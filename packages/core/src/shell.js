@@ -35,22 +35,48 @@ export async function runShell({
   input = process.stdin,
   output = process.stdout,
   dispatchCommand,
-  greeting = "(no greeting)"
+  greeting = "(no greeting)",
+  installSigintHandler
 } = {}) {
   if (typeof dispatchCommand !== "function") {
     throw new Error("runShell requires a dispatchCommand(argv) function.");
   }
+  // Default: install the SIGINT handler only when reading from the real
+  // process.stdin (i.e. an interactive operator). Tests inject a stream
+  // and should not have process-level signal handlers interfering.
+  const shouldInstallSigint = installSigintHandler ?? input === process.stdin;
 
   output.write(`${greeting}\n\n`);
   output.write(HELP);
 
   const rl = createInterface({ input, output, prompt: PROMPT, terminal: false });
 
+  let sigintCount = 0;
+  let sigintTimer = null;
+  const onSigint = () => {
+    sigintCount++;
+    if (sigintCount >= 2) {
+      output.write("\nGoodbye.\n");
+      rl.close();
+      return;
+    }
+    output.write("\n(Ctrl+C again to exit cleanly, or type `exit`.)\n");
+    rl.prompt();
+    if (sigintTimer) clearTimeout(sigintTimer);
+    sigintTimer = setTimeout(() => {
+      sigintCount = 0;
+    }, 2000);
+  };
+  if (shouldInstallSigint) {
+    process.on("SIGINT", onSigint);
+  }
+
   return await new Promise((resolve) => {
     rl.prompt();
 
     rl.on("line", async (rawLine) => {
       const line = rawLine.trim();
+      sigintCount = 0;
       if (line === "") {
         rl.prompt();
         return;
@@ -66,7 +92,14 @@ export async function runShell({
         return;
       }
 
-      const argv = tokenize(line);
+      let argv;
+      try {
+        argv = tokenize(line);
+      } catch (err) {
+        output.write(`error: ${err?.message ?? String(err)}\n`);
+        rl.prompt();
+        return;
+      }
       try {
         await dispatchCommand(argv);
       } catch (err) {
@@ -75,7 +108,13 @@ export async function runShell({
       rl.prompt();
     });
 
-    rl.on("close", () => resolve({ exited: true }));
+    rl.on("close", () => {
+      if (shouldInstallSigint) {
+        process.removeListener("SIGINT", onSigint);
+      }
+      if (sigintTimer) clearTimeout(sigintTimer);
+      resolve({ exited: true });
+    });
   });
 }
 

@@ -20,6 +20,11 @@ import {
   formatVerdict,
   verifyReceiptPlaceholder
 } from "../../../packages/verifier/src/sat-placeholder.js";
+import {
+  highestLevel,
+  levelLabel,
+  requestApproval
+} from "../../../packages/core/src/approval-gate.js";
 
 const adapter = createNode0Adapter();
 
@@ -164,6 +169,25 @@ Next:
       }
       const task = TASK_REGISTRY[subcommand];
       if (!task) throw new Error(`Unknown task: ${subcommand}`);
+
+      // Approval gate per A4.5 + B1.2 design. L0/L1/L2 auto-approve
+      // (no prompt). L3+ requires interactive approval. L4 routes
+      // through FATE evaluateConsent. L5 is unconditionally refused.
+      const level = highestLevel(task.autonomy_level);
+      if (level >= 3) {
+        const approval = await requestApproval({
+          autonomyLevel: levelLabel(level),
+          action: `task ${task.id}`,
+          scope: task.scope ?? task.description ?? null,
+          requireExactPhrase: task.requireExactPhrase
+        });
+        if (!approval.approved) {
+          console.log(`Refused: ${approval.refused_reason}`);
+          process.exitCode = 1;
+          return;
+        }
+      }
+
       const receipt = await task.run();
       const verdict = verifyReceiptPlaceholder(receipt);
       console.log(task.format(receipt));
