@@ -9,6 +9,7 @@ coverage/
 .claude/
 .vscode/
 .artifacts/
+.qodo/
 
 # OpenTimestamps creates *.ots.bak backups on each `ots upgrade` —
 # regenerable cruft, never the canonical receipt.
