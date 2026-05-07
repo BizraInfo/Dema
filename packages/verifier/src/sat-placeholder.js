@@ -101,3 +101,168 @@ export function formatVerdict(verdict) {
   lines.push(`  ${verdict.note}`);
   return lines.join("\n");
 }
+
+// ─── v0.3.2 SAT verifier sibling — dual-schema dispatch ────────────────
+//
+// Per docs/02-architecture/sat-verifier-sibling-spec.md (DECLARED 2026-05-07).
+//
+// Today's verifier handles only the task-receipt schema. Production receipts
+// use TWO schemas: task receipts (Dema-issued) and gateway-handoff receipts
+// (mirror of upstream-issued mission receipts like ARTIFACT-011). The probe
+// run on 2026-05-07 confirmed gateway receipts had zero verifier coverage —
+// not even placeholder-grade.
+//
+// `verifyReceipt(receipt)` is the single dispatch entry point. It routes by
+// `receipt.schema`, falls closed on unknown schema, and returns a verdict in
+// the existing `bizra.dema.sat_verdict.v0.1` envelope. The per-schema check
+// lists differ; the verdict envelope is uniform.
+//
+// Truth-label discipline preserved: this verifier never returns PERMIT from
+// local logic. Only real SAT-5 (PLANNED upstream in bizra-data-lake) issues
+// PERMIT. v0.3.2 caps at PARTIAL_PLACEHOLDER for the happy path.
+
+const TASK_RECEIPT_SCHEMA = "bizra.dema.task_receipt.v0.1";
+const GATEWAY_HANDOFF_SCHEMA = "bizra.dema.gateway_receipt_handoff.v0.1";
+const REQUIRED_GATEWAY_SCORERS = Object.freeze([
+  "ZANN_ZERO",
+  "CLAIM_MUST_BIND",
+  "RIBA_ZERO",
+  "NO_SHADOW_STATE",
+  "IHSAN_FLOOR"
+]);
+const IHSAN_FLOOR = 0.95;
+
+export function verifyReceipt(receipt) {
+  const schema = receipt?.schema;
+
+  if (schema === TASK_RECEIPT_SCHEMA) {
+    return verifyReceiptPlaceholder(receipt);
+  }
+
+  if (schema === GATEWAY_HANDOFF_SCHEMA) {
+    return verifyGatewayHandoffReceipt(receipt);
+  }
+
+  // Fail-closed on unknown / missing schema (A4.5 §"Core law": rejective by default).
+  return {
+    schema: SAT_PLACEHOLDER_SCHEMA,
+    verdict: "REJECT",
+    truth_label: "DECLARED",
+    checked_at: new Date().toISOString(),
+    receipt_id: receipt?.receipt_id ?? null,
+    checks: [
+      {
+        check: "schema_supported",
+        pass: false,
+        detail: `unsupported_schema: ${JSON.stringify(schema ?? null)} (expected ${TASK_RECEIPT_SCHEMA} or ${GATEWAY_HANDOFF_SCHEMA})`
+      }
+    ],
+    note:
+      "verifyReceipt: schema is missing or not in the supported set. Refused by default per A4.5 fail-closed rule. New schemas require an explicit handler before they may pass."
+  };
+}
+
+export function verifyGatewayHandoffReceipt(receipt) {
+  const checks = [];
+
+  // Check 1: schema explicitly declared as gateway_receipt_handoff.
+  const schemaOk = receipt?.schema === GATEWAY_HANDOFF_SCHEMA;
+  checks.push({
+    check: "schema_declared_as_gateway_handoff",
+    pass: schemaOk,
+    detail: schemaOk
+      ? `schema: ${GATEWAY_HANDOFF_SCHEMA}`
+      : `expected ${GATEWAY_HANDOFF_SCHEMA}, got: ${receipt?.schema ?? "(missing)"}`
+  });
+
+  // Check 2: truth_label is GATEWAY_ISSUED_HANDOFF (the Dema-side mirror label).
+  const labelOk = receipt?.truth_label === "GATEWAY_ISSUED_HANDOFF";
+  checks.push({
+    check: "truth_label_is_gateway_handoff",
+    pass: labelOk,
+    detail: labelOk
+      ? `truth_label: GATEWAY_ISSUED_HANDOFF`
+      : `expected GATEWAY_ISSUED_HANDOFF, got: ${receipt?.truth_label ?? "(missing)"}`
+  });
+
+  // Check 3: gateway.admissibility_verdict === "Permit" (top-level recorded verdict).
+  const verdictOk = receipt?.gateway?.admissibility_verdict === "Permit";
+  checks.push({
+    check: "gateway_admissibility_permit",
+    pass: verdictOk,
+    detail: verdictOk
+      ? `gateway.admissibility_verdict: Permit`
+      : `expected Permit, got: ${receipt?.gateway?.admissibility_verdict ?? "(missing)"}`
+  });
+
+  // Check 4: chain_head present and 64-hex (the upstream chain head this receipt was
+  // sealed against).
+  const chainHead = receipt?.gateway?.chain_head;
+  const chainHeadOk = typeof chainHead === "string" && /^[0-9a-f]{64}$/.test(chainHead);
+  checks.push({
+    check: "chain_head_present_64hex",
+    pass: chainHeadOk,
+    detail: chainHeadOk
+      ? `chain_head: ${chainHead.slice(0, 16)}…`
+      : `chain_head missing or not 64-hex`
+  });
+
+  // Check 5: consent_phrase_record present (byte-for-byte phrase comparison is the
+  // caller's responsibility — different actions use different phrases).
+  const consentRecorded =
+    typeof receipt?.consent_phrase_record === "string" &&
+    receipt.consent_phrase_record.length > 0;
+  checks.push({
+    check: "consent_phrase_recorded",
+    pass: consentRecorded,
+    detail: consentRecorded
+      ? `consent_phrase_record present (${receipt.consent_phrase_record.length} chars)`
+      : `consent_phrase_record missing`
+  });
+
+  // Check 6: gate verdicts (when exposed) — all required scorers Permit, IHSAN ≥ 0.95.
+  const gateVerdicts = receipt?.preserved_post_response_body?.admissibility?.gateVerdicts;
+  if (Array.isArray(gateVerdicts) && gateVerdicts.length > 0) {
+    const allPermit = gateVerdicts.every((v) => v?.verdict === "Permit");
+    const presentScorers = new Set(gateVerdicts.map((v) => v?.scorerId));
+    const missingScorers = REQUIRED_GATEWAY_SCORERS.filter((s) => !presentScorers.has(s));
+    const ihsanScore = gateVerdicts.find((v) => v?.scorerId === "IHSAN_FLOOR")?.score;
+    const ihsanOk = typeof ihsanScore === "number" && ihsanScore >= IHSAN_FLOOR;
+    const gatesOk = allPermit && missingScorers.length === 0 && ihsanOk;
+    checks.push({
+      check: "gate_verdicts_all_permit_with_required_scorers",
+      pass: gatesOk,
+      detail: gatesOk
+        ? `${gateVerdicts.length} gates Permit; required scorers present; IHSAN ${ihsanScore.toFixed(2)} ≥ ${IHSAN_FLOOR}`
+        : `gate issue: missing=[${missingScorers.join(",") || "none"}], all_permit=${allPermit}, ihsan=${ihsanScore ?? "missing"}`
+    });
+  } else {
+    // Not exposed → cannot certify the scorer breakdown; this is a SOFT finding
+    // (placeholder-grade verifier; real SAT-5 would cross-check with gateway directly).
+    checks.push({
+      check: "gate_verdicts_exposed",
+      pass: false,
+      detail: "preserved_post_response_body.admissibility.gateVerdicts not exposed; cannot certify scorer breakdown"
+    });
+  }
+
+  const allPassed = checks.every((c) => c.pass);
+  const verdict = allPassed ? "PARTIAL_PLACEHOLDER" : "REJECT";
+
+  return {
+    schema: SAT_PLACEHOLDER_SCHEMA,
+    verdict,
+    truth_label: "DECLARED",
+    checked_at: new Date().toISOString(),
+    receipt_id: receipt?.receipt_id ?? null,
+    checks,
+    note:
+      "Gateway handoff receipt verification is PLACEHOLDER-GRADE in v0.3.2. " +
+      "The shallow checks above confirm the receipt declares the right shape and " +
+      "that the gateway returned Permit at issuance time — they do NOT cross-check " +
+      "the live gateway /chain (offline-safe), do NOT re-derive the niyyah evidence " +
+      "hash, and do NOT certify the upstream admissibility chain's verdict beyond " +
+      "reading the recorded value. Real verification with live cross-check arrives " +
+      "when the SAT-5 Rust roster lands upstream in bizra-data-lake."
+  };
+}
