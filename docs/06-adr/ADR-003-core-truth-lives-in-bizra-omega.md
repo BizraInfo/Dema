@@ -18,7 +18,7 @@ If DEMA duplicates any core truth (e.g., reimplements receipt validation, invent
 
 ## Decision
 
-DEMA consumes core truth exclusively through the gateway client SDK. It never:
+DEMA consumes core truth exclusively through the read-only gateway HTTP surface (today: [`packages/node-adapter/src/gateway-http-adapter.js`](../../packages/node-adapter/src/gateway-http-adapter.js), enforced GET-only, four endpoints: `/health`, `/chain`, `/poi/summary`, `/resources/list`). It never:
 
 - Duplicates mission law or mission state machines
 - Reimplements admissibility checks
@@ -35,8 +35,8 @@ DEMA may:
 
 ## Consequences
 
-- `packages/sdk/` defines the approved contract surface
-- Any new core concept requires a gateway contract before DEMA can use it
-- `scripts/sync-contracts.sh` validates contract alignment on CI
-- DEMA tests mock the gateway, not the core internals
-- Breaking contract changes require coordination between repos
+- The approved contract surface is the gateway HTTP adapter at [`packages/node-adapter/src/gateway-http-adapter.js`](../../packages/node-adapter/src/gateway-http-adapter.js); any field the gateway does not expose is surfaced as `unknown[]` or carries a `_truth: "NOT_EXPOSED_BY_GATEWAY"` marker rather than a fabricated value.
+- Any new core concept requires a gateway endpoint contract before Dema can consume it; until that contract exists, the field stays in `unknown[]`.
+- Dema tests mock the gateway with a local `http.createServer` (see [`tests/gateway-http-adapter.test.js`](../../tests/gateway-http-adapter.test.js)), never the core internals.
+- A future contract-sync mechanism (originally planned as `scripts/sync-contracts.sh`) is **PLANNED**, not yet implemented; until it exists, contract drift is caught only by the gateway's domain-mismatch finding (`composeNode0StatusFromGateway` returns `truth_label: "DEGRADED"` if `domain !== "bizra-cognition-gateway-v1"`).
+- Breaking contract changes require coordination between Dema and `bizra-data-lake` (the substrate hosting `bizra-cognition-gateway`).
