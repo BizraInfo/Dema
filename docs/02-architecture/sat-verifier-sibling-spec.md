@@ -101,7 +101,7 @@ Produced by `bizra-cognition-gateway` POST `/missions` upstream; mirrored locall
 | Check | Requirement |
 |---|---|
 | `gateway.admissibility_verdict === "Permit"` | required for non-REJECT verdict |
-| `gateway.gateVerdicts` (if exposed in `preserved_post_response_body.admissibility`) | all required scorers Permit (ZANN_ZERO, CLAIM_MUST_BIND, RIBA_ZERO, NO_SHADOW_STATE, IHSAN_FLOOR ≥ 0.95) |
+| `preserved_post_response_body.admissibility.gateVerdicts` (when exposed) | all required scorers Permit (ZANN_ZERO, CLAIM_MUST_BIND, RIBA_ZERO, NO_SHADOW_STATE, IHSAN_FLOOR ≥ 0.95). When NOT exposed, treat as informational/soft finding — does NOT block PARTIAL_PLACEHOLDER verdict (the gateway's top-level `admissibility_verdict` is the load-bearing field). |
 | `consent_phrase_record === BOUNDED_DIAGNOSTIC_CONSENT_PHRASE` | byte-for-byte for ARTIFACT-011 receipts; future actions may have other phrases |
 | `proof_anchors.evidence_hash_niyyah_sha256` matches the niyyah on disk if available | optional; report `evidence_hash_unverified_locally` if niyyah file absent |
 | `gateway.chain_head` matches live gateway `/chain` response if gateway reachable | optional; report `chain_head_unverified_offline` if gateway unreachable |
@@ -123,12 +123,12 @@ Behavior:
 
 1. **Inspect `receipt.schema`** — strict equality, no fuzzy match (per A4.5 anti-pattern #4: shadow consent surfaces).
 2. **Dispatch:**
-   - `bizra.dema.task_receipt.v0.1` → existing `verifyReceiptPlaceholder` (now renamed `verifyTaskReceipt` for clarity).
+   - `bizra.dema.task_receipt.v0.1` → existing `verifyReceiptPlaceholder` (kept under its original name for backwards compatibility; new callers use `verifyReceipt`).
    - `bizra.dema.gateway_receipt_handoff.v0.1` → new `verifyGatewayHandoffReceipt`.
    - Any other schema → return `REJECT` with reason `unsupported_schema:<schema>`. Fail-closed by default per A4.5 §"Core law".
 3. **Compose verdict** in the uniform `bizra.dema.sat_verdict.v0.1` envelope. Schema-specific check details land in the `checks[]` array; the top-level `verdict` reflects whether all required checks passed.
 
-The existing `verifyReceiptPlaceholder` export is **kept** for backwards compatibility; new callers use `verifyReceipt`. Migration: deprecate `verifyReceiptPlaceholder` in v0.3.3 once the active kernel + tests use `verifyReceipt`.
+The existing `verifyReceiptPlaceholder` export is **kept** under its original name for backwards compatibility; new callers use `verifyReceipt`. Migration: consider deprecating `verifyReceiptPlaceholder` in v0.3.3 once the active kernel + tests use `verifyReceipt`. Source of truth for both functions is [`packages/verifier/src/sat-placeholder.js`](../../packages/verifier/src/sat-placeholder.js).
 
 ---
 
@@ -226,17 +226,17 @@ If the package split feels heavy, an alternative is to keep all logic in `sat-pl
 
 ## Acceptance criteria for v0.3.2 close
 
-The cycle ships when:
+The cycle ships when ALL of these hold. Boxes marked `[x]` are done in this PR; `[ ]` items are pending follow-up work within the v0.3.2 cycle.
 
-1. ✅ `verifyReceipt(receipt)` exists, dispatches by schema, falls closed on unknown schema.
-2. ✅ Task-receipt verification has identical behavior to existing `verifyReceiptPlaceholder` (regression-tested).
-3. ✅ Gateway-handoff verification is implemented with the checks listed above; honest about its placeholder grade.
-4. ✅ Tests cover both schemas, including: a known-good receipt of each shape, a tampered receipt of each shape, an unsupported-schema input, and the absent-niyyah / unreachable-gateway optional-check paths.
-5. ✅ `apps/cli/src/index.js` task case calls `verifyReceipt` (not `verifyReceiptPlaceholder` directly) — same behavior, route through the dispatch.
-6. ✅ `dema receipts <id>` CLI surface is unchanged in v0.3.2 scope (verification on read is v0.3.6).
-7. ✅ `npm test` and `npm run check` green.
-8. ✅ No L1+ surfaces added; verifier stays L0.
-9. ✅ This spec doc updated with implementation cross-references on close.
+- [x] `verifyReceipt(receipt)` exists, dispatches by schema, falls closed on unknown schema.
+- [x] Task-receipt verification has identical behavior to existing `verifyReceiptPlaceholder` (regression-tested via the dispatch-routes-task-receipt test).
+- [x] Gateway-handoff verification is implemented with the checks listed above; honest about its placeholder grade.
+- [x] Tests cover both schemas, including: a known-good receipt of each shape, a tampered receipt of each shape, an unsupported-schema input, the absent-gateVerdicts soft-finding path, and (per the v0.3.2 patch responding to PR #18 review) the action-aware consent-phrase enforcement.
+- [ ] `apps/cli/src/index.js` task case calls `verifyReceipt` (not `verifyReceiptPlaceholder` directly) — same behavior, route through the dispatch. **Pending follow-up PR within the v0.3.2 cycle.**
+- [x] `dema receipts <id>` CLI surface is unchanged in v0.3.2 scope (verification on read is v0.3.6).
+- [x] `npm test` and `npm run check` green.
+- [x] No L1+ surfaces added; verifier stays L0.
+- [ ] This spec doc updated with implementation cross-references on close. **Pending — done partially in this PR; final cross-link of the merged commit hashes happens at cycle-close.**
 
 ---
 

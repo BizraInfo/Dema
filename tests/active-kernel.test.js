@@ -432,7 +432,57 @@ test("verifyGatewayHandoffReceipt REJECTs when consent_phrase_record is missing"
   delete r.consent_phrase_record;
   const verdict = verifyGatewayHandoffReceipt(r);
   assert.equal(verdict.verdict, "REJECT");
-  assert.ok(verdict.checks.find((c) => c.check === "consent_phrase_recorded" && !c.pass));
+  assert.ok(verdict.checks.find((c) => c.check === "consent_phrase_recorded_and_canonical" && !c.pass));
+});
+
+test("verifyGatewayHandoffReceipt REJECTs wrong consent phrase for a known action (action-aware)", () => {
+  // Per CodeRabbit + Copilot review on PR #18: receipts with
+  // action=bounded_diagnostic_activation must carry exactly the
+  // BOUNDED_DIAGNOSTIC_CONSENT_PHRASE per A4.5 anti-pattern #4
+  // (shadow consent surfaces — only the typed exact phrase is valid).
+  const verdict = verifyGatewayHandoffReceipt(
+    makeGatewayHandoffReceipt({
+      action: "bounded_diagnostic_activation",
+      consent_phrase_record: "GO: anything else"
+    })
+  );
+  assert.equal(verdict.verdict, "REJECT");
+  const consentCheck = verdict.checks.find((c) => c.check === "consent_phrase_recorded_and_canonical");
+  assert.ok(consentCheck);
+  assert.equal(consentCheck.pass, false);
+  assert.match(consentCheck.detail, /does NOT match canonical phrase/);
+});
+
+test("verifyGatewayHandoffReceipt PASSes consent check when action has no canonical phrase registered", () => {
+  // Future actions (not yet defined) fall back to "non-empty string" with an
+  // informational detail — do not block the verdict on an unknown action.
+  const verdict = verifyGatewayHandoffReceipt(
+    makeGatewayHandoffReceipt({
+      action: "future_action_not_yet_defined",
+      consent_phrase_record: "GO: future phrase tbd"
+    })
+  );
+  // Other checks may or may not pass depending on the rest of the receipt;
+  // assert specifically that the consent check passes (not blocking).
+  const consentCheck = verdict.checks.find((c) => c.check === "consent_phrase_recorded_and_canonical");
+  assert.equal(consentCheck.pass, true);
+  assert.match(consentCheck.detail, /no canonical phrase registered yet/);
+});
+
+test("verifyGatewayHandoffReceipt PASSes when gateVerdicts is entirely missing (informational, not blocking)", () => {
+  // Per CodeRabbit + Copilot + Codex 3-way convergence on PR #18: absent
+  // gateVerdicts is a SOFT finding, not a hard REJECT. The gateway's
+  // top-level admissibility_verdict is the load-bearing field; the
+  // scorer breakdown is nice-to-have. Live cross-check (PLANNED with
+  // real SAT-5 upstream) would resolve the breakdown.
+  const r = makeGatewayHandoffReceipt();
+  delete r.preserved_post_response_body;
+  const verdict = verifyGatewayHandoffReceipt(r);
+  assert.equal(verdict.verdict, "PARTIAL_PLACEHOLDER");
+  const gatesCheck = verdict.checks.find((c) => c.check === "gate_verdicts_exposed");
+  assert.ok(gatesCheck);
+  assert.equal(gatesCheck.pass, true);
+  assert.match(gatesCheck.detail, /informational/);
 });
 
 test("verifyGatewayHandoffReceipt REJECTs when IHSAN_FLOOR score is below 0.95", () => {

@@ -121,6 +121,8 @@ export function formatVerdict(verdict) {
 // local logic. Only real SAT-5 (PLANNED upstream in bizra-data-lake) issues
 // PERMIT. v0.3.2 caps at PARTIAL_PLACEHOLDER for the happy path.
 
+import { BOUNDED_DIAGNOSTIC_CONSENT_PHRASE } from "../../core/src/mission.js";
+
 const TASK_RECEIPT_SCHEMA = "bizra.dema.task_receipt.v0.1";
 const GATEWAY_HANDOFF_SCHEMA = "bizra.dema.gateway_receipt_handoff.v0.1";
 const REQUIRED_GATEWAY_SCORERS = Object.freeze([
@@ -131,6 +133,13 @@ const REQUIRED_GATEWAY_SCORERS = Object.freeze([
   "IHSAN_FLOOR"
 ]);
 const IHSAN_FLOOR = 0.95;
+
+// Known action → canonical exact-string consent phrase. v0.3.2 lists
+// only ARTIFACT-011's phrase. Future actions add entries; receipts
+// with an unknown `action` fall back to "non-empty string" — informational.
+const KNOWN_ACTION_PHRASES = Object.freeze({
+  bounded_diagnostic_activation: BOUNDED_DIAGNOSTIC_CONSENT_PHRASE
+});
 
 export function verifyReceipt(receipt) {
   const schema = receipt?.schema;
@@ -207,17 +216,42 @@ export function verifyGatewayHandoffReceipt(receipt) {
       : `chain_head missing or not 64-hex`
   });
 
-  // Check 5: consent_phrase_record present (byte-for-byte phrase comparison is the
-  // caller's responsibility — different actions use different phrases).
-  const consentRecorded =
-    typeof receipt?.consent_phrase_record === "string" &&
-    receipt.consent_phrase_record.length > 0;
+  // Check 5: consent_phrase_record present AND, when the action is known to
+  // require an exact phrase, byte-for-byte equality with the canonical phrase.
+  // Per CodeRabbit + Copilot + Codex review feedback on PR #18 — non-empty
+  // string was too loose for ARTIFACT-011, which the spec says MUST match
+  // BOUNDED_DIAGNOSTIC_CONSENT_PHRASE byte-for-byte.
+  const consentValue = receipt?.consent_phrase_record;
+  const consentNonEmpty = typeof consentValue === "string" && consentValue.length > 0;
+  const expectedPhrase = KNOWN_ACTION_PHRASES[receipt?.action];
+
+  let consentPass;
+  let consentDetail;
+  if (!consentNonEmpty) {
+    consentPass = false;
+    consentDetail = "consent_phrase_record missing";
+  } else if (expectedPhrase !== undefined) {
+    if (consentValue === expectedPhrase) {
+      consentPass = true;
+      consentDetail = `consent_phrase matches canonical phrase for action '${receipt.action}'`;
+    } else {
+      consentPass = false;
+      consentDetail =
+        `consent_phrase_record does NOT match canonical phrase for action '${receipt.action}' ` +
+        `(per A4.5 anti-pattern #4: shadow consent surfaces — only the exact phrase is valid)`;
+    }
+  } else {
+    // Unknown action — no canonical phrase registered yet. Non-empty is
+    // informational; future actions register their phrase in KNOWN_ACTION_PHRASES.
+    consentPass = true;
+    consentDetail =
+      `consent_phrase_record present (${consentValue.length} chars; ` +
+      `action '${receipt?.action ?? "?"}' has no canonical phrase registered yet — informational)`;
+  }
   checks.push({
-    check: "consent_phrase_recorded",
-    pass: consentRecorded,
-    detail: consentRecorded
-      ? `consent_phrase_record present (${receipt.consent_phrase_record.length} chars)`
-      : `consent_phrase_record missing`
+    check: "consent_phrase_recorded_and_canonical",
+    pass: consentPass,
+    detail: consentDetail
   });
 
   // Check 6: gate verdicts (when exposed) — all required scorers Permit, IHSAN ≥ 0.95.
@@ -237,12 +271,18 @@ export function verifyGatewayHandoffReceipt(receipt) {
         : `gate issue: missing=[${missingScorers.join(",") || "none"}], all_permit=${allPermit}, ihsan=${ihsanScore ?? "missing"}`
     });
   } else {
-    // Not exposed → cannot certify the scorer breakdown; this is a SOFT finding
-    // (placeholder-grade verifier; real SAT-5 would cross-check with gateway directly).
+    // SOFT finding — informational, not blocking. Per spec §"Receipt-shape
+    // integrity rules" + 3-reviewer convergence on PR #18: absence of the
+    // scorer breakdown does not invalidate the receipt; the gateway's top-level
+    // admissibility_verdict (already checked above) is the load-bearing field.
+    // Real SAT-5 will resolve this by querying the live gateway directly when
+    // the Rust roster lands upstream. Keep as pass:true so the aggregate
+    // verdict stays non-REJECT when only this check is informational.
     checks.push({
       check: "gate_verdicts_exposed",
-      pass: false,
-      detail: "preserved_post_response_body.admissibility.gateVerdicts not exposed; cannot certify scorer breakdown"
+      pass: true,
+      detail:
+        "preserved_post_response_body.admissibility.gateVerdicts not exposed in this receipt — informational; live cross-check (PLANNED with real SAT-5 upstream) would resolve"
     });
   }
 
