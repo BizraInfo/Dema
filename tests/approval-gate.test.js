@@ -40,7 +40,7 @@ function captureOutput() {
 
 // ─── highestLevel / levelLabel ─────────────────────────────────────────
 
-test("highestLevel parses single and slash-joined level strings", () => {
+test("highestLevel parses valid L0..L5 single and slash-joined strings", () => {
   assert.equal(highestLevel("L0"), 0);
   assert.equal(highestLevel("L1"), 1);
   assert.equal(highestLevel("L0/L1"), 1);
@@ -48,8 +48,23 @@ test("highestLevel parses single and slash-joined level strings", () => {
   assert.equal(highestLevel("L3"), 3);
   assert.equal(highestLevel("L0/L3"), 3);
   assert.equal(highestLevel("L5"), 5);
-  assert.equal(highestLevel(""), 0);
-  assert.equal(highestLevel(undefined), 0);
+});
+
+test("highestLevel returns null on malformed/missing input (fail-closed)", () => {
+  // Doctrine: A4.5 §"Core law" says rejective by default. The previous
+  // implementation returned 0 for every malformed input, which silently
+  // downgraded unknown levels to L0/L1/L2 auto-approve. CodeRabbit +
+  // Copilot + Codex flagged this as fail-open on PR #16.
+  assert.equal(highestLevel(""), null, "empty string → null");
+  assert.equal(highestLevel(undefined), null, "undefined → null");
+  assert.equal(highestLevel(null), null, "null → null");
+  assert.equal(highestLevel(42), null, "non-string → null");
+  assert.equal(highestLevel("l4"), null, "lowercase 'l4' → null");
+  assert.equal(highestLevel("typo"), null, "no L-token → null");
+  assert.equal(highestLevel("L10"), null, "out-of-range L10 → null");
+  assert.equal(highestLevel("L99"), null, "out-of-range L99 → null");
+  assert.equal(highestLevel("LEVEL4"), null, "no word-bounded L0..5 token → null");
+  assert.equal(highestLevel("L6"), null, "L6 not in envelope → null");
 });
 
 test("levelLabel formats numeric levels", () => {
@@ -201,11 +216,17 @@ test("L5 always refuses from the shell, regardless of input", async () => {
 
 // ─── unknown level / bad inputs ────────────────────────────────────────
 
-test("unknown autonomy level throws", async () => {
-  await assert.rejects(
-    () => requestApproval({ autonomyLevel: "L99", action: "x" }),
-    /unknown autonomyLevel/
-  );
+test("unknown autonomy level returns refusal envelope (fail-closed, was throw)", async () => {
+  // PR #16 review consensus (CodeRabbit + Copilot + Codex): an unknown
+  // autonomy level on a safety boundary must NOT throw and MUST NOT
+  // silently downgrade. Return a refusal envelope instead so the caller
+  // logs a clear "Refused: ..." line and the task does not run.
+  for (const lvl of ["L99", "l4", "LEVEL4", "L10", "typo", "", null, undefined]) {
+    const result = await requestApproval({ autonomyLevel: lvl, action: "x" });
+    assert.equal(result.approved, false, `expected refused for ${JSON.stringify(lvl)}`);
+    assert.equal(result.mode, "refused");
+    assert.match(result.refused_reason, /Refused by default|autonomyLevel|required/);
+  }
 });
 
 test("missing action throws", async () => {

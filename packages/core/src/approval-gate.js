@@ -63,10 +63,24 @@ export async function requestApproval({
   output = process.stdout
 } = {}) {
   if (!action || typeof action !== "string") {
+    // `action` is the human-readable label of what's being gated. Missing
+    // it is a programming bug, not a safety situation — throw so the
+    // caller surfaces it loudly. The autonomy level below, by contrast,
+    // is the security-relevant axis and must fail-closed (refusal envelope).
     throw new Error("requestApproval: action (string) is required");
   }
   if (!autonomyLevel || typeof autonomyLevel !== "string") {
-    throw new Error("requestApproval: autonomyLevel (string) is required");
+    return envelopeBase({
+      autonomyLevel: autonomyLevel ?? null,
+      action,
+      scope,
+      target,
+      mode: "refused",
+      approved: false,
+      refusedReason:
+        "autonomyLevel is missing or non-string. Refused by default per A4.5 fail-closed rule (rejective by default).",
+      input: null
+    });
   }
 
   if (autonomyLevel === "L0" || autonomyLevel === "L1" || autonomyLevel === "L2") {
@@ -145,17 +159,37 @@ export async function requestApproval({
     });
   }
 
-  throw new Error(`requestApproval: unknown autonomyLevel: ${autonomyLevel} (expected L0-L5)`);
+  // Fail-closed: any value not exactly L0..L5 is refused, not thrown.
+  // Throwing makes the caller responsible for catching every malformed
+  // input; refusing-by-default is the doctrine (A4.5 §"Core law":
+  // "Rejective by default. Silence = no.").
+  return envelopeBase({
+    autonomyLevel,
+    action,
+    scope,
+    target,
+    mode: "refused",
+    approved: false,
+    refusedReason: `unknown autonomyLevel: ${JSON.stringify(autonomyLevel)} (expected L0-L5). Refused by default per A4.5 fail-closed rule.`,
+    input: null
+  });
 }
 
 // Helper: parse a task's autonomy_level string ("L0/L1", "L3", "L0", etc.)
-// into the highest numeric level. Used by callers that want to decide
-// whether the gate fires at all.
+// into the highest numeric level. Strict regex — L0..L5 only, word-bounded.
+// Returns null on any input that does not contain at least one valid token,
+// so callers can fail-closed on malformed values rather than silently
+// downgrading them to L0 (the original implementation's fail-open path
+// flagged by CodeRabbit + GitHub Copilot + ChatGPT Codex on PR #16).
+const STRICT_LEVEL_TOKEN = /\bL([0-5])\b/g;
+
 export function highestLevel(autonomyLevelString) {
-  if (typeof autonomyLevelString !== "string") return 0;
-  const matches = autonomyLevelString.match(/L(\d)/g) ?? [];
-  if (matches.length === 0) return 0;
-  return Math.max(...matches.map((m) => parseInt(m.slice(1), 10)));
+  if (typeof autonomyLevelString !== "string") return null;
+  const matches = [...autonomyLevelString.matchAll(STRICT_LEVEL_TOKEN)].map(
+    (m) => parseInt(m[1], 10)
+  );
+  if (matches.length === 0) return null;
+  return Math.max(...matches);
 }
 
 export function levelLabel(numericLevel) {
