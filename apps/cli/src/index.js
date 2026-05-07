@@ -20,6 +20,11 @@ import {
   formatVerdict,
   verifyReceiptPlaceholder
 } from "../../../packages/verifier/src/sat-placeholder.js";
+import {
+  highestLevel,
+  levelLabel,
+  requestApproval
+} from "../../../packages/core/src/approval-gate.js";
 
 const adapter = createNode0Adapter();
 
@@ -164,6 +169,33 @@ Next:
       }
       const task = TASK_REGISTRY[subcommand];
       if (!task) throw new Error(`Unknown task: ${subcommand}`);
+
+      // Approval gate per A4.5 + B1.2 design. L0/L1/L2 auto-approve
+      // (no prompt). L3+ requires interactive approval. L4 routes
+      // through FATE evaluateConsent. L5 is unconditionally refused.
+      // Fail-closed: a malformed/missing autonomy_level (highestLevel
+      // returns null) is refused, not silently downgraded.
+      const level = highestLevel(task.autonomy_level);
+      if (level === null) {
+        console.log(
+          `Refused: task ${task.id} has malformed or missing autonomy_level ` +
+            `(got: ${JSON.stringify(task.autonomy_level)}). Expected L0..L5.`
+        );
+        return { refused: true, reason: "malformed_autonomy_level" };
+      }
+      if (level >= 3) {
+        const approval = await requestApproval({
+          autonomyLevel: levelLabel(level),
+          action: `task ${task.id}`,
+          scope: task.scope ?? task.description ?? null,
+          requireExactPhrase: task.requireExactPhrase
+        });
+        if (!approval.approved) {
+          console.log(`Refused: ${approval.refused_reason}`);
+          return { refused: true, reason: approval.refused_reason };
+        }
+      }
+
       const receipt = await task.run();
       const verdict = verifyReceiptPlaceholder(receipt);
       console.log(task.format(receipt));
@@ -213,10 +245,18 @@ const isDirectInvocation =
   process.argv[1] && (process.argv[1].endsWith("/index.js") || process.argv[1].endsWith("/dema"));
 
 if (isDirectInvocation) {
-  dispatch(process.argv.slice(2)).catch((error) => {
-    console.error("Dema error:", error?.message ?? error);
-    process.exit(1);
-  });
+  dispatch(process.argv.slice(2))
+    .then((result) => {
+      // Refusal sentinel from the task gate translates to exit 1 only at
+      // the top-level CLI boundary. Inside `dema chat` (where dispatch is
+      // invoked from runShell) the refusal stays a per-turn outcome and
+      // does not taint the parent process exit code.
+      if (result?.refused) process.exit(1);
+    })
+    .catch((error) => {
+      console.error("Dema error:", error?.message ?? error);
+      process.exit(1);
+    });
 }
 
 export { dispatch, runActiveKernel };

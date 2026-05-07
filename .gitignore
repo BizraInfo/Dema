@@ -17,3 +17,8 @@ coverage/
 # External reference projects — Dema stands on the shoulders, does not ingest.
 hermes-agent-2026.4.23/
 openclaw-2026.4.25/
+
+# proof-forge local evidence — kept off-tree until the skill ships its scripts
+# and an ADR reconciles it with the ~/.dema/receipts spine (ADR-002, ADR-005).
+.proof-forge/
+PROOF_SUMMARY.md
