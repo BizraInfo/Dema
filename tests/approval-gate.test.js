@@ -5,6 +5,7 @@ import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import {
   APPROVAL_SCHEMA,
@@ -14,7 +15,11 @@ import {
 } from "../packages/core/src/approval-gate.js";
 
 const execFileAsync = promisify(execFile);
-const cliPath = new URL("../apps/cli/src/index.js", import.meta.url).pathname;
+// fileURLToPath, not new URL(...).pathname: the latter yields `/C:/...`
+// on Windows and breaks execFile resolution. Same pattern exists in the
+// other tests/*.test.js files; flagged for a follow-up Windows-portability
+// sweep, not patched here to keep PR #16 scope tight.
+const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
 
 function inputFrom(text) {
   // Simulate operator typing `text\n`. Empty string = immediate EOF.
@@ -259,6 +264,6 @@ test("approval envelope is schema-tagged with decided_at timestamp", async () =>
     autonomyLevel: "L0",
     action: "x"
   });
-  assert.equal(result.schema, "bizra.dema.approval_verdict.v0.1");
+  assert.equal(result.schema, APPROVAL_SCHEMA);
   assert.match(result.decided_at, /^\d{4}-\d{2}-\d{2}T/);
 });
