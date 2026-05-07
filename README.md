@@ -170,19 +170,27 @@ Dema says:
 
 ## Current boundary
 
-The next runtime artifact is:
+ARTIFACT-011 — the first bounded-diagnostic receipt — was issued on
+**2026-05-06** by the governed runtime path (gateway POST `/missions`,
+admissibility verdict PERMIT). The local mirror lives at
+`~/.dema/receipts/artifact-011.json` and is viewable via `dema receipts`.
 
-```text
-ARTIFACT-011 -- First Bounded Diagnostic Receipt
-```
-
-ARTIFACT-011 remains locked behind the governed one-shot runtime path and the exact consent phrase:
+The exact consent phrase that gated the issuance was:
 
 ```text
 GO: Node0 bounded diagnostic activation only
 ```
 
-Until that receipt exists, Dema's public language remains local-first, consent-bound, and proof-safe.
+That phrase is **not** a re-usable token. Each future L4 mission requires
+its own typed phrase per the
+[Dema Autonomy Envelope](docs/02-architecture/dema-autonomy-envelope.md).
+Issuance never happened *inside* this repo — Dema reads and lists; the
+governed runtime in `bizra-cognition-gateway` (upstream, in
+`bizra-data-lake`) is what creates receipts. See
+[`SPROUT_PIN.md`](SPROUT_PIN.md) for the captured chain head, Bitcoin
+state, and replay recipe.
+
+Dema's public language remains local-first, consent-bound, and proof-safe.
 
 ---
 
