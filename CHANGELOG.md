@@ -1,25 +1,27 @@
 # Changelog
 
-All dates UTC. Versions follow the cadence in the git log; intermediate
-docs-only steps share a parent feature version where it makes review
-clearer than minting a fresh number.
+All dates UTC. Entries are split into two sections so a reader can
+tell at a glance which versions exist as immutable git tags and
+which are logical groupings of work that landed without their own
+tag:
 
-## 0.3.1 — 2026-05-06
+- **Tagged releases** — versions that exist as git tags
+  (`git tag --list`) and, when published, as GitHub releases.
+- **Logical milestones (untagged)** — version-numbered groupings
+  of work that landed in the git log without their own tag.
+  Maintained for reviewer clarity; promote to "Tagged releases"
+  when/if a tag is minted.
 
-- Interactive approval gate per the A4.5 autonomy envelope (B1.2 design).
-  Implements the L0–L5 matrix: L0/L1/L2 auto-approve; L3 prompts
-  `Approve <action>? [y/N]:` (case-insensitive `y`/`yes`/`proceed`,
-  silence/EOF/ambiguous = deny); L4 routes through FATE
-  `evaluateConsent` for byte-for-byte phrase match; L5 unconditionally
-  refuses from the interactive shell.
-- Adds `packages/core/src/approval-gate.js` (~120 LOC) and
-  `tests/approval-gate.test.js` (16 tests covering every level path).
-- `task` subcommand consults the gate when a registered task's
-  `autonomy_level` is `>= L3` before dispatch.
-- Shell hardening: dual-Ctrl+C exit (first warns; second within 2s
-  exits clean), `tokenize` error handling, graceful `rl.close`.
+The current **pending tag** is `v0.3.1`, awaiting PR #16
+(interactive approval gate) merge to `main`. Tagging is an L5
+act per the A4.5 autonomy envelope and requires explicit
+in-the-moment GO from the operator at merge time.
 
-## 0.3.0 — 2026-05-06
+---
+
+## Tagged releases
+
+### 0.3.0 — 2026-05-06 (tag `v0.3.0`)
 
 - Active Command Kernel — `dema` (no args) becomes the entry point.
   Composes operator profile + node stage + gateway state + receipt
@@ -36,7 +38,7 @@ clearer than minting a fresh number.
   and `REJECT` for receipts that try to over-claim. Real SAT-5
   verifier sibling lands in v0.3.2 / upstream `bizra-data-lake`.
 
-## 0.2.7 — 2026-05-06 (docs)
+### 0.2.7 — 2026-05-06 (tag `v0.2.7`, docs)
 
 - PAT-builder / SAT-validator doctrine v0.1
   ([`docs/02-architecture/pat-builder-sat-validator.md`](docs/02-architecture/pat-builder-sat-validator.md)).
@@ -46,13 +48,43 @@ clearer than minting a fresh number.
   (anti-pattern 6: sovereign-bypass).
 - Names the SAT-5 Rust roster gap (DECLARED here, PLANNED upstream).
 
-## 0.2.6 — 2026-05-06 (docs)
+### 0.2.0 — 2026-05-05 (tag `v0.2.0-alpha`)
+
+- Imports R1 doctrine + engineering discipline + CI matrix.
+- Adds `docs/ENGINEERING_DISCIPLINE.md` — five rules (small edits,
+  explicit assumptions, no invented commands, testable success,
+  stop at ambiguity) and the halt-gate matrix that overrides
+  auto-mode.
+- CI workflow `.github/workflows/check.yml` — Node 20.x + 22.x
+  matrix, `fail-fast: false`, `npm test` + `npm run check`.
+- Scopes `npm test` to `tests/*.test.js`; gitignores `.artifacts/`.
+
+---
+
+## Logical milestones (untagged)
+
+### 0.3.1 — 2026-05-06 (pending tag — awaiting PR #16 merge)
+
+- Interactive approval gate per the A4.5 autonomy envelope (B1.2 design).
+  Implements the L0–L5 matrix: L0/L1/L2 auto-approve; L3 prompts
+  `Approve <action>? [y/N]:` (case-insensitive `y`/`yes`/`proceed`,
+  silence/EOF/ambiguous = deny); L4 routes through FATE
+  `evaluateConsent` for byte-for-byte phrase match; L5 unconditionally
+  refuses from the interactive shell.
+- Adds `packages/core/src/approval-gate.js` (~120 LOC) and
+  `tests/approval-gate.test.js` (16 tests covering every level path).
+- `task` subcommand consults the gate when a registered task's
+  `autonomy_level` is `>= L3` before dispatch.
+- Shell hardening: dual-Ctrl+C exit (first warns; second within 2s
+  exits clean), `tokenize` error handling, graceful `rl.close`.
+
+### 0.2.6 — 2026-05-06 (untagged, docs)
 
 - ABSORPTION_NOTES_v2 — pi-verifier-agent V1–V6 patterns mapped onto
   the PAT/SAT axes; clarifies what lives on the builder side vs the
   validator side.
 
-## 0.2.5 — 2026-05-06 (docs)
+### 0.2.5 — 2026-05-06 (untagged, docs)
 
 - Dema Autonomy Envelope v0.1 (A4.5 — pre-A5 doctrine,
   [`docs/02-architecture/dema-autonomy-envelope.md`](docs/02-architecture/dema-autonomy-envelope.md)).
@@ -67,7 +99,7 @@ clearer than minting a fresh number.
   `9391e6fe…`, admissibility verdict PERMIT). Dema's role is read /
   list — issuance occurred upstream via gateway POST `/missions`.
 
-## 0.2.4 — 2026-05-05 → 2026-05-06
+### 0.2.4 — 2026-05-05 → 2026-05-06 (untagged)
 
 - Gateway HTTP adapter — Dema reads live Node0 state from
   `bizra-cognition-gateway` per ADR-003.
@@ -81,7 +113,7 @@ clearer than minting a fresh number.
   (or the `adapterMode` option). Default falls through to the
   legacy shellout / `defaultStatus()` path.
 
-## 0.2.3 — 2026-05-05
+### 0.2.3 — 2026-05-05 (untagged)
 
 - Persistent memory awareness — Dema knows the operator.
 - Adds `packages/memory/src/memory-store.js` — read-only viewer
@@ -92,7 +124,7 @@ clearer than minting a fresh number.
 - Adds Node0 activation roadmap ([`docs/NODE0_ACTIVATION_ROADMAP.md`](docs/NODE0_ACTIVATION_ROADMAP.md))
   — SEED → SPROUT → … → FOREST stages.
 
-## 0.2.2 — 2026-05-05
+### 0.2.2 — 2026-05-05 (untagged)
 
 - Proof-of-priority — `bizra.priority-anchor.v1` algorithm and a
   reproducible SHA-256 Merkle root over the three founding PDFs
@@ -108,23 +140,12 @@ clearer than minting a fresh number.
   infrastructure: `npm run priority-anchor:verify` reproduces root
   `45aa2789…` from this repo alone.
 
-## 0.2.1 — 2026-05-05 (docs)
+### 0.2.1 — 2026-05-05 (untagged, docs)
 
 - Mission-centric product thesis ([`docs/00-product-thesis/mission-centric-thesis.md`](docs/00-product-thesis/mission-centric-thesis.md))
   and Hermes / OpenClaw absorption notes (v1).
 
-## 0.2.0 — 2026-05-05
-
-- Imports R1 doctrine + engineering discipline + CI matrix.
-- Adds `docs/ENGINEERING_DISCIPLINE.md` — five rules (small edits,
-  explicit assumptions, no invented commands, testable success,
-  stop at ambiguity) and the halt-gate matrix that overrides
-  auto-mode.
-- CI workflow `.github/workflows/check.yml` — Node 20.x + 22.x
-  matrix, `fail-fast: false`, `npm test` + `npm run check`.
-- Scopes `npm test` to `tests/*.test.js`; gitignores `.artifacts/`.
-
-## 0.1.0-alpha.0 — 2026-04 (initial bootstrap)
+### 0.1.0-alpha.0 — 2026-04 (untagged, initial bootstrap)
 
 - Initial Dema product repo bootstrap.
 - README rewritten as a product landing page for the first 60 seconds.
