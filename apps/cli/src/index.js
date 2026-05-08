@@ -18,7 +18,7 @@ import { runShell } from "../../../packages/core/src/shell.js";
 import { TASK_REGISTRY } from "../../../packages/tasks/src/downloads-audit-preview.js";
 import {
   formatVerdict,
-  verifyReceiptPlaceholder
+  verifyReceipt
 } from "../../../packages/verifier/src/sat-placeholder.js";
 import {
   highestLevel,
@@ -197,7 +197,13 @@ Next:
       }
 
       const receipt = await task.run();
-      const verdict = verifyReceiptPlaceholder(receipt);
+      // Route through verifyReceipt dispatcher (per v0.3.2 spec acceptance
+      // criterion #5; see docs/02-architecture/sat-verifier-sibling-spec.md).
+      // Dispatcher fails closed on unknown schema; task receipts route to the
+      // placeholder logic, gateway-issued receipts route to the gateway-handoff
+      // verifier. Caps at PARTIAL_PLACEHOLDER per spec — never returns PERMIT
+      // from local logic; SAT-5 PERMIT is reserved for upstream Rust roster.
+      const verdict = verifyReceipt(receipt);
       console.log(task.format(receipt));
       console.log("");
       console.log(formatVerdict(verdict));
