@@ -515,6 +515,43 @@ test("verifyGatewayHandoffReceipt never returns PERMIT (caps at PARTIAL_PLACEHOL
   assert.equal(verdict.verdict, "PARTIAL_PLACEHOLDER");
 });
 
+// ─── v0.3.2 CLI wiring regression ──────────────────────────────────────
+// Per docs/02-architecture/sat-verifier-sibling-spec.md acceptance
+// criterion #5: the production CLI path MUST route receipt verification
+// through verifyReceipt (the schema dispatcher), NOT through
+// verifyReceiptPlaceholder directly. The placeholder may remain
+// importable by tests for unit-level coverage, but the production
+// dispatch surface must use the dispatcher so:
+//   - unknown schemas fail closed
+//   - gateway-handoff receipts route to verifyGatewayHandoffReceipt
+//   - the SAT-5 PERMIT discipline is uniformly enforced
+
+test("regression: apps/cli/src/index.js routes verification through verifyReceipt dispatcher", async () => {
+  const cliSrcPath = new URL("../apps/cli/src/index.js", import.meta.url);
+  const cliSrc = await readFile(cliSrcPath, "utf8");
+
+  // The CLI must import verifyReceipt (the dispatcher).
+  assert.match(
+    cliSrc,
+    /import\s*\{[^}]*\bverifyReceipt\b(?!Placeholder)[^}]*\}\s*from\s*["']\.\.\/\.\.\/\.\.\/packages\/verifier\/src\/sat-placeholder\.js["']/s,
+    "apps/cli/src/index.js must import verifyReceipt from packages/verifier/src/sat-placeholder.js"
+  );
+
+  // The CLI must NOT import verifyReceiptPlaceholder directly. The
+  // placeholder is for unit-test coverage only; production dispatch
+  // is via verifyReceipt.
+  assert.doesNotMatch(
+    cliSrc,
+    /import\s*\{[^}]*\bverifyReceiptPlaceholder\b[^}]*\}\s*from\s*["']\.\.\/\.\.\/\.\.\/packages\/verifier\/src\/sat-placeholder\.js["']/s,
+    "apps/cli/src/index.js must NOT import verifyReceiptPlaceholder directly — route through verifyReceipt dispatcher per v0.3.2 spec criterion #5"
+  );
+
+  // Belt-and-braces: confirm the call site uses verifyReceipt(receipt)
+  // and does not retain the legacy verifyReceiptPlaceholder(receipt) call.
+  assert.match(cliSrc, /\bverifyReceipt\s*\(\s*receipt\s*\)/);
+  assert.doesNotMatch(cliSrc, /\bverifyReceiptPlaceholder\s*\(\s*receipt\s*\)/);
+});
+
 // ─── CLI integration ───────────────────────────────────────────────────
 
 test("dema task (no arg) lists registered tasks as schema-tagged JSON", async () => {
