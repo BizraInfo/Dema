@@ -5,6 +5,7 @@ import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 import {
   listMemoryEntries,
   readMemoryEntry,
@@ -12,7 +13,7 @@ import {
 } from "../packages/memory/src/memory-store.js";
 
 const execFileAsync = promisify(execFile);
-const cliPath = new URL("../apps/cli/src/index.js", import.meta.url).pathname;
+const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
 
 async function makeMemoryRoot() {
   const root = await mkdtemp(join(tmpdir(), "dema-memory-"));
