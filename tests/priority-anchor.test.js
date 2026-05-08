@@ -5,6 +5,7 @@ import { mkdtemp, writeFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 import {
   ALGORITHM_ID,
   LEAF_DOMAIN,
@@ -18,7 +19,7 @@ import {
 } from "../scripts/priority-anchor.mjs";
 
 const execFileAsync = promisify(execFile);
-const scriptPath = new URL("../scripts/priority-anchor.mjs", import.meta.url).pathname;
+const scriptPath = fileURLToPath(new URL("../scripts/priority-anchor.mjs", import.meta.url));
 
 test("priority-anchor algorithm constants are bound to v1", () => {
   assert.equal(ALGORITHM_ID, "bizra.priority-anchor.v1");

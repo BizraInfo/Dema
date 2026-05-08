@@ -6,6 +6,7 @@ import { mkdtemp, mkdir, writeFile, readFile, readdir, stat } from "node:fs/prom
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 import {
   formatBanner,
   gatherBannerInputs,
@@ -25,7 +26,7 @@ import {
 } from "../packages/verifier/src/sat-placeholder.js";
 
 const execFileAsync = promisify(execFile);
-const cliPath = new URL("../apps/cli/src/index.js", import.meta.url).pathname;
+const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
 const HEALTHY_DOMAIN = "bizra-cognition-gateway-v1";
 
 function startFakeGateway(routes) {
@@ -603,7 +604,7 @@ test("dema help still works after the active-kernel refactor", async () => {
 });
 
 test("bin/dema script exists and is executable", async () => {
-  const binPath = new URL("../bin/dema", import.meta.url).pathname;
+  const binPath = fileURLToPath(new URL("../bin/dema", import.meta.url));
   const s = await stat(binPath);
   assert.ok(s.isFile(), "bin/dema should be a regular file");
   // Owner execute bit (0o100 in mode):

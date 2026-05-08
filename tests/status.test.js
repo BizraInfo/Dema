@@ -5,6 +5,7 @@ import { mkdtemp, mkdir, writeFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 import { defaultStatus, formatStatus } from "../packages/core/src/status.js";
 import {
   BOUNDED_DIAGNOSTIC_CONSENT_PHRASE,
@@ -22,7 +23,7 @@ import {
 import { listReceipts, readReceipt } from "../packages/receipts/src/receipt-store.js";
 
 const execFileAsync = promisify(execFile);
-const cliPath = new URL("../apps/cli/src/index.js", import.meta.url).pathname;
+const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
 
 test("default status is safe and blocked", () => {
   const status = defaultStatus();
