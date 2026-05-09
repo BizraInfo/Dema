@@ -23,3 +23,8 @@ openclaw-2026.4.25/
 # and an ADR reconciles it with the ~/.dema/receipts spine (ADR-002, ADR-005).
 .proof-forge/
 PROOF_SUMMARY.md
+
+# Vercel deploy staging — produced by scripts/build/vercel-publish.sh on the
+# Vercel runner only; never committed. Operator's install path is unaffected.
+public/
+.vercel/
