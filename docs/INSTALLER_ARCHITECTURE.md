@@ -100,14 +100,14 @@ sh /tmp/install.sh
 Until the endpoint is published (a halt-gated L5 act), the canonical reference is the script bytes at the v0.3.5 tag in `BizraInfo/Dema`. Hash table:
 
 ```text
-SHA-256 hashes (filled at release tag):
-  install-unix.sh       <pending v0.3.5 tag>
-  install-windows.ps1   <pending v0.3.5 tag>
-  uninstall-unix.sh     <pending v0.3.5 tag>
-  uninstall-windows.ps1 <pending v0.3.5 tag>
+SHA-256 hashes at v0.3.5 (commit 27a6662):
+  install-unix.sh       bbe0060dcd61ed5aca76e6de1cb0b9dc32e386d388e4f2df6a0f74d698ff0693
+  install-windows.ps1   5c14121e803c7656f8100595e14295c5f32871397282a9d05b45dd4ced6f3198
+  uninstall-unix.sh     4f55a343c94de1aa45bbe691d928dfa88ccce823ad8d69eda9b0ea25c266f4c1
+  uninstall-windows.ps1 3dcf4d36874e47de8040526f5da5cec8f20b6fcb173c72fc42ffaf980404a416
 ```
 
-The release process replaces `<pending v0.3.5 tag>` with actual digests at tag time.
+Verify locally with `sha256sum scripts/install/<name>` (Linux/macOS) or `Get-FileHash -Algorithm SHA256 scripts/install/<name>` (PowerShell). Future v0.3.x patches that touch these scripts must update this block in the same PR.
 
 ## Release rule
 
