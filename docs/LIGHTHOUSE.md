@@ -88,8 +88,8 @@ Each step has a verifiable artifact. None can be skipped.
 1. Operator reads الرسالة + البذرة + Third Fact (founding documents, hashed on Bitcoin blocks 948027/8/9).
 2. Operator installs Dema v0.3.x on their own machine.
 3. `dema setup` → idempotent `~/.dema/` skeleton on operator's machine.
-4. `dema doctor` → must pass all four predicates (`ready`, `consoleReady`, `activationGate === EXPLICIT_GO_REQUIRED`, `daemonStatus !== running`).
-5. Operator reads [docs/ARTIFACT_011_PREP.md](ARTIFACT_011_PREP.md) and [docs/06-adr/ADR-005-operator-consent.md](06-adr/) (or equivalent consent ADR).
+4. `dema doctor` → must pass all four predicates (`ready`, `consoleReady`, `activationGate === "EXPLICIT_GO_REQUIRED"`, `daemonStatus !== "running"`).
+5. Operator reads [docs/ARTIFACT_011_PREP.md](ARTIFACT_011_PREP.md) and [docs/06-adr/ADR-005-operator-actions-require-explicit-consent.md](06-adr/ADR-005-operator-actions-require-explicit-consent.md).
 6. Operator provides consent for bounded diagnostic per the FATE exact-string phrase.
 7. Operator's first L4 receipt is issued by the upstream gateway and mirrored locally.
 8. Operator continues operating inside receipts discipline. No public framing of their participation.
