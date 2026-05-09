@@ -147,6 +147,16 @@ test("setup CLI reports untouched runtime boundaries", async () => {
   assert.ok(output.untouched.includes("runtime pulse"));
 });
 
+test("doctor CLI reports blocked state with explanatory copy when gateway is not configured", async () => {
+  const root = await mkdtemp(join(tmpdir(), "dema-cli-doctor-"));
+  const env = { ...process.env, DEMA_HOME: root };
+  delete env.DEMA_NODE0_STATUS_COMMAND;
+  const result = await execFileAsync("node", [cliPath, "doctor"], { env }).catch((e) => e);
+  assert.equal(result.code, 1);
+  assert.match(result.stdout, /blocked — gateway not configured/);
+  assert.match(result.stdout, /expected pre-handshake state/);
+});
+
 test("mission propose CLI remains preview-only", async () => {
   const root = await mkdtemp(join(tmpdir(), "dema-cli-mission-"));
   const { stdout } = await execFileAsync("node", [cliPath, "mission", "propose"], {

@@ -114,7 +114,11 @@ Next:
         status.consoleReady &&
         status.activationGate === "EXPLICIT_GO_REQUIRED" &&
         status.daemonStatus !== "running";
-      console.log(ready ? "Dema doctor: ready and consent-gated." : "Dema doctor: attention required.");
+      console.log(
+        ready
+          ? "Dema doctor: ready and consent-gated."
+          : "Dema doctor: blocked — gateway not configured (expected pre-handshake state)."
+      );
       console.log(formatStatus(status));
       process.exitCode = ready ? 0 : 1;
       return;

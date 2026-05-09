@@ -91,14 +91,16 @@ The terminal installer endpoint is planned for the packaged alpha release. Until
 Planned Linux / macOS command:
 
 ```bash
-curl -fsSL https://install.dema.ai | sh
+curl -fsSL https://install.bizra.ai/dema | sh
 ```
 
 Planned Windows PowerShell command:
 
 ```powershell
-irm https://install.dema.ai | iex
+irm https://install.bizra.ai/dema | iex
 ```
+
+Both planned commands will publish a SHA-256 hash alongside the script so operators can verify the bytes before execution. See [docs/INSTALLER_ARCHITECTURE.md](docs/INSTALLER_ARCHITECTURE.md) for the verification flow.
 
 ### Developer install
 
