@@ -109,12 +109,22 @@ Next:
 
     case "doctor": {
       const status = await adapter.status();
-      const ready =
-        status.ready &&
-        status.consoleReady &&
-        status.activationGate === "EXPLICIT_GO_REQUIRED" &&
-        status.daemonStatus !== "running";
-      console.log(ready ? "Dema doctor: ready and consent-gated." : "Dema doctor: attention required.");
+      const blockReasons = [];
+      if (!status.ready) blockReasons.push("not ready");
+      if (!status.consoleReady) blockReasons.push("console not ready");
+      if (status.activationGate !== "EXPLICIT_GO_REQUIRED") {
+        blockReasons.push(
+          `activation gate is ${status.activationGate ?? "unknown"} (expected EXPLICIT_GO_REQUIRED)`
+        );
+      }
+      if (status.daemonStatus === "running") blockReasons.push("daemon is running");
+
+      const ready = blockReasons.length === 0;
+      console.log(
+        ready
+          ? "Dema doctor: ready and consent-gated."
+          : `Dema doctor: blocked — ${blockReasons.join("; ")}.`
+      );
       console.log(formatStatus(status));
       process.exitCode = ready ? 0 : 1;
       return;
