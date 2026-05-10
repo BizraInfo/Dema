@@ -89,13 +89,25 @@ This phrase is **separate** from the FATE bounded-diagnostic consent phrase. FAT
 
 ## Hash verification (v0.3.5)
 
-When the canonical install endpoint at `https://install.bizra.ai/dema` is published, each released script will publish its SHA-256 hash alongside it. Operators verify with:
+When the canonical install endpoint at `https://install.bizra.ai/dema/` is published, each released script is hosted alongside its peers at explicit paths. Operators verify with:
 
 ```bash
-curl -fsSL https://install.bizra.ai/dema | tee /tmp/install.sh
+curl -fsSL https://install.bizra.ai/dema/install.sh | tee /tmp/install.sh
 sha256sum /tmp/install.sh   # compare against published hash
 sh /tmp/install.sh
 ```
+
+Published paths:
+
+| Path | Source-of-truth file |
+|---|---|
+| `/dema/install.sh` | `scripts/install/install-unix.sh` |
+| `/dema/install.ps1` | `scripts/install/install-windows.ps1` |
+| `/dema/uninstall.sh` | `scripts/install/uninstall-unix.sh` |
+| `/dema/uninstall.ps1` | `scripts/install/uninstall-windows.ps1` |
+| `/dema/` | `vercel/index.html` (index page listing the four scripts) |
+
+Bytes at each path are byte-for-byte copies of the corresponding source-of-truth file at the deploy commit; the deploy is just a `cp` (see `scripts/build/vercel-publish.sh`).
 
 Until the endpoint is published (a halt-gated L5 act), the canonical reference is the script bytes at the v0.3.5 tag in `BizraInfo/Dema`. Hash table:
 
