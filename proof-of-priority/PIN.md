@@ -46,6 +46,7 @@ Expected output:
 ```text
 ✔ bizra.priority-anchor.v1
 ✔ root_hash reproduced: 45aa2789b6085558a387cd3d6bbae894defdfa71fdd5a1db18135e6039e1477a
+✔ file bytes matched manifest: 3 files from /path/to/Dema
 ```
 
 ## Stamp lifecycle

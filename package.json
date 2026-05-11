@@ -12,7 +12,7 @@
     "check": "node scripts/check.mjs",
     "test": "node --test tests/*.test.js",
     "priority-anchor": "node scripts/priority-anchor.mjs themassage.pdf bizra.pdf BIZRA_Third_Fact_v0_1_FINAL.pdf",
-    "priority-anchor:verify": "node scripts/priority-anchor.mjs --verify proof-of-priority/manifest.json"
+    "priority-anchor:verify": "node scripts/priority-anchor.mjs --verify proof-of-priority/manifest.json --base-dir ."
   },
   "engines": {
     "node": ">=20"

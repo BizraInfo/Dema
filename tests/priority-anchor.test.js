@@ -15,7 +15,8 @@ import {
   buildMerkleTree,
   leafHash,
   nodeHash,
-  verifyManifest
+  verifyManifest,
+  verifyManifestFiles
 } from "../scripts/priority-anchor.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -120,6 +121,7 @@ test("CLI build + verify round-trip on fixture files", async () => {
   // --verify mode reproduces the root from the manifest.
   const { stdout } = await execFileAsync("node", [scriptPath, "--verify", join(out, "manifest.json")]);
   assert.match(stdout, /root_hash reproduced/);
+  assert.match(stdout, /file bytes matched manifest: 3 files/);
   assert.match(stdout, new RegExp(manifest.root_hash));
 });
 
@@ -151,4 +153,39 @@ test("verifyManifest rejects a tampered file_sha256", async () => {
   const result = verifyManifest(tampered);
   assert.equal(result.ok, false);
   assert.match(result.reason, /leaf_hash mismatch/);
+});
+
+test("verifyManifestFiles rejects when current file bytes drift from manifest", async () => {
+  const root = await mkdtemp(join(tmpdir(), "priority-anchor-file-drift-"));
+  await writeFile(join(root, "a.txt"), "alpha\n");
+  await writeFile(join(root, "b.txt"), "beta\n");
+
+  const manifest = await buildManifest([join(root, "a.txt"), join(root, "b.txt")]);
+  await writeFile(join(root, "a.txt"), "changed\n");
+
+  const result = await verifyManifestFiles(manifest, { baseDir: root });
+  assert.equal(result.ok, false);
+  assert.match(result.reason, /file_sha256 mismatch for a\.txt|file_size mismatch for a\.txt/);
+});
+
+test("CLI verify fails when current file bytes drift from manifest", async () => {
+  const root = await mkdtemp(join(tmpdir(), "priority-anchor-cli-drift-"));
+  await writeFile(join(root, "a.txt"), "alpha\n");
+  await writeFile(join(root, "b.txt"), "beta\n");
+  const out = join(root, "out");
+
+  await execFileAsync("node", [
+    scriptPath,
+    "--out",
+    out,
+    join(root, "a.txt"),
+    join(root, "b.txt")
+  ]);
+  await writeFile(join(root, "a.txt"), "changed\n");
+
+  const result = await execFileAsync("node", [scriptPath, "--verify", join(out, "manifest.json")]).catch(
+    (e) => e
+  );
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /file_sha256 mismatch for a\.txt|file_size mismatch for a\.txt/);
 });

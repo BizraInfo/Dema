@@ -18,7 +18,7 @@
 
 import { createHash } from "node:crypto";
 import { createReadStream, statSync, promises as fsp } from "node:fs";
-import { resolve, basename, isAbsolute } from "node:path";
+import { resolve, basename, dirname, isAbsolute } from "node:path";
 import { pipeline } from "node:stream/promises";
 
 export const ALGORITHM_ID = "bizra.priority-anchor.v1";
@@ -144,10 +144,57 @@ export function verifyManifest(manifest) {
   return { ok: true, root: recomputedRoot };
 }
 
+export async function verifyManifestFiles(manifest, { baseDir = process.cwd() } = {}) {
+  const metadataCheck = verifyManifest(manifest);
+  if (!metadataCheck.ok) return metadataCheck;
+
+  for (const f of manifest.files) {
+    if (!f.filename || basename(f.filename) !== f.filename) {
+      return { ok: false, reason: `unsafe filename in manifest: ${JSON.stringify(f.filename)}` };
+    }
+
+    const path = resolve(baseDir, f.filename);
+    let stat;
+    try {
+      stat = statSync(path);
+    } catch {
+      return { ok: false, reason: `manifest file missing or unreadable: ${path}` };
+    }
+    if (!stat.isFile()) {
+      return { ok: false, reason: `manifest input is not a regular file: ${path}` };
+    }
+    if (stat.size !== f.file_size_bytes) {
+      return {
+        ok: false,
+        reason:
+          `file_size mismatch for ${f.filename}: manifest=${f.file_size_bytes} ` +
+          `current=${stat.size}`
+      };
+    }
+
+    const actualSha256 = await sha256File(path);
+    if (actualSha256 !== f.file_sha256) {
+      return {
+        ok: false,
+        reason:
+          `file_sha256 mismatch for ${f.filename}: manifest=${f.file_sha256} ` +
+          `current=${actualSha256}`
+      };
+    }
+  }
+
+  return {
+    ...metadataCheck,
+    checked_files: manifest.files.length,
+    base_dir: resolve(baseDir)
+  };
+}
+
 function parseArgs(argv) {
   let outDir = resolve(process.cwd(), "proof-of-priority");
   let mode = "build";
   let manifestPath = null;
+  let baseDir = null;
   const inputs = [];
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
@@ -155,6 +202,10 @@ function parseArgs(argv) {
       const next = argv[++i];
       if (!next) throw new Error("--out requires a path");
       outDir = isAbsolute(next) ? next : resolve(process.cwd(), next);
+    } else if (a === "--base-dir") {
+      const next = argv[++i];
+      if (!next) throw new Error("--base-dir requires a path");
+      baseDir = isAbsolute(next) ? next : resolve(process.cwd(), next);
     } else if (a === "--verify") {
       mode = "verify";
       const next = argv[++i];
@@ -167,7 +218,7 @@ function parseArgs(argv) {
     }
   }
   if (mode === "build" && inputs.length === 0) printHelpAndExit(2);
-  return { mode, inputs, outDir, manifestPath };
+  return { mode, inputs, outDir, manifestPath, baseDir };
 }
 
 function printHelpAndExit(code) {
@@ -175,7 +226,8 @@ function printHelpAndExit(code) {
     [
       "Usage:",
       "  priority-anchor.mjs [--out DIR] FILE [FILE...]    build manifest + root",
-      "  priority-anchor.mjs --verify MANIFEST              re-derive root, compare",
+      "  priority-anchor.mjs --verify MANIFEST [--base-dir DIR]",
+      "                                                     re-hash files + root, compare",
       "",
       "Builds (or verifies) a deterministic SHA-256 Merkle root using the",
       `${ALGORITHM_ID} algorithm. Build mode writes manifest.json,`,
@@ -230,13 +282,17 @@ async function runBuild(opts) {
 async function runVerify(opts) {
   const raw = await fsp.readFile(opts.manifestPath, "utf8");
   const manifest = JSON.parse(raw);
-  const result = verifyManifest(manifest);
+  // Build mode writes manifests under an output directory, while files are
+  // normally siblings of that directory (proof-of-priority/ -> repo root).
+  const baseDir = opts.baseDir ?? resolve(dirname(opts.manifestPath), "..");
+  const result = await verifyManifestFiles(manifest, { baseDir });
   if (!result.ok) {
     console.error(`✘ ${result.reason}`);
     process.exit(1);
   }
   console.log(`✔ ${manifest.algorithm_id}`);
   console.log(`✔ root_hash reproduced: ${result.root}`);
+  console.log(`✔ file bytes matched manifest: ${result.checked_files} files from ${result.base_dir}`);
 }
 
 async function main() {
