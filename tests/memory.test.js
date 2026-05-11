@@ -88,6 +88,28 @@ test("readMemoryEntry rejects empty/non-string names", async () => {
   await assert.rejects(() => readMemoryEntry(undefined), /Memory entry name is required/);
 });
 
+test("readMemoryEntry rejects unsafe names (path traversal, separators, special chars)", async () => {
+  const root = await makeMemoryRoot();
+  const unsafe = [
+    "../../../etc/passwd",
+    "foo/bar",
+    "foo\\bar",
+    "..",
+    ".hidden",
+    "name with spaces",
+    "name.with.dots",
+    "name;injection",
+    "/absolute/path"
+  ];
+  for (const name of unsafe) {
+    await assert.rejects(
+      () => readMemoryEntry(name, root),
+      /Memory entry name must contain only letters, digits, hyphens, or underscores/,
+      `expected unsafe name to be rejected: ${JSON.stringify(name)}`
+    );
+  }
+});
+
 test("summarizeMemory returns a schema-tagged index", async () => {
   const root = await makeMemoryRoot();
   await writeFile(

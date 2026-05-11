@@ -7,6 +7,13 @@ const MEMORY_DIR = "memory";
 // today.json is the continuity tick written by `dema today`; it is operational
 // state, not a memory entry, and is intentionally excluded from listings.
 const SKIP_MEMORY_FILES = new Set(["today.json"]);
+// Memory entry names must be safe path stems — letters, digits, hyphens, or
+// underscores only. Real entries on disk (a5-niyyah, bizra-context,
+// foundational-mindset, node0-space, operator_grounding_gate, space-env,
+// time_discipline) all match this. The validation prevents `dema memory show`
+// from reaching outside the memory dir via path separators, "..", or absolute
+// paths in caller-supplied names.
+const SAFE_MEMORY_NAME = /^[A-Za-z0-9_-]+$/;
 
 function defaultRoot() {
   return process.env.DEMA_HOME || join(homedir(), ".dema");
@@ -15,6 +22,11 @@ function defaultRoot() {
 function entryPath(name, root) {
   if (name === "profile") {
     return join(root, PROFILE_FILE);
+  }
+  if (!SAFE_MEMORY_NAME.test(name)) {
+    throw new Error(
+      `Memory entry name must contain only letters, digits, hyphens, or underscores: ${JSON.stringify(name)}`
+    );
   }
   return join(root, MEMORY_DIR, `${name}.json`);
 }
