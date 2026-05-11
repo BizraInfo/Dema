@@ -55,6 +55,14 @@ export function parseCommandLine(command) {
 }
 
 export function normalizeNode0Status(raw) {
+  // Adapter input is untrusted (CLAUDE.md invariant 6). `??` falls through
+  // only for null/undefined, so a malformed gateway payload like
+  // `loaded_model_ids: "phi-2"` would slip past and crash status.js's
+  // `.join(", ")` on a string. Coerce to array explicitly here.
+  const rawLoadedIds =
+    raw?.lm_studio?.loaded_model_ids ?? raw?.model_backend?.loaded_model_ids;
+  const loadedModelIds = Array.isArray(rawLoadedIds) ? rawLoadedIds : [];
+
   return {
     schema: "bizra.dema.status.v0.1",
     node: "Node0",
@@ -70,7 +78,7 @@ export function normalizeNode0Status(raw) {
     findings: raw?.findings ?? [],
     model: {
       connected: Boolean(raw?.lm_studio?.connected ?? raw?.model_backend?.connected),
-      loadedModelIds: raw?.lm_studio?.loaded_model_ids ?? raw?.model_backend?.loaded_model_ids ?? [],
+      loadedModelIds,
       tokenPresent: Boolean(raw?.lm_studio?.token_present ?? raw?.model_backend?.token_present)
     },
     rustBus: {
