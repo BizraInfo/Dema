@@ -223,6 +223,21 @@ test("node0 status normalization does not default to a private human name", () =
   assert.equal(status.human, null);
 });
 
+test("node0 status normalization coerces non-array loaded_model_ids to []", () => {
+  // Adapter input is untrusted (CLAUDE.md invariant 6). A malformed payload
+  // like `loaded_model_ids: "phi-2"` must not crash `.join(", ")` downstream.
+  for (const malformed of ["phi-2", 42, true, { id: "x" }]) {
+    const status = normalizeNode0Status({
+      lm_studio: { loaded_model_ids: malformed }
+    });
+    assert.deepEqual(
+      status.model.loadedModelIds,
+      [],
+      `expected [] for non-array input ${JSON.stringify(malformed)}`
+    );
+  }
+});
+
 test("node0 adapter explains malformed command output", async () => {
   const adapter = createNode0Adapter({
     command: 'node -e "process.stdout.write(`not-json`)"'
