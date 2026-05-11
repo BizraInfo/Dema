@@ -43,7 +43,7 @@ node scripts/priority-anchor.mjs themassage.pdf bizra.pdf BIZRA_Third_Fact_v0_1_
 
 Both write `proof-of-priority/{manifest.json, merkle-root.txt, merkle-tree.json}`.
 
-To verify the committed manifest still matches its root (re-derives every leaf and the root from the manifest's metadata):
+To verify the committed manifest still matches its root **and** the current founding PDF bytes (re-hashes each named file, re-derives every leaf, then re-derives the root):
 
 ```bash
 npm run priority-anchor:verify
