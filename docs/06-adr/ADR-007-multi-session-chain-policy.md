@@ -33,7 +33,7 @@ Each Claude Code session gets its own `chain_id` namespace, keyed by session ide
 Serialize all mints behind an exclusive lock. The locking primitive is `flock(2)` on the `chain-head.txt` file itself (or a sibling `.chain-head.lock` file). A session wishing to mint acquires the exclusive lock, reads the current head, writes the receipt, advances the head, then releases. Concurrent sessions wait.
 
 - **Pro:** Preserves the existing single-chain model exactly. No structural changes to the receipt envelope or chain directory layout. Chain integrity proofs remain as simple as today: one file, one linked list.
-- **Con:** Introduces latency: a session that acquires the lock holds it for the full mint operation (digest derivation + file write + head update). Under high-concurrency scenarios (many parallel `dema-assure all` runs), sessions may queue. Lock acquisition failure (crash, SIGKILL) requires a recovery policy to remove stale locks.
+- **Con:** Introduces latency: a session that acquires the lock holds it for the full mint operation (digest derivation + file write + head update). Under high-concurrency scenarios (many parallel `dema-assure all` runs), sessions may queue. Lock acquisition failure (crash, SIGKILL) requires a recovery policy to remove stale locks. Option B alone does not add per-session attribution to the receipt envelope; Companion change 2 is required to close that gap.
 - **Cost:** Every mint call in `mint_lib.py` must wrap the write section in `fcntl.flock`. Lock contention metrics must be captured (wait time, retries) and surfaced in `perf.py`. A typed retry policy is needed for stale-lock recovery.
 
 ### Option C: Declare chain as shared resource
@@ -58,7 +58,7 @@ Every receipt mint envelope acquires a `chain_id` field referencing the emitting
 
 ### If Option B is selected
 
-Every call to `mint_lib.mint_receipt` acquires an exclusive filesystem lock before writing. Lock wait time and retry counts become new fields in `perf.py` metrics. A stale-lock recovery procedure is documented (timeout threshold + manual removal path). No change to the receipt envelope schema beyond adding optional `lock_wait_ms` to the metrics payload. The chain structure, traversal, and attribution model are unchanged from today.
+Every call to `mint_lib.mint_receipt` acquires an exclusive filesystem lock before writing. Lock wait time and retry counts become new fields in `perf.py` metrics. A stale-lock recovery procedure is documented (timeout threshold + manual removal path). No change to the receipt envelope schema beyond adding optional `lock_wait_ms` to the metrics payload. The chain structure, traversal, and attribution model are unchanged from today. When paired with Companion change 2, the receipt envelope additionally acquires `session_id` for cross-session attribution under the serialized-mint regime.
 
 ### If Option C is selected
 
