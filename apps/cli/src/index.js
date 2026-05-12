@@ -238,7 +238,12 @@ Next:
       const result = spawnSync("python3", [scaffold, ...argv.slice(1)], {
         stdio: "inherit"
       });
-      process.exit(result.status ?? 0);
+      if (result.error) {
+        console.error(`dema sovereign: failed to spawn python3: ${result.error.message}`);
+        process.exit(1);
+      }
+      // status null without error is unusual; fail-safe to non-zero
+      process.exit(result.status ?? 1);
     }
 
     case "help":
