@@ -95,7 +95,7 @@ ADR-007 codifies this finding and proposes policy options without yet locking a 
    - ADR-006 Continuous Assurance and No-mint Verification
    - `mint_lib.py` (current single-producer assumption)
    - Cross-session canon at operator-side memory dir
-   - Bash audit log at `/data/bizra/logs/claude-bash-audit.log`
+   - Bash audit log at `claude-bash-audit.log` (operator-side log · path redacted)
 
 ### Acceptance criteria
 

@@ -92,4 +92,4 @@ The following three changes can land regardless of which option is selected. The
 - [ADR-006 Continuous Assurance and No-mint Verification](ADR-006-continuous-assurance-and-no-mint-verification.md) — §1 Mint mode contains the single-producer assumption this ADR calls into question; V-I10 is the invariant whose cross-session blind spot is documented here.
 - `mint_lib.py` at `~/.dema/kernel/assurance/mint_lib.py` — current implementation; single-producer assumption lives in the `mint_receipt` function's `chain-head.txt` read-modify-write sequence.
 - Cross-session forensic canon at `project_cross_session_chain_mutation_discovered.md` (operator-side memory canon · path redacted) — operator-side primary evidence for the 2026-05-12 discovery.
-- Bash audit log at `/data/bizra/logs/claude-bash-audit.log` — secondary forensic evidence channel; currently hampered by 500-byte truncation (see Companion changes item 1).
+- Bash audit log at `claude-bash-audit.log` (operator-side log · path redacted) — secondary forensic evidence channel; currently hampered by 500-byte truncation (see Companion changes item 1).
