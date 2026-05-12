@@ -228,6 +228,19 @@ Next:
       ].join("\n"));
       return;
 
+    case "sovereign": {
+      // Sovereign Mission Interface — 7-panel cockpit renderer
+      // Delegates to the Python scaffold at ~/.dema/kernel/sovereign_tui/sovereign.py
+      // Schema: bizra.dema.sovereign_tui_render.v0.1
+      const { spawnSync } = await import("node:child_process");
+      const home = process.env.HOME || process.env.USERPROFILE;
+      const scaffold = `${home}/.dema/kernel/sovereign_tui/sovereign.py`;
+      const result = spawnSync("python3", [scaffold, ...argv.slice(1)], {
+        stdio: "inherit"
+      });
+      process.exit(result.status ?? 0);
+    }
+
     case "help":
     case "-h":
     case "--help":
