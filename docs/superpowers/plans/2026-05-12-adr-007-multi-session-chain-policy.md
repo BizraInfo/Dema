@@ -8,9 +8,9 @@
 
 ## Context
 
-On 2026-05-12 ~19:15 GST, a SPARC analyzer forensic investigation resolved a chain-state gap. Root cause: another Claude Code session running concurrently on the same Node0 (session id `8183a42d-96a3-441b-8ed0-1958ba84d13f` vs my session `0c74e543-904a-4546-8f34-f02dd9f24f5c`) invoked `dema-assure all` twice at 15:05 Dubai, extending the agent chain through my session's just-saved code without my session's awareness.
+On 2026-05-12 ~19:15 GST, a SPARC analyzer forensic investigation resolved a chain-state gap. Root cause: another Claude Code session running concurrently on the same Node0 (session id `8183a42d-…` (full id redacted) vs my session `0c74e543-…` (full id redacted)) invoked `dema-assure all` twice at 15:05 Dubai, extending the agent chain through my session's just-saved code without my session's awareness.
 
-Detailed evidence + 5 follow-up decisions are captured in `~/.claude/projects/-home-bizra-operating-system-Downloads-Dema/memory/project_cross_session_chain_mutation_discovered.md` (the operator-side canon).
+Detailed evidence + 5 follow-up decisions are captured in `project_cross_session_chain_mutation_discovered.md` (operator-side memory canon · path redacted) (the operator-side canon).
 
 This finding contradicts an implicit assumption baked into ADR-006: "Mint mode · canonical chain extension" assumed a single producer per chain. On Node0 in practice, the chain is filesystem-scoped (`~/.dema/agents/dema.node0_mission_agent/`), and multiple concurrent Claude Code sessions on the same hardware can all mutate it.
 
@@ -36,7 +36,7 @@ ADR-007 codifies this finding and proposes policy options without yet locking a 
 **Supersedes:** none
 **Related:** [ADR-002 No Shadow State](ADR-002-no-shadow-state.md), [ADR-006 Continuous Assurance and No-mint Verification](ADR-006-continuous-assurance-and-no-mint-verification.md)
 **Implements:** none (proposal stage)
-**Evidence:** `~/.claude/projects/-home-bizra-operating-system-Downloads-Dema/memory/project_cross_session_chain_mutation_discovered.md` (operator-side forensic canon)
+**Evidence:** `project_cross_session_chain_mutation_discovered.md` (operator-side memory canon · path redacted) (operator-side forensic canon)
 ```
 
 **Sections (in order):**

@@ -6,11 +6,11 @@
 **Supersedes:** none
 **Related:** [ADR-002 No Shadow State](ADR-002-no-shadow-state.md), [ADR-006 Continuous Assurance and No-mint Verification](ADR-006-continuous-assurance-and-no-mint-verification.md)
 **Implements:** none (proposal stage)
-**Evidence:** `~/.claude/projects/-home-bizra-operating-system-Downloads-Dema/memory/project_cross_session_chain_mutation_discovered.md` (operator-side forensic canon)
+**Evidence:** `project_cross_session_chain_mutation_discovered.md` (operator-side memory canon · path redacted) (operator-side forensic canon)
 
 ## Context
 
-On 2026-05-12 ~19:15 GST, a cross-session chain mutation was discovered on Node0. Session `0c74e543-904a-4546-8f34-f02dd9f24f5c` (this session) observed 12 receipts minted across 2 full `dema-assure all` cycles by a concurrent session (`8183a42d-96a3-441b-8ed0-1958ba84d13f`), with the agent chain head at `656589525cda36927d06c8f1415576e649d03482f6273e9a40df4c2351e7e092` at investigation time. Chain integrity was preserved — the hash chain itself remained valid and unbroken. What broke was single-session attribution: any within-session claim of "chain unchanged" was silently false because a second producer was advancing the chain concurrently. The forensic investigation was recorded in operator-side canon at `~/.claude/projects/-home-bizra-operating-system-Downloads-Dema/memory/project_cross_session_chain_mutation_discovered.md`.
+On 2026-05-12 ~19:15 GST, a cross-session chain mutation was discovered on Node0. Session `0c74e543-…` (full id redacted) (this session) observed 12 receipts minted across 2 full `dema-assure all` cycles by a concurrent session (`8183a42d-…` (full id redacted)), with the agent chain head at `656589525cda36927d06c8f1415576e649d03482f6273e9a40df4c2351e7e092` at investigation time. Chain integrity was preserved — the hash chain itself remained valid and unbroken. What broke was single-session attribution: any within-session claim of "chain unchanged" was silently false because a second producer was advancing the chain concurrently. The forensic investigation was recorded in operator-side canon at `project_cross_session_chain_mutation_discovered.md` (operator-side memory canon · path redacted).
 
 ## Problem
 
@@ -91,5 +91,5 @@ The following three changes can land regardless of which option is selected. The
 - [ADR-002 No Shadow State](ADR-002-no-shadow-state.md) — establishes that all persistent state must be visible and inspectable; relevant because cross-session chain mutations are not visible to the session that did not produce them.
 - [ADR-006 Continuous Assurance and No-mint Verification](ADR-006-continuous-assurance-and-no-mint-verification.md) — §1 Mint mode contains the single-producer assumption this ADR calls into question; V-I10 is the invariant whose cross-session blind spot is documented here.
 - `mint_lib.py` at `~/.dema/kernel/assurance/mint_lib.py` — current implementation; single-producer assumption lives in the `mint_receipt` function's `chain-head.txt` read-modify-write sequence.
-- Cross-session forensic canon at `~/.claude/projects/-home-bizra-operating-system-Downloads-Dema/memory/project_cross_session_chain_mutation_discovered.md` — operator-side primary evidence for the 2026-05-12 discovery.
+- Cross-session forensic canon at `project_cross_session_chain_mutation_discovered.md` (operator-side memory canon · path redacted) — operator-side primary evidence for the 2026-05-12 discovery.
 - Bash audit log at `/data/bizra/logs/claude-bash-audit.log` — secondary forensic evidence channel; currently hampered by 500-byte truncation (see Companion changes item 1).
