@@ -2176,7 +2176,7 @@ Expected: `✅ PASS`.
 ```
 
 Expected output:
-```
+```text
 === dema assure all ===
   bizra.dema.assurance.preflight.v0.1: PASS  (<hash>…)
   bizra.dema.assurance.security.v0.1: PASS  (<hash>…)

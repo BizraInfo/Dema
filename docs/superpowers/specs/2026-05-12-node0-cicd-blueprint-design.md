@@ -42,7 +42,7 @@ The runtime is built in 6 phases. Phase 1 produces this design doc + zero runtim
 
 ### 1.1 Topology
 
-```
+```text
 ┌──────────────────── NODE0 (AUTHORITY · source-of-truth) ────────────────────┐
 │                                                                              │
 │  ~/.dema/kernel/                                                             │
@@ -153,7 +153,7 @@ Six `dema assure` subcommands. Phase-2 trio (preflight · security · chain) spe
 
 **Purpose:** the fast green light — verifies tests + canon + no-bash.
 
-```
+```text
 Inputs:    none (runs against current ~/.dema/ state)
 Execution: 1. Load canon-of-canons + Node0-space + Awakening doctrine
               (refuse if any missing)
@@ -178,7 +178,7 @@ Time goal: <30 seconds on Node0
 
 **Purpose:** the security gate. Five orthogonal checks; each fails the gate independently.
 
-```
+```text
 Execution: 1. SAST   — bandit (Python static analysis, low/medium/high severity)
            2. SCA    — pip-audit on DECLARED dependency manifests FIRST:
                        pyproject.toml / requirements.txt / package.json
@@ -208,7 +208,7 @@ Time goal: <60 seconds
 
 **Purpose:** receipt chain integrity walker. Snapshot-then-validate-then-mint (per Section 2 Note 2).
 
-```
+```text
 Inputs:    optional --since <hash>  (walk only forward from a hash)
 Execution: 1. Capture snapshot_head_before_validation for each chain
               (read all 4 chain-head files at the same atomic moment)
@@ -233,7 +233,7 @@ Time goal: <10 sec at current scale (152 total receipts); test at 10k synthetic
 
 ### 2.4 `dema assure perf` (Phase 2)
 
-```
+```text
 Execution: invoke each subject under controlled args (bounded entry counts to avoid
            OOM); capture wall-time + RSS-peak; compare against baseline.json under
            ~/.dema/kernel/assurance/baselines/
@@ -246,7 +246,7 @@ Time goal: <120 sec for quick mode
 
 ### 2.5 `dema assure publish` (Phase 6 — architecture only)
 
-```
+```text
 Required typed-GO: "GO: publish kernel-mirror at <kernel_state_hash>"
                    (kernel_state_hash printed by the tool before GO prompt)
 Execution: 1. Compute kernel_state_hash = sha256 of tar archive of ~/.dema/kernel/
@@ -264,7 +264,7 @@ Drift:     If reconcile detects ci_drift → mint and CONTINUE (warning) (per N1
 
 ### 2.6 `dema assure release` (Phase 6 — architecture only)
 
-```
+```text
 Required typed-GO: "GO: release Dema vX.Y.Z"  (X.Y.Z matches a SemVer tag)
 Execution: 1. Require `dema assure publish` ran in last 30 minutes
            2. Require all subgates green: preflight + security + chain
@@ -281,7 +281,7 @@ Execution: 1. Require `dema assure publish` ran in last 30 minutes
 
 ### 2.7 `dema assure all` (the default invocation)
 
-```
+```text
 Runs: preflight · security · chain · perf --mode=quick
 Skips: publish, release (those require typed-GO, NEVER autorun)
 Mints:
@@ -315,7 +315,7 @@ producer_version: "<semver>"            # OPTIONAL in v0.1 — accepted if passe
 
 ### 3.2 Legacy Alias Mapping (validator-only · never minter-side)
 
-```
+```text
 Legacy field         →  Canonical interpretation when validator reads
 ─────────────────────────────────────────────────────────────────────
 blake3_prev          →  prev_digest  (with implicit digest_algo: sha256)
@@ -383,7 +383,7 @@ def extract_chain_fields(receipt: dict) -> dict:
 
 ### 3.4 Adapter/Compat Strategy for Phases 3-5
 
-```
+```text
 Phase 3: Migrate node0_awakening.py — chain stays linked because the NEXT receipt's
          prev_digest = LAST legacy chain-head value (chain-head.txt content).
 Phase 4: Migrate kernel.py mint_act_handler_receipt + mint_state_transition_receipt.
@@ -414,7 +414,7 @@ Link still verifies because `N+1.prev_digest == N.blake3_self`.
 
 ### 4.1 Two Workflows Side-by-Side
 
-```
+```text
 ~/Downloads/Dema/.github/workflows/
 ├─ check.yml      (EXISTING · npm test on Node 20/22 · gates JS code)
 └─ assure.yml     (NEW       · gates Python kernel-mirror/)

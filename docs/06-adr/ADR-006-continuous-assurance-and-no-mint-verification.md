@@ -55,7 +55,7 @@ The four inner gates accept an optional `minter=` parameter (default = `mint_lib
 
 For any invocation of `dema-assure verify`:
 
-```
+```text
 chain_head_before == chain_head_after
 ```
 
