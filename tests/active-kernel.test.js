@@ -600,7 +600,21 @@ test("dema help still works after the active-kernel refactor", async () => {
   const { stdout } = await execFileAsync("node", [cliPath, "help"]);
   assert.match(stdout, /Dema CLI/);
   assert.match(stdout, /dema task/);
+  assert.match(stdout, /dema sovereign/);
   assert.match(stdout, /v0\.3\.0/);
+});
+
+test("dema sovereign respects DEMA_HOME and fails clearly when scaffold is absent", async () => {
+  const fakeHome = await mkdtemp(join(tmpdir(), "dema-sovereign-home-"));
+  const demaRoot = await mkdtemp(join(tmpdir(), "dema-sovereign-root-"));
+  const result = await execFileAsync("node", [cliPath, "sovereign"], {
+    env: { ...process.env, HOME: fakeHome, DEMA_HOME: demaRoot }
+  }).catch((e) => e);
+
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /dema sovereign: scaffold not found/);
+  assert.ok(result.stderr.includes(demaRoot), "error should point at DEMA_HOME, not HOME");
+  assert.doesNotMatch(result.stderr, /can't open file/);
 });
 
 test("bin/dema script exists and is executable", async () => {
