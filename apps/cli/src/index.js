@@ -53,6 +53,7 @@ Usage:
                     Show one memory entry by name (e.g. profile, bizra-context)
   dema task         List registered tasks
   dema task NAME    Run a registered task (read-only in v0.3.0)
+  dema sovereign    Render local Sovereign Mission Interface (view-only)
   dema monetize     Show proof-safe first offer boundary
   dema help         Show this list
 
@@ -232,9 +233,20 @@ Next:
       // Sovereign Mission Interface — 7-panel cockpit renderer
       // Delegates to the Python scaffold at ~/.dema/kernel/sovereign_tui/sovereign.py
       // Schema: bizra.dema.sovereign_tui_render.v0.1
+      const { existsSync } = await import("node:fs");
+      const { join } = await import("node:path");
       const { spawnSync } = await import("node:child_process");
       const home = process.env.HOME || process.env.USERPROFILE;
-      const scaffold = `${home}/.dema/kernel/sovereign_tui/sovereign.py`;
+      const demaHome = process.env.DEMA_HOME || (home ? join(home, ".dema") : null);
+      if (!demaHome) {
+        console.error("dema sovereign: unable to resolve DEMA_HOME (set DEMA_HOME or HOME).");
+        process.exit(1);
+      }
+      const scaffold = join(demaHome, "kernel", "sovereign_tui", "sovereign.py");
+      if (!existsSync(scaffold)) {
+        console.error(`dema sovereign: scaffold not found: ${scaffold}`);
+        process.exit(1);
+      }
       const result = spawnSync("python3", [scaffold, ...argv.slice(1)], {
         stdio: "inherit"
       });
