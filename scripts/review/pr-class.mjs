@@ -8,6 +8,9 @@ const REVIEW_CLASSES = {
   },
   "docs/u1-proof-pin": {
     branches: ["proof/u1-proof-pin", "docs/u1-proof-pin", "ci/u1-proof-pin-class"]
+  },
+  "devops/release-readiness": {
+    branches: ["devops/release-readiness", "ci/devops-release-readiness-class"]
   }
 };
 

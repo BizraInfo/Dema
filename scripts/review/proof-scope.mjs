@@ -32,6 +32,14 @@ const U1_PROOF_PIN_FILES = new Set([
   "docs/08-quality/U1_NODE0_LOCAL_URP_PROOF_PIN.md"
 ]);
 
+const DEVOPS_RELEASE_READINESS_FILES = new Set([
+  "docs/DELIVERY_BLUEPRINT.md",
+  "package.json",
+  "scripts/check.mjs",
+  "scripts/release-readiness.mjs",
+  "tests/release-readiness.test.js"
+]);
+
 const REVIEW_CLASSES = {
   "proof/u1": {
     primaryFiles: U1_FILES,
@@ -45,6 +53,16 @@ const REVIEW_CLASSES = {
   "docs/u1-proof-pin": {
     primaryFiles: U1_PROOF_PIN_FILES,
     requiredFiles: []
+  },
+  "devops/release-readiness": {
+    primaryFiles: DEVOPS_RELEASE_READINESS_FILES,
+    requiredFiles: [
+      "docs/DELIVERY_BLUEPRINT.md",
+      "package.json",
+      "scripts/check.mjs",
+      "scripts/release-readiness.mjs",
+      "tests/release-readiness.test.js"
+    ]
   }
 };
 
@@ -73,8 +91,11 @@ export function validateProofScope({ reviewClass, files }) {
     throw new Error(`${reviewClass} scope contains unexpected files: ${unexpected.join(", ")}`);
   }
 
-  for (const required of policy.requiredFiles) {
-    if (!files.includes(required)) throw new Error(`${reviewClass} scope missing required file: ${required}`);
+  const includesPrimaryFile = files.some((file) => policy.primaryFiles.has(file));
+  if (includesPrimaryFile) {
+    for (const required of policy.requiredFiles) {
+      if (!files.includes(required)) throw new Error(`${reviewClass} scope missing required file: ${required}`);
+    }
   }
 
   return {
