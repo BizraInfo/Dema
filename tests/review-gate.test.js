@@ -21,6 +21,35 @@ const u1Files = [
   "tests/node0-self-check.test.js"
 ];
 
+const u2DemaPreviewFiles = [
+  "README.md",
+  "apps/cli/src/index.js",
+  "docs/UX_BLUEPRINT.md",
+  "packages/core/src/ambient.js",
+  "packages/core/src/safety-report.js",
+  "packages/core/src/shell.js",
+  "packages/consent/src/consent-common.js",
+  "packages/consent/src/consent-extract.js",
+  "packages/consent/src/consent-format.js",
+  "packages/consent/src/consent-planner.js",
+  "packages/mission/src/diagnostics-plan.js",
+  "packages/mission/src/journey.js",
+  "packages/mission/src/mission-draft.js",
+  "packages/models/src/model-common.js",
+  "packages/models/src/model-format.js",
+  "packages/models/src/model-inventory.js",
+  "packages/models/src/model-routing.js",
+  "packages/models/src/model-safety.js",
+  "scripts/check.mjs",
+  "tests/ambient.test.js",
+  "tests/consent-planner.test.js",
+  "tests/diagnostics-plan.test.js",
+  "tests/journey.test.js",
+  "tests/mission-draft.test.js",
+  "tests/models.test.js",
+  "tests/safety-report.test.js"
+];
+
 test("docs/u1-proof-pin PR class accepts the proof-pin branch only", () => {
   const report = validatePrClass({
     reviewClass: "docs/u1-proof-pin",
@@ -155,6 +184,62 @@ test("devops/release-readiness allows gate-policy files for the class policy PR 
   assert.equal(report.ok, true);
 });
 
+test("u2/dema-preview-surfaces PR class accepts only the preview and policy branches", () => {
+  assert.equal(validatePrClass({
+    reviewClass: "u2/dema-preview-surfaces",
+    branch: "u2/dema-preview-surfaces"
+  }).ok, true);
+  assert.equal(validatePrClass({
+    reviewClass: "u2/dema-preview-surfaces",
+    branch: "ci/u2-dema-preview-class"
+  }).ok, true);
+  assert.throws(
+    () => validatePrClass({ reviewClass: "u2/dema-preview-surfaces", branch: "u2/random" }),
+    /do not allow branch/
+  );
+  assert.throws(
+    () => validatePrClass({ reviewClass: "u2/dema-preview-surfaces", branch: "feat/dema-preview" }),
+    /do not allow branch/
+  );
+});
+
+test("u2/dema-preview-surfaces proof scope allows only the Dema preview surface files", () => {
+  const report = validateProofScope({
+    reviewClass: "u2/dema-preview-surfaces",
+    files: u2DemaPreviewFiles
+  });
+
+  assert.equal(report.ok, true);
+  assert.throws(
+    () => validateProofScope({
+      reviewClass: "u2/dema-preview-surfaces",
+      files: [...u2DemaPreviewFiles, "package.json"]
+    }),
+    /unexpected files/
+  );
+  assert.throws(
+    () => validateProofScope({
+      reviewClass: "u2/dema-preview-surfaces",
+      files: [...u2DemaPreviewFiles, "packages/node-adapter/src/gateway-http-adapter.js"]
+    }),
+    /unexpected files/
+  );
+  assert.throws(
+    () => validateProofScope({
+      reviewClass: "u2/dema-preview-surfaces",
+      files: [...u2DemaPreviewFiles, ".github/workflows/check.yml"]
+    }),
+    /unexpected files/
+  );
+  assert.throws(
+    () => validateProofScope({
+      reviewClass: "u2/dema-preview-surfaces",
+      files: [...u2DemaPreviewFiles, "artifacts/proofs/node0-local-urp/self_check_report.json"]
+    }),
+    /unexpected files/
+  );
+});
+
 test("proof/u1 remains strict and does not accept proof-pin docs", () => {
   assert.equal(validateProofScope({ reviewClass: "proof/u1", files: u1Files }).ok, true);
   assert.throws(
@@ -174,4 +259,16 @@ test("docs/u1-proof-pin remains strict and does not accept DevOps docs", () => {
     }),
     /unexpected files/
   );
+});
+
+test("existing proof classes remain strict and do not accept U2 Dema preview files", () => {
+  for (const reviewClass of ["proof/u1", "docs/u1-proof-pin", "devops/release-readiness"]) {
+    assert.throws(
+      () => validateProofScope({
+        reviewClass,
+        files: ["packages/mission/src/mission-draft.js"]
+      }),
+      /unexpected files/
+    );
+  }
 });
