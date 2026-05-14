@@ -1,0 +1,64 @@
+{
+  "binding": "non_canonical_local_seed",
+  "boundary_note": "SAT-5 registration here is a local seed proof; real SAT-5 PERMIT authority remains upstream.",
+  "canon_status": "declared_by_operator_prompt_for_local_proof_only",
+  "content_sha256": "74e81ed1dd7059e2cbd85919803878926712c401c9c2a58de646f1fcc1c0517c",
+  "external_user_data": false,
+  "federation": "not_implemented",
+  "federation_claim": false,
+  "node1_handshake": false,
+  "node_id": "Node0",
+  "pat_count": 7,
+  "poi_mode": "sandbox_no_cash_value",
+  "proof_date": "2026-05-14",
+  "public_network": false,
+  "raw_private_data_included": false,
+  "real_reward_claim": false,
+  "roles": [
+    {
+      "id": "S1",
+      "name": "Validator",
+      "residence": "URP",
+      "responsibility": "receipts/proofs/replay",
+      "service_scope": "system_serving",
+      "verdict_authority": "placeholder_only_never_permit"
+    },
+    {
+      "id": "S2",
+      "name": "Oracle",
+      "residence": "URP",
+      "responsibility": "frozen truth axioms / impact-event review",
+      "service_scope": "system_serving",
+      "verdict_authority": "placeholder_only_never_permit"
+    },
+    {
+      "id": "S3",
+      "name": "Mediator",
+      "residence": "URP",
+      "responsibility": "policy conflict resolution",
+      "service_scope": "system_serving",
+      "verdict_authority": "placeholder_only_never_permit"
+    },
+    {
+      "id": "S4",
+      "name": "Archivist",
+      "residence": "URP",
+      "responsibility": "system memory / evidence retention",
+      "service_scope": "system_serving",
+      "verdict_authority": "placeholder_only_never_permit"
+    },
+    {
+      "id": "S5",
+      "name": "Sentinel",
+      "residence": "URP",
+      "responsibility": "security / tamper / privacy boundary",
+      "service_scope": "system_serving",
+      "verdict_authority": "placeholder_only_never_permit"
+    }
+  ],
+  "sat_count": 5,
+  "schema": "bizra.dema.urp_local.sat5_registration.v0.1",
+  "token_value_claim": false,
+  "truth_label": "URP_LOCAL_ACTIVE",
+  "visibility": "local_only"
+}

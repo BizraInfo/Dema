@@ -1,0 +1,175 @@
+{
+  "autonomy_level": "L2",
+  "boundary": {
+    "auto_fix_performed": false,
+    "network_used": false,
+    "node1_handshake": false,
+    "private_data_scanned": false,
+    "public_network": false,
+    "runtime_execution": false,
+    "token_value_claim": false
+  },
+  "checks": [
+    {
+      "evidence": {
+        "files_checked": 7
+      },
+      "id": "u1.hash_verify",
+      "label": "U1 proof artifacts hash-verify",
+      "pass": true
+    },
+    {
+      "evidence": {
+        "truth_label": "URP_LOCAL_ACTIVE"
+      },
+      "id": "u1.truth_label",
+      "label": "URP_LOCAL_ACTIVE truth label is present",
+      "pass": true
+    },
+    {
+      "evidence": {
+        "pat_count": 7
+      },
+      "id": "u1.pat7",
+      "label": "PAT count equals 7",
+      "pass": true
+    },
+    {
+      "evidence": {
+        "roles": [
+          "Validator",
+          "Oracle",
+          "Mediator",
+          "Archivist",
+          "Sentinel"
+        ],
+        "sat_count": 5
+      },
+      "id": "u1.sat5",
+      "label": "SAT count equals 5",
+      "pass": true
+    },
+    {
+      "evidence": {
+        "actual_roles": [
+          "Validator",
+          "Oracle",
+          "Mediator",
+          "Archivist",
+          "Sentinel"
+        ],
+        "required_roles": [
+          "Validator",
+          "Oracle",
+          "Mediator",
+          "Archivist",
+          "Sentinel"
+        ]
+      },
+      "id": "u1.sat_roles",
+      "label": "SAT roles match local seed list",
+      "pass": true
+    },
+    {
+      "evidence": {
+        "knowledge_packs": 1,
+        "poi_sandbox_records": 1,
+        "resource_offers": 1,
+        "skills": 1
+      },
+      "id": "u1.registry_seed",
+      "label": "Skill, knowledge pack, resource offer, and PoI records exist",
+      "pass": true
+    },
+    {
+      "evidence": {
+        "node1_handshake": false,
+        "poi_mode": "sandbox_no_cash_value",
+        "public_network": false,
+        "raw_private_data_included": false,
+        "token_value_claim": false
+      },
+      "id": "u1.local_boundary",
+      "label": "No public network, Node1 handshake, raw private data, or token claim",
+      "pass": true
+    },
+    {
+      "evidence": {
+        "receipts_checked": 4
+      },
+      "id": "u1.receipt_hashes",
+      "label": "Receipts are content-hash backed",
+      "pass": true
+    },
+    {
+      "evidence": {
+        "duplicate_policy": "duplicate_offer_id_is_same_offer"
+      },
+      "id": "u1.resource_idempotency",
+      "label": "Duplicate local resource offer is declared idempotent",
+      "pass": true
+    }
+  ],
+  "content_sha256": "f230e0203fbc903d14361c10ae41b33606edcd350d17874aab8a3fe8e18b2276",
+  "mission_id": "node0.self_check.001",
+  "phases": [
+    "UNDERSTAND",
+    "PLAN",
+    "ACT",
+    "VERIFY",
+    "SETTLE"
+  ],
+  "report_date": "2026-05-14",
+  "report_id": "node0-self-check-report-v0.1",
+  "schema": "bizra.dema.urp_local.self_check_report.v0.1",
+  "scope": {
+    "excludes": [
+      "private raw user data",
+      "network calls",
+      "Node1 handshake",
+      "runtime execution",
+      "auto-fix mutation"
+    ],
+    "reads_only": [
+      "U1 proof artifacts",
+      "local receipt artifacts",
+      "SAT-5 local seed registry",
+      "PoI sandbox record"
+    ],
+    "writes_only": [
+      "self_check_report.json",
+      "critic_report_001.json"
+    ]
+  },
+  "source_artifacts": [
+    {
+      "path": "node0_local_urp_status.json",
+      "sha256": "223ad3cc477a71d8bed3a0e8d0ebaab9692fe1361d935b38b3225c465847a79a"
+    },
+    {
+      "path": "urp_local_registry.json",
+      "sha256": "a3b53639d8390af204887c87050e5554dedee84caed96dd98a55491688ed8cf0"
+    },
+    {
+      "path": "sat5_urp_registration.json",
+      "sha256": "127364ab6254574d3d54ff4d6789eb945ba1eac02998c4ab014b1c0a5f105969"
+    },
+    {
+      "path": "urp_skill_registry_receipt.json",
+      "sha256": "57a21f51695fc60d91a9a6da30e4aee2ea171a7c36877161673e066a70e68f55"
+    },
+    {
+      "path": "urp_knowledge_pack_receipt.json",
+      "sha256": "888a874061ba10bda2559310d8eada27a02b82dacd91feac38d6fd35408eab7b"
+    },
+    {
+      "path": "urp_resource_offer_receipt.json",
+      "sha256": "dadd4c33d7b1ac14b794f970040388465a832b8ddf7cd224108a96148ddf1efc"
+    },
+    {
+      "path": "poi_sandbox_record.json",
+      "sha256": "7f6e49f8e76993fa3d5ace25cfc05258c35fa3545f6fddd8063ff2455e120e25"
+    }
+  ],
+  "verdict": "pass_with_review_items"
+}

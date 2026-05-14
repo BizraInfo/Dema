@@ -1,0 +1,41 @@
+{
+  "artifact_011_class": false,
+  "content_sha256": "b98212f7aec4b4732b078ed8c03bab15de1a636e6065e6663f1b978f9686540d",
+  "external_user_data": false,
+  "federation": "not_implemented",
+  "federation_claim": false,
+  "identity_bound": false,
+  "issuer": "node0_local_sandbox",
+  "node1_handshake": false,
+  "node_id": "Node0",
+  "pat_count": 7,
+  "payload": {
+    "allowed_effects": [
+      "read_local_status",
+      "render_preview_report"
+    ],
+    "autonomy_level": "L1",
+    "blocked_effects": [
+      "network_call",
+      "filesystem_mutation",
+      "runtime_execution"
+    ],
+    "name": "Dema Local Readiness Preview",
+    "skill_id": "dema.local_readiness.preview"
+  },
+  "poi_mode": "sandbox_no_cash_value",
+  "proof_date": "2026-05-14",
+  "public_network": false,
+  "raw_private_data_included": false,
+  "real_reward_claim": false,
+  "receipt_authority": "local_proof_preview_not_canonical_runtime",
+  "receipt_id": "urp-skill-local-dema-readiness-v0.1",
+  "sat_count": 5,
+  "schema": "bizra.dema.urp_local.skill_receipt.v0.1",
+  "scope": "local_only_read_only_proof",
+  "signing_key_used": null,
+  "subject": "skill_registry",
+  "token_value_claim": false,
+  "truth_label": "URP_LOCAL_ACTIVE",
+  "visibility": "local_only"
+}

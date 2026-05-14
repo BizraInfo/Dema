@@ -1,0 +1,27 @@
+name: BIZRA Review Gate
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  proof-quality:
+    name: proof-quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run check
+      - run: node scripts/review/pr-class.mjs --class proof/u1
+      - run: node scripts/review/proof-scope.mjs --class proof/u1
+      - run: node scripts/review/no-overclaim.mjs --class proof/u1
+      - run: node scripts/review/receipt-integrity.mjs --class proof/u1
