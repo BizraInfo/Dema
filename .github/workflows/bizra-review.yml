@@ -24,6 +24,9 @@ jobs:
       - name: Resolve BIZRA review class
         run: |
           case "${GITHUB_HEAD_REF}" in
+            devops/release-readiness|ci/devops-release-readiness-class)
+              echo "BIZRA_REVIEW_CLASS=devops/release-readiness" >> "$GITHUB_ENV"
+              ;;
             proof/u1-proof-pin|docs/u1-proof-pin|ci/u1-proof-pin-class)
               echo "BIZRA_REVIEW_CLASS=docs/u1-proof-pin" >> "$GITHUB_ENV"
               ;;
