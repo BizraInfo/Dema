@@ -47,6 +47,7 @@ dema setup
 dema journey "Fix auth.py and run pytest"
 dema models
 dema ambient
+dema ambient audit
 dema diagnostics plan
 dema consent plan "Fix auth.py and run pytest"
 dema mission draft "Fix auth.py and run pytest"
@@ -115,6 +116,18 @@ For a schema-tagged machine view:
 ```bash
 dema ambient:json
 ```
+
+For the SNR/SAPE compliance view:
+
+```bash
+dema ambient audit
+dema ambient audit --json
+```
+
+This compresses the Bash/AHK/Telescript actuator risk into one preview-only
+audit: intent, micro-consent, capability, effect, evidence, impact. It names the
+HHMM phases, Proof-of-Truth posture, and next one-node/one-mission diagnostic
+without enabling execution.
 
 ---
 

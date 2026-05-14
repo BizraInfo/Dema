@@ -27,7 +27,9 @@ import {
   probeGateway
 } from "../../../packages/core/src/banner.js";
 import {
+  buildAmbientAuditPreview,
   buildAmbientBoundary,
+  formatAmbientAuditPreview,
   formatAmbientBoundary
 } from "../../../packages/core/src/ambient.js";
 import {
@@ -73,6 +75,8 @@ Usage:
   dema today        Record a local continuity tick + memory summary
   dema doctor       Validate readiness and consent gate
   dema ambient      Show Ambient Sovereign Execution boundary (preview-only)
+  dema ambient audit [--json]
+                    Preview SNR/SAPE audit of ambient sovereign execution
   dema ambient:json Show the ambient boundary as schema-tagged JSON
   dema journey [--json] ["<intent>"]
                     Preview first launch -> mission -> Node0 handoff -> receipts
@@ -173,6 +177,15 @@ Next:
     }
 
     case "ambient": {
+      if (subcommand === "audit") {
+        const audit = buildAmbientAuditPreview();
+        console.log(
+          argv.includes("--json")
+            ? JSON.stringify(audit, null, 2)
+            : formatAmbientAuditPreview(audit)
+        );
+        return;
+      }
       console.log(formatAmbientBoundary(buildAmbientBoundary()));
       return;
     }

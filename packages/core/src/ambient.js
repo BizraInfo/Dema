@@ -1,4 +1,5 @@
 const SCHEMA = "bizra.dema.ambient_boundary.v0.1";
+const AUDIT_SCHEMA = "bizra.dema.ambient_audit_preview.v0.1";
 
 const ALLOWED_NOW = [
   "observe_local_readiness",
@@ -87,6 +88,67 @@ export function buildAmbientBoundary({ now = new Date() } = {}) {
   };
 }
 
+export function buildAmbientAuditPreview({ now = new Date() } = {}) {
+  const boundary = buildAmbientBoundary({ now });
+  return {
+    schema: AUDIT_SCHEMA,
+    generated_at: now.toISOString(),
+    mode: "PREVIEW_ONLY",
+    hidden_flow_pattern: "intent -> micro_consent -> capability -> effect -> evidence -> impact",
+    snr: {
+      signal: "EffectCap is the only legal side-effect path",
+      noise_to_defer: [
+        "autonomous shell loops",
+        "token economics",
+        "public federation",
+        "mobile-agent migration"
+      ]
+    },
+    sape_lenses: [
+      {
+        id: "security",
+        finding: "Bash, GUI, and mobile-agent actuators are blocked in Dema and must remain behind governed capabilities."
+      },
+      {
+        id: "architecture",
+        finding: "Dema is the product face; Node0/bizra-omega owns runtime effects through EffectCap."
+      },
+      {
+        id: "performance",
+        finding: "Preview surfaces stay cheap and deterministic; runtime scheduling belongs to Node0 after consent."
+      },
+      {
+        id: "ethics",
+        finding: "Ihsan and micro-consent apply before every effect, not after evidence is produced."
+      }
+    ],
+    hhmm_phases: ["UNDERSTAND", "PLAN", "ACT", "VERIFY", "SETTLE"],
+    compliance_spine: {
+      intent_declared: true,
+      consent_required: true,
+      policy_required: true,
+      capability_required: true,
+      effect_logged: "runtime_only",
+      impact_claim_allowed: false
+    },
+    next_implementation: {
+      id: "one_node_one_mission_diagnostic",
+      command_path: "dema journey \"Run a bounded Node0 diagnostic and produce a safety readiness receipt\"",
+      requirement: "handoff remains blocked until governed Node0 commits a ConsentScope"
+    },
+    proof_of_truth: boundary.proof_of_truth,
+    boundary: {
+      scope: "read-only-audit",
+      inference_invoked: false,
+      execution_enabled: false,
+      mutation_performed: false,
+      daemon_started: false,
+      receipt_minted: false,
+      impact_claimed: false
+    }
+  };
+}
+
 function appendList(lines, label, items) {
   lines.push(`${label}:`);
   for (const item of items) lines.push(`  - ${item}`);
@@ -122,6 +184,41 @@ export function formatAmbientBoundary(boundary) {
   lines.push("");
   lines.push(`Handoff target: ${boundary.execution.handoff_target}`);
   lines.push("Boundary: preview-only; no execution; no daemon; no receipt minted.");
+
+  return lines.join("\n");
+}
+
+export function formatAmbientAuditPreview(audit) {
+  const lines = [
+    "DEMA Ambient Sovereign Execution Audit",
+    "",
+    `Mode: ${audit.mode}`,
+    `Hidden flow: ${audit.hidden_flow_pattern}`,
+    `SNR signal: ${audit.snr.signal}`,
+    "",
+    "SAPE lenses:"
+  ];
+
+  for (const lens of audit.sape_lenses) {
+    lines.push(`  ${lens.id}: ${lens.finding}`);
+  }
+  lines.push("");
+  lines.push(`HHMM phases: ${audit.hhmm_phases.join(" -> ")}`);
+  lines.push("");
+  lines.push("Micro-compliance spine:");
+  for (const [key, value] of Object.entries(audit.compliance_spine)) {
+    lines.push(`  ${key}: ${value}`);
+  }
+  lines.push("");
+  lines.push("Proof-of-Truth Convergence:");
+  for (const [pillar, value] of Object.entries(audit.proof_of_truth)) {
+    lines.push(`  ${pillar}: ${value.status} - ${value.proof}`);
+  }
+  lines.push("");
+  lines.push(`Next implementation: ${audit.next_implementation.id}`);
+  lines.push(`Command path: ${audit.next_implementation.command_path}`);
+  lines.push(`Requirement: ${audit.next_implementation.requirement}`);
+  lines.push("Boundary: preview-only; no execution; no mutation; no receipt minted.");
 
   return lines.join("\n");
 }
