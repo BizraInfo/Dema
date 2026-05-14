@@ -1,5 +1,8 @@
+import { createHash } from "node:crypto";
+
 const SCHEMA = "bizra.dema.ambient_boundary.v0.1";
 const AUDIT_SCHEMA = "bizra.dema.ambient_audit_preview.v0.1";
+const MANIFEST_SCHEMA = "bizra.dema.ambient_manifest_preview.v0.1";
 
 const ALLOWED_NOW = [
   "observe_local_readiness",
@@ -149,6 +152,75 @@ export function buildAmbientAuditPreview({ now = new Date() } = {}) {
   };
 }
 
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function sha256(value) {
+  return `sha256:${createHash("sha256").update(canonicalJson(value)).digest("hex")}`;
+}
+
+export function buildAmbientManifestPreview({ now = new Date() } = {}) {
+  const manifestBody = {
+    schema: MANIFEST_SCHEMA,
+    generated_at: now.toISOString(),
+    mode: "PREVIEW_ONLY",
+    node_id: "node0",
+    hardware: {
+      source: "not_probed_in_dema_preview",
+      ram_gb: null,
+      gpu_vram_gb: null,
+      disk_gb: null
+    },
+    sovereign_boundary: {
+      readable_paths: ["operator_workspace", "dema_home"],
+      writable_paths: [],
+      executable_commands: [],
+      network_access: false
+    },
+    urp_share_policy: {
+      data_classes_allowed: ["public", "local_code"],
+      no_foreign_personal_data: true,
+      publication: "blocked_until_governed_node0_handoff"
+    },
+    micro_consent: {
+      required_before: "any_manifest_publication_or_effect",
+      capability_expansion_allowed: false,
+      effectcap_required: true
+    },
+    signature: {
+      status: "deferred_to_node0",
+      reason: "Dema does not issue identity-bound signing artifacts"
+    },
+    proof_of_truth: {
+      formal: "machine-readable boundary with empty write/execute grants",
+      cryptographic: "hash commitment only; signature deferred to governed Node0",
+      empirical: "operator can inspect manifest before any handoff",
+      economic: "no reward, IMP, or impact claim from preview"
+    },
+    boundary: {
+      scope: "read-only-manifest-preview",
+      execution_enabled: false,
+      mutation_performed: false,
+      daemon_started: false,
+      receipt_minted: false,
+      identity_artifact_issued: false
+    }
+  };
+
+  return {
+    ...manifestBody,
+    manifest_hash: sha256(manifestBody)
+  };
+}
+
 function appendList(lines, label, items) {
   lines.push(`${label}:`);
   for (const item of items) lines.push(`  - ${item}`);
@@ -219,6 +291,36 @@ export function formatAmbientAuditPreview(audit) {
   lines.push(`Command path: ${audit.next_implementation.command_path}`);
   lines.push(`Requirement: ${audit.next_implementation.requirement}`);
   lines.push("Boundary: preview-only; no execution; no mutation; no receipt minted.");
+
+  return lines.join("\n");
+}
+
+export function formatAmbientManifestPreview(manifest) {
+  const lines = [
+    "DEMA Ambient Capability Manifest Preview",
+    "",
+    `Mode: ${manifest.mode}`,
+    `Node: ${manifest.node_id}`,
+    `Manifest hash: ${manifest.manifest_hash}`,
+    "",
+    "Sovereign boundary:",
+    `  Readable paths: ${manifest.sovereign_boundary.readable_paths.join(", ")}`,
+    `  Writable paths: ${manifest.sovereign_boundary.writable_paths.length}`,
+    `  Executable commands: ${manifest.sovereign_boundary.executable_commands.length}`,
+    `  Network access: ${manifest.sovereign_boundary.network_access}`,
+    "",
+    "URP share policy:",
+    `  Data classes allowed: ${manifest.urp_share_policy.data_classes_allowed.join(", ")}`,
+    `  No foreign personal data: ${manifest.urp_share_policy.no_foreign_personal_data}`,
+    `  Publication: ${manifest.urp_share_policy.publication}`,
+    "",
+    "Micro-consent:",
+    `  Required before: ${manifest.micro_consent.required_before}`,
+    `  EffectCap required: ${manifest.micro_consent.effectcap_required}`,
+    "",
+    `Signature: ${manifest.signature.status} - ${manifest.signature.reason}`,
+    "Boundary: preview-only; no execution; no mutation; no identity artifact issued."
+  ];
 
   return lines.join("\n");
 }

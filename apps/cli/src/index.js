@@ -29,8 +29,10 @@ import {
 import {
   buildAmbientAuditPreview,
   buildAmbientBoundary,
+  buildAmbientManifestPreview,
   formatAmbientAuditPreview,
-  formatAmbientBoundary
+  formatAmbientBoundary,
+  formatAmbientManifestPreview
 } from "../../../packages/core/src/ambient.js";
 import {
   buildSafetyReportPreview,
@@ -75,6 +77,8 @@ Usage:
   dema today        Record a local continuity tick + memory summary
   dema doctor       Validate readiness and consent gate
   dema ambient      Show Ambient Sovereign Execution boundary (preview-only)
+  dema ambient --manifest [--json]
+                    Preview machine-readable zero-trust capability manifest
   dema ambient audit [--json]
                     Preview SNR/SAPE audit of ambient sovereign execution
   dema ambient:json Show the ambient boundary as schema-tagged JSON
@@ -177,6 +181,15 @@ Next:
     }
 
     case "ambient": {
+      if (subcommand === "--manifest") {
+        const manifest = buildAmbientManifestPreview();
+        console.log(
+          argv.includes("--json")
+            ? JSON.stringify(manifest, null, 2)
+            : formatAmbientManifestPreview(manifest)
+        );
+        return;
+      }
       if (subcommand === "audit") {
         const audit = buildAmbientAuditPreview();
         console.log(

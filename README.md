@@ -47,6 +47,7 @@ dema setup
 dema journey "Fix auth.py and run pytest"
 dema models
 dema ambient
+dema ambient --manifest
 dema ambient audit
 dema diagnostics plan
 dema consent plan "Fix auth.py and run pytest"
@@ -116,6 +117,18 @@ For a schema-tagged machine view:
 ```bash
 dema ambient:json
 ```
+
+For a zero-trust capability manifest preview:
+
+```bash
+dema ambient --manifest
+dema ambient --manifest --json
+```
+
+This emits a hash-committed machine-readable manifest for the current Dema
+boundary: readable symbolic paths, no writable paths, no executable commands,
+no network access, and no foreign personal data. Signing is explicitly deferred
+to governed Node0 because Dema does not issue identity-bound artifacts.
 
 For the SNR/SAPE compliance view:
 

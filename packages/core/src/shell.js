@@ -23,6 +23,7 @@ const HELP = [
   "  today                continuity tick + memory summary",
   "  doctor               readiness check",
   "  ambient              show ambient execution boundary",
+  "  ambient --manifest   preview zero-trust capability manifest",
   "  ambient audit        preview ambient sovereign execution audit",
   "  journey TEXT         preview the sovereign journey OS path",
   "  diagnostics plan     preview self-diagnostics harness",

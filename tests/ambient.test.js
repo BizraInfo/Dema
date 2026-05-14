@@ -7,8 +7,10 @@ import { fileURLToPath } from "node:url";
 import {
   buildAmbientAuditPreview,
   buildAmbientBoundary,
+  buildAmbientManifestPreview,
   formatAmbientAuditPreview,
-  formatAmbientBoundary
+  formatAmbientBoundary,
+  formatAmbientManifestPreview
 } from "../packages/core/src/ambient.js";
 
 const execFileAsync = promisify(execFile);
@@ -114,4 +116,53 @@ test("dema ambient audit --json emits a schema-tagged non-executing audit", asyn
   assert.equal(audit.schema, "bizra.dema.ambient_audit_preview.v0.1");
   assert.equal(audit.boundary.execution_enabled, false);
   assert.equal(audit.proof_of_truth.economic.status, "closed_until_verified_impact");
+});
+
+test("buildAmbientManifestPreview declares a hashable zero-trust capability manifest", () => {
+  const manifest = buildAmbientManifestPreview({
+    now: new Date("2026-05-14T08:00:00.000Z")
+  });
+
+  assert.equal(manifest.schema, "bizra.dema.ambient_manifest_preview.v0.1");
+  assert.equal(manifest.generated_at, "2026-05-14T08:00:00.000Z");
+  assert.equal(manifest.node_id, "node0");
+  assert.equal(manifest.mode, "PREVIEW_ONLY");
+  assert.deepEqual(manifest.sovereign_boundary.executable_commands, []);
+  assert.deepEqual(manifest.sovereign_boundary.writable_paths, []);
+  assert.equal(manifest.sovereign_boundary.network_access, false);
+  assert.equal(manifest.urp_share_policy.no_foreign_personal_data, true);
+  assert.match(manifest.manifest_hash, /^sha256:[a-f0-9]{64}$/);
+  assert.equal(manifest.signature.status, "deferred_to_node0");
+  assert.equal(manifest.boundary.execution_enabled, false);
+  assert.equal(manifest.boundary.identity_artifact_issued, false);
+});
+
+test("formatAmbientManifestPreview renders the manifest hash and no-execution boundary", () => {
+  const output = formatAmbientManifestPreview(buildAmbientManifestPreview());
+
+  assert.match(output, /DEMA Ambient Capability Manifest Preview/);
+  assert.match(output, /Node: node0/);
+  assert.match(output, /Manifest hash: sha256:/);
+  assert.match(output, /Network access: false/);
+  assert.match(output, /Signature: deferred_to_node0/);
+  assert.match(output, /Boundary: preview-only; no execution; no mutation; no identity artifact issued/);
+});
+
+test("dema ambient --manifest prints the ambient manifest preview", async () => {
+  const { stdout } = await execFileAsync("node", [cliPath, "ambient", "--manifest"]);
+
+  assert.match(stdout, /DEMA Ambient Capability Manifest Preview/);
+  assert.match(stdout, /Manifest hash: sha256:/);
+  assert.match(stdout, /No foreign personal data: true/);
+  assert.match(stdout, /Boundary: preview-only; no execution; no mutation; no identity artifact issued/);
+});
+
+test("dema ambient --manifest --json emits a schema-tagged non-executing manifest", async () => {
+  const { stdout } = await execFileAsync("node", [cliPath, "ambient", "--manifest", "--json"]);
+  const manifest = JSON.parse(stdout);
+
+  assert.equal(manifest.schema, "bizra.dema.ambient_manifest_preview.v0.1");
+  assert.equal(manifest.sovereign_boundary.network_access, false);
+  assert.equal(manifest.signature.status, "deferred_to_node0");
+  assert.equal(manifest.boundary.execution_enabled, false);
 });
