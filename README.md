@@ -144,6 +144,17 @@ without enabling execution. It also keeps the agent topology explicit: PAT-7 is
 the local user-aligned mission party, while SAT-5 is the system-owned URP
 control plane. SAT are not cloud PAT and do not live inside user nodes.
 
+Canonical UX boundary:
+
+```text
+Your PAT agents help shape and later execute your local mission.
+SAT/URP validation is system-side and only applies after evidence or receipt handoff.
+```
+
+Canonical invariant: PAT may want success. SAT must require truth. SAT-5 roles
+are SAT-Orchestrator, SAT-Policy, SAT-QualityOps, SAT-Resource, and
+SAT-GlobalVerifier.
+
 ---
 
 ## Consent planning

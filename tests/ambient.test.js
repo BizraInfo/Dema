@@ -88,8 +88,19 @@ test("buildAmbientAuditPreview captures SNR, SAPE, HHMM, and proof convergence w
   assert.ok(audit.agent_topology.pat.roles.includes("execute"));
   assert.equal(audit.agent_topology.sat.alignment, "system_aligned");
   assert.equal(audit.agent_topology.sat.residence, "urp_control_plane_only");
-  assert.ok(audit.agent_topology.sat.roles.includes("resource_scheduler"));
+  assert.deepEqual(audit.agent_topology.sat.roles.map((role) => role.id), [
+    "SAT-Orchestrator",
+    "SAT-Policy",
+    "SAT-QualityOps",
+    "SAT-Resource",
+    "SAT-GlobalVerifier"
+  ]);
   assert.equal(audit.agent_topology.boundary, "SAT are not cloud PAT and do not live inside user nodes");
+  assert.equal(audit.agent_topology.invariant, "PAT may want success. SAT must require truth.");
+  assert.equal(audit.agent_topology.access.user_can_directly_command_sat, false);
+  assert.equal(audit.agent_topology.access.sat_reads_raw_private_pat_memory_by_default, false);
+  assert.equal(audit.agent_topology.access.urp_receives_raw_private_data, false);
+  assert.equal(audit.agent_topology.access.imp_from_pat_self_certification, false);
   assert.equal(audit.hhmm_phases[0], "UNDERSTAND");
   assert.equal(audit.boundary.execution_enabled, false);
   assert.equal(audit.boundary.mutation_performed, false);
@@ -104,6 +115,10 @@ test("formatAmbientAuditPreview renders the compliance spine and next implementa
   assert.match(output, /Hidden flow: intent -> micro_consent -> capability -> effect -> evidence -> impact/);
   assert.match(output, /PAT-7: local, user-aligned, user-node-only mission party/);
   assert.match(output, /SAT-5: system-owned, system-aligned URP control plane/);
+  assert.match(output, /SAT-Orchestrator: Global task sharding, mission routing, RSI scheduling/);
+  assert.match(output, /PAT may want success\. SAT must require truth\./);
+  assert.match(output, /Your PAT agents help shape and later execute your local mission/);
+  assert.match(output, /SAT\/URP validation is system-side and only applies after evidence or receipt handoff/);
   assert.match(output, /SAT are not cloud PAT/);
   assert.match(output, /Proof-of-Truth Convergence/);
   assert.match(output, /Next implementation: one_node_one_mission_diagnostic/);
@@ -116,6 +131,8 @@ test("dema ambient audit prints the ambient sovereign execution audit", async ()
   assert.match(stdout, /DEMA Ambient Sovereign Execution Audit/);
   assert.match(stdout, /micro_consent/);
   assert.match(stdout, /SAT-5: system-owned, system-aligned URP control plane/);
+  assert.match(stdout, /SAT-GlobalVerifier/);
+  assert.doesNotMatch(stdout, /Your SAT agents help you do the task/);
   assert.match(stdout, /one_node_one_mission_diagnostic/);
   assert.match(stdout, /Boundary: preview-only; no execution; no mutation; no receipt minted/);
 });
@@ -126,6 +143,8 @@ test("dema ambient audit --json emits a schema-tagged non-executing audit", asyn
 
   assert.equal(audit.schema, "bizra.dema.ambient_audit_preview.v0.1");
   assert.equal(audit.agent_topology.sat.residence, "urp_control_plane_only");
+  assert.equal(audit.agent_topology.ux_copy.pat, "Your PAT agents help shape and later execute your local mission.");
+  assert.equal(audit.agent_topology.ux_copy.sat, "SAT/URP validation is system-side and only applies after evidence or receipt handoff.");
   assert.equal(audit.boundary.execution_enabled, false);
   assert.equal(audit.proof_of_truth.economic.status, "closed_until_verified_impact");
 });

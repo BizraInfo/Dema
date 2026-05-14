@@ -146,14 +146,40 @@ export function buildAmbientAuditPreview({ now = new Date() } = {}) {
         residence: "urp_control_plane_only",
         role: "system staff for ecosystem orchestration, policy, quality, resources, and global verification",
         roles: [
-          "global_orchestrator",
-          "policy_governance",
-          "poi_oracle",
-          "resource_scheduler",
-          "observability_quality"
+          {
+            id: "SAT-Orchestrator",
+            responsibility: "Global task sharding, mission routing, RSI scheduling."
+          },
+          {
+            id: "SAT-Policy",
+            responsibility: "Ihsan, Sharia, privacy, no-overclaim, cross-node safety."
+          },
+          {
+            id: "SAT-QualityOps",
+            responsibility: "Health, latency, drift, MTTR, diagnostics triggers."
+          },
+          {
+            id: "SAT-Resource",
+            responsibility: "Resource manifests, RSI registry, sovereign data gating."
+          },
+          {
+            id: "SAT-GlobalVerifier",
+            responsibility: "EvidenceChain checks, PoI/oracle review, IMP authorization."
+          }
         ]
       },
-      boundary: "SAT are not cloud PAT and do not live inside user nodes"
+      invariant: "PAT may want success. SAT must require truth.",
+      boundary: "SAT are not cloud PAT and do not live inside user nodes",
+      access: {
+        user_can_directly_command_sat: false,
+        sat_reads_raw_private_pat_memory_by_default: false,
+        urp_receives_raw_private_data: false,
+        imp_from_pat_self_certification: false
+      },
+      ux_copy: {
+        pat: "Your PAT agents help shape and later execute your local mission.",
+        sat: "SAT/URP validation is system-side and only applies after evidence or receipt handoff."
+      }
     },
     hhmm_phases: ["UNDERSTAND", "PLAN", "ACT", "VERIFY", "SETTLE"],
     compliance_spine: {
@@ -308,6 +334,12 @@ export function formatAmbientAuditPreview(audit) {
   lines.push("Agent topology:");
   lines.push("  PAT-7: local, user-aligned, user-node-only mission party");
   lines.push("  SAT-5: system-owned, system-aligned URP control plane");
+  for (const role of audit.agent_topology.sat.roles) {
+    lines.push(`    ${role.id}: ${role.responsibility}`);
+  }
+  lines.push(`  Invariant: ${audit.agent_topology.invariant}`);
+  lines.push(`  UX: ${audit.agent_topology.ux_copy.pat}`);
+  lines.push(`  UX: ${audit.agent_topology.ux_copy.sat}`);
   lines.push(`  Boundary: ${audit.agent_topology.boundary}`);
   lines.push("");
   lines.push(`HHMM phases: ${audit.hhmm_phases.join(" -> ")}`);
