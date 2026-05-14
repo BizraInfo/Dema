@@ -44,6 +44,15 @@ Dema does not ask you to trust a black box. It tells you what it knows, what it 
 ```bash
 dema welcome
 dema setup
+dema journey "Fix auth.py and run pytest"
+dema models
+dema ambient
+dema ambient --manifest
+dema ambient audit
+dema diagnostics plan
+dema consent plan "Fix auth.py and run pytest"
+dema mission draft "Fix auth.py and run pytest"
+dema report safety
 dema status
 dema doctor
 dema mission propose
@@ -65,6 +74,190 @@ Next:
 ```
 
 `dema mission propose` is a preview command. It checks readiness and consent state, then stops. It does not start a daemon, execute work, or create the first runtime receipt.
+
+---
+
+## Sovereign journey
+
+Use:
+
+```bash
+dema journey "Fix auth.py and run pytest"
+```
+
+This is the one-screen journey preview: first launch, safety boundary, mission
+draft, consent scope, Node0 handoff, and receipt/impact posture. It is a
+terminal UX guide, not a runtime command. It does not approve consent, hand work
+to Node0, execute commands, mutate files, invoke models, or mint receipts.
+
+For a schema-tagged machine view:
+
+```bash
+dema journey --json "Audit Downloads and send to Slack"
+```
+
+---
+
+## Ambient boundary
+
+Use:
+
+```bash
+dema ambient
+```
+
+This shows the Ambient Sovereign Execution boundary. Dema may observe local
+readiness, inventory local models, and prepare a consent handoff. It does not
+run Bash, start a daemon, invoke a model, mutate files, mint artifacts, or
+federate. Raw Bash belongs behind Node0's governed EffectCap runtime, not in
+the Dema product face.
+
+For a schema-tagged machine view:
+
+```bash
+dema ambient:json
+```
+
+For a zero-trust capability manifest preview:
+
+```bash
+dema ambient --manifest
+dema ambient --manifest --json
+```
+
+This emits a hash-committed machine-readable manifest for the current Dema
+boundary: readable symbolic paths, no writable paths, no executable commands,
+no network access, and no foreign personal data. Signing is explicitly deferred
+to governed Node0 because Dema does not issue identity-bound artifacts.
+
+For the SNR/SAPE compliance view:
+
+```bash
+dema ambient audit
+dema ambient audit --json
+```
+
+This compresses the Bash/AHK/Telescript actuator risk into one preview-only
+audit: intent, micro-consent, capability, effect, evidence, impact. It names the
+HHMM phases, Proof-of-Truth posture, and next one-node/one-mission diagnostic
+without enabling execution. It also keeps the agent topology explicit: PAT-7 is
+the local user-aligned mission party, while SAT-5 is the system-owned URP
+control plane. SAT are not cloud PAT and do not live inside user nodes.
+
+Canonical UX boundary:
+
+```text
+Your PAT agents help shape and later execute your local mission.
+SAT/URP validation is system-side and only applies after evidence or receipt handoff.
+```
+
+Canonical invariant: PAT may want success. SAT must require truth. SAT-5 roles
+are SAT-Orchestrator, SAT-Policy, SAT-QualityOps, SAT-Resource, and
+SAT-GlobalVerifier.
+
+---
+
+## Consent planning
+
+Use:
+
+```bash
+dema consent plan "Fix auth.py and run pytest"
+```
+
+This drafts a micro-consent scope from a plain-language intent. It maps obvious
+files, commands, and services into structured permissions, computes a
+commitment hash over the proposed permission set, and flags risky analogies
+such as audit-shaped work that requests external delivery.
+
+This is still preview-only. It does not approve consent, mint capabilities, run
+Bash, call a model, mutate files, or create a receipt. The resulting scope must
+be reviewed and handed to Node0's governed EffectCap runtime before any effect.
+
+For a schema-tagged machine view:
+
+```bash
+dema consent plan --json "Audit Downloads and send to Slack"
+```
+
+---
+
+## Diagnostics plan
+
+Use:
+
+```bash
+dema diagnostics plan
+```
+
+This previews the self-proactive diagnostics mission: local model inventory,
+ambient boundary, safety report, `npm test`, `npm run check`, and Node0
+self-check verification. It is the Dema-facing harness for self-critique, but it
+still does not run commands. Execution belongs behind explicit consent in the
+governed Node0 runtime.
+
+For a schema-tagged machine view:
+
+```bash
+dema diagnostics plan --json
+```
+
+---
+
+## Mission drafting
+
+Use:
+
+```bash
+dema mission draft "Fix auth.py and run pytest"
+```
+
+This converts plain-language intent into a schema-tagged MissionDraft and embeds
+the matching ConsentPlan preview. The mission stays in `DRAFT_INTENT`; the next
+phase is `CONSENT_NEGOTIATION`. Dema does not approve the scope, mint EffectCaps,
+execute commands, or create receipts.
+
+For a schema-tagged machine view:
+
+```bash
+dema mission draft --json "Audit Downloads and send to Slack"
+```
+
+---
+
+## Local models
+
+Use:
+
+```bash
+dema models
+```
+
+This reads local model inventory from Ollama, LM Studio, and model files under
+`~/Downloads` without invoking a model, mutating files, or minting a receipt. It
+also flags model servers that appear LAN-exposed and model names that require an
+explicit operator routing decision.
+
+---
+
+## Safety report
+
+Use:
+
+```bash
+dema report safety
+```
+
+This previews Dema's safety posture for a lighthouse alpha operator: local-only
+boundaries, proof gaps, self-critique, and the demo loop to run before talking
+to another user. It is not a certification command. It does not compute proof,
+invoke a model, execute work, mutate files, start a daemon, or mint a receipt.
+
+For a schema-tagged machine view:
+
+```bash
+dema report safety --json
+```
 
 ---
 

@@ -30,6 +30,12 @@ jobs:
             proof/u1-proof-pin|docs/u1-proof-pin|ci/u1-proof-pin-class)
               echo "BIZRA_REVIEW_CLASS=docs/u1-proof-pin" >> "$GITHUB_ENV"
               ;;
+            u2/dema-preview-surfaces|ci/u2-dema-preview-class)
+              echo "BIZRA_REVIEW_CLASS=u2/dema-preview-surfaces" >> "$GITHUB_ENV"
+              ;;
+            tooling/claim-ledger-checker|ci/claim-ledger-checker-class)
+              echo "BIZRA_REVIEW_CLASS=tooling/claim-ledger-checker" >> "$GITHUB_ENV"
+              ;;
             proof/u1-*)
               echo "BIZRA_REVIEW_CLASS=proof/u1" >> "$GITHUB_ENV"
               ;;

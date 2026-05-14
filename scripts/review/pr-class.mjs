@@ -11,6 +11,12 @@ const REVIEW_CLASSES = {
   },
   "devops/release-readiness": {
     branches: ["devops/release-readiness", "ci/devops-release-readiness-class"]
+  },
+  "u2/dema-preview-surfaces": {
+    branches: ["u2/dema-preview-surfaces", "ci/u2-dema-preview-class"]
+  },
+  "tooling/claim-ledger-checker": {
+    branches: ["tooling/claim-ledger-checker", "ci/claim-ledger-checker-class"]
   }
 };
 
