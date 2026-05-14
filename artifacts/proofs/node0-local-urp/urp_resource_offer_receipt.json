@@ -1,6 +1,6 @@
 {
   "artifact_011_class": false,
-  "content_sha256": "b10a6d7cddb3cd694ad52ccefab36582057da449ccbe8c953f0154df6dc80785",
+  "content_sha256": "15e81a76916e32973545d6e61b83888897f45b9156b7e027d9865167ba03c86d",
   "external_user_data": false,
   "federation": "not_implemented",
   "federation_claim": false,
@@ -10,7 +10,7 @@
   "node_id": "Node0",
   "pat_count": 7,
   "payload": {
-    "duplicate_policy": "idempotent_same_offer_id",
+    "duplicate_policy": "duplicate_offer_id_is_same_offer",
     "economic_mode": "sandbox_no_cash_value",
     "external_access": false,
     "offer_id": "node0.local.compute.readiness.preview",

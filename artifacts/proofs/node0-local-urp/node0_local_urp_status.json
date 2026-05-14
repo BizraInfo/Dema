@@ -10,6 +10,7 @@
     "RECEIPTS",
     "POI"
   ],
+  "content_sha256": "3b48e83bc3dd6239dda9762656280f3278aec8de0c5d7e4f8f96b1c1e836ad9c",
   "external_user_data": false,
   "federation": "not_implemented",
   "federation_claim": false,

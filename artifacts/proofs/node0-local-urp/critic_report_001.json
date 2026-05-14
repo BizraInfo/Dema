@@ -7,7 +7,7 @@
     "sat_permit_claimed": false,
     "token_or_reward_claimed": false
   },
-  "content_sha256": "b43656bcd55a563b7dd6758c7bd714e1a475d0af0879b98592480870027baaa6",
+  "content_sha256": "228d1e60f05b966ad54fc43172d234ab511e575f0176b16cd4c71aa32b843731",
   "finding_summary": {
     "blocker": 0,
     "info": 1,
@@ -48,5 +48,5 @@
   "report_id": "critic-report-node0-local-urp-001",
   "schema": "bizra.dema.urp_local.critic_report.v0.1",
   "scope": "U1 proof artifacts and self-check report only",
-  "self_check_report_sha256": "fb13cdc33eeaaa4e7191a7087e40af98f102c9c9128e4e91bbea4c6fbd3703a8"
+  "self_check_report_sha256": "f230e0203fbc903d14361c10ae41b33606edcd350d17874aab8a3fe8e18b2276"
 }

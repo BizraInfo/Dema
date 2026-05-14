@@ -14,6 +14,7 @@ import {
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = dirname(SCRIPT_DIR);
 const PROOF_DIR = "artifacts/proofs/node0-local-urp";
+// REPORT_DATE is the fixed snapshot date for this U1 proof set; update it only when regenerating a new proof snapshot.
 const REPORT_DATE = "2026-05-14";
 
 export const REPORT_FILES = [
@@ -115,7 +116,7 @@ function buildChecks(artifacts, proofVerify) {
     asCheck("u1.resource_idempotency", "Duplicate local resource offer is declared idempotent", (
       registry.idempotency.duplicate_resource_offer_rejected_or_idempotent === true
     ), {
-      duplicate_policy: registry.idempotency.resource_offer_policy
+      duplicate_policy: registry.idempotency.duplicate_policy
     })
   ];
 }
@@ -310,8 +311,8 @@ export async function verifySelfCheckReports({ root = REPO_ROOT } = {}) {
   return {
     schema: "bizra.dema.urp_local.self_check_verify.v0.1",
     proof_dir: PROOF_DIR,
-    ok: expected.reports.self_check_report.verdict === "pass_with_review_items" &&
-      files.every((file) => file.exists && file.matches),
+    ok: files.every((file) => file.exists && file.matches),
+    validationPassed: expected.reports.self_check_report.verdict === "pass_with_review_items",
     files,
     boundary: expected.boundary
   };

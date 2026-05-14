@@ -110,7 +110,7 @@
       "pass": true
     }
   ],
-  "content_sha256": "fb13cdc33eeaaa4e7191a7087e40af98f102c9c9128e4e91bbea4c6fbd3703a8",
+  "content_sha256": "f230e0203fbc903d14361c10ae41b33606edcd350d17874aab8a3fe8e18b2276",
   "mission_id": "node0.self_check.001",
   "phases": [
     "UNDERSTAND",
@@ -144,15 +144,15 @@
   "source_artifacts": [
     {
       "path": "node0_local_urp_status.json",
-      "sha256": "2adf675acc432eb56cfffe5250744fe31fa14a09e080d8efbd05627c0dfe1cd5"
+      "sha256": "223ad3cc477a71d8bed3a0e8d0ebaab9692fe1361d935b38b3225c465847a79a"
     },
     {
       "path": "urp_local_registry.json",
-      "sha256": "1601c508ef0c4c79759490aecc807de4e808156cab7df0615d6d10e2cf3150c7"
+      "sha256": "a3b53639d8390af204887c87050e5554dedee84caed96dd98a55491688ed8cf0"
     },
     {
       "path": "sat5_urp_registration.json",
-      "sha256": "9df683717e21d62810a4a21665ca69dc1ffe7a9e339b474a2985a0f6eabf24e5"
+      "sha256": "127364ab6254574d3d54ff4d6789eb945ba1eac02998c4ab014b1c0a5f105969"
     },
     {
       "path": "urp_skill_registry_receipt.json",
@@ -164,11 +164,11 @@
     },
     {
       "path": "urp_resource_offer_receipt.json",
-      "sha256": "0ed061b778a253eb3af18953e7f5931592ec32cbac67cec174ad670f3e512be8"
+      "sha256": "dadd4c33d7b1ac14b794f970040388465a832b8ddf7cd224108a96148ddf1efc"
     },
     {
       "path": "poi_sandbox_record.json",
-      "sha256": "117daf552623040c7feb489be38ebbb7e5e7c7ca5d51c0530edf9b22ff815c9c"
+      "sha256": "7f6e49f8e76993fa3d5ace25cfc05258c35fa3545f6fddd8063ff2455e120e25"
     }
   ],
   "verdict": "pass_with_review_items"

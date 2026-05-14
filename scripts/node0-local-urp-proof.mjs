@@ -110,10 +110,10 @@ function localReceipt(schema, receiptId, subject, payload) {
 
 function buildArtifacts(root) {
   const node0StandalonePath = join(root, "scripts", "node0_standalone.py");
-  const status = {
-    schema: "bizra.dema.urp_local.status.v0.1",
-    proof_id: "node0-local-urp-proof-v0.1",
-    proof_date: PROOF_DATE,
+    const status = withContentHash({
+      schema: "bizra.dema.urp_local.status.v0.1",
+      proof_id: "node0-local-urp-proof-v0.1",
+      proof_date: PROOF_DATE,
     ...TRUTH_FIELDS,
     ...LOCAL_BOUNDARY,
     component_count: 7,
@@ -131,9 +131,9 @@ function buildArtifacts(root) {
     },
     boundary_note:
       "This is a local proof artifact set, not ARTIFACT-011, not a SAT PERMIT, and not a runtime execution."
-  };
+  });
 
-  const sat5 = {
+  const sat5 = withContentHash({
     schema: "bizra.dema.urp_local.sat5_registration.v0.1",
     proof_date: PROOF_DATE,
     ...TRUTH_FIELDS,
@@ -143,7 +143,7 @@ function buildArtifacts(root) {
     roles: SAT_ROLES,
     boundary_note:
       "SAT-5 registration here is a local seed proof; real SAT-5 PERMIT authority remains upstream."
-  };
+  });
 
   const skillReceipt = localReceipt(
     "bizra.dema.urp_local.skill_receipt.v0.1",
@@ -183,7 +183,7 @@ function buildArtifacts(root) {
       resource_type: "local_compute_preview",
       visibility: "local_only",
       economic_mode: "sandbox_no_cash_value",
-      duplicate_policy: "idempotent_same_offer_id",
+      duplicate_policy: "duplicate_offer_id_is_same_offer",
       external_access: false
     }
   );
@@ -208,7 +208,7 @@ function buildArtifacts(root) {
     kpi_value: 1
   });
 
-  const registry = {
+  const registry = withContentHash({
     schema: "bizra.dema.urp_local.registry.v0.1",
     proof_date: PROOF_DATE,
     ...TRUTH_FIELDS,
@@ -248,10 +248,10 @@ function buildArtifacts(root) {
       }
     ],
     idempotency: {
-      resource_offer_policy: "duplicate_offer_id_is_same_offer",
+      duplicate_policy: "duplicate_offer_id_is_same_offer",
       duplicate_resource_offer_rejected_or_idempotent: true
     }
-  };
+  });
 
   return {
     node0_local_urp_status: status,

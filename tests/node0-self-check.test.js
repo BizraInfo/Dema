@@ -28,6 +28,7 @@ test("self-check reports exist and verify byte-for-byte", async () => {
 
   assert.equal(result.schema, "bizra.dema.urp_local.self_check_verify.v0.1");
   assert.equal(result.ok, true);
+  assert.equal(result.validationPassed, true);
   assert.deepEqual(result.files.map((file) => file.path), REPORT_FILES);
   assert.ok(result.files.every((file) => file.matches === true));
 });

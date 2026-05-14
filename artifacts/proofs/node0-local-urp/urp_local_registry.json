@@ -1,10 +1,11 @@
 {
+  "content_sha256": "d9667ae70b0bdcea63499b2112896359443f9ef6c2ad514e7096992cf5f3e5e8",
   "external_user_data": false,
   "federation": "not_implemented",
   "federation_claim": false,
   "idempotency": {
-    "duplicate_resource_offer_rejected_or_idempotent": true,
-    "resource_offer_policy": "duplicate_offer_id_is_same_offer"
+    "duplicate_policy": "duplicate_offer_id_is_same_offer",
+    "duplicate_resource_offer_rejected_or_idempotent": true
   },
   "knowledge_packs": [
     {
@@ -19,7 +20,7 @@
   "poi_mode": "sandbox_no_cash_value",
   "poi_sandbox_records": [
     {
-      "content_sha256": "eb4d1f6e9d3d3ec5a1d4bf2fa1a053a0d226009dfbfae4371afb2db326fc76e7",
+      "content_sha256": "cab1c728bc86e46c2b97fa7186b49ac11b01c49ce37b7b06ba5db1ffff44603e",
       "record_id": "poi-sandbox-node0-local-urp-v0.1"
     }
   ],
@@ -29,7 +30,7 @@
   "real_reward_claim": false,
   "resource_offers": [
     {
-      "content_sha256": "b10a6d7cddb3cd694ad52ccefab36582057da449ccbe8c953f0154df6dc80785",
+      "content_sha256": "15e81a76916e32973545d6e61b83888897f45b9156b7e027d9865167ba03c86d",
       "offer_id": "node0.local.compute.readiness.preview",
       "receipt_id": "urp-resource-offer-local-compute-readiness-v0.1"
     }

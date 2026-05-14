@@ -48,6 +48,7 @@ test("status proves URP_LOCAL_ACTIVE with required local-only truth fields", asy
   assert.equal(status.public_network, false);
   assert.equal(status.node1_handshake, false);
   assert.equal(status.raw_private_data_included, false);
+  assert.equal(status.content_sha256, contentHash(status));
 });
 
 test("SAT-5 registration has the local seed roles and does not claim SAT PERMIT", async () => {
@@ -56,6 +57,7 @@ test("SAT-5 registration has the local seed roles and does not claim SAT PERMIT"
   assert.equal(sat.schema, "bizra.dema.urp_local.sat5_registration.v0.1");
   assert.equal(sat.binding, "non_canonical_local_seed");
   assert.equal(sat.sat_count, 5);
+  assert.equal(sat.content_sha256, contentHash(sat));
   assert.deepEqual(
     sat.roles.map((role) => role.name),
     ["Validator", "Oracle", "Mediator", "Archivist", "Sentinel"]
@@ -68,27 +70,22 @@ test("registry includes one skill, knowledge pack, resource offer, and PoI sandb
 
   assert.equal(registry.schema, "bizra.dema.urp_local.registry.v0.1");
   assert.equal(registry.truth_label, "URP_LOCAL_ACTIVE");
+  assert.equal(registry.content_sha256, contentHash(registry));
   assert.equal(registry.skills.length, 1);
   assert.equal(registry.knowledge_packs.length, 1);
   assert.equal(registry.resource_offers.length, 1);
   assert.equal(registry.poi_sandbox_records.length, 1);
+  assert.equal(registry.idempotency.duplicate_policy, "duplicate_offer_id_is_same_offer");
   assert.equal(new Set(registry.resource_offers.map((offer) => offer.offer_id)).size, 1);
 });
 
 test("local receipts and PoI record are hash-verifiable and identity-safe", async () => {
-  const receiptFiles = [
-    "urp_skill_registry_receipt.json",
-    "urp_knowledge_pack_receipt.json",
-    "urp_resource_offer_receipt.json",
-    "poi_sandbox_record.json"
-  ];
-
-  for (const file of receiptFiles) {
+  for (const file of ARTIFACT_FILES) {
     const artifact = await readArtifact(file);
     assert.equal(artifact.content_sha256, contentHash(artifact));
-    assert.equal(artifact.identity_bound, false);
-    assert.equal(artifact.signing_key_used, null);
-    assert.equal(artifact.artifact_011_class, false);
+    if ("identity_bound" in artifact) assert.equal(artifact.identity_bound, false);
+    if ("signing_key_used" in artifact) assert.equal(artifact.signing_key_used, null);
+    if ("artifact_011_class" in artifact) assert.equal(artifact.artifact_011_class, false);
     assert.equal(artifact.token_value_claim, false);
   }
 });

@@ -1,11 +1,11 @@
 {
   "artifact_011_class": false,
-  "content_sha256": "eb4d1f6e9d3d3ec5a1d4bf2fa1a053a0d226009dfbfae4371afb2db326fc76e7",
+  "content_sha256": "cab1c728bc86e46c2b97fa7186b49ac11b01c49ce37b7b06ba5db1ffff44603e",
   "economic_mode": "sandbox_no_cash_value",
   "evidence_hashes": [
     "b98212f7aec4b4732b078ed8c03bab15de1a636e6065e6663f1b978f9686540d",
     "b80e818f59abeab657dda5edfc8a396b7f2e8935925d9d12ec069943f7c706bf",
-    "b10a6d7cddb3cd694ad52ccefab36582057da449ccbe8c953f0154df6dc80785"
+    "15e81a76916e32973545d6e61b83888897f45b9156b7e027d9865167ba03c86d"
   ],
   "external_user_data": false,
   "federation": "not_implemented",
