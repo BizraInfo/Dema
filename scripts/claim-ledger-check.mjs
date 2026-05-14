@@ -33,7 +33,7 @@ export const RISK_PATTERNS = [
   },
   {
     kind: "deployment",
-    pattern: /\b(production-ready|deployable|autonomous deployment|public network live|URP network live)\b/i,
+    pattern: /\b(production-ready|deployable|autonomous deployment|public network live|URP\s+network\s+live)\b/i,
     reason: "deployment claims require operational evidence"
   }
 ];
