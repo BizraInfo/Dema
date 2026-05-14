@@ -2,6 +2,18 @@
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
 import { formatStatus } from "../../../packages/core/src/status.js";
 import { previewBoundedDiagnostic } from "../../../packages/core/src/mission.js";
+import {
+  buildMissionDraftPreview,
+  formatMissionDraftPreview
+} from "../../../packages/mission/src/mission-draft.js";
+import {
+  buildDiagnosticsMissionPlan,
+  formatDiagnosticsMissionPlan
+} from "../../../packages/mission/src/diagnostics-plan.js";
+import {
+  buildSovereignJourneyPreview,
+  formatSovereignJourneyPreview
+} from "../../../packages/mission/src/journey.js";
 import { recordTodayTick } from "../../../packages/core/src/today.js";
 import { listReceipts, readReceipt } from "../../../packages/receipts/src/receipt-store.js";
 import { runSetup } from "../../../packages/installer/src/setup.js";
@@ -14,12 +26,28 @@ import {
   gatherBannerInputs,
   probeGateway
 } from "../../../packages/core/src/banner.js";
+import {
+  buildAmbientBoundary,
+  formatAmbientBoundary
+} from "../../../packages/core/src/ambient.js";
+import {
+  buildSafetyReportPreview,
+  formatSafetyReportPreview
+} from "../../../packages/core/src/safety-report.js";
 import { runShell } from "../../../packages/core/src/shell.js";
 import { TASK_REGISTRY } from "../../../packages/tasks/src/downloads-audit-preview.js";
 import {
   formatVerdict,
   verifyReceipt
 } from "../../../packages/verifier/src/sat-placeholder.js";
+import {
+  buildConsentPlanPreview,
+  formatConsentPlanPreview
+} from "../../../packages/consent/src/consent-planner.js";
+import {
+  collectModelInventory,
+  formatModelInventory
+} from "../../../packages/models/src/model-inventory.js";
 import {
   highestLevel,
   levelLabel,
@@ -44,6 +72,16 @@ Usage:
   dema status:json  Show machine-readable status
   dema today        Record a local continuity tick + memory summary
   dema doctor       Validate readiness and consent gate
+  dema ambient      Show Ambient Sovereign Execution boundary (preview-only)
+  dema ambient:json Show the ambient boundary as schema-tagged JSON
+  dema journey [--json] ["<intent>"]
+                    Preview first launch -> mission -> Node0 handoff -> receipts
+  dema diagnostics plan [--json]
+                    Preview self-diagnostics harness; does not run checks
+  dema consent plan [--json] "<intent>"
+                    Preview a micro-consent scope; does not approve or execute
+  dema mission draft [--json] "<intent>"
+                    Preview Intent -> MissionDraft -> ConsentPlan
   dema mission propose [--consent "GO: Node0 bounded diagnostic activation only"]
                     Preview ARTIFACT-011 readiness; does not execute runtime
   dema receipts     List local receipts
@@ -51,6 +89,9 @@ Usage:
   dema memory       List local memory entries (profile + ~/.dema/memory/*)
   dema memory show NAME
                     Show one memory entry by name (e.g. profile, bizra-context)
+  dema models       Show local model inventory (read-only; no inference)
+  dema report safety [--json]
+                    Preview the safety report; does not certify, execute, or mint
   dema task         List registered tasks
   dema task NAME    Run a registered task (read-only in v0.3.0)
   dema sovereign    Render local Sovereign Mission Interface (view-only)
@@ -131,9 +172,60 @@ Next:
       return;
     }
 
+    case "ambient": {
+      console.log(formatAmbientBoundary(buildAmbientBoundary()));
+      return;
+    }
+
+    case "ambient:json": {
+      console.log(JSON.stringify(buildAmbientBoundary(), null, 2));
+      return;
+    }
+
+    case "journey": {
+      const json = argv.includes("--json");
+      const intent = argv.slice(1).filter((arg) => arg !== "--json").join(" ").trim();
+      const journey = buildSovereignJourneyPreview({ intent });
+      console.log(json ? JSON.stringify(journey, null, 2) : formatSovereignJourneyPreview(journey));
+      return;
+    }
+
+    case "diagnostics": {
+      if (subcommand !== "plan") {
+        throw new Error("Unknown diagnostics command. Use `dema diagnostics plan [--json]`.");
+      }
+      const plan = buildDiagnosticsMissionPlan();
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(plan, null, 2)
+          : formatDiagnosticsMissionPlan(plan)
+      );
+      return;
+    }
+
+    case "consent": {
+      if (subcommand !== "plan") {
+        throw new Error("Unknown consent command. Use `dema consent plan \"<intent>\"`.");
+      }
+      const json = argv.includes("--json");
+      const intent = argv.slice(2).filter((arg) => arg !== "--json").join(" ").trim();
+      if (!intent) throw new Error("Usage: dema consent plan [--json] \"<intent>\"");
+      const plan = buildConsentPlanPreview({ intent });
+      console.log(json ? JSON.stringify(plan, null, 2) : formatConsentPlanPreview(plan));
+      return;
+    }
+
     case "mission": {
+      if (subcommand === "draft") {
+        const json = argv.includes("--json");
+        const intent = argv.slice(2).filter((arg) => arg !== "--json").join(" ").trim();
+        if (!intent) throw new Error("Usage: dema mission draft [--json] \"<intent>\"");
+        const draft = buildMissionDraftPreview({ intent });
+        console.log(json ? JSON.stringify(draft, null, 2) : formatMissionDraftPreview(draft));
+        return;
+      }
       if (subcommand !== "propose") {
-        throw new Error("Unknown mission command. Use `dema mission propose`.");
+        throw new Error("Unknown mission command. Use `dema mission draft \"<intent>\"` or `dema mission propose`.");
       }
       const status = await adapter.status();
       const consent = argValue(argv, "--consent") ?? "";
@@ -164,6 +256,25 @@ Next:
           "Unknown memory command. Use `dema memory [list]` or `dema memory show <name>`."
         );
       }
+      return;
+    }
+
+    case "models": {
+      const inventory = await collectModelInventory();
+      console.log(formatModelInventory(inventory));
+      return;
+    }
+
+    case "report": {
+      if (subcommand !== "safety") {
+        throw new Error("Unknown report command. Use `dema report safety [--json]`.");
+      }
+      const report = buildSafetyReportPreview();
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(report, null, 2)
+          : formatSafetyReportPreview(report)
+      );
       return;
     }
 
