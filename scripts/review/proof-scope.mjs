@@ -69,6 +69,12 @@ const U2_DEMA_PREVIEW_SURFACE_FILES = new Set([
   "tests/safety-report.test.js"
 ]);
 
+const CLAIM_LEDGER_CHECKER_FILES = new Set([
+  "package.json",
+  "scripts/claim-ledger-check.mjs",
+  "tests/claim-ledger-check.test.js"
+]);
+
 const REVIEW_CLASSES = {
   "proof/u1": {
     primaryFiles: U1_FILES,
@@ -96,6 +102,14 @@ const REVIEW_CLASSES = {
   "u2/dema-preview-surfaces": {
     primaryFiles: U2_DEMA_PREVIEW_SURFACE_FILES,
     requiredFiles: []
+  },
+  "tooling/claim-ledger-checker": {
+    primaryFiles: CLAIM_LEDGER_CHECKER_FILES,
+    requiredFiles: [
+      "package.json",
+      "scripts/claim-ledger-check.mjs",
+      "tests/claim-ledger-check.test.js"
+    ]
   }
 };
 
