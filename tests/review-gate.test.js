@@ -24,6 +24,7 @@ const u1Files = [
 const u2DemaPreviewFiles = [
   "README.md",
   "apps/cli/src/index.js",
+  "docs/UX_BLUEPRINT.md",
   "packages/core/src/ambient.js",
   "packages/core/src/safety-report.js",
   "packages/core/src/shell.js",
@@ -32,12 +33,14 @@ const u2DemaPreviewFiles = [
   "packages/consent/src/consent-format.js",
   "packages/consent/src/consent-planner.js",
   "packages/mission/src/diagnostics-plan.js",
+  "packages/mission/src/journey.js",
   "packages/mission/src/mission-draft.js",
   "packages/models/src/model-inventory.js",
   "scripts/check.mjs",
   "tests/ambient.test.js",
   "tests/consent-planner.test.js",
   "tests/diagnostics-plan.test.js",
+  "tests/journey.test.js",
   "tests/mission-draft.test.js",
   "tests/models.test.js",
   "tests/safety-report.test.js"
