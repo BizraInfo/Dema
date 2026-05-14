@@ -75,6 +75,17 @@ const CLAIM_LEDGER_CHECKER_FILES = new Set([
   "tests/claim-ledger-check.test.js"
 ]);
 
+const AMANA_KERNEL_CONTRACT_FILES = new Set([
+  "packages/consent/src/consent-hash-table.js",
+  "packages/capabilities/src/effect-cap.js",
+  "packages/evidence/src/evidence-chain.js",
+  "packages/impact/src/impact-event.js",
+  "tests/consent-hash-table.test.js",
+  "tests/effect-cap.test.js",
+  "tests/evidence-chain.test.js",
+  "tests/impact-event.test.js"
+]);
+
 const REVIEW_CLASSES = {
   "proof/u1": {
     primaryFiles: U1_FILES,
@@ -109,6 +120,19 @@ const REVIEW_CLASSES = {
       "package.json",
       "scripts/claim-ledger-check.mjs",
       "tests/claim-ledger-check.test.js"
+    ]
+  },
+  "u2.1/amana-kernel-contracts": {
+    primaryFiles: AMANA_KERNEL_CONTRACT_FILES,
+    requiredFiles: [
+      "packages/consent/src/consent-hash-table.js",
+      "packages/capabilities/src/effect-cap.js",
+      "packages/evidence/src/evidence-chain.js",
+      "packages/impact/src/impact-event.js",
+      "tests/consent-hash-table.test.js",
+      "tests/effect-cap.test.js",
+      "tests/evidence-chain.test.js",
+      "tests/impact-event.test.js"
     ]
   }
 };

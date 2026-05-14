@@ -36,6 +36,9 @@ jobs:
             tooling/claim-ledger-checker|ci/claim-ledger-checker-class)
               echo "BIZRA_REVIEW_CLASS=tooling/claim-ledger-checker" >> "$GITHUB_ENV"
               ;;
+            u2.1/amana-kernel-contracts|ci/u2.1-amana-kernel-contracts-class)
+              echo "BIZRA_REVIEW_CLASS=u2.1/amana-kernel-contracts" >> "$GITHUB_ENV"
+              ;;
             proof/u1-*)
               echo "BIZRA_REVIEW_CLASS=proof/u1" >> "$GITHUB_ENV"
               ;;
