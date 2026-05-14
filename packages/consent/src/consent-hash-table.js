@@ -30,11 +30,22 @@ function parseExpiry(value) {
   return Number.isNaN(time) ? null : time;
 }
 
-function validatePermission(permission, index, now) {
-  if (!permission || typeof permission !== "object" || Array.isArray(permission)) {
+function invalid(code, detail, index = null) {
+  return {
+    ok: false,
+    denial: denial(code, detail, index)
+  };
+}
+
+function validateConsentFields(value, index, { requireExpiry, now } = {}) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {
       ok: false,
-      denial: denial("invalid_permission", "permission must be an object", index)
+      denial: denial(
+        requireExpiry ? "invalid_permission" : "invalid_request",
+        requireExpiry ? "permission must be an object" : "lookup request must be an object",
+        index
+      )
     };
   }
 
@@ -44,69 +55,47 @@ function validatePermission(permission, index, now) {
     operation,
     purpose,
     expires_at: expiresAt
-  } = permission;
+  } = value;
 
-  if (!nonEmptyString(resourceType)) {
-    return {
-      ok: false,
-      denial: denial("missing_resource_type", "resource_type must be a non-empty string", index)
-    };
-  }
+  if (!nonEmptyString(resourceType)) return invalid("missing_resource_type", "resource_type must be a non-empty string", index);
   if (!RESOURCE_TYPES.has(resourceType)) {
-    return {
-      ok: false,
-      denial: denial("unknown_resource_type", `unsupported resource_type: ${resourceType}`, index)
-    };
+    return invalid("unknown_resource_type", `unsupported resource_type: ${resourceType}`, index);
   }
-  if (!nonEmptyString(resourceId)) {
-    return {
-      ok: false,
-      denial: denial("missing_resource_id", "resource_id must be a non-empty string", index)
-    };
-  }
-  if (!nonEmptyString(operation)) {
-    return {
-      ok: false,
-      denial: denial("missing_operation", "operation must be a non-empty string", index)
-    };
-  }
+  if (!nonEmptyString(resourceId)) return invalid("missing_resource_id", "resource_id must be a non-empty string", index);
+  if (!nonEmptyString(operation)) return invalid("missing_operation", "operation must be a non-empty string", index);
   if (!OPERATIONS.has(operation)) {
-    return {
-      ok: false,
-      denial: denial("unknown_operation", `unsupported operation: ${operation}`, index)
-    };
+    return invalid("unknown_operation", `unsupported operation: ${operation}`, index);
   }
-  if (!nonEmptyString(purpose)) {
-    return {
-      ok: false,
-      denial: denial("missing_purpose", "purpose must be a non-empty string", index)
-    };
-  }
+  if (!nonEmptyString(purpose)) return invalid("missing_purpose", "purpose must be a non-empty string", index);
 
-  const expiry = parseExpiry(expiresAt);
-  if (expiry === null) {
-    return {
-      ok: false,
-      denial: denial("missing_expiry", "expires_at must be a valid timestamp string", index)
-    };
-  }
-  if (expiry <= now.getTime()) {
-    return {
-      ok: false,
-      denial: denial("expired_scope", `expires_at is not after now: ${expiresAt}`, index)
-    };
+  const fields = {
+    resource_type: resourceType,
+    resource_id: resourceId,
+    operation,
+    purpose
+  };
+
+  if (requireExpiry) {
+    const expiry = parseExpiry(expiresAt);
+    if (expiry === null) {
+      return invalid("missing_expiry", "expires_at must be a valid timestamp string", index);
+    }
+    if (expiry <= now.getTime()) {
+      return invalid("expired_scope", `expires_at is not after now: ${expiresAt}`, index);
+    }
+    fields.expires_at = expiresAt;
   }
 
   return {
     ok: true,
-    permission: {
-      resource_type: resourceType,
-      resource_id: resourceId,
-      operation,
-      purpose,
-      expires_at: expiresAt
-    }
+    fields
   };
+}
+
+function validatePermission(permission, index, now) {
+  const validated = validateConsentFields(permission, index, { requireExpiry: true, now });
+  if (!validated.ok) return validated;
+  return { ok: true, permission: validated.fields };
 }
 
 export function consentKey({ resource_type: resourceType, resource_id: resourceId, operation }) {
@@ -171,66 +160,9 @@ export function verifyConsentHashTable(table) {
 }
 
 function validateLookupRequest(request) {
-  if (!request || typeof request !== "object" || Array.isArray(request)) {
-    return {
-      ok: false,
-      denial: denial("invalid_request", "lookup request must be an object")
-    };
-  }
-
-  const {
-    resource_type: resourceType,
-    resource_id: resourceId,
-    operation,
-    purpose
-  } = request;
-
-  if (!nonEmptyString(resourceType)) {
-    return {
-      ok: false,
-      denial: denial("missing_resource_type", "resource_type must be a non-empty string")
-    };
-  }
-  if (!RESOURCE_TYPES.has(resourceType)) {
-    return {
-      ok: false,
-      denial: denial("unknown_resource_type", `unsupported resource_type: ${resourceType}`)
-    };
-  }
-  if (!nonEmptyString(resourceId)) {
-    return {
-      ok: false,
-      denial: denial("missing_resource_id", "resource_id must be a non-empty string")
-    };
-  }
-  if (!nonEmptyString(operation)) {
-    return {
-      ok: false,
-      denial: denial("missing_operation", "operation must be a non-empty string")
-    };
-  }
-  if (!OPERATIONS.has(operation)) {
-    return {
-      ok: false,
-      denial: denial("unknown_operation", `unsupported operation: ${operation}`)
-    };
-  }
-  if (!nonEmptyString(purpose)) {
-    return {
-      ok: false,
-      denial: denial("missing_purpose", "purpose must be a non-empty string")
-    };
-  }
-
-  return {
-    ok: true,
-    request: {
-      resource_type: resourceType,
-      resource_id: resourceId,
-      operation,
-      purpose
-    }
-  };
+  const validated = validateConsentFields(request, null, { requireExpiry: false });
+  if (!validated.ok) return validated;
+  return { ok: true, request: validated.fields };
 }
 
 export function lookupConsent(table, request, { now = new Date() } = {}) {
