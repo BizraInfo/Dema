@@ -21,7 +21,21 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm test
       - run: npm run check
-      - run: node scripts/review/pr-class.mjs --class proof/u1
-      - run: node scripts/review/proof-scope.mjs --class proof/u1
-      - run: node scripts/review/no-overclaim.mjs --class proof/u1
-      - run: node scripts/review/receipt-integrity.mjs --class proof/u1
+      - name: Resolve BIZRA review class
+        run: |
+          case "${GITHUB_HEAD_REF}" in
+            proof/u1-proof-pin|docs/u1-proof-pin|ci/u1-proof-pin-class)
+              echo "BIZRA_REVIEW_CLASS=docs/u1-proof-pin" >> "$GITHUB_ENV"
+              ;;
+            proof/u1-*)
+              echo "BIZRA_REVIEW_CLASS=proof/u1" >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo "Unsupported BIZRA review branch: ${GITHUB_HEAD_REF}" >&2
+              exit 1
+              ;;
+          esac
+      - run: node scripts/review/pr-class.mjs --class "$BIZRA_REVIEW_CLASS"
+      - run: node scripts/review/proof-scope.mjs --class "$BIZRA_REVIEW_CLASS"
+      - run: node scripts/review/no-overclaim.mjs --class "$BIZRA_REVIEW_CLASS"
+      - run: node scripts/review/receipt-integrity.mjs --class "$BIZRA_REVIEW_CLASS"
