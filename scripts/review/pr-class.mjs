@@ -14,6 +14,9 @@ const REVIEW_CLASSES = {
   },
   "u2/dema-preview-surfaces": {
     branches: ["u2/dema-preview-surfaces", "ci/u2-dema-preview-class"]
+  },
+  "tooling/claim-ledger-checker": {
+    branches: ["tooling/claim-ledger-checker", "ci/claim-ledger-checker-class"]
   }
 };
 

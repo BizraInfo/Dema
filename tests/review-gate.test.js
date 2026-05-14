@@ -50,6 +50,12 @@ const u2DemaPreviewFiles = [
   "tests/safety-report.test.js"
 ];
 
+const claimLedgerCheckerFiles = [
+  "package.json",
+  "scripts/claim-ledger-check.mjs",
+  "tests/claim-ledger-check.test.js"
+];
+
 test("docs/u1-proof-pin PR class accepts the proof-pin branch only", () => {
   const report = validatePrClass({
     reviewClass: "docs/u1-proof-pin",
@@ -240,6 +246,72 @@ test("u2/dema-preview-surfaces proof scope allows only the Dema preview surface 
   );
 });
 
+test("tooling/claim-ledger-checker PR class accepts only checker and policy branches", () => {
+  assert.equal(validatePrClass({
+    reviewClass: "tooling/claim-ledger-checker",
+    branch: "tooling/claim-ledger-checker"
+  }).ok, true);
+  assert.equal(validatePrClass({
+    reviewClass: "tooling/claim-ledger-checker",
+    branch: "ci/claim-ledger-checker-class"
+  }).ok, true);
+  assert.throws(
+    () => validatePrClass({ reviewClass: "tooling/claim-ledger-checker", branch: "tooling/random" }),
+    /do not allow branch/
+  );
+  assert.throws(
+    () => validatePrClass({ reviewClass: "tooling/claim-ledger-checker", branch: "u2/dema-preview-surfaces" }),
+    /do not allow branch/
+  );
+});
+
+test("tooling/claim-ledger-checker proof scope allows only claim checker files", () => {
+  const report = validateProofScope({
+    reviewClass: "tooling/claim-ledger-checker",
+    files: claimLedgerCheckerFiles
+  });
+
+  assert.equal(report.ok, true);
+  for (const unexpected of [
+    "docs/ROADMAP.md",
+    "apps/cli/src/index.js",
+    "packages/core/src/ambient.js",
+    "packages/node-adapter/src/gateway-http-adapter.js",
+    "packages/receipts/src/receipt-store.js",
+    "artifacts/proofs/node0-local-urp/self_check_report.json",
+    ".github/workflows/check.yml"
+  ]) {
+    assert.throws(
+      () => validateProofScope({
+        reviewClass: "tooling/claim-ledger-checker",
+        files: [...claimLedgerCheckerFiles, unexpected]
+      }),
+      /unexpected files/
+    );
+  }
+  assert.throws(
+    () => validateProofScope({
+      reviewClass: "tooling/claim-ledger-checker",
+      files: claimLedgerCheckerFiles.filter((file) => file !== "scripts/claim-ledger-check.mjs")
+    }),
+    /missing required file/
+  );
+});
+
+test("tooling/claim-ledger-checker allows gate-policy files for the class policy PR itself", () => {
+  const report = validateProofScope({
+    reviewClass: "tooling/claim-ledger-checker",
+    files: [
+      ".github/workflows/bizra-review.yml",
+      "scripts/review/pr-class.mjs",
+      "scripts/review/proof-scope.mjs",
+      "tests/review-gate.test.js"
+    ]
+  });
+
+  assert.equal(report.ok, true);
+});
+
 test("proof/u1 remains strict and does not accept proof-pin docs", () => {
   assert.equal(validateProofScope({ reviewClass: "proof/u1", files: u1Files }).ok, true);
   assert.throws(
@@ -267,6 +339,18 @@ test("existing proof classes remain strict and do not accept U2 Dema preview fil
       () => validateProofScope({
         reviewClass,
         files: ["packages/mission/src/mission-draft.js"]
+      }),
+      /unexpected files/
+    );
+  }
+});
+
+test("existing proof classes remain strict and do not accept claim-ledger checker files", () => {
+  for (const reviewClass of ["proof/u1", "docs/u1-proof-pin", "devops/release-readiness", "u2/dema-preview-surfaces"]) {
+    assert.throws(
+      () => validateProofScope({
+        reviewClass,
+        files: ["scripts/claim-ledger-check.mjs"]
       }),
       /unexpected files/
     );
