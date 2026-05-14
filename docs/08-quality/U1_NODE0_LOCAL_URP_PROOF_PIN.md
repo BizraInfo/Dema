@@ -29,7 +29,7 @@ U1 does not claim:
 - Token value, cash value, or reward authority
 - SAT PERMIT authority
 - ARTIFACT-011 issuance
-- Autonomous supervisor or hidden daemon
+- Supervisor authority or hidden daemon
 - Raw private data scanning
 
 CodeRabbit was treated as advisory after its valid findings were addressed; BIZRA-owned gates decide proof quality.
