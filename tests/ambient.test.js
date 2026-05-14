@@ -83,6 +83,13 @@ test("buildAmbientAuditPreview captures SNR, SAPE, HHMM, and proof convergence w
     "performance",
     "ethics"
   ]);
+  assert.equal(audit.agent_topology.pat.alignment, "user_aligned");
+  assert.equal(audit.agent_topology.pat.residence, "user_node_only");
+  assert.ok(audit.agent_topology.pat.roles.includes("execute"));
+  assert.equal(audit.agent_topology.sat.alignment, "system_aligned");
+  assert.equal(audit.agent_topology.sat.residence, "urp_control_plane_only");
+  assert.ok(audit.agent_topology.sat.roles.includes("resource_scheduler"));
+  assert.equal(audit.agent_topology.boundary, "SAT are not cloud PAT and do not live inside user nodes");
   assert.equal(audit.hhmm_phases[0], "UNDERSTAND");
   assert.equal(audit.boundary.execution_enabled, false);
   assert.equal(audit.boundary.mutation_performed, false);
@@ -95,6 +102,9 @@ test("formatAmbientAuditPreview renders the compliance spine and next implementa
   assert.match(output, /DEMA Ambient Sovereign Execution Audit/);
   assert.match(output, /SNR signal: EffectCap is the only legal side-effect path/);
   assert.match(output, /Hidden flow: intent -> micro_consent -> capability -> effect -> evidence -> impact/);
+  assert.match(output, /PAT-7: local, user-aligned, user-node-only mission party/);
+  assert.match(output, /SAT-5: system-owned, system-aligned URP control plane/);
+  assert.match(output, /SAT are not cloud PAT/);
   assert.match(output, /Proof-of-Truth Convergence/);
   assert.match(output, /Next implementation: one_node_one_mission_diagnostic/);
   assert.match(output, /Boundary: preview-only; no execution; no mutation; no receipt minted/);
@@ -105,6 +115,7 @@ test("dema ambient audit prints the ambient sovereign execution audit", async ()
 
   assert.match(stdout, /DEMA Ambient Sovereign Execution Audit/);
   assert.match(stdout, /micro_consent/);
+  assert.match(stdout, /SAT-5: system-owned, system-aligned URP control plane/);
   assert.match(stdout, /one_node_one_mission_diagnostic/);
   assert.match(stdout, /Boundary: preview-only; no execution; no mutation; no receipt minted/);
 });
@@ -114,6 +125,7 @@ test("dema ambient audit --json emits a schema-tagged non-executing audit", asyn
   const audit = JSON.parse(stdout);
 
   assert.equal(audit.schema, "bizra.dema.ambient_audit_preview.v0.1");
+  assert.equal(audit.agent_topology.sat.residence, "urp_control_plane_only");
   assert.equal(audit.boundary.execution_enabled, false);
   assert.equal(audit.proof_of_truth.economic.status, "closed_until_verified_impact");
 });

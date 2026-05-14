@@ -140,7 +140,9 @@ dema ambient audit --json
 This compresses the Bash/AHK/Telescript actuator risk into one preview-only
 audit: intent, micro-consent, capability, effect, evidence, impact. It names the
 HHMM phases, Proof-of-Truth posture, and next one-node/one-mission diagnostic
-without enabling execution.
+without enabling execution. It also keeps the agent topology explicit: PAT-7 is
+the local user-aligned mission party, while SAT-5 is the system-owned URP
+control plane. SAT are not cloud PAT and do not live inside user nodes.
 
 ---
 

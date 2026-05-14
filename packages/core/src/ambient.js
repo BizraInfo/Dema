@@ -125,6 +125,36 @@ export function buildAmbientAuditPreview({ now = new Date() } = {}) {
         finding: "Ihsan and micro-consent apply before every effect, not after evidence is produced."
       }
     ],
+    agent_topology: {
+      pat: {
+        count: 7,
+        alignment: "user_aligned",
+        residence: "user_node_only",
+        role: "local mission party for one human and their local data",
+        roles: [
+          "plan",
+          "research",
+          "execute",
+          "critique",
+          "verify",
+          "report"
+        ]
+      },
+      sat: {
+        count: 5,
+        alignment: "system_aligned",
+        residence: "urp_control_plane_only",
+        role: "system staff for ecosystem orchestration, policy, quality, resources, and global verification",
+        roles: [
+          "global_orchestrator",
+          "policy_governance",
+          "poi_oracle",
+          "resource_scheduler",
+          "observability_quality"
+        ]
+      },
+      boundary: "SAT are not cloud PAT and do not live inside user nodes"
+    },
     hhmm_phases: ["UNDERSTAND", "PLAN", "ACT", "VERIFY", "SETTLE"],
     compliance_spine: {
       intent_declared: true,
@@ -274,6 +304,11 @@ export function formatAmbientAuditPreview(audit) {
   for (const lens of audit.sape_lenses) {
     lines.push(`  ${lens.id}: ${lens.finding}`);
   }
+  lines.push("");
+  lines.push("Agent topology:");
+  lines.push("  PAT-7: local, user-aligned, user-node-only mission party");
+  lines.push("  SAT-5: system-owned, system-aligned URP control plane");
+  lines.push(`  Boundary: ${audit.agent_topology.boundary}`);
   lines.push("");
   lines.push(`HHMM phases: ${audit.hhmm_phases.join(" -> ")}`);
   lines.push("");
