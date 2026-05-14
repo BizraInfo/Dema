@@ -1,0 +1,41 @@
+{
+  "boundary_note": "This is a local proof artifact set, not ARTIFACT-011, not a SAT PERMIT, and not a runtime execution.",
+  "component_count": 7,
+  "components": [
+    "PAT",
+    "SAT",
+    "DEMA",
+    "FATE",
+    "URP",
+    "RECEIPTS",
+    "POI"
+  ],
+  "external_user_data": false,
+  "federation": "not_implemented",
+  "federation_claim": false,
+  "node1_handshake": false,
+  "node_id": "Node0",
+  "pat_count": 7,
+  "poi_mode": "sandbox_no_cash_value",
+  "prereq_checks": {
+    "node0_standalone_py": "missing_not_in_this_checkout"
+  },
+  "proof_date": "2026-05-14",
+  "proof_id": "node0-local-urp-proof-v0.1",
+  "proof_scope": [
+    "local_only",
+    "sandbox_no_cash_value",
+    "no_federation",
+    "no_node1_handshake",
+    "no_external_network",
+    "no_raw_private_data"
+  ],
+  "public_network": false,
+  "raw_private_data_included": false,
+  "real_reward_claim": false,
+  "sat_count": 5,
+  "schema": "bizra.dema.urp_local.status.v0.1",
+  "token_value_claim": false,
+  "truth_label": "URP_LOCAL_ACTIVE",
+  "visibility": "local_only"
+}

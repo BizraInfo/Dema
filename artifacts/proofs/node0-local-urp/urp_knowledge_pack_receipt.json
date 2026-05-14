@@ -1,0 +1,37 @@
+{
+  "artifact_011_class": false,
+  "content_sha256": "b80e818f59abeab657dda5edfc8a396b7f2e8935925d9d12ec069943f7c706bf",
+  "external_user_data": false,
+  "federation": "not_implemented",
+  "federation_claim": false,
+  "identity_bound": false,
+  "issuer": "node0_local_sandbox",
+  "node1_handshake": false,
+  "node_id": "Node0",
+  "pat_count": 7,
+  "payload": {
+    "excludes_private_user_data": true,
+    "pack_id": "dema.boundaries.v0.1",
+    "title": "Dema Local Boundaries",
+    "truth_sources": [
+      "docs/ARCHITECTURE.md",
+      "docs/ENGINEERING_DISCIPLINE.md",
+      "docs/02-architecture/dema-autonomy-envelope.md"
+    ]
+  },
+  "poi_mode": "sandbox_no_cash_value",
+  "proof_date": "2026-05-14",
+  "public_network": false,
+  "raw_private_data_included": false,
+  "real_reward_claim": false,
+  "receipt_authority": "local_proof_preview_not_canonical_runtime",
+  "receipt_id": "urp-knowledge-pack-dema-boundaries-v0.1",
+  "sat_count": 5,
+  "schema": "bizra.dema.urp_local.knowledge_pack_receipt.v0.1",
+  "scope": "local_only_read_only_proof",
+  "signing_key_used": null,
+  "subject": "knowledge_pack_registry",
+  "token_value_claim": false,
+  "truth_label": "URP_LOCAL_ACTIVE",
+  "visibility": "local_only"
+}

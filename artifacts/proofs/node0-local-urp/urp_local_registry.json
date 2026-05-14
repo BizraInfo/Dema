@@ -1,0 +1,62 @@
+{
+  "external_user_data": false,
+  "federation": "not_implemented",
+  "federation_claim": false,
+  "idempotency": {
+    "duplicate_resource_offer_rejected_or_idempotent": true,
+    "resource_offer_policy": "duplicate_offer_id_is_same_offer"
+  },
+  "knowledge_packs": [
+    {
+      "content_sha256": "b80e818f59abeab657dda5edfc8a396b7f2e8935925d9d12ec069943f7c706bf",
+      "pack_id": "dema.boundaries.v0.1",
+      "receipt_id": "urp-knowledge-pack-dema-boundaries-v0.1"
+    }
+  ],
+  "node1_handshake": false,
+  "node_id": "Node0",
+  "pat_count": 7,
+  "poi_mode": "sandbox_no_cash_value",
+  "poi_sandbox_records": [
+    {
+      "content_sha256": "eb4d1f6e9d3d3ec5a1d4bf2fa1a053a0d226009dfbfae4371afb2db326fc76e7",
+      "record_id": "poi-sandbox-node0-local-urp-v0.1"
+    }
+  ],
+  "proof_date": "2026-05-14",
+  "public_network": false,
+  "raw_private_data_included": false,
+  "real_reward_claim": false,
+  "resource_offers": [
+    {
+      "content_sha256": "b10a6d7cddb3cd694ad52ccefab36582057da449ccbe8c953f0154df6dc80785",
+      "offer_id": "node0.local.compute.readiness.preview",
+      "receipt_id": "urp-resource-offer-local-compute-readiness-v0.1"
+    }
+  ],
+  "sat_count": 5,
+  "sat_registrations": [
+    {
+      "binding": "non_canonical_local_seed",
+      "registration_id": "sat5-local-seed-v0.1",
+      "roles": [
+        "Validator",
+        "Oracle",
+        "Mediator",
+        "Archivist",
+        "Sentinel"
+      ]
+    }
+  ],
+  "schema": "bizra.dema.urp_local.registry.v0.1",
+  "skills": [
+    {
+      "content_sha256": "b98212f7aec4b4732b078ed8c03bab15de1a636e6065e6663f1b978f9686540d",
+      "receipt_id": "urp-skill-local-dema-readiness-v0.1",
+      "skill_id": "dema.local_readiness.preview"
+    }
+  ],
+  "token_value_claim": false,
+  "truth_label": "URP_LOCAL_ACTIVE",
+  "visibility": "local_only"
+}
