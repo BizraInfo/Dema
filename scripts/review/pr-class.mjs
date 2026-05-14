@@ -17,6 +17,9 @@ const REVIEW_CLASSES = {
   },
   "tooling/claim-ledger-checker": {
     branches: ["tooling/claim-ledger-checker", "ci/claim-ledger-checker-class"]
+  },
+  "u2.1/amana-kernel-contracts": {
+    branches: ["u2.1/amana-kernel-contracts", "ci/u2.1-amana-kernel-contracts-class"]
   }
 };
 
