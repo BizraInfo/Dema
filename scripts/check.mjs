@@ -5,6 +5,8 @@ const commands = [
   ["npm", ["run", "coverage"]],
   ["node", ["apps/cli/src/index.js", "welcome"]],
   ["node", ["apps/cli/src/index.js", "help"]],
+  ["node", ["apps/cli/src/index.js", "onboard"]],
+  ["node", ["apps/cli/src/index.js", "onboard", "--json"]],
   ["node", ["apps/cli/src/index.js", "ambient"]],
   ["node", ["apps/cli/src/index.js", "report", "safety"]],
   ["node", ["apps/cli/src/index.js", "mcp", "blueprint"]],

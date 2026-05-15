@@ -30,6 +30,10 @@ import {
   buildNetworkBlueprint,
   formatNetworkBlueprint
 } from "../../../packages/core/src/network-blueprint.js";
+import {
+  buildOnboardingPreview,
+  formatOnboardingPreview
+} from "../../../packages/core/src/onboarding.js";
 import { runShell } from "../../../packages/core/src/shell.js";
 import { TASK_REGISTRY } from "../../../packages/tasks/src/downloads-audit-preview.js";
 import {
@@ -59,6 +63,8 @@ Usage:
   dema              Active kernel — banner + setup-or-status + next safe task
   dema chat         Interactive shell (same surface as the bare CLI)
   dema welcome      Show the first-run orientation
+  dema onboard [--json]
+                    Preview first-run onboarding; does not setup, execute, or connect
   dema setup        Create local Dema folders/profile skeleton
   dema status       Show human-readable Node0 status
   dema status:json  Show machine-readable status
@@ -113,6 +119,16 @@ Next:
 2. Check status
 3. Preview first bounded diagnostic`);
       return;
+
+    case "onboard": {
+      const guide = buildOnboardingPreview();
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(guide, null, 2)
+          : formatOnboardingPreview(guide)
+      );
+      return;
+    }
 
     case "setup":
       console.log(JSON.stringify(await runSetup(), null, 2));

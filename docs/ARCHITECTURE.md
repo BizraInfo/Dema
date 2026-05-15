@@ -31,6 +31,9 @@ Receipts decide truth.
 dema setup
   creates ~/.dema without starting a daemon
 
+dema onboard / dema onboard --json
+  previews first-run user state and blocked actions; performs no setup, mission, network, or mint
+
 dema status
   reads Node0 readiness through an adapter
 
