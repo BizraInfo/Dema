@@ -41,6 +41,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/consent-hash-preview.test.js` | ConsentHashTable preview hashing, exact lookup, revocation, expiry, no-authority boundary, and pure-module scope. |
 | `tests/consent-planner.test.js` | Micro-consent planning, permission extraction, unsafe file filtering, JSON/human CLI output. |
 | `tests/corpus-data-tier-classifier-preview.test.js` | Corpus data-tier classifier preview for D0-D4 metadata-only signal classification, D3/D4 quarantine, raw-content rejection, no ingestion/upload/tuning/memory mutation/node sharing, and no-runtime boundary. |
+| `tests/corpus-redaction-fixture-preview.test.js` | Corpus redaction fixture preview for metadata-only D0-D4 handling markers, D3 quarantine, D4 rejection, raw-content rejection, no real redaction, and no-runtime boundary. |
 | `tests/diagnostics-plan.test.js` | Self-diagnostics preview plan and non-execution boundary. |
 | `tests/downloads-audit-preview.test.js` | Read-only downloads audit task, task receipt, placeholder SAT verdict formatting. |
 | `tests/evidence-chain-preview.test.js` | EvidenceChain pure preview linking, receipt-domain rejection, tamper checks, no-authority formatting, and no-CLI wiring boundary. |
