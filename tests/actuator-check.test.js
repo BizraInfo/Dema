@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   analyzeActuatorSource,
+  analyzeEffectCapInvariantSource,
   buildActuatorCheckReport
 } from "../scripts/review/actuator-check.mjs";
 
@@ -53,4 +54,30 @@ test("actuator source analyzer allows argv-based process execution", () => {
   `, "fixture.js");
 
   assert.deepEqual(findings, []);
+});
+
+test("effectcap invariant analyzer rejects caller-provided execution closures", () => {
+  const findings = analyzeEffectCapInvariantSource(`
+    effectingOperation(cap, "file:notes", "read", exec);
+    EffectCap.perform(intent, exec);
+    perform(intent, () => writeFileSync("x", "y"));
+  `, "fixture.js");
+
+  assert.deepEqual(findings.map((finding) => finding.label), [
+    "effectcap.caller_exec_closure",
+    "effectcap.caller_exec_closure",
+    "effectcap.caller_exec_closure"
+  ]);
+});
+
+test("effectcap invariant analyzer rejects executable policy code", () => {
+  const findings = analyzeEffectCapInvariantSource(`
+    const bad = eval(rule.condition);
+    const alsoBad = Function("mission", rule.condition);
+  `, "fixture.js");
+
+  assert.deepEqual(findings.map((finding) => finding.label), [
+    "policy.executable_rule_code",
+    "policy.executable_rule_code"
+  ]);
 });

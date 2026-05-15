@@ -70,6 +70,37 @@ export function analyzeActuatorSource(body, file = "(memory)") {
   return findings;
 }
 
+export function analyzeEffectCapInvariantSource(body, file = "(memory)") {
+  const findings = [
+    ...collectRegexFindings(
+      body,
+      file,
+      /\bEffectCap\.perform\s*\([^)]*\bexec\b/gi,
+      "effectcap.caller_exec_closure"
+    ),
+    ...collectRegexFindings(
+      body,
+      file,
+      /\beffectingOperation\s*\([^)]*\bexec\b/gi,
+      "effectcap.caller_exec_closure"
+    ),
+    ...collectRegexFindings(
+      body,
+      file,
+      /\bperform\s*\([^;\n]*(?:=>|function\s*\()/gi,
+      "effectcap.caller_exec_closure"
+    ),
+    ...collectRegexFindings(
+      body,
+      file,
+      /\b(eval|Function)\s*\(/g,
+      "policy.executable_rule_code"
+    )
+  ];
+
+  return findings;
+}
+
 export function buildActuatorCheckReport({
   root = process.cwd(),
   scanRoots = DEFAULT_SCAN_ROOTS
@@ -78,7 +109,10 @@ export function buildActuatorCheckReport({
   const findings = [];
   for (const file of files) {
     const body = readFileSync(join(root, file), "utf8");
-    findings.push(...analyzeActuatorSource(body, file));
+    findings.push(
+      ...analyzeActuatorSource(body, file),
+      ...analyzeEffectCapInvariantSource(body, file)
+    );
   }
   return {
     schema: "bizra.dema.review.actuator_check.v0.1",
@@ -88,7 +122,9 @@ export function buildActuatorCheckReport({
     forbidden_patterns: [
       "child_process.exec",
       "child_process.execSync",
-      "child_process.spawn/spawnSync with shell:true"
+      "child_process.spawn/spawnSync with shell:true",
+      "caller-provided EffectCap execution closures",
+      "executable policy rule code"
     ],
     allowed_patterns: [
       "execFile/execFileSync with argv array",
