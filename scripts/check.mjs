@@ -8,6 +8,7 @@ const commands = [
   ["node", ["apps/cli/src/index.js", "mission", "propose"]],
   ["node", ["apps/cli/src/index.js", "monetize"]],
   ["node", ["scripts/review/actuator-check.mjs"]],
+  ["node", ["scripts/review/canon-check.mjs"]],
   ["node", ["scripts/node0-self-check.mjs", "--verify"]]
 ];
 

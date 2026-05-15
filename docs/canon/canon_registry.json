@@ -1,0 +1,77 @@
+{
+  "schema": "bizra.dema.canon_registry.v0.1",
+  "truth_label": "DECLARED_TOPOLOGY_GUARD",
+  "canonical_sentence": "Each human node mints PAT-7 locally on their device and SAT-5 into one shared Universal Resource Pool. PAT serves the human. SAT serves the system. The membrane sits between them.",
+  "required_files": [
+    "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+    "docs/02-architecture/node0-urp-ecosystem-transition.md",
+    "docs/02-architecture/pat-builder-sat-validator.md"
+  ],
+  "phases": [
+    {
+      "id": "phase_0",
+      "label": "CANDIDATE_CANONICAL",
+      "summary": "Single-node Node0 sovereign runtime candidate; Dema remains local product face."
+    },
+    {
+      "id": "phase_1",
+      "label": "PLANNED",
+      "summary": "Shared URP wake-up and second-node membrane-mediated handshake."
+    },
+    {
+      "id": "phase_2",
+      "label": "PLANNED",
+      "summary": "SAT-5 operational inside the one shared URP at multi-node scale."
+    },
+    {
+      "id": "phase_3",
+      "label": "PLANNED",
+      "summary": "Opt-in federated cognition via membrane and Shared Reflex Registry."
+    },
+    {
+      "id": "phase_4",
+      "label": "DIRECTIONAL",
+      "summary": "Long-range decentralized self-growing agentic ecosystem."
+    }
+  ],
+  "topology_invariants": {
+    "urp_count": "one_shared_urp",
+    "pat_location": "local_per_human_device",
+    "sat_location": "shared_urp",
+    "crossing": "pat_to_membrane_to_sat",
+    "human_network_access": "never_direct"
+  },
+  "forbidden_topology_phrases": [
+    {
+      "phrase": "Each user has their own URP",
+      "allowed_files": ["docs/canon/BIZRA_TOPOLOGY_CANON.md"]
+    },
+    {
+      "phrase": "SAT-5 lives inside each user's local node",
+      "allowed_files": ["docs/canon/BIZRA_TOPOLOGY_CANON.md"]
+    },
+    {
+      "phrase": "PAT connects directly to other nodes",
+      "allowed_files": ["docs/canon/BIZRA_TOPOLOGY_CANON.md"]
+    },
+    {
+      "phrase": "The URP is a server that nodes are clients of",
+      "allowed_files": ["docs/canon/BIZRA_TOPOLOGY_CANON.md"]
+    },
+    {
+      "phrase": "both internal to the same node",
+      "allowed_files": []
+    },
+    {
+      "phrase": "SAT-5 lives inside each",
+      "allowed_files": ["docs/canon/BIZRA_TOPOLOGY_CANON.md"]
+    }
+  ],
+  "dema_repo_boundary": {
+    "runtime_execution": false,
+    "federation_started": false,
+    "receipt_minted": false,
+    "sat5_implemented_here": false,
+    "ci_modified_by_registry": false
+  }
+}
