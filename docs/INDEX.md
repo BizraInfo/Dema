@@ -105,6 +105,7 @@ These are working design artifacts. They are not the public onboarding path.
 - [superpowers/specs/2026-05-14-actuator-boundary-spine/01_specification.md](superpowers/specs/2026-05-14-actuator-boundary-spine/01_specification.md) — working artifact for actuator boundary spine.
 - [superpowers/specs/2026-05-14-dema-broad-gtm-readiness/01_specification.md](superpowers/specs/2026-05-14-dema-broad-gtm-readiness/01_specification.md) — working artifact for broad-GTM readiness.
 - [superpowers/specs/2026-05-14-effectcap-invariant/01_specification.md](superpowers/specs/2026-05-14-effectcap-invariant/01_specification.md) — working artifact for pre-runtime EffectCap invariants.
+- [superpowers/specs/2026-05-15-bizra-steer-vector-v0.1/01_specification.md](superpowers/specs/2026-05-15-bizra-steer-vector-v0.1/01_specification.md) — working artifact for steer-vector boundaries.
 
 ## Rule for future docs
 
