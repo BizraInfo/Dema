@@ -31,21 +31,13 @@ import {
   formatSafetyReportPreview
 } from "../../../packages/core/src/safety-report.js";
 import {
-  buildMcpIntegrationBlueprint,
-  formatMcpIntegrationBlueprint
-} from "../../../packages/core/src/mcp-blueprint.js";
-import {
   buildNetworkBlueprint,
   formatNetworkBlueprint
 } from "../../../packages/core/src/network-blueprint.js";
 import {
-  buildOnboardingPreview,
-  formatOnboardingPreview
-} from "../../../packages/core/src/onboarding.js";
-import {
-  buildBehavioralModulationPreview,
-  formatBehavioralModulationPreview
-} from "../../../packages/core/src/behavioral-modulation.js";
+  buildMcpIntegrationBlueprint,
+  formatMcpIntegrationBlueprint
+} from "../../../packages/core/src/mcp-blueprint.js";
 import {
   buildOptimizationRoadmapPreview,
   formatOptimizationRoadmapPreview
@@ -63,6 +55,14 @@ import {
   emulateLoopDesign,
   formatLoopDesignEmulation
 } from "../../../packages/core/src/loop-emulator.js";
+import {
+  buildOnboardingGuide,
+  formatOnboardingGuide
+} from "../../../packages/core/src/onboarding.js";
+import {
+  buildBehavioralModulationPreview,
+  formatBehavioralModulationPreview
+} from "../../../packages/core/src/behavioral-modulation.js";
 import { runShell } from "../../../packages/core/src/shell.js";
 import { TASK_REGISTRY } from "../../../packages/tasks/src/downloads-audit-preview.js";
 import {
@@ -70,13 +70,13 @@ import {
   verifyReceipt
 } from "../../../packages/verifier/src/sat-placeholder.js";
 import {
-  collectModelInventory,
-  formatModelInventory
-} from "../../../packages/models/src/model-inventory.js";
-import {
   buildConsentPlanPreview,
   formatConsentPlanPreview
 } from "../../../packages/consent/src/consent-planner.js";
+import {
+  collectModelInventory,
+  formatModelInventory
+} from "../../../packages/models/src/model-inventory.js";
 import {
   highestLevel,
   levelLabel,
@@ -130,19 +130,19 @@ Local evidence:
   dema report safety [--json]
                     Preview the safety report; does not certify, execute, or mint
   dema network blueprint [--json]
-                    Preview Node1/Node2 readiness; does not connect or federate
+                      Preview Node1/Node2 readiness; does not connect or federate
   dema mcp blueprint [--json]
-                    Preview MCP integration contract; does not call MCP tools
+                      Preview MCP integration contract; does not call MCP tools
   dema roadmap preview [--json]
-                    Preview optimization roadmap; does not execute or enforce gates
+                      Preview optimization roadmap; does not execute or enforce gates
   dema evidence receipt preview [--json]
-                    Preview receipt-shaped evidence; does not mint, sign, or write
+                      Preview receipt-shaped evidence; does not mint, sign, or write
   dema ihsan floor preview [--score N] [--json]
-                    Preview externally supplied Ihsan floor check; does not certify
+                      Preview externally supplied Ihsan floor check; does not certify
   dema behavior modulation preview [--consent TEXT] [--score N] [--json] "<intent>"
-                    Preview visible guidance modulation; does not apply behavior changes
+                      Preview visible guidance modulation; does not apply behavior changes
   dema design emulate-loop [--json]
-                    Preview PAT/SAT loop design assumptions; does not run agents
+                      Preview PAT/SAT loop design assumptions; does not run agents
 
 Tasks and views:
   dema task         List registered tasks
@@ -166,92 +166,15 @@ async function dispatch(argv) {
       return runActiveKernel({ interactive: true, force: true });
 
     case "welcome":
-      console.log(formatOnboardingPreview(buildOnboardingPreview()));
+      console.log(formatOnboardingGuide(buildOnboardingGuide()));
       return;
 
     case "onboard": {
-      const guide = buildOnboardingPreview();
+      const guide = buildOnboardingGuide();
       console.log(
         argv.includes("--json")
           ? JSON.stringify(guide, null, 2)
-          : formatOnboardingPreview(guide)
-      );
-      return;
-    }
-
-    case "roadmap": {
-      if (subcommand !== "preview") {
-        throw new Error("Unknown roadmap command. Use `dema roadmap preview [--json]`.");
-      }
-      const report = buildOptimizationRoadmapPreview();
-      console.log(
-        argv.includes("--json")
-          ? JSON.stringify(report, null, 2)
-          : formatOptimizationRoadmapPreview(report)
-      );
-      return;
-    }
-
-    case "evidence": {
-      const receiptCommand = argv[1];
-      const receiptSubcommand = argv[2];
-      if (receiptCommand !== "receipt" || receiptSubcommand !== "preview") {
-        throw new Error("Unknown evidence command. Use `dema evidence receipt preview [--json]`.");
-      }
-      const receipt = buildEvidenceReceiptPreview();
-      console.log(
-        argv.includes("--json")
-          ? JSON.stringify(receipt, null, 2)
-          : formatEvidenceReceiptPreview(receipt)
-      );
-      return;
-    }
-
-    case "ihsan": {
-      const floorCommand = argv[1];
-      const floorSubcommand = argv[2];
-      if (floorCommand !== "floor" || floorSubcommand !== "preview") {
-        throw new Error("Unknown ihsan command. Use `dema ihsan floor preview [--score N] [--json]`.");
-      }
-      const scoreArg = argValue(argv, "--score");
-      const score = scoreArg === undefined ? DEFAULT_IHSAN_FLOOR : Number(scoreArg);
-      const preview = evaluateIhsanFloorPreview({ score });
-      console.log(
-        argv.includes("--json")
-          ? JSON.stringify(preview, null, 2)
-          : formatIhsanFloorPreview(preview)
-      );
-      return;
-    }
-
-    case "behavior": {
-      const behaviorCommand = argv[1];
-      const behaviorSubcommand = argv[2];
-      if (behaviorCommand !== "modulation" || behaviorSubcommand !== "preview") {
-        throw new Error('Unknown behavior command. Use `dema behavior modulation preview [--consent TEXT] [--score N] [--json] "<intent>"`.');
-      }
-      const consentPhrase = argValue(argv, "--consent") ?? "";
-      const scoreArg = argValue(argv, "--score");
-      const ihsanScore = scoreArg === undefined ? 0.95 : Number(scoreArg);
-      const intentParts = [];
-      for (let index = 3; index < argv.length; index += 1) {
-        const arg = argv[index];
-        if (arg === "--json") continue;
-        if (arg === "--consent" || arg === "--score") {
-          index += 1;
-          continue;
-        }
-        intentParts.push(arg);
-      }
-      const preview = buildBehavioralModulationPreview({
-        intent: intentParts.join(" ").trim(),
-        consentPhrase,
-        ihsanScore
-      });
-      console.log(
-        argv.includes("--json")
-          ? JSON.stringify(preview, null, 2)
-          : formatBehavioralModulationPreview(preview)
+          : formatOnboardingGuide(guide)
       );
       return;
     }
@@ -342,13 +265,13 @@ async function dispatch(argv) {
       if (subcommand === "draft") {
         const json = argv.includes("--json");
         const intent = argv.slice(2).filter((arg) => arg !== "--json").join(" ").trim();
-        if (!intent) throw new Error('Usage: dema mission draft [--json] "<intent>"');
+        if (!intent) throw new Error("Usage: dema mission draft [--json] \"<intent>\"");
         const draft = buildMissionDraftPreview({ intent });
         console.log(json ? JSON.stringify(draft, null, 2) : formatMissionDraftPreview(draft));
         return;
       }
       if (subcommand !== "propose") {
-        throw new Error('Unknown mission command. Use `dema mission draft "<intent>"` or `dema mission propose`.');
+        throw new Error("Unknown mission command. Use `dema mission draft \"<intent>\"` or `dema mission propose`.");
       }
       const status = await adapter.status();
       const consent = argValue(argv, "--consent") ?? "";
@@ -401,6 +324,19 @@ async function dispatch(argv) {
       return;
     }
 
+    case "network": {
+      if (subcommand !== "blueprint") {
+        throw new Error("Unknown network command. Use `dema network blueprint [--json]`.");
+      }
+      const blueprint = buildNetworkBlueprint();
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(blueprint, null, 2)
+          : formatNetworkBlueprint(blueprint)
+      );
+      return;
+    }
+
     case "mcp": {
       if (subcommand !== "blueprint") {
         throw new Error("Unknown mcp command. Use `dema mcp blueprint [--json]`.");
@@ -414,15 +350,79 @@ async function dispatch(argv) {
       return;
     }
 
-    case "network": {
-      if (subcommand !== "blueprint") {
-        throw new Error("Unknown network command. Use `dema network blueprint [--json]`.");
+    case "roadmap": {
+      if (subcommand !== "preview") {
+        throw new Error("Unknown roadmap command. Use `dema roadmap preview [--json]`.");
       }
-      const blueprint = buildNetworkBlueprint();
+      const report = buildOptimizationRoadmapPreview();
       console.log(
         argv.includes("--json")
-          ? JSON.stringify(blueprint, null, 2)
-          : formatNetworkBlueprint(blueprint)
+          ? JSON.stringify(report, null, 2)
+          : formatOptimizationRoadmapPreview(report)
+      );
+      return;
+    }
+
+    case "evidence": {
+      const receiptCommand = argv[1];
+      const receiptSubcommand = argv[2];
+      if (receiptCommand !== "receipt" || receiptSubcommand !== "preview") {
+        throw new Error("Unknown evidence command. Use `dema evidence receipt preview [--json]`.");
+      }
+      const receipt = buildEvidenceReceiptPreview();
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(receipt, null, 2)
+          : formatEvidenceReceiptPreview(receipt)
+      );
+      return;
+    }
+
+    case "ihsan": {
+      const floorCommand = argv[1];
+      const floorSubcommand = argv[2];
+      if (floorCommand !== "floor" || floorSubcommand !== "preview") {
+        throw new Error("Unknown ihsan command. Use `dema ihsan floor preview [--score N] [--json]`.");
+      }
+      const scoreArg = argValue(argv, "--score");
+      const score = scoreArg === undefined ? DEFAULT_IHSAN_FLOOR : Number(scoreArg);
+      const preview = evaluateIhsanFloorPreview({ score });
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(preview, null, 2)
+          : formatIhsanFloorPreview(preview)
+      );
+      return;
+    }
+
+    case "behavior": {
+      const behaviorCommand = argv[1];
+      const behaviorSubcommand = argv[2];
+      if (behaviorCommand !== "modulation" || behaviorSubcommand !== "preview") {
+        throw new Error('Unknown behavior command. Use `dema behavior modulation preview [--consent TEXT] [--score N] [--json] "<intent>"`.');
+      }
+      const consentPhrase = argValue(argv, "--consent") ?? "";
+      const scoreArg = argValue(argv, "--score");
+      const ihsanScore = scoreArg === undefined ? 0.95 : Number(scoreArg);
+      const intentParts = [];
+      for (let index = 3; index < argv.length; index += 1) {
+        const arg = argv[index];
+        if (arg === "--json") continue;
+        if (arg === "--consent" || arg === "--score") {
+          index += 1;
+          continue;
+        }
+        intentParts.push(arg);
+      }
+      const preview = buildBehavioralModulationPreview({
+        intent: intentParts.join(" ").trim(),
+        consentPhrase,
+        ihsanScore
+      });
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(preview, null, 2)
+          : formatBehavioralModulationPreview(preview)
       );
       return;
     }
