@@ -35,5 +35,6 @@ node --test tests/status.test.js
 | `tests/node0-local-urp-proof.test.js` | Local URP proof boundaries. |
 | `tests/node0-self-check.test.js` | Node0 self-check verification surface. |
 | `tests/priority-anchor.test.js` | Founding-file Merkle root algorithm and priority anchor behavior. |
+| `tests/release-readiness.test.js` | Release-readiness report, workflow scan, dependency/installer/doc risk checks. |
 | `tests/review-gate.test.js` | PR class and proof-scope guardrails. |
 | `tests/status.test.js` | Status formatting, readiness, setup idempotency, mission proposal, receipts, CLI basics. |
