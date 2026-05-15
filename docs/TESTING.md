@@ -40,6 +40,7 @@ node --test tests/status.test.js
 | `tests/effectcap-invariant.test.js` | Pre-runtime EffectCap invariant spec and negative tests. |
 | `tests/gateway-http-adapter.test.js` | Gateway adapter probing and failure normalization. |
 | `tests/ihsan-floor-preview.test.js` | Ihsan floor preview scalar validation, non-certifying boundary, formatter, and CLI output. |
+| `tests/integration-check.test.js` | Command/help/docs/test matrix integration guard for preview surfaces. |
 | `tests/llm-guidance-check.test.js` | Canonical LLM flow guidance, root agent routing, and docs noise classification. |
 | `tests/loop-emulator.test.js` | PAT/SAT loop design emulation preview, determinism, and no-runtime boundary. |
 | `tests/melae-preview.test.js` | MELAE/SAPE preview scoring, fail-closed probe validation, SNR/Ihsan floor gates, and no-runtime boundary. |
@@ -76,6 +77,16 @@ after `npm test` and before `npm run check`.
 `npm run check` includes:
 
 ```text
+node apps/cli/src/index.js welcome
+node apps/cli/src/index.js help
+node apps/cli/src/index.js status
+node apps/cli/src/index.js mission propose
+node apps/cli/src/index.js monetize
+node scripts/review/actuator-check.mjs
+node scripts/review/canon-check.mjs
+node scripts/review/integration-check.mjs
+node scripts/llm-guidance-check.mjs
+node scripts/node0-self-check.mjs --verify
 node apps/cli/src/index.js ambient
 node apps/cli/src/index.js report safety
 node apps/cli/src/index.js mcp blueprint

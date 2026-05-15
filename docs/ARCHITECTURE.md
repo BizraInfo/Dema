@@ -31,6 +31,30 @@ Receipts decide truth.
 dema setup
   creates ~/.dema without starting a daemon
 
+dema / dema help
+  shows CLI help only; starts no runtime
+
+dema welcome
+  shows first-run orientation only; performs no setup
+
+dema status:json
+  reads Node0 readiness through an adapter as JSON
+
+dema doctor
+  validates readiness predicates and exits nonzero on failed gates
+
+dema consent plan / dema consent plan --json
+  previews micro-consent scope; records no approval and executes nothing
+
+dema memory / dema memory show NAME
+  reads local memory/profile entries only
+
+dema task
+  lists or runs registered local preview tasks behind autonomy gates
+
+dema sovereign
+  renders the local scaffold view only; starts no daemon or federation
+
 dema onboard / dema onboard --json
   previews first-run user state and blocked actions; performs no setup, mission, network, or mint
 
