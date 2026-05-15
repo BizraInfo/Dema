@@ -10,6 +10,14 @@ import { createNode0Adapter } from "../packages/node-adapter/src/node0-adapter.j
 
 const HEALTHY_GATEWAY_DOMAIN = "bizra-cognition-gateway-v1";
 
+function restoreEnv(name, value) {
+  if (value === undefined) {
+    delete process.env[name];
+    return;
+  }
+  process.env[name] = value;
+}
+
 function jsonResponse(body, status = 200) {
   return { status, body, headers: { "content-type": "application/json" } };
 }
@@ -200,11 +208,21 @@ test("createNode0Adapter still honors the shellout path when adapterMode is unse
   // No DEMA_NODE0_ADAPTER, no DEMA_NODE0_STATUS_COMMAND, no command option:
   // the adapter must fall through to defaultStatus() (everything blocked) —
   // the documented developer-machine state.
-  const adapter = createNode0Adapter();
-  const status = await adapter.status();
-  assert.equal(status.schema, "bizra.dema.status.v0.1");
-  assert.equal(status.ready, false);
-  assert.equal(status.activationGate, "BLOCKED");
+  const originalAdapterMode = process.env.DEMA_NODE0_ADAPTER;
+  const originalStatusCommand = process.env.DEMA_NODE0_STATUS_COMMAND;
+  try {
+    delete process.env.DEMA_NODE0_ADAPTER;
+    delete process.env.DEMA_NODE0_STATUS_COMMAND;
+
+    const adapter = createNode0Adapter();
+    const status = await adapter.status();
+    assert.equal(status.schema, "bizra.dema.status.v0.1");
+    assert.equal(status.ready, false);
+    assert.equal(status.activationGate, "BLOCKED");
+  } finally {
+    restoreEnv("DEMA_NODE0_ADAPTER", originalAdapterMode);
+    restoreEnv("DEMA_NODE0_STATUS_COMMAND", originalStatusCommand);
+  }
 });
 
 test("composeNode0StatusFromGateway is pure: same input -> same output", async () => {
