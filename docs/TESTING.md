@@ -26,6 +26,7 @@ node --test tests/status.test.js
 | `tests/active-kernel-banner.test.js` | Active-kernel banner, gateway probe, and shell tokenization. |
 | `tests/active-kernel-cli.test.js` | Active-kernel CLI smoke behavior and task command wiring. |
 | `tests/downloads-audit-preview.test.js` | Read-only downloads audit task, task receipt, placeholder SAT verdict formatting. |
+| `tests/safety-report.test.js` | Safety report preview and non-certification language. |
 | `tests/sat-placeholder.test.js` | Receipt verifier dispatch, gateway handoff checks, exact consent, fail-closed behavior. |
 | `tests/actuator-check.test.js` | Raw actuator and EffectCap invariant static guard behavior. |
 | `tests/ambient.test.js` | Ambient boundary report and preview-only constraints. |
@@ -66,4 +67,5 @@ after `npm test` and before `npm run check`.
 
 ```text
 node apps/cli/src/index.js ambient
+node apps/cli/src/index.js report safety
 ```

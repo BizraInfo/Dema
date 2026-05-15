@@ -37,6 +37,9 @@ dema status
 dema ambient / dema ambient:json
   previews ambient execution boundaries; executes nothing
 
+dema report safety / dema report safety --json
+  previews safety posture and evidence gaps; certifies nothing
+
 dema today
   records continuity only; mission_executed=false, runtime_pulse.fired=false
 

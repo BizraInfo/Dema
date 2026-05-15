@@ -6,6 +6,7 @@ const commands = [
   ["node", ["apps/cli/src/index.js", "welcome"]],
   ["node", ["apps/cli/src/index.js", "help"]],
   ["node", ["apps/cli/src/index.js", "ambient"]],
+  ["node", ["apps/cli/src/index.js", "report", "safety"]],
   ["node", ["apps/cli/src/index.js", "status"]],
   ["node", ["apps/cli/src/index.js", "mission", "propose"]],
   ["node", ["apps/cli/src/index.js", "monetize"]],

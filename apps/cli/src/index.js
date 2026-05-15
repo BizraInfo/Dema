@@ -18,6 +18,10 @@ import {
   buildAmbientBoundary,
   formatAmbientBoundary
 } from "../../../packages/core/src/ambient.js";
+import {
+  buildSafetyReportPreview,
+  formatSafetyReportPreview
+} from "../../../packages/core/src/safety-report.js";
 import { runShell } from "../../../packages/core/src/shell.js";
 import { TASK_REGISTRY } from "../../../packages/tasks/src/downloads-audit-preview.js";
 import {
@@ -54,6 +58,8 @@ Usage:
   dema doctor       Validate readiness and consent gate
   dema ambient      Show Ambient Sovereign Execution boundary (preview-only)
   dema ambient:json Show the ambient boundary as schema-tagged JSON
+  dema report safety [--json]
+                    Preview the safety report; does not certify, execute, or mint
   dema consent plan [--json] "<intent>"
                     Preview a micro-consent scope; does not approve or execute
   dema mission propose [--consent "GO: Node0 bounded diagnostic activation only"]
@@ -198,6 +204,19 @@ Next:
           "Unknown memory command. Use `dema memory [list]` or `dema memory show <name>`."
         );
       }
+      return;
+    }
+
+    case "report": {
+      if (subcommand !== "safety") {
+        throw new Error("Unknown report command. Use `dema report safety [--json]`.");
+      }
+      const report = buildSafetyReportPreview();
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(report, null, 2)
+          : formatSafetyReportPreview(report)
+      );
       return;
     }
 
