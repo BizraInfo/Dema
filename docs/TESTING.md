@@ -22,7 +22,10 @@ node --test tests/status.test.js
 
 | Test file | Surface covered |
 |---|---|
-| `tests/active-kernel.test.js` | Active-kernel banner, gateway probe, shell tokenization, CLI smoke behavior, and task registry basics. |
+| `tests/active-kernel-banner.test.js` | Active-kernel banner, gateway probe, and shell tokenization. |
+| `tests/active-kernel-cli.test.js` | Active-kernel CLI smoke behavior and task command wiring. |
+| `tests/downloads-audit-preview.test.js` | Read-only downloads audit task, task receipt, placeholder SAT verdict formatting. |
+| `tests/sat-placeholder.test.js` | Receipt verifier dispatch, gateway handoff checks, exact consent, fail-closed behavior. |
 | `tests/actuator-check.test.js` | Raw actuator and EffectCap invariant static guard behavior. |
 | `tests/approval-gate.test.js` | Approval gate and exact-consent safety behavior. |
 | `tests/canon-check.test.js` | Topology canon registry and forbidden topology drift guard. |
