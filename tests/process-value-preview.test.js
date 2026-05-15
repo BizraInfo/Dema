@@ -27,6 +27,12 @@ const invariantBlockedActions = [
   "step7_mint_without_exact_authorization"
 ];
 
+const forbiddenAuthorizationPatterns = [
+  /\bI authorize\b/i,
+  /GO:\s*Step\s*7/i,
+  /--authorize\s+["'][^"']+["']/i
+];
+
 test("computeProcessRsi treats clean proof progress as high momentum", () => {
   const rsi = computeProcessRsi({
     events: [
@@ -95,17 +101,30 @@ test("buildTrueValuePreview reports Step 7 ready but unminted as improving but g
   assert.equal(preview.certifies, false);
   assert.equal(preview.process_state, "node0_proof_ready_step7_gated");
   assert.equal(preview.momentum, "improving_but_gated");
-  assert.equal(preview.next_safe_action, "hold_step7_or_prepare_exact_authorized_ceremony");
+  assert.equal(preview.next_safe_action, "hold_step7_ceremony");
+  assert.equal(preview.next_safe_action_allowed, true);
   assert.ok(preview.true_value_score > 0.7);
   assert.deepEqual(preview.blocked_actions, invariantBlockedActions);
   assert.equal(preview.self_proactive_harness.mode, "DETERMINISTIC_PREVIEW");
   assert.equal(preview.self_proactive_harness.recommended_micro_action, preview.next_safe_action);
+  assert.equal(preview.step7_hold_posture.status, "HOLD");
+  assert.equal(preview.step7_hold_posture.ceremony_allowed_by_preview, false);
+  assert.equal(preview.step7_hold_posture.authorization_observed_in_current_turn, false);
+  assert.equal(preview.step7_hold_posture.authorization_phrase_emitted, false);
+  assert.equal(preview.step7_hold_posture.receipt_mint_allowed_by_preview, false);
   assert.equal(preview.micro_compliance.preview_only, true);
+  assert.equal(preview.micro_compliance.step7_hold_enforced, true);
+  assert.equal(preview.micro_compliance.authorization_phrase_emitted, false);
   assert.equal(preview.micro_consent.action_authorized_by_preview, false);
+  assert.equal(preview.micro_consent.future_step7_mint_requires_fresh_current_operator_turn, true);
+  assert.equal(preview.micro_consent.reusable_authorization_created, false);
+  assert.equal(preview.micro_consent.broad_consent_allowed, false);
   assert.equal(preview.analogical_model.model, "process_cockpit_not_engine");
   assert.equal(preview.boundary.receipt_minted, false);
   assert.equal(preview.boundary.runtime_started, false);
   assert.equal(preview.boundary.node_connection_attempted, false);
+  assert.equal(preview.boundary.step7_authorization_observed, false);
+  assert.equal(preview.checks.find((check) => check.check === "step7_hold_boundary").pass, true);
 });
 
 test("buildTrueValuePreview lowers true value when operational noise rises", () => {
@@ -255,15 +274,31 @@ test("buildTrueValuePreview always uses allowlisted safe actions and invariant b
     assert.equal(Object.isFrozen(preview.self_proactive_harness), true);
     assert.equal(Object.isFrozen(preview.self_proactive_harness.gates), true);
     assert.equal(Object.isFrozen(preview.self_proactive_harness.gates[0]), true);
+    assert.equal(Object.isFrozen(preview.step7_hold_posture), true);
     assert.equal(Object.isFrozen(preview.micro_compliance), true);
     assert.equal(Object.isFrozen(preview.micro_consent), true);
     assert.equal(preview.self_proactive_harness.gates.find((gate) => gate.gate === "node_connection_blocked").pass, true);
+    assert.equal(preview.self_proactive_harness.gates.find((gate) => gate.gate === "step7_hold_boundary").pass, true);
     assert.equal(preview.micro_compliance.no_runtime, true);
     assert.equal(preview.micro_compliance.no_federation, true);
     assert.equal(preview.micro_compliance.no_node_connection, true);
     assert.equal(preview.micro_compliance.no_receipt_mint, true);
     assert.equal(preview.micro_consent.consent_observed_in_preview, false);
     assert.equal(preview.checks.find((check) => check.check === "blocked_actions_invariant").pass, true);
+  }
+});
+
+test("buildTrueValuePreview emits no reusable Step 7 authorization phrase", () => {
+  const preview = buildTrueValuePreview({
+    processEvents: [{ type: "gate_passed" }],
+    proofSignals,
+    blockers: [{ kind: "step7_ready_unminted", severity: "halt_gate" }],
+    now: fixedNow
+  });
+  const serialized = JSON.stringify(preview);
+
+  for (const pattern of forbiddenAuthorizationPatterns) {
+    assert.doesNotMatch(serialized, pattern);
   }
 });
 

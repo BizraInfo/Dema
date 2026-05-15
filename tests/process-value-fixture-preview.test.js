@@ -19,6 +19,7 @@ const forbiddenAuthorizationPatterns = [
 const expectedStates = new Map([
   ["clean_progress", ["proof_process_preview", "continue_verified_micro_slice"]],
   ["dirty_step7_gated", ["process_dirty", "restore_clean_baseline"]],
+  ["clean_step7_hold", ["node0_proof_ready_step7_gated", "hold_step7_ceremony"]],
   ["noisy_failure", ["proof_process_preview", "reduce_noise_before_next_slice"]],
   ["node_connection_blocked", ["node_connection_gated", "continue_preview_only_readiness"]],
   ["malformed_rejected", ["preview_reject", "fix_malformed_process_inputs"]]
@@ -30,8 +31,8 @@ test("buildProcessValueFixturePackPreview emits a schema-tagged offline fixture 
   assert.equal(pack.schema, PROCESS_VALUE_FIXTURE_PACK_SCHEMA);
   assert.equal(pack.mode, "PREVIEW_ONLY");
   assert.equal(pack.verdict, "PARTIAL_PLACEHOLDER");
-  assert.equal(pack.fixture_count, 5);
-  assert.equal(pack.entries.length, 5);
+  assert.equal(pack.fixture_count, 6);
+  assert.equal(pack.entries.length, 6);
   assert.equal(pack.all_expected_matched, true);
 });
 
@@ -55,6 +56,17 @@ test("dirty Step 7 fixture restores clean baseline before ceremony work", () => 
 
   assert.equal(entry.preview_summary.process_state, "process_dirty");
   assert.equal(entry.preview_summary.next_safe_action, "restore_clean_baseline");
+});
+
+test("clean Step 7 fixture locks ceremony into hold posture", () => {
+  const pack = buildProcessValueFixturePackPreview();
+  const entry = pack.entries.find((candidate) => candidate.id === "clean_step7_hold");
+
+  assert.equal(entry.preview_summary.process_state, "node0_proof_ready_step7_gated");
+  assert.equal(entry.preview_summary.next_safe_action, "hold_step7_ceremony");
+  assert.equal(entry.expected_match, true);
+  assert.equal(entry.boundary.receipt_minted, false);
+  assert.equal(entry.boundary.authorization_emitted, false);
 });
 
 test("malformed inner fixture is separate from malformed pack rejection", () => {

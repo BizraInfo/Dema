@@ -20,6 +20,13 @@ const DEFAULT_FIXTURES = [
     now: FIXTURE_NOW
   },
   {
+    id: "clean_step7_hold",
+    processEvents: [{ type: "clean_commit" }, { type: "gate_passed" }, { type: "no_mint_verification" }],
+    proofSignals: [{ id: "step7_command_path", status: "passed" }, { id: "step7_receipt", status: "blocked" }],
+    blockers: [{ kind: "step7_ready_unminted", severity: "halt_gate" }],
+    now: FIXTURE_NOW
+  },
+  {
     id: "noisy_failure",
     processEvents: [{ type: "gate_failed" }, { type: "scope_contamination" }],
     proofSignals: [{ id: "single_signal", status: "passed" }],
@@ -50,6 +57,10 @@ const EXPECTED_BY_ID = Object.freeze({
   dirty_step7_gated: Object.freeze({
     process_state: "process_dirty",
     next_safe_action: "restore_clean_baseline"
+  }),
+  clean_step7_hold: Object.freeze({
+    process_state: "node0_proof_ready_step7_gated",
+    next_safe_action: "hold_step7_ceremony"
   }),
   noisy_failure: Object.freeze({
     process_state: "proof_process_preview",

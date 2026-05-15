@@ -64,8 +64,8 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/node0-self-check.test.js` | Node0 self-check verification surface. |
 | `tests/onboarding.test.js` | Guided CLI/TUI onboarding, inspiration doctrine, preview-only boundaries. |
 | `tests/optimization-roadmap.test.js` | Advisory optimization roadmap, non-enforcing gates, blueprint coverage, and no-side-effect CLI output. |
-| `tests/process-value-fixture-preview.test.js` | Offline Process Value fixture pack, golden canned evidence states, no-CLI/no-mint boundary, and fail-closed pack rejection. |
-| `tests/process-value-preview.test.js` | Process Value Preview pure module, process RSI, SNR value, true-value scoring, deterministic harness metadata, fail-closed inputs, and no-runtime boundary. |
+| `tests/process-value-fixture-preview.test.js` | Offline Process Value fixture pack, golden canned evidence states including Step 7 hold posture, no-CLI/no-mint boundary, and fail-closed pack rejection. |
+| `tests/process-value-preview.test.js` | Process Value Preview pure module, process RSI, SNR value, true-value scoring, deterministic harness metadata, Step 7 hold-only posture, fail-closed inputs, and no-runtime boundary. |
 | `tests/priority-anchor.test.js` | Founding-file Merkle root algorithm and priority anchor behavior. |
 | `tests/proof-forge-scripts.test.js` | Proof Forge Python script subprocess boundary, local evidence chain, summary output, and no-repo-write guarantee. |
 | `tests/release-readiness.test.js` | Release-readiness report, workflow scan, dependency/installer/doc risk checks. |

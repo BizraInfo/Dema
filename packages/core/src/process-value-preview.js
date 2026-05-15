@@ -35,7 +35,7 @@ const INVARIANT_BLOCKED_ACTIONS = Object.freeze([
 const NEXT_SAFE_ACTIONS = Object.freeze([
   "fix_malformed_process_inputs",
   "restore_clean_baseline",
-  "hold_step7_or_prepare_exact_authorized_ceremony",
+  "hold_step7_ceremony",
   "continue_preview_only_readiness",
   "reduce_noise_before_next_slice",
   "continue_verified_micro_slice"
@@ -343,7 +343,7 @@ function deriveNextSafeAction({ inputMalformed, processState, snr }) {
   if (inputMalformed) return "fix_malformed_process_inputs";
   if (processState === "process_dirty") return "restore_clean_baseline";
   if (processState === "node0_proof_ready_step7_gated") {
-    return "hold_step7_or_prepare_exact_authorized_ceremony";
+    return "hold_step7_ceremony";
   }
   if (snr.score !== null && snr.score < 0.5) return "reduce_noise_before_next_slice";
   if (processState === "node_connection_gated") return "continue_preview_only_readiness";
@@ -354,7 +354,7 @@ function reasonFor({ processState, inputMalformed }) {
   if (inputMalformed) return "One or more inputs were malformed; preview rejects instead of inventing value.";
   if (processState === "process_dirty") return "Dirty scope makes append-only or gated ceremonies unsafe.";
   if (processState === "node0_proof_ready_step7_gated") {
-    return "Step 7 is proof-ready but still exact-authorization and append-only gated.";
+    return "Step 7 ceremony is held; no fresh exact operator authorization is observed by this preview.";
   }
   if (processState === "node_connection_gated") {
     return "Node connection remains blocked until proof gates and preview-only readiness checks pass.";
@@ -363,6 +363,7 @@ function reasonFor({ processState, inputMalformed }) {
 }
 
 function buildProcessHarness({ inputMalformed, processState, trueValueScore, nextSafeAction }) {
+  const step7Held = processState === "node0_proof_ready_step7_gated";
   return deepFreeze({
     self_proactive_harness: {
       mode: "DETERMINISTIC_PREVIEW",
@@ -370,6 +371,7 @@ function buildProcessHarness({ inputMalformed, processState, trueValueScore, nex
       gates: [
         { gate: "malformed_inputs", pass: !inputMalformed },
         { gate: "clean_baseline_before_ceremony", pass: processState !== "process_dirty" },
+        { gate: "step7_hold_boundary", pass: !step7Held || nextSafeAction === "hold_step7_ceremony" },
         { gate: "node_connection_blocked", pass: true },
         { gate: "runtime_boundary_closed", pass: true }
       ]
@@ -379,14 +381,28 @@ function buildProcessHarness({ inputMalformed, processState, trueValueScore, nex
       limitation: "Scores summarize supplied evidence only; they are not receipts, authority, or runtime proof.",
       weakest_link: inputMalformed ? "input_shape" : "external_evidence_not_examined_here"
     },
+    step7_hold_posture: {
+      status: step7Held ? "HOLD" : "NOT_APPLICABLE",
+      ceremony_allowed_by_preview: false,
+      authorization_observed_in_current_turn: false,
+      authorization_phrase_emitted: false,
+      receipt_mint_allowed_by_preview: false,
+      next_unblocked_condition: "fresh_current_operator_turn_plus_clean_baseline_plus_governed_ceremony"
+    },
     micro_compliance: {
       preview_only: true, deterministic: true, no_runtime: true, no_federation: true,
-      no_node_connection: true, no_receipt_mint: true, fail_closed_on_malformed_input: inputMalformed
+      no_node_connection: true, no_receipt_mint: true, fail_closed_on_malformed_input: inputMalformed,
+      step7_hold_enforced: step7Held ? nextSafeAction === "hold_step7_ceremony" : true,
+      authorization_phrase_emitted: false
     },
     micro_consent: {
+      preview_scope: "process_value_preview_only",
       exact_string_required_for_gated_actions: true,
       consent_observed_in_preview: false,
-      action_authorized_by_preview: false
+      action_authorized_by_preview: false,
+      future_step7_mint_requires_fresh_current_operator_turn: true,
+      reusable_authorization_created: false,
+      broad_consent_allowed: false
     },
     analogical_model: {
       model: "process_cockpit_not_engine",
@@ -480,7 +496,16 @@ export function buildTrueValuePreview({
       { check: "next_safe_action_allowlisted", pass: NEXT_SAFE_ACTIONS.includes(nextSafeAction) },
       { check: "blocked_actions_invariant", pass: INVARIANT_BLOCKED_ACTIONS.every((action) => (
         blockedActions.includes(action)
-      )) }
+      )) },
+      {
+        check: "step7_hold_boundary",
+        pass: processState !== "node0_proof_ready_step7_gated" || (
+          nextSafeAction === "hold_step7_ceremony" &&
+          harness.step7_hold_posture.status === "HOLD" &&
+          harness.step7_hold_posture.authorization_phrase_emitted === false &&
+          harness.step7_hold_posture.receipt_mint_allowed_by_preview === false
+        )
+      }
     ],
     boundary: {
       runtime_started: false,
@@ -489,6 +514,7 @@ export function buildTrueValuePreview({
       receipt_minted: false,
       capability_minted: false,
       authorization_emitted: false,
+      step7_authorization_observed: false,
       filesystem_write_performed: false,
       process_modified: false,
       push_performed: false
