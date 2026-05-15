@@ -15,6 +15,10 @@ import {
 const execFileAsync = promisify(execFile);
 const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function jsonResponse(body) {
   return new Response(JSON.stringify(body), {
     status: 200,
@@ -102,6 +106,118 @@ test("collectModelInventory inventories Ollama, LM Studio, downloads, and exposu
   assert.match(formatted, /qwen3-coder-next:q4_K_M/);
   assert.match(formatted, /LAN-exposed/);
   assert.match(formatted, /Boundary: read-only; local probes only; no model invoked/);
+});
+
+test("collectModelInventory redacts absolute local model paths by default", async () => {
+  const downloadsRoot = await mkdtemp(join(tmpdir(), "dema-models-private-"));
+  await mkdir(join(downloadsRoot, "vision"), { recursive: true });
+  await writeFile(join(downloadsRoot, "vision", "Nemotron3-Nano-4B-Q8_K_P.gguf"), "model-bytes");
+
+  const inventory = await collectModelInventory({
+    ollamaUrl: "https://models.example.test",
+    lmStudioUrl: "https://lm.example.test",
+    downloadsRoot,
+    fetchImpl: async () => {
+      throw new Error("should not fetch external endpoints");
+    },
+    tcpBindings: []
+  });
+
+  const serialized = JSON.stringify(inventory);
+  assert.doesNotMatch(serialized, new RegExp(escapeRegExp(downloadsRoot)));
+  assert.doesNotMatch(serialized, /\/home\/|\/Users\/|C:\\/);
+
+  assert.equal(inventory.providers.downloads.root_redacted, true);
+  assert.equal(inventory.providers.downloads.root, "[local-downloads-root-redacted]");
+  assert.equal(inventory.providers.downloads.model_count, 1);
+
+  const [model] = inventory.providers.downloads.models;
+  assert.equal(model.id, "Nemotron3-Nano-4B-Q8_K_P.gguf");
+  assert.equal(model.path_redacted, true);
+  assert.equal(model.path, "vision/Nemotron3-Nano-4B-Q8_K_P.gguf");
+  assert.equal(model.relative_path, "vision/Nemotron3-Nano-4B-Q8_K_P.gguf");
+  assert.equal(model.size_bytes, "model-bytes".length);
+  assert.equal(model.size, "11 B");
+});
+
+test("collectModelInventory exposes absolute model paths only by explicit debug option", async () => {
+  const downloadsRoot = await mkdtemp(join(tmpdir(), "dema-models-debug-"));
+  const filename = "Qwen3VL-8B-Q8_0.gguf";
+  await writeFile(join(downloadsRoot, filename), "debug-model-bytes");
+
+  const inventory = await collectModelInventory({
+    ollamaUrl: "https://models.example.test",
+    lmStudioUrl: "https://lm.example.test",
+    downloadsRoot,
+    includeAbsolutePaths: true,
+    fetchImpl: async () => {
+      throw new Error("should not fetch external endpoints");
+    },
+    tcpBindings: []
+  });
+
+  assert.equal(inventory.providers.downloads.root_redacted, false);
+  assert.equal(inventory.providers.downloads.root, downloadsRoot);
+  assert.equal(inventory.providers.downloads.models[0].path_redacted, false);
+  assert.equal(inventory.providers.downloads.models[0].path, join(downloadsRoot, filename));
+});
+
+test("formatModelInventory redacts POSIX and Windows absolute roots unless debug is explicit", () => {
+  const inventory = {
+    total_models: 2,
+    providers: {
+      ollama: {
+        reachable: false,
+        model_count: 0,
+        active_count: 0,
+        models: [],
+        active: [],
+        error: null
+      },
+      lm_studio: {
+        reachable: false,
+        model_count: 0,
+        models: [],
+        error: null
+      },
+      downloads: {
+        source: "downloads",
+        root: "/home/mumu/Downloads/models",
+        model_count: 2,
+        models: [
+          {
+            id: "GLM-4.7-Flash-Q4_K_M.gguf",
+            source: "downloads",
+            path: "/home/mumu/Downloads/models/GLM-4.7-Flash-Q4_K_M.gguf",
+            relative_path: "GLM-4.7-Flash-Q4_K_M.gguf",
+            size: "12 B"
+          },
+          {
+            id: "Qwen3VL-8B-Q8_0.gguf",
+            source: "downloads",
+            path: "C:\\Users\\Mumu\\Downloads\\Qwen3VL-8B-Q8_0.gguf",
+            relative_path: "Qwen3VL-8B-Q8_0.gguf",
+            size: "18 B"
+          }
+        ],
+        error: null
+      }
+    },
+    routing_recommendations: {},
+    safety: {
+      exposures: [],
+      model_name_flags: []
+    }
+  };
+
+  const output = formatModelInventory(inventory);
+  assert.match(output, /GLM-4\.7-Flash-Q4_K_M\.gguf/);
+  assert.match(output, /Qwen3VL-8B-Q8_0\.gguf/);
+  assert.doesNotMatch(output, /\/home\/mumu/);
+  assert.doesNotMatch(output, /C:\\Users\\Mumu/);
+
+  const debugOutput = formatModelInventory(inventory, { includeAbsolutePaths: true });
+  assert.match(debugOutput, /\/home\/mumu\/Downloads\/models/);
 });
 
 test("collectModelInventory refuses non-local model server endpoints", async () => {

@@ -8,6 +8,16 @@ function appendModels(lines, models, limit = 8) {
   if (models.length > limit) lines.push(`  - ... +${models.length - limit} more`);
 }
 
+function isAbsolutePathLike(value) {
+  return /^(?:[A-Za-z]:\\|\\\\|\/)/.test(String(value ?? ""));
+}
+
+function pathForDisplay(path, { includeAbsolutePaths = false } = {}) {
+  if (!path) return "unknown";
+  if (includeAbsolutePaths || !isAbsolutePathLike(path)) return path;
+  return "[local-downloads-root-redacted]";
+}
+
 function appendOllama(lines, ollama) {
   lines.push(`Ollama: ${ollama.reachable ? "reachable" : "unreachable"} (${ollama.model_count} models, ${ollama.active_count} active)`);
   if (ollama.error) lines.push(`  error: ${ollama.error}`);
@@ -28,9 +38,9 @@ function appendLmStudio(lines, lmStudio) {
   appendModels(lines, lmStudio.models);
 }
 
-function appendDownloads(lines, downloads) {
+function appendDownloads(lines, downloads, options = {}) {
   lines.push("");
-  lines.push(`Downloads: ${downloads.root} (${downloads.model_count} model files)`);
+  lines.push(`Downloads: ${pathForDisplay(downloads.root, options)} (${downloads.model_count} model files)`);
   if (downloads.error) lines.push(`  error: ${downloads.error}`);
   appendModels(lines, downloads.models);
 }
@@ -59,7 +69,7 @@ function appendSafety(lines, safety) {
   }
 }
 
-export function formatModelInventory(inventory) {
+export function formatModelInventory(inventory, { includeAbsolutePaths = false } = {}) {
   const lines = [
     "DEMA Local Model Inventory",
     "",
@@ -69,7 +79,7 @@ export function formatModelInventory(inventory) {
 
   appendOllama(lines, inventory.providers.ollama);
   appendLmStudio(lines, inventory.providers.lm_studio);
-  appendDownloads(lines, inventory.providers.downloads);
+  appendDownloads(lines, inventory.providers.downloads, { includeAbsolutePaths });
   appendRouting(lines, inventory.routing_recommendations);
   appendSafety(lines, inventory.safety);
 
