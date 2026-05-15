@@ -28,6 +28,7 @@ node --test tests/status.test.js
 | `tests/downloads-audit-preview.test.js` | Read-only downloads audit task, task receipt, placeholder SAT verdict formatting. |
 | `tests/sat-placeholder.test.js` | Receipt verifier dispatch, gateway handoff checks, exact consent, fail-closed behavior. |
 | `tests/actuator-check.test.js` | Raw actuator and EffectCap invariant static guard behavior. |
+| `tests/ambient.test.js` | Ambient boundary report and preview-only constraints. |
 | `tests/approval-gate.test.js` | Approval gate and exact-consent safety behavior. |
 | `tests/canon-check.test.js` | Topology canon registry and forbidden topology drift guard. |
 | `tests/consent-planner.test.js` | Micro-consent planning, permission extraction, unsafe file filtering, JSON/human CLI output. |
@@ -58,3 +59,11 @@ functions: 95
 
 The primary GitHub Actions check and BIZRA Review Gate run this coverage command
 after `npm test` and before `npm run check`.
+
+## Smoke checks
+
+`npm run check` includes:
+
+```text
+node apps/cli/src/index.js ambient
+```

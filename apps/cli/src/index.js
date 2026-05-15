@@ -14,6 +14,10 @@ import {
   gatherBannerInputs,
   probeGateway
 } from "../../../packages/core/src/banner.js";
+import {
+  buildAmbientBoundary,
+  formatAmbientBoundary
+} from "../../../packages/core/src/ambient.js";
 import { runShell } from "../../../packages/core/src/shell.js";
 import { TASK_REGISTRY } from "../../../packages/tasks/src/downloads-audit-preview.js";
 import {
@@ -48,6 +52,8 @@ Usage:
   dema status:json  Show machine-readable status
   dema today        Record a local continuity tick + memory summary
   dema doctor       Validate readiness and consent gate
+  dema ambient      Show Ambient Sovereign Execution boundary (preview-only)
+  dema ambient:json Show the ambient boundary as schema-tagged JSON
   dema consent plan [--json] "<intent>"
                     Preview a micro-consent scope; does not approve or execute
   dema mission propose [--consent "GO: Node0 bounded diagnostic activation only"]
@@ -134,6 +140,16 @@ Next:
       );
       console.log(formatStatus(status));
       process.exitCode = ready ? 0 : 1;
+      return;
+    }
+
+    case "ambient": {
+      console.log(formatAmbientBoundary(buildAmbientBoundary()));
+      return;
+    }
+
+    case "ambient:json": {
+      console.log(JSON.stringify(buildAmbientBoundary(), null, 2));
       return;
     }
 

@@ -34,6 +34,9 @@ dema setup
 dema status
   reads Node0 readiness through an adapter
 
+dema ambient / dema ambient:json
+  previews ambient execution boundaries; executes nothing
+
 dema today
   records continuity only; mission_executed=false, runtime_pulse.fired=false
 
