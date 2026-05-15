@@ -37,6 +37,9 @@ dema onboard / dema onboard --json
 dema roadmap preview / dema roadmap preview --json
   previews advisory optimization priorities and dependencies; dispatches no work and enforces no gates
 
+dema evidence receipt preview / dema evidence receipt preview --json
+  previews receipt-shaped evidence with canonical hashes; mints no receipt, signs nothing, and writes nothing
+
 dema status
   reads Node0 readiness through an adapter
 

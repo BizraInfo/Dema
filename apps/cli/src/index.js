@@ -38,6 +38,10 @@ import {
   buildOptimizationRoadmapPreview,
   formatOptimizationRoadmapPreview
 } from "../../../packages/core/src/optimization-roadmap.js";
+import {
+  buildEvidenceReceiptPreview,
+  formatEvidenceReceiptPreview
+} from "../../../packages/verifier/src/evidence-receipt-preview.js";
 import { runShell } from "../../../packages/core/src/shell.js";
 import { TASK_REGISTRY } from "../../../packages/tasks/src/downloads-audit-preview.js";
 import {
@@ -71,6 +75,8 @@ Usage:
                     Preview first-run onboarding; does not setup, execute, or connect
   dema roadmap preview [--json]
                     Preview advisory optimization roadmap; does not dispatch work
+  dema evidence receipt preview [--json]
+                    Preview receipt-shaped evidence; does not mint, sign, or write
   dema setup        Create local Dema folders/profile skeleton
   dema status       Show human-readable Node0 status
   dema status:json  Show machine-readable status
@@ -145,6 +151,21 @@ Next:
         argv.includes("--json")
           ? JSON.stringify(report, null, 2)
           : formatOptimizationRoadmapPreview(report)
+      );
+      return;
+    }
+
+    case "evidence": {
+      const receiptCommand = argv[1];
+      const receiptSubcommand = argv[2];
+      if (receiptCommand !== "receipt" || receiptSubcommand !== "preview") {
+        throw new Error("Unknown evidence command. Use `dema evidence receipt preview [--json]`.");
+      }
+      const receipt = buildEvidenceReceiptPreview();
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(receipt, null, 2)
+          : formatEvidenceReceiptPreview(receipt)
       );
       return;
     }

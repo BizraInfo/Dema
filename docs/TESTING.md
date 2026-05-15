@@ -33,6 +33,7 @@ node --test tests/status.test.js
 | `tests/approval-gate.test.js` | Approval gate and exact-consent safety behavior. |
 | `tests/canon-check.test.js` | Topology canon registry and forbidden topology drift guard. |
 | `tests/consent-planner.test.js` | Micro-consent planning, permission extraction, unsafe file filtering, JSON/human CLI output. |
+| `tests/evidence-receipt-preview.test.js` | Evidence receipt preview canonical hashing, no-mint boundary, self-verification, and CLI output. |
 | `tests/effectcap-invariant.test.js` | Pre-runtime EffectCap invariant spec and negative tests. |
 | `tests/gateway-http-adapter.test.js` | Gateway adapter probing and failure normalization. |
 | `tests/llm-guidance-check.test.js` | Canonical LLM flow guidance, root agent routing, and docs noise classification. |
@@ -80,4 +81,6 @@ node apps/cli/src/index.js onboard
 node apps/cli/src/index.js onboard --json
 node apps/cli/src/index.js roadmap preview
 node apps/cli/src/index.js roadmap preview --json
+node apps/cli/src/index.js evidence receipt preview
+node apps/cli/src/index.js evidence receipt preview --json
 ```
