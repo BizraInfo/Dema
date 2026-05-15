@@ -87,6 +87,24 @@
       "allowed_files": []
     }
   ],
+  "forbidden_authorization_phrases": [
+    {
+      "phrase": "I authorize",
+      "allowed_files": []
+    },
+    {
+      "phrase": "I approve",
+      "allowed_files": []
+    },
+    {
+      "phrase": "--authorize \"",
+      "allowed_files": []
+    },
+    {
+      "phrase": "--authorize '",
+      "allowed_files": []
+    }
+  ],
   "source_scan_roots": ["apps", "packages", "scripts"],
   "dema_repo_boundary": {
     "runtime_execution": false,

@@ -44,11 +44,11 @@ function lineNumber(body, index) {
   return body.slice(0, index).split("\n").length;
 }
 
-function phraseFindings({ root, registry, markdownFiles }) {
+function phraseFindings({ root, rules, scannedFiles }) {
   const findings = [];
-  for (const file of markdownFiles) {
+  for (const file of scannedFiles) {
     const body = readFileSync(join(root, file), "utf8");
-    for (const rule of registry.forbidden_topology_phrases ?? []) {
+    for (const rule of rules ?? []) {
       if ((rule.allowed_files ?? []).includes(file)) continue;
       let index = body.indexOf(rule.phrase);
       while (index >= 0) {
@@ -82,9 +82,21 @@ export function buildCanonCheckReport({
   const sourceFiles = (registry.source_scan_roots ?? [])
     .flatMap((scanRoot) => listSourceFiles(join(root, scanRoot), root));
   const scannedFiles = [...new Set([...markdownFiles, ...sourceFiles])].sort();
-  const forbiddenFindings = phraseFindings({ root, registry, markdownFiles: scannedFiles });
+  const forbiddenTopologyFindings = phraseFindings({
+    root,
+    rules: registry.forbidden_topology_phrases,
+    scannedFiles
+  });
+  const forbiddenAuthorizationFindings = phraseFindings({
+    root,
+    rules: registry.forbidden_authorization_phrases,
+    scannedFiles
+  });
 
-  const ok = missingFiles.length === 0 && canonicalSentencePresent && forbiddenFindings.length === 0;
+  const ok = missingFiles.length === 0 &&
+    canonicalSentencePresent &&
+    forbiddenTopologyFindings.length === 0 &&
+    forbiddenAuthorizationFindings.length === 0;
   return {
     schema: "bizra.dema.review.canon_check.v0.1",
     ok,
@@ -95,7 +107,8 @@ export function buildCanonCheckReport({
     source_scan_roots: registry.source_scan_roots ?? [],
     scanned_files_count: scannedFiles.length,
     missing_files: missingFiles,
-    forbidden_topology_findings: forbiddenFindings,
+    forbidden_topology_findings: forbiddenTopologyFindings,
+    forbidden_authorization_findings: forbiddenAuthorizationFindings,
     boundary: {
       read_only_audit: true,
       runtime_execution: false,

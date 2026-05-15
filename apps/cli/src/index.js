@@ -39,6 +39,10 @@ import {
   formatOfflineNetworkFixturePreview
 } from "../../../packages/core/src/network-fixture-preview.js";
 import {
+  buildNetworkRefusalMatrixPreview,
+  formatNetworkRefusalMatrixPreview
+} from "../../../packages/core/src/network-refusal-matrix-preview.js";
+import {
   buildAmanaContractsPreview,
   formatAmanaContractsPreview
 } from "../../../packages/core/src/amana-contracts-preview.js";
@@ -141,6 +145,8 @@ Local evidence:
                        Preview Node1/Node2 and phase-gated readiness; no federation
   dema network fixture preview [--json]
                        Preview offline 5-slot fixture; no sockets or mint
+  dema network refusal preview [--json]
+                       Preview partition/rejoin refusal matrix; no sockets or mint
   dema amana contracts preview [--json]
                         Preview Amana contract primitives; imports no external code
   dema mcp blueprint [--json]
@@ -355,8 +361,17 @@ async function dispatch(argv) {
         );
         return;
       }
+      if (subcommand === "refusal" && argv[2] === "preview") {
+        const preview = buildNetworkRefusalMatrixPreview();
+        console.log(
+          argv.includes("--json")
+            ? JSON.stringify(preview, null, 2)
+            : formatNetworkRefusalMatrixPreview(preview)
+        );
+        return;
+      }
       throw new Error(
-        "Unknown network command. Use `dema network blueprint [--json]` or `dema network fixture preview [--json]`."
+        "Unknown network command. Use `dema network blueprint [--json]`, `dema network fixture preview [--json]`, or `dema network refusal preview [--json]`."
       );
     }
 

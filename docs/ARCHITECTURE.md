@@ -54,6 +54,7 @@ Dema does not own dangerous execution. It talks to adapters. Adapters talk to go
 | `dema report safety` | safety report surface | Preview-only; not certification. |
 | `dema network blueprint` | `packages/core/src/network-blueprint.js` | Node1/Node2 and phase-gated readiness preview only; no sockets, handshakes, or federation. |
 | `dema network fixture preview` | `packages/core/src/network-fixture-preview.js` | Offline 5-slot schematic only; 0 live nodes, no sockets, no mint. |
+| `dema network refusal preview` | `packages/core/src/network-refusal-matrix-preview.js` | Partition/rejoin refusal matrix preview only; no sockets, no simulation, no mint. |
 | `dema amana contracts preview` | `packages/core/src/amana-contracts-preview.js` | Registry preview only; no external code import, execution, mint, or Step 7 unlock. |
 | `dema mcp blueprint` | `packages/core/src/mcp-blueprint.js` | MCP integration contract only; no MCP tool call or credential access. |
 | `dema roadmap preview` | `packages/core/src/optimization-roadmap.js` | Advisory roadmap only; no execution or gate enforcement. |
@@ -141,8 +142,10 @@ Governed runtime issues.
 `dema network blueprint` is a readiness map only. `dema network fixture preview`
 is an offline 5-slot schematic only: it reports 0 live nodes, 0 sockets, unnamed
 phase slots, micro-compliance controls, micro-consent requirements, and inert
-scenario shapes. These commands may describe future Node1/Node2 handoff contracts
-and canonical phase_3/phase_4 directions, but they must not:
+scenario shapes. `dema network refusal preview` renders a paper truth-table
+refusal matrix for partition, rejoin, stale receipt, missing micro-consent, and
+schema mismatch shapes. These commands may describe future Node1/Node2 handoff
+contracts and canonical phase_3/phase_4 directions, but they must not:
 
 - connect nodes,
 - open sockets,

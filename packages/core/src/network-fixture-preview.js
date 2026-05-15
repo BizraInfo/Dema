@@ -84,7 +84,7 @@ const STATIC_RELATIONSHIPS = [
   }
 ];
 
-const INERT_SCENARIOS = [
+export const NETWORK_INERT_SCENARIOS = [
   {
     id: "partition_shape",
     purpose: "describe how a future partition case would be represented",
@@ -104,6 +104,30 @@ const INERT_SCENARIOS = [
   {
     id: "adversarial_slot_input_shape",
     purpose: "describe how malformed future slot input would be refused",
+    simulation_status: "describes_shape_only",
+    executed: false,
+    produces_receipt: false,
+    not_executed_because: "no runtime in this repo"
+  },
+  {
+    id: "stale_receipt_shape",
+    purpose: "describe how stale receipt references would be refused",
+    simulation_status: "describes_shape_only",
+    executed: false,
+    produces_receipt: false,
+    not_executed_because: "no runtime in this repo"
+  },
+  {
+    id: "missing_micro_consent_shape",
+    purpose: "describe how absent micro-consent would be refused",
+    simulation_status: "describes_shape_only",
+    executed: false,
+    produces_receipt: false,
+    not_executed_because: "no runtime in this repo"
+  },
+  {
+    id: "schema_mismatch_shape",
+    purpose: "describe how schema mismatch would be refused",
     simulation_status: "describes_shape_only",
     executed: false,
     produces_receipt: false,
@@ -245,7 +269,7 @@ export function buildOfflineNetworkFixturePreview() {
     fixture: clone(FIXTURE_META),
     slots: clone(FIXTURE_SLOTS),
     static_relationships: clone(STATIC_RELATIONSHIPS),
-    inert_scenarios: clone(INERT_SCENARIOS),
+    inert_scenarios: clone(NETWORK_INERT_SCENARIOS),
     micro_compliance: clone(MICRO_COMPLIANCE),
     micro_consent: clone(MICRO_CONSENT),
     analogical_model: clone(ANALOGICAL_MODEL),

@@ -30,6 +30,8 @@ export const commands = [
   ["node", ["apps/cli/src/index.js", "network", "blueprint", "--json"]],
   ["node", ["apps/cli/src/index.js", "network", "fixture", "preview"]],
   ["node", ["apps/cli/src/index.js", "network", "fixture", "preview", "--json"]],
+  ["node", ["apps/cli/src/index.js", "network", "refusal", "preview"]],
+  ["node", ["apps/cli/src/index.js", "network", "refusal", "preview", "--json"]],
   ["node", ["apps/cli/src/index.js", "amana", "contracts", "preview"]],
   ["node", ["apps/cli/src/index.js", "amana", "contracts", "preview", "--json"]],
   ["node", ["apps/cli/src/index.js", "design", "emulate-loop"]],

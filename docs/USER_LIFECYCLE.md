@@ -183,10 +183,12 @@ Use:
 dema report safety
 dema network blueprint
 dema network fixture preview
+dema network refusal preview
 ```
 
 `report safety` explains current safety posture. `network blueprint` explains Node1/Node2 handoff gates and phase-gated multi-node readiness.
 `network fixture preview` shows an offline 5-slot lab-bench schematic with 0 live nodes, micro-compliance controls, micro-consent requirements, and inert scenario shapes.
+`network refusal preview` shows a paper truth-table refusal matrix for partition, rejoin, stale receipt, missing micro-consent, and schema mismatch shapes.
 
 Both are previews. They do not certify, connect, federate, or open sockets.
 

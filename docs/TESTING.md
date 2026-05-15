@@ -59,6 +59,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/models.test.js` | Local model inventory and no-inference behavior. |
 | `tests/network-blueprint.test.js` | Node1/Node2 and phase-gated multi-node blueprint gates, no-network behavior, boundary booleans, authorization-phrase safety, determinism, mutation isolation. |
 | `tests/network-fixture-preview.test.js` | Offline 5-slot fixture preview, no-socket/no-mint boundary, micro-compliance, micro-consent, analogical model, and no invented node names. |
+| `tests/network-refusal-matrix-preview.test.js` | Partition/rejoin refusal matrix preview, no-socket/no-mint boundary, computed self-proactive checks, micro-compliance, micro-consent, and no topology or authorization drift. |
 | `tests/node0-local-urp-proof.test.js` | Local URP proof boundaries. |
 | `tests/node0-self-check.test.js` | Node0 self-check verification surface. |
 | `tests/onboarding.test.js` | Guided CLI/TUI onboarding, inspiration doctrine, preview-only boundaries. |
@@ -103,6 +104,8 @@ node apps/cli/src/index.js network blueprint
 node apps/cli/src/index.js network blueprint --json
 node apps/cli/src/index.js network fixture preview
 node apps/cli/src/index.js network fixture preview --json
+node apps/cli/src/index.js network refusal preview
+node apps/cli/src/index.js network refusal preview --json
 node apps/cli/src/index.js amana contracts preview
 node apps/cli/src/index.js amana contracts preview --json
 node apps/cli/src/index.js design emulate-loop

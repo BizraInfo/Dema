@@ -42,6 +42,8 @@ const HELP = [
   "  network blueprint    preview Node1/Node2 and phase-gated readiness",
   "  network fixture preview",
   "                       preview offline 5-slot fixture without sockets",
+  "  network refusal preview",
+  "                       preview partition/rejoin refusal matrix without sockets",
   "  amana contracts preview",
   "                       preview Amana contracts without importing external code",
   "",

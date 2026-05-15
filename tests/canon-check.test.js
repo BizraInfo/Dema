@@ -22,7 +22,29 @@ test("canon check passes on current docs", () => {
   assert.ok(report.source_scan_roots.includes("packages"));
   assert.deepEqual(report.missing_files, []);
   assert.deepEqual(report.forbidden_topology_findings, []);
+  assert.deepEqual(report.forbidden_authorization_findings, []);
   assert.equal(report.boundary.runtime_execution, false);
+});
+
+test("canon check rejects forbidden authorization phrase drift in source files", async () => {
+  const root = await mkdtemp(join(tmpdir(), "dema-canon-auth-check-"));
+  await mkdir(join(root, "docs", "canon"), { recursive: true });
+  await mkdir(join(root, "docs", "02-architecture"), { recursive: true });
+  await mkdir(join(root, "packages", "core", "src"), { recursive: true });
+  await cp("docs/canon/canon_registry.json", join(root, "docs", "canon", "canon_registry.json"));
+  await writeFile(
+    join(root, "docs", "canon", "BIZRA_TOPOLOGY_CANON.md"),
+    "Each human node mints PAT-7 locally on their device and SAT-5 into one shared Universal Resource Pool. PAT serves the human. SAT serves the system. The membrane sits between them.\n"
+  );
+  await writeFile(join(root, "docs", "02-architecture", "node0-urp-ecosystem-transition.md"), "# Transition\n");
+  await writeFile(join(root, "docs", "02-architecture", "pat-builder-sat-validator.md"), "# PAT/SAT\n");
+  await writeFile(join(root, "packages", "core", "src", "bad.js"), "export const leaked = 'I authorize';\n");
+
+  const report = buildCanonCheckReport({ root });
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.forbidden_authorization_findings, [
+    { file: "packages/core/src/bad.js", line: 1, phrase: "I authorize" }
+  ]);
 });
 
 test("canon check CLI emits schema-tagged read-only report", async () => {
