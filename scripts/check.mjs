@@ -13,6 +13,8 @@ const commands = [
   ["node", ["apps/cli/src/index.js", "evidence", "receipt", "preview", "--json"]],
   ["node", ["apps/cli/src/index.js", "ihsan", "floor", "preview", "--score", "0.97"]],
   ["node", ["apps/cli/src/index.js", "ihsan", "floor", "preview", "--score", "0.97", "--json"]],
+  ["node", ["apps/cli/src/index.js", "behavior", "modulation", "preview", "--consent", "GO: preview behavioral modulation only", "--score", "0.97", "Adjust tone to prioritize safety reminders"]],
+  ["node", ["apps/cli/src/index.js", "behavior", "modulation", "preview", "--consent", "GO: preview behavioral modulation only", "--score", "0.97", "--json", "Adjust tone to prioritize safety reminders"]],
   ["node", ["apps/cli/src/index.js", "ambient"]],
   ["node", ["apps/cli/src/index.js", "report", "safety"]],
   ["node", ["apps/cli/src/index.js", "mcp", "blueprint"]],

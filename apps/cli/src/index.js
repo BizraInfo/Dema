@@ -35,6 +35,10 @@ import {
   formatOnboardingPreview
 } from "../../../packages/core/src/onboarding.js";
 import {
+  buildBehavioralModulationPreview,
+  formatBehavioralModulationPreview
+} from "../../../packages/core/src/behavioral-modulation.js";
+import {
   buildOptimizationRoadmapPreview,
   formatOptimizationRoadmapPreview
 } from "../../../packages/core/src/optimization-roadmap.js";
@@ -84,6 +88,8 @@ Usage:
                     Preview receipt-shaped evidence; does not mint, sign, or write
   dema ihsan floor preview [--score N] [--json]
                     Preview externally supplied Ihsan floor check; does not certify
+  dema behavior modulation preview [--consent TEXT] [--score N] [--json] "<intent>"
+                    Preview visible guidance modulation; does not apply behavior changes
   dema setup        Create local Dema folders/profile skeleton
   dema status       Show human-readable Node0 status
   dema status:json  Show machine-readable status
@@ -190,6 +196,38 @@ Next:
         argv.includes("--json")
           ? JSON.stringify(preview, null, 2)
           : formatIhsanFloorPreview(preview)
+      );
+      return;
+    }
+
+    case "behavior": {
+      const behaviorCommand = argv[1];
+      const behaviorSubcommand = argv[2];
+      if (behaviorCommand !== "modulation" || behaviorSubcommand !== "preview") {
+        throw new Error('Unknown behavior command. Use `dema behavior modulation preview [--consent TEXT] [--score N] [--json] "<intent>"`.');
+      }
+      const consentPhrase = argValue(argv, "--consent") ?? "";
+      const scoreArg = argValue(argv, "--score");
+      const ihsanScore = scoreArg === undefined ? 0.95 : Number(scoreArg);
+      const intentParts = [];
+      for (let index = 3; index < argv.length; index += 1) {
+        const arg = argv[index];
+        if (arg === "--json") continue;
+        if (arg === "--consent" || arg === "--score") {
+          index += 1;
+          continue;
+        }
+        intentParts.push(arg);
+      }
+      const preview = buildBehavioralModulationPreview({
+        intent: intentParts.join(" ").trim(),
+        consentPhrase,
+        ihsanScore
+      });
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(preview, null, 2)
+          : formatBehavioralModulationPreview(preview)
       );
       return;
     }

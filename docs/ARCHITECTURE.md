@@ -43,6 +43,9 @@ dema evidence receipt preview / dema evidence receipt preview --json
 dema ihsan floor preview / dema ihsan floor preview --score N --json
   previews an externally supplied Ihsan scalar against the floor; certifies nothing and runs no gate
 
+dema behavior modulation preview / dema behavior modulation preview --json
+  previews visible, reversible guidance modulation under exact consent; applies no behavior change
+
 dema status
   reads Node0 readiness through an adapter
 

@@ -32,6 +32,7 @@ node --test tests/status.test.js
 | `tests/ambient.test.js` | Ambient boundary report and preview-only constraints. |
 | `tests/approval-gate.test.js` | Approval gate and exact-consent safety behavior. |
 | `tests/canon-check.test.js` | Topology canon registry and forbidden topology drift guard. |
+| `tests/behavioral-modulation.test.js` | Consent-bound visible guidance modulation preview, forbidden shaping rejection, evidence linkage, and CLI output. |
 | `tests/consent-planner.test.js` | Micro-consent planning, permission extraction, unsafe file filtering, JSON/human CLI output. |
 | `tests/evidence-receipt-preview.test.js` | Evidence receipt preview canonical hashing, no-mint boundary, self-verification, and CLI output. |
 | `tests/effectcap-invariant.test.js` | Pre-runtime EffectCap invariant spec and negative tests. |
@@ -86,4 +87,6 @@ node apps/cli/src/index.js evidence receipt preview
 node apps/cli/src/index.js evidence receipt preview --json
 node apps/cli/src/index.js ihsan floor preview --score 0.97
 node apps/cli/src/index.js ihsan floor preview --score 0.97 --json
+node apps/cli/src/index.js behavior modulation preview --consent "GO: preview behavioral modulation only" --score 0.97 "Adjust tone to prioritize safety reminders"
+node apps/cli/src/index.js behavior modulation preview --consent "GO: preview behavioral modulation only" --score 0.97 --json "Adjust tone to prioritize safety reminders"
 ```
