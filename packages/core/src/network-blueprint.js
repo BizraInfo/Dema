@@ -215,7 +215,7 @@ const SELF_PROACTIVE_HARNESS = {
     "advisory strings only; no agent loop, no shell command, no network call, no authorization text"
 };
 
-const SELF_CRITIQUE = [
+export const NETWORK_PREVIEW_SELF_CRITIQUE = [
   {
     risk: "preview readiness could be mistaken for permission",
     mitigation: "keep Node1, Node2, phase_3, and phase_4 gates blocked while Node0 proof gates are blocked"
@@ -308,11 +308,12 @@ const PROPOSED_NEXT_ACTIONS = [
   }
 ];
 
-const BOUNDARY = {
+export const NETWORK_PREVIEW_BOUNDARY = {
   scope: "read-only-preview",
   inference_invoked: false,
   execution_enabled: false,
   mutation_performed: false,
+  runtime_started: false,
   capability_minted: false,
   receipt_minted: false,
   daemon_started: false,
@@ -342,11 +343,11 @@ export function buildNetworkBlueprint() {
     handoff_contract_preview: clone(HANDOFF_CONTRACT_PREVIEW),
     offline_integration_harness: clone(OFFLINE_INTEGRATION_HARNESS),
     self_proactive_harness: clone(SELF_PROACTIVE_HARNESS),
-    self_critique: clone(SELF_CRITIQUE),
+    self_critique: clone(NETWORK_PREVIEW_SELF_CRITIQUE),
     lifecycle: clone(LIFECYCLE),
     gtm_blockers: clone(GTM_BLOCKERS),
     proposed_next_actions: clone(PROPOSED_NEXT_ACTIONS),
-    boundary: clone(BOUNDARY)
+    boundary: clone(NETWORK_PREVIEW_BOUNDARY)
   };
 }
 

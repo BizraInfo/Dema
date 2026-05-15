@@ -65,8 +65,29 @@
     {
       "phrase": "SAT-5 lives inside each",
       "allowed_files": ["docs/canon/BIZRA_TOPOLOGY_CANON.md"]
+    },
+    {
+      "phrase": "Node3",
+      "allowed_files": []
+    },
+    {
+      "phrase": "Node4",
+      "allowed_files": []
+    },
+    {
+      "phrase": "peer_alpha",
+      "allowed_files": []
+    },
+    {
+      "phrase": "peer_beta",
+      "allowed_files": []
+    },
+    {
+      "phrase": "phase_5",
+      "allowed_files": []
     }
   ],
+  "source_scan_roots": ["apps", "packages", "scripts"],
   "dema_repo_boundary": {
     "runtime_execution": false,
     "federation_started": false,

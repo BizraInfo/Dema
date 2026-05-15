@@ -35,6 +35,10 @@ import {
   formatNetworkBlueprint
 } from "../../../packages/core/src/network-blueprint.js";
 import {
+  buildOfflineNetworkFixturePreview,
+  formatOfflineNetworkFixturePreview
+} from "../../../packages/core/src/network-fixture-preview.js";
+import {
   buildAmanaContractsPreview,
   formatAmanaContractsPreview
 } from "../../../packages/core/src/amana-contracts-preview.js";
@@ -135,8 +139,10 @@ Local evidence:
                     Preview the safety report; does not certify, execute, or mint
   dema network blueprint [--json]
                        Preview Node1/Node2 and phase-gated readiness; no federation
+  dema network fixture preview [--json]
+                       Preview offline 5-slot fixture; no sockets or mint
   dema amana contracts preview [--json]
-                       Preview Amana contract primitives; imports no external code
+                        Preview Amana contract primitives; imports no external code
   dema mcp blueprint [--json]
                        Preview MCP integration contract; does not call MCP tools
   dema roadmap preview [--json]
@@ -331,16 +337,27 @@ async function dispatch(argv) {
     }
 
     case "network": {
-      if (subcommand !== "blueprint") {
-        throw new Error("Unknown network command. Use `dema network blueprint [--json]`.");
+      if (subcommand === "blueprint") {
+        const blueprint = buildNetworkBlueprint();
+        console.log(
+          argv.includes("--json")
+            ? JSON.stringify(blueprint, null, 2)
+            : formatNetworkBlueprint(blueprint)
+        );
+        return;
       }
-      const blueprint = buildNetworkBlueprint();
-      console.log(
-        argv.includes("--json")
-          ? JSON.stringify(blueprint, null, 2)
-          : formatNetworkBlueprint(blueprint)
+      if (subcommand === "fixture" && argv[2] === "preview") {
+        const preview = buildOfflineNetworkFixturePreview();
+        console.log(
+          argv.includes("--json")
+            ? JSON.stringify(preview, null, 2)
+            : formatOfflineNetworkFixturePreview(preview)
+        );
+        return;
+      }
+      throw new Error(
+        "Unknown network command. Use `dema network blueprint [--json]` or `dema network fixture preview [--json]`."
       );
-      return;
     }
 
     case "amana": {

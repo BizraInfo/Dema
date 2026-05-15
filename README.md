@@ -130,6 +130,7 @@ The loop is intentionally conservative. Dema can complete the local preview life
 | Mission | `dema mission draft "<intent>"` | Creates a mission draft from intent. | Does not run the mission. |
 | Safety | `dema report safety` | Shows current safety posture. | Does not certify production readiness. |
 | Network | `dema network blueprint` | Previews Node1/Node2 handoff gates and phase-gated multi-node readiness. | Does not connect, federate, or open sockets. |
+| Offline fixture | `dema network fixture preview` | Previews a 5-slot lab-bench schematic with micro-compliance and micro-consent gates. | Reports 0 live nodes; does not connect, mint, or simulate runtime. |
 | MCP | `dema mcp blueprint` | Previews MCP integration points, auth boundaries, validation, retries, and redaction rules. | Does not call MCP tools or access external APIs. |
 | Roadmap | `dema roadmap preview` | Previews prioritized architecture, security, performance, documentation, DevOps, and ethics work. | Does not execute roadmap items or enforce gates. |
 | Design emulation | `dema design emulate-loop` | Models PAT/SAT loop assumptions across hardware, performance, data, and impact lenses. | Does not run agents, mint receipts, or write local state. |
@@ -161,6 +162,7 @@ dema memory show NAME
 dema models
 dema report safety [--json]
 dema network blueprint [--json]
+dema network fixture preview [--json]
 dema mcp blueprint [--json]
 dema roadmap preview [--json]
 dema evidence receipt preview [--json]

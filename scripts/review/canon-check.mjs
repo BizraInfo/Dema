@@ -24,6 +24,22 @@ function listMarkdownFiles(dir, root = dir) {
   return files;
 }
 
+function listSourceFiles(dir, root = dir) {
+  const files = [];
+  if (!existsSync(dir)) return files;
+  for (const entry of readdirSync(dir)) {
+    if (entry === "node_modules" || entry === ".git") continue;
+    const path = join(dir, entry);
+    const stat = statSync(path);
+    if (stat.isDirectory()) {
+      files.push(...listSourceFiles(path, root));
+    } else if (/\.(js|mjs|json)$/.test(entry)) {
+      files.push(relative(root, path).split("\\").join("/"));
+    }
+  }
+  return files;
+}
+
 function lineNumber(body, index) {
   return body.slice(0, index).split("\n").length;
 }
@@ -63,7 +79,10 @@ export function buildCanonCheckReport({
   const canonicalBody = existsSync(canonicalFile) ? readFileSync(canonicalFile, "utf8") : "";
   const canonicalSentencePresent = canonicalBody.includes(registry.canonical_sentence);
   const markdownFiles = listMarkdownFiles(join(root, "docs"), root);
-  const forbiddenFindings = phraseFindings({ root, registry, markdownFiles });
+  const sourceFiles = (registry.source_scan_roots ?? [])
+    .flatMap((scanRoot) => listSourceFiles(join(root, scanRoot), root));
+  const scannedFiles = [...new Set([...markdownFiles, ...sourceFiles])].sort();
+  const forbiddenFindings = phraseFindings({ root, registry, markdownFiles: scannedFiles });
 
   const ok = missingFiles.length === 0 && canonicalSentencePresent && forbiddenFindings.length === 0;
   return {
@@ -73,6 +92,8 @@ export function buildCanonCheckReport({
     truth_label: registry.truth_label,
     canonical_sentence_present: canonicalSentencePresent,
     required_files_checked: registry.required_files ?? [],
+    source_scan_roots: registry.source_scan_roots ?? [],
+    scanned_files_count: scannedFiles.length,
     missing_files: missingFiles,
     forbidden_topology_findings: forbiddenFindings,
     boundary: {

@@ -77,6 +77,7 @@ test("buildNetworkBlueprint keeps every boundary switch false", () => {
   const expectedFalseBoundaries = [
     "execution_enabled",
     "mutation_performed",
+    "runtime_started",
     "capability_minted",
     "receipt_minted",
     "daemon_started",

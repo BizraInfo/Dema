@@ -40,6 +40,8 @@ const HELP = [
   "  models               show local model inventory",
   "  report safety        preview safety report, proof gaps, and boundaries",
   "  network blueprint    preview Node1/Node2 and phase-gated readiness",
+  "  network fixture preview",
+  "                       preview offline 5-slot fixture without sockets",
   "  amana contracts preview",
   "                       preview Amana contracts without importing external code",
   "",
