@@ -38,6 +38,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/amana-contracts-preview.test.js` | Amana contract registry preview, external-code exclusion, path overlap, CLI output, and Step 7 blocked posture. |
 | `tests/approval-gate.test.js` | Approval gate and exact-consent safety behavior. |
 | `tests/behavioral-modulation.test.js` | Consent-bound visible guidance modulation preview, forbidden shaping rejection, evidence linkage, and CLI output. |
+| `tests/consent-hash-preview.test.js` | ConsentHashTable preview hashing, exact lookup, revocation, expiry, no-authority boundary, and pure-module scope. |
 | `tests/consent-planner.test.js` | Micro-consent planning, permission extraction, unsafe file filtering, JSON/human CLI output. |
 | `tests/diagnostics-plan.test.js` | Self-diagnostics preview plan and non-execution boundary. |
 | `tests/downloads-audit-preview.test.js` | Read-only downloads audit task, task receipt, placeholder SAT verdict formatting. |
