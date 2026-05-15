@@ -42,6 +42,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/consent-planner.test.js` | Micro-consent planning, permission extraction, unsafe file filtering, JSON/human CLI output. |
 | `tests/corpus-benchmark-schema-preview.test.js` | Corpus benchmark schema preview for metadata-only evaluation contracts, SNR/SAPE/Proof-of-Truth axes, D3/D4 eval-only quarantine/rejection, raw-content rejection, and no-runtime boundary. |
 | `tests/corpus-data-tier-classifier-preview.test.js` | Corpus data-tier classifier preview for D0-D4 metadata-only signal classification, D3/D4 quarantine, raw-content rejection, no ingestion/upload/tuning/memory mutation/node sharing, and no-runtime boundary. |
+| `tests/corpus-manual-review-queue-preview.test.js` | Corpus manual review queue preview for sanitized local metadata candidate prioritization, non-actionable D3/D4 lanes, ownership-not-consent boundary, raw-content rejection, and no-runtime boundary. |
 | `tests/corpus-redaction-fixture-preview.test.js` | Corpus redaction fixture preview for metadata-only D0-D4 handling markers, D3 quarantine, D4 rejection, raw-content rejection, no real redaction, and no-runtime boundary. |
 | `tests/diagnostics-plan.test.js` | Self-diagnostics preview plan and non-execution boundary. |
 | `tests/downloads-audit-preview.test.js` | Read-only downloads audit task, task receipt, placeholder SAT verdict formatting. |
