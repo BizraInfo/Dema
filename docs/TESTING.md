@@ -42,6 +42,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/consent-planner.test.js` | Micro-consent planning, permission extraction, unsafe file filtering, JSON/human CLI output. |
 | `tests/diagnostics-plan.test.js` | Self-diagnostics preview plan and non-execution boundary. |
 | `tests/downloads-audit-preview.test.js` | Read-only downloads audit task, task receipt, placeholder SAT verdict formatting. |
+| `tests/evidence-chain-preview.test.js` | EvidenceChain pure preview linking, receipt-domain rejection, tamper checks, no-authority formatting, and no-CLI wiring boundary. |
 | `tests/evidence-receipt-preview.test.js` | No-mint evidence receipt preview hashing, boundary, and tamper checks. |
 | `tests/gateway-http-adapter.test.js` | Gateway adapter probing and failure normalization. |
 | `tests/actuator-check.test.js` | Raw actuator and EffectCap invariant static guard behavior. |
