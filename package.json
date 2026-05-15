@@ -12,10 +12,10 @@
     "check": "node scripts/check.mjs",
     "test": "node --test tests/*.test.js",
     "coverage": "node --test --experimental-test-coverage --test-coverage-lines=95 --test-coverage-branches=80 --test-coverage-functions=95 tests/*.test.js",
-    "priority-anchor": "node scripts/priority-anchor.mjs themassage.pdf bizra.pdf BIZRA_Third_Fact_v0_1_FINAL.pdf",
-    "priority-anchor:verify": "node scripts/priority-anchor.mjs --verify proof-of-priority/manifest.json --base-dir .",
+    "llm:guidance": "node scripts/llm-guidance-check.mjs",
     "release:readiness": "node scripts/release-readiness.mjs",
-    "llm:guidance": "node scripts/llm-guidance-check.mjs"
+    "priority-anchor": "node scripts/priority-anchor.mjs themassage.pdf bizra.pdf BIZRA_Third_Fact_v0_1_FINAL.pdf",
+    "priority-anchor:verify": "node scripts/priority-anchor.mjs --verify proof-of-priority/manifest.json --base-dir ."
   },
   "engines": {
     "node": ">=20"
