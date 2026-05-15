@@ -32,6 +32,7 @@ node --test tests/status.test.js
 | `tests/consent-planner.test.js` | Micro-consent planning, permission extraction, unsafe file filtering, JSON/human CLI output. |
 | `tests/effectcap-invariant.test.js` | Pre-runtime EffectCap invariant spec and negative tests. |
 | `tests/gateway-http-adapter.test.js` | Gateway adapter probing and failure normalization. |
+| `tests/llm-guidance-check.test.js` | Canonical LLM flow guidance, root agent routing, and docs noise classification. |
 | `tests/loop-emulator.test.js` | PAT/SAT loop design emulation preview, determinism, and no-runtime boundary. |
 | `tests/melae-preview.test.js` | MELAE/SAPE preview scoring, fail-closed probe validation, SNR/Ihsan floor gates, and no-runtime boundary. |
 | `tests/memory.test.js` | Local memory/profile reading and safe missing-state behavior. |
