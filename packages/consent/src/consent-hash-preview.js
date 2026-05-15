@@ -56,6 +56,10 @@ function nonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function isValidDate(value) {
+  return value instanceof Date && !Number.isNaN(value.getTime());
+}
+
 function stripUndefined(value) {
   if (Array.isArray(value)) return value.map(stripUndefined);
   if (!isObject(value)) return value;
@@ -256,6 +260,9 @@ export function buildConsentHashTablePreview({
   const denials = [];
   let sourcePlan = plan;
 
+  if (!isValidDate(now)) {
+    return emptyTable({ plan: sourcePlan ?? null, denials: [denial("invalid_now", "now must be a valid Date")] });
+  }
   if (!sourcePlan && nonEmptyString(intent)) sourcePlan = buildConsentPlanPreview({ intent, now });
 
   if (!isObject(sourcePlan)) {
@@ -389,6 +396,9 @@ export function lookupConsentHashTablePreview(table, request, { now = new Date()
   const validated = validateLookupRequest(request);
   if (!validated.ok) {
     return lookupResult({ reason: validated.reason, detail: validated.detail, key: validated.key });
+  }
+  if (!isValidDate(now)) {
+    return lookupResult({ reason: "invalid_now", detail: "now must be a valid Date", key: validated.key });
   }
 
   const integrity = verifyConsentHashTablePreview(table);

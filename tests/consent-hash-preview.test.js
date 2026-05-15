@@ -185,6 +185,42 @@ test("expiresAt is required but expired scopes are represented for lookup denial
   );
 });
 
+test("invalid now input returns preview denials instead of throwing", () => {
+  const fromPlan = build({ now: null });
+  assert.equal(fromPlan.valid, false);
+  assert.equal(fromPlan.denials[0].code, "invalid_now");
+
+  const fromInvalidDate = build({ now: new Date("not-a-date") });
+  assert.equal(fromInvalidDate.valid, false);
+  assert.equal(fromInvalidDate.denials[0].code, "invalid_now");
+
+  const fromIntent = buildConsentHashTablePreview({
+    intent: "Fix auth.py",
+    expiresAt,
+    now: "invalid"
+  });
+  assert.equal(fromIntent.valid, false);
+  assert.equal(fromIntent.denials[0].code, "invalid_now");
+
+  const lookup = lookupConsentHashTablePreview(build(), {
+    resource_type: "file",
+    resource_id: "auth.py",
+    operation: "read"
+  }, { now: null });
+  assert.equal(lookup.allowed, false);
+  assert.equal(lookup.not_an_authorization, true);
+  assert.equal(lookup.reason, "invalid_now");
+
+  assert.equal(
+    lookupConsentHashTablePreview(build(), {
+      resource_type: "file",
+      resource_id: "auth.py",
+      operation: "read"
+    }, { now: 123 }).reason,
+    "invalid_now"
+  );
+});
+
 test("verification recomputes commitment and detects entry tampering", () => {
   const table = build();
   assert.equal(verifyConsentHashTablePreview(table).ok, true);
