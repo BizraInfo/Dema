@@ -38,9 +38,9 @@ dema network blueprint
 ```
 
 This command is a preview-only full-stack blueprint. It names the Node1/Node2
-readiness gates and GTM blockers, but it does not connect nodes, open sockets,
-start federation, issue identity artifacts, mint receipts, or execute runtime
-work.
+handoff readiness gates, canonical phase-gated multi-node blockers, and GTM
+blockers, but it does not connect nodes, open sockets, start federation, issue
+identity artifacts, mint receipts, or execute runtime work.
 
 ## Forbidden claims
 

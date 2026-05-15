@@ -57,7 +57,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/mission-draft.test.js` | Intent-to-mission draft conversion and consent preview embedding. |
 | `tests/mcp-blueprint.test.js` | MCP integration blueprint, no-MCP-call boundary, credential handling, and deterministic output. |
 | `tests/models.test.js` | Local model inventory and no-inference behavior. |
-| `tests/network-blueprint.test.js` | Node1/Node2 blueprint gates, no-network behavior, determinism, mutation isolation. |
+| `tests/network-blueprint.test.js` | Node1/Node2 and phase-gated multi-node blueprint gates, no-network behavior, boundary booleans, authorization-phrase safety, determinism, mutation isolation. |
 | `tests/node0-local-urp-proof.test.js` | Local URP proof boundaries. |
 | `tests/node0-self-check.test.js` | Node0 self-check verification surface. |
 | `tests/onboarding.test.js` | Guided CLI/TUI onboarding, inspiration doctrine, preview-only boundaries. |

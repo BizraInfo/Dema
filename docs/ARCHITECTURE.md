@@ -52,7 +52,7 @@ Dema does not own dangerous execution. It talks to adapters. Adapters talk to go
 | `dema memory`, `dema memory show` | `packages/memory` | Reads local memory/profile entries only. |
 | `dema models` | `packages/models` | Inventories local model surfaces; no inference. |
 | `dema report safety` | safety report surface | Preview-only; not certification. |
-| `dema network blueprint` | `packages/core/src/network-blueprint.js` | No sockets, handshakes, or federation. |
+| `dema network blueprint` | `packages/core/src/network-blueprint.js` | Node1/Node2 and phase-gated readiness preview only; no sockets, handshakes, or federation. |
 | `dema amana contracts preview` | `packages/core/src/amana-contracts-preview.js` | Registry preview only; no external code import, execution, mint, or Step 7 unlock. |
 | `dema mcp blueprint` | `packages/core/src/mcp-blueprint.js` | MCP integration contract only; no MCP tool call or credential access. |
 | `dema roadmap preview` | `packages/core/src/optimization-roadmap.js` | Advisory roadmap only; no execution or gate enforcement. |
@@ -135,9 +135,11 @@ Dema lists and shows.
 Governed runtime issues.
 ```
 
-## Node1 / Node2 boundary
+## Node1 / Node2 and multi-node boundary
 
-`dema network blueprint` is a readiness map only. It must not:
+`dema network blueprint` is a readiness map only. It may describe future
+Node1/Node2 handoff contracts and canonical phase_3/phase_4 directions, but it
+must not:
 
 - connect nodes,
 - open sockets,

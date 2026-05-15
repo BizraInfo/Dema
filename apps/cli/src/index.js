@@ -134,7 +134,7 @@ Local evidence:
   dema report safety [--json]
                     Preview the safety report; does not certify, execute, or mint
   dema network blueprint [--json]
-                       Preview Node1/Node2 readiness; does not connect or federate
+                       Preview Node1/Node2 and phase-gated readiness; no federation
   dema amana contracts preview [--json]
                        Preview Amana contract primitives; imports no external code
   dema mcp blueprint [--json]

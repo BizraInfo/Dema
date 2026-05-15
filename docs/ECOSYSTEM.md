@@ -16,6 +16,7 @@ flowchart TD
   Dema --> Human["Human operator"]
   Node0 -. "future gated expansion" .-> Node1["Node1"]
   Node0 -. "future gated expansion" .-> Node2["Node2"]
+  Node2 -. "canonical phase gates" .-> Pilot["phase_3 / phase_4 direction"]
 ```
 
 ## The seed documents
@@ -41,7 +42,8 @@ The proof-of-priority pin is [../proof-of-priority/PIN.md](../proof-of-priority/
 | FATE | Consent and admissibility boundary. | Exact consent and preview gates are reflected here. |
 | RECEIPTS | Evidence and handoff records. | Dema lists and reads local receipt files. |
 | URP / SAT / PAT / POI | Broader BIZRA reasoning/proof components. | Referenced as architecture context, not claimed as shipped Dema runtime. |
-| Node1 / Node2 | Future network expansion. | Preview-only blueprint; no connection or federation. |
+| Node1 / Node2 | Future handoff expansion. | Preview-only blueprint; no connection or federation. |
+| phase_3 / phase_4 | Canonical multi-node pilot and public-network directions. | Directional preview only; blocked until proof gates pass. |
 
 ## What is current
 
@@ -56,6 +58,7 @@ The proof-of-priority pin is [../proof-of-priority/PIN.md](../proof-of-priority/
 - Runtime execution.
 - EffectCap minting.
 - Node1/Node2 connection.
+- phase_3/phase_4 multi-node pilot or public-network activation.
 - Federation.
 - Public network claims.
 - Release publishing.

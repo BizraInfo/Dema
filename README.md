@@ -129,7 +129,7 @@ The loop is intentionally conservative. Dema can complete the local preview life
 | Consent | `dema consent plan "<intent>"` | Drafts a micro-consent scope. | Does not approve consent or mint capability. |
 | Mission | `dema mission draft "<intent>"` | Creates a mission draft from intent. | Does not run the mission. |
 | Safety | `dema report safety` | Shows current safety posture. | Does not certify production readiness. |
-| Network | `dema network blueprint` | Previews Node1/Node2 readiness gates. | Does not connect, federate, or open sockets. |
+| Network | `dema network blueprint` | Previews Node1/Node2 handoff gates and phase-gated multi-node readiness. | Does not connect, federate, or open sockets. |
 | MCP | `dema mcp blueprint` | Previews MCP integration points, auth boundaries, validation, retries, and redaction rules. | Does not call MCP tools or access external APIs. |
 | Roadmap | `dema roadmap preview` | Previews prioritized architecture, security, performance, documentation, DevOps, and ethics work. | Does not execute roadmap items or enforce gates. |
 | Design emulation | `dema design emulate-loop` | Models PAT/SAT loop assumptions across hardware, performance, data, and impact lenses. | Does not run agents, mint receipts, or write local state. |
@@ -207,7 +207,7 @@ BIZRA founding documents
 -> bizra-data-lake / bizra-omega core truth
 -> Node0 governed runtime
 -> Dema local product face
--> future Node1 / Node2 readiness, still gated
+-> future Node1 / Node2 and phase-gated multi-node readiness, still gated
 ```
 
 The current repo keeps those boundaries clear:
@@ -217,7 +217,8 @@ The current repo keeps those boundaries clear:
 - **bizra-data-lake / bizra-omega**: core truth substrate named by ADR-003.
 - **FATE / consent**: exact consent boundary.
 - **Receipts**: local evidence records shown by Dema, minted by governed runtime paths.
-- **Node1 / Node2**: future network expansion, currently preview-only.
+- **Node1 / Node2**: future handoff expansion, currently preview-only.
+- **phase_3 / phase_4**: canonical multi-node pilot and public-network directions, currently blocked.
 
 Read [docs/ECOSYSTEM.md](docs/ECOSYSTEM.md) for the fuller map.
 
@@ -277,7 +278,7 @@ Dema is intentionally strict:
 - no automatic runtime action,
 - no fuzzy consent,
 - no silent profile overwrite,
-- no Node1/Node2 federation from this repo,
+- no Node1/Node2 federation or multi-node pilot from this repo,
 - no token, passive-income, AGI, or guaranteed-security claim,
 - no receipt minting inside Dema preview commands.
 
@@ -316,7 +317,7 @@ Current release-readiness is a professional risk report and is allowed to show l
 | `doctor` exits nonzero | At least one readiness predicate is blocked. | Read the printed status; Dema stops instead of pretending readiness. |
 | No receipts listed | No local receipt handoff exists in `~/.dema/receipts`. | Run `dema setup`, then check whether a governed runtime produced a handoff. |
 | No local models found | Dema did not detect Ollama, LM Studio, or model files. | Install/configure a local model separately; Dema will not download one silently. |
-| Network blueprint says blocked | Node1/Node2 expansion is not ready. | Complete repeatable local Node0 proof first. |
+| Network blueprint says blocked | Node1/Node2 or phase-gated multi-node expansion is not ready. | Complete Step 7 and repeatable local Node0 proof first. |
 
 ---
 

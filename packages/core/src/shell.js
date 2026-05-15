@@ -39,7 +39,7 @@ const HELP = [
   "  memory show NAME     show one memory entry",
   "  models               show local model inventory",
   "  report safety        preview safety report, proof gaps, and boundaries",
-  "  network blueprint    preview Node1/Node2 readiness without connecting",
+  "  network blueprint    preview Node1/Node2 and phase-gated readiness",
   "  amana contracts preview",
   "                       preview Amana contracts without importing external code",
   "",

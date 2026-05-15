@@ -58,7 +58,7 @@ For machine-readable onboarding, use:
 dema onboard --json
 ```
 
-The JSON output is still preview-only. It does not create files, start runtime, mint receipts, or connect Node1/Node2.
+The JSON output is still preview-only. It does not create files, start runtime, mint receipts, connect Node1/Node2, or start a multi-node pilot.
 
 ## Step 3: Create your local Dema folder
 
@@ -184,7 +184,7 @@ dema report safety
 dema network blueprint
 ```
 
-`report safety` explains current safety posture. `network blueprint` explains Node1/Node2 readiness gates.
+`report safety` explains current safety posture. `network blueprint` explains Node1/Node2 handoff gates and phase-gated multi-node readiness.
 
 Both are previews. They do not certify, connect, federate, or open sockets.
 
@@ -211,7 +211,7 @@ dema receipts
 - It does not run Bash from a preview command.
 - It does not call a model from a preview command.
 - It does not send your files to a cloud provider by default.
-- It does not connect Node1 or Node2.
+- It does not connect Node1, Node2, or any multi-node pilot.
 - It does not mint a receipt inside this repo.
 
 ## Troubleshooting in plain language
