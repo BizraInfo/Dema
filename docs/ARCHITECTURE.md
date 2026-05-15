@@ -43,6 +43,9 @@ dema report safety / dema report safety --json
 dema mcp blueprint / dema mcp blueprint --json
   previews MCP integration controls; calls no MCP tools and stores no credentials
 
+dema network blueprint / dema network blueprint --json
+  previews Node1/Node2 readiness gates; connects no nodes and opens no sockets
+
 dema today
   records continuity only; mission_executed=false, runtime_pulse.fired=false
 

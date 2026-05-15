@@ -26,6 +26,10 @@ import {
   buildMcpIntegrationBlueprint,
   formatMcpIntegrationBlueprint
 } from "../../../packages/core/src/mcp-blueprint.js";
+import {
+  buildNetworkBlueprint,
+  formatNetworkBlueprint
+} from "../../../packages/core/src/network-blueprint.js";
 import { runShell } from "../../../packages/core/src/shell.js";
 import { TASK_REGISTRY } from "../../../packages/tasks/src/downloads-audit-preview.js";
 import {
@@ -66,6 +70,8 @@ Usage:
                     Preview the safety report; does not certify, execute, or mint
   dema mcp blueprint [--json]
                     Preview MCP integration contract; does not call MCP tools
+  dema network blueprint [--json]
+                    Preview Node1/Node2 network readiness; does not connect nodes
   dema consent plan [--json] "<intent>"
                     Preview a micro-consent scope; does not approve or execute
   dema mission propose [--consent "GO: Node0 bounded diagnostic activation only"]
@@ -235,6 +241,19 @@ Next:
         argv.includes("--json")
           ? JSON.stringify(blueprint, null, 2)
           : formatMcpIntegrationBlueprint(blueprint)
+      );
+      return;
+    }
+
+    case "network": {
+      if (subcommand !== "blueprint") {
+        throw new Error("Unknown network command. Use `dema network blueprint [--json]`.");
+      }
+      const blueprint = buildNetworkBlueprint();
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(blueprint, null, 2)
+          : formatNetworkBlueprint(blueprint)
       );
       return;
     }
