@@ -123,9 +123,11 @@ test("formatBanner suggests setup when profile is missing", async () => {
   await mkdir(join(root, "memory"), { recursive: true });
   const inputs = await gatherBannerInputs({ home: root, gatewayUrl: "http://127.0.0.1:1" });
   const banner = formatBanner(inputs);
-  assert.match(banner, /Operator:\s+operator/);
+  assert.match(banner, /name\s+:\s+operator/);
+  assert.match(banner, /Local-first cockpit/);
   assert.match(banner, /\$ dema setup/);
   assert.match(banner, /First run/i);
+  assert.match(banner, /\$ dema onboard/);
 });
 
 test("formatBanner suggests downloads.audit.preview when fully ready", async () => {
@@ -148,9 +150,9 @@ test("formatBanner suggests downloads.audit.preview when fully ready", async () 
   try {
     const inputs = await gatherBannerInputs({ home: root, gatewayUrl: gw.url });
     const banner = formatBanner(inputs);
-    assert.match(banner, /Operator:\s+Mumu/);
-    assert.match(banner, /Stage:\s+SPROUT/);
-    assert.match(banner, /Gateway:\s+connected/);
+    assert.match(banner, /name\s+:\s+Mumu/);
+    assert.match(banner, /stage\s+:\s+SPROUT/);
+    assert.match(banner, /gateway\s+:\s+connected/);
     assert.match(banner, /\$ dema task downloads\.audit\.preview/);
   } finally {
     await gw.stop();

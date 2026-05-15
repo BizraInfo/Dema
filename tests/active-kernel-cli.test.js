@@ -54,14 +54,18 @@ test("dema bare invocation (no args) prints the active-kernel banner", async () 
     }
   });
   assert.match(stdout, /Dema — Sovereign AI Node Companion/);
-  assert.match(stdout, /Operator:\s+operator/);
+  assert.match(stdout, /Local-first cockpit/);
+  assert.match(stdout, /name\s+:\s+operator/);
   assert.match(stdout, /Next safe task/);
+  assert.match(stdout, /Guided path/);
   assert.match(stdout, /Boundary: no action without explicit consent/);
 });
 
 test("dema help still works after the active-kernel refactor", async () => {
   const { stdout } = await execFileAsync("node", [cliPath, "help"]);
   assert.match(stdout, /Dema CLI/);
+  assert.match(stdout, /Orientation:/);
+  assert.match(stdout, /dema onboard/);
   assert.match(stdout, /dema task/);
   assert.match(stdout, /dema sovereign/);
   assert.match(stdout, /v0\.3\.0/);

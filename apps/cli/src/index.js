@@ -91,44 +91,54 @@ const HELP = `Dema CLI
 Usage:
   dema              Active kernel — banner + setup-or-status + next safe task
   dema chat         Interactive shell (same surface as the bare CLI)
+
+Orientation:
   dema welcome      Show the first-run orientation
   dema onboard [--json]
-                    Preview first-run onboarding; does not setup, execute, or connect
+                    Guided zero-technical onboarding path; preview-only
+  dema setup        Create local Dema folders/profile skeleton
+
+Readiness:
+  dema status       Show human-readable Node0 status
+  dema status:json  Show machine-readable status
+  dema today        Record a local continuity tick + memory summary
+  dema doctor       Validate readiness and consent gate
+
+Preview planning:
+  dema ambient      Show Ambient Sovereign Execution boundary (preview-only)
+  dema ambient:json Show the ambient boundary as schema-tagged JSON
+  dema diagnostics plan [--json]
+                    Preview self-diagnostics harness; does not run checks
+  dema consent plan [--json] "<intent>"
+                    Preview a micro-consent scope; does not approve or execute
+  dema mission draft [--json] "<intent>"
+                    Preview Intent -> MissionDraft -> ConsentPlan
+  dema mission propose [--consent "GO: Node0 bounded diagnostic activation only"]
+                    Preview ARTIFACT-011 readiness; does not execute runtime
+
+Local evidence:
+  dema receipts     List local receipts
+  dema receipts ID  Show by ID, artifact ID, exact path, or unique filename
+  dema memory       List local memory entries (profile + ~/.dema/memory/*)
+  dema memory show NAME
+                    Show one memory entry by name (e.g. profile, bizra-context)
+  dema models       Show local model inventory (read-only; no inference)
+  dema report safety [--json]
+                    Preview the safety report; does not certify, execute, or mint
+  dema network blueprint [--json]
+                    Preview Node1/Node2 readiness; does not connect or federate
+  dema mcp blueprint [--json]
+                    Preview MCP integration contract; does not call MCP tools
   dema roadmap preview [--json]
-                    Preview advisory optimization roadmap; does not dispatch work
+                    Preview optimization roadmap; does not execute or enforce gates
   dema evidence receipt preview [--json]
                     Preview receipt-shaped evidence; does not mint, sign, or write
   dema ihsan floor preview [--score N] [--json]
                     Preview externally supplied Ihsan floor check; does not certify
   dema behavior modulation preview [--consent TEXT] [--score N] [--json] "<intent>"
                     Preview visible guidance modulation; does not apply behavior changes
-  dema setup        Create local Dema folders/profile skeleton
-  dema status       Show human-readable Node0 status
-  dema status:json  Show machine-readable status
-  dema today        Record a local continuity tick + memory summary
-  dema doctor       Validate readiness and consent gate
-  dema ambient      Show Ambient Sovereign Execution boundary (preview-only)
-  dema ambient:json Show the ambient boundary as schema-tagged JSON
-  dema report safety [--json]
-                    Preview the safety report; does not certify, execute, or mint
-  dema mcp blueprint [--json]
-                    Preview MCP integration contract; does not call MCP tools
-  dema network blueprint [--json]
-                    Preview Node1/Node2 network readiness; does not connect nodes
-  dema diagnostics plan [--json]
-                    Preview self-diagnostics mission plan; does not run checks
-  dema consent plan [--json] "<intent>"
-                    Preview a micro-consent scope; does not approve or execute
-  dema mission draft [--json] "<intent>"
-                    Preview Intent -> MissionDraft -> ConsentPlan; does not execute
-  dema mission propose [--consent "GO: Node0 bounded diagnostic activation only"]
-                    Preview ARTIFACT-011 readiness; does not execute runtime
-  dema receipts     List local receipts
-  dema receipts ID  Show one receipt by ID, artifact ID, or path suffix
-  dema memory       List local memory entries (profile + ~/.dema/memory/*)
-  dema memory show NAME
-                    Show one memory entry by name (e.g. profile, bizra-context)
-  dema models       Show local model inventory (read-only; no inference)
+
+Tasks and views:
   dema task         List registered tasks
   dema task NAME    Run a registered task (read-only in v0.3.0)
   dema sovereign    Render local Sovereign Mission Interface (view-only)
@@ -150,16 +160,7 @@ async function dispatch(argv) {
       return runActiveKernel({ interactive: true, force: true });
 
     case "welcome":
-      console.log(`Welcome to Dema.
-
-Your node is local-first.
-Your actions are consent-bound.
-Your important steps can produce receipts.
-
-Next:
-1. Run setup
-2. Check status
-3. Preview first bounded diagnostic`);
+      console.log(formatOnboardingPreview(buildOnboardingPreview()));
       return;
 
     case "onboard": {

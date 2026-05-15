@@ -129,9 +129,9 @@ test("setup creates local profile and config without daemon activation", async (
 test("welcome CLI gives non-technical first-run orientation", async () => {
   const { stdout } = await execFileAsync("node", [cliPath, "welcome"]);
   assert.match(stdout, /Welcome to Dema/);
-  assert.match(stdout, /local-first/);
-  assert.match(stdout, /consent-bound/);
-  assert.match(stdout, /Run setup/);
+  assert.match(stdout, /Local-first/);
+  assert.match(stdout, /Consent-bound/);
+  assert.match(stdout, /dema setup/);
 });
 
 test("setup CLI reports untouched runtime boundaries", async () => {
@@ -278,7 +278,6 @@ test("receipt store lists and reads receipts by artifact id", async () => {
   const byFile = await readReceipt("artifact-011.json", root);
   assert.equal(byFile.artifact_id, "ARTIFACT-011");
 });
-
 
 test("receipt store rejects ambiguous filename selectors", async () => {
   const root = await mkdtemp(join(tmpdir(), "dema-receipts-"));
