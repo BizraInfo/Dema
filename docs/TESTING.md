@@ -46,6 +46,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/corpus-gold-label-fixture-preview.test.js` | Corpus gold-label fixture preview for metadata-only rubric slots, D3/D4 no-label guards, ownership-not-consent boundary, raw-content rejection, and no-runtime boundary. |
 | `tests/corpus-manual-review-queue-preview.test.js` | Corpus manual review queue preview for sanitized local metadata candidate prioritization, non-actionable D3/D4 lanes, ownership-not-consent boundary, raw-content rejection, and no-runtime boundary. |
 | `tests/corpus-redaction-fixture-preview.test.js` | Corpus redaction fixture preview for metadata-only D0-D4 handling markers, D3 quarantine, D4 rejection, raw-content rejection, no real redaction, and no-runtime boundary. |
+| `tests/corpus-scorecard-receipt-schema-preview.test.js` | Corpus scorecard receipt schema preview for future evidence field slots, required-field guards, no hash/seal computation, no receipt minting, raw-content rejection, and no-runtime boundary. |
 | `tests/diagnostics-plan.test.js` | Self-diagnostics preview plan and non-execution boundary. |
 | `tests/downloads-audit-preview.test.js` | Read-only downloads audit task, task receipt, placeholder SAT verdict formatting. |
 | `tests/evidence-chain-preview.test.js` | EvidenceChain pure preview linking, receipt-domain rejection, tamper checks, no-authority formatting, and no-CLI wiring boundary. |
