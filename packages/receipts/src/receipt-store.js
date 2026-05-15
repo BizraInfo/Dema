@@ -30,17 +30,22 @@ export async function listReceipts(root = process.env.DEMA_HOME || join(homedir(
 
 export async function readReceipt(selector, root = process.env.DEMA_HOME || join(homedir(), ".dema")) {
   const receipts = await listReceipts(root);
-  const match = receipts.find(
-    (receipt) =>
-      receipt.path === selector ||
-      receipt.receipt_id === selector ||
-      receipt.artifact_id === selector ||
-      basename(receipt.path) === selector
+  const pathMatches = receipts.filter((receipt) => receipt.path === selector);
+  const idMatches = receipts.filter(
+    (receipt) => receipt.receipt_id === selector || receipt.artifact_id === selector
   );
+  const filenameMatches = receipts.filter((receipt) => basename(receipt.path) === selector);
+  const matches = pathMatches.length ? pathMatches : idMatches.length ? idMatches : filenameMatches;
 
-  if (!match) {
+  if (matches.length > 1) {
+    throw new Error(
+      `Ambiguous receipt selector: ${selector}. Use receipt_id, artifact_id, or exact path.`
+    );
+  }
+
+  if (matches.length === 0) {
     throw new Error(`Receipt not found: ${selector}`);
   }
 
-  return JSON.parse(await readFile(match.path, "utf8"));
+  return JSON.parse(await readFile(matches[0].path, "utf8"));
 }

@@ -150,6 +150,7 @@ test("setup CLI reports untouched runtime boundaries", async () => {
 test("doctor CLI lists specific failing predicates when gateway is not configured", async () => {
   const root = await mkdtemp(join(tmpdir(), "dema-cli-doctor-"));
   const env = { ...process.env, DEMA_HOME: root };
+  delete env.DEMA_NODE0_ADAPTER;
   delete env.DEMA_NODE0_STATUS_COMMAND;
   const result = await execFileAsync("node", [cliPath, "doctor"], { env }).catch((e) => e);
   assert.equal(result.code, 1);
@@ -240,6 +241,7 @@ test("node0 status normalization coerces non-array loaded_model_ids to []", () =
 
 test("node0 adapter explains malformed command output", async () => {
   const adapter = createNode0Adapter({
+    adapterMode: "shellout",
     command: 'node -e "process.stdout.write(`not-json`)"'
   });
   await assert.rejects(
@@ -275,4 +277,32 @@ test("receipt store lists and reads receipts by artifact id", async () => {
 
   const byFile = await readReceipt("artifact-011.json", root);
   assert.equal(byFile.artifact_id, "ARTIFACT-011");
+});
+
+
+test("receipt store rejects ambiguous filename selectors", async () => {
+  const root = await mkdtemp(join(tmpdir(), "dema-receipts-"));
+  await mkdir(join(root, "receipts", "a"), { recursive: true });
+  await mkdir(join(root, "receipts", "b"), { recursive: true });
+  await writeFile(join(root, "receipts", "a", "handoff.json"), JSON.stringify({
+    receipt_id: "receipt-a",
+    artifact_id: "ARTIFACT-A",
+    action: "bounded_diagnostic_activation",
+    truth_label: "MEASURED",
+    created_at: "2026-05-04T18:20:00.000Z"
+  }));
+  await writeFile(join(root, "receipts", "b", "handoff.json"), JSON.stringify({
+    receipt_id: "receipt-b",
+    artifact_id: "ARTIFACT-B",
+    action: "bounded_diagnostic_activation",
+    truth_label: "MEASURED",
+    created_at: "2026-05-04T18:21:00.000Z"
+  }));
+
+  await assert.rejects(
+    () => readReceipt("handoff.json", root),
+    /Ambiguous receipt selector/
+  );
+  assert.equal((await readReceipt("ARTIFACT-A", root)).receipt_id, "receipt-a");
+  assert.equal((await readReceipt("receipt-b", root)).artifact_id, "ARTIFACT-B");
 });

@@ -49,7 +49,7 @@ Read one receipt:
 dema receipts ARTIFACT-011
 ```
 
-The selector may be a receipt ID, artifact ID, exact path, or receipt filename.
+The selector may be a receipt ID, artifact ID, exact path, or unique receipt filename.
 
 ## ARTIFACT-011 boundary
 
