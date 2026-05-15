@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 import {
   emulateLoopDesign,
@@ -9,6 +11,8 @@ import {
 } from "../packages/core/src/loop-emulator.js";
 
 const modulePath = fileURLToPath(new URL("../packages/core/src/loop-emulator.js", import.meta.url));
+const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const execFileAsync = promisify(execFile);
 
 test("emulateLoopDesign emits a schema-tagged preview without effects", () => {
   const report = emulateLoopDesign();
@@ -54,6 +58,16 @@ test("formatLoopDesignEmulation renders boundary and scale summaries", () => {
   assert.match(output, /no runtime execution/);
   assert.match(output, /global_1m/);
   assert.match(output, /Self-critique/);
+});
+
+test("dema design emulate-loop exposes the preview without runtime execution", async () => {
+  const { stdout } = await execFileAsync("node", [cliPath, "design", "emulate-loop", "--json"]);
+  const output = JSON.parse(stdout);
+
+  assert.equal(output.schema, "bizra.dema.loop_design_emulation_preview.v0.1");
+  assert.equal(output.mode, "PREVIEW_ONLY");
+  assert.equal(output.boundary.runtime_execution, false);
+  assert.equal(output.boundary.network_connection_attempted, false);
 });
 
 test("loop emulator module has no filesystem or network side effects", async () => {

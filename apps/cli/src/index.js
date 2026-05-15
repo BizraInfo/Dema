@@ -59,6 +59,10 @@ import {
   evaluateIhsanFloorPreview,
   formatIhsanFloorPreview
 } from "../../../packages/verifier/src/ihsan-floor-preview.js";
+import {
+  emulateLoopDesign,
+  formatLoopDesignEmulation
+} from "../../../packages/core/src/loop-emulator.js";
 import { runShell } from "../../../packages/core/src/shell.js";
 import { TASK_REGISTRY } from "../../../packages/tasks/src/downloads-audit-preview.js";
 import {
@@ -137,6 +141,8 @@ Local evidence:
                     Preview externally supplied Ihsan floor check; does not certify
   dema behavior modulation preview [--consent TEXT] [--score N] [--json] "<intent>"
                     Preview visible guidance modulation; does not apply behavior changes
+  dema design emulate-loop [--json]
+                    Preview PAT/SAT loop design assumptions; does not run agents
 
 Tasks and views:
   dema task         List registered tasks
@@ -417,6 +423,19 @@ async function dispatch(argv) {
         argv.includes("--json")
           ? JSON.stringify(blueprint, null, 2)
           : formatNetworkBlueprint(blueprint)
+      );
+      return;
+    }
+
+    case "design": {
+      if (subcommand !== "emulate-loop") {
+        throw new Error("Unknown design command. Use `dema design emulate-loop [--json]`.");
+      }
+      const report = emulateLoopDesign();
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(report, null, 2)
+          : formatLoopDesignEmulation(report)
       );
       return;
     }

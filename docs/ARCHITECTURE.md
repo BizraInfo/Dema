@@ -49,6 +49,9 @@ dema consent plan / dema consent plan --json
 dema memory / dema memory show NAME
   reads local memory/profile entries only
 
+dema design emulate-loop / dema design emulate-loop --json
+  previews PAT/SAT loop design assumptions; runs no agents, runtime, network, receipts, or local writes
+
 dema task
   lists or runs registered local preview tasks behind autonomy gates
 

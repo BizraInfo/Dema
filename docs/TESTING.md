@@ -79,6 +79,7 @@ after `npm test` and before `npm run check`.
 ```text
 node apps/cli/src/index.js welcome
 node apps/cli/src/index.js help
+node apps/cli/src/index.js design emulate-loop
 node apps/cli/src/index.js status
 node apps/cli/src/index.js mission propose
 node apps/cli/src/index.js monetize
