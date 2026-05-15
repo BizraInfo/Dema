@@ -46,6 +46,7 @@ dema welcome
 dema setup
 dema status
 dema doctor
+dema consent plan "Check my local node health"
 dema mission propose
 ```
 
@@ -65,6 +66,8 @@ Next:
 ```
 
 `dema mission propose` is a preview command. It checks readiness and consent state, then stops. It does not start a daemon, execute work, or create the first runtime receipt.
+
+`dema consent plan "<intent>"` is also preview-only. It drafts the smallest detected permission scope, shows unsafe references for human review, and does not approve consent, mint a capability, execute work, or create a receipt.
 
 ---
 

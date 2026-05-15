@@ -21,6 +21,10 @@ import {
   verifyReceipt
 } from "../../../packages/verifier/src/sat-placeholder.js";
 import {
+  buildConsentPlanPreview,
+  formatConsentPlanPreview
+} from "../../../packages/consent/src/consent-planner.js";
+import {
   highestLevel,
   levelLabel,
   requestApproval
@@ -44,6 +48,8 @@ Usage:
   dema status:json  Show machine-readable status
   dema today        Record a local continuity tick + memory summary
   dema doctor       Validate readiness and consent gate
+  dema consent plan [--json] "<intent>"
+                    Preview a micro-consent scope; does not approve or execute
   dema mission propose [--consent "GO: Node0 bounded diagnostic activation only"]
                     Preview ARTIFACT-011 readiness; does not execute runtime
   dema receipts     List local receipts
@@ -128,6 +134,18 @@ Next:
       );
       console.log(formatStatus(status));
       process.exitCode = ready ? 0 : 1;
+      return;
+    }
+
+    case "consent": {
+      if (subcommand !== "plan") {
+        throw new Error("Unknown consent command. Use `dema consent plan \"<intent>\"`.");
+      }
+      const json = argv.includes("--json");
+      const intent = argv.slice(2).filter((arg) => arg !== "--json").join(" ").trim();
+      if (!intent) throw new Error("Usage: dema consent plan [--json] \"<intent>\"");
+      const plan = buildConsentPlanPreview({ intent });
+      console.log(json ? JSON.stringify(plan, null, 2) : formatConsentPlanPreview(plan));
       return;
     }
 
