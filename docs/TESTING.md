@@ -54,6 +54,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/loop-emulator.test.js` | PAT/SAT loop design emulation preview, determinism, and no-runtime boundary. |
 | `tests/melae-preview.test.js` | MELAE/SAPE preview scoring, fail-closed probe validation, SNR/Ihsan floor gates, and no-runtime boundary. |
 | `tests/memory.test.js` | Local memory/profile reading and safe missing-state behavior. |
+| `tests/model-corpus-manifest-preview.test.js` | Model corpus manifest preview for Node0 multi-model conversation assets, no raw ingestion/upload/tuning/memory mutation/node sharing, source allowlist, data tiers, and fail-closed malformed manifests. |
 | `tests/mission-draft.test.js` | Intent-to-mission draft conversion and consent preview embedding. |
 | `tests/mcp-blueprint.test.js` | MCP integration blueprint, no-MCP-call boundary, credential handling, and deterministic output. |
 | `tests/models.test.js` | Local model inventory and no-inference behavior. |
