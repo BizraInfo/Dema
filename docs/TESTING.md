@@ -1,6 +1,6 @@
-# Dema Testing Matrix
+# Dema Testing and Quality Matrix
 
-This matrix records the committed local test surfaces. It is intentionally scoped to committed files in this slice; broader dirty-tree preview tests remain separate until their own atomic commits land.
+This repo uses native Node.js tests and CLI smoke checks. The goal is behavior coverage: every public safety boundary should have a replayable local check.
 
 ## Commands
 
@@ -10,6 +10,8 @@ Run the full local gate:
 npm test
 npm run coverage
 npm run check
+npm run llm:guidance
+npm run release:readiness
 git diff --check
 ```
 
@@ -19,44 +21,103 @@ Run one test file:
 node --test tests/status.test.js
 ```
 
+Run one test name pattern:
+
+```bash
+node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
+```
+
 ## Test surfaces
 
 | Test file | Surface covered |
 |---|---|
-| `tests/active-kernel-banner.test.js` | Active-kernel banner, gateway probe, and shell tokenization. |
-| `tests/active-kernel-cli.test.js` | Active-kernel CLI smoke behavior and task command wiring. |
-| `tests/diagnostics-plan.test.js` | Self-diagnostics mission plan preview, consent requirements, proof convergence, and CLI output. |
-| `tests/mission-draft.test.js` | Mission draft preview, consent-plan embedding, no-execution boundary, and CLI output. |
-| `tests/downloads-audit-preview.test.js` | Read-only downloads audit task, task receipt, placeholder SAT verdict formatting. |
-| `tests/safety-report.test.js` | Safety report preview and non-certification language. |
-| `tests/sat-placeholder.test.js` | Receipt verifier dispatch, gateway handoff checks, exact consent, fail-closed behavior. |
-| `tests/actuator-check.test.js` | Raw actuator and EffectCap invariant static guard behavior. |
+| `tests/status.test.js` | Status formatting, readiness, setup idempotency, mission proposal, receipts, CLI basics. |
+| `tests/active-kernel-banner.test.js` | Active-kernel banner, gateway probe, shell tokenization. |
+| `tests/active-kernel-cli.test.js` | Bare CLI, task registry, task command, sovereign error path, executable bin. |
 | `tests/ambient.test.js` | Ambient boundary report and preview-only constraints. |
 | `tests/approval-gate.test.js` | Approval gate and exact-consent safety behavior. |
-| `tests/canon-check.test.js` | Topology canon registry and forbidden topology drift guard. |
 | `tests/behavioral-modulation.test.js` | Consent-bound visible guidance modulation preview, forbidden shaping rejection, evidence linkage, and CLI output. |
 | `tests/consent-planner.test.js` | Micro-consent planning, permission extraction, unsafe file filtering, JSON/human CLI output. |
-| `tests/evidence-receipt-preview.test.js` | Evidence receipt preview canonical hashing, no-mint boundary, self-verification, and CLI output. |
-| `tests/effectcap-invariant.test.js` | Pre-runtime EffectCap invariant spec and negative tests. |
+| `tests/diagnostics-plan.test.js` | Self-diagnostics preview plan and non-execution boundary. |
+| `tests/downloads-audit-preview.test.js` | Read-only downloads audit task, task receipt, placeholder SAT verdict formatting. |
+| `tests/evidence-receipt-preview.test.js` | No-mint evidence receipt preview hashing, boundary, and tamper checks. |
 | `tests/gateway-http-adapter.test.js` | Gateway adapter probing and failure normalization. |
+| `tests/actuator-check.test.js` | Raw actuator and EffectCap invariant static guard behavior. |
+| `tests/canon-check.test.js` | Topology canon registry and forbidden topology drift guard. |
+| `tests/effectcap-invariant.test.js` | Pre-runtime EffectCap invariant spec and negative tests. |
+| `tests/integration-check.test.js` | CLI help, smoke gate, architecture map, and test-matrix integration guard. |
 | `tests/ihsan-floor-preview.test.js` | Ihsan floor preview scalar validation, non-certifying boundary, formatter, and CLI output. |
-| `tests/integration-check.test.js` | Command/help/docs/test matrix integration guard for preview surfaces. |
 | `tests/llm-guidance-check.test.js` | Canonical LLM flow guidance, root agent routing, and docs noise classification. |
 | `tests/loop-emulator.test.js` | PAT/SAT loop design emulation preview, determinism, and no-runtime boundary. |
 | `tests/melae-preview.test.js` | MELAE/SAPE preview scoring, fail-closed probe validation, SNR/Ihsan floor gates, and no-runtime boundary. |
-| `tests/mcp-blueprint.test.js` | MCP integration blueprint, no-MCP-call boundary, credential handling, and deterministic output. |
 | `tests/memory.test.js` | Local memory/profile reading and safe missing-state behavior. |
-| `tests/models.test.js` | Local model inventory, local-only provider probes, routing hints, exposure flags, and no-inference CLI output. |
-| `tests/network-blueprint.test.js` | Node network blueprint, Node1/Node2 blocked readiness gates, and no-network boundary. |
-| `tests/onboarding.test.js` | First-run onboarding preview, blocked action boundaries, JSON safety, and CLI onboarding output. |
+| `tests/mission-draft.test.js` | Intent-to-mission draft conversion and consent preview embedding. |
+| `tests/mcp-blueprint.test.js` | MCP integration blueprint, no-MCP-call boundary, credential handling, and deterministic output. |
+| `tests/models.test.js` | Local model inventory and no-inference behavior. |
+| `tests/network-blueprint.test.js` | Node1/Node2 blueprint gates, no-network behavior, determinism, mutation isolation. |
 | `tests/node0-local-urp-proof.test.js` | Local URP proof boundaries. |
 | `tests/node0-self-check.test.js` | Node0 self-check verification surface. |
-| `tests/optimization-roadmap.test.js` | Advisory optimization roadmap preview, dependency risk graph, non-enforcing gates, and no-dispatch boundary. |
+| `tests/onboarding.test.js` | Guided CLI/TUI onboarding, inspiration doctrine, preview-only boundaries. |
+| `tests/optimization-roadmap.test.js` | Advisory optimization roadmap, non-enforcing gates, blueprint coverage, and no-side-effect CLI output. |
 | `tests/priority-anchor.test.js` | Founding-file Merkle root algorithm and priority anchor behavior. |
 | `tests/release-readiness.test.js` | Release-readiness report, workflow scan, dependency/installer/doc risk checks. |
 | `tests/review-gate.test.js` | PR class and proof-scope guardrails. |
-| `tests/status.test.js` | Status formatting, readiness, setup idempotency, mission proposal, receipts, CLI basics. |
+| `tests/safety-report.test.js` | Safety report preview and non-certification language. |
+| `tests/sat-placeholder.test.js` | Receipt verifier dispatch, gateway handoff checks, exact consent, fail-closed behavior. |
 
+## Smoke checks
+
+`npm run check` runs:
+
+```text
+node --test
+npm run coverage
+node apps/cli/src/index.js welcome
+node apps/cli/src/index.js help
+node apps/cli/src/index.js onboard
+node apps/cli/src/index.js onboard --json
+node apps/cli/src/index.js roadmap preview
+node apps/cli/src/index.js roadmap preview --json
+node apps/cli/src/index.js models
+node apps/cli/src/index.js evidence receipt preview
+node apps/cli/src/index.js evidence receipt preview --json
+node apps/cli/src/index.js ihsan floor preview --score 0.97
+node apps/cli/src/index.js ihsan floor preview --score 0.97 --json
+node apps/cli/src/index.js behavior modulation preview --consent "GO: preview behavioral modulation only" --score 0.97 "Adjust tone to prioritize safety reminders"
+node apps/cli/src/index.js behavior modulation preview --consent "GO: preview behavioral modulation only" --score 0.97 --json "Adjust tone to prioritize safety reminders"
+node apps/cli/src/index.js diagnostics plan
+node apps/cli/src/index.js diagnostics plan --json
+node apps/cli/src/index.js consent plan "Fix auth.py and run pytest"
+node apps/cli/src/index.js mission draft "Fix auth.py and run pytest"
+node apps/cli/src/index.js mission draft --json "Fix auth.py and run pytest"
+node apps/cli/src/index.js ambient
+node apps/cli/src/index.js report safety
+node apps/cli/src/index.js mcp blueprint
+node apps/cli/src/index.js mcp blueprint --json
+node apps/cli/src/index.js network blueprint
+node apps/cli/src/index.js network blueprint --json
+node apps/cli/src/index.js design emulate-loop
+node apps/cli/src/index.js status
+node apps/cli/src/index.js mission propose
+node apps/cli/src/index.js monetize
+node scripts/review/actuator-check.mjs
+node scripts/review/canon-check.mjs
+node scripts/review/integration-check.mjs
+node scripts/llm-guidance-check.mjs
+node scripts/node0-self-check.mjs --verify
+```
+
+## Quality expectations
+
+Every new public surface should add or update tests for:
+
+1. schema tag,
+2. human output,
+3. JSON output when available,
+4. safe default,
+5. non-execution boundary,
+6. hostile or malformed input,
+7. deterministic output when relevant.
 
 ## Coverage threshold
 
@@ -71,42 +132,3 @@ functions: 95
 
 The primary GitHub Actions check and BIZRA Review Gate run this coverage command
 after `npm test` and before `npm run check`.
-
-## Smoke checks
-
-`npm run check` includes:
-
-```text
-node apps/cli/src/index.js welcome
-node apps/cli/src/index.js help
-node apps/cli/src/index.js design emulate-loop
-node apps/cli/src/index.js status
-node apps/cli/src/index.js mission propose
-node apps/cli/src/index.js monetize
-node scripts/review/actuator-check.mjs
-node scripts/review/canon-check.mjs
-node scripts/review/integration-check.mjs
-node scripts/llm-guidance-check.mjs
-node scripts/node0-self-check.mjs --verify
-node apps/cli/src/index.js ambient
-node apps/cli/src/index.js report safety
-node apps/cli/src/index.js mcp blueprint
-node apps/cli/src/index.js mcp blueprint --json
-node apps/cli/src/index.js network blueprint
-node apps/cli/src/index.js network blueprint --json
-node apps/cli/src/index.js onboard
-node apps/cli/src/index.js onboard --json
-node apps/cli/src/index.js roadmap preview
-node apps/cli/src/index.js roadmap preview --json
-node apps/cli/src/index.js evidence receipt preview
-node apps/cli/src/index.js evidence receipt preview --json
-node apps/cli/src/index.js ihsan floor preview --score 0.97
-node apps/cli/src/index.js ihsan floor preview --score 0.97 --json
-node apps/cli/src/index.js behavior modulation preview --consent "GO: preview behavioral modulation only" --score 0.97 "Adjust tone to prioritize safety reminders"
-node apps/cli/src/index.js behavior modulation preview --consent "GO: preview behavioral modulation only" --score 0.97 --json "Adjust tone to prioritize safety reminders"
-node apps/cli/src/index.js models
-node apps/cli/src/index.js diagnostics plan
-node apps/cli/src/index.js diagnostics plan --json
-node apps/cli/src/index.js mission draft "Fix auth.py and run pytest"
-node apps/cli/src/index.js mission draft --json "Fix auth.py and run pytest"
-```

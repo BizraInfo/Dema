@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
-const commands = [
+export const commands = [
   ["node", ["--test"]],
   ["npm", ["run", "coverage"]],
   ["node", ["apps/cli/src/index.js", "welcome"]],
@@ -18,6 +19,7 @@ const commands = [
   ["node", ["apps/cli/src/index.js", "behavior", "modulation", "preview", "--consent", "GO: preview behavioral modulation only", "--score", "0.97", "--json", "Adjust tone to prioritize safety reminders"]],
   ["node", ["apps/cli/src/index.js", "diagnostics", "plan"]],
   ["node", ["apps/cli/src/index.js", "diagnostics", "plan", "--json"]],
+  ["node", ["apps/cli/src/index.js", "consent", "plan", "Fix auth.py and run pytest"]],
   ["node", ["apps/cli/src/index.js", "mission", "draft", "Fix auth.py and run pytest"]],
   ["node", ["apps/cli/src/index.js", "mission", "draft", "--json", "Fix auth.py and run pytest"]],
   ["node", ["apps/cli/src/index.js", "ambient"]],
@@ -37,7 +39,13 @@ const commands = [
   ["node", ["scripts/node0-self-check.mjs", "--verify"]]
 ];
 
-for (const [bin, args] of commands) {
-  console.log(`> ${bin} ${args.join(" ")}`);
-  execFileSync(bin, args, { stdio: "inherit" });
+export function runChecks(checks = commands) {
+  for (const [bin, args] of checks) {
+    console.log(`> ${bin} ${args.join(" ")}`);
+    execFileSync(bin, args, { stdio: "inherit" });
+  }
+}
+
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  runChecks();
 }
