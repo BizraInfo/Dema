@@ -60,6 +60,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/onboarding.test.js` | Guided CLI/TUI onboarding, inspiration doctrine, preview-only boundaries. |
 | `tests/optimization-roadmap.test.js` | Advisory optimization roadmap, non-enforcing gates, blueprint coverage, and no-side-effect CLI output. |
 | `tests/priority-anchor.test.js` | Founding-file Merkle root algorithm and priority anchor behavior. |
+| `tests/proof-forge-scripts.test.js` | Proof Forge Python script subprocess boundary, local evidence chain, summary output, and no-repo-write guarantee. |
 | `tests/release-readiness.test.js` | Release-readiness report, workflow scan, dependency/installer/doc risk checks. |
 | `tests/review-gate.test.js` | PR class and proof-scope guardrails. |
 | `tests/safety-report.test.js` | Safety report preview and non-certification language. |
