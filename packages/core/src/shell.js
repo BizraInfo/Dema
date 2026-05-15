@@ -40,6 +40,8 @@ const HELP = [
   "  models               show local model inventory",
   "  report safety        preview safety report, proof gaps, and boundaries",
   "  network blueprint    preview Node1/Node2 readiness without connecting",
+  "  amana contracts preview",
+  "                       preview Amana contracts without importing external code",
   "",
   "Tasks:",
   "  task NAME            run a registered task (read-only in v0.3.0)",

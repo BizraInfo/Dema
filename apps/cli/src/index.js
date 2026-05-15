@@ -35,6 +35,10 @@ import {
   formatNetworkBlueprint
 } from "../../../packages/core/src/network-blueprint.js";
 import {
+  buildAmanaContractsPreview,
+  formatAmanaContractsPreview
+} from "../../../packages/core/src/amana-contracts-preview.js";
+import {
   buildMcpIntegrationBlueprint,
   formatMcpIntegrationBlueprint
 } from "../../../packages/core/src/mcp-blueprint.js";
@@ -130,9 +134,11 @@ Local evidence:
   dema report safety [--json]
                     Preview the safety report; does not certify, execute, or mint
   dema network blueprint [--json]
-                      Preview Node1/Node2 readiness; does not connect or federate
+                       Preview Node1/Node2 readiness; does not connect or federate
+  dema amana contracts preview [--json]
+                       Preview Amana contract primitives; imports no external code
   dema mcp blueprint [--json]
-                      Preview MCP integration contract; does not call MCP tools
+                       Preview MCP integration contract; does not call MCP tools
   dema roadmap preview [--json]
                       Preview optimization roadmap; does not execute or enforce gates
   dema evidence receipt preview [--json]
@@ -333,6 +339,21 @@ async function dispatch(argv) {
         argv.includes("--json")
           ? JSON.stringify(blueprint, null, 2)
           : formatNetworkBlueprint(blueprint)
+      );
+      return;
+    }
+
+    case "amana": {
+      const amanaCommand = argv[1];
+      const amanaSubcommand = argv[2];
+      if (amanaCommand !== "contracts" || amanaSubcommand !== "preview") {
+        throw new Error("Unknown amana command. Use `dema amana contracts preview [--json]`.");
+      }
+      const preview = buildAmanaContractsPreview();
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(preview, null, 2)
+          : formatAmanaContractsPreview(preview)
       );
       return;
     }

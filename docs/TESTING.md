@@ -35,6 +35,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/active-kernel-banner.test.js` | Active-kernel banner, gateway probe, shell tokenization. |
 | `tests/active-kernel-cli.test.js` | Bare CLI, task registry, task command, sovereign error path, executable bin. |
 | `tests/ambient.test.js` | Ambient boundary report and preview-only constraints. |
+| `tests/amana-contracts-preview.test.js` | Amana contract registry preview, external-code exclusion, path overlap, CLI output, and Step 7 blocked posture. |
 | `tests/approval-gate.test.js` | Approval gate and exact-consent safety behavior. |
 | `tests/behavioral-modulation.test.js` | Consent-bound visible guidance modulation preview, forbidden shaping rejection, evidence linkage, and CLI output. |
 | `tests/consent-planner.test.js` | Micro-consent planning, permission extraction, unsafe file filtering, JSON/human CLI output. |
@@ -97,6 +98,8 @@ node apps/cli/src/index.js mcp blueprint
 node apps/cli/src/index.js mcp blueprint --json
 node apps/cli/src/index.js network blueprint
 node apps/cli/src/index.js network blueprint --json
+node apps/cli/src/index.js amana contracts preview
+node apps/cli/src/index.js amana contracts preview --json
 node apps/cli/src/index.js design emulate-loop
 node apps/cli/src/index.js status
 node apps/cli/src/index.js mission propose

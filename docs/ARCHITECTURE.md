@@ -53,6 +53,7 @@ Dema does not own dangerous execution. It talks to adapters. Adapters talk to go
 | `dema models` | `packages/models` | Inventories local model surfaces; no inference. |
 | `dema report safety` | safety report surface | Preview-only; not certification. |
 | `dema network blueprint` | `packages/core/src/network-blueprint.js` | No sockets, handshakes, or federation. |
+| `dema amana contracts preview` | `packages/core/src/amana-contracts-preview.js` | Registry preview only; no external code import, execution, mint, or Step 7 unlock. |
 | `dema mcp blueprint` | `packages/core/src/mcp-blueprint.js` | MCP integration contract only; no MCP tool call or credential access. |
 | `dema roadmap preview` | `packages/core/src/optimization-roadmap.js` | Advisory roadmap only; no execution or gate enforcement. |
 | `dema evidence receipt preview` | `packages/verifier/src/evidence-receipt-preview.js` | Receipt-shaped preview only; no mint, signature, chain advance, or write. |
@@ -68,6 +69,7 @@ Dema does not own dangerous execution. It talks to adapters. Adapters talk to go
 Dema includes professional management, DevOps, and QA blueprint surfaces for planning only:
 
 - `dema mcp blueprint` describes MCP integration boundaries, validation, retry, and redaction expectations without calling tools or accessing credentials.
+- `dema amana contracts preview` classifies Amana-adjacent contract primitives, current overlap, import risk, and proof gates without importing external snapshot code or unblocking Step 7.
 - `dema roadmap preview` organizes advisory architecture, security, performance, documentation, DevOps, QA, and ethics work without executing tasks or enforcing gates.
 - `dema evidence receipt preview` demonstrates canonical hashing and placeholder verification without minting receipts, signing payloads, or advancing a chain.
 - `dema ihsan floor preview` checks an externally supplied scalar against the floor without claiming canonical scoring, certification, or SAT admissibility.
