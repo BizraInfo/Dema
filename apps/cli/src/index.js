@@ -22,6 +22,10 @@ import {
   buildSafetyReportPreview,
   formatSafetyReportPreview
 } from "../../../packages/core/src/safety-report.js";
+import {
+  buildMcpIntegrationBlueprint,
+  formatMcpIntegrationBlueprint
+} from "../../../packages/core/src/mcp-blueprint.js";
 import { runShell } from "../../../packages/core/src/shell.js";
 import { TASK_REGISTRY } from "../../../packages/tasks/src/downloads-audit-preview.js";
 import {
@@ -60,6 +64,8 @@ Usage:
   dema ambient:json Show the ambient boundary as schema-tagged JSON
   dema report safety [--json]
                     Preview the safety report; does not certify, execute, or mint
+  dema mcp blueprint [--json]
+                    Preview MCP integration contract; does not call MCP tools
   dema consent plan [--json] "<intent>"
                     Preview a micro-consent scope; does not approve or execute
   dema mission propose [--consent "GO: Node0 bounded diagnostic activation only"]
@@ -216,6 +222,19 @@ Next:
         argv.includes("--json")
           ? JSON.stringify(report, null, 2)
           : formatSafetyReportPreview(report)
+      );
+      return;
+    }
+
+    case "mcp": {
+      if (subcommand !== "blueprint") {
+        throw new Error("Unknown mcp command. Use `dema mcp blueprint [--json]`.");
+      }
+      const blueprint = buildMcpIntegrationBlueprint();
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(blueprint, null, 2)
+          : formatMcpIntegrationBlueprint(blueprint)
       );
       return;
     }

@@ -38,6 +38,7 @@ node --test tests/status.test.js
 | `tests/llm-guidance-check.test.js` | Canonical LLM flow guidance, root agent routing, and docs noise classification. |
 | `tests/loop-emulator.test.js` | PAT/SAT loop design emulation preview, determinism, and no-runtime boundary. |
 | `tests/melae-preview.test.js` | MELAE/SAPE preview scoring, fail-closed probe validation, SNR/Ihsan floor gates, and no-runtime boundary. |
+| `tests/mcp-blueprint.test.js` | MCP integration blueprint, no-MCP-call boundary, credential handling, and deterministic output. |
 | `tests/memory.test.js` | Local memory/profile reading and safe missing-state behavior. |
 | `tests/node0-local-urp-proof.test.js` | Local URP proof boundaries. |
 | `tests/node0-self-check.test.js` | Node0 self-check verification surface. |
@@ -68,4 +69,6 @@ after `npm test` and before `npm run check`.
 ```text
 node apps/cli/src/index.js ambient
 node apps/cli/src/index.js report safety
+node apps/cli/src/index.js mcp blueprint
+node apps/cli/src/index.js mcp blueprint --json
 ```
