@@ -36,6 +36,7 @@ node --test tests/status.test.js
 | `tests/evidence-receipt-preview.test.js` | Evidence receipt preview canonical hashing, no-mint boundary, self-verification, and CLI output. |
 | `tests/effectcap-invariant.test.js` | Pre-runtime EffectCap invariant spec and negative tests. |
 | `tests/gateway-http-adapter.test.js` | Gateway adapter probing and failure normalization. |
+| `tests/ihsan-floor-preview.test.js` | Ihsan floor preview scalar validation, non-certifying boundary, formatter, and CLI output. |
 | `tests/llm-guidance-check.test.js` | Canonical LLM flow guidance, root agent routing, and docs noise classification. |
 | `tests/loop-emulator.test.js` | PAT/SAT loop design emulation preview, determinism, and no-runtime boundary. |
 | `tests/melae-preview.test.js` | MELAE/SAPE preview scoring, fail-closed probe validation, SNR/Ihsan floor gates, and no-runtime boundary. |
@@ -83,4 +84,6 @@ node apps/cli/src/index.js roadmap preview
 node apps/cli/src/index.js roadmap preview --json
 node apps/cli/src/index.js evidence receipt preview
 node apps/cli/src/index.js evidence receipt preview --json
+node apps/cli/src/index.js ihsan floor preview --score 0.97
+node apps/cli/src/index.js ihsan floor preview --score 0.97 --json
 ```

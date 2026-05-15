@@ -42,6 +42,11 @@ import {
   buildEvidenceReceiptPreview,
   formatEvidenceReceiptPreview
 } from "../../../packages/verifier/src/evidence-receipt-preview.js";
+import {
+  DEFAULT_IHSAN_FLOOR,
+  evaluateIhsanFloorPreview,
+  formatIhsanFloorPreview
+} from "../../../packages/verifier/src/ihsan-floor-preview.js";
 import { runShell } from "../../../packages/core/src/shell.js";
 import { TASK_REGISTRY } from "../../../packages/tasks/src/downloads-audit-preview.js";
 import {
@@ -77,6 +82,8 @@ Usage:
                     Preview advisory optimization roadmap; does not dispatch work
   dema evidence receipt preview [--json]
                     Preview receipt-shaped evidence; does not mint, sign, or write
+  dema ihsan floor preview [--score N] [--json]
+                    Preview externally supplied Ihsan floor check; does not certify
   dema setup        Create local Dema folders/profile skeleton
   dema status       Show human-readable Node0 status
   dema status:json  Show machine-readable status
@@ -166,6 +173,23 @@ Next:
         argv.includes("--json")
           ? JSON.stringify(receipt, null, 2)
           : formatEvidenceReceiptPreview(receipt)
+      );
+      return;
+    }
+
+    case "ihsan": {
+      const floorCommand = argv[1];
+      const floorSubcommand = argv[2];
+      if (floorCommand !== "floor" || floorSubcommand !== "preview") {
+        throw new Error("Unknown ihsan command. Use `dema ihsan floor preview [--score N] [--json]`.");
+      }
+      const scoreArg = argValue(argv, "--score");
+      const score = scoreArg === undefined ? DEFAULT_IHSAN_FLOOR : Number(scoreArg);
+      const preview = evaluateIhsanFloorPreview({ score });
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(preview, null, 2)
+          : formatIhsanFloorPreview(preview)
       );
       return;
     }

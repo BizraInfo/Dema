@@ -11,6 +11,8 @@ const commands = [
   ["node", ["apps/cli/src/index.js", "roadmap", "preview", "--json"]],
   ["node", ["apps/cli/src/index.js", "evidence", "receipt", "preview"]],
   ["node", ["apps/cli/src/index.js", "evidence", "receipt", "preview", "--json"]],
+  ["node", ["apps/cli/src/index.js", "ihsan", "floor", "preview", "--score", "0.97"]],
+  ["node", ["apps/cli/src/index.js", "ihsan", "floor", "preview", "--score", "0.97", "--json"]],
   ["node", ["apps/cli/src/index.js", "ambient"]],
   ["node", ["apps/cli/src/index.js", "report", "safety"]],
   ["node", ["apps/cli/src/index.js", "mcp", "blueprint"]],

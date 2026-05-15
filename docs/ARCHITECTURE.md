@@ -40,6 +40,9 @@ dema roadmap preview / dema roadmap preview --json
 dema evidence receipt preview / dema evidence receipt preview --json
   previews receipt-shaped evidence with canonical hashes; mints no receipt, signs nothing, and writes nothing
 
+dema ihsan floor preview / dema ihsan floor preview --score N --json
+  previews an externally supplied Ihsan scalar against the floor; certifies nothing and runs no gate
+
 dema status
   reads Node0 readiness through an adapter
 
