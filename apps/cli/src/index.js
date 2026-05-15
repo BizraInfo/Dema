@@ -34,6 +34,10 @@ import {
   buildOnboardingPreview,
   formatOnboardingPreview
 } from "../../../packages/core/src/onboarding.js";
+import {
+  buildOptimizationRoadmapPreview,
+  formatOptimizationRoadmapPreview
+} from "../../../packages/core/src/optimization-roadmap.js";
 import { runShell } from "../../../packages/core/src/shell.js";
 import { TASK_REGISTRY } from "../../../packages/tasks/src/downloads-audit-preview.js";
 import {
@@ -65,6 +69,8 @@ Usage:
   dema welcome      Show the first-run orientation
   dema onboard [--json]
                     Preview first-run onboarding; does not setup, execute, or connect
+  dema roadmap preview [--json]
+                    Preview advisory optimization roadmap; does not dispatch work
   dema setup        Create local Dema folders/profile skeleton
   dema status       Show human-readable Node0 status
   dema status:json  Show machine-readable status
@@ -126,6 +132,19 @@ Next:
         argv.includes("--json")
           ? JSON.stringify(guide, null, 2)
           : formatOnboardingPreview(guide)
+      );
+      return;
+    }
+
+    case "roadmap": {
+      if (subcommand !== "preview") {
+        throw new Error("Unknown roadmap command. Use `dema roadmap preview [--json]`.");
+      }
+      const report = buildOptimizationRoadmapPreview();
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(report, null, 2)
+          : formatOptimizationRoadmapPreview(report)
       );
       return;
     }

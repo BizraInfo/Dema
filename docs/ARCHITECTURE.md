@@ -34,6 +34,9 @@ dema setup
 dema onboard / dema onboard --json
   previews first-run user state and blocked actions; performs no setup, mission, network, or mint
 
+dema roadmap preview / dema roadmap preview --json
+  previews advisory optimization priorities and dependencies; dispatches no work and enforces no gates
+
 dema status
   reads Node0 readiness through an adapter
 

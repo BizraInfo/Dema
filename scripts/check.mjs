@@ -7,6 +7,8 @@ const commands = [
   ["node", ["apps/cli/src/index.js", "help"]],
   ["node", ["apps/cli/src/index.js", "onboard"]],
   ["node", ["apps/cli/src/index.js", "onboard", "--json"]],
+  ["node", ["apps/cli/src/index.js", "roadmap", "preview"]],
+  ["node", ["apps/cli/src/index.js", "roadmap", "preview", "--json"]],
   ["node", ["apps/cli/src/index.js", "ambient"]],
   ["node", ["apps/cli/src/index.js", "report", "safety"]],
   ["node", ["apps/cli/src/index.js", "mcp", "blueprint"]],

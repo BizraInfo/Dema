@@ -44,6 +44,7 @@ node --test tests/status.test.js
 | `tests/onboarding.test.js` | First-run onboarding preview, blocked action boundaries, JSON safety, and CLI onboarding output. |
 | `tests/node0-local-urp-proof.test.js` | Local URP proof boundaries. |
 | `tests/node0-self-check.test.js` | Node0 self-check verification surface. |
+| `tests/optimization-roadmap.test.js` | Advisory optimization roadmap preview, dependency risk graph, non-enforcing gates, and no-dispatch boundary. |
 | `tests/priority-anchor.test.js` | Founding-file Merkle root algorithm and priority anchor behavior. |
 | `tests/release-readiness.test.js` | Release-readiness report, workflow scan, dependency/installer/doc risk checks. |
 | `tests/review-gate.test.js` | PR class and proof-scope guardrails. |
@@ -77,4 +78,6 @@ node apps/cli/src/index.js network blueprint
 node apps/cli/src/index.js network blueprint --json
 node apps/cli/src/index.js onboard
 node apps/cli/src/index.js onboard --json
+node apps/cli/src/index.js roadmap preview
+node apps/cli/src/index.js roadmap preview --json
 ```
