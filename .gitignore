@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .DS_Store
+__pycache__/
+*.py[cod]
 .env
 .env.*
 !.env.example
@@ -28,3 +30,6 @@ PROOF_SUMMARY.md
 # Vercel runner only; never committed. Operator's install path is unaffected.
 public/
 .vercel/
+
+# Local scratch/reference export, not repo documentation.
+what is bash , why its the most important and most (1).md
