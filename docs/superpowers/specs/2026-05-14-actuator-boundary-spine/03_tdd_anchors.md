@@ -57,7 +57,7 @@ Write failing tests before implementation for:
 
 - `dema consent spine --json "<intent>"` emits a schema-tagged preview;
 - preview includes actuator classes, policy decisions, and proof labels;
-- preview never mints runtime capability;
+- preview never mints EffectCap;
 - preview never records approval;
 - formatted output says governed runtime handoff is required for execution.
 
@@ -106,6 +106,6 @@ git diff --check
 - No Dema command executes raw Bash.
 - No hidden daemon starts.
 - No preview command records approval.
-- No local command mints runtime receipt or runtime capability.
+- No local command mints runtime receipt or EffectCap.
 - No economic claim is upgraded without verified impact governance.
 - No unsafe path becomes a consent permission.

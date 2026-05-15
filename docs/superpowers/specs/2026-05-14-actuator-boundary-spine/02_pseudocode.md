@@ -61,7 +61,7 @@ function buildConsentSpinePreview(intent, now):
     policy_preview: policyPreview,
     effect_capability: {
       minted: false,
-      reason: "Dema drafts consent only; governed runtime must mint runtime capability"
+      reason: "Dema drafts consent only; governed runtime must mint EffectCap"
     },
     proof_of_truth: buildProofLabels(policyPreview),
     boundary: previewBoundary()
@@ -90,7 +90,7 @@ function evaluatePreviewPolicies(intentShape, actuatorClasses):
   if "bash" in actuatorClasses:
     decisions add requireRuntimeHandoff(
       code = "bash_like_actuator",
-      reason = "command execution needs governed runtime capability runtime"
+      reason = "command execution needs governed EffectCap runtime"
     )
 
   if "external_call" in actuatorClasses and intentShape.category == "audit":
@@ -151,10 +151,10 @@ TDD anchors:
 - fixture with `spawn(..., { shell: true })` fails;
 - argv-based `execFile` and `spawnSync` are allowed.
 
-## Module E - Future runtime capability runtime handoff
+## Module E - Future EffectCap runtime handoff
 
 ```text
-function requestRuntimeCapability(runtimeClient, consentScope, policyDecision):
+function requestEffectCap(runtimeClient, consentScope, policyDecision):
   if policyDecision is deny:
     return refused(policyDecision.reason)
 
@@ -170,7 +170,7 @@ function requestRuntimeCapability(runtimeClient, consentScope, policyDecision):
     requested_effects: consentScope.permissions
   }
 
-  return runtimeClient.requestRuntimeCapability(request)
+  return runtimeClient.requestEffectCap(request)
 ```
 
 TDD anchors:

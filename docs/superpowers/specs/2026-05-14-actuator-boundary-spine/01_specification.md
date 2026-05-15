@@ -18,7 +18,7 @@ token issuance, or Proof-of-Impact settlement inside this repo.
 - `scripts/review/actuator-check.mjs` audits source for raw shell execution
   patterns in `apps`, `packages`, and `scripts`.
 - Dema's current boundary is read-only or preview-only for these surfaces.
-- Node0 and deeper runtime capability runtime remain governed handoff targets, not Dema
+- Node0 and deeper EffectCap runtime remain governed handoff targets, not Dema
   local execution paths.
 
 ## Product objective
@@ -51,7 +51,7 @@ Required classes:
 Every future effecting operation must be representable as:
 
 ```text
-Intent -> MissionDraft -> ConsentScope -> PolicyDecision -> runtime capability -> OutcomeLog
+Intent -> MissionDraft -> ConsentScope -> PolicyDecision -> EffectCap -> OutcomeLog
 ```
 
 Required consent fields:
@@ -130,7 +130,7 @@ Every actuator-boundary report must expose:
 
 ## Out of scope
 
-- Runtime runtime capability implementation.
+- Runtime EffectCap implementation.
 - Bash sandbox implementation.
 - URP/SAT execution.
 - PoI/IMP/GOLD economic mechanics.

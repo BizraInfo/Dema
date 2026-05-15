@@ -108,4 +108,4 @@ Economic:
 3. Add a dedicated consent-spine preview command if operator UX needs it.
 4. Define runtime handoff request shape only after exact-consent semantics are
    stable.
-5. Defer actual runtime capability minting to governed Node0 runtime.
+5. Defer actual EffectCap minting to governed Node0 runtime.
