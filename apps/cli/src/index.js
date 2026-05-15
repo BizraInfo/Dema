@@ -2,6 +2,14 @@
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
 import { formatStatus } from "../../../packages/core/src/status.js";
 import { previewBoundedDiagnostic } from "../../../packages/core/src/mission.js";
+import {
+  buildMissionDraftPreview,
+  formatMissionDraftPreview
+} from "../../../packages/mission/src/mission-draft.js";
+import {
+  buildDiagnosticsMissionPlan,
+  formatDiagnosticsMissionPlan
+} from "../../../packages/mission/src/diagnostics-plan.js";
 import { recordTodayTick } from "../../../packages/core/src/today.js";
 import { listReceipts, readReceipt } from "../../../packages/receipts/src/receipt-store.js";
 import { runSetup } from "../../../packages/installer/src/setup.js";
@@ -103,8 +111,12 @@ Usage:
                     Preview MCP integration contract; does not call MCP tools
   dema network blueprint [--json]
                     Preview Node1/Node2 network readiness; does not connect nodes
+  dema diagnostics plan [--json]
+                    Preview self-diagnostics mission plan; does not run checks
   dema consent plan [--json] "<intent>"
                     Preview a micro-consent scope; does not approve or execute
+  dema mission draft [--json] "<intent>"
+                    Preview Intent -> MissionDraft -> ConsentPlan; does not execute
   dema mission propose [--consent "GO: Node0 bounded diagnostic activation only"]
                     Preview ARTIFACT-011 readiness; does not execute runtime
   dema receipts     List local receipts
@@ -289,6 +301,19 @@ Next:
       return;
     }
 
+    case "diagnostics": {
+      if (subcommand !== "plan") {
+        throw new Error("Unknown diagnostics command. Use `dema diagnostics plan [--json]`.");
+      }
+      const plan = buildDiagnosticsMissionPlan();
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(plan, null, 2)
+          : formatDiagnosticsMissionPlan(plan)
+      );
+      return;
+    }
+
     case "consent": {
       if (subcommand !== "plan") {
         throw new Error("Unknown consent command. Use `dema consent plan \"<intent>\"`.");
@@ -302,8 +327,16 @@ Next:
     }
 
     case "mission": {
+      if (subcommand === "draft") {
+        const json = argv.includes("--json");
+        const intent = argv.slice(2).filter((arg) => arg !== "--json").join(" ").trim();
+        if (!intent) throw new Error('Usage: dema mission draft [--json] "<intent>"');
+        const draft = buildMissionDraftPreview({ intent });
+        console.log(json ? JSON.stringify(draft, null, 2) : formatMissionDraftPreview(draft));
+        return;
+      }
       if (subcommand !== "propose") {
-        throw new Error("Unknown mission command. Use `dema mission propose`.");
+        throw new Error('Unknown mission command. Use `dema mission draft "<intent>"` or `dema mission propose`.');
       }
       const status = await adapter.status();
       const consent = argValue(argv, "--consent") ?? "";

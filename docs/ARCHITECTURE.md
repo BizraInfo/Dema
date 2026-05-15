@@ -46,6 +46,12 @@ dema ihsan floor preview / dema ihsan floor preview --score N --json
 dema behavior modulation preview / dema behavior modulation preview --json
   previews visible, reversible guidance modulation under exact consent; applies no behavior change
 
+dema diagnostics plan / dema diagnostics plan --json
+  previews a self-diagnostics mission plan; runs no checks and executes nothing
+
+dema mission draft / dema mission draft --json
+  previews Intent -> MissionDraft -> ConsentPlan; records no approval and executes nothing
+
 dema status
   reads Node0 readiness through an adapter
 

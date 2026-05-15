@@ -25,6 +25,8 @@ node --test tests/status.test.js
 |---|---|
 | `tests/active-kernel-banner.test.js` | Active-kernel banner, gateway probe, and shell tokenization. |
 | `tests/active-kernel-cli.test.js` | Active-kernel CLI smoke behavior and task command wiring. |
+| `tests/diagnostics-plan.test.js` | Self-diagnostics mission plan preview, consent requirements, proof convergence, and CLI output. |
+| `tests/mission-draft.test.js` | Mission draft preview, consent-plan embedding, no-execution boundary, and CLI output. |
 | `tests/downloads-audit-preview.test.js` | Read-only downloads audit task, task receipt, placeholder SAT verdict formatting. |
 | `tests/safety-report.test.js` | Safety report preview and non-certification language. |
 | `tests/sat-placeholder.test.js` | Receipt verifier dispatch, gateway handoff checks, exact consent, fail-closed behavior. |
@@ -89,4 +91,8 @@ node apps/cli/src/index.js ihsan floor preview --score 0.97
 node apps/cli/src/index.js ihsan floor preview --score 0.97 --json
 node apps/cli/src/index.js behavior modulation preview --consent "GO: preview behavioral modulation only" --score 0.97 "Adjust tone to prioritize safety reminders"
 node apps/cli/src/index.js behavior modulation preview --consent "GO: preview behavioral modulation only" --score 0.97 --json "Adjust tone to prioritize safety reminders"
+node apps/cli/src/index.js diagnostics plan
+node apps/cli/src/index.js diagnostics plan --json
+node apps/cli/src/index.js mission draft "Fix auth.py and run pytest"
+node apps/cli/src/index.js mission draft --json "Fix auth.py and run pytest"
 ```
