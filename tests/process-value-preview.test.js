@@ -98,6 +98,11 @@ test("buildTrueValuePreview reports Step 7 ready but unminted as improving but g
   assert.equal(preview.next_safe_action, "hold_step7_or_prepare_exact_authorized_ceremony");
   assert.ok(preview.true_value_score > 0.7);
   assert.deepEqual(preview.blocked_actions, invariantBlockedActions);
+  assert.equal(preview.self_proactive_harness.mode, "DETERMINISTIC_PREVIEW");
+  assert.equal(preview.self_proactive_harness.recommended_micro_action, preview.next_safe_action);
+  assert.equal(preview.micro_compliance.preview_only, true);
+  assert.equal(preview.micro_consent.action_authorized_by_preview, false);
+  assert.equal(preview.analogical_model.model, "process_cockpit_not_engine");
   assert.equal(preview.boundary.receipt_minted, false);
   assert.equal(preview.boundary.runtime_started, false);
   assert.equal(preview.boundary.node_connection_attempted, false);
@@ -165,6 +170,9 @@ test("buildTrueValuePreview fails closed for malformed inputs", () => {
   assert.equal(preview.risk_level, "high");
   assert.equal(preview.next_safe_action, "fix_malformed_process_inputs");
   assert.equal(preview.ihsan_safety, null);
+  assert.equal(preview.self_critique.confidence, "rejected");
+  assert.equal(preview.micro_compliance.fail_closed_on_malformed_input, true);
+  assert.equal(preview.snr_interpretation, "rejected_until_inputs_are_structured");
   assert.equal(preview.checks.find((check) => check.check === "blockers_structured").pass, false);
 });
 
@@ -244,6 +252,17 @@ test("buildTrueValuePreview always uses allowlisted safe actions and invariant b
     assert.equal(preview.next_safe_action_allowed, true);
     assert.deepEqual(preview.blocked_actions, invariantBlockedActions);
     assert.equal(Object.isFrozen(preview.blocked_actions), true);
+    assert.equal(Object.isFrozen(preview.self_proactive_harness), true);
+    assert.equal(Object.isFrozen(preview.self_proactive_harness.gates), true);
+    assert.equal(Object.isFrozen(preview.self_proactive_harness.gates[0]), true);
+    assert.equal(Object.isFrozen(preview.micro_compliance), true);
+    assert.equal(Object.isFrozen(preview.micro_consent), true);
+    assert.equal(preview.self_proactive_harness.gates.find((gate) => gate.gate === "node_connection_blocked").pass, true);
+    assert.equal(preview.micro_compliance.no_runtime, true);
+    assert.equal(preview.micro_compliance.no_federation, true);
+    assert.equal(preview.micro_compliance.no_node_connection, true);
+    assert.equal(preview.micro_compliance.no_receipt_mint, true);
+    assert.equal(preview.micro_consent.consent_observed_in_preview, false);
     assert.equal(preview.checks.find((check) => check.check === "blocked_actions_invariant").pass, true);
   }
 });

@@ -82,6 +82,12 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function deepFreeze(value) {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
 function round(value, places = 4) {
   return Number(value.toFixed(places));
 }
@@ -356,6 +362,42 @@ function reasonFor({ processState, inputMalformed }) {
   return "Process evidence is summarized for review only; no authority is granted.";
 }
 
+function buildProcessHarness({ inputMalformed, processState, trueValueScore, nextSafeAction }) {
+  return deepFreeze({
+    self_proactive_harness: {
+      mode: "DETERMINISTIC_PREVIEW",
+      recommended_micro_action: nextSafeAction,
+      gates: [
+        { gate: "malformed_inputs", pass: !inputMalformed },
+        { gate: "clean_baseline_before_ceremony", pass: processState !== "process_dirty" },
+        { gate: "node_connection_blocked", pass: true },
+        { gate: "runtime_boundary_closed", pass: true }
+      ]
+    },
+    self_critique: {
+      confidence: inputMalformed ? "rejected" : "bounded_preview",
+      limitation: "Scores summarize supplied evidence only; they are not receipts, authority, or runtime proof.",
+      weakest_link: inputMalformed ? "input_shape" : "external_evidence_not_examined_here"
+    },
+    micro_compliance: {
+      preview_only: true, deterministic: true, no_runtime: true, no_federation: true,
+      no_node_connection: true, no_receipt_mint: true, fail_closed_on_malformed_input: inputMalformed
+    },
+    micro_consent: {
+      exact_string_required_for_gated_actions: true,
+      consent_observed_in_preview: false,
+      action_authorized_by_preview: false
+    },
+    analogical_model: {
+      model: "process_cockpit_not_engine",
+      mapping: "Like a flight instrument panel, this preview can show drift and next-safe vectors but cannot move the aircraft."
+    },
+    snr_interpretation: trueValueScore === null
+      ? "rejected_until_inputs_are_structured"
+      : "signal_is_actionable_only_when_boundaries_remain_closed"
+  });
+}
+
 export function buildTrueValuePreview({
   processEvents = [],
   proofSignals = [],
@@ -399,6 +441,7 @@ export function buildTrueValuePreview({
   });
   const nextSafeAction = deriveNextSafeAction({ inputMalformed, processState, snr });
   const blockedActions = Object.freeze(clone(INVARIANT_BLOCKED_ACTIONS));
+  const harness = buildProcessHarness({ inputMalformed, processState, trueValueScore, nextSafeAction });
 
   return {
     schema: TRUE_VALUE_PREVIEW_SCHEMA,
@@ -425,6 +468,7 @@ export function buildTrueValuePreview({
     true_value_score: trueValueScore,
     next_safe_action: nextSafeAction,
     next_safe_action_allowed: NEXT_SAFE_ACTIONS.includes(nextSafeAction),
+    ...harness,
     blocked_actions: blockedActions,
     reason: reasonFor({ processState, inputMalformed }),
     checks: [
@@ -449,8 +493,6 @@ export function buildTrueValuePreview({
       process_modified: false,
       push_performed: false
     },
-    note:
-      "Process Value Preview ranks process health for review only. It does not authorize mint, " +
-      "federation, node connection, runtime execution, or recursive self-modification."
+    note: "Process Value Preview ranks process health for review only. It does not authorize mint, federation, node connection, runtime execution, or recursive self-modification."
   };
 }
