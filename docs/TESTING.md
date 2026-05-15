@@ -8,6 +8,7 @@ Run the full local gate:
 
 ```bash
 npm test
+npm run coverage
 npm run check
 git diff --check
 ```
@@ -42,3 +43,18 @@ node --test tests/status.test.js
 | `tests/release-readiness.test.js` | Release-readiness report, workflow scan, dependency/installer/doc risk checks. |
 | `tests/review-gate.test.js` | PR class and proof-scope guardrails. |
 | `tests/status.test.js` | Status formatting, readiness, setup idempotency, mission proposal, receipts, CLI basics. |
+
+
+## Coverage threshold
+
+`npm run coverage` uses Node's native test coverage gate with enforced
+thresholds:
+
+```text
+lines: 95
+branches: 80
+functions: 95
+```
+
+The primary GitHub Actions check and BIZRA Review Gate run this coverage command
+after `npm test` and before `npm run check`.
