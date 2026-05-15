@@ -76,6 +76,9 @@ dema mission propose
 dema receipts
   lists or views local proof receipts
 
+dema models
+  inventories local model surfaces with local-only probes; invokes no model and mutates nothing
+
 dema monetize
   displays the safe first offer boundary only
 ```

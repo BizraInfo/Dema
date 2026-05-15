@@ -66,6 +66,10 @@ import {
   verifyReceipt
 } from "../../../packages/verifier/src/sat-placeholder.js";
 import {
+  collectModelInventory,
+  formatModelInventory
+} from "../../../packages/models/src/model-inventory.js";
+import {
   buildConsentPlanPreview,
   formatConsentPlanPreview
 } from "../../../packages/consent/src/consent-planner.js";
@@ -124,6 +128,7 @@ Usage:
   dema memory       List local memory entries (profile + ~/.dema/memory/*)
   dema memory show NAME
                     Show one memory entry by name (e.g. profile, bizra-context)
+  dema models       Show local model inventory (read-only; no inference)
   dema task         List registered tasks
   dema task NAME    Run a registered task (read-only in v0.3.0)
   dema sovereign    Render local Sovereign Mission Interface (view-only)
@@ -367,6 +372,12 @@ Next:
           "Unknown memory command. Use `dema memory [list]` or `dema memory show <name>`."
         );
       }
+      return;
+    }
+
+    case "models": {
+      const inventory = await collectModelInventory();
+      console.log(formatModelInventory(inventory));
       return;
     }
 

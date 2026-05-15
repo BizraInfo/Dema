@@ -45,6 +45,7 @@ node --test tests/status.test.js
 | `tests/melae-preview.test.js` | MELAE/SAPE preview scoring, fail-closed probe validation, SNR/Ihsan floor gates, and no-runtime boundary. |
 | `tests/mcp-blueprint.test.js` | MCP integration blueprint, no-MCP-call boundary, credential handling, and deterministic output. |
 | `tests/memory.test.js` | Local memory/profile reading and safe missing-state behavior. |
+| `tests/models.test.js` | Local model inventory, local-only provider probes, routing hints, exposure flags, and no-inference CLI output. |
 | `tests/network-blueprint.test.js` | Node network blueprint, Node1/Node2 blocked readiness gates, and no-network boundary. |
 | `tests/onboarding.test.js` | First-run onboarding preview, blocked action boundaries, JSON safety, and CLI onboarding output. |
 | `tests/node0-local-urp-proof.test.js` | Local URP proof boundaries. |
@@ -91,6 +92,7 @@ node apps/cli/src/index.js ihsan floor preview --score 0.97
 node apps/cli/src/index.js ihsan floor preview --score 0.97 --json
 node apps/cli/src/index.js behavior modulation preview --consent "GO: preview behavioral modulation only" --score 0.97 "Adjust tone to prioritize safety reminders"
 node apps/cli/src/index.js behavior modulation preview --consent "GO: preview behavioral modulation only" --score 0.97 --json "Adjust tone to prioritize safety reminders"
+node apps/cli/src/index.js models
 node apps/cli/src/index.js diagnostics plan
 node apps/cli/src/index.js diagnostics plan --json
 node apps/cli/src/index.js mission draft "Fix auth.py and run pytest"
