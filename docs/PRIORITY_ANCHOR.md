@@ -4,7 +4,7 @@
 **Script:** [`scripts/priority-anchor.mjs`](../scripts/priority-anchor.mjs)
 **Artifact:** [`proof-of-priority/`](../proof-of-priority/)
 
-A repo-canonical, deterministic SHA-256 Merkle root over the three founding documents. The root is the artifact intended for OpenTimestamps anchoring; the stamp itself is a **halt-gated**, identity-binding follow-up — the script does not perform it.
+A repo-canonical, deterministic SHA-256 Merkle root over the three founding documents. The script reproduces and verifies the root; OpenTimestamps stamping and upgrading are identity-binding operations that require explicit human authorization. The current canonical pin records the upgraded Bitcoin attestation state.
 
 ## Why this exists
 
@@ -63,11 +63,12 @@ npm run priority-anchor:verify
 | `root_hash` | The single 64-char hex Merkle root. |
 | `layers` | Full intermediate-layer hex dump (audit aid). |
 
-## OpenTimestamps anchoring (halt-gated)
+## OpenTimestamps anchoring
 
-Stamping is **not** performed by this script. After the manifest and root are committed and reviewed, the next step is:
+Stamping is **not** performed by this script. The canonical lifecycle is:
 
 ```bash
+npm run priority-anchor:verify
 ots stamp proof-of-priority/merkle-root.txt
 # wait ~24h for a calendar attestation
 ots upgrade proof-of-priority/merkle-root.txt.ots
@@ -75,3 +76,5 @@ ots verify  proof-of-priority/merkle-root.txt.ots
 ```
 
 The stamp action is irreversible (it writes to a public timestamp calendar) and identity-binding. It requires explicit human GO and is out of scope for any auto-mode session.
+
+Current status is tracked in [../proof-of-priority/PIN.md](../proof-of-priority/PIN.md). At the current pin, `proof-of-priority/merkle-root.txt.ots` is present and upgraded with Bitcoin block-header attestations.
