@@ -98,49 +98,69 @@ function buildBoundary() {
   };
 }
 
+export function buildSelfProactiveHarness({ malformed, nextSafeAction }) {
+  return deepFreeze({
+    mode: "DETERMINISTIC_REFUSAL_PREVIEW",
+    recommended_micro_action: nextSafeAction,
+    gates: [
+      { gate: "observed_text_structured", pass: !malformed },
+      { gate: "step7_hold_boundary", pass: true },
+      { gate: "authorization_phrase_not_emitted", pass: true },
+      { gate: "receipt_mint_blocked", pass: true },
+      { gate: "runtime_boundary_closed", pass: true }
+    ]
+  });
+}
+
+export function buildSelfCritique({ malformed }) {
+  return deepFreeze({
+    confidence: malformed ? "rejected" : "bounded_refusal_preview",
+    limitation: "This preview refuses or classifies supplied consent language only; it is not the governed Step 7 ceremony gate.",
+    weakest_link: malformed ? "input_shape" : "exact_authorization_is_intentionally_not_known_here"
+  });
+}
+
+export function buildMicroCompliance({ malformed }) {
+  return deepFreeze({
+    preview_only: true,
+    deterministic: true,
+    refusal_only: true,
+    no_runtime: true,
+    no_federation: true,
+    no_node_connection: true,
+    no_receipt_mint: true,
+    no_authorization_emit: true,
+    no_observed_text_echo: true,
+    fail_closed_on_malformed_input: malformed
+  });
+}
+
+export function buildMicroConsent() {
+  return deepFreeze({
+    preview_scope: "step7_consent_refusal_preview_only",
+    exact_string_required_for_gated_actions: true,
+    consent_observed_in_preview: false,
+    action_authorized_by_preview: false,
+    future_step7_mint_requires_fresh_current_operator_turn: true,
+    reusable_authorization_created: false,
+    broad_consent_allowed: false
+  });
+}
+
+export function buildAnalogicalModel() {
+  return deepFreeze({
+    model: "locked_door_sign_not_key",
+    mapping: "The preview can label a door as locked and explain why broad permission is not the key; it cannot unlock the door."
+  });
+}
+
 function buildHarness({ malformed, refusalReason, nextSafeAction }) {
   return {
-    self_proactive_harness: {
-      mode: "DETERMINISTIC_REFUSAL_PREVIEW",
-      recommended_micro_action: nextSafeAction,
-      gates: [
-        { gate: "observed_text_structured", pass: !malformed },
-        { gate: "step7_hold_boundary", pass: true },
-        { gate: "authorization_phrase_not_emitted", pass: true },
-        { gate: "receipt_mint_blocked", pass: true },
-        { gate: "runtime_boundary_closed", pass: true }
-      ]
-    },
-    self_critique: {
-      confidence: malformed ? "rejected" : "bounded_refusal_preview",
-      limitation: "This preview refuses or classifies supplied consent language only; it is not the governed Step 7 ceremony gate.",
-      weakest_link: malformed ? "input_shape" : "exact_authorization_is_intentionally_not_known_here"
-    },
-    micro_compliance: {
-      preview_only: true,
-      deterministic: true,
-      refusal_only: true,
-      no_runtime: true,
-      no_federation: true,
-      no_node_connection: true,
-      no_receipt_mint: true,
-      no_authorization_emit: true,
-      no_observed_text_echo: true,
-      fail_closed_on_malformed_input: malformed
-    },
-    micro_consent: {
-      preview_scope: "step7_consent_refusal_preview_only",
-      exact_string_required_for_gated_actions: true,
-      consent_observed_in_preview: false,
-      action_authorized_by_preview: false,
-      future_step7_mint_requires_fresh_current_operator_turn: true,
-      reusable_authorization_created: false,
-      broad_consent_allowed: false
-    },
-    analogical_model: {
-      model: "locked_door_sign_not_key",
-      mapping: "The preview can label a door as locked and explain why broad permission is not the key; it cannot unlock the door."
-    },
+    self_proactive_harness: buildSelfProactiveHarness({ malformed, nextSafeAction }),
+    self_critique: buildSelfCritique({ malformed }),
+    micro_compliance: buildMicroCompliance({ malformed }),
+    micro_consent: buildMicroConsent(),
+    analogical_model: buildAnalogicalModel(),
     refusal_interpretation: refusalReason
   };
 }
