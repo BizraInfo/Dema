@@ -1,12 +1,13 @@
 # ADR-007: Multi-Session Chain Policy
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-05-12
+**Accepted-Date:** 2026-05-16
 **Decision makers:** Mumu (Mohamed Beshr)
 **Supersedes:** none
 **Related:** [ADR-002 No Shadow State](ADR-002-no-shadow-state.md), [ADR-006 Continuous Assurance and No-mint Verification](ADR-006-continuous-assurance-and-no-mint-verification.md)
-**Implements:** none (proposal stage)
-**Evidence:** `project_cross_session_chain_mutation_discovered.md` (operator-side memory canon · path redacted) (operator-side forensic canon)
+**Implements:** none (option choice A/B/C remains a separate halt-gate)
+**Evidence:** `project_cross_session_chain_mutation_discovered.md` (operator-side memory canon · path redacted) and three confirming events on 2026-05-16 documented in §Confirming evidence below.
 
 ## Context
 
@@ -74,9 +75,23 @@ The following three changes can land regardless of which option is selected. The
 
 3. **Update memory canons that claimed "chain unchanged" within a single-session view.** Any canon entry asserting "chain unchanged" without a session-scope qualifier is now potentially misleading. The forensic canon's §"Discipline encoded" rule requires adding "as-of HH:MM session view" qualifiers to such claims. This change targets operator-side memory files (`~/.claude/projects/.../memory/`) and requires a separate typed-GO.
 
+## Confirming evidence (2026-05-16 GST)
+
+Three additional cross-session events on 2026-05-16 GST confirm the pattern documented in this ADR and resolve Open Question 1 below ("intentional or incidental").
+
+1. **05:07:27 GST — SessionStart hook stale by one commit.** Codex CLI (PID 10378, 22h 38m uptime, cwd `~/Downloads/Dema`) committed `8df722d` (`feat(core): add corpus preview index`) on the local detached chain while a sibling Claude Code session was being spawned. The sibling session's `SessionStart` hook captured `head: 92712db`, which was already one commit behind reality by the time the session loaded ~3 minutes later. **Per-session HEAD snapshots are stale by default in multi-producer environments, even at sub-minute timescales.** Any within-session claim of "HEAD unchanged" must re-read `git rev-parse HEAD` at the moment of the claim, not at session start.
+
+2. **05:17 GST — stale external AI artifact recommended already-shipped action.** An external AI artifact dated "Sat, 16 May 2026" recommended committing a code change whose target subject (`fix(node-adapter): harden legacy shellout boundary`) had already been shipped 37 minutes earlier by Codex as commit `92712db`. The artifact's premise ("dirty by design, scoped to two files, waiting for packaging/commit") conflicted with disk state (`git status --porcelain` empty, both target files mtime ≥ 30 min stale). **Cloud-author artifacts can be hours stale on a live multi-producer host and must be verified against disk before any action.** Per the existing operator canon `feedback_cloud_disk_asymmetry`: disk wins over narrative.
+
+3. **05:14 GST — forensic identification of `@openai/codex` as concurrent producer.** Process inspection identified the second producer as the `@openai/codex` CLI binary at PID 10378, parented to a `node codex` host. The producer holds the operator's GitHub-noreply identity (`Mohamed Beshr <155658129+BizraInfo@users.noreply.github.com>`), runs preview-only commits adhering to the "preview-only until proof gates pass" invariant, and was detached from any branch (59 commits ahead of `origin/main`). The chain was captured under the local label `codex/2026-05-16-preview-stream` (pointing at `8df722d`) to prevent loss before any further session-side acts.
+
+**Resolution of Open Question 1:** concurrent sessions on Node0 are **intentional**. The operator runs a sustained Codex CLI session for preview-surface engineering alongside ad-hoc Claude Code sessions for forensic, ADR, and operator-side memory work. Node0 is therefore a multi-producer environment by design at the Claude-Code/Codex-CLI level, not an incidental dual-session state.
+
+**Status promotion to Accepted locks:** (a) the problem statement, (b) the three options A/B/C and their trade-offs, (c) the deferred-decision posture on the option choice, and (d) the three Companion changes. **It does not choose Option A, B, or C.** That selection remains a separate halt-gate, now informed by the resolved Q1 answer favoring Option B (serialize) or Option C (accept-with-attribution) over Option A (per-session subchain), since multi-producer-by-design weakens the case for aggregation cost.
+
 ## Open questions
 
-1. **Concurrent sessions — intentional or incidental?** Does Node0 currently host multiple concurrent Claude Code sessions by design (e.g., separate operator-side and implementation sessions running together), or was the 2026-05-12 dual-session state incidental? The answer determines whether Option B (serialize) or Option C (accept) is the right default posture.
+1. **Concurrent sessions — intentional or incidental?** Does Node0 currently host multiple concurrent Claude Code sessions by design (e.g., separate operator-side and implementation sessions running together), or was the 2026-05-12 dual-session state incidental? The answer determines whether Option B (serialize) or Option C (accept) is the right default posture. **Resolved 2026-05-16: intentional — see §Confirming evidence above.**
 
 2. **Latency tolerance for Option B.** The `dema-assure all` cycle currently completes in under 120 seconds (ADR-006 performance target). If two sessions overlap, lock contention could extend total wall-clock time. What is the operator's acceptable wait ceiling for a mint operation blocked behind a sibling session?
 
