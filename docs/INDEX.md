@@ -84,6 +84,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 ## Quality, delivery, and contribution
 
 - [DELIVERY_BLUEPRINT.md](DELIVERY_BLUEPRINT.md) — release-readiness and DevOps discipline.
+- [RELEASE_DECISION_RECORD_adr-007-accept_2026-05-16.md](RELEASE_DECISION_RECORD_adr-007-accept_2026-05-16.md) — Working artifact. RDR-001 (first canonical instance per DELIVERY_BLUEPRINT.md Level-4 mandate): integrates PMBOK + DevOps + CI/CD + Performance-QA discipline against the 18-commit `adr/007-accept` branch state at HEAD `e64b9c3`; documents scope, schedule, quality gates, risk register (7 risks with severity codes), rollback plan, GateVerdict=REVIEW assistant-side verdict; merge decision remains operator halt-gate.
 - [TESTING.md](TESTING.md) — test surface and smoke-check matrix.
 - [LLM_SYSTEM_FLOW.md](LLM_SYSTEM_FLOW.md) — canonical repo-local flow for connected LLMs and agents.
 - [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) — engineering rules and halt gates.
