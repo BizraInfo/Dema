@@ -45,6 +45,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [02-architecture/behavioral-modulation-preview.md](02-architecture/behavioral-modulation-preview.md) — current preview model for consent-bound, no-mint behavioral modulation.
 - [02-architecture/dema-autonomy-envelope.md](02-architecture/dema-autonomy-envelope.md) — autonomy levels and consent.
 - [02-architecture/dema-tui-onboarding-design.md](02-architecture/dema-tui-onboarding-design.md) — Working artifact. TUI cockpit + onboarding design composing existing organs (homebase, shared-urp, consent, evidence, ihsan, mission) into one display-only surface; does not propose new schemas or CLI verbs, complements `FIRST_RUN_WIZARD.md` (screen sequence) and `USER_LIFECYCLE.md` (user journey).
+- [02-architecture/dema-ux-proof-harness.md](02-architecture/dema-ux-proof-harness.md) — Working artifact. UX uniqueness scorecard with 12 character criteria + 5-round design review ritual + 7-minute acceptance test + one-sentence competitor-copy discriminator; complements technical gates by adding the BIZRA-native-character review that prevents generic-agent-dashboard drift.
 - [02-architecture/gateway-http-adapter.md](02-architecture/gateway-http-adapter.md) — gateway adapter target.
 - [02-architecture/pat-builder-sat-validator.md](02-architecture/pat-builder-sat-validator.md) — PAT/SAT bridge.
 - [02-architecture/sat-verifier-sibling-spec.md](02-architecture/sat-verifier-sibling-spec.md) — SAT verifier sibling spec.
