@@ -69,7 +69,7 @@ Every receipt mint envelope acquires a `session_id` field (populated from the Cl
 
 The following three changes can land regardless of which option is selected. They improve forensic capability and attribution transparency without committing to any chain architecture decision:
 
-1. **Lift `head -c 500` truncation in `~/.claude/settings.json` PreToolUse Bash hook.** The current 500-byte cap hides cross-session command bodies, making attribution forensics difficult. Raising the cap to `head -c 4000` (or routing full bodies to a sidecar file) restores the ability to reconstruct which session issued which command. This change is scoped to `~/.claude/settings.json` and requires a separate typed-GO as it touches audit infrastructure.
+1. **Lift `head -c 500` truncation in `~/.claude/settings.json` PreToolUse Bash hook.** **RESOLVED on or before 2026-05-16:** verification at 2026-05-16 12:01 GST confirmed `~/.claude/settings.json` line 330 already uses `head -c 4000`, exactly the cap this Companion change recommended. Companion change #1 is therefore already implemented; no further action is required for this item. The historical 500-byte cap remains documented in § Problem above as the context that motivated the ADR; the operative state is the 4000-byte cap now in effect.
 
 2. **Add `session_id` field to the receipt envelope as metadata.** This is a non-breaking envelope addition — the `session_id` field is informational and does not affect chain-integrity validation, `prev_digest` linkage, or `self_digest` computation. It provides attribution for every future mint regardless of whether Option A, B, or C governs the chain structure. This change touches `mint_lib.py` and requires a separate typed-GO as it is a code change.
 
