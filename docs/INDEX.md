@@ -38,6 +38,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [ARCHITECTURE.md](ARCHITECTURE.md) — current component and command map.
 - [INSTALLER_ARCHITECTURE.md](INSTALLER_ARCHITECTURE.md) — installer levels and release rules.
 - [NODE0_ACTIVATION_ROADMAP.md](NODE0_ACTIVATION_ROADMAP.md) — staged Node0 activation roadmap.
+- [NODE0_GENESIS_READINESS_2026_05_16.md](NODE0_GENESIS_READINESS_2026_05_16.md) — Working artifact. 2026-05-16 state snapshot mapping current Node0 readiness against the genesis-to-production ladder; complements `NODE0_ACTIVATION_ROADMAP.md` (stage progression) and `DELIVERY_BLUEPRINT.md` (process discipline).
 - [ARTIFACT_011_PREP.md](ARTIFACT_011_PREP.md) — first bounded diagnostic preparation boundary.
 - [02-architecture/repo-charter.md](02-architecture/repo-charter.md) — repo charter.
 - [02-architecture/boundary-core-vs-face.md](02-architecture/boundary-core-vs-face.md) — core-vs-face boundary.
@@ -106,6 +107,7 @@ These are working design artifacts. They are not the public onboarding path.
 - [superpowers/specs/2026-05-14-dema-broad-gtm-readiness/01_specification.md](superpowers/specs/2026-05-14-dema-broad-gtm-readiness/01_specification.md) — working artifact for broad-GTM readiness.
 - [superpowers/specs/2026-05-14-effectcap-invariant/01_specification.md](superpowers/specs/2026-05-14-effectcap-invariant/01_specification.md) — working artifact for pre-runtime EffectCap invariants.
 - [superpowers/specs/2026-05-15-bizra-steer-vector-v0.1/01_specification.md](superpowers/specs/2026-05-15-bizra-steer-vector-v0.1/01_specification.md) — working artifact for steer-vector boundaries.
+- [superpowers/specs/2026-05-16-integration-foundry-registry/01_specification.md](superpowers/specs/2026-05-16-integration-foundry-registry/01_specification.md) — Working artifact for the external pattern registry preview (one module of a proposed Integration Foundry); maps 11 external giants → existing BIZRA primitives via `GateVerdict` + `MICRO_CONSENT_SHAPE` vocabulary. Bundle includes `02_pseudocode.md`, `03_tdd_anchors.md`, `04_integration_notes.md`.
 
 ## Rule for future docs
 
