@@ -1,0 +1,57 @@
+#!/usr/bin/env node
+import { pathToFileURL } from "node:url";
+
+// 9 DEMA_* env vars that affect test/runtime behavior. Discovery command
+// (run from repo root):
+//   grep -rhE 'process\.env\.DEMA_[A-Z0-9_]+' tests/ packages/ apps/ scripts/
+//     | grep -oE 'DEMA_[A-Z0-9_]+' | sort -u
+//
+// T-13 in the companion test asserts this list stays in sync with source
+// references — any DEMA_* env var added in source code without being added
+// here will fail the test.
+//
+// Why this list matters: on 2026-05-16 a leaked DEMA_NODE0_ADAPTER=gateway-http
+// in the operator shell produced 3 phantom test failures that were reported as
+// "pre-existing on main" in PR #44 body, requiring public retraction. This
+// gate institutionalizes the verification habit at infrastructure level.
+const KNOWN_DEMA_ENV_VARS = Object.freeze([
+  "DEMA_DOWNLOADS_ROOT",
+  "DEMA_GATEWAY_URL",
+  "DEMA_HOME",
+  "DEMA_LM_STUDIO_URL",
+  "DEMA_MODELS_SKIP_TCP",
+  "DEMA_MODEL_DOWNLOADS_ROOT",
+  "DEMA_NODE0_ADAPTER",
+  "DEMA_NODE0_STATUS_COMMAND",
+  "DEMA_OLLAMA_URL"
+]);
+
+export function checkEnvHygiene({ env = process.env, strict = false } = {}) {
+  const polluters = KNOWN_DEMA_ENV_VARS
+    .filter((name) => Object.hasOwn(env, name) && env[name] !== undefined && env[name] !== "")
+    .map((name) => Object.freeze({ name, value_length: String(env[name]).length }));
+
+  const ok = polluters.length === 0;
+  const remediation = ok
+    ? null
+    : `env ${polluters.map((p) => `-u ${p.name}`).join(" ")} <command>`;
+
+  return Object.freeze({
+    schema: "bizra.dema.review.env_hygiene.v0.1",
+    ok,
+    strict_mode: strict,
+    polluters: Object.freeze(polluters),
+    polluter_count: polluters.length,
+    known_dema_env_vars: KNOWN_DEMA_ENV_VARS,
+    remediation
+  });
+}
+
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  const strict = process.argv.includes("--strict");
+  const report = checkEnvHygiene({ strict });
+  console.log(JSON.stringify(report, null, 2));
+  if (strict && !report.ok) {
+    process.exit(1);
+  }
+}
