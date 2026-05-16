@@ -452,3 +452,53 @@ test("existing proof classes remain strict and do not accept Amana contract file
     );
   }
 });
+
+test("policy/broad-scope PR class accepts adr/* and policy/* and governance/* and tooling/* branches", () => {
+  for (const branch of [
+    "adr/007-accept-clean",
+    "adr/008-something",
+    "policy/proof-quality-broad-scope",
+    "governance/charter-update",
+    "tooling/env-hygiene-check"
+  ]) {
+    assert.equal(
+      validatePrClass({ reviewClass: "policy/broad-scope", branch }).ok,
+      true,
+      `policy/broad-scope should accept ${branch}`
+    );
+  }
+});
+
+test("policy/broad-scope PR class rejects feature-class branches", () => {
+  for (const branch of ["feature/random", "fix/random", "main"]) {
+    assert.throws(
+      () => validatePrClass({ reviewClass: "policy/broad-scope", branch }),
+      /do not allow branch/,
+      `policy/broad-scope should reject ${branch}`
+    );
+  }
+});
+
+test("policy/broad-scope proof scope accepts any file list and skips allowlist enforcement", () => {
+  const broadFileSet = [
+    "docs/anything.md",
+    "packages/random/src/foo.js",
+    "tests/random.test.js",
+    "scripts/anything.mjs"
+  ];
+
+  const report = validateProofScope({
+    reviewClass: "policy/broad-scope",
+    files: broadFileSet
+  });
+
+  assert.equal(report.ok, true);
+  assert.equal(report.enforcement, "advisory_reviewer_discipline");
+  assert.deepEqual(report.changed_files, broadFileSet);
+});
+
+test("policy/broad-scope proof scope accepts empty file list", () => {
+  const report = validateProofScope({ reviewClass: "policy/broad-scope", files: [] });
+  assert.equal(report.ok, true);
+  assert.equal(report.enforcement, "advisory_reviewer_discipline");
+});

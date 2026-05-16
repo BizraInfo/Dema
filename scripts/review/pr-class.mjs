@@ -20,6 +20,9 @@ const REVIEW_CLASSES = {
   },
   "u2.1/amana-kernel-contracts": {
     branches: ["u2.1/amana-kernel-contracts", "ci/u2.1-amana-kernel-contracts-class"]
+  },
+  "policy/broad-scope": {
+    branchPrefixes: ["adr/", "policy/", "governance/", "tooling/"]
   }
 };
 

@@ -42,6 +42,9 @@ jobs:
             proof/u1-*)
               echo "BIZRA_REVIEW_CLASS=proof/u1" >> "$GITHUB_ENV"
               ;;
+            adr/*|policy/*|governance/*|tooling/*)
+              echo "BIZRA_REVIEW_CLASS=policy/broad-scope" >> "$GITHUB_ENV"
+              ;;
             *)
               echo "Unsupported BIZRA review branch: ${GITHUB_HEAD_REF}" >&2
               exit 1
