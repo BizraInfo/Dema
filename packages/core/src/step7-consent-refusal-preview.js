@@ -7,6 +7,8 @@ const NEXT_SAFE_ACTIONS = Object.freeze([
   "hold_step7_ceremony"
 ]);
 
+// Diagnostic only: drives observed_text_class and refusal_reason, not verdict.
+// Verdict is HOLD by default; classifier accuracy does not bear on safety.
 const AUTHORIZATION_INTENT_PATTERN = /\b(authori[sz]e|authori[sz]ation|permission|permit|approve|approval|consent|proceed)\b/i;
 
 const INVARIANT_BLOCKED_ACTIONS = Object.freeze([
