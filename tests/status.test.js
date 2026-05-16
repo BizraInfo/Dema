@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, writeFile, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
+import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
@@ -258,50 +258,136 @@ test("node0 command parser preserves quoted paths with spaces", () => {
 });
 
 test("receipt store lists and reads receipts by artifact id", async () => {
-  const root = await mkdtemp(join(tmpdir(), "dema-receipts-"));
-  await mkdir(join(root, "receipts"), { recursive: true });
-  await writeFile(join(root, "receipts", "artifact-011.json"), JSON.stringify({
-    receipt_id: "receipt-1",
-    artifact_id: "ARTIFACT-011",
-    action: "bounded_diagnostic_activation",
-    truth_label: "MEASURED",
-    created_at: "2026-05-04T18:20:00.000Z"
-  }));
+  await withReceiptFixture("dema-receipts-", async (root) => {
+    await writeFile(join(root, "receipts", "artifact-011.json"), JSON.stringify({
+      receipt_id: "receipt-1",
+      artifact_id: "ARTIFACT-011",
+      action: "bounded_diagnostic_activation",
+      truth_label: "MEASURED",
+      created_at: "2026-05-04T18:20:00.000Z"
+    }));
 
-  const receipts = await listReceipts(root);
-  assert.equal(receipts.length, 1);
-  assert.equal(receipts[0].artifact_id, "ARTIFACT-011");
+    const receipts = await listReceipts(root);
+    assert.equal(receipts.length, 1);
+    assert.equal(receipts[0].artifact_id, "ARTIFACT-011");
 
-  const receipt = await readReceipt("ARTIFACT-011", root);
-  assert.equal(receipt.receipt_id, "receipt-1");
+    const receipt = await readReceipt("ARTIFACT-011", root);
+    assert.equal(receipt.receipt_id, "receipt-1");
 
-  const byFile = await readReceipt("artifact-011.json", root);
-  assert.equal(byFile.artifact_id, "ARTIFACT-011");
+    const byFile = await readReceipt("artifact-011.json", root);
+    assert.equal(byFile.artifact_id, "ARTIFACT-011");
+  });
 });
 
 test("receipt store rejects ambiguous filename selectors", async () => {
-  const root = await mkdtemp(join(tmpdir(), "dema-receipts-"));
-  await mkdir(join(root, "receipts", "a"), { recursive: true });
-  await mkdir(join(root, "receipts", "b"), { recursive: true });
-  await writeFile(join(root, "receipts", "a", "handoff.json"), JSON.stringify({
-    receipt_id: "receipt-a",
-    artifact_id: "ARTIFACT-A",
+  await withReceiptFixture("dema-receipts-", async (root) => {
+    await mkdir(join(root, "receipts", "a"), { recursive: true });
+    await mkdir(join(root, "receipts", "b"), { recursive: true });
+    await writeFile(join(root, "receipts", "a", "handoff.json"), JSON.stringify({
+      receipt_id: "receipt-a",
+      artifact_id: "ARTIFACT-A",
+      action: "bounded_diagnostic_activation",
+      truth_label: "MEASURED",
+      created_at: "2026-05-04T18:20:00.000Z"
+    }));
+    await writeFile(join(root, "receipts", "b", "handoff.json"), JSON.stringify({
+      receipt_id: "receipt-b",
+      artifact_id: "ARTIFACT-B",
+      action: "bounded_diagnostic_activation",
+      truth_label: "MEASURED",
+      created_at: "2026-05-04T18:21:00.000Z"
+    }));
+
+    await assert.rejects(
+      () => readReceipt("handoff.json", root),
+      /Ambiguous receipt selector/
+    );
+    assert.equal((await readReceipt("ARTIFACT-A", root)).receipt_id, "receipt-a");
+    assert.equal((await readReceipt("receipt-b", root)).artifact_id, "ARTIFACT-B");
+  });
+});
+
+async function withReceiptFixture(prefix, fn) {
+  const root = await mkdtemp(join(tmpdir(), prefix));
+  try {
+    await mkdir(join(root, "receipts"), { recursive: true });
+    return await fn(root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+async function writeReceiptFixture(root, filename, fields = {}) {
+  await writeFile(join(root, "receipts", filename), JSON.stringify({
+    receipt_id: `receipt-${filename}`,
+    artifact_id: `ARTIFACT-${filename}`,
     action: "bounded_diagnostic_activation",
     truth_label: "MEASURED",
-    created_at: "2026-05-04T18:20:00.000Z"
+    created_at: "2026-05-04T18:20:00.000Z",
+    ...fields
   }));
-  await writeFile(join(root, "receipts", "b", "handoff.json"), JSON.stringify({
-    receipt_id: "receipt-b",
-    artifact_id: "ARTIFACT-B",
-    action: "bounded_diagnostic_activation",
-    truth_label: "MEASURED",
-    created_at: "2026-05-04T18:21:00.000Z"
-  }));
+}
+
+test("receipt store respects deterministic max file count and pagination", async () => {
+  await withReceiptFixture("dema-receipts-limit-", async (root) => {
+    await writeReceiptFixture(root, "003.json", { artifact_id: "ARTIFACT-003" });
+    await writeReceiptFixture(root, "001.json", { artifact_id: "ARTIFACT-001" });
+    await writeReceiptFixture(root, "004.json", { artifact_id: "ARTIFACT-004" });
+    await writeReceiptFixture(root, "002.json", { artifact_id: "ARTIFACT-002" });
+
+    const capped = await listReceipts(root, { maxFiles: 2 });
+    assert.deepEqual(capped.map((receipt) => receipt.artifact_id), [
+      "ARTIFACT-001",
+      "ARTIFACT-002"
+    ]);
+
+    const page = await listReceipts(root, { limit: 2, offset: 1 });
+    assert.deepEqual(page.map((receipt) => receipt.artifact_id), [
+      "ARTIFACT-002",
+      "ARTIFACT-003"
+    ]);
+  });
+});
+
+test("receipt store marks oversized and malformed JSON without crashing", async () => {
+  await withReceiptFixture("dema-receipts-safety-", async (root) => {
+    await writeReceiptFixture(root, "ok.json", { artifact_id: "ARTIFACT-OK" });
+    await writeFile(join(root, "receipts", "oversized.json"), JSON.stringify({
+      receipt_id: "receipt-oversized",
+      artifact_id: "ARTIFACT-OVERSIZED",
+      payload: "x".repeat(256)
+    }));
+    await writeFile(join(root, "receipts", "malformed.json"), "{not-json");
+
+    const receipts = await listReceipts(root, { maxJsonBytes: 256 });
+    const byFilename = new Map(receipts.map((receipt) => [basename(receipt.path), receipt]));
+
+    assert.equal(byFilename.get("ok.json").artifact_id, "ARTIFACT-OK");
+    assert.equal(byFilename.get("oversized.json").unreadable, true);
+    assert.equal(byFilename.get("oversized.json").reason, "receipt_json_too_large");
+    assert.match(byFilename.get("oversized.json").error, /maxJsonBytes/);
+    assert.equal(byFilename.get("malformed.json").unreadable, true);
+    assert.equal(byFilename.get("malformed.json").reason, "malformed_json");
+  });
+});
+
+test("receipt store labels listing as local read/list rather than governed runtime issuance", async () => {
+  let fixtureRoot;
+  await withReceiptFixture("dema-receipts-boundary-", async (root) => {
+    fixtureRoot = root;
+    await writeReceiptFixture(root, "artifact-011.json", {
+      receipt_id: "receipt-boundary",
+      artifact_id: "ARTIFACT-011"
+    });
+
+    const [receipt] = await listReceipts(root);
+    assert.equal(receipt.store_scope, "local_read_list");
+    assert.equal(receipt.operation_boundary, "read_list_only_no_mint");
+    assert.equal(receipt.issuer_boundary, "governed_runtime_issues_receipts");
+  });
 
   await assert.rejects(
-    () => readReceipt("handoff.json", root),
-    /Ambiguous receipt selector/
+    () => readFile(join(fixtureRoot, "receipts", "artifact-011.json"), "utf8"),
+    /ENOENT/
   );
-  assert.equal((await readReceipt("ARTIFACT-A", root)).receipt_id, "receipt-a");
-  assert.equal((await readReceipt("receipt-b", root)).artifact_id, "ARTIFACT-B");
 });
