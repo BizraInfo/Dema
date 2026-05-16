@@ -18,6 +18,23 @@ function restoreEnv(name, value) {
   process.env[name] = value;
 }
 
+async function withNode0AdapterEnv(values, fn) {
+  const names = [
+    "DEMA_NODE0_ADAPTER",
+    "DEMA_GATEWAY_URL",
+    "DEMA_NODE0_STATUS_COMMAND"
+  ];
+  const originals = Object.fromEntries(names.map((name) => [name, process.env[name]]));
+  try {
+    for (const name of names) {
+      if (Object.hasOwn(values, name)) restoreEnv(name, values[name]);
+    }
+    return await fn();
+  } finally {
+    for (const [name, value] of Object.entries(originals)) restoreEnv(name, value);
+  }
+}
+
 function jsonResponse(body, status = 200) {
   return { status, body, headers: { "content-type": "application/json" } };
 }
@@ -204,10 +221,135 @@ test("createNode0Adapter dispatches to gateway-http when DEMA_NODE0_ADAPTER=gate
   }
 });
 
+test("createNode0Adapter prefers a configured gateway URL over legacy status command by default", async () => {
+  const gw = await startFakeGateway(HEALTHY_ROUTES);
+  try {
+    await withNode0AdapterEnv(
+      {
+        DEMA_NODE0_ADAPTER: undefined,
+        DEMA_GATEWAY_URL: gw.url,
+        DEMA_NODE0_STATUS_COMMAND: 'node -e "process.exit(42)"'
+      },
+      async () => {
+        const adapter = createNode0Adapter({ timeoutMs: 1000 });
+        const status = await adapter.status();
+
+        assert.equal(status.schema, "bizra.dema.node0_status.v0.2");
+        assert.equal(status.source, "gateway-http-composed");
+        assert.equal(status.gateway.base_url, gw.url);
+        assert.deepEqual(gw.calls.map((call) => call.method), ["GET", "GET", "GET", "GET"]);
+      }
+    );
+  } finally {
+    await gw.stop();
+  }
+});
+
+test("createNode0Adapter labels shellout status as legacy and operator-owned", async () => {
+  const adapter = createNode0Adapter({
+    adapterMode: "shellout",
+    command: 'node -e "process.stdout.write(JSON.stringify({ ready: true, findings: [] }))"'
+  });
+  const status = await adapter.status();
+
+  assert.equal(status.schema, "bizra.dema.status.v0.1");
+  assert.equal(status.source, "legacy-shellout");
+  assert.deepEqual(status.adapter, {
+    mode: "legacy-shellout",
+    legacy: true,
+    operator_owned: true,
+    execution: "execFile",
+    shell: false,
+    available: true
+  });
+});
+
+test("createNode0Adapter treats shell metacharacters as literal argv in shellout command", async () => {
+  const adapter = createNode0Adapter({
+    adapterMode: "shellout",
+    command:
+      'node -e "process.stdout.write(JSON.stringify({ human: process.argv.slice(1).join(`|`), findings: process.argv.slice(1) }))" "semi;echo SHOULD_NOT_RUN" "$(echo SHOULD_NOT_EXPAND)" "plain&&echo NO"'
+  });
+  const status = await adapter.status();
+
+  assert.equal(
+    status.human,
+    "semi;echo SHOULD_NOT_RUN|$(echo SHOULD_NOT_EXPAND)|plain&&echo NO"
+  );
+  assert.deepEqual(status.findings, [
+    "semi;echo SHOULD_NOT_RUN",
+    "$(echo SHOULD_NOT_EXPAND)",
+    "plain&&echo NO"
+  ]);
+  assert.equal(status.adapter.shell, false);
+});
+
+test("createNode0Adapter reports missing legacy shellout command as unavailable status", async () => {
+  const adapter = createNode0Adapter({
+    adapterMode: "shellout",
+    command: "dema-node0-status-command-that-should-not-exist"
+  });
+  const status = await adapter.status();
+
+  assert.equal(status.schema, "bizra.dema.status.v0.1");
+  assert.equal(status.ready, false);
+  assert.equal(status.source, "legacy-shellout-unavailable");
+  assert.equal(status.adapter.mode, "legacy-shellout");
+  assert.equal(status.adapter.legacy, true);
+  assert.equal(status.adapter.operator_owned, true);
+  assert.equal(status.adapter.shell, false);
+  assert.equal(status.adapter.available, false);
+  assert.equal(status.adapter.reason, "legacy_status_command_unavailable");
+  assert.ok(status.findings.some((finding) => finding.includes("DEMA_NODE0_STATUS_COMMAND unavailable")));
+});
+
+test("createNode0Adapter reports absent legacy shellout command as unavailable status", async () => {
+  await withNode0AdapterEnv(
+    {
+      DEMA_NODE0_ADAPTER: "shellout",
+      DEMA_GATEWAY_URL: undefined,
+      DEMA_NODE0_STATUS_COMMAND: undefined
+    },
+    async () => {
+      const status = await createNode0Adapter().status();
+
+      assert.equal(status.schema, "bizra.dema.status.v0.1");
+      assert.equal(status.ready, false);
+      assert.equal(status.source, "legacy-shellout-unavailable");
+      assert.equal(status.adapter.available, false);
+      assert.equal(status.adapter.reason, "legacy_status_command_not_configured");
+    }
+  );
+});
+
+test("node0 adapter env test helper restores adapter environment variables", async () => {
+  const originals = {
+    DEMA_NODE0_ADAPTER: process.env.DEMA_NODE0_ADAPTER,
+    DEMA_GATEWAY_URL: process.env.DEMA_GATEWAY_URL,
+    DEMA_NODE0_STATUS_COMMAND: process.env.DEMA_NODE0_STATUS_COMMAND
+  };
+
+  await withNode0AdapterEnv(
+    {
+      DEMA_NODE0_ADAPTER: "gateway-http",
+      DEMA_GATEWAY_URL: "http://127.0.0.1:65534",
+      DEMA_NODE0_STATUS_COMMAND: "node fake.js"
+    },
+    async () => {
+      assert.equal(process.env.DEMA_NODE0_ADAPTER, "gateway-http");
+      assert.equal(process.env.DEMA_GATEWAY_URL, "http://127.0.0.1:65534");
+      assert.equal(process.env.DEMA_NODE0_STATUS_COMMAND, "node fake.js");
+    }
+  );
+
+  assert.equal(process.env.DEMA_NODE0_ADAPTER, originals.DEMA_NODE0_ADAPTER);
+  assert.equal(process.env.DEMA_GATEWAY_URL, originals.DEMA_GATEWAY_URL);
+  assert.equal(process.env.DEMA_NODE0_STATUS_COMMAND, originals.DEMA_NODE0_STATUS_COMMAND);
+});
+
 test("createNode0Adapter still honors the shellout path when adapterMode is unset", async () => {
   // No DEMA_NODE0_ADAPTER, no DEMA_NODE0_STATUS_COMMAND, no command option:
-  // the adapter must fall through to defaultStatus() (everything blocked) —
-  // the documented developer-machine state.
+  // the adapter must fall through to a blocked legacy-unavailable status.
   const originalAdapterMode = process.env.DEMA_NODE0_ADAPTER;
   const originalStatusCommand = process.env.DEMA_NODE0_STATUS_COMMAND;
   try {
