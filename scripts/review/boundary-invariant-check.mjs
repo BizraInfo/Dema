@@ -63,7 +63,10 @@ const AUTHORITY_FLAGS = new Set([
   "automation_run",
   "contract_executed",
   "prompt_invoked",
-  "model_started"
+  "model_started",
+  "secret_persisted_on_phone",
+  "phone_authority_granted",
+  "socket_opened"
 ]);
 
 function listPreviewModules(root = REPO_ROOT) {
