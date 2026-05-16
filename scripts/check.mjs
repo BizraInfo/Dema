@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 
 const commands = [
+  ["node", ["scripts/review/env-hygiene-check.mjs"]],
   ["node", ["--test"]],
   ["node", ["apps/cli/src/index.js", "welcome"]],
   ["node", ["apps/cli/src/index.js", "help"]],
