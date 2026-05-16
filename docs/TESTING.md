@@ -53,6 +53,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/downloads-audit-preview.test.js` | Read-only downloads audit task, task receipt, placeholder SAT verdict formatting. |
 | `tests/evidence-chain-preview.test.js` | EvidenceChain pure preview linking, receipt-domain rejection, tamper checks, no-authority formatting, and no-CLI wiring boundary. |
 | `tests/evidence-receipt-preview.test.js` | No-mint evidence receipt preview hashing, boundary, and tamper checks. |
+| `tests/external-pattern-registry-preview.test.js` | External pattern registry preview module: schema check, mode+truth_label, 7-line operating canon, 8-16 pattern entries, required keys per pattern, status enum (PLANNED/PREVIEW/BLOCKED only, no LIVE), GateVerdict validity, MICRO_CONSENT_SHAPE validity, OPERATIONS validity, effect mutual exclusion, on_disk_anchor existence, boundary all-false (12 flags), deterministic+frozen, fresh-object-per-call, pure-module imports, summary counts, and boundary-invariant lint inclusion. |
 | `tests/gateway-http-adapter.test.js` | Gateway adapter probing and failure normalization. |
 | `tests/actuator-check.test.js` | Raw actuator and EffectCap invariant static guard behavior. |
 | `tests/canon-check.test.js` | Topology canon registry and forbidden topology drift guard. |
