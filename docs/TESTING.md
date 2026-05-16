@@ -69,6 +69,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/network-blueprint.test.js` | Node1/Node2 and phase-gated multi-node blueprint gates, no-network behavior, boundary booleans, authorization-phrase safety, determinism, mutation isolation. |
 | `tests/network-fixture-preview.test.js` | Offline 5-slot fixture preview, no-socket/no-mint boundary, micro-compliance, micro-consent, analogical model, and no invented node names. |
 | `tests/network-refusal-matrix-preview.test.js` | Partition/rejoin refusal matrix preview, no-socket/no-mint boundary, computed self-proactive checks, micro-compliance, micro-consent, and no topology or authorization drift. |
+| `tests/node0-homebase-state-preview.test.js` | Node0 homebase state preview pure module, player/device identity per Node0-space canon, PAT-7 + SAT-5 local preview registries, local URP active and shared URP locked, all authority flags false, deterministic frozen output, fresh-object-per-call, and no-runtime/no-filesystem boundary. |
 | `tests/node0-local-urp-proof.test.js` | Local URP proof boundaries. |
 | `tests/node0-self-check.test.js` | Node0 self-check verification surface. |
 | `tests/onboarding.test.js` | Guided CLI/TUI onboarding, inspiration doctrine, preview-only boundaries. |
@@ -81,6 +82,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/review-gate.test.js` | PR class and proof-scope guardrails. |
 | `tests/safety-report.test.js` | Safety report preview and non-certification language. |
 | `tests/sat-placeholder.test.js` | Receipt verifier dispatch, gateway handoff checks, exact consent, fail-closed behavior. |
+| `tests/shared-urp-world-preview.test.js` | Shared URP world preview pure module, locked-preview-only status, ghost-hold nodes 1-4, empty resource/skill/manifest/impact arrays, all authority flags false, deterministic frozen output, fresh-object-per-call, and no-runtime/no-filesystem boundary. |
 | `tests/step7-consent-refusal-preview.test.js` | Step 7 consent refusal preview, broad-consent rejection, no observed-text echo, micro-compliance, micro-consent, no-CLI/no-mint boundary, and fail-closed malformed input. |
 
 ## Smoke checks
