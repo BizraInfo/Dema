@@ -112,6 +112,7 @@ These are working design artifacts. They are not the public onboarding path.
 - [superpowers/specs/2026-05-14-effectcap-invariant/01_specification.md](superpowers/specs/2026-05-14-effectcap-invariant/01_specification.md) — working artifact for pre-runtime EffectCap invariants.
 - [superpowers/specs/2026-05-15-bizra-steer-vector-v0.1/01_specification.md](superpowers/specs/2026-05-15-bizra-steer-vector-v0.1/01_specification.md) — working artifact for steer-vector boundaries.
 - [superpowers/specs/2026-05-16-integration-foundry-registry/01_specification.md](superpowers/specs/2026-05-16-integration-foundry-registry/01_specification.md) — Working artifact for the external pattern registry preview (one module of a proposed Integration Foundry); maps 11 external giants → existing BIZRA primitives via `GateVerdict` + `MICRO_CONSENT_SHAPE` vocabulary. Bundle includes `02_pseudocode.md`, `03_tdd_anchors.md`, `04_integration_notes.md`.
+- [superpowers/specs/2026-05-16-urp-carrying-cost/01_specification.md](superpowers/specs/2026-05-16-urp-carrying-cost/01_specification.md) — Working artifact for the URP Carrying Cost preview (Harberger/COST sibling spec); 8 shareable types vs 8 forbidden private types; type-enforced refusal of private data; license-challenge-not-forced-purchase v0.1 invariant; closes 1 of 3 blockers on the integration-foundry-registry's `harberger_cost` entry. Bundle includes `02_pseudocode.md`, `03_tdd_anchors.md`, `04_integration_notes.md`.
 
 ## Rule for future docs
 
