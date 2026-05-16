@@ -65,6 +65,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/melae-preview.test.js` | MELAE/SAPE preview scoring, fail-closed probe validation, SNR/Ihsan floor gates, and no-runtime boundary. |
 | `tests/memory.test.js` | Local memory/profile reading and safe missing-state behavior. |
 | `tests/model-corpus-manifest-preview.test.js` | Model corpus manifest preview for Node0 multi-model conversation assets, no raw ingestion/upload/tuning/memory mutation/node sharing, source allowlist, data tiers, and fail-closed malformed manifests. |
+| `tests/model-role-router-preview.test.js` | Model role router preview v0.1: schema, mode, 6 roles matching existing model-routing.js taxonomy (coding, governance, reasoning, fast, embedding, vision), per-role effects_declared + effects_denied + consent_field_required + sat_verdict_required, every role denies write/execute/call, local_only + prompt_invocation_allowed false, recommendation passthrough shape, boundary all 9 flags false, deterministic + frozen, fresh-object-per-call, pure-module imports, missing-providers fallback, boundary-invariant lint passes (24/24 modules). |
 | `tests/mission-draft.test.js` | Intent-to-mission draft conversion and consent preview embedding. |
 | `tests/mcp-blueprint.test.js` | MCP integration blueprint, no-MCP-call boundary, credential handling, and deterministic output. |
 | `tests/models.test.js` | Local model inventory and no-inference behavior. |

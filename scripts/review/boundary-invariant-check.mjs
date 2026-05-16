@@ -10,6 +10,7 @@ const REPO_ROOT = join(__dirname, "..", "..");
 const PREVIEW_DIRS = [
   "packages/consent/src",
   "packages/core/src",
+  "packages/models/src",
   "packages/tasks/src",
   "packages/verifier/src"
 ];
@@ -60,7 +61,9 @@ const AUTHORITY_FLAGS = new Set([
   "a2a_network_call_made",
   "hook_executed",
   "automation_run",
-  "contract_executed"
+  "contract_executed",
+  "prompt_invoked",
+  "model_started"
 ]);
 
 function listPreviewModules(root = REPO_ROOT) {
