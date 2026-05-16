@@ -54,7 +54,13 @@ const AUTHORITY_FLAGS = new Set([
   "ci_modified",
   "shared_urp_publish",
   "cross_node_receipt_emission",
-  "sat_permit_enabled"
+  "sat_permit_enabled",
+  "authority_imported",
+  "mcp_server_invoked",
+  "a2a_network_call_made",
+  "hook_executed",
+  "automation_run",
+  "contract_executed"
 ]);
 
 function listPreviewModules(root = REPO_ROOT) {
