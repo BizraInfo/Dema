@@ -125,7 +125,7 @@ The "production ready" target is layered. Each layer must close before the next 
 | Step | State | Truth |
 |---|---|---|
 | C1 Node1 onboarding kit | NOT STARTED | ASPIRATIONAL |
-| C2 First Node0↔Node1 federation handshake | NOT STARTED | ASPIRATIONAL |
+| C2 First inter-node handshake (Node0 ↔ next-node, federation-preview only) | NOT STARTED | ASPIRATIONAL |
 | C3 Cross-node receipt verification | NOT STARTED | ASPIRATIONAL |
 
 **Layer C status: GATED on Layer B complete + multi-operator validation framework.**
