@@ -66,7 +66,18 @@ const AUTHORITY_FLAGS = new Set([
   "model_started",
   "secret_persisted_on_phone",
   "phone_authority_granted",
-  "socket_opened"
+  "socket_opened",
+  "credential_persisted",
+  "remote_access_granted",
+  "authority_transferred",
+  "cross_node_handoff_executed",
+  "skill_activated",
+  "skill_invoked",
+  "forced_transfer_executed",
+  "private_memory_accessed",
+  "license_issued",
+  "offer_published",
+  "ownership_transferred"
 ]);
 
 function listPreviewModules(root = REPO_ROOT) {
