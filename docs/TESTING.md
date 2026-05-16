@@ -38,6 +38,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/amana-contracts-preview.test.js` | Amana contract registry preview, external-code exclusion, path overlap, CLI output, and Step 7 blocked posture. |
 | `tests/approval-gate.test.js` | Approval gate and exact-consent safety behavior. |
 | `tests/behavioral-modulation.test.js` | Consent-bound visible guidance modulation preview, forbidden shaping rejection, evidence linkage, and CLI output. |
+| `tests/boundary-invariant-check.test.js` | Cross-package boundary-invariant lint: walks all packages/*/src/*-preview.js, asserts no authority-flag-named key is set to `true` via conservative AUTHORITY_FLAGS allowlist, static-source scan only, schema-tagged read-only audit, no false positives on commentary or non-authority keys. |
 | `tests/consent-hash-preview.test.js` | ConsentHashTable preview hashing, exact lookup, revocation, expiry, no-authority boundary, and pure-module scope. |
 | `tests/consent-planner.test.js` | Micro-consent planning, permission extraction, unsafe file filtering, JSON/human CLI output. |
 | `tests/corpus-benchmark-schema-preview.test.js` | Corpus benchmark schema preview for metadata-only evaluation contracts, SNR/SAPE/Proof-of-Truth axes, D3/D4 eval-only quarantine/rejection, raw-content rejection, and no-runtime boundary. |
