@@ -86,6 +86,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/sat-placeholder.test.js` | Receipt verifier dispatch, gateway handoff checks, exact consent, fail-closed behavior. |
 | `tests/shared-urp-world-preview.test.js` | Shared URP world preview pure module, locked-preview-only status, ghost-hold nodes 1-4, empty resource/skill/manifest/impact arrays, all authority flags false, deterministic frozen output, fresh-object-per-call, and no-runtime/no-filesystem boundary. |
 | `tests/step7-consent-refusal-preview.test.js` | Step 7 consent refusal preview, broad-consent rejection, no observed-text echo, micro-compliance, micro-consent, no-CLI/no-mint boundary, and fail-closed malformed input. |
+| `tests/system-lifecycle-integration.test.js` | End-to-end composition test across 8 organs (consent_plan → consent_hash_table → lookup → homebase_state → shared_urp_world → ihsan_floor → evidence_chain → process_value → external_pattern_registry); asserts schema integrity at each stage, consent-table self-verification, ihsan floor pass/fail behavior, registry binding to existing primitives, every boundary flag stays false across all 8 organs, full-composition determinism, and fresh-frozen objects per builder call. |
 
 ## Smoke checks
 
