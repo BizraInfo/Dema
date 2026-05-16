@@ -85,7 +85,7 @@ Gate sequence for this branch (current state vs Level 4 mandate):
 ### 3.2 Static-source review
 
 - **Truncation guard:** `~/.claude/settings.json` line 330 = `head -c 4000` (per ADR-007 Companion change #1 resolution at `e64b9c3`)
-- **Topology canon:** `canon-check.mjs` finds 0 forbidden phrases (Node3 / Node4 capital-N would fail; ADR-007 lint corrected those in design docs)
+- **Topology canon:** `canon-check.mjs` finds 0 forbidden phrases (capital-N references to ghost-hold nodes beyond the canonical Node1/Node2 pair would fail; the topology canon allowlist is enforced at every commit)
 - **Authorization discipline:** `canon-check.mjs` finds 0 forbidden authorization phrases
 
 ### 3.3 Schema integrity
