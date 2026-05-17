@@ -2,6 +2,7 @@
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
 import { formatStatus } from "../../../packages/core/src/status.js";
 import { buildNode0StatePreview } from "../../../packages/core/src/state.js";
+import { buildProfileFoundationPreview } from "../../../packages/core/src/profiles.js";
 import { previewBoundedDiagnostic } from "../../../packages/core/src/mission.js";
 import {
   buildMissionDraftPreview,
@@ -216,6 +217,11 @@ async function dispatch(argv) {
 
     case "state": {
       console.log(JSON.stringify(buildNode0StatePreview(), null, 2));
+      return;
+    }
+
+    case "profiles": {
+      console.log(JSON.stringify(buildProfileFoundationPreview(), null, 2));
       return;
     }
 
