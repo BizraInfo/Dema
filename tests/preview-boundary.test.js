@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildPreviewBoundary,
   isCanonicalBoundary,
+  isCanonicalBoundaryShape,
   PREVIEW_BOUNDARY_CANONICAL_KEYS
 } from "../packages/core/src/preview-boundary.js";
 
@@ -106,6 +107,35 @@ test("isCanonicalBoundary rejects null/undefined/non-object", () => {
 test("Canonical key set has no duplicates", () => {
   const set = new Set(EXPECTED_KEYS);
   assert.equal(set.size, EXPECTED_KEYS.length);
+});
+
+test("isCanonicalBoundaryShape accepts canonical-shape objects without requiring freeze", () => {
+  // JSON.parse'd boundary: non-frozen, but canonical key set + all-false
+  const fromJSON = JSON.parse(JSON.stringify(buildPreviewBoundary()));
+  assert.equal(Object.isFrozen(fromJSON), false, "JSON round-trip strips freeze");
+  assert.equal(isCanonicalBoundaryShape(fromJSON), true,
+    "shape-only verifier must accept non-frozen canonical inputs");
+});
+
+test("isCanonicalBoundaryShape still rejects extra keys, missing keys, truthy values", () => {
+  const extra = JSON.parse(JSON.stringify({ ...buildPreviewBoundary(), sneaky: false }));
+  assert.equal(isCanonicalBoundaryShape(extra), false);
+
+  const partial = Object.fromEntries(EXPECTED_KEYS.slice(0, 15).map((k) => [k, false]));
+  assert.equal(isCanonicalBoundaryShape(partial), false);
+
+  const truthyValue = Object.fromEntries(EXPECTED_KEYS.map((k) => [k, k === "filesystem_write_performed"]));
+  assert.equal(isCanonicalBoundaryShape(truthyValue), false);
+});
+
+test("isCanonicalBoundary remains strict (rejects non-frozen even if shape is canonical)", () => {
+  // Confirm the two functions diverge precisely on freeze: same shape, different freeze status
+  const frozen = buildPreviewBoundary();
+  const unfrozen = JSON.parse(JSON.stringify(frozen));
+  assert.equal(isCanonicalBoundary(frozen), true);
+  assert.equal(isCanonicalBoundary(unfrozen), false, "strict variant requires freeze");
+  assert.equal(isCanonicalBoundaryShape(frozen), true);
+  assert.equal(isCanonicalBoundaryShape(unfrozen), true, "shape variant accepts both");
 });
 
 test("Canonical keys follow naming convention (snake_case, no caps, ends in performed/used/included/loaded/executed/invoked/advanced/collected/minted)", () => {

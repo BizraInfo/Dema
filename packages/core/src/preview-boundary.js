@@ -41,9 +41,8 @@ export function buildPreviewBoundary() {
   return Object.freeze(Object.fromEntries(entries));
 }
 
-export function isCanonicalBoundary(boundary) {
+function checkCanonicalShape(boundary) {
   if (!boundary || typeof boundary !== "object") return false;
-  if (!Object.isFrozen(boundary)) return false;
   const actualKeys = Object.keys(boundary).sort();
   const expectedKeys = [...CANONICAL_BOUNDARY_KEYS].sort();
   if (actualKeys.length !== expectedKeys.length) return false;
@@ -52,6 +51,20 @@ export function isCanonicalBoundary(boundary) {
     if (boundary[expectedKeys[i]] !== false) return false;
   }
   return true;
+}
+
+// Strict: structure + values + freeze. Use on in-process emitter output.
+export function isCanonicalBoundary(boundary) {
+  if (!checkCanonicalShape(boundary)) return false;
+  if (!Object.isFrozen(boundary)) return false;
+  return true;
+}
+
+// Shape-only: structure + values, no freeze requirement. Use on boundaries
+// recovered from JSON round-trip (e.g. CLI subprocess output, persisted
+// receipts), where freeze cannot survive serialization.
+export function isCanonicalBoundaryShape(boundary) {
+  return checkCanonicalShape(boundary);
 }
 
 export const PREVIEW_BOUNDARY_CANONICAL_KEYS = CANONICAL_BOUNDARY_KEYS;
