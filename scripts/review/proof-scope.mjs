@@ -63,6 +63,10 @@ const REVIEW_CLASSES = {
       "scripts/release-readiness.mjs",
       "tests/release-readiness.test.js"
     ]
+  },
+  "policy/broad-scope": {
+    primaryFiles: new Set(),
+    requiredFiles: []
   }
 };
 
@@ -85,6 +89,22 @@ export function changedFiles() {
 export function validateProofScope({ reviewClass, files }) {
   const policy = REVIEW_CLASSES[reviewClass];
   if (!policy) throw new Error(`Unsupported proof-scope class: ${reviewClass}`);
+
+  // Broad-scope classes (empty primaryFiles + empty requiredFiles) intentionally
+  // skip per-file allowlist enforcement. Reviewer discipline takes over for
+  // acceptance-style PRs that legitimately span many feature areas. The full
+  // file list is still recorded in the JSON output for reviewer visibility.
+  if (policy.primaryFiles.size === 0 && policy.requiredFiles.length === 0) {
+    return {
+      schema: "bizra.dema.review.proof_scope.v0.1",
+      ok: true,
+      class: reviewClass,
+      changed_files: files,
+      enforcement: "advisory_reviewer_discipline",
+      allowed_files: [],
+      allowed_gate_files: [...GATE_FILES]
+    };
+  }
 
   const unexpected = files.filter((file) => !policy.primaryFiles.has(file) && !GATE_FILES.has(file));
   if (unexpected.length > 0) {

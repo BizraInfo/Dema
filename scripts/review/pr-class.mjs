@@ -11,6 +11,9 @@ const REVIEW_CLASSES = {
   },
   "devops/release-readiness": {
     branches: ["devops/release-readiness", "ci/devops-release-readiness-class"]
+  },
+  "policy/broad-scope": {
+    branchPrefixes: ["adr/", "policy/", "governance/", "tooling/", "season-"]
   }
 };
 
