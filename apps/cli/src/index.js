@@ -2,9 +2,15 @@
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
 import { formatStatus } from "../../../packages/core/src/status.js";
 import { buildNode0StatePreview } from "../../../packages/core/src/state.js";
-import { buildProfileFoundationPreview } from "../../../packages/core/src/profiles.js";
+import {
+  buildProfileFoundationPreview,
+  buildProfileFoundationSummary
+} from "../../../packages/core/src/profiles.js";
 import { buildConsentCardPreview } from "../../../packages/core/src/consent-card-preview.js";
-import { buildMissionLoopPreview } from "../../../packages/core/src/mission-loop-preview.js";
+import {
+  buildMissionLoopPreview,
+  buildMissionLoopSummary
+} from "../../../packages/core/src/mission-loop-preview.js";
 import { buildEvidenceChainEventPreviewFromInputs } from "../../../packages/core/src/evidence-chain-event-preview.js";
 import { buildLocalLLMRouterPreview } from "../../../packages/core/src/local-llm-router-preview.js";
 import { previewBoundedDiagnostic } from "../../../packages/core/src/mission.js";
@@ -225,7 +231,10 @@ async function dispatch(argv) {
     }
 
     case "profiles": {
-      console.log(JSON.stringify(buildProfileFoundationPreview(), null, 2));
+      const preview = argv.includes("--summary")
+        ? buildProfileFoundationSummary()
+        : buildProfileFoundationPreview();
+      console.log(JSON.stringify(preview, null, 2));
       return;
     }
 
@@ -235,7 +244,10 @@ async function dispatch(argv) {
     }
 
     case "mission-loop": {
-      console.log(JSON.stringify(buildMissionLoopPreview(), null, 2));
+      const preview = argv.includes("--summary")
+        ? buildMissionLoopSummary()
+        : buildMissionLoopPreview();
+      console.log(JSON.stringify(preview, null, 2));
       return;
     }
 

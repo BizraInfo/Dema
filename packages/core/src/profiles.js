@@ -189,3 +189,31 @@ export function buildProfileFoundationPreview(options = {}) {
     boundary: buildBoundary()
   });
 }
+
+// Summary view of profile foundation — used by `dema profiles --summary`.
+// Collapses 5 nested actor structures (~205 lines pretty-printed) to a
+// ~25-line view that preserves schema-tagged identity for each actor and
+// keeps the canonical 16-key top-level boundary intact.
+//
+// Machine-grep contract preserved:
+//   - schema field tagged with `_summary` suffix so consumers can distinguish
+//   - truth_label preserved verbatim
+//   - boundary object is the same canonical 16-key all-false object
+//   - actor presence visible via per-role schema string (drift-detectable)
+export function buildProfileFoundationSummary(options = {}) {
+  const full = buildProfileFoundationPreview(options);
+  return Object.freeze({
+    schema: "bizra.dema.profile_foundation_summary.v0.1",
+    truth_label: full.truth_label,
+    mode: "summary",
+    source_schema: full.schema,
+    actors: Object.freeze({
+      user: full.user.schema,
+      pat: full.pat.schema,
+      sat: full.sat.schema,
+      mission: full.mission.schema
+    }),
+    context_capsule_schema: full.context_capsule.schema,
+    boundary: full.boundary
+  });
+}

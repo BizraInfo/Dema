@@ -159,4 +159,37 @@ export function buildMissionLoopPreview({
   });
 }
 
+// Summary view of mission loop — used by `dema mission-loop --summary`.
+// Collapses 6 nested child preview structures (~374 lines pretty-printed)
+// to a ~28-line view that preserves lifecycle status, current phase, and
+// the canonical 16-key top-level boundary.
+//
+// Machine-grep contract preserved:
+//   - schema field tagged with `_summary` suffix so consumers can distinguish
+//   - preview_lifecycle_status pinned to "HOLD" identically to the full view
+//   - boundary object is the same canonical 16-key all-false object
+//   - child schemas/statuses visible (drift-detectable per child)
+export function buildMissionLoopSummary(options = {}) {
+  const full = buildMissionLoopPreview(options);
+  return Object.freeze({
+    schema: "bizra.dema.mission_loop_summary.v0.1",
+    truth_label: full.truth_label,
+    mode: "summary",
+    source_schema: full.schema,
+    preview_lifecycle_status: full.preview_lifecycle_status,
+    lifecycle_phase: full.lifecycle_phase,
+    next_safe_action: full.next_safe_action,
+    children: Object.freeze({
+      state_load: full.state_load.schema,
+      profile_foundation: full.profile_foundation.schema,
+      consent_card: full.consent_card.schema,
+      local_model_invocation_status: full.local_model_invocation.invocation_status,
+      evidence_chain_event_status: full.evidence_chain_event.status,
+      receipt_preview_status: full.receipt_preview.status
+    }),
+    consent_decision_recorded: full.consent_decision_recorded,
+    boundary: full.boundary
+  });
+}
+
 export const MISSION_LOOP_LIFECYCLE_PHASES = LIFECYCLE_PHASES;
