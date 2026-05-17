@@ -5,6 +5,7 @@ import { buildNode0StatePreview } from "../../../packages/core/src/state.js";
 import { buildProfileFoundationPreview } from "../../../packages/core/src/profiles.js";
 import { buildConsentCardPreview } from "../../../packages/core/src/consent-card-preview.js";
 import { buildMissionLoopPreview } from "../../../packages/core/src/mission-loop-preview.js";
+import { buildEvidenceChainEventPreviewFromInputs } from "../../../packages/core/src/evidence-chain-event-preview.js";
 import { previewBoundedDiagnostic } from "../../../packages/core/src/mission.js";
 import {
   buildMissionDraftPreview,
@@ -234,6 +235,11 @@ async function dispatch(argv) {
 
     case "mission-loop": {
       console.log(JSON.stringify(buildMissionLoopPreview(), null, 2));
+      return;
+    }
+
+    case "evidence-event": {
+      console.log(JSON.stringify(buildEvidenceChainEventPreviewFromInputs(), null, 2));
       return;
     }
 
