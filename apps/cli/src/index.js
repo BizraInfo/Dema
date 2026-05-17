@@ -3,6 +3,7 @@ import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-ada
 import { formatStatus } from "../../../packages/core/src/status.js";
 import { buildNode0StatePreview } from "../../../packages/core/src/state.js";
 import { buildProfileFoundationPreview } from "../../../packages/core/src/profiles.js";
+import { buildConsentCardPreview } from "../../../packages/core/src/consent-card-preview.js";
 import { previewBoundedDiagnostic } from "../../../packages/core/src/mission.js";
 import {
   buildMissionDraftPreview,
@@ -222,6 +223,11 @@ async function dispatch(argv) {
 
     case "profiles": {
       console.log(JSON.stringify(buildProfileFoundationPreview(), null, 2));
+      return;
+    }
+
+    case "consent-card": {
+      console.log(JSON.stringify(buildConsentCardPreview(), null, 2));
       return;
     }
 

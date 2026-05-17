@@ -43,6 +43,7 @@ Dema does not own dangerous execution. It talks to adapters. Adapters talk to go
 | `dema status`, `dema status:json` | `packages/node-adapter`, `packages/core/status.js` | Reads adapter status. |
 | `dema state` | `packages/core/state.js` | Emits Node0 state preview JSON (`bizra.dema.node0_state.v0.1`, truth label `NODE0_LOCAL_SEED`); preview-only, no adapter call, no runtime. |
 | `dema profiles` | `packages/core/profiles.js` | Emits Profile Foundation Preview (`bizra.dema.profile_foundation.v0.1`): UserProfile / PATProfile / SATProfile / MissionProfile / ContextCapsule. Preview-only; ContextCapsule includes whitelisted fields only (no raw conversation, no full evidence payload). |
+| `dema consent-card` | `packages/core/consent-card-preview.js` | Emits Consent Card Preview (`bizra.dema.consent_card_preview.v0.1`): mission + PAT proposal + SAT-style verdict + allowed/blocked effects + decision options. Required blocked effects (runtime, federation, mint, Node1/2 connection, raw scan, public network) are pinned non-overrideable; caller can ADD blocks but never REMOVE. SAT verdict status pinned `policy_preview`. Receipt preview status `not_minted`. Preview-only, deep-frozen, exhaustively-false boundary. |
 | `dema today` | `packages/core/today.js` | Records local continuity, not runtime pulse. |
 | `dema doctor` | CLI readiness predicates | Exits nonzero when safety gates fail. |
 | `dema ambient`, `dema ambient:json` | `packages/core/src/ambient.js` | Preview-only boundary report. |
