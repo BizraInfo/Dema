@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
 import { formatStatus } from "../../../packages/core/src/status.js";
+import { buildNode0StatePreview } from "../../../packages/core/src/state.js";
 import { previewBoundedDiagnostic } from "../../../packages/core/src/mission.js";
 import {
   buildMissionDraftPreview,
@@ -210,6 +211,11 @@ async function dispatch(argv) {
     case "status:json": {
       const status = await adapter.status();
       console.log(JSON.stringify(status, null, 2));
+      return;
+    }
+
+    case "state": {
+      console.log(JSON.stringify(buildNode0StatePreview(), null, 2));
       return;
     }
 

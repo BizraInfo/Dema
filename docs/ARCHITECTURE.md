@@ -41,6 +41,7 @@ Dema does not own dangerous execution. It talks to adapters. Adapters talk to go
 | `dema onboard` | `packages/core/src/onboarding.js` | Preview-only guide; no state change. |
 | `dema setup` | `packages/installer` | Creates local skeleton only. |
 | `dema status`, `dema status:json` | `packages/node-adapter`, `packages/core/status.js` | Reads adapter status. |
+| `dema state` | `packages/core/state.js` | Emits Node0 state preview JSON (`bizra.dema.node0_state.v0.1`, truth label `NODE0_LOCAL_SEED`); preview-only, no adapter call, no runtime. |
 | `dema today` | `packages/core/today.js` | Records local continuity, not runtime pulse. |
 | `dema doctor` | CLI readiness predicates | Exits nonzero when safety gates fail. |
 | `dema ambient`, `dema ambient:json` | `packages/core/src/ambient.js` | Preview-only boundary report. |

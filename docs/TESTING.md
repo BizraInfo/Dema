@@ -83,6 +83,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/safety-report.test.js` | Safety report preview and non-certification language. |
 | `tests/sat-placeholder.test.js` | Receipt verifier dispatch, gateway handoff checks, exact consent, fail-closed behavior. |
 | `tests/step7-consent-refusal-preview.test.js` | Step 7 consent refusal preview, broad-consent rejection, no observed-text echo, micro-compliance, micro-consent, no-CLI/no-mint boundary, and fail-closed malformed input. |
+| `tests/node0-state-preview.test.js` | Node0 state preview (`dema state --json`): canonical schema + truth label `NODE0_LOCAL_SEED`, all runtime/federation/mint boundaries pinned false, PAT/SAT ownership split, exhaustively-false boundary object, deep-frozen output. |
 
 ## Smoke checks
 
