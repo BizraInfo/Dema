@@ -22,11 +22,20 @@ const PROFILE_SCHEMAS = {
 const REQUIRED_BOUNDARY_FALSE_KEYS = [
   "filesystem_write_performed",
   "network_used",
-  "runtime_execution",
-  "chain_head_advanced",
-  "receipt_minted",
+  "runtime_execution_performed",
+  "model_loaded",
+  "model_invocation_performed",
+  "prompt_executed",
+  "external_call_performed",
+  "raw_corpus_scan_performed",
   "raw_data_included",
-  "federation_invoked"
+  "tool_executed",
+  "chain_advance_performed",
+  "receipt_mint_performed",
+  "federation_invoked",
+  "node_connection_performed",
+  "public_network_used",
+  "consent_collected"
 ];
 
 function assertExhaustiveFalseBoundary(boundary, label) {
@@ -217,6 +226,54 @@ test("All builders truth-label NODE0_LOCAL_SEED — none overclaim active runtim
   for (const b of builders) {
     assert.equal(b.truth_label, "NODE0_LOCAL_SEED", `${b.schema} must label NODE0_LOCAL_SEED`);
   }
+});
+
+test("ADVERSARIAL: caller cannot flip SAT user_control via any input path", () => {
+  // SAT user_control=false is a constitutional invariant. The SAT builder
+  // takes no input, so the only attack surface is post-construction
+  // mutation. Verify frozen.
+  const sat = buildSATProfile();
+  assert.equal(sat.user_control, false);
+  let threw = false;
+  try {
+    sat.user_control = true;
+  } catch (e) {
+    threw = true;
+  }
+  assert.equal(sat.user_control, false, "user_control must stay false after attempted mutation");
+});
+
+test("ADVERSARIAL: PAT can_execute and can_mint stay false even after attempted mutation", () => {
+  const pat = buildPATProfile();
+  assert.equal(pat.authority.can_execute, false);
+  assert.equal(pat.authority.can_mint, false);
+  let threw = false;
+  try {
+    pat.authority.can_execute = true;
+    pat.authority.can_mint = true;
+  } catch (e) {
+    threw = true;
+  }
+  assert.equal(pat.authority.can_execute, false);
+  assert.equal(pat.authority.can_mint, false);
+});
+
+test("ADVERSARIAL: ContextCapsule rejects unknown fields injected through profiles", () => {
+  // Caller might construct a fake userProfile-shaped object with extra fields
+  // hoping they leak through the capsule view. Verify only the selected
+  // fields land in capsule.user.
+  const fakeUser = Object.freeze({
+    schema: "fake.user.v0.1",
+    role: "sovereign_operator",
+    identity: Object.freeze({ name: "AttackerName" }),
+    secret_token: "SHOULD_NOT_LEAK",
+    private_key: "ALSO_NOT_LEAK"
+  });
+  const capsule = buildContextCapsule({ userProfile: fakeUser });
+  assert.equal(capsule.user.schema, "fake.user.v0.1");
+  assert.equal(capsule.user.operator, "AttackerName");
+  assert.equal("secret_token" in capsule.user, false);
+  assert.equal("private_key" in capsule.user, false);
 });
 
 test("Boundary objects across all builders are exhaustively false and frozen", () => {

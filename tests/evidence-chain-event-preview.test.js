@@ -12,15 +12,20 @@ import { buildMissionLoopPreview } from "../packages/core/src/mission-loop-previ
 const REQUIRED_BOUNDARY_FALSE_KEYS = [
   "filesystem_write_performed",
   "network_used",
-  "runtime_execution",
+  "runtime_execution_performed",
+  "model_loaded",
   "model_invocation_performed",
-  "federation_invoked",
-  "canonical_minting",
+  "prompt_executed",
+  "external_call_performed",
+  "raw_corpus_scan_performed",
+  "raw_data_included",
+  "tool_executed",
   "chain_advance_performed",
   "receipt_mint_performed",
+  "federation_invoked",
   "node_connection_performed",
-  "raw_data_included",
-  "public_network"
+  "public_network_used",
+  "consent_collected"
 ];
 
 function assertExhaustiveFalseBoundary(boundary) {

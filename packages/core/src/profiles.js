@@ -11,16 +11,10 @@
 //   ContextCapsule includes selective whitelisted fields only — never raw
 //   conversation, never full-corpus injection.
 
+import { buildPreviewBoundary } from "./preview-boundary.js";
+
 function buildBoundary() {
-  return Object.freeze({
-    filesystem_write_performed: false,
-    network_used: false,
-    runtime_execution: false,
-    chain_head_advanced: false,
-    receipt_minted: false,
-    raw_data_included: false,
-    federation_invoked: false
-  });
+  return buildPreviewBoundary();
 }
 
 export function buildUserProfile({ operator = "MoMo", node = "Node0" } = {}) {

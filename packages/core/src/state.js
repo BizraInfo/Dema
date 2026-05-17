@@ -4,6 +4,8 @@
 // and truth_label NODE0_LOCAL_SEED. All runtime / federation / mint / public
 // boundaries are pinned to false. Source-of-truth for Node0 + DEMA Goal v0.2.
 
+import { buildPreviewBoundary } from "./preview-boundary.js";
+
 const NODE0_STATE_TRUTH_LABEL = "NODE0_LOCAL_SEED";
 
 export function buildNode0StatePreview({ operator = "MoMo" } = {}) {
@@ -38,13 +40,6 @@ export function buildNode0StatePreview({ operator = "MoMo" } = {}) {
       status: "locked_preview"
     }),
     next_safe_action: "open_homebase_view",
-    boundary: Object.freeze({
-      filesystem_write_performed: false,
-      network_used: false,
-      runtime_execution: false,
-      chain_head_advanced: false,
-      receipt_minted: false,
-      consent_collected: false
-    })
+    boundary: buildPreviewBoundary()
   });
 }

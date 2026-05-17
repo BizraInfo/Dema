@@ -61,3 +61,38 @@ test("buildNode0StatePreview defaults operator to MoMo", () => {
   const state = buildNode0StatePreview();
   assert.equal(state.operator, "MoMo");
 });
+
+test("buildNode0StatePreview ADVERSARIAL: caller cannot mutate frozen output", () => {
+  const state = buildNode0StatePreview();
+  let threw = false;
+  try {
+    state.runtime.autonomous_daemon = true;
+  } catch (e) {
+    threw = true;
+  }
+  // strict mode throws; non-strict silently fails. Either way, value unchanged.
+  assert.equal(state.runtime.autonomous_daemon, false,
+    "mutation attempt must not change frozen value");
+});
+
+test("buildNode0StatePreview ADVERSARIAL: caller cannot inject boundary override", () => {
+  // The function takes a single operator string; no path exists to inject
+  // boundary keys. Confirm the boundary key set is exactly canonical 16.
+  const state = buildNode0StatePreview();
+  const keys = Object.keys(state.boundary).sort();
+  assert.equal(keys.length, 16, "boundary must have exactly 16 canonical keys");
+  for (const v of Object.values(state.boundary)) {
+    assert.equal(v, false, "every boundary value must be false");
+  }
+});
+
+test("buildNode0StatePreview ADVERSARIAL: non-string operator coerced safely", () => {
+  // Schema requires operator to be displayable; non-strings stored as-is
+  // but no execution path uses them as code/HTML/SQL — they're just labels.
+  const state = buildNode0StatePreview({ operator: 42 });
+  // value preserved verbatim; not interpreted
+  assert.equal(state.operator, 42);
+  // boundary still intact
+  assert.equal(state.boundary.runtime_execution_performed, false);
+  assert.equal(state.runtime.autonomous_daemon, false);
+});

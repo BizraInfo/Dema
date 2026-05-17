@@ -23,6 +23,7 @@
 // Operating law applied: Evidence before model output.
 
 import { buildMissionLoopPreview } from "./mission-loop-preview.js";
+import { buildPreviewBoundary } from "./preview-boundary.js";
 
 const EVENT_STATUS_VALUES = Object.freeze([
   "not_prepared",
@@ -40,19 +41,7 @@ const REQUIRED_BLOCKED_EFFECTS = Object.freeze([
 ]);
 
 function buildBoundary() {
-  return Object.freeze({
-    filesystem_write_performed: false,
-    network_used: false,
-    runtime_execution: false,
-    model_invocation_performed: false,
-    federation_invoked: false,
-    canonical_minting: false,
-    chain_advance_performed: false,
-    receipt_mint_performed: false,
-    node_connection_performed: false,
-    raw_data_included: false,
-    public_network: false
-  });
+  return buildPreviewBoundary();
 }
 
 function isApprovedPreview(missionLoopPreview) {

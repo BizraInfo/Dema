@@ -10,12 +10,20 @@ import {
 const REQUIRED_BOUNDARY_FALSE_KEYS = [
   "filesystem_write_performed",
   "network_used",
-  "runtime_execution",
-  "chain_head_advanced",
-  "receipt_minted",
+  "runtime_execution_performed",
+  "model_loaded",
+  "model_invocation_performed",
+  "prompt_executed",
+  "external_call_performed",
+  "raw_corpus_scan_performed",
   "raw_data_included",
+  "tool_executed",
+  "chain_advance_performed",
+  "receipt_mint_performed",
   "federation_invoked",
-  "canonical_mint_performed"
+  "node_connection_performed",
+  "public_network_used",
+  "consent_collected"
 ];
 
 function assertExhaustiveFalseBoundary(boundary) {
@@ -213,6 +221,6 @@ test("ConsentCard canonical_mint and federation are PINNED FALSE regardless of c
     satVerdict: { status: "PERMIT", canonical_mint: true, federation: true }
   });
   assert.equal(card.canonical_mint, false);
-  assert.equal(card.boundary.canonical_mint_performed, false);
+  assert.equal(card.boundary.receipt_mint_performed, false);
   assert.equal(card.boundary.federation_invoked, false);
 });

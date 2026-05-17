@@ -41,17 +41,10 @@ const DECISION_OPTIONS = Object.freeze([
 
 const REQUIRED_BLOCKED_SET = new Set(REQUIRED_BLOCKED_EFFECTS);
 
+import { buildPreviewBoundary } from "./preview-boundary.js";
+
 function buildBoundary() {
-  return Object.freeze({
-    filesystem_write_performed: false,
-    network_used: false,
-    runtime_execution: false,
-    chain_head_advanced: false,
-    receipt_minted: false,
-    raw_data_included: false,
-    federation_invoked: false,
-    canonical_mint_performed: false
-  });
+  return buildPreviewBoundary();
 }
 
 function selectMissionView(mission) {

@@ -22,6 +22,7 @@
 import { buildNode0StatePreview } from "./state.js";
 import { buildProfileFoundationPreview } from "./profiles.js";
 import { buildConsentCardPreview } from "./consent-card-preview.js";
+import { buildPreviewBoundary } from "./preview-boundary.js";
 
 const LIFECYCLE_PHASES = Object.freeze([
   "ready",
@@ -114,18 +115,7 @@ function buildReceiptPreviewView(phase) {
 }
 
 function buildBoundary() {
-  return Object.freeze({
-    filesystem_write_performed: false,
-    network_used: false,
-    runtime_execution: false,
-    local_model_invoked: false,
-    federation_invoked: false,
-    canonical_minting: false,
-    chain_head_advanced: false,
-    receipt_minted: false,
-    public_network: false,
-    raw_data_included: false
-  });
+  return buildPreviewBoundary();
 }
 
 export function buildMissionLoopPreview({

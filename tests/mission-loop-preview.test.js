@@ -9,14 +9,20 @@ import {
 const REQUIRED_BOUNDARY_FALSE_KEYS = [
   "filesystem_write_performed",
   "network_used",
-  "runtime_execution",
-  "local_model_invoked",
+  "runtime_execution_performed",
+  "model_loaded",
+  "model_invocation_performed",
+  "prompt_executed",
+  "external_call_performed",
+  "raw_corpus_scan_performed",
+  "raw_data_included",
+  "tool_executed",
+  "chain_advance_performed",
+  "receipt_mint_performed",
   "federation_invoked",
-  "canonical_minting",
-  "chain_head_advanced",
-  "receipt_minted",
-  "public_network",
-  "raw_data_included"
+  "node_connection_performed",
+  "public_network_used",
+  "consent_collected"
 ];
 
 function assertExhaustiveFalseBoundary(boundary) {

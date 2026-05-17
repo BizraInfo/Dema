@@ -45,21 +45,10 @@ const ALLOWED_FAMILIES = Object.freeze([
   "other"
 ]);
 
+import { buildPreviewBoundary } from "./preview-boundary.js";
+
 function buildBoundary() {
-  return Object.freeze({
-    filesystem_write_performed: false,
-    network_used: false,
-    runtime_execution: false,
-    model_loaded: false,
-    model_invocation_performed: false,
-    prompt_executed: false,
-    external_call_performed: false,
-    raw_corpus_scan_performed: false,
-    tool_executed: false,
-    chain_advance_performed: false,
-    receipt_minted: false,
-    federation_invoked: false
-  });
+  return buildPreviewBoundary();
 }
 
 function sanitizeModelEntry(entry) {
