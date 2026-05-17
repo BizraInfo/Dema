@@ -6,6 +6,7 @@ import { buildProfileFoundationPreview } from "../../../packages/core/src/profil
 import { buildConsentCardPreview } from "../../../packages/core/src/consent-card-preview.js";
 import { buildMissionLoopPreview } from "../../../packages/core/src/mission-loop-preview.js";
 import { buildEvidenceChainEventPreviewFromInputs } from "../../../packages/core/src/evidence-chain-event-preview.js";
+import { buildLocalLLMRouterPreview } from "../../../packages/core/src/local-llm-router-preview.js";
 import { previewBoundedDiagnostic } from "../../../packages/core/src/mission.js";
 import {
   buildMissionDraftPreview,
@@ -240,6 +241,11 @@ async function dispatch(argv) {
 
     case "evidence-event": {
       console.log(JSON.stringify(buildEvidenceChainEventPreviewFromInputs(), null, 2));
+      return;
+    }
+
+    case "llm-router": {
+      console.log(JSON.stringify(buildLocalLLMRouterPreview(), null, 2));
       return;
     }
 
