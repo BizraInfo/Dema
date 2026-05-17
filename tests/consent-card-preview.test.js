@@ -7,24 +7,7 @@ import {
   CONSENT_CARD_DECISION_OPTIONS
 } from "../packages/core/src/consent-card-preview.js";
 
-const REQUIRED_BOUNDARY_FALSE_KEYS = [
-  "filesystem_write_performed",
-  "network_used",
-  "runtime_execution_performed",
-  "model_loaded",
-  "model_invocation_performed",
-  "prompt_executed",
-  "external_call_performed",
-  "raw_corpus_scan_performed",
-  "raw_data_included",
-  "tool_executed",
-  "chain_advance_performed",
-  "receipt_mint_performed",
-  "federation_invoked",
-  "node_connection_performed",
-  "public_network_used",
-  "consent_collected"
-];
+import { PREVIEW_BOUNDARY_CANONICAL_KEYS as REQUIRED_BOUNDARY_FALSE_KEYS } from "../packages/core/src/preview-boundary.js";
 
 function assertExhaustiveFalseBoundary(boundary) {
   for (const key of REQUIRED_BOUNDARY_FALSE_KEYS) {
