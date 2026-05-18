@@ -119,6 +119,7 @@
     "adr_009_poi_anchor": "docs/06-adr/ADR-009-poi-proof-of-impact-design.md",
     "companion_to": ["node_ordinal_law", "seed_pattern_invariant"]
   },
+  "adr_011_onboarding_consciousness_anchor": "docs/06-adr/ADR-011-onboarding-consciousness-layer.md",
   "law_of_assumption": {
     "version": "v0.1",
     "introduced_at_repo_commit": "pending_this_commit",
