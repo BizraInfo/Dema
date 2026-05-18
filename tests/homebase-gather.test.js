@@ -170,3 +170,44 @@ test("ISSUE-5: gather() pushes informational warning when ~/.dema/memory directo
     await tearDown(home);
   }
 });
+
+test("CANONICAL-PROFILE: gather() reads `preferred_name` per bizra.dema.profile.v0.1 schema", async () => {
+  // Canonical profile schema uses `preferred_name`, not `name`. This test
+  // ensures gather honors the canonical field. Path B fix from 2026-05-18
+  // (the `Welcome.` vs `Welcome back, Mumu.` papercut).
+  const home = await makeHome({
+    profile: {
+      schema: "bizra.dema.profile.v0.1",
+      preferred_name: "Mumu",
+      node: "Node0",
+    },
+  });
+  try {
+    const result = await gather({ home });
+    assert.equal(result.profile.source_present, true);
+    assert.equal(result.profile.name, "Mumu", "gather must surface preferred_name as profile.name");
+    assert.equal(result.profile.node, "Node0");
+  } finally {
+    await tearDown(home);
+  }
+});
+
+test("CANONICAL-PROFILE: when both `preferred_name` and `name` exist, `preferred_name` wins", async () => {
+  // Defensive precedence: canonical schema field beats the workaround field.
+  // Mirrors the in-flight state of Mumu's ~/.dema/profile.json on 2026-05-18
+  // (had both fields after the band-aid edit · canonical must win after Path B).
+  const home = await makeHome({
+    profile: {
+      schema: "bizra.dema.profile.v0.1",
+      preferred_name: "CanonicalName",
+      name: "FallbackName",
+      node: "Node0",
+    },
+  });
+  try {
+    const result = await gather({ home });
+    assert.equal(result.profile.name, "CanonicalName", "preferred_name must take precedence over name");
+  } finally {
+    await tearDown(home);
+  }
+});

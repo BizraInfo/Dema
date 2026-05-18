@@ -51,8 +51,11 @@ function pickString(obj, key) {
 async function readProfile(home, result) {
   try {
     const data = await readJSON(join(home, "profile.json"));
+    // Canonical bizra.dema.profile.v0.1 schema uses `preferred_name`.
+    // Fall back to `name` for non-canonical profiles or test fixtures.
+    const profileName = pickString(data, "preferred_name") ?? pickString(data, "name");
     return {
-      name: pickString(data, "name"),
+      name: profileName,
       node: pickString(data, "node") ?? "Node0",
       source_present: true,
     };
