@@ -1,7 +1,7 @@
 # ADR-010: Interactive TUI Layer · Dep Decision for v0.2 Homebase
 
-**Status:** Proposed
-**Date:** 2026-05-18 (proposed)
+**Status:** Accepted (Option D · zero-dep minimal)
+**Date:** 2026-05-18 (proposed) · 2026-05-18 (accepted ~18:43 GST)
 **Decision makers:** Mumu (Mohamed Beshr)
 **Supersedes:** none
 **Related:** [ADR-001 Dema Is One Face](ADR-001-dema-is-one-face.md), [ADR-002 No Shadow State](ADR-002-no-shadow-state.md), [ADR-005 Operator Actions Require Explicit Consent](ADR-005-operator-actions-require-explicit-consent.md), [ADR-008 Runtime Activation](ADR-008-runtime-activation.md)
@@ -259,23 +259,50 @@ T-13  EPIPE during render exits cleanly (e.g., `dema | head -1`)
 T-14  process.stdout.isTTY=false at dispatch entry falls back to JSON (no render)
 ```
 
-## Decision · pending typed-GO
+## Decision · bound 2026-05-18 ~18:43 GST · Option D
 
-This ADR DOES NOT bind a decision. The decision binds on receipt of an exact-string typed-GO from the operator (Mumu):
-
-```text
-GO: adopt ADR-010 Option <A|B|C|D> for v0.2 homebase interactive layer
-```
-
-Where `<A|B|C|D>` is the chosen option. The operator may also type:
+This ADR bound on receipt of the exact-string typed-GO from Mumu at HEAD
+`baf0ce4` on `season-gap2-summary-flag`:
 
 ```text
-GO: defer ADR-010 · keep v0.1a static frame · revisit at v0.3
+GO: adopt ADR-010 Option D for v0.2 homebase interactive layer
 ```
 
-to explicitly defer the decision. In that case v0.2 ships no homebase interactivity; the visible frame remains operative.
+**Bound option: D · Minimal zero-dep.**
 
-**Until typed-GO is received:** no implementation lands under this ADR. Phase-4 v0.1b is blocked at "design framework set · awaiting decision." Status stays Proposed.
+The v0.2 homebase interactive layer SHALL be implemented as a zero-dep
+extension under the established `tui-formatter.js` convention. The 3
+new modules outlined in §"Implementation outline (Option D)" are the
+target surface. Memory browser `[b]` affordance routes to a subprocess
+spawn (`dema memory list` or equivalent) rather than an in-TUI subscreen
+(deferred to a v0.3 ADR if the operator later requests it).
+
+Two doctrinal corollaries bind alongside the option choice:
+
+1. **Zero-deps doctrine remains binding for the v0.2 surface.** Adding
+   any runtime dep (npm or otherwise) to support the homebase interactive
+   layer requires reopening this ADR or a successor ADR. No silent dep
+   addition through a side channel is permissible.
+
+2. **Implementation under typed-GO.** This ADR adoption binds the FRAMEWORK.
+   The implementation slices themselves require separate typed-GO phrases
+   (per ADR-005 + the Skill Growth Law four-line rule "no skill promotion
+   without receipt"). Acceptable templates:
+
+   ```text
+   GO: implement ADR-010 Option D phase-1 keypress handler
+   GO: implement ADR-010 Option D phase-2 dispatch table
+   GO: implement ADR-010 Option D phase-3 consent prompt
+   GO: implement ADR-010 Option D · full v0.2 slice
+   ```
+
+   The first three are for staged implementation (one module at a time);
+   the fourth is for a single combined slice. Either path is acceptable.
+
+Status was `Proposed` until 2026-05-18 ~18:43 GST. Operator typed the
+above adoption phrase in the conversation that produced commit `baf0ce4`
+(ADR-010 authoring) followed by the acceptance commit that inscribes
+this Decision History entry. Status stays Proposed.
 
 ## Companions
 
