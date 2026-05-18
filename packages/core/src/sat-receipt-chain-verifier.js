@@ -121,7 +121,7 @@ export function verifyReceiptChain({ receipts = [] } = {}) {
       hash,
       prev_hash: prevHash,
       hash_format_valid: hash !== null && HASH_REGEX.test(hash),
-      prev_hash_format_valid: prevHash === null || HASH_REGEX.test(prevHash),
+      prev_hash_format_valid: prevHash === null || prevHash === "genesis" || HASH_REGEX.test(prevHash),
       links_to_previous: false,
       issues: []
     };
