@@ -13,6 +13,10 @@ import {
 } from "../../../packages/core/src/mission-loop-preview.js";
 import { buildEvidenceChainEventPreviewFromInputs } from "../../../packages/core/src/evidence-chain-event-preview.js";
 import { buildLocalLLMRouterPreview } from "../../../packages/core/src/local-llm-router-preview.js";
+import {
+  buildProcessMiningPreview,
+  buildProcessMiningSummary
+} from "../../../packages/core/src/process-mining-preview.js";
 import { previewBoundedDiagnostic } from "../../../packages/core/src/mission.js";
 import {
   buildMissionDraftPreview,
@@ -258,6 +262,14 @@ async function dispatch(argv) {
 
     case "llm-router": {
       console.log(JSON.stringify(buildLocalLLMRouterPreview(), null, 2));
+      return;
+    }
+
+    case "process-mining": {
+      const preview = argv.includes("--summary")
+        ? buildProcessMiningSummary()
+        : buildProcessMiningPreview();
+      console.log(JSON.stringify(preview, null, 2));
       return;
     }
 

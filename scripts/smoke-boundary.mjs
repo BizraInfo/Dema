@@ -38,7 +38,8 @@ const SPINE_COMMANDS = Object.freeze([
   "consent-card",
   "mission-loop",
   "evidence-event",
-  "llm-router"
+  "llm-router",
+  "process-mining"
 ]);
 
 async function checkOne(cmd) {
