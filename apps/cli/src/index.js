@@ -242,11 +242,15 @@ async function dispatch(argv) {
   const command = argv[0] ?? "active";
   const subcommand = argv[1];
 
-  // Homebase TUI v0.1 phase-5 dispatch · 14th canonical spine surface.
-  // Bare `dema` routes to either the homebase TUI (TTY · phase-4) or the
-  // schema-tagged JSON form (non-TTY · --json · DEMA_NO_TUI · NODE_ENV=test).
-  // Until phase-4 lands Ink render, TTY path falls through to the existing
-  // active-kernel interactive shell (preserved · backwards-compat for users).
+  // Homebase TUI v0.1 phases 4+5 dispatch · 14th canonical spine surface.
+  // Bare `dema` routes to either:
+  //   · TTY → ANSI homebase frame (phase-4 · static render · v0.1a)
+  //   · non-TTY / --json / DEMA_NO_TUI / NODE_ENV=test → JSON form (phase-5)
+  // The active-kernel interactive shell remains accessible via explicit
+  // `dema chat` or `dema --interactive` opt-outs (preserved for backwards-compat).
+  // v0.1 ships the STATIC frame · no interactive keypress · no affordance
+  // spawn · operator types subcommands explicitly (e.g., `dema receipts`).
+  // Interactive layer deferred to v0.2 with explicit ADR for the dep decision.
   const isBareInvocation =
     (command === "active" || command === "" || command === "--json") &&
     !argv.includes("--chat") &&
@@ -257,18 +261,24 @@ async function dispatch(argv) {
       !process.stdout.isTTY ||
       Boolean(process.env.DEMA_NO_TUI) ||
       process.env.NODE_ENV === "test";
+    const [{ gather }, { buildHomebasePreview }] = await Promise.all([
+      import("../../../packages/core/src/homebase-gather.js"),
+      import("../../../packages/core/src/homebase-preview.js"),
+    ]);
+    const gathered = await gather();
+    const preview = buildHomebasePreview({ gather: gathered });
     if (wantJson) {
-      const [{ gather }, { buildHomebasePreview }] = await Promise.all([
-        import("../../../packages/core/src/homebase-gather.js"),
-        import("../../../packages/core/src/homebase-preview.js"),
-      ]);
-      const gathered = await gather();
-      const preview = buildHomebasePreview({ gather: gathered });
       process.stdout.write(JSON.stringify(preview, null, 2) + "\n");
       return;
     }
-    // TTY path · no --json/DEMA_NO_TUI/NODE_ENV=test ·
-    // fall through to existing active-kernel interactive shell.
+    // TTY path · render ANSI frame via existing zero-dep formatter.
+    const [{ formatHomebasePreview }, { resolveFormatterOptsFromEnv }] = await Promise.all([
+      import("../../../packages/core/src/tui-formatter.js"),
+      import("../../../packages/core/src/tui-formatter.js"),
+    ]);
+    const opts = resolveFormatterOptsFromEnv(process.env);
+    process.stdout.write(formatHomebasePreview(preview, opts) + "\n");
+    return;
   }
 
   switch (command) {

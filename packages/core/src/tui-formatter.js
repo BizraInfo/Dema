@@ -506,6 +506,134 @@ export function formatProjectStatusPreview(preview, {
   return lines.join("\n");
 }
 
+// Homebase preview formatter — the 14th canonical spine surface render.
+//
+// Renders the schema-tagged bizra.dema.homebase_v0_1.v0.1 preview (from
+// packages/core/src/homebase-preview.js) into the static ANSI homebase frame.
+// This is the TTY render path for bare `dema` invocation per Homebase TUI v0.1
+// phase-4 spec, ZERO new runtime deps · matches the established formatter
+// convention (no Ink / no JSX / no React).
+//
+// v0.1 design discipline:
+//   - Static frame only · NO interactive keypress · NO affordance dispatch.
+//     Affordances are displayed as keyboard hints; the operator types
+//     `dema receipts` (or any subcommand) themselves to act. Interactive
+//     keypress + spawn dispatch deferred to v0.2 with an explicit ADR for
+//     the dep decision (the spec phase_04 §4.5 work is heavy enough to
+//     warrant its own slice).
+//   - 76-column width discipline (matches preview.viewport.cols_target).
+//   - NO_COLOR / TERM=dumb honored via opts (passed in by CLI boundary).
+//   - Pure function · no I/O · no env reads · deterministic given input.
+export function formatHomebasePreview(preview, {
+  noColor = false,
+  termDumb = false,
+  width = 76
+} = {}) {
+  if (!preview || preview.schema !== "bizra.dema.homebase_v0_1.v0.1") {
+    return formatError("Expected bizra.dema.homebase_v0_1.v0.1 input", { noColor, termDumb, width });
+  }
+  const c = chars(termDumb);
+  const lines = [];
+  const h = preview.header || {};
+  const g = preview.greeting || {};
+  const m3 = preview.memory3 || { entries: [], fallback_text: null };
+  const st = preview.status || {};
+  const na = preview.next_action || {};
+  const affs = Array.isArray(preview.affordances) ? preview.affordances : [];
+
+  // Top border + branded header line
+  lines.push(topBorder(width, c));
+  const headerLeft = bold(`DEMA · ${h.node_name ?? "Node0"}`, noColor);
+  const headerRight = dim(`v${h.dema_version ?? "?"}`, noColor);
+  const headerMid = `${dim(c.bullet, noColor)} ${h.date_human_gst ?? "?"} ${dim(c.bullet, noColor)} ${h.time_human_gst ?? "?"}`;
+  lines.push(lineBox(`${headerLeft}  ${headerMid}  ${headerRight}`, { width, c }));
+  lines.push(dividerBox(width, c));
+  lines.push(lineBox("", { width, c }));
+
+  // Greeting
+  const greetingText = typeof g.text === "string" ? g.text : "Welcome.";
+  lines.push(lineBox(bold(greetingText, noColor), { width, c }));
+  lines.push(lineBox("", { width, c }));
+
+  // Memory3 (three things I remember · or fallback)
+  if (m3.fallback_text) {
+    lines.push(lineBox(`${dim(m3.fallback_text, noColor)}`, { width, c }));
+  } else {
+    lines.push(lineBox(bold("Three things I remember:", noColor), { width, c }));
+    const entries = Array.isArray(m3.entries) ? m3.entries : [];
+    for (let i = 0; i < 3; i++) {
+      const e = entries[i];
+      if (e) {
+        const label = (typeof e.summary === "string" && e.summary.length > 0) ? e.summary : (e.name ?? "?");
+        lines.push(lineBox(`  ${dim((i + 1) + ".", noColor)} ${label}`, { width, c }));
+      } else {
+        lines.push(lineBox(`  ${dim((i + 1) + ". —", noColor)}`, { width, c }));
+      }
+    }
+  }
+  lines.push(lineBox("", { width, c }));
+
+  // Status (4 rows: ring · mission · gateway · memory_bar)
+  lines.push(lineBox(bold("Right now:", noColor), { width, c }));
+  if (st.ring) {
+    const barStr = typeof st.ring.bar === "string" ? st.ring.bar : "";
+    lines.push(lineBox(`  ${dim("Node0  ", noColor)}${barStr}  ${st.ring.label ?? ""}`, { width, c }));
+  }
+  if (st.mission) {
+    const icon = st.mission.icon ?? (st.mission.label === "active" ? c.circle_on : c.circle_off);
+    const missionColor = st.mission.label === "active" ? green : dim;
+    lines.push(lineBox(`  ${dim("Mission", noColor)} ${missionColor(icon, noColor)}  ${st.mission.label ?? "?"}`, { width, c }));
+  }
+  if (st.gateway) {
+    const icon = st.gateway.icon ?? c.circle_off;
+    lines.push(lineBox(`  ${dim("Gateway", noColor)} ${dim(icon, noColor)}  ${dim(st.gateway.label ?? "", noColor)}`, { width, c }));
+  }
+  if (st.memory_bar) {
+    const barStr = typeof st.memory_bar.bar === "string" ? st.memory_bar.bar : "";
+    lines.push(lineBox(`  ${dim("Memory ", noColor)}${barStr}  ${dim(st.memory_bar.label ?? "", noColor)}`, { width, c }));
+  }
+  lines.push(lineBox("", { width, c }));
+
+  // Next safe action
+  lines.push(lineBox(bold("Next safe action:", noColor), { width, c }));
+  const actionText = typeof na.text === "string" ? na.text : "press ? to see available actions";
+  for (const l of wrappedLineBoxes(`  ${c.arrow} ${cyan(actionText, noColor)}`, { width, c }, "    ")) {
+    lines.push(l);
+  }
+  lines.push(lineBox("", { width, c }));
+
+  // Affordances (keyboard hints · static · NOT interactive in v0.1)
+  lines.push(dividerBox(width, c));
+  if (affs.length > 0) {
+    const hintParts = affs.map((a) => `${bold(`[${a.key}]`, noColor)} ${a.label}`);
+    // Pack hints into lines respecting width budget
+    const inner = width - 4 - 2;
+    let row = "  ";
+    for (const hint of hintParts) {
+      const candidate = row.length > 2 ? `${row}  ${hint}` : `${row}${hint}`;
+      if (visibleWidth(candidate) <= inner) {
+        row = candidate;
+      } else {
+        lines.push(lineBox(row, { width, c }));
+        row = `  ${hint}`;
+      }
+    }
+    if (row.trim().length > 0) lines.push(lineBox(row, { width, c }));
+    lines.push(lineBox(dim("  v0.1: keyboard hints only · type the command on the next line.", noColor), { width, c }));
+  }
+
+  // Partial-state warning
+  if (preview.partial) {
+    lines.push(lineBox(`${yellow(c.bullet, noColor)} ${dim("partial state · " + (preview.warnings?.length ?? 0) + " warning(s) · run with --json for detail", noColor)}`, { width, c }));
+  }
+
+  // Boundary footer
+  lines.push(dividerBox(width, c));
+  lines.push(lineBox(dim("Boundary: preview-only · no action without explicit consent.", noColor), { width, c }));
+  lines.push(bottomBorder(width, c));
+  return lines.join("\n");
+}
+
 // ─── Error fallback ────────────────────────────────────────────────────────
 
 function formatError(msg, { noColor, termDumb, width }) {
