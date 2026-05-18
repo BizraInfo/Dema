@@ -113,6 +113,28 @@ function buildRefusal({ kind, attempted, reason }) {
   });
 }
 
+// v0.1f canonical scaling constants — every accepted human-node contributes
+// these agent counts per the Scaling table in BIZRA_TOPOLOGY_CANON.md.
+// PAT-7 mints locally on the operator's device; SAT-5 mints into the one
+// shared URP. Companion devices belonging to the same human do NOT multiply
+// these counts — only distinct human-nodes do (the ordinal counts the human,
+// not the device).
+const PAT_AGENTS_PER_NODE = 7;
+const SAT_AGENTS_PER_NODE = 5;
+
+// URP resource categories per ADR-008 §C7 + `packages/core/src/urp-local.js`.
+// These are the categories each accepted node MAY contribute to the shared
+// URP pool. At v0.1f stage no node has activated federation, so contributed
+// resources is always empty per category; the structure declares the shape
+// the future federated URP will fill.
+const URP_RESOURCE_CATEGORIES = Object.freeze([
+  "hardware",
+  "data_corpus",
+  "knowledge_base",
+  "experience_history",
+  "skill_library"
+]);
+
 // Refuse-as-product taxonomy surfaced on the registry envelope itself. These
 // are the structural refusals the builder will emit even before any input
 // triggers them — they describe what the registry WILL refuse regardless of
@@ -229,6 +251,49 @@ export function buildNodeRegistryPreview({
   const maxSeen = seenOrdinals.size > 0 ? Math.max(...seenOrdinals) : -1;
   const nextAvailable = computeNextAvailable();
 
+  // v0.1f count primitives — derived from the validated accepted/ghost arrays.
+  // The companion vs primary split is per the device-companion canonization:
+  // a human keeps one ordinal across multiple devices; only primaries count
+  // as distinct human-nodes for the PAT/SAT multiplication.
+  const companion_device_count = acceptedOut.filter((e) => e.companion_of !== null).length;
+  const primary_node_count = acceptedOut.length - companion_device_count;
+  const connected_node_count = primary_node_count;
+  const ghost_pending_count = ghostsOut.length;
+
+  // v0.1f scaling totals — what the canonical Scaling table predicts for the
+  // current node count. These are PLANNED counts; actual mint requires each
+  // node's device-side PAT-7 activation (deferred until federation surfaces
+  // land). Preview-only · no runtime · no federation.
+  const total_pat_agents_planned = primary_node_count * PAT_AGENTS_PER_NODE;
+  const total_sat_agents_planned = primary_node_count * SAT_AGENTS_PER_NODE;
+  const total_agents_planned = total_pat_agents_planned + total_sat_agents_planned;
+
+  // v0.1f shared URP pool inventory shape — preview of what the federated URP
+  // WOULD show once activation occurs. At v0.1f stage no node has federated,
+  // so contributed_resources is empty per category; the structure declares
+  // the shape the future federated URP will fill.
+  const contributed_resources_template = Object.freeze(
+    Object.fromEntries(URP_RESOURCE_CATEGORIES.map((cat) => [cat, Object.freeze([])]))
+  );
+  const urp_shared_pool_inventory = Object.freeze({
+    mode: "preview_only",
+    federation_active: false,
+    urp_runtime_active: false,
+    per_primary_node_contribution: Object.freeze({
+      pat_agents_local_per_node: PAT_AGENTS_PER_NODE,
+      sat_agents_into_shared_urp_per_node: SAT_AGENTS_PER_NODE
+    }),
+    current_totals_if_each_node_were_to_activate: Object.freeze({
+      pat_agents: total_pat_agents_planned,
+      sat_agents: total_sat_agents_planned,
+      total_agents: total_agents_planned
+    }),
+    resource_categories: URP_RESOURCE_CATEGORIES,
+    contributed_resources: contributed_resources_template,
+    contribution_status: "preview_only_no_node_has_federated",
+    canon_anchor: "docs/canon/BIZRA_TOPOLOGY_CANON.md#scaling"
+  });
+
   return Object.freeze({
     schema: SCHEMA,
     truth_label: TRUTH_LABEL,
@@ -241,8 +306,13 @@ export function buildNodeRegistryPreview({
       next_available_ordinal: nextAvailable,
       highest_assigned_ordinal: maxSeen,
       forbidden_ordinals: Object.freeze(Array.from(FORBIDDEN_ORDINALS).sort((a, b) => a - b)),
+      connected_node_count,
+      primary_node_count,
+      companion_device_count,
+      ghost_pending_count,
       seed_pattern_invariant_applies_to_every_entry: true
     }),
+    urp_shared_pool_inventory,
     refusals: Object.freeze(refusals),
     primary_refusals: PRIMARY_REFUSALS,
     blocked_effects: BLOCKED_EFFECTS,

@@ -316,3 +316,128 @@ test("ADVERSARIAL: RTL candidate name preserved verbatim in ghost slot", () => {
   // claim phrase still uses LTR ordinal substitution
   assert.equal(r.registry_state.ghost[0].ordinal_claim_phrase, "GO accept Node1 ordinal");
 });
+
+// ─── v0.1f COUNT + URP INVENTORY TESTS ──────────────────────────────────────
+
+test("v0.1f: default state has connected_node_count: 1 and zero ghosts pending", () => {
+  const r = buildNodeRegistryPreview();
+  assert.equal(r.registry_state.connected_node_count, 1, "Node0 alone → 1 connected");
+  assert.equal(r.registry_state.primary_node_count, 1);
+  assert.equal(r.registry_state.companion_device_count, 0);
+  assert.equal(r.registry_state.ghost_pending_count, 0);
+});
+
+test("v0.1f: companion device shares ordinal but counts as companion, not connected", () => {
+  // Per Node ordinal law + device-companion canonization: founder's primary +
+  // founder's phone share ordinal 0 BUT the phone has companion_of: <primary>.
+  // The phone counts as companion_device, NOT as a separate connected node.
+  // NOTE: same-ordinal duplicate is itself refused by the registry; this test
+  // verifies the count logic when a companion is registered under a DIFFERENT
+  // ordinal (e.g., a second human with their phone as companion).
+  const r = buildNodeRegistryPreview({
+    active: [
+      { node_ordinal: 0, node_label: "Node0", status: "accepted_primary" },
+      { node_ordinal: 1, node_label: "Node1", status: "accepted_companion", companion_of: "Node0" }
+    ]
+  });
+  assert.equal(r.registry_state.accepted.length, 2, "both entries accepted (different ordinals)");
+  assert.equal(r.registry_state.connected_node_count, 1, "only primary counts as connected human");
+  assert.equal(r.registry_state.companion_device_count, 1, "one companion registered");
+  assert.equal(r.registry_state.primary_node_count, 1);
+});
+
+test("v0.1f: ceremony moment — Node0 + accepted Node1 → connected_node_count: 2", () => {
+  const r = buildNodeRegistryPreview({
+    active: [
+      { node_ordinal: 0, node_label: "Node0", status: "accepted_primary" },
+      { node_ordinal: 1, node_label: "Node1", status: "accepted_primary", candidate_name: "Friend" }
+    ]
+  });
+  assert.equal(r.registry_state.connected_node_count, 2, "the moment friend accepts → 2 connected");
+  assert.equal(r.registry_state.ghost_pending_count, 0);
+});
+
+test("v0.1f: ghost slot is counted as pending, not connected", () => {
+  const r = buildNodeRegistryPreview({
+    ghosts: [{ node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" }]
+  });
+  assert.equal(r.registry_state.connected_node_count, 1, "Node0 alone is still 1");
+  assert.equal(r.registry_state.ghost_pending_count, 1, "Friend pending acceptance");
+});
+
+test("v0.1f: total_pat_agents_planned = primary_node_count × 7", () => {
+  const r = buildNodeRegistryPreview({
+    active: [
+      { node_ordinal: 0, node_label: "Node0", status: "accepted_primary" },
+      { node_ordinal: 1, node_label: "Node1", status: "accepted_primary" }
+    ]
+  });
+  assert.equal(r.urp_shared_pool_inventory.current_totals_if_each_node_were_to_activate.pat_agents, 14);
+});
+
+test("v0.1f: total_sat_agents_planned = primary_node_count × 5", () => {
+  const r = buildNodeRegistryPreview({
+    active: [
+      { node_ordinal: 0, node_label: "Node0", status: "accepted_primary" },
+      { node_ordinal: 1, node_label: "Node1", status: "accepted_primary" }
+    ]
+  });
+  assert.equal(r.urp_shared_pool_inventory.current_totals_if_each_node_were_to_activate.sat_agents, 10);
+  assert.equal(r.urp_shared_pool_inventory.current_totals_if_each_node_were_to_activate.total_agents, 24);
+});
+
+test("v0.1f: urp_shared_pool_inventory.federation_active is FALSE at v0.1f stage", () => {
+  const r = buildNodeRegistryPreview();
+  assert.equal(r.urp_shared_pool_inventory.federation_active, false);
+  assert.equal(r.urp_shared_pool_inventory.urp_runtime_active, false);
+  assert.equal(r.urp_shared_pool_inventory.mode, "preview_only");
+});
+
+test("v0.1f: urp_shared_pool_inventory carries the 5 canonical resource categories", () => {
+  const r = buildNodeRegistryPreview();
+  const cats = r.urp_shared_pool_inventory.resource_categories;
+  assert.deepEqual([...cats], [
+    "hardware",
+    "data_corpus",
+    "knowledge_base",
+    "experience_history",
+    "skill_library"
+  ]);
+  // contributed_resources empty per category (no node has federated)
+  for (const cat of cats) {
+    assert.deepEqual([...r.urp_shared_pool_inventory.contributed_resources[cat]], []);
+  }
+  assert.equal(r.urp_shared_pool_inventory.contribution_status, "preview_only_no_node_has_federated");
+});
+
+test("v0.1f: per_primary_node_contribution declares PAT=7 + SAT=5 (canonical Scaling table)", () => {
+  const r = buildNodeRegistryPreview();
+  assert.equal(r.urp_shared_pool_inventory.per_primary_node_contribution.pat_agents_local_per_node, 7);
+  assert.equal(r.urp_shared_pool_inventory.per_primary_node_contribution.sat_agents_into_shared_urp_per_node, 5);
+});
+
+test("ADVERSARIAL v0.1f: count fields ignore refused ghost entries", () => {
+  // Two ghosts submitted: one valid (Node1), one with would_skip_ordinal (Node5).
+  // The valid one counts in ghost_pending; the refused one does NOT.
+  const r = buildNodeRegistryPreview({
+    ghosts: [
+      { node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" },
+      { node_ordinal: 5, status: "ghost_preview", candidate_name: "TooSoon" }
+    ]
+  });
+  assert.equal(r.registry_state.ghost_pending_count, 1, "only the validly-ordered ghost counts");
+  assert.equal(r.refusals.length, 1, "one refusal recorded");
+  assert.equal(r.refusals[0].refusal_reason, "would_skip_ordinal");
+});
+
+test("ADVERSARIAL v0.1f: count fields are integers · zero allocations possible", () => {
+  // Verify the count fields are integers (not floats, not strings, not bigints).
+  // Friend asks "how many nodes?" — the answer must be a plain number that
+  // renders cleanly in a TUI.
+  const r = buildNodeRegistryPreview();
+  assert.equal(Number.isInteger(r.registry_state.connected_node_count), true);
+  assert.equal(Number.isInteger(r.registry_state.companion_device_count), true);
+  assert.equal(Number.isInteger(r.registry_state.ghost_pending_count), true);
+  assert.equal(Number.isInteger(r.urp_shared_pool_inventory.current_totals_if_each_node_were_to_activate.pat_agents), true);
+  assert.equal(Number.isInteger(r.urp_shared_pool_inventory.current_totals_if_each_node_were_to_activate.sat_agents), true);
+});
