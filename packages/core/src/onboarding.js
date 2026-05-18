@@ -1,3 +1,5 @@
+import { buildUserProfile } from "./profiles.js";
+
 const SCHEMA = "bizra.dema.onboarding.preview.v0.1";
 
 const USER_STATE = {
@@ -14,6 +16,23 @@ const USER_STATE = {
     "external_posting"
   ]
 };
+
+// v0.1a node-identity primitives — surfaced on the onboarding preview so the
+// future TUI + language-aware onboarding stages can read identity from one
+// schema-tagged place. Built fresh on each call so mutations on the returned
+// guide don't leak into next call (matches existing mutation-isolation
+// contract used for inspiration[] and steps[]).
+function buildNodeIdentity() {
+  const profile = buildUserProfile();
+  return {
+    node_ordinal: profile.identity.node_ordinal,
+    node_label: profile.identity.node,
+    node_uid: profile.identity.node_uid,
+    language: profile.identity.language,
+    device_label: profile.identity.device_label,
+    companion_of: profile.identity.companion_of
+  };
+}
 
 const NEXT_STEPS = [
   "verify local gates",
@@ -116,6 +135,7 @@ export function buildOnboardingPreview() {
     schema: SCHEMA,
     mode: "preview_only",
     user_state: cloneObject(USER_STATE),
+    node_identity: buildNodeIdentity(),
     next_steps: [...NEXT_STEPS],
     boundaries: cloneObject(BOUNDARIES),
     product: {

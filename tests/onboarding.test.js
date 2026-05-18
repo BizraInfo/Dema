@@ -76,6 +76,27 @@ test("buildOnboardingPreview returns mutation-isolated guide collections", () =>
   assert.notEqual(nextGuide.steps, guide.steps);
 });
 
+test("buildOnboardingPreview surfaces node_identity with Node0 ordinal, uid, and null language", () => {
+  const guide = buildOnboardingPreview();
+  assert.ok(guide.node_identity, "node_identity block present");
+  assert.equal(guide.node_identity.node_ordinal, 0, "Node0 has ordinal=0 by canon");
+  assert.equal(guide.node_identity.node_label, "Node0");
+  assert.match(guide.node_identity.node_uid, /^bizra_node_0_[0-9a-f]{12}$/);
+  assert.equal(guide.node_identity.language, null, "language null until first-run prompt");
+  assert.equal(guide.node_identity.device_label, null);
+  assert.equal(guide.node_identity.companion_of, null);
+});
+
+test("node_identity is stable across calls AND mutation-isolated from prior guide", () => {
+  const first = buildOnboardingPreview();
+  const second = buildOnboardingPreview();
+  assert.equal(first.node_identity.node_uid, second.node_identity.node_uid, "uid is deterministic");
+  // mutate first → does not leak into second
+  first.node_identity.language = "ar";
+  const third = buildOnboardingPreview();
+  assert.equal(third.node_identity.language, null, "mutation on prior guide must not leak");
+});
+
 test("formatOnboardingGuide renders nontechnical CLI/TUI orientation", () => {
   const output = formatOnboardingPreview(buildOnboardingPreview());
 

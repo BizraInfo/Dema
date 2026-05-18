@@ -11,20 +11,49 @@
 //   ContextCapsule includes selective whitelisted fields only — never raw
 //   conversation, never full-corpus injection.
 
+import { createHash } from "node:crypto";
+
 import { buildPreviewBoundary } from "./preview-boundary.js";
 
 function buildBoundary() {
   return buildPreviewBoundary();
 }
 
-export function buildUserProfile({ operator = "MoMo", node = "Node0" } = {}) {
+// Derive a stable, deterministic node_uid from identity-bearing inputs.
+// Format: bizra_node_<ordinal>_<12-hex>. SHA-256 over operator|ordinal|device
+// — the same operator on the same device at the same ordinal always gets the
+// same uid. Language is intentionally NOT part of the seed: identity is stable
+// across presentation changes.
+function deriveNodeUid({ operator, ordinal, device }) {
+  const seed = `${operator}|${ordinal}|${device ?? "default"}`;
+  const hex = createHash("sha256").update(seed, "utf8").digest("hex");
+  return `bizra_node_${ordinal}_${hex.slice(0, 12)}`;
+}
+
+export function buildUserProfile({
+  operator = "MoMo",
+  node = "Node0",
+  language = null,
+  node_ordinal = 0,
+  device_label = null,
+  companion_of = null
+} = {}) {
+  const node_uid = deriveNodeUid({ operator, ordinal: node_ordinal, device: device_label });
   return Object.freeze({
     schema: "bizra.dema.user_profile.v0.1",
     truth_label: "NODE0_LOCAL_SEED",
     owner: "user_owned",
     role: "sovereign_operator",
     loyalty: "self_and_mission",
-    identity: Object.freeze({ name: operator, node }),
+    identity: Object.freeze({
+      name: operator,
+      node,
+      language,
+      node_ordinal,
+      node_uid,
+      device_label,
+      companion_of
+    }),
     authority: Object.freeze({
       can_consent: true,
       can_revoke: true,

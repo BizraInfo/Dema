@@ -273,3 +273,81 @@ test("Boundary objects across all builders are exhaustively false and frozen", (
     assert.equal(Object.isFrozen(b.boundary), true);
   }
 });
+
+// v0.1a node-identity primitives — language + node_ordinal + node_uid + device_label + companion_of
+
+test("UserProfile.identity defaults: language=null and Node0 with ordinal=0", () => {
+  const user = buildUserProfile();
+  assert.equal(user.identity.language, null, "language defaults to null (asked at first run)");
+  assert.equal(user.identity.node_ordinal, 0, "Node0 has ordinal=0 by canon");
+  assert.equal(user.identity.node, "Node0");
+  assert.equal(user.identity.device_label, null);
+  assert.equal(user.identity.companion_of, null);
+});
+
+test("UserProfile.identity.node_uid matches format bizra_node_<ordinal>_<12hex>", () => {
+  const user = buildUserProfile();
+  assert.match(user.identity.node_uid, /^bizra_node_0_[0-9a-f]{12}$/);
+  const node1 = buildUserProfile({ node_ordinal: 1, node: "Node1" });
+  assert.match(node1.identity.node_uid, /^bizra_node_1_[0-9a-f]{12}$/);
+  const node42 = buildUserProfile({ node_ordinal: 42, node: "Node42" });
+  assert.match(node42.identity.node_uid, /^bizra_node_42_[0-9a-f]{12}$/);
+});
+
+test("UserProfile.identity.node_uid is deterministic given identical inputs", () => {
+  const a = buildUserProfile({ operator: "Mumu", node_ordinal: 0, device_label: "MSI Titan" });
+  const b = buildUserProfile({ operator: "Mumu", node_ordinal: 0, device_label: "MSI Titan" });
+  assert.equal(a.identity.node_uid, b.identity.node_uid, "same inputs must produce same uid");
+});
+
+test("UserProfile.identity.node_uid is distinct across operators, ordinals, and devices", () => {
+  const mumu_n0 = buildUserProfile({ operator: "Mumu", node_ordinal: 0 });
+  const other_n0 = buildUserProfile({ operator: "Other", node_ordinal: 0 });
+  const mumu_n1 = buildUserProfile({ operator: "Mumu", node_ordinal: 1 });
+  const mumu_n0_phone = buildUserProfile({ operator: "Mumu", node_ordinal: 0, device_label: "Z Fold 6" });
+  assert.notEqual(mumu_n0.identity.node_uid, other_n0.identity.node_uid, "different operators get different uids");
+  assert.notEqual(mumu_n0.identity.node_uid, mumu_n1.identity.node_uid, "different ordinals get different uids");
+  assert.notEqual(mumu_n0.identity.node_uid, mumu_n0_phone.identity.node_uid, "different devices get different uids");
+});
+
+test("UserProfile.identity carries language override when provided", () => {
+  const ar = buildUserProfile({ language: "ar" });
+  const en = buildUserProfile({ language: "en" });
+  assert.equal(ar.identity.language, "ar");
+  assert.equal(en.identity.language, "en");
+  // identity block remains frozen with the new fields
+  assert.equal(Object.isFrozen(ar.identity), true);
+});
+
+test("ADVERSARIAL v0.1a: RTL operator name produces a stable, valid node_uid", () => {
+  // BIZRA must work for Arabic-named operators. The hash is over UTF-8 bytes;
+  // verify the uid format is preserved AND deterministic across calls.
+  const a = buildUserProfile({ operator: "محمد بشر" });
+  const b = buildUserProfile({ operator: "محمد بشر" });
+  assert.match(a.identity.node_uid, /^bizra_node_0_[0-9a-f]{12}$/);
+  assert.equal(a.identity.node_uid, b.identity.node_uid, "RTL name must produce deterministic uid");
+  assert.equal(a.identity.name, "محمد بشر", "RTL name preserved verbatim");
+});
+
+test("ADVERSARIAL v0.1a: legacy 2-arg builder call still works · no crash", () => {
+  // Existing callers pass only { operator, node }. v0.1a must accept these
+  // without error and apply safe defaults for the new fields.
+  const legacy = buildUserProfile({ operator: "Mumu", node: "Node0" });
+  assert.equal(legacy.identity.name, "Mumu");
+  assert.equal(legacy.identity.node, "Node0");
+  assert.equal(legacy.identity.language, null);
+  assert.equal(legacy.identity.node_ordinal, 0);
+  assert.equal(typeof legacy.identity.node_uid, "string");
+  assert.equal(legacy.identity.device_label, null);
+  assert.equal(legacy.identity.companion_of, null);
+});
+
+test("ADVERSARIAL v0.1a: language change does NOT mutate node_uid · identity is independent of presentation", () => {
+  // Per Founder IP Separation: identity (uid) and presentation (language) are
+  // distinct. Changing the language a user prefers must not change their
+  // cryptographic identity.
+  const a = buildUserProfile({ operator: "Mumu", language: "en" });
+  const b = buildUserProfile({ operator: "Mumu", language: "ar" });
+  assert.equal(a.identity.node_uid, b.identity.node_uid, "language is presentation, not identity");
+  assert.notEqual(a.identity.language, b.identity.language, "language fields themselves still differ");
+});
