@@ -242,6 +242,35 @@ async function dispatch(argv) {
   const command = argv[0] ?? "active";
   const subcommand = argv[1];
 
+  // Homebase TUI v0.1 phase-5 dispatch · 14th canonical spine surface.
+  // Bare `dema` routes to either the homebase TUI (TTY · phase-4) or the
+  // schema-tagged JSON form (non-TTY · --json · DEMA_NO_TUI · NODE_ENV=test).
+  // Until phase-4 lands Ink render, TTY path falls through to the existing
+  // active-kernel interactive shell (preserved · backwards-compat for users).
+  const isBareInvocation =
+    (command === "active" || command === "" || command === "--json") &&
+    !argv.includes("--chat") &&
+    !argv.includes("--interactive");
+  if (isBareInvocation) {
+    const wantJson =
+      argv.includes("--json") ||
+      !process.stdout.isTTY ||
+      Boolean(process.env.DEMA_NO_TUI) ||
+      process.env.NODE_ENV === "test";
+    if (wantJson) {
+      const [{ gather }, { buildHomebasePreview }] = await Promise.all([
+        import("../../../packages/core/src/homebase-gather.js"),
+        import("../../../packages/core/src/homebase-preview.js"),
+      ]);
+      const gathered = await gather();
+      const preview = buildHomebasePreview({ gather: gathered });
+      process.stdout.write(JSON.stringify(preview, null, 2) + "\n");
+      return;
+    }
+    // TTY path · no --json/DEMA_NO_TUI/NODE_ENV=test ·
+    // fall through to existing active-kernel interactive shell.
+  }
+
   switch (command) {
     case "active":
     case "":

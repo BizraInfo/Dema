@@ -32,6 +32,11 @@ const execFileAsync = promisify(execFile);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CLI_PATH = join(__dirname, "..", "apps", "cli", "src", "index.js");
 
+// Each entry is either:
+//   - a string (the command name · also used as argv[0]), OR
+//   - an object { name: "<label>", args: ["<argv>", ...] } for surfaces that
+//     are not single-subcommand-named (e.g., the 14th surface "homebase"
+//     lives at the bare `dema` invocation · invoked via the --json flag).
 const SPINE_COMMANDS = Object.freeze([
   "state",
   "profiles",
@@ -45,17 +50,20 @@ const SPINE_COMMANDS = Object.freeze([
   "node-registry",
   "onboarding-lifecycle",
   "skill-growth-governor",
-  "project-status"
+  "project-status",
+  Object.freeze({ name: "homebase", args: ["--json"] })
 ]);
 
-async function checkOne(cmd) {
+async function checkOne(spec) {
+  const name = typeof spec === "string" ? spec : spec.name;
+  const args = typeof spec === "string" ? [spec] : spec.args;
   let stdout;
   try {
-    const result = await execFileAsync("node", [CLI_PATH, cmd], { timeout: 10000 });
+    const result = await execFileAsync("node", [CLI_PATH, ...args], { timeout: 10000 });
     stdout = result.stdout;
   } catch (err) {
     return {
-      cmd,
+      cmd: name,
       ok: false,
       reason: `exec_error: ${err.message?.split("\n")[0] ?? "unknown"}`
     };
@@ -65,22 +73,22 @@ async function checkOne(cmd) {
   try {
     parsed = JSON.parse(stdout);
   } catch (err) {
-    return { cmd, ok: false, reason: "json_parse_error" };
+    return { cmd: name, ok: false, reason: "json_parse_error" };
   }
 
   if (!parsed || typeof parsed !== "object") {
-    return { cmd, ok: false, reason: "non_object_output" };
+    return { cmd: name, ok: false, reason: "non_object_output" };
   }
   if (!parsed.boundary) {
-    return { cmd, ok: false, reason: "missing_boundary_field" };
+    return { cmd: name, ok: false, reason: "missing_boundary_field" };
   }
   // Use shape-only check: JSON.parse'd boundaries lose their freeze property
   // but should still match canonical key set + all-false values. The freeze
   // invariant is verified in-process by preview-boundary.test.js.
   if (!isCanonicalBoundaryShape(parsed.boundary)) {
-    return { cmd, ok: false, reason: "non_canonical_boundary_shape" };
+    return { cmd: name, ok: false, reason: "non_canonical_boundary_shape" };
   }
-  return { cmd, ok: true, reason: null };
+  return { cmd: name, ok: true, reason: null };
 }
 
 export async function runSmokeBoundary() {

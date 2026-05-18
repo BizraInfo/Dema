@@ -44,8 +44,11 @@ const IN_PROCESS_BUILDERS = [
   ["project-status", buildProjectStatusPreview]
 ];
 
-test("SMOKE_BOUNDARY_SPINE_COMMANDS lists exactly the 13 spine surfaces", () => {
-  assert.deepEqual([...SMOKE_BOUNDARY_SPINE_COMMANDS], [
+test("SMOKE_BOUNDARY_SPINE_COMMANDS lists exactly the 14 spine surfaces", () => {
+  const labels = [...SMOKE_BOUNDARY_SPINE_COMMANDS].map((s) =>
+    typeof s === "string" ? s : s.name
+  );
+  assert.deepEqual(labels, [
     "state",
     "profiles",
     "consent-card",
@@ -58,7 +61,8 @@ test("SMOKE_BOUNDARY_SPINE_COMMANDS lists exactly the 13 spine surfaces", () => 
     "node-registry",
     "onboarding-lifecycle",
     "skill-growth-governor",
-    "project-status"
+    "project-status",
+    "homebase"
   ]);
 });
 
@@ -79,7 +83,7 @@ test("runSmokeBoundary returns the canonical report schema (subprocess path)", a
   assert.equal(report.schema, "bizra.dema.smoke_boundary_report.v0.1");
   assert.equal(report.truth_label, "NODE0_LOCAL_SEED");
   assert.equal(report.mode, "preview_only");
-  assert.equal(report.commands_checked, 13);
+  assert.equal(report.commands_checked, 14);
   assert.equal(report.canonical_keys_expected, PREVIEW_BOUNDARY_CANONICAL_KEYS.length);
   assert.equal(report.canonical_keys_expected, 16);
 });
@@ -93,12 +97,13 @@ test("runSmokeBoundary all_canonical=true on the current spine", async () => {
   }
 });
 
-test("runSmokeBoundary report results include all 13 spine commands", async () => {
+test("runSmokeBoundary report results include all 14 spine commands", async () => {
   const report = await runSmokeBoundary();
   const cmds = report.results.map((r) => r.cmd).sort();
   assert.deepEqual(cmds, [
     "consent-card",
     "evidence-event",
+    "homebase",
     "key-maker-check",
     "llm-invoke",
     "llm-router",
