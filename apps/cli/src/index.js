@@ -26,6 +26,10 @@ import {
   buildLLMInvocationSummary,
   invokeLocalLLM
 } from "../../../packages/core/src/llm-adapter.js";
+import {
+  buildLocalModelInventoryScan,
+  buildLocalModelInventorySummary
+} from "../../../packages/core/src/local-model-inventory-scan.js";
 import { previewBoundedDiagnostic } from "../../../packages/core/src/mission.js";
 import {
   buildMissionDraftPreview,
@@ -164,6 +168,9 @@ Local evidence:
   dema memory show NAME
                     Show one memory entry by name (e.g. profile, bizra-context)
   dema models       Show local model inventory (read-only; no inference)
+  dema models scan [--summary]
+                    C1.5 · schema-tagged local model inventory scan (Ollama API · LM Studio API · GGUF files · HF cache · /data/bizra)
+                    Read-only · no model load · no prompt execution · no public network · canonical 16-key boundary
   dema report safety [--json]
                     Preview the safety report; does not certify, execute, or mint
   dema network blueprint [--json]
@@ -451,6 +458,16 @@ async function dispatch(argv) {
     }
 
     case "models": {
+      // dema models scan [--summary]   → C1.5 · schema-tagged local inventory scan
+      // dema models                    → existing human-readable inventory
+      if (subcommand === "scan") {
+        const scan = await buildLocalModelInventoryScan();
+        const output = argv.includes("--summary")
+          ? buildLocalModelInventorySummary(scan)
+          : scan;
+        console.log(JSON.stringify(output, null, 2));
+        return;
+      }
       const inventory = await collectModelInventory();
       console.log(formatModelInventory(inventory));
       return;
