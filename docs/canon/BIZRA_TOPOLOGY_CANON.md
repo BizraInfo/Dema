@@ -184,6 +184,66 @@ Concretely:
 
 **Doctrinal anchor:** this invariant is companion to [Node ordinal law](#node-ordinal-law). The ordinal counts which node; the seed-pattern says what every node carries. Together they constitute the topology of BIZRA expansion.
 
+## Skill Growth Law
+
+**Amendment:** 2026-05-18 GST. Inscribes the law that governs how DEMA learns. Companion to [Node ordinal law](#node-ordinal-law) (which node) and [Seed-pattern invariant](#seed-pattern-invariant-fractality) (what every node carries). This law specifies *how a node may safely grow without betraying its human*.
+
+The four-line law:
+
+> No learning without evaluation.
+> No evaluation without evidence.
+> No skill promotion without receipt.
+> No overwrite without human consent.
+
+**Why this exists:** the dominant industry pattern for self-improving agents (OpenClaw-style act-then-reflect, Hermes-style skill-writing memory loops) lets an agent reflect on a task, decide it succeeded, write a "skill", and reuse it later. The pattern breaks when the agent misjudges success, generates a flawed skill, overwrites a better human-edited skill, or "improves" itself into a worse version of itself. BIZRA refuses that pattern. BIZRA grows under audit.
+
+**The five promotion gates:**
+
+Every skill candidate must pass ALL FIVE before it may be promoted:
+
+1. **`evidence_exists`** — the candidate must link to at least one receipt that recorded the task it was distilled from. No receipt, no candidate.
+2. **`success_metric_present`** — a named metric (`tests_pass` / `user_approval` / `task_completion` / etc.) with declared `kind`, `score`, `threshold`, and `passed: true`. Reflection alone is not a metric.
+3. **`no_boundary_violation`** — the candidate must explicitly declare it would not flip any canonical 16-key boundary if promoted. Default is refuse.
+4. **`sat_review_passed`** — the upstream SAT pipeline must return `passed`. Local-only "I think this is fine" verdicts do not satisfy this gate.
+5. **`human_consent_received`** — the operator must type the exact promotion phrase `GO promote skill <id> v<version>` verbatim. ADR-005 binding: no fuzzy match, no case-insensitive, no prefix, no clipboard paste.
+
+**The eight refusal paths** (refuse-as-product taxonomy):
+
+1. `refuse_to_overwrite_human_edited_skill` — human-edited skills are sacred. DEMA reads them but never writes over them. It may propose a *new version beside* the human's, never *in place of*.
+2. `refuse_to_promote_without_evidence` — gate 1 short-circuit.
+3. `refuse_to_promote_failed_task_outcome` — a candidate whose source task was marked `task_outcome: "failure"` cannot become a skill.
+4. `refuse_to_promote_without_success_metric` — gate 2 short-circuit.
+5. `refuse_to_emit_skill_change_without_typed_consent` — gate 5 short-circuit.
+6. `refuse_to_archive_pinned_skill` — pinned skills survive archive requests.
+7. `refuse_to_score_skill_by_self_reflection_alone` — reflection is candidacy, not proof.
+8. `refuse_to_create_skill_overlapping_protected_namespace` — six namespaces are sacred: `consent`, `boundary`, `receipt_mint`, `federation`, `identity`, `canon`. New skills inside these must declare `protected_namespace_override: true`, which is itself data the SAT pipeline can still refuse.
+
+**Operational consequences:**
+
+- A skill that "improves on every run" is not BIZRA-coherent. Improvement is gated by receipts, not by self-assessment.
+- A reflection note like *"I think that worked better this time"* is a candidate, not a fact. The chain decides.
+- A human edit to any skill file is canonized at the moment the file mtime updates with human authorship. DEMA SHALL NOT touch human-edited skill bytes.
+- "Reflection is not proof." This phrase is binding across all skill-related code paths.
+- The TUI Growth Dashboard surfaces what DEMA *would* promote vs what it *refuses*. Refusal is product, not defect.
+
+**Implementation anchors:**
+
+- `packages/core/src/skill-growth-governor.js` — pure builder implementing all 5 gates + 8 refusals + 6 protected namespaces (commit `fc3ad84`, 2026-05-18).
+- `tests/skill-growth-governor.test.js` — 32 tests (16 base + 16 adversarial) verifying every refusal path.
+- `dema skill-growth-governor [--json]` — 12th canonical spine surface.
+- `docs/06-adr/ADR-005-operator-actions-require-explicit-consent.md` — exact-string consent binding cited by gate 5.
+- `docs/06-adr/ADR-009-poi-proof-of-impact-design.md` — promoted skills are upstream input to POI score computation.
+
+**Doctrinal anchor:** this law is companion to [Node ordinal law](#node-ordinal-law) and [Seed-pattern invariant](#seed-pattern-invariant-fractality). Together they form the three structural laws of BIZRA topology:
+
+```text
+Node ordinal law          who is in the network
+Seed-pattern invariant    what every node carries
+Skill Growth Law          how a node may safely grow
+```
+
+A BIZRA node that violates any of these three is not a BIZRA node. It may be impressive software. It is not part of this network.
+
 ## Canonicalized subsystems
 
 | Subsystem | Status | Cycle | BLAKE3 Hash | Tests |

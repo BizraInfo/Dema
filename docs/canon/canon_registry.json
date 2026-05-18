@@ -76,6 +76,49 @@
     "code_anchor": "packages/core/src/profiles.js",
     "companion_to": "node_ordinal_law"
   },
+  "skill_growth_law": {
+    "version": "v0.1",
+    "introduced_at_commit": "fc3ad84",
+    "introduced_at_date": "2026-05-18",
+    "statement_four_lines": [
+      "No learning without evaluation.",
+      "No evaluation without evidence.",
+      "No skill promotion without receipt.",
+      "No overwrite without human consent."
+    ],
+    "five_gates": [
+      "evidence_exists",
+      "success_metric_present",
+      "no_boundary_violation",
+      "sat_review_passed",
+      "human_consent_received"
+    ],
+    "eight_refusals": [
+      "refuse_to_overwrite_human_edited_skill",
+      "refuse_to_promote_without_evidence",
+      "refuse_to_promote_failed_task_outcome",
+      "refuse_to_promote_without_success_metric",
+      "refuse_to_emit_skill_change_without_typed_consent",
+      "refuse_to_archive_pinned_skill",
+      "refuse_to_score_skill_by_self_reflection_alone",
+      "refuse_to_create_skill_overlapping_protected_namespace"
+    ],
+    "protected_namespaces": [
+      "consent",
+      "boundary",
+      "receipt_mint",
+      "federation",
+      "identity",
+      "canon"
+    ],
+    "promotion_phrase_template": "GO promote skill <id> v<version>",
+    "canon_anchor": "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+    "code_anchor": "packages/core/src/skill-growth-governor.js",
+    "test_anchor": "tests/skill-growth-governor.test.js",
+    "adr_005_anchor": "docs/06-adr/ADR-005-operator-actions-require-explicit-consent.md",
+    "adr_009_poi_anchor": "docs/06-adr/ADR-009-poi-proof-of-impact-design.md",
+    "companion_to": ["node_ordinal_law", "seed_pattern_invariant"]
+  },
   "forbidden_topology_phrases": [
     {
       "phrase": "Each user has their own URP",
