@@ -15,10 +15,12 @@ import { buildEvidenceChainEventPreviewFromInputs } from "../../../packages/core
 import { buildNodeRegistryPreview } from "../../../packages/core/src/node-registry-preview.js";
 import { buildOnboardingLifecyclePreview } from "../../../packages/core/src/onboarding-lifecycle.js";
 import { buildSkillGrowthGovernorPreview } from "../../../packages/core/src/skill-growth-governor.js";
+import { buildProjectStatusPreview } from "../../../packages/core/src/project-status-preview.js";
 import {
   formatOnboardingLifecyclePreview,
   formatNodeRegistryPreview,
   formatSkillGrowthGovernorPreview,
+  formatProjectStatusPreview,
   resolveFormatterOptsFromEnv
 } from "../../../packages/core/src/tui-formatter.js";
 import { buildLocalLLMRouterPreview } from "../../../packages/core/src/local-llm-router-preview.js";
@@ -217,6 +219,8 @@ Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
                            Onboarding lifecycle preview (v0.1) · 7-stage flow (language→tech-level→node-role→purpose→resources→consent-constitution→first-mission) · ANSI TUI on TTY · JSON in --json or non-TTY
   dema skill-growth-governor [--json]
                            Skill Growth Governor preview (v0.1) · 5 promotion gates + 8 refusals · 4-line law: no learning without evaluation, no evaluation without evidence, no skill promotion without receipt, no overwrite without human consent
+  dema project-status [--json]
+                           Project Status preview (v0.1 · PMBOK 7th-edition-aligned) · stakeholders + value stream + risk register + quality posture + 12 principles · companion to docs/pm/PROJECT_CHARTER_AND_STATUS.md
   dema llm-router          Local LLM router preview; routing_allowed=false; abstain by default
   dema process-mining [--summary]
                            Operator-pattern mirror; surfaces ring_advancement_status; blocks operator_judgment
@@ -340,6 +344,20 @@ async function dispatch(argv) {
       }
       if (process.stdout.isTTY) {
         console.log(formatSkillGrowthGovernorPreview(preview, resolveFormatterOptsFromEnv()));
+      } else {
+        console.log(JSON.stringify(preview, null, 2));
+      }
+      return;
+    }
+
+    case "project-status": {
+      const preview = buildProjectStatusPreview();
+      if (argv.includes("--json")) {
+        console.log(JSON.stringify(preview, null, 2));
+        return;
+      }
+      if (process.stdout.isTTY) {
+        console.log(formatProjectStatusPreview(preview, resolveFormatterOptsFromEnv()));
       } else {
         console.log(JSON.stringify(preview, null, 2));
       }

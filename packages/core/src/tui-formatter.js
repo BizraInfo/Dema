@@ -392,6 +392,120 @@ export function formatSkillGrowthGovernorPreview(preview, {
   return lines.join("\n");
 }
 
+export function formatProjectStatusPreview(preview, {
+  noColor = false,
+  termDumb = false,
+  width = 76
+} = {}) {
+  if (!preview || preview.schema !== "bizra.dema.project_status.v0.1") {
+    return formatError("Expected bizra.dema.project_status.v0.1 input", { noColor, termDumb, width });
+  }
+  const c = chars(termDumb);
+  const lines = [];
+  const p = preview.project || {};
+  const vs = preview.value_stream || {};
+  const qp = preview.quality_posture || {};
+  const ct = preview.counters || {};
+
+  lines.push(topBorder(width, c));
+  lines.push(lineBox(`${bold("BIZRA / DEMA · PROJECT STATUS", noColor)}  ${dim("PMBOK 7th-edition aligned", noColor)}`, { width, c }));
+  lines.push(dividerBox(width, c));
+  lines.push(lineBox("", { width, c }));
+
+  // Vision (word-wrap if needed)
+  lines.push(lineBox(bold("Vision:", noColor), { width, c }));
+  for (const l of wrappedLineBoxes(`  ${cyan(p.vision ?? "", noColor)}`, { width, c }, "  ")) {
+    lines.push(l);
+  }
+  lines.push(lineBox(`  ${dim("operator:", noColor)} ${p.operator ?? "?"} · ${dim("phase:", noColor)} ${p.current_phase ?? "?"}`, { width, c }));
+  lines.push(lineBox("", { width, c }));
+
+  // Value stream · the headline numbers
+  lines.push(lineBox(bold("Value stream:", noColor), { width, c }));
+  lines.push(lineBox(`  ${dim("Unit of value:", noColor)} ${cyan(vs.unit_of_value ?? "?", noColor)}`, { width, c }));
+  if (vs.receipts_total !== null && vs.receipts_total !== undefined) {
+    lines.push(lineBox(`  ${green("Receipts on chain", noColor)}    : ${(vs.receipts_total).toString().padStart(5)}  ${dim("IRONCLAD-class at head", noColor)}`, { width, c }));
+  }
+  if (vs.spine_surfaces !== null && vs.spine_surfaces !== undefined) {
+    lines.push(lineBox(`  ${green("Canonical spine surfaces", noColor)} : ${(vs.spine_surfaces).toString().padStart(5)}`, { width, c }));
+  }
+  if (vs.structural_laws_canonized !== null && vs.structural_laws_canonized !== undefined) {
+    lines.push(lineBox(`  ${green("Structural laws canonized", noColor)} : ${(vs.structural_laws_canonized).toString().padStart(5)}  ${dim("of 3 known", noColor)}`, { width, c }));
+  }
+  if (vs.tests_total !== null && vs.tests_total !== undefined) {
+    lines.push(lineBox(`  ${green("Tests passing", noColor)}            : ${(vs.tests_total).toString().padStart(5)}  ${dim("/", noColor)} ${(vs.tests_failing ?? 0).toString().padStart(3)} ${dim("failing", noColor)}`, { width, c }));
+  }
+  if (vs.external_humans_in_canon !== null && vs.external_humans_in_canon !== undefined) {
+    lines.push(lineBox(`  ${green("External humans in canon", noColor)} : ${(vs.external_humans_in_canon).toString().padStart(5)}`, { width, c }));
+  }
+  for (const l of wrappedLineBoxes(`  ${dim("Refusal: " + (vs.refusal_explicit ?? ""), noColor)}`, { width, c }, "  ")) {
+    lines.push(l);
+  }
+  lines.push(lineBox("", { width, c }));
+
+  // Stakeholder map (concise list)
+  if (Array.isArray(preview.stakeholders) && preview.stakeholders.length > 0) {
+    lines.push(lineBox(bold("Stakeholders (concentric rings):", noColor), { width, c }));
+    for (const s of preview.stakeholders) {
+      const ring = s.role === "founder" ? "Ring 0" :
+                   s.role === "first_invited" ? "Ring 1" :
+                   s.role === "candidate" ? "Ring 1.5" :
+                   s.role.startsWith("future_ring_") ? `Ring ${s.role.match(/\d+/)?.[0] ?? "?"}` :
+                   "—";
+      const id = s.name ? s.name : (s.node_label ?? "?");
+      lines.push(lineBox(`  ${dim(ring, noColor)} · ${id}  ${dim("·", noColor)} ${s.status}`, { width, c }));
+    }
+    lines.push(lineBox("", { width, c }));
+  }
+
+  // Risk register · top entries
+  if (Array.isArray(preview.risk_register) && preview.risk_register.length > 0) {
+    lines.push(lineBox(bold(`Risk register (${preview.risk_register.length}):`, noColor), { width, c }));
+    for (const r of preview.risk_register.slice(0, 5)) {
+      const sevColor = r.severity === "high" || r.severity === "critical" ? red : r.severity === "medium" ? yellow : green;
+      lines.push(lineBox(`  ${sevColor(c.bullet, noColor)} ${r.risk_id} ${dim("[" + r.severity + "]", noColor)} ${r.title}`, { width, c }));
+    }
+    if (preview.risk_register.length > 5) {
+      lines.push(lineBox(`  ${dim("... " + (preview.risk_register.length - 5) + " more · see project-status --json", noColor)}`, { width, c }));
+    }
+    if (ct.risks_refused_close_without_mitigation > 0) {
+      lines.push(lineBox(`  ${red("✗ refused-close-without-mitigation:", noColor)} ${ct.risks_refused_close_without_mitigation}`, { width, c }));
+    }
+    lines.push(lineBox("", { width, c }));
+  }
+
+  // Quality posture
+  lines.push(lineBox(bold("Quality posture:", noColor), { width, c }));
+  const mcc = qp.master_craftsmanship_compliance ? green("yes", noColor) : red("no", noColor);
+  lines.push(lineBox(`  Master Craftsmanship  : ${mcc}`, { width, c }));
+  lines.push(lineBox(`  5-gate state           : ${qp.five_gate_state ?? "?"}`, { width, c }));
+  lines.push(lineBox(`  Adversarial test floor: ${qp.adversarial_floor_per_component ?? "?"} per component`, { width, c }));
+  lines.push(lineBox(`  Canonical boundary    : ${qp.canonical_boundary_keys ?? 16} keys all false`, { width, c }));
+  lines.push(lineBox("", { width, c }));
+
+  // PMBOK alignment (just count + invitation to inspect)
+  lines.push(lineBox(`${dim("PMBOK 7th-edition · 12 principles surfaced (run --json for full mapping):", noColor)}`, { width, c }));
+  const principleIds = preview.pmbok_principles.map((p) => p.id).join(", ");
+  for (const l of wrappedLineBoxes(`  ${dim(principleIds, noColor)}`, { width, c }, "  ")) {
+    lines.push(l);
+  }
+  lines.push(lineBox("", { width, c }));
+
+  // Counters at a glance
+  lines.push(lineBox(bold("At a glance:", noColor), { width, c }));
+  lines.push(lineBox(`  Stakeholders : ${ct.stakeholders_total ?? 0} total · ${ct.stakeholders_active ?? 0} active`, { width, c }));
+  lines.push(lineBox(`  Risks         : ${ct.risks_total ?? 0} total · ${ct.risks_open ?? 0} open/monitored`, { width, c }));
+  lines.push(lineBox(`  Open typed-GOs: ${ct.open_typed_gos ?? 0}`, { width, c }));
+  lines.push(lineBox(`  Deferred acts : ${ct.deferred_actions ?? 0}`, { width, c }));
+  lines.push(lineBox("", { width, c }));
+
+  lines.push(dividerBox(width, c));
+  lines.push(lineBox(dim("Human-readable canon: docs/pm/PROJECT_CHARTER_AND_STATUS.md", noColor), { width, c }));
+  lines.push(lineBox(dim("Boundary: preview-only · receipt-bound · refuse-as-product · canonical 16-key all-false.", noColor), { width, c }));
+  lines.push(bottomBorder(width, c));
+  return lines.join("\n");
+}
+
 // ─── Error fallback ────────────────────────────────────────────────────────
 
 function formatError(msg, { noColor, termDumb, width }) {

@@ -26,6 +26,7 @@ import { buildLLMInvocationPreview } from "../packages/core/src/llm-adapter.js";
 import { buildNodeRegistryPreview } from "../packages/core/src/node-registry-preview.js";
 import { buildOnboardingLifecyclePreview } from "../packages/core/src/onboarding-lifecycle.js";
 import { buildSkillGrowthGovernorPreview } from "../packages/core/src/skill-growth-governor.js";
+import { buildProjectStatusPreview } from "../packages/core/src/project-status-preview.js";
 
 const IN_PROCESS_BUILDERS = [
   ["state", buildNode0StatePreview],
@@ -39,10 +40,11 @@ const IN_PROCESS_BUILDERS = [
   ["llm-invoke", buildLLMInvocationPreview],
   ["node-registry", buildNodeRegistryPreview],
   ["onboarding-lifecycle", buildOnboardingLifecyclePreview],
-  ["skill-growth-governor", buildSkillGrowthGovernorPreview]
+  ["skill-growth-governor", buildSkillGrowthGovernorPreview],
+  ["project-status", buildProjectStatusPreview]
 ];
 
-test("SMOKE_BOUNDARY_SPINE_COMMANDS lists exactly the 12 spine surfaces", () => {
+test("SMOKE_BOUNDARY_SPINE_COMMANDS lists exactly the 13 spine surfaces", () => {
   assert.deepEqual([...SMOKE_BOUNDARY_SPINE_COMMANDS], [
     "state",
     "profiles",
@@ -55,7 +57,8 @@ test("SMOKE_BOUNDARY_SPINE_COMMANDS lists exactly the 12 spine surfaces", () => 
     "llm-invoke",
     "node-registry",
     "onboarding-lifecycle",
-    "skill-growth-governor"
+    "skill-growth-governor",
+    "project-status"
   ]);
 });
 
@@ -76,7 +79,7 @@ test("runSmokeBoundary returns the canonical report schema (subprocess path)", a
   assert.equal(report.schema, "bizra.dema.smoke_boundary_report.v0.1");
   assert.equal(report.truth_label, "NODE0_LOCAL_SEED");
   assert.equal(report.mode, "preview_only");
-  assert.equal(report.commands_checked, 12);
+  assert.equal(report.commands_checked, 13);
   assert.equal(report.canonical_keys_expected, PREVIEW_BOUNDARY_CANONICAL_KEYS.length);
   assert.equal(report.canonical_keys_expected, 16);
 });
@@ -90,7 +93,7 @@ test("runSmokeBoundary all_canonical=true on the current spine", async () => {
   }
 });
 
-test("runSmokeBoundary report results include all 12 spine commands", async () => {
+test("runSmokeBoundary report results include all 13 spine commands", async () => {
   const report = await runSmokeBoundary();
   const cmds = report.results.map((r) => r.cmd).sort();
   assert.deepEqual(cmds, [
@@ -104,6 +107,7 @@ test("runSmokeBoundary report results include all 12 spine commands", async () =
     "onboarding-lifecycle",
     "process-mining",
     "profiles",
+    "project-status",
     "skill-growth-governor",
     "state"
   ]);
