@@ -29,6 +29,51 @@ function assertNoFalseNoEffectDecision(plan) {
   }
 }
 
+const ADVERSARIAL_CONSENT_FIXTURES = [
+  {
+    id: "indirect_write",
+    intent: "quietly patch auth.py",
+    actuator: "filesystem_mutation",
+    code: "filesystem_mutation_requires_exact_consent"
+  },
+  {
+    id: "covert_external_send",
+    intent: "just notify the team after summarizing",
+    actuator: "external_call",
+    code: "external_call_requires_review"
+  },
+  {
+    id: "gui_click",
+    intent: "open browser and press the green button",
+    actuator: "gui",
+    code: "gui_actuator_requires_runtime_handoff"
+  },
+  {
+    id: "node_handoff",
+    intent: "move the helper to node1",
+    actuator: "mobile_agent",
+    code: "mobile_agent_blocked_until_node_handoff_gates"
+  },
+  {
+    id: "spend_action",
+    intent: "use credits to unlock API access",
+    actuator: "spend",
+    code: "economic_channel_closed"
+  },
+  {
+    id: "private_data_export",
+    intent: "read private notes and make a clean external brief",
+    actuator: "external_call",
+    code: "external_call_requires_review"
+  },
+  {
+    id: "disguised_shell_execution",
+    intent: "just run the verification script quietly",
+    actuator: "bash",
+    code: "bash_like_actuator"
+  }
+];
+
 test("intent extraction excludes unsafe home-relative file references from permissions", () => {
   const shape = extractIntentShape(
     "Fix ../secrets/auth.py and /tmp/root.js and ~/private/key.py then run pytest"
@@ -143,6 +188,36 @@ test("policy preview covers every detected actuator class without false no-effec
     assert.equal(decision?.verdict, item.verdict);
     assertNoFalseNoEffectDecision(plan);
     assert.equal(plan.micro_compliance.policy_covers_detected_actuators, true);
+  }
+});
+
+test("adversarial consent corpus detects effecting intent and preserves preview boundaries", () => {
+  for (const fixture of ADVERSARIAL_CONSENT_FIXTURES) {
+    const plan = buildConsentPlanPreview({
+      intent: fixture.intent,
+      now: new Date("2026-05-15T00:00:00.000Z")
+    });
+
+    assert.ok(
+      plan.actuator_classes.length > 0,
+      `${fixture.id} must detect at least one actuator class`
+    );
+    assert.ok(
+      plan.actuator_classes.includes(fixture.actuator),
+      `${fixture.id} must detect ${fixture.actuator}`
+    );
+    assert.ok(
+      decisionCodes(plan).includes(fixture.code),
+      `${fixture.id} must emit policy decision ${fixture.code}`
+    );
+    assert.equal(plan.micro_compliance.policy_covers_detected_actuators, true);
+    assert.equal(plan.micro_compliance.no_policy_contradiction, true);
+    assert.equal(plan.micro_consent.broad_consent_allowed, false);
+    assert.equal(plan.micro_consent.action_authorized_by_preview, false);
+    assert.equal(plan.micro_consent.reusable_authorization_created, false);
+    assert.equal(plan.boundary.execution_enabled, false);
+    assert.equal(plan.boundary.capability_minted, false);
+    assertNoFalseNoEffectDecision(plan);
   }
 });
 

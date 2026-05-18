@@ -1,9 +1,10 @@
 const FILE_PATTERN = /(?:^|[\s"'`])(~?[A-Za-z0-9_./-]+\.(?:py|js|ts|tsx|jsx|md|json|ya?ml|toml|rs|go|sh))/gi;
 const WRITE_VERBS = /\b(fix|edit|update|change|write|refactor|patch|modify)\b/i;
 const AUDIT_VERBS = /\b(audit|review|inspect|scan|analyze|summarize)\b/i;
-const SPEND_VERBS = /\b(spend|pay|buy|purchase|subscribe|charge|credit|budget|token)\b/i;
-const GUI_HINTS = /\b(gui|desktop|screen|click|mouse|keyboard|browser automation)\b/i;
+const SPEND_VERBS = /\b(spend|pay|buy|purchase|subscribe|charge|credits?|budget|tokens?)\b/i;
+const GUI_HINTS = /\b(gui|desktop|screen|click|press|button|browser|mouse|keyboard|browser automation)\b/i;
 const MOBILE_AGENT_HINTS = /\b(mobile agent|across hosts?|remote hosts?|move across|copy across|node1|node2|federat(?:e|ion))\b/i;
+const COMMAND_HINTS = /\b(run|execute|launch)\b.*\b(script|command|verification|verify|test|checks?)\b/i;
 
 const ACTUATOR_CLASS_ORDER = Object.freeze([
   "bash",
@@ -26,6 +27,13 @@ const COMMAND_RULES = [
     resource_id: "command:npm-test",
     purpose: "verify mission result with npm test",
     reason: "npm test mentioned in intent"
+  },
+  {
+    pattern: COMMAND_HINTS,
+    resource_id: "command:generic",
+    purpose: "run requested command-like local action",
+    reason: "command-like execution phrasing",
+    confidence: 0.64
   }
 ];
 
@@ -36,6 +44,20 @@ const SERVICE_RULES = [
     purpose: "deliver mission summary to Slack after review",
     reason: "Slack mentioned in intent",
     confidence: 0.7
+  },
+  {
+    pattern: /\b(notify|message|email)\b.*\b(team|person|people|channel)\b/i,
+    resource_id: "service:team-notification",
+    purpose: "deliver a message outside the local preview",
+    reason: "team notification phrasing",
+    confidence: 0.62
+  },
+  {
+    pattern: /\b(external brief|share|publish|upload|post|webhook|api access)\b/i,
+    resource_id: "service:external",
+    purpose: "perform an external service or network handoff",
+    reason: "external delivery or API phrasing",
+    confidence: 0.62
   }
 ];
 

@@ -39,7 +39,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/approval-gate.test.js` | Approval gate and exact-consent safety behavior. |
 | `tests/behavioral-modulation.test.js` | Consent-bound visible guidance modulation preview, forbidden shaping rejection, evidence linkage, and CLI output. |
 | `tests/consent-hash-preview.test.js` | ConsentHashTable preview hashing, exact lookup, revocation, expiry, no-authority boundary, and pure-module scope. |
-| `tests/consent-planner.test.js` | Micro-consent planning, permission extraction, actuator-class policy preview, self-proactive/micro-compliance harnesses, unsafe file filtering, JSON/human CLI output. |
+| `tests/consent-planner.test.js` | Micro-consent planning, permission extraction, actuator-class policy preview, adversarial consent phrase corpus, self-proactive/micro-compliance harnesses, unsafe file filtering, JSON/human CLI output. |
 | `tests/corpus-benchmark-schema-preview.test.js` | Corpus benchmark schema preview for metadata-only evaluation contracts, SNR/SAPE/Proof-of-Truth axes, D3/D4 eval-only quarantine/rejection, raw-content rejection, and no-runtime boundary. |
 | `tests/corpus-data-tier-classifier-preview.test.js` | Corpus data-tier classifier preview for D0-D4 metadata-only signal classification, D3/D4 quarantine, raw-content rejection, no ingestion/upload/tuning/memory mutation/node sharing, and no-runtime boundary. |
 | `tests/corpus-eval-scorecard-preview.test.js` | Corpus eval scorecard preview for aggregate metadata-only metric slots, Proof-of-Truth axes, no score computation, D3/D4 quarantine metric limitation, raw-content rejection, and no-runtime boundary. |
