@@ -27,6 +27,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [GTM.md](GTM.md) — first offer, audience, forbidden claims, Node1/Node2 boundary.
 - [ROADMAP.md](ROADMAP.md) — product roadmap.
 - [LIGHTHOUSE.md](LIGHTHOUSE.md) — private lighthouse operator lane.
+- [founder-field-notes/inroom-walkthrough-v0.2.md](founder-field-notes/inroom-walkthrough-v0.2.md) — Current working artifact for Ring-1 adversarial in-room review.
 - [DEMA_CONSTITUTION.md](DEMA_CONSTITUTION.md) — product constitution.
 - [00-product-thesis/dema-one-face.md](00-product-thesis/dema-one-face.md) — Dema as the one face.
 - [00-product-thesis/mission-centric-thesis.md](00-product-thesis/mission-centric-thesis.md) — mission-centric thesis.
