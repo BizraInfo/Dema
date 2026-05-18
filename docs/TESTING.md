@@ -79,6 +79,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/priority-anchor.test.js` | Founding-file Merkle root algorithm and priority anchor behavior. |
 | `tests/proof-forge-scripts.test.js` | Proof Forge Python script subprocess boundary, local evidence chain, summary output, and no-repo-write guarantee. |
 | `tests/release-readiness.test.js` | Release-readiness report, workflow scan, dependency/installer/doc risk checks. |
+| `tests/samy-bootstrap.test.js` | Phase C handoff bootstrap script (`scripts/install/samy-bootstrap.sh`): script exists + executable, `--help` prints "Phase C · Node1 device bootstrap" + preview-only stance + ADR-005 binding + cites paired receipt #21 evidence hash verbatim, `--dry-run` reports planned writes (profile.json + node1-self-witness.json) with "Network used: false · Federation invoked: false · Runtime executed: false", `--dry-run --name TestCandidate` honors the override, `--check` reports state without writing, unknown flag exits with code 2 + named error, ADVERSARIAL `--dry-run` with custom DEMA_HOME does NOT create the directory. |
 | `tests/review-gate.test.js` | PR class and proof-scope guardrails. |
 | `tests/safety-report.test.js` | Safety report preview and non-certification language. |
 | `tests/sat-placeholder.test.js` | Receipt verifier dispatch, gateway handoff checks, exact consent, fail-closed behavior. |
