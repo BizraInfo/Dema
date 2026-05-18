@@ -126,7 +126,7 @@ The loop is intentionally conservative. Dema can complete the local preview life
 | Setup | `dema setup` | Creates local folders and skeleton files. | Does not overwrite profile/config or start a daemon. |
 | Status | `dema status` | Shows Node0 readiness through the adapter. | Does not repair or execute. |
 | Diagnostics | `dema diagnostics plan` | Previews a self-check harness. | Does not run tests or shell commands. |
-| Consent | `dema consent plan "<intent>"` | Drafts a micro-consent scope. | Does not approve consent or mint capability. |
+| Consent | `dema consent plan "<intent>"` | Drafts a micro-consent scope with visible actuator classes, policy-preview decisions, and self-check harnesses. | Does not approve consent, mint capability, or execute. |
 | Mission | `dema mission draft "<intent>"` | Creates a mission draft from intent. | Does not run the mission. |
 | Safety | `dema report safety` | Shows current safety posture. | Does not certify production readiness. |
 | Network | `dema network blueprint` | Previews Node1/Node2 handoff gates and phase-gated multi-node readiness. | Does not connect, federate, or open sockets. |

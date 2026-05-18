@@ -202,6 +202,20 @@ for (const [mod, fn, input] of PREVIEWS) {
   });
 }
 
+test("preview primitive shape contract: consent-planner.js", async () => {
+  const m = await import("../packages/consent/src/consent-planner.js");
+  const out = m.buildConsentPlanPreview({
+    intent: "Fix auth.py and run npm test",
+    now: fixedNow
+  });
+
+  assertHarnessShape(out.self_proactive_harness, "consent-planner.js");
+  assertCritiqueShape(out.self_critique, "consent-planner.js");
+  assertComplianceShape(out.micro_compliance, "consent-planner.js");
+  assertConsentShape(out.micro_consent, "consent-planner.js");
+  assertAnalogicalShape(out.analogical_model, "consent-planner.js");
+});
+
 test("step7 named builders implement the canonical primitive shape", async () => {
   const m = await import("../packages/core/src/step7-consent-refusal-preview.js");
   assertHarnessShape(m.buildSelfProactiveHarness({ malformed: false, nextSafeAction: "hold_step7_ceremony" }), "step7-builder");

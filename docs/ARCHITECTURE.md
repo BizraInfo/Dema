@@ -55,7 +55,7 @@ Dema does not own dangerous execution. It talks to adapters. Adapters talk to go
 | `dema doctor` | CLI readiness predicates | Exits nonzero when safety gates fail. |
 | `dema ambient`, `dema ambient:json` | `packages/core/src/ambient.js` | Preview-only boundary report. |
 | `dema diagnostics plan` | diagnostics plan surface | Preview-only; does not run checks. |
-| `dema consent plan` | `packages/consent` | Drafts micro-consent; does not approve. |
+| `dema consent plan` | `packages/consent` | Drafts micro-consent with actuator classes, policy-preview decisions, self-proactive harness, self-critique, and micro-compliance; does not approve, mint, or execute. |
 | `dema mission draft` | `packages/mission` | Drafts intent; does not execute. |
 | `dema mission propose` | `packages/core/mission.js` + FATE | Previews ARTIFACT-011 readiness only. |
 | `dema receipts` | `packages/receipts` | Reads local receipt files. |
@@ -136,7 +136,7 @@ Adapter input is untrusted. Normalization must coerce values and preserve unknow
 
 Consent is exact, narrow, and action-specific.
 
-`dema consent plan` may produce a proposed scope and commitment hash, but that is not approval. `dema mission propose` may check the exact bounded-diagnostic phrase, but it still returns preview behavior in this repo.
+`dema consent plan` may produce a proposed scope, actuator classes, policy-preview decisions, self-check harnesses, and a commitment hash, but that is not approval. `dema mission propose` may check the exact bounded-diagnostic phrase, but it still returns preview behavior in this repo.
 
 ## Receipt model
 

@@ -124,7 +124,7 @@ Run:
 dema consent plan "Check my local node health"
 ```
 
-Dema converts your sentence into a proposed permission scope. It shows what files, commands, or services would be involved if the intent later moved into governed runtime.
+Dema converts your sentence into a proposed permission scope. It shows what files, commands, services, actuator classes, policy-preview decisions, and self-check harnesses would be involved if the intent later moved into governed runtime.
 
 Important: this does not approve consent. It is a draft for review.
 
