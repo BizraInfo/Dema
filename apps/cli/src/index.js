@@ -12,6 +12,7 @@ import {
   buildMissionLoopSummary
 } from "../../../packages/core/src/mission-loop-preview.js";
 import { buildEvidenceChainEventPreviewFromInputs } from "../../../packages/core/src/evidence-chain-event-preview.js";
+import { buildNodeRegistryPreview } from "../../../packages/core/src/node-registry-preview.js";
 import { buildLocalLLMRouterPreview } from "../../../packages/core/src/local-llm-router-preview.js";
 import {
   buildProcessMiningPreview,
@@ -202,6 +203,7 @@ Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
   dema mission-loop [--summary]
                            Full lifecycle preview; preview_lifecycle_status pinned HOLD
   dema evidence-event      EvidenceChain event preview; chain_advance=false; hash-only refs
+  dema node-registry       Node ordinal registry preview (v0.1e); accepted + ghost slots; no federation, no node_connection
   dema llm-router          Local LLM router preview; routing_allowed=false; abstain by default
   dema process-mining [--summary]
                            Operator-pattern mirror; surfaces ring_advancement_status; blocks operator_judgment
@@ -289,6 +291,11 @@ async function dispatch(argv) {
 
     case "evidence-event": {
       console.log(JSON.stringify(buildEvidenceChainEventPreviewFromInputs(), null, 2));
+      return;
+    }
+
+    case "node-registry": {
+      console.log(JSON.stringify(buildNodeRegistryPreview(), null, 2));
       return;
     }
 

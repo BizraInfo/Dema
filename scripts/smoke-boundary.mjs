@@ -41,7 +41,8 @@ const SPINE_COMMANDS = Object.freeze([
   "llm-router",
   "process-mining",
   "key-maker-check",
-  "llm-invoke"
+  "llm-invoke",
+  "node-registry"
 ]);
 
 async function checkOne(cmd) {
