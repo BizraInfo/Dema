@@ -402,3 +402,66 @@ test("ADVERSARIAL: mutation attempt on returned candidate_evaluations is rejecte
   try { r.candidate_evaluations[0].refusals.push("fake_refusal"); } catch (e) { /* expected */ }
   assert.equal(r.candidate_evaluations[0].refusals.length, 0);
 });
+
+// ─── HISTORICAL FAILURE MODES (regression protection) ───────────────────────
+//
+// Locks specific real-world failure modes that the Skill Growth Governor must
+// continue to refuse across all future refactors. Each test encodes a named,
+// public, documented failure mode from another agent system, asserts the
+// governor structurally refuses it. If a future commit removes one of the 8
+// refusal paths, these tests fail · the regression is caught.
+
+test("HERMES REGRESSION · CustomMerkins · agent self-overwrite of human-edited skill must be REFUSED", () => {
+  // Public failure mode attributed to Nous Research's Hermes Agent
+  // (early 2026 · Reddit user "CustomMerkins"):
+  //
+  //   1. Hermes pulled water test results from a government website
+  //   2. Agent jumbled the data
+  //   3. Agent self-evaluated · gave itself a passing grade ("kicked ass")
+  //   4. CustomMerkins manually fixed the broken skill (v2 · human edit)
+  //   5. Hermes overwrote his fix with the next self-improved version
+  //
+  // This is exactly the failure mode BIZRA's Skill Growth Law (commit
+  // 1899332 · 2026-05-18) was canonized to refuse. The 4 refusals that
+  // fire here form the structural cure for the disease.
+  const r = buildSkillGrowthGovernorPreview({
+    skill_candidates: [{
+      skill_id: "fetch_water_test_results",
+      candidate_version: 3,
+      namespace: "research",
+      requested_action: "promote",
+      evidence_receipt_ids: [],
+      success_metric: { kind: "self_reflection", score: 0.95, threshold: 0.7, passed: true },
+      no_boundary_violation: false,
+      sat_review_status: "skipped",
+      human_consent_phrase_typed: "",
+      task_outcome: "success",
+      self_reflection_only: true
+    }],
+    existing_skills: [{
+      skill_id: "fetch_water_test_results",
+      current_version: 2,
+      human_edit_protected: true,
+      last_edited_by: "human"
+    }]
+  });
+
+  const e = r.candidate_evaluations[0];
+  // The governor must HALT (not propose · not promote · halt)
+  assert.equal(e.next_action, "halt", "Hermes-mode promotion MUST yield next_action: halt");
+  // All 4 refusal paths from the doctrine must fire on this scenario
+  assert.ok(e.refusals.includes("refuse_to_overwrite_human_edited_skill"),
+    "MUST refuse to overwrite CustomMerkins's manual fix");
+  assert.ok(e.refusals.includes("refuse_to_score_skill_by_self_reflection_alone"),
+    "MUST refuse self-reflection-only promotion (agent grading its own work)");
+  assert.ok(e.refusals.includes("refuse_to_promote_without_evidence"),
+    "MUST refuse promotion when no receipt links the candidate to evidence");
+  assert.ok(e.refusals.includes("refuse_to_emit_skill_change_without_typed_consent"),
+    "MUST refuse promotion without exact-string typed-GO from operator");
+  // Existing skill protection flag must surface up
+  assert.equal(e.existing_skill_protected, true,
+    "Human-edited skill must be marked as protected");
+  // Promotion phrase rendered for the operator (informational · they must
+  // explicitly type this exact string to override · which they won't here)
+  assert.equal(e.promotion_phrase_required, "GO promote skill fetch_water_test_results v3");
+});
