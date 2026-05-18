@@ -117,3 +117,56 @@ test("TDD-19: gather() never throws · always returns · regardless of disk chao
     await tearDown(home);
   }
 });
+
+test("ISSUE-2: gather() surfaces real receipts populated under <home>/receipts/", async () => {
+  const home = await mkdtemp(join(tmpdir(), "dema-homebase-gather-receipts-"));
+  await mkdir(join(home, "receipts"), { recursive: true });
+  await writeFile(
+    join(home, "receipts", "01_alpha.json"),
+    JSON.stringify({ receipt_id: "alpha-001", artifact_id: "art-1", action: "test", created_at: "2026-05-18T00:00:00Z" }),
+  );
+  await writeFile(
+    join(home, "receipts", "02_beta.json"),
+    JSON.stringify({ receipt_id: "beta-002", artifact_id: "art-2", action: "test", created_at: "2026-05-18T01:00:00Z" }),
+  );
+  try {
+    const result = await gather({ home });
+    assert.equal(result.receipts.count, 2);
+    assert.equal(result.receipts.last_id, "beta-002");
+    assert.equal(result.receipts.gateway_issued, 0);
+  } finally {
+    await tearDown(home);
+  }
+});
+
+test("ISSUE-1: gather() warns + sets partial when receipts path exists but is not a directory", async () => {
+  const home = await mkdtemp(join(tmpdir(), "dema-homebase-gather-receipts-bad-"));
+  await writeFile(join(home, "receipts"), "this is a file, not a directory");
+  try {
+    const result = await gather({ home });
+    assert.equal(result.partial, true);
+    assert.ok(
+      result.warnings.some((w) => w.toLowerCase().includes("receipts")),
+      `expected a receipts warning · got: ${JSON.stringify(result.warnings)}`,
+    );
+    assert.equal(result.receipts.count, 0);
+    assert.equal(result.receipts.last_id, null);
+  } finally {
+    await tearDown(home);
+  }
+});
+
+test("ISSUE-5: gather() pushes informational warning when ~/.dema/memory directory is missing", async () => {
+  const home = await mkdtemp(join(tmpdir(), "dema-homebase-gather-no-mem-"));
+  await writeFile(join(home, "profile.json"), JSON.stringify({ name: "Mumu" }));
+  try {
+    const result = await gather({ home });
+    assert.ok(
+      result.warnings.some((w) => w.includes("no ~/.dema/memory directory")),
+      `expected memory-missing warning · got: ${JSON.stringify(result.warnings)}`,
+    );
+    assert.deepEqual(result.memory_recent, []);
+  } finally {
+    await tearDown(home);
+  }
+});

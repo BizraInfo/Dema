@@ -88,7 +88,10 @@ async function readMemoryRecent(home, result) {
   try {
     files = await listMemoryFiles(join(home, "memory"));
   } catch (err) {
-    if (err && err.code === "ENOENT") return [];
+    if (err && err.code === "ENOENT") {
+      result.warnings.push("no ~/.dema/memory directory · empty homebase");
+      return [];
+    }
     result.warnings.push(`memory directory read failed: ${err.message}`);
     result.partial = true;
     return [];
@@ -119,6 +122,24 @@ async function tryBuilder(call, fallback) {
     return await call();
   } catch (err) {
     return fallback(err);
+  }
+}
+
+// listReceipts swallows all errors and returns []. Probe the directory directly
+// so we can distinguish "no receipts yet" (ENOENT · normal) from "couldn't read"
+// (EACCES or similar · degradation worth surfacing).
+async function probeReceiptsDir(home, result) {
+  const dir = join(home, "receipts");
+  try {
+    const s = await stat(dir);
+    if (!s.isDirectory()) {
+      result.warnings.push("receipts path exists but is not a directory");
+      result.partial = true;
+    }
+  } catch (err) {
+    if (err && err.code === "ENOENT") return;
+    result.warnings.push(`receipts directory inaccessible: ${err.message}`);
+    result.partial = true;
   }
 }
 
@@ -163,6 +184,7 @@ export async function gather(opts = {}) {
     },
   );
 
+  await probeReceiptsDir(home, result);
   result.receipts = await tryBuilder(
     async () => {
       const list = await listReceipts(home);

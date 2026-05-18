@@ -9,13 +9,39 @@
 ## 2.1 · Module identity
 
 ```text
-TARGET FILE  packages/cli-tui/src/gather.js
+TARGET FILE  packages/core/src/homebase-gather.js   (impl placement · see §2.1.1)
+SPEC TARGET  packages/cli-tui/src/gather.js          (original pseudocode target)
 EXPORTS      async function gather(opts = {}) → Promise<GatherResult>
 PURITY       impure (disk I/O · invokes existing builders that may read disk)
 SIDE EFFECTS reads only · NEVER writes (C-5)
 DEPS         node:fs · node:path · node:os · existing @bizra/core builders
 TEST FILE    tests/homebase-gather.test.js
 ```
+
+### 2.1.1 · Module placement deviation (binding)
+
+Pseudocode originally specified `packages/cli-tui/src/gather.js`. That package
+does not exist on disk at HEAD `ad0b1fb` (the spec-authoring HEAD) or at HEAD
+`91d8b80` (phase-3 ship). The impl landed at `packages/core/src/homebase-gather.js`
+to match the convention of every existing builder/preview (`state.js`,
+`process-mining-preview.js`, `consent-card-preview.js`, …).
+
+This is a known design debt. When phase-4 (TUI render) lands and creates the
+`@bizra/dema-cli-tui` package, either:
+
+  (a) `homebase-gather.js` moves there and `@bizra/dema-core` no longer
+      depends on it; or
+  (b) the gather adapter stays in core (read-only adapter is fine in core)
+      and phase-4 imports from core via the established
+      `@bizra/dema-core` export surface.
+
+Option (b) is preferred — phase-2 has no TUI semantics; it is a read-only
+disk adapter that any consumer can use. Phase-4 should treat it as a core
+primitive, not a TUI-internal helper.
+
+This note exists so phase-4 doesn't reproduce the pseudocode's stale target
+path without thinking. The spec target field above is kept honest as
+historical artifact; the impl path is the operative one.
 
 ---
 

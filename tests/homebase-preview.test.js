@@ -1,8 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
 import { buildHomebasePreview } from "../packages/core/src/homebase-preview.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
+
+const REPO_PKG_VERSION = (() => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const pkgPath = join(here, "..", "package.json");
+  return JSON.parse(readFileSync(pkgPath, "utf8")).version;
+})();
 
 const FIXED_TS = new Date("2026-05-18T12:42:00Z");
 
@@ -201,4 +210,12 @@ test("warnings/partial propagate from gather to preview", () => {
   });
   assert.equal(out.partial, true);
   assert.deepEqual(out.warnings, ["disk-flake-one"]);
+});
+
+test("ISSUE-4: header.dema_version is non-zero and matches repo package.json", () => {
+  const out = buildHomebasePreview({ gather: makeGather() });
+  assert.notEqual(out.header.dema_version, "0.0.0", "PKG_VERSION IIFE fell back to 0.0.0 · readFileSync path likely broken");
+  assert.equal(typeof out.header.dema_version, "string");
+  assert.ok(out.header.dema_version.length > 0, "dema_version must be non-empty");
+  assert.equal(out.header.dema_version, REPO_PKG_VERSION, "preview version must match repo package.json");
 });
