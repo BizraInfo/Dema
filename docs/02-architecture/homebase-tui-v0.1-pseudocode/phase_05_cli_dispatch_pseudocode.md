@@ -9,7 +9,7 @@
 ## 5.1 · Module identity
 
 ```text
-TARGET FILE     apps/cli/src/index.js                  (existing · ~46 commands · ~XXX LOC)
+TARGET FILE     apps/cli/src/index.js                  (existing · ~46 commands · ~780 LOC at HEAD ad0b1fb)
 MUTATION SHAPE  ADD a top-level branch in the bare-invocation handler
                 MUST NOT change behavior of any other subcommand
                 MUST NOT introduce a new top-level command name
