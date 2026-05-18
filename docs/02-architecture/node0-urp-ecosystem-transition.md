@@ -142,7 +142,7 @@ There is one URP: not per-node, not per-user, not middleware. It is one shared l
 
 ### Closure criterion
 
-A second human activates a Node: their device mints PAT-7 locally, five more SAT agents materialize into the same shared URP that Node0 woke, and both nodes interact only through their respective membranes and SAT-in-URP. A signed receipt produced on either node is verified by the SAT-5 layer in the URP, not by direct node-to-node trust.
+A second human activates as Node1 (per [Node ordinal law](../canon/BIZRA_TOPOLOGY_CANON.md#node-ordinal-law)): their device mints PAT-7 locally, five more SAT agents materialize into the same shared URP that Node0 woke, and both nodes interact only through their respective membranes and SAT-in-URP. A signed receipt produced on either node is verified by the SAT-5 layer in the URP, not by direct node-to-node trust.
 
 ## 3.5. The Membrane
 

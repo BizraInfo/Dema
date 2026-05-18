@@ -41,6 +41,24 @@
     "crossing": "pat_to_membrane_to_sat",
     "human_network_access": "never_direct"
   },
+  "node_ordinal_law": {
+    "version": "v0.1",
+    "introduced_at_commit": "9a8389e",
+    "introduced_at_date": "2026-05-18",
+    "rules": [
+      "node0_is_origin",
+      "node1_is_first_invited_human_not_second_device",
+      "ordinal_is_registry_assigned_never_guessed",
+      "no_duplicate_ordinal",
+      "no_skipped_ordinal_without_canon_authorization",
+      "no_hidden_ordinal",
+      "companion_device_shares_ordinal_distinct_uid",
+      "identity_independent_of_presentation"
+    ],
+    "canon_anchor": "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+    "code_anchor": "packages/core/src/profiles.js",
+    "uid_seed_format": "operator|ordinal|device"
+  },
   "forbidden_topology_phrases": [
     {
       "phrase": "Each user has their own URP",

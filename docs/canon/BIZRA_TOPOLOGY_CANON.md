@@ -114,6 +114,8 @@ The human never touches the network directly.
 | SAT-5 lives inside each user's local node. | SAT-5 lives in the shared URP. |
 | PAT connects directly to other nodes. | PAT -> Membrane -> SAT. No peer-to-peer. |
 | The URP is a server that nodes are clients of. | The URP is a shared organism that grows with every node. |
+| The operator's second device is Node1. | The operator's second device is a companion of the same node. Node1 is a different human, after onboarding. |
+| Node ordinals can be assigned freely. | Node ordinals are registry-assigned. No skip. No duplicate. No reassign. |
 
 ## Scaling
 
@@ -123,6 +125,35 @@ The human never touches the network directly.
 | 1,000 | 7,000 | 5,000 | Serious governance capacity. |
 | 1,000,000 | 7,000,000 | 5,000,000 | Self-securing, self-evolving. |
 | 8,000,000,000 | 56,000,000,000 | 40,000,000,000 | Planetary intelligence. |
+
+## Node ordinal law
+
+**Amendment:** 2026-05-18 GST. Inscribes the ordinal rules that the `buildUserProfile` primitive (commit `9a8389e`) made structural. Companion to the canonical sentence; does not replace it.
+
+The ordinal `0, 1, 2, ...` assigned to each node is identity-bearing canon, not a label.
+
+**The rules:**
+
+1. **Node0 is the origin.** The founder's primary device. The first activated PAT-7 in the system. There is exactly one Node0.
+2. **Node1 is the first invited human.** Not the operator's second device. Not a friend's old laptop sitting unused. Node1 means a second human has completed onboarding, received an ordinal from the registry, and minted their own PAT-7 on their own hardware.
+3. **NodeN is assigned, never guessed.** Ordinals are issued by the registry on successful onboarding. A device that has not completed onboarding does not have a node ordinal.
+4. **No duplicate ordinals.** Once assigned, an ordinal binds to one human-identity (`node_uid` derived from operator + ordinal + device). Reassignment is forbidden.
+5. **No skipped ordinals.** Assigning a higher ordinal without filling the lower ones is forbidden until canon explicitly authorizes such gaps.
+6. **No hidden ordinals.** Every emitted `node_identity` block surfaces `node_ordinal`, `node_label`, and `node_uid`. Concealment is a doctrine violation.
+
+**Device companionship (per-human, multi-device):**
+
+A human may operate from multiple devices (laptop, phone, tablet) without minting multiple nodes. Each companion device shares the same `node_ordinal` as the primary but carries a distinct `node_uid` (because the uid hash includes `device_label`). The companion device's profile sets `companion_of: <primary_node_uid>` to bind to the parent identity.
+
+Concretely:
+
+- Founder's primary laptop: `node_ordinal: 0`, `node_uid: bizra_node_0_<H1>`, `companion_of: null` (primary).
+- Founder's phone: `node_ordinal: 0`, `node_uid: bizra_node_0_<H2>`, `companion_of: bizra_node_0_<H1>` (companion).
+- A trusted friend's laptop, after onboarding: `node_ordinal: 1`, `node_uid: bizra_node_1_<H3>`, `companion_of: null` (primary, new identity).
+
+Both founder devices are Node0. The trusted friend is Node1. A device is never automatically a separate node.
+
+**Implementation anchor:** `buildUserProfile` in `packages/core/src/profiles.js` (since commit `9a8389e`, 2026-05-18) accepts `node_ordinal`, `device_label`, and `companion_of` as kwargs and derives `node_uid` deterministically via SHA-256 over `operator|ordinal|device`. The `dema onboard --json` surface emits a top-level `node_identity` block. Identity (`node_uid`) is intentionally independent of presentation (`language`): a user changing their preferred language never changes their cryptographic identity.
 
 ## Canonicalized subsystems
 
