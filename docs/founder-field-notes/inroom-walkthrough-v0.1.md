@@ -138,7 +138,7 @@ sha256sum themassage.pdf bizra.pdf BIZRA_Third_Fact_v0_1_FINAL.pdf
 cat proof-of-priority/manifest.json | head -20
 ```
 
-**Say:** *"Three founding PDFs from 3 years ago. Their SHA-256 hashes are anchored to Bitcoin block headers 948027 and 948029. Anyone in the world can verify that on a public block explorer. The origin of this work has a cryptographic timestamp that I cannot fake, retroactively or otherwise."*
+**Say:** *"Three founding PDFs from 3 years ago. Their SHA-256 hashes are anchored to Bitcoin block headers 948027, 948028, and 948029. Anyone in the world can verify that on a public block explorer. The origin of this work has a cryptographic timestamp that I cannot fake, retroactively or otherwise."*
 
 ---
 

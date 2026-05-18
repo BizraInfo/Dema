@@ -47,7 +47,7 @@
 
 ### BIZRA
 **Definition:** the wider sovereign-AI ecosystem. Per the Third Fact (BIZRA_Third_Fact_v0_1_FINAL.pdf) BIZRA encompasses 7 pillars: PAT · SAT · DEMA · FATE · URP · RECEIPTS · POI.
-**Status:** V (Bitcoin-anchored at block 948027/948029 via OpenTimestamps)
+**Status:** V (Bitcoin-anchored at blocks 948027/948028/948029 via OpenTimestamps)
 
 ### Dema
 **Definition:** the LOCAL product face of BIZRA Node0. One of the 7 BIZRA pillars. This repository implements Dema. Per [ADR-001](docs/06-adr/ADR-001-dema-is-one-face.md), Dema is "the one face" — the human-facing CLI and (future) TUI.
@@ -178,7 +178,7 @@ A claim outside these four categories must not be made.
 ### OpenTimestamps (OTS)
 **Origin:** Peter Todd · open protocol.
 **Definition:** the mechanism Dema uses to anchor sha256 hashes to the Bitcoin blockchain. Submits hash to 4 calendar servers which aggregate and write to Bitcoin. After confirmation, anyone can verify "this hash existed at this UTC time" against the public chain.
-**Status:** V (3 founding PDFs CONFIRMED at blocks 948027/948029 · PROOF_SUMMARY.md.ots PENDING)
+**Status:** V (3 founding PDFs CONFIRMED at blocks 948027/948028/948029 · PROOF_SUMMARY.md.ots PENDING)
 
 ### Receipt
 **Two distinct meanings · context-sensitive:**

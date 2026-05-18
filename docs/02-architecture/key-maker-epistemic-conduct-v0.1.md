@@ -177,7 +177,7 @@ This holds conviction without claiming certainty. The system must not collapse c
 
 ### Implication for BIZRA
 
-The 50% pool framing per [`reference_50_percent_pool_correct_framing`](../../../memory/) is a *conviction* (Mumu's إيمان commitment), not a *certainty* claim. The Bitcoin block-header attestations at 948027/948029 are *certainty* claims (cryptographic, machine-verifiable). The Lighthouse Pack v1.0 must surface conviction-grade items and certainty-grade items separately. Conflating them would violate this protocol.
+The 50% pool framing per [`reference_50_percent_pool_correct_framing`](../../../memory/) is a *conviction* (Mumu's إيمان commitment), not a *certainty* claim. The Bitcoin block-header attestations at 948027/948028/948029 are *certainty* claims (cryptographic, machine-verifiable). The Lighthouse Pack v1.0 must surface conviction-grade items and certainty-grade items separately. Conflating them would violate this protocol.
 
 ---
 
