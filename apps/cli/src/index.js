@@ -21,6 +21,11 @@ import {
   buildKeyMakerCompliancePreview,
   buildKeyMakerComplianceSummary
 } from "../../../packages/core/src/key-maker-compliance.js";
+import {
+  buildLLMInvocationPreview,
+  buildLLMInvocationSummary,
+  invokeLocalLLM
+} from "../../../packages/core/src/llm-adapter.js";
 import { previewBoundedDiagnostic } from "../../../packages/core/src/mission.js";
 import {
   buildMissionDraftPreview,
@@ -195,6 +200,8 @@ Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
                            Operator-pattern mirror; surfaces ring_advancement_status; blocks operator_judgment
   dema key-maker-check [--door "<text>"] [--summary]
                            Self-audits reasoning shape against the 5 Key Maker invariants; fails closed when violated
+  dema llm-invoke [--model NAME --prompt TEXT] [--invoke --consent "GO: invoke local LLM at NAME"] [--summary]
+                           C1 · local LLM adapter · preview-only by default; --invoke + exact consent calls Ollama at localhost
 
 Tasks and views:
   dema task         List registered tasks
@@ -297,6 +304,39 @@ async function dispatch(argv) {
         ? buildKeyMakerComplianceSummary({ door })
         : buildKeyMakerCompliancePreview({ door });
       console.log(JSON.stringify(preview, null, 2));
+      return;
+    }
+
+    case "llm-invoke": {
+      // C1 spine surface (per ADR-008 §C1) · two modes:
+      //   no --invoke    → preview-only · canonical boundary all false
+      //   --invoke       → actual Ollama call · requires --consent exact phrase
+      const model = argValue(argv, "--model") ?? "";
+      const prompt = argValue(argv, "--prompt") ?? "";
+      const consent = argValue(argv, "--consent") ?? "";
+      const ollamaBaseUrl = argValue(argv, "--base") ?? undefined;
+      const wantsSummary = argv.includes("--summary");
+      const wantsInvoke = argv.includes("--invoke");
+
+      if (!wantsInvoke) {
+        const preview = wantsSummary
+          ? buildLLMInvocationSummary({ model, prompt, ollamaBaseUrl })
+          : buildLLMInvocationPreview({ model, prompt, ollamaBaseUrl });
+        console.log(JSON.stringify(preview, null, 2));
+        return;
+      }
+
+      // --invoke flag present · real HTTP call to Ollama · consent-gated
+      const result = await invokeLocalLLM({
+        model,
+        prompt,
+        consentPhrase: consent,
+        ollamaBaseUrl
+      });
+      console.log(JSON.stringify(result, null, 2));
+      if (result.invocation_status === "failed") {
+        process.exitCode = 1;
+      }
       return;
     }
 
