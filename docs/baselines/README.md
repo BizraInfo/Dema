@@ -88,7 +88,24 @@ A baseline is one row in a continuous ledger. Trend matters more than any single
 
 ## How to compare two baselines
 
-Comparison is currently manual (diff the JSON). Future enhancement: a `baseline-diff.mjs` script that prints a delta table. Deferred until two or more baselines exist and the comparison need is concrete.
+Use `baseline-l1-diff` (implemented 2026-05-18):
+
+```bash
+# By short SHA (auto-resolves to docs/baselines/dema-baseline-l1-<sha>.json)
+npm run baseline:l1:diff -- d60767a e436b7c
+
+# By explicit file paths
+npm run baseline:l1:diff -- --files docs/baselines/old.json docs/baselines/new.json
+```
+
+Output is a schema-tagged `bizra.dema.baseline_l1_diff.v0.1` JSON with:
+
+- per-metric numerical deltas (`{before, after, delta}` triples)
+- pair metadata (sha · branch · measured_at)
+- growth percentages with 0.1 precision
+- a `verify_before_assert_trend` classification naming the tests-vs-packages growth asymmetry honestly
+
+The trend is observational, not prescriptive. The operator decides what the trend means.
 
 ---
 

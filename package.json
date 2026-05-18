@@ -15,6 +15,7 @@
     "llm:guidance": "node scripts/llm-guidance-check.mjs",
     "smoke-boundary": "node scripts/smoke-boundary.mjs",
     "baseline:l1": "node scripts/baseline-l1.mjs",
+    "baseline:l1:diff": "node scripts/baseline-l1-diff.mjs",
     "release:readiness": "node scripts/release-readiness.mjs",
     "priority-anchor": "node scripts/priority-anchor.mjs themassage.pdf bizra.pdf BIZRA_Third_Fact_v0_1_FINAL.pdf",
     "priority-anchor:verify": "node scripts/priority-anchor.mjs --verify proof-of-priority/manifest.json --base-dir ."
