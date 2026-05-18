@@ -10,7 +10,7 @@ import {
   PREVIEW_BOUNDARY_CANONICAL_KEYS
 } from "../packages/core/src/preview-boundary.js";
 
-// In-process verification: import the 8 builders directly and assert that
+// In-process verification: import the 10 builders directly and assert that
 // each emits a canonical boundary. Faster than the subprocess path used by
 // the CLI script, but covers the same invariant.
 
@@ -23,6 +23,7 @@ import { buildLocalLLMRouterPreview } from "../packages/core/src/local-llm-route
 import { buildProcessMiningPreview } from "../packages/core/src/process-mining-preview.js";
 import { buildKeyMakerCompliancePreview } from "../packages/core/src/key-maker-compliance.js";
 import { buildLLMInvocationPreview } from "../packages/core/src/llm-adapter.js";
+import { buildNodeRegistryPreview } from "../packages/core/src/node-registry-preview.js";
 
 const IN_PROCESS_BUILDERS = [
   ["state", buildNode0StatePreview],
@@ -33,10 +34,11 @@ const IN_PROCESS_BUILDERS = [
   ["llm-router", buildLocalLLMRouterPreview],
   ["process-mining", buildProcessMiningPreview],
   ["key-maker-check", buildKeyMakerCompliancePreview],
-  ["llm-invoke", buildLLMInvocationPreview]
+  ["llm-invoke", buildLLMInvocationPreview],
+  ["node-registry", buildNodeRegistryPreview]
 ];
 
-test("SMOKE_BOUNDARY_SPINE_COMMANDS lists exactly the 9 spine surfaces", () => {
+test("SMOKE_BOUNDARY_SPINE_COMMANDS lists exactly the 10 spine surfaces", () => {
   assert.deepEqual([...SMOKE_BOUNDARY_SPINE_COMMANDS], [
     "state",
     "profiles",
@@ -46,7 +48,8 @@ test("SMOKE_BOUNDARY_SPINE_COMMANDS lists exactly the 9 spine surfaces", () => {
     "llm-router",
     "process-mining",
     "key-maker-check",
-    "llm-invoke"
+    "llm-invoke",
+    "node-registry"
   ]);
 });
 
@@ -67,7 +70,7 @@ test("runSmokeBoundary returns the canonical report schema (subprocess path)", a
   assert.equal(report.schema, "bizra.dema.smoke_boundary_report.v0.1");
   assert.equal(report.truth_label, "NODE0_LOCAL_SEED");
   assert.equal(report.mode, "preview_only");
-  assert.equal(report.commands_checked, 9);
+  assert.equal(report.commands_checked, 10);
   assert.equal(report.canonical_keys_expected, PREVIEW_BOUNDARY_CANONICAL_KEYS.length);
   assert.equal(report.canonical_keys_expected, 16);
 });
@@ -81,7 +84,7 @@ test("runSmokeBoundary all_canonical=true on the current spine", async () => {
   }
 });
 
-test("runSmokeBoundary report results include all 9 spine commands", async () => {
+test("runSmokeBoundary report results include all 10 spine commands", async () => {
   const report = await runSmokeBoundary();
   const cmds = report.results.map((r) => r.cmd).sort();
   assert.deepEqual(cmds, [
@@ -91,6 +94,7 @@ test("runSmokeBoundary report results include all 9 spine commands", async () =>
     "llm-invoke",
     "llm-router",
     "mission-loop",
+    "node-registry",
     "process-mining",
     "profiles",
     "state"
