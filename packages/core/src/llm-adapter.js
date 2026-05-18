@@ -33,13 +33,21 @@ const MAX_MODEL_NAME_LENGTH = 200;
 
 // Canonical model whitelist — only these can be invoked. Caller cannot
 // override. Extend this list via deliberate ADR amendment, never via input.
+// Whitelist of model name-prefixes (the part before the colon in Ollama's
+// user-facing name). Extended 2026-05-18 GST based on C1.5 scan findings
+// of operator-installed models. Each addition was verified to exist on
+// disk via `dema models scan` before being added here.
 const ALLOWED_MODEL_FAMILIES = Object.freeze([
+  // Canonical upstream families
   "llama", "llama2", "llama3", "llama3.1", "llama3.2", "llama3.3",
   "mistral", "mixtral", "qwen", "qwen2", "qwen2.5", "qwen3",
-  "gemma", "gemma2", "gemma3",
+  "gemma", "gemma2", "gemma3", "gemma4",
   "phi", "phi3", "phi4",
   "deepseek", "deepseek-r1", "deepseek-v2", "deepseek-v3",
-  "nomic-embed-text", "mxbai-embed-large"
+  "nomic-embed-text", "mxbai-embed-large",
+  // Operator-installed (verified via C1.5 scan 2026-05-18 GST)
+  "qwen3-coder-next",     // qwen3-coder-next:q4_K_M (79.7B coding)
+  "whiterabbitneo-v3"     // whiterabbitneo-v3:7b-q4_K_M (security 7.6B)
 ]);
 
 const REQUIRED_BLOCKED_EFFECTS_PREVIEW = Object.freeze([

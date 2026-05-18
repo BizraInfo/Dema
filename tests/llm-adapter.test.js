@@ -293,6 +293,33 @@ test("Exported constants are present and frozen", () => {
   assert.equal(llmAdapterConsentPhraseFor("llama3.1:8b"), "GO: invoke local LLM at llama3.1:8b");
 });
 
+test("Whitelist includes operator-installed families verified via C1.5 scan", () => {
+  // Each was discovered by `dema models scan` on 2026-05-18 GST · added with verification
+  assert.ok(LLM_ADAPTER_ALLOWED_MODEL_FAMILIES.includes("gemma4"),
+    "gemma4 family must be allowed (gemma4:26b · gemma4:26b-bizra-16k · gemma4:e4b installed)");
+  assert.ok(LLM_ADAPTER_ALLOWED_MODEL_FAMILIES.includes("qwen3-coder-next"),
+    "qwen3-coder-next must be allowed (79.7B coding model installed)");
+  assert.ok(LLM_ADAPTER_ALLOWED_MODEL_FAMILIES.includes("whiterabbitneo-v3"),
+    "whiterabbitneo-v3 must be allowed (security-focused 7.6B model installed)");
+});
+
+test("Operator-installed model name-prefixes pass isAllowedModelName check via preview", () => {
+  const installed = [
+    "gemma4:26b",
+    "gemma4:26b-bizra-16k",
+    "gemma4:e4b",
+    "qwen3-coder-next:q4_K_M",
+    "whiterabbitneo-v3:7b-q4_K_M",
+    "deepseek-r1:7b",
+    "nomic-embed-text:latest"
+  ];
+  for (const name of installed) {
+    const p = buildLLMInvocationPreview({ model: name, prompt: "test" });
+    assert.equal(p.model_allowed_in_whitelist, true,
+      `'${name}' must pass whitelist check (operator has it installed via C1.5 scan)`);
+  }
+});
+
 // =========================================================================
 // INTEGRATION / DOCTRINE TESTS (3 · for Master Craftsmanship completeness)
 // =========================================================================
