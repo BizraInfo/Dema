@@ -59,6 +59,23 @@
     "code_anchor": "packages/core/src/profiles.js",
     "uid_seed_format": "operator|ordinal|device"
   },
+  "seed_pattern_invariant": {
+    "version": "v0.1",
+    "introduced_at_date": "2026-05-18",
+    "statement": "Every seed contains the full tree DNA. Every tree carries the full forest pattern.",
+    "rules": [
+      "a_node_is_a_seed_no_lite_node",
+      "a_seed_contains_the_tree_full_pattern_at_one_human",
+      "a_tree_contains_the_forest_no_node_owns_the_system",
+      "node_leaving_does_not_delete_capability",
+      "node_joining_does_not_import_the_system_from_outside"
+    ],
+    "canon_anchor": "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+    "third_fact_anchor": "docs/public/third-fact-v0.1.md",
+    "bitcoin_anchor_blocks": [948027, 948029],
+    "code_anchor": "packages/core/src/profiles.js",
+    "companion_to": "node_ordinal_law"
+  },
   "forbidden_topology_phrases": [
     {
       "phrase": "Each user has their own URP",

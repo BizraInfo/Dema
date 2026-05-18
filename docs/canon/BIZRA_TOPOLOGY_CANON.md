@@ -155,6 +155,35 @@ Both founder devices are Node0. The trusted friend is Node1. A device is never a
 
 **Implementation anchor:** `buildUserProfile` in `packages/core/src/profiles.js` (since commit `9a8389e`, 2026-05-18) accepts `node_ordinal`, `device_label`, and `companion_of` as kwargs and derives `node_uid` deterministically via SHA-256 over `operator|ordinal|device`. The `dema onboard --json` surface emits a top-level `node_identity` block. Identity (`node_uid`) is intentionally independent of presentation (`language`): a user changing their preferred language never changes their cryptographic identity.
 
+## Seed-pattern invariant (fractality)
+
+**Amendment:** 2026-05-18 GST. Inscribes as canon what the Third Fact (`docs/public/third-fact-v0.1.md` line 160, Bitcoin-anchored at block 948027 + 948029) already implies: BIZRA is fractal in structure. Every node carries the full system, not a subset of it.
+
+**The invariant:**
+
+> Every seed contains the full tree DNA. Every tree carries the full forest pattern.
+
+Concretely:
+
+1. **A node is a seed.** Every node carries the constitutional spine, the canonical 16-key boundary, the V/D/A/U claim discipline, the 7-pillar architecture pointer, and the receipt-shape contract. There is no "lite" node.
+2. **A seed contains the tree.** Node0 alone, with no federation, already runs the discipline that the whole BIZRA ecosystem will run at planetary scale. The PAT-7 + SAT-5 + URP layout at one human is the same layout at one billion humans, only with a different SAT-count multiple.
+3. **A tree contains the forest.** No node *owns* the system; each node *carries* it. Federation grows what is already present; it does not introduce missing pieces.
+4. **Bitcoin-anchored.** The Third Fact PDF (block 948027 + 948029) anchors this fractality at the founding-doc level.
+
+**Operational consequences:**
+
+- A node leaving the network does not delete the network's capability — the seed pattern is preserved in every other node.
+- A new node joining does not import the system from outside — it activates the system that was already present in its constitutional spine.
+- No node is the "real" BIZRA. The system IS the relationship between nodes that each carry it.
+
+**Implementation anchors:**
+
+- `docs/public/third-fact-v0.1.md` lines 93, 150, 160, 309-311, 344-353 — the seed-pattern language across the manifesto.
+- `packages/core/src/profiles.js` (commit `9a8389e`) — every `buildUserProfile` call emits the full PAT/SAT/URP/boundary structure regardless of `node_ordinal`. The same identity primitive at Node0 is the same at Node1.
+- Founding PDFs anchored at Bitcoin block 948027 + 948029.
+
+**Doctrinal anchor:** this invariant is companion to [Node ordinal law](#node-ordinal-law). The ordinal counts which node; the seed-pattern says what every node carries. Together they constitute the topology of BIZRA expansion.
+
 ## Canonicalized subsystems
 
 | Subsystem | Status | Cycle | BLAKE3 Hash | Tests |
