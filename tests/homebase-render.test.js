@@ -156,3 +156,22 @@ test("ADV: formatHomebasePreview displays the v0.1 keyboard-hints-only banner (n
   const out = formatHomebasePreview(makePreview(), { noColor: true });
   assert.match(out, /keyboard hints only/, "v0.1 must NOT claim interactivity it does not yet have");
 });
+
+test("LAW-OF-ASSUMPTION: footer carries the LoA citation per docs/canon/LAW_OF_ASSUMPTION.md", () => {
+  // The persona DNA must be visible in every render · not only textual in canon.
+  // The boundary footer is the embodiment surface that operators see every time
+  // `dema` is invoked. This is the gate that catches if the LoA citation is
+  // ever silently removed. The one-line citation drops the definite article
+  // "the" to fit the 72-char inner width budget · all canonical content words
+  // preserved (Law of Assumption · declare · boundary · evidence · uncertainty).
+  // Full canonical phrasing lives at docs/canon/LAW_OF_ASSUMPTION.md.
+  const out = formatHomebasePreview(makePreview(), { noColor: true });
+  assert.match(out, /Boundary: preview-only · no action without explicit consent\./);
+  assert.match(out, /Law of Assumption: declare boundary between evidence and uncertainty\./);
+});
+
+test("LAW-OF-ASSUMPTION: both boundary lines render under termDumb (ASCII fallback)", () => {
+  const out = formatHomebasePreview(makePreview(), { noColor: true, termDumb: true });
+  assert.match(out, /no action without explicit consent/);
+  assert.match(out, /declare boundary between evidence and uncertainty/);
+});

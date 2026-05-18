@@ -119,6 +119,40 @@
     "adr_009_poi_anchor": "docs/06-adr/ADR-009-poi-proof-of-impact-design.md",
     "companion_to": ["node_ordinal_law", "seed_pattern_invariant"]
   },
+  "law_of_assumption": {
+    "version": "v0.1",
+    "introduced_at_repo_commit": "pending_this_commit",
+    "introduced_at_date": "2026-05-18",
+    "authored_by": "Mumu (Mohamed Beshr)",
+    "operator_local_origin_date": "2026-05-09",
+    "operator_local_anchor": "~/.dema/memory/foundational-mindset.{json,md}",
+    "repo_canon_anchor": "docs/canon/LAW_OF_ASSUMPTION.md",
+    "statement_bilingual_source_present": true,
+    "claim_states": ["VERIFIED", "DERIVED", "ASSUMED_WITH_IHSAN", "UNKNOWN"],
+    "assumption_shape_fields": ["assumption", "ground", "boundary", "rejectable"],
+    "third_path_named": "bounded_autonomy_through_declared_epistemic_ground",
+    "deeper_gate": "can Dema honestly declare the boundary between evidence and uncertainty?",
+    "refusal_as_product_corollary": true,
+    "embodiment_in_render": {
+      "surface": "homebase_v0_1a_boundary_footer",
+      "code_anchor": "packages/core/src/tui-formatter.js::formatHomebasePreview",
+      "test_anchor": "tests/homebase-render.test.js (LAW-OF-ASSUMPTION assertions)",
+      "footer_citation_text": "Law of Assumption: declare boundary between evidence and uncertainty."
+    },
+    "binding_at_layers": [
+      "every_receipt",
+      "every_proposal_awaiting_typed_go",
+      "every_claim_dema_makes",
+      "every_spine_surface_emission",
+      "every_vigil_reflection",
+      "every_federation_handshake_future",
+      "every_artifact_n_issuance",
+      "every_refusal_emitted",
+      "every_operator_facing_render"
+    ],
+    "companion_to": ["node_ordinal_law", "seed_pattern_invariant", "skill_growth_law"],
+    "operating_frame_one_line": "Evidence > Assumption. When assumption is unavoidable, assume with Ihsān. Declare the boundary between evidence and uncertainty. Refusal is a product, not an error."
+  },
   "forbidden_topology_phrases": [
     {
       "phrase": "Each user has their own URP",

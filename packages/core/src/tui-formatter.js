@@ -627,9 +627,13 @@ export function formatHomebasePreview(preview, {
     lines.push(lineBox(`${yellow(c.bullet, noColor)} ${dim("partial state · " + (preview.warnings?.length ?? 0) + " warning(s) · run with --json for detail", noColor)}`, { width, c }));
   }
 
-  // Boundary footer
+  // Boundary footer · two-line embodiment per docs/canon/LAW_OF_ASSUMPTION.md.
+  // First line is the consent boundary; second line is the Law of Assumption
+  // citation. Together they make the persona DNA visible to the operator at
+  // every render, not just textual in the docs tree.
   lines.push(dividerBox(width, c));
   lines.push(lineBox(dim("Boundary: preview-only · no action without explicit consent.", noColor), { width, c }));
+  lines.push(lineBox(dim("Law of Assumption: declare boundary between evidence and uncertainty.", noColor), { width, c }));
   lines.push(bottomBorder(width, c));
   return lines.join("\n");
 }
