@@ -10,7 +10,12 @@ set -eu
 
 mkdir -p public/dema
 
-cp scripts/install/install-unix.sh       public/dema/install.sh
+# Canonical Linux/macOS installer is the unified install.sh (commit 70e3233+).
+# install-unix.sh in this repo is a backward-compat wrapper that exec's
+# install.sh from the same directory; publishing it standalone would break
+# (the wrapper has no sibling install.sh to exec at the published URL).
+# Therefore the published /dema/install.sh IS the unified install.sh directly.
+cp scripts/install/install.sh            public/dema/install.sh
 cp scripts/install/install-windows.ps1   public/dema/install.ps1
 cp scripts/install/uninstall-unix.sh     public/dema/uninstall.sh
 cp scripts/install/uninstall-windows.ps1 public/dema/uninstall.ps1
