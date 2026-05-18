@@ -18,7 +18,7 @@ Sovereign AI nodes that grow without betraying their humans.
 
 The full system intent lives in:
 
-- `docs/public/third-fact-v0.1.md` — the public manifesto (Bitcoin-anchored at blocks 948027 + 948029)
+- `docs/public/third-fact-v0.1.md` — the public manifesto (Bitcoin-anchored at blocks 948027 + 948028 + 948029)
 - `docs/canon/BIZRA_TOPOLOGY_CANON.md` — the structural topology canon
 - Founding PDFs at `~/Downloads/BIZRA_Third_Fact_v0_1_FINAL.pdf` (and siblings)
 

@@ -6,7 +6,7 @@
 **Supersedes:** none
 **Related:** [ADR-001 Dema Is One Face](ADR-001-dema-is-one-face.md), [ADR-002 No Shadow State](ADR-002-no-shadow-state.md), [ADR-006 Continuous Assurance and No-mint Verification](ADR-006-continuous-assurance-and-no-mint-verification.md), [ADR-008 Runtime Activation](ADR-008-runtime-activation.md)
 **Implements:** the design contract for the 7th BIZRA pillar (POI) referenced in ADR-008 §C4 and the Third Fact manifest. Implementation is deferred to a separate scoped GO.
-**Evidence:** `docs/public/third-fact-v0.1.md` §213-229 (canonical economic flow, Bitcoin-anchored at block 948027 + 948029); `packages/core/src/profiles.js` (commit `9a8389e`, 2026-05-18) `buildUserProfile` `node_uid` primitive that POI scoring will reference; `docs/canon/BIZRA_TOPOLOGY_CANON.md` §"Node ordinal law" and §"Seed-pattern invariant" (companion canon for what every node carries).
+**Evidence:** `docs/public/third-fact-v0.1.md` §213-229 (canonical economic flow, Bitcoin-anchored at blocks 948027 + 948028 + 948029); `packages/core/src/profiles.js` (commit `9a8389e`, 2026-05-18) `buildUserProfile` `node_uid` primitive that POI scoring will reference; `docs/canon/BIZRA_TOPOLOGY_CANON.md` §"Node ordinal law" and §"Seed-pattern invariant" (companion canon for what every node carries).
 
 ---
 
