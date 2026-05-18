@@ -33,3 +33,9 @@ public/
 
 # Local scratch/reference export, not repo documentation.
 what is bash , why its the most important and most (1).md
+
+# Skill bundles authored locally (zip archives with SKILL.md + references/).
+# These are operator-authored artifacts intended for ~/.claude/skills/ install,
+# not repo-tracked content. Filed as artifact-type policy: skill bundles live
+# outside the source tree.
+*.skill
