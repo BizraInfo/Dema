@@ -4,6 +4,8 @@
 
 **Bound by** [CLAUDE.md](../../CLAUDE.md), [ADR-001](../06-adr/ADR-001-dema-is-one-face.md), [ADR-005](../06-adr/ADR-005-operator-actions-require-explicit-consent.md), [ADR-006](../06-adr/ADR-006-mint-preview-bifurcation.md), [Dema Autonomy Envelope](dema-autonomy-envelope.md), and [Node0 + DEMA Goal v0.2](node0-dema-goal-v0.2.md).
 
+**Related** [Homebase TUI v0.1](homebase-tui-v0.1.md) — first-contact surface that applies the Mirror key (§7) and Boundary Marker key (§7) of this canon as UX affordances.
+
 **Authored:** 2026-05-18 GST · **Supersedes:** none (first authoring).
 
 ---

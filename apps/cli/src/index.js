@@ -182,6 +182,20 @@ Local evidence:
   dema design emulate-loop [--json]
                       Preview PAT/SAT loop design assumptions; does not run agents
 
+Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
+  dema state               Node0 state preview; mission_centered + runtime/federation/mint=false
+  dema profiles [--summary]
+                           Profile foundation (User/PAT/SAT/Mission/ContextCapsule)
+  dema consent-card        Consent card preview; allowed/blocked effects + decision options
+  dema mission-loop [--summary]
+                           Full lifecycle preview; preview_lifecycle_status pinned HOLD
+  dema evidence-event      EvidenceChain event preview; chain_advance=false; hash-only refs
+  dema llm-router          Local LLM router preview; routing_allowed=false; abstain by default
+  dema process-mining [--summary]
+                           Operator-pattern mirror; surfaces ring_advancement_status; blocks operator_judgment
+  dema key-maker-check [--door "<text>"] [--summary]
+                           Self-audits reasoning shape against the 5 Key Maker invariants; fails closed when violated
+
 Tasks and views:
   dema task         List registered tasks
   dema task NAME    Run a registered task (read-only in v0.3.0)

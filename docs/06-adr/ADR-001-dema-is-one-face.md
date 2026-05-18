@@ -37,7 +37,7 @@ DEMA operates in six modes: Ask, Code, Research, Browser, Computer, Memory/Trust
 
 The original Decision (above) names six **product modes** for DEMA: Ask, Code, Research, Browser, Computer, Memory/Trust. Those are user-facing surfaces — what an operator selects when they want to do something.
 
-The current implementation work has produced six **infrastructure spine commands**, all preview-only: `state`, `profiles`, `consent-card`, `mission-loop`, `evidence-event`, `llm-router`. These are infrastructure that any future product mode must call before capability is granted.
+The current implementation work has produced eight **infrastructure spine commands**, all preview-only: `state`, `profiles`, `consent-card`, `mission-loop`, `evidence-event`, `llm-router`, `process-mining`, `key-maker-check`. These are infrastructure that any future product mode must call before capability is granted.
 
 The two sets of six are not the same. They are not in conflict.
 
@@ -46,7 +46,7 @@ USER-FACING PRODUCT MODES (per original Decision)
   Ask · Code · Research · Browser · Computer · Memory/Trust
                         ⇣ each must traverse ⇣
 INFRASTRUCTURE PREVIEW SPINE (per current implementation)
-  state · profiles · consent-card · mission-loop · evidence-event · llm-router
+  state · profiles · consent-card · mission-loop · evidence-event · llm-router · process-mining · key-maker-check
                         ⇣ each pinned by ⇣
 CANONICAL PREVIEW BOUNDARY
   16 keys · all false · isCanonicalBoundary (strict) · isCanonicalBoundaryShape (post-JSON)
@@ -70,16 +70,18 @@ The spine commands do not replace the modes. They provide the truth, identity, c
 | Computer | PLANNED | No CLI/UI surface yet; future mode atop the spine |
 | Memory/Trust | PARTIAL PREVIEW | Substrate is partially present via `state`, `profiles`, context capsule. Full mode UX not yet built |
 
-### Infrastructure spine (the six implemented previews)
+### Infrastructure spine (the eight implemented previews)
 
 | Surface | Status | Source |
 |---|---|---|
 | `state` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/state.js` · schema `bizra.dema.node0_state.v0.1` |
-| `profiles` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/profiles.js` · 5 actor profiles + ContextCapsule |
+| `profiles` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/profiles.js` · 5 actor profiles + ContextCapsule · `--summary` variant |
 | `consent-card` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/consent-card-preview.js` |
-| `mission-loop` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/mission-loop-preview.js` |
+| `mission-loop` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/mission-loop-preview.js` · `--summary` variant |
 | `evidence-event` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/evidence-chain-event-preview.js` |
 | `llm-router` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/local-llm-router-preview.js` |
+| `process-mining` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/process-mining-preview.js` · operator-pattern mirror · `--summary` variant |
+| `key-maker-check` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/key-maker-compliance.js` · self-audits 5 invariants from [Key Maker Epistemic Conduct v0.1](../02-architecture/key-maker-epistemic-conduct-v0.1.md) · `--summary` variant |
 
 ### Cross-layer trust primitives
 
