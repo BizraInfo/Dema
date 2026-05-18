@@ -53,7 +53,7 @@ test("buildReleaseReadinessReport scores dependency and installer posture", asyn
 
   assert.equal(report.dependency_management.runtime_dependencies, 0);
   assert.equal(report.dependency_management.dev_dependencies, 0);
-  assert.equal(report.installer_artifacts.required.length, 4);
+  assert.equal(report.installer_artifacts.required.length, 5);
   assert.ok(report.installer_artifacts.required.every((artifact) => artifact.exists));
   assert.ok(report.installer_artifacts.capabilities.includes("dry-run"));
   assert.ok(report.installer_artifacts.capabilities.includes("check"));

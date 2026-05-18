@@ -13,6 +13,12 @@ import {
 } from "../../../packages/core/src/mission-loop-preview.js";
 import { buildEvidenceChainEventPreviewFromInputs } from "../../../packages/core/src/evidence-chain-event-preview.js";
 import { buildNodeRegistryPreview } from "../../../packages/core/src/node-registry-preview.js";
+import { buildOnboardingLifecyclePreview } from "../../../packages/core/src/onboarding-lifecycle.js";
+import {
+  formatOnboardingLifecyclePreview,
+  formatNodeRegistryPreview,
+  resolveFormatterOptsFromEnv
+} from "../../../packages/core/src/tui-formatter.js";
 import { buildLocalLLMRouterPreview } from "../../../packages/core/src/local-llm-router-preview.js";
 import {
   buildProcessMiningPreview,
@@ -203,7 +209,10 @@ Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
   dema mission-loop [--summary]
                            Full lifecycle preview; preview_lifecycle_status pinned HOLD
   dema evidence-event      EvidenceChain event preview; chain_advance=false; hash-only refs
-  dema node-registry       Node ordinal registry preview (v0.1e); accepted + ghost slots; no federation, no node_connection
+  dema node-registry [--pretty]
+                           Node ordinal registry preview (v0.1e+f); accepted + ghost slots; no federation, no node_connection. --pretty = ANSI TUI render
+  dema onboarding-lifecycle [--json]
+                           Onboarding lifecycle preview (v0.1) · 7-stage flow (language→tech-level→node-role→purpose→resources→consent-constitution→first-mission) · ANSI TUI on TTY · JSON in --json or non-TTY
   dema llm-router          Local LLM router preview; routing_allowed=false; abstain by default
   dema process-mining [--summary]
                            Operator-pattern mirror; surfaces ring_advancement_status; blocks operator_judgment
@@ -295,7 +304,27 @@ async function dispatch(argv) {
     }
 
     case "node-registry": {
-      console.log(JSON.stringify(buildNodeRegistryPreview(), null, 2));
+      const preview = buildNodeRegistryPreview();
+      if (argv.includes("--pretty")) {
+        console.log(formatNodeRegistryPreview(preview, resolveFormatterOptsFromEnv()));
+        return;
+      }
+      console.log(JSON.stringify(preview, null, 2));
+      return;
+    }
+
+    case "onboarding-lifecycle": {
+      const preview = buildOnboardingLifecyclePreview();
+      if (argv.includes("--json")) {
+        console.log(JSON.stringify(preview, null, 2));
+        return;
+      }
+      // Default: pretty TUI on TTY, JSON when redirected
+      if (process.stdout.isTTY) {
+        console.log(formatOnboardingLifecyclePreview(preview, resolveFormatterOptsFromEnv()));
+      } else {
+        console.log(JSON.stringify(preview, null, 2));
+      }
       return;
     }
 

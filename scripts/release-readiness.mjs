@@ -20,6 +20,7 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = dirname(SCRIPT_DIR);
 
 const REQUIRED_INSTALLER_ARTIFACTS = [
+  "scripts/install/install.sh",
   "scripts/install/install-unix.sh",
   "scripts/install/install-windows.ps1",
   "scripts/install/uninstall-unix.sh",
