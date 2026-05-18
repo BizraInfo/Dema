@@ -51,7 +51,8 @@ const SPINE_COMMANDS = Object.freeze([
   "onboarding-lifecycle",
   "skill-growth-governor",
   "project-status",
-  Object.freeze({ name: "homebase", args: ["--json"] })
+  Object.freeze({ name: "homebase", args: ["--json"] }),
+  "craftsmanship-witness"
 ]);
 
 async function checkOne(spec) {

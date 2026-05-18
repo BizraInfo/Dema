@@ -16,6 +16,7 @@ import { buildNodeRegistryPreview } from "../../../packages/core/src/node-regist
 import { buildOnboardingLifecyclePreview } from "../../../packages/core/src/onboarding-lifecycle.js";
 import { buildSkillGrowthGovernorPreview } from "../../../packages/core/src/skill-growth-governor.js";
 import { buildProjectStatusPreview } from "../../../packages/core/src/project-status-preview.js";
+import { buildCraftsmanshipWitnessPreview } from "../../../packages/core/src/craftsmanship-witness-preview.js";
 import {
   formatOnboardingLifecyclePreview,
   formatNodeRegistryPreview,
@@ -400,6 +401,16 @@ async function dispatch(argv) {
       } else {
         console.log(JSON.stringify(preview, null, 2));
       }
+      return;
+    }
+
+    case "craftsmanship-witness": {
+      // 15th canonical spine surface · the master-craftsmanship creation
+      // (proactive self micro harness + micro consent + RSI micro process
+      //  mining + master craftsmanship · all in one preview).
+      // Inputs are caller-declared (zero I/O in builder); CLI passes empty
+      // defaults · operator can pipe their own slice_history/rsi_signals etc.
+      console.log(JSON.stringify(buildCraftsmanshipWitnessPreview(), null, 2));
       return;
     }
 

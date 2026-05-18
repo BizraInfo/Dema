@@ -61,6 +61,8 @@ const HELP = [
   "  onboarding-lifecycle 7-stage flow: language→tech-level→...→first-mission",
   "  skill-growth-governor proof-governed growth · 5 gates + 8 refusals",
   "  project-status       PMBOK 7th-edition aligned · stakeholders + risks + value",
+  "  craftsmanship-witness master craftsmanship creation · proactive self-harness +",
+  "                       micro-consent + RSI process-mining-of-self + 10 invariants",
   "",
   "Tasks:",
   "  task NAME            run a registered task (read-only in v0.3.0)",
