@@ -305,6 +305,93 @@ export function formatNodeRegistryPreview(preview, {
   return lines.join("\n");
 }
 
+export function formatSkillGrowthGovernorPreview(preview, {
+  noColor = false,
+  termDumb = false,
+  width = 76
+} = {}) {
+  if (!preview || preview.schema !== "bizra.dema.skill_growth_governor.v0.1") {
+    return formatError("Expected bizra.dema.skill_growth_governor.v0.1 input", { noColor, termDumb, width });
+  }
+  const c = chars(termDumb);
+  const lines = [];
+
+  lines.push(topBorder(width, c));
+  lines.push(lineBox(`${bold("DEMA · SKILL GROWTH GOVERNOR", noColor)}  ${dim("preview · proof-governed", noColor)}`, { width, c }));
+  lines.push(dividerBox(width, c));
+  lines.push(lineBox("", { width, c }));
+
+  // Four-line law front and center · the doctrinal anchor
+  lines.push(lineBox(bold("Operating law:", noColor), { width, c }));
+  for (const law of preview.four_line_law || []) {
+    lines.push(lineBox(`  ${cyan(law, noColor)}`, { width, c }));
+  }
+  lines.push(lineBox("", { width, c }));
+
+  // Counters at a glance · the Growth Dashboard
+  const ct = preview.counters || {};
+  lines.push(lineBox(bold("Growth dashboard:", noColor), { width, c }));
+  lines.push(lineBox(`  Candidates total      : ${(ct.candidates_total ?? 0).toString().padStart(3)}`, { width, c }));
+  lines.push(lineBox(`  ${green("Promotable", noColor)}             : ${(ct.candidates_promotable ?? 0).toString().padStart(3)}`, { width, c }));
+  lines.push(lineBox(`  ${yellow("Proposed (gates pending)", noColor)} : ${(ct.candidates_proposed ?? 0).toString().padStart(3)}`, { width, c }));
+  lines.push(lineBox(`  ${red("Halted (refused)", noColor)}      : ${(ct.candidates_halted ?? 0).toString().padStart(3)}`, { width, c }));
+  lines.push(lineBox(`  Human-edited protected: ${(ct.human_edited_skills_protected ?? 0).toString().padStart(3)}  ${dim("(sacred)", noColor)}`, { width, c }));
+  lines.push(lineBox(`  Pinned skills         : ${(ct.pinned_skills ?? 0).toString().padStart(3)}`, { width, c }));
+  lines.push(lineBox(`  Total refusals        : ${(ct.refusals_total ?? 0).toString().padStart(3)}`, { width, c }));
+  lines.push(lineBox("", { width, c }));
+
+  // Five gates as a list
+  lines.push(lineBox(bold("Five promotion gates:", noColor), { width, c }));
+  for (const gate of preview.five_gates || []) {
+    lines.push(lineBox(`  ${cyan(c.bullet, noColor)} ${gate}`, { width, c }));
+  }
+  lines.push(lineBox("", { width, c }));
+
+  // Per-candidate detail · only show if any
+  if (Array.isArray(preview.candidate_evaluations) && preview.candidate_evaluations.length > 0) {
+    lines.push(lineBox(bold("Candidate evaluations:", noColor), { width, c }));
+    for (const e of preview.candidate_evaluations) {
+      const actionColor = e.next_action === "promote" ? green : e.next_action === "halt" ? red : yellow;
+      const actionMark = e.next_action === "promote" ? c.circle_on : e.next_action === "halt" ? c.circle_off : c.circle_off;
+      lines.push(lineBox(`  ${actionColor(actionMark, noColor)} ${e.skill_id} v${e.candidate_version}  ${dim("→", noColor)} ${actionColor(bold(e.next_action, noColor), noColor)}`, { width, c }));
+      // Show per-gate results
+      for (const [gName, gResult] of Object.entries(e.gates ?? {})) {
+        const passSym = gResult.passed ? green(c.circle_on, noColor) : red(c.circle_off, noColor);
+        const reason = gResult.passed ? "" : `  ${dim("· " + (gResult.reason ?? ""), noColor)}`;
+        for (const l of wrappedLineBoxes(`      ${passSym} ${gName}${reason}`, { width, c }, "        ")) {
+          lines.push(l);
+        }
+      }
+      // Show refusals
+      if (Array.isArray(e.refusals) && e.refusals.length > 0) {
+        for (const r of e.refusals) {
+          for (const l of wrappedLineBoxes(`      ${red("✗ refusal:", noColor)} ${r}`, { width, c }, "        ")) {
+            lines.push(l);
+          }
+        }
+      }
+      // Show consent phrase required if not yet typed
+      if (!e.gates?.human_consent_received?.passed) {
+        for (const l of wrappedLineBoxes(`      ${dim("type to promote:", noColor)} ${cyan(`"${e.promotion_phrase_required}"`, noColor)}`, { width, c }, "        ")) {
+          lines.push(l);
+        }
+      }
+      lines.push(lineBox("", { width, c }));
+    }
+  }
+
+  // Protected namespaces footer
+  if (Array.isArray(preview.protected_namespaces) && preview.protected_namespaces.length > 0) {
+    lines.push(lineBox(`${dim("Protected namespaces:", noColor)} ${preview.protected_namespaces.join(", ")} ${dim("(no skills here without override)", noColor)}`, { width, c }));
+    lines.push(lineBox("", { width, c }));
+  }
+
+  lines.push(dividerBox(width, c));
+  lines.push(lineBox(dim("Boundary: preview-only · no overwrite · no auto-promotion · refusal-as-product.", noColor), { width, c }));
+  lines.push(bottomBorder(width, c));
+  return lines.join("\n");
+}
+
 // ─── Error fallback ────────────────────────────────────────────────────────
 
 function formatError(msg, { noColor, termDumb, width }) {

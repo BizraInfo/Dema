@@ -43,7 +43,8 @@ const SPINE_COMMANDS = Object.freeze([
   "key-maker-check",
   "llm-invoke",
   "node-registry",
-  "onboarding-lifecycle"
+  "onboarding-lifecycle",
+  "skill-growth-governor"
 ]);
 
 async function checkOne(cmd) {
