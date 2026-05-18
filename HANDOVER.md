@@ -102,8 +102,8 @@ If all 5 return as expected, **the system is verifiable at HEAD as committed.** 
 │  EVIDENCE (~/.dema/  + .proof-forge/  + Bitcoin attestation)                │
 │                                                                             │
 │  Local state                Receipt chain              Bitcoin anchor        │
-│  5.8 GB · 24 memory         17 receipts · genesis      Founding PDFs block   │
-│  entries · 3 receipts       2026-05-07 → IRONCLAD #17  948027 + 948029       │
+│  5.8 GB · 24 memory         17 receipts · genesis      Founding PDFs blocks  │
+│  entries · 3 receipts       2026-05-07 → IRONCLAD #17  948027/948028/948029  │
 │                                                        IRONCLAD #17: pending  │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -170,7 +170,7 @@ Receipt #17 2026-05-18  ADR-008 IRONCLAD (4 verification commands)
 
 Bitcoin attestations:
 ```
-Founding documents (3 PDFs) → block 948027 + 948029 (CONFIRMED 2026-04)
+Founding documents (3 PDFs) → blocks 948027 + 948028 + 948029 (CONFIRMED 2026-04)
 PROOF_SUMMARY.md            → submitted to 4 OTS calendars (PENDING 2026-05-18)
 ```
 

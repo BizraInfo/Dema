@@ -20,7 +20,7 @@ After 3 years of foundational work, Dema at HEAD `bc59e32` consists of:
 - Key Maker Epistemic Conduct v0.1 (canon → code · 5 invariants self-auditing)
 - L1 baseline tooling (capture + diff · 3 frozen snapshots)
 - Founder Field Notes v0.1 + In-Room Walkthrough v0.1 (canon-grade narrative)
-- Three founding documents Bitcoin-anchored at blocks 948027 + 948029
+- Three founding documents Bitcoin-anchored at blocks 948027 + 948028 + 948029
 - 5.8 GB persistent local state at `~/.dema/`
 
 **What exists today is the substrate, not the agent.** The substrate emits canonical preview JSON. It does not invoke an LLM. It does not act. It does not orchestrate. The 7 PAT and 5 SAT exist in canon (per [Third Fact](../../themassage.pdf), [Node0 Goal v0.2](../02-architecture/node0-dema-goal-v0.2.md)) but are not running code.
