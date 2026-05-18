@@ -17,6 +17,10 @@ import {
   buildProcessMiningPreview,
   buildProcessMiningSummary
 } from "../../../packages/core/src/process-mining-preview.js";
+import {
+  buildKeyMakerCompliancePreview,
+  buildKeyMakerComplianceSummary
+} from "../../../packages/core/src/key-maker-compliance.js";
 import { previewBoundedDiagnostic } from "../../../packages/core/src/mission.js";
 import {
   buildMissionDraftPreview,
@@ -269,6 +273,15 @@ async function dispatch(argv) {
       const preview = argv.includes("--summary")
         ? buildProcessMiningSummary()
         : buildProcessMiningPreview();
+      console.log(JSON.stringify(preview, null, 2));
+      return;
+    }
+
+    case "key-maker-check": {
+      const door = argValue(argv, "--door") ?? "";
+      const preview = argv.includes("--summary")
+        ? buildKeyMakerComplianceSummary({ door })
+        : buildKeyMakerCompliancePreview({ door });
       console.log(JSON.stringify(preview, null, 2));
       return;
     }
