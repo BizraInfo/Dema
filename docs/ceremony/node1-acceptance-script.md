@@ -454,7 +454,7 @@ cat .proof-forge/receipts/$(ls -t .proof-forge/receipts/ | head -1) | python3 -m
 **[Mumu says:]**
 
 > That hash chain link is now part of BIZRA's permanent local history.
-> When we eventually add Node1 federation (months from now), this ceremony
+> When the future Node1 handshake step lands (months from now), this ceremony
 > is what BIZRA points back to as your origin.
 
 ---

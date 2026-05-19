@@ -203,7 +203,7 @@ The cloud-author blueprint correctly named the temptations to avoid. Phase_07 ma
 | Build all 5 screens at once | Dilutes the slice; v0.1 cannot ship if v0.2 ships in same arc |
 | Add a global chat box on homebase | Breaks identity-first hook; falls into ChatGPT-with-steps trap |
 | Add gamification (streaks · levels) | Anti-Ihsān per Key Maker §11 |
-| Add a Node1 federation mockup before Ring 1 reviewer feedback | Skips a ring |
+| Add a Node1 inter-node handshake mockup before Ring 1 reviewer feedback | Skips a ring |
 | Allow non-typed "approve" affordance for L1+ actions | Violates ADR-005 |
 | Add raw-corpus excerpts to knowledge screen | D4-secret leak surface; ADR-008 C8 forbids |
 | Make URP cards mutable from inside TUI | URP is read-only at v0.1-0.3; mutation needs a separate ADR |
