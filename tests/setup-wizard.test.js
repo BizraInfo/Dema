@@ -192,3 +192,43 @@ test("Setup canceled message emitted on EOF", async () => {
   const { output } = await wizard(["TestUser"], {}, 1);
   assert.match(output, /Setup canceled/);
 });
+
+test("REGRESSION: EOF on Q2 (device label) returns null cleanly — no hang, no write", async () => {
+  // Bug surfaced by SPARC Reviewer (2026-05-19): Q2 cancellation branch was
+  // missing `lq.close()` before returning, while every other branch
+  // (Q1/Q3/Q4/Q5) called it. In real interactive TTY use this caused
+  // the process to hang. In unit tests the stream ends naturally so the
+  // hang is invisible — hence the structural regression test below.
+  const { profile, output, writtenProfile } = await wizard(["MumuQ1"], {}, 1);
+  assert.equal(profile, null);
+  assert.equal(writtenProfile, null);
+  assert.match(output, /Setup canceled/);
+});
+
+test("REGRESSION: every 'Setup canceled' branch in setup-wizard.js calls lq.close() first", async () => {
+  // Structural source-level invariant — catches future regressions of the
+  // same bug class even when unit-test streams end naturally.
+  const { readFileSync } = await import("node:fs");
+  const { fileURLToPath } = await import("node:url");
+  const src = readFileSync(
+    fileURLToPath(new URL("../packages/core/src/setup-wizard.js", import.meta.url)),
+    "utf8"
+  );
+  const lines = src.split("\n");
+  let canceledBranchesChecked = 0;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].includes('"Setup canceled') && lines[i].includes("stdout.write")) {
+      let foundClose = false;
+      for (let j = i - 1; j >= Math.max(0, i - 4); j--) {
+        if (lines[j].includes("lq.close()")) { foundClose = true; break; }
+        if (lines[j].trim().startsWith("if (canceled")) break;
+      }
+      assert.ok(
+        foundClose,
+        `setup-wizard.js:${i + 1}: 'Setup canceled' write must be preceded by lq.close() within its cancel branch`
+      );
+      canceledBranchesChecked++;
+    }
+  }
+  assert.equal(canceledBranchesChecked, 5, "expected exactly 5 'Setup canceled' branches (Q1..Q5)");
+});

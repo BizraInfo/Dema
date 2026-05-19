@@ -163,6 +163,7 @@ export async function runSetupWizard({
   write("   Optional; used for multi-device companion identity.\n");
   const deviceLabel = await askDeviceLabel(lq, stdout);
   if (canceled(deviceLabel)) {
+    lq.close();
     stdout.write("Setup canceled. No changes written.\n");
     return null;
   }
