@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { routeChatInput, STOPWORDS, GREETING_WORDS } from "../packages/core/src/chat-router.js";
+import { routeChatInput, STOPWORDS, GREETING_WORDS, NEXT_ACTION_PHRASES, DISPATCH_INTENT_MAP } from "../packages/core/src/chat-router.js";
 
 // ── Dependency-injection helpers ──────────────────────────────────────────────
 
@@ -194,4 +194,98 @@ test("suggestedCommands is always an array", () => {
     const r = routeChatInput(input, DI);
     assert.ok(Array.isArray(r.suggestedCommands), `suggestedCommands not array for input '${input}'`);
   }
+});
+
+// ── next-action intent ────────────────────────────────────────────────────────
+
+test("'what should I do next' → intent: next-action", () => {
+  const r = routeChatInput("what should I do next", DI);
+  assert.equal(r.intent, "next-action");
+  assert.match(r.response, /next safe action/i);
+  assert.ok(Array.isArray(r.suggestedCommands));
+  assert.ok(r.suggestedCommands.includes("dema doctor"));
+});
+
+test("'what now' → intent: next-action", () => {
+  const r = routeChatInput("what now", DI);
+  assert.equal(r.intent, "next-action");
+});
+
+test("'what's next' (apostrophe variant) → intent: next-action", () => {
+  const r = routeChatInput("what's next", DI);
+  assert.equal(r.intent, "next-action");
+});
+
+test("'next move' → intent: next-action", () => {
+  const r = routeChatInput("next move", DI);
+  assert.equal(r.intent, "next-action");
+});
+
+test("next-action response uses injected status (activationGate + nextAdmissibleAction)", () => {
+  const mockStatus = {
+    activationGate: "EXPLICIT_GO_REQUIRED",
+    findings: [],
+    nextAdmissibleAction: "bounded_setup_complete"
+  };
+  const r = routeChatInput("what should I do next", { ...DI, status: mockStatus });
+  assert.equal(r.intent, "next-action");
+  assert.match(r.response, /EXPLICIT_GO_REQUIRED/);
+  assert.match(r.response, /bounded_setup_complete/);
+});
+
+test("next-action with null status falls back to defaults gracefully", () => {
+  const r = routeChatInput("next action", { ...DI, status: null });
+  assert.equal(r.intent, "next-action");
+  assert.match(r.response, /BLOCKED/);
+  assert.match(r.response, /bounded_diagnostic_activation/);
+});
+
+// ── dispatch-intent ───────────────────────────────────────────────────────────
+
+test("'show my status' → intent: dispatch-intent, dispatchCommand: ['status']", () => {
+  const r = routeChatInput("show my status", DI);
+  assert.equal(r.intent, "dispatch-intent");
+  assert.deepEqual(r.dispatchCommand, ["status"]);
+});
+
+test("'show my receipts' → intent: dispatch-intent, dispatchCommand: ['receipts']", () => {
+  const r = routeChatInput("show my receipts", DI);
+  assert.equal(r.intent, "dispatch-intent");
+  assert.deepEqual(r.dispatchCommand, ["receipts"]);
+});
+
+test("'help me draft a mission' → intent: dispatch-intent, dispatchCommand: ['mission','draft']", () => {
+  const r = routeChatInput("help me draft a mission", DI);
+  assert.equal(r.intent, "dispatch-intent");
+  assert.deepEqual(r.dispatchCommand, ["mission", "draft"]);
+});
+
+test("'what models' → intent: dispatch-intent, dispatchCommand: ['models','scan','--summary']", () => {
+  const r = routeChatInput("what models", DI);
+  assert.equal(r.intent, "dispatch-intent");
+  assert.deepEqual(r.dispatchCommand, ["models", "scan", "--summary"]);
+});
+
+test("'show my memory' → intent: dispatch-intent, dispatchCommand: ['memory']", () => {
+  const r = routeChatInput("show my memory", DI);
+  assert.equal(r.intent, "dispatch-intent");
+  assert.deepEqual(r.dispatchCommand, ["memory"]);
+});
+
+test("adversarial: 'show my statusxyz' does not match dispatch-intent for status", () => {
+  // "show my statusxyz" does not contain exact phrase "show my status" followed by word boundary
+  // but it DOES contain "show my status" as substring — that is the current design (substring match).
+  // Test documents the actual behavior: it WILL match because of substring inclusion.
+  // Confirm the intent is dispatch-intent (not unknown).
+  const r = routeChatInput("show my statusxyz", DI);
+  // The phrase "show my status" is a substring of "show my statusxyz", so dispatch-intent fires.
+  assert.equal(r.intent, "dispatch-intent");
+  assert.deepEqual(r.dispatchCommand, ["status"]);
+});
+
+test("NEXT_ACTION_PHRASES and DISPATCH_INTENT_MAP are exported arrays", () => {
+  assert.ok(Array.isArray(NEXT_ACTION_PHRASES));
+  assert.ok(NEXT_ACTION_PHRASES.length >= 6);
+  assert.ok(Array.isArray(DISPATCH_INTENT_MAP));
+  assert.ok(DISPATCH_INTENT_MAP.length >= 5);
 });

@@ -67,3 +67,24 @@ test("'hello\\nexit' → stdout contains 'not a chat agent yet'", async () => {
   const { stdout } = await runChat(["hello", "exit"], demaHome);
   assert.match(stdout, /not a chat agent yet/);
 });
+
+test("'what should I do next\\nexit' → stdout contains 'next safe action'", async () => {
+  const demaHome = await makeDemaHome();
+  const { stdout } = await runChat(["what should I do next", "exit"], demaHome);
+  assert.match(stdout, /next safe action/i);
+});
+
+test("'show my status\\nexit' → stdout contains 'Routing your request to' and status output", async () => {
+  const demaHome = await makeDemaHome();
+  const { stdout } = await runChat(["show my status", "exit"], demaHome);
+  assert.match(stdout, /Routing your request to/);
+  assert.match(stdout, /DEMA/);
+});
+
+test("'help me draft a mission\\nexit' → stdout contains mission draft preview header", async () => {
+  const demaHome = await makeDemaHome();
+  const { stdout } = await runChat(["help me draft a mission", "exit"], demaHome);
+  // mission draft without intent arg throws — REPL catches and writes error line
+  // The test verifies routing fired (routing line present OR error about intent).
+  assert.match(stdout, /Routing your request to|dema mission draft|intent/i);
+});

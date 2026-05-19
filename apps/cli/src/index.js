@@ -1131,7 +1131,8 @@ async function runActiveKernel({ interactive = false, force = false } = {}) {
   if (interactive) {
     await runShell({
       greeting: banner,
-      dispatchCommand: dispatch
+      dispatchCommand: dispatch,
+      statusProvider: () => statusWithLocalIdentity()
     });
     return;
   }

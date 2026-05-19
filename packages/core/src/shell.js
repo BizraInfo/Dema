@@ -12,6 +12,8 @@
 
 import { createInterface } from "node:readline";
 import { routeChatInput } from "./chat-router.js";
+import { buildChatBanner } from "./chat-banner.js";
+import { readOperatorPreferredName } from "./operator-profile.js";
 
 const PROMPT = "dema> ";
 
@@ -77,7 +79,9 @@ export async function runShell({
   output = process.stdout,
   dispatchCommand,
   greeting = "(no greeting)",
-  installSigintHandler
+  installSigintHandler,
+  noBanner = false,
+  statusProvider = null
 } = {}) {
   if (typeof dispatchCommand !== "function") {
     throw new Error("runShell requires a dispatchCommand(argv) function.");
@@ -86,6 +90,20 @@ export async function runShell({
   // process.stdin (i.e. an interactive operator). Tests inject a stream
   // and should not have process-level signal handlers interfering.
   const shouldInstallSigint = installSigintHandler ?? input === process.stdin;
+
+  // Banner suppressed under non-TTY, --no-banner flag, or DEMA_BANNER_INTERACTIVE=0.
+  const isTTY = Boolean(output?.isTTY);
+  const suppressBanner =
+    noBanner ||
+    !isTTY ||
+    process.argv.includes("--no-banner") ||
+    process.env.DEMA_BANNER_INTERACTIVE === "0";
+
+  if (!suppressBanner) {
+    const human = await readOperatorPreferredName();
+    const banner = buildChatBanner({ human, suppressed: false });
+    if (banner) output.write(banner + "\n\n");
+  }
 
   output.write(`${greeting}\n\n`);
   output.write(HELP);
@@ -145,8 +163,28 @@ export async function runShell({
       // Conversational fallback: route through chat-router before dispatch.
       // If the input is a BIZRA concept, a greeting, a typo suggestion, or
       // unknown, respond conversationally and skip the CLI dispatcher.
-      const chatResult = routeChatInput(line);
+      const currentStatus = statusProvider ? await statusProvider() : null;
+      const chatResult = routeChatInput(line, { status: currentStatus });
       const PASS_THROUGH_INTENTS = new Set(["empty", "registered-command"]);
+
+      if (chatResult.intent === "next-action") {
+        output.write(chatResult.response + "\n");
+        rl.prompt();
+        return;
+      }
+
+      if (chatResult.intent === "dispatch-intent") {
+        const cmd = chatResult.dispatchCommand ?? [];
+        output.write(`Routing your request to: dema ${cmd.join(" ")}\n`);
+        try {
+          await dispatchCommand(cmd);
+        } catch (err) {
+          output.write(`error: ${err?.message ?? String(err)}\n`);
+        }
+        rl.prompt();
+        return;
+      }
+
       if (!PASS_THROUGH_INTENTS.has(chatResult.intent)) {
         output.write(chatResult.response + "\n");
         rl.prompt();

@@ -1,6 +1,6 @@
 // Conversational fallback router for `dema chat` REPL.
 // Pure synchronous routing — no I/O, no network, no LLM calls.
-// Dependency-inject glossaryFn and suggesterFn for test isolation.
+// Dependency-inject glossaryFn, suggesterFn, and statusFn for test isolation.
 
 import { CANON_GLOSSARY } from "./canon-glossary.js";
 import { suggestCommands } from "./command-suggester.js";
@@ -66,6 +66,26 @@ const SHELL_REGISTERED_COMMANDS = [
   { command: "quit", description: "leave the shell" }
 ];
 
+// Phrase sets for next-action intent detection (lowercase).
+const NEXT_ACTION_PHRASES = [
+  "what should i do next",
+  "what now",
+  "what's next",
+  "whats next",
+  "next action",
+  "next safe task",
+  "next move"
+];
+
+// Dispatch-intent phrase → argv map. Checked left-to-right; first match wins.
+const DISPATCH_INTENT_MAP = [
+  { phrases: ["show my status", "show status", "status please"],         argv: ["status"] },
+  { phrases: ["show my receipts", "list receipts", "my receipts"],        argv: ["receipts"] },
+  { phrases: ["what models", "list my models", "show models"],            argv: ["models", "scan", "--summary"] },
+  { phrases: ["draft a mission", "help me draft a mission", "start a mission"], argv: ["mission", "draft"] },
+  { phrases: ["show my memory", "list memory"],                           argv: ["memory"] }
+];
+
 /**
  * Route a REPL line to the appropriate conversational intent.
  *
@@ -74,13 +94,15 @@ const SHELL_REGISTERED_COMMANDS = [
  * @param {Map}    [options.glossary] - CANON_GLOSSARY-compatible Map (injectable for tests)
  * @param {Function} [options.suggester] - suggestCommands-compatible function (injectable for tests)
  * @param {Array}  [options.registeredCommands] - command list (injectable for tests)
+ * @param {object|null} [options.status] - status object for next-action panel (injectable for tests)
  * @returns {{ intent: string, response: string, suggestedCommands: string[] }}
  */
 function routeChatInput(input, options = {}) {
   const {
     glossary = CANON_GLOSSARY,
     suggester = suggestCommands,
-    registeredCommands = SHELL_REGISTERED_COMMANDS
+    registeredCommands = SHELL_REGISTERED_COMMANDS,
+    status = null
   } = options;
 
   // Safely coerce input — never throw on weird types.
@@ -140,6 +162,32 @@ function routeChatInput(input, options = {}) {
     }
   }
 
+  // (d-pre) Next-action intent: check normalized input against known phrases.
+  const lowerNorm = normalized.toLowerCase();
+  for (const phrase of NEXT_ACTION_PHRASES) {
+    if (lowerNorm.includes(phrase)) {
+      return {
+        intent: "next-action",
+        response: _nextActionResponse(status),
+        suggestedCommands: ["dema doctor", "dema today", "dema explain artifact-011"]
+      };
+    }
+  }
+
+  // (d-pre2) Dispatch-intent: map natural-language phrases to argv arrays.
+  for (const entry of DISPATCH_INTENT_MAP) {
+    for (const phrase of entry.phrases) {
+      if (lowerNorm.includes(phrase)) {
+        return {
+          intent: "dispatch-intent",
+          response: "",
+          dispatchCommand: entry.argv,
+          suggestedCommands: [`dema ${entry.argv.join(" ")}`]
+        };
+      }
+    }
+  }
+
   // (d) Concept-match: check ALL content tokens against the glossary.
   // First match wins — preserves left-to-right natural reading order.
   for (const token of contentTokens) {
@@ -185,6 +233,29 @@ function routeChatInput(input, options = {}) {
   };
 }
 
+function _nextActionResponse(status) {
+  const gate = status?.activationGate ?? "BLOCKED";
+  const findings = Array.isArray(status?.findings) ? status.findings : ["Node0 adapter not connected"];
+  const failCount = findings.length;
+  const readinessLine = gate === "BLOCKED"
+    ? `Node0 readiness: BLOCKED (${failCount} predicate${failCount === 1 ? "" : "s"} failing)`
+    : `Node0 readiness: ${gate}`;
+  const nextAction = status?.nextAdmissibleAction ?? "bounded_diagnostic_activation";
+
+  return [
+    "> Your next safe action:",
+    "",
+    `  ${readinessLine}`,
+    `  Next safe action: ${nextAction}`,
+    "  Gateway: unreachable by design",
+    "",
+    "  Suggested next step:",
+    "    dema doctor    — see exactly what's blocking",
+    "    dema today     — record a continuity tick",
+    "    dema explain artifact-011  — learn what comes next"
+  ].join("\n");
+}
+
 function _conceptResponse(entry) {
   const lines = [
     "I can answer that from my local knowledge.",
@@ -222,4 +293,4 @@ function _unknownResponse(token) {
   ].join("\n");
 }
 
-export { routeChatInput, STOPWORDS, GREETING_WORDS, SHELL_REGISTERED_COMMANDS };
+export { routeChatInput, STOPWORDS, GREETING_WORDS, SHELL_REGISTERED_COMMANDS, NEXT_ACTION_PHRASES, DISPATCH_INTENT_MAP };
