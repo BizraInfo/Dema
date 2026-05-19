@@ -142,6 +142,11 @@ import {
   buildExplainPreview,
   formatExplainPreview
 } from "../../../packages/core/src/canon-glossary.js";
+import {
+  shouldShowIntro,
+  renderIntroLine,
+  recordIntroSeen
+} from "../../../packages/core/src/intro-line.js";
 import { readBannerKey, KEY_BINDINGS } from "../../../packages/core/src/banner-keys.js";
 import {
   renderHelpRoot,
@@ -338,6 +343,16 @@ async function dispatch(argv) {
       !process.stdout.isTTY ||
       Boolean(process.env.DEMA_NO_TUI) ||
       process.env.NODE_ENV === "test";
+    const { join: pathJoin } = await import("node:path");
+    const { homedir } = await import("node:os");
+    const demaHome = process.env.DEMA_HOME || pathJoin(homedir(), ".dema");
+    const showIntro = await shouldShowIntro({ home: demaHome });
+    if (showIntro) {
+      // In JSON mode write intro to stderr so stdout stays machine-parseable.
+      const introStream = wantJson ? process.stderr : process.stdout;
+      introStream.write(renderIntroLine() + "\n\n");
+      await recordIntroSeen({ home: demaHome });
+    }
     const [{ gather }, { buildHomebasePreview }] = await Promise.all([
       import("../../../packages/core/src/homebase-gather.js"),
       import("../../../packages/core/src/homebase-preview.js"),
@@ -409,6 +424,13 @@ async function dispatch(argv) {
         return;
       }
       console.log(formatExplainPreview(preview));
+      // Operator used `dema explain dema` — counts as intentional engagement; suppress intro.
+      if (concept === "dema") {
+        const { join: pj } = await import("node:path");
+        const { homedir: hd } = await import("node:os");
+        const explainHome = process.env.DEMA_HOME || pj(hd(), ".dema");
+        await recordIntroSeen({ home: explainHome, suppressedBy: "user-explain" });
+      }
       return;
     }
 
@@ -638,7 +660,7 @@ async function dispatch(argv) {
         "Dema today",
         `  Continuity tick recorded — ${tick.date}`,
         `  NODE0_READY=${tick.node0Ready} · Activation gate: ${tick.activationGate}`,
-        `  ${memory.total} memory entries summarized at ${result.path}`,
+        `  ${memory.count} memory entries summarized at ${result.path}`,
         `  Next artifact: ${tick.nextArtifact}`,
         humanHintLine("today")
       ].join("\n"));
