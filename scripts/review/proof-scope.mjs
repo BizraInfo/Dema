@@ -40,6 +40,52 @@ const DEVOPS_RELEASE_READINESS_FILES = new Set([
   "tests/release-readiness.test.js"
 ]);
 
+const U2_DEMA_PREVIEW_SURFACE_FILES = new Set([
+  "README.md",
+  "apps/cli/src/index.js",
+  "docs/UX_BLUEPRINT.md",
+  "packages/core/src/ambient.js",
+  "packages/core/src/safety-report.js",
+  "packages/core/src/shell.js",
+  "packages/consent/src/consent-common.js",
+  "packages/consent/src/consent-extract.js",
+  "packages/consent/src/consent-format.js",
+  "packages/consent/src/consent-planner.js",
+  "packages/mission/src/diagnostics-plan.js",
+  "packages/mission/src/journey.js",
+  "packages/mission/src/mission-draft.js",
+  "packages/models/src/model-common.js",
+  "packages/models/src/model-format.js",
+  "packages/models/src/model-inventory.js",
+  "packages/models/src/model-routing.js",
+  "packages/models/src/model-safety.js",
+  "scripts/check.mjs",
+  "tests/ambient.test.js",
+  "tests/consent-planner.test.js",
+  "tests/diagnostics-plan.test.js",
+  "tests/journey.test.js",
+  "tests/mission-draft.test.js",
+  "tests/models.test.js",
+  "tests/safety-report.test.js"
+]);
+
+const CLAIM_LEDGER_CHECKER_FILES = new Set([
+  "package.json",
+  "scripts/claim-ledger-check.mjs",
+  "tests/claim-ledger-check.test.js"
+]);
+
+const AMANA_KERNEL_CONTRACT_FILES = new Set([
+  "packages/consent/src/consent-hash-table.js",
+  "packages/capabilities/src/effect-cap.js",
+  "packages/evidence/src/evidence-chain.js",
+  "packages/impact/src/impact-event.js",
+  "tests/consent-hash-table.test.js",
+  "tests/effect-cap.test.js",
+  "tests/evidence-chain.test.js",
+  "tests/impact-event.test.js"
+]);
+
 const REVIEW_CLASSES = {
   "proof/u1": {
     primaryFiles: U1_FILES,
@@ -62,6 +108,31 @@ const REVIEW_CLASSES = {
       "scripts/check.mjs",
       "scripts/release-readiness.mjs",
       "tests/release-readiness.test.js"
+    ]
+  },
+  "u2/dema-preview-surfaces": {
+    primaryFiles: U2_DEMA_PREVIEW_SURFACE_FILES,
+    requiredFiles: []
+  },
+  "tooling/claim-ledger-checker": {
+    primaryFiles: CLAIM_LEDGER_CHECKER_FILES,
+    requiredFiles: [
+      "package.json",
+      "scripts/claim-ledger-check.mjs",
+      "tests/claim-ledger-check.test.js"
+    ]
+  },
+  "u2.1/amana-kernel-contracts": {
+    primaryFiles: AMANA_KERNEL_CONTRACT_FILES,
+    requiredFiles: [
+      "packages/consent/src/consent-hash-table.js",
+      "packages/capabilities/src/effect-cap.js",
+      "packages/evidence/src/evidence-chain.js",
+      "packages/impact/src/impact-event.js",
+      "tests/consent-hash-table.test.js",
+      "tests/effect-cap.test.js",
+      "tests/evidence-chain.test.js",
+      "tests/impact-event.test.js"
     ]
   },
   "policy/broad-scope": {

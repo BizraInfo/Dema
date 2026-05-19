@@ -1,89 +1,301 @@
 # Dema
 
-**The local-first face of the BIZRA node.**
+**Your sovereign AI node companion.**
 
-Dema helps a person see what is ready on their own computer, what is blocked, what can be safely previewed, and what must wait for exact consent and governed runtime execution.
+Dema helps you run a private AI workspace on your own machine -- with memory, safe actions, receipts, and a clear next step.
 
-It is built for a simple rule:
+Local-first.
+Consent-bound.
+Receipt-backed.
+No coding required.
 
 ```text
-No claim without proof.
-No action without consent.
-No memory without boundary.
-No monetization without verified benefit.
+Install Dema
+-> create your profile
+-> connect a local model
+-> see your node health
+-> approve one bounded action
+-> receive your first proof receipt
 ```
 
-BIZRA is the wider ecosystem. Dema is the door a human can open.
+BIZRA is the ecosystem.
+Dema is the door.
 
 ---
 
-## What Dema is
+## The 60-second version
 
-Dema is a local command-line product face for BIZRA Node0. It reads local state, shows readiness, drafts consent scopes, previews missions, lists receipts, and explains the next safe action.
+Dema is for people who want local AI without invisible autonomy.
 
-Dema does **not** hide a background process. It does **not** start federation. It does **not** run an action just because a user typed an idea. Runtime execution and receipt issuance belong behind the governed Node0 path outside this repo.
+It shows:
 
-```text
-You
--> Dema
--> local setup and status
--> consent preview
--> mission preview
--> governed Node0 runtime handoff
--> local receipt viewer
-```
+- what is ready on your machine
+- what is blocked
+- what Dema can safely preview
+- what requires your exact consent
+- what receipt will prove the result
 
-```mermaid
-flowchart TD
-  User["Human operator"] --> Dema["Dema product face"]
-  Dema --> State["~/.dema local state"]
-  Dema --> Adapter["Node0 adapter"]
-  Adapter --> Node0["BIZRA Node0 / gateway runtime"]
-  Dema --> Consent["Consent and mission previews"]
-  Node0 --> Receipt["Governed receipt handoff"]
-  Receipt --> Viewer["dema receipts"]
-  State --> Viewer
-  Consent -. "preview only in this repo" .-> User
-```
+Dema does not ask you to trust a black box. It tells you what it knows, what it will not touch, and what the next safe action is.
 
 ---
 
-## Start here if you are not technical
-
-If someone has already installed Dema on your computer, open a terminal and copy these commands one at a time:
+## First run
 
 ```bash
 dema welcome
-dema onboard
 dema setup
-dema status
+dema journey "Fix auth.py and run pytest"
+dema models
+dema ambient
+dema ambient --manifest
+dema ambient audit
 dema diagnostics plan
-dema consent plan "Check my local node health"
-dema mission draft "Check my local node health"
+dema consent plan "Fix auth.py and run pytest"
+dema mission draft "Fix auth.py and run pytest"
 dema report safety
-dema roadmap preview
-dema receipts
+dema status
+dema doctor
+dema mission propose
 ```
 
-What to expect:
+Expected first impression:
 
-1. `welcome` explains the local-first boundary.
-2. `setup` creates your local Dema folder.
-3. `status` shows what is ready and what is blocked.
-4. `diagnostics plan` previews a health-check plan without running it.
-5. `consent plan` shows what permission would be needed.
-6. `mission draft` turns your intent into a draft, still without execution.
-7. `report safety` explains the current safety posture.
-8. `roadmap preview` shows the advisory optimization roadmap.
-9. `receipts` lists local proof records if any exist.
+```text
+Welcome to Dema.
 
-For a slower walk-through, read [docs/USER_LIFECYCLE.md](docs/USER_LIFECYCLE.md).
+Your node is local-first.
+Your actions are consent-bound.
+Your important steps can produce receipts.
+
+Next:
+1. Run setup
+2. Check status
+3. Preview first bounded diagnostic
+```
+
+`dema mission propose` is a preview command. It checks readiness and consent state, then stops. It does not start a daemon, execute work, or create the first runtime receipt.
 
 ---
 
-## Install for this repository
+## Sovereign journey
 
-This repo currently supports the developer/lighthouse path. It requires Node.js 20 or newer.
+Use:
+
+```bash
+dema journey "Fix auth.py and run pytest"
+```
+
+This is the one-screen journey preview: first launch, safety boundary, mission
+draft, consent scope, Node0 handoff, and receipt/impact posture. It is a
+terminal UX guide, not a runtime command. It does not approve consent, hand work
+to Node0, execute commands, mutate files, invoke models, or mint receipts.
+
+For a schema-tagged machine view:
+
+```bash
+dema journey --json "Audit Downloads and send to Slack"
+```
+
+---
+
+## Ambient boundary
+
+Use:
+
+```bash
+dema ambient
+```
+
+This shows the Ambient Sovereign Execution boundary. Dema may observe local
+readiness, inventory local models, and prepare a consent handoff. It does not
+run Bash, start a daemon, invoke a model, mutate files, mint artifacts, or
+federate. Raw Bash belongs behind Node0's governed EffectCap runtime, not in
+the Dema product face.
+
+For a schema-tagged machine view:
+
+```bash
+dema ambient:json
+```
+
+For a zero-trust capability manifest preview:
+
+```bash
+dema ambient --manifest
+dema ambient --manifest --json
+```
+
+This emits a hash-committed machine-readable manifest for the current Dema
+boundary: readable symbolic paths, no writable paths, no executable commands,
+no network access, and no foreign personal data. Signing is explicitly deferred
+to governed Node0 because Dema does not issue identity-bound artifacts.
+
+For the SNR/SAPE compliance view:
+
+```bash
+dema ambient audit
+dema ambient audit --json
+```
+
+This compresses the Bash/AHK/Telescript actuator risk into one preview-only
+audit: intent, micro-consent, capability, effect, evidence, impact. It names the
+HHMM phases, Proof-of-Truth posture, and next one-node/one-mission diagnostic
+without enabling execution. It also keeps the agent topology explicit: PAT-7 is
+the local user-aligned mission party, while SAT-5 is the system-owned URP
+control plane. SAT are not cloud PAT and do not live inside user nodes.
+
+Canonical UX boundary:
+
+```text
+Your PAT agents help shape and later execute your local mission.
+SAT/URP validation is system-side and only applies after evidence or receipt handoff.
+```
+
+Canonical invariant: PAT may want success. SAT must require truth. SAT-5 roles
+are SAT-Orchestrator, SAT-Policy, SAT-QualityOps, SAT-Resource, and
+SAT-GlobalVerifier.
+
+---
+
+## Consent planning
+
+Use:
+
+```bash
+dema consent plan "Fix auth.py and run pytest"
+```
+
+This drafts a micro-consent scope from a plain-language intent. It maps obvious
+files, commands, and services into structured permissions, computes a
+commitment hash over the proposed permission set, and flags risky analogies
+such as audit-shaped work that requests external delivery.
+
+This is still preview-only. It does not approve consent, mint capabilities, run
+Bash, call a model, mutate files, or create a receipt. The resulting scope must
+be reviewed and handed to Node0's governed EffectCap runtime before any effect.
+
+For a schema-tagged machine view:
+
+```bash
+dema consent plan --json "Audit Downloads and send to Slack"
+```
+
+---
+
+## Diagnostics plan
+
+Use:
+
+```bash
+dema diagnostics plan
+```
+
+This previews the self-proactive diagnostics mission: local model inventory,
+ambient boundary, safety report, `npm test`, `npm run check`, and Node0
+self-check verification. It is the Dema-facing harness for self-critique, but it
+still does not run commands. Execution belongs behind explicit consent in the
+governed Node0 runtime.
+
+For a schema-tagged machine view:
+
+```bash
+dema diagnostics plan --json
+```
+
+---
+
+## Mission drafting
+
+Use:
+
+```bash
+dema mission draft "Fix auth.py and run pytest"
+```
+
+This converts plain-language intent into a schema-tagged MissionDraft and embeds
+the matching ConsentPlan preview. The mission stays in `DRAFT_INTENT`; the next
+phase is `CONSENT_NEGOTIATION`. Dema does not approve the scope, mint EffectCaps,
+execute commands, or create receipts.
+
+For a schema-tagged machine view:
+
+```bash
+dema mission draft --json "Audit Downloads and send to Slack"
+```
+
+---
+
+## Local models
+
+Use:
+
+```bash
+dema models
+```
+
+This reads local model inventory from Ollama, LM Studio, and model files under
+`~/Downloads` without invoking a model, mutating files, or minting a receipt. It
+also flags model servers that appear LAN-exposed and model names that require an
+explicit operator routing decision.
+
+---
+
+## Safety report
+
+Use:
+
+```bash
+dema report safety
+```
+
+This previews Dema's safety posture for a lighthouse alpha operator: local-only
+boundaries, proof gaps, self-critique, and the demo loop to run before talking
+to another user. It is not a certification command. It does not compute proof,
+invoke a model, execute work, mutate files, start a daemon, or mint a receipt.
+
+For a schema-tagged machine view:
+
+```bash
+dema report safety --json
+```
+
+---
+
+## Install
+
+### Guided installer
+
+Download Dema, open it, and follow the first-run wizard.
+
+The wizard guides you through:
+
+1. Welcome
+2. Privacy mode
+3. Profile
+4. Model detection
+5. Local health check
+6. Receipt folder
+7. First safe action preview
+
+### Terminal install
+
+The terminal installer endpoint is planned for the packaged alpha release. Until release assets are published, use the developer install below.
+
+Planned Linux / macOS command:
+
+```bash
+curl -fsSL https://install.bizra.ai/dema/install.sh | sh
+```
+
+Planned Windows PowerShell command:
+
+```powershell
+irm https://install.bizra.ai/dema/install.ps1 | iex
+```
+
+Each script's SHA-256 hash is published in [docs/INSTALLER_ARCHITECTURE.md](docs/INSTALLER_ARCHITECTURE.md) at every release tag. Operators can verify the bytes match before execution. The endpoint also hosts uninstall scripts at `/dema/uninstall.sh` and `/dema/uninstall.ps1`, plus a small index page at `/dema/`.
+
+### Developer install
 
 ```bash
 git clone https://github.com/BizraInfo/Dema
@@ -93,97 +305,11 @@ npm test
 npm run check
 ```
 
-Run Dema directly from the repo:
-
-```bash
-node apps/cli/src/index.js welcome
-node apps/cli/src/index.js setup
-node apps/cli/src/index.js status
-```
-
-The packaged installer and nontechnical desktop flow are product targets documented in [docs/FIRST_RUN_WIZARD.md](docs/FIRST_RUN_WIZARD.md) and [docs/INSTALLER_ARCHITECTURE.md](docs/INSTALLER_ARCHITECTURE.md). Until release assets are published, do not treat installer URLs as live.
-
----
-
-## The complete safe local loop
-
-```mermaid
-flowchart LR
-  A["Install or open Dema"] --> B["Run setup"]
-  B --> C["Check status"]
-  C --> D["Preview diagnostics"]
-  D --> E["Preview consent"]
-  E --> F["Draft mission"]
-  F --> G["Stop for governed runtime"]
-  G --> H["View receipts if runtime produced one"]
-```
-
-The loop is intentionally conservative. Dema can complete the local preview lifecycle, but the effectful runtime lifecycle is gated elsewhere.
-
-| Step | Command | What it does | What it does not do |
-|---|---|---|---|
-| Welcome | `dema welcome` | Explains Dema in plain language. | Does not configure or run anything. |
-| Setup | `dema setup` | Creates local folders and skeleton files. | Does not overwrite profile/config or start a daemon. |
-| Status | `dema status` | Shows Node0 readiness through the adapter. | Does not repair or execute. |
-| Diagnostics | `dema diagnostics plan` | Previews a self-check harness. | Does not run tests or shell commands. |
-| Consent | `dema consent plan "<intent>"` | Drafts a micro-consent scope with visible actuator classes, policy-preview decisions, and self-check harnesses. | Does not approve consent, mint capability, or execute. |
-| Mission | `dema mission draft "<intent>"` | Creates a mission draft from intent. | Does not run the mission. |
-| Safety | `dema report safety` | Shows current safety posture. | Does not certify production readiness. |
-| Network | `dema network blueprint` | Previews Node1/Node2 handoff gates and phase-gated multi-node readiness. | Does not connect, federate, or open sockets. |
-| Offline fixture | `dema network fixture preview` | Previews a 5-slot lab-bench schematic with micro-compliance and micro-consent gates. | Reports 0 live nodes; does not connect, mint, or simulate runtime. |
-| Refusal matrix | `dema network refusal preview` | Previews partition/rejoin refusal decisions as a paper truth table. | Does not execute scenarios, connect, mint, or authorize live probes. |
-| MCP | `dema mcp blueprint` | Previews MCP integration points, auth boundaries, validation, retries, and redaction rules. | Does not call MCP tools or access external APIs. |
-| Roadmap | `dema roadmap preview` | Previews prioritized architecture, security, performance, documentation, DevOps, and ethics work. | Does not execute roadmap items or enforce gates. |
-| Design emulation | `dema design emulate-loop` | Models PAT/SAT loop assumptions across hardware, performance, data, and impact lenses. | Does not run agents, mint receipts, or write local state. |
-| Receipts | `dema receipts` | Lists local receipt handoffs. | Does not create receipts. |
-
-The MCP blueprint, roadmap preview, and release-readiness report are professional management, DevOps, and QA planning surfaces. They are advisory and read-only: they do not deploy, execute work, enforce gates, certify readiness, or make token/economic claims.
-
----
-
-## Command reference
-
-```text
-dema welcome
-dema onboard [--json]
-dema setup
-dema status
-dema status:json
-dema today
-dema doctor
-dema ambient
-dema ambient:json
-dema diagnostics plan [--json]
-dema consent plan [--json] "<intent>"
-dema mission draft [--json] "<intent>"
-dema mission propose [--consent "GO: Node0 bounded diagnostic activation only"]
-dema receipts [ID|unique-filename|path]
-dema memory
-dema memory show NAME
-dema models
-dema report safety [--json]
-dema network blueprint [--json]
-dema network fixture preview [--json]
-dema network refusal preview [--json]
-dema mcp blueprint [--json]
-dema roadmap preview [--json]
-dema evidence receipt preview [--json]
-dema ihsan floor preview [--score N] [--json]
-dema behavior modulation preview [--consent TEXT] [--score N] [--json] "<intent>"
-dema design emulate-loop [--json]
-dema task [NAME]
-dema sovereign
-dema monetize
-dema help
-```
-
-Machine-readable surfaces carry schema tags such as `bizra.dema.<surface>.v0.1`.
-
 ---
 
 ## What setup creates
 
-`dema setup` writes local state under `DEMA_HOME` or `~/.dema`:
+`dema setup` creates local state in your Dema home directory, usually `~/.dema`:
 
 ```text
 ~/.dema/
@@ -195,64 +321,17 @@ Machine-readable surfaces carry schema tags such as `bizra.dema.<surface>.v0.1`.
   skills/
 ```
 
-Setup is idempotent. If `profile.json` or `config.local.json` already exists, Dema leaves it in place.
+Setup is idempotent and non-destructive. If a profile or config already exists, Dema leaves it in place.
 
-Setup does not start a background process. Setup does not execute a mission. Setup does not issue ARTIFACT-011.
-
----
-
-## The wider BIZRA ecosystem
-
-Dema is not the whole system. It is the visible face of a longer BIZRA build:
-
-```text
-BIZRA founding documents
--> proof-of-priority anchor
--> bizra-data-lake / bizra-omega core truth
--> Node0 governed runtime
--> Dema local product face
--> future Node1 / Node2 and phase-gated multi-node readiness, still gated
-```
-
-The current repo keeps those boundaries clear:
-
-- **Dema**: local product face, previews, setup, status, receipts viewer.
-- **Node0**: governed runtime and first receipt path.
-- **bizra-data-lake / bizra-omega**: core truth substrate named by ADR-003.
-- **FATE / consent**: exact consent boundary.
-- **Receipts**: local evidence records shown by Dema, minted by governed runtime paths.
-- **Node1 / Node2**: future handoff expansion, currently preview-only.
-- **phase_3 / phase_4**: canonical multi-node pilot and public-network directions, currently blocked.
-
-Read [docs/ECOSYSTEM.md](docs/ECOSYSTEM.md) for the fuller map.
-
----
-
-## Proof-of-priority root
-
-BIZRA's proof-of-priority in this repo binds three founding files:
-
-```text
-themassage.pdf
-bizra.pdf
-BIZRA_Third_Fact_v0_1_FINAL.pdf
-```
-
-The canonical pin is [proof-of-priority/PIN.md](proof-of-priority/PIN.md). It records the deterministic Merkle root, the manifest, and the OpenTimestamps status. The current pin says the root was upgraded into Bitcoin block-header attestations.
-
-Reproduce the repo root:
-
-```bash
-npm run priority-anchor:verify
-```
-
-This proves the current files still match the committed manifest and root. It does not replace independent review of the documents or the wider BIZRA claims.
+Setup does not start a background process.
+Setup does not execute a mission.
+Setup does not issue ARTIFACT-011.
 
 ---
 
 ## Receipts
 
-A Dema receipt answers:
+A receipt is Dema's way of saying:
 
 ```text
 what happened,
@@ -268,76 +347,54 @@ dema receipts
 dema receipts ARTIFACT-011
 ```
 
-ARTIFACT-011 is a governed gateway receipt handoff captured in [SPROUT_PIN.md](SPROUT_PIN.md). Dema can list and show the local handoff. Issuance did not happen inside this repo.
-
-Learn more in [docs/RECEIPTS.md](docs/RECEIPTS.md).
+Learn more in [`docs/RECEIPTS.md`](docs/RECEIPTS.md).
 
 ---
 
-## Safety boundaries
+## Product promise
 
-Dema is intentionally strict:
+Dema says:
 
-- no hidden daemon,
-- no automatic runtime action,
-- no fuzzy consent,
-- no silent profile overwrite,
-- no Node1/Node2 federation or multi-node pilot from this repo,
-- no token, passive-income, AGI, or guaranteed-security claim,
-- no receipt minting inside Dema preview commands.
+> Here is what I know.  
+> Here is what is safe.  
+> Here is what is blocked.  
+> Here is what I can preview with your consent.
+> Here is the receipt.
 
-The exact consent phrase for the first bounded diagnostic preview is:
+---
+
+## Current boundary
+
+ARTIFACT-011 — the first bounded-diagnostic receipt — was issued on
+**2026-05-06** by the governed runtime path (gateway POST `/missions`,
+admissibility verdict PERMIT). The local mirror lives at
+`~/.dema/receipts/artifact-011.json` and is viewable via `dema receipts`.
+
+The exact consent phrase that gated the issuance was:
 
 ```text
 GO: Node0 bounded diagnostic activation only
 ```
 
-That phrase is not a reusable password. Future effectful missions require their own explicit consent.
+That phrase is **not** a re-usable token. Each future L4 mission requires
+its own typed phrase per the
+[Dema Autonomy Envelope](docs/02-architecture/dema-autonomy-envelope.md).
+Issuance never happened *inside* this repo — Dema reads and lists; the
+governed runtime in `bizra-cognition-gateway` (upstream, in
+`bizra-data-lake`) is what creates receipts. See
+[`SPROUT_PIN.md`](SPROUT_PIN.md) for the captured chain head, Bitcoin
+state, and replay recipe.
+
+Dema's public language remains local-first, consent-bound, and proof-safe.
 
 ---
 
-## Quality and local checks
+## Proof of priority
 
-The repo is a Node.js ESM monorepo with zero runtime dependencies and no build step.
-
-Run:
+Dema's three founding documents are anchored on Bitcoin via OpenTimestamps. The algorithm and root are **reproducible from this repo** with Node ≥20:
 
 ```bash
-npm test
-npm run check
-npm run release:readiness
-git diff --check
+npm run priority-anchor:verify
 ```
 
-Current release-readiness is a professional risk report and is allowed to show launch blockers. Known examples include modified workflow files that still need explicit authorization, missing release artifact hashes before broad release, or advisory installer dry-run promotion. Those are not hidden; they are tracked as explicit risks, not treated as deployment approval or certification.
-
----
-
-## Troubleshooting
-
-| Symptom | Meaning | Next step |
-|---|---|---|
-| `Node0 adapter not connected` | Safe developer-machine default. | Continue with previews, or connect the governed gateway when intentionally testing Node0. |
-| `doctor` exits nonzero | At least one readiness predicate is blocked. | Read the printed status; Dema stops instead of pretending readiness. |
-| No receipts listed | No local receipt handoff exists in `~/.dema/receipts`. | Run `dema setup`, then check whether a governed runtime produced a handoff. |
-| No local models found | Dema did not detect Ollama, LM Studio, or model files. | Install/configure a local model separately; Dema will not download one silently. |
-| Network blueprint says blocked | Node1/Node2 or phase-gated multi-node expansion is not ready. | Complete Step 7 and repeatable local Node0 proof first. |
-
----
-
-## Documentation map
-
-Start with:
-
-- [docs/INDEX.md](docs/INDEX.md) — clean map of every major doc area.
-- [docs/USER_LIFECYCLE.md](docs/USER_LIFECYCLE.md) — step-by-step local user journey.
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — component and boundary map.
-- [docs/ECOSYSTEM.md](docs/ECOSYSTEM.md) — how Dema fits into BIZRA.
-- [docs/TESTING.md](docs/TESTING.md) — test and smoke-check coverage matrix.
-- [docs/DELIVERY_BLUEPRINT.md](docs/DELIVERY_BLUEPRINT.md) — release-readiness and quality discipline.
-
----
-
-## License
-
-See [LICENSE](LICENSE).
+Canonical state lives in [`proof-of-priority/PIN.md`](proof-of-priority/PIN.md). Spec in [`docs/PRIORITY_ANCHOR.md`](docs/PRIORITY_ANCHOR.md).

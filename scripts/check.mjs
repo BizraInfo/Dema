@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 export const commands = [
+  ["node", ["scripts/review/env-hygiene-check.mjs"]],
   ["node", ["--test"]],
   ["npm", ["run", "coverage"]],
   ["node", ["apps/cli/src/index.js", "welcome"]],
