@@ -6,12 +6,61 @@
 |---|---|
 | **Document type** | Strategic GTM Plan (BIG 3 consulting deliverable equivalent) |
 | **Prepared** | 2026-05-19 GST |
+| **Amendments** | **v0.1.1** (2026-05-19 GST · post-A+-review): 3 corrections from Mumu's peer review applied — see §0 "v0.1.1 Amendments" below |
 | **Author of record** | Mumu (Mohamed Beshr) |
 | **Synthesis prepared by** | Coordinator (Claude Opus 4.7 · 1M context · session-bound) |
 | **Working main HEAD** | `ea4c231` (10 receipts minted this session · top 9 Ironclad) |
 | **Document scope** | Days 1–90 only · Ring 1 → Ring 2 → Ring 3 (NOT Ring 4 public) |
 | **Truth discipline** | Every claim labeled VERIFIED · DERIVED · ASSUMED · UNKNOWN |
 | **Decision authority** | Mumu retains all halt-gate decisions · this doc proposes, does not commit |
+
+---
+
+## Part 0 · v0.1.1 Amendments (Mumu's A+ review · 2026-05-19 GST)
+
+Mumu peer-reviewed v0.1 and assigned `GRADE: A- · CAN BECOME: A+ · BLOCKER: terminology precision + execution sequencing discipline`. Three corrections applied in this amendment:
+
+### 0.1 Terminology · "minted" → "receipted to chain"
+
+The phrase "minted POI preview envelope" can confuse readers because "mint" carries economic/token connotations. Canonical replacement wording per Mumu's review:
+
+> **No token mint. No economic assignment. Only a receipt-backed POI measurement preview.**
+
+In Part VI.B Day 45–48 (and all forward references), "Mint first POI preview envelope" reads as **"Receipt first POI preview envelope to chain."** The receipt chain captures the measurement; no mint event in the economic sense occurs.
+
+### 0.2 Dates are planning cadence · gates are binding
+
+The 90-day phasing is **planning rhythm**, not a forcing function:
+
+> **The dates are planning cadence. The gates are binding.**
+
+If Ring-1 N=1 feedback (Phase 1 Gate 1) is delayed beyond Day 28, Phase 2 does **NOT** start by calendar. It waits. POI v0.1 implementation cannot begin until Gate 1 closes. This is enforced by ADR-009's own activation gates (§Implementation activation gates, lines 124-146 of ADR-009).
+
+This amendment elevates that discipline from implicit-to-the-attentive to explicit-on-the-page.
+
+### 0.3 ADR-009 + ADR-014 acceptance precedes POI/URP work
+
+The plan canonically depends on two ADRs being Accepted (not Proposed):
+
+> **ADR-009 = POI design legitimacy**
+> **ADR-014 = three-runtime architecture legitimacy**
+
+Until both are Accepted, POI and URP work must stay in planning mode. This amendment makes the dependency explicit:
+
+```text
+Phase 1 Day 1 — ADR-009 + ADR-014 Accepted (typed-GO required)
+              ↓
+Phase 1 Days 2-30 — Phase 1 deliverables proceed
+              ↓
+Phase 2 — POI implementation authorized (separate typed-GO)
+        — URP local-pool init authorized (separate typed-GO)
+```
+
+If ADR acceptance is declined or revised, Phase 2 does not start. This is the same gate-bound discipline as §0.2.
+
+### 0.4 Acceptance status update (this amendment)
+
+**This v0.1.1 amendment is shipped under typed-GO `GO accept ADR-009 and ADR-014` (2026-05-19 GST).** ADR-009 and ADR-014 status fields updated from `Proposed` to `Accepted`. The receipt anchoring this amendment carries truth label `ADR_009_AND_ADR_014_ACCEPTED_FOR_PRIVATE_WITNESS_GTM`. No POI implementation. No URP initialization. No public claims.
 
 ---
 
@@ -217,7 +266,7 @@ If any of the 5 criteria above is not met by Day 90, the GTM plan continues into
 |---|---|---|---|
 | 31–35 | Verify all 5 POI Gates closed (Phase 1 closed Gate 1; this turn closes Gates 2-5) | (gates close mechanically as work lands) | Gate-closure ledger receipt |
 | 35–45 | Implement POI v0.1 per ADR-009 + ADR-015 (the test plan from Phase 1) | `GO impl POI v0.1` | `packages/core/src/poi-preview-v0_1.js` + 15+ tests · all green |
-| 45–48 | Mint first POI preview envelope against Node0's 70+ receipts | `GO mint POI envelope #1` | `~/.dema/poi/preview-envelopes/2026-poi-001.json` + chain receipt |
+| 45–48 | Receipt first POI preview envelope to chain (NO token mint · NO economic assignment · only receipt-backed measurement preview · per §0.1 amendment) | `GO receipt POI envelope #1 to chain` | `~/.dema/poi/preview-envelopes/2026-poi-001.json` + chain receipt |
 | 30–55 | Identify Ring-2 cohort candidates (2 additional · Mumu's network) | Mumu (operator-side) | 2 distinct candidates named |
 | 35–60 | Refresh Lighthouse Pack to current HEAD (v1.1 · regenerate manifest) | `GO refresh lighthouse pack to v1.1` | `lighthouse-pack-v1.1/MANIFEST.sha256` |
 | 50–55 | Send updated pack to 2 Ring-2 candidates | `GO send v1.1 pack to <names>` | Send-receipts on record |

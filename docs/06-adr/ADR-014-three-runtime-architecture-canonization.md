@@ -1,7 +1,7 @@
 # ADR-014: Three-Runtime Architecture Canonization
 
-**Status:** Proposed
-**Date:** 2026-05-19
+**Status:** Accepted
+**Date:** 2026-05-19 (Proposed) · 2026-05-19 (Accepted via typed-GO `GO accept ADR-009 and ADR-014` · truth label `ADR_009_AND_ADR_014_ACCEPTED_FOR_PRIVATE_WITNESS_GTM`)
 **Authors:** Coordinator (Claude Opus 4.7, 1M ctx) at MoMo's direction
 **Cross-references:**
 - ADR-013 (visual language isomorphism — sibling slice)
