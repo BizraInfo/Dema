@@ -38,8 +38,9 @@ const CLI_PATH = join(__dirname, "..", "apps", "cli", "src", "index.js");
 //     are not single-subcommand-named (e.g., the 14th surface "homebase"
 //     lives at the bare `dema` invocation · invoked via the --json flag).
 const SPINE_COMMANDS = Object.freeze([
-  "state",
-  "profiles",
+  // state + profiles now default to human output; --json required for JSON parse.
+  Object.freeze({ name: "state", args: ["state", "--json"] }),
+  Object.freeze({ name: "profiles", args: ["profiles", "--json"] }),
   "consent-card",
   "mission-loop",
   "evidence-event",

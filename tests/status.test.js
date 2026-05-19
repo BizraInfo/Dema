@@ -164,7 +164,7 @@ test("doctor CLI lists specific failing predicates when gateway is not configure
 
 test("mission propose CLI remains preview-only", async () => {
   const root = await mkdtemp(join(tmpdir(), "dema-cli-mission-"));
-  const { stdout } = await execFileAsync("node", [cliPath, "mission", "propose"], {
+  const { stdout } = await execFileAsync("node", [cliPath, "mission", "propose", "--json"], {
     env: { ...process.env, DEMA_HOME: root }
   });
   const output = JSON.parse(stdout);

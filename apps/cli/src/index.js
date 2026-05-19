@@ -150,6 +150,7 @@ import {
   renderHelpFlat,
   renderHelpUnknown,
 } from "../../../packages/core/src/help-topics.js";
+import { wantsJson, humanHintLine } from "../../../packages/core/src/output-mode.js";
 
 const adapter = createNode0Adapter();
 
@@ -431,15 +432,56 @@ async function dispatch(argv) {
     }
 
     case "state": {
-      console.log(JSON.stringify(buildNode0StatePreview(), null, 2));
+      const statePreview = buildNode0StatePreview();
+      if (wantsJson(argv)) {
+        console.log(JSON.stringify(statePreview, null, 2));
+        return;
+      }
+      console.log([
+        "Dema state",
+        `  Node: ${statePreview.node} · Operator: ${statePreview.operator}`,
+        `  Mission-centered: ${statePreview.mission_centered}`,
+        `  Runtime autonomous daemon: ${statePreview.runtime.autonomous_daemon}`,
+        `  Federation: ${statePreview.runtime.federation}`,
+        `  Minting: ${statePreview.runtime.minting}`,
+        `  Next safe action: ${statePreview.next_safe_action}`,
+        humanHintLine("state")
+      ].join("\n"));
       return;
     }
 
     case "profiles": {
-      const preview = argv.includes("--summary")
+      const wantsSummary = argv.includes("--summary");
+      const profilePreview = wantsSummary
         ? buildProfileFoundationSummary()
         : buildProfileFoundationPreview();
-      console.log(JSON.stringify(preview, null, 2));
+      if (wantsJson(argv)) {
+        console.log(JSON.stringify(profilePreview, null, 2));
+        return;
+      }
+      if (wantsSummary) {
+        const actors = profilePreview.actors;
+        console.log([
+          "Dema profiles (summary)",
+          `  User: ${actors.user}`,
+          `  PAT:  ${actors.pat}`,
+          `  SAT:  ${actors.sat}`,
+          `  Mission: ${actors.mission}`,
+          `  Context capsule: ${profilePreview.context_capsule_schema}`,
+          humanHintLine("profiles")
+        ].join("\n"));
+      } else {
+        const p = profilePreview;
+        console.log([
+          "Dema profiles",
+          `  User: ${p.user.schema} · operator: ${p.user.identity.name}`,
+          `  PAT:  ${p.pat.schema} · owner: ${p.pat.owner}`,
+          `  SAT:  ${p.sat.schema} · owner: ${p.sat.owner}`,
+          `  Mission: ${p.mission.schema} · status: ${p.mission.status}`,
+          `  Context capsule: ${p.context_capsule.schema}`,
+          humanHintLine("profiles")
+        ].join("\n"));
+      }
       return;
     }
 
@@ -583,7 +625,19 @@ async function dispatch(argv) {
       const status = await statusWithLocalIdentity();
       const result = await recordTodayTick({ status });
       const memory = await summarizeMemory();
-      console.log(JSON.stringify({ ...result, memory }, null, 2));
+      if (wantsJson(argv)) {
+        console.log(JSON.stringify({ ...result, memory }, null, 2));
+        return;
+      }
+      const tick = result.tick;
+      console.log([
+        "Dema today",
+        `  Continuity tick recorded — ${tick.date}`,
+        `  NODE0_READY=${tick.node0Ready} · Activation gate: ${tick.activationGate}`,
+        `  ${memory.total} memory entries summarized at ${result.path}`,
+        `  Next artifact: ${tick.nextArtifact}`,
+        humanHintLine("today")
+      ].join("\n"));
       return;
     }
 
@@ -659,7 +713,20 @@ async function dispatch(argv) {
       }
       const status = await statusWithLocalIdentity();
       const consent = argValue(argv, "--consent") ?? "";
-      console.log(JSON.stringify(previewBoundedDiagnostic(status, consent), null, 2));
+      const proposePreview = previewBoundedDiagnostic(status, consent);
+      if (wantsJson(argv)) {
+        console.log(JSON.stringify(proposePreview, null, 2));
+        return;
+      }
+      console.log([
+        "Dema mission propose",
+        `  Action: ${proposePreview.action}`,
+        `  Executes: ${proposePreview.executes}`,
+        `  Proposal allowed: ${proposePreview.proposal.allowed}`,
+        `  Consent accepted: ${proposePreview.consent.accepted}`,
+        `  Next: ${proposePreview.next}`,
+        humanHintLine("mission propose")
+      ].join("\n"));
       return;
     }
 
@@ -690,14 +757,30 @@ async function dispatch(argv) {
     }
 
     case "models": {
-      // dema models scan [--summary]   → C1.5 · schema-tagged local inventory scan
+      // dema models scan [--json]      → C1.5 · schema-tagged local inventory scan
       // dema models                    → existing human-readable inventory
       if (subcommand === "scan") {
         const scan = await buildLocalModelInventoryScan();
-        const output = argv.includes("--summary")
+        const scanOutput = argv.includes("--summary")
           ? buildLocalModelInventorySummary(scan)
           : scan;
-        console.log(JSON.stringify(output, null, 2));
+        if (wantsJson(argv)) {
+          console.log(JSON.stringify(scanOutput, null, 2));
+          return;
+        }
+        const providers = scan.providers || {};
+        const ollama = providers.ollama || {};
+        const lms = providers.lm_studio || {};
+        const dl = providers.downloads || {};
+        console.log([
+          "Dema models scan",
+          `  Total models found: ${scan.total_models ?? 0}`,
+          `  Ollama: ${ollama.reachable ? "reachable" : "unreachable"} · ${ollama.model_count ?? 0} model(s)`,
+          `  LM Studio: ${lms.reachable ? "reachable" : "unreachable"} · ${lms.model_count ?? 0} model(s)`,
+          `  Downloads: ${dl.model_count ?? 0} GGUF file(s)`,
+          `  Boundary: read-only; local probes only; no model invoked`,
+          humanHintLine("models scan")
+        ].join("\n"));
         return;
       }
       const inventory = await collectModelInventory();

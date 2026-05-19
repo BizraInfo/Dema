@@ -165,7 +165,7 @@ test("dema today CLI now includes a memory summary alongside the tick", async ()
     JSON.stringify({ project: "BIZRA Node0" })
   );
 
-  const { stdout } = await execFileAsync("node", [cliPath, "today"], {
+  const { stdout } = await execFileAsync("node", [cliPath, "today", "--json"], {
     env: { ...process.env, DEMA_HOME: root }
   });
   const output = JSON.parse(stdout);
