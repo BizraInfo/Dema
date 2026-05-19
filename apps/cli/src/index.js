@@ -19,6 +19,10 @@ import { buildSkillGrowthGovernorPreview } from "../../../packages/core/src/skil
 import { buildProjectStatusPreview } from "../../../packages/core/src/project-status-preview.js";
 import { buildCraftsmanshipWitnessPreview } from "../../../packages/core/src/craftsmanship-witness-preview.js";
 import {
+  auditArtifact,
+  formatAuditReport,
+} from "../../../packages/core/src/master-craftsmanship-audit.js";
+import {
   formatOnboardingLifecyclePreview,
   formatNodeRegistryPreview,
   formatSkillGrowthGovernorPreview,
@@ -804,6 +808,43 @@ async function dispatch(argv) {
       // Inputs are caller-declared (zero I/O in builder); CLI passes empty
       // defaults · operator can pipe their own slice_history/rsi_signals etc.
       console.log(JSON.stringify(buildCraftsmanshipWitnessPreview(), null, 2));
+      return;
+    }
+
+    case "master-craftsmanship": {
+      // External audit surface — audits arbitrary artifacts against the 10
+      // MASTER_CRAFTSMANSHIP_INVARIANTS. Default subject is the ADR-011
+      // phase-4 compliance suite.
+      // Usage:
+      //   dema master-craftsmanship audit [--json] [<path>]
+      const mcSubcommand = argv[1];
+      if (mcSubcommand !== "audit") {
+        console.log(
+          "Usage: dema master-craftsmanship audit [--json] [<path>]\n" +
+          "  Default path: tests/node-onboarding-adr011-compliance.test.js"
+        );
+        process.exitCode = 1;
+        return;
+      }
+      const mcJsonFlag = argv.includes("--json");
+      // Path is any non-flag arg after the subcommand
+      const mcPathArg = argv.slice(2).find((a) => !a.startsWith("--"));
+      const { fileURLToPath: mcFURL } = await import("node:url");
+      const { dirname: mcDirname, join: mcJoin } = await import("node:path");
+      const projectRoot = mcJoin(
+        mcDirname(mcFURL(import.meta.url)),
+        "../../.."
+      );
+      const result = await auditArtifact({
+        artifactPath: mcPathArg,
+        projectRoot,
+      });
+      if (mcJsonFlag) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        console.log(formatAuditReport(result));
+      }
+      if (!result.overall_compliant) process.exitCode = 1;
       return;
     }
 
