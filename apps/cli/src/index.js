@@ -141,6 +141,7 @@ import {
   buildExplainPreview,
   formatExplainPreview
 } from "../../../packages/core/src/canon-glossary.js";
+import { readBannerKey, KEY_BINDINGS } from "../../../packages/core/src/banner-keys.js";
 
 const adapter = createNode0Adapter();
 
@@ -341,6 +342,24 @@ async function dispatch(argv) {
     ]);
     const opts = resolveFormatterOptsFromEnv(process.env);
     process.stdout.write(formatHomebasePreview(preview, opts) + "\n");
+
+    // Keyboard dispatch — enabled only when both stdin and stdout are TTY
+    // and the operator has not opted out via DEMA_BANNER_INTERACTIVE=0.
+    const bannerInteractive =
+      process.stdin.isTTY &&
+      process.stdout.isTTY &&
+      process.env.DEMA_BANNER_INTERACTIVE !== "0";
+
+    if (bannerInteractive) {
+      const key = await readBannerKey({
+        stdin: process.stdin,
+        stdout: process.stdout
+      });
+      const subArgv = key ? KEY_BINDINGS[key] : null;
+      if (subArgv) {
+        await dispatch(subArgv);
+      }
+    }
     return;
   }
 

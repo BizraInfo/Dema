@@ -152,9 +152,9 @@ test("ADV: formatHomebasePreview surfaces partial-state warning marker when prev
   assert.match(out, /2 warning/);
 });
 
-test("ADV: formatHomebasePreview displays the v0.1 keyboard-hints-only banner (no interactive promise)", () => {
+test("ADV: formatHomebasePreview does NOT display the keyboard-hints-only disclaimer (keys are now functional)", () => {
   const out = formatHomebasePreview(makePreview(), { noColor: true });
-  assert.match(out, /keyboard hints only/, "v0.1 must NOT claim interactivity it does not yet have");
+  assert.doesNotMatch(out, /keyboard hints only/, "disclaimer must be absent now that keys are wired");
 });
 
 test("LAW-OF-ASSUMPTION: footer carries the LoA citation per docs/canon/LAW_OF_ASSUMPTION.md", () => {

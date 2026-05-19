@@ -619,7 +619,6 @@ export function formatHomebasePreview(preview, {
       }
     }
     if (row.trim().length > 0) lines.push(lineBox(row, { width, c }));
-    lines.push(lineBox(dim("  v0.1: keyboard hints only · type the command on the next line.", noColor), { width, c }));
   }
 
   // Partial-state warning
