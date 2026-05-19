@@ -55,6 +55,7 @@ import {
 import { recordTodayTick } from "../../../packages/core/src/today.js";
 import { listReceipts, readReceipt } from "../../../packages/receipts/src/receipt-store.js";
 import { runSetup } from "../../../packages/installer/src/setup.js";
+import { runSetupWizard } from "../../../packages/core/src/setup-wizard.js";
 import {
   readMemoryEntry,
   summarizeMemory
@@ -399,9 +400,16 @@ async function dispatch(argv) {
       return;
     }
 
-    case "setup":
-      console.log(JSON.stringify(await runSetup(), null, 2));
+    case "setup": {
+      const isJsonMode = argv.includes("--json") || !process.stdout.isTTY;
+      if (isJsonMode) {
+        console.log(JSON.stringify(await runSetup(), null, 2));
+      } else {
+        await runSetupWizard();
+        await runSetup();
+      }
       return;
+    }
 
     case "status": {
       const status = await statusWithLocalIdentity();
