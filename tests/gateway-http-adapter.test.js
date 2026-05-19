@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
+import { execFile } from "node:child_process";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 import {
   composeNode0StatusFromGateway,
   createGatewayHttpAdapter,
@@ -9,6 +15,8 @@ import {
 import { createNode0Adapter } from "../packages/node-adapter/src/node0-adapter.js";
 
 const HEALTHY_GATEWAY_DOMAIN = "bizra-cognition-gateway-v1";
+const execFileAsync = promisify(execFile);
+const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
 
 function restoreEnv(name, value) {
   if (value === undefined) {
@@ -377,6 +385,42 @@ test("composeNode0StatusFromGateway is pure: same input -> same output", async (
     // then deepEqual everything else.
     assert.deepEqual(a, b);
   } finally {
+    await gw.stop();
+  }
+});
+
+test("dema status:json under gateway-http adapter overlays local profile.preferred_name at CLI boundary", async () => {
+  // End-to-end lock: with DEMA_NODE0_ADAPTER=gateway-http (the production
+  // operator config), the gateway-http adapter still returns human:null per
+  // its NOT_EXPOSED_BY_GATEWAY honesty contract, but the CLI wrapper
+  // statusWithLocalIdentity() must enrich the displayed JSON from
+  // ~/.dema/profile.json. This is the exact path that originally showed
+  // "Human: unknown" on the operator machine before commit d24bb4c.
+  const gw = await startFakeGateway(HEALTHY_ROUTES);
+  const demaRoot = await mkdtemp(join(tmpdir(), "dema-gw-cli-human-"));
+  try {
+    await writeFile(
+      join(demaRoot, "profile.json"),
+      JSON.stringify({ preferred_name: "Mumu" })
+    );
+    const { stdout } = await execFileAsync("node", [cliPath, "status:json"], {
+      env: {
+        ...process.env,
+        DEMA_NODE0_ADAPTER: "gateway-http",
+        DEMA_GATEWAY_URL: gw.url,
+        DEMA_HOME: demaRoot,
+        DEMA_NODE0_STATUS_COMMAND: ""
+      }
+    });
+    const status = JSON.parse(stdout);
+    assert.equal(status.schema, "bizra.dema.node0_status.v0.2");
+    assert.equal(status.source, "gateway-http-composed");
+    assert.equal(status.human, "Mumu");
+    // Adapter contract still in force: preferred_name is in unknown[] (the
+    // gateway did not expose it; the CLI overlaid local truth).
+    assert.ok(status.unknown.some((u) => u.includes("preferred_name")));
+  } finally {
+    await rm(demaRoot, { recursive: true, force: true });
     await gw.stop();
   }
 });

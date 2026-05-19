@@ -478,7 +478,7 @@ async function dispatch(argv) {
     }
 
     case "today": {
-      const status = await adapter.status();
+      const status = await statusWithLocalIdentity();
       const result = await recordTodayTick({ status });
       const memory = await summarizeMemory();
       console.log(JSON.stringify({ ...result, memory }, null, 2));
@@ -555,7 +555,7 @@ async function dispatch(argv) {
       if (subcommand !== "propose") {
         throw new Error("Unknown mission command. Use `dema mission draft \"<intent>\"` or `dema mission propose`.");
       }
-      const status = await adapter.status();
+      const status = await statusWithLocalIdentity();
       const consent = argValue(argv, "--consent") ?? "";
       console.log(JSON.stringify(previewBoundedDiagnostic(status, consent), null, 2));
       return;
