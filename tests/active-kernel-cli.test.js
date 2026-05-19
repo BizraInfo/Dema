@@ -65,8 +65,19 @@ test("dema bare invocation (no args · non-TTY) emits homebase canonical JSON (1
   assert.equal(parsed.boundary.runtime_execution_performed, false);
 });
 
-test("dema help still works after the active-kernel refactor", async () => {
+// `dema help` (no args) now emits the topic-based root per the hierarchical
+// help system (Task #6). Full flat list is preserved at `dema help --all`.
+test("dema help (no args) emits hierarchical topic root after active-kernel refactor", async () => {
   const { stdout } = await execFileAsync("node", [cliPath, "help"]);
+  assert.match(stdout, /Available topics:/);
+  assert.match(stdout, /orientation/);
+  assert.match(stdout, /readiness/);
+  assert.match(stdout, /dema help <topic>/);
+  assert.match(stdout, /dema help --all/);
+});
+
+test("dema help --all still emits the full flat HELP list", async () => {
+  const { stdout } = await execFileAsync("node", [cliPath, "help", "--all"]);
   assert.match(stdout, /Dema CLI/);
   assert.match(stdout, /Orientation:/);
   assert.match(stdout, /dema onboard/);

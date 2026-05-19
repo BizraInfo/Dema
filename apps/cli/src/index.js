@@ -143,6 +143,13 @@ import {
   formatExplainPreview
 } from "../../../packages/core/src/canon-glossary.js";
 import { readBannerKey, KEY_BINDINGS } from "../../../packages/core/src/banner-keys.js";
+import {
+  renderHelpRoot,
+  renderHelpTopic,
+  renderHelpCommand,
+  renderHelpFlat,
+  renderHelpUnknown,
+} from "../../../packages/core/src/help-topics.js";
 
 const adapter = createNode0Adapter();
 
@@ -953,10 +960,35 @@ async function dispatch(argv) {
       process.exit(result.status ?? 1);
     }
 
-    case "help":
+    case "help": {
+      const helpArg = argv[1];
+      if (!helpArg) {
+        console.log(renderHelpRoot());
+        return;
+      }
+      if (helpArg === "--all") {
+        console.log(renderHelpFlat(HELP));
+        return;
+      }
+      // Try topic first, then command detail, then unknown.
+      const topicOutput = renderHelpTopic(helpArg);
+      if (topicOutput !== null) {
+        console.log(topicOutput);
+        return;
+      }
+      const commandOutput = renderHelpCommand(helpArg);
+      if (commandOutput !== null) {
+        console.log(commandOutput);
+        return;
+      }
+      console.log(renderHelpUnknown(helpArg));
+      return;
+    }
+
+    // -h and --help emit the full flat list (opt-in backward-compat path).
     case "-h":
     case "--help":
-      console.log(HELP);
+      console.log(renderHelpFlat(HELP));
       return;
 
     default: {
