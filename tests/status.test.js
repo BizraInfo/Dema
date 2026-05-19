@@ -152,14 +152,15 @@ test("doctor CLI lists specific failing predicates when gateway is not configure
   const env = { ...process.env, DEMA_HOME: root };
   delete env.DEMA_NODE0_ADAPTER;
   delete env.DEMA_NODE0_STATUS_COMMAND;
-  const result = await execFileAsync("node", [cliPath, "doctor"], { env }).catch((e) => e);
+  const result = await execFileAsync("node", [cliPath, "doctor", "--no-color"], { env }).catch((e) => e);
   assert.equal(result.code, 1);
-  assert.match(result.stdout, /Dema doctor: blocked — /);
+  // Dashboard format: row-based predicates with ❌ icons and Verdict line.
   // Default-status fingerprint: ready=false, consoleReady=false, activationGate=BLOCKED,
-  // daemonStatus=unknown (so daemon predicate does NOT fail).
-  assert.match(result.stdout, /not ready/);
-  assert.match(result.stdout, /console not ready/);
-  assert.match(result.stdout, /activation gate is BLOCKED \(expected EXPLICIT_GO_REQUIRED\)/);
+  // daemonStatus=unknown (daemon predicate does NOT fail — unknown is ok).
+  assert.match(result.stdout, /Verdict: blocked/);
+  assert.match(result.stdout, /❌ Ready\s+false/);
+  assert.match(result.stdout, /❌ Console ready\s+false/);
+  assert.match(result.stdout, /❌ Activation gate\s+BLOCKED/);
 });
 
 test("mission propose CLI remains preview-only", async () => {

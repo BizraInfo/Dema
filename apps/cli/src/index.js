@@ -151,6 +151,10 @@ import {
   renderHelpUnknown,
 } from "../../../packages/core/src/help-topics.js";
 import { wantsJson, humanHintLine } from "../../../packages/core/src/output-mode.js";
+import {
+  evaluatePredicates,
+  formatDoctorDashboard
+} from "../../../packages/core/src/doctor-dashboard.js";
 
 const adapter = createNode0Adapter();
 
@@ -643,24 +647,22 @@ async function dispatch(argv) {
 
     case "doctor": {
       const status = await statusWithLocalIdentity();
-      const blockReasons = [];
-      if (!status.ready) blockReasons.push("not ready");
-      if (!status.consoleReady) blockReasons.push("console not ready");
-      if (status.activationGate !== "EXPLICIT_GO_REQUIRED") {
-        blockReasons.push(
-          `activation gate is ${status.activationGate ?? "unknown"} (expected EXPLICIT_GO_REQUIRED)`
-        );
-      }
-      if (status.daemonStatus === "running") blockReasons.push("daemon is running");
+      const predicates = evaluatePredicates(status);
+      const anyFail = predicates.some((p) => p.status === "fail");
 
-      const ready = blockReasons.length === 0;
-      console.log(
-        ready
-          ? "Dema doctor: ready and consent-gated."
-          : `Dema doctor: blocked — ${blockReasons.join("; ")}.`
-      );
-      console.log(formatStatus(status));
-      process.exitCode = ready ? 0 : 1;
+      if (wantsJson(argv)) {
+        const verdict = anyFail ? "blocked" : "ready and consent-gated";
+        console.log(JSON.stringify({ schema: "bizra.dema.doctor_dashboard.v0.1", verdict, predicates, status }, null, 2));
+        process.exitCode = anyFail ? 1 : 0;
+        return;
+      }
+
+      const noColor =
+        Boolean(process.env.NO_COLOR) ||
+        process.env.TERM === "dumb" ||
+        argv.includes("--no-color");
+      console.log(formatDoctorDashboard(predicates, { color: !noColor }));
+      process.exitCode = anyFail ? 1 : 0;
       return;
     }
 
