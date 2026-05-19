@@ -1165,3 +1165,4 @@ if (isDirectInvocation) {
 
 export { dispatch, runActiveKernel };
 export { probeGateway };
+export { REGISTERED_COMMANDS_LIST };
