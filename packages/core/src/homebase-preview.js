@@ -179,11 +179,42 @@ function buildStatus(g) {
   });
 }
 
+// Map process-mining observation codes (snake_case, schema-stable) to human
+// strings for TUI display. The raw code is preserved on `observation_code`
+// so machine consumers (--json) still see the canonical schema value.
+const OBSERVATION_HUMANIZER = Object.freeze({
+  no_ring_1_artifact_observable:
+    "No Ring 1 artifact observable yet — seal a Lighthouse pack to advance.",
+  ring_1_pack_sealed_observable:
+    "Ring 1 pack sealed locally — send to a candidate reviewer to earn Ring 1.",
+  ring_1_pack_sealed_observable_and_commits_held_observable:
+    "Ring 1 pack sealed locally; commits also held from origin — review held work and ship the pack.",
+  external_reviewer_form_present_observable:
+    "External reviewer form on record — Ring 1 earned. Mint the corresponding receipt."
+});
+
+// SNAKE_CASE_RE matches lowercase-letter-leading snake_case identifiers
+// (the convention used by process-mining observation codes). Strings that
+// already contain spaces or capital letters are treated as pre-humanized
+// and passed through unchanged.
+const SNAKE_CASE_RE = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$/;
+
+function humanizeObservation(observable) {
+  if (typeof observable !== "string" || observable.length === 0) return observable;
+  if (OBSERVATION_HUMANIZER[observable]) return OBSERVATION_HUMANIZER[observable];
+  if (SNAKE_CASE_RE.test(observable)) {
+    const words = observable.replace(/_/g, " ");
+    return words.charAt(0).toUpperCase() + words.slice(1) + ".";
+  }
+  return observable;
+}
+
 function buildNextAction(g) {
   const observable = g.process_mining?.next_step_observable;
   if (typeof observable === "string" && observable.length > 0) {
     return Object.freeze({
-      text: observable,
+      text: humanizeObservation(observable),
+      observation_code: observable,
       kind: classifyNextActionKind(observable),
       source: "process_mining_preview",
       command: null,
@@ -191,6 +222,7 @@ function buildNextAction(g) {
   }
   return Object.freeze({
     text: "press ? to see available actions",
+    observation_code: null,
     kind: "preview",
     source: "fallback",
     command: null,

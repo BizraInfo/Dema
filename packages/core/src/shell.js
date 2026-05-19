@@ -102,13 +102,23 @@ export async function runShell({
     process.argv.includes("--no-banner") ||
     process.env.DEMA_BANNER_INTERACTIVE === "0";
 
+  let chatBannerShown = false;
   if (!suppressBanner) {
     const human = await readOperatorPreferredName();
     const banner = buildChatBanner({ human, suppressed: false });
-    if (banner) output.write(banner + "\n\n");
+    if (banner) {
+      output.write(banner + "\n\n");
+      chatBannerShown = true;
+    }
   }
 
-  output.write(`${greeting}\n\n`);
+  // The chat banner is a strict superset of the legacy `greeting`
+  // (formatBanner) block — operator name, node, gateway state, etc. all
+  // already appear in the bordered chat banner. Skip the greeting when
+  // the chat banner was rendered to avoid the stacked-banner duplication.
+  if (!chatBannerShown) {
+    output.write(`${greeting}\n\n`);
+  }
   output.write(HELP);
 
   const rl = createInterface({ input, output, prompt: PROMPT, terminal: false });

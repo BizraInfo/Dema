@@ -160,7 +160,7 @@ import {
   renderIntroLine,
   recordIntroSeen
 } from "../../../packages/core/src/intro-line.js";
-import { readBannerKey, KEY_BINDINGS } from "../../../packages/core/src/banner-keys.js";
+import { readBannerKey, KEY_BINDINGS, runBannerKeyLoop } from "../../../packages/core/src/banner-keys.js";
 import {
   renderHelpRoot,
   renderHelpTopic,
@@ -397,14 +397,15 @@ async function dispatch(argv) {
       process.env.DEMA_BANNER_INTERACTIVE !== "0";
 
     if (bannerInteractive) {
-      const key = await readBannerKey({
-        stdin: process.stdin,
-        stdout: process.stdout
+      // Loop the key prompt so a key press dispatches and then returns
+      // to the prompt. Exits cleanly when readBannerKey returns null
+      // (q / Enter / Esc / Ctrl-C / timeout). Safety cap at 50 iterations
+      // bounds any pathological raw-mode loop.
+      await runBannerKeyLoop({
+        readKey: readBannerKey,
+        dispatchFn: dispatch,
+        readKeyOpts: { stdin: process.stdin, stdout: process.stdout }
       });
-      const subArgv = key ? KEY_BINDINGS[key] : null;
-      if (subArgv) {
-        await dispatch(subArgv);
-      }
     }
     return;
   }
