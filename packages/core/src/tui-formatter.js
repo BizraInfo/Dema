@@ -531,6 +531,7 @@ export function formatProjectStatusPreview(preview, {
 export function formatHomebasePreview(preview, {
   noColor = false,
   termDumb = false,
+  palette = "24bit",
   width = 76
 } = {}) {
   if (!preview || preview.schema !== "bizra.dema.homebase_v0_1.v0.1") {
@@ -547,9 +548,11 @@ export function formatHomebasePreview(preview, {
 
   // Top border + branded header line.
   // Header title uses Theme.title (Ihsān-gold from bizra-cli theme.rs port) —
-  // proof-of-isomorphism for ADR-013. See dema-theme.js.
+  // proof-of-isomorphism for ADR-013. Palette resolved at CLI boundary per
+  // resolvePaletteFromEnv (COLORTERM=truecolor → 24bit · *-256color → 256 ·
+  // NO_COLOR / TERM=dumb → none). See dema-theme.js.
   lines.push(topBorder(width, c));
-  const headerLeft = Theme.title(`DEMA · ${h.node_name ?? "Node0"}`, { noColor });
+  const headerLeft = Theme.title(`DEMA · ${h.node_name ?? "Node0"}`, { noColor, palette });
   const headerRight = dim(`v${h.dema_version ?? "?"}`, noColor);
   const headerMid = `${dim(c.bullet, noColor)} ${h.date_human_gst ?? "?"} ${dim(c.bullet, noColor)} ${h.time_human_gst ?? "?"}`;
   lines.push(lineBox(`${headerLeft}  ${headerMid}  ${headerRight}`, { width, c }));
@@ -660,10 +663,38 @@ function formatError(msg, { noColor, termDumb, width }) {
 // CLI dispatch reads env at the boundary and forwards into the pure formatter.
 // This helper is NOT pure (reads process.env) but it's the only impure shim,
 // kept tiny and obvious so the formatter itself remains pure.
+
+// Compute the most-capable palette the operator's terminal supports.
+// Order: explicit overrides → NO_COLOR / TERM=dumb → COLORTERM → TERM family.
+// Public so dema-theme.js consumers can pass it directly to Theme.* helpers.
+export function resolvePaletteFromEnv(env = process.env) {
+  // Explicit overrides always win.
+  if (env.DEMA_PALETTE === "24bit" || env.DEMA_PALETTE === "256" || env.DEMA_PALETTE === "none") {
+    return env.DEMA_PALETTE;
+  }
+  // No-color contracts: NO_COLOR (any value · per https://no-color.org) and
+  // TERM=dumb both mean "do not emit ANSI color sequences."
+  if (env.NO_COLOR) return "none";
+  if (env.TERM === "dumb") return "none";
+  // 24-bit true-color hint: COLORTERM=truecolor or 24bit (xterm-256color,
+  // Windows Terminal, iTerm2, kitty, alacritty, gnome-terminal all set this).
+  const colorterm = String(env.COLORTERM || "").toLowerCase();
+  if (colorterm === "truecolor" || colorterm === "24bit") return "24bit";
+  // 256-color: TERM matching *-256color or screen.* with 256.
+  const term = String(env.TERM || "").toLowerCase();
+  if (term.includes("256color") || term.endsWith("-256")) return "256";
+  // Conservative default: most modern terminals support 24-bit even without
+  // declaring it; downgrade to 256 only for explicit legacy signals.
+  if (term === "xterm" || term === "screen" || term === "linux" || term === "vt100") return "256";
+  return "24bit";
+}
+
 export function resolveFormatterOptsFromEnv(env = process.env) {
+  const palette = resolvePaletteFromEnv(env);
   return {
-    noColor: Boolean(env.NO_COLOR),
+    noColor: Boolean(env.NO_COLOR) || palette === "none",
     termDumb: env.TERM === "dumb",
+    palette,
     width: Number.isFinite(Number(env.DEMA_TUI_WIDTH)) ? Number(env.DEMA_TUI_WIDTH) : 76
   };
 }
