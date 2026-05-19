@@ -136,6 +136,7 @@ import {
   levelLabel,
   requestApproval
 } from "../../../packages/core/src/approval-gate.js";
+import { suggestCommands } from "../../../packages/core/src/command-suggester.js";
 
 const adapter = createNode0Adapter();
 
@@ -246,6 +247,52 @@ Tasks and views:
   dema help         Show this list
 
 Dema v0.3.0 — Active Command Kernel. Local-first. Consent-bound. Receipt-aware.`;
+
+// Top-level tokens the switch handles. Used by the command suggester only.
+const REGISTERED_COMMANDS_LIST = [
+  { command: "status", description: "show Node0 readiness" },
+  { command: "status:json", description: "machine-readable status" },
+  { command: "state", description: "Node0 state preview" },
+  { command: "profiles", description: "profile foundation preview" },
+  { command: "consent-card", description: "consent card preview" },
+  { command: "mission-loop", description: "full mission lifecycle preview" },
+  { command: "evidence-event", description: "evidence chain event preview" },
+  { command: "node-registry", description: "node ordinal registry preview" },
+  { command: "onboarding-lifecycle", description: "onboarding lifecycle preview" },
+  { command: "skill-growth-governor", description: "skill growth governor preview" },
+  { command: "project-status", description: "project status preview" },
+  { command: "craftsmanship-witness", description: "master-craftsmanship creation preview" },
+  { command: "llm-router", description: "local LLM router preview" },
+  { command: "process-mining", description: "operator-pattern mirror" },
+  { command: "key-maker-check", description: "self-audit reasoning against Key Maker invariants" },
+  { command: "llm-invoke", description: "local LLM adapter (preview or live call)" },
+  { command: "today", description: "record a local continuity tick" },
+  { command: "doctor", description: "validate readiness and consent gate" },
+  { command: "ambient", description: "show Ambient Sovereign Execution boundary" },
+  { command: "ambient:json", description: "ambient boundary as JSON" },
+  { command: "diagnostics", description: "preview self-diagnostics harness" },
+  { command: "consent", description: "preview a micro-consent scope" },
+  { command: "mission", description: "preview mission draft or propose" },
+  { command: "receipts", description: "list or show local receipts" },
+  { command: "memory", description: "list or show local memory entries" },
+  { command: "models", description: "show local model inventory" },
+  { command: "report", description: "preview safety report" },
+  { command: "network", description: "preview network blueprint or refusal matrix" },
+  { command: "amana", description: "preview Amana contract primitives" },
+  { command: "mcp", description: "preview MCP integration contract" },
+  { command: "roadmap", description: "preview optimization roadmap" },
+  { command: "evidence", description: "preview evidence receipt" },
+  { command: "ihsan", description: "preview Ihsan floor check" },
+  { command: "behavior", description: "preview behavioral modulation" },
+  { command: "design", description: "preview PAT/SAT loop design assumptions" },
+  { command: "task", description: "list or run registered tasks" },
+  { command: "monetize", description: "show proof-safe first offer boundary" },
+  { command: "sovereign", description: "render Sovereign Mission Interface" },
+  { command: "welcome", description: "show first-run orientation" },
+  { command: "onboard", description: "guided onboarding path" },
+  { command: "setup", description: "create local Dema folders/profile skeleton" },
+  { command: "help", description: "show full command list" }
+];
 
 async function dispatch(argv) {
   const command = argv[0] ?? "active";
@@ -861,8 +908,24 @@ async function dispatch(argv) {
     case "help":
     case "-h":
     case "--help":
-    default:
       console.log(HELP);
+      return;
+
+    default: {
+      const result = suggestCommands(command, REGISTERED_COMMANDS_LIST);
+      const lines = [`I don't have a \`${result.missingToken || command}\` command.`, ""];
+      if (result.matched === "natural-language" || result.matched === "close") {
+        lines.push("Did you mean:");
+        for (const s of result.suggestions) {
+          lines.push(`  - dema ${s.command.padEnd(32)} — ${s.description}`);
+        }
+      } else {
+        lines.push("I couldn't find a close match. Type `dema help` for the full list.");
+      }
+      lines.push("", "Type `dema help` to see everything I can do.");
+      console.log(lines.join("\n"));
+      return;
+    }
   }
 }
 
