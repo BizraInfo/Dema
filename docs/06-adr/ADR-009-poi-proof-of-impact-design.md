@@ -1,7 +1,7 @@
 # ADR-009: Proof-of-Impact (POI) Design — pre-implementation specification
 
-**Status:** Proposed
-**Date:** 2026-05-18 (proposed)
+**Status:** Accepted
+**Date:** 2026-05-18 (proposed) · 2026-05-19 (Accepted via typed-GO `GO accept ADR-009 and ADR-014` · truth label `ADR_009_AND_ADR_014_ACCEPTED_FOR_PRIVATE_WITNESS_GTM`)
 **Decision makers:** Mumu (Mohamed Beshr)
 **Supersedes:** none
 **Related:** [ADR-001 Dema Is One Face](ADR-001-dema-is-one-face.md), [ADR-002 No Shadow State](ADR-002-no-shadow-state.md), [ADR-006 Continuous Assurance and No-mint Verification](ADR-006-continuous-assurance-and-no-mint-verification.md), [ADR-008 Runtime Activation](ADR-008-runtime-activation.md)
