@@ -1,7 +1,7 @@
 # ADR-011: Onboarding Consciousness Layer
 
-**Status:** Proposed
-**Date:** 2026-05-18 (proposed)
+**Status:** Accepted
+**Date:** 2026-05-18 (proposed) · 2026-05-19 (accepted with v0.2 scope extensions: returning-user language load · second language capture · Genesis Preview Card)
 **Decision makers:** Mumu (Mohamed Beshr)
 **Supersedes:** none (extends ADR-008 §C1.5 model-readiness boundary + ADR-005 consent discipline + ADR-010 v0.2 framework)
 **Related:** [ADR-001 Dema Is One Face](ADR-001-dema-is-one-face.md), [ADR-002 No Shadow State](ADR-002-no-shadow-state.md), [ADR-005 Operator Actions Require Explicit Consent](ADR-005-operator-actions-require-explicit-consent.md), [ADR-008 Runtime Activation](ADR-008-runtime-activation.md), [ADR-009 POI Design](ADR-009-poi-proof-of-impact-design.md), [ADR-010 Interactive TUI Layer · Dep Decision](ADR-010-interactive-tui-layer-dep-decision.md), [Law of Assumption](../canon/LAW_OF_ASSUMPTION.md), [BIZRA Topology Canon](../canon/BIZRA_TOPOLOGY_CANON.md)
@@ -60,7 +60,7 @@ This ADR specifies the framework. No new code lands under this ADR. Implementati
 - **Descriptor-first** — when onboarding asks about resources (storage capacity · model inventory · network state), the answer is captured as a **descriptor** (a labeled estimate the operator declares) — NOT as a raw scan. A scan happens only after a separate consent gate with its own ADR-005 phrase.
 - **Preview-only at output** — every onboarding emission is `mode: "preview_only"` with `federation_invoked: false`, `chain_advance_performed: false`, `receipt_mint_performed: false` until explicit graduation gates fire. Onboarding never auto-activates downstream pillars.
 
-### Eight binding laws
+### Eleven binding laws
 
 ```text
 1. Language before identity.
@@ -104,6 +104,37 @@ This ADR specifies the framework. No new code lands under this ADR. Implementati
    POI scoring, does NOT publish anything, does NOT modify the receipt
    chain. All these require explicit, separate, typed-GO phrases at
    their own gate ADRs.
+
+9. Returning-user language load before re-asking.
+   If `~/.dema/profile.json::language_code` is set, the language stage
+   loads from disk and does NOT re-prompt. Re-prompting an established
+   operator for their own language is a structural error — it implies
+   the system has forgotten who they are. Only first-run candidates
+   (profile.json absent OR language_code null) see the language picker.
+   An operator may explicitly invoke `dema onboard --reset-language`
+   to re-ask · the default path is silent load.
+
+10. Second language as fallback dignity.
+    After the primary language is set, the candidate is OPTIONALLY
+    asked for a secondary language. The default answer is "skip" and
+    a single press of Enter accepts it. The secondary language enables:
+    (a) fallback display when a primary-language string is missing,
+    (b) bilingual consent phrase rendering ("GO: ... (primary)" / "GO:
+    ... (secondary)") for operators who want to read the consent
+    phrase in their stronger comprehension language while the system
+    accepts either form. NEVER required · NEVER auto-detected · NEVER
+    inferred from typing patterns.
+
+11. Genesis Preview before mint.
+    Onboarding completion produces a **Genesis Preview Card** — a
+    deterministic preview-only JSON artifact representing what an
+    onboarding receipt WOULD look like if minted. The card is shown
+    to the candidate, printed to terminal, and stored under
+    `~/.dema/state/` (NOT under `~/.dema/receipts/`). The actual
+    receipt mint requires a separate typed-GO that quotes the card's
+    `receipt_id_preview` hash. Card emission is NOT a chain-advance,
+    NOT a receipt write, NOT an external publication. See § Genesis
+    Preview Card below for the canonical schema.
 ```
 
 ### Canonical refusals (binding regardless of implementation)
@@ -144,6 +175,24 @@ NEVER:
   · publish_onboarding_output_to_any_external_surface
     (onboarding emissions are preview-only · local-only · no public
      broadcast · no telemetry.)
+
+  · re_ask_language_to_established_operator
+    (per Law #9 · if profile.json carries language_code, language
+     stage MUST silently load · re-asking implies amnesia.)
+
+  · require_second_language_to_proceed
+    (per Law #10 · secondary language is OPTIONAL · default is "skip"
+     · the candidate must be able to advance with a single Enter.)
+
+  · auto_detect_language_from_keyboard_or_locale
+    (language must be operator-declared · not inferred from system
+     locale, keyboard layout, IP, typing patterns, or any signal that
+     bypasses the operator's explicit declaration.)
+
+  · mint_onboarding_receipt_without_quoted_genesis_card_hash
+    (per Law #11 · the receipt mint typed-GO MUST quote the Genesis
+     Preview Card's receipt_id_preview · this binds the mint to a
+     specific preview the candidate saw.)
 ```
 
 ### Canonical output schema (proposed extension)
@@ -180,8 +229,18 @@ The existing 11th surface emits `bizra.dema.onboarding_lifecycle.v0.1`. ADR-011 
   },
   "language_state": {
     "language_set": false,
-    "language_code": null,                  // ISO 639-1 when set
-    "consent_phrases_will_render_in": null  // matches language_code when set
+    "language_code": null,                  // ISO 639-1 when set (primary / mother tongue)
+    "consent_phrases_will_render_in": null, // matches language_code when set
+    "secondary_language_code": null,        // ISO 639-1 · optional · operator-declared
+    "secondary_language_offered": false,    // true once Law #10 prompt fires
+    "returning_user_load": false,           // true if loaded silently from profile.json (Law #9)
+    "language_source": "unset"              // unset | first_run_picker | profile_load | reset_explicit
+  },
+  "candidate_lifecycle": {                  // NEW · explicit first-run vs returning-user
+    "is_first_run": true,                   // false when profile.json exists with required fields
+    "is_returning_user": false,             // true when profile.json loaded silently
+    "onboarding_trigger": null,             // "first_run" | "reset_explicit" | "candidate_invite"
+    "stage_skipped_due_to_profile": []      // list of stage_ids skipped via Law #9 / returning-user load
   },
   "blocked_effects": {                      // separate from canonical boundary · 
                                             //   these are onboarding-specific blocks
@@ -226,9 +285,115 @@ P6 · A candidate is never asked to consent to anything they cannot read.
 
 P7 · Onboarding completion does NOT add the candidate to any external
      ledger, network, or registry without a separate explicit gate.
+
+P8 · A returning operator (profile.json carries language_code) opens
+     `dema` and is NEVER re-asked for their language. The system loads
+     it silently and renders subsequent text in that language. Only
+     `dema onboard --reset-language` (explicit) re-asks.
+
+P9 · A candidate may decline the second language with a single press
+     of Enter. The second-language stage NEVER blocks advancement.
+     A candidate who declines secondary language sees the same
+     downstream experience as one who supplies it (no penalty, no
+     reduced-function path).
+
+P10 · A candidate who completes the 7-stage flow sees a Genesis Preview
+      Card BEFORE any receipt mint fires. The card is human-readable,
+      shows what would-be-minted, and explicitly states no mint has
+      occurred. The candidate may close the session at this point with
+      zero side effect on the chain.
 ```
 
 Each predicate becomes a test in the eventual implementation slice (`tests/node-onboarding-adr011-compliance.test.js` or similar).
+
+---
+
+## Genesis Preview Card · ADR-011 v0.2 extension
+
+The Genesis Preview Card is the canonical preview-only artifact that represents what an onboarding receipt would look like if the candidate typed the consent phrase. It is the **bridge between completing the 7-stage flow and minting a receipt** — and the bridge MUST exist so the candidate can SEE what would be written about them before they authorize it.
+
+### Canonical schema
+
+```jsonc
+{
+  "schema": "bizra.dema.genesis_preview_card.v0.1",
+  "truth_label": "NODE0_LOCAL_SEED",
+  "mode": "preview_only",
+  "card_type": "onboarding_completion_genesis",
+  "candidate": {
+    "node_ordinal": 0,                          // or 1, 2 per ordinal law
+    "preferred_name": "<operator-declared>",
+    "primary_language": "<ISO 639-1>",
+    "secondary_language": "<ISO 639-1 | null>",
+    "device_label": "<string | null>",
+    "model_readiness": "MODEL_UNKNOWN",         // per model_readiness enum
+    "technical_level": "<self-declared scale>"
+  },
+  "would_mint_if_consented": {
+    "receipt_type": "node_onboarding_genesis.v0.1",
+    "receipt_id_preview": "<sha256 of canonical card payload>",
+    "consent_phrase_required": "<exact ADR-005 phrase rendered in primary_language>",
+    "consent_phrase_secondary": "<same phrase in secondary_language · null if not set>",
+    "mint_destination": "~/.dema/receipts/node-onboarding-genesis-<receipt_id>.json"
+  },
+  "blocked_until_typed_GO": [
+    "actual_receipt_mint",
+    "chain_advance_performed",
+    "federation_handshake",
+    "external_publication",
+    "node_ordinal_increment"
+  ],
+  "card_storage": {
+    "path": "~/.dema/state/genesis-preview-<timestamp>.json",
+    "store_scope": "local_preview_only",
+    "expires_after": "session_end_or_24h",
+    "purpose": "auditable record that the candidate SAW this exact preview before any mint"
+  },
+  "boundary": {                                  // canonical 16-key · ALL false
+    "network_used": false,
+    "runtime_execution": false,
+    "filesystem_write_performed": false,         // card storage is NOT a content write
+    "receipt_mint_performed": false,
+    "chain_advance_performed": false,
+    "federation_invoked": false,
+    "node_connection_performed": false,
+    "consent_collected": false,
+    "model_loaded": false,
+    "model_invocation_performed": false,
+    "prompt_executed": false,
+    "external_call_performed": false,
+    "raw_corpus_scan_performed": false,
+    "raw_data_included": false,
+    "tool_executed": false,
+    "public_network_used": false
+  }
+}
+```
+
+### Generation rules
+
+1. The card emits when the candidate reaches **stage 6** (`first_mission`) AND all prior stages (`language`, `technical_level`, `node_role`, `purpose`, `resources`, `consent_constitution`) carry validated values.
+2. `receipt_id_preview` is `sha256(canonical_payload_without_card_storage_block)`. Same inputs → same hash. Deterministic. Auditable by the candidate themselves.
+3. The card is **printed to terminal** in the candidate's `primary_language` (with secondary-language reading available via flag).
+4. The card is **written to `~/.dema/state/genesis-preview-<ISO_timestamp>.json`** — NOT to `~/.dema/receipts/`. This is a critical boundary: receipts are minted artifacts; preview cards are display artifacts that record what was shown.
+5. The card does NOT advance the receipt chain. Chain length remains constant. `forge_evidence.py --verify` is unaffected.
+6. The candidate can close the session here. No chain mutation has occurred. No federation handshake exists. The card is the maximum extent of state created by ADR-011 onboarding without a mint typed-GO.
+
+### Mint typed-GO
+
+To mint the actual receipt (separate event):
+
+```text
+GO: mint node-onboarding-genesis receipt for card <receipt_id_preview>
+```
+
+The phrase MUST quote the exact `receipt_id_preview` from a card written to disk. This binds the mint to a specific preview the candidate saw — preventing "mint without preview" or "mint a different shape than was previewed."
+
+### Why this matters
+
+Without a Genesis Preview Card, the candidate would consent to receipt-mint without seeing the receipt's structure. That violates **Law #2 (Understanding before consent)** at the receipt-content level: they understood the consent phrase, but did they understand what would be recorded about them?
+
+The Genesis Preview Card closes that loop: the canonical preview-only card shows the receipt's exact payload before the mint, ensuring the candidate consents to the *content*, not just to the *event*.
 
 ---
 
@@ -276,6 +441,33 @@ T-13  homebase render (commit 1d6b85a) accepts an onboarding-incomplete
       gather/preview already handle this · ADR-011 inscribes it as law).
 T-14  v0.1c language picker (when shipped) calls into onboarding-
       lifecycle stage 0 and respects T-1..T-12 above.
+
+T-15  Returning-user language load: if ~/.dema/profile.json contains
+      language_code "ar", running `dema onboard` SILENTLY loads that
+      value · language_state.language_source === "profile_load" ·
+      language_state.returning_user_load === true · candidate_lifecycle.
+      stage_skipped_due_to_profile includes "language". No prompt is
+      rendered in stdout for the language stage. (Law #9 regression.)
+
+T-16  Reset-language flag: `dema onboard --reset-language` clears the
+      profile's language_code AND re-runs the language picker even
+      when a value existed. language_state.language_source ===
+      "reset_explicit". (Law #9 escape hatch test.)
+
+T-17  Second language optional: at stage 0b (post-primary-language),
+      the candidate may decline by pressing Enter. language_state.
+      secondary_language_offered === true · language_state.
+      secondary_language_code === null · candidate proceeds to
+      stage 1 without delay. The system MUST NOT re-prompt or warn.
+      (Law #10 regression.)
+
+T-18  Genesis Preview Card on completion: reaching stage 6 with all
+      prior stages valid emits a card with schema "bizra.dema.
+      genesis_preview_card.v0.1" · card written to ~/.dema/state/
+      genesis-preview-<timestamp>.json · receipt_id_preview is a
+      valid sha256 · boundary.receipt_mint_performed === false ·
+      .proof-forge chain length unchanged before and after card
+      emission. (Law #11 regression.)
 ```
 
 T-1 through T-9 are unit-test-shape. T-10..T-14 may need integration-test scaffolding (`DEMA_FORCE_TTY=1` env · subprocess spawn · etc.) when implementation lands.
@@ -394,9 +586,13 @@ This makes Samy's install the **first ADR-011 compliance test against a real ext
 ```text
 A node cannot join before the human understands.
 The first proof of consent is language.
+A returning operator is never re-asked their own name or tongue.
+A second language is an offer of dignity, not a requirement.
 A model-less node is a sovereign node.
+Onboarding produces a preview before it produces a receipt.
+The candidate sees what would be written before authorizing the write.
 Onboarding never federates.
-Onboarding never mints.
+Onboarding never mints without quoted preview.
 ```
 
 Operating frame:
