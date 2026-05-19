@@ -2,6 +2,7 @@ name: BIZRA Review Gate
 
 on:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
