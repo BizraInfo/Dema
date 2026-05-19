@@ -15,6 +15,7 @@
 // Deterministic given identical inputs.
 
 import { buildPreviewBoundary } from "./preview-boundary.js";
+import { buildNodeOnboardingExtension } from "./node-onboarding-extension.js";
 
 const SCHEMA = "bizra.dema.onboarding_lifecycle.v0.1";
 const TRUTH_LABEL = "NODE0_LOCAL_SEED";
@@ -248,7 +249,9 @@ export function buildOnboardingLifecyclePreview({
   candidate_ordinal = null,
   progress = null,
   language = null,
-  technical_level = null
+  technical_level = null,
+  // ADR-011 extension inputs — all optional; builder applies canonical defaults
+  adr011 = {}
 } = {}) {
   const ordinal = (typeof candidate_ordinal === "number" && Number.isInteger(candidate_ordinal) && candidate_ordinal >= 0)
     ? candidate_ordinal
@@ -263,6 +266,11 @@ export function buildOnboardingLifecyclePreview({
 
   const completed = Array.isArray(progress?.completed) ? [...progress.completed] : [];
   const completion_ratio = completed.length / CANONICAL_STAGES.length;
+
+  // ADR-011 extension: build the 5 schema blocks (pure, no I/O)
+  const ext = buildNodeOnboardingExtension(
+    Object.assign({ candidate_ordinal }, adr011)
+  );
 
   return Object.freeze({
     schema: SCHEMA,
@@ -312,6 +320,12 @@ export function buildOnboardingLifecyclePreview({
       adr_009_poi: "docs/06-adr/ADR-009-poi-proof-of-impact-design.md",
       node_registry_preview: "packages/core/src/node-registry-preview.js"
     }),
+    // ADR-011 extension blocks — inline at top level (additive · existing fields unchanged)
+    node_topology: ext.node_topology,
+    model_readiness: ext.model_readiness,
+    language_state: ext.language_state,
+    candidate_lifecycle: ext.candidate_lifecycle,
+    adr011_blocked_effects: ext.blocked_effects,
     boundary: buildPreviewBoundary()
   });
 }
