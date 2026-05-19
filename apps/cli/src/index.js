@@ -160,6 +160,7 @@ import {
   evaluatePredicates,
   formatDoctorDashboard
 } from "../../../packages/core/src/doctor-dashboard.js";
+import { createSpinner } from "../../../packages/core/src/spinner.js";
 
 const adapter = createNode0Adapter();
 
@@ -784,7 +785,10 @@ async function dispatch(argv) {
       // dema models scan [--json]      → C1.5 · schema-tagged local inventory scan
       // dema models                    → existing human-readable inventory
       if (subcommand === "scan") {
+        const spinner = createSpinner({ stdout: process.stdout, label: "Scanning local model inventory…" });
+        spinner.start();
         const scan = await buildLocalModelInventoryScan();
+        spinner.stop();
         const scanOutput = argv.includes("--summary")
           ? buildLocalModelInventorySummary(scan)
           : scan;
@@ -1016,7 +1020,10 @@ async function dispatch(argv) {
         }
       }
 
+      const taskSpinner = createSpinner({ stdout: process.stdout, label: `Running ${task.id}…` });
+      taskSpinner.start();
       const receipt = await task.run();
+      taskSpinner.stop();
       // Route through verifyReceipt dispatcher (per v0.3.2 spec acceptance
       // criterion #5; see docs/02-architecture/sat-verifier-sibling-spec.md).
       // Dispatcher fails closed on unknown schema; task receipts route to the
