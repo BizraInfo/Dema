@@ -23,7 +23,9 @@ test("createSpinner returns start, update, stop methods", () => {
 
 test("start emits a frame containing the label", () => {
   const out = fakeStdout();
-  const spinner = createSpinner({ stdout: out, label: "Loading", intervalMs: 10000 });
+  // suppressed:false overrides env-based detection (process.env.CI is set in
+  // GitHub Actions and would otherwise suppress all writes — see Task #10).
+  const spinner = createSpinner({ stdout: out, label: "Loading", intervalMs: 10000, suppressed: false });
   spinner.start();
   spinner.stop();
   // At least the first write must contain the label text.
@@ -32,7 +34,7 @@ test("start emits a frame containing the label", () => {
 
 test("update changes the label used in subsequent writes", () => {
   const out = fakeStdout();
-  const spinner = createSpinner({ stdout: out, label: "Phase A", intervalMs: 10000 });
+  const spinner = createSpinner({ stdout: out, label: "Phase A", intervalMs: 10000, suppressed: false });
   spinner.start();
   spinner.update("Phase B");
   spinner.stop();
@@ -44,7 +46,7 @@ test("update changes the label used in subsequent writes", () => {
 
 test("stop clears the spinner line (\\r + spaces + \\r)", () => {
   const out = fakeStdout();
-  const spinner = createSpinner({ stdout: out, label: "Hello", intervalMs: 10000 });
+  const spinner = createSpinner({ stdout: out, label: "Hello", intervalMs: 10000, suppressed: false });
   spinner.start();
   spinner.stop();
   const clearWrite = out.writes[out.writes.length - 1];
@@ -74,7 +76,7 @@ test("frame rotation cycles through all 10 braille frames", (t) => {
   // Use mock timer to control ticks.
   t.mock.timers.enable({ apis: ["setInterval"] });
 
-  const spinner = createSpinner({ stdout: out, label: "Tick", intervalMs: 80 });
+  const spinner = createSpinner({ stdout: out, label: "Tick", intervalMs: 80, suppressed: false });
   spinner.start();
   // Advance 10 intervals to see all frames.
   t.mock.timers.tick(80 * 10);
@@ -93,7 +95,7 @@ test("frame rotation cycles through all 10 braille frames", (t) => {
 
 test("multiple start/stop cycles are safe", () => {
   const out = fakeStdout();
-  const spinner = createSpinner({ stdout: out, label: "Cycle", intervalMs: 10000 });
+  const spinner = createSpinner({ stdout: out, label: "Cycle", intervalMs: 10000, suppressed: false });
   spinner.start();
   spinner.stop();
   const writesAfterFirst = out.writes.length;
@@ -113,7 +115,7 @@ test("stop without prior start is safe (no crash, no output)", () => {
 test("very long label is safely truncated to 120 chars", () => {
   const out = fakeStdout();
   const longLabel = "X".repeat(300);
-  const spinner = createSpinner({ stdout: out, label: longLabel, intervalMs: 10000 });
+  const spinner = createSpinner({ stdout: out, label: longLabel, intervalMs: 10000, suppressed: false });
   spinner.start();
   spinner.stop();
   // The write containing the frame must not exceed 120 + 3 chars (frame + space + label).
