@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 
 import { buildPreviewBoundary } from "./preview-boundary.js";
 import { GREETING_TEMPLATES } from "./homebase-language-picker.js";
+import { humanizeNextAction } from "./next-action-humanizer.js";
 
 const SCHEMA = "bizra.dema.homebase_v0_1.v0.1";
 const TRUTH_LABEL = "NODE0_LOCAL_SEED";
@@ -183,7 +184,8 @@ function buildNextAction(g) {
   const observable = g.process_mining?.next_step_observable;
   if (typeof observable === "string" && observable.length > 0) {
     return Object.freeze({
-      text: observable,
+      text: humanizeNextAction(observable),
+      observation_code: observable,
       kind: classifyNextActionKind(observable),
       source: "process_mining_preview",
       command: null,
@@ -191,6 +193,7 @@ function buildNextAction(g) {
   }
   return Object.freeze({
     text: "press ? to see available actions",
+    observation_code: null,
     kind: "preview",
     source: "fallback",
     command: null,

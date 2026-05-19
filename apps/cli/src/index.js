@@ -160,7 +160,8 @@ import {
   renderIntroLine,
   recordIntroSeen
 } from "../../../packages/core/src/intro-line.js";
-import { readBannerKey, KEY_BINDINGS } from "../../../packages/core/src/banner-keys.js";
+import { readBannerKey, KEY_BINDINGS, runBannerKeyLoop } from "../../../packages/core/src/banner-keys.js";
+import { humanizeNextAction } from "../../../packages/core/src/next-action-humanizer.js";
 import {
   renderHelpRoot,
   renderHelpTopic,
@@ -397,14 +398,15 @@ async function dispatch(argv) {
       process.env.DEMA_BANNER_INTERACTIVE !== "0";
 
     if (bannerInteractive) {
-      const key = await readBannerKey({
-        stdin: process.stdin,
-        stdout: process.stdout
+      // Loop the key prompt so a key press dispatches and then returns
+      // to the prompt. Exits cleanly when readBannerKey returns null
+      // (q / Enter / Esc / Ctrl-C / timeout). Safety cap at 50 iterations
+      // bounds any pathological raw-mode loop.
+      await runBannerKeyLoop({
+        readKey: readBannerKey,
+        dispatchFn: dispatch,
+        readKeyOpts: { stdin: process.stdin, stdout: process.stdout }
       });
-      const subArgv = key ? KEY_BINDINGS[key] : null;
-      if (subArgv) {
-        await dispatch(subArgv);
-      }
     }
     return;
   }
@@ -700,7 +702,7 @@ async function dispatch(argv) {
         `  Runtime autonomous daemon: ${statePreview.runtime.autonomous_daemon}`,
         `  Federation: ${statePreview.runtime.federation}`,
         `  Minting: ${statePreview.runtime.minting}`,
-        `  Next safe action: ${statePreview.next_safe_action}`,
+        `  Next safe action: ${humanizeNextAction(statePreview.next_safe_action)}`,
         humanHintLine("state")
       ].join("\n"));
       return;

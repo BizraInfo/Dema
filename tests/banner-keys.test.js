@@ -123,3 +123,69 @@ test("KEY_BINDINGS['h'] and '?' both map to help", () => {
   assert.deepEqual(KEY_BINDINGS["?"], ["help"]);
   assert.deepEqual(KEY_BINDINGS["h"], ["help"]);
 });
+
+import { runBannerKeyLoop } from "../packages/core/src/banner-keys.js";
+
+test("LOOP-01: runBannerKeyLoop exits cleanly when readKey returns null (no dispatch)", async () => {
+  const calls = [];
+  const dispatches = await runBannerKeyLoop({
+    readKey: async () => null,
+    dispatchFn: async (argv) => { calls.push(argv); }
+  });
+  assert.equal(dispatches, 0);
+  assert.equal(calls.length, 0);
+});
+
+test("LOOP-02: runBannerKeyLoop dispatches each key then exits on null", async () => {
+  const sequence = ["m", "j", "r", null];
+  let i = 0;
+  const calls = [];
+  const dispatches = await runBannerKeyLoop({
+    readKey: async () => sequence[i++],
+    dispatchFn: async (argv) => { calls.push(argv); }
+  });
+  assert.equal(dispatches, 3);
+  assert.deepEqual(calls, [
+    ["mission", "propose"],
+    ["today"],
+    ["receipts"]
+  ]);
+});
+
+test("LOOP-03: runBannerKeyLoop ignores unmapped keys (no dispatch) then continues", async () => {
+  const sequence = ["x", "m", "z", null];
+  let i = 0;
+  const calls = [];
+  const dispatches = await runBannerKeyLoop({
+    readKey: async () => sequence[i++],
+    dispatchFn: async (argv) => { calls.push(argv); }
+  });
+  assert.equal(dispatches, 1);
+  assert.deepEqual(calls, [["mission", "propose"]]);
+});
+
+test("LOOP-04: runBannerKeyLoop respects maxIterations safety cap", async () => {
+  // readKey always returns 'm' — without cap this would loop forever.
+  const calls = [];
+  const dispatches = await runBannerKeyLoop({
+    readKey: async () => "m",
+    dispatchFn: async (argv) => { calls.push(argv); },
+    maxIterations: 7
+  });
+  assert.equal(dispatches, 7);
+  assert.equal(calls.length, 7);
+});
+
+test("LOOP-05: runBannerKeyLoop throws TypeError when readKey is not a function", async () => {
+  await assert.rejects(
+    () => runBannerKeyLoop({ readKey: null, dispatchFn: async () => {} }),
+    TypeError
+  );
+});
+
+test("LOOP-06: runBannerKeyLoop throws TypeError when dispatchFn is not a function", async () => {
+  await assert.rejects(
+    () => runBannerKeyLoop({ readKey: async () => null, dispatchFn: "not a fn" }),
+    TypeError
+  );
+});

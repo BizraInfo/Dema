@@ -26,6 +26,33 @@ const VALID_KEYS = new Set([...Object.keys(KEY_BINDINGS), ...QUIT_KEYS]);
 const PROMPT_LINE = "\nPress a key: m j r b ? q  (or Enter to skip) ▸ ";
 const RETRY_HINT  = "Press m/j/r/b/?/q (or Enter to skip)\n";
 
+// runBannerKeyLoop — read keys repeatedly, dispatch each, exit on null.
+// Pure orchestration: I/O is delegated to `readKey` (defaults to
+// readBannerKey but can be mocked in tests) and dispatch is delegated
+// to `dispatchFn`. A safety cap of 50 iterations bounds any pathological
+// raw-mode loop. Returns the number of dispatches that fired.
+export async function runBannerKeyLoop({
+  readKey,
+  dispatchFn,
+  bindings = KEY_BINDINGS,
+  maxIterations = 50,
+  readKeyOpts = {}
+} = {}) {
+  if (typeof readKey !== "function") throw new TypeError("runBannerKeyLoop requires readKey()");
+  if (typeof dispatchFn !== "function") throw new TypeError("runBannerKeyLoop requires dispatchFn()");
+  let dispatches = 0;
+  for (let i = 0; i < maxIterations; i++) {
+    const key = await readKey(readKeyOpts);
+    if (!key) return dispatches;
+    const subArgv = bindings[key];
+    if (subArgv) {
+      await dispatchFn(subArgv);
+      dispatches++;
+    }
+  }
+  return dispatches;
+}
+
 // readBannerKey — exported for both CLI and tests.
 // Returns the mapped key char (e.g. 'm') if it has a dispatch binding,
 // or null if the user pressed a quit/skip key or the timeout fired.

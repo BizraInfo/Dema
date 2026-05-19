@@ -203,6 +203,69 @@ test("ADV-06: next_action surfaces process_mining.next_step_observable when pres
   });
   assert.equal(out.next_action.text, "Ring 1 candidate response observable in inbox");
   assert.equal(out.next_action.source, "process_mining_preview");
+  // Pre-humanized input (contains spaces) is passed through unchanged
+  // and is also mirrored to observation_code.
+  assert.equal(
+    out.next_action.observation_code,
+    "Ring 1 candidate response observable in inbox"
+  );
+});
+
+test("ADV-07: known snake_case observation code is humanized for display, raw code preserved", () => {
+  const out = buildHomebasePreview({
+    gather: makeGather({
+      process_mining: {
+        next_step_observable: "no_ring_1_artifact_observable",
+        ring_advancement_status: "Ring 0 verified; Ring 1 pack status unknown",
+      },
+    }),
+  });
+  assert.ok(
+    out.next_action.text.includes("seal a Lighthouse pack"),
+    `expected humanized hint to mention 'seal a Lighthouse pack', got: ${out.next_action.text}`
+  );
+  assert.equal(out.next_action.text.includes("_"), false, "humanized text must not contain underscores");
+  assert.equal(out.next_action.observation_code, "no_ring_1_artifact_observable");
+  assert.equal(out.next_action.source, "process_mining_preview");
+});
+
+test("ADV-08: all four known process-mining observation codes humanize to distinct human strings", () => {
+  const codes = [
+    "no_ring_1_artifact_observable",
+    "ring_1_pack_sealed_observable",
+    "ring_1_pack_sealed_observable_and_commits_held_observable",
+    "external_reviewer_form_present_observable"
+  ];
+  const texts = codes.map((code) => {
+    const out = buildHomebasePreview({
+      gather: makeGather({ process_mining: { next_step_observable: code, ring_advancement_status: "x" } }),
+    });
+    return out.next_action.text;
+  });
+  for (const t of texts) {
+    assert.equal(t.includes("_"), false, `text must not contain underscores: ${t}`);
+    assert.ok(t.length > 20, `text must be a real sentence, not a token: ${t}`);
+  }
+  assert.equal(new Set(texts).size, 4, "all 4 humanizations must be distinct");
+});
+
+test("ADV-09: unknown snake_case code receives heuristic humanization (no crash, no raw underscores leak)", () => {
+  const out = buildHomebasePreview({
+    gather: makeGather({
+      process_mining: {
+        next_step_observable: "some_new_unknown_observable",
+        ring_advancement_status: "x",
+      },
+    }),
+  });
+  assert.equal(out.next_action.text.includes("_"), false);
+  assert.equal(out.next_action.observation_code, "some_new_unknown_observable");
+});
+
+test("ADV-10: observation_code field is null when no process_mining input (fallback path)", () => {
+  const out = buildHomebasePreview({ gather: makeGather({ process_mining: null }) });
+  assert.equal(out.next_action.observation_code, null);
+  assert.equal(out.next_action.source, "fallback");
 });
 
 test("warnings/partial propagate from gather to preview", () => {
