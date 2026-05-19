@@ -72,6 +72,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/node0-local-urp-proof.test.js` | Local URP proof boundaries. |
 | `tests/node0-self-check.test.js` | Node0 self-check verification surface. |
 | `tests/onboarding.test.js` | Guided CLI/TUI onboarding, inspiration doctrine, preview-only boundaries. |
+| `tests/operator-profile.test.js` | Operator preferred_name reader for local-first identity injection at CLI boundary: canonical preferred_name happy path, legacy `name` fallback, precedence (preferred_name wins), adversarial null returns on missing/malformed/empty-string/non-string, and DEMA_HOME env override. |
 | `tests/optimization-roadmap.test.js` | Advisory optimization roadmap, non-enforcing gates, blueprint coverage, and no-side-effect CLI output. |
 | `tests/preview-primitive-shape.test.js` | Cross-preview shape contract for the 5 micro-primitives (self_proactive_harness, self_critique, micro_compliance, micro_consent, analogical_model); accepts the step7/corpus and network/process-value-fixture conventions documented in-file. |
 | `tests/process-value-fixture-preview.test.js` | Offline Process Value fixture pack, golden canned evidence states including Step 7 hold posture, no-CLI/no-mint boundary, and fail-closed pack rejection. |

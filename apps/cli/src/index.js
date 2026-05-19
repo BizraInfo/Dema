@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
 import { formatStatus } from "../../../packages/core/src/status.js";
+import { readOperatorPreferredName } from "../../../packages/core/src/operator-profile.js";
 import { buildNode0StatePreview } from "../../../packages/core/src/state.js";
 import {
   buildProfileFoundationPreview,
@@ -137,6 +138,13 @@ import {
 } from "../../../packages/core/src/approval-gate.js";
 
 const adapter = createNode0Adapter();
+
+async function statusWithLocalIdentity() {
+  const status = await adapter.status();
+  if (status?.human) return status;
+  const human = await readOperatorPreferredName();
+  return human ? { ...status, human } : status;
+}
 
 function argValue(argv, name) {
   const index = argv.indexOf(name);
@@ -309,13 +317,13 @@ async function dispatch(argv) {
       return;
 
     case "status": {
-      const status = await adapter.status();
+      const status = await statusWithLocalIdentity();
       console.log(formatStatus(status));
       return;
     }
 
     case "status:json": {
-      const status = await adapter.status();
+      const status = await statusWithLocalIdentity();
       console.log(JSON.stringify(status, null, 2));
       return;
     }
@@ -478,7 +486,7 @@ async function dispatch(argv) {
     }
 
     case "doctor": {
-      const status = await adapter.status();
+      const status = await statusWithLocalIdentity();
       const blockReasons = [];
       if (!status.ready) blockReasons.push("not ready");
       if (!status.consoleReady) blockReasons.push("console not ready");

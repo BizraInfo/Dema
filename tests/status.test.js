@@ -391,3 +391,67 @@ test("receipt store labels listing as local read/list rather than governed runti
     /ENOENT/
   );
 });
+
+test("dema status:json injects human from profile.json::preferred_name (local-first identity at CLI boundary)", async () => {
+  const demaRoot = await mkdtemp(join(tmpdir(), "dema-status-human-"));
+  try {
+    await writeFile(
+      join(demaRoot, "profile.json"),
+      JSON.stringify({ preferred_name: "Mumu" })
+    );
+    const { stdout } = await execFileAsync("node", [cliPath, "status:json"], {
+      env: {
+        ...process.env,
+        DEMA_HOME: demaRoot,
+        DEMA_NODE0_ADAPTER: "",
+        DEMA_GATEWAY_URL: "",
+        DEMA_NODE0_STATUS_COMMAND: ""
+      }
+    });
+    const status = JSON.parse(stdout);
+    assert.equal(status.human, "Mumu");
+  } finally {
+    await rm(demaRoot, { recursive: true, force: true });
+  }
+});
+
+test("dema status:json human falls back to null when profile.json absent (graceful, no throw)", async () => {
+  const demaRoot = await mkdtemp(join(tmpdir(), "dema-status-no-profile-"));
+  try {
+    const { stdout } = await execFileAsync("node", [cliPath, "status:json"], {
+      env: {
+        ...process.env,
+        DEMA_HOME: demaRoot,
+        DEMA_NODE0_ADAPTER: "",
+        DEMA_GATEWAY_URL: "",
+        DEMA_NODE0_STATUS_COMMAND: ""
+      }
+    });
+    const status = JSON.parse(stdout);
+    assert.equal(status.human, null);
+  } finally {
+    await rm(demaRoot, { recursive: true, force: true });
+  }
+});
+
+test("dema status (formatter) renders Human: <preferred_name> when profile populated", async () => {
+  const demaRoot = await mkdtemp(join(tmpdir(), "dema-status-fmt-"));
+  try {
+    await writeFile(
+      join(demaRoot, "profile.json"),
+      JSON.stringify({ preferred_name: "Mumu" })
+    );
+    const { stdout } = await execFileAsync("node", [cliPath, "status"], {
+      env: {
+        ...process.env,
+        DEMA_HOME: demaRoot,
+        DEMA_NODE0_ADAPTER: "",
+        DEMA_GATEWAY_URL: "",
+        DEMA_NODE0_STATUS_COMMAND: ""
+      }
+    });
+    assert.match(stdout, /^Human: Mumu$/m);
+  } finally {
+    await rm(demaRoot, { recursive: true, force: true });
+  }
+});
