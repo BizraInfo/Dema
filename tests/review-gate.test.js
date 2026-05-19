@@ -481,6 +481,43 @@ test("policy/broad-scope PR class rejects non-allowlisted branches", () => {
   }
 });
 
+test("MAIN-01: policy/merged-to-main PR class accepts the literal main branch (canonical state)", () => {
+  const out = validatePrClass({ reviewClass: "policy/merged-to-main", branch: "main" });
+  assert.equal(out.ok, true);
+  assert.equal(out.class, "policy/merged-to-main");
+});
+
+test("MAIN-02: policy/merged-to-main PR class rejects any non-main branch", () => {
+  for (const branch of ["adr/something", "fix/random", "season-test", "feature/x"]) {
+    assert.throws(
+      () => validatePrClass({ reviewClass: "policy/merged-to-main", branch }),
+      /do not allow branch/,
+      `policy/merged-to-main must reject ${branch} (only main is valid for canonical-state class)`
+    );
+  }
+});
+
+test("MAIN-03: policy/merged-to-main proof scope accepts any file list (canonical state already gated upstream)", () => {
+  const broadFileSet = [
+    "docs/anything.md",
+    "packages/random/src/foo.js",
+    "tests/random.test.js",
+    "scripts/anything.mjs",
+    ".github/workflows/anything.yml"
+  ];
+  const report = validateProofScope({
+    reviewClass: "policy/merged-to-main",
+    files: broadFileSet
+  });
+  assert.equal(report.ok, true);
+  assert.equal(report.class, "policy/merged-to-main");
+});
+
+test("MAIN-04: ci/* branches map to policy/broad-scope (parity with adr/* and fix/*)", () => {
+  const out = validatePrClass({ reviewClass: "policy/broad-scope", branch: "ci/push-trigger-and-walkdir-tests" });
+  assert.equal(out.ok, true);
+});
+
 test("policy/broad-scope proof scope accepts any file list and skips allowlist enforcement", () => {
   const broadFileSet = [
     "docs/anything.md",

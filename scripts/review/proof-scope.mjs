@@ -138,6 +138,10 @@ const REVIEW_CLASSES = {
   "policy/broad-scope": {
     primaryFiles: new Set(),
     requiredFiles: []
+  },
+  "policy/merged-to-main": {
+    primaryFiles: new Set(),
+    requiredFiles: []
   }
 };
 

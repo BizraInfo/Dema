@@ -3,6 +3,8 @@ name: BIZRA Review Gate
 on:
   pull_request:
   workflow_dispatch:
+  push:
+    branches: [main]
 
 permissions:
   contents: read
@@ -47,8 +49,15 @@ jobs:
             proof/u1-*)
               echo "BIZRA_REVIEW_CLASS=proof/u1" >> "$GITHUB_ENV"
               ;;
-            adr/*|policy/*|governance/*|tooling/*|season-*|fix/*)
+            adr/*|policy/*|governance/*|tooling/*|season-*|fix/*|ci/*)
               echo "BIZRA_REVIEW_CLASS=policy/broad-scope" >> "$GITHUB_ENV"
+              ;;
+            main)
+              # Triggered by push to main (post-merge canonical state).
+              # Runs no-overclaim + receipt-integrity on the merged state;
+              # pr-class + proof-scope use the merged-to-main class with
+              # no file-set enforcement (canonical state is already gated).
+              echo "BIZRA_REVIEW_CLASS=policy/merged-to-main" >> "$GITHUB_ENV"
               ;;
             *)
               echo "Unsupported BIZRA review branch: $BRANCH" >&2
