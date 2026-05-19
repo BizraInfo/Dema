@@ -193,7 +193,7 @@ Three subagents ran in parallel (Analyzer · Reviewer · Orchestrator) and retur
 ### 8.2 Reviewer (correctness + canon lens · `feature-dev:code-reviewer`)
 - **Real bug (confidence 88)**: `packages/core/src/setup-wizard.js:165-167` — Q2 (device label) cancellation branch missing `lq.close()`. Every other cancel branch (Q1/Q3/Q4/Q5) calls it. Process hangs in interactive use; test only exercises Q1 EOF path.
 - **Security**: no concrete attack vector found ≥80% confidence. Honest "none" per ZANN_ZERO.
-- **Silent canon drift (confidence 90)**: `packages/core/src/step7-consent-refusal-preview.js:86-101` defines its own 12-key boundary instead of using `buildPreviewBoundary()` from `preview-boundary.js:20-37`. The "all boundaries are canonical 16-key" contract silently broken; `isCanonicalBoundary()` never called.
+- **Silent canon drift (confidence 90 · RETRACTED 14:50 GST by Coordinator)**: `packages/core/src/step7-consent-refusal-preview.js:86-101` defines its own 12-key boundary instead of using `buildPreviewBoundary()` from `preview-boundary.js:20-37`. Reviewer assumed one canonical shape applies to every preview module. **Deeper inspection (23 files, multiple domain vocabularies) showed this is intentional per-module specificity, not drift.** `behavioral-modulation.js` has its own 10-key shape; each preview surface composes a domain-specific boundary adjacent to (or in place of) the universal 16-key vocabulary. The two vocabularies coexist by design. Canonized in [[feedback_per_module_domain_boundary_pattern]]. This is a worked example of [[feedback_external_ai_audit_wrong_codebase_pattern]] applied to a swarm subagent.
 - **Test gap**: `walkDirSize` in `homebase-gather.js:159-181` — depth-cap (`DIR_WALK_MAX_DEPTH=6`) and symlink-vanish branches untested.
 - **False-good tells**: (a) dead `topCommand` at `chat-router.js:210` · (b) 5+ distinct ad-hoc truth labels with no shared enum · (c) `emptyResult(ts)` keeps `ts` as `Date` object, not ISO string (inconsistent with rest of tree).
 
@@ -211,7 +211,7 @@ Three subagents ran in parallel (Analyzer · Reviewer · Orchestrator) and retur
 **Documented for follow-up** (each needs typed GO + separate slice):
 2. Analyzer's soft cycle — `behavioral-modulation.js` ↔ `sat-placeholder.js`. Fix: extract shared constants to leaf file.
 3. Reviewer's setup-wizard Q2 missing `lq.close()` — single-line fix in `setup-wizard.js:165-167`.
-4. Reviewer's step7 boundary canon drift — refactor `step7-consent-refusal-preview.js` to use `buildPreviewBoundary()`.
+4. ~~Reviewer's step7 boundary canon drift — refactor `step7-consent-refusal-preview.js` to use `buildPreviewBoundary()`.~~ **RETRACTED 14:50 GST (Tue 19 May 2026).** Coordinator preflight on this follow-up revealed 23 files with multiple domain-specific boundary vocabularies — not drift but intentional per-module specificity. Canonized in [[feedback_per_module_domain_boundary_pattern]] memory entry. No refactor needed.
 5. Orchestrator's CI gap — add `push: branches:[main]` to `bizra-review.yml`.
 6. Reviewer's `walkDirSize` test gap — add depth-cap + symlink-vanish test cases.
 
