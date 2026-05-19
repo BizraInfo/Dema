@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 import { buildPreviewBoundary } from "./preview-boundary.js";
+import { GREETING_TEMPLATES } from "./homebase-language-picker.js";
 
 const SCHEMA = "bizra.dema.homebase_v0_1.v0.1";
 const TRUTH_LABEL = "NODE0_LOCAL_SEED";
@@ -107,13 +108,22 @@ function buildHeader(g) {
 }
 
 function buildGreeting(g) {
+  const langCode = typeof g.profile.language_code === "string" ? g.profile.language_code : null;
+  const tmpl = (langCode && GREETING_TEMPLATES[langCode]) ? GREETING_TEMPLATES[langCode] : GREETING_TEMPLATES.en;
+
   if (!g.profile.source_present || typeof g.profile.name !== "string" || g.profile.name.length === 0) {
-    return Object.freeze({ text: "Welcome.", has_name: false, name_source: "absent" });
+    return Object.freeze({
+      text: tmpl.welcome_new,
+      has_name: false,
+      name_source: "absent",
+      language_code: langCode,
+    });
   }
   return Object.freeze({
-    text: `Welcome back, ${g.profile.name}.`,
+    text: tmpl.welcome_back.replace("{name}", g.profile.name),
     has_name: true,
     name_source: "profile_json",
+    language_code: langCode,
   });
 }
 

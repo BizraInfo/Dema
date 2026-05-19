@@ -102,11 +102,12 @@ test("TDD-08: viewport cols_target=76, rows_target=22", () => {
   assert.equal(out.viewport.rows_target, 22);
 });
 
-test("TDD-09: missing profile yields greeting Welcome. + has_name=false + name_source=absent", () => {
+test("TDD-09: missing profile yields greeting (welcome_new text) + has_name=false + name_source=absent", () => {
   const out = buildHomebasePreview({
     gather: makeGather({ profile: { name: null, node: "Node0", source_present: false } }),
   });
-  assert.equal(out.greeting.text, "Welcome.");
+  // English welcome_new template is "Welcome to Dema." (ADR-011 phase-2)
+  assert.match(out.greeting.text, /Welcome/);
   assert.equal(out.greeting.has_name, false);
   assert.equal(out.greeting.name_source, "absent");
 });

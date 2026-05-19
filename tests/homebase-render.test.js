@@ -80,11 +80,12 @@ test("formatHomebasePreview displays the greeting verbatim", () => {
   assert.match(out, /Welcome back, Samy\./);
 });
 
-test("formatHomebasePreview displays 'Welcome.' when profile is absent", () => {
+test("formatHomebasePreview displays welcome text when profile is absent", () => {
   const out = formatHomebasePreview(makePreview({
     profile: { name: null, node: "Node0", source_present: false },
   }), { noColor: true });
-  assert.match(out, /Welcome\./);
+  // ADR-011 phase-2: welcome_new template is "Welcome to Dema." (English default)
+  assert.match(out, /Welcome/);
   assert.ok(!/Welcome back/.test(out), "should NOT show 'Welcome back' for absent profile");
 });
 

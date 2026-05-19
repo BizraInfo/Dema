@@ -48,24 +48,34 @@ function pickString(obj, key) {
   return typeof obj?.[key] === "string" ? obj[key] : null;
 }
 
+function pickIso639_1(obj, key) {
+  const v = obj?.[key];
+  if (typeof v !== "string") return null;
+  if (/^[a-z]{2}$/.test(v) || v === "other") return v;
+  return null;
+}
+
 async function readProfile(home, result) {
   try {
     const data = await readJSON(join(home, "profile.json"));
     // Canonical bizra.dema.profile.v0.1 schema uses `preferred_name`.
     // Fall back to `name` for non-canonical profiles or test fixtures.
     const profileName = pickString(data, "preferred_name") ?? pickString(data, "name");
+    // language_code: check canonical field, then legacy `language` field
+    const languageCode = pickIso639_1(data, "language_code") ?? pickIso639_1(data, "language");
     return {
       name: profileName,
       node: pickString(data, "node") ?? "Node0",
       source_present: true,
+      language_code: languageCode,
     };
   } catch (err) {
     if (err && err.code === "ENOENT") {
-      return { name: null, node: "Node0", source_present: false };
+      return { name: null, node: "Node0", source_present: false, language_code: null };
     }
     result.warnings.push(`profile.json read failed: ${err.message}`);
     result.partial = true;
-    return { name: null, node: "Node0", source_present: false };
+    return { name: null, node: "Node0", source_present: false, language_code: null };
   }
 }
 

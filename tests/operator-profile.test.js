@@ -1,10 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, rm, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   readOperatorPreferredName,
+  readOperatorLanguage,
+  writeOperatorLanguage,
   defaultDemaHome
 } from "../packages/core/src/operator-profile.js";
 
@@ -81,6 +83,42 @@ test("operator-profile · adversarial · non-string preferred_name: returns null
       JSON.stringify({ preferred_name: 42 })
     );
     assert.equal(await readOperatorPreferredName(home), null);
+  });
+});
+
+test("operator-profile · readOperatorLanguage: profile with language_code → returns it", async () => {
+  await withHome(async (home) => {
+    await writeFile(
+      join(home, "profile.json"),
+      JSON.stringify({ language_code: "ar", secondary_language_code: "en" })
+    );
+    const result = await readOperatorLanguage(home);
+    assert.equal(result.language_code, "ar");
+    assert.equal(result.secondary_language_code, "en");
+    assert.equal(result.source, "profile_json");
+  });
+});
+
+test("operator-profile · readOperatorLanguage: profile absent → source='absent'", async () => {
+  await withHome(async (home) => {
+    const result = await readOperatorLanguage(home);
+    assert.equal(result.source, "absent");
+    assert.equal(result.language_code, null);
+    assert.equal(result.secondary_language_code, null);
+  });
+});
+
+test("operator-profile · writeOperatorLanguage: preserves preferred_name when merging", async () => {
+  await withHome(async (home) => {
+    await writeFile(
+      join(home, "profile.json"),
+      JSON.stringify({ schema: "bizra.dema.profile.v0.1", preferred_name: "Mumu", memory_consent: "local" })
+    );
+    await writeOperatorLanguage({ home, language_code: "fr", secondary_language_code: null });
+    const raw = await readFile(join(home, "profile.json"), "utf8");
+    const data = JSON.parse(raw);
+    assert.equal(data.preferred_name, "Mumu", "preferred_name must be preserved");
+    assert.equal(data.language_code, "fr");
   });
 });
 
