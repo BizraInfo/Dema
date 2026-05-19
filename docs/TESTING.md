@@ -57,6 +57,8 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/gateway-http-adapter.test.js` | Gateway adapter probing and failure normalization. |
 | `tests/actuator-check.test.js` | Raw actuator and EffectCap invariant static guard behavior. |
 | `tests/canon-check.test.js` | Topology canon registry and forbidden topology drift guard. |
+| `tests/canon-glossary.test.js` | Canon glossary unit tests (`packages/core/src/canon-glossary.js`): 28-entry count, required-field completeness, truth_label from known set, see_also referential integrity, frozen mutation rejection, exact lookup, case-insensitive lookup, hyphenated concept, not-found suggestions, listing mode (null/empty), prototype-pollution safety, 5000-char input safety, unicode/RTL graceful handling, close-match typo suggestion, formatExplainPreview human output, listing formatter, not-found formatter, null input safety. |
+| `tests/canon-glossary-cli.test.js` | Canon Glossary CLI integration (`dema explain`): subprocess tests verifying `dema explain ihsan` emits Excellence + Truth label + See also, `dema explain` (listing) emits Available concepts, `dema explain --json ihsan` parses to schema=bizra.dema.canon_glossary_entry.v0.1 + concept=ihsan, `dema explain nonexistent` emits don't-have-a-definition + suggestion hint. |
 | `tests/effectcap-invariant.test.js` | Pre-runtime EffectCap invariant spec and negative tests. |
 | `tests/integration-check.test.js` | CLI help, smoke gate, architecture map, and test-matrix integration guard. |
 | `tests/ihsan-floor-preview.test.js` | Ihsan floor preview scalar validation, non-certifying boundary, formatter, and CLI output. |

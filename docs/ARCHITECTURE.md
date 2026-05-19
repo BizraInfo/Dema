@@ -39,6 +39,7 @@ Dema does not own dangerous execution. It talks to adapters. Adapters talk to go
 |---|---|---|
 | `dema welcome` | CLI shell text | No state change. |
 | `dema onboard` | `packages/core/src/onboarding.js` | Preview-only guide; no state change. |
+| `dema explain` | `packages/core/src/canon-glossary.js` | Plain-language inline canon teacher. 28 grounded vocabulary entries (ihsan, adl, riba-zero, zann-zero, PAT, SAT, URP, FATE, DEMA, BIZRA, Third Fact, الرسالة, البذرة, Node0, Node1, Lighthouse, Ring 0, Ring 1, ARTIFACT-011, ADR-005, Daughter Test, receipt, chain, truth-label, refusal-as-product, founding-documents, bitcoin-anchor, boundary). Each entry: title, short, long, truth_label, see_also, doc_anchor. Read-only; no state change; `--json` emits schema-tagged entry. |
 | `dema setup` | `packages/installer` | Creates local skeleton only. |
 | `dema status`, `dema status:json` | `packages/node-adapter`, `packages/core/status.js` | Reads adapter status. |
 | `dema state` | `packages/core/state.js` | Emits Node0 state preview JSON (`bizra.dema.node0_state.v0.1`, truth label `NODE0_LOCAL_SEED`); preview-only, no adapter call, no runtime. |

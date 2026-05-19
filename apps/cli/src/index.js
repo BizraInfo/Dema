@@ -137,6 +137,10 @@ import {
   requestApproval
 } from "../../../packages/core/src/approval-gate.js";
 import { suggestCommands } from "../../../packages/core/src/command-suggester.js";
+import {
+  buildExplainPreview,
+  formatExplainPreview
+} from "../../../packages/core/src/canon-glossary.js";
 
 const adapter = createNode0Adapter();
 
@@ -162,6 +166,8 @@ Orientation:
   dema welcome      Show the first-run orientation
   dema onboard [--json]
                     Guided zero-technical onboarding path; preview-only
+  dema explain [<concept>]
+                    Plain-language definition of a BIZRA/Dema concept (28 known)
   dema setup        Create local Dema folders/profile skeleton
 
 Readiness:
@@ -290,6 +296,7 @@ const REGISTERED_COMMANDS_LIST = [
   { command: "sovereign", description: "render Sovereign Mission Interface" },
   { command: "welcome", description: "show first-run orientation" },
   { command: "onboard", description: "guided onboarding path" },
+  { command: "explain", description: "plain-language definition of a BIZRA/Dema concept (28 known)" },
   { command: "setup", description: "create local Dema folders/profile skeleton" },
   { command: "help", description: "show full command list" }
 ];
@@ -356,6 +363,20 @@ async function dispatch(argv) {
           ? JSON.stringify(guide, null, 2)
           : formatOnboardingGuide(guide)
       );
+      return;
+    }
+
+    case "explain": {
+      const wantJson = argv.includes("--json");
+      // Strip --json from arg list to isolate the concept token
+      const conceptArgs = argv.slice(1).filter((a) => a !== "--json");
+      const concept = conceptArgs[0] ?? null;
+      const preview = buildExplainPreview(concept);
+      if (wantJson) {
+        console.log(JSON.stringify(preview, null, 2));
+        return;
+      }
+      console.log(formatExplainPreview(preview));
       return;
     }
 
