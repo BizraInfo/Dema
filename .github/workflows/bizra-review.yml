@@ -49,7 +49,7 @@ jobs:
             proof/u1-*)
               echo "BIZRA_REVIEW_CLASS=proof/u1" >> "$GITHUB_ENV"
               ;;
-            adr/*|policy/*|governance/*|tooling/*|season-*|fix/*|ci/*|docs/*)
+            adr/*|policy/*|governance/*|tooling/*|season-*|fix/*|ci/*|docs/*|feat/*)
               echo "BIZRA_REVIEW_CLASS=policy/broad-scope" >> "$GITHUB_ENV"
               ;;
             main)

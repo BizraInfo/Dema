@@ -523,6 +523,11 @@ test("MAIN-05: docs/* branches map to policy/broad-scope (parity with adr/* fix/
   assert.equal(out.ok, true);
 });
 
+test("MAIN-06: feat/* branches map to policy/broad-scope (parity with adr/* fix/* ci/* docs/*)", () => {
+  const out = validatePrClass({ reviewClass: "policy/broad-scope", branch: "feat/palette-env-resolver" });
+  assert.equal(out.ok, true);
+});
+
 test("policy/broad-scope proof scope accepts any file list and skips allowlist enforcement", () => {
   const broadFileSet = [
     "docs/anything.md",
