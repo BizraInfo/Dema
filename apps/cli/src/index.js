@@ -407,12 +407,83 @@ async function dispatch(argv) {
       return;
 
     case "onboard": {
+      if (argv.includes("--preview-card")) {
+        const { join: pcJoin } = await import("node:path");
+        const { homedir: pcHd } = await import("node:os");
+        const { buildGenesisPreviewCard } = await import("../../../packages/core/src/genesis-preview-card.js");
+        const { writeGenesisPreviewCard, readOperatorLanguage } = await import("../../../packages/core/src/operator-profile.js");
+        const pcHome = process.env.DEMA_HOME || pcJoin(pcHd(), ".dema");
+        const langResult = await readOperatorLanguage(pcHome);
+        const timestamp = new Date().toISOString();
+        const card = buildGenesisPreviewCard({
+          candidate: {
+            primary_language: langResult.language_code,
+            secondary_language: langResult.secondary_language_code,
+          },
+          timestamp,
+        });
+        await writeGenesisPreviewCard({ home: pcHome, card });
+        if (argv.includes("--json")) {
+          console.log(JSON.stringify(card, null, 2));
+        } else {
+          console.log(`Genesis Preview Card`);
+          console.log(`  schema:             ${card.schema}`);
+          console.log(`  mode:               ${card.mode}`);
+          console.log(`  truth_label:        ${card.truth_label}`);
+          console.log(`  receipt_id_preview: ${card.would_mint_if_consented.receipt_id_preview}`);
+          console.log(`  consent_phrase:     ${card.would_mint_if_consented.consent_phrase_required}`);
+          console.log(`  stored_at:          ${card.card_storage.path}`);
+          console.log(`\nNo mint has occurred. Type the consent phrase to mint (separate typed-GO required).`);
+        }
+        return;
+      }
       const guide = buildOnboardingGuide();
       console.log(
         argv.includes("--json")
           ? JSON.stringify(guide, null, 2)
           : formatOnboardingGuide(guide)
       );
+      return;
+    }
+
+    case "preview-card": {
+      const { join: pcJoin2 } = await import("node:path");
+      const { homedir: pcHd2 } = await import("node:os");
+      const { readGenesisPreviewCards } = await import("../../../packages/core/src/operator-profile.js");
+      const pcHome2 = process.env.DEMA_HOME || pcJoin2(pcHd2(), ".dema");
+
+      if (!subcommand || subcommand === "show") {
+        // dema preview-card show [<receipt_id_preview>] [--json]
+        const hashArg = argv[2] && !argv[2].startsWith("--") ? argv[2] : null;
+        const wantJson2 = argv.includes("--json");
+        const cards = await readGenesisPreviewCards(pcHome2);
+
+        if (hashArg) {
+          const match = cards.find(
+            (c) => c?.would_mint_if_consented?.receipt_id_preview === hashArg
+          );
+          if (!match) {
+            console.log(`preview-card: card not found for hash ${hashArg}`);
+            return;
+          }
+          console.log(wantJson2 ? JSON.stringify(match, null, 2) : `receipt_id_preview: ${match.would_mint_if_consented.receipt_id_preview}`);
+          return;
+        }
+
+        if (cards.length === 0) {
+          console.log("no preview cards stored yet");
+          return;
+        }
+
+        if (wantJson2) {
+          console.log(JSON.stringify(cards, null, 2));
+          return;
+        }
+        for (const c of cards) {
+          console.log(`  ${c?.would_mint_if_consented?.receipt_id_preview ?? "unknown"}`);
+        }
+        return;
+      }
       return;
     }
 

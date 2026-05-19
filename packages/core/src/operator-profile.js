@@ -1,5 +1,5 @@
-import { readFile, writeFile, rename, mkdir } from "node:fs/promises";
-import { join, dirname } from "node:path";
+import { readFile, writeFile, rename, mkdir, readdir } from "node:fs/promises";
+import { join, dirname, basename } from "node:path";
 import { homedir } from "node:os";
 
 // Stricter than homebase-gather's pickString: empty string is treated as
@@ -49,6 +49,50 @@ export async function readOperatorLanguage(home = defaultDemaHome()) {
     };
   } catch {
     return { language_code: null, secondary_language_code: null, source: "absent" };
+  }
+}
+
+export async function writeGenesisPreviewCard({ home = defaultDemaHome(), card } = {}) {
+  const stateDir = join(home, "state");
+  await mkdir(stateDir, { recursive: true });
+
+  // Derive a filename-safe ISO timestamp from card.candidate or card_storage.path
+  let timestamp = "unknown";
+  if (card?.card_storage?.path) {
+    const match = String(card.card_storage.path).match(/genesis-preview-(.+)\.json$/);
+    if (match) timestamp = match[1];
+  }
+
+  const filename = `genesis-preview-${timestamp}.json`;
+  const filePath = join(stateDir, filename);
+  const tmpPath = filePath + ".tmp";
+
+  await writeFile(tmpPath, `${JSON.stringify(card, null, 2)}\n`, "utf8");
+  await rename(tmpPath, filePath);
+  return filePath;
+}
+
+export async function readGenesisPreviewCards(home = defaultDemaHome()) {
+  const stateDir = join(home, "state");
+  try {
+    const entries = await readdir(stateDir);
+    const cardFiles = entries
+      .filter((f) => /^genesis-preview-.+\.json$/.test(f))
+      .sort()
+      .reverse(); // most-recent first (ISO timestamp sort is lexicographic)
+
+    const cards = [];
+    for (const f of cardFiles) {
+      try {
+        const raw = await readFile(join(stateDir, f), "utf8");
+        cards.push(JSON.parse(raw));
+      } catch {
+        // skip malformed files silently
+      }
+    }
+    return cards;
+  } catch {
+    return [];
   }
 }
 

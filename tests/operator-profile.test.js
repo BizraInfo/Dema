@@ -1,12 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, rm, readFile } from "node:fs/promises";
+import { mkdtemp, writeFile, rm, readFile, access } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   readOperatorPreferredName,
   readOperatorLanguage,
   writeOperatorLanguage,
+  writeGenesisPreviewCard,
+  readGenesisPreviewCards,
   defaultDemaHome
 } from "../packages/core/src/operator-profile.js";
 
@@ -119,6 +121,34 @@ test("operator-profile · writeOperatorLanguage: preserves preferred_name when m
     const data = JSON.parse(raw);
     assert.equal(data.preferred_name, "Mumu", "preferred_name must be preserved");
     assert.equal(data.language_code, "fr");
+  });
+});
+
+// ─── writeGenesisPreviewCard / readGenesisPreviewCards ───────────────────────
+
+test("operator-profile · writeGenesisPreviewCard creates state/ subdirectory if absent", async () => {
+  await withHome(async (home) => {
+    const fakeCard = { schema: "bizra.dema.genesis_preview_card.v0.1", card_storage: { path: "~/.dema/state/genesis-preview-2026-05-19T00:00:00.000Z.json" } };
+    await writeGenesisPreviewCard({ home, card: fakeCard });
+    // Verify state/ directory exists
+    await access(join(home, "state"));
+  });
+});
+
+test("operator-profile · writeGenesisPreviewCard returns the full path written", async () => {
+  await withHome(async (home) => {
+    const fakeCard = { schema: "bizra.dema.genesis_preview_card.v0.1", card_storage: { path: "~/.dema/state/genesis-preview-2026-05-19T12:00:00.000Z.json" } };
+    const written = await writeGenesisPreviewCard({ home, card: fakeCard });
+    assert.ok(written.startsWith(home));
+    assert.ok(written.includes("genesis-preview-"));
+    assert.ok(written.endsWith(".json"));
+  });
+});
+
+test("operator-profile · readGenesisPreviewCards returns [] when state/ is empty or absent", async () => {
+  await withHome(async (home) => {
+    const cards = await readGenesisPreviewCards(home);
+    assert.deepEqual(cards, []);
   });
 });
 

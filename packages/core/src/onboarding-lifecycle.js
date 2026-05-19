@@ -16,6 +16,7 @@
 
 import { buildPreviewBoundary } from "./preview-boundary.js";
 import { buildNodeOnboardingExtension } from "./node-onboarding-extension.js";
+import { buildGenesisPreviewCard } from "./genesis-preview-card.js";
 
 const SCHEMA = "bizra.dema.onboarding_lifecycle.v0.1";
 const TRUTH_LABEL = "NODE0_LOCAL_SEED";
@@ -244,6 +245,18 @@ function freezeStage(stage, candidateOrdinal) {
 
 // ─── Main builder ───────────────────────────────────────────────────────────
 
+// ─── Canonical stage IDs required before genesis card emits ─────────────────
+
+const GENESIS_REQUIRED_STAGES = Object.freeze([
+  "language",
+  "technical_level",
+  "node_role",
+  "purpose",
+  "resources",
+  "consent_constitution",
+  "first_mission",
+]);
+
 export function buildOnboardingLifecyclePreview({
   candidate_name = null,
   candidate_ordinal = null,
@@ -251,7 +264,10 @@ export function buildOnboardingLifecyclePreview({
   language = null,
   technical_level = null,
   // ADR-011 extension inputs — all optional; builder applies canonical defaults
-  adr011 = {}
+  adr011 = {},
+  // ADR-011 phase-3: Genesis Preview Card inputs (all optional)
+  genesis_timestamp = null,
+  genesis_card_storage_path_hint = null,
 } = {}) {
   const ordinal = (typeof candidate_ordinal === "number" && Number.isInteger(candidate_ordinal) && candidate_ordinal >= 0)
     ? candidate_ordinal
@@ -271,6 +287,31 @@ export function buildOnboardingLifecyclePreview({
   const ext = buildNodeOnboardingExtension(
     Object.assign({ candidate_ordinal }, adr011)
   );
+
+  // ADR-011 phase-3: Genesis Preview Card — emits only when all 7 stages complete
+  const completedSet = new Set(completed);
+  const allStagesComplete = GENESIS_REQUIRED_STAGES.every((id) => completedSet.has(id));
+
+  const genesisPreviewCard = allStagesComplete
+    ? buildGenesisPreviewCard({
+        candidate: {
+          node_ordinal: ordinal ?? 0,
+          preferred_name: typeof candidate_name === "string" ? candidate_name : null,
+          primary_language: isValidLanguageCode(language) ? language : null,
+          secondary_language: (adr011.secondary_language_code ?? null),
+          device_label: (adr011.device_label ?? null),
+          model_readiness: (adr011.model_status ?? "MODEL_UNKNOWN"),
+          technical_level:
+            typeof technical_level === "number" &&
+            technical_level >= 1 &&
+            technical_level <= 4
+              ? technical_level - 1  // ADR says scale 0-3; builder arg is 1-4
+              : null,
+        },
+        timestamp: genesis_timestamp,
+        card_storage_path_hint: genesis_card_storage_path_hint,
+      })
+    : null;
 
   return Object.freeze({
     schema: SCHEMA,
@@ -326,6 +367,8 @@ export function buildOnboardingLifecyclePreview({
     language_state: ext.language_state,
     candidate_lifecycle: ext.candidate_lifecycle,
     adr011_blocked_effects: ext.blocked_effects,
+    // ADR-011 phase-3: Genesis Preview Card (null until all 7 stages complete)
+    genesis_preview_card: genesisPreviewCard,
     boundary: buildPreviewBoundary()
   });
 }

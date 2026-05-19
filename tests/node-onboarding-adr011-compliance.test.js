@@ -417,3 +417,55 @@ test("EXTENSION_SCHEMA_VERSION is the canonical string", () => {
     "bizra.dema.onboarding_lifecycle.adr011_extension.v0.1"
   );
 });
+
+// ─── Law #11 phase-3 tests ────────────────────────────────────────────────────
+
+test("Law #11a: builder output with all 7 stages completed contains genesis_preview_card block", () => {
+  const allCompleted = [
+    "language", "technical_level", "node_role", "purpose",
+    "resources", "consent_constitution", "first_mission"
+  ];
+  const r = buildOnboardingLifecyclePreview({
+    progress: { completed: allCompleted },
+    genesis_timestamp: "2026-05-19T00:00:00.000Z",
+  });
+  assert.ok("genesis_preview_card" in r, "genesis_preview_card must be present when all 7 stages complete");
+  assert.notEqual(r.genesis_preview_card, null);
+  assert.equal(r.genesis_preview_card.schema, "bizra.dema.genesis_preview_card.v0.1");
+  assert.equal(r.genesis_preview_card.mode, "preview_only");
+});
+
+test("Law #11b: builder output without stage 6 (first_mission) → genesis_preview_card === null", () => {
+  const r = buildOnboardingLifecyclePreview({
+    progress: { completed: ["language", "technical_level", "node_role", "purpose", "resources", "consent_constitution"] },
+  });
+  assert.equal(r.genesis_preview_card, null, "genesis_preview_card must be null without first_mission");
+});
+
+test("Law #11c: card emission does NOT advance receipt chain — boundary.chain_advance_performed remains false", () => {
+  const allCompleted = [
+    "language", "technical_level", "node_role", "purpose",
+    "resources", "consent_constitution", "first_mission"
+  ];
+  const r = buildOnboardingLifecyclePreview({
+    progress: { completed: allCompleted },
+    genesis_timestamp: "2026-05-19T00:00:00.000Z",
+  });
+  assert.equal(r.boundary.chain_advance_performed, false);
+  assert.equal(r.genesis_preview_card.boundary.chain_advance_performed, false);
+  assert.equal(r.genesis_preview_card.boundary.receipt_mint_performed, false);
+});
+
+test("Law #11d: card_storage path is under state/ not receipts/", () => {
+  const allCompleted = [
+    "language", "technical_level", "node_role", "purpose",
+    "resources", "consent_constitution", "first_mission"
+  ];
+  const r = buildOnboardingLifecyclePreview({
+    progress: { completed: allCompleted },
+    genesis_timestamp: "2026-05-19T00:00:00.000Z",
+  });
+  const storagePath = r.genesis_preview_card.card_storage.path;
+  assert.ok(storagePath.includes("state/"), "card_storage path must be under state/ not receipts/");
+  assert.equal(storagePath.includes("receipts/"), false, "card_storage path must NOT be under receipts/");
+});
