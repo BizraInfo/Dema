@@ -15,6 +15,7 @@ import { pathToFileURL } from "node:url";
 // "pre-existing on main" in PR #44 body, requiring public retraction. This
 // gate institutionalizes the verification habit at infrastructure level.
 const KNOWN_DEMA_ENV_VARS = Object.freeze([
+  "DEMA_BANNER_INTERACTIVE",
   "DEMA_DOWNLOADS_ROOT",
   "DEMA_GATEWAY_URL",
   "DEMA_HOME",
@@ -23,6 +24,7 @@ const KNOWN_DEMA_ENV_VARS = Object.freeze([
   "DEMA_MODEL_DOWNLOADS_ROOT",
   "DEMA_NODE0_ADAPTER",
   "DEMA_NODE0_STATUS_COMMAND",
+  "DEMA_NO_TUI",
   "DEMA_OLLAMA_URL"
 ]);
 

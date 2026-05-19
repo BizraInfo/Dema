@@ -206,12 +206,16 @@ node apps/cli/src/index.js mission propose
 node apps/cli/src/index.js monetize
 node scripts/review/actuator-check.mjs
 node scripts/review/canon-check.mjs
+node scripts/review/env-hygiene-check.mjs
 node scripts/review/integration-check.mjs
 node scripts/llm-guidance-check.mjs
 node scripts/node0-self-check.mjs --verify
 ```
 
 | `tests/a2a-message-envelope-preview.test.js` | A2A message envelope preview v0.1: schema/mode, from/to non-empty + distinct, mission_id required, message_type enum (4 types), effect_level subset of {read} only (rejects write/execute/call), claims array, authority_transfer + dispatched false invariants, boundary all 7 flags false, deterministic + frozen, fresh-object-per-call, pure-module imports. |
+| `tests/claim-ledger-check.test.js` | Claim Ledger checker tooling tests: scans repo for unbinder claims, asserts every reachable claim binds to a verifiable artifact (sha · file path · receipt). |
+| `tests/env-hygiene-check.test.js` | Env-hygiene gate (PR #45): 13 anchors covering KNOWN_DEMA_ENV_VARS allowlist, redaction (value_length only), --strict exit-1 behavior, T-13 source-drift trap that greps source for DEMA_* refs and asserts the allowlist stays in sync. |
+| `tests/journey.test.js` | Sovereign journey OS preview module: one-screen journey from first launch → safety boundary → mission draft → consent scope → Node0 handoff → receipt/impact posture. Preview-only, no execution. |
 | `tests/boundary-invariant-check.test.js` | Cross-package boundary-invariant lint: walks all packages/*/src/*-preview.js, asserts no authority-flag-named key is set to `true` via conservative AUTHORITY_FLAGS allowlist, static-source scan only, schema-tagged read-only audit, no false positives on commentary or non-authority keys. |
 | `tests/external-pattern-registry-preview.test.js` | External pattern registry preview module: schema check, mode+truth_label, 7-line operating canon, 8-16 pattern entries, required keys per pattern, status enum (PLANNED/PREVIEW/BLOCKED only, no LIVE), GateVerdict validity, MICRO_CONSENT_SHAPE validity, OPERATIONS validity, effect mutual exclusion, on_disk_anchor existence, boundary all-false (12 flags), deterministic+frozen, fresh-object-per-call, pure-module imports, summary counts, and boundary-invariant lint inclusion. |
 | `tests/mcp-capability-descriptor-preview.test.js` | MCP capability descriptor preview v0.1: schema/mode, valid-envelope shape, effects-overlap fail-closed, OPERATIONS membership for declared/denied, RESOURCE_TYPES + MICRO_CONSENT_SHAPE + GateVerdict validity, invocable_now false invariant, boundary all 8 flags false, deterministic + frozen + fresh-object-per-call, defensive REVIEW rule for execute/call effects, pure-module imports, fail-closed on invalid tool_id/Date. |

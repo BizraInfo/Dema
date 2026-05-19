@@ -70,9 +70,17 @@ import {
   probeGateway
 } from "../../../packages/core/src/banner.js";
 import {
+  buildAmbientAuditPreview,
   buildAmbientBoundary,
-  formatAmbientBoundary
+  buildAmbientManifestPreview,
+  formatAmbientAuditPreview,
+  formatAmbientBoundary,
+  formatAmbientManifestPreview
 } from "../../../packages/core/src/ambient.js";
+import {
+  buildSovereignJourneyPreview,
+  formatSovereignJourneyPreview
+} from "../../../packages/mission/src/journey.js";
 import {
   buildSafetyReportPreview,
   formatSafetyReportPreview
@@ -948,12 +956,38 @@ async function dispatch(argv) {
     }
 
     case "ambient": {
+      if (subcommand === "--manifest") {
+        const manifest = buildAmbientManifestPreview();
+        console.log(
+          argv.includes("--json")
+            ? JSON.stringify(manifest, null, 2)
+            : formatAmbientManifestPreview(manifest)
+        );
+        return;
+      }
+      if (subcommand === "audit") {
+        const audit = buildAmbientAuditPreview();
+        console.log(
+          argv.includes("--json")
+            ? JSON.stringify(audit, null, 2)
+            : formatAmbientAuditPreview(audit)
+        );
+        return;
+      }
       console.log(formatAmbientBoundary(buildAmbientBoundary()));
       return;
     }
 
     case "ambient:json": {
       console.log(JSON.stringify(buildAmbientBoundary(), null, 2));
+      return;
+    }
+
+    case "journey": {
+      const json = argv.includes("--json");
+      const intent = argv.slice(1).filter((arg) => arg !== "--json").join(" ").trim();
+      const journey = buildSovereignJourneyPreview({ intent });
+      console.log(json ? JSON.stringify(journey, null, 2) : formatSovereignJourneyPreview(journey));
       return;
     }
 

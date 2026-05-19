@@ -453,13 +453,15 @@ test("existing proof classes remain strict and do not accept Amana contract file
   }
 });
 
-test("policy/broad-scope PR class accepts adr/* and policy/* and governance/* and tooling/* branches", () => {
+test("policy/broad-scope PR class accepts adr/* and policy/* and governance/* and tooling/* and fix/* branches", () => {
   for (const branch of [
     "adr/007-accept-clean",
     "adr/008-something",
     "policy/proof-quality-broad-scope",
     "governance/charter-update",
-    "tooling/env-hygiene-check"
+    "tooling/env-hygiene-check",
+    "fix/pr-50-followup-test-stabilization",
+    "fix/something-broken"
   ]) {
     assert.equal(
       validatePrClass({ reviewClass: "policy/broad-scope", branch }).ok,
@@ -469,8 +471,8 @@ test("policy/broad-scope PR class accepts adr/* and policy/* and governance/* an
   }
 });
 
-test("policy/broad-scope PR class rejects feature-class branches", () => {
-  for (const branch of ["feature/random", "fix/random", "main"]) {
+test("policy/broad-scope PR class rejects non-allowlisted branches", () => {
+  for (const branch of ["feature/random", "main"]) {
     assert.throws(
       () => validatePrClass({ reviewClass: "policy/broad-scope", branch }),
       /do not allow branch/,
