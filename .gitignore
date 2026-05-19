@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .DS_Store
+__pycache__/
+*.py[cod]
 .env
 .env.*
 !.env.example
@@ -19,8 +21,8 @@ coverage/
 hermes-agent-2026.4.23/
 openclaw-2026.4.25/
 
-# proof-forge local evidence — kept off-tree until the skill ships its scripts
-# and an ADR reconciles it with the ~/.dema/receipts spine (ADR-002, ADR-005).
+# proof-forge local evidence — generated artifacts stay off-tree until an ADR
+# reconciles them with the ~/.dema/receipts spine (ADR-002, ADR-005).
 .proof-forge/
 PROOF_SUMMARY.md
 
@@ -28,3 +30,12 @@ PROOF_SUMMARY.md
 # Vercel runner only; never committed. Operator's install path is unaffected.
 public/
 .vercel/
+
+# Local scratch/reference export, not repo documentation.
+what is bash , why its the most important and most (1).md
+
+# Skill bundles authored locally (zip archives with SKILL.md + references/).
+# These are operator-authored artifacts intended for ~/.claude/skills/ install,
+# not repo-tracked content. Filed as artifact-type policy: skill bundles live
+# outside the source tree.
+*.skill

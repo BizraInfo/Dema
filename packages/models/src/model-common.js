@@ -32,6 +32,15 @@ export function isLocalAddress(address) {
   return ["127.0.0.1", "::1", "localhost"].includes(address);
 }
 
+export function isLocalUrl(baseUrl) {
+  try {
+    const url = new URL(baseUrl);
+    return isLocalAddress(url.hostname.replace(/^\[|\]$/g, ""));
+  } catch {
+    return false;
+  }
+}
+
 export function isExposedAddress(address) {
   if (!address) return false;
   return !isLocalAddress(address.replace(/^\[|\]$/g, ""));

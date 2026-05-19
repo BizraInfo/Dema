@@ -121,7 +121,10 @@ export function formatVerdict(verdict) {
 // local logic. Only real SAT-5 (PLANNED upstream in bizra-data-lake) issues
 // PERMIT. v0.3.2 caps at PARTIAL_PLACEHOLDER for the happy path.
 
-import { BOUNDED_DIAGNOSTIC_CONSENT_PHRASE } from "../../core/src/mission.js";
+// Imported from a true-leaf module (no outbound imports) to break the
+// file-resolution cycle that otherwise forms via
+// core/behavioral-modulation.js -> verifier/* -> core/mission.js.
+import { BOUNDED_DIAGNOSTIC_CONSENT_PHRASE } from "../../core/src/diagnostic-consent.js";
 
 const TASK_RECEIPT_SCHEMA = "bizra.dema.task_receipt.v0.1";
 const GATEWAY_HANDOFF_SCHEMA = "bizra.dema.gateway_receipt_handoff.v0.1";

@@ -1,0 +1,229 @@
+{
+  "schema": "bizra.dema.canon_registry.v0.1",
+  "truth_label": "DECLARED_TOPOLOGY_GUARD",
+  "canonical_sentence": "Each human node mints PAT-7 locally on their device and SAT-5 into one shared Universal Resource Pool. PAT serves the human. SAT serves the system. The membrane sits between them.",
+  "required_files": [
+    "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+    "docs/02-architecture/node0-urp-ecosystem-transition.md",
+    "docs/02-architecture/pat-builder-sat-validator.md"
+  ],
+  "phases": [
+    {
+      "id": "phase_0",
+      "label": "CANDIDATE_CANONICAL",
+      "summary": "Single-node Node0 sovereign runtime candidate; Dema remains local product face."
+    },
+    {
+      "id": "phase_1",
+      "label": "PLANNED",
+      "summary": "Shared URP wake-up and second-node membrane-mediated handshake."
+    },
+    {
+      "id": "phase_2",
+      "label": "PLANNED",
+      "summary": "SAT-5 operational inside the one shared URP at multi-node scale."
+    },
+    {
+      "id": "phase_3",
+      "label": "PLANNED",
+      "summary": "Opt-in federated cognition via membrane and Shared Reflex Registry."
+    },
+    {
+      "id": "phase_4",
+      "label": "DIRECTIONAL",
+      "summary": "Long-range decentralized self-growing agentic ecosystem."
+    }
+  ],
+  "topology_invariants": {
+    "urp_count": "one_shared_urp",
+    "pat_location": "local_per_human_device",
+    "sat_location": "shared_urp",
+    "crossing": "pat_to_membrane_to_sat",
+    "human_network_access": "never_direct"
+  },
+  "node_ordinal_law": {
+    "version": "v0.1",
+    "introduced_at_commit": "9a8389e",
+    "introduced_at_date": "2026-05-18",
+    "rules": [
+      "node0_is_origin",
+      "node1_is_first_invited_human_not_second_device",
+      "ordinal_is_registry_assigned_never_guessed",
+      "no_duplicate_ordinal",
+      "no_skipped_ordinal_without_canon_authorization",
+      "no_hidden_ordinal",
+      "companion_device_shares_ordinal_distinct_uid",
+      "identity_independent_of_presentation"
+    ],
+    "canon_anchor": "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+    "code_anchor": "packages/core/src/profiles.js",
+    "uid_seed_format": "operator|ordinal|device"
+  },
+  "seed_pattern_invariant": {
+    "version": "v0.1",
+    "introduced_at_date": "2026-05-18",
+    "statement": "Every seed contains the full tree DNA. Every tree carries the full forest pattern.",
+    "rules": [
+      "a_node_is_a_seed_no_lite_node",
+      "a_seed_contains_the_tree_full_pattern_at_one_human",
+      "a_tree_contains_the_forest_no_node_owns_the_system",
+      "node_leaving_does_not_delete_capability",
+      "node_joining_does_not_import_the_system_from_outside"
+    ],
+    "canon_anchor": "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+    "third_fact_anchor": "docs/public/third-fact-v0.1.md",
+    "bitcoin_anchor_blocks": [948027, 948029],
+    "code_anchor": "packages/core/src/profiles.js",
+    "companion_to": "node_ordinal_law"
+  },
+  "skill_growth_law": {
+    "version": "v0.1",
+    "introduced_at_commit": "fc3ad84",
+    "introduced_at_date": "2026-05-18",
+    "statement_four_lines": [
+      "No learning without evaluation.",
+      "No evaluation without evidence.",
+      "No skill promotion without receipt.",
+      "No overwrite without human consent."
+    ],
+    "five_gates": [
+      "evidence_exists",
+      "success_metric_present",
+      "no_boundary_violation",
+      "sat_review_passed",
+      "human_consent_received"
+    ],
+    "eight_refusals": [
+      "refuse_to_overwrite_human_edited_skill",
+      "refuse_to_promote_without_evidence",
+      "refuse_to_promote_failed_task_outcome",
+      "refuse_to_promote_without_success_metric",
+      "refuse_to_emit_skill_change_without_typed_consent",
+      "refuse_to_archive_pinned_skill",
+      "refuse_to_score_skill_by_self_reflection_alone",
+      "refuse_to_create_skill_overlapping_protected_namespace"
+    ],
+    "protected_namespaces": [
+      "consent",
+      "boundary",
+      "receipt_mint",
+      "federation",
+      "identity",
+      "canon"
+    ],
+    "promotion_phrase_template": "GO promote skill <id> v<version>",
+    "canon_anchor": "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+    "code_anchor": "packages/core/src/skill-growth-governor.js",
+    "test_anchor": "tests/skill-growth-governor.test.js",
+    "adr_005_anchor": "docs/06-adr/ADR-005-operator-actions-require-explicit-consent.md",
+    "adr_009_poi_anchor": "docs/06-adr/ADR-009-poi-proof-of-impact-design.md",
+    "companion_to": ["node_ordinal_law", "seed_pattern_invariant"]
+  },
+  "adr_011_onboarding_consciousness_anchor": "docs/06-adr/ADR-011-onboarding-consciousness-layer.md",
+  "law_of_assumption": {
+    "version": "v0.1",
+    "introduced_at_repo_commit": "pending_this_commit",
+    "introduced_at_date": "2026-05-18",
+    "authored_by": "Mumu (Mohamed Beshr)",
+    "operator_local_origin_date": "2026-05-09",
+    "operator_local_anchor": "~/.dema/memory/foundational-mindset.{json,md}",
+    "repo_canon_anchor": "docs/canon/LAW_OF_ASSUMPTION.md",
+    "statement_bilingual_source_present": true,
+    "claim_states": ["VERIFIED", "DERIVED", "ASSUMED_WITH_IHSAN", "UNKNOWN"],
+    "assumption_shape_fields": ["assumption", "ground", "boundary", "rejectable"],
+    "third_path_named": "bounded_autonomy_through_declared_epistemic_ground",
+    "deeper_gate": "can Dema honestly declare the boundary between evidence and uncertainty?",
+    "refusal_as_product_corollary": true,
+    "embodiment_in_render": {
+      "surface": "homebase_v0_1a_boundary_footer",
+      "code_anchor": "packages/core/src/tui-formatter.js::formatHomebasePreview",
+      "test_anchor": "tests/homebase-render.test.js (LAW-OF-ASSUMPTION assertions)",
+      "footer_citation_text": "Law of Assumption: declare boundary between evidence and uncertainty."
+    },
+    "binding_at_layers": [
+      "every_receipt",
+      "every_proposal_awaiting_typed_go",
+      "every_claim_dema_makes",
+      "every_spine_surface_emission",
+      "every_vigil_reflection",
+      "every_federation_handshake_future",
+      "every_artifact_n_issuance",
+      "every_refusal_emitted",
+      "every_operator_facing_render"
+    ],
+    "companion_to": ["node_ordinal_law", "seed_pattern_invariant", "skill_growth_law"],
+    "operating_frame_one_line": "Evidence > Assumption. When assumption is unavoidable, assume with Ihsān. Declare the boundary between evidence and uncertainty. Refusal is a product, not an error."
+  },
+  "forbidden_topology_phrases": [
+    {
+      "phrase": "Each user has their own URP",
+      "allowed_files": ["docs/canon/BIZRA_TOPOLOGY_CANON.md"]
+    },
+    {
+      "phrase": "SAT-5 lives inside each user's local node",
+      "allowed_files": ["docs/canon/BIZRA_TOPOLOGY_CANON.md"]
+    },
+    {
+      "phrase": "PAT connects directly to other nodes",
+      "allowed_files": ["docs/canon/BIZRA_TOPOLOGY_CANON.md"]
+    },
+    {
+      "phrase": "The URP is a server that nodes are clients of",
+      "allowed_files": ["docs/canon/BIZRA_TOPOLOGY_CANON.md"]
+    },
+    {
+      "phrase": "both internal to the same node",
+      "allowed_files": []
+    },
+    {
+      "phrase": "SAT-5 lives inside each",
+      "allowed_files": ["docs/canon/BIZRA_TOPOLOGY_CANON.md"]
+    },
+    {
+      "phrase": "Node3",
+      "allowed_files": []
+    },
+    {
+      "phrase": "Node4",
+      "allowed_files": []
+    },
+    {
+      "phrase": "peer_alpha",
+      "allowed_files": []
+    },
+    {
+      "phrase": "peer_beta",
+      "allowed_files": []
+    },
+    {
+      "phrase": "phase_5",
+      "allowed_files": []
+    }
+  ],
+  "forbidden_authorization_phrases": [
+    {
+      "phrase": "I authorize",
+      "allowed_files": []
+    },
+    {
+      "phrase": "I approve",
+      "allowed_files": []
+    },
+    {
+      "phrase": "--authorize \"",
+      "allowed_files": []
+    },
+    {
+      "phrase": "--authorize '",
+      "allowed_files": []
+    }
+  ],
+  "source_scan_roots": ["apps", "packages", "scripts"],
+  "dema_repo_boundary": {
+    "runtime_execution": false,
+    "federation_started": false,
+    "receipt_minted": false,
+    "sat5_implemented_here": false,
+    "ci_modified_by_registry": false
+  }
+}

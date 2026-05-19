@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, writeFile, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
+import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
@@ -129,9 +129,9 @@ test("setup creates local profile and config without daemon activation", async (
 test("welcome CLI gives non-technical first-run orientation", async () => {
   const { stdout } = await execFileAsync("node", [cliPath, "welcome"]);
   assert.match(stdout, /Welcome to Dema/);
-  assert.match(stdout, /local-first/);
-  assert.match(stdout, /consent-bound/);
-  assert.match(stdout, /Run setup/);
+  assert.match(stdout, /Local-first/);
+  assert.match(stdout, /Consent-bound/);
+  assert.match(stdout, /dema setup/);
 });
 
 test("setup CLI reports untouched runtime boundaries", async () => {
@@ -150,20 +150,22 @@ test("setup CLI reports untouched runtime boundaries", async () => {
 test("doctor CLI lists specific failing predicates when gateway is not configured", async () => {
   const root = await mkdtemp(join(tmpdir(), "dema-cli-doctor-"));
   const env = { ...process.env, DEMA_HOME: root };
+  delete env.DEMA_NODE0_ADAPTER;
   delete env.DEMA_NODE0_STATUS_COMMAND;
-  const result = await execFileAsync("node", [cliPath, "doctor"], { env }).catch((e) => e);
+  const result = await execFileAsync("node", [cliPath, "doctor", "--no-color"], { env }).catch((e) => e);
   assert.equal(result.code, 1);
-  assert.match(result.stdout, /Dema doctor: blocked — /);
+  // Dashboard format: row-based predicates with ❌ icons and Verdict line.
   // Default-status fingerprint: ready=false, consoleReady=false, activationGate=BLOCKED,
-  // daemonStatus=unknown (so daemon predicate does NOT fail).
-  assert.match(result.stdout, /not ready/);
-  assert.match(result.stdout, /console not ready/);
-  assert.match(result.stdout, /activation gate is BLOCKED \(expected EXPLICIT_GO_REQUIRED\)/);
+  // daemonStatus=unknown (daemon predicate does NOT fail — unknown is ok).
+  assert.match(result.stdout, /Verdict: blocked/);
+  assert.match(result.stdout, /❌ Ready\s+false/);
+  assert.match(result.stdout, /❌ Console ready\s+false/);
+  assert.match(result.stdout, /❌ Activation gate\s+BLOCKED/);
 });
 
 test("mission propose CLI remains preview-only", async () => {
   const root = await mkdtemp(join(tmpdir(), "dema-cli-mission-"));
-  const { stdout } = await execFileAsync("node", [cliPath, "mission", "propose"], {
+  const { stdout } = await execFileAsync("node", [cliPath, "mission", "propose", "--json"], {
     env: { ...process.env, DEMA_HOME: root }
   });
   const output = JSON.parse(stdout);
@@ -240,6 +242,7 @@ test("node0 status normalization coerces non-array loaded_model_ids to []", () =
 
 test("node0 adapter explains malformed command output", async () => {
   const adapter = createNode0Adapter({
+    adapterMode: "shellout",
     command: 'node -e "process.stdout.write(`not-json`)"'
   });
   await assert.rejects(
@@ -256,23 +259,200 @@ test("node0 command parser preserves quoted paths with spaces", () => {
 });
 
 test("receipt store lists and reads receipts by artifact id", async () => {
-  const root = await mkdtemp(join(tmpdir(), "dema-receipts-"));
-  await mkdir(join(root, "receipts"), { recursive: true });
-  await writeFile(join(root, "receipts", "artifact-011.json"), JSON.stringify({
-    receipt_id: "receipt-1",
-    artifact_id: "ARTIFACT-011",
+  await withReceiptFixture("dema-receipts-", async (root) => {
+    await writeFile(join(root, "receipts", "artifact-011.json"), JSON.stringify({
+      receipt_id: "receipt-1",
+      artifact_id: "ARTIFACT-011",
+      action: "bounded_diagnostic_activation",
+      truth_label: "MEASURED",
+      created_at: "2026-05-04T18:20:00.000Z"
+    }));
+
+    const receipts = await listReceipts(root);
+    assert.equal(receipts.length, 1);
+    assert.equal(receipts[0].artifact_id, "ARTIFACT-011");
+
+    const receipt = await readReceipt("ARTIFACT-011", root);
+    assert.equal(receipt.receipt_id, "receipt-1");
+
+    const byFile = await readReceipt("artifact-011.json", root);
+    assert.equal(byFile.artifact_id, "ARTIFACT-011");
+  });
+});
+
+test("receipt store rejects ambiguous filename selectors", async () => {
+  await withReceiptFixture("dema-receipts-", async (root) => {
+    await mkdir(join(root, "receipts", "a"), { recursive: true });
+    await mkdir(join(root, "receipts", "b"), { recursive: true });
+    await writeFile(join(root, "receipts", "a", "handoff.json"), JSON.stringify({
+      receipt_id: "receipt-a",
+      artifact_id: "ARTIFACT-A",
+      action: "bounded_diagnostic_activation",
+      truth_label: "MEASURED",
+      created_at: "2026-05-04T18:20:00.000Z"
+    }));
+    await writeFile(join(root, "receipts", "b", "handoff.json"), JSON.stringify({
+      receipt_id: "receipt-b",
+      artifact_id: "ARTIFACT-B",
+      action: "bounded_diagnostic_activation",
+      truth_label: "MEASURED",
+      created_at: "2026-05-04T18:21:00.000Z"
+    }));
+
+    await assert.rejects(
+      () => readReceipt("handoff.json", root),
+      /Ambiguous receipt selector/
+    );
+    assert.equal((await readReceipt("ARTIFACT-A", root)).receipt_id, "receipt-a");
+    assert.equal((await readReceipt("receipt-b", root)).artifact_id, "ARTIFACT-B");
+  });
+});
+
+async function withReceiptFixture(prefix, fn) {
+  const root = await mkdtemp(join(tmpdir(), prefix));
+  try {
+    await mkdir(join(root, "receipts"), { recursive: true });
+    return await fn(root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+async function writeReceiptFixture(root, filename, fields = {}) {
+  await writeFile(join(root, "receipts", filename), JSON.stringify({
+    receipt_id: `receipt-${filename}`,
+    artifact_id: `ARTIFACT-${filename}`,
     action: "bounded_diagnostic_activation",
     truth_label: "MEASURED",
-    created_at: "2026-05-04T18:20:00.000Z"
+    created_at: "2026-05-04T18:20:00.000Z",
+    ...fields
   }));
+}
 
-  const receipts = await listReceipts(root);
-  assert.equal(receipts.length, 1);
-  assert.equal(receipts[0].artifact_id, "ARTIFACT-011");
+test("receipt store respects deterministic max file count and pagination", async () => {
+  await withReceiptFixture("dema-receipts-limit-", async (root) => {
+    await writeReceiptFixture(root, "003.json", { artifact_id: "ARTIFACT-003" });
+    await writeReceiptFixture(root, "001.json", { artifact_id: "ARTIFACT-001" });
+    await writeReceiptFixture(root, "004.json", { artifact_id: "ARTIFACT-004" });
+    await writeReceiptFixture(root, "002.json", { artifact_id: "ARTIFACT-002" });
 
-  const receipt = await readReceipt("ARTIFACT-011", root);
-  assert.equal(receipt.receipt_id, "receipt-1");
+    const capped = await listReceipts(root, { maxFiles: 2 });
+    assert.deepEqual(capped.map((receipt) => receipt.artifact_id), [
+      "ARTIFACT-001",
+      "ARTIFACT-002"
+    ]);
 
-  const byFile = await readReceipt("artifact-011.json", root);
-  assert.equal(byFile.artifact_id, "ARTIFACT-011");
+    const page = await listReceipts(root, { limit: 2, offset: 1 });
+    assert.deepEqual(page.map((receipt) => receipt.artifact_id), [
+      "ARTIFACT-002",
+      "ARTIFACT-003"
+    ]);
+  });
+});
+
+test("receipt store marks oversized and malformed JSON without crashing", async () => {
+  await withReceiptFixture("dema-receipts-safety-", async (root) => {
+    await writeReceiptFixture(root, "ok.json", { artifact_id: "ARTIFACT-OK" });
+    await writeFile(join(root, "receipts", "oversized.json"), JSON.stringify({
+      receipt_id: "receipt-oversized",
+      artifact_id: "ARTIFACT-OVERSIZED",
+      payload: "x".repeat(256)
+    }));
+    await writeFile(join(root, "receipts", "malformed.json"), "{not-json");
+
+    const receipts = await listReceipts(root, { maxJsonBytes: 256 });
+    const byFilename = new Map(receipts.map((receipt) => [basename(receipt.path), receipt]));
+
+    assert.equal(byFilename.get("ok.json").artifact_id, "ARTIFACT-OK");
+    assert.equal(byFilename.get("oversized.json").unreadable, true);
+    assert.equal(byFilename.get("oversized.json").reason, "receipt_json_too_large");
+    assert.match(byFilename.get("oversized.json").error, /maxJsonBytes/);
+    assert.equal(byFilename.get("malformed.json").unreadable, true);
+    assert.equal(byFilename.get("malformed.json").reason, "malformed_json");
+  });
+});
+
+test("receipt store labels listing as local read/list rather than governed runtime issuance", async () => {
+  let fixtureRoot;
+  await withReceiptFixture("dema-receipts-boundary-", async (root) => {
+    fixtureRoot = root;
+    await writeReceiptFixture(root, "artifact-011.json", {
+      receipt_id: "receipt-boundary",
+      artifact_id: "ARTIFACT-011"
+    });
+
+    const [receipt] = await listReceipts(root);
+    assert.equal(receipt.store_scope, "local_read_list");
+    assert.equal(receipt.operation_boundary, "read_list_only_no_mint");
+    assert.equal(receipt.issuer_boundary, "governed_runtime_issues_receipts");
+  });
+
+  await assert.rejects(
+    () => readFile(join(fixtureRoot, "receipts", "artifact-011.json"), "utf8"),
+    /ENOENT/
+  );
+});
+
+test("dema status:json injects human from profile.json::preferred_name (local-first identity at CLI boundary)", async () => {
+  const demaRoot = await mkdtemp(join(tmpdir(), "dema-status-human-"));
+  try {
+    await writeFile(
+      join(demaRoot, "profile.json"),
+      JSON.stringify({ preferred_name: "Mumu" })
+    );
+    const { stdout } = await execFileAsync("node", [cliPath, "status:json"], {
+      env: {
+        ...process.env,
+        DEMA_HOME: demaRoot,
+        DEMA_NODE0_ADAPTER: "",
+        DEMA_GATEWAY_URL: "",
+        DEMA_NODE0_STATUS_COMMAND: ""
+      }
+    });
+    const status = JSON.parse(stdout);
+    assert.equal(status.human, "Mumu");
+  } finally {
+    await rm(demaRoot, { recursive: true, force: true });
+  }
+});
+
+test("dema status:json human falls back to null when profile.json absent (graceful, no throw)", async () => {
+  const demaRoot = await mkdtemp(join(tmpdir(), "dema-status-no-profile-"));
+  try {
+    const { stdout } = await execFileAsync("node", [cliPath, "status:json"], {
+      env: {
+        ...process.env,
+        DEMA_HOME: demaRoot,
+        DEMA_NODE0_ADAPTER: "",
+        DEMA_GATEWAY_URL: "",
+        DEMA_NODE0_STATUS_COMMAND: ""
+      }
+    });
+    const status = JSON.parse(stdout);
+    assert.equal(status.human, null);
+  } finally {
+    await rm(demaRoot, { recursive: true, force: true });
+  }
+});
+
+test("dema status (formatter) renders Human: <preferred_name> when profile populated", async () => {
+  const demaRoot = await mkdtemp(join(tmpdir(), "dema-status-fmt-"));
+  try {
+    await writeFile(
+      join(demaRoot, "profile.json"),
+      JSON.stringify({ preferred_name: "Mumu" })
+    );
+    const { stdout } = await execFileAsync("node", [cliPath, "status"], {
+      env: {
+        ...process.env,
+        DEMA_HOME: demaRoot,
+        DEMA_NODE0_ADAPTER: "",
+        DEMA_GATEWAY_URL: "",
+        DEMA_NODE0_STATUS_COMMAND: ""
+      }
+    });
+    assert.match(stdout, /Human: Mumu/);
+  } finally {
+    await rm(demaRoot, { recursive: true, force: true });
+  }
 });

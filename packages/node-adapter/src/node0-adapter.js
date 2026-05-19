@@ -5,6 +5,14 @@ import { createGatewayHttpAdapter } from "./gateway-http-adapter.js";
 
 const execFileAsync = promisify(execFile);
 
+const LEGACY_SHELLOUT_ADAPTER = {
+  mode: "legacy-shellout",
+  legacy: true,
+  operator_owned: true,
+  execution: "execFile",
+  shell: false
+};
+
 export function parseCommandLine(command) {
   const tokens = [];
   let current = "";
@@ -92,14 +100,46 @@ export function normalizeNode0Status(raw) {
   };
 }
 
+function withLegacyShelloutMetadata(status, extra = {}) {
+  return {
+    ...status,
+    source: extra.source ?? "legacy-shellout",
+    adapter: {
+      ...LEGACY_SHELLOUT_ADAPTER,
+      available: extra.available ?? true,
+      ...(extra.reason ? { reason: extra.reason } : {})
+    }
+  };
+}
+
+function legacyShelloutUnavailable(reason, finding) {
+  const status = defaultStatus();
+  return withLegacyShelloutMetadata(
+    {
+      ...status,
+      source: "legacy-shellout-unavailable",
+      findings: [...(status.findings ?? []), finding]
+    },
+    { available: false, reason, source: "legacy-shellout-unavailable" }
+  );
+}
+
 export function createNode0Adapter(options = {}) {
   // Adapter dispatch (ADR-003): explicit `adapterMode` option wins, else
-  // DEMA_NODE0_ADAPTER env var, else fall back to the legacy shellout
-  // backend (or the default-blocked status when neither env is set).
+  // DEMA_NODE0_ADAPTER env var, else a configured gateway URL wins over
+  // the legacy shellout backend.
   const adapterMode = options.adapterMode ?? process.env.DEMA_NODE0_ADAPTER;
+  const gatewayUrl = options.gatewayUrl ?? process.env.DEMA_GATEWAY_URL;
   if (adapterMode === "gateway-http") {
     return createGatewayHttpAdapter({
-      baseUrl: options.gatewayUrl,
+      baseUrl: gatewayUrl,
+      timeoutMs: options.timeoutMs
+    });
+  }
+
+  if (!adapterMode && gatewayUrl) {
+    return createGatewayHttpAdapter({
+      baseUrl: gatewayUrl,
       timeoutMs: options.timeoutMs
     });
   }
@@ -108,13 +148,29 @@ export function createNode0Adapter(options = {}) {
 
   return {
     async status() {
-      if (!command) return defaultStatus();
+      if (!command) {
+        return legacyShelloutUnavailable(
+          "legacy_status_command_not_configured",
+          "DEMA_NODE0_STATUS_COMMAND unavailable: not configured"
+        );
+      }
 
       const [bin, ...args] = parseCommandLine(command);
       if (!bin) throw new Error("DEMA_NODE0_STATUS_COMMAND is empty");
-      const { stdout } = await execFileAsync(bin, args, { timeout: 30000 });
+      let stdout;
       try {
-        return normalizeNode0Status(JSON.parse(stdout));
+        ({ stdout } = await execFileAsync(bin, args, { timeout: 30000 }));
+      } catch (error) {
+        if (error?.code === "ENOENT") {
+          return legacyShelloutUnavailable(
+            "legacy_status_command_unavailable",
+            `DEMA_NODE0_STATUS_COMMAND unavailable: ${error.message}`
+          );
+        }
+        throw error;
+      }
+      try {
+        return withLegacyShelloutMetadata(normalizeNode0Status(JSON.parse(stdout)));
       } catch (error) {
         throw new Error(
           `DEMA_NODE0_STATUS_COMMAND returned non-JSON output: ${error.message}`

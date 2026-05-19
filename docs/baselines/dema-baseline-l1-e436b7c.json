@@ -1,0 +1,55 @@
+{
+  "schema": "bizra.dema.baseline_l1.v0.1",
+  "truth_label": "NODE0_LOCAL_SEED",
+  "mode": "snapshot",
+  "measured_at": "2026-05-18T03:01:18.558Z",
+  "git": {
+    "commit_sha": "e436b7cfd204c68d0bc4e046e346f47b0b48ef0f",
+    "short_sha": "e436b7c",
+    "branch": "season-gap2-summary-flag",
+    "working_tree_clean": false
+  },
+  "source_state": {
+    "packages_loc": 13294,
+    "packages_files": 63,
+    "tests_loc": 12339,
+    "tests_files": 65,
+    "scripts_loc": 2926,
+    "scripts_files": 17,
+    "apps_loc": 723,
+    "apps_files": 1,
+    "schemas_declared_unique": 74,
+    "cli_commands_in_help": 44
+  },
+  "test_state": {
+    "pass": 728,
+    "fail": 0,
+    "total": 728,
+    "completed": true
+  },
+  "boundary": {
+    "filesystem_write_performed": false,
+    "network_used": false,
+    "runtime_execution_performed": false,
+    "model_loaded": false,
+    "model_invocation_performed": false,
+    "prompt_executed": false,
+    "external_call_performed": false,
+    "raw_corpus_scan_performed": false,
+    "raw_data_included": false,
+    "tool_executed": false,
+    "chain_advance_performed": false,
+    "receipt_mint_performed": false,
+    "federation_invoked": false,
+    "node_connection_performed": false,
+    "public_network_used": false,
+    "consent_collected": false
+  },
+  "notes": [
+    "L1 only · engineering metrics measurable from source state alone.",
+    "L2 (reasoning-shape) requires fixture+scorer; see key-maker-epistemic-conduct-v0.1.md §12.",
+    "L3 (reviewer experience) requires Ring-1 form data.",
+    "L4 (operator-life impact) is unmeasurable at Ring-0 per claim discipline.",
+    "Use --save to write to docs/baselines/dema-baseline-l1-<short_sha>.json"
+  ]
+}

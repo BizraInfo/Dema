@@ -65,7 +65,10 @@ export function buildMissionDraftPreview({ intent, now = new Date() } = {}) {
       capability_minted: false,
       execution_enabled: false,
       mutation_performed: false,
-      receipt_minted: false
+      receipt_minted: false,
+      daemon_started: false,
+      network_connection_attempted: false,
+      external_posting_performed: false
     }
   };
 }
@@ -104,7 +107,9 @@ export function formatMissionDraftPreview(draft) {
   if (draft.consent_plan.analogical_notes.length === 0) lines.push("  - none");
   lines.push("");
   lines.push(`Gate: ${draft.phase_gate.requirement}`);
-  lines.push("Boundary: preview-only; no approval; no capability minted; no execution.");
+  lines.push(
+    "Boundary: preview-only; no approval; no capability minted; no execution; no network; no external posting."
+  );
 
   return lines.join("\n");
 }

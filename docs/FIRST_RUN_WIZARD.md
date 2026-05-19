@@ -2,6 +2,8 @@
 
 The first-run wizard turns a fresh Dema install into a safe local status screen without requiring a user to understand the full BIZRA ecosystem.
 
+Scope note: this file is the in-product screen spec. The plain-language user journey lives in [USER_LIFECYCLE.md](USER_LIFECYCLE.md), and the full docs map lives in [INDEX.md](INDEX.md).
+
 ## Goal
 
 A non-technical user should understand this in the first minute:
@@ -32,13 +34,13 @@ Message:
 
 ```text
 Welcome to Dema.
+Dema -- Sovereign AI Node Companion
 
-Your node is local-first.
-Your actions are consent-bound.
-Your important steps can produce receipts.
+Local-first. Consent-bound. Receipt-aware.
+BIZRA is the ecosystem. Dema is the product face.
 ```
 
-Primary action: `Start setup`
+Primary action: `Start guided setup`
 
 ### 2. Privacy mode
 
@@ -99,10 +101,22 @@ The CLI equivalent is:
 
 ```bash
 dema welcome
+dema onboard
 dema setup
 dema status
-dema doctor
-dema mission propose
+dema diagnostics plan
+dema consent plan "Check my local node health"
+dema mission draft "Check my local node health"
+dema report safety
+dema receipts
 ```
 
-`dema mission propose` must report `executes=false`.
+These CLI commands mirror the safe preview journey. They must not start runtime, connect Node1/Node2, or issue ARTIFACT-011.
+
+## Reader handoff
+
+After the wizard, a user should know where to go next:
+
+- [USER_LIFECYCLE.md](USER_LIFECYCLE.md) for the end-to-end local journey.
+- [RECEIPTS.md](RECEIPTS.md) for proof records.
+- [ECOSYSTEM.md](ECOSYSTEM.md) for how Dema relates to BIZRA Node0 and the wider system.

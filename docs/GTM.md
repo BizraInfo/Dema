@@ -26,6 +26,22 @@ Sovereign Local AI Node Setup + Safety Audit
 - first bounded diagnostic receipt
 - plain-language safety report
 
+## Network expansion boundary
+
+Node1 and Node2 are not part of the first offer. They remain blocked until
+Node0 can prove repeatable local bounded-diagnostic receipts.
+
+Use:
+
+```bash
+dema network blueprint
+```
+
+This command is a preview-only full-stack blueprint. It names the Node1/Node2
+handoff readiness gates, canonical phase-gated multi-node blockers, and GTM
+blockers, but it does not connect nodes, open sockets, start federation, issue
+identity artifacts, mint receipts, or execute runtime work.
+
 ## Forbidden claims
 
 - AGI

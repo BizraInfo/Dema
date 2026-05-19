@@ -113,21 +113,32 @@ export function formatBanner(inputs) {
     : `unreachable (${gateway.error ?? "no response"})`;
   const next = suggestNextSafeTask(inputs);
 
+  const receiptsLine = `${receiptCount}${receiptHighlights.length > 0 ? ` (latest: ${receiptHighlights.map((r) => r.artifact_id ?? r.action).filter(Boolean).join(", ")})` : ""}`;
   const lines = [
-    `Dema — Sovereign AI Node Companion`,
-    ``,
-    `Operator:    ${name}`,
-    `Node:        Node0`,
-    `Stage:       ${stage}${nextStage ? ` → ${nextStage}` : ""}`,
-    `Gateway:     ${gatewayLine}`,
-    `Receipts:    ${receiptCount}${receiptHighlights.length > 0 ? ` (latest: ${receiptHighlights.map((r) => r.artifact_id ?? r.action).filter(Boolean).join(", ")})` : ""}`,
-    ``,
-    `Next safe task:`,
+    "Dema — Sovereign AI Node Companion",
+    "============================================================",
+    "Local-first cockpit for BIZRA Node0",
+    "",
+    "Operator",
+    `  name     : ${name}`,
+    `  node     : Node0`,
+    `  stage    : ${stage}${nextStage ? ` -> ${nextStage}` : ""}`,
+    "",
+    "Signals",
+    `  gateway  : ${gatewayLine}`,
+    `  receipts : ${receiptsLine}`,
+    "",
+    "Next safe task:",
     `  $ ${next.command}`,
-    `    ${next.why}`,
-    ``,
-    `Type \`dema help\` for the full command list.`,
-    `Boundary: no action without explicit consent.`
+    `  why: ${next.why}`,
+    "",
+    "Guided path:",
+    "  $ dema onboard",
+    "  $ dema status",
+    "  $ dema diagnostics plan",
+    "",
+    "Type `dema help` for the full command list.",
+    "Boundary: no action without explicit consent."
   ];
   return lines.join("\n");
 }

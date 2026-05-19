@@ -1,8 +1,11 @@
 import { evaluateConsent } from "../../fate/src/fate.js";
 import { isReadyForBoundedDiagnostic } from "./status.js";
+import { BOUNDED_DIAGNOSTIC_CONSENT_PHRASE } from "./diagnostic-consent.js";
 
-export const BOUNDED_DIAGNOSTIC_CONSENT_PHRASE =
-  "GO: Node0 bounded diagnostic activation only";
+// Re-export so existing callers (tests, CLI dispatchers) keep working
+// without import-path changes. The canonical source is the leaf module
+// `./diagnostic-consent.js`; this file forwards it.
+export { BOUNDED_DIAGNOSTIC_CONSENT_PHRASE };
 
 export const BOUNDED_DIAGNOSTIC_FORBIDDEN = Object.freeze([
   "node1_activation",

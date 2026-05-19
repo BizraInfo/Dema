@@ -2,6 +2,7 @@ name: BIZRA Review Gate
 
 on:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,18 +13,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22.x
       - run: npm install --no-audit --no-fund
       - run: npm test
+      - run: npm run coverage
       - run: npm run check
       - name: Resolve BIZRA review class
         run: |
-          case "${GITHUB_HEAD_REF}" in
+          # GITHUB_HEAD_REF is set on pull_request events only.
+          # Fall back to GITHUB_REF_NAME so workflow_dispatch also works.
+          BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          case "$BRANCH" in
             devops/release-readiness|ci/devops-release-readiness-class)
               echo "BIZRA_REVIEW_CLASS=devops/release-readiness" >> "$GITHUB_ENV"
               ;;
@@ -42,11 +47,11 @@ jobs:
             proof/u1-*)
               echo "BIZRA_REVIEW_CLASS=proof/u1" >> "$GITHUB_ENV"
               ;;
-            adr/*|policy/*|governance/*|tooling/*)
+            adr/*|policy/*|governance/*|tooling/*|season-*)
               echo "BIZRA_REVIEW_CLASS=policy/broad-scope" >> "$GITHUB_ENV"
               ;;
             *)
-              echo "Unsupported BIZRA review branch: ${GITHUB_HEAD_REF}" >&2
+              echo "Unsupported BIZRA review branch: $BRANCH" >&2
               exit 1
               ;;
           esac

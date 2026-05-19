@@ -29,6 +29,8 @@ test("buildMissionDraftPreview creates deterministic Intent -> MissionDraft -> C
   assert.equal(first.phase_gate.next_phase, "CONSENT_NEGOTIATION");
   assert.equal(first.phase_gate.effect_caps_minted, false);
   assert.equal(first.boundary.execution_enabled, false);
+  assert.equal(first.boundary.network_connection_attempted, false);
+  assert.equal(first.boundary.external_posting_performed, false);
 });
 
 test("buildMissionDraftPreview preserves audit/external-call warning through consent plan", () => {
@@ -53,6 +55,7 @@ test("formatMissionDraftPreview renders mission, consent, and boundary", () => {
   assert.match(output, /next_phase: CONSENT_NEGOTIATION/);
   assert.match(output, /file:auth\.py\s+read/);
   assert.match(output, /Boundary: preview-only; no approval; no capability minted; no execution/);
+  assert.match(output, /no network; no external posting/);
 });
 
 test("dema mission draft prints a human-readable preview", async () => {
@@ -68,6 +71,7 @@ test("dema mission draft prints a human-readable preview", async () => {
   assert.match(stdout, /CONSENT_NEGOTIATION/);
   assert.match(stdout, /command:pytest/);
   assert.match(stdout, /Boundary: preview-only; no approval; no capability minted; no execution/);
+  assert.match(stdout, /no network; no external posting/);
 });
 
 test("dema mission draft --json emits schema-tagged preview", async () => {
@@ -84,4 +88,11 @@ test("dema mission draft --json emits schema-tagged preview", async () => {
   assert.equal(draft.mission.current_phase, "DRAFT_INTENT");
   assert.equal(draft.consent_plan.boundary.execution_enabled, false);
   assert.ok(draft.mission.data_domains.includes("Downloads"));
+});
+
+test("dema mission draft rejects missing intent", async () => {
+  await assert.rejects(
+    execFileAsync("node", [cliPath, "mission", "draft"]),
+    /Usage: dema mission draft/
+  );
 });

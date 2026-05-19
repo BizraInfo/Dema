@@ -87,6 +87,32 @@ const SELF_CRITIQUE_GAPS = [
   }
 ];
 
+const TRUTH_SPINE_PREVIEWS = {
+  ihsan_floor: {
+    schema: "bizra.dema.ihsan_floor_preview.v0.1",
+    status: "preview_only_external_scalar",
+    certifies: false,
+    note: "Dema can check an externally supplied Ihsan scalar against the upstream floor, but does not compute canonical Ihsan."
+  },
+  evidence_receipt: {
+    schema: "bizra.dema.evidence_receipt_preview.v0.1",
+    status: "preview_only_no_chain",
+    certifies: false,
+    digest_algo: "sha256",
+    chain_id: "preview-only-no-chain",
+    receipt_minted: false,
+    note: "Dema can derive deterministic preview hashes without minting, signing, or advancing a Node0 chain."
+  },
+  behavioral_modulation: {
+    schema: "bizra.dema.behavioral_modulation_preview.v0.1",
+    status: "preview_only_consent_bound",
+    certifies: false,
+    receipt_minted: false,
+    behavior_changed: false,
+    note: "Dema can preview consent-bound behavioral modulation rules, constitutionally reject unsafe shaping, and attach a no-mint receipt preview."
+  }
+};
+
 export function buildSafetyReportPreview({ now = new Date() } = {}) {
   return {
     schema: SCHEMA,
@@ -105,6 +131,7 @@ export function buildSafetyReportPreview({ now = new Date() } = {}) {
       status: "preview",
       next_actions: PROACTIVE_ACTIONS
     },
+    truth_spine_previews: TRUTH_SPINE_PREVIEWS,
     self_critique: {
       status: "open_gaps_visible",
       gaps: SELF_CRITIQUE_GAPS
@@ -142,6 +169,13 @@ export function formatSafetyReportPreview(report) {
   lines.push("Proactive harness:");
   for (const item of report.proactive_harness.next_actions) {
     lines.push(`  - ${item.code}: ${item.action}`);
+  }
+
+  lines.push("");
+  lines.push("Truth spine previews:");
+  for (const [name, preview] of Object.entries(report.truth_spine_previews)) {
+    lines.push(`  - ${name}: ${preview.status} (${preview.schema}; certifies=${preview.certifies})`);
+    lines.push(`    ${preview.note}`);
   }
 
   lines.push("");

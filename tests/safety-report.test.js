@@ -29,6 +29,16 @@ test("buildSafetyReportPreview emits a schema-tagged preview with no effects", (
     "empirical",
     "economic"
   ]);
+  assert.equal(report.truth_spine_previews.ihsan_floor.certifies, false);
+  assert.equal(report.truth_spine_previews.ihsan_floor.schema, "bizra.dema.ihsan_floor_preview.v0.1");
+  assert.equal(report.truth_spine_previews.evidence_receipt.receipt_minted, false);
+  assert.equal(report.truth_spine_previews.evidence_receipt.schema, "bizra.dema.evidence_receipt_preview.v0.1");
+  assert.equal(report.truth_spine_previews.evidence_receipt.digest_algo, "sha256");
+  assert.equal(
+    report.truth_spine_previews.behavioral_modulation.schema,
+    "bizra.dema.behavioral_modulation_preview.v0.1"
+  );
+  assert.equal(report.truth_spine_previews.behavioral_modulation.behavior_changed, false);
 });
 
 test("buildSafetyReportPreview keeps convergence claims evidence-tagged and non-certified", () => {
@@ -38,6 +48,9 @@ test("buildSafetyReportPreview keeps convergence claims evidence-tagged and non-
   assert.ok(pillars.every((pillar) => pillar.evidence_kind));
   assert.ok(pillars.every((pillar) => pillar.status !== "PERMIT"));
   assert.ok(pillars.every((pillar) => pillar.certifies === false));
+  assert.equal(report.proof_of_truth_convergence.cryptographic.certifies, false);
+  assert.equal(report.truth_spine_previews.evidence_receipt.chain_id, "preview-only-no-chain");
+  assert.equal(report.truth_spine_previews.behavioral_modulation.certifies, false);
   assert.ok(report.self_critique.gaps.some((gap) => gap.code === "sat.real_verifier_pending"));
   assert.ok(report.proactive_harness.next_actions.some((action) => action.code === "run.demo_loop"));
 });
@@ -51,6 +64,8 @@ test("formatSafetyReportPreview renders convergence, critique, and boundary", ()
   assert.match(output, /Cryptographic/);
   assert.match(output, /Empirical/);
   assert.match(output, /Economic/);
+  assert.match(output, /Truth spine previews/);
+  assert.match(output, /preview_only_no_chain/);
   assert.match(output, /Self-critique/);
   assert.match(output, /No proof is computed/);
   assert.match(output, /Boundary: preview-only; no model inference; no execution; no mutation; no receipt minted/);
@@ -61,6 +76,7 @@ test("dema report safety prints the non-technical preview", async () => {
 
   assert.match(stdout, /DEMA Safety Report Preview/);
   assert.match(stdout, /Proof-of-Truth Convergence/);
+  assert.match(stdout, /Truth spine previews/);
   assert.match(stdout, /Self-critique/);
   assert.match(stdout, /Boundary: preview-only; no model inference; no execution; no mutation; no receipt minted/);
 });
@@ -74,4 +90,6 @@ test("dema report safety --json emits a schema-tagged convergence preview", asyn
   assert.equal(report.boundary.execution_enabled, false);
   assert.equal(report.boundary.receipt_minted, false);
   assert.equal(report.proof_of_truth_convergence.economic.certifies, false);
+  assert.equal(report.proof_of_truth_convergence.cryptographic.certifies, false);
+  assert.equal(report.truth_spine_previews.evidence_receipt.certifies, false);
 });

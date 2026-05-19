@@ -49,7 +49,7 @@ Read one receipt:
 dema receipts ARTIFACT-011
 ```
 
-The selector may be a receipt ID, artifact ID, exact path, or receipt filename.
+The selector may be a receipt ID, artifact ID, exact path, or unique receipt filename.
 
 ## ARTIFACT-011 boundary
 
@@ -62,6 +62,23 @@ The actual runtime path remains gated by exact consent:
 ```text
 GO: Node0 bounded diagnostic activation only
 ```
+
+## Preview evidence artifacts
+
+Some Dema surfaces produce deterministic evidence previews. These are useful for review, but they are not canonical receipts.
+
+A preview evidence artifact must say so explicitly:
+
+```text
+mode: PREVIEW_ONLY
+chain_id: preview-no-chain
+prev_digest: null
+producer_identity: null
+certifies: false
+receipt_minted: false
+```
+
+Behavioral modulation previews use this pattern to show what would be checked without changing behavior, signing, minting, or advancing the Node0 chain.
 
 ## Receipt quality bar
 

@@ -50,6 +50,9 @@ Dema may act at **L5** only with a typed in-the-moment GO from the operator, in 
 | `dema monetize` | L0 | Static text — declares the safe-offer boundary |
 | The new `~/.dema/memory/a5-niyyah.json` | L1 declared, intent for L4 | Operator's typed niyyah; lives at L1 until A5 carries it into a receipt at L4 |
 | Gateway HTTP adapter (`packages/node-adapter/src/gateway-http-adapter.js`) | L0 | GET-only by enforced contract — test asserts `methods === ["GET"]` |
+| `dema state` / `dema profiles` / `dema consent-card` / `dema mission-loop` / `dema evidence-event` / `dema llm-router` | L0–L2 | The original 6 spine preview surfaces · all emit canonical 16-key boundary all-false · `truth_label: NODE0_LOCAL_SEED` |
+| `dema process-mining` | L0 | 7th spine surface · operator-pattern mirror · `blocked_effects` explicitly includes `operator_judgment` |
+| `dema key-maker-check` | L0 | 8th spine surface · self-audits reasoning shape against 5 invariants from [Key Maker Epistemic Conduct v0.1](key-maker-epistemic-conduct-v0.1.md) §9 · fails closed when canon violated |
 
 **Everything Dema currently does is L0–L2.** That is the correct posture for SEED. ARTIFACT-011 is the first L4 act. There is no L4 surface in this repo today; L4 lives upstream in the governed bounded-diagnostic runtime.
 

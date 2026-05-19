@@ -82,7 +82,9 @@ const BOUNDARY = {
   execution_enabled: false,
   mutation_performed: false,
   receipt_minted: false,
-  daemon_started: false
+  daemon_started: false,
+  network_connection_attempted: false,
+  external_posting_performed: false
 };
 
 function missionIdFor(intent) {
@@ -133,7 +135,8 @@ export function buildDiagnosticsMissionPlan({ now = new Date() } = {}) {
     proactive_harness: {
       status: "planned",
       trigger: "before lighthouse installs, Node0 activation attempts, or public trust claims",
-      next_action: "operator reviews this plan, narrows scope, then hands it to governed Node0 runtime"
+      next_action:
+        "operator reviews this plan, narrows scope, then separately authorizes any governed runtime handoff"
     },
     self_critique: safetyReport.self_critique,
     phase_gate: {
@@ -191,7 +194,9 @@ export function formatDiagnosticsMissionPlan(plan) {
   }
   lines.push("");
   lines.push(`Gate: ${plan.phase_gate.requirement}`);
-  lines.push("Boundary: preview-only; no execution; no mutation; no receipt minted.");
+  lines.push(
+    "Boundary: preview-only; no execution; no mutation; no receipt minted; no network; no external posting."
+  );
 
   return lines.join("\n");
 }

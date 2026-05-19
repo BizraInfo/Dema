@@ -9,12 +9,15 @@ import {
   defaultDownloadsRoot,
   humanBytes,
   isModelFilename,
+  isLocalUrl,
   portFor,
   urlFor
 } from "./model-common.js";
 import { formatModelInventory } from "./model-format.js";
 import { buildRoutingRecommendations } from "./model-routing.js";
 import { buildSafety, parseSsBindings, resolveTcpBindings } from "./model-safety.js";
+
+const REDACTED_DOWNLOADS_ROOT = "[local-downloads-root-redacted]";
 
 export { humanBytes } from "./model-common.js";
 export { formatModelInventory } from "./model-format.js";
@@ -62,6 +65,20 @@ function normalizeLmStudioModel(model) {
 }
 
 async function probeOllama({ baseUrl, fetchImpl, timeoutMs }) {
+  if (!isLocalUrl(baseUrl)) {
+    return {
+      source: "ollama",
+      url: baseUrl,
+      reachable: false,
+      model_count: 0,
+      active_count: 0,
+      models: [],
+      active: [],
+      error: "non-local endpoint refused",
+      active_error: "non-local endpoint refused"
+    };
+  }
+
   const [tags, ps] = await Promise.all([
     fetchJson(urlFor(baseUrl, "/api/tags"), { fetchImpl, timeoutMs }),
     fetchJson(urlFor(baseUrl, "/api/ps"), { fetchImpl, timeoutMs })
@@ -83,6 +100,17 @@ async function probeOllama({ baseUrl, fetchImpl, timeoutMs }) {
 }
 
 async function probeLmStudio({ baseUrl, fetchImpl, timeoutMs }) {
+  if (!isLocalUrl(baseUrl)) {
+    return {
+      source: "lm_studio",
+      url: baseUrl,
+      reachable: false,
+      model_count: 0,
+      models: [],
+      error: "non-local endpoint refused"
+    };
+  }
+
   const modelsResponse = await fetchJson(urlFor(baseUrl, "/v1/models"), { fetchImpl, timeoutMs });
   const models = modelsResponse.ok
     ? (modelsResponse.json?.data ?? []).map(normalizeLmStudioModel)
@@ -98,14 +126,20 @@ async function probeLmStudio({ baseUrl, fetchImpl, timeoutMs }) {
   };
 }
 
-async function scanModelFiles(root, { maxDepth = 4, maxFiles = 500 } = {}) {
+async function scanModelFiles(root, { maxDepth = 4, maxFiles = 500, includeAbsolutePaths = false } = {}) {
   const files = [];
-  const result = await walkModelFiles(root, root, files, { depth: 0, maxDepth, maxFiles });
+  const result = await walkModelFiles(root, root, files, {
+    depth: 0,
+    maxDepth,
+    maxFiles,
+    includeAbsolutePaths
+  });
   files.sort((a, b) => b.size_bytes - a.size_bytes || a.relative_path.localeCompare(b.relative_path));
 
   return {
     source: "downloads",
-    root,
+    root: includeAbsolutePaths ? root : REDACTED_DOWNLOADS_ROOT,
+    root_redacted: !includeAbsolutePaths,
     model_count: files.length,
     max_depth: maxDepth,
     truncated: files.length >= maxFiles,
@@ -121,7 +155,8 @@ async function walkModelFiles(root, dir, files, limits) {
   try {
     entries = await readdir(dir, { withFileTypes: true });
   } catch (err) {
-    return limits.depth === 0 ? { error: `${err.code ?? "read_error"}:${root}` } : null;
+    const rootLabel = limits.includeAbsolutePaths ? root : REDACTED_DOWNLOADS_ROOT;
+    return limits.depth === 0 ? { error: `${err.code ?? "read_error"}:${rootLabel}` } : null;
   }
 
   for (const entry of entries) {
@@ -137,17 +172,21 @@ async function visitModelEntry(root, dir, entry, files, limits) {
   if (entry.isDirectory()) {
     await walkModelFiles(root, path, files, { ...limits, depth: limits.depth + 1 });
   } else if (entry.isFile() && isModelFilename(entry.name)) {
-    files.push(await modelFileRecord(root, path, entry.name));
+    files.push(await modelFileRecord(root, path, entry.name, {
+      includeAbsolutePaths: limits.includeAbsolutePaths
+    }));
   }
 }
 
-async function modelFileRecord(root, path, id) {
+async function modelFileRecord(root, path, id, { includeAbsolutePaths = false } = {}) {
   const fileStat = await stat(path);
+  const relativePath = relative(root, path).split("\\").join("/");
   return {
     id,
     source: "downloads",
-    path,
-    relative_path: relative(root, path),
+    path: includeAbsolutePaths ? path : relativePath,
+    path_redacted: !includeAbsolutePaths,
+    relative_path: relativePath,
     size_bytes: fileStat.size,
     size: humanBytes(fileStat.size),
     modified_at: fileStat.mtime.toISOString()
@@ -161,13 +200,14 @@ export async function collectModelInventory({
   fetchImpl = fetch,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   tcpBindings,
+  includeAbsolutePaths = false,
   now = new Date()
 } = {}) {
   const ports = [portFor(ollamaUrl), portFor(lmStudioUrl)].filter(Boolean);
   const [ollama, lmStudio, downloads, tcp] = await Promise.all([
     probeOllama({ baseUrl: ollamaUrl, fetchImpl, timeoutMs }),
     probeLmStudio({ baseUrl: lmStudioUrl, fetchImpl, timeoutMs }),
-    scanModelFiles(downloadsRoot),
+    scanModelFiles(downloadsRoot, { includeAbsolutePaths }),
     resolveTcpBindings(ports, tcpBindings)
   ]);
 
@@ -180,6 +220,9 @@ export async function collectModelInventory({
     boundary: {
       scope: "read-only",
       inference_invoked: false,
+      local_http_probe_performed: true,
+      external_network_probe_performed: false,
+      tcp_listener_probe_performed: tcp.available && !tcp.skipped,
       mutation_performed: false,
       receipt_minted: false
     },

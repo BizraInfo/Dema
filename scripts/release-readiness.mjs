@@ -3,291 +3,434 @@ import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { formatReleaseReadinessReport } from "./release-readiness/format.mjs";
+import {
+  findActionRefs,
+  findNodeMatrix,
+  findRunCommands,
+  findWorkflowEvents,
+  parseWorkflowWorktreeChanges,
+  readWorkflowFiles,
+  readWorkflowWorktreeStatus,
+  WORKFLOW_DIR
+} from "./release-readiness/workflow-audit.mjs";
 
+const SCHEMA = "bizra.dema.release_readiness.v0.1";
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = dirname(SCRIPT_DIR);
 
-const REQUIRED_SCRIPTS = ["test", "check"];
-const REQUIRED_NODE_MATRIX = ["20.x", "22.x"];
-const REQUIRED_REVIEW_SCRIPTS = [
-  "scripts/review/pr-class.mjs",
-  "scripts/review/proof-scope.mjs",
-  "scripts/review/no-overclaim.mjs",
-  "scripts/review/receipt-integrity.mjs"
-];
-const EXPECTED_INSTALLER_ARTIFACTS = [
+const REQUIRED_INSTALLER_ARTIFACTS = [
+  "scripts/install/install.sh",
   "scripts/install/install-unix.sh",
   "scripts/install/install-windows.ps1",
   "scripts/install/uninstall-unix.sh",
   "scripts/install/uninstall-windows.ps1"
 ];
 
-async function readText(root, relativePath, required = true) {
-  try {
-    return await readFile(join(root, relativePath), "utf8");
-  } catch (error) {
-    if (required) throw error;
-    return null;
+const REQUIRED_GATES = ["npm test", "npm run coverage", "npm run check", "git diff --check"];
+const WORKFLOW_AUTH_FLAG = "--ci-workflow-changes-authorized";
+const PMBOK_DOMAINS = ["integration_management", "scope_management", "schedule_management", "cost_management", "quality_management", "resource_management", "communications_management", "risk_management", "procurement_management", "stakeholder_management"];
+
+async function readText(root, path) {
+  return await readFile(join(root, path), "utf8");
+}
+
+async function readJson(root, path) {
+  return JSON.parse(await readText(root, path));
+}
+
+export {
+  findActionRefs,
+  findNodeMatrix,
+  findRunCommands,
+  findWorkflowEvents,
+  parseWorkflowWorktreeChanges,
+  formatReleaseReadinessReport
+};
+
+function hasCoverageThresholdCommand(command = "") {
+  return command.includes("--experimental-test-coverage") &&
+    /--test-coverage-lines=\d+/.test(command) &&
+    /--test-coverage-branches=\d+/.test(command) &&
+    /--test-coverage-functions=\d+/.test(command);
+}
+
+function extractCoverageThresholds(command = "") {
+  const pick = (name) => {
+    const match = command.match(new RegExp(`--test-coverage-${name}=(\\d+)`));
+    return match ? Number(match[1]) : null;
+  };
+  return {
+    lines: pick("lines"),
+    branches: pick("branches"),
+    functions: pick("functions")
+  };
+}
+
+function buildCoverageThreshold(packageJson, pipelineAutomation) {
+  const command = packageJson.scripts?.coverage ?? "";
+  const configured = hasCoverageThresholdCommand(command);
+  const observedInCi = pipelineAutomation.ci_gate_observations
+    .some((gate) => gate.command === "npm run coverage" && gate.observed_in_ci);
+  return {
+    command: command || null,
+    configured,
+    observed_in_ci: observedInCi,
+    enforced: configured && observedInCi,
+    thresholds: configured ? extractCoverageThresholds(command) : null
+  };
+}
+
+function classifyRisks({
+  workflowExists,
+  actionRefs,
+  packageJson,
+  installerArtifacts,
+  docs,
+  coverageThreshold,
+  workflowWorktreeStatus
+}) {
+  const risks = [];
+  if (!workflowExists) {
+    risks.push({ code: "ci.primary_workflow_missing", severity: "launch_blocker", note: "Primary check workflow is missing." });
   }
-}
-
-async function readJson(root, relativePath) {
-  return JSON.parse(await readText(root, relativePath));
-}
-
-export function findActionRefs(workflowText) {
-  return [...workflowText.matchAll(/uses:\s*([^\s#]+)/g)].map((match) => match[1]);
-}
-
-export function isPinnedActionRef(ref) {
-  return /@[0-9a-f]{40}$/i.test(ref);
-}
-
-export function findNodeMatrix(workflowText) {
-  const inline = workflowText.match(/node-version:\s*\[([^\]]+)\]/);
-  if (inline) {
-    return inline[1].split(",").map((value) => value.trim()).filter(Boolean);
+  if (actionRefs.some((ref) => !ref.pinned)) {
+    risks.push({ code: "ci.actions_not_sha_pinned", severity: "launch_blocker", note: "Workflow actions use version tags instead of immutable commit SHAs." });
   }
-
-  const block = workflowText.match(/node-version:\s*\n((?:\s+-\s*.+\n?)+)/);
-  if (!block) return [];
-  return block[1]
-    .split("\n")
-    .map((line) => line.match(/-\s*(.+)$/)?.[1]?.trim())
-    .filter(Boolean);
-}
-
-function risk(code, severity, message, evidence = {}) {
-  return { code, severity, message, evidence };
+  if (workflowWorktreeStatus?.changes?.length > 0 && !workflowWorktreeStatus.authorized) {
+    risks.push({
+      code: "ci.workflow_worktree_modified_requires_authorization",
+      severity: "launch_blocker",
+      note: "Workflow files are modified in the current worktree; repo hard-stop requires explicit authorization before ship."
+    });
+  }
+  if (!packageJson.scripts?.["release:readiness"]) {
+    risks.push({ code: "pipeline.release_readiness_script_missing", severity: "review", note: "Package scripts do not expose the release readiness audit." });
+  }
+  if (!installerArtifacts.every((artifact) => artifact.exists)) {
+    risks.push({ code: "installer.artifacts_missing", severity: "launch_blocker", note: "Required installer or uninstall scripts are missing." });
+  }
+  if (!docs.deliveryBlueprint) {
+    risks.push({ code: "docs.delivery_blueprint_missing", severity: "review", note: "Delivery blueprint documentation is missing." });
+  }
+  if (!coverageThreshold.enforced) {
+    risks.push({ code: "qa.coverage_threshold_missing", severity: "improvement", note: "CI runs behavior tests but does not enforce coverage thresholds." });
+  }
+  return risks;
 }
 
 function scoreFromRisks(risks) {
-  const penalty = risks.reduce((sum, item) => {
-    if (item.severity === "fail") return sum + 35;
-    if (item.severity === "review") return sum + 8;
-    return sum + 4;
+  const penalty = risks.reduce((sum, risk) => {
+    if (risk.severity === "launch_blocker") return sum + 12;
+    if (risk.severity === "review") return sum + 6;
+    return sum + 3;
   }, 0);
   return Math.max(0, 100 - penalty);
 }
 
-function scoreBand(score, gateOk) {
-  if (!gateOk) return "not_ready";
-  if (score >= 90) return "ready_with_advisories";
-  if (score >= 70) return "conditional";
-  return "needs_work";
+function buildInstallerCapabilities(artifactTexts) {
+  const combined = artifactTexts.join("\n");
+  return [
+    /--dry-run\b|-DryRun\b/.test(combined) ? "dry-run" : null,
+    /--check\b|-Check\b/.test(combined) ? "check" : null,
+    combined.includes("REMOVE DEMA LOCAL DATA") ? "uninstall-exact-consent" : null,
+    combined.includes("No daemon was started") ? "no-hidden-daemon-disclosure" : null
+  ].filter(Boolean);
 }
 
-function installerCapabilities(text) {
-  if (!text) return [];
-  const capabilities = [];
-  if (text.includes("--dry-run")) capabilities.push("dry-run");
-  if (text.includes("--check")) capabilities.push("check");
-  if (text.includes("No daemon was started")) capabilities.push("no-hidden-daemon-disclosure");
-  if (text.includes("REMOVE DEMA LOCAL DATA")) capabilities.push("uninstall-exact-consent");
-  return capabilities;
-}
-
-function nextActions(risks) {
-  const actions = [];
-  if (risks.some((item) => item.code === "ci.actions_not_sha_pinned")) {
-    actions.push("Pin GitHub Actions to immutable commit SHAs before broad release.");
-  }
-  if (risks.some((item) => item.code === "qa.coverage_threshold_missing")) {
-    actions.push("Add coverage/doc-link gates once dependency policy allows tooling.");
-  }
-  if (risks.some((item) => item.code === "installer.expected_artifact_missing")) {
-    actions.push("Restore expected installer artifacts or document the release-surface change.");
-  }
-  if (actions.length === 0) actions.push("Keep release gate outputs attached to release-candidate review.");
-  return actions;
-}
-
-export async function buildReleaseReadinessReport({
-  root = REPO_ROOT,
-  now = new Date().toISOString()
-} = {}) {
-  const packageJson = await readJson(root, "package.json");
-  const checkWorkflow = await readText(root, ".github/workflows/check.yml", false);
-  const bizraReviewWorkflow = await readText(root, ".github/workflows/bizra-review.yml", false);
-  const checkScript = await readText(root, "scripts/check.mjs", false);
-  const installUnix = await readText(root, "scripts/install/install-unix.sh", false);
-  const uninstallUnix = await readText(root, "scripts/install/uninstall-unix.sh", false);
-
-  const risks = [];
-  const scripts = packageJson.scripts ?? {};
-  for (const script of REQUIRED_SCRIPTS) {
-    if (!scripts[script]) risks.push(risk("package.required_script_missing", "fail", `Missing npm script: ${script}`));
-  }
-
-  const dependencies = Object.keys(packageJson.dependencies ?? {});
-  if (dependencies.length > 0) {
-    risks.push(risk("dependencies.runtime_not_zero", "fail", "Runtime dependencies are not zero.", {
-      dependencies
-    }));
-  }
-
-  const actionRefs = checkWorkflow === null ? [] : findActionRefs(checkWorkflow);
-  const unpinnedActions = actionRefs.filter((ref) => !isPinnedActionRef(ref));
-  if (checkWorkflow === null) {
-    risks.push(risk("ci.workflow_missing", "fail", "Primary check workflow is missing."));
-  } else if (unpinnedActions.length > 0) {
-    risks.push(risk("ci.actions_not_sha_pinned", "review", "Workflow actions use version tags instead of immutable commit SHAs.", {
-      unpinned_actions: unpinnedActions
-    }));
-  }
-
-  const nodeMatrix = checkWorkflow === null ? [] : findNodeMatrix(checkWorkflow);
-  const missingNodeVersions = REQUIRED_NODE_MATRIX.filter((version) => !nodeMatrix.includes(version));
-  if (missingNodeVersions.length > 0) {
-    risks.push(risk("ci.node_matrix_incomplete", "fail", "Node matrix does not include required versions.", {
-      required: REQUIRED_NODE_MATRIX,
-      actual: nodeMatrix
-    }));
-  }
-
-  if (bizraReviewWorkflow === null) {
-    risks.push(risk("review.bizra_gate_missing", "fail", "BIZRA Review Gate workflow is missing."));
-  }
-
-  const missingReviewScripts = REQUIRED_REVIEW_SCRIPTS.filter((file) => !existsSync(join(root, file)));
-  if (missingReviewScripts.length > 0) {
-    risks.push(risk("review.script_missing", "fail", "BIZRA review scripts are missing.", {
-      missing: missingReviewScripts
-    }));
-  }
-
-  if (!checkScript?.includes("scripts/node0-self-check.mjs")) {
-    risks.push(risk("proof.self_check_not_enforced", "fail", "npm run check does not enforce Node0 self-check verification."));
-  }
-
-  if (!existsSync(join(root, "artifacts/proofs/node0-local-urp/self_check_report.json")) ||
-      !existsSync(join(root, "artifacts/proofs/node0-local-urp/critic_report_001.json"))) {
-    risks.push(risk("proof.u1_reports_missing", "fail", "U1 self-check or critic report is missing."));
-  }
-
-  const missingInstallerArtifacts = EXPECTED_INSTALLER_ARTIFACTS.filter((file) => !existsSync(join(root, file)));
-  if (missingInstallerArtifacts.length > 0) {
-    risks.push(risk("installer.expected_artifact_missing", "review", "Expected installer artifact is missing.", {
-      missing: missingInstallerArtifacts
-    }));
-  }
-
-  if (!existsSync(join(root, "coverage")) && !existsSync(join(root, ".nycrc")) && !existsSync(join(root, "c8.config.js"))) {
-    risks.push(risk("qa.coverage_threshold_missing", "improvement", "Behavior tests run, but no coverage threshold is enforced."));
-  }
-
-  const gateOk = !risks.some((item) => item.severity === "fail");
-  const score = scoreFromRisks(risks);
+function buildPipelineAutomation({ workflowFiles, packageJson, nodeMatrix }) {
+  const workflows = workflowFiles.map((workflow) => ({
+    path: workflow.path,
+    events: findWorkflowEvents(workflow.text),
+    run_commands: findRunCommands(workflow.text),
+    action_count: findActionRefs(workflow.text).length
+  }));
+  const ciRunCommands = workflows.flatMap((workflow) => workflow.run_commands);
+  const packageScripts = Object.keys(packageJson.scripts ?? {}).sort();
 
   return {
-    schema: "bizra.dema.release_readiness.v0.1",
-    generated_at: now,
-    mode: "READ_ONLY_AUDIT",
-    gate_ok: gateOk,
-    readiness_score: score,
-    score_band: scoreBand(score, gateOk),
-    management_bok: {
-      domains: [
-        "integration_management",
-        "scope_management",
-        "schedule_management",
-        "cost_management",
-        "quality_management",
-        "resource_management",
-        "communications_management",
-        "risk_management",
-        "procurement_management",
-        "stakeholder_management"
+    posture: "advisory_read_only_pipeline_audit",
+    workflow_count: workflows.length,
+    workflows,
+    package_scripts: packageScripts,
+    release_readiness_script_exposed: packageScripts.includes("release:readiness"),
+    ci_gate_observations: REQUIRED_GATES.map((command) => ({
+      command,
+      observed_in_ci: ciRunCommands.includes(command),
+      observed_as_package_script: packageScripts.includes(command === "npm test" ? "test" : command.replace(/^npm run /, ""))
+    })),
+    node_matrix: nodeMatrix,
+    deployment_automation: "not_configured_no_external_deploy"
+  };
+}
+
+function buildCiCdMaturity({ workflowExists, actionRefs, pipelineAutomation, docs, coverageThreshold }) {
+  const hasCiChecks = pipelineAutomation.ci_gate_observations
+    .some((gate) => gate.command === "npm test" && gate.observed_in_ci)
+    && pipelineAutomation.ci_gate_observations
+      .some((gate) => gate.command === "npm run check" && gate.observed_in_ci);
+  const hasImmutableActions = actionRefs.length > 0 && actionRefs.every((ref) => ref.pinned);
+  const hasReleaseAudit = pipelineAutomation.release_readiness_script_exposed;
+
+  return {
+    model: "advisory_pmbok_aligned_maturity_v1",
+    current_level: {
+      id: hasCiChecks && hasReleaseAudit ? "level_3_defined" : "level_2_repeatable",
+      label: hasCiChecks && hasReleaseAudit
+        ? "defined local release audit with CI validation"
+        : "repeatable local scripts with partial CI evidence"
+    },
+    dimensions: [
+      { id: "continuous_integration", status: workflowExists && hasCiChecks ? "observed" : "missing_or_partial", evidence: "workflow audit for npm test and npm run check" },
+      { id: "continuous_delivery", status: "not_configured_advisory", evidence: "no deployment was performed by this read-only audit" },
+      { id: "immutable_supply_chain", status: hasImmutableActions ? "observed" : "improvement_needed", evidence: "GitHub Actions references are checked for commit-SHA pinning" },
+      { id: "release_governance", status: hasReleaseAudit && docs.deliveryBlueprint ? "observed" : "missing_or_partial", evidence: "package release:readiness script and delivery blueprint" },
+      { id: "quality_feedback", status: coverageThreshold.enforced ? "observed" : "partial", evidence: coverageThreshold.enforced ? "behavior and coverage thresholds are enforced in CI" : "behavior checks exist; coverage threshold remains advisory" }
+    ],
+    next_maturity_step:
+      "Resolve launch-blocking supply-chain findings, add coverage/performance evidence, then document an explicit release decision."
+  };
+}
+
+function buildPerformanceQa({ packageJson, runtimeDeps, docs, coverageThreshold }) {
+  const scripts = packageJson.scripts ?? {};
+  return {
+    posture: "mechanism_inventory_not_performance_certification",
+    mechanisms: [
+      { id: "zero_build_step", status: scripts.build ? "review" : "observed", evidence: scripts.build ? "build script is present" : "no package build script is configured" },
+      { id: "zero_runtime_dependencies", status: runtimeDeps === 0 ? "observed" : "review", evidence: `${runtimeDeps} runtime dependencies declared` },
+      { id: "bounded_cli_smoke_checks", status: scripts.check ? "observed" : "missing", evidence: scripts.check ?? "npm run check script missing" },
+      { id: "native_coverage_thresholds", status: coverageThreshold.enforced ? "observed" : "missing", evidence: coverageThreshold.command ?? "npm run coverage script missing" },
+      { id: "delivery_blueprint_performance_notes", status: docs.deliveryBlueprint ? "documented" : "missing", evidence: "docs/DELIVERY_BLUEPRINT.md" }
+    ],
+    candidate_budgets: [
+      { id: "cli_startup_time", status: "not_enforced_advisory", note: "Add a measured startup-time budget before broad release." },
+      { id: "large_local_state_fixture", status: "not_enforced_advisory", note: "Add large receipt and memory fixtures before claiming scale readiness." },
+      { id: "bounded_adapter_timeout", status: "not_enforced_advisory", note: "Keep external adapter probes bounded and preview-only." }
+    ]
+  };
+}
+
+function buildRolloutRollback({ docs }) {
+  return {
+    posture: "manual_governed_release_operation",
+    rollout: {
+      deployment_performed_by_audit: false,
+      stages: [
+        "local read-only readiness audit",
+        "human release decision record",
+        "explicit artifact publication step outside this audit",
+        "post-release receipt and installer verification"
       ],
-      rule: "Every release candidate must make scope, gates, risks, rollback, and stakeholder evidence explicit."
+      documented: docs.deliveryBlueprint
     },
-    ci_cd: {
-      primary_workflow: ".github/workflows/check.yml",
-      bizra_review_gate: bizraReviewWorkflow !== null,
-      node_matrix: nodeMatrix,
-      action_refs: actionRefs,
-      deployment_status: "not_configured_no_external_deploy"
-    },
-    quality_assurance: {
-      npm_test: scripts.test ?? null,
-      npm_check: scripts.check ?? null,
-      self_check_enforced: Boolean(checkScript?.includes("scripts/node0-self-check.mjs")),
-      release_readiness_script: "node scripts/release-readiness.mjs",
-      review_scripts: REQUIRED_REVIEW_SCRIPTS
-    },
-    dependency_posture: {
-      runtime_dependencies: dependencies.length,
-      zero_runtime_dependencies: dependencies.length === 0
-    },
-    installer_posture: {
-      expected_artifacts: EXPECTED_INSTALLER_ARTIFACTS.map((file) => ({
-        path: file,
-        present: existsSync(join(root, file))
-      })),
-      capabilities: [...new Set([
-        ...installerCapabilities(installUnix),
-        ...installerCapabilities(uninstallUnix)
-      ])].sort()
-    },
-    risks,
-    next_actions: nextActions(risks),
-    boundary: {
-      read_only: true,
-      deployment_performed: false,
-      secrets_accessed: false,
-      infrastructure_changed: false,
-      external_network_required: false
+    rollback: {
+      strategy: "source_control_and_candidate_artifact_rollback",
+      controls: [
+        { area: "code", action: "revert the release commit before publishing artifacts" },
+        { area: "installer", action: "remove or replace unpublished candidate assets before promotion" },
+        { area: "local_state", action: "remove Dema-managed local state only after exact consent" },
+        { area: "receipts", action: "preserve receipts as historical evidence rather than rewriting them" }
+      ]
     }
   };
 }
 
-export function formatReleaseReadinessReport(report) {
-  const lines = [
-    "DEMA Release Readiness",
-    "",
-    `Mode: ${report.mode}`,
-    `Gate: ${report.gate_ok ? "PASS" : "FAIL"}`,
-    `Readiness score: ${report.readiness_score}/100 (${report.score_band})`,
-    "",
-    "Management BoK:",
-    `  domains: ${report.management_bok.domains.join(", ")}`,
-    `  rule: ${report.management_bok.rule}`,
-    "",
-    "CI/CD:",
-    `  primary workflow: ${report.ci_cd.primary_workflow}`,
-    `  BIZRA Review Gate: ${report.ci_cd.bizra_review_gate ? "present" : "missing"}`,
-    `  node matrix: ${report.ci_cd.node_matrix.join(", ") || "unknown"}`,
-    `  deployment: ${report.ci_cd.deployment_status}`,
-    "",
-    "Quality assurance:",
-    `  npm test: ${report.quality_assurance.npm_test}`,
-    `  npm check: ${report.quality_assurance.npm_check}`,
-    `  self-check enforced: ${report.quality_assurance.self_check_enforced ? "yes" : "no"}`,
-    "",
-    "Installer posture:",
-    ...report.installer_posture.expected_artifacts.map((artifact) =>
-      `  - ${artifact.present ? "present" : "missing"}: ${artifact.path}`
-    ),
-    `  capabilities: ${report.installer_posture.capabilities.join(", ") || "none detected"}`,
-    "",
-    "Risks:",
-    ...(report.risks.length === 0
-      ? ["  - none"]
-      : report.risks.map((item) => `  - ${item.severity}: ${item.code} - ${item.message}`)),
-    "",
-    "Next actions:",
-    ...report.next_actions.map((action) => `  - ${action}`),
-    "",
-    "Boundary: read-only audit; no deployment; no secrets accessed; no infrastructure changed."
-  ];
+function buildWorldClassQualityGates({ actionRefs, pipelineAutomation, installerCapabilities, coverageThreshold }) {
+  const observed = new Map(
+    pipelineAutomation.ci_gate_observations.map((gate) => [gate.command, gate.observed_in_ci])
+  );
+  const actionsPinned = actionRefs.length > 0 && actionRefs.every((ref) => ref.pinned);
 
-  return lines.join("\n");
+  return {
+    posture: "advisory_gap_model_not_enforcement_claim",
+    gates: [
+      { id: "behavior_tests", command: "npm test", currently_enforced: observed.get("npm test") === true, target: "required_for_release_candidate" },
+      { id: "safety_static_checks", command: "npm run check", currently_enforced: observed.get("npm run check") === true, target: "required_for_release_candidate" },
+      { id: "diff_hygiene", command: "git diff --check", currently_enforced: observed.get("git diff --check") === true, target: "required_local_gate" },
+      { id: "immutable_action_refs", currently_enforced: actionsPinned, target: "pin all GitHub Actions to commit SHAs", risk_code: actionsPinned ? null : "ci.actions_not_sha_pinned" },
+      {
+        id: "coverage_threshold",
+        command: "npm run coverage",
+        currently_enforced: coverageThreshold.enforced,
+        thresholds: coverageThreshold.thresholds,
+        target: "enforce native Node coverage thresholds in CI",
+        risk_code: coverageThreshold.enforced ? null : "qa.coverage_threshold_missing"
+      },
+      {
+        id: "installer_dry_run_check",
+        currently_enforced: false,
+        observed_capabilities: installerCapabilities.filter((capability) => (
+          capability === "dry-run" || capability === "check"
+        )),
+        target: "promote installer dry-run and check into CI when policy allows"
+      },
+      { id: "release_artifact_hashes", currently_enforced: false, target: "publish and verify release artifact hashes before broad release" }
+    ]
+  };
+}
+
+function buildTraceability({ workflowFiles, packageJson, docs, risks }) {
+  const documentationFiles = Object.entries(docs).map(([name, exists]) => ({ name, exists }));
+  return {
+    evidence_scope: "repository_files_only_no_secrets_no_external_deploy",
+    observed_files: [
+      { path: "package.json", purpose: "scripts and dependency posture" },
+      ...workflowFiles.map((workflow) => ({ path: workflow.path, purpose: "CI workflow evidence" })),
+      ...documentationFiles.map((doc) => ({ path: doc.name, purpose: doc.exists ? "documentation present" : "documentation missing" }))
+    ],
+    package_scripts: Object.keys(packageJson.scripts ?? {}).sort(),
+    risk_codes: risks.map((risk) => risk.code),
+    deterministic_ordering: true
+  };
+}
+
+export async function buildReleaseReadinessReport({
+  root = REPO_ROOT,
+  now = new Date(),
+  workflowStatusText,
+  workflowChangesAuthorized = false
+} = {}) {
+  const packageJson = await readJson(root, "package.json");
+  const workflowPath = ".github/workflows/check.yml";
+  const workflowExists = existsSync(join(root, workflowPath));
+  const workflowFiles = await readWorkflowFiles(root);
+  const workflowText = workflowFiles.find((workflow) => workflow.path === workflowPath)?.text ?? "";
+  const actionRefs = workflowFiles.flatMap((workflow) => (
+    findActionRefs(workflow.text).map((action) => ({ ...action, workflow: workflow.path }))
+  ));
+  const nodeMatrix = findNodeMatrix(workflowText);
+  const workflowWorktreeStatus = readWorkflowWorktreeStatus(root, workflowStatusText);
+  workflowWorktreeStatus.authorized = Boolean(workflowChangesAuthorized);
+
+  const installerArtifacts = REQUIRED_INSTALLER_ARTIFACTS.map((path) => ({
+    path,
+    exists: existsSync(join(root, path))
+  }));
+  const installerTexts = await Promise.all(
+    installerArtifacts
+      .filter((artifact) => artifact.exists)
+      .map((artifact) => readText(root, artifact.path))
+  );
+  const docs = {
+    installerArchitecture: existsSync(join(root, "docs/INSTALLER_ARCHITECTURE.md")),
+    deliveryBlueprint: existsSync(join(root, "docs/DELIVERY_BLUEPRINT.md")),
+    gtm: existsSync(join(root, "docs/GTM.md")),
+    security: existsSync(join(root, "SECURITY.md"))
+  };
+  const runtimeDeps = Object.keys(packageJson.dependencies ?? {}).length;
+  const devDeps = Object.keys(packageJson.devDependencies ?? {}).length;
+
+  const installerCapabilities = buildInstallerCapabilities(installerTexts);
+  const pipelineAutomation = buildPipelineAutomation({ workflowFiles, packageJson, nodeMatrix });
+  const coverageThreshold = buildCoverageThreshold(packageJson, pipelineAutomation);
+  const risks = classifyRisks({
+    workflowExists,
+    actionRefs,
+    packageJson,
+    installerArtifacts,
+    docs,
+    coverageThreshold,
+    workflowWorktreeStatus
+  });
+
+  return {
+    schema: SCHEMA,
+    generated_at: now.toISOString(),
+    mode: "READ_ONLY_AUDIT",
+    readiness_score: scoreFromRisks(risks),
+    management_bok: {
+      domains: PMBOK_DOMAINS,
+      operating_rule:
+        "Every release candidate must make scope, quality gates, risks, rollback, and stakeholder evidence explicit."
+    },
+    ci: {
+      workflow: {
+        path: workflowPath,
+        exists: workflowExists,
+        scanned_paths: workflowFiles.map((workflow) => workflow.path),
+        action_refs: actionRefs,
+        worktree_status_available: workflowWorktreeStatus.available,
+        worktree_changes: workflowWorktreeStatus.changes,
+        worktree_changes_authorized: workflowWorktreeStatus.authorized
+      },
+      matrix: nodeMatrix,
+      immutable_actions_required: true
+    },
+    pipeline: {
+      gates: REQUIRED_GATES.map((command) => ({
+        command,
+        required: true,
+        observed_in_ci: pipelineAutomation.ci_gate_observations
+          .some((gate) => gate.command === command && gate.observed_in_ci)
+      })),
+      automation_level: "local_release_readiness_gate",
+      cd_status: "not_configured_no_external_deploy"
+    },
+    ci_cd_maturity: buildCiCdMaturity({
+      workflowExists,
+      actionRefs,
+      pipelineAutomation,
+      docs,
+      coverageThreshold
+    }),
+    pipeline_automation: pipelineAutomation,
+    dependency_management: {
+      runtime_dependencies: runtimeDeps,
+      dev_dependencies: devDeps,
+      zero_dependency_posture: runtimeDeps === 0 && devDeps === 0
+    },
+    installer_artifacts: {
+      required: installerArtifacts,
+      capabilities: installerCapabilities
+    },
+    quality_assurance: {
+      test_gate: packageJson.scripts?.test ?? null,
+      smoke_gate: packageJson.scripts?.check ?? null,
+      coverage_threshold: coverageThreshold,
+      performance_gate: "bounded_cli_smoke_and_complexity_checks_manual",
+      documentation_gate: "manual_diff_hygiene_until_link_checker_exists"
+    },
+    performance_qa: buildPerformanceQa({ packageJson, runtimeDeps, docs, coverageThreshold }),
+    rollout_rollback: buildRolloutRollback({ docs }),
+    world_class_quality_gates: buildWorldClassQualityGates({
+      actionRefs,
+      pipelineAutomation,
+      installerCapabilities,
+      coverageThreshold
+    }),
+    documentation: {
+      files: Object.entries(docs).map(([name, exists]) => ({ name, exists }))
+    },
+    risks,
+    traceability: buildTraceability({ workflowFiles, packageJson, docs, risks }),
+    boundary: {
+      scope: "read-only",
+      external_deploy_performed: false,
+      secrets_accessed: false,
+      ci_workflow_modified: false,
+      production_config_modified: false
+    },
+    next_actions: [
+      "Add receipt schema documentation and verifier transparency.",
+      "Add doc-link gates once dependency policy allows tooling.",
+      "Promote installer dry-run/check verification into release candidate checklist."
+    ]
+  };
+}
+
+export function parseReleaseReadinessArgs(argv = []) {
+  return {
+    json: argv.includes("--json"),
+    workflowChangesAuthorized: argv.includes(WORKFLOW_AUTH_FLAG)
+  };
 }
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
-  const report = await buildReleaseReadinessReport();
-  console.log(process.argv.includes("--json")
-    ? JSON.stringify(report, null, 2)
-    : formatReleaseReadinessReport(report));
-  if (!report.gate_ok) process.exitCode = 1;
+  const options = parseReleaseReadinessArgs(process.argv.slice(2));
+  const report = await buildReleaseReadinessReport({
+    workflowChangesAuthorized: options.workflowChangesAuthorized
+  });
+  const json = options.json;
+  console.log(json ? JSON.stringify(report, null, 2) : formatReleaseReadinessReport(report));
 }

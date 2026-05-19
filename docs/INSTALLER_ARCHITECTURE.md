@@ -101,25 +101,28 @@ Published paths:
 
 | Path | Source-of-truth file |
 |---|---|
-| `/dema/install.sh` | `scripts/install/install-unix.sh` |
+| `/dema/install.sh` | `scripts/install/install.sh` (unified · since commit 70e3233) |
 | `/dema/install.ps1` | `scripts/install/install-windows.ps1` |
 | `/dema/uninstall.sh` | `scripts/install/uninstall-unix.sh` |
 | `/dema/uninstall.ps1` | `scripts/install/uninstall-windows.ps1` |
 | `/dema/` | `vercel/index.html` (index page listing the four scripts) |
 
+`scripts/install/install-unix.sh` exists in the repo as a backward-compat wrapper (13 lines, exec's `install.sh`) for local references that target the legacy filename. It is NOT published to `/dema/install.sh` directly because the wrapper would have no sibling `install.sh` to exec at the published URL. The published Linux/macOS installer IS the unified `install.sh`.
+
 Bytes at each path are byte-for-byte copies of the corresponding source-of-truth file at the deploy commit; the deploy is just a `cp` (see `scripts/build/vercel-publish.sh`).
 
-Until the endpoint is published (a halt-gated L5 act), the canonical reference is the script bytes at the v0.3.5 tag in `BizraInfo/Dema`. Hash table:
+Until the endpoint is published (a halt-gated L5 act), the canonical reference is the script bytes at HEAD in `BizraInfo/Dema`. Hash table at unified-installer commit `70e3233`:
 
 ```text
-SHA-256 hashes at v0.3.5 (commit 27a6662):
-  install-unix.sh       bbe0060dcd61ed5aca76e6de1cb0b9dc32e386d388e4f2df6a0f74d698ff0693
+SHA-256 hashes at commit 70e3233 (unified installer · 2026-05-18):
+  install.sh            c2d5884e98c53fe44773d2b8b9be830257804a035d1c49bc1b1b3a850a53a977
+  install-unix.sh       b4f0f020bd47c257f5db77515eecbf707b949b94bb6e7424826a63cbd95d65e5  (backward-compat wrapper · 13 lines · exec's install.sh)
   install-windows.ps1   5c14121e803c7656f8100595e14295c5f32871397282a9d05b45dd4ced6f3198
   uninstall-unix.sh     4f55a343c94de1aa45bbe691d928dfa88ccce823ad8d69eda9b0ea25c266f4c1
   uninstall-windows.ps1 3dcf4d36874e47de8040526f5da5cec8f20b6fcb173c72fc42ffaf980404a416
 ```
 
-Verify locally with `sha256sum scripts/install/<name>` (Linux/macOS) or `Get-FileHash -Algorithm SHA256 scripts/install/<name>` (PowerShell). Future v0.3.x patches that touch these scripts must update this block in the same PR.
+Verify locally with `sha256sum scripts/install/<name>` (Linux/macOS) or `Get-FileHash -Algorithm SHA256 scripts/install/<name>` (PowerShell). Future patches that touch these scripts must update this block in the same PR.
 
 ## Release rule
 

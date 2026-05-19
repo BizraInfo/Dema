@@ -25,6 +25,8 @@ test("buildDiagnosticsMissionPlan emits a schema-tagged self-harness without eff
   assert.equal(plan.boundary.execution_enabled, false);
   assert.equal(plan.boundary.mutation_performed, false);
   assert.equal(plan.boundary.receipt_minted, false);
+  assert.equal(plan.boundary.network_connection_attempted, false);
+  assert.equal(plan.boundary.external_posting_performed, false);
 });
 
 test("buildDiagnosticsMissionPlan names the proactive checks and consent requirements", () => {
@@ -56,6 +58,7 @@ test("formatDiagnosticsMissionPlan renders phases, critique, proof, and boundary
   assert.match(output, /Self-critique/);
   assert.match(output, /Proof-of-Truth Convergence/);
   assert.match(output, /Boundary: preview-only; no execution; no mutation; no receipt minted/);
+  assert.match(output, /no network; no external posting/);
 });
 
 test("dema diagnostics plan prints a human-readable preview", async () => {
@@ -65,6 +68,7 @@ test("dema diagnostics plan prints a human-readable preview", async () => {
   assert.match(stdout, /npm test/);
   assert.match(stdout, /node scripts\/node0-self-check\.mjs --verify/);
   assert.match(stdout, /Boundary: preview-only; no execution; no mutation; no receipt minted/);
+  assert.match(stdout, /no network; no external posting/);
 });
 
 test("dema diagnostics plan --json emits the schema-tagged plan", async () => {
@@ -75,4 +79,11 @@ test("dema diagnostics plan --json emits the schema-tagged plan", async () => {
   assert.equal(plan.mode, "PREVIEW_ONLY");
   assert.equal(plan.boundary.execution_enabled, false);
   assert.ok(plan.checks.some((check) => check.command === "npm run check"));
+});
+
+test("dema diagnostics rejects unknown subcommands", async () => {
+  await assert.rejects(
+    execFileAsync("node", [cliPath, "diagnostics", "run"]),
+    /Unknown diagnostics command/
+  );
 });
