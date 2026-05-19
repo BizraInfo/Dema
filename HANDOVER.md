@@ -33,7 +33,7 @@ npm run smoke-boundary
 npm run llm:guidance
 #   → expected: PASS all 7 checks · READ_ONLY_AUDIT
 
-# 5. Confirm Proof Forge chain integrity (17 receipts · genesis → IRONCLAD)
+# 5. Confirm Proof Forge chain integrity (55 receipts · genesis → IRONCLAD)
 python3 scripts/forge_evidence.py --verify --project-dir .
 #   → expected: ok: true · receipt_count: 17 · 5 legacy warnings (expected)
 ```
@@ -102,8 +102,8 @@ If all 5 return as expected, **the system is verifiable at HEAD as committed.** 
 │  EVIDENCE (~/.dema/  + .proof-forge/  + Bitcoin attestation)                │
 │                                                                             │
 │  Local state                Receipt chain              Bitcoin anchor        │
-│  5.8 GB · 24 memory         17 receipts · genesis      Founding PDFs blocks  │
-│  entries · 3 receipts       2026-05-07 → IRONCLAD #17  948027/948028/948029  │
+│  5.8 GB · 24 memory         55 receipts · genesis      Founding PDFs blocks  │
+│  entries · 3 receipts       2026-05-07 → IRONCLAD #55  948027/948028/948029  │
 │                                                        IRONCLAD #17: pending  │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -166,6 +166,17 @@ Receipt #2  2026-05-11  spearpoint + investor presentation kit
 Receipt #15 2026-05-16  Step7 micro-primitives extracted
 Receipt #16 2026-05-18  ADR-008 Runtime Activation COMPLETE (Strong)
 Receipt #17 2026-05-18  ADR-008 IRONCLAD (4 verification commands)
+... (37 additional receipts 2026-05-19 — ADR-011 full 4-phase implementation
+     arc · master-craftsmanship audit consolidation · all IRONCLAD except #46/#47
+     which are Logged due to verification-script grep typos · see EVIDENCE_INDEX.json)
+Receipt #48 2026-05-19  ADR-011 advanced Proposed → Accepted (3 new laws + Genesis Preview Card)
+Receipt #49 2026-05-19  ADR-011 phase-1 node-onboarding-extension (5 schema blocks)
+Receipt #50 2026-05-19  ADR-011 phase-2 homebase-language-picker (Law #9 + Law #10)
+Receipt #51 2026-05-19  ADR-011 phase-3 Genesis Preview Card (Law #11 + sha256 receipt_id_preview)
+Receipt #52 2026-05-19  ADR-011 phase-3 fixup (timestamp excluded from hash · determinism restored)
+Receipt #53 2026-05-19  ADR-011 phase-4 FINAL (full T-1..T-18 + P1-P10 compliance suite)
+Receipt #54 2026-05-19  master-craftsmanship audit (ADR-011 suite externally witnessed COMPLIANT 10/10)
+Receipt #55 2026-05-19  master-craftsmanship polish (discoverability + ADR-012 amendment)
 ```
 
 Bitcoin attestations:
@@ -177,7 +188,7 @@ PROOF_SUMMARY.md            → submitted to 4 OTS calendars (PENDING 2026-05-18
 **Verify the chain:**
 ```bash
 python3 scripts/forge_evidence.py --verify --project-dir .
-# Walks all 17 receipts · recomputes hashes · reports any breaks
+# Walks all 55 receipts · recomputes hashes · reports any breaks
 ```
 
 **Verify the Bitcoin anchor (after confirmation):**
@@ -237,7 +248,7 @@ L0 Quranic frame                      Founding PDFs (Bitcoin-anchored)
 L1 Constitutional anchors             docs/canon/BIZRA_TOPOLOGY_CANON.md
 L2 ADRs                               docs/06-adr/ADR-001 → ADR-008
 L3 Code spine                         packages/core/src/ (62 files · 14,408 LOC)
-L4 Sealed evidence                    .proof-forge/ (17 receipts · gitignored locally)
+L4 Sealed evidence                    .proof-forge/ (55 receipts · gitignored locally)
 L5 Verified state                     ~/.dema/ (5.8 GB local · 24 memory · 3 receipts)
 L6 Held state                         13+ commits local · push held externally
 L7 Unearned                           Ring 1 (external reviewer feedback) · still future
@@ -257,9 +268,11 @@ L7 Unearned                           Ring 1 (external reviewer feedback) · sti
 2. PROOF_SUMMARY.md.ots Bitcoin attestation pending (submitted 2026-05-18 ~09:49).
    Confirms within 1-12h. Run `ots upgrade PROOF_SUMMARY.md.ots` after confirmation.
 
-3. Ring 1 reviewer not yet engaged. The system is technically ready (1159 tests pass,
-   12 components ship, IRONCLAD receipt #17). The operator-act of inviting one
-   trusted-friend reviewer remains the only unmoved variable per the field notes.
+3. Ring 1 reviewer not yet engaged. The system is technically ready (1896 tests pass
+   at HEAD `e6412ab` · 12 ADR-008 components + ADR-011 full 4-phase implementation
+   arc + master-craftsmanship audit module all ship · IRONCLAD receipt #55). The
+   operator-act of inviting one trusted-friend reviewer remains the only unmoved
+   variable per the field notes.
 
 4. The conversational layer (LLM invocation in operator-facing UX) requires C1
    (Local LLM Adapter) to be wired into an interactive surface. `dema llm-invoke`

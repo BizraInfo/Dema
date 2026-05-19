@@ -119,8 +119,13 @@ A claim outside these four categories must not be made.
 
 ### Master Craftsmanship
 **Origin:** [ADR-008](docs/06-adr/ADR-008-runtime-activation.md).
-**Definition:** the 10 quality invariants every ADR-008 runtime component must satisfy. See [HANDOVER.md §4](HANDOVER.md) for the full list.
-**Status:** V (binding · 1159 tests verify it across the 12 components)
+**Definition:** the 10 quality invariants every ADR-008 runtime component must satisfy. See [HANDOVER.md §4](HANDOVER.md) for the full list. The 10 invariant IDs: `canon_bound` · `test_backed` · `consent_gated` · `receipt_emitting` · `doctrine_coherent` · `boundary_disciplined` · `adversarial_tested` · `verify_before_asserting` · `reversible` · `cross_referenced`.
+**Status:** V (binding · 1896 tests verify it across 12 ADR-008 components + ADR-011 4-phase implementation arc + master-craftsmanship audit module)
+
+### Master Craftsmanship Audit
+**Origin:** Commit `3d8522e` (2026-05-19) · `packages/core/src/master-craftsmanship-audit.js`.
+**Definition:** the EXTERNAL-WITNESS audit surface. Where the existing `craftsmanship-witness` builder SELF-asserts compliance for its own module, `master-craftsmanship audit` reads ANY artifact file path + maps it against the 10 master-craftsmanship invariants via evidence-anchored heuristic probes. Emits `bizra.dema.master_craftsmanship_audit.v0.1`. Default audit subject is `tests/node-onboarding-adr011-compliance.test.js` (the ADR-011 phase-4 compliance suite). Verdict: COMPLIANT (10/10) · PARTIAL (N/10) · NON-COMPLIANT. Exits 1 on non-compliant or missing artifact. Per [ADR-012 §Amendments 2026-05-19](docs/06-adr/ADR-012-cli-naming-convention.md), the kebab `master-craftsmanship` token is the 13th legacy allowlist entry.
+**Status:** V (canonical first verdict: ADR-011 compliance suite COMPLIANT 10/10 · receipt #54 IRONCLAD)
 
 ### Concentric Rings (Ring 0 → Ring 4)
 **Origin:** [feedback_evidence_first_gtm_concentric_rings](memory anchor) · framework Mumu derived from Linux/Bitcoin/Git propagation patterns.
@@ -165,11 +170,11 @@ A claim outside these four categories must not be made.
 
 ### Proof Forge
 **Definition:** the local evidence kernel. Per the `/proof-forge` skill, produces sha256-chained receipts with verification reports. Located at `.proof-forge/` (gitignored locally).
-**Status:** V (17 receipts on chain · last is IRONCLAD)
+**Status:** V (55 receipts on chain · last is IRONCLAD #55 · `forge_evidence.py --verify` reports `ok: true`)
 
 ### IRONCLAD
-**Definition:** Proof Forge confidence level 5 of 5. Requires ≥3 verification commands all-passed. Current receipt #17 has 4 commands: npm test · npm run check · npm run smoke-boundary · npm run llm:guidance.
-**Status:** V (at receipt #17 · `9461dd1382a0...`)
+**Definition:** Proof Forge confidence level 5 of 5. Requires ≥3 verification commands all-passed. Example: receipt #17 (ADR-008) has 4 commands; receipt #55 (master-craftsmanship polish) has 13. Two outliers exist as `Logged` (#46, #47 from 2026-05-19) due to verification-script grep typos — the work itself was clean, the verification commands targeted strings that didn't match output. Honest chain history preserved as-is.
+**Status:** V (latest IRONCLAD at receipt #55 · evidence_hash `e76eb0bd48af78b8f0e70ce4a902884800b2c78089d9f943d91b3d76a2e39276`)
 
 ### Strong / Solid / Attested / Logged
 **Definition:** Proof Forge confidence tiers below IRONCLAD. See [`scripts/forge_evidence.py`](scripts/forge_evidence.py) `confidence_label()` for exact thresholds.
@@ -190,6 +195,32 @@ ADR-008 §C12 (`receipt-mint-integration.js`) bridges Proof Forge candidates to 
 ### Anchor (verb · "to anchor")
 **Definition:** to bind a piece of data to a cryptographic proof (sha256 + OTS to Bitcoin). Anchoring is reversible only by cryptographic break, which has never happened to Bitcoin's hash function.
 **Status:** V
+
+---
+
+## ADR-011 onboarding consciousness vocabulary
+
+Vocabulary introduced by [ADR-011 Onboarding Consciousness Layer](docs/06-adr/ADR-011-onboarding-consciousness-layer.md) (Accepted 2026-05-19). The ADR ships 11 binding laws governing how any human enters BIZRA as a sovereign node. The implementation arc is complete across 4 phases (`6303dc9` → `4125a42`). Receipt #53 anchors the end-to-end compliance suite.
+
+### Genesis Preview Card
+**Origin:** ADR-011 Law #11 (Genesis Preview before mint) · commits `d2db755` + `e955520`.
+**Definition:** a preview-only artifact representing what an onboarding receipt WOULD look like if the candidate typed the mint consent phrase. Schema: `bizra.dema.genesis_preview_card.v0.1`. Contains candidate identity + a deterministic `receipt_id_preview` (sha256 of canonical payload, EXCLUDING timestamp so the hash is stable across renders) + `blocked_until_typed_GO` list + `card_storage` block + canonical 16-key boundary all-false. Card stored under `~/.dema/state/genesis-preview-<timestamp>.json` (NOT under `~/.dema/receipts/`). The actual receipt mint requires a separate typed-GO that **quotes the card's `receipt_id_preview` hash** — preventing mint-without-preview. Surface: `dema onboard --preview-card [--json]`.
+**Status:** V (live · verified deterministic across consecutive renders at the binary surface · receipt #51 + #52)
+
+### Returning-user language load (ADR-011 Law #9)
+**Origin:** ADR-011 v0.2 amendment 2026-05-19 · commit `59f399c`.
+**Definition:** if `~/.dema/profile.json::language_code` is set, the language stage of onboarding loads silently from disk and does NOT re-prompt. Re-prompting an established operator for their own language is a structural error — it implies amnesia. Only first-run candidates (profile.json absent OR language_code null) see the language picker. Escape hatch: `dema onboard --reset-language` explicitly re-asks. Enforced at code level by `resolveOperatorLanguage()` in `packages/core/src/homebase-language-picker.js`; `language_state.language_source` flips to `"profile_load"` on silent-load path.
+**Status:** V (live · proven at binary surface: profile with language_code "ar" → silent load · NO prompt rendered)
+
+### Second language as fallback dignity (ADR-011 Law #10)
+**Origin:** ADR-011 v0.2 amendment 2026-05-19 · commit `59f399c`.
+**Definition:** after the primary language is set during first-run onboarding, the candidate is OPTIONALLY asked for a secondary language. Default answer is "skip" via a single press of Enter. NEVER required · NEVER auto-detected from keyboard/locale · NEVER inferred from typing patterns. Enables fallback display when a primary-language string is missing AND bilingual consent phrase rendering (the candidate may read the consent phrase in their stronger-comprehension language). Recorded at `language_state.secondary_language_code`.
+**Status:** V (live · 7 language options: ar/en/fr/es/ur/hi/other · GREETING_TEMPLATES marked DECLARED for en/fr/es/other · DECLARED_NEEDS_NATIVE_REVIEW for ar · PLACEHOLDER_PENDING_NATIVE_AUTHOR for ur/hi)
+
+### receipt_id_preview
+**Origin:** ADR-011 Law #11 implementation.
+**Definition:** the sha256 hex hash embedded in a Genesis Preview Card's `would_mint_if_consented` block. Deterministic: same candidate identity + same onboarding state → same hash, regardless of when the card was rendered. Excludes timestamp from the hash payload by design (fix `e955520`). Acts as the binding token between a preview the candidate SAW and a future mint typed-GO that QUOTES it. A mint typed-GO that does not literally contain the expected receipt_id_preview hex is refused by `refuseMintWithoutQuotedHash()` validator.
+**Status:** V (live · 4 consent phrase templates (en/ar/fr/es) embed the hash literally · refusal validator covered by tests)
 
 ---
 
