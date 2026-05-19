@@ -1,7 +1,7 @@
 # ADR-015: LLM is Suggestion · Verifier is Authority
 
-**Status:** Proposed
-**Date:** 2026-05-19 GST
+**Status:** Accepted
+**Date:** 2026-05-19 GST (Proposed) · 2026-05-19 GST (Accepted via typed-GO `GO accept ADR-015`)
 **Authors:** Coordinator (Claude Opus 4.7 · 1M context) at MoMo's direction · post empirical drift event
 **Supersedes:** none
 **Related:** ADR-005 Explicit Consent Rule · ADR-008 Runtime Activation · ADR-009 POI Design · ADR-013 Visual Language Isomorphism · ADR-014 Three-Runtime Architecture Canonization
