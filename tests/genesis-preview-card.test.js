@@ -125,6 +125,23 @@ test("Different node_ordinal → different receipt_id_preview", () => {
   );
 });
 
+test("determinism: same candidate + DIFFERENT timestamps → SAME receipt_id_preview (timestamp excluded from hash)", () => {
+  const base = sampleInput();
+  const a = buildGenesisPreviewCard({ ...base, timestamp: "2026-05-19T00:00:00Z" });
+  const b = buildGenesisPreviewCard({ ...base, timestamp: "2026-05-20T12:34:56Z" });
+  assert.equal(
+    a.would_mint_if_consented.receipt_id_preview,
+    b.would_mint_if_consented.receipt_id_preview,
+    "timestamp must not affect receipt_id_preview hash"
+  );
+});
+
+test("rendered_at field carries the injected timestamp (render metadata, not hash)", () => {
+  const ts = "2026-05-19T10:00:00.000Z";
+  const card = buildGenesisPreviewCard({ ...sampleInput(), timestamp: ts });
+  assert.equal(card.rendered_at, ts);
+});
+
 test("card_storage block excluded from hash: same candidate+timestamp yields same hash regardless of card_storage_path_hint", () => {
   const base = sampleInput();
   const cardA = buildGenesisPreviewCard({ ...base, card_storage_path_hint: "/path/a/card.json" });

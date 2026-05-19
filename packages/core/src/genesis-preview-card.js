@@ -84,15 +84,16 @@ function computeReceiptIdPreview(canonicalPayload) {
   return createHash("sha256").update(serialized, "utf8").digest("hex");
 }
 
-function buildCanonicalHashPayload(normalizedCandidate, timestamp) {
-  // Deterministic field ordering. card_storage is excluded by design.
+function buildCanonicalHashPayload(normalizedCandidate) {
+  // Deterministic field ordering. card_storage and rendered_at are excluded by design.
+  // timestamp is NOT included: the hash must bind to candidate identity, not render time,
+  // so that a candidate can quote receipt_id_preview from any render of the same state.
   return {
     schema: GENESIS_PREVIEW_CARD_SCHEMA,
     truth_label: "NODE0_LOCAL_SEED",
     mode: "preview_only",
     card_type: "onboarding_completion_genesis",
     candidate: normalizedCandidate,
-    timestamp,
     would_mint_receipt_type: "node_onboarding_genesis.v0.1",
   };
 }
@@ -143,8 +144,8 @@ export function buildGenesisPreviewCard(input = {}) {
       ? raw.timestamp
       : DETERMINISTIC_TIMESTAMP_PLACEHOLDER;
 
-  // Compute receipt_id_preview from canonical payload (card_storage excluded)
-  const hashPayload = buildCanonicalHashPayload(normalizedCandidate, timestamp);
+  // Compute receipt_id_preview from canonical payload (card_storage and rendered_at excluded)
+  const hashPayload = buildCanonicalHashPayload(normalizedCandidate);
   const receiptIdPreview = computeReceiptIdPreview(hashPayload);
 
   // Render consent phrases
@@ -180,6 +181,7 @@ export function buildGenesisPreviewCard(input = {}) {
     truth_label: "NODE0_LOCAL_SEED",   // structurally constant — Law #11
     mode: "preview_only",              // structurally constant — Law #11
     card_type: "onboarding_completion_genesis",
+    rendered_at: timestamp,            // render metadata — excluded from hash payload
     candidate: normalizedCandidate,
     would_mint_if_consented: {
       receipt_type: "node_onboarding_genesis.v0.1",

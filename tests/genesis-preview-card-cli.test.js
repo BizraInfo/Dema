@@ -59,31 +59,27 @@ test("dema onboard --preview-card --json contains would_mint_if_consented.receip
   }
 });
 
-test("Same DEMA_HOME + same inputs twice → both invocations produce the SAME receipt_id_preview", async () => {
+test("CLI determinism: same profile across two invocations → same receipt_id_preview hash", async () => {
   const home = await makeTmpHome();
   try {
-    // Write a profile.json with known language before both calls so the language is fixed
     const { writeFile } = await import("node:fs/promises");
     await writeFile(
       join(home, "profile.json"),
       JSON.stringify({ schema: "bizra.dema.profile.v0.1", language_code: "en", preferred_name: "Test" })
     );
 
-    // Two sequential calls. Timestamps will differ, so we cannot assert full JSON equality,
-    // but the hash (which excludes card_storage with the timestamp) must differ only due to
-    // the injected timestamp. We verify that the profile-based fields are deterministic.
-    // Actually: timestamp IS part of the hash payload. So sequential CLI calls WILL produce
-    // different hashes (different wall-clock timestamps). This test instead verifies the
-    // card schema and structure are stable between calls.
     const { stdout: out1 } = await runCli(["onboard", "--preview-card", "--json"], home);
     const { stdout: out2 } = await runCli(["onboard", "--preview-card", "--json"], home);
     const card1 = JSON.parse(out1);
     const card2 = JSON.parse(out2);
-    assert.equal(card1.schema, card2.schema);
-    assert.equal(card1.mode, card2.mode);
-    assert.equal(card1.truth_label, card2.truth_label);
-    assert.equal(card1.candidate.preferred_name, card2.candidate.preferred_name);
-    assert.equal(card1.candidate.primary_language, card2.candidate.primary_language);
+    assert.equal(
+      card1.would_mint_if_consented.receipt_id_preview,
+      card2.would_mint_if_consented.receipt_id_preview,
+      "receipt_id_preview must be stable across consecutive CLI invocations with the same profile"
+    );
+    // rendered_at may differ between calls; that is expected and correct
+    assert.equal(typeof card1.rendered_at, "string");
+    assert.equal(typeof card2.rendered_at, "string");
   } finally {
     await rm(home, { recursive: true, force: true });
   }
