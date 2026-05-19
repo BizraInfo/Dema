@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import {
   CANON_GLOSSARY,
   buildExplainPreview,
-  formatExplainPreview
+  formatExplainPreview,
+  getPerspective
 } from "../packages/core/src/canon-glossary.js";
 
 const KNOWN_TRUTH_LABELS = new Set(["DECLARED", "MEASURED", "ASSUMED"]);
@@ -161,4 +162,134 @@ test("formatExplainPreview with null input returns error string without throwing
   const result = formatExplainPreview(null);
   assert.ok(typeof result === "string");
   assert.ok(result.includes("Error"));
+});
+
+// ── perspectives: 8 seed concepts have all 4 perspectives ────────────────────
+
+const SEED_CONCEPTS = ["bizra", "dema", "node0", "urp", "pat", "sat", "fate", "receipt"];
+
+test("all 8 seed concepts have a perspectives block", () => {
+  for (const concept of SEED_CONCEPTS) {
+    const entry = CANON_GLOSSARY.get(concept);
+    assert.ok(
+      entry && typeof entry.perspectives === "object" && entry.perspectives !== null,
+      `'${concept}' missing perspectives block`
+    );
+  }
+});
+
+test("all 8 seed concepts have non-empty simple perspective (≥10 chars)", () => {
+  for (const concept of SEED_CONCEPTS) {
+    const text = getPerspective(concept, "simple");
+    assert.ok(
+      typeof text === "string" && text.length >= 10,
+      `'${concept}' simple perspective empty or too short`
+    );
+  }
+});
+
+test("all 8 seed concepts have non-empty technical perspective (≥50 chars)", () => {
+  for (const concept of SEED_CONCEPTS) {
+    const text = getPerspective(concept, "technical");
+    assert.ok(
+      typeof text === "string" && text.length >= 50,
+      `'${concept}' technical perspective empty or too short (got: ${text})`
+    );
+  }
+});
+
+test("all 8 seed concepts have non-empty game perspective (≥30 chars)", () => {
+  for (const concept of SEED_CONCEPTS) {
+    const text = getPerspective(concept, "game");
+    assert.ok(
+      typeof text === "string" && text.length >= 30,
+      `'${concept}' game perspective empty or too short`
+    );
+  }
+});
+
+test("all 8 seed concepts have non-empty arabic perspective (≥30 chars)", () => {
+  for (const concept of SEED_CONCEPTS) {
+    const text = getPerspective(concept, "arabic");
+    assert.ok(
+      typeof text === "string" && text.length >= 30,
+      `'${concept}' arabic perspective empty or too short`
+    );
+  }
+});
+
+test("arabic perspectives contain Arabic Unicode block characters (؀-ۿ)", () => {
+  const arabicRange = /[؀-ۿ]/;
+  for (const concept of SEED_CONCEPTS) {
+    const text = getPerspective(concept, "arabic");
+    assert.ok(
+      arabicRange.test(text),
+      `'${concept}' arabic perspective contains no Arabic Unicode characters`
+    );
+  }
+});
+
+// ── non-seed concepts have only simple perspective ───────────────────────────
+
+const NON_SEED_CONCEPTS = ["ihsan", "adl", "riba-zero", "zann-zero", "third-fact"];
+
+test("non-seed concepts return null for technical perspective", () => {
+  for (const concept of NON_SEED_CONCEPTS) {
+    const text = getPerspective(concept, "technical");
+    assert.equal(text, null, `'${concept}' should not have a technical perspective`);
+  }
+});
+
+test("non-seed concepts return null for arabic perspective", () => {
+  for (const concept of NON_SEED_CONCEPTS) {
+    const text = getPerspective(concept, "arabic");
+    assert.equal(text, null, `'${concept}' should not have an arabic perspective`);
+  }
+});
+
+test("non-seed concepts return null for game perspective", () => {
+  for (const concept of NON_SEED_CONCEPTS) {
+    const text = getPerspective(concept, "game");
+    assert.equal(text, null, `'${concept}' should not have a game perspective`);
+  }
+});
+
+// ── getPerspective: basic contract ───────────────────────────────────────────
+
+test("getPerspective returns text for present perspective (bizra/technical)", () => {
+  const text = getPerspective("bizra", "technical");
+  assert.ok(typeof text === "string" && text.length > 0);
+});
+
+test("getPerspective returns null for absent perspective (ihsan/technical)", () => {
+  const result = getPerspective("ihsan", "technical");
+  assert.equal(result, null);
+});
+
+test("getPerspective is case-insensitive on concept name", () => {
+  const lower = getPerspective("dema", "simple");
+  const upper = getPerspective("DEMA", "simple");
+  assert.equal(lower, upper);
+  assert.ok(typeof lower === "string" && lower.length > 0);
+});
+
+// ── adversarial: getPerspective ───────────────────────────────────────────────
+
+test("adversarial: invalid perspective name returns null", () => {
+  assert.equal(getPerspective("bizra", "hacker"), null);
+  assert.equal(getPerspective("bizra", ""), null);
+  assert.equal(getPerspective("bizra", "__proto__"), null);
+});
+
+test("adversarial: prototype pollution via getPerspective is safe", () => {
+  const before = Object.prototype.toString;
+  const result = getPerspective("__proto__", "simple");
+  assert.equal(result, null);
+  assert.equal(Object.prototype.toString, before, "prototype was mutated by getPerspective");
+});
+
+test("adversarial: non-string inputs to getPerspective return null", () => {
+  assert.equal(getPerspective(null, "simple"), null);
+  assert.equal(getPerspective("bizra", null), null);
+  assert.equal(getPerspective(42, "simple"), null);
 });

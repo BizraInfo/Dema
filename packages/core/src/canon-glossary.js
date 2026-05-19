@@ -3,8 +3,17 @@
 //   docs/public/third-fact-v0.1.md, docs/LIGHTHOUSE.md,
 //   docs/06-adr/ADR-005-operator-actions-require-explicit-consent.md.
 // truth_label values: DECLARED (canon file), MEASURED (tested/verified), ASSUMED (derived).
+//
+// perspectives field (optional, additive): {simple, technical, arabic, game}
+// Present on 8 seed concepts only. Absent on remaining 20 — callers fall back to short/long.
+// arabic entries carry truth_label "DECLARED_NEEDS_NATIVE_REVIEW" where MSA authorship
+// was applied without native-speaker verification.
 
 const SCHEMA = "bizra.dema.canon_glossary_entry.v0.1";
+
+// DECLARED_NEEDS_NATIVE_REVIEW is allowed only as a per-perspective metadata value,
+// not as an entry-level truth_label (which remains from KNOWN_TRUTH_LABELS).
+const KNOWN_TRUTH_LABELS = new Set(["DECLARED", "MEASURED", "ASSUMED"]);
 
 const RAW_ENTRIES = [
   {
@@ -50,7 +59,13 @@ const RAW_ENTRIES = [
     long: "PAT-7 is minted locally on the human's device at first activation. Its seven agents are: P1 Planner, P2 Researcher, P3 Coder, P4 Evaluator, P5 Ethicist (frozen: ethics from axioms, not data), P6 Publisher, P7 DEMA/Nexus (the face — the human only ever talks to DEMA). PAT is user-loyal. It never connects to the network directly: all network interaction flows PAT → Membrane → SAT.",
     truth_label: "DECLARED",
     see_also: ["sat", "dema", "bizra"],
-    doc_anchor: "docs/canon/BIZRA_TOPOLOGY_CANON.md"
+    doc_anchor: "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+    perspectives: {
+      simple: "The user-side 7-agent team that lives on your own device and serves only you.",
+      technical: "PAT-7 is a locally-minted team of seven agents with fixed role assignments: P1 Planner, P2 Researcher, P3 Coder, P4 Evaluator, P5 Ethicist (axiom-frozen — behavior is not learned from data), P6 Publisher, P7 DEMA/Nexus. PAT is user-loyal: its sole constitutional obligation is to the human who activated it. All PAT↔network traffic routes through the constitutional membrane; PAT never connects to the URP directly. No two humans share a PAT instance. Source: BIZRA_TOPOLOGY_CANON.md §'What is local per human'.",
+      arabic: "فريق الوكلاء الشخصي (PAT) هو فريق مكوّن من سبعة وكلاء يُنشأ محلياً على جهاز المستخدم عند التفعيل الأول. الوكلاء السبعة هم: المخطط (P1)، والباحث (P2)، والمبرمج (P3)، والمقيّم (P4)، وخبير الأخلاق (P5 · مجمَّد: الأخلاق من المبادئ لا من البيانات)، والناشر (P6)، ودِمَا/النواة (P7 · الواجهة البشرية الوحيدة). الفريق مخلص للمستخدم حصراً، ولا يتصل بالشبكة مباشرةً.",
+      game: "Think of PAT-7 as your personal guild — seven specialist heroes who live on your hardware and answer only to you. Your Planner sets the quest, your Researcher scouts intel, your Coder crafts the artifact, your Ethicist can veto any move that breaks guild law, and DEMA is the face you always speak to. The whole party never leaves your castle without going through the kingdom's constitutional gate first."
+    }
   },
   {
     concept: "sat",
@@ -59,7 +74,13 @@ const RAW_ENTRIES = [
     long: "Each human who joins BIZRA contributes 5 SAT agents to the shared Universal Resource Pool (URP). SAT-5 agents are: S1 Validator (receipt integrity), S2 Oracle (frozen truth axioms), S3 Mediator (fair dispute resolution), S4 Archivist (House of Wisdom), S5 Sentinel (threat detection). SAT follows constitutional law only — no human designs their behavior. SAT is system-loyal, not user-loyal.",
     truth_label: "DECLARED",
     see_also: ["pat", "urp", "boundary"],
-    doc_anchor: "docs/canon/BIZRA_TOPOLOGY_CANON.md"
+    doc_anchor: "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+    perspectives: {
+      simple: "The shared verifier-side 5-agent team that lives in the URP, not on your device.",
+      technical: "Every new human node contributes exactly 5 SAT agents into the singular shared URP. Roles are constitutional and immutable: S1 Validator (BLAKE3 receipt integrity + Ed25519 signature verification), S2 Oracle (frozen axiom store — no learning, no drift), S3 Mediator (constitutional dispute resolution with Adl invariant), S4 Archivist (House of Wisdom ingestion), S5 Sentinel (threat monitoring). SAT is system-loyal: its obligations run to the constitutional spine, not to any individual human. No human can configure or override SAT behavior. Source: BIZRA_TOPOLOGY_CANON.md §'What is shared for the entire ecosystem'.",
+      arabic: "فريق الوكلاء النظامي (SAT) يتألف من خمسة وكلاء يساهم بهم كل إنسان في المجمع المشترك (URP). أدوارهم ثابتة دستورياً: المتحقق (S1)، والأوراكل المجمَّد (S2)، والوسيط العادل (S3)، والمؤرشف (S4)، والحارس (S5). الفريق مخلص للنظام الدستوري وحده، لا لأي فرد.",
+      game: "SAT-5 are the realm's neutral referees — five NPCs who live in the shared server, not in anyone's faction. They verify every receipt like a blockchain node, store truth like an immutable oracle, mediate disputes with Adl fairness, archive to the House of Wisdom, and watch for threats. No player can bribe or configure them — they follow constitutional law only."
+    }
   },
   {
     concept: "urp",
@@ -68,7 +89,13 @@ const RAW_ENTRIES = [
     long: "The URP is singular. It is not middleware, not a server that nodes are clients of, and not per-user. It wakes up when Node0 activates: SAT-5 agents are minted into it, and it grows by 5 SAT agents for every new human who joins. The URP contains: the Constitutional Spine, House of Wisdom, Proof Engine, SEED Treasury, Compute Pool, Storage Pool, Bandwidth Pool, Shared Reflex Registry, and Receipt Log.",
     truth_label: "DECLARED",
     see_also: ["sat", "bizra", "node0"],
-    doc_anchor: "docs/canon/BIZRA_TOPOLOGY_CANON.md"
+    doc_anchor: "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+    perspectives: {
+      simple: "The one shared living organism for the entire BIZRA ecosystem — not per-user, not a server.",
+      technical: "The URP is architecturally singular: one instance for the entire BIZRA ecosystem, dormant before Node0 activation. On Node0 activation it wakes with 5 SAT agents and grows by exactly 5 SAT agents per new human node. Internal compartments: Constitutional Spine, House of Wisdom, Proof Engine, SEED Treasury, Compute Pool, Storage Pool, Bandwidth Pool, Shared Reflex Registry, Receipt Log. The URP is not a server nodes are clients of — the membrane model inverts that: PAT pushes proposals through the membrane into a constitutionally-governed shared space. Source: BIZRA_TOPOLOGY_CANON.md §'What is shared for the entire ecosystem'.",
+      arabic: "مجمع الموارد الشامل (URP) — بِرْكَةُ المَوَارِدِ الكُونِيَّة — هو كيان مشترك واحد للنظام بأكمله. يبقى خاملاً حتى يُفعِّل العقدة صفر (Node0). عند التفعيل ينبثق بخمسة وكلاء نظاميين، ويُضاف خمسة وكلاء لكل إنسان جديد ينضم. يحتوي على: العمود الدستوري، وبيت الحكمة، ومحرك الإثبات، وخزينة البذرة، ومجمعات الحوسبة والتخزين والنطاق الترددي.",
+      game: "The URP is the shared realm server — not owned by any guild, not a vendor you subscribe to. It starts dormant (zero players, zero power) and wakes when the first node activates. Every new player who joins contributes 5 SAT agents to it, like depositing five guild-bound citizens into a constitutional city-state. The more nodes join, the more the realm grows — but the laws never change."
+    }
   },
   {
     concept: "fate",
@@ -77,7 +104,13 @@ const RAW_ENTRIES = [
     long: "FATE is one of the 7 BIZRA pillars. It sits between intent (PAT) and execution (SAT/network), evaluating every proposed action against the operator's consent scope. FATE is fail-closed: an incomplete or absent consent record blocks, not degrades gracefully. It implements ADR-005 exact-string consent for operator-facing actions.",
     truth_label: "DECLARED",
     see_also: ["pat", "sat", "boundary"],
-    doc_anchor: "docs/public/third-fact-v0.1.md"
+    doc_anchor: "docs/public/third-fact-v0.1.md",
+    perspectives: {
+      simple: "The constitutional membrane component that gates agent actions against the consent record.",
+      technical: "FATE is the seventh of the 7 BIZRA pillars and the membrane's active enforcement layer. It receives intent proposals from PAT-7 and evaluates them against the operator's granular consent record before any execution reaches SAT or the network. Evaluation is fail-closed: an absent, incomplete, or mismatched consent record results in a blocking refusal — FATE never degrades gracefully. It enforces ADR-005 exact-string consent: the typed phrase must match verbatim. Each FATE decision (permit or refuse) mints a receipt via the constitutional membrane. Source: docs/public/third-fact-v0.1.md + ADR-005.",
+      arabic: "بوابة التقييم والموافقة (FATE) هي المكوّن النشط للغشاء الدستوري. تقع بين النية (PAT) والتنفيذ (SAT)، وتُقيّم كل إجراء مقترح مقابل سجل الموافقة التفصيلية للمشغّل. مبدؤها: الإغلاق عند الشك — أي سجل غائب أو غير مكتمل يُوقف الإجراء. لا تُهادن ولا تتساهل.",
+      game: "FATE is the portcullis of the constitutional castle. Every action your PAT party wants to take must pass through FATE's gatehouse first. The gatekeeper checks the exact consent scroll — even one wrong word on the passphrase means the gate stays down. There's no 'close enough' in FATE's rulebook, and every verdict (open or closed) is logged as a receipt."
+    }
   },
   {
     concept: "dema",
@@ -86,7 +119,13 @@ const RAW_ENTRIES = [
     long: "DEMA is P7 (the Nexus/face) in the PAT-7 team. It is the only agent the human interacts with: all other PAT agents, SAT agents, and the URP are invisible to the operator. DEMA routes intent, surfaces previews, mints receipts, and refuses actions that violate the boundary. At the repo level, Dema is the CLI and local toolkit — the face of the system before federation is active.",
     truth_label: "DECLARED",
     see_also: ["pat", "boundary", "receipt"],
-    doc_anchor: "docs/canon/BIZRA_TOPOLOGY_CANON.md"
+    doc_anchor: "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+    perspectives: {
+      simple: "The human-facing agent — P7 of PAT-7. The only surface the operator directly touches.",
+      technical: "DEMA is P7/Nexus in the PAT-7 team, the sole interaction surface for the operator. Architectural responsibilities: route operator intent to the appropriate inner agents (P1–P6), surface previews before any consequential action, gate consent collection via FATE, mint receipts for every crossing of the constitutional membrane, and refuse boundary-violating requests with a logged refusal receipt. At the Dema repo level (before federation), DEMA is the local CLI: NODE0_LOCAL_SEED mode, no SAT federation, no URP connection. Source: BIZRA_TOPOLOGY_CANON.md §'The one sentence' + §'What is local per human'.",
+      arabic: "دِمَا (DEMA) هي الوكيل رقم 7 (P7/النواة) في فريق PAT-7، وهو الواجهة الإنسانية الوحيدة للمشغّل. تتولى توجيه النية، وعرض المعاينات، وجمع الموافقة، وسكّ الإيصالات. الاسم مأخوذ من اسم ابنة المؤسس — حاملة روح المشروع وهويته الإنسانية.",
+      game: "DEMA is your guild's guildmaster NPC — the single character you ever speak to. Behind DEMA is a full party of specialist agents handling quests, research, code, ethics, and publishing, but you never address them directly. DEMA translates your intent into party orders, shows you a preview before anything real happens, and holds the consent scroll that governs every action."
+    }
   },
   {
     concept: "bizra",
@@ -95,7 +134,13 @@ const RAW_ENTRIES = [
     long: "BIZRA (البذرة, the seed) is the full ecosystem. Its seven pillars are: PAT (Personal Agentic Team), SAT (System Agentic Team), DEMA (the face), FATE (consent gate), URP (Universal Resource Pool), RECEIPTS (the evidence chain), and POI (Proof of Impact). The Third Fact manifesto anchors the architecture at Bitcoin blocks 948027–948029. BIZRA is fractal: every node carries the full system DNA (seed-pattern invariant).",
     truth_label: "DECLARED",
     see_also: ["pat", "sat", "third-fact"],
-    doc_anchor: "docs/public/third-fact-v0.1.md"
+    doc_anchor: "docs/public/third-fact-v0.1.md",
+    perspectives: {
+      simple: "The constitutional ecosystem of sovereign local intelligence — PAT · SAT · DEMA · FATE · URP · RECEIPTS · POI.",
+      technical: "BIZRA is the 7-pillar constitutional ecosystem designed to close the Third Fact fracture: data comes from the many, infrastructure owned by the few. Seven pillars: PAT (user-loyal local team), SAT (system-loyal shared verifiers), DEMA (the human face, P7), FATE (consent gate), URP (singular shared resource pool), RECEIPTS (BLAKE3-chained provenance), POI (Proof of Impact). Architectural invariants: riba-zero, zann-zero, Gini ≤ 0.35, Ihsan ≥ 0.95, exact-string consent (ADR-005). Seed-pattern invariant: every node carries full system DNA. Anchored to Bitcoin blocks 948027–948029. Source: docs/public/third-fact-v0.1.md + BIZRA_TOPOLOGY_CANON.md.",
+      arabic: "بِزْرَة (BIZRA) هي منظومة دستورية للذكاء المحلي السيادي، مبنية على سبعة ركائز: فريق الوكلاء الشخصي (PAT)، وفريق الوكلاء النظامي (SAT)، ودِمَا (الواجهة)، وبوابة الموافقة (FATE)، ومجمع الموارد الشامل (URP)، والإيصالات (سلسلة الأدلة)، وإثبات الأثر (POI). الاسم مشتق من 'البذرة' — إذ كل عقدة تحمل الحمض النووي الكامل للنظام.",
+      game: "BIZRA is the full game world: seven core systems that every player node inherits. PAT is your local party, SAT is the realm's neutral referee guild, DEMA is the face you talk to, FATE is the gatehouse, URP is the shared server economy, RECEIPTS are the immutable quest log, and POI is the impact scoreboard. The world is fractal: every node carries the complete rule-set, like every cell carrying the full genome."
+    }
   },
   {
     concept: "third-fact",
@@ -131,7 +176,13 @@ const RAW_ENTRIES = [
     long: "Node0 is the first node. There is exactly one Node0. Per the Node Ordinal Law in BIZRA_TOPOLOGY_CANON.md: Node0 is the origin, and its ordinal is identity-bearing. The Dema CLI running locally on Node0 is called NODE0_LOCAL_SEED mode. Node0 runs without federation, without a live network, and without a public economic claim — it is the seed the whole system grows from.",
     truth_label: "DECLARED",
     see_also: ["node1", "boundary", "pat"],
-    doc_anchor: "docs/canon/BIZRA_TOPOLOGY_CANON.md"
+    doc_anchor: "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+    perspectives: {
+      simple: "The origin — the founder's primary device, the first activated PAT-7 in the system.",
+      technical: "Node0 is ordinal-zero: the unique first node, identity-bearing (ordinal is part of the node identity, not just metadata). Operating mode: NODE0_LOCAL_SEED — no federation, no live URP connection, no public economic claim. The Dema CLI repo is Node0's local seed implementation. Companion devices (e.g., a secondary phone) share Node0's ordinal — they are not Node1. The Node Ordinal Law (BIZRA_TOPOLOGY_CANON.md) fixes: ordinals are assigned in join order and are permanent; only one Node0 can ever exist; companion devices do not increment the ordinal counter. Source: BIZRA_TOPOLOGY_CANON.md §'Node ordinal law'.",
+      arabic: "العقدة صفر (Node0) هي نقطة الأصل — الجهاز الأساسي للمؤسس والعقدة الأولى في النظام. ترتيبها (صفر) يُمثّل هويتها لا مجرد وصف. تعمل في وضع 'البذرة المحلية' (NODE0_LOCAL_SEED) دون اتحاد مع الشبكة، ودون ادعاء اقتصادي عام. كل النظام ينبثق منها — كما ينبثق الشجر من بذرته.",
+      game: "Node0 is Player One — the origin character who woke the realm. There is exactly one Node0; you can have companion devices (like a phone that shares your login), but they don't become Node1. Node0 runs in solo mode: no server federation, no shared economy claims — just proving the mechanics work locally before the multiplayer gates open."
+    }
   },
   {
     concept: "node1",
@@ -203,7 +254,13 @@ const RAW_ENTRIES = [
     long: "A receipt is the atomic unit of BIZRA provenance. Every crossing of the constitutional membrane, every mint, every skill promotion, and every consent event produces a receipt chained to the previous one via BLAKE3 hash. Receipts have: a schema tag, an evidence hash, a chain position, a prev_hash link, and a truth label. A receipt cannot be minted, modified, or faked locally — it routes through the governed gateway handoff.",
     truth_label: "DECLARED",
     see_also: ["chain", "boundary", "truth-label"],
-    doc_anchor: "docs/canon/BIZRA_TOPOLOGY_CANON.md"
+    doc_anchor: "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+    perspectives: {
+      simple: "A BLAKE3-chained, tamper-evident record that every consequential action in Dema produces.",
+      technical: "A receipt is the atomic provenance unit in BIZRA. Schema fields: schema tag (e.g. bizra.dema.canon_glossary_entry.v0.1), evidence_hash (BLAKE3 of the event payload), chain_position (sequential integer), prev_hash (BLAKE3 of prior receipt — links the chain), truth_label (DECLARED/MEASURED/ASSUMED). The membrane's cryptographic provenance guarantee (property 3 in BIZRA_TOPOLOGY_CANON.md) requires every constitutional crossing to emit a receipt. Receipts are append-only; no local code path can modify or delete a minted receipt. Source: BIZRA_TOPOLOGY_CANON.md §'The membrane' property 3 + §'Receipt completeness'.",
+      arabic: "الإيصال هو الوحدة الأساسية للإثبات في منظومة BIZRA. يُنتَج عن كل عبور للغشاء الدستوري — كل سكّ، وكل تعزيز مهارة، وكل حدث موافقة. يتضمن: وسم المخطط، وبصمة الأدلة (BLAKE3)، وموضعه في السلسلة، ورابط الإيصال السابق. السلسلة إلحاقية فقط — لا حذف، ولا تعديل، ولا تزوير.",
+      game: "A receipt is a quest log entry that the game engine writes automatically and can never be erased. Finish a crafting action? Receipt. Cross the consent gate? Receipt. Each entry chains to the one before it via a cryptographic hash — tamper with any entry and the whole chain breaks like a broken link in plate armor. This is BIZRA's proof that you actually did what you claim you did."
+    }
   },
   {
     concept: "chain",
@@ -415,4 +472,33 @@ function truthLabelNote(label) {
   }
 }
 
-export { CANON_GLOSSARY, buildExplainPreview, formatExplainPreview };
+/**
+ * Retrieve one perspective text for a concept, or null if absent.
+ * Returns null for invalid perspective names or unknown concepts.
+ * Safe against prototype-pollution inputs.
+ *
+ * @param {string} concept - glossary key (case-insensitive)
+ * @param {string} perspective - one of: simple, technical, arabic, game
+ * @returns {string|null}
+ */
+function getPerspective(concept, perspective) {
+  const VALID = new Set(["simple", "technical", "arabic", "game"]);
+  if (typeof concept !== "string" || typeof perspective !== "string") return null;
+  if (!VALID.has(perspective)) return null;
+
+  const key = concept.trim().toLowerCase();
+  const entry = CANON_GLOSSARY.get(key);
+  if (!entry) return null;
+
+  const persp = entry.perspectives;
+  if (!persp) {
+    // No perspectives block — fall back to simple using short.
+    if (perspective === "simple") return entry.short;
+    return null;
+  }
+
+  const text = persp[perspective];
+  return typeof text === "string" && text.length > 0 ? text : null;
+}
+
+export { CANON_GLOSSARY, buildExplainPreview, formatExplainPreview, getPerspective };
