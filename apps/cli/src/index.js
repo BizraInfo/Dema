@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
-import { formatStatus } from "../../../packages/core/src/status.js";
+import { formatStatus, shouldUseColor } from "../../../packages/core/src/status.js";
 import { readOperatorPreferredName } from "../../../packages/core/src/operator-profile.js";
 import { buildNode0StatePreview } from "../../../packages/core/src/state.js";
 import {
@@ -448,7 +448,8 @@ async function dispatch(argv) {
 
     case "status": {
       const status = await statusWithLocalIdentity();
-      console.log(formatStatus(status));
+      const color = argv.includes("--no-color") ? false : shouldUseColor();
+      console.log(formatStatus(status, { color }));
       return;
     }
 

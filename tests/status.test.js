@@ -451,7 +451,7 @@ test("dema status (formatter) renders Human: <preferred_name> when profile popul
         DEMA_NODE0_STATUS_COMMAND: ""
       }
     });
-    assert.match(stdout, /^Human: Mumu$/m);
+    assert.match(stdout, /Human: Mumu/);
   } finally {
     await rm(demaRoot, { recursive: true, force: true });
   }
