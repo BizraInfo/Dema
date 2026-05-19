@@ -20,5 +20,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - run: npm install --no-audit --no-fund
       - run: npm test
-      - run: npm run coverage
+      # `npm run coverage` uses --test-coverage-{lines,branches,functions}
+      # thresholds which require Node 22+. Skip on 20.x; tests run on both.
+      - if: matrix.node-version == '22.x'
+        run: npm run coverage
       - run: npm run check

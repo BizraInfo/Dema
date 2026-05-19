@@ -25,7 +25,10 @@ jobs:
       - run: npm run check
       - name: Resolve BIZRA review class
         run: |
-          case "${GITHUB_HEAD_REF}" in
+          # GITHUB_HEAD_REF is set on pull_request events only.
+          # Fall back to GITHUB_REF_NAME so workflow_dispatch also works.
+          BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          case "$BRANCH" in
             devops/release-readiness|ci/devops-release-readiness-class)
               echo "BIZRA_REVIEW_CLASS=devops/release-readiness" >> "$GITHUB_ENV"
               ;;
@@ -39,7 +42,7 @@ jobs:
               echo "BIZRA_REVIEW_CLASS=policy/broad-scope" >> "$GITHUB_ENV"
               ;;
             *)
-              echo "Unsupported BIZRA review branch: ${GITHUB_HEAD_REF}" >&2
+              echo "Unsupported BIZRA review branch: $BRANCH" >&2
               exit 1
               ;;
           esac
