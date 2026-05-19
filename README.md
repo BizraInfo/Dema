@@ -1,5 +1,7 @@
 # Dema
 
+> **A deterministic constitutional execution engine with replayable receipts.**
+
 **Your sovereign AI node companion.**
 
 Dema helps you run a private AI workspace on your own machine -- with memory, safe actions, receipts, and a clear next step.

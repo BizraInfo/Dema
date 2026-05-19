@@ -1,4 +1,11 @@
 // Dema Visual Theme — Isomorphic port of bizra-cli/src/theme.rs
+//
+// Operating canon (primary · ecosystem-wide · per ADR-014):
+//   A deterministic constitutional execution engine with replayable receipts.
+//
+// Operating law (secondary · cross-runtime ports · per ADR-013):
+//   Design wisdom transfers across runtime boundaries. Code does not.
+//
 // Source: /home/bizra-operating-system/BIZRA Node0/bizra-data-lake/bizra-omega/
 //          bizra-cli/src/theme.rs (Rust · ratatui · 283 LOC)
 // Author of source: MoMo (محمد) — Dubai Night Sky palette · Arabic borders ·
@@ -6,7 +13,8 @@
 // Port discipline: zero new deps · plain ANSI escape codes · 24-bit / 256 /
 //                  none palette fallback · noColor suppression compatible with
 //                  resolveFormatterOptsFromEnv().
-// ADR: docs/06-adr/ADR-013-visual-language-isomorphism-bizra-cli-to-dema.md
+// ADRs: docs/06-adr/ADR-013-visual-language-isomorphism-bizra-cli-to-dema.md
+//       docs/06-adr/ADR-014-three-runtime-architecture-canonization.md
 
 const ESC = "\x1b[";
 
