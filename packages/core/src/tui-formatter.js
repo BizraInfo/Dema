@@ -19,6 +19,10 @@
 // and audit in 5 minutes. Recognition before configuration. Refusal-as-
 // product visible: every "by design" absence is annotated.
 
+// Theme port — bizra-cli/src/theme.rs design language adapted to JS.
+// See docs/06-adr/ADR-013-visual-language-isomorphism-bizra-cli-to-dema.md
+import { Theme } from "./dema-theme.js";
+
 // ─── ANSI primitives ───────────────────────────────────────────────────────
 
 const ESC = "\x1b[";
@@ -541,9 +545,11 @@ export function formatHomebasePreview(preview, {
   const na = preview.next_action || {};
   const affs = Array.isArray(preview.affordances) ? preview.affordances : [];
 
-  // Top border + branded header line
+  // Top border + branded header line.
+  // Header title uses Theme.title (Ihsān-gold from bizra-cli theme.rs port) —
+  // proof-of-isomorphism for ADR-013. See dema-theme.js.
   lines.push(topBorder(width, c));
-  const headerLeft = bold(`DEMA · ${h.node_name ?? "Node0"}`, noColor);
+  const headerLeft = Theme.title(`DEMA · ${h.node_name ?? "Node0"}`, { noColor });
   const headerRight = dim(`v${h.dema_version ?? "?"}`, noColor);
   const headerMid = `${dim(c.bullet, noColor)} ${h.date_human_gst ?? "?"} ${dim(c.bullet, noColor)} ${h.time_human_gst ?? "?"}`;
   lines.push(lineBox(`${headerLeft}  ${headerMid}  ${headerRight}`, { width, c }));
