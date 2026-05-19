@@ -269,6 +269,8 @@ Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
                            Self-audits reasoning shape against the 5 Key Maker invariants; fails closed when violated
   dema llm-invoke [--model NAME --prompt TEXT] [--invoke --consent "GO: invoke local LLM at NAME"] [--summary]
                            C1 · local LLM adapter · preview-only by default; --invoke + exact consent calls Ollama at localhost
+  dema master-craftsmanship audit [--json] [<path>]
+                           External audit of any artifact against the 10 master-craftsmanship invariants. Default subject: tests/node-onboarding-adr011-compliance.test.js. Verdict: COMPLIANT (10/10) | PARTIAL (N/10) | NON-COMPLIANT. Exits 1 on non-compliant or missing path.
 
 Tasks and views:
   dema task         List registered tasks
@@ -293,6 +295,7 @@ const REGISTERED_COMMANDS_LIST = [
   { command: "skill-growth-governor", description: "skill growth governor preview" },
   { command: "project-status", description: "project status preview" },
   { command: "craftsmanship-witness", description: "master-craftsmanship creation preview" },
+  { command: "master-craftsmanship", description: "audit an artifact against the 10 master-craftsmanship invariants" },
   { command: "llm-router", description: "local LLM router preview" },
   { command: "process-mining", description: "operator-pattern mirror" },
   { command: "key-maker-check", description: "self-audit reasoning against Key Maker invariants" },

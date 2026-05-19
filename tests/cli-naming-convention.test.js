@@ -18,6 +18,11 @@ const KEBAB_ALLOWLIST = new Set([
   "process-mining",
   "key-maker-check",
   "llm-invoke",
+  // ADR-012 amendment 2026-05-19: extended allowlist to 13 entries with the
+  // addition of `master-craftsmanship` (the external-audit surface that
+  // consolidates the ADR-011 phase-4 compliance suite). Scoped exception
+  // per the ADR's own amendment-by-typed-GO rule. See ADR-012 §Decision.
+  "master-craftsmanship",
 ]);
 
 function classify(command) {
@@ -90,9 +95,10 @@ test("pattern distribution matches ADR-012 counts (drift guard)", () => {
     counts[classify(command)] += 1;
   }
   // ADR-012 documents: single-word=17, space-subcommand=13 (top-level tokens),
-  // kebab=12, colon=2. If this test fails, update ADR-012 alongside.
-  assert.equal(counts.kebab, 12,
-    `Kebab count changed (expected 12, got ${counts.kebab}). Update ADR-012 allowlist.`);
+  // kebab=13 (since 2026-05-19 amendment adding master-craftsmanship), colon=2.
+  // If this test fails, update ADR-012 alongside.
+  assert.equal(counts.kebab, 13,
+    `Kebab count changed (expected 13, got ${counts.kebab}). Update ADR-012 allowlist.`);
   assert.equal(counts.colon, 2,
     `Colon count changed (expected 2, got ${counts.colon}). Update ADR-012 allowlist.`);
   // Single-word + space-subcommand bounds: check they are non-zero and reasonable.

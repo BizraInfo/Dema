@@ -51,6 +51,7 @@ export const HELP_TOPICS = Object.freeze({
       Object.freeze({ command: "evidence receipt preview", short_description: "Preview receipt-shaped evidence; does not mint" }),
       Object.freeze({ command: "ihsan floor preview", short_description: "Preview externally supplied Ihsan floor check; does not certify" }),
       Object.freeze({ command: "evidence-event", short_description: "EvidenceChain event preview; chain_advance=false" }),
+      Object.freeze({ command: "master-craftsmanship audit", short_description: "External audit of an artifact against the 10 master-craftsmanship invariants; verdict COMPLIANT (10/10) | PARTIAL | NON-COMPLIANT" }),
     ]),
     see_also: Object.freeze(["readiness", "spine"]),
   }),
