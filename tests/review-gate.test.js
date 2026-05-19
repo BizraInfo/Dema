@@ -518,6 +518,11 @@ test("MAIN-04: ci/* branches map to policy/broad-scope (parity with adr/* and fi
   assert.equal(out.ok, true);
 });
 
+test("MAIN-05: docs/* branches map to policy/broad-scope (parity with adr/* fix/* ci/*)", () => {
+  const out = validatePrClass({ reviewClass: "policy/broad-scope", branch: "docs/canonize-step7-second-boundary-vocab" });
+  assert.equal(out.ok, true);
+});
+
 test("policy/broad-scope proof scope accepts any file list and skips allowlist enforcement", () => {
   const broadFileSet = [
     "docs/anything.md",
