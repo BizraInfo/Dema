@@ -11,6 +11,7 @@
 //   - Tests can drive it via injected stdin/stdout streams.
 
 import { createInterface } from "node:readline";
+import { routeChatInput } from "./chat-router.js";
 
 const PROMPT = "dema> ";
 
@@ -140,6 +141,18 @@ export async function runShell({
         rl.prompt();
         return;
       }
+
+      // Conversational fallback: route through chat-router before dispatch.
+      // If the input is a BIZRA concept, a greeting, a typo suggestion, or
+      // unknown, respond conversationally and skip the CLI dispatcher.
+      const chatResult = routeChatInput(line);
+      const PASS_THROUGH_INTENTS = new Set(["empty", "registered-command"]);
+      if (!PASS_THROUGH_INTENTS.has(chatResult.intent)) {
+        output.write(chatResult.response + "\n");
+        rl.prompt();
+        return;
+      }
+
       try {
         await dispatchCommand(argv);
       } catch (err) {

@@ -1,0 +1,197 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { routeChatInput, STOPWORDS, GREETING_WORDS } from "../packages/core/src/chat-router.js";
+
+// ── Dependency-injection helpers ──────────────────────────────────────────────
+
+const MOCK_GLOSSARY = new Map([
+  ["bizra", { concept: "bizra", title: "BIZRA · The 7-Pillar Ecosystem", short: "The sovereign-AI ecosystem.", see_also: ["pat", "dema"] }],
+  ["ihsan", { concept: "ihsan", title: "Ihsan", short: "Excellence as the minimum bar.", see_also: ["adl"] }],
+  ["adl",   { concept: "adl",   title: "Adl",   short: "Fairness and bounded inequality.", see_also: ["ihsan"] }],
+  ["node0", { concept: "node0", title: "Node0", short: "The origin device.", see_also: ["node1"] }]
+]);
+
+const MOCK_COMMANDS = [
+  { command: "status", description: "show Node0 readiness" },
+  { command: "state",  description: "Node0 state preview" },
+  { command: "memory", description: "list local memory entries" },
+  { command: "help",   description: "show command list" }
+];
+
+function mockSuggester(input, cmds) {
+  const lower = input.toLowerCase();
+  const exact = cmds.find((c) => c.command === lower);
+  if (exact) return { matched: "exact", suggestions: [exact], originalInput: input, missingToken: lower };
+  return { matched: "unknown", suggestions: [], originalInput: input, missingToken: lower };
+}
+
+const DI = { glossary: MOCK_GLOSSARY, suggester: mockSuggester, registeredCommands: MOCK_COMMANDS };
+
+// ── Structural invariants ─────────────────────────────────────────────────────
+
+test("STOPWORDS is a frozen-compatible Set with expected tokens", () => {
+  assert.ok(STOPWORDS instanceof Set);
+  assert.ok(STOPWORDS.has("what"));
+  assert.ok(STOPWORDS.has("tell"));
+  assert.ok(STOPWORDS.has("the"));
+  assert.ok(!STOPWORDS.has("bizra"));
+});
+
+test("GREETING_WORDS contains expected greetings including Arabic variants", () => {
+  assert.ok(GREETING_WORDS instanceof Set);
+  assert.ok(GREETING_WORDS.has("salam"));
+  assert.ok(GREETING_WORDS.has("salaam"));
+  assert.ok(GREETING_WORDS.has("hello"));
+  assert.ok(GREETING_WORDS.has("hi"));
+  assert.ok(GREETING_WORDS.has("hey"));
+});
+
+// ── Empty / whitespace ────────────────────────────────────────────────────────
+
+test("empty string → intent: empty, response: ''", () => {
+  const r = routeChatInput("", DI);
+  assert.equal(r.intent, "empty");
+  assert.equal(r.response, "");
+  assert.deepEqual(r.suggestedCommands, []);
+});
+
+test("whitespace-only → intent: empty", () => {
+  const r = routeChatInput("   \t  ", DI);
+  assert.equal(r.intent, "empty");
+});
+
+// ── Registered command ────────────────────────────────────────────────────────
+
+test("exact registered command 'status' → intent: registered-command", () => {
+  const r = routeChatInput("status", DI);
+  assert.equal(r.intent, "registered-command");
+  assert.ok(r.suggestedCommands[0].includes("status"));
+});
+
+// ── Concept match ─────────────────────────────────────────────────────────────
+
+test("'what is bizra' → intent: concept-match, concept: bizra", () => {
+  const r = routeChatInput("what is bizra", DI);
+  assert.equal(r.intent, "concept-match");
+  assert.equal(r.concept, "bizra");
+  assert.match(r.response, /BIZRA/);
+  assert.match(r.response, /I can answer that from my local knowledge/);
+});
+
+test("'tell me about ihsan' → intent: concept-match, concept: ihsan", () => {
+  const r = routeChatInput("tell me about ihsan", DI);
+  assert.equal(r.intent, "concept-match");
+  assert.equal(r.concept, "ihsan");
+});
+
+test("'tell me about node0' → intent: concept-match, concept: node0", () => {
+  const r = routeChatInput("tell me about node0", DI);
+  assert.equal(r.intent, "concept-match");
+  assert.equal(r.concept, "node0");
+});
+
+test("case-insensitive: 'WHAT IS BIZRA' → concept-match bizra", () => {
+  const r = routeChatInput("WHAT IS BIZRA", DI);
+  assert.equal(r.intent, "concept-match");
+  assert.equal(r.concept, "bizra");
+});
+
+test("multiple concepts 'compare ihsan and adl' → first match (ihsan)", () => {
+  const r = routeChatInput("compare ihsan and adl", DI);
+  assert.equal(r.intent, "concept-match");
+  // 'and' is not a stopword; 'ihsan' appears before 'adl' in content tokens
+  assert.equal(r.concept, "ihsan");
+});
+
+// ── Greeting ──────────────────────────────────────────────────────────────────
+
+test("'hello dema' → intent: greeting", () => {
+  const r = routeChatInput("hello dema", DI);
+  assert.equal(r.intent, "greeting");
+  assert.match(r.response, /I'm not a chat agent yet/);
+});
+
+test("'salam' alone → intent: greeting (Arabic-aware)", () => {
+  const r = routeChatInput("salam", DI);
+  assert.equal(r.intent, "greeting");
+});
+
+test("'hey' → intent: greeting", () => {
+  const r = routeChatInput("hey", DI);
+  assert.equal(r.intent, "greeting");
+});
+
+// ── Command suggestion (typo) ─────────────────────────────────────────────────
+
+test("'stauts' (typo) → intent: command-suggestion via real suggester", () => {
+  // Use the real suggester so Levenshtein fires.
+  const r = routeChatInput("stauts");
+  assert.equal(r.intent, "command-suggestion");
+  assert.match(r.response, /status/);
+  assert.match(r.response, /Did you mean/);
+});
+
+// ── Unknown ───────────────────────────────────────────────────────────────────
+
+test("'xyzqwerty asdf' → intent: unknown", () => {
+  const r = routeChatInput("xyzqwerty asdf", DI);
+  assert.equal(r.intent, "unknown");
+  assert.match(r.response, /xyzqwerty/);
+  assert.match(r.response, /dema explain/);
+});
+
+test("stopwords alone 'the the the' → unknown (no concept match)", () => {
+  const r = routeChatInput("the the the", DI);
+  assert.equal(r.intent, "unknown");
+});
+
+// ── Edge cases / adversarial ──────────────────────────────────────────────────
+
+test("'?' alone → command-suggestion or unknown, not a throw", () => {
+  const r = routeChatInput("?");
+  assert.ok(["command-suggestion", "unknown"].includes(r.intent), `unexpected intent: ${r.intent}`);
+  assert.equal(typeof r.response, "string");
+});
+
+test("input with newlines and tabs → handled safely, no throw", () => {
+  const r = routeChatInput("what\tis\nbizra", DI);
+  // After normalization the concept 'bizra' should still match.
+  assert.equal(r.intent, "concept-match");
+  assert.equal(r.concept, "bizra");
+});
+
+test("prototype pollution attempt → safe, no leak", () => {
+  const r = routeChatInput("__proto__ constructor", DI);
+  // Neither token is a registered command or glossary concept.
+  assert.ok(["unknown", "command-suggestion"].includes(r.intent));
+  assert.equal(typeof r.response, "string");
+  assert.ok(!Object.prototype.hasOwnProperty.call({}, "pwned"));
+});
+
+test("very long input (10KB+) → intent: unknown, no throw", () => {
+  const long = "x".repeat(10241);
+  const r = routeChatInput(long);
+  assert.equal(r.intent, "unknown");
+  assert.equal(typeof r.response, "string");
+});
+
+// ── Dependency injection ──────────────────────────────────────────────────────
+
+test("DI: mock glossary and suggester resolve 'bizra' concept", () => {
+  const r = routeChatInput("explain bizra please", DI);
+  // 'explain' is a stopword; 'bizra' is a content token that hits the mock glossary
+  assert.equal(r.intent, "concept-match");
+  assert.equal(r.concept, "bizra");
+});
+
+test("DI: mock suggester exact-match 'memory' → registered-command", () => {
+  const r = routeChatInput("memory", DI);
+  assert.equal(r.intent, "registered-command");
+});
+
+test("suggestedCommands is always an array", () => {
+  for (const input of ["", "hello", "bizra", "xyzqwerty", "status"]) {
+    const r = routeChatInput(input, DI);
+    assert.ok(Array.isArray(r.suggestedCommands), `suggestedCommands not array for input '${input}'`);
+  }
+});
