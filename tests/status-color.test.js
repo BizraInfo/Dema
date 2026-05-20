@@ -57,11 +57,33 @@ test("shouldUseColor: NO_COLOR env suppresses color", () => {
   }
 });
 
+test("shouldUseColor: opts.color=true overrides NO_COLOR", () => {
+  const saved = process.env.NO_COLOR;
+  process.env.NO_COLOR = "";
+  try {
+    assert.equal(shouldUseColor({ color: true }), true);
+  } finally {
+    if (saved === undefined) delete process.env.NO_COLOR;
+    else process.env.NO_COLOR = saved;
+  }
+});
+
 test("shouldUseColor: TERM=dumb suppresses color", () => {
   const saved = process.env.TERM;
   process.env.TERM = "dumb";
   try {
     assert.equal(shouldUseColor({}), false);
+  } finally {
+    if (saved === undefined) delete process.env.TERM;
+    else process.env.TERM = saved;
+  }
+});
+
+test("shouldUseColor: opts.color=true overrides TERM=dumb", () => {
+  const saved = process.env.TERM;
+  process.env.TERM = "dumb";
+  try {
+    assert.equal(shouldUseColor({ color: true }), true);
   } finally {
     if (saved === undefined) delete process.env.TERM;
     else process.env.TERM = saved;
