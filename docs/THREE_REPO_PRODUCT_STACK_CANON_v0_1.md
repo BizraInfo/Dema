@@ -54,6 +54,8 @@ Dema must not claim that it directly performs governed runtime execution if that
 
 `bizra-data-lake` is authoritative for governed runtime and proof-core claims.
 
+`bizra-omega` is the Rust runtime/proof workspace inside `bizra-data-lake`; references to Data Lake runtime/proof authority include that workspace unless a document explicitly narrows the scope.
+
 Runtime/proof claims must point to evidence in `bizra-data-lake`, such as:
 
 ```text
@@ -182,7 +184,7 @@ The delivery ladder is:
 local gate -> branch gate -> PR gate -> merge gate -> release candidate gate -> release receipt
 ```
 
-Minimum local gate:
+Repo-reproducible minimum local gate:
 
 ```text
 npm test
@@ -190,8 +192,15 @@ npm run check
 npm run llm:guidance
 npm run release:readiness
 git diff --check
+```
+
+Operator-local extended gate:
+
+```text
 ~/.dema/bin/mu-test-all
 ```
+
+The extended gate is valid operational evidence for the operator's local Node0 harness, but it is not a repo-reproducible minimum because it depends on an operator-local absolute path outside a clean checkout.
 
 Minimum PR gate:
 
@@ -250,9 +259,16 @@ receipt/proof pointer if available
 This canon aligns future delivery work with three external professional standards families:
 
 ```text
-DORA:
-  delivery measurement through lead time, deployment frequency,
-  failed deployment recovery time, change fail rate, and deployment rework rate.
+DORA Four Key Metrics:
+  - lead time for changes
+  - deployment frequency
+  - time to restore service
+  - change failure rate
+
+BIZRA internal delivery extensions:
+  - deployment rework rate
+  - proof/receipt verification rate
+  - local-governance gate pass rate
 
 NIST SSDF:
   secure software development practices integrated into the SDLC.
