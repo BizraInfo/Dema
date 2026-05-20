@@ -29,6 +29,7 @@ export function isReadyForBoundedDiagnostic(status) {
 }
 
 export function shouldUseColor(opts = {}) {
+  if (opts.color === true) return true;
   if (opts.color === false) return false;
   if (process.env.NO_COLOR !== undefined) return false;
   if (process.env.TERM === "dumb") return false;

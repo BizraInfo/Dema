@@ -1,9 +1,54 @@
-import { readdir, readFile, stat } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { readdir, readFile, stat, realpath } from "node:fs/promises";
+import { basename, join, resolve, relative, isAbsolute, sep } from "node:path";
 import { homedir } from "node:os";
 
 const DEFAULT_MAX_FILES = 500;
 const DEFAULT_MAX_JSON_BYTES = 1024 * 1024;
+
+// v0.1.2 (2026-05-20 · PR #64 review feedback): receipt root containment.
+//
+// State Boundary Matrix v0.1 #7 classifies DEMA_HOME as Constitutional.
+// v0.1.1 (this slice's first attempt) restricted DEMA_HOME to homedir() or
+// tmpdir(), which 3 reviewers flagged as too strict (operators can legitimately
+// declare a project-local state root anywhere on disk). v0.1.2 corrects this:
+//
+//   1. safeReceiptsRoot() accepts ANY operator-declared root · pure path
+//      normalization via resolve() · `..` segments collapse · no whitelist
+//   2. Per-entry containment is enforced inside the receipts iteration via
+//      path.relative() + realpath() · catches symlink escapes and traversal
+//      attempts at FILE granularity rather than ROOT granularity
+//   3. Cross-platform safe: path module's relative()/resolve() are platform-aware
+//      (handles Windows case-insensitivity + separators via path.win32/posix)
+function safeReceiptsRoot(root) {
+  // Operator-declared root · `resolve()` collapses `..` and produces an
+  // absolute path. No whitelist. Containment is enforced per-entry below.
+  return resolve(root);
+}
+
+// Returns true if `candidatePath` lives inside `rootPath` after symlink
+// resolution. Both args should be absolute paths. Falls back to literal-path
+// comparison when realpath() can't resolve (e.g., target doesn't exist yet).
+async function isContainedReceipt(rootPath, candidatePath) {
+  // Cheap literal-path check first (no I/O · catches most traversal attempts)
+  const litRel = relative(rootPath, candidatePath);
+  if (litRel === ".." || litRel.startsWith(".." + sep) || isAbsolute(litRel)) {
+    return false;
+  }
+  // realpath check catches symlink escapes
+  try {
+    const realRoot = await realpath(rootPath);
+    const realCand = await realpath(candidatePath);
+    const realRel = relative(realRoot, realCand);
+    if (realRel === ".." || realRel.startsWith(".." + sep) || isAbsolute(realRel)) {
+      return false;
+    }
+    return true;
+  } catch {
+    // realpath failed (candidate doesn't exist or root doesn't exist) ·
+    // fall back to the literal-path result (already known to be contained)
+    return true;
+  }
+}
 
 const LIST_BOUNDARY = Object.freeze({
   store_scope: "local_read_list",
@@ -34,7 +79,7 @@ function normalizeListOptions({
   };
 }
 
-async function collectReceiptFiles(dir, files, { maxFiles, prefix = "" }) {
+async function collectReceiptFiles(dir, files, { maxFiles, prefix = "", containmentRoot }) {
   if (files.length >= maxFiles) return;
 
   const entries = await readdir(dir, { withFileTypes: true });
@@ -44,8 +89,16 @@ async function collectReceiptFiles(dir, files, { maxFiles, prefix = "" }) {
     if (files.length >= maxFiles) return;
     const relativePath = prefix ? join(prefix, entry.name) : entry.name;
     const path = join(dir, entry.name);
+
+    // v0.1.2: containment check · symlinks/traversal escaping the receipts
+    // root are silently skipped during enumeration. This catches a symlinked
+    // subdir or file that would otherwise escape via realpath resolution.
+    if (containmentRoot && !(await isContainedReceipt(containmentRoot, path))) {
+      continue;
+    }
+
     if (entry.isDirectory()) {
-      await collectReceiptFiles(path, files, { maxFiles, prefix: relativePath });
+      await collectReceiptFiles(path, files, { maxFiles, prefix: relativePath, containmentRoot });
     } else if (entry.isFile() && entry.name.endsWith(".json")) {
       files.push(relativePath);
     }
@@ -95,16 +148,21 @@ export async function listReceipts(
   root = process.env.DEMA_HOME || join(homedir(), ".dema"),
   options = {}
 ) {
-  const receiptsRoot = join(root, "receipts");
+  const normalizedRoot = safeReceiptsRoot(root);
+  const receiptsRoot = join(normalizedRoot, "receipts");
   const limits = normalizeListOptions(options);
   if (limits.maxFiles === 0 || limits.limit === 0) return [];
 
   try {
     const files = [];
-    await collectReceiptFiles(receiptsRoot, files, limits);
+    // v0.1.2: pass containment root for per-entry symlink/traversal detection
+    await collectReceiptFiles(receiptsRoot, files, { ...limits, containmentRoot: receiptsRoot });
     const page = files.slice(limits.offset, limits.offset + limits.limit);
     return Promise.all(page.map((file) => receiptSummary(join(receiptsRoot, file), limits)));
   } catch {
+    // Fail-soft: any IO error (path doesn't exist, permission denied, etc.)
+    // returns []. Boundary violations are caught BEFORE this by the
+    // containment guard inside collectReceiptFiles.
     return [];
   }
 }

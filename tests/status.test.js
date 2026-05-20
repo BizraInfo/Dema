@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, readFile, rm, symlink } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
@@ -391,6 +391,94 @@ test("receipt store labels listing as local read/list rather than governed runti
     () => readFile(join(fixtureRoot, "receipts", "artifact-011.json"), "utf8"),
     /ENOENT/
   );
+});
+
+// v0.1.2 (2026-05-20 · PR #64 review feedback): receipt root containment.
+//
+// Earlier v0.1.1 restricted DEMA_HOME to homedir() or tmpdir(), which 3
+// reviewers flagged as too strict (operator can legitimately declare a
+// project-local state root anywhere). v0.1.2 corrects this:
+//   1. Any operator-declared DEMA_HOME is honored after path normalization
+//   2. Per-entry containment is enforced via path.relative() + realpath() so
+//      symlink escapes and traversal beyond the declared root are caught
+//   3. Cross-platform safe (path module handles Windows case-folding)
+//
+// Tests below cover the 7 acceptance criteria from the review-thread closeout
+// scope: custom DEMA_HOME · tmpdir fixture · symlink escape · listReceipts
+// soft-fail · readReceipt hard-fail · path normalization · traversal collapse.
+
+test("F-3 v0.1.2 · AC-1: custom project-local DEMA_HOME outside home/tmp accepted", async () => {
+  // v0.1.1 would have rejected this; v0.1.2 honors operator-declared root.
+  // We can't easily write to /opt in tests, so we verify via no-throw +
+  // expected fail-soft (no receipts dir there).
+  const result = await listReceipts("/opt/dema-nonexistent-project-x");
+  assert.deepEqual(result, [], "non-existent operator-declared root returns [] (fail-soft)");
+});
+
+test("F-3 v0.1.2 · AC-2: tmpdir fixture pattern still works (backward compat)", async () => {
+  await withReceiptFixture("dema-v012-tmpdir-", async (root) => {
+    await writeReceiptFixture(root, "x.json", { receipt_id: "r", artifact_id: "A" });
+    const receipts = await listReceipts(root);
+    assert.equal(receipts.length, 1);
+    assert.equal(receipts[0].artifact_id, "A");
+  });
+});
+
+test("F-3 v0.1.2 · AC-3: receipts symlink escaping DEMA_HOME is rejected (skipped during enumeration)", async () => {
+  await withReceiptFixture("dema-v012-symlink-", async (root) => {
+    // legitimate receipt inside
+    await writeReceiptFixture(root, "real.json", { receipt_id: "r-real", artifact_id: "A-REAL" });
+    // adversarial: plant a file OUTSIDE the receipts root, then symlink IN
+    const outsideDir = await mkdtemp(join(tmpdir(), "dema-v012-outside-"));
+    try {
+      const outsideFile = join(outsideDir, "evil.json");
+      await writeFile(outsideFile, JSON.stringify({ receipt_id: "r-evil", artifact_id: "A-EVIL" }));
+      await symlink(outsideFile, join(root, "receipts", "evil.json"));
+      const receipts = await listReceipts(root);
+      const hasEvil = receipts.some(r => r.artifact_id === "A-EVIL");
+      assert.equal(hasEvil, false, "symlinked receipt escaping root must NOT appear in listing");
+      // real receipt is still surfaced
+      assert.equal(receipts.some(r => r.artifact_id === "A-REAL"), true);
+    } finally {
+      await rm(outsideDir, { recursive: true, force: true });
+    }
+  });
+});
+
+test("F-3 v0.1.2 · AC-4: listReceipts soft-fail on nonexistent root returns []", async () => {
+  const result = await listReceipts("/tmp/dema-truly-nonexistent-12345");
+  assert.deepEqual(result, []);
+});
+
+test("F-3 v0.1.2 · AC-5: readReceipt hard-fail on nonexistent receipt throws", async () => {
+  await assert.rejects(
+    () => readReceipt("nonexistent-id", "/tmp/dema-truly-nonexistent-12345"),
+    /Receipt not found/,
+    "readReceipt must throw with clear 'not found' error"
+  );
+});
+
+test("F-3 v0.1.2 · AC-6: traversal segments in DEMA_HOME collapse via resolve()", async () => {
+  await withReceiptFixture("dema-v012-traversal-", async (root) => {
+    await writeReceiptFixture(root, "t.json", { receipt_id: "rt", artifact_id: "AT" });
+    // DEMA_HOME value with `..` segments · resolve() inside safeReceiptsRoot collapses them
+    const indirectRoot = join(root, "sub", "..");
+    const receipts = await listReceipts(indirectRoot);
+    assert.equal(receipts.length, 1);
+    assert.equal(receipts[0].artifact_id, "AT");
+  });
+});
+
+test("F-3 v0.1.2 · AC-7: equivalent paths produce equivalent listings (path normalization)", async () => {
+  await withReceiptFixture("dema-v012-norm-", async (root) => {
+    await writeReceiptFixture(root, "n.json", { receipt_id: "rn", artifact_id: "AN" });
+    // Pass root with trailing separator vs without · normalized identically
+    const withTrailing = root.endsWith("/") ? root : `${root}/`;
+    const a = await listReceipts(root);
+    const b = await listReceipts(withTrailing);
+    assert.equal(a.length, b.length);
+    assert.equal(a[0].artifact_id, b[0].artifact_id);
+  });
 });
 
 test("dema status:json injects human from profile.json::preferred_name (local-first identity at CLI boundary)", async () => {
