@@ -393,6 +393,27 @@ test("receipt store labels listing as local read/list rather than governed runti
   );
 });
 
+// v0.1.1 (2026-05-20): F-3 fix · DEMA_HOME path-containment guard tests.
+// State Boundary Matrix v0.1 #7 classifies DEMA_HOME as Constitutional. The
+// guard at safeReceiptsRoot() rejects any path that resolves outside the
+// user homedir() or tmpdir() · prior to this fix a crafted `..` value would
+// escape to /etc, /var, /root, etc. Tests below verify both fail modes:
+// listReceipts soft-fails (returns []) · readReceipt hard-throws.
+test("F-3: listReceipts rejects roots outside home/tmp · returns empty list", async () => {
+  // Path-traversal attempt to /etc → guard rejects · soft-fail returns []
+  const result = await listReceipts("/etc");
+  assert.deepEqual(result, [], "listReceipts on /etc must return empty list (containment guard)");
+});
+
+test("F-3: readReceipt throws on roots outside home/tmp", async () => {
+  // Path-traversal attempt → guard throws BEFORE filesystem access
+  await assert.rejects(
+    () => readReceipt("any-selector", "/etc"),
+    /Receipts root must be under homedir.*tmpdir/,
+    "readReceipt must throw with clear message on out-of-boundary root"
+  );
+});
+
 test("dema status:json injects human from profile.json::preferred_name (local-first identity at CLI boundary)", async () => {
   const demaRoot = await mkdtemp(join(tmpdir(), "dema-status-human-"));
   try {

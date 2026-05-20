@@ -1,9 +1,33 @@
 import { readdir, readFile, stat } from "node:fs/promises";
-import { basename, join } from "node:path";
-import { homedir } from "node:os";
+import { basename, join, resolve, sep } from "node:path";
+import { homedir, tmpdir } from "node:os";
 
 const DEFAULT_MAX_FILES = 500;
 const DEFAULT_MAX_JSON_BYTES = 1024 * 1024;
+
+// v0.1.1 (2026-05-20): F-3 fix · DEMA_HOME path-containment guard.
+// State Boundary Matrix v0.1 #7 classifies DEMA_HOME as Constitutional. Prior
+// version accepted process.env.DEMA_HOME into receipt path joining without
+// containment check · a crafted `..` value would escape the receipts root.
+// This guard enforces the matrix's classification at the source level (the
+// canonical pattern ADR-015 calls for: deterministic verifier · not LLM memory).
+//
+// Allowed roots: user homedir() OR tmpdir() · the latter enables the existing
+// withReceiptFixture test pattern (mkdtempSync writes under /tmp). Both are
+// OS-managed paths · path traversal to /etc, /root, /var, etc. is rejected.
+function safeReceiptsRoot(root) {
+  const resolvedRoot = resolve(root);
+  const resolvedHome = resolve(homedir());
+  const resolvedTmp = resolve(tmpdir());
+  const underHome = resolvedRoot === resolvedHome || resolvedRoot.startsWith(resolvedHome + sep);
+  const underTmp = resolvedRoot === resolvedTmp || resolvedRoot.startsWith(resolvedTmp + sep);
+  if (!underHome && !underTmp) {
+    throw new Error(
+      `Receipts root must be under homedir() or tmpdir() · refused: ${root} (resolved: ${resolvedRoot})`
+    );
+  }
+  return resolvedRoot;
+}
 
 const LIST_BOUNDARY = Object.freeze({
   store_scope: "local_read_list",
@@ -95,7 +119,13 @@ export async function listReceipts(
   root = process.env.DEMA_HOME || join(homedir(), ".dema"),
   options = {}
 ) {
-  const receiptsRoot = join(root, "receipts");
+  let receiptsRoot;
+  try {
+    receiptsRoot = join(safeReceiptsRoot(root), "receipts");
+  } catch {
+    // F-3: path-containment failure · return empty (matches existing fail-soft)
+    return [];
+  }
   const limits = normalizeListOptions(options);
   if (limits.maxFiles === 0 || limits.limit === 0) return [];
 
@@ -114,6 +144,9 @@ export async function readReceipt(
   root = process.env.DEMA_HOME || join(homedir(), ".dema"),
   options = {}
 ) {
+  // F-3: containment guard · throws on traversal · readReceipt already throws
+  // on other errors so propagating is the right semantic here.
+  safeReceiptsRoot(root);
   const receipts = await listReceipts(root, options);
   const pathMatches = receipts.filter((receipt) => receipt.path === selector);
   const idMatches = receipts.filter(
