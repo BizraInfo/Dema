@@ -31,6 +31,14 @@ import {
 } from "../../../packages/core/src/tui-formatter.js";
 import { buildLocalLLMRouterPreview } from "../../../packages/core/src/local-llm-router-preview.js";
 import {
+  buildModelBrokerPreview,
+  routeForTask
+} from "../../../packages/models/src/model-broker-preview.js";
+import {
+  DEFAULT_SAMPLE_REGISTRY,
+  buildRegistryFromConfig
+} from "../../../packages/models/src/model-registry-config-preview.js";
+import {
   buildProcessMiningPreview,
   buildProcessMiningSummary
 } from "../../../packages/core/src/process-mining-preview.js";
@@ -221,6 +229,14 @@ Preview planning:
                     Preview Intent -> MissionDraft -> ConsentPlan
   dema mission propose [--consent "GO: Node0 bounded diagnostic activation only"]
                     Preview ARTIFACT-011 readiness; does not execute runtime
+  dema model-broker route --task <kind> [--required-role <role>]
+                          [--no-local-only] [--allow-unknown] [--max-size <class>]
+                          [--registry-stdin] [--pretty]
+                    Route a task through the local model broker preview;
+                    emits a bizra.dema.local_model_route_receipt.v0.1 JSON to stdout.
+                    Default registry is DEFAULT_SAMPLE_REGISTRY (placeholders only -> routes nothing).
+                    Pipe operator registry JSON to --registry-stdin to route to a real entry.
+                    Does not invoke any model. No network. No ~/.dema read.
 
 Local evidence:
   dema receipts     List local receipts
@@ -863,6 +879,76 @@ async function dispatch(argv) {
 
     case "llm-router": {
       console.log(JSON.stringify(buildLocalLLMRouterPreview(), null, 2));
+      return;
+    }
+
+    case "model-broker": {
+      // CLI preview for the local model broker + registry config (PR #79 + #80).
+      // Emits a bizra.dema.local_model_route_receipt.v0.1 JSON to stdout.
+      // Does not invoke any model. Does not read ~/.dema. Does not call network.
+      const action = argv[1];
+      if (action !== "route") {
+        process.stderr.write(
+          `dema model-broker: unknown action '${action ?? ""}' (expected: route)\n`
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      const taskKind = argValue(argv, "--task") ?? null;
+      const requiredRole = argValue(argv, "--required-role") ?? null;
+      const maxSizeClass = argValue(argv, "--max-size") ?? null;
+      const localOnly = !argv.includes("--no-local-only");
+      const allowUnknown = argv.includes("--allow-unknown");
+      const pretty = argv.includes("--pretty");
+      const useStdinRegistry = argv.includes("--registry-stdin");
+
+      if (!taskKind && !requiredRole) {
+        process.stderr.write(
+          "dema model-broker route: --task <kind> or --required-role <role> is required\n"
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      let registry = DEFAULT_SAMPLE_REGISTRY;
+      if (useStdinRegistry) {
+        let raw = "";
+        try {
+          for await (const chunk of process.stdin) raw += chunk;
+        } catch (err) {
+          process.stderr.write(
+            `dema model-broker route: stdin read failed: ${err?.message ?? err}\n`
+          );
+          process.exitCode = 1;
+          return;
+        }
+        try {
+          const parsed = JSON.parse(raw);
+          registry = buildRegistryFromConfig(parsed);
+        } catch (err) {
+          process.stderr.write(
+            `dema model-broker route: malformed --registry-stdin JSON: ${err?.message ?? err}\n`
+          );
+          process.exitCode = 1;
+          return;
+        }
+      }
+
+      const broker = buildModelBrokerPreview({ registry });
+      const routeOpts = {
+        local_only: localOnly,
+        allow_unknown: allowUnknown
+      };
+      if (taskKind) routeOpts.task_kind = taskKind;
+      if (requiredRole) routeOpts.required_role = requiredRole;
+      if (maxSizeClass) routeOpts.max_size_class = maxSizeClass;
+
+      const receipt = routeForTask(broker, routeOpts);
+      const out = pretty
+        ? JSON.stringify(receipt, null, 2)
+        : JSON.stringify(receipt);
+      process.stdout.write(out + "\n");
       return;
     }
 
