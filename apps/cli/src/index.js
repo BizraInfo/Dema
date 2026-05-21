@@ -52,6 +52,11 @@ import {
   saveInvocationResult
 } from "../../../packages/receipts/src/invocation-result-save.js";
 import {
+  verifyRoutedInvocationEnvelope,
+  readEnvelopeFromFile,
+  resolveLatestInvocationPath
+} from "../../../packages/core/src/routed-invocation-verifier.js";
+import {
   buildProcessMiningPreview,
   buildProcessMiningSummary
 } from "../../../packages/core/src/process-mining-preview.js";
@@ -269,6 +274,16 @@ Preview planning:
                     failure envelopes for audit. Requires --invoke (nothing to save without
                     an invocation envelope).
                     Does NOT call remote endpoints. NO PAT/SAT swarm. NO URP. NO token/economy.
+  dema model-broker verify-invocation
+                          [--invocation-result-file <abs-path> | --latest] [--pretty]
+                    Deterministic invariant checker for a saved routed invocation envelope.
+                    Reads a saved invocation-<sha256>.json file (--invocation-result-file abs path,
+                    or --latest reads newest from $DEMA_HOME/receipts/) and emits a
+                    bizra.dema.local_model_routed_invocation_verification.v0.1 JSON envelope
+                    with verdict (compliant/non_compliant), 17 invariant probes, evidence quality,
+                    self-critique, warnings, and a canonical next_step recommendation.
+                    NOT canonical SAT-1..5 verification. NOT chain-bound mint. No model invocation.
+                    No network. No mutation.
 
 Local evidence:
   dema receipts     List local receipts
@@ -915,20 +930,110 @@ async function dispatch(argv) {
     }
 
     case "model-broker": {
-      // CLI preview for the local model broker + registry config.
+      // CLI preview for the local model broker + registry config + verifier.
       // v0.1 (PR #81): --registry-stdin + DEFAULT_SAMPLE_REGISTRY.
-      // v0.2 (this slice): --use-local-registry + --registry-file <abs-path>
-      //   - read-only file loading from operator's local machine
-      //   - 1 MB size cap (matches receipt-store)
-      //   - mutual exclusion across all three registry input modes
-      //   - fail-closed on missing / malformed / oversized / permission errors
-      // Emits a bizra.dema.local_model_route_receipt.v0.1 JSON to stdout.
-      // Does NOT invoke any model. Does NOT call network. Does NOT write to
-      // any file. Does NOT mint receipts.
+      // v0.2 (PR #82): --use-local-registry + --registry-file <abs-path>
+      // v0.2 (PR #83): --save-receipt + exact consent
+      // v0.1 (PR #84): --invoke + --invoke-consent + bridge to llm-adapter
+      // v0.1 (PR #85): --save-invocation-result + exact consent
+      // v0.1 (this slice): verify-invocation action — deterministic
+      //   invariant checker over saved invocation envelopes.
+      // Emits route receipt OR routed invocation envelope OR verification
+      // envelope JSON to stdout depending on action + flags. Does NOT invoke
+      // any model except through the explicit --invoke gate. Does NOT call
+      // network outside the adapter. Does NOT mint receipts.
       const action = argv[1];
+      if (action === "verify-invocation") {
+        // ─── verify-invocation deterministic invariant checker ──────────────
+        const explicitFile = argValue(argv, "--invocation-result-file") ?? null;
+        const useLatest = argv.includes("--latest");
+        const pretty = argv.includes("--pretty");
+
+        if (explicitFile && useLatest) {
+          process.stderr.write(
+            "dema model-broker verify-invocation: --invocation-result-file and --latest are mutually exclusive\n"
+          );
+          process.exitCode = 1;
+          return;
+        }
+        if (!explicitFile && !useLatest) {
+          process.stderr.write(
+            "dema model-broker verify-invocation: one of --invocation-result-file <abs-path> or --latest is required\n"
+          );
+          process.exitCode = 1;
+          return;
+        }
+
+        const { isAbsolute: pathIsAbsolute } = await import("node:path");
+
+        let targetPath;
+        let sourceKind;
+        if (explicitFile) {
+          if (!pathIsAbsolute(explicitFile)) {
+            process.stderr.write(
+              `dema model-broker verify-invocation: --invocation-result-file path must be absolute (got: ${explicitFile})\n`
+            );
+            process.exitCode = 1;
+            return;
+          }
+          targetPath = explicitFile;
+          sourceKind = "file";
+        } else {
+          const latest = await resolveLatestInvocationPath({ demaHome: process.env.DEMA_HOME });
+          if (!latest) {
+            process.stderr.write(
+              "dema model-broker verify-invocation: no invocation-*.json files found in $DEMA_HOME/receipts/\n"
+            );
+            process.exitCode = 1;
+            return;
+          }
+          targetPath = latest;
+          sourceKind = "latest";
+        }
+
+        let readResult;
+        try {
+          readResult = await readEnvelopeFromFile(targetPath);
+        } catch (err) {
+          if (err?.code === "ENOENT") {
+            process.stderr.write(
+              `dema model-broker verify-invocation: envelope file not found: ${targetPath}\n`
+            );
+          } else if (err instanceof SyntaxError) {
+            process.stderr.write(
+              `dema model-broker verify-invocation: malformed envelope JSON at ${targetPath}: ${err.message}\n`
+            );
+          } else {
+            process.stderr.write(
+              `dema model-broker verify-invocation: envelope read failed at ${targetPath}: ${err?.message ?? err}\n`
+            );
+          }
+          process.exitCode = 1;
+          return;
+        }
+
+        const verification = verifyRoutedInvocationEnvelope(readResult.envelope, {
+          source: {
+            kind: sourceKind,
+            path: targetPath,
+            source_invocation_result_hash: readResult.sourceHash
+          }
+        });
+
+        const out = pretty
+          ? JSON.stringify(verification, null, 2)
+          : JSON.stringify(verification);
+        process.stdout.write(out + "\n");
+
+        if (verification.verdict !== "compliant") {
+          process.exitCode = 1;
+        }
+        return;
+      }
+
       if (action !== "route") {
         process.stderr.write(
-          `dema model-broker: unknown action '${action ?? ""}' (expected: route)\n`
+          `dema model-broker: unknown action '${action ?? ""}' (expected: route | verify-invocation)\n`
         );
         process.exitCode = 1;
         return;
