@@ -9,10 +9,14 @@ Purpose: make the signal path obvious, reduce duplicated guidance, and stop conn
 1. [README.md](../README.md) for the human-facing product promise.
 2. This file for the model-facing execution flow.
 3. [INDEX.md](INDEX.md) for the docs map.
-4. [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries.
-5. [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) for engineering rules.
-6. [06-adr/](06-adr/) before changing anything covered by an ADR.
-7. [TESTING.md](TESTING.md) before changing tests or gates.
+4. [THREE_REPO_PRODUCT_STACK_CANON_v0_1.md](THREE_REPO_PRODUCT_STACK_CANON_v0_1.md) for the three-repo product stack canon.
+5. [NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md](NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md) for the complete Node0 + Dema component DNA and per-layer status labels.
+6. [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries.
+7. [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) for engineering rules.
+8. [06-adr/](06-adr/) before changing anything covered by an ADR.
+9. [TESTING.md](TESTING.md) before changing tests or gates.
+
+When uncertain whether a feature belongs in Node0, Dema, URP, UKE, pilot, or future forest, consult the Component DNA document before proposing implementation.
 
 ## System identity
 
