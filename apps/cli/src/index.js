@@ -47,6 +47,11 @@ import {
   invokeRoutedLocalModel
 } from "../../../packages/core/src/routed-llm-invocation.js";
 import {
+  INVOCATION_RESULT_SAVE_CONSENT,
+  serializeInvocationResultForSave,
+  saveInvocationResult
+} from "../../../packages/receipts/src/invocation-result-save.js";
+import {
   buildProcessMiningPreview,
   buildProcessMiningSummary
 } from "../../../packages/core/src/process-mining-preview.js";
@@ -243,7 +248,9 @@ Preview planning:
                           [--save-receipt --consent "GO: save local model route receipt"]
                           [--invoke --prompt "<text>"
                                     --invoke-consent "GO: invoke local LLM at <selected_model_id>"
-                                    [--timeout-ms <n>]]
+                                    [--timeout-ms <n>]
+                                    [--save-invocation-result
+                                     --save-invocation-consent "GO: save local model invocation result"]]
                           [--pretty]
                     Route a task through the local model broker preview;
                     emits a bizra.dema.local_model_route_receipt.v0.1 JSON to stdout.
@@ -256,6 +263,11 @@ Preview planning:
                     --invoke REQUIRES --prompt and --invoke-consent. In invoke mode, stdout
                     emits a bizra.dema.local_model_routed_invocation_result.v0.1 envelope
                     instead of the bare route receipt.
+                    --save-invocation-result (with exact --save-invocation-consent) persists
+                    the envelope to $DEMA_HOME/receipts/invocation-<sha256>.json (atomic;
+                    preview-grade; NOT canonical chain-bound mint). Saves both success and
+                    failure envelopes for audit. Requires --invoke (nothing to save without
+                    an invocation envelope).
                     Does NOT call remote endpoints. NO PAT/SAT swarm. NO URP. NO token/economy.
 
 Local evidence:
@@ -1059,6 +1071,17 @@ async function dispatch(argv) {
 
       const saveReceiptFlag = argv.includes("--save-receipt");
       const invokeFlag = argv.includes("--invoke");
+      const saveInvocationResultFlag = argv.includes("--save-invocation-result");
+
+      // Early validation: --save-invocation-result requires --invoke (no
+      // envelope exists to save without invocation).
+      if (saveInvocationResultFlag && !invokeFlag) {
+        process.stderr.write(
+          "dema model-broker route: --save-invocation-result requires --invoke (no envelope to save without invocation)\n"
+        );
+        process.exitCode = 1;
+        return;
+      }
 
       // v0.1 (this slice): --invoke runs the routed local-LLM invocation.
       // Hard ordering: route → save route receipt → invoke selected model.
@@ -1125,11 +1148,46 @@ async function dispatch(argv) {
           timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : undefined
         });
 
-        // Step 3: stdout emits the envelope (replaces the bare route receipt).
-        const envelopeOut = pretty
-          ? JSON.stringify(envelope, null, 2)
-          : JSON.stringify(envelope);
-        process.stdout.write(envelopeOut + "\n");
+        // Serialize ONCE so stdout and any saved file match byte-for-byte
+        // (architect-locked invariant; mirrors PR #83 route-receipt-save).
+        const envelopeContent = serializeInvocationResultForSave(envelope, { pretty });
+
+        // Step 3 (optional): persist envelope to disk under explicit consent.
+        // v0.1 invocation result SAVE (mirrors v0.2 route receipt SAVE from
+        // PR #83). Preview-grade save (NOT canonical chain-bound mint).
+        // Saves BOTH success and failure envelopes for audit.
+        if (saveInvocationResultFlag) {
+          const saveInvocationConsent = argValue(argv, "--save-invocation-consent") ?? "";
+          const saveInvResult = await saveInvocationResult(envelope, {
+            demaHome: process.env.DEMA_HOME,
+            consent: saveInvocationConsent,
+            pretty
+          });
+          if (!saveInvResult.saved) {
+            if (saveInvResult.reason === "consent_missing") {
+              process.stderr.write(
+                `dema model-broker route: --save-invocation-result requires --save-invocation-consent "${INVOCATION_RESULT_SAVE_CONSENT}"\n`
+              );
+            } else if (saveInvResult.reason === "consent_mismatch") {
+              process.stderr.write(
+                `dema model-broker route: --save-invocation-result consent phrase mismatch; required: "${INVOCATION_RESULT_SAVE_CONSENT}"\n`
+              );
+            } else {
+              process.stderr.write(
+                `dema model-broker route: --save-invocation-result failed (${saveInvResult.reason}): ${saveInvResult.error_message ?? "unknown"}\n`
+              );
+            }
+            // Still emit the envelope to stdout so the operator can see the
+            // result they were trying to save.
+            process.stdout.write(envelopeContent);
+            process.exitCode = 1;
+            return;
+          }
+          process.stderr.write(`saved invocation result to: ${saveInvResult.path}\n`);
+        }
+
+        // Step 4: stdout emits the envelope (replaces the bare route receipt).
+        process.stdout.write(envelopeContent);
 
         // Non-zero exit on adapter-reported failure so operators can chain
         // routed invocation into scripts that fail-fast on missing/refused
