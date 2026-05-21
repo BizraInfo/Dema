@@ -74,9 +74,24 @@ const REQUIRED_MARKERS = [
   }
 ];
 
+const IN_REPO_LAUNCH_PACK_DIR = "docs/launch-pack-v0.1";
+
 function defaultLighthousePackDir() {
   if (!process.env.HOME) return null;
   return join(process.env.HOME, "Documents", "bizra", "lighthouse-pack-v1.0");
+}
+
+/** Prefer operator pack on disk; fall back to vendored launch pack for CI and fresh clones. */
+export function resolveLighthousePackDir({ root = REPO_ROOT, explicit = null } = {}) {
+  if (explicit) return explicit;
+  const candidates = [
+    defaultLighthousePackDir(),
+    join(root, IN_REPO_LAUNCH_PACK_DIR)
+  ].filter(Boolean);
+  for (const dir of candidates) {
+    if (existsSync(join(dir, "MANIFEST.sha256"))) return dir;
+  }
+  return candidates[0] ?? join(root, IN_REPO_LAUNCH_PACK_DIR);
 }
 
 async function readTextIfExists(root, path) {
@@ -243,7 +258,7 @@ function flattenFindings({ fileChecks, markerChecks, staleCheck, lighthousePack 
 
 export async function buildGtmReadinessReport({
   root = REPO_ROOT,
-  lighthousePackDir = defaultLighthousePackDir()
+  lighthousePackDir = resolveLighthousePackDir({ root })
 } = {}) {
   const fileTexts = new Map();
   for (const file of REQUIRED_FILES) {
@@ -342,9 +357,11 @@ async function main(argv = process.argv.slice(2)) {
   }
 
   const json = argv.includes("--json");
+  const root = valueAfter(argv, "--root") ?? REPO_ROOT;
+  const explicitPack = valueAfter(argv, "--lighthouse-pack-dir");
   const report = await buildGtmReadinessReport({
-    root: valueAfter(argv, "--root") ?? REPO_ROOT,
-    lighthousePackDir: valueAfter(argv, "--lighthouse-pack-dir") ?? defaultLighthousePackDir()
+    root,
+    lighthousePackDir: resolveLighthousePackDir({ root, explicit: explicitPack })
   });
 
   if (json) {

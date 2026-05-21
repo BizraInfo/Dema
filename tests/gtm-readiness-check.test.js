@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,8 +12,11 @@ import { fileURLToPath } from "node:url";
 import {
   buildGtmReadinessReport,
   formatGtmReadinessReport,
+  resolveLighthousePackDir,
   verifyManifestLines
 } from "../scripts/gtm-readiness-check.mjs";
+
+const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 const execFileAsync = promisify(execFile);
 const scriptPath = fileURLToPath(new URL("../scripts/gtm-readiness-check.mjs", import.meta.url));
@@ -32,6 +36,21 @@ async function createPack(files) {
   await writeFile(join(dir, "MANIFEST.sha256"), `${lines.join("\n")}\n`, "utf8");
   return dir;
 }
+
+test("buildGtmReadinessReport passes when pointed at in-repo launch pack", async () => {
+  const inRepoPack = join(REPO_ROOT, "docs/launch-pack-v0.1");
+  const report = await buildGtmReadinessReport({
+    root: REPO_ROOT,
+    lighthousePackDir: inRepoPack
+  });
+  assert.equal(report.ok, true);
+  assert.equal(report.lighthouse_pack.dir, inRepoPack);
+});
+
+test("resolveLighthousePackDir finds vendored manifest without external Documents path", () => {
+  const resolved = resolveLighthousePackDir({ root: REPO_ROOT });
+  assert.ok(existsSync(join(resolved, "MANIFEST.sha256")));
+});
 
 test("buildGtmReadinessReport verifies current GTM docs and Lighthouse pack boundaries", async () => {
   const packDir = await createPack({
