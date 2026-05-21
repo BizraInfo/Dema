@@ -52,6 +52,11 @@ import {
   saveInvocationResult
 } from "../../../packages/receipts/src/invocation-result-save.js";
 import {
+  VERIFICATION_RESULT_SAVE_CONSENT,
+  serializeVerificationResultForSave,
+  saveVerificationResult
+} from "../../../packages/receipts/src/verification-result-save.js";
+import {
   verifyRoutedInvocationEnvelope,
   readEnvelopeFromFile,
   resolveLatestInvocationPath
@@ -275,13 +280,20 @@ Preview planning:
                     an invocation envelope).
                     Does NOT call remote endpoints. NO PAT/SAT swarm. NO URP. NO token/economy.
   dema model-broker verify-invocation
-                          [--invocation-result-file <abs-path> | --latest] [--pretty]
+                          [--invocation-result-file <abs-path> | --latest]
+                          [--save-verification-result
+                           --save-verification-consent "GO: save local model invocation verification"]
+                          [--pretty]
                     Deterministic invariant checker for a saved routed invocation envelope.
                     Reads a saved invocation-<sha256>.json file (--invocation-result-file abs path,
                     or --latest reads newest from $DEMA_HOME/receipts/) and emits a
                     bizra.dema.local_model_routed_invocation_verification.v0.1 JSON envelope
                     with verdict (compliant/non_compliant), 17 invariant probes, evidence quality,
                     self-critique, warnings, and a canonical next_step recommendation.
+                    --save-verification-result (with exact --save-verification-consent) persists
+                    the verification envelope to $DEMA_HOME/receipts/verification-<sha256>.json
+                    (atomic; saves both compliant and non_compliant for audit). Saved file
+                    matches stdout byte-for-byte.
                     NOT canonical SAT-1..5 verification. NOT chain-bound mint. No model invocation.
                     No network. No mutation.
 
@@ -1020,10 +1032,38 @@ async function dispatch(argv) {
           }
         });
 
-        const out = pretty
-          ? JSON.stringify(verification, null, 2)
-          : JSON.stringify(verification);
-        process.stdout.write(out + "\n");
+        // v0.1 (this slice): --save-verification-result + exact consent.
+        // Single serialization shared by save + stdout (byte-for-byte).
+        const verificationOut = serializeVerificationResultForSave(verification, { pretty });
+        const saveVerificationFlag = argv.includes("--save-verification-result");
+        if (saveVerificationFlag) {
+          const saveConsent = argValue(argv, "--save-verification-consent") ?? null;
+          const saveResult = await saveVerificationResult(verification, {
+            demaHome: process.env.DEMA_HOME,
+            consent: saveConsent,
+            pretty
+          });
+          if (!saveResult.saved) {
+            if (saveResult.reason === "consent_missing") {
+              process.stderr.write(
+                `dema model-broker verify-invocation: --save-verification-result requires --save-verification-consent "${VERIFICATION_RESULT_SAVE_CONSENT}"\n`
+              );
+            } else if (saveResult.reason === "consent_mismatch") {
+              process.stderr.write(
+                `dema model-broker verify-invocation: --save-verification-result consent phrase mismatch; required: "${VERIFICATION_RESULT_SAVE_CONSENT}"\n`
+              );
+            } else {
+              process.stderr.write(
+                `dema model-broker verify-invocation: --save-verification-result failed (${saveResult.reason}): ${saveResult.error_message ?? "unknown"}\n`
+              );
+            }
+            process.exitCode = 1;
+            return;
+          }
+          process.stderr.write(`saved verification result to: ${saveResult.path}\n`);
+        }
+
+        process.stdout.write(verificationOut);
 
         if (verification.verdict !== "compliant") {
           process.exitCode = 1;
@@ -1034,6 +1074,16 @@ async function dispatch(argv) {
       if (action !== "route") {
         process.stderr.write(
           `dema model-broker: unknown action '${action ?? ""}' (expected: route | verify-invocation)\n`
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      // --save-verification-result is only valid for verify-invocation; reject
+      // here so the operator gets a precise pointer instead of silent ignore.
+      if (argv.includes("--save-verification-result") || argv.includes("--save-verification-consent")) {
+        process.stderr.write(
+          "dema model-broker route: --save-verification-result is only valid for the 'verify-invocation' action\n"
         );
         process.exitCode = 1;
         return;
