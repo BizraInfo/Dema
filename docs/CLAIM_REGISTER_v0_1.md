@@ -111,10 +111,11 @@ Load-bearing surface. Every public surface authors must satisfy this table befor
 | **Founder proof** | "Node0 was built by one human across several years of solo work, captured in this repo's commit history and inventory artifacts." | `DERIVED` | git history + founder asset inventory ladder (memory: `project_founder_asset_inventory_v0_3`) | Inflated hour/repo/data figures without an evidence path |
 | **Origin Video 001** | "Origin Video 001 is referenced as a foundational artifact. The primary artifact is hash-bound; the 2023-08-31 creation date is derived from a filename-embedded timestamp and not yet corroborated." | `VERIFIED` (file identity: path + sha256) · `DERIVED` (date, from filename-embedded ms timestamp `1693522543490` → 2023-08-31 UTC; single witness) · `DERIVED_STRONG` (Google AI Studio production tool, from folder + filename convention) · `SOURCE_PENDING` (public release status, pristine-original status) | `BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` §6 Artifact Identity + §22 Evidence Binding v0.2 (path + sha256 + decoded timestamp); no media binaries committed to this repo | Claiming 2023-08-31 as `VERIFIED` from filename alone; claiming Google AI Studio provenance as `VERIFIED` without corroboration; claiming any public release; using Claude upload history as evidence; presenting either Downloads-folder derivative (`_restyled.mp4` or `My Video-2.mp4`) as the primary artifact |
 | **Visual Emulator** | "The visual emulator illustrates Node0 + forest behavior as scenario, not as measurement." | `DESIGNED_NOT_LIVE` or `SCENARIO` | Component DNA Section 18; future `BIZRA_VISUAL_EMULATOR_SPEC_v0_1.md` | Presenting emulator output as measured live network behavior |
-| **PAT-7** | "PAT-7 is the seven-Personal-Agent local intelligence layer, designed; PAT may discover, never finalize." | `DESIGNED_NOT_LIVE` | Component DNA Section 9 + topology canon | Claiming PAT actions occur without SAT/receipt cover |
-| **SAT-5** | "SAT-5 is the five-Sovereign-Agent governance layer, designed; SAT must govern." | `DESIGNED_NOT_LIVE` | Component DNA Section 10 + SAT verifier sibling spec | Naming SAT as live authority before its verifier runtime ships |
-| **UKE House of Wisdom** | "UKE is the designed shared knowledge fabric; specification only." | `DESIGNED_NOT_LIVE` | Component DNA Section 13 | Claiming UKE is a live shared runtime |
-| **URP Soil** | "URP is the designed shared resource / agent-as-a-service substrate; specification only." | `DESIGNED_NOT_LIVE` | Component DNA Section 14 + topology canon | Claiming a live public URP |
+| **PAT-7** | "PAT-7 is the seven-Personal-Agent proposal layer; preview modules exist, but PAT may discover and propose only, never finalize." | `DESIGNED_NOT_LIVE` | Component DNA Section 9 + House of Wisdom Canon Sections 2.4 and 6 | Claiming an autonomous PAT swarm, PAT promotion authority, or PAT actions without SAT/receipt cover |
+| **SAT-5** | "SAT-5 is the five-Sovereign-Agent governance layer; preview verifier modules exist, but SAT is not a live UKE/URP authority." | `DESIGNED_NOT_LIVE` | Component DNA Section 10 + House of Wisdom Canon Sections 2.3 and 5 | Naming SAT as live shared-canon authority before UKE/URP runtime ships |
+| **UKE House of Wisdom** | "UKE is the designed SAT-governed House of Wisdom knowledge cortex inside URP; no UKE runtime exists in this repo." | `DESIGNED_NOT_LIVE` | Component DNA Section 13 + House of Wisdom Canon Sections 2.1 and 13 | Claiming UKE is live, has accepted claims, or stores shared knowledge today |
+| **URP Soil** | "URP is the designed shared substrate; the House of Wisdom canon defines UKE inside URP, but shared URP runtime is not connected." | `DESIGNED_NOT_LIVE` | Component DNA Section 14 + topology canon + House of Wisdom Canon Sections 2.2 and 8 | Claiming a live public URP, connected shared runtime, or URP marketplace |
+| **House of Wisdom / META_CANON** | "The House of Wisdom canon defines an 8-tier promotion ladder ending in META_CANON; no runtime promotion ladder or META_CANON entries are live." | `DESIGNED_NOT_LIVE` | House of Wisdom Canon Sections 3 and 4 | Claiming "House of Wisdom accepted X" or "META_CANON includes X" as a live fact |
 | **Proof-of-Impact** | "Proof-of-Impact is the designed outcome-bound reward signal; depends on UKE + URP runtime." | `DESIGNED_NOT_LIVE` | Component DNA Section 15 | Implying PoI rewards are live or guaranteed |
 | **Dual token economy** | "SEED / impact utility token and BIZRA / governance-settlement token are designed concepts; no live economic layer." | `DESIGNED_NOT_LIVE` (research-quarantine for value language) | Component DNA Section 16 (RESEARCH_QUARANTINE) | Any token value, market, yield, or rebate claim |
 | **Agent-as-a-Service** | "AaaS is the designed URP capability; no live marketplace." | `DESIGNED_NOT_LIVE` | Component DNA Section 14 | Claiming a live marketplace, listings, or service catalog |
@@ -141,6 +142,12 @@ These claims are **forbidden** on every public surface (README, GTM, Canva, land
 - Do not claim bizra-node0-genesis is active runtime authority.
 - Do not claim private PAT memory enters URP/UKE by default.
 - Do not present visual emulator projections as measured results.
+- Do not claim URP shared runtime is connected before the shared-runtime proof gate.
+- Do not claim BIZRA has minted a canonical receipt from Dema.
+- Do not claim federation is operational before validated multi-node proof.
+- Do not claim PAT-7 swarm is autonomously running.
+- Do not claim House of Wisdom has accepted any specific claim before UKE implementation and acceptance receipts exist.
+- Do not claim META_CANON contains specific entries beyond the structural tier defined in the House of Wisdom canon.
 
 A surface that contains a forbidden claim is a release-blocking defect. It is not negotiable by tone or framing.
 
@@ -233,14 +240,19 @@ Until pilot evidence exists and a live runtime ships, all URP, UKE, and PoI clai
 Allowed:
 
 - "URP is the designed shared substrate."
-- "UKE is the designed shared knowledge fabric."
+- "UKE is the designed SAT-governed House of Wisdom knowledge cortex inside URP."
+- "The House of Wisdom canon defines a promotion ladder; the runtime ladder is not live."
 - "Proof-of-Impact is the designed outcome-bound reward signal."
 
 Forbidden:
 
 - "URP is live."
+- "URP shared runtime is connected."
 - "URP marketplace is open."
 - "UKE remembers your contributions across the forest." (as live behavior)
+- "UKE is live."
+- "House of Wisdom has accepted X."
+- "META_CANON includes X." (unless X is the structural tier definition in the canon itself)
 - "PoI pays contributors." (as live)
 - "PoI guarantees reward."
 
@@ -421,6 +433,7 @@ This Claim Register depends on and points forward to:
 - `docs/THREE_REPO_PRODUCT_STACK_CANON_v0_1.md` — repo authority.
 - `docs/NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md` — component status labels.
 - `docs/DELIVERY_SPINE_v0_1.md` — gate that enforces this Register at release time.
+- `docs/HOUSE_OF_WISDOM_UKE_URP_CANON_v0_1.md` — UKE/URP promotion ladder, META_CANON, consent, and House-of-Wisdom forbidden claims.
 - `docs/06-adr/ADR-001-dema-is-one-face.md` — Dema-is-one-face binding.
 - `docs/06-adr/ADR-005-operator-actions-require-explicit-consent.md` — consent law.
 - `docs/06-adr/ADR-006-continuous-assurance-and-no-mint-verification.md` — no-mint posture.

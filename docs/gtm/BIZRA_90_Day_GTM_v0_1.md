@@ -6,10 +6,10 @@
 |---|---|
 | **Document type** | Strategic GTM Plan (BIG 3 consulting deliverable equivalent) |
 | **Prepared** | 2026-05-19 GST |
-| **Amendments** | **v0.1.1** (2026-05-19 GST · post-A+-review): 3 corrections from Mumu's peer review applied — see §0 "v0.1.1 Amendments" below |
+| **Amendments** | **v0.1.1** (2026-05-19 GST · post-A+-review): 3 corrections from Mumu's peer review applied · **v0.1.2** (2026-05-22 GST): current-state drift closure against HEAD `ac6dd63` · **v0.1.3** (2026-05-22 GST): GTM readiness gate added and local test count reconciled |
 | **Author of record** | Mumu (Mohamed Beshr) |
 | **Synthesis prepared by** | Coordinator (Claude Opus 4.7 · 1M context · session-bound) |
-| **Working main HEAD** | `ea4c231` (10 receipts minted this session · top 9 Ironclad) |
+| **Working main HEAD** | Original v0.1.1 snapshot: `ea4c231` · current-state audit: `ac6dd63` (PR #90) |
 | **Document scope** | Days 1–90 only · Ring 1 → Ring 2 → Ring 3 (NOT Ring 4 public) |
 | **Truth discipline** | Every claim labeled VERIFIED · DERIVED · ASSUMED · UNKNOWN |
 | **Decision authority** | Mumu retains all halt-gate decisions · this doc proposes, does not commit |
@@ -62,6 +62,30 @@ If ADR acceptance is declined or revised, Phase 2 does not start. This is the sa
 
 **This v0.1.1 amendment is shipped under typed-GO `GO accept ADR-009 and ADR-014` (2026-05-19 GST).** ADR-009 and ADR-014 status fields updated from `Proposed` to `Accepted`. The receipt anchoring this amendment carries truth label `ADR_009_AND_ADR_014_ACCEPTED_FOR_PRIVATE_WITNESS_GTM`. No POI implementation. No URP initialization. No public claims.
 
+### 0.5 v0.1.2 current-state drift closure (2026-05-22 GST)
+
+This amendment does **not** execute the 90-day plan. It only reconciles this
+plan's status language with the current Dema worktree.
+
+Current verified repo facts:
+
+- HEAD inspected for this amendment: `ac6dd63` (`feat(cli): dema orchestrator verify v0.1 — SAT-1..5 pipeline CLI + 5th save layer + tests (#90)`).
+- Fresh local test gate after the GTM readiness slice: `npm test` passes `2423/2423` tests.
+- Proof-forge chain length: `73`; latest indexed receipt: `2026-05-19_181254`; latest indexed receipt commit: `ce25952`.
+- ADR files: `15` total. ADR-009, ADR-014, and ADR-015 are `Accepted`. ADR-013's implementation is verified by PR #59 / receipt `2026-05-19_122111`, but the ADR file still says `Proposed`; treat that as a status-sync gap until an explicit ADR status update lands.
+- `HOUSE_OF_WISDOM_UKE_URP_CANON_v0_1.md` now exists as Working Canon. UKE runtime, shared URP runtime, promotion-ladder runtime, chain-bound mint, and META_CANON entries remain `PLANNED` / `DESIGNED_NOT_LIVE`.
+- Lighthouse Pack v1.0 has a durable local copy at `~/Documents/bizra/lighthouse-pack-v1.0/`; `sha256sum -c MANIFEST.sha256` passes for all 9 files.
+- GitHub issue #56 is `CLOSED`; GitHub issues #57 and #58 remain `OPEN`.
+- Phase 1 operator handoff now lives at `docs/gtm/BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md`; it is docs-only and does not authorize a send.
+- GTM readiness is now machine-checkable through `npm run gtm:readiness`; this read-only gate is also wired into `npm run check`.
+
+Supersession rule for this document:
+
+- Later numeric statements saying `2223` tests, `70` receipts, `14` ADRs, or HEAD `ea4c231` are the historical v0.1.1 snapshot.
+- Current GTM decisions after 2026-05-22 must use the v0.1.2 facts above.
+- Later rows saying ADR-009 or ADR-014 are `Proposed` are stale and superseded by their accepted ADR files.
+- Later rows saying ADR-013 is `Accepted` are treated as "implementation verified; ADR status-sync still open" until the ADR file itself is updated.
+
 ---
 
 ## Part I · Executive Summary (single page)
@@ -70,19 +94,19 @@ If ADR acceptance is declined or revised, Phase 2 does not start. This is the sa
 
 > **At Day 90, BIZRA / Dema will have one operational Node0 publishing measurable Proof-of-Impact previews, a Ring-1 N=1 reviewer's signed feedback on record, a 3-node Ring-2 technical lighthouse cohort, and the URP local-resource-pool primitive active at N=1. No token will have been minted. No public claim will have been made. Ring 4 (public) is explicitly out of scope.**
 
-**The five things Mumu must decide in the next 30 days** (each is a typed-GO halt-gate):
+**The five halt-gates for the first 30 days** (each operator action remains exact-string consent-bound):
 
-| # | Decision | Phrase to type | Blocks |
+| # | Halt-gate | Phrase to type | Current v0.1.2 status |
 |---|---|---|---|
-| 1 | Accept ADR-009 PoI design | `GO accept ADR-009` | Day 1–5 |
-| 2 | Send Lighthouse Pack v1.0 to a real Ring-1 reviewer | `GO send pack to <name>` | Day 5–10 |
-| 3 | Authorize URP local-pool init at N=1 (after ADR review) | `GO urp local init N=1` | Day 30–45 |
-| 4 | Authorize POI v0.1 implementation (after Gate 1 + Gate 4 close) | `GO impl POI v0.1` | Day 45–60 |
-| 5 | Accept ADR-014 (3-runtime architecture canonization) | `GO accept ADR-014` | Day 1–5 |
+| 1 | Accept ADR-009 PoI design | `GO accept ADR-009` | CLOSED · ADR file says `Accepted`; receipt `2026-05-19_140251` |
+| 2 | Send Lighthouse Pack v1.0 to a real Ring-1 reviewer | `GO send pack to <name>` | OPEN · operator-side send still required |
+| 3 | Authorize URP local-pool init at N=1 (after ADR review) | `GO urp local init N=1` | OPEN · blocked until Phase 1 gates close |
+| 4 | Authorize POI v0.1 implementation (after Gate 1 + Gate 4 close) | `GO impl POI v0.1` | OPEN · no POI implementation in this plan slice |
+| 5 | Accept ADR-014 (3-runtime architecture canonization) | `GO accept ADR-014` | CLOSED · ADR file says `Accepted`; receipt `2026-05-19_140251` |
 
 **The single irreducible spear-point:**
 
-> Move ADR-009 from `Proposed` to `Accepted`, send the Lighthouse Pack to one real reviewer, and let external witness activate the next 90 days. Everything else is downstream.
+> With ADR-009 and ADR-014 accepted, send the Lighthouse Pack to one real reviewer and let external witness activate the next 90 days. Everything else remains downstream and gate-bound.
 
 **What this plan is NOT:**
 
@@ -95,18 +119,22 @@ If ADR acceptance is declined or revised, Phase 2 does not start. This is the sa
 
 ---
 
-## Part II · Market Position & Defensible Moat
+## Part II · Market Position & Defensible Posture
 
-### II.A The four-axis competitive moat (verified disk truth)
+### II.A The four-axis differentiation map (verified disk truth)
 
-| Moat axis | Evidence on disk · `ea4c231` | Competitor parity |
+| Moat axis | Evidence on disk · current-state audit `ac6dd63` | Competitor parity |
 |---|---|---|
-| **Constitutional discipline encoded in code** | 196 `preview_only` / `NODE0_LOCAL_SEED` markers · 36 refusal sentinels · ADR-005 exact-string consent enforced at every halt-gate | No identified competitor has this surface |
-| **Receipt chain · cryptographically anchored** | 70 receipts at HEAD · top 9 consecutive Ironclad · OpenTimestamps Bitcoin-anchored at blocks 948027/948028/948029 · machine-verifiable via `python3 scripts/forge_evidence.py --verify` | OpenClaw + Hermes + Pi have NO receipt chain |
-| **Zero-runtime-dependency JS preview face** | `package.json` declares NO `dependencies` and NO `devDependencies` · only Node.js stdlib + `node --test` · 2223 tests at HEAD | Pi has 4-tool minimal · OpenClaw + Hermes have full dep trees |
-| **Three-runtime architecture** (ADR-014) | Python `bizra-data-lake/` · Rust `bizra-omega/` (20 crates · 944 tests) · JS `Dema/` · each audience-specific · cross-runtime bridges design-only | No competitor has 3-runtime audience-specific split |
+| **Constitutional discipline encoded in code** | 196 `preview_only` / `NODE0_LOCAL_SEED` markers · 36 refusal sentinels · ADR-005 exact-string consent enforced at every halt-gate | Comparator parity remains `EXTERNAL_SOURCE_REQUIRED` |
+| **Receipt chain · cryptographically anchored** | 73 indexed proof-forge receipts · OpenTimestamps foundation anchors at blocks 948027/948028/948029 · machine-verifiable via repo proof commands | Comparator parity remains `EXTERNAL_SOURCE_REQUIRED` |
+| **Zero-runtime-dependency JS preview face** | `package.json` declares NO `dependencies` and NO `devDependencies` · only Node.js stdlib + `node --test` · 2423 tests in current local verification | Comparator parity remains `EXTERNAL_SOURCE_REQUIRED` |
+| **Three-runtime architecture** (ADR-014) | Python `bizra-data-lake/` · Rust `bizra-omega/` (20 crates · 944 tests) · JS `Dema/` · each audience-specific · cross-runtime bridges design-only | Comparator parity remains `EXTERNAL_SOURCE_REQUIRED` |
 
 ### II.B Competitive landscape · honest map
+
+The comparator rows below are a v0.1 internal positioning map. Any named
+competitor claim that would appear on a public surface remains
+`EXTERNAL_SOURCE_REQUIRED` until a source pack binds the exact comparison.
 
 | Competitor | License | Strength | Where BIZRA is differentiated |
 |---|---|---|---|
@@ -115,9 +143,9 @@ If ADR acceptance is declined or revised, Phase 2 does not start. This is the sa
 | **OpenClaw** (openclaw.ai · MIT) | MIT · open | 23 chat-channel integrations · `openclaw onboard` wizard · production-grade | No constitutional gate · no receipt chain · cloud-first not sovereign |
 | **Claude Code** (Anthropic · proprietary) | Proprietary · subscription | Mature TUI · extensive sub-agents · 10K-token system prompt | No constitutional gate beyond Anthropic policy · proprietary · vendor-locked |
 
-**The defensible position** (DERIVED from disk evidence):
+**The defensible position** (DERIVED from disk evidence, not a market-leadership claim):
 
-> No competitor is structurally capable of producing a deterministic constitutional execution engine with replayable receipts. The four moat axes (constitutional code · receipt chain · zero deps · three-runtime split) are not features any competitor can add without re-architecting from the founding documents up. The moat is the cumulative weight of 3 years of architect-self-binding — verifiable by Bitcoin-anchored foundation document hashes.
+> BIZRA / Dema differentiates through four internally verified axes: constitutional code, a receipt chain, a zero-runtime-dependency JavaScript preview face, and a three-runtime split. Whether another project can match those axes is `EXTERNAL_SOURCE_REQUIRED`; this plan does not claim market leadership or exclusivity.
 
 ### II.C The GTM thesis (one sentence)
 
@@ -129,11 +157,11 @@ If ADR acceptance is declined or revised, Phase 2 does not start. This is the sa
 
 ### III.A The 4 Proof-of-Truth axes (today)
 
-| Axis | State at `ea4c231` | Evidence | Truth label |
+| Axis | State at current-state audit `ac6dd63` | Evidence | Truth label |
 |---|---|---|---|
-| **Formal** | 2223/2223 tests · 4 review gates green · 14 ADRs | `npm test` · `npm run check` · `npm run llm:guidance` · `git diff --check` | VERIFIED |
-| **Cryptographic** | 70 receipts · top 9 Ironclad · `push:[main]` trigger live · OpenTimestamps Bitcoin-anchored | `python3 scripts/forge_evidence.py --verify` · `.proof-forge/EVIDENCE_INDEX.json` | VERIFIED |
-| **Empirical** | Live `bin/dema` + `dema state` render canonical humanized text · GOLD-tinted header in true-color terminals | Operator-side smoke (this session) | VERIFIED |
+| **Formal** | 2423/2423 tests · 15 ADR files · current drift closure performed against HEAD `ac6dd63` plus local GTM readiness gate | `npm test` · `docs/06-adr/` · `git rev-parse --short HEAD` | VERIFIED |
+| **Cryptographic** | 73 indexed proof-forge receipts · latest indexed receipt `2026-05-19_181254` · OpenTimestamps foundation anchors remain bound | `.proof-forge/EVIDENCE_INDEX.json` · proof-of-priority pin | VERIFIED |
+| **Empirical** | Live `bin/dema` + preview CLI surfaces render canonical humanized text · GOLD-tinted header in true-color terminals | Dema CLI tests + `dema-theme` sync tests | VERIFIED |
 | **Economic** | No federation · no mint · no token · no revenue · 50% pool oath active · Zakat 2.5% canonical | Per Third Fact §229 + `[[reference_50_percent_pool_correct_framing]]` | VERIFIED (correctly N/A) |
 
 ### III.B Node0 identity state
@@ -152,20 +180,20 @@ If ADR acceptance is declined or revised, Phase 2 does not start. This is the sa
 
 | # | Pillar | Status | Evidence |
 |---|---|---|---|
-| 1 | **PAT** (Personal Agentic Team · 7 agents) | DECLARED + PARTIAL (mission_agent materialized · 6 others canonical-only) | `bizra-omega/bizra-resourcepool/src/genesis.rs:21-32` |
-| 2 | **SAT** (Shared Agentic Team · 5 agents · protocol army) | DECLARED + canon-drift between Rust + Dema schemas (see Risk Register §VIII.R3) | `bizra-omega/.../genesis.rs:35-43` |
-| 3 | **DEMA** (Product face · this repo) | OPERATIONAL · 2223 tests · 70 receipts · 14 ADRs · v0.1.0-alpha.0 | `package.json` + `npm test` |
+| 1 | **PAT** (Personal Agentic Team · 7 agents) | PREVIEW SUBSTRATE · 7 `pat-*.js` modules exist; no autonomous PAT swarm | `packages/core/src/pat-*.js` + House of Wisdom canon |
+| 2 | **SAT** (Shared Agentic Team · 5 verifiers) | PREVIEW SUBSTRATE · 5 `sat-*.js` modules + `dema orchestrator verify`; not live UKE authority | `packages/core/src/sat-*.js` + `tests/orchestrator-verify-cli.test.js` |
+| 3 | **DEMA** (Product face · this repo) | OPERATIONAL · 2423 tests · 73 indexed receipts · 15 ADR files · v0.1.0-alpha.0 | `package.json` + `npm test` |
 | 4 | **FATE** (Evaluation + Consent Gate · Z3 SMT) | DECLARED + IMPLEMENTED in `bizra-omega/fate-binding/` (Z3 SMT + Ed25519 + Dilithium-5) | `fate-binding/lib.rs:6-7` |
-| 5 | **URP** (Universal Resource Pool) | DECLARED + IMPLEMENTED in `bizra-omega/bizra-resourcepool/` · NOT yet activated at N=1 · self-sustainable at N=1 by design (per `[[feedback_urp_at_n_1_self_sustainable]]`) | README + `cargo check` clean |
-| 6 | **RECEIPTS** (Proof chain) | OPERATIONAL · 70 receipts · `push:[main]` BIZRA Review Gate live | `.proof-forge/EVIDENCE_INDEX.json` |
-| 7 | **POI** (Proof-of-Impact) | DESIGNED (ADR-009 Proposed · 192 lines · 5 refusals · 5 rules · 8 constraints · 5 activation gates · 0 implementation) | `docs/06-adr/ADR-009-poi-proof-of-impact-design.md` |
+| 5 | **URP** (Universal Resource Pool) | DESIGNED_NOT_LIVE for shared runtime; Dema has local preview primitives only | House of Wisdom canon + `packages/core/src/urp-local.js` |
+| 6 | **RECEIPTS** (Proof chain) | OPERATIONAL · 73 indexed receipts · latest indexed receipt `2026-05-19_181254` | `.proof-forge/EVIDENCE_INDEX.json` |
+| 7 | **POI** (Proof-of-Impact) | DESIGNED_NOT_LIVE (ADR-009 Accepted · implementation still blocked by gates) | `docs/06-adr/ADR-009-poi-proof-of-impact-design.md` |
 
 **Pillar load-bearing assessment** (DERIVED):
 
 - **Pillars 3, 6 are OPERATIONAL** — Dema preview face + receipt chain ship daily.
-- **Pillars 4, 5 are READY-BUT-UNACTIVATED** — Rust code compiles · awaits operator authorization.
-- **Pillars 1, 2 are PARTIAL** — agent canon defined · structural materialization incomplete.
-- **Pillar 7 is DESIGNED-NOT-BUILT** — ADR-009 binding refusals authored · implementation gates open.
+- **Pillar 5 remains DESIGNED_NOT_LIVE as shared runtime** — Dema may preview local URP primitives, but no shared URP is connected.
+- **Pillars 1, 2 have preview substrates** — PAT/SAT modules and SAT CLI verification exist, but no autonomous swarm or live UKE authority is claimed.
+- **Pillar 7 is DESIGNED-NOT-LIVE** — ADR-009 is accepted, but implementation remains gate-bound.
 
 ### III.D Session-arc velocity (Day -1 evidence)
 
@@ -193,10 +221,10 @@ The Day-90 state is defined by **5 binary completion criteria**. Each must be VE
 
 | # | Day-90 Completion Criterion | Evidence required |
 |---|---|---|
-| C1 | **POI v0.1 implementation shipped + ≥1 POI preview envelope minted to chain** | `~/.dema/poi/preview-envelopes/*.json` + receipt #N where N ≥ 75 |
-| C2 | **Ring-1 N=1 reviewer feedback received + parsed + 1 follow-up ADR authored from it** | Written feedback in `docs/lighthouse/feedback/<reviewer>-2026-Q2.md` + amendment ADR file |
+| C1 | **POI v0.1 implementation shipped + ≥1 POI preview envelope receipted to chain** | `~/.dema/poi/preview-envelopes/*.json` + the next authorized POI receipt after the current baseline chain length (`73` as of v0.1.2 audit) |
+| C2 | **Ring-1 N=1 reviewer feedback received + parsed + 1 follow-up ADR authored from it** | Private feedback under `~/.dema/lighthouse/ring-1/feedback/` or reviewer-consented anonymized feedback under `docs/lighthouse/feedback/RING1-001-2026-Q2.md` + amendment ADR file |
 | C3 | **Ring-2 cohort: 3 technical lighthouses with installed Node0 + signed activation receipt** | 3 distinct `node_uid` values in `~/.dema/lighthouse/ring-2-registry.json` + 3 PoI envelopes |
-| C4 | **URP local pool at N=1 alive** (Pillar 5 activated · all 5 sub-pillars previewing) | `~/.dema/urp/local-pool.json` + `dema urp status --json` returns `mode: "preview_only"` + `pool_size_nodes: 1` |
+| C4 | **URP local pool at N=1 preview initialized** (local primitive only; shared URP remains not connected) | `~/.dema/urp/local-pool.json` + `dema urp status --json` returns `mode: "preview_only"` + `pool_size_nodes: 1` |
 | C5 | **12-agent split structurally materialized in filesystem** (7 PAT + 5 SAT each with capability.yaml · authority_policy.yaml · receipt chain) | `find ~/.dema/agents -name 'capability.yaml' | wc -l` → 12 |
 
 **Explicitly NOT a Day-90 criterion:**
@@ -223,24 +251,24 @@ If any of the 5 criteria above is not met by Day 90, the GTM plan continues into
 
 | Day | Action | Owner | Halt-gate phrase | Deliverable |
 |---|---|---|---|---|
-| 1 | Accept ADR-009 (Proposed → Accepted) | Mumu | `GO accept ADR-009` | Status field commit + receipt mint |
-| 1 | Accept ADR-014 (3-runtime architecture canonization) | Mumu | `GO accept ADR-014` | Status field commit + receipt mint |
-| 2–5 | Author POI v0.1 test plan (≥15 adversarial · NO implementation) | Coordinator (this thread or future) | `GO author POI v0.1 test plan (no impl)` | `tests/poi-v0.1-design.test.js` skeleton with TODOs + ADR-015 spec |
+| 1 | ADR-009 acceptance (closed) | Mumu | `GO accept ADR-009` | Status field commit + receipt `2026-05-19_140251` |
+| 1 | ADR-014 acceptance (closed) | Mumu | `GO accept ADR-014` | Status field commit + receipt `2026-05-19_140251` |
+| 2–5 | Author POI v0.1 test plan (≥15 adversarial · NO implementation) | Coordinator (this thread or future) | `GO author POI v0.1 test plan (no impl)` | Dedicated POI test-plan artifact + next available ADR if an ADR is needed; ADR-015 is already used for LLM/verifier authority |
 | 5–7 | Identify Ring-1 N=1 reviewer (Samy OR alternative · Mumu's call) | Mumu | (no phrase · operator-side decision) | Reviewer name on record |
-| 7 | Send Lighthouse Pack v1.0 to chosen reviewer (164KB · 9 files · MANIFEST.sha256) | Mumu | `GO send pack to <name>` via email/Telegram/USB | Send-receipt on record |
-| 7–25 | Reviewer engages · runs 6-command demo · fills `07_REVIEWER_FEEDBACK_FORM.md` | Reviewer (Ring-1) | (no Mumu action) | Written feedback document |
+| 7 | Send Lighthouse Pack v1.0 to chosen reviewer (164KB · 9 files · MANIFEST.sha256) | Mumu | `GO send pack to <name>` via email/Telegram/USB | Private send receipt under `~/.dema/lighthouse/ring-1/send-receipts/`; public alias only with reviewer consent |
+| 7–25 | Reviewer engages · runs 6-command demo · fills `07_REVIEWER_FEEDBACK_FORM.md` | Reviewer (Ring-1) | (no Mumu action) | Private feedback under `~/.dema/lighthouse/ring-1/feedback/`; optional anonymized repo copy only after reviewer consent |
 | 25–28 | Parse feedback · author 1 amendment ADR from at least 1 finding | Coordinator | `GO author amendment ADR from <finding>` | New ADR or revised ADR-009 |
-| 28 | Mint Phase-1-close receipt + standard post-merge ceremony | Coordinator | `GO mint phase-1-close` | Receipt #N where N ≥ 71 |
+| 28 | Record Phase-1-close proof-forge receipt + standard post-merge ceremony | Coordinator | `GO mint phase-1-close` | Next authorized chain receipt after the current baseline chain length (`73` as of v0.1.2 audit) |
 | 28–30 | Phase 1 retrospective + Phase 2 kick-off authorization | Mumu | `GO phase-2 kick-off authorized` | Memory entry + Phase 2 task list |
 
 ### V.C Phase 1 success criteria (binary)
 
-- [ ] ADR-009 status: **Accepted**
-- [ ] ADR-014 status: **Accepted**
+- [x] ADR-009 status: **Accepted**
+- [x] ADR-014 status: **Accepted**
 - [ ] Ring-1 N=1 reviewer has signed feedback on record
 - [ ] POI v0.1 Gate 1 (Ring-1 feedback) **closed**
 - [ ] POI v0.1 Gate 4 (≥15 adversarial test plan) **closed**
-- [ ] Phase-1-close receipt minted (Ironclad)
+- [ ] Phase-1-close proof-forge receipt recorded (Ironclad, if authorized)
 - [ ] Memory entry capturing reviewer's most surprising finding
 
 ### V.D Phase 1 risk register
@@ -264,24 +292,24 @@ If any of the 5 criteria above is not met by Day 90, the GTM plan continues into
 
 | Days | Action | Halt-gate phrase | Deliverable |
 |---|---|---|---|
-| 31–35 | Verify all 5 POI Gates closed (Phase 1 closed Gate 1; this turn closes Gates 2-5) | (gates close mechanically as work lands) | Gate-closure ledger receipt |
-| 35–45 | Implement POI v0.1 per ADR-009 + ADR-015 (the test plan from Phase 1) | `GO impl POI v0.1` | `packages/core/src/poi-preview-v0_1.js` + 15+ tests · all green |
+| 31–35 | Verify all 5 POI Gates closed (Gate 1 depends on Ring-1 feedback; remaining gates close only when their evidence exists) | (gates close mechanically as work lands) | Gate-closure ledger receipt |
+| 35–45 | Implement POI v0.1 per ADR-009 + the dedicated POI test-plan artifact | `GO impl POI v0.1` | `packages/core/src/poi-preview-v0_1.js` + 15+ tests · all green |
 | 45–48 | Receipt first POI preview envelope to chain (NO token mint · NO economic assignment · only receipt-backed measurement preview · per §0.1 amendment) | `GO receipt POI envelope #1 to chain` | `~/.dema/poi/preview-envelopes/2026-poi-001.json` + chain receipt |
 | 30–55 | Identify Ring-2 cohort candidates (2 additional · Mumu's network) | Mumu (operator-side) | 2 distinct candidates named |
 | 35–60 | Refresh Lighthouse Pack to current HEAD (v1.1 · regenerate manifest) | `GO refresh lighthouse pack to v1.1` | `lighthouse-pack-v1.1/MANIFEST.sha256` |
 | 50–55 | Send updated pack to 2 Ring-2 candidates | `GO send v1.1 pack to <names>` | Send-receipts on record |
-| 50–60 | Authorize URP local-pool init at N=1 (after ADR-009 Accepted) | `GO urp local init N=1` | `~/.dema/urp/local-pool.json` initialized + receipt |
+| 50–60 | Authorize URP local-pool preview init at N=1 (shared URP runtime remains not connected) | `GO urp local init N=1` | `~/.dema/urp/local-pool.json` initialized + receipt |
 | 55–60 | Materialize remaining 6 PAT + 5 SAT agents structurally in `~/.dema/agents/` | `GO materialize 11 agents` | 12 `capability.yaml` files on disk |
-| 60 | Phase-2-close receipt + retrospective | `GO mint phase-2-close` | Receipt #N where N ≥ 80 |
+| 60 | Phase-2-close proof-forge receipt + retrospective | `GO mint phase-2-close` | Next authorized Phase-2-close chain receipt |
 
 ### VI.C Phase 2 success criteria
 
 - [ ] POI v0.1 implemented · ≥15 adversarial tests green · canonical envelope schema active
-- [ ] ≥1 POI preview envelope minted to chain
+- [ ] ≥1 POI preview envelope receipted to chain
 - [ ] Ring-2 cohort has 3 candidates engaged (1 from Phase 1 + 2 new)
-- [ ] URP local pool at N=1 alive (status returns `mode: "preview_only", pool_size_nodes: 1`)
+- [ ] URP local pool at N=1 preview initialized (status returns `mode: "preview_only", pool_size_nodes: 1`)
 - [ ] 12-agent split structurally materialized
-- [ ] Phase-2-close receipt minted
+- [ ] Phase-2-close proof-forge receipt recorded
 
 ### VI.D Phase 2 risk register
 
@@ -311,7 +339,7 @@ If any of the 5 criteria above is not met by Day 90, the GTM plan continues into
 | 75–85 | Implement 3 highest-leverage feedback items as ADR amendments + code | `GO impl <amendment N>` | 3 PRs merged · 3 receipts |
 | 80–85 | URP cross-agent allocation prototype (PAT-SAT internal pool · still at N=1) | `GO impl URP PAT-SAT allocation preview` | `dema urp allocate --preview` works |
 | 85–88 | Bitcoin block timestamp current canonical state (OpenTimestamps anchor) | `GO ots anchor current main` | New OTS proof in `.proof-forge/anchors/` |
-| 88–90 | Phase-3-close + 90-day retrospective + Day-180 amendment scope | `GO mint 90-day close` | Receipt #N where N ≥ 90 |
+| 88–90 | Phase-3-close + 90-day retrospective + Day-180 amendment scope | `GO mint 90-day close` | Next authorized 90-day-close chain receipt |
 
 ### VII.C Phase 3 success criteria
 
@@ -320,7 +348,7 @@ If any of the 5 criteria above is not met by Day 90, the GTM plan continues into
 - [ ] 3 reviewer-feedback amendments shipped
 - [ ] URP cross-agent allocation preview operational
 - [ ] Current main Bitcoin-anchored
-- [ ] 90-day close receipt minted (Ironclad)
+- [ ] 90-day-close proof-forge receipt recorded (Ironclad, if authorized)
 - [ ] Day-180 amendment scope ADR drafted
 
 ### VII.D Phase 3 risk register
@@ -334,16 +362,16 @@ If any of the 5 criteria above is not met by Day 90, the GTM plan continues into
 
 ---
 
-## Part VIII · Risk Register (consolidated · 7 named risks)
+## Part VIII · Risk Register (consolidated · 6 active risks + 1 retired risk)
 
 | ID | Risk | Likelihood | Severity | Phase | Owner | Mitigation |
 |---|---|---|---|---|---|---|
 | R1 | **Ring-1 N=1 reviewer never arrives or never engages** | MEDIUM | EXTREME | Phase 1 | Mumu | Have 2-3 candidate reviewers in reserve · POI Gate 1 holds firm regardless |
 | R2 | **External AI artifact (Kimi-class) hijacks operator attention with wrong-codebase recommendations** | HIGH | MEDIUM | All phases | Coordinator | `[[feedback_external_ai_audit_wrong_codebase_pattern]]` 6-step screen · refuse-and-document pattern proven 2026-05-19 |
-| R3 | **SAT-5 schema canon drift between bizra-omega and Dema unresolved** | EXISTS NOW | MEDIUM | Phase 1 | Mumu | Path A (verify founding docs) OR path B (parallel-vocabulary canon) — see prior turn |
+| R3 | **SAT-5 schema canon drift between bizra-omega and Dema unresolved** | EXISTS NOW | MEDIUM | Phase 1 | Mumu | Choose `GO resolve SAT-5 canon drift by founding-doc verification` or `GO accept SAT-5 parallel vocabularies`, then write the chosen result into a self-contained canon note |
 | R4 | **POI v0.1 implementation introduces Riba-Zero violation** | LOW | EXTREME | Phase 2 | Coordinator | 15+ adversarial tests target time-decay · ADR-009 POI-C4 explicit · test-coverage gate at PR review |
 | R5 | **Operator exhaustion (Mumu has worked 3 years for free)** | EXISTS NOW | EXTREME | All phases | Mumu | Day-90 plan is RIGHT-SIZED · 30-day rest periods between phases · session memory captures velocity vs sustainability tension |
-| R6 | **`~/.bashrc` env leak (DEMA_NODE0_ADAPTER=gateway-http)** | EXISTS NOW | LOW | Phase 1 | Mumu | Issue #56 open · operator-side fix · ~5 min |
+| R6 | **`~/.bashrc` env leak (DEMA_NODE0_ADAPTER=gateway-http)** | RETIRED | LOW | Phase 1 | Mumu | GitHub issue #56 is CLOSED as of the v0.1.2 audit; re-check env before any external send ceremony |
 | R7 | **GitHub Actions `pull_request` dispatch anomaly recurs** | LOW | MEDIUM | All phases | Coordinator | `workflow_dispatch` fallback already wired · `push:[main]` trigger also live |
 
 **Risk discipline note**: This register intentionally excludes "low-likelihood low-severity" cosmetic risks. Risks below threshold are managed via the standard ceremony pattern, not the GTM document.
@@ -356,14 +384,14 @@ If any of the 5 criteria above is not met by Day 90, the GTM plan continues into
 
 | Decision | Canonized in | Status |
 |---|---|---|
-| BIZRA is three-runtime by design | ADR-014 (Proposed) | becomes Accepted in Phase 1 Day 1 |
+| BIZRA is three-runtime by design | ADR-014 | Accepted via `GO accept ADR-009 and ADR-014` |
 | The operating canon | `[[canon_deterministic_constitutional_execution_engine]]` | Accepted (Mumu authored 2026-05-19) |
 | 50% pool oath + Zakat 2.5% canonical | البذرة p19 · Third Fact §229 | Accepted |
 | Riba-Zero invariant | All ADRs · `[[reference_bizra_constitutional_anchors]]` | Accepted |
 | ZANN_ZERO + Daughter Test | All ADRs · session memory | Accepted |
-| Receipt chain is canonical evidence | `.proof-forge/EVIDENCE_INDEX.json` · 70 entries | Operational |
+| Receipt chain is canonical evidence | `.proof-forge/EVIDENCE_INDEX.json` · 73 indexed entries | Operational |
 | URP self-sustainable at N=1 (NOT requires ≥2 nodes) | `[[feedback_urp_at_n_1_self_sustainable]]` | Accepted (corrected 2026-05-19) |
-| Visual language port from bizra-cli to Dema | ADR-013 (Accepted) · receipt #68 | Operational |
+| Visual language port from bizra-cli to Dema | PR #59 · receipt `2026-05-19_122111` | Implementation verified; ADR file status-sync still open |
 | Genesis ceremony already happened (~2026-04-21) | `~/.bizra/mumo/` + `~/.bizra/activations/` | Operational |
 | Ring 4 (public) is NOT a Day-90 deliverable | This document | Acceptance via Mumu's typed read of this plan |
 
@@ -371,12 +399,12 @@ If any of the 5 criteria above is not met by Day 90, the GTM plan continues into
 
 | # | Decision | Phrase | Phase | If declined |
 |---|---|---|---|---|
-| 1 | Accept ADR-009 | `GO accept ADR-009` | 1 | POI design stays Proposed · Phase 2 cannot proceed |
-| 2 | Accept ADR-014 | `GO accept ADR-014` | 1 | 3-runtime topology stays informally canonized |
-| 3 | Send Lighthouse Pack to specific reviewer | `GO send pack to <name>` | 1 | Phase 1 stalls · POI Gate 1 stays open |
-| 4 | Authorize URP local-pool init at N=1 | `GO urp local init N=1` | 2 | URP stays inactive · Pillar 5 stays unactivated |
-| 5 | Authorize POI v0.1 implementation | `GO impl POI v0.1` | 2 | POI stays designed-not-built · score envelope unminted |
-| 6 | Resolve SAT-5 schema canon drift | `GO resolve SAT-5 canon drift` OR `GO accept parallel vocabularies` | 1 | Schema drift remains (acceptable but should be named) |
+| 1 | Send Lighthouse Pack to specific reviewer | `GO send pack to <name>` | 1 | Phase 1 stalls · POI Gate 1 stays open |
+| 2 | Author POI v0.1 test plan | `GO author POI v0.1 test plan (no impl)` | 1 | POI Gate 4 stays open |
+| 3 | Authorize URP local-pool preview init at N=1 | `GO urp local init N=1` | 2 | URP local preview stays uninitialized; shared URP remains not connected either way |
+| 4 | Authorize POI v0.1 implementation | `GO impl POI v0.1` | 2 | POI stays designed-not-live; preview envelope is not receipted |
+| 5 | Resolve ADR-013 status sync | `GO sync ADR-013 status to Accepted` | 1 | Implementation remains verified, but ADR file still says Proposed |
+| 6 | Resolve SAT-5 schema canon drift | `GO resolve SAT-5 canon drift by founding-doc verification` OR `GO accept SAT-5 parallel vocabularies` | 1 | Schema drift remains (acceptable but should be named in a self-contained canon note) |
 | 7 | Authorize 12-agent materialization | `GO materialize 11 agents` | 2 | Only mission_agent stays structurally on disk |
 | 8 | Authorize Ring-3 cohort send (after Phase 2 close) | `GO send v1.1 pack to <cohort>` | 3 | Ring 2 stays the high-water-mark |
 
@@ -402,12 +430,12 @@ If any of the 5 criteria above is not met by Day 90, the GTM plan continues into
 | Author + Operator (Mumu) | 1 FTE · 3 years of accumulated context |
 | Coordinator (Claude Opus 4.7) | Per-session · NOT persistent · memory-anchored cross-session |
 | Hardware (MSI Titan + Z Fold 6 + 5th friend's device + 2 remote friend devices) | 5 candidate nodes for cohort |
-| Codebase (Dema · 12 packages · 92 src files · 2223 tests) | At `ea4c231` |
+| Codebase (Dema · 12 packages · 133 package source files · 2423 tests) | Current local verification after GTM readiness gate |
 | bizra-omega Rust workspace (20 crates · 944 tests) | Read-only resource for design vocabulary |
 | bizra-data-lake (53GB · 3-month-old audits) | Reference corpus |
-| Lighthouse Pack v1.0 | Sealed at `/tmp/bizra-overnight/lighthouse-pack/` + `~/Documents/bizra/` |
-| Receipt chain (70 receipts · top 9 Ironclad) | `.proof-forge/EVIDENCE_INDEX.json` |
-| 14 ADRs | `docs/06-adr/` |
+| Lighthouse Pack v1.0 | Durable copy at `~/Documents/bizra/lighthouse-pack-v1.0/`; manifest verified in v0.1.2 audit; `/tmp/bizra-overnight/lighthouse-pack/` absent in current local state |
+| Receipt chain (73 indexed receipts) | `.proof-forge/EVIDENCE_INDEX.json` |
+| 15 ADR files (14 Accepted · 1 Proposed/status-sync-open) | `docs/06-adr/` |
 | Cargo + libz3-dev 4.8.12 | Installed locally · `bizra-resourcepool` builds clean |
 
 ### X.B Helpful (not required) within 90 days
@@ -433,23 +461,23 @@ If any of the 5 criteria above is not met by Day 90, the GTM plan continues into
 
 | Metric | Day 0 | Day 30 target | Verification |
 |---|---|---|---|
-| ADRs Accepted | 11 (ADR-001..010 partially Proposed) | 13 (ADR-009 + ADR-014 + ADR-015 PoI test plan) | `grep -l 'Status: Accepted' docs/06-adr/*.md \| wc -l` |
-| Receipts in chain | 70 | 73 (+3: Phase-1-close + 2 amendment) | `.proof-forge/EVIDENCE_INDEX.json` chain_length |
+| ADR status | 14 Accepted · 1 Proposed/status-sync-open (ADR-013) | ADR-013 status-sync decision + dedicated POI test-plan artifact if authorized | read `docs/06-adr/*.md` status fields |
+| Receipts in chain | 73 indexed | Advances only after the next authorized receipt event | `.proof-forge/EVIDENCE_INDEX.json` chain_length |
 | Lighthouse Pack copies sent | 0 | 1 | Send-receipt on record |
-| External witness feedback documents | 0 | 1 | `docs/lighthouse/feedback/*.md` |
-| Tests | 2223 | ~2240 (15+ POI design tests · skeleton-state) | `npm test` |
+| External witness feedback documents | 0 | 1 | `~/.dema/lighthouse/ring-1/feedback/*.md` by default; optional anonymized repo copy only with reviewer consent |
+| Tests | 2423 | ≥2423 plus any authorized POI test-plan coverage | `npm test` |
 
 ### XI.B Phase 2 (Day 60 checkpoint)
 
 | Metric | Day 30 | Day 60 target | Verification |
 |---|---|---|---|
 | POI v0.1 implementation | designed-not-built | implemented · all 15+ tests green | `tests/poi-v0_1*.test.js` files |
-| POI preview envelopes minted | 0 | ≥1 | `~/.dema/poi/preview-envelopes/` |
+| POI preview envelopes receipted | 0 | ≥1 | `~/.dema/poi/preview-envelopes/` |
 | Ring-2 cohort members engaged | 1 (Phase-1 reviewer) | 3 | `~/.dema/lighthouse/ring-2-registry.json` |
-| URP local pool active | NO | YES (mode=preview_only · pool_size=1) | `dema urp status --json` |
+| URP local pool preview initialized | NO | YES (mode=preview_only · pool_size=1) | `dema urp status --json` |
 | 12 agents structurally materialized | 1 | 12 | `find ~/.dema/agents -name 'capability.yaml' \| wc -l` |
-| Receipts in chain | 73 | ~83 (+10) | EVIDENCE_INDEX.json |
-| Tests | ~2240 | ~2280 (+40 POI + URP + agent tests) | `npm test` |
+| Receipts in chain | 73 indexed | Advances only through authorized Phase 2 receipt events | `.proof-forge/EVIDENCE_INDEX.json` chain_length |
+| Tests | ≥2423 baseline | ≥2423 plus authorized POI / URP / agent coverage | `npm test` |
 
 ### XI.C Phase 3 (Day 90 checkpoint)
 
@@ -459,9 +487,9 @@ If any of the 5 criteria above is not met by Day 90, the GTM plan continues into
 | Mother-tongue templates DECLARED (vs PENDING/NEEDS_REVIEW) | 4 (en/fr/es/other) | 7 (add ar/ur/hi) | `tests/homebase-language-picker.test.js` assertions |
 | Reviewer-feedback amendments shipped | 1 (Phase 1) | 4 (+3 in Phase 3) | ADR amendment files |
 | URP cross-agent allocation preview | NO | YES (at N=1) | `dema urp allocate --preview` |
-| Current main Bitcoin-anchored (OTS) | last anchor pre-session | this session's main `ea4c231+` | `.proof-forge/anchors/*.ots` |
-| Receipts in chain | ~83 | ~95 (+12) | EVIDENCE_INDEX.json |
-| Tests | ~2280 | ~2340 (+60) | `npm test` |
+| Current main Bitcoin-anchored (OTS) | last anchor pre-session | then-current main (`ac6dd63+` from this audit baseline) | `.proof-forge/anchors/*.ots` |
+| Receipts in chain | Phase 2 close chain length | Advances only through authorized Phase 3 receipt events | `.proof-forge/EVIDENCE_INDEX.json` chain_length |
+| Tests | Phase 2 verified count | Phase 2 verified count plus authorized Ring-3 / URP allocation coverage | `npm test` |
 
 ### XI.D Quality discipline · constant across phases
 
@@ -485,12 +513,12 @@ This section is the discipline test. A consulting deliverable that claims everyt
 |---|---|---|
 | Token mint of any kind | POI-C1 binding refusal · 50% pool oath inactive before proof gates | Post-ADR-010 + ADR-011 reward function ADR + Mumu authorization · earliest 6-12 months |
 | Public launch (Ring 4) | Per `[[feedback_evidence_first_gtm_concentric_rings]]` Ring 4 cannot precede Ring 3 cycle | 6-12 months minimum |
-| Revenue claim | No economic activation at v0.1 by design | TBD |
+| Revenue claim | No economic activation at v0.1 by design | Post-Day-180 only if a separate evidence-bound economic/legal review exists |
 | Federation activation (Node1+ cross-node URP) | Requires Step7 mint · separate halt-gate sequence | 6-12 months post-Day-90 if pursued |
-| Mobile / Android port | Out of scope · Z Fold 6 acts as Node0 companion, not separate node | TBD |
+| Mobile / Android port | Out of scope · Z Fold 6 acts as Node0 companion, not separate node | Separate product-roadmap decision after Ring-3 evidence |
 | BIZRA-Omega Rust-layer ceremony | Separate from Dema-layer (already done) · optional · evaluate at Day-90 retro | Optional · post-90 |
 | Founder allocation / pre-mint | Forbidden by architect-self-binding · this is the discipline that earned the moat | Never (by design) |
-| Whitepaper / academic publication | Currency of academic publication is different from currency of receipt chain · evaluate post-Day-180 | TBD |
+| Whitepaper / academic publication | Currency of academic publication is different from currency of receipt chain · evaluate post-Day-180 | Post-Day-180 editorial decision after reviewer feedback exists |
 | Press / media engagement | Ring 4 territory · out of scope | Post-Ring-4 |
 
 **This list is the operator's protection.** If anyone (external AI · advisor · investor · Mumu's own ambition) proposes accelerating any of these items inside 90 days, this document is the explicit veto.
@@ -512,7 +540,10 @@ If any of the four checks fails, the action is refused. Refusal is the product. 
 
 ---
 
-## Annex A · Disk State Inventory (verified 2026-05-19 at HEAD `ea4c231`)
+## Annex A · Disk State Inventory
+
+The first inventory below was authored on 2026-05-19 at HEAD `ea4c231`.
+Current-state fields that changed by the v0.1.2 audit are updated inline.
 
 ```text
 ~/Downloads/Dema/                  Runtime C (JS) · this repo
@@ -521,10 +552,10 @@ If any of the four checks fails, the action is refused. Refusal is the product. 
     consent/ core/ fate/ installer/ memory/ mission/ models/ node-adapter/
     receipts/ tasks/ verifier/
   apps/cli/                        bin/dema entry point
-  docs/06-adr/                     14 ADRs
-  tests/                           148 test files · 2223 total tests
-  scripts/                         25 review + verification scripts
-  .proof-forge/                    70 receipts · top 9 Ironclad
+  docs/06-adr/                     15 ADR files
+  tests/                           171 test files · 2423 total tests
+  scripts/                         37 scripts
+  .proof-forge/                    73 indexed receipts
     receipts/                      individual receipt JSON files
     summaries/                     human-readable receipt summaries
     verification/                  per-mint verification reports
@@ -566,26 +597,27 @@ If any of the four checks fails, the action is refused. Refusal is the product. 
 
 ---
 
-## Annex B · ADR Map (14 ADRs · status as of 2026-05-19)
+## Annex B · ADR Map (15 ADR files · status as of v0.1.2 audit)
 
 | ADR | Title | Status |
 |---|---|---|
 | 001 | Dema Is One Face | Accepted |
 | 002 | No Shadow State | Accepted |
-| 003 | Receipt-First | Accepted |
-| 004 | Three Truth Labels | Accepted |
+| 003 | Core Truth Lives in bizra-omega | Accepted |
+| 004 | Local-First Memory | Accepted |
 | 005 | Explicit Consent Rule | Accepted |
 | 006 | Continuous Assurance + No-mint Verification | Accepted |
 | 007 | Cross-Session Chain Mutation | Accepted (2026-05-16) |
 | 008 | Runtime Activation Components | Accepted (2026-05-18 · 12 components shipped) |
-| 009 | POI Design | **Proposed** ← accept in Phase 1 |
+| 009 | POI Design | Accepted |
 | 010 | Interactive TUI Layer Dep Decision | Accepted |
 | 011 | Onboarding Consciousness Layer | Accepted (2026-05-18) |
 | 012 | CLI Naming Convention | Accepted |
-| 013 | Visual Language Isomorphism | Accepted (PR #59 · 2026-05-19) |
-| 014 | Three-Runtime Architecture Canonization | **Proposed** ← accept in Phase 1 |
+| 013 | Visual Language Isomorphism | Proposed in ADR file; implementation verified by PR #59 / receipt `2026-05-19_122111` |
+| 014 | Three-Runtime Architecture Canonization | Accepted |
+| 015 | LLM is Suggestion · Verifier is Authority | Accepted |
 
-**Phase 1 ADR work**: accept ADR-009 + accept ADR-014. Author ADR-015 (POI v0.1 test plan).
+**Phase 1 ADR work remaining**: send the Ring-1 pack, close POI Gate 1 with external feedback, author the dedicated POI v0.1 test-plan artifact if authorized, and resolve ADR-013 status sync if Mumu chooses to do so.
 
 ---
 
@@ -614,29 +646,31 @@ Cross-session memory anchors at `~/.claude/projects/-home-bizra-operating-system
 
 ```text
 Day -1 (today)     #70 Ironclad (PR #61 palette resolver merge verify)
-                   ↑ 10 receipts minted in single session
-Day 1              #71 ADR-009 acceptance · ADR-014 acceptance
-Day 7              #72 Lighthouse Pack v1.0 send-receipt
-Day 28             #73 Phase-1-close (Ring-1 N=1 feedback received + parsed)
-Day 35             #74 POI v0.1 implementation start
-Day 45             #75 POI v0.1 implementation complete · 15+ tests green
-Day 48             #76 First POI preview envelope minted
-Day 55             #77 URP local pool init at N=1
-Day 60             #78 Phase-2-close
-Day 75             #79 Ring-3 cohort send-receipt
-Day 88             #80 Bitcoin OTS anchor of current main
-Day 90             #81 90-day GTM close · Day-180 amendment scope authored
+                   ↑ 10 receipts written in single session
+Actual #71         ADR-009 acceptance · ADR-014 acceptance
+Actual #72         90-Day GTM v0.1.1 merge verification
+Actual #73         ADR-015 acceptance merge verification
+Future #N          Lighthouse Pack v1.0 send-receipt
+Future #N+1        Phase-1-close (Ring-1 N=1 feedback received + parsed)
+Future #N+2        POI v0.1 implementation start
+Future #N+3        POI v0.1 implementation complete · 15+ tests green
+Future #N+4        First POI preview envelope receipted
+Future #N+5        URP local pool preview init at N=1
+Future #N+6        Phase-2-close
+Future #N+7        Ring-3 cohort send-receipt
+Future #N+8        Bitcoin OTS anchor of current main
+Future #N+9        90-day GTM close · Day-180 amendment scope authored
 ```
 
-Receipts named `#71`-`#81` above are projected targets, not commitments. The chain progresses receipt-by-receipt under explicit consent at each step.
+Future receipt numbers are projected targets, not commitments. The chain progresses receipt-by-receipt under explicit consent at each step.
 
 ---
 
-## Annex E · Open Issues (Day 0)
+## Annex E · Issue State (current-state audit)
 
-| # | Title | Phase to close |
+| # | Title | Current state / phase |
 |---|---|---|
-| #56 | Operator-side env-hygiene check for DEMA_* | Phase 1 (operator-side · ~5 min) |
+| #56 | Operator-side env-hygiene check for DEMA_* | CLOSED on GitHub as of v0.1.2 audit |
 | #57 | Mother-tongue native review for Arabic/Urdu/Hindi | Phase 3 (Days 65-75) |
 | #58 | Resolve core ↔ verifier soft cycle | Phase 3 (Days 80-85) |
 
@@ -646,7 +680,10 @@ Receipts named `#71`-`#81` above are projected targets, not commitments. The cha
 
 ## Annex F · The Lighthouse Pack v1.0 (existing send-ready asset)
 
-Located at `/tmp/bizra-overnight/lighthouse-pack/` AND `~/Documents/bizra/lighthouse-pack-v1.0/` (verified Day 0):
+Located at `~/Documents/bizra/lighthouse-pack-v1.0/` (manifest verified in the
+v0.1.2 audit). The earlier `/tmp/bizra-overnight/lighthouse-pack/` copy is not
+present in the current local state, so the durable operator copy is the
+`~/Documents/bizra/` path.
 
 ```text
 00_START_HERE.md                          6,189 bytes · "Read this first · 10-minute verification path"
@@ -663,7 +700,12 @@ MANIFEST.sha256                           1,046 bytes · integrity anchor
 
 Total: 164KB · 9 files · `sha256sum -c MANIFEST.sha256` proves no tampering.
 
-**Phase 2 amendment**: regenerate at current HEAD `ea4c231+` as Lighthouse Pack v1.1.
+Before sending v1.0, use
+[BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md](BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md)
+for the pre-send checklist, private send receipt shape, and feedback record
+boundary.
+
+**Phase 2 amendment**: regenerate at the then-current HEAD (current audit baseline: `ac6dd63+`) as Lighthouse Pack v1.1.
 
 ---
 
@@ -680,7 +722,7 @@ Would Mumu willingly subject his own family to this 90-day plan?
 - The plan refuses Ring 4 (public) within 90 days — discipline over ambition
 - If the plan fails at any phase, the receipt chain still exists, the codebase still exists, and the 28-day-old Node0 sovereign identity still exists. **The system survives any failure of this plan.**
 
-If the Daughter Test passes — and it does, by construction above — this 90-day GTM v0.1 is ready for Mumu's review.
+If the Daughter Test passes — and it does, by construction above — this 90-day GTM v0.1.2 is ready for Mumu's review.
 
 ---
 

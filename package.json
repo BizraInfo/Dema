@@ -16,6 +16,7 @@
     "test": "node --test tests/*.test.js",
     "coverage": "node --test --experimental-test-coverage --test-coverage-lines=95 --test-coverage-branches=80 --test-coverage-functions=95 tests/*.test.js",
     "llm:guidance": "node scripts/llm-guidance-check.mjs",
+    "gtm:readiness": "node scripts/gtm-readiness-check.mjs",
     "smoke-boundary": "node scripts/smoke-boundary.mjs",
     "baseline:l1": "node scripts/baseline-l1.mjs",
     "baseline:l1:diff": "node scripts/baseline-l1-diff.mjs",

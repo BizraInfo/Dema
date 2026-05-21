@@ -22,12 +22,15 @@ Purpose: make the signal path obvious, reduce duplicated guidance, and stop conn
 14. [BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md](BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md) for the expression-layer brief between canon and media (asset-family briefs, prompt packs, forbidden lists, production checklist, review gate).
 15. [BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md](BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md) for the reviewer-facing evaluation pack (truth buckets, evaluation maps, reviewer checklist, risk register, evidence-request roadmap).
 16. [BIZRA_MARKET_ANALYSIS_v0_1.md](BIZRA_MARKET_ANALYSIS_v0_1.md) for the market-comparison frame (5 patterns, comparator landscape, differentiation map, non-claims, risks, EXTERNAL_SOURCE_REQUIRED items).
-17. [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries.
-18. [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) for engineering rules.
-19. [06-adr/](06-adr/) before changing anything covered by an ADR.
-20. [TESTING.md](TESTING.md) before changing tests or gates.
+17. [HOUSE_OF_WISDOM_UKE_URP_CANON_v0_1.md](HOUSE_OF_WISDOM_UKE_URP_CANON_v0_1.md) for the constitutional definition of UKE as the SAT-governed knowledge cortex inside the URP, the 8-tier promotion ladder ending in META_CANON (system-recursive canon), SAT/PAT/Dema/URP authority boundaries, consent and privacy rules, and the House-of-Wisdom forbidden-claims list.
+18. [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries.
+19. [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) for engineering rules.
+20. [06-adr/](06-adr/) before changing anything covered by an ADR.
+21. [TESTING.md](TESTING.md) before changing tests or gates.
 
 When uncertain whether a feature belongs in Node0, Dema, URP, UKE, pilot, or future forest, consult the Component DNA document before proposing implementation.
+
+When drafting or implementing anything about shared knowledge, UKE, URP sharing, SAT governance, PAT proposals, the promotion ladder, META_CANON, or House of Wisdom acceptance, consult HOUSE_OF_WISDOM_UKE_URP_CANON_v0_1.md and CLAIM_REGISTER_v0_1.md first. Never promote a claim across tiers without the gates this canon defines.
 
 When changing delivery, release, CI/CD, quality gates, claim boundaries, or public launch readiness, consult DELIVERY_SPINE_v0_1.md before proposing implementation.
 
@@ -182,6 +185,7 @@ npm test
 npm run check
 npm run llm:guidance
 npm run release:readiness
+npm run gtm:readiness
 git diff --check
 ```
 

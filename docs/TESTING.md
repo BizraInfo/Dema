@@ -12,6 +12,7 @@ npm run coverage
 npm run check
 npm run llm:guidance
 npm run release:readiness
+npm run gtm:readiness
 git diff --check
 ```
 
@@ -71,6 +72,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/chat-router-cli.test.js` | Chat Router CLI integration (`dema chat` REPL conversational fallback): 6 subprocess tests verifying piped stdin containing `what is bizra\nexit` emits BIZRA concept response, `stauts\nexit` emits "Did you mean" + status, `hello\nexit` emits "not a chat agent yet", `what should I do next\nexit` emits "next safe action", `show my status\nexit` emits "Routing your request to" + status output, `help me draft a mission\nexit` emits routing or mission draft output. Uses isolated DEMA_HOME tmpdir + DEMA_BANNER_INTERACTIVE=0. |
 | `tests/chat-router.test.js` | Chat Router unit tests (`packages/core/src/chat-router.js`): 36 adversarial tests covering STOPWORDS/GREETING_WORDS structure, empty/whitespace → empty, exact registered command → registered-command, "what is bizra" → concept-match bizra, "tell me about ihsan/node0" → concept-match, case-insensitive BIZRA → concept-match, multiple concepts → first-match (ihsan before adl), "hello dema" → greeting, "salam" → greeting (Arabic-aware), "hey" → greeting, "stauts" typo → command-suggestion via real Levenshtein, "xyzqwerty asdf" → unknown, stopwords-only → unknown, "?" → command-suggestion or unknown, newlines/tabs → safe, prototype-pollution → safe, 10 KB+ input → unknown, DI mock glossary + mock suggester resolve correctly, suggestedCommands always array. New intents: "what should I do next" / "what now" / "next move" → next-action (6 tests), "show my status" / "show my receipts" / "help me draft a mission" / "what models" / "show my memory" → dispatch-intent (6 tests), NEXT_ACTION_PHRASES + DISPATCH_INTENT_MAP exported arrays. |
 | `tests/effectcap-invariant.test.js` | Pre-runtime EffectCap invariant spec and negative tests. |
+| `tests/gtm-readiness-check.test.js` | GTM readiness checker (`scripts/gtm-readiness-check.mjs`): schema-tagged read-only audit of current GTM docs, Phase-1 operator packet, Lighthouse private-send boundaries, UKE/URP claim boundaries, stale-marker absence, Lighthouse Pack manifest verification including sha256sum comment-line compatibility and tamper detection, human formatter, and `--json` CLI output. |
 | `tests/integration-check.test.js` | CLI help, smoke gate, architecture map, and test-matrix integration guard. |
 | `tests/ihsan-floor-preview.test.js` | Ihsan floor preview scalar validation, non-certifying boundary, formatter, and CLI output. |
 | `tests/llm-guidance-check.test.js` | Canonical LLM flow guidance, root agent routing, and docs noise classification. |
@@ -215,6 +217,7 @@ node scripts/review/canon-check.mjs
 node scripts/review/env-hygiene-check.mjs
 node scripts/review/integration-check.mjs
 node scripts/llm-guidance-check.mjs
+node scripts/gtm-readiness-check.mjs
 node scripts/node0-self-check.mjs --verify
 ```
 
