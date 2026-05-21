@@ -106,11 +106,19 @@ The seed is small **by design**. Its smallness is not a limitation — it is the
 ## 9. Origin Video 001
 
 - **Origin element**: the foundational witnessing artifact that documents the founder's stated intent in the founder's own voice.
-- **Status (per CLAIM_REGISTER_v0_1.md Section 9 row)**: `SOURCE_PENDING` — the video itself is not in this repo at v0.1; a future inventory slice will bind its hash, location, and accessibility path.
-- **Allowed public wording**: "Origin Video 001 is referenced as a foundational artifact; its evidence path is being assembled."
-- **Forbidden**: treating the video as live runtime proof; quoting it as authoritative without the binding step landing first.
+- **Status (v0.2 evidence-binding update)**:
+  - **Emotional canon**: preserved in full by `docs/BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` (transcript Section 7, four-beat narrative spine Section 8 — declared inviolate).
+  - **Primary artifact identity**: hash-bound. Local primary artifact at `/data/bizra/cloud-archive/gdrive-wizard/Google AI Studio/…(1693522543490).mp4.mp4`, sha256 `8b89b6dd…3d5af`, 149,888,720 bytes. Label `FILE_IDENTITY_VERIFIED`.
+  - **Creation / export date**: filename-embedded Unix-ms timestamp `1693522543490` decodes to 2023-08-31 22:55:43 UTC. Label `DATE_DERIVED_SINGLE_WITNESS` — *derived from a single witness, not fully verified*. Promotion to `VERIFIED` requires Google Drive `createdTime`, Google AI Studio export metadata, Runway/Midjourney provenance, or another independent witness.
+  - **Production tool**: Google AI Studio (from folder + filename convention). Label `TOOL_PROVENANCE_DERIVED_STRONG`. Promotion to `VERIFIED` requires documented GAI Studio export-format behavior or live Drive metadata corroboration.
+  - **Public release status**: `PUBLIC_RELEASE_SOURCE_PENDING`.
+  - **Pristine-original status**: `PRISTINE_ORIGINAL_SOURCE_PENDING`.
+  - **Not evidence**: Claude upload history is explicitly excluded as a witness (per `feedback_no_invented_evidence_source.md`).
+  - **No media binaries committed to this repo.**
+- **Allowed public wording**: "Origin Video 001 is a foundational artifact preserved as canon and hash-bound to a local primary file; its 2023 creation date is derived from a filename-embedded timestamp and awaits corroborating evidence."
+- **Forbidden**: treating the video as live runtime proof; quoting any field as `VERIFIED` when its label is `DERIVED` or `SOURCE_PENDING`; using either of the two `~/Downloads/` derivative files (`_restyled.mp4`, `My Video-2.mp4`) as the primary artifact; using Claude upload history as evidence.
 
-When Origin Video 001 is bound to a hash and a reachable location, the label is promoted from `SOURCE_PENDING` to `VERIFIED` and this section is updated.
+When future evidence corroborates the date / production-tool / pristine-original / public-release dimensions, the labels in this section are promoted and the corresponding rows in `CLAIM_REGISTER_v0_1.md §9` and the Evidence Binding v0.2 subsection of the Origin Video Canon are updated to match.
 
 ## 10. The Third Fact
 
