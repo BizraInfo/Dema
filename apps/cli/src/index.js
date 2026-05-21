@@ -31,6 +31,12 @@ import {
   serializeCodebaseMapForSave,
   saveCodebaseMap
 } from "../../../packages/receipts/src/codebase-map-save.js";
+import { runVerificationPipeline } from "../../../packages/core/src/multi-agent-orchestrator.js";
+import {
+  PIPELINE_RESULT_SAVE_CONSENT,
+  serializePipelineResultForSave,
+  savePipelineResult
+} from "../../../packages/receipts/src/pipeline-result-save.js";
 import {
   formatOnboardingLifecyclePreview,
   formatNodeRegistryPreview,
@@ -364,6 +370,9 @@ Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
                            C1 · local LLM adapter · preview-only by default; --invoke + exact consent calls Ollama at localhost
   dema master-craftsmanship audit [--json] [<path>]
                            External audit of any artifact against the 10 master-craftsmanship invariants. Default subject: tests/node-onboarding-adr011-compliance.test.js. Verdict: COMPLIANT (10/10) | PARTIAL (N/10) | NON-COMPLIANT. Exits 1 on non-compliant or missing path.
+  dema orchestrator verify [--invocation-file <abs-path> | --latest] [--pretty]
+                           [--save-pipeline-result --save-pipeline-consent "GO: save local orchestrator pipeline result"]
+                           v0.1 SAT-1..5 pipeline exposure. Reads a saved invocation envelope and pipes it through the existing runVerificationPipeline() (multi-agent-orchestrator.js). Emits bizra.dema.orchestrator_verification_pipeline.v0.1 to stdout with per-SAT verdicts + aggregate verdict. Optional --save-pipeline-result persists to $DEMA_HOME/receipts/pipeline-<sha256>.json (atomic; preview-grade; saves both passed and non-passed pipelines). NOT chain-bound mint. NOT PAT execution. NO model invocation. NO network. NO URP. NO token/economy.
   dema codebase map <abs-path>
                            [--summary] [--json] [--max-files N] [--max-depth N] [--max-file-size N]
                            [--include-tests] [--hotspots] [--exclude PAT] [--no-default-exclude]
@@ -395,6 +404,7 @@ const REGISTERED_COMMANDS_LIST = [
   { command: "craftsmanship-witness", description: "master-craftsmanship creation preview" },
   { command: "master-craftsmanship", description: "audit an artifact against the 10 master-craftsmanship invariants" },
   { command: "codebase", description: "read-only architecture map of any target repo (subcommand: map <abs-path>)" },
+  { command: "orchestrator", description: "run the SAT-1..5 verification pipeline on a saved invocation envelope (subcommand: verify)" },
   { command: "llm-router", description: "local LLM router preview" },
   { command: "process-mining", description: "operator-pattern mirror" },
   { command: "key-maker-check", description: "self-audit reasoning against Key Maker invariants" },
@@ -1063,6 +1073,128 @@ async function dispatch(argv) {
         process.stdout.write(cbOut);
       }
       if (envelope.partial) process.exitCode = 1;
+      return;
+    }
+
+    case "orchestrator": {
+      // v0.1 · SAT-1..5 pipeline exposure. Reads a saved invocation envelope
+      // and pipes it through the existing runVerificationPipeline() from
+      // multi-agent-orchestrator.js. NOT chain-bound mint. NOT PAT execution.
+      // No model invocation. No network.
+      const orcSub = argv[1];
+      if (orcSub !== "verify") {
+        process.stderr.write(
+          "Usage: dema orchestrator verify [--invocation-file <abs-path> | --latest] [--pretty] [--save-pipeline-result --save-pipeline-consent \"GO: save local orchestrator pipeline result\"]\n"
+        );
+        process.exitCode = 1;
+        return;
+      }
+      const { isAbsolute: orcIsAbsolute } = await import("node:path");
+      const orcFile = argValue(argv, "--invocation-file") ?? null;
+      const orcLatest = argv.includes("--latest");
+      const orcPretty = argv.includes("--pretty");
+      const orcSave = argv.includes("--save-pipeline-result");
+
+      if (orcFile && orcLatest) {
+        process.stderr.write(
+          "dema orchestrator verify: --invocation-file and --latest are mutually exclusive\n"
+        );
+        process.exitCode = 1;
+        return;
+      }
+      if (!orcFile && !orcLatest) {
+        process.stderr.write(
+          "dema orchestrator verify: one of --invocation-file <abs-path> or --latest is required\n"
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      let orcTargetPath;
+      if (orcFile) {
+        if (!orcIsAbsolute(orcFile)) {
+          process.stderr.write(
+            `dema orchestrator verify: --invocation-file path must be absolute (got: ${orcFile})\n`
+          );
+          process.exitCode = 1;
+          return;
+        }
+        orcTargetPath = orcFile;
+      } else {
+        const latest = await resolveLatestInvocationPath({ demaHome: process.env.DEMA_HOME });
+        if (!latest) {
+          process.stderr.write(
+            "dema orchestrator verify: no invocation-*.json files found in $DEMA_HOME/receipts/\n"
+          );
+          process.exitCode = 1;
+          return;
+        }
+        orcTargetPath = latest;
+      }
+
+      let orcReadResult;
+      try {
+        orcReadResult = await readEnvelopeFromFile(orcTargetPath);
+      } catch (err) {
+        if (err?.code === "ENOENT") {
+          process.stderr.write(
+            `dema orchestrator verify: envelope file not found: ${orcTargetPath}\n`
+          );
+        } else if (err instanceof SyntaxError) {
+          process.stderr.write(
+            `dema orchestrator verify: malformed envelope JSON at ${orcTargetPath}: ${err.message}\n`
+          );
+        } else {
+          process.stderr.write(
+            `dema orchestrator verify: envelope read failed at ${orcTargetPath}: ${err?.message ?? err}\n`
+          );
+        }
+        process.exitCode = 1;
+        return;
+      }
+
+      const pipeline = runVerificationPipeline({ artifact: orcReadResult.envelope });
+      // Attach source linkage (Q8: preserve source artifact hash) without
+      // mutating the frozen pipeline object — wrap via a fresh frozen shape.
+      const pipelineWithSource = Object.freeze({
+        ...pipeline,
+        source: Object.freeze({
+          path: orcTargetPath,
+          source_invocation_result_hash: orcReadResult.sourceHash
+        })
+      });
+
+      const pipelineOut = serializePipelineResultForSave(pipelineWithSource, { pretty: orcPretty });
+
+      if (orcSave) {
+        const orcSaveConsent = argValue(argv, "--save-pipeline-consent") ?? null;
+        const saveResult = await savePipelineResult(pipelineWithSource, {
+          demaHome: process.env.DEMA_HOME,
+          consent: orcSaveConsent,
+          pretty: orcPretty
+        });
+        if (!saveResult.saved) {
+          if (saveResult.reason === "consent_missing") {
+            process.stderr.write(
+              `dema orchestrator verify: --save-pipeline-result requires --save-pipeline-consent "${PIPELINE_RESULT_SAVE_CONSENT}"\n`
+            );
+          } else if (saveResult.reason === "consent_mismatch") {
+            process.stderr.write(
+              `dema orchestrator verify: --save-pipeline-result consent phrase mismatch; required: "${PIPELINE_RESULT_SAVE_CONSENT}"\n`
+            );
+          } else {
+            process.stderr.write(
+              `dema orchestrator verify: --save-pipeline-result failed (${saveResult.reason}): ${saveResult.error_message ?? "unknown"}\n`
+            );
+          }
+          process.exitCode = 1;
+          return;
+        }
+        process.stderr.write(`saved pipeline result to: ${saveResult.path}\n`);
+      }
+
+      process.stdout.write(pipelineOut);
+      if (!pipelineWithSource.passed) process.exitCode = 1;
       return;
     }
 
