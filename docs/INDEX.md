@@ -59,6 +59,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md](NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md) — Defines the first human proof path behind Node0: what is verified, derived, operator-attested, source-pending, and forbidden before public founder-proof claims.
 - [BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md](BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md) — Defines the claim-governed 2026 First Look narrative: origin chain, scenes, public wording boundaries, visual direction, and production rules.
 - [BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md](BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md) — Production-control brief between canon and media: 7 asset-family briefs (video / Canva / emulator / website / social / lighthouse invitation / founder story), scene-to-asset + claim-to-visual matrices, forbidden visuals + wording, 3 prompt packs (Canva / Video / Visual Emulator), Production Checklist, Review Gate. No Canva or video is produced by this slice.
+- [BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md](BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md) — Reviewer-facing evaluation pack: executive summary · 5 truth-bucket sections · 3 evaluation maps · μ-layer + security + testing + docs posture · structural market-pattern comparison · 13-item reviewer checklist · 11 suggested reviewer questions · known limitations · risk register v0.1 · evidence request roadmap. Makes BIZRA reviewable; does not sell BIZRA.
 
 ## Binding ADRs
 
