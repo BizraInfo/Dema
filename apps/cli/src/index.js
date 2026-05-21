@@ -965,7 +965,7 @@ async function dispatch(argv) {
         // Resolve target path.
         const { join: pathJoin, isAbsolute: pathIsAbsolute } = await import("node:path");
         const { homedir } = await import("node:os");
-        const { readFile, stat } = await import("node:fs/promises");
+        const { open } = await import("node:fs/promises");
 
         let targetPath;
         if (explicitRegistryFile) {
@@ -984,17 +984,26 @@ async function dispatch(argv) {
           targetPath = pathJoin(home, "models", "registry.json");
         }
 
-        // Read-only load with size cap + fail-closed error paths.
+        // Read-only load through a single file handle with bounded read.
+        // The handle approach closes the TOCTOU race that a stat()+readFile()
+        // pattern leaves open: between stat() and readFile() an attacker
+        // could swap the file with a larger one and bypass the size cap. By
+        // reading at most MAX+1 bytes from a single open handle, we never
+        // allocate more than MAX+1 even if the file grows under us, and we
+        // never trust a separate stat() call.
+        let fh = null;
         try {
-          const statResult = await stat(targetPath);
-          if (statResult.size > MAX_REGISTRY_FILE_BYTES) {
+          fh = await open(targetPath, "r");
+          const buffer = Buffer.alloc(MAX_REGISTRY_FILE_BYTES + 1);
+          const { bytesRead } = await fh.read(buffer, 0, MAX_REGISTRY_FILE_BYTES + 1, 0);
+          if (bytesRead > MAX_REGISTRY_FILE_BYTES) {
             process.stderr.write(
-              `dema model-broker route: registry file too large: ${statResult.size} bytes (max: ${MAX_REGISTRY_FILE_BYTES})\n`
+              `dema model-broker route: registry file too large: exceeds ${MAX_REGISTRY_FILE_BYTES} bytes\n`
             );
             process.exitCode = 1;
             return;
           }
-          const raw = await readFile(targetPath, "utf8");
+          const raw = buffer.subarray(0, bytesRead).toString("utf8");
           const parsed = JSON.parse(raw);
           registry = buildRegistryFromConfig(parsed);
         } catch (err) {
@@ -1013,6 +1022,10 @@ async function dispatch(argv) {
           }
           process.exitCode = 1;
           return;
+        } finally {
+          if (fh) {
+            try { await fh.close(); } catch { /* best-effort close */ }
+          }
         }
       }
 
