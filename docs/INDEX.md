@@ -52,6 +52,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 ## Canon references
 
 - [canon/BIZRA_TOPOLOGY_CANON.md](canon/BIZRA_TOPOLOGY_CANON.md) — topology authority for PAT-7, SAT-5, one shared URP, and membrane language; docs-only mirror in this repo.
+- [THREE_REPO_PRODUCT_STACK_CANON_v0_1.md](THREE_REPO_PRODUCT_STACK_CANON_v0_1.md) — three-repo product stack canon: which BIZRA repo holds which authority.
 - [NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md](NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md) — Defines the complete Node0 + Dema component DNA: what is active, MVP-required, pilot-required, future-forest, research-quarantined, or designed-not-live.
 
 ## Binding ADRs
@@ -76,6 +77,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 
 ## Quality, delivery, and contribution
 
+- [DELIVERY_SPINE_v0_1.md](DELIVERY_SPINE_v0_1.md) — Defines Dema's canonical delivery gates, CI/CD ownership, release truth labels, quality spine, and operator-local extended gate boundaries.
 - [DELIVERY_BLUEPRINT.md](DELIVERY_BLUEPRINT.md) — release-readiness and DevOps discipline.
 - [TESTING.md](TESTING.md) — test surface and smoke-check matrix.
 - [LLM_SYSTEM_FLOW.md](LLM_SYSTEM_FLOW.md) — canonical repo-local flow for connected LLMs and agents.
