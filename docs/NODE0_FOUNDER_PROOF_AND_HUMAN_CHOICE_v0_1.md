@@ -172,14 +172,76 @@ Specific 2023 witnesses already identified in the probe:
 
 ## 13. Origin Artifact Evidence
 
-The pre-GitHub evidence anchor is **Origin Video 001**, already preserved and evidence-bound in `docs/BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` with v0.2 evidence binding:
+### 13.1 Corrected Origin Chain
+
+```text
+الرسالة + البذرة
+→ Ramadan 2023 to June/July 2023 Arabic root-paper phase
+→ Google Drive screenshot witness showing الرسالة.pdf dated 8 Jul 2023
+→ prompt-engineering exploration
+→ parallel crypto token trading and smart-contract exploration
+→ Origin Video 001
+→ GitHub / Node0 / Dema proof path
+→ future full chat-history pattern analysis
+```
+
+BIZRA did not begin with GitHub or with Origin Video 001. It began with two Arabic root papers — `الرسالة` (The Message) and `البذرة` (The Seed) — whose evidence chain reaches back into 2023. Prompt-engineering exploration and parallel crypto / smart-contract research were early development tracks alongside the root-paper writing; Origin Video 001 followed as the first cinematic / emotional articulation; GitHub `BizraInfo` opened in January 2024 as the public engineering proof surface; chat-history reconstruction across providers is the future v0.N work.
+
+### 13.2 Origin Video 001 (pre-GitHub cinematic anchor)
+
+The pre-GitHub **cinematic** evidence anchor is **Origin Video 001**, already preserved and evidence-bound in `docs/BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` with v0.2 evidence binding:
 
 - Primary artifact candidate is hash-bound (`sha256: 8b89b6dd…3d5af`, ~143 MB, located in the `gdrive-wizard` local mirror).
 - Filename-embedded ms timestamp `1693522543490` decodes to **2023-08-31 22:55:43 UTC**. Carries label `DATE_DERIVED_SINGLE_WITNESS`.
 - Production tool: Google AI Studio (label `TOOL_PROVENANCE_DERIVED_STRONG`).
 - Pristine-original status remains `PRISTINE_ORIGINAL_SOURCE_PENDING`.
 
-This anchors the pre-2024-01 portion of the founder evidence chain. Founder Proof v0.1 does not re-bind these claims; it cites the Origin Video canon as the authoritative source.
+Origin Video 001 sits **after** the two Arabic root papers in the origin chain (Section 13.1). Founder Proof v0.1 does not re-bind Origin Video 001's evidence; it cites the Origin Video canon as the authoritative source.
+
+### 13.3 Arabic Root-Paper Evidence Binding (الرسالة + البذرة)
+
+Captured by read-only local probe 2026-05-21. The two Arabic root papers' evidence binds across three layers: the Bitcoin-anchored repository originals, the OneDrive 2023-dated hash-identical copies, and the source-document DOCX with a filename-embedded creation timestamp.
+
+| Artifact | Path | Size | mtime | SHA-256 | Truth label | What it proves | What it does NOT prove |
+|---|---|---|---|---|---|---|---|
+| **البذرة → `bizra.pdf` (Bitcoin-anchored canonical Seed)** | `Dema/bizra.pdf` (repo root) | 691,327 B | 2026-05-04 (repo touch) | `f95bc6f76acdc9339e005411a17810c50624784f18b55811d8339fcef6601538` | `FILE_IDENTITY_VERIFIED` + ANCHORED in `proof-of-priority/manifest.json` (root `45aa2789…1477a`) | Hash identity; canon binding via Bitcoin merkle anchor | — |
+| **البذرة Arabic OneDrive cross-witness** | `/data/bizra/cloud-archive/onedrive-beshr000/البذرة.pdf` (plus two identical copies in same mirror) | 691,327 B each | **2023-07-22 05:58:41 +04** (OneDrive mtime preserved) | **`f95bc6f76acdc9339e005411a17810c50624784f18b55811d8339fcef6601538`** — IDENTICAL to anchored `bizra.pdf` | `FILE_IDENTITY_VERIFIED` + `DATE_DERIVED_FROM_FILESYSTEM` (OneDrive mirror preserved 2023 mtime) | بذرة.pdf existed under the anchored hash on OneDrive on **2023-07-22**; the Arabic Seed and the Bitcoin-anchored `bizra.pdf` are the same file by hash | Original creation date (mtime ≠ createdTime); Ramadan 2023 start date |
+| **البذرة source DOCX (two-witness corroborated 2023-07-22 timestamp floor)** | `/data/bizra/cloud-archive/onedrive-beshr000/Documents/البذرة_230722_051419.docx` | 11,481,680 B (~11 MB) | **2023-07-22 05:18:14 +04** | `1e5b80cdd3bb12395d53058550b3a4aa79453082a31fc42328a8892294fddfdd` | `DATE_DERIVED_FROM_FILESYSTEM` + `FILENAME_TIMESTAMP_CORROBORATED` (filename-embedded `230722_051419` = 2023-07-22 05:14:19 + OneDrive mirror mtime 2023-07-22 05:18:14, agreeing to within 4 minutes) | The Arabic Seed source document existed on disk under this hash by **2023-07-22** — i.e., a **July 2023 existence / export-date floor**, not a full creation-proof. Two corroborating timestamp witnesses (filename + mirror mtime); the DOCX precedes the PDF export by ~44 minutes | Ramadan 2023 START date; June 2023 COMPLETION date; **pristine original creation / export metadata** (Drive `createdTime` not yet captured — filename + mirror mtime do not verify pristine provenance); content equivalence with anchored `bizra.pdf` (different format, similar period — text-extraction + diff would be required for content match) |
+| **الرسالة → `themassage.pdf` (Bitcoin-anchored canonical Message)** | `Dema/themassage.pdf` (repo root) | 186,502 B | 2026-05-04 (repo touch) | `e05b73b933df31964b96255dca673300b01caea3bce8bd283e7f6440a876d3ce` | `FILE_IDENTITY_VERIFIED` + ANCHORED in `proof-of-priority/manifest.json` | Hash identity; canon binding via Bitcoin merkle anchor | — |
+| **الرسالة Arabic GDrive copy (revision, NOT pristine original)** | `/data/bizra/cloud-archive/gdrive-bizra-info-duplicates/Google AI Studio/الرسالة.dup--hwsEPWjIys.pdf` (and `.dup--S--qeVd364.pdf` — identical duplicate) | 1,061,379 B (~1 MB) | **2025-09-28 02:27:29 +04** (NOT 2023) | `100e0e2318b506706a6add99c173ea627242adfd85e201d7832e311ffb305446` — **DIFFERENT** from anchored `themassage.pdf` | `FILE_IDENTITY_VERIFIED` (for this revision) + `FILE_IDENTITY_DIVERGENCE_VERIFIED` (this is a revision, not the anchored original — matches existing memory canon `project_themassage_vs_alrisala_hash_drift`) | A divergent Arabic revision exists | The 2023 creation date; the original Ramadan-2023 writing window; the original الرسالة file's hash |
+
+### 13.4 Google Drive Root-Paper Visual Witness
+
+On 2026-05-21 the operator provided a Google Drive screenshot showing search results for "the massage" with the following visible entries:
+
+| Visible entry | Date modified (per screenshot) |
+|---|---|
+| `الرسالة.pdf` | **8 Jul 2023** |
+| `the massage.docx` | **17 Jul 2023** |
+| `the massage.docx` (second revision) | **20 Sept 2023** |
+| `معجم الدخيل…txt` (related Arabic dictionary) | **24 Sept 2023** |
+
+- **Truth label**: `DRIVE_SCREENSHOT_WITNESS` / `SOURCE_PENDING_FOR_METADATA`.
+- **Proves**: `الرسالة` / "The Message" artifacts were visible in the operator's Google Drive records by **July 2023**.
+- **Does NOT prove**: original creation date; Ramadan 2023 start date; June 2023 completion date; file content integrity (the screenshot does not bind file hashes); `createdTime` vs `modifiedTime` distinction (Drive screenshot shows modifiedTime only).
+
+The screenshot itself is operator-provided; its hash + path capture into `/data/bizra/research/founder-proof-evidence-inventory.md` is a future v0.2 binding task.
+
+### 13.5 Evidence-interpretation boundaries
+
+These four interpretation rules govern every promotion in §13.3 and §13.4:
+
+- **Screenshot proves visible record**, not file content integrity. A Drive screenshot witnesses "this entry was visible in search results on date X"; it does NOT bind the file's bytes.
+- **Hash proves artifact identity**, not creation date. A matching sha256 binds two files as byte-identical; it says nothing about when either was created.
+- **Drive metadata proves date** (`createdTime` / `modifiedTime`). Filesystem mtime in a mirror is a *secondary* witness that the mirror preserved Drive's `modifiedTime`; the authoritative date evidence is Drive metadata export, not local mtime alone.
+- **Content summary proves semantic continuity**. To claim "the Arabic Seed *content* became the canonical `bizra.pdf` content," text extraction and diff are required; hash-identity alone proves byte-identity, not semantic continuity across format conversions (DOCX → PDF).
+
+### 13.6 Early-track boundaries
+
+The corrected origin chain (Section 13.1) names two parallel pre-Origin-Video tracks:
+
+- **Prompt-engineering exploration** — `OPERATOR_ATTESTED`. Evidence binding is deferred to the chat-history reconstruction roadmap (Section 27).
+- **Parallel crypto token trading and smart-contract exploration** — `OPERATOR_ATTESTED` *as research history only*. **This MUST NOT be read as evidence of a live BIZRA token, a live BIZRA smart contract, or any live economic activity** (see Section 24).
 
 ## 14. Time and Effort Claims
 
@@ -261,6 +323,9 @@ This is part of the founder narrative arc — that the seed grew from scratch un
 - "No founder-allocation token has been minted."
 - "No formal technical background before Ramadan 2023."
 - "All operator-mirror files dated 2023-03-22 onwards are BIZRA-relevant by default" (this is itself architect-locked in `feedback_post_ramadan_2023_default_relevance`; the inversion is operator-decreed).
+- **Early prompt-engineering exploration** during the Ramadan-2023 → 2024 window (parallel early development track per §13.1). Evidence binding deferred to the chat-history reconstruction roadmap (§27).
+- **Parallel crypto token trading and smart-contract exploration** during the same window — `OPERATOR_ATTESTED` as **research history only**; not evidence of live token / smart-contract activity for BIZRA.
+- "الرسالة and البذرة were written during Ramadan 2023 (Gregorian 2023-03-22 onwards) and completed around June 2023." This is the operator-attested writing-window claim. The hash-evidence binding in §13.3 supports a hard 2023-07-22 floor for بذرة existence on disk; the Ramadan-2023 start date and June 2023 completion date remain `OPERATOR_ATTESTED` / `SOURCE_PENDING` until Drive metadata export or earlier-dated original-file evidence is bound.
 
 Each of these is reusable in public language only when paired with the `OPERATOR_ATTESTED` label or equivalent qualifier (e.g., "the founder attests …").
 
@@ -293,6 +358,10 @@ Forbidden in this canon and in every public artifact derived from it:
 - "The founder is the final authority" — the founder is the **first** proof path.
 - "3 years on GitHub" — GitHub account begins 2024-01-04; the broader chain reaches earlier via Origin Video + local mirrors.
 - Live public URP, UKE shared runtime, Proof-of-Impact rewards, or token economy.
+- The exact creation / completion dates of `الرسالة` or `البذرة` as `VERIFIED` from a Google Drive screenshot alone. The screenshot proves visible record, not file content integrity.
+- "June 2023 completion of الرسالة / البذرة" as `VERIFIED` until original file metadata, Drive `createdTime` export, or an earlier-dated artifact is bound (the hash-evidence floor is **2023-07-22** for بذرة; الرسالة remains earlier-dated only via the 8 Jul 2023 screenshot witness).
+- "The full 2023 development pattern has been reconstructed" until the chat-history reconstruction roadmap (§27) completes.
+- **Reading early crypto token trading or smart-contract exploration as evidence of a live BIZRA token, a minted BIZRA smart contract, a BIZRA economic system, or any live economic activity.** Those parallel tracks are research history, not active product surface.
 
 A surface that contains any of these is a release-blocking defect.
 
@@ -353,8 +422,13 @@ Named and deferred, per `feedback_incremental_evidence_binding`:
 | **v0.5 — Dema home-base consolidation** | Awaits `dema consolidate home-base` feature shipping | "600 GB+ R&D" promoted from `OPERATOR_ATTESTED` to `DERIVED` with measured number |
 | **v0.6 — ledger absence-proof** | Public on-chain or off-chain audit showing no founder-allocation token mint | "No founder token" `OPERATOR_ATTESTED` → `VERIFIED` |
 | **v0.7 — background claim** | Education / employment history evidence (if and only if the operator chooses to publish it) | "No formal technical background" `OPERATOR_ATTESTED` → `DERIVED` or `VERIFIED` (or kept `OPERATOR_ATTESTED` by choice) |
+| **v0.8 — Arabic root-paper original-file binding** | Bind `الرسالة` and `البذرة` **original** files by path, hash, language, content summary, and (if available) Drive `createdTime` export. The current v0.1 binding establishes the **2023-07-22 floor** for `البذرة` via two-witness corroboration; v0.8 targets pre-2023-07 evidence for the actual writing window. | Ramadan-2023 → June-2023 writing window `OPERATOR_ATTESTED` → `DERIVED` or `VERIFIED` (per witnesses found) |
+| **v0.9 — Google Drive metadata capture** | Capture `createdTime` + `modifiedTime` + file ID + owner-account context for `الرسالة.pdf`, `the massage.docx`, `البذرة.pdf`, `البذرة_230722_051419.docx`, and the Drive search screenshot itself (hash the PNG + bind to repo evidence inventory). | Drive screenshot witness `DRIVE_SCREENSHOT_WITNESS` / `SOURCE_PENDING_FOR_METADATA` → `DATE_DERIVED_VERIFIED` when Drive `createdTime` corroborates |
+| **v0.10 — Early prompt-engineering session binding** | Bind early prompt-engineering sessions from the chat-history corpus (post-Ramadan-2023 window per `feedback_post_ramadan_2023_default_relevance`) as a parallel development track | Early prompt-engineering `OPERATOR_ATTESTED` → `DERIVED` |
+| **v0.11 — Early crypto / smart-contract exploration binding** | Bind early crypto token trading + smart-contract exploration as research history only: folders, notes, chat traces, tool screenshots, contract experiments, and wallet/tool evidence only if the operator chooses to expose them. No token/economy activation language. | Early crypto/smart-contract exploration `OPERATOR_ATTESTED` → `DERIVED` as research history only; never evidence of a live BIZRA token/economy |
+| **v0.12 — Incremental 2023 dev-pattern reconstruction** | Reconstruct the 2023 BIZRA development pattern from chat history incrementally (single provider first, then cross-provider), feeding the founder asset inventory ladder | "2023 development pattern reconstructed" remains `SOURCE_PENDING` at v0.1; v0.12 produces the first partial reconstruction; full reconstruction is itself an open-ended growing artifact per `feedback_incremental_evidence_binding` |
 
-Each slice is small, scoped, and adds binding without revisiting prior bindings.
+Each slice is small, scoped, and adds binding without revisiting prior bindings. v0.8–v0.12 are explicitly bounded by the four architect-locked evidence laws.
 
 ## 28. Explicit Non-Goals
 
