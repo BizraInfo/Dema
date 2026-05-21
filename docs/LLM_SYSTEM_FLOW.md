@@ -17,10 +17,11 @@ Purpose: make the signal path obvious, reduce duplicated guidance, and stop conn
 9. [BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md](BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md) for the first known BIZRA cinematic message, transcript, meaning, and timestamp-evidence status.
 10. [NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md](NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md) for the first human proof path behind Node0 with truth-labeled evidence.
 11. [BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md](BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md) for the claim-governed 2026 First Look narrative blueprint (origin chain, 7 scenes, public wording, visual/audio direction, verification checklist).
-12. [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries.
-13. [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) for engineering rules.
-14. [06-adr/](06-adr/) before changing anything covered by an ADR.
-15. [TESTING.md](TESTING.md) before changing tests or gates.
+12. [BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md](BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md) for the expression-layer brief between canon and media (asset-family briefs, prompt packs, forbidden lists, production checklist, review gate).
+13. [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries.
+14. [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) for engineering rules.
+15. [06-adr/](06-adr/) before changing anything covered by an ADR.
+16. [TESTING.md](TESTING.md) before changing tests or gates.
 
 When uncertain whether a feature belongs in Node0, Dema, URP, UKE, pilot, or future forest, consult the Component DNA document before proposing implementation.
 
@@ -35,6 +36,8 @@ When drafting BIZRA origin video, 2026 First Look, founder proof, public launch 
 When drafting founder proof, one-human/one-node narrative, public first-look copy, visual emulator story, or GTM language, consult NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md and CLAIM_REGISTER_v0_1.md before proposing wording.
 
 When drafting BIZRA first-look copy, video scripts, visual emulator language, public launch teasers, Canva prompts, or founder-story material, consult BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md and CLAIM_REGISTER_v0_1.md before proposing wording.
+
+When producing any Canva slide, video frame, website page, social teaser, visual-emulator screen, lighthouse-invitation packet, or founder-story artifact, consult BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md for the asset-family brief, prompt pack, forbidden visuals/wording, Production Checklist, and Review Gate before producing the artifact.
 
 ## System identity
 
