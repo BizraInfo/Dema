@@ -54,6 +54,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [canon/BIZRA_TOPOLOGY_CANON.md](canon/BIZRA_TOPOLOGY_CANON.md) — topology authority for PAT-7, SAT-5, one shared URP, and membrane language; docs-only mirror in this repo.
 - [THREE_REPO_PRODUCT_STACK_CANON_v0_1.md](THREE_REPO_PRODUCT_STACK_CANON_v0_1.md) — three-repo product stack canon: which BIZRA repo holds which authority.
 - [NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md](NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md) — Defines the complete Node0 + Dema component DNA: what is active, MVP-required, pilot-required, future-forest, research-quarantined, or designed-not-live.
+- [BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md](BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md) — Defines the origin, meaning, proof boundary, and public-facing moral spine of BIZRA from الرسالة and البذرة through Node0, Dema, URP, and the GTM path.
 
 ## Binding ADRs
 
