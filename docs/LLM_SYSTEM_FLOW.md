@@ -14,10 +14,11 @@ Purpose: make the signal path obvious, reduce duplicated guidance, and stop conn
 6. [DELIVERY_SPINE_v0_1.md](DELIVERY_SPINE_v0_1.md) for canonical delivery gates, authority table, claim gate, and release receipt template.
 7. [CLAIM_REGISTER_v0_1.md](CLAIM_REGISTER_v0_1.md) for the public-face truth-label taxonomy, forbidden claims, and Claim Review Gate.
 8. [BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md](BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md) for the BIZRA origin chain, moral spine, and canonical public paragraph.
-9. [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries.
-10. [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) for engineering rules.
-11. [06-adr/](06-adr/) before changing anything covered by an ADR.
-12. [TESTING.md](TESTING.md) before changing tests or gates.
+9. [BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md](BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md) for the first known BIZRA cinematic message, transcript, meaning, and timestamp-evidence status.
+10. [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries.
+11. [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) for engineering rules.
+12. [06-adr/](06-adr/) before changing anything covered by an ADR.
+13. [TESTING.md](TESTING.md) before changing tests or gates.
 
 When uncertain whether a feature belongs in Node0, Dema, URP, UKE, pilot, or future forest, consult the Component DNA document before proposing implementation.
 
@@ -26,6 +27,8 @@ When changing delivery, release, CI/CD, quality gates, claim boundaries, or publ
 When drafting README, GTM, Canva, market, emulator, token, URP, PoI, or public-facing language, consult CLAIM_REGISTER_v0_1.md before proposing wording.
 
 When drafting public-facing BIZRA origin, mission, GTM, visual emulator, README, or founder-proof language, consult BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md and CLAIM_REGISTER_v0_1.md before proposing wording.
+
+When drafting BIZRA origin video, 2026 First Look, founder proof, public launch story, or visual emulator language, consult BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md before proposing wording.
 
 ## System identity
 
