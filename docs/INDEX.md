@@ -25,6 +25,8 @@ This index is the clean map for the repo. It separates current user-facing docs,
 
 - [PRODUCT.md](PRODUCT.md) — concise product strategy.
 - [GTM.md](GTM.md) — first offer, audience, forbidden claims, Node1/Node2 boundary.
+- [gtm/BIZRA_90_Day_GTM_v0_1.md](gtm/BIZRA_90_Day_GTM_v0_1.md) — strategic 90-day GTM plan with v0.1.2 current-state drift closure.
+- [gtm/BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md](gtm/BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md) — docs-only Phase-1 Ring-1 send checklist, private send receipt shape, feedback record boundary, and exact next consent phrases.
 - [ROADMAP.md](ROADMAP.md) — product roadmap.
 - [LIGHTHOUSE.md](LIGHTHOUSE.md) — private lighthouse operator lane.
 - [founder-field-notes/inroom-walkthrough-v0.2.md](founder-field-notes/inroom-walkthrough-v0.2.md) — Current working artifact for Ring-1 adversarial in-room review.
@@ -53,6 +55,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 
 - [canon/BIZRA_TOPOLOGY_CANON.md](canon/BIZRA_TOPOLOGY_CANON.md) — topology authority for PAT-7, SAT-5, one shared URP, and membrane language; docs-only mirror in this repo.
 - [THREE_REPO_PRODUCT_STACK_CANON_v0_1.md](THREE_REPO_PRODUCT_STACK_CANON_v0_1.md) — three-repo product stack canon: which BIZRA repo holds which authority.
+- [HOUSE_OF_WISDOM_UKE_URP_CANON_v0_1.md](HOUSE_OF_WISDOM_UKE_URP_CANON_v0_1.md) — constitutional definition of UKE as the SAT-governed knowledge cortex inside the URP, the 8-tier promotion ladder (RAW_CLAIM → META_CANON), SAT/PAT/Dema/URP authority boundaries, consent and privacy rules, and 9 House-of-Wisdom forbidden claim examples.
 - [NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md](NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md) — Defines the complete Node0 + Dema component DNA: what is active, MVP-required, pilot-required, future-forest, research-quarantined, or designed-not-live.
 - [BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md](BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md) — Defines the origin, meaning, proof boundary, and public-facing moral spine of BIZRA from الرسالة and البذرة through Node0, Dema, URP, and the GTM path.
 - [BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md](BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md) — Preserves the first known BIZRA cinematic message, transcript, meaning, timestamp-evidence status, and relationship to the 2026 First Look.

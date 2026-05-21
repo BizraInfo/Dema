@@ -10,6 +10,10 @@ Its purpose is to validate Dema local setup, consent boundaries, node health, an
 
 This document captures the operator contract. It is the canonical source. ROADMAP keeps the public-roadmap line; this doc is the working contract.
 
+The Phase-1 GTM send checklist and private record shapes live in
+[docs/gtm/BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md](gtm/BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md).
+That packet is docs-only; it does not authorize a send.
+
 ---
 
 ## Why this exists
@@ -105,6 +109,18 @@ Each of these requires explicit GO from the program owner — auto-mode does not
 - First-time issuance of any L4 receipt on the operator's machine.
 - Federation handshake (L5 receipt) — Phase B gate.
 - Any change to this document that loosens an operator constraint.
+
+The current Ring-1 send phrase is:
+
+```text
+GO send pack to <name>
+```
+
+The phrase authorizes one private send to one named candidate. It does not
+authorize a public post, a batch send, a receipt mint, or any runtime action.
+
+Private send and feedback records stay under `~/.dema/lighthouse/ring-1/` unless
+the reviewer explicitly consents to an anonymized repo artifact.
 
 ---
 

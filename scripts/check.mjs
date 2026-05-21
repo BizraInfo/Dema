@@ -43,6 +43,7 @@ export const commands = [
   ["node", ["scripts/review/canon-check.mjs"]],
   ["node", ["scripts/review/integration-check.mjs"]],
   ["node", ["scripts/llm-guidance-check.mjs"]],
+  ["node", ["scripts/gtm-readiness-check.mjs"]],
   ["node", ["scripts/node0-self-check.mjs", "--verify"]]
 ];
 
