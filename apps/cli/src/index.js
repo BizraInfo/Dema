@@ -44,6 +44,9 @@ import {
   saveRouteReceipt
 } from "../../../packages/receipts/src/route-receipt-save.js";
 import {
+  invokeRoutedLocalModel
+} from "../../../packages/core/src/routed-llm-invocation.js";
+import {
   buildProcessMiningPreview,
   buildProcessMiningSummary
 } from "../../../packages/core/src/process-mining-preview.js";
@@ -238,17 +241,22 @@ Preview planning:
                           [--no-local-only] [--allow-unknown] [--max-size <class>]
                           [--registry-stdin | --use-local-registry | --registry-file <abs-path>]
                           [--save-receipt --consent "GO: save local model route receipt"]
+                          [--invoke --prompt "<text>"
+                                    --invoke-consent "GO: invoke local LLM at <selected_model_id>"
+                                    [--timeout-ms <n>]]
                           [--pretty]
                     Route a task through the local model broker preview;
                     emits a bizra.dema.local_model_route_receipt.v0.1 JSON to stdout.
                     Default registry is DEFAULT_SAMPLE_REGISTRY (placeholders only -> routes nothing).
-                    Pipe operator registry JSON to --registry-stdin to route to a real entry.
-                    --use-local-registry reads $DEMA_HOME/models/registry.json (read-only; 1 MB max).
-                    --registry-file <abs-path> reads operator-supplied absolute file (read-only; 1 MB max).
                     --save-receipt (with exact --consent) persists the route receipt to
-                    $DEMA_HOME/receipts/route-<sha256>.json (atomic write; preview-grade save;
-                    NOT canonical chain-bound mint). Stdout unchanged; stderr emits a one-line note.
-                    Does not invoke any model. No network. No registry-file write. No canonical mint.
+                    $DEMA_HOME/receipts/route-<sha256>.json (atomic; NOT canonical mint).
+                    --invoke runs the routed local-LLM invocation through the existing adapter
+                    (localhost-only, model-whitelist, prompt-length-bounded, exact-consent).
+                    --invoke REQUIRES --save-receipt (route durability before invocation).
+                    --invoke REQUIRES --prompt and --invoke-consent. In invoke mode, stdout
+                    emits a bizra.dema.local_model_routed_invocation_result.v0.1 envelope
+                    instead of the bare route receipt.
+                    Does NOT call remote endpoints. NO PAT/SAT swarm. NO URP. NO token/economy.
 
 Local evidence:
   dema receipts     List local receipts
@@ -1049,16 +1057,99 @@ async function dispatch(argv) {
 
       const receipt = routeForTask(broker, routeOpts);
 
-      // Serialize ONCE via the route-receipt-save helper so stdout and any
-      // on-disk file match byte-for-byte. Same serializer for both paths is
-      // the architect-locked invariant.
+      const saveReceiptFlag = argv.includes("--save-receipt");
+      const invokeFlag = argv.includes("--invoke");
+
+      // v0.1 (this slice): --invoke runs the routed local-LLM invocation.
+      // Hard ordering: route → save route receipt → invoke selected model.
+      // --invoke REQUIRES --save-receipt + --prompt + --invoke-consent.
+      if (invokeFlag) {
+        if (!saveReceiptFlag) {
+          process.stderr.write(
+            "dema model-broker route: --invoke requires --save-receipt for route durability before invocation.\n"
+          );
+          process.exitCode = 1;
+          return;
+        }
+        const prompt = argValue(argv, "--prompt") ?? "";
+        if (typeof prompt !== "string" || prompt.length === 0) {
+          process.stderr.write(
+            "dema model-broker route: --invoke requires --prompt \"<text>\"\n"
+          );
+          process.exitCode = 1;
+          return;
+        }
+        const invokeConsent = argValue(argv, "--invoke-consent") ?? "";
+        if (typeof invokeConsent !== "string" || invokeConsent.length === 0) {
+          process.stderr.write(
+            "dema model-broker route: --invoke requires --invoke-consent \"GO: invoke local LLM at <selected_model_id>\"\n"
+          );
+          process.exitCode = 1;
+          return;
+        }
+        // Step 1: save first (route durability before invocation).
+        const consent = argValue(argv, "--consent") ?? "";
+        const saveResult = await saveRouteReceipt(receipt, {
+          demaHome: process.env.DEMA_HOME,
+          consent,
+          pretty
+        });
+        if (!saveResult.saved) {
+          if (saveResult.reason === "consent_missing") {
+            process.stderr.write(
+              `dema model-broker route: --save-receipt requires --consent "${ROUTE_RECEIPT_SAVE_CONSENT}"\n`
+            );
+          } else if (saveResult.reason === "consent_mismatch") {
+            process.stderr.write(
+              `dema model-broker route: --save-receipt consent phrase mismatch; required: "${ROUTE_RECEIPT_SAVE_CONSENT}"\n`
+            );
+          } else {
+            process.stderr.write(
+              `dema model-broker route: --save-receipt failed (${saveResult.reason}): ${saveResult.error_message ?? "unknown"}\n`
+            );
+          }
+          process.exitCode = 1;
+          return;
+        }
+        process.stderr.write(`saved receipt to: ${saveResult.path}\n`);
+
+        // Step 2: invoke routed local model via the bridge → adapter.
+        const timeoutMsArg = argValue(argv, "--timeout-ms");
+        const timeoutMs = timeoutMsArg !== undefined
+          ? Number.parseInt(timeoutMsArg, 10)
+          : undefined;
+        const envelope = await invokeRoutedLocalModel({
+          routeReceipt: receipt,
+          prompt,
+          invokeConsent,
+          timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : undefined
+        });
+
+        // Step 3: stdout emits the envelope (replaces the bare route receipt).
+        const envelopeOut = pretty
+          ? JSON.stringify(envelope, null, 2)
+          : JSON.stringify(envelope);
+        process.stdout.write(envelopeOut + "\n");
+
+        // Non-zero exit on adapter-reported failure so operators can chain
+        // routed invocation into scripts that fail-fast on missing/refused
+        // models.
+        if (
+          envelope.invocation_result === null ||
+          envelope.invocation_result.invocation_status === "failed"
+        ) {
+          process.exitCode = 1;
+        }
+        return;
+      }
+
+      // Non-invoke path: stdout = route receipt; optionally save.
       const content = serializeRouteReceiptForSave(receipt, { pretty });
       process.stdout.write(content);
 
-      // v0.2 (this slice): --save-receipt persists the route receipt to
+      // v0.2: --save-receipt persists the route receipt to
       // $DEMA_HOME/receipts/route-<sha256>.json under exact-string consent.
       // Preview-grade SAVE (not canonical chain-bound MINT per ADR-008 §C12).
-      const saveReceiptFlag = argv.includes("--save-receipt");
       if (saveReceiptFlag) {
         const consent = argValue(argv, "--consent") ?? "";
         const result = await saveRouteReceipt(receipt, {
