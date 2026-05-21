@@ -13,17 +13,18 @@ Purpose: make the signal path obvious, reduce duplicated guidance, and stop conn
 5. [NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md](NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md) for the complete Node0 + Dema component DNA and per-layer status labels.
 6. [DELIVERY_SPINE_v0_1.md](DELIVERY_SPINE_v0_1.md) for canonical delivery gates, authority table, claim gate, and release receipt template.
 7. [CLAIM_REGISTER_v0_1.md](CLAIM_REGISTER_v0_1.md) for the public-face truth-label taxonomy, forbidden claims, and Claim Review Gate.
-8. [BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md](BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md) for the BIZRA origin chain, moral spine, and canonical public paragraph.
-9. [BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md](BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md) for the first known BIZRA cinematic message, transcript, meaning, and timestamp-evidence status.
-10. [NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md](NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md) for the first human proof path behind Node0 with truth-labeled evidence.
-11. [BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md](BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md) for the claim-governed 2026 First Look narrative blueprint (origin chain, 7 scenes, public wording, visual/audio direction, verification checklist).
-12. [BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md](BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md) for the expression-layer brief between canon and media (asset-family briefs, prompt packs, forbidden lists, production checklist, review gate).
-13. [BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md](BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md) for the reviewer-facing evaluation pack (truth buckets, evaluation maps, reviewer checklist, risk register, evidence-request roadmap).
-14. [BIZRA_MARKET_ANALYSIS_v0_1.md](BIZRA_MARKET_ANALYSIS_v0_1.md) for the market-comparison frame (5 patterns, comparator landscape, differentiation map, non-claims, risks, EXTERNAL_SOURCE_REQUIRED items).
-15. [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries.
-16. [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) for engineering rules.
-17. [06-adr/](06-adr/) before changing anything covered by an ADR.
-18. [TESTING.md](TESTING.md) before changing tests or gates.
+8. [BIZRA_AGENT_DNA_LAW_OF_ASSUMPTION_v0_1.md](BIZRA_AGENT_DNA_LAW_OF_ASSUMPTION_v0_1.md) for the agent DNA Law of Assumption — how every BIZRA agent handles uncertainty, disagreement, evidence, humility, and unavoidable assumptions (Arabic + English law text · 6-field Required Output Pattern · 12 forbidden behaviors).
+9. [BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md](BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md) for the BIZRA origin chain, moral spine, and canonical public paragraph.
+10. [BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md](BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md) for the first known BIZRA cinematic message, transcript, meaning, and timestamp-evidence status.
+11. [NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md](NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md) for the first human proof path behind Node0 with truth-labeled evidence.
+12. [BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md](BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md) for the claim-governed 2026 First Look narrative blueprint (origin chain, 7 scenes, public wording, visual/audio direction, verification checklist).
+13. [BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md](BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md) for the expression-layer brief between canon and media (asset-family briefs, prompt packs, forbidden lists, production checklist, review gate).
+14. [BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md](BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md) for the reviewer-facing evaluation pack (truth buckets, evaluation maps, reviewer checklist, risk register, evidence-request roadmap).
+15. [BIZRA_MARKET_ANALYSIS_v0_1.md](BIZRA_MARKET_ANALYSIS_v0_1.md) for the market-comparison frame (5 patterns, comparator landscape, differentiation map, non-claims, risks, EXTERNAL_SOURCE_REQUIRED items).
+16. [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries.
+17. [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) for engineering rules.
+18. [06-adr/](06-adr/) before changing anything covered by an ADR.
+19. [TESTING.md](TESTING.md) before changing tests or gates.
 
 When uncertain whether a feature belongs in Node0, Dema, URP, UKE, pilot, or future forest, consult the Component DNA document before proposing implementation.
 
@@ -44,6 +45,8 @@ When producing any Canva slide, video frame, website page, social teaser, visual
 When preparing reviewer-facing material, due-diligence response, advisor briefing, lighthouse-candidate inspection package, or partner evaluation surface, consult BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md as the canonical reviewability surface; never substitute marketing copy for the truth-bucket structure.
 
 When drafting GTM, pitch, landing page, investor/advisor material, competitor comparison, or public market positioning, consult BIZRA_MARKET_ANALYSIS_v0_1.md and CLAIM_REGISTER_v0_1.md first. Treat every unsourced market fact as EXTERNAL_SOURCE_REQUIRED until v0.2+ binds the citation.
+
+When drafting market analysis, third-party evaluation responses, GTM claims, agent behavior rules, or public language under uncertainty, consult BIZRA_AGENT_DNA_LAW_OF_ASSUMPTION_v0_1.md and CLAIM_REGISTER_v0_1.md first. Never hide uncertainty behind confidence; never fabricate to fill a gap; label assumptions with `ASSUMED-WITH-IHSAN`.
 
 ## System identity
 
