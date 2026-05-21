@@ -27,6 +27,11 @@ import {
   formatCodebaseMapSummary
 } from "../../../packages/core/src/codebase-architecture-map.js";
 import {
+  CODEBASE_MAP_SAVE_CONSENT,
+  serializeCodebaseMapForSave,
+  saveCodebaseMap
+} from "../../../packages/receipts/src/codebase-map-save.js";
+import {
   formatOnboardingLifecyclePreview,
   formatNodeRegistryPreview,
   formatSkillGrowthGovernorPreview,
@@ -362,7 +367,8 @@ Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
   dema codebase map <abs-path>
                            [--summary] [--json] [--max-files N] [--max-depth N] [--max-file-size N]
                            [--include-tests] [--hotspots] [--exclude PAT] [--no-default-exclude]
-                           Read-only architecture map for any target repo (v0.1). Iterative bounded walker · stdlib only · deterministic. Default JSON (bizra.dema.codebase_architecture_map.v0.1) to stdout. --summary emits compact human summary. --hotspots enables content-reading hotspot probes. .env*, *secret*, *credential*, *.pem/.key/.crt/.p12, id_rsa* recorded as metadata only. Symlinks recorded but never followed. NOT a model. NO network. NO mutation. NO chain-bound mint. NO PAT/SAT swarm. NO URP. NO token/economy.
+                           [--save-map --save-map-consent "GO: save local codebase architecture map"]
+                           Read-only architecture map for any target repo (v0.1). Iterative bounded walker · stdlib only · deterministic. Default JSON (bizra.dema.codebase_architecture_map.v0.1) to stdout. --summary emits compact human summary. --hotspots enables content-reading hotspot probes. .env*, *secret*, *credential*, *.pem/.key/.crt/.p12, id_rsa* recorded as metadata only. Symlinks recorded but never followed. --save-map (with exact --save-map-consent) persists the envelope to $DEMA_HOME/receipts/codebase-map-<sha256>.json (atomic; 256 MiB serialized cap; preview persistence; NOT canonical chain-bound mint). --save-map cannot combine with --summary unless --json is also passed. NOT a model. NO network. NO mutation. NO chain-bound mint. NO PAT/SAT swarm. NO URP. NO token/economy.
 
 Tasks and views:
   dema task         List registered tasks
@@ -973,6 +979,19 @@ async function dispatch(argv) {
       const cbIncludeTests = argv.includes("--include-tests");
       const cbHotspots = argv.includes("--hotspots");
       const cbNoDefaultExclude = argv.includes("--no-default-exclude");
+      const cbSaveMap = argv.includes("--save-map");
+      // v0.2 (this slice): --save-map cannot combine with --summary unless
+      // --json is also passed (saved file must match stdout byte-for-byte;
+      // a human summary text saved to codebase-map-<sha>.json is a category
+      // error). Fail-closed mirrors PR #85 "--save-invocation-result requires
+      // --invoke" early-validation pattern.
+      if (cbSaveMap && cbSummary && !cbJsonForce) {
+        process.stderr.write(
+          "dema codebase map: --save-map requires JSON output; cannot combine with --summary unless --json is also provided\n"
+        );
+        process.exitCode = 1;
+        return;
+      }
       const parseIntOrNull = (s) => {
         if (typeof s !== "string") return undefined;
         const n = Number.parseInt(s, 10);
@@ -994,18 +1013,54 @@ async function dispatch(argv) {
         extraExclusions: cbExtraExclusions,
         useDefaultExclusions: !cbNoDefaultExclude
       });
+      // Single serializer shared by save + stdout (byte-for-byte invariant).
+      // pretty=false matches the v0.1 CLI behavior; --pretty is not exposed
+      // by codebase-map yet.
+      const cbOut = serializeCodebaseMapForSave(envelope, { pretty: false });
+      // v0.2: save BEFORE any stdout write. If save fails, exit non-zero
+      // without polluting stdout.
+      if (cbSaveMap) {
+        const cbSaveConsent = argValue(argv, "--save-map-consent") ?? null;
+        const cbSaveResult = await saveCodebaseMap(envelope, {
+          demaHome: process.env.DEMA_HOME,
+          consent: cbSaveConsent,
+          pretty: false
+        });
+        if (!cbSaveResult.saved) {
+          if (cbSaveResult.reason === "consent_missing") {
+            process.stderr.write(
+              `dema codebase map: --save-map requires --save-map-consent "${CODEBASE_MAP_SAVE_CONSENT}"\n`
+            );
+          } else if (cbSaveResult.reason === "consent_mismatch") {
+            process.stderr.write(
+              `dema codebase map: --save-map consent phrase mismatch; required: "${CODEBASE_MAP_SAVE_CONSENT}"\n`
+            );
+          } else if (cbSaveResult.reason === "oversized_serialized_envelope") {
+            process.stderr.write(
+              `dema codebase map: --save-map failed (serialized envelope ${cbSaveResult.serialized_bytes} bytes exceeds ${cbSaveResult.max_saved_bytes} byte cap)\n`
+            );
+          } else {
+            process.stderr.write(
+              `dema codebase map: --save-map failed (${cbSaveResult.reason}): ${cbSaveResult.error_message ?? "unknown"}\n`
+            );
+          }
+          process.exitCode = 1;
+          return;
+        }
+        process.stderr.write(`saved codebase map to: ${cbSaveResult.path}\n`);
+      }
       if (envelope.error_reason) {
         process.stderr.write(
           `dema codebase map: ${envelope.error_reason}${envelope.error_message ? ": " + envelope.error_message : ""}\n`
         );
-        process.stdout.write(JSON.stringify(envelope) + "\n");
+        process.stdout.write(cbOut);
         process.exitCode = 1;
         return;
       }
       if (cbSummary && !cbJsonForce) {
         process.stdout.write(formatCodebaseMapSummary(envelope) + "\n");
       } else {
-        process.stdout.write(JSON.stringify(envelope) + "\n");
+        process.stdout.write(cbOut);
       }
       if (envelope.partial) process.exitCode = 1;
       return;
