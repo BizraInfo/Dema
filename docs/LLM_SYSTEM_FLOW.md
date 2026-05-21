@@ -19,10 +19,11 @@ Purpose: make the signal path obvious, reduce duplicated guidance, and stop conn
 11. [BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md](BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md) for the claim-governed 2026 First Look narrative blueprint (origin chain, 7 scenes, public wording, visual/audio direction, verification checklist).
 12. [BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md](BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md) for the expression-layer brief between canon and media (asset-family briefs, prompt packs, forbidden lists, production checklist, review gate).
 13. [BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md](BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md) for the reviewer-facing evaluation pack (truth buckets, evaluation maps, reviewer checklist, risk register, evidence-request roadmap).
-14. [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries.
-15. [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) for engineering rules.
-16. [06-adr/](06-adr/) before changing anything covered by an ADR.
-17. [TESTING.md](TESTING.md) before changing tests or gates.
+14. [BIZRA_MARKET_ANALYSIS_v0_1.md](BIZRA_MARKET_ANALYSIS_v0_1.md) for the market-comparison frame (5 patterns, comparator landscape, differentiation map, non-claims, risks, EXTERNAL_SOURCE_REQUIRED items).
+15. [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries.
+16. [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) for engineering rules.
+17. [06-adr/](06-adr/) before changing anything covered by an ADR.
+18. [TESTING.md](TESTING.md) before changing tests or gates.
 
 When uncertain whether a feature belongs in Node0, Dema, URP, UKE, pilot, or future forest, consult the Component DNA document before proposing implementation.
 
@@ -41,6 +42,8 @@ When drafting BIZRA first-look copy, video scripts, visual emulator language, pu
 When producing any Canva slide, video frame, website page, social teaser, visual-emulator screen, lighthouse-invitation packet, or founder-story artifact, consult BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md for the asset-family brief, prompt pack, forbidden visuals/wording, Production Checklist, and Review Gate before producing the artifact.
 
 When preparing reviewer-facing material, due-diligence response, advisor briefing, lighthouse-candidate inspection package, or partner evaluation surface, consult BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md as the canonical reviewability surface; never substitute marketing copy for the truth-bucket structure.
+
+When drafting GTM, pitch, landing page, investor/advisor material, competitor comparison, or public market positioning, consult BIZRA_MARKET_ANALYSIS_v0_1.md and CLAIM_REGISTER_v0_1.md first. Treat every unsourced market fact as EXTERNAL_SOURCE_REQUIRED until v0.2+ binds the citation.
 
 ## System identity
 
