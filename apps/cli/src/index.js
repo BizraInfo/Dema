@@ -39,6 +39,11 @@ import {
   buildRegistryFromConfig
 } from "../../../packages/models/src/model-registry-config-preview.js";
 import {
+  ROUTE_RECEIPT_SAVE_CONSENT,
+  serializeRouteReceiptForSave,
+  saveRouteReceipt
+} from "../../../packages/receipts/src/route-receipt-save.js";
+import {
   buildProcessMiningPreview,
   buildProcessMiningSummary
 } from "../../../packages/core/src/process-mining-preview.js";
@@ -232,6 +237,7 @@ Preview planning:
   dema model-broker route --task <kind> [--required-role <role>]
                           [--no-local-only] [--allow-unknown] [--max-size <class>]
                           [--registry-stdin | --use-local-registry | --registry-file <abs-path>]
+                          [--save-receipt --consent "GO: save local model route receipt"]
                           [--pretty]
                     Route a task through the local model broker preview;
                     emits a bizra.dema.local_model_route_receipt.v0.1 JSON to stdout.
@@ -239,7 +245,10 @@ Preview planning:
                     Pipe operator registry JSON to --registry-stdin to route to a real entry.
                     --use-local-registry reads $DEMA_HOME/models/registry.json (read-only; 1 MB max).
                     --registry-file <abs-path> reads operator-supplied absolute file (read-only; 1 MB max).
-                    Does not invoke any model. No network. No registry-file write. No receipt mint.
+                    --save-receipt (with exact --consent) persists the route receipt to
+                    $DEMA_HOME/receipts/route-<sha256>.json (atomic write; preview-grade save;
+                    NOT canonical chain-bound mint). Stdout unchanged; stderr emits a one-line note.
+                    Does not invoke any model. No network. No registry-file write. No canonical mint.
 
 Local evidence:
   dema receipts     List local receipts
@@ -1039,10 +1048,43 @@ async function dispatch(argv) {
       if (maxSizeClass) routeOpts.max_size_class = maxSizeClass;
 
       const receipt = routeForTask(broker, routeOpts);
-      const out = pretty
-        ? JSON.stringify(receipt, null, 2)
-        : JSON.stringify(receipt);
-      process.stdout.write(out + "\n");
+
+      // Serialize ONCE via the route-receipt-save helper so stdout and any
+      // on-disk file match byte-for-byte. Same serializer for both paths is
+      // the architect-locked invariant.
+      const content = serializeRouteReceiptForSave(receipt, { pretty });
+      process.stdout.write(content);
+
+      // v0.2 (this slice): --save-receipt persists the route receipt to
+      // $DEMA_HOME/receipts/route-<sha256>.json under exact-string consent.
+      // Preview-grade SAVE (not canonical chain-bound MINT per ADR-008 §C12).
+      const saveReceiptFlag = argv.includes("--save-receipt");
+      if (saveReceiptFlag) {
+        const consent = argValue(argv, "--consent") ?? "";
+        const result = await saveRouteReceipt(receipt, {
+          demaHome: process.env.DEMA_HOME,
+          consent,
+          pretty
+        });
+        if (!result.saved) {
+          if (result.reason === "consent_missing") {
+            process.stderr.write(
+              `dema model-broker route: --save-receipt requires --consent "${ROUTE_RECEIPT_SAVE_CONSENT}"\n`
+            );
+          } else if (result.reason === "consent_mismatch") {
+            process.stderr.write(
+              `dema model-broker route: --save-receipt consent phrase mismatch; required: "${ROUTE_RECEIPT_SAVE_CONSENT}"\n`
+            );
+          } else {
+            process.stderr.write(
+              `dema model-broker route: --save-receipt failed (${result.reason}): ${result.error_message ?? "unknown"}\n`
+            );
+          }
+          process.exitCode = 1;
+          return;
+        }
+        process.stderr.write(`saved receipt to: ${result.path}\n`);
+      }
       return;
     }
 
