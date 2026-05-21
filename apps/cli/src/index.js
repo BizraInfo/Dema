@@ -23,6 +23,10 @@ import {
   formatAuditReport,
 } from "../../../packages/core/src/master-craftsmanship-audit.js";
 import {
+  buildCodebaseArchitectureMap,
+  formatCodebaseMapSummary
+} from "../../../packages/core/src/codebase-architecture-map.js";
+import {
   formatOnboardingLifecyclePreview,
   formatNodeRegistryPreview,
   formatSkillGrowthGovernorPreview,
@@ -355,6 +359,10 @@ Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
                            C1 · local LLM adapter · preview-only by default; --invoke + exact consent calls Ollama at localhost
   dema master-craftsmanship audit [--json] [<path>]
                            External audit of any artifact against the 10 master-craftsmanship invariants. Default subject: tests/node-onboarding-adr011-compliance.test.js. Verdict: COMPLIANT (10/10) | PARTIAL (N/10) | NON-COMPLIANT. Exits 1 on non-compliant or missing path.
+  dema codebase map <abs-path>
+                           [--summary] [--json] [--max-files N] [--max-depth N] [--max-file-size N]
+                           [--include-tests] [--hotspots] [--exclude PAT] [--no-default-exclude]
+                           Read-only architecture map for any target repo (v0.1). Iterative bounded walker · stdlib only · deterministic. Default JSON (bizra.dema.codebase_architecture_map.v0.1) to stdout. --summary emits compact human summary. --hotspots enables content-reading hotspot probes. .env*, *secret*, *credential*, *.pem/.key/.crt/.p12, id_rsa* recorded as metadata only. Symlinks recorded but never followed. NOT a model. NO network. NO mutation. NO chain-bound mint. NO PAT/SAT swarm. NO URP. NO token/economy.
 
 Tasks and views:
   dema task         List registered tasks
@@ -380,6 +388,7 @@ const REGISTERED_COMMANDS_LIST = [
   { command: "project-status", description: "project status preview" },
   { command: "craftsmanship-witness", description: "master-craftsmanship creation preview" },
   { command: "master-craftsmanship", description: "audit an artifact against the 10 master-craftsmanship invariants" },
+  { command: "codebase", description: "read-only architecture map of any target repo (subcommand: map <abs-path>)" },
   { command: "llm-router", description: "local LLM router preview" },
   { command: "process-mining", description: "operator-pattern mirror" },
   { command: "key-maker-check", description: "self-audit reasoning against Key Maker invariants" },
@@ -933,6 +942,72 @@ async function dispatch(argv) {
         console.log(formatAuditReport(result));
       }
       if (!result.overall_compliant) process.exitCode = 1;
+      return;
+    }
+
+    case "codebase": {
+      // v0.1 · read-only codebase architecture map.
+      // Usage: dema codebase map <abs-path> [flags]
+      const cbSubcommand = argv[1];
+      if (cbSubcommand !== "map") {
+        process.stderr.write(
+          "Usage: dema codebase map <abs-path> [--summary] [--json] [--max-files N] [--max-depth N] [--max-file-size N] [--include-tests] [--hotspots] [--exclude PAT] [--no-default-exclude]\n"
+        );
+        process.exitCode = 1;
+        return;
+      }
+      const { isAbsolute: cbIsAbsolute } = await import("node:path");
+      const cbPath = argv.slice(2).find((a) => !a.startsWith("--"));
+      if (!cbPath) {
+        process.stderr.write("dema codebase map: <abs-path> is required\n");
+        process.exitCode = 1;
+        return;
+      }
+      if (!cbIsAbsolute(cbPath)) {
+        process.stderr.write(`dema codebase map: <abs-path> must be absolute (got: ${cbPath})\n`);
+        process.exitCode = 1;
+        return;
+      }
+      const cbSummary = argv.includes("--summary");
+      const cbJsonForce = argv.includes("--json");
+      const cbIncludeTests = argv.includes("--include-tests");
+      const cbHotspots = argv.includes("--hotspots");
+      const cbNoDefaultExclude = argv.includes("--no-default-exclude");
+      const parseIntOrNull = (s) => {
+        if (typeof s !== "string") return undefined;
+        const n = Number.parseInt(s, 10);
+        return Number.isFinite(n) && n >= 0 ? n : undefined;
+      };
+      const cbMaxFiles = parseIntOrNull(argValue(argv, "--max-files"));
+      const cbMaxDepth = parseIntOrNull(argValue(argv, "--max-depth"));
+      const cbMaxFileSize = parseIntOrNull(argValue(argv, "--max-file-size"));
+      const cbExtraExclusions = [];
+      for (let i = 0; i < argv.length - 1; i++) {
+        if (argv[i] === "--exclude") cbExtraExclusions.push(argv[i + 1]);
+      }
+      const envelope = await buildCodebaseArchitectureMap(cbPath, {
+        maxFiles: cbMaxFiles,
+        maxDepth: cbMaxDepth,
+        maxFileSize: cbMaxFileSize,
+        includeTests: cbIncludeTests,
+        hotspots: cbHotspots,
+        extraExclusions: cbExtraExclusions,
+        useDefaultExclusions: !cbNoDefaultExclude
+      });
+      if (envelope.error_reason) {
+        process.stderr.write(
+          `dema codebase map: ${envelope.error_reason}${envelope.error_message ? ": " + envelope.error_message : ""}\n`
+        );
+        process.stdout.write(JSON.stringify(envelope) + "\n");
+        process.exitCode = 1;
+        return;
+      }
+      if (cbSummary && !cbJsonForce) {
+        process.stdout.write(formatCodebaseMapSummary(envelope) + "\n");
+      } else {
+        process.stdout.write(JSON.stringify(envelope) + "\n");
+      }
+      if (envelope.partial) process.exitCode = 1;
       return;
     }
 
