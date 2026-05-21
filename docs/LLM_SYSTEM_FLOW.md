@@ -15,10 +15,11 @@ Purpose: make the signal path obvious, reduce duplicated guidance, and stop conn
 7. [CLAIM_REGISTER_v0_1.md](CLAIM_REGISTER_v0_1.md) for the public-face truth-label taxonomy, forbidden claims, and Claim Review Gate.
 8. [BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md](BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md) for the BIZRA origin chain, moral spine, and canonical public paragraph.
 9. [BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md](BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md) for the first known BIZRA cinematic message, transcript, meaning, and timestamp-evidence status.
-10. [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries.
-11. [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) for engineering rules.
-12. [06-adr/](06-adr/) before changing anything covered by an ADR.
-13. [TESTING.md](TESTING.md) before changing tests or gates.
+10. [NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md](NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md) for the first human proof path behind Node0 with truth-labeled evidence.
+11. [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries.
+12. [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) for engineering rules.
+13. [06-adr/](06-adr/) before changing anything covered by an ADR.
+14. [TESTING.md](TESTING.md) before changing tests or gates.
 
 When uncertain whether a feature belongs in Node0, Dema, URP, UKE, pilot, or future forest, consult the Component DNA document before proposing implementation.
 
@@ -29,6 +30,8 @@ When drafting README, GTM, Canva, market, emulator, token, URP, PoI, or public-f
 When drafting public-facing BIZRA origin, mission, GTM, visual emulator, README, or founder-proof language, consult BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md and CLAIM_REGISTER_v0_1.md before proposing wording.
 
 When drafting BIZRA origin video, 2026 First Look, founder proof, public launch story, or visual emulator language, consult BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md before proposing wording.
+
+When drafting founder proof, one-human/one-node narrative, public first-look copy, visual emulator story, or GTM language, consult NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md and CLAIM_REGISTER_v0_1.md before proposing wording.
 
 ## System identity
 
