@@ -78,6 +78,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 ## Quality, delivery, and contribution
 
 - [DELIVERY_SPINE_v0_1.md](DELIVERY_SPINE_v0_1.md) — Defines Dema's canonical delivery gates, CI/CD ownership, release truth labels, quality spine, and operator-local extended gate boundaries.
+- [CLAIM_REGISTER_v0_1.md](CLAIM_REGISTER_v0_1.md) — Defines public claim truth labels, forbidden overclaims, scenario boundaries, and evidence requirements before GTM/public-face material.
 - [DELIVERY_BLUEPRINT.md](DELIVERY_BLUEPRINT.md) — release-readiness and DevOps discipline.
 - [TESTING.md](TESTING.md) — test surface and smoke-check matrix.
 - [LLM_SYSTEM_FLOW.md](LLM_SYSTEM_FLOW.md) — canonical repo-local flow for connected LLMs and agents.
