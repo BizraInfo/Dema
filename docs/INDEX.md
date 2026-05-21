@@ -57,6 +57,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md](BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md) — Defines the origin, meaning, proof boundary, and public-facing moral spine of BIZRA from الرسالة and البذرة through Node0, Dema, URP, and the GTM path.
 - [BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md](BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md) — Preserves the first known BIZRA cinematic message, transcript, meaning, timestamp-evidence status, and relationship to the 2026 First Look.
 - [NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md](NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md) — Defines the first human proof path behind Node0: what is verified, derived, operator-attested, source-pending, and forbidden before public founder-proof claims.
+- [BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md](BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md) — Defines the claim-governed 2026 First Look narrative: origin chain, scenes, public wording boundaries, visual direction, and production rules.
 
 ## Binding ADRs
 

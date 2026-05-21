@@ -16,10 +16,11 @@ Purpose: make the signal path obvious, reduce duplicated guidance, and stop conn
 8. [BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md](BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md) for the BIZRA origin chain, moral spine, and canonical public paragraph.
 9. [BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md](BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md) for the first known BIZRA cinematic message, transcript, meaning, and timestamp-evidence status.
 10. [NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md](NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md) for the first human proof path behind Node0 with truth-labeled evidence.
-11. [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries.
-12. [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) for engineering rules.
-13. [06-adr/](06-adr/) before changing anything covered by an ADR.
-14. [TESTING.md](TESTING.md) before changing tests or gates.
+11. [BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md](BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md) for the claim-governed 2026 First Look narrative blueprint (origin chain, 7 scenes, public wording, visual/audio direction, verification checklist).
+12. [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries.
+13. [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md) for engineering rules.
+14. [06-adr/](06-adr/) before changing anything covered by an ADR.
+15. [TESTING.md](TESTING.md) before changing tests or gates.
 
 When uncertain whether a feature belongs in Node0, Dema, URP, UKE, pilot, or future forest, consult the Component DNA document before proposing implementation.
 
@@ -32,6 +33,8 @@ When drafting public-facing BIZRA origin, mission, GTM, visual emulator, README,
 When drafting BIZRA origin video, 2026 First Look, founder proof, public launch story, or visual emulator language, consult BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md before proposing wording.
 
 When drafting founder proof, one-human/one-node narrative, public first-look copy, visual emulator story, or GTM language, consult NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md and CLAIM_REGISTER_v0_1.md before proposing wording.
+
+When drafting BIZRA first-look copy, video scripts, visual emulator language, public launch teasers, Canva prompts, or founder-story material, consult BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md and CLAIM_REGISTER_v0_1.md before proposing wording.
 
 ## System identity
 
