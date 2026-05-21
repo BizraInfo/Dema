@@ -231,12 +231,15 @@ Preview planning:
                     Preview ARTIFACT-011 readiness; does not execute runtime
   dema model-broker route --task <kind> [--required-role <role>]
                           [--no-local-only] [--allow-unknown] [--max-size <class>]
-                          [--registry-stdin] [--pretty]
+                          [--registry-stdin | --use-local-registry | --registry-file <abs-path>]
+                          [--pretty]
                     Route a task through the local model broker preview;
                     emits a bizra.dema.local_model_route_receipt.v0.1 JSON to stdout.
                     Default registry is DEFAULT_SAMPLE_REGISTRY (placeholders only -> routes nothing).
                     Pipe operator registry JSON to --registry-stdin to route to a real entry.
-                    Does not invoke any model. No network. No ~/.dema read.
+                    --use-local-registry reads $DEMA_HOME/models/registry.json (read-only; 1 MB max).
+                    --registry-file <abs-path> reads operator-supplied absolute file (read-only; 1 MB max).
+                    Does not invoke any model. No network. No registry-file write. No receipt mint.
 
 Local evidence:
   dema receipts     List local receipts
@@ -883,9 +886,16 @@ async function dispatch(argv) {
     }
 
     case "model-broker": {
-      // CLI preview for the local model broker + registry config (PR #79 + #80).
+      // CLI preview for the local model broker + registry config.
+      // v0.1 (PR #81): --registry-stdin + DEFAULT_SAMPLE_REGISTRY.
+      // v0.2 (this slice): --use-local-registry + --registry-file <abs-path>
+      //   - read-only file loading from operator's local machine
+      //   - 1 MB size cap (matches receipt-store)
+      //   - mutual exclusion across all three registry input modes
+      //   - fail-closed on missing / malformed / oversized / permission errors
       // Emits a bizra.dema.local_model_route_receipt.v0.1 JSON to stdout.
-      // Does not invoke any model. Does not read ~/.dema. Does not call network.
+      // Does NOT invoke any model. Does NOT call network. Does NOT write to
+      // any file. Does NOT mint receipts.
       const action = argv[1];
       if (action !== "route") {
         process.stderr.write(
@@ -902,6 +912,21 @@ async function dispatch(argv) {
       const allowUnknown = argv.includes("--allow-unknown");
       const pretty = argv.includes("--pretty");
       const useStdinRegistry = argv.includes("--registry-stdin");
+      const useLocalRegistry = argv.includes("--use-local-registry");
+      const explicitRegistryFile = argValue(argv, "--registry-file") ?? null;
+
+      // Mutual exclusion: only one registry input mode at a time.
+      const registryInputCount =
+        (useStdinRegistry ? 1 : 0) +
+        (useLocalRegistry ? 1 : 0) +
+        (explicitRegistryFile ? 1 : 0);
+      if (registryInputCount > 1) {
+        process.stderr.write(
+          "dema model-broker route: --registry-stdin, --registry-file, and --use-local-registry are mutually exclusive (pass at most one)\n"
+        );
+        process.exitCode = 1;
+        return;
+      }
 
       if (!taskKind && !requiredRole) {
         process.stderr.write(
@@ -910,6 +935,9 @@ async function dispatch(argv) {
         process.exitCode = 1;
         return;
       }
+
+      // 1 MB cap on registry file size (matches packages/receipts/src/receipt-store.js).
+      const MAX_REGISTRY_FILE_BYTES = 1024 * 1024;
 
       let registry = DEFAULT_SAMPLE_REGISTRY;
       if (useStdinRegistry) {
@@ -930,6 +958,59 @@ async function dispatch(argv) {
           process.stderr.write(
             `dema model-broker route: malformed --registry-stdin JSON: ${err?.message ?? err}\n`
           );
+          process.exitCode = 1;
+          return;
+        }
+      } else if (useLocalRegistry || explicitRegistryFile) {
+        // Resolve target path.
+        const { join: pathJoin, isAbsolute: pathIsAbsolute } = await import("node:path");
+        const { homedir } = await import("node:os");
+        const { readFile, stat } = await import("node:fs/promises");
+
+        let targetPath;
+        if (explicitRegistryFile) {
+          if (!pathIsAbsolute(explicitRegistryFile)) {
+            process.stderr.write(
+              `dema model-broker route: --registry-file path must be absolute (got: ${explicitRegistryFile}). Use --use-local-registry for default DEMA_HOME location.\n`
+            );
+            process.exitCode = 1;
+            return;
+          }
+          targetPath = explicitRegistryFile;
+        } else {
+          // --use-local-registry: $DEMA_HOME/models/registry.json (env override
+          // honored; falls back to ~/.dema per repo convention).
+          const home = process.env.DEMA_HOME || pathJoin(homedir(), ".dema");
+          targetPath = pathJoin(home, "models", "registry.json");
+        }
+
+        // Read-only load with size cap + fail-closed error paths.
+        try {
+          const statResult = await stat(targetPath);
+          if (statResult.size > MAX_REGISTRY_FILE_BYTES) {
+            process.stderr.write(
+              `dema model-broker route: registry file too large: ${statResult.size} bytes (max: ${MAX_REGISTRY_FILE_BYTES})\n`
+            );
+            process.exitCode = 1;
+            return;
+          }
+          const raw = await readFile(targetPath, "utf8");
+          const parsed = JSON.parse(raw);
+          registry = buildRegistryFromConfig(parsed);
+        } catch (err) {
+          if (err?.code === "ENOENT") {
+            process.stderr.write(
+              `dema model-broker route: registry file not found: ${targetPath}\n`
+            );
+          } else if (err instanceof SyntaxError) {
+            process.stderr.write(
+              `dema model-broker route: malformed registry file JSON at ${targetPath}: ${err.message}\n`
+            );
+          } else {
+            process.stderr.write(
+              `dema model-broker route: registry file load failed at ${targetPath}: ${err?.message ?? err}\n`
+            );
+          }
           process.exitCode = 1;
           return;
         }
