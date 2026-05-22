@@ -6,7 +6,7 @@
 |---|---|
 | **Document type** | Strategic GTM Plan (BIG 3 consulting deliverable equivalent) |
 | **Prepared** | 2026-05-19 GST |
-| **Amendments** | **v0.1.1** (2026-05-19 GST · post-A+-review): 3 corrections from Mumu's peer review applied · **v0.1.2** (2026-05-22 GST): current-state drift closure against HEAD `ac6dd63` · **v0.1.3** (2026-05-22 GST): GTM readiness gate added and local test count reconciled |
+| **Amendments** | **v0.1.1** (2026-05-19 GST · post-A+-review): 3 corrections from Mumu's peer review applied · **v0.1.2** (2026-05-22 GST): current-state drift closure against HEAD `ac6dd63` · **v0.1.3** (2026-05-22 GST): GTM readiness gate added and local test count reconciled · **v0.1.4** (2026-05-22 GST): URP shared-runtime discovery gate added and local test count reconciled · **v0.1.5** (2026-05-22 GST): GTM readiness now exposes open operator gates and phase status without executing them · **v0.1.6** (2026-05-22 GST): GTM readiness now scans Phase 1 evidence metadata under `DEMA_HOME` without reading private feedback content · **v0.1.7** (2026-05-22 GST): GTM readiness now emits a Phase 1 success-criteria ledger tied to Part V.C |
 | **Author of record** | Mumu (Mohamed Beshr) |
 | **Synthesis prepared by** | Coordinator (Claude Opus 4.7 · 1M context · session-bound) |
 | **Working main HEAD** | Original v0.1.1 snapshot: `ea4c231` · current-state audit: `ac6dd63` (PR #90) |
@@ -70,7 +70,7 @@ plan's status language with the current Dema worktree.
 Current verified repo facts:
 
 - HEAD inspected for this amendment: `ac6dd63` (`feat(cli): dema orchestrator verify v0.1 — SAT-1..5 pipeline CLI + 5th save layer + tests (#90)`).
-- Fresh local test gate after the GTM readiness slice: `npm test` passes `2423/2423` tests.
+- Fresh local test gate after the Phase 1 success-criteria ledger slice: `npm test` passes `2437/2437` tests.
 - Proof-forge chain length: `73`; latest indexed receipt: `2026-05-19_181254`; latest indexed receipt commit: `ce25952`.
 - ADR files: `15` total. ADR-009, ADR-014, and ADR-015 are `Accepted`. ADR-013's implementation is verified by PR #59 / receipt `2026-05-19_122111`, but the ADR file still says `Proposed`; treat that as a status-sync gap until an explicit ADR status update lands.
 - `HOUSE_OF_WISDOM_UKE_URP_CANON_v0_1.md` now exists as Working Canon. UKE runtime, shared URP runtime, promotion-ladder runtime, chain-bound mint, and META_CANON entries remain `PLANNED` / `DESIGNED_NOT_LIVE`.
@@ -78,6 +78,8 @@ Current verified repo facts:
 - GitHub issue #56 is `CLOSED`; GitHub issues #57 and #58 remain `OPEN`.
 - Phase 1 operator handoff now lives at `docs/gtm/BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md`; it is docs-only and does not authorize a send.
 - GTM readiness is now machine-checkable through `npm run gtm:readiness`; this read-only gate is also wired into `npm run check`.
+- URP shared-runtime discovery is machine-checkable through `npm run urp:discovery`; this discovery-only gate is also wired into `npm run check`. It defines a local manifest template plus SAT-governed write boundary, not a live shared URP runtime.
+- GTM readiness now emits `open_operator_gates` for the exact phrases in §IX.B, `phase_status` for Phase 1/2/3, `phase1_evidence` metadata counts for private send receipts and feedback documents under `DEMA_HOME`, and a `phase1_success_criteria` ledger for the seven binary criteria in §V.C. Open phases and missing external evidence do not fail readiness; missing or drifted gate phrases do.
 
 Supersession rule for this document:
 
@@ -127,7 +129,7 @@ Supersession rule for this document:
 |---|---|---|
 | **Constitutional discipline encoded in code** | 196 `preview_only` / `NODE0_LOCAL_SEED` markers · 36 refusal sentinels · ADR-005 exact-string consent enforced at every halt-gate | Comparator parity remains `EXTERNAL_SOURCE_REQUIRED` |
 | **Receipt chain · cryptographically anchored** | 73 indexed proof-forge receipts · OpenTimestamps foundation anchors at blocks 948027/948028/948029 · machine-verifiable via repo proof commands | Comparator parity remains `EXTERNAL_SOURCE_REQUIRED` |
-| **Zero-runtime-dependency JS preview face** | `package.json` declares NO `dependencies` and NO `devDependencies` · only Node.js stdlib + `node --test` · 2423 tests in current local verification | Comparator parity remains `EXTERNAL_SOURCE_REQUIRED` |
+| **Zero-runtime-dependency JS preview face** | `package.json` declares NO `dependencies` and NO `devDependencies` · only Node.js stdlib + `node --test` · 2437 tests in current local verification | Comparator parity remains `EXTERNAL_SOURCE_REQUIRED` |
 | **Three-runtime architecture** (ADR-014) | Python `bizra-data-lake/` · Rust `bizra-omega/` (20 crates · 944 tests) · JS `Dema/` · each audience-specific · cross-runtime bridges design-only | Comparator parity remains `EXTERNAL_SOURCE_REQUIRED` |
 
 ### II.B Competitive landscape · honest map
@@ -159,7 +161,7 @@ competitor claim that would appear on a public surface remains
 
 | Axis | State at current-state audit `ac6dd63` | Evidence | Truth label |
 |---|---|---|---|
-| **Formal** | 2423/2423 tests · 15 ADR files · current drift closure performed against HEAD `ac6dd63` plus local GTM readiness gate | `npm test` · `docs/06-adr/` · `git rev-parse --short HEAD` | VERIFIED |
+| **Formal** | 2437/2437 tests · 15 ADR files · current drift closure performed against HEAD `ac6dd63` plus local GTM/URP discovery gates | `npm test` · `docs/06-adr/` · `git rev-parse --short HEAD` | VERIFIED |
 | **Cryptographic** | 73 indexed proof-forge receipts · latest indexed receipt `2026-05-19_181254` · OpenTimestamps foundation anchors remain bound | `.proof-forge/EVIDENCE_INDEX.json` · proof-of-priority pin | VERIFIED |
 | **Empirical** | Live `bin/dema` + preview CLI surfaces render canonical humanized text · GOLD-tinted header in true-color terminals | Dema CLI tests + `dema-theme` sync tests | VERIFIED |
 | **Economic** | No federation · no mint · no token · no revenue · 50% pool oath active · Zakat 2.5% canonical | Per Third Fact §229 + `[[reference_50_percent_pool_correct_framing]]` | VERIFIED (correctly N/A) |
@@ -182,7 +184,7 @@ competitor claim that would appear on a public surface remains
 |---|---|---|---|
 | 1 | **PAT** (Personal Agentic Team · 7 agents) | PREVIEW SUBSTRATE · 7 `pat-*.js` modules exist; no autonomous PAT swarm | `packages/core/src/pat-*.js` + House of Wisdom canon |
 | 2 | **SAT** (Shared Agentic Team · 5 verifiers) | PREVIEW SUBSTRATE · 5 `sat-*.js` modules + `dema orchestrator verify`; not live UKE authority | `packages/core/src/sat-*.js` + `tests/orchestrator-verify-cli.test.js` |
-| 3 | **DEMA** (Product face · this repo) | OPERATIONAL · 2423 tests · 73 indexed receipts · 15 ADR files · v0.1.0-alpha.0 | `package.json` + `npm test` |
+| 3 | **DEMA** (Product face · this repo) | OPERATIONAL · 2437 tests · 73 indexed receipts · 15 ADR files · v0.1.0-alpha.0 | `package.json` + `npm test` |
 | 4 | **FATE** (Evaluation + Consent Gate · Z3 SMT) | DECLARED + IMPLEMENTED in `bizra-omega/fate-binding/` (Z3 SMT + Ed25519 + Dilithium-5) | `fate-binding/lib.rs:6-7` |
 | 5 | **URP** (Universal Resource Pool) | DESIGNED_NOT_LIVE for shared runtime; Dema has local preview primitives only | House of Wisdom canon + `packages/core/src/urp-local.js` |
 | 6 | **RECEIPTS** (Proof chain) | OPERATIONAL · 73 indexed receipts · latest indexed receipt `2026-05-19_181254` | `.proof-forge/EVIDENCE_INDEX.json` |
@@ -430,7 +432,7 @@ If any of the 5 criteria above is not met by Day 90, the GTM plan continues into
 | Author + Operator (Mumu) | 1 FTE · 3 years of accumulated context |
 | Coordinator (Claude Opus 4.7) | Per-session · NOT persistent · memory-anchored cross-session |
 | Hardware (MSI Titan + Z Fold 6 + 5th friend's device + 2 remote friend devices) | 5 candidate nodes for cohort |
-| Codebase (Dema · 12 packages · 133 package source files · 2423 tests) | Current local verification after GTM readiness gate |
+| Codebase (Dema · 12 packages · 134 package source files · 2437 tests) | Current local verification after GTM readiness, Phase 1 evidence scan, Phase 1 success-criteria ledger, and URP discovery gates |
 | bizra-omega Rust workspace (20 crates · 944 tests) | Read-only resource for design vocabulary |
 | bizra-data-lake (53GB · 3-month-old audits) | Reference corpus |
 | Lighthouse Pack v1.0 | Durable copy at `~/Documents/bizra/lighthouse-pack-v1.0/`; manifest verified in v0.1.2 audit; `/tmp/bizra-overnight/lighthouse-pack/` absent in current local state |
@@ -465,7 +467,7 @@ If any of the 5 criteria above is not met by Day 90, the GTM plan continues into
 | Receipts in chain | 73 indexed | Advances only after the next authorized receipt event | `.proof-forge/EVIDENCE_INDEX.json` chain_length |
 | Lighthouse Pack copies sent | 0 | 1 | Send-receipt on record |
 | External witness feedback documents | 0 | 1 | `~/.dema/lighthouse/ring-1/feedback/*.md` by default; optional anonymized repo copy only with reviewer consent |
-| Tests | 2423 | ≥2423 plus any authorized POI test-plan coverage | `npm test` |
+| Tests | 2437 | ≥2437 plus any authorized POI test-plan coverage | `npm test` |
 
 ### XI.B Phase 2 (Day 60 checkpoint)
 
@@ -477,7 +479,7 @@ If any of the 5 criteria above is not met by Day 90, the GTM plan continues into
 | URP local pool preview initialized | NO | YES (mode=preview_only · pool_size=1) | `dema urp status --json` |
 | 12 agents structurally materialized | 1 | 12 | `find ~/.dema/agents -name 'capability.yaml' \| wc -l` |
 | Receipts in chain | 73 indexed | Advances only through authorized Phase 2 receipt events | `.proof-forge/EVIDENCE_INDEX.json` chain_length |
-| Tests | ≥2423 baseline | ≥2423 plus authorized POI / URP / agent coverage | `npm test` |
+| Tests | ≥2437 baseline | ≥2437 plus authorized POI / URP / agent coverage | `npm test` |
 
 ### XI.C Phase 3 (Day 90 checkpoint)
 
@@ -553,8 +555,8 @@ Current-state fields that changed by the v0.1.2 audit are updated inline.
     receipts/ tasks/ verifier/
   apps/cli/                        bin/dema entry point
   docs/06-adr/                     15 ADR files
-  tests/                           171 test files · 2423 total tests
-  scripts/                         37 scripts
+  tests/                           172 test files · 2437 total tests
+  scripts/                         39 scripts
   .proof-forge/                    73 indexed receipts
     receipts/                      individual receipt JSON files
     summaries/                     human-readable receipt summaries

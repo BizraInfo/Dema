@@ -61,7 +61,7 @@ and governed resources live.
 
 URP is the **soil**, not a database, not a federation protocol, not a token system. UKE lives inside URP as the knowledge cortex; other URP layers (compute, reusable skills, proof artifacts) sit alongside.
 
-Status: **PLANNED** — URP shared runtime is freeze-point item #3, not yet implemented.
+Status: **DISCOVERY_ONLY + PLANNED** — Dema now has a local manifest template and SAT-governed write-boundary discovery slice (`packages/core/src/urp-shared-runtime-discovery.js` + `npm run urp:discovery`). It performs no persist, no network publish, no UKE auto-ingest, no PAT private export, no federation, and no chain-bound mint. The shared URP runtime itself remains freeze-point item #3 and is not connected.
 
 ### 2.3 SAT-5 — System Audit Triad (5 verifiers)
 
@@ -428,6 +428,7 @@ This canon sits in the BIZRA constitutional read order between component DNA and
 
 - **Downstream** (gated by this canon):
   - `UKE_RUNTIME_INTEGRATION_v0_1` — PLANNED · the first code slice that gives UKE a runtime
+  - `URP_SHARED_RUNTIME_DISCOVERY_v0_1` — DISCOVERY_ONLY · manifest template + SAT-governed write boundary · no persist/network/federation
   - `URP_SHARED_RUNTIME_v0_1` — PLANNED · freeze-point item #3
   - `CHAIN_BOUND_MINT_v0_1` — PLANNED · freeze-point item #4, halt-gated by ADR-008 §C12
 
@@ -437,7 +438,7 @@ Honest summary of what currently exists vs. what is PLANNED:
 
 | Component | Status | Where |
 |---|---|---|
-| Dema CLI | **SHIPPED** | `apps/cli/src/index.js` · current local test gate: 2423/2423 pass |
+| Dema CLI | **SHIPPED** | `apps/cli/src/index.js` · current local test gate: 2437/2437 pass |
 | PAT-1..7 substrate | **SHIPPED** (preview) | `packages/core/src/pat-*.js` · CLI execution PLANNED |
 | SAT-1..5 substrate | **SHIPPED** (preview) | `packages/core/src/sat-*.js` |
 | SAT-1..5 operator CLI | **SHIPPED** (preview verifier surface) | `dema orchestrator verify` (PR #90) |
@@ -445,7 +446,7 @@ Honest summary of what currently exists vs. what is PLANNED:
 | C12 mint-request validator | **SHIPPED** (preview) | `packages/core/src/receipt-mint-integration.js` · actual mint PLANNED |
 | EvidenceChain (5 receipt layers) | **SHIPPED** | route + invocation + verification + codebase-map + pipeline |
 | UKE knowledge cortex | **PLANNED** | not yet implemented |
-| URP shared runtime | **PLANNED** | freeze-point item #3 |
+| URP shared runtime | **DISCOVERY_ONLY + PLANNED** | `packages/core/src/urp-shared-runtime-discovery.js` + `npm run urp:discovery`; shared runtime remains not connected |
 | Chain-bound mint | **PLANNED** | freeze-point item #4 · halt-gated |
 | Promotion ladder runtime | **PLANNED** | depends on UKE implementation |
 | META_CANON entries | **PLANNED** | tier defined here; entries are not live |

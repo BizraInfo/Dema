@@ -44,6 +44,7 @@ export const commands = [
   ["node", ["scripts/review/integration-check.mjs"]],
   ["node", ["scripts/llm-guidance-check.mjs"]],
   ["node", ["scripts/gtm-readiness-check.mjs"]],
+  ["node", ["scripts/urp-shared-discovery.mjs"]],
   ["node", ["scripts/node0-self-check.mjs", "--verify"]]
 ];
 
