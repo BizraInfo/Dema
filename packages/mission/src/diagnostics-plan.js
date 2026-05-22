@@ -1,5 +1,9 @@
 import { buildSafetyReportPreview } from "../../core/src/safety-report.js";
-import { sha256, stableStringify } from "../../consent/src/consent-common.js";
+import {
+  MICRO_CONSENT_SHAPE,
+  sha256,
+  stableStringify
+} from "../../consent/src/consent-common.js";
 
 const SCHEMA = "bizra.dema.diagnostics_mission_plan.v0.1";
 
@@ -105,6 +109,105 @@ function proofFromSafetyReport(safetyReport) {
   );
 }
 
+function effectingPermissionsRequireConsent(permissions) {
+  return permissions
+    .filter((permission) => permission.action !== "read")
+    .every((permission) => permission.requires_human_consent === true);
+}
+
+function previewBoundaryClosed(boundary) {
+  return [
+    "approval_recorded",
+    "capability_minted",
+    "execution_enabled",
+    "mutation_performed",
+    "receipt_minted",
+    "daemon_started",
+    "network_connection_attempted",
+    "external_posting_performed"
+  ].every((key) => boundary[key] === false);
+}
+
+function buildMicroCompliance({ permissions, boundary }) {
+  const allEffectingChecksRequireConsent = effectingPermissionsRequireConsent(permissions);
+  const boundaryClosed = previewBoundaryClosed(boundary);
+  const noRuntime = boundary.execution_enabled === false && boundary.daemon_started === false;
+  const noNetwork = boundary.network_connection_attempted === false;
+  const noExternalPosting = boundary.external_posting_performed === false;
+
+  return {
+    preview_only: true,
+    deterministic: true,
+    no_runtime: noRuntime,
+    no_federation: noNetwork && noExternalPosting,
+    no_node_connection: noNetwork,
+    no_capability_mint: boundary.capability_minted === false,
+    no_receipt_mint: boundary.receipt_minted === false,
+    no_approval_recorded: boundary.approval_recorded === false,
+    all_effecting_checks_require_consent: allEffectingChecksRequireConsent,
+    preview_boundary_closed: boundaryClosed,
+    no_policy_contradiction: allEffectingChecksRequireConsent && boundaryClosed
+  };
+}
+
+function buildProactiveHarness({ microCompliance }) {
+  return {
+    mode: "DETERMINISTIC_DIAGNOSTICS_POLICY_PREVIEW",
+    status: "planned",
+    trigger: "before lighthouse installs, Node0 activation attempts, or public trust claims",
+    recommended_micro_action: "narrow_diagnostics_scope_then_request_exact_consent",
+    gates: [
+      {
+        gate: "all_effecting_checks_require_consent",
+        pass: microCompliance.all_effecting_checks_require_consent
+      },
+      {
+        gate: "preview_boundary_closed",
+        pass: microCompliance.preview_boundary_closed
+      },
+      {
+        gate: "approval_not_recorded",
+        pass: microCompliance.no_approval_recorded
+      },
+      {
+        gate: "effect_capability_not_minted",
+        pass: microCompliance.no_capability_mint
+      },
+      {
+        gate: "runtime_boundary_closed",
+        pass: microCompliance.no_runtime
+      }
+    ],
+    next_action:
+      "operator reviews this plan, narrows scope, then separately authorizes any governed runtime handoff"
+  };
+}
+
+function buildMicroConsent() {
+  return {
+    preview_scope: "diagnostics_plan_preview_only",
+    status: "draft_only",
+    approval_recorded: false,
+    exact_consent_required_for_effecting_checks: true,
+    consent_observed_in_preview: false,
+    action_authorized_by_preview: false,
+    reusable_authorization_created: false,
+    broad_consent_allowed: false,
+    minimum_shape: MICRO_CONSENT_SHAPE
+  };
+}
+
+function buildSelfCritique(safetyReport) {
+  return {
+    ...safetyReport.self_critique,
+    confidence: "bounded_preview",
+    weakest_link: "operator_scope_selection",
+    limitation:
+      "Diagnostics planning can name checks and consent requirements, but it cannot certify results until the operator authorizes execution and verification reads actual traces.",
+    open_risk_count: safetyReport.self_critique.gaps.length
+  };
+}
+
 export function buildDiagnosticsMissionPlan({ now = new Date() } = {}) {
   const safetyReport = buildSafetyReportPreview({ now });
   const mission = {
@@ -122,6 +225,10 @@ export function buildDiagnosticsMissionPlan({ now = new Date() } = {}) {
     permissions: PERMISSIONS,
     commitment_hash: sha256(stableStringify(PERMISSIONS))
   };
+  const microCompliance = buildMicroCompliance({
+    permissions: PERMISSIONS,
+    boundary: BOUNDARY
+  });
 
   return {
     schema: SCHEMA,
@@ -132,13 +239,10 @@ export function buildDiagnosticsMissionPlan({ now = new Date() } = {}) {
     consent_scope_preview: consentScopePreview,
     mission_commitment_hash: sha256(stableStringify(mission)),
     proof_of_truth_convergence: proofFromSafetyReport(safetyReport),
-    proactive_harness: {
-      status: "planned",
-      trigger: "before lighthouse installs, Node0 activation attempts, or public trust claims",
-      next_action:
-        "operator reviews this plan, narrows scope, then separately authorizes any governed runtime handoff"
-    },
-    self_critique: safetyReport.self_critique,
+    proactive_harness: buildProactiveHarness({ microCompliance }),
+    self_critique: buildSelfCritique(safetyReport),
+    micro_compliance: microCompliance,
+    micro_consent: buildMicroConsent(),
     phase_gate: {
       current_phase: "DRAFT_INTENT",
       next_phase: "CONSENT_NEGOTIATION",
@@ -159,6 +263,12 @@ function appendChecks(lines, checks) {
 function appendPermissions(lines, permissions) {
   for (const permission of permissions) {
     lines.push(`  - ${permission.resource_id}  ${permission.action}  purpose="${permission.purpose}"`);
+  }
+}
+
+function appendGates(lines, gates) {
+  for (const gate of gates) {
+    lines.push(`  - ${gate.gate}: ${gate.pass ? "pass" : "fail"}`);
   }
 }
 
@@ -188,7 +298,25 @@ export function formatDiagnosticsMissionPlan(plan) {
     lines.push(`  ${pillar}: ${value.status} (${value.evidence_kind}; certifies=${value.certifies})`);
   }
   lines.push("");
+  lines.push("Self-proactive harness:");
+  lines.push(`  mode: ${plan.proactive_harness.mode}`);
+  lines.push(`  recommended_micro_action: ${plan.proactive_harness.recommended_micro_action}`);
+  appendGates(lines, plan.proactive_harness.gates);
+  lines.push("");
+  lines.push("Micro-compliance:");
+  for (const [key, value] of Object.entries(plan.micro_compliance)) {
+    lines.push(`  - ${key}: ${value}`);
+  }
+  lines.push("");
+  lines.push("Micro-consent:");
+  lines.push(`  scope: ${plan.micro_consent.preview_scope}`);
+  lines.push(`  status: ${plan.micro_consent.status}`);
+  lines.push(`  exact_consent_required_for_effecting_checks: ${plan.micro_consent.exact_consent_required_for_effecting_checks}`);
+  lines.push(`  action_authorized_by_preview: ${plan.micro_consent.action_authorized_by_preview}`);
+  lines.push("");
   lines.push("Self-critique:");
+  lines.push(`  confidence: ${plan.self_critique.confidence}`);
+  lines.push(`  weakest_link: ${plan.self_critique.weakest_link}`);
   for (const gap of plan.self_critique.gaps) {
     lines.push(`  - ${gap.severity}: ${gap.code} - ${gap.note}`);
   }

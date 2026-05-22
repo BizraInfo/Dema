@@ -49,12 +49,43 @@ test("buildDiagnosticsMissionPlan names the proactive checks and consent require
   ]);
 });
 
+test("buildDiagnosticsMissionPlan exposes micro harness compliance without authorization", () => {
+  const plan = buildDiagnosticsMissionPlan({ now: fixedNow });
+
+  assert.equal(plan.proactive_harness.mode, "DETERMINISTIC_DIAGNOSTICS_POLICY_PREVIEW");
+  assert.equal(plan.proactive_harness.recommended_micro_action, "narrow_diagnostics_scope_then_request_exact_consent");
+  assert.equal(
+    plan.proactive_harness.gates.find((gate) => gate.gate === "all_effecting_checks_require_consent").pass,
+    true
+  );
+  assert.equal(
+    plan.proactive_harness.gates.find((gate) => gate.gate === "preview_boundary_closed").pass,
+    true
+  );
+  assert.equal(plan.micro_compliance.preview_only, true);
+  assert.equal(plan.micro_compliance.no_runtime, true);
+  assert.equal(plan.micro_compliance.no_capability_mint, true);
+  assert.equal(plan.micro_compliance.all_effecting_checks_require_consent, true);
+  assert.equal(plan.micro_compliance.no_policy_contradiction, true);
+  assert.equal(plan.micro_consent.preview_scope, "diagnostics_plan_preview_only");
+  assert.equal(plan.micro_consent.status, "draft_only");
+  assert.equal(plan.micro_consent.exact_consent_required_for_effecting_checks, true);
+  assert.equal(plan.micro_consent.consent_observed_in_preview, false);
+  assert.equal(plan.micro_consent.approval_recorded, false);
+  assert.equal(plan.micro_consent.broad_consent_allowed, false);
+  assert.equal(plan.self_critique.confidence, "bounded_preview");
+  assert.equal(plan.self_critique.open_risk_count, plan.self_critique.gaps.length);
+});
+
 test("formatDiagnosticsMissionPlan renders phases, critique, proof, and boundary", () => {
   const output = formatDiagnosticsMissionPlan(buildDiagnosticsMissionPlan({ now: fixedNow }));
 
   assert.match(output, /DEMA Diagnostics Mission Plan/);
   assert.match(output, /UNDERSTAND -> PLAN -> ACT -> VERIFY -> SETTLE/);
   assert.match(output, /npm run check/);
+  assert.match(output, /Self-proactive harness/);
+  assert.match(output, /Micro-compliance/);
+  assert.match(output, /Micro-consent/);
   assert.match(output, /Self-critique/);
   assert.match(output, /Proof-of-Truth Convergence/);
   assert.match(output, /Boundary: preview-only; no execution; no mutation; no receipt minted/);
@@ -79,6 +110,8 @@ test("dema diagnostics plan --json emits the schema-tagged plan", async () => {
   assert.equal(plan.mode, "PREVIEW_ONLY");
   assert.equal(plan.boundary.execution_enabled, false);
   assert.ok(plan.checks.some((check) => check.command === "npm run check"));
+  assert.equal(plan.micro_compliance.all_effecting_checks_require_consent, true);
+  assert.equal(plan.micro_consent.action_authorized_by_preview, false);
 });
 
 test("dema diagnostics rejects unknown subcommands", async () => {
