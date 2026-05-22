@@ -45,6 +45,7 @@ export const commands = [
   ["node", ["scripts/llm-guidance-check.mjs"]],
   ["node", ["scripts/gtm-readiness-check.mjs"]],
   ["node", ["scripts/urp-shared-discovery.mjs"]],
+  ["node", ["scripts/proof-room-bundle.mjs", "--json"]],
   ["node", ["scripts/node0-self-check.mjs", "--verify"]]
 ];
 

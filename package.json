@@ -18,6 +18,7 @@
     "llm:guidance": "node scripts/llm-guidance-check.mjs",
     "gtm:readiness": "node scripts/gtm-readiness-check.mjs",
     "urp:discovery": "node scripts/urp-shared-discovery.mjs",
+    "proof:room": "node scripts/proof-room-bundle.mjs",
     "smoke-boundary": "node scripts/smoke-boundary.mjs",
     "baseline:l1": "node scripts/baseline-l1.mjs",
     "baseline:l1:diff": "node scripts/baseline-l1-diff.mjs",

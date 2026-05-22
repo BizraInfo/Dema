@@ -119,6 +119,7 @@ These are working design artifacts. They are not the public onboarding path.
 - [superpowers/plans/2026-05-12-adr-007-multi-session-chain-policy.md](superpowers/plans/2026-05-12-adr-007-multi-session-chain-policy.md)
 - [superpowers/plans/2026-05-12-phase2-assurance-mint-lib-and-gates.md](superpowers/plans/2026-05-12-phase2-assurance-mint-lib-and-gates.md)
 - [superpowers/plans/2026-05-22-urp-shared-runtime-discovery.md](superpowers/plans/2026-05-22-urp-shared-runtime-discovery.md) — working plan for the discovery-only URP shared-runtime manifest and SAT-governed write-boundary slice.
+- [superpowers/plans/2026-05-22-proof-room-bundle.md](superpowers/plans/2026-05-22-proof-room-bundle.md) — working plan for the proof-room gate composition (`npm run proof:room`).
 - [superpowers/specs/2026-05-12-node0-cicd-blueprint-design.md](superpowers/specs/2026-05-12-node0-cicd-blueprint-design.md)
 - [superpowers/specs/2026-05-14-actuator-boundary-spine/01_specification.md](superpowers/specs/2026-05-14-actuator-boundary-spine/01_specification.md) — working artifact for actuator boundary spine.
 - [superpowers/specs/2026-05-14-dema-broad-gtm-readiness/01_specification.md](superpowers/specs/2026-05-14-dema-broad-gtm-readiness/01_specification.md) — working artifact for broad-GTM readiness.
