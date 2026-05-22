@@ -33,7 +33,7 @@ Read these before acting:
 | Item | Evidence | Status |
 |---|---|---|
 | Dema audit HEAD | `ac6dd63` | Current-state audit baseline |
-| Test gate | `npm test` -> `2423/2423` | Verified by current GTM readiness gate |
+| Test gate | `npm test` -> `2437/2437` | Verified by current GTM readiness gate |
 | Proof-forge chain | `.proof-forge/EVIDENCE_INDEX.json` -> `chain_length: 73` | Verified in v0.1.2 GTM audit |
 | ADR-009 | `docs/06-adr/ADR-009-poi-proof-of-impact-design.md` | Accepted |
 | ADR-014 | `docs/06-adr/ADR-014-three-runtime-architecture-canonization.md` | Accepted |
@@ -133,6 +133,10 @@ The real reviewer name may live in the operator's private address book or privat
 notes. If a public repo artifact is later needed, use only `ring1-001` unless the
 reviewer explicitly consents to being named.
 
+`npm run gtm:readiness` now performs a read-only metadata scan of this directory
+under `DEMA_HOME` or `~/.dema`. It counts `.md` send receipts but does not send,
+mint, publish, or read feedback content.
+
 ## 8. Feedback record shape
 
 The filled reviewer form remains private first:
@@ -150,6 +154,11 @@ docs/lighthouse/feedback/RING1-001-2026-Q2.md
 Only create the public version if the reviewer consents to repo inclusion or if
 the content is redacted enough to protect identity, private context, and channel
 metadata.
+
+`npm run gtm:readiness` also counts `.md` feedback documents in the private
+feedback directory. It reports counts only; feedback content remains private to
+the operator unless a later exact gate authorizes review or anonymized repo
+inclusion.
 
 ## 9. Gate closure rules
 

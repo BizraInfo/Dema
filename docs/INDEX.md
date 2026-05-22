@@ -25,7 +25,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 
 - [PRODUCT.md](PRODUCT.md) — concise product strategy.
 - [GTM.md](GTM.md) — first offer, audience, forbidden claims, Node1/Node2 boundary.
-- [gtm/BIZRA_90_Day_GTM_v0_1.md](gtm/BIZRA_90_Day_GTM_v0_1.md) — strategic 90-day GTM plan with v0.1.2 current-state drift closure.
+- [gtm/BIZRA_90_Day_GTM_v0_1.md](gtm/BIZRA_90_Day_GTM_v0_1.md) — strategic 90-day GTM plan with v0.1.7 current-state drift closure, GTM readiness gate, URP discovery gate, open operator gate reporting, phase-status reporting, private Phase 1 evidence metadata scanning, and a Phase 1 success-criteria ledger.
 - [gtm/BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md](gtm/BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md) — docs-only Phase-1 Ring-1 send checklist, private send receipt shape, feedback record boundary, and exact next consent phrases.
 - [ROADMAP.md](ROADMAP.md) — product roadmap.
 - [LIGHTHOUSE.md](LIGHTHOUSE.md) — private lighthouse operator lane.
@@ -118,6 +118,7 @@ These are working design artifacts. They are not the public onboarding path.
 
 - [superpowers/plans/2026-05-12-adr-007-multi-session-chain-policy.md](superpowers/plans/2026-05-12-adr-007-multi-session-chain-policy.md)
 - [superpowers/plans/2026-05-12-phase2-assurance-mint-lib-and-gates.md](superpowers/plans/2026-05-12-phase2-assurance-mint-lib-and-gates.md)
+- [superpowers/plans/2026-05-22-urp-shared-runtime-discovery.md](superpowers/plans/2026-05-22-urp-shared-runtime-discovery.md) — working plan for the discovery-only URP shared-runtime manifest and SAT-governed write-boundary slice.
 - [superpowers/specs/2026-05-12-node0-cicd-blueprint-design.md](superpowers/specs/2026-05-12-node0-cicd-blueprint-design.md)
 - [superpowers/specs/2026-05-14-actuator-boundary-spine/01_specification.md](superpowers/specs/2026-05-14-actuator-boundary-spine/01_specification.md) — working artifact for actuator boundary spine.
 - [superpowers/specs/2026-05-14-dema-broad-gtm-readiness/01_specification.md](superpowers/specs/2026-05-14-dema-broad-gtm-readiness/01_specification.md) — working artifact for broad-GTM readiness.
