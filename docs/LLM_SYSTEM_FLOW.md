@@ -187,6 +187,7 @@ npm run llm:guidance
 npm run release:readiness
 npm run gtm:readiness
 npm run urp:discovery
+npm run proof:room
 git diff --check
 ```
 
