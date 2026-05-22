@@ -1,0 +1,139 @@
+{
+  "schema": "bizra.dema.proof_room_bundle.v0.1",
+  "mode": "PROOF_ROOM_FULL",
+  "truth_label": "MEASURED",
+  "ok": true,
+  "generated_at": "2026-05-22T22:24:05.184Z",
+  "repo_root": "/home/bizra-operating-system/Downloads/Dema",
+  "gates": [
+    {
+      "id": "gtm_readiness",
+      "command": "node scripts/gtm-readiness-check.mjs --json",
+      "exit_code": 0,
+      "ok": true,
+      "stdout_sha256": "334edad80c68da810cb707cef0a3b2fe0d31e847c3b50977f671b63960e30b4a",
+      "stdout_bytes": 19273,
+      "summary": {
+        "json_ok": true
+      },
+      "error": null,
+      "duration_ms": 33
+    },
+    {
+      "id": "urp_discovery",
+      "command": "node scripts/urp-shared-discovery.mjs --json",
+      "exit_code": 0,
+      "ok": true,
+      "stdout_sha256": "c387d6b1fbd97af440ca68a5605ecb7fbdb53d852ec0256b40bdf03d07ca554c",
+      "stdout_bytes": 5434,
+      "summary": {
+        "json_ok": true
+      },
+      "error": null,
+      "duration_ms": 24
+    },
+    {
+      "id": "llm_guidance",
+      "command": "node scripts/llm-guidance-check.mjs --json",
+      "exit_code": 0,
+      "ok": true,
+      "stdout_sha256": "03e944f1351ba5e90f5997311cd86bde7304a2d7d5324bbc5c9fecae326a751a",
+      "stdout_bytes": 979,
+      "summary": {
+        "json_ok": true
+      },
+      "error": null,
+      "duration_ms": 18
+    },
+    {
+      "id": "release_readiness",
+      "command": "node scripts/release-readiness.mjs --json",
+      "exit_code": 0,
+      "ok": true,
+      "stdout_sha256": "65c784d02dd231a3ce76c261cde89bc0cd79084221df113318c51de078685d65",
+      "stdout_bytes": 14419,
+      "summary": {
+        "readiness_score": 100,
+        "min_required": 100
+      },
+      "error": null,
+      "duration_ms": 24
+    },
+    {
+      "id": "git_diff_check",
+      "command": "git diff --check",
+      "exit_code": 0,
+      "ok": true,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "summary": null,
+      "error": null,
+      "duration_ms": 2
+    },
+    {
+      "id": "node0_self_check_verify",
+      "command": "node scripts/node0-self-check.mjs --verify",
+      "exit_code": 0,
+      "ok": true,
+      "stdout_sha256": "3bbb897dd7027f4e0bf5d2789f41206e4ccbf1b5dc51611dfd57ea9e852e254d",
+      "stdout_bytes": 881,
+      "summary": null,
+      "error": null,
+      "duration_ms": 22
+    },
+    {
+      "id": "npm_test",
+      "command": "npm test",
+      "exit_code": 0,
+      "ok": true,
+      "stdout_sha256": "c1030430cb9d876a74d1eb01aab0282bc603a885fd7e4383f540fc1ecd4bbb58",
+      "stdout_bytes": 490904,
+      "summary": {
+        "pass": 2443,
+        "fail": 0,
+        "total": 2443,
+        "ok": true
+      },
+      "error": null,
+      "duration_ms": 5893
+    }
+  ],
+  "self_harness": {
+    "gates_run": 7,
+    "gates_passed": 7,
+    "gates_failed": 0,
+    "failed_gate_ids": [],
+    "replay_command": "npm run proof:room",
+    "full_replay_command": "npm run proof:room -- --full",
+    "micro_consent_write": "GO: write proof room bundle to artifacts/proofs/proof-room-v0.1",
+    "self_critique": [
+      "All composed gates passed; safe to offer outsider replay of this bundle."
+    ]
+  },
+  "proof_convergence": {
+    "formal": "schema-tagged gate composition",
+    "cryptographic": "per-gate stdout_sha256 digests",
+    "empirical": "subprocess exit codes and TAP counts when --full",
+    "economic": "no token, revenue, or PoI claims in this bundle"
+  },
+  "boundary": {
+    "filesystem_write_performed": false,
+    "network_used": false,
+    "runtime_execution_performed": false,
+    "model_loaded": false,
+    "model_invocation_performed": false,
+    "prompt_executed": false,
+    "external_call_performed": false,
+    "raw_corpus_scan_performed": false,
+    "raw_data_included": false,
+    "tool_executed": false,
+    "chain_advance_performed": false,
+    "receipt_mint_performed": false,
+    "federation_invoked": false,
+    "node_connection_performed": false,
+    "public_network_used": false,
+    "consent_collected": false
+  },
+  "next_safe_action": "Optional: npm run proof:room -- --write --consent \"GO: write proof room bundle to artifacts/proofs/proof-room-v0.1\"",
+  "content_sha256": "9b75818ca62a7aff81f5ea10058606b01d257cd93f8a182140af535061291f5c"
+}

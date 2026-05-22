@@ -25,7 +25,8 @@ This index is the clean map for the repo. It separates current user-facing docs,
 
 - [PRODUCT.md](PRODUCT.md) — concise product strategy.
 - [GTM.md](GTM.md) — first offer, audience, forbidden claims, Node1/Node2 boundary.
-- [gtm/BIZRA_90_Day_GTM_v0_1.md](gtm/BIZRA_90_Day_GTM_v0_1.md) — strategic 90-day GTM plan with v0.1.7 current-state drift closure, GTM readiness gate, URP discovery gate, open operator gate reporting, phase-status reporting, private Phase 1 evidence metadata scanning, and a Phase 1 success-criteria ledger.
+- [gtm/BIZRA_90_Day_GTM_v0_1.md](gtm/BIZRA_90_Day_GTM_v0_1.md) — strategic 90-day GTM plan with v0.1.8 current-state drift closure (HEAD `004e887`, `2443/2443` tests), GTM readiness gate, URP discovery gate, Proof Room Bundle gate (`npm run proof:room`), open operator gate reporting, phase-status reporting, private Phase 1 evidence metadata scanning, and a Phase 1 success-criteria ledger.
+- [gtm/BIZRA_OPEN_SOURCE_ENGAGEMENT_AND_BUSINESS_MODEL_v0_1.md](gtm/BIZRA_OPEN_SOURCE_ENGAGEMENT_AND_BUSINESS_MODEL_v0_1.md) — claim-governed summary of open-source engagement thesis and commercial assurance lane (source PDF on operator disk; not a runtime contract).
 - [gtm/BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md](gtm/BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md) — docs-only Phase-1 Ring-1 send checklist, private send receipt shape, feedback record boundary, and exact next consent phrases.
 - [ROADMAP.md](ROADMAP.md) — product roadmap.
 - [LIGHTHOUSE.md](LIGHTHOUSE.md) — private lighthouse operator lane.

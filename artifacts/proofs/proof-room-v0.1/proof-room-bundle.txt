@@ -1,0 +1,22 @@
+DEMA Proof Room Bundle
+
+Schema: bizra.dema.proof_room_bundle.v0.1
+Mode: PROOF_ROOM_FULL
+Result: PASS
+Generated: 2026-05-22T22:24:05.184Z
+
+Gates:
+- PASS gtm_readiness (exit 0, 33ms)
+- PASS urp_discovery (exit 0, 24ms)
+- PASS llm_guidance (exit 0, 18ms)
+- PASS release_readiness (exit 0, 24ms)
+- PASS git_diff_check (exit 0, 2ms)
+- PASS node0_self_check_verify (exit 0, 22ms)
+- PASS npm_test (exit 0, 5893ms)
+  tests: 2443/2443
+
+Self-harness:
+- All composed gates passed; safe to offer outsider replay of this bundle.
+
+Write requires: GO: write proof room bundle to artifacts/proofs/proof-room-v0.1
+Boundary: read-only composition; no runtime; no receipt mint; no network.

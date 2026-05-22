@@ -6,10 +6,10 @@
 |---|---|
 | **Document type** | Strategic GTM Plan (BIG 3 consulting deliverable equivalent) |
 | **Prepared** | 2026-05-19 GST |
-| **Amendments** | **v0.1.1** (2026-05-19 GST · post-A+-review): 3 corrections from Mumu's peer review applied · **v0.1.2** (2026-05-22 GST): current-state drift closure against HEAD `ac6dd63` · **v0.1.3** (2026-05-22 GST): GTM readiness gate added and local test count reconciled · **v0.1.4** (2026-05-22 GST): URP shared-runtime discovery gate added and local test count reconciled · **v0.1.5** (2026-05-22 GST): GTM readiness now exposes open operator gates and phase status without executing them · **v0.1.6** (2026-05-22 GST): GTM readiness now scans Phase 1 evidence metadata under `DEMA_HOME` without reading private feedback content · **v0.1.7** (2026-05-22 GST): GTM readiness now emits a Phase 1 success-criteria ledger tied to Part V.C |
+| **Amendments** | **v0.1.1** (2026-05-19 GST · post-A+-review): 3 corrections from Mumu's peer review applied · **v0.1.2** (2026-05-22 GST): current-state drift closure against HEAD `ac6dd63` · **v0.1.3** (2026-05-22 GST): GTM readiness gate added and local test count reconciled · **v0.1.4** (2026-05-22 GST): URP shared-runtime discovery gate added and local test count reconciled · **v0.1.5** (2026-05-22 GST): GTM readiness now exposes open operator gates and phase status without executing them · **v0.1.6** (2026-05-22 GST): GTM readiness now scans Phase 1 evidence metadata under `DEMA_HOME` without reading private feedback content · **v0.1.7** (2026-05-22 GST): GTM readiness now emits a Phase 1 success-criteria ledger tied to Part V.C · **v0.1.8** (2026-05-22 GST): Proof Room Bundle v0.1 shipped (#93); current-state drift closure against HEAD `004e887` |
 | **Author of record** | Mumu (Mohamed Beshr) |
 | **Synthesis prepared by** | Coordinator (Claude Opus 4.7 · 1M context · session-bound) |
-| **Working main HEAD** | Original v0.1.1 snapshot: `ea4c231` · current-state audit: `ac6dd63` (PR #90) |
+| **Working main HEAD** | Original v0.1.1 snapshot: `ea4c231` · current-state audit: `004e887` (PR #93 Proof Room Bundle) |
 | **Document scope** | Days 1–90 only · Ring 1 → Ring 2 → Ring 3 (NOT Ring 4 public) |
 | **Truth discipline** | Every claim labeled VERIFIED · DERIVED · ASSUMED · UNKNOWN |
 | **Decision authority** | Mumu retains all halt-gate decisions · this doc proposes, does not commit |
@@ -84,9 +84,25 @@ Current verified repo facts:
 Supersession rule for this document:
 
 - Later numeric statements saying `2223` tests, `70` receipts, `14` ADRs, or HEAD `ea4c231` are the historical v0.1.1 snapshot.
-- Current GTM decisions after 2026-05-22 must use the v0.1.2 facts above.
+- Current GTM decisions after 2026-05-22 must use the v0.1.8 facts in §0.8 when present; otherwise the v0.1.2 facts in §0.5.
 - Later rows saying ADR-009 or ADR-014 are `Proposed` are stale and superseded by their accepted ADR files.
 - Later rows saying ADR-013 is `Accepted` are treated as "implementation verified; ADR status-sync still open" until the ADR file itself is updated.
+
+### 0.8 v0.1.8 Proof Room Bundle drift closure (2026-05-22 GST)
+
+This amendment does **not** execute the 90-day plan. It reconciles GTM current-state markers with merged Proof Room Bundle v0.1 (#93).
+
+Current verified repo facts:
+
+- HEAD inspected for this amendment: `004e887` (merge PR #93 · Proof Room Bundle v0.1).
+- Fresh local test gate: `npm test` passes `2443/2443` tests.
+- Proof Room Bundle is machine-checkable through `npm run proof:room`; core gates compose `gtm:readiness`, `urp:discovery`, `llm:guidance`, `release:readiness` (`--json`, `readiness_score >= 100`), `git diff --check`, and `node0-self-check --verify`. Wired into `npm run check`.
+- Optional outsider replay artifact (micro-consent write): `GO: write proof room bundle to artifacts/proofs/proof-room-v0.1` → `artifacts/proofs/proof-room-v0.1/proof-room-bundle.json` + `.txt`. No runtime execution; no receipt mint; no network.
+
+Supersession rule for this document:
+
+- Current GTM decisions after this amendment must use the v0.1.8 facts above.
+- Later statements citing HEAD `ac6dd63` or test count `2437/2437` are the v0.1.2–v0.1.7 snapshot unless explicitly historical.
 
 ---
 

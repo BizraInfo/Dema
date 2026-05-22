@@ -174,12 +174,13 @@ const REQUIRED_MARKERS = [
     name: "gtm_current_state_markers",
     file: "docs/gtm/BIZRA_90_Day_GTM_v0_1.md",
     markers: [
-      "ac6dd63",
-      "2437/2437",
+      "004e887",
+      "2443/2443",
       "73 indexed",
       "GO send pack to <name>",
       "GO author POI v0.1 test plan (no impl)",
       "npm run urp:discovery",
+      "npm run proof:room",
       "~/.dema/lighthouse/ring-1/feedback/"
     ]
   },

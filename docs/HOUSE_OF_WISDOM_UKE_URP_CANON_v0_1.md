@@ -438,7 +438,7 @@ Honest summary of what currently exists vs. what is PLANNED:
 
 | Component | Status | Where |
 |---|---|---|
-| Dema CLI | **SHIPPED** | `apps/cli/src/index.js` · current local test gate: 2437/2437 pass |
+| Dema CLI | **SHIPPED** | `apps/cli/src/index.js` · current local test gate: 2443/2443 pass |
 | PAT-1..7 substrate | **SHIPPED** (preview) | `packages/core/src/pat-*.js` · CLI execution PLANNED |
 | SAT-1..5 substrate | **SHIPPED** (preview) | `packages/core/src/sat-*.js` |
 | SAT-1..5 operator CLI | **SHIPPED** (preview verifier surface) | `dema orchestrator verify` (PR #90) |

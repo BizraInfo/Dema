@@ -32,8 +32,9 @@ Read these before acting:
 
 | Item | Evidence | Status |
 |---|---|---|
-| Dema audit HEAD | `ac6dd63` | Current-state audit baseline |
-| Test gate | `npm test` -> `2437/2437` | Verified by current GTM readiness gate |
+| Dema audit HEAD | `004e887` | Current-state audit baseline (PR #93) |
+| Test gate | `npm test` -> `2443/2443` | Verified by current GTM readiness gate |
+| Proof room gate | `npm run proof:room` | Composed outsider-replay bundle (read-only; optional write under micro-consent) |
 | Proof-forge chain | `.proof-forge/EVIDENCE_INDEX.json` -> `chain_length: 73` | Verified in v0.1.2 GTM audit |
 | ADR-009 | `docs/06-adr/ADR-009-poi-proof-of-impact-design.md` | Accepted |
 | ADR-014 | `docs/06-adr/ADR-014-three-runtime-architecture-canonization.md` | Accepted |
