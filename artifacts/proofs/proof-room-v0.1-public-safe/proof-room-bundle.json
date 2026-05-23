@@ -1,0 +1,126 @@
+{
+  "schema": "bizra.dema.proof_room_bundle.v0.1",
+  "mode": "PROOF_ROOM_CORE",
+  "truth_label": "PUBLIC_SAFE",
+  "ok": true,
+  "generated_at": "2026-05-23T02:43:41.145Z",
+  "repo_root": "<repo_root:redacted>",
+  "gates": [
+    {
+      "id": "gtm_readiness",
+      "command": "node scripts/gtm-readiness-check.mjs --json",
+      "exit_code": 0,
+      "ok": true,
+      "stdout_sha256": "334edad80c68da810cb707cef0a3b2fe0d31e847c3b50977f671b63960e30b4a",
+      "stdout_bytes": 19273,
+      "summary": {
+        "json_ok": true
+      },
+      "error": null,
+      "duration_ms": 36
+    },
+    {
+      "id": "urp_discovery",
+      "command": "node scripts/urp-shared-discovery.mjs --json",
+      "exit_code": 0,
+      "ok": true,
+      "stdout_sha256": "c387d6b1fbd97af440ca68a5605ecb7fbdb53d852ec0256b40bdf03d07ca554c",
+      "stdout_bytes": 5434,
+      "summary": {
+        "json_ok": true
+      },
+      "error": null,
+      "duration_ms": 29
+    },
+    {
+      "id": "llm_guidance",
+      "command": "node scripts/llm-guidance-check.mjs --json",
+      "exit_code": 0,
+      "ok": true,
+      "stdout_sha256": "03e944f1351ba5e90f5997311cd86bde7304a2d7d5324bbc5c9fecae326a751a",
+      "stdout_bytes": 979,
+      "summary": {
+        "json_ok": true
+      },
+      "error": null,
+      "duration_ms": 20
+    },
+    {
+      "id": "release_readiness",
+      "command": "node scripts/release-readiness.mjs --json",
+      "exit_code": 0,
+      "ok": true,
+      "stdout_sha256": "102888146e283e560cc733fc3e894c0e4f03cf0435ef86701392f37599b75e0b",
+      "stdout_bytes": 14461,
+      "summary": {
+        "readiness_score": 100,
+        "min_required": 100
+      },
+      "error": null,
+      "duration_ms": 29
+    },
+    {
+      "id": "git_diff_check",
+      "command": "git diff --check",
+      "exit_code": 0,
+      "ok": true,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "summary": null,
+      "error": null,
+      "duration_ms": 4
+    },
+    {
+      "id": "node0_self_check_verify",
+      "command": "node scripts/node0-self-check.mjs --verify",
+      "exit_code": 0,
+      "ok": true,
+      "stdout_sha256": "3bbb897dd7027f4e0bf5d2789f41206e4ccbf1b5dc51611dfd57ea9e852e254d",
+      "stdout_bytes": 881,
+      "summary": null,
+      "error": null,
+      "duration_ms": 27
+    }
+  ],
+  "self_harness": {
+    "gates_run": 6,
+    "gates_passed": 6,
+    "gates_failed": 0,
+    "failed_gate_ids": [],
+    "replay_command": "npm run proof:room",
+    "full_replay_command": "npm run proof:room -- --full",
+    "micro_consent_write": "GO: write proof room bundle to artifacts/proofs/proof-room-v0.1",
+    "self_critique": [
+      "All composed gates passed; safe to offer outsider replay of this bundle."
+    ]
+  },
+  "proof_convergence": {
+    "formal": "schema-tagged gate composition",
+    "cryptographic": "per-gate stdout_sha256 digests",
+    "empirical": "subprocess exit codes and TAP counts when --full",
+    "economic": "no token, revenue, or PoI claims in this bundle"
+  },
+  "boundary": {
+    "filesystem_write_performed": false,
+    "network_used": false,
+    "runtime_execution_performed": false,
+    "model_loaded": false,
+    "model_invocation_performed": false,
+    "prompt_executed": false,
+    "external_call_performed": false,
+    "raw_corpus_scan_performed": false,
+    "raw_data_included": false,
+    "tool_executed": false,
+    "chain_advance_performed": false,
+    "receipt_mint_performed": false,
+    "federation_invoked": false,
+    "node_connection_performed": false,
+    "public_network_used": false,
+    "consent_collected": false
+  },
+  "next_safe_action": "Optional: npm run proof:room -- --public-safe --write --consent \"GO: write proof room bundle to artifacts/proofs/proof-room-v0.1-public-safe\"",
+  "repo_root_basename": "Dema",
+  "repo_root_sha256": "a65f2fae3503a8bc43bc2b06bb6e8d86f2eb94fa0211f0f9e01033351630e0d2",
+  "redacted": true,
+  "content_sha256": "2ab1035817547e5c2f8ae3de99e829657121582c62e23478f7da324fa30892b4"
+}
