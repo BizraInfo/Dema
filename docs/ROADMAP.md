@@ -228,6 +228,7 @@ The files a dev opens FIRST when re-orienting:
 | Doc | Purpose |
 |---|---|
 | [`docs/BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md`](BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md) | North-star goal · operating law · A+ quality definition · flagship test |
+| [`docs/A_PLUS_BLUEPRINT_v0_1.md`](A_PLUS_BLUEPRINT_v0_1.md) | A+ development standard · component map · phase ordering · build-order timeline |
 | [`README.md`](../README.md) | Public landing · 5-command first run · PLANNED-not-live banner on install URL |
 | [`docs/CURRENT_LIMITS.md`](CURRENT_LIMITS.md) | MEASURED vs DESIGNED_NOT_LIVE vs PLANNED vs LOCAL_ONLY truth map |
 | [`docs/PRODUCT.md`](PRODUCT.md) | What Dema is / is not / who it's for |
