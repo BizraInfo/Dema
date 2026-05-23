@@ -12,6 +12,7 @@
 //   - required (array of property names; only when value is an object)
 //   - properties (per-property sub-schemas; only when value is an object)
 //   - items (per-element sub-schema; only when value is an array)
+//   - minItems / maxItems (array length bounds)
 //   - pattern (regex; only when value is a string)
 //
 // Out of scope for v0.1: $ref, anyOf/oneOf/allOf, additionalProperties,
@@ -40,7 +41,9 @@ const ERROR_CODES = Object.freeze({
   CONST_MISMATCH: "const_mismatch",
   ENUM_MISMATCH: "enum_mismatch",
   PATTERN_MISMATCH: "pattern_mismatch",
-  INVALID_PATTERN: "invalid_pattern"
+  INVALID_PATTERN: "invalid_pattern",
+  ARRAY_TOO_SHORT: "array_too_short",
+  ARRAY_TOO_LONG: "array_too_long"
 });
 
 const __filename = fileURLToPath(import.meta.url);
@@ -165,9 +168,27 @@ function walk(value, schema, path, errors) {
     }
   }
 
-  if (schema.items && Array.isArray(value)) {
-    for (let i = 0; i < value.length; i += 1) {
-      walk(value[i], schema.items, `${path}[${i}]`, errors);
+  if (Array.isArray(value)) {
+    if (typeof schema.minItems === "number" && value.length < schema.minItems) {
+      pushError(
+        errors,
+        path,
+        ERROR_CODES.ARRAY_TOO_SHORT,
+        `array has ${value.length} items, schema requires at least ${schema.minItems}`
+      );
+    }
+    if (typeof schema.maxItems === "number" && value.length > schema.maxItems) {
+      pushError(
+        errors,
+        path,
+        ERROR_CODES.ARRAY_TOO_LONG,
+        `array has ${value.length} items, schema allows at most ${schema.maxItems}`
+      );
+    }
+    if (schema.items) {
+      for (let i = 0; i < value.length; i += 1) {
+        walk(value[i], schema.items, `${path}[${i}]`, errors);
+      }
     }
   }
 }

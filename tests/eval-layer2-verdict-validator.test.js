@@ -96,14 +96,17 @@ test("validatePastedJudgeVerdict · unknown envelope schema → SCHEMA_UNKNOWN",
   assert.equal(result.truth_label, "SCHEMA_UNKNOWN");
 });
 
-test("validatePastedJudgeVerdict · judge_origin=local_model_designed_not_live rejected in v0.1", () => {
-  const broken = { ...VALID_VERDICT, judge_origin: "local_model_designed_not_live" };
+test("validatePastedJudgeVerdict · v0.2-style judge_origin rejected by structural enum_mismatch", () => {
+  // v0.1 schema enum is restricted to ["external_paste_back"]. Any other
+  // value is caught at the structural layer as enum_mismatch — no semantic
+  // re-check is needed (cleaner separation of v0.1 vs v0.2 contracts).
+  const broken = { ...VALID_VERDICT, judge_origin: "local_model_via_broker" };
   const result = validatePastedJudgeVerdict(broken);
   assert.equal(result.recognized, true);
   assert.equal(result.ok, false);
-  assert.equal(result.truth_label, "SEMANTIC_VIOLATION");
+  assert.equal(result.truth_label, "VALIDATION_FAILED");
   const codes = result.errors.map((e) => e.code);
-  assert.ok(codes.includes(SEMANTIC_ERROR_CODES.V0_1_ORIGIN_NOT_SUPPORTED));
+  assert.ok(codes.includes("enum_mismatch"));
 });
 
 test("validatePastedJudgeVerdict · hostile input (null/array/primitive) → VALIDATION_FAILED", () => {
@@ -150,10 +153,12 @@ test("formatVerdictReport renders MEASURED happy path", () => {
 });
 
 test("formatVerdictReport renders SEMANTIC_VIOLATION error list", () => {
-  const broken = { ...VALID_VERDICT, judge_origin: "local_model_designed_not_live" };
+  // Empty evidence_excerpt: structural passes (it's a string), semantic
+  // layer rejects with EMPTY_EVIDENCE → truth_label SEMANTIC_VIOLATION.
+  const broken = { ...VALID_VERDICT, evidence_excerpt: "   " };
   const text = formatVerdictReport(validatePastedJudgeVerdict(broken));
   assert.match(text, /Truth label:\s+SEMANTIC_VIOLATION/);
-  assert.match(text, /v0_1_origin_not_supported/);
+  assert.match(text, /semantic_empty_evidence/);
 });
 
 test("validator module is pure (no fs · http · net · child_process · fetch)", async () => {

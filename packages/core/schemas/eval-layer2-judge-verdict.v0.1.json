@@ -1,7 +1,7 @@
 {
   "$id": "bizra.dema.eval_layer2_judge_verdict.v0.1",
   "title": "Eval Layer 2 Judge Verdict v0.1",
-  "description": "Paste-back verdict from an external LLM judge. Validated structurally by envelope-schema-validator and semantically by eval-layer2-verdict-validator.validatePastedJudgeVerdict(). v0.1 accepts judge_origin=external_paste_back only; local_model_designed_not_live is reserved for v0.2.",
+  "description": "Paste-back verdict from an external LLM judge. Validated structurally by envelope-schema-validator and semantically by eval-layer2-verdict-validator.validatePastedJudgeVerdict(). v0.1 accepts judge_origin=external_paste_back only. v0.2 will bump the schema id and expand judge_origin to include additional invocation surfaces (e.g., local_model_via_broker).",
   "type": "object",
   "required": [
     "schema",
@@ -24,11 +24,11 @@
     "score": { "enum": [0, 1, 2] },
     "evidence_excerpt": { "type": "string" },
     "judge_origin": {
-      "enum": ["external_paste_back", "local_model_designed_not_live"]
+      "enum": ["external_paste_back"]
     },
     "judged_at": {
       "type": "string",
-      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?(?:Z|[+\\-][0-9]{2}:[0-9]{2})$"
     },
     "judge_model_name": { "type": "string" },
     "judge_run_id": { "type": "string" },

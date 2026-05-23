@@ -7,15 +7,19 @@
 //   bad regex patterns (e.g., non-hex sha256), etc.
 //
 // Layer B (semantic): adds checks the JSON Schema cannot express.
-//   - rubric_id must be a known v0.1 rubric (cross-references RUBRIC_IDS)
-//   - score must be an integer in {0, 1, 2}
-//   - evidence_excerpt must be non-empty after trim
-//   - judge_origin must be "external_paste_back" in v0.1; the alternative
-//     enum value "local_model_designed_not_live" is reserved for v0.2 and
-//     rejected with code "v0_1_origin_not_supported".
-//   - judged_artifact_sha256 must be 64 lowercase hex chars (the schema's
-//     `pattern` already enforces this; we re-check here so the verdict
-//     report names a clearer code if it ever drifts).
+//   - rubric_id must cross-reference the live RUBRIC_IDS export (catches
+//     drift between schema enum and rubric module if either is bumped
+//     without the other).
+//   - evidence_excerpt must be non-empty after trim (schema only requires
+//     `type: "string"`; trim-non-empty is enforced here).
+//   - schema field must match the expected verdict schema id (defense
+//     against an envelope routing into the wrong validator).
+//
+// Note: `score` (must be 0|1|2) and `judged_artifact_sha256` (64-hex
+// pattern) are enforced entirely by the structural layer via the schema
+// enum and pattern — they are NOT re-checked here. The structural layer
+// returns `enum_mismatch` / `pattern_mismatch` codes which downstream
+// surfaces (the CLI report) already render clearly.
 //
 // Result envelope: bizra.dema.eval_layer2_verdict_validator.v0.1 with
 // truth_label ∈ {"MEASURED", "VALIDATION_FAILED", "SEMANTIC_VIOLATION",
@@ -41,7 +45,6 @@ const BOUNDARY = Object.freeze({
 export const SEMANTIC_ERROR_CODES = Object.freeze({
   UNKNOWN_RUBRIC: "semantic_unknown_rubric",
   EMPTY_EVIDENCE: "semantic_empty_evidence",
-  V0_1_ORIGIN_NOT_SUPPORTED: "v0_1_origin_not_supported",
   WRONG_SCHEMA_FIELD: "semantic_wrong_schema_field"
 });
 
@@ -85,17 +88,10 @@ function semanticChecks(verdict) {
     );
   }
 
-  // v0.1 only accepts external_paste_back. The schema enum allows the v0.2
-  // value, but the semantic layer rejects it explicitly until v0.2 lands.
-  if (verdict.judge_origin === "local_model_designed_not_live") {
-    errors.push(
-      err(
-        "$.judge_origin",
-        SEMANTIC_ERROR_CODES.V0_1_ORIGIN_NOT_SUPPORTED,
-        "judge_origin=local_model_designed_not_live is reserved for v0.2 — Dema does not invoke any LLM in v0.1"
-      )
-    );
-  }
+  // v0.1 judge_origin restriction: the schema enum is now restricted to
+  // ["external_paste_back"] so any non-supported value is caught structurally
+  // as `enum_mismatch`. No semantic re-check needed. v0.2 will bump the
+  // schema id and add additional supported invocation surfaces.
 
   return errors;
 }
