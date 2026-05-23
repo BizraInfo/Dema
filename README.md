@@ -43,21 +43,14 @@ Dema does not ask you to trust a black box. It tells you what it knows, what it 
 
 ## First run
 
+Five commands. Each one is safe and reversible.
+
 ```bash
-dema welcome
-dema setup
-dema journey "Fix auth.py and run pytest"
-dema models
-dema ambient
-dema ambient --manifest
-dema ambient audit
-dema diagnostics plan
-dema consent plan "Fix auth.py and run pytest"
-dema mission draft "Fix auth.py and run pytest"
-dema report safety
-dema status
-dema doctor
-dema mission propose
+dema welcome              # 1. read the product promise
+dema setup                # 2. create ~/.dema/ (idempotent, non-destructive)
+dema status               # 3. see what is ready, what is blocked
+dema doctor               # 4. row-by-row readiness check + fix hints
+dema journey "Fix auth.py and run pytest"   # 5. preview the journey for one example task
 ```
 
 Expected first impression:
@@ -75,7 +68,25 @@ Next:
 3. Preview first bounded diagnostic
 ```
 
-`dema mission propose` is a preview command. It checks readiness and consent state, then stops. It does not start a daemon, execute work, or create the first runtime receipt.
+What these commands do **not** do:
+
+- They do not start a background daemon.
+- They do not call a remote provider.
+- They do not mutate anything outside `~/.dema/`.
+- They do not mint a receipt — the existing ARTIFACT-011 receipt is the
+  read/list view of a gateway-issued artifact (see *Current boundary* below).
+
+There are more commands once you are ready (`dema diagnostics plan`,
+`dema consent plan "<intent>"`, `dema mission draft "<intent>"`,
+`dema report safety`, `dema ambient`, `dema ambient --manifest`,
+`dema ambient audit`, `dema models`, `dema mission propose`, ...).
+Each one is a preview unless explicit consent is typed.
+See [docs/USER_LIFECYCLE.md](docs/USER_LIFECYCLE.md) for the full local
+journey.
+
+For the full list of what is **measured**, what is **designed but not
+live**, and what is **planned**, read
+[docs/CURRENT_LIMITS.md](docs/CURRENT_LIMITS.md).
 
 ---
 
@@ -281,21 +292,34 @@ The wizard guides you through:
 
 ### Terminal install
 
-The terminal installer endpoint is planned for the packaged alpha release. Until release assets are published, use the developer install below.
+> **PLANNED — not yet live.** The terminal installer endpoint
+> (`install.bizra.ai`) is planned for the packaged alpha release. Until
+> release assets are published, use the developer install below. Do not
+> attempt to curl or PowerShell-fetch these URLs — they do not resolve.
 
-Planned Linux / macOS command:
+The shape of the planned command (for reference; **DO NOT RUN YET**):
 
 ```bash
+# PLANNED — not live
 curl -fsSL https://install.bizra.ai/dema/install.sh | sh
 ```
 
-Planned Windows PowerShell command:
-
 ```powershell
+# PLANNED — not live
 irm https://install.bizra.ai/dema/install.ps1 | iex
 ```
 
-Each script's SHA-256 hash is published in [docs/INSTALLER_ARCHITECTURE.md](docs/INSTALLER_ARCHITECTURE.md) at every release tag. Operators can verify the bytes match before execution. The endpoint also hosts uninstall scripts at `/dema/uninstall.sh` and `/dema/uninstall.ps1`, plus a small index page at `/dema/`.
+When live, each script's SHA-256 hash will be published in
+[docs/INSTALLER_ARCHITECTURE.md](docs/INSTALLER_ARCHITECTURE.md) at every
+release tag so operators can verify bytes before execution. The endpoint
+will also host uninstall scripts at `/dema/uninstall.sh` and
+`/dema/uninstall.ps1`, plus a small index page at `/dema/`.
+
+Until then: see *Developer install* below, or use the local
+`scripts/install/install.sh` (Unix) / `scripts/install/install-windows.ps1`
+that already ship in this repo. See
+[docs/CURRENT_LIMITS.md](docs/CURRENT_LIMITS.md) for the full list of
+planned-but-not-live surfaces.
 
 ### Developer install
 

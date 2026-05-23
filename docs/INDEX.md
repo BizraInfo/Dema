@@ -15,7 +15,9 @@ This index is the clean map for the repo. It separates current user-facing docs,
 
 ## Current public front doors
 
-- [../README.md](../README.md) — product landing page, onboarding, command reference, diagrams.
+- [../README.md](../README.md) — product landing page, 5-command first run, command reference, diagrams.
+- [PRODUCT.md](PRODUCT.md) — public product page (what Dema is, what it isn't, who it's for, how to verify).
+- [CURRENT_LIMITS.md](CURRENT_LIMITS.md) — honest map of what is MEASURED, DESIGNED_NOT_LIVE, PLANNED, and LOCAL_ONLY. Read this before quoting Dema in a slide.
 - [USER_LIFECYCLE.md](USER_LIFECYCLE.md) — nontechnical end-to-end local journey.
 - [FIRST_RUN_WIZARD.md](FIRST_RUN_WIZARD.md) — in-product first-run screen spec.
 - [ECOSYSTEM.md](ECOSYSTEM.md) — Dema's place inside BIZRA, Node0, and future nodes.

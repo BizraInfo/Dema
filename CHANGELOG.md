@@ -12,10 +12,19 @@ tag:
   Maintained for reviewer clarity; promote to "Tagged releases"
   when/if a tag is minted.
 
-The current **pending tag** is `v0.3.1`, awaiting PR #16
-(interactive approval gate) merge to `main`. Tagging is an L5
-act per the A4.5 autonomy envelope and requires explicit
-in-the-moment GO from the operator at merge time.
+The current **HEAD** is on `main` post-`v0.3.5` (2026-05-09). The work
+that landed between `v0.3.5` and HEAD (notably ADR-008 runtime
+activation prep, Node1 acceptance ceremony, μ-layer hardening, the SAT
+verifier sibling, the codebase architecture map, the Onboarding Seal
+v0.1 regression contract, and the Layer 1 artifact-safety eval) is
+listed under **Logical milestones (untagged)** below. Tagging the next
+release is an L5 act per the A4.5 autonomy envelope and requires
+explicit in-the-moment GO from the operator at the moment of tagging.
+
+> **Note.** Earlier revisions of this file referenced
+> `v0.3.1` as a *pending* tag. `v0.3.1` was tagged shortly after that
+> note was written and is now an immutable git tag. The current pending
+> work is post-`v0.3.5`.
 
 ---
 
