@@ -49,12 +49,26 @@ const VALID_PROOF_ROOM_BUNDLE = Object.freeze({
     empirical: "subprocess exit codes and TAP counts when --full",
     economic: "no token, revenue, or PoI claims in this bundle"
   },
+  // Canonical 16-key preview boundary (see packages/core/src/preview-boundary.js).
+  // The proof-room-bundle.v0.1.json schema now requires every key to be present
+  // and exactly `false`, matching the real on-disk public-safe bundle shape.
   boundary: {
-    read_only: true,
-    network: false,
-    mint: false,
-    external_send: false,
-    urp_runtime: false
+    filesystem_write_performed: false,
+    network_used: false,
+    runtime_execution_performed: false,
+    model_loaded: false,
+    model_invocation_performed: false,
+    prompt_executed: false,
+    external_call_performed: false,
+    raw_corpus_scan_performed: false,
+    raw_data_included: false,
+    tool_executed: false,
+    chain_advance_performed: false,
+    receipt_mint_performed: false,
+    federation_invoked: false,
+    node_connection_performed: false,
+    public_network_used: false,
+    consent_collected: false
   },
   next_safe_action: "Optional: redacted variant ready to share",
   redacted: true,

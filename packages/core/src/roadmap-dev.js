@@ -70,6 +70,10 @@ export async function gatherDevRoadmapState({
   const headSubjectOut = await runGit(["log", "-1", "--pretty=%s"], { cwd });
   const statusOut = await runGit(["status", "--short"], { cwd });
 
+  // 1b. repo root — anchor-doc presence checks must resolve against the
+  // git toplevel, not the caller's cwd (which may be a subdirectory).
+  const repoRootOut = await runGit(["rev-parse", "--show-toplevel"], { cwd });
+
   // 2. recent merged work on main
   const recentMainOut = await runGit(
     ["log", "main", `-${recent_window}`, "--pretty=%h %s"],
@@ -88,7 +92,27 @@ export async function gatherDevRoadmapState({
     { cwd }
   );
 
-  // 5. anchor docs presence (no I/O if cwd is fake — guarded)
+  // Per-call availability flags (clarifies which sections are reliable).
+  const gitCallStatus = Object.freeze({
+    branch: !isGitError(branchOut),
+    head: !isGitError(headShaOut),
+    head_subject: !isGitError(headSubjectOut),
+    status: !isGitError(statusOut),
+    repo_root: !isGitError(repoRootOut),
+    recent_main: !isGitError(recentMainOut),
+    feat_branches: !isGitError(localBranchesOut),
+    ahead_behind: !isGitError(aheadBehindOut)
+  });
+
+  // git_available now means "every git call this module makes succeeded".
+  // Previously it was true even when ahead/behind/main-log errored, which
+  // produced misleading synced=true reports.
+  const gitAvailable = Object.values(gitCallStatus).every(Boolean);
+
+  // 5. anchor docs presence (resolved against repo root, not cwd)
+  const repoRoot = gitCallStatus.repo_root
+    ? (parseLines(repoRootOut)[0] ?? cwd)
+    : cwd;
   const anchorDocs = [
     ROADMAP_DOC_PATH,
     CURRENT_LIMITS_DOC_PATH,
@@ -99,7 +123,7 @@ export async function gatherDevRoadmapState({
   ];
   const anchorDocsStatus = anchorDocs.map((relPath) => ({
     path: relPath,
-    exists: existsSync(join(cwd, relPath))
+    exists: existsSync(join(repoRoot, relPath))
   }));
 
   // Compose
@@ -117,21 +141,26 @@ export async function gatherDevRoadmapState({
     const [name, when, sha] = line.split("|");
     return { name: name ?? line, last_touched: when ?? null, sha: sha ?? null };
   });
-  const aheadBehind = parseLines(aheadBehindOut)[0] ?? null; // "0\t0"
-  const [aheadStr, behindStr] = (aheadBehind ?? "0\t0").split(/\s+/);
-  const ahead = Number(aheadStr) || 0;
-  const behind = Number(behindStr) || 0;
 
-  const gitError =
-    isGitError(branchOut) ||
-    isGitError(headShaOut) ||
-    isGitError(headSubjectOut) ||
-    isGitError(statusOut);
+  // Upstream comparison: when the rev-list call errored, refuse to report
+  // synced=true. ahead/behind become null; synced becomes null (unknown).
+  const aheadBehindAvailable = gitCallStatus.ahead_behind;
+  const aheadBehindLine = aheadBehindAvailable
+    ? (parseLines(aheadBehindOut)[0] ?? null)
+    : null;
+  const aheadBehindParsable = typeof aheadBehindLine === "string";
+  const [aheadStr, behindStr] = aheadBehindParsable
+    ? aheadBehindLine.split(/\s+/)
+    : [null, null];
+  const ahead = aheadBehindParsable ? (Number(aheadStr) || 0) : null;
+  const behind = aheadBehindParsable ? (Number(behindStr) || 0) : null;
+  const synced = aheadBehindParsable ? ahead === 0 && behind === 0 : null;
 
   return Object.freeze({
     schema: ROADMAP_DEV_SCHEMA,
     generated_at: new Date().toISOString(),
-    git_available: !gitError,
+    git_available: gitAvailable,
+    git_call_status: gitCallStatus,
     anchor: Object.freeze({
       branch,
       head_sha: headSha,
@@ -142,19 +171,19 @@ export async function gatherDevRoadmapState({
     main_vs_origin: Object.freeze({
       ahead_of_origin: ahead,
       behind_origin: behind,
-      synced: ahead === 0 && behind === 0
+      synced
     }),
     recent_on_main: Object.freeze(recentCommits.map((c) => Object.freeze(c))),
     feat_branches: Object.freeze(featBranches.map((b) => Object.freeze(b))),
     anchor_docs: Object.freeze(anchorDocsStatus.map((d) => Object.freeze(d))),
-    next_moves_pointer: {
+    next_moves_pointer: Object.freeze({
       doc: ROADMAP_DOC_PATH,
       section: "Next 5 moves (curated, prioritized)"
-    },
-    parking_lot_pointer: {
+    }),
+    parking_lot_pointer: Object.freeze({
       doc: ROADMAP_DOC_PATH,
       section: "Parking lot — deferred with unblock-GO lines"
-    },
+    }),
     boundary: BOUNDARY
   });
 }
@@ -173,7 +202,9 @@ export function formatDevRoadmapReport(state) {
   lines.push(
     `  Tree:        ${state.anchor.dirty_count === 0 ? "clean" : `dirty (${state.anchor.dirty_count} file${state.anchor.dirty_count > 1 ? "s" : ""})`}`
   );
-  if (state.main_vs_origin.synced) {
+  if (state.main_vs_origin.synced === null) {
+    lines.push(`  main/origin: (upstream comparison unavailable)`);
+  } else if (state.main_vs_origin.synced) {
     lines.push(`  main/origin: synced`);
   } else {
     lines.push(

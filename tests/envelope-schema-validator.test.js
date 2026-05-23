@@ -13,7 +13,9 @@ import {
   ENVELOPE_SCHEMA_VALIDATOR_SCHEMA,
   ENVELOPE_SCHEMA_VALIDATOR_BOUNDARY,
   ERROR_CODES,
-  KNOWN_SCHEMAS,
+  KNOWN_SCHEMA_IDS,
+  getKnownSchema,
+  hasKnownSchema,
   loadKnownSchemas,
   validateEnvelope,
   validateAgainstRegistry
@@ -36,15 +38,43 @@ test("ENVELOPE_SCHEMA_VALIDATOR_SCHEMA matches v0.1", () => {
   );
 });
 
-test("KNOWN_SCHEMAS registry loads the 3 v0.1 envelope schemas", () => {
-  const ids = [...KNOWN_SCHEMAS.keys()].sort();
-  assert.ok(ids.includes("bizra.dema.onboarding_seal.v0.1"));
-  assert.ok(ids.includes("bizra.dema.artifact_safety_eval.v0.1"));
-  assert.ok(ids.includes("bizra.dema.proof_room_bundle.v0.1"));
+test("KNOWN_SCHEMA_IDS exposes the 3 v0.1 envelope schemas", () => {
+  assert.ok(KNOWN_SCHEMA_IDS.includes("bizra.dema.onboarding_seal.v0.1"));
+  assert.ok(KNOWN_SCHEMA_IDS.includes("bizra.dema.artifact_safety_eval.v0.1"));
+  assert.ok(KNOWN_SCHEMA_IDS.includes("bizra.dema.proof_room_bundle.v0.1"));
 });
 
-test("KNOWN_SCHEMAS is frozen", () => {
-  assert.ok(Object.isFrozen(KNOWN_SCHEMAS));
+test("KNOWN_SCHEMA_IDS is a truly immutable frozen array", () => {
+  assert.ok(Array.isArray(KNOWN_SCHEMA_IDS));
+  assert.ok(Object.isFrozen(KNOWN_SCHEMA_IDS));
+  assert.throws(
+    () => {
+      KNOWN_SCHEMA_IDS.push("bizra.dema.injected_fake.v0.1");
+    },
+    /(read.only|frozen|extensible)/i
+  );
+});
+
+test("getKnownSchema returns frozen schema or undefined; cannot be mutated", () => {
+  const schema = getKnownSchema("bizra.dema.onboarding_seal.v0.1");
+  assert.ok(schema);
+  assert.equal(schema.$id, "bizra.dema.onboarding_seal.v0.1");
+  assert.ok(Object.isFrozen(schema));
+  assert.equal(getKnownSchema("bizra.dema.nope.v0.1"), undefined);
+  assert.equal(getKnownSchema(null), undefined);
+  assert.equal(getKnownSchema(undefined), undefined);
+});
+
+test("hasKnownSchema is true for the 3 v0.1 schemas, false otherwise", () => {
+  assert.equal(hasKnownSchema("bizra.dema.onboarding_seal.v0.1"), true);
+  assert.equal(hasKnownSchema("bizra.dema.unknown.v0.1"), false);
+  assert.equal(hasKnownSchema(null), false);
+});
+
+test("the private known-schema registry is NOT reachable as a mutable Map export", async () => {
+  const mod = await import("../packages/core/src/envelope-schema-validator.js");
+  // KNOWN_SCHEMAS was the prior leak surface; it must not be present.
+  assert.equal(mod.KNOWN_SCHEMAS, undefined);
 });
 
 test("loadKnownSchemas accepts an injected dir (for tests)", () => {
@@ -136,6 +166,21 @@ test("validateEnvelope · pattern_mismatch on a regex-constrained string", () =>
   const result = validateEnvelope({ artifact_sha256: "not-a-hash" }, schemaDef);
   assert.equal(result.ok, false);
   assert.equal(result.errors[0].code, ERROR_CODES.PATTERN_MISMATCH);
+});
+
+test("validateEnvelope · invalid_pattern when schema regex is malformed (no throw)", () => {
+  // Unterminated character class — would throw at new RegExp() construction.
+  const schemaDef = {
+    type: "object",
+    properties: {
+      thing: { type: "string", pattern: "^[a-z" }
+    }
+  };
+  // Must not throw — the validator should surface the error structurally.
+  const result = validateEnvelope({ thing: "anything" }, schemaDef);
+  assert.equal(result.ok, false);
+  assert.equal(result.errors[0].code, ERROR_CODES.INVALID_PATTERN);
+  assert.match(result.errors[0].message, /not a valid regex/);
 });
 
 test("validateEnvelope · union type accepts each branch", () => {
