@@ -148,6 +148,11 @@ import {
   formatAmanaContractsPreview
 } from "../../../packages/core/src/amana-contracts-preview.js";
 import {
+  buildFirstRunPlan,
+  formatFirstRunPlan,
+  summarizeFirstRunOutcome
+} from "../../../packages/core/src/first-run.js";
+import {
   buildMcpIntegrationBlueprint,
   formatMcpIntegrationBlueprint
 } from "../../../packages/core/src/mcp-blueprint.js";
@@ -443,6 +448,41 @@ async function dispatch(argv) {
   const command = argv[0] ?? "active";
   const subcommand = argv[1];
 
+  // --version / -v intercept (top-level flag OR explicit command).
+  // Returns the package.json version so a release manifest is verifiable
+  // from CLI without parsing it externally. JSON output via --json.
+  if (
+    command === "--version" ||
+    command === "-v" ||
+    command === "version" ||
+    argv.includes("--version")
+  ) {
+    const { readFile } = await import("node:fs/promises");
+    const { fileURLToPath } = await import("node:url");
+    const { dirname: vDir, join: vJoin } = await import("node:path");
+    const here = vDir(fileURLToPath(import.meta.url));
+    const pkgPath = vJoin(here, "..", "..", "..", "package.json");
+    let version = "0.0.0-unknown";
+    try {
+      const raw = await readFile(pkgPath, "utf8");
+      version = JSON.parse(raw).version ?? version;
+    } catch {
+      // Fall through with default; CLI must not throw on --version.
+    }
+    if (argv.includes("--json")) {
+      console.log(
+        JSON.stringify(
+          { schema: "bizra.dema.cli_version.v0.1", name: "dema", version },
+          null,
+          2
+        )
+      );
+    } else {
+      console.log(`dema ${version}`);
+    }
+    return;
+  }
+
   // Homebase TUI v0.1 phases 4+5 dispatch · 14th canonical spine surface.
   // Bare `dema` routes to either:
   //   · TTY → ANSI homebase frame (phase-4 · static render · v0.1a)
@@ -522,6 +562,71 @@ async function dispatch(argv) {
     case "welcome":
       console.log(formatOnboardingGuide(buildOnboardingGuide()));
       return;
+
+    case "first-run": {
+      const dryRun = argv.includes("--dry-run");
+      const wantJson = argv.includes("--json");
+      const plan = buildFirstRunPlan({ dry_run: dryRun });
+
+      if (wantJson && argv.includes("--plan-only")) {
+        console.log(JSON.stringify(plan, null, 2));
+        return;
+      }
+
+      // Human header. In JSON mode we still emit the header on stderr so
+      // stdout stays machine-parseable.
+      const headerStream = wantJson ? process.stderr : process.stdout;
+      headerStream.write(formatFirstRunPlan(plan) + "\n\n");
+
+      // Step 1: welcome
+      headerStream.write("==> 1. Welcome\n");
+      headerStream.write(formatOnboardingGuide(buildOnboardingGuide()) + "\n\n");
+
+      // Step 2: setup (skipped under --dry-run)
+      headerStream.write("==> 2. Setup\n");
+      if (dryRun) {
+        headerStream.write("[dry-run] would call runSetup() · would create ~/.dema/ if missing\n\n");
+      } else {
+        const result = await runSetup();
+        headerStream.write(JSON.stringify(result, null, 2) + "\n\n");
+      }
+
+      // Step 3: status
+      headerStream.write("==> 3. Status\n");
+      const status = await statusWithLocalIdentity();
+      const color = !argv.includes("--no-color") && shouldUseColor();
+      headerStream.write(formatStatus(status, { color }) + "\n\n");
+
+      // Step 4: doctor
+      headerStream.write("==> 4. Doctor\n");
+      const predicates = evaluatePredicates(status);
+      const noColor =
+        Boolean(process.env.NO_COLOR) ||
+        process.env.TERM === "dumb" ||
+        argv.includes("--no-color");
+      headerStream.write(formatDoctorDashboard(predicates, { color: !noColor }) + "\n\n");
+
+      // Step 5: next safe action
+      headerStream.write("==> 5. Next safe action\n");
+      const outcome = summarizeFirstRunOutcome({ status, predicates, dry_run: dryRun });
+      headerStream.write(outcome.suggested_next + "\n");
+
+      if (wantJson) {
+        // stdout payload (machine-parseable) — separate from human header.
+        console.log(
+          JSON.stringify({ plan, outcome, predicates, status }, null, 2)
+        );
+      }
+
+      // first-run exit semantics: the COMMAND succeeded if it walked all 5
+      // steps. Doctor verdicts are informational and surfaced via
+      // outcome.suggested_next, not via exit code. The operator should
+      // never see a "first-run failed" error simply because the system
+      // is not yet fully ready — that's exactly the state first-run is
+      // designed to help diagnose.
+      process.exitCode = 0;
+      return;
+    }
 
     case "onboard": {
       if (argv.includes("--preview-card")) {
