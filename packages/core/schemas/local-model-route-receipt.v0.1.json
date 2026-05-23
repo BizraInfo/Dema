@@ -1,0 +1,62 @@
+{
+  "$id": "bizra.dema.local_model_route_receipt.v0.1",
+  "title": "Local Model Route Receipt v0.1",
+  "description": "Data-only suggestion from the model-broker: which model the broker WOULD select for a task, with locality + role + rejected candidates. Per ADR-015, the route is advisory; the operator (and downstream invocation) decides whether to use it. boundary is the broker-specific 8-key vocabulary all-false.",
+  "type": "object",
+  "required": [
+    "schema",
+    "timestamp",
+    "task_kind",
+    "required_role",
+    "local_only",
+    "max_size_class",
+    "allow_unknown",
+    "selected_model_id",
+    "selected_model_role",
+    "selected_model_locality",
+    "reason",
+    "rejected_candidates",
+    "canon_refs",
+    "warnings",
+    "boundary"
+  ],
+  "properties": {
+    "schema": { "const": "bizra.dema.local_model_route_receipt.v0.1" },
+    "timestamp": { "type": "string" },
+    "task_kind": { "type": "string" },
+    "required_role": { "type": ["string", "null"] },
+    "local_only": { "type": "boolean" },
+    "max_size_class": { "type": ["string", "null"] },
+    "allow_unknown": { "type": "boolean" },
+    "selected_model_id": { "type": ["string", "null"] },
+    "selected_model_role": { "type": ["string", "null"] },
+    "selected_model_locality": { "type": ["string", "null"] },
+    "reason": { "type": "string" },
+    "rejected_candidates": { "type": "array" },
+    "canon_refs": { "type": "array", "items": { "type": "string" } },
+    "warnings": { "type": "array", "items": { "type": "string" } },
+    "boundary": {
+      "type": "object",
+      "required": [
+        "runtime",
+        "model_invocation",
+        "network_used",
+        "federation",
+        "mint",
+        "token_economy",
+        "urp_networking",
+        "prompt_invocation_allowed"
+      ],
+      "properties": {
+        "runtime": { "const": false },
+        "model_invocation": { "const": false },
+        "network_used": { "const": false },
+        "federation": { "const": false },
+        "mint": { "const": false },
+        "token_economy": { "const": false },
+        "urp_networking": { "const": false },
+        "prompt_invocation_allowed": { "const": false }
+      }
+    }
+  }
+}

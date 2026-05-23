@@ -1,0 +1,46 @@
+{
+  "$id": "bizra.dema.local_model_routed_invocation_result.v0.1",
+  "title": "Local Model Routed Invocation Result v0.1",
+  "description": "Bridge envelope from `dema model-broker route` to `invokeLocalLLM()`. Carries the (advisory) route receipt + the routed selected_model_id + the inner invocation_result (nullable when no model was selected) + a 9-key envelope-boundary that reports what actually happened.",
+  "type": "object",
+  "required": [
+    "schema",
+    "route_receipt",
+    "selected_model_id",
+    "invocation_result",
+    "boundary",
+    "warnings"
+  ],
+  "properties": {
+    "schema": { "const": "bizra.dema.local_model_routed_invocation_result.v0.1" },
+    "route_receipt": { "type": "object" },
+    "selected_model_id": { "type": ["string", "null"] },
+    "invocation_result": { "type": ["object", "null"] },
+    "warnings": { "type": "array", "items": { "type": "string" } },
+    "boundary": {
+      "type": "object",
+      "required": [
+        "runtime",
+        "model_invocation",
+        "network_used",
+        "localhost_only",
+        "remote_provider",
+        "federation",
+        "mint",
+        "token_economy",
+        "urp_networking"
+      ],
+      "properties": {
+        "runtime": { "type": "boolean" },
+        "model_invocation": { "type": "boolean" },
+        "network_used": { "type": "boolean" },
+        "localhost_only": { "const": true },
+        "remote_provider": { "const": false },
+        "federation": { "const": false },
+        "mint": { "const": false },
+        "token_economy": { "const": false },
+        "urp_networking": { "const": false }
+      }
+    }
+  }
+}

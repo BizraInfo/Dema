@@ -1,0 +1,68 @@
+{
+  "$id": "bizra.dema.local_model_availability_probe.v0.1",
+  "title": "Local Model Availability Probe v0.1",
+  "description": "Localhost read-only scan: does the local Ollama (or future provider) respond at the given localhost endpoint. No prompts sent. No model loaded. Only network_used may be true; everything else stays false. Used by `dema model-broker status` and `dema doctor` health surface.",
+  "type": "object",
+  "required": [
+    "schema",
+    "truth_label",
+    "target_endpoint",
+    "target_is_localhost",
+    "reachable",
+    "boundary"
+  ],
+  "properties": {
+    "schema": { "const": "bizra.dema.local_model_availability_probe.v0.1" },
+    "truth_label": { "enum": ["LOCALHOST_READ_ONLY_SCAN"] },
+    "target_endpoint": {
+      "type": "string",
+      "pattern": "^http://(?:localhost|127\\.0\\.0\\.1)(?::[0-9]+)?(?:/.*)?$"
+    },
+    "target_is_localhost": { "const": true },
+    "reachable": { "type": "boolean" },
+    "boundary": {
+      "type": "object",
+      "required": [
+        "filesystem_write_performed",
+        "network_used",
+        "runtime_execution_performed",
+        "model_loaded",
+        "model_invocation_performed",
+        "prompt_executed",
+        "external_call_performed",
+        "raw_corpus_scan_performed",
+        "raw_data_included",
+        "tool_executed",
+        "chain_advance_performed",
+        "receipt_mint_performed",
+        "federation_invoked",
+        "node_connection_performed",
+        "public_network_used",
+        "consent_collected"
+      ],
+      "properties": {
+        "filesystem_write_performed": { "const": false },
+        "network_used": { "type": "boolean" },
+        "runtime_execution_performed": { "const": false },
+        "model_loaded": { "const": false },
+        "model_invocation_performed": { "const": false },
+        "prompt_executed": { "const": false },
+        "external_call_performed": { "const": false },
+        "raw_corpus_scan_performed": { "const": false },
+        "raw_data_included": { "const": false },
+        "tool_executed": { "const": false },
+        "chain_advance_performed": { "const": false },
+        "receipt_mint_performed": { "const": false },
+        "federation_invoked": { "const": false },
+        "node_connection_performed": { "const": false },
+        "public_network_used": { "const": false },
+        "consent_collected": { "const": false }
+      }
+    },
+    "http_status": { "type": ["integer", "null"] },
+    "model_count": { "type": ["integer", "null"] },
+    "models_seen": { "type": "array", "items": { "type": "string" } },
+    "error_reason": { "type": ["string", "null"] },
+    "probe_duration_ms": { "type": ["integer", "null"] }
+  }
+}
