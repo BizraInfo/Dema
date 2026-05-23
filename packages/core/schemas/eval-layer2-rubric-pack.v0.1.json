@@ -9,6 +9,8 @@
     "version": { "type": "string", "pattern": "^v0\\.1$" },
     "rubrics": {
       "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
       "items": {
         "type": "object",
         "required": ["id", "title", "score_scale", "prompt", "score_meanings"],

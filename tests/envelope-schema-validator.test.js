@@ -199,6 +199,30 @@ test("validateEnvelope · union type accepts each branch", () => {
   assert.equal(c.errors[0].code, ERROR_CODES.WRONG_TYPE);
 });
 
+test("validateEnvelope · minItems triggers array_too_short", () => {
+  const schemaDef = {
+    type: "object",
+    properties: { tags: { type: "array", minItems: 2, items: { type: "string" } } }
+  };
+  const ok = validateEnvelope({ tags: ["a", "b"] }, schemaDef);
+  assert.equal(ok.ok, true);
+  const bad = validateEnvelope({ tags: ["a"] }, schemaDef);
+  assert.equal(bad.ok, false);
+  assert.equal(bad.errors[0].code, ERROR_CODES.ARRAY_TOO_SHORT);
+});
+
+test("validateEnvelope · maxItems triggers array_too_long", () => {
+  const schemaDef = {
+    type: "object",
+    properties: { tags: { type: "array", maxItems: 2, items: { type: "string" } } }
+  };
+  const ok = validateEnvelope({ tags: ["a", "b"] }, schemaDef);
+  assert.equal(ok.ok, true);
+  const bad = validateEnvelope({ tags: ["a", "b", "c"] }, schemaDef);
+  assert.equal(bad.ok, false);
+  assert.equal(bad.errors[0].code, ERROR_CODES.ARRAY_TOO_LONG);
+});
+
 test("validateEnvelope · nested items array validation", () => {
   const schemaDef = {
     type: "object",

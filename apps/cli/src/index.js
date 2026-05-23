@@ -447,6 +447,7 @@ const REGISTERED_COMMANDS_LIST = [
   { command: "amana", description: "preview Amana contract primitives" },
   { command: "mcp", description: "preview MCP integration contract" },
   { command: "roadmap", description: "preview optimization roadmap" },
+  { command: "eval", description: "Layer 2 LLM-as-judge surfaces (subcommands: layer2 prompts | layer2 verify <abs-path>)" },
   { command: "evidence", description: "preview evidence receipt" },
   { command: "ihsan", description: "preview Ihsan floor check" },
   { command: "behavior", description: "preview behavioral modulation" },
@@ -2161,7 +2162,10 @@ async function dispatch(argv) {
         }
         const result = validatePastedJudgeVerdict(parsed);
         console.log(asJson ? JSON.stringify(result, null, 2) : formatVerdictReport(result));
-        if (!result.ok) {
+        // Exit 0 only when the documented success state holds. truth_label is
+        // the authoritative contract surface (see docs/TESTING.md row); gating
+        // on it directly prevents drift if a future truth_label value is added.
+        if (result.truth_label !== "MEASURED") {
           process.exitCode = 1;
         }
         return;

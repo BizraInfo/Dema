@@ -51,7 +51,7 @@ Layer 2 v0.1 ships:
 2. **2 new envelope schemas** under `packages/core/schemas/`:
    - `bizra.dema.eval_layer2_rubric_pack.v0.1` — the rubric pack itself, self-validating
    - `bizra.dema.eval_layer2_judge_verdict.v0.1` — the paste-back verdict envelope
-3. **A pure validator** `validatePastedJudgeVerdict()` in `packages/core/src/eval-layer2-verdict-validator.js`, delegating structural validation to the existing `envelope-schema-validator.validateAgainstRegistry()` and layering semantic checks (rubric_id ∈ known set · score ∈ {0,1,2} · evidence non-empty · sha256 well-formed · judge_origin = `external_paste_back` only in v0.1).
+3. **A pure validator** `validatePastedJudgeVerdict()` in `packages/core/src/eval-layer2-verdict-validator.js`, delegating structural validation to the existing `envelope-schema-validator.validateAgainstRegistry()` and layering semantic checks the JSON Schema cannot express (rubric_id cross-referenced against the live `RUBRIC_IDS` export · evidence_excerpt non-empty after trim · `schema` field matches the expected verdict id). `score ∈ {0,1,2}` · `judged_artifact_sha256` 64-hex pattern · `judge_origin = external_paste_back` are enforced structurally by the schema's enum / pattern; the semantic layer does not re-check them.
 4. **Two read-only CLI surfaces**:
    - `dema eval layer2 prompts [--json]` — emits the frozen rubric pack to stdout
    - `dema eval layer2 verify <abs-path> [--json]` — validates a pasted-back verdict file; exits 1 on validation failure
@@ -147,7 +147,7 @@ File: `packages/core/schemas/eval-layer2-judge-verdict.v0.1.json`
 | `judged_artifact_sha256` | string · pattern `^[a-f0-9]{64}$` | ✓ | |
 | `score` | integer `{0, 1, 2}` | ✓ | |
 | `evidence_excerpt` | string · min 1 char (post-trim) | ✓ | |
-| `judge_origin` | enum `external_paste_back \| local_model_designed_not_live` | ✓ | v0.1 only `external_paste_back` is accepted by the semantic layer; `local_model_designed_not_live` is reserved for v0.2 and rejected with `SEMANTIC_VIOLATION` until then |
+| `judge_origin` | enum `external_paste_back` | ✓ | v0.1 schema enum is restricted to the single value Dema actually supports. v0.2 will bump the schema id (`...v0.2`) and add additional invocation surfaces (e.g., `local_model_via_broker`) once `dema model-broker` hardens out of `DESIGNED_NOT_LIVE`. Non-v0.1 values are caught structurally as `enum_mismatch`; no semantic re-check needed |
 | `judged_at` | ISO-8601 string | ✓ | |
 | `judge_model_name` | string | optional | |
 | `judge_run_id` | string | optional | |
@@ -196,7 +196,7 @@ All Layer 1 tests (artifact-safety-eval · artifact-safety-eval-schema-wiring ·
 | File | Approx tests | Locks |
 |---|---|---|
 | `tests/eval-layer2-rubrics.test.js` | ~8 | pack shape · all 3 rubric IDs · prompt strings non-empty · self-validate via `validateAgainstRegistry` · deep-frozen · boundary stamp · `getPromptFor("unknown")` returns null · pack passes Layer 1 `evaluateArtifactSafety` with verdict PUBLIC_SAFE |
-| `tests/eval-layer2-verdict-validator.test.js` | ~12 | happy path · missing required → `VALIDATION_FAILED` · unknown `rubric_id` → `SEMANTIC_VIOLATION` · `score=3` → semantic fail · empty `evidence_excerpt` → semantic fail · bad sha256 → `PATTERN_MISMATCH` · wrong schema → `SCHEMA_UNKNOWN` · `judge_origin=local_model_designed_not_live` rejected in v0.1 · frozen result · boundary stamp |
+| `tests/eval-layer2-verdict-validator.test.js` | ~15 | happy path · missing required → `VALIDATION_FAILED` · unknown `rubric_id` (structural `enum_mismatch` + semantic `UNKNOWN_RUBRIC`) · `score=3` → structural `enum_mismatch` → `VALIDATION_FAILED` (score is enforced by schema enum, not by semantic layer) · empty `evidence_excerpt` → semantic `EMPTY_EVIDENCE` → `SEMANTIC_VIOLATION` · bad sha256 → `pattern_mismatch` · wrong schema → `SCHEMA_UNKNOWN` · v0.2-style `judge_origin` → structural `enum_mismatch` (no semantic re-check; schema enum is now restricted to `external_paste_back`) · hostile input (null / array / string / number) → `VALIDATION_FAILED` · frozen result · 6-key boundary stamp · formatter renders both happy + sad paths · module pure |
 | `tests/eval-layer2-schema-registry-wiring.test.js` | ~3 | both new schemas appear in `KNOWN_SCHEMA_IDS` · both have non-empty `properties` · both `$id` matches filename convention |
 | `tests/eval-layer2-cli.test.js` | ~5 | `dema eval layer2 prompts` exits 0 + emits JSON · `verify <good>` exits 0 · `verify <bad>` exits 1 · `verify <missing-file>` exits 1 with helpful message · stdout from `prompts` passes Layer 1 PUBLIC_SAFE when piped through `evaluateArtifactSafety` |
 
