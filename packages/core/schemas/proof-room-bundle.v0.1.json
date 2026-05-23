@@ -41,7 +41,45 @@
         "economic": { "type": "string" }
       }
     },
-    "boundary": { "type": "object" },
+    "boundary": {
+      "type": "object",
+      "required": [
+        "filesystem_write_performed",
+        "network_used",
+        "runtime_execution_performed",
+        "model_loaded",
+        "model_invocation_performed",
+        "prompt_executed",
+        "external_call_performed",
+        "raw_corpus_scan_performed",
+        "raw_data_included",
+        "tool_executed",
+        "chain_advance_performed",
+        "receipt_mint_performed",
+        "federation_invoked",
+        "node_connection_performed",
+        "public_network_used",
+        "consent_collected"
+      ],
+      "properties": {
+        "filesystem_write_performed": { "const": false },
+        "network_used": { "const": false },
+        "runtime_execution_performed": { "const": false },
+        "model_loaded": { "const": false },
+        "model_invocation_performed": { "const": false },
+        "prompt_executed": { "const": false },
+        "external_call_performed": { "const": false },
+        "raw_corpus_scan_performed": { "const": false },
+        "raw_data_included": { "const": false },
+        "tool_executed": { "const": false },
+        "chain_advance_performed": { "const": false },
+        "receipt_mint_performed": { "const": false },
+        "federation_invoked": { "const": false },
+        "node_connection_performed": { "const": false },
+        "public_network_used": { "const": false },
+        "consent_collected": { "const": false }
+      }
+    },
     "next_safe_action": { "type": "string" },
     "redacted": { "type": "boolean" },
     "repo_root_basename": { "type": "string" },

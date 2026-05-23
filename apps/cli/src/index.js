@@ -345,6 +345,8 @@ Local evidence:
                        Preview MCP integration contract; does not call MCP tools
   dema roadmap preview [--json]
                       Preview optimization roadmap; does not execute or enforce gates
+  dema roadmap dev [--json]
+                      Live dev anchor (branch · HEAD · dirty · main vs origin · recent on main · feat/* branches · anchor-doc presence); read-only
   dema evidence receipt preview [--json]
                       Preview receipt-shaped evidence; does not mint, sign, or write
   dema ihsan floor preview [--score N] [--json]

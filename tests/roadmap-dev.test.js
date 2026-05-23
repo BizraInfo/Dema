@@ -99,6 +99,45 @@ test("gatherDevRoadmapState — runGit error path marks git_available=false", as
   assert.equal(state.anchor.head_sha, null);
   assert.equal(state.recent_on_main.length, 0);
   assert.equal(state.feat_branches.length, 0);
+  // per-call status is uniformly false on a total git error
+  assert.ok(state.git_call_status);
+  assert.equal(state.git_call_status.branch, false);
+  assert.equal(state.git_call_status.head, false);
+  assert.equal(state.git_call_status.status, false);
+  assert.equal(state.git_call_status.repo_root, false);
+  assert.equal(state.git_call_status.recent_main, false);
+  assert.equal(state.git_call_status.feat_branches, false);
+  assert.equal(state.git_call_status.ahead_behind, false);
+  // synced must be null (unknown), NOT false-positive true
+  assert.equal(state.main_vs_origin.synced, null);
+  assert.equal(state.main_vs_origin.ahead_of_origin, null);
+  assert.equal(state.main_vs_origin.behind_origin, null);
+});
+
+test("gatherDevRoadmapState — synced is null when only ahead/behind git call fails", async () => {
+  // Essentials pass; only the rev-list call returns __GIT_ERROR__.
+  const runGit = async (args) => {
+    const key = args.join(" ");
+    if (key === "branch --show-current") return "main\n";
+    if (key === "rev-parse --short HEAD") return "ab47dbe\n";
+    if (key === "rev-parse --show-toplevel") return `${process.cwd()}\n`;
+    if (key === "log -1 --pretty=%s") return "feat: thing\n";
+    if (key === "status --short") return "";
+    if (key === "log main -12 --pretty=%h %s") return "ab47dbe feat\n";
+    if (args[0] === "for-each-ref") return "";
+    if (args[0] === "rev-list") return "__GIT_ERROR__: no upstream";
+    return "";
+  };
+  const state = await gatherDevRoadmapState({ cwd: process.cwd(), runGit });
+  // git_available is false because the strict definition includes ahead_behind
+  assert.equal(state.git_available, false);
+  assert.equal(state.git_call_status.ahead_behind, false);
+  assert.equal(state.git_call_status.branch, true);
+  assert.equal(state.git_call_status.head, true);
+  // critical assertion: synced is null, NOT true. No silent false positive.
+  assert.equal(state.main_vs_origin.synced, null);
+  assert.equal(state.main_vs_origin.ahead_of_origin, null);
+  assert.equal(state.main_vs_origin.behind_origin, null);
 });
 
 test("boundary stamp denies network/mint/external_send/urp_runtime/fs_write", async () => {
@@ -116,7 +155,7 @@ test("boundary stamp denies network/mint/external_send/urp_runtime/fs_write", as
   });
 });
 
-test("state is deep-frozen", async () => {
+test("state is deep-frozen including pointer objects and git_call_status", async () => {
   const state = await gatherDevRoadmapState({
     cwd: process.cwd(),
     runGit: fakeRunGit({})
@@ -127,6 +166,11 @@ test("state is deep-frozen", async () => {
   assert.ok(Object.isFrozen(state.feat_branches));
   assert.ok(Object.isFrozen(state.anchor_docs));
   assert.ok(Object.isFrozen(state.boundary));
+  // pointer objects must be frozen too (otherwise the envelope leaks mutability)
+  assert.ok(Object.isFrozen(state.next_moves_pointer));
+  assert.ok(Object.isFrozen(state.parking_lot_pointer));
+  // per-call git status is also frozen
+  assert.ok(Object.isFrozen(state.git_call_status));
 });
 
 test("formatDevRoadmapReport renders anchor + recent + branches + docs", async () => {

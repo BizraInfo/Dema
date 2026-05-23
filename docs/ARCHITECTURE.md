@@ -79,6 +79,7 @@ Dema does not own dangerous execution. It talks to adapters. Adapters talk to go
 | `dema amana contracts preview` | `packages/core/src/amana-contracts-preview.js` | Registry preview only; no external code import, execution, mint, or Step 7 unlock. |
 | `dema mcp blueprint` | `packages/core/src/mcp-blueprint.js` | MCP integration contract only; no MCP tool call or credential access. |
 | `dema roadmap preview` | `packages/core/src/optimization-roadmap.js` | Advisory roadmap only; no execution or gate enforcement. |
+| `dema roadmap dev` | `packages/core/src/roadmap-dev.js` | Live dev anchor (branch · HEAD · dirty · main vs origin · recent · feat/* · anchor-doc presence); read-only; emits `bizra.dema.roadmap_dev.v0.1`. |
 | `dema evidence receipt preview` | `packages/verifier/src/evidence-receipt-preview.js` | Receipt-shaped preview only; no mint, signature, chain advance, or write. |
 | `dema ihsan floor preview` | `packages/verifier/src/ihsan-floor-preview.js` | Externally supplied scalar check only; no certification or runtime gate. |
 | `dema behavior modulation preview` | `packages/core/src/behavioral-modulation.js` | Visible reversible guidance preview under exact consent; applies no behavior change. |

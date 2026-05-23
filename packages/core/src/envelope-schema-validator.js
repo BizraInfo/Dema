@@ -39,7 +39,8 @@ const ERROR_CODES = Object.freeze({
   WRONG_TYPE: "wrong_type",
   CONST_MISMATCH: "const_mismatch",
   ENUM_MISMATCH: "enum_mismatch",
-  PATTERN_MISMATCH: "pattern_mismatch"
+  PATTERN_MISMATCH: "pattern_mismatch",
+  INVALID_PATTERN: "invalid_pattern"
 });
 
 const __filename = fileURLToPath(import.meta.url);
@@ -119,8 +120,18 @@ function walk(value, schema, path, errors) {
     typeof schema.pattern === "string" &&
     typeof value === "string"
   ) {
-    const re = new RegExp(schema.pattern);
-    if (!re.test(value)) {
+    let re = null;
+    try {
+      re = new RegExp(schema.pattern);
+    } catch (err) {
+      pushError(
+        errors,
+        path,
+        ERROR_CODES.INVALID_PATTERN,
+        `schema pattern is not a valid regex: ${JSON.stringify(schema.pattern)} (${err && err.message ? err.message : "syntax error"})`
+      );
+    }
+    if (re && !re.test(value)) {
       pushError(
         errors,
         path,
@@ -188,25 +199,45 @@ export function loadKnownSchemas({ dir = DEFAULT_SCHEMAS_DIR } = {}) {
   return loadKnownSchemasFromDir(dir);
 }
 
-export const KNOWN_SCHEMAS = (() => {
+// Private registry. NOT exported as a mutable Map because `Object.freeze` on
+// a Map does not block .set/.delete/.clear — the registry must be reached
+// only via the immutable accessors below.
+const _knownSchemas = (() => {
   try {
-    const loaded = loadKnownSchemasFromDir(DEFAULT_SCHEMAS_DIR);
-    return Object.freeze(loaded);
+    return loadKnownSchemasFromDir(DEFAULT_SCHEMAS_DIR);
   } catch {
-    return Object.freeze(new Map());
+    return new Map();
   }
 })();
 
-export function validateAgainstRegistry(
-  envelope,
-  { registry = KNOWN_SCHEMAS } = {}
-) {
+export const KNOWN_SCHEMA_IDS = Object.freeze(
+  [..._knownSchemas.keys()].sort()
+);
+
+export function getKnownSchema(id) {
+  if (typeof id !== "string") return undefined;
+  return _knownSchemas.get(id);
+}
+
+export function hasKnownSchema(id) {
+  if (typeof id !== "string") return false;
+  return _knownSchemas.has(id);
+}
+
+function resolveLookup(registry) {
+  if (registry instanceof Map) return (id) => registry.get(id);
+  if (typeof registry === "function") return registry;
+  return (id) => _knownSchemas.get(id);
+}
+
+export function validateAgainstRegistry(envelope, { registry } = {}) {
   const declared =
     envelope && typeof envelope === "object" && !Array.isArray(envelope)
       ? envelope.schema
       : null;
+  const lookup = resolveLookup(registry);
   const schemaDef =
-    typeof declared === "string" ? registry.get(declared) : undefined;
+    typeof declared === "string" ? lookup(declared) : undefined;
   const recognized = Boolean(schemaDef);
   let truth_label;
   let errors;
