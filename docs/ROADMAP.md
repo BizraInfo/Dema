@@ -15,8 +15,21 @@
 > dema roadmap dev --json   # machine envelope
 > ```
 >
-> See also: [CURRENT_LIMITS.md](CURRENT_LIMITS.md) for the
-> MEASURED / DESIGNED_NOT_LIVE / PLANNED / LOCAL_ONLY truth map.
+> See also:
+> - [`BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md`](BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md) — the north-star goal every slice on this roadmap serves.
+> - [`CURRENT_LIMITS.md`](CURRENT_LIMITS.md) — MEASURED / DESIGNED_NOT_LIVE / PLANNED / LOCAL_ONLY truth map.
+
+## Operating law (from the goal script)
+
+Every slice on this roadmap is judged against five lines:
+
+> **State before screen · Contract before runtime · Consent before
+> capability · Evidence before trust · Node0 before mesh.**
+
+A slice that advances any of those lines is in-scope. A slice that
+weakens any of them needs an ADR + typed GO before merge. See
+[`BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md`](BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md)
+for the full goal text.
 
 ---
 
@@ -214,6 +227,7 @@ The files a dev opens FIRST when re-orienting:
 
 | Doc | Purpose |
 |---|---|
+| [`docs/BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md`](BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md) | North-star goal · operating law · A+ quality definition · flagship test |
 | [`README.md`](../README.md) | Public landing · 5-command first run · PLANNED-not-live banner on install URL |
 | [`docs/CURRENT_LIMITS.md`](CURRENT_LIMITS.md) | MEASURED vs DESIGNED_NOT_LIVE vs PLANNED vs LOCAL_ONLY truth map |
 | [`docs/PRODUCT.md`](PRODUCT.md) | What Dema is / is not / who it's for |
