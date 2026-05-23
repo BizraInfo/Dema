@@ -153,6 +153,10 @@ import {
   summarizeFirstRunOutcome
 } from "../../../packages/core/src/first-run.js";
 import {
+  gatherDevRoadmapState,
+  formatDevRoadmapReport
+} from "../../../packages/core/src/roadmap-dev.js";
+import {
   buildMcpIntegrationBlueprint,
   formatMcpIntegrationBlueprint
 } from "../../../packages/core/src/mcp-blueprint.js";
@@ -2078,16 +2082,27 @@ async function dispatch(argv) {
     }
 
     case "roadmap": {
-      if (subcommand !== "preview") {
-        throw new Error("Unknown roadmap command. Use `dema roadmap preview [--json]`.");
+      if (subcommand === "preview") {
+        const report = buildOptimizationRoadmapPreview();
+        console.log(
+          argv.includes("--json")
+            ? JSON.stringify(report, null, 2)
+            : formatOptimizationRoadmapPreview(report)
+        );
+        return;
       }
-      const report = buildOptimizationRoadmapPreview();
-      console.log(
-        argv.includes("--json")
-          ? JSON.stringify(report, null, 2)
-          : formatOptimizationRoadmapPreview(report)
+      if (subcommand === "dev") {
+        const state = await gatherDevRoadmapState({ cwd: process.cwd() });
+        console.log(
+          argv.includes("--json")
+            ? JSON.stringify(state, null, 2)
+            : formatDevRoadmapReport(state)
+        );
+        return;
+      }
+      throw new Error(
+        "Unknown roadmap command. Use `dema roadmap preview [--json]` or `dema roadmap dev [--json]`."
       );
-      return;
     }
 
     case "evidence": {
