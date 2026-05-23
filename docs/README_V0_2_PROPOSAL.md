@@ -23,6 +23,52 @@ The plan is implementation-ready: §4 contains concrete content drafts for every
 
 ---
 
+## 0. Canonical source material · operator-personal ideology corpus
+
+**Added 2026-05-24** after operator observation that the ideology folder + 3 Bitcoin-anchored founding documents together form the complete BIZRA ideological corpus. When the rewrite slice runs, **the §4 content drafts below are FALLBACK** — operator-canonical text from these sources takes precedence wherever a section maps to one.
+
+### Roots (Bitcoin-anchored · provenance lives on a public chain)
+
+| File | Arabic name | What it is | Anchored block |
+|---|---|---|---|
+| `~/Downloads/themassage.pdf` | الرسالة (The Message) | Ramadan 2023 spiritual/personal origin · the personal voice | 948027 / 948029 |
+| `~/Downloads/bizra.pdf` | البذرة (The Seed) | The original ideological seed | 948028 |
+| `~/Downloads/BIZRA_Third_Fact_v0_1_FINAL.pdf` | Third Fact | 7 pillars · URP ladder · Node0 stages · Override in conflict per memory `reference_bizra_third_fact_manifest` | 948027–948029 chain |
+
+Provenance is verifiable in-repo: `npm run priority-anchor:verify`.
+
+### Tree (the 2026-05-24 growth — operator-personal working material)
+
+11 files at `/home/bizra-operating-system/Downloads/bizra ideology/` (604 KB total):
+- `BIZRA_Manifesto_Video_Script_v1.md` (+ rendered PDF) — 2:30 production-ready manifesto video · U-shape · contains the iconic closing line **"بذرة واحدة — تصنع غابة / One seed creates a forest"** and the framing line **"ليس منتجاً. ليس منصة. هندسة لاستعادة المعنى. / Not a product. Not a platform. Architecture for restoring meaning."**
+- `BIZRA_BOOK_OUTLINE_الانهيار_الصامت.md` — 14-chapter book outline · 4 sections · cross-civilization Ihsan synthesis (Ch 7) · 3 silent killers grounded in Quran + Western canon (Ch 8–10) · personal proof from Ramadan 2023 onward (Ch 12–14)
+- `BIZRA_Book_Manifest.js` + `BIZRA_Book_Tree_Map.jsx` — book structure as code
+- `The-Silent-Collapse-BIZRA-Risalah-4 (1).docx` — Risalah long-form
+- 5 Arabic chapter files: `التمهيد_والميثاق` · `الفصل_الأول_ما_معنى_كلمة` · `الفصل_12_رمضان_2023` · `الفصل_13_ما_علمتني_الرحلة` · `الفصل_14_الوهاب_خيوط_النور`
+
+### Source-to-section routing (for the rewrite implementer)
+
+| README v0.2 section | Canonical source · use first | §4 fallback draft |
+|---|---|---|
+| §0 opening tagline (4.1) | Manifesto Act III: **"Not a product. Not a platform. Architecture for restoring meaning."** + Act I opening **"اقرأ / Read"** | §4.1 below |
+| §2 What is Dema? (4.4) | Risalah personal voice + book Ch 12 (15K hours · 471K LOC · alone since Ramadan 2023 · "وحدي أولاً") | §4.4 below |
+| §3 Why does it exist? (4.5) | Manifesto Act I (3 silent killers · maps to ZANN_ZERO / RIBA_ZERO / Ihsan floor) + book Ch 8–10 (Arendt · Frankfurt · Zuboff · Graeber · Hudson · Varoufakis grounding) | §4.5 below |
+| Footer | Manifesto closing line **"بذرة واحدة — تصنع غابة / One seed creates a forest"** appended verbatim to current "BIZRA is the ecosystem. Dema is the door." | extended in §3 footer row |
+
+### Boundary on this material
+
+- These 14 files are **operator-canonical** and **NOT in the Dema repo by design** — provenance for the 3 roots is on the public chain; the 11 tree files are working material under the operator's control.
+- The rewrite slice does **not** auto-copy any of this material into the repo. The implementer **reads** the canonical text + **paraphrases or quotes short attributed excerpts** in the README rewrite. No file ingestion. No PDF parsing. No DOCX import.
+- If the manifesto / book / Risalah is later published publicly (video render · book launch · academic paper), the README v0.2 may link out — but README v0.2 must work standalone for cold visitors who never click through.
+
+### What this §0 is NOT
+
+- Not a GTM calendar — separate slice, deferred.
+- Not a corpus manifest — formalizing source-to-surface routing across all GTM artifacts (Lighthouse Pack · video · book · pitch decks · MENA Arabic media · academic/policy) is its own slice (proposed as `BIZRA_GTM_CORPUS_MANIFEST_v0_1`, deferred).
+- Not a directive to publish — those decisions stay with the operator.
+
+---
+
 ## 1. Recommended path
 
 **Full rewrite, not additive.** The current 426-line file is structurally inverted (commands at line 50, product promise at line 380) and section-shaped like a man page; pasting a new top onto it will not fix the inversion.
@@ -64,7 +110,7 @@ Target ~240 lines (43% reduction from 426). All command-reference depth migrates
 | 7 | `## Install` | Guided installer + PLANNED-not-live banner + developer install | 149–180 |
 | 8 | `## Current boundary` | ARTIFACT-011 origin + Bitcoin-anchored proof spine + `npm run priority-anchor:verify` | 181–210 |
 | 9 | `## Where to go next` | Live anchor pointer (`dema roadmap dev`) + curated 5-row deeper-reading table | 211–235 |
-| — | Footer | "BIZRA is the ecosystem. Dema is the door." + last-refreshed date + refresh trigger | 236–245 |
+| — | Footer | "BIZRA is the ecosystem. Dema is the door." + iconic line **"بذرة واحدة — تصنع غابة / One seed creates a forest"** (verbatim from Manifesto closing, per §0) + last-refreshed date + refresh trigger | 236–248 |
 
 **Total: ~240 lines** (down from 426; 43% reduction).
 
@@ -72,9 +118,13 @@ Target ~240 lines (43% reduction from 426). All command-reference depth migrates
 
 ## 4. Concrete content drafts for the critical sections
 
-These are ready-to-use drafts. Implementer can paste them verbatim into the new README (after the impl-time disk re-verification noted in §6 / §7).
+**Read §0 first.** When §0 names a canonical source for a section (4.1 · 4.4 · 4.5 · footer), the implementer reads the operator-canonical text **first**, paraphrases or quotes short attributed excerpts, and uses the draft below only as a **structural fallback** when the canonical source does not yield a fit.
+
+The §4 drafts are ready-to-use if the canonical sources are unavailable at impl time. Implementer can paste them verbatim into the new README (after the impl-time disk re-verification noted in §6 / §7).
 
 ### 4.1 Opening tagline (replaces current line 3)
+
+**Canonical source (use first per §0):** `BIZRA_Manifesto_Video_Script_v1.md` Act III — the line **"ليس منتجاً. ليس منصة. هندسة لاستعادة المعنى. / Not a product. Not a platform. Architecture for restoring meaning."** When this lands as the tagline (English primary; small Arabic line below if it renders cleanly in GitHub markdown), the draft below becomes the **stance block underneath the tagline**, not the tagline itself.
 
 ```markdown
 # Dema · your sovereign AI companion
@@ -134,6 +184,8 @@ Caption immediately below:
 
 ### 4.4 "What is Dema?" 80-word narrative + Sara scenario (replaces current lines 28–42)
 
+**Canonical source (use first per §0):** the personal-voice 80-word narrative should be paraphrased from الرسالة (`~/Downloads/themassage.pdf`) + book Ch 12 ("12 Ramadan 2023") — that voice carries provenance ("15K hours · 471K LOC · alone since Ramadan 2023 · وحدي أولاً") the §4.4 draft below cannot. The Sara scenario block stays as-is (it shows actual `dema status` output, which is repo-grounded, not corpus-grounded).
+
 ```markdown
 ## What is Dema?
 
@@ -164,6 +216,8 @@ next safe step is. No prompts to a remote API. No background tasks.
 **Impl-time caveat (per §6 R7):** the `dema status` output shown must match actual disk output. Implementer runs `dema status` and uses the real format, not invented.
 
 ### 4.5 "Why does it exist?" 2 paragraphs (new)
+
+**Canonical source (use first per §0):** `BIZRA_Manifesto_Video_Script_v1.md` Act I — the **3 silent killers** framing, which maps directly to Dema constitutional constants (ZANN_ZERO · RIBA_ZERO · Ihsan floor). Book Ch 8–10 has the same framing grounded in Quran + Western canon (Arendt · Frankfurt · Zuboff · Graeber · Hudson · Varoufakis). Paraphrase from there; the §4.5 draft below is the generic-voice fallback for when canonical excerpts cannot be quoted in the rewrite slice.
 
 ```markdown
 ## Why does it exist?
@@ -296,6 +350,8 @@ Five rows; replaces dozens of scattered links throughout the current README. `do
 - Layer 1 `eval:layer1` verdict on the rewritten README **WILL NOT be `PUBLIC_SAFE`** (per CURRENT_LIMITS.md lines 107–113: prose docs legitimately reference operator paths). Implementation does not chase `PUBLIC_SAFE`; it chases **no overclaim hits** specifically.
 - ADR-018 / model-broker reference remains accurate if cited (and only if cited as `MEASURED`).
 - Footer "Last refreshed: <date>" + refresh trigger line, matching the discipline already used by `docs/PRODUCT.md` line 131 and `docs/CURRENT_LIMITS.md` line 124.
+- **Canonical-source precedence (§0):** for sections §0 names a canonical source for (opening tagline · "What is Dema?" · "Why does it exist?" · footer iconic line), implementer paraphrases or quotes short attributed excerpts from the operator-canonical ideology corpus first; the §4 drafts are structural fallback only. No PDF / DOCX file ingestion into the repo.
+- **Iconic line preservation:** the manifesto closing **"بذرة واحدة — تصنع غابة / One seed creates a forest"** appears in the footer **verbatim** in both Arabic and English (the Arabic is the canonical source; the English is the manifesto's own published translation). Right-to-left rendering must be correct in the GitHub markdown preview before merge.
 
 ---
 
@@ -360,15 +416,21 @@ Two passes:
 
 ```text
 GO ship readme-v0-2-rewrite as a full rewrite of /home/bizra-operating-system/Downloads/Dema/README.md
-targeting ~240 lines, covering opening tagline + 4-line stance + 7-cell stats table + ASCII
-trust-topology diagram + "What is Dema?" 80-word narrative + Sara scenario + "Why does it exist?"
-2-paragraph block + "How does it compare?" binary 6-property × 4-tool table + compressed 60-second
-tour + relocated 5-line product promise + Install section with PLANNED-not-live banner preserved
-verbatim + Current boundary with ARTIFACT-011 origin story + Bitcoin-anchored proof spine +
-curated 5-row deeper-reading table + footer with "BIZRA is the ecosystem. Dema is the door."
-preserved verbatim, preserving every verbatim string named in §7 and all truth labels, no new
-dependency · no code change · no schema change · no decimal scores · no badge-image services ·
-no comparison cells beyond default-posture facts as of 2026-05.
+targeting ~240 lines, sourcing opening tagline + "What is Dema?" narrative + "Why does it exist?"
+prose + footer iconic line FROM §0 canonical operator-personal ideology corpus (الرسالة · البذرة ·
+Third Fact · BIZRA_Manifesto_Video_Script_v1 · BIZRA_BOOK_OUTLINE_الانهيار_الصامت) per §0
+source-to-section routing table, with §4 drafts as structural fallback only, covering opening
+tagline + 4-line stance + 7-cell stats table + ASCII trust-topology diagram + "What is Dema?"
+80-word narrative + Sara scenario + "Why does it exist?" 2-paragraph block + "How does it
+compare?" binary 6-property × 4-tool table + compressed 60-second tour + relocated 5-line product
+promise + Install section with PLANNED-not-live banner preserved verbatim + Current boundary with
+ARTIFACT-011 origin story + Bitcoin-anchored proof spine + curated 5-row deeper-reading table +
+footer with "BIZRA is the ecosystem. Dema is the door." preserved verbatim AND the iconic line
+"بذرة واحدة — تصنع غابة / One seed creates a forest" appended verbatim per §7, preserving every
+verbatim string named in §7 and all truth labels, no new dependency · no code change · no schema
+change · no decimal scores · no badge-image services · no comparison cells beyond default-posture
+facts as of 2026-05, no auto-copy of operator-canonical ideology files into the repo, no PDF or
+DOCX file ingestion (paraphrase + short attributed quotes only).
 ```
 
 Exact-string. Byte-comparison. No fuzzy match. Any deviation halts.
