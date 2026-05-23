@@ -1,0 +1,88 @@
+{
+  "$id": "bizra.dema.eval_layer2_rubric_pack.v0.1",
+  "title": "Eval Layer 2 Rubric Pack v0.1",
+  "description": "The rubric pack emitted by packages/core/src/eval-layer2-rubrics.js getRubricPack(). Data-only — no LLM is invoked by Dema. Operator runs the LLM judge externally and pastes verdicts back, validated against bizra.dema.eval_layer2_judge_verdict.v0.1.",
+  "type": "object",
+  "required": ["schema", "version", "rubrics", "boundary"],
+  "properties": {
+    "schema": { "const": "bizra.dema.eval_layer2_rubric_pack.v0.1" },
+    "version": { "type": "string", "pattern": "^v0\\.1$" },
+    "rubrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "score_scale", "prompt", "score_meanings"],
+        "properties": {
+          "id": {
+            "enum": ["truthfulness", "actionability", "boundary_compliance"]
+          },
+          "title": { "type": "string" },
+          "score_scale": {
+            "type": "object",
+            "required": ["min", "max"],
+            "properties": {
+              "min": { "const": 0 },
+              "max": { "const": 2 }
+            }
+          },
+          "prompt": {
+            "type": "object",
+            "required": ["system", "user_template"],
+            "properties": {
+              "system": { "type": "string" },
+              "user_template": { "type": "string" }
+            }
+          },
+          "score_meanings": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "required": [
+        "filesystem_write_performed",
+        "network_used",
+        "runtime_execution_performed",
+        "model_loaded",
+        "model_invocation_performed",
+        "prompt_executed",
+        "external_call_performed",
+        "raw_corpus_scan_performed",
+        "raw_data_included",
+        "tool_executed",
+        "chain_advance_performed",
+        "receipt_mint_performed",
+        "federation_invoked",
+        "node_connection_performed",
+        "public_network_used",
+        "consent_collected"
+      ],
+      "properties": {
+        "filesystem_write_performed": { "const": false },
+        "network_used": { "const": false },
+        "runtime_execution_performed": { "const": false },
+        "model_loaded": { "const": false },
+        "model_invocation_performed": { "const": false },
+        "prompt_executed": { "const": false },
+        "external_call_performed": { "const": false },
+        "raw_corpus_scan_performed": { "const": false },
+        "raw_data_included": { "const": false },
+        "tool_executed": { "const": false },
+        "chain_advance_performed": { "const": false },
+        "receipt_mint_performed": { "const": false },
+        "federation_invoked": { "const": false },
+        "node_connection_performed": { "const": false },
+        "public_network_used": { "const": false },
+        "consent_collected": { "const": false }
+      }
+    },
+    "notes": { "type": "string" },
+    "non_goals": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
