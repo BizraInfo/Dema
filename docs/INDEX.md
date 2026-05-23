@@ -15,6 +15,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 
 ## Current public front doors
 
+- [BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md](BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md) — north-star goal for BIZRA Node0 + DEMA. Operating law, A+ quality definition, mission lifecycle, flagship test. Companion to CURRENT_LIMITS and PRODUCT.
 - [../README.md](../README.md) — product landing page, 5-command first run, command reference, diagrams.
 - [PRODUCT.md](PRODUCT.md) — public product page (what Dema is, what it isn't, who it's for, how to verify).
 - [CURRENT_LIMITS.md](CURRENT_LIMITS.md) — honest map of what is MEASURED, DESIGNED_NOT_LIVE, PLANNED, and LOCAL_ONLY. Read this before quoting Dema in a slide.

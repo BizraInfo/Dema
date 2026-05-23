@@ -8,6 +8,10 @@ The rule: **no surface in Dema may advertise a capability that the local
 code does not actually implement**. If a feature is below "MEASURED"
 truth level, this page names it.
 
+> **Companion docs**:
+> - [`BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md`](BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md) — the north-star goal this page tracks against. The goal names every subsystem; this page reports how much of each is `MEASURED` today.
+> - [`ROADMAP.md`](ROADMAP.md) — what slices are moving rows on this page from `PLANNED` / `DESIGNED_NOT_LIVE` toward `MEASURED`.
+
 > **Truth labels** used on this page:
 > - `MEASURED` — verifiable from the local code or a captured artifact.
 > - `DESIGNED_NOT_LIVE` — schema/spec exists, runtime does not.
