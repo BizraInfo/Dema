@@ -80,6 +80,8 @@ Dema does not own dangerous execution. It talks to adapters. Adapters talk to go
 | `dema mcp blueprint` | `packages/core/src/mcp-blueprint.js` | MCP integration contract only; no MCP tool call or credential access. |
 | `dema roadmap preview` | `packages/core/src/optimization-roadmap.js` | Advisory roadmap only; no execution or gate enforcement. |
 | `dema roadmap dev` | `packages/core/src/roadmap-dev.js` | Live dev anchor (branch · HEAD · dirty · main vs origin · recent · feat/* · anchor-doc presence); read-only; emits `bizra.dema.roadmap_dev.v0.1`. |
+| `dema eval layer2 prompts` | `packages/core/src/eval-layer2-rubrics.js` | Emits Layer 2 rubric pack (truthfulness · actionability · boundary_compliance) as `bizra.dema.eval_layer2_rubric_pack.v0.1`; data-only; no LLM invocation. |
+| `dema eval layer2 verify` | `packages/core/src/eval-layer2-verdict-validator.js` | Validates an operator-pasted Layer 2 judge verdict (absolute path arg) against `bizra.dema.eval_layer2_judge_verdict.v0.1`; structural + semantic checks; read-only; exit 1 on failure. |
 | `dema evidence receipt preview` | `packages/verifier/src/evidence-receipt-preview.js` | Receipt-shaped preview only; no mint, signature, chain advance, or write. |
 | `dema ihsan floor preview` | `packages/verifier/src/ihsan-floor-preview.js` | Externally supplied scalar check only; no certification or runtime gate. |
 | `dema behavior modulation preview` | `packages/core/src/behavioral-modulation.js` | Visible reversible guidance preview under exact consent; applies no behavior change. |

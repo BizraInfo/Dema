@@ -34,6 +34,7 @@ truth level, this page names it.
 | Layer 1 artifact safety eval | `packages/core/src/artifact-safety-eval.js` + `npm run eval:layer1` + 15 tests |
 | Envelope schema validator v0.1 (covers `onboarding_seal`, `artifact_safety_eval`, `proof_room_bundle`) | `packages/core/src/envelope-schema-validator.js` + `packages/core/schemas/*.v0.1.json` + 20 tests |
 | Layer 1 pipeline schema validation (wired) | `artifact-safety-eval.scanSchema()` delegates to `validateAgainstRegistry`; structural violations of a known envelope schema produce `SCHEMA_VIOLATION` verdict and exit 1 from `npm run eval:layer1`. Tests: `tests/artifact-safety-eval-schema-wiring.test.js` (7 scenarios) |
+| Layer 2 rubric pack + verdict validator (paste-back) | `packages/core/src/eval-layer2-rubrics.js` + `packages/core/src/eval-layer2-verdict-validator.js` + 2 schemas + `dema eval layer2 prompts` / `dema eval layer2 verify <abs-path>` CLI surfaces. **Data-only** — Dema does NOT invoke any LLM. Operator runs the judge externally and pastes verdicts back; Dema validates them structurally + semantically. ADR-016 records the design. Tests: `tests/eval-layer2-rubrics.test.js` (10) · `tests/eval-layer2-verdict-validator.test.js` (15) · `tests/eval-layer2-schema-registry-wiring.test.js` (3) · `tests/eval-layer2-cli.test.js` (9). |
 | Public-safe proof-room variant | `artifacts/proofs/proof-room-v0.1-public-safe/` (Layer 1 verdict `PUBLIC_SAFE`) |
 | CodeQL security scan | `.github/workflows/codeql.yml` (per-PR + weekly cron) |
 | ARTIFACT-011 — first bounded-diagnostic receipt | `~/.dema/receipts/artifact-011.json` (issued 2026-05-06 by the governed gateway; admissibility verdict `Permit`; chain length 8) |
@@ -48,6 +49,7 @@ truth level, this page names it.
 | Proof-of-Impact / token economy | `docs/02-architecture/dema-urp-resource-offer-v0.1.md` | No PoI runtime, no token issuance, no economic settlement |
 | Identity-bound signing of receipts (Ed25519 hot path) | `docs/02-architecture/key-maker-epistemic-conduct-v0.1.md` | Receipts are minted upstream by the governed gateway; Dema-local identity-bound signing is partial |
 | Behavioral modulation runtime | `packages/core/src/behavioral-modulation.js` | Preview-only; no live tone-adjustment runtime |
+| Layer 2 LLM-as-judge runtime (automated judging) | `docs/06-adr/ADR-016-eval-layer2-scaffold-only.md` (path b: scaffold-only) | Dema does NOT invoke an LLM in v0.1. Operator runs the judge externally. v0.2 candidates: `--judge-cmd` operator-supplied invocation OR `dema model-broker` routing once model-broker hardens out of DESIGNED_NOT_LIVE. |
 | MCP capability descriptor | `docs/02-architecture/dema-mcp-capability-descriptor-v0.1.md` | Descriptor preview, no live MCP runtime in Dema |
 | QR / mobile consent companion | `docs/02-architecture/dema-mobile-qr-consent-v0.md` | Preview only; QR + manual echo flow on paper |
 

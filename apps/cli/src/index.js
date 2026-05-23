@@ -230,6 +230,14 @@ import {
   formatDoctorDashboard
 } from "../../../packages/core/src/doctor-dashboard.js";
 import { createSpinner } from "../../../packages/core/src/spinner.js";
+import {
+  getRubricPack,
+  formatRubricPackReport
+} from "../../../packages/core/src/eval-layer2-rubrics.js";
+import {
+  validatePastedJudgeVerdict,
+  formatVerdictReport
+} from "../../../packages/core/src/eval-layer2-verdict-validator.js";
 
 const adapter = createNode0Adapter();
 
@@ -347,6 +355,10 @@ Local evidence:
                       Preview optimization roadmap; does not execute or enforce gates
   dema roadmap dev [--json]
                       Live dev anchor (branch · HEAD · dirty · main vs origin · recent on main · feat/* branches · anchor-doc presence); read-only
+  dema eval layer2 prompts [--json]
+                      Emit Layer 2 rubric pack (truthfulness · actionability · boundary_compliance); data-only, no LLM invocation
+  dema eval layer2 verify <abs-path> [--json]
+                      Validate an operator-pasted Layer 2 judge verdict file; structural + semantic checks; read-only; exit 1 on validation failure
   dema evidence receipt preview [--json]
                       Preview receipt-shaped evidence; does not mint, sign, or write
   dema ihsan floor preview [--score N] [--json]
@@ -2104,6 +2116,59 @@ async function dispatch(argv) {
       }
       throw new Error(
         "Unknown roadmap command. Use `dema roadmap preview [--json]` or `dema roadmap dev [--json]`."
+      );
+    }
+
+    case "eval": {
+      const evalCommand = argv[1];
+      const evalSubcommand = argv[2];
+      const asJson = argv.includes("--json");
+
+      if (evalCommand !== "layer2") {
+        throw new Error(
+          "Unknown eval command. Use `dema eval layer2 prompts [--json]` or `dema eval layer2 verify <abs-path> [--json]`."
+        );
+      }
+
+      if (evalSubcommand === "prompts") {
+        const pack = getRubricPack();
+        console.log(asJson ? JSON.stringify(pack, null, 2) : formatRubricPackReport(pack));
+        return;
+      }
+
+      if (evalSubcommand === "verify") {
+        const verdictPath = argv[3];
+        if (!verdictPath) {
+          throw new Error(
+            "Missing <abs-path>. Use `dema eval layer2 verify <abs-path-to-pasted-verdict.json> [--json]`."
+          );
+        }
+        const { isAbsolute: pathIsAbsolute, resolve: pathResolve } = await import("node:path");
+        if (!pathIsAbsolute(verdictPath)) {
+          throw new Error(
+            "`dema eval layer2 verify` requires an absolute path to the pasted verdict file."
+          );
+        }
+        const { readFile: readVerdictFile } = await import("node:fs/promises");
+        let parsed;
+        try {
+          const raw = await readVerdictFile(pathResolve(verdictPath), "utf8");
+          parsed = JSON.parse(raw);
+        } catch (readErr) {
+          throw new Error(
+            `Failed to read or parse verdict file at ${verdictPath}: ${readErr && readErr.message ? readErr.message : readErr}`
+          );
+        }
+        const result = validatePastedJudgeVerdict(parsed);
+        console.log(asJson ? JSON.stringify(result, null, 2) : formatVerdictReport(result));
+        if (!result.ok) {
+          process.exitCode = 1;
+        }
+        return;
+      }
+
+      throw new Error(
+        "Unknown eval layer2 subcommand. Use `dema eval layer2 prompts [--json]` or `dema eval layer2 verify <abs-path> [--json]`."
       );
     }
 
