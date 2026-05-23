@@ -7,13 +7,18 @@ import { fileURLToPath } from "node:url";
 import {
   PROOF_ROOM_BUNDLE_SCHEMA,
   PROOF_ROOM_WRITE_CONSENT,
+  PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT,
+  PROOF_ROOM_PUBLIC_SAFE_ARTIFACT_RELATIVE_DIR,
+  REDACTED_REPO_ROOT_PLACEHOLDER,
   CORE_PROOF_ROOM_GATES,
   buildProofRoomBundle,
   evaluateProofRoomWrite,
   formatProofRoomReport,
   parseTapSummary,
-  readJsonOk
+  readJsonOk,
+  redactProofRoomBundle
 } from "../packages/core/src/proof-room-bundle.js";
+import { evaluateArtifactSafety } from "../packages/core/src/artifact-safety-eval.js";
 
 const execFileAsync = promisify(execFile);
 const scriptPath = fileURLToPath(new URL("../scripts/proof-room-bundle.mjs", import.meta.url));
@@ -111,4 +116,116 @@ test("proof-room-bundle CLI --json exits 0 on current repo", async () => {
   const report = JSON.parse(stdout);
   assert.equal(report.schema, PROOF_ROOM_BUNDLE_SCHEMA);
   assert.equal(report.ok, true);
+});
+
+test("redactProofRoomBundle scrubs repo_root + emits basename + sha256", () => {
+  const original = {
+    schema: PROOF_ROOM_BUNDLE_SCHEMA,
+    mode: "PROOF_ROOM_CORE",
+    truth_label: "MEASURED",
+    ok: true,
+    generated_at: "2026-05-23T06:00:00.000Z",
+    repo_root: "/home/operator/Downloads/Dema",
+    gates: [],
+    self_harness: { gates_run: 0, gates_passed: 0, gates_failed: 0, failed_gate_ids: [], replay_command: "x", full_replay_command: "y", micro_consent_write: "z", self_critique: [] },
+    boundary: {},
+    next_safe_action: "x"
+  };
+  const redacted = redactProofRoomBundle(original);
+  assert.equal(redacted.repo_root, REDACTED_REPO_ROOT_PLACEHOLDER);
+  assert.equal(redacted.repo_root_basename, "Dema");
+  assert.match(redacted.repo_root_sha256, /^[0-9a-f]{64}$/);
+  assert.equal(redacted.redacted, true);
+  assert.equal(redacted.truth_label, "PUBLIC_SAFE");
+  assert.equal(original.repo_root, "/home/operator/Downloads/Dema", "input must not be mutated");
+});
+
+test("redactProofRoomBundle is idempotent", () => {
+  const original = {
+    schema: PROOF_ROOM_BUNDLE_SCHEMA,
+    truth_label: "MEASURED",
+    ok: true,
+    repo_root: "/tmp/x",
+    gates: [],
+    self_harness: { gates_run: 0, gates_passed: 0, gates_failed: 0, failed_gate_ids: [], replay_command: "x", full_replay_command: "y", micro_consent_write: "z", self_critique: [] },
+    boundary: {}
+  };
+  const once = redactProofRoomBundle(original);
+  const twice = redactProofRoomBundle(once);
+  assert.equal(twice.repo_root, REDACTED_REPO_ROOT_PLACEHOLDER);
+  assert.equal(twice.repo_root_sha256, once.repo_root_sha256);
+  assert.strictEqual(twice, once, "second call must return same frozen object");
+});
+
+test("redacted bundle passes Layer 1 artifact-safety eval as PUBLIC_SAFE", () => {
+  const bundle = {
+    schema: PROOF_ROOM_BUNDLE_SCHEMA,
+    mode: "PROOF_ROOM_CORE",
+    truth_label: "MEASURED",
+    ok: true,
+    repo_root: "/home/operator/Downloads/Dema",
+    gates: [],
+    self_harness: { gates_run: 0, gates_passed: 0, gates_failed: 0, failed_gate_ids: [], replay_command: "npm run proof:room", full_replay_command: "npm run proof:room -- --full", micro_consent_write: PROOF_ROOM_WRITE_CONSENT, self_critique: ["safe"] },
+    boundary: { read_only: true, runtime_execution_performed: false, receipt_mint_performed: false, network_used: false, federation_invoked: false }
+  };
+  const redacted = redactProofRoomBundle(bundle);
+  const eval1 = evaluateArtifactSafety(JSON.stringify(redacted, null, 2));
+  assert.equal(eval1.verdict, "PUBLIC_SAFE", `got ${eval1.verdict}; findings: ${JSON.stringify(eval1.findings)}`);
+  assert.equal(eval1.score, 1);
+});
+
+test("evaluateProofRoomWrite accepts public-safe required_phrase override", () => {
+  const accepted = evaluateProofRoomWrite({
+    consent_phrase: PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT,
+    required_phrase: PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT
+  });
+  assert.equal(accepted.allowed, true);
+  assert.equal(accepted.consent_phrase_required, PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT);
+
+  // Default required_phrase must still be the non-public-safe one (back-compat).
+  const refused = evaluateProofRoomWrite({
+    consent_phrase: PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT
+  });
+  assert.equal(refused.allowed, false);
+});
+
+test("proof-room-bundle CLI --public-safe --json emits redacted bundle", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [scriptPath, "--public-safe", "--json"], {
+    encoding: "utf8",
+    maxBuffer: 8 * 1024 * 1024,
+    timeout: 300_000
+  });
+  const report = JSON.parse(stdout);
+  assert.equal(report.redacted, true);
+  assert.equal(report.repo_root, REDACTED_REPO_ROOT_PLACEHOLDER);
+  assert.equal(report.repo_root_basename, "Dema");
+  assert.match(report.repo_root_sha256, /^[0-9a-f]{64}$/);
+  // Verify the rendered JSON passes Layer 1 artifact-safety eval.
+  const safety = evaluateArtifactSafety(stdout);
+  assert.equal(safety.verdict, "PUBLIC_SAFE", `findings: ${JSON.stringify(safety.findings)}`);
+});
+
+test("formatProofRoomReport flags redacted bundle in header", async () => {
+  const bundle = await buildProofRoomBundle({
+    root: "/tmp/dema",
+    run: async ({ gate }) => ({
+      id: gate.id,
+      command: "node x",
+      exit_code: 0,
+      ok: true,
+      stdout_sha256: "x",
+      stdout_bytes: 1,
+      summary: null,
+      error: null,
+      duration_ms: 1
+    })
+  });
+  const redacted = redactProofRoomBundle(bundle);
+  const text = formatProofRoomReport(redacted);
+  assert.match(text, /Redacted: true/);
+  assert.match(text, /repo_root_basename=dema/i);
+});
+
+test("PROOF_ROOM_PUBLIC_SAFE_ARTIFACT_RELATIVE_DIR is the parallel public-safe dir", () => {
+  assert.equal(PROOF_ROOM_PUBLIC_SAFE_ARTIFACT_RELATIVE_DIR, "artifacts/proofs/proof-room-v0.1-public-safe");
 });

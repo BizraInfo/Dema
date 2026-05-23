@@ -9,6 +9,16 @@ export const PROOF_ROOM_WRITE_CONSENT =
   "GO: write proof room bundle to artifacts/proofs/proof-room-v0.1";
 export const PROOF_ROOM_ARTIFACT_RELATIVE_DIR = "artifacts/proofs/proof-room-v0.1";
 
+// Public-safe variant: redacts operator-absolute repo_root so the artifact
+// passes the Layer 1 artifact-safety scanner with verdict PUBLIC_SAFE and
+// is share-safe outside the operator's machine. The non-redacted v0.1 bundle
+// remains operator-local (verdict LOCAL_ONLY/LEAKAGE_DETECTED) for replay.
+export const PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT =
+  "GO: write proof room bundle to artifacts/proofs/proof-room-v0.1-public-safe";
+export const PROOF_ROOM_PUBLIC_SAFE_ARTIFACT_RELATIVE_DIR =
+  "artifacts/proofs/proof-room-v0.1-public-safe";
+export const REDACTED_REPO_ROOT_PLACEHOLDER = "<repo_root:redacted>";
+
 export const CORE_PROOF_ROOM_GATES = Object.freeze([
   {
     id: "gtm_readiness",
@@ -124,17 +134,21 @@ export function evaluateGateOk(stdout, gate) {
   return { ok: false, summary: null };
 }
 
-export function evaluateProofRoomWrite({ consent_phrase = "", allow_write = true } = {}) {
+export function evaluateProofRoomWrite({
+  consent_phrase = "",
+  allow_write = true,
+  required_phrase = PROOF_ROOM_WRITE_CONSENT
+} = {}) {
   const phrase = typeof consent_phrase === "string" ? consent_phrase.trim() : "";
   const violations = [];
   if (!allow_write) violations.push({ code: "write_disabled" });
-  if (phrase !== PROOF_ROOM_WRITE_CONSENT) violations.push({ code: "consent_phrase_mismatch" });
+  if (phrase !== required_phrase) violations.push({ code: "consent_phrase_mismatch" });
   const allowed = violations.length === 0;
   return deepFreeze({
     schema: "bizra.dema.proof_room_write_boundary.v0.1",
     mode: "MICRO_CONSENT_GATE",
     allowed,
-    consent_phrase_required: PROOF_ROOM_WRITE_CONSENT,
+    consent_phrase_required: required_phrase,
     consent_phrase_provided: phrase || null,
     violations: Object.freeze(violations.map((v) => Object.freeze({ ...v }))),
     filesystem_write_performed: false,
@@ -262,6 +276,37 @@ export async function buildProofRoomBundle({
   }));
 }
 
+// redactProofRoomBundle returns a new (non-frozen-input-safe) bundle with the
+// absolute repo_root replaced by a placeholder. Adds repo_root_basename for
+// human context and repo_root_sha256 so an operator who knows their checkout
+// can still verify the original path. Idempotent · non-mutating · sets
+// `redacted: true` and `truth_label: "PUBLIC_SAFE"` when input was MEASURED.
+export function redactProofRoomBundle(bundle) {
+  if (!bundle || typeof bundle !== "object") {
+    throw new Error("redactProofRoomBundle: bundle must be an object");
+  }
+  if (bundle.redacted === true) return bundle;
+  const original = bundle.repo_root;
+  const basename =
+    typeof original === "string" && original.length > 0
+      ? original.replace(/[\\/]+$/, "").split(/[\\/]/).pop() || REDACTED_REPO_ROOT_PLACEHOLDER
+      : REDACTED_REPO_ROOT_PLACEHOLDER;
+  const sha = digestStdout(typeof original === "string" ? original : "");
+  const next = {
+    ...clone(bundle),
+    repo_root: REDACTED_REPO_ROOT_PLACEHOLDER,
+    repo_root_basename: basename,
+    repo_root_sha256: sha,
+    redacted: true,
+    truth_label: bundle.truth_label === "MEASURED" ? "PUBLIC_SAFE" : bundle.truth_label,
+    next_safe_action:
+      bundle.ok === true
+        ? `Optional: npm run proof:room -- --public-safe --write --consent "${PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT}"`
+        : "Fix failing gate, rerun npm run proof:room -- --public-safe, then consider --write"
+  };
+  return deepFreeze(next);
+}
+
 export function formatProofRoomReport(report) {
   const lines = [
     "DEMA Proof Room Bundle",
@@ -270,6 +315,9 @@ export function formatProofRoomReport(report) {
     `Mode: ${report.mode}`,
     `Result: ${report.ok ? "PASS" : "FAIL"}`,
     `Generated: ${report.generated_at}`,
+    ...(report.redacted === true
+      ? [`Redacted: true (repo_root_basename=${report.repo_root_basename ?? "?"})`]
+      : []),
     "",
     "Gates:"
   ];
