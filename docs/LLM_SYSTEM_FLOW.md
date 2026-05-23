@@ -188,6 +188,7 @@ npm run release:readiness
 npm run gtm:readiness
 npm run urp:discovery
 npm run proof:room
+npm run eval:layer1 -- --artifact <abs-path-to-artifact> [--json]
 git diff --check
 ```
 
