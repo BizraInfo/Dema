@@ -207,6 +207,24 @@ unblock it is the second line.
 - **Unblock GO**: `GO author dema federation handshake v0.1 spec, no runtime`
 - **Status**: v0.5+
 
+#### ADR-019 · External Tool Skill Contract (DEMA-as-commander · tools-as-pieces)
+- **Why parked**: After ADR-018 / PR #100 landed model-broker localhost invocation, the natural next contract is how Dema **absorbs capability** from external apps (Fabric · yt-dlp · jq · git · etc.) **without absorbing authority**. ADR-019 would codify the 5-layer absorption protocol (Discover · Wrap · Sandbox · Gate · Receipt), define an `bizra.dema.external_tool_skill.v0.1` schema with `allowed_commands` / `forbidden_commands` / `network_policy` / `requires_consent` / `verdict_role: tool_output_not_authority`, and use Fabric as the first reference example (status: `DESIGNED_NOT_LIVE`). Maps the chess metaphor — FATE as legal-move validator · SAT as referee · receipts as move history · human as sovereign owner.
+- **Unblock GO**: `GO route ADR-019 (external-tool skill contract · Fabric as reference example) through planner subagent first`
+- **Status**: design only · no runtime · no Fabric install · no dependency change · no tool execution surface · DESIGNED_NOT_LIVE
+- **Constraints to preserve in the ADR**: no live network from runtime · no remote provider · no scraping · no public deployment · no mint · no federation · no tool autonomy on receipts · LLM judgment never over constitutional gates
+
+#### ADR-020 · URP Capability Market + Capability Capsule schema
+- **Why parked**: Generalizes ADR-019's external-tool contract into a broader BIZRA-URP capability surface — tools, skills, patterns, datasets, reports, local models, workflows, agent services, domain knowledge packs, experience receipts, public-good services, developer-built modules. Defines an `bizra.urp.capability_capsule.v0.1` envelope per capability with `allowed_inputs` / `forbidden_inputs` / `proof_requirements` / `sat_controls` (truth_check · safety_check · anti_manipulation_check · quality_score) / `price_policy` (kept `DESIGNED_NOT_LIVE` per CURRENT_LIMITS) / `verdict_role: advisory`. Depends on ADR-019 landing first.
+- **Unblock GO**: `GO route ADR-020 (URP Capability Market + capability capsule schema) through planner subagent first, depends on ADR-019`
+- **Status**: design only · no live marketplace · no token claim · no public deployment · DESIGNED_NOT_LIVE until SAT-5 and PAT-7 promote out of DESIGNED_NOT_LIVE
+- **Constraints to preserve in the ADR**: no recommendation manipulation · no engagement optimization · no outrage amplification · no pay-to-rank · no hidden sponsor ranking · no personalized financial advice · no algorithmic feed manipulation · price/token policy stays `DESIGNED_NOT_LIVE`
+
+#### ADR-021 · SAT Public-Good Service MVP (one capsule, minimum viable)
+- **Why parked**: Smallest demonstrable special case of ADR-020 · one SAT public-good service capsule (candidate: Daily Verified Insight — input one local article/report/source file · process: extract claims · classify facts/opinions/uncertainties · attach source/evidence list · Layer 1 + Layer 2 paste-back checks · create receipt · output one public-safe verified insight report). Proves SAT can create ecosystem value · URP can hold a capability · DEMA can request it · PAT can use it · receipts can prove it · PoI can later evaluate contribution. Depends on ADR-019 + ADR-020.
+- **Unblock GO**: `GO route ADR-021 (SAT public-good service MVP · Daily Verified Insight Capsule) through planner subagent first, depends on ADR-019 + ADR-020`
+- **Status**: design only · single capsule · local-only · no public deployment · no PoI runtime · DESIGNED_NOT_LIVE
+- **Constraints to preserve in the ADR**: news content carries source diversity + claim receipts + bias markers + separate fact-from-opinion + uncertainty markers; finance content is educational + risk-labeled + source-backed, never pump signals / guaranteed profit / personalized financial advice; no recommendation manipulation; SAT verdict_role is `advisory` per ADR-015
+
 ---
 
 ## What is NOT on this roadmap
