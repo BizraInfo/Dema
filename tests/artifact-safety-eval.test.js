@@ -19,8 +19,12 @@ import {
 const execFileAsync = promisify(execFile);
 const scriptPath = fileURLToPath(new URL("../scripts/artifact-safety-check.mjs", import.meta.url));
 
+// No `schema` field on this fixture: tests 1/12/14 are about the
+// path/secret/claim scanners; schema-routing coverage lives in
+// tests/artifact-safety-eval-schema-wiring.test.js. Carrying a fake
+// schema id here would trigger a (correct) "schema_unknown" warning
+// from the wired scanSchema and pollute the assertions.
 const SAFE_ARTIFACT = {
-  schema: "bizra.dema.example.v0.1",
   truth_label: "VERIFIED",
   status: "DESIGNED_NOT_LIVE",
   summary: "Operator-recorded preview only."
@@ -75,14 +79,24 @@ test("8 artifact saying URP is DESIGNED_NOT_LIVE passes", () => {
   assert.equal(result.verdict, "PUBLIC_SAFE");
 });
 
-test("9 proof-room-like artifact with absolute repo_root is LOCAL_ONLY not PUBLIC_SAFE", () => {
+test("9 proof-room-like artifact with absolute repo_root is not PUBLIC_SAFE", () => {
+  // The stub envelope is intentionally minimal (missing most proof-room-bundle
+  // required fields). Pre-wiring it surfaced as LOCAL_ONLY/LEAKAGE_DETECTED
+  // because the path leak was the strongest deterministic signal. Post-wiring,
+  // structural-schema violation takes verdict priority via deriveVerdict, so
+  // SCHEMA_VIOLATION is now the correct verdict for this stub. The semantic
+  // assertion ("not PUBLIC_SAFE") is preserved.
   const result = evaluateArtifactSafety({
     schema: "bizra.dema.proof_room_bundle.v0.1",
     repo_root: "/home/bizra-operating-system/Downloads/Dema",
     ok: true
   });
   assert.notEqual(result.verdict, "PUBLIC_SAFE");
-  assert.ok(result.verdict === "LOCAL_ONLY" || result.verdict === "LEAKAGE_DETECTED");
+  assert.ok(
+    result.verdict === "LOCAL_ONLY" ||
+      result.verdict === "LEAKAGE_DETECTED" ||
+      result.verdict === "SCHEMA_VIOLATION"
+  );
 });
 
 test("10 scanner is read-only: input unchanged", () => {
