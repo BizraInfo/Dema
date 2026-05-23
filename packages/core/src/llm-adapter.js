@@ -24,7 +24,11 @@
 // Per ADR-008 §C1: this is the first runtime component.
 // Per Key Maker canon: every claim binds to V/D/A/U state.
 
-import { buildPreviewBoundary } from "./preview-boundary.js";
+import {
+  buildPreviewBoundary,
+  buildRuntimeEmissionBoundary
+} from "./preview-boundary.js";
+import { evaluateArtifactSafety } from "./artifact-safety-eval.js";
 
 const DEFAULT_OLLAMA_BASE = "http://localhost:11434";
 const DEFAULT_TIMEOUT_MS = 60000;
@@ -83,6 +87,57 @@ function consentPhraseFor(modelName) {
   return `GO: invoke local LLM at ${modelName}`;
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// Monotonic per-invocation consent freshness · ADR-018 §S6.
+//
+// Each consent phrase, once successfully verified in this process, is
+// recorded. Re-using the SAME phrase for a subsequent invocation in the
+// SAME process is rejected with `consent_phrase_replayed_in_session`.
+//
+// Each `dema model-broker invoke` CLI run is its own Node process — the
+// set starts empty, so first-invocation flow is unaffected. The replay
+// guard catches the in-process programmatic-use risk.
+//
+// `__resetInvocationFreshness()` is exported for tests only.
+
+const _seenConsentPhrases = new Set();
+let _attemptCounter = 0;
+
+function recordConsentUsage(phrase) {
+  if (_seenConsentPhrases.has(phrase)) {
+    return { replayed: true, attempt_n: _attemptCounter };
+  }
+  _seenConsentPhrases.add(phrase);
+  _attemptCounter += 1;
+  return { replayed: false, attempt_n: _attemptCounter };
+}
+
+export function __resetInvocationFreshness() {
+  _seenConsentPhrases.clear();
+  _attemptCounter = 0;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Bidirectional Layer 1 safety scan · ADR-018 §S5.
+//
+// Pre-fetch: scan the prompt. If the Layer 1 verdict is not PUBLIC_SAFE,
+// refuse to call the model · truth_label INVOCATION_BLOCKED.
+//
+// Post-fetch: scan the response_text. If the verdict is not PUBLIC_SAFE,
+// emit a result envelope with response_safety_verdict = the verdict and
+// replace the response_text_preview with a REDACTED placeholder.
+
+function scanInboundPrompt(prompt) {
+  const result = evaluateArtifactSafety(prompt);
+  return result.verdict;
+}
+
+function scanOutboundResponse(text) {
+  if (typeof text !== "string" || text.length === 0) return "PUBLIC_SAFE";
+  const result = evaluateArtifactSafety(text);
+  return result.verdict;
+}
+
 export function buildLLMInvocationPreview({
   model = "",
   prompt = "",
@@ -136,7 +191,23 @@ export function buildLLMInvocationSummary(options = {}) {
 }
 
 // Result envelope after actual invocation. NOT a preview · different schema.
-// boundary preserves canonical structure but reflects what HAPPENED.
+// Per ADR-018 §C3, the boundary on a runtime emission is the sibling
+// vocabulary `buildRuntimeEmissionBoundary` — 6 keys MAY be true (network,
+// model_loaded, model_invocation, prompt_executed, runtime_execution,
+// consent_collected); 10 keys MUST stay false (public_network, external_call,
+// chain_advance, receipt_mint, federation, node_connection, raw_corpus_scan,
+// raw_data, tool_executed, filesystem_write).
+//
+// Per ADR-018 §C5 / ADR-015, every result envelope carries verdict_role:
+// "suggestion" — the model output is NEVER an authority signal.
+//
+// Per ADR-018 §C4, the result envelope can carry prompt_safety_verdict and
+// response_safety_verdict from the bidirectional Layer 1 scan. truth_label
+// becomes INVOCATION_BLOCKED when inbound scan refuses the prompt.
+//
+// `effects_observed` is retained as a backwards-compatibility alias for one
+// release cycle so existing callers / tests continue to work; new code MUST
+// read `boundary` instead.
 function buildInvocationResult({
   modelName,
   promptSubmitted,
@@ -145,48 +216,74 @@ function buildInvocationResult({
   durationMs,
   endpoint,
   consentPhraseVerified,
-  errorReason = null
+  errorReason = null,
+  blocked = false,
+  promptSafetyVerdict = null,
+  responseSafetyVerdict = null,
+  responseTextPreviewOverride = undefined,
+  attemptN = null
 }) {
-  const effectsObserved = Object.freeze({
-    network_used: true,
-    public_network_used: false,
-    model_loaded: !errorReason,
-    model_invocation_performed: !errorReason,
-    prompt_executed: !errorReason,
-    consent_collected: consentPhraseVerified === true,
-    filesystem_write_performed: false,
-    runtime_execution_performed: !errorReason,
-    external_call_performed: false,
-    raw_corpus_scan_performed: false,
-    raw_data_included: false,
-    tool_executed: false,
-    chain_advance_performed: false,
-    receipt_mint_performed: false,
-    federation_invoked: false,
-    node_connection_performed: false
+  const isError = errorReason !== null;
+  const isCompletedSuccess = !isError && !blocked;
+  const boundary = buildRuntimeEmissionBoundary({
+    network_used: isCompletedSuccess,
+    model_loaded: isCompletedSuccess,
+    model_invocation_performed: isCompletedSuccess,
+    prompt_executed: isCompletedSuccess,
+    runtime_execution_performed: isCompletedSuccess,
+    consent_collected: consentPhraseVerified === true
   });
+
+  let truthLabel;
+  let invocationStatus;
+  if (blocked) {
+    truthLabel = "INVOCATION_BLOCKED";
+    invocationStatus = "blocked";
+  } else if (isError) {
+    truthLabel = "INVOCATION_FAILED";
+    invocationStatus = "failed";
+  } else {
+    truthLabel = "MEASURED";
+    invocationStatus = "completed";
+  }
+
+  let responseTextPreview;
+  if (responseTextPreviewOverride !== undefined) {
+    responseTextPreview = responseTextPreviewOverride;
+  } else if (typeof responseText === "string") {
+    responseTextPreview =
+      responseText.slice(0, 500) + (responseText.length > 500 ? " […truncated]" : "");
+  } else {
+    responseTextPreview = null;
+  }
 
   return Object.freeze({
     schema: "bizra.dema.llm_invocation_result.v0.1",
-    truth_label: errorReason ? "INVOCATION_FAILED" : "MEASURED",
+    truth_label: truthLabel,
     mode: "invocation_result",
-    invocation_status: errorReason ? "failed" : "completed",
+    invocation_status: invocationStatus,
     error_reason: errorReason,
     model_invoked: modelName,
     prompt_length_chars: typeof promptSubmitted === "string" ? promptSubmitted.length : 0,
     response_length_chars: typeof responseText === "string" ? responseText.length : 0,
-    response_text_preview: typeof responseText === "string"
-      ? responseText.slice(0, 500) + (responseText.length > 500 ? " […truncated]" : "")
-      : null,
-    response_raw_keys: responseRaw && typeof responseRaw === "object"
-      ? Object.freeze(Object.keys(responseRaw).slice(0, 50))
-      : Object.freeze([]),
+    response_text_preview: responseTextPreview,
+    response_raw_keys:
+      responseRaw && typeof responseRaw === "object"
+        ? Object.freeze(Object.keys(responseRaw).slice(0, 50))
+        : Object.freeze([]),
     duration_ms: typeof durationMs === "number" ? durationMs : null,
     target_endpoint: endpoint,
-    target_is_localhost: typeof endpoint === "string" &&
+    target_is_localhost:
+      typeof endpoint === "string" &&
       (endpoint.startsWith("http://localhost") || endpoint.startsWith("http://127.0.0.1")),
     consent_phrase_verified: consentPhraseVerified === true,
-    effects_observed: effectsObserved,
+    verdict_role: "suggestion",
+    attempt_n: typeof attemptN === "number" ? attemptN : null,
+    prompt_safety_verdict: promptSafetyVerdict,
+    response_safety_verdict: responseSafetyVerdict,
+    boundary,
+    // Backwards-compat alias retained for one cycle per ADR-018 S4.
+    effects_observed: boundary,
     blocked_effects: REQUIRED_BLOCKED_EFFECTS_PREVIEW
   });
 }
@@ -285,6 +382,46 @@ export async function invokeLocalLLM({
     });
   }
 
+  // Gate 5: consent freshness · ADR-018 §S6
+  // Re-using the same consent phrase for a second invocation in the same
+  // process is rejected. Each fresh invocation requires a fresh consent.
+  // Process restart (separate CLI run) resets the seen-set.
+  const freshness = recordConsentUsage(consentSafe);
+  if (freshness.replayed) {
+    return buildInvocationResult({
+      modelName: modelSafe,
+      promptSubmitted: promptSafe,
+      responseText: null,
+      responseRaw: null,
+      durationMs: 0,
+      endpoint: baseUrl,
+      consentPhraseVerified: true,
+      errorReason: `consent_phrase_replayed_in_session · attempt ${freshness.attempt_n} · each invocation requires fresh consent · invocation refused`,
+      attemptN: freshness.attempt_n
+    });
+  }
+
+  // Gate 6: inbound prompt safety · ADR-018 §S5
+  // Scan the prompt with Layer 1 BEFORE calling the model. If the prompt
+  // contains a path leak, secret-shaped token, or forbidden-live claim,
+  // refuse the invocation with INVOCATION_BLOCKED + the verdict.
+  const promptVerdict = scanInboundPrompt(promptSafe);
+  if (promptVerdict !== "PUBLIC_SAFE") {
+    return buildInvocationResult({
+      modelName: modelSafe,
+      promptSubmitted: promptSafe,
+      responseText: null,
+      responseRaw: null,
+      durationMs: 0,
+      endpoint: baseUrl,
+      consentPhraseVerified: true,
+      blocked: true,
+      promptSafetyVerdict: promptVerdict,
+      errorReason: `inbound_prompt_safety_violation · ${promptVerdict} · invocation blocked before fetch`,
+      attemptN: freshness.attempt_n
+    });
+  }
+
   // All gates passed · proceed to invocation
   const fetcher = fetchImpl || globalThis.fetch;
   if (typeof fetcher !== "function") {
@@ -296,7 +433,9 @@ export async function invokeLocalLLM({
       durationMs: 0,
       endpoint: baseUrl,
       consentPhraseVerified: true,
-      errorReason: "fetch_not_available · runtime missing fetch primitive"
+      errorReason: "fetch_not_available · runtime missing fetch primitive",
+      promptSafetyVerdict: promptVerdict,
+      attemptN: freshness.attempt_n
     });
   }
 
@@ -327,7 +466,9 @@ export async function invokeLocalLLM({
         durationMs: Date.now() - startedAt,
         endpoint: baseUrl,
         consentPhraseVerified: true,
-        errorReason: `http_status_${response.status} · ${response.statusText || "unknown"}`
+        errorReason: `http_status_${response.status} · ${response.statusText || "unknown"}`,
+        promptSafetyVerdict: promptVerdict,
+        attemptN: freshness.attempt_n
       });
     }
 
@@ -343,19 +484,32 @@ export async function invokeLocalLLM({
         durationMs: Date.now() - startedAt,
         endpoint: baseUrl,
         consentPhraseVerified: true,
-        errorReason: `response_not_json · ${String(parseErr).slice(0, 200)}`
+        errorReason: `response_not_json · ${String(parseErr).slice(0, 200)}`,
+        promptSafetyVerdict: promptVerdict,
+        attemptN: freshness.attempt_n
       });
     }
 
+    const responseText = typeof body?.response === "string" ? body.response : null;
+    // Outbound Layer 1 scan · ADR-018 §S5
+    const responseVerdict = scanOutboundResponse(responseText);
+    const responseTextPreviewOverride =
+      responseVerdict !== "PUBLIC_SAFE" && responseText
+        ? `[REDACTED: ${responseVerdict}]`
+        : undefined;
     return buildInvocationResult({
       modelName: modelSafe,
       promptSubmitted: promptSafe,
-      responseText: typeof body?.response === "string" ? body.response : null,
+      responseText,
       responseRaw: body,
       durationMs: Date.now() - startedAt,
       endpoint: baseUrl,
       consentPhraseVerified: true,
-      errorReason: null
+      errorReason: null,
+      promptSafetyVerdict: promptVerdict,
+      responseSafetyVerdict: responseVerdict,
+      responseTextPreviewOverride,
+      attemptN: freshness.attempt_n
     });
   } catch (err) {
     clearTimeout(timeoutHandle);
@@ -370,7 +524,9 @@ export async function invokeLocalLLM({
       durationMs: Date.now() - startedAt,
       endpoint: baseUrl,
       consentPhraseVerified: true,
-      errorReason: errorClass
+      errorReason: errorClass,
+      promptSafetyVerdict: promptVerdict,
+      attemptN: freshness.attempt_n
     });
   }
 }

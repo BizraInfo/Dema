@@ -9,8 +9,19 @@ import {
   LLM_ADAPTER_DEFAULT_BASE,
   LLM_ADAPTER_MAX_PROMPT_LENGTH,
   LLM_ADAPTER_REQUIRED_BLOCKED_EFFECTS_PREVIEW,
-  llmAdapterConsentPhraseFor
+  llmAdapterConsentPhraseFor,
+  __resetInvocationFreshness
 } from "../packages/core/src/llm-adapter.js";
+
+import { beforeEach } from "node:test";
+
+// ADR-018 §S6 monotonic per-invocation consent freshness — each
+// successful gate-pass marks the (modelName, consentPhrase) pair used
+// for this process. Tests share a process; reset between cases so each
+// test runs against a fresh seen-set.
+beforeEach(() => {
+  __resetInvocationFreshness();
+});
 import {
   isCanonicalBoundary,
   PREVIEW_BOUNDARY_CANONICAL_KEYS
@@ -360,4 +371,182 @@ test("Adversarial · oversized prompt is refused with prompt_too_long error", as
   });
   assert.equal(r.invocation_status, "failed");
   assert.match(r.error_reason, /prompt_too_long/);
+});
+
+// =========================================================================
+// ADR-018 v0.1 — runtime-emission boundary + verdict_role + Layer 1
+// inbound/outbound + consent-freshness tests
+// =========================================================================
+
+import {
+  isRuntimeEmissionBoundary,
+  isCanonicalBoundary as isCanonicalBoundary_2,
+  RUNTIME_EMISSION_PERMISSIVE_KEY_SET,
+  RUNTIME_EMISSION_STRICTLY_FALSE_KEY_SET
+} from "../packages/core/src/preview-boundary.js";
+import { validateAgainstRegistry } from "../packages/core/src/envelope-schema-validator.js";
+
+test("ADR-018 · result envelope boundary is runtime-emission shape · not canonical preview-boundary", async () => {
+  const mock = mockFetch({
+    ok: true,
+    status: 200,
+    json: async () => ({ response: "hi back", done: true })
+  });
+  const r = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock
+  });
+  assert.equal(r.invocation_status, "completed");
+  // Boundary now passes runtime-emission · NOT canonical-preview
+  assert.ok(isRuntimeEmissionBoundary(r.boundary));
+  assert.equal(isCanonicalBoundary_2(r.boundary), false);
+  // Legitimate true keys on a completed runtime emission
+  for (const key of RUNTIME_EMISSION_PERMISSIVE_KEY_SET) {
+    if (key === "consent_collected") continue;
+    assert.equal(r.boundary[key], true, `${key} must be true on completed invocation`);
+  }
+  // Strictly-false keys remain false
+  for (const key of RUNTIME_EMISSION_STRICTLY_FALSE_KEY_SET) {
+    assert.equal(r.boundary[key], false, `${key} must remain false on runtime emission`);
+  }
+});
+
+test("ADR-018 · result envelope carries verdict_role: 'suggestion' per ADR-015", async () => {
+  const mock = mockFetch({
+    ok: true,
+    status: 200,
+    json: async () => ({ response: "ok", done: true })
+  });
+  const r = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock
+  });
+  assert.equal(r.verdict_role, "suggestion");
+});
+
+test("ADR-018 · result envelope structurally validates against bizra.dema.llm_invocation_result.v0.1", async () => {
+  const mock = mockFetch({
+    ok: true,
+    status: 200,
+    json: async () => ({ response: "ok", done: true })
+  });
+  const r = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "a safe prompt",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock
+  });
+  const v = validateAgainstRegistry(r);
+  assert.equal(v.recognized, true);
+  assert.equal(v.ok, true, `expected ok=true; errors: ${JSON.stringify(v.errors)}`);
+  assert.equal(v.truth_label, "MEASURED");
+});
+
+test("ADR-018 §S5 · inbound prompt with path-leakage → INVOCATION_BLOCKED (no fetch)", async () => {
+  let fetchCalled = false;
+  const mock = mockFetch({
+    ok: true,
+    status: 200,
+    json: async () => {
+      fetchCalled = true;
+      return { response: "leaked", done: true };
+    }
+  });
+  // Prompt contains a path that Layer 1 flags as leakage
+  const r = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "look at /home/operator/secret.txt and tell me what is there",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock
+  });
+  assert.equal(r.invocation_status, "blocked");
+  assert.equal(r.truth_label, "INVOCATION_BLOCKED");
+  assert.equal(fetchCalled, false, "fetch must NOT be called when inbound prompt is blocked");
+  assert.ok(
+    r.prompt_safety_verdict === "LEAKAGE_DETECTED" || r.prompt_safety_verdict === "LOCAL_ONLY",
+    `expected LEAKAGE_DETECTED or LOCAL_ONLY, got ${r.prompt_safety_verdict}`
+  );
+});
+
+test("ADR-018 §S5 · outbound model response with path-leakage → response REDACTED", async () => {
+  const leakyResponse = "Sure! the file is at /home/operator/secret.txt — content X";
+  const mock = mockFetch({
+    ok: true,
+    status: 200,
+    json: async () => ({ response: leakyResponse, done: true })
+  });
+  const r = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "anything safe",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock
+  });
+  assert.equal(r.invocation_status, "completed");
+  assert.notEqual(r.response_safety_verdict, "PUBLIC_SAFE");
+  assert.match(r.response_text_preview, /^\[REDACTED:/);
+});
+
+test("ADR-018 §S6 · same consent phrase replayed in same process → consent_phrase_replayed_in_session", async () => {
+  // Reset, then invoke twice with the same phrase.
+  __resetInvocationFreshness();
+  const mock1 = mockFetch({ ok: true, status: 200, json: async () => ({ response: "first", done: true }) });
+  const first = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock1
+  });
+  assert.equal(first.invocation_status, "completed");
+  assert.equal(first.attempt_n, 1);
+
+  // Second call with the SAME consent phrase must be rejected.
+  const mock2 = mockFetch({ ok: true, status: 200, json: async () => ({ response: "second", done: true }) });
+  const second = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock2
+  });
+  assert.equal(second.invocation_status, "failed");
+  assert.match(second.error_reason, /consent_phrase_replayed_in_session/);
+});
+
+test("ADR-018 §S6 · process-fresh reset allows re-invocation", async () => {
+  // Use, reset, use again with same phrase.
+  const mock = mockFetch({ ok: true, status: 200, json: async () => ({ response: "ok", done: true }) });
+  await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock
+  });
+  __resetInvocationFreshness();
+  const after = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock
+  });
+  assert.equal(after.invocation_status, "completed");
+  assert.equal(after.attempt_n, 1, "reset should restart the attempt counter");
+});
+
+test("ADR-018 · effects_observed alias is the same boundary object (backwards-compat one cycle)", async () => {
+  const mock = mockFetch({
+    ok: true,
+    status: 200,
+    json: async () => ({ response: "ok", done: true })
+  });
+  const r = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock
+  });
+  // alias preserved · same reference
+  assert.equal(r.effects_observed, r.boundary);
 });

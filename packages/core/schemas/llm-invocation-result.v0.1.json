@@ -1,0 +1,88 @@
+{
+  "$id": "bizra.dema.llm_invocation_result.v0.1",
+  "title": "LLM Invocation Result v0.1",
+  "description": "Runtime-emission envelope: what HAPPENED after invokeLocalLLM() ran. Carries the runtime-emission boundary (sibling vocabulary to canonical preview-boundary), where up to 6 specific keys MAY be true on MEASURED truth_label. verdict_role is enum-constrained to suggestion per ADR-015 (LLM is suggestion, verifier is authority).",
+  "type": "object",
+  "required": [
+    "schema",
+    "truth_label",
+    "mode",
+    "invocation_status",
+    "model_invoked",
+    "prompt_length_chars",
+    "response_length_chars",
+    "target_endpoint",
+    "target_is_localhost",
+    "consent_phrase_verified",
+    "verdict_role",
+    "boundary"
+  ],
+  "properties": {
+    "schema": { "const": "bizra.dema.llm_invocation_result.v0.1" },
+    "truth_label": {
+      "enum": ["MEASURED", "INVOCATION_FAILED", "INVOCATION_BLOCKED"]
+    },
+    "mode": { "const": "invocation_result" },
+    "invocation_status": {
+      "enum": ["completed", "failed", "blocked"]
+    },
+    "model_invoked": { "type": "string" },
+    "prompt_length_chars": { "type": "integer" },
+    "response_length_chars": { "type": "integer" },
+    "target_endpoint": {
+      "type": "string"
+    },
+    "target_is_localhost": { "type": "boolean" },
+    "consent_phrase_verified": { "type": "boolean" },
+    "verdict_role": { "const": "suggestion" },
+    "boundary": {
+      "type": "object",
+      "required": [
+        "filesystem_write_performed",
+        "network_used",
+        "runtime_execution_performed",
+        "model_loaded",
+        "model_invocation_performed",
+        "prompt_executed",
+        "external_call_performed",
+        "raw_corpus_scan_performed",
+        "raw_data_included",
+        "tool_executed",
+        "chain_advance_performed",
+        "receipt_mint_performed",
+        "federation_invoked",
+        "node_connection_performed",
+        "public_network_used",
+        "consent_collected"
+      ],
+      "properties": {
+        "filesystem_write_performed": { "const": false },
+        "network_used": { "type": "boolean" },
+        "runtime_execution_performed": { "type": "boolean" },
+        "model_loaded": { "type": "boolean" },
+        "model_invocation_performed": { "type": "boolean" },
+        "prompt_executed": { "type": "boolean" },
+        "external_call_performed": { "const": false },
+        "raw_corpus_scan_performed": { "const": false },
+        "raw_data_included": { "const": false },
+        "tool_executed": { "const": false },
+        "chain_advance_performed": { "const": false },
+        "receipt_mint_performed": { "const": false },
+        "federation_invoked": { "const": false },
+        "node_connection_performed": { "const": false },
+        "public_network_used": { "const": false },
+        "consent_collected": { "type": "boolean" }
+      }
+    },
+    "error_reason": { "type": ["string", "null"] },
+    "response_text_preview": { "type": ["string", "null"] },
+    "response_raw_keys": { "type": "array", "items": { "type": "string" } },
+    "duration_ms": { "type": ["integer", "null"] },
+    "prompt_safety_verdict": { "type": "string" },
+    "response_safety_verdict": { "type": "string" },
+    "request_id": { "type": "string" },
+    "attempt_n": { "type": "integer" },
+    "blocked_effects": { "type": "array", "items": { "type": "string" } },
+    "effects_observed": { "type": "object" }
+  }
+}

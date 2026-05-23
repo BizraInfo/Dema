@@ -1,0 +1,74 @@
+{
+  "$id": "bizra.dema.llm_invocation_request.v0.1",
+  "title": "LLM Invocation Request v0.1",
+  "description": "Operator-intent envelope: what the caller wants to do BEFORE any model invocation. Carries the preview-boundary all-false (nothing has happened yet). Used by buildLLMInvocationPreview() and paste-back preview UX.",
+  "type": "object",
+  "required": [
+    "schema",
+    "truth_label",
+    "requested_model",
+    "prompt_length_chars",
+    "target_endpoint",
+    "consent_required",
+    "boundary"
+  ],
+  "properties": {
+    "schema": { "const": "bizra.dema.llm_invocation_request.v0.1" },
+    "truth_label": { "enum": ["OPERATOR_INTENT", "NODE0_LOCAL_SEED"] },
+    "requested_model": { "type": "string" },
+    "prompt_length_chars": { "type": "integer" },
+    "target_endpoint": {
+      "type": "string",
+      "pattern": "^http://(?:localhost|127\\.0\\.0\\.1)(?::[0-9]+)?(?:/.*)?$"
+    },
+    "consent_required": { "type": "string" },
+    "boundary": {
+      "type": "object",
+      "required": [
+        "filesystem_write_performed",
+        "network_used",
+        "runtime_execution_performed",
+        "model_loaded",
+        "model_invocation_performed",
+        "prompt_executed",
+        "external_call_performed",
+        "raw_corpus_scan_performed",
+        "raw_data_included",
+        "tool_executed",
+        "chain_advance_performed",
+        "receipt_mint_performed",
+        "federation_invoked",
+        "node_connection_performed",
+        "public_network_used",
+        "consent_collected"
+      ],
+      "properties": {
+        "filesystem_write_performed": { "const": false },
+        "network_used": { "const": false },
+        "runtime_execution_performed": { "const": false },
+        "model_loaded": { "const": false },
+        "model_invocation_performed": { "const": false },
+        "prompt_executed": { "const": false },
+        "external_call_performed": { "const": false },
+        "raw_corpus_scan_performed": { "const": false },
+        "raw_data_included": { "const": false },
+        "tool_executed": { "const": false },
+        "chain_advance_performed": { "const": false },
+        "receipt_mint_performed": { "const": false },
+        "federation_invoked": { "const": false },
+        "node_connection_performed": { "const": false },
+        "public_network_used": { "const": false },
+        "consent_collected": { "const": false }
+      }
+    },
+    "prompt_truncated": { "type": "boolean" },
+    "timeout_ms": { "type": "integer" },
+    "requested_by": { "type": "string" },
+    "request_id": { "type": "string" },
+    "target_is_localhost": { "const": true },
+    "model_allowed_in_whitelist": { "type": "boolean" },
+    "mode": { "enum": ["preview_only"] },
+    "invocation_status": { "enum": ["not_invoked_preview_only"] },
+    "blocked_effects": { "type": "array", "items": { "type": "string" } }
+  }
+}

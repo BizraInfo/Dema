@@ -86,3 +86,91 @@ export function isCanonicalBoundaryShape(boundary) {
 }
 
 export const PREVIEW_BOUNDARY_CANONICAL_KEYS = CANONICAL_BOUNDARY_KEYS;
+
+// ──────────────────────────────────────────────────────────────────────────
+// Runtime-emission boundary · sibling vocabulary to canonical preview-boundary.
+//
+// Per ADR-018 §C3: when a module performs legitimate runtime acts (e.g.,
+// invoking a localhost-only LLM), it cannot emit the canonical 16-key
+// all-false boundary — some keys legitimately flip true. The preview-boundary
+// canon stays all-false (every existing preview module unchanged); the new
+// runtime-emission vocabulary uses the SAME 16 keys, but allows up to 6 of
+// them to be true ONLY when the truth_label is MEASURED. The other 10 keys
+// MUST stay false in every runtime emission too.
+//
+// 6 keys that MAY be true on MEASURED truth_label (legitimate runtime acts):
+//   runtime_execution_performed · model_loaded · model_invocation_performed
+//   prompt_executed · network_used · consent_collected
+//
+// 10 keys that MUST stay false even in runtime emissions:
+//   public_network_used · external_call_performed · chain_advance_performed
+//   receipt_mint_performed · federation_invoked · node_connection_performed
+//   raw_corpus_scan_performed · raw_data_included · tool_executed
+//   filesystem_write_performed
+
+const RUNTIME_EMISSION_PERMISSIVE_KEYS = Object.freeze([
+  "runtime_execution_performed",
+  "model_loaded",
+  "model_invocation_performed",
+  "prompt_executed",
+  "network_used",
+  "consent_collected"
+]);
+
+const RUNTIME_EMISSION_STRICTLY_FALSE_KEYS = Object.freeze([
+  "public_network_used",
+  "external_call_performed",
+  "chain_advance_performed",
+  "receipt_mint_performed",
+  "federation_invoked",
+  "node_connection_performed",
+  "raw_corpus_scan_performed",
+  "raw_data_included",
+  "tool_executed",
+  "filesystem_write_performed"
+]);
+
+export const RUNTIME_EMISSION_BOUNDARY_KEYS = CANONICAL_BOUNDARY_KEYS;
+export const RUNTIME_EMISSION_PERMISSIVE_KEY_SET = RUNTIME_EMISSION_PERMISSIVE_KEYS;
+export const RUNTIME_EMISSION_STRICTLY_FALSE_KEY_SET = RUNTIME_EMISSION_STRICTLY_FALSE_KEYS;
+
+export function buildRuntimeEmissionBoundary(observed = {}) {
+  const out = Object.create(null);
+  for (const key of CANONICAL_BOUNDARY_KEYS) {
+    if (RUNTIME_EMISSION_PERMISSIVE_KEYS.includes(key)) {
+      out[key] = observed[key] === true;
+    } else {
+      out[key] = false;
+    }
+  }
+  return Object.freeze(out);
+}
+
+function checkRuntimeEmissionShape(boundary) {
+  if (!boundary || typeof boundary !== "object") return false;
+  const actualKeys = Object.keys(boundary).sort();
+  const expectedKeys = [...CANONICAL_BOUNDARY_KEYS].sort();
+  if (actualKeys.length !== expectedKeys.length) return false;
+  for (let i = 0; i < expectedKeys.length; i++) {
+    if (actualKeys[i] !== expectedKeys[i]) return false;
+    const v = boundary[expectedKeys[i]];
+    if (typeof v !== "boolean") return false;
+  }
+  for (const key of RUNTIME_EMISSION_STRICTLY_FALSE_KEYS) {
+    if (boundary[key] !== false) return false;
+  }
+  return true;
+}
+
+// Strict: shape + strictly-false keys + freeze. Use on in-process emissions.
+export function isRuntimeEmissionBoundary(boundary) {
+  if (!checkRuntimeEmissionShape(boundary)) return false;
+  if (!Object.isFrozen(boundary)) return false;
+  return true;
+}
+
+// Shape-only: structure + strictly-false-keys check. Use on JSON-recovered
+// boundaries where freeze cannot survive serialization.
+export function isRuntimeEmissionBoundaryShape(boundary) {
+  return checkRuntimeEmissionShape(boundary);
+}
