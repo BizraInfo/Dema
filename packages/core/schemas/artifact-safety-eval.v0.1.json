@@ -1,0 +1,61 @@
+{
+  "$id": "bizra.dema.artifact_safety_eval.v0.1",
+  "title": "Artifact Safety Eval v0.1",
+  "description": "Verdict envelope from packages/core/src/artifact-safety-eval.js evaluateArtifactSafety(). Layer 1 deterministic scan.",
+  "type": "object",
+  "required": [
+    "schema",
+    "verdict",
+    "score",
+    "findings",
+    "boundary",
+    "artifact_sha256"
+  ],
+  "properties": {
+    "schema": { "const": "bizra.dema.artifact_safety_eval.v0.1" },
+    "verdict": {
+      "enum": [
+        "PUBLIC_SAFE",
+        "LOCAL_ONLY",
+        "LEAKAGE_DETECTED",
+        "CLAIM_BOUNDARY_VIOLATION"
+      ]
+    },
+    "score": { "enum": [0, 1] },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "pattern_id", "severity", "message"],
+        "properties": {
+          "kind": { "type": "string" },
+          "pattern_id": { "type": "string" },
+          "severity": { "type": "string" },
+          "field": { "type": ["string", "null"] },
+          "message": { "type": "string" }
+        }
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "required": [
+        "read_only",
+        "network",
+        "mint",
+        "external_send",
+        "urp_runtime"
+      ],
+      "properties": {
+        "read_only": { "type": "boolean" },
+        "network": { "type": "boolean" },
+        "mint": { "type": "boolean" },
+        "external_send": { "type": "boolean" },
+        "urp_runtime": { "type": "boolean" }
+      }
+    },
+    "artifact_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

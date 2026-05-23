@@ -32,6 +32,7 @@ truth level, this page names it.
 | Receipt store (read/list only) | `packages/receipts/src/receipt-store.js` — symlink-aware containment, max-files + max-bytes caps; **NO mint surface** |
 | Onboarding Seal v0.1 (9-invariant regression contract) | `packages/core/src/onboarding-seal.js` + 23 tests |
 | Layer 1 artifact safety eval | `packages/core/src/artifact-safety-eval.js` + `npm run eval:layer1` + 15 tests |
+| Envelope schema validator v0.1 (covers `onboarding_seal`, `artifact_safety_eval`, `proof_room_bundle`) | `packages/core/src/envelope-schema-validator.js` + `packages/core/schemas/*.v0.1.json` + 20 tests; library-only, no CLI surface yet |
 | Public-safe proof-room variant | `artifacts/proofs/proof-room-v0.1-public-safe/` (Layer 1 verdict `PUBLIC_SAFE`) |
 | CodeQL security scan | `.github/workflows/codeql.yml` (per-PR + weekly cron) |
 | ARTIFACT-011 — first bounded-diagnostic receipt | `~/.dema/receipts/artifact-011.json` (issued 2026-05-06 by the governed gateway; admissibility verdict `Permit`; chain length 8) |
