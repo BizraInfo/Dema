@@ -446,26 +446,32 @@ test("ADR-018 · result envelope structurally validates against bizra.dema.llm_i
   assert.equal(v.truth_label, "MEASURED");
 });
 
-test("ADR-018 §S5 · inbound prompt with path-leakage → INVOCATION_BLOCKED (no fetch)", async () => {
-  let fetchCalled = false;
-  const mock = mockFetch({
-    ok: true,
-    status: 200,
-    json: async () => {
-      fetchCalled = true;
-      return { response: "leaked", done: true };
-    }
-  });
+test("ADR-018 §S5 · inbound prompt with path-leakage → INVOCATION_BLOCKED (no fetch entry)", async () => {
+  // ADR-018 review fix #7: strengthen the "no fetch" assertion. Previously
+  // the flag was set inside the json() callback; if fetch was called but
+  // JSON parsing failed somehow, the flag would stay false. Now we mark
+  // at fetch ENTRY (the fetchImpl function itself), so any call to fetch
+  // — even one that never reaches the body — gets caught.
+  let fetchEntered = false;
+  const trackingFetch = async () => {
+    fetchEntered = true;
+    return {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      json: async () => ({ response: "leaked", done: true })
+    };
+  };
   // Prompt contains a path that Layer 1 flags as leakage
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "look at /home/operator/secret.txt and tell me what is there",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: trackingFetch
   });
   assert.equal(r.invocation_status, "blocked");
   assert.equal(r.truth_label, "INVOCATION_BLOCKED");
-  assert.equal(fetchCalled, false, "fetch must NOT be called when inbound prompt is blocked");
+  assert.equal(fetchEntered, false, "fetch must NEVER be entered when inbound prompt is blocked");
   assert.ok(
     r.prompt_safety_verdict === "LEAKAGE_DETECTED" || r.prompt_safety_verdict === "LOCAL_ONLY",
     `expected LEAKAGE_DETECTED or LOCAL_ONLY, got ${r.prompt_safety_verdict}`
@@ -549,4 +555,138 @@ test("ADR-018 · effects_observed alias is the same boundary object (backwards-c
   });
   // alias preserved · same reference
   assert.equal(r.effects_observed, r.boundary);
+});
+
+// =========================================================================
+// ADR-018 PR #100 review-fix tests (3 new behaviors)
+// =========================================================================
+
+test("ADR-018 review fix #4 · http_status failure preserves network_used=true (fetch was attempted)", async () => {
+  const mock = mockFetch({
+    ok: false,
+    status: 500,
+    statusText: "Internal Server Error",
+    json: async () => ({})
+  });
+  const r = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock
+  });
+  assert.equal(r.invocation_status, "failed");
+  assert.match(r.error_reason, /http_status_500/);
+  // Fetch was attempted → these boundary keys must remain true even though
+  // the request failed. Prior bug: they were all driven by isCompletedSuccess
+  // and collapsed to false on any error.
+  assert.equal(r.boundary.network_used, true, "network was used (fetch was sent)");
+  assert.equal(r.boundary.prompt_executed, true, "prompt was sent over the wire");
+  assert.equal(r.boundary.runtime_execution_performed, true, "runtime executed the fetch");
+  // But the model itself did not complete — these stay false.
+  assert.equal(r.boundary.model_loaded, false);
+  assert.equal(r.boundary.model_invocation_performed, false);
+});
+
+test("ADR-018 review fix #4 · network_error failure also preserves network_used=true", async () => {
+  const mock = async () => {
+    throw new Error("ECONNREFUSED");
+  };
+  const r = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock
+  });
+  assert.equal(r.invocation_status, "failed");
+  assert.match(r.error_reason, /network_error/);
+  assert.equal(r.boundary.network_used, true);
+  assert.equal(r.boundary.prompt_executed, true);
+  assert.equal(r.boundary.runtime_execution_performed, true);
+  assert.equal(r.boundary.model_loaded, false);
+  assert.equal(r.boundary.model_invocation_performed, false);
+});
+
+test("ADR-018 review fix #4 · pre-fetch gate failure (consent_mismatch) keeps all runtime keys false", async () => {
+  // Mismatched consent never reaches fetch · all runtime-emission keys
+  // including network_used MUST be false.
+  const mock = mockFetch({ ok: true, status: 200, json: async () => ({ response: "x" }) });
+  const r = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "wrong phrase",
+    fetchImpl: mock
+  });
+  assert.equal(r.invocation_status, "failed");
+  assert.match(r.error_reason, /consent_phrase_mismatch/);
+  assert.equal(r.boundary.network_used, false);
+  assert.equal(r.boundary.prompt_executed, false);
+  assert.equal(r.boundary.runtime_execution_performed, false);
+});
+
+test("ADR-018 review fix #6 · 200 OK with missing response field → malformed_response_payload (failed, not completed)", async () => {
+  const mock = mockFetch({
+    ok: true,
+    status: 200,
+    statusText: "OK",
+    json: async () => ({ done: true /* no `response` field */ })
+  });
+  const r = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock
+  });
+  assert.equal(r.invocation_status, "failed", "missing body.response must NOT be 'completed'");
+  assert.match(r.error_reason, /malformed_response_payload/);
+  // fetch was attempted → network_used=true; but invocation did not complete
+  assert.equal(r.boundary.network_used, true);
+  assert.equal(r.boundary.model_invocation_performed, false);
+});
+
+test("ADR-018 review fix #6 · 200 OK with non-string response (number) → malformed_response_payload", async () => {
+  const mock = mockFetch({
+    ok: true,
+    status: 200,
+    statusText: "OK",
+    json: async () => ({ response: 42 /* number, not string */, done: true })
+  });
+  const r = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock
+  });
+  assert.equal(r.invocation_status, "failed");
+  assert.match(r.error_reason, /malformed_response_payload/);
+});
+
+test("ADR-018 review fix #3 · attempt_n is monotonic across replayed calls", async () => {
+  __resetInvocationFreshness();
+  const mock = mockFetch({ ok: true, status: 200, json: async () => ({ response: "first", done: true }) });
+  const first = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock
+  });
+  assert.equal(first.attempt_n, 1);
+
+  const second = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock
+  });
+  // Replay rejected, but attempt_n must still increment to 2 (not stuck at 1).
+  assert.equal(second.invocation_status, "failed");
+  assert.match(second.error_reason, /consent_phrase_replayed_in_session/);
+  assert.equal(second.attempt_n, 2, "attempt_n must be monotonic across replays");
+
+  const third = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: mock
+  });
+  assert.equal(third.attempt_n, 3, "third replay must show attempt_n=3");
 });

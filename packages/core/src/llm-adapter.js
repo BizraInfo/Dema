@@ -104,11 +104,15 @@ const _seenConsentPhrases = new Set();
 let _attemptCounter = 0;
 
 function recordConsentUsage(phrase) {
+  // Per ADR-018 review fix #3: attempt_n is monotonic across ALL calls,
+  // including replayed ones. The replay flag distinguishes accept/reject;
+  // the counter just counts attempts so successive replays surface as
+  // attempts 2, 3, 4, ... instead of stuck at the prior accept's value.
+  _attemptCounter += 1;
   if (_seenConsentPhrases.has(phrase)) {
     return { replayed: true, attempt_n: _attemptCounter };
   }
   _seenConsentPhrases.add(phrase);
-  _attemptCounter += 1;
   return { replayed: false, attempt_n: _attemptCounter };
 }
 
@@ -218,6 +222,7 @@ function buildInvocationResult({
   consentPhraseVerified,
   errorReason = null,
   blocked = false,
+  fetchAttempted = false,
   promptSafetyVerdict = null,
   responseSafetyVerdict = null,
   responseTextPreviewOverride = undefined,
@@ -225,12 +230,16 @@ function buildInvocationResult({
 }) {
   const isError = errorReason !== null;
   const isCompletedSuccess = !isError && !blocked;
+  // Per ADR-018 review fix #4: a fetch that started and failed mid-stream
+  // still constitutes network use + a prompt sent + runtime that executed.
+  // Split network/prompt/runtime (gated on fetchAttempted) from
+  // model_loaded/model_invocation (gated on completed success).
   const boundary = buildRuntimeEmissionBoundary({
-    network_used: isCompletedSuccess,
+    network_used: fetchAttempted,
+    prompt_executed: fetchAttempted,
+    runtime_execution_performed: fetchAttempted,
     model_loaded: isCompletedSuccess,
     model_invocation_performed: isCompletedSuccess,
-    prompt_executed: isCompletedSuccess,
-    runtime_execution_performed: isCompletedSuccess,
     consent_collected: consentPhraseVerified === true
   });
 
@@ -467,6 +476,7 @@ export async function invokeLocalLLM({
         endpoint: baseUrl,
         consentPhraseVerified: true,
         errorReason: `http_status_${response.status} · ${response.statusText || "unknown"}`,
+        fetchAttempted: true,
         promptSafetyVerdict: promptVerdict,
         attemptN: freshness.attempt_n
       });
@@ -485,12 +495,32 @@ export async function invokeLocalLLM({
         endpoint: baseUrl,
         consentPhraseVerified: true,
         errorReason: `response_not_json · ${String(parseErr).slice(0, 200)}`,
+        fetchAttempted: true,
         promptSafetyVerdict: promptVerdict,
         attemptN: freshness.attempt_n
       });
     }
 
-    const responseText = typeof body?.response === "string" ? body.response : null;
+    // ADR-018 review fix #6: a 200 OK body without a string `response`
+    // field is malformed — reject as failed instead of routing through the
+    // success path with responseText=null.
+    if (typeof body?.response !== "string") {
+      return buildInvocationResult({
+        modelName: modelSafe,
+        promptSubmitted: promptSafe,
+        responseText: null,
+        responseRaw: body,
+        durationMs: Date.now() - startedAt,
+        endpoint: baseUrl,
+        consentPhraseVerified: true,
+        errorReason: `malformed_response_payload · 200 OK but body.response is ${typeof body?.response} not string`,
+        fetchAttempted: true,
+        promptSafetyVerdict: promptVerdict,
+        attemptN: freshness.attempt_n
+      });
+    }
+
+    const responseText = body.response;
     // Outbound Layer 1 scan · ADR-018 §S5
     const responseVerdict = scanOutboundResponse(responseText);
     const responseTextPreviewOverride =
@@ -506,6 +536,7 @@ export async function invokeLocalLLM({
       endpoint: baseUrl,
       consentPhraseVerified: true,
       errorReason: null,
+      fetchAttempted: true,
       promptSafetyVerdict: promptVerdict,
       responseSafetyVerdict: responseVerdict,
       responseTextPreviewOverride,
@@ -525,6 +556,9 @@ export async function invokeLocalLLM({
       endpoint: baseUrl,
       consentPhraseVerified: true,
       errorReason: errorClass,
+      // Per ADR-018 review fix #4: timeout / network_error means fetch
+      // started and failed before completion. network was used.
+      fetchAttempted: true,
       promptSafetyVerdict: promptVerdict,
       attemptN: freshness.attempt_n
     });
