@@ -1,7 +1,7 @@
 {
   "$id": "bizra.dema.llm_invocation_request.v0.1",
   "title": "LLM Invocation Request v0.1",
-  "description": "Operator-intent envelope: what the caller wants to do BEFORE any model invocation. Carries the preview-boundary all-false (nothing has happened yet). Used by buildLLMInvocationPreview() and paste-back preview UX.",
+  "description": "Operator-intent envelope: what the caller wants to do BEFORE any model invocation. Carries the preview-boundary all-false (nothing has happened yet). Used by buildLLMInvocationPreview() and paste-back preview UX. v0.1 design: target_endpoint pattern is IPv4-localhost-only (`http://localhost` or `http://127.0.0.1` with optional port + path). IPv6 localhost (`[::1]`) is deliberately rejected by both the schema pattern and the adapter's runtime string-check — keeping a single, predictable canonical form. IPv6 support is a v0.2 candidate behind its own ADR.",
   "type": "object",
   "required": [
     "schema",
