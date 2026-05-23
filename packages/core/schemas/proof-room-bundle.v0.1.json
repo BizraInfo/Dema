@@ -1,0 +1,53 @@
+{
+  "$id": "bizra.dema.proof_room_bundle.v0.1",
+  "title": "Proof Room Bundle v0.1",
+  "description": "Verdict envelope from packages/core/src/proof-room-bundle.js buildProofRoomBundle() and redactProofRoomBundle(). Layer 1 aggregate gate composition. Redacted variant uses truth_label=PUBLIC_SAFE and adds repo_root_basename + repo_root_sha256 + redacted=true.",
+  "type": "object",
+  "required": [
+    "schema",
+    "mode",
+    "truth_label",
+    "ok",
+    "generated_at",
+    "repo_root",
+    "gates",
+    "self_harness",
+    "proof_convergence",
+    "boundary",
+    "next_safe_action"
+  ],
+  "properties": {
+    "schema": { "const": "bizra.dema.proof_room_bundle.v0.1" },
+    "mode": { "enum": ["PROOF_ROOM_FULL", "PROOF_ROOM_CORE"] },
+    "truth_label": { "enum": ["MEASURED", "GATE_FAILURE", "PUBLIC_SAFE"] },
+    "ok": { "type": "boolean" },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
+    },
+    "repo_root": { "type": "string" },
+    "gates": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "self_harness": { "type": "object" },
+    "proof_convergence": {
+      "type": "object",
+      "required": ["formal", "cryptographic", "empirical", "economic"],
+      "properties": {
+        "formal": { "type": "string" },
+        "cryptographic": { "type": "string" },
+        "empirical": { "type": "string" },
+        "economic": { "type": "string" }
+      }
+    },
+    "boundary": { "type": "object" },
+    "next_safe_action": { "type": "string" },
+    "redacted": { "type": "boolean" },
+    "repo_root_basename": { "type": "string" },
+    "repo_root_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "$id": "bizra.dema.onboarding_seal.v0.1",
+  "title": "Onboarding Seal v0.1",
+  "description": "Verdict envelope from packages/core/src/onboarding-seal.js evaluateOnboardingSeal(). Locks the 9-invariant first-run regression contract.",
+  "type": "object",
+  "required": [
+    "schema",
+    "ok",
+    "score",
+    "invariants",
+    "failed_invariants",
+    "boundary",
+    "next_safe_action"
+  ],
+  "properties": {
+    "schema": { "const": "bizra.dema.onboarding_seal.v0.1" },
+    "ok": { "type": "boolean" },
+    "score": { "enum": [0, 1] },
+    "invariants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "label", "status"],
+        "properties": {
+          "key": { "type": "string" },
+          "label": { "type": "string" },
+          "status": { "enum": ["ok", "fail", "warn"] },
+          "value": {},
+          "severity": { "type": ["string", "null"] },
+          "fix": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "failed_invariants": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "boundary": {
+      "type": "object",
+      "required": [
+        "read_only",
+        "network",
+        "mint",
+        "external_send",
+        "urp_runtime",
+        "filesystem_write_performed"
+      ],
+      "properties": {
+        "read_only": { "type": "boolean" },
+        "network": { "type": "boolean" },
+        "mint": { "type": "boolean" },
+        "external_send": { "type": "boolean" },
+        "urp_runtime": { "type": "boolean" },
+        "filesystem_write_performed": { "type": "boolean" }
+      }
+    },
+    "next_safe_action": { "type": "string" }
+  }
+}
