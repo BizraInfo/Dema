@@ -18,7 +18,8 @@
         "PUBLIC_SAFE",
         "LOCAL_ONLY",
         "LEAKAGE_DETECTED",
-        "CLAIM_BOUNDARY_VIOLATION"
+        "CLAIM_BOUNDARY_VIOLATION",
+        "SCHEMA_VIOLATION"
       ]
     },
     "score": { "enum": [0, 1] },

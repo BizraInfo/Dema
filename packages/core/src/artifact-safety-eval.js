@@ -1,7 +1,17 @@
 // Layer 1 · Artifact Safety Eval v0.1 — deterministic path/secret/claim checks.
 // Read-only over caller-supplied artifact text or object. No repo-wide scan.
+//
+// Schema validation: when the artifact is a JSON object whose `schema` field
+// matches a known envelope schema in packages/core/schemas/, structural
+// validation is delegated to envelope-schema-validator. Validation errors are
+// surfaced as findings with kind="SCHEMA" and severity="BLOCKER", which
+// drives verdict SCHEMA_VIOLATION through deriveVerdict().
 
 import { createHash } from "node:crypto";
+
+import {
+  validateAgainstRegistry
+} from "./envelope-schema-validator.js";
 
 export const ARTIFACT_SAFETY_SCHEMA = "bizra.dema.artifact_safety_eval.v0.1";
 
@@ -155,19 +165,49 @@ export function scanClaimBoundary(text, { field = null } = {}) {
 function scanSchema(object) {
   if (!object || typeof object !== "object") return Object.freeze([]);
   const findings = [];
-  if (object.schema && typeof object.schema === "string") {
-    if (!object.schema.startsWith("bizra.dema.")) {
-      findings.push(
-        finding(
-          "SCHEMA",
-          "schema_namespace",
-          "WARNING",
-          `Unexpected schema namespace: ${object.schema}`,
-          "schema"
-        )
-      );
-    }
+  const declared = object.schema;
+  if (typeof declared !== "string") return Object.freeze(findings);
+
+  if (!declared.startsWith("bizra.dema.")) {
+    findings.push(
+      finding(
+        "SCHEMA",
+        "schema_namespace",
+        "WARNING",
+        `Unexpected schema namespace: ${declared}`,
+        "schema"
+      )
+    );
+    return Object.freeze(findings);
   }
+
+  const validation = validateAgainstRegistry(object);
+
+  if (!validation.recognized) {
+    findings.push(
+      finding(
+        "SCHEMA",
+        "schema_unknown",
+        "WARNING",
+        `Schema declared as ${declared} but not in known-schema registry`,
+        "schema"
+      )
+    );
+    return Object.freeze(findings);
+  }
+
+  for (const err of validation.errors) {
+    findings.push(
+      finding(
+        "SCHEMA",
+        `schema_${err.code}`,
+        "BLOCKER",
+        `Schema violation at ${err.path}: ${err.message}`,
+        "schema"
+      )
+    );
+  }
+
   return Object.freeze(findings);
 }
 
