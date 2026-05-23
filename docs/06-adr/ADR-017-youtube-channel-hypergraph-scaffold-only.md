@@ -116,8 +116,8 @@ Optional: `notes`, `non_goals`.
 
 ### `bizra.dema.youtube_video_record.v0.1`
 Required: `schema` (const), `video_id`, `title` (1..512), `published_at` (ISO-8601), `duration_seconds` (integer ≥ 0), `tags` (array · 0..50), `description` (string · 0..10000), `record_origin` (enum `external_operator_fetch`).
-Optional: `transcript_excerpts` (array of string · each 0..2000 · max 100), `chapters` (array of `{ start_seconds, title }`), `notes`.
-**Forbidden**: `private_*`, `api_key`, `auth_token`, full transcripts > 10000 chars.
+Optional: `transcript_excerpts` (array of string · each 0..500 chars · max 20 entries · **total cap 10,000 chars** to match the doctrine bound below), `chapters` (array of `{ start_seconds, title }`), `notes`.
+**Forbidden**: `private_*`, `api_key`, `auth_token`, full transcripts > 10,000 chars. The `transcript_excerpts` cardinality (20 × 500 = 10,000) is tightened from the planner's original (100 × 2,000 = 200,000) to be consistent with this 10,000-char doctrine bound.
 
 ### `bizra.dema.youtube_hypergraph_query_result.v0.1`
 Required: `schema` (const), `query_kind` (enum `co_mentions | anchor_topics`), `query_input` (object · echoes operator input), `verdict_role` (const `"advisory"`), `truth_label` (enum `MEASURED | NO_HITS | INDEX_EMPTY`), `videos_matched` (array), `topic_anchors` (array), `index_stats` (object), `boundary` (canonical 16-key).
