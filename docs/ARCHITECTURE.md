@@ -71,6 +71,7 @@ Dema does not own dangerous execution. It talks to adapters. Adapters talk to go
 | `dema mission propose` | `packages/core/mission.js` + FATE | Previews ARTIFACT-011 readiness only. |
 | `dema receipts` | `packages/receipts` | Reads local receipt files. |
 | `dema memory`, `dema memory show` | `packages/memory` | Reads local memory/profile entries only. |
+| `dema memory query "<text>" [--top N] [--json]` | `apps/cli/src/index.js` + operator-side `~/.dema/bin/agent-db-query` | MC-A v0.1 · read-only operator-local query against BIZRA Omega's AgentDB (separate `/data/bizra/dema-runtime-arch-wt/core/memory/`, NOT in this repo per ADR-022 doctrine). Spawns Python subprocess wrapper · 30s timeout · honest 16-key boundary (`runtime_execution_performed: true`, `tool_executed: false` per `preview-boundary.js` runtime-emission canon) + 5-key memory_domain_boundary (snippet cap 200, `public_safe: false`, `operator_local_only: true`) + 3-key consent (`typed_command_read_only` / `C0_OPERATOR_LOCAL_READ`). No LLM call, no mission loop, no receipt mint, no chain advance, no memory write. Schema: `bizra.dema.memory_query_result.v0.1`. |
 | `dema models` | `packages/models` | Inventories local model surfaces; no inference. |
 | `dema report safety` | safety report surface | Preview-only; not certification. |
 | `dema network blueprint` | `packages/core/src/network-blueprint.js` | Node1/Node2 and phase-gated readiness preview only; no sockets, handshakes, or federation. |

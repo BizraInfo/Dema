@@ -22,9 +22,9 @@
   "properties": {
     "schema": { "type": "string", "const": "bizra.dema.memory_query_result.v0.1" },
     "tool_version": { "type": "string", "const": "dema-memory-query-v0.1" },
-    "generated_at": { "type": "string", "format": "date-time" },
+    "generated_at": { "type": "string" },
     "query": { "type": "string" },
-    "top": { "type": "integer", "minimum": 1, "maximum": 20 },
+    "top": { "type": "integer" },
     "hits": {
       "type": "array",
       "items": {
@@ -33,12 +33,12 @@
         "properties": {
           "id": { "type": ["string", "null"] },
           "score": { "type": ["number", "null"] },
-          "snippet": { "type": "string", "maxLength": 200 },
+          "snippet": { "type": "string" },
           "metadata": { "type": "object" }
         }
       }
     },
-    "hits_count": { "type": "integer", "minimum": 0 },
+    "hits_count": { "type": "integer" },
     "wrapper_invoked": { "type": "string" },
     "wrapper_exit_code": { "type": "integer" },
     "wrapper_duration_ms": { "type": "number" },
@@ -84,7 +84,7 @@
         "external_call_performed": { "type": "boolean", "const": false },
         "raw_corpus_scan_performed": { "type": "boolean", "const": false },
         "raw_data_included": { "type": "boolean", "const": false },
-        "tool_executed": { "type": "boolean", "const": true },
+        "tool_executed": { "type": "boolean", "const": false },
         "chain_advance_performed": { "type": "boolean", "const": false },
         "receipt_mint_performed": { "type": "boolean", "const": false },
         "federation_invoked": { "type": "boolean", "const": false },
@@ -99,7 +99,7 @@
       "properties": {
         "memory_snippet_included": { "type": "boolean", "const": true },
         "raw_memory_dump_included": { "type": "boolean", "const": false },
-        "snippet_max_chars": { "type": "integer", "const": 200 },
+        "snippet_max_chars": { "type": "integer" },
         "public_safe": { "type": "boolean", "const": false },
         "operator_local_only": { "type": "boolean", "const": true }
       }
