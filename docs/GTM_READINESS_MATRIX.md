@@ -20,7 +20,7 @@
 
 ## Last verified
 
-2026-05-24 ~16:20 GST against main `45a584e` (post-INDEX.md + RELEASE_PROCESS.md + CI_CD_PIPELINE.md + QUICKSTART.md + 00_START_HERE.md + DEMO_SCRIPT.md + NODE0_OPERATOR_GUIDE.md authorship · plus Third Fact Delta Register).
+2026-05-24 ~17:40 GST against main `549b05d` (post-INDEX.md + RELEASE_PROCESS.md + CI_CD_PIPELINE.md + QUICKSTART.md + 00_START_HERE.md + DEMO_SCRIPT.md + NODE0_OPERATOR_GUIDE.md + DEMA_ARCHITECTURE.md authorship · plus Third Fact Delta Register).
 
 ---
 
@@ -34,7 +34,7 @@
 | 4 | `PRODUCT_BRIEF.md` | PARTIAL | Investor / customer | YES | Mumu | — | `docs/BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md` (candidate · needs consolidation) | Pitch falls back to demo · no read-along | Node0 + Dema today, in 2 pages, no future-tense claims |
 | 5 | `SYSTEM_ARCHITECTURE.md` | COMPLETE | Engineer / technical reviewer | YES | Mumu | 2026-05-24 (today's edit added MC-A row) | `docs/ARCHITECTURE.md` (40.5 KB) | Engineer can't reconstruct mental model | Full Node0 / Dema / PAT / SAT / FATE / URP map · refreshed per major arch change |
 | 6 | `NODE0_ARCHITECTURE.md` | MISSING | Engineer | YES | Mumu | — | — | First-sovereign-node design is implicit, not documented | Exact design of the first sovereign node · readable standalone |
-| 7 | `DEMA_ARCHITECTURE.md` | PARTIAL | Engineer | YES | Mumu | 2026-05-24 (covered in ARCHITECTURE.md) | Same as #5 (no separate file) | Dema-specific design buried in system doc | Dema as face / cockpit / consent layer / bridge · separate file for focus |
+| 7 | `DEMA_ARCHITECTURE.md` | COMPLETE | Engineer | YES | Mumu | 2026-05-24 (authored this session) | `docs/DEMA_ARCHITECTURE.md` (focused view organized by 4 roles: face / cockpit / consent layer / bridge · position relative to BIZRA Omega · 12-package role mapping · runtime boundary · local state · consent model · receipt model · what this doc deliberately does NOT cover) | — | Dema as face / cockpit / consent layer / bridge · separate file for focus |
 | 8 | `PAT_SAT_BOUNDARY.md` | MISSING | Engineer / reviewer | YES | Mumu | — | — | The PAT-vs-SAT distinction is core to BIZRA but undocumented externally | PAT serves user, SAT protects system · with concrete examples per surface |
 | 9 | `ROADMAP.md` | COMPLETE | All | YES | Mumu | 2026-05-24 (recent) | `docs/ROADMAP.md` (22.4 KB) | No public visibility into trajectory · investor sees no forward shape | Parked-vs-active items · each with status, why-parked, unblock-GO |
 | 10 | `ADR_INDEX.md` | COMPLETE | Engineer | YES | Mumu | 2026-05-24 (authored this session) | `docs/06-adr/INDEX.md` (18 active ADRs · 17 Accepted · 1 Parking lot · audits/ subfolder linked) | — | Index file at `docs/06-adr/INDEX.md` listing every ADR with title, status, accepted date, one-line decision summary |
@@ -60,8 +60,8 @@
 
 | Status | Count | % |
 |---|---:|---:|
-| COMPLETE | 11 | 44% |
-| PARTIAL | 1 | 4% |
+| COMPLETE | 12 | 48% |
+| PARTIAL | 0 | 0% |
 | DRAFT | 1 | 4% |
 | MISSING | 11 | 44% |
 | OPERATOR-SIDE | 1 | 4% |
@@ -69,13 +69,13 @@
 
 ## Honesty boundary
 
-The "PARTIAL" entries (#4, #7, #24) all mean: *related content exists somewhere, but the canonical-named GTM doc does not yet exist*. Promoting from PARTIAL → COMPLETE requires either:
+The "PARTIAL" entries (#4, #24) all mean: *related content exists somewhere, but the canonical-named GTM doc does not yet exist*. Promoting from PARTIAL → COMPLETE requires either:
 - (a) Renaming + consolidating the existing content into the canonical file, OR
 - (b) Authoring a fresh focused doc that supersedes the partial coverage.
 
 The 14 MISSING entries require fresh authorship. None of them have evidence in repo today.
 
-Coverage today is **44% strictly complete · 46% if PARTIAL counts as half** — still well short of the gold-standard 25/25 the GTM bar requires, but seven matrix slices closed in one session (Tier-1 #1 START_HERE + Tier-1 #20 QUICKSTART + Tier-2 #10 ADR Index + Tier-2 #15 CI_CD_PIPELINE + Tier-2 #16 RELEASE_PROCESS + Tier-4 #21 NODE0_OPERATOR_GUIDE + Tier-4 #22 DEMO_SCRIPT · plus the out-of-matrix Third Fact Delta Register · coverage 2.75× starting state of 16% · CLI walkthrough family complete: first-runner / audience / Ring-1 operator).
+Coverage today is **48% strictly complete · 50% if PARTIAL/2 counts as half** — at the halfway mark of the gold-standard 25/25 GTM bar. Eight matrix slices closed in one session (Tier-1 #1 START_HERE + Tier-1 #20 QUICKSTART + Tier-2 #7 DEMA_ARCHITECTURE + Tier-2 #10 ADR Index + Tier-2 #15 CI_CD_PIPELINE + Tier-2 #16 RELEASE_PROCESS + Tier-4 #21 NODE0_OPERATOR_GUIDE + Tier-4 #22 DEMO_SCRIPT · plus the out-of-matrix Third Fact Delta Register · coverage 3× starting state of 16% · CLI walkthrough family complete · architecture coverage now full).
 
 ## Priority order (suggested for fill-in sequence)
 
@@ -87,6 +87,7 @@ Coverage today is **44% strictly complete · 46% if PARTIAL counts as half** —
 
 **Tier 2 — Architecture / engineering credibility:**
 - #6 NODE0_ARCHITECTURE.md
+- ~~#7 DEMA_ARCHITECTURE.md~~ — closed 2026-05-24 (`docs/DEMA_ARCHITECTURE.md` · 4-role focused view)
 - #8 PAT_SAT_BOUNDARY.md
 - ~~#10 ADR_INDEX.md~~ — closed 2026-05-24 (`docs/06-adr/INDEX.md` · 18 ADRs indexed)
 - ~~#15 CI_CD_PIPELINE.md~~ — closed 2026-05-24 (`docs/CI_CD_PIPELINE.md` · 9-section workflow detail)
