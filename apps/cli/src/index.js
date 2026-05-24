@@ -2016,7 +2016,11 @@ async function dispatch(argv) {
           process.exit(2);
         }
         const memTopArg = argValue(argv, "--top");
-        const memTop = memTopArg ? parseInt(memTopArg, 10) : 3;
+        let memTop = memTopArg ? parseInt(memTopArg, 10) : 3;
+        if (!Number.isInteger(memTop) || memTop < 1 || memTop > 20) {
+          console.error(`dema memory query: --top out of range: must be integer in [1, 20] (got '${memTopArg}')`);
+          process.exit(2);
+        }
         const memWantsJson = argv.includes("--json");
 
         const { existsSync: memExistsSync } = await import("node:fs");
@@ -2027,13 +2031,26 @@ async function dispatch(argv) {
         const wrapperPath = process.env.DEMA_AGENT_DB_QUERY_PATH
           || memJoinPath(memHomedir(), ".dema", "bin", "agent-db-query");
 
+        // Defensive snippet truncation: even if the wrapper misbehaves and
+        // returns snippets longer than 200 chars, Dema must keep its boundary
+        // claim honest (memory_domain_boundary.snippet_max_chars: 200).
+        const truncateHits = (rawHits) => {
+          if (!Array.isArray(rawHits)) return [];
+          return rawHits.map((h) => {
+            const snippet = typeof h?.snippet === "string"
+              ? h.snippet.slice(0, 200)
+              : h?.snippet;
+            return { ...h, snippet };
+          });
+        };
+
         const buildMemEnv = ({ wrapperExit, wrapperDurationMs, wrapperEnvelope, errorMessage }) => ({
           schema: "bizra.dema.memory_query_result.v0.1",
           tool_version: "dema-memory-query-v0.1",
           generated_at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
           query: queryText,
           top: memTop,
-          hits: wrapperEnvelope?.hits ?? [],
+          hits: truncateHits(wrapperEnvelope?.hits),
           hits_count: wrapperEnvelope?.hits_count ?? 0,
           wrapper_invoked: wrapperPath,
           wrapper_exit_code: wrapperExit,
@@ -2056,7 +2073,7 @@ async function dispatch(argv) {
             external_call_performed: false,
             raw_corpus_scan_performed: false,
             raw_data_included: false,
-            tool_executed: true,
+            tool_executed: false,
             chain_advance_performed: false,
             receipt_mint_performed: false,
             federation_invoked: false,
@@ -2078,7 +2095,12 @@ async function dispatch(argv) {
             wrapperExit: -1, wrapperDurationMs: 0, wrapperEnvelope: null,
             errorMessage: `wrapper not found at ${wrapperPath} — install or set DEMA_AGENT_DB_QUERY_PATH`
           });
-          console.log(JSON.stringify(env, null, 2));
+          if (memWantsJson) {
+            console.log(JSON.stringify(env, null, 2));
+          } else {
+            console.error(`dema memory query: wrapper not found at ${wrapperPath}`);
+            console.error("  install ~/.dema/bin/agent-db-query or set DEMA_AGENT_DB_QUERY_PATH");
+          }
           process.exit(1);
         }
         const memT0 = Date.now();
@@ -2099,8 +2121,18 @@ async function dispatch(argv) {
             memErrMsg = `wrapper stdout not JSON: ${e.message}`;
           }
         }
+        const memExit = memResult.status ?? -1;
+        // Propagate wrapper non-zero exit into env.error so the Dema exit code
+        // honestly reflects the subprocess outcome. Without this, a wrapper
+        // exit 3 + valid JSON stdout would silently let Dema exit 0.
+        if (!memErrMsg && memExit !== 0) {
+          const wrappedErr = memWrapperEnv && typeof memWrapperEnv.error === "string" && memWrapperEnv.error
+            ? memWrapperEnv.error
+            : `wrapper exited with code ${memExit}`;
+          memErrMsg = wrappedErr;
+        }
         const env = buildMemEnv({
-          wrapperExit: memResult.status ?? -1,
+          wrapperExit: memExit,
           wrapperDurationMs: memDuration,
           wrapperEnvelope: memWrapperEnv,
           errorMessage: memErrMsg
