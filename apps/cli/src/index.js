@@ -272,6 +272,7 @@ Readiness:
   dema status:json  Show machine-readable status
   dema today        Record a local continuity tick + memory summary
   dema doctor       Validate readiness and consent gate
+  dema dashboard    Open homebase dashboard in browser [--json for path only]
 
 Preview planning:
   dema ambient      Show Ambient Sovereign Execution boundary (preview-only)
@@ -434,6 +435,7 @@ const REGISTERED_COMMANDS_LIST = [
   { command: "llm-invoke", description: "local LLM adapter (preview or live call)" },
   { command: "today", description: "record a local continuity tick" },
   { command: "doctor", description: "validate readiness and consent gate" },
+  { command: "dashboard", description: "open homebase dashboard in browser" },
   { command: "ambient", description: "show Ambient Sovereign Execution boundary" },
   { command: "ambient:json", description: "ambient boundary as JSON" },
   { command: "diagnostics", description: "preview self-diagnostics harness" },
@@ -1874,6 +1876,35 @@ async function dispatch(argv) {
         argv.includes("--no-color");
       console.log(formatDoctorDashboard(predicates, { color: !noColor }));
       process.exitCode = anyFail ? 1 : 0;
+      return;
+    }
+
+    case "dashboard": {
+      const { fileURLToPath } = await import("node:url");
+      const { dirname, join, resolve } = await import("node:path");
+      const { accessSync, constants } = await import("node:fs");
+
+      const here = dirname(fileURLToPath(import.meta.url));
+      const htmlPath = resolve(join(here, "..", "..", "..", "docs", "tui", "dema-homebase-dashboard-v0.1.html"));
+
+      try {
+        accessSync(htmlPath, constants.R_OK);
+      } catch {
+        console.log("Dashboard not found: " + htmlPath);
+        process.exitCode = 1;
+        return;
+      }
+
+      if (wantsJson(argv)) {
+        console.log(JSON.stringify({ schema: "bizra.dema.dashboard.v0.1", path: htmlPath }, null, 2));
+        return;
+      }
+
+      const opener = process.platform === "darwin" ? "open"
+        : process.platform === "win32" ? "start" : "xdg-open";
+      const { execFile } = await import("node:child_process");
+      execFile(opener, [htmlPath], () => {});
+      console.log("Opening dashboard: " + htmlPath);
       return;
     }
 
