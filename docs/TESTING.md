@@ -296,3 +296,19 @@ functions: 95
 
 The primary GitHub Actions check and BIZRA Review Gate run this coverage command
 after `npm test` and before `npm run check`.
+
+## Secret-scanning gate (CI)
+
+`.github/workflows/gitleaks.yml` runs gitleaks v8.30.1 on every pull request
+and every push to main. Invariants:
+
+- SHA-256-verified binary install (no marketplace-action license dependency)
+- SHA-pinned `actions/checkout` reference (matches 100% SHA-pinning canon)
+- `gitleaks detect --source . --no-banner --verbose --exit-code 1 --redact`
+- Fails the workflow on any finding (`--exit-code 1`)
+- Redacts secrets from CI logs (`--redact`) so the workflow output itself
+  never becomes the leak surface
+- Boundary: read-only audit · no repo write · no external publish
+
+The gate is independent of `check.yml` and `bizra-review.yml` — a secret
+finding fails its own workflow without blocking unrelated CI runs.

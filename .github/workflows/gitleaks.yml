@@ -1,0 +1,48 @@
+name: gitleaks
+
+# Secret-scanning CI gate · BIZRA-aligned discipline:
+#   • SHA-pinned action references (matches existing 100% SHA-pinning canon)
+#   • Direct-binary install (no marketplace-action license dependency)
+#   • SHA-256 verification of the downloaded gitleaks tarball
+#   • Scans full branch git history (catches secrets in new + existing commits)
+#   • Fails the workflow on any finding (--exit-code 1)
+#   • Redacts secrets from CI logs (--redact) so the workflow output never
+#     itself becomes the leak surface
+#
+# Boundary: read-only audit · no repo write · no deploy · no external publish.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks v8.30.1 (SHA-256 verified binary)
+        run: |
+          set -euo pipefail
+          VERSION="8.30.1"
+          EXPECTED_SHA256="551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+          URL="https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
+          curl -sSL "$URL" -o gitleaks.tar.gz
+          ACTUAL_SHA256=$(sha256sum gitleaks.tar.gz | awk '{print $1}')
+          if [ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]; then
+            echo "ERROR: gitleaks binary SHA256 mismatch"
+            echo "  expected: $EXPECTED_SHA256"
+            echo "  actual:   $ACTUAL_SHA256"
+            exit 1
+          fi
+          tar -xzf gitleaks.tar.gz gitleaks
+          chmod +x gitleaks
+          ./gitleaks version
+      - name: Detect secrets (full branch history)
+        run: ./gitleaks detect --source . --no-banner --verbose --exit-code 1 --redact
