@@ -27,6 +27,32 @@ The plan is implementation-ready: §4 contains concrete content drafts for every
 
 **Added 2026-05-24** after operator observation that the ideology folder + 3 Bitcoin-anchored founding documents together form the complete BIZRA ideological corpus. When the rewrite slice runs, **the §4 content drafts below are FALLBACK** — operator-canonical text from these sources takes precedence wherever a section maps to one.
 
+### Genesis · Tier 0 (NEW · added 2026-05-24 · MEASURED)
+
+**Deepest provenance artifact in BIZRA's possession** — older in narrative-origin time than the Bitcoin-anchored Roots below. The seed before the seed.
+
+| Property | Value |
+|---|---|
+| Artifact | ChatGPT account export ZIP (operator-personal) |
+| Path (operator-local · NOT in repo) | `~/Downloads/a388767198965d9685f2db111e8aeb7e50473f60cdc1e0481e113ea8fd2b9341-2026-05-23-00-38-32-adbc6ea4a2a445f0b4a6f15b3b71b791.zip` |
+| SHA-256 (cite-by-fingerprint) | `aa420789d2c6a191bd1860d4d49009bea5d31954d5fb03c26c6b749149de359e` |
+| Size | 95,401,819 bytes (~91 MB compressed) |
+| Total conversations | **406** (403 with OpenAI server-side timestamps · 3 missing) |
+| **EARLIEST conversation** | **2023-01-14T11:51:31 UTC** — 45 days after ChatGPT public launch (2022-11-30) |
+| LATEST conversation | 2026-05-21T06:01:22 UTC (3 days before the export was generated) |
+| Span | 1,222.8 days · **3.35 years** |
+| High-intensity period | 2023-07 (101 conversations) + 2023-08 (80) — 181 in 2 months |
+| OpenAI export format version | 1 (manifest-confirmed) |
+| Bitcoin-anchor candidacy | Eligible — anchoring `aa420789…` to a future block extends the Tier 1 proof spine backward in narrative-origin time |
+
+**Status: MEASURED** via OpenAI's per-conversation `create_time` field. Verified 2026-05-24 by extracting `export_manifest.json` + the 5 `conversations-NNN.json` shards to a temp dir, parsing strictly for timestamp metadata (no titles · no messages · no content emitted), and deleting all temp files.
+
+**Tier 0 ↔ Tier 1 relationship**: the Bitcoin-anchored Roots below were authored 2024–2025 from the intellectual journey captured in Tier 0 (2023-01-14 onward). Tier 1 is the *constitutional* layer (the consciousness arrived at); Tier 0 is the *journey* layer (the consciousness emerging). They are complementary — Tier 0 does **not** replace or supersede Tier 1.
+
+**README v0.2 implementer note**: Tier 0 is provenance, not content. The MEASURED facts may appear as a single optional footer line (e.g., "BIZRA's intellectual genesis traces to 2023-01-14 · 3.35 years · 406 conversations · MEASURED via OpenAI server timestamps") or as one supporting clause in §4.5 "Why does it exist?". Tier 0 is **not** the source for the opening tagline / "What is Dema?" narrative / iconic line — those still draw from Tier 2 (ideology corpus) per the source-to-section routing table below.
+
+**Boundary**: operator-canonical · NOT in Dema repo · NOT to be copied into repo · NOT to be published. Cite by path + SHA-256 only (never by content). Founder IP per IP separation spec · Daughter Test BINDING. The MEASURED facts above are the **only** content from this ZIP that may appear in Dema documentation — individual conversation content stays operator-private. Any further extraction (per-conversation content · message bodies · titles · attachments) requires its own per-extraction typed-GO.
+
 ### Roots (Bitcoin-anchored · provenance lives on a public chain)
 
 | File | Arabic name | What it is | Anchored block |
