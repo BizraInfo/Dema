@@ -82,6 +82,11 @@ import {
   buildProcessMiningSummary,
 } from "../../../packages/core/src/process-mining-preview.js";
 import {
+  buildHarnessIntegration,
+  buildHarnessIntegrationSummary,
+  formatHarnessIntegration,
+} from "../../../packages/core/src/harness-integration.js";
+import {
   buildKeyMakerCompliancePreview,
   buildKeyMakerComplianceSummary,
 } from "../../../packages/core/src/key-maker-compliance.js";
@@ -397,6 +402,8 @@ Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
   dema project-status [--json]
                            Project Status preview (v0.1 · PMBOK 7th-edition-aligned) · stakeholders + value stream + risk register + quality posture + 12 principles · companion to docs/pm/PROJECT_CHARTER_AND_STATUS.md
   dema llm-router          Local LLM router preview; routing_allowed=false; abstain by default
+  dema harness [--summary] [--json]
+                           Unified harness integration; aggregates self-proactive, self-critique, micro-compliance, micro-consent + hook inventory
   dema process-mining [--summary]
                            Operator-pattern mirror; surfaces ring_advancement_status; blocks operator_judgment
   dema key-maker-check [--door "<text>"] [--summary]
@@ -462,6 +469,7 @@ const REGISTERED_COMMANDS_LIST = [
       "run the SAT-1..5 verification pipeline on a saved invocation envelope (subcommand: verify)",
   },
   { command: "llm-router", description: "local LLM router preview" },
+  { command: "harness", description: "unified harness integration" },
   { command: "process-mining", description: "operator-pattern mirror" },
   {
     command: "key-maker-check",
@@ -1977,6 +1985,18 @@ async function dispatch(argv) {
           return;
         }
         process.stderr.write(`saved receipt to: ${result.path}\n`);
+      }
+      return;
+    }
+
+    case "harness": {
+      const harness = argv.includes("--summary")
+        ? buildHarnessIntegrationSummary()
+        : buildHarnessIntegration();
+      if (argv.includes("--json")) {
+        console.log(JSON.stringify(harness, null, 2));
+      } else {
+        console.log(formatHarnessIntegration(buildHarnessIntegration()));
       }
       return;
     }
