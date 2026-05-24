@@ -20,7 +20,7 @@
 
 ## Last verified
 
-2026-05-24 ~15:35 GST against main `66dd426` (post-INDEX.md + RELEASE_PROCESS.md + CI_CD_PIPELINE.md authorship).
+2026-05-24 ~15:45 GST against main `a6ad0a1` (post-INDEX.md + RELEASE_PROCESS.md + CI_CD_PIPELINE.md + QUICKSTART.md authorship).
 
 ---
 
@@ -47,7 +47,7 @@
 | 17 | `AI_GOVERNANCE.md` | MISSING | AI ethics reviewer / regulator / investor | YES | Mumu | — | — | No mapping to ISO 42001 thinking · vulnerable to "what AI policy?" question | Decision boundaries · model card pointers · evals · per-surface policy |
 | 18 | `CONSENT_AND_MICRO_CONSENT_POLICY.md` | MISSING | All | YES | Mumu | — | (canon implicit in code · `~/.dema/lint/consent_grants.ndjson` operator-side schema lives) | Consent ladder C0-C5 not externalized · core BIZRA differentiator invisible to outsiders | C0-C5 ladder · per-action mapping · μ-C1 enforcer link · exact-string consent canon explained |
 | 19 | `DATA_PRIVACY_AND_MEMORY_POLICY.md` | MISSING | Privacy reviewer / regulator / investor | YES | Mumu | — | — | GDPR / CCPA / general data posture undefined externally | Memory access · retention · deletion · public-safe defaults · MC-A boundary doctrine |
-| 20 | `QUICKSTART.md` | PARTIAL | New developer / Ring-1 user | YES | Mumu | — | README.md has install lines but no labeled Quickstart | New users abandon at install · Ring-1 expansion stalls | 1-page · `node bin/dema status` works in <2 min · expected output shown |
+| 20 | `QUICKSTART.md` | COMPLETE | New developer / Ring-1 user | YES | Mumu | 2026-05-24 (authored this session) | `docs/QUICKSTART.md` (1-page · prerequisites + 4 sequential commands with verbatim expected output + troubleshooting + paths-from-here · verified against main @ a6ad0a1 on Node v22.22.2) | — | 1-page · `node bin/dema status` works in <2 min · expected output shown |
 | 21 | `NODE0_OPERATOR_GUIDE.md` | MISSING | Ring-1 user | YES | Mumu | — | — | First operator (Samy/equivalent) needs founder over their shoulder | Run · doctor · setup · receipts · troubleshoot · safe boundaries |
 | 22 | `DEMO_SCRIPT.md` | MISSING | Founder for demo · GTM team | YES | Mumu | — | — | Demos inconsistent · "what should I show?" question every time | 3-min and 10-min scripts · exact commands · expected output · failure-mode handling |
 | 23 | `INVESTOR_MEMO.md` | MISSING | Investor | YES | Mumu | — | — | Pitch deck without written memo = no async circulation · no leverage | Thesis · market · moat · what's MEASURED · what's PARKED · ask |
@@ -60,8 +60,8 @@
 
 | Status | Count | % |
 |---|---:|---:|
-| COMPLETE | 7 | 28% |
-| PARTIAL | 3 | 12% |
+| COMPLETE | 8 | 32% |
+| PARTIAL | 2 | 8% |
 | DRAFT | 1 | 4% |
 | MISSING | 13 | 52% |
 | OPERATOR-SIDE | 1 | 4% |
@@ -69,20 +69,20 @@
 
 ## Honesty boundary
 
-The "PARTIAL" entries (#1, #4, #7, #20, #24) all mean: *related content exists somewhere, but the canonical-named GTM doc does not yet exist*. Promoting from PARTIAL → COMPLETE requires either:
+The "PARTIAL" entries (#1, #4, #7, #24) all mean: *related content exists somewhere, but the canonical-named GTM doc does not yet exist*. Promoting from PARTIAL → COMPLETE requires either:
 - (a) Renaming + consolidating the existing content into the canonical file, OR
 - (b) Authoring a fresh focused doc that supersedes the partial coverage.
 
 The 14 MISSING entries require fresh authorship. None of them have evidence in repo today.
 
-Coverage today is **28% strictly complete · 34% if PARTIAL counts as half** — still far from the gold-standard 25/25 the GTM bar requires, but advancing three slices in one session (Tier-2 #10 ADR Index + Tier-2 #16 RELEASE_PROCESS + Tier-2 #15 CI_CD_PIPELINE).
+Coverage today is **32% strictly complete · 36% if PARTIAL counts as half** — still far from the gold-standard 25/25 the GTM bar requires, but advancing four slices in one session (Tier-1 #20 QUICKSTART + Tier-2 #10 ADR Index + Tier-2 #15 CI_CD_PIPELINE + Tier-2 #16 RELEASE_PROCESS · one full doubling of starting coverage).
 
 ## Priority order (suggested for fill-in sequence)
 
 **Tier 1 — Trust spine (blocks any external action):**
 - #11 SECURITY.md (DRAFT → COMPLETE) — fix the 548-byte stub first; reporting address is table-stakes
 - #1 00_START_HERE.md — single entry point reviewers find before anything else
-- #20 QUICKSTART.md — first thing developers try; current README is too long
+- ~~#20 QUICKSTART.md~~ — closed 2026-05-24 (`docs/QUICKSTART.md` · 1-page · 4 commands with verbatim output)
 - #23 INVESTOR_MEMO.md — pitch deck without memo can't circulate async
 
 **Tier 2 — Architecture / engineering credibility:**
