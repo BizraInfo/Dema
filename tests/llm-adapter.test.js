@@ -80,6 +80,24 @@ test("Adversarial: non-localhost ollamaBaseUrl falls back to default in preview"
   assert.equal(p.target_is_localhost, true);
 });
 
+test("Adversarial: localhost-prefix smuggling falls back to default in preview", () => {
+  const endpoints = [
+    "http://localhost.evil.example:11434",
+    "http://127.0.0.1.evil.example:11434",
+    "http://localhost@evil.example:11434"
+  ];
+
+  for (const ollamaBaseUrl of endpoints) {
+    const p = buildLLMInvocationPreview({
+      model: "llama3.1:8b",
+      prompt: "hi",
+      ollamaBaseUrl
+    });
+    assert.equal(p.target_endpoint, LLM_ADAPTER_DEFAULT_BASE, `${ollamaBaseUrl} must be rejected`);
+    assert.equal(p.target_is_localhost, true);
+  }
+});
+
 test("Adversarial: non-whitelisted model is marked model_allowed_in_whitelist=false in preview", () => {
   const p = buildLLMInvocationPreview({
     model: "evil-model:99b",
@@ -143,6 +161,32 @@ test("Invoke with non-localhost endpoint refused before any other gate", async (
   });
   assert.equal(r.invocation_status, "failed");
   assert.match(r.error_reason, /endpoint_not_localhost/);
+});
+
+test("Invoke with localhost-prefix smuggling is refused before fetch", async () => {
+  const endpoints = [
+    "http://localhost.evil.example:11434",
+    "http://127.0.0.1.evil.example:11434",
+    "http://localhost@evil.example:11434"
+  ];
+
+  for (const ollamaBaseUrl of endpoints) {
+    let fetchEntered = false;
+    const r = await invokeLocalLLM({
+      model: "llama3.1:8b",
+      prompt: "hi",
+      consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+      ollamaBaseUrl,
+      fetchImpl: async () => {
+        fetchEntered = true;
+        return { ok: true, status: 200, json: async () => ({ response: "unsafe" }) };
+      }
+    });
+    assert.equal(r.invocation_status, "failed", `${ollamaBaseUrl} must fail`);
+    assert.match(r.error_reason, /endpoint_not_localhost/);
+    assert.equal(r.target_is_localhost, false, `${ollamaBaseUrl} must not be reported as localhost`);
+    assert.equal(fetchEntered, false, "fetch must not be entered for smuggled endpoints");
+  }
 });
 
 test("Invoke with non-whitelisted model refused", async () => {
