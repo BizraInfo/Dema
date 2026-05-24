@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bizra.dema.memory_query_result.v0.1",
+  "title": "Dema memory query result (MC-A v0.1)",
+  "description": "Read-only operator-local memory query result. JS↔Python bridge envelope: Dema CLI spawns operator-side agent-db-query wrapper which imports BIZRA Omega's AgentDB.search() facade. Per ADR-022 doctrine the Omega substrate stays outside the Dema repo. boundary is the canonical 16-key vocabulary; memory_domain_boundary is the 5-key memory-specific vocabulary per the per-module-domain-boundary canon.",
+  "type": "object",
+  "required": [
+    "schema",
+    "tool_version",
+    "generated_at",
+    "query",
+    "top",
+    "hits",
+    "hits_count",
+    "wrapper_invoked",
+    "wrapper_exit_code",
+    "verdict_role",
+    "consent",
+    "boundary",
+    "memory_domain_boundary"
+  ],
+  "properties": {
+    "schema": { "type": "string", "const": "bizra.dema.memory_query_result.v0.1" },
+    "tool_version": { "type": "string", "const": "dema-memory-query-v0.1" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "query": { "type": "string" },
+    "top": { "type": "integer", "minimum": 1, "maximum": 20 },
+    "hits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "score", "snippet"],
+        "properties": {
+          "id": { "type": ["string", "null"] },
+          "score": { "type": ["number", "null"] },
+          "snippet": { "type": "string", "maxLength": 200 },
+          "metadata": { "type": "object" }
+        }
+      }
+    },
+    "hits_count": { "type": "integer", "minimum": 0 },
+    "wrapper_invoked": { "type": "string" },
+    "wrapper_exit_code": { "type": "integer" },
+    "wrapper_duration_ms": { "type": "number" },
+    "omega_root_used": { "type": ["string", "null"] },
+    "error": { "type": ["string", "null"] },
+    "verdict_role": { "type": "string", "const": "suggestion" },
+    "consent": {
+      "type": "object",
+      "required": ["consent_mode", "consent_level", "exact_string_consent_required"],
+      "properties": {
+        "consent_mode": { "type": "string", "const": "typed_command_read_only" },
+        "consent_level": { "type": "string", "const": "C0_OPERATOR_LOCAL_READ" },
+        "exact_string_consent_required": { "type": "boolean", "const": false }
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "required": [
+        "filesystem_write_performed",
+        "network_used",
+        "runtime_execution_performed",
+        "model_loaded",
+        "model_invocation_performed",
+        "prompt_executed",
+        "external_call_performed",
+        "raw_corpus_scan_performed",
+        "raw_data_included",
+        "tool_executed",
+        "chain_advance_performed",
+        "receipt_mint_performed",
+        "federation_invoked",
+        "node_connection_performed",
+        "public_network_used",
+        "consent_collected"
+      ],
+      "properties": {
+        "filesystem_write_performed": { "type": "boolean", "const": false },
+        "network_used": { "type": "boolean", "const": false },
+        "runtime_execution_performed": { "type": "boolean", "const": true },
+        "model_loaded": { "type": "boolean", "const": false },
+        "model_invocation_performed": { "type": "boolean", "const": false },
+        "prompt_executed": { "type": "boolean", "const": false },
+        "external_call_performed": { "type": "boolean", "const": false },
+        "raw_corpus_scan_performed": { "type": "boolean", "const": false },
+        "raw_data_included": { "type": "boolean", "const": false },
+        "tool_executed": { "type": "boolean", "const": true },
+        "chain_advance_performed": { "type": "boolean", "const": false },
+        "receipt_mint_performed": { "type": "boolean", "const": false },
+        "federation_invoked": { "type": "boolean", "const": false },
+        "node_connection_performed": { "type": "boolean", "const": false },
+        "public_network_used": { "type": "boolean", "const": false },
+        "consent_collected": { "type": "boolean", "const": true }
+      }
+    },
+    "memory_domain_boundary": {
+      "type": "object",
+      "required": ["memory_snippet_included", "raw_memory_dump_included", "snippet_max_chars", "public_safe", "operator_local_only"],
+      "properties": {
+        "memory_snippet_included": { "type": "boolean", "const": true },
+        "raw_memory_dump_included": { "type": "boolean", "const": false },
+        "snippet_max_chars": { "type": "integer", "const": 200 },
+        "public_safe": { "type": "boolean", "const": false },
+        "operator_local_only": { "type": "boolean", "const": true }
+      }
+    }
+  }
+}
