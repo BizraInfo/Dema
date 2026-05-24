@@ -1,0 +1,37 @@
+title = "Dema gitleaks config"
+
+# Inherit the full gitleaks v8 default ruleset (gcp-api-key, aws-access-token,
+# slack-webhook, generic high-entropy heuristics, etc.). Allowlists below only
+# subtract; they never widen the scan.
+[extend]
+useDefault = true
+
+# ─── Grandfathered historical finding ────────────────────────────────────────
+# firebase-applet-config.json at commit 5057af3 (2026-04-18,
+# "feat: Initialize BIZRA Genesis application structure") contained a Firebase
+# Web SDK client config from the abandoned BIZRA Genesis Firebase Studio
+# prototype that preceded Dema.
+#
+# Firebase WEB client API keys are identifiers, not secrets — they are meant
+# to be embedded in client bundles; access is governed by Firebase Security
+# Rules + App Check (per Google docs), not by key secrecy. The file was
+# deleted from HEAD in d735c9b ("feat: bootstrap Dema product shell") when
+# Dema pivoted to a local-first stdlib-only architecture with no Firebase
+# dependency at all (current production deps: 0).
+#
+# Project disposition (recorded 2026-05-24 by Mumu):
+#   - Firebase project 'studio-1293684429-a835a': DELETED in GCP on 2026-05-24
+#   - Key 'AIzaSy...REDACTED': REVOKED by virtue of project deletion
+#
+# Scan confirmed this is the only GCP/Firebase key in all 374 commits of repo
+# history (verified by `git grep AIzaSy` across `git rev-list --all`).
+#
+# The allowlist is fingerprint-scoped (commit:path:rule:line), the narrowest
+# form gitleaks supports. It does NOT silence the key text globally — any
+# re-leak of the same string in any other commit or file will still fail the
+# gate.
+[[allowlists]]
+description = "Grandfathered: Firebase web SDK config of abandoned Genesis applet (project deleted 2026-05-24)"
+fingerprints = [
+  "5057af345d71c0fa6ff2e437fbdd5164150aefb5:firebase-applet-config.json:gcp-api-key:4"
+]
