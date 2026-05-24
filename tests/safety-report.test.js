@@ -6,11 +6,14 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildSafetyReportPreview,
-  formatSafetyReportPreview
+  formatSafetyReportPreview,
+  detectSelfCritiqueGaps,
 } from "../packages/core/src/safety-report.js";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 const fixedNow = new Date("2026-05-14T01:42:00.000Z");
 
 test("buildSafetyReportPreview emits a schema-tagged preview with no effects", () => {
@@ -27,18 +30,33 @@ test("buildSafetyReportPreview emits a schema-tagged preview with no effects", (
     "formal",
     "cryptographic",
     "empirical",
-    "economic"
+    "economic",
   ]);
   assert.equal(report.truth_spine_previews.ihsan_floor.certifies, false);
-  assert.equal(report.truth_spine_previews.ihsan_floor.schema, "bizra.dema.ihsan_floor_preview.v0.1");
-  assert.equal(report.truth_spine_previews.evidence_receipt.receipt_minted, false);
-  assert.equal(report.truth_spine_previews.evidence_receipt.schema, "bizra.dema.evidence_receipt_preview.v0.1");
-  assert.equal(report.truth_spine_previews.evidence_receipt.digest_algo, "sha256");
+  assert.equal(
+    report.truth_spine_previews.ihsan_floor.schema,
+    "bizra.dema.ihsan_floor_preview.v0.1",
+  );
+  assert.equal(
+    report.truth_spine_previews.evidence_receipt.receipt_minted,
+    false,
+  );
+  assert.equal(
+    report.truth_spine_previews.evidence_receipt.schema,
+    "bizra.dema.evidence_receipt_preview.v0.1",
+  );
+  assert.equal(
+    report.truth_spine_previews.evidence_receipt.digest_algo,
+    "sha256",
+  );
   assert.equal(
     report.truth_spine_previews.behavioral_modulation.schema,
-    "bizra.dema.behavioral_modulation_preview.v0.1"
+    "bizra.dema.behavioral_modulation_preview.v0.1",
   );
-  assert.equal(report.truth_spine_previews.behavioral_modulation.behavior_changed, false);
+  assert.equal(
+    report.truth_spine_previews.behavioral_modulation.behavior_changed,
+    false,
+  );
 });
 
 test("buildSafetyReportPreview keeps convergence claims evidence-tagged and non-certified", () => {
@@ -48,15 +66,34 @@ test("buildSafetyReportPreview keeps convergence claims evidence-tagged and non-
   assert.ok(pillars.every((pillar) => pillar.evidence_kind));
   assert.ok(pillars.every((pillar) => pillar.status !== "PERMIT"));
   assert.ok(pillars.every((pillar) => pillar.certifies === false));
-  assert.equal(report.proof_of_truth_convergence.cryptographic.certifies, false);
-  assert.equal(report.truth_spine_previews.evidence_receipt.chain_id, "preview-only-no-chain");
-  assert.equal(report.truth_spine_previews.behavioral_modulation.certifies, false);
-  assert.ok(report.self_critique.gaps.some((gap) => gap.code === "sat.real_verifier_pending"));
-  assert.ok(report.proactive_harness.next_actions.some((action) => action.code === "run.demo_loop"));
+  assert.equal(
+    report.proof_of_truth_convergence.cryptographic.certifies,
+    false,
+  );
+  assert.equal(
+    report.truth_spine_previews.evidence_receipt.chain_id,
+    "preview-only-no-chain",
+  );
+  assert.equal(
+    report.truth_spine_previews.behavioral_modulation.certifies,
+    false,
+  );
+  assert.ok(
+    report.self_critique.gaps.some(
+      (gap) => gap.code === "sat.real_verifier_pending",
+    ),
+  );
+  assert.ok(
+    report.proactive_harness.next_actions.some(
+      (action) => action.code === "run.demo_loop",
+    ),
+  );
 });
 
 test("formatSafetyReportPreview renders convergence, critique, and boundary", () => {
-  const output = formatSafetyReportPreview(buildSafetyReportPreview({ now: fixedNow }));
+  const output = formatSafetyReportPreview(
+    buildSafetyReportPreview({ now: fixedNow }),
+  );
 
   assert.match(output, /DEMA Safety Report Preview/);
   assert.match(output, /Proof-of-Truth Convergence/);
@@ -68,7 +105,10 @@ test("formatSafetyReportPreview renders convergence, critique, and boundary", ()
   assert.match(output, /preview_only_no_chain/);
   assert.match(output, /Self-critique/);
   assert.match(output, /No proof is computed/);
-  assert.match(output, /Boundary: preview-only; no model inference; no execution; no mutation; no receipt minted/);
+  assert.match(
+    output,
+    /Boundary: preview-only; no model inference; no execution; no mutation; no receipt minted/,
+  );
 });
 
 test("dema report safety prints the non-technical preview", async () => {
@@ -78,11 +118,19 @@ test("dema report safety prints the non-technical preview", async () => {
   assert.match(stdout, /Proof-of-Truth Convergence/);
   assert.match(stdout, /Truth spine previews/);
   assert.match(stdout, /Self-critique/);
-  assert.match(stdout, /Boundary: preview-only; no model inference; no execution; no mutation; no receipt minted/);
+  assert.match(
+    stdout,
+    /Boundary: preview-only; no model inference; no execution; no mutation; no receipt minted/,
+  );
 });
 
 test("dema report safety --json emits a schema-tagged convergence preview", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "report", "safety", "--json"]);
+  const { stdout } = await execFileAsync("node", [
+    cliPath,
+    "report",
+    "safety",
+    "--json",
+  ]);
   const report = JSON.parse(stdout);
 
   assert.equal(report.schema, "bizra.dema.safety_report_preview.v0.1");
@@ -90,6 +138,64 @@ test("dema report safety --json emits a schema-tagged convergence preview", asyn
   assert.equal(report.boundary.execution_enabled, false);
   assert.equal(report.boundary.receipt_minted, false);
   assert.equal(report.proof_of_truth_convergence.economic.certifies, false);
-  assert.equal(report.proof_of_truth_convergence.cryptographic.certifies, false);
+  assert.equal(
+    report.proof_of_truth_convergence.cryptographic.certifies,
+    false,
+  );
   assert.equal(report.truth_spine_previews.evidence_receipt.certifies, false);
+});
+
+test("detectSelfCritiqueGaps returns all 3 gaps with default params", () => {
+  const gaps = detectSelfCritiqueGaps();
+  assert.equal(gaps.length, 3);
+  assert.ok(gaps.some((g) => g.code === "installer.packaging_pending"));
+  assert.ok(gaps.some((g) => g.code === "sat.real_verifier_pending"));
+  assert.ok(gaps.some((g) => g.code === "report.evidence_pending"));
+});
+
+test("detectSelfCritiqueGaps drops verifier gap when verifierWired=true", () => {
+  const gaps = detectSelfCritiqueGaps({ verifierWired: true });
+  assert.ok(!gaps.some((g) => g.code === "sat.real_verifier_pending"));
+  assert.ok(gaps.some((g) => g.code === "installer.packaging_pending"));
+  assert.ok(gaps.some((g) => g.code === "report.evidence_pending"));
+});
+
+test("detectSelfCritiqueGaps drops evidence gap when evidenceBound=true", () => {
+  const gaps = detectSelfCritiqueGaps({ evidenceBound: true });
+  assert.ok(!gaps.some((g) => g.code === "report.evidence_pending"));
+  assert.ok(gaps.some((g) => g.code === "installer.packaging_pending"));
+  assert.ok(gaps.some((g) => g.code === "sat.real_verifier_pending"));
+});
+
+test("detectSelfCritiqueGaps returns only installer gap when both wired", () => {
+  const gaps = detectSelfCritiqueGaps({
+    verifierWired: true,
+    evidenceBound: true,
+  });
+  assert.equal(gaps.length, 1);
+  assert.equal(gaps[0].code, "installer.packaging_pending");
+  assert.equal(gaps[0].severity, "launch_blocker");
+});
+
+test("buildSafetyReportPreview with verifierWired=true omits verifier gap", () => {
+  const report = buildSafetyReportPreview({
+    now: fixedNow,
+    verifierWired: true,
+  });
+  assert.ok(
+    !report.self_critique.gaps.some(
+      (g) => g.code === "sat.real_verifier_pending",
+    ),
+  );
+  assert.equal(report.self_critique.status, "open_gaps_visible");
+});
+
+test("buildSafetyReportPreview self_critique.status reflects gap count", () => {
+  const report = buildSafetyReportPreview({
+    now: fixedNow,
+    verifierWired: true,
+    evidenceBound: true,
+  });
+  assert.equal(report.self_critique.gaps.length, 1);
+  assert.equal(report.self_critique.status, "open_gaps_visible");
 });
