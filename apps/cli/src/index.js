@@ -1,16 +1,19 @@
 #!/usr/bin/env node
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
-import { formatStatus, shouldUseColor } from "../../../packages/core/src/status.js";
+import {
+  formatStatus,
+  shouldUseColor,
+} from "../../../packages/core/src/status.js";
 import { readOperatorPreferredName } from "../../../packages/core/src/operator-profile.js";
 import { buildNode0StatePreview } from "../../../packages/core/src/state.js";
 import {
   buildProfileFoundationPreview,
-  buildProfileFoundationSummary
+  buildProfileFoundationSummary,
 } from "../../../packages/core/src/profiles.js";
 import { buildConsentCardPreview } from "../../../packages/core/src/consent-card-preview.js";
 import {
   buildMissionLoopPreview,
-  buildMissionLoopSummary
+  buildMissionLoopSummary,
 } from "../../../packages/core/src/mission-loop-preview.js";
 import { buildEvidenceChainEventPreviewFromInputs } from "../../../packages/core/src/evidence-chain-event-preview.js";
 import { buildNodeRegistryPreview } from "../../../packages/core/src/node-registry-preview.js";
@@ -24,96 +27,97 @@ import {
 } from "../../../packages/core/src/master-craftsmanship-audit.js";
 import {
   buildCodebaseArchitectureMap,
-  formatCodebaseMapSummary
+  formatCodebaseMapSummary,
 } from "../../../packages/core/src/codebase-architecture-map.js";
 import {
   CODEBASE_MAP_SAVE_CONSENT,
   serializeCodebaseMapForSave,
-  saveCodebaseMap
+  saveCodebaseMap,
 } from "../../../packages/receipts/src/codebase-map-save.js";
 import { runVerificationPipeline } from "../../../packages/core/src/multi-agent-orchestrator.js";
 import {
   PIPELINE_RESULT_SAVE_CONSENT,
   serializePipelineResultForSave,
-  savePipelineResult
+  savePipelineResult,
 } from "../../../packages/receipts/src/pipeline-result-save.js";
 import {
   formatOnboardingLifecyclePreview,
   formatNodeRegistryPreview,
   formatSkillGrowthGovernorPreview,
   formatProjectStatusPreview,
-  resolveFormatterOptsFromEnv
+  resolveFormatterOptsFromEnv,
 } from "../../../packages/core/src/tui-formatter.js";
 import { buildLocalLLMRouterPreview } from "../../../packages/core/src/local-llm-router-preview.js";
 import {
   buildModelBrokerPreview,
-  routeForTask
+  routeForTask,
 } from "../../../packages/models/src/model-broker-preview.js";
 import {
   DEFAULT_SAMPLE_REGISTRY,
-  buildRegistryFromConfig
+  buildRegistryFromConfig,
 } from "../../../packages/models/src/model-registry-config-preview.js";
 import {
   ROUTE_RECEIPT_SAVE_CONSENT,
   serializeRouteReceiptForSave,
-  saveRouteReceipt
+  saveRouteReceipt,
 } from "../../../packages/receipts/src/route-receipt-save.js";
-import {
-  invokeRoutedLocalModel
-} from "../../../packages/core/src/routed-llm-invocation.js";
+import { invokeRoutedLocalModel } from "../../../packages/core/src/routed-llm-invocation.js";
 import {
   INVOCATION_RESULT_SAVE_CONSENT,
   serializeInvocationResultForSave,
-  saveInvocationResult
+  saveInvocationResult,
 } from "../../../packages/receipts/src/invocation-result-save.js";
 import {
   VERIFICATION_RESULT_SAVE_CONSENT,
   serializeVerificationResultForSave,
-  saveVerificationResult
+  saveVerificationResult,
 } from "../../../packages/receipts/src/verification-result-save.js";
 import {
   verifyRoutedInvocationEnvelope,
   readEnvelopeFromFile,
-  resolveLatestInvocationPath
+  resolveLatestInvocationPath,
 } from "../../../packages/core/src/routed-invocation-verifier.js";
 import {
   buildProcessMiningPreview,
-  buildProcessMiningSummary
+  buildProcessMiningSummary,
 } from "../../../packages/core/src/process-mining-preview.js";
 import {
   buildKeyMakerCompliancePreview,
-  buildKeyMakerComplianceSummary
+  buildKeyMakerComplianceSummary,
 } from "../../../packages/core/src/key-maker-compliance.js";
 import {
   buildLLMInvocationPreview,
   buildLLMInvocationSummary,
-  invokeLocalLLM
+  invokeLocalLLM,
 } from "../../../packages/core/src/llm-adapter.js";
 import {
   buildLocalModelInventoryScan,
-  buildLocalModelInventorySummary
+  buildLocalModelInventorySummary,
 } from "../../../packages/core/src/local-model-inventory-scan.js";
 import { previewBoundedDiagnostic } from "../../../packages/core/src/mission.js";
 import {
   buildMissionDraftPreview,
-  formatMissionDraftPreview
+  formatMissionDraftPreview,
 } from "../../../packages/mission/src/mission-draft.js";
 import {
   buildDiagnosticsMissionPlan,
-  formatDiagnosticsMissionPlan
+  formatDiagnosticsMissionPlan,
 } from "../../../packages/mission/src/diagnostics-plan.js";
 import { recordTodayTick } from "../../../packages/core/src/today.js";
-import { listReceipts, readReceipt } from "../../../packages/receipts/src/receipt-store.js";
+import {
+  listReceipts,
+  readReceipt,
+} from "../../../packages/receipts/src/receipt-store.js";
 import { runSetup } from "../../../packages/installer/src/setup.js";
 import { runSetupWizard } from "../../../packages/core/src/setup-wizard.js";
 import {
   readMemoryEntry,
-  summarizeMemory
+  summarizeMemory,
 } from "../../../packages/memory/src/memory-store.js";
 import {
   formatBanner,
   gatherBannerInputs,
-  probeGateway
+  probeGateway,
 } from "../../../packages/core/src/banner.js";
 import {
   buildAmbientAuditPreview,
@@ -121,101 +125,105 @@ import {
   buildAmbientManifestPreview,
   formatAmbientAuditPreview,
   formatAmbientBoundary,
-  formatAmbientManifestPreview
+  formatAmbientManifestPreview,
 } from "../../../packages/core/src/ambient.js";
 import {
   buildSovereignJourneyPreview,
-  formatSovereignJourneyPreview
+  formatSovereignJourneyPreview,
 } from "../../../packages/mission/src/journey.js";
 import {
   buildSafetyReportPreview,
-  formatSafetyReportPreview
+  formatSafetyReportPreview,
 } from "../../../packages/core/src/safety-report.js";
 import {
   buildNetworkBlueprint,
-  formatNetworkBlueprint
+  formatNetworkBlueprint,
 } from "../../../packages/core/src/network-blueprint.js";
 import {
   buildOfflineNetworkFixturePreview,
-  formatOfflineNetworkFixturePreview
+  formatOfflineNetworkFixturePreview,
 } from "../../../packages/core/src/network-fixture-preview.js";
 import {
   buildNetworkRefusalMatrixPreview,
-  formatNetworkRefusalMatrixPreview
+  formatNetworkRefusalMatrixPreview,
 } from "../../../packages/core/src/network-refusal-matrix-preview.js";
 import {
   buildAmanaContractsPreview,
-  formatAmanaContractsPreview
+  formatAmanaContractsPreview,
 } from "../../../packages/core/src/amana-contracts-preview.js";
 import {
   buildFirstRunPlan,
   formatFirstRunPlan,
-  summarizeFirstRunOutcome
+  summarizeFirstRunOutcome,
 } from "../../../packages/core/src/first-run.js";
 import {
   gatherDevRoadmapState,
-  formatDevRoadmapReport
+  formatDevRoadmapReport,
 } from "../../../packages/core/src/roadmap-dev.js";
 import {
   buildMcpIntegrationBlueprint,
-  formatMcpIntegrationBlueprint
+  formatMcpIntegrationBlueprint,
 } from "../../../packages/core/src/mcp-blueprint.js";
 import {
   buildOptimizationRoadmapPreview,
-  formatOptimizationRoadmapPreview
+  formatOptimizationRoadmapPreview,
 } from "../../../packages/core/src/optimization-roadmap.js";
 import {
   buildEvidenceReceiptPreview,
-  formatEvidenceReceiptPreview
+  formatEvidenceReceiptPreview,
 } from "../../../packages/verifier/src/evidence-receipt-preview.js";
 import {
   DEFAULT_IHSAN_FLOOR,
   evaluateIhsanFloorPreview,
-  formatIhsanFloorPreview
+  formatIhsanFloorPreview,
 } from "../../../packages/verifier/src/ihsan-floor-preview.js";
 import {
   emulateLoopDesign,
-  formatLoopDesignEmulation
+  formatLoopDesignEmulation,
 } from "../../../packages/core/src/loop-emulator.js";
 import {
   buildOnboardingGuide,
-  formatOnboardingGuide
+  formatOnboardingGuide,
 } from "../../../packages/core/src/onboarding.js";
 import {
   buildBehavioralModulationPreview,
-  formatBehavioralModulationPreview
+  formatBehavioralModulationPreview,
 } from "../../../packages/core/src/behavioral-modulation.js";
 import { runShell } from "../../../packages/core/src/shell.js";
 import { TASK_REGISTRY } from "../../../packages/tasks/src/downloads-audit-preview.js";
 import {
   formatVerdict,
-  verifyReceipt
+  verifyReceipt,
 } from "../../../packages/verifier/src/sat-placeholder.js";
 import {
   buildConsentPlanPreview,
-  formatConsentPlanPreview
+  formatConsentPlanPreview,
 } from "../../../packages/consent/src/consent-planner.js";
 import {
   collectModelInventory,
-  formatModelInventory
+  formatModelInventory,
 } from "../../../packages/models/src/model-inventory.js";
 import {
   highestLevel,
   levelLabel,
-  requestApproval
+  requestApproval,
 } from "../../../packages/core/src/approval-gate.js";
 import { suggestCommands } from "../../../packages/core/src/command-suggester.js";
 import {
   buildExplainPreview,
   formatExplainPreview,
-  getPerspective
+  getPerspective,
 } from "../../../packages/core/src/canon-glossary.js";
 import {
   shouldShowIntro,
   renderIntroLine,
-  recordIntroSeen
+  recordIntroSeen,
 } from "../../../packages/core/src/intro-line.js";
-import { readBannerKey, KEY_BINDINGS, runBannerKeyLoop } from "../../../packages/core/src/banner-keys.js";
+import {
+  readBannerKey,
+  KEY_BINDINGS,
+  runBannerKeyLoop,
+} from "../../../packages/core/src/banner-keys.js";
 import { humanizeNextAction } from "../../../packages/core/src/next-action-humanizer.js";
 import {
   renderHelpRoot,
@@ -224,19 +232,22 @@ import {
   renderHelpFlat,
   renderHelpUnknown,
 } from "../../../packages/core/src/help-topics.js";
-import { wantsJson, humanHintLine } from "../../../packages/core/src/output-mode.js";
+import {
+  wantsJson,
+  humanHintLine,
+} from "../../../packages/core/src/output-mode.js";
 import {
   evaluatePredicates,
-  formatDoctorDashboard
+  formatDoctorDashboard,
 } from "../../../packages/core/src/doctor-dashboard.js";
 import { createSpinner } from "../../../packages/core/src/spinner.js";
 import {
   getRubricPack,
-  formatRubricPackReport
+  formatRubricPackReport,
 } from "../../../packages/core/src/eval-layer2-rubrics.js";
 import {
   validatePastedJudgeVerdict,
-  formatVerdictReport
+  formatVerdictReport,
 } from "../../../packages/core/src/eval-layer2-verdict-validator.js";
 
 const adapter = createNode0Adapter();
@@ -422,34 +433,75 @@ const REGISTERED_COMMANDS_LIST = [
   { command: "mission-loop", description: "full mission lifecycle preview" },
   { command: "evidence-event", description: "evidence chain event preview" },
   { command: "node-registry", description: "node ordinal registry preview" },
-  { command: "onboarding-lifecycle", description: "onboarding lifecycle preview" },
-  { command: "skill-growth-governor", description: "skill growth governor preview" },
+  {
+    command: "onboarding-lifecycle",
+    description: "onboarding lifecycle preview",
+  },
+  {
+    command: "skill-growth-governor",
+    description: "skill growth governor preview",
+  },
   { command: "project-status", description: "project status preview" },
-  { command: "craftsmanship-witness", description: "master-craftsmanship creation preview" },
-  { command: "master-craftsmanship", description: "audit an artifact against the 10 master-craftsmanship invariants" },
-  { command: "codebase", description: "read-only architecture map of any target repo (subcommand: map <abs-path>)" },
-  { command: "orchestrator", description: "run the SAT-1..5 verification pipeline on a saved invocation envelope (subcommand: verify)" },
+  {
+    command: "craftsmanship-witness",
+    description: "master-craftsmanship creation preview",
+  },
+  {
+    command: "master-craftsmanship",
+    description:
+      "audit an artifact against the 10 master-craftsmanship invariants",
+  },
+  {
+    command: "codebase",
+    description:
+      "read-only architecture map of any target repo (subcommand: map <abs-path>)",
+  },
+  {
+    command: "orchestrator",
+    description:
+      "run the SAT-1..5 verification pipeline on a saved invocation envelope (subcommand: verify)",
+  },
   { command: "llm-router", description: "local LLM router preview" },
   { command: "process-mining", description: "operator-pattern mirror" },
-  { command: "key-maker-check", description: "self-audit reasoning against Key Maker invariants" },
-  { command: "llm-invoke", description: "local LLM adapter (preview or live call)" },
+  {
+    command: "key-maker-check",
+    description: "self-audit reasoning against Key Maker invariants",
+  },
+  {
+    command: "llm-invoke",
+    description: "local LLM adapter (preview or live call)",
+  },
   { command: "today", description: "record a local continuity tick" },
   { command: "doctor", description: "validate readiness and consent gate" },
   { command: "dashboard", description: "open homebase dashboard in browser" },
-  { command: "ambient", description: "show Ambient Sovereign Execution boundary" },
+  {
+    command: "ambient",
+    description: "show Ambient Sovereign Execution boundary",
+  },
   { command: "ambient:json", description: "ambient boundary as JSON" },
   { command: "diagnostics", description: "preview self-diagnostics harness" },
   { command: "consent", description: "preview a micro-consent scope" },
   { command: "mission", description: "preview mission draft or propose" },
   { command: "receipts", description: "list or show local receipts" },
-  { command: "memory", description: "list/show local memory entries · query BIZRA Omega AgentDB (MC-A)" },
+  {
+    command: "memory",
+    description:
+      "list/show local memory entries · query BIZRA Omega AgentDB (MC-A)",
+  },
   { command: "models", description: "show local model inventory" },
   { command: "report", description: "preview safety report" },
-  { command: "network", description: "preview network blueprint or refusal matrix" },
+  {
+    command: "network",
+    description: "preview network blueprint or refusal matrix",
+  },
   { command: "amana", description: "preview Amana contract primitives" },
   { command: "mcp", description: "preview MCP integration contract" },
   { command: "roadmap", description: "preview optimization roadmap" },
-  { command: "eval", description: "Layer 2 LLM-as-judge surfaces (subcommands: layer2 prompts | layer2 verify <abs-path>)" },
+  {
+    command: "eval",
+    description:
+      "Layer 2 LLM-as-judge surfaces (subcommands: layer2 prompts | layer2 verify <abs-path>)",
+  },
   { command: "evidence", description: "preview evidence receipt" },
   { command: "ihsan", description: "preview Ihsan floor check" },
   { command: "behavior", description: "preview behavioral modulation" },
@@ -460,9 +512,15 @@ const REGISTERED_COMMANDS_LIST = [
   { command: "language", description: "set or show preferred language" },
   { command: "welcome", description: "show first-run orientation" },
   { command: "onboard", description: "guided onboarding path" },
-  { command: "explain", description: "plain-language definition of a BIZRA/Dema concept (28 known)" },
-  { command: "setup", description: "create local Dema folders/profile skeleton" },
-  { command: "help", description: "show full command list" }
+  {
+    command: "explain",
+    description: "plain-language definition of a BIZRA/Dema concept (28 known)",
+  },
+  {
+    command: "setup",
+    description: "create local Dema folders/profile skeleton",
+  },
+  { command: "help", description: "show full command list" },
 ];
 
 async function readPackageVersion() {
@@ -503,8 +561,8 @@ async function dispatch(argv) {
         JSON.stringify(
           { schema: "bizra.dema.cli_version.v0.1", name: "dema", version },
           null,
-          2
-        )
+          2,
+        ),
       );
     } else {
       console.log(`dema ${version}`);
@@ -552,10 +610,11 @@ async function dispatch(argv) {
       return;
     }
     // TTY path · render ANSI frame via existing zero-dep formatter.
-    const [{ formatHomebasePreview }, { resolveFormatterOptsFromEnv }] = await Promise.all([
-      import("../../../packages/core/src/tui-formatter.js"),
-      import("../../../packages/core/src/tui-formatter.js"),
-    ]);
+    const [{ formatHomebasePreview }, { resolveFormatterOptsFromEnv }] =
+      await Promise.all([
+        import("../../../packages/core/src/tui-formatter.js"),
+        import("../../../packages/core/src/tui-formatter.js"),
+      ]);
     const opts = resolveFormatterOptsFromEnv(process.env);
     process.stdout.write(formatHomebasePreview(preview, opts) + "\n");
 
@@ -574,7 +633,7 @@ async function dispatch(argv) {
       await runBannerKeyLoop({
         readKey: readBannerKey,
         dispatchFn: dispatch,
-        readKeyOpts: { stdin: process.stdin, stdout: process.stdout }
+        readKeyOpts: { stdin: process.stdin, stdout: process.stdout },
       });
     }
     return;
@@ -609,12 +668,16 @@ async function dispatch(argv) {
 
       // Step 1: welcome
       headerStream.write("==> 1. Welcome\n");
-      headerStream.write(formatOnboardingGuide(buildOnboardingGuide()) + "\n\n");
+      headerStream.write(
+        formatOnboardingGuide(buildOnboardingGuide()) + "\n\n",
+      );
 
       // Step 2: setup (skipped under --dry-run)
       headerStream.write("==> 2. Setup\n");
       if (dryRun) {
-        headerStream.write("[dry-run] would call runSetup() · would create ~/.dema/ if missing\n\n");
+        headerStream.write(
+          "[dry-run] would call runSetup() · would create ~/.dema/ if missing\n\n",
+        );
       } else {
         const result = await runSetup();
         headerStream.write(JSON.stringify(result, null, 2) + "\n\n");
@@ -633,17 +696,23 @@ async function dispatch(argv) {
         Boolean(process.env.NO_COLOR) ||
         process.env.TERM === "dumb" ||
         argv.includes("--no-color");
-      headerStream.write(formatDoctorDashboard(predicates, { color: !noColor }) + "\n\n");
+      headerStream.write(
+        formatDoctorDashboard(predicates, { color: !noColor }) + "\n\n",
+      );
 
       // Step 5: next safe action
       headerStream.write("==> 5. Next safe action\n");
-      const outcome = summarizeFirstRunOutcome({ status, predicates, dry_run: dryRun });
+      const outcome = summarizeFirstRunOutcome({
+        status,
+        predicates,
+        dry_run: dryRun,
+      });
       headerStream.write(outcome.suggested_next + "\n");
 
       if (wantJson) {
         // stdout payload (machine-parseable) — separate from human header.
         console.log(
-          JSON.stringify({ plan, outcome, predicates, status }, null, 2)
+          JSON.stringify({ plan, outcome, predicates, status }, null, 2),
         );
       }
 
@@ -661,8 +730,10 @@ async function dispatch(argv) {
       if (argv.includes("--preview-card")) {
         const { join: pcJoin } = await import("node:path");
         const { homedir: pcHd } = await import("node:os");
-        const { buildGenesisPreviewCard } = await import("../../../packages/core/src/genesis-preview-card.js");
-        const { writeGenesisPreviewCard, readOperatorLanguage } = await import("../../../packages/core/src/operator-profile.js");
+        const { buildGenesisPreviewCard } =
+          await import("../../../packages/core/src/genesis-preview-card.js");
+        const { writeGenesisPreviewCard, readOperatorLanguage } =
+          await import("../../../packages/core/src/operator-profile.js");
         const pcHome = process.env.DEMA_HOME || pcJoin(pcHd(), ".dema");
         const langResult = await readOperatorLanguage(pcHome);
         const timestamp = new Date().toISOString();
@@ -681,10 +752,16 @@ async function dispatch(argv) {
           console.log(`  schema:             ${card.schema}`);
           console.log(`  mode:               ${card.mode}`);
           console.log(`  truth_label:        ${card.truth_label}`);
-          console.log(`  receipt_id_preview: ${card.would_mint_if_consented.receipt_id_preview}`);
-          console.log(`  consent_phrase:     ${card.would_mint_if_consented.consent_phrase_required}`);
+          console.log(
+            `  receipt_id_preview: ${card.would_mint_if_consented.receipt_id_preview}`,
+          );
+          console.log(
+            `  consent_phrase:     ${card.would_mint_if_consented.consent_phrase_required}`,
+          );
           console.log(`  stored_at:          ${card.card_storage.path}`);
-          console.log(`\nNo mint has occurred. Type the consent phrase to mint (separate typed-GO required).`);
+          console.log(
+            `\nNo mint has occurred. Type the consent phrase to mint (separate typed-GO required).`,
+          );
         }
         return;
       }
@@ -692,7 +769,7 @@ async function dispatch(argv) {
       console.log(
         argv.includes("--json")
           ? JSON.stringify(guide, null, 2)
-          : formatOnboardingGuide(guide)
+          : formatOnboardingGuide(guide),
       );
       return;
     }
@@ -700,7 +777,8 @@ async function dispatch(argv) {
     case "preview-card": {
       const { join: pcJoin2 } = await import("node:path");
       const { homedir: pcHd2 } = await import("node:os");
-      const { readGenesisPreviewCards } = await import("../../../packages/core/src/operator-profile.js");
+      const { readGenesisPreviewCards } =
+        await import("../../../packages/core/src/operator-profile.js");
       const pcHome2 = process.env.DEMA_HOME || pcJoin2(pcHd2(), ".dema");
 
       if (!subcommand || subcommand === "show") {
@@ -711,13 +789,17 @@ async function dispatch(argv) {
 
         if (hashArg) {
           const match = cards.find(
-            (c) => c?.would_mint_if_consented?.receipt_id_preview === hashArg
+            (c) => c?.would_mint_if_consented?.receipt_id_preview === hashArg,
           );
           if (!match) {
             console.log(`preview-card: card not found for hash ${hashArg}`);
             return;
           }
-          console.log(wantJson2 ? JSON.stringify(match, null, 2) : `receipt_id_preview: ${match.would_mint_if_consented.receipt_id_preview}`);
+          console.log(
+            wantJson2
+              ? JSON.stringify(match, null, 2)
+              : `receipt_id_preview: ${match.would_mint_if_consented.receipt_id_preview}`,
+          );
           return;
         }
 
@@ -731,7 +813,9 @@ async function dispatch(argv) {
           return;
         }
         for (const c of cards) {
-          console.log(`  ${c?.would_mint_if_consented?.receipt_id_preview ?? "unknown"}`);
+          console.log(
+            `  ${c?.would_mint_if_consented?.receipt_id_preview ?? "unknown"}`,
+          );
         }
         return;
       }
@@ -741,39 +825,56 @@ async function dispatch(argv) {
     case "language": {
       const { join: pathJoin } = await import("node:path");
       const { homedir: hd } = await import("node:os");
-      const { readOperatorLanguage } = await import("../../../packages/core/src/operator-profile.js");
-      const { resolveOperatorLanguage, LANGUAGE_OPTIONS } = await import("../../../packages/core/src/homebase-language-picker.js");
+      const { readOperatorLanguage } =
+        await import("../../../packages/core/src/operator-profile.js");
+      const { resolveOperatorLanguage, LANGUAGE_OPTIONS } =
+        await import("../../../packages/core/src/homebase-language-picker.js");
       const langHome = process.env.DEMA_HOME || pathJoin(hd(), ".dema");
 
       // dema language show [--json]
       if (subcommand === "show") {
         const result = await readOperatorLanguage(langHome);
         if (argv.includes("--json")) {
-          console.log(JSON.stringify({
-            schema: "bizra.dema.language_state.v0.1",
-            language_code: result.language_code,
-            secondary_language_code: result.secondary_language_code,
-            source: result.source,
-          }, null, 2));
+          console.log(
+            JSON.stringify(
+              {
+                schema: "bizra.dema.language_state.v0.1",
+                language_code: result.language_code,
+                secondary_language_code: result.secondary_language_code,
+                source: result.source,
+              },
+              null,
+              2,
+            ),
+          );
           return;
         }
         if (result.source === "absent" || result.language_code === null) {
-          console.log("Language: not set yet. Run `dema language` to set your preferred language.");
+          console.log(
+            "Language: not set yet. Run `dema language` to set your preferred language.",
+          );
         } else {
-          const opt = LANGUAGE_OPTIONS.find((o) => o.code === result.language_code);
+          const opt = LANGUAGE_OPTIONS.find(
+            (o) => o.code === result.language_code,
+          );
           const label = opt ? opt.label : result.language_code;
           console.log(`Language: ${label} (${result.language_code})`);
           if (result.secondary_language_code) {
-            const opt2 = LANGUAGE_OPTIONS.find((o) => o.code === result.secondary_language_code);
+            const opt2 = LANGUAGE_OPTIONS.find(
+              (o) => o.code === result.secondary_language_code,
+            );
             const label2 = opt2 ? opt2.label : result.secondary_language_code;
-            console.log(`Secondary: ${label2} (${result.secondary_language_code})`);
+            console.log(
+              `Secondary: ${label2} (${result.secondary_language_code})`,
+            );
           }
         }
         return;
       }
 
       // dema language [--reset] — interactive picker
-      const resetLanguage = argv.includes("--reset") || subcommand === "--reset";
+      const resetLanguage =
+        argv.includes("--reset") || subcommand === "--reset";
       const picked = await resolveOperatorLanguage({
         home: langHome,
         stdin: process.stdin,
@@ -789,7 +890,13 @@ async function dispatch(argv) {
 
     case "explain": {
       // Parse perspective flags — these are mutually exclusive; last one wins.
-      const PERSP_FLAGS = ["--simple", "--technical", "--arabic", "--game", "--all"];
+      const PERSP_FLAGS = [
+        "--simple",
+        "--technical",
+        "--arabic",
+        "--game",
+        "--all",
+      ];
       let perspFlag = null;
       for (const f of PERSP_FLAGS) {
         if (argv.includes(f)) perspFlag = f;
@@ -806,9 +913,13 @@ async function dispatch(argv) {
         if (wantJson) {
           // Add perspectives map (simple only) for JSON output.
           const persp = concept
-            ? { simple: getPerspective(concept, "simple") ?? preview.short ?? null }
+            ? {
+                simple:
+                  getPerspective(concept, "simple") ?? preview.short ?? null,
+              }
             : undefined;
-          const out = persp !== undefined ? { ...preview, perspectives: persp } : preview;
+          const out =
+            persp !== undefined ? { ...preview, perspectives: persp } : preview;
           console.log(JSON.stringify(out, null, 2));
           return;
         }
@@ -817,7 +928,10 @@ async function dispatch(argv) {
           const { join: pj } = await import("node:path");
           const { homedir: hd } = await import("node:os");
           const explainHome = process.env.DEMA_HOME || pj(hd(), ".dema");
-          await recordIntroSeen({ home: explainHome, suppressedBy: "user-explain" });
+          await recordIntroSeen({
+            home: explainHome,
+            suppressedBy: "user-explain",
+          });
         }
         return;
       }
@@ -840,7 +954,9 @@ async function dispatch(argv) {
             const t = getPerspective(concept, p);
             if (t !== null) perspMap[p] = t;
           }
-          console.log(JSON.stringify({ ...preview, perspectives: perspMap }, null, 2));
+          console.log(
+            JSON.stringify({ ...preview, perspectives: perspMap }, null, 2),
+          );
           return;
         }
         const lines = [preview.title, ""];
@@ -850,7 +966,9 @@ async function dispatch(argv) {
           if (text !== null) {
             lines.push("  " + text);
           } else {
-            lines.push(`  ⚠ The ${p} perspective for this concept is not yet authored.`);
+            lines.push(
+              `  ⚠ The ${p} perspective for this concept is not yet authored.`,
+            );
           }
           lines.push("");
         }
@@ -869,33 +987,43 @@ async function dispatch(argv) {
 
       if (wantJson) {
         const perspMap = text !== null ? { [perspName]: text } : {};
-        console.log(JSON.stringify({ ...preview, perspectives: perspMap }, null, 2));
+        console.log(
+          JSON.stringify({ ...preview, perspectives: perspMap }, null, 2),
+        );
         return;
       }
 
       if (text === null) {
-        const available = PERSPECTIVES_ORDER.filter((p) => getPerspective(concept, p) !== null);
-        console.log([
-          preview.title,
-          "  " + (getPerspective(concept, "simple") ?? preview.short),
-          "",
-          `  ⚠ The ${perspName} perspective for this concept is not yet authored.`,
-          `  Available perspectives: ${available.join(", ") || "simple"}`,
-          `  Type \`dema explain ${concept}\` for the simple form, or`,
-          `       \`dema explain --all ${concept}\` for all available perspectives.`
-        ].join("\n"));
+        const available = PERSPECTIVES_ORDER.filter(
+          (p) => getPerspective(concept, p) !== null,
+        );
+        console.log(
+          [
+            preview.title,
+            "  " + (getPerspective(concept, "simple") ?? preview.short),
+            "",
+            `  ⚠ The ${perspName} perspective for this concept is not yet authored.`,
+            `  Available perspectives: ${available.join(", ") || "simple"}`,
+            `  Type \`dema explain ${concept}\` for the simple form, or`,
+            `       \`dema explain --all ${concept}\` for all available perspectives.`,
+          ].join("\n"),
+        );
         return;
       }
 
-      console.log([
-        preview.title,
-        "  " + text,
-        "",
-        `  Truth label: ${preview.truth_label}`,
-        preview.see_also && preview.see_also.length > 0
-          ? "  See also: " + preview.see_also.join(", ")
-          : null
-      ].filter(Boolean).join("\n"));
+      console.log(
+        [
+          preview.title,
+          "  " + text,
+          "",
+          `  Truth label: ${preview.truth_label}`,
+          preview.see_also && preview.see_also.length > 0
+            ? "  See also: " + preview.see_also.join(", ")
+            : null,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      );
       return;
     }
 
@@ -929,16 +1057,18 @@ async function dispatch(argv) {
         console.log(JSON.stringify(statePreview, null, 2));
         return;
       }
-      console.log([
-        "Dema state",
-        `  Node: ${statePreview.node} · Operator: ${statePreview.operator}`,
-        `  Mission-centered: ${statePreview.mission_centered}`,
-        `  Runtime autonomous daemon: ${statePreview.runtime.autonomous_daemon}`,
-        `  Federation: ${statePreview.runtime.federation}`,
-        `  Minting: ${statePreview.runtime.minting}`,
-        `  Next safe action: ${humanizeNextAction(statePreview.next_safe_action)}`,
-        humanHintLine("state")
-      ].join("\n"));
+      console.log(
+        [
+          "Dema state",
+          `  Node: ${statePreview.node} · Operator: ${statePreview.operator}`,
+          `  Mission-centered: ${statePreview.mission_centered}`,
+          `  Runtime autonomous daemon: ${statePreview.runtime.autonomous_daemon}`,
+          `  Federation: ${statePreview.runtime.federation}`,
+          `  Minting: ${statePreview.runtime.minting}`,
+          `  Next safe action: ${humanizeNextAction(statePreview.next_safe_action)}`,
+          humanHintLine("state"),
+        ].join("\n"),
+      );
       return;
     }
 
@@ -953,26 +1083,30 @@ async function dispatch(argv) {
       }
       if (wantsSummary) {
         const actors = profilePreview.actors;
-        console.log([
-          "Dema profiles (summary)",
-          `  User: ${actors.user}`,
-          `  PAT:  ${actors.pat}`,
-          `  SAT:  ${actors.sat}`,
-          `  Mission: ${actors.mission}`,
-          `  Context capsule: ${profilePreview.context_capsule_schema}`,
-          humanHintLine("profiles")
-        ].join("\n"));
+        console.log(
+          [
+            "Dema profiles (summary)",
+            `  User: ${actors.user}`,
+            `  PAT:  ${actors.pat}`,
+            `  SAT:  ${actors.sat}`,
+            `  Mission: ${actors.mission}`,
+            `  Context capsule: ${profilePreview.context_capsule_schema}`,
+            humanHintLine("profiles"),
+          ].join("\n"),
+        );
       } else {
         const p = profilePreview;
-        console.log([
-          "Dema profiles",
-          `  User: ${p.user.schema} · operator: ${p.user.identity.name}`,
-          `  PAT:  ${p.pat.schema} · owner: ${p.pat.owner}`,
-          `  SAT:  ${p.sat.schema} · owner: ${p.sat.owner}`,
-          `  Mission: ${p.mission.schema} · status: ${p.mission.status}`,
-          `  Context capsule: ${p.context_capsule.schema}`,
-          humanHintLine("profiles")
-        ].join("\n"));
+        console.log(
+          [
+            "Dema profiles",
+            `  User: ${p.user.schema} · operator: ${p.user.identity.name}`,
+            `  PAT:  ${p.pat.schema} · owner: ${p.pat.owner}`,
+            `  SAT:  ${p.sat.schema} · owner: ${p.sat.owner}`,
+            `  Mission: ${p.mission.schema} · status: ${p.mission.status}`,
+            `  Context capsule: ${p.context_capsule.schema}`,
+            humanHintLine("profiles"),
+          ].join("\n"),
+        );
       }
       return;
     }
@@ -991,14 +1125,18 @@ async function dispatch(argv) {
     }
 
     case "evidence-event": {
-      console.log(JSON.stringify(buildEvidenceChainEventPreviewFromInputs(), null, 2));
+      console.log(
+        JSON.stringify(buildEvidenceChainEventPreviewFromInputs(), null, 2),
+      );
       return;
     }
 
     case "node-registry": {
       const preview = buildNodeRegistryPreview();
       if (argv.includes("--pretty")) {
-        console.log(formatNodeRegistryPreview(preview, resolveFormatterOptsFromEnv()));
+        console.log(
+          formatNodeRegistryPreview(preview, resolveFormatterOptsFromEnv()),
+        );
         return;
       }
       console.log(JSON.stringify(preview, null, 2));
@@ -1013,7 +1151,12 @@ async function dispatch(argv) {
       }
       // Default: pretty TUI on TTY, JSON when redirected
       if (process.stdout.isTTY) {
-        console.log(formatOnboardingLifecyclePreview(preview, resolveFormatterOptsFromEnv()));
+        console.log(
+          formatOnboardingLifecyclePreview(
+            preview,
+            resolveFormatterOptsFromEnv(),
+          ),
+        );
       } else {
         console.log(JSON.stringify(preview, null, 2));
       }
@@ -1027,7 +1170,12 @@ async function dispatch(argv) {
         return;
       }
       if (process.stdout.isTTY) {
-        console.log(formatSkillGrowthGovernorPreview(preview, resolveFormatterOptsFromEnv()));
+        console.log(
+          formatSkillGrowthGovernorPreview(
+            preview,
+            resolveFormatterOptsFromEnv(),
+          ),
+        );
       } else {
         console.log(JSON.stringify(preview, null, 2));
       }
@@ -1041,7 +1189,9 @@ async function dispatch(argv) {
         return;
       }
       if (process.stdout.isTTY) {
-        console.log(formatProjectStatusPreview(preview, resolveFormatterOptsFromEnv()));
+        console.log(
+          formatProjectStatusPreview(preview, resolveFormatterOptsFromEnv()),
+        );
       } else {
         console.log(JSON.stringify(preview, null, 2));
       }
@@ -1068,7 +1218,7 @@ async function dispatch(argv) {
       if (mcSubcommand !== "audit") {
         console.log(
           "Usage: dema master-craftsmanship audit [--json] [<path>]\n" +
-          "  Default path: tests/node-onboarding-adr011-compliance.test.js"
+            "  Default path: tests/node-onboarding-adr011-compliance.test.js",
         );
         process.exitCode = 1;
         return;
@@ -1080,7 +1230,7 @@ async function dispatch(argv) {
       const { dirname: mcDirname, join: mcJoin } = await import("node:path");
       const projectRoot = mcJoin(
         mcDirname(mcFURL(import.meta.url)),
-        "../../.."
+        "../../..",
       );
       const result = await auditArtifact({
         artifactPath: mcPathArg,
@@ -1101,7 +1251,7 @@ async function dispatch(argv) {
       const cbSubcommand = argv[1];
       if (cbSubcommand !== "map") {
         process.stderr.write(
-          "Usage: dema codebase map <abs-path> [--summary] [--json] [--max-files N] [--max-depth N] [--max-file-size N] [--include-tests] [--hotspots] [--exclude PAT] [--no-default-exclude]\n"
+          "Usage: dema codebase map <abs-path> [--summary] [--json] [--max-files N] [--max-depth N] [--max-file-size N] [--include-tests] [--hotspots] [--exclude PAT] [--no-default-exclude]\n",
         );
         process.exitCode = 1;
         return;
@@ -1114,7 +1264,9 @@ async function dispatch(argv) {
         return;
       }
       if (!cbIsAbsolute(cbPath)) {
-        process.stderr.write(`dema codebase map: <abs-path> must be absolute (got: ${cbPath})\n`);
+        process.stderr.write(
+          `dema codebase map: <abs-path> must be absolute (got: ${cbPath})\n`,
+        );
         process.exitCode = 1;
         return;
       }
@@ -1131,7 +1283,7 @@ async function dispatch(argv) {
       // --invoke" early-validation pattern.
       if (cbSaveMap && cbSummary && !cbJsonForce) {
         process.stderr.write(
-          "dema codebase map: --save-map requires JSON output; cannot combine with --summary unless --json is also provided\n"
+          "dema codebase map: --save-map requires JSON output; cannot combine with --summary unless --json is also provided\n",
         );
         process.exitCode = 1;
         return;
@@ -1155,7 +1307,7 @@ async function dispatch(argv) {
         includeTests: cbIncludeTests,
         hotspots: cbHotspots,
         extraExclusions: cbExtraExclusions,
-        useDefaultExclusions: !cbNoDefaultExclude
+        useDefaultExclusions: !cbNoDefaultExclude,
       });
       // Single serializer shared by save + stdout (byte-for-byte invariant).
       // pretty=false matches the v0.1 CLI behavior; --pretty is not exposed
@@ -1168,24 +1320,24 @@ async function dispatch(argv) {
         const cbSaveResult = await saveCodebaseMap(envelope, {
           demaHome: process.env.DEMA_HOME,
           consent: cbSaveConsent,
-          pretty: false
+          pretty: false,
         });
         if (!cbSaveResult.saved) {
           if (cbSaveResult.reason === "consent_missing") {
             process.stderr.write(
-              `dema codebase map: --save-map requires --save-map-consent "${CODEBASE_MAP_SAVE_CONSENT}"\n`
+              `dema codebase map: --save-map requires --save-map-consent "${CODEBASE_MAP_SAVE_CONSENT}"\n`,
             );
           } else if (cbSaveResult.reason === "consent_mismatch") {
             process.stderr.write(
-              `dema codebase map: --save-map consent phrase mismatch; required: "${CODEBASE_MAP_SAVE_CONSENT}"\n`
+              `dema codebase map: --save-map consent phrase mismatch; required: "${CODEBASE_MAP_SAVE_CONSENT}"\n`,
             );
           } else if (cbSaveResult.reason === "oversized_serialized_envelope") {
             process.stderr.write(
-              `dema codebase map: --save-map failed (serialized envelope ${cbSaveResult.serialized_bytes} bytes exceeds ${cbSaveResult.max_saved_bytes} byte cap)\n`
+              `dema codebase map: --save-map failed (serialized envelope ${cbSaveResult.serialized_bytes} bytes exceeds ${cbSaveResult.max_saved_bytes} byte cap)\n`,
             );
           } else {
             process.stderr.write(
-              `dema codebase map: --save-map failed (${cbSaveResult.reason}): ${cbSaveResult.error_message ?? "unknown"}\n`
+              `dema codebase map: --save-map failed (${cbSaveResult.reason}): ${cbSaveResult.error_message ?? "unknown"}\n`,
             );
           }
           process.exitCode = 1;
@@ -1195,7 +1347,7 @@ async function dispatch(argv) {
       }
       if (envelope.error_reason) {
         process.stderr.write(
-          `dema codebase map: ${envelope.error_reason}${envelope.error_message ? ": " + envelope.error_message : ""}\n`
+          `dema codebase map: ${envelope.error_reason}${envelope.error_message ? ": " + envelope.error_message : ""}\n`,
         );
         process.stdout.write(cbOut);
         process.exitCode = 1;
@@ -1218,7 +1370,7 @@ async function dispatch(argv) {
       const orcSub = argv[1];
       if (orcSub !== "verify") {
         process.stderr.write(
-          "Usage: dema orchestrator verify [--invocation-file <abs-path> | --latest] [--pretty] [--save-pipeline-result --save-pipeline-consent \"GO: save local orchestrator pipeline result\"]\n"
+          'Usage: dema orchestrator verify [--invocation-file <abs-path> | --latest] [--pretty] [--save-pipeline-result --save-pipeline-consent "GO: save local orchestrator pipeline result"]\n',
         );
         process.exitCode = 1;
         return;
@@ -1231,14 +1383,14 @@ async function dispatch(argv) {
 
       if (orcFile && orcLatest) {
         process.stderr.write(
-          "dema orchestrator verify: --invocation-file and --latest are mutually exclusive\n"
+          "dema orchestrator verify: --invocation-file and --latest are mutually exclusive\n",
         );
         process.exitCode = 1;
         return;
       }
       if (!orcFile && !orcLatest) {
         process.stderr.write(
-          "dema orchestrator verify: one of --invocation-file <abs-path> or --latest is required\n"
+          "dema orchestrator verify: one of --invocation-file <abs-path> or --latest is required\n",
         );
         process.exitCode = 1;
         return;
@@ -1248,17 +1400,19 @@ async function dispatch(argv) {
       if (orcFile) {
         if (!orcIsAbsolute(orcFile)) {
           process.stderr.write(
-            `dema orchestrator verify: --invocation-file path must be absolute (got: ${orcFile})\n`
+            `dema orchestrator verify: --invocation-file path must be absolute (got: ${orcFile})\n`,
           );
           process.exitCode = 1;
           return;
         }
         orcTargetPath = orcFile;
       } else {
-        const latest = await resolveLatestInvocationPath({ demaHome: process.env.DEMA_HOME });
+        const latest = await resolveLatestInvocationPath({
+          demaHome: process.env.DEMA_HOME,
+        });
         if (!latest) {
           process.stderr.write(
-            "dema orchestrator verify: no invocation-*.json files found in $DEMA_HOME/receipts/\n"
+            "dema orchestrator verify: no invocation-*.json files found in $DEMA_HOME/receipts/\n",
           );
           process.exitCode = 1;
           return;
@@ -1272,53 +1426,58 @@ async function dispatch(argv) {
       } catch (err) {
         if (err?.code === "ENOENT") {
           process.stderr.write(
-            `dema orchestrator verify: envelope file not found: ${orcTargetPath}\n`
+            `dema orchestrator verify: envelope file not found: ${orcTargetPath}\n`,
           );
         } else if (err instanceof SyntaxError) {
           process.stderr.write(
-            `dema orchestrator verify: malformed envelope JSON at ${orcTargetPath}: ${err.message}\n`
+            `dema orchestrator verify: malformed envelope JSON at ${orcTargetPath}: ${err.message}\n`,
           );
         } else {
           process.stderr.write(
-            `dema orchestrator verify: envelope read failed at ${orcTargetPath}: ${err?.message ?? err}\n`
+            `dema orchestrator verify: envelope read failed at ${orcTargetPath}: ${err?.message ?? err}\n`,
           );
         }
         process.exitCode = 1;
         return;
       }
 
-      const pipeline = runVerificationPipeline({ artifact: orcReadResult.envelope });
+      const pipeline = runVerificationPipeline({
+        artifact: orcReadResult.envelope,
+      });
       // Attach source linkage (Q8: preserve source artifact hash) without
       // mutating the frozen pipeline object — wrap via a fresh frozen shape.
       const pipelineWithSource = Object.freeze({
         ...pipeline,
         source: Object.freeze({
           path: orcTargetPath,
-          source_invocation_result_hash: orcReadResult.sourceHash
-        })
+          source_invocation_result_hash: orcReadResult.sourceHash,
+        }),
       });
 
-      const pipelineOut = serializePipelineResultForSave(pipelineWithSource, { pretty: orcPretty });
+      const pipelineOut = serializePipelineResultForSave(pipelineWithSource, {
+        pretty: orcPretty,
+      });
 
       if (orcSave) {
-        const orcSaveConsent = argValue(argv, "--save-pipeline-consent") ?? null;
+        const orcSaveConsent =
+          argValue(argv, "--save-pipeline-consent") ?? null;
         const saveResult = await savePipelineResult(pipelineWithSource, {
           demaHome: process.env.DEMA_HOME,
           consent: orcSaveConsent,
-          pretty: orcPretty
+          pretty: orcPretty,
         });
         if (!saveResult.saved) {
           if (saveResult.reason === "consent_missing") {
             process.stderr.write(
-              `dema orchestrator verify: --save-pipeline-result requires --save-pipeline-consent "${PIPELINE_RESULT_SAVE_CONSENT}"\n`
+              `dema orchestrator verify: --save-pipeline-result requires --save-pipeline-consent "${PIPELINE_RESULT_SAVE_CONSENT}"\n`,
             );
           } else if (saveResult.reason === "consent_mismatch") {
             process.stderr.write(
-              `dema orchestrator verify: --save-pipeline-result consent phrase mismatch; required: "${PIPELINE_RESULT_SAVE_CONSENT}"\n`
+              `dema orchestrator verify: --save-pipeline-result consent phrase mismatch; required: "${PIPELINE_RESULT_SAVE_CONSENT}"\n`,
             );
           } else {
             process.stderr.write(
-              `dema orchestrator verify: --save-pipeline-result failed (${saveResult.reason}): ${saveResult.error_message ?? "unknown"}\n`
+              `dema orchestrator verify: --save-pipeline-result failed (${saveResult.reason}): ${saveResult.error_message ?? "unknown"}\n`,
             );
           }
           process.exitCode = 1;
@@ -1359,14 +1518,14 @@ async function dispatch(argv) {
 
         if (explicitFile && useLatest) {
           process.stderr.write(
-            "dema model-broker verify-invocation: --invocation-result-file and --latest are mutually exclusive\n"
+            "dema model-broker verify-invocation: --invocation-result-file and --latest are mutually exclusive\n",
           );
           process.exitCode = 1;
           return;
         }
         if (!explicitFile && !useLatest) {
           process.stderr.write(
-            "dema model-broker verify-invocation: one of --invocation-result-file <abs-path> or --latest is required\n"
+            "dema model-broker verify-invocation: one of --invocation-result-file <abs-path> or --latest is required\n",
           );
           process.exitCode = 1;
           return;
@@ -1379,7 +1538,7 @@ async function dispatch(argv) {
         if (explicitFile) {
           if (!pathIsAbsolute(explicitFile)) {
             process.stderr.write(
-              `dema model-broker verify-invocation: --invocation-result-file path must be absolute (got: ${explicitFile})\n`
+              `dema model-broker verify-invocation: --invocation-result-file path must be absolute (got: ${explicitFile})\n`,
             );
             process.exitCode = 1;
             return;
@@ -1387,10 +1546,12 @@ async function dispatch(argv) {
           targetPath = explicitFile;
           sourceKind = "file";
         } else {
-          const latest = await resolveLatestInvocationPath({ demaHome: process.env.DEMA_HOME });
+          const latest = await resolveLatestInvocationPath({
+            demaHome: process.env.DEMA_HOME,
+          });
           if (!latest) {
             process.stderr.write(
-              "dema model-broker verify-invocation: no invocation-*.json files found in $DEMA_HOME/receipts/\n"
+              "dema model-broker verify-invocation: no invocation-*.json files found in $DEMA_HOME/receipts/\n",
             );
             process.exitCode = 1;
             return;
@@ -1405,58 +1566,69 @@ async function dispatch(argv) {
         } catch (err) {
           if (err?.code === "ENOENT") {
             process.stderr.write(
-              `dema model-broker verify-invocation: envelope file not found: ${targetPath}\n`
+              `dema model-broker verify-invocation: envelope file not found: ${targetPath}\n`,
             );
           } else if (err instanceof SyntaxError) {
             process.stderr.write(
-              `dema model-broker verify-invocation: malformed envelope JSON at ${targetPath}: ${err.message}\n`
+              `dema model-broker verify-invocation: malformed envelope JSON at ${targetPath}: ${err.message}\n`,
             );
           } else {
             process.stderr.write(
-              `dema model-broker verify-invocation: envelope read failed at ${targetPath}: ${err?.message ?? err}\n`
+              `dema model-broker verify-invocation: envelope read failed at ${targetPath}: ${err?.message ?? err}\n`,
             );
           }
           process.exitCode = 1;
           return;
         }
 
-        const verification = verifyRoutedInvocationEnvelope(readResult.envelope, {
-          source: {
-            kind: sourceKind,
-            path: targetPath,
-            source_invocation_result_hash: readResult.sourceHash
-          }
-        });
+        const verification = verifyRoutedInvocationEnvelope(
+          readResult.envelope,
+          {
+            source: {
+              kind: sourceKind,
+              path: targetPath,
+              source_invocation_result_hash: readResult.sourceHash,
+            },
+          },
+        );
 
         // v0.1 (this slice): --save-verification-result + exact consent.
         // Single serialization shared by save + stdout (byte-for-byte).
-        const verificationOut = serializeVerificationResultForSave(verification, { pretty });
-        const saveVerificationFlag = argv.includes("--save-verification-result");
+        const verificationOut = serializeVerificationResultForSave(
+          verification,
+          { pretty },
+        );
+        const saveVerificationFlag = argv.includes(
+          "--save-verification-result",
+        );
         if (saveVerificationFlag) {
-          const saveConsent = argValue(argv, "--save-verification-consent") ?? null;
+          const saveConsent =
+            argValue(argv, "--save-verification-consent") ?? null;
           const saveResult = await saveVerificationResult(verification, {
             demaHome: process.env.DEMA_HOME,
             consent: saveConsent,
-            pretty
+            pretty,
           });
           if (!saveResult.saved) {
             if (saveResult.reason === "consent_missing") {
               process.stderr.write(
-                `dema model-broker verify-invocation: --save-verification-result requires --save-verification-consent "${VERIFICATION_RESULT_SAVE_CONSENT}"\n`
+                `dema model-broker verify-invocation: --save-verification-result requires --save-verification-consent "${VERIFICATION_RESULT_SAVE_CONSENT}"\n`,
               );
             } else if (saveResult.reason === "consent_mismatch") {
               process.stderr.write(
-                `dema model-broker verify-invocation: --save-verification-result consent phrase mismatch; required: "${VERIFICATION_RESULT_SAVE_CONSENT}"\n`
+                `dema model-broker verify-invocation: --save-verification-result consent phrase mismatch; required: "${VERIFICATION_RESULT_SAVE_CONSENT}"\n`,
               );
             } else {
               process.stderr.write(
-                `dema model-broker verify-invocation: --save-verification-result failed (${saveResult.reason}): ${saveResult.error_message ?? "unknown"}\n`
+                `dema model-broker verify-invocation: --save-verification-result failed (${saveResult.reason}): ${saveResult.error_message ?? "unknown"}\n`,
               );
             }
             process.exitCode = 1;
             return;
           }
-          process.stderr.write(`saved verification result to: ${saveResult.path}\n`);
+          process.stderr.write(
+            `saved verification result to: ${saveResult.path}\n`,
+          );
         }
 
         process.stdout.write(verificationOut);
@@ -1469,7 +1641,7 @@ async function dispatch(argv) {
 
       if (action !== "route") {
         process.stderr.write(
-          `dema model-broker: unknown action '${action ?? ""}' (expected: route | verify-invocation)\n`
+          `dema model-broker: unknown action '${action ?? ""}' (expected: route | verify-invocation)\n`,
         );
         process.exitCode = 1;
         return;
@@ -1477,9 +1649,12 @@ async function dispatch(argv) {
 
       // --save-verification-result is only valid for verify-invocation; reject
       // here so the operator gets a precise pointer instead of silent ignore.
-      if (argv.includes("--save-verification-result") || argv.includes("--save-verification-consent")) {
+      if (
+        argv.includes("--save-verification-result") ||
+        argv.includes("--save-verification-consent")
+      ) {
         process.stderr.write(
-          "dema model-broker route: --save-verification-result is only valid for the 'verify-invocation' action\n"
+          "dema model-broker route: --save-verification-result is only valid for the 'verify-invocation' action\n",
         );
         process.exitCode = 1;
         return;
@@ -1502,7 +1677,7 @@ async function dispatch(argv) {
         (explicitRegistryFile ? 1 : 0);
       if (registryInputCount > 1) {
         process.stderr.write(
-          "dema model-broker route: --registry-stdin, --registry-file, and --use-local-registry are mutually exclusive (pass at most one)\n"
+          "dema model-broker route: --registry-stdin, --registry-file, and --use-local-registry are mutually exclusive (pass at most one)\n",
         );
         process.exitCode = 1;
         return;
@@ -1510,7 +1685,7 @@ async function dispatch(argv) {
 
       if (!taskKind && !requiredRole) {
         process.stderr.write(
-          "dema model-broker route: --task <kind> or --required-role <role> is required\n"
+          "dema model-broker route: --task <kind> or --required-role <role> is required\n",
         );
         process.exitCode = 1;
         return;
@@ -1526,7 +1701,7 @@ async function dispatch(argv) {
           for await (const chunk of process.stdin) raw += chunk;
         } catch (err) {
           process.stderr.write(
-            `dema model-broker route: stdin read failed: ${err?.message ?? err}\n`
+            `dema model-broker route: stdin read failed: ${err?.message ?? err}\n`,
           );
           process.exitCode = 1;
           return;
@@ -1536,14 +1711,15 @@ async function dispatch(argv) {
           registry = buildRegistryFromConfig(parsed);
         } catch (err) {
           process.stderr.write(
-            `dema model-broker route: malformed --registry-stdin JSON: ${err?.message ?? err}\n`
+            `dema model-broker route: malformed --registry-stdin JSON: ${err?.message ?? err}\n`,
           );
           process.exitCode = 1;
           return;
         }
       } else if (useLocalRegistry || explicitRegistryFile) {
         // Resolve target path.
-        const { join: pathJoin, isAbsolute: pathIsAbsolute } = await import("node:path");
+        const { join: pathJoin, isAbsolute: pathIsAbsolute } =
+          await import("node:path");
         const { homedir } = await import("node:os");
         const { open } = await import("node:fs/promises");
 
@@ -1551,7 +1727,7 @@ async function dispatch(argv) {
         if (explicitRegistryFile) {
           if (!pathIsAbsolute(explicitRegistryFile)) {
             process.stderr.write(
-              `dema model-broker route: --registry-file path must be absolute (got: ${explicitRegistryFile}). Use --use-local-registry for default DEMA_HOME location.\n`
+              `dema model-broker route: --registry-file path must be absolute (got: ${explicitRegistryFile}). Use --use-local-registry for default DEMA_HOME location.\n`,
             );
             process.exitCode = 1;
             return;
@@ -1575,10 +1751,15 @@ async function dispatch(argv) {
         try {
           fh = await open(targetPath, "r");
           const buffer = Buffer.alloc(MAX_REGISTRY_FILE_BYTES + 1);
-          const { bytesRead } = await fh.read(buffer, 0, MAX_REGISTRY_FILE_BYTES + 1, 0);
+          const { bytesRead } = await fh.read(
+            buffer,
+            0,
+            MAX_REGISTRY_FILE_BYTES + 1,
+            0,
+          );
           if (bytesRead > MAX_REGISTRY_FILE_BYTES) {
             process.stderr.write(
-              `dema model-broker route: registry file too large: exceeds ${MAX_REGISTRY_FILE_BYTES} bytes\n`
+              `dema model-broker route: registry file too large: exceeds ${MAX_REGISTRY_FILE_BYTES} bytes\n`,
             );
             process.exitCode = 1;
             return;
@@ -1589,22 +1770,26 @@ async function dispatch(argv) {
         } catch (err) {
           if (err?.code === "ENOENT") {
             process.stderr.write(
-              `dema model-broker route: registry file not found: ${targetPath}\n`
+              `dema model-broker route: registry file not found: ${targetPath}\n`,
             );
           } else if (err instanceof SyntaxError) {
             process.stderr.write(
-              `dema model-broker route: malformed registry file JSON at ${targetPath}: ${err.message}\n`
+              `dema model-broker route: malformed registry file JSON at ${targetPath}: ${err.message}\n`,
             );
           } else {
             process.stderr.write(
-              `dema model-broker route: registry file load failed at ${targetPath}: ${err?.message ?? err}\n`
+              `dema model-broker route: registry file load failed at ${targetPath}: ${err?.message ?? err}\n`,
             );
           }
           process.exitCode = 1;
           return;
         } finally {
           if (fh) {
-            try { await fh.close(); } catch { /* best-effort close */ }
+            try {
+              await fh.close();
+            } catch {
+              /* best-effort close */
+            }
           }
         }
       }
@@ -1612,7 +1797,7 @@ async function dispatch(argv) {
       const broker = buildModelBrokerPreview({ registry });
       const routeOpts = {
         local_only: localOnly,
-        allow_unknown: allowUnknown
+        allow_unknown: allowUnknown,
       };
       if (taskKind) routeOpts.task_kind = taskKind;
       if (requiredRole) routeOpts.required_role = requiredRole;
@@ -1622,13 +1807,15 @@ async function dispatch(argv) {
 
       const saveReceiptFlag = argv.includes("--save-receipt");
       const invokeFlag = argv.includes("--invoke");
-      const saveInvocationResultFlag = argv.includes("--save-invocation-result");
+      const saveInvocationResultFlag = argv.includes(
+        "--save-invocation-result",
+      );
 
       // Early validation: --save-invocation-result requires --invoke (no
       // envelope exists to save without invocation).
       if (saveInvocationResultFlag && !invokeFlag) {
         process.stderr.write(
-          "dema model-broker route: --save-invocation-result requires --invoke (no envelope to save without invocation)\n"
+          "dema model-broker route: --save-invocation-result requires --invoke (no envelope to save without invocation)\n",
         );
         process.exitCode = 1;
         return;
@@ -1640,7 +1827,7 @@ async function dispatch(argv) {
       if (invokeFlag) {
         if (!saveReceiptFlag) {
           process.stderr.write(
-            "dema model-broker route: --invoke requires --save-receipt for route durability before invocation.\n"
+            "dema model-broker route: --invoke requires --save-receipt for route durability before invocation.\n",
           );
           process.exitCode = 1;
           return;
@@ -1648,7 +1835,7 @@ async function dispatch(argv) {
         const prompt = argValue(argv, "--prompt") ?? "";
         if (typeof prompt !== "string" || prompt.length === 0) {
           process.stderr.write(
-            "dema model-broker route: --invoke requires --prompt \"<text>\"\n"
+            'dema model-broker route: --invoke requires --prompt "<text>"\n',
           );
           process.exitCode = 1;
           return;
@@ -1656,7 +1843,7 @@ async function dispatch(argv) {
         const invokeConsent = argValue(argv, "--invoke-consent") ?? "";
         if (typeof invokeConsent !== "string" || invokeConsent.length === 0) {
           process.stderr.write(
-            "dema model-broker route: --invoke requires --invoke-consent \"GO: invoke local LLM at <selected_model_id>\"\n"
+            'dema model-broker route: --invoke requires --invoke-consent "GO: invoke local LLM at <selected_model_id>"\n',
           );
           process.exitCode = 1;
           return;
@@ -1666,20 +1853,20 @@ async function dispatch(argv) {
         const saveResult = await saveRouteReceipt(receipt, {
           demaHome: process.env.DEMA_HOME,
           consent,
-          pretty
+          pretty,
         });
         if (!saveResult.saved) {
           if (saveResult.reason === "consent_missing") {
             process.stderr.write(
-              `dema model-broker route: --save-receipt requires --consent "${ROUTE_RECEIPT_SAVE_CONSENT}"\n`
+              `dema model-broker route: --save-receipt requires --consent "${ROUTE_RECEIPT_SAVE_CONSENT}"\n`,
             );
           } else if (saveResult.reason === "consent_mismatch") {
             process.stderr.write(
-              `dema model-broker route: --save-receipt consent phrase mismatch; required: "${ROUTE_RECEIPT_SAVE_CONSENT}"\n`
+              `dema model-broker route: --save-receipt consent phrase mismatch; required: "${ROUTE_RECEIPT_SAVE_CONSENT}"\n`,
             );
           } else {
             process.stderr.write(
-              `dema model-broker route: --save-receipt failed (${saveResult.reason}): ${saveResult.error_message ?? "unknown"}\n`
+              `dema model-broker route: --save-receipt failed (${saveResult.reason}): ${saveResult.error_message ?? "unknown"}\n`,
             );
           }
           process.exitCode = 1;
@@ -1689,43 +1876,47 @@ async function dispatch(argv) {
 
         // Step 2: invoke routed local model via the bridge → adapter.
         const timeoutMsArg = argValue(argv, "--timeout-ms");
-        const timeoutMs = timeoutMsArg !== undefined
-          ? Number.parseInt(timeoutMsArg, 10)
-          : undefined;
+        const timeoutMs =
+          timeoutMsArg !== undefined
+            ? Number.parseInt(timeoutMsArg, 10)
+            : undefined;
         const envelope = await invokeRoutedLocalModel({
           routeReceipt: receipt,
           prompt,
           invokeConsent,
-          timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : undefined
+          timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : undefined,
         });
 
         // Serialize ONCE so stdout and any saved file match byte-for-byte
         // (architect-locked invariant; mirrors PR #83 route-receipt-save).
-        const envelopeContent = serializeInvocationResultForSave(envelope, { pretty });
+        const envelopeContent = serializeInvocationResultForSave(envelope, {
+          pretty,
+        });
 
         // Step 3 (optional): persist envelope to disk under explicit consent.
         // v0.1 invocation result SAVE (mirrors v0.2 route receipt SAVE from
         // PR #83). Preview-grade save (NOT canonical chain-bound mint).
         // Saves BOTH success and failure envelopes for audit.
         if (saveInvocationResultFlag) {
-          const saveInvocationConsent = argValue(argv, "--save-invocation-consent") ?? "";
+          const saveInvocationConsent =
+            argValue(argv, "--save-invocation-consent") ?? "";
           const saveInvResult = await saveInvocationResult(envelope, {
             demaHome: process.env.DEMA_HOME,
             consent: saveInvocationConsent,
-            pretty
+            pretty,
           });
           if (!saveInvResult.saved) {
             if (saveInvResult.reason === "consent_missing") {
               process.stderr.write(
-                `dema model-broker route: --save-invocation-result requires --save-invocation-consent "${INVOCATION_RESULT_SAVE_CONSENT}"\n`
+                `dema model-broker route: --save-invocation-result requires --save-invocation-consent "${INVOCATION_RESULT_SAVE_CONSENT}"\n`,
               );
             } else if (saveInvResult.reason === "consent_mismatch") {
               process.stderr.write(
-                `dema model-broker route: --save-invocation-result consent phrase mismatch; required: "${INVOCATION_RESULT_SAVE_CONSENT}"\n`
+                `dema model-broker route: --save-invocation-result consent phrase mismatch; required: "${INVOCATION_RESULT_SAVE_CONSENT}"\n`,
               );
             } else {
               process.stderr.write(
-                `dema model-broker route: --save-invocation-result failed (${saveInvResult.reason}): ${saveInvResult.error_message ?? "unknown"}\n`
+                `dema model-broker route: --save-invocation-result failed (${saveInvResult.reason}): ${saveInvResult.error_message ?? "unknown"}\n`,
               );
             }
             // Still emit the envelope to stdout so the operator can see the
@@ -1734,7 +1925,9 @@ async function dispatch(argv) {
             process.exitCode = 1;
             return;
           }
-          process.stderr.write(`saved invocation result to: ${saveInvResult.path}\n`);
+          process.stderr.write(
+            `saved invocation result to: ${saveInvResult.path}\n`,
+          );
         }
 
         // Step 4: stdout emits the envelope (replaces the bare route receipt).
@@ -1764,20 +1957,20 @@ async function dispatch(argv) {
         const result = await saveRouteReceipt(receipt, {
           demaHome: process.env.DEMA_HOME,
           consent,
-          pretty
+          pretty,
         });
         if (!result.saved) {
           if (result.reason === "consent_missing") {
             process.stderr.write(
-              `dema model-broker route: --save-receipt requires --consent "${ROUTE_RECEIPT_SAVE_CONSENT}"\n`
+              `dema model-broker route: --save-receipt requires --consent "${ROUTE_RECEIPT_SAVE_CONSENT}"\n`,
             );
           } else if (result.reason === "consent_mismatch") {
             process.stderr.write(
-              `dema model-broker route: --save-receipt consent phrase mismatch; required: "${ROUTE_RECEIPT_SAVE_CONSENT}"\n`
+              `dema model-broker route: --save-receipt consent phrase mismatch; required: "${ROUTE_RECEIPT_SAVE_CONSENT}"\n`,
             );
           } else {
             process.stderr.write(
-              `dema model-broker route: --save-receipt failed (${result.reason}): ${result.error_message ?? "unknown"}\n`
+              `dema model-broker route: --save-receipt failed (${result.reason}): ${result.error_message ?? "unknown"}\n`,
             );
           }
           process.exitCode = 1;
@@ -1829,7 +2022,7 @@ async function dispatch(argv) {
         model,
         prompt,
         consentPhrase: consent,
-        ollamaBaseUrl
+        ollamaBaseUrl,
       });
       console.log(JSON.stringify(result, null, 2));
       if (result.invocation_status === "failed") {
@@ -1847,14 +2040,16 @@ async function dispatch(argv) {
         return;
       }
       const tick = result.tick;
-      console.log([
-        "Dema today",
-        `  Continuity tick recorded — ${tick.date}`,
-        `  NODE0_READY=${tick.node0Ready} · Activation gate: ${tick.activationGate}`,
-        `  ${memory.count} memory entries summarized at ${result.path}`,
-        `  Next artifact: ${tick.nextArtifact}`,
-        humanHintLine("today")
-      ].join("\n"));
+      console.log(
+        [
+          "Dema today",
+          `  Continuity tick recorded — ${tick.date}`,
+          `  NODE0_READY=${tick.node0Ready} · Activation gate: ${tick.activationGate}`,
+          `  ${memory.count} memory entries summarized at ${result.path}`,
+          `  Next artifact: ${tick.nextArtifact}`,
+          humanHintLine("today"),
+        ].join("\n"),
+      );
       return;
     }
 
@@ -1865,7 +2060,18 @@ async function dispatch(argv) {
 
       if (wantsJson(argv)) {
         const verdict = anyFail ? "blocked" : "ready and consent-gated";
-        console.log(JSON.stringify({ schema: "bizra.dema.doctor_dashboard.v0.1", verdict, predicates, status }, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              schema: "bizra.dema.doctor_dashboard.v0.1",
+              verdict,
+              predicates,
+              status,
+            },
+            null,
+            2,
+          ),
+        );
         process.exitCode = anyFail ? 1 : 0;
         return;
       }
@@ -1882,11 +2088,27 @@ async function dispatch(argv) {
     case "dashboard": {
       const { fileURLToPath } = await import("node:url");
       const { dirname, join, resolve } = await import("node:path");
-      const { readFileSync, writeFileSync, accessSync, constants, mkdtempSync } = await import("node:fs");
+      const {
+        readFileSync,
+        writeFileSync,
+        accessSync,
+        constants,
+        mkdtempSync,
+      } = await import("node:fs");
       const { tmpdir } = await import("node:os");
 
       const here = dirname(fileURLToPath(import.meta.url));
-      const htmlPath = resolve(join(here, "..", "..", "..", "docs", "tui", "dema-homebase-dashboard-v0.1.html"));
+      const htmlPath = resolve(
+        join(
+          here,
+          "..",
+          "..",
+          "..",
+          "docs",
+          "tui",
+          "dema-homebase-dashboard-v0.1.html",
+        ),
+      );
 
       try {
         accessSync(htmlPath, constants.R_OK);
@@ -1897,7 +2119,13 @@ async function dispatch(argv) {
       }
 
       if (wantsJson(argv)) {
-        console.log(JSON.stringify({ schema: "bizra.dema.dashboard.v0.1", path: htmlPath }, null, 2));
+        console.log(
+          JSON.stringify(
+            { schema: "bizra.dema.dashboard.v0.1", path: htmlPath },
+            null,
+            2,
+          ),
+        );
         return;
       }
 
@@ -1930,11 +2158,19 @@ async function dispatch(argv) {
         writeFileSync(openPath, filled, "utf8");
       }
 
-      const opener = process.platform === "darwin" ? "open"
-        : process.platform === "win32" ? "start" : "xdg-open";
+      const opener =
+        process.platform === "darwin"
+          ? "open"
+          : process.platform === "win32"
+            ? "start"
+            : "xdg-open";
       const { execFile } = await import("node:child_process");
       execFile(opener, [openPath], () => {});
-      console.log(useStatic ? "Opening static dashboard: " + openPath : "Opening live dashboard: " + openPath);
+      console.log(
+        useStatic
+          ? "Opening static dashboard: " + openPath
+          : "Opening live dashboard: " + openPath,
+      );
       return;
     }
 
@@ -1944,7 +2180,7 @@ async function dispatch(argv) {
         console.log(
           argv.includes("--json")
             ? JSON.stringify(manifest, null, 2)
-            : formatAmbientManifestPreview(manifest)
+            : formatAmbientManifestPreview(manifest),
         );
         return;
       }
@@ -1953,7 +2189,7 @@ async function dispatch(argv) {
         console.log(
           argv.includes("--json")
             ? JSON.stringify(audit, null, 2)
-            : formatAmbientAuditPreview(audit)
+            : formatAmbientAuditPreview(audit),
         );
         return;
       }
@@ -1968,48 +2204,78 @@ async function dispatch(argv) {
 
     case "journey": {
       const json = argv.includes("--json");
-      const intent = argv.slice(1).filter((arg) => arg !== "--json").join(" ").trim();
+      const intent = argv
+        .slice(1)
+        .filter((arg) => arg !== "--json")
+        .join(" ")
+        .trim();
       const journey = buildSovereignJourneyPreview({ intent });
-      console.log(json ? JSON.stringify(journey, null, 2) : formatSovereignJourneyPreview(journey));
+      console.log(
+        json
+          ? JSON.stringify(journey, null, 2)
+          : formatSovereignJourneyPreview(journey),
+      );
       return;
     }
 
     case "diagnostics": {
       if (subcommand !== "plan") {
-        throw new Error("Unknown diagnostics command. Use `dema diagnostics plan [--json]`.");
+        throw new Error(
+          "Unknown diagnostics command. Use `dema diagnostics plan [--json]`.",
+        );
       }
       const plan = buildDiagnosticsMissionPlan();
       console.log(
         argv.includes("--json")
           ? JSON.stringify(plan, null, 2)
-          : formatDiagnosticsMissionPlan(plan)
+          : formatDiagnosticsMissionPlan(plan),
       );
       return;
     }
 
     case "consent": {
       if (subcommand !== "plan") {
-        throw new Error("Unknown consent command. Use `dema consent plan \"<intent>\"`.");
+        throw new Error(
+          'Unknown consent command. Use `dema consent plan "<intent>"`.',
+        );
       }
       const json = argv.includes("--json");
-      const intent = argv.slice(2).filter((arg) => arg !== "--json").join(" ").trim();
-      if (!intent) throw new Error("Usage: dema consent plan [--json] \"<intent>\"");
+      const intent = argv
+        .slice(2)
+        .filter((arg) => arg !== "--json")
+        .join(" ")
+        .trim();
+      if (!intent)
+        throw new Error('Usage: dema consent plan [--json] "<intent>"');
       const plan = buildConsentPlanPreview({ intent });
-      console.log(json ? JSON.stringify(plan, null, 2) : formatConsentPlanPreview(plan));
+      console.log(
+        json ? JSON.stringify(plan, null, 2) : formatConsentPlanPreview(plan),
+      );
       return;
     }
 
     case "mission": {
       if (subcommand === "draft") {
         const json = argv.includes("--json");
-        const intent = argv.slice(2).filter((arg) => arg !== "--json").join(" ").trim();
-        if (!intent) throw new Error("Usage: dema mission draft [--json] \"<intent>\"");
+        const intent = argv
+          .slice(2)
+          .filter((arg) => arg !== "--json")
+          .join(" ")
+          .trim();
+        if (!intent)
+          throw new Error('Usage: dema mission draft [--json] "<intent>"');
         const draft = buildMissionDraftPreview({ intent });
-        console.log(json ? JSON.stringify(draft, null, 2) : formatMissionDraftPreview(draft));
+        console.log(
+          json
+            ? JSON.stringify(draft, null, 2)
+            : formatMissionDraftPreview(draft),
+        );
         return;
       }
       if (subcommand !== "propose") {
-        throw new Error("Unknown mission command. Use `dema mission draft \"<intent>\"` or `dema mission propose`.");
+        throw new Error(
+          'Unknown mission command. Use `dema mission draft "<intent>"` or `dema mission propose`.',
+        );
       }
       const status = await statusWithLocalIdentity();
       const consent = argValue(argv, "--consent") ?? "";
@@ -2018,15 +2284,17 @@ async function dispatch(argv) {
         console.log(JSON.stringify(proposePreview, null, 2));
         return;
       }
-      console.log([
-        "Dema mission propose",
-        `  Action: ${proposePreview.action}`,
-        `  Executes: ${proposePreview.executes}`,
-        `  Proposal allowed: ${proposePreview.proposal.allowed}`,
-        `  Consent accepted: ${proposePreview.consent.accepted}`,
-        `  Next: ${proposePreview.next}`,
-        humanHintLine("mission propose")
-      ].join("\n"));
+      console.log(
+        [
+          "Dema mission propose",
+          `  Action: ${proposePreview.action}`,
+          `  Executes: ${proposePreview.executes}`,
+          `  Proposal allowed: ${proposePreview.proposal.allowed}`,
+          `  Consent accepted: ${proposePreview.consent.accepted}`,
+          `  Next: ${proposePreview.next}`,
+          humanHintLine("mission propose"),
+        ].join("\n"),
+      );
       return;
     }
 
@@ -2043,20 +2311,22 @@ async function dispatch(argv) {
     case "memory": {
       const action = subcommand;
       if (action === "--help" || action === "-h") {
-        console.log([
-          "dema memory — local memory entries + BIZRA Omega AgentDB query (MC-A v0.1)",
-          "",
-          "USAGE",
-          "  dema memory [list]                       List Dema auto-memory entries",
-          "  dema memory show <name>                  Show one memory entry by name",
-          "  dema memory query \"<text>\" [--top N]     Query BIZRA Omega AgentDB (MC-A)",
-          "    [--json]",
-          "",
-          "MC-A query: spawns ~/.dema/bin/agent-db-query · AgentDB.search() facade",
-          "  Discipline: read-only · no LLM · no mission loop · no receipt mint",
-          "  Override Omega root with BIZRA_OMEGA_ROOT env var (default: /data/bizra/dema-runtime-arch-wt)",
-          "  Override wrapper path with DEMA_AGENT_DB_QUERY_PATH (test only)"
-        ].join("\n"));
+        console.log(
+          [
+            "dema memory — local memory entries + BIZRA Omega AgentDB query (MC-A v0.1)",
+            "",
+            "USAGE",
+            "  dema memory [list]                       List Dema auto-memory entries",
+            "  dema memory show <name>                  Show one memory entry by name",
+            '  dema memory query "<text>" [--top N]     Query BIZRA Omega AgentDB (MC-A)',
+            "    [--json]",
+            "",
+            "MC-A query: spawns ~/.dema/bin/agent-db-query · AgentDB.search() facade",
+            "  Discipline: read-only · no LLM · no mission loop · no receipt mint",
+            "  Override Omega root with BIZRA_OMEGA_ROOT env var (default: /data/bizra/dema-runtime-arch-wt)",
+            "  Override wrapper path with DEMA_AGENT_DB_QUERY_PATH (test only)",
+          ].join("\n"),
+        );
         return;
       }
       if (!action || action === "list") {
@@ -2073,14 +2343,18 @@ async function dispatch(argv) {
         // loop · no chain mint · schema-envelope-bound (NOT receipt-bound).
         const queryText = argv[2];
         if (!queryText || queryText.startsWith("-")) {
-          console.error("dema memory query: missing <text> argument. Usage: dema memory query \"<text>\" [--top N]");
+          console.error(
+            'dema memory query: missing <text> argument. Usage: dema memory query "<text>" [--top N]',
+          );
           process.exitCode = 2;
           return;
         }
         const memTopArg = argValue(argv, "--top");
         let memTop = memTopArg ? parseInt(memTopArg, 10) : 3;
         if (!Number.isInteger(memTop) || memTop < 1 || memTop > 20) {
-          console.error(`dema memory query: --top out of range: must be integer in [1, 20] (got '${memTopArg}')`);
+          console.error(
+            `dema memory query: --top out of range: must be integer in [1, 20] (got '${memTopArg}')`,
+          );
           process.exitCode = 2;
           return;
         }
@@ -2091,8 +2365,9 @@ async function dispatch(argv) {
         const { homedir: memHomedir } = await import("node:os");
         const { join: memJoinPath } = await import("node:path");
 
-        const wrapperPath = process.env.DEMA_AGENT_DB_QUERY_PATH
-          || memJoinPath(memHomedir(), ".dema", "bin", "agent-db-query");
+        const wrapperPath =
+          process.env.DEMA_AGENT_DB_QUERY_PATH ||
+          memJoinPath(memHomedir(), ".dema", "bin", "agent-db-query");
 
         // Defensive snippet truncation: even if the wrapper misbehaves and
         // returns snippets longer than 200 chars, Dema must keep its boundary
@@ -2100,14 +2375,20 @@ async function dispatch(argv) {
         const truncateHits = (rawHits) => {
           if (!Array.isArray(rawHits)) return [];
           return rawHits.map((h) => {
-            const snippet = typeof h?.snippet === "string"
-              ? h.snippet.slice(0, 200)
-              : h?.snippet;
+            const snippet =
+              typeof h?.snippet === "string"
+                ? h.snippet.slice(0, 200)
+                : h?.snippet;
             return { ...h, snippet };
           });
         };
 
-        const buildMemEnv = ({ wrapperExit, wrapperDurationMs, wrapperEnvelope, errorMessage }) => ({
+        const buildMemEnv = ({
+          wrapperExit,
+          wrapperDurationMs,
+          wrapperEnvelope,
+          errorMessage,
+        }) => ({
           schema: "bizra.dema.memory_query_result.v0.1",
           tool_version: "dema-memory-query-v0.1",
           generated_at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
@@ -2124,7 +2405,7 @@ async function dispatch(argv) {
           consent: {
             consent_mode: "typed_command_read_only",
             consent_level: "C0_OPERATOR_LOCAL_READ",
-            exact_string_consent_required: false
+            exact_string_consent_required: false,
           },
           boundary: {
             filesystem_write_performed: false,
@@ -2142,35 +2423,50 @@ async function dispatch(argv) {
             federation_invoked: false,
             node_connection_performed: false,
             public_network_used: false,
-            consent_collected: true
+            consent_collected: true,
           },
           memory_domain_boundary: {
             memory_snippet_included: true,
             raw_memory_dump_included: false,
             snippet_max_chars: 200,
             public_safe: false,
-            operator_local_only: true
-          }
+            operator_local_only: true,
+          },
         });
 
         if (!memExistsSync(wrapperPath)) {
           const env = buildMemEnv({
-            wrapperExit: -1, wrapperDurationMs: 0, wrapperEnvelope: null,
-            errorMessage: `wrapper not found at ${wrapperPath} — install or set DEMA_AGENT_DB_QUERY_PATH`
+            wrapperExit: -1,
+            wrapperDurationMs: 0,
+            wrapperEnvelope: null,
+            errorMessage: `wrapper not found at ${wrapperPath} — install or set DEMA_AGENT_DB_QUERY_PATH`,
           });
           if (memWantsJson) {
             console.log(JSON.stringify(env, null, 2));
           } else {
-            console.error(`dema memory query: wrapper not found at ${wrapperPath}`);
-            console.error("  install ~/.dema/bin/agent-db-query or set DEMA_AGENT_DB_QUERY_PATH");
+            console.error(
+              `dema memory query: wrapper not found at ${wrapperPath}`,
+            );
+            console.error(
+              "  install ~/.dema/bin/agent-db-query or set DEMA_AGENT_DB_QUERY_PATH",
+            );
           }
           process.exitCode = 1;
           return;
         }
         const memT0 = Date.now();
-        const memResult = memSpawnSync("python3", [
-          wrapperPath, "--query", queryText, "--top", String(memTop), "--json"
-        ], { encoding: "utf8", timeout: 30000 });
+        const memResult = memSpawnSync(
+          "python3",
+          [
+            wrapperPath,
+            "--query",
+            queryText,
+            "--top",
+            String(memTop),
+            "--json",
+          ],
+          { encoding: "utf8", timeout: 30000 },
+        );
         const memDuration = Date.now() - memT0;
         let memWrapperEnv = null;
         let memErrMsg = null;
@@ -2190,23 +2486,30 @@ async function dispatch(argv) {
         // honestly reflects the subprocess outcome. Without this, a wrapper
         // exit 3 + valid JSON stdout would silently let Dema exit 0.
         if (!memErrMsg && memExit !== 0) {
-          const wrappedErr = memWrapperEnv && typeof memWrapperEnv.error === "string" && memWrapperEnv.error
-            ? memWrapperEnv.error
-            : `wrapper exited with code ${memExit}`;
+          const wrappedErr =
+            memWrapperEnv &&
+            typeof memWrapperEnv.error === "string" &&
+            memWrapperEnv.error
+              ? memWrapperEnv.error
+              : `wrapper exited with code ${memExit}`;
           memErrMsg = wrappedErr;
         }
         const env = buildMemEnv({
           wrapperExit: memExit,
           wrapperDurationMs: memDuration,
           wrapperEnvelope: memWrapperEnv,
-          errorMessage: memErrMsg
+          errorMessage: memErrMsg,
         });
         if (memWantsJson) {
           console.log(JSON.stringify(env, null, 2));
         } else {
-          console.log(`Dema memory query: ${env.hits_count} hit(s) for "${env.query}" (top=${env.top})`);
+          console.log(
+            `Dema memory query: ${env.hits_count} hit(s) for "${env.query}" (top=${env.top})`,
+          );
           for (const h of env.hits) {
-            console.log(`  · ${h.id} [score ${h.score}] — ${h.snippet?.slice(0, 80) ?? ""}…`);
+            console.log(
+              `  · ${h.id} [score ${h.score}] — ${h.snippet?.slice(0, 80) ?? ""}…`,
+            );
           }
           if (env.error) console.error(`error: ${env.error}`);
         }
@@ -2214,7 +2517,7 @@ async function dispatch(argv) {
         return;
       } else {
         throw new Error(
-          "Unknown memory command. Use `dema memory [list]` or `dema memory show <name>` or `dema memory query \"<text>\" [--top N]`."
+          'Unknown memory command. Use `dema memory [list]` or `dema memory show <name>` or `dema memory query "<text>" [--top N]`.',
         );
       }
       return;
@@ -2224,7 +2527,10 @@ async function dispatch(argv) {
       // dema models scan [--json]      → C1.5 · schema-tagged local inventory scan
       // dema models                    → existing human-readable inventory
       if (subcommand === "scan") {
-        const spinner = createSpinner({ stdout: process.stdout, label: "Scanning local model inventory…" });
+        const spinner = createSpinner({
+          stdout: process.stdout,
+          label: "Scanning local model inventory…",
+        });
         spinner.start();
         const scan = await buildLocalModelInventoryScan();
         spinner.stop();
@@ -2239,15 +2545,17 @@ async function dispatch(argv) {
         const ollama = providers.ollama || {};
         const lms = providers.lm_studio || {};
         const dl = providers.downloads || {};
-        console.log([
-          "Dema models scan",
-          `  Total models found: ${scan.total_models ?? 0}`,
-          `  Ollama: ${ollama.reachable ? "reachable" : "unreachable"} · ${ollama.model_count ?? 0} model(s)`,
-          `  LM Studio: ${lms.reachable ? "reachable" : "unreachable"} · ${lms.model_count ?? 0} model(s)`,
-          `  Downloads: ${dl.model_count ?? 0} GGUF file(s)`,
-          `  Boundary: read-only; local probes only; no model invoked`,
-          humanHintLine("models scan")
-        ].join("\n"));
+        console.log(
+          [
+            "Dema models scan",
+            `  Total models found: ${scan.total_models ?? 0}`,
+            `  Ollama: ${ollama.reachable ? "reachable" : "unreachable"} · ${ollama.model_count ?? 0} model(s)`,
+            `  LM Studio: ${lms.reachable ? "reachable" : "unreachable"} · ${lms.model_count ?? 0} model(s)`,
+            `  Downloads: ${dl.model_count ?? 0} GGUF file(s)`,
+            `  Boundary: read-only; local probes only; no model invoked`,
+            humanHintLine("models scan"),
+          ].join("\n"),
+        );
         return;
       }
       const inventory = await collectModelInventory();
@@ -2257,13 +2565,15 @@ async function dispatch(argv) {
 
     case "report": {
       if (subcommand !== "safety") {
-        throw new Error("Unknown report command. Use `dema report safety [--json]`.");
+        throw new Error(
+          "Unknown report command. Use `dema report safety [--json]`.",
+        );
       }
       const report = buildSafetyReportPreview();
       console.log(
         argv.includes("--json")
           ? JSON.stringify(report, null, 2)
-          : formatSafetyReportPreview(report)
+          : formatSafetyReportPreview(report),
       );
       return;
     }
@@ -2274,7 +2584,7 @@ async function dispatch(argv) {
         console.log(
           argv.includes("--json")
             ? JSON.stringify(blueprint, null, 2)
-            : formatNetworkBlueprint(blueprint)
+            : formatNetworkBlueprint(blueprint),
         );
         return;
       }
@@ -2283,7 +2593,7 @@ async function dispatch(argv) {
         console.log(
           argv.includes("--json")
             ? JSON.stringify(preview, null, 2)
-            : formatOfflineNetworkFixturePreview(preview)
+            : formatOfflineNetworkFixturePreview(preview),
         );
         return;
       }
@@ -2292,12 +2602,12 @@ async function dispatch(argv) {
         console.log(
           argv.includes("--json")
             ? JSON.stringify(preview, null, 2)
-            : formatNetworkRefusalMatrixPreview(preview)
+            : formatNetworkRefusalMatrixPreview(preview),
         );
         return;
       }
       throw new Error(
-        "Unknown network command. Use `dema network blueprint [--json]`, `dema network fixture preview [--json]`, or `dema network refusal preview [--json]`."
+        "Unknown network command. Use `dema network blueprint [--json]`, `dema network fixture preview [--json]`, or `dema network refusal preview [--json]`.",
       );
     }
 
@@ -2305,26 +2615,30 @@ async function dispatch(argv) {
       const amanaCommand = argv[1];
       const amanaSubcommand = argv[2];
       if (amanaCommand !== "contracts" || amanaSubcommand !== "preview") {
-        throw new Error("Unknown amana command. Use `dema amana contracts preview [--json]`.");
+        throw new Error(
+          "Unknown amana command. Use `dema amana contracts preview [--json]`.",
+        );
       }
       const preview = buildAmanaContractsPreview();
       console.log(
         argv.includes("--json")
           ? JSON.stringify(preview, null, 2)
-          : formatAmanaContractsPreview(preview)
+          : formatAmanaContractsPreview(preview),
       );
       return;
     }
 
     case "mcp": {
       if (subcommand !== "blueprint") {
-        throw new Error("Unknown mcp command. Use `dema mcp blueprint [--json]`.");
+        throw new Error(
+          "Unknown mcp command. Use `dema mcp blueprint [--json]`.",
+        );
       }
       const blueprint = buildMcpIntegrationBlueprint();
       console.log(
         argv.includes("--json")
           ? JSON.stringify(blueprint, null, 2)
-          : formatMcpIntegrationBlueprint(blueprint)
+          : formatMcpIntegrationBlueprint(blueprint),
       );
       return;
     }
@@ -2335,7 +2649,7 @@ async function dispatch(argv) {
         console.log(
           argv.includes("--json")
             ? JSON.stringify(report, null, 2)
-            : formatOptimizationRoadmapPreview(report)
+            : formatOptimizationRoadmapPreview(report),
         );
         return;
       }
@@ -2344,12 +2658,12 @@ async function dispatch(argv) {
         console.log(
           argv.includes("--json")
             ? JSON.stringify(state, null, 2)
-            : formatDevRoadmapReport(state)
+            : formatDevRoadmapReport(state),
         );
         return;
       }
       throw new Error(
-        "Unknown roadmap command. Use `dema roadmap preview [--json]` or `dema roadmap dev [--json]`."
+        "Unknown roadmap command. Use `dema roadmap preview [--json]` or `dema roadmap dev [--json]`.",
       );
     }
 
@@ -2360,13 +2674,15 @@ async function dispatch(argv) {
 
       if (evalCommand !== "layer2") {
         throw new Error(
-          "Unknown eval command. Use `dema eval layer2 prompts [--json]` or `dema eval layer2 verify <abs-path> [--json]`."
+          "Unknown eval command. Use `dema eval layer2 prompts [--json]` or `dema eval layer2 verify <abs-path> [--json]`.",
         );
       }
 
       if (evalSubcommand === "prompts") {
         const pack = getRubricPack();
-        console.log(asJson ? JSON.stringify(pack, null, 2) : formatRubricPackReport(pack));
+        console.log(
+          asJson ? JSON.stringify(pack, null, 2) : formatRubricPackReport(pack),
+        );
         return;
       }
 
@@ -2374,13 +2690,14 @@ async function dispatch(argv) {
         const verdictPath = argv[3];
         if (!verdictPath) {
           throw new Error(
-            "Missing <abs-path>. Use `dema eval layer2 verify <abs-path-to-pasted-verdict.json> [--json]`."
+            "Missing <abs-path>. Use `dema eval layer2 verify <abs-path-to-pasted-verdict.json> [--json]`.",
           );
         }
-        const { isAbsolute: pathIsAbsolute, resolve: pathResolve } = await import("node:path");
+        const { isAbsolute: pathIsAbsolute, resolve: pathResolve } =
+          await import("node:path");
         if (!pathIsAbsolute(verdictPath)) {
           throw new Error(
-            "`dema eval layer2 verify` requires an absolute path to the pasted verdict file."
+            "`dema eval layer2 verify` requires an absolute path to the pasted verdict file.",
           );
         }
         const { readFile: readVerdictFile } = await import("node:fs/promises");
@@ -2390,11 +2707,15 @@ async function dispatch(argv) {
           parsed = JSON.parse(raw);
         } catch (readErr) {
           throw new Error(
-            `Failed to read or parse verdict file at ${verdictPath}: ${readErr && readErr.message ? readErr.message : readErr}`
+            `Failed to read or parse verdict file at ${verdictPath}: ${readErr && readErr.message ? readErr.message : readErr}`,
           );
         }
         const result = validatePastedJudgeVerdict(parsed);
-        console.log(asJson ? JSON.stringify(result, null, 2) : formatVerdictReport(result));
+        console.log(
+          asJson
+            ? JSON.stringify(result, null, 2)
+            : formatVerdictReport(result),
+        );
         // Exit 0 only when the documented success state holds. truth_label is
         // the authoritative contract surface (see docs/TESTING.md row); gating
         // on it directly prevents drift if a future truth_label value is added.
@@ -2405,7 +2726,7 @@ async function dispatch(argv) {
       }
 
       throw new Error(
-        "Unknown eval layer2 subcommand. Use `dema eval layer2 prompts [--json]` or `dema eval layer2 verify <abs-path> [--json]`."
+        "Unknown eval layer2 subcommand. Use `dema eval layer2 prompts [--json]` or `dema eval layer2 verify <abs-path> [--json]`.",
       );
     }
 
@@ -2413,13 +2734,15 @@ async function dispatch(argv) {
       const receiptCommand = argv[1];
       const receiptSubcommand = argv[2];
       if (receiptCommand !== "receipt" || receiptSubcommand !== "preview") {
-        throw new Error("Unknown evidence command. Use `dema evidence receipt preview [--json]`.");
+        throw new Error(
+          "Unknown evidence command. Use `dema evidence receipt preview [--json]`.",
+        );
       }
       const receipt = buildEvidenceReceiptPreview();
       console.log(
         argv.includes("--json")
           ? JSON.stringify(receipt, null, 2)
-          : formatEvidenceReceiptPreview(receipt)
+          : formatEvidenceReceiptPreview(receipt),
       );
       return;
     }
@@ -2428,15 +2751,18 @@ async function dispatch(argv) {
       const floorCommand = argv[1];
       const floorSubcommand = argv[2];
       if (floorCommand !== "floor" || floorSubcommand !== "preview") {
-        throw new Error("Unknown ihsan command. Use `dema ihsan floor preview [--score N] [--json]`.");
+        throw new Error(
+          "Unknown ihsan command. Use `dema ihsan floor preview [--score N] [--json]`.",
+        );
       }
       const scoreArg = argValue(argv, "--score");
-      const score = scoreArg === undefined ? DEFAULT_IHSAN_FLOOR : Number(scoreArg);
+      const score =
+        scoreArg === undefined ? DEFAULT_IHSAN_FLOOR : Number(scoreArg);
       const preview = evaluateIhsanFloorPreview({ score });
       console.log(
         argv.includes("--json")
           ? JSON.stringify(preview, null, 2)
-          : formatIhsanFloorPreview(preview)
+          : formatIhsanFloorPreview(preview),
       );
       return;
     }
@@ -2444,8 +2770,13 @@ async function dispatch(argv) {
     case "behavior": {
       const behaviorCommand = argv[1];
       const behaviorSubcommand = argv[2];
-      if (behaviorCommand !== "modulation" || behaviorSubcommand !== "preview") {
-        throw new Error('Unknown behavior command. Use `dema behavior modulation preview [--consent TEXT] [--score N] [--json] "<intent>"`.');
+      if (
+        behaviorCommand !== "modulation" ||
+        behaviorSubcommand !== "preview"
+      ) {
+        throw new Error(
+          'Unknown behavior command. Use `dema behavior modulation preview [--consent TEXT] [--score N] [--json] "<intent>"`.',
+        );
       }
       const consentPhrase = argValue(argv, "--consent") ?? "";
       const scoreArg = argValue(argv, "--score");
@@ -2463,25 +2794,27 @@ async function dispatch(argv) {
       const preview = buildBehavioralModulationPreview({
         intent: intentParts.join(" ").trim(),
         consentPhrase,
-        ihsanScore
+        ihsanScore,
       });
       console.log(
         argv.includes("--json")
           ? JSON.stringify(preview, null, 2)
-          : formatBehavioralModulationPreview(preview)
+          : formatBehavioralModulationPreview(preview),
       );
       return;
     }
 
     case "design": {
       if (subcommand !== "emulate-loop") {
-        throw new Error("Unknown design command. Use `dema design emulate-loop [--json]`.");
+        throw new Error(
+          "Unknown design command. Use `dema design emulate-loop [--json]`.",
+        );
       }
       const report = emulateLoopDesign();
       console.log(
         argv.includes("--json")
           ? JSON.stringify(report, null, 2)
-          : formatLoopDesignEmulation(report)
+          : formatLoopDesignEmulation(report),
       );
       return;
     }
@@ -2492,9 +2825,15 @@ async function dispatch(argv) {
         const list = Object.values(TASK_REGISTRY).map((t) => ({
           id: t.id,
           autonomy_level: t.autonomy_level,
-          description: t.description
+          description: t.description,
         }));
-        console.log(JSON.stringify({ schema: "bizra.dema.task_list.v0.1", tasks: list }, null, 2));
+        console.log(
+          JSON.stringify(
+            { schema: "bizra.dema.task_list.v0.1", tasks: list },
+            null,
+            2,
+          ),
+        );
         return;
       }
       const task = TASK_REGISTRY[subcommand];
@@ -2509,7 +2848,7 @@ async function dispatch(argv) {
       if (level === null) {
         console.log(
           `Refused: task ${task.id} has malformed or missing autonomy_level ` +
-            `(got: ${JSON.stringify(task.autonomy_level)}). Expected L0..L5.`
+            `(got: ${JSON.stringify(task.autonomy_level)}). Expected L0..L5.`,
         );
         return { refused: true, reason: "malformed_autonomy_level" };
       }
@@ -2518,7 +2857,7 @@ async function dispatch(argv) {
           autonomyLevel: levelLabel(level),
           action: `task ${task.id}`,
           scope: task.scope ?? task.description ?? null,
-          requireExactPhrase: task.requireExactPhrase
+          requireExactPhrase: task.requireExactPhrase,
         });
         if (!approval.approved) {
           console.log(`Refused: ${approval.refused_reason}`);
@@ -2526,7 +2865,10 @@ async function dispatch(argv) {
         }
       }
 
-      const taskSpinner = createSpinner({ stdout: process.stdout, label: `Running ${task.id}…` });
+      const taskSpinner = createSpinner({
+        stdout: process.stdout,
+        label: `Running ${task.id}…`,
+      });
       taskSpinner.start();
       const receipt = await task.run();
       taskSpinner.stop();
@@ -2544,11 +2886,13 @@ async function dispatch(argv) {
     }
 
     case "monetize":
-      console.log([
-        "Dema monetize: safe offer guardian.",
-        "Allowed now: Sovereign Local AI Node Setup + Safety Audit.",
-        "Blocked: token claims, passive income claims, AGI claims, public federation claims."
-      ].join("\n"));
+      console.log(
+        [
+          "Dema monetize: safe offer guardian.",
+          "Allowed now: Sovereign Local AI Node Setup + Safety Audit.",
+          "Blocked: token claims, passive income claims, AGI claims, public federation claims.",
+        ].join("\n"),
+      );
       return;
 
     case "sovereign": {
@@ -2559,21 +2903,31 @@ async function dispatch(argv) {
       const { join } = await import("node:path");
       const { spawnSync } = await import("node:child_process");
       const home = process.env.HOME || process.env.USERPROFILE;
-      const demaHome = process.env.DEMA_HOME || (home ? join(home, ".dema") : null);
+      const demaHome =
+        process.env.DEMA_HOME || (home ? join(home, ".dema") : null);
       if (!demaHome) {
-        console.error("dema sovereign: unable to resolve DEMA_HOME (set DEMA_HOME or HOME).");
+        console.error(
+          "dema sovereign: unable to resolve DEMA_HOME (set DEMA_HOME or HOME).",
+        );
         process.exit(1);
       }
-      const scaffold = join(demaHome, "kernel", "sovereign_tui", "sovereign.py");
+      const scaffold = join(
+        demaHome,
+        "kernel",
+        "sovereign_tui",
+        "sovereign.py",
+      );
       if (!existsSync(scaffold)) {
         console.error(`dema sovereign: scaffold not found: ${scaffold}`);
         process.exit(1);
       }
       const result = spawnSync("python3", [scaffold, ...argv.slice(1)], {
-        stdio: "inherit"
+        stdio: "inherit",
       });
       if (result.error) {
-        console.error(`dema sovereign: failed to spawn python3: ${result.error.message}`);
+        console.error(
+          `dema sovereign: failed to spawn python3: ${result.error.message}`,
+        );
         process.exit(1);
       }
       // status null without error is unusual; fail-safe to non-zero
@@ -2613,14 +2967,19 @@ async function dispatch(argv) {
 
     default: {
       const result = suggestCommands(command, REGISTERED_COMMANDS_LIST);
-      const lines = [`I don't have a \`${result.missingToken || command}\` command.`, ""];
+      const lines = [
+        `I don't have a \`${result.missingToken || command}\` command.`,
+        "",
+      ];
       if (result.matched === "natural-language" || result.matched === "close") {
         lines.push("Did you mean:");
         for (const s of result.suggestions) {
           lines.push(`  - dema ${s.command.padEnd(32)} — ${s.description}`);
         }
       } else {
-        lines.push("I couldn't find a close match. Type `dema help` for the full list.");
+        lines.push(
+          "I couldn't find a close match. Type `dema help` for the full list.",
+        );
       }
       lines.push("", "Type `dema help` to see everything I can do.");
       console.log(lines.join("\n"));
@@ -2637,7 +2996,7 @@ async function runActiveKernel({ interactive = false, force = false } = {}) {
     await runShell({
       greeting: banner,
       dispatchCommand: dispatch,
-      statusProvider: () => statusWithLocalIdentity()
+      statusProvider: () => statusWithLocalIdentity(),
     });
     return;
   }
@@ -2652,7 +3011,8 @@ async function runActiveKernel({ interactive = false, force = false } = {}) {
 
 // Allow tests to import dispatch + runActiveKernel without firing main().
 const isDirectInvocation =
-  process.argv[1] && (process.argv[1].endsWith("/index.js") || process.argv[1].endsWith("/dema"));
+  process.argv[1] &&
+  (process.argv[1].endsWith("/index.js") || process.argv[1].endsWith("/dema"));
 
 if (isDirectInvocation) {
   dispatch(process.argv.slice(2))
