@@ -32,6 +32,8 @@ useDefault = true
 # gate.
 [[allowlists]]
 description = "Grandfathered: Firebase web SDK config of abandoned Genesis applet (project deleted 2026-05-24)"
-fingerprints = [
-  "5057af345d71c0fa6ff2e437fbdd5164150aefb5:firebase-applet-config.json:gcp-api-key:4"
-]
+# Gitleaks v8 AND-joins all conditions within a single [[allowlists]] block,
+# so this matches ONLY findings where BOTH the commit AND the path match.
+# A re-leak of the same key text in any other commit or path still fails.
+commits = ["5057af345d71c0fa6ff2e437fbdd5164150aefb5"]
+paths = ['''(^|/)firebase-applet-config\.json$''']
