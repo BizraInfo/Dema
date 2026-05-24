@@ -29,7 +29,7 @@ The plan is implementation-ready: §4 contains concrete content drafts for every
 
 ### Genesis · Tier 0 (NEW · added 2026-05-24 · MEASURED)
 
-**Deepest provenance artifact in BIZRA's possession** — older in narrative-origin time than the Bitcoin-anchored Roots below. The seed before the seed.
+**Chronologically-oldest known ChatGPT account export in BIZRA's possession** — older in narrative-origin time than the Bitcoin-anchored Roots below. The seed before the seed. **One of N sibling exports** comprising the broader Tier 0 Genesis corpus (inventoried below) · only this primary ChatGPT account is MEASURED so far.
 
 | Property | Value |
 |---|---|
@@ -46,6 +46,23 @@ The plan is implementation-ready: §4 contains concrete content drafts for every
 | Bitcoin-anchor candidacy | Eligible — anchoring `aa420789…` to a future block extends the Tier 1 proof spine backward in narrative-origin time |
 
 **Status: MEASURED** via OpenAI's per-conversation `create_time` field. Verified 2026-05-24 by extracting `export_manifest.json` + the 5 `conversations-NNN.json` shards to a temp dir, parsing strictly for timestamp metadata (no titles · no messages · no content emitted), and deleting all temp files.
+
+#### Sibling exports in the broader Tier 0 corpus (inventory only · NOT MEASURED · 2026-05-24)
+
+The primary ChatGPT account export above is one of multiple chat history artifacts in BIZRA's full AI-chat lineage. Sibling exports verified at filename + size + ZIP-inventory level only on 2026-05-24 (no content extraction):
+
+| Platform / account | Path (operator-local · NOT in repo) | Compressed size | Notes |
+|---|---|---|---|
+| ChatGPT account B (beshr000@) | `/data/bizra/cloud-archive/onedrive-beshr000/Downloads/534d265eae29359444afcf7b93ffdf01df96a4db38a09c7fe53947615a7e745b-2024-05-18-20-40-12.zip` (sha256 `9dbf7c94…`) | 208 KB | Small secondary-account export · 2024-05-18 · `conversations.json` 670 KB |
+| Claude account | `~/Downloads/data-43cc0344-1239-4174-867b-25beff52f00f-1778573258-21781d24-batch-0000.zip` | 93 MB compressed · **434 MB uncompressed `conversations.json`** | Anthropic export format (users.json + projects/ + conversations.json) · 2026-05-12 · likely 1,000+ conversations — candidate location for operator's "~1,400 conversations alone" reference |
+| DeepSeek account | `~/Downloads/deepseek_data-2026-04-27.zip` | 29 MB compressed · 106 MB uncompressed `conversations.json` | 2026-04-27 |
+| Google AI Studio | `~/Downloads/Google AI Studio-20260424T183259Z-3-001.zip` | 1.8 GB | Non-standard chat format · prompts + responses + assets · contains `conversation_metrics_all_models.csv` (260 KB) |
+| Gemini Gems | `~/Downloads/Gemini Gems-20260424T185142Z-3-001.zip` | 808 MB | NOT chat history per se · prompt-engineering assets (already BIZRA-related — contains "BIZRA Genesis Seal" + "BIZRA Manifest_ Analysis and Refinement.docx") |
+| Per-conversation Google AI Studio | `/data/bizra/cloud-archive/gdrive-*/Google AI Studio/chat-export-*.json` | varies | Individual export-per-conversation JSON files · earliest seen 2025-03 |
+| Curated ChatGPT 3.5 snippets | `/data/bizra/docs/origins/chat-history/{chatgpt-3.5-early.txt, chatgpt-history-2023-12-26.txt, ...}` | ~750 KB total | Operator-extracted snapshots · 2026-04-14 |
+| Operator-personal dump | `~/Documents/ChatGPT.txt` | 414 KB | Plain text · 2026-05-11 |
+
+Each sibling can be MEASURED in its own future slice — **same metadata-only discipline as the primary account** (extract inventory + index files only · parse strictly for timestamps · delete temp files · per-extraction typed-GO required for each). The Bitcoin-anchor candidacy applies to each sibling SHA-256 independently — anchoring extends the proof spine in different directions of the multi-platform genesis corpus.
 
 **Tier 0 ↔ Tier 1 relationship**: the Bitcoin-anchored Roots below were authored 2024–2025 from the intellectual journey captured in Tier 0 (2023-01-14 onward). Tier 1 is the *constitutional* layer (the consciousness arrived at); Tier 0 is the *journey* layer (the consciousness emerging). They are complementary — Tier 0 does **not** replace or supersede Tier 1.
 
