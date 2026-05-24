@@ -20,7 +20,7 @@
 
 ## Last verified
 
-2026-05-24 ~15:45 GST against main `a6ad0a1` (post-INDEX.md + RELEASE_PROCESS.md + CI_CD_PIPELINE.md + QUICKSTART.md authorship).
+2026-05-24 ~16:00 GST against main `ccde52a` (post-INDEX.md + RELEASE_PROCESS.md + CI_CD_PIPELINE.md + QUICKSTART.md + 00_START_HERE.md authorship · plus Third Fact Delta Register).
 
 ---
 
@@ -28,7 +28,7 @@
 
 | # | Document | Status | Audience | Required for GTM? | Owner | Last reviewed | Evidence link | Risk if missing | Definition of Done |
 |---:|---|---|---|:---:|---|---|---|---|---|
-| 1 | `00_START_HERE.md` | PARTIAL | All | YES | Mumu (operator) | — | `README.md` (10.9 KB · generic README, not a controlled START_HERE) | Reviewer can't find where to begin · investor confusion · loses trust in 1st minute | Single page · routes reviewer to public / NDA / technical / investor sub-packs · published at repo root or `docs/00-start-here/` |
+| 1 | `00_START_HERE.md` | COMPLETE | All | YES | Mumu (operator) | 2026-05-24 (authored this session) | `docs/00_START_HERE.md` (single-page routing doc · 7 reviewer classes · top-of-page truth-at-a-glance table · explicit "what this repo does NOT contain" section · first-time-runner one-liner) | — | Single page · routes reviewer to public / NDA / technical / investor sub-packs · published at repo root or `docs/00-start-here/` |
 | 2 | `CURRENT_LIMITS.md` | COMPLETE | All | YES | Mumu | 2026-05-24 (in repo) | `docs/CURRENT_LIMITS.md` (11.3 KB) | Public claims drift from truth · audit fail | Every claim labeled MEASURED / DESIGNED_NOT_LIVE / SIMULATION_ONLY · refreshed monthly |
 | 3 | `BIZRA_ONE_PAGER.md` | MISSING | Investor / customer | YES | Mumu | — | — | No 60-second pitch · loses warm leads | Single page · what it is · why now · who for · proof line · one CTA |
 | 4 | `PRODUCT_BRIEF.md` | PARTIAL | Investor / customer | YES | Mumu | — | `docs/BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md` (candidate · needs consolidation) | Pitch falls back to demo · no read-along | Node0 + Dema today, in 2 pages, no future-tense claims |
@@ -60,8 +60,8 @@
 
 | Status | Count | % |
 |---|---:|---:|
-| COMPLETE | 8 | 32% |
-| PARTIAL | 2 | 8% |
+| COMPLETE | 9 | 36% |
+| PARTIAL | 1 | 4% |
 | DRAFT | 1 | 4% |
 | MISSING | 13 | 52% |
 | OPERATOR-SIDE | 1 | 4% |
@@ -69,19 +69,19 @@
 
 ## Honesty boundary
 
-The "PARTIAL" entries (#1, #4, #7, #24) all mean: *related content exists somewhere, but the canonical-named GTM doc does not yet exist*. Promoting from PARTIAL → COMPLETE requires either:
+The "PARTIAL" entries (#4, #7, #24) all mean: *related content exists somewhere, but the canonical-named GTM doc does not yet exist*. Promoting from PARTIAL → COMPLETE requires either:
 - (a) Renaming + consolidating the existing content into the canonical file, OR
 - (b) Authoring a fresh focused doc that supersedes the partial coverage.
 
 The 14 MISSING entries require fresh authorship. None of them have evidence in repo today.
 
-Coverage today is **32% strictly complete · 36% if PARTIAL counts as half** — still far from the gold-standard 25/25 the GTM bar requires, but advancing four slices in one session (Tier-1 #20 QUICKSTART + Tier-2 #10 ADR Index + Tier-2 #15 CI_CD_PIPELINE + Tier-2 #16 RELEASE_PROCESS · one full doubling of starting coverage).
+Coverage today is **36% strictly complete · 38% if PARTIAL counts as half** — still far from the gold-standard 25/25 the GTM bar requires, but advancing five slices in one session (Tier-1 #1 START_HERE + Tier-1 #20 QUICKSTART + Tier-2 #10 ADR Index + Tier-2 #15 CI_CD_PIPELINE + Tier-2 #16 RELEASE_PROCESS · plus the Third Fact Delta Register as out-of-matrix doctrine-to-disk bridge · coverage more than doubled from the starting 16%).
 
 ## Priority order (suggested for fill-in sequence)
 
 **Tier 1 — Trust spine (blocks any external action):**
 - #11 SECURITY.md (DRAFT → COMPLETE) — fix the 548-byte stub first; reporting address is table-stakes
-- #1 00_START_HERE.md — single entry point reviewers find before anything else
+- ~~#1 00_START_HERE.md~~ — closed 2026-05-24 (`docs/00_START_HERE.md` · 7-class reviewer routing + truth-at-a-glance)
 - ~~#20 QUICKSTART.md~~ — closed 2026-05-24 (`docs/QUICKSTART.md` · 1-page · 4 commands with verbatim output)
 - #23 INVESTOR_MEMO.md — pitch deck without memo can't circulate async
 
