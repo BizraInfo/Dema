@@ -87,6 +87,16 @@ function consentPhraseFor(modelName) {
   return `GO: invoke local LLM at ${modelName}`;
 }
 
+function isLocalhostBaseUrl(baseUrl) {
+  try {
+    const url = new URL(baseUrl);
+    const host = url.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "").toLowerCase();
+    return url.protocol === "http:" && ["localhost", "127.0.0.1", "::1"].includes(host);
+  } catch {
+    return false;
+  }
+}
+
 // ──────────────────────────────────────────────────────────────────────────
 // Monotonic per-invocation consent freshness · ADR-018 §S6.
 //
@@ -156,9 +166,7 @@ export function buildLLMInvocationPreview({
     : DEFAULT_TIMEOUT_MS;
 
   const modelAllowed = isAllowedModelName(modelSafe);
-  const urlSafe = baseUrl.startsWith("http://localhost") || baseUrl.startsWith("http://127.0.0.1")
-    ? baseUrl
-    : DEFAULT_OLLAMA_BASE;
+  const urlSafe = isLocalhostBaseUrl(baseUrl) ? baseUrl : DEFAULT_OLLAMA_BASE;
 
   return Object.freeze({
     schema: "bizra.dema.llm_invocation_preview.v0.1",
@@ -282,9 +290,7 @@ function buildInvocationResult({
         : Object.freeze([]),
     duration_ms: typeof durationMs === "number" ? durationMs : null,
     target_endpoint: endpoint,
-    target_is_localhost:
-      typeof endpoint === "string" &&
-      (endpoint.startsWith("http://localhost") || endpoint.startsWith("http://127.0.0.1")),
+    target_is_localhost: typeof endpoint === "string" && isLocalhostBaseUrl(endpoint),
     consent_phrase_verified: consentPhraseVerified === true,
     verdict_role: "suggestion",
     attempt_n: typeof attemptN === "number" ? attemptN : null,
@@ -323,7 +329,7 @@ export async function invokeLocalLLM({
     : DEFAULT_TIMEOUT_MS;
 
   // Gate 1: localhost-bound
-  if (!(baseUrl.startsWith("http://localhost") || baseUrl.startsWith("http://127.0.0.1"))) {
+  if (!isLocalhostBaseUrl(baseUrl)) {
     return buildInvocationResult({
       modelName: modelSafe,
       promptSubmitted: promptSafe,
