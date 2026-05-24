@@ -404,12 +404,12 @@ Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
 
 Tasks and views:
   dema task         List registered tasks
-  dema task NAME    Run a registered task (read-only in v0.3.0)
+  dema task NAME    Run a registered task (read-only in v{{DEMA_VERSION}})
   dema sovereign    Render local Sovereign Mission Interface (view-only)
   dema monetize     Show proof-safe first offer boundary
   dema help         Show this list
 
-Dema v0.3.0 — Active Command Kernel. Local-first. Consent-bound. Receipt-aware.`;
+Dema v{{DEMA_VERSION}} — Active Command Kernel. Local-first. Consent-bound. Receipt-aware.`;
 
 // Top-level tokens the switch handles. Used by the command suggester only.
 const REGISTERED_COMMANDS_LIST = [
@@ -463,6 +463,25 @@ const REGISTERED_COMMANDS_LIST = [
   { command: "help", description: "show full command list" }
 ];
 
+async function readPackageVersion() {
+  const { readFile } = await import("node:fs/promises");
+  const { fileURLToPath } = await import("node:url");
+  const { dirname: vDir, join: vJoin } = await import("node:path");
+  const here = vDir(fileURLToPath(import.meta.url));
+  const pkgPath = vJoin(here, "..", "..", "..", "package.json");
+  try {
+    const raw = await readFile(pkgPath, "utf8");
+    return JSON.parse(raw).version ?? "0.0.0-unknown";
+  } catch {
+    return "0.0.0-unknown";
+  }
+}
+
+async function renderFullHelp() {
+  const version = await readPackageVersion();
+  return renderHelpFlat(HELP.replaceAll("{{DEMA_VERSION}}", version));
+}
+
 async function dispatch(argv) {
   const command = argv[0] ?? "active";
   const subcommand = argv[1];
@@ -476,18 +495,7 @@ async function dispatch(argv) {
     command === "version" ||
     argv.includes("--version")
   ) {
-    const { readFile } = await import("node:fs/promises");
-    const { fileURLToPath } = await import("node:url");
-    const { dirname: vDir, join: vJoin } = await import("node:path");
-    const here = vDir(fileURLToPath(import.meta.url));
-    const pkgPath = vJoin(here, "..", "..", "..", "package.json");
-    let version = "0.0.0-unknown";
-    try {
-      const raw = await readFile(pkgPath, "utf8");
-      version = JSON.parse(raw).version ?? version;
-    } catch {
-      // Fall through with default; CLI must not throw on --version.
-    }
+    const version = await readPackageVersion();
     if (argv.includes("--json")) {
       console.log(
         JSON.stringify(
@@ -2354,7 +2362,7 @@ async function dispatch(argv) {
         return;
       }
       if (helpArg === "--all") {
-        console.log(renderHelpFlat(HELP));
+        console.log(await renderFullHelp());
         return;
       }
       // Try topic first, then command detail, then unknown.
@@ -2375,7 +2383,7 @@ async function dispatch(argv) {
     // -h and --help emit the full flat list (opt-in backward-compat path).
     case "-h":
     case "--help":
-      console.log(renderHelpFlat(HELP));
+      console.log(await renderFullHelp());
       return;
 
     default: {

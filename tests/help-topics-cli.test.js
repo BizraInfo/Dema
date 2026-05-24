@@ -1,11 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
 const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const packagePath = fileURLToPath(new URL("../package.json", import.meta.url));
+
+async function packageVersion() {
+  return JSON.parse(await readFile(packagePath, "utf8")).version;
+}
 
 test("dema help (no args) → stdout contains 'Available topics:' + at least 5 topic names", async () => {
   const { stdout } = await execFileAsync("node", [cliPath, "help"]);
@@ -37,6 +43,14 @@ test("dema help --all → stdout contains full HELP text (≥80 lines)", async (
   assert.match(stdout, /Dema CLI/);
   assert.match(stdout, /Orientation:/);
   assert.match(stdout, /Spine preview surfaces/);
+});
+
+test("dema help --all → version footer matches package.json", async () => {
+  const expected = await packageVersion();
+  const { stdout } = await execFileAsync("node", [cliPath, "help", "--all"]);
+  assert.match(stdout, new RegExp(`Dema v${expected.replaceAll(".", "\\.")}`));
+  assert.doesNotMatch(stdout, /Dema v0\.3\.0/);
+  assert.doesNotMatch(stdout, /read-only in v0\.3\.0/);
 });
 
 test("dema help xyz → stdout contains unknown-topic message", async () => {

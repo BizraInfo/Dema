@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
@@ -9,6 +9,11 @@ import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
 const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const packagePath = fileURLToPath(new URL("../package.json", import.meta.url));
+
+async function packageVersion() {
+  return JSON.parse(await readFile(packagePath, "utf8")).version;
+}
 
 async function makeFixtureDownloads() {
   const downloadsRoot = await mkdtemp(join(tmpdir(), "dema-fixture-downloads-"));
@@ -77,13 +82,15 @@ test("dema help (no args) emits hierarchical topic root after active-kernel refa
 });
 
 test("dema help --all still emits the full flat HELP list", async () => {
+  const expectedVersion = await packageVersion();
   const { stdout } = await execFileAsync("node", [cliPath, "help", "--all"]);
   assert.match(stdout, /Dema CLI/);
   assert.match(stdout, /Orientation:/);
   assert.match(stdout, /dema onboard/);
   assert.match(stdout, /dema task/);
   assert.match(stdout, /dema sovereign/);
-  assert.match(stdout, /v0\.3\.0/);
+  assert.match(stdout, new RegExp(`Dema v${expectedVersion.replaceAll(".", "\\.")}`));
+  assert.doesNotMatch(stdout, /Dema v0\.3\.0/);
 });
 
 test("dema sovereign respects DEMA_HOME and fails clearly when scaffold is absent", async () => {
