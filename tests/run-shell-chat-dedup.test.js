@@ -121,4 +121,5 @@ test("DEDUP-04: HELP block is always emitted (chat banner does not remove it)", 
   // HELP includes section heads like "Readiness:" and "Local evidence:"
   assert.match(captured, /Readiness:/, "HELP block must still appear after chat banner");
   assert.match(captured, /Local evidence:/, "HELP block must include local-evidence section");
+  assert.doesNotMatch(captured, /read-only in v0\.3\.0/, "shell help must not carry stale release wording");
 });

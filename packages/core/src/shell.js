@@ -71,7 +71,7 @@ const HELP = [
   "                       micro-consent + RSI process-mining-of-self + 10 invariants",
   "",
   "Tasks:",
-  "  task NAME            run a registered task (read-only in v0.3.0)",
+  "  task NAME            run a registered task (read-only in this release)",
   "  help                 this list",
   "  exit | quit          leave the shell",
   ""
