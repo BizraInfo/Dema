@@ -20,7 +20,7 @@
 
 ## Last verified
 
-2026-05-24 ~15:25 GST against main `7315cf1` (post-INDEX.md + RELEASE_PROCESS.md authorship).
+2026-05-24 ~15:35 GST against main `66dd426` (post-INDEX.md + RELEASE_PROCESS.md + CI_CD_PIPELINE.md authorship).
 
 ---
 
@@ -42,7 +42,7 @@
 | 12 | `THREAT_MODEL.md` | MISSING | Security reviewer | YES | Mumu | — | — | No STRIDE / no asset map · auditor's first question goes unanswered | STRIDE or equivalent · per-surface · mitigations linked to code |
 | 13 | `SECURE_SDLC_MAPPING.md` | MISSING | Security reviewer / enterprise buyer | YES | Mumu | — | — | NIST SSDF compliance posture unverifiable | Per-SSDF-practice mapping to BIZRA artifact (PR template, CI step, ADR) |
 | 14 | `TESTING.md` | COMPLETE | Engineer | YES | Mumu | 2026-05-24 (today's edit added memory-query test row) | `docs/TESTING.md` (136 KB) | — | Per-test-file row · invariants · how to run · coverage report referenced |
-| 15 | `CI_CD_PIPELINE.md` | MISSING | Engineer / security reviewer | YES | Mumu | — | (live state observable via `.github/workflows/` · 4 SHA-pinned Node-24 workflows) | CI posture documented only in workflow files · investor can't ask "is your CI rigorous?" and get a written answer | Documents: BIZRA Review Gate, check, CodeQL, gitleaks · pinning policy · workflow-changes-authorized gate · release-readiness score |
+| 15 | `CI_CD_PIPELINE.md` | COMPLETE | Engineer / security reviewer | YES | Mumu | 2026-05-24 (authored this session) | `docs/CI_CD_PIPELINE.md` (9 sections · 4-workflow inventory + per-workflow detail + SHA pinning policy + Node version policy + workflow-changes-authorized gate + operator runbook) | — | Documents: BIZRA Review Gate, check, CodeQL, gitleaks · pinning policy · workflow-changes-authorized gate · release-readiness score |
 | 16 | `RELEASE_PROCESS.md` | COMPLETE | Engineer | YES | Mumu | 2026-05-24 (authored this session) | `docs/RELEASE_PROCESS.md` (8 sections · versioning + 3-layer gate chain + RDR convention + rollback ladder + ADR-007 reference + workflow pinning policy + halt-gates) | — | Versioning · readiness gates · rollback · ADR-007 chain-mutation policy reference |
 | 17 | `AI_GOVERNANCE.md` | MISSING | AI ethics reviewer / regulator / investor | YES | Mumu | — | — | No mapping to ISO 42001 thinking · vulnerable to "what AI policy?" question | Decision boundaries · model card pointers · evals · per-surface policy |
 | 18 | `CONSENT_AND_MICRO_CONSENT_POLICY.md` | MISSING | All | YES | Mumu | — | (canon implicit in code · `~/.dema/lint/consent_grants.ndjson` operator-side schema lives) | Consent ladder C0-C5 not externalized · core BIZRA differentiator invisible to outsiders | C0-C5 ladder · per-action mapping · μ-C1 enforcer link · exact-string consent canon explained |
@@ -60,10 +60,10 @@
 
 | Status | Count | % |
 |---|---:|---:|
-| COMPLETE | 6 | 24% |
+| COMPLETE | 7 | 28% |
 | PARTIAL | 3 | 12% |
 | DRAFT | 1 | 4% |
-| MISSING | 14 | 56% |
+| MISSING | 13 | 52% |
 | OPERATOR-SIDE | 1 | 4% |
 | **TOTAL** | **25** | **100%** |
 
@@ -75,7 +75,7 @@ The "PARTIAL" entries (#1, #4, #7, #20, #24) all mean: *related content exists s
 
 The 14 MISSING entries require fresh authorship. None of them have evidence in repo today.
 
-Coverage today is **24% strictly complete · 30% if PARTIAL counts as half** — still far from the gold-standard 25/25 the GTM bar requires, but advancing two slices in one session (Tier-2 #10 ADR Index + Tier-2 #16 RELEASE_PROCESS).
+Coverage today is **28% strictly complete · 34% if PARTIAL counts as half** — still far from the gold-standard 25/25 the GTM bar requires, but advancing three slices in one session (Tier-2 #10 ADR Index + Tier-2 #16 RELEASE_PROCESS + Tier-2 #15 CI_CD_PIPELINE).
 
 ## Priority order (suggested for fill-in sequence)
 
@@ -89,7 +89,7 @@ Coverage today is **24% strictly complete · 30% if PARTIAL counts as half** —
 - #6 NODE0_ARCHITECTURE.md
 - #8 PAT_SAT_BOUNDARY.md
 - ~~#10 ADR_INDEX.md~~ — closed 2026-05-24 (`docs/06-adr/INDEX.md` · 18 ADRs indexed)
-- #15 CI_CD_PIPELINE.md
+- ~~#15 CI_CD_PIPELINE.md~~ — closed 2026-05-24 (`docs/CI_CD_PIPELINE.md` · 9-section workflow detail)
 - ~~#16 RELEASE_PROCESS.md~~ — closed 2026-05-24 (`docs/RELEASE_PROCESS.md` · 8-section process doc)
 
 **Tier 3 — Security + AI governance:**
