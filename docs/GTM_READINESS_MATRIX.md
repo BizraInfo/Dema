@@ -20,7 +20,7 @@
 
 ## Last verified
 
-2026-05-24 ~16:00 GST against main `ccde52a` (post-INDEX.md + RELEASE_PROCESS.md + CI_CD_PIPELINE.md + QUICKSTART.md + 00_START_HERE.md authorship · plus Third Fact Delta Register).
+2026-05-24 ~16:10 GST against main `3ff8fc3` (post-INDEX.md + RELEASE_PROCESS.md + CI_CD_PIPELINE.md + QUICKSTART.md + 00_START_HERE.md + DEMO_SCRIPT.md authorship · plus Third Fact Delta Register).
 
 ---
 
@@ -49,7 +49,7 @@
 | 19 | `DATA_PRIVACY_AND_MEMORY_POLICY.md` | MISSING | Privacy reviewer / regulator / investor | YES | Mumu | — | — | GDPR / CCPA / general data posture undefined externally | Memory access · retention · deletion · public-safe defaults · MC-A boundary doctrine |
 | 20 | `QUICKSTART.md` | COMPLETE | New developer / Ring-1 user | YES | Mumu | 2026-05-24 (authored this session) | `docs/QUICKSTART.md` (1-page · prerequisites + 4 sequential commands with verbatim expected output + troubleshooting + paths-from-here · verified against main @ a6ad0a1 on Node v22.22.2) | — | 1-page · `node bin/dema status` works in <2 min · expected output shown |
 | 21 | `NODE0_OPERATOR_GUIDE.md` | MISSING | Ring-1 user | YES | Mumu | — | — | First operator (Samy/equivalent) needs founder over their shoulder | Run · doctor · setup · receipts · troubleshoot · safe boundaries |
-| 22 | `DEMO_SCRIPT.md` | MISSING | Founder for demo · GTM team | YES | Mumu | — | — | Demos inconsistent · "what should I show?" question every time | 3-min and 10-min scripts · exact commands · expected output · failure-mode handling |
+| 22 | `DEMO_SCRIPT.md` | COMPLETE | Founder for demo · GTM team | YES | Mumu | 2026-05-24 (authored this session) | `docs/DEMO_SCRIPT.md` (3-min + 10-min scripts · 9 timed steps total · verbatim expected output from real run against fresh DEMA_HOME · 7-row failure-mode handling table · pre-demo checklist · explicit "what this demo does NOT cover") | — | 3-min and 10-min scripts · exact commands · expected output · failure-mode handling |
 | 23 | `INVESTOR_MEMO.md` | MISSING | Investor | YES | Mumu | — | — | Pitch deck without written memo = no async circulation · no leverage | Thesis · market · moat · what's MEASURED · what's PARKED · ask |
 | 24 | `RISK_REGISTER.md` | PARTIAL | Investor / engineer / governance | YES | Mumu | — | `docs/CLAIM_REGISTER_v0_1.md` (candidate · related discipline) | Risks live in head not on paper · auditor first question unanswered | Strategic + technical risks · probability · impact · mitigation · owner |
 | 25 | `LIGHTHOUSE_PACK.md` | OPERATOR-SIDE | Ring-1 reviewer | YES | Mumu | 2026-05-19 (per memory · relocated) | `~/Documents/bizra/lighthouse-pack-v1.0/` (operator-side · 9 files · per memory `project_lighthouse_pack_v1_0_relocated`) | Ring-1 review can't proceed cleanly without packaged surface | 9-file curated package · evidence + envelope + onboarding · send-ready |
@@ -60,10 +60,10 @@
 
 | Status | Count | % |
 |---|---:|---:|
-| COMPLETE | 9 | 36% |
+| COMPLETE | 10 | 40% |
 | PARTIAL | 1 | 4% |
 | DRAFT | 1 | 4% |
-| MISSING | 13 | 52% |
+| MISSING | 12 | 48% |
 | OPERATOR-SIDE | 1 | 4% |
 | **TOTAL** | **25** | **100%** |
 
@@ -75,7 +75,7 @@ The "PARTIAL" entries (#4, #7, #24) all mean: *related content exists somewhere,
 
 The 14 MISSING entries require fresh authorship. None of them have evidence in repo today.
 
-Coverage today is **36% strictly complete · 38% if PARTIAL counts as half** — still far from the gold-standard 25/25 the GTM bar requires, but advancing five slices in one session (Tier-1 #1 START_HERE + Tier-1 #20 QUICKSTART + Tier-2 #10 ADR Index + Tier-2 #15 CI_CD_PIPELINE + Tier-2 #16 RELEASE_PROCESS · plus the Third Fact Delta Register as out-of-matrix doctrine-to-disk bridge · coverage more than doubled from the starting 16%).
+Coverage today is **40% strictly complete · 42% if PARTIAL counts as half** — still well short of the gold-standard 25/25 the GTM bar requires, but six matrix slices closed in one session (Tier-1 #1 START_HERE + Tier-1 #20 QUICKSTART + Tier-2 #10 ADR Index + Tier-2 #15 CI_CD_PIPELINE + Tier-2 #16 RELEASE_PROCESS + Tier-4 #22 DEMO_SCRIPT · plus the out-of-matrix Third Fact Delta Register · coverage 2.5× starting state of 16%).
 
 ## Priority order (suggested for fill-in sequence)
 
@@ -101,7 +101,7 @@ Coverage today is **36% strictly complete · 38% if PARTIAL counts as half** —
 
 **Tier 4 — GTM execution:**
 - #3 BIZRA_ONE_PAGER.md
-- #22 DEMO_SCRIPT.md
+- ~~#22 DEMO_SCRIPT.md~~ — closed 2026-05-24 (`docs/DEMO_SCRIPT.md` · 3-min + 10-min scripts with verbatim output)
 - #21 NODE0_OPERATOR_GUIDE.md
 - #24 RISK_REGISTER.md (PARTIAL → COMPLETE)
 - #25 LIGHTHOUSE_PACK.md (decide: leave operator-side or replicate a repo-resident summary)
