@@ -2013,13 +2013,15 @@ async function dispatch(argv) {
         const queryText = argv[2];
         if (!queryText || queryText.startsWith("-")) {
           console.error("dema memory query: missing <text> argument. Usage: dema memory query \"<text>\" [--top N]");
-          process.exit(2);
+          process.exitCode = 2;
+          return;
         }
         const memTopArg = argValue(argv, "--top");
         let memTop = memTopArg ? parseInt(memTopArg, 10) : 3;
         if (!Number.isInteger(memTop) || memTop < 1 || memTop > 20) {
           console.error(`dema memory query: --top out of range: must be integer in [1, 20] (got '${memTopArg}')`);
-          process.exit(2);
+          process.exitCode = 2;
+          return;
         }
         const memWantsJson = argv.includes("--json");
 
@@ -2101,7 +2103,8 @@ async function dispatch(argv) {
             console.error(`dema memory query: wrapper not found at ${wrapperPath}`);
             console.error("  install ~/.dema/bin/agent-db-query or set DEMA_AGENT_DB_QUERY_PATH");
           }
-          process.exit(1);
+          process.exitCode = 1;
+          return;
         }
         const memT0 = Date.now();
         const memResult = memSpawnSync("python3", [
@@ -2146,7 +2149,8 @@ async function dispatch(argv) {
           }
           if (env.error) console.error(`error: ${env.error}`);
         }
-        process.exit(env.error ? 1 : 0);
+        process.exitCode = env.error ? 1 : 0;
+        return;
       } else {
         throw new Error(
           "Unknown memory command. Use `dema memory [list]` or `dema memory show <name>` or `dema memory query \"<text>\" [--top N]`."
