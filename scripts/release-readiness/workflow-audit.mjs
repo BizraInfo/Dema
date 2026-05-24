@@ -28,9 +28,36 @@ export function findNodeMatrix(workflowText) {
 }
 
 export function findRunCommands(workflowText) {
-  return [...workflowText.matchAll(/^\s*-\s*run:\s*(.+)$/gm)]
-    .map((match) => match[1].trim())
-    .filter(Boolean);
+  const commands = [];
+  const lines = String(workflowText ?? "").split(/\r?\n/);
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const match = line.match(/^(\s*)(?:-\s*)?run:\s*(.*)$/);
+    if (!match) continue;
+
+    const baseIndent = match[1].length;
+    const value = match[2].trim();
+    if (/^[|>][+-]?\d*$/.test(value)) {
+      for (i += 1; i < lines.length; i += 1) {
+        const blockLine = lines[i];
+        const trimmed = blockLine.trim();
+        if (!trimmed) continue;
+
+        const indent = blockLine.match(/^\s*/)[0].length;
+        if (indent <= baseIndent) {
+          i -= 1;
+          break;
+        }
+        if (!trimmed.startsWith("#")) commands.push(trimmed);
+      }
+      continue;
+    }
+
+    if (value) commands.push(value);
+  }
+
+  return commands;
 }
 
 export function findWorkflowEvents(workflowText) {

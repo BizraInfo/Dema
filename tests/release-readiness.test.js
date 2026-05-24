@@ -101,6 +101,33 @@ strategy:
   assert.deepEqual(findRunCommands(workflow), ["npm test", "npm run check"]);
 });
 
+test("workflow parser detects multiline run blocks under named steps", () => {
+  const workflow = `
+jobs:
+  check:
+    steps:
+      - name: Install scanner
+        run: |
+          set -euo pipefail
+          curl -fsSL https://example.invalid/tool.tgz -o tool.tgz
+          sha256sum -c tool.tgz.sha256
+      - name: Run gates
+        run: |
+          npm test
+          npm run check
+      - run: node scripts/release-readiness.mjs --json
+`;
+
+  assert.deepEqual(findRunCommands(workflow), [
+    "set -euo pipefail",
+    "curl -fsSL https://example.invalid/tool.tgz -o tool.tgz",
+    "sha256sum -c tool.tgz.sha256",
+    "npm test",
+    "npm run check",
+    "node scripts/release-readiness.mjs --json"
+  ]);
+});
+
 test("parseWorkflowWorktreeChanges extracts only workflow YAML changes", () => {
   const changes = parseWorkflowWorktreeChanges(`
  M .github/workflows/check.yml
