@@ -1913,6 +1913,7 @@ async function dispatch(argv) {
         missionExecuted: status.missionExecuted,
         runtimePulse: status.runtimePulse,
         modelConnected: status.modelConnected,
+        nextAction: status.nextAdmissibleAction || "complete_setup",
         version,
         generated_at: new Date().toISOString(),
       };
