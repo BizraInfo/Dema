@@ -1882,7 +1882,8 @@ async function dispatch(argv) {
     case "dashboard": {
       const { fileURLToPath } = await import("node:url");
       const { dirname, join, resolve } = await import("node:path");
-      const { accessSync, constants } = await import("node:fs");
+      const { readFileSync, writeFileSync, accessSync, constants, mkdtempSync } = await import("node:fs");
+      const { tmpdir } = await import("node:os");
 
       const here = dirname(fileURLToPath(import.meta.url));
       const htmlPath = resolve(join(here, "..", "..", "..", "docs", "tui", "dema-homebase-dashboard-v0.1.html"));
@@ -1900,11 +1901,39 @@ async function dispatch(argv) {
         return;
       }
 
+      const status = await statusWithLocalIdentity();
+      const version = await readPackageVersion();
+      const statusPayload = {
+        node: status.node || "Node0",
+        human: status.human || "unknown",
+        ready: status.ready,
+        consoleReady: status.consoleReady,
+        activationGate: status.activationGate || "BLOCKED",
+        daemonStatus: status.daemonStatus,
+        missionExecuted: status.missionExecuted,
+        runtimePulse: status.runtimePulse,
+        modelConnected: status.modelConnected,
+        version,
+        generated_at: new Date().toISOString(),
+      };
+
+      const useStatic = argv.includes("--static");
+      let openPath = htmlPath;
+
+      if (!useStatic) {
+        const html = readFileSync(htmlPath, "utf8");
+        const injection = `<script>window.__DEMA_STATUS__=${JSON.stringify(statusPayload)};</script>`;
+        const filled = html.replace("</body>", injection + "\n</body>");
+        const tmp = mkdtempSync(join(tmpdir(), "dema-dashboard-"));
+        openPath = join(tmp, "dashboard.html");
+        writeFileSync(openPath, filled, "utf8");
+      }
+
       const opener = process.platform === "darwin" ? "open"
         : process.platform === "win32" ? "start" : "xdg-open";
       const { execFile } = await import("node:child_process");
-      execFile(opener, [htmlPath], () => {});
-      console.log("Opening dashboard: " + htmlPath);
+      execFile(opener, [openPath], () => {});
+      console.log(useStatic ? "Opening static dashboard: " + openPath : "Opening live dashboard: " + openPath);
       return;
     }
 

@@ -512,8 +512,8 @@
       </div>
     </div>
     <div class="header-right">
-      <div class="badge badge-version">v0.1.0-alpha.0</div>
-      <div class="badge badge-blocked"><div class="pulse"></div> BLOCKED</div>
+      <div class="badge badge-version" id="d-version">v0.1.0-alpha.0</div>
+      <div class="badge badge-blocked" id="d-gate-badge"><div class="pulse"></div> BLOCKED</div>
     </div>
   </div>
 
@@ -532,19 +532,19 @@
         <div class="panel-body">
           <div class="identity-row">
             <span class="identity-key">Node</span>
-            <span class="identity-val">Node0</span>
+            <span class="identity-val" id="d-node">Node0</span>
           </div>
           <div class="identity-row">
             <span class="identity-key">Human</span>
-            <span class="identity-val unknown">unknown</span>
+            <span class="identity-val unknown" id="d-human">unknown</span>
           </div>
           <div class="identity-row">
             <span class="identity-key">Phase</span>
-            <span class="identity-val val-warn">first_run</span>
+            <span class="identity-val val-warn" id="d-phase">first_run</span>
           </div>
           <div class="identity-row">
             <span class="identity-key">Role</span>
-            <span class="identity-val">momo_node0</span>
+            <span class="identity-val" id="d-role">momo_node0</span>
           </div>
         </div>
       </div>
@@ -758,11 +758,30 @@
       <strong>MoMo before mesh.</strong>
     </div>
     <div class="footer-meta">
-      DEMA Homebase Dashboard v0.1 · Verified against main @ 6bdce8f · 2026-05-24 GST ·
+      <span id="d-footer-meta">DEMA Homebase Dashboard v0.1 · static design reference</span> ·
       <a href="https://github.com/BizraInfo/Dema" style="color:var(--accent-blue); text-decoration:none;">github.com/BizraInfo/Dema</a>
     </div>
   </div>
 
 </div><!-- /root -->
+<script>
+(function(){
+  var s = window.__DEMA_STATUS__;
+  if (!s) return;
+  function t(id, v) { var e = document.getElementById(id); if (e && v != null) e.textContent = String(v); }
+  t('d-node', s.node || 'Node0');
+  t('d-human', s.human || 'unknown');
+  t('d-version', 'v' + (s.version || '0.0.0'));
+  t('d-footer-meta', 'DEMA Homebase Dashboard · live from dema status · ' + (s.generated_at || ''));
+  if (s.human && s.human !== 'unknown') {
+    var el = document.getElementById('d-human');
+    if (el) { el.classList.remove('unknown'); }
+  }
+  if (s.activationGate && s.activationGate !== 'BLOCKED') {
+    var gb = document.getElementById('d-gate-badge');
+    if (gb) { gb.textContent = s.activationGate; gb.classList.remove('badge-blocked'); gb.classList.add('badge-version'); }
+  }
+})();
+</script>
 </body>
 </html>
