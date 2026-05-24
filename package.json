@@ -14,7 +14,7 @@
     "env-hygiene": "node scripts/review/env-hygiene-check.mjs",
     "env-hygiene:strict": "node scripts/review/env-hygiene-check.mjs --strict",
     "test": "node --test tests/*.test.js",
-    "coverage": "node --test --experimental-test-coverage --test-coverage-lines=95 --test-coverage-branches=80 --test-coverage-functions=95 tests/*.test.js",
+    "coverage": "node --test --experimental-test-coverage --test-coverage-lines=95 --test-coverage-branches=85 --test-coverage-functions=95 tests/*.test.js",
     "llm:guidance": "node scripts/llm-guidance-check.mjs",
     "gtm:readiness": "node scripts/gtm-readiness-check.mjs",
     "urp:discovery": "node scripts/urp-shared-discovery.mjs",

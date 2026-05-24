@@ -290,7 +290,7 @@ thresholds:
 
 ```text
 lines: 95
-branches: 80
+branches: 85
 functions: 95
 ```
 
