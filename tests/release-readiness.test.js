@@ -190,7 +190,7 @@ test("buildReleaseReadinessReport models automation and quality gates without ov
   if (report.quality_assurance.coverage_threshold.configured) {
     assert.deepEqual(gates.get("coverage_threshold").thresholds, {
       lines: 95,
-      branches: 80,
+      branches: 85,
       functions: 95
     });
   }
