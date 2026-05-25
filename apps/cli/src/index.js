@@ -119,6 +119,12 @@ import {
   removeSetup,
   REMOVE_CONSENT_PHRASE,
 } from "../../../packages/installer/src/setup.js";
+import {
+  saveWitnessReceipt,
+  buildWitnessAttestation,
+  formatWitnessReceipt,
+  WITNESS_CONSENT_PHRASE,
+} from "../../../packages/receipts/src/witness-receipt.js";
 import { runSetupWizard } from "../../../packages/core/src/setup-wizard.js";
 import {
   readMemoryEntry,
@@ -291,6 +297,8 @@ Orientation:
   dema setup-check  Verify install integrity (paths + sha256 hashes)
   dema uninstall [--dry-run]
                     Remove local Dema data; requires --consent with exact phrase
+  dema witness [--dry-run] [--json]
+                    Node0 self-witness receipt; requires --consent to save
 
 Readiness:
   dema status       Show human-readable Node0 status
@@ -544,6 +552,10 @@ const REGISTERED_COMMANDS_LIST = [
   {
     command: "uninstall",
     description: "remove local Dema data (consent-gated)",
+  },
+  {
+    command: "witness",
+    description: "Node0 self-witness receipt (consent-gated)",
   },
   { command: "help", description: "show full command list" },
 ];
@@ -1082,6 +1094,37 @@ async function dispatch(argv) {
       const result = await removeSetup(undefined, { consent, dryRun });
       console.log(JSON.stringify(result, null, 2));
       if (!result.removed && result.reason !== "dry_run") process.exitCode = 1;
+      return;
+    }
+
+    case "witness": {
+      const consent = argValue(argv, "--consent") ?? "";
+      const dryRun = argv.includes("--dry-run");
+      const wantJson = argv.includes("--json") || !process.stdout.isTTY;
+      if (dryRun && !consent) {
+        const att = await buildWitnessAttestation();
+        if (wantJson) {
+          console.log(
+            JSON.stringify(
+              { ...att, saved: false, reason: "dry_run", dry_run: true },
+              null,
+              2,
+            ),
+          );
+        } else {
+          console.log(
+            formatWitnessReceipt({ ...att, saved: false, reason: "dry_run" }),
+          );
+        }
+        return;
+      }
+      const result = await saveWitnessReceipt({ consent, dryRun });
+      if (wantJson) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        console.log(formatWitnessReceipt(result));
+      }
+      if (!result.saved && result.reason !== "dry_run") process.exitCode = 1;
       return;
     }
 
