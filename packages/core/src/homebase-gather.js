@@ -6,7 +6,10 @@ import { performance } from "node:perf_hooks";
 import { buildNode0StatePreview } from "./state.js";
 import { buildProcessMiningSummary } from "./process-mining-preview.js";
 import { buildLocalModelInventoryScan } from "./local-model-inventory-scan.js";
-import { buildHarnessIntegrationSummary } from "./harness-integration.js";
+import {
+  buildHarnessIntegration,
+  buildHarnessIntegrationSummary,
+} from "./harness-integration.js";
 import { listReceipts } from "../../receipts/src/receipt-store.js";
 
 const SCHEMA_VERSION = "bizra.dema.homebase_gather.v0.1";
@@ -246,6 +249,11 @@ export async function gather(opts = {}) {
 
   result.harness = await tryBuilder(
     () => buildHarnessIntegrationSummary(),
+    () => null,
+  );
+
+  result._harness_full = await tryBuilder(
+    () => buildHarnessIntegration(),
     () => null,
   );
 

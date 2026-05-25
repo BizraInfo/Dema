@@ -72,8 +72,12 @@ test("TDD-03: output is deep-frozen at every depth", () => {
 });
 
 test("TDD-04: deterministic — buildHomebasePreview byte-equal across runs given identical input", () => {
-  const g1 = makeGather({ profile: { name: "Mumu", node: "Node0", source_present: true } });
-  const g2 = makeGather({ profile: { name: "Mumu", node: "Node0", source_present: true } });
+  const g1 = makeGather({
+    profile: { name: "Mumu", node: "Node0", source_present: true },
+  });
+  const g2 = makeGather({
+    profile: { name: "Mumu", node: "Node0", source_present: true },
+  });
   const a = JSON.stringify(buildHomebasePreview({ gather: g1 }));
   const b = JSON.stringify(buildHomebasePreview({ gather: g2 }));
   assert.equal(a, b);
@@ -92,7 +96,10 @@ test("TDD-06: mode === preview_only", () => {
 test("TDD-07: rendered_at parseable by new Date()", () => {
   const out = buildHomebasePreview({ gather: makeGather() });
   const parsed = new Date(out.rendered_at);
-  assert.ok(!Number.isNaN(parsed.getTime()), "rendered_at must be a valid ISO date");
+  assert.ok(
+    !Number.isNaN(parsed.getTime()),
+    "rendered_at must be a valid ISO date",
+  );
   assert.equal(parsed.getTime(), FIXED_TS.getTime());
 });
 
@@ -104,7 +111,9 @@ test("TDD-08: viewport cols_target=76, rows_target=22", () => {
 
 test("TDD-09: missing profile yields greeting (welcome_new text) + has_name=false + name_source=absent", () => {
   const out = buildHomebasePreview({
-    gather: makeGather({ profile: { name: null, node: "Node0", source_present: false } }),
+    gather: makeGather({
+      profile: { name: null, node: "Node0", source_present: false },
+    }),
   });
   // English welcome_new template is "Welcome to Dema." (ADR-011 phase-2)
   assert.match(out.greeting.text, /Welcome/);
@@ -114,7 +123,9 @@ test("TDD-09: missing profile yields greeting (welcome_new text) + has_name=fals
 
 test("TDD-10: profile.name=Mumu yields Welcome back, Mumu. + name_source=profile_json", () => {
   const out = buildHomebasePreview({
-    gather: makeGather({ profile: { name: "Mumu", node: "Node0", source_present: true } }),
+    gather: makeGather({
+      profile: { name: "Mumu", node: "Node0", source_present: true },
+    }),
   });
   assert.equal(out.greeting.text, "Welcome back, Mumu.");
   assert.equal(out.greeting.has_name, true);
@@ -122,7 +133,9 @@ test("TDD-10: profile.name=Mumu yields Welcome back, Mumu. + name_source=profile
 });
 
 test("TDD-11: empty memory_recent yields memory3.fallback_text === 'no prior sessions'", () => {
-  const out = buildHomebasePreview({ gather: makeGather({ memory_recent: [] }) });
+  const out = buildHomebasePreview({
+    gather: makeGather({ memory_recent: [] }),
+  });
   assert.deepEqual(out.memory3.entries, []);
   assert.equal(out.memory3.fallback_text, "no prior sessions");
 });
@@ -134,7 +147,9 @@ test("TDD-12: status.gateway always reachable=false + by_design=true", () => {
 });
 
 test("TDD-13: next_action falls back to 'press ? to see available actions' when process_mining absent", () => {
-  const out = buildHomebasePreview({ gather: makeGather({ process_mining: null }) });
+  const out = buildHomebasePreview({
+    gather: makeGather({ process_mining: null }),
+  });
   assert.equal(out.next_action.text, "press ? to see available actions");
   assert.equal(out.next_action.source, "fallback");
   assert.equal(out.next_action.command, null);
@@ -175,7 +190,10 @@ test("ADV-03: mutating input warnings array does not affect output (defensive co
 
 test("ADV-04: prototype pollution attempt does not leak into output", () => {
   const dirty = makeGather();
-  Object.defineProperty(dirty, "__proto__", { value: { evil: "yes" }, enumerable: true });
+  Object.defineProperty(dirty, "__proto__", {
+    value: { evil: "yes" },
+    enumerable: true,
+  });
   const out = buildHomebasePreview({ gather: dirty });
   assert.equal("evil" in out, false);
   assert.equal(Object.getPrototypeOf(out), Object.prototype);
@@ -184,7 +202,9 @@ test("ADV-04: prototype pollution attempt does not leak into output", () => {
 test("ADV-05: enormously long profile.name (10000 chars) does not crash; output still deep-frozen", () => {
   const longName = "A".repeat(10000);
   const out = buildHomebasePreview({
-    gather: makeGather({ profile: { name: longName, node: "Node0", source_present: true } }),
+    gather: makeGather({
+      profile: { name: longName, node: "Node0", source_present: true },
+    }),
   });
   assert.equal(Object.isFrozen(out), true);
   assert.equal(Object.isFrozen(out.greeting), true);
@@ -201,13 +221,16 @@ test("ADV-06: next_action surfaces process_mining.next_step_observable when pres
       },
     }),
   });
-  assert.equal(out.next_action.text, "Ring 1 candidate response observable in inbox");
+  assert.equal(
+    out.next_action.text,
+    "Ring 1 candidate response observable in inbox",
+  );
   assert.equal(out.next_action.source, "process_mining_preview");
   // Pre-humanized input (contains spaces) is passed through unchanged
   // and is also mirrored to observation_code.
   assert.equal(
     out.next_action.observation_code,
-    "Ring 1 candidate response observable in inbox"
+    "Ring 1 candidate response observable in inbox",
   );
 });
 
@@ -222,10 +245,17 @@ test("ADV-07: known snake_case observation code is humanized for display, raw co
   });
   assert.ok(
     out.next_action.text.includes("seal a Lighthouse pack"),
-    `expected humanized hint to mention 'seal a Lighthouse pack', got: ${out.next_action.text}`
+    `expected humanized hint to mention 'seal a Lighthouse pack', got: ${out.next_action.text}`,
   );
-  assert.equal(out.next_action.text.includes("_"), false, "humanized text must not contain underscores");
-  assert.equal(out.next_action.observation_code, "no_ring_1_artifact_observable");
+  assert.equal(
+    out.next_action.text.includes("_"),
+    false,
+    "humanized text must not contain underscores",
+  );
+  assert.equal(
+    out.next_action.observation_code,
+    "no_ring_1_artifact_observable",
+  );
   assert.equal(out.next_action.source, "process_mining_preview");
 });
 
@@ -234,16 +264,25 @@ test("ADV-08: all four known process-mining observation codes humanize to distin
     "no_ring_1_artifact_observable",
     "ring_1_pack_sealed_observable",
     "ring_1_pack_sealed_observable_and_commits_held_observable",
-    "external_reviewer_form_present_observable"
+    "external_reviewer_form_present_observable",
   ];
   const texts = codes.map((code) => {
     const out = buildHomebasePreview({
-      gather: makeGather({ process_mining: { next_step_observable: code, ring_advancement_status: "x" } }),
+      gather: makeGather({
+        process_mining: {
+          next_step_observable: code,
+          ring_advancement_status: "x",
+        },
+      }),
     });
     return out.next_action.text;
   });
   for (const t of texts) {
-    assert.equal(t.includes("_"), false, `text must not contain underscores: ${t}`);
+    assert.equal(
+      t.includes("_"),
+      false,
+      `text must not contain underscores: ${t}`,
+    );
     assert.ok(t.length > 20, `text must be a real sentence, not a token: ${t}`);
   }
   assert.equal(new Set(texts).size, 4, "all 4 humanizations must be distinct");
@@ -263,7 +302,9 @@ test("ADV-09: unknown snake_case code receives heuristic humanization (no crash,
 });
 
 test("ADV-10: observation_code field is null when no process_mining input (fallback path)", () => {
-  const out = buildHomebasePreview({ gather: makeGather({ process_mining: null }) });
+  const out = buildHomebasePreview({
+    gather: makeGather({ process_mining: null }),
+  });
   assert.equal(out.next_action.observation_code, null);
   assert.equal(out.next_action.source, "fallback");
 });
@@ -278,8 +319,66 @@ test("warnings/partial propagate from gather to preview", () => {
 
 test("ISSUE-4: header.dema_version is non-zero and matches repo package.json", () => {
   const out = buildHomebasePreview({ gather: makeGather() });
-  assert.notEqual(out.header.dema_version, "0.0.0", "PKG_VERSION IIFE fell back to 0.0.0 · readFileSync path likely broken");
+  assert.notEqual(
+    out.header.dema_version,
+    "0.0.0",
+    "PKG_VERSION IIFE fell back to 0.0.0 · readFileSync path likely broken",
+  );
   assert.equal(typeof out.header.dema_version, "string");
-  assert.ok(out.header.dema_version.length > 0, "dema_version must be non-empty");
-  assert.equal(out.header.dema_version, REPO_PKG_VERSION, "preview version must match repo package.json");
+  assert.ok(
+    out.header.dema_version.length > 0,
+    "dema_version must be non-empty",
+  );
+  assert.equal(
+    out.header.dema_version,
+    REPO_PKG_VERSION,
+    "preview version must match repo package.json",
+  );
+});
+
+test("next_action reflects harness gap when blockers exist", () => {
+  const gather = makeGather({
+    harness: {
+      verdict: "REVIEW",
+      critique_gaps: 1,
+      critique_blockers: 1,
+      gates: "5/5",
+      hooks_wired: 6,
+    },
+    _harness_full: {
+      self_critique: {
+        gaps: [
+          {
+            code: "installer.packaging_pending",
+            severity: "launch_blocker",
+            note: "test",
+          },
+        ],
+      },
+    },
+  });
+  const out = buildHomebasePreview({ gather });
+  assert.equal(out.next_action.source, "harness_integration");
+  assert.equal(out.next_action.kind, "harness_gap");
+  assert.equal(out.next_action.observation_code, "installer.packaging_pending");
+  assert.ok(out.next_action.text.includes("Package"));
+});
+
+test("next_action falls back to process_mining when no blockers", () => {
+  const gather = makeGather({
+    harness: {
+      verdict: "CLEAN",
+      critique_gaps: 0,
+      critique_blockers: 0,
+      gates: "5/5",
+      hooks_wired: 6,
+    },
+    _harness_full: { self_critique: { gaps: [] } },
+    process_mining: {
+      next_step_observable: "no_ring_1_artifact_observable",
+      ring_advancement_status: "Ring 0",
+    },
+  });
+  const out = buildHomebasePreview({ gather });
+  assert.equal(out.next_action.source, "process_mining_preview");
 });

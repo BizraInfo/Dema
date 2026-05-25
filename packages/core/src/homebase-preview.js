@@ -269,7 +269,44 @@ function buildStatus(g) {
   });
 }
 
+const GAP_ACTIONS = {
+  "installer.packaging_pending": {
+    text: "Package the installer for broad distribution (hashes, dry-run, uninstall).",
+    command: null,
+  },
+  "sat.real_verifier_pending": {
+    text: "Wire SAT-facing receipt verification into the CLI.",
+    command: "dema orchestrator verify --latest",
+  },
+  "report.evidence_pending": {
+    text: "Attach computed evidence to the safety report.",
+    command: "dema harness --json",
+  },
+};
+
 function buildNextAction(g) {
+  const harness = g.harness;
+  if (
+    harness &&
+    harness.verdict === "REVIEW" &&
+    harness.critique_blockers > 0
+  ) {
+    const fullHarness = g._harness_full;
+    if (fullHarness?.self_critique?.gaps?.length > 0) {
+      const topGap = fullHarness.self_critique.gaps[0];
+      const action = GAP_ACTIONS[topGap.code];
+      if (action) {
+        return Object.freeze({
+          text: action.text,
+          observation_code: topGap.code,
+          kind: "harness_gap",
+          source: "harness_integration",
+          command: action.command,
+        });
+      }
+    }
+  }
+
   const observable = g.process_mining?.next_step_observable;
   if (typeof observable === "string" && observable.length > 0) {
     return Object.freeze({
