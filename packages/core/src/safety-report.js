@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -123,6 +123,41 @@ export function probeVerifierEvidence(root = repoRoot()) {
   return { verifierWired: allPass, checks };
 }
 
+export function probeEvidenceBinding(root = repoRoot()) {
+  const checks = {
+    test_files_exist: false,
+    ci_workflows_exist: false,
+    harness_integration_exists: false,
+    review_scripts_exist: false,
+  };
+
+  const testsDir = join(root, "tests");
+  try {
+    const entries = readdirSync(testsDir);
+    const testFiles = entries.filter((f) => f.endsWith(".test.js"));
+    checks.test_files_exist = testFiles.length >= 10;
+  } catch {}
+
+  const ciDir = join(root, ".github", "workflows");
+  try {
+    const entries = readdirSync(ciDir);
+    checks.ci_workflows_exist = entries.some((f) => f.endsWith(".yml"));
+  } catch {}
+
+  checks.harness_integration_exists = existsSync(
+    join(root, "packages", "core", "src", "harness-integration.js"),
+  );
+
+  const reviewDir = join(root, "scripts", "review");
+  try {
+    const entries = readdirSync(reviewDir);
+    checks.review_scripts_exist = entries.some((f) => f.endsWith(".mjs"));
+  } catch {}
+
+  const allPass = Object.values(checks).every(Boolean);
+  return { evidenceBound: allPass, checks };
+}
+
 function detectSelfCritiqueGaps({
   verifierWired = false,
   evidenceBound = false,
@@ -183,16 +218,20 @@ const TRUTH_SPINE_PREVIEWS = {
 export function buildSafetyReportPreview({
   now = new Date(),
   verifierWired,
-  evidenceBound = false,
+  evidenceBound,
   repoRoot: root,
 } = {}) {
   const resolvedVerifierWired =
     verifierWired !== undefined
       ? verifierWired
       : probeVerifierEvidence(root).verifierWired;
+  const resolvedEvidenceBound =
+    evidenceBound !== undefined
+      ? evidenceBound
+      : probeEvidenceBinding(root).evidenceBound;
   const gaps = detectSelfCritiqueGaps({
     verifierWired: resolvedVerifierWired,
-    evidenceBound,
+    evidenceBound: resolvedEvidenceBound,
   });
   return {
     schema: SCHEMA,

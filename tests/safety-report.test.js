@@ -9,6 +9,7 @@ import {
   formatSafetyReportPreview,
   detectSelfCritiqueGaps,
   probeVerifierEvidence,
+  probeEvidenceBinding,
 } from "../packages/core/src/safety-report.js";
 
 const execFileAsync = promisify(execFile);
@@ -220,25 +221,45 @@ test("probeVerifierEvidence returns false on nonexistent root", () => {
   assert.equal(probe.checks.sat_modules_exist, false);
 });
 
-test("buildSafetyReportPreview auto-detects verifier without explicit param", () => {
+test("buildSafetyReportPreview auto-detects both probes on real repo", () => {
   const report = buildSafetyReportPreview({ now: fixedNow });
   assert.ok(
     !report.self_critique.gaps.some(
       (g) => g.code === "sat.real_verifier_pending",
     ),
   );
-  assert.equal(report.self_critique.gaps.length, 2);
+  assert.ok(
+    !report.self_critique.gaps.some(
+      (g) => g.code === "report.evidence_pending",
+    ),
+  );
+  assert.equal(report.self_critique.gaps.length, 1);
+  assert.equal(
+    report.self_critique.gaps[0].code,
+    "installer.packaging_pending",
+  );
 });
 
-test("buildSafetyReportPreview explicit verifierWired=false overrides probe", () => {
+test("buildSafetyReportPreview explicit overrides beat probes", () => {
   const report = buildSafetyReportPreview({
     now: fixedNow,
     verifierWired: false,
+    evidenceBound: false,
   });
-  assert.ok(
-    report.self_critique.gaps.some(
-      (g) => g.code === "sat.real_verifier_pending",
-    ),
-  );
   assert.equal(report.self_critique.gaps.length, 3);
+});
+
+test("probeEvidenceBinding returns true on real repo", () => {
+  const probe = probeEvidenceBinding();
+  assert.equal(probe.evidenceBound, true);
+  assert.equal(probe.checks.test_files_exist, true);
+  assert.equal(probe.checks.ci_workflows_exist, true);
+  assert.equal(probe.checks.harness_integration_exists, true);
+  assert.equal(probe.checks.review_scripts_exist, true);
+});
+
+test("probeEvidenceBinding returns false on nonexistent root", () => {
+  const probe = probeEvidenceBinding("/nonexistent/repo");
+  assert.equal(probe.evidenceBound, false);
+  assert.equal(probe.checks.test_files_exist, false);
 });

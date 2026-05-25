@@ -223,7 +223,7 @@ export function renderLiveHomebase(preview, opts = {}) {
     const hLabel =
       harness.verdict === "CLEAN"
         ? `${green("CLEAN", nc)} ${dim(c.bullet, nc)} ${harness.gates} ${dim(c.bullet, nc)} ${harness.hooks} hooks`
-        : `${yellow(harness.verdict, nc)} ${dim(c.bullet, nc)} ${harness.gates} ${dim(c.bullet, nc)} ${harness.gaps} gaps`;
+        : `${yellow(harness.verdict, nc)} ${dim(c.bullet, nc)} ${harness.gates} ${dim(c.bullet, nc)} ${harness.gaps} gap${harness.gaps === 1 ? "" : "s"}`;
     lines.push(line(`  ${bold("Harness", nc)}  ${hIcon}  ${hLabel}`, width, c));
   }
 
