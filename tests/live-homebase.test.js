@@ -355,4 +355,48 @@ describe("progressive disclosure", () => {
     assert.ok(!output.includes("runtime: measured"));
     assert.ok(output.includes("runtime: not_measured"));
   });
+
+  it("witness VERIFIED row renders with checks and node", () => {
+    const preview = makePreview({
+      root: {
+        status: {
+          ...makePreview().status,
+          witness: {
+            verdict: "VERIFIED",
+            checks: "14/14",
+            node: "Node0",
+            harness_at_witness: "CLEAN",
+          },
+        },
+      },
+    });
+    const output = renderLiveHomebase(preview, { noColor: true });
+    assert.ok(output.includes("Witness"));
+    assert.ok(output.includes("VERIFIED"));
+    assert.ok(output.includes("14/14"));
+    assert.ok(output.includes("Node0"));
+  });
+
+  it("witness row absent when no witness exists", () => {
+    const output = renderLiveHomebase(makePreview(), { noColor: true });
+    assert.ok(!output.includes("Witness"));
+  });
+
+  it("witness FAILED row renders differently", () => {
+    const preview = makePreview({
+      root: {
+        status: {
+          ...makePreview().status,
+          witness: {
+            verdict: "FAILED",
+            checks: "12/14",
+            node: "Node0",
+          },
+        },
+      },
+    });
+    const output = renderLiveHomebase(preview, { noColor: true });
+    assert.ok(output.includes("FAILED"));
+    assert.ok(output.includes("12/14"));
+  });
 });

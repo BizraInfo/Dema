@@ -10,6 +10,10 @@ import {
   buildHarnessIntegration,
   buildHarnessIntegrationSummary,
 } from "./harness-integration.js";
+import {
+  findLatestWitness,
+  verifyWitnessReceipt,
+} from "../../receipts/src/witness-verify.js";
 import { buildNode0HomebaseStatePreview } from "./node0-homebase-state-preview.js";
 import { listReceipts } from "../../receipts/src/receipt-store.js";
 
@@ -37,6 +41,7 @@ function emptyResult(ts) {
     process_mining: null,
     harness: null,
     seed_topology: null,
+    last_witness: null,
     models: null,
     memory_size: { bytes: 0, entries: 0 },
     env_flags: {
@@ -261,6 +266,24 @@ export async function gather(opts = {}) {
 
   result.seed_topology = await tryBuilder(
     () => buildNode0HomebaseStatePreview(),
+    () => null,
+  );
+
+  result.last_witness = await tryBuilder(
+    async () => {
+      const path = await findLatestWitness(home);
+      if (!path) return null;
+      const verification = await verifyWitnessReceipt(path);
+      return {
+        path,
+        verdict: verification.verdict,
+        checks_passing: verification.checks_passing,
+        checks_total: verification.checks_total,
+        witnessed_at: verification.receipt_summary ? null : null,
+        node: verification.receipt_summary?.node ?? null,
+        harness_verdict: verification.receipt_summary?.harness_verdict ?? null,
+      };
+    },
     () => null,
   );
 

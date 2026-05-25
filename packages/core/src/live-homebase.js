@@ -256,6 +256,19 @@ export function renderLiveHomebase(preview, opts = {}) {
     }
   }
 
+  const witness = status?.witness;
+  if (witness) {
+    const wIcon =
+      witness.verdict === "VERIFIED"
+        ? green(c.dot_on, nc)
+        : yellow(c.dot_on, nc);
+    const wLabel =
+      witness.verdict === "VERIFIED"
+        ? `${green("VERIFIED", nc)} ${dim(c.bullet, nc)} ${witness.checks} checks ${dim(c.bullet, nc)} ${witness.node}`
+        : `${yellow(witness.verdict, nc)} ${dim(c.bullet, nc)} ${witness.checks} checks`;
+    lines.push(line(`  ${bold("Witness", nc)}  ${wIcon}  ${wLabel}`, width, c));
+  }
+
   lines.push(line("", width, c));
 
   if (nextAction.text) {

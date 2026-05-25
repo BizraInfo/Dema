@@ -285,6 +285,16 @@ function buildStatus(g) {
           }
         : null,
     ),
+    witness: Object.freeze(
+      g.last_witness
+        ? {
+            verdict: g.last_witness.verdict ?? "UNKNOWN",
+            checks: `${g.last_witness.checks_passing ?? 0}/${g.last_witness.checks_total ?? 0}`,
+            node: g.last_witness.node ?? "Node0",
+            harness_at_witness: g.last_witness.harness_verdict ?? null,
+          }
+        : null,
+    ),
   });
 }
 
