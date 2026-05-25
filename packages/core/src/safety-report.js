@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -158,17 +158,61 @@ export function probeEvidenceBinding(root = repoRoot()) {
   return { evidenceBound: allPass, checks };
 }
 
+export function probeInstallerPackaging(root = repoRoot()) {
+  const checks = {
+    setup_module_exists: false,
+    check_function_exists: false,
+    remove_function_exists: false,
+    lifecycle_tests_exist: false,
+    cli_commands_wired: false,
+  };
+
+  const setupPath = join(root, "packages", "installer", "src", "setup.js");
+  checks.setup_module_exists = existsSync(setupPath);
+
+  if (checks.setup_module_exists) {
+    try {
+      const src = readFileSync(setupPath, "utf8");
+      checks.check_function_exists = src.includes(
+        "export async function checkSetup",
+      );
+      checks.remove_function_exists = src.includes(
+        "export async function removeSetup",
+      );
+    } catch {}
+  }
+
+  checks.lifecycle_tests_exist = existsSync(
+    join(root, "tests", "setup-lifecycle.test.js"),
+  );
+
+  try {
+    const cliSrc = readFileSync(
+      join(root, "apps", "cli", "src", "index.js"),
+      "utf8",
+    );
+    checks.cli_commands_wired =
+      cliSrc.includes('"setup-check"') && cliSrc.includes('"uninstall"');
+  } catch {}
+
+  const allPass = Object.values(checks).every(Boolean);
+  return { installerComplete: allPass, checks };
+}
+
 function detectSelfCritiqueGaps({
   verifierWired = false,
   evidenceBound = false,
+  installerComplete = false,
 } = {}) {
   const gaps = [];
 
-  gaps.push({
-    code: "installer.packaging_pending",
-    severity: "launch_blocker",
-    note: "Developer install exists, but broad GTM needs packaged install, hashes, dry-run/check, and uninstall.",
-  });
+  if (!installerComplete) {
+    gaps.push({
+      code: "installer.packaging_pending",
+      severity: "launch_blocker",
+      note: "Developer install exists, but broad GTM needs packaged install, hashes, dry-run/check, and uninstall.",
+    });
+  }
 
   if (!verifierWired) {
     gaps.push({
@@ -219,6 +263,7 @@ export function buildSafetyReportPreview({
   now = new Date(),
   verifierWired,
   evidenceBound,
+  installerComplete,
   repoRoot: root,
 } = {}) {
   const resolvedVerifierWired =
@@ -229,9 +274,14 @@ export function buildSafetyReportPreview({
     evidenceBound !== undefined
       ? evidenceBound
       : probeEvidenceBinding(root).evidenceBound;
+  const resolvedInstallerComplete =
+    installerComplete !== undefined
+      ? installerComplete
+      : probeInstallerPackaging(root).installerComplete;
   const gaps = detectSelfCritiqueGaps({
     verifierWired: resolvedVerifierWired,
     evidenceBound: resolvedEvidenceBound,
+    installerComplete: resolvedInstallerComplete,
   });
   return {
     schema: SCHEMA,

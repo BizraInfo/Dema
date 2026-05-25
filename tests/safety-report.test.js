@@ -10,6 +10,7 @@ import {
   detectSelfCritiqueGaps,
   probeVerifierEvidence,
   probeEvidenceBinding,
+  probeInstallerPackaging,
 } from "../packages/core/src/safety-report.js";
 
 const execFileAsync = promisify(execFile);
@@ -187,6 +188,8 @@ test("buildSafetyReportPreview with verifierWired=true omits verifier gap", () =
   const report = buildSafetyReportPreview({
     now: fixedNow,
     verifierWired: true,
+    evidenceBound: false,
+    installerComplete: false,
   });
   assert.ok(
     !report.self_critique.gaps.some(
@@ -201,6 +204,7 @@ test("buildSafetyReportPreview self_critique.status reflects gap count", () => {
     now: fixedNow,
     verifierWired: true,
     evidenceBound: true,
+    installerComplete: false,
   });
   assert.equal(report.self_critique.gaps.length, 1);
   assert.equal(report.self_critique.status, "open_gaps_visible");
@@ -221,23 +225,10 @@ test("probeVerifierEvidence returns false on nonexistent root", () => {
   assert.equal(probe.checks.sat_modules_exist, false);
 });
 
-test("buildSafetyReportPreview auto-detects both probes on real repo", () => {
+test("buildSafetyReportPreview auto-detects all three probes on real repo", () => {
   const report = buildSafetyReportPreview({ now: fixedNow });
-  assert.ok(
-    !report.self_critique.gaps.some(
-      (g) => g.code === "sat.real_verifier_pending",
-    ),
-  );
-  assert.ok(
-    !report.self_critique.gaps.some(
-      (g) => g.code === "report.evidence_pending",
-    ),
-  );
-  assert.equal(report.self_critique.gaps.length, 1);
-  assert.equal(
-    report.self_critique.gaps[0].code,
-    "installer.packaging_pending",
-  );
+  assert.equal(report.self_critique.gaps.length, 0);
+  assert.equal(report.self_critique.status, "no_gaps");
 });
 
 test("buildSafetyReportPreview explicit overrides beat probes", () => {
@@ -245,6 +236,7 @@ test("buildSafetyReportPreview explicit overrides beat probes", () => {
     now: fixedNow,
     verifierWired: false,
     evidenceBound: false,
+    installerComplete: false,
   });
   assert.equal(report.self_critique.gaps.length, 3);
 });
@@ -262,4 +254,19 @@ test("probeEvidenceBinding returns false on nonexistent root", () => {
   const probe = probeEvidenceBinding("/nonexistent/repo");
   assert.equal(probe.evidenceBound, false);
   assert.equal(probe.checks.test_files_exist, false);
+});
+
+test("probeInstallerPackaging returns true on real repo", () => {
+  const probe = probeInstallerPackaging();
+  assert.equal(probe.installerComplete, true);
+  assert.equal(probe.checks.setup_module_exists, true);
+  assert.equal(probe.checks.check_function_exists, true);
+  assert.equal(probe.checks.remove_function_exists, true);
+  assert.equal(probe.checks.lifecycle_tests_exist, true);
+  assert.equal(probe.checks.cli_commands_wired, true);
+});
+
+test("probeInstallerPackaging returns false on nonexistent root", () => {
+  const probe = probeInstallerPackaging("/nonexistent/repo");
+  assert.equal(probe.installerComplete, false);
 });

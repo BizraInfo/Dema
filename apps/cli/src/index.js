@@ -113,7 +113,12 @@ import {
   listReceipts,
   readReceipt,
 } from "../../../packages/receipts/src/receipt-store.js";
-import { runSetup } from "../../../packages/installer/src/setup.js";
+import {
+  runSetup,
+  checkSetup,
+  removeSetup,
+  REMOVE_CONSENT_PHRASE,
+} from "../../../packages/installer/src/setup.js";
 import { runSetupWizard } from "../../../packages/core/src/setup-wizard.js";
 import {
   readMemoryEntry,
@@ -283,6 +288,9 @@ Orientation:
   dema explain [<concept>]
                     Plain-language definition of a BIZRA/Dema concept (28 known)
   dema setup        Create local Dema folders/profile skeleton
+  dema setup-check  Verify install integrity (paths + sha256 hashes)
+  dema uninstall [--dry-run]
+                    Remove local Dema data; requires --consent with exact phrase
 
 Readiness:
   dema status       Show human-readable Node0 status
@@ -528,6 +536,14 @@ const REGISTERED_COMMANDS_LIST = [
   {
     command: "setup",
     description: "create local Dema folders/profile skeleton",
+  },
+  {
+    command: "setup-check",
+    description: "verify local Dema install integrity (hashes + paths)",
+  },
+  {
+    command: "uninstall",
+    description: "remove local Dema data (consent-gated)",
   },
   { command: "help", description: "show full command list" },
 ];
@@ -1050,6 +1066,22 @@ async function dispatch(argv) {
         await runSetupWizard();
         await runSetup();
       }
+      return;
+    }
+
+    case "setup-check": {
+      const result = await checkSetup();
+      console.log(JSON.stringify(result, null, 2));
+      if (result.verdict !== "INTACT") process.exitCode = 1;
+      return;
+    }
+
+    case "uninstall": {
+      const consent = argValue(argv, "--consent") ?? "";
+      const dryRun = argv.includes("--dry-run");
+      const result = await removeSetup(undefined, { consent, dryRun });
+      console.log(JSON.stringify(result, null, 2));
+      if (!result.removed && result.reason !== "dry_run") process.exitCode = 1;
       return;
     }
 
