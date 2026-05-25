@@ -277,6 +277,11 @@ function buildStatus(g) {
             local_urp: g.seed_topology.local_urp_status ?? "unknown",
             shared_urp: g.seed_topology.shared_urp_status ?? "unknown",
             connected_nodes: 1,
+            epistemic_ground: Object.freeze({
+              topology: "topology_canon",
+              runtime: "not_measured",
+              assumption: "declared_with_ihsan",
+            }),
           }
         : null,
     ),

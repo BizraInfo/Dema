@@ -244,6 +244,16 @@ export function renderLiveHomebase(preview, opts = {}) {
         c,
       ),
     );
+    if (seed.epistemic_ground) {
+      const eg = seed.epistemic_ground;
+      lines.push(
+        line(
+          `    ${dim(`ground: ${eg.topology} ${c.bullet} runtime: ${eg.runtime} ${c.bullet} ${eg.assumption}`, nc)}`,
+          width,
+          c,
+        ),
+      );
+    }
   }
 
   lines.push(line("", width, c));

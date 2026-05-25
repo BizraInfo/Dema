@@ -49,6 +49,11 @@ function makePreview(overrides = {}) {
         local_urp: "active_local_only",
         shared_urp: "locked_preview_only",
         connected_nodes: 1,
+        epistemic_ground: {
+          topology: "topology_canon",
+          runtime: "not_measured",
+          assumption: "declared_with_ihsan",
+        },
         ...overrides.seed,
       },
     },
@@ -328,5 +333,26 @@ describe("progressive disclosure", () => {
     const preview = makePreview({ seed: { connected_nodes: 2 } });
     const output = renderLiveHomebase(preview, { noColor: true });
     assert.ok(output.includes("N=2"));
+  });
+
+  it("epistemic ground line renders below seed row", () => {
+    const output = renderLiveHomebase(makePreview(), { noColor: true });
+    assert.ok(output.includes("ground: topology_canon"));
+    assert.ok(output.includes("not_measured"));
+    assert.ok(output.includes("declared_with_ihsan"));
+  });
+
+  it("epistemic ground does not render when seed is null", () => {
+    const preview = makePreview({ seed: null });
+    preview.status.seed = null;
+    const output = renderLiveHomebase(preview, { noColor: true });
+    assert.ok(!output.includes("ground:"));
+    assert.ok(!output.includes("declared_with_ihsan"));
+  });
+
+  it("no false runtime measured claim", () => {
+    const output = renderLiveHomebase(makePreview(), { noColor: true });
+    assert.ok(!output.includes("runtime: measured"));
+    assert.ok(output.includes("runtime: not_measured"));
   });
 });
