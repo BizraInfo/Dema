@@ -266,6 +266,11 @@ import {
   humanHintLine,
 } from "../../../packages/core/src/output-mode.js";
 import {
+  resolveMissionReceipt,
+  buildCloseoutReport,
+  renderCloseoutText,
+} from "../../../packages/mission/src/mission-closeout.js";
+import {
   evaluatePredicates,
   formatDoctorDashboard,
 } from "../../../packages/core/src/doctor-dashboard.js";
@@ -2457,6 +2462,59 @@ async function dispatch(argv) {
             ? JSON.stringify(draft, null, 2)
             : formatMissionDraftPreview(draft),
         );
+        return;
+      }
+      if (subcommand === "closeout") {
+        const missionId =
+          argv[2] && !argv[2].startsWith("-") ? argv[2] : undefined;
+        const wantJsonCO = wantsJson(argv);
+        const resolved = await resolveMissionReceipt(missionId);
+        if (resolved.error) {
+          if (wantJsonCO) {
+            console.log(
+              JSON.stringify(
+                {
+                  schema: "bizra.dema.mission_closeout.v0.1",
+                  error: resolved.error,
+                },
+                null,
+                2,
+              ),
+            );
+          } else {
+            console.error(resolved.error);
+          }
+          process.exitCode = 1;
+          return;
+        }
+        const report = buildCloseoutReport(
+          resolved.receipt,
+          resolved.path,
+          resolved.filename,
+        );
+        if (report.error) {
+          if (wantJsonCO) {
+            console.log(
+              JSON.stringify(
+                {
+                  schema: "bizra.dema.mission_closeout.v0.1",
+                  error: report.error,
+                },
+                null,
+                2,
+              ),
+            );
+          } else {
+            console.error(report.error);
+          }
+          process.exitCode = 1;
+          return;
+        }
+        if (wantJsonCO) {
+          console.log(JSON.stringify(report, null, 2));
+        } else {
+          console.log(renderCloseoutText(report));
+        }
         return;
       }
       if (subcommand !== "propose") {
