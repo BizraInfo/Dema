@@ -125,6 +125,11 @@ import {
   formatWitnessReceipt,
   WITNESS_CONSENT_PHRASE,
 } from "../../../packages/receipts/src/witness-receipt.js";
+import {
+  verifyWitnessReceipt,
+  findLatestWitness,
+  formatWitnessVerification,
+} from "../../../packages/receipts/src/witness-verify.js";
 import { runSetupWizard } from "../../../packages/core/src/setup-wizard.js";
 import {
   readMemoryEntry,
@@ -299,6 +304,8 @@ Orientation:
                     Remove local Dema data; requires --consent with exact phrase
   dema witness [--dry-run] [--json]
                     Node0 self-witness receipt; requires --consent to save
+  dema witness verify [--file <path>] [--json]
+                    Verify a witness receipt (latest or by path)
 
 Readiness:
   dema status       Show human-readable Node0 status
@@ -1098,6 +1105,27 @@ async function dispatch(argv) {
     }
 
     case "witness": {
+      const subCmd = argv[1] ?? "";
+      if (subCmd === "verify") {
+        const filePath = argValue(argv, "--file") ?? "";
+        const wantJsonV = argv.includes("--json") || !process.stdout.isTTY;
+        const receiptPath = filePath || (await findLatestWitness());
+        if (!receiptPath) {
+          console.error(
+            'No witness receipt found. Run `dema witness --consent "WITNESS NODE0 STATE"` first.',
+          );
+          process.exitCode = 1;
+          return;
+        }
+        const vResult = await verifyWitnessReceipt(receiptPath);
+        if (wantJsonV) {
+          console.log(JSON.stringify(vResult, null, 2));
+        } else {
+          console.log(formatWitnessVerification(vResult));
+        }
+        if (vResult.verdict !== "VERIFIED") process.exitCode = 1;
+        return;
+      }
       const consent = argValue(argv, "--consent") ?? "";
       const dryRun = argv.includes("--dry-run");
       const wantJson = argv.includes("--json") || !process.stdout.isTTY;
