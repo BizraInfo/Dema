@@ -227,6 +227,25 @@ export function renderLiveHomebase(preview, opts = {}) {
     lines.push(line(`  ${bold("Harness", nc)}  ${hIcon}  ${hLabel}`, width, c));
   }
 
+  const seed = status?.seed;
+  if (seed) {
+    const localLabel =
+      seed.local_urp === "active_local_only"
+        ? green("active", nc)
+        : dim(seed.local_urp, nc);
+    const sharedLabel =
+      seed.shared_urp === "locked_preview_only"
+        ? dim("locked", nc)
+        : cyan(seed.shared_urp, nc);
+    lines.push(
+      line(
+        `  ${bold("Seed", nc)}     ${cyan(`${seed.pat_count}`, nc)} PAT local ${dim(c.bullet, nc)} ${cyan(`${seed.sat_count}`, nc)} SAT shared ${dim(c.bullet, nc)} URP ${localLabel}/${sharedLabel} ${dim(c.bullet, nc)} N=${seed.connected_nodes}`,
+        width,
+        c,
+      ),
+    );
+  }
+
   lines.push(line("", width, c));
 
   if (nextAction.text) {

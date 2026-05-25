@@ -10,6 +10,7 @@ import {
   buildHarnessIntegration,
   buildHarnessIntegrationSummary,
 } from "./harness-integration.js";
+import { buildNode0HomebaseStatePreview } from "./node0-homebase-state-preview.js";
 import { listReceipts } from "../../receipts/src/receipt-store.js";
 
 const SCHEMA_VERSION = "bizra.dema.homebase_gather.v0.1";
@@ -35,6 +36,7 @@ function emptyResult(ts) {
     receipts: { count: 0, last_id: null, gateway_issued: 0 },
     process_mining: null,
     harness: null,
+    seed_topology: null,
     models: null,
     memory_size: { bytes: 0, entries: 0 },
     env_flags: {
@@ -254,6 +256,11 @@ export async function gather(opts = {}) {
 
   result._harness_full = await tryBuilder(
     () => buildHarnessIntegration(),
+    () => null,
+  );
+
+  result.seed_topology = await tryBuilder(
+    () => buildNode0HomebaseStatePreview(),
     () => null,
   );
 

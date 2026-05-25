@@ -42,6 +42,15 @@ function makePreview(overrides = {}) {
         hooks: 6,
         ...overrides.harness,
       },
+      seed: {
+        pat_count: 7,
+        sat_count: 5,
+        total_agents: 12,
+        local_urp: "active_local_only",
+        shared_urp: "locked_preview_only",
+        connected_nodes: 1,
+        ...overrides.seed,
+      },
     },
     next_action: { text: null, command: null, ...overrides.next_action },
     warnings: overrides.warnings ?? [],
@@ -287,5 +296,37 @@ describe("progressive disclosure", () => {
     });
     const output = renderLiveHomebase(preview, { noColor: true });
     assert.ok(!output.includes("UNAVAILABLE"));
+  });
+
+  it("seed row shows PAT and SAT counts", () => {
+    const output = renderLiveHomebase(makePreview(), { noColor: true });
+    assert.ok(output.includes("Seed"));
+    assert.ok(output.includes("7 PAT local"));
+    assert.ok(output.includes("5 SAT shared"));
+  });
+
+  it("seed row shows N=1 at single node", () => {
+    const output = renderLiveHomebase(makePreview(), { noColor: true });
+    assert.ok(output.includes("N=1"));
+  });
+
+  it("seed row shows URP status", () => {
+    const output = renderLiveHomebase(makePreview(), { noColor: true });
+    assert.ok(output.includes("URP"));
+    assert.ok(output.includes("active"));
+    assert.ok(output.includes("locked"));
+  });
+
+  it("seed row absent when seed is null", () => {
+    const preview = makePreview({ seed: null });
+    preview.status.seed = null;
+    const output = renderLiveHomebase(preview, { noColor: true });
+    assert.ok(!output.includes("Seed"));
+  });
+
+  it("seed row reflects N=2 when connected_nodes=2", () => {
+    const preview = makePreview({ seed: { connected_nodes: 2 } });
+    const output = renderLiveHomebase(preview, { noColor: true });
+    assert.ok(output.includes("N=2"));
   });
 });

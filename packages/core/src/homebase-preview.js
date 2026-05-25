@@ -266,6 +266,20 @@ function buildStatus(g) {
             hooks: 0,
           },
     ),
+    seed: Object.freeze(
+      g.seed_topology
+        ? {
+            pat_count: g.seed_topology.pat_count ?? 7,
+            sat_count: g.seed_topology.sat_count ?? 5,
+            total_agents:
+              (g.seed_topology.pat_count ?? 7) +
+              (g.seed_topology.sat_count ?? 5),
+            local_urp: g.seed_topology.local_urp_status ?? "unknown",
+            shared_urp: g.seed_topology.shared_urp_status ?? "unknown",
+            connected_nodes: 1,
+          }
+        : null,
+    ),
   });
 }
 
