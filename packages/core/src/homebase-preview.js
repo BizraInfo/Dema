@@ -23,30 +23,77 @@ const PKG_VERSION = (() => {
 
 const WEEKDAYS_GST = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS_GST = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
 const AFFORDANCES = Object.freeze([
-  Object.freeze({ key: "m", label: "Mission",  command: "dema mission draft",  boundary_level: "L2_propose"  }),
-  Object.freeze({ key: "j", label: "Journal",  command: "dema today",          boundary_level: "L1_remember" }),
-  Object.freeze({ key: "r", label: "Receipts", command: "dema receipts",       boundary_level: "L0_observe"  }),
-  Object.freeze({ key: "b", label: "Browse",   command: "<sub_screen:memory>", boundary_level: "L0_observe"  }),
-  Object.freeze({ key: "?", label: "Help",     command: "dema help",           boundary_level: "L0_observe"  }),
-  Object.freeze({ key: "q", label: "Quit",     command: "<exit>",              boundary_level: "L0_observe"  }),
+  Object.freeze({
+    key: "m",
+    label: "Mission",
+    command: "dema mission draft",
+    boundary_level: "L2_propose",
+  }),
+  Object.freeze({
+    key: "j",
+    label: "Journal",
+    command: "dema today",
+    boundary_level: "L1_remember",
+  }),
+  Object.freeze({
+    key: "r",
+    label: "Receipts",
+    command: "dema receipts",
+    boundary_level: "L0_observe",
+  }),
+  Object.freeze({
+    key: "b",
+    label: "Browse",
+    command: "<sub_screen:memory>",
+    boundary_level: "L0_observe",
+  }),
+  Object.freeze({
+    key: "?",
+    label: "Help",
+    command: "dema help",
+    boundary_level: "L0_observe",
+  }),
+  Object.freeze({
+    key: "q",
+    label: "Quit",
+    command: "<exit>",
+    boundary_level: "L0_observe",
+  }),
 ]);
 
 function assertGatherShape(g) {
-  if (!g || typeof g !== "object") throw new TypeError("gather missing or not an object");
+  if (!g || typeof g !== "object")
+    throw new TypeError("gather missing or not an object");
   if (!(g.ts instanceof Date) || Number.isNaN(g.ts.getTime())) {
     throw new TypeError("gather.ts not a valid Date");
   }
-  if (!g.profile || typeof g.profile !== "object") throw new TypeError("gather.profile missing");
-  if (!Array.isArray(g.memory_recent)) throw new TypeError("gather.memory_recent must be Array");
-  if (!Array.isArray(g.warnings)) throw new TypeError("gather.warnings must be Array");
-  if (typeof g.partial !== "boolean") throw new TypeError("gather.partial must be boolean");
-  if (!g.env_flags || typeof g.env_flags !== "object") throw new TypeError("gather.env_flags missing");
-  if (!g.memory_size || typeof g.memory_size !== "object") throw new TypeError("gather.memory_size missing");
+  if (!g.profile || typeof g.profile !== "object")
+    throw new TypeError("gather.profile missing");
+  if (!Array.isArray(g.memory_recent))
+    throw new TypeError("gather.memory_recent must be Array");
+  if (!Array.isArray(g.warnings))
+    throw new TypeError("gather.warnings must be Array");
+  if (typeof g.partial !== "boolean")
+    throw new TypeError("gather.partial must be boolean");
+  if (!g.env_flags || typeof g.env_flags !== "object")
+    throw new TypeError("gather.env_flags missing");
+  if (!g.memory_size || typeof g.memory_size !== "object")
+    throw new TypeError("gather.memory_size missing");
 }
 
 function formatGstDate(d) {
@@ -95,13 +142,21 @@ function classifyNextActionKind(text) {
   if (typeof text !== "string") return "preview";
   const lower = text.toLowerCase();
   if (lower.includes("observable")) return "preview";
-  if (lower.startsWith("review ") || lower.startsWith("send ") || lower.startsWith("respond")) return "operator_act";
+  if (
+    lower.startsWith("review ") ||
+    lower.startsWith("send ") ||
+    lower.startsWith("respond")
+  )
+    return "operator_act";
   return "preview";
 }
 
 function buildHeader(g) {
   return Object.freeze({
-    node_name: typeof g.profile.node === "string" && g.profile.node.length > 0 ? g.profile.node : "Node0",
+    node_name:
+      typeof g.profile.node === "string" && g.profile.node.length > 0
+        ? g.profile.node
+        : "Node0",
     date_human_gst: formatGstDate(g.ts),
     time_human_gst: formatGstTime(g.ts),
     dema_version: PKG_VERSION,
@@ -109,10 +164,20 @@ function buildHeader(g) {
 }
 
 function buildGreeting(g) {
-  const langCode = typeof g.profile.language_code === "string" ? g.profile.language_code : null;
-  const tmpl = (langCode && GREETING_TEMPLATES[langCode]) ? GREETING_TEMPLATES[langCode] : GREETING_TEMPLATES.en;
+  const langCode =
+    typeof g.profile.language_code === "string"
+      ? g.profile.language_code
+      : null;
+  const tmpl =
+    langCode && GREETING_TEMPLATES[langCode]
+      ? GREETING_TEMPLATES[langCode]
+      : GREETING_TEMPLATES.en;
 
-  if (!g.profile.source_present || typeof g.profile.name !== "string" || g.profile.name.length === 0) {
+  if (
+    !g.profile.source_present ||
+    typeof g.profile.name !== "string" ||
+    g.profile.name.length === 0
+  ) {
     return Object.freeze({
       text: tmpl.welcome_new,
       has_name: false,
@@ -130,7 +195,10 @@ function buildGreeting(g) {
 
 function buildMemory3(g) {
   if (!Array.isArray(g.memory_recent) || g.memory_recent.length === 0) {
-    return Object.freeze({ entries: Object.freeze([]), fallback_text: "no prior sessions" });
+    return Object.freeze({
+      entries: Object.freeze([]),
+      fallback_text: "no prior sessions",
+    });
   }
   const entries = g.memory_recent.slice(0, 3).map((m) =>
     Object.freeze({
@@ -147,7 +215,9 @@ function buildMemory3(g) {
 function buildStatus(g) {
   const ringRatio = computeRingRatio(g);
   const missionActive = Boolean(g.state?.mission_centered);
-  const entries = Number.isFinite(g.memory_size?.entries) ? g.memory_size.entries : 0;
+  const entries = Number.isFinite(g.memory_size?.entries)
+    ? g.memory_size.entries
+    : 0;
   const bytes = Number.isFinite(g.memory_size?.bytes) ? g.memory_size.bytes : 0;
   const memRatio = Math.min(1, entries / 24);
   return Object.freeze({
@@ -162,7 +232,9 @@ function buildStatus(g) {
     mission: Object.freeze({
       label: missionActive ? "active" : "clear",
       icon: missionActive ? "●" : "◉",
-      active_count: Number.isFinite(g.state?.active_mission_count) ? g.state.active_mission_count : 0,
+      active_count: Number.isFinite(g.state?.active_mission_count)
+        ? g.state.active_mission_count
+        : 0,
     }),
     gateway: Object.freeze({
       label: "unreachable (by design · no runtime here)",
@@ -177,6 +249,23 @@ function buildStatus(g) {
       bytes,
       entries,
     }),
+    harness: Object.freeze(
+      g.harness
+        ? {
+            verdict: g.harness.verdict ?? "UNKNOWN",
+            gates: g.harness.gates ?? "?/? passing",
+            gaps: g.harness.critique_gaps ?? 0,
+            blockers: g.harness.critique_blockers ?? 0,
+            hooks: g.harness.hooks_wired ?? 0,
+          }
+        : {
+            verdict: "UNAVAILABLE",
+            gates: "?",
+            gaps: 0,
+            blockers: 0,
+            hooks: 0,
+          },
+    ),
   });
 }
 

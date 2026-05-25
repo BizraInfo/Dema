@@ -211,6 +211,22 @@ export function renderLiveHomebase(preview, opts = {}) {
       c,
     ),
   );
+
+  const harness = status?.harness;
+  if (harness && harness.verdict !== "UNAVAILABLE") {
+    const hIcon =
+      harness.verdict === "CLEAN"
+        ? green(c.dot_on, nc)
+        : harness.blockers > 0
+          ? yellow(c.dot_on, nc)
+          : dim(c.dot_on, nc);
+    const hLabel =
+      harness.verdict === "CLEAN"
+        ? `${green("CLEAN", nc)} ${dim(c.bullet, nc)} ${harness.gates} ${dim(c.bullet, nc)} ${harness.hooks} hooks`
+        : `${yellow(harness.verdict, nc)} ${dim(c.bullet, nc)} ${harness.gates} ${dim(c.bullet, nc)} ${harness.gaps} gaps`;
+    lines.push(line(`  ${bold("Harness", nc)}  ${hIcon}  ${hLabel}`, width, c));
+  }
+
   lines.push(line("", width, c));
 
   if (nextAction.text) {

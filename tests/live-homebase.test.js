@@ -34,6 +34,14 @@ function makePreview(overrides = {}) {
         entries: 0,
         ...overrides.memory,
       },
+      harness: {
+        verdict: "REVIEW",
+        gates: "5/5 passing",
+        gaps: 2,
+        blockers: 1,
+        hooks: 6,
+        ...overrides.harness,
+      },
     },
     next_action: { text: null, command: null, ...overrides.next_action },
     warnings: overrides.warnings ?? [],
@@ -243,5 +251,41 @@ describe("progressive disclosure", () => {
   it("first_run does not show Mission key", () => {
     const keys = keysForPhase("first_run");
     assert.ok(!keys.some((k) => k.key === "m"));
+  });
+
+  it("harness row shows verdict and gates", () => {
+    const output = renderLiveHomebase(makePreview(), { noColor: true });
+    assert.ok(output.includes("Harness"));
+    assert.ok(output.includes("REVIEW"));
+    assert.ok(output.includes("5/5 passing"));
+  });
+
+  it("harness CLEAN verdict renders differently", () => {
+    const preview = makePreview({
+      harness: {
+        verdict: "CLEAN",
+        gates: "5/5 passing",
+        gaps: 0,
+        blockers: 0,
+        hooks: 6,
+      },
+    });
+    const output = renderLiveHomebase(preview, { noColor: true });
+    assert.ok(output.includes("CLEAN"));
+    assert.ok(output.includes("6 hooks"));
+  });
+
+  it("harness UNAVAILABLE is hidden", () => {
+    const preview = makePreview({
+      harness: {
+        verdict: "UNAVAILABLE",
+        gates: "?",
+        gaps: 0,
+        blockers: 0,
+        hooks: 0,
+      },
+    });
+    const output = renderLiveHomebase(preview, { noColor: true });
+    assert.ok(!output.includes("UNAVAILABLE"));
   });
 });
