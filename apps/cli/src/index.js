@@ -229,6 +229,7 @@ import {
   KEY_BINDINGS,
   runBannerKeyLoop,
 } from "../../../packages/core/src/banner-keys.js";
+import { runLiveHomebase } from "../../../packages/core/src/live-homebase.js";
 import { humanizeNextAction } from "../../../packages/core/src/next-action-humanizer.js";
 import {
   renderHelpRoot,
@@ -626,23 +627,29 @@ async function dispatch(argv) {
     const opts = resolveFormatterOptsFromEnv(process.env);
     process.stdout.write(formatHomebasePreview(preview, opts) + "\n");
 
-    // Keyboard dispatch — enabled only when both stdin and stdout are TTY
-    // and the operator has not opted out via DEMA_BANNER_INTERACTIVE=0.
     const bannerInteractive =
       process.stdin.isTTY &&
       process.stdout.isTTY &&
       process.env.DEMA_BANNER_INTERACTIVE !== "0";
 
     if (bannerInteractive) {
-      // Loop the key prompt so a key press dispatches and then returns
-      // to the prompt. Exits cleanly when readBannerKey returns null
-      // (q / Enter / Esc / Ctrl-C / timeout). Safety cap at 50 iterations
-      // bounds any pathological raw-mode loop.
-      await runBannerKeyLoop({
-        readKey: readBannerKey,
-        dispatchFn: dispatch,
-        readKeyOpts: { stdin: process.stdin, stdout: process.stdout },
-      });
+      const liveMode = process.env.DEMA_HOMEBASE_LIVE !== "0";
+      if (liveMode) {
+        await runLiveHomebase({
+          gatherFn: gather,
+          buildPreviewFn: buildHomebasePreview,
+          dispatchFn: dispatch,
+          stdin: process.stdin,
+          stdout: process.stdout,
+          opts,
+        });
+      } else {
+        await runBannerKeyLoop({
+          readKey: readBannerKey,
+          dispatchFn: dispatch,
+          readKeyOpts: { stdin: process.stdin, stdout: process.stdout },
+        });
+      }
     }
     return;
   }

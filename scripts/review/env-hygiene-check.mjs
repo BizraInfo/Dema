@@ -20,19 +20,23 @@ const KNOWN_DEMA_ENV_VARS = Object.freeze([
   "DEMA_DOWNLOADS_ROOT",
   "DEMA_GATEWAY_URL",
   "DEMA_HOME",
+  "DEMA_HOMEBASE_LIVE",
   "DEMA_LM_STUDIO_URL",
   "DEMA_MODELS_SKIP_TCP",
   "DEMA_MODEL_DOWNLOADS_ROOT",
   "DEMA_NODE0_ADAPTER",
   "DEMA_NODE0_STATUS_COMMAND",
   "DEMA_NO_TUI",
-  "DEMA_OLLAMA_URL"
+  "DEMA_OLLAMA_URL",
 ]);
 
 export function checkEnvHygiene({ env = process.env, strict = false } = {}) {
-  const polluters = KNOWN_DEMA_ENV_VARS
-    .filter((name) => Object.hasOwn(env, name) && env[name] !== undefined && env[name] !== "")
-    .map((name) => Object.freeze({ name, value_length: String(env[name]).length }));
+  const polluters = KNOWN_DEMA_ENV_VARS.filter(
+    (name) =>
+      Object.hasOwn(env, name) && env[name] !== undefined && env[name] !== "",
+  ).map((name) =>
+    Object.freeze({ name, value_length: String(env[name]).length }),
+  );
 
   const ok = polluters.length === 0;
   const remediation = ok
@@ -46,11 +50,14 @@ export function checkEnvHygiene({ env = process.env, strict = false } = {}) {
     polluters: Object.freeze(polluters),
     polluter_count: polluters.length,
     known_dema_env_vars: KNOWN_DEMA_ENV_VARS,
-    remediation
+    remediation,
   });
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (
+  process.argv[1] &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
   const strict = process.argv.includes("--strict");
   const report = checkEnvHygiene({ strict });
   console.log(JSON.stringify(report, null, 2));
