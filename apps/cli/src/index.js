@@ -130,6 +130,13 @@ import {
   findLatestWitness,
   formatWitnessVerification,
 } from "../../../packages/receipts/src/witness-verify.js";
+import {
+  buildHealthSnapshot,
+  saveHealthSnapshotReceipt,
+  verifyHealthSnapshotReceipt,
+  formatHealthSnapshotReceipt,
+  HEALTH_MISSION_CONSENT_PHRASE,
+} from "../../../packages/mission/src/health-snapshot.js";
 import { runSetupWizard } from "../../../packages/core/src/setup-wizard.js";
 import {
   readMemoryEntry,
@@ -306,6 +313,10 @@ Orientation:
                     Node0 self-witness receipt; requires --consent to save
   dema witness verify [--file <path>] [--json]
                     Verify a witness receipt (latest or by path)
+  dema mission run health [--dry-run] [--json]
+                    Node0 health snapshot mission; requires --consent to save
+  dema mission verify <path> [--json]
+                    Verify a mission receipt
 
 Readiness:
   dema status       Show human-readable Node0 status
@@ -2385,6 +2396,52 @@ async function dispatch(argv) {
     }
 
     case "mission": {
+      if (subcommand === "run" && argv[2] === "health") {
+        const consent = argValue(argv, "--consent") ?? "";
+        const dryRun = argv.includes("--dry-run");
+        const wantJsonM = argv.includes("--json") || !process.stdout.isTTY;
+        if (dryRun && !consent) {
+          const snap = await buildHealthSnapshot();
+          if (wantJsonM) {
+            console.log(
+              JSON.stringify(
+                { ...snap, saved: false, reason: "dry_run", dry_run: true },
+                null,
+                2,
+              ),
+            );
+          } else {
+            console.log(
+              formatHealthSnapshotReceipt({
+                ...snap,
+                saved: false,
+                reason: "dry_run",
+              }),
+            );
+          }
+          return;
+        }
+        const result = await saveHealthSnapshotReceipt({ consent, dryRun });
+        if (wantJsonM) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log(formatHealthSnapshotReceipt(result));
+        }
+        if (!result.saved && result.reason !== "dry_run") process.exitCode = 1;
+        return;
+      }
+      if (subcommand === "verify" && argv[2]) {
+        const mPath = argv[2];
+        const wantJsonMV = argv.includes("--json") || !process.stdout.isTTY;
+        const mv = await verifyHealthSnapshotReceipt(mPath);
+        console.log(
+          wantJsonMV
+            ? JSON.stringify(mv, null, 2)
+            : JSON.stringify(mv, null, 2),
+        );
+        if (mv.verdict !== "VERIFIED") process.exitCode = 1;
+        return;
+      }
       if (subcommand === "draft") {
         const json = argv.includes("--json");
         const intent = argv

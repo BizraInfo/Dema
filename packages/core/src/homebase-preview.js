@@ -138,6 +138,27 @@ function computeRingRatio(g) {
   return 0.2;
 }
 
+function buildMissionLabel(lastMission) {
+  if (!lastMission) return "none · press [m] to run health snapshot";
+
+  const missionType = lastMission.mission_type ?? "mission";
+  const verificationVerdict = lastMission.verification_verdict ?? null;
+  if (verificationVerdict === "FAILED") return `${missionType} · FAILED`;
+
+  const missionVerdict = lastMission.mission_verdict ?? "?";
+  return verificationVerdict
+    ? `${missionType} · ${verificationVerdict} · ${missionVerdict}`
+    : `${missionType} · ${missionVerdict}`;
+}
+
+function buildMissionIcon(lastMission) {
+  if (!lastMission) return "○";
+  if (lastMission.verification_verdict === "FAILED") return "○";
+  if (lastMission.mission_verdict === "CLEAN") return "●";
+  if (lastMission.mission_verdict === "ATTENTION") return "◐";
+  return "○";
+}
+
 function classifyNextActionKind(text) {
   if (typeof text !== "string") return "preview";
   const lower = text.toLowerCase();
@@ -214,7 +235,6 @@ function buildMemory3(g) {
 
 function buildStatus(g) {
   const ringRatio = computeRingRatio(g);
-  const missionActive = Boolean(g.state?.mission_centered);
   const entries = Number.isFinite(g.memory_size?.entries)
     ? g.memory_size.entries
     : 0;
@@ -229,13 +249,26 @@ function buildStatus(g) {
       bar: bar10(ringRatio),
       ratio: ringRatio,
     }),
-    mission: Object.freeze({
-      label: missionActive ? "active" : "clear",
-      icon: missionActive ? "●" : "◉",
-      active_count: Number.isFinite(g.state?.active_mission_count)
-        ? g.state.active_mission_count
-        : 0,
-    }),
+    mission: Object.freeze(
+      g.last_mission
+        ? {
+            label: buildMissionLabel(g.last_mission),
+            icon: buildMissionIcon(g.last_mission),
+            active_count: 1,
+            mission_id: g.last_mission.mission_id ?? null,
+            verification_verdict:
+              g.last_mission.verification_verdict ?? null,
+            mission_verdict: g.last_mission.mission_verdict ?? null,
+          }
+        : {
+            label: buildMissionLabel(null),
+            icon: buildMissionIcon(null),
+            active_count: 0,
+            mission_id: null,
+            verification_verdict: null,
+            mission_verdict: null,
+          },
+    ),
     gateway: Object.freeze({
       label: "unreachable (by design · no runtime here)",
       icon: "○",

@@ -1,10 +1,33 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { gather } from "../packages/core/src/homebase-gather.js";
+import { buildHomebasePreview } from "../packages/core/src/homebase-preview.js";
 import {
   renderLiveHomebase,
   derivePhase,
   keysForPhase,
 } from "../packages/core/src/live-homebase.js";
+import { runSetup } from "../packages/installer/src/setup.js";
+import {
+  saveHealthSnapshotReceipt,
+  HEALTH_MISSION_CONSENT_PHRASE,
+} from "../packages/mission/src/health-snapshot.js";
+
+async function freshHomebaseHome() {
+  const home = await mkdtemp(join(tmpdir(), "dema-live-homebase-mission-"));
+  await runSetup(home);
+  return home;
+}
+
+async function renderGatheredHomebase(home) {
+  const gathered = await gather({ home, include_models: false });
+  const preview = buildHomebasePreview({ gather: gathered });
+  const output = renderLiveHomebase(preview, { noColor: true });
+  return { gathered, preview, output };
+}
 
 function makePreview(overrides = {}) {
   return {
@@ -398,5 +421,67 @@ describe("progressive disclosure", () => {
     const output = renderLiveHomebase(preview, { noColor: true });
     assert.ok(output.includes("FAILED"));
     assert.ok(output.includes("12/14"));
+  });
+});
+
+describe("health mission row verification", () => {
+  it("shows no mission when no health mission receipt exists", async () => {
+    const home = await freshHomebaseHome();
+    const { preview, output } = await renderGatheredHomebase(home);
+
+    assert.equal(preview.status.mission.active_count, 0);
+    assert.equal(
+      preview.status.mission.label,
+      "none · press [m] to run health snapshot",
+    );
+    assert.ok(output.includes("none"));
+  });
+
+  it("shows valid health mission receipt as verifier-backed", async () => {
+    const home = await freshHomebaseHome();
+    const previousHome = process.env.DEMA_HOME;
+    process.env.DEMA_HOME = home;
+    try {
+      await saveHealthSnapshotReceipt({
+        consent: HEALTH_MISSION_CONSENT_PHRASE,
+        now: new Date("2026-05-26T12:00:00Z"),
+      });
+
+      const { gathered, preview, output } = await renderGatheredHomebase(home);
+
+      assert.equal(gathered.last_mission.verification_verdict, "VERIFIED");
+      assert.equal(preview.status.mission.verification_verdict, "VERIFIED");
+      assert.ok(output.includes("VERIFIED"));
+      assert.match(output, /CLEAN|ATTENTION|FAILED/);
+    } finally {
+      if (previousHome) process.env.DEMA_HOME = previousHome;
+      else delete process.env.DEMA_HOME;
+    }
+  });
+
+  it("shows tampered health mission receipt as failed, not raw receipt data", async () => {
+    const home = await freshHomebaseHome();
+    const previousHome = process.env.DEMA_HOME;
+    process.env.DEMA_HOME = home;
+    try {
+      const saved = await saveHealthSnapshotReceipt({
+        consent: HEALTH_MISSION_CONSENT_PHRASE,
+        now: new Date("2026-05-26T12:00:00Z"),
+      });
+      const tampered = JSON.parse(await readFile(saved.path, "utf8"));
+      tampered.attests.mission_verdict = "TAMPERED";
+      await writeFile(saved.path, JSON.stringify(tampered, null, 2));
+
+      const { gathered, preview, output } = await renderGatheredHomebase(home);
+
+      assert.equal(gathered.last_mission.verification_verdict, "FAILED");
+      assert.equal(gathered.last_mission.mission_verdict, "FAILED");
+      assert.equal(preview.status.mission.verification_verdict, "FAILED");
+      assert.ok(output.includes("FAILED"));
+      assert.ok(!output.includes("TAMPERED"));
+    } finally {
+      if (previousHome) process.env.DEMA_HOME = previousHome;
+      else delete process.env.DEMA_HOME;
+    }
   });
 });

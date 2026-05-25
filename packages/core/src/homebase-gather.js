@@ -16,6 +16,7 @@ import {
 } from "../../receipts/src/witness-verify.js";
 import { buildNode0HomebaseStatePreview } from "./node0-homebase-state-preview.js";
 import { listReceipts } from "../../receipts/src/receipt-store.js";
+import { verifyHealthSnapshotReceipt } from "../../mission/src/health-snapshot.js";
 
 const SCHEMA_VERSION = "bizra.dema.homebase_gather.v0.1";
 const GATHER_TIMING_BUDGET_MS = 200;
@@ -42,6 +43,7 @@ function emptyResult(ts) {
     harness: null,
     seed_topology: null,
     last_witness: null,
+    last_mission: null,
     models: null,
     memory_size: { bytes: 0, entries: 0 },
     env_flags: {
@@ -185,6 +187,27 @@ async function probeReceiptsDir(home, result) {
   }
 }
 
+async function findLatestHealthMissionReceipt(home) {
+  const receiptsDir = join(home, "receipts");
+  const entries = await readdir(receiptsDir);
+  const missions = entries.filter(
+    (f) => f.startsWith("mission-health-") && f.endsWith(".json"),
+  );
+  if (missions.length === 0) return null;
+
+  let latest = null;
+  let latestMtime = 0;
+  for (const mission of missions) {
+    const path = join(receiptsDir, mission);
+    const s = await stat(path);
+    if (s.mtimeMs > latestMtime) {
+      latestMtime = s.mtimeMs;
+      latest = path;
+    }
+  }
+  return latest;
+}
+
 async function walkDirSize(root, depth = 0) {
   if (depth > DIR_WALK_MAX_DEPTH) return { bytes: 0, entries: 0 };
   let bytes = 0;
@@ -283,6 +306,39 @@ export async function gather(opts = {}) {
         node: verification.receipt_summary?.node ?? null,
         harness_verdict: verification.receipt_summary?.harness_verdict ?? null,
       };
+    },
+    () => null,
+  );
+
+  result.last_mission = await tryBuilder(
+    async () => {
+      try {
+        const latest = await findLatestHealthMissionReceipt(home);
+        if (!latest) return null;
+        const verification = await verifyHealthSnapshotReceipt(latest);
+        if (verification.verdict !== "VERIFIED") {
+          return {
+            path: latest,
+            verification_verdict: "FAILED",
+            mission_verdict: "FAILED",
+            mission_type: "health_snapshot",
+            mission_id: null,
+            checks_passing: verification.checks_passing ?? 0,
+            checks_total: verification.checks_total ?? 0,
+          };
+        }
+        return {
+          path: latest,
+          verification_verdict: "VERIFIED",
+          mission_verdict: verification.mission_verdict ?? null,
+          mission_type: verification.mission_type ?? "health_snapshot",
+          mission_id: verification.mission_id ?? null,
+          checks_passing: verification.checks_passing ?? 0,
+          checks_total: verification.checks_total ?? 0,
+        };
+      } catch {
+        return null;
+      }
     },
     () => null,
   );

@@ -114,7 +114,11 @@ const PHASE_KEYS = {
   active: [
     { key: "s", label: "Status", cmd: ["status"] },
     { key: "d", label: "Doctor", cmd: ["doctor"] },
-    { key: "m", label: "Mission", cmd: ["mission", "propose"] },
+    {
+      key: "m",
+      label: "Mission",
+      cmd: ["mission", "run", "health", "--dry-run"],
+    },
     { key: "c", label: "Consent", cmd: ["consent", "plan", "Check my node"] },
     { key: "r", label: "Receipts", cmd: ["receipts"] },
     { key: "j", label: "Journal", cmd: ["today"] },
