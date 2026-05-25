@@ -1,4 +1,10 @@
+import { existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
 const SCHEMA = "bizra.dema.safety_report_preview.v0.1";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const DEMO_LOOP = [
   "dema welcome",
@@ -76,6 +82,47 @@ const PROACTIVE_ACTIONS = [
   },
 ];
 
+function repoRoot() {
+  return join(__dirname, "..", "..", "..");
+}
+
+export function probeVerifierEvidence(root = repoRoot()) {
+  const checks = {
+    sat_modules_exist: false,
+    orchestrator_exists: false,
+    sat_tests_exist: false,
+    cli_wired: false,
+  };
+
+  const satFiles = [
+    "sat-boundary-verifier.js",
+    "sat-consent-auditor.js",
+    "sat-doctrine-compliance.js",
+    "sat-identity-verifier.js",
+    "sat-receipt-chain-verifier.js",
+  ];
+
+  const coreSrc = join(root, "packages", "core", "src");
+  checks.sat_modules_exist = satFiles.every((f) =>
+    existsSync(join(coreSrc, f)),
+  );
+
+  checks.orchestrator_exists = existsSync(
+    join(coreSrc, "multi-agent-orchestrator.js"),
+  );
+
+  const testsDir = join(root, "tests");
+  checks.sat_tests_exist =
+    existsSync(join(testsDir, "sat-boundary-verifier.test.js")) &&
+    existsSync(join(testsDir, "orchestrator-verify-cli.test.js"));
+
+  checks.cli_wired = existsSync(join(root, "apps", "cli", "src", "index.js"));
+
+  const allPass = Object.values(checks).every(Boolean);
+
+  return { verifierWired: allPass, checks };
+}
+
 function detectSelfCritiqueGaps({
   verifierWired = false,
   evidenceBound = false,
@@ -135,10 +182,18 @@ const TRUTH_SPINE_PREVIEWS = {
 
 export function buildSafetyReportPreview({
   now = new Date(),
-  verifierWired = false,
+  verifierWired,
   evidenceBound = false,
+  repoRoot: root,
 } = {}) {
-  const gaps = detectSelfCritiqueGaps({ verifierWired, evidenceBound });
+  const resolvedVerifierWired =
+    verifierWired !== undefined
+      ? verifierWired
+      : probeVerifierEvidence(root).verifierWired;
+  const gaps = detectSelfCritiqueGaps({
+    verifierWired: resolvedVerifierWired,
+    evidenceBound,
+  });
   return {
     schema: SCHEMA,
     generated_at: now.toISOString(),

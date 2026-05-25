@@ -8,6 +8,7 @@ import {
   buildSafetyReportPreview,
   formatSafetyReportPreview,
   detectSelfCritiqueGaps,
+  probeVerifierEvidence,
 } from "../packages/core/src/safety-report.js";
 
 const execFileAsync = promisify(execFile);
@@ -78,8 +79,12 @@ test("buildSafetyReportPreview keeps convergence claims evidence-tagged and non-
     report.truth_spine_previews.behavioral_modulation.certifies,
     false,
   );
+  const reportNoVerifier = buildSafetyReportPreview({
+    now: fixedNow,
+    verifierWired: false,
+  });
   assert.ok(
-    report.self_critique.gaps.some(
+    reportNoVerifier.self_critique.gaps.some(
       (gap) => gap.code === "sat.real_verifier_pending",
     ),
   );
@@ -198,4 +203,42 @@ test("buildSafetyReportPreview self_critique.status reflects gap count", () => {
   });
   assert.equal(report.self_critique.gaps.length, 1);
   assert.equal(report.self_critique.status, "open_gaps_visible");
+});
+
+test("probeVerifierEvidence returns true on real repo", () => {
+  const probe = probeVerifierEvidence();
+  assert.equal(probe.verifierWired, true);
+  assert.equal(probe.checks.sat_modules_exist, true);
+  assert.equal(probe.checks.orchestrator_exists, true);
+  assert.equal(probe.checks.sat_tests_exist, true);
+  assert.equal(probe.checks.cli_wired, true);
+});
+
+test("probeVerifierEvidence returns false on nonexistent root", () => {
+  const probe = probeVerifierEvidence("/nonexistent/repo");
+  assert.equal(probe.verifierWired, false);
+  assert.equal(probe.checks.sat_modules_exist, false);
+});
+
+test("buildSafetyReportPreview auto-detects verifier without explicit param", () => {
+  const report = buildSafetyReportPreview({ now: fixedNow });
+  assert.ok(
+    !report.self_critique.gaps.some(
+      (g) => g.code === "sat.real_verifier_pending",
+    ),
+  );
+  assert.equal(report.self_critique.gaps.length, 2);
+});
+
+test("buildSafetyReportPreview explicit verifierWired=false overrides probe", () => {
+  const report = buildSafetyReportPreview({
+    now: fixedNow,
+    verifierWired: false,
+  });
+  assert.ok(
+    report.self_critique.gaps.some(
+      (g) => g.code === "sat.real_verifier_pending",
+    ),
+  );
+  assert.equal(report.self_critique.gaps.length, 3);
 });
