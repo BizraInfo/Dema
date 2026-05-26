@@ -283,6 +283,10 @@ import {
   formatThinkDryRun,
 } from "../../../packages/think/src/think-dry-run.js";
 import {
+  buildThinkLive,
+  formatThinkLive,
+} from "../../../packages/think/src/think-live.js";
+import {
   evaluatePredicates,
   formatDoctorDashboard,
 } from "../../../packages/core/src/doctor-dashboard.js";
@@ -2852,10 +2856,14 @@ async function dispatch(argv) {
     }
 
     case "think": {
-      if (!argv.includes("--dry-run")) {
-        const wantJsonTH = wantsJson(argv);
-        const msg =
-          "dema think v0.1 requires --dry-run. Live invocation is not yet available.";
+      const hasDryRun = argv.includes("--dry-run");
+      const thinkConsent = argValue(argv, "--consent") ?? "";
+      const modelConsent = argValue(argv, "--model-consent") ?? "";
+      const thinkModel = argValue(argv, "--model") ?? "";
+      const wantJsonTH = wantsJson(argv);
+
+      if (hasDryRun && thinkConsent) {
+        const msg = "Cannot use both --dry-run and --consent.";
         if (wantJsonTH) {
           console.log(
             JSON.stringify(
@@ -2870,61 +2878,140 @@ async function dispatch(argv) {
         process.exitCode = 1;
         return;
       }
-      const thinkQuery = argv
-        .slice(1)
-        .filter(
-          (a) => a !== "--dry-run" && a !== "--json" && a !== "--no-color",
-        )
-        .join(" ")
-        .trim();
-      if (!thinkQuery) {
-        const wantJsonTH2 = wantsJson(argv);
-        const msg2 = 'Usage: dema think "<query>" --dry-run [--json]';
-        if (wantJsonTH2) {
+
+      if (!hasDryRun && !thinkConsent) {
+        const msg =
+          'Specify --dry-run or --consent "RUN LOCAL THINK".\n' +
+          "Usage:\n" +
+          '  dema think "<query>" --dry-run [--json]\n' +
+          '  dema think "<query>" --consent "RUN LOCAL THINK" --model-consent "<phrase>" [--json]';
+        if (wantJsonTH) {
           console.log(
             JSON.stringify(
-              { schema: "bizra.dema.think_dry_run.v0.1", error: msg2 },
+              { schema: "bizra.dema.think_live.v0.1", error: msg },
               null,
               2,
             ),
           );
         } else {
-          console.error(msg2);
+          console.error(msg);
         }
         process.exitCode = 1;
         return;
       }
-      const wantJsonTH3 = wantsJson(argv);
+
+      const thinkQuery = argv
+        .slice(1)
+        .filter(
+          (a) =>
+            a !== "--dry-run" &&
+            a !== "--json" &&
+            a !== "--no-color" &&
+            a !== "--consent" &&
+            a !== thinkConsent &&
+            a !== "--model-consent" &&
+            a !== modelConsent &&
+            a !== "--model" &&
+            a !== thinkModel,
+        )
+        .join(" ")
+        .trim();
+
+      if (!thinkQuery) {
+        const msg =
+          'Missing query. Usage: dema think "<query>" --dry-run [--json]';
+        if (wantJsonTH) {
+          console.log(
+            JSON.stringify(
+              { schema: "bizra.dema.think_dry_run.v0.1", error: msg },
+              null,
+              2,
+            ),
+          );
+        } else {
+          console.error(msg);
+        }
+        process.exitCode = 1;
+        return;
+      }
+
+      if (hasDryRun) {
+        try {
+          const thinkEnvelope = buildThinkDryRun(thinkQuery);
+          if (thinkEnvelope.error) {
+            if (wantJsonTH) {
+              console.log(
+                JSON.stringify(
+                  {
+                    schema: "bizra.dema.think_dry_run.v0.1",
+                    error: thinkEnvelope.error,
+                  },
+                  null,
+                  2,
+                ),
+              );
+            } else {
+              console.error(thinkEnvelope.error);
+            }
+            process.exitCode = 1;
+            return;
+          }
+          if (wantJsonTH) {
+            console.log(JSON.stringify(thinkEnvelope, null, 2));
+          } else {
+            console.log(formatThinkDryRun(thinkEnvelope));
+          }
+        } catch (err) {
+          if (wantJsonTH) {
+            console.log(
+              JSON.stringify(
+                { schema: "bizra.dema.think_dry_run.v0.1", error: err.message },
+                null,
+                2,
+              ),
+            );
+          } else {
+            console.error(`Think error: ${err.message}`);
+          }
+          process.exitCode = 2;
+        }
+        return;
+      }
+
       try {
-        const thinkEnvelope = buildThinkDryRun(thinkQuery);
-        if (thinkEnvelope.error) {
-          if (wantJsonTH3) {
+        const liveEnvelope = await buildThinkLive(thinkQuery, {
+          thinkConsent,
+          modelConsent,
+          model: thinkModel,
+        });
+        if (liveEnvelope.error) {
+          if (wantJsonTH) {
             console.log(
               JSON.stringify(
                 {
-                  schema: "bizra.dema.think_dry_run.v0.1",
-                  error: thinkEnvelope.error,
+                  schema: "bizra.dema.think_live.v0.1",
+                  error: liveEnvelope.error,
                 },
                 null,
                 2,
               ),
             );
           } else {
-            console.error(thinkEnvelope.error);
+            console.error(liveEnvelope.error);
           }
           process.exitCode = 1;
           return;
         }
-        if (wantJsonTH3) {
-          console.log(JSON.stringify(thinkEnvelope, null, 2));
+        if (wantJsonTH) {
+          console.log(JSON.stringify(liveEnvelope, null, 2));
         } else {
-          console.log(formatThinkDryRun(thinkEnvelope));
+          console.log(formatThinkLive(liveEnvelope));
         }
       } catch (err) {
-        if (wantJsonTH3) {
+        if (wantJsonTH) {
           console.log(
             JSON.stringify(
-              { schema: "bizra.dema.think_dry_run.v0.1", error: err.message },
+              { schema: "bizra.dema.think_live.v0.1", error: err.message },
               null,
               2,
             ),

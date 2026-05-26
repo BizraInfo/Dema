@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
+import { llmAdapterConsentPhraseFor } from "../../core/src/llm-adapter.js";
 
 const SCHEMA = "bizra.dema.think_dry_run.v0.1";
 const SNIPPET_MAX_CHARS = 200;
@@ -120,7 +121,10 @@ export function buildThinkDryRun(query, { now = new Date(), top = 3 } = {}) {
       model: modelReadiness.recommended_model,
       prompt_length_chars: contextLength,
       consent_required: true,
-      consent_phrase: modelReadiness.consent_phrase_pattern,
+      think_consent_phrase: "RUN LOCAL THINK",
+      required_model_consent_phrase: modelReadiness.recommended_model
+        ? llmAdapterConsentPhraseFor(modelReadiness.recommended_model)
+        : modelReadiness.consent_phrase_pattern,
       model_invocation_performed: false,
     },
     boundary: {
