@@ -5,6 +5,7 @@ import {
   buildHarnessIntegrationSummary,
   formatHarnessIntegration,
   HARNESS_HOOK_CHECKS,
+  HARNESS_BEHAVIORAL_PROBES,
 } from "../packages/core/src/harness-integration.js";
 import { isCanonicalBoundaryShape } from "../packages/core/src/preview-boundary.js";
 
@@ -15,7 +16,7 @@ describe("harness-integration", () => {
     it("returns frozen object with correct schema", () => {
       const result = buildHarnessIntegration({ now: FIXED_NOW });
       assert.ok(Object.isFrozen(result));
-      assert.equal(result.schema, "bizra.dema.harness_integration.v0.1");
+      assert.equal(result.schema, "bizra.dema.harness_integration.v0.2");
     });
 
     it("mode is always PREVIEW_ONLY", () => {
@@ -28,12 +29,13 @@ describe("harness-integration", () => {
       assert.ok(["CLEAN", "REVIEW"].includes(result.verdict));
     });
 
-    it("contains all four harness surfaces", () => {
+    it("contains all five harness surfaces", () => {
       const result = buildHarnessIntegration({ now: FIXED_NOW });
       assert.ok(result.self_proactive_harness);
       assert.ok(result.self_critique);
       assert.ok(result.micro_compliance);
       assert.ok(result.micro_consent);
+      assert.ok(result.behavioral_probes);
     });
 
     it("contains hook inventory", () => {
@@ -101,8 +103,12 @@ describe("harness-integration", () => {
     it("has source_count and sources", () => {
       const result = buildHarnessIntegration({ now: FIXED_NOW });
       const sc = result.self_critique;
-      assert.equal(sc.source_count, 2);
-      assert.deepEqual(sc.sources, ["safety_report", "diagnostics_plan"]);
+      assert.equal(sc.source_count, 3);
+      assert.deepEqual(sc.sources, [
+        "safety_report",
+        "diagnostics_plan",
+        "behavioral_probes",
+      ]);
     });
 
     it("confidence is bounded_preview", () => {
@@ -260,7 +266,7 @@ describe("harness-integration", () => {
       const result = buildHarnessIntegrationSummary({ now: FIXED_NOW });
       assert.equal(
         result.schema,
-        "bizra.dema.harness_integration_summary.v0.1",
+        "bizra.dema.harness_integration_summary.v0.2",
       );
     });
 
@@ -273,6 +279,13 @@ describe("harness-integration", () => {
       const result = buildHarnessIntegrationSummary({ now: FIXED_NOW });
       assert.ok(typeof result.hooks_wired === "number");
       assert.ok(result.hooks_wired >= 6);
+    });
+
+    it("has probes_present and probe_count", () => {
+      const result = buildHarnessIntegrationSummary({ now: FIXED_NOW });
+      assert.equal(typeof result.probes_present, "boolean");
+      assert.equal(typeof result.probe_count, "number");
+      assert.equal(result.probe_count, 3);
     });
 
     it("has boundary with canonical shape", () => {
@@ -299,13 +312,14 @@ describe("harness-integration", () => {
       assert.ok(formatted.includes("Verdict:"));
     });
 
-    it("includes all four sections", () => {
+    it("includes all five sections", () => {
       const harness = buildHarnessIntegration({ now: FIXED_NOW });
       const formatted = formatHarnessIntegration(harness);
       assert.ok(formatted.includes("Self-Proactive Harness:"));
       assert.ok(formatted.includes("Self-Critique:"));
       assert.ok(formatted.includes("Micro-Compliance:"));
       assert.ok(formatted.includes("Micro-Consent:"));
+      assert.ok(formatted.includes("Behavioral Probes:"));
     });
 
     it("includes hook inventory", () => {
@@ -319,6 +333,68 @@ describe("harness-integration", () => {
       const harness = buildHarnessIntegration({ now: FIXED_NOW });
       const formatted = formatHarnessIntegration(harness);
       assert.ok(formatted.includes("preview-only"));
+    });
+  });
+
+  describe("behavioral_probes", () => {
+    it("has probe_count matching probes array length", () => {
+      const result = buildHarnessIntegration({ now: FIXED_NOW });
+      const bp = result.behavioral_probes;
+      assert.equal(bp.probe_count, bp.probes.length);
+    });
+
+    it("lists all three proof surfaces", () => {
+      const result = buildHarnessIntegration({ now: FIXED_NOW });
+      const ids = result.behavioral_probes.probes.map((p) => p.id);
+      assert.ok(ids.includes("mission_probe"));
+      assert.ok(ids.includes("think_probe"));
+      assert.ok(ids.includes("proof_loop_convergence"));
+    });
+
+    it("all probes present in this repo", () => {
+      const result = buildHarnessIntegration({ now: FIXED_NOW });
+      assert.equal(result.behavioral_probes.all_present, true);
+      assert.equal(result.behavioral_probes.status, "all_probes_present");
+    });
+
+    it("each probe has source_exists and test_exists", () => {
+      const result = buildHarnessIntegration({ now: FIXED_NOW });
+      for (const probe of result.behavioral_probes.probes) {
+        assert.ok(typeof probe.test_exists === "boolean");
+        assert.ok(
+          typeof probe.source_exists === "boolean" ||
+            probe.source_exists === null,
+        );
+      }
+    });
+
+    it("includes note about sync-only check", () => {
+      const result = buildHarnessIntegration({ now: FIXED_NOW });
+      assert.ok(result.behavioral_probes.note.includes("sync"));
+      assert.ok(result.behavioral_probes.note.includes("not executed"));
+    });
+
+    it("probes are frozen", () => {
+      const result = buildHarnessIntegration({ now: FIXED_NOW });
+      assert.ok(Object.isFrozen(result.behavioral_probes));
+      assert.ok(Object.isFrozen(result.behavioral_probes.probes));
+      for (const probe of result.behavioral_probes.probes) {
+        assert.ok(Object.isFrozen(probe));
+      }
+    });
+  });
+
+  describe("HARNESS_BEHAVIORAL_PROBES", () => {
+    it("is exported and non-empty", () => {
+      assert.ok(Array.isArray(HARNESS_BEHAVIORAL_PROBES));
+      assert.equal(HARNESS_BEHAVIORAL_PROBES.length, 3);
+    });
+
+    it("each probe has id and test", () => {
+      for (const probe of HARNESS_BEHAVIORAL_PROBES) {
+        assert.ok(typeof probe.id === "string");
+        assert.ok(typeof probe.test === "string");
+      }
     });
   });
 

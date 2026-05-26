@@ -1,10 +1,37 @@
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { buildPreviewBoundary } from "./preview-boundary.js";
 import { buildProcessMiningPreview } from "./process-mining-preview.js";
 import { buildKeyMakerCompliancePreview } from "./key-maker-compliance.js";
 import { buildSafetyReportPreview } from "./safety-report.js";
 import { buildDiagnosticsMissionPlan } from "../../mission/src/diagnostics-plan.js";
 
-const SCHEMA = "bizra.dema.harness_integration.v0.1";
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(__dirname, "..", "..", "..");
+
+const SCHEMA = "bizra.dema.harness_integration.v0.2";
+
+const BEHAVIORAL_PROBES = Object.freeze([
+  {
+    id: "mission_probe",
+    schema: "bizra.dema.mission_probe.v0.1",
+    source: "packages/mission/src/mission-probe.js",
+    test: "tests/mission-probe.test.js",
+  },
+  {
+    id: "think_probe",
+    schema: "bizra.dema.think_probe.v0.1",
+    source: "packages/think/src/think-probe.js",
+    test: "tests/think-probe.test.js",
+  },
+  {
+    id: "proof_loop_convergence",
+    schema: null,
+    source: null,
+    test: "tests/proof-loop-convergence.test.js",
+  },
+]);
 
 const HOOK_CHECKS = [
   {
@@ -66,8 +93,8 @@ function aggregateSelfCritique(safetyReport, diagnosticsPlan) {
   }
 
   return Object.freeze({
-    source_count: 2,
-    sources: ["safety_report", "diagnostics_plan"],
+    source_count: 3,
+    sources: ["safety_report", "diagnostics_plan", "behavioral_probes"],
     confidence: "bounded_preview",
     total_gap_count: uniqueGaps.length,
     severity_counts: Object.freeze(
@@ -141,6 +168,35 @@ function buildHookInventory() {
   );
 }
 
+function buildBehavioralProbeAwareness() {
+  const probes = BEHAVIORAL_PROBES.map((p) => {
+    const sourceExists = p.source
+      ? existsSync(join(REPO_ROOT, p.source))
+      : null;
+    const testExists = existsSync(join(REPO_ROOT, p.test));
+    return Object.freeze({
+      id: p.id,
+      schema: p.schema,
+      source_exists: sourceExists,
+      test_exists: testExists,
+      status:
+        (sourceExists === null || sourceExists) && testExists
+          ? "present"
+          : "missing",
+    });
+  });
+
+  const allPresent = probes.every((p) => p.status === "present");
+
+  return Object.freeze({
+    probe_count: probes.length,
+    all_present: allPresent,
+    status: allPresent ? "all_probes_present" : "probes_missing",
+    note: "sync source-exists check only; probes are async and not executed here",
+    probes: Object.freeze(probes),
+  });
+}
+
 export function buildHarnessIntegration({ now = new Date() } = {}) {
   const safetyReport = buildSafetyReportPreview({ now });
   const diagnosticsPlan = buildDiagnosticsMissionPlan({ now });
@@ -154,6 +210,7 @@ export function buildHarnessIntegration({ now = new Date() } = {}) {
   const microConsent = aggregateMicroConsent(diagnosticsPlan);
   const proactiveHarness = aggregateProactiveHarness(diagnosticsPlan);
   const hookInventory = buildHookInventory();
+  const behavioralProbes = buildBehavioralProbeAwareness();
 
   const allGatesPass = proactiveHarness.status === "all_gates_pass";
   const complianceClean =
@@ -172,6 +229,7 @@ export function buildHarnessIntegration({ now = new Date() } = {}) {
     self_critique: selfCritique,
     micro_compliance: microCompliance,
     micro_consent: microConsent,
+    behavioral_probes: behavioralProbes,
     hook_inventory: hookInventory,
     boundary: buildPreviewBoundary(),
   });
@@ -180,7 +238,7 @@ export function buildHarnessIntegration({ now = new Date() } = {}) {
 export function buildHarnessIntegrationSummary(options = {}) {
   const full = buildHarnessIntegration(options);
   return Object.freeze({
-    schema: "bizra.dema.harness_integration_summary.v0.1",
+    schema: "bizra.dema.harness_integration_summary.v0.2",
     verdict: full.verdict,
     proactive_status: full.self_proactive_harness.status,
     gates: `${full.self_proactive_harness.gates_passing}/${full.self_proactive_harness.gate_count} passing`,
@@ -190,6 +248,8 @@ export function buildHarnessIntegrationSummary(options = {}) {
       full.micro_compliance.diagnostics_boundary_closed &&
       full.micro_compliance.no_policy_contradiction,
     consent_status: full.micro_consent.status,
+    probes_present: full.behavioral_probes.all_present,
+    probe_count: full.behavioral_probes.probe_count,
     hooks_wired: full.hook_inventory.length,
     boundary: full.boundary,
   });
@@ -237,6 +297,17 @@ export function formatHarnessIntegration(harness) {
   lines.push(`  action_authorized: ${harness.micro_consent.action_authorized}`);
 
   lines.push("");
+  lines.push("Behavioral Probes:");
+  lines.push(`  status: ${harness.behavioral_probes.status}`);
+  lines.push(`  probe_count: ${harness.behavioral_probes.probe_count}`);
+  lines.push(`  all_present: ${harness.behavioral_probes.all_present}`);
+  for (const probe of harness.behavioral_probes.probes) {
+    lines.push(
+      `    ${probe.status === "present" ? "PRESENT" : "MISSING"} ${probe.id}${probe.schema ? ` (${probe.schema})` : ""}`,
+    );
+  }
+
+  lines.push("");
   lines.push("Hook Inventory:");
   for (const hook of harness.hook_inventory) {
     lines.push(
@@ -253,3 +324,4 @@ export function formatHarnessIntegration(harness) {
 }
 
 export const HARNESS_HOOK_CHECKS = HOOK_CHECKS;
+export const HARNESS_BEHAVIORAL_PROBES = BEHAVIORAL_PROBES;
