@@ -287,6 +287,10 @@ import {
   formatThinkLive,
 } from "../../../packages/think/src/think-live.js";
 import {
+  buildThinkCloseout,
+  formatThinkCloseout,
+} from "../../../packages/think/src/think-closeout.js";
+import {
   evaluatePredicates,
   formatDoctorDashboard,
 } from "../../../packages/core/src/doctor-dashboard.js";
@@ -2856,6 +2860,55 @@ async function dispatch(argv) {
     }
 
     case "think": {
+      const closeoutPath = argValue(argv, "--closeout");
+      if (closeoutPath) {
+        const wantJsonTC = wantsJson(argv);
+        try {
+          const { readFile: tcReadFile } = await import("node:fs/promises");
+          const raw = await tcReadFile(closeoutPath, "utf8");
+          const envelope = JSON.parse(raw);
+          const closeout = buildThinkCloseout(envelope);
+          if (closeout.error) {
+            if (wantJsonTC) {
+              console.log(
+                JSON.stringify(
+                  {
+                    schema: "bizra.dema.think_closeout.v0.1",
+                    error: closeout.error,
+                  },
+                  null,
+                  2,
+                ),
+              );
+            } else {
+              console.error(closeout.error);
+            }
+            process.exitCode = 1;
+          } else if (wantJsonTC) {
+            console.log(JSON.stringify(closeout, null, 2));
+          } else {
+            console.log(formatThinkCloseout(closeout));
+          }
+        } catch (err) {
+          if (wantsJson(argv)) {
+            console.log(
+              JSON.stringify(
+                {
+                  schema: "bizra.dema.think_closeout.v0.1",
+                  error: err.message,
+                },
+                null,
+                2,
+              ),
+            );
+          } else {
+            console.error(`Think closeout error: ${err.message}`);
+          }
+          process.exitCode = 2;
+        }
+        return;
+      }
+
       const hasDryRun = argv.includes("--dry-run");
       const thinkConsent = argValue(argv, "--consent") ?? "";
       const modelConsent = argValue(argv, "--model-consent") ?? "";
