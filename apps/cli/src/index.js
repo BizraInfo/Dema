@@ -291,6 +291,10 @@ import {
   formatThinkCloseout,
 } from "../../../packages/think/src/think-closeout.js";
 import {
+  saveThinkReceipt,
+  THINK_RECEIPT_SAVE_CONSENT,
+} from "../../../packages/think/src/think-receipt-save.js";
+import {
   evaluatePredicates,
   formatDoctorDashboard,
 } from "../../../packages/core/src/doctor-dashboard.js";
@@ -2953,6 +2957,7 @@ async function dispatch(argv) {
         return;
       }
 
+      const saveConsentVal = argValue(argv, "--save-consent") ?? "";
       const thinkQuery = argv
         .slice(1)
         .filter(
@@ -2965,7 +2970,10 @@ async function dispatch(argv) {
             a !== "--model-consent" &&
             a !== modelConsent &&
             a !== "--model" &&
-            a !== thinkModel,
+            a !== thinkModel &&
+            a !== "--save-receipt" &&
+            a !== "--save-consent" &&
+            a !== saveConsentVal,
         )
         .join(" ")
         .trim();
@@ -3059,6 +3067,33 @@ async function dispatch(argv) {
           console.log(JSON.stringify(liveEnvelope, null, 2));
         } else {
           console.log(formatThinkLive(liveEnvelope));
+        }
+
+        if (argv.includes("--save-receipt")) {
+          const saveConsent = argValue(argv, "--save-consent") ?? "";
+          const saveResult = await saveThinkReceipt(liveEnvelope, {
+            demaHome: process.env.DEMA_HOME,
+            consent: saveConsent,
+            pretty: true,
+          });
+          if (!saveResult.saved) {
+            if (saveResult.reason === "consent_missing") {
+              console.error(
+                `dema think: --save-receipt requires --save-consent "${THINK_RECEIPT_SAVE_CONSENT}"\n`,
+              );
+            } else if (saveResult.reason === "consent_mismatch") {
+              console.error(
+                `dema think: --save-receipt consent phrase mismatch; required: "${THINK_RECEIPT_SAVE_CONSENT}"\n`,
+              );
+            } else {
+              console.error(
+                `dema think: --save-receipt failed (${saveResult.reason}): ${saveResult.error_message ?? "unknown"}\n`,
+              );
+            }
+            process.exitCode = 1;
+          } else {
+            console.error(`saved receipt to: ${saveResult.path}\n`);
+          }
         }
       } catch (err) {
         if (wantJsonTH) {
