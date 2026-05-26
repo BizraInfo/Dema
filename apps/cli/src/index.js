@@ -295,6 +295,10 @@ import {
   THINK_RECEIPT_SAVE_CONSENT,
 } from "../../../packages/think/src/think-receipt-save.js";
 import {
+  runThinkProbe,
+  renderThinkProbeText,
+} from "../../../packages/think/src/think-probe.js";
+import {
   evaluatePredicates,
   formatDoctorDashboard,
 } from "../../../packages/core/src/doctor-dashboard.js";
@@ -2864,6 +2868,45 @@ async function dispatch(argv) {
     }
 
     case "think": {
+      if (argv.includes("--probe")) {
+        const wantJsonTP = wantsJson(argv);
+        try {
+          const { fileURLToPath: tpURL } = await import("node:url");
+          const { dirname: tpDirname, join: tpJoin } =
+            await import("node:path");
+          const tpRepoRoot = tpJoin(
+            tpDirname(tpURL(import.meta.url)),
+            "..",
+            "..",
+            "..",
+          );
+          const tpReport = await runThinkProbe(tpRepoRoot);
+          if (wantJsonTP) {
+            console.log(JSON.stringify(tpReport, null, 2));
+          } else {
+            console.log(renderThinkProbeText(tpReport));
+          }
+          if (tpReport.verdict === "FAILED") process.exitCode = 1;
+        } catch (err) {
+          if (wantJsonTP) {
+            console.log(
+              JSON.stringify(
+                {
+                  schema: "bizra.dema.think_probe.v0.1",
+                  error: err.message,
+                },
+                null,
+                2,
+              ),
+            );
+          } else {
+            console.error(`Think probe error: ${err.message}`);
+          }
+          process.exitCode = 2;
+        }
+        return;
+      }
+
       const closeoutPath = argValue(argv, "--closeout");
       if (closeoutPath) {
         const wantJsonTC = wantsJson(argv);
