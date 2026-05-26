@@ -39,7 +39,11 @@ async function isContainedReceipt(rootPath, candidatePath) {
     const realRoot = await realpath(rootPath);
     const realCand = await realpath(candidatePath);
     const realRel = relative(realRoot, realCand);
-    if (realRel === ".." || realRel.startsWith(".." + sep) || isAbsolute(realRel)) {
+    if (
+      realRel === ".." ||
+      realRel.startsWith(".." + sep) ||
+      isAbsolute(realRel)
+    ) {
       return false;
     }
     return true;
@@ -53,7 +57,7 @@ async function isContainedReceipt(rootPath, candidatePath) {
 const LIST_BOUNDARY = Object.freeze({
   store_scope: "local_read_list",
   operation_boundary: "read_list_only_no_mint",
-  issuer_boundary: "governed_runtime_issues_receipts"
+  issuer_boundary: "governed_runtime_issues_receipts",
 });
 
 function nonNegativeInteger(value, fallback) {
@@ -65,7 +69,7 @@ function normalizeListOptions({
   maxFiles = DEFAULT_MAX_FILES,
   maxJsonBytes = DEFAULT_MAX_JSON_BYTES,
   limit,
-  offset = 0
+  offset = 0,
 } = {}) {
   const normalizedMaxFiles = nonNegativeInteger(maxFiles, DEFAULT_MAX_FILES);
   return {
@@ -73,13 +77,17 @@ function normalizeListOptions({
     maxJsonBytes: nonNegativeInteger(maxJsonBytes, DEFAULT_MAX_JSON_BYTES),
     limit: Math.min(
       nonNegativeInteger(limit, normalizedMaxFiles),
-      normalizedMaxFiles
+      normalizedMaxFiles,
     ),
-    offset: nonNegativeInteger(offset, 0)
+    offset: nonNegativeInteger(offset, 0),
   };
 }
 
-async function collectReceiptFiles(dir, files, { maxFiles, prefix = "", containmentRoot }) {
+async function collectReceiptFiles(
+  dir,
+  files,
+  { maxFiles, prefix = "", containmentRoot },
+) {
   if (files.length >= maxFiles) return;
 
   const entries = await readdir(dir, { withFileTypes: true });
@@ -98,7 +106,11 @@ async function collectReceiptFiles(dir, files, { maxFiles, prefix = "", containm
     }
 
     if (entry.isDirectory()) {
-      await collectReceiptFiles(path, files, { maxFiles, prefix: relativePath, containmentRoot });
+      await collectReceiptFiles(path, files, {
+        maxFiles,
+        prefix: relativePath,
+        containmentRoot,
+      });
     } else if (entry.isFile() && entry.name.endsWith(".json")) {
       files.push(relativePath);
     }
@@ -110,7 +122,7 @@ function unreadableReceipt(path, fields = {}) {
     path,
     unreadable: true,
     ...LIST_BOUNDARY,
-    ...fields
+    ...fields,
   };
 }
 
@@ -122,7 +134,7 @@ async function receiptSummary(path, { maxJsonBytes }) {
         reason: "receipt_json_too_large",
         error: `Receipt JSON exceeds maxJsonBytes (${fileStat.size} > ${maxJsonBytes})`,
         size_bytes: fileStat.size,
-        max_json_bytes: maxJsonBytes
+        max_json_bytes: maxJsonBytes,
       });
     }
 
@@ -130,23 +142,25 @@ async function receiptSummary(path, { maxJsonBytes }) {
     return {
       path,
       ...LIST_BOUNDARY,
+      schema: data.schema ?? null,
       receipt_id: data.receipt_id,
       artifact_id: data.artifact_id,
       action: data.action,
       truth_label: data.truth_label,
-      created_at: data.created_at
+      created_at: data.created_at ?? data.generated_at ?? data.saved_at ?? null,
     };
   } catch (err) {
     return unreadableReceipt(path, {
-      reason: err instanceof SyntaxError ? "malformed_json" : "receipt_read_error",
-      error: err instanceof Error ? err.message : String(err)
+      reason:
+        err instanceof SyntaxError ? "malformed_json" : "receipt_read_error",
+      error: err instanceof Error ? err.message : String(err),
     });
   }
 }
 
 export async function listReceipts(
   root = process.env.DEMA_HOME || join(homedir(), ".dema"),
-  options = {}
+  options = {},
 ) {
   const normalizedRoot = safeReceiptsRoot(root);
   const receiptsRoot = join(normalizedRoot, "receipts");
@@ -156,9 +170,14 @@ export async function listReceipts(
   try {
     const files = [];
     // v0.1.2: pass containment root for per-entry symlink/traversal detection
-    await collectReceiptFiles(receiptsRoot, files, { ...limits, containmentRoot: receiptsRoot });
+    await collectReceiptFiles(receiptsRoot, files, {
+      ...limits,
+      containmentRoot: receiptsRoot,
+    });
     const page = files.slice(limits.offset, limits.offset + limits.limit);
-    return Promise.all(page.map((file) => receiptSummary(join(receiptsRoot, file), limits)));
+    return Promise.all(
+      page.map((file) => receiptSummary(join(receiptsRoot, file), limits)),
+    );
   } catch {
     // Fail-soft: any IO error (path doesn't exist, permission denied, etc.)
     // returns []. Boundary violations are caught BEFORE this by the
@@ -170,19 +189,26 @@ export async function listReceipts(
 export async function readReceipt(
   selector,
   root = process.env.DEMA_HOME || join(homedir(), ".dema"),
-  options = {}
+  options = {},
 ) {
   const receipts = await listReceipts(root, options);
   const pathMatches = receipts.filter((receipt) => receipt.path === selector);
   const idMatches = receipts.filter(
-    (receipt) => receipt.receipt_id === selector || receipt.artifact_id === selector
+    (receipt) =>
+      receipt.receipt_id === selector || receipt.artifact_id === selector,
   );
-  const filenameMatches = receipts.filter((receipt) => basename(receipt.path) === selector);
-  const matches = pathMatches.length ? pathMatches : idMatches.length ? idMatches : filenameMatches;
+  const filenameMatches = receipts.filter(
+    (receipt) => basename(receipt.path) === selector,
+  );
+  const matches = pathMatches.length
+    ? pathMatches
+    : idMatches.length
+      ? idMatches
+      : filenameMatches;
 
   if (matches.length > 1) {
     throw new Error(
-      `Ambiguous receipt selector: ${selector}. Use receipt_id, artifact_id, or exact path.`
+      `Ambiguous receipt selector: ${selector}. Use receipt_id, artifact_id, or exact path.`,
     );
   }
 
@@ -191,8 +217,68 @@ export async function readReceipt(
   }
 
   if (matches[0].unreadable) {
-    throw new Error(`Receipt unreadable: ${selector} (${matches[0].reason ?? "unknown"})`);
+    throw new Error(
+      `Receipt unreadable: ${selector} (${matches[0].reason ?? "unknown"})`,
+    );
   }
 
   return JSON.parse(await readFile(matches[0].path, "utf8"));
+}
+
+function classifyReceiptType(receipt) {
+  const schema = receipt.schema ?? "";
+  const filename = basename(receipt.path ?? "");
+  if (schema.includes("think_receipt") || schema.includes("think_live"))
+    return "think";
+  if (
+    schema.includes("mission") ||
+    schema.includes("health_snapshot") ||
+    schema.includes("health_mission")
+  )
+    return "mission";
+  if (schema.includes("route_receipt") || schema.includes("local_model_route"))
+    return "route";
+  if (schema.includes("invocation")) return "invocation";
+  if (schema.includes("verification") || schema.includes("pipeline"))
+    return "verification";
+  if (schema.includes("codebase_architecture")) return "codebase-map";
+  if (receipt.unreadable) return "corrupt";
+  if (filename.startsWith("think-")) return "think";
+  if (filename.startsWith("mission-")) return "mission";
+  if (filename.startsWith("route-")) return "route";
+  return "other";
+}
+
+export function formatReceiptList(receipts) {
+  if (receipts.length === 0) {
+    return "No receipts found.";
+  }
+
+  const sorted = [...receipts].sort((a, b) => {
+    const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return tb - ta;
+  });
+
+  const lines = [`Receipts (${sorted.length})`, "=".repeat(50)];
+
+  for (const r of sorted) {
+    const filename = basename(r.path ?? "unknown");
+    const type = classifyReceiptType(r);
+    const ts = r.created_at
+      ? new Date(r.created_at).toISOString().replace("T", " ").slice(0, 19)
+      : "unknown";
+    const status = r.unreadable ? "CORRUPT" : "valid";
+
+    lines.push(`  ${type.padEnd(14)} ${filename}`);
+    lines.push(`    ${ts}  ${status}  ${r.truth_label ?? ""}`);
+    if (r.unreadable) {
+      lines.push(`    ! ${r.reason ?? "unknown error"}`);
+    }
+  }
+
+  lines.push("=".repeat(50));
+  lines.push("Boundary: read-only list; no mint; no mutation.");
+
+  return lines.join("\n");
 }

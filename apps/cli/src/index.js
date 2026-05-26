@@ -116,6 +116,7 @@ import { recordTodayTick } from "../../../packages/core/src/today.js";
 import {
   listReceipts,
   readReceipt,
+  formatReceiptList,
 } from "../../../packages/receipts/src/receipt-store.js";
 import {
   runSetup,
@@ -2656,11 +2657,16 @@ async function dispatch(argv) {
     }
 
     case "receipts": {
-      const selector = argv[1];
+      const selector = argv.slice(1).find((a) => !a.startsWith("-"));
       if (selector) {
         console.log(JSON.stringify(await readReceipt(selector), null, 2));
       } else {
-        console.log(JSON.stringify(await listReceipts(), null, 2));
+        const allReceipts = await listReceipts();
+        if (wantsJson(argv)) {
+          console.log(JSON.stringify(allReceipts, null, 2));
+        } else {
+          console.log(formatReceiptList(allReceipts));
+        }
       }
       return;
     }
