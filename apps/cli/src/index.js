@@ -4,6 +4,10 @@ import {
   formatStatus,
   shouldUseColor,
 } from "../../../packages/core/src/status.js";
+import {
+  buildSystemSnapshot,
+  formatSystemSnapshot,
+} from "../../../packages/core/src/system-snapshot.js";
 import { readOperatorPreferredName } from "../../../packages/core/src/operator-profile.js";
 import { buildNode0StatePreview } from "../../../packages/core/src/state.js";
 import {
@@ -1201,6 +1205,15 @@ async function dispatch(argv) {
     }
 
     case "status": {
+      if (argv.includes("--full")) {
+        const snapshot = buildSystemSnapshot();
+        if (wantsJson(argv)) {
+          console.log(JSON.stringify(snapshot, null, 2));
+        } else {
+          console.log(formatSystemSnapshot(snapshot));
+        }
+        return;
+      }
       const status = await statusWithLocalIdentity();
       const color = argv.includes("--no-color") ? false : shouldUseColor();
       console.log(formatStatus(status, { color }));
