@@ -1,8 +1,10 @@
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
-import { HEALTH_MISSION_CONSENT_PHRASE } from "./health-snapshot.js";
+import {
+  HEALTH_MISSION_CONSENT_PHRASE,
+  HEALTH_MISSION_RECEIPT_SCHEMA,
+} from "./health-snapshot.js";
 
 const SCHEMA = "bizra.dema.mission_manifest.v0.1";
-const RECEIPT_SCHEMA = "bizra.dema.mission_receipt.health_snapshot.v0.1";
 
 const SUPPORTED_TYPES = ["health_snapshot"];
 
@@ -57,7 +59,7 @@ export function buildMissionManifest(missionType, { now = new Date() } = {}) {
     },
     proof_boundary: {
       truth_label: "LOCAL_STATIC_DECLARATION",
-      receipt_schema: RECEIPT_SCHEMA,
+      receipt_schema: HEALTH_MISSION_RECEIPT_SCHEMA,
       content_hash_algorithm: "sha256",
       content_hash_input: "stableStringify(attests)",
       tamper_detectable: true,

@@ -7,6 +7,7 @@ import { buildMissionManifest } from "../packages/mission/src/mission-manifest.j
 import {
   saveHealthSnapshotReceipt,
   HEALTH_MISSION_CONSENT_PHRASE,
+  HEALTH_MISSION_RECEIPT_SCHEMA,
 } from "../packages/mission/src/health-snapshot.js";
 import { buildCloseoutReport } from "../packages/mission/src/mission-closeout.js";
 import {
@@ -164,5 +165,25 @@ describe("mission-lifecycle-coherence", () => {
       if (old) process.env.DEMA_HOME = old;
       else delete process.env.DEMA_HOME;
     }
+  });
+
+  it("manifest receipt_schema is imported, not duplicated", () => {
+    const manifest = buildMissionManifest("health_snapshot", {
+      now: FIXED_NOW,
+    });
+    assert.equal(
+      manifest.proof_boundary.receipt_schema,
+      HEALTH_MISSION_RECEIPT_SCHEMA,
+      "manifest.proof_boundary.receipt_schema must be the imported " +
+        "HEALTH_MISSION_RECEIPT_SCHEMA constant, not a duplicated string",
+    );
+  });
+
+  it("receipt schema constant is a single source of truth", () => {
+    assert.equal(typeof HEALTH_MISSION_RECEIPT_SCHEMA, "string");
+    assert.match(
+      HEALTH_MISSION_RECEIPT_SCHEMA,
+      /^bizra\.dema\.mission_receipt\.health_snapshot\.v\d+\.\d+$/,
+    );
   });
 });

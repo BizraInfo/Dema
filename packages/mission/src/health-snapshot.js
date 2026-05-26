@@ -17,6 +17,7 @@ const TRUTH_LABEL = "LOCAL_OPERATOR_MISSION";
 const CONSENT_PHRASE = "RUN NODE0 HEALTH SNAPSHOT";
 
 export { CONSENT_PHRASE as HEALTH_MISSION_CONSENT_PHRASE };
+export { SCHEMA as HEALTH_MISSION_RECEIPT_SCHEMA };
 
 function deriveMissionVerdict(results) {
   const setupOk = results.setup.verdict === "INTACT";
@@ -250,7 +251,9 @@ export async function verifyHealthSnapshotReceipt(receiptPath) {
     checks_passing: checks.filter((c) => c.pass).length,
     checks_failing: checks.filter((c) => !c.pass).length,
     checks,
-    mission_verdict: allPass ? (receipt.attests?.mission_verdict ?? null) : null,
+    mission_verdict: allPass
+      ? (receipt.attests?.mission_verdict ?? null)
+      : null,
     mission_type: allPass ? (receipt.attests?.mission_type ?? null) : null,
     mission_id: allPass ? (receipt.mission_id ?? null) : null,
   };
