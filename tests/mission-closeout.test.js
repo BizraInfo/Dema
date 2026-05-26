@@ -107,6 +107,28 @@ describe("mission-closeout", () => {
       assert.equal(result.filename, "mission-health-abc123def.json");
     });
 
+    it("returns error for corrupted JSON receipt", async () => {
+      const home = await mkdtemp(join(tmpdir(), "dema-closeout-corrupt-"));
+      const dir = join(home, "receipts");
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, "mission-health-corrupt.json"), "NOT JSON{{{");
+      const result = await resolveMissionReceipt("corrupt", home);
+      assert.ok(result.error);
+      assert.match(result.error, /not valid JSON/);
+    });
+
+    it("returns error for corrupted latest receipt", async () => {
+      const home = await mkdtemp(
+        join(tmpdir(), "dema-closeout-corruptlatest-"),
+      );
+      const dir = join(home, "receipts");
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, "mission-health-bad.json"), "{broken");
+      const result = await resolveMissionReceipt(undefined, home);
+      assert.ok(result.error);
+      assert.match(result.error, /not valid JSON/);
+    });
+
     it("returns error for unmatched ID", async () => {
       const home = await mkdtemp(join(tmpdir(), "dema-closeout-nomatch-"));
       const dir = join(home, "receipts");

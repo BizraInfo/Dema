@@ -29,7 +29,11 @@ export async function resolveMissionReceipt(missionId, home) {
     const picked = match[0];
     const fullPath = join(receiptsDir, picked);
     const raw = await readFile(fullPath, "utf8");
-    return { receipt: JSON.parse(raw), path: fullPath, filename: picked };
+    try {
+      return { receipt: JSON.parse(raw), path: fullPath, filename: picked };
+    } catch {
+      return { error: `Receipt file is not valid JSON: ${picked}` };
+    }
   }
 
   const withMtime = await Promise.all(
@@ -42,11 +46,15 @@ export async function resolveMissionReceipt(missionId, home) {
   withMtime.sort((a, b) => b.mtime - a.mtime);
   const latest = withMtime[0];
   const raw = await readFile(latest.path, "utf8");
-  return {
-    receipt: JSON.parse(raw),
-    path: latest.path,
-    filename: latest.filename,
-  };
+  try {
+    return {
+      receipt: JSON.parse(raw),
+      path: latest.path,
+      filename: latest.filename,
+    };
+  } catch {
+    return { error: `Receipt file is not valid JSON: ${latest.filename}` };
+  }
 }
 
 export function buildCloseoutReport(receipt, sourcePath, sourceFilename) {
@@ -143,7 +151,7 @@ export function renderCloseoutText(report) {
   const trueKeys = bKeys.filter((k) => s.boundary[k] === true);
   if (trueKeys.length > 0) {
     const trueLabels = trueKeys.map(
-      (k) => k.replace(/_performed$/, "").replace(/_/g, "_") + ": YES",
+      (k) => k.replace(/_performed$/, "") + ": YES",
     );
     lines.push(`  Boundary (${s.boundary.total_keys} keys):`);
     lines.push(`    ${trueLabels.join(" | ")}`);

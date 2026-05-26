@@ -167,7 +167,7 @@ async function probeDeterminism() {
 async function probeConsentGate(home) {
   const beforeFiles = await listReceipts(home);
 
-  await saveHealthSnapshotReceipt({
+  const noConsentResult = await saveHealthSnapshotReceipt({
     consent: "",
     now: new Date("2026-01-01T00:00:01Z"),
   });
@@ -189,7 +189,7 @@ async function probeConsentGate(home) {
     name: "consent_gate",
     pass: !noConsentWritten && consentWritten,
     evidence: {
-      no_consent_saved: false,
+      no_consent_saved: noConsentResult.saved,
       no_consent_file_written: noConsentWritten,
       with_consent_saved: withConsent.saved,
       with_consent_file_written: consentWritten,
