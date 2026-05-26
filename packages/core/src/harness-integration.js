@@ -10,7 +10,7 @@ import { buildDiagnosticsMissionPlan } from "../../mission/src/diagnostics-plan.
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..", "..", "..");
 
-const SCHEMA = "bizra.dema.harness_integration.v0.2";
+const SCHEMA = "bizra.dema.harness_integration.v0.3";
 
 const BEHAVIORAL_PROBES = Object.freeze([
   {
@@ -78,10 +78,26 @@ const HOOK_CHECKS = [
   },
 ];
 
-function aggregateSelfCritique(safetyReport, diagnosticsPlan) {
+function aggregateSelfCritique(
+  safetyReport,
+  diagnosticsPlan,
+  behavioralProbes,
+) {
   const safetyGaps = safetyReport.self_critique?.gaps ?? [];
   const diagnosticsGaps = diagnosticsPlan.self_critique?.gaps ?? [];
   const allGaps = [...safetyGaps, ...diagnosticsGaps];
+
+  if (!behavioralProbes.all_present) {
+    const missing = behavioralProbes.probes
+      .filter((p) => p.status === "missing")
+      .map((p) => p.id);
+    allGaps.push({
+      code: "behavioral_probes_missing",
+      severity: "review",
+      note: `Required behavioral probe source files are missing: ${missing.join(", ")}`,
+      missing,
+    });
+  }
   const uniqueGaps = [];
   const seen = new Set();
   for (const gap of allGaps) {
@@ -168,12 +184,10 @@ function buildHookInventory() {
   );
 }
 
-function buildBehavioralProbeAwareness() {
+function buildBehavioralProbeAwareness(repoRoot = REPO_ROOT) {
   const probes = BEHAVIORAL_PROBES.map((p) => {
-    const sourceExists = p.source
-      ? existsSync(join(REPO_ROOT, p.source))
-      : null;
-    const testExists = existsSync(join(REPO_ROOT, p.test));
+    const sourceExists = p.source ? existsSync(join(repoRoot, p.source)) : null;
+    const testExists = existsSync(join(repoRoot, p.test));
     return Object.freeze({
       id: p.id,
       schema: p.schema,
@@ -197,12 +211,11 @@ function buildBehavioralProbeAwareness() {
   });
 }
 
-export function buildHarnessIntegration({ now = new Date() } = {}) {
+export function buildHarnessIntegration({ now = new Date(), repoRoot } = {}) {
   const safetyReport = buildSafetyReportPreview({ now });
   const diagnosticsPlan = buildDiagnosticsMissionPlan({ now });
   const processMining = buildProcessMiningPreview();
 
-  const selfCritique = aggregateSelfCritique(safetyReport, diagnosticsPlan);
   const microCompliance = aggregateMicroCompliance(
     diagnosticsPlan,
     processMining,
@@ -210,7 +223,12 @@ export function buildHarnessIntegration({ now = new Date() } = {}) {
   const microConsent = aggregateMicroConsent(diagnosticsPlan);
   const proactiveHarness = aggregateProactiveHarness(diagnosticsPlan);
   const hookInventory = buildHookInventory();
-  const behavioralProbes = buildBehavioralProbeAwareness();
+  const behavioralProbes = buildBehavioralProbeAwareness(repoRoot);
+  const selfCritique = aggregateSelfCritique(
+    safetyReport,
+    diagnosticsPlan,
+    behavioralProbes,
+  );
 
   const allGatesPass = proactiveHarness.status === "all_gates_pass";
   const complianceClean =
@@ -218,13 +236,24 @@ export function buildHarnessIntegration({ now = new Date() } = {}) {
     microCompliance.no_policy_contradiction;
   const noBlockerGaps =
     (selfCritique.severity_counts.launch_blocker ?? 0) === 0;
+  const probesPresent = behavioralProbes.all_present;
+
+  const verdictInputs = Object.freeze({
+    all_gates_pass: allGatesPass,
+    compliance_clean: complianceClean,
+    no_blocker_gaps: noBlockerGaps,
+    behavioral_probes_all_present: probesPresent,
+  });
 
   return Object.freeze({
     schema: SCHEMA,
     generated_at: now.toISOString(),
     mode: "PREVIEW_ONLY",
     verdict:
-      allGatesPass && complianceClean && noBlockerGaps ? "CLEAN" : "REVIEW",
+      allGatesPass && complianceClean && noBlockerGaps && probesPresent
+        ? "CLEAN"
+        : "REVIEW",
+    verdict_inputs: verdictInputs,
     self_proactive_harness: proactiveHarness,
     self_critique: selfCritique,
     micro_compliance: microCompliance,
@@ -238,7 +267,7 @@ export function buildHarnessIntegration({ now = new Date() } = {}) {
 export function buildHarnessIntegrationSummary(options = {}) {
   const full = buildHarnessIntegration(options);
   return Object.freeze({
-    schema: "bizra.dema.harness_integration_summary.v0.2",
+    schema: "bizra.dema.harness_integration_summary.v0.3",
     verdict: full.verdict,
     proactive_status: full.self_proactive_harness.status,
     gates: `${full.self_proactive_harness.gates_passing}/${full.self_proactive_harness.gate_count} passing`,
@@ -257,7 +286,7 @@ export function buildHarnessIntegrationSummary(options = {}) {
 
 export function formatHarnessIntegration(harness) {
   const lines = [
-    "DEMA Harness Integration v0.1",
+    "DEMA Harness Integration v0.3",
     "",
     `Verdict: ${harness.verdict}`,
     `Generated: ${harness.generated_at}`,

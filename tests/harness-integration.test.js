@@ -8,15 +8,35 @@ import {
   HARNESS_BEHAVIORAL_PROBES,
 } from "../packages/core/src/harness-integration.js";
 import { isCanonicalBoundaryShape } from "../packages/core/src/preview-boundary.js";
+import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const FIXED_NOW = new Date("2026-05-25T12:00:00Z");
+
+function makeFakeRepoRoot({ exclude = [] } = {}) {
+  const root = mkdtempSync(join(tmpdir(), "dema-harness-test-"));
+  for (const probe of HARNESS_BEHAVIORAL_PROBES) {
+    if (probe.source && !exclude.includes(probe.id)) {
+      const srcPath = join(root, probe.source);
+      mkdirSync(join(srcPath, ".."), { recursive: true });
+      writeFileSync(srcPath, "// stub");
+    }
+    if (!exclude.includes(probe.id)) {
+      const testPath = join(root, probe.test);
+      mkdirSync(join(testPath, ".."), { recursive: true });
+      writeFileSync(testPath, "// stub");
+    }
+  }
+  return root;
+}
 
 describe("harness-integration", () => {
   describe("buildHarnessIntegration", () => {
     it("returns frozen object with correct schema", () => {
       const result = buildHarnessIntegration({ now: FIXED_NOW });
       assert.ok(Object.isFrozen(result));
-      assert.equal(result.schema, "bizra.dema.harness_integration.v0.2");
+      assert.equal(result.schema, "bizra.dema.harness_integration.v0.3");
     });
 
     it("mode is always PREVIEW_ONLY", () => {
@@ -266,7 +286,7 @@ describe("harness-integration", () => {
       const result = buildHarnessIntegrationSummary({ now: FIXED_NOW });
       assert.equal(
         result.schema,
-        "bizra.dema.harness_integration_summary.v0.2",
+        "bizra.dema.harness_integration_summary.v0.3",
       );
     });
 
@@ -424,6 +444,95 @@ describe("harness-integration", () => {
       const a = buildHarnessIntegrationSummary({ now: FIXED_NOW });
       const b = buildHarnessIntegrationSummary({ now: FIXED_NOW });
       assert.deepEqual(a, b);
+    });
+  });
+
+  describe("verdict_inputs", () => {
+    it("exists with all 4 boolean fields", () => {
+      const result = buildHarnessIntegration({ now: FIXED_NOW });
+      assert.ok(result.verdict_inputs);
+      assert.equal(typeof result.verdict_inputs.all_gates_pass, "boolean");
+      assert.equal(typeof result.verdict_inputs.compliance_clean, "boolean");
+      assert.equal(typeof result.verdict_inputs.no_blocker_gaps, "boolean");
+      assert.equal(
+        typeof result.verdict_inputs.behavioral_probes_all_present,
+        "boolean",
+      );
+    });
+
+    it("is frozen", () => {
+      const result = buildHarnessIntegration({ now: FIXED_NOW });
+      assert.ok(Object.isFrozen(result.verdict_inputs));
+    });
+
+    it("behavioral_probes_all_present is true on real repo", () => {
+      const result = buildHarnessIntegration({ now: FIXED_NOW });
+      assert.equal(result.verdict_inputs.behavioral_probes_all_present, true);
+    });
+  });
+
+  describe("verdict policy — missing probes", () => {
+    it("all probes present with fake root → CLEAN includes probes", () => {
+      const root = makeFakeRepoRoot();
+      const result = buildHarnessIntegration({
+        now: FIXED_NOW,
+        repoRoot: root,
+      });
+      assert.equal(result.behavioral_probes.all_present, true);
+      assert.equal(result.verdict_inputs.behavioral_probes_all_present, true);
+    });
+
+    it("missing mission_probe → REVIEW + behavioral_probes_missing gap", () => {
+      const root = makeFakeRepoRoot({ exclude: ["mission_probe"] });
+      const result = buildHarnessIntegration({
+        now: FIXED_NOW,
+        repoRoot: root,
+      });
+      assert.equal(result.verdict, "REVIEW");
+      assert.equal(result.verdict_inputs.behavioral_probes_all_present, false);
+      const gap = result.self_critique.gaps.find(
+        (g) => g.code === "behavioral_probes_missing",
+      );
+      assert.ok(gap, "expected behavioral_probes_missing gap");
+      assert.ok(gap.missing.includes("mission_probe"));
+    });
+
+    it("missing think_probe → REVIEW + behavioral_probes_missing gap", () => {
+      const root = makeFakeRepoRoot({ exclude: ["think_probe"] });
+      const result = buildHarnessIntegration({
+        now: FIXED_NOW,
+        repoRoot: root,
+      });
+      assert.equal(result.verdict, "REVIEW");
+      const gap = result.self_critique.gaps.find(
+        (g) => g.code === "behavioral_probes_missing",
+      );
+      assert.ok(gap);
+      assert.ok(gap.missing.includes("think_probe"));
+    });
+
+    it("missing proof_loop_convergence → REVIEW + behavioral_probes_missing gap", () => {
+      const root = makeFakeRepoRoot({ exclude: ["proof_loop_convergence"] });
+      const result = buildHarnessIntegration({
+        now: FIXED_NOW,
+        repoRoot: root,
+      });
+      assert.equal(result.verdict, "REVIEW");
+      const gap = result.self_critique.gaps.find(
+        (g) => g.code === "behavioral_probes_missing",
+      );
+      assert.ok(gap);
+      assert.ok(gap.missing.includes("proof_loop_convergence"));
+    });
+
+    it("harness note confirms probes are not executed", () => {
+      const root = makeFakeRepoRoot({ exclude: ["mission_probe"] });
+      const result = buildHarnessIntegration({
+        now: FIXED_NOW,
+        repoRoot: root,
+      });
+      assert.ok(result.behavioral_probes.note.includes("sync"));
+      assert.ok(result.behavioral_probes.note.includes("not executed"));
     });
   });
 });
