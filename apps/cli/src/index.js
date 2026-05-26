@@ -275,6 +275,10 @@ import {
   renderProbeText,
 } from "../../../packages/mission/src/mission-probe.js";
 import {
+  buildMissionManifest,
+  formatMissionManifest,
+} from "../../../packages/mission/src/mission-manifest.js";
+import {
   evaluatePredicates,
   formatDoctorDashboard,
 } from "../../../packages/core/src/doctor-dashboard.js";
@@ -2461,11 +2465,44 @@ async function dispatch(argv) {
         if (!intent)
           throw new Error('Usage: dema mission draft [--json] "<intent>"');
         const draft = buildMissionDraftPreview({ intent });
+        draft.pre_execution_manifest = buildMissionManifest("health_snapshot", {
+          now: new Date(),
+        });
         console.log(
           json
             ? JSON.stringify(draft, null, 2)
             : formatMissionDraftPreview(draft),
         );
+        return;
+      }
+      if (subcommand === "manifest") {
+        const missionType =
+          argv[2] && !argv[2].startsWith("-") ? argv[2] : undefined;
+        const wantJsonMF = wantsJson(argv);
+        const manifest = buildMissionManifest(missionType);
+        if (manifest.error) {
+          if (wantJsonMF) {
+            console.log(
+              JSON.stringify(
+                {
+                  schema: "bizra.dema.mission_manifest.v0.1",
+                  error: manifest.error,
+                },
+                null,
+                2,
+              ),
+            );
+          } else {
+            console.error(manifest.error);
+          }
+          process.exitCode = 1;
+          return;
+        }
+        if (wantJsonMF) {
+          console.log(JSON.stringify(manifest, null, 2));
+        } else {
+          console.log(formatMissionManifest(manifest));
+        }
         return;
       }
       if (subcommand === "probe") {
