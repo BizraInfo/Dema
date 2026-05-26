@@ -1,0 +1,175 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import {
+  buildThinkDryRun,
+  formatThinkDryRun,
+} from "../packages/think/src/think-dry-run.js";
+import {
+  sha256,
+  stableStringify,
+} from "../packages/consent/src/consent-common.js";
+
+const FIXED_NOW = new Date("2026-01-01T00:00:00Z");
+
+describe("think-dry-run", () => {
+  describe("buildThinkDryRun", () => {
+    it("returns schema bizra.dema.think_dry_run.v0.1", () => {
+      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+      assert.equal(e.schema, "bizra.dema.think_dry_run.v0.1");
+    });
+
+    it("returns DRY_RUN mode", () => {
+      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+      assert.equal(e.mode, "DRY_RUN");
+    });
+
+    it("returns error for missing query", () => {
+      const e = buildThinkDryRun("", { now: FIXED_NOW });
+      assert.ok(e.error);
+      assert.match(e.error, /Usage/);
+    });
+
+    it("returns error for null query", () => {
+      const e = buildThinkDryRun(null, { now: FIXED_NOW });
+      assert.ok(e.error);
+    });
+
+    it("returns error for whitespace-only query", () => {
+      const e = buildThinkDryRun("   ", { now: FIXED_NOW });
+      assert.ok(e.error);
+    });
+
+    it("trims query whitespace", () => {
+      const e = buildThinkDryRun("  hello world  ", { now: FIXED_NOW });
+      assert.equal(e.query, "hello world");
+    });
+
+    it("proof_hash is deterministic for same now", () => {
+      const e1 = buildThinkDryRun("test query", { now: FIXED_NOW });
+      const e2 = buildThinkDryRun("test query", { now: FIXED_NOW });
+      assert.equal(e1.proof_hash, e2.proof_hash);
+    });
+
+    it("proof_hash is sha256 of stableStringify excluding proof_hash", () => {
+      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+      const payload = { ...e };
+      delete payload.proof_hash;
+      const expected = sha256(stableStringify(payload));
+      assert.equal(e.proof_hash, expected);
+    });
+
+    it("boundary has all 16 keys", () => {
+      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+      const keys = Object.keys(e.boundary);
+      assert.equal(keys.length, 16);
+    });
+
+    it("model_invocation_performed is false", () => {
+      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+      assert.equal(e.boundary.model_invocation_performed, false);
+      assert.equal(e.boundary.model_loaded, false);
+      assert.equal(e.boundary.prompt_executed, false);
+    });
+
+    it("no receipt minted", () => {
+      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+      assert.equal(e.boundary.receipt_mint_performed, false);
+    });
+
+    it("no public network used", () => {
+      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+      assert.equal(e.boundary.public_network_used, false);
+      assert.equal(e.boundary.network_used, false);
+    });
+
+    it("no filesystem write", () => {
+      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+      assert.equal(e.boundary.filesystem_write_performed, false);
+    });
+
+    it("boundary_evidence uses evidence labels not booleans", () => {
+      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+      assert.equal(
+        e.boundary_evidence.model_invocation,
+        "NOT_PERFORMED_DRY_RUN",
+      );
+      assert.equal(e.boundary_evidence.network_used, "STATIC_CHECKED");
+      assert.equal(e.boundary_evidence.receipt_minted, "NOT_PERFORMED_DRY_RUN");
+      assert.equal(e.boundary_evidence.model_readiness, "DISK_CHECK_ONLY");
+    });
+
+    it("memory query handles wrapper missing gracefully", () => {
+      const old = process.env.DEMA_AGENT_DB_QUERY_PATH;
+      process.env.DEMA_AGENT_DB_QUERY_PATH = "/nonexistent/wrapper-test";
+      try {
+        const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+        assert.equal(e.context_manifest.memory.available, false);
+        assert.equal(e.context_manifest.memory.reason, "wrapper_not_found");
+        assert.equal(e.context_manifest.memory.hits_count, 0);
+        assert.deepStrictEqual(e.context_manifest.memory.hit_summaries, []);
+      } finally {
+        if (old) process.env.DEMA_AGENT_DB_QUERY_PATH = old;
+        else delete process.env.DEMA_AGENT_DB_QUERY_PATH;
+      }
+    });
+
+    it("no raw snippets in memory hit_summaries", () => {
+      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+      for (const h of e.context_manifest.memory.hit_summaries) {
+        assert.ok(!("snippet" in h), "hit_summaries must not contain snippets");
+        assert.ok(!("content" in h), "hit_summaries must not contain content");
+        assert.ok(!("text" in h), "hit_summaries must not contain text");
+      }
+    });
+
+    it("model_readiness reports disk check only", () => {
+      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+      assert.equal(
+        e.context_manifest.model_readiness.broker_reachable,
+        "NOT_PROBED_DRY_RUN",
+      );
+    });
+
+    it("would_invoke shows consent required", () => {
+      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+      assert.equal(e.would_invoke.consent_required, true);
+      assert.equal(e.would_invoke.model_invocation_performed, false);
+    });
+
+    it("resource estimate includes context length", () => {
+      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+      assert.equal(
+        e.context_manifest.resource_estimate.context_length_chars,
+        10,
+      );
+    });
+
+    it("generated_at uses injected now", () => {
+      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+      assert.equal(e.generated_at, "2026-01-01T00:00:00.000Z");
+    });
+  });
+
+  describe("formatThinkDryRun", () => {
+    it("renders human-readable dry-run report", () => {
+      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+      const text = formatThinkDryRun(e);
+      assert.match(text, /Dema Think Dry-Run/);
+      assert.match(text, /DRY_RUN/);
+      assert.match(text, /test query/);
+      assert.match(text, /Proof Hash/);
+      assert.match(text, /Boundary Evidence/);
+    });
+
+    it("renders error string when envelope has error", () => {
+      const text = formatThinkDryRun({ error: "missing query" });
+      assert.equal(text, "missing query");
+    });
+
+    it("shows NOT_PERFORMED_DRY_RUN in evidence", () => {
+      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+      const text = formatThinkDryRun(e);
+      assert.match(text, /NOT_PERFORMED_DRY_RUN/);
+    });
+  });
+});
