@@ -332,14 +332,24 @@ describe("harness-integration", () => {
       assert.ok(formatted.includes("Verdict:"));
     });
 
-    it("includes all five sections", () => {
+    it("includes all six sections", () => {
       const harness = buildHarnessIntegration({ now: FIXED_NOW });
       const formatted = formatHarnessIntegration(harness);
+      assert.ok(formatted.includes("Verdict Inputs:"));
       assert.ok(formatted.includes("Self-Proactive Harness:"));
       assert.ok(formatted.includes("Self-Critique:"));
       assert.ok(formatted.includes("Micro-Compliance:"));
       assert.ok(formatted.includes("Micro-Consent:"));
       assert.ok(formatted.includes("Behavioral Probes:"));
+    });
+
+    it("verdict inputs section shows all 4 booleans", () => {
+      const harness = buildHarnessIntegration({ now: FIXED_NOW });
+      const formatted = formatHarnessIntegration(harness);
+      assert.ok(formatted.includes("all_gates_pass:"));
+      assert.ok(formatted.includes("compliance_clean:"));
+      assert.ok(formatted.includes("no_blocker_gaps:"));
+      assert.ok(formatted.includes("behavioral_probes_all_present:"));
     });
 
     it("includes hook inventory", () => {
