@@ -1,8 +1,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { buildMissionManifest } from "../packages/mission/src/mission-manifest.js";
 import {
   saveHealthSnapshotReceipt,
@@ -17,6 +18,7 @@ import {
 import { runSetup } from "../packages/installer/src/setup.js";
 
 const FIXED_NOW = new Date("2026-01-01T00:00:00Z");
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 describe("mission-lifecycle-coherence", () => {
   it("manifest predictions match executed mission behavior", async () => {
@@ -174,8 +176,6 @@ describe("mission-lifecycle-coherence", () => {
     assert.equal(
       manifest.proof_boundary.receipt_schema,
       HEALTH_MISSION_RECEIPT_SCHEMA,
-      "manifest.proof_boundary.receipt_schema must be the imported " +
-        "HEALTH_MISSION_RECEIPT_SCHEMA constant, not a duplicated string",
     );
   });
 
@@ -184,6 +184,21 @@ describe("mission-lifecycle-coherence", () => {
     assert.match(
       HEALTH_MISSION_RECEIPT_SCHEMA,
       /^bizra\.dema\.mission_receipt\.health_snapshot\.v\d+\.\d+$/,
+    );
+  });
+
+  it("mission-manifest.js source imports schema constant, not a hardcoded string", async () => {
+    const src = await readFile(
+      join(REPO_ROOT, "packages/mission/src/mission-manifest.js"),
+      "utf8",
+    );
+    assert.ok(
+      src.includes("HEALTH_MISSION_RECEIPT_SCHEMA"),
+      "mission-manifest.js must import HEALTH_MISSION_RECEIPT_SCHEMA",
+    );
+    assert.ok(
+      !src.includes("bizra.dema.mission_receipt.health_snapshot.v0.1"),
+      "mission-manifest.js must NOT contain the hardcoded receipt schema string — use the imported constant",
     );
   });
 });
