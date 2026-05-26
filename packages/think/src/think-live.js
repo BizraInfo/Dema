@@ -156,8 +156,7 @@ export async function buildThinkLive(
   const modelResponded =
     invocationResult.invocation_status === "completed" ||
     invocationResult.invocation_status === "invocation_completed";
-  const modelOutput =
-    invocationResult.response_text ?? invocationResult.result?.response ?? null;
+  const modelOutput = invocationResult.response_text_preview ?? null;
 
   const payload = {
     schema: SCHEMA,
