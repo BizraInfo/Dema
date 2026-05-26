@@ -74,7 +74,7 @@ What these commands do **not** do:
 - They do not call a remote provider.
 - They do not mutate anything outside `~/.dema/`.
 - They do not mint a receipt — the existing ARTIFACT-011 receipt is the
-  read/list view of a gateway-issued artifact (see *Current boundary* below).
+  read/list view of a gateway-issued artifact (see _Current boundary_ below).
 
 There are more commands once you are ready (`dema diagnostics plan`,
 `dema consent plan "<intent>"`, `dema mission draft "<intent>"`,
@@ -315,7 +315,7 @@ release tag so operators can verify bytes before execution. The endpoint
 will also host uninstall scripts at `/dema/uninstall.sh` and
 `/dema/uninstall.ps1`, plus a small index page at `/dema/`.
 
-Until then: see *Developer install* below, or use the local
+Until then: see _Developer install_ below, or use the local
 `scripts/install/install.sh` (Unix) / `scripts/install/install-windows.ps1`
 that already ship in this repo. See
 [docs/CURRENT_LIMITS.md](docs/CURRENT_LIMITS.md) for the full list of
@@ -405,13 +405,54 @@ GO: Node0 bounded diagnostic activation only
 That phrase is **not** a re-usable token. Each future L4 mission requires
 its own typed phrase per the
 [Dema Autonomy Envelope](docs/02-architecture/dema-autonomy-envelope.md).
-Issuance never happened *inside* this repo — Dema reads and lists; the
+Issuance never happened _inside_ this repo — Dema reads and lists; the
 governed runtime in `bizra-cognition-gateway` (upstream, in
 `bizra-data-lake`) is what creates receipts. See
 [`SPROUT_PIN.md`](SPROUT_PIN.md) for the captured chain head, Bitcoin
 state, and replay recipe.
 
 Dema's public language remains local-first, consent-bound, and proof-safe.
+
+---
+
+## What is live
+
+As of commit `95b4a4d` (442 commits, 3030 tests passing, 4/4 CI green):
+
+**Operational proof loops:**
+
+- Local mission proof loop (manifest, consent, execute, receipt, closeout, behavioral probe)
+- Local think proof loop (dry-run, consent, model invoke, receipt, closeout, behavioral probe)
+
+**Operator cockpit:**
+
+- `dema status --full` — truth-labeled system snapshot
+- `dema harness` — verdict with 4 explainable inputs
+- `dema receipts` — typed receipt list with timestamps
+- `dema think --closeout latest` — auto-resolve latest receipt
+- `dema think --probe` — 5 behavioral invariants
+- `dema think --dry-run` — safe preview with consent phrases
+
+**Proof infrastructure:**
+
+- Tamper-evident receipts (sha256 content-addressed)
+- Consent-gated persistence (exact-string match required)
+- Behavioral probes (determinism, consent gate, integrity, tamper detection)
+- Harness verdict policy (CLEAN requires all proof surfaces present)
+- Convergence canary (both loops tested together)
+
+**What is NOT live:**
+
+- Federation (multi-node communication)
+- Token / Proof-of-Impact economy
+- Node1 / URP networking
+- Ed25519 authorship signing
+- Full multi-model routing
+- Public installer endpoint (install.bizra.ai)
+
+These layers are intentionally locked. See
+[docs/demo/operator-proof-loop.md](docs/demo/operator-proof-loop.md)
+for a runnable 90-second walkthrough.
 
 ---
 
