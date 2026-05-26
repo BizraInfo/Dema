@@ -2924,8 +2924,54 @@ async function dispatch(argv) {
       if (closeoutPath) {
         const wantJsonTC = wantsJson(argv);
         try {
-          const { readFile: tcReadFile } = await import("node:fs/promises");
-          const raw = await tcReadFile(closeoutPath, "utf8");
+          const {
+            readFile: tcReadFile,
+            readdir: tcReaddir,
+            stat: tcStat,
+          } = await import("node:fs/promises");
+          const { join: tcJoin } = await import("node:path");
+          const { homedir: tcHd } = await import("node:os");
+          let raw;
+          if (closeoutPath === "latest") {
+            const tcHome = process.env.DEMA_HOME || tcJoin(tcHd(), ".dema");
+            const tcDir = tcJoin(tcHome, "receipts");
+            let tcFiles;
+            try {
+              tcFiles = (await tcReaddir(tcDir)).filter(
+                (f) => f.startsWith("think-") && f.endsWith(".json"),
+              );
+            } catch {
+              tcFiles = [];
+            }
+            if (tcFiles.length === 0) {
+              const noMsg =
+                "No think receipts found. Run a think with --save-receipt first.";
+              if (wantJsonTC) {
+                console.log(
+                  JSON.stringify(
+                    { schema: "bizra.dema.think_closeout.v0.1", error: noMsg },
+                    null,
+                    2,
+                  ),
+                );
+              } else {
+                console.error(noMsg);
+              }
+              process.exitCode = 1;
+              return;
+            }
+            const withMtime = await Promise.all(
+              tcFiles.map(async (f) => {
+                const fp = tcJoin(tcDir, f);
+                const s = await tcStat(fp);
+                return { path: fp, mtime: s.mtimeMs };
+              }),
+            );
+            withMtime.sort((a, b) => b.mtime - a.mtime);
+            raw = await tcReadFile(withMtime[0].path, "utf8");
+          } else {
+            raw = await tcReadFile(closeoutPath, "utf8");
+          }
           const envelope = JSON.parse(raw);
           const closeout = buildThinkCloseout(envelope);
           if (closeout.error) {

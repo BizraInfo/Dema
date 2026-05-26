@@ -1,17 +1,10 @@
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 
-const EXPECTED_SCHEMA = "bizra.dema.think_live.v0.1";
+const LIVE_SCHEMA = "bizra.dema.think_live.v0.1";
+const RECEIPT_SCHEMA = "bizra.dema.think_receipt.v0.1";
+const ACCEPTED_SCHEMAS = [LIVE_SCHEMA, RECEIPT_SCHEMA];
 
-export function buildThinkCloseout(envelope) {
-  if (!envelope || typeof envelope !== "object") {
-    return { error: "Think closeout requires a valid think_live envelope." };
-  }
-  if (envelope.schema !== EXPECTED_SCHEMA) {
-    return {
-      error: `Expected schema ${EXPECTED_SCHEMA}, got ${envelope.schema ?? "none"}.`,
-    };
-  }
-
+function closeoutFromLiveEnvelope(envelope) {
   const payload = { ...envelope };
   delete payload.proof_hash;
   const recomputedHash = sha256(stableStringify(payload));
@@ -69,6 +62,88 @@ export function buildThinkCloseout(envelope) {
     warnings,
     warning_count: warnings.length,
   };
+}
+
+function closeoutFromReceipt(receipt) {
+  const check = { ...receipt };
+  delete check.receipt_hash;
+  const recomputedHash = sha256(stableStringify(check));
+  const hashMatch = recomputedHash === receipt.receipt_hash;
+
+  const inv = receipt.invocation ?? {};
+  const bs = receipt.boundary_summary ?? {};
+  const es = receipt.evidence_summary ?? {};
+  const se = receipt.source_envelope ?? {};
+
+  const warnings = [];
+  if (!inv.consent_verified) warnings.push("consent_phrase not verified");
+  if (bs.public_network_used) warnings.push("public network was used");
+  if (bs.filesystem_write_performed)
+    warnings.push("filesystem write detected (source envelope)");
+  if (bs.receipt_mint_performed)
+    warnings.push("receipt was minted unexpectedly");
+  if (!hashMatch)
+    warnings.push("receipt_hash MISMATCH — receipt may be tampered");
+  if (!se.proof_hash_verified)
+    warnings.push("source envelope proof_hash was NOT verified at save time");
+
+  return {
+    schema: "bizra.dema.think_closeout.v0.1",
+    source_schema: receipt.schema,
+    query: receipt.query ?? null,
+    model: receipt.model ?? null,
+    mode: receipt.mode ?? null,
+    invocation: {
+      status: inv.status ?? null,
+      model_responded: inv.model_responded ?? false,
+      output_length_chars: inv.output_length_chars ?? 0,
+      consent_verified: inv.consent_verified ?? false,
+    },
+    output_preview: receipt.output_preview ?? null,
+    verification: {
+      proof_hash_match: hashMatch,
+      recomputed_hash: recomputedHash,
+      original_hash: receipt.receipt_hash ?? null,
+    },
+    boundary_summary: {
+      model_invocation_performed: bs.model_invocation_performed ?? false,
+      consent_collected: bs.consent_collected ?? false,
+      network_used: bs.network_used ?? false,
+      public_network_used: bs.public_network_used ?? false,
+      external_call_performed: bs.external_call_performed ?? false,
+      external_call_scope: bs.external_call_scope ?? null,
+      filesystem_write_performed: bs.filesystem_write_performed ?? false,
+      receipt_mint_performed: bs.receipt_mint_performed ?? false,
+    },
+    evidence_summary: {
+      model_invocation: es.model_invocation ?? null,
+      public_network: es.public_network ?? null,
+      filesystem_write: es.filesystem_write ?? null,
+      receipt_minted: es.receipt_minted ?? null,
+      memory_query: null,
+    },
+    warnings,
+    warning_count: warnings.length,
+  };
+}
+
+export function buildThinkCloseout(envelope) {
+  if (!envelope || typeof envelope !== "object") {
+    return {
+      error:
+        "Think closeout requires a valid think_live envelope or think_receipt.",
+    };
+  }
+  if (!ACCEPTED_SCHEMAS.includes(envelope.schema)) {
+    return {
+      error: `Expected schema ${ACCEPTED_SCHEMAS.join(" or ")}, got ${envelope.schema ?? "none"}.`,
+    };
+  }
+
+  if (envelope.schema === RECEIPT_SCHEMA) {
+    return closeoutFromReceipt(envelope);
+  }
+  return closeoutFromLiveEnvelope(envelope);
 }
 
 export function formatThinkCloseout(closeout) {
