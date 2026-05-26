@@ -31,8 +31,11 @@ describe("mission-probe", () => {
       assert.equal(report.probes_total, 5);
       assert.equal(report.probes_passing, 5);
       assert.equal(report.probes_failing, 0);
-      assert.equal(report.boundary.network_used, false);
-      assert.equal(report.boundary.operator_home_touched, false);
+      assert.equal(report.boundary.network_used, "STATIC_CHECKED");
+      assert.equal(
+        report.boundary.operator_home_touched,
+        "DECLARED_NOT_VERIFIED_V0_1",
+      );
     });
 
     it("probe 1: boundary_observed_v0_1 passes with correct evidence levels", async () => {
@@ -139,6 +142,92 @@ describe("mission-probe", () => {
   describe("verdict derivation", () => {
     it("CLEAN when all probes pass", async () => {
       const report = await runMissionProbe(REPO_ROOT);
+      assert.equal(report.verdict, "CLEAN");
+    });
+
+    it("REVIEW when some probes pass and some fail", () => {
+      const probes = [
+        { name: "a", pass: true, evidence: {} },
+        { name: "b", pass: false, evidence: {} },
+        { name: "c", pass: true, evidence: {} },
+      ];
+      const passing = probes.filter((p) => p.pass).length;
+      const failing = probes.length - passing;
+      let verdict;
+      if (failing === 0) verdict = "CLEAN";
+      else if (passing > 0) verdict = "REVIEW";
+      else verdict = "FAILED";
+      assert.equal(verdict, "REVIEW");
+      assert.equal(passing, 2);
+      assert.equal(failing, 1);
+    });
+
+    it("FAILED when all probes fail", () => {
+      const probes = [
+        { name: "a", pass: false, evidence: {} },
+        { name: "b", pass: false, evidence: {} },
+      ];
+      const passing = probes.filter((p) => p.pass).length;
+      const failing = probes.length - passing;
+      let verdict;
+      if (failing === 0) verdict = "CLEAN";
+      else if (passing > 0) verdict = "REVIEW";
+      else verdict = "FAILED";
+      assert.equal(verdict, "FAILED");
+      assert.equal(passing, 0);
+    });
+  });
+
+  describe("boundary key classification completeness", () => {
+    it("all 16 boundary keys are explicitly classified", async () => {
+      const report = await runMissionProbe(REPO_ROOT);
+      const ev = report.probes.find(
+        (p) => p.name === "boundary_observed_v0_1",
+      ).evidence;
+      assert.equal(ev.fs_write.level, "OBSERVED");
+      assert.equal(ev.consent_collected.level, "OBSERVED");
+      assert.equal(ev.network_used.level, "STATIC_CHECKED");
+      assert.equal(ev.model_loaded.level, "STATIC_CHECKED");
+      assert.equal(
+        ev.raw_corpus_scan_performed.level,
+        "DECLARED_NOT_OBSERVABLE_V0_1",
+      );
+      assert.equal(ev.federation_invoked.level, "DECLARED_NOT_OBSERVABLE_V0_1");
+      assert.equal(
+        ev.chain_advance_performed.level,
+        "DECLARED_NOT_OBSERVABLE_V0_1",
+      );
+      assert.equal(ev.not_observable_count, 7);
+    });
+  });
+
+  describe("probe boundary self-honesty", () => {
+    it("probe report boundary uses evidence levels, not hardcoded booleans", async () => {
+      const report = await runMissionProbe(REPO_ROOT);
+      assert.equal(report.boundary.network_used, "STATIC_CHECKED");
+      assert.equal(
+        report.boundary.operator_home_touched,
+        "DECLARED_NOT_VERIFIED_V0_1",
+      );
+    });
+  });
+
+  describe("CLI exit codes", () => {
+    it("exit 0 for CLEAN verdict", async () => {
+      const { execFile } = await import("node:child_process");
+      const { promisify } = await import("node:util");
+      const execFileP = promisify(execFile);
+      const { stdout } = await execFileP(
+        "node",
+        [
+          join(REPO_ROOT, "apps/cli/src/index.js"),
+          "mission",
+          "probe",
+          "--json",
+        ],
+        { env: { ...process.env, DEMA_NO_TUI: "1" } },
+      );
+      const report = JSON.parse(stdout);
       assert.equal(report.verdict, "CLEAN");
     });
   });

@@ -44,6 +44,15 @@ const STATIC_CHECKED_KEYS = [
   "external_call_performed",
   "public_network_used",
 ];
+const DECLARED_NOT_OBSERVABLE_KEYS = [
+  "raw_corpus_scan_performed",
+  "raw_data_included",
+  "tool_executed",
+  "chain_advance_performed",
+  "receipt_mint_performed",
+  "federation_invoked",
+  "node_connection_performed",
+];
 
 const SOURCE_FILES = [
   "packages/mission/src/health-snapshot.js",
@@ -130,14 +139,25 @@ async function probeBoundary(home, repoRoot) {
   }
 
   const allBoundaryKeys = Object.keys(boundary);
-  const observedOrChecked = [...OBSERVED_KEYS, ...STATIC_CHECKED_KEYS];
-  const notObservable = allBoundaryKeys.filter(
-    (k) => !observedOrChecked.includes(k),
+  const classifiedKeys = [
+    ...OBSERVED_KEYS,
+    ...STATIC_CHECKED_KEYS,
+    ...DECLARED_NOT_OBSERVABLE_KEYS,
+  ];
+  const unclassified = allBoundaryKeys.filter(
+    (k) => !classifiedKeys.includes(k),
   );
-  evidence.not_observable_count = notObservable.length;
-  for (const k of notObservable) {
-    evidence[k] = { level: "DECLARED_NOT_OBSERVABLE_V0_1" };
+  if (unclassified.length > 0) {
+    failures.push(`boundary keys not classified: ${unclassified.join(", ")}`);
   }
+  for (const k of DECLARED_NOT_OBSERVABLE_KEYS) {
+    if (k in boundary) {
+      evidence[k] = { level: "DECLARED_NOT_OBSERVABLE_V0_1" };
+    }
+  }
+  evidence.not_observable_count = DECLARED_NOT_OBSERVABLE_KEYS.filter(
+    (k) => k in boundary,
+  ).length;
 
   return {
     name: "boundary_observed_v0_1",
@@ -294,8 +314,8 @@ export async function runMissionProbe(repoRoot) {
       isolated_home: home,
       boundary: {
         read_only_report: true,
-        network_used: false,
-        operator_home_touched: false,
+        network_used: "STATIC_CHECKED",
+        operator_home_touched: "DECLARED_NOT_VERIFIED_V0_1",
       },
     };
   } finally {
