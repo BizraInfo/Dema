@@ -13,96 +13,98 @@ const FIXED_NOW = new Date("2026-01-01T00:00:00Z");
 
 describe("think-dry-run", () => {
   describe("buildThinkDryRun", () => {
-    it("returns schema bizra.dema.think_dry_run.v0.1", () => {
-      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("returns schema bizra.dema.think_dry_run.v0.1", async () => {
+      const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
       assert.equal(e.schema, "bizra.dema.think_dry_run.v0.1");
     });
 
-    it("returns DRY_RUN mode", () => {
-      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("returns DRY_RUN mode", async () => {
+      const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
       assert.equal(e.mode, "DRY_RUN");
     });
 
-    it("returns error for missing query", () => {
-      const e = buildThinkDryRun("", { now: FIXED_NOW });
+    it("returns error for missing query", async () => {
+      const e = await buildThinkDryRun("", { now: FIXED_NOW });
       assert.ok(e.error);
       assert.match(e.error, /Usage/);
     });
 
-    it("returns error for null query", () => {
-      const e = buildThinkDryRun(null, { now: FIXED_NOW });
+    it("returns error for null query", async () => {
+      const e = await buildThinkDryRun(null, { now: FIXED_NOW });
       assert.ok(e.error);
     });
 
-    it("returns error for whitespace-only query", () => {
-      const e = buildThinkDryRun("   ", { now: FIXED_NOW });
+    it("returns error for whitespace-only query", async () => {
+      const e = await buildThinkDryRun("   ", { now: FIXED_NOW });
       assert.ok(e.error);
     });
 
-    it("trims query whitespace", () => {
-      const e = buildThinkDryRun("  hello world  ", { now: FIXED_NOW });
+    it("trims query whitespace", async () => {
+      const e = await buildThinkDryRun("  hello world  ", { now: FIXED_NOW });
       assert.equal(e.query, "hello world");
     });
 
-    it("proof_hash is deterministic for same now", () => {
-      const e1 = buildThinkDryRun("test query", { now: FIXED_NOW });
-      const e2 = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("proof_hash is deterministic for same now", async () => {
+      const e1 = await buildThinkDryRun("test query", { now: FIXED_NOW });
+      const e2 = await buildThinkDryRun("test query", { now: FIXED_NOW });
       assert.equal(e1.proof_hash, e2.proof_hash);
     });
 
-    it("proof_hash is sha256 of stableStringify excluding proof_hash", () => {
-      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("proof_hash is sha256 of stableStringify excluding proof_hash", async () => {
+      const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
       const payload = { ...e };
       delete payload.proof_hash;
       const expected = sha256(stableStringify(payload));
       assert.equal(e.proof_hash, expected);
     });
 
-    it("boundary has all 16 keys", () => {
-      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("boundary has all 16 keys", async () => {
+      const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
       const keys = Object.keys(e.boundary);
       assert.equal(keys.length, 16);
     });
 
-    it("model_invocation_performed is false", () => {
-      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("model_invocation_performed is false", async () => {
+      const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
       assert.equal(e.boundary.model_invocation_performed, false);
       assert.equal(e.boundary.model_loaded, false);
       assert.equal(e.boundary.prompt_executed, false);
     });
 
-    it("no receipt minted", () => {
-      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("no receipt minted", async () => {
+      const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
       assert.equal(e.boundary.receipt_mint_performed, false);
     });
 
-    it("no public network used", () => {
-      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("no public network used", async () => {
+      const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
       assert.equal(e.boundary.public_network_used, false);
-      assert.equal(e.boundary.network_used, false);
     });
 
-    it("no filesystem write", () => {
-      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("no filesystem write", async () => {
+      const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
       assert.equal(e.boundary.filesystem_write_performed, false);
     });
 
-    it("boundary_evidence uses evidence labels not booleans", () => {
-      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("boundary_evidence uses evidence labels not booleans", async () => {
+      const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
       assert.equal(
         e.boundary_evidence.model_invocation,
         "NOT_PERFORMED_DRY_RUN",
       );
-      assert.equal(e.boundary_evidence.network_used, "STATIC_CHECKED");
+      assert.ok(
+        ["STATIC_CHECKED", "LOCALHOST_API_OBSERVED"].includes(
+          e.boundary_evidence.network_used,
+        ),
+      );
       assert.equal(e.boundary_evidence.receipt_minted, "NOT_PERFORMED_DRY_RUN");
-      assert.equal(e.boundary_evidence.model_readiness, "DISK_CHECK_ONLY");
     });
 
-    it("memory query handles wrapper missing gracefully", () => {
+    it("memory query handles wrapper missing gracefully", async () => {
       const old = process.env.DEMA_AGENT_DB_QUERY_PATH;
       process.env.DEMA_AGENT_DB_QUERY_PATH = "/nonexistent/wrapper-test";
       try {
-        const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+        const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
         assert.equal(e.context_manifest.memory.available, false);
         assert.equal(e.context_manifest.memory.reason, "wrapper_not_found");
         assert.equal(e.context_manifest.memory.hits_count, 0);
@@ -113,8 +115,8 @@ describe("think-dry-run", () => {
       }
     });
 
-    it("no raw snippets in memory hit_summaries", () => {
-      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("no raw snippets in memory hit_summaries", async () => {
+      const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
       for (const h of e.context_manifest.memory.hit_summaries) {
         assert.ok(!("snippet" in h), "hit_summaries must not contain snippets");
         assert.ok(!("content" in h), "hit_summaries must not contain content");
@@ -122,37 +124,41 @@ describe("think-dry-run", () => {
       }
     });
 
-    it("model_readiness reports disk check only", () => {
-      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
-      assert.equal(
-        e.context_manifest.model_readiness.broker_reachable,
-        "NOT_PROBED_DRY_RUN",
-      );
+    it("model_readiness detects adapter-visible models when Ollama is running", async () => {
+      const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
+      const mr = e.context_manifest.model_readiness;
+      if (mr.broker_reachable === "LOCALHOST_API_OBSERVED") {
+        assert.ok(mr.available_models.length > 0);
+        assert.ok(mr.recommended_model);
+        assert.equal(mr.model_readiness_evidence, "LOCALHOST_API_OBSERVED");
+      }
     });
 
-    it("would_invoke shows consent required", () => {
-      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("would_invoke shows consent required and model consent phrase", async () => {
+      const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
       assert.equal(e.would_invoke.consent_required, true);
+      assert.equal(e.would_invoke.think_consent_phrase, "RUN LOCAL THINK");
       assert.equal(e.would_invoke.model_invocation_performed, false);
+      assert.ok(e.would_invoke.required_model_consent_phrase);
     });
 
-    it("resource estimate includes context length", () => {
-      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("resource estimate includes context length", async () => {
+      const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
       assert.equal(
         e.context_manifest.resource_estimate.context_length_chars,
         10,
       );
     });
 
-    it("generated_at uses injected now", () => {
-      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("generated_at uses injected now", async () => {
+      const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
       assert.equal(e.generated_at, "2026-01-01T00:00:00.000Z");
     });
   });
 
   describe("formatThinkDryRun", () => {
-    it("renders human-readable dry-run report", () => {
-      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("renders human-readable dry-run report", async () => {
+      const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
       const text = formatThinkDryRun(e);
       assert.match(text, /Dema Think Dry-Run/);
       assert.match(text, /DRY_RUN/);
@@ -166,8 +172,8 @@ describe("think-dry-run", () => {
       assert.equal(text, "missing query");
     });
 
-    it("shows NOT_PERFORMED_DRY_RUN in evidence", () => {
-      const e = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("shows NOT_PERFORMED_DRY_RUN in evidence", async () => {
+      const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
       const text = formatThinkDryRun(e);
       assert.match(text, /NOT_PERFORMED_DRY_RUN/);
     });

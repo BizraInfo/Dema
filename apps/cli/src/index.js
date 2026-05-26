@@ -2937,7 +2937,7 @@ async function dispatch(argv) {
 
       if (hasDryRun) {
         try {
-          const thinkEnvelope = buildThinkDryRun(thinkQuery);
+          const thinkEnvelope = await buildThinkDryRun(thinkQuery);
           if (thinkEnvelope.error) {
             if (wantJsonTH) {
               console.log(

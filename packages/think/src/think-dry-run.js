@@ -69,27 +69,59 @@ function queryMemory(query, top) {
   }
 }
 
-function checkModelReadiness() {
+async function checkModelReadiness() {
   const ollamaHome = join(homedir(), ".ollama", "models");
   const ollamaInstalled = existsSync(ollamaHome);
 
+  let apiModels = [];
+  let apiReachable = false;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch("http://localhost:11434/api/tags", {
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (res.ok) {
+      const data = await res.json();
+      apiModels = Array.isArray(data.models) ? data.models : [];
+      apiReachable = true;
+    }
+  } catch {
+    apiReachable = false;
+  }
+
+  const textModels = apiModels
+    .filter((m) => !m.name.includes("embed"))
+    .sort((a, b) => (a.size ?? Infinity) - (b.size ?? Infinity));
+  const recommended = textModels.length > 0 ? textModels[0].name : null;
+
   return {
-    ollama_installed: ollamaInstalled,
+    ollama_installed: ollamaInstalled || apiReachable,
     ollama_models_dir: ollamaInstalled ? ollamaHome : null,
-    broker_reachable: "NOT_PROBED_DRY_RUN",
-    recommended_model: null,
+    broker_reachable: apiReachable ? "LOCALHOST_API_OBSERVED" : "NOT_REACHABLE",
+    available_models: textModels.map((m) => m.name),
+    recommended_model: recommended,
     consent_phrase_pattern: "GO: invoke local LLM at <model>",
+    model_readiness_evidence: apiReachable
+      ? "LOCALHOST_API_OBSERVED"
+      : ollamaInstalled
+        ? "DISK_CHECK_ONLY"
+        : "NOT_DETECTED",
   };
 }
 
-export function buildThinkDryRun(query, { now = new Date(), top = 3 } = {}) {
+export async function buildThinkDryRun(
+  query,
+  { now = new Date(), top = 3 } = {},
+) {
   if (!query || typeof query !== "string" || !query.trim()) {
     return { error: 'Usage: dema think "<query>" --dry-run [--json]' };
   }
 
   const trimmedQuery = query.trim();
   const memoryRaw = queryMemory(trimmedQuery, top);
-  const modelReadiness = checkModelReadiness();
+  const modelReadiness = await checkModelReadiness();
 
   const contextLength = trimmedQuery.length;
 
@@ -147,13 +179,16 @@ export function buildThinkDryRun(query, { now = new Date(), top = 3 } = {}) {
     },
     boundary_evidence: {
       model_invocation: "NOT_PERFORMED_DRY_RUN",
-      network_used: "STATIC_CHECKED",
+      network_used:
+        modelReadiness.broker_reachable === "LOCALHOST_API_OBSERVED"
+          ? "LOCALHOST_API_OBSERVED"
+          : "STATIC_CHECKED",
       receipt_minted: "NOT_PERFORMED_DRY_RUN",
       filesystem_write: "NOT_PERFORMED_DRY_RUN",
       memory_query: memoryResult.available
         ? "WRAPPER_SPAWNED_LOCAL"
         : memoryResult.reason || "WRAPPER_MISSING",
-      model_readiness: "DISK_CHECK_ONLY",
+      model_readiness: modelReadiness.model_readiness_evidence,
       public_network: "NOT_PERFORMED_DRY_RUN",
     },
   };

@@ -100,8 +100,8 @@ describe("boundary-cross-validation", () => {
   // ─── Think dry-run boundary coherence ───────────────────────────────────
 
   describe("think dry-run boundary vs canonical", () => {
-    it("think boundary keys exactly match canonical set", () => {
-      const think = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("think boundary keys exactly match canonical set", async () => {
+      const think = await buildThinkDryRun("test query", { now: FIXED_NOW });
       const thinkKeys = new Set(Object.keys(think.boundary));
       assert.equal(thinkKeys.size, CANONICAL_SET.size);
       for (const key of CANONICAL_SET) {
@@ -118,8 +118,8 @@ describe("boundary-cross-validation", () => {
       }
     });
 
-    it("think boundary values are all boolean", () => {
-      const think = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("think boundary values are all boolean", async () => {
+      const think = await buildThinkDryRun("test query", { now: FIXED_NOW });
       for (const [key, value] of Object.entries(think.boundary)) {
         assert.equal(
           typeof value,
@@ -129,8 +129,8 @@ describe("boundary-cross-validation", () => {
       }
     });
 
-    it("think boundary_evidence covers every non-false boundary key", () => {
-      const think = buildThinkDryRun("test query", { now: FIXED_NOW });
+    it("think boundary_evidence covers every non-false boundary key", async () => {
+      const think = await buildThinkDryRun("test query", { now: FIXED_NOW });
       const trueKeys = Object.entries(think.boundary)
         .filter(([, v]) => v === true)
         .map(([k]) => k);
@@ -236,9 +236,9 @@ describe("boundary-cross-validation", () => {
   // ─── Cross-system semantic coherence ────────────────────────────────────
 
   describe("cross-system semantic coherence", () => {
-    it("harness and think agree on all false boundary keys (both are preview-only)", () => {
+    it("harness and think agree on all false boundary keys (both are preview-only)", async () => {
       const harness = buildHarnessIntegration({ now: FIXED_NOW });
-      const think = buildThinkDryRun("test query", { now: FIXED_NOW });
+      const think = await buildThinkDryRun("test query", { now: FIXED_NOW });
 
       for (const key of CANONICAL_SET) {
         if (key === "runtime_execution_performed") continue; // think may spawn wrapper
@@ -286,10 +286,10 @@ describe("boundary-cross-validation", () => {
       assert.ok(manifest.resource_boundary.truth_label);
     });
 
-    it("no module uses a boundary key that looks canonical but is misspelled", () => {
+    it("no module uses a boundary key that looks canonical but is misspelled", async () => {
       // Catch typos like "filesytem_write_performed" or "model_invoked"
       const harness = buildHarnessIntegration({ now: FIXED_NOW });
-      const think = buildThinkDryRun("test query", { now: FIXED_NOW });
+      const think = await buildThinkDryRun("test query", { now: FIXED_NOW });
       const manifest = buildMissionManifest("health_snapshot", {
         now: FIXED_NOW,
       });
@@ -320,13 +320,13 @@ describe("boundary-cross-validation", () => {
   // ─── Determinism across systems ─────────────────────────────────────────
 
   describe("cross-system determinism", () => {
-    it("running all three builders twice produces identical boundaries", () => {
+    it("running all three builders twice produces identical boundaries", async () => {
       const h1 = buildHarnessIntegration({ now: FIXED_NOW });
       const h2 = buildHarnessIntegration({ now: FIXED_NOW });
       assert.deepEqual(h1.boundary, h2.boundary);
 
-      const t1 = buildThinkDryRun("same query", { now: FIXED_NOW });
-      const t2 = buildThinkDryRun("same query", { now: FIXED_NOW });
+      const t1 = await buildThinkDryRun("same query", { now: FIXED_NOW });
+      const t2 = await buildThinkDryRun("same query", { now: FIXED_NOW });
       assert.deepEqual(t1.boundary, t2.boundary);
 
       const m1 = buildMissionManifest("health_snapshot", { now: FIXED_NOW });
