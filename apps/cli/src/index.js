@@ -271,6 +271,10 @@ import {
   renderCloseoutText,
 } from "../../../packages/mission/src/mission-closeout.js";
 import {
+  runMissionProbe,
+  renderProbeText,
+} from "../../../packages/mission/src/mission-probe.js";
+import {
   evaluatePredicates,
   formatDoctorDashboard,
 } from "../../../packages/core/src/doctor-dashboard.js";
@@ -2462,6 +2466,44 @@ async function dispatch(argv) {
             ? JSON.stringify(draft, null, 2)
             : formatMissionDraftPreview(draft),
         );
+        return;
+      }
+      if (subcommand === "probe") {
+        const wantJsonPR = wantsJson(argv);
+        try {
+          const { fileURLToPath: probeURL } = await import("node:url");
+          const { dirname: probeDirname, join: probeJoin } =
+            await import("node:path");
+          const repoRoot = probeJoin(
+            probeDirname(probeURL(import.meta.url)),
+            "..",
+            "..",
+            "..",
+          );
+          const report = await runMissionProbe(repoRoot);
+          if (wantJsonPR) {
+            console.log(JSON.stringify(report, null, 2));
+          } else {
+            console.log(renderProbeText(report));
+          }
+          if (report.verdict === "FAILED") process.exitCode = 1;
+        } catch (err) {
+          if (wantJsonPR) {
+            console.log(
+              JSON.stringify(
+                {
+                  schema: "bizra.dema.mission_probe.v0.1",
+                  error: err.message,
+                },
+                null,
+                2,
+              ),
+            );
+          } else {
+            console.error(`Probe error: ${err.message}`);
+          }
+          process.exitCode = 2;
+        }
         return;
       }
       if (subcommand === "closeout") {
