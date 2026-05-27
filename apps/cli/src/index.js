@@ -149,6 +149,7 @@ import {
   signArtifact,
   SIGN_CONSENT_PHRASE,
 } from "../../../packages/receipts/src/authorship-sign-command.js";
+import { getLatestAuthorshipReceiptSummary } from "../../../packages/receipts/src/authorship-latest.js";
 import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
@@ -371,6 +372,8 @@ Orientation:
                     Generate and persist Ed25519 keypair (requires --consent)
   dema authorship sign <artifact-path> [--json]
                     Sign a local artifact (requires --consent)
+  dema authorship latest [--json]
+                    Show the most recent authorship receipt (read-only)
   dema authorship verify <receipt.json> [--json]
                     Verify an Ed25519-signed authorship receipt
   dema authorship demo [--json]
@@ -1281,6 +1284,22 @@ async function dispatch(argv) {
         return;
       }
 
+      if (subCmdA === "latest") {
+        const summary = await getLatestAuthorshipReceiptSummary();
+        if (wantJsonA) {
+          console.log(JSON.stringify(summary, null, 2));
+        } else if (summary.found) {
+          console.log("Latest Authorship Receipt");
+          console.log("=".repeat(40));
+          console.log(`  File: ${summary.receipt_filename}`);
+          console.log(`  Path: ${summary.receipt_path}`);
+        } else {
+          console.log("No authorship receipts found.");
+        }
+        if (!summary.found) process.exitCode = 1;
+        return;
+      }
+
       if (subCmdA === "verify") {
         const receiptFile = argv[2];
         if (!receiptFile) {
@@ -1385,7 +1404,7 @@ async function dispatch(argv) {
       }
 
       console.error(
-        "Usage: dema authorship key init | sign <path> | verify <receipt> | demo",
+        "Usage: dema authorship key init | sign <path> | latest | verify <receipt> | demo",
       );
       process.exitCode = 1;
       return;
