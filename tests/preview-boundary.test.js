@@ -5,7 +5,7 @@ import {
   buildPreviewBoundary,
   isCanonicalBoundary,
   isCanonicalBoundaryShape,
-  PREVIEW_BOUNDARY_CANONICAL_KEYS
+  PREVIEW_BOUNDARY_CANONICAL_KEYS,
 } from "../packages/core/src/preview-boundary.js";
 
 const EXPECTED_KEYS = [
@@ -24,7 +24,7 @@ const EXPECTED_KEYS = [
   "federation_invoked",
   "node_connection_performed",
   "public_network_used",
-  "consent_collected"
+  "consent_collected",
 ];
 
 test("buildPreviewBoundary emits all 16 canonical keys", () => {
@@ -64,31 +64,31 @@ test("isCanonicalBoundary accepts a canonical boundary", () => {
 });
 
 test("isCanonicalBoundary rejects boundaries with wrong key set", () => {
-  // Missing a key
-  const missing = Object.freeze({
-    ...buildPreviewBoundary(),
-    // Override by reconstructing without consent_collected
-  });
-  // Construct a non-canonical key set:
-  const partial = Object.freeze(Object.fromEntries(
-    EXPECTED_KEYS.slice(0, 15).map((k) => [k, false])
-  ));
+  // Construct a non-canonical key set (subset of expected keys):
+  const partial = Object.freeze(
+    Object.fromEntries(EXPECTED_KEYS.slice(0, 15).map((k) => [k, false])),
+  );
   assert.equal(isCanonicalBoundary(partial), false);
 });
 
 test("isCanonicalBoundary rejects boundaries with extra keys", () => {
   const extra = Object.freeze({
     ...buildPreviewBoundary(),
-    sneaky_extra_key: false
+    sneaky_extra_key: false,
   });
   assert.equal(isCanonicalBoundary(extra), false);
 });
 
 test("isCanonicalBoundary rejects boundaries with any value=true", () => {
   // Can't actually mutate a frozen object; construct fresh with a true value
-  const evil = Object.freeze(Object.fromEntries(
-    EXPECTED_KEYS.map((k) => [k, k === "filesystem_write_performed" ? true : false])
-  ));
+  const evil = Object.freeze(
+    Object.fromEntries(
+      EXPECTED_KEYS.map((k) => [
+        k,
+        k === "filesystem_write_performed" ? true : false,
+      ]),
+    ),
+  );
   assert.equal(isCanonicalBoundary(evil), false);
 });
 
@@ -112,19 +112,32 @@ test("Canonical key set has no duplicates", () => {
 test("isCanonicalBoundaryShape accepts canonical-shape objects without requiring freeze", () => {
   // JSON.parse'd boundary: non-frozen, but canonical key set + all-false
   const fromJSON = JSON.parse(JSON.stringify(buildPreviewBoundary()));
-  assert.equal(Object.isFrozen(fromJSON), false, "JSON round-trip strips freeze");
-  assert.equal(isCanonicalBoundaryShape(fromJSON), true,
-    "shape-only verifier must accept non-frozen canonical inputs");
+  assert.equal(
+    Object.isFrozen(fromJSON),
+    false,
+    "JSON round-trip strips freeze",
+  );
+  assert.equal(
+    isCanonicalBoundaryShape(fromJSON),
+    true,
+    "shape-only verifier must accept non-frozen canonical inputs",
+  );
 });
 
 test("isCanonicalBoundaryShape still rejects extra keys, missing keys, truthy values", () => {
-  const extra = JSON.parse(JSON.stringify({ ...buildPreviewBoundary(), sneaky: false }));
+  const extra = JSON.parse(
+    JSON.stringify({ ...buildPreviewBoundary(), sneaky: false }),
+  );
   assert.equal(isCanonicalBoundaryShape(extra), false);
 
-  const partial = Object.fromEntries(EXPECTED_KEYS.slice(0, 15).map((k) => [k, false]));
+  const partial = Object.fromEntries(
+    EXPECTED_KEYS.slice(0, 15).map((k) => [k, false]),
+  );
   assert.equal(isCanonicalBoundaryShape(partial), false);
 
-  const truthyValue = Object.fromEntries(EXPECTED_KEYS.map((k) => [k, k === "filesystem_write_performed"]));
+  const truthyValue = Object.fromEntries(
+    EXPECTED_KEYS.map((k) => [k, k === "filesystem_write_performed"]),
+  );
   assert.equal(isCanonicalBoundaryShape(truthyValue), false);
 });
 
@@ -133,19 +146,38 @@ test("isCanonicalBoundary remains strict (rejects non-frozen even if shape is ca
   const frozen = buildPreviewBoundary();
   const unfrozen = JSON.parse(JSON.stringify(frozen));
   assert.equal(isCanonicalBoundary(frozen), true);
-  assert.equal(isCanonicalBoundary(unfrozen), false, "strict variant requires freeze");
+  assert.equal(
+    isCanonicalBoundary(unfrozen),
+    false,
+    "strict variant requires freeze",
+  );
   assert.equal(isCanonicalBoundaryShape(frozen), true);
-  assert.equal(isCanonicalBoundaryShape(unfrozen), true, "shape variant accepts both");
+  assert.equal(
+    isCanonicalBoundaryShape(unfrozen),
+    true,
+    "shape variant accepts both",
+  );
 });
 
 test("Canonical keys follow naming convention (snake_case, no caps, ends in performed/used/included/loaded/executed/invoked/advanced/collected/minted)", () => {
   const validSuffixes = [
-    "_performed", "_used", "_included", "_loaded", "_executed",
-    "_invoked", "_advanced", "_collected", "_minted"
+    "_performed",
+    "_used",
+    "_included",
+    "_loaded",
+    "_executed",
+    "_invoked",
+    "_advanced",
+    "_collected",
+    "_minted",
   ];
   for (const k of EXPECTED_KEYS) {
     assert.match(k, /^[a-z_]+$/, `${k} must be snake_case`);
     const hasValidSuffix = validSuffixes.some((s) => k.endsWith(s));
-    assert.equal(hasValidSuffix, true, `${k} must end in an action-past-tense suffix`);
+    assert.equal(
+      hasValidSuffix,
+      true,
+      `${k} must end in an action-past-tense suffix`,
+    );
   }
 });

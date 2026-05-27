@@ -11,7 +11,7 @@ import {
   ONBOARDING_SEAL_SCHEMA,
   SEAL_INVARIANT_KEYS,
   evaluateOnboardingSeal,
-  formatOnboardingSealReport
+  formatOnboardingSealReport,
 } from "../packages/core/src/onboarding-seal.js";
 import * as receiptStoreModule from "../packages/receipts/src/receipt-store.js";
 import { defaultStatus } from "../packages/core/src/status.js";
@@ -29,12 +29,12 @@ function passingSnapshot() {
       daemonStatus: "stopped",
       missionExecuted: false,
       runtimePulse: { fired: false },
-      human: "Mumu"
+      human: "Mumu",
     },
     profile_present: true,
     today_tick: { timestamp: "2026-05-23T06:50:00.000Z" },
     os_username: "bizra-operating-system",
-    receipt_module: receiptStoreModule
+    receipt_module: receiptStoreModule,
   };
 }
 
@@ -52,7 +52,7 @@ test("SEAL_INVARIANT_KEYS contains exactly 9 invariants in canonical order", () 
     "daemon_not_running",
     "mission_not_executed",
     "runtime_pulse_not_fired",
-    "receipt_store_read_only"
+    "receipt_store_read_only",
   ]);
 });
 
@@ -189,7 +189,7 @@ test("Invariant 9: live receipt-store module surface is read/list-only", () => {
   assert.equal(
     inv9.status,
     "ok",
-    `live receipt-store exports leaked a mint surface; exports: ${Object.keys(receiptStoreModule).join(", ")}`
+    `live receipt-store exports leaked a mint surface; exports: ${Object.keys(receiptStoreModule).join(", ")}`,
   );
 });
 
@@ -208,7 +208,7 @@ test("Boundary stamp declares zero side effects", () => {
     mint: false,
     external_send: false,
     urp_runtime: false,
-    filesystem_write_performed: false
+    filesystem_write_performed: false,
   });
 });
 
@@ -217,10 +217,7 @@ test("formatOnboardingSealReport renders human report with verdict + invariants"
   const text = formatOnboardingSealReport(r);
   assert.match(text, /Onboarding Seal v0\.1/);
   assert.match(text, /HOLDS/);
-  for (const key of SEAL_INVARIANT_KEYS) {
-    // Each invariant's label or key fragment should appear; using a loose
-    // check via the section banner only.
-  }
+  assert.ok(SEAL_INVARIANT_KEYS.length > 0);
   assert.match(text, /Invariants:/);
 });
 
@@ -236,7 +233,10 @@ test("formatOnboardingSealReport reflects broken seal", () => {
 test("Live disk reality (informational): if ~/.dema/profile.json exists, snapshot reflects it", () => {
   // Not a gate — this test just records the cross-session reality without
   // failing if the operator hasn't run `dema setup` in this checkout.
-  const profilePath = join(process.env.DEMA_HOME || join(homedir(), ".dema"), "profile.json");
+  const profilePath = join(
+    process.env.DEMA_HOME || join(homedir(), ".dema"),
+    "profile.json",
+  );
   const present = existsSync(profilePath);
   // No assertion on the boolean — the seal is an evaluator, not a setup
   // initiator. We assert that evaluation succeeds either way.

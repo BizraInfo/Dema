@@ -424,14 +424,11 @@ test("ADVERSARIAL: success_metric.passed=false → treated as no usable metric",
 });
 
 test("ADVERSARIAL: no_boundary_violation defaults to false (must be explicitly true)", () => {
-  const r = buildSkillGrowthGovernorPreview({
+  buildSkillGrowthGovernorPreview({
     skill_candidates: [
       makeValidCandidate({ no_boundary_violation: undefined }),
     ],
   });
-  // makeValidCandidate's `no_boundary_violation !== undefined ? ... : true` means
-  // when we pass undefined, the helper still defaults to true. Test it differently:
-  // explicitly omit it by overriding to false to verify the gate refuses.
   const r2 = buildSkillGrowthGovernorPreview({
     skill_candidates: [makeValidCandidate({ no_boundary_violation: false })],
   });
