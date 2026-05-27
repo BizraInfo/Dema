@@ -5,10 +5,9 @@ import {
   buildURPLocalPreview,
   buildURPLocalSummary,
   buildResourceAllocationCandidate,
-  URP_LOCAL_SCHEMA_NAME,
   URP_LOCAL_ALLOCATION_SCHEMA_NAME,
   URP_LOCAL_RESOURCE_CATEGORIES,
-  URP_LOCAL_REQUIRED_BLOCKED_EFFECTS
+  URP_LOCAL_REQUIRED_BLOCKED_EFFECTS,
 } from "../packages/core/src/urp-local.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 
@@ -23,7 +22,13 @@ test("URP-local canonical schema · NODE0_LOCAL_SEED · pool_scope = node0_local
 test("URP-local declares 5 resource categories", () => {
   const u = buildURPLocalPreview();
   assert.equal(u.resource_categories.length, 5);
-  for (const c of ["hardware", "data_corpus", "knowledge_base", "experience_history", "skill_library"]) {
+  for (const c of [
+    "hardware",
+    "data_corpus",
+    "knowledge_base",
+    "experience_history",
+    "skill_library",
+  ]) {
     assert.ok(u.resource_categories.includes(c));
   }
 });
@@ -40,7 +45,7 @@ test("URP-local with all summaries → all categories data_present=true", () => 
     data_corpus_summary: { total_messages: 27044 },
     knowledge_base_summary: { memory_entries_count: 100 },
     experience_history_summary: { receipts_count: 3 },
-    skill_library_summary: { skills_count: 5 }
+    skill_library_summary: { skills_count: 5 },
   });
   for (const c of URP_LOCAL_RESOURCE_CATEGORIES) {
     assert.equal(u[c].data_present, true);
@@ -49,7 +54,7 @@ test("URP-local with all summaries → all categories data_present=true", () => 
 
 test("URP-local missing summaries → data_present=false for those categories", () => {
   const u = buildURPLocalPreview({
-    hardware_summary: { cpu_cores: 8 }
+    hardware_summary: { cpu_cores: 8 },
   });
   assert.equal(u.hardware.data_present, true);
   assert.equal(u.data_corpus.data_present, false);
@@ -58,8 +63,16 @@ test("URP-local missing summaries → data_present=false for those categories", 
 
 test("URP-local blocked_effects include allocation_without_consent + sharing_without_typed_go", () => {
   const u = buildURPLocalPreview();
-  assert.ok(u.blocked_effects.includes("allocate_resource_without_per_resource_consent"));
-  assert.ok(u.blocked_effects.includes("share_resource_to_node1_or_node2_without_typed_go"));
+  assert.ok(
+    u.blocked_effects.includes(
+      "allocate_resource_without_per_resource_consent",
+    ),
+  );
+  assert.ok(
+    u.blocked_effects.includes(
+      "share_resource_to_node1_or_node2_without_typed_go",
+    ),
+  );
   assert.ok(u.blocked_effects.includes("federation_invocation"));
 });
 
@@ -68,19 +81,22 @@ test("Allocation candidate · valid input → consent phrase generated · alloca
     resource: { id: "gpu-0", category: "hardware" },
     consumer_agent_id: "pat-3-code-apprentice",
     duration_minutes: 30,
-    purpose: "compile and test bizra-omega"
+    purpose: "compile and test bizra-omega",
   });
   assert.equal(a.schema, URP_LOCAL_ALLOCATION_SCHEMA_NAME);
   assert.equal(a.valid, true);
   assert.equal(a.allocation_active, false);
-  assert.match(a.consent_phrase, /^GO: allocate hardware 'gpu-0' to pat-3-code-apprentice for 30min/);
+  assert.match(
+    a.consent_phrase,
+    /^GO: allocate hardware 'gpu-0' to pat-3-code-apprentice for 30min/,
+  );
 });
 
 test("Allocation candidate · missing resource → invalid", () => {
   const a = buildResourceAllocationCandidate({
     consumer_agent_id: "pat-1",
     duration_minutes: 10,
-    purpose: "test"
+    purpose: "test",
   });
   assert.equal(a.valid, false);
   assert.ok(a.violations.includes("no_resource"));
@@ -91,7 +107,7 @@ test("Allocation candidate · unknown category → invalid", () => {
     resource: { id: "x", category: "malicious_category" },
     consumer_agent_id: "pat-1",
     duration_minutes: 10,
-    purpose: "test"
+    purpose: "test",
   });
   assert.equal(a.valid, false);
   assert.ok(a.violations.some((v) => v.includes("unknown_resource_category")));
@@ -102,7 +118,7 @@ test("Allocation candidate · invalid duration → invalid", () => {
     resource: { id: "x", category: "hardware" },
     consumer_agent_id: "pat-1",
     duration_minutes: 0,
-    purpose: "test"
+    purpose: "test",
   });
   assert.equal(a.valid, false);
   assert.ok(a.violations.includes("invalid_duration"));
@@ -112,7 +128,7 @@ test("Allocation candidate · missing purpose → invalid", () => {
   const a = buildResourceAllocationCandidate({
     resource: { id: "x", category: "hardware" },
     consumer_agent_id: "pat-1",
-    duration_minutes: 30
+    duration_minutes: 30,
   });
   assert.equal(a.valid, false);
   assert.ok(a.violations.includes("no_purpose"));
@@ -123,7 +139,7 @@ test("Adversarial · non-object resource handled gracefully", () => {
     resource: "not-an-object",
     consumer_agent_id: "pat-1",
     duration_minutes: 30,
-    purpose: "x"
+    purpose: "x",
   });
   assert.equal(a.valid, false);
 });
@@ -133,7 +149,7 @@ test("Allocation candidate deep-frozen + canonical boundary", () => {
     resource: { id: "x", category: "hardware" },
     consumer_agent_id: "pat-1",
     duration_minutes: 30,
-    purpose: "test"
+    purpose: "test",
   });
   assert.ok(Object.isFrozen(a));
   assert.ok(isCanonicalBoundary(a.boundary));
@@ -141,7 +157,7 @@ test("Allocation candidate deep-frozen + canonical boundary", () => {
 
 test("Summary + exports", () => {
   const s = buildURPLocalSummary({
-    hardware_summary: { cpu_cores: 8 }
+    hardware_summary: { cpu_cores: 8 },
   });
   assert.equal(s.categories_with_data.length, 1);
   assert.equal(s.categories_without_data_count, 4);

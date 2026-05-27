@@ -6,7 +6,6 @@ import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 import { llmAdapterConsentPhraseFor } from "../../core/src/llm-adapter.js";
 
 const SCHEMA = "bizra.dema.think_dry_run.v0.1";
-const SNIPPET_MAX_CHARS = 200;
 
 function queryMemory(query, top) {
   const wrapperPath =

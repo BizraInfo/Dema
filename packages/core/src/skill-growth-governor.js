@@ -42,7 +42,7 @@ const PRIMARY_REFUSALS = Object.freeze([
   "refuse_to_emit_skill_change_without_typed_consent",
   "refuse_to_archive_pinned_skill",
   "refuse_to_score_skill_by_self_reflection_alone",
-  "refuse_to_create_skill_overlapping_protected_namespace"
+  "refuse_to_create_skill_overlapping_protected_namespace",
 ]);
 
 // Effects this surface explicitly blocks. All preview-only spine surfaces
@@ -57,28 +57,27 @@ const BLOCKED_EFFECTS = Object.freeze([
   "federation",
   "network_used",
   "receipt_mint",
-  "chain_advance"
+  "chain_advance",
 ]);
 
 // Namespaces the governor protects by default. New skills inside these must
 // declare protected_namespace_override: true to be even evaluated. (The
 // override itself is data the SAT pipeline can still refuse later; this is
 // the governor's first guard, not the only guard.)
-const PROTECTED_NAMESPACES = Object.freeze(new Set([
-  "consent",
-  "boundary",
-  "receipt_mint",
-  "federation",
-  "identity",
-  "canon"
-]));
+const PROTECTED_NAMESPACES = Object.freeze(
+  new Set([
+    "consent",
+    "boundary",
+    "receipt_mint",
+    "federation",
+    "identity",
+    "canon",
+  ]),
+);
 
 // The promotion phrase template. ADR-005 binding: exact-string, no fuzzy,
 // no case-insensitive, no prefix match, no clipboard paste.
 const PROMOTION_PHRASE_TEMPLATE = "GO promote skill <id> v<version>";
-
-const VALID_TASK_OUTCOMES = Object.freeze(new Set(["success", "partial", "failure"]));
-const VALID_NEXT_ACTIONS = Object.freeze(new Set(["halt", "propose", "promote", "archive"]));
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -97,9 +96,10 @@ function isArray(v) {
 // Build the exact promotion phrase a candidate must have typed. Pure
 // substitution into the canonical template — no shortcuts.
 function buildPromotionPhrase(skillId, version) {
-  return PROMOTION_PHRASE_TEMPLATE
-    .replace("<id>", String(skillId))
-    .replace("<version>", String(version));
+  return PROMOTION_PHRASE_TEMPLATE.replace("<id>", String(skillId)).replace(
+    "<version>",
+    String(version),
+  );
 }
 
 function gateResult(passed, reason = null) {
@@ -139,10 +139,16 @@ function evaluateCandidate(candidate, existingSkills) {
     typeof sm.threshold === "number" &&
     typeof sm.passed === "boolean";
   if (!smOk) {
-    gates.success_metric_present = gateResult(false, "success_metric_missing_or_malformed");
+    gates.success_metric_present = gateResult(
+      false,
+      "success_metric_missing_or_malformed",
+    );
     refusals.push("refuse_to_promote_without_success_metric");
   } else if (sm.passed === false) {
-    gates.success_metric_present = gateResult(false, "success_metric_did_not_pass_threshold");
+    gates.success_metric_present = gateResult(
+      false,
+      "success_metric_did_not_pass_threshold",
+    );
     // Same refusal taxonomy: a metric that didn't pass is treated as no usable metric
     refusals.push("refuse_to_promote_without_success_metric");
   } else {
@@ -155,7 +161,10 @@ function evaluateCandidate(candidate, existingSkills) {
   if (candidate?.no_boundary_violation === true) {
     gates.no_boundary_violation = gateResult(true);
   } else {
-    gates.no_boundary_violation = gateResult(false, "boundary_violation_flag_not_explicitly_true");
+    gates.no_boundary_violation = gateResult(
+      false,
+      "boundary_violation_flag_not_explicitly_true",
+    );
   }
 
   // Gate 4: sat_review_passed — upstream SAT pipeline verdict
@@ -166,12 +175,18 @@ function evaluateCandidate(candidate, existingSkills) {
   }
 
   // Gate 5: human_consent_received — exact-string match
-  const expectedPhrase = buildPromotionPhrase(candidate?.skill_id, candidate?.candidate_version);
+  const expectedPhrase = buildPromotionPhrase(
+    candidate?.skill_id,
+    candidate?.candidate_version,
+  );
   const typedPhrase = candidate?.human_consent_phrase_typed ?? "";
   if (typeof typedPhrase === "string" && typedPhrase === expectedPhrase) {
     gates.human_consent_received = gateResult(true);
   } else {
-    gates.human_consent_received = gateResult(false, "consent_phrase_not_typed_verbatim");
+    gates.human_consent_received = gateResult(
+      false,
+      "consent_phrase_not_typed_verbatim",
+    );
     refusals.push("refuse_to_emit_skill_change_without_typed_consent");
   }
 
@@ -240,7 +255,9 @@ function evaluateCandidate(candidate, existingSkills) {
     next_action,
     promotion_phrase_required: expectedPhrase,
     existing_skill_protected:
-      existing?.human_edit_protected === true || existing?.pinned === true || false
+      existing?.human_edit_protected === true ||
+      existing?.pinned === true ||
+      false,
   });
 }
 
@@ -248,7 +265,7 @@ function evaluateCandidate(candidate, existingSkills) {
 
 export function buildSkillGrowthGovernorPreview({
   skill_candidates = [],
-  existing_skills = []
+  existing_skills = [],
 } = {}) {
   const candidatesIn = isArray(skill_candidates) ? skill_candidates : [];
   const existingIn = isArray(existing_skills) ? existing_skills : [];
@@ -259,26 +276,38 @@ export function buildSkillGrowthGovernorPreview({
     .map((s) =>
       Object.freeze({
         skill_id: s.skill_id,
-        current_version: isPositiveInt(s.current_version) ? s.current_version : 1,
+        current_version: isPositiveInt(s.current_version)
+          ? s.current_version
+          : 1,
         human_edit_protected: s.human_edit_protected === true,
         pinned: s.pinned === true,
-        last_edited_by: ["human", "dema", "sat"].includes(s.last_edited_by) ? s.last_edited_by : "unknown",
-        namespace: isNonEmptyString(s.namespace) ? s.namespace : null
-      })
+        last_edited_by: ["human", "dema", "sat"].includes(s.last_edited_by)
+          ? s.last_edited_by
+          : "unknown",
+        namespace: isNonEmptyString(s.namespace) ? s.namespace : null,
+      }),
     );
 
   // Per-candidate evaluation
-  const evaluations = candidatesIn.map((c) => evaluateCandidate(c, existingOut));
+  const evaluations = candidatesIn.map((c) =>
+    evaluateCandidate(c, existingOut),
+  );
 
   // Aggregate counters · what a TUI Growth panel needs at a glance
   const counters = {
     candidates_total: evaluations.length,
-    candidates_promotable: evaluations.filter((e) => e.next_action === "promote").length,
-    candidates_halted: evaluations.filter((e) => e.next_action === "halt").length,
-    candidates_proposed: evaluations.filter((e) => e.next_action === "propose").length,
-    human_edited_skills_protected: existingOut.filter((s) => s.human_edit_protected).length,
+    candidates_promotable: evaluations.filter(
+      (e) => e.next_action === "promote",
+    ).length,
+    candidates_halted: evaluations.filter((e) => e.next_action === "halt")
+      .length,
+    candidates_proposed: evaluations.filter((e) => e.next_action === "propose")
+      .length,
+    human_edited_skills_protected: existingOut.filter(
+      (s) => s.human_edit_protected,
+    ).length,
     pinned_skills: existingOut.filter((s) => s.pinned).length,
-    refusals_total: evaluations.reduce((sum, e) => sum + e.refusals.length, 0)
+    refusals_total: evaluations.reduce((sum, e) => sum + e.refusals.length, 0),
   };
 
   return Object.freeze({
@@ -290,14 +319,14 @@ export function buildSkillGrowthGovernorPreview({
       "No learning without evaluation.",
       "No evaluation without evidence.",
       "No skill promotion without receipt.",
-      "No overwrite without human consent."
+      "No overwrite without human consent.",
     ]),
     five_gates: Object.freeze([
       "evidence_exists",
       "success_metric_present",
       "no_boundary_violation",
       "sat_review_passed",
-      "human_consent_received"
+      "human_consent_received",
     ]),
     primary_refusals: PRIMARY_REFUSALS,
     blocked_effects: BLOCKED_EFFECTS,
@@ -309,18 +338,21 @@ export function buildSkillGrowthGovernorPreview({
       case_insensitive_allowed: false,
       prefix_match_allowed: false,
       paste_allowed: false,
-      adr_005_anchor: "docs/06-adr/ADR-005-operator-actions-require-explicit-consent.md"
+      adr_005_anchor:
+        "docs/06-adr/ADR-005-operator-actions-require-explicit-consent.md",
     }),
     existing_skills: Object.freeze(existingOut),
     candidate_evaluations: Object.freeze(evaluations),
     counters: Object.freeze(counters),
     canon_anchors: Object.freeze({
       ordinal_law: "docs/canon/BIZRA_TOPOLOGY_CANON.md#node-ordinal-law",
-      seed_pattern: "docs/canon/BIZRA_TOPOLOGY_CANON.md#seed-pattern-invariant-fractality",
-      adr_005: "docs/06-adr/ADR-005-operator-actions-require-explicit-consent.md",
-      adr_009_poi: "docs/06-adr/ADR-009-poi-proof-of-impact-design.md"
+      seed_pattern:
+        "docs/canon/BIZRA_TOPOLOGY_CANON.md#seed-pattern-invariant-fractality",
+      adr_005:
+        "docs/06-adr/ADR-005-operator-actions-require-explicit-consent.md",
+      adr_009_poi: "docs/06-adr/ADR-009-poi-proof-of-impact-design.md",
     }),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -329,11 +361,12 @@ export function buildSkillGrowthGovernorPreview({
 export const SKILL_GROWTH_GOVERNOR_SCHEMA = SCHEMA;
 export const SKILL_GROWTH_GOVERNOR_PRIMARY_REFUSALS = PRIMARY_REFUSALS;
 export const SKILL_GROWTH_GOVERNOR_PROTECTED_NAMESPACES = PROTECTED_NAMESPACES;
-export const SKILL_GROWTH_GOVERNOR_PROMOTION_PHRASE_TEMPLATE = PROMOTION_PHRASE_TEMPLATE;
+export const SKILL_GROWTH_GOVERNOR_PROMOTION_PHRASE_TEMPLATE =
+  PROMOTION_PHRASE_TEMPLATE;
 export const SKILL_GROWTH_GOVERNOR_FIVE_GATES = Object.freeze([
   "evidence_exists",
   "success_metric_present",
   "no_boundary_violation",
   "sat_review_passed",
-  "human_consent_received"
+  "human_consent_received",
 ]);

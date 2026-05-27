@@ -7,10 +7,8 @@ import {
   buildPATMemoryCuratorEffectCap,
   buildPATMemoryCuratorKernel,
   classifyMemoryEntry,
-  PAT_MEMORY_CURATOR_SCHEMA_NAME,
-  PAT_MEMORY_CURATOR_CLASSIFICATION_SCHEMA_NAME,
   PAT_MEMORY_CURATOR_PERSONA,
-  PAT_MEMORY_CURATOR_CANONICAL_CATEGORIES
+  PAT_MEMORY_CURATOR_CANONICAL_CATEGORIES,
 } from "../packages/core/src/pat-memory-curator.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 
@@ -31,7 +29,9 @@ test("PAT-4 boundary canonical + deep frozen", () => {
 test("PAT-4 refusals: never delete · never move without consent · never edit", () => {
   const p = buildPATMemoryCuratorPreview();
   assert.ok(p.persona.primary_refusals.includes("delete_memory_entries"));
-  assert.ok(p.persona.primary_refusals.includes("move_entries_without_consent"));
+  assert.ok(
+    p.persona.primary_refusals.includes("move_entries_without_consent"),
+  );
   assert.ok(p.persona.primary_refusals.includes("edit_entry_content"));
 });
 
@@ -52,7 +52,13 @@ test("PAT-4 kernel pre-configured correctly", () => {
 test("PAT-4 declares 5 canonical memory categories", () => {
   const p = buildPATMemoryCuratorPreview();
   assert.equal(p.canonical_memory_categories.length, 5);
-  for (const cat of ["user", "feedback", "project", "reference", "uncategorized"]) {
+  for (const cat of [
+    "user",
+    "feedback",
+    "project",
+    "reference",
+    "uncategorized",
+  ]) {
     assert.ok(p.canonical_memory_categories.includes(cat));
   }
 });
@@ -60,7 +66,7 @@ test("PAT-4 declares 5 canonical memory categories", () => {
 test("classifyMemoryEntry · feedback_xxx → feedback category · high confidence with frontmatter", () => {
   const c = classifyMemoryEntry({
     entry_name: "feedback_law_of_assumption",
-    entry_type_frontmatter: "feedback"
+    entry_type_frontmatter: "feedback",
   });
   assert.equal(c.schema, "bizra.dema.memory_classification.v0.1");
   assert.equal(c.suggested_category, "feedback");
@@ -82,7 +88,7 @@ test("classifyMemoryEntry · unknown name → uncategorized · low confidence", 
 test("classifyMemoryEntry · frontmatter wins over name when both present", () => {
   const c = classifyMemoryEntry({
     entry_name: "feedback_something",
-    entry_type_frontmatter: "project"
+    entry_type_frontmatter: "project",
   });
   assert.equal(c.suggested_category, "project");
   assert.equal(c.inferred_from_name, "feedback");
@@ -92,16 +98,19 @@ test("classifyMemoryEntry · frontmatter wins over name when both present", () =
 test("classifyMemoryEntry · current category differs from suggested → requires consent", () => {
   const c = classifyMemoryEntry({
     entry_name: "feedback_x",
-    current_category: "project"
+    current_category: "project",
   });
   assert.equal(c.requires_consent_to_apply, true);
-  assert.match(c.consent_phrase, /GO: move 'feedback_x' from 'project' to 'feedback'/);
+  assert.match(
+    c.consent_phrase,
+    /GO: move 'feedback_x' from 'project' to 'feedback'/,
+  );
 });
 
 test("classifyMemoryEntry · current category matches suggested → no consent needed", () => {
   const c = classifyMemoryEntry({
     entry_name: "feedback_x",
-    current_category: "feedback"
+    current_category: "feedback",
   });
   assert.equal(c.requires_consent_to_apply, false);
   assert.equal(c.consent_phrase, null);
@@ -110,7 +119,7 @@ test("classifyMemoryEntry · current category matches suggested → no consent n
 test("Adversarial · non-canonical frontmatter value falls back to name-based inference", () => {
   const c = classifyMemoryEntry({
     entry_name: "feedback_x",
-    entry_type_frontmatter: "malicious_category"
+    entry_type_frontmatter: "malicious_category",
   });
   assert.equal(c.suggested_category, "feedback");
   assert.equal(c.inferred_from_frontmatter, null);

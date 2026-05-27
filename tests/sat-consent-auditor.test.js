@@ -4,11 +4,10 @@ import assert from "node:assert/strict";
 import {
   buildSATConsentAuditorPreview,
   buildSATConsentAuditorEffectCap,
-  buildSATConsentAuditorKernel,
   buildSATConsentAuditorSummary,
   auditAction,
   SAT_CONSENT_AUDITOR_PERSONA,
-  SAT_CONSENT_AUDITOR_RISK_TIER_THRESHOLDS
+  SAT_CONSENT_AUDITOR_RISK_TIER_THRESHOLDS,
 } from "../packages/core/src/sat-consent-auditor.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 
@@ -28,8 +27,12 @@ test("SAT-2 boundary canonical + deep frozen", () => {
 test("SAT-2 refusals: never fuzzy · never case-insensitive · never waive audit", () => {
   const p = buildSATConsentAuditorPreview();
   assert.ok(p.persona.primary_refusals.includes("accept_fuzzy_consent"));
-  assert.ok(p.persona.primary_refusals.includes("accept_case_insensitive_consent"));
-  assert.ok(p.persona.primary_refusals.includes("waive_audit_trail_requirement"));
+  assert.ok(
+    p.persona.primary_refusals.includes("accept_case_insensitive_consent"),
+  );
+  assert.ok(
+    p.persona.primary_refusals.includes("waive_audit_trail_requirement"),
+  );
 });
 
 test("SAT-2 EffectCap blocks fuzzy/waive/approve-without-consent", () => {
@@ -57,8 +60,8 @@ test("auditAction · L3 with exact consent + audit trail → audited_ok", () => 
       risk_tier: "L3",
       consent_phrase_required: "GO: edit foo.js",
       consent_phrase_provided: "GO: edit foo.js",
-      audit_trail: { event_id: "abc", timestamp: "2026-05-18T00:00:00Z" }
-    }
+      audit_trail: { event_id: "abc", timestamp: "2026-05-18T00:00:00Z" },
+    },
   });
   assert.equal(v.schema, "bizra.dema.consent_audit_verdict.v0.1");
   assert.equal(v.verdict, "audited_ok");
@@ -73,12 +76,14 @@ test("auditAction · L3 with MISMATCHED consent → audit_failed · names mismat
       risk_tier: "L3",
       consent_phrase_required: "GO: edit foo.js",
       consent_phrase_provided: "GO: edit foo", // missing .js
-      audit_trail: { event_id: "x" }
-    }
+      audit_trail: { event_id: "x" },
+    },
   });
   assert.equal(v.verdict, "audit_failed");
   assert.equal(v.passed, false);
-  assert.ok(v.violations.some((vio) => vio.includes("consent_phrase_mismatch")));
+  assert.ok(
+    v.violations.some((vio) => vio.includes("consent_phrase_mismatch")),
+  );
 });
 
 test("auditAction · L4 missing audit trail → audit_failed", () => {
@@ -87,9 +92,9 @@ test("auditAction · L4 missing audit trail → audit_failed", () => {
       action_name: "mint",
       risk_tier: "L4",
       consent_phrase_required: "GO: mint",
-      consent_phrase_provided: "GO: mint"
+      consent_phrase_provided: "GO: mint",
       // no audit_trail
-    }
+    },
   });
   assert.equal(v.verdict, "audit_failed");
   assert.ok(v.violations.includes("audit_trail_missing_or_invalid"));
@@ -99,9 +104,9 @@ test("auditAction · L0 needs neither consent nor audit", () => {
   const v = auditAction({
     action: {
       action_name: "read_file",
-      risk_tier: "L0"
+      risk_tier: "L0",
       // no consent · no audit · L0 doesn't need them
-    }
+    },
   });
   assert.equal(v.verdict, "audited_ok");
   assert.equal(v.passed, true);
@@ -112,15 +117,15 @@ test("auditAction · L1/L2 needs audit trail but not consent", () => {
     action: {
       action_name: "write_today",
       risk_tier: "L1",
-      audit_trail: { event_id: "x" }
-    }
+      audit_trail: { event_id: "x" },
+    },
   });
   const v2 = auditAction({
     action: {
       action_name: "propose",
       risk_tier: "L2",
-      audit_trail: { event_id: "y" }
-    }
+      audit_trail: { event_id: "y" },
+    },
   });
   assert.equal(v1.passed, true);
   assert.equal(v2.passed, true);
@@ -130,8 +135,8 @@ test("auditAction · unknown risk_tier → structurally_invalid", () => {
   const v = auditAction({
     action: {
       action_name: "test",
-      risk_tier: "L9_MADE_UP"
-    }
+      risk_tier: "L9_MADE_UP",
+    },
   });
   assert.equal(v.verdict, "structurally_invalid");
   assert.ok(v.violations.some((vio) => vio.includes("unknown_risk_tier")));
@@ -150,11 +155,13 @@ test("auditAction · L3 with empty consent_phrase_required → flagged", () => {
       risk_tier: "L3",
       consent_phrase_required: "",
       consent_phrase_provided: "anything",
-      audit_trail: { x: 1 }
-    }
+      audit_trail: { x: 1 },
+    },
   });
   assert.equal(v.passed, false);
-  assert.ok(v.violations.includes("required_consent_phrase_missing_from_action"));
+  assert.ok(
+    v.violations.includes("required_consent_phrase_missing_from_action"),
+  );
 });
 
 test("Verdict deep-frozen + canonical boundary", () => {

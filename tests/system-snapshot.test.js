@@ -16,7 +16,6 @@ import {
 } from "../packages/core/src/system-snapshot.js";
 import { isCanonicalBoundaryShape } from "../packages/core/src/preview-boundary.js";
 
-const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FIXED_NOW = new Date("2026-05-26T12:00:00Z");
 
 function makeDemaHome() {

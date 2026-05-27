@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, readdir } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -84,7 +84,7 @@ describe("verifyWitnessReceipt", () => {
   });
 
   it("FAILED on tampered content", async () => {
-    const { receipt, home, restore } = await freshHomeWithWitness();
+    const { receipt, restore } = await freshHomeWithWitness();
     try {
       const tampered = JSON.parse(
         await (await import("node:fs/promises")).readFile(receipt.path, "utf8"),

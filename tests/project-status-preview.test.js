@@ -4,16 +4,19 @@ import assert from "node:assert/strict";
 import {
   buildProjectStatusPreview,
   PROJECT_STATUS_SCHEMA,
-  PROJECT_STATUS_PMBOK_PRINCIPLES,
   PROJECT_STATUS_STAKEHOLDER_ROLES,
-  PROJECT_STATUS_PRIMARY_REFUSALS
+  PROJECT_STATUS_PRIMARY_REFUSALS,
 } from "../packages/core/src/project-status-preview.js";
 
 import { PREVIEW_BOUNDARY_CANONICAL_KEYS } from "../packages/core/src/preview-boundary.js";
 
 function assertCanonicalBoundary(boundary, label) {
   for (const key of PREVIEW_BOUNDARY_CANONICAL_KEYS) {
-    assert.equal(boundary[key], false, `${label}.boundary.${key} must be false`);
+    assert.equal(
+      boundary[key],
+      false,
+      `${label}.boundary.${key} must be false`,
+    );
   }
 }
 
@@ -35,8 +38,17 @@ test("ProjectStatus emits canonical 16-key boundary all false", () => {
 
 test("ProjectStatus output is deep-frozen", () => {
   const r = buildProjectStatusPreview({
-    stakeholders: [{ role: "founder", name: "Mumu", node_label: "Node0", status: "active" }],
-    risk_register: [{ risk_id: "R1", title: "Test risk", severity: "low", mitigation: "monitor" }]
+    stakeholders: [
+      { role: "founder", name: "Mumu", node_label: "Node0", status: "active" },
+    ],
+    risk_register: [
+      {
+        risk_id: "R1",
+        title: "Test risk",
+        severity: "low",
+        mitigation: "monitor",
+      },
+    ],
   });
   assert.equal(Object.isFrozen(r), true);
   assert.equal(Object.isFrozen(r.stakeholders), true);
@@ -50,8 +62,18 @@ test("ProjectStatus output is deep-frozen", () => {
 
 test("ProjectStatus is deterministic given identical inputs", () => {
   const inputs = {
-    stakeholders: [{ role: "founder", name: "M", node_label: "Node0", status: "active" }],
-    risk_register: [{ risk_id: "R1", title: "T", severity: "low", mitigation: "M", status: "monitored" }]
+    stakeholders: [
+      { role: "founder", name: "M", node_label: "Node0", status: "active" },
+    ],
+    risk_register: [
+      {
+        risk_id: "R1",
+        title: "T",
+        severity: "low",
+        mitigation: "M",
+        status: "monitored",
+      },
+    ],
   };
   const a = buildProjectStatusPreview(inputs);
   const b = buildProjectStatusPreview(inputs);
@@ -63,26 +85,44 @@ test("PMBOK 7th edition has 12 principles · all surfaced with embodiment + anch
   assert.equal(r.pmbok_principles.length, 12);
   const ids = r.pmbok_principles.map((p) => p.id);
   for (const principle of [
-    "stewardship", "team", "stakeholders", "value", "systems_thinking",
-    "leadership", "tailoring", "quality", "complexity", "risk",
-    "adaptability_resilience", "change"
+    "stewardship",
+    "team",
+    "stakeholders",
+    "value",
+    "systems_thinking",
+    "leadership",
+    "tailoring",
+    "quality",
+    "complexity",
+    "risk",
+    "adaptability_resilience",
+    "change",
   ]) {
     assert.ok(ids.includes(principle), `PMBOK principle missing: ${principle}`);
   }
   for (const p of r.pmbok_principles) {
     assert.ok(typeof p.pmbok_text === "string" && p.pmbok_text.length > 0);
-    assert.ok(typeof p.bizra_embodiment === "string" && p.bizra_embodiment.length > 0);
+    assert.ok(
+      typeof p.bizra_embodiment === "string" && p.bizra_embodiment.length > 0,
+    );
     assert.ok(typeof p.anchor === "string" && p.anchor.length > 0);
   }
 });
 
 test("Stakeholder role taxonomy includes the 7 canonical concentric-ring roles", () => {
   for (const role of [
-    "founder", "first_invited", "candidate",
-    "future_ring_2_cohort", "future_ring_3_design_partners", "future_ring_4_public",
-    "concurrent_claude_session"
+    "founder",
+    "first_invited",
+    "candidate",
+    "future_ring_2_cohort",
+    "future_ring_3_design_partners",
+    "future_ring_4_public",
+    "concurrent_claude_session",
   ]) {
-    assert.ok(PROJECT_STATUS_STAKEHOLDER_ROLES.includes(role), `role ${role} must be in taxonomy`);
+    assert.ok(
+      PROJECT_STATUS_STAKEHOLDER_ROLES.includes(role),
+      `role ${role} must be in taxonomy`,
+    );
   }
 });
 
@@ -98,7 +138,7 @@ test("primary_refusals surfaces 8-entry PM-applied refusal taxonomy", () => {
     "refuse_to_advance_phase_without_predecessor_phase_complete",
     "refuse_to_count_features_or_loc_as_units_of_value",
     "refuse_to_publish_status_that_contradicts_receipt_chain",
-    "refuse_to_hide_open_typed_gos_from_handoff_state"
+    "refuse_to_hide_open_typed_gos_from_handoff_state",
   ]) {
     assert.ok(r.primary_refusals.includes(refusal));
   }
@@ -109,7 +149,9 @@ test("blocked_effects includes federation + receipt_mint + 8 PM-specific blocks"
   assert.ok(r.blocked_effects.includes("federation"));
   assert.ok(r.blocked_effects.includes("receipt_mint"));
   assert.ok(r.blocked_effects.includes("claim_progress_without_evidence"));
-  assert.ok(r.blocked_effects.includes("rate_quality_by_self_reflection_alone"));
+  assert.ok(
+    r.blocked_effects.includes("rate_quality_by_self_reflection_alone"),
+  );
   assert.ok(r.blocked_effects.includes("skip_stakeholder_in_ring_progression"));
   assert.ok(r.blocked_effects.includes("close_risk_without_mitigation"));
   assert.ok(r.blocked_effects.includes("hide_pending_typed_gos"));
@@ -132,9 +174,22 @@ test("Value stream unit_of_value is ironclad_proof_forge_receipt (not features/L
 test("Stakeholder with valid role is preserved", () => {
   const r = buildProjectStatusPreview({
     stakeholders: [
-      { role: "founder", name: "Mumu", node_label: "Node0", node_ordinal: 0, status: "active", commitments: ["50% pool oath"] },
-      { role: "first_invited", name: "Samy", node_label: "Node1", node_ordinal: 1, status: "ghost_accepted_pending_device_install" }
-    ]
+      {
+        role: "founder",
+        name: "Mumu",
+        node_label: "Node0",
+        node_ordinal: 0,
+        status: "active",
+        commitments: ["50% pool oath"],
+      },
+      {
+        role: "first_invited",
+        name: "Samy",
+        node_label: "Node1",
+        node_ordinal: 1,
+        status: "ghost_accepted_pending_device_install",
+      },
+    ],
   });
   assert.equal(r.stakeholders.length, 2);
   assert.equal(r.stakeholders[0].role, "founder");
@@ -145,14 +200,16 @@ test("Stakeholder with valid role is preserved", () => {
 
 test("Risk register with mitigation is preserved", () => {
   const r = buildProjectStatusPreview({
-    risk_register: [{
-      risk_id: "R1",
-      title: "Push held since CI dispatch incident",
-      severity: "medium",
-      mitigation: "retry push when workflow worktree clean",
-      status: "monitored",
-      owner: "Mumu"
-    }]
+    risk_register: [
+      {
+        risk_id: "R1",
+        title: "Push held since CI dispatch incident",
+        severity: "medium",
+        mitigation: "retry push when workflow worktree clean",
+        status: "monitored",
+        owner: "Mumu",
+      },
+    ],
   });
   assert.equal(r.risk_register.length, 1);
   assert.equal(r.risk_register[0].risk_id, "R1");
@@ -162,7 +219,10 @@ test("Risk register with mitigation is preserved", () => {
 
 test("Quality posture surfaces 5-gate audit method", () => {
   const r = buildProjectStatusPreview({
-    quality_posture: { master_craftsmanship_compliance: true, five_gate_state: "all_green" }
+    quality_posture: {
+      master_craftsmanship_compliance: true,
+      five_gate_state: "all_green",
+    },
   });
   assert.equal(r.quality_posture.master_craftsmanship_compliance, true);
   assert.equal(r.quality_posture.five_gate_state, "all_green");
@@ -174,14 +234,38 @@ test("Counters aggregate correctly", () => {
   const r = buildProjectStatusPreview({
     stakeholders: [
       { role: "founder", name: "M", node_label: "Node0", status: "active" },
-      { role: "first_invited", name: "S", node_label: "Node1", status: "ghost_accepted_pending_device_install" },
-      { role: "candidate", name: "V", node_label: "Node2", status: "not_yet_contacted" }
+      {
+        role: "first_invited",
+        name: "S",
+        node_label: "Node1",
+        status: "ghost_accepted_pending_device_install",
+      },
+      {
+        role: "candidate",
+        name: "V",
+        node_label: "Node2",
+        status: "not_yet_contacted",
+      },
     ],
     risk_register: [
-      { risk_id: "R1", title: "T1", severity: "low", mitigation: "M1", status: "monitored" },
-      { risk_id: "R2", title: "T2", severity: "medium", mitigation: "M2", status: "mitigated" }
+      {
+        risk_id: "R1",
+        title: "T1",
+        severity: "low",
+        mitigation: "M1",
+        status: "monitored",
+      },
+      {
+        risk_id: "R2",
+        title: "T2",
+        severity: "medium",
+        mitigation: "M2",
+        status: "mitigated",
+      },
     ],
-    open_typed_gos: [{ phrase: "GO push", scope: "origin/main", halt_gate_class: "publish" }]
+    open_typed_gos: [
+      { phrase: "GO push", scope: "origin/main", halt_gate_class: "publish" },
+    ],
   });
   assert.equal(r.counters.stakeholders_total, 3);
   assert.equal(r.counters.stakeholders_active, 2);
@@ -215,11 +299,15 @@ test("Empty inputs yield valid status with zero counters", () => {
 
 test("ADVERSARIAL: REFUSE to close a risk without named mitigation", () => {
   const r = buildProjectStatusPreview({
-    risk_register: [{
-      risk_id: "R1", title: "Sneaky risk", severity: "high",
-      status: "closed_with_mitigation"
-      // mitigation deliberately omitted
-    }]
+    risk_register: [
+      {
+        risk_id: "R1",
+        title: "Sneaky risk",
+        severity: "high",
+        status: "closed_with_mitigation",
+        // mitigation deliberately omitted
+      },
+    ],
   });
   // Refuse-as-product: status forced back to "open"
   assert.equal(r.risk_register[0].status, "open");
@@ -229,11 +317,15 @@ test("ADVERSARIAL: REFUSE to close a risk without named mitigation", () => {
 
 test("ADVERSARIAL: REFUSE to close a risk when mitigation is empty string", () => {
   const r = buildProjectStatusPreview({
-    risk_register: [{
-      risk_id: "R1", title: "T", severity: "high",
-      mitigation: "",
-      status: "mitigated"
-    }]
+    risk_register: [
+      {
+        risk_id: "R1",
+        title: "T",
+        severity: "high",
+        mitigation: "",
+        status: "mitigated",
+      },
+    ],
   });
   assert.equal(r.risk_register[0].status, "open");
   assert.equal(r.risk_register[0].refused_close_without_mitigation, true);
@@ -241,28 +333,48 @@ test("ADVERSARIAL: REFUSE to close a risk when mitigation is empty string", () =
 
 test("ADVERSARIAL: Unknown stakeholder role coerced to 'unknown' (not silently passed)", () => {
   const r = buildProjectStatusPreview({
-    stakeholders: [{ role: "ceo", name: "X", node_label: "Node0", status: "active" }]
+    stakeholders: [
+      { role: "ceo", name: "X", node_label: "Node0", status: "active" },
+    ],
   });
   assert.equal(r.stakeholders[0].role, "unknown");
 });
 
 test("ADVERSARIAL: Invalid severity coerced to 'medium' (no silent injection)", () => {
   const r = buildProjectStatusPreview({
-    risk_register: [{ risk_id: "R1", title: "T", severity: "catastrophic_omg", mitigation: "M", status: "monitored" }]
+    risk_register: [
+      {
+        risk_id: "R1",
+        title: "T",
+        severity: "catastrophic_omg",
+        mitigation: "M",
+        status: "monitored",
+      },
+    ],
   });
   assert.equal(r.risk_register[0].severity, "medium");
 });
 
 test("ADVERSARIAL: Invalid risk status coerced to 'open' (safest default)", () => {
   const r = buildProjectStatusPreview({
-    risk_register: [{ risk_id: "R1", title: "T", severity: "high", mitigation: "M", status: "totally_fine" }]
+    risk_register: [
+      {
+        risk_id: "R1",
+        title: "T",
+        severity: "high",
+        mitigation: "M",
+        status: "totally_fine",
+      },
+    ],
   });
   assert.equal(r.risk_register[0].status, "open");
 });
 
 test("ADVERSARIAL: Stakeholder with no name has node_ordinal still preserved", () => {
   const r = buildProjectStatusPreview({
-    stakeholders: [{ role: "candidate", node_ordinal: 2, status: "not_yet_contacted" }]
+    stakeholders: [
+      { role: "candidate", node_ordinal: 2, status: "not_yet_contacted" },
+    ],
   });
   assert.equal(r.stakeholders[0].name, null);
   assert.equal(r.stakeholders[0].node_ordinal, 2);
@@ -270,15 +382,21 @@ test("ADVERSARIAL: Stakeholder with no name has node_ordinal still preserved", (
 
 test("ADVERSARIAL: Mutation attempt on returned stakeholders is rejected (frozen)", () => {
   const r = buildProjectStatusPreview({
-    stakeholders: [{ role: "founder", name: "M", node_label: "Node0", status: "active" }]
+    stakeholders: [
+      { role: "founder", name: "M", node_label: "Node0", status: "active" },
+    ],
   });
   try {
     r.stakeholders.push({ role: "founder", name: "FakeFounder" });
-  } catch (e) { /* expected */ }
+  } catch (e) {
+    /* expected */
+  }
   assert.equal(r.stakeholders.length, 1);
   try {
     r.stakeholders[0].name = "Hacker";
-  } catch (e) { /* expected */ }
+  } catch (e) {
+    /* expected */
+  }
   assert.equal(r.stakeholders[0].name, "M");
 });
 
@@ -286,7 +404,9 @@ test("ADVERSARIAL: Mutation attempt on returned pmbok_principles is rejected", (
   const r = buildProjectStatusPreview();
   try {
     r.pmbok_principles.push({ id: "fake_principle" });
-  } catch (e) { /* expected */ }
+  } catch (e) {
+    /* expected */
+  }
   assert.equal(r.pmbok_principles.length, 12);
 });
 
@@ -314,14 +434,20 @@ test("ADVERSARIAL: Project name as non-string falls back to BIZRA / Dema default
 
 test("ADVERSARIAL: open_typed_gos with non-string scope coerced to null", () => {
   const r = buildProjectStatusPreview({
-    open_typed_gos: [{ phrase: "GO push", scope: { evil: "object" }, halt_gate_class: "publish" }]
+    open_typed_gos: [
+      {
+        phrase: "GO push",
+        scope: { evil: "object" },
+        halt_gate_class: "publish",
+      },
+    ],
   });
   assert.equal(r.open_typed_gos[0].scope, null);
 });
 
 test("ADVERSARIAL: value_stream with non-numeric receipts_total coerced to null", () => {
   const r = buildProjectStatusPreview({
-    value_stream: { receipts_total: "twenty-five", spine_surfaces: 12 }
+    value_stream: { receipts_total: "twenty-five", spine_surfaces: 12 },
   });
   assert.equal(r.value_stream.receipts_total, null);
   assert.equal(r.value_stream.spine_surfaces, 12);
@@ -331,15 +457,20 @@ test("ADVERSARIAL: stakeholder with status 'active' counts as active", () => {
   const r = buildProjectStatusPreview({
     stakeholders: [
       { role: "founder", name: "M", node_label: "Node0", status: "active" },
-      { role: "candidate", name: "X", node_label: "Node2", status: "not_yet_contacted" }
-    ]
+      {
+        role: "candidate",
+        name: "X",
+        node_label: "Node2",
+        status: "not_yet_contacted",
+      },
+    ],
   });
   assert.equal(r.counters.stakeholders_active, 1);
 });
 
 test("ADVERSARIAL: Deferred actions non-string entries filtered out", () => {
   const r = buildProjectStatusPreview({
-    deferred_actions: ["Send Samy email", 42, null, "Build Node2 ceremony"]
+    deferred_actions: ["Send Samy email", 42, null, "Build Node2 ceremony"],
   });
   assert.equal(r.deferred_actions.length, 2);
 });

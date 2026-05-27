@@ -27,18 +27,15 @@ const REQUIRED_BLOCKED_EFFECTS = Object.freeze([
   "modify_existing_receipt",
   "mint_outside_dema_receipts_dir",
   "skip_ots_attestation_for_founding_grade",
-  "federation_invocation"
+  "federation_invocation",
 ]);
 
 const RECEIPT_GRADES = Object.freeze({
   preview: "preview only · no chain advance",
   measured: "operator-witnessed · chain advances · no OTS",
-  founding: "founding-document-grade · chain advances · OTS-anchored to Bitcoin"
+  founding:
+    "founding-document-grade · chain advances · OTS-anchored to Bitcoin",
 });
-
-function safeString(v, fallback = "") {
-  return typeof v === "string" ? v : fallback;
-}
 
 function safeObject(v) {
   return v && typeof v === "object" && !Array.isArray(v) ? v : null;
@@ -63,7 +60,7 @@ export function buildReceiptMintIntegrationPreview() {
       "sat-4-receipt-chain-verifier",
       "sat-5-identity-verifier",
       "per_receipt_typed_consent",
-      "governed_gateway_handoff"
+      "governed_gateway_handoff",
     ]),
     receipt_grades: RECEIPT_GRADES,
     ots_required_for_grade: "founding",
@@ -73,9 +70,9 @@ export function buildReceiptMintIntegrationPreview() {
       "Mint never proceeds without per-receipt typed consent phrase",
       "Mint never advances chain without governed gateway handoff",
       "Mint never forges prev_hash · gap is named honestly",
-      "Mint never modifies existing receipts · chain is append-only"
+      "Mint never modifies existing receipts · chain is append-only",
     ]),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -87,13 +84,21 @@ export function buildReceiptMintRequest({
   sat_pipeline_result = null,
   receipt_grade = "preview",
   prev_chain_head_hash = null,
-  ots_attestation_proof = null
+  ots_attestation_proof = null,
 } = {}) {
   const c = safeObject(candidate);
   const pipeline = safeObject(sat_pipeline_result);
-  const grade = Object.keys(RECEIPT_GRADES).includes(receipt_grade) ? receipt_grade : "preview";
-  const prevHash = prev_chain_head_hash && typeof prev_chain_head_hash === "string" ? prev_chain_head_hash : null;
-  const otsProof = ots_attestation_proof && typeof ots_attestation_proof === "string" ? ots_attestation_proof : null;
+  const grade = Object.keys(RECEIPT_GRADES).includes(receipt_grade)
+    ? receipt_grade
+    : "preview";
+  const prevHash =
+    prev_chain_head_hash && typeof prev_chain_head_hash === "string"
+      ? prev_chain_head_hash
+      : null;
+  const otsProof =
+    ots_attestation_proof && typeof ots_attestation_proof === "string"
+      ? ots_attestation_proof
+      : null;
 
   const violations = [];
 
@@ -101,24 +106,37 @@ export function buildReceiptMintRequest({
   if (!c) {
     violations.push("no_candidate");
   } else if (c.schema !== "bizra.dema.receipt_candidate.v0.1") {
-    violations.push(`candidate_wrong_schema · expected bizra.dema.receipt_candidate.v0.1 · got '${c.schema}'`);
+    violations.push(
+      `candidate_wrong_schema · expected bizra.dema.receipt_candidate.v0.1 · got '${c.schema}'`,
+    );
   } else if (c.valid !== true) {
     violations.push("candidate_invalid · candidate.valid must be true");
-  } else if (typeof c.candidate_hash !== "string" || !HASH_REGEX.test(c.candidate_hash)) {
+  } else if (
+    typeof c.candidate_hash !== "string" ||
+    !HASH_REGEX.test(c.candidate_hash)
+  ) {
     violations.push("candidate_hash_format_invalid · expected 64-char hex");
   }
 
   // Gate 2: SAT pipeline must have passed
   if (!pipeline) {
     violations.push("no_sat_pipeline_result");
-  } else if (pipeline.schema !== "bizra.dema.orchestrator_verification_pipeline.v0.1") {
+  } else if (
+    pipeline.schema !== "bizra.dema.orchestrator_verification_pipeline.v0.1"
+  ) {
     violations.push("pipeline_wrong_schema");
   } else if (pipeline.passed !== true) {
-    violations.push(`sat_pipeline_did_not_pass · failed: ${(pipeline.sats_failed || []).join(",")}`);
+    violations.push(
+      `sat_pipeline_did_not_pass · failed: ${(pipeline.sats_failed || []).join(",")}`,
+    );
   }
 
   // Gate 3: prev_chain_head_hash format check
-  if (prevHash !== null && !HASH_REGEX.test(prevHash) && prevHash !== "genesis") {
+  if (
+    prevHash !== null &&
+    !HASH_REGEX.test(prevHash) &&
+    prevHash !== "genesis"
+  ) {
     violations.push(`prev_chain_head_hash_format_invalid · '${prevHash}'`);
   }
 
@@ -162,7 +180,7 @@ export function buildReceiptMintRequest({
     requires_governed_gateway_handoff: true,
     audit_trail_required: true,
     receipt_shape_ready: valid,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -178,7 +196,7 @@ export function buildReceiptMintIntegrationSummary() {
     receipt_grade_count: Object.keys(preview.receipt_grades).length,
     ots_required_for_grade: preview.ots_required_for_grade,
     blocked_effect_count: preview.blocked_effects.length,
-    boundary: preview.boundary
+    boundary: preview.boundary,
   });
 }
 

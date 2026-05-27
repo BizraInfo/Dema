@@ -5,13 +5,13 @@ import {
   buildSATBoundaryVerifierPreview,
   buildSATBoundaryVerifierSummary,
   buildSATBoundaryVerifierEffectCap,
-  buildSATBoundaryVerifierKernel,
   verifyArtifactBoundary,
-  SAT_BOUNDARY_VERIFIER_SCHEMA_NAME,
-  SAT_BOUNDARY_VERIFIER_VERDICT_SCHEMA_NAME,
-  SAT_BOUNDARY_VERIFIER_PERSONA
+  SAT_BOUNDARY_VERIFIER_PERSONA,
 } from "../packages/core/src/sat-boundary-verifier.js";
-import { isCanonicalBoundary, buildPreviewBoundary } from "../packages/core/src/preview-boundary.js";
+import {
+  isCanonicalBoundary,
+  buildPreviewBoundary,
+} from "../packages/core/src/preview-boundary.js";
 import { buildNode0StatePreview } from "../packages/core/src/state.js";
 
 test("SAT-1 canonical schema · persona sat_number=1", () => {
@@ -31,7 +31,9 @@ test("SAT-1 refusals: never modify · never waive · never approve non-canonical
   const p = buildSATBoundaryVerifierPreview();
   assert.ok(p.persona.primary_refusals.includes("modify_verified_artifact"));
   assert.ok(p.persona.primary_refusals.includes("waive_boundary_requirement"));
-  assert.ok(p.persona.primary_refusals.includes("approve_non_canonical_output"));
+  assert.ok(
+    p.persona.primary_refusals.includes("approve_non_canonical_output"),
+  );
 });
 
 test("SAT-1 EffectCap valid + blocks modify/waive/approve", () => {
@@ -66,7 +68,9 @@ test("verifyArtifactBoundary · missing artifact → structurally_invalid", () =
 });
 
 test("verifyArtifactBoundary · missing boundary field → structurally_invalid", () => {
-  const v = verifyArtifactBoundary({ artifact: { schema: "x.v0.1", data: "nope" } });
+  const v = verifyArtifactBoundary({
+    artifact: { schema: "x.v0.1", data: "nope" },
+  });
   assert.equal(v.verdict, "structurally_invalid");
   assert.ok(v.violations.includes("missing_boundary_field"));
 });
@@ -74,20 +78,22 @@ test("verifyArtifactBoundary · missing boundary field → structurally_invalid"
 test("verifyArtifactBoundary · boundary with truthy key → violated · names specific key", () => {
   const corrupted = {
     schema: "x.v0.1",
-    boundary: { ...buildPreviewBoundary(), runtime_execution_performed: true }
+    boundary: { ...buildPreviewBoundary(), runtime_execution_performed: true },
   };
   // Note: spread breaks the freeze · so frozen_check_passed will be false too
   const v = verifyArtifactBoundary({ artifact: corrupted });
   assert.equal(v.verdict, "violated");
   assert.equal(v.passed, false);
   assert.ok(v.violations.some((vio) => vio.includes("truthy_keys")));
-  assert.ok(v.violations.some((vio) => vio.includes("runtime_execution_performed")));
+  assert.ok(
+    v.violations.some((vio) => vio.includes("runtime_execution_performed")),
+  );
 });
 
 test("verifyArtifactBoundary · missing keys → violated · names them", () => {
   const partial = {
     schema: "x.v0.1",
-    boundary: { filesystem_write_performed: false } // only 1 of 16
+    boundary: { filesystem_write_performed: false }, // only 1 of 16
   };
   const v = verifyArtifactBoundary({ artifact: partial });
   assert.equal(v.verdict, "violated");
@@ -97,19 +103,25 @@ test("verifyArtifactBoundary · missing keys → violated · names them", () => 
 test("verifyArtifactBoundary · extra unknown keys → violated · names them", () => {
   const withExtra = {
     schema: "x.v0.1",
-    boundary: { ...buildPreviewBoundary(), evil_extra_key: false }
+    boundary: { ...buildPreviewBoundary(), evil_extra_key: false },
   };
   const v = verifyArtifactBoundary({ artifact: withExtra });
   assert.equal(v.verdict, "violated");
-  assert.ok(v.violations.some((vio) => vio.includes("extra_keys") && vio.includes("evil_extra_key")));
+  assert.ok(
+    v.violations.some(
+      (vio) => vio.includes("extra_keys") && vio.includes("evil_extra_key"),
+    ),
+  );
 });
 
 test("verifyArtifactBoundary · shape OK but not frozen → verified_shape_only", () => {
   // Use a non-frozen object that has correct shape (JSON-roundtrip simulation)
-  const jsonRoundtrip = JSON.parse(JSON.stringify({
-    schema: "x.v0.1",
-    boundary: buildPreviewBoundary()
-  }));
+  const jsonRoundtrip = JSON.parse(
+    JSON.stringify({
+      schema: "x.v0.1",
+      boundary: buildPreviewBoundary(),
+    }),
+  );
   const v = verifyArtifactBoundary({ artifact: jsonRoundtrip });
   assert.equal(v.verdict, "verified_shape_only");
   assert.equal(v.passed, true);

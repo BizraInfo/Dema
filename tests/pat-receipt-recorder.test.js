@@ -8,9 +8,7 @@ import {
   buildPATReceiptRecorderKernel,
   shapeReceiptCandidate,
   verifyReceiptHash,
-  PAT_RECEIPT_RECORDER_SCHEMA_NAME,
-  PAT_RECEIPT_RECORDER_CANDIDATE_SCHEMA_NAME,
-  PAT_RECEIPT_RECORDER_PERSONA
+  PAT_RECEIPT_RECORDER_PERSONA,
 } from "../packages/core/src/pat-receipt-recorder.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 
@@ -31,7 +29,9 @@ test("PAT-6 refusals: never mint · never advance chain · never sign · never m
   const p = buildPATReceiptRecorderPreview();
   assert.ok(p.persona.primary_refusals.includes("mint_canonical_receipt"));
   assert.ok(p.persona.primary_refusals.includes("advance_chain"));
-  assert.ok(p.persona.primary_refusals.includes("sign_receipt_without_consent"));
+  assert.ok(
+    p.persona.primary_refusals.includes("sign_receipt_without_consent"),
+  );
   assert.ok(p.persona.primary_refusals.includes("modify_existing_receipt"));
   assert.ok(p.persona.primary_refusals.includes("forge_prev_hash_chain"));
 });
@@ -46,14 +46,16 @@ test("PAT-6 EffectCap blocks mint · advance-chain · modify-existing · forge-p
 });
 
 test("PAT-6 kernel pre-configured", () => {
-  const k = buildPATReceiptRecorderKernel({ mission_intent: "shape candidate" });
+  const k = buildPATReceiptRecorderKernel({
+    mission_intent: "shape candidate",
+  });
   assert.equal(k.agent_id, "pat-6-receipt-recorder");
 });
 
 test("shapeReceiptCandidate · valid input → 64-char sha256 hash", () => {
   const c = shapeReceiptCandidate({
     event_schema: "test.event.v0.1",
-    event_summary: { x: 1, y: "abc" }
+    event_summary: { x: 1, y: "abc" },
   });
   assert.equal(c.schema, "bizra.dema.receipt_candidate.v0.1");
   assert.equal(c.valid, true);
@@ -64,25 +66,31 @@ test("shapeReceiptCandidate · valid input → 64-char sha256 hash", () => {
 test("shapeReceiptCandidate · deterministic hash given same input", () => {
   const a = shapeReceiptCandidate({
     event_schema: "test.event.v0.1",
-    event_summary: { x: 1, y: "abc" }
+    event_summary: { x: 1, y: "abc" },
   });
   const b = shapeReceiptCandidate({
     event_schema: "test.event.v0.1",
-    event_summary: { x: 1, y: "abc" }
+    event_summary: { x: 1, y: "abc" },
   });
   assert.equal(a.candidate_hash, b.candidate_hash);
 });
 
 test("shapeReceiptCandidate · different summary keys → different hash", () => {
-  const a = shapeReceiptCandidate({ event_schema: "x.v0.1", event_summary: { k1: 1 } });
-  const b = shapeReceiptCandidate({ event_schema: "x.v0.1", event_summary: { k2: 1 } });
+  const a = shapeReceiptCandidate({
+    event_schema: "x.v0.1",
+    event_summary: { k1: 1 },
+  });
+  const b = shapeReceiptCandidate({
+    event_schema: "x.v0.1",
+    event_summary: { k2: 1 },
+  });
   assert.notEqual(a.candidate_hash, b.candidate_hash);
 });
 
 test("shapeReceiptCandidate · chain_advance_performed=false ALWAYS · receipt_minted=false ALWAYS", () => {
   const c = shapeReceiptCandidate({
     event_schema: "x.v0.1",
-    event_summary: { x: 1 }
+    event_summary: { x: 1 },
   });
   assert.equal(c.chain_advance_performed, false);
   assert.equal(c.receipt_minted, false);
@@ -95,7 +103,7 @@ test("shapeReceiptCandidate · prev_hash propagated · chain_position_inferred=t
   const c = shapeReceiptCandidate({
     event_schema: "x.v0.1",
     event_summary: { x: 1 },
-    prev_receipt_hash: prev
+    prev_receipt_hash: prev,
   });
   assert.equal(c.prev_receipt_hash, prev);
   assert.equal(c.chain_position_inferred, true);
@@ -117,7 +125,7 @@ test("shapeReceiptCandidate · invalid action_class coerced to 'preview'", () =>
   const c = shapeReceiptCandidate({
     event_schema: "x.v0.1",
     event_summary: { x: 1 },
-    action_class: "malicious_class"
+    action_class: "malicious_class",
   });
   assert.equal(c.action_class, "preview");
 });
@@ -126,7 +134,7 @@ test("shapeReceiptCandidate · invalid truth_label coerced to NODE0_LOCAL_SEED",
   const c = shapeReceiptCandidate({
     event_schema: "x.v0.1",
     event_summary: { x: 1 },
-    truth_label_for_action: "MADE_UP_LABEL"
+    truth_label_for_action: "MADE_UP_LABEL",
   });
   assert.equal(c.truth_label, "NODE0_LOCAL_SEED");
 });
@@ -134,14 +142,14 @@ test("shapeReceiptCandidate · invalid truth_label coerced to NODE0_LOCAL_SEED",
 test("Adversarial · non-string event_schema coerced to empty · refused", () => {
   const c = shapeReceiptCandidate({
     event_schema: { malicious: true },
-    event_summary: { x: 1 }
+    event_summary: { x: 1 },
   });
   assert.equal(c.valid, false);
 });
 
 test("verifyReceiptHash · 64-char hex declared → format_ok_unverified", () => {
   const v = verifyReceiptHash({
-    receipt: { receipt_id: "a".repeat(64) }
+    receipt: { receipt_id: "a".repeat(64) },
   });
   assert.equal(v.hash_format_valid, true);
   assert.equal(v.verification_status, "declared_format_ok_content_unverified");
@@ -149,7 +157,7 @@ test("verifyReceiptHash · 64-char hex declared → format_ok_unverified", () =>
 
 test("verifyReceiptHash · wrong-length declared → format_invalid", () => {
   const v = verifyReceiptHash({
-    receipt: { receipt_id: "short" }
+    receipt: { receipt_id: "short" },
   });
   assert.equal(v.hash_format_valid, false);
   assert.match(v.verification_status, /declared_format_invalid/);
@@ -158,7 +166,7 @@ test("verifyReceiptHash · wrong-length declared → format_invalid", () => {
 test("Receipt candidate deep-frozen + canonical boundary", () => {
   const c = shapeReceiptCandidate({
     event_schema: "x.v0.1",
-    event_summary: { x: 1 }
+    event_summary: { x: 1 },
   });
   assert.ok(Object.isFrozen(c));
   assert.ok(isCanonicalBoundary(c.boundary));

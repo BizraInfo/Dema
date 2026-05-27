@@ -3,7 +3,6 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildPreviewBoundary } from "./preview-boundary.js";
 import { buildProcessMiningPreview } from "./process-mining-preview.js";
-import { buildKeyMakerCompliancePreview } from "./key-maker-compliance.js";
 import { buildSafetyReportPreview } from "./safety-report.js";
 import { buildDiagnosticsMissionPlan } from "../../mission/src/diagnostics-plan.js";
 

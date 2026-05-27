@@ -5,11 +5,13 @@ import {
   buildMultiAgentOrchestrator,
   buildMultiAgentOrchestratorSummary,
   runVerificationPipeline,
-  MULTI_AGENT_ORCHESTRATOR_SCHEMA_NAME,
   MULTI_AGENT_PAT_IDS,
-  MULTI_AGENT_SAT_IDS
+  MULTI_AGENT_SAT_IDS,
 } from "../packages/core/src/multi-agent-orchestrator.js";
-import { isCanonicalBoundary, buildPreviewBoundary } from "../packages/core/src/preview-boundary.js";
+import {
+  isCanonicalBoundary,
+  buildPreviewBoundary,
+} from "../packages/core/src/preview-boundary.js";
 import { buildNode0StatePreview } from "../packages/core/src/state.js";
 
 test("Orchestrator emits canonical schema", () => {
@@ -54,8 +56,12 @@ test("Orchestrator boundary canonical · routing_law declared", () => {
 test("Orchestrator blocked_effects include critical refusals", () => {
   const o = buildMultiAgentOrchestrator();
   assert.ok(o.blocked_effects.includes("skip_sat_verification"));
-  assert.ok(o.blocked_effects.includes("approve_pat_proposal_without_operator_consent"));
-  assert.ok(o.blocked_effects.includes("chain_advance_without_full_verification"));
+  assert.ok(
+    o.blocked_effects.includes("approve_pat_proposal_without_operator_consent"),
+  );
+  assert.ok(
+    o.blocked_effects.includes("chain_advance_without_full_verification"),
+  );
 });
 
 test("Pipeline · canonical artifact alone → SAT-1 runs and passes", () => {
@@ -70,7 +76,7 @@ test("Pipeline · canonical artifact alone → SAT-1 runs and passes", () => {
 test("Pipeline · non-canonical artifact → SAT-1 fails · pipeline_violated", () => {
   const broken = {
     schema: "x.v0.1",
-    boundary: { ...buildPreviewBoundary(), runtime_execution_performed: true }
+    boundary: { ...buildPreviewBoundary(), runtime_execution_performed: true },
   };
   const p = runVerificationPipeline({ artifact: broken });
   assert.equal(p.passed, false);
@@ -81,7 +87,7 @@ test("Pipeline · non-canonical artifact → SAT-1 fails · pipeline_violated", 
 test("Pipeline · with doctrine_inputs → SAT-3 also runs", () => {
   const p = runVerificationPipeline({
     artifact: buildNode0StatePreview(),
-    doctrine_inputs: { claims_door: "test", boundary_marker: "n/a" }
+    doctrine_inputs: { claims_door: "test", boundary_marker: "n/a" },
   });
   assert.ok(p.sats_run.includes("sat-1-boundary-verifier"));
   assert.ok(p.sats_run.includes("sat-3-doctrine-compliance"));
@@ -96,8 +102,8 @@ test("Pipeline · with action L3 + consent → SAT-2 runs and passes", () => {
       risk_tier: "L3",
       consent_phrase_required: "GO: test",
       consent_phrase_provided: "GO: test",
-      audit_trail: { event: "x" }
-    }
+      audit_trail: { event: "x" },
+    },
   });
   assert.ok(p.sats_run.includes("sat-2-consent-auditor"));
   assert.equal(p.passed, true);
@@ -111,8 +117,8 @@ test("Pipeline · with action L3 + WRONG consent → SAT-2 fails", () => {
       risk_tier: "L3",
       consent_phrase_required: "GO: test",
       consent_phrase_provided: "wrong",
-      audit_trail: { event: "x" }
-    }
+      audit_trail: { event: "x" },
+    },
   });
   assert.equal(p.passed, false);
   assert.ok(p.sats_failed.includes("sat-2-consent-auditor"));
@@ -122,7 +128,7 @@ test("Pipeline · with valid receipts → SAT-4 runs and passes", () => {
   const hash = "a".repeat(64);
   const p = runVerificationPipeline({
     artifact: buildNode0StatePreview(),
-    receipts: [{ receipt_id: hash, prev_hash: null }]
+    receipts: [{ receipt_id: hash, prev_hash: null }],
   });
   assert.ok(p.sats_run.includes("sat-4-receipt-chain-verifier"));
   assert.equal(p.passed, true);
@@ -132,7 +138,7 @@ test("Pipeline · with profile + matching snapshot → SAT-5 runs and passes", (
   const p = runVerificationPipeline({
     artifact: buildNode0StatePreview(),
     profile: { name: "Mumu", node: "Node0" },
-    previous_snapshot: { name: "Mumu", node: "Node0" }
+    previous_snapshot: { name: "Mumu", node: "Node0" },
   });
   assert.ok(p.sats_run.includes("sat-5-identity-verifier"));
   assert.equal(p.passed, true);
@@ -150,10 +156,11 @@ test("Pipeline · all 5 SATs run when all inputs present", () => {
     artifact: buildNode0StatePreview(),
     doctrine_inputs: { claims_door: "test" },
     action: {
-      action_name: "test", risk_tier: "L0"
+      action_name: "test",
+      risk_tier: "L0",
     },
     receipts: [{ receipt_id: hash, prev_hash: null }],
-    profile: { name: "Mumu", node: "Node0" }
+    profile: { name: "Mumu", node: "Node0" },
   });
   assert.equal(p.sats_run.length, 5);
   assert.equal(p.passed, true);

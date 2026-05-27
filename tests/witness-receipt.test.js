@@ -29,7 +29,7 @@ async function freshHome() {
 
 describe("buildWitnessAttestation", () => {
   it("returns correct schema and truth label", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const att = await buildWitnessAttestation({ now: FIXED_NOW });
       assert.equal(att.schema, "bizra.dema.node0_witness_receipt.v0.1");
@@ -40,7 +40,7 @@ describe("buildWitnessAttestation", () => {
   });
 
   it("attests Node0 with N=1", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const att = await buildWitnessAttestation({ now: FIXED_NOW });
       assert.equal(att.attests.node, "Node0");
@@ -51,7 +51,7 @@ describe("buildWitnessAttestation", () => {
   });
 
   it("attests PAT-7 and SAT-5", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const att = await buildWitnessAttestation({ now: FIXED_NOW });
       assert.equal(att.attests.pat_count, 7);
@@ -62,7 +62,7 @@ describe("buildWitnessAttestation", () => {
   });
 
   it("attests no federation, no token, no model, no public network", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const att = await buildWitnessAttestation({ now: FIXED_NOW });
       assert.equal(att.attests.federation, false);
@@ -75,7 +75,7 @@ describe("buildWitnessAttestation", () => {
   });
 
   it("has sha256 content hash", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const att = await buildWitnessAttestation({ now: FIXED_NOW });
       assert.match(att.content_hash, /^[a-f0-9]{64}$/);
@@ -85,7 +85,7 @@ describe("buildWitnessAttestation", () => {
   });
 
   it("content hash is deterministic", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const a = await buildWitnessAttestation({ now: FIXED_NOW });
       const b = await buildWitnessAttestation({ now: FIXED_NOW });
@@ -96,7 +96,7 @@ describe("buildWitnessAttestation", () => {
   });
 
   it("boundary is all false in preview mode", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const att = await buildWitnessAttestation({ now: FIXED_NOW });
       for (const [key, value] of Object.entries(att.boundary)) {
@@ -108,7 +108,7 @@ describe("buildWitnessAttestation", () => {
   });
 
   it("attests harness verdict", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const att = await buildWitnessAttestation({ now: FIXED_NOW });
       assert.ok(["CLEAN", "REVIEW"].includes(att.attests.harness_verdict));
@@ -118,7 +118,7 @@ describe("buildWitnessAttestation", () => {
   });
 
   it("attests setup integrity", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const att = await buildWitnessAttestation({ now: FIXED_NOW });
       assert.equal(att.attests.setup_integrity, "INTACT");
@@ -128,7 +128,7 @@ describe("buildWitnessAttestation", () => {
   });
 
   it("attests epistemic ground", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const att = await buildWitnessAttestation({ now: FIXED_NOW });
       assert.equal(att.attests.epistemic_ground, "topology_canon");
@@ -140,7 +140,7 @@ describe("buildWitnessAttestation", () => {
 
 describe("saveWitnessReceipt", () => {
   it("requires exact consent phrase", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const result = await saveWitnessReceipt({
         consent: "wrong",
@@ -172,7 +172,7 @@ describe("saveWitnessReceipt", () => {
   });
 
   it("saves with correct consent", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const result = await saveWitnessReceipt({
         consent: WITNESS_CONSENT_PHRASE,
@@ -188,7 +188,7 @@ describe("saveWitnessReceipt", () => {
   });
 
   it("saved file is valid JSON matching schema", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const result = await saveWitnessReceipt({
         consent: WITNESS_CONSENT_PHRASE,
@@ -204,7 +204,7 @@ describe("saveWitnessReceipt", () => {
   });
 
   it("saved receipt has consent_collected=true and filesystem_write=true", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const result = await saveWitnessReceipt({
         consent: WITNESS_CONSENT_PHRASE,
@@ -223,7 +223,7 @@ describe("saveWitnessReceipt", () => {
 
 describe("formatWitnessReceipt", () => {
   it("returns a string with header", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const att = await buildWitnessAttestation({ now: FIXED_NOW });
       const text = formatWitnessReceipt(att);
@@ -235,7 +235,7 @@ describe("formatWitnessReceipt", () => {
   });
 
   it("shows attests fields", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const att = await buildWitnessAttestation({ now: FIXED_NOW });
       const text = formatWitnessReceipt(att);
@@ -248,7 +248,7 @@ describe("formatWitnessReceipt", () => {
   });
 
   it("shows saved path when saved", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const result = await saveWitnessReceipt({
         consent: WITNESS_CONSENT_PHRASE,
@@ -262,7 +262,7 @@ describe("formatWitnessReceipt", () => {
   });
 
   it("shows consent hint when not saved", async () => {
-    const { home, restore } = await freshHome();
+    const { restore } = await freshHome();
     try {
       const result = await saveWitnessReceipt({
         consent: "wrong",

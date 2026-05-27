@@ -24,13 +24,10 @@ import { dirname } from "node:path";
 
 import {
   buildNodeOnboardingExtension,
-  EXTENSION_SCHEMA_VERSION
+  EXTENSION_SCHEMA_VERSION,
 } from "../packages/core/src/node-onboarding-extension.js";
 
-import {
-  buildOnboardingLifecyclePreview,
-  ONBOARDING_LIFECYCLE_STAGE_IDS,
-} from "../packages/core/src/onboarding-lifecycle.js";
+import { buildOnboardingLifecyclePreview } from "../packages/core/src/onboarding-lifecycle.js";
 import { PREVIEW_BOUNDARY_CANONICAL_KEYS } from "../packages/core/src/preview-boundary.js";
 
 import {
@@ -52,7 +49,11 @@ async function withTmpDir(fn) {
 
 function makeStdin(lines) {
   const buf = lines.join("\n") + "\n";
-  const r = Readable.from((async function* () { yield buf; })());
+  const r = Readable.from(
+    (async function* () {
+      yield buf;
+    })(),
+  );
   r.isTTY = true;
   return r;
 }
@@ -60,7 +61,10 @@ function makeStdin(lines) {
 function makeStdout() {
   let output = "";
   const w = new Writable({
-    write(chunk, _enc, cb) { output += chunk.toString(); cb(); },
+    write(chunk, _enc, cb) {
+      output += chunk.toString();
+      cb();
+    },
   });
   w.isTTY = true;
   Object.defineProperty(w, "output", { get: () => output });
@@ -68,8 +72,13 @@ function makeStdout() {
 }
 
 const ALL_7_STAGES = Object.freeze([
-  "language", "technical_level", "node_role", "purpose",
-  "resources", "consent_constitution", "first_mission"
+  "language",
+  "technical_level",
+  "node_role",
+  "purpose",
+  "resources",
+  "consent_constitution",
+  "first_mission",
 ]);
 
 // === SECTION 1 · T-1 to T-9 · phase-1 shape tests ===========================
@@ -87,7 +96,10 @@ test("T-1a: node_topology block is present in default (Node0) extension output",
 
 test("T-1b: node_topology block is present in composed onboarding-lifecycle output", () => {
   const r = buildOnboardingLifecyclePreview();
-  assert.ok("node_topology" in r, "composed preview must include node_topology");
+  assert.ok(
+    "node_topology" in r,
+    "composed preview must include node_topology",
+  );
   assert.equal(r.node_topology.current_ordinal, 0);
   assert.equal(r.node_topology.candidate_ordinal, null);
 });
@@ -107,7 +119,10 @@ test("T-2: model_readiness defaults to MODEL_UNKNOWN · never MODEL_REQUIRED", (
   assert.notEqual(ext.model_readiness.status, "MODEL_REQUIRED");
   assert.equal(ext.model_readiness.scan_performed, false);
   assert.equal(ext.model_readiness.model_invocation_allowed, false);
-  assert.equal(ext.model_readiness.fallback_path, "continue_model_less_onboarding");
+  assert.equal(
+    ext.model_readiness.fallback_path,
+    "continue_model_less_onboarding",
+  );
 });
 
 test("T-2b: model_status valid enum values are accepted", () => {
@@ -115,10 +130,14 @@ test("T-2b: model_status valid enum values are accepted", () => {
     "MODEL_LESS_DECLARED",
     "MODEL_INVENTORY_PENDING_CONSENT",
     "MODEL_INVENTORY_DECLARED",
-    "MODEL_AVAILABLE"
+    "MODEL_AVAILABLE",
   ]) {
     const ext = buildNodeOnboardingExtension({ model_status: status });
-    assert.equal(ext.model_readiness.status, status, `${status} must be accepted`);
+    assert.equal(
+      ext.model_readiness.status,
+      status,
+      `${status} must be accepted`,
+    );
   }
 });
 
@@ -132,8 +151,11 @@ test("T-2c: unknown model_status coerced to MODEL_UNKNOWN", () => {
 test("T-3: model_readiness.local_models_required is structurally false · injection refused", () => {
   // Attempt to inject true via input (must be ignored)
   const ext = buildNodeOnboardingExtension({ local_models_required: true });
-  assert.equal(ext.model_readiness.local_models_required, false,
-    "local_models_required must remain false regardless of input");
+  assert.equal(
+    ext.model_readiness.local_models_required,
+    false,
+    "local_models_required must remain false regardless of input",
+  );
 
   // Attempt to mutate the frozen output
   assert.throws(() => {
@@ -146,8 +168,11 @@ test("T-3: model_readiness.local_models_required is structurally false · inject
 
 test("T-4: blocked_effects.federation is structurally true · cannot be flipped", () => {
   const ext = buildNodeOnboardingExtension({ federation: false });
-  assert.equal(ext.blocked_effects.federation, true,
-    "federation must remain true regardless of input");
+  assert.equal(
+    ext.blocked_effects.federation,
+    true,
+    "federation must remain true regardless of input",
+  );
 
   // Mutation attempt must fail
   assert.throws(() => {
@@ -159,7 +184,9 @@ test("T-4: blocked_effects.federation is structurally true · cannot be flipped"
 // ─── T-5: model_scan_without_consent structurally true ──────────────────────
 
 test("T-5: blocked_effects.model_scan_without_consent is structurally true", () => {
-  const ext = buildNodeOnboardingExtension({ model_scan_without_consent: false });
+  const ext = buildNodeOnboardingExtension({
+    model_scan_without_consent: false,
+  });
   assert.equal(ext.blocked_effects.model_scan_without_consent, true);
 
   assert.throws(() => {
@@ -171,7 +198,9 @@ test("T-5: blocked_effects.model_scan_without_consent is structurally true", () 
 // ─── T-6: auto_advance_to_node_n_plus_1 structurally true ───────────────────
 
 test("T-6: blocked_effects.auto_advance_to_node_n_plus_1 is structurally true", () => {
-  const ext = buildNodeOnboardingExtension({ auto_advance_to_node_n_plus_1: false });
+  const ext = buildNodeOnboardingExtension({
+    auto_advance_to_node_n_plus_1: false,
+  });
   assert.equal(ext.blocked_effects.auto_advance_to_node_n_plus_1, true);
 });
 
@@ -186,13 +215,20 @@ test("T-6b: all 8 blocked_effects entries are structurally true", () => {
     "poi_scoring",
     "model_scan_without_consent",
     "model_invocation",
-    "auto_advance_to_node_n_plus_1"
+    "auto_advance_to_node_n_plus_1",
   ];
   for (const key of keys) {
-    assert.equal(ext.blocked_effects[key], true, `blocked_effects.${key} must be true`);
+    assert.equal(
+      ext.blocked_effects[key],
+      true,
+      `blocked_effects.${key} must be true`,
+    );
   }
-  assert.equal(Object.keys(ext.blocked_effects).length, 8,
-    "blocked_effects must have exactly 8 entries");
+  assert.equal(
+    Object.keys(ext.blocked_effects).length,
+    8,
+    "blocked_effects must have exactly 8 entries",
+  );
 });
 
 // ─── T-7: language_state.language_set defaults false ────────────────────────
@@ -217,8 +253,10 @@ test("T-8a: candidate_ordinal 1 → paired_receipt_required true + paired_receip
   const ext = buildNodeOnboardingExtension({ candidate_ordinal: 1 });
   assert.equal(ext.node_topology.paired_receipt_required, true);
   // Slot exists (null is OK at builder level; disk lookup is phase-2)
-  assert.ok("paired_receipt_id" in ext.node_topology,
-    "paired_receipt_id slot must be present in node_topology");
+  assert.ok(
+    "paired_receipt_id" in ext.node_topology,
+    "paired_receipt_id slot must be present in node_topology",
+  );
   assert.equal(ext.node_topology.paired_receipt_id, null);
 });
 
@@ -230,7 +268,7 @@ test("T-8b: candidate_ordinal 2 → paired_receipt_required true", () => {
 test("T-8c: paired_receipt_id propagates when provided", () => {
   const ext = buildNodeOnboardingExtension({
     candidate_ordinal: 1,
-    paired_receipt_id: "abc123receipt"
+    paired_receipt_id: "abc123receipt",
   });
   assert.equal(ext.node_topology.paired_receipt_id, "abc123receipt");
 });
@@ -239,16 +277,22 @@ test("T-8c: paired_receipt_id propagates when provided", () => {
 
 test("T-9a: candidate_ordinal 3 is refused — coerced to null", () => {
   const ext = buildNodeOnboardingExtension({ candidate_ordinal: 3 });
-  assert.equal(ext.node_topology.candidate_ordinal, null,
-    "ordinal 3 must be coerced to null per forbidden_topology_phrases");
+  assert.equal(
+    ext.node_topology.candidate_ordinal,
+    null,
+    "ordinal 3 must be coerced to null per forbidden_topology_phrases",
+  );
   // paired_receipt_required follows the coercion
   assert.equal(ext.node_topology.paired_receipt_required, false);
 });
 
 test("T-9b: candidate_ordinal 4 is refused — coerced to null", () => {
   const ext = buildNodeOnboardingExtension({ candidate_ordinal: 4 });
-  assert.equal(ext.node_topology.candidate_ordinal, null,
-    "ordinal 4 must be coerced to null per forbidden_topology_phrases");
+  assert.equal(
+    ext.node_topology.candidate_ordinal,
+    null,
+    "ordinal 4 must be coerced to null per forbidden_topology_phrases",
+  );
 });
 
 test("T-9c: candidate_ordinal 2 is NOT refused (only 3 and 4 are forbidden)", () => {
@@ -313,7 +357,9 @@ test("v0.2: candidate_lifecycle.onboarding_trigger accepts valid enum values", (
 
 test("v0.2: candidate_lifecycle.stage_skipped_due_to_profile defaults []", () => {
   const ext = buildNodeOnboardingExtension();
-  assert.ok(Array.isArray(ext.candidate_lifecycle.stage_skipped_due_to_profile));
+  assert.ok(
+    Array.isArray(ext.candidate_lifecycle.stage_skipped_due_to_profile),
+  );
   assert.equal(ext.candidate_lifecycle.stage_skipped_due_to_profile.length, 0);
 });
 
@@ -338,7 +384,7 @@ test("Determinism: same input → byte-identical output (JSON.stringify equal)",
     language_source: "profile_load",
     is_returning_user: true,
     returning_user_load: true,
-    onboarding_trigger: "first_run"
+    onboarding_trigger: "first_run",
   };
   const a = buildNodeOnboardingExtension(input);
   const b = buildNodeOnboardingExtension(input);
@@ -393,7 +439,7 @@ test("ADVERSARIAL: very long string for paired_receipt_id is capped at 500 chars
   const longId = "x".repeat(10000);
   const ext = buildNodeOnboardingExtension({
     candidate_ordinal: 1,
-    paired_receipt_id: longId
+    paired_receipt_id: longId,
   });
   assert.equal(ext.node_topology.paired_receipt_id.length, 500);
 });
@@ -401,8 +447,11 @@ test("ADVERSARIAL: very long string for paired_receipt_id is capped at 500 chars
 test("ADVERSARIAL: non-string language_code rejected and coerced to null", () => {
   for (const bad of [42, true, {}, [], null, undefined]) {
     const ext = buildNodeOnboardingExtension({ language_code: bad });
-    assert.equal(ext.language_state.language_code, null,
-      `language_code ${JSON.stringify(bad)} must coerce to null`);
+    assert.equal(
+      ext.language_state.language_code,
+      null,
+      `language_code ${JSON.stringify(bad)} must coerce to null`,
+    );
   }
 });
 
@@ -419,29 +468,46 @@ test("ADVERSARIAL: non-string values for onboarding_trigger coerced to null", ()
 });
 
 test("ADVERSARIAL: non-array stage_skipped_due_to_profile coerced to []", () => {
-  const ext = buildNodeOnboardingExtension({ stage_skipped_due_to_profile: "language" });
+  const ext = buildNodeOnboardingExtension({
+    stage_skipped_due_to_profile: "language",
+  });
   assert.deepEqual(ext.candidate_lifecycle.stage_skipped_due_to_profile, []);
 });
 
 test("ADVERSARIAL: non-string entries in stage_skipped_due_to_profile filtered out", () => {
   const ext = buildNodeOnboardingExtension({
-    stage_skipped_due_to_profile: ["language", 42, null, "technical_level"]
+    stage_skipped_due_to_profile: ["language", 42, null, "technical_level"],
   });
-  assert.deepEqual(
-    ext.candidate_lifecycle.stage_skipped_due_to_profile,
-    ["language", "technical_level"]
-  );
+  assert.deepEqual(ext.candidate_lifecycle.stage_skipped_due_to_profile, [
+    "language",
+    "technical_level",
+  ]);
 });
 
 // ─── Integration: 5 ADR-011 blocks in composed preview ───────────────────────
 
 test("Integration: buildOnboardingLifecyclePreview includes all 5 ADR-011 blocks", () => {
   const r = buildOnboardingLifecyclePreview();
-  assert.ok("node_topology" in r, "node_topology missing from composed preview");
-  assert.ok("model_readiness" in r, "model_readiness missing from composed preview");
-  assert.ok("language_state" in r, "language_state missing from composed preview");
-  assert.ok("candidate_lifecycle" in r, "candidate_lifecycle missing from composed preview");
-  assert.ok("adr011_blocked_effects" in r, "adr011_blocked_effects missing from composed preview");
+  assert.ok(
+    "node_topology" in r,
+    "node_topology missing from composed preview",
+  );
+  assert.ok(
+    "model_readiness" in r,
+    "model_readiness missing from composed preview",
+  );
+  assert.ok(
+    "language_state" in r,
+    "language_state missing from composed preview",
+  );
+  assert.ok(
+    "candidate_lifecycle" in r,
+    "candidate_lifecycle missing from composed preview",
+  );
+  assert.ok(
+    "adr011_blocked_effects" in r,
+    "adr011_blocked_effects missing from composed preview",
+  );
 });
 
 test("Integration: composed preview ADR-011 blocks carry structural invariants", () => {
@@ -455,16 +521,21 @@ test("Integration: composed preview ADR-011 blocks carry structural invariants",
 test("Integration: existing canonical 16-key boundary still all false (additive compose cannot flip)", () => {
   const r = buildOnboardingLifecyclePreview();
   for (const key of PREVIEW_BOUNDARY_CANONICAL_KEYS) {
-    assert.equal(r.boundary[key], false,
-      `boundary.${key} must still be false after ADR-011 compose`);
+    assert.equal(
+      r.boundary[key],
+      false,
+      `boundary.${key} must still be false after ADR-011 compose`,
+    );
   }
 });
 
 test("Integration: existing blocked_effects array unchanged (additive · pre-existing field preserved)", () => {
   const r = buildOnboardingLifecyclePreview();
   // The original blocked_effects is an array (pre-ADR-011 shape preserved)
-  assert.ok(Array.isArray(r.blocked_effects),
-    "original blocked_effects array must be preserved");
+  assert.ok(
+    Array.isArray(r.blocked_effects),
+    "original blocked_effects array must be preserved",
+  );
   assert.ok(r.blocked_effects.includes("federation"));
   assert.ok(r.blocked_effects.includes("receipt_mint"));
 });
@@ -472,7 +543,7 @@ test("Integration: existing blocked_effects array unchanged (additive · pre-exi
 test("EXTENSION_SCHEMA_VERSION is the canonical string", () => {
   assert.equal(
     EXTENSION_SCHEMA_VERSION,
-    "bizra.dema.onboarding_lifecycle.adr011_extension.v0.1"
+    "bizra.dema.onboarding_lifecycle.adr011_extension.v0.1",
   );
 });
 
@@ -482,30 +553,59 @@ test("EXTENSION_SCHEMA_VERSION is the canonical string", () => {
 
 test("Law #11a: builder output with all 7 stages completed contains genesis_preview_card block", () => {
   const allCompleted = [
-    "language", "technical_level", "node_role", "purpose",
-    "resources", "consent_constitution", "first_mission"
+    "language",
+    "technical_level",
+    "node_role",
+    "purpose",
+    "resources",
+    "consent_constitution",
+    "first_mission",
   ];
   const r = buildOnboardingLifecyclePreview({
     progress: { completed: allCompleted },
     genesis_timestamp: "2026-05-19T00:00:00.000Z",
   });
-  assert.ok("genesis_preview_card" in r, "genesis_preview_card must be present when all 7 stages complete");
+  assert.ok(
+    "genesis_preview_card" in r,
+    "genesis_preview_card must be present when all 7 stages complete",
+  );
   assert.notEqual(r.genesis_preview_card, null);
-  assert.equal(r.genesis_preview_card.schema, "bizra.dema.genesis_preview_card.v0.1");
+  assert.equal(
+    r.genesis_preview_card.schema,
+    "bizra.dema.genesis_preview_card.v0.1",
+  );
   assert.equal(r.genesis_preview_card.mode, "preview_only");
 });
 
 test("Law #11b: builder output without stage 6 (first_mission) → genesis_preview_card === null", () => {
   const r = buildOnboardingLifecyclePreview({
-    progress: { completed: ["language", "technical_level", "node_role", "purpose", "resources", "consent_constitution"] },
+    progress: {
+      completed: [
+        "language",
+        "technical_level",
+        "node_role",
+        "purpose",
+        "resources",
+        "consent_constitution",
+      ],
+    },
   });
-  assert.equal(r.genesis_preview_card, null, "genesis_preview_card must be null without first_mission");
+  assert.equal(
+    r.genesis_preview_card,
+    null,
+    "genesis_preview_card must be null without first_mission",
+  );
 });
 
 test("Law #11c: card emission does NOT advance receipt chain — boundary.chain_advance_performed remains false", () => {
   const allCompleted = [
-    "language", "technical_level", "node_role", "purpose",
-    "resources", "consent_constitution", "first_mission"
+    "language",
+    "technical_level",
+    "node_role",
+    "purpose",
+    "resources",
+    "consent_constitution",
+    "first_mission",
   ];
   const r = buildOnboardingLifecyclePreview({
     progress: { completed: allCompleted },
@@ -518,16 +618,28 @@ test("Law #11c: card emission does NOT advance receipt chain — boundary.chain_
 
 test("Law #11d: card_storage path is under state/ not receipts/", () => {
   const allCompleted = [
-    "language", "technical_level", "node_role", "purpose",
-    "resources", "consent_constitution", "first_mission"
+    "language",
+    "technical_level",
+    "node_role",
+    "purpose",
+    "resources",
+    "consent_constitution",
+    "first_mission",
   ];
   const r = buildOnboardingLifecyclePreview({
     progress: { completed: allCompleted },
     genesis_timestamp: "2026-05-19T00:00:00.000Z",
   });
   const storagePath = r.genesis_preview_card.card_storage.path;
-  assert.ok(storagePath.includes("state/"), "card_storage path must be under state/ not receipts/");
-  assert.equal(storagePath.includes("receipts/"), false, "card_storage path must NOT be under receipts/");
+  assert.ok(
+    storagePath.includes("state/"),
+    "card_storage path must be under state/ not receipts/",
+  );
+  assert.equal(
+    storagePath.includes("receipts/"),
+    false,
+    "card_storage path must NOT be under receipts/",
+  );
 });
 
 // === SECTION 2 · T-10 · P1-P7 Daughter Test predicate regressions ============
@@ -541,8 +653,9 @@ test("T-10 · P1 · non-English candidate completes via language stage 0: each L
     if (opt.code === "other") continue; // "other" is a sentinel, not ISO 639-1
     const ext = buildNodeOnboardingExtension({ language_code: opt.code });
     assert.equal(
-      ext.language_state.language_set, true,
-      `language_code "${opt.code}" must satisfy language stage`
+      ext.language_state.language_set,
+      true,
+      `language_code "${opt.code}" must satisfy language stage`,
     );
     assert.equal(ext.language_state.language_code, opt.code);
   }
@@ -561,8 +674,17 @@ test("T-10 · P1b · language stage is stage 0 (order 0) in CANONICAL_STAGES", (
 test("T-10 · P2 · stage 0-2 prompts and option labels contain no BIZRA technical jargon", () => {
   // The jargon set — words a non-technical user would find intimidating/confusing.
   const JARGON = [
-    "PAT", "SAT", "URP", "ARTIFACT-011", "Ihsan", "Adl",
-    "FATE", "EvidenceChain", "ADR-005", "Bitcoin-anchored", "Sovereign Spine"
+    "PAT",
+    "SAT",
+    "URP",
+    "ARTIFACT-011",
+    "Ihsan",
+    "Adl",
+    "FATE",
+    "EvidenceChain",
+    "ADR-005",
+    "Bitcoin-anchored",
+    "Sovereign Spine",
   ];
 
   const r = buildOnboardingLifecyclePreview();
@@ -571,14 +693,17 @@ test("T-10 · P2 · stage 0-2 prompts and option labels contain no BIZRA technic
   for (const stage of stagesToCheck) {
     const textToScan = [
       stage.title,
-      ...(Array.isArray(stage.options) ? stage.options.map((o) => o.label ?? "") : []),
+      ...(Array.isArray(stage.options)
+        ? stage.options.map((o) => o.label ?? "")
+        : []),
       stage.prompt_intent ?? "",
     ].join(" ");
 
     for (const jargon of JARGON) {
       assert.equal(
-        textToScan.includes(jargon), false,
-        `Stage "${stage.id}" (order ${stage.order}) must not contain jargon "${jargon}" · found in: ${textToScan}`
+        textToScan.includes(jargon),
+        false,
+        `Stage "${stage.id}" (order ${stage.order}) must not contain jargon "${jargon}" · found in: ${textToScan}`,
       );
     }
   }
@@ -587,10 +712,15 @@ test("T-10 · P2 · stage 0-2 prompts and option labels contain no BIZRA technic
 // ─── T-10 · P3: model-less candidate never prompted for model ────────────────
 
 test("T-10 · P3 · MODEL_LESS_DECLARED proceeds without any model requirement", () => {
-  const ext = buildNodeOnboardingExtension({ model_status: "MODEL_LESS_DECLARED" });
+  const ext = buildNodeOnboardingExtension({
+    model_status: "MODEL_LESS_DECLARED",
+  });
   assert.equal(ext.model_readiness.status, "MODEL_LESS_DECLARED");
   assert.equal(ext.model_readiness.local_models_required, false);
-  assert.equal(ext.model_readiness.fallback_path, "continue_model_less_onboarding");
+  assert.equal(
+    ext.model_readiness.fallback_path,
+    "continue_model_less_onboarding",
+  );
   // The builder completes without error — no model gate blocks it.
 });
 
@@ -613,15 +743,28 @@ test("T-10 · P5 · pure builder produces no filesystem side effects (no writes,
   // buildNodeOnboardingExtension and buildOnboardingLifecyclePreview are pure.
   // We verify: (a) no fs module calls are exercised by examining that the output
   // is identical across multiple calls (pure means deterministic + no I/O).
-  const input = { candidate_ordinal: 1, language_code: "ar", model_status: "MODEL_LESS_DECLARED" };
+  const input = {
+    candidate_ordinal: 1,
+    language_code: "ar",
+    model_status: "MODEL_LESS_DECLARED",
+  };
   const a = buildNodeOnboardingExtension(input);
   const b = buildNodeOnboardingExtension(input);
-  assert.equal(JSON.stringify(a), JSON.stringify(b),
-    "Identical inputs must produce identical outputs — confirms pure (no side effects)");
+  assert.equal(
+    JSON.stringify(a),
+    JSON.stringify(b),
+    "Identical inputs must produce identical outputs — confirms pure (no side effects)",
+  );
 
   // Composed lifecycle builder is also pure.
-  const la = buildOnboardingLifecyclePreview({ candidate_ordinal: 1, language: "ar" });
-  const lb = buildOnboardingLifecyclePreview({ candidate_ordinal: 1, language: "ar" });
+  const la = buildOnboardingLifecyclePreview({
+    candidate_ordinal: 1,
+    language: "ar",
+  });
+  const lb = buildOnboardingLifecyclePreview({
+    candidate_ordinal: 1,
+    language: "ar",
+  });
   assert.equal(JSON.stringify(la), JSON.stringify(lb));
 });
 
@@ -632,24 +775,35 @@ test("T-10 · P6 · language_set=false means consent_phrases_will_render_in=null
   // This structurally prevents consent rendering until language is chosen.
   const ext = buildNodeOnboardingExtension();
   assert.equal(ext.language_state.language_set, false);
-  assert.equal(ext.language_state.consent_phrases_will_render_in, null,
-    "No language set → consent phrase language is null → consent cannot render");
+  assert.equal(
+    ext.language_state.consent_phrases_will_render_in,
+    null,
+    "No language set → consent phrase language is null → consent cannot render",
+  );
 });
 
 test("T-10 · P6b · setting language_code enables consent_phrases_will_render_in", () => {
   const ext = buildNodeOnboardingExtension({ language_code: "ar" });
   assert.equal(ext.language_state.language_set, true);
-  assert.equal(ext.language_state.consent_phrases_will_render_in, "ar",
-    "With language set to ar, consent phrases must render in ar");
+  assert.equal(
+    ext.language_state.consent_phrases_will_render_in,
+    "ar",
+    "With language set to ar, consent phrases must render in ar",
+  );
 });
 
 // ─── T-10 · P7: no external ledger/registry add ──────────────────────────────
 
 test("T-10 · P7 · all boundary keys false after onboarding completion · no external ledger add", () => {
-  const r = buildOnboardingLifecyclePreview({ progress: { completed: [...ALL_7_STAGES] } });
+  const r = buildOnboardingLifecyclePreview({
+    progress: { completed: [...ALL_7_STAGES] },
+  });
   for (const key of PREVIEW_BOUNDARY_CANONICAL_KEYS) {
-    assert.equal(r.boundary[key], false,
-      `boundary.${key} must remain false after onboarding completion`);
+    assert.equal(
+      r.boundary[key],
+      false,
+      `boundary.${key} must remain false after onboarding completion`,
+    );
   }
   // ADR-011 blocked effects: federation and poi_scoring explicitly blocked
   assert.equal(r.adr011_blocked_effects.federation, true);
@@ -673,16 +827,25 @@ test("T-11 · model-less node full flow produces no model fs side effects", () =
   assert.equal(r.model_readiness.local_models_required, false);
   assert.equal(r.model_readiness.scan_performed, false);
   assert.equal(r.model_readiness.model_invocation_allowed, false);
-  assert.equal(r.model_readiness.fallback_path, "continue_model_less_onboarding");
+  assert.equal(
+    r.model_readiness.fallback_path,
+    "continue_model_less_onboarding",
+  );
   // genesis_preview_card still emits (model-less node is fully valid)
-  assert.ok(r.genesis_preview_card !== null, "genesis_preview_card must emit for model-less node");
+  assert.ok(
+    r.genesis_preview_card !== null,
+    "genesis_preview_card must emit for model-less node",
+  );
   // Determinism check (pure = no fs reads/writes changing state between calls)
   const r2 = buildOnboardingLifecyclePreview({
     adr011: { model_status: "MODEL_LESS_DECLARED" },
     progress: { completed: [...ALL_7_STAGES] },
   });
   assert.equal(r.model_readiness.status, r2.model_readiness.status);
-  assert.equal(r.model_readiness.scan_performed, r2.model_readiness.scan_performed);
+  assert.equal(
+    r.model_readiness.scan_performed,
+    r2.model_readiness.scan_performed,
+  );
 });
 
 // ─── T-12: onboarding completion does NOT mint or advance chain ───────────────
@@ -693,22 +856,32 @@ test("T-12 · onboarding completion does NOT mint receipt · does NOT advance ch
     genesis_timestamp: "2026-05-19T00:00:00.000Z",
   });
   // Top-level boundary
-  assert.equal(r.boundary.receipt_mint_performed, false,
-    "boundary.receipt_mint_performed must be false after onboarding completion");
-  assert.equal(r.boundary.chain_advance_performed, false,
-    "boundary.chain_advance_performed must be false after onboarding completion");
+  assert.equal(
+    r.boundary.receipt_mint_performed,
+    false,
+    "boundary.receipt_mint_performed must be false after onboarding completion",
+  );
+  assert.equal(
+    r.boundary.chain_advance_performed,
+    false,
+    "boundary.chain_advance_performed must be false after onboarding completion",
+  );
   // Genesis card boundary
   assert.ok(r.genesis_preview_card !== null);
   assert.equal(r.genesis_preview_card.boundary.receipt_mint_performed, false);
   assert.equal(r.genesis_preview_card.boundary.chain_advance_performed, false);
   // blocked_until_typed_GO must include chain_advance_performed
   assert.ok(
-    r.genesis_preview_card.blocked_until_typed_GO.includes("chain_advance_performed"),
-    "blocked_until_typed_GO must list chain_advance_performed"
+    r.genesis_preview_card.blocked_until_typed_GO.includes(
+      "chain_advance_performed",
+    ),
+    "blocked_until_typed_GO must list chain_advance_performed",
   );
   assert.ok(
-    r.genesis_preview_card.blocked_until_typed_GO.includes("actual_receipt_mint"),
-    "blocked_until_typed_GO must list actual_receipt_mint"
+    r.genesis_preview_card.blocked_until_typed_GO.includes(
+      "actual_receipt_mint",
+    ),
+    "blocked_until_typed_GO must list actual_receipt_mint",
   );
 });
 
@@ -716,7 +889,8 @@ test("T-12 · onboarding completion does NOT mint receipt · does NOT advance ch
 
 test("T-13 · homebase-preview buildGreeting accepts onboarding-incomplete candidate · returns non-undefined non-throw", async () => {
   // Import dynamically to avoid top-level side effects.
-  const { buildHomebasePreview } = await import("../packages/core/src/homebase-preview.js");
+  const { buildHomebasePreview } =
+    await import("../packages/core/src/homebase-preview.js");
 
   // An onboarding-incomplete candidate has no profile name and no language_code.
   const incompleteGather = {
@@ -730,7 +904,12 @@ test("T-13 · homebase-preview buildGreeting accepts onboarding-incomplete candi
     memory_recent: [],
     warnings: [],
     partial: true,
-    env_flags: { DEMA_HOME: null, DEMA_FORCE_TTY: false, DEMA_DEBUG: false, DEMA_NODE0_ADAPTER: null },
+    env_flags: {
+      DEMA_HOME: null,
+      DEMA_FORCE_TTY: false,
+      DEMA_DEBUG: false,
+      DEMA_NODE0_ADAPTER: null,
+    },
     memory_size: { entries: 0, bytes: 0 },
   };
 
@@ -741,10 +920,18 @@ test("T-13 · homebase-preview buildGreeting accepts onboarding-incomplete candi
 
   assert.ok(result !== undefined, "result must not be undefined");
   assert.ok(result.greeting !== undefined, "greeting must be present");
-  assert.equal(typeof result.greeting.text, "string", "greeting.text must be a string");
+  assert.equal(
+    typeof result.greeting.text,
+    "string",
+    "greeting.text must be a string",
+  );
   assert.ok(result.greeting.text.length > 0, "greeting.text must be non-empty");
   // With no name, should use welcome_new (not throw or return empty)
-  assert.equal(result.greeting.has_name, false, "has_name must be false for nameless candidate");
+  assert.equal(
+    result.greeting.has_name,
+    false,
+    "has_name must be false for nameless candidate",
+  );
 });
 
 // ─── T-14: language picker LANGUAGE_OPTIONS matches lifecycle stage 0 options ─
@@ -761,7 +948,7 @@ test("T-14 · v0.1c language picker LANGUAGE_OPTIONS exactly matches lifecycle s
   for (const code of pickerCodes) {
     assert.ok(
       stage0Codes.has(code),
-      `LANGUAGE_OPTIONS code "${code}" must be present in stage 0 options`
+      `LANGUAGE_OPTIONS code "${code}" must be present in stage 0 options`,
     );
   }
 });
@@ -770,7 +957,7 @@ test("T-14b · GREETING_TEMPLATES keys are a superset of LANGUAGE_OPTIONS codes"
   for (const opt of LANGUAGE_OPTIONS) {
     assert.ok(
       GREETING_TEMPLATES[opt.code] !== undefined,
-      `GREETING_TEMPLATES must have entry for LANGUAGE_OPTIONS code "${opt.code}"`
+      `GREETING_TEMPLATES must have entry for LANGUAGE_OPTIONS code "${opt.code}"`,
     );
   }
 });
@@ -783,7 +970,7 @@ test("T-15 · returning-user language load · profile.json with language_code=ar
   await withTmpDir(async (home) => {
     await writeFile(
       join(home, "profile.json"),
-      JSON.stringify({ preferred_name: "Samy", language_code: "ar" })
+      JSON.stringify({ preferred_name: "Samy", language_code: "ar" }),
     );
     const stdout = makeStdout();
     const stdin = makeStdin([]); // TTY stdin, but must NOT be read
@@ -797,18 +984,27 @@ test("T-15 · returning-user language load · profile.json with language_code=ar
     });
 
     assert.equal(result.language_code, "ar");
-    assert.equal(result.language_source, "profile_load",
-      "language_source must be profile_load for returning user");
-    assert.equal(result.returning_user_load, true,
-      "returning_user_load must be true");
+    assert.equal(
+      result.language_source,
+      "profile_load",
+      "language_source must be profile_load for returning user",
+    );
+    assert.equal(
+      result.returning_user_load,
+      true,
+      "returning_user_load must be true",
+    );
     assert.ok(
       Array.isArray(result.candidate_lifecycle?.stage_skipped_due_to_profile) ||
-      result.candidate_lifecycle?.is_returning_user === true,
-      "candidate_lifecycle must indicate returning user"
+        result.candidate_lifecycle?.is_returning_user === true,
+      "candidate_lifecycle must indicate returning user",
     );
     // No prompt rendered — silent load means no stdout output
-    assert.equal(stdout.output, "",
-      "No prompt must be written to stdout for returning-user silent load");
+    assert.equal(
+      stdout.output,
+      "",
+      "No prompt must be written to stdout for returning-user silent load",
+    );
   });
 });
 
@@ -818,7 +1014,7 @@ test("T-16 · reset-language flag · existing profile language_code cleared · p
   await withTmpDir(async (home) => {
     await writeFile(
       join(home, "profile.json"),
-      JSON.stringify({ preferred_name: "Samy", language_code: "ar" })
+      JSON.stringify({ preferred_name: "Samy", language_code: "ar" }),
     );
     const stdout = makeStdout();
     // Select "fr" (option 3), skip secondary
@@ -832,16 +1028,30 @@ test("T-16 · reset-language flag · existing profile language_code cleared · p
       skipPrompt: false,
     });
 
-    assert.equal(result.language_source, "reset_explicit",
-      "language_source must be reset_explicit when --reset-language is used");
-    assert.equal(result.returning_user_load, false,
-      "returning_user_load must be false for reset path");
-    assert.equal(result.language_code, "fr",
-      "picker must have run and selected fr");
+    assert.equal(
+      result.language_source,
+      "reset_explicit",
+      "language_source must be reset_explicit when --reset-language is used",
+    );
+    assert.equal(
+      result.returning_user_load,
+      false,
+      "returning_user_load must be false for reset path",
+    );
+    assert.equal(
+      result.language_code,
+      "fr",
+      "picker must have run and selected fr",
+    );
     // Prompt must have been rendered (picker ran)
-    assert.ok(stdout.output.length > 0,
-      "stdout must contain picker prompt when reset-language triggers interactive picker");
-    assert.equal(result.candidate_lifecycle.onboarding_trigger, "reset_explicit");
+    assert.ok(
+      stdout.output.length > 0,
+      "stdout must contain picker prompt when reset-language triggers interactive picker",
+    );
+    assert.equal(
+      result.candidate_lifecycle.onboarding_trigger,
+      "reset_explicit",
+    );
   });
 });
 
@@ -861,10 +1071,16 @@ test("T-17 · second language optional · single Enter declines · secondary_lan
       skipPrompt: false,
     });
 
-    assert.equal(result.secondary_language_offered, true,
-      "secondary_language_offered must be true — prompt was shown");
-    assert.equal(result.secondary_language_code, null,
-      "secondary_language_code must be null when Enter pressed to skip");
+    assert.equal(
+      result.secondary_language_offered,
+      true,
+      "secondary_language_offered must be true — prompt was shown",
+    );
+    assert.equal(
+      result.secondary_language_code,
+      null,
+      "secondary_language_code must be null when Enter pressed to skip",
+    );
     assert.equal(result.language_code, "en");
     // Candidate proceeds normally — no re-prompt, no warning about skip
     // (we verify by checking there's no language_code=null in result)
@@ -882,20 +1098,43 @@ test("T-18 · Genesis Preview Card emits on stage 6 · schema correct · receipt
     candidate_name: "Samy",
   });
 
-  assert.ok(r.genesis_preview_card !== null, "genesis_preview_card must be present");
-  assert.equal(r.genesis_preview_card.schema, "bizra.dema.genesis_preview_card.v0.1");
+  assert.ok(
+    r.genesis_preview_card !== null,
+    "genesis_preview_card must be present",
+  );
+  assert.equal(
+    r.genesis_preview_card.schema,
+    "bizra.dema.genesis_preview_card.v0.1",
+  );
 
-  const receiptIdPreview = r.genesis_preview_card.would_mint_if_consented.receipt_id_preview;
-  assert.equal(typeof receiptIdPreview, "string", "receipt_id_preview must be a string");
-  assert.equal(receiptIdPreview.length, 64, "receipt_id_preview must be 64 chars (sha256 hex)");
-  assert.ok(/^[0-9a-f]{64}$/.test(receiptIdPreview),
-    "receipt_id_preview must be lowercase hex sha256");
+  const receiptIdPreview =
+    r.genesis_preview_card.would_mint_if_consented.receipt_id_preview;
+  assert.equal(
+    typeof receiptIdPreview,
+    "string",
+    "receipt_id_preview must be a string",
+  );
+  assert.equal(
+    receiptIdPreview.length,
+    64,
+    "receipt_id_preview must be 64 chars (sha256 hex)",
+  );
+  assert.ok(
+    /^[0-9a-f]{64}$/.test(receiptIdPreview),
+    "receipt_id_preview must be lowercase hex sha256",
+  );
 
   assert.equal(r.boundary.receipt_mint_performed, false);
-  assert.equal(r.genesis_preview_card.boundary.receipt_mint_performed, false,
-    "card boundary.receipt_mint_performed must be false");
-  assert.equal(r.genesis_preview_card.boundary.chain_advance_performed, false,
-    "card boundary.chain_advance_performed must be false");
+  assert.equal(
+    r.genesis_preview_card.boundary.receipt_mint_performed,
+    false,
+    "card boundary.receipt_mint_performed must be false",
+  );
+  assert.equal(
+    r.genesis_preview_card.boundary.chain_advance_performed,
+    false,
+    "card boundary.chain_advance_performed must be false",
+  );
 });
 
 test("T-18b · proof-forge chain length unchanged before and after genesis card emission", () => {
@@ -928,8 +1167,11 @@ test("T-18b · proof-forge chain length unchanged before and after genesis card 
   }
 
   if (chainLengthBefore !== null && chainLengthAfter !== null) {
-    assert.equal(chainLengthAfter, chainLengthBefore,
-      `chain_length must not change: was ${chainLengthBefore}, now ${chainLengthAfter}`);
+    assert.equal(
+      chainLengthAfter,
+      chainLengthBefore,
+      `chain_length must not change: was ${chainLengthBefore}, now ${chainLengthAfter}`,
+    );
   }
   // If file is absent, builder is still pure by construction — test passes.
 });
@@ -942,7 +1184,7 @@ test("P8 · returning operator NEVER re-asked language at user-facing surface ·
   await withTmpDir(async (home) => {
     await writeFile(
       join(home, "profile.json"),
-      JSON.stringify({ preferred_name: "Samy", language_code: "en" })
+      JSON.stringify({ preferred_name: "Samy", language_code: "en" }),
     );
     const stdout = makeStdout();
     const stdin = makeStdin([]); // TTY stdin provided — must NOT be consumed
@@ -956,8 +1198,11 @@ test("P8 · returning operator NEVER re-asked language at user-facing surface ·
     });
 
     // Must load silently — no prompt written
-    assert.equal(stdout.output, "",
-      "P8: No language prompt must be emitted when profile.json carries language_code");
+    assert.equal(
+      stdout.output,
+      "",
+      "P8: No language prompt must be emitted when profile.json carries language_code",
+    );
     assert.equal(result.language_code, "en");
     assert.equal(result.returning_user_load, true);
     assert.equal(result.language_source, "profile_load");
@@ -980,16 +1225,24 @@ test("P9 · single Enter on second-language prompt declines without re-prompt ·
       skipPrompt: false,
     });
 
-    assert.equal(result.language_code, "ar",
-      "Primary language must be set");
-    assert.equal(result.secondary_language_offered, true,
-      "P9: secondary_language_offered must be true — prompt was shown");
-    assert.equal(result.secondary_language_code, null,
-      "P9: secondary_language_code must be null when Enter pressed");
+    assert.equal(result.language_code, "ar", "Primary language must be set");
+    assert.equal(
+      result.secondary_language_offered,
+      true,
+      "P9: secondary_language_offered must be true — prompt was shown",
+    );
+    assert.equal(
+      result.secondary_language_code,
+      null,
+      "P9: secondary_language_code must be null when Enter pressed",
+    );
     // No re-prompt: if there were a re-prompt, the stdin would have run out
     // and result.language_code would be null or warnings would fire.
-    assert.equal(result.language_code, "ar",
-      "P9: candidate proceeds to primary language with no penalty");
+    assert.equal(
+      result.language_code,
+      "ar",
+      "P9: candidate proceeds to primary language with no penalty",
+    );
   });
 });
 
@@ -1003,12 +1256,20 @@ test("P10 · Genesis Preview Card shown BEFORE any mint · no mint receipt file 
       genesis_timestamp: "2026-05-19T00:00:00.000Z",
     });
 
-    assert.ok(r.genesis_preview_card !== null,
-      "P10: genesis_preview_card must be present (shown to candidate)");
-    assert.equal(r.genesis_preview_card.mode, "preview_only",
-      "P10: card must be preview_only — not a minted artifact");
-    assert.equal(r.genesis_preview_card.boundary.receipt_mint_performed, false,
-      "P10: boundary.receipt_mint_performed must be false");
+    assert.ok(
+      r.genesis_preview_card !== null,
+      "P10: genesis_preview_card must be present (shown to candidate)",
+    );
+    assert.equal(
+      r.genesis_preview_card.mode,
+      "preview_only",
+      "P10: card must be preview_only — not a minted artifact",
+    );
+    assert.equal(
+      r.genesis_preview_card.boundary.receipt_mint_performed,
+      false,
+      "P10: boundary.receipt_mint_performed must be false",
+    );
 
     // No mint receipt file must exist in the tmpdir (simulates ~/.dema/)
     // The card's mint_destination references ~/.dema/receipts/ — we verify
@@ -1021,18 +1282,22 @@ test("P10 · Genesis Preview Card shown BEFORE any mint · no mint receipt file 
     } catch {
       receiptsExist = false; // expected — directory/file absent
     }
-    assert.equal(receiptsExist, false,
-      "P10: no mint receipt file must exist under ~/.dema/receipts/ after card emission");
+    assert.equal(
+      receiptsExist,
+      false,
+      "P10: no mint receipt file must exist under ~/.dema/receipts/ after card emission",
+    );
 
     // The card's own storage path is under state/, not receipts/
     const storagePath = r.genesis_preview_card.card_storage.path;
     assert.equal(
-      storagePath.includes("receipts/"), false,
-      "P10: card_storage.path must NOT reference receipts/"
+      storagePath.includes("receipts/"),
+      false,
+      "P10: card_storage.path must NOT reference receipts/",
     );
     assert.ok(
       storagePath.includes("state/"),
-      "P10: card_storage.path must reference state/"
+      "P10: card_storage.path must reference state/",
     );
   });
 });

@@ -8,9 +8,8 @@ import {
   LLM_ADAPTER_ALLOWED_MODEL_FAMILIES,
   LLM_ADAPTER_DEFAULT_BASE,
   LLM_ADAPTER_MAX_PROMPT_LENGTH,
-  LLM_ADAPTER_REQUIRED_BLOCKED_EFFECTS_PREVIEW,
   llmAdapterConsentPhraseFor,
-  __resetInvocationFreshness
+  __resetInvocationFreshness,
 } from "../packages/core/src/llm-adapter.js";
 
 import { beforeEach } from "node:test";
@@ -24,7 +23,7 @@ beforeEach(() => {
 });
 import {
   isCanonicalBoundary,
-  PREVIEW_BOUNDARY_CANONICAL_KEYS
+  PREVIEW_BOUNDARY_CANONICAL_KEYS,
 } from "../packages/core/src/preview-boundary.js";
 
 // =========================================================================
@@ -32,7 +31,10 @@ import {
 // =========================================================================
 
 test("Preview emits canonical schema + truth label + preview_only mode", () => {
-  const p = buildLLMInvocationPreview({ model: "llama3.1:8b", prompt: "hello" });
+  const p = buildLLMInvocationPreview({
+    model: "llama3.1:8b",
+    prompt: "hello",
+  });
   assert.equal(p.schema, "bizra.dema.llm_invocation_preview.v0.1");
   assert.equal(p.truth_label, "NODE0_LOCAL_SEED");
   assert.equal(p.mode, "preview_only");
@@ -40,7 +42,10 @@ test("Preview emits canonical schema + truth label + preview_only mode", () => {
 });
 
 test("Preview boundary is canonical 16-key all-false frozen object", () => {
-  const p = buildLLMInvocationPreview({ model: "llama3.1:8b", prompt: "hello" });
+  const p = buildLLMInvocationPreview({
+    model: "llama3.1:8b",
+    prompt: "hello",
+  });
   assert.ok(isCanonicalBoundary(p.boundary));
   for (const key of PREVIEW_BOUNDARY_CANONICAL_KEYS) {
     assert.equal(p.boundary[key], false);
@@ -48,7 +53,10 @@ test("Preview boundary is canonical 16-key all-false frozen object", () => {
 });
 
 test("Preview is deep-frozen at top level + blocked_effects + boundary", () => {
-  const p = buildLLMInvocationPreview({ model: "llama3.1:8b", prompt: "hello" });
+  const p = buildLLMInvocationPreview({
+    model: "llama3.1:8b",
+    prompt: "hello",
+  });
   assert.ok(Object.isFrozen(p));
   assert.ok(Object.isFrozen(p.blocked_effects));
   assert.ok(Object.isFrozen(p.boundary));
@@ -74,7 +82,7 @@ test("Adversarial: non-localhost ollamaBaseUrl falls back to default in preview"
   const p = buildLLMInvocationPreview({
     model: "llama3.1:8b",
     prompt: "hi",
-    ollamaBaseUrl: "http://evil.example.com:11434"
+    ollamaBaseUrl: "http://evil.example.com:11434",
   });
   assert.equal(p.target_endpoint, LLM_ADAPTER_DEFAULT_BASE);
   assert.equal(p.target_is_localhost, true);
@@ -84,16 +92,20 @@ test("Adversarial: localhost-prefix smuggling falls back to default in preview",
   const endpoints = [
     "http://localhost.evil.example:11434",
     "http://127.0.0.1.evil.example:11434",
-    "http://localhost@evil.example:11434"
+    "http://localhost@evil.example:11434",
   ];
 
   for (const ollamaBaseUrl of endpoints) {
     const p = buildLLMInvocationPreview({
       model: "llama3.1:8b",
       prompt: "hi",
-      ollamaBaseUrl
+      ollamaBaseUrl,
     });
-    assert.equal(p.target_endpoint, LLM_ADAPTER_DEFAULT_BASE, `${ollamaBaseUrl} must be rejected`);
+    assert.equal(
+      p.target_endpoint,
+      LLM_ADAPTER_DEFAULT_BASE,
+      `${ollamaBaseUrl} must be rejected`,
+    );
     assert.equal(p.target_is_localhost, true);
   }
 });
@@ -101,26 +113,44 @@ test("Adversarial: localhost-prefix smuggling falls back to default in preview",
 test("Adversarial: non-whitelisted model is marked model_allowed_in_whitelist=false in preview", () => {
   const p = buildLLMInvocationPreview({
     model: "evil-model:99b",
-    prompt: "hi"
+    prompt: "hi",
   });
   assert.equal(p.model_allowed_in_whitelist, false);
 });
 
 test("Adversarial: non-string model coerced to empty string", () => {
-  const p = buildLLMInvocationPreview({ model: { malicious: true }, prompt: "hi" });
+  const p = buildLLMInvocationPreview({
+    model: { malicious: true },
+    prompt: "hi",
+  });
   assert.equal(p.requested_model, "");
   assert.equal(p.model_allowed_in_whitelist, false);
 });
 
 test("Adversarial: non-string prompt coerced to empty string", () => {
-  const p = buildLLMInvocationPreview({ model: "llama3.1:8b", prompt: () => "malicious" });
+  const p = buildLLMInvocationPreview({
+    model: "llama3.1:8b",
+    prompt: () => "malicious",
+  });
   assert.equal(p.prompt_length_chars, 0);
 });
 
 test("Adversarial: out-of-range timeoutMs reverts to default", () => {
-  const tooHigh = buildLLMInvocationPreview({ model: "llama3.1:8b", prompt: "hi", timeoutMs: 99999999 });
-  const negative = buildLLMInvocationPreview({ model: "llama3.1:8b", prompt: "hi", timeoutMs: -100 });
-  const string = buildLLMInvocationPreview({ model: "llama3.1:8b", prompt: "hi", timeoutMs: "evil" });
+  const tooHigh = buildLLMInvocationPreview({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    timeoutMs: 99999999,
+  });
+  const negative = buildLLMInvocationPreview({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    timeoutMs: -100,
+  });
+  const string = buildLLMInvocationPreview({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    timeoutMs: "evil",
+  });
   assert.equal(tooHigh.timeout_ms, 60000);
   assert.equal(negative.timeout_ms, 60000);
   assert.equal(string.timeout_ms, 60000);
@@ -134,7 +164,7 @@ test("Invoke without consent phrase fails with consent_phrase_mismatch", async (
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
-    consentPhrase: ""
+    consentPhrase: "",
   });
   assert.equal(r.invocation_status, "failed");
   assert.match(r.error_reason, /consent_phrase_mismatch/);
@@ -146,7 +176,7 @@ test("Invoke with WRONG consent phrase fails (no fuzzy match)", async () => {
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
-    consentPhrase: "GO: invoke local llm at llama3.1:8b" // lowercase 'llm' · should fail
+    consentPhrase: "GO: invoke local llm at llama3.1:8b", // lowercase 'llm' · should fail
   });
   assert.equal(r.invocation_status, "failed");
   assert.match(r.error_reason, /consent_phrase_mismatch/);
@@ -157,7 +187,7 @@ test("Invoke with non-localhost endpoint refused before any other gate", async (
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    ollamaBaseUrl: "http://evil.example.com:11434"
+    ollamaBaseUrl: "http://evil.example.com:11434",
   });
   assert.equal(r.invocation_status, "failed");
   assert.match(r.error_reason, /endpoint_not_localhost/);
@@ -167,7 +197,7 @@ test("Invoke with localhost-prefix smuggling is refused before fetch", async () 
   const endpoints = [
     "http://localhost.evil.example:11434",
     "http://127.0.0.1.evil.example:11434",
-    "http://localhost@evil.example:11434"
+    "http://localhost@evil.example:11434",
   ];
 
   for (const ollamaBaseUrl of endpoints) {
@@ -179,13 +209,25 @@ test("Invoke with localhost-prefix smuggling is refused before fetch", async () 
       ollamaBaseUrl,
       fetchImpl: async () => {
         fetchEntered = true;
-        return { ok: true, status: 200, json: async () => ({ response: "unsafe" }) };
-      }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ response: "unsafe" }),
+        };
+      },
     });
     assert.equal(r.invocation_status, "failed", `${ollamaBaseUrl} must fail`);
     assert.match(r.error_reason, /endpoint_not_localhost/);
-    assert.equal(r.target_is_localhost, false, `${ollamaBaseUrl} must not be reported as localhost`);
-    assert.equal(fetchEntered, false, "fetch must not be entered for smuggled endpoints");
+    assert.equal(
+      r.target_is_localhost,
+      false,
+      `${ollamaBaseUrl} must not be reported as localhost`,
+    );
+    assert.equal(
+      fetchEntered,
+      false,
+      "fetch must not be entered for smuggled endpoints",
+    );
   }
 });
 
@@ -193,7 +235,7 @@ test("Invoke with non-whitelisted model refused", async () => {
   const r = await invokeLocalLLM({
     model: "evil-model:1.0",
     prompt: "hi",
-    consentPhrase: "GO: invoke local LLM at evil-model:1.0"
+    consentPhrase: "GO: invoke local LLM at evil-model:1.0",
   });
   assert.equal(r.invocation_status, "failed");
   assert.match(r.error_reason, /model_not_in_whitelist/);
@@ -214,13 +256,17 @@ test("Invoke succeeds with valid consent + valid model + mocked Ollama response"
   const mock = mockFetch({
     ok: true,
     status: 200,
-    json: async () => ({ response: "hello there!", done: true, model: "llama3.1:8b" })
+    json: async () => ({
+      response: "hello there!",
+      done: true,
+      model: "llama3.1:8b",
+    }),
   });
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   assert.equal(r.invocation_status, "completed");
   assert.equal(r.error_reason, null);
@@ -236,12 +282,16 @@ test("Invoke succeeds with valid consent + valid model + mocked Ollama response"
 });
 
 test("Invoke with non-200 status emits http_status error", async () => {
-  const mock = mockFetch({ ok: false, status: 500, statusText: "Internal Server Error" });
+  const mock = mockFetch({
+    ok: false,
+    status: 500,
+    statusText: "Internal Server Error",
+  });
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   assert.equal(r.invocation_status, "failed");
   assert.match(r.error_reason, /http_status_500/);
@@ -252,25 +302,29 @@ test("Invoke with non-JSON response emits response_not_json error", async () => 
   const mock = mockFetch({
     ok: true,
     status: 200,
-    json: async () => { throw new Error("Unexpected token"); }
+    json: async () => {
+      throw new Error("Unexpected token");
+    },
   });
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   assert.equal(r.invocation_status, "failed");
   assert.match(r.error_reason, /response_not_json/);
 });
 
 test("Invoke with network error emits network_error", async () => {
-  const errorFetch = async () => { throw new Error("ECONNREFUSED"); };
+  const errorFetch = async () => {
+    throw new Error("ECONNREFUSED");
+  };
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: errorFetch
+    fetchImpl: errorFetch,
   });
   assert.equal(r.invocation_status, "failed");
   assert.match(r.error_reason, /network_error/);
@@ -280,7 +334,8 @@ test("Invoke with timeout aborts cleanly · emits timeout_after error", async ()
   // Custom abort-aware mock that respects controller.signal
   const slowFetch = async (_url, opts) => {
     return new Promise((resolve, reject) => {
-      const onAbort = () => reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+      const onAbort = () =>
+        reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
       opts.signal?.addEventListener("abort", onAbort, { once: true });
       // never resolve on its own · only abort wins
     });
@@ -290,7 +345,7 @@ test("Invoke with timeout aborts cleanly · emits timeout_after error", async ()
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
     timeoutMs: 100,
-    fetchImpl: slowFetch
+    fetchImpl: slowFetch,
   });
   assert.equal(r.invocation_status, "failed");
   assert.match(r.error_reason, /timeout_after_100ms/);
@@ -301,13 +356,13 @@ test("Invoke result text preview is capped at 500 chars + truncation marker", as
   const mock = mockFetch({
     ok: true,
     status: 200,
-    json: async () => ({ response: longResponse, done: true })
+    json: async () => ({ response: longResponse, done: true }),
   });
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   assert.equal(r.invocation_status, "completed");
   assert.equal(r.response_length_chars, 2000);
@@ -345,17 +400,26 @@ test("Exported constants are present and frozen", () => {
   assert.ok(LLM_ADAPTER_DEFAULT_BASE.startsWith("http://localhost"));
   assert.equal(typeof LLM_ADAPTER_MAX_PROMPT_LENGTH, "number");
   assert.equal(typeof llmAdapterConsentPhraseFor("llama3.1:8b"), "string");
-  assert.equal(llmAdapterConsentPhraseFor("llama3.1:8b"), "GO: invoke local LLM at llama3.1:8b");
+  assert.equal(
+    llmAdapterConsentPhraseFor("llama3.1:8b"),
+    "GO: invoke local LLM at llama3.1:8b",
+  );
 });
 
 test("Whitelist includes operator-installed families verified via C1.5 scan", () => {
   // Each was discovered by `dema models scan` on 2026-05-18 GST · added with verification
-  assert.ok(LLM_ADAPTER_ALLOWED_MODEL_FAMILIES.includes("gemma4"),
-    "gemma4 family must be allowed (gemma4:26b · gemma4:26b-bizra-16k · gemma4:e4b installed)");
-  assert.ok(LLM_ADAPTER_ALLOWED_MODEL_FAMILIES.includes("qwen3-coder-next"),
-    "qwen3-coder-next must be allowed (79.7B coding model installed)");
-  assert.ok(LLM_ADAPTER_ALLOWED_MODEL_FAMILIES.includes("whiterabbitneo-v3"),
-    "whiterabbitneo-v3 must be allowed (security-focused 7.6B model installed)");
+  assert.ok(
+    LLM_ADAPTER_ALLOWED_MODEL_FAMILIES.includes("gemma4"),
+    "gemma4 family must be allowed (gemma4:26b · gemma4:26b-bizra-16k · gemma4:e4b installed)",
+  );
+  assert.ok(
+    LLM_ADAPTER_ALLOWED_MODEL_FAMILIES.includes("qwen3-coder-next"),
+    "qwen3-coder-next must be allowed (79.7B coding model installed)",
+  );
+  assert.ok(
+    LLM_ADAPTER_ALLOWED_MODEL_FAMILIES.includes("whiterabbitneo-v3"),
+    "whiterabbitneo-v3 must be allowed (security-focused 7.6B model installed)",
+  );
 });
 
 test("Operator-installed model name-prefixes pass isAllowedModelName check via preview", () => {
@@ -366,12 +430,15 @@ test("Operator-installed model name-prefixes pass isAllowedModelName check via p
     "qwen3-coder-next:q4_K_M",
     "whiterabbitneo-v3:7b-q4_K_M",
     "deepseek-r1:7b",
-    "nomic-embed-text:latest"
+    "nomic-embed-text:latest",
   ];
   for (const name of installed) {
     const p = buildLLMInvocationPreview({ model: name, prompt: "test" });
-    assert.equal(p.model_allowed_in_whitelist, true,
-      `'${name}' must pass whitelist check (operator has it installed via C1.5 scan)`);
+    assert.equal(
+      p.model_allowed_in_whitelist,
+      true,
+      `'${name}' must pass whitelist check (operator has it installed via C1.5 scan)`,
+    );
   }
 });
 
@@ -393,14 +460,16 @@ test("All 10 Master Craftsmanship checks · structural verification", () => {
   assert.ok(p.blocked_effects.length >= 7);
   assert.ok(p.blocked_effects.includes("public_network_use"));
   assert.ok(p.blocked_effects.includes("non_whitelisted_model_invocation"));
-  assert.ok(p.blocked_effects.includes("consent_phrase_inference_or_fuzzy_match"));
+  assert.ok(
+    p.blocked_effects.includes("consent_phrase_inference_or_fuzzy_match"),
+  );
 });
 
 test("Adversarial · empty prompt is refused with prompt_empty error", async () => {
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "",
-    consentPhrase: "GO: invoke local LLM at llama3.1:8b"
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
   });
   assert.equal(r.invocation_status, "failed");
   assert.match(r.error_reason, /prompt_empty/);
@@ -411,7 +480,7 @@ test("Adversarial · oversized prompt is refused with prompt_too_long error", as
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: huge,
-    consentPhrase: "GO: invoke local LLM at llama3.1:8b"
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
   });
   assert.equal(r.invocation_status, "failed");
   assert.match(r.error_reason, /prompt_too_long/);
@@ -426,7 +495,7 @@ import {
   isRuntimeEmissionBoundary,
   isCanonicalBoundary as isCanonicalBoundary_2,
   RUNTIME_EMISSION_PERMISSIVE_KEY_SET,
-  RUNTIME_EMISSION_STRICTLY_FALSE_KEY_SET
+  RUNTIME_EMISSION_STRICTLY_FALSE_KEY_SET,
 } from "../packages/core/src/preview-boundary.js";
 import { validateAgainstRegistry } from "../packages/core/src/envelope-schema-validator.js";
 
@@ -434,13 +503,13 @@ test("ADR-018 · result envelope boundary is runtime-emission shape · not canon
   const mock = mockFetch({
     ok: true,
     status: 200,
-    json: async () => ({ response: "hi back", done: true })
+    json: async () => ({ response: "hi back", done: true }),
   });
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   assert.equal(r.invocation_status, "completed");
   // Boundary now passes runtime-emission · NOT canonical-preview
@@ -449,11 +518,19 @@ test("ADR-018 · result envelope boundary is runtime-emission shape · not canon
   // Legitimate true keys on a completed runtime emission
   for (const key of RUNTIME_EMISSION_PERMISSIVE_KEY_SET) {
     if (key === "consent_collected") continue;
-    assert.equal(r.boundary[key], true, `${key} must be true on completed invocation`);
+    assert.equal(
+      r.boundary[key],
+      true,
+      `${key} must be true on completed invocation`,
+    );
   }
   // Strictly-false keys remain false
   for (const key of RUNTIME_EMISSION_STRICTLY_FALSE_KEY_SET) {
-    assert.equal(r.boundary[key], false, `${key} must remain false on runtime emission`);
+    assert.equal(
+      r.boundary[key],
+      false,
+      `${key} must remain false on runtime emission`,
+    );
   }
 });
 
@@ -461,13 +538,13 @@ test("ADR-018 · result envelope carries verdict_role: 'suggestion' per ADR-015"
   const mock = mockFetch({
     ok: true,
     status: 200,
-    json: async () => ({ response: "ok", done: true })
+    json: async () => ({ response: "ok", done: true }),
   });
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   assert.equal(r.verdict_role, "suggestion");
 });
@@ -476,17 +553,21 @@ test("ADR-018 · result envelope structurally validates against bizra.dema.llm_i
   const mock = mockFetch({
     ok: true,
     status: 200,
-    json: async () => ({ response: "ok", done: true })
+    json: async () => ({ response: "ok", done: true }),
   });
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "a safe prompt",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   const v = validateAgainstRegistry(r);
   assert.equal(v.recognized, true);
-  assert.equal(v.ok, true, `expected ok=true; errors: ${JSON.stringify(v.errors)}`);
+  assert.equal(
+    v.ok,
+    true,
+    `expected ok=true; errors: ${JSON.stringify(v.errors)}`,
+  );
   assert.equal(v.truth_label, "MEASURED");
 });
 
@@ -503,7 +584,7 @@ test("ADR-018 §S5 · inbound prompt with path-leakage → INVOCATION_BLOCKED (n
       ok: true,
       status: 200,
       statusText: "OK",
-      json: async () => ({ response: "leaked", done: true })
+      json: async () => ({ response: "leaked", done: true }),
     };
   };
   // Prompt contains a path that Layer 1 flags as leakage
@@ -511,29 +592,35 @@ test("ADR-018 §S5 · inbound prompt with path-leakage → INVOCATION_BLOCKED (n
     model: "llama3.1:8b",
     prompt: "look at /home/operator/secret.txt and tell me what is there",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: trackingFetch
+    fetchImpl: trackingFetch,
   });
   assert.equal(r.invocation_status, "blocked");
   assert.equal(r.truth_label, "INVOCATION_BLOCKED");
-  assert.equal(fetchEntered, false, "fetch must NEVER be entered when inbound prompt is blocked");
+  assert.equal(
+    fetchEntered,
+    false,
+    "fetch must NEVER be entered when inbound prompt is blocked",
+  );
   assert.ok(
-    r.prompt_safety_verdict === "LEAKAGE_DETECTED" || r.prompt_safety_verdict === "LOCAL_ONLY",
-    `expected LEAKAGE_DETECTED or LOCAL_ONLY, got ${r.prompt_safety_verdict}`
+    r.prompt_safety_verdict === "LEAKAGE_DETECTED" ||
+      r.prompt_safety_verdict === "LOCAL_ONLY",
+    `expected LEAKAGE_DETECTED or LOCAL_ONLY, got ${r.prompt_safety_verdict}`,
   );
 });
 
 test("ADR-018 §S5 · outbound model response with path-leakage → response REDACTED", async () => {
-  const leakyResponse = "Sure! the file is at /home/operator/secret.txt — content X";
+  const leakyResponse =
+    "Sure! the file is at /home/operator/secret.txt — content X";
   const mock = mockFetch({
     ok: true,
     status: 200,
-    json: async () => ({ response: leakyResponse, done: true })
+    json: async () => ({ response: leakyResponse, done: true }),
   });
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "anything safe",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   assert.equal(r.invocation_status, "completed");
   assert.notEqual(r.response_safety_verdict, "PUBLIC_SAFE");
@@ -543,23 +630,31 @@ test("ADR-018 §S5 · outbound model response with path-leakage → response RED
 test("ADR-018 §S6 · same consent phrase replayed in same process → consent_phrase_replayed_in_session", async () => {
   // Reset, then invoke twice with the same phrase.
   __resetInvocationFreshness();
-  const mock1 = mockFetch({ ok: true, status: 200, json: async () => ({ response: "first", done: true }) });
+  const mock1 = mockFetch({
+    ok: true,
+    status: 200,
+    json: async () => ({ response: "first", done: true }),
+  });
   const first = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock1
+    fetchImpl: mock1,
   });
   assert.equal(first.invocation_status, "completed");
   assert.equal(first.attempt_n, 1);
 
   // Second call with the SAME consent phrase must be rejected.
-  const mock2 = mockFetch({ ok: true, status: 200, json: async () => ({ response: "second", done: true }) });
+  const mock2 = mockFetch({
+    ok: true,
+    status: 200,
+    json: async () => ({ response: "second", done: true }),
+  });
   const second = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock2
+    fetchImpl: mock2,
   });
   assert.equal(second.invocation_status, "failed");
   assert.match(second.error_reason, /consent_phrase_replayed_in_session/);
@@ -567,19 +662,23 @@ test("ADR-018 §S6 · same consent phrase replayed in same process → consent_p
 
 test("ADR-018 §S6 · process-fresh reset allows re-invocation", async () => {
   // Use, reset, use again with same phrase.
-  const mock = mockFetch({ ok: true, status: 200, json: async () => ({ response: "ok", done: true }) });
+  const mock = mockFetch({
+    ok: true,
+    status: 200,
+    json: async () => ({ response: "ok", done: true }),
+  });
   await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   __resetInvocationFreshness();
   const after = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   assert.equal(after.invocation_status, "completed");
   assert.equal(after.attempt_n, 1, "reset should restart the attempt counter");
@@ -589,13 +688,13 @@ test("ADR-018 · effects_observed alias is the same boundary object (backwards-c
   const mock = mockFetch({
     ok: true,
     status: 200,
-    json: async () => ({ response: "ok", done: true })
+    json: async () => ({ response: "ok", done: true }),
   });
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   // alias preserved · same reference
   assert.equal(r.effects_observed, r.boundary);
@@ -610,22 +709,34 @@ test("ADR-018 review fix #4 · http_status failure preserves network_used=true (
     ok: false,
     status: 500,
     statusText: "Internal Server Error",
-    json: async () => ({})
+    json: async () => ({}),
   });
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   assert.equal(r.invocation_status, "failed");
   assert.match(r.error_reason, /http_status_500/);
   // Fetch was attempted → these boundary keys must remain true even though
   // the request failed. Prior bug: they were all driven by isCompletedSuccess
   // and collapsed to false on any error.
-  assert.equal(r.boundary.network_used, true, "network was used (fetch was sent)");
-  assert.equal(r.boundary.prompt_executed, true, "prompt was sent over the wire");
-  assert.equal(r.boundary.runtime_execution_performed, true, "runtime executed the fetch");
+  assert.equal(
+    r.boundary.network_used,
+    true,
+    "network was used (fetch was sent)",
+  );
+  assert.equal(
+    r.boundary.prompt_executed,
+    true,
+    "prompt was sent over the wire",
+  );
+  assert.equal(
+    r.boundary.runtime_execution_performed,
+    true,
+    "runtime executed the fetch",
+  );
   // But the model itself did not complete — these stay false.
   assert.equal(r.boundary.model_loaded, false);
   assert.equal(r.boundary.model_invocation_performed, false);
@@ -639,7 +750,7 @@ test("ADR-018 review fix #4 · network_error failure also preserves network_used
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   assert.equal(r.invocation_status, "failed");
   assert.match(r.error_reason, /network_error/);
@@ -653,12 +764,16 @@ test("ADR-018 review fix #4 · network_error failure also preserves network_used
 test("ADR-018 review fix #4 · pre-fetch gate failure (consent_mismatch) keeps all runtime keys false", async () => {
   // Mismatched consent never reaches fetch · all runtime-emission keys
   // including network_used MUST be false.
-  const mock = mockFetch({ ok: true, status: 200, json: async () => ({ response: "x" }) });
+  const mock = mockFetch({
+    ok: true,
+    status: 200,
+    json: async () => ({ response: "x" }),
+  });
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "wrong phrase",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   assert.equal(r.invocation_status, "failed");
   assert.match(r.error_reason, /consent_phrase_mismatch/);
@@ -672,15 +787,19 @@ test("ADR-018 review fix #6 · 200 OK with missing response field → malformed_
     ok: true,
     status: 200,
     statusText: "OK",
-    json: async () => ({ done: true /* no `response` field */ })
+    json: async () => ({ done: true /* no `response` field */ }),
   });
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
-  assert.equal(r.invocation_status, "failed", "missing body.response must NOT be 'completed'");
+  assert.equal(
+    r.invocation_status,
+    "failed",
+    "missing body.response must NOT be 'completed'",
+  );
   assert.match(r.error_reason, /malformed_response_payload/);
   // fetch was attempted → network_used=true; but invocation did not complete
   assert.equal(r.boundary.network_used, true);
@@ -692,13 +811,13 @@ test("ADR-018 review fix #6 · 200 OK with non-string response (number) → malf
     ok: true,
     status: 200,
     statusText: "OK",
-    json: async () => ({ response: 42 /* number, not string */, done: true })
+    json: async () => ({ response: 42 /* number, not string */, done: true }),
   });
   const r = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   assert.equal(r.invocation_status, "failed");
   assert.match(r.error_reason, /malformed_response_payload/);
@@ -706,12 +825,16 @@ test("ADR-018 review fix #6 · 200 OK with non-string response (number) → malf
 
 test("ADR-018 review fix #3 · attempt_n is monotonic across replayed calls", async () => {
   __resetInvocationFreshness();
-  const mock = mockFetch({ ok: true, status: 200, json: async () => ({ response: "first", done: true }) });
+  const mock = mockFetch({
+    ok: true,
+    status: 200,
+    json: async () => ({ response: "first", done: true }),
+  });
   const first = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   assert.equal(first.attempt_n, 1);
 
@@ -719,18 +842,22 @@ test("ADR-018 review fix #3 · attempt_n is monotonic across replayed calls", as
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   // Replay rejected, but attempt_n must still increment to 2 (not stuck at 1).
   assert.equal(second.invocation_status, "failed");
   assert.match(second.error_reason, /consent_phrase_replayed_in_session/);
-  assert.equal(second.attempt_n, 2, "attempt_n must be monotonic across replays");
+  assert.equal(
+    second.attempt_n,
+    2,
+    "attempt_n must be monotonic across replays",
+  );
 
   const third = await invokeLocalLLM({
     model: "llama3.1:8b",
     prompt: "hi",
     consentPhrase: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mock
+    fetchImpl: mock,
   });
   assert.equal(third.attempt_n, 3, "third replay must show attempt_n=3");
 });

@@ -1,12 +1,8 @@
-import { Theme } from "./dema-theme.js";
-
 const ESC = "\x1b[";
 const RESET = ESC + "0m";
 const CLEAR_SCREEN = ESC + "2J" + ESC + "H";
 const HIDE_CURSOR = ESC + "?25l";
 const SHOW_CURSOR = ESC + "?25h";
-const SAVE_CURSOR = ESC + "s";
-const RESTORE_CURSOR = ESC + "u";
 
 function bold(s, nc) {
   return nc ? s : ESC + "1m" + s + ESC + "22m";
@@ -23,10 +19,6 @@ function green(s, nc) {
 function yellow(s, nc) {
   return nc ? s : ESC + "33m" + s + ESC + "39m";
 }
-function red(s, nc) {
-  return nc ? s : ESC + "31m" + s + ESC + "39m";
-}
-
 function chars(dumb) {
   if (dumb)
     return {

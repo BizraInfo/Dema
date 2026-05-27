@@ -11,17 +11,21 @@ import {
   mergeRegistries,
   validateRegistryEntry,
   buildLocalModelRegistryConfigPreview,
-  BROKER_ROLES,
-  BROKER_SIZE_CLASSES,
-  sanitizeRegistryEntry
 } from "../packages/models/src/model-registry-config-preview.js";
 
 import {
   buildModelBrokerPreview,
-  routeForTask
+  routeForTask,
 } from "../packages/models/src/model-broker-preview.js";
 
-const PLACEHOLDER_ROLES = ["dema_face", "pat_worker", "sat_validator", "router", "classifier", "consent_detector"];
+const PLACEHOLDER_ROLES = [
+  "dema_face",
+  "pat_worker",
+  "sat_validator",
+  "router",
+  "classifier",
+  "consent_detector",
+];
 
 test("DEFAULT_SAMPLE_REGISTRY contains exactly the 6 placeholder roles named by the architect", () => {
   assert.equal(DEFAULT_SAMPLE_REGISTRY.length, 6);
@@ -29,23 +33,43 @@ test("DEFAULT_SAMPLE_REGISTRY contains exactly the 6 placeholder roles named by 
   for (const expectedRole of PLACEHOLDER_ROLES) {
     assert.ok(
       sampleRoles.includes(expectedRole),
-      `expected role ${expectedRole} in sample registry, got ${JSON.stringify(sampleRoles)}`
+      `expected role ${expectedRole} in sample registry, got ${JSON.stringify(sampleRoles)}`,
     );
   }
 });
 
 test("every sample entry is an honest placeholder (no claimed real model identity)", () => {
   for (const entry of DEFAULT_SAMPLE_REGISTRY) {
-    assert.equal(entry.status, "source_pending", `entry ${entry.id} should be source_pending`);
-    assert.equal(entry.locality, "unknown", `entry ${entry.id} should be locality=unknown`);
-    assert.equal(entry.provider, "unknown", `entry ${entry.id} should be provider=unknown`);
-    assert.equal(entry.size_class, "unknown", `entry ${entry.id} should be size_class=unknown`);
-    assert.deepEqual(entry.allowed_tasks, [], `entry ${entry.id} should have empty allowed_tasks`);
+    assert.equal(
+      entry.status,
+      "source_pending",
+      `entry ${entry.id} should be source_pending`,
+    );
+    assert.equal(
+      entry.locality,
+      "unknown",
+      `entry ${entry.id} should be locality=unknown`,
+    );
+    assert.equal(
+      entry.provider,
+      "unknown",
+      `entry ${entry.id} should be provider=unknown`,
+    );
+    assert.equal(
+      entry.size_class,
+      "unknown",
+      `entry ${entry.id} should be size_class=unknown`,
+    );
+    assert.deepEqual(
+      entry.allowed_tasks,
+      [],
+      `entry ${entry.id} should have empty allowed_tasks`,
+    );
     assert.equal(entry.context_limit, null);
     // id must contain "placeholder" — no real model name leakage allowed.
     assert.ok(
       entry.id.includes("placeholder"),
-      `entry id ${entry.id} should contain "placeholder" to mark it as a non-real entry`
+      `entry id ${entry.id} should contain "placeholder" to mark it as a non-real entry`,
     );
     // model_name matches id (no real name).
     assert.equal(entry.model_name, entry.id);
@@ -63,7 +87,7 @@ test("validateRegistryEntry accepts a well-formed operator entry", () => {
     allowed_tasks: ["planning"],
     max_concurrency: 2,
     context_limit: 16384,
-    status: "active"
+    status: "active",
   };
   assert.equal(validateRegistryEntry(validEntry), true);
 });
@@ -77,30 +101,46 @@ test("validateRegistryEntry rejects malformed and null entries without throwing"
   // Wrong role
   assert.equal(
     validateRegistryEntry({
-      id: "x", role: "not-a-real-role", size_class: "7B", locality: "local", status: "active"
+      id: "x",
+      role: "not-a-real-role",
+      size_class: "7B",
+      locality: "local",
+      status: "active",
     }),
-    false
+    false,
   );
   // Wrong size_class
   assert.equal(
     validateRegistryEntry({
-      id: "x", role: "pat_worker", size_class: "999B", locality: "local", status: "active"
+      id: "x",
+      role: "pat_worker",
+      size_class: "999B",
+      locality: "local",
+      status: "active",
     }),
-    false
+    false,
   );
   // Wrong locality
   assert.equal(
     validateRegistryEntry({
-      id: "x", role: "pat_worker", size_class: "7B", locality: "moon", status: "active"
+      id: "x",
+      role: "pat_worker",
+      size_class: "7B",
+      locality: "moon",
+      status: "active",
     }),
-    false
+    false,
   );
   // Wrong status
   assert.equal(
     validateRegistryEntry({
-      id: "x", role: "pat_worker", size_class: "7B", locality: "local", status: "imaginary"
+      id: "x",
+      role: "pat_worker",
+      size_class: "7B",
+      locality: "local",
+      status: "imaginary",
     }),
-    false
+    false,
   );
 });
 
@@ -116,9 +156,9 @@ test("buildRegistryFromConfig returns frozen sanitized registry array from { ent
         status: "active",
         allowed_tasks: ["synthesis"],
         max_concurrency: 1,
-        context_limit: 32768
-      }
-    ]
+        context_limit: 32768,
+      },
+    ],
   };
   const registry = buildRegistryFromConfig(config);
   assert.ok(Array.isArray(registry));
@@ -137,8 +177,19 @@ test("buildRegistryFromConfig drops malformed entries safely; passing array dire
       null,
       undefined,
       "string-not-object",
-      { /* missing id */ role: "pat_worker", size_class: "7B", locality: "local", status: "active" },
-      { id: "", role: "pat_worker", size_class: "7B", locality: "local", status: "active" }, // empty id
+      {
+        /* missing id */ role: "pat_worker",
+        size_class: "7B",
+        locality: "local",
+        status: "active",
+      },
+      {
+        id: "",
+        role: "pat_worker",
+        size_class: "7B",
+        locality: "local",
+        status: "active",
+      }, // empty id
       {
         id: "real-pat-7b",
         provider: "ollama",
@@ -148,9 +199,9 @@ test("buildRegistryFromConfig drops malformed entries safely; passing array dire
         status: "active",
         allowed_tasks: ["planning"],
         max_concurrency: 2,
-        context_limit: 8192
-      }
-    ]
+        context_limit: 8192,
+      },
+    ],
   };
   const registry = buildRegistryFromConfig(config);
   assert.equal(registry.length, 1, "only the one valid entry should survive");
@@ -158,7 +209,13 @@ test("buildRegistryFromConfig drops malformed entries safely; passing array dire
 
   // Array passed directly is also accepted.
   const directArray = [
-    { id: "x", role: "pat_worker", size_class: "7B", locality: "local", status: "active" }
+    {
+      id: "x",
+      role: "pat_worker",
+      size_class: "7B",
+      locality: "local",
+      status: "active",
+    },
   ];
   const direct = buildRegistryFromConfig(directArray);
   assert.equal(direct.length, 1);
@@ -181,7 +238,7 @@ test("mergeRegistries uses operator-wins precedence on id conflicts", () => {
       status: "source_pending",
       allowed_tasks: [],
       max_concurrency: 0,
-      context_limit: null
+      context_limit: null,
     },
     {
       id: "sample-only-id",
@@ -192,8 +249,8 @@ test("mergeRegistries uses operator-wins precedence on id conflicts", () => {
       status: "source_pending",
       allowed_tasks: [],
       max_concurrency: 0,
-      context_limit: null
-    }
+      context_limit: null,
+    },
   ];
   const operator = [
     {
@@ -205,7 +262,7 @@ test("mergeRegistries uses operator-wins precedence on id conflicts", () => {
       status: "active",
       allowed_tasks: ["synthesis"],
       max_concurrency: 1,
-      context_limit: 32768
+      context_limit: 32768,
     },
     {
       id: "operator-only-id",
@@ -216,8 +273,8 @@ test("mergeRegistries uses operator-wins precedence on id conflicts", () => {
       status: "active",
       allowed_tasks: ["claim_review"],
       max_concurrency: 1,
-      context_limit: 8192
-    }
+      context_limit: 8192,
+    },
   ];
   const merged = mergeRegistries(sample, operator);
   // 3 unique ids total (shared collapsed to operator).
@@ -247,12 +304,19 @@ test("default sample registry alone feeds broker and routes nothing (placeholder
   assert.equal(receipt.reason, "no_acceptable_candidate");
   // Every sample entry should appear in rejected_candidates with reason
   // referencing source_pending.
-  assert.ok(receipt.rejected_candidates.length >= 1, "expected at least one rejection");
+  assert.ok(
+    receipt.rejected_candidates.length >= 1,
+    "expected at least one rejection",
+  );
   // Find a sample-id rejection and confirm its reason names source_pending.
   const samplePlaceholderRejection = receipt.rejected_candidates.find(
-    (r) => r.model_id.startsWith("operator-") && r.model_id.endsWith("-placeholder")
+    (r) =>
+      r.model_id.startsWith("operator-") && r.model_id.endsWith("-placeholder"),
   );
-  assert.ok(samplePlaceholderRejection, "expected at least one placeholder in rejections");
+  assert.ok(
+    samplePlaceholderRejection,
+    "expected at least one placeholder in rejections",
+  );
   assert.match(samplePlaceholderRejection.reason, /source_pending|unknown/);
 });
 
@@ -269,9 +333,9 @@ test("operator-provided local Dema face entry feeds broker and routes synthesis 
         allowed_tasks: ["synthesis", "summarization"],
         max_concurrency: 1,
         context_limit: 32768,
-        status: "active"
-      }
-    ]
+        status: "active",
+      },
+    ],
   };
   // Build the operator registry from config, merge with the sample, and
   // feed the broker. Synthesis task should route to the operator entry,
@@ -297,9 +361,9 @@ test("buildLocalModelRegistryConfigPreview returns a schema-tagged envelope with
         status: "active",
         allowed_tasks: ["planning"],
         max_concurrency: 2,
-        context_limit: 16384
-      }
-    ]
+        context_limit: 16384,
+      },
+    ],
   });
   assert.equal(envelope.schema, LOCAL_MODEL_REGISTRY_CONFIG_SCHEMA);
   assert.equal(envelope.mode, "PREVIEW_ONLY");
@@ -340,7 +404,7 @@ test("module is a pure preview: no fs/network/child_process imports", () => {
     "packages",
     "models",
     "src",
-    "model-registry-config-preview.js"
+    "model-registry-config-preview.js",
   );
   const src = readFileSync(moduleSrcPath, "utf8");
   const forbidden = [
@@ -353,12 +417,12 @@ test("module is a pure preview: no fs/network/child_process imports", () => {
     "import 'fs'",
     'import "fs"',
     'require("fs")',
-    "require('fs')"
+    "require('fs')",
   ];
   for (const f of forbidden) {
     assert.ok(
       !src.includes(f),
-      `model-registry-config-preview.js must not import ${f} (got it in source)`
+      `model-registry-config-preview.js must not import ${f} (got it in source)`,
     );
   }
 });

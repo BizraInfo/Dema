@@ -122,13 +122,11 @@ import {
   runSetup,
   checkSetup,
   removeSetup,
-  REMOVE_CONSENT_PHRASE,
 } from "../../../packages/installer/src/setup.js";
 import {
   saveWitnessReceipt,
   buildWitnessAttestation,
   formatWitnessReceipt,
-  WITNESS_CONSENT_PHRASE,
 } from "../../../packages/receipts/src/witness-receipt.js";
 import {
   verifyWitnessReceipt,
@@ -140,7 +138,6 @@ import {
   saveHealthSnapshotReceipt,
   verifyHealthSnapshotReceipt,
   formatHealthSnapshotReceipt,
-  HEALTH_MISSION_CONSENT_PHRASE,
 } from "../../../packages/mission/src/health-snapshot.js";
 import { runSetupWizard } from "../../../packages/core/src/setup-wizard.js";
 import {
@@ -254,7 +251,6 @@ import {
 } from "../../../packages/core/src/intro-line.js";
 import {
   readBannerKey,
-  KEY_BINDINGS,
   runBannerKeyLoop,
 } from "../../../packages/core/src/banner-keys.js";
 import { runLiveHomebase } from "../../../packages/core/src/live-homebase.js";

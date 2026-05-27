@@ -16,8 +16,7 @@ import { buildPreviewBoundary } from "./preview-boundary.js";
 export const MASTER_CRAFTSMANSHIP_AUDIT_SCHEMA =
   "bizra.dema.master_craftsmanship_audit.v0.1";
 
-const DEFAULT_AUDIT_SUBJECT =
-  "tests/node-onboarding-adr011-compliance.test.js";
+const DEFAULT_AUDIT_SUBJECT = "tests/node-onboarding-adr011-compliance.test.js";
 
 // ─── Probe helpers ────────────────────────────────────────────────────────────
 
@@ -56,12 +55,13 @@ function probeCanonBound(text) {
 function probeTestBacked(text, artifactPath) {
   // Two paths: (a) test file in tests/ → count test() declarations
   //            (b) source file → check for adversarial evidence_anchors in source
-  const isTestFile = artifactPath.includes("tests/") || artifactPath.includes("test.");
+  const isTestFile =
+    artifactPath.includes("tests/") || artifactPath.includes("test.");
   const testCount = countMatches(text, /^test\(/gm);
   // Threshold for test files: ≥15 test() declarations
   const adversarialMentions = countMatches(
     text,
-    /adversarial|ADV-\d+|red-team|fuzzy|pollution|forgery|injection/gi
+    /adversarial|ADV-\d+|red-team|fuzzy|pollution|forgery|injection/gi,
   );
   // For source files: ≥8 adversarial mentions in evidence_anchor comments is sufficient.
   // (craftsmanship-witness has 12 such mentions as evidence_anchor strings + comments)
@@ -76,7 +76,9 @@ function probeTestBacked(text, artifactPath) {
       test_declarations: testCount,
       adversarial_mentions: adversarialMentions,
       test_references: testRefCount,
-      threshold: isTestFile ? "test_declarations ≥15" : "adversarial_mentions ≥8 OR test_refs ≥15",
+      threshold: isTestFile
+        ? "test_declarations ≥15"
+        : "adversarial_mentions ≥8 OR test_refs ≥15",
     },
   };
 }
@@ -85,7 +87,8 @@ function probeConsentGated(text) {
   const adr005Count = countMatches(text, /ADR-005/g);
   const consentPhraseCount = countMatches(text, /consent_phrase/g);
   const evaluateConsentCount = countMatches(text, /evaluateConsent/g);
-  const satisfied = adr005Count >= 1 || consentPhraseCount >= 1 || evaluateConsentCount >= 1;
+  const satisfied =
+    adr005Count >= 1 || consentPhraseCount >= 1 || evaluateConsentCount >= 1;
   return {
     satisfied,
     evidence: {
@@ -112,7 +115,8 @@ function probeReceiptEmitting(text) {
       receipt_shape_ready: receiptShapeReadyCount,
       receipt_id_preview: receiptIdPreviewCount,
       receipt_general: receiptGeneralCount,
-      threshold: "receipt_shape_ready≥1 OR receipt_id_preview≥1 OR receipt_general≥2",
+      threshold:
+        "receipt_shape_ready≥1 OR receipt_id_preview≥1 OR receipt_general≥2",
     },
   };
 }
@@ -129,7 +133,7 @@ function probeDoctrineCoherent(text) {
   // Substring match (no word boundary) catches MODEL_LESS_DECLARED, MODEL_UNKNOWN etc.
   const doctrineTermCount = countMatches(
     text,
-    /MEASURED|DECLARED|ASSUMED|VERIFIED|UNKNOWN|V\/D\/A\/U/g
+    /MEASURED|DECLARED|ASSUMED|VERIFIED|UNKNOWN|V\/D\/A\/U/g,
   );
   const vdauNotationCount = countMatches(text, /V\/D\/A\/U|\{V,D,A,U\}/g);
   // Threshold: ≥1 of the 4 signals is sufficient for doctrine coherence.
@@ -149,7 +153,8 @@ function probeDoctrineCoherent(text) {
       doctrine_term_count: doctrineTermCount,
       vdau_notation_count: vdauNotationCount,
       signals_present: signalCount,
-      threshold: "≥1 of 4 signals: truth_label|claim_state|doctrine_terms|V/D/A/U",
+      threshold:
+        "≥1 of 4 signals: truth_label|claim_state|doctrine_terms|V/D/A/U",
     },
   };
 }
@@ -176,13 +181,13 @@ const CANONICAL_BOUNDARY_KEY_NAMES = [
 
 function probeBoundaryDisciplined(text) {
   const matchedKeys = CANONICAL_BOUNDARY_KEY_NAMES.filter((k) =>
-    text.includes(k)
+    text.includes(k),
   );
   // Also count broader boundary terms (for files that use the module without
   // inlining every key — e.g. PREVIEW_BOUNDARY_CANONICAL_KEYS reference)
   const canonicalKeyModuleRef = countMatches(
     text,
-    /PREVIEW_BOUNDARY_CANONICAL_KEYS|buildPreviewBoundary|CANONICAL_BOUNDARY/g
+    /PREVIEW_BOUNDARY_CANONICAL_KEYS|buildPreviewBoundary|CANONICAL_BOUNDARY/g,
   );
   // Threshold: ≥4 individual keys OR ≥1 module-level boundary reference
   const satisfied = matchedKeys.length >= 4 || canonicalKeyModuleRef >= 1;
@@ -225,7 +230,10 @@ function probeAdversarialTested(text) {
 }
 
 function probeVerifyBeforeAsserting(text) {
-  const refusalCount = countMatches(text, /refuse_|not_supported|refused|rejected/g);
+  const refusalCount = countMatches(
+    text,
+    /refuse_|not_supported|refused|rejected/g,
+  );
   const reasonCount = countMatches(text, /\breason\b/g);
   // Threshold: ≥1 refusal term OR ≥2 "reason" references
   const satisfied = refusalCount >= 1 || reasonCount >= 2;
@@ -240,7 +248,8 @@ function probeVerifyBeforeAsserting(text) {
 }
 
 function probeReversible(text, artifactPath) {
-  const isTestFile = artifactPath.includes("tests/") || artifactPath.includes("test.");
+  const isTestFile =
+    artifactPath.includes("tests/") || artifactPath.includes("test.");
   // Test files are inherently reversible (they observe; they don't mutate state)
   if (isTestFile) {
     return {
@@ -254,7 +263,10 @@ function probeReversible(text, artifactPath) {
   }
   // Source files: must be pure — no process.env writes, no mkdir/writeFile
   const envWriteCount = countMatches(text, /process\.env\.\w+\s*=/g);
-  const fsWriteCount = countMatches(text, /\b(writeFile|mkdir|appendFile|unlink)\b/g);
+  const fsWriteCount = countMatches(
+    text,
+    /\b(writeFile|mkdir|appendFile|unlink)\b/g,
+  );
   const pureMarkerCount = countMatches(text, /pure|preview.only|no.I\/O/gi);
   const satisfied = envWriteCount === 0 && fsWriteCount === 0;
   return {
@@ -275,12 +287,12 @@ function probeCrossReferenced(text) {
   // Canon docs: check for symbol names that reference canon material
   const canonDocCount = countMatches(
     text,
-    /BIZRA_TOPOLOGY_CANON|LAW_OF_ASSUMPTION|third-fact|PREVIEW_BOUNDARY_CANONICAL_KEYS|CANONICAL_STAGES|canon_anchors|CANONICAL/g
+    /BIZRA_TOPOLOGY_CANON|LAW_OF_ASSUMPTION|third-fact|PREVIEW_BOUNDARY_CANONICAL_KEYS|CANONICAL_STAGES|canon_anchors|CANONICAL/g,
   );
   // Memory / test anchors: T-1..T-18, P1..P10, feedback_, project_, reference_
   const anchorCount = countMatches(
     text,
-    /T-\d+|P\d+\s·|feedback_\w+|project_\w+|reference_\w+|memory_anchor/g
+    /T-\d+|P\d+\s·|feedback_\w+|project_\w+|reference_\w+|memory_anchor/g,
   );
   // Threshold: ADR≥1 AND (canonDoc≥1 OR anchor≥1)
   const satisfied = adrCount >= 1 && (canonDocCount >= 1 || anchorCount >= 1);
@@ -302,27 +314,31 @@ function extractAuditSummary(text, artifactPath) {
   const totalTests = countMatches(text, /^test\(/gm);
   const adversarialTests = countMatches(
     text,
-    /adversarial|ADVERSARIAL|ADV-\d+|red-team/gi
+    /adversarial|ADVERSARIAL|ADV-\d+|red-team/gi,
   );
 
   // T-N and P-N anchors
-  const tAnchors = [...new Set(
-    (text.match(/\bT-\d+\b/g) ?? []).filter((t) => {
-      const n = parseInt(t.slice(2), 10);
-      return n >= 1 && n <= 18;
-    })
-  )].sort((a, b) => {
+  const tAnchors = [
+    ...new Set(
+      (text.match(/\bT-\d+\b/g) ?? []).filter((t) => {
+        const n = parseInt(t.slice(2), 10);
+        return n >= 1 && n <= 18;
+      }),
+    ),
+  ].sort((a, b) => {
     const na = parseInt(a.slice(2), 10);
     const nb = parseInt(b.slice(2), 10);
     return na - nb;
   });
 
-  const pAnchors = [...new Set(
-    (text.match(/\bP\d+\b/g) ?? []).filter((p) => {
-      const n = parseInt(p.slice(1), 10);
-      return n >= 1 && n <= 10;
-    })
-  )].sort((a, b) => {
+  const pAnchors = [
+    ...new Set(
+      (text.match(/\bP\d+\b/g) ?? []).filter((p) => {
+        const n = parseInt(p.slice(1), 10);
+        return n >= 1 && n <= 10;
+      }),
+    ),
+  ].sort((a, b) => {
     const na = parseInt(a.slice(1), 10);
     const nb = parseInt(b.slice(1), 10);
     return na - nb;
@@ -330,10 +346,7 @@ function extractAuditSummary(text, artifactPath) {
 
   const schemaRefs = countMatches(text, /\bschema\b/g);
   const adrRefs = [...new Set(text.match(/ADR-\d+/g) ?? [])].sort();
-  const boundaryAssertions = countMatches(
-    text,
-    /boundary\[|boundary\./g
-  );
+  const boundaryAssertions = countMatches(text, /boundary\[|boundary\./g);
 
   return {
     total_tests_in_artifact: totalTests,
@@ -454,7 +467,10 @@ function buildProbeResults(text, displayPath, readError) {
     { id: "doctrine_coherent", fn: () => probeDoctrineCoherent(text) },
     { id: "boundary_disciplined", fn: () => probeBoundaryDisciplined(text) },
     { id: "adversarial_tested", fn: () => probeAdversarialTested(text) },
-    { id: "verify_before_asserting", fn: () => probeVerifyBeforeAsserting(text) },
+    {
+      id: "verify_before_asserting",
+      fn: () => probeVerifyBeforeAsserting(text),
+    },
     { id: "reversible", fn: () => probeReversible(text, displayPath) },
     { id: "cross_referenced", fn: () => probeCrossReferenced(text) },
   ];
@@ -486,12 +502,10 @@ const INVARIANT_IDS = [
 // ─── Human-readable formatter ─────────────────────────────────────────────────
 
 export function formatAuditReport(auditResult) {
-  const { subject, invariants, overall_compliant, satisfied_count, audit_summary } = auditResult;
+  const { subject, invariants, overall_compliant, satisfied_count } =
+    auditResult;
 
-  const lines = [
-    `Master Craftsmanship Audit — ${subject.path}`,
-    "",
-  ];
+  const lines = [`Master Craftsmanship Audit — ${subject.path}`, ""];
 
   for (const inv of invariants) {
     const tick = inv.satisfied ? "✅" : "❌";
@@ -545,14 +559,14 @@ export function formatAuditReport(auditResult) {
   const verdict = overall_compliant
     ? `COMPLIANT (${satisfied_count}/${total} invariants satisfied)`
     : satisfied_count === 0
-    ? `NON-COMPLIANT (0/${total} invariants satisfied)`
-    : `PARTIAL (${satisfied_count}/${total} invariants satisfied)`;
+      ? `NON-COMPLIANT (0/${total} invariants satisfied)`
+      : `PARTIAL (${satisfied_count}/${total} invariants satisfied)`;
 
   lines.push(`Verdict: ${verdict}`);
   if (subject.sha256) lines.push(`SHA-256: ${subject.sha256}`);
   lines.push("");
   lines.push(
-    `Type \`dema master-craftsmanship audit --json ${subject.path}\` for machine-readable output.`
+    `Type \`dema master-craftsmanship audit --json ${subject.path}\` for machine-readable output.`,
   );
 
   return lines.join("\n");

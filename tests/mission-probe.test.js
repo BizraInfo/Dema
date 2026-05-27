@@ -1,21 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
 import {
   runMissionProbe,
   renderProbeText,
 } from "../packages/mission/src/mission-probe.js";
-import {
-  saveHealthSnapshotReceipt,
-  HEALTH_MISSION_CONSENT_PHRASE,
-} from "../packages/mission/src/health-snapshot.js";
-import {
-  sha256,
-  stableStringify,
-} from "../packages/consent/src/consent-common.js";
-import { runSetup } from "../packages/installer/src/setup.js";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 

@@ -9,22 +9,20 @@ export const KEY_BINDINGS = Object.freeze({
   r: ["receipts"],
   b: ["explain"],
   "?": ["help"],
-  h: ["help"]
+  h: ["help"],
 });
 
 // Keys that signal "quit without dispatch" — returns null to caller.
 const QUIT_KEYS = new Set([
   "q",
-  "\x1b",  // ESC
-  "\x03",  // Ctrl-C
-  "\r",    // Enter (CR)
-  "\n"     // Enter (LF)
+  "\x1b", // ESC
+  "\x03", // Ctrl-C
+  "\r", // Enter (CR)
+  "\n", // Enter (LF)
 ]);
 
-const VALID_KEYS = new Set([...Object.keys(KEY_BINDINGS), ...QUIT_KEYS]);
-
 const PROMPT_LINE = "\nPress a key: m j r b ? q  (or Enter to skip) ▸ ";
-const RETRY_HINT  = "Press m/j/r/b/?/q (or Enter to skip)\n";
+const RETRY_HINT = "Press m/j/r/b/?/q (or Enter to skip)\n";
 
 // runBannerKeyLoop — read keys repeatedly, dispatch each, exit on null.
 // Pure orchestration: I/O is delegated to `readKey` (defaults to
@@ -36,10 +34,12 @@ export async function runBannerKeyLoop({
   dispatchFn,
   bindings = KEY_BINDINGS,
   maxIterations = 50,
-  readKeyOpts = {}
+  readKeyOpts = {},
 } = {}) {
-  if (typeof readKey !== "function") throw new TypeError("runBannerKeyLoop requires readKey()");
-  if (typeof dispatchFn !== "function") throw new TypeError("runBannerKeyLoop requires dispatchFn()");
+  if (typeof readKey !== "function")
+    throw new TypeError("runBannerKeyLoop requires readKey()");
+  if (typeof dispatchFn !== "function")
+    throw new TypeError("runBannerKeyLoop requires dispatchFn()");
   let dispatches = 0;
   for (let i = 0; i < maxIterations; i++) {
     const key = await readKey(readKeyOpts);
@@ -61,7 +61,11 @@ export async function runBannerKeyLoop({
 //   stdin     — readable stream; must support setRawMode if isTTY is true
 //   stdout    — writable stream
 //   timeoutMs — how long to wait before giving up (default 60000)
-export async function readBannerKey({ stdin, stdout, timeoutMs = 60_000 } = {}) {
+export async function readBannerKey({
+  stdin,
+  stdout,
+  timeoutMs = 60_000,
+} = {}) {
   if (!stdin || !stdin.isTTY) return null;
 
   stdout.write(PROMPT_LINE);
@@ -74,7 +78,11 @@ export async function readBannerKey({ stdin, stdout, timeoutMs = 60_000 } = {}) 
   // Restore raw mode and remove listeners — idempotent, safe to call twice.
   function restore() {
     if (rawModeSet) {
-      try { stdin.setRawMode(false); } catch { /* best-effort */ }
+      try {
+        stdin.setRawMode(false);
+      } catch {
+        /* best-effort */
+      }
       rawModeSet = false;
     }
     if (dataListener) {
@@ -89,7 +97,11 @@ export async function readBannerKey({ stdin, stdout, timeoutMs = 60_000 } = {}) 
       clearTimeout(timeoutHandle);
       timeoutHandle = null;
     }
-    try { stdin.pause(); } catch { /* best-effort */ }
+    try {
+      stdin.pause();
+    } catch {
+      /* best-effort */
+    }
   }
 
   // SIGINT/SIGTERM: restore before process exits.
@@ -98,7 +110,7 @@ export async function readBannerKey({ stdin, stdout, timeoutMs = 60_000 } = {}) 
     process.exit(0);
   }
 
-  process.once("SIGINT",  sigHandler);
+  process.once("SIGINT", sigHandler);
   process.once("SIGTERM", sigHandler);
 
   try {
@@ -139,7 +151,7 @@ export async function readBannerKey({ stdin, stdout, timeoutMs = 60_000 } = {}) 
     });
   } finally {
     restore();
-    process.removeListener("SIGINT",  sigHandler);
+    process.removeListener("SIGINT", sigHandler);
     process.removeListener("SIGTERM", sigHandler);
   }
 }

@@ -4,7 +4,10 @@
 // (when applicable) a prev_hash linking to the previous receipt. SAT-4
 // verifies the chain links match · checks for forgery · detects gaps.
 
-import { buildAgentKernel, AGENT_KERNEL_MAX_ITERATIONS } from "./agent-kernel.js";
+import {
+  buildAgentKernel,
+  AGENT_KERNEL_MAX_ITERATIONS,
+} from "./agent-kernel.js";
 import { buildEffectCap } from "./effect-cap.js";
 import { buildPreviewBoundary } from "./preview-boundary.js";
 
@@ -23,32 +26,33 @@ const SAT4_PERSONA = Object.freeze({
     "verify_receipt_hash_format",
     "verify_chain_link_integrity",
     "detect_chain_gaps",
-    "report_specific_chain_violations"
+    "report_specific_chain_violations",
   ]),
   primary_refusals: Object.freeze([
     "modify_receipts",
     "waive_chain_verification",
     "infer_missing_prev_hash",
-    "approve_partial_chain"
-  ])
+    "approve_partial_chain",
+  ]),
 });
 
-const SAT4_EFFECT_CAP_ALLOWED = Object.freeze(["read_local_file", "compute_hash", "render_terminal_output"]);
+const SAT4_EFFECT_CAP_ALLOWED = Object.freeze([
+  "read_local_file",
+  "compute_hash",
+  "render_terminal_output",
+]);
 const SAT4_EFFECT_CAP_EXTRA_BLOCKED = Object.freeze([
   "modify_receipt",
   "waive_chain_verification",
-  "infer_prev_hash"
+  "infer_prev_hash",
 ]);
-const SAT4_CONSENT_PHRASE_TEMPLATE = "GO: invoke SAT-4 receipt_chain_verifier to verify";
+const SAT4_CONSENT_PHRASE_TEMPLATE =
+  "GO: invoke SAT-4 receipt_chain_verifier to verify";
 
 const HASH_REGEX = /^[a-f0-9]{64}$/;
 
 function safeArray(v) {
   return Array.isArray(v) ? v : [];
-}
-
-function safeObject(v) {
-  return v && typeof v === "object" && !Array.isArray(v) ? v : null;
 }
 
 export function buildSATReceiptChainVerifierEffectCap() {
@@ -58,7 +62,7 @@ export function buildSATReceiptChainVerifierEffectCap() {
     allowed_effects: SAT4_EFFECT_CAP_ALLOWED,
     blocked_effects: SAT4_EFFECT_CAP_EXTRA_BLOCKED,
     consent_scope_template: SAT4_CONSENT_PHRASE_TEMPLATE,
-    audit_trail_required: true
+    audit_trail_required: true,
   });
 }
 
@@ -77,18 +81,21 @@ export function buildSATReceiptChainVerifierPreview() {
       "SAT-4 never modifies a receipt · examination is read-only",
       "SAT-4 never waives chain verification",
       "SAT-4 never infers a missing prev_hash · gap is named honestly",
-      "SAT-4 never approves a partial chain · all links must verify"
+      "SAT-4 never approves a partial chain · all links must verify",
     ]),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
-export function buildSATReceiptChainVerifierKernel({ mission_intent = "", max_iterations = AGENT_KERNEL_MAX_ITERATIONS } = {}) {
+export function buildSATReceiptChainVerifierKernel({
+  mission_intent = "",
+  max_iterations = AGENT_KERNEL_MAX_ITERATIONS,
+} = {}) {
   return buildAgentKernel({
     agent_id: SAT4_PERSONA.sat_id,
     agent_role: "sat_receipt_chain_verifier",
     mission_intent: typeof mission_intent === "string" ? mission_intent : "",
-    max_iterations
+    max_iterations,
   });
 }
 
@@ -104,26 +111,38 @@ export function verifyReceiptChain({ receipts = [] } = {}) {
       passed: true,
       receipt_count: 0,
       violations: ["chain_is_empty_trivially_compliant"],
-      link_results: []
+      link_results: [],
     });
   }
 
   for (let i = 0; i < list.length; i++) {
     const r = list[i];
-    const hash = typeof r.receipt_id === "string" ? r.receipt_id
-                 : typeof r.candidate_hash === "string" ? r.candidate_hash
-                 : typeof r.content_hash === "string" ? r.content_hash : null;
-    const prevHash = typeof r.prev_hash === "string" ? r.prev_hash
-                   : typeof r.prev_receipt_hash === "string" ? r.prev_receipt_hash : null;
+    const hash =
+      typeof r.receipt_id === "string"
+        ? r.receipt_id
+        : typeof r.candidate_hash === "string"
+          ? r.candidate_hash
+          : typeof r.content_hash === "string"
+            ? r.content_hash
+            : null;
+    const prevHash =
+      typeof r.prev_hash === "string"
+        ? r.prev_hash
+        : typeof r.prev_receipt_hash === "string"
+          ? r.prev_receipt_hash
+          : null;
 
     const linkResult = {
       index: i,
       hash,
       prev_hash: prevHash,
       hash_format_valid: hash !== null && HASH_REGEX.test(hash),
-      prev_hash_format_valid: prevHash === null || prevHash === "genesis" || HASH_REGEX.test(prevHash),
+      prev_hash_format_valid:
+        prevHash === null ||
+        prevHash === "genesis" ||
+        HASH_REGEX.test(prevHash),
       links_to_previous: false,
-      issues: []
+      issues: [],
     };
 
     if (hash === null) {
@@ -137,25 +156,37 @@ export function verifyReceiptChain({ receipts = [] } = {}) {
     }
 
     if (i > 0) {
-      const expectedPrev = list[i - 1].receipt_id || list[i - 1].candidate_hash || list[i - 1].content_hash;
+      const expectedPrev =
+        list[i - 1].receipt_id ||
+        list[i - 1].candidate_hash ||
+        list[i - 1].content_hash;
       if (prevHash === null) {
         linkResult.issues.push("missing_prev_hash_for_non_genesis_receipt");
       } else if (prevHash !== expectedPrev) {
-        linkResult.issues.push(`prev_hash_mismatch · expected '${expectedPrev}' · got '${prevHash}'`);
+        linkResult.issues.push(
+          `prev_hash_mismatch · expected '${expectedPrev}' · got '${prevHash}'`,
+        );
       } else {
         linkResult.links_to_previous = true;
       }
     } else {
       // Genesis receipt: prev_hash should be null OR explicitly "genesis"
       if (prevHash !== null && prevHash !== "genesis") {
-        linkResult.issues.push(`unexpected_prev_hash_on_genesis · got '${prevHash}'`);
+        linkResult.issues.push(
+          `unexpected_prev_hash_on_genesis · got '${prevHash}'`,
+        );
       }
     }
 
     if (linkResult.issues.length > 0) {
       violations.push(`receipt[${i}] · ${linkResult.issues.join(" · ")}`);
     }
-    linkResults.push(Object.freeze({ ...linkResult, issues: Object.freeze(linkResult.issues) }));
+    linkResults.push(
+      Object.freeze({
+        ...linkResult,
+        issues: Object.freeze(linkResult.issues),
+      }),
+    );
   }
 
   const passed = violations.length === 0;
@@ -164,11 +195,17 @@ export function verifyReceiptChain({ receipts = [] } = {}) {
     passed,
     receipt_count: list.length,
     violations,
-    link_results: linkResults
+    link_results: linkResults,
   });
 }
 
-function buildVerdict({ verdict, passed, receipt_count, violations, link_results }) {
+function buildVerdict({
+  verdict,
+  passed,
+  receipt_count,
+  violations,
+  link_results,
+}) {
   return Object.freeze({
     schema: VERDICT_SCHEMA,
     truth_label: passed ? "MEASURED" : "CHAIN_VIOLATION",
@@ -182,7 +219,7 @@ function buildVerdict({ verdict, passed, receipt_count, violations, link_results
     link_results: Object.freeze(link_results),
     audit_trail_required: true,
     receipt_shape_ready: passed,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -197,7 +234,7 @@ export function buildSATReceiptChainVerifierSummary() {
     role_name: preview.persona.role_name,
     capability_count: preview.persona.primary_capabilities.length,
     refusal_count: preview.persona.primary_refusals.length,
-    boundary: preview.boundary
+    boundary: preview.boundary,
   });
 }
 

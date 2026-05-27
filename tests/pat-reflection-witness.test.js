@@ -7,9 +7,7 @@ import {
   buildPATReflectionWitnessEffectCap,
   buildPATReflectionWitnessKernel,
   composeDailyReflection,
-  PAT_REFLECTION_WITNESS_SCHEMA_NAME,
-  PAT_REFLECTION_WITNESS_REFLECTION_SCHEMA_NAME,
-  PAT_REFLECTION_WITNESS_PERSONA
+  PAT_REFLECTION_WITNESS_PERSONA,
 } from "../packages/core/src/pat-reflection-witness.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 
@@ -29,9 +27,15 @@ test("PAT-7 boundary canonical + deep frozen", () => {
 test("PAT-7 refusals: never judge · never claim without evidence · never modify history", () => {
   const p = buildPATReflectionWitnessPreview();
   assert.ok(p.persona.primary_refusals.includes("judge_the_operator"));
-  assert.ok(p.persona.primary_refusals.includes("claim_doctrine_catch_without_evidence"));
+  assert.ok(
+    p.persona.primary_refusals.includes(
+      "claim_doctrine_catch_without_evidence",
+    ),
+  );
   assert.ok(p.persona.primary_refusals.includes("modify_observed_history"));
-  assert.ok(p.persona.primary_refusals.includes("extrapolate_pattern_from_n_eq_1"));
+  assert.ok(
+    p.persona.primary_refusals.includes("extrapolate_pattern_from_n_eq_1"),
+  );
   assert.ok(p.persona.primary_refusals.includes("score_or_grade_the_operator"));
 });
 
@@ -45,7 +49,9 @@ test("PAT-7 EffectCap blocks judge · modify-history · infer-from-silence · sc
 });
 
 test("PAT-7 kernel pre-configured correctly", () => {
-  const k = buildPATReflectionWitnessKernel({ mission_intent: "compose reflection" });
+  const k = buildPATReflectionWitnessKernel({
+    mission_intent: "compose reflection",
+  });
   assert.equal(k.agent_id, "pat-7-reflection-witness");
 });
 
@@ -54,7 +60,7 @@ test("composeDailyReflection · valid input · canonical schema", () => {
     date: "2026-05-18",
     commits_today: [{ sha: "abc", title: "test" }],
     doctrine_catches: [],
-    memory_writes_today: ["today.json"]
+    memory_writes_today: ["today.json"],
   });
   assert.equal(r.schema, "bizra.dema.daily_reflection.v0.1");
   assert.equal(r.truth_label, "NODE0_LOCAL_SEED");
@@ -66,8 +72,12 @@ test("composeDailyReflection · valid input · canonical schema", () => {
 test("composeDailyReflection · catch WITH evidence_pointer → V-grade", () => {
   const r = composeDailyReflection({
     doctrine_catches: [
-      { claim: "boundary violated", evidence_pointer: "packages/core/x.js:42", doctrine_canon_referenced: "preview-boundary" }
-    ]
+      {
+        claim: "boundary violated",
+        evidence_pointer: "packages/core/x.js:42",
+        doctrine_canon_referenced: "preview-boundary",
+      },
+    ],
   });
   assert.equal(r.verified_catches.length, 1);
   assert.equal(r.assumed_catches.length, 0);
@@ -77,8 +87,8 @@ test("composeDailyReflection · catch WITH evidence_pointer → V-grade", () => 
 test("composeDailyReflection · catch WITHOUT evidence_pointer → A-grade (downgraded)", () => {
   const r = composeDailyReflection({
     doctrine_catches: [
-      { claim: "something happened", doctrine_canon_referenced: "any-canon" }
-    ]
+      { claim: "something happened", doctrine_canon_referenced: "any-canon" },
+    ],
   });
   assert.equal(r.verified_catches.length, 0);
   assert.equal(r.assumed_catches.length, 1);
@@ -88,10 +98,22 @@ test("composeDailyReflection · catch WITHOUT evidence_pointer → A-grade (down
 test("composeDailyReflection · pattern detection requires N≥2 same canon", () => {
   const r = composeDailyReflection({
     doctrine_catches: [
-      { claim: "x", evidence_pointer: "a:1", doctrine_canon_referenced: "key-maker" },
-      { claim: "y", evidence_pointer: "b:1", doctrine_canon_referenced: "key-maker" },
-      { claim: "z", evidence_pointer: "c:1", doctrine_canon_referenced: "law-of-assumption" }
-    ]
+      {
+        claim: "x",
+        evidence_pointer: "a:1",
+        doctrine_canon_referenced: "key-maker",
+      },
+      {
+        claim: "y",
+        evidence_pointer: "b:1",
+        doctrine_canon_referenced: "key-maker",
+      },
+      {
+        claim: "z",
+        evidence_pointer: "c:1",
+        doctrine_canon_referenced: "law-of-assumption",
+      },
+    ],
   });
   // key-maker has N=2 · key-maker pattern fires
   // law-of-assumption has N=1 · does NOT fire
@@ -107,7 +129,11 @@ test("composeDailyReflection · NEVER offers operator_judgment", () => {
 
 test("composeDailyReflection · session_metrics propagated honestly · null when absent", () => {
   const r = composeDailyReflection({
-    session_metrics: { tests_pass: 1000, gates_green: true, spine_surfaces: 12 }
+    session_metrics: {
+      tests_pass: 1000,
+      gates_green: true,
+      spine_surfaces: 12,
+    },
   });
   assert.equal(r.summary.session_metrics.tests_pass, 1000);
   assert.equal(r.summary.session_metrics.gates_green, true);
@@ -129,8 +155,8 @@ test("Adversarial · non-object catches filtered out", () => {
       { claim: "valid", evidence_pointer: "x:1" },
       "not-an-object",
       null,
-      undefined
-    ]
+      undefined,
+    ],
   });
   assert.equal(r.doctrine_catches_classified.length, 1);
 });

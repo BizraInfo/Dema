@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, readdir, mkdir } from "node:fs/promises";
+import { mkdtemp, readFile, readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -11,7 +11,7 @@ import {
   MAX_SAVED_BYTES,
   serializeCodebaseMapForSave,
   buildCodebaseMapSavePath,
-  saveCodebaseMap
+  saveCodebaseMap,
 } from "../packages/receipts/src/codebase-map-save.js";
 
 function minimalEnvelope() {
@@ -21,13 +21,36 @@ function minimalEnvelope() {
     repo_path: "/tmp/example",
     repo_path_realpath_verified: true,
     scan_config: null,
-    totals: { file_count: 0, symlink_count: 0, total_bytes: 0, total_bytes_read: 0, by_extension: {}, by_role: {} },
-    packages: [], modules: [], files: [], symlinks: [], edges: [], hotspots: [],
-    warnings: [], partial: false, error_reason: null,
+    totals: {
+      file_count: 0,
+      symlink_count: 0,
+      total_bytes: 0,
+      total_bytes_read: 0,
+      by_extension: {},
+      by_role: {},
+    },
+    packages: [],
+    modules: [],
+    files: [],
+    symlinks: [],
+    edges: [],
+    hotspots: [],
+    warnings: [],
+    partial: false,
+    error_reason: null,
     blocked_effects: ["file_write"],
-    boundary: { runtime: true, file_io: true, network_used: false, model_invocation: false,
-                mutation: false, federation: false, mint: false, token_economy: false,
-                urp_networking: false, secret_files_skipped: true }
+    boundary: {
+      runtime: true,
+      file_io: true,
+      network_used: false,
+      model_invocation: false,
+      mutation: false,
+      federation: false,
+      mint: false,
+      token_economy: false,
+      urp_networking: false,
+      secret_files_skipped: true,
+    },
   };
 }
 
@@ -37,8 +60,14 @@ async function makeHome() {
 
 // 1. Exports + constants surface
 test("exports: CONSENT phrase, schema, MAX_SAVED_BYTES are stable", () => {
-  assert.equal(CODEBASE_MAP_SAVE_CONSENT, "GO: save local codebase architecture map");
-  assert.equal(CODEBASE_MAP_SAVE_SCHEMA, "bizra.dema.codebase_architecture_map_save.v0.1");
+  assert.equal(
+    CODEBASE_MAP_SAVE_CONSENT,
+    "GO: save local codebase architecture map",
+  );
+  assert.equal(
+    CODEBASE_MAP_SAVE_SCHEMA,
+    "bizra.dema.codebase_architecture_map_save.v0.1",
+  );
   assert.equal(MAX_SAVED_BYTES, 268_435_456);
   assert.equal(typeof MAX_SAVED_BYTES, "number");
   assert.ok(Number.isInteger(MAX_SAVED_BYTES));
@@ -58,7 +87,10 @@ test("saveCodebaseMap fails closed on consent_missing", async () => {
 // 3. Fail-closed: consent mismatch
 test("saveCodebaseMap fails closed on consent_mismatch", async () => {
   const home = await makeHome();
-  const result = await saveCodebaseMap(minimalEnvelope(), { demaHome: home, consent: "wrong phrase" });
+  const result = await saveCodebaseMap(minimalEnvelope(), {
+    demaHome: home,
+    consent: "wrong phrase",
+  });
   assert.equal(result.saved, false);
   assert.equal(result.reason, "consent_mismatch");
   assert.equal(result.expected, CODEBASE_MAP_SAVE_CONSENT);
@@ -77,7 +109,7 @@ test("saveCodebaseMap fails closed on oversized_serialized_envelope (using injec
   const result = await saveCodebaseMap(env, {
     demaHome: home,
     consent: CODEBASE_MAP_SAVE_CONSENT,
-    maxBytes: 100
+    maxBytes: 100,
   });
   assert.equal(result.saved, false);
   assert.equal(result.reason, "oversized_serialized_envelope");
@@ -100,7 +132,7 @@ test("saveCodebaseMap saves successfully when serialized_bytes <= maxBytes", asy
   const result = await saveCodebaseMap(env, {
     demaHome: home,
     consent: CODEBASE_MAP_SAVE_CONSENT,
-    maxBytes: 1024 * 1024
+    maxBytes: 1024 * 1024,
   });
   assert.equal(result.saved, true);
   assert.ok(result.serialized_bytes < 1024 * 1024);
@@ -110,7 +142,10 @@ test("saveCodebaseMap saves successfully when serialized_bytes <= maxBytes", asy
 test("saveCodebaseMap success return shape is frozen + content addressed", async () => {
   const home = await makeHome();
   const env = minimalEnvelope();
-  const result = await saveCodebaseMap(env, { demaHome: home, consent: CODEBASE_MAP_SAVE_CONSENT });
+  const result = await saveCodebaseMap(env, {
+    demaHome: home,
+    consent: CODEBASE_MAP_SAVE_CONSENT,
+  });
   assert.equal(result.saved, true);
   assert.equal(typeof result.path, "string");
   assert.match(result.filename, /^codebase-map-[a-f0-9]{64}\.json$/);
@@ -119,7 +154,9 @@ test("saveCodebaseMap success return shape is frozen + content addressed", async
   assert.equal(result.dema_home, home);
   assert.equal(typeof result.serialized_bytes, "number");
   // Frozen
-  assert.throws(() => { result.path = "/tmp/hijacked"; }, /(Cannot assign|read[- ]only)/i);
+  assert.throws(() => {
+    result.path = "/tmp/hijacked";
+  }, /(Cannot assign|read[- ]only)/i);
   // Disk content matches what the helper serialized
   const onDisk = await readFile(result.path, "utf8");
   const expected = serializeCodebaseMapForSave(env, { pretty: false });
@@ -175,12 +212,20 @@ test("saveCodebaseMap returns saved=true on idempotent re-save of identical enve
   // existing final file atomically on POSIX. Result: both succeed.
   const home = await makeHome();
   const env = minimalEnvelope();
-  const r1 = await saveCodebaseMap(env, { demaHome: home, consent: CODEBASE_MAP_SAVE_CONSENT });
-  const r2 = await saveCodebaseMap(env, { demaHome: home, consent: CODEBASE_MAP_SAVE_CONSENT });
+  const r1 = await saveCodebaseMap(env, {
+    demaHome: home,
+    consent: CODEBASE_MAP_SAVE_CONSENT,
+  });
+  const r2 = await saveCodebaseMap(env, {
+    demaHome: home,
+    consent: CODEBASE_MAP_SAVE_CONSENT,
+  });
   assert.equal(r1.saved, true);
   assert.equal(r2.saved, true);
   assert.equal(r1.path, r2.path, "same envelope → same content-addressed path");
   const files = await readdir(join(home, "receipts"));
-  const mapFiles = files.filter((f) => f.startsWith("codebase-map-") && f.endsWith(".json"));
+  const mapFiles = files.filter(
+    (f) => f.startsWith("codebase-map-") && f.endsWith(".json"),
+  );
   assert.equal(mapFiles.length, 1, "idempotent re-save yields one final file");
 });

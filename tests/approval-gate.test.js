@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { Readable, Writable } from "node:stream";
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -11,7 +11,7 @@ import {
   APPROVAL_SCHEMA,
   highestLevel,
   levelLabel,
-  requestApproval
+  requestApproval,
 } from "../packages/core/src/approval-gate.js";
 
 const execFileAsync = promisify(execFile);
@@ -19,7 +19,9 @@ const execFileAsync = promisify(execFile);
 // on Windows and breaks execFile resolution. Same pattern exists in the
 // other tests/*.test.js files; flagged for a follow-up Windows-portability
 // sweep, not patched here to keep PR #16 scope tight.
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 function inputFrom(text) {
   // Simulate operator typing `text\n`. Empty string = immediate EOF.
@@ -33,13 +35,13 @@ function captureOutput() {
     write(chunk, _enc, cb) {
       chunks.push(chunk.toString());
       cb();
-    }
+    },
   });
   return {
     stream,
     get text() {
       return chunks.join("");
-    }
+    },
   };
 }
 
@@ -68,7 +70,11 @@ test("highestLevel returns null on malformed/missing input (fail-closed)", () =>
   assert.equal(highestLevel("typo"), null, "no L-token → null");
   assert.equal(highestLevel("L10"), null, "out-of-range L10 → null");
   assert.equal(highestLevel("L99"), null, "out-of-range L99 → null");
-  assert.equal(highestLevel("LEVEL4"), null, "no word-bounded L0..5 token → null");
+  assert.equal(
+    highestLevel("LEVEL4"),
+    null,
+    "no word-bounded L0..5 token → null",
+  );
   assert.equal(highestLevel("L6"), null, "L6 not in envelope → null");
 });
 
@@ -84,7 +90,7 @@ test("L0 auto-approves without reading input or writing prompt", async () => {
   const result = await requestApproval({
     autonomyLevel: "L0",
     action: "status",
-    output: out.stream
+    output: out.stream,
   });
   assert.equal(result.schema, APPROVAL_SCHEMA);
   assert.equal(result.approved, true);
@@ -95,7 +101,11 @@ test("L0 auto-approves without reading input or writing prompt", async () => {
 test("L1 and L2 also auto-approve without prompting", async () => {
   for (const lvl of ["L1", "L2"]) {
     const out = captureOutput();
-    const result = await requestApproval({ autonomyLevel: lvl, action: "x", output: out.stream });
+    const result = await requestApproval({
+      autonomyLevel: lvl,
+      action: "x",
+      output: out.stream,
+    });
     assert.equal(result.approved, true);
     assert.equal(out.text, "", `${lvl} must not prompt`);
   }
@@ -110,7 +120,7 @@ test("L3 approves on y / yes / proceed (case-insensitive)", async () => {
       autonomyLevel: "L3",
       action: "test",
       input: inputFrom(answer),
-      output: out.stream
+      output: out.stream,
     });
     assert.equal(result.approved, true, `expected approve on '${answer}'`);
     assert.equal(result.mode, "interactive");
@@ -124,7 +134,7 @@ test("L3 default-denies on silence/EOF", async () => {
     autonomyLevel: "L3",
     action: "test",
     input: inputFrom(""), // immediate EOF
-    output: out.stream
+    output: out.stream,
   });
   assert.equal(result.approved, false);
   assert.equal(result.mode, "interactive");
@@ -138,7 +148,7 @@ test("L3 default-denies on n / no / blank / arbitrary text", async () => {
       autonomyLevel: "L3",
       action: "test",
       input: inputFrom(answer),
-      output: out.stream
+      output: out.stream,
     });
     assert.equal(result.approved, false, `expected deny on '${answer}'`);
   }
@@ -151,7 +161,7 @@ test("L3 prompt includes scope when provided", async () => {
     action: "task X",
     scope: "reversible-local",
     input: inputFrom("y"),
-    output: out.stream
+    output: out.stream,
   });
   assert.match(out.text, /scope: reversible-local/);
 });
@@ -166,7 +176,7 @@ test("L4 approves only on exact phrase match (FATE)", async () => {
     action: "ARTIFACT-011 issuance",
     requireExactPhrase: phrase,
     input: inputFrom(phrase),
-    output: out.stream
+    output: out.stream,
   });
   assert.equal(result.approved, true);
   assert.equal(result.mode, "exact_phrase");
@@ -179,7 +189,7 @@ test("L4 denies on near-match (trailing space, missing colon, etc.)", async () =
     "go: Node0 bounded diagnostic activation only", // case
     "GO Node0 bounded diagnostic activation only", // missing colon
     "y", // typical L3 affirmative
-    "" // EOF
+    "", // EOF
   ]) {
     const out = captureOutput();
     const result = await requestApproval({
@@ -187,7 +197,7 @@ test("L4 denies on near-match (trailing space, missing colon, etc.)", async () =
       action: "x",
       requireExactPhrase: phrase,
       input: inputFrom(wrong),
-      output: out.stream
+      output: out.stream,
     });
     assert.equal(result.approved, false, `expected deny on '${wrong}'`);
   }
@@ -197,7 +207,7 @@ test("L4 refuses honestly when requireExactPhrase is missing", async () => {
   const result = await requestApproval({
     autonomyLevel: "L4",
     action: "x",
-    output: captureOutput().stream
+    output: captureOutput().stream,
   });
   assert.equal(result.approved, false);
   assert.match(result.refused_reason, /requireExactPhrase/);
@@ -211,11 +221,14 @@ test("L5 always refuses from the shell, regardless of input", async () => {
       autonomyLevel: "L5",
       action: "git push --force",
       input: inputFrom(text),
-      output: captureOutput().stream
+      output: captureOutput().stream,
     });
     assert.equal(result.approved, false);
     assert.equal(result.mode, "refused");
-    assert.match(result.refused_reason, /L5 acts cannot be approved from the interactive shell/);
+    assert.match(
+      result.refused_reason,
+      /L5 acts cannot be approved from the interactive shell/,
+    );
   }
 });
 
@@ -226,18 +239,34 @@ test("unknown autonomy level returns refusal envelope (fail-closed, was throw)",
   // autonomy level on a safety boundary must NOT throw and MUST NOT
   // silently downgrade. Return a refusal envelope instead so the caller
   // logs a clear "Refused: ..." line and the task does not run.
-  for (const lvl of ["L99", "l4", "LEVEL4", "L10", "typo", "", null, undefined]) {
+  for (const lvl of [
+    "L99",
+    "l4",
+    "LEVEL4",
+    "L10",
+    "typo",
+    "",
+    null,
+    undefined,
+  ]) {
     const result = await requestApproval({ autonomyLevel: lvl, action: "x" });
-    assert.equal(result.approved, false, `expected refused for ${JSON.stringify(lvl)}`);
+    assert.equal(
+      result.approved,
+      false,
+      `expected refused for ${JSON.stringify(lvl)}`,
+    );
     assert.equal(result.mode, "refused");
-    assert.match(result.refused_reason, /Refused by default|autonomyLevel|required/);
+    assert.match(
+      result.refused_reason,
+      /Refused by default|autonomyLevel|required/,
+    );
   }
 });
 
 test("missing action throws", async () => {
   await assert.rejects(
     () => requestApproval({ autonomyLevel: "L0" }),
-    /action.*required/
+    /action.*required/,
   );
 });
 
@@ -248,9 +277,17 @@ test("CLI: dema task downloads.audit.preview (L0/L1) runs without firing gate", 
   const demaRoot = await mkdtemp(join(tmpdir(), "dema-gate-home-"));
   await writeFile(join(downloadsRoot, "alpha.txt"), "hello\n");
 
-  const { stdout } = await execFileAsync("node", [cliPath, "task", "downloads.audit.preview"], {
-    env: { ...process.env, DEMA_DOWNLOADS_ROOT: downloadsRoot, DEMA_HOME: demaRoot }
-  });
+  const { stdout } = await execFileAsync(
+    "node",
+    [cliPath, "task", "downloads.audit.preview"],
+    {
+      env: {
+        ...process.env,
+        DEMA_DOWNLOADS_ROOT: downloadsRoot,
+        DEMA_HOME: demaRoot,
+      },
+    },
+  );
   // No "Refused:" or "Approve task" line — gate did not fire.
   assert.doesNotMatch(stdout, /Approve task/);
   assert.doesNotMatch(stdout, /^Refused:/m);
@@ -262,7 +299,7 @@ test("CLI: dema task downloads.audit.preview (L0/L1) runs without firing gate", 
 test("approval envelope is schema-tagged with decided_at timestamp", async () => {
   const result = await requestApproval({
     autonomyLevel: "L0",
-    action: "x"
+    action: "x",
   });
   assert.equal(result.schema, APPROVAL_SCHEMA);
   assert.match(result.decided_at, /^\d{4}-\d{2}-\d{2}T/);

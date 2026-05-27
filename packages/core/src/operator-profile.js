@@ -1,5 +1,5 @@
 import { readFile, writeFile, rename, mkdir, readdir } from "node:fs/promises";
-import { join, dirname, basename } from "node:path";
+import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 
 // Stricter than homebase-gather's pickString: empty string is treated as
@@ -40,26 +40,40 @@ export async function readOperatorLanguage(home = defaultDemaHome()) {
     try {
       data = JSON.parse(raw);
     } catch {
-      return { language_code: null, secondary_language_code: null, source: "malformed" };
+      return {
+        language_code: null,
+        secondary_language_code: null,
+        source: "malformed",
+      };
     }
     return {
-      language_code: pickIso639_1(data, "language_code") ?? pickIso639_1(data, "language"),
+      language_code:
+        pickIso639_1(data, "language_code") ?? pickIso639_1(data, "language"),
       secondary_language_code: pickIso639_1(data, "secondary_language_code"),
       source: "profile_json",
     };
   } catch {
-    return { language_code: null, secondary_language_code: null, source: "absent" };
+    return {
+      language_code: null,
+      secondary_language_code: null,
+      source: "absent",
+    };
   }
 }
 
-export async function writeGenesisPreviewCard({ home = defaultDemaHome(), card } = {}) {
+export async function writeGenesisPreviewCard({
+  home = defaultDemaHome(),
+  card,
+} = {}) {
   const stateDir = join(home, "state");
   await mkdir(stateDir, { recursive: true });
 
   // Derive a filename-safe ISO timestamp from card.candidate or card_storage.path
   let timestamp = "unknown";
   if (card?.card_storage?.path) {
-    const match = String(card.card_storage.path).match(/genesis-preview-(.+)\.json$/);
+    const match = String(card.card_storage.path).match(
+      /genesis-preview-(.+)\.json$/,
+    );
     if (match) timestamp = match[1];
   }
 
@@ -96,7 +110,11 @@ export async function readGenesisPreviewCards(home = defaultDemaHome()) {
   }
 }
 
-export async function writeOperatorLanguage({ home = defaultDemaHome(), language_code, secondary_language_code = null } = {}) {
+export async function writeOperatorLanguage({
+  home = defaultDemaHome(),
+  language_code,
+  secondary_language_code = null,
+} = {}) {
   const profilePath = join(home, "profile.json");
   const tmpPath = profilePath + ".tmp";
 
@@ -104,8 +122,14 @@ export async function writeOperatorLanguage({ home = defaultDemaHome(), language
   let existing = {};
   try {
     const raw = await readFile(profilePath, "utf8");
-    try { existing = JSON.parse(raw); } catch { /* malformed — overwrite */ }
-  } catch { /* absent — create */ }
+    try {
+      existing = JSON.parse(raw);
+    } catch {
+      /* malformed — overwrite */
+    }
+  } catch {
+    /* absent — create */
+  }
 
   const now = new Date().toISOString();
   const merged = Object.assign(
@@ -120,7 +144,7 @@ export async function writeOperatorLanguage({ home = defaultDemaHome(), language
     {
       language_code: language_code ?? null,
       secondary_language_code: secondary_language_code ?? null,
-    }
+    },
   );
 
   await mkdir(dirname(profilePath), { recursive: true });

@@ -16,26 +16,27 @@ const REQUIRED_BLOCKED_EFFECTS = Object.freeze([
   "cache_asset_outside_dema_home",
   "execute_runtime",
   "federation_invocation",
-  "publish_inventory_publicly"
+  "publish_inventory_publicly",
 ]);
 
 const ASSET_SURFACES = Object.freeze([
-  "BIZRA-ASSET", "cloud_storage", "github_repos", "test_suites",
-  "memory_entries", "receipts", "proof_of_priority"
+  "BIZRA-ASSET",
+  "cloud_storage",
+  "github_repos",
+  "test_suites",
+  "memory_entries",
+  "receipts",
+  "proof_of_priority",
 ]);
 
 const ACCESS_TIERS = Object.freeze({
   read_metadata_only: "list + hash · no content",
   read_with_redaction: "content returned with D3/D4 redacted",
-  read_full: "full content · explicit per-asset consent required"
+  read_full: "full content · explicit per-asset consent required",
 });
 
 function safeString(v, fallback = "") {
   return typeof v === "string" ? v : fallback;
-}
-
-function safeArray(v) {
-  return Array.isArray(v) ? v : [];
 }
 
 function safeNumber(v, fallback = 0) {
@@ -47,7 +48,7 @@ export function buildAssetAccessPreview({
   bizra_asset_size_gb = 0,
   cloud_storage_size_gb = 0,
   github_repos_count = 0,
-  total_tests = 0
+  total_tests = 0,
 } = {}) {
   return Object.freeze({
     schema: SCHEMA,
@@ -65,9 +66,9 @@ export function buildAssetAccessPreview({
       "Inventory is never modified · read-only access",
       "Assets are never ingested without operator consent",
       "Assets are never shared externally · local-only",
-      "Public inventory disclosure refused"
+      "Public inventory disclosure refused",
     ]),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -75,16 +76,21 @@ export function buildAssetAccessRequest({
   asset_id = "",
   asset_surface = "",
   access_tier = "read_metadata_only",
-  purpose = ""
+  purpose = "",
 } = {}) {
   const id = safeString(asset_id);
   const surface = safeString(asset_surface);
-  const tier = Object.keys(ACCESS_TIERS).includes(access_tier) ? access_tier : "read_metadata_only";
+  const tier = Object.keys(ACCESS_TIERS).includes(access_tier)
+    ? access_tier
+    : "read_metadata_only";
   const purposeSafe = safeString(purpose).trim();
 
   const violations = [];
   if (id.length === 0) violations.push("no_asset_id");
-  if (!ASSET_SURFACES.includes(surface)) violations.push(`invalid_asset_surface · expected one of ${ASSET_SURFACES.join(",")}`);
+  if (!ASSET_SURFACES.includes(surface))
+    violations.push(
+      `invalid_asset_surface · expected one of ${ASSET_SURFACES.join(",")}`,
+    );
   if (purposeSafe.length === 0) violations.push("no_purpose");
 
   const valid = violations.length === 0;
@@ -108,7 +114,7 @@ export function buildAssetAccessRequest({
     requires_typed_go: true,
     audit_trail_required: true,
     receipt_shape_ready: valid,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -124,7 +130,7 @@ export function buildAssetAccessSummary(options = {}) {
     total_tests: preview.total_tests,
     surface_count: preview.asset_surfaces.length,
     access_tier_count: Object.keys(preview.access_tiers).length,
-    boundary: preview.boundary
+    boundary: preview.boundary,
   });
 }
 

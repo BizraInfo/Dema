@@ -9,7 +9,7 @@ const POSITIVE_EVENT_TYPES = new Set([
   "blocker_reduced",
   "clean_replay",
   "no_mint_verification",
-  "release_readiness_clean"
+  "release_readiness_clean",
 ]);
 
 const NEGATIVE_EVENT_TYPES = new Set([
@@ -19,7 +19,7 @@ const NEGATIVE_EVENT_TYPES = new Set([
   "unauthorized_mint_attempt",
   "runtime_ambiguity",
   "unresolved_blocker",
-  "scope_contamination"
+  "scope_contamination",
 ]);
 
 const INVARIANT_BLOCKED_ACTIONS = Object.freeze([
@@ -29,7 +29,7 @@ const INVARIANT_BLOCKED_ACTIONS = Object.freeze([
   "receipt_mint",
   "capability_mint",
   "authorization_emit",
-  "step7_mint_without_exact_authorization"
+  "step7_mint_without_exact_authorization",
 ]);
 
 const NEXT_SAFE_ACTIONS = Object.freeze([
@@ -38,19 +38,19 @@ const NEXT_SAFE_ACTIONS = Object.freeze([
   "hold_step7_ceremony",
   "continue_preview_only_readiness",
   "reduce_noise_before_next_slice",
-  "continue_verified_micro_slice"
+  "continue_verified_micro_slice",
 ]);
 
 const STEP7_BLOCKER_KINDS = new Set([
   "step7_ready_unminted",
   "step7_unauthorized",
-  "step7_anchor_pending"
+  "step7_anchor_pending",
 ]);
 
 const NODE_BLOCKER_KINDS = new Set([
   "node_connection_blocked",
   "node1_connection_blocked",
-  "federation_blocked"
+  "federation_blocked",
 ]);
 
 const UNSAFE_BLOCKER_KINDS = new Set([
@@ -61,7 +61,7 @@ const UNSAFE_BLOCKER_KINDS = new Set([
   "runtime_blocked",
   "receipt_mint_blocked",
   "capability_mint_blocked",
-  "unauthorized_mint_attempt"
+  "unauthorized_mint_attempt",
 ]);
 
 const PROOF_SIGNAL_STATUSES = new Set([
@@ -71,7 +71,7 @@ const PROOF_SIGNAL_STATUSES = new Set([
   "blocked",
   "pending",
   "failed",
-  "missing"
+  "missing",
 ]);
 
 const PASSING_PROOF_SIGNAL_STATUSES = new Set(["passed", "pass", "measured"]);
@@ -83,7 +83,8 @@ function clone(value) {
 }
 
 function deepFreeze(value) {
-  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  if (!value || typeof value !== "object" || Object.isFrozen(value))
+    return value;
   for (const child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
 }
@@ -102,10 +103,6 @@ function finiteNonNegative(value) {
 
 function finitePositiveInteger(value) {
   return Number.isInteger(value) && value > 0;
-}
-
-function finiteUnitNumber(value) {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1;
 }
 
 function normalizeProcessEvent(event) {
@@ -130,7 +127,7 @@ function rsiFromGainLoss(gain, loss) {
   if (gain === 0 && loss === 0) return 50;
   if (loss === 0 && gain > 0) return 100;
   if (gain === 0 && loss > 0) return 0;
-  return clamp(100 - (100 / (1 + (gain / loss))), 0, 100);
+  return clamp(100 - 100 / (1 + gain / loss), 0, 100);
 }
 
 function failMetric(schema, reason) {
@@ -140,7 +137,7 @@ function failMetric(schema, reason) {
     verdict: "PREVIEW_REJECT",
     score: null,
     normalized_score: null,
-    reason
+    reason,
   };
 }
 
@@ -152,17 +149,20 @@ export function computeProcessRsi({ events, window = 14 } = {}) {
       events_considered: 0,
       proof_gain: null,
       proof_loss: null,
-      malformed_events: 1
+      malformed_events: 1,
     };
   }
   if (!finitePositiveInteger(window)) {
     return {
-      ...failMetric(PROCESS_RSI_PREVIEW_SCHEMA, "window_must_be_positive_integer"),
+      ...failMetric(
+        PROCESS_RSI_PREVIEW_SCHEMA,
+        "window_must_be_positive_integer",
+      ),
       window,
       events_considered: 0,
       proof_gain: null,
       proof_loss: null,
-      malformed_events: 0
+      malformed_events: 0,
     };
   }
 
@@ -176,7 +176,7 @@ export function computeProcessRsi({ events, window = 14 } = {}) {
       events_considered: consideredEvents.length,
       proof_gain: null,
       proof_loss: null,
-      malformed_events: malformedEvents
+      malformed_events: malformedEvents,
     };
   }
 
@@ -193,7 +193,7 @@ export function computeProcessRsi({ events, window = 14 } = {}) {
     events_considered: consideredEvents.length,
     proof_gain: round(proofGain, 4),
     proof_loss: round(proofLoss, 4),
-    malformed_events: 0
+    malformed_events: 0,
   };
 }
 
@@ -208,9 +208,12 @@ export function computeSNRValue({ signalEvents = [], noiseEvents = [] } = {}) {
   const noise = eventCount(noiseEvents);
   if (!signal.ok || !noise.ok) {
     return {
-      ...failMetric(PROCESS_SNR_PREVIEW_SCHEMA, "signal_and_noise_must_be_arrays_or_non_negative_counts"),
+      ...failMetric(
+        PROCESS_SNR_PREVIEW_SCHEMA,
+        "signal_and_noise_must_be_arrays_or_non_negative_counts",
+      ),
       signal_count: signal.count,
-      noise_count: noise.count
+      noise_count: noise.count,
     };
   }
 
@@ -223,7 +226,7 @@ export function computeSNRValue({ signalEvents = [], noiseEvents = [] } = {}) {
     score: round(score),
     signal_count: signal.count,
     noise_count: noise.count,
-    total_count: total
+    total_count: total,
   };
 }
 
@@ -233,27 +236,44 @@ function normalizeProofSignal(signal) {
   }
   const weight = signal.weight === undefined ? 1 : signal.weight;
   const status = typeof signal.status === "string" ? signal.status : null;
-  if (!finiteNonNegative(weight) || !status || !PROOF_SIGNAL_STATUSES.has(status)) {
+  if (
+    !finiteNonNegative(weight) ||
+    !status ||
+    !PROOF_SIGNAL_STATUSES.has(status)
+  ) {
     return { malformed: true, required: true, passed: false, weight: 0 };
   }
   return {
     malformed: false,
     required: signal.required !== false,
     passed: PASSING_PROOF_SIGNAL_STATUSES.has(status),
-    weight
+    weight,
   };
 }
 
 function computeProofCompleteness(proofSignals) {
   if (!Array.isArray(proofSignals)) {
-    return { score: null, malformed: true, required_weight: null, passed_weight: null };
+    return {
+      score: null,
+      malformed: true,
+      required_weight: null,
+      passed_weight: null,
+    };
   }
   const normalized = proofSignals.map(normalizeProofSignal);
   if (normalized.some((signal) => signal.malformed)) {
-    return { score: null, malformed: true, required_weight: null, passed_weight: null };
+    return {
+      score: null,
+      malformed: true,
+      required_weight: null,
+      passed_weight: null,
+    };
   }
   const required = normalized.filter((signal) => signal.required);
-  const requiredWeight = required.reduce((total, signal) => total + signal.weight, 0);
+  const requiredWeight = required.reduce(
+    (total, signal) => total + signal.weight,
+    0,
+  );
   const passedWeight = required
     .filter((signal) => signal.passed)
     .reduce((total, signal) => total + signal.weight, 0);
@@ -261,42 +281,57 @@ function computeProofCompleteness(proofSignals) {
     score: requiredWeight === 0 ? 0 : round(passedWeight / requiredWeight),
     malformed: false,
     required_weight: round(requiredWeight),
-    passed_weight: round(passedWeight)
+    passed_weight: round(passedWeight),
   };
 }
 
 function normalizeBlocker(blocker) {
   if (!blocker || typeof blocker !== "object" || Array.isArray(blocker)) {
-    return { malformed: true, kind: "unstructured_blocker", severity: "halt_gate" };
+    return {
+      malformed: true,
+      kind: "unstructured_blocker",
+      severity: "halt_gate",
+    };
   }
   const kind = typeof blocker.kind === "string" ? blocker.kind : null;
-  const severity = typeof blocker.severity === "string" ? blocker.severity : "review";
+  const severity =
+    typeof blocker.severity === "string" ? blocker.severity : "review";
   return {
     malformed: !kind || !BLOCKER_SEVERITIES.has(severity),
     kind: kind ?? "unstructured_blocker",
-    severity
+    severity,
   };
 }
 
 function normalizeBlockers(blockers) {
   if (!Array.isArray(blockers)) {
-    return { blockers: [{ malformed: true, kind: "unstructured_blocker", severity: "halt_gate" }], malformed: true };
+    return {
+      blockers: [
+        {
+          malformed: true,
+          kind: "unstructured_blocker",
+          severity: "halt_gate",
+        },
+      ],
+      malformed: true,
+    };
   }
   const normalized = blockers.map(normalizeBlocker);
   return {
     blockers: normalized,
-    malformed: normalized.some((blocker) => blocker.malformed)
+    malformed: normalized.some((blocker) => blocker.malformed),
   };
 }
 
 function computeIhsanSafety(normalizedBlockers) {
   if (normalizedBlockers.length === 0) return 1;
-  const unsafe = normalizedBlockers.filter((blocker) => (
-    blocker.malformed ||
-    blocker.severity === "halt_gate" ||
-    UNSAFE_BLOCKER_KINDS.has(blocker.kind)
-  )).length;
-  return round(1 - (unsafe / normalizedBlockers.length));
+  const unsafe = normalizedBlockers.filter(
+    (blocker) =>
+      blocker.malformed ||
+      blocker.severity === "halt_gate" ||
+      UNSAFE_BLOCKER_KINDS.has(blocker.kind),
+  ).length;
+  return round(1 - unsafe / normalizedBlockers.length);
 }
 
 function hasKind(blockers, kindSet) {
@@ -304,7 +339,10 @@ function hasKind(blockers, kindSet) {
 }
 
 function hasProcessEvent(processEvents, eventType) {
-  return Array.isArray(processEvents) && processEvents.some((event) => event?.type === eventType);
+  return (
+    Array.isArray(processEvents) &&
+    processEvents.some((event) => event?.type === eventType)
+  );
 }
 
 function normalizeNow(now) {
@@ -318,23 +356,33 @@ function normalizeNow(now) {
 function deriveState({ inputMalformed, blockers, processEvents }) {
   if (inputMalformed) return "preview_reject";
   if (hasProcessEvent(processEvents, "dirty_tree")) return "process_dirty";
-  if (hasKind(blockers, STEP7_BLOCKER_KINDS)) return "node0_proof_ready_step7_gated";
+  if (hasKind(blockers, STEP7_BLOCKER_KINDS))
+    return "node0_proof_ready_step7_gated";
   if (hasKind(blockers, NODE_BLOCKER_KINDS)) return "node_connection_gated";
   return "proof_process_preview";
 }
 
 function deriveRiskLevel({ inputMalformed, trueValueScore, blockers }) {
   if (inputMalformed) return "high";
-  if (blockers.some((blocker) => blocker.severity === "halt_gate")) return "medium";
+  if (blockers.some((blocker) => blocker.severity === "halt_gate"))
+    return "medium";
   if (trueValueScore === null || trueValueScore < 0.45) return "high";
   if (trueValueScore < 0.7) return "medium";
   return "low";
 }
 
-function deriveMomentum({ inputMalformed, processRsi, trueValueScore, blockers }) {
-  if (inputMalformed || processRsi.score === null || trueValueScore === null) return "unknown_rejected";
-  if (hasKind(blockers, STEP7_BLOCKER_KINDS) && processRsi.score >= 60) return "improving_but_gated";
-  if (processRsi.score >= 65 && trueValueScore >= 0.7 && blockers.length === 0) return "improving";
+function deriveMomentum({
+  inputMalformed,
+  processRsi,
+  trueValueScore,
+  blockers,
+}) {
+  if (inputMalformed || processRsi.score === null || trueValueScore === null)
+    return "unknown_rejected";
+  if (hasKind(blockers, STEP7_BLOCKER_KINDS) && processRsi.score >= 60)
+    return "improving_but_gated";
+  if (processRsi.score >= 65 && trueValueScore >= 0.7 && blockers.length === 0)
+    return "improving";
   if (processRsi.score < 45 || trueValueScore < 0.45) return "declining";
   return "stable";
 }
@@ -345,14 +393,18 @@ function deriveNextSafeAction({ inputMalformed, processState, snr }) {
   if (processState === "node0_proof_ready_step7_gated") {
     return "hold_step7_ceremony";
   }
-  if (snr.score !== null && snr.score < 0.5) return "reduce_noise_before_next_slice";
-  if (processState === "node_connection_gated") return "continue_preview_only_readiness";
+  if (snr.score !== null && snr.score < 0.5)
+    return "reduce_noise_before_next_slice";
+  if (processState === "node_connection_gated")
+    return "continue_preview_only_readiness";
   return "continue_verified_micro_slice";
 }
 
 function reasonFor({ processState, inputMalformed }) {
-  if (inputMalformed) return "One or more inputs were malformed; preview rejects instead of inventing value.";
-  if (processState === "process_dirty") return "Dirty scope makes append-only or gated ceremonies unsafe.";
+  if (inputMalformed)
+    return "One or more inputs were malformed; preview rejects instead of inventing value.";
+  if (processState === "process_dirty")
+    return "Dirty scope makes append-only or gated ceremonies unsafe.";
   if (processState === "node0_proof_ready_step7_gated") {
     return "Step 7 ceremony is held; no fresh exact operator authorization is observed by this preview.";
   }
@@ -362,7 +414,12 @@ function reasonFor({ processState, inputMalformed }) {
   return "Process evidence is summarized for review only; no authority is granted.";
 }
 
-function buildProcessHarness({ inputMalformed, processState, trueValueScore, nextSafeAction }) {
+function buildProcessHarness({
+  inputMalformed,
+  processState,
+  trueValueScore,
+  nextSafeAction,
+}) {
   const step7Held = processState === "node0_proof_ready_step7_gated";
   return deepFreeze({
     self_proactive_harness: {
@@ -370,16 +427,25 @@ function buildProcessHarness({ inputMalformed, processState, trueValueScore, nex
       recommended_micro_action: nextSafeAction,
       gates: [
         { gate: "malformed_inputs", pass: !inputMalformed },
-        { gate: "clean_baseline_before_ceremony", pass: processState !== "process_dirty" },
-        { gate: "step7_hold_boundary", pass: !step7Held || nextSafeAction === "hold_step7_ceremony" },
+        {
+          gate: "clean_baseline_before_ceremony",
+          pass: processState !== "process_dirty",
+        },
+        {
+          gate: "step7_hold_boundary",
+          pass: !step7Held || nextSafeAction === "hold_step7_ceremony",
+        },
         { gate: "node_connection_blocked", pass: true },
-        { gate: "runtime_boundary_closed", pass: true }
-      ]
+        { gate: "runtime_boundary_closed", pass: true },
+      ],
     },
     self_critique: {
       confidence: inputMalformed ? "rejected" : "bounded_preview",
-      limitation: "Scores summarize supplied evidence only; they are not receipts, authority, or runtime proof.",
-      weakest_link: inputMalformed ? "input_shape" : "external_evidence_not_examined_here"
+      limitation:
+        "Scores summarize supplied evidence only; they are not receipts, authority, or runtime proof.",
+      weakest_link: inputMalformed
+        ? "input_shape"
+        : "external_evidence_not_examined_here",
     },
     step7_hold_posture: {
       status: step7Held ? "HOLD" : "NOT_APPLICABLE",
@@ -387,13 +453,21 @@ function buildProcessHarness({ inputMalformed, processState, trueValueScore, nex
       authorization_observed_in_current_turn: false,
       authorization_phrase_emitted: false,
       receipt_mint_allowed_by_preview: false,
-      next_unblocked_condition: "fresh_current_operator_turn_plus_clean_baseline_plus_governed_ceremony"
+      next_unblocked_condition:
+        "fresh_current_operator_turn_plus_clean_baseline_plus_governed_ceremony",
     },
     micro_compliance: {
-      preview_only: true, deterministic: true, no_runtime: true, no_federation: true,
-      no_node_connection: true, no_receipt_mint: true, fail_closed_on_malformed_input: inputMalformed,
-      step7_hold_enforced: step7Held ? nextSafeAction === "hold_step7_ceremony" : true,
-      authorization_phrase_emitted: false
+      preview_only: true,
+      deterministic: true,
+      no_runtime: true,
+      no_federation: true,
+      no_node_connection: true,
+      no_receipt_mint: true,
+      fail_closed_on_malformed_input: inputMalformed,
+      step7_hold_enforced: step7Held
+        ? nextSafeAction === "hold_step7_ceremony"
+        : true,
+      authorization_phrase_emitted: false,
     },
     micro_consent: {
       preview_scope: "process_value_preview_only",
@@ -402,15 +476,17 @@ function buildProcessHarness({ inputMalformed, processState, trueValueScore, nex
       action_authorized_by_preview: false,
       future_step7_mint_requires_fresh_current_operator_turn: true,
       reusable_authorization_created: false,
-      broad_consent_allowed: false
+      broad_consent_allowed: false,
     },
     analogical_model: {
       model: "process_cockpit_not_engine",
-      mapping: "Like a flight instrument panel, this preview can show drift and next-safe vectors but cannot move the aircraft."
+      mapping:
+        "Like a flight instrument panel, this preview can show drift and next-safe vectors but cannot move the aircraft.",
     },
-    snr_interpretation: trueValueScore === null
-      ? "rejected_until_inputs_are_structured"
-      : "signal_is_actionable_only_when_boundaries_remain_closed"
+    snr_interpretation:
+      trueValueScore === null
+        ? "rejected_until_inputs_are_structured"
+        : "signal_is_actionable_only_when_boundaries_remain_closed",
   });
 }
 
@@ -418,12 +494,14 @@ export function buildTrueValuePreview({
   processEvents = [],
   proofSignals = [],
   blockers = [],
-  now = new Date()
+  now = new Date(),
 } = {}) {
   const checkedAt = normalizeNow(now);
   const processRsi = computeProcessRsi({ events: processEvents });
   const signalEvents = Array.isArray(proofSignals)
-    ? proofSignals.filter((signal) => PASSING_PROOF_SIGNAL_STATUSES.has(signal?.status))
+    ? proofSignals.filter((signal) =>
+        PASSING_PROOF_SIGNAL_STATUSES.has(signal?.status),
+      )
     : proofSignals;
   const noiseEvents = Array.isArray(processEvents)
     ? processEvents.filter((event) => NEGATIVE_EVENT_TYPES.has(event?.type))
@@ -445,19 +523,28 @@ export function buildTrueValuePreview({
   const trueValueScore = inputMalformed
     ? null
     : round(
-      (0.40 * snr.score) +
-      (0.25 * processRsi.normalized_score) +
-      (0.20 * proofCompleteness.score) +
-      (0.15 * ihsanSafety)
-    );
+        0.4 * snr.score +
+          0.25 * processRsi.normalized_score +
+          0.2 * proofCompleteness.score +
+          0.15 * ihsanSafety,
+      );
   const processState = deriveState({
     inputMalformed,
     blockers: normalizedBlockers.blockers,
-    processEvents
+    processEvents,
   });
-  const nextSafeAction = deriveNextSafeAction({ inputMalformed, processState, snr });
+  const nextSafeAction = deriveNextSafeAction({
+    inputMalformed,
+    processState,
+    snr,
+  });
   const blockedActions = Object.freeze(clone(INVARIANT_BLOCKED_ACTIONS));
-  const harness = buildProcessHarness({ inputMalformed, processState, trueValueScore, nextSafeAction });
+  const harness = buildProcessHarness({
+    inputMalformed,
+    processState,
+    trueValueScore,
+    nextSafeAction,
+  });
 
   return {
     schema: TRUE_VALUE_PREVIEW_SCHEMA,
@@ -469,13 +556,13 @@ export function buildTrueValuePreview({
     risk_level: deriveRiskLevel({
       inputMalformed,
       trueValueScore,
-      blockers: normalizedBlockers.blockers
+      blockers: normalizedBlockers.blockers,
     }),
     momentum: deriveMomentum({
       inputMalformed,
       processRsi,
       trueValueScore,
-      blockers: normalizedBlockers.blockers
+      blockers: normalizedBlockers.blockers,
     }),
     process_rsi: processRsi,
     snr,
@@ -488,24 +575,34 @@ export function buildTrueValuePreview({
     blocked_actions: blockedActions,
     reason: reasonFor({ processState, inputMalformed }),
     checks: [
-      { check: "process_rsi_valid", pass: processRsi.verdict !== "PREVIEW_REJECT" },
+      {
+        check: "process_rsi_valid",
+        pass: processRsi.verdict !== "PREVIEW_REJECT",
+      },
       { check: "snr_valid", pass: snr.verdict !== "PREVIEW_REJECT" },
       { check: "proof_completeness_valid", pass: !proofCompleteness.malformed },
       { check: "blockers_structured", pass: !normalizedBlockers.malformed },
       { check: "checked_at_valid", pass: !checkedAt.malformed },
-      { check: "next_safe_action_allowlisted", pass: NEXT_SAFE_ACTIONS.includes(nextSafeAction) },
-      { check: "blocked_actions_invariant", pass: INVARIANT_BLOCKED_ACTIONS.every((action) => (
-        blockedActions.includes(action)
-      )) },
+      {
+        check: "next_safe_action_allowlisted",
+        pass: NEXT_SAFE_ACTIONS.includes(nextSafeAction),
+      },
+      {
+        check: "blocked_actions_invariant",
+        pass: INVARIANT_BLOCKED_ACTIONS.every((action) =>
+          blockedActions.includes(action),
+        ),
+      },
       {
         check: "step7_hold_boundary",
-        pass: processState !== "node0_proof_ready_step7_gated" || (
-          nextSafeAction === "hold_step7_ceremony" &&
-          harness.step7_hold_posture.status === "HOLD" &&
-          harness.step7_hold_posture.authorization_phrase_emitted === false &&
-          harness.step7_hold_posture.receipt_mint_allowed_by_preview === false
-        )
-      }
+        pass:
+          processState !== "node0_proof_ready_step7_gated" ||
+          (nextSafeAction === "hold_step7_ceremony" &&
+            harness.step7_hold_posture.status === "HOLD" &&
+            harness.step7_hold_posture.authorization_phrase_emitted === false &&
+            harness.step7_hold_posture.receipt_mint_allowed_by_preview ===
+              false),
+      },
     ],
     boundary: {
       runtime_started: false,
@@ -517,8 +614,8 @@ export function buildTrueValuePreview({
       step7_authorization_observed: false,
       filesystem_write_performed: false,
       process_modified: false,
-      push_performed: false
+      push_performed: false,
     },
-    note: "Process Value Preview ranks process health for review only. It does not authorize mint, federation, node connection, runtime execution, or recursive self-modification."
+    note: "Process Value Preview ranks process health for review only. It does not authorize mint, federation, node connection, runtime execution, or recursive self-modification.",
   };
 }

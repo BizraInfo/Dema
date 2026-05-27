@@ -11,18 +11,19 @@ import {
   renderHelpTopic,
   renderHelpCommand,
   renderHelpFlat,
-  renderHelpUnknown,
 } from "../packages/core/src/help-topics.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CLI_SRC = readFileSync(
   join(__dirname, "..", "apps", "cli", "src", "index.js"),
-  "utf8"
+  "utf8",
 );
 
 // Extract all top-level dispatch cases from the CLI source.
 function extractDispatchCases(source) {
-  const cases = [...source.matchAll(/case\s+"([a-zA-Z][\w:-]*)"\s*:/g)].map((m) => m[1]);
+  const cases = [...source.matchAll(/case\s+"([a-zA-Z][\w:-]*)"\s*:/g)].map(
+    (m) => m[1],
+  );
   return new Set(cases);
 }
 
@@ -67,7 +68,10 @@ test("renderHelpTopic('readiness') returns string containing 'status' and 'docto
 test("renderHelpTopic returns string for every declared topic", () => {
   for (const slug of TOPIC_SLUGS) {
     const out = renderHelpTopic(slug);
-    assert.ok(typeof out === "string" && out.length > 0, `renderHelpTopic(${slug}) returned null`);
+    assert.ok(
+      typeof out === "string" && out.length > 0,
+      `renderHelpTopic(${slug}) returned null`,
+    );
   }
 });
 
@@ -137,7 +141,11 @@ test("every top-level command in HELP_TOPICS has a dispatch case in the CLI", ()
       }
     }
   }
-  assert.deepEqual(missing, [], `HELP_TOPICS entries with no dispatch case: ${missing.join("; ")}`);
+  assert.deepEqual(
+    missing,
+    [],
+    `HELP_TOPICS entries with no dispatch case: ${missing.join("; ")}`,
+  );
 });
 
 test("topic see_also references only valid topic slugs", () => {
@@ -165,7 +173,11 @@ test("every related reference in COMMAND_DETAIL has a dispatch case in the CLI",
       }
     }
   }
-  assert.deepEqual(missing, [], `COMMAND_DETAIL.related entries missing from dispatch: ${missing.join("; ")}`);
+  assert.deepEqual(
+    missing,
+    [],
+    `COMMAND_DETAIL.related entries missing from dispatch: ${missing.join("; ")}`,
+  );
 });
 
 // ── Deep-frozen adversarial ───────────────────────────────────────────────────

@@ -11,7 +11,10 @@
 // Per Key Maker discipline: every claim PAT-1 makes about its role is
 // schema-tagged and frozen · the persona is canon-as-data.
 
-import { buildAgentKernel, AGENT_STATES, AGENT_KERNEL_MAX_ITERATIONS } from "./agent-kernel.js";
+import {
+  buildAgentKernel,
+  AGENT_KERNEL_MAX_ITERATIONS,
+} from "./agent-kernel.js";
 import { buildEffectCap } from "./effect-cap.js";
 import { buildPreviewBoundary } from "./preview-boundary.js";
 
@@ -30,7 +33,7 @@ const PAT1_PERSONA = Object.freeze({
     "intent_capture",
     "proposal_drafting",
     "consent_phrase_authoring",
-    "mission_scope_naming"
+    "mission_scope_naming",
   ]),
   primary_refusals: Object.freeze([
     "execute_runtime",
@@ -38,21 +41,20 @@ const PAT1_PERSONA = Object.freeze({
     "advance_chain",
     "connect_external_nodes",
     "approve_consent_on_behalf_of_operator",
-    "infer_consent_from_implicit_signals"
-  ])
+    "infer_consent_from_implicit_signals",
+  ]),
 });
 
-const PAT1_EFFECT_CAP_ALLOWED = Object.freeze([
-  "render_terminal_output"
-]);
+const PAT1_EFFECT_CAP_ALLOWED = Object.freeze(["render_terminal_output"]);
 
 const PAT1_EFFECT_CAP_EXTRA_BLOCKED = Object.freeze([
   "approve_consent_on_behalf_of_operator",
   "fuzzy_match_consent_phrase",
-  "auto_approve_proposal"
+  "auto_approve_proposal",
 ]);
 
-const PAT1_CONSENT_PHRASE_TEMPLATE = "GO: invoke PAT-1 mission_scribe to draft proposal";
+const PAT1_CONSENT_PHRASE_TEMPLATE =
+  "GO: invoke PAT-1 mission_scribe to draft proposal";
 
 function safeString(v, fallback = "") {
   return typeof v === "string" ? v : fallback;
@@ -66,7 +68,7 @@ export function buildPATMissionScribeEffectCap() {
     allowed_effects: PAT1_EFFECT_CAP_ALLOWED,
     blocked_effects: PAT1_EFFECT_CAP_EXTRA_BLOCKED,
     consent_scope_template: PAT1_CONSENT_PHRASE_TEMPLATE,
-    audit_trail_required: true
+    audit_trail_required: true,
   });
 }
 
@@ -86,19 +88,22 @@ export function buildPATMissionScribePreview({ operator_name = "Mumu" } = {}) {
       "PAT-1 never executes runtime · only drafts",
       "PAT-1 never mints receipts · only suggests proposal shapes",
       "PAT-1 never advances chain · only emits proposal-shape objects",
-      "PAT-1 never approves consent · only authors consent phrases for operator review"
+      "PAT-1 never approves consent · only authors consent phrases for operator review",
     ]),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
 // PAT-1's kernel · pre-configured for the mission_scribe role.
-export function buildPATMissionScribeKernel({ mission_intent = "", max_iterations = AGENT_KERNEL_MAX_ITERATIONS } = {}) {
+export function buildPATMissionScribeKernel({
+  mission_intent = "",
+  max_iterations = AGENT_KERNEL_MAX_ITERATIONS,
+} = {}) {
   return buildAgentKernel({
     agent_id: PAT1_PERSONA.pat_id,
     agent_role: "pat_mission_scribe",
     mission_intent: safeString(mission_intent, ""),
-    max_iterations
+    max_iterations,
   });
 }
 
@@ -121,34 +126,40 @@ export function draftMissionProposal({
     "mint_receipts",
     "advance_chain",
     "federation_invocation",
-    "connect_external_nodes"
-  ]
+    "connect_external_nodes",
+  ],
 } = {}) {
   const intent = safeString(operator_intent, "").trim();
   const allowed = Array.isArray(suggested_allowed_effects)
-    ? suggested_allowed_effects.filter((e) => typeof e === "string" && e.length > 0)
+    ? suggested_allowed_effects.filter(
+        (e) => typeof e === "string" && e.length > 0,
+      )
     : [];
   const blocked = Array.isArray(always_blocked_effects)
-    ? always_blocked_effects.filter((e) => typeof e === "string" && e.length > 0)
+    ? always_blocked_effects.filter(
+        (e) => typeof e === "string" && e.length > 0,
+      )
     : [];
 
-  const normalizedScope = intent.length > 0
-    ? intent.split(/\s+/).filter(Boolean).slice(0, 8).join(" ")
-    : "<empty-intent>";
+  const normalizedScope =
+    intent.length > 0
+      ? intent.split(/\s+/).filter(Boolean).slice(0, 8).join(" ")
+      : "<empty-intent>";
 
   // Compute proposal-specific consent phrase
-  const proposalConsentPhrase = intent.length > 0
-    ? `GO: act on proposal '${normalizedScope}'`
-    : "GO: act on proposal '<empty>'";
+  const proposalConsentPhrase =
+    intent.length > 0
+      ? `GO: act on proposal '${normalizedScope}'`
+      : "GO: act on proposal '<empty>'";
 
   // Validation
   const valid = intent.length > 0 && allowed.length > 0 && blocked.length > 0;
   const refusal_reason = !valid
-    ? (intent.length === 0
-        ? "empty_intent · cannot draft proposal"
-        : allowed.length === 0
-          ? "no_allowed_effects · proposal would have nothing to do"
-          : "no_blocked_effects · proposal must declare what it will NOT do")
+    ? intent.length === 0
+      ? "empty_intent · cannot draft proposal"
+      : allowed.length === 0
+        ? "no_allowed_effects · proposal would have nothing to do"
+        : "no_blocked_effects · proposal must declare what it will NOT do"
     : null;
 
   return Object.freeze({
@@ -168,7 +179,7 @@ export function draftMissionProposal({
     refusal_reason,
     audit_trail_required: true,
     receipt_shape_ready: valid,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -188,11 +199,12 @@ export function buildPATMissionScribeSummary(options = {}) {
     refusal_count: preview.persona.primary_refusals.length,
     consent_phrase_template: preview.consent_phrase_template,
     memory_file_path: preview.memory_file_path,
-    boundary: preview.boundary
+    boundary: preview.boundary,
   });
 }
 
 export const PAT_MISSION_SCRIBE_SCHEMA_NAME = SCHEMA;
 export const PAT_MISSION_SCRIBE_PROPOSAL_SCHEMA_NAME = PROPOSAL_SCHEMA;
-export const PAT_MISSION_SCRIBE_CONSENT_PHRASE_TEMPLATE = PAT1_CONSENT_PHRASE_TEMPLATE;
+export const PAT_MISSION_SCRIBE_CONSENT_PHRASE_TEMPLATE =
+  PAT1_CONSENT_PHRASE_TEMPLATE;
 export const PAT_MISSION_SCRIBE_PERSONA = PAT1_PERSONA;

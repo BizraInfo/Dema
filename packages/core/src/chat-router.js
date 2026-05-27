@@ -7,14 +7,30 @@ import { suggestCommands } from "./command-suggester.js";
 
 // Tokens stripped before concept/command matching.
 const STOPWORDS = new Set([
-  "what", "is", "about", "me", "the", "a", "an", "tell", "show",
-  "explain", "help", "do", "does", "are", "how", "why", "when",
-  "who", "where", "can", "i"
+  "what",
+  "is",
+  "about",
+  "me",
+  "the",
+  "a",
+  "an",
+  "tell",
+  "show",
+  "explain",
+  "help",
+  "do",
+  "does",
+  "are",
+  "how",
+  "why",
+  "when",
+  "who",
+  "where",
+  "can",
+  "i",
 ]);
 
-const GREETING_WORDS = new Set([
-  "hi", "hello", "hey", "salam", "salaam"
-]);
+const GREETING_WORDS = new Set(["hi", "hello", "hey", "salam", "salaam"]);
 
 // Top-level tokens the shell's dispatchCommand accepts (mirrors index.js).
 const SHELL_REGISTERED_COMMANDS = [
@@ -26,17 +42,35 @@ const SHELL_REGISTERED_COMMANDS = [
   { command: "mission-loop", description: "full mission lifecycle preview" },
   { command: "evidence-event", description: "evidence chain event preview" },
   { command: "node-registry", description: "node ordinal registry preview" },
-  { command: "onboarding-lifecycle", description: "onboarding lifecycle preview" },
-  { command: "skill-growth-governor", description: "skill growth governor preview" },
+  {
+    command: "onboarding-lifecycle",
+    description: "onboarding lifecycle preview",
+  },
+  {
+    command: "skill-growth-governor",
+    description: "skill growth governor preview",
+  },
   { command: "project-status", description: "project status preview" },
-  { command: "craftsmanship-witness", description: "master-craftsmanship creation preview" },
+  {
+    command: "craftsmanship-witness",
+    description: "master-craftsmanship creation preview",
+  },
   { command: "llm-router", description: "local LLM router preview" },
   { command: "process-mining", description: "operator-pattern mirror" },
-  { command: "key-maker-check", description: "self-audit reasoning against Key Maker invariants" },
-  { command: "llm-invoke", description: "local LLM adapter (preview or live call)" },
+  {
+    command: "key-maker-check",
+    description: "self-audit reasoning against Key Maker invariants",
+  },
+  {
+    command: "llm-invoke",
+    description: "local LLM adapter (preview or live call)",
+  },
   { command: "today", description: "record a local continuity tick" },
   { command: "doctor", description: "validate readiness and consent gate" },
-  { command: "ambient", description: "show Ambient Sovereign Execution boundary" },
+  {
+    command: "ambient",
+    description: "show Ambient Sovereign Execution boundary",
+  },
   { command: "ambient:json", description: "ambient boundary as JSON" },
   { command: "diagnostics", description: "preview self-diagnostics harness" },
   { command: "consent", description: "preview a micro-consent scope" },
@@ -45,7 +79,10 @@ const SHELL_REGISTERED_COMMANDS = [
   { command: "memory", description: "list or show local memory entries" },
   { command: "models", description: "show local model inventory" },
   { command: "report", description: "preview safety report" },
-  { command: "network", description: "preview network blueprint or refusal matrix" },
+  {
+    command: "network",
+    description: "preview network blueprint or refusal matrix",
+  },
   { command: "amana", description: "preview Amana contract primitives" },
   { command: "mcp", description: "preview MCP integration contract" },
   { command: "roadmap", description: "preview optimization roadmap" },
@@ -58,12 +95,18 @@ const SHELL_REGISTERED_COMMANDS = [
   { command: "sovereign", description: "render Sovereign Mission Interface" },
   { command: "welcome", description: "show first-run orientation" },
   { command: "onboard", description: "guided onboarding path" },
-  { command: "explain", description: "plain-language definition of a BIZRA/Dema concept (28 known)" },
-  { command: "setup", description: "create local Dema folders/profile skeleton" },
+  {
+    command: "explain",
+    description: "plain-language definition of a BIZRA/Dema concept (28 known)",
+  },
+  {
+    command: "setup",
+    description: "create local Dema folders/profile skeleton",
+  },
   { command: "help", description: "show full command list" },
   { command: "chat", description: "interactive REPL shell" },
   { command: "exit", description: "leave the shell" },
-  { command: "quit", description: "leave the shell" }
+  { command: "quit", description: "leave the shell" },
 ];
 
 // Phrase sets for next-action intent detection (lowercase).
@@ -74,16 +117,28 @@ const NEXT_ACTION_PHRASES = [
   "whats next",
   "next action",
   "next safe task",
-  "next move"
+  "next move",
 ];
 
 // Dispatch-intent phrase → argv map. Checked left-to-right; first match wins.
 const DISPATCH_INTENT_MAP = [
-  { phrases: ["show my status", "show status", "status please"],         argv: ["status"] },
-  { phrases: ["show my receipts", "list receipts", "my receipts"],        argv: ["receipts"] },
-  { phrases: ["what models", "list my models", "show models"],            argv: ["models", "scan", "--summary"] },
-  { phrases: ["draft a mission", "help me draft a mission", "start a mission"], argv: ["mission", "draft"] },
-  { phrases: ["show my memory", "list memory"],                           argv: ["memory"] }
+  {
+    phrases: ["show my status", "show status", "status please"],
+    argv: ["status"],
+  },
+  {
+    phrases: ["show my receipts", "list receipts", "my receipts"],
+    argv: ["receipts"],
+  },
+  {
+    phrases: ["what models", "list my models", "show models"],
+    argv: ["models", "scan", "--summary"],
+  },
+  {
+    phrases: ["draft a mission", "help me draft a mission", "start a mission"],
+    argv: ["mission", "draft"],
+  },
+  { phrases: ["show my memory", "list memory"], argv: ["memory"] },
 ];
 
 /**
@@ -102,7 +157,7 @@ function routeChatInput(input, options = {}) {
     glossary = CANON_GLOSSARY,
     suggester = suggestCommands,
     registeredCommands = SHELL_REGISTERED_COMMANDS,
-    status = null
+    status = null,
   } = options;
 
   // Safely coerce input — never throw on weird types.
@@ -116,7 +171,7 @@ function routeChatInput(input, options = {}) {
     return {
       intent: "empty",
       response: "",
-      suggestedCommands: []
+      suggestedCommands: [],
     };
   }
 
@@ -125,7 +180,7 @@ function routeChatInput(input, options = {}) {
     return {
       intent: "unknown",
       response: _unknownResponse(normalized.split(/\s+/)[0]),
-      suggestedCommands: []
+      suggestedCommands: [],
     };
   }
 
@@ -143,9 +198,9 @@ function routeChatInput(input, options = {}) {
         "from local knowledge. Try:",
         "  dema explain dema    — what I am",
         "  dema help            — what I can do",
-        "  dema memory          — what I remember"
+        "  dema memory          — what I remember",
       ].join("\n"),
-      suggestedCommands: ["dema explain dema", "dema help", "dema memory"]
+      suggestedCommands: ["dema explain dema", "dema help", "dema memory"],
     };
   }
 
@@ -157,7 +212,7 @@ function routeChatInput(input, options = {}) {
       return {
         intent: "registered-command",
         response: `Dispatching \`${firstContent}\`.`,
-        suggestedCommands: [`dema ${firstContent}`]
+        suggestedCommands: [`dema ${firstContent}`],
       };
     }
   }
@@ -169,7 +224,11 @@ function routeChatInput(input, options = {}) {
       return {
         intent: "next-action",
         response: _nextActionResponse(status),
-        suggestedCommands: ["dema doctor", "dema today", "dema explain artifact-011"]
+        suggestedCommands: [
+          "dema doctor",
+          "dema today",
+          "dema explain artifact-011",
+        ],
       };
     }
   }
@@ -182,7 +241,7 @@ function routeChatInput(input, options = {}) {
           intent: "dispatch-intent",
           response: "",
           dispatchCommand: entry.argv,
-          suggestedCommands: [`dema ${entry.argv.join(" ")}`]
+          suggestedCommands: [`dema ${entry.argv.join(" ")}`],
         };
       }
     }
@@ -198,7 +257,10 @@ function routeChatInput(input, options = {}) {
         intent: "concept-match",
         concept: key,
         response: _conceptResponse(entry),
-        suggestedCommands: [`dema explain ${key}`, `dema memory show ${key}-context`]
+        suggestedCommands: [
+          `dema explain ${key}`,
+          `dema memory show ${key}-context`,
+        ],
       };
     }
   }
@@ -207,11 +269,10 @@ function routeChatInput(input, options = {}) {
   if (firstContent) {
     const closeResult = suggester(firstContent, registeredCommands);
     if (closeResult.matched === "close") {
-      const topCommand = closeResult.suggestions[0].command;
       const lines = [
         `I don't have a \`${firstContent}\` command.`,
         "",
-        "Did you mean:"
+        "Did you mean:",
       ];
       for (const s of closeResult.suggestions) {
         lines.push(`  - dema ${s.command.padEnd(30)} — ${s.description}`);
@@ -220,7 +281,9 @@ function routeChatInput(input, options = {}) {
       return {
         intent: "command-suggestion",
         response: lines.join("\n"),
-        suggestedCommands: closeResult.suggestions.map((s) => `dema ${s.command}`)
+        suggestedCommands: closeResult.suggestions.map(
+          (s) => `dema ${s.command}`,
+        ),
       };
     }
   }
@@ -229,18 +292,22 @@ function routeChatInput(input, options = {}) {
   return {
     intent: "unknown",
     response: _unknownResponse(firstToken || normalized),
-    suggestedCommands: []
+    suggestedCommands: [],
   };
 }
 
 function _nextActionResponse(status) {
   const gate = status?.activationGate ?? "BLOCKED";
-  const findings = Array.isArray(status?.findings) ? status.findings : ["Node0 adapter not connected"];
+  const findings = Array.isArray(status?.findings)
+    ? status.findings
+    : ["Node0 adapter not connected"];
   const failCount = findings.length;
-  const readinessLine = gate === "BLOCKED"
-    ? `Node0 readiness: BLOCKED (${failCount} predicate${failCount === 1 ? "" : "s"} failing)`
-    : `Node0 readiness: ${gate}`;
-  const nextAction = status?.nextAdmissibleAction ?? "bounded_diagnostic_activation";
+  const readinessLine =
+    gate === "BLOCKED"
+      ? `Node0 readiness: BLOCKED (${failCount} predicate${failCount === 1 ? "" : "s"} failing)`
+      : `Node0 readiness: ${gate}`;
+  const nextAction =
+    status?.nextAdmissibleAction ?? "bounded_diagnostic_activation";
 
   return [
     "> Your next safe action:",
@@ -252,7 +319,7 @@ function _nextActionResponse(status) {
     "  Suggested next step:",
     "    dema doctor    — see exactly what's blocking",
     "    dema today     — record a continuity tick",
-    "    dema explain artifact-011  — learn what comes next"
+    "    dema explain artifact-011  — learn what comes next",
   ].join("\n");
 }
 
@@ -263,7 +330,7 @@ function _conceptResponse(entry) {
     `> dema explain ${entry.concept}`,
     `${entry.title}`,
     `  ${entry.short}`,
-    ""
+    "",
   ];
 
   if (entry.see_also && entry.see_also.length > 0) {
@@ -277,7 +344,7 @@ function _conceptResponse(entry) {
   lines.push(
     "If you want more, type:",
     `  dema explain ${entry.concept}   — the canonical definition`,
-    `  dema memory show ${entry.concept}-context   — operator memory about ${entry.title}`
+    `  dema memory show ${entry.concept}-context   — operator memory about ${entry.title}`,
   );
   return lines.join("\n");
 }
@@ -289,8 +356,15 @@ function _unknownResponse(token) {
     "I couldn't match it to a command or to a BIZRA concept. You can browse:",
     "  dema explain    — list known concepts",
     "  dema help       — list known commands",
-    "  dema memory     — list local memory entries"
+    "  dema memory     — list local memory entries",
   ].join("\n");
 }
 
-export { routeChatInput, STOPWORDS, GREETING_WORDS, SHELL_REGISTERED_COMMANDS, NEXT_ACTION_PHRASES, DISPATCH_INTENT_MAP };
+export {
+  routeChatInput,
+  STOPWORDS,
+  GREETING_WORDS,
+  SHELL_REGISTERED_COMMANDS,
+  NEXT_ACTION_PHRASES,
+  DISPATCH_INTENT_MAP,
+};

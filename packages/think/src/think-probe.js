@@ -6,7 +6,6 @@ import {
   buildThinkReceipt,
   saveThinkReceipt,
   THINK_RECEIPT_SAVE_CONSENT,
-  THINK_RECEIPT_SCHEMA,
 } from "./think-receipt-save.js";
 
 const SCHEMA = "bizra.dema.think_probe.v0.1";

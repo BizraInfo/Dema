@@ -1,14 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, writeFile, readFile, readdir } from "node:fs/promises";
+import { mkdtemp, readFile, readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 const SAVE_RECEIPT_CONSENT = "GO: save local model route receipt";
 const SAVE_INVOCATION_CONSENT = "GO: save local model invocation result";
 
@@ -18,16 +20,23 @@ function runCli(args, { stdin = null, env = {}, timeout = 10000 } = {}) {
       "node",
       [cliPath, ...args],
       {
-        env: { ...process.env, DEMA_BANNER_INTERACTIVE: "0", NODE_ENV: "test", ...env },
-        timeout
+        env: {
+          ...process.env,
+          DEMA_BANNER_INTERACTIVE: "0",
+          NODE_ENV: "test",
+          ...env,
+        },
+        timeout,
       },
       (err, stdout, stderr) => {
         if (err && err.killed) {
-          reject(new Error(`Process timed out. stdout=${stdout} stderr=${stderr}`));
+          reject(
+            new Error(`Process timed out. stdout=${stdout} stderr=${stderr}`),
+          );
           return;
         }
         resolve({ stdout, stderr, exitCode: err?.code ?? 0 });
-      }
+      },
     );
     if (stdin !== null) child.stdin.write(stdin);
     child.stdin.end();
@@ -49,25 +58,44 @@ async function makeDemaHome() {
 // will be null. Saving still works because the envelope itself is well-formed.
 function placeholderInvokeArgs() {
   return [
-    "model-broker", "route", "--task", "synthesis",
-    "--save-receipt", "--consent", SAVE_RECEIPT_CONSENT,
-    "--invoke", "--prompt", "hello",
-    "--invoke-consent", "GO: invoke local LLM at anything"
+    "model-broker",
+    "route",
+    "--task",
+    "synthesis",
+    "--save-receipt",
+    "--consent",
+    SAVE_RECEIPT_CONSENT,
+    "--invoke",
+    "--prompt",
+    "hello",
+    "--invoke-consent",
+    "GO: invoke local LLM at anything",
   ];
 }
 
 test("'--save-invocation-result' with valid consent writes file under $DEMA_HOME/receipts/invocation-<hash>.json", async () => {
   const home = await makeDemaHome();
   const { exitCode } = await runCli(
-    [...placeholderInvokeArgs(), "--save-invocation-result", "--save-invocation-consent", SAVE_INVOCATION_CONSENT],
-    { env: { DEMA_HOME: home } }
+    [
+      ...placeholderInvokeArgs(),
+      "--save-invocation-result",
+      "--save-invocation-consent",
+      SAVE_INVOCATION_CONSENT,
+    ],
+    { env: { DEMA_HOME: home } },
   );
   // Exit code may be non-zero because the underlying invocation has no
   // selected model (placeholder discipline); save still happens.
   assert.notEqual(exitCode, 0);
   const files = await readdir(join(home, "receipts"));
-  const invocationFiles = files.filter((f) => f.startsWith("invocation-") && f.endsWith(".json"));
-  assert.equal(invocationFiles.length, 1, `expected 1 invocation file; got ${invocationFiles.length}: ${files.join(",")}`);
+  const invocationFiles = files.filter(
+    (f) => f.startsWith("invocation-") && f.endsWith(".json"),
+  );
+  assert.equal(
+    invocationFiles.length,
+    1,
+    `expected 1 invocation file; got ${invocationFiles.length}: ${files.join(",")}`,
+  );
   assert.match(invocationFiles[0], /^invocation-[a-f0-9]{64}\.json$/);
 });
 
@@ -75,7 +103,7 @@ test("'--save-invocation-result' without --save-invocation-consent exits non-zer
   const home = await makeDemaHome();
   const { stderr, exitCode } = await runCli(
     [...placeholderInvokeArgs(), "--save-invocation-result"],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /requires --save-invocation-consent/);
@@ -85,8 +113,13 @@ test("'--save-invocation-result' without --save-invocation-consent exits non-zer
 test("'--save-invocation-result' with wrong consent exits non-zero with consent_mismatch", async () => {
   const home = await makeDemaHome();
   const { stderr, exitCode } = await runCli(
-    [...placeholderInvokeArgs(), "--save-invocation-result", "--save-invocation-consent", "wrong phrase"],
-    { env: { DEMA_HOME: home } }
+    [
+      ...placeholderInvokeArgs(),
+      "--save-invocation-result",
+      "--save-invocation-consent",
+      "wrong phrase",
+    ],
+    { env: { DEMA_HOME: home } },
   );
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /consent phrase mismatch/);
@@ -95,21 +128,36 @@ test("'--save-invocation-result' with wrong consent exits non-zero with consent_
 test("with valid consent, stdout still emits parseable envelope JSON (unchanged behavior)", async () => {
   const home = await makeDemaHome();
   const { stdout } = await runCli(
-    [...placeholderInvokeArgs(), "--save-invocation-result", "--save-invocation-consent", SAVE_INVOCATION_CONSENT],
-    { env: { DEMA_HOME: home } }
+    [
+      ...placeholderInvokeArgs(),
+      "--save-invocation-result",
+      "--save-invocation-consent",
+      SAVE_INVOCATION_CONSENT,
+    ],
+    { env: { DEMA_HOME: home } },
   );
   const envelope = JSON.parse(stdout);
-  assert.equal(envelope.schema, "bizra.dema.local_model_routed_invocation_result.v0.1");
+  assert.equal(
+    envelope.schema,
+    "bizra.dema.local_model_routed_invocation_result.v0.1",
+  );
 });
 
 test("with valid consent, saved invocation file matches stdout byte-for-byte", async () => {
   const home = await makeDemaHome();
   const { stdout } = await runCli(
-    [...placeholderInvokeArgs(), "--save-invocation-result", "--save-invocation-consent", SAVE_INVOCATION_CONSENT],
-    { env: { DEMA_HOME: home } }
+    [
+      ...placeholderInvokeArgs(),
+      "--save-invocation-result",
+      "--save-invocation-consent",
+      SAVE_INVOCATION_CONSENT,
+    ],
+    { env: { DEMA_HOME: home } },
   );
   const files = await readdir(join(home, "receipts"));
-  const invocationFile = files.find((f) => f.startsWith("invocation-") && f.endsWith(".json"));
+  const invocationFile = files.find(
+    (f) => f.startsWith("invocation-") && f.endsWith(".json"),
+  );
   assert.ok(invocationFile, "expected invocation file");
   const onDisk = await readFile(join(home, "receipts", invocationFile), "utf8");
   assert.equal(onDisk, stdout, "on-disk file must match stdout byte-for-byte");
@@ -121,8 +169,13 @@ test("with valid consent, saved invocation file matches stdout byte-for-byte", a
 test("with valid consent, stderr contains 'saved invocation result to:' info line", async () => {
   const home = await makeDemaHome();
   const { stderr } = await runCli(
-    [...placeholderInvokeArgs(), "--save-invocation-result", "--save-invocation-consent", SAVE_INVOCATION_CONSENT],
-    { env: { DEMA_HOME: home } }
+    [
+      ...placeholderInvokeArgs(),
+      "--save-invocation-result",
+      "--save-invocation-consent",
+      SAVE_INVOCATION_CONSENT,
+    ],
+    { env: { DEMA_HOME: home } },
   );
   assert.match(stderr, /saved invocation result to:/);
   assert.match(stderr, new RegExp(home.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
@@ -145,38 +198,57 @@ test("failed invocation envelope is STILL saved (auditability for both success a
         allowed_tasks: ["synthesis"],
         max_concurrency: 1,
         context_limit: 8192,
-        status: "active"
-      }
-    ]
+        status: "active",
+      },
+    ],
   });
   const { stdout, exitCode } = await runCli(
     [
-      "model-broker", "route", "--task", "synthesis",
+      "model-broker",
+      "route",
+      "--task",
+      "synthesis",
       "--registry-stdin",
-      "--save-receipt", "--consent", SAVE_RECEIPT_CONSENT,
-      "--invoke", "--prompt", "hello",
-      "--invoke-consent", "definitely wrong phrase",
-      "--save-invocation-result", "--save-invocation-consent", SAVE_INVOCATION_CONSENT
+      "--save-receipt",
+      "--consent",
+      SAVE_RECEIPT_CONSENT,
+      "--invoke",
+      "--prompt",
+      "hello",
+      "--invoke-consent",
+      "definitely wrong phrase",
+      "--save-invocation-result",
+      "--save-invocation-consent",
+      SAVE_INVOCATION_CONSENT,
     ],
-    { env: { DEMA_HOME: home }, stdin: fixture }
+    { env: { DEMA_HOME: home }, stdin: fixture },
   );
   assert.notEqual(exitCode, 0);
   // Envelope reports failed invocation.
   const envelope = JSON.parse(stdout);
   assert.equal(envelope.invocation_result.invocation_status, "failed");
-  assert.match(envelope.invocation_result.error_reason, /consent_phrase_mismatch/);
+  assert.match(
+    envelope.invocation_result.error_reason,
+    /consent_phrase_mismatch/,
+  );
   // Invocation file is STILL written (auditability).
   const files = await readdir(join(home, "receipts"));
-  const invocationFile = files.find((f) => f.startsWith("invocation-") && f.endsWith(".json"));
+  const invocationFile = files.find(
+    (f) => f.startsWith("invocation-") && f.endsWith(".json"),
+  );
   assert.ok(invocationFile, "failed invocation envelope must still be saved");
   // Saved content includes the failure reason.
-  const onDisk = JSON.parse(await readFile(join(home, "receipts", invocationFile), "utf8"));
+  const onDisk = JSON.parse(
+    await readFile(join(home, "receipts", invocationFile), "utf8"),
+  );
   assert.equal(onDisk.invocation_result.invocation_status, "failed");
 });
 
 test("no --save-invocation-result flag means no invocation-*.json file is written", async () => {
   const home = await makeDemaHome();
-  const { exitCode } = await runCli(placeholderInvokeArgs(), { env: { DEMA_HOME: home } });
+  const { exitCode } = await runCli(placeholderInvokeArgs(), {
+    env: { DEMA_HOME: home },
+  });
   // Non-zero because placeholder has no selected model.
   assert.notEqual(exitCode, 0);
   // receipts/ may exist (route receipt was saved by --save-receipt), but no
@@ -184,19 +256,30 @@ test("no --save-invocation-result flag means no invocation-*.json file is writte
   if (existsSync(join(home, "receipts"))) {
     const files = await readdir(join(home, "receipts"));
     const invocationFiles = files.filter((f) => f.startsWith("invocation-"));
-    assert.equal(invocationFiles.length, 0, "no invocation-* file should exist without --save-invocation-result");
+    assert.equal(
+      invocationFiles.length,
+      0,
+      "no invocation-* file should exist without --save-invocation-result",
+    );
   }
 });
 
 test("saved invocation envelope preserves 9-key boundary structure unchanged", async () => {
   const home = await makeDemaHome();
   await runCli(
-    [...placeholderInvokeArgs(), "--save-invocation-result", "--save-invocation-consent", SAVE_INVOCATION_CONSENT],
-    { env: { DEMA_HOME: home } }
+    [
+      ...placeholderInvokeArgs(),
+      "--save-invocation-result",
+      "--save-invocation-consent",
+      SAVE_INVOCATION_CONSENT,
+    ],
+    { env: { DEMA_HOME: home } },
   );
   const files = await readdir(join(home, "receipts"));
   const invocationFile = files.find((f) => f.startsWith("invocation-"));
-  const onDisk = JSON.parse(await readFile(join(home, "receipts", invocationFile), "utf8"));
+  const onDisk = JSON.parse(
+    await readFile(join(home, "receipts", invocationFile), "utf8"),
+  );
   // 9-key envelope boundary.
   const boundaryKeys = Object.keys(onDisk.boundary).sort();
   assert.deepEqual(boundaryKeys, [
@@ -208,7 +291,7 @@ test("saved invocation envelope preserves 9-key boundary structure unchanged", a
     "remote_provider",
     "runtime",
     "token_economy",
-    "urp_networking"
+    "urp_networking",
   ]);
   // Placeholder route → no selection → no invocation → all "active" flags false.
   assert.equal(onDisk.boundary.runtime, true); // bridge code ran
@@ -225,20 +308,36 @@ test("saved invocation envelope preserves 9-key boundary structure unchanged", a
 test("re-running the same invocation creates content-addressed files; timestamps make each envelope unique", async () => {
   const home = await makeDemaHome();
   const r1 = await runCli(
-    [...placeholderInvokeArgs(), "--save-invocation-result", "--save-invocation-consent", SAVE_INVOCATION_CONSENT],
-    { env: { DEMA_HOME: home } }
+    [
+      ...placeholderInvokeArgs(),
+      "--save-invocation-result",
+      "--save-invocation-consent",
+      SAVE_INVOCATION_CONSENT,
+    ],
+    { env: { DEMA_HOME: home } },
   );
   await new Promise((res) => setTimeout(res, 10));
   const r2 = await runCli(
-    [...placeholderInvokeArgs(), "--save-invocation-result", "--save-invocation-consent", SAVE_INVOCATION_CONSENT],
-    { env: { DEMA_HOME: home } }
+    [
+      ...placeholderInvokeArgs(),
+      "--save-invocation-result",
+      "--save-invocation-consent",
+      SAVE_INVOCATION_CONSENT,
+    ],
+    { env: { DEMA_HOME: home } },
   );
   // Both runs produce envelopes (and both are non-zero due to placeholder).
   assert.notEqual(r1.exitCode, 0);
   assert.notEqual(r2.exitCode, 0);
   const files = await readdir(join(home, "receipts"));
-  const invocationFiles = files.filter((f) => f.startsWith("invocation-") && f.endsWith(".json")).sort();
-  assert.equal(invocationFiles.length, 2, `expected 2 distinct invocation files (timestamps differ); got ${invocationFiles.length}`);
+  const invocationFiles = files
+    .filter((f) => f.startsWith("invocation-") && f.endsWith(".json"))
+    .sort();
+  assert.equal(
+    invocationFiles.length,
+    2,
+    `expected 2 distinct invocation files (timestamps differ); got ${invocationFiles.length}`,
+  );
   assert.notEqual(invocationFiles[0], invocationFiles[1]);
   // Each filename matches its file's sha256.
   for (const f of invocationFiles) {
@@ -252,11 +351,18 @@ test("'--save-invocation-result' without --invoke exits non-zero (no envelope to
   const home = await makeDemaHome();
   const { stderr, exitCode } = await runCli(
     [
-      "model-broker", "route", "--task", "synthesis",
-      "--save-receipt", "--consent", SAVE_RECEIPT_CONSENT,
-      "--save-invocation-result", "--save-invocation-consent", SAVE_INVOCATION_CONSENT
+      "model-broker",
+      "route",
+      "--task",
+      "synthesis",
+      "--save-receipt",
+      "--consent",
+      SAVE_RECEIPT_CONSENT,
+      "--save-invocation-result",
+      "--save-invocation-consent",
+      SAVE_INVOCATION_CONSENT,
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /--save-invocation-result requires --invoke/);

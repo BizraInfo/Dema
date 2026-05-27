@@ -1,6 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mock } from "node:test";
 import { createSpinner } from "../packages/core/src/spinner.js";
 
 // Build a fake stdout that records writes. isTTY=true by default.
@@ -8,8 +7,10 @@ function fakeStdout({ isTTY = true } = {}) {
   const writes = [];
   return {
     isTTY,
-    write(chunk) { writes.push(chunk); },
-    writes
+    write(chunk) {
+      writes.push(chunk);
+    },
+    writes,
   };
 }
 
@@ -25,16 +26,29 @@ test("start emits a frame containing the label", () => {
   const out = fakeStdout();
   // suppressed:false overrides env-based detection (process.env.CI is set in
   // GitHub Actions and would otherwise suppress all writes — see Task #10).
-  const spinner = createSpinner({ stdout: out, label: "Loading", intervalMs: 10000, suppressed: false });
+  const spinner = createSpinner({
+    stdout: out,
+    label: "Loading",
+    intervalMs: 10000,
+    suppressed: false,
+  });
   spinner.start();
   spinner.stop();
   // At least the first write must contain the label text.
-  assert.ok(out.writes.some((w) => w.includes("Loading")), "first write contains label");
+  assert.ok(
+    out.writes.some((w) => w.includes("Loading")),
+    "first write contains label",
+  );
 });
 
 test("update changes the label used in subsequent writes", () => {
   const out = fakeStdout();
-  const spinner = createSpinner({ stdout: out, label: "Phase A", intervalMs: 10000, suppressed: false });
+  const spinner = createSpinner({
+    stdout: out,
+    label: "Phase A",
+    intervalMs: 10000,
+    suppressed: false,
+  });
   spinner.start();
   spinner.update("Phase B");
   spinner.stop();
@@ -46,7 +60,12 @@ test("update changes the label used in subsequent writes", () => {
 
 test("stop clears the spinner line (\\r + spaces + \\r)", () => {
   const out = fakeStdout();
-  const spinner = createSpinner({ stdout: out, label: "Hello", intervalMs: 10000, suppressed: false });
+  const spinner = createSpinner({
+    stdout: out,
+    label: "Hello",
+    intervalMs: 10000,
+    suppressed: false,
+  });
   spinner.start();
   spinner.stop();
   const clearWrite = out.writes[out.writes.length - 1];
@@ -55,7 +74,11 @@ test("stop clears the spinner line (\\r + spaces + \\r)", () => {
 
 test("suppressed:true — no I/O on start, update, stop", () => {
   const out = fakeStdout();
-  const spinner = createSpinner({ stdout: out, label: "Hidden", suppressed: true });
+  const spinner = createSpinner({
+    stdout: out,
+    label: "Hidden",
+    suppressed: true,
+  });
   spinner.start();
   spinner.update("Still hidden");
   spinner.stop();
@@ -76,7 +99,12 @@ test("frame rotation cycles through all 10 braille frames", (t) => {
   // Use mock timer to control ticks.
   t.mock.timers.enable({ apis: ["setInterval"] });
 
-  const spinner = createSpinner({ stdout: out, label: "Tick", intervalMs: 80, suppressed: false });
+  const spinner = createSpinner({
+    stdout: out,
+    label: "Tick",
+    intervalMs: 80,
+    suppressed: false,
+  });
   spinner.start();
   // Advance 10 intervals to see all frames.
   t.mock.timers.tick(80 * 10);
@@ -84,8 +112,8 @@ test("frame rotation cycles through all 10 braille frames", (t) => {
 
   // Collect the frames written (each write is \r<frame> <label>).
   const frames = out.writes
-    .filter((w) => !(/^\r +\r$/.test(w))) // exclude clear writes
-    .map((w) => w.replace(/^\r/, "")[0]);  // first char after \r
+    .filter((w) => !/^\r +\r$/.test(w)) // exclude clear writes
+    .map((w) => w.replace(/^\r/, "")[0]); // first char after \r
 
   // All 10 distinct frames must appear.
   for (const f of FRAMES) {
@@ -95,19 +123,31 @@ test("frame rotation cycles through all 10 braille frames", (t) => {
 
 test("multiple start/stop cycles are safe", () => {
   const out = fakeStdout();
-  const spinner = createSpinner({ stdout: out, label: "Cycle", intervalMs: 10000, suppressed: false });
+  const spinner = createSpinner({
+    stdout: out,
+    label: "Cycle",
+    intervalMs: 10000,
+    suppressed: false,
+  });
   spinner.start();
   spinner.stop();
   const writesAfterFirst = out.writes.length;
   spinner.start();
   spinner.stop();
   // Second cycle should produce writes as well (not silently dead).
-  assert.ok(out.writes.length > writesAfterFirst, "second cycle produces output");
+  assert.ok(
+    out.writes.length > writesAfterFirst,
+    "second cycle produces output",
+  );
 });
 
 test("stop without prior start is safe (no crash, no output)", () => {
   const out = fakeStdout();
-  const spinner = createSpinner({ stdout: out, label: "NoStart", intervalMs: 10000 });
+  const spinner = createSpinner({
+    stdout: out,
+    label: "NoStart",
+    intervalMs: 10000,
+  });
   assert.doesNotThrow(() => spinner.stop());
   assert.equal(out.writes.length, 0, "stop-without-start writes nothing");
 });
@@ -115,13 +155,21 @@ test("stop without prior start is safe (no crash, no output)", () => {
 test("very long label is safely truncated to 120 chars", () => {
   const out = fakeStdout();
   const longLabel = "X".repeat(300);
-  const spinner = createSpinner({ stdout: out, label: longLabel, intervalMs: 10000, suppressed: false });
+  const spinner = createSpinner({
+    stdout: out,
+    label: longLabel,
+    intervalMs: 10000,
+    suppressed: false,
+  });
   spinner.start();
   spinner.stop();
   // The write containing the frame must not exceed 120 + 3 chars (frame + space + label).
-  const frameWrites = out.writes.filter((w) => !(/^\r +\r$/.test(w)));
+  const frameWrites = out.writes.filter((w) => !/^\r +\r$/.test(w));
   for (const w of frameWrites) {
     // "\r" + frame(1) + " "(1) + label(≤120) = ≤123 + \r = ≤124
-    assert.ok(w.length <= 124, `write length ${w.length} exceeds truncation limit`);
+    assert.ok(
+      w.length <= 124,
+      `write length ${w.length} exceeds truncation limit`,
+    );
   }
 });

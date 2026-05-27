@@ -11,20 +11,10 @@ export const A2A_MESSAGE_TYPES = Object.freeze([
   "verification_request",
   "status_query",
   "evidence_share",
-  "consent_review_request"
+  "consent_review_request",
 ]);
 
 const ALLOWED_EFFECT_LEVELS = Object.freeze(["read"]);
-
-const BOUNDARY = Object.freeze({
-  runtime: false,
-  federation: false,
-  mint: false,
-  a2a_network_call_made: false,
-  network_used: false,
-  authority_transferred: false,
-  cross_node_handoff_executed: false
-});
 
 function isValidDate(value) {
   return value instanceof Date && !Number.isNaN(value.getTime());
@@ -39,7 +29,8 @@ function clone(value) {
 }
 
 function deepFreeze(value) {
-  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  if (!value || typeof value !== "object" || Object.isFrozen(value))
+    return value;
   for (const child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
 }
@@ -67,7 +58,7 @@ export function buildA2aMessageEnvelopePreview({
   message_type,
   effect_level,
   claims,
-  now
+  now,
 } = {}) {
   if (!nonEmptyString(from)) {
     return failEnvelope("invalid_from", "from must be a non-empty string");
@@ -76,73 +67,89 @@ export function buildA2aMessageEnvelopePreview({
     return failEnvelope("invalid_to", "to must be a non-empty string");
   }
   if (from === to) {
-    return failEnvelope("self_addressed", "from and to must differ; agents may not send A2A messages to themselves");
+    return failEnvelope(
+      "self_addressed",
+      "from and to must differ; agents may not send A2A messages to themselves",
+    );
   }
   if (!nonEmptyString(mission_id)) {
-    return failEnvelope("invalid_mission_id", "mission_id must be a non-empty string");
+    return failEnvelope(
+      "invalid_mission_id",
+      "mission_id must be a non-empty string",
+    );
   }
   if (!A2A_MESSAGE_TYPES.includes(message_type)) {
-    return failEnvelope("invalid_message_type", `message_type must be one of ${A2A_MESSAGE_TYPES.join(", ")}`);
+    return failEnvelope(
+      "invalid_message_type",
+      `message_type must be one of ${A2A_MESSAGE_TYPES.join(", ")}`,
+    );
   }
   if (!isReadOnlyEffectSubset(effect_level)) {
     return failEnvelope(
       "invalid_effect_level",
-      "effect_level must be an array subset of [\"read\"] in v0.1 (write/execute/call are rejected on inter-agent messages)"
+      'effect_level must be an array subset of ["read"] in v0.1 (write/execute/call are rejected on inter-agent messages)',
     );
   }
   if (!isStringArray(claims)) {
-    return failEnvelope("invalid_claims", "claims must be an array of strings (may be empty)");
+    return failEnvelope(
+      "invalid_claims",
+      "claims must be an array of strings (may be empty)",
+    );
   }
   if (!isValidDate(now)) {
     return failEnvelope("invalid_now", "now must be a valid Date");
   }
 
-  return deepFreeze(clone({
-    schema: A2A_MESSAGE_ENVELOPE_PREVIEW_SCHEMA,
-    mode: "PREVIEW_ONLY",
-    truth_label: "DECLARED",
-    valid: true,
-    from,
-    to,
-    mission_id,
-    message_type,
-    effect_level: [...effect_level],
-    claims: [...claims],
-    authority_transfer: false,
-    dispatched: false,
-    generated_at: now.toISOString(),
-    boundary: {
-      runtime: false,
-      federation: false,
-      mint: false,
-      a2a_network_call_made: false,
-      network_used: false,
-      authority_transferred: false,
-      cross_node_handoff_executed: false
-    },
-    note: "Envelope is RECORDED, not DISPATCHED. No network channel is opened, no authority is transferred."
-  }));
+  return deepFreeze(
+    clone({
+      schema: A2A_MESSAGE_ENVELOPE_PREVIEW_SCHEMA,
+      mode: "PREVIEW_ONLY",
+      truth_label: "DECLARED",
+      valid: true,
+      from,
+      to,
+      mission_id,
+      message_type,
+      effect_level: [...effect_level],
+      claims: [...claims],
+      authority_transfer: false,
+      dispatched: false,
+      generated_at: now.toISOString(),
+      boundary: {
+        runtime: false,
+        federation: false,
+        mint: false,
+        a2a_network_call_made: false,
+        network_used: false,
+        authority_transferred: false,
+        cross_node_handoff_executed: false,
+      },
+      note: "Envelope is RECORDED, not DISPATCHED. No network channel is opened, no authority is transferred.",
+    }),
+  );
 }
 
 function failEnvelope(code, detail) {
-  return deepFreeze(clone({
-    schema: A2A_MESSAGE_ENVELOPE_PREVIEW_SCHEMA,
-    mode: "PREVIEW_ONLY",
-    truth_label: "DECLARED",
-    valid: false,
-    denial: { code, detail },
-    authority_transfer: false,
-    dispatched: false,
-    boundary: {
-      runtime: false,
-      federation: false,
-      mint: false,
-      a2a_network_call_made: false,
-      network_used: false,
-      authority_transferred: false,
-      cross_node_handoff_executed: false
-    }
-  }));
+  return deepFreeze(
+    clone({
+      schema: A2A_MESSAGE_ENVELOPE_PREVIEW_SCHEMA,
+      mode: "PREVIEW_ONLY",
+      truth_label: "DECLARED",
+      valid: false,
+      denial: { code, detail },
+      authority_transfer: false,
+      dispatched: false,
+      boundary: {
+        runtime: false,
+        federation: false,
+        mint: false,
+        a2a_network_call_made: false,
+        network_used: false,
+        authority_transferred: false,
+        cross_node_handoff_executed: false,
+      },
+    }),
+  );
 }
 
 // Reference the canonical allowed set so future readers see the v0.1 surface;

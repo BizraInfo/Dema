@@ -12,11 +12,11 @@ import {
   AGENT_KERNEL_MAX_ITERATIONS,
   AGENT_KERNEL_REQUIRED_BLOCKED_EFFECTS,
   AGENT_KERNEL_SCHEMA_NAME,
-  AGENT_KERNEL_TRANSITION_SCHEMA_NAME
+  AGENT_KERNEL_TRANSITION_SCHEMA_NAME,
 } from "../packages/core/src/agent-kernel.js";
 import {
   isCanonicalBoundary,
-  PREVIEW_BOUNDARY_CANONICAL_KEYS
+  PREVIEW_BOUNDARY_CANONICAL_KEYS,
 } from "../packages/core/src/preview-boundary.js";
 
 function validKernel(overrides = {}) {
@@ -24,7 +24,7 @@ function validKernel(overrides = {}) {
     agent_id: "pat-1-mission-scribe",
     mission_intent: "draft the next safe action",
     agent_role: "pat",
-    ...overrides
+    ...overrides,
   });
 }
 
@@ -69,7 +69,10 @@ test("Kernel is deep-frozen at top level + sub-views", () => {
 
 test("Kernel declares memory_file_path per-agent · scoped to ~/.dema/agents/<id>", () => {
   const k = validKernel();
-  assert.equal(k.memory_file_path, "~/.dema/agents/pat-1-mission-scribe/memory.json");
+  assert.equal(
+    k.memory_file_path,
+    "~/.dema/agents/pat-1-mission-scribe/memory.json",
+  );
 });
 
 // =========================================================================
@@ -124,7 +127,9 @@ test("ACT_OR_HOLD → OBSERVE with act_result captured", () => {
   ({ kernel } = tick(kernel));
   ({ kernel } = tick(kernel, { proposal_summary: { x: 1 } }));
   ({ kernel } = tick(kernel, { consent_decision: "granted" }));
-  ({ kernel } = tick(kernel, { act_result_summary: { schema: "test.result.v0.1", output: "ok" } }));
+  ({ kernel } = tick(kernel, {
+    act_result_summary: { schema: "test.result.v0.1", output: "ok" },
+  }));
   assert.equal(kernel.current_state, AGENT_STATES.OBSERVE);
   assert.equal(kernel.last_act_result_summary.has_schema, true);
 });
@@ -169,25 +174,29 @@ test("DECIDE_NEXT → PERCEIVE (loop) increments iteration", () => {
 
 test("Iteration cap halts the kernel after max_iterations exceeded", () => {
   // Build with tiny max_iterations
-  const k = buildAgentKernel({ agent_id: "test", mission_intent: "loop test", max_iterations: 2 });
+  const k = buildAgentKernel({
+    agent_id: "test",
+    mission_intent: "loop test",
+    max_iterations: 2,
+  });
   // Reach iteration 2 (the cap) and then attempt another tick
   let kernel = k;
   // Force iteration count up by constructing scenario (we cannot mutate frozen)
   // Loop the full cycle twice to get iteration=2
   for (let i = 0; i < 2; i++) {
-    ({ kernel } = tick(kernel));                                      // INIT/PERCEIVE → ...
-    ({ kernel } = tick(kernel));                                      // PERCEIVE → PROPOSE
-    ({ kernel } = tick(kernel, { proposal_summary: {} }));            // PROPOSE → CONSENT_REQUEST
-    ({ kernel } = tick(kernel, { consent_decision: "granted" }));      // CONSENT_REQUEST → ACT_OR_HOLD
-    ({ kernel } = tick(kernel, { act_result_summary: {} }));          // ACT_OR_HOLD → OBSERVE
-    ({ kernel } = tick(kernel));                                      // OBSERVE → DECIDE_NEXT
+    ({ kernel } = tick(kernel)); // INIT/PERCEIVE → ...
+    ({ kernel } = tick(kernel)); // PERCEIVE → PROPOSE
+    ({ kernel } = tick(kernel, { proposal_summary: {} })); // PROPOSE → CONSENT_REQUEST
+    ({ kernel } = tick(kernel, { consent_decision: "granted" })); // CONSENT_REQUEST → ACT_OR_HOLD
+    ({ kernel } = tick(kernel, { act_result_summary: {} })); // ACT_OR_HOLD → OBSERVE
+    ({ kernel } = tick(kernel)); // OBSERVE → DECIDE_NEXT
     if (i === 0) {
-      ({ kernel } = tick(kernel, { decision: "loop" }));              // → PERCEIVE (iter=1)
+      ({ kernel } = tick(kernel, { decision: "loop" })); // → PERCEIVE (iter=1)
     }
   }
   // After 2 loops, iteration=1 (after first loop) · we want iteration ≥ max_iterations
   // Force loop one more time to push iteration to 2 (the cap)
-  ({ kernel } = tick(kernel, { decision: "loop" }));                   // iter goes to 2 = max
+  ({ kernel } = tick(kernel, { decision: "loop" })); // iter goes to 2 = max
   // Now any further tick should halt
   const result = tick(kernel);
   assert.equal(result.kernel.current_state, AGENT_STATES.HALTED);
@@ -198,8 +207,6 @@ test("Multiple ticks are deterministic given same input · pure function", () =>
   const k = validKernel();
   const a = tick(k);
   const b = tick(k);
-  // Strip non-deterministic timestamp from history for comparison
-  const stripTs = (ev) => ({ ...ev, history: ev.history?.map(h => ({ ...h, timestamp: "X" })) });
   assert.equal(a.kernel.current_state, b.kernel.current_state);
   assert.equal(a.kernel.iteration, b.kernel.iteration);
   assert.equal(a.event.from_state, b.event.from_state);
@@ -211,8 +218,11 @@ test("Multiple ticks are deterministic given same input · pure function", () =>
 // =========================================================================
 
 test("halt=true input transitions any state to HALTED", () => {
-  let { kernel } = tick(validKernel());           // → PERCEIVE
-  ({ kernel } = tick(kernel, { halt: true, halt_reason: "operator requested" }));
+  let { kernel } = tick(validKernel()); // → PERCEIVE
+  ({ kernel } = tick(kernel, {
+    halt: true,
+    halt_reason: "operator requested",
+  }));
   assert.equal(kernel.current_state, AGENT_STATES.HALTED);
   assert.equal(kernel.halted, true);
   assert.match(kernel.halted_reason, /operator requested/);
@@ -323,7 +333,11 @@ test("Adversarial · halt_reason non-string coerced to empty", () => {
 
 test("Adversarial · cannot mutate frozen kernel · attempts silently fail", () => {
   const k = validKernel();
-  try { k.current_state = "halted"; } catch { /* strict-mode throw is OK */ }
+  try {
+    k.current_state = "halted";
+  } catch {
+    /* strict-mode throw is OK */
+  }
   // Mutation either silently fails or throws; value must not change
   assert.equal(k.current_state, AGENT_STATES.INIT);
 });
@@ -333,7 +347,7 @@ test("Adversarial · cannot mutate frozen kernel · attempts silently fail", () 
 // =========================================================================
 
 test("Transition event has canonical schema + receipt_shape_ready flag", () => {
-  let { kernel, event } = tick(validKernel());
+  let { event } = tick(validKernel());
   assert.equal(event.schema, AGENT_KERNEL_TRANSITION_SCHEMA_NAME);
   assert.equal(event.schema, "bizra.dema.agent_kernel_transition.v0.1");
   assert.equal(event.audit_trail_required, true);
@@ -382,6 +396,14 @@ test("Exports + constants present and frozen", () => {
   assert.ok(AGENT_KERNEL_TERMINAL_STATES.includes("complete"));
   assert.equal(typeof AGENT_KERNEL_MAX_ITERATIONS, "number");
   assert.ok(Object.isFrozen(AGENT_KERNEL_REQUIRED_BLOCKED_EFFECTS));
-  assert.ok(AGENT_KERNEL_REQUIRED_BLOCKED_EFFECTS.includes("infinite_loop_without_decision"));
-  assert.ok(AGENT_KERNEL_REQUIRED_BLOCKED_EFFECTS.includes("receipt_mint_inside_kernel"));
+  assert.ok(
+    AGENT_KERNEL_REQUIRED_BLOCKED_EFFECTS.includes(
+      "infinite_loop_without_decision",
+    ),
+  );
+  assert.ok(
+    AGENT_KERNEL_REQUIRED_BLOCKED_EFFECTS.includes(
+      "receipt_mint_inside_kernel",
+    ),
+  );
 });

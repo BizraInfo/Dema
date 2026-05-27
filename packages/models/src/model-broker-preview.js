@@ -32,7 +32,8 @@
 //   - DEMA_AGENT_HARNESS_AND_SKILL_DNA_v0_1.md   (act verifiably; loop step)
 //   - NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md  (PAT-7 / SAT-5 layers)
 
-export const LOCAL_MODEL_ROUTE_RECEIPT_SCHEMA = "bizra.dema.local_model_route_receipt.v0.1";
+export const LOCAL_MODEL_ROUTE_RECEIPT_SCHEMA =
+  "bizra.dema.local_model_route_receipt.v0.1";
 
 export const BROKER_ROLES = Object.freeze([
   "dema_face",
@@ -44,7 +45,7 @@ export const BROKER_ROLES = Object.freeze([
   "claim_checker",
   "consent_detector",
   "code_helper",
-  "fallback"
+  "fallback",
 ]);
 
 export const BROKER_SIZE_CLASSES = Object.freeze([
@@ -54,7 +55,7 @@ export const BROKER_SIZE_CLASSES = Object.freeze([
   "7B",
   "14B",
   "32B",
-  "unknown"
+  "unknown",
 ]);
 
 const SIZE_CLASS_ORDER = Object.freeze({
@@ -64,14 +65,14 @@ const SIZE_CLASS_ORDER = Object.freeze({
   "7B": 3,
   "14B": 4,
   "32B": 5,
-  "unknown": 6
+  unknown: 6,
 });
 
 export const BROKER_CANON_REFS = Object.freeze([
   "CLAIM_REGISTER_v0_1.md",
   "BIZRA_AGENT_DNA_LAW_OF_ASSUMPTION_v0_1.md",
   "DEMA_AGENT_HARNESS_AND_SKILL_DNA_v0_1.md",
-  "NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md"
+  "NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md",
 ]);
 
 const BROKER_BOUNDARY = Object.freeze({
@@ -82,7 +83,7 @@ const BROKER_BOUNDARY = Object.freeze({
   mint: false,
   token_economy: false,
   urp_networking: false,
-  prompt_invocation_allowed: false
+  prompt_invocation_allowed: false,
 });
 
 // Task-kind → preferred-roles mapping. Tasks not matched fall through to
@@ -98,11 +99,12 @@ const TASK_ROLE_PREFERENCES = Object.freeze({
   consent_detect: Object.freeze(["consent_detector", "classifier"]),
   intent_classify: Object.freeze(["classifier", "router"]),
   route: Object.freeze(["router", "classifier"]),
-  code_help: Object.freeze(["code_helper", "pat_worker"])
+  code_help: Object.freeze(["code_helper", "pat_worker"]),
 });
 
 function deepFreeze(value) {
-  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  if (!value || typeof value !== "object" || Object.isFrozen(value))
+    return value;
   for (const child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
 }
@@ -119,19 +121,43 @@ function nowIso() {
 // returned as null (caller filters nulls).
 export function sanitizeRegistryEntry(entry) {
   if (!entry || typeof entry !== "object") return null;
-  const id = typeof entry.id === "string" && entry.id.length > 0 ? entry.id : null;
+  const id =
+    typeof entry.id === "string" && entry.id.length > 0 ? entry.id : null;
   if (id === null) return null;
-  const provider = typeof entry.provider === "string" ? entry.provider : "unknown";
-  const model_name = typeof entry.model_name === "string" ? entry.model_name : id;
-  const role = typeof entry.role === "string" && BROKER_ROLES.includes(entry.role) ? entry.role : "fallback";
-  const size_class = typeof entry.size_class === "string" && BROKER_SIZE_CLASSES.includes(entry.size_class) ? entry.size_class : "unknown";
-  const locality = ["local", "remote", "disabled", "unknown"].includes(entry.locality) ? entry.locality : "unknown";
+  const provider =
+    typeof entry.provider === "string" ? entry.provider : "unknown";
+  const model_name =
+    typeof entry.model_name === "string" ? entry.model_name : id;
+  const role =
+    typeof entry.role === "string" && BROKER_ROLES.includes(entry.role)
+      ? entry.role
+      : "fallback";
+  const size_class =
+    typeof entry.size_class === "string" &&
+    BROKER_SIZE_CLASSES.includes(entry.size_class)
+      ? entry.size_class
+      : "unknown";
+  const locality = ["local", "remote", "disabled", "unknown"].includes(
+    entry.locality,
+  )
+    ? entry.locality
+    : "unknown";
   const allowed_tasks = Array.isArray(entry.allowed_tasks)
     ? entry.allowed_tasks.filter((t) => typeof t === "string")
     : [];
-  const max_concurrency = Number.isInteger(entry.max_concurrency) && entry.max_concurrency >= 0 ? entry.max_concurrency : 1;
-  const context_limit = Number.isInteger(entry.context_limit) && entry.context_limit > 0 ? entry.context_limit : null;
-  const status = ["active", "available", "disabled", "source_pending"].includes(entry.status) ? entry.status : "source_pending";
+  const max_concurrency =
+    Number.isInteger(entry.max_concurrency) && entry.max_concurrency >= 0
+      ? entry.max_concurrency
+      : 1;
+  const context_limit =
+    Number.isInteger(entry.context_limit) && entry.context_limit > 0
+      ? entry.context_limit
+      : null;
+  const status = ["active", "available", "disabled", "source_pending"].includes(
+    entry.status,
+  )
+    ? entry.status
+    : "source_pending";
   return Object.freeze({
     id,
     provider,
@@ -142,7 +168,7 @@ export function sanitizeRegistryEntry(entry) {
     allowed_tasks: Object.freeze(allowed_tasks),
     max_concurrency,
     context_limit,
-    status
+    status,
   });
 }
 
@@ -164,7 +190,11 @@ function buildPreferredRoles(task_kind, required_role) {
       if (!prefs.includes(role)) prefs.push(role);
     }
   }
-  if (required_role && BROKER_ROLES.includes(required_role) && !prefs.includes(required_role)) {
+  if (
+    required_role &&
+    BROKER_ROLES.includes(required_role) &&
+    !prefs.includes(required_role)
+  ) {
     prefs.push(required_role);
   }
   // Always include fallback as a last-resort role unless caller asked for
@@ -175,7 +205,10 @@ function buildPreferredRoles(task_kind, required_role) {
 
 function sizeClassWithinMax(candidateClass, maxClass) {
   if (!maxClass) return true;
-  if (!BROKER_SIZE_CLASSES.includes(candidateClass) || !BROKER_SIZE_CLASSES.includes(maxClass)) {
+  if (
+    !BROKER_SIZE_CLASSES.includes(candidateClass) ||
+    !BROKER_SIZE_CLASSES.includes(maxClass)
+  ) {
     return false;
   }
   // unknown is never within a finite max
@@ -183,13 +216,25 @@ function sizeClassWithinMax(candidateClass, maxClass) {
   return SIZE_CLASS_ORDER[candidateClass] <= SIZE_CLASS_ORDER[maxClass];
 }
 
-function rejectionReason({ candidate, local_only, allow_unknown, max_size_class, preferredRoles, required_role }) {
+function rejectionReason({
+  candidate,
+  local_only,
+  allow_unknown,
+  max_size_class,
+  preferredRoles,
+  required_role,
+}) {
   if (candidate.status === "disabled") return "status_disabled";
   if (candidate.status === "source_pending") return "status_source_pending";
-  if (candidate.status === "unknown" && !allow_unknown) return "status_unknown_without_allow";
-  if (local_only && candidate.locality !== "local") return `locality_${candidate.locality}_under_local_only`;
+  if (candidate.status === "unknown" && !allow_unknown)
+    return "status_unknown_without_allow";
+  if (local_only && candidate.locality !== "local")
+    return `locality_${candidate.locality}_under_local_only`;
   if (candidate.locality === "disabled") return "locality_disabled";
-  if (max_size_class && !sizeClassWithinMax(candidate.size_class, max_size_class)) {
+  if (
+    max_size_class &&
+    !sizeClassWithinMax(candidate.size_class, max_size_class)
+  ) {
     return `size_class_${candidate.size_class}_exceeds_max_${max_size_class}`;
   }
   if (preferredRoles.length > 0 && !preferredRoles.includes(candidate.role)) {
@@ -201,37 +246,46 @@ function rejectionReason({ candidate, local_only, allow_unknown, max_size_class,
   return null;
 }
 
-function isSelectable(candidate, ctx) {
-  return rejectionReason({ ...ctx, candidate }) === null;
-}
-
 function pickByPreferredRoleOrder(candidates, preferredRoles) {
   for (const role of preferredRoles) {
     const match = candidates.find((c) => c.role === role);
-    if (match) return { candidate: match, reason: `matched_preferred_role_${role}` };
+    if (match)
+      return { candidate: match, reason: `matched_preferred_role_${role}` };
   }
   return null;
 }
 
 export function routeForTask(broker, opts = {}) {
   const task_kind = typeof opts.task_kind === "string" ? opts.task_kind : null;
-  const required_role = typeof opts.required_role === "string" && BROKER_ROLES.includes(opts.required_role)
-    ? opts.required_role
-    : null;
+  const required_role =
+    typeof opts.required_role === "string" &&
+    BROKER_ROLES.includes(opts.required_role)
+      ? opts.required_role
+      : null;
   const local_only = opts.local_only !== false;
-  const max_size_class = typeof opts.max_size_class === "string" && BROKER_SIZE_CLASSES.includes(opts.max_size_class)
-    ? opts.max_size_class
-    : null;
+  const max_size_class =
+    typeof opts.max_size_class === "string" &&
+    BROKER_SIZE_CLASSES.includes(opts.max_size_class)
+      ? opts.max_size_class
+      : null;
   const allow_unknown = opts.allow_unknown === true;
 
   const warnings = [];
-  if (!task_kind && !required_role) warnings.push("no_task_kind_or_required_role");
+  if (!task_kind && !required_role)
+    warnings.push("no_task_kind_or_required_role");
   if (!local_only) warnings.push("local_only_disabled");
   if (allow_unknown) warnings.push("allow_unknown_enabled");
 
-  const registry = broker && Array.isArray(broker.registry) ? broker.registry : [];
+  const registry =
+    broker && Array.isArray(broker.registry) ? broker.registry : [];
   const preferredRoles = buildPreferredRoles(task_kind, required_role);
-  const ctx = { local_only, allow_unknown, max_size_class, preferredRoles, required_role };
+  const ctx = {
+    local_only,
+    allow_unknown,
+    max_size_class,
+    preferredRoles,
+    required_role,
+  };
 
   const rejected_candidates = [];
   const acceptable = [];
@@ -248,33 +302,40 @@ export function routeForTask(broker, opts = {}) {
   // If no preferred role matched but acceptable is non-empty and the caller
   // gave no required_role, take the first acceptable candidate.
   if (!selection && !required_role && acceptable.length > 0) {
-    selection = { candidate: acceptable[0], reason: "first_acceptable_no_required_role" };
+    selection = {
+      candidate: acceptable[0],
+      reason: "first_acceptable_no_required_role",
+    };
   }
 
   const selected_model_id = selection ? selection.candidate.id : null;
   const selected_model_role = selection ? selection.candidate.role : null;
-  const selected_model_locality = selection ? selection.candidate.locality : null;
+  const selected_model_locality = selection
+    ? selection.candidate.locality
+    : null;
   const reason = selection ? selection.reason : "no_acceptable_candidate";
 
   if (!selection) warnings.push("no_selection_made");
 
-  return deepFreeze(clone({
-    schema: LOCAL_MODEL_ROUTE_RECEIPT_SCHEMA,
-    timestamp: nowIso(),
-    task_kind,
-    required_role,
-    local_only,
-    max_size_class,
-    allow_unknown,
-    selected_model_id,
-    selected_model_role,
-    selected_model_locality,
-    reason,
-    rejected_candidates,
-    canon_refs: Array.from(BROKER_CANON_REFS),
-    warnings,
-    boundary: { ...BROKER_BOUNDARY }
-  }));
+  return deepFreeze(
+    clone({
+      schema: LOCAL_MODEL_ROUTE_RECEIPT_SCHEMA,
+      timestamp: nowIso(),
+      task_kind,
+      required_role,
+      local_only,
+      max_size_class,
+      allow_unknown,
+      selected_model_id,
+      selected_model_role,
+      selected_model_locality,
+      reason,
+      rejected_candidates,
+      canon_refs: Array.from(BROKER_CANON_REFS),
+      warnings,
+      boundary: { ...BROKER_BOUNDARY },
+    }),
+  );
 }
 
 export function buildModelBrokerPreview({ registry, providers } = {}) {
@@ -283,16 +344,18 @@ export function buildModelBrokerPreview({ registry, providers } = {}) {
   // by the broker at v0.1. v0.2 may compose buildRoutingRecommendations()
   // when registry is absent. For now, the registry is the primary input.
   const sanitized_registry = sanitizeRegistry(registry);
-  return deepFreeze(clone({
-    schema: "bizra.dema.local_model_broker_preview.v0.1",
-    mode: "PREVIEW_ONLY",
-    roles: Array.from(BROKER_ROLES),
-    size_classes: Array.from(BROKER_SIZE_CLASSES),
-    registry: sanitized_registry,
-    providers_received: providers !== undefined,
-    boundary: { ...BROKER_BOUNDARY },
-    canon_refs: Array.from(BROKER_CANON_REFS)
-  }));
+  return deepFreeze(
+    clone({
+      schema: "bizra.dema.local_model_broker_preview.v0.1",
+      mode: "PREVIEW_ONLY",
+      roles: Array.from(BROKER_ROLES),
+      size_classes: Array.from(BROKER_SIZE_CLASSES),
+      registry: sanitized_registry,
+      providers_received: providers !== undefined,
+      boundary: { ...BROKER_BOUNDARY },
+      canon_refs: Array.from(BROKER_CANON_REFS),
+    }),
+  );
 }
 
 // Convenience: build a broker AND immediately route a single task in one

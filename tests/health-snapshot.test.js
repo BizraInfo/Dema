@@ -11,10 +11,7 @@ import {
   HEALTH_MISSION_CONSENT_PHRASE,
 } from "../packages/mission/src/health-snapshot.js";
 import { runSetup } from "../packages/installer/src/setup.js";
-import {
-  saveWitnessReceipt,
-  WITNESS_CONSENT_PHRASE,
-} from "../packages/receipts/src/witness-receipt.js";
+import { WITNESS_CONSENT_PHRASE } from "../packages/receipts/src/witness-receipt.js";
 
 const FIXED_NOW = new Date("2026-05-26T12:00:00Z");
 
@@ -30,15 +27,6 @@ async function freshHome() {
       else delete process.env.DEMA_HOME;
     },
   };
-}
-
-async function freshHomeWithWitness() {
-  const ctx = await freshHome();
-  await saveWitnessReceipt({
-    consent: WITNESS_CONSENT_PHRASE,
-    now: FIXED_NOW,
-  });
-  return ctx;
 }
 
 describe("buildHealthSnapshot", () => {

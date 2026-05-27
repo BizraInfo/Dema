@@ -5,7 +5,6 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 
 import {
   buildGenesisPreviewCard,
@@ -65,16 +64,12 @@ test("truth_label === 'NODE0_LOCAL_SEED' always", () => {
 test("All 16 canonical boundary keys present and all === false", () => {
   const card = buildGenesisPreviewCard(sampleInput());
   for (const key of PREVIEW_BOUNDARY_CANONICAL_KEYS) {
-    assert.equal(
-      card.boundary[key],
-      false,
-      `boundary.${key} must be false`
-    );
+    assert.equal(card.boundary[key], false, `boundary.${key} must be false`);
   }
   assert.equal(
     Object.keys(card.boundary).length,
     PREVIEW_BOUNDARY_CANONICAL_KEYS.length,
-    "boundary must have exactly the canonical key count"
+    "boundary must have exactly the canonical key count",
   );
 });
 
@@ -101,38 +96,56 @@ test("Same input + same timestamp → same receipt_id_preview hash", () => {
   const b = buildGenesisPreviewCard(input);
   assert.equal(
     a.would_mint_if_consented.receipt_id_preview,
-    b.would_mint_if_consented.receipt_id_preview
+    b.would_mint_if_consented.receipt_id_preview,
   );
 });
 
 test("Different preferred_name → different receipt_id_preview (hash is sensitive to identity)", () => {
   const base = sampleInput();
-  const cardA = buildGenesisPreviewCard({ ...base, candidate: { ...base.candidate, preferred_name: "Alice" } });
-  const cardB = buildGenesisPreviewCard({ ...base, candidate: { ...base.candidate, preferred_name: "Bob" } });
+  const cardA = buildGenesisPreviewCard({
+    ...base,
+    candidate: { ...base.candidate, preferred_name: "Alice" },
+  });
+  const cardB = buildGenesisPreviewCard({
+    ...base,
+    candidate: { ...base.candidate, preferred_name: "Bob" },
+  });
   assert.notEqual(
     cardA.would_mint_if_consented.receipt_id_preview,
-    cardB.would_mint_if_consented.receipt_id_preview
+    cardB.would_mint_if_consented.receipt_id_preview,
   );
 });
 
 test("Different node_ordinal → different receipt_id_preview", () => {
   const base = sampleInput();
-  const cardA = buildGenesisPreviewCard({ ...base, candidate: { ...base.candidate, node_ordinal: 0 } });
-  const cardB = buildGenesisPreviewCard({ ...base, candidate: { ...base.candidate, node_ordinal: 2 } });
+  const cardA = buildGenesisPreviewCard({
+    ...base,
+    candidate: { ...base.candidate, node_ordinal: 0 },
+  });
+  const cardB = buildGenesisPreviewCard({
+    ...base,
+    candidate: { ...base.candidate, node_ordinal: 2 },
+  });
   assert.notEqual(
     cardA.would_mint_if_consented.receipt_id_preview,
-    cardB.would_mint_if_consented.receipt_id_preview
+    cardB.would_mint_if_consented.receipt_id_preview,
   );
 });
 
 test("determinism: same candidate + DIFFERENT timestamps → SAME receipt_id_preview (timestamp excluded from hash)", () => {
   const base = sampleInput();
-  const a = buildGenesisPreviewCard({ ...base, timestamp: "2026-05-19T00:00:00Z" });
-  const b = buildGenesisPreviewCard({ ...base, timestamp: "2026-05-20T12:34:56Z" });
+  const a = buildGenesisPreviewCard({
+    ...base,
+    timestamp: "2026-05-19T00:00:00Z",
+  });
+  const b = buildGenesisPreviewCard({
+    ...base,
+    timestamp: "2026-05-20T12:34:56Z",
+  });
   assert.equal(
     a.would_mint_if_consented.receipt_id_preview,
     b.would_mint_if_consented.receipt_id_preview,
-    "timestamp must not affect receipt_id_preview hash"
+    "timestamp must not affect receipt_id_preview hash",
   );
 });
 
@@ -144,12 +157,18 @@ test("rendered_at field carries the injected timestamp (render metadata, not has
 
 test("card_storage block excluded from hash: same candidate+timestamp yields same hash regardless of card_storage_path_hint", () => {
   const base = sampleInput();
-  const cardA = buildGenesisPreviewCard({ ...base, card_storage_path_hint: "/path/a/card.json" });
-  const cardB = buildGenesisPreviewCard({ ...base, card_storage_path_hint: "/path/b/card.json" });
+  const cardA = buildGenesisPreviewCard({
+    ...base,
+    card_storage_path_hint: "/path/a/card.json",
+  });
+  const cardB = buildGenesisPreviewCard({
+    ...base,
+    card_storage_path_hint: "/path/b/card.json",
+  });
   assert.equal(
     cardA.would_mint_if_consented.receipt_id_preview,
     cardB.would_mint_if_consented.receipt_id_preview,
-    "card_storage_path_hint must not affect the hash"
+    "card_storage_path_hint must not affect the hash",
   );
 });
 
@@ -178,7 +197,7 @@ test("blocked_until_typed_GO includes all 5 required entries", () => {
   for (const entry of required) {
     assert.ok(
       card.blocked_until_typed_GO.includes(entry),
-      `blocked_until_typed_GO must include '${entry}'`
+      `blocked_until_typed_GO must include '${entry}'`,
     );
   }
 });
@@ -218,7 +237,10 @@ test("Output is deep-frozen (mutation rejected in strict mode)", () => {
 
 test("CONSENT_PHRASE_TEMPLATES contains en, ar, fr, es at minimum", () => {
   for (const lang of ["en", "ar", "fr", "es"]) {
-    assert.ok(lang in CONSENT_PHRASE_TEMPLATES, `${lang} must be in CONSENT_PHRASE_TEMPLATES`);
+    assert.ok(
+      lang in CONSENT_PHRASE_TEMPLATES,
+      `${lang} must be in CONSENT_PHRASE_TEMPLATES`,
+    );
     assert.ok(typeof CONSENT_PHRASE_TEMPLATES[lang].template === "string");
     assert.ok(typeof CONSENT_PHRASE_TEMPLATES[lang].truth_label === "string");
   }
@@ -230,14 +252,17 @@ test("English phrase is the canonical reference (starts with 'GO:')", () => {
 });
 
 test("Arabic phrase is marked DECLARED_NEEDS_NATIVE_REVIEW", () => {
-  assert.equal(CONSENT_PHRASE_TEMPLATES.ar.truth_label, "DECLARED_NEEDS_NATIVE_REVIEW");
+  assert.equal(
+    CONSENT_PHRASE_TEMPLATES.ar.truth_label,
+    "DECLARED_NEEDS_NATIVE_REVIEW",
+  );
 });
 
 test("Each phrase template contains {receipt_id_preview} placeholder", () => {
   for (const [lang, entry] of Object.entries(CONSENT_PHRASE_TEMPLATES)) {
     assert.ok(
       entry.template.includes("{receipt_id_preview}"),
-      `${lang} template must contain {receipt_id_preview} placeholder`
+      `${lang} template must contain {receipt_id_preview} placeholder`,
     );
   }
 });
@@ -247,7 +272,7 @@ test("consent_phrase_required embeds the actual receipt_id_preview hash", () => 
   const hash = card.would_mint_if_consented.receipt_id_preview;
   assert.ok(
     card.would_mint_if_consented.consent_phrase_required.includes(hash),
-    "consent_phrase_required must embed the receipt_id_preview hash"
+    "consent_phrase_required must embed the receipt_id_preview hash",
   );
 });
 
@@ -263,7 +288,9 @@ test("consent_phrase_secondary is populated when secondary_language is set", () 
   const card = buildGenesisPreviewCard(sampleInput()); // secondary = "ar"
   assert.notEqual(card.would_mint_if_consented.consent_phrase_secondary, null);
   const hash = card.would_mint_if_consented.receipt_id_preview;
-  assert.ok(card.would_mint_if_consented.consent_phrase_secondary.includes(hash));
+  assert.ok(
+    card.would_mint_if_consented.consent_phrase_secondary.includes(hash),
+  );
 });
 
 // ─── refuseMintWithoutQuotedHash validator ───────────────────────────────────
@@ -316,7 +343,11 @@ test("Phrase quoting hash of DIFFERENT card → rejected", () => {
     typedPhrase: phraseB,
     expectedReceiptIdPreview: hashA,
   });
-  assert.equal(result.accepted, false, "phrase for card B must not satisfy card A's hash");
+  assert.equal(
+    result.accepted,
+    false,
+    "phrase for card B must not satisfy card A's hash",
+  );
   assert.notEqual(hashA, hashB);
 });
 
@@ -368,6 +399,6 @@ test("ADVERSARIAL: unicode in preferred_name flows through correctly into hash",
   // Hash must be non-empty and 64 hex chars
   assert.match(
     card.would_mint_if_consented.receipt_id_preview,
-    /^[0-9a-f]{64}$/
+    /^[0-9a-f]{64}$/,
   );
 });
