@@ -66,28 +66,52 @@ export async function signArtifact({
   }
 
   const artifactBytes = await readFile(artifactPath);
+  if (artifactBytes.length > MAX_ARTIFACT_BYTES) {
+    return fail("artifact_too_large", {
+      path: artifactPath,
+      size: artifactBytes.length,
+      max: MAX_ARTIFACT_BYTES,
+    });
+  }
   const artifactSha256 = createHash("sha256")
     .update(artifactBytes)
     .digest("hex");
 
   const privateKeyPem = await loadPrivateKey(home);
+  if (!privateKeyPem) {
+    return fail("private_key_not_readable");
+  }
   const publicKeyPem = await loadPublicKey(home);
-  const fingerprint = sha256(
-    createPublicKey(publicKeyPem)
-      .export({ type: "spki", format: "der" })
-      .toString("hex"),
-  );
+  if (!publicKeyPem) {
+    return fail("public_key_not_readable");
+  }
 
-  const receipt = buildSignedAuthorshipReceipt({
-    artifact_path: artifactPath,
-    artifact_sha256: artifactSha256,
-    private_key_pem: privateKeyPem,
-    public_key_pem: publicKeyPem,
-    public_key_fingerprint: fingerprint,
-  });
+  let receipt;
+  let fingerprint;
+  try {
+    fingerprint = sha256(
+      createPublicKey(publicKeyPem)
+        .export({ type: "spki", format: "der" })
+        .toString("hex"),
+    );
+    receipt = buildSignedAuthorshipReceipt({
+      artifact_path: artifactPath,
+      artifact_sha256: artifactSha256,
+      private_key_pem: privateKeyPem,
+      public_key_pem: publicKeyPem,
+      public_key_fingerprint: fingerprint,
+    });
+  } catch {
+    return fail("signing_failed");
+  }
 
   const { signature, ...payload } = receipt;
-  const selfVerify = verifyPayload(payload, signature.value, publicKeyPem);
+  let selfVerify;
+  try {
+    selfVerify = verifyPayload(payload, signature.value, publicKeyPem);
+  } catch {
+    return fail("self_verify_failed");
+  }
   if (!selfVerify) {
     return fail("self_verify_failed");
   }
@@ -98,7 +122,10 @@ export async function signArtifact({
   const receiptDir = receiptsDir(home);
   await mkdir(receiptDir, { recursive: true });
 
-  const tmpPath = join(receiptDir, `.tmp-${receiptFilename}`);
+  const tmpPath = join(
+    receiptDir,
+    `.tmp-${receiptFilename}.${process.pid}.${Date.now()}`,
+  );
   const finalPath = join(receiptDir, receiptFilename);
   await writeFile(tmpPath, receiptJson, { encoding: "utf8", flag: "wx" });
   await rename(tmpPath, finalPath);

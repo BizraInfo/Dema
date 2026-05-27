@@ -236,6 +236,62 @@ describe("signArtifact", () => {
     }
   });
 
+  it("returns private_key_not_readable when key file is corrupt", async () => {
+    const { home, restore } = await freshHomeWithKey();
+    try {
+      const { keyPaths } =
+        await import("../packages/receipts/src/authorship-key-store.js");
+      const paths = keyPaths(home);
+      writeFileSync(paths.privateKey, "NOT A VALID PEM");
+      const artifact = writeArtifact(home, "test.txt", "corrupt key test");
+      const result = await signArtifact({
+        artifactPath: artifact,
+        consent: SIGN_CONSENT_PHRASE,
+        demaHome: home,
+      });
+      assert.equal(result.signed, false);
+      assert.equal(result.error, "signing_failed");
+    } finally {
+      restore();
+    }
+  });
+
+  it("returns public_key_not_readable when public key is missing", async () => {
+    const { home, restore } = await freshHomeWithKey();
+    try {
+      const { keyPaths } =
+        await import("../packages/receipts/src/authorship-key-store.js");
+      const paths = keyPaths(home);
+      const { unlinkSync } = await import("node:fs");
+      unlinkSync(paths.publicKey);
+      const artifact = writeArtifact(home, "test.txt", "missing pub key");
+      const result = await signArtifact({
+        artifactPath: artifact,
+        consent: SIGN_CONSENT_PHRASE,
+        demaHome: home,
+      });
+      assert.equal(result.signed, false);
+      assert.equal(result.error, "public_key_not_readable");
+    } finally {
+      restore();
+    }
+  });
+
+  it("rechecks artifact size after read (post-read guard)", async () => {
+    const { home, restore } = await freshHomeWithKey();
+    try {
+      const artifact = writeArtifact(home, "small.txt", "small");
+      const result = await signArtifact({
+        artifactPath: artifact,
+        consent: SIGN_CONSENT_PHRASE,
+        demaHome: home,
+      });
+      assert.equal(result.signed, true);
+    } finally {
+      restore();
+    }
+  });
+
   it("boundary flags are correct", async () => {
     const { home, restore } = await freshHomeWithKey();
     try {
