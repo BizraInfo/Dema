@@ -9,8 +9,10 @@ import {
 } from "../packages/core/src/harness-integration.js";
 import { isCanonicalBoundaryShape } from "../packages/core/src/preview-boundary.js";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { execFileSync } from "node:child_process";
+import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 
 const FIXED_NOW = new Date("2026-05-25T12:00:00Z");
 
@@ -544,5 +546,45 @@ describe("harness-integration", () => {
       assert.ok(result.behavioral_probes.note.includes("sync"));
       assert.ok(result.behavioral_probes.note.includes("not executed"));
     });
+  });
+});
+
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+describe("npm script integration", () => {
+  function runScript(name) {
+    return JSON.parse(
+      execFileSync(
+        "node",
+        [join(REPO_ROOT, "apps/cli/src/index.js"), ...name.split(" ")],
+        {
+          cwd: REPO_ROOT,
+          env: { ...process.env, NO_COLOR: "1", NODE_ENV: "test" },
+          timeout: 10000,
+        },
+      ).toString(),
+    );
+  }
+
+  it("harness --json returns schema-tagged CLEAN envelope", () => {
+    const result = runScript("harness --json");
+    assert.equal(result.schema, "bizra.dema.harness_integration.v0.3");
+    assert.equal(typeof result.verdict, "string");
+    assert.ok(result.boundary);
+  });
+
+  it("harness --summary --json returns compact verdict", () => {
+    const result = runScript("harness --summary --json");
+    assert.equal(result.schema, "bizra.dema.harness_integration_summary.v0.3");
+    assert.equal(typeof result.verdict, "string");
+    assert.equal(typeof result.gates, "string");
+  });
+
+  it("status --full --json returns system snapshot", () => {
+    const result = runScript("status --full --json");
+    assert.equal(result.schema, "bizra.dema.system_snapshot.v0.1");
+    assert.ok(result.harness);
+    assert.ok(result.proof_loops);
+    assert.ok(result.boundary);
   });
 });
