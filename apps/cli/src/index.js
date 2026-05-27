@@ -141,6 +141,11 @@ import {
   AUTHORSHIP_SCHEMA,
 } from "../../../packages/receipts/src/authorship-signature.js";
 import {
+  initAuthorshipKey,
+  hasAuthorshipKey,
+  KEY_INIT_CONSENT_PHRASE,
+} from "../../../packages/receipts/src/authorship-key-store.js";
+import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
   verifyHealthSnapshotReceipt,
@@ -358,6 +363,8 @@ Orientation:
                     Node0 health snapshot mission; requires --consent to save
   dema mission verify <path> [--json]
                     Verify a mission receipt
+  dema authorship key init [--json]
+                    Generate and persist Ed25519 keypair (requires --consent)
   dema authorship verify <receipt.json> [--json]
                     Verify an Ed25519-signed authorship receipt
   dema authorship demo [--json]
@@ -1220,6 +1227,30 @@ async function dispatch(argv) {
       const subCmdA = argv[1] ?? "";
       const wantJsonA = wantsJson(argv);
 
+      if (subCmdA === "key" && (argv[2] === "init" || !argv[2])) {
+        const consent = argValue(argv, "--consent") ?? "";
+        const result = await initAuthorshipKey({ consent });
+        if (wantJsonA) {
+          console.log(JSON.stringify(result, null, 2));
+        } else if (result.initialized) {
+          console.log("Authorship Key Initialized");
+          console.log("=".repeat(40));
+          console.log(`  Fingerprint: ${result.public_key_fingerprint}`);
+          console.log(`  Private key: ${result.private_key_path}`);
+          console.log(`  Public key:  ${result.public_key_path}`);
+        } else if (result.error === "consent_required") {
+          console.error(
+            `Consent required. Use: --consent "${KEY_INIT_CONSENT_PHRASE}"`,
+          );
+        } else if (result.error === "key_already_exists") {
+          console.error(
+            `Key already exists at ${result.private_key_path}. Use dema authorship key rotate (future) to replace.`,
+          );
+        }
+        if (!result.initialized) process.exitCode = 1;
+        return;
+      }
+
       if (subCmdA === "verify") {
         const receiptFile = argv[2];
         if (!receiptFile) {
@@ -1324,7 +1355,7 @@ async function dispatch(argv) {
       }
 
       console.error(
-        "Usage: dema authorship verify <receipt.json> | dema authorship demo",
+        "Usage: dema authorship key init | dema authorship verify <receipt.json> | dema authorship demo",
       );
       process.exitCode = 1;
       return;
