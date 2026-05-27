@@ -149,7 +149,14 @@ import {
   signArtifact,
   SIGN_CONSENT_PHRASE,
 } from "../../../packages/receipts/src/authorship-sign-command.js";
-import { getLatestAuthorshipReceiptSummary } from "../../../packages/receipts/src/authorship-latest.js";
+import {
+  getLatestAuthorshipReceiptSummary,
+  findLatestAuthorshipReceipt,
+} from "../../../packages/receipts/src/authorship-latest.js";
+import {
+  verifyAuthorshipReceiptFile,
+  formatAuthorshipVerification,
+} from "../../../packages/receipts/src/authorship-verify.js";
 import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
@@ -374,8 +381,8 @@ Orientation:
                     Sign a local artifact (requires --consent)
   dema authorship latest [--json]
                     Show the most recent authorship receipt (read-only)
-  dema authorship verify <receipt.json> [--json]
-                    Verify an Ed25519-signed authorship receipt
+  dema authorship verify <receipt.json> | --latest [--json]
+                    Verify an Ed25519-signed authorship receipt (by path or latest)
   dema authorship demo [--json]
                     Generate ephemeral keypair, sign, verify (no disk write)
 
@@ -1301,62 +1308,44 @@ async function dispatch(argv) {
       }
 
       if (subCmdA === "verify") {
-        const receiptFile = argv[2];
-        if (!receiptFile) {
+        let receiptPath = argv[2];
+        const useLatest = argv.includes("--latest");
+
+        if (useLatest) {
+          const latest = await findLatestAuthorshipReceipt();
+          if (!latest) {
+            const err = {
+              schema: "bizra.dema.authorship_verify_result.v0.1",
+              verified: false,
+              verdict: "FAILED",
+              error: "no_authorship_receipts_found",
+            };
+            console.log(
+              wantJsonA
+                ? JSON.stringify(err, null, 2)
+                : "No authorship receipts found.",
+            );
+            process.exitCode = 1;
+            return;
+          }
+          receiptPath = latest.path;
+        }
+
+        if (!receiptPath) {
           console.error(
-            "Usage: dema authorship verify <receipt.json> [--json]",
+            "Usage: dema authorship verify <receipt.json> | --latest [--json]",
           );
           process.exitCode = 1;
           return;
         }
-        const { readFile } = await import("node:fs/promises");
-        let raw;
-        try {
-          raw = JSON.parse(await readFile(receiptFile, "utf8"));
-        } catch {
-          const err = { verified: false, error: `Cannot read ${receiptFile}` };
-          console.log(
-            wantJsonA ? JSON.stringify(err, null, 2) : `FAILED: ${err.error}`,
-          );
-          process.exitCode = 1;
-          return;
-        }
-        if (raw.schema !== AUTHORSHIP_SCHEMA || !raw.signature) {
-          const err = {
-            verified: false,
-            error: "Not a valid authorship receipt",
-          };
-          console.log(
-            wantJsonA ? JSON.stringify(err, null, 2) : `FAILED: ${err.error}`,
-          );
-          process.exitCode = 1;
-          return;
-        }
-        const { signature, ...payload } = raw;
-        const ok = verifyPayload(
-          payload,
-          signature.value,
-          signature.public_key_pem,
-        );
-        const out = {
-          schema: "bizra.dema.authorship_verify_result.v0.1",
-          verified: ok,
-          verdict: ok ? "VERIFIED" : "FAILED",
-          artifact: payload.artifact,
-          author: payload.author,
-          boundary: { network_used: false, mutation_performed: false },
-        };
+
+        const result = await verifyAuthorshipReceiptFile(receiptPath);
         if (wantJsonA) {
-          console.log(JSON.stringify(out, null, 2));
+          console.log(JSON.stringify(result, null, 2));
         } else {
-          console.log(`Authorship Verification: ${out.verdict}`);
-          console.log(`  Artifact: ${out.artifact.path}`);
-          console.log(`  SHA256:   ${out.artifact.sha256}`);
-          console.log(
-            `  Author:   ${out.author.node} (${out.author.key_type})`,
-          );
+          console.log(formatAuthorshipVerification(result));
         }
-        if (!ok) process.exitCode = 1;
+        if (!result.verified) process.exitCode = 1;
         return;
       }
 
