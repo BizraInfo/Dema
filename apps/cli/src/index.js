@@ -158,6 +158,10 @@ import {
   formatAuthorshipVerification,
 } from "../../../packages/receipts/src/authorship-verify.js";
 import {
+  buildAuthorshipCloseout,
+  formatAuthorshipCloseout,
+} from "../../../packages/receipts/src/authorship-closeout.js";
+import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
   verifyHealthSnapshotReceipt,
@@ -381,6 +385,8 @@ Orientation:
                     Sign a local artifact (requires --consent)
   dema authorship latest [--json]
                     Show the most recent authorship receipt (read-only)
+  dema authorship closeout [--json]
+                    Closeout summary: discover + verify latest receipt
   dema authorship verify <receipt.json> | --latest [--json]
                     Verify an Ed25519-signed authorship receipt (by path or latest)
   dema authorship demo [--json]
@@ -1307,6 +1313,17 @@ async function dispatch(argv) {
         return;
       }
 
+      if (subCmdA === "closeout") {
+        const closeout = await buildAuthorshipCloseout();
+        if (wantJsonA) {
+          console.log(JSON.stringify(closeout, null, 2));
+        } else {
+          console.log(formatAuthorshipCloseout(closeout));
+        }
+        if (!closeout.verified) process.exitCode = 1;
+        return;
+      }
+
       if (subCmdA === "verify") {
         let receiptPath = argv[2];
         const useLatest = argv.includes("--latest");
@@ -1393,7 +1410,7 @@ async function dispatch(argv) {
       }
 
       console.error(
-        "Usage: dema authorship key init | sign <path> | latest | verify <receipt> | demo",
+        "Usage: dema authorship key init | sign <path> | latest | closeout | verify <receipt> | demo",
       );
       process.exitCode = 1;
       return;
