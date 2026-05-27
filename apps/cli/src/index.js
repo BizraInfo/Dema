@@ -146,6 +146,10 @@ import {
   KEY_INIT_CONSENT_PHRASE,
 } from "../../../packages/receipts/src/authorship-key-store.js";
 import {
+  signArtifact,
+  SIGN_CONSENT_PHRASE,
+} from "../../../packages/receipts/src/authorship-sign-command.js";
+import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
   verifyHealthSnapshotReceipt,
@@ -365,6 +369,8 @@ Orientation:
                     Verify a mission receipt
   dema authorship key init [--json]
                     Generate and persist Ed25519 keypair (requires --consent)
+  dema authorship sign <artifact-path> [--json]
+                    Sign a local artifact (requires --consent)
   dema authorship verify <receipt.json> [--json]
                     Verify an Ed25519-signed authorship receipt
   dema authorship demo [--json]
@@ -1251,6 +1257,30 @@ async function dispatch(argv) {
         return;
       }
 
+      if (subCmdA === "sign") {
+        const artifactPath = argv[2];
+        const consent = argValue(argv, "--consent") ?? "";
+        const result = await signArtifact({ artifactPath, consent });
+        if (wantJsonA) {
+          console.log(JSON.stringify(result, null, 2));
+        } else if (result.signed) {
+          console.log("Authorship Receipt Signed");
+          console.log("=".repeat(40));
+          console.log(`  Artifact SHA256: ${result.artifact_sha256}`);
+          console.log(`  Fingerprint:     ${result.public_key_fingerprint}`);
+          console.log(`  Receipt:         ${result.receipt_path}`);
+          console.log(`  Self-verified:   ${result.self_verified}`);
+        } else if (result.error === "consent_required") {
+          console.error(
+            `Consent required. Use: --consent "${SIGN_CONSENT_PHRASE}"`,
+          );
+        } else {
+          console.error(`Signing failed: ${result.error}`);
+        }
+        if (!result.signed) process.exitCode = 1;
+        return;
+      }
+
       if (subCmdA === "verify") {
         const receiptFile = argv[2];
         if (!receiptFile) {
@@ -1355,7 +1385,7 @@ async function dispatch(argv) {
       }
 
       console.error(
-        "Usage: dema authorship key init | dema authorship verify <receipt.json> | dema authorship demo",
+        "Usage: dema authorship key init | sign <path> | verify <receipt> | demo",
       );
       process.exitCode = 1;
       return;

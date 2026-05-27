@@ -84,6 +84,15 @@ export async function initAuthorshipKey({
   });
 }
 
+export async function loadPrivateKey(demaHome) {
+  const paths = keyPaths(demaHome);
+  try {
+    return await readFile(paths.privateKey, "utf8");
+  } catch {
+    return null;
+  }
+}
+
 export async function loadPublicKey(demaHome) {
   const paths = keyPaths(demaHome);
   try {
