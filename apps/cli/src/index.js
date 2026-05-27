@@ -134,6 +134,13 @@ import {
   formatWitnessVerification,
 } from "../../../packages/receipts/src/witness-verify.js";
 import {
+  generateEd25519Keypair,
+  buildSignedAuthorshipReceipt,
+  verifyPayload,
+  sha256 as authorshipSha256,
+  AUTHORSHIP_SCHEMA,
+} from "../../../packages/receipts/src/authorship-signature.js";
+import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
   verifyHealthSnapshotReceipt,
@@ -351,6 +358,10 @@ Orientation:
                     Node0 health snapshot mission; requires --consent to save
   dema mission verify <path> [--json]
                     Verify a mission receipt
+  dema authorship verify <receipt.json> [--json]
+                    Verify an Ed25519-signed authorship receipt
+  dema authorship demo [--json]
+                    Generate ephemeral keypair, sign, verify (no disk write)
 
 Readiness:
   dema status       Show human-readable Node0 status
@@ -560,6 +571,10 @@ const REGISTERED_COMMANDS_LIST = [
   { command: "consent", description: "preview a micro-consent scope" },
   { command: "mission", description: "preview mission draft or propose" },
   { command: "receipts", description: "list or show local receipts" },
+  {
+    command: "authorship",
+    description: "verify or demo Ed25519 authorship receipts",
+  },
   {
     command: "memory",
     description:
@@ -1198,6 +1213,120 @@ async function dispatch(argv) {
         console.log(formatWitnessReceipt(result));
       }
       if (!result.saved && result.reason !== "dry_run") process.exitCode = 1;
+      return;
+    }
+
+    case "authorship": {
+      const subCmdA = argv[1] ?? "";
+      const wantJsonA = wantsJson(argv);
+
+      if (subCmdA === "verify") {
+        const receiptFile = argv[2];
+        if (!receiptFile) {
+          console.error(
+            "Usage: dema authorship verify <receipt.json> [--json]",
+          );
+          process.exitCode = 1;
+          return;
+        }
+        const { readFile } = await import("node:fs/promises");
+        let raw;
+        try {
+          raw = JSON.parse(await readFile(receiptFile, "utf8"));
+        } catch {
+          const err = { verified: false, error: `Cannot read ${receiptFile}` };
+          console.log(
+            wantJsonA ? JSON.stringify(err, null, 2) : `FAILED: ${err.error}`,
+          );
+          process.exitCode = 1;
+          return;
+        }
+        if (raw.schema !== AUTHORSHIP_SCHEMA || !raw.signature) {
+          const err = {
+            verified: false,
+            error: "Not a valid authorship receipt",
+          };
+          console.log(
+            wantJsonA ? JSON.stringify(err, null, 2) : `FAILED: ${err.error}`,
+          );
+          process.exitCode = 1;
+          return;
+        }
+        const { signature, ...payload } = raw;
+        const ok = verifyPayload(
+          payload,
+          signature.value,
+          signature.public_key_pem,
+        );
+        const out = {
+          schema: "bizra.dema.authorship_verify_result.v0.1",
+          verified: ok,
+          verdict: ok ? "VERIFIED" : "FAILED",
+          artifact: payload.artifact,
+          author: payload.author,
+          boundary: { network_used: false, mutation_performed: false },
+        };
+        if (wantJsonA) {
+          console.log(JSON.stringify(out, null, 2));
+        } else {
+          console.log(`Authorship Verification: ${out.verdict}`);
+          console.log(`  Artifact: ${out.artifact.path}`);
+          console.log(`  SHA256:   ${out.artifact.sha256}`);
+          console.log(
+            `  Author:   ${out.author.node} (${out.author.key_type})`,
+          );
+        }
+        if (!ok) process.exitCode = 1;
+        return;
+      }
+
+      if (subCmdA === "demo") {
+        const keys = generateEd25519Keypair();
+        const demoHash = authorshipSha256("dema-authorship-demo");
+        const receipt = buildSignedAuthorshipReceipt({
+          artifact_path: "demo/ephemeral-artifact.txt",
+          artifact_sha256: demoHash,
+          private_key_pem: keys.private_key_pem,
+          public_key_pem: keys.public_key_pem,
+          public_key_fingerprint: keys.public_key_fingerprint,
+        });
+        const { signature, ...payload } = receipt;
+        const ok = verifyPayload(payload, signature.value, keys.public_key_pem);
+        const out = {
+          schema: "bizra.dema.authorship_demo.v0.1",
+          mode: "EPHEMERAL_DEMO",
+          receipt,
+          self_verify: ok ? "VERIFIED" : "FAILED",
+          boundary: {
+            network_used: false,
+            key_persisted: false,
+            receipt_saved: false,
+            mutation_performed: false,
+          },
+        };
+        if (wantJsonA) {
+          console.log(JSON.stringify(out, null, 2));
+        } else {
+          console.log("Ed25519 Authorship Demo (ephemeral)");
+          console.log("=".repeat(40));
+          console.log(`  Key fingerprint: ${keys.public_key_fingerprint}`);
+          console.log(`  Artifact:        ${receipt.artifact.path}`);
+          console.log(`  SHA256:          ${receipt.artifact.sha256}`);
+          console.log(
+            `  Signed:          yes (${receipt.signature.algorithm})`,
+          );
+          console.log(`  Self-verify:     ${ok ? "VERIFIED" : "FAILED"}`);
+          console.log("");
+          console.log("  No keys or receipts were saved to disk.");
+        }
+        if (!ok) process.exitCode = 1;
+        return;
+      }
+
+      console.error(
+        "Usage: dema authorship verify <receipt.json> | dema authorship demo",
+      );
+      process.exitCode = 1;
       return;
     }
 
