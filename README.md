@@ -446,7 +446,7 @@ As of commit `95b4a4d` (442 commits, 3030 tests passing, 4/4 CI green):
 - Federation (multi-node communication)
 - Token / Proof-of-Impact economy
 - Node1 / URP networking
-- Ed25519 authorship signing
+- Ed25519 persistent key custody (demo + verify are live; key persistence is not)
 - Full multi-model routing
 - Public installer endpoint (install.bizra.ai)
 
