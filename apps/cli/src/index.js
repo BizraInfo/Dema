@@ -179,6 +179,10 @@ import {
   renderDemaRealmHome,
 } from "../../../packages/core/src/dema-realm-home.js";
 import {
+  gatherDemaRealmBoard,
+  renderDemaRealmBoard,
+} from "../../../packages/core/src/dema-realm-board.js";
+import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
   verifyHealthSnapshotReceipt,
@@ -431,12 +435,19 @@ URP:
                     body-hash recompute + filename↔hash parity + forbidden-
                     field check. Read-only. Exit 0 on VERIFIED, 1 on FAILED.
 
-Dema Realm (UX-1A):
+Dema Realm (UX-1A, UX-1B):
   dema realm [--json] [--no-color]
                     Wake Node0. 7-step boot sequence + BIZRA NODE0 · DEMA HOME
                     frame + 5 menu placeholders. Truth-labeled (DECLARED for
                     surfaces with no runtime yet). Read-only. No mutation, no
                     network. Menu dispatch is preview-only in v0 (UX-2A wires it).
+  dema realm board [--json] [--no-color]
+                    The 6-stage BIZRA lifecycle quest board: SEED · PREFLIGHT ·
+                    FORGE · VERIFY · CLOSEOUT · ARCHIVE. Reads operator-curated
+                    DEMA_HOME/realm/quest-board.json if present, else uses
+                    built-in default reflecting the actual session ledger. Per-
+                    quest status (DONE/ACTIVE/NEXT/READY/BLOCKED) honestly
+                    labeled. Read-only.
 
 Readiness:
   dema status       Show human-readable Node0 status
@@ -1773,8 +1784,20 @@ async function dispatch(argv) {
     }
 
     case "realm": {
+      const realmSub = argv[1] ?? "";
       const wantJsonR = wantsJson(argv);
       const noColor = argv.includes("--no-color") || !shouldUseColor();
+
+      if (realmSub === "board") {
+        const board = await gatherDemaRealmBoard();
+        if (wantJsonR) {
+          console.log(JSON.stringify(board, null, 2));
+          return;
+        }
+        console.log(renderDemaRealmBoard(board, { useColor: !noColor }));
+        return;
+      }
+
       const state = await gatherDemaRealmState();
       if (wantJsonR) {
         console.log(JSON.stringify(state, null, 2));
