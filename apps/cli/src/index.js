@@ -170,6 +170,8 @@ import {
   formatProofPassportVerification,
 } from "../../../packages/receipts/src/proof-passport-verify.js";
 import { verifyProofPassportDeep } from "../../../packages/receipts/src/proof-passport-deep-verify.js";
+import { buildUrpLocalIndex } from "../../../packages/urp/src/local-index.js";
+import { saveUrpLocalIndex } from "../../../packages/urp/src/local-index-writer.js";
 import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
@@ -408,6 +410,12 @@ Proof:
                     Verify a proof passport. Default: envelope only (hash + structure
                     + boundary). With --deep: also re-verifies each referenced
                     authorship receipt file against passport metadata.
+
+URP:
+  dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]
+                    Build + persist a local content-addressed URP index from a
+                    verified proof passport. LOCAL_INDEX_ONLY · MARKED_LOCAL_ONLY.
+                    No share, no mint, no PoI, no federation, no network.
 
 Readiness:
   dema status       Show human-readable Node0 status
@@ -1534,6 +1542,128 @@ async function dispatch(argv) {
       }
       console.error(
         "Usage: dema proof passport [--json] | dema proof passport verify <path>",
+      );
+      process.exitCode = 1;
+      return;
+    }
+
+    case "urp": {
+      const urpSub = argv[1] ?? "";
+      const wantJsonU = wantsJson(argv);
+
+      if (urpSub === "index") {
+        const passportPath = argValue(argv, "--passport");
+        const receiptsDir = argValue(argv, "--receipts-dir");
+
+        if (!passportPath) {
+          console.error(
+            "Usage: dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]",
+          );
+          process.exitCode = 1;
+          return;
+        }
+
+        const { readFile } = await import("node:fs/promises");
+        let passport;
+        try {
+          const raw = await readFile(passportPath, "utf8");
+          try {
+            passport = JSON.parse(raw);
+          } catch {
+            const err = {
+              schema: "bizra.dema.urp_local_index_cli_result.v0.1",
+              indexed: false,
+              written: false,
+              error: "invalid_passport_json",
+              passport_path: passportPath,
+            };
+            console.log(
+              wantJsonU
+                ? JSON.stringify(err, null, 2)
+                : `FAILED: invalid JSON in ${passportPath}`,
+            );
+            process.exitCode = 1;
+            return;
+          }
+        } catch {
+          const err = {
+            schema: "bizra.dema.urp_local_index_cli_result.v0.1",
+            indexed: false,
+            written: false,
+            error: "cannot_read_passport",
+            passport_path: passportPath,
+          };
+          console.log(
+            wantJsonU
+              ? JSON.stringify(err, null, 2)
+              : `FAILED: cannot read ${passportPath}`,
+          );
+          process.exitCode = 1;
+          return;
+        }
+
+        const { join: joinPath } = await import("node:path");
+        const { homedir: getHome } = await import("node:os");
+        const envHome = process.env.DEMA_HOME;
+        const resolvedReceiptsDir =
+          receiptsDir ??
+          joinPath(envHome ?? joinPath(getHome(), ".dema"), "receipts");
+        const buildResult = await buildUrpLocalIndex(passport, {
+          receiptsDir: resolvedReceiptsDir,
+        });
+        if (!buildResult.indexed) {
+          const out = {
+            schema: "bizra.dema.urp_local_index_cli_result.v0.1",
+            indexed: false,
+            written: false,
+            error: buildResult.error,
+            verification: buildResult.verification,
+          };
+          if (wantJsonU) {
+            console.log(JSON.stringify(out, null, 2));
+          } else {
+            console.log(
+              `FAILED: ${buildResult.error} · LOCAL_INDEX_ONLY · MARKED_LOCAL_ONLY`,
+            );
+          }
+          process.exitCode = 1;
+          return;
+        }
+
+        const writeResult = await saveUrpLocalIndex(buildResult);
+        const out = {
+          schema: "bizra.dema.urp_local_index_cli_result.v0.1",
+          indexed: true,
+          written: writeResult.written,
+          truth_label: "LOCAL_VERIFIED_RESOURCE_INDEX",
+          mode: "LOCAL_INDEX_ONLY",
+          share_status: "MARKED_LOCAL_ONLY",
+          write_result: writeResult,
+        };
+        if (wantJsonU) {
+          console.log(JSON.stringify(out, null, 2));
+        } else if (writeResult.written) {
+          console.log(
+            [
+              `URP Local Index: WRITTEN`,
+              `  Index hash: ${writeResult.index_hash}`,
+              `  Index path: ${writeResult.index_path}`,
+              `  Mode:       LOCAL_INDEX_ONLY`,
+              `  Share:      MARKED_LOCAL_ONLY`,
+              `  Truth:      LOCAL_VERIFIED_RESOURCE_INDEX`,
+            ].join("\n"),
+          );
+        } else {
+          console.log(
+            `FAILED: writer rejected · ${writeResult.error} · LOCAL_INDEX_ONLY · MARKED_LOCAL_ONLY`,
+          );
+        }
+        if (!writeResult.written) process.exitCode = 1;
+        return;
+      }
+
+      console.error(
+        "Usage: dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]",
       );
       process.exitCode = 1;
       return;
