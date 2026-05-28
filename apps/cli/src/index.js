@@ -180,6 +180,7 @@ import {
   DECISION_MARK_LOCAL_ONLY,
 } from "../../../packages/urp/src/choose-decision.js";
 import { saveChooseDecision } from "../../../packages/urp/src/choose-writer.js";
+import { listChooseDecisions } from "../../../packages/urp/src/choose-list.js";
 import {
   gatherDemaRealmState,
   renderDemaRealmHome,
@@ -453,6 +454,10 @@ URP:
                     Verify a single local index file by path: schema +
                     body-hash recompute + filename↔hash parity + forbidden-
                     field check. Read-only. Exit 0 on VERIFIED, 1 on FAILED.
+  dema urp choose list [--json]
+                    UX-4.1C+ list persisted choose receipts under
+                    $DEMA_HOME/urp/choices/. Filename↔hash + body-hash
+                    integrity per entry. Exit 1 only on detected corruption.
   dema urp choose <index.json> --decision MARK_SHAREABLE|MARK_LOCAL_ONLY
                               --consent "<exact phrase>" [--json]
                     UX-4.1C operator choose CLI. Reads a verified URP local
@@ -1831,6 +1836,46 @@ async function dispatch(argv) {
       }
 
       if (urpSub === "choose") {
+        // Sub-action: `dema urp choose list [--json]` (lists persisted choose receipts).
+        if (argv[2] === "list") {
+          const r = await listChooseDecisions();
+          if (wantJsonU) {
+            console.log(JSON.stringify(r, null, 2));
+          } else if (r.count === 0) {
+            console.log(
+              [
+                "URP Choose Receipts: (none)",
+                `  Dir: ${r.choices_dir}`,
+                `  LOCAL ONLY · no network · no federation · no mint`,
+              ].join("\n"),
+            );
+          } else {
+            const lines = [
+              `URP Choose Receipts: ${r.count}`,
+              `  Dir: ${r.choices_dir}`,
+            ];
+            for (const e of r.entries) {
+              if (e.error) {
+                lines.push(
+                  `  ! ${e.filename}: ${e.error}${e.message ? " · " + e.message : ""}`,
+                );
+              } else {
+                const integ =
+                  e.filename_hash_matches && e.body_hash_intact
+                    ? "OK"
+                    : "CORRUPT";
+                lines.push(
+                  `  - ${e.filename}  ${e.decision ?? "?"}  ${e.previous_share_status ?? "?"} -> ${e.next_share_status ?? "?"}  [${integ}]`,
+                );
+              }
+            }
+            lines.push(`  LOCAL ONLY · no network · no federation · no mint`);
+            console.log(lines.join("\n"));
+          }
+          if (r.corruption_detected) process.exitCode = 1;
+          return;
+        }
+
         const positional = argv.slice(2).filter((a) => !a.startsWith("--"));
         const indexPath = positional[0];
         const decision = argValue(argv, "--decision");
