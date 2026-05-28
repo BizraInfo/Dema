@@ -79,7 +79,12 @@ describe("buildProofPassport", () => {
       assert.equal(passport.aggregate.verified_count, 1);
       assert.equal(passport.aggregate.failed_count, 0);
       assert.equal(passport.receipts[0].verdict, "VERIFIED");
-      assert.match(passport.subject.public_key_fingerprint, /^[a-f0-9]{64}$/);
+      assert.equal(passport.subject.public_key_fingerprints.length, 1);
+      assert.match(
+        passport.subject.public_key_fingerprints[0],
+        /^[a-f0-9]{64}$/,
+      );
+      assert.match(passport.receipts[0].author_fingerprint, /^[a-f0-9]{64}$/);
     } finally {
       restore();
     }
@@ -156,6 +161,60 @@ describe("buildProofPassport", () => {
   });
 });
 
+describe("H19.1.1 hardening — determinism and portability", () => {
+  it("multi-receipt passport_hash is order-independent", async () => {
+    const home = freshHome();
+    const old = process.env.DEMA_HOME;
+    process.env.DEMA_HOME = home;
+    try {
+      await initAuthorshipKey({
+        consent: KEY_INIT_CONSENT_PHRASE,
+        demaHome: home,
+      });
+      for (let i = 0; i < 3; i += 1) {
+        const artifact = join(home, `artifact-${i}.txt`);
+        writeFileSync(artifact, `content-${i}`);
+        await signArtifact({
+          artifactPath: artifact,
+          consent: SIGN_CONSENT_PHRASE,
+          demaHome: home,
+        });
+      }
+      const a = await buildProofPassport(home);
+      const b = await buildProofPassport(home);
+      const stripVolatile = ({ generated_at, passport_hash, ...rest }) => rest;
+      assert.deepEqual(stripVolatile(a), stripVolatile(b));
+      assert.equal(a.aggregate.total_receipts, 3);
+      assert.equal(a.subject.public_key_fingerprints.length, 1);
+    } finally {
+      if (old) process.env.DEMA_HOME = old;
+      else delete process.env.DEMA_HOME;
+    }
+  });
+
+  it("preserves author fingerprint when local public key is removed", async () => {
+    const { home, restore } = await homeWithSignedReceipt();
+    try {
+      const { unlinkSync } = await import("node:fs");
+      const { keyPaths } =
+        await import("../packages/receipts/src/authorship-key-store.js");
+      const paths = keyPaths(home);
+      unlinkSync(paths.publicKey);
+      unlinkSync(paths.privateKey);
+
+      const passport = await buildProofPassport(home);
+      assert.equal(passport.aggregate.verdict, "ALL_VERIFIED");
+      assert.equal(passport.subject.public_key_fingerprints.length, 1);
+      assert.match(
+        passport.subject.public_key_fingerprints[0],
+        /^[a-f0-9]{64}$/,
+      );
+    } finally {
+      restore();
+    }
+  });
+});
+
 describe("formatProofPassport", () => {
   it("formats empty passport", () => {
     const text = formatProofPassport({
@@ -171,7 +230,7 @@ describe("formatProofPassport", () => {
       const passport = await buildProofPassport(home);
       const text = formatProofPassport(passport);
       assert.match(text, /ALL_VERIFIED/);
-      assert.match(text, /Fingerprint:/);
+      assert.match(text, /Fingerprints:/);
       assert.match(text, /Verified:\s+1/);
     } finally {
       restore();

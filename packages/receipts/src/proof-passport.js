@@ -1,11 +1,8 @@
-import { readdir, stat, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readdir } from "node:fs/promises";
+import { join, basename } from "node:path";
 import { homedir } from "node:os";
 import { verifyAuthorshipReceiptFile } from "./authorship-verify.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
-import { AUTHORSHIP_SCHEMA } from "./authorship-signature.js";
-import { loadPublicKey } from "./authorship-key-store.js";
-import { createPublicKey } from "node:crypto";
 
 export const PROOF_PASSPORT_SCHEMA = "bizra.dema.proof_passport.v0.1";
 
@@ -32,23 +29,10 @@ async function findAuthorshipReceipts(home) {
     const entries = await readdir(receiptsDir);
     return entries
       .filter((f) => f.startsWith("authorship-") && f.endsWith(".json"))
-      .map((f) => join(receiptsDir, f));
+      .map((f) => join(receiptsDir, f))
+      .sort();
   } catch {
     return [];
-  }
-}
-
-async function getFingerprint(home) {
-  const pubPem = await loadPublicKey(home);
-  if (!pubPem) return null;
-  try {
-    return sha256(
-      createPublicKey(pubPem)
-        .export({ type: "spki", format: "der" })
-        .toString("hex"),
-    );
-  } catch {
-    return null;
   }
 }
 
@@ -61,7 +45,7 @@ export async function buildProofPassport(demaHome) {
       schema: PROOF_PASSPORT_SCHEMA,
       generated_at: new Date().toISOString(),
       mode: "LOCAL_EXPORT",
-      subject: { node: "Node0", public_key_fingerprint: null },
+      subject: { node: "Node0", public_key_fingerprints: [] },
       receipts: [],
       aggregate: {
         total_receipts: 0,
@@ -75,18 +59,22 @@ export async function buildProofPassport(demaHome) {
     });
   }
 
-  const fingerprint = await getFingerprint(home);
   const receipts = [];
+  const fingerprintSet = new Set();
 
   for (const path of receiptPaths) {
     const verification = await verifyAuthorshipReceiptFile(path);
-    const filename = path.split("/").pop();
+    const fingerprint = verification.author?.public_key_fingerprint ?? null;
+    if (fingerprint && verification.verified) {
+      fingerprintSet.add(fingerprint);
+    }
     receipts.push({
       type: "authorship",
-      receipt_filename: filename,
+      receipt_filename: basename(path),
       artifact_path: verification.artifact?.path ?? null,
       artifact_sha256: verification.artifact?.sha256 ?? null,
       signature_algorithm: "ed25519",
+      author_fingerprint: fingerprint,
       verdict: verification.verdict,
       truth_label: verification.verified
         ? "VERIFIED_LOCAL_AUTHORSHIP_RECEIPT"
@@ -110,13 +98,15 @@ export async function buildProofPassport(demaHome) {
     truthLabel = "LOCAL_PROOF_PASSPORT_NONE_VERIFIED";
   }
 
+  const fingerprints = [...fingerprintSet].sort();
+
   const body = {
     schema: PROOF_PASSPORT_SCHEMA,
     generated_at: new Date().toISOString(),
     mode: "LOCAL_EXPORT",
     subject: {
       node: "Node0",
-      public_key_fingerprint: fingerprint,
+      public_key_fingerprints: fingerprints,
     },
     receipts,
     aggregate: {
@@ -143,8 +133,9 @@ export function formatProofPassport(passport) {
     "=".repeat(40),
     `  Node:         ${passport.subject.node}`,
   ];
-  if (passport.subject.public_key_fingerprint) {
-    lines.push(`  Fingerprint:  ${passport.subject.public_key_fingerprint}`);
+  const fingerprints = passport.subject.public_key_fingerprints ?? [];
+  if (fingerprints.length > 0) {
+    lines.push(`  Fingerprints: ${fingerprints.join(", ")}`);
   }
   lines.push(
     `  Receipts:     ${passport.aggregate.total_receipts}`,
