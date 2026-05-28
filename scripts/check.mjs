@@ -116,6 +116,7 @@ export const commands = [
   ["node", ["scripts/proof-room-bundle.mjs", "--json"]],
   ["node", ["scripts/node0-self-check.mjs", "--verify"]],
   ["node", ["scripts/review/harness-gate.mjs"]],
+  ["node", ["scripts/urp-stage3-closeout.mjs"]],
 ];
 
 export function runChecks(checks = commands) {
