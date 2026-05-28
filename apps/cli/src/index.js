@@ -188,6 +188,10 @@ import {
 } from "../../../packages/core/src/dema-realm-checkpoint.js";
 import { saveDemaRealmCheckpoint } from "../../../packages/core/src/dema-realm-checkpoint-writer.js";
 import {
+  gatherDemaRealmCouncil,
+  renderDemaRealmCouncil,
+} from "../../../packages/core/src/dema-realm-council.js";
+import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
   verifyHealthSnapshotReceipt,
@@ -453,6 +457,12 @@ Dema Realm (UX-1A, UX-1B):
                     built-in default reflecting the actual session ledger. Per-
                     quest status (DONE/ACTIVE/NEXT/READY/BLOCKED) honestly
                     labeled. Read-only.
+  dema realm council [--json] [--no-color]
+                    UX-1D Council Chamber: 5 declared council profiles —
+                    Guardian (boundary/consent/risk), Reasoner (SAPE/graph
+                    thinking), Builder (implementation/tests), Critic (self-
+                    review/red-team), Archivist (receipts/memory/truth).
+                    Profiles are DECLARED, NOT runtime-backed. Read-only.
   dema realm checkpoint [--json] [--no-color]
                     Checkpoint Journal v0 — where you stopped, what resumes.
                     Reads DEMA_HOME/realm/last-checkpoint.json + optional
@@ -1815,6 +1825,16 @@ async function dispatch(argv) {
           return;
         }
         console.log(renderDemaRealmBoard(board, { useColor: !noColor }));
+        return;
+      }
+
+      if (realmSub === "council") {
+        const council = gatherDemaRealmCouncil();
+        if (wantJsonR) {
+          console.log(JSON.stringify(council, null, 2));
+          return;
+        }
+        console.log(renderDemaRealmCouncil(council, { useColor: !noColor }));
         return;
       }
 
