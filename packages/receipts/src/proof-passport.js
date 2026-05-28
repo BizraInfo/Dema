@@ -41,9 +41,8 @@ export async function buildProofPassport(demaHome) {
   const receiptPaths = await findAuthorshipReceipts(home);
 
   if (receiptPaths.length === 0) {
-    return freeze({
+    const emptyBody = {
       schema: PROOF_PASSPORT_SCHEMA,
-      generated_at: new Date().toISOString(),
       mode: "LOCAL_EXPORT",
       subject: { node: "Node0", public_key_fingerprints: [] },
       receipts: [],
@@ -53,9 +52,13 @@ export async function buildProofPassport(demaHome) {
         failed_count: 0,
         verdict: "EMPTY",
       },
-      passport_hash: null,
       boundary: BOUNDARY,
       truth_label: "LOCAL_PROOF_PASSPORT_EMPTY",
+    };
+    return freeze({
+      ...emptyBody,
+      passport_hash: sha256(stableStringify(emptyBody)),
+      generated_at: new Date().toISOString(),
     });
   }
 
@@ -100,9 +103,8 @@ export async function buildProofPassport(demaHome) {
 
   const fingerprints = [...fingerprintSet].sort();
 
-  const body = {
+  const passportBody = {
     schema: PROOF_PASSPORT_SCHEMA,
-    generated_at: new Date().toISOString(),
     mode: "LOCAL_EXPORT",
     subject: {
       node: "Node0",
@@ -119,9 +121,13 @@ export async function buildProofPassport(demaHome) {
     truth_label: truthLabel,
   };
 
-  body.passport_hash = sha256(stableStringify(body));
+  const passportHash = sha256(stableStringify(passportBody));
 
-  return freeze(body);
+  return freeze({
+    ...passportBody,
+    passport_hash: passportHash,
+    generated_at: new Date().toISOString(),
+  });
 }
 
 export function formatProofPassport(passport) {

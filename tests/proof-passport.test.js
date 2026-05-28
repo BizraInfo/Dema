@@ -116,7 +116,7 @@ describe("buildProofPassport", () => {
     const { home, restore } = await homeWithSignedReceipt();
     try {
       const passport = await buildProofPassport(home);
-      const { passport_hash, ...body } = passport;
+      const { passport_hash, generated_at, ...body } = passport;
       const recomputed = sha256(stableStringify(body));
       assert.equal(passport_hash, recomputed);
     } finally {
@@ -182,14 +182,37 @@ describe("H19.1.1 hardening — determinism and portability", () => {
       }
       const a = await buildProofPassport(home);
       const b = await buildProofPassport(home);
-      const stripVolatile = ({ generated_at, passport_hash, ...rest }) => rest;
+      const stripVolatile = ({ generated_at, ...rest }) => rest;
       assert.deepEqual(stripVolatile(a), stripVolatile(b));
+      assert.equal(a.passport_hash, b.passport_hash);
       assert.equal(a.aggregate.total_receipts, 3);
       assert.equal(a.subject.public_key_fingerprints.length, 1);
     } finally {
       if (old) process.env.DEMA_HOME = old;
       else delete process.env.DEMA_HOME;
     }
+  });
+
+  it("passport_hash is stable across re-builds (H19.1.2)", async () => {
+    const { home, restore } = await homeWithSignedReceipt();
+    try {
+      const a = await buildProofPassport(home);
+      await new Promise((r) => setTimeout(r, 10));
+      const b = await buildProofPassport(home);
+      assert.notEqual(a.generated_at, b.generated_at);
+      assert.equal(a.passport_hash, b.passport_hash);
+    } finally {
+      restore();
+    }
+  });
+
+  it("empty passport_hash is also stable", async () => {
+    const homeA = freshHome();
+    const homeB = freshHome();
+    const a = await buildProofPassport(homeA);
+    const b = await buildProofPassport(homeB);
+    assert.equal(a.passport_hash, b.passport_hash);
+    assert.equal(a.aggregate.verdict, "EMPTY");
   });
 
   it("preserves author fingerprint when local public key is removed", async () => {
