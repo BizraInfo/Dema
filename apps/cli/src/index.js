@@ -166,6 +166,10 @@ import {
   formatProofPassport,
 } from "../../../packages/receipts/src/proof-passport.js";
 import {
+  verifyProofPassportFile,
+  formatProofPassportVerification,
+} from "../../../packages/receipts/src/proof-passport-verify.js";
+import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
   verifyHealthSnapshotReceipt,
@@ -399,6 +403,8 @@ Orientation:
 Proof:
   dema proof passport [--json]
                     Generate portable proof passport from local receipts
+  dema proof passport verify <passport.json> [--json]
+                    Verify a portable proof passport (hash + structure + boundary)
 
 Readiness:
   dema status       Show human-readable Node0 status
@@ -1427,9 +1433,29 @@ async function dispatch(argv) {
 
     case "proof": {
       const proofSub = argv[1] ?? "";
+      const wantJsonP = wantsJson(argv);
+
+      if (proofSub === "passport" && argv[2] === "verify") {
+        const passportPath = argv[3];
+        if (!passportPath) {
+          console.error(
+            "Usage: dema proof passport verify <passport.json> [--json]",
+          );
+          process.exitCode = 1;
+          return;
+        }
+        const result = await verifyProofPassportFile(passportPath);
+        if (wantJsonP) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log(formatProofPassportVerification(result));
+        }
+        if (!result.verified) process.exitCode = 1;
+        return;
+      }
+
       if (proofSub === "passport") {
         const passport = await buildProofPassport();
-        const wantJsonP = wantsJson(argv);
         if (wantJsonP) {
           console.log(JSON.stringify(passport, null, 2));
         } else {
@@ -1443,7 +1469,9 @@ async function dispatch(argv) {
         }
         return;
       }
-      console.error("Usage: dema proof passport [--json]");
+      console.error(
+        "Usage: dema proof passport [--json] | dema proof passport verify <path>",
+      );
       process.exitCode = 1;
       return;
     }
