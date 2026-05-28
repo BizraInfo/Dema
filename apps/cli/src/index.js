@@ -175,6 +175,10 @@ import { saveUrpLocalIndex } from "../../../packages/urp/src/local-index-writer.
 import { listUrpLocalIndexes } from "../../../packages/urp/src/local-index-list.js";
 import { verifyUrpLocalIndexFile } from "../../../packages/urp/src/local-index-verify.js";
 import {
+  gatherDemaRealmState,
+  renderDemaRealmHome,
+} from "../../../packages/core/src/dema-realm-home.js";
+import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
   verifyHealthSnapshotReceipt,
@@ -426,6 +430,13 @@ URP:
                     Verify a single local index file by path: schema +
                     body-hash recompute + filename↔hash parity + forbidden-
                     field check. Read-only. Exit 0 on VERIFIED, 1 on FAILED.
+
+Dema Realm (UX-1A):
+  dema realm [--json] [--no-color]
+                    Wake Node0. 7-step boot sequence + BIZRA NODE0 · DEMA HOME
+                    frame + 5 menu placeholders. Truth-labeled (DECLARED for
+                    surfaces with no runtime yet). Read-only. No mutation, no
+                    network. Menu dispatch is preview-only in v0 (UX-2A wires it).
 
 Readiness:
   dema status       Show human-readable Node0 status
@@ -1758,6 +1769,18 @@ async function dispatch(argv) {
         "Usage: dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]\n       dema urp list [--json]\n       dema urp verify <index.json> [--json]",
       );
       process.exitCode = 1;
+      return;
+    }
+
+    case "realm": {
+      const wantJsonR = wantsJson(argv);
+      const noColor = argv.includes("--no-color") || !shouldUseColor();
+      const state = await gatherDemaRealmState();
+      if (wantJsonR) {
+        console.log(JSON.stringify(state, null, 2));
+        return;
+      }
+      console.log(renderDemaRealmHome(state, { useColor: !noColor }));
       return;
     }
 
