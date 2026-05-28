@@ -173,6 +173,7 @@ import { verifyProofPassportDeep } from "../../../packages/receipts/src/proof-pa
 import { buildUrpLocalIndex } from "../../../packages/urp/src/local-index.js";
 import { saveUrpLocalIndex } from "../../../packages/urp/src/local-index-writer.js";
 import { listUrpLocalIndexes } from "../../../packages/urp/src/local-index-list.js";
+import { verifyUrpLocalIndexFile } from "../../../packages/urp/src/local-index-verify.js";
 import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
@@ -421,6 +422,10 @@ URP:
                     Enumerate locally-persisted URP indexes under
                     $DEMA_HOME/urp/indexes/, verifying filename↔hash parity
                     per entry. Read-only. Exit 1 only on detected corruption.
+  dema urp verify <index.json> [--json]
+                    Verify a single local index file by path: schema +
+                    body-hash recompute + filename↔hash parity + forbidden-
+                    field check. Read-only. Exit 0 on VERIFIED, 1 on FAILED.
 
 Readiness:
   dema status       Show human-readable Node0 status
@@ -1706,8 +1711,51 @@ async function dispatch(argv) {
         return;
       }
 
+      if (urpSub === "verify") {
+        const positional = argv.slice(2).filter((a) => !a.startsWith("--"));
+        const indexPath = positional[0];
+
+        if (!indexPath) {
+          console.error("Usage: dema urp verify <index.json> [--json]");
+          process.exitCode = 1;
+          return;
+        }
+
+        const result = await verifyUrpLocalIndexFile(indexPath);
+        if (wantJsonU) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          const lines = [
+            `URP Local Index Verify: ${result.verdict}`,
+            `  File: ${indexPath}`,
+          ];
+          if (result.verified) {
+            lines.push(`  Index hash: ${result.index_hash}`);
+            lines.push(
+              `  Filename↔hash: ${result.filename_hash_matches === null ? "n/a (non-canonical filename)" : result.filename_hash_matches ? "OK" : "MISMATCH"}`,
+            );
+            lines.push(`  Receipts:    ${result.receipts_count ?? "?"}`);
+            lines.push(`  Truth:       ${result.truth_label}`);
+          } else {
+            lines.push(`  Error:       ${result.error}`);
+            if (result.declared && result.recomputed) {
+              lines.push(`  Declared:    ${result.declared}`);
+              lines.push(`  Recomputed:  ${result.recomputed}`);
+            }
+            if (result.field) {
+              lines.push(`  Forbidden field: ${result.field}`);
+            }
+            lines.push(`  Truth:       ${result.truth_label}`);
+          }
+          lines.push(`  LOCAL_INDEX_ONLY · MARKED_LOCAL_ONLY`);
+          console.log(lines.join("\n"));
+        }
+        if (!result.verified) process.exitCode = 1;
+        return;
+      }
+
       console.error(
-        "Usage: dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]\n       dema urp list [--json]",
+        "Usage: dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]\n       dema urp list [--json]\n       dema urp verify <index.json> [--json]",
       );
       process.exitCode = 1;
       return;
