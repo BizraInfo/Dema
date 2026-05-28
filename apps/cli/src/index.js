@@ -183,6 +183,10 @@ import {
   renderDemaRealmBoard,
 } from "../../../packages/core/src/dema-realm-board.js";
 import {
+  gatherDemaRealmCheckpoint,
+  renderDemaRealmCheckpoint,
+} from "../../../packages/core/src/dema-realm-checkpoint.js";
+import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
   verifyHealthSnapshotReceipt,
@@ -448,6 +452,11 @@ Dema Realm (UX-1A, UX-1B):
                     built-in default reflecting the actual session ledger. Per-
                     quest status (DONE/ACTIVE/NEXT/READY/BLOCKED) honestly
                     labeled. Read-only.
+  dema realm checkpoint [--json] [--no-color]
+                    Checkpoint Journal v0 — where you stopped, what resumes.
+                    Reads DEMA_HOME/realm/last-checkpoint.json + optional
+                    DEMA_HOME/realm/timeline.json. Honest CHECKPOINT_ABSENT
+                    state when no file. Read-only.
 
 Readiness:
   dema status       Show human-readable Node0 status
@@ -1795,6 +1804,16 @@ async function dispatch(argv) {
           return;
         }
         console.log(renderDemaRealmBoard(board, { useColor: !noColor }));
+        return;
+      }
+
+      if (realmSub === "checkpoint") {
+        const cp = await gatherDemaRealmCheckpoint();
+        if (wantJsonR) {
+          console.log(JSON.stringify(cp, null, 2));
+          return;
+        }
+        console.log(renderDemaRealmCheckpoint(cp, { useColor: !noColor }));
         return;
       }
 
