@@ -169,6 +169,7 @@ import {
   verifyProofPassportFile,
   formatProofPassportVerification,
 } from "../../../packages/receipts/src/proof-passport-verify.js";
+import { verifyProofPassportDeep } from "../../../packages/receipts/src/proof-passport-deep-verify.js";
 import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
@@ -403,8 +404,10 @@ Orientation:
 Proof:
   dema proof passport [--json]
                     Generate portable proof passport from local receipts
-  dema proof passport verify <passport.json> [--json]
-                    Verify a portable proof passport (hash + structure + boundary)
+  dema proof passport verify <passport.json> [--deep] [--receipts-dir <dir>] [--json]
+                    Verify a proof passport. Default: envelope only (hash + structure
+                    + boundary). With --deep: also re-verifies each referenced
+                    authorship receipt file against passport metadata.
 
 Readiness:
   dema status       Show human-readable Node0 status
@@ -1436,14 +1439,74 @@ async function dispatch(argv) {
       const wantJsonP = wantsJson(argv);
 
       if (proofSub === "passport" && argv[2] === "verify") {
-        const passportPath = argv[3];
+        const positional = argv.slice(3).filter((a) => !a.startsWith("--"));
+        const passportPath = positional[0];
+        const deep = argv.includes("--deep");
+        const receiptsDir = argValue(argv, "--receipts-dir");
+
         if (!passportPath) {
           console.error(
-            "Usage: dema proof passport verify <passport.json> [--json]",
+            "Usage: dema proof passport verify <passport.json> [--deep] [--receipts-dir <dir>] [--json]",
           );
           process.exitCode = 1;
           return;
         }
+
+        if (deep) {
+          const { readFile } = await import("node:fs/promises");
+          let passport;
+          try {
+            passport = JSON.parse(await readFile(passportPath, "utf8"));
+          } catch {
+            const err = {
+              verified: false,
+              verdict: "FAILED",
+              error: "cannot_read_passport",
+              passport_path: passportPath,
+            };
+            console.log(
+              wantJsonP
+                ? JSON.stringify(err, null, 2)
+                : `FAILED: cannot read ${passportPath}`,
+            );
+            process.exitCode = 1;
+            return;
+          }
+          const { join: joinPath } = await import("node:path");
+          const { homedir: getHome } = await import("node:os");
+          const envHome = process.env.DEMA_HOME;
+          const resolvedDir =
+            receiptsDir ??
+            joinPath(envHome ?? joinPath(getHome(), ".dema"), "receipts");
+          const deepResult = await verifyProofPassportDeep(passport, {
+            receiptsDir: resolvedDir,
+          });
+          if (wantJsonP) {
+            console.log(JSON.stringify(deepResult, null, 2));
+          } else {
+            const lines = [
+              `Proof Passport Deep Verification: ${deepResult.verdict}`,
+              `  Scope:    ${deepResult.verification_scope}`,
+              `  Receipts: ${deepResult.receipt_results.length}`,
+            ];
+            const failed = deepResult.receipt_results.filter(
+              (r) => !r.verified,
+            );
+            if (failed.length > 0) {
+              lines.push(`  Failed:   ${failed.length}`);
+              for (const r of failed) {
+                lines.push(
+                  `    - ${r.receipt_filename}: ${r.error ?? "metadata_mismatch"}`,
+                );
+              }
+            }
+            lines.push(`  Truth:    ${deepResult.truth_label}`);
+            console.log(lines.join("\n"));
+          }
+          if (!deepResult.verified) process.exitCode = 1;
+          return;
+        }
+
         const result = await verifyProofPassportFile(passportPath);
         if (wantJsonP) {
           console.log(JSON.stringify(result, null, 2));
