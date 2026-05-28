@@ -175,6 +175,12 @@ import { saveUrpLocalIndex } from "../../../packages/urp/src/local-index-writer.
 import { listUrpLocalIndexes } from "../../../packages/urp/src/local-index-list.js";
 import { verifyUrpLocalIndexFile } from "../../../packages/urp/src/local-index-verify.js";
 import {
+  buildChooseDecision,
+  DECISION_MARK_SHAREABLE,
+  DECISION_MARK_LOCAL_ONLY,
+} from "../../../packages/urp/src/choose-decision.js";
+import { saveChooseDecision } from "../../../packages/urp/src/choose-writer.js";
+import {
   gatherDemaRealmState,
   renderDemaRealmHome,
 } from "../../../packages/core/src/dema-realm-home.js";
@@ -447,6 +453,15 @@ URP:
                     Verify a single local index file by path: schema +
                     body-hash recompute + filename↔hash parity + forbidden-
                     field check. Read-only. Exit 0 on VERIFIED, 1 on FAILED.
+  dema urp choose <index.json> --decision MARK_SHAREABLE|MARK_LOCAL_ONLY
+                              --consent "<exact phrase>" [--json]
+                    UX-4.1C operator choose CLI. Reads a verified URP local
+                    index, builds a kernel envelope, persists it to
+                    $DEMA_HOME/urp/choices/choose-<sha256>.json (mode 0o600,
+                    content-addressed, append-only). Decision MARK_SHAREABLE
+                    requires consent "MARK URP ENTRY SHAREABLE";
+                    MARK_LOCAL_ONLY requires "MARK URP ENTRY LOCAL-ONLY".
+                    LOCAL ONLY — no network, no federation, no mint.
 
 Dema Realm (UX-1A, UX-1B):
   dema realm [--json] [--no-color]
@@ -1815,8 +1830,149 @@ async function dispatch(argv) {
         return;
       }
 
+      if (urpSub === "choose") {
+        const positional = argv.slice(2).filter((a) => !a.startsWith("--"));
+        const indexPath = positional[0];
+        const decision = argValue(argv, "--decision");
+        const consent = argValue(argv, "--consent");
+
+        if (!indexPath) {
+          console.error(
+            'Usage: dema urp choose <index.json> --decision MARK_SHAREABLE|MARK_LOCAL_ONLY --consent "<exact phrase>" [--json]',
+          );
+          process.exitCode = 1;
+          return;
+        }
+        if (!decision) {
+          console.error(
+            "dema urp choose: --decision is required (MARK_SHAREABLE or MARK_LOCAL_ONLY)",
+          );
+          process.exitCode = 1;
+          return;
+        }
+        if (
+          decision !== DECISION_MARK_SHAREABLE &&
+          decision !== DECISION_MARK_LOCAL_ONLY
+        ) {
+          console.error(
+            `dema urp choose: invalid --decision "${decision}"; must be MARK_SHAREABLE or MARK_LOCAL_ONLY`,
+          );
+          process.exitCode = 1;
+          return;
+        }
+
+        const { readFile: rf } = await import("node:fs/promises");
+        let index;
+        try {
+          const raw = await rf(indexPath, "utf8");
+          try {
+            index = JSON.parse(raw);
+          } catch {
+            const err = {
+              schema: "bizra.dema.urp_choose_cli_result.v0.1",
+              chosen: false,
+              written: false,
+              error: "invalid_index_json",
+              index_path: indexPath,
+            };
+            console.log(
+              wantJsonU
+                ? JSON.stringify(err, null, 2)
+                : `FAILED: invalid JSON in ${indexPath}`,
+            );
+            process.exitCode = 1;
+            return;
+          }
+        } catch {
+          const err = {
+            schema: "bizra.dema.urp_choose_cli_result.v0.1",
+            chosen: false,
+            written: false,
+            error: "cannot_read_index",
+            index_path: indexPath,
+          };
+          console.log(
+            wantJsonU
+              ? JSON.stringify(err, null, 2)
+              : `FAILED: cannot read ${indexPath}`,
+          );
+          process.exitCode = 1;
+          return;
+        }
+
+        const kernelResult = buildChooseDecision(index, {
+          decision,
+          consent,
+        });
+        if (!kernelResult.chosen) {
+          const out = {
+            schema: "bizra.dema.urp_choose_cli_result.v0.1",
+            chosen: false,
+            written: false,
+            error: kernelResult.error,
+            expected_consent: kernelResult.expected_consent ?? null,
+            from: kernelResult.from ?? null,
+            decision,
+          };
+          if (wantJsonU) {
+            console.log(JSON.stringify(out, null, 2));
+          } else {
+            console.error(
+              `Choose REJECTED · ${kernelResult.error}` +
+                (kernelResult.expected_consent
+                  ? ` · expected consent phrase: "${kernelResult.expected_consent}"`
+                  : ""),
+            );
+          }
+          process.exitCode = 1;
+          return;
+        }
+
+        const writeResult = await saveChooseDecision(kernelResult);
+        const out = {
+          schema: "bizra.dema.urp_choose_cli_result.v0.1",
+          chosen: true,
+          written: writeResult.written,
+          truth_label: writeResult.truth_label ?? null,
+          decision: kernelResult.decision,
+          previous_share_status: kernelResult.previous_share_status,
+          next_share_status: kernelResult.next_share_status,
+          source_index_hash: kernelResult.source_index_hash,
+          choose_hash: kernelResult.choose_hash,
+          receipt_path: writeResult.receipt_path ?? null,
+          mode_octal: writeResult.mode_octal ?? null,
+          already_existed: writeResult.already_existed ?? null,
+          write_result: writeResult,
+        };
+        if (wantJsonU) {
+          console.log(JSON.stringify(out, null, 2));
+        } else if (writeResult.written) {
+          console.log(
+            [
+              `Choose receipt persisted. No external share performed.`,
+              `  Decision:     ${kernelResult.decision}`,
+              `  From:         ${kernelResult.previous_share_status}`,
+              `  To:           ${kernelResult.next_share_status}`,
+              `  Source index: ${kernelResult.source_index_hash}`,
+              `  Choose hash:  ${kernelResult.choose_hash}`,
+              `  Receipt:      ${writeResult.receipt_path}`,
+              `  Mode:         ${writeResult.mode_octal}`,
+              `  Already existed: ${writeResult.already_existed ? "yes (idempotent)" : "no (new)"}`,
+              `  Truth:        ${writeResult.truth_label}`,
+              `  LOCAL ONLY · no network · no federation · no mint`,
+            ].join("\n"),
+          );
+        } else {
+          console.error(
+            `Choose receipt NOT persisted · writer error: ${writeResult.error}`,
+          );
+          process.exitCode = 1;
+        }
+        return;
+      }
+
       console.error(
-        "Usage: dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]\n       dema urp list [--json]\n       dema urp verify <index.json> [--json]",
+        'Usage: dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]\n       dema urp list [--json]\n       dema urp verify <index.json> [--json]\n       dema urp choose <index.json> --decision MARK_SHAREABLE|MARK_LOCAL_ONLY --consent "<exact phrase>" [--json]',
       );
       process.exitCode = 1;
       return;
