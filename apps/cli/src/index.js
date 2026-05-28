@@ -172,6 +172,7 @@ import {
 import { verifyProofPassportDeep } from "../../../packages/receipts/src/proof-passport-deep-verify.js";
 import { buildUrpLocalIndex } from "../../../packages/urp/src/local-index.js";
 import { saveUrpLocalIndex } from "../../../packages/urp/src/local-index-writer.js";
+import { listUrpLocalIndexes } from "../../../packages/urp/src/local-index-list.js";
 import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
@@ -416,6 +417,10 @@ URP:
                     Build + persist a local content-addressed URP index from a
                     verified proof passport. LOCAL_INDEX_ONLY · MARKED_LOCAL_ONLY.
                     No share, no mint, no PoI, no federation, no network.
+  dema urp list [--json]
+                    Enumerate locally-persisted URP indexes under
+                    $DEMA_HOME/urp/indexes/, verifying filename↔hash parity
+                    per entry. Read-only. Exit 1 only on detected corruption.
 
 Readiness:
   dema status       Show human-readable Node0 status
@@ -1662,8 +1667,47 @@ async function dispatch(argv) {
         return;
       }
 
+      if (urpSub === "list") {
+        const result = await listUrpLocalIndexes();
+        if (wantJsonU) {
+          console.log(JSON.stringify(result, null, 2));
+        } else if (result.count === 0) {
+          console.log(
+            [
+              "URP Local Indexes: (none)",
+              `  Dir: ${result.indexes_dir}`,
+              `  LOCAL_INDEX_ONLY · MARKED_LOCAL_ONLY`,
+            ].join("\n"),
+          );
+        } else {
+          const lines = [
+            `URP Local Indexes: ${result.count}`,
+            `  Dir: ${result.indexes_dir}`,
+          ];
+          for (const e of result.entries) {
+            if (e.error) {
+              lines.push(
+                `  ! ${e.filename}: ${e.error}${e.message ? " · " + e.message : ""}`,
+              );
+            } else {
+              const integ =
+                e.filename_hash_matches && e.body_hash_intact
+                  ? "OK"
+                  : "CORRUPT";
+              lines.push(
+                `  - ${e.filename}  receipts=${e.receipts_count ?? "?"}  ${e.truth_label ?? ""}  [${integ}]`,
+              );
+            }
+          }
+          lines.push(`  LOCAL_INDEX_ONLY · MARKED_LOCAL_ONLY`);
+          console.log(lines.join("\n"));
+        }
+        if (result.corruption_detected) process.exitCode = 1;
+        return;
+      }
+
       console.error(
-        "Usage: dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]",
+        "Usage: dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]\n       dema urp list [--json]",
       );
       process.exitCode = 1;
       return;
