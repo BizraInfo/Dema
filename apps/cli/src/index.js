@@ -162,6 +162,10 @@ import {
   formatAuthorshipCloseout,
 } from "../../../packages/receipts/src/authorship-closeout.js";
 import {
+  buildProofPassport,
+  formatProofPassport,
+} from "../../../packages/receipts/src/proof-passport.js";
+import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
   verifyHealthSnapshotReceipt,
@@ -392,6 +396,10 @@ Orientation:
   dema authorship demo [--json]
                     Generate ephemeral keypair, sign, verify (no disk write)
 
+Proof:
+  dema proof passport [--json]
+                    Generate portable proof passport from local receipts
+
 Readiness:
   dema status       Show human-readable Node0 status
   dema status:json  Show machine-readable status
@@ -604,6 +612,7 @@ const REGISTERED_COMMANDS_LIST = [
     command: "authorship",
     description: "verify or demo Ed25519 authorship receipts",
   },
+  { command: "proof", description: "generate portable proof passport" },
   {
     command: "memory",
     description:
@@ -1412,6 +1421,29 @@ async function dispatch(argv) {
       console.error(
         "Usage: dema authorship key init | sign <path> | latest | closeout | verify <receipt> | demo",
       );
+      process.exitCode = 1;
+      return;
+    }
+
+    case "proof": {
+      const proofSub = argv[1] ?? "";
+      if (proofSub === "passport") {
+        const passport = await buildProofPassport();
+        const wantJsonP = wantsJson(argv);
+        if (wantJsonP) {
+          console.log(JSON.stringify(passport, null, 2));
+        } else {
+          console.log(formatProofPassport(passport));
+        }
+        if (
+          passport.aggregate.verdict === "EMPTY" ||
+          passport.aggregate.verdict === "NONE_VERIFIED"
+        ) {
+          process.exitCode = 1;
+        }
+        return;
+      }
+      console.error("Usage: dema proof passport [--json]");
       process.exitCode = 1;
       return;
     }
