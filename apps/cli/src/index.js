@@ -186,6 +186,7 @@ import {
   gatherDemaRealmCheckpoint,
   renderDemaRealmCheckpoint,
 } from "../../../packages/core/src/dema-realm-checkpoint.js";
+import { saveDemaRealmCheckpoint } from "../../../packages/core/src/dema-realm-checkpoint-writer.js";
 import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
@@ -457,6 +458,16 @@ Dema Realm (UX-1A, UX-1B):
                     Reads DEMA_HOME/realm/last-checkpoint.json + optional
                     DEMA_HOME/realm/timeline.json. Honest CHECKPOINT_ABSENT
                     state when no file. Read-only.
+  dema realm checkpoint save --label "<text>"
+                              [--stage <SEED|PREFLIGHT|FORGE|VERIFY|CLOSEOUT|ARCHIVE>]
+                              [--next-gear <text>] [--resume "<cmd>"]
+                              [--timeline-label <text>] [--json]
+                    UX-2B persistence writer. Overwrites
+                    DEMA_HOME/realm/last-checkpoint.json (atomic, mode 0o600)
+                    AND appends one event to DEMA_HOME/realm/timeline.json
+                    (append-only). Operator memory aid; no consent required.
+                    Boundary honestly declares file_write_performed:true and
+                    mutation_performed:true.
 
 Readiness:
   dema status       Show human-readable Node0 status
@@ -1808,6 +1819,50 @@ async function dispatch(argv) {
       }
 
       if (realmSub === "checkpoint") {
+        const checkpointSub = argv[2] ?? "";
+
+        if (checkpointSub === "save") {
+          const label = argValue(argv, "--label");
+          const stage = argValue(argv, "--stage");
+          const nextGear = argValue(argv, "--next-gear");
+          const resumeCommand = argValue(argv, "--resume");
+          const timelineLabel = argValue(argv, "--timeline-label");
+          const result = await saveDemaRealmCheckpoint({
+            label,
+            stage,
+            nextGear,
+            resumeCommand,
+            timelineLabel,
+          });
+          if (wantJsonR) {
+            console.log(JSON.stringify(result, null, 2));
+          } else if (result.saved) {
+            console.log(
+              [
+                `Checkpoint saved.`,
+                `  Label:    ${result.checkpoint.label}`,
+                `  Stage:    ${result.checkpoint.stage ?? "—"}`,
+                `  Resume:   ${result.checkpoint.resume_command}`,
+                `  Next:     ${result.checkpoint.next_gear ?? "—"}`,
+                `  Sealed:   ${result.checkpoint.sealed_at_iso}`,
+                `  Path:     ${result.checkpoint_path}`,
+                `  Mode:     ${result.mode_octal ?? "—"}`,
+                `  Timeline: ${result.timeline_total_events} events (latest: ${result.timeline_event_appended.at} · ${result.timeline_event_appended.label})`,
+                `  Truth:    ${result.truth_label}`,
+              ].join("\n"),
+            );
+          } else {
+            console.error(
+              `Checkpoint NOT saved · error: ${result.error}` +
+                (result.max_length
+                  ? ` (max ${result.max_length}, received ${result.received_length})`
+                  : ""),
+            );
+            process.exitCode = 1;
+          }
+          return;
+        }
+
         const cp = await gatherDemaRealmCheckpoint();
         if (wantJsonR) {
           console.log(JSON.stringify(cp, null, 2));
