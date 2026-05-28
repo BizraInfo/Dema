@@ -181,6 +181,7 @@ import {
 } from "../../../packages/urp/src/choose-decision.js";
 import { saveChooseDecision } from "../../../packages/urp/src/choose-writer.js";
 import { listChooseDecisions } from "../../../packages/urp/src/choose-list.js";
+import { verifyChooseReceiptFile } from "../../../packages/urp/src/choose-verify.js";
 import {
   gatherDemaRealmState,
   renderDemaRealmHome,
@@ -454,6 +455,11 @@ URP:
                     Verify a single local index file by path: schema +
                     body-hash recompute + filename↔hash parity + forbidden-
                     field check. Read-only. Exit 0 on VERIFIED, 1 on FAILED.
+  dema urp choose verify <choose-receipt.json> [--json]
+                    UX-4.1C-ter verify a single persisted choose receipt by
+                    path: schema + chosen:true + decision + consent_verified +
+                    forbidden-field scan + body-hash recompute + filename↔hash
+                    parity. Exit 0 on VERIFIED, 1 on FAILED.
   dema urp choose list [--json]
                     UX-4.1C+ list persisted choose receipts under
                     $DEMA_HOME/urp/choices/. Filename↔hash + body-hash
@@ -1836,6 +1842,56 @@ async function dispatch(argv) {
       }
 
       if (urpSub === "choose") {
+        // Sub-action: `dema urp choose verify <choose.json> [--json]` (URP-4.1C-ter).
+        if (argv[2] === "verify") {
+          const positional = argv.slice(3).filter((a) => !a.startsWith("--"));
+          const filePath = positional[0];
+          if (!filePath) {
+            console.error(
+              "Usage: dema urp choose verify <choose-receipt.json> [--json]",
+            );
+            process.exitCode = 1;
+            return;
+          }
+          const result = await verifyChooseReceiptFile(filePath);
+          if (wantJsonU) {
+            console.log(JSON.stringify(result, null, 2));
+          } else {
+            const lines = [
+              `URP Choose Verify: ${result.verdict}`,
+              `  File: ${filePath}`,
+            ];
+            if (result.verified) {
+              lines.push(`  Choose hash: ${result.choose_hash}`);
+              lines.push(
+                `  Filename↔hash: ${result.filename_hash_matches === null ? "n/a (non-canonical filename)" : result.filename_hash_matches ? "OK" : "MISMATCH"}`,
+              );
+              lines.push(`  Decision:    ${result.decision}`);
+              lines.push(
+                `  Transition:  ${result.previous_share_status} → ${result.next_share_status}`,
+              );
+              lines.push(`  Truth:       ${result.truth_label}`);
+            } else {
+              lines.push(`  Error:       ${result.error}`);
+              if (result.declared && result.recomputed) {
+                lines.push(`  Declared:    ${result.declared}`);
+                lines.push(`  Recomputed:  ${result.recomputed}`);
+              }
+              if (result.field) {
+                lines.push(`  Forbidden field: ${result.field}`);
+              }
+              if (result.received_schema) {
+                lines.push(`  Received schema: ${result.received_schema}`);
+              }
+              lines.push(`  Truth:       ${result.truth_label}`);
+            }
+            lines.push(`  LOCAL ONLY · no network · no federation · no mint`);
+            console.log(lines.join("\n"));
+          }
+          if (!result.verified) process.exitCode = 1;
+          return;
+        }
+
         // Sub-action: `dema urp choose list [--json]` (lists persisted choose receipts).
         if (argv[2] === "list") {
           const r = await listChooseDecisions();
