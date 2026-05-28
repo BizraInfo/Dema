@@ -211,6 +211,27 @@ describe("verifyProofPassport", () => {
       restore();
     }
   });
+
+  it("claim discipline: schema, scope, and envelope truth labels (H19.2.1)", async () => {
+    const { passport, restore } = await homeWithPassport();
+    try {
+      const ok = verifyProofPassport(passport);
+      assert.equal(ok.schema, "bizra.dema.proof_passport_verification.v0.1");
+      assert.equal(ok.verification_scope, "PASSPORT_ENVELOPE_ONLY");
+      assert.equal(ok.truth_label, "LOCAL_PROOF_PASSPORT_ENVELOPE_VERIFIED");
+
+      const tampered = { ...passport, passport_hash: "0".repeat(64) };
+      const failed = verifyProofPassport(tampered);
+      assert.equal(
+        failed.schema,
+        "bizra.dema.proof_passport_verification.v0.1",
+      );
+      assert.equal(failed.verification_scope, "PASSPORT_ENVELOPE_ONLY");
+      assert.equal(failed.truth_label, "LOCAL_PROOF_PASSPORT_ENVELOPE_FAILED");
+    } finally {
+      restore();
+    }
+  });
 });
 
 describe("verifyProofPassportFile", () => {

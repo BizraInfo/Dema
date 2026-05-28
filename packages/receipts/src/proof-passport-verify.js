@@ -2,7 +2,12 @@ import { readFile } from "node:fs/promises";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 import { PROOF_PASSPORT_SCHEMA } from "./proof-passport.js";
 
-export const PASSPORT_VERIFY_SCHEMA = "bizra.dema.proof_passport_verify.v0.1";
+export const PASSPORT_VERIFY_SCHEMA =
+  "bizra.dema.proof_passport_verification.v0.1";
+
+const VERIFICATION_SCOPE = "PASSPORT_ENVELOPE_ONLY";
+const TRUTH_LABEL_VERIFIED = "LOCAL_PROOF_PASSPORT_ENVELOPE_VERIFIED";
+const TRUTH_LABEL_FAILED = "LOCAL_PROOF_PASSPORT_ENVELOPE_FAILED";
 
 const REQUIRED_BOUNDARY_KEYS = Object.freeze({
   passport_signed: false,
@@ -171,6 +176,8 @@ export function verifyProofPassport(passport, passportPath = null) {
     schema: PASSPORT_VERIFY_SCHEMA,
     verified,
     verdict: verified ? "VERIFIED" : "FAILED",
+    verification_scope: VERIFICATION_SCOPE,
+    truth_label: verified ? TRUTH_LABEL_VERIFIED : TRUTH_LABEL_FAILED,
     passport_path: passportPath,
     passport_hash: passport.passport_hash ?? null,
     checks: Object.freeze(checks),
@@ -203,6 +210,8 @@ function fail(error, checks, passportPath = null) {
     schema: PASSPORT_VERIFY_SCHEMA,
     verified: false,
     verdict: "FAILED",
+    verification_scope: VERIFICATION_SCOPE,
+    truth_label: TRUTH_LABEL_FAILED,
     passport_path: passportPath,
     error,
     checks: Object.freeze(checks),
