@@ -192,6 +192,10 @@ import {
   renderDemaRealmCouncil,
 } from "../../../packages/core/src/dema-realm-council.js";
 import {
+  gatherDemaRealmStatus,
+  renderDemaRealmStatus,
+} from "../../../packages/core/src/dema-realm-status.js";
+import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
   verifyHealthSnapshotReceipt,
@@ -457,6 +461,11 @@ Dema Realm (UX-1A, UX-1B):
                     built-in default reflecting the actual session ledger. Per-
                     quest status (DONE/ACTIVE/NEXT/READY/BLOCKED) honestly
                     labeled. Read-only.
+  dema realm status [--json] [--no-color]
+                    UX-2A Live Status (heartbeat). Aggregates identity status,
+                    authorship-receipts count, URP-indexes count, checkpoint
+                    present/label, timeline events count + latest event.
+                    Read-only · pure aggregation · 10-flag false boundary.
   dema realm council [--json] [--no-color]
                     UX-1D Council Chamber: 5 declared council profiles —
                     Guardian (boundary/consent/risk), Reasoner (SAPE/graph
@@ -1825,6 +1834,16 @@ async function dispatch(argv) {
           return;
         }
         console.log(renderDemaRealmBoard(board, { useColor: !noColor }));
+        return;
+      }
+
+      if (realmSub === "status") {
+        const status = await gatherDemaRealmStatus();
+        if (wantJsonR) {
+          console.log(JSON.stringify(status, null, 2));
+          return;
+        }
+        console.log(renderDemaRealmStatus(status, { useColor: !noColor }));
         return;
       }
 
