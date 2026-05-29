@@ -309,8 +309,8 @@ const RAW_ENTRIES = [
     concept: "chain",
     title: "Chain · Receipt Chain",
     short:
-      "The append-only, BLAKE3-linked sequence of receipts that forms the local evidence log.",
-    long: "The receipt chain is the local evidence log: an ordered sequence of receipts where each receipt's prev_hash field links to the BLAKE3 hash of the prior receipt. The chain is append-only and tamper-evident. Any gap, hash mismatch, or out-of-order entry is a chain violation. The chain does not live on a blockchain — it is a local filesystem-scoped structure managed under ~/.dema/receipts/ and verified by the SAT-4 Receipt Chain Verifier.",
+      "The append-only, SHA-256-linked sequence of receipts that forms the local evidence log.",
+    long: "The receipt chain is the local evidence log: an ordered sequence of receipts where each receipt's prev_hash field links to the SHA-256 hash of the prior receipt. The chain is append-only and tamper-evident. Any gap, hash mismatch, or out-of-order entry is a chain violation. The chain does not live on a blockchain — it is a local filesystem-scoped structure managed under ~/.dema/receipts/ and verified by the SAT-4 Receipt Chain Verifier.",
     truth_label: "DECLARED",
     see_also: ["receipt", "boundary", "sat"],
     doc_anchor: "docs/canon/BIZRA_TOPOLOGY_CANON.md",
