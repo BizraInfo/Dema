@@ -25,12 +25,18 @@ import {
   evaluate as canonicalShapeEvaluate,
   RULE_ID as CANONICAL_SHAPE_RULE_ID,
 } from "../../rules/src/rule-canonical-shape.v0.1.js";
+import { verifyConsentProof } from "./consent-proof.js";
 
 export const VERDICT_RECEIPT_SCHEMA = "bizra.dema.verdict_receipt.v0.1";
 
 // Reuse the EXISTING fail-closed consent phrase (per spec: do not invent a
 // new phrase; attest is a signing operation so it shares the sign gate).
 export const ATTEST_CONSENT_PHRASE = "SIGN AUTHORSHIP RECEIPT";
+
+// KEYCONSENT-1B: stable action_type for consent_proof.action_scope. The
+// consent proof must declare this exact action_type for the verifier to
+// accept it. Cross-action consent reuse → consent_scope_mismatch.
+export const ATTEST_ACTION_TYPE = "MINT_VERDICT_RECEIPT";
 
 // Single-rule registry. Spec forbids a general rule registry this slice.
 const RULES = Object.freeze({
@@ -74,11 +80,15 @@ export async function attestVerdict({
   rule,
   input,
   consent,
+  consentProof,
   demaHome,
   prevHash = null,
   createdAtIso,
+  now,
 }) {
-  // (1) Fail-closed consent gate — REUSED pattern
+  // (1) Legacy fail-closed phrase gate — UNCHANGED (defense in depth).
+  // KEYCONSENT-1B preserves the existing exact-string discipline; the
+  // new key-bound check runs AFTER this.
   if (consent !== ATTEST_CONSENT_PHRASE) {
     return fail({
       error: "consent_required",
@@ -99,39 +109,69 @@ export async function attestVerdict({
   }
   const publicKeyPem = await loadPublicKey(demaHome);
 
-  // (4) Run the rule (pure)
+  // (4) KEYCONSENT-1B: consent proof MANDATORY (per preflight §9 + Mumu's
+  // bar #2). Caller must supply a key-bound consent_proof envelope built
+  // via buildConsentProof() with action_scope bound to this specific
+  // input via target_hash = sha256(stableStringify(input)).
+  if (!consentProof || typeof consentProof !== "object") {
+    return fail({ error: "consent_proof_required" });
+  }
+
+  // (5) KEYCONSENT-1B: verify consent proof.
+  // Critical invariant (same as verdict-receipt REJECT-4): uses ONLY the
+  // operator's pubkey loaded from disk as the external authority;
+  // consent_proof.operator_public_key_fingerprint is NOT trusted for
+  // identity. A consent signed by a different key fails signature_invalid.
+  const inputHash = sha256(stableStringify(input));
+  const consentVerify = verifyConsentProof({
+    consentProof,
+    pubkeyPem: publicKeyPem,
+    expectedActionScope: {
+      action_type: ATTEST_ACTION_TYPE,
+      target_hash: inputHash,
+    },
+    now: now || new Date().toISOString(),
+  });
+  if (!consentVerify.verified) {
+    return fail({ error: `consent_proof_${consentVerify.reason}` });
+  }
+
+  // (6) Run the rule (pure)
   const { verdict, computed } = evaluator(input);
 
-  // (5) Build body — input itself does NOT ship in body; only its hash.
-  const inputHash = sha256(stableStringify(input));
+  // (7) Build body — now references consent_proof_hash; input does NOT
+  // ship in body (only its hash). Body commits to BOTH the input hash
+  // and the consent proof hash; the bundle ships both alongside.
   const body = Object.freeze({
     schema: VERDICT_RECEIPT_SCHEMA,
     rule_id: rule,
     input_hash: inputHash,
     verdict,
     computed,
-    prev_hash: prevHash, // hook for chain-walk; this slice null
+    prev_hash: prevHash,
     created_at_iso: createdAtIso || new Date().toISOString(),
+    consent_proof_hash: consentProof.consent_proof_hash,
   });
 
-  // (6) Sign the body
+  // (8) Sign the body
   const signature = signPayload(body, privateKeyPem);
 
-  // (7) Body hash for filename
+  // (9) Body hash for filename
   const bodyHash = sha256(stableStringify(body));
 
-  // (8) Persist the bundle to ~/.dema/receipts/verdict-<bodyHash>.json
+  // (10) Persist the bundle to ~/.dema/receipts/verdict-<bodyHash>.json
   const home = resolveHome(demaHome);
   const receiptsDir = join(home, "receipts");
   await mkdir(receiptsDir, { recursive: true });
   const receiptPath = join(receiptsDir, `verdict-${bodyHash}.json`);
 
-  // The on-disk artifact IS the bundle (portable proof; input ships alongside).
+  // Bundle now carries consent_proof envelope alongside body+sig+pubkey+input.
   const bundle = {
     body,
     signature_b64: signature,
     signer_public_key_pem: publicKeyPem,
     input,
+    consent_proof: consentProof,
   };
   await writeFile(receiptPath, JSON.stringify(bundle, null, 2), {
     mode: 0o600,
@@ -145,6 +185,7 @@ export async function attestVerdict({
     signature_b64: signature,
     signer_public_key_pem: publicKeyPem,
     input,
+    consent_proof: consentProof,
     body_hash: bodyHash,
     receipt_path: receiptPath,
     boundary: buildBoundary({ attested: true }),

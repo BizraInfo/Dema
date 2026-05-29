@@ -36,13 +36,32 @@ async function freshHome() {
   return await mkdtemp(join(tmpdir(), "dema-verdict-test-"));
 }
 
+// KEYCONSENT-1B: attestFresh now builds a key-bound consent proof from the
+// canonical phrase + input hash before calling attestVerdict. This keeps the
+// existing verdict-receipt tests green while ensuring every attest produces
+// a consent-proof-bound receipt.
 async function attestFresh(input) {
   const home = await freshHome();
   await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home });
+  const { buildConsentProof } =
+    await import("../packages/receipts/src/consent-proof.js");
+  const { sha256, stableStringify } =
+    await import("../packages/consent/src/consent-common.js");
+  const inputHash = sha256(stableStringify(input));
+  const cp = await buildConsentProof({
+    phrase: ATTEST_CONSENT_PHRASE,
+    actionScope: {
+      action_type: "MINT_VERDICT_RECEIPT",
+      target_hash: inputHash,
+      rule_id: "canonical-shape.v0.1",
+    },
+    demaHome: home,
+  });
   const minted = await attestVerdict({
     rule: "canonical-shape.v0.1",
     input,
     consent: ATTEST_CONSENT_PHRASE,
+    consentProof: cp.consent_proof,
     demaHome: home,
   });
   return { home, minted };
