@@ -54,6 +54,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [02-architecture/pat-builder-sat-validator.md](02-architecture/pat-builder-sat-validator.md) — PAT/SAT bridge.
 - [02-architecture/sat-verifier-sibling-spec.md](02-architecture/sat-verifier-sibling-spec.md) — SAT verifier sibling spec.
 - [02-architecture/node0-urp-ecosystem-transition.md](02-architecture/node0-urp-ecosystem-transition.md) — internal Node0 to shared URP transition note; docs-only, not public roadmap.
+- [security/URP_STAGE_4_CHOOSE_CLOSEOUT.md](security/URP_STAGE_4_CHOOSE_CLOSEOUT.md) — Current URP Stage 4 Choose closeout note: write/list/verify symmetry, closeout drift-guard probe, non-claims, and Stage 5 boundary.
 
 ## Canon references
 

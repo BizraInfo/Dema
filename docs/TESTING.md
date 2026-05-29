@@ -285,6 +285,7 @@ node scripts/proof-room-bundle.mjs --json
 node scripts/node0-self-check.mjs --verify
 node scripts/review/harness-gate.mjs
 node scripts/urp-stage3-closeout.mjs
+node scripts/urp-stage4-closeout.mjs
 ```
 
 | `tests/a2a-message-envelope-preview.test.js` | A2A message envelope preview v0.1: schema/mode, from/to non-empty + distinct, mission*id required, message_type enum (4 types), effect_level subset of {read} only (rejects write/execute/call), claims array, authority_transfer + dispatched false invariants, boundary all 7 flags false, deterministic + frozen, fresh-object-per-call, pure-module imports. |
@@ -320,6 +321,12 @@ node scripts/urp-stage3-closeout.mjs
 | `tests/system-lifecycle-integration.test.js` | End-to-end composition test across 8 organs (consent_plan → consent_hash_table → lookup → homebase_state → shared_urp_world → ihsan_floor → evidence_chain → process_value → external_pattern_registry); asserts schema integrity at each stage, consent-table self-verification, ihsan floor pass/fail behavior, registry binding to existing primitives, every boundary flag stays false across all 8 organs, full-composition determinism, and fresh-frozen objects per builder call. |
 | `tests/urp-carrying-cost-preview.test.js` | URP Carrying Cost preview v0.1: schema/mode, valid-envelope shape, simulated_carrying_cost = value × rate (computed, not user-supplied), 8 FORBIDDEN_RESOURCE_TYPES rejected with code=forbidden_resource_type, unknown_resource_type rejection, invalid value/rate/required-strings/now rejection, boundary all 9 flags false on both valid and failure envelopes, all 8 SHAREABLE_RESOURCE_TYPES accepted, deterministic + frozen, fresh-object-per-call, pure-module imports. |
 | `tests/urp-resource-offer-preview.test.js` | URP Resource Offer preview v0.1: schema/mode, valid-envelope shape, imports SHAREABLE_RESOURCE_TYPES + FORBIDDEN_RESOURCE_TYPES from urp-carrying-cost-preview, denied_effects must include write+execute+call invariant, settlement=preview_only + published=false invariants, owner_node person-identifier heuristic (rejects @ and :), no_raw_data_proof ≥ 30 chars, carrying_cost_reference null-or-/^chal-[0-9a-f]{32}$/, boundary all 8 flags false on both valid and failure envelopes, deterministic + frozen, fresh-object-per-call, pure-module imports. |
+
+## Harness-only probes
+
+| Probe | Surface covered |
+| --- | --- |
+| `scripts/urp-stage4-closeout.mjs` | URP-4.1D Stage 4 Choose closeout drift-guard probe (`scripts/urp-stage4-closeout.mjs` registered in `scripts/check.mjs`): runs the real local proof/choose chain in a throwaway `mkdtemp` `DEMA_HOME` (`authorship key init` with `GENERATE AUTHORSHIP KEY` consent -> `authorship sign` with `SIGN AUTHORSHIP RECEIPT` consent -> `proof passport --json` -> `urp index --passport <p> --json` -> `urp verify <index> --json` -> `urp choose <index> --decision MARK_SHAREABLE --consent "MARK URP ENTRY SHAREABLE" --json` -> `urp choose <index> --decision MARK_LOCAL_ONLY --consent "MARK URP ENTRY LOCAL-ONLY" --json` -> `urp choose list --json` -> `urp choose verify <receipt> --json` for both generated choose receipts). Emits `bizra.dema.urp_stage4_closeout_demo.v0.1` with `demo_passed:true` and `truth_label:URP_STAGE_4_CHOOSE_CLOSEOUT_VERIFIED` on success. Failure emits `URP_STAGE_4_CHOOSE_CLOSEOUT_FAILED` and exits 1. Per-subprocess timeout: `URP_STAGE4_CLOSEOUT_TIMEOUT_MS` (default 30000). Cleans tmpdir in `finally`. No new CLI surface, no operator `DEMA_HOME` mutation, no network, no share publication, no PoI, no mint, no federation, no economic claim, and no persistent closeout receipt. |
 
 ## Quality expectations
 

@@ -219,6 +219,10 @@ contracts and canonical phase_3/phase_4 directions, but they must not:
 - Package imports use relative paths.
 - Tests use `node:test`.
 
+## Harness probes
+
+`scripts/urp-stage4-closeout.mjs` is the URP-4.1D Stage 4 Choose closeout drift-guard probe. It is a one-shot stdlib-only Node script, registered in `scripts/check.mjs`, and is not a `dema` subcommand. It runs the real local chain inside a throwaway `mkdtemp` `DEMA_HOME`: authorship key init with exact consent, authorship sign with exact consent, proof passport, URP local index, URP index verify, choose `MARK_SHAREABLE`, choose `MARK_LOCAL_ONLY`, choose list, and choose verify for both generated choose receipts. It emits `bizra.dema.urp_stage4_closeout_demo.v0.1` with truth label `URP_STAGE_4_CHOOSE_CLOSEOUT_VERIFIED` on success or `URP_STAGE_4_CHOOSE_CLOSEOUT_FAILED` on failure. Boundary: local-only; temporary file writes and temporary choose receipts occur only under the throwaway `DEMA_HOME`; operator `DEMA_HOME` is not mutated; no network, share publication, PoI, token mint, federation, economic claim, or persistent closeout receipt.
+
 ## Verification commands
 
 ```bash

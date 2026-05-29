@@ -206,7 +206,7 @@ All must pass before URP-4.1 can be considered complete:
       list filters by state, verify returns VERIFIED/FAILED
 - [ ] Docs in `ARCHITECTURE.md` + `TESTING.md` updated for each sub-slice
 - [ ] CI green at each URP-4.1A/B/C/-ter/D commit
-- [ ] URP-4.1D closeout drift-guard probe wired into `scripts/check.mjs`
+- [x] URP-4.1D closeout drift-guard probe wired into `scripts/check.mjs`
       (same pattern as `scripts/urp-stage3-closeout.mjs`)
 
 ## 9. What This Preflight Does NOT Do
@@ -265,4 +265,4 @@ Stage 5 Mint preflight (URP-5.0, future) introduces its own consent
 surface gated on the existence of `CANDIDATE_SHAREABLE` choose receipts
 that have not been superseded.
 
-Last updated: 2026-05-28 at commit `4f10f6a` (URP-3.1D closeout sealed).
+Last updated: 2026-05-29 in local worktree for URP-4.1D closeout wiring.
