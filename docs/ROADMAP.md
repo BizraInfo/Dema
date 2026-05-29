@@ -6,14 +6,18 @@
 > place a dev opens to remember the shape of the work without re-reading
 > 3 years of files.
 >
-> The hand-maintained sections below are anchored at **2026-05-29 ·
-> main@79b46eb · 3396/3396 tests**. For LIVE state (current branch, dirty
-> tree, recent merges) run:
+> The hand-maintained sections below describe the SHAPE of work since the
+> 2026-05-23 seed (`main@ab47dbe`, 2504/2504 tests at that point — the
+> oldest row in the rear-view table). For CURRENT live state — branch,
+> HEAD, dirty tree, test count, recent commits — run:
 >
 > ```bash
 > dema roadmap dev          # human-readable
-> dema roadmap dev --json   # machine envelope
+> dema roadmap dev --json   # schema-tagged envelope (bizra.dema.roadmap_dev.v0.1)
 > ```
+>
+> The tool is the source of truth for "where we are NOW"; the doc is the
+> source of truth for "what was the SHAPE of the work."
 >
 > See also:
 >
@@ -34,17 +38,16 @@ for the full goal text.
 
 ---
 
-## Where we are (anchor)
+## Where we are (live)
 
-| Field                         | Value                                                                        |
-| ----------------------------- | ---------------------------------------------------------------------------- |
-| **HEAD**                      | `79b46eb` feat(urp): wire URP-4.1C-ter choose verify                         |
-| **Branch**                    | `main` (synced with origin/main)                                             |
-| **Tests**                     | 3396/3396 PASS                                                               |
-| **Last canonical check**      | `npm run check` PASS · `proof:room` 6/6 PASS · `release_readiness` score 100 |
-| **Open PRs**                  | none from this lane                                                          |
-| **Open ceremonies**           | none active (last ceremony: ARTIFACT-011 on 2026-05-06)                      |
-| **Last refresh of this file** | 2026-05-29                                                                   |
+**This section is intentionally dynamic.** A static snapshot lived here for many sessions and was a treadmill — every new commit made it stale within minutes. Removed 2026-05-29 in favor of:
+
+```bash
+dema roadmap dev          # human-readable
+dema roadmap dev --json   # schema-tagged envelope (bizra.dema.roadmap_dev.v0.1)
+```
+
+What `dema roadmap dev --json` surfaces: current branch · HEAD SHA + subject · dirty file count + paths · synced/ahead/behind vs origin · the last N commits on main. Run it; trust it; do not re-pin static values in this doc.
 
 ---
 
