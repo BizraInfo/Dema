@@ -10,16 +10,17 @@
 
 ## 1. Versioning
 
-| Field | Value (measured 2026-05-24) | Source |
-|---|---|---|
-| `package.json` `version` | `0.1.0-alpha.0` | `package.json` |
-| Most recent release tag | `v0.3.5` | `git tag --sort=-creatordate` |
-| Tag history (descending) | `v0.3.5` · `v0.3.2` · `v0.3.1` · `v0.3.0` · `v0.2.7` · `v0.2.0-alpha` | `git tag` |
-| Safety tag (pre-rebase backup) | `matrix-pre-rebase-20260520` | manual |
-| Engine pin | `node >= 20` (CI on Node 24) | `package.json` engines + `.github/workflows/check.yml` |
-| Production dependency count | **0** | `package.json` (stdlib-only invariant) |
+| Field                          | Value (measured 2026-05-24)                                           | Source                                                 |
+| ------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------ |
+| `package.json` `version`       | `0.1.0-alpha.0`                                                       | `package.json`                                         |
+| Most recent release tag        | `v0.3.5`                                                              | `git tag --sort=-creatordate`                          |
+| Tag history (descending)       | `v0.3.5` · `v0.3.2` · `v0.3.1` · `v0.3.0` · `v0.2.7` · `v0.2.0-alpha` | `git tag`                                              |
+| Safety tag (pre-rebase backup) | `matrix-pre-rebase-20260520`                                          | manual                                                 |
+| Engine pin                     | `node >= 20` (CI on Node 24)                                          | `package.json` engines + `.github/workflows/check.yml` |
+| Production dependency count    | **0**                                                                 | `package.json` (stdlib-only invariant)                 |
 
 **Conventions:**
+
 - Tags are prefixed `v` for release tags (`v0.3.5`).
 - Non-release tags use descriptive prefixes (`matrix-pre-rebase-<YYYYMMDD>`).
 - `package.json` `version` and the tag stream may diverge during refactors; the **tag** is the canonical release marker, the **commit** is the canonical artifact.
@@ -35,7 +36,7 @@ Every change to `main` passes through three concentric layers of gates. All thre
 Run before staging:
 
 ```bash
-npm test                  # full unit suite · expected 2618/2618 PASS at d14b267 onward
+npm test                  # full unit suite · expected 3396/3396 PASS at 79b46eb onward
 npm run check             # canonical aggregator (env-hygiene + test + coverage + ~40 CLI subcalls + review gates)
 npm run llm:guidance      # 7/7 router/canon checks
 git diff --check          # whitespace + conflict markers
@@ -64,15 +65,15 @@ npm run env-hygiene       # env var leak check
 
 The pre-push hook at `.git/hooks/pre-push` (operator-installed; **not** in repo) runs the μ-layer orchestrator `~/.dema/bin/mu-test-all`, which executes 7 doctrine harnesses:
 
-| Harness | Purpose | Expected |
-|---|---|---|
-| μ-H1 drift linter | catches doctrine drift in CLAUDE.md / AGENTS.md / canon docs | PASS |
-| μ-K1 self-critique | self-critique discipline harness | PASS |
-| μ-H2 tool envelope | tool-call envelope canon (boundary keys, runtime emission) | PASS |
-| μ-C1-enforcer | docs/* gating | PASS |
-| μ-M2 doctrine projector | doctrine-catch registry | PASS |
-| μ-A1 audit tool | `mu_state_root` audit | PASS or WARN (exit 0) |
-| μ-C1 consent CLI | consent surface canon | PASS |
+| Harness                 | Purpose                                                      | Expected              |
+| ----------------------- | ------------------------------------------------------------ | --------------------- |
+| μ-H1 drift linter       | catches doctrine drift in CLAUDE.md / AGENTS.md / canon docs | PASS                  |
+| μ-K1 self-critique      | self-critique discipline harness                             | PASS                  |
+| μ-H2 tool envelope      | tool-call envelope canon (boundary keys, runtime emission)   | PASS                  |
+| μ-C1-enforcer           | docs/\* gating                                               | PASS                  |
+| μ-M2 doctrine projector | doctrine-catch registry                                      | PASS                  |
+| μ-A1 audit tool         | `mu_state_root` audit                                        | PASS or WARN (exit 0) |
+| μ-C1 consent CLI        | consent surface canon                                        | PASS                  |
 
 A typical green run reports **104 PASS / 0 FAIL · ~18s**. The pre-push hook gates the push and appends a receipt to `~/.dema/lint/mu_test_run_log.ndjson`.
 
@@ -82,12 +83,12 @@ A typical green run reports **104 PASS / 0 FAIL · ~18s**. The pre-push hook gat
 
 Four workflows fire on every push to `main` and every pull request. All are SHA-pinned to Node-24-native action versions (per PR #108, 2026-05-24):
 
-| Workflow | File | Purpose | Typical duration |
-|---|---|---|---|
-| **gitleaks** | `.github/workflows/gitleaks.yml` (48 LOC) | secret scan via `gitleaks v8.30.1` with `commits + paths` allowlist | ~10s |
-| **CodeQL** | `.github/workflows/codeql.yml` (42 LOC) | static-analysis security scan | ~1m37s |
-| **check** | `.github/workflows/check.yml` (30 LOC) | runs `npm run check` (aggregator) | ~2m23s |
-| **BIZRA Review Gate** | `.github/workflows/bizra-review.yml` (78 LOC) | repo-specific review gates (env-hygiene, canon, boundary invariants) | ~2m15s |
+| Workflow              | File                                          | Purpose                                                              | Typical duration |
+| --------------------- | --------------------------------------------- | -------------------------------------------------------------------- | ---------------- |
+| **gitleaks**          | `.github/workflows/gitleaks.yml` (48 LOC)     | secret scan via `gitleaks v8.30.1` with `commits + paths` allowlist  | ~10s             |
+| **CodeQL**            | `.github/workflows/codeql.yml` (42 LOC)       | static-analysis security scan                                        | ~1m37s           |
+| **check**             | `.github/workflows/check.yml` (30 LOC)        | runs `npm run check` (aggregator)                                    | ~2m23s           |
+| **BIZRA Review Gate** | `.github/workflows/bizra-review.yml` (78 LOC) | repo-specific review gates (env-hygiene, canon, boundary invariants) | ~2m15s           |
 
 All four must report `success` before the slice is considered shipped. A `success` on three of four with one `failure` is **not** shipped — diagnose the failing gate before continuing.
 
@@ -102,6 +103,7 @@ All four must report `success` before the slice is considered shipped. A `succes
 `npm run release:readiness` produces a 0-100 score and a list of risks/next-actions. Current score should be **100/100** with **0 risks**. Any non-zero risk list is a halt-gate before tagging a release.
 
 The script reads:
+
 - test suite state (count + pass rate)
 - coverage thresholds (95/85/95)
 - gate outcomes (proof:room, llm:guidance, env-hygiene)
@@ -117,6 +119,7 @@ Per `docs/DELIVERY_BLUEPRINT.md` Level-4 mandate, every substantial work unit (t
 The first canonical instance is `docs/RELEASE_DECISION_RECORD_adr-007-accept_2026-05-16.md` (RDR-001).
 
 An RDR closes:
+
 - **Scope** (what shipped · what was deliberately excluded)
 - **Schedule** (gate sequence + result truth-labels: MEASURED / PENDING / DESIGNED_NOT_LIVE)
 - **Quality** (test surface · coverage · gate outcomes)
@@ -132,15 +135,16 @@ Single-commit fixes and docs-only slices do not require an RDR — the commit me
 
 Rollback paths in order of preference:
 
-| Severity | Path | Effect |
-|---|---|---|
-| Bad commit on `main` not yet pushed | `git reset --soft HEAD~1` | Un-do commit; keep working tree |
-| Bad commit on `main` already pushed, no downstream consumers | `git revert <sha>` + push | Forward-only revert · preserves history |
-| Bad commit triggers CI gate failure | Fix-forward in a follow-up commit | Preferred when feasible · avoids history rewrite |
-| Multi-commit branch needs unwind | `git revert -m 1 <merge-sha>` on the merge commit | Reverts the whole merged branch |
-| Catastrophic state corruption | Reset to a known safety tag (e.g., `matrix-pre-rebase-20260520`) | Last resort · destroys subsequent history · requires operator GO |
+| Severity                                                     | Path                                                             | Effect                                                           |
+| ------------------------------------------------------------ | ---------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Bad commit on `main` not yet pushed                          | `git reset --soft HEAD~1`                                        | Un-do commit; keep working tree                                  |
+| Bad commit on `main` already pushed, no downstream consumers | `git revert <sha>` + push                                        | Forward-only revert · preserves history                          |
+| Bad commit triggers CI gate failure                          | Fix-forward in a follow-up commit                                | Preferred when feasible · avoids history rewrite                 |
+| Multi-commit branch needs unwind                             | `git revert -m 1 <merge-sha>` on the merge commit                | Reverts the whole merged branch                                  |
+| Catastrophic state corruption                                | Reset to a known safety tag (e.g., `matrix-pre-rebase-20260520`) | Last resort · destroys subsequent history · requires operator GO |
 
 **Halt-gates per CLAUDE.md** that constrain rollback:
+
 - `git push --force` to `main` is forbidden without explicit typed-GO.
 - `git reset --hard` is forbidden without explicit typed-GO.
 - Deleting branches or tags is forbidden without explicit typed-GO.
@@ -156,6 +160,7 @@ Tags are append-only. A retracted release is marked with a follow-up commit + an
 **Current state:** ADR-007 is Accepted (2026-05-16 · PR #44 / commit `0ef5998`). Decision A/B/C among the three resolution options remains **deferred to operator typed-GO** — the chain operates in the unguarded shared-resource state (effectively Option C semantics) until that GO lands.
 
 **Release implications:**
+
 - Concurrent producers are permitted; the N+2 split-commit canon (memory: `project_2026_05_20_codex_concurrent_producer_n2.md`) is the working pattern when two agents publish in the same window.
 - Every within-session claim of "chain unchanged" requires a session-scoped qualifier — release announcements that depend on chain state must cite the session id and timestamp.
 - The `session_id` field in receipt envelopes is a forward-looking commitment (Companion change #2) and lives in `bizra-omega`, OUT of this repo per ADR-001 + ADR-003.
@@ -171,6 +176,7 @@ All `.github/workflows/*.yml` action references are SHA-pinned (not tag-pinned).
 - `github/codeql-action/*@7211b7c8` (v4.36.0)
 
 **Update protocol:** when bumping a pinned action, use the canary-then-fan-out pattern (memory: `feedback_per_workflow_reinventory_after_first_bump`):
+
 1. Bump one workflow first (the canary).
 2. Push and verify a clean run on that workflow.
 3. Re-inventory every other workflow's run log for deprecation warnings (warnings are workflow-local, not repo-wide).
@@ -211,6 +217,7 @@ Local commits, local file edits, and local test runs do **not** require typed-GO
 ## Update protocol
 
 Re-refresh this document when:
+
 - The CI workflow set changes (add/remove/rename a workflow).
 - Pinned action SHAs are bumped (update §7 baseline).
 - A new readiness script lands in `package.json scripts` (add to §2).

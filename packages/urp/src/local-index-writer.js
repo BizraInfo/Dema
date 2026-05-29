@@ -23,6 +23,12 @@ const FORBIDDEN_FIELDS = Object.freeze([
   "federation_target",
 ]);
 
+// URP-domain boundary vocabulary per per-module-domain-boundary-pattern.
+// Coexists with the canonical 16-key shape (preview-boundary.js). These
+// 10 keys capture URP Stage 3 Local Index-specific risks: file write
+// true on success; explicit raw_artifact / full_receipt_json /
+// personal_memory non-inclusion; explicit network/federation/mint/PoI/
+// economic-claim negation; explicit private-key non-load.
 const WRITER_BOUNDARY_OK = Object.freeze({
   private_key_loaded: false,
   file_write_performed: true,
