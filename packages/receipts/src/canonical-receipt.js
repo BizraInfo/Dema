@@ -97,7 +97,9 @@ export async function buildCanonicalReceipt({
   if (consent !== CANONICAL_RECEIPT_CONSENT_PHRASE) {
     return fail("consent_required");
   }
-  if (!isNonEmptyString(now)) {
+  // created_at_iso must be a real, parseable timestamp (it is committed to the
+  // receipt_id + signature; a malformed string would mint a nonsensical receipt).
+  if (!isNonEmptyString(now) || Number.isNaN(Date.parse(now))) {
     return fail("created_at_iso_required");
   }
   if (!isPlainObject(canonicalBody) || !isJsonSafe(canonicalBody)) {

@@ -337,6 +337,19 @@ describe("RECEIPT-CHAIN-1A · build + verify canonical chain", () => {
     }
   });
 
+  it("builder rejects a malformed created_at_iso (not a real timestamp) → created_at_iso_required", async () => {
+    const home = await freshKeyedHome();
+    try {
+      const r = await buildCanonicalReceipt(
+        commonArgs(home, { now: "not-a-timestamp" }),
+      );
+      assert.equal(r.built, false);
+      assert.equal(r.error, "created_at_iso_required");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   it("verifier rejects an invalid truth_label even if self-consistent → truth_label_invalid", async () => {
     const home = await freshKeyedHome();
     try {

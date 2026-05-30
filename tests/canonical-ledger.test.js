@@ -32,7 +32,7 @@ import { CANONICAL_RECEIPT_CONSENT_PHRASE } from "../packages/receipts/src/canon
 let n = 0;
 function nextNow() {
   n += 1;
-  return `2026-05-30T15:0${n}:00.000Z`;
+  return `2026-05-30T15:${String(n).padStart(2, "0")}:00.000Z`;
 }
 
 async function freshKeyedHome() {

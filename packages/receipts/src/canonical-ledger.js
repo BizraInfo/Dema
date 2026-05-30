@@ -41,8 +41,12 @@ export async function loadCanonicalLedger({ demaHome } = {}) {
   let raw;
   try {
     raw = await readFile(ledgerPath(demaHome), "utf8");
-  } catch {
-    return [];
+  } catch (err) {
+    // Only a missing ledger is an empty chain. A permission/transient read
+    // error must NOT masquerade as empty (which could branch a fresh genesis
+    // over a real-but-unreadable ledger) — surface it.
+    if (err && err.code === "ENOENT") return [];
+    throw err;
   }
   return raw
     .split("\n")
@@ -126,7 +130,9 @@ export async function appendCanonicalReceipt({
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
   const content =
     [...entries, built.receipt].map((r) => JSON.stringify(r)).join("\n") + "\n";
-  const tmp = `${path}.tmp`;
+  // Unique tmp per append (content-addressed) so concurrent appends can't
+  // collide on a shared temp file. Deterministic — no random/clock.
+  const tmp = `${path}.${built.receipt.receipt_id.slice(0, 12)}.tmp`;
   try {
     await writeFile(tmp, content, { encoding: "utf8", mode: 0o600 });
     await rename(tmp, path);
