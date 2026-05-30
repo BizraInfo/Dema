@@ -28,6 +28,17 @@ import {
   GROUNDING_SCORE_RULE_ID,
 } from "../packages/flywheel/src/flywheel-one-task.js";
 import { GUARDED_CLAIM_CONSENT_PHRASE } from "../packages/receipts/src/assumption-guarded-claim.js";
+import {
+  sha256,
+  stableStringify,
+} from "../packages/consent/src/consent-common.js";
+
+// Re-seal a (possibly forged) flywheel body so its receipt_id is self-consistent
+// — proves replay rejects on contract grounds, not merely on a hash mismatch.
+function reseal(receipt) {
+  const { receipt_id, ...body } = receipt;
+  return { ...body, receipt_id: sha256(stableStringify(body)) };
+}
 
 const NOW = "2026-05-30T13:00:00.000Z";
 const A_ENVELOPE = Object.freeze({
@@ -255,6 +266,103 @@ describe("FLYWHEEL-1A · runOneTaskFlywheel", () => {
       const s = JSON.stringify(r.flywheel_receipt);
       assert.ok(!s.includes("PRIVATE KEY"));
       assert.ok(!/token_minted|federation|private_key/i.test(s));
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  // ── review hardening (PR #112): replay must fail closed ──────────
+  it("REJECT (orphan): replay without actionReceiptId → action_receipt_id_required", async () => {
+    const home = await freshHome();
+    try {
+      const r = await runOneTaskFlywheel({
+        task: "t",
+        envelope: A_ENVELOPE,
+        consent: GUARDED_CLAIM_CONSENT_PHRASE,
+        demaHome: home,
+        now: NOW,
+      });
+      const rp = replayOneTaskFlywheel({ flywheelReceipt: r.flywheel_receipt });
+      assert.equal(rp.replayed, false);
+      assert.equal(rp.reason, "action_receipt_id_required");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("REJECT (contract): self-consistent receipt with wrong schema → schema_mismatch", async () => {
+    const home = await freshHome();
+    try {
+      const r = await runOneTaskFlywheel({
+        task: "t",
+        envelope: A_ENVELOPE,
+        consent: GUARDED_CLAIM_CONSENT_PHRASE,
+        demaHome: home,
+        now: NOW,
+      });
+      const forged = reseal({
+        ...r.flywheel_receipt,
+        schema: "bizra.dema.evil.v0.1",
+      });
+      const rp = replayOneTaskFlywheel({
+        flywheelReceipt: forged,
+        actionReceiptId: r.action_receipt_id,
+      });
+      assert.equal(rp.replayed, false);
+      assert.equal(rp.reason, "schema_mismatch");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("REJECT (contract): self-consistent receipt with wrong score_rule_id → score_rule_mismatch", async () => {
+    const home = await freshHome();
+    try {
+      const r = await runOneTaskFlywheel({
+        task: "t",
+        envelope: A_ENVELOPE,
+        consent: GUARDED_CLAIM_CONSENT_PHRASE,
+        demaHome: home,
+        now: NOW,
+      });
+      const forged = reseal({
+        ...r.flywheel_receipt,
+        score_rule_id: "made_up_rule.v9",
+      });
+      const rp = replayOneTaskFlywheel({
+        flywheelReceipt: forged,
+        actionReceiptId: r.action_receipt_id,
+      });
+      assert.equal(rp.replayed, false);
+      assert.equal(rp.reason, "score_rule_mismatch");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("REJECT (contract): self-consistent receipt with out-of-spec claim_state → claim_state_invalid", async () => {
+    const home = await freshHome();
+    try {
+      const r = await runOneTaskFlywheel({
+        task: "t",
+        envelope: A_ENVELOPE,
+        consent: GUARDED_CLAIM_CONSENT_PHRASE,
+        demaHome: home,
+        now: NOW,
+      });
+      // claim_state "Z" scores 0; keep score self-consistent so only the
+      // claim-state contract check can catch it.
+      const forged = reseal({
+        ...r.flywheel_receipt,
+        claim_state: "Z",
+        score: scoreEpistemicGrounding("Z"),
+      });
+      const rp = replayOneTaskFlywheel({
+        flywheelReceipt: forged,
+        actionReceiptId: r.action_receipt_id,
+      });
+      assert.equal(rp.replayed, false);
+      assert.equal(rp.reason, "claim_state_invalid");
     } finally {
       await rm(home, { recursive: true, force: true });
     }

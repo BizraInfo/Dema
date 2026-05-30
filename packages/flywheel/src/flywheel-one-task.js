@@ -148,11 +148,33 @@ export function replayOneTaskFlywheel({
       reason: "flywheel_receipt_invalid",
     });
   }
-  if (
-    actionReceiptId !== undefined &&
-    flywheelReceipt.prev_hash !== actionReceiptId
-  ) {
+  // Require the action receipt id — replaying without it would falsely verify
+  // an orphaned receipt by skipping the chain check (PR #112 review).
+  if (typeof actionReceiptId !== "string" || actionReceiptId.length === 0) {
+    return Object.freeze({
+      replayed: false,
+      reason: "action_receipt_id_required",
+    });
+  }
+  if (flywheelReceipt.prev_hash !== actionReceiptId) {
     return Object.freeze({ replayed: false, reason: "chain_link_mismatch" });
+  }
+
+  // A self-consistent hash is not enough — fail closed on any out-of-spec
+  // contract (schema / rule / claim_state) before trusting it (PR #112 review).
+  if (flywheelReceipt.schema !== FLYWHEEL_SCHEMA) {
+    return Object.freeze({ replayed: false, reason: "schema_mismatch" });
+  }
+  if (flywheelReceipt.score_rule_id !== GROUNDING_SCORE_RULE_ID) {
+    return Object.freeze({ replayed: false, reason: "score_rule_mismatch" });
+  }
+  if (
+    !Object.prototype.hasOwnProperty.call(
+      GROUNDING_SCORES,
+      flywheelReceipt.claim_state,
+    )
+  ) {
+    return Object.freeze({ replayed: false, reason: "claim_state_invalid" });
   }
 
   const rederivedScore = scoreEpistemicGrounding(flywheelReceipt.claim_state);
