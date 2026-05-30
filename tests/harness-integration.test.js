@@ -380,6 +380,14 @@ describe("harness-integration", () => {
       assert.ok(typeof formatted === "string");
     });
 
+    // REMEDIATION-0 #4 · banner version must match the bumped schema (v0.4)
+    it("banner version matches the schema (v0.4, not stale v0.3)", () => {
+      const harness = buildHarnessIntegration({ now: FIXED_NOW });
+      const formatted = formatHarnessIntegration(harness);
+      assert.ok(formatted.includes("v0.4"));
+      assert.ok(!formatted.includes("v0.3"));
+    });
+
     it("includes verdict", () => {
       const harness = buildHarnessIntegration({ now: FIXED_NOW });
       const formatted = formatHarnessIntegration(harness);

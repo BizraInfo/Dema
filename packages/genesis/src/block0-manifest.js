@@ -25,6 +25,7 @@ import {
   loadPublicKey,
 } from "../../receipts/src/authorship-key-store.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
+import { verifyConsentProof } from "../../receipts/src/consent-proof.js";
 
 export const BLOCK0_MANIFEST_SCHEMA = "bizra.dema.block0_genesis_snapshot.v0.1";
 
@@ -252,6 +253,13 @@ export async function buildBlock0Manifest({
     return fail("consent_scope_mismatch");
   }
 
+  // ── (3b) created_at_iso is required — no wall-clock fallback ──────
+  // block0_id and the signature commit to created_at_iso; a Date.now()
+  // fallback would make the builder nondeterministic. Fail closed.
+  if (typeof createdAtIso !== "string" || createdAtIso.length === 0) {
+    return fail("created_at_iso_required");
+  }
+
   // ── (4) Load the operator's signing keypair from disk ────────────
   const privateKeyPem = await loadPrivateKey(demaHome);
   if (!privateKeyPem) {
@@ -265,7 +273,7 @@ export async function buildBlock0Manifest({
   const fingerprint = fingerprintFromPem(publicKeyPem);
 
   // ── (5) Derive deterministic ids + freeze sub-shapes ─────────────
-  const createdIso = createdAtIso || new Date().toISOString();
+  const createdIso = createdAtIso;
   const frozenPrereqs = freezePrerequisites(prerequisites);
   const frozenBoundary = freezeBoundary(boundaryInput);
 
@@ -280,6 +288,28 @@ export async function buildBlock0Manifest({
       created_at_iso: createdIso,
     }),
   );
+
+  // ── (5b) Cryptographically verify the consent proof ──────────────
+  // The action_type check above is necessary but NOT sufficient: a
+  // forged or stale object with that field set would otherwise be
+  // signed with the operator's key. Verify the consent proof's Ed25519
+  // signature using the operator's OWN on-disk public key (trust ONLY
+  // that key, not any embedded fingerprint — same rule as verdict-attest
+  // / KEYCONSENT-1A), and bind its scope to this manifest's commitment
+  // set: consent.action_scope.target_hash must equal block0_id. Freshness
+  // is checked as of created_at_iso (the sealing moment).
+  const consentVerify = verifyConsentProof({
+    consentProof,
+    pubkeyPem: publicKeyPem,
+    expectedActionScope: {
+      action_type: BLOCK0_ACTION_TYPE,
+      target_hash: block0Id,
+    },
+    now: createdIso,
+  });
+  if (!consentVerify.verified) {
+    return fail(`consent_proof_${consentVerify.reason}`);
+  }
 
   // ── (6) Compose the signing body (no signature, no proof_hash) ───
   //

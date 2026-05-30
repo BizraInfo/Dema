@@ -322,7 +322,7 @@ export function buildHarnessIntegrationSummary(options = {}) {
 
 export function formatHarnessIntegration(harness) {
   const lines = [
-    "DEMA Harness Integration v0.3",
+    "DEMA Harness Integration v0.4",
     "",
     `Verdict: ${harness.verdict}`,
     `Generated: ${harness.generated_at}`,

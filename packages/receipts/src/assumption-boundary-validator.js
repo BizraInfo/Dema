@@ -38,8 +38,13 @@ function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function hasNonEmptyStringEntry(value) {
-  return Array.isArray(value) && value.some(isNonEmptyString);
+// A reference array (evidence_refs / derived_from) must be non-empty AND
+// every entry must be a non-empty string. One valid entry does not launder
+// junk (null, "", numbers) — a partially-malformed array is a malformed claim.
+function isNonEmptyStringArray(value) {
+  return (
+    Array.isArray(value) && value.length > 0 && value.every(isNonEmptyString)
+  );
 }
 
 function reject(error) {
@@ -77,11 +82,11 @@ export function validateAssumptionBoundary(envelope) {
   if (claimState === "V") {
     // A "Verified" claim asserts certainty; certainty without a named
     // evidence pointer is unsupported certainty (ZANN).
-    if (!hasNonEmptyStringEntry(envelope.evidence_refs)) {
+    if (!isNonEmptyStringArray(envelope.evidence_refs)) {
       return reject("unsupported_certainty");
     }
   } else if (claimState === "D") {
-    if (!hasNonEmptyStringEntry(envelope.derived_from)) {
+    if (!isNonEmptyStringArray(envelope.derived_from)) {
       return reject("derivation_chain_missing");
     }
   } else if (claimState === "A") {

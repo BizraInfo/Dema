@@ -109,6 +109,34 @@ describe("ASSUMPTION-GATE-1A · validateAssumptionBoundary", () => {
     assert.equal(r.error, "unsupported_certainty");
   });
 
+  // REMEDIATION-0 #3 · a single valid entry must NOT launder a malformed array
+  it("V with a partially-malformed evidence array (valid + null) → unsupported_certainty", () => {
+    const r = validateAssumptionBoundary({
+      claim_state: "V",
+      evidence_refs: ["packages/x.js:1", null],
+    });
+    assert.equal(r.valid, false);
+    assert.equal(r.error, "unsupported_certainty");
+  });
+
+  it("V with a valid + empty-string evidence entry → unsupported_certainty", () => {
+    const r = validateAssumptionBoundary({
+      claim_state: "V",
+      evidence_refs: ["ok", "   "],
+    });
+    assert.equal(r.valid, false);
+    assert.equal(r.error, "unsupported_certainty");
+  });
+
+  it("D with a non-string entry in the derivation chain → derivation_chain_missing", () => {
+    const r = validateAssumptionBoundary({
+      claim_state: "D",
+      derived_from: ["V1", 42],
+    });
+    assert.equal(r.valid, false);
+    assert.equal(r.error, "derivation_chain_missing");
+  });
+
   it("D without derivation chain → derivation_chain_missing", () => {
     const r = validateAssumptionBoundary({ claim_state: "D" });
     assert.equal(r.valid, false);

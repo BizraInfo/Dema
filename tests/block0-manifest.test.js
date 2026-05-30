@@ -411,4 +411,97 @@ describe("BLOCK0-1A · buildBlock0Manifest", () => {
       await rm(home, { recursive: true, force: true });
     }
   });
+
+  // ── REMEDIATION-0 #2 · determinism: no wall-clock fallback ──────────
+  it("REMEDIATION-0 #2: missing createdAtIso → created_at_iso_required (no Date.now fallback)", async () => {
+    const home = await freshHome();
+    try {
+      await initAuthorshipKey({
+        consent: KEY_INIT_CONSENT_PHRASE,
+        demaHome: home,
+      });
+      const prerequisites = makeValidPrerequisites();
+      const consentProof = await buildSealBlock0ConsentProof(
+        home,
+        prerequisites,
+      );
+      const r = await buildBlock0Manifest({
+        prerequisites,
+        consentProof,
+        demaHome: home,
+        // createdAtIso intentionally omitted
+      });
+      assert.equal(r.built, false);
+      assert.equal(r.error, "created_at_iso_required");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  // ── REMEDIATION-0 #1 · Critical: consent proof must be cryptographically verified ──
+  it("REMEDIATION-0 #1a: forged consent object (right action_type, no valid signature) → rejected", async () => {
+    const home = await freshHome();
+    try {
+      await initAuthorshipKey({
+        consent: KEY_INIT_CONSENT_PHRASE,
+        demaHome: home,
+      });
+      const prerequisites = makeValidPrerequisites();
+      // A plain object that passes the cheap action_type check but is NOT a
+      // validly-signed KEYCONSENT-1A proof. Before the fix this BUILT; the
+      // gate now verifies the signature and rejects.
+      const forged = {
+        action_scope: { action_type: BLOCK0_ACTION_TYPE },
+        consent_proof_hash: "f".repeat(64),
+      };
+      const r = await buildBlock0Manifest({
+        prerequisites,
+        consentProof: forged,
+        demaHome: home,
+        createdAtIso: FIXED_CREATED,
+      });
+      assert.equal(r.built, false);
+      assert.ok(
+        r.error.startsWith("consent_proof_"),
+        `expected a consent_proof_* rejection, got ${r.error}`,
+      );
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("REMEDIATION-0 #1b: validly-signed consent bound to the WRONG target_hash → consent_proof_consent_scope_mismatch", async () => {
+    const home = await freshHome();
+    try {
+      await initAuthorshipKey({
+        consent: KEY_INIT_CONSENT_PHRASE,
+        demaHome: home,
+      });
+      const prerequisites = makeValidPrerequisites();
+      // Real signed consent proof, correct action_type, but target_hash binds
+      // to something other than this manifest's commitment set.
+      const cp = await buildConsentProof({
+        phrase: "SIGN AUTHORSHIP RECEIPT",
+        actionScope: {
+          action_type: BLOCK0_ACTION_TYPE,
+          target_hash: "a".repeat(64),
+        },
+        demaHome: home,
+        nonce: FIXED_NONCE,
+        createdAtIso: "2026-05-30T07:59:00.000Z",
+        expiresAtIso: "2026-05-30T08:04:00.000Z",
+      });
+      assert.equal(cp.built, true);
+      const r = await buildBlock0Manifest({
+        prerequisites,
+        consentProof: cp.consent_proof,
+        demaHome: home,
+        createdAtIso: FIXED_CREATED,
+      });
+      assert.equal(r.built, false);
+      assert.equal(r.error, "consent_proof_consent_scope_mismatch");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
 });
