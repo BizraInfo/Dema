@@ -6,8 +6,13 @@ import {
   formatHarnessIntegration,
   HARNESS_HOOK_CHECKS,
   HARNESS_BEHAVIORAL_PROBES,
+  HARNESS_LOA_SELF_DECLARATION,
 } from "../packages/core/src/harness-integration.js";
 import { isCanonicalBoundaryShape } from "../packages/core/src/preview-boundary.js";
+import {
+  validateAssumptionBoundary,
+  ASSUMPTION_VALIDATOR_SCHEMA,
+} from "../packages/receipts/src/assumption-boundary-validator.js";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join, dirname } from "node:path";
@@ -38,7 +43,7 @@ describe("harness-integration", () => {
     it("returns frozen object with correct schema", () => {
       const result = buildHarnessIntegration({ now: FIXED_NOW });
       assert.ok(Object.isFrozen(result));
-      assert.equal(result.schema, "bizra.dema.harness_integration.v0.3");
+      assert.equal(result.schema, "bizra.dema.harness_integration.v0.4");
     });
 
     it("mode is always PREVIEW_ONLY", () => {
@@ -81,6 +86,53 @@ describe("harness-integration", () => {
     it("generated_at reflects provided timestamp", () => {
       const result = buildHarnessIntegration({ now: FIXED_NOW });
       assert.equal(result.generated_at, "2026-05-25T12:00:00.000Z");
+    });
+
+    // ASSUMPTION-GATE-1B · Law of Assumption gate wired into the harness
+    it("law_of_assumption surface is gate-wired, frozen, schema-tagged", () => {
+      const result = buildHarnessIntegration({ now: FIXED_NOW });
+      assert.ok(result.law_of_assumption);
+      assert.ok(Object.isFrozen(result.law_of_assumption));
+      assert.equal(
+        result.law_of_assumption.gate_schema,
+        ASSUMPTION_VALIDATOR_SCHEMA,
+      );
+    });
+
+    it("law_of_assumption value is the LIVE gate output, not hardcoded", () => {
+      const result = buildHarnessIntegration({ now: FIXED_NOW });
+      const fresh = validateAssumptionBoundary(HARNESS_LOA_SELF_DECLARATION);
+      assert.equal(
+        result.law_of_assumption.self_declaration_valid,
+        fresh.valid,
+      );
+      assert.equal(result.law_of_assumption.self_declaration_valid, true);
+      assert.equal(result.law_of_assumption.self_declaration_error, null);
+    });
+
+    it("exported self-declaration is a real canon A-envelope", () => {
+      assert.equal(HARNESS_LOA_SELF_DECLARATION.claim_state, "A");
+      assert.ok(HARNESS_LOA_SELF_DECLARATION.assumption);
+      assert.ok(HARNESS_LOA_SELF_DECLARATION.ground);
+      assert.ok(HARNESS_LOA_SELF_DECLARATION.boundary);
+      assert.equal(HARNESS_LOA_SELF_DECLARATION.rejectable, true);
+    });
+
+    it("the gate the harness uses CAN reject (falsifiability)", () => {
+      const broken = { ...HARNESS_LOA_SELF_DECLARATION, boundary: undefined };
+      const verdict = validateAssumptionBoundary(broken);
+      assert.equal(verdict.valid, false);
+      assert.equal(verdict.error, "assumption_boundary_missing");
+    });
+
+    it("law_of_assumption reports the honest V/D/A/U gap (no existing surface declares yet)", () => {
+      const result = buildHarnessIntegration({ now: FIXED_NOW });
+      assert.equal(result.law_of_assumption.surfaces_declaring_vdau, 0);
+    });
+
+    it("summary surfaces law_of_assumption_valid", () => {
+      const summary = buildHarnessIntegrationSummary({ now: FIXED_NOW });
+      assert.equal(summary.law_of_assumption_valid, true);
     });
   });
 
@@ -288,7 +340,7 @@ describe("harness-integration", () => {
       const result = buildHarnessIntegrationSummary({ now: FIXED_NOW });
       assert.equal(
         result.schema,
-        "bizra.dema.harness_integration_summary.v0.3",
+        "bizra.dema.harness_integration_summary.v0.4",
       );
     });
 
@@ -568,14 +620,14 @@ describe("npm script integration", () => {
 
   it("harness --json returns schema-tagged CLEAN envelope", () => {
     const result = runScript("harness --json");
-    assert.equal(result.schema, "bizra.dema.harness_integration.v0.3");
+    assert.equal(result.schema, "bizra.dema.harness_integration.v0.4");
     assert.equal(typeof result.verdict, "string");
     assert.ok(result.boundary);
   });
 
   it("harness --summary --json returns compact verdict", () => {
     const result = runScript("harness --summary --json");
-    assert.equal(result.schema, "bizra.dema.harness_integration_summary.v0.3");
+    assert.equal(result.schema, "bizra.dema.harness_integration_summary.v0.4");
     assert.equal(typeof result.verdict, "string");
     assert.equal(typeof result.gates, "string");
   });

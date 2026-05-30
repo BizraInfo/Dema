@@ -641,7 +641,7 @@ Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
                            Project Status preview (v0.1 · PMBOK 7th-edition-aligned) · stakeholders + value stream + risk register + quality posture + 12 principles · companion to docs/pm/PROJECT_CHARTER_AND_STATUS.md
   dema llm-router          Local LLM router preview; routing_allowed=false; abstain by default
   dema harness [--summary] [--json]
-                           Unified harness integration; aggregates self-proactive, self-critique, micro-compliance, micro-consent + hook inventory
+                           Unified harness integration; aggregates self-proactive, self-critique, micro-compliance, micro-consent, Law-of-Assumption gate + hook inventory
   dema process-mining [--summary]
                            Operator-pattern mirror; surfaces ring_advancement_status; blocks operator_judgment
   dema key-maker-check [--door "<text>"] [--summary]
