@@ -26,6 +26,7 @@ import {
   RULE_ID as CANONICAL_SHAPE_RULE_ID,
 } from "../../rules/src/rule-canonical-shape.v0.1.js";
 import { verifyConsentProof } from "./consent-proof.js";
+import { recordConsentNonce } from "./consent-nonce-registry.js";
 
 export const VERDICT_RECEIPT_SCHEMA = "bizra.dema.verdict_receipt.v0.1";
 
@@ -134,6 +135,22 @@ export async function attestVerdict({
   });
   if (!consentVerify.verified) {
     return fail({ error: `consent_proof_${consentVerify.reason}` });
+  }
+
+  // (5b) KEYCONSENT-2B: record the consent proof's nonce as consumed.
+  // First call with a given nonce wins; replay → consent_nonce_already_used.
+  // Recorded AFTER consent verification succeeds and BEFORE rule
+  // execution + receipt persistence, so a rejected replay leaves NO
+  // side effect: no receipt, no chain advance, no rule run.
+  const nonceResult = await recordConsentNonce({
+    nonce: consentProof.nonce,
+    actionType: consentProof.action_scope.action_type,
+    targetHash: consentProof.action_scope.target_hash,
+    consentProofHash: consentProof.consent_proof_hash,
+    demaHome,
+  });
+  if (!nonceResult.recorded) {
+    return fail({ error: `consent_${nonceResult.error}` });
   }
 
   // (6) Run the rule (pure)
