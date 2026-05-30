@@ -5,11 +5,46 @@ import { buildPreviewBoundary } from "./preview-boundary.js";
 import { buildProcessMiningPreview } from "./process-mining-preview.js";
 import { buildSafetyReportPreview } from "./safety-report.js";
 import { buildDiagnosticsMissionPlan } from "../../mission/src/diagnostics-plan.js";
+import {
+  validateAssumptionBoundary,
+  ASSUMPTION_VALIDATOR_SCHEMA,
+} from "../../receipts/src/assumption-boundary-validator.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..", "..", "..");
 
-const SCHEMA = "bizra.dema.harness_integration.v0.3";
+const SCHEMA = "bizra.dema.harness_integration.v0.4";
+
+// ASSUMPTION-GATE-1B · the harness's own epistemic posture, declared as a
+// canon A-claim (Assumed-with-Iḥsān) and routed through the Law-of-Assumption
+// gate on every build — the first live caller of validateAssumptionBoundary.
+export const HARNESS_LOA_SELF_DECLARATION = Object.freeze({
+  claim_state: "A",
+  assumption:
+    "This harness preview reflects the repo's current self-proactive, " +
+    "self-critique, micro-compliance and micro-consent posture.",
+  ground:
+    "Aggregated at generated_at from safety-report + diagnostics-plan + " +
+    "process-mining previews; no model call, no network.",
+  boundary:
+    "Does not hold if repo files change after generated_at or a source " +
+    "preview is stale; this is a preview, not a runtime gate.",
+  rejectable: true,
+});
+
+// Routes the self-declaration through the live gate. self_declaration_valid is
+// the gate's real output (not a hardcoded flag); surfaces_declaring_vdau is the
+// honest count of existing harness sub-surfaces that emit a V/D/A/U envelope —
+// currently zero (this is the first), surfaced as self-critique, not hidden.
+function buildLawOfAssumptionSurface() {
+  const verdict = validateAssumptionBoundary(HARNESS_LOA_SELF_DECLARATION);
+  return Object.freeze({
+    gate_schema: ASSUMPTION_VALIDATOR_SCHEMA,
+    self_declaration_valid: verdict.valid,
+    self_declaration_error: verdict.error ?? null,
+    surfaces_declaring_vdau: 0,
+  });
+}
 
 const BEHAVIORAL_PROBES = Object.freeze([
   {
@@ -257,6 +292,7 @@ export function buildHarnessIntegration({ now = new Date(), repoRoot } = {}) {
     self_critique: selfCritique,
     micro_compliance: microCompliance,
     micro_consent: microConsent,
+    law_of_assumption: buildLawOfAssumptionSurface(),
     behavioral_probes: behavioralProbes,
     hook_inventory: hookInventory,
     boundary: buildPreviewBoundary(),
@@ -266,8 +302,9 @@ export function buildHarnessIntegration({ now = new Date(), repoRoot } = {}) {
 export function buildHarnessIntegrationSummary(options = {}) {
   const full = buildHarnessIntegration(options);
   return Object.freeze({
-    schema: "bizra.dema.harness_integration_summary.v0.3",
+    schema: "bizra.dema.harness_integration_summary.v0.4",
     verdict: full.verdict,
+    law_of_assumption_valid: full.law_of_assumption.self_declaration_valid,
     proactive_status: full.self_proactive_harness.status,
     gates: `${full.self_proactive_harness.gates_passing}/${full.self_proactive_harness.gate_count} passing`,
     critique_gaps: full.self_critique.total_gap_count,
@@ -285,7 +322,7 @@ export function buildHarnessIntegrationSummary(options = {}) {
 
 export function formatHarnessIntegration(harness) {
   const lines = [
-    "DEMA Harness Integration v0.3",
+    "DEMA Harness Integration v0.4",
     "",
     `Verdict: ${harness.verdict}`,
     `Generated: ${harness.generated_at}`,
