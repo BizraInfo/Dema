@@ -266,7 +266,9 @@ export async function buildSkillLedger({
       action_type: MUTATE_AGENT_SKILL_LEDGER_ACTION_TYPE,
       target_hash,
     },
-    now: new Date().toISOString(),
+    // Check consent freshness as of the act's own timestamp (deterministic),
+    // not whenever the verifier runs (wall-clock → flaky). Matches block0.
+    now: createdAtIso || new Date().toISOString(),
   });
   if (!consentVerify.verified) {
     if (consentVerify.reason === "consent_scope_mismatch") {
