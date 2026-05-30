@@ -300,4 +300,54 @@ describe("RECEIPT-CHAIN-1A · build + verify canonical chain", () => {
       await rm(home, { recursive: true, force: true });
     }
   });
+
+  // ── PR #113 review hardening: fail-closed, never throw ───────────
+  it("builder fail-closed (not throw) on non-JSON-safe canonical_body", async () => {
+    const home = await freshKeyedHome();
+    try {
+      const fn = await buildCanonicalReceipt(
+        commonArgs(home, { canonicalBody: { f: () => 1 } }),
+      );
+      assert.equal(fn.built, false);
+      assert.equal(fn.error, "canonical_body_invalid");
+
+      const circ = {};
+      circ.self = circ;
+      const c = await buildCanonicalReceipt(
+        commonArgs(home, { canonicalBody: circ }),
+      );
+      assert.equal(c.built, false);
+      assert.equal(c.error, "canonical_body_invalid");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("verifier never THROWS on a hostile entry (circular body) → verified:false", async () => {
+    const home = await freshKeyedHome();
+    try {
+      const g = await buildCanonicalReceipt(commonArgs(home));
+      const pubkey = await loadPublicKey(home);
+      const hostile = { ...g.receipt, canonical_body: {} };
+      hostile.canonical_body.self = hostile.canonical_body; // circular
+      const v = verifyCanonicalChain({ entries: [hostile], pubkeyPem: pubkey });
+      assert.equal(v.verified, false); // must reject, not crash
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("verifier rejects an invalid truth_label even if self-consistent → truth_label_invalid", async () => {
+    const home = await freshKeyedHome();
+    try {
+      const g = await buildCanonicalReceipt(commonArgs(home));
+      const pubkey = await loadPublicKey(home);
+      const forged = reseal({ ...g.receipt, truth_label: "MADE_UP_LABEL" });
+      const v = verifyCanonicalChain({ entries: [forged], pubkeyPem: pubkey });
+      assert.equal(v.verified, false);
+      assert.equal(v.reason, "truth_label_invalid");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
 });

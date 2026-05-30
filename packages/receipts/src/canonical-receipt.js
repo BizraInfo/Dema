@@ -49,6 +49,20 @@ function isSha256Hex(s) {
 function isPlainObject(v) {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
+// True only if the value round-trips through JSON: rejects function / undefined
+// / bigint / symbol / NaN / Infinity and circular references. A canonical body
+// that is not JSON-safe cannot be content-addressed or replayed.
+function isJsonSafe(value, seen = new WeakSet()) {
+  if (value === null) return true;
+  const t = typeof value;
+  if (t === "string" || t === "boolean") return true;
+  if (t === "number") return Number.isFinite(value);
+  if (t !== "object") return false; // function / undefined / bigint / symbol
+  if (seen.has(value)) return false; // circular
+  seen.add(value);
+  const members = Array.isArray(value) ? value : Object.values(value);
+  return members.every((m) => isJsonSafe(m, seen));
+}
 function isNonEmptyString(v) {
   return typeof v === "string" && v.trim().length > 0;
 }
@@ -86,7 +100,7 @@ export async function buildCanonicalReceipt({
   if (!isNonEmptyString(now)) {
     return fail("created_at_iso_required");
   }
-  if (!isPlainObject(canonicalBody)) {
+  if (!isPlainObject(canonicalBody) || !isJsonSafe(canonicalBody)) {
     return fail("canonical_body_invalid");
   }
   if (!VALID_TRUTH_LABELS.includes(truthLabel)) {
@@ -108,26 +122,32 @@ export async function buildCanonicalReceipt({
     return fail("no_authorship_key");
   }
 
-  // body is exactly what the signature + receipt_id commit to.
-  const body = {
-    schema: CANONICAL_RECEIPT_SCHEMA,
-    prev_hash: prevHash,
-    body_hash: sha256(stableStringify(canonicalBody)),
-    canonical_body: canonicalBody,
-    truth_label: truthLabel,
-    what_this_proves: whatProves,
-    what_this_does_not_prove: whatDoesNotProve,
-    operator_public_key_fingerprint: fingerprintFromPem(publicKeyPem),
-    created_at_iso: now,
-  };
-  const receipt_id = sha256(stableStringify(body));
-  const receipt_signature_b64 = signPayload(body, privateKeyPem);
+  // Fail-closed even on crypto/serialization faults (corrupt key PEM, etc.):
+  // never throw out of a builder documented as fail-closed.
+  try {
+    // body is exactly what the signature + receipt_id commit to.
+    const body = {
+      schema: CANONICAL_RECEIPT_SCHEMA,
+      prev_hash: prevHash,
+      body_hash: sha256(stableStringify(canonicalBody)),
+      canonical_body: canonicalBody,
+      truth_label: truthLabel,
+      what_this_proves: whatProves,
+      what_this_does_not_prove: whatDoesNotProve,
+      operator_public_key_fingerprint: fingerprintFromPem(publicKeyPem),
+      created_at_iso: now,
+    };
+    const receipt_id = sha256(stableStringify(body));
+    const receipt_signature_b64 = signPayload(body, privateKeyPem);
 
-  return Object.freeze({
-    built: true,
-    receipt: Object.freeze({ ...body, receipt_id, receipt_signature_b64 }),
-    signer_public_key_pem: publicKeyPem,
-  });
+    return Object.freeze({
+      built: true,
+      receipt: Object.freeze({ ...body, receipt_id, receipt_signature_b64 }),
+      signer_public_key_pem: publicKeyPem,
+    });
+  } catch {
+    return fail("signing_failed");
+  }
 }
 
 function reject(reason, at_index) {
@@ -181,21 +201,27 @@ export function verifyCanonicalChain({ entries, pubkeyPem } = {}) {
       return reject("receipt_id_mismatch", i);
     }
     const { receipt_id, receipt_signature_b64, ...body } = entry;
-    if (sha256(stableStringify(body)) !== receipt_id) {
-      return reject("receipt_id_mismatch", i);
-    }
 
-    // body_hash binds the content independently of the chain metadata
-    if (sha256(stableStringify(body.canonical_body)) !== body.body_hash) {
-      return reject("body_hash_mismatch", i);
-    }
-
-    // signature — external pubkey ONLY (embedded fingerprint never trusted)
+    // A trustless verifier must REJECT hostile/non-serializable input, never
+    // throw. All recomputation + signature checks run under one guard.
     let sigValid;
     try {
+      // receipt_id re-derivation (catches any non-canonical body drift)
+      if (sha256(stableStringify(body)) !== receipt_id) {
+        return reject("receipt_id_mismatch", i);
+      }
+      // body_hash binds the content independently of the chain metadata
+      if (sha256(stableStringify(body.canonical_body)) !== body.body_hash) {
+        return reject("body_hash_mismatch", i);
+      }
+      // contract: a valid truth_label is required even if self-consistent
+      if (!VALID_TRUTH_LABELS.includes(body.truth_label)) {
+        return reject("truth_label_invalid", i);
+      }
+      // signature — external pubkey ONLY (embedded fingerprint never trusted)
       sigValid = verifyPayload(body, receipt_signature_b64, pubkeyPem);
     } catch {
-      sigValid = false;
+      return reject("receipt_id_mismatch", i); // unserializable → reject
     }
     if (!sigValid) {
       return reject("signature_invalid", i);

@@ -79,7 +79,13 @@ export async function appendCanonicalReceipt({
     return Object.freeze({ appended: false, error: "consent_required" });
   }
 
-  const entries = await loadCanonicalLedger({ demaHome });
+  // A corrupt/non-JSON ledger line must fail closed, never throw.
+  let entries;
+  try {
+    entries = await loadCanonicalLedger({ demaHome });
+  } catch {
+    return Object.freeze({ appended: false, error: "ledger_unreadable" });
+  }
 
   // INVARIANT: never extend a corrupt chain.
   if (entries.length > 0) {

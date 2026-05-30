@@ -160,4 +160,20 @@ describe("RECEIPT-CHAIN-1B · canonical ledger on disk", () => {
       await rm(home, { recursive: true, force: true });
     }
   });
+
+  it("fail-closed on a corrupt (non-JSON) ledger line → ledger_unreadable, not a throw", async () => {
+    const home = await freshKeyedHome();
+    try {
+      await appendCanonicalReceipt(appendArgs(home, { step: 1 }));
+      await writeFile(
+        join(home, CANONICAL_LEDGER_RELPATH),
+        "this is not json\n",
+      );
+      const r = await appendCanonicalReceipt(appendArgs(home, { step: 2 }));
+      assert.equal(r.appended, false);
+      assert.equal(r.error, "ledger_unreadable");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
 });
