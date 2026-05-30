@@ -17,45 +17,31 @@
 //
 // Local-only. Permissionless. No I/O, no Date.now, no Math.random, no network.
 //
-// NOTE: ECON-1A's `buildLedgerEntry` stores `prev_hash` as a sha256-hex string,
-// using `"0".repeat(64)` to represent genesis. The ECON-1B verifier per spec
-// uses `null` for genesis. The test fixtures construct entries directly via
-// the kernel for non-genesis links (real signatures) and override
-// genesis entries to set `prev_hash: null` before signing — we do this by
-// re-signing the body under an injected helper that mirrors the kernel's
-// stable-body construction. This keeps ECON-1A unmodified.
+// NOTE: ECON-1A now accepts `prev_hash:null` for genesis so the entries built
+// by the kernel replay directly under ECON-1B. Linked entries still require a
+// 64-hex predecessor hash.
 
 import { describe, it } from "node:test";
 import { strict as assert } from "node:assert";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createPublicKey } from "node:crypto";
 
 import {
   verifyLedgerReplay,
   DUAL_TOKEN_LEDGER_ENTRY_SCHEMA as REPLAY_SCHEMA,
 } from "../packages/econ/src/dual-token-ledger-replay.js";
 
-import {
-  buildLedgerEntry,
-  DUAL_TOKEN_LEDGER_ENTRY_SCHEMA,
-} from "../packages/econ/src/dual-token-ledger.js";
+import { buildLedgerEntry } from "../packages/econ/src/dual-token-ledger.js";
 import { buildConsentProof } from "../packages/receipts/src/consent-proof.js";
 import {
   initAuthorshipKey,
   KEY_INIT_CONSENT_PHRASE,
-  loadPrivateKey,
-  loadPublicKey,
 } from "../packages/receipts/src/authorship-key-store.js";
 import {
   signPayload,
   generateEd25519Keypair,
 } from "../packages/receipts/src/authorship-signature.js";
-import {
-  sha256,
-  stableStringify,
-} from "../packages/consent/src/consent-common.js";
 
 const VALID_PHRASE = "MINT LEDGER ENTRY";
 const MINT_TARGET_HASH = "f".repeat(64);
@@ -76,16 +62,6 @@ const EVIDENCE_HASH_A = "a".repeat(64);
 const EVIDENCE_HASH_B = "b".repeat(64);
 const EVIDENCE_HASH_C = "c".repeat(64);
 const EVIDENCE_HASH_D = "d".repeat(64);
-
-// ECON-1A boundary block — must be preserved on rebuild so signature stays valid.
-const ECON_BOUNDARY_OK = Object.freeze({
-  local_only: true,
-  network_used: false,
-  federation_used: false,
-  public_economic_claim_made: false,
-  token_minted: true,
-  exchange_value_claimed: false,
-});
 
 async function freshHome() {
   return await mkdtemp(join(tmpdir(), "dema-econ-replay-test-"));
@@ -108,37 +84,6 @@ async function makeConsentProof(home, scope = VALID_MINT_SCOPE) {
     throw new Error(`test setup failure: consent proof not built: ${cp.error}`);
   }
   return cp;
-}
-
-function fingerprintFromPem(pem) {
-  const pk = createPublicKey(pem);
-  return sha256(pk.export({ type: "spki", format: "der" }).toString("hex"));
-}
-
-// Re-sign an entry whose body we have mutated (e.g. prev_hash -> null for
-// genesis). Mirrors the kernel's stable-body construction exactly.
-async function resignEntry(home, entry, prevHashOverride) {
-  const privateKeyPem = await loadPrivateKey(home);
-  const publicKeyPem = await loadPublicKey(home);
-  const fingerprint = fingerprintFromPem(publicKeyPem);
-  const stableBody = Object.freeze({
-    schema: DUAL_TOKEN_LEDGER_ENTRY_SCHEMA,
-    entry_type: entry.entry_type,
-    token_class: entry.token_class,
-    amount: entry.amount,
-    evidence_receipt_hashes: Object.freeze([...entry.evidence_receipt_hashes]),
-    prev_hash: prevHashOverride,
-    created_at_iso: entry.created_at_iso,
-    operator_public_key_fingerprint: fingerprint,
-    boundary: ECON_BOUNDARY_OK,
-  });
-  const signature = signPayload(stableBody, privateKeyPem);
-  const entry_hash = sha256(stableStringify(stableBody));
-  return Object.freeze({
-    ...stableBody,
-    entry_signature_b64: signature,
-    entry_hash,
-  });
 }
 
 async function buildKernelEntry(home, cp, prev_hash, overrides = {}) {
@@ -167,16 +112,14 @@ async function buildChain(home, length = 4) {
   const pubkeyPem = cp.signer_public_key_pem;
   const entries = [];
 
-  // Genesis: build via kernel with a 64-zero prev_hash, then re-sign with
-  // prev_hash: null to match the ECON-1B replay verifier's genesis convention.
-  const genesisBase = await buildKernelEntry(home, cp, "0".repeat(64), {
+  // Genesis: build directly with prev_hash:null to match ECON-1B replay.
+  const genesis = await buildKernelEntry(home, cp, null, {
     entry_type: "RESOURCE_DEBIT",
     token_class: "RESOURCE",
     amount: 5,
     evidence_receipt_hashes: [EVIDENCE_HASH_A],
     createdAtIso: FIXED_LEDGER_NOW_1,
   });
-  const genesis = await resignEntry(home, genesisBase, null);
   entries.push(genesis);
 
   const overrides = [

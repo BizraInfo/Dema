@@ -118,6 +118,10 @@ function isSha256Hex(s) {
   return typeof s === "string" && /^[a-f0-9]{64}$/.test(s);
 }
 
+function isValidPrevHash(s) {
+  return s === null || isSha256Hex(s);
+}
+
 function isValidConsentProofShape(cp) {
   if (!cp || typeof cp !== "object" || Array.isArray(cp)) return false;
   if (cp.schema !== CONSENT_PROOF_SCHEMA) return false;
@@ -195,8 +199,8 @@ export async function buildLedgerEntry({
     return fail("evidence_receipt_hashes_invalid");
   }
 
-  // ── (5) Prev-hash: 64-hex (or 64 zeros for genesis) ──────────────
-  if (!isSha256Hex(prev_hash)) {
+  // ── (5) Prev-hash: null for genesis, 64-hex for linked entries ───
+  if (!isValidPrevHash(prev_hash)) {
     return fail("prev_hash_invalid");
   }
 
@@ -270,7 +274,7 @@ export function verifyLedgerEntry({ entry, pubkeyPem }) {
     "entry_hash",
   ];
   for (const f of required) {
-    if (entry[f] === undefined || entry[f] === null) {
+    if (entry[f] === undefined || (entry[f] === null && f !== "prev_hash")) {
       return reject(`structural_missing_field_${f}`);
     }
   }
@@ -289,7 +293,7 @@ export function verifyLedgerEntry({ entry, pubkeyPem }) {
   if (!isValidEvidenceHashes(entry.evidence_receipt_hashes)) {
     return reject("evidence_receipt_hashes_invalid");
   }
-  if (!isSha256Hex(entry.prev_hash)) {
+  if (!isValidPrevHash(entry.prev_hash)) {
     return reject("prev_hash_invalid");
   }
 
