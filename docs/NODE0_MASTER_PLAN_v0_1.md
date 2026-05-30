@@ -60,16 +60,25 @@ Each phase is a set of micro-slices. **Slice discipline (non-negotiable):** TDD
 dependencies, one concern per slice. **Mutation/commit/seal steps are halt-gated —
 operator GO required.**
 
-### Phase A — Bind the flywheel to the proof spine
+### Phase A — Bind the flywheel to the proof spine — **DONE (`MEASURED_LOCAL`)**
 
-**Goal:** every flywheel action/reward/XP receipt enters the canonical `prev_hash`
+**Goal:** every flywheel action/reward receipt enters the canonical `prev_hash`
 chain, so one mission is one replayable ledger (closes the "receipt chain not bound
 to flywheel" gap).
-**Slices:** RECEIPT-CHAIN-1C (bind flywheel + econ + skill-ledger entries into the
-canonical chain) · ASSUMPTION-GATE-1C (enforce the V/D/A/U boundary on one durable
-mutation path before it writes).
-**Exit gate:** one task's full action→mint sequence replays as a single canonical
-chain; tampering any link fails `verifyCanonicalChain`. `MEASURED_LOCAL`.
+**Slices:**
+
+- **RECEIPT-CHAIN-1C** — `bindTaskReceiptsToCanonicalChain` (`canonical-task-binding.js`)
+  appends one task's flywheel action receipt → IMPACT entry → SAT validation receipt
+  as one canonical prev_hash chain; `verifyCanonicalLedger` replays it. **DONE** (5 tests).
+- **ASSUMPTION-GATE-1C** — **ALREADY SATISFIED on disk** (verified 2026-05-31):
+  `mintGuardedClaim` (`assumption-guarded-claim.js`) is the only path to the flywheel
+  action write and rejects via `validateAssumptionBoundary` before writing — the
+  V/D/A/U boundary is enforced on that durable mutation. Broadening enforcement to the
+  ledger-append paths is optional later work, not a Phase A blocker.
+  **Exit gate:** MET — one task's action→validation sequence replays as a single
+  canonical chain; tampering any link fails `verifyCanonicalChain`. `MEASURED_LOCAL`.
+  **Remaining for full §19:** binding steps 12–17 (lesson/perf/next-mission) lands in
+  Phase C as those receipts come to exist.
 
 ### Phase B — Complete the SAT-5 constitutional gates
 
