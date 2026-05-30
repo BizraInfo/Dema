@@ -4,18 +4,21 @@ This index is the clean map for the repo. It separates current user-facing docs,
 
 ## Fast reading paths
 
-| Reader | Start here | Then read |
-|---|---|---|
-| Normal user | [USER_LIFECYCLE.md](USER_LIFECYCLE.md) | [FIRST_RUN_WIZARD.md](FIRST_RUN_WIZARD.md), [RECEIPTS.md](RECEIPTS.md) |
-| Developer | [ARCHITECTURE.md](ARCHITECTURE.md) | [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md), [DELIVERY_BLUEPRINT.md](DELIVERY_BLUEPRINT.md) |
-| LLM / agent | [LLM_SYSTEM_FLOW.md](LLM_SYSTEM_FLOW.md) | [ARCHITECTURE.md](ARCHITECTURE.md), [TESTING.md](TESTING.md) |
-| Security reviewer | [SECURITY.md](../SECURITY.md) | [06-adr/ADR-005-operator-actions-require-explicit-consent.md](06-adr/ADR-005-operator-actions-require-explicit-consent.md), [02-architecture/dema-autonomy-envelope.md](02-architecture/dema-autonomy-envelope.md) |
-| Product/GTM reviewer | [PRODUCT.md](PRODUCT.md) | [GTM.md](GTM.md), [LIGHTHOUSE.md](LIGHTHOUSE.md), [ROADMAP.md](ROADMAP.md) |
-| Proof auditor | [../proof-of-priority/PIN.md](../proof-of-priority/PIN.md) | [PRIORITY_ANCHOR.md](PRIORITY_ANCHOR.md), [../SPROUT_PIN.md](../SPROUT_PIN.md) |
+| Reader               | Start here                                                 | Then read                                                                                                                                                                                                          |
+| -------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Normal user          | [USER_LIFECYCLE.md](USER_LIFECYCLE.md)                     | [FIRST_RUN_WIZARD.md](FIRST_RUN_WIZARD.md), [RECEIPTS.md](RECEIPTS.md)                                                                                                                                             |
+| Developer            | [ARCHITECTURE.md](ARCHITECTURE.md)                         | [ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md), [DELIVERY_BLUEPRINT.md](DELIVERY_BLUEPRINT.md)                                                                                                             |
+| LLM / agent          | [LLM_SYSTEM_FLOW.md](LLM_SYSTEM_FLOW.md)                   | [ARCHITECTURE.md](ARCHITECTURE.md), [TESTING.md](TESTING.md)                                                                                                                                                       |
+| Security reviewer    | [SECURITY.md](../SECURITY.md)                              | [06-adr/ADR-005-operator-actions-require-explicit-consent.md](06-adr/ADR-005-operator-actions-require-explicit-consent.md), [02-architecture/dema-autonomy-envelope.md](02-architecture/dema-autonomy-envelope.md) |
+| Product/GTM reviewer | [PRODUCT.md](PRODUCT.md)                                   | [GTM.md](GTM.md), [LIGHTHOUSE.md](LIGHTHOUSE.md), [ROADMAP.md](ROADMAP.md)                                                                                                                                         |
+| Proof auditor        | [../proof-of-priority/PIN.md](../proof-of-priority/PIN.md) | [PRIORITY_ANCHOR.md](PRIORITY_ANCHOR.md), [../SPROUT_PIN.md](../SPROUT_PIN.md)                                                                                                                                     |
 
 ## Current public front doors
 
 - [BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md](BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md) — north-star goal for BIZRA Node0 + DEMA. Operating law, A+ quality definition, mission lifecycle, flagship test. Companion to CURRENT_LIMITS and PRODUCT.
+- [NODE0_MASTER_CRAFTSMANSHIP_CHECKLIST.md](NODE0_MASTER_CRAFTSMANSHIP_CHECKLIST.md) — evidence-bound Genesis Node completion scorecard: master flywheel acceptance test, domain scorecard, forbidden overclaims, and next implementation spearpoint.
+- [NODE0_MASTER_PLAN_v0_1.md](NODE0_MASTER_PLAN_v0_1.md) — ordered, exit-gated build sequence to Block0 seal (Phases A→E + SEAL), disk-anchored current truth, critical path, non-goals, halt gates.
+- [02-architecture/NODE0_OSTREE_TAD_v0_1.md](02-architecture/NODE0_OSTREE_TAD_v0_1.md) — OSTree-model technical architecture: maps the content-addressed signed receipt chain / Block0 to OSTree (object store, commit, fsck, deployment), then proposes the stdlib composition manifest before any libostree adoption.
 - [../README.md](../README.md) — product landing page, 5-command first run, command reference, diagrams.
 - [PRODUCT.md](PRODUCT.md) — public product page (what Dema is, what it isn't, who it's for, how to verify).
 - [CURRENT_LIMITS.md](CURRENT_LIMITS.md) — honest map of what is MEASURED, DESIGNED_NOT_LIVE, PLANNED, and LOCAL_ONLY. Read this before quoting Dema in a slide.
@@ -52,6 +55,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [02-architecture/dema-autonomy-envelope.md](02-architecture/dema-autonomy-envelope.md) — autonomy levels and consent.
 - [02-architecture/gateway-http-adapter.md](02-architecture/gateway-http-adapter.md) — gateway adapter target.
 - [02-architecture/pat-builder-sat-validator.md](02-architecture/pat-builder-sat-validator.md) — PAT/SAT bridge.
+- [02-architecture/SAT_ROLE_BOUNDARY.md](02-architecture/SAT_ROLE_BOUNDARY.md) — SAT constitutional guard contract: PAT proposes / SAT verifies-blocks-audits, the 5 role questions, verdict shape, and the registry-field contract (DECLARED, no runtime).
 - [02-architecture/sat-verifier-sibling-spec.md](02-architecture/sat-verifier-sibling-spec.md) — SAT verifier sibling spec.
 - [02-architecture/node0-urp-ecosystem-transition.md](02-architecture/node0-urp-ecosystem-transition.md) — internal Node0 to shared URP transition note; docs-only, not public roadmap.
 - [security/URP_STAGE_4_CHOOSE_CLOSEOUT.md](security/URP_STAGE_4_CHOOSE_CLOSEOUT.md) — Current URP Stage 4 Choose closeout note: write/list/verify symmetry, closeout drift-guard probe, non-claims, and Stage 5 boundary.
@@ -110,12 +114,12 @@ These files are useful background, but they are not the first source of truth wh
 
 - [ABSORPTION_NOTES_v1.md](ABSORPTION_NOTES_v1.md) — historical absorption notes.
 - [ABSORPTION_NOTES_v2.md](ABSORPTION_NOTES_v2.md) — historical absorption notes.
-- [_absorbed/README.md](_absorbed/README.md) — absorbed legacy index.
-- [_absorbed/BIZRA_GENESIS_PROVENANCE_LEDGER_V0_1.md](_absorbed/BIZRA_GENESIS_PROVENANCE_LEDGER_V0_1.md) — absorbed provenance reference.
-- [_absorbed/DEMA_PRODUCT_CONSTITUTION_V0_1.md](_absorbed/DEMA_PRODUCT_CONSTITUTION_V0_1.md) — absorbed constitution draft.
-- [_absorbed/DEMA_PRODUCT_REPO_BOOTSTRAP_V0_1.md](_absorbed/DEMA_PRODUCT_REPO_BOOTSTRAP_V0_1.md) — absorbed bootstrap draft.
-- [_absorbed/DEMA_REPO_BOOTSTRAP_V0_2_SUMMARY.md](_absorbed/DEMA_REPO_BOOTSTRAP_V0_2_SUMMARY.md) — absorbed bootstrap summary.
-- [_absorbed/DEMA_SAFE_MONETIZATION_SKILL_V0_1.md](_absorbed/DEMA_SAFE_MONETIZATION_SKILL_V0_1.md) — absorbed monetization skill note.
+- [\_absorbed/README.md](_absorbed/README.md) — absorbed legacy index.
+- [\_absorbed/BIZRA_GENESIS_PROVENANCE_LEDGER_V0_1.md](_absorbed/BIZRA_GENESIS_PROVENANCE_LEDGER_V0_1.md) — absorbed provenance reference.
+- [\_absorbed/DEMA_PRODUCT_CONSTITUTION_V0_1.md](_absorbed/DEMA_PRODUCT_CONSTITUTION_V0_1.md) — absorbed constitution draft.
+- [\_absorbed/DEMA_PRODUCT_REPO_BOOTSTRAP_V0_1.md](_absorbed/DEMA_PRODUCT_REPO_BOOTSTRAP_V0_1.md) — absorbed bootstrap draft.
+- [\_absorbed/DEMA_REPO_BOOTSTRAP_V0_2_SUMMARY.md](_absorbed/DEMA_REPO_BOOTSTRAP_V0_2_SUMMARY.md) — absorbed bootstrap summary.
+- [\_absorbed/DEMA_SAFE_MONETIZATION_SKILL_V0_1.md](_absorbed/DEMA_SAFE_MONETIZATION_SKILL_V0_1.md) — absorbed monetization skill note.
 
 ## Superpowers specs and plans
 
