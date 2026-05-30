@@ -297,7 +297,9 @@ export async function buildAgentProfile({
       action_type: MUTATE_AGENT_PROFILE_ACTION_TYPE,
       target_hash,
     },
-    now: new Date().toISOString(),
+    // Check consent freshness as of the act's own timestamp (deterministic),
+    // not whenever the verifier runs (wall-clock → flaky). Matches block0.
+    now: createdAtIso || new Date().toISOString(),
   });
   if (!consentVerify.verified) {
     // Surface scope mismatch as the contract error name, signature/expiry

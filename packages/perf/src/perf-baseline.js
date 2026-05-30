@@ -201,6 +201,9 @@ export async function buildBaseline({
       action_type: PERF_BASELINE_ACTION_TYPE,
       target_hash: targetHash,
     },
+    // Check consent freshness as of the act's own timestamp (deterministic),
+    // not the verifier's wall clock (→ flaky). Matches block0.
+    now: createdAtIso || new Date().toISOString(),
   });
   if (!cv.verified) {
     // Surface the canonical reason directly so callers can branch on it.
