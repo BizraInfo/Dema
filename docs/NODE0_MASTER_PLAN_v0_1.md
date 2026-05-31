@@ -77,8 +77,13 @@ to flywheel" gap).
   ledger-append paths is optional later work, not a Phase A blocker.
   **Exit gate:** MET — one task's action→validation sequence replays as a single
   canonical chain; tampering any link fails `verifyCanonicalChain`. `MEASURED_LOCAL`.
-  **Remaining for full §19:** binding steps 12–17 (lesson/perf/next-mission) lands in
+  **Remaining for full §19:** binding steps 12–16 (lesson/perf/next-mission) lands in
   Phase C as those receipts come to exist.
+- **FLYWHEEL-REPLAY-1A** — `verifyTaskCoherence` (`flywheel-task-coherence.js`): §19
+  step-17 coherence verifier. Proves a bound `[action, IMPACT, SAT]` chain is ONE
+  task (re-derives the cross-references), not just three signed receipts — closes
+  the "Frankenstein chain" hole in RECEIPT-CHAIN-1C. **DONE** (6 tests). Extends to
+  steps 12–16 as those receipts join the chain in Phase C.
 
 ### Phase B — Complete the SAT-5 constitutional gates
 

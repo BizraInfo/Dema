@@ -272,6 +272,22 @@ permissionless and trusts ONLY the external pubkey (embedded fingerprint never
 authoritative — REJECT-4 invariant). Pure-with-key-load: signs, but no other
 I/O, no clock, no randomness. Mints nothing itself.
 
+`packages/flywheel/src/flywheel-task-coherence.js` is FLYWHEEL-REPLAY-1A, the §19
+step-17 task-coherence verifier. RECEIPT-CHAIN-1C hash-links a task's `[action,
+IMPACT, SAT]` receipts, but hash links prove tamper-evidence, not that the three
+belong to the same task. `verifyTaskCoherence()` closes that Frankenstein hole:
+pure/zero-trust, it verifies each artifact under the external pubkey
+(`replayOneTaskFlywheel` + `verifyLedgerEntry` + `verifySatValidationReceipt`),
+then re-derives four cross-references from the existing rule functions (no drift) —
+IMPACT derived from the action, IMPACT amount from the re-derived score, SAT bound
+to that IMPACT, validated XP from that IMPACT. Emits
+`bizra.dema.flywheel_task_coherence.v0.1`; rejects an incoherent (multi-task) bundle
+with a specific `cross_reference` reason even when every receipt is individually
+signed-valid. Both success and failure envelopes carry a frozen pure-verifier
+boundary block: no file write, no `DEMA_HOME` mutation, no network, no federation,
+no public economy/transfer, no marketplace, no House of Wisdom mutation, no
+performance delta, and no full-Node0-complete claim.
+
 `packages/flywheel/src/flywheel-xp-mint.js` is FLYWHEEL-1E, the
 operator-approved XP mint bridge. It composes a FLYWHEEL-1D proposal, a
 SAT-VALIDATE-1A receipt, the verified `IMPACT_CREDIT` ledger entry, and a
