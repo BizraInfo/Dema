@@ -39,6 +39,12 @@ export const CONVERGENCE_ATTESTATION_LEDGER_SCHEMA =
 export const ATTESTATION_LEDGER_RELPATH =
   "attestations/convergence-attestation-ledger.ndjson";
 export const APPEND_ATTESTATION_ACTION_TYPE = "APPEND_ATTESTATION";
+// The exact consent phrase the operator must have typed. verifyConsentProof
+// authenticates the signed body (which includes consent_phrase) but does not
+// pin the phrase text, so a proof with any phrase + the right scope would
+// otherwise pass — require the canonical phrase here.
+export const APPEND_ATTESTATION_CONSENT_PHRASE =
+  "APPEND CONVERGENCE ATTESTATION";
 
 function resolveHome(demaHome) {
   if (typeof demaHome === "string" && demaHome.length > 0) return demaHome;
@@ -58,6 +64,27 @@ function isSha256Hex(s) {
   return typeof s === "string" && /^[a-f0-9]{64}$/.test(s);
 }
 
+const SUCCESS_BOUNDARY = Object.freeze({
+  local_only: true,
+  file_write_performed: true,
+  operator_dema_home_mutated: true,
+  network_used: false,
+  federation_used: false,
+  public_economic_claim_made: false,
+  exchange_value_claimed: false,
+  public_transfer_performed: false,
+});
+const FAIL_BOUNDARY = Object.freeze({
+  local_only: true,
+  file_write_performed: false,
+  operator_dema_home_mutated: false,
+  network_used: false,
+  federation_used: false,
+  public_economic_claim_made: false,
+  exchange_value_claimed: false,
+  public_transfer_performed: false,
+});
+
 function fail(error, extra = {}) {
   return Object.freeze({
     schema: CONVERGENCE_ATTESTATION_LEDGER_SCHEMA,
@@ -65,6 +92,7 @@ function fail(error, extra = {}) {
     truth_label: "LOCAL_CONVERGENCE_ATTESTATION_LEDGER_APPEND_REFUSED",
     error,
     ...extra,
+    boundary: FAIL_BOUNDARY,
   });
 }
 function reject(reason, at_index) {
@@ -240,11 +268,15 @@ export async function appendConvergenceAttestation({
     now,
   });
   if (!consentVerify.verified) {
-    return fail(
-      consentVerify.reason === "consent_scope_mismatch"
-        ? "consent_scope_mismatch"
-        : `consent_${consentVerify.reason}`,
-    );
+    // verifyConsentProof reasons already carry their own prefix
+    // (consent_expired / consent_scope_mismatch / consent_signature_invalid / …);
+    // surface them verbatim rather than double-prefixing.
+    return fail(consentVerify.reason);
+  }
+  // The signed consent_phrase must be the exact append phrase — scope binding
+  // alone is not enough; the operator must have typed this specific consent.
+  if (consentProof.consent_phrase !== APPEND_ATTESTATION_CONSENT_PHRASE) {
+    return fail("consent_phrase_mismatch");
   }
   // (6) Operator key load + binding to operatorPubkeyPem.
   const privateKeyPem = await loadPrivateKey(demaHome);
@@ -302,5 +334,6 @@ export async function appendConvergenceAttestation({
     length: nextEntries.length,
     head: entry_hash,
     entry,
+    boundary: SUCCESS_BOUNDARY,
   });
 }

@@ -193,6 +193,10 @@ describe("ATTEST-1B · appendConvergenceAttestation", () => {
       assert.equal(r.entry.consent_proof_hash, consentProof.consent_proof_hash);
       assert.match(r.entry.entry_hash, /^[a-f0-9]{64}$/);
       assert.equal(r.path.endsWith(ATTESTATION_LEDGER_RELPATH), true);
+      assert.equal(r.boundary.local_only, true);
+      assert.equal(r.boundary.file_write_performed, true);
+      assert.equal(r.boundary.network_used, false);
+      assert.equal(r.boundary.public_economic_claim_made, false);
 
       const loaded = await loadConvergenceAttestationLedger({ demaHome: home });
       assert.equal(loaded.length, 1);
@@ -410,6 +414,42 @@ describe("ATTEST-1B · appendConvergenceAttestation", () => {
       });
       assert.equal(r.appended, false);
       assert.equal(r.error, "attestation_ledger_chain_broken");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("fail-closed: a correctly-scoped consent with the WRONG phrase does not append", async () => {
+    const home = await freshHome();
+    try {
+      const pubkeyPem = await buildChain(home, 1);
+      const attestation = await freshAttestation(home, pubkeyPem);
+      // Right action scope + target, but the operator typed a different phrase.
+      const wrong = await buildConsentProof({
+        phrase: "GO: whatever",
+        actionScope: {
+          action_type: APPEND_ATTESTATION_ACTION_TYPE,
+          target_hash: attestation.attestation_id,
+        },
+        demaHome: home,
+        nonce: "wrongph0".repeat(8),
+        createdAtIso: APPEND_NOW,
+        expiresAtIso: CONSENT_EXPIRES,
+      });
+      const r = await appendConvergenceAttestation({
+        attestation,
+        consentProof: wrong.consent_proof,
+        operatorPubkeyPem: pubkeyPem,
+        demaHome: home,
+        now: APPEND_NOW,
+      });
+      assert.equal(r.appended, false);
+      assert.equal(r.error, "consent_phrase_mismatch");
+      assert.equal(r.boundary.file_write_performed, false);
+      assert.deepEqual(
+        await loadConvergenceAttestationLedger({ demaHome: home }),
+        [],
+      );
     } finally {
       await rm(home, { recursive: true, force: true });
     }
