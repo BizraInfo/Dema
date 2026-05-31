@@ -298,7 +298,12 @@ task's artifacts by schema and runs `verifyTaskCoherence` for **Empirical**
 (cross-reference coherence) and **Economic** (amounts follow the deterministic
 rules). The point: a Frankenstein chain binds and chain-verifies (formal +
 cryptographic true) yet is rejected `empirical:false` — convergence catches what
-`verifyCanonicalLedger` alone misses. Emits
+`verifyCanonicalLedger` alone misses. It verifies EVERY 3-entry task segment
+(`[action, IMPACT, SAT]`, the RECEIPT-CHAIN-1C binding unit), so a later
+incoherent task is never masked by an earlier coherent one (`segment_index`
+reports which failed). On a chain-layer failure it does not over-claim the
+`cryptographic` layer (signatures are checked after structure, so a structural
+failure leaves them unverified). Emits
 `bizra.dema.flywheel_task_convergence.v0.1`. Pure-with-disk-read: loads the
 ledger, no write, no clock, no key load.
 

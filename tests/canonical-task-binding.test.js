@@ -225,6 +225,34 @@ describe("RECEIPT-CHAIN-1C · bindTaskReceiptsToCanonicalChain", () => {
     }
   });
 
+  it("fail-closed: a JSON-unsafe body is rejected up front, leaving no half-bound chain", async () => {
+    const home = await freshHome();
+    try {
+      await initAuthorshipKey({
+        consent: KEY_INIT_CONSENT_PHRASE,
+        demaHome: home,
+      });
+      const r = await bindTaskReceiptsToCanonicalChain({
+        taskReceipts: [
+          {
+            body: { schema: "x", nope: () => 1 }, // function -> not JSON-safe
+            truthLabel: "LEVEL_A_SIGNED",
+            whatProves: "x",
+            whatDoesNotProve: "y",
+          },
+        ],
+        consent: CANONICAL_RECEIPT_CONSENT_PHRASE,
+        demaHome: home,
+        now: BIND_NOW,
+      });
+      assert.equal(r.bound, false);
+      assert.equal(r.error, "task_receipt_body_invalid");
+      assert.deepEqual(await loadCanonicalLedger({ demaHome: home }), []);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   it("fail-closed: missing now refuses nondeterministic binding", async () => {
     const home = await freshHome();
     try {

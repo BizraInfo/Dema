@@ -42,10 +42,37 @@ function isPlainObject(v) {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
+// Mirrors canonical-receipt's JSON-safety gate so the batch pre-validation
+// covers every reason appendCanonicalReceipt can refuse — a body carrying a
+// function / undefined / bigint / symbol would otherwise pass validateDescriptor
+// and fail mid-batch, leaving a half-bound chain.
+function isJsonSafe(value, seen = new WeakSet()) {
+  if (value === null) return true;
+  const t = typeof value;
+  if (t === "string" || t === "boolean") return true;
+  if (t === "number") return Number.isFinite(value);
+  if (
+    t === "function" ||
+    t === "undefined" ||
+    t === "bigint" ||
+    t === "symbol"
+  ) {
+    return false;
+  }
+  if (t === "object") {
+    if (seen.has(value)) return false;
+    seen.add(value);
+    if (Array.isArray(value)) return value.every((v) => isJsonSafe(v, seen));
+    return Object.values(value).every((v) => isJsonSafe(v, seen));
+  }
+  return false;
+}
+
 // Validate one task-receipt descriptor before any durable write.
 function validateDescriptor(d) {
   if (!isPlainObject(d)) return "task_receipt_malformed";
   if (!isPlainObject(d.body)) return "task_receipt_body_invalid";
+  if (!isJsonSafe(d.body)) return "task_receipt_body_invalid";
   if (!VALID_TRUTH_LABELS.includes(d.truthLabel)) {
     return "task_receipt_truth_label_invalid";
   }
@@ -109,8 +136,25 @@ export async function bindTaskReceiptsToCanonicalChain({
     receipt_ids.push(res.receipt.receipt_id);
   }
 
+  // Final replay must verify before we claim the chain is bound. Never throw —
+  // a read error fails closed; a non-verified replay is not a successful bind.
   const pubkeyPem = await loadPublicKey(demaHome);
-  const replay = await verifyCanonicalLedger({ demaHome, pubkeyPem });
+  let replay;
+  try {
+    replay = await verifyCanonicalLedger({ demaHome, pubkeyPem });
+  } catch {
+    return fail("replay_unreadable", {
+      bound_count: receipt_ids.length,
+      receipt_ids: Object.freeze([...receipt_ids]),
+    });
+  }
+  if (!replay.verified) {
+    return fail("replay_failed", {
+      bound_count: receipt_ids.length,
+      receipt_ids: Object.freeze([...receipt_ids]),
+      replay,
+    });
+  }
 
   return Object.freeze({
     schema: CANONICAL_TASK_BINDING_SCHEMA,

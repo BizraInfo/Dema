@@ -24,8 +24,6 @@ export const FLYWHEEL_SETTLEMENT_SCHEMA =
 export const IMPACT_AMOUNT_RULE_ID =
   "proof_quality_score_to_impact_points.v0.1";
 
-const ZERO_HASH = "0".repeat(64);
-
 const SUCCESS_BOUNDARY = Object.freeze({
   local_only: true,
   file_write_performed: false,
@@ -96,7 +94,7 @@ export async function settleOneTaskFlywheelImpact({
   demaHome,
   now,
   createdAtIso,
-  prevLedgerHash = ZERO_HASH,
+  prevLedgerHash = null,
 } = {}) {
   const createdIso =
     typeof createdAtIso === "string" && createdAtIso.length > 0

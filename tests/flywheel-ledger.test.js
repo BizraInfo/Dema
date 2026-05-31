@@ -70,7 +70,12 @@ async function runFlywheel(home, envelope, now, task = "ship FLYWHEEL-1C") {
   return r;
 }
 
-async function mintConsent(home, targetHash, now, nonce = "c0ffee00".repeat(8)) {
+async function mintConsent(
+  home,
+  targetHash,
+  now,
+  nonce = "c0ffee00".repeat(8),
+) {
   const r = await buildConsentProof({
     phrase: "MINT LEDGER ENTRY",
     actionScope: {
@@ -109,7 +114,10 @@ describe("FLYWHEEL-1C · durable impact ledger append", () => {
 
       assert.equal(r.schema, FLYWHEEL_LEDGER_APPEND_SCHEMA);
       assert.equal(r.appended, true);
-      assert.equal(r.truth_label, "LOCAL_FLYWHEEL_IMPACT_LEDGER_APPEND_VERIFIED");
+      assert.equal(
+        r.truth_label,
+        "LOCAL_FLYWHEEL_IMPACT_LEDGER_APPEND_VERIFIED",
+      );
       assert.equal(r.length, 1);
       assert.equal(r.ledger_entry.prev_hash, null);
       assert.equal(r.ledger_entry.amount, scoreEpistemicGrounding("A") * 100);
@@ -125,6 +133,53 @@ describe("FLYWHEEL-1C · durable impact ledger append", () => {
       const loaded = await loadFlywheelImpactLedger({ demaHome: home });
       assert.equal(loaded.length, 1);
       assert.equal(loaded[0].entry_hash, r.ledger_entry.entry_hash);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("fail-closed: re-settling the same flywheel receipt is rejected as a duplicate", async () => {
+    const home = await freshHome();
+    try {
+      await initKey(home);
+      const flywheel = await runFlywheel(home, A_ENVELOPE, ACTION_NOW_A);
+      const consent = await mintConsent(
+        home,
+        flywheel.flywheel_receipt.receipt_id,
+        SETTLE_NOW_A,
+      );
+      const first = await appendFlywheelImpactSettlement({
+        flywheelReceipt: flywheel.flywheel_receipt,
+        actionReceiptId: flywheel.action_receipt_id,
+        consentProof: consent.consent_proof,
+        operatorPubkeyPem: consent.signer_public_key_pem,
+        demaHome: home,
+        now: SETTLE_NOW_A,
+      });
+      assert.equal(first.appended, true);
+
+      // Same action, fresh still-valid consent — must NOT mint a second
+      // IMPACT_CREDIT (would inflate the ledger while replay still verifies).
+      const dupConsent = await mintConsent(
+        home,
+        flywheel.flywheel_receipt.receipt_id,
+        SETTLE_NOW_B,
+        "dup00001".repeat(8),
+      );
+      const dup = await appendFlywheelImpactSettlement({
+        flywheelReceipt: flywheel.flywheel_receipt,
+        actionReceiptId: flywheel.action_receipt_id,
+        consentProof: dupConsent.consent_proof,
+        operatorPubkeyPem: dupConsent.signer_public_key_pem,
+        demaHome: home,
+        now: SETTLE_NOW_B,
+      });
+      assert.equal(dup.appended, false);
+      assert.equal(dup.error, "duplicate_settlement");
+      assert.equal(
+        (await loadFlywheelImpactLedger({ demaHome: home })).length,
+        1,
+      );
     } finally {
       await rm(home, { recursive: true, force: true });
     }
@@ -223,7 +278,10 @@ describe("FLYWHEEL-1C · durable impact ledger append", () => {
       assert.equal(r.appended, false);
       assert.equal(r.error, "ledger_chain_broken");
       assert.equal(r.reason, "entry_hash_mismatch");
-      assert.equal((await loadFlywheelImpactLedger({ demaHome: home })).length, 1);
+      assert.equal(
+        (await loadFlywheelImpactLedger({ demaHome: home })).length,
+        1,
+      );
     } finally {
       await rm(home, { recursive: true, force: true });
     }
@@ -330,7 +388,8 @@ describe("FLYWHEEL-1C · durable impact ledger append", () => {
     try {
       const r = await verifyFlywheelImpactLedger({
         demaHome: home,
-        pubkeyPem: "-----BEGIN PUBLIC KEY-----\nmissing\n-----END PUBLIC KEY-----",
+        pubkeyPem:
+          "-----BEGIN PUBLIC KEY-----\nmissing\n-----END PUBLIC KEY-----",
       });
       assert.equal(r.verified, true);
       assert.equal(r.total_entries, 0);

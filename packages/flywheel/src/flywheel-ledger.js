@@ -101,13 +101,31 @@ export async function appendFlywheelImpactSettlement({
   }
 
   if (entries.length > 0) {
-    const existingReplay = verifyLedgerReplay({ entries, pubkeyPem: operatorPubkeyPem });
+    const existingReplay = verifyLedgerReplay({
+      entries,
+      pubkeyPem: operatorPubkeyPem,
+    });
     if (!existingReplay.verified) {
       return fail("ledger_chain_broken", {
         reason: existingReplay.reason,
         replay: existingReplay,
       });
     }
+  }
+
+  // Reject duplicate settlements: the same flywheel action must not mint a
+  // second IMPACT_CREDIT. A doubled chain still replays, so the guard lives
+  // here — scan existing evidence for this flywheel receipt id.
+  const flywheelReceiptId = flywheelReceipt && flywheelReceipt.receipt_id;
+  if (
+    flywheelReceiptId &&
+    entries.some(
+      (e) =>
+        Array.isArray(e.evidence_receipt_hashes) &&
+        e.evidence_receipt_hashes.includes(flywheelReceiptId),
+    )
+  ) {
+    return fail("duplicate_settlement");
   }
 
   const prevLedgerHash =
@@ -141,7 +159,8 @@ export async function appendFlywheelImpactSettlement({
 
   const path = ledgerPath(demaHome);
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-  const content = nextEntries.map((entry) => JSON.stringify(entry)).join("\n") + "\n";
+  const content =
+    nextEntries.map((entry) => JSON.stringify(entry)).join("\n") + "\n";
   const tmp = `${path}.${settlement.ledger_entry.entry_hash.slice(0, 12)}.tmp`;
   try {
     await writeFile(tmp, content, { encoding: "utf8", mode: 0o600 });

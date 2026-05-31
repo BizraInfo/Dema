@@ -9,10 +9,7 @@ import { strict as assert } from "node:assert";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  runOneTaskFlywheel,
-  scoreEpistemicGrounding,
-} from "../packages/flywheel/src/flywheel-one-task.js";
+import { runOneTaskFlywheel } from "../packages/flywheel/src/flywheel-one-task.js";
 import {
   settleOneTaskFlywheelImpact,
   FLYWHEEL_SETTLEMENT_SCHEMA,
@@ -110,7 +107,10 @@ describe("FLYWHEEL-1B · settleOneTaskFlywheelImpact", () => {
       assert.equal(r.truth_label, "LOCAL_FLYWHEEL_SETTLEMENT_BRIDGE_VERIFIED");
       assert.equal(r.amount_rule_id, IMPACT_AMOUNT_RULE_ID);
       assert.equal(r.settlement.amount, 60);
-      assert.equal(r.settlement.flywheel_receipt_id, flywheel.flywheel_receipt.receipt_id);
+      assert.equal(
+        r.settlement.flywheel_receipt_id,
+        flywheel.flywheel_receipt.receipt_id,
+      );
       assert.equal(r.flywheel_replay.replayed, true);
       assert.equal(r.ledger_entry.entry_type, "IMPACT_CREDIT");
       assert.equal(r.ledger_entry.token_class, "IMPACT");
@@ -202,7 +202,8 @@ describe("FLYWHEEL-1B · settleOneTaskFlywheelImpact", () => {
       const r = await settleOneTaskFlywheelImpact({
         flywheelReceipt: flywheel.flywheel_receipt,
         actionReceiptId: flywheel.action_receipt_id,
-        operatorPubkeyPem: "-----BEGIN PUBLIC KEY-----\nmissing\n-----END PUBLIC KEY-----",
+        operatorPubkeyPem:
+          "-----BEGIN PUBLIC KEY-----\nmissing\n-----END PUBLIC KEY-----",
         demaHome: home,
         now: SETTLEMENT_NOW,
         createdAtIso: SETTLEMENT_NOW,
@@ -248,9 +249,13 @@ describe("FLYWHEEL-1B · settleOneTaskFlywheelImpact", () => {
     try {
       await initKey(home);
       const flywheel = await runFlywheel(home);
-      const consent = await mintConsent(home, flywheel.flywheel_receipt.receipt_id, {
-        expiresAtIso: "2026-05-30T14:00:30.000Z",
-      });
+      const consent = await mintConsent(
+        home,
+        flywheel.flywheel_receipt.receipt_id,
+        {
+          expiresAtIso: "2026-05-30T14:00:30.000Z",
+        },
+      );
 
       const r = await settleOneTaskFlywheelImpact({
         flywheelReceipt: flywheel.flywheel_receipt,

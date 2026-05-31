@@ -270,7 +270,9 @@ export function verifyFlywheelXpStateRecords({ records, pubkeyPem } = {}) {
       });
     }
 
-    if (record.skill_ledger_proof_hash !== record.skill_ledger?.ledger_proof_hash) {
+    if (
+      record.skill_ledger_proof_hash !== record.skill_ledger?.ledger_proof_hash
+    ) {
       return reject("skill_ledger_proof_hash_mismatch", i);
     }
     if (record.agent_id !== record.skill_ledger?.agent_id) {
@@ -279,7 +281,9 @@ export function verifyFlywheelXpStateRecords({ records, pubkeyPem } = {}) {
 
     const skillLedgerVerification = verifySkillLedger({
       ledger: record.skill_ledger,
-      impactReceipts: [impactReceiptFromLedgerEntry(record.impact_ledger_entry)],
+      impactReceipts: [
+        impactReceiptFromLedgerEntry(record.impact_ledger_entry),
+      ],
       satValidations: [record.sat_validation_receipt],
       pubkeyPem,
     });
@@ -338,6 +342,21 @@ export async function appendFlywheelXpState({
         replay: existingReplay,
       });
     }
+  }
+
+  // Reject duplicate XP grants: the same verified IMPACT proof must not be
+  // recorded twice (aggregateSummaries would double-count it). Scan existing
+  // records for this impact entry before minting.
+  const impactEntryHash = ledgerEntry && ledgerEntry.entry_hash;
+  if (
+    impactEntryHash &&
+    records.some(
+      (r) =>
+        r.impact_ledger_entry &&
+        r.impact_ledger_entry.entry_hash === impactEntryHash,
+    )
+  ) {
+    return fail("duplicate_xp_grant");
   }
 
   const mint = await mintFlywheelXpGrant({

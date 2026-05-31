@@ -231,7 +231,47 @@ describe("FLYWHEEL-1F · durable XP state append", () => {
         pubkeyPem: context.pubkeyPem,
       });
       assert.equal(verified.verified, true, verified.reason);
-      assert.equal(verified.agent_summaries[SUBJECT].xp_total, context.ledgerEntry.amount);
+      assert.equal(
+        verified.agent_summaries[SUBJECT].xp_total,
+        context.ledgerEntry.amount,
+      );
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("fail-closed: re-recording the same impact proof is rejected as a duplicate XP grant", async () => {
+    const home = await freshHome();
+    try {
+      await initKey(home);
+      const context = await buildReadyContext({
+        home,
+        task: "ship FLYWHEEL-1F",
+        envelope: A_ENVELOPE,
+        actionNow: ACTION_NOW_A,
+        settleNow: SETTLE_NOW_A,
+        validateNow: VALIDATE_NOW_A,
+        settleNonce: "dupf0001".repeat(8),
+      });
+      const first = await appendReadyXpState({
+        home,
+        context,
+        mintNow: MINT_NOW_A,
+        nonce: "dupf0002".repeat(8),
+      });
+      assert.equal(first.appended, true, first.error);
+
+      // Same verified impact proof, fresh skill-ledger consent — must NOT
+      // record a second time (aggregateSummaries would double-count the XP).
+      const dup = await appendReadyXpState({
+        home,
+        context,
+        mintNow: MINT_NOW_B,
+        nonce: "dupf0003".repeat(8),
+      });
+      assert.equal(dup.appended, false);
+      assert.equal(dup.error, "duplicate_xp_grant");
+      assert.equal((await loadFlywheelXpState({ demaHome: home })).length, 1);
     } finally {
       await rm(home, { recursive: true, force: true });
     }

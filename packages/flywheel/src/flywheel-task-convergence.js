@@ -50,13 +50,16 @@ function fail(stage, reason, layers, extra = {}) {
   });
 }
 
-// A canonical-chain failure: a signature failure is cryptographic; any other
-// (hash/prev_hash/genesis/schema) is a formal-structure failure.
+// A canonical-chain failure. verifyCanonicalChain checks structure (prev_hash /
+// receipt_id / body_hash / truth_label) BEFORE signatures, so on a structural
+// failure the signatures were never verified — cryptographic must NOT be claimed
+// true (that would be an unproven convergence claim). Only a signature failure
+// means the structure passed.
 function layersFromChain(reason) {
   const isSig = reason === "signature_invalid";
   return {
-    formal: isSig,
-    cryptographic: !isSig,
+    formal: isSig, // structure passed iff we got as far as the signature check
+    cryptographic: false, // never verified on a failed chain
     empirical: false,
     economic: false,
   };
@@ -91,18 +94,14 @@ function layersFromCoherence(coh) {
   return layers;
 }
 
-function findBySchema(entries, schema) {
-  for (const e of entries) {
-    if (e && e.canonical_body && e.canonical_body.schema === schema) {
-      return e.canonical_body;
-    }
-  }
-  return null;
-}
-
 /**
  * Verify that the persisted canonical task chain converges across all four
  * Proof-of-Truth layers. Returns a frozen verdict.
+ *
+ * The canonical ledger is append-only and RECEIPT-CHAIN-1C binds each task as a
+ * contiguous 3-entry segment [flywheel action, IMPACT, SAT]. Convergence is
+ * proven for EVERY segment — a later incoherent (Frankenstein) task must not be
+ * masked by an earlier coherent one.
  */
 export async function verifyConvergentTaskChain({ demaHome, pubkeyPem } = {}) {
   // ── Load the bound chain ──────────────────────────────────────────
@@ -129,45 +128,46 @@ export async function verifyConvergentTaskChain({ demaHome, pubkeyPem } = {}) {
     );
   }
 
-  // ── Extract the task's artifacts by schema ────────────────────────
-  const flywheelReceipt = findBySchema(entries, FLYWHEEL_SCHEMA);
-  const impactEntry = findBySchema(entries, DUAL_TOKEN_LEDGER_ENTRY_SCHEMA);
-  const satReceipt = findBySchema(entries, SAT_VALIDATION_RECEIPT_SCHEMA);
-  // Formal + cryptographic already hold for the chain at this point.
+  // Formal + cryptographic hold for the chain at this point.
   const chainLayers = { formal: true, cryptographic: true };
-  if (!flywheelReceipt) {
-    return fail("extract", "missing_task_artifact_flywheel", {
+  const extractFail = (reason) =>
+    fail("extract", reason, {
       ...chainLayers,
       empirical: false,
       economic: false,
     });
-  }
-  if (!impactEntry) {
-    return fail("extract", "missing_task_artifact_impact", {
-      ...chainLayers,
-      empirical: false,
-      economic: false,
-    });
-  }
-  if (!satReceipt) {
-    return fail("extract", "missing_task_artifact_sat", {
-      ...chainLayers,
-      empirical: false,
-      economic: false,
-    });
-  }
 
-  // ── Empirical + Economic: cross-reference coherence ───────────────
-  const coherence = verifyTaskCoherence({
-    flywheelReceipt,
-    impactEntry,
-    satReceipt,
-    operatorPubkeyPem: pubkeyPem,
-  });
-  if (!coherence.coherent) {
-    return fail("coherence", coherence.reason, layersFromCoherence(coherence), {
-      coherence,
+  // ── Verify each 3-entry task segment ──────────────────────────────
+  const tasks = [];
+  for (let i = 0; i < entries.length; i += 3) {
+    const a = entries[i] && entries[i].canonical_body;
+    const b = entries[i + 1] && entries[i + 1].canonical_body;
+    const c = entries[i + 2] && entries[i + 2].canonical_body;
+    if (!a || a.schema !== FLYWHEEL_SCHEMA) {
+      return extractFail("missing_task_artifact_flywheel");
+    }
+    if (!b || b.schema !== DUAL_TOKEN_LEDGER_ENTRY_SCHEMA) {
+      return extractFail("missing_task_artifact_impact");
+    }
+    if (!c || c.schema !== SAT_VALIDATION_RECEIPT_SCHEMA) {
+      return extractFail("missing_task_artifact_sat");
+    }
+    // ── Empirical + Economic: cross-reference coherence ─────────────
+    const coherence = verifyTaskCoherence({
+      flywheelReceipt: a,
+      impactEntry: b,
+      satReceipt: c,
+      operatorPubkeyPem: pubkeyPem,
     });
+    if (!coherence.coherent) {
+      return fail(
+        "coherence",
+        coherence.reason,
+        layersFromCoherence(coherence),
+        { coherence, segment_index: i / 3 },
+      );
+    }
+    tasks.push(coherence.task);
   }
 
   return Object.freeze({
@@ -181,6 +181,8 @@ export async function verifyConvergentTaskChain({ demaHome, pubkeyPem } = {}) {
       economic: true,
     }),
     chain_length: entries.length,
-    task: coherence.task,
+    task_count: tasks.length,
+    tasks: Object.freeze(tasks),
+    task: tasks[tasks.length - 1],
   });
 }

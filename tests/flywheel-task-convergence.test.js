@@ -235,6 +235,56 @@ describe("FLYWHEEL-REPLAY-1B · verifyConvergentTaskChain", () => {
       assert.equal(r.convergent, false);
       assert.equal(r.stage, "canonical_chain");
       assert.equal(r.layers.formal, false);
+      // Signatures were never reached (structure checked first) — must not be
+      // claimed converged.
+      assert.equal(r.layers.cryptographic, false);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("MULTI-SEGMENT: a later Frankenstein task is NOT masked by an earlier coherent one", async () => {
+    const home = await freshHome();
+    try {
+      await initAuthorshipKey({
+        consent: KEY_INIT_CONSENT_PHRASE,
+        demaHome: home,
+      });
+      // Segment 1: a fully coherent task A.
+      const a = await task(home, {
+        tag: "A",
+        actionNow: "2026-05-31T11:00:00.000Z",
+        settleNow: "2026-05-31T11:01:00.000Z",
+        nonce: "seg0001a".repeat(8),
+      });
+      await bind(home, descriptors(a));
+      // Segment 2: a Frankenstein — C's action with D's impact + SAT.
+      const c = await task(home, {
+        tag: "C",
+        actionNow: "2026-05-31T11:10:00.000Z",
+        settleNow: "2026-05-31T11:11:00.000Z",
+        nonce: "seg0002c".repeat(8),
+      });
+      const d = await task(home, {
+        tag: "D",
+        actionNow: "2026-05-31T11:20:00.000Z",
+        settleNow: "2026-05-31T11:21:00.000Z",
+        nonce: "seg0003d".repeat(8),
+      });
+      await bind(home, [
+        descriptors(c)[0],
+        descriptors(d)[1],
+        descriptors(d)[2],
+      ]);
+
+      const r = await verifyConvergentTaskChain({
+        demaHome: home,
+        pubkeyPem: a.pubkeyPem,
+      });
+      assert.equal(r.convergent, false);
+      assert.equal(r.stage, "coherence");
+      assert.equal(r.reason, "impact_not_derived_from_action");
+      assert.equal(r.segment_index, 1); // the SECOND segment is the bad one
     } finally {
       await rm(home, { recursive: true, force: true });
     }
