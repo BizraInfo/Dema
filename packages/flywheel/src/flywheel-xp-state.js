@@ -216,6 +216,10 @@ export function verifyFlywheelXpStateRecords({ records, pubkeyPem } = {}) {
     });
   }
 
+  // Track impact proofs across the whole chain so a replayed (duplicate) impact
+  // entry cannot double-count XP — defense-in-depth alongside the append guard,
+  // covering a hand-edited state file.
+  const seenImpactHashes = new Set();
   for (let i = 0; i < records.length; i += 1) {
     const record = records[i];
     if (!isPlainObject(record)) {
@@ -256,6 +260,11 @@ export function verifyFlywheelXpStateRecords({ records, pubkeyPem } = {}) {
     ) {
       return reject("not_an_impact_credit", i);
     }
+    const impactHash = record.impact_ledger_entry.entry_hash;
+    if (seenImpactHashes.has(impactHash)) {
+      return reject("duplicate_impact_proof", i);
+    }
+    seenImpactHashes.add(impactHash);
 
     const satVerification = verifySatValidationReceipt({
       receipt: record.sat_validation_receipt,
@@ -396,6 +405,11 @@ export async function appendFlywheelXpState({
     });
   }
 
+  // SINGLE-WRITER ASSUMPTION (v0.1 LOCAL_ONLY): tmp+rename is atomic per write,
+  // but two concurrent Dema processes against the same DEMA_HOME could read the
+  // same head and lose one append. Node0 is single-operator / single-process, so
+  // this is a documented limitation; a lockfile / compare-and-swap is future
+  // hardening before any multi-writer use.
   const path = statePath(demaHome);
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
   const content =

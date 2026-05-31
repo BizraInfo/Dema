@@ -196,6 +196,13 @@ export async function validateXpGrantProposal({
     return fail("no_authorship_key");
   }
   const fingerprint = fingerprintFromPem(publicKeyPem);
+  // The receipt is signed with the local key but the impact was verified under
+  // operatorPubkeyPem. If they differ, the receipt would be self-inconsistent
+  // (verifySatValidationReceipt under operatorPubkeyPem would always reject it).
+  // Fail closed rather than emit an unverifiable receipt.
+  if (fingerprint !== fingerprintFromPem(operatorPubkeyPem)) {
+    return fail("operator_key_mismatch");
+  }
 
   const body = buildReceiptBody({
     validator_agent_id: validatorAgentId,
@@ -263,6 +270,17 @@ export function verifySatValidationReceipt({ receipt, pubkeyPem } = {}) {
   }
   if (!isSha256Hex(receipt.receipt_hash)) {
     return reject("receipt_hash_invalid");
+  }
+  // Re-enforce the SAT-5 constitutional invariants at VERIFY time, not only at
+  // build time — a correctly-signed but out-of-band-forged receipt (validator
+  // not a SAT agent, or validator == subject) must NOT pass, or it would
+  // bypass the "SAT only" / "no self-validation" rules through any downstream
+  // verifier (e.g. verifyTaskCoherence / verifyConvergentTaskChain).
+  if (!SAT_ID_SET.has(receipt.validator_agent_id)) {
+    return reject("validator_not_sat_agent");
+  }
+  if (receipt.validator_agent_id === receipt.subject_agent_id) {
+    return reject("self_validation_forbidden");
   }
 
   const body = buildReceiptBody({

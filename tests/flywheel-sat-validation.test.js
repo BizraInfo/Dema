@@ -23,10 +23,18 @@ import {
 import { buildSkillLedger } from "../packages/agents/src/agent-skill-ledger.js";
 import { GUARDED_CLAIM_CONSENT_PHRASE } from "../packages/receipts/src/assumption-guarded-claim.js";
 import { buildConsentProof } from "../packages/receipts/src/consent-proof.js";
-import { generateEd25519Keypair } from "../packages/receipts/src/authorship-signature.js";
+import {
+  generateEd25519Keypair,
+  signPayload,
+} from "../packages/receipts/src/authorship-signature.js";
+import {
+  sha256,
+  stableStringify,
+} from "../packages/consent/src/consent-common.js";
 import {
   initAuthorshipKey,
   KEY_INIT_CONSENT_PHRASE,
+  loadPrivateKey,
 } from "../packages/receipts/src/authorship-key-store.js";
 
 const VALIDATOR = "sat.economist";
@@ -406,6 +414,58 @@ describe("SAT-VALIDATE-1A · validateXpGrantProposal", () => {
       ]) {
         assert.equal(s.includes(forbidden), false, forbidden);
       }
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("verifier re-enforces SAT invariants: an out-of-band forged self-validation is rejected", async () => {
+    const home = await freshHome();
+    try {
+      await initKey(home);
+      const { proposal, entry, pubkeyPem } = await proposeFor(home, {
+        actionNow: "2026-05-30T16:00:00.000Z",
+        settleNow: "2026-05-30T16:01:00.000Z",
+        nonce: "5a70000c".repeat(8),
+      });
+      const valid = await validateXpGrantProposal({
+        proposal,
+        ledgerEntry: entry,
+        validatorAgentId: VALIDATOR,
+        operatorPubkeyPem: pubkeyPem,
+        demaHome: home,
+        createdAtIso: VALIDATE_NOW,
+      });
+      assert.equal(valid.validated, true);
+
+      // Forge a self-validation: same operator key, but validator == subject.
+      // The build-time gate is bypassed (signed out-of-band), so the verifier
+      // MUST catch it — else it passes through verifyTaskCoherence.
+      const privateKeyPem = await loadPrivateKey(home);
+      const { receipt_signature_b64, receipt_hash, ...body } = valid.receipt;
+      // validator stays a SAT agent (passes the SAT-only check) but subject is
+      // forced equal to it → isolates the self-validation rule.
+      const forgedBody = { ...body, subject_agent_id: body.validator_agent_id };
+      const forged = {
+        ...forgedBody,
+        receipt_signature_b64: signPayload(forgedBody, privateKeyPem),
+        receipt_hash: sha256(stableStringify(forgedBody)),
+      };
+
+      const v = verifySatValidationReceipt({ receipt: forged, pubkeyPem });
+      assert.equal(v.verified, false);
+      assert.equal(v.reason, "self_validation_forbidden");
+
+      // And a non-SAT validator, likewise re-signed, is rejected.
+      const forgedBody2 = { ...body, validator_agent_id: "pat.builder" };
+      const forged2 = {
+        ...forgedBody2,
+        receipt_signature_b64: signPayload(forgedBody2, privateKeyPem),
+        receipt_hash: sha256(stableStringify(forgedBody2)),
+      };
+      const v2 = verifySatValidationReceipt({ receipt: forged2, pubkeyPem });
+      assert.equal(v2.verified, false);
+      assert.equal(v2.reason, "validator_not_sat_agent");
     } finally {
       await rm(home, { recursive: true, force: true });
     }

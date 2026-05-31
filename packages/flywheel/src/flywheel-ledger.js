@@ -157,6 +157,11 @@ export async function appendFlywheelImpactSettlement({
     return fail("ledger_replay_failed", { reason: replay.reason, replay });
   }
 
+  // SINGLE-WRITER ASSUMPTION (v0.1 LOCAL_ONLY): tmp+rename makes each write
+  // atomic, but two concurrent Dema processes against the same DEMA_HOME could
+  // read the same head and lose one append. Node0 is single-operator /
+  // single-process, so this is a documented limitation, not a live exploit; a
+  // lockfile / compare-and-swap is future hardening before any multi-writer use.
   const path = ledgerPath(demaHome);
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
   const content =

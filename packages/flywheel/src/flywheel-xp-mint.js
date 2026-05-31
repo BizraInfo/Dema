@@ -170,7 +170,9 @@ function validateXpMintContext({
   if (satValidationReceipt.validated_xp_amount !== grant.xp_amount) {
     return { ok: false, error: "sat_xp_amount_mismatch" };
   }
-  if (satValidationReceipt.evidence_impact_receipt_hash !== ledgerEntry.entry_hash) {
+  if (
+    satValidationReceipt.evidence_impact_receipt_hash !== ledgerEntry.entry_hash
+  ) {
     return { ok: false, error: "sat_evidence_mismatch" };
   }
 
@@ -213,6 +215,15 @@ export async function buildFlywheelXpMintConsentScope({
   const publicKeyPem = await loadPublicKey(demaHome);
   if (!publicKeyPem) {
     return fail("input", "no_authorship_key");
+  }
+  // The consent scope is content-addressed over a body fingerprinted with the
+  // local key, but the receipts were verified under operatorPubkeyPem. If they
+  // diverge, the scope cannot mint under the claimed operator authority — fail
+  // closed rather than return built:true for an unusable scope.
+  if (
+    fingerprintFromPem(publicKeyPem) !== fingerprintFromPem(operatorPubkeyPem)
+  ) {
+    return fail("input", "operator_key_mismatch");
   }
 
   const skillGrants = Object.freeze([context.skillGrant]);
