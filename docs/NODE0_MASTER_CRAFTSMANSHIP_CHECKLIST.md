@@ -83,11 +83,12 @@ running tests or checking CI on the exact branch.
 | Flywheel durable ledger append     | `MEASURED_LOCAL` | `tests/flywheel-ledger.test.js`                                                               | Lesson, performance delta, and next mission are not yet composed.                                                                                                                                                                     |
 | Flywheel XP grant proposal         | `MEASURED_LOCAL` | `tests/flywheel-xp-proposal.test.js`                                                          | Proposal only — SAT validation and operator-approved XP mint are separate gates.                                                                                                                                                      |
 | Flywheel XP mint bridge            | `MEASURED_LOCAL` | `tests/flywheel-sat-validation.test.js`, `tests/flywheel-xp-mint.test.js`                     | Builds a signed skill ledger after SAT validation + consent; persistence, lesson, performance delta, and next mission remain.                                                                                                         |
+| Flywheel durable XP state          | `MEASURED_LOCAL` | `tests/flywheel-xp-state.test.js`                                                             | Persists signed XP skill-ledger records to local `DEMA_HOME` and replays the wrapper chain plus impact/SAT/skill-ledger proofs; lesson, performance delta, and next mission remain.                                                   |
 | Local dual-token ledger            | `PARTIAL`        | `tests/econ-ledger.test.js`, `tests/econ-ledger-replay.test.js`                               | Broader mission/flywheel use without public economy claims.                                                                                                                                                                           |
 | PoI deterministic rule             | `PARTIAL`        | `tests/poi-rule-consent-replay-verification.test.js`                                          | Convert rule output into a mission-scoped score receipt and ledger input.                                                                                                                                                             |
 | Agent profiles                     | `PARTIAL`        | `tests/agent-profile-registry.test.js`                                                        | Persistent Dema-visible characters and task ownership.                                                                                                                                                                                |
 | Agent wallets                      | `PARTIAL`        | `tests/agent-wallet.test.js`                                                                  | Link wallet changes to mission settlement and agent service events.                                                                                                                                                                   |
-| Agent skills / XP                  | `PARTIAL`        | `tests/agent-skill-ledger.test.js`, `tests/flywheel-xp-mint.test.js`                          | FLYWHEEL-1E composes verified impact + SAT validation + operator consent into a signed skill ledger; durable skill-ledger persistence remains.                                                                                        |
+| Agent skills / XP                  | `PARTIAL`        | `tests/agent-skill-ledger.test.js`, `tests/flywheel-xp-mint.test.js`, `tests/flywheel-xp-state.test.js` | FLYWHEEL-1F persists verified XP skill-ledger state with replay; persistent Dema-visible agent profile integration remains.                                                                                                            |
 | Mission lifecycle                  | `PARTIAL`        | `tests/mission-lifecycle.test.js`                                                             | Compose with full flywheel and Dema Realm surfaces.                                                                                                                                                                                   |
 | House of Wisdom writer             | `PARTIAL`        | `tests/how-lesson-writer.test.js`                                                             | Teacher extraction, SAT review, operator approval, and replay link.                                                                                                                                                                   |
 | Performance baseline / improvement | `PARTIAL`        | `tests/perf-baseline.test.js`, `tests/perf-improvement.test.js`                               | Real sampling harness and full mission improvement receipt.                                                                                                                                                                           |
@@ -118,7 +119,7 @@ network, public economy, private-key leakage, or unconsented mutation.
 |    8 | Verifier re-checks.                  | `MEASURED_LOCAL` for selected rules      | Full lifecycle verifier is not complete.                                                                                                     |
 |    9 | PoI scores.                          | `PARTIAL`                                | One deterministic rule exists; mission integration missing.                                                                                  |
 |   10 | Token ledger updates.                | `PARTIAL`                                | Durable settlement append (FLYWHEEL-1B/1C) composes verified action → IMPACT ledger + replay; broader mission integration remains.           |
-|   11 | Agent XP updates.                    | `PARTIAL`                                | FLYWHEEL-1E builds a signed skill ledger from verified impact + SAT validation + operator consent; durable skill-ledger persistence missing. |
+|   11 | Agent XP updates.                    | `PARTIAL / MEASURED_LOCAL for XP state`  | FLYWHEEL-1F persists signed XP state and replays impact + SAT + skill-ledger proofs; broader agent profile/Realm integration remains.       |
 |   12 | Teacher proposes lesson.             | `DESIGNED_NOT_LIVE`                      | HOW writer exists; Teacher extraction path is not live.                                                                                      |
 |   13 | MuMu approves lesson.                | `PARTIAL`                                | Lesson consent shape exists; full operator approval flow missing.                                                                            |
 |   14 | House of Wisdom writes entry.        | `PARTIAL`                                | Local writer exists; full proof-backed learning loop incomplete.                                                                             |
@@ -150,7 +151,7 @@ non-replayable ledger, or overclaim fails the master test.
 | Genesis-local economy |  10/10 | `PARTIAL`     | Compose PoI score into ECON ledger with replay.                              |
 | PoI scoring           |  10/10 | `PARTIAL`     | Produce a mission-scoped PoI receipt, not just a rule result.                |
 | Agent profiles        |  10/10 | `PARTIAL`     | Make 12 agents persistent Dema-visible characters with proof refs.           |
-| Agent XP / skills     |  10/10 | `PARTIAL`     | Link XP grant to verified mission impact + SAT validation.                   |
+| Agent XP / skills     |  10/10 | `PARTIAL`     | Persisted XP state exists; connect it to durable agent profiles and Realm.   |
 | Mission loop          |  10/10 | `PARTIAL`     | Compose mission lifecycle with flywheel and closeout.                        |
 | House of Wisdom       |  10/10 | `PARTIAL`     | Connect receipt -> reflection -> approval -> lesson entry.                   |
 | Performance baseline  |  10/10 | `PARTIAL`     | Add real sampling harness and improvement receipt integration.               |
@@ -196,6 +197,7 @@ Noise = speculative implementation detail without proof bar.
 | `FLYWHEEL-1D` XP grant proposal      |     10 |     2 | Implemented as the §19 step-11 vertebra; proves the XP gate refuses to mint without SAT.                 |
 | `SAT-VALIDATE-1A` validation receipt |     10 |     2 | Implemented; a SAT-5 signature unblocks the §11 gate — closes the step-11 chain to the consent boundary. |
 | `FLYWHEEL-1E` XP mint bridge         |     10 |     2 | Implemented; composes verified impact + SAT validation + operator consent into a signed skill ledger.    |
+| `FLYWHEEL-1F` durable XP state       |     10 |     2 | Implemented; persists signed XP state with replay across impact, SAT, skill-ledger, and wrapper hashes.  |
 | Dema Realm full cockpit              |      9 |     5 | Strong, but should read from the scorecard and flywheel state.                                           |
 | New cognitive orchestration layer    |      7 |     6 | Useful only if it routes existing organs instead of duplicating them.                                    |
 | More isolated kernels                |      6 |     7 | Risk: organ sprawl without organism proof.                                                               |
@@ -203,48 +205,52 @@ Noise = speculative implementation detail without proof bar.
 Latest implemented spearpoint:
 
 ```text
-FLYWHEEL-1E_OPERATOR_APPROVED_XP_MINT_BRIDGE
+FLYWHEEL-1F_DURABLE_XP_STATE_APPEND
 ```
 
 Minimal solvable special case:
 
 ```text
 Input: one FLYWHEEL-1D PENDING proposal + its verified IMPACT_CREDIT entry +
-one SAT-VALIDATE-1A receipt.
-Action: project the exact AGENT-SKILL-1A consent target hash, require scoped
-operator consent, then build one signed skill ledger.
-Verify: `verifySkillLedger()` replays the XP total, referenced impact hash,
-SAT validation hash, body hash, and signature under the external public key.
-Non-goals: no durable skill-ledger write, no marketplace, no lesson, no
-performance delta, no full SAT-5 council runtime.
+one SAT-VALIDATE-1A receipt + scoped operator consent.
+Action: run the FLYWHEEL-1E XP mint bridge, wrap the signed skill ledger with
+its impact entry, SAT receipt, consent proof hash, and prev_state_hash, then
+append it to `$DEMA_HOME/agents/flywheel-xp-state.ndjson`.
+Verify: `verifyFlywheelXpState()` replays the wrapper chain, re-verifies the
+impact entry and SAT receipt under the external pubkey, re-runs
+`verifySkillLedger()`, and aggregates per-agent XP totals.
+Non-goals: no marketplace, no lesson, no performance delta, no Dema Realm
+profile mutation, no full SAT-5 council runtime.
 ```
 
 Proof bar:
 
 ```text
-verified impact entry + SAT receipt + scoped consent -> signed skill ledger
-ledger.xp_total equals the verified impact amount
-verifySkillLedger re-verifies under the external pubkey
-missing/wrong consent refuses before XP ledger success
+verified impact entry + SAT receipt + scoped consent -> persisted XP state
+first record has prev_state_hash:null; second links to previous state_hash
+verifyFlywheelXpState replays impact + SAT + skill ledger + wrapper hashes
+missing/wrong consent refuses before the XP state file is created
 ```
 
 Disproof bar:
 
 ```text
-missing consent builds XP
-wrong consent target hash builds XP
-tampered SAT receipt builds XP
-tampered impact entry builds XP
+missing consent appends XP state
+wrong consent target hash appends XP state
+tampered SAT receipt appends XP state
+tampered impact entry appends XP state
+corrupt existing XP state is extended
 public economic field appears
 ```
 
 Current implementation boundary:
 
 ```text
-FLYWHEEL-1E produces a signed AGENT-SKILL-1A ledger after SAT validation and
-operator consent. It does NOT persist that ledger, does not update Dema Realm
-state, does not write an agent profile, does not run a marketplace, and is not
-the full SAT-5 council runtime.
+FLYWHEEL-1F persists a replayable local XP state record after FLYWHEEL-1E
+builds a signed AGENT-SKILL-1A ledger. It does NOT update Dema Realm state,
+does not write an agent profile registry entry, does not run a marketplace,
+does not write a House-of-Wisdom lesson, and is not the full SAT-5 council
+runtime.
 ```
 
 ## 6. Hidden-State Reasoning Boundary
@@ -310,8 +316,8 @@ What this does not prove:
 Remaining blocker:
 
 ```text
-No single replayable chain currently proves action -> PoI -> ledger -> XP ->
-durable XP state -> lesson -> performance delta -> next mission.
+No single replayable chain currently proves action -> mission-scoped PoI ->
+ledger -> XP state -> lesson -> performance delta -> next mission.
 ```
 
 Forbidden overclaim:

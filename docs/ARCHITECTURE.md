@@ -287,6 +287,20 @@ skill ledger, then runs `verifySkillLedger()` before success. It emits
 network, no federation, no public economy, no transfer, no House of Wisdom, no
 performance delta, and no full 17-step flywheel claim.
 
+`packages/flywheel/src/flywheel-xp-state.js` is FLYWHEEL-1F, the durable local
+XP state append. It takes the FLYWHEEL-1E bridge output, stores a replayable
+state record at `$DEMA_HOME/agents/flywheel-xp-state.ndjson` via tmp+rename,
+and verifies the whole wrapper chain before success. Each record binds the full
+signed `IMPACT_CREDIT` entry, SAT validation receipt, signed AGENT-SKILL-1A
+ledger, consent proof hash, and `prev_state_hash`; `verifyFlywheelXpState()`
+replays the wrapper hash chain, re-checks the impact entry and SAT receipt under
+the external public key, then re-runs `verifySkillLedger()` and aggregates
+per-agent XP totals. It emits `bizra.dema.flywheel_xp_state_append.v0.1` with
+truth label `LOCAL_FLYWHEEL_XP_STATE_APPEND_VERIFIED`. Boundary: mutates only
+local `DEMA_HOME`, no CLI, no network, no federation, no public economy, no
+transfer, no marketplace, no House of Wisdom, no performance delta, and no full
+Node0-complete claim.
+
 ## Harness probes
 
 `scripts/urp-stage4-closeout.mjs` is the URP-4.1D Stage 4 Choose closeout drift-guard probe. It is a one-shot stdlib-only Node script, registered in `scripts/check.mjs`, and is not a `dema` subcommand. It runs the real local chain inside a throwaway `mkdtemp` `DEMA_HOME`: authorship key init with exact consent, authorship sign with exact consent, proof passport, URP local index, URP index verify, choose `MARK_SHAREABLE`, choose `MARK_LOCAL_ONLY`, choose list, and choose verify for both generated choose receipts. It emits `bizra.dema.urp_stage4_closeout_demo.v0.1` with truth label `URP_STAGE_4_CHOOSE_CLOSEOUT_VERIFIED` on success or `URP_STAGE_4_CHOOSE_CLOSEOUT_FAILED` on failure. Boundary: local-only; temporary file writes and temporary choose receipts occur only under the throwaway `DEMA_HOME`; operator `DEMA_HOME` is not mutated; no network, share publication, PoI, token mint, federation, economic claim, or persistent closeout receipt.
