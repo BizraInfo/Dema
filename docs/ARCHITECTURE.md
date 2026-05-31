@@ -321,6 +321,22 @@ verdict still re-derives. The grounding property: tampering the chain after
 attesting leaves the signature valid but fails Level-B — signed ≠ true, grounded
 = true. This is the sealed artifact Block0 §18 binds for "one full flywheel run".
 
+`packages/flywheel/src/flywheel-attestation-ledger.js` is ATTEST-1B, the durable
+home for those attestations — verify → ATTEST → seal → APPEND → replay.
+`appendConvergenceAttestation()` appends a currently-Level-B-grounded attestation
+plus a key-bound consent proof (action_type `APPEND_ATTESTATION`, scoped to the
+`attestation_id`) to a content-addressed, operator-signed `prev_hash` chain at
+`$DEMA_HOME/attestations/convergence-attestation-ledger.ndjson`
+(`bizra.dema.convergence_attestation_ledger.v0.1`, truth label
+`LEVEL_B_GROUNDED_DURABLE`). Grounding policy: Level-B is enforced at append time;
+`verifyConvergenceAttestationLedger()` replays the durable chain (entry links +
+entry signatures + each embedded attestation's own Level-A signature),
+independent of later canonical-chain growth — so a historical entry stays
+verifiable after the chain advances past the snapshot it attested. Fail-closed
+before every write (missing consent, ungrounded attestation, duplicate, corrupt
+ledger, scope/key mismatch). Single-writer assumption (v0.1 LOCAL_ONLY) stated.
+This is the direct feed into Block0's "one full flywheel run sealed" prerequisite.
+
 `packages/flywheel/src/flywheel-xp-mint.js` is FLYWHEEL-1E, the
 operator-approved XP mint bridge. It composes a FLYWHEEL-1D proposal, a
 SAT-VALIDATE-1A receipt, the verified `IMPACT_CREDIT` ledger entry, and a
