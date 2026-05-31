@@ -307,6 +307,20 @@ failure leaves them unverified). Emits
 `bizra.dema.flywheel_task_convergence.v0.1`. Pure-with-disk-read: loads the
 ledger, no write, no clock, no key load.
 
+`packages/flywheel/src/flywheel-convergence-attestation.js` is
+CONVERGENCE-ATTEST-1A, the cap of the proof spine (verify → ATTEST → seal). The
+convergence verdict is otherwise ephemeral; `attestConvergence()` runs
+`verifyConvergentTaskChain` and, only if convergent, signs a content-addressed
+`bizra.dema.convergence_attestation.v0.1` committing to the chain root,
+`chain_length`, `task_count`, a `task_fingerprint`, and the four layers
+(pure-with-key-load — signs the verdict like SAT-VALIDATE-1A, no consent phrase,
+no disk write). `verifyConvergenceAttestation()` is two-tier: Level-A re-derives
+the content address + verifies the signature under the external pubkey; Level-B
+re-runs the convergence check against the LIVE chain and confirms the attested
+verdict still re-derives. The grounding property: tampering the chain after
+attesting leaves the signature valid but fails Level-B — signed ≠ true, grounded
+= true. This is the sealed artifact Block0 §18 binds for "one full flywheel run".
+
 `packages/flywheel/src/flywheel-xp-mint.js` is FLYWHEEL-1E, the
 operator-approved XP mint bridge. It composes a FLYWHEEL-1D proposal, a
 SAT-VALIDATE-1A receipt, the verified `IMPACT_CREDIT` ledger entry, and a

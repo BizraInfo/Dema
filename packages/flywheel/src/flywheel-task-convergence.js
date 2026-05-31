@@ -181,6 +181,10 @@ export async function verifyConvergentTaskChain({ demaHome, pubkeyPem } = {}) {
       economic: true,
     }),
     chain_length: entries.length,
+    // The chain head, taken from the SAME loaded snapshot — callers (e.g. the
+    // convergence attestation) use this instead of re-reading the ledger, so the
+    // verdict and the recorded root can never come from two different reads.
+    canonical_chain_root: entries[entries.length - 1].receipt_id,
     task_count: tasks.length,
     tasks: Object.freeze(tasks),
     task: tasks[tasks.length - 1],
