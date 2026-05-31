@@ -288,6 +288,20 @@ boundary block: no file write, no `DEMA_HOME` mutation, no network, no federatio
 no public economy/transfer, no marketplace, no House of Wisdom mutation, no
 performance delta, and no full-Node0-complete claim.
 
+`packages/flywheel/src/flywheel-task-convergence.js` is FLYWHEEL-REPLAY-1B, the
+Proof-of-Truth convergence verifier — the capstone of RECEIPT-CHAIN-1C (bind) and
+FLYWHEEL-REPLAY-1A (coherence). `verifyConvergentTaskChain({demaHome, pubkeyPem})`
+loads the persisted canonical chain and returns one verdict across four layers in
+a `layers` map: **Formal** (prev_hash structure) and **Cryptographic** (Ed25519
+under the external pubkey) via `verifyCanonicalLedger`; then it extracts the
+task's artifacts by schema and runs `verifyTaskCoherence` for **Empirical**
+(cross-reference coherence) and **Economic** (amounts follow the deterministic
+rules). The point: a Frankenstein chain binds and chain-verifies (formal +
+cryptographic true) yet is rejected `empirical:false` — convergence catches what
+`verifyCanonicalLedger` alone misses. Emits
+`bizra.dema.flywheel_task_convergence.v0.1`. Pure-with-disk-read: loads the
+ledger, no write, no clock, no key load.
+
 `packages/flywheel/src/flywheel-xp-mint.js` is FLYWHEEL-1E, the
 operator-approved XP mint bridge. It composes a FLYWHEEL-1D proposal, a
 SAT-VALIDATE-1A receipt, the verified `IMPACT_CREDIT` ledger entry, and a
