@@ -26,10 +26,18 @@ import { proposeFlywheelXpGrant } from "../packages/flywheel/src/flywheel-xp-pro
 import { validateXpGrantProposal } from "../packages/flywheel/src/flywheel-sat-validation.js";
 import { GUARDED_CLAIM_CONSENT_PHRASE } from "../packages/receipts/src/assumption-guarded-claim.js";
 import { buildConsentProof } from "../packages/receipts/src/consent-proof.js";
-import { generateEd25519Keypair } from "../packages/receipts/src/authorship-signature.js";
+import {
+  generateEd25519Keypair,
+  signPayload,
+} from "../packages/receipts/src/authorship-signature.js";
+import {
+  sha256,
+  stableStringify,
+} from "../packages/consent/src/consent-common.js";
 import {
   initAuthorshipKey,
   KEY_INIT_CONSENT_PHRASE,
+  loadPrivateKey,
 } from "../packages/receipts/src/authorship-key-store.js";
 
 const A_ENVELOPE = Object.freeze({
@@ -300,6 +308,91 @@ describe("CONVERGENCE-ATTEST-1A · attestConvergence", () => {
       ]) {
         assert.equal(s.includes(forbidden), false, forbidden);
       }
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("GROUNDING IS TOTAL: a re-signed attestation with a wrong task_count passes Level-A but fails Level-B", async () => {
+    const home = await freshHome();
+    try {
+      const pubkeyPem = await boundConvergentChain(home, "att00008".repeat(8));
+      const r = await attestConvergence({
+        demaHome: home,
+        operatorPubkeyPem: pubkeyPem,
+        now: ATTEST_NOW,
+      });
+      assert.equal(r.attested, true);
+
+      // Forge: bump task_count, then re-sign with the operator's own key and
+      // recompute the content address. Level-A is therefore valid — but the
+      // value no longer re-derives from the live chain.
+      const privateKeyPem = await loadPrivateKey(home);
+      const { attestation_id, attestation_signature_b64, ...body } =
+        r.attestation;
+      const forgedBody = { ...body, task_count: body.task_count + 5 };
+      const forged = {
+        ...forgedBody,
+        attestation_id: sha256(stableStringify(forgedBody)),
+        attestation_signature_b64: signPayload(forgedBody, privateKeyPem),
+      };
+      const v = await verifyConvergenceAttestation({
+        attestation: forged,
+        demaHome: home,
+        pubkeyPem,
+      });
+      assert.equal(v.verified, false);
+      assert.equal(v.level_a_signature_valid, true);
+      assert.equal(v.stage, "grounding");
+      assert.equal(v.reason, "task_count_mismatch");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("verifier fails closed (no crash) on a malformed external pubkey", async () => {
+    const home = await freshHome();
+    try {
+      const pubkeyPem = await boundConvergentChain(home, "att00009".repeat(8));
+      const r = await attestConvergence({
+        demaHome: home,
+        operatorPubkeyPem: pubkeyPem,
+        now: ATTEST_NOW,
+      });
+      const v = await verifyConvergenceAttestation({
+        attestation: r.attestation,
+        demaHome: home,
+        // contains the marker but is not a valid PEM body
+        pubkeyPem:
+          "-----BEGIN PUBLIC KEY-----\nnot-a-real-key\n-----END PUBLIC KEY-----",
+      });
+      assert.equal(v.verified, false);
+      assert.equal(v.stage, "signature");
+      assert.equal(v.reason, "signature_invalid");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("fail-closed: a rotated local key (no longer == operatorPubkeyPem) refuses to attest", async () => {
+    const home = await freshHome();
+    try {
+      const pubkeyPem = await boundConvergentChain(home, "att0000a".repeat(8));
+      // Rotate the local key AFTER binding: delete keys + re-init a new pair.
+      await rm(join(home, "keys"), { recursive: true, force: true });
+      await initAuthorshipKey({
+        consent: KEY_INIT_CONSENT_PHRASE,
+        demaHome: home,
+      });
+      // The chain still converges under the ORIGINAL operator key, but the local
+      // signing key now differs — the attestation would be unverifiable.
+      const r = await attestConvergence({
+        demaHome: home,
+        operatorPubkeyPem: pubkeyPem,
+        now: ATTEST_NOW,
+      });
+      assert.equal(r.attested, false);
+      assert.equal(r.error, "operator_key_mismatch");
     } finally {
       await rm(home, { recursive: true, force: true });
     }

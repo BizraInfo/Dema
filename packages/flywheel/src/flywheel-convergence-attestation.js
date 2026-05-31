@@ -27,7 +27,6 @@ import {
   loadPublicKey,
 } from "../../receipts/src/authorship-key-store.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
-import { loadCanonicalLedger } from "../../receipts/src/canonical-ledger.js";
 import { verifyConvergentTaskChain } from "./flywheel-task-convergence.js";
 
 export const CONVERGENCE_ATTESTATION_SCHEMA =
@@ -59,11 +58,6 @@ function isNonEmptyString(s) {
 
 function isSha256Hex(s) {
   return typeof s === "string" && /^[a-f0-9]{64}$/.test(s);
-}
-
-async function chainHead(demaHome) {
-  const entries = await loadCanonicalLedger({ demaHome });
-  return entries.length ? entries[entries.length - 1].receipt_id : null;
 }
 
 // Build the canonical attestation body — basis for both the signature and the
@@ -128,7 +122,8 @@ export async function attestConvergence({
 
   const body = buildAttestationBody({
     convergence_schema: convergence.schema,
-    canonical_chain_root: await chainHead(demaHome),
+    // From the convergence verifier's own loaded snapshot — not a second read.
+    canonical_chain_root: convergence.canonical_chain_root,
     chain_length: convergence.chain_length,
     task_count: convergence.task_count,
     // Commit to the exact set of verified tasks so the attestation cannot be
@@ -206,11 +201,23 @@ export async function verifyConvergenceAttestation({
   if (sha256(stableStringify(body)) !== attestation_id) {
     return reject("signature", "attestation_id_mismatch");
   }
-  if (!verifyPayload(body, attestation_signature_b64, pubkeyPem)) {
+  // A malformed-but-"BEGIN PUBLIC KEY"-shaped pubkey makes createPublicKey throw
+  // inside verifyPayload. This verifier accepts external material, so a bad key
+  // must fail closed with a structured reject, never crash the caller.
+  let signatureOk;
+  try {
+    signatureOk = verifyPayload(body, attestation_signature_b64, pubkeyPem);
+  } catch {
+    return reject("signature", "signature_invalid");
+  }
+  if (!signatureOk) {
     return reject("signature", "signature_invalid");
   }
 
-  // ── Level-B: the attested verdict must still re-derive on the live chain ──
+  // ── Level-B: EVERY signed field this verifier claims to ground must
+  //    re-derive from the live convergence result — not just a subset, or a
+  //    valid signer could attest wrong task_count / layers / rule for a chain
+  //    that merely also converges. ─────────────────────────────────────────
   const live = await verifyConvergentTaskChain({ demaHome, pubkeyPem });
   if (!live.convergent) {
     return reject("grounding", "live_chain_not_convergent", {
@@ -218,28 +225,43 @@ export async function verifyConvergenceAttestation({
       live,
     });
   }
-  if (live.chain_length !== attestation.chain_length) {
-    return reject("grounding", "chain_length_mismatch", {
-      level_a_signature_valid: true,
-    });
-  }
-  const liveRoot = await chainHead(demaHome);
-  if (liveRoot !== attestation.canonical_chain_root) {
-    return reject("grounding", "chain_root_mismatch", {
-      level_a_signature_valid: true,
-    });
-  }
-  if (sha256(stableStringify(live.tasks)) !== attestation.task_fingerprint) {
-    return reject("grounding", "task_fingerprint_mismatch", {
-      level_a_signature_valid: true,
-    });
-  }
+  const ground = (cond, reason) =>
+    cond
+      ? null
+      : reject("grounding", reason, { level_a_signature_valid: true });
 
-  return Object.freeze({
-    verified: true,
-    level: "B",
-    level_a_signature_valid: true,
-    attestation_id,
-    task_count: attestation.task_count,
-  });
+  return (
+    ground(
+      attestation.verifier_rule_id === CONVERGENCE_VERIFIER_RULE_ID,
+      "verifier_rule_id_mismatch",
+    ) ||
+    ground(
+      attestation.convergence_schema === live.schema,
+      "convergence_schema_mismatch",
+    ) ||
+    ground(
+      attestation.chain_length === live.chain_length,
+      "chain_length_mismatch",
+    ) ||
+    ground(
+      attestation.canonical_chain_root === live.canonical_chain_root,
+      "chain_root_mismatch",
+    ) ||
+    ground(attestation.task_count === live.task_count, "task_count_mismatch") ||
+    ground(
+      stableStringify(attestation.layers) === stableStringify(live.layers),
+      "layers_mismatch",
+    ) ||
+    ground(
+      attestation.task_fingerprint === sha256(stableStringify(live.tasks)),
+      "task_fingerprint_mismatch",
+    ) ||
+    Object.freeze({
+      verified: true,
+      level: "B",
+      level_a_signature_valid: true,
+      attestation_id,
+      task_count: live.task_count,
+    })
+  );
 }
