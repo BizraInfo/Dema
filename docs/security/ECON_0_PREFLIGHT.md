@@ -126,7 +126,7 @@ impact_token: {
     agent_improvement_units:         <integer>
   }
 }
-prior_entry_hash:                    "<sha256 hex of the previous ledger entry body, or '0'*64 for genesis>"
+prior_entry_hash:                    "<sha256 hex of the previous ledger entry body, or null for genesis>"
 created_at_iso:                      "<ISO-8601 UTC>"
 entry_signature_b64:                 "<Ed25519 signature over stableStringify(body excluding entry_signature_b64 and entry_hash), base64>"
 entry_hash:                          "<sha256 of stableStringify(body excluding entry_signature_b64 and entry_hash)>"
@@ -142,7 +142,7 @@ Field-by-field rationale:
 - `impact_token.delta` — always `≥ 0`. Impact Tokens are credited, never spent (in v0.1; spending semantics are deliberately deferred).
 - `resource_token.components` / `impact_token.components` — the operator-PDF Section 9 enumeration, captured structurally so the audit ladder can later promote individual components to MEASURED.
 - `impact_token.derivation` — the score → impact mapping is a separate public rule (`impact-multiplier.v0.1`) with its own code hash. The verifier re-runs the multiplier deterministically.
-- `prior_entry_hash` — every entry chains backward, identical to the proof-passport chain pattern. Genesis entry uses 64 zeros.
+- `prior_entry_hash` — every entry chains backward, identical to the proof-passport chain pattern. Genesis entry uses `null`.
 - `entry_signature_b64` / `entry_hash` — same body / signature / hash separation as every other envelope.
 
 The body for signing/hashing is the envelope **without** `entry_signature_b64` and **without** `entry_hash`.
@@ -200,7 +200,7 @@ For ledger entries (separate verification entry-point invoked by `dema economy r
 16. **Resource-measurement rule code hash match** — verifier re-hashes the local resource-measurement source file(s); must equal `entry.resource_token.measurement_rule_code_hash`.
 17. **Impact-multiplier rule code hash match** — verifier re-hashes the local impact-multiplier source file(s); must equal `entry.impact_token.derivation.impact_multiplier_code_hash`.
 18. **Realm lock** — `entry.ledger_scope.realm == "local-only"`. Any other value → `REJECTED:realm_drift`.
-19. **Chain continuity** — `entry.prior_entry_hash` must equal the sha256 of the previous entry's body (or 64 zeros for genesis).
+19. **Chain continuity** — `entry.prior_entry_hash` must equal the sha256 of the previous entry's body (or `null` for genesis).
 20. **Token sign discipline** — `entry.resource_token.delta <= 0` AND `entry.impact_token.delta >= 0`. Violation → `REJECTED:token_sign_invalid`.
 
 If steps 12–20 all pass for every entry in the chain → `LEDGER_VERIFIED`.

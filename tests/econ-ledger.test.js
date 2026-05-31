@@ -185,6 +185,32 @@ describe("econ-ledger · buildLedgerEntry · happy path & shape", () => {
     }
   });
 
+  it("supports null prev_hash for replay-compatible genesis entries", async () => {
+    const home = await freshHome();
+    try {
+      const cp = await makeConsentProof(home);
+      const result = await buildLedgerEntry({
+        entry_type: "IMPACT_CREDIT",
+        token_class: "IMPACT",
+        amount: 7,
+        evidence_receipt_hashes: [EVIDENCE_HASH_A],
+        prev_hash: null,
+        consentProof: cp.consent_proof,
+        demaHome: home,
+        createdAtIso: FIXED_LEDGER_NOW,
+      });
+      assert.equal(result.error, undefined);
+      assert.equal(result.prev_hash, null);
+      const verified = verifyLedgerEntry({
+        entry: result,
+        pubkeyPem: cp.signer_public_key_pem,
+      });
+      assert.equal(verified.verified, true);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   it("determinism: identical inputs + injected createdAt → byte-equal entry", async () => {
     const home = await freshHome();
     try {

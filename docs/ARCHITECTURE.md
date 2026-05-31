@@ -221,6 +221,121 @@ contracts and canonical phase_3/phase_4 directions, but they must not:
 - Package imports use relative paths.
 - Tests use `node:test`.
 
+## Module-only composition surfaces
+
+`packages/flywheel/src/flywheel-settlement.js` is FLYWHEEL-1B, a local-only
+settlement bridge. It composes existing kernels without a CLI surface:
+`replayOneTaskFlywheel()` verifies the FLYWHEEL-1A receipt, `verifyConsentProof()`
+checks a key-bound `MINT_LEDGER_ENTRY` proof scoped to the flywheel receipt hash,
+`buildLedgerEntry()` creates one signed local `IMPACT_CREDIT`, and
+`verifyLedgerEntry()` immediately re-checks it with the external public key.
+It emits `bizra.dema.flywheel_settlement_bridge.v0.1` with truth label
+`LOCAL_FLYWHEEL_SETTLEMENT_BRIDGE_VERIFIED` on success. Boundary: no file write,
+no network, no federation, no public transfer, no exchange-value claim, no
+public economy, no XP, no House of Wisdom, no performance delta, and no full
+17-step flywheel claim.
+
+`packages/flywheel/src/flywheel-ledger.js` is FLYWHEEL-1C, the durable local
+append for those settlement entries. It writes ECON entries to
+`$DEMA_HOME/econ/flywheel-impact-ledger.ndjson` via tmp+rename, refuses to
+extend unreadable or corrupt ledgers, and runs `verifyLedgerReplay()` across
+the whole ledger before returning success. It emits
+`bizra.dema.flywheel_impact_ledger_append.v0.1` with truth label
+`LOCAL_FLYWHEEL_IMPACT_LEDGER_APPEND_VERIFIED`. Boundary: mutates only the
+operator's local `DEMA_HOME`, no CLI, no network, no federation, no public
+token/economy/transfer, no XP, no House of Wisdom, no performance delta, and
+no full 17-step flywheel claim.
+
+`packages/flywheel/src/flywheel-xp-proposal.js` is FLYWHEEL-1D, the §19 step-11
+XP bridge. It is pure (no key, no consent, no I/O, no clock): given a verified
+`IMPACT_CREDIT` ledger entry, it verifies the entry under the external public
+key (`verifyLedgerEntry()`), maps impact amount to XP 1:1 via the named rule
+`impact_amount_to_xp.v0.1`, and emits a `bizra.dema.flywheel_xp_grant_proposal.v0.1`
+envelope with status `PENDING_SAT_VALIDATION`. The proposed grant carries
+`sat_validation_receipt_hash: null` by design — so the existing AGENT-SKILL-1A
+kernel REFUSES to mint XP from it (`reward_without_validation`) until a
+different agent's SAT validation and operator approval supply a real hash. It
+grants nothing: no XP, no SAT, no consent, no file write, no public economy.
+
+`packages/flywheel/src/flywheel-sat-validation.js` is SAT-VALIDATE-1A, the §19
+step-11 closing vertebra. A canonical SAT-5 agent (`sat.verifier|compliance|resource|economist|evolution`,
+derived from `CANONICAL_AGENTS` so it cannot drift) validates a FLYWHEEL-1D
+proposal: it re-verifies the impact entry under the external pubkey, enforces
+the §11 "no self-verification" law (`self_validation_forbidden` when validator
+== subject), re-derives the XP from the entry via the SAME `impact_amount_to_xp.v0.1`
+rule (rejecting `xp_amount_mismatch` on any inflation), checks evidence binding,
+then signs a `bizra.dema.sat_validation_receipt.v0.1` receipt. The receipt's
+content hash is exactly the `sat_validation_receipt_hash` AGENT-SKILL-1A
+requires — so a verified SAT receipt unblocks the §11 gate (operator key-bound
+consent is still required to actually mint). `verifySatValidationReceipt()` is
+permissionless and trusts ONLY the external pubkey (embedded fingerprint never
+authoritative — REJECT-4 invariant). Pure-with-key-load: signs, but no other
+I/O, no clock, no randomness. Mints nothing itself.
+
+`packages/flywheel/src/flywheel-task-coherence.js` is FLYWHEEL-REPLAY-1A, the §19
+step-17 task-coherence verifier. RECEIPT-CHAIN-1C hash-links a task's `[action,
+IMPACT, SAT]` receipts, but hash links prove tamper-evidence, not that the three
+belong to the same task. `verifyTaskCoherence()` closes that Frankenstein hole:
+pure/zero-trust, it verifies each artifact under the external pubkey
+(`replayOneTaskFlywheel` + `verifyLedgerEntry` + `verifySatValidationReceipt`),
+then re-derives four cross-references from the existing rule functions (no drift) —
+IMPACT derived from the action, IMPACT amount from the re-derived score, SAT bound
+to that IMPACT, validated XP from that IMPACT. Emits
+`bizra.dema.flywheel_task_coherence.v0.1`; rejects an incoherent (multi-task) bundle
+with a specific `cross_reference` reason even when every receipt is individually
+signed-valid. Both success and failure envelopes carry a frozen pure-verifier
+boundary block: no file write, no `DEMA_HOME` mutation, no network, no federation,
+no public economy/transfer, no marketplace, no House of Wisdom mutation, no
+performance delta, and no full-Node0-complete claim.
+
+`packages/flywheel/src/flywheel-task-convergence.js` is FLYWHEEL-REPLAY-1B, the
+Proof-of-Truth convergence verifier — the capstone of RECEIPT-CHAIN-1C (bind) and
+FLYWHEEL-REPLAY-1A (coherence). `verifyConvergentTaskChain({demaHome, pubkeyPem})`
+loads the persisted canonical chain and returns one verdict across four layers in
+a `layers` map: **Formal** (prev_hash structure) and **Cryptographic** (Ed25519
+under the external pubkey) via `verifyCanonicalLedger`; then it extracts the
+task's artifacts by schema and runs `verifyTaskCoherence` for **Empirical**
+(cross-reference coherence) and **Economic** (amounts follow the deterministic
+rules). The point: a Frankenstein chain binds and chain-verifies (formal +
+cryptographic true) yet is rejected `empirical:false` — convergence catches what
+`verifyCanonicalLedger` alone misses. It verifies EVERY 3-entry task segment
+(`[action, IMPACT, SAT]`, the RECEIPT-CHAIN-1C binding unit), so a later
+incoherent task is never masked by an earlier coherent one (`segment_index`
+reports which failed). On a chain-layer failure it does not over-claim the
+`cryptographic` layer (signatures are checked after structure, so a structural
+failure leaves them unverified). Emits
+`bizra.dema.flywheel_task_convergence.v0.1`. Pure-with-disk-read: loads the
+ledger, no write, no clock, no key load.
+
+`packages/flywheel/src/flywheel-xp-mint.js` is FLYWHEEL-1E, the
+operator-approved XP mint bridge. It composes a FLYWHEEL-1D proposal, a
+SAT-VALIDATE-1A receipt, the verified `IMPACT_CREDIT` ledger entry, and a
+key-bound operator consent proof into the existing AGENT-SKILL-1A
+`buildSkillLedger()` gate. `buildFlywheelXpMintConsentScope()` projects the
+exact `MUTATE_AGENT_PROFILE` consent scope for the skill-ledger body so the
+operator signs the same target hash the ledger builder later verifies.
+`mintFlywheelXpGrant()` re-verifies the impact entry and SAT receipt under the
+external public key, checks subject/skill/XP/evidence binding, builds the signed
+skill ledger, then runs `verifySkillLedger()` before success. It emits
+`bizra.dema.flywheel_xp_mint_bridge.v0.1` with truth label
+`LOCAL_FLYWHEEL_XP_MINT_BRIDGE_VERIFIED`. Boundary: no file write, no CLI, no
+network, no federation, no public economy, no transfer, no House of Wisdom, no
+performance delta, and no full 17-step flywheel claim.
+
+`packages/flywheel/src/flywheel-xp-state.js` is FLYWHEEL-1F, the durable local
+XP state append. It takes the FLYWHEEL-1E bridge output, stores a replayable
+state record at `$DEMA_HOME/agents/flywheel-xp-state.ndjson` via tmp+rename,
+and verifies the whole wrapper chain before success. Each record binds the full
+signed `IMPACT_CREDIT` entry, SAT validation receipt, signed AGENT-SKILL-1A
+ledger, consent proof hash, and `prev_state_hash`; `verifyFlywheelXpState()`
+replays the wrapper hash chain, re-checks the impact entry and SAT receipt under
+the external public key, then re-runs `verifySkillLedger()` and aggregates
+per-agent XP totals. It emits `bizra.dema.flywheel_xp_state_append.v0.1` with
+truth label `LOCAL_FLYWHEEL_XP_STATE_APPEND_VERIFIED`. Boundary: mutates only
+local `DEMA_HOME`, no CLI, no network, no federation, no public economy, no
+transfer, no marketplace, no House of Wisdom, no performance delta, and no full
+Node0-complete claim.
+
 ## Harness probes
 
 `scripts/urp-stage4-closeout.mjs` is the URP-4.1D Stage 4 Choose closeout drift-guard probe. It is a one-shot stdlib-only Node script, registered in `scripts/check.mjs`, and is not a `dema` subcommand. It runs the real local chain inside a throwaway `mkdtemp` `DEMA_HOME`: authorship key init with exact consent, authorship sign with exact consent, proof passport, URP local index, URP index verify, choose `MARK_SHAREABLE`, choose `MARK_LOCAL_ONLY`, choose list, and choose verify for both generated choose receipts. It emits `bizra.dema.urp_stage4_closeout_demo.v0.1` with truth label `URP_STAGE_4_CHOOSE_CLOSEOUT_VERIFIED` on success or `URP_STAGE_4_CHOOSE_CLOSEOUT_FAILED` on failure. Boundary: local-only; temporary file writes and temporary choose receipts occur only under the throwaway `DEMA_HOME`; operator `DEMA_HOME` is not mutated; no network, share publication, PoI, token mint, federation, economic claim, or persistent closeout receipt.
