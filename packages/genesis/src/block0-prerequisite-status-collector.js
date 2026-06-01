@@ -32,6 +32,7 @@ import {
   evaluate as poiReplayEvaluate,
 } from "../../rules/src/rule-consent-replay-verification.v0.1.js";
 import { verifyKeyconsentIntegrationProof } from "./keyconsent-integration-proof.js";
+import { verifyCoreFlywheelRunReceipt } from "./core-flywheel-run-proof.js";
 
 export const BLOCK0_PREREQUISITE_STATUS_COLLECTION_SCHEMA =
   "bizra.dema.block0_prerequisite_status_collection.v0.1";
@@ -141,6 +142,15 @@ export const SLOT_ADAPTERS = Object.freeze({
     kind: "attestation",
     verify: ({ proof, operatorPubkeyPem }) =>
       verifyKeyconsentIntegrationProof({ proof, operatorPubkeyPem }),
+  },
+  // The core flywheel run receipt's self-hash field IS the slot name, so it
+  // wires via the simplest existing kind (scalar_hash). The producer + verifier
+  // (core-flywheel-run-proof.js) carry the honest CORE-vs-FULL coverage labels.
+  full_flywheel_run_receipt_hash: {
+    kind: "scalar_hash",
+    verify: ({ proof, operatorPubkeyPem }) =>
+      verifyCoreFlywheelRunReceipt({ proof, operatorPubkeyPem }),
+    proofHashField: "full_flywheel_run_receipt_hash",
   },
 });
 
