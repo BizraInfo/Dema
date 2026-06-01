@@ -10,14 +10,16 @@
 
 ## 1. Workflow inventory
 
-| Workflow | File | LOC | Triggers | Jobs | Typical green duration |
-|---|---|---:|---|---|---|
-| `check` | `.github/workflows/check.yml` | 30 | `pull_request` · `push: main` · `workflow_dispatch` | `test` (Node 20.x + 22.x matrix) | ~2m23s |
-| `BIZRA Review Gate` | `.github/workflows/bizra-review.yml` | 78 | `pull_request` · `push: main` · `workflow_dispatch` | `proof-quality` (Node 22.x) | ~2m15s |
-| `CodeQL` | `.github/workflows/codeql.yml` | 42 | `push: main` · `pull_request: main` · `schedule: cron '0 6 * * 1'` | `analyze` (JavaScript) | ~1m37s |
-| `gitleaks` | `.github/workflows/gitleaks.yml` | 48 | `pull_request` · `push: main` · `workflow_dispatch` | `scan` (full history) | ~10s |
+| Workflow            | File                                 | LOC | Triggers                                                           | Jobs                             | Typical green duration |
+| ------------------- | ------------------------------------ | --: | ------------------------------------------------------------------ | -------------------------------- | ---------------------- |
+| `check`             | `.github/workflows/check.yml`        |  30 | `pull_request` · `push: main` · `workflow_dispatch`                | `test` (Node 20.x + 22.x matrix) | ~2m23s                 |
+| `BIZRA Review Gate` | `.github/workflows/bizra-review.yml` |  78 | `pull_request` · `push: main` · `workflow_dispatch`                | `proof-quality` (Node 22.x)      | ~2m15s                 |
+| `CodeQL`            | `.github/workflows/codeql.yml`       |  42 | `push: main` · `pull_request: main` · `schedule: cron '0 6 * * 1'` | `analyze` (JavaScript)           | ~1m37s                 |
+| `gitleaks`          | `.github/workflows/gitleaks.yml`     |  48 | `pull_request` · `push: main` · `workflow_dispatch`                | `scan` (full history)            | ~10s                   |
 
 All four must report `success` before a slice on `main` is considered shipped. A `success` on three of four with one `failure` is **not** shipped — diagnose the failing gate before continuing.
+
+> **CodeRabbit is advisory, not a gate.** The CodeRabbit check that appears on PRs is a third-party app, not one of these four workflows. It is frequently silent (credits / "review skipped" / rate-limit); its absence does not block merge and does not satisfy the review obligation. When the advisory layer gives no signal — or the diff is novel logic — a documented self-review is **required** before merge per the Review gate in [docs/ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md).
 
 ---
 
@@ -29,14 +31,14 @@ All four must report `success` before a slice on `main` is considered shipped. A
 
 **Job: `test`**
 
-| Step | Command | Run on |
-|---|---|---|
-| Checkout | `actions/checkout@de0fac2e` (v6.0.2 · Node 24) | both 20.x and 22.x |
-| Set up Node | `actions/setup-node@48b55a01` (v6.4.0 · Node 24) | both 20.x and 22.x |
-| Install | `npm install --no-audit --no-fund` | both 20.x and 22.x |
-| Test | `npm test` | both 20.x and 22.x |
-| Coverage | `npm run coverage` | **22.x only** |
-| Aggregate check | `npm run check` | **22.x only** |
+| Step            | Command                                          | Run on             |
+| --------------- | ------------------------------------------------ | ------------------ |
+| Checkout        | `actions/checkout@de0fac2e` (v6.0.2 · Node 24)   | both 20.x and 22.x |
+| Set up Node     | `actions/setup-node@48b55a01` (v6.4.0 · Node 24) | both 20.x and 22.x |
+| Install         | `npm install --no-audit --no-fund`               | both 20.x and 22.x |
+| Test            | `npm test`                                       | both 20.x and 22.x |
+| Coverage        | `npm run coverage`                               | **22.x only**      |
+| Aggregate check | `npm run check`                                  | **22.x only**      |
 
 **Why coverage + check are 22.x-only:** Node 22 introduced the `--test-coverage-{lines,branches,functions}` threshold flags used by `npm run coverage`. `npm run check` (via `scripts/check.mjs`) internally calls coverage, so it inherits the same constraint. Tests themselves run on both versions to keep the engine floor honest.
 
@@ -63,26 +65,26 @@ All four must report `success` before a slice on `main` is considered shipped. A
 
 **Branch-class resolution** (case statement on `GITHUB_HEAD_REF` / `GITHUB_REF_NAME`):
 
-| Pattern | Class |
-|---|---|
-| `devops/release-readiness` · `ci/devops-release-readiness-class` | `devops/release-readiness` |
-| `proof/u1-proof-pin` · `docs/u1-proof-pin` · `ci/u1-proof-pin-class` | `docs/u1-proof-pin` |
-| `u2/dema-preview-surfaces` · `ci/u2-dema-preview-class` | `u2/dema-preview-surfaces` |
-| `tooling/claim-ledger-checker` · `ci/claim-ledger-checker-class` | `tooling/claim-ledger-checker` |
-| `u2.1/amana-kernel-contracts` · `ci/u2.1-amana-kernel-contracts-class` | `u2.1/amana-kernel-contracts` |
-| `proof/u1-*` (glob) | `proof/u1` |
-| `adr/*` · `policy/*` · `governance/*` · `tooling/*` · `season-*` · `fix/*` · `ci/*` · `docs/*` · `feat/*` · `chore/*` (glob) | `policy/broad-scope` |
-| `main` (push event) | `policy/merged-to-main` (no file-set enforcement; canonical state already gated) |
-| anything else | **fails immediately** with `"Unsupported BIZRA review branch"` |
+| Pattern                                                                                                                      | Class                                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `devops/release-readiness` · `ci/devops-release-readiness-class`                                                             | `devops/release-readiness`                                                       |
+| `proof/u1-proof-pin` · `docs/u1-proof-pin` · `ci/u1-proof-pin-class`                                                         | `docs/u1-proof-pin`                                                              |
+| `u2/dema-preview-surfaces` · `ci/u2-dema-preview-class`                                                                      | `u2/dema-preview-surfaces`                                                       |
+| `tooling/claim-ledger-checker` · `ci/claim-ledger-checker-class`                                                             | `tooling/claim-ledger-checker`                                                   |
+| `u2.1/amana-kernel-contracts` · `ci/u2.1-amana-kernel-contracts-class`                                                       | `u2.1/amana-kernel-contracts`                                                    |
+| `proof/u1-*` (glob)                                                                                                          | `proof/u1`                                                                       |
+| `adr/*` · `policy/*` · `governance/*` · `tooling/*` · `season-*` · `fix/*` · `ci/*` · `docs/*` · `feat/*` · `chore/*` (glob) | `policy/broad-scope`                                                             |
+| `main` (push event)                                                                                                          | `policy/merged-to-main` (no file-set enforcement; canonical state already gated) |
+| anything else                                                                                                                | **fails immediately** with `"Unsupported BIZRA review branch"`                   |
 
 **Review scripts** (run after class is resolved):
 
-| Script | Purpose |
-|---|---|
-| `scripts/review/pr-class.mjs --class <class>` | Asserts the change touches files allowed for the resolved class |
-| `scripts/review/proof-scope.mjs --class <class>` | Asserts proof claims stay within the class's allowed scope |
-| `scripts/review/no-overclaim.mjs --class <class>` | Catches claims that overstate truth (e.g., SHIPPED for WIRED_PARTIAL) |
-| `scripts/review/receipt-integrity.mjs --class <class>` | Validates receipt-chain references in the diff |
+| Script                                                 | Purpose                                                               |
+| ------------------------------------------------------ | --------------------------------------------------------------------- |
+| `scripts/review/pr-class.mjs --class <class>`          | Asserts the change touches files allowed for the resolved class       |
+| `scripts/review/proof-scope.mjs --class <class>`       | Asserts proof claims stay within the class's allowed scope            |
+| `scripts/review/no-overclaim.mjs --class <class>`      | Catches claims that overstate truth (e.g., SHIPPED for WIRED_PARTIAL) |
+| `scripts/review/receipt-integrity.mjs --class <class>` | Validates receipt-chain references in the diff                        |
 
 **Operator note:** new branches not matching any pattern will fail this workflow with exit 1. To add a new class, edit `bizra-review.yml` and add the case + corresponding allow-list in the review scripts. This is the **workflow-changes-authorized gate** per CLAUDE.md — only the operator may change CI workflows.
 
@@ -96,13 +98,14 @@ All four must report `success` before a slice on `main` is considered shipped. A
 
 **Job: `analyze`** · 15-min timeout · runs `Analyze (JavaScript)`
 
-| Step | Action |
-|---|---|
-| Checkout | `actions/checkout@de0fac2e` (v6.0.2) |
-| Initialize CodeQL | `github/codeql-action/init@7211b7c8` (v4.36.0) · `queries: security-and-quality` |
+| Step                    | Action                                                                              |
+| ----------------------- | ----------------------------------------------------------------------------------- |
+| Checkout                | `actions/checkout@de0fac2e` (v6.0.2)                                                |
+| Initialize CodeQL       | `github/codeql-action/init@7211b7c8` (v4.36.0) · `queries: security-and-quality`    |
 | Perform CodeQL Analysis | `github/codeql-action/analyze@7211b7c8` (v4.36.0) · category `/language:javascript` |
 
 **Triggers:**
+
 - `push` to `main`
 - `pull_request` against `main`
 - `schedule`: every Monday at 06:00 UTC (`cron: '0 6 * * 1'`) — catches new CodeQL rules even when no code lands.
@@ -123,11 +126,11 @@ All four must report `success` before a slice on `main` is considered shipped. A
 
 **Job: `scan`**
 
-| Step | Detail |
-|---|---|
-| Checkout | `actions/checkout@de0fac2e` with `fetch-depth: 0` (full history) |
-| Install gitleaks | Direct binary download · v8.30.1 · SHA-256 verified |
-| Scan | `./gitleaks detect --source . --no-banner --verbose --exit-code 1 --redact` |
+| Step             | Detail                                                                      |
+| ---------------- | --------------------------------------------------------------------------- |
+| Checkout         | `actions/checkout@de0fac2e` with `fetch-depth: 0` (full history)            |
+| Install gitleaks | Direct binary download · v8.30.1 · SHA-256 verified                         |
+| Scan             | `./gitleaks detect --source . --no-banner --verbose --exit-code 1 --redact` |
 
 **SHA-256 pin on the gitleaks binary:** `551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb`. The download URL is GitHub Releases (`gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz`). A SHA-256 mismatch fails the workflow before scanning — the binary itself is trust-pinned.
 
@@ -145,12 +148,12 @@ Every `uses:` reference in every workflow is **SHA-pinned**, not tag-pinned. Tag
 
 **Current pinning baseline (2026-05-24, post-PR #108 Node 24 migration):**
 
-| Action | SHA pin | Tag equivalent | Notes |
-|---|---|---|---|
-| `actions/checkout` | `de0fac2e4500dabe0009e67214ff5f5447ce83dd` | v6.0.2 | Node 24 native |
-| `actions/setup-node` | `48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e` | v6.4.0 | Node 24 native |
-| `github/codeql-action/init` | `7211b7c8077ea37d8641b6271f6a365a22a5fbfa` | v4.36.0 | Node 24 compatible |
-| `github/codeql-action/analyze` | `7211b7c8077ea37d8641b6271f6a365a22a5fbfa` | v4.36.0 | Node 24 compatible |
+| Action                         | SHA pin                                    | Tag equivalent | Notes              |
+| ------------------------------ | ------------------------------------------ | -------------- | ------------------ |
+| `actions/checkout`             | `de0fac2e4500dabe0009e67214ff5f5447ce83dd` | v6.0.2         | Node 24 native     |
+| `actions/setup-node`           | `48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e` | v6.4.0         | Node 24 native     |
+| `github/codeql-action/init`    | `7211b7c8077ea37d8641b6271f6a365a22a5fbfa` | v4.36.0        | Node 24 compatible |
+| `github/codeql-action/analyze` | `7211b7c8077ea37d8641b6271f6a365a22a5fbfa` | v4.36.0        | Node 24 compatible |
 
 **Update protocol** (canary-then-fan-out · memory: `feedback_per_workflow_reinventory_after_first_bump`):
 
@@ -166,15 +169,16 @@ Every `uses:` reference in every workflow is **SHA-pinned**, not tag-pinned. Tag
 
 ## 7. Node version policy
 
-| Surface | Version | Source |
-|---|---|---|
-| `package.json` engines | `>=20` | `package.json` |
-| `check` workflow matrix | 20.x + 22.x | `.github/workflows/check.yml` |
-| `BIZRA Review Gate` workflow | 22.x | `.github/workflows/bizra-review.yml` |
-| CodeQL / gitleaks workflow runtimes | Node 24 (action-internal) | post-PR #108 SHA bump |
-| Local development | operator's choice ≥ 20 | per-machine |
+| Surface                             | Version                   | Source                               |
+| ----------------------------------- | ------------------------- | ------------------------------------ |
+| `package.json` engines              | `>=20`                    | `package.json`                       |
+| `check` workflow matrix             | 20.x + 22.x               | `.github/workflows/check.yml`        |
+| `BIZRA Review Gate` workflow        | 22.x                      | `.github/workflows/bizra-review.yml` |
+| CodeQL / gitleaks workflow runtimes | Node 24 (action-internal) | post-PR #108 SHA bump                |
+| Local development                   | operator's choice ≥ 20    | per-machine                          |
 
 **Node 24 migration timeline:**
+
 - 2026-06-02 — GitHub deprecation: Node 20 → Node 24 forced default in actions
 - 2026-09-16 — Node 20 fully removed from runners
 - 2026-05-24 — this repo migrated proactively (PR #108) · all 4 workflows now Node 24 native via action SHA bumps · zero deprecation warnings across all workflow logs
@@ -188,6 +192,7 @@ Every `uses:` reference in every workflow is **SHA-pinned**, not tag-pinned. Tag
 Per CLAUDE.md user-scope operator discipline, **modifying CI workflows requires explicit operator authorization** — this is a halt-gate identical to `git push` to a shared branch.
 
 Specifically:
+
 - Editing any `.github/workflows/*.yml` requires typed-GO.
 - Adding a new workflow requires typed-GO + an ADR for non-trivial workflows.
 - Bumping a pinned action SHA requires typed-GO; the canary-then-fan-out protocol (§6) must be followed.
@@ -203,15 +208,15 @@ Specifically:
 
 **When a workflow fails:**
 
-| Symptom | First diagnostic |
-|---|---|
-| `check` red on Node 20.x but green on 22.x | An ES feature or test API requires Node 22; either patch the test or document the floor bump |
-| `check` red on both | Run `npm test` locally — if green locally but red in CI, examine the env-hygiene gate (env vars differ) |
-| `BIZRA Review Gate` red at `pr-class` | Branch name doesn't match any recognized class; either rename or add a case |
-| `BIZRA Review Gate` red at `no-overclaim` | Commit message or doc has a SHIPPED claim that should be WIRED_PARTIAL / TESTED / etc. |
-| `CodeQL` red | Read the Security tab; distinguish new findings (block) from inherited findings on the merge base (not blocking on the diff) |
-| `gitleaks` red | Read the redacted finding; either it's a real leak (rotate + remove from history) or add a `commits + paths` allowlist entry in `.gitleaks.toml` |
-| Workflow times out | Default 15 min on `BIZRA Review Gate` and `CodeQL` (other two have no explicit timeout); if exceeded, profile the slowest step — `npm run check` is the most likely culprit |
+| Symptom                                    | First diagnostic                                                                                                                                                            |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `check` red on Node 20.x but green on 22.x | An ES feature or test API requires Node 22; either patch the test or document the floor bump                                                                                |
+| `check` red on both                        | Run `npm test` locally — if green locally but red in CI, examine the env-hygiene gate (env vars differ)                                                                     |
+| `BIZRA Review Gate` red at `pr-class`      | Branch name doesn't match any recognized class; either rename or add a case                                                                                                 |
+| `BIZRA Review Gate` red at `no-overclaim`  | Commit message or doc has a SHIPPED claim that should be WIRED_PARTIAL / TESTED / etc.                                                                                      |
+| `CodeQL` red                               | Read the Security tab; distinguish new findings (block) from inherited findings on the merge base (not blocking on the diff)                                                |
+| `gitleaks` red                             | Read the redacted finding; either it's a real leak (rotate + remove from history) or add a `commits + paths` allowlist entry in `.gitleaks.toml`                            |
+| Workflow times out                         | Default 15 min on `BIZRA Review Gate` and `CodeQL` (other two have no explicit timeout); if exceeded, profile the slowest step — `npm run check` is the most likely culprit |
 
 **Re-running a workflow:** `gh run rerun <run-id>` or `gh run rerun <run-id> --failed` (only failed jobs). No need to push an empty commit just to re-trigger.
 
@@ -236,6 +241,7 @@ Specifically:
 ## Update protocol
 
 Re-refresh this document when:
+
 - A workflow is added, removed, or renamed.
 - A workflow's triggers change (e.g., new branch added to the `branches:` list).
 - A pinned action SHA is bumped (update §6 baseline table).

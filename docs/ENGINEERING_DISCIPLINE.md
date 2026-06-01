@@ -11,10 +11,25 @@ Five rules for any code change in this repo. Originally condensed from user-scop
 ## How this lands in practice
 
 - A bug-fix PR fixes the bug and nothing else. The cleanup goes in a follow-up.
-- A doc-only PR does not touch executable code. A code PR may include doc updates *for code it touches*, but does not import unrelated doctrine.
+- A doc-only PR does not touch executable code. A code PR may include doc updates _for code it touches_, but does not import unrelated doctrine.
 - New abstractions need a second concrete caller before they exist. Three similar lines is better than a premature abstraction.
 - New dependencies need a written justification. Dema's current zero-dep status is a feature, not an oversight.
 - Constants come from a named source. If a value lives in two places it will diverge.
+
+## Review gate: automated advisory + self-review fallback
+
+Ratified 2026-06-01 after five PRs (#119–#123) merged to `main` with **zero CodeRabbit review signal** — self-review carried every merge ad hoc. This formalizes that practice.
+
+- **The required review is the CI gates, not CodeRabbit.** The four workflows (`test`, `check`, `BIZRA Review Gate`/`proof-quality`, `gitleaks`) plus the review scripts (`pr-class`, `proof-scope`, `no-overclaim`, `receipt-integrity`) always run and always gate. See [docs/CI_CD_PIPELINE.md](CI_CD_PIPELINE.md).
+- **CodeRabbit is a third-party _advisory_ layer, not a required gate.** It is frequently silent (credits exhausted, "review skipped", rate-limit). Its silence does **not** block merge — and it does **not** satisfy the review obligation either.
+- **A documented self-review is REQUIRED before merge when _either_:**
+  1. the advisory layer produced no signal, **or**
+  2. the diff contains novel (non-mirror) logic.
+- **Mirror exception.** A verbatim structural mirror of already-reviewed code may substitute a normalized **structural-identity diff** (proving zero logic drift) for a full self-review — e.g. a new proof producer cloned from a reviewed sibling. Novel composition or first-of-its-kind logic never qualifies.
+- **A self-review is evidence-based or it is nothing.** Read the actual committed diff, trace each real risk to the _code_ (not the PR description), and state a verdict — `SELF_REVIEW_CLEAN` or enumerated findings. Performative agreement is not a review.
+- **Record the verdict** on the PR or in the merge body so a replayer sees that review happened and on what basis.
+
+This is not a license to skip CodeRabbit when it works — when it posts a review, read it. It is the floor that holds when the advisory layer is absent.
 
 ## Halt gates that override auto-mode
 
