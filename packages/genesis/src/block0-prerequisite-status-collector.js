@@ -25,6 +25,8 @@ import {
   verifyAgentProfile,
   CANONICAL_AGENTS,
 } from "../../agents/src/agent-profile-registry.js";
+import { verifyCanonicalChain } from "../../receipts/src/canonical-receipt.js";
+import { verifyLedgerReplay } from "../../econ/src/dual-token-ledger-replay.js";
 
 export const BLOCK0_PREREQUISITE_STATUS_COLLECTION_SCHEMA =
   "bizra.dema.block0_prerequisite_status_collection.v0.1";
@@ -89,6 +91,22 @@ export const SLOT_ADAPTERS = Object.freeze({
   sat_profile_proof_hashes: {
     kind: "hash_list",
     canonicalIds: CANONICAL_SAT,
+  },
+  // kind:"chain_root" → proofs[slot] is an ARRAY of ledger entries; an existing
+  // PURE chain verifier re-derives the deterministic root and the slot hash is
+  // the verifier's returned chain_root_hash. (No demaHome disk read — entries are
+  // passed in-memory.)
+  canonical_receipt_ledger_root_hash: {
+    kind: "chain_root",
+    verify: ({ proof, operatorPubkeyPem }) =>
+      verifyCanonicalChain({ entries: proof, pubkeyPem: operatorPubkeyPem }),
+    resultHashField: "chain_root_hash",
+  },
+  genesis_local_token_ledger_root_hash: {
+    kind: "chain_root",
+    verify: ({ proof, operatorPubkeyPem }) =>
+      verifyLedgerReplay({ entries: proof, pubkeyPem: operatorPubkeyPem }),
+    resultHashField: "chain_root_hash",
   },
 });
 
@@ -211,6 +229,14 @@ export function collectBlock0PrerequisiteStatus({
             verified: true,
             proof_hashes: Object.freeze([...result.proof_hashes]),
           }
+        : { verified: false, reason: result.reason };
+    } else if (adapter.kind === "chain_root") {
+      // proofs[slot] is an ARRAY of ledger entries; a pure chain verifier
+      // re-derives the deterministic root. The slot hash is the returned root.
+      const result = adapter.verify({ proof: proofs[slot], operatorPubkeyPem });
+      verified = result.verified === true;
+      verification = verified
+        ? { verified: true, root_hash: result[adapter.resultHashField] }
         : { verified: false, reason: result.reason };
     } else {
       // scalar_hash: single proof object through the slot's verifier.

@@ -98,6 +98,10 @@ export function judgeBlock0FromProofs({
         manifestValue,
         collection.slot_verification[slot].proof_hashes,
       );
+    } else if (adapter.kind === "chain_root") {
+      // Bind the manifest's committed root to the verifier-derived chain root.
+      const rootHash = collection.slot_verification[slot].root_hash;
+      bound = manifestValue !== undefined && manifestValue === rootHash;
     } else {
       const proofHash = proofs[slot]?.[adapter.proofHashField];
       bound = manifestValue !== undefined && manifestValue === proofHash;
