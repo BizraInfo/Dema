@@ -113,6 +113,18 @@ export function judgeBlock0FromProofs({
             proofs[slot] != null &&
             manifest[f] === proofs[slot][f],
         );
+    } else if (adapter.kind === "attestation") {
+      // Composite bind: the manifest's keyconsent_integration_complete (bool) +
+      // keyconsent_truth_labels (array) must equal the verified attestation's.
+      const v = collection.slot_verification[slot];
+      bound =
+        isPlainObject(manifest) &&
+        manifest.keyconsent_integration_complete ===
+          v.keyconsent_integration_complete &&
+        sameStringArray(
+          manifest.keyconsent_truth_labels,
+          v.keyconsent_truth_labels,
+        );
     } else {
       const proofHash = proofs[slot]?.[adapter.proofHashField];
       bound = manifestValue !== undefined && manifestValue === proofHash;
