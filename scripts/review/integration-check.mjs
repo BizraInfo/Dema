@@ -68,9 +68,12 @@ function architectureRows(source) {
   return rows;
 }
 
-function parseSmokeCommands(source) {
+export function parseSmokeCommands(source) {
   const commands = [];
-  const re = /\[\s*"([^"]+)"\s*,\s*\[((?:\s*"[^"]*"\s*,?\s*)*)\]\s*\]/g;
+  // Linear regex (no nested quantifiers → no catastrophic backtracking): the
+  // inner args list is captured flat as [^\]]* and re-parsed below by the
+  // per-string matchAll, so the previous (?:\s*"…"\s*,?\s*)* nesting is unneeded.
+  const re = /\[\s*"([^"]+)"\s*,\s*\[([^\]]*)\]\s*\]/g;
   for (const match of source.matchAll(re)) {
     commands.push([
       match[1],
