@@ -271,6 +271,20 @@ describe("BLOCK0-1B · verifyBlock0Manifest", () => {
         }).reason,
         "claim_boundary_violation",
       );
+      // exact key set — a smuggled extra (true) flag must be rejected
+      assert.equal(
+        verifyBlock0Manifest({
+          manifest: {
+            ...manifest,
+            claim_boundary: {
+              ...manifest.claim_boundary,
+              secretly_public_economy: true,
+            },
+          },
+          operatorPubkeyPem: pubkeyPem,
+        }).reason,
+        "claim_boundary_unexpected_field",
+      );
     } finally {
       await rm(home, { recursive: true, force: true });
     }

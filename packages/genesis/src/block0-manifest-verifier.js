@@ -182,6 +182,11 @@ function validateClaimBoundary(boundary) {
   if (!boundary || typeof boundary !== "object" || Array.isArray(boundary)) {
     return "claim_boundary_invalid";
   }
+  // Exact key set — a signed manifest must not smuggle extra claim flags past
+  // a fail-closed boundary (e.g. an added true flag alongside the 7 required).
+  if (Object.keys(boundary).length !== REQUIRED_FALSE_BOUNDARY_FIELDS.length) {
+    return "claim_boundary_unexpected_field";
+  }
   for (const f of REQUIRED_FALSE_BOUNDARY_FIELDS) {
     if (boundary[f] !== false) return "claim_boundary_violation";
   }
