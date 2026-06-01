@@ -19,16 +19,47 @@ import { verifyNode0IdentityProof } from "./node0-identity-proof.js";
 import { verifyUrpResourceStatusProof } from "./urp-resource-status-proof.js";
 import { verifyDemaRealmStateProof } from "./dema-realm-state-proof.js";
 import { BLOCK0_PREREQUISITE_SLOTS } from "./block0-manifest-verifier.js";
+import { verifyBaseline } from "../../perf/src/perf-baseline.js";
+import { verifyLesson } from "../../learn/src/how-lesson-writer.js";
 
 export const BLOCK0_PREREQUISITE_STATUS_COLLECTION_SCHEMA =
   "bizra.dema.block0_prerequisite_status_collection.v0.1";
 
-// The only slots with a runnable genesis producer this collector can verify.
-// Each maps a slot name → its pure external-pubkey verifier.
-const SLOT_VERIFIERS = Object.freeze({
-  node0_identity_proof_hash: verifyNode0IdentityProof,
-  urp_resource_status_proof_hash: verifyUrpResourceStatusProof,
-  dema_realm_state_proof_hash: verifyDemaRealmStateProof,
+// COLLECTOR-2A · uniform slot-verifier adapter interface.
+//
+// Each Block0 slot maps to { verify, proofHashField }:
+//   - verify: a uniform ({proof, operatorPubkeyPem}) → {verified, reason?}
+//     wrapper over the slot's real external-pubkey verifier. Native genesis
+//     verifiers already match the contract; domain verifiers with a different
+//     signature (({domainObj, pubkeyPem})) are adapted inline.
+//   - proofHashField: the field on the proof object carrying the proof_hash the
+//     Block0 manifest commits for that slot (the judge binds manifest[slot] ===
+//     proof[proofHashField]). For native genesis slots this equals the slot name.
+//
+// Only slots present here are collectable; any other key fails closed.
+export const SLOT_ADAPTERS = Object.freeze({
+  node0_identity_proof_hash: {
+    verify: verifyNode0IdentityProof,
+    proofHashField: "node0_identity_proof_hash",
+  },
+  urp_resource_status_proof_hash: {
+    verify: verifyUrpResourceStatusProof,
+    proofHashField: "urp_resource_status_proof_hash",
+  },
+  dema_realm_state_proof_hash: {
+    verify: verifyDemaRealmStateProof,
+    proofHashField: "dema_realm_state_proof_hash",
+  },
+  performance_baseline_proof_hash: {
+    verify: ({ proof, operatorPubkeyPem }) =>
+      verifyBaseline({ baseline: proof, pubkeyPem: operatorPubkeyPem }),
+    proofHashField: "baseline_proof_hash",
+  },
+  house_of_wisdom_first_lesson_proof_hash: {
+    verify: ({ proof, operatorPubkeyPem }) =>
+      verifyLesson({ lesson: proof, pubkeyPem: operatorPubkeyPem }),
+    proofHashField: "lesson_proof_hash",
+  },
 });
 
 function isPlainObject(v) {
@@ -66,7 +97,7 @@ export function collectBlock0PrerequisiteStatus({
   }
   // Exact slot vocabulary — never collect a proof into an unknown/foreign slot.
   for (const slot of Object.keys(proofs)) {
-    if (!Object.prototype.hasOwnProperty.call(SLOT_VERIFIERS, slot)) {
+    if (!Object.prototype.hasOwnProperty.call(SLOT_ADAPTERS, slot)) {
       return fail("unexpected_proof_slot");
     }
   }
@@ -76,11 +107,13 @@ export function collectBlock0PrerequisiteStatus({
   let producer_live_count = 0;
   let provided_slot_count = 0;
 
-  for (const slot of Object.keys(SLOT_VERIFIERS)) {
+  for (const slot of Object.keys(SLOT_ADAPTERS)) {
     if (!Object.prototype.hasOwnProperty.call(proofs, slot)) continue;
     provided_slot_count += 1;
-    const verify = SLOT_VERIFIERS[slot];
-    const result = verify({ proof: proofs[slot], operatorPubkeyPem });
+    const result = SLOT_ADAPTERS[slot].verify({
+      proof: proofs[slot],
+      operatorPubkeyPem,
+    });
     const verified = result.verified === true;
     // A status mark is ONLY ever set from a real verification result. There is
     // no path that asserts PRODUCER_LIVE without verified:true.
