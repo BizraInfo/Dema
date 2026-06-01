@@ -81,10 +81,6 @@ function isPlaceholderHash(s) {
 function isNonEmptyString(s) {
   return typeof s === "string" && s.length > 0;
 }
-function fingerprintFromPem(pubkeyPem) {
-  const pk = createPublicKey(pubkeyPem);
-  return sha256(pk.export({ type: "spki", format: "der" }).toString("hex"));
-}
 
 function fail(reason) {
   return Object.freeze({
@@ -143,7 +139,43 @@ function validateManifestShape(m) {
   ) {
     return "poi_rule_invalid";
   }
+  // The manifest commits the consent proof hash (SEAL_BLOCK0 consent at build).
+  // Without it, an operator-key-signed envelope with no consent could verify.
+  if (!isSha256Hex(m.consent_proof_hash)) {
+    return "consent_proof_hash_missing";
+  }
   return null;
+}
+
+// Re-derive block0_id from the committed fields (mirrors the generator's
+// freezePrerequisites shape) so an arbitrary 64-hex block0_id is rejected —
+// the content-address / consent-target binding must hold.
+function deriveBlock0Id(m) {
+  const prerequisites = {
+    keyconsent_integration_complete: m.keyconsent_integration_complete,
+    keyconsent_truth_labels: m.keyconsent_truth_labels,
+    canonical_receipt_ledger_root_hash: m.canonical_receipt_ledger_root_hash,
+    node0_identity_proof_hash: m.node0_identity_proof_hash,
+    dema_realm_state_proof_hash: m.dema_realm_state_proof_hash,
+    pat_profile_proof_hashes: m.pat_profile_proof_hashes,
+    sat_profile_proof_hashes: m.sat_profile_proof_hashes,
+    urp_resource_status_proof_hash: m.urp_resource_status_proof_hash,
+    genesis_local_token_ledger_root_hash:
+      m.genesis_local_token_ledger_root_hash,
+    poi_rule_id: m.poi_rule_id,
+    poi_rule_version: m.poi_rule_version,
+    full_flywheel_run_receipt_hash: m.full_flywheel_run_receipt_hash,
+    performance_baseline_proof_hash: m.performance_baseline_proof_hash,
+    house_of_wisdom_first_lesson_proof_hash:
+      m.house_of_wisdom_first_lesson_proof_hash,
+  };
+  return sha256(
+    stableStringify({
+      prerequisites,
+      claim_boundary: m.claim_boundary,
+      created_at_iso: m.created_at_iso,
+    }),
+  );
 }
 
 function validateClaimBoundary(boundary) {
@@ -224,9 +256,18 @@ export function verifyBlock0Manifest({
   if (boundaryError) return fail(boundaryError);
 
   // ── Operator authority ────────────────────────────────────────────
+  // Block0/operator authority is defined as Ed25519. verifyPayload would also
+  // accept RSA/EC, so an RSA-signed envelope with an RSA fingerprint could
+  // otherwise verify — reject any non-Ed25519 operator key.
   let fingerprint;
   try {
-    fingerprint = fingerprintFromPem(operatorPubkeyPem);
+    const pk = createPublicKey(operatorPubkeyPem);
+    if (pk.asymmetricKeyType !== "ed25519") {
+      return fail("operator_key_not_ed25519");
+    }
+    fingerprint = sha256(
+      pk.export({ type: "spki", format: "der" }).toString("hex"),
+    );
   } catch {
     return fail("external_pubkey_required");
   }
@@ -246,6 +287,13 @@ export function verifyBlock0Manifest({
     return fail("block0_signature_invalid");
   }
   if (!signatureOk) return fail("block0_signature_invalid");
+
+  // block0_id must be the real content address over the committed fields, not
+  // an arbitrary 64-hex value — this is the consent-target / content-address
+  // binding the manifest relies on.
+  if (manifest.block0_id !== deriveBlock0Id(manifest)) {
+    return fail("block0_id_mismatch");
+  }
 
   // ── Sealability — from the explicit status map ONLY ───────────────
   const seal = evaluatePrerequisiteStatusMap(prerequisiteStatusMap);

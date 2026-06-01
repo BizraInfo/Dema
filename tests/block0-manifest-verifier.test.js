@@ -23,15 +23,20 @@ import {
   BLOCK0_ACTION_TYPE,
 } from "../packages/genesis/src/block0-manifest.js";
 import { buildConsentProof } from "../packages/receipts/src/consent-proof.js";
-import { generateEd25519Keypair } from "../packages/receipts/src/authorship-signature.js";
+import {
+  generateEd25519Keypair,
+  signPayload,
+} from "../packages/receipts/src/authorship-signature.js";
 import {
   initAuthorshipKey,
   KEY_INIT_CONSENT_PHRASE,
+  loadPrivateKey,
 } from "../packages/receipts/src/authorship-key-store.js";
 import {
   sha256,
   stableStringify,
 } from "../packages/consent/src/consent-common.js";
+import { generateKeyPairSync } from "node:crypto";
 
 const CREATED = "2026-06-01T08:00:00.000Z";
 const H = (s) => sha256(`block0-verifier-fixture:${s}`); // real sha256, not a sentinel
@@ -287,6 +292,54 @@ describe("BLOCK0-1B · verifyBlock0Manifest", () => {
         assert.equal(r.boundary.federation_used, false);
         assert.equal(r.boundary.public_economic_claim_made, false);
       }
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("fail-closed: missing consent_proof_hash / non-Ed25519 operator key / forged block0_id", async () => {
+    const home = await freshHome();
+    try {
+      const { manifest, pubkeyPem } = await buildValidManifest(home);
+
+      // (1) consent_proof_hash missing — operator-key-signed but no consent.
+      const m1 = { ...manifest };
+      delete m1.consent_proof_hash;
+      assert.equal(
+        verifyBlock0Manifest({ manifest: m1, operatorPubkeyPem: pubkeyPem })
+          .reason,
+        "consent_proof_hash_missing",
+      );
+
+      // (2) non-Ed25519 operator key (RSA) is rejected before signature.
+      const rsa = generateKeyPairSync("rsa", { modulusLength: 2048 });
+      assert.equal(
+        verifyBlock0Manifest({
+          manifest,
+          operatorPubkeyPem: rsa.publicKey.export({
+            type: "spki",
+            format: "pem",
+          }),
+        }).reason,
+        "operator_key_not_ed25519",
+      );
+
+      // (3) forged block0_id: re-sign a body with an arbitrary (real-looking)
+      // block0_id → proof hash + signature pass, but it is not the content
+      // address over the committed fields.
+      const privateKeyPem = await loadPrivateKey(home);
+      const { block0_signature_b64, block0_proof_hash, ...body } = manifest;
+      const forgedBody = { ...body, block0_id: sha256("forged-block0-id") };
+      const forged = {
+        ...forgedBody,
+        block0_signature_b64: signPayload(forgedBody, privateKeyPem),
+        block0_proof_hash: sha256(stableStringify(forgedBody)),
+      };
+      assert.equal(
+        verifyBlock0Manifest({ manifest: forged, operatorPubkeyPem: pubkeyPem })
+          .reason,
+        "block0_id_mismatch",
+      );
     } finally {
       await rm(home, { recursive: true, force: true });
     }
