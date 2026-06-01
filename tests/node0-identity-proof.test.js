@@ -309,4 +309,39 @@ describe("NODE0-IDENTITY-1A · buildNode0IdentityProof / verify", () => {
       await rm(home, { recursive: true, force: true });
     }
   });
+
+  it("fail-closed (no throw): malformed pubkey, unexpected top-level field, bad consent hash", async () => {
+    const home = await freshHome();
+    try {
+      // node0IdentityCommitment returns null (not throw) on a malformed key.
+      assert.equal(
+        node0IdentityCommitment({
+          operatorPubkeyPem:
+            "-----BEGIN PUBLIC KEY-----\nnope\n-----END PUBLIC KEY-----",
+          createdAtIso: CREATED,
+        }),
+        null,
+      );
+
+      const { r, pubkeyPem } = await buildProof(home);
+      // an extra top-level field must be rejected even if otherwise well-formed
+      assert.equal(
+        verifyNode0IdentityProof({
+          proof: { ...r.proof, legal_identity_claimed: true },
+          operatorPubkeyPem: pubkeyPem,
+        }).reason,
+        "proof_unexpected_field",
+      );
+      // a non-sha256 consent_proof_hash must fail closed
+      assert.equal(
+        verifyNode0IdentityProof({
+          proof: { ...r.proof, consent_proof_hash: "not-a-hash" },
+          operatorPubkeyPem: pubkeyPem,
+        }).reason,
+        "consent_proof_hash_invalid",
+      );
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
 });

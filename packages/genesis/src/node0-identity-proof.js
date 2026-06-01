@@ -48,10 +48,25 @@ function defaultClaimBoundary() {
   };
 }
 
+// Fail-closed (never throws): a missing/malformed PEM or a non-Ed25519 key
+// returns { error } so every caller (commitment, build, verify) handles it via
+// the envelope rather than an uncaught exception.
 function ed25519FingerprintFromPem(pubkeyPem) {
-  const pk = createPublicKey(pubkeyPem);
-  if (pk.asymmetricKeyType !== "ed25519")
+  if (
+    typeof pubkeyPem !== "string" ||
+    !pubkeyPem.includes("BEGIN PUBLIC KEY")
+  ) {
+    return { error: "external_pubkey_required" };
+  }
+  let pk;
+  try {
+    pk = createPublicKey(pubkeyPem);
+  } catch {
+    return { error: "external_pubkey_required" };
+  }
+  if (pk.asymmetricKeyType !== "ed25519") {
     return { error: "operator_key_not_ed25519" };
+  }
   return {
     fingerprint: sha256(
       pk.export({ type: "spki", format: "der" }).toString("hex"),
@@ -232,7 +247,7 @@ export function verifyNode0IdentityProof({ proof, operatorPubkeyPem } = {}) {
   ) {
     return reject("external_pubkey_required");
   }
-  for (const f of [
+  const REQUIRED = [
     "node0_identity_id",
     "genesis_node_id",
     "genesis_human_id",
@@ -242,24 +257,29 @@ export function verifyNode0IdentityProof({ proof, operatorPubkeyPem } = {}) {
     "created_at_iso",
     "node0_identity_signature_b64",
     "node0_identity_proof_hash",
-  ]) {
+  ];
+  for (const f of REQUIRED) {
     if (proof[f] === undefined || proof[f] === null) {
       return reject(`structural_missing_field_${f}`);
     }
   }
+  // Exact top-level shape — a re-signed proof must not smuggle extra top-level
+  // fields (e.g. a misleading claim) past the fail-closed boundary.
+  if (Object.keys(proof).length !== REQUIRED.length + 1 /* schema */) {
+    return reject("proof_unexpected_field");
+  }
   if (!isSha256Hex(proof.node0_identity_proof_hash)) {
     return reject("node0_identity_proof_hash_invalid");
   }
-
-  // Operator authority — external pubkey, Ed25519 only.
-  let fingerprint;
-  try {
-    const fp = ed25519FingerprintFromPem(operatorPubkeyPem);
-    if (fp.error) return reject(fp.error);
-    fingerprint = fp.fingerprint;
-  } catch {
-    return reject("external_pubkey_required");
+  // The committed consent reference must be a canonical sha256 hex.
+  if (!isSha256Hex(proof.consent_proof_hash)) {
+    return reject("consent_proof_hash_invalid");
   }
+
+  // Operator authority — external pubkey, Ed25519 only (fail-closed, no throw).
+  const fp = ed25519FingerprintFromPem(operatorPubkeyPem);
+  if (fp.error) return reject(fp.error);
+  const fingerprint = fp.fingerprint;
   if (proof.operator_public_key_fingerprint !== fingerprint) {
     return reject("operator_key_mismatch");
   }
