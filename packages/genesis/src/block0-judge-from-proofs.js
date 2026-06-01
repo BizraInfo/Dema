@@ -102,6 +102,17 @@ export function judgeBlock0FromProofs({
       // Bind the manifest's committed root to the verifier-derived chain root.
       const rootHash = collection.slot_verification[slot].root_hash;
       bound = manifestValue !== undefined && manifestValue === rootHash;
+    } else if (adapter.kind === "rule_id") {
+      // Composite bind: the manifest's poi_rule_id/version (separate fields, NOT
+      // manifest[slot]) must each equal the recognized proof's fields.
+      bound =
+        isPlainObject(manifest) &&
+        adapter.manifestFields.every(
+          (f) =>
+            manifest[f] !== undefined &&
+            proofs[slot] != null &&
+            manifest[f] === proofs[slot][f],
+        );
     } else {
       const proofHash = proofs[slot]?.[adapter.proofHashField];
       bound = manifestValue !== undefined && manifestValue === proofHash;

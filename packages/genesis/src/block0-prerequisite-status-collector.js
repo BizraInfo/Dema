@@ -27,9 +27,25 @@ import {
 } from "../../agents/src/agent-profile-registry.js";
 import { verifyCanonicalChain } from "../../receipts/src/canonical-receipt.js";
 import { verifyLedgerReplay } from "../../econ/src/dual-token-ledger-replay.js";
+import {
+  RULE_ID as POI_REPLAY_RULE_ID,
+  evaluate as poiReplayEvaluate,
+} from "../../rules/src/rule-consent-replay-verification.v0.1.js";
 
 export const BLOCK0_PREREQUISITE_STATUS_COLLECTION_SCHEMA =
   "bizra.dema.block0_prerequisite_status_collection.v0.1";
+
+// Canonical PoI rule registry — sourced from the REAL rule modules (RULE_ID +
+// executable evaluate). A poi_rule slot is honest only if its declared
+// (id, version) resolves here AND the rule's evaluate is executable. This is a
+// recognition check, not a rubber-stamp on the manifest boolean.
+const CANONICAL_POI_RULES = Object.freeze([
+  Object.freeze({
+    rule_id: POI_REPLAY_RULE_ID,
+    version: "0.1.0",
+    evaluate: poiReplayEvaluate,
+  }),
+]);
 
 const CANONICAL_PAT = Object.freeze(
   CANONICAL_AGENTS.filter((a) => a.agent_class === "PAT").map(
@@ -108,6 +124,15 @@ export const SLOT_ADAPTERS = Object.freeze({
       verifyLedgerReplay({ entries: proof, pubkeyPem: operatorPubkeyPem }),
     resultHashField: "chain_root_hash",
   },
+  // kind:"rule_id" → proofs[slot] is {poi_rule_id, poi_rule_version}; the slot is
+  // honest only if that pair is a RECOGNIZED canonical rule with executable
+  // evaluate. The judge binds the COMPOSITE manifest fields (manifestFields),
+  // not a single manifest[slot] hash.
+  poi_rule: {
+    kind: "rule_id",
+    canonicalRules: CANONICAL_POI_RULES,
+    manifestFields: ["poi_rule_id", "poi_rule_version"],
+  },
 });
 
 function isPlainObject(v) {
@@ -165,6 +190,37 @@ export function collectCanonicalProfileList({
   return {
     verified: true,
     proof_hashes: canonicalIds.map((id) => byId.get(id)),
+  };
+}
+
+// Recognize a declared PoI rule against the canonical registry. Honest check:
+// (id, version) must match a registered canonical rule AND that rule's evaluate
+// must be executable — proving the declared rule identity is real + loadable, not
+// just structurally well-formed. Pure.
+export function collectCanonicalRuleId({ proof, canonicalRules }) {
+  if (!isPlainObject(proof)) {
+    return { verified: false, reason: "poi_rule_proof_invalid" };
+  }
+  const { poi_rule_id, poi_rule_version } = proof;
+  if (
+    typeof poi_rule_id !== "string" ||
+    poi_rule_id.length === 0 ||
+    typeof poi_rule_version !== "string" ||
+    poi_rule_version.length === 0
+  ) {
+    return { verified: false, reason: "poi_rule_proof_invalid" };
+  }
+  const match = canonicalRules.find(
+    (r) => r.rule_id === poi_rule_id && r.version === poi_rule_version,
+  );
+  if (!match) return { verified: false, reason: "poi_rule_unrecognized" };
+  if (typeof match.evaluate !== "function") {
+    return { verified: false, reason: "poi_rule_not_executable" };
+  }
+  return {
+    verified: true,
+    rule_id: poi_rule_id,
+    rule_version: poi_rule_version,
   };
 }
 
@@ -237,6 +293,21 @@ export function collectBlock0PrerequisiteStatus({
       verified = result.verified === true;
       verification = verified
         ? { verified: true, root_hash: result[adapter.resultHashField] }
+        : { verified: false, reason: result.reason };
+    } else if (adapter.kind === "rule_id") {
+      // proofs[slot] is {<field>...}; the (id, version) must resolve to a
+      // recognized canonical rule with an executable evaluate.
+      const result = collectCanonicalRuleId({
+        proof: proofs[slot],
+        canonicalRules: adapter.canonicalRules,
+      });
+      verified = result.verified === true;
+      verification = verified
+        ? {
+            verified: true,
+            rule_id: result.rule_id,
+            rule_version: result.rule_version,
+          }
         : { verified: false, reason: result.reason };
     } else {
       // scalar_hash: single proof object through the slot's verifier.
