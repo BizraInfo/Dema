@@ -19,20 +19,21 @@
 //
 // Pure: no key load, no clock, no network, no write, no repo scan.
 
-import { collectBlock0PrerequisiteStatus } from "./block0-prerequisite-status-collector.js";
+import {
+  collectBlock0PrerequisiteStatus,
+  SLOT_ADAPTERS,
+} from "./block0-prerequisite-status-collector.js";
 import { verifyBlock0Manifest } from "./block0-manifest-verifier.js";
 
 export const BLOCK0_JUDGED_FROM_PROOFS_SCHEMA =
   "bizra.dema.block0_judged_from_proofs.v0.1";
 
-// For the 3 collectable slots, the proof's self-declared proof_hash field name
-// is identical to the slot name (verified in the producers), so the manifest
-// bind is manifest[slot] === proof[slot].
-const COLLECTABLE_SLOTS = Object.freeze([
-  "node0_identity_proof_hash",
-  "urp_resource_status_proof_hash",
-  "dema_realm_state_proof_hash",
-]);
+// COLLECTOR-2A · the collectable slots + their proof-hash field come from the
+// single SLOT_ADAPTERS registry. The manifest bind is
+// manifest[slot] === proof[SLOT_ADAPTERS[slot].proofHashField] — for native
+// genesis slots proofHashField equals the slot name; adapter slots (e.g.
+// performance_baseline_proof_hash → baseline_proof_hash) differ.
+const COLLECTABLE_SLOTS = Object.freeze(Object.keys(SLOT_ADAPTERS));
 
 function isPlainObject(v) {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -87,7 +88,7 @@ export function judgeBlock0FromProofs({
       continue;
     }
     const manifestHash = isPlainObject(manifest) ? manifest[slot] : undefined;
-    const proofHash = proofs[slot]?.[slot];
+    const proofHash = proofs[slot]?.[SLOT_ADAPTERS[slot].proofHashField];
     if (manifestHash !== undefined && manifestHash === proofHash) {
       slot_binding[slot] = Object.freeze({ bound: true });
       judged_status_map[slot] = "PRODUCER_LIVE";
