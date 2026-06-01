@@ -31,6 +31,7 @@ import {
   RULE_ID as POI_REPLAY_RULE_ID,
   evaluate as poiReplayEvaluate,
 } from "../../rules/src/rule-consent-replay-verification.v0.1.js";
+import { verifyKeyconsentIntegrationProof } from "./keyconsent-integration-proof.js";
 
 export const BLOCK0_PREREQUISITE_STATUS_COLLECTION_SCHEMA =
   "bizra.dema.block0_prerequisite_status_collection.v0.1";
@@ -132,6 +133,14 @@ export const SLOT_ADAPTERS = Object.freeze({
     kind: "rule_id",
     canonicalRules: CANONICAL_POI_RULES,
     manifestFields: ["poi_rule_id", "poi_rule_version"],
+  },
+  // kind:"attestation" → proofs[slot] is a signed functional attestation; the
+  // verifier confirms the signature AND that every functional check measured
+  // true. The judge composite-binds the manifest's bool + labels-array fields.
+  keyconsent_integration: {
+    kind: "attestation",
+    verify: ({ proof, operatorPubkeyPem }) =>
+      verifyKeyconsentIntegrationProof({ proof, operatorPubkeyPem }),
   },
 });
 
@@ -307,6 +316,22 @@ export function collectBlock0PrerequisiteStatus({
             verified: true,
             rule_id: result.rule_id,
             rule_version: result.rule_version,
+          }
+        : { verified: false, reason: result.reason };
+    } else if (adapter.kind === "attestation") {
+      // proofs[slot] is a signed functional attestation; verify confirms the
+      // signature + that every check measured true, and surfaces the composite
+      // bind fields the judge needs.
+      const result = adapter.verify({ proof: proofs[slot], operatorPubkeyPem });
+      verified = result.verified === true;
+      verification = verified
+        ? {
+            verified: true,
+            keyconsent_integration_complete:
+              result.keyconsent_integration_complete,
+            keyconsent_truth_labels: Object.freeze([
+              ...result.keyconsent_truth_labels,
+            ]),
           }
         : { verified: false, reason: result.reason };
     } else {
