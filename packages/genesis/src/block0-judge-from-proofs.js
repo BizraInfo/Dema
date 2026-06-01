@@ -22,6 +22,7 @@
 import {
   collectBlock0PrerequisiteStatus,
   SLOT_ADAPTERS,
+  sameStringArray,
 } from "./block0-prerequisite-status-collector.js";
 import { verifyBlock0Manifest } from "./block0-manifest-verifier.js";
 
@@ -87,9 +88,21 @@ export function judgeBlock0FromProofs({
       }
       continue;
     }
-    const manifestHash = isPlainObject(manifest) ? manifest[slot] : undefined;
-    const proofHash = proofs[slot]?.[SLOT_ADAPTERS[slot].proofHashField];
-    if (manifestHash !== undefined && manifestHash === proofHash) {
+    const adapter = SLOT_ADAPTERS[slot];
+    const manifestValue = isPlainObject(manifest) ? manifest[slot] : undefined;
+    let bound;
+    if (adapter.kind === "hash_list") {
+      // Bind the manifest's committed hash array to the collected, canonically
+      // ordered proof_hashes (order-sensitive — a reordered manifest fails).
+      bound = sameStringArray(
+        manifestValue,
+        collection.slot_verification[slot].proof_hashes,
+      );
+    } else {
+      const proofHash = proofs[slot]?.[adapter.proofHashField];
+      bound = manifestValue !== undefined && manifestValue === proofHash;
+    }
+    if (bound) {
       slot_binding[slot] = Object.freeze({ bound: true });
       judged_status_map[slot] = "PRODUCER_LIVE";
       bound_live_count += 1;
