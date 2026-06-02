@@ -126,6 +126,7 @@ Dema does not own dangerous execution. It talks to adapters. Adapters talk to go
 
 Dema includes professional management, DevOps, and QA blueprint surfaces for planning only:
 
+- `dema genesis composition blueprint` exposes the NODE0-OSTREE-1A delivery blueprint around the signed Node0 composition manifest: management Body of Knowledge, DevOps posture, CI/CD gate ladder, performance model, QA thresholds, and explicit blocked effects. It does not build, sign, deploy, persist, federate, mint, mutate CI, or adopt libostree.
 - `dema mcp blueprint` describes MCP integration boundaries, validation, retry, and redaction expectations without calling tools or accessing credentials.
 - `dema amana contracts preview` classifies Amana-adjacent contract primitives, current overlap, import risk, and proof gates without importing external snapshot code or unblocking Step 7.
 - `dema roadmap preview` organizes advisory architecture, security, performance, documentation, DevOps, QA, and ethics work without executing tasks or enforcing gates.
@@ -133,6 +134,10 @@ Dema includes professional management, DevOps, and QA blueprint surfaces for pla
 - `dema ihsan floor preview` checks an externally supplied scalar against the floor without claiming canonical scoring, certification, or SAT admissibility.
 - `dema behavior modulation preview` models visible, reversible guidance modulation under exact consent while rejecting covert persuasion, manipulation, and other unsafe shaping.
 - `npm run release:readiness` reports release risks and launch blockers without deployment, certification, runtime execution, or token/economic claims.
+
+| Command | Primary surface | Effect boundary |
+| --- | --- | --- |
+| `dema genesis composition blueprint` | `packages/core/src/genesis-composition-blueprint-preview.js` | Read-only schema-tagged preview. No libostree, daemon, deploy/rollback surface, federation, network, receipt mint, chain advance, or CI workflow mutation. |
 
 ## Behavioral modulation preview
 

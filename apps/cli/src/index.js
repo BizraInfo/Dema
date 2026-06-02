@@ -355,6 +355,10 @@ import {
   formatMissionManifest,
 } from "../../../packages/mission/src/mission-manifest.js";
 import {
+  buildGenesisCompositionBlueprintPreview,
+  formatGenesisCompositionBlueprintPreview,
+} from "../../../packages/core/src/genesis-composition-blueprint-preview.js";
+import {
   buildThinkDryRun,
   formatThinkDryRun,
 } from "../../../packages/think/src/think-dry-run.js";
@@ -446,6 +450,15 @@ Proof:
                     Verify a proof passport. Default: envelope only (hash + structure
                     + boundary). With --deep: also re-verifies each referenced
                     authorship receipt file against passport metadata.
+
+Genesis:
+  dema genesis composition blueprint [--json]
+                    Preview the NODE0-OSTREE-1A delivery blueprint around the
+                    signed Node0 composition manifest: management Body of
+                    Knowledge, DevOps operating model, CI/CD gate ladder,
+                    performance model, and QA thresholds. Read-only. No
+                    libostree, no daemon, no federation, no deploy surface,
+                    no receipt mint, no CI workflow mutation.
 
 URP:
   dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]
@@ -732,6 +745,11 @@ const REGISTERED_COMMANDS_LIST = [
     description: "verify or demo Ed25519 authorship receipts",
   },
   { command: "proof", description: "generate portable proof passport" },
+  {
+    command: "genesis",
+    description:
+      "preview Genesis/OSTree composition blueprint (subcommand: composition blueprint)",
+  },
   {
     command: "memory",
     description:
@@ -1560,6 +1578,25 @@ async function cmd_proof(ctx) {
   console.error(
     "Usage: dema proof passport [--json] | dema proof passport verify <path>",
   );
+  process.exitCode = 1;
+  return;
+}
+
+async function cmd_genesis(ctx) {
+  const { argv } = ctx;
+  const genesisSub = argv[1] ?? "";
+  const genesisAction = argv[2] ?? "";
+  const wantJsonG = wantsJson(argv);
+  if (genesisSub === "composition" && genesisAction === "blueprint") {
+    const preview = buildGenesisCompositionBlueprintPreview();
+    console.log(
+      wantJsonG
+        ? JSON.stringify(preview, null, 2)
+        : formatGenesisCompositionBlueprintPreview(preview),
+    );
+    return;
+  }
+  console.error("Usage: dema genesis composition blueprint [--json]");
   process.exitCode = 1;
   return;
 }
@@ -4671,6 +4708,7 @@ const COMMAND_TABLE = {
   witness: cmd_witness,
   authorship: cmd_authorship,
   proof: cmd_proof,
+  genesis: cmd_genesis,
   attest: cmd_attest,
   "verify-grounded": cmd_verify_grounded,
   urp: cmd_urp,
