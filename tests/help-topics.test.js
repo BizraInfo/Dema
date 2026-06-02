@@ -12,6 +12,7 @@ import {
   renderHelpCommand,
   renderHelpFlat,
 } from "../packages/core/src/help-topics.js";
+import { COMMAND_TABLE } from "../apps/cli/src/index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CLI_SRC = readFileSync(
@@ -19,12 +20,15 @@ const CLI_SRC = readFileSync(
   "utf8",
 );
 
-// Extract all top-level dispatch cases from the CLI source.
+// Extract all top-level dispatch cases from the CLI source. A command is
+// dispatchable if it has a `case "<cmd>":` in the switch OR a handler entry in
+// the exported COMMAND_TABLE (Track 2 dispatcher refactor migrates cases into
+// the table; both are real dispatch paths).
 function extractDispatchCases(source) {
   const cases = [...source.matchAll(/case\s+"([a-zA-Z][\w:-]*)"\s*:/g)].map(
     (m) => m[1],
   );
-  return new Set(cases);
+  return new Set([...cases, ...Object.keys(COMMAND_TABLE)]);
 }
 
 const dispatchCases = extractDispatchCases(CLI_SRC);
