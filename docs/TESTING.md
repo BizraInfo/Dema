@@ -288,6 +288,7 @@ node scripts/node0-self-check.mjs --verify
 node scripts/review/harness-gate.mjs
 node scripts/urp-stage3-closeout.mjs
 node scripts/urp-stage4-closeout.mjs
+node scripts/perf-bench.mjs
 ```
 
 | `tests/a2a-message-envelope-preview.test.js` | A2A message envelope preview v0.1: schema/mode, from/to non-empty + distinct, mission*id required, message_type enum (4 types), effect_level subset of {read} only (rejects write/execute/call), claims array, authority_transfer + dispatched false invariants, boundary all 7 flags false, deterministic + frozen, fresh-object-per-call, pure-module imports. |

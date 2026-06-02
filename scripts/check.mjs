@@ -118,6 +118,10 @@ export const commands = [
   ["node", ["scripts/review/harness-gate.mjs"]],
   ["node", ["scripts/urp-stage3-closeout.mjs"]],
   ["node", ["scripts/urp-stage4-closeout.mjs"]],
+  // PERF-MEASURE-1A regression-sanity gate: measures keyless hot-path latency +
+  // process metrics and fails only on a gross regression (generous ceilings,
+  // not SLOs). Runs last so a perf blip never masks a correctness failure.
+  ["node", ["scripts/perf-bench.mjs"]],
 ];
 
 export function runChecks(checks = commands) {
