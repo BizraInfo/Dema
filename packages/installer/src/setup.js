@@ -19,9 +19,21 @@ async function ensureDir(path) {
 }
 
 async function writeJsonIfMissing(path, value) {
-  if (await exists(path)) return { path, status: "existing" };
-  await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-  return { path, status: "created" };
+  // Atomic exclusive create: flag "wx" (O_CREAT|O_EXCL) fails closed if the
+  // path already exists — including as a symlink — eliminating the
+  // exists()-then-writeFile TOCTOU window and the symlink write-through it
+  // allowed (a symlinked target outside the dema root was followed and
+  // clobbered). EEXIST is the expected "already present" signal.
+  try {
+    await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, {
+      encoding: "utf8",
+      flag: "wx",
+    });
+    return { path, status: "created" };
+  } catch (err) {
+    if (err.code === "EEXIST") return { path, status: "existing" };
+    throw err;
+  }
 }
 
 async function sha256File(path) {
