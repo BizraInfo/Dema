@@ -244,7 +244,12 @@ describe("BLOCK0-PROPERTY · single-field mutation invariant", () => {
         "pat: control list must be PRODUCER_LIVE",
       );
       // mutate every field of the first profile → list must fail closed
-      for (const [field, mutatedProfile] of singleFieldMutations(profiles[0])) {
+      const patMuts = singleFieldMutations(profiles[0]);
+      assert.ok(
+        patMuts.length >= 4,
+        "pat: expected several profile fields to mutate (non-vacuous guard)",
+      );
+      for (const [field, mutatedProfile] of patMuts) {
         const mutatedList = [mutatedProfile, ...profiles.slice(1)];
         const r = collectBlock0PrerequisiteStatus({
           proofs: { [slot]: mutatedList },
@@ -254,6 +259,25 @@ describe("BLOCK0-PROPERTY · single-field mutation invariant", () => {
           r.status_map[slot],
           "NAMED_ONLY",
           `pat: mutating profile[0] field "${field}" MUST drop the list to NAMED_ONLY`,
+        );
+      }
+      // ...and EVERY other profile POSITION must be verified too — guards
+      // against a regression that only checks profile[0] and skips the rest.
+      for (let i = 1; i < profiles.length; i += 1) {
+        const [field, mutatedProfile] = singleFieldMutations(profiles[i])[0];
+        const list = [
+          ...profiles.slice(0, i),
+          mutatedProfile,
+          ...profiles.slice(i + 1),
+        ];
+        const r = collectBlock0PrerequisiteStatus({
+          proofs: { [slot]: list },
+          operatorPubkeyPem: pubkeyPem,
+        });
+        assert.equal(
+          r.status_map[slot],
+          "NAMED_ONLY",
+          `pat: mutating profile[${i}] field "${field}" MUST drop the list to NAMED_ONLY`,
         );
       }
     } finally {
