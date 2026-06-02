@@ -1,5 +1,9 @@
 import { buildConsentPlanPreview } from "../../consent/src/consent-planner.js";
-import { sha256, stableStringify } from "../../consent/src/consent-common.js";
+import {
+  assertIntentWithinBound,
+  sha256,
+  stableStringify,
+} from "../../consent/src/consent-common.js";
 
 const SCHEMA = "bizra.dema.mission_draft_preview.v0.1";
 
@@ -33,6 +37,7 @@ export function buildMissionDraftPreview({ intent, now = new Date() } = {}) {
   if (!naturalLanguage) {
     throw new Error("Mission draft requires a non-empty intent.");
   }
+  assertIntentWithinBound(naturalLanguage, "Mission draft intent");
 
   const consentPlan = buildConsentPlanPreview({ intent: naturalLanguage, now });
   const mission = {
@@ -41,7 +46,7 @@ export function buildMissionDraftPreview({ intent, now = new Date() } = {}) {
     category: consentPlan.mission_draft.category,
     data_domains: dataDomains(consentPlan.permissions),
     risk_level: consentPlan.mission_draft.risk_level,
-    current_phase: "DRAFT_INTENT"
+    current_phase: "DRAFT_INTENT",
   };
 
   return {
@@ -54,9 +59,10 @@ export function buildMissionDraftPreview({ intent, now = new Date() } = {}) {
     phase_gate: {
       current_phase: "DRAFT_INTENT",
       next_phase: "CONSENT_NEGOTIATION",
-      requirement: "human reviews and approves a committed ConsentScope in governed Node0 runtime",
+      requirement:
+        "human reviews and approves a committed ConsentScope in governed Node0 runtime",
       consent_scope_committed: false,
-      effect_caps_minted: false
+      effect_caps_minted: false,
     },
     boundary: {
       scope: "read-only",
@@ -68,14 +74,16 @@ export function buildMissionDraftPreview({ intent, now = new Date() } = {}) {
       receipt_minted: false,
       daemon_started: false,
       network_connection_attempted: false,
-      external_posting_performed: false
-    }
+      external_posting_performed: false,
+    },
   };
 }
 
 function appendPermissions(lines, permissions) {
   for (const permission of permissions) {
-    lines.push(`  - ${permission.resource_id}  ${permission.action}  purpose="${permission.purpose}"`);
+    lines.push(
+      `  - ${permission.resource_id}  ${permission.action}  purpose="${permission.purpose}"`,
+    );
   }
   if (permissions.length === 0) lines.push("  - none detected");
 }
@@ -95,7 +103,7 @@ export function formatMissionDraftPreview(draft) {
     `mission_commitment_hash: ${draft.mission_commitment_hash}`,
     `consent_commitment_hash: ${draft.consent_plan.commitment_hash}`,
     "",
-    "Proposed permissions:"
+    "Proposed permissions:",
   ];
 
   appendPermissions(lines, draft.consent_plan.permissions);
@@ -108,7 +116,7 @@ export function formatMissionDraftPreview(draft) {
   lines.push("");
   lines.push(`Gate: ${draft.phase_gate.requirement}`);
   lines.push(
-    "Boundary: preview-only; no approval; no capability minted; no execution; no network; no external posting."
+    "Boundary: preview-only; no approval; no capability minted; no execution; no network; no external posting.",
   );
 
   return lines.join("\n");
