@@ -250,7 +250,7 @@ function emptyTable({ plan, denials }) {
   return table;
 }
 
-export function buildConsentHashTablePreview({
+export async function buildConsentHashTablePreview({
   intent,
   plan,
   expiresAt,
@@ -263,7 +263,7 @@ export function buildConsentHashTablePreview({
   if (!isValidDate(now)) {
     return emptyTable({ plan: sourcePlan ?? null, denials: [denial("invalid_now", "now must be a valid Date")] });
   }
-  if (!sourcePlan && nonEmptyString(intent)) sourcePlan = buildConsentPlanPreview({ intent, now });
+  if (!sourcePlan && nonEmptyString(intent)) sourcePlan = await buildConsentPlanPreview({ intent, now });
 
   if (!isObject(sourcePlan)) {
     return emptyTable({ plan: null, denials: [denial("missing_plan", "buildConsentHashTablePreview requires a consent plan or non-empty intent")] });

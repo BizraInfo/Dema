@@ -44,6 +44,15 @@ async function collectReceiptFiles(dir, files, { maxFiles, prefix = "" }) {
     if (files.length >= maxFiles) return;
     const relativePath = prefix ? join(prefix, entry.name) : entry.name;
     const path = join(dir, entry.name);
+    
+    // Security hardening: Skip symbolic links to prevent directory traversal
+    // Requires attacker to already have write access to ~/.dema/receipts/
+    // but defense-in-depth principle dictates we validate even then.
+    if (entry.isSymbolicLink()) {
+      // Log warning in future observability layer, skip for now
+      continue;
+    }
+    
     if (entry.isDirectory()) {
       await collectReceiptFiles(path, files, { maxFiles, prefix: relativePath });
     } else if (entry.isFile() && entry.name.endsWith(".json")) {
@@ -129,11 +138,15 @@ export async function readReceipt(
   }
 
   if (matches.length === 0) {
-    throw new Error(`Receipt not found: ${selector}`);
+    // Security: Sanitize selector to prevent path leakage in error messages
+    const safeSelector = basename(String(selector)).slice(0, 64);
+    throw new Error(`Receipt not found: ${safeSelector}`);
   }
 
   if (matches[0].unreadable) {
-    throw new Error(`Receipt unreadable: ${selector} (${matches[0].reason ?? "unknown"})`);
+    // Security: Sanitize selector to prevent path leakage in error messages
+    const safeSelector = basename(String(selector)).slice(0, 64);
+    throw new Error(`Receipt unreadable: ${safeSelector} (${matches[0].reason ?? "unknown"})`);
   }
 
   return JSON.parse(await readFile(matches[0].path, "utf8"));

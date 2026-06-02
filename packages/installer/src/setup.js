@@ -1,26 +1,37 @@
-import { mkdir, writeFile, access } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { arch, homedir, platform } from "node:os";
 
-async function exists(path) {
+// Atomic directory creation: mkdir with recursive:true handles existence atomically
+// No TOCTOU race condition between exists() check and mkdir() call.
+async function ensureDir(path) {
   try {
-    await access(path);
-    return true;
-  } catch {
-    return false;
+    await mkdir(path, { recursive: true });
+    // mkdir recursive is atomic - if it succeeds, directory exists (created or pre-existing)
+    // We can't perfectly distinguish without a separate stat call, but that's acceptable
+    // The key security win is eliminating the race window
+    return { path, status: "ensured" };
+  } catch (err) {
+    // If it fails with EEXIST after recursive mkdir, it already exists
+    if (err.code === "EEXIST") {
+      return { path, status: "existing" };
+    }
+    throw err;
   }
 }
 
-async function ensureDir(path) {
-  const alreadyExists = await exists(path);
-  await mkdir(path, { recursive: true });
-  return { path, status: alreadyExists ? "existing" : "created" };
-}
-
 async function writeJsonIfMissing(path, value) {
-  if (await exists(path)) return { path, status: "existing" };
-  await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-  return { path, status: "created" };
+  // Use writeFile with 'wx' flag (write exclusive) - fails if file exists
+  // This is atomic and eliminates TOCTOU race between exists() and writeFile()
+  try {
+    await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+    return { path, status: "created" };
+  } catch (err) {
+    if (err.code === "EEXIST") {
+      return { path, status: "existing" };
+    }
+    throw err;
+  }
 }
 
 export async function runSetup(root = process.env.DEMA_HOME || join(homedir(), ".dema")) {

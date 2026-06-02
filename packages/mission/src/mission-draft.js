@@ -1,5 +1,6 @@
 import { buildConsentPlanPreview } from "../../consent/src/consent-planner.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
+import { validateMaxLength, VALIDATION_LIMITS } from "../../core/src/input-validator.js";
 
 const SCHEMA = "bizra.dema.mission_draft_preview.v0.1";
 
@@ -28,13 +29,25 @@ function dataDomains(permissions) {
   return [...new Set(permissions.map(domainForPermission).filter(Boolean))];
 }
 
-export function buildMissionDraftPreview({ intent, now = new Date() } = {}) {
+export async function buildMissionDraftPreview({ intent, now = new Date() } = {}) {
   const naturalLanguage = String(intent ?? "").trim();
+  
+  // Security: Validate intent length to prevent DoS via massive input strings
+  const lengthValidation = await validateMaxLength(
+    naturalLanguage,
+    VALIDATION_LIMITS.MAX_INTENT_LENGTH,
+    "intent"
+  );
+  
+  if (!lengthValidation.accepted) {
+    throw new Error(lengthValidation.rejected_detail);
+  }
+  
   if (!naturalLanguage) {
     throw new Error("Mission draft requires a non-empty intent.");
   }
 
-  const consentPlan = buildConsentPlanPreview({ intent: naturalLanguage, now });
+  const consentPlan = await buildConsentPlanPreview({ intent: naturalLanguage, now });
   const mission = {
     id: missionIdFor(naturalLanguage),
     natural_language: naturalLanguage,

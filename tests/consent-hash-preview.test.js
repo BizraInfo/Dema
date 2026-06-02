@@ -64,8 +64,8 @@ function build(overrides = {}) {
   });
 }
 
-test("buildConsentHashTablePreview emits a schema-tagged preview without authority", () => {
-  const table = build();
+test("buildConsentHashTablePreview emits a schema-tagged preview without authority", async () => {
+  const table = await build();
 
   assert.equal(table.schema, CONSENT_HASH_TABLE_PREVIEW_SCHEMA);
   assert.equal(table.mode, "PREVIEW_ONLY");
@@ -84,8 +84,8 @@ test("buildConsentHashTablePreview emits a schema-tagged preview without authori
   assert.match(table.commitment_hash, /^sha256:[0-9a-f]{64}$/);
 });
 
-test("builder can derive the table from current consent plan intent", () => {
-  const table = buildConsentHashTablePreview({
+test("builder can derive the table from current consent plan intent", async () => {
+  const table = await buildConsentHashTablePreview({
     intent: "Audit Downloads and send to Slack",
     expiresAt,
     now: fixedNow
@@ -163,8 +163,8 @@ test("invalid permissions and revocations become denials without throwing", () =
   ]);
 });
 
-test("expiresAt is required but expired scopes are represented for lookup denial", () => {
-  const missing = buildConsentHashTablePreview({
+test("expiresAt is required but expired scopes are represented for lookup denial", async () => {
+  const missing = await buildConsentHashTablePreview({
     plan: makePlan(),
     now: fixedNow
   });
@@ -185,7 +185,7 @@ test("expiresAt is required but expired scopes are represented for lookup denial
   );
 });
 
-test("invalid now input returns preview denials instead of throwing", () => {
+test("invalid now input returns preview denials instead of throwing", async () => {
   const fromPlan = build({ now: null });
   assert.equal(fromPlan.valid, false);
   assert.equal(fromPlan.denials[0].code, "invalid_now");
@@ -194,7 +194,7 @@ test("invalid now input returns preview denials instead of throwing", () => {
   assert.equal(fromInvalidDate.valid, false);
   assert.equal(fromInvalidDate.denials[0].code, "invalid_now");
 
-  const fromIntent = buildConsentHashTablePreview({
+  const fromIntent = await buildConsentHashTablePreview({
     intent: "Fix auth.py",
     expiresAt,
     now: "invalid"

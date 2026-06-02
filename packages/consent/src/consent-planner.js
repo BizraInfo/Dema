@@ -10,11 +10,24 @@ import {
   buildAnalogicalNotes,
   extractIntentShape
 } from "./consent-extract.js";
+import { validateMaxLength, VALIDATION_LIMITS } from "../../core/src/input-validator.js";
 
 export { formatConsentPlanPreview } from "./consent-format.js";
 
-export function buildConsentPlanPreview({ intent, now = new Date() } = {}) {
+export async function buildConsentPlanPreview({ intent, now = new Date() } = {}) {
   const naturalLanguage = String(intent ?? "").trim();
+  
+  // Security: Validate intent length to prevent DoS via massive input strings
+  const lengthValidation = await validateMaxLength(
+    naturalLanguage,
+    VALIDATION_LIMITS.MAX_INTENT_LENGTH,
+    "intent"
+  );
+  
+  if (!lengthValidation.accepted) {
+    throw new Error(lengthValidation.rejected_detail);
+  }
+  
   if (!naturalLanguage) {
     throw new Error("Consent planning requires a non-empty intent.");
   }
