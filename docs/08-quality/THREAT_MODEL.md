@@ -5,7 +5,7 @@
 
 ## 1. System boundary & assets
 
-Dema is a **local-first CLI** with **no network runtime** and **no daemon**. Its only outbound socket target in source is `http://127.0.0.1:7421` — a gateway probe that is **unreachable-by-design** (the runtime gateway is not part of this repo). All persistent state lives under `DEMA_HOME` (default `~/.dema`).
+Dema is a **local-first CLI** with **no public-network runtime** and **no daemon**. Its network-capable surfaces are local loopback only: the Node0 gateway probe/adapter at `http://127.0.0.1:7421` (gateway runtime is outside this repo), optional Ollama model probes/invocation at `http://localhost:11434` / `http://127.0.0.1:11434`, and LM Studio inventory/safety checks at `http://127.0.0.1:1234` where model commands are used. These are local operator endpoints, not federation or public transport. All persistent state lives under `DEMA_HOME` (default `~/.dema`).
 
 **Trust boundary:** the line between (a) the operator's local machine + `DEMA_HOME` and (b) everything else (other processes, the filesystem outside `DEMA_HOME`, untrusted input strings, external AI artifacts pasted in).
 
@@ -65,7 +65,7 @@ External AI artifacts (pasted plans/code) are treated as **context, not authorit
 
 ## 4. Out-of-scope (by design)
 
-- Network/transport security (no network runtime).
+- Public network/transport security (Dema exposes no public-network runtime; loopback endpoint hardening is local-operator scope).
 - Multi-tenant isolation (single sovereign operator).
 - Federation/custody proofs (gated; `federation_started=false`).
 - OS / hardware compromise (assumed-trusted local machine).

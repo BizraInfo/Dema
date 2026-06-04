@@ -5,7 +5,7 @@
 - **Method:** Direct disk measurement (`grep`/`wc`/`node --test`/`npm run coverage`) + targeted code reading. No external-tool generation.
 - **Truth labels:** `[M]` measured this session · `[A]` assessed/qualitative · `—` measured-absent.
 
-> **Scope calibration (read first).** This 25-pillar framework is calibrated for **distributed, hosted agentic services**. Dema is a **local-first, no-daemon, no-network sovereign CLI node**. Several pillars (Observability, SRE, Scalability, Operational Readiness) score low **not from defect but from deliberate scope exclusion**. We score against the literal framework, then give a scope-adjusted read. Every score binds to a measured signal — honoring the framework's own **Claim Discipline** pillar.
+> **Scope calibration (read first).** This 25-pillar framework is calibrated for **distributed, hosted agentic services**. Dema is a **local-first, no-daemon, no-public-network sovereign CLI node**. Several pillars (Observability, SRE, Scalability, Operational Readiness) score low **not from defect but from deliberate scope exclusion**. We score against the literal framework, then give a scope-adjusted read. Every score binds to a measured signal — honoring the framework's own **Claim Discipline** pillar.
 
 ## Evidence base (all [M])
 
@@ -22,7 +22,7 @@
 | Docs                       | 198 `.md`, 18 ADRs                                                                      |
 | Quality gate               | `npm run check` = 59 sub-commands, 11 review scripts, EXIT 0                            |
 | Crypto                     | `node:crypto` in 48 files; SHA-256 ×431, Ed25519 ×46, sign/verify, `generateKeyPair` ×2 |
-| Network surface            | **only `http://127.0.0.1:7421`** (localhost gateway probe) across 5 files               |
+| Network surface            | **loopback-only**: Node0 gateway `127.0.0.1:7421`; Ollama `localhost`/`127.0.0.1:11434`; LM Studio `127.0.0.1:1234` where model commands apply |
 | Immutability               | 1,892 `Object.freeze`                                                                   |
 | Bounded limits             | `timeoutMs` ×47, `MAX_ITERATIONS` ×37, `maxFiles` ×27, `MAX_*_BYTES`, `maxDepth` ×13    |
 | Error handling             | 246 `try`, 87 `throw`, 124 `process.exit`                                               |

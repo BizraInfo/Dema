@@ -30,8 +30,9 @@ Dema runs on the Node.js standard library only. Statically-imported builtins `[M
 | `node:readline`               | interactive `dema chat` REPL                                 |
 | `node:url`                    | module-path resolution (`fileURLToPath`)                     |
 | `node:util`                   | `promisify` and formatting                                   |
+| `node:child_process`          | argv-array subprocess execution for review/check gates, CLI smoke, local Node0 shellout adapter, model safety probes, and guarded local wrappers |
 
-Additionally, `node:child_process` is used via **dynamic import** in the `sovereign` bridge and in test harnesses (CLI subprocess smoke). It is not a third-party dependency.
+`node:child_process` is used both statically and dynamically; it is not a third-party dependency. The actuator gate permits `execFile`/`execFileSync` and `spawn`/`spawnSync` with argv arrays, and rejects raw shell execution patterns (`child_process.exec`, `execSync`, or `shell:true`). Loopback HTTP surfaces use platform `fetch`/`AbortController`, not npm packages: Node0 gateway `127.0.0.1:7421`, Ollama `localhost`/`127.0.0.1:11434`, and LM Studio `127.0.0.1:1234` where applicable.
 
 - **Engine constraint:** Node ≥ 20 (`package.json` `engines`).
 - **Module system:** ESM (`"type": "module"`).
