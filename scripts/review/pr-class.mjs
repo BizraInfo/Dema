@@ -4,29 +4,53 @@ import { pathToFileURL } from "node:url";
 
 const REVIEW_CLASSES = {
   "proof/u1": {
-    branchPrefixes: ["proof/u1-"]
+    branchPrefixes: ["proof/u1-"],
   },
   "docs/u1-proof-pin": {
-    branches: ["proof/u1-proof-pin", "docs/u1-proof-pin", "ci/u1-proof-pin-class"]
+    branches: [
+      "proof/u1-proof-pin",
+      "docs/u1-proof-pin",
+      "ci/u1-proof-pin-class",
+    ],
   },
   "devops/release-readiness": {
-    branches: ["devops/release-readiness", "ci/devops-release-readiness-class"]
+    branches: ["devops/release-readiness", "ci/devops-release-readiness-class"],
   },
   "u2/dema-preview-surfaces": {
-    branches: ["u2/dema-preview-surfaces", "ci/u2-dema-preview-class"]
+    branches: ["u2/dema-preview-surfaces", "ci/u2-dema-preview-class"],
   },
   "tooling/claim-ledger-checker": {
-    branches: ["tooling/claim-ledger-checker", "ci/claim-ledger-checker-class"]
+    branches: ["tooling/claim-ledger-checker", "ci/claim-ledger-checker-class"],
   },
   "u2.1/amana-kernel-contracts": {
-    branches: ["u2.1/amana-kernel-contracts", "ci/u2.1-amana-kernel-contracts-class"]
+    branches: [
+      "u2.1/amana-kernel-contracts",
+      "ci/u2.1-amana-kernel-contracts-class",
+    ],
   },
   "policy/broad-scope": {
-    branchPrefixes: ["adr/", "policy/", "governance/", "tooling/", "season-", "fix/", "ci/", "docs/", "feat/", "chore/"]
+    // Kept in sync with the branch-class case resolver in
+    // .github/workflows/bizra-review.yml. pr/* is the clean release-train
+    // convention; refactor/* and test/* are accepted as broad-scope too.
+    branchPrefixes: [
+      "adr/",
+      "policy/",
+      "governance/",
+      "tooling/",
+      "season-",
+      "fix/",
+      "ci/",
+      "docs/",
+      "feat/",
+      "chore/",
+      "pr/",
+      "refactor/",
+      "test/",
+    ],
   },
   "policy/merged-to-main": {
-    branches: ["main"]
-  }
+    branches: ["main"],
+  },
 };
 
 function argValue(name) {
@@ -35,8 +59,12 @@ function argValue(name) {
 }
 
 export function currentBranch() {
-  return process.env.GITHUB_HEAD_REF ||
-    execFileSync("git", ["branch", "--show-current"], { encoding: "utf8" }).trim();
+  return (
+    process.env.GITHUB_HEAD_REF ||
+    execFileSync("git", ["branch", "--show-current"], {
+      encoding: "utf8",
+    }).trim()
+  );
 }
 
 export function validatePrClass({ reviewClass, branch }) {
@@ -60,14 +88,17 @@ export function validatePrClass({ reviewClass, branch }) {
     class: reviewClass,
     branch,
     advisory_reviewers: ["CodeRabbit", "Copilot review"],
-    required_gate: "BIZRA Review Gate"
+    required_gate: "BIZRA Review Gate",
   };
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (
+  process.argv[1] &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
   const report = validatePrClass({
     reviewClass: argValue("--class"),
-    branch: currentBranch()
+    branch: currentBranch(),
   });
   console.log(JSON.stringify(report, null, 2));
 }

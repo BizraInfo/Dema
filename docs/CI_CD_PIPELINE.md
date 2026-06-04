@@ -65,17 +65,17 @@ All four must report `success` before a slice on `main` is considered shipped. A
 
 **Branch-class resolution** (case statement on `GITHUB_HEAD_REF` / `GITHUB_REF_NAME`):
 
-| Pattern                                                                                                                      | Class                                                                            |
-| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `devops/release-readiness` · `ci/devops-release-readiness-class`                                                             | `devops/release-readiness`                                                       |
-| `proof/u1-proof-pin` · `docs/u1-proof-pin` · `ci/u1-proof-pin-class`                                                         | `docs/u1-proof-pin`                                                              |
-| `u2/dema-preview-surfaces` · `ci/u2-dema-preview-class`                                                                      | `u2/dema-preview-surfaces`                                                       |
-| `tooling/claim-ledger-checker` · `ci/claim-ledger-checker-class`                                                             | `tooling/claim-ledger-checker`                                                   |
-| `u2.1/amana-kernel-contracts` · `ci/u2.1-amana-kernel-contracts-class`                                                       | `u2.1/amana-kernel-contracts`                                                    |
-| `proof/u1-*` (glob)                                                                                                          | `proof/u1`                                                                       |
-| `adr/*` · `policy/*` · `governance/*` · `tooling/*` · `season-*` · `fix/*` · `ci/*` · `docs/*` · `feat/*` · `chore/*` (glob) | `policy/broad-scope`                                                             |
-| `main` (push event)                                                                                                          | `policy/merged-to-main` (no file-set enforcement; canonical state already gated) |
-| anything else                                                                                                                | **fails immediately** with `"Unsupported BIZRA review branch"`                   |
+| Pattern                                                                                                                                                         | Class                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `devops/release-readiness` · `ci/devops-release-readiness-class`                                                                                                | `devops/release-readiness`                                                       |
+| `proof/u1-proof-pin` · `docs/u1-proof-pin` · `ci/u1-proof-pin-class`                                                                                            | `docs/u1-proof-pin`                                                              |
+| `u2/dema-preview-surfaces` · `ci/u2-dema-preview-class`                                                                                                         | `u2/dema-preview-surfaces`                                                       |
+| `tooling/claim-ledger-checker` · `ci/claim-ledger-checker-class`                                                                                                | `tooling/claim-ledger-checker`                                                   |
+| `u2.1/amana-kernel-contracts` · `ci/u2.1-amana-kernel-contracts-class`                                                                                          | `u2.1/amana-kernel-contracts`                                                    |
+| `proof/u1-*` (glob)                                                                                                                                             | `proof/u1`                                                                       |
+| `adr/*` · `policy/*` · `governance/*` · `tooling/*` · `season-*` · `fix/*` · `ci/*` · `docs/*` · `feat/*` · `chore/*` · `pr/*` · `refactor/*` · `test/*` (glob) | `policy/broad-scope`                                                             |
+| `main` (push event)                                                                                                                                             | `policy/merged-to-main` (no file-set enforcement; canonical state already gated) |
+| anything else                                                                                                                                                   | **fails immediately** with `"Unsupported BIZRA review branch"`                   |
 
 **Review scripts** (run after class is resolved):
 
