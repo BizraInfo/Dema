@@ -13,7 +13,15 @@
 // only — no network, no keys, no consent, no mint.
 
 import { createHash } from "node:crypto";
-import { existsSync, statSync, readdirSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  statSync,
+  readdirSync,
+  readFileSync,
+  openSync,
+  fstatSync,
+  closeSync,
+} from "node:fs";
 import { join, relative, sep } from "node:path";
 import { stableStringify } from "../../consent/src/consent-common.js";
 
@@ -53,11 +61,22 @@ function walkFiles(home) {
         if (out.length >= MAX_FILES) {
           throw new RangeError(`recovery: home exceeds max files ${MAX_FILES}`);
         }
-        out.push({
-          rel_path: toPosix(relative(home, full)),
-          sha256: sha256Bytes(readFileSync(full)),
-          bytes: st.size,
-        });
+        // Read via a file descriptor so the integrity check (fstat) and use
+        // (read) bind to the SAME inode — no time-of-check/time-of-use race
+        // where the path is swapped between stat and read.
+        const fd = openSync(full, "r");
+        try {
+          const fst = fstatSync(fd);
+          if (fst.isFile()) {
+            out.push({
+              rel_path: toPosix(relative(home, full)),
+              sha256: sha256Bytes(readFileSync(fd)),
+              bytes: fst.size,
+            });
+          }
+        } finally {
+          closeSync(fd);
+        }
       }
     }
   }
