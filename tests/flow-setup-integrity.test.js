@@ -34,8 +34,14 @@ function run(home, args) {
   return { stdout: r.stdout || "", stderr: r.stderr || "", status: r.status };
 }
 
-function runJson(home, args) {
-  return JSON.parse(run(home, args).stdout);
+function runJson(home, args, { status = 0 } = {}) {
+  const r = run(home, args);
+  assert.equal(
+    r.status,
+    status,
+    `expected \`${args.join(" ")}\` to exit ${status}, got ${r.status}\nstdout:\n${r.stdout}\nstderr:\n${r.stderr}`,
+  );
+  return JSON.parse(r.stdout);
 }
 
 function freshHome() {
@@ -43,7 +49,7 @@ function freshHome() {
 }
 
 describe("flow: setup → setup-check → witness (persistent home)", () => {
-  it("initializes a fresh home, verifies INTACT, and emits a valid witness receipt", () => {
+  it("initializes a fresh home, verifies INTACT, and refuses unsanctioned witness persistence", () => {
     const home = freshHome();
     try {
       // Step 1 — setup creates the local skeleton.
@@ -58,14 +64,17 @@ describe("flow: setup → setup-check → witness (persistent home)", () => {
       assert.equal(check.verdict, "INTACT");
       assert.equal(check.integrity, "VERIFIED");
 
-      // Step 3 — witness emits a signed Node0 self-witness receipt that
-      // attests the constitutional counts (PAT=7, SAT=5) for THIS node.
-      const witness = runJson(home, ["witness", "--json"]);
+      // Step 3 — witness renders the Node0 self-witness envelope but
+      // refuses persistence without exact consent.
+      const witness = runJson(home, ["witness", "--json"], { status: 1 });
       assert.equal(witness.schema, "bizra.dema.node0_witness_receipt.v0.1");
       assert.equal(witness.truth_label, "LOCAL_OPERATOR_WITNESS");
       assert.equal(witness.attests.node, "Node0");
       assert.equal(witness.attests.pat_count, 7);
       assert.equal(witness.attests.sat_count, 5);
+      assert.equal(witness.saved, false);
+      assert.equal(witness.reason, "consent_phrase_mismatch");
+      assert.equal(witness.required_phrase, "WITNESS NODE0 STATE");
     } finally {
       rmSync(home, { recursive: true, force: true });
     }

@@ -43,8 +43,14 @@ function run(home, args) {
   return { stdout: r.stdout || "", stderr: r.stderr || "", status: r.status };
 }
 
-function runJson(home, args) {
-  return JSON.parse(run(home, args).stdout);
+function runJson(home, args, { status = 0 } = {}) {
+  const r = run(home, args);
+  assert.equal(
+    r.status,
+    status,
+    `expected \`${args.join(" ")}\` to exit ${status}, got ${r.status}\nstdout:\n${r.stdout}\nstderr:\n${r.stderr}`,
+  );
+  return JSON.parse(r.stdout);
 }
 
 function setupHome() {
@@ -54,10 +60,10 @@ function setupHome() {
 }
 
 // Build a passport into a file inside the home and return the path.
-function writePassport(home) {
-  const passport = run(home, ["proof", "passport", "--json"]).stdout;
+function writePassport(home, options) {
+  const passport = runJson(home, ["proof", "passport", "--json"], options);
   const path = join(home, "passport.json");
-  writeFileSync(path, passport);
+  writeFileSync(path, JSON.stringify(passport, null, 2));
   return path;
 }
 
@@ -76,12 +82,16 @@ describe("flow: consent-gated authorship → proof passport (persistent home)", 
     const home = setupHome();
     try {
       writeFileSync(join(home, "a.txt"), "hello bizra proof");
-      const res = runJson(home, [
-        "authorship",
-        "sign",
-        join(home, "a.txt"),
-        "--json",
-      ]);
+      const res = runJson(
+        home,
+        [
+          "authorship",
+          "sign",
+          join(home, "a.txt"),
+          "--json",
+        ],
+        { status: 1 },
+      );
       assert.equal(res.signed, false);
       assert.equal(res.error, "consent_required");
       assert.equal(res.required_phrase, SIGN_CONSENT);
@@ -166,11 +176,13 @@ describe("flow: consent-gated authorship → proof passport (persistent home)", 
   it("boundary: an empty home yields an EMPTY passport and DEEP_EMPTY verify", () => {
     const home = setupHome();
     try {
-      const passport = runJson(home, ["proof", "passport", "--json"]);
+      const passport = runJson(home, ["proof", "passport", "--json"], {
+        status: 1,
+      });
       assert.equal(passport.aggregate.total_receipts, 0);
       assert.equal(passport.aggregate.verdict, "EMPTY");
 
-      const passportPath = writePassport(home);
+      const passportPath = writePassport(home, { status: 1 });
       const deep = runJson(home, [
         "proof",
         "passport",
@@ -217,15 +229,19 @@ describe("flow: consent-gated authorship → proof passport (persistent home)", 
       writeFileSync(receiptPath, JSON.stringify(receipt, null, 2));
 
       // Rebuild the passport over the tampered store and deep-verify.
-      const passportPath = writePassport(home);
-      const deep = runJson(home, [
-        "proof",
-        "passport",
-        "verify",
-        passportPath,
-        "--deep",
-        "--json",
-      ]);
+      const passportPath = writePassport(home, { status: 1 });
+      const deep = runJson(
+        home,
+        [
+          "proof",
+          "passport",
+          "verify",
+          passportPath,
+          "--deep",
+          "--json",
+        ],
+        { status: 1 },
+      );
       assert.equal(deep.verified, false);
       assert.equal(deep.verdict, "FAILED");
       assert.equal(deep.truth_label, "LOCAL_PROOF_PASSPORT_DEEP_FAILED");
