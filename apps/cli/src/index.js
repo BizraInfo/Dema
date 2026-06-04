@@ -138,11 +138,9 @@ import {
   buildSignedAuthorshipReceipt,
   verifyPayload,
   sha256 as authorshipSha256,
-  AUTHORSHIP_SCHEMA,
 } from "../../../packages/receipts/src/authorship-signature.js";
 import {
   initAuthorshipKey,
-  hasAuthorshipKey,
   KEY_INIT_CONSENT_PHRASE,
 } from "../../../packages/receipts/src/authorship-key-store.js";
 import {
@@ -3234,8 +3232,7 @@ async function cmd_dashboard(ctx) {
   const { argv } = ctx;
   const { fileURLToPath } = await import("node:url");
   const { dirname, join, resolve } = await import("node:path");
-  const { readFileSync, writeFileSync, accessSync, constants, mkdtempSync } =
-    await import("node:fs");
+  const { readFileSync, writeFileSync, mkdtempSync } = await import("node:fs");
   const { tmpdir } = await import("node:os");
 
   const here = dirname(fileURLToPath(import.meta.url));
@@ -3251,8 +3248,9 @@ async function cmd_dashboard(ctx) {
     ),
   );
 
+  let dashboardHtml;
   try {
-    accessSync(htmlPath, constants.R_OK);
+    dashboardHtml = readFileSync(htmlPath, "utf8");
   } catch {
     console.log("Dashboard not found: " + htmlPath);
     process.exitCode = 1;
@@ -3291,7 +3289,7 @@ async function cmd_dashboard(ctx) {
   let openPath = htmlPath;
 
   if (!useStatic) {
-    const html = readFileSync(htmlPath, "utf8");
+    const html = dashboardHtml;
     const injection = `<script>window.__DEMA_STATUS__=${JSON.stringify(statusPayload)};</script>`;
     const filled = html.replace("</body>", injection + "\n</body>");
     const tmp = mkdtempSync(join(tmpdir(), "dema-dashboard-"));
@@ -3362,7 +3360,7 @@ async function cmd_journey(ctx) {
 }
 
 async function cmd_diagnostics(ctx) {
-  const { argv, subcommand, command } = ctx;
+  const { argv, subcommand } = ctx;
   if (subcommand !== "plan") {
     throw new Error(
       "Unknown diagnostics command. Use `dema diagnostics plan [--json]`.",
@@ -3378,7 +3376,7 @@ async function cmd_diagnostics(ctx) {
 }
 
 async function cmd_consent(ctx) {
-  const { argv, subcommand, command } = ctx;
+  const { argv, subcommand } = ctx;
   if (subcommand === "plan") {
     const json = argv.includes("--json");
     const intent = argv
@@ -3465,7 +3463,7 @@ async function cmd_consent(ctx) {
 }
 
 async function cmd_mission(ctx) {
-  const { argv, subcommand, command } = ctx;
+  const { argv, subcommand } = ctx;
   if (subcommand === "run" && argv[2] === "health") {
     const consent = argValue(argv, "--consent") ?? "";
     const dryRun = argv.includes("--dry-run");
@@ -3691,7 +3689,7 @@ async function cmd_receipts(ctx) {
 }
 
 async function cmd_memory(ctx) {
-  const { argv, subcommand, command } = ctx;
+  const { argv, subcommand } = ctx;
   const action = subcommand;
   if (action === "--help" || action === "-h") {
     console.log(
@@ -4270,7 +4268,7 @@ async function cmd_models(ctx) {
 }
 
 async function cmd_report(ctx) {
-  const { argv, subcommand, command } = ctx;
+  const { argv, subcommand } = ctx;
   if (subcommand !== "safety") {
     throw new Error(
       "Unknown report command. Use `dema report safety [--json]`.",
@@ -4286,7 +4284,7 @@ async function cmd_report(ctx) {
 }
 
 async function cmd_network(ctx) {
-  const { argv, subcommand, command } = ctx;
+  const { argv, subcommand } = ctx;
   if (subcommand === "blueprint") {
     const blueprint = buildNetworkBlueprint();
     console.log(
@@ -4320,7 +4318,7 @@ async function cmd_network(ctx) {
 }
 
 async function cmd_amana(ctx) {
-  const { argv, command } = ctx;
+  const { argv } = ctx;
   const amanaCommand = argv[1];
   const amanaSubcommand = argv[2];
   if (amanaCommand !== "contracts" || amanaSubcommand !== "preview") {
@@ -4338,7 +4336,7 @@ async function cmd_amana(ctx) {
 }
 
 async function cmd_mcp(ctx) {
-  const { argv, subcommand, command } = ctx;
+  const { argv, subcommand } = ctx;
   if (subcommand !== "blueprint") {
     throw new Error("Unknown mcp command. Use `dema mcp blueprint [--json]`.");
   }
@@ -4352,7 +4350,7 @@ async function cmd_mcp(ctx) {
 }
 
 async function cmd_roadmap(ctx) {
-  const { argv, subcommand, command } = ctx;
+  const { argv, subcommand } = ctx;
   if (subcommand === "preview") {
     const report = buildOptimizationRoadmapPreview();
     console.log(
@@ -4377,7 +4375,7 @@ async function cmd_roadmap(ctx) {
 }
 
 async function cmd_eval(ctx) {
-  const { argv, subcommand, command } = ctx;
+  const { argv, subcommand } = ctx;
   const evalCommand = argv[1];
   const evalSubcommand = argv[2];
   const asJson = argv.includes("--json");
@@ -4439,7 +4437,7 @@ async function cmd_eval(ctx) {
 }
 
 async function cmd_evidence(ctx) {
-  const { argv, command } = ctx;
+  const { argv } = ctx;
   const receiptCommand = argv[1];
   const receiptSubcommand = argv[2];
   if (receiptCommand !== "receipt" || receiptSubcommand !== "preview") {
@@ -4457,7 +4455,7 @@ async function cmd_evidence(ctx) {
 }
 
 async function cmd_ihsan(ctx) {
-  const { argv, command } = ctx;
+  const { argv } = ctx;
   const floorCommand = argv[1];
   const floorSubcommand = argv[2];
   if (floorCommand !== "floor" || floorSubcommand !== "preview") {
@@ -4477,7 +4475,7 @@ async function cmd_ihsan(ctx) {
 }
 
 async function cmd_behavior(ctx) {
-  const { argv, command } = ctx;
+  const { argv } = ctx;
   const behaviorCommand = argv[1];
   const behaviorSubcommand = argv[2];
   if (behaviorCommand !== "modulation" || behaviorSubcommand !== "preview") {
@@ -4512,7 +4510,7 @@ async function cmd_behavior(ctx) {
 }
 
 async function cmd_design(ctx) {
-  const { argv, subcommand, command } = ctx;
+  const { argv, subcommand } = ctx;
   if (subcommand !== "emulate-loop") {
     throw new Error(
       "Unknown design command. Use `dema design emulate-loop [--json]`.",
@@ -4629,7 +4627,7 @@ async function cmd_sovereign(ctx) {
 }
 
 async function cmd_help(ctx) {
-  const { argv, command } = ctx;
+  const { argv } = ctx;
   const helpArg = argv[1];
   if (!helpArg) {
     console.log(renderHelpRoot());
@@ -4833,8 +4831,10 @@ async function dispatch(argv) {
   // token maps to a named handler in COMMAND_TABLE; the switch was replaced by
   // this O(1) lookup. Unknown commands fall through to the suggester below.
   const ctx = { argv, command, subcommand };
-  const handler = COMMAND_TABLE[command];
-  if (handler) return await handler(ctx);
+  const handler = Object.hasOwn(COMMAND_TABLE, command)
+    ? COMMAND_TABLE[command]
+    : null;
+  if (typeof handler === "function") return await handler(ctx);
 
   // Default: unknown command — suggest the closest registered command.
   const result = suggestCommands(command, REGISTERED_COMMANDS_LIST);

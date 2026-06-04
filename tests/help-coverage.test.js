@@ -58,7 +58,7 @@ const helpCommands = extractHelpCommands(CLI_SRC);
 const dispatchCases = extractDispatchCases(CLI_SRC);
 // A HELP command is dispatchable if it has a `case` in the switch OR a handler
 // in the exported COMMAND_TABLE (Track 2 dispatcher refactor migrates cases into
-// the table). The reverse test below intentionally stays on case-only sources.
+// the table).
 const dispatchablePaths = [
   ...new Set([...dispatchCases, ...Object.keys(COMMAND_TABLE)]),
 ];
@@ -85,6 +85,9 @@ test("Every HELP command (except whitelisted) has a dispatch case", () => {
 test("Every dispatch case (except internal) has a HELP entry", () => {
   // Internal cases that legitimately do not appear in HELP:
   const DISPATCH_WHITELIST = new Set([
+    "", // bare-invocation alias
+    "-h", // help flag alias
+    "--help", // help flag alias
     "active", // bare-invocation alias
     "chat", // also bare-invocation flow with --interactive forced
     "ambient:json", // colon-form variant · 'ambient' covers it in HELP
@@ -104,7 +107,7 @@ test("Every dispatch case (except internal) has a HELP entry", () => {
     "screen-recording", // dema screen-recording
     "self-recording", // dema self-recording
   ]);
-  const missing = dispatchCases.filter(
+  const missing = dispatchablePaths.filter(
     (cmd) => !helpCommands.includes(cmd) && !DISPATCH_WHITELIST.has(cmd),
   );
   // Surface non-empty as a soft warning string so reviewers can see what
