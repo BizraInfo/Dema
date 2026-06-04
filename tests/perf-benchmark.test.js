@@ -1,5 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import {
   PERF_MEASUREMENT_SCHEMA,
@@ -19,9 +21,50 @@ import { REQUIRED_METRICS } from "../packages/perf/src/perf-baseline.js";
 // presence, provenance labels, determinism of context, frozen outputs).
 
 const HEX64 = /^[0-9a-f]{64}$/;
+const PERF_BENCH_SCRIPT = fileURLToPath(
+  new URL("../scripts/perf-bench.mjs", import.meta.url),
+);
+const PERF_BENCH_SOURCE = readFileSync(PERF_BENCH_SCRIPT, "utf8");
 
 test("PERF_MEASUREMENT_SCHEMA is the versioned schema id", () => {
   assert.equal(PERF_MEASUREMENT_SCHEMA, "bizra.dema.perf_measurement.v0.1");
+});
+
+test("perf-bench CLI boot probe is bounded and isolated from live gateway/model env", () => {
+  assert.doesNotMatch(
+    PERF_BENCH_SOURCE,
+    /env:\s*\{\s*\.{3}process\.env,\s*DEMA_NO_TUI:\s*"1"\s*\}/,
+    "boot probe must not inherit every ambient gateway/model env var",
+  );
+  assert.doesNotMatch(
+    PERF_BENCH_SOURCE,
+    /,\s*bench\s*,/,
+    "perf-bench CLI must not import unused benchmark helpers",
+  );
+  assert.match(
+    PERF_BENCH_SOURCE,
+    /timeout:\s*BOOT_PROBE_TIMEOUT_MS/,
+    "boot probe subprocess must have an explicit timeout",
+  );
+  assert.match(
+    PERF_BENCH_SOURCE,
+    /DEMA_NODE0_ADAPTER:\s*"local"/,
+    "boot probe must force the local adapter unless the gate intentionally opts in",
+  );
+  for (const envName of [
+    "DEMA_GATEWAY_URL",
+    "DEMA_NODE0_STATUS_COMMAND",
+    "DEMA_OLLAMA_URL",
+    "DEMA_LM_STUDIO_URL",
+    "OLLAMA_HOST",
+    "LM_STUDIO_URL",
+  ]) {
+    assert.match(
+      PERF_BENCH_SOURCE,
+      new RegExp(`delete sanitized\\.${envName}`),
+      `${envName} must be removed from the perf gate subprocess env`,
+    );
+  }
 });
 
 test("bench returns frozen stats with p50 <= p95 <= max and min <= p50", async () => {

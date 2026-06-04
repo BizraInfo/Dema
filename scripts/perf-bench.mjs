@@ -20,13 +20,28 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
   measurePerf,
-  bench,
   PERF_MEASUREMENT_SCHEMA,
 } from "../packages/perf/src/perf-benchmark.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..");
 const CLI = join(REPO_ROOT, "apps", "cli", "src", "index.js");
+const BOOT_PROBE_TIMEOUT_MS = 5000;
+
+function buildBootProbeEnv(env = process.env) {
+  const sanitized = {
+    ...env,
+    DEMA_NO_TUI: "1",
+    DEMA_NODE0_ADAPTER: "local",
+  };
+  delete sanitized.DEMA_GATEWAY_URL;
+  delete sanitized.DEMA_NODE0_STATUS_COMMAND;
+  delete sanitized.DEMA_OLLAMA_URL;
+  delete sanitized.DEMA_LM_STUDIO_URL;
+  delete sanitized.OLLAMA_HOST;
+  delete sanitized.LM_STUDIO_URL;
+  return sanitized;
+}
 
 // Generous regression-sanity ceilings (ms). Breach = gross regression.
 const CEILINGS = Object.freeze({
@@ -41,7 +56,8 @@ function measureBootLatency({ runs = 5 } = {}) {
     try {
       execFileSync("node", [CLI, "status", "--json"], {
         stdio: "ignore",
-        env: { ...process.env, DEMA_NO_TUI: "1" },
+        env: buildBootProbeEnv(),
+        timeout: BOOT_PROBE_TIMEOUT_MS,
       });
     } catch {
       // status may exit non-zero on a not-ready node; the spawn+run still
