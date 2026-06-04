@@ -51,6 +51,7 @@ export const HELP_TOPICS = Object.freeze({
       Object.freeze({ command: "evidence receipt preview", short_description: "Preview receipt-shaped evidence; does not mint" }),
       Object.freeze({ command: "ihsan floor preview", short_description: "Preview externally supplied Ihsan floor check; does not certify" }),
       Object.freeze({ command: "evidence-event", short_description: "EvidenceChain event preview; chain_advance=false" }),
+      Object.freeze({ command: "genesis composition blueprint", short_description: "Preview NODE0-OSTREE-1A management, DevOps, CI/CD, and QA blueprint" }),
       Object.freeze({ command: "master-craftsmanship audit", short_description: "External audit of an artifact against the 10 master-craftsmanship invariants; verdict COMPLIANT (10/10) | PARTIAL | NON-COMPLIANT" }),
     ]),
     see_also: Object.freeze(["readiness", "spine"]),
@@ -126,6 +127,12 @@ export const COMMAND_DETAIL = Object.freeze({
     description: "List local receipts or show one by ID, artifact ID, exact path,\nor unique filename.",
     boundary: "read-only. Local filesystem only.",
     related: Object.freeze(["evidence-event", "today"]),
+  }),
+  genesis: Object.freeze({
+    syntax: "dema genesis composition blueprint [--json]",
+    description: "Preview the NODE0-OSTREE-1A delivery blueprint around the signed\nNode0 composition manifest: management Body of Knowledge, DevOps posture,\nCI/CD gate ladder, performance model, and QA thresholds.",
+    boundary: "read-only preview. No libostree. No daemon. No federation. No\ndeploy surface. No receipt mint. No CI workflow mutation.",
+    related: Object.freeze(["project-status", "proof", "roadmap"]),
   }),
   explain: Object.freeze({
     syntax: "dema explain [<concept>]\ndema explain --json [<concept>]",
