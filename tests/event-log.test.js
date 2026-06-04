@@ -1,8 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import {
+  mkdtempSync,
+  rmSync,
+  readFileSync,
+  writeFileSync,
+  statSync,
+} from "node:fs";
+import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 
 import {
   EVENT_LOG_SCHEMA,
@@ -18,6 +26,17 @@ import {
 // evidence. No network. No auto-capture. Tests use a temp DEMA_HOME.
 
 const HEX64 = /^[0-9a-f]{64}$/;
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const EVENTS_CLI = join(REPO_ROOT, "scripts", "events.mjs");
+
+function runEvents(home, args = []) {
+  return spawnSync("node", [EVENTS_CLI, ...args], {
+    cwd: REPO_ROOT,
+    env: { ...process.env, DEMA_HOME: home, NO_COLOR: "1" },
+    encoding: "utf8",
+    timeout: 15000,
+  });
+}
 
 function freshHome() {
   return mkdtempSync(join(tmpdir(), "dema-events-"));
@@ -56,6 +75,17 @@ test("buildEvent fail-closed: missing required fields throw", () => {
 
 test("buildEvent fail-closed: invalid outcome enum throws", () => {
   assert.throws(() => buildEvent({ ...VALID, outcome: "exploded" }));
+});
+
+test("buildEvent fail-closed: invalid recorded_at_iso throws", () => {
+  assert.throws(
+    () => buildEvent({ ...VALID, recorded_at_iso: "not-an-iso-date" }),
+    /recorded_at_iso/,
+  );
+  assert.throws(
+    () => buildEvent({ ...VALID, recorded_at_iso: new Date() }),
+    /recorded_at_iso/,
+  );
 });
 
 test("buildEvent redaction: non-primitive metadata is rejected (no content leak)", () => {
@@ -178,6 +208,70 @@ test("readEvents: a corrupt line is skipped and flagged, never throws", () => {
     const out = readEvents({ home });
     assert.equal(out.entries.length, 1);
     assert.ok(out.corrupt_lines >= 1);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+
+test("appendEvent rejects tampered event_id before writing", () => {
+  const home = freshHome();
+  try {
+    const event = buildEvent(VALID);
+    const tampered = { ...event, event_id: "0".repeat(64) };
+    assert.throws(
+      () => appendEvent({ home, event: tampered }),
+      /event_id/,
+    );
+    assert.equal(readEvents({ home }).count, 0);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("appendEvent creates event log paths with no group/world permissions", () => {
+  const home = freshHome();
+  try {
+    const res = appendEvent({ home, event: buildEvent(VALID) });
+    const dirMode = statSync(join(home, "events")).mode & 0o777;
+    const fileMode = statSync(res.path).mode & 0o777;
+    assert.equal(dirMode & 0o077, 0);
+    assert.equal(fileMode & 0o077, 0);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("readEvents fails closed without an explicit DEMA_HOME path", () => {
+  assert.throws(() => readEvents(), /home/);
+  assert.throws(() => readEvents({ home: "" }), /home/);
+});
+
+test("events reader exits nonzero when corrupt lines are present", () => {
+  const home = freshHome();
+  try {
+    const res = appendEvent({ home, event: buildEvent(VALID) });
+    writeFileSync(res.path, readFileSync(res.path, "utf8") + "{not valid json\n");
+    const cli = runEvents(home, ["--json"]);
+    assert.equal(
+      cli.status,
+      1,
+      "stdout:\n" + cli.stdout + "\nstderr:\n" + cli.stderr,
+    );
+    const report = JSON.parse(cli.stdout);
+    assert.equal(report.corrupt_lines, 1);
+    assert.equal(report.boundary.read_only, true);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("events reader rejects non-positive --limit", () => {
+  const home = freshHome();
+  try {
+    const cli = runEvents(home, ["--limit", "0", "--json"]);
+    assert.equal(cli.status, 1);
+    assert.match(cli.stderr, /--limit must be a positive integer/);
   } finally {
     rmSync(home, { recursive: true, force: true });
   }

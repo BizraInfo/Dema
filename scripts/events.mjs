@@ -3,8 +3,8 @@
 //
 // Prints recent entries from $DEMA_HOME/events/log.jsonl and reports chain
 // integrity. Read-only: never writes, never networks, never mints. Exits 1 if
-// content/chain verification fails (tamper detected) so it can double as a
-// local integrity check.
+// content/chain verification fails or corrupt lines are present (tamper
+// detected) so it can double as a local integrity check.
 //
 // Usage: node scripts/events.mjs [--json] [--limit N]
 
@@ -18,12 +18,17 @@ function arg(name, fallback) {
 }
 
 const home = process.env.DEMA_HOME || join(homedir(), ".dema");
-const limit = Number.parseInt(arg("--limit", "20"), 10);
+const limitRaw = arg("--limit", "20");
 const wantJson = process.argv.includes("--json");
+
+if (!/^[1-9][0-9]*$/.test(limitRaw)) {
+  console.error("events: --limit must be a positive integer");
+  process.exit(1);
+}
 
 const result = readEvents({
   home,
-  limit: Number.isInteger(limit) ? limit : 20,
+  limit: Number.parseInt(limitRaw, 10),
 });
 
 const report = {
@@ -66,4 +71,6 @@ if (wantJson) {
   console.log("  boundary:      read-only · no network · no keys · no mint");
 }
 
-if (!result.verified || !result.chain_intact) process.exitCode = 1;
+if (!result.verified || !result.chain_intact || result.corrupt_lines > 0) {
+  process.exitCode = 1;
+}

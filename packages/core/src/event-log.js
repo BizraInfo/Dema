@@ -19,6 +19,10 @@
 //                   integrity) and verifies the prev_hash chain. Never throws
 //                   on a corrupt line — skips and flags it.
 //
+// Concurrency caveat: appendEvent() is a single-writer local append path.
+// Callers that might emit concurrently must serialize writes externally until
+// a future OBS slice adds an explicit file lock.
+//
 // REUSES (no duplication): sha256, stableStringify  packages/consent/src/consent-common.js
 // No network. No keys. No consent. No CLI.
 
@@ -31,9 +35,29 @@ export const EVENT_LOG_SCHEMA = "bizra.dema.event_log_entry.v0.1";
 const VALID_OUTCOMES = Object.freeze(["ok", "error", "refused"]);
 const MAX_METADATA_KEYS = 32;
 const MAX_METADATA_STRING = 256;
+const EVENT_DIR_MODE = 0o700;
+const EVENT_FILE_MODE = 0o600;
 
 function isNonEmptyString(v) {
   return typeof v === "string" && v.length > 0;
+}
+
+function assertHome(home) {
+  if (!isNonEmptyString(home)) {
+    throw new TypeError("event-log: home (DEMA_HOME path) is required");
+  }
+  return home;
+}
+
+function validateRecordedAtIso(recorded_at_iso) {
+  if (!isNonEmptyString(recorded_at_iso)) {
+    throw new TypeError("event-log: recorded_at_iso must be an ISO timestamp string");
+  }
+  const parsed = Date.parse(recorded_at_iso);
+  if (!Number.isFinite(parsed)) {
+    throw new TypeError("event-log: recorded_at_iso must be an ISO timestamp string");
+  }
+  return recorded_at_iso;
 }
 
 // Redaction guard: every value in an attestation/metadata map must be a scalar
@@ -41,7 +65,12 @@ function isNonEmptyString(v) {
 // can never be smuggled into a record. Strings are length-capped.
 function assertPrimitiveMap(map, label) {
   if (map === undefined) return {};
-  if (map === null || typeof map !== "object" || Array.isArray(map)) {
+  if (
+    map === null ||
+    typeof map !== "object" ||
+    Array.isArray(map) ||
+    Object.getPrototypeOf(map) !== Object.prototype
+  ) {
     throw new TypeError(`event-log: ${label} must be a plain object`);
   }
   const keys = Object.keys(map);
@@ -100,10 +129,14 @@ export function buildEvent({
   }
   const safeBoundary = freezeMap(assertPrimitiveMap(boundary, "boundary"));
   const safeMetadata = freezeMap(assertPrimitiveMap(metadata, "metadata"));
+  const recordedAtIso =
+    recorded_at_iso === undefined
+      ? new Date().toISOString()
+      : validateRecordedAtIso(recorded_at_iso);
 
   const body = Object.freeze({
     schema: EVENT_LOG_SCHEMA,
-    recorded_at_iso: recorded_at_iso || new Date().toISOString(),
+    recorded_at_iso: recordedAtIso,
     command,
     outcome,
     correlation_id,
@@ -128,20 +161,7 @@ function contentEventId(entry) {
   return sha256(stableStringify(body));
 }
 
-function logPathFor(home) {
-  return join(home, "events", "log.jsonl");
-}
-
-function readLines(path) {
-  if (!existsSync(path)) return [];
-  const raw = readFileSync(path, "utf8");
-  return raw.split("\n").filter((l) => l.trim().length > 0);
-}
-
-export function appendEvent({ home, event }) {
-  if (!isNonEmptyString(home)) {
-    throw new TypeError("event-log: home (DEMA_HOME path) is required");
-  }
+function assertValidEvent(event) {
   if (
     !event ||
     event.schema !== EVENT_LOG_SCHEMA ||
@@ -151,8 +171,42 @@ export function appendEvent({ home, event }) {
       "event-log: a valid event (from buildEvent) is required",
     );
   }
+  if (!isNonEmptyString(event.command)) {
+    throw new TypeError("event-log: command (non-empty string) is required");
+  }
+  if (!VALID_OUTCOMES.includes(event.outcome)) {
+    throw new TypeError(
+      `event-log: outcome must be one of ${VALID_OUTCOMES.join("|")}`,
+    );
+  }
+  if (!isNonEmptyString(event.correlation_id)) {
+    throw new TypeError(
+      "event-log: correlation_id (non-empty string) is required",
+    );
+  }
+  validateRecordedAtIso(event.recorded_at_iso);
+  assertPrimitiveMap(event.boundary ?? {}, "boundary");
+  assertPrimitiveMap(event.metadata ?? {}, "metadata");
+  if (contentEventId(event) !== event.event_id) {
+    throw new TypeError("event-log: event_id does not match event content");
+  }
+}
+
+function logPathFor(home) {
+  return join(assertHome(home), "events", "log.jsonl");
+}
+
+function readLines(path) {
+  if (!existsSync(path)) return [];
+  const raw = readFileSync(path, "utf8");
+  return raw.split("\n").filter((l) => l.trim().length > 0);
+}
+
+export function appendEvent({ home, event }) {
+  assertHome(home);
+  assertValidEvent(event);
   const path = logPathFor(home);
-  mkdirSync(dirname(path), { recursive: true });
+  mkdirSync(dirname(path), { recursive: true, mode: EVENT_DIR_MODE });
 
   const existing = readLines(path);
   let prev_hash = null;
@@ -165,7 +219,9 @@ export function appendEvent({ home, event }) {
   }
 
   const record = { ...event, prev_hash };
-  appendFileSync(path, JSON.stringify(record) + "\n");
+  appendFileSync(path, JSON.stringify(record) + "\n", {
+    mode: EVENT_FILE_MODE,
+  });
   return Object.freeze({
     path,
     event_id: event.event_id,
