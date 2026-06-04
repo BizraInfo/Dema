@@ -14,8 +14,6 @@
 
 import { createHash } from "node:crypto";
 import {
-  existsSync,
-  statSync,
   readdirSync,
   readFileSync,
   openSync,
@@ -42,9 +40,6 @@ function toPosix(rel) {
 // Recursively collect every file under `home` as { rel_path, sha256, bytes },
 // sorted by rel_path. Throws on a missing home or when caps are exceeded.
 function walkFiles(home) {
-  if (!existsSync(home) || !statSync(home).isDirectory()) {
-    throw new Error(`recovery: home not found or not a directory: ${home}`);
-  }
   const out = [];
   const stack = [{ dir: home, depth: 0 }];
   while (stack.length > 0) {
@@ -52,32 +47,41 @@ function walkFiles(home) {
     if (depth > MAX_DEPTH) {
       throw new RangeError(`recovery: home exceeds max depth ${MAX_DEPTH}`);
     }
-    for (const name of readdirSync(dir).sort()) {
-      const full = join(dir, name);
-      const st = statSync(full);
-      if (st.isDirectory()) {
+    // No stat-by-path check anywhere: entry types come from the readdir
+    // dirents (in memory), and files are opened once and read+sized from the
+    // SAME descriptor. There is no time-of-check/time-of-use window because no
+    // path is checked and then re-resolved by a later fs call.
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      if (dir === home) {
+        throw new Error(`recovery: home not found or not a directory: ${home}`);
+      }
+      throw new Error(`recovery: cannot read directory: ${dir}`);
+    }
+    entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    for (const ent of entries) {
+      const full = join(dir, ent.name);
+      if (ent.isDirectory()) {
         stack.push({ dir: full, depth: depth + 1 });
-      } else if (st.isFile()) {
+      } else if (ent.isFile()) {
         if (out.length >= MAX_FILES) {
           throw new RangeError(`recovery: home exceeds max files ${MAX_FILES}`);
         }
-        // Read via a file descriptor so the integrity check (fstat) and use
-        // (read) bind to the SAME inode — no time-of-check/time-of-use race
-        // where the path is swapped between stat and read.
         const fd = openSync(full, "r");
         try {
-          const fst = fstatSync(fd);
-          if (fst.isFile()) {
-            out.push({
-              rel_path: toPosix(relative(home, full)),
-              sha256: sha256Bytes(readFileSync(fd)),
-              bytes: fst.size,
-            });
-          }
+          out.push({
+            rel_path: toPosix(relative(home, full)),
+            sha256: sha256Bytes(readFileSync(fd)),
+            bytes: fstatSync(fd).size,
+          });
         } finally {
           closeSync(fd);
         }
       }
+      // Symlinks and special files are intentionally skipped (dirent reports
+      // them as neither file nor directory), avoiding symlink-escape and loops.
     }
   }
   out.sort((a, b) =>
