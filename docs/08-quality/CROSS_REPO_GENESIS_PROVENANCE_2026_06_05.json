@@ -1,0 +1,319 @@
+{
+  "schema": "bizra.dema.cross_repo_genesis_provenance.v0.1",
+  "generated_at_iso": "2026-06-05T00:56:50.260Z",
+  "audit_id": "CROSS-REPO-GENESIS-PROVENANCE-1A",
+  "repos": [
+    {
+      "name": "Dema",
+      "fullName": "BizraInfo/Dema",
+      "archived": false,
+      "visibility": "PUBLIC",
+      "canonRole": "CURRENT_CANON",
+      "defaultBranch": "main",
+      "pushedAt": "2026-06-04T23:29:56Z",
+      "localRoot": "<LOCAL_PATH_REDACTED>",
+      "ghAvailable": true,
+      "ghSearchRateLimited": false,
+      "artifact_count": 262
+    },
+    {
+      "name": "bizra-data-lake",
+      "fullName": "BizraInfo/bizra-data-lake",
+      "archived": false,
+      "visibility": "PUBLIC",
+      "canonRole": "HISTORICAL_CANON",
+      "defaultBranch": "main",
+      "pushedAt": "2026-05-08T21:45:24Z",
+      "localRoot": "<LOCAL_PATH_REDACTED>",
+      "ghAvailable": true,
+      "ghSearchRateLimited": false,
+      "artifact_count": 602
+    },
+    {
+      "name": "BIZRA-OS",
+      "fullName": "BizraInfo/BIZRA-OS",
+      "archived": false,
+      "visibility": "PRIVATE",
+      "canonRole": "IMPLEMENTATION_CANDIDATE",
+      "defaultBranch": "main",
+      "pushedAt": "2026-01-26T02:16:01Z",
+      "localRoot": null,
+      "ghAvailable": true,
+      "ghSearchRateLimited": false,
+      "artifact_count": 0
+    },
+    {
+      "name": "bizra-genesis-node",
+      "fullName": "BizraInfo/bizra-genesis-node",
+      "archived": true,
+      "visibility": "PRIVATE",
+      "canonRole": "ARCHIVED_REFERENCE",
+      "defaultBranch": "main",
+      "pushedAt": "2026-03-04T16:01:55Z",
+      "localRoot": null,
+      "ghAvailable": true,
+      "ghSearchRateLimited": false,
+      "artifact_count": 0
+    },
+    {
+      "name": "bizra-node0-genesis",
+      "fullName": "BizraInfo/bizra-node0-genesis",
+      "archived": true,
+      "visibility": "PUBLIC",
+      "canonRole": "ARCHIVED_REFERENCE",
+      "defaultBranch": "main",
+      "pushedAt": "2026-02-19T17:44:38Z",
+      "localRoot": null,
+      "ghAvailable": true,
+      "ghSearchRateLimited": false,
+      "artifact_count": 0
+    },
+    {
+      "name": "bizra_scaffold",
+      "fullName": "BizraInfo/bizra_scaffold",
+      "archived": true,
+      "visibility": "PUBLIC",
+      "canonRole": "ARCHIVED_REFERENCE",
+      "defaultBranch": "main",
+      "pushedAt": "2026-03-12T20:31:07Z",
+      "localRoot": null,
+      "ghAvailable": true,
+      "ghSearchRateLimited": false,
+      "artifact_count": 0
+    }
+  ],
+  "artifact_count_total": 864,
+  "artifact_count_by_class": {
+    "HISTORICAL_CANON": 159,
+    "IMPLEMENTATION_CANDIDATE": 411,
+    "SECRET_REFERENCE_DO_NOT_READ": 7,
+    "TEST_FIXTURE": 100,
+    "CURRENT_CANON": 187
+  },
+  "block0_live_readiness": {
+    "operator_pubkey_present": false,
+    "poi_rule_verifiable": false,
+    "ceremony_required": true,
+    "needs_operator_signing_count": 11
+  },
+  "decision_matrix": {
+    "inherit": [
+      "BizraInfo/Dema:.gitleaks.toml",
+      "BizraInfo/Dema:apps/cli/src/index.js",
+      "BizraInfo/Dema:artifacts/proofs/node0-local-urp/critic_report_001.json",
+      "BizraInfo/Dema:artifacts/proofs/node0-local-urp/node0_local_urp_status.json",
+      "BizraInfo/Dema:artifacts/proofs/node0-local-urp/poi_sandbox_record.json",
+      "BizraInfo/Dema:artifacts/proofs/node0-local-urp/sat5_urp_registration.json",
+      "BizraInfo/Dema:artifacts/proofs/node0-local-urp/self_check_report.json",
+      "BizraInfo/Dema:artifacts/proofs/node0-local-urp/urp_knowledge_pack_receipt.json",
+      "BizraInfo/Dema:artifacts/proofs/node0-local-urp/urp_local_registry.json",
+      "BizraInfo/Dema:artifacts/proofs/node0-local-urp/urp_resource_offer_receipt.json",
+      "BizraInfo/Dema:artifacts/proofs/node0-local-urp/urp_skill_registry_receipt.json",
+      "BizraInfo/Dema:CHANGELOG.md",
+      "BizraInfo/Dema:docs/02-architecture/dema-urp-resource-offer-v0.1.md",
+      "BizraInfo/Dema:docs/02-architecture/homebase-tui-v0.1-pseudocode/phase_05_cli_dispatch_pseudocode.md",
+      "BizraInfo/Dema:docs/02-architecture/NODE0_OSTREE_TAD_v0_1.md",
+      "BizraInfo/Dema:docs/02-architecture/node0-dema-goal-v0.2.md",
+      "BizraInfo/Dema:docs/02-architecture/node0-urp-ecosystem-transition.md",
+      "BizraInfo/Dema:docs/02-architecture/pat-builder-sat-validator.md",
+      "BizraInfo/Dema:docs/02-architecture/SAT_ROLE_BOUNDARY.md",
+      "BizraInfo/Dema:docs/02-architecture/sat-verifier-sibling-spec.md"
+    ],
+    "ignore_count": 100,
+    "operator_review_count": 418,
+    "secret_reference_count": 7
+  },
+  "next_gate": {
+    "gate": "BLOCKED_BY_UNRESOLVED_PROVENANCE",
+    "reason": "Unresolved SECRET_REFERENCE_DO_NOT_READ or LIVE_PROOF_CANDIDATE artifacts require operator review before any key ceremony."
+  },
+  "highlighted_artifacts": [
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-node0/bizra-omega/bizra-core/src/genesis.rs",
+      "artifact_type": "code",
+      "status_class": "HISTORICAL_CANON",
+      "migration_decision": "REFERENCE_ONLY",
+      "evidence": "path_match",
+      "source": "local_path_scan",
+      "query": "genesis"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-node0/bizra-omega/bizra-resourcepool/src/bin/node0_genesis.rs",
+      "artifact_type": "code",
+      "status_class": "HISTORICAL_CANON",
+      "migration_decision": "REFERENCE_ONLY",
+      "evidence": "path_match",
+      "source": "local_path_scan",
+      "query": "genesis"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-node0/bizra-omega/bizra-resourcepool/src/genesis.rs",
+      "artifact_type": "code",
+      "status_class": "HISTORICAL_CANON",
+      "migration_decision": "REFERENCE_ONLY",
+      "evidence": "path_match",
+      "source": "local_path_scan",
+      "query": "genesis"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-node0/docs/GENESIS_100_GATE.md",
+      "artifact_type": "doc",
+      "status_class": "HISTORICAL_CANON",
+      "migration_decision": "REFERENCE_ONLY",
+      "evidence": "path_match",
+      "source": "local_path_scan",
+      "query": "genesis"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-node0/scripts/genesis_100_gate.py",
+      "artifact_type": "code",
+      "status_class": "HISTORICAL_CANON",
+      "migration_decision": "REFERENCE_ONLY",
+      "evidence": "path_match",
+      "source": "local_path_scan",
+      "query": "genesis"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-node0/scripts/node0_genesis_ceremony.sh",
+      "artifact_type": "other",
+      "status_class": "HISTORICAL_CANON",
+      "migration_decision": "REFERENCE_ONLY",
+      "evidence": "path_match",
+      "source": "local_path_scan",
+      "query": "genesis"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/bizra-core/src/genesis.rs",
+      "artifact_type": "code",
+      "status_class": "HISTORICAL_CANON",
+      "migration_decision": "REFERENCE_ONLY",
+      "evidence": "path_match",
+      "source": "local_path_scan",
+      "query": "genesis"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/bizra-resourcepool/src/bin/node0_genesis.rs",
+      "artifact_type": "code",
+      "status_class": "HISTORICAL_CANON",
+      "migration_decision": "REFERENCE_ONLY",
+      "evidence": "//! NODE0 GENESIS CEREMONY - THE LIFE KISS\n//!\n//! This binary executes the Genesis ceremony for MoMo (Node0).\n//! It mi",
+      "source": "gh_search",
+      "query": "Node0"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/bizra-resourcepool/src/genesis.rs",
+      "artifact_type": "code",
+      "status_class": "HISTORICAL_CANON",
+      "migration_decision": "REFERENCE_ONLY",
+      "evidence": "path_match",
+      "source": "local_path_scan",
+      "query": "genesis"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "docs/NODE0_GENESIS_COVENANT.md",
+      "artifact_type": "doc",
+      "status_class": "HISTORICAL_CANON",
+      "migration_decision": "REFERENCE_ONLY",
+      "evidence": "# \ud83c\udf31 BIZRA NODE0 GENESIS COVENANT\n\n**Authored By:** MoMo (\u0645\u062d\u0645\u062f) \u2014 First Architect of BIZRA",
+      "source": "gh_search",
+      "query": "genesis"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "scripts/node0_genesis_ceremony.sh",
+      "artifact_type": "other",
+      "status_class": "HISTORICAL_CANON",
+      "migration_decision": "REFERENCE_ONLY",
+      "evidence": "#   sovereign_state/node0_genesis.json    (authority)\n#   sovereign_state/genesis_hash.txt      (authority hash)\n#",
+      "source": "gh_search",
+      "query": "genesis"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "tools/node0_genesis_manifest.py",
+      "artifact_type": "code",
+      "status_class": "HISTORICAL_CANON",
+      "migration_decision": "REFERENCE_ONLY",
+      "evidence": "#!/usr/bin/env python3\n\"\"\"Node0 Genesis Asset Manifest \u2014 content-addressed declaration of founder seed assets.",
+      "source": "gh_search",
+      "query": "genesis"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/NODE0_GENESIS_READINESS_2026_05_16.md",
+      "artifact_type": "doc",
+      "status_class": "CURRENT_CANON",
+      "migration_decision": "INHERIT_ACTIVE",
+      "evidence": "# Node0 Genesis Readiness \u2014 2026-05-16 Snapshot\n\n**Status:** DECLARED state snapshot",
+      "source": "gh_search",
+      "query": "genesis"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/genesis/src/block0-live-readiness.js",
+      "artifact_type": "code",
+      "status_class": "CURRENT_CANON",
+      "migration_decision": "INHERIT_ACTIVE",
+      "evidence": "path_match",
+      "source": "local_path_scan",
+      "query": "genesis"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/authorship-key-store.js",
+      "artifact_type": "code",
+      "status_class": "CURRENT_CANON",
+      "migration_decision": "INHERIT_ACTIVE",
+      "evidence": "export const KEY_INIT_CONSENT_PHRASE = \"GENERATE AUTHORSHIP KEY\";\nexport const KEY_INIT_SCHEMA = \"bizra.dema.authorship_",
+      "source": "gh_search",
+      "query": "Ed25519"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "scripts/block0-live-readiness.mjs",
+      "artifact_type": "other",
+      "status_class": "CURRENT_CANON",
+      "migration_decision": "INHERIT_ACTIVE",
+      "evidence": "path_match",
+      "source": "local_path_scan",
+      "query": "block0"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/block0-live-readiness.test.js",
+      "artifact_type": "test",
+      "status_class": "TEST_FIXTURE",
+      "migration_decision": "IGNORE",
+      "evidence": "path_match",
+      "source": "local_path_scan",
+      "query": "block0"
+    }
+  ],
+  "boundary": {
+    "read_only_audit": true,
+    "runtime_execution": false,
+    "mutation_performed": false,
+    "private_key_read": false,
+    "signing_performed": false,
+    "migration_performed": false,
+    "block0_sealed": false,
+    "federation_started": false,
+    "network_used": true,
+    "gh_api_used": true
+  },
+  "limitations": [
+    "GitHub code search API rate limit hit during scan; artifact index is complete for Dema + bizra-data-lake only in this run.",
+    "Archive repos (BIZRA-OS, bizra-genesis-node, bizra-node0-genesis, bizra_scaffold) have metadata via gh repo view; re-run after rate reset for full code index.",
+    "Secret paths recorded path-only; contents never read."
+  ]
+}
