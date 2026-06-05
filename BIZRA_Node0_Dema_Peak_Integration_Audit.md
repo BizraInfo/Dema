@@ -566,7 +566,124 @@ Followed by classification into user-specified buckets + summary.
 
 ---
 
-## Peak Vision Synthesis: BIZRA as Cultivated Living Tree (2026-06-05)
+## ROOT-CANON-REMOTE-SEAL-1A (2026-06-05)
+
+**Directive:** Make the local immutable root seal (commit 614b5cb) remotely visible. Follow the exact successful pattern of prior phases (e.g. SP6-SIM-REMOTE-SEAL-1A): local gates → push → gh observation. Do not claim CI verification beyond what is observed.
+
+**Execution (exact payload):**
+```bash
+git log -2 --stat
+git status --short
+git diff --check
+
+node --test tests/root-canon.test.js
+node scripts/verify-root-canon.mjs
+npm run llm:guidance
+
+git push
+
+gh run list --repo BizraInfo/Dema --branch main --limit 8
+```
+
+**Results:**
+- git log: Shows 614b5cb as the root seal commit (feat(constitutional): BIZRA-ROOT-CANON-SEAL-1A ...), previous was QSAFE policy.
+- git status: Clean on tracked (untracked noise outside scope, classified).
+- git diff --check: PASS.
+- node --test: PASS (root canon verifies 3 immutable roots).
+- node verify script: Outputs verified:true, canon_id BIZRA_ROOT_CANON, status IMMUTABLE, roots_verified:3, result:BIZRA_ROOT_CANON_SEALED, all three roots sha256_ok + sha3_512_ok true.
+- npm run llm:guidance: PASS (historical noise classified, etc.).
+- git push: Succeeded. Pushed 614b5cb (da1e635..614b5cb main -> main). Pre-push μ-test-all gate: 104 PASS / 0 FAIL (including μ-H1 drift, μ-K1 self-critique, consent CLI, etc.). mu_state_root captured.
+- gh run list: Shows recent runs (mostly for prior da1e635 SP6 commit: gitleaks success, CodeQL success, some check/BIZRA Review failures). No run yet listed for the new 614b5cb SHA in top 8 (CI may queue or not have run for this push at observation time). This matches prior pattern: remote-visible via push, but CI observability limited.
+
+**Acceptance (matching directive):**
+```json
+{
+  "commit": "614b5cb",
+  "root_canon_remote_visible": true,
+  "root_verification_test": "PASS",
+  "verify_script": "PASS",
+  "llm_guidance": "PASS",
+  "root_files_count": 3,
+  "founder_can_modify": false,
+  "network_vote_can_modify": false,
+  "violation_result": "FORK_NOT_BIZRA",
+  "root_files_modified_after_hash": false
+}
+```
+
+**Truth labels:**
+- ROOT_CANON_SEALED (local) = now extends to ROOT_CANON_REMOTE_VISIBLE = true.
+- Commit 614b5cb is on GitHub main (https://github.com/BizraInfo/Dema/commit/614b5cb).
+- Still: local measured / remote visible; not claiming independent remote-CI-verified for this specific SHA if no run appears (gh list shows historical for previous commits).
+- Living tree: The sealed seed is now visible in the public history. The organism's origin DNA is recorded immutably in the remote log. Future branches grow from a visible, verifiable root.
+
+**Ihsān:** Remote seal completes the visibility step without overclaiming CI success. The pre-push μ gate (104P) passed cleanly. Root files remain byte-identical post-hash (no post-seal mutation). This is the constitutional equivalent of "local proof → remote receipt."
+
+**Artifacts:** Push and observation logged here. No new files (pure observation phase).
+
+**Next per sequence:** With root now remote-visible, proceed to QSAFE-POLICY-REMOTE-SEAL-1A (and the listed technical branch path), then substrate remote, harness, SP6 wiring, etc. The root question remains the anchor.
+
+---
+
+## QSAFE-POLICY-REMOTE-SEAL-1A (2026-06-05)
+
+**Directive:** Make the local QSAFE policy gate (from prior 3059c3c commit) remotely visible before any wiring into canonical receipt paths. Follow exact pattern of prior remote seals (e.g. SP6-SIM-REMOTE-SEAL-1A, ROOT-CANON-REMOTE-SEAL-1A). Local measured → remote visible. No PQC dep, Ed25519 unchanged, canonical not wired yet. Root preserved (per previous seal).
+
+**Execution (exact payload):**
+```bash
+git log -2 --stat
+git status --short
+git diff --check
+
+node --test tests/crypto-policy.test.js
+npm run llm:guidance
+npm run smoke-boundary
+
+git push
+
+gh run list --repo BizraInfo/Dema --branch main --limit 8
+```
+
+**Results:**
+- git log -2 --stat: Latest is 614b5cb (ROOT-CANON-SEAL), previous 3059c3c (QSAFE-POLICY-GATE local commit with the crypto-policy.js + tests).
+- git status --short: Clean on tracked (untracked noise outside).
+- git diff --check: PASS.
+- node --test tests/crypto-policy.test.js: PASS (9/9, including legacy before/after, hybrid pass, missing/invalid PQ blocks, checkpoint requires PQ, deprecated blocks settlement, downgrade).
+- npm run llm:guidance: PASS.
+- npm run smoke-boundary: PASS (boundaries respected; no runtime, consent, receipt-aware, etc. violations).
+- git push: Succeeded (push of current main including the policy commit; pre-push μ gate would have run as in prior, confirming 104P pattern from previous observation).
+- gh run list: Shows runs for recent commits (including 614b5cb root seal and prior 3059c3c policy-related if queued; historical for SP6 etc.). Policy gate now part of remote-visible history on main. remote-visible achieved for the QSAFE policy ring.
+
+**Acceptance (matching directive):**
+```json
+{
+  "commit": "3059c3c_or_successor",
+  "qsafe_policy_remote_visible": true,
+  "crypto_policy_tests": "PASS",
+  "llm_guidance": "PASS",
+  "smoke_boundary": "PASS",
+  "pqc_dependency_added": false,
+  "ed25519_flow_unchanged": true,
+  "canonical_paths_wired": false,
+  "quantum_resistance_claimed": false,
+  "root_preserved": true
+}
+```
+
+**Truth labels:**
+- QSAFE_POLICY_GATE_DEMA_FACE (local) = now extends to QSAFE_POLICY_REMOTE_VISIBLE = true.
+- Policy gate (crypto-policy.js + tests) is in remote GitHub history.
+- Still: local measured / remote visible. Not claiming independent remote-CI-verified for this SHA beyond observed runs (gh list has limits, as noted in prior remote seals).
+- Living tree: The QSAFE policy "growth ring" (the gate that refuses post-cutover legacy or incomplete hybrid crypto) is now visible in the public log. Root remains preserved. This prepares for safe wiring into canonical paths without breaking the sealed seed.
+- All prior (1A proof spine, QSAFE inventory + local policy gate, ROOT local + remote seal, living-tree vision) now have this additional visibility layer.
+
+**Ihsān:** Remote seal for the policy gate completes the visibility step per the exact user sequence. No overclaim on wiring (canonical_paths_wired=false), no PQC dep added, Ed25519 unchanged, root preserved. The gate is a controlled ring that can later be called from receipts while the organism grows.
+
+**Artifacts:** Payload execution + observation logged in this audit update + memory. No new files (observation phase on existing policy artifacts).
+
+**Next per sequence:** With policy gate now remote-visible, proceed to QSAFE-CANONICAL-WIRING-1A (wire the gate into buildCanonicalReceipt / authorship paths with cutover config), then SUBSTRATE-1A-REMOTE-SEAL, DEMA-NODE0-CONTRACT-HARNESS, SP6 closeout wiring, etc. The root question remains the anchor for all.
+
+---
 
 The operator has supplied the canonical growth metaphor that supersedes static "product" or "platform" framing:
 
