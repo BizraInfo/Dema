@@ -449,6 +449,70 @@ Followed by classification into user-specified buckets + summary.
 
 ---
 
+## BIZRA-QSAFE-POLICY-GATE-1A (Dema Face — 2026-06-05)
+
+**Directive:** Add the policy classification gate as the next growth ring after INVENTORY-1A. Pure module first. No PQC deps. No change to live Ed25519 receipt semantics or signing paths yet. Frame as cultivation per the living-tree north star (controlled, testable addition to the organism's DNA without breaking existing proof spine).
+
+**Execution:**
+- Created `packages/receipts/src/crypto-policy.js` (pure, no deps): QSAFE_REASON_CODES, QSAFE_POLICY_MODES, evaluateSignaturePolicy() matching the exact shape and logic in the directive.
+- Created `tests/crypto-policy.test.js` with the required tests (legacy before/after cutover, hybrid pass, missing/invalid/low-sec PQ, checkpoint requires PQ, settlement block on deprecated, downgrade).
+- Used node --test runner.
+
+**Results:**
+- All 9 tests PASS (node --test tests/crypto-policy.test.js).
+- The gate correctly:
+  - Allows legacy classical before cutover.
+  - Requires hybrid + valid PQ after cutover for non-checkpoint live artifacts; blocks settlement otherwise.
+  - Checkpoints require PQ.
+  - Produces the exact reason codes (HYBRID_SIGNATURE_REQUIRED, PQ_SIGNATURE_MISSING, etc.).
+  - Reports requiredMode.
+- No changes to authorship-signature.js, canonical-receipt.js, or any live paths (per "do not change live semantics yet").
+- Ed25519 flows untouched.
+- No new dependencies.
+
+**Gates (exact per directive):**
+- node --test tests/crypto-policy.test.js → PASS (9/9)
+- npm run llm:guidance → PASS
+- npm run smoke-boundary → PASS (relevant boundaries respected)
+- git diff --check → PASS (after ws hygiene)
+
+**Truth labels:**
+- QSAFE_INVENTORY_DEMA_FACE = COMPLETE / MEASURED (prior)
+- QSAFE_POLICY_GATE_DEMA_FACE = MEASURED (this phase: the pure gate + tests exist and pass)
+- HYBRID_PQ_SIGNATURES = not yet wired
+- PQC_DEPENDENCY_ADDED = false
+- ED25519_FLOW_UNCHANGED = true
+- QUANTUM_RESISTANCE_IMPLEMENTED = not claimed
+- Overall: living system cultivation step — added a policy "growth ring" that can later be called from canonical build/verify.
+
+**Living tree framing:** This is the "root-to-trunk" policy layer. The immune system now has an additional sensor for obsolete crypto. Future rings (hybrid schema in receipts, adapters in authorship module) can grow from this without mutating the seed.
+
+**Acceptance JSON (matching directive):**
+```json
+{
+  "qsafe_inventory": "COMPLETE",
+  "policy_gate_added": true,
+  "pqc_dependency_added": false,
+  "ed25519_flow_unchanged": true,
+  "legacy_before_cutover_passes": true,
+  "legacy_after_cutover_fails": true,
+  "missing_pq_blocks_settlement": true,
+  "downgrade_reason_codes_exist": true,
+  "llm_guidance": "PASS",
+  "smoke_boundary": "PASS",
+  "diff_check": "PASS",
+  "quantum_resistance_claimed": false
+}
+```
+
+**Ihsān:** Exact match to the minimal spec. No overclaim. Centralized surface (from INVENTORY) makes this safe and small. Ties directly to "BIZRA is cultivated" — this gate is one more ring that teaches the organism when to refuse growth from weak DNA.
+
+**Artifacts:** New module + tests committed isolated.
+
+**Next per sequence:** Wire the gate into canonical-receipt / authorship paths (with cutover config), add dual-sign support, then hybrid transport, etc. Provide consent when ready for the wiring phase.
+
+---
+
 ## Peak Vision Synthesis: BIZRA as Cultivated Living Tree (2026-06-05)
 
 The operator has supplied the canonical growth metaphor that supersedes static "product" or "platform" framing:
