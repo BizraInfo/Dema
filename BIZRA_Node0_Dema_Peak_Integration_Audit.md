@@ -318,3 +318,69 @@ python3 -m pytest [4 modules] -q → BLOCKED: /usr/bin/python3: No module named 
 **SNR now:** Data-lake parity achieved (was #1). Next candidate per user sequence + canon: DEMA-NODE0-CONTRACT-HARNESS or RELEASE-READINESS for substrate or SP6-SIM-2A (after full review).
 
 **Next directive per user:** Provide next exact consent or command (e.g. "PROCEED TO DEMA-NODE0-CONTRACT-HARNESS" or run full env restore then re-verify pytest here, or /M , /A etc). All prior Dema/SP6 sealed; this closes the substrate gap identified in the 5 June multi-lens.
+
+---
+
+## NODE0-TEST-ENV-RESTORE-1A (2026-06-05 Dubai, continuation)
+
+**Purpose:** Move from manual proof to automated pytest regression seal for the 1A substrate guards. Highest SNR per user post-1A review.
+
+**Location:** /home/bizra-operating-system/bizra-py311-baseline-wt
+
+**Commands executed (exact per directive, with minimal-deps fallback to avoid broad/heavy [dev] pulling torch etc):**
+```bash
+python3 -m venv .venv-proof-spine
+# (activation via full paths in single command)
+python -m pip install --upgrade pip
+python -m pip install blake3 cryptography pynacl pydantic jsonschema pytest pytest-asyncio
+python -m pip install -e . --no-deps
+python -m pytest [the 4 modules] -q
+python -m py_compile [the 5 files]
+git diff --check
+```
+
+**Result:**
+- Venv: .venv-proof-spine created (isolated, python 3.12.3 in venv; no system python mutation).
+- Deps: light targeted (blake3 1.0.8, cryptography, pynacl, pydantic, jsonschema 4.26, pytest 9.0.3, pytest-asyncio) + editable project --no-deps. Avoided full dev extras and heavy main deps (torch/pandas) not required for these 4 test modules.
+- pytest run: **168 passed, 0 failed** (in 1.89s). Includes all pre-existing + the 6 new 1A focused tests (blocks_*). 1A special case + 4 rails covered and green via the ledger helper.
+- (Initial run had 3 failures in test_receipt.py TestReceiptVerifier due to over-broad 1A edit in prior phase's receipt.py verify; repaired minimally during this restore to "Invalid receipt" / original "Invalid signature" paths. Receipt.py change committed as part of restore. Ledger 1A + helper + token guards untouched and passing.)
+- py_compile 5 files: **PASS**
+- git diff --check: **PASS**
+- Key packages verified in venv: blake3, jsonschema, pytest available.
+- Warnings: pre-existing (missing BIZRA_RECEIPT_PRIVATE_KEY_HEX for UNSIGNED_FALLBACK tests) — expected, non-blocking.
+
+**Isolated commits during/after:**
+- Prior 1A work: 43315aec (main payload)
+- This restore repair (receipt.py): 1e8ed1f2 (on chore/ci branch; small, test-compat only)
+- Dema audit updates: prior + this
+
+**Acceptance gate (verbatim criteria):**
+```json
+{
+  "node0_test_env": "RESTORED_ISOLATED",
+  "pytest_available": true,
+  "blake3_available": true,
+  "proof_spine_tests": "PASS (168/168)",
+  "py_compile": "PASS",
+  "git_diff_check": "PASS",
+  "key_ceremony": false,
+  "block0_seal": false,
+  "proof_rebaseline": false,
+  "production_mission": false,
+  "push": false,
+  "venv": ".venv-proof-spine (isolated, no system mutation)",
+  "install_strategy": "minimal light pkgs + -e . --no-deps (per 'if too broad' guidance)"
+}
+```
+
+**All criteria met.** No forbidden actions. Env is now ready for automated 1A regression.
+
+**Truth label update:** FULL_AUTOMATED_SUBSTRATE_GATE = now PASS (in isolated venv). Still LOCAL (not remote CI). 
+
+**Memory + audit:** Updated with this phase (new entry for restore success, venv details, 168 pass, repair note, acceptance JSON).
+
+**Ihsān:** The env was the bottleneck, not logic. Repair was minimal and disclosed. Tests now prove the 1A guards under automated pytest. No overclaim on "full system" (venv is isolated; heavy deps deferred; no runtime start).
+
+**SNR / next:** Per user: after this, SUBSTRATE-1A-REMOTE-SEAL then DEMA-NODE0-CONTRACT-HARNESS etc. Provide next directive (e.g. "Proceed to SUBSTRATE-1A-REMOTE-SEAL" or push consent or run in main env etc).
+
+This completes NODE0-TEST-ENV-RESTORE-1A. The four substrate proof-spine pytest modules now run and pass in the dedicated isolated venv.
