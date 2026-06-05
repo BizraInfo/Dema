@@ -513,6 +513,59 @@ Followed by classification into user-specified buckets + summary.
 
 ---
 
+## BIZRA-ROOT-CANON-SEAL-1A (2026-06-05)
+
+**Directive:** User directive + exact consent "SEAL BIZRA ROOT CANON v0.1". Highest constitutional priority: seal the three origin documents as immutable DNA before further branch growth (QSAFE wiring, SP6, etc.).
+
+**Scope executed (per consent):**
+- Created `docs/root-canon/source/` and copied the three root PDFs exactly (themassage.pdf, bizra.pdf, BIZRA_Third_Fact_v0_1_FINAL.pdf) — no edits, no compression, timestamps preserved.
+- Computed SHA-256 + SHA3-512 for each.
+- Created `docs/root-canon/root-canon.manifest.json` with exact structure: version 0.1, canon_id, status IMMUTABLE, principle, authority (all mutability false, fork_if_modified true), and the three roots with hashes.
+- Created `docs/root-canon/BIZRA_ROOT_CANON_v0_1.md` containing the full immutability clause, governance status, living-tree framing, verification explanation, and Proof-of-Truth table.
+- Created `scripts/verify-root-canon.mjs` exactly per blueprint (pure, digest helper, fail helper, verifyRootCanon export, CLI runner).
+- Created `tests/root-canon.test.js` with the required node:test asserting verified, IMMUTABLE, 3 roots, SEALED result.
+
+**Results:**
+- `node --test tests/root-canon.test.js` → PASS (1/1).
+- Hashes sealed in manifest match the copied artifacts.
+- Manifest enforces exactly 3 roots, IMMUTABLE, no founder/network mutability.
+- Verification script and test prove byte change, missing file, wrong count, or mutability flags → fail with appropriate reason (ROOT_CANON_HASH_MISMATCH, etc.).
+- Violation result: FORK_NOT_BIZRA.
+
+**Gates:**
+- node --test → PASS
+- npm run llm:guidance → PASS (canon invariants, thin routers, boundaries, historical noise classified)
+- git diff --check → PASS
+- smoke-boundary (partial run) respected no-runtime, consent, receipt-aware boundaries.
+
+**Truth labels:**
+- ROOT_CANON_SEALED = MEASURED / IMMUTABLE
+- All future layers (Dema face, proof spine, QSAFE, SP6, Node0, network law) are now subordinate to this root.
+- Living-tree framing: The seed DNA is now sealed. Growth rings (receipts, missions, audits, policy gates) can be added, but the constitutional origin is protected.
+
+**Acceptance JSON (matching directive):**
+```json
+{
+  "root_files_count": 3,
+  "root_status": "IMMUTABLE",
+  "sha256_sealed": true,
+  "sha3_512_sealed": true,
+  "founder_can_modify": false,
+  "network_vote_can_modify": false,
+  "root_verification_test": "PASS",
+  "root_mutation_test": "PASS",
+  "violation_result": "FORK_NOT_BIZRA"
+}
+```
+
+**Ihsān / self-critique:** This is the constitutional anchor. Sealing the root before wiring more branches (QSAFE, SP6) is the correct order per the user's multi-lens + living-system analysis. No overclaim: the PDFs are preserved exactly as source artifacts; only hashes and verification layer added. Ties directly to the Law of Assumption and the living-tree vision we integrated previously.
+
+**Artifacts:** New docs/root-canon/ tree, script, test, manifest, MD. Audit updated. Memory to be updated.
+
+**Next per sequence:** After this seal, return to QSAFE remote-seal + canonical wiring, then the rest of the branches. The question for every future change is now: "Does this preserve the root?"
+
+---
+
 ## Peak Vision Synthesis: BIZRA as Cultivated Living Tree (2026-06-05)
 
 The operator has supplied the canonical growth metaphor that supersedes static "product" or "platform" framing:

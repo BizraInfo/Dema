@@ -1,0 +1,40 @@
+{
+  "version": "0.1",
+  "canon_id": "BIZRA_ROOT_CANON",
+  "status": "IMMUTABLE",
+  "principle": "Root may be translated, explained, interpreted, and preserved, but never modified, replaced, removed, or overwritten.",
+  "authority": {
+    "founder_can_modify": false,
+    "network_vote_can_modify": false,
+    "agent_can_modify": false,
+    "model_can_modify": false,
+    "validator_can_modify": false,
+    "fork_if_modified": true
+  },
+  "roots": [
+    {
+      "id": "ROOT_1_THE_MESSAGE",
+      "title": "The Message",
+      "role": "human_spiritual_root",
+      "path": "docs/root-canon/source/themassage.pdf",
+      "sha256": "e05b73b933df31964b96255dca673300b01caea3bce8bd283e7f6440a876d3ce",
+      "sha3_512": "f507b40102eefb7fad69d2883345134bd2efc7481fba08bfadd12b6ead88e802eb7c534450621ba63df689aecc2aec5e5c77a55d0ef5a21a9fa75173ed0dbc56"
+    },
+    {
+      "id": "ROOT_2_THE_SEED",
+      "title": "The Seed / البذرة",
+      "role": "ethical_economic_root",
+      "path": "docs/root-canon/source/bizra.pdf",
+      "sha256": "f95bc6f76acdc9339e005411a17810c50624784f18b55811d8339fcef6601538",
+      "sha3_512": "79d9752a9c09cbc79fbef74fcdd954c9c1f08671c259ca7ab5feba37d5718ddb033ee6289dd2cf5e537f0489fb43cf0fd21100324c43b94604967080e322f520"
+    },
+    {
+      "id": "ROOT_3_THE_THIRD_FACT",
+      "title": "The Third Fact",
+      "role": "public_constitutional_root",
+      "path": "docs/root-canon/source/BIZRA_Third_Fact_v0_1_FINAL.pdf",
+      "sha256": "1deacd63f42315d7ae5ac426eb33149fae5d37e99c67b3949421b2c5c80cd02d",
+      "sha3_512": "c40fbce7c6246d263c5ebd69753240354b530db18ba2b40be5535821a92df30a31987eb0408752572b0bab245acd95e4d4cbdfe7760fd323b31007156d599a9b"
+    }
+  ]
+}
