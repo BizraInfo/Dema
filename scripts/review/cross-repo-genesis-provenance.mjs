@@ -3,7 +3,7 @@
 // No key generation, private-key read, signing, migration, or Block0 seal.
 
 import { execFile } from "node:child_process";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";

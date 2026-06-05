@@ -63,7 +63,8 @@ test("preflight blocks when provenance unresolved", async () => {
 
 test("preflight CLI emits JSON on fresh home with explicit key-ceremony provenance", async () => {
   const home = await mkdtemp(join(tmpdir(), "dema-key-preflight-cli-"));
-  const provFile = join(tmpdir(), `prov-${Date.now()}.json`);
+  const provDir = await mkdtemp(join(tmpdir(), "dema-key-preflight-prov-"));
+  const provFile = join(provDir, "provenance.json");
   try {
     await writeFile(
       provFile,
@@ -80,7 +81,7 @@ test("preflight CLI emits JSON on fresh home with explicit key-ceremony provenan
     assert.equal(report.cleared_for_key_init, true);
   } finally {
     await rm(home, { recursive: true, force: true });
-    await rm(provFile, { force: true });
+    await rm(provDir, { recursive: true, force: true });
   }
 });
 

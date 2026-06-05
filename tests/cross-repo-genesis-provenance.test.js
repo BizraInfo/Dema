@@ -14,7 +14,6 @@ import {
   dedupeArtifacts,
   deriveNextGate,
   isSecretPath,
-  inferArtifactType,
   migrationDecision,
   scanLocalPaths,
   buildCrossRepoGenesisProvenanceReport,
