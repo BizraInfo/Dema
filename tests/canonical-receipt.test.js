@@ -287,6 +287,48 @@ describe("RECEIPT-CHAIN-1A · build + verify canonical chain", () => {
     }
   });
 
+  it("PROOF-SPINE-GUARD-1A: builder guards for empty genesis body (#101), quarantined pulse (#102); verify guards for empty sig (#107), empty genesis body (#101)", async () => {
+    const home = await freshKeyedHome();
+    try {
+      // #101: genesis must not be empty body (formal root of trust)
+      const emptyGenesis = await buildCanonicalReceipt(
+        commonArgs(home, { canonicalBody: {}, prevHash: null }),
+      );
+      assert.equal(emptyGenesis.built, false);
+      assert.equal(emptyGenesis.error, "genesis_receipt_body_must_not_be_empty");
+
+      // #102: refuse on QUARANTINED (economic rail)
+      const quarantined = await buildCanonicalReceipt(
+        commonArgs(home, { canonicalBody: { pulse_state: "QUARANTINED", value: 1 } }),
+      );
+      assert.equal(quarantined.built, false);
+      assert.equal(quarantined.error, "refuse_on_quarantined_pulse");
+
+      // Build a valid genesis for verify tampering
+      const g = await buildCanonicalReceipt(commonArgs(home));
+      const pubkey = await loadPublicKey(home);
+
+      // #107: verify rejects empty/missing signature (cryptographic)
+      const noSig = { ...g.receipt, receipt_signature_b64: "" };
+      const vNoSig = verifyCanonicalChain({ entries: [noSig], pubkeyPem: pubkey });
+      assert.equal(vNoSig.verified, false);
+      assert.equal(vNoSig.reason, "empty_or_missing_signature");
+
+      // #101 in verify: genesis body empty
+      const emptyBodyGenesis = {
+        ...g.receipt,
+        canonical_body: {},
+        body_hash: sha256(stableStringify({})),
+      };
+      const resealedEmpty = reseal(emptyBodyGenesis); // keep id/sig consistent for the test
+      const vEmptyBody = verifyCanonicalChain({ entries: [resealedEmpty], pubkeyPem: pubkey });
+      assert.equal(vEmptyBody.verified, false);
+      assert.equal(vEmptyBody.reason, "genesis_receipt_body_empty");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   it("deterministic + no PRIVATE KEY material in the receipt", async () => {
     const home = await freshKeyedHome();
     try {

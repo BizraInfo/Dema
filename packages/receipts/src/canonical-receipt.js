@@ -118,6 +118,21 @@ export async function buildCanonicalReceipt({
     return fail("prev_hash_invalid");
   }
 
+  // PROOF-SPINE-GUARD-1A: block #101 (empty genesis receipt {}) and ensure
+  // genesis (fresh-state root of trust) has non-empty body. Ed25519 path is
+  // enforced by key load + signPayload below (#103).
+  if (prevHash === null) {
+    if (!canonicalBody || Object.keys(canonicalBody).length === 0) {
+      return fail("genesis_receipt_body_must_not_be_empty");
+    }
+  }
+
+  // PROOF-SPINE-GUARD-1A #102: refuse builds that would settle/mint on
+  // QUARANTINED or bad pulse state (Dema face guard; substrate must match).
+  if (canonicalBody && (canonicalBody.pulse_state === "QUARANTINED" || canonicalBody.quarantined === true || canonicalBody.state === "QUARANTINED")) {
+    return fail("refuse_on_quarantined_pulse");
+  }
+
   const privateKeyPem = await loadPrivateKey(demaHome);
   const publicKeyPem = await loadPublicKey(demaHome);
   if (!privateKeyPem || !publicKeyPem) {
@@ -181,6 +196,15 @@ export function verifyCanonicalChain({ entries, pubkeyPem } = {}) {
     const entry = entries[i];
     if (!isPlainObject(entry) || entry.schema !== CANONICAL_RECEIPT_SCHEMA) {
       return reject("receipt_schema_mismatch", i);
+    }
+
+    // PROOF-SPINE-GUARD-1A: reject empty/missing sig (#107) and empty genesis body (#101)
+    // even on historical bad data. Ed25519 sig verification remains mandatory (#103).
+    if (!entry.receipt_signature_b64 || typeof entry.receipt_signature_b64 !== "string" || entry.receipt_signature_b64.trim().length === 0) {
+      return reject("empty_or_missing_signature", i);
+    }
+    if (i === 0 && (!entry.canonical_body || Object.keys(entry.canonical_body || {}).length === 0)) {
+      return reject("genesis_receipt_body_empty", i);
     }
 
     // prev_hash chain

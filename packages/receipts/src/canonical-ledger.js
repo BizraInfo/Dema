@@ -60,6 +60,8 @@ export async function verifyCanonicalLedger({ demaHome, pubkeyPem } = {}) {
   if (entries.length === 0) {
     return Object.freeze({ verified: true, total_entries: 0 });
   }
+  // PROOF-SPINE-GUARD-1A: verifyCanonicalChain now rejects empty sigs (#107)
+  // and empty genesis bodies (#101). This is the on-disk spine guard.
   return verifyCanonicalChain({ entries, pubkeyPem });
 }
 
@@ -92,6 +94,14 @@ export async function appendCanonicalReceipt({
   }
 
   // INVARIANT: never extend a corrupt chain.
+  // PROOF-SPINE-GUARD-1A: explicit pre-check for #107 empty signatures in ledger
+  // (defense in depth; verifyCanonicalChain will also catch).
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i];
+    if (!e.receipt_signature_b64 || typeof e.receipt_signature_b64 !== "string" || e.receipt_signature_b64.trim().length === 0) {
+      return Object.freeze({ appended: false, error: "ledger_contains_empty_signature", at_index: i });
+    }
+  }
   if (entries.length > 0) {
     const pubkey = await loadPublicKey(demaHome);
     if (!pubkey) {
