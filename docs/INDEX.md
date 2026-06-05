@@ -94,6 +94,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [../SPROUT_PIN.md](../SPROUT_PIN.md) — operator-local ARTIFACT-011 / SPROUT proof pin.
 - [EVIDENCE_v0.2_first_run_smoke.md](EVIDENCE_v0.2_first_run_smoke.md) — first-run smoke evidence.
 - [08-quality/U1_NODE0_LOCAL_URP_PROOF_PIN.md](08-quality/U1_NODE0_LOCAL_URP_PROOF_PIN.md) — U1 proof pin.
+- [08-quality/CROSS_REPO_GENESIS_PROVENANCE_2026_06_05.md](08-quality/CROSS_REPO_GENESIS_PROVENANCE_2026_06_05.md) — read-only cross-repo genesis/key/proof provenance audit (six repos); gates Node0 key ceremony.
 - [../themassage.pdf](../themassage.pdf), [../bizra.pdf](../bizra.pdf), [../BIZRA_Third_Fact_v0_1_FINAL.pdf](../BIZRA_Third_Fact_v0_1_FINAL.pdf) — three founding files bound by the priority anchor.
 
 ## Quality, delivery, and contribution
