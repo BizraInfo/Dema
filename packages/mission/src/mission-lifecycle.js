@@ -291,6 +291,12 @@ export async function buildMissionLifecycle({
   });
 }
 
+// SP6-FEEDBACK-BRIDGE-SPEC-1A: design-only lifecycle hook.
+// Future SIM-1A may derive a feedback proposal from closeout lesson/next_step,
+// then route it through exact consent:
+// "PROPOSE_FEEDBACK_BRIDGE_LESSON"
+// No runtime behavior is introduced in SPEC-1A.
+
 function reject(reason) {
   return Object.freeze({ verified: false, rejected: true, reason });
 }
