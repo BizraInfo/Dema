@@ -1,0 +1,1416 @@
+{
+  "schema": "bizra.dema.node0_local_resource_pool.v0.1",
+  "generated_at": "2026-06-05T05:45:35.662Z",
+  "hermetic": false,
+  "boundaries": {
+    "read_only": true,
+    "network_used": false,
+    "secret_content_read": false,
+    "mutation_performed": false,
+    "key_generated": false,
+    "signing_performed": false,
+    "block0_sealed": false,
+    "federation_started": false
+  },
+  "dema_root": "<LOCAL_PATH_REDACTED>",
+  "dema_home": "<LOCAL_PATH_REDACTED>",
+  "repos": [
+    {
+      "name": "Dema",
+      "fullName": "BizraInfo/Dema",
+      "canonRole": "CURRENT_CANON",
+      "archived": false,
+      "visibility": "PUBLIC",
+      "local_root": "<LOCAL_PATH_REDACTED>",
+      "status": "FOUND",
+      "file_count": 847,
+      "truncated": false,
+      "languages_hint": [
+        ".js(524)",
+        ".md(220)",
+        ".mjs(36)",
+        ".json(34)",
+        ".sh(7)",
+        ".ots(5)",
+        ".ps1(4)",
+        ".pdf(3)"
+      ],
+      "test_surfaces_count": 50,
+      "proof_assets_count": 50,
+      "receipt_assets_count": 50,
+      "secret_reference_count": 0,
+      "migration_candidates_count": 0
+    },
+    {
+      "name": "bizra-data-lake",
+      "fullName": "BizraInfo/bizra-data-lake",
+      "canonRole": "HISTORICAL_CANON",
+      "archived": false,
+      "visibility": "PUBLIC",
+      "local_root": "<LOCAL_PATH_REDACTED>",
+      "status": "FOUND",
+      "file_count": 2000,
+      "truncated": true,
+      "languages_hint": [
+        ".py(967)",
+        ".rs(377)",
+        ".md(260)",
+        ".json(225)",
+        ".toml(44)",
+        ".yaml(32)",
+        ".ts(22)",
+        ".sh(12)"
+      ],
+      "test_surfaces_count": 0,
+      "proof_assets_count": 50,
+      "receipt_assets_count": 37,
+      "secret_reference_count": 0,
+      "migration_candidates_count": 20
+    },
+    {
+      "name": "BIZRA-OS",
+      "fullName": "BizraInfo/BIZRA-OS",
+      "canonRole": "IMPLEMENTATION_CANDIDATE",
+      "archived": false,
+      "visibility": "PRIVATE",
+      "local_root": null,
+      "status": "NOT_CONFIGURED",
+      "file_count": null,
+      "truncated": false,
+      "languages_hint": [],
+      "test_surfaces_count": 0,
+      "proof_assets_count": 0,
+      "receipt_assets_count": 0,
+      "secret_reference_count": 0,
+      "migration_candidates_count": 0
+    },
+    {
+      "name": "bizra-genesis-node",
+      "fullName": "BizraInfo/bizra-genesis-node",
+      "canonRole": "ARCHIVED_REFERENCE",
+      "archived": true,
+      "visibility": "PRIVATE",
+      "local_root": null,
+      "status": "NOT_CONFIGURED",
+      "file_count": null,
+      "truncated": false,
+      "languages_hint": [],
+      "test_surfaces_count": 0,
+      "proof_assets_count": 0,
+      "receipt_assets_count": 0,
+      "secret_reference_count": 0,
+      "migration_candidates_count": 0
+    },
+    {
+      "name": "bizra-node0-genesis",
+      "fullName": "BizraInfo/bizra-node0-genesis",
+      "canonRole": "ARCHIVED_REFERENCE",
+      "archived": true,
+      "visibility": "PUBLIC",
+      "local_root": null,
+      "status": "NOT_CONFIGURED",
+      "file_count": null,
+      "truncated": false,
+      "languages_hint": [],
+      "test_surfaces_count": 0,
+      "proof_assets_count": 0,
+      "receipt_assets_count": 0,
+      "secret_reference_count": 0,
+      "migration_candidates_count": 0
+    },
+    {
+      "name": "bizra_scaffold",
+      "fullName": "BizraInfo/bizra_scaffold",
+      "canonRole": "ARCHIVED_REFERENCE",
+      "archived": true,
+      "visibility": "PUBLIC",
+      "local_root": null,
+      "status": "NOT_CONFIGURED",
+      "file_count": null,
+      "truncated": false,
+      "languages_hint": [],
+      "test_surfaces_count": 0,
+      "proof_assets_count": 0,
+      "receipt_assets_count": 0,
+      "secret_reference_count": 0,
+      "migration_candidates_count": 0
+    }
+  ],
+  "artifact_categories": {
+    "LOCAL_ASSET": 356,
+    "LOCAL_PROOF": 417,
+    "LOCAL_REPO": 0,
+    "LOCAL_DATASET": 146,
+    "LOCAL_COMPUTE_CAPABILITY": 495,
+    "HISTORICAL_ARTIFACT": 634,
+    "MIGRATION_CANDIDATE": 1366,
+    "SECRET_REFERENCE_DO_NOT_READ": 0,
+    "UNKNOWN_REQUIRES_OPERATOR_REVIEW": 175
+  },
+  "proof_assets": [
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "PROOF_SUMMARY.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "PROOF_SUMMARY.md.ots",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/node0-local-urp/critic_report_001.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/node0-local-urp/node0_local_urp_status.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/node0-local-urp/poi_sandbox_record.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/node0-local-urp/sat5_urp_registration.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/node0-local-urp/self_check_report.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/node0-local-urp/urp_knowledge_pack_receipt.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/node0-local-urp/urp_local_registry.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/node0-local-urp/urp_resource_offer_receipt.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/node0-local-urp/urp_skill_registry_receipt.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/proof-room-v0.1/proof-room-bundle.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/proof-room-v0.1/proof-room-bundle.txt",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/proof-room-v0.1-public-safe/README.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/proof-room-v0.1-public-safe/proof-room-bundle.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/proof-room-v0.1-public-safe/proof-room-bundle.txt",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/02-architecture/dema-ci-cd-proof-quality-gating-options.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/02-architecture/dema-ux-proof-harness.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/06-adr/ADR-009-poi-proof-of-impact-design.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/08-quality/CROSS_REPO_GENESIS_PROVENANCE_2026_06_05.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/08-quality/CROSS_REPO_GENESIS_PROVENANCE_2026_06_05.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/08-quality/POST_SEAL_EVIDENCE_2026_06_04.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/08-quality/U1_NODE0_LOCAL_URP_PROOF_PIN.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/NODE0_GENESIS_READINESS_2026_05_16.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/RECEIPTS.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/_absorbed/BIZRA_GENESIS_PROVENANCE_LEDGER_V0_1.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/archive/gtm/DEMA_PROOF_STUDIO_V0_DEMO_CLOSEOUT.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/demo/operator-proof-loop.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/security/BLOCK0_0_PREFLIGHT.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/security/PROOF_PASSPORT_PREFLIGHT.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/superpowers/plans/2026-05-22-proof-room-bundle.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/core/schemas/local-model-route-receipt.v0.1.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/core/schemas/onboarding-seal.v0.1.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/core/schemas/proof-room-bundle.v0.1.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/core/src/corpus-scorecard-receipt-schema-preview.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/core/src/genesis-composition-blueprint-preview.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/core/src/genesis-preview-card.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/core/src/onboarding-seal.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/core/src/pat-receipt-recorder.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/core/src/proof-room-bundle.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/core/src/receipt-mint-integration.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/core/src/sat-receipt-chain-verifier.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/genesis/src/block0-judge-from-proofs.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/genesis/src/block0-live-readiness.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/genesis/src/block0-manifest-verifier.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/genesis/src/block0-manifest.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/genesis/src/block0-prerequisite-status-collector.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/genesis/src/core-flywheel-run-proof.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/genesis/src/dema-realm-state-proof.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "00_GENESIS/03_SPIRITUAL_TECHNICAL/ihsan_as_architecture.md",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "00_GENESIS/BIZRA_COMPLETE_STORY_AUTHORITATIVE.md",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "00_GENESIS/BLOCK0_COMPLETE_STORY.md",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "00_GENESIS/LINEAGE_START.md",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "00_GENESIS/THE_TRUE_STORY_FROM_DATA_LAKE.md",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "00_GENESIS/backups/genesis_TAMPERED_20260122_184905.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "00_GENESIS/genesis.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "BIZRA_Genesis_Build_Script.docx",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "BIZRA_Universal_Constitution_v3.0.0_GENESIS.html",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "CANONICAL_LOOP_PROOF_GUIDE.md",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "GENESIS_LINEAGE.md",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "GENESIS_MANIFEST_VERIFIED.yaml",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "GENESIS_PROVENANCE.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "GENESIS_PROVENANCE_VERIFIED.md",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "GENESIS_QUICKSTART.md",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "PROOF_SUMMARY.md",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "archive/downloads-files-7-2026-04-17/receipt_freeze_v1.rs",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/CANONICAL_SPEARPOINT_V1/run1_receipt.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/CANONICAL_SPEARPOINT_V1/run2_receipt.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-007676b1.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-029a14e7.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-10f5e275.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-275b5ce2.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-3374b238.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-3c3f32bd.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-3e5094da.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-4fdabf43.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-5770742d.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-6419dbc1.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-66f5421a.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-6aa6ea8c.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-74dd5c2a.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-7a3a7011.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-93952534.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-9578e9b7.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-a4e8b2c1.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-ac947ec2.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-b1afebf3.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-b879c173.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-bf3336f7.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-c4f97be8.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-cad349a0.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-e05a4056.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-e680305e.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/loop-proof-ee2b24a7.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/node0-local-urp/node0_local_urp_status.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/node0-local-urp/poi_sandbox_record.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/node0-local-urp/sat5_urp_registration.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/node0-local-urp/urp_knowledge_pack_receipt.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/node0-local-urp/urp_local_registry.json",
+      "category": "HISTORICAL_ARTIFACT"
+    }
+  ],
+  "receipt_assets": [
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/node0-local-urp/urp_knowledge_pack_receipt.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/node0-local-urp/urp_resource_offer_receipt.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "artifacts/proofs/node0-local-urp/urp_skill_registry_receipt.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "docs/RECEIPTS.md",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/core/schemas/local-model-route-receipt.v0.1.json",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/core/src/corpus-scorecard-receipt-schema-preview.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/core/src/pat-receipt-recorder.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/core/src/receipt-mint-integration.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/core/src/sat-receipt-chain-verifier.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/assumption-boundary-validator.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/assumption-guarded-claim.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/authorship-closeout.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/authorship-key-store.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/authorship-latest.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/authorship-sign-command.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/authorship-signature.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/authorship-verify.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/canonical-ledger.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/canonical-receipt.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/canonical-task-binding.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/codebase-map-save.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/consent-nonce-registry.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/consent-proof.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/consent-prove-command.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/consent-verify-command.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/invocation-result-save.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/pipeline-result-save.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/proof-passport-deep-verify.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/proof-passport-verify.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/proof-passport.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/receipt-store.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/route-receipt-save.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/verdict-attest-command.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/verdict-attest.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/verdict-verify-command.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/verdict-verify.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/verification-result-save.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/witness-receipt.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/receipts/src/witness-verify.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/think/src/think-receipt-save.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "packages/verifier/src/evidence-receipt-preview.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "scripts/review/receipt-integrity.mjs",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/canonical-receipt.test.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/corpus-scorecard-receipt-schema-preview.test.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/evidence-receipt-preview.test.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/model-broker-receipt-save-cli.test.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/pat-receipt-recorder.test.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/receipt-mint-integration.test.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/receipt-store-format.test.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/sat-receipt-chain-verifier.test.js",
+      "category": "LOCAL_PROOF"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "archive/downloads-files-7-2026-04-17/receipt_freeze_v1.rs",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/CANONICAL_SPEARPOINT_V1/run1_receipt.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/CANONICAL_SPEARPOINT_V1/run2_receipt.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/node0-local-urp/urp_knowledge_pack_receipt.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/node0-local-urp/urp_resource_offer_receipt.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/node0-local-urp/urp_skill_registry_receipt.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "artifacts/proofs/node0-private-pilot-evidence-receipt.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-constitution/evidence_receipt.py",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-constitution/tests/test_evidence_receipt.py",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-constitution-v5/bizra-constitution-v5/evidence_receipt.py",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-constitution-v5/bizra-constitution-v5/tests/test_evidence_receipt.py",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-genesis-engine-v5/bizra-genesis-engine-v5/evidence_receipt.py",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-genesis-engine-v5/bizra-genesis-engine-v5/tests/test_evidence_receipt.py",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-node0/core/bridges/bridge_receipt.py",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-node0-v6/evidence_receipt.py",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-node0-v6/tests/test_evidence_receipt.py",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/bizra-action/src/receipt.rs",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/bizra-cli/src/widgets/receipt_detail.rs",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/bizra-cli/src/widgets/receipt_rail.rs",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/bizra-cognition/src/receipt_freeze_v1.rs",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/bizra-cognition/src/receipt_history_cache.rs",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/bizra-cognition/src/receipts.rs",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/bizra-cognition-gateway/bindings/ReceiptKindName.ts",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/bizra-core/src/canonical_receipt.rs",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/bizra-core/src/receipt_state_machine.rs",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/bizra-installer/src/install_receipt.rs",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/bizra-mission/src/receipt.rs",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/bizra-node/data/audit/action_receipts.jsonl",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/bizra-proofspace/src/receipt_chain.rs",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/docs/contracts/urp_canonical_receipt.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/docs/evidence/receipts/omega-validation-20260131-033954.json",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "bizra-omega/docs/specs/phase_86a_ed25519_receipt_signing.md",
+      "category": "HISTORICAL_ARTIFACT"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "core/bridges/bridge_receipt.py",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "core/dema/receipts.py",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "core/proof_engine/canonical_receipt_adapter.py",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "core/proof_engine/receipt.py",
+      "category": "MIGRATION_CANDIDATE"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "core/sovereign/receipt_outcome.py",
+      "category": "MIGRATION_CANDIDATE"
+    }
+  ],
+  "test_surfaces": [
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/a2a-message-envelope-preview.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/active-kernel-banner.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/active-kernel-cli.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/actuator-check.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/agent-kernel.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/agent-profile-registry.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/agent-skill-ledger.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/agent-wallet.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/amana-contracts-preview.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/ambient.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/approval-gate.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/artifact-safety-eval-schema-wiring.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/artifact-safety-eval.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/asset-access.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/assumption-boundary-validator.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/assumption-guarded-claim.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/authorship-cli.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/authorship-closeout.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/authorship-key-store.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/authorship-latest.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/authorship-sign-command.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/authorship-signature.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/authorship-verify-latest.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/banner-keys-cli.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/banner-keys.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/baseline-l1-diff.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/behavioral-modulation.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/block0-collector-adapters.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/block0-collector-chain-root-adapters.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/block0-collector-flywheel-run-adapter.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/block0-collector-keyconsent-adapter.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/block0-collector-list-slots.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/block0-collector-poi-rule-adapter.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/block0-judge-from-proofs.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/block0-live-readiness.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/block0-manifest-verifier.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/block0-manifest.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/block0-prerequisite-status-collector.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/block0-proof-mutation-property.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/block0-seal-readiness.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/boundary-cross-validation.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/boundary-invariant-check.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/canon-check.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/canon-glossary-cli.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/canon-glossary.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/canonical-ledger.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/canonical-receipt.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/canonical-task-binding.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/chat-banner.test.js"
+    },
+    {
+      "repo": "BizraInfo/Dema",
+      "path": "tests/chat-router-cli.test.js"
+    }
+  ],
+  "secret_reference_paths": [],
+  "migration_candidates": [
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "UNIFIED-NODE-INSTALLER/bootstrap/install.py",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "UNIFIED-NODE-INSTALLER/core/main.py",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "UNIFIED-NODE-INSTALLER/core/network_node.py",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "UNIFIED-NODE-INSTALLER/core/pat_engine.py",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "archive/downloads-files-7-2026-04-17/admissibility_freeze_v1.rs",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "archive/downloads-files-7-2026-04-17/bizra_constitutional_audit.py",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "archive/downloads-files-7-2026-04-17/bizra_peak_synthesis_cycle_2.py",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "archive/downloads-files-7-2026-04-17/dema_cli_v02_organize.rs",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "archive/downloads-files-7-2026-04-17/eval_v1.rs",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "archive/downloads-files-7-2026-04-17/eval_v1_integrated.rs",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "archive/downloads-files-7-2026-04-17/gateway_v03_compile.rs",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "archive/downloads-files-7-2026-04-17/lawful_loop.rs",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "archive/downloads-files-7-2026-04-17/manifest_artifact.rs",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "archive/downloads-files-7-2026-04-17/mission_freeze_v1.rs",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "archive/downloads-files-7-2026-04-17/receipt_freeze_v1.rs",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "archive/downloads-files-7-2026-04-17/trust_compiler.rs",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "arte_engine.py",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "benchmark/__init__.py",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "benchmark/__main__.py",
+      "canonRole": "HISTORICAL_CANON"
+    },
+    {
+      "repo": "BizraInfo/bizra-data-lake",
+      "path": "benchmark/runner.py",
+      "canonRole": "HISTORICAL_CANON"
+    }
+  ],
+  "dema_home_scan": {
+    "status": "FOUND",
+    "path": "<LOCAL_PATH_REDACTED>",
+    "file_count": 742,
+    "proof_assets_count": 50,
+    "secret_reference_count": 0
+  },
+  "summary": {
+    "total_local_repos_found": 2,
+    "total_local_repos_missing": 4,
+    "total_file_count": 3589,
+    "secret_reference_count": 0,
+    "proof_asset_count": 100,
+    "receipt_asset_count": 87,
+    "test_surfaces_count": 50,
+    "migration_candidate_count": 20
+  },
+  "secret_reference_operator_review_note": null,
+  "next_recommended_gate": {
+    "gate": "DEMA-AGENT-REGISTRY-1A",
+    "reason": "NODE0-LOCAL-RESOURCE-POOL-1A complete; no secret reference blockers detected. Suggest DEMA-AGENT-REGISTRY-1A as next gate per delivery spine."
+  }
+}

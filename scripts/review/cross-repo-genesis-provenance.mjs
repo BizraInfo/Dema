@@ -95,6 +95,14 @@ export const REPO_CATALOG = Object.freeze([
 const SECRET_PATH_PATTERN =
   /(?:private|secret|id_ed25519|\.pem(?:\.|$)|\/keys\/|\/secrets\/|\.key$)/i;
 
+/**
+ * Program names and doc labels that superficially match SECRET_PATH_PATTERN
+ * but are not secret files (e.g. "private-pilot" beta artifacts, operator-review
+ * documentation about secret references).
+ */
+const SECRET_PATH_FP_EXCLUSION =
+  /private-pilot|SECRET_REFERENCE_OPERATOR_REVIEW/i;
+
 const LOCAL_SCAN_MAX_PER_TERM = 40;
 const LOCAL_SCAN_MAX_DEPTH = 8;
 const GH_SEARCH_LIMIT = 30;
@@ -103,6 +111,7 @@ const GH_SEARCH_LIMIT = 30;
  * @param {string} filePath
  */
 export function isSecretPath(filePath) {
+  if (SECRET_PATH_FP_EXCLUSION.test(filePath)) return false;
   return SECRET_PATH_PATTERN.test(filePath);
 }
 

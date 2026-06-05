@@ -34,6 +34,25 @@ test("isSecretPath blocks key-like paths without reading content", () => {
   assert.equal(isSecretPath("docs/GENESIS_100_GATE.md"), false);
 });
 
+test("isSecretPath does not flag private-pilot or operator-review doc paths", () => {
+  // private-pilot is a beta program name, not a private key directory
+  assert.equal(
+    isSecretPath("artifacts/proofs/node0-private-pilot-foo.json"),
+    false,
+  );
+  assert.equal(isSecretPath("node0-private-pilot-status.json"), false);
+  // operator-review docs describe secret refs; they are not secret files
+  assert.equal(
+    isSecretPath(
+      "docs/08-quality/SECRET_REFERENCE_OPERATOR_REVIEW_2026_06_05.md",
+    ),
+    false,
+  );
+  // real secrets still blocked
+  assert.equal(isSecretPath("runtime/keys/node0.pem"), true);
+  assert.equal(isSecretPath("private/key.json"), true);
+});
+
 test("classifyArtifact marks Dema genesis kernel as CURRENT_CANON", () => {
   assert.equal(
     classifyArtifact({
