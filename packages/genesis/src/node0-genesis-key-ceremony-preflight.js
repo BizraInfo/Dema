@@ -25,12 +25,13 @@ export const ALLOWED_PROVENANCE_GATES = Object.freeze([
 /**
  * @param {object} opts
  * @param {string} [opts.demaHome]
- * @param {string} [opts.provenanceNextGate]
+ * @param {string|undefined} [opts.provenanceNextGate] - must be a value in ALLOWED_PROVENANCE_GATES;
+ *   missing or invalid → fails closed as BLOCKED_BY_UNRESOLVED_PROVENANCE.
  * @param {object|null} [opts.block0LiveReadiness]
  */
 export async function assessNode0GenesisKeyCeremonyPreflight({
   demaHome,
-  provenanceNextGate = "NODE0-GENESIS-KEY-CEREMONY-1A",
+  provenanceNextGate,
   block0LiveReadiness = null,
 } = {}) {
   const block0 =
@@ -41,15 +42,24 @@ export async function assessNode0GenesisKeyCeremonyPreflight({
   /** @type {Array<{code:string,message:string}>} */
   const blockers = [];
 
-  if (provenanceNextGate === "BLOCKED_BY_UNRESOLVED_PROVENANCE") {
+  if (provenanceNextGate == null || provenanceNextGate === "") {
+    blockers.push({
+      code: "provenance_unresolved",
+      message:
+        "No provenance gate supplied; complete CROSS-REPO-GENESIS-PROVENANCE-1A before key ceremony.",
+    });
+  } else if (!ALLOWED_PROVENANCE_GATES.includes(provenanceNextGate)) {
+    blockers.push({
+      code: "unknown_provenance_gate",
+      message: `Unknown provenance gate "${provenanceNextGate}"; must be one of: ${ALLOWED_PROVENANCE_GATES.join(", ")}.`,
+    });
+  } else if (provenanceNextGate === "BLOCKED_BY_UNRESOLVED_PROVENANCE") {
     blockers.push({
       code: "provenance_unresolved",
       message:
         "Cross-repo provenance is unresolved; complete CROSS-REPO-GENESIS-PROVENANCE-1A before key ceremony.",
     });
-  }
-
-  if (provenanceNextGate === "MIGRATE-HISTORICAL-GENESIS-PROOF-1A") {
+  } else if (provenanceNextGate === "MIGRATE-HISTORICAL-GENESIS-PROOF-1A") {
     blockers.push({
       code: "migrate_review_required",
       message:

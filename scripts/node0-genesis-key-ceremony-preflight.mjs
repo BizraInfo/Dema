@@ -27,13 +27,14 @@ function loadProvenanceGate() {
           "docs/08-quality/CROSS_REPO_GENESIS_PROVENANCE_2026_06_05.json",
         );
 
-  if (!existsSync(path)) return "NODE0-GENESIS-KEY-CEREMONY-1A";
+  // Fail closed: missing or unreadable provenance → BLOCKED rather than silently proceed.
+  if (!existsSync(path)) return "BLOCKED_BY_UNRESOLVED_PROVENANCE";
 
   try {
     const doc = JSON.parse(readFileSync(path, "utf8"));
-    return doc.next_gate?.gate ?? "NODE0-GENESIS-KEY-CEREMONY-1A";
+    return doc.next_gate?.gate ?? "BLOCKED_BY_UNRESOLVED_PROVENANCE";
   } catch {
-    return "NODE0-GENESIS-KEY-CEREMONY-1A";
+    return "BLOCKED_BY_UNRESOLVED_PROVENANCE";
   }
 }
 

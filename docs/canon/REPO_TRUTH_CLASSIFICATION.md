@@ -143,10 +143,27 @@ This document does NOT:
 It only declares **the boundary between evidence and uncertainty** —
 which is the exact operational form of the LoA canon.
 
-## 8. Living Status
+## 8. Cross-Repo Provenance Status Classes
+
+The cross-repo genesis provenance scanner (`scripts/review/cross-repo-genesis-provenance.mjs`) classifies discovered artifacts with these status classes. They map to the tiers above as follows:
+
+| Status class                   | Tier mapping           | Migration decision               | Description                                                                                                                                                      |
+| ------------------------------ | ---------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CURRENT_CANON`                | PRIMARY_VERIFIED       | `INHERIT_ACTIVE`                 | Active product code in the canonical Dema repo with CI coverage.                                                                                                 |
+| `HISTORICAL_CANON`             | VALUE_ADD / HISTORICAL | `REFERENCE_ONLY`                 | Past-accurate artifacts retained as read-only lineage; do not patch unless promoted.                                                                             |
+| `IMPLEMENTATION_CANDIDATE`     | VALUE_ADD              | `OPERATOR_REVIEW_BEFORE_MIGRATE` | Real code in non-archived repos (e.g., BIZRA-OS) that is not yet Dema canon. Requires operator review before any migration. Not a live runtime authority.        |
+| `ARCHIVED_REFERENCE`           | HISTORICAL             | `IGNORE_UNLESS_OPERATOR_REVIEW`  | Code in archived repos retained as historical lineage only (e.g., `bizra-genesis-node`, `bizra-node0-genesis`, `bizra_scaffold`). Do not treat as current truth. |
+| `SPEC_ONLY`                    | HISTORICAL             | `REFERENCE_ONLY`                 | Documentation or specification with no current backing implementation.                                                                                           |
+| `TEST_FIXTURE`                 | PRIMARY_VERIFIED       | `IGNORE`                         | Test helpers; not part of the production artifact set.                                                                                                           |
+| `LIVE_PROOF_CANDIDATE`         | VALUE_ADD              | `OPERATOR_VERIFY_ON_DISK`        | Artifact that may contain real live proof material; blocks key ceremony until operator verifies on disk.                                                         |
+| `SECRET_REFERENCE_DO_NOT_READ` | N/A (security)         | `OPERATOR_REVIEW`                | Path matches secret/key patterns. Content is never read. **Blocks key ceremony** until operator confirms no duplicate live keys.                                 |
+| `MIGRATION_CANDIDATE`          | VALUE_ADD / HISTORICAL | `OPERATOR_REVIEW_BEFORE_MIGRATE` | Archived code that may contain promotable implementation; review required before import.                                                                         |
+| `REJECTED_OR_SUPERSEDED`       | HISTORICAL             | `IGNORE`                         | Artifacts containing known overclaims (e.g., `PEAK_MASTERPIECE`, "PRODUCTION READY" without CI). Permanently superseded.                                         |
+
+## 9. Living Status
 
 This document is the source of truth for portfolio classification.
 When a repo moves tiers, append a new row with date + commit + reason.
 When an external audit is screened, append a note in §6.
 
-Last updated: 2026-05-28 at commit `8d0aea7` (Dema H19.3.2 sealed).
+Last updated: 2026-06-05 at commit on `feat/block0-live-readiness` — added §8 cross-repo provenance status class definitions; provenance next_gate updated to `BLOCKED_BY_UNRESOLVED_PROVENANCE` pending secret-reference operator review.

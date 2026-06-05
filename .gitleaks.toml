@@ -37,3 +37,19 @@ description = "Grandfathered: Firebase web SDK config of abandoned Genesis apple
 # A re-leak of the same key text in any other commit or path still fails.
 commits = ["5057af345d71c0fa6ff2e437fbdd5164150aefb5"]
 paths = ['''(^|/)firebase-applet-config\.json$''']
+
+# ─── False-positive: ALLOWED_PROVENANCE_GATES string literals ────────────────
+# Lines 19-23 of node0-genesis-key-ceremony-preflight.js define the
+# ALLOWED_PROVENANCE_GATES constant. The string literals
+# "NODE0-GENESIS-KEY-CEREMONY-1A" and "MIGRATE-HISTORICAL-GENESIS-PROOF-1A"
+# contain the substrings "KEY" and "CEREMONY" / "PROOF" which can trigger
+# generic high-entropy or keyword rules.
+#
+# These are gate-name identifiers (not secrets); they are intentionally
+# committed as part of the gate-enforcement logic. The allowlist is scoped
+# tightly to this single source file to avoid silencing any real secret
+# in any other location.
+[[allowlists]]
+description = "False positive: ALLOWED_PROVENANCE_GATES gate-name literals in preflight source (not secrets)"
+paths = ['''(^|/)node0-genesis-key-ceremony-preflight\.js$''']
+regexes = ['''NODE0-GENESIS-KEY-CEREMONY-1A|MIGRATE-HISTORICAL-GENESIS-PROOF-1A|BLOCKED_BY_UNRESOLVED_PROVENANCE''']

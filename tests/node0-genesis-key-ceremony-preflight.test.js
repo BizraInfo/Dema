@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFile } from "node:child_process";
@@ -61,15 +61,54 @@ test("preflight blocks when provenance unresolved", async () => {
   }
 });
 
-test("preflight CLI emits JSON on fresh home", async () => {
+test("preflight CLI emits JSON on fresh home with explicit key-ceremony provenance", async () => {
   const home = await mkdtemp(join(tmpdir(), "dema-key-preflight-cli-"));
+  const provFile = join(tmpdir(), `prov-${Date.now()}.json`);
   try {
-    const { stdout } = await execFileAsync("node", [scriptPath, "--json"], {
-      env: { ...process.env, DEMA_HOME: home },
-    });
+    await writeFile(
+      provFile,
+      JSON.stringify({ next_gate: { gate: "NODE0-GENESIS-KEY-CEREMONY-1A" } }),
+      "utf8",
+    );
+    const { stdout } = await execFileAsync(
+      "node",
+      [scriptPath, "--json", "--provenance-json", provFile],
+      { env: { ...process.env, DEMA_HOME: home } },
+    );
     const report = JSON.parse(stdout);
     assert.equal(report.schema, NODE0_GENESIS_KEY_CEREMONY_PREFLIGHT_SCHEMA);
     assert.equal(report.cleared_for_key_init, true);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+    await rm(provFile, { force: true });
+  }
+});
+
+test("preflight blocks when provenance gate is missing (no default)", async () => {
+  const home = await mkdtemp(join(tmpdir(), "dema-key-preflight-missing-"));
+  try {
+    const report = await assessNode0GenesisKeyCeremonyPreflight({
+      demaHome: home,
+      // provenanceNextGate intentionally absent
+    });
+    assert.equal(report.cleared_for_key_init, false);
+    assert.equal(report.blockers[0].code, "provenance_unresolved");
+    assert.equal(report.recommended_command, null);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+test("preflight blocks with unknown_provenance_gate for unrecognized gate value", async () => {
+  const home = await mkdtemp(join(tmpdir(), "dema-key-preflight-unknown-"));
+  try {
+    const report = await assessNode0GenesisKeyCeremonyPreflight({
+      demaHome: home,
+      provenanceNextGate: "SOME-UNKNOWN-GATE-XYZ",
+    });
+    assert.equal(report.cleared_for_key_init, false);
+    assert.equal(report.blockers[0].code, "unknown_provenance_gate");
+    assert.ok(report.blockers[0].message.includes("SOME-UNKNOWN-GATE-XYZ"));
   } finally {
     await rm(home, { recursive: true, force: true });
   }

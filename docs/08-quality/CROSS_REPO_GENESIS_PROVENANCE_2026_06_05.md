@@ -41,14 +41,14 @@ Six repositories:
 
 ## Repo metadata (measured 2026-06-05)
 
-| Repo                | Default branch | Last push (UTC)      | Local root used                     | gh code index              |
-| ------------------- | -------------- | -------------------- | ----------------------------------- | -------------------------- |
-| Dema                | main           | 2026-06-04T23:29:56Z | workspace                           | 262 artifacts              |
-| bizra-data-lake     | main           | 2026-05-08T21:45:24Z | `/data/bizra/repos/bizra-data-lake` | 602 artifacts              |
-| BIZRA-OS            | main           | 2026-01-26T02:16:01Z | none                                | metadata only (rate limit) |
-| bizra-genesis-node  | main           | 2026-03-04T16:01:55Z | none                                | metadata only (rate limit) |
-| bizra-node0-genesis | main           | 2026-02-19T17:44:38Z | none                                | metadata only (rate limit) |
-| bizra_scaffold      | main           | 2026-03-12T20:31:07Z | none                                | metadata only (rate limit) |
+| Repo                | Default branch | Last push (UTC)      | Local root used         | gh code index              |
+| ------------------- | -------------- | -------------------- | ----------------------- | -------------------------- |
+| Dema                | main           | 2026-06-04T23:29:56Z | workspace               | 262 artifacts              |
+| bizra-data-lake     | main           | 2026-05-08T21:45:24Z | `<LOCAL_PATH_REDACTED>` | 602 artifacts              |
+| BIZRA-OS            | main           | 2026-01-26T02:16:01Z | none                    | metadata only (rate limit) |
+| bizra-genesis-node  | main           | 2026-03-04T16:01:55Z | none                    | metadata only (rate limit) |
+| bizra-node0-genesis | main           | 2026-02-19T17:44:38Z | none                    | metadata only (rate limit) |
+| bizra_scaffold      | main           | 2026-03-12T20:31:07Z | none                    | metadata only (rate limit) |
 
 **Limitation:** GitHub code search hit API rate limits mid-scan. Artifact counts above are complete for Dema + bizra-data-lake; archive/private repos retain metadata via `gh repo view` only in this run. Re-run the scanner after rate reset for a full six-repo code index.
 
@@ -109,11 +109,13 @@ Full index (864 rows) available by re-running the scanner; committed JSON is a *
 
 ## Next gate
 
-**`NODE0-GENESIS-KEY-CEREMONY-1A`**
+**`BLOCKED_BY_UNRESOLVED_PROVENANCE`**
 
-Reason: Dema live home has no operator pubkey/key material. Historical and substrate repos document identity architecture but do **not** materialize keys in the current Dema home. Provenance reconciliation is complete enough to proceed to an **explicit, consent-gated** fresh key ceremony — not to Block0 seal and not to blind reuse of archive keys.
+Reason: 7 `SECRET_REFERENCE_DO_NOT_READ` artifacts were discovered across the cross-repo inventory. Unresolved secret references require operator review — confirm no duplicate live keys exist before any key ceremony proceeds.
 
-**Preflight (read-only):** run `node scripts/node0-genesis-key-ceremony-preflight.mjs` before `dema authorship key init`. Cleared preflight emits the exact consent-gated command; it does not generate keys.
+**Required action:** Operator must review each secret-reference path listed in the decision matrix (`secret_reference_count: 7`), confirm none contain live Dema key material, then re-run the provenance scanner. Once the scan reports zero secret-reference or live-proof-candidate artifacts that block the ceremony, the next gate will advance to `NODE0-GENESIS-KEY-CEREMONY-1A`.
+
+**Preflight (read-only):** run `node scripts/node0-genesis-key-ceremony-preflight.mjs` before `dema authorship key init`. The preflight reads the committed provenance JSON; it will remain blocked until the gate is resolved.
 
 **Not yet:**
 

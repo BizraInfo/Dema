@@ -11,7 +11,7 @@
       "canonRole": "CURRENT_CANON",
       "defaultBranch": "main",
       "pushedAt": "2026-06-04T23:29:56Z",
-      "localRoot": "/home/bizra-operating-system/Downloads/Dema",
+      "localRoot": "<LOCAL_PATH_REDACTED>",
       "ghAvailable": true,
       "ghSearchRateLimited": false,
       "artifact_count": 262
@@ -24,7 +24,7 @@
       "canonRole": "HISTORICAL_CANON",
       "defaultBranch": "main",
       "pushedAt": "2026-05-08T21:45:24Z",
-      "localRoot": "/data/bizra/repos/bizra-data-lake",
+      "localRoot": "<LOCAL_PATH_REDACTED>",
       "ghAvailable": true,
       "ghSearchRateLimited": false,
       "artifact_count": 602
@@ -124,8 +124,8 @@
     "secret_reference_count": 7
   },
   "next_gate": {
-    "gate": "NODE0-GENESIS-KEY-CEREMONY-1A",
-    "reason": "Dema live home has no operator pubkey/key path; historical repos document architecture but do not materialize live Dema keys."
+    "gate": "BLOCKED_BY_UNRESOLVED_PROVENANCE",
+    "reason": "Unresolved SECRET_REFERENCE_DO_NOT_READ or LIVE_PROOF_CANDIDATE artifacts require operator review before any key ceremony."
   },
   "highlighted_artifacts": [
     {
@@ -224,7 +224,7 @@
       "artifact_type": "doc",
       "status_class": "HISTORICAL_CANON",
       "migration_decision": "REFERENCE_ONLY",
-      "evidence": "# 🌱 BIZRA NODE0 GENESIS COVENANT\n\n**Authored By:** MoMo (محمد) — First Architect of BIZRA",
+      "evidence": "# \ud83c\udf31 BIZRA NODE0 GENESIS COVENANT\n\n**Authored By:** MoMo (\u0645\u062d\u0645\u062f) \u2014 First Architect of BIZRA",
       "source": "gh_search",
       "query": "genesis"
     },
@@ -244,7 +244,7 @@
       "artifact_type": "code",
       "status_class": "HISTORICAL_CANON",
       "migration_decision": "REFERENCE_ONLY",
-      "evidence": "#!/usr/bin/env python3\n\"\"\"Node0 Genesis Asset Manifest — content-addressed declaration of founder seed assets.",
+      "evidence": "#!/usr/bin/env python3\n\"\"\"Node0 Genesis Asset Manifest \u2014 content-addressed declaration of founder seed assets.",
       "source": "gh_search",
       "query": "genesis"
     },
@@ -254,7 +254,7 @@
       "artifact_type": "doc",
       "status_class": "CURRENT_CANON",
       "migration_decision": "INHERIT_ACTIVE",
-      "evidence": "# Node0 Genesis Readiness — 2026-05-16 Snapshot\n\n**Status:** DECLARED state snapshot",
+      "evidence": "# Node0 Genesis Readiness \u2014 2026-05-16 Snapshot\n\n**Status:** DECLARED state snapshot",
       "source": "gh_search",
       "query": "genesis"
     },

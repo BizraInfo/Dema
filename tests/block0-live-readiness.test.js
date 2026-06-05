@@ -24,17 +24,17 @@ function operatorPubkeyPem() {
 }
 
 const SIGNING_SLOTS = [
-  "node0_identity",
-  "urp_resource_status",
-  "dema_realm_state",
-  "performance_baseline",
-  "house_of_wisdom_first_lesson",
-  "pat_profile",
-  "sat_profile",
-  "canonical_receipt_ledger_root",
-  "genesis_local_token_ledger_root",
+  "canonical_receipt_ledger_root_hash",
+  "node0_identity_proof_hash",
+  "dema_realm_state_proof_hash",
+  "urp_resource_status_proof_hash",
+  "genesis_local_token_ledger_root_hash",
+  "full_flywheel_run_receipt_hash",
+  "performance_baseline_proof_hash",
+  "house_of_wisdom_first_lesson_proof_hash",
+  "pat_profile_proof_hashes",
+  "sat_profile_proof_hashes",
   "keyconsent_integration",
-  "full_flywheel_run",
 ];
 
 test("BLOCK0_LIVE_READINESS_SCHEMA is the versioned schema id", () => {

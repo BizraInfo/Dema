@@ -381,16 +381,18 @@ export function deriveNextGate({
   block0LiveReadiness,
   operatorPubkeyPresent,
 }) {
-  const unresolved = artifacts.filter((a) => blocksKeyCeremony(a.status_class));
+  const secretRefs = artifacts.filter(
+    (a) => a.status_class === "SECRET_REFERENCE_DO_NOT_READ",
+  );
   const liveProofCandidates = artifacts.filter(
     (a) => a.status_class === "LIVE_PROOF_CANDIDATE",
   );
 
-  if (unresolved.length > 0 && liveProofCandidates.length > 1) {
+  if (secretRefs.length > 0 || liveProofCandidates.length > 0) {
     return {
       gate: "BLOCKED_BY_UNRESOLVED_PROVENANCE",
       reason:
-        "Unresolved LIVE_PROOF_CANDIDATE or secret-reference artifacts require operator review before any key ceremony.",
+        "Unresolved SECRET_REFERENCE_DO_NOT_READ or LIVE_PROOF_CANDIDATE artifacts require operator review before any key ceremony.",
     };
   }
 
@@ -428,17 +430,31 @@ export function deriveNextGate({
 }
 
 /**
+ * Replace absolute local paths in committed report output.
+ * Opt-in raw paths are disabled by default.
+ * @param {string|null} p
+ * @returns {string|null}
+ */
+function redactLocalPath(p) {
+  if (typeof p === "string" && p.startsWith("/"))
+    return "<LOCAL_PATH_REDACTED>";
+  return p;
+}
+
+/**
  * @param {object} [opts]
  * @param {string} [opts.demaRoot]
  * @param {boolean} [opts.skipGh]
  * @param {object|null} [opts.block0LiveReadiness]
  * @param {Array<object>} [opts.artifactOverrides]
+ * @param {boolean} [opts.rawPaths] - opt-in to include unredacted local paths (default false)
  */
 export async function buildCrossRepoGenesisProvenanceReport({
   demaRoot = process.cwd(),
   skipGh = process.env.CROSS_REPO_SKIP_GH === "1",
   block0LiveReadiness = null,
   artifactOverrides = null,
+  rawPaths = false,
 } = {}) {
   /** @type {Array<object>} */
   const repoMetadata = [];
@@ -555,12 +571,21 @@ export async function buildCrossRepoGenesisProvenanceReport({
     a.migration_decision.includes("OPERATOR"),
   );
 
+  const networkUsed = !skipGh && !artifactOverrides;
+
+  const repoMetadataOut = rawPaths
+    ? repoMetadata
+    : repoMetadata.map((r) => ({
+        ...r,
+        localRoot: redactLocalPath(r.localRoot),
+      }));
+
   return Object.freeze({
     schema: CROSS_REPO_GENESIS_PROVENANCE_SCHEMA,
     ok: repoMetadata.length === REPO_CATALOG.length,
     generated_at_iso: new Date().toISOString(),
-    dema_root: demaRoot,
-    repos: Object.freeze(repoMetadata),
+    dema_root: rawPaths ? demaRoot : redactLocalPath(demaRoot),
+    repos: Object.freeze(repoMetadataOut),
     artifact_count: artifacts.length,
     artifacts: Object.freeze(artifacts),
     block0_live_readiness: block0LiveReadiness,
@@ -582,8 +607,8 @@ export async function buildCrossRepoGenesisProvenanceReport({
       migration_performed: false,
       block0_sealed: false,
       federation_started: false,
-      network_used: true,
-      gh_api_used: !skipGh && !artifactOverrides,
+      network_used: networkUsed,
+      gh_api_used: networkUsed,
     }),
   });
 }

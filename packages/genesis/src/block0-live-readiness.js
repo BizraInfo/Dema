@@ -29,18 +29,19 @@ export const BLOCK0_LIVE_READINESS_SCHEMA =
 // Per-slot signing requirement, verified against each producer's source
 // 2026-06-04: every producer signs (loadPrivateKey + signPayload) except
 // poi_rule, which has no producer and is recognized by canonical-rule lookup.
+// Slot IDs align with BLOCK0_PREREQUISITE_SLOTS from block0-manifest-verifier.js.
 const SLOT_NEEDS_PRIVATE_KEY = Object.freeze({
-  node0_identity: true,
-  urp_resource_status: true,
-  dema_realm_state: true,
-  performance_baseline: true,
-  house_of_wisdom_first_lesson: true,
-  pat_profile: true,
-  sat_profile: true,
-  canonical_receipt_ledger_root: true,
-  genesis_local_token_ledger_root: true,
+  canonical_receipt_ledger_root_hash: true,
+  node0_identity_proof_hash: true,
+  dema_realm_state_proof_hash: true,
+  urp_resource_status_proof_hash: true,
+  genesis_local_token_ledger_root_hash: true,
+  full_flywheel_run_receipt_hash: true,
+  performance_baseline_proof_hash: true,
+  house_of_wisdom_first_lesson_proof_hash: true,
+  pat_profile_proof_hashes: true,
+  sat_profile_proof_hashes: true,
   keyconsent_integration: true,
-  full_flywheel_run: true,
   poi_rule: false,
 });
 

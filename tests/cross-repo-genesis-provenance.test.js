@@ -177,3 +177,91 @@ test("cross-repo provenance CLI emits schema-tagged JSON", async () => {
   assert.equal(report.schema, CROSS_REPO_GENESIS_PROVENANCE_SCHEMA);
   assert.equal(report.boundary.mutation_performed, false);
 });
+
+test("deriveNextGate blocks on SECRET_REFERENCE_DO_NOT_READ artifact", () => {
+  const gate = deriveNextGate({
+    artifacts: [{ status_class: "SECRET_REFERENCE_DO_NOT_READ" }],
+    block0LiveReadiness: { ceremony_required: true },
+    operatorPubkeyPresent: false,
+  });
+  assert.equal(gate.gate, "BLOCKED_BY_UNRESOLVED_PROVENANCE");
+  assert.ok(gate.reason.includes("SECRET_REFERENCE_DO_NOT_READ"));
+});
+
+test("deriveNextGate blocks on single LIVE_PROOF_CANDIDATE", () => {
+  const gate = deriveNextGate({
+    artifacts: [{ status_class: "LIVE_PROOF_CANDIDATE" }],
+    block0LiveReadiness: { ceremony_required: true },
+    operatorPubkeyPresent: false,
+  });
+  assert.equal(gate.gate, "BLOCKED_BY_UNRESOLVED_PROVENANCE");
+});
+
+test("buildCrossRepoGenesisProvenanceReport hermetic: network_used false with skipGh and overrides", async () => {
+  const overrides = [
+    {
+      repo: "BizraInfo/Dema",
+      path: "packages/genesis/src/block0-manifest.js",
+      source: "fixture",
+      query: "block0",
+      evidence: "fixture",
+    },
+  ];
+  const report = await buildCrossRepoGenesisProvenanceReport({
+    skipGh: true,
+    artifactOverrides: overrides,
+    block0LiveReadiness: {
+      operator_pubkey_present: false,
+      ceremony_required: true,
+    },
+  });
+  assert.equal(report.boundary.network_used, false);
+  assert.equal(report.boundary.gh_api_used, false);
+});
+
+test("buildCrossRepoGenesisProvenanceReport blocks when SECRET_REFERENCE artifact present", async () => {
+  const overrides = [
+    {
+      repo: "BizraInfo/bizra-data-lake",
+      path: "runtime/secrets/genesis.key",
+      source: "fixture",
+      query: "keys",
+      evidence: "path-only (secret guard)",
+    },
+  ];
+  const report = await buildCrossRepoGenesisProvenanceReport({
+    skipGh: true,
+    artifactOverrides: overrides,
+    block0LiveReadiness: {
+      operator_pubkey_present: false,
+      ceremony_required: true,
+    },
+  });
+  assert.equal(report.next_gate.gate, "BLOCKED_BY_UNRESOLVED_PROVENANCE");
+  assert.ok(report.decision_matrix.secret_reference_count >= 1);
+});
+
+test("buildCrossRepoGenesisProvenanceReport redacts local paths by default", async () => {
+  const report = await buildCrossRepoGenesisProvenanceReport({
+    skipGh: true,
+    artifactOverrides: [],
+    block0LiveReadiness: null,
+    rawPaths: false,
+  });
+  for (const repo of report.repos) {
+    if (repo.localRoot !== null) {
+      assert.notEqual(
+        repo.localRoot,
+        "/home/bizra-operating-system/Downloads/Dema",
+      );
+      assert.notEqual(repo.localRoot, "/data/bizra/repos/bizra-data-lake");
+    }
+  }
+  // dema_root should be redacted if it was an absolute path
+  if (report.dema_root !== null && report.dema_root !== "") {
+    assert.ok(
+      !report.dema_root.startsWith("/home/"),
+      `dema_root should be redacted, got: ${report.dema_root}`,
+    );
+  }
+});
