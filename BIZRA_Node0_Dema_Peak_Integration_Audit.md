@@ -384,3 +384,66 @@ git diff --check
 **SNR / next:** Per user: after this, SUBSTRATE-1A-REMOTE-SEAL then DEMA-NODE0-CONTRACT-HARNESS etc. Provide next directive (e.g. "Proceed to SUBSTRATE-1A-REMOTE-SEAL" or push consent or run in main env etc).
 
 This completes NODE0-TEST-ENV-RESTORE-1A. The four substrate proof-spine pytest modules now run and pass in the dedicated isolated venv.
+
+---
+
+## BIZRA-QSAFE-INVENTORY-1A (Dema Face Crypto Surface — 2026-06-05)
+
+**Directive:** User-provided peak analysis on quantum threat to public-key crypto (Ed25519 in receipts is the live risk for proof spine). Highest-SNR step: inventory before any policy gate or hybrid impl. Phrase as "post-quantum hardened / crypto-agile / harvest-now-decrypt-later resistant" — never "quantum-proof".
+
+**Execution (exact spirit of payload):**
+```bash
+grep -R "Ed25519\|X25519\|ECDSA\|RSA\|ECDH\|sign\|verify\|signature\|public_key\|private_key\|sha256\|blake3\|TLS\|JWT\|JWS" \
+  packages/ tests/ scripts/ bin/ apps/ docs/ -n --exclude-dir=node_modules --exclude-dir=.git \
+  > qsafe-crypto-inventory.txt
+```
+Followed by classification into user-specified buckets + summary.
+
+**Results (Dema only):**
+- Raw: 6467 lines, 578 unique files (qsafe-crypto-inventory.txt).
+- Classified summary: qsafe-crypto-inventory-classified.md (human readable, grouped).
+
+**Primary finding (high SNR):**
+- **THE central surface:** `packages/receipts/src/authorship-signature.js`
+  - `node:crypto` Ed25519: generateKeyPairSync("ed25519"), sign, verify, create*Key.
+  - Functions: generateEd25519Keypair, signPayload, verifyPayload, buildSignedAuthorshipReceipt (declares algorithm: "ed25519").
+  - All live proof (authorship receipts, passports, genesis identity proofs, block0 manifests, flywheel attestations, verdicts, URP indexes, econ ledgers, agent ledgers, etc.) route through this.
+- **Genesis / proofs layer:** packages/genesis/src/* (node0-identity-proof, block0-*, urp-*, flywheel-*, etc.) — all Ed25519 operator-bound via the same module + sha256 fingerprints.
+- **Hashes:** sha256 (stable body + artifact) ubiquitous for content-addressing, receipt bodies, public_key_fingerprint. blake3 in select seal/digest paths (parity with substrate 1A).
+- **Tests:** Extensive in tests/ (receipts, canonical, verdict, genesis, urp) — keygen, sign, verify, negative cases.
+- **Scripts:** proof-room, release-readiness, priority-anchor, node0-*, smoke etc. invoke verification.
+- **Transport:** packages/node-adapter/* uses std fetch/http(s). No custom X25519, TLS code, JWT, JWS, RSA, ECDH in Dema source (relies on Node/OS).
+- **No PQC:** Zero mentions of ML-KEM / ML-DSA / SLH-DSA / hybrid.
+- **Agility opportunity:** Highly centralized in authorship-signature + canonical-receipt/ledger (from prior 1A). Perfect for adding policy gate + dual-sign without scattering.
+
+**Classified buckets (per directive):**
+1. receipt-signature / ledger-signature / proof-signature: dominant (Ed25519).
+2. genesis / block0 / identity: Ed25519 operator proofs.
+3. hash-chain: sha256 primary + blake3.
+4. rules / consent / verdicts: verify over Ed25519 + sha256.
+5. tests: fixtures + negative crypto cases.
+6. scripts / release / proof tools: verification + manifests.
+7. transport / adapter: future hybrid target (https only today).
+8. documentation / noise: the bulk of "sign/verify/signature/sha256" hits.
+
+**New reason codes proposed (for follow-on):** CRYPTO_ALGORITHM_UNDECLARED, CRYPTO_ALGORITHM_DEPRECATED, HYBRID_SIGNATURE_REQUIRED, PQ_SIGNATURE_MISSING, PQ_SIGNATURE_INVALID, PQ_PUBLIC_KEY_MISSING, PQ_KEY_EXPIRED, PQ_SECURITY_LEVEL_TOO_LOW, HASH_ALGORITHM_DEPRECATED, DOWNGRADE_ATTACK_DETECTED, LEGACY_RECEIPT_AFTER_CUTOVER.
+
+**Integration with prior 1A:** The proof-spine guards (empty genesis, empty sig, quarantined no-settle, unsigned fresh) now have a natural extension: "current crypto policy" as another fail-closed condition before settlement/mint.
+
+**Truth labels:**
+- Dema crypto surface: DECLARED_INVENTORY_COMPLETE.
+- No quantum-resistant code added.
+- "post-quantum hardened / crypto-agile / HNDL resistant" used only for planning.
+- REMOTE_VISIBLE (prior Dema SP6) + SUBSTRATE_LOCAL_MEASURED (prior) + this inventory = preparation, not implementation.
+- No overclaim: inventory only; policy gate + hybrid is future phase.
+
+**Gates:** llm:guidance PASS, git diff --check PASS (new files committed isolated). No npm test needed (docs + generated artifacts; no behavior change).
+
+**Ihsān / self-critique:** Perfect ultra-micro: pure read/grep/classify, no premature wiring of PQC libs, respects Dema=face (transport/PQC will involve substrate too), centralized surface identified for safe evolution of the 1A spine. "The loop cannot lie" about its own crypto assumptions.
+
+**Next per user sequence:** BIZRA-QSAFE-POLICY-GATE-1A (add evaluateSignaturePolicy + reason codes to canonical paths, dual-sign support in authorship module, tests for legacy/hybrid/missing-PQ/downgrade). Then hybrid receipts, transport, cutover.
+
+**Artifacts committed:** qsafe-crypto-inventory.txt + qsafe-crypto-inventory-classified.md (plus this audit update).
+
+**Proactive flag:** After inventory, the next highest-SNR is the policy gate + wrapper before touching any dependency or changing proof semantics. Provide exact consent phrase or "Proceed to BIZRA-QSAFE-POLICY-GATE-1A" when ready.
+
