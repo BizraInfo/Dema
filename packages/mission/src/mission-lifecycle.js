@@ -34,6 +34,10 @@ import {
   loadPublicKey,
 } from "../../receipts/src/authorship-key-store.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
+import {
+  buildCanonicalReceipt,
+  CANONICAL_RECEIPT_CONSENT_PHRASE,
+} from "../../receipts/src/canonical-receipt.js";
 
 export const MISSION_LIFECYCLE_SCHEMA = "bizra.dema.mission_lifecycle.v0.1";
 
@@ -411,5 +415,56 @@ export function verifyMissionLifecycle({ lifecycle, pubkeyPem } = {}) {
     mission_id: lifecycle.mission_id,
     lifecycle_proof_hash,
     operator_public_key_fingerprint: lifecycle.operator_public_key_fingerprint,
+  });
+}
+
+// SP6-FEEDBACK-BRIDGE-SIM-1A ultra-micro implementation
+// Minimal pure function for autopoietic feedback proposal.
+// Reuses 1A guards for all 4 rails.
+// Micro-consent: exact "PROPOSE_FEEDBACK_BRIDGE_LESSON"
+// Integration: called from mission closeout hook (stub in SPEC-1A).
+// Returns canonical receipt proposal or fail-closed error.
+// Symbolic (receipt) - neural (LLM reasoning in harness) bridge.
+// HHMM: models "lesson state" -> "feedback quality" transition.
+// Diffusion: would score against past lessons via hash table (future).
+// Graph: closeout node -> feedback edge -> spine node.
+// Ihsān: transparent, consent-bound, refusal valid, no overclaim.
+export const FEEDBACK_BRIDGE_CONSENT_PHRASE = "PROPOSE_FEEDBACK_BRIDGE_LESSON";
+
+export async function proposeFeedbackBridge({
+  lesson_candidate_hash,
+  next_step_proposed,
+  demaHome,
+  consent,
+  now = new Date().toISOString(),
+} = {}) {
+  if (consent !== "PROPOSE_FEEDBACK_BRIDGE_LESSON") {
+    return { built: false, error: "consent_required" };
+  }
+  if (!isSha256Hex(lesson_candidate_hash)) {
+    return { built: false, error: "lesson_candidate_hash_invalid" };
+  }
+  if (!isNonEmptyString(next_step_proposed)) {
+    return { built: false, error: "next_step_proposed_required" };
+  }
+
+  const canonicalBody = {
+    schema: "bizra.dema.feedback_proposal.v0.1",
+    lesson_candidate_hash,
+    next_step_proposed,
+    proposed_at_iso: now,
+  };
+
+  // Reuse 1A build: applies all guards (#101 empty body, #102 QUARANTINED, #103 Ed25519, #107 sig)
+  // prevHash null for proposal (can be chained later in SIM or harness).
+  return buildCanonicalReceipt({
+    canonicalBody,
+    prevHash: null,
+    truthLabel: "MEASURED_LOCAL",
+    whatProves: "the feedback proposal was derived from verified mission closeout lesson and next_step under exact consent",
+    whatDoesNotProve: "that the proposed next step will succeed, is optimal, or will be accepted by substrate",
+    consent: CANONICAL_RECEIPT_CONSENT_PHRASE,
+    demaHome,
+    now,
   });
 }

@@ -19,6 +19,8 @@ import {
   verifyMissionLifecycle,
   MISSION_LIFECYCLE_SCHEMA,
   MISSION_ACTION_TYPE,
+  proposeFeedbackBridge,
+  FEEDBACK_BRIDGE_CONSENT_PHRASE,
 } from "../packages/mission/src/mission-lifecycle.js";
 import { buildConsentProof } from "../packages/receipts/src/consent-proof.js";
 import {
@@ -740,5 +742,81 @@ describe("mission-lifecycle · verifyMissionLifecycle (signature + proof_hash + 
     } finally {
       await rm(home, { recursive: true, force: true });
     }
+  });
+
+  // SP6-SIM-HARNESS-1A: direct tests for proposeFeedbackBridge (pure, before any wiring)
+  describe("proposeFeedbackBridge (SP6-SIM-HARNESS-1A)", () => {
+    it("refuses without exact consent → consent_required", async () => {
+      const home = await freshHomeWithKey();
+      try {
+        const r = await proposeFeedbackBridge({
+          lesson_candidate_hash: HASH_A,
+          next_step_proposed: "improve spine",
+          demaHome: home,
+          consent: "WRONG CONSENT",
+        });
+        assert.equal(r.built, false);
+        assert.equal(r.error, "consent_required");
+      } finally {
+        await rm(home, { recursive: true, force: true });
+      }
+    });
+
+    it("refuses if authorship key unavailable → no_authorship_key (reuses 1A)", async () => {
+      const home = await freshHome(); // no key init
+      try {
+        const r = await proposeFeedbackBridge({
+          lesson_candidate_hash: HASH_A,
+          next_step_proposed: "improve spine",
+          demaHome: home,
+          consent: FEEDBACK_BRIDGE_CONSENT_PHRASE,
+        });
+        assert.equal(r.built, false);
+        assert.equal(r.error, "no_authorship_key");
+      } finally {
+        await rm(home, { recursive: true, force: true });
+      }
+    });
+
+    it("succeeds with exact consent + temp keyed Dema home → canonical proposal receipt (reuses 1A guards)", async () => {
+      const home = await freshHomeWithKey();
+      try {
+        const r = await proposeFeedbackBridge({
+          lesson_candidate_hash: HASH_A,
+          next_step_proposed: "improve spine via feedback",
+          demaHome: home,
+          consent: FEEDBACK_BRIDGE_CONSENT_PHRASE,
+        });
+        assert.equal(r.built, true);
+        assert.ok(r.receipt, "should return receipt");
+        // The outer receipt is canonical (from 1A build); the feedback proposal is in canonical_body
+        assert.equal(r.receipt.schema, "bizra.dema.canonical_receipt.v0.1");
+        assert.equal(r.receipt.canonical_body.schema, "bizra.dema.feedback_proposal.v0.1");
+        assert.equal(r.receipt.canonical_body.lesson_candidate_hash, HASH_A);
+        assert.ok(r.receipt.receipt_signature_b64, "should have Ed25519 signature");
+        assert.equal(r.receipt.prev_hash, null);
+        // 1A guards ensure no QUARANTINED etc.
+        assert.notEqual(r.receipt.truth_label, "QUARANTINED");
+      } finally {
+        await rm(home, { recursive: true, force: true });
+      }
+    });
+
+    it("refuses invalid payload (non-hex lesson) → lesson_candidate_hash_invalid (exercises 1A guard path)", async () => {
+      const home = await freshHomeWithKey();
+      try {
+        const r = await proposeFeedbackBridge({
+          lesson_candidate_hash: "not-a-valid-hex",
+          next_step_proposed: "improve",
+          demaHome: home,
+          consent: FEEDBACK_BRIDGE_CONSENT_PHRASE,
+        });
+        assert.equal(r.built, false);
+        assert.equal(r.error, "lesson_candidate_hash_invalid");
+        // Note: this path precedes build, but build would also guard; 1A reuse confirmed in happy path above.
+      } finally {
+        await rm(home, { recursive: true, force: true });
+      }
+    });
   });
 });
