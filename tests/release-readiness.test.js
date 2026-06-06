@@ -66,6 +66,32 @@ test("buildReleaseReadinessReport emits schema-tagged PMBOK release status", asy
   );
 });
 
+test("buildReleaseReadinessReport exposes ARTIFACT-011 preflight release gate", async () => {
+  const report = await buildCleanReleaseReadinessReport({ now: fixedNow });
+
+  assert.ok(report.quality_assurance.artifact_011_preflight);
+  assert.equal(
+    report.quality_assurance.artifact_011_preflight.posture,
+    "preview_only_no_governed_node0_runtime",
+  );
+  assert.equal(
+    report.quality_assurance.artifact_011_preflight
+      .requires_operator_runtime_ready,
+    false,
+  );
+  assert.ok(
+    report.performance_qa.mechanisms.some(
+      (m) => m.id === "artifact_011_ceremony_preflight_gate",
+    ),
+  );
+  assert.ok(
+    report.world_class_quality_gates.gates.some(
+      (g) => g.id === "artifact_011_ceremony_preflight",
+    ),
+  );
+  assert.equal(hasRisk(report, "artifact_011.preflight_script_missing"), false);
+});
+
 test("buildReleaseReadinessReport scores dependency and installer posture", async () => {
   const report = await buildCleanReleaseReadinessReport({ now: fixedNow });
 

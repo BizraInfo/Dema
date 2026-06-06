@@ -32,11 +32,16 @@ test("check gate includes transition assurance before proof-room composition", (
   const transitionIndex = keys.indexOf(
     "node scripts/review/transition-assurance-check.mjs",
   );
+  const artifact011Index = keys.indexOf(
+    "node scripts/review/artifact-011-preflight-gate.mjs",
+  );
   const proofRoomIndex = keys.indexOf(
     "node scripts/proof-room-bundle.mjs --json",
   );
 
   assert.notEqual(transitionIndex, -1);
+  assert.notEqual(artifact011Index, -1);
   assert.notEqual(proofRoomIndex, -1);
-  assert.ok(transitionIndex < proofRoomIndex);
+  assert.ok(transitionIndex < artifact011Index);
+  assert.ok(artifact011Index < proofRoomIndex);
 });

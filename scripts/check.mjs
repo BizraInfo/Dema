@@ -114,6 +114,7 @@ export const commands = [
   ["node", ["scripts/gtm-readiness-check.mjs"]],
   ["node", ["scripts/urp-shared-discovery.mjs"]],
   ["node", ["scripts/review/transition-assurance-check.mjs"]],
+  ["node", ["scripts/review/artifact-011-preflight-gate.mjs"]],
   ["node", ["scripts/proof-room-bundle.mjs", "--json"]],
   ["node", ["scripts/node0-self-check.mjs", "--verify"]],
   ["node", ["scripts/review/harness-gate.mjs"]],

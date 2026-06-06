@@ -2,6 +2,10 @@
 
 ARTIFACT-011 is the first bounded diagnostic runtime receipt.
 
+**Full v0.1 Definition of Done:** [NODE0_DEMA_DOD_v0.1.md](NODE0_DEMA_DOD_v0.1.md)
+
+**Operator ceremony template (PREPARED / NOT YET MEASURED):** [evidence/ARTIFACT-011_FIRST_BOUNDED_DIAGNOSTIC_RECEIPT.md](evidence/ARTIFACT-011_FIRST_BOUNDED_DIAGNOSTIC_RECEIPT.md)
+
 ## Allowed
 
 - bounded diagnostic activation only

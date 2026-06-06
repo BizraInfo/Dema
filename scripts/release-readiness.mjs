@@ -33,6 +33,8 @@ const REQUIRED_GATES = [
   "npm run perf",
   "git diff --check",
 ];
+const ARTIFACT_011_PREFLIGHT_SCRIPT = "artifact-011:preflight";
+const ARTIFACT_011_PREFLIGHT_COMMAND = "npm run artifact-011:preflight";
 const WORKFLOW_AUTH_FLAG = "--ci-workflow-changes-authorized";
 const PMBOK_DOMAINS = [
   "integration_management",
@@ -160,6 +162,13 @@ function classifyRisks({
       code: "qa.coverage_threshold_missing",
       severity: "improvement",
       note: "CI runs behavior tests but does not enforce coverage thresholds.",
+    });
+  }
+  if (!packageJson.scripts?.[ARTIFACT_011_PREFLIGHT_SCRIPT]) {
+    risks.push({
+      code: "artifact_011.preflight_script_missing",
+      severity: "launch_blocker",
+      note: "ARTIFACT-011 Dema-side ceremony preflight script is missing from package.json.",
     });
   }
   return risks;
@@ -335,6 +344,12 @@ function buildPerformanceQa({
         evidence:
           "scripts/review/transition-assurance-check.mjs (24 sampled transitions; fails closed before proof-room composition in npm run check)",
       },
+      {
+        id: "artifact_011_ceremony_preflight_gate",
+        status: scripts[ARTIFACT_011_PREFLIGHT_SCRIPT] ? "enforced" : "missing",
+        evidence:
+          "scripts/review/artifact-011-preflight-gate.mjs (isolated preview-only ceremony chain; enforced in npm run check; does not require operator_runtime_ready)",
+      },
     ],
     candidate_budgets: [
       {
@@ -409,6 +424,7 @@ function buildWorldClassQualityGates({
   );
   const actionsPinned =
     actionRefs.length > 0 && actionRefs.every((ref) => ref.pinned);
+  const packageScripts = pipelineAutomation.package_scripts ?? [];
 
   return {
     posture: "advisory_gap_model_not_enforcement_claim",
@@ -461,6 +477,18 @@ function buildWorldClassQualityGates({
         currently_enforced: false,
         target:
           "publish and verify release artifact hashes before broad release",
+      },
+      {
+        id: "artifact_011_ceremony_preflight",
+        command: ARTIFACT_011_PREFLIGHT_COMMAND,
+        currently_enforced:
+          packageScripts.includes(ARTIFACT_011_PREFLIGHT_SCRIPT) &&
+          observed.get("npm run check") === true,
+        target:
+          "preview-only ARTIFACT-011 ceremony preflight enforced via npm run check (isolated home; no governed Node0 runtime)",
+        risk_code: packageScripts.includes(ARTIFACT_011_PREFLIGHT_SCRIPT)
+          ? null
+          : "artifact_011.preflight_script_missing",
       },
     ],
   };
@@ -613,6 +641,13 @@ export async function buildReleaseReadinessReport({
       coverage_threshold: coverageThreshold,
       performance_gate: "a_plus_enforced_via_perf_bench (see performance_qa)",
       documentation_gate: "manual_diff_hygiene_until_link_checker_exists",
+      artifact_011_preflight: {
+        script: packageJson.scripts?.[ARTIFACT_011_PREFLIGHT_SCRIPT] ?? null,
+        release_gate:
+          "scripts/review/artifact-011-preflight-gate.mjs via npm run check",
+        posture: "preview_only_no_governed_node0_runtime",
+        requires_operator_runtime_ready: false,
+      },
     },
     performance_qa: buildPerformanceQa({
       packageJson,
