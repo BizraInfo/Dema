@@ -2134,6 +2134,7 @@ async function cmd_urp(ctx) {
 }
 
 // Sub-action: `dema urp launch-5sat` (URP-5SAT-1A Node0 5 SAT launch/lock).
+(async () => {
 if (argv[2] === "launch-5sat") {
   const consent = argValue(argv, "--consent");
   const exactConsent = "LAUNCH NODE0 URP WITH 5 SAT ONLY AND LOCK AGAINST PAT/DEMA/MOMO";
@@ -5106,6 +5107,7 @@ async function runActiveKernel({ interactive = false, force = false } = {}) {
   }
 }
 
+})();
 // Allow tests to import dispatch + runActiveKernel without firing main().
 const isDirectInvocation =
   process.argv[1] &&
