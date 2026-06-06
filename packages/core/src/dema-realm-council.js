@@ -9,8 +9,14 @@
 // doctrine, active ability, current_state, and boundary note. This is presence
 // without false claims of autonomous agency.
 //
+// After URP-5SAT-1A launch: the 5 SAT are locked in the council if the launch receipt/state is present (always active, cannot be manipulated by PAT or Dema or Momo).
+//
 // NO model calls. NO autonomous agent runtime. NO memory mutation. NO tool
 // execution. NO network. NO federation. NO PoI. NO mint. NO file write.
+
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
 
 export const DEMA_REALM_COUNCIL_CHAMBER_SCHEMA =
   "bizra.dema.realm_council_chamber.v0.1";
@@ -111,14 +117,35 @@ const COUNCIL_BOUNDARY = Object.freeze({
 });
 
 export function gatherDemaRealmCouncil({ now = new Date() } = {}) {
+  let urp5satActive = false;
+  let locked = false;
+  try {
+    const activePath = join(process.env.DEMA_HOME || join(homedir(), ".dema"), "urp", "5sat-active-locked.json");
+    const active = JSON.parse(readFileSync(activePath, "utf8"));
+    if (active.active && active.locked) {
+      urp5satActive = true;
+      locked = true;
+    }
+  } catch {}
+  const profiles = locked
+    ? COUNCIL.map((p) => ({
+        ...p,
+        current_state: "LOCKED",
+        boundary_note:
+          p.boundary_note +
+          " | Locked by URP 5SAT launch (always active), cannot be manipulated by PAT or Dema or Momo.",
+      }))
+    : COUNCIL;
   return Object.freeze({
     schema: DEMA_REALM_COUNCIL_CHAMBER_SCHEMA,
     truth_label: COUNCIL_TRUTH_LABEL,
     rendered_at_iso: now.toISOString(),
-    profile_count: COUNCIL.length,
-    profiles: COUNCIL,
+    profile_count: profiles.length,
+    profiles,
+    urp_5sat_active: urp5satActive,
+    urp_5sat_locked: locked,
     disclaimer:
-      "Council profiles are DECLARED, not runtime-backed. UX-1D ships their presence; future slices may wire individual agents as discrete runtime modules.",
+      "Council profiles are DECLARED, not runtime-backed. UX-1D ships their presence; future slices may wire individual agents as discrete runtime modules. After URP-5SAT-1A launch the 5 SAT are locked and always active.",
     boundary: COUNCIL_BOUNDARY,
   });
 }

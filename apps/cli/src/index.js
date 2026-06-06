@@ -2149,10 +2149,26 @@ if (argv[2] === "launch-5sat") {
   const tmpPath = receiptPath + ".tmp";
   await writeFile(tmpPath, JSON.stringify(launch, null, 2));
   await rename(tmpPath, receiptPath);
+  // Write active state for "always on active" (the system treats URP 5SAT as active and locked once launched).
+  const activePath = join(home, "urp", "5sat-active-locked.json");
+  const activeTmp = activePath + ".tmp";
+  const activeState = {
+    schema: "bizra.dema.node0_5sat_urp_active.v0.1",
+    active: true,
+    locked: true,
+    active_sat: launch.body.active_sat,
+    manipulators_blocked: launch.body.manipulators_blocked,
+    connection_rules: launch.body.connection_rules,
+    launched_at: launch.body.launched_at_iso,
+    truth_label: "NODE0_5SAT_URP_ACTIVE_AND_LOCKED",
+  };
+  await writeFile(activeTmp, JSON.stringify(activeState, null, 2));
+  await rename(activeTmp, activePath);
   const result = {
     launched: true,
     launch_hash: launch.launch_hash,
     receipt_path: receiptPath,
+    active_state_path: activePath,
     active_sat: launch.body.active_sat,
     locked: true,
     manipulators_blocked: launch.body.manipulators_blocked,
@@ -2166,6 +2182,7 @@ if (argv[2] === "launch-5sat") {
     console.log(`  Active SAT: ${result.active_sat.join(" | ")}`);
     console.log(`  Locked against: ${result.manipulators_blocked.join(", ")}`);
     console.log(`  Receipt: ${receiptPath}`);
+    console.log(`  Active State: ${activePath}`);
     console.log("  LOCAL ONLY · no network · no federation · no mint · always active");
     console.log(`  Truth: ${result.truth_label}`);
   }
