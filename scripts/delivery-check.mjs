@@ -115,15 +115,9 @@ async function checkCovenantGate() {
   console.log('\n[COVENANT GATE A+ QA (Omnidirectional Audit kernel)]');
   try {
     const { screenProposal } = await import('../packages/covenant/src/covenant-gate.js');
-    // Minimal solvable special case proposal from audit
-    const proposal = {
-      project_id: "ocean-cleanup-dao",
-      sector: "environmental",
-      team_disclosure: true,
-      guaranteed_apr: false,
-      debt_ratio: 0.05,
-      impact_evidence: [{ type: "oracle_attestation", source: "demo_oracle_1", hash: "sha256:demo" }]
-    };
+    // Load canonical fixture (ultra micro: replaces inline embedding for reproducibility per audit)
+    const proposalPath = path.join(REPO_ROOT, 'fixtures/covenant/example-impact-proposal.json');
+    const proposal = JSON.parse(readFileSync(proposalPath, 'utf8'));
     const decision = screenProposal(proposal);
     const hasNeedsConsent = decision.status === 'needs_human_consent';
     const hasNoAprVerification = decision.thought_packets.some(p =>

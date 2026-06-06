@@ -1,0 +1,30 @@
+{
+  "_note": "[PROTOTYPE] Golden expected for audit kernel. decision_id and created_at are dynamic (hash includes time); focus on structure, status, packets types/claims, proof_gap. Used for regression in delivery-check QA and tests.",
+  "schema": "bizra.dema.graduation_decision.v0.1",
+  "project_id": "ocean-cleanup-dao",
+  "status": "needs_human_consent",
+  "screening": {
+    "anti_scam": "pass",
+    "business_activity": "pass",
+    "financial_screen": "pass",
+    "token_mechanics": "pass",
+    "impact_evidence": "partial"
+  },
+  "thought_packets": [
+    {
+      "type": "verification",
+      "claim": "No guaranteed APR detected.",
+      "confidence": 0.9,
+      "requires_human_review": false
+    },
+    {
+      "type": "risk",
+      "claim": "Impact evidence is not independently verified in v0.1.",
+      "confidence": 0.9,
+      "requires_human_review": true
+    }
+  ],
+  "proof_gap": [
+    "Impact evidence is not independently verified in v0.1."
+  ]
+}

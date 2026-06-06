@@ -1,0 +1,14 @@
+{
+  "project_id": "ocean-cleanup-dao",
+  "sector": "environmental",
+  "team_disclosure": true,
+  "guaranteed_apr": false,
+  "debt_ratio": 0.05,
+  "impact_evidence": [
+    {
+      "type": "oracle_attestation",
+      "source": "demo_oracle_1",
+      "hash": "sha256:demo"
+    }
+  ]
+}
