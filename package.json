@@ -31,7 +31,9 @@
     "priority-anchor:verify": "node scripts/priority-anchor.mjs --verify proof-of-priority/manifest.json --base-dir .",
     "perf": "node scripts/perf-bench.mjs --a-plus",
     "perf:json": "node scripts/perf-bench.mjs --a-plus --json",
-    "artifact-011:preflight": "node scripts/artifact-011-ceremony-preflight.mjs --isolated --json"
+    "artifact-011:preflight": "node scripts/artifact-011-ceremony-preflight.mjs --isolated --json",
+    "pre-push:seal": "node scripts/pre-push-proof-seal.mjs",
+    "layer-a5:prep": "node scripts/layer-a5-operator-prep.mjs --json"
   },
   "engines": {
     "node": ">=20"

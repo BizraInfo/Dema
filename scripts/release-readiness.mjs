@@ -35,6 +35,10 @@ const REQUIRED_GATES = [
 ];
 const ARTIFACT_011_PREFLIGHT_SCRIPT = "artifact-011:preflight";
 const ARTIFACT_011_PREFLIGHT_COMMAND = "npm run artifact-011:preflight";
+const PRE_PUSH_SEAL_SCRIPT = "pre-push:seal";
+const PRE_PUSH_SEAL_COMMAND = "npm run pre-push:seal";
+const LAYER_A5_PREP_SCRIPT = "layer-a5:prep";
+const LAYER_A5_PREP_COMMAND = "npm run layer-a5:prep";
 const WORKFLOW_AUTH_FLAG = "--ci-workflow-changes-authorized";
 const PMBOK_DOMAINS = [
   "integration_management",
@@ -169,6 +173,20 @@ function classifyRisks({
       code: "artifact_011.preflight_script_missing",
       severity: "launch_blocker",
       note: "ARTIFACT-011 Dema-side ceremony preflight script is missing from package.json.",
+    });
+  }
+  if (!packageJson.scripts?.[PRE_PUSH_SEAL_SCRIPT]) {
+    risks.push({
+      code: "pipeline.pre_push_seal_script_missing",
+      severity: "review",
+      note: "Pre-push proof seal script is missing from package.json.",
+    });
+  }
+  if (!packageJson.scripts?.[LAYER_A5_PREP_SCRIPT]) {
+    risks.push({
+      code: "pipeline.layer_a5_prep_script_missing",
+      severity: "review",
+      note: "Layer A5 operator prep script is missing from package.json.",
     });
   }
   return risks;
@@ -350,6 +368,18 @@ function buildPerformanceQa({
         evidence:
           "scripts/review/artifact-011-preflight-gate.mjs (isolated preview-only ceremony chain; enforced in npm run check; does not require operator_runtime_ready)",
       },
+      {
+        id: "pre_push_proof_seal",
+        status: scripts[PRE_PUSH_SEAL_SCRIPT] ? "enforced" : "missing",
+        evidence:
+          "scripts/pre-push-proof-seal.mjs (operator publish pipeline: git posture + npm run check + release readiness 100; no git push)",
+      },
+      {
+        id: "layer_a5_operator_prep",
+        status: scripts[LAYER_A5_PREP_SCRIPT] ? "enforced" : "missing",
+        evidence:
+          "scripts/layer-a5-operator-prep.mjs (real-home Step A5 checklist; Dema-side only; no governed Node0 runtime)",
+      },
     ],
     candidate_budgets: [
       {
@@ -489,6 +519,26 @@ function buildWorldClassQualityGates({
         risk_code: packageScripts.includes(ARTIFACT_011_PREFLIGHT_SCRIPT)
           ? null
           : "artifact_011.preflight_script_missing",
+      },
+      {
+        id: "pre_push_proof_seal",
+        command: PRE_PUSH_SEAL_COMMAND,
+        currently_enforced: packageScripts.includes(PRE_PUSH_SEAL_SCRIPT),
+        target:
+          "operator runs pre-push proof seal before git push (git posture + full check + release readiness)",
+        risk_code: packageScripts.includes(PRE_PUSH_SEAL_SCRIPT)
+          ? null
+          : "pipeline.pre_push_seal_script_missing",
+      },
+      {
+        id: "layer_a5_operator_prep",
+        command: LAYER_A5_PREP_COMMAND,
+        currently_enforced: packageScripts.includes(LAYER_A5_PREP_SCRIPT),
+        target:
+          "operator runs Layer A5 prep on real ~/.dema after push sync and before governed Node0 ceremony",
+        risk_code: packageScripts.includes(LAYER_A5_PREP_SCRIPT)
+          ? null
+          : "pipeline.layer_a5_prep_script_missing",
       },
     ],
   };
