@@ -189,6 +189,10 @@ import { saveChooseDecision } from "../../../packages/urp/src/choose-writer.js";
 import { listChooseDecisions } from "../../../packages/urp/src/choose-list.js";
 import { verifyChooseReceiptFile } from "../../../packages/urp/src/choose-verify.js";
 import {
+  buildNode05SatU rpLaunch,
+  verifyNode05SatU rpLaunch,
+} from "../../../packages/urp/src/five-sat-urp-launch.js";
+import {
   gatherDemaRealmState,
   renderDemaRealmHome,
 } from "../../../packages/core/src/dema-realm-home.js";
@@ -485,6 +489,14 @@ URP:
                     integrity per entry. Exit 1 only on detected corruption.
   dema urp choose <index.json> --decision MARK_SHAREABLE|MARK_LOCAL_ONLY
                               --consent "<exact phrase>" [--json]
+  dema urp launch-5sat --consent "LAUNCH NODE0 URP WITH 5 SAT ONLY AND LOCK AGAINST PAT/DEMA/MOMO" [--json]
+                    URP-5SAT-1A (Node0 only): Launch BIZRA URP with *only* the Node0 5 SAT
+                    (Guardian/Reasoner/Builder/Critic/Archivist from council). Declares
+                    URP "always on active" with locked:true and manipulators_blocked.
+                    The 5 SAT cannot be manipulated by PAT or Dema or Momo.
+                    Writes content-addressed launch receipt. Exact consent required.
+                    [PROTOTYPE] — declaration/lock only. No runtime URP. Local face.
+                    LOCAL ONLY — no network, no federation, no mint.
                     UX-4.1C operator choose CLI. Reads a verified URP local
                     index, builds a kernel envelope, persists it to
                     $DEMA_HOME/urp/choices/choose-<sha256>.json (mode 0o600,
@@ -2113,6 +2125,50 @@ async function cmd_urp(ctx) {
     'Usage: dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]\n       dema urp list [--json]\n       dema urp verify <index.json> [--json]\n       dema urp choose <index.json> --decision MARK_SHAREABLE|MARK_LOCAL_ONLY --consent "<exact phrase>" [--json]',
   );
   process.exitCode = 1;
+  return;
+}
+
+// Sub-action: `dema urp launch-5sat` (URP-5SAT-1A Node0 5 SAT launch/lock).
+if (argv[2] === "launch-5sat") {
+  const consent = argValue(argv, "--consent");
+  const exactConsent = "LAUNCH NODE0 URP WITH 5 SAT ONLY AND LOCK AGAINST PAT/DEMA/MOMO";
+  if (!consent || consent !== exactConsent) {
+    console.error(`dema urp launch-5sat: exact --consent "${exactConsent}" required`);
+    process.exitCode = 1;
+    return;
+  }
+  const launch = buildNode05SatU rpLaunch();
+  // Save as content-addressed receipt (atomic). Self-contained for micro.
+  const { join } = await import("node:path");
+  const { homedir } = await import("node:os");
+  const { writeFile, rename, mkdir } = await import("node:fs/promises");
+  const home = process.env.DEMA_HOME || join(homedir(), ".dema");
+  const receiptsDir = join(home, "receipts");
+  await mkdir(receiptsDir, { recursive: true });
+  const receiptPath = join(receiptsDir, `node0-5sat-urp-launch-${launch.launch_hash}.json`);
+  const tmpPath = receiptPath + ".tmp";
+  await writeFile(tmpPath, JSON.stringify(launch, null, 2));
+  await rename(tmpPath, receiptPath);
+  const result = {
+    launched: true,
+    launch_hash: launch.launch_hash,
+    receipt_path: receiptPath,
+    active_sat: launch.body.active_sat,
+    locked: true,
+    manipulators_blocked: launch.body.manipulators_blocked,
+    truth_label: launch.body.truth_label,
+  };
+  const wantJsonLocal = argv.includes("--json");
+  if (wantJsonLocal) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log("Node0 5 SAT URP launched and locked.");
+    console.log(`  Active SAT: ${result.active_sat.join(" | ")}`);
+    console.log(`  Locked against: ${result.manipulators_blocked.join(", ")}`);
+    console.log(`  Receipt: ${receiptPath}`);
+    console.log("  LOCAL ONLY · no network · no federation · no mint · always active");
+    console.log(`  Truth: ${result.truth_label}`);
+  }
   return;
 }
 
