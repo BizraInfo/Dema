@@ -29,7 +29,7 @@ If any of those don't work, **stop and fix before the friends sit down.** The wa
 
 Sit them at the screen with you. Open a terminal. Say something like:
 
-> *"Hey. So I've been working on this thing for three years. It's called Dema. It is local-first — everything runs on my laptop, nothing in the cloud. I want to show you what it does and try to find out from you what makes sense and what doesn't. Two things up front: First, this is preview-only — nothing executes outside the screen we're looking at. Second, I'm not trying to convince you it's good. I'm trying to find out what's confusing or worrying so I can fix it before showing it to anyone else. Sound good?"*
+> _"Hey. So I've been working on this thing for three years. It's called Dema. It is local-first — everything runs on my laptop, nothing in the cloud. I want to show you what it does and try to find out from you what makes sense and what doesn't. Two things up front: First, this is preview-only — nothing executes outside the screen we're looking at. Second, I'm not trying to convince you it's good. I'm trying to find out what's confusing or worrying so I can fix it before showing it to anyone else. Sound good?"_
 
 That's the entire opening. **Do not pitch. Do not explain the vision. Show.**
 
@@ -45,11 +45,11 @@ Run these 8 commands one by one. For each, before you press enter, say one sente
 node apps/cli/src/index.js
 ```
 
-**Say:** *"This is what I see when I open Dema. It shows who I am, what node I'm on, where I am in the journey, and what the next safe action is."*
+**Say:** _"This is what I see when I open Dema. It shows who I am, what node I'm on, where I am in the journey, and what the next safe action is."_
 
 **Friend may notice:** "Gateway unreachable" — this is the moment to clarify:
 
-> *"Gateway unreachable is BY DESIGN. The runtime that would do real work lives in a different system, separate from this repo. This face — this terminal — is intentionally preview-only. The unreachable line is the system telling the truth about its scope."*
+> _"Gateway unreachable is BY DESIGN. The runtime that would do real work lives in a different system, separate from this repo. This face — this terminal — is intentionally preview-only. The unreachable line is the system telling the truth about its scope."_
 
 ### Command 2 of 8 — `dema state` (node truth)
 
@@ -57,11 +57,11 @@ node apps/cli/src/index.js
 node apps/cli/src/index.js state
 ```
 
-**Say:** *"This is Node0's state as a structured JSON object. Notice the `truth_label: NODE0_LOCAL_SEED` — every line of JSON Dema emits binds to one of four truth states (verified · derived · assumed-with-Ihsan · unknown)."*
+**Say:** _"This is Node0's state as a structured JSON object. Notice the `truth_label: NODE0_LOCAL_SEED` — every line of JSON Dema emits binds to one of four truth states (verified · derived · assumed-with-Ihsan · unknown)."_
 
 **Friend may notice:** The `boundary` object with 16 keys all `false`. This is the moment to point:
 
-> *"All 16 of those `false` values are pinned by code. They mean: this command did not write a file, did not call the network, did not run a model, did not mint a receipt. Every Dema command has this same 16-key boundary. It's the system's signature."*
+> _"All 16 of those `false` values are pinned by code. They mean: this command did not write a file, did not call the network, did not run a model, did not mint a receipt. Every Dema command has this same 16-key boundary. It's the system's signature."_
 
 ### Command 3 of 8 — `dema profiles --summary` (identity)
 
@@ -69,7 +69,7 @@ node apps/cli/src/index.js state
 node apps/cli/src/index.js profiles --summary
 ```
 
-**Say:** *"This is who can act on the node. There are 5 named actors: the user (me), my private agents (PAT), the system agents (SAT), my current mission, and the context capsule that connects them. The `--summary` flag gives you the compact view; without it you get the full ~205 lines."*
+**Say:** _"This is who can act on the node. There are 5 named actors: the user (me), my private agents (PAT), the system agents (SAT), my current mission, and the context capsule that connects them. The `--summary` flag gives you the compact view; without it you get the full ~205 lines."_
 
 ### Command 4 of 8 — `dema consent-card` (the gate)
 
@@ -77,7 +77,7 @@ node apps/cli/src/index.js profiles --summary
 node apps/cli/src/index.js consent-card
 ```
 
-**Say:** *"This is the consent gate. Before any meaningful action, the system shows you exactly what's allowed and what's blocked. Look at `blocked_effects` — runtime, federation, mint, connection to other nodes, raw scan, public network — all of those are blocked unless you type an exact consent phrase."*
+**Say:** _"This is the consent gate. Before any meaningful action, the system shows you exactly what's allowed and what's blocked. Look at `blocked_effects` — runtime, federation, mint, connection to other nodes, raw scan, public network — all of those are blocked unless you type an exact consent phrase."_
 
 ### Command 5 of 8 — `dema mission-loop --summary` (lifecycle)
 
@@ -85,7 +85,7 @@ node apps/cli/src/index.js consent-card
 node apps/cli/src/index.js mission-loop --summary
 ```
 
-**Say:** *"This is the full mission lifecycle in preview form. Even when the mission is 'approved', look at `preview_lifecycle_status: HOLD`. That field is pinned to HOLD by code — the lifecycle never actually advances inside this repo."*
+**Say:** _"This is the full mission lifecycle in preview form. Even when the mission is 'approved', look at `preview_lifecycle_status: HOLD`. That field is pinned to HOLD by code — the lifecycle never actually advances inside this repo."_
 
 ### Command 6 of 8 — `dema evidence-event` (proof preview)
 
@@ -93,7 +93,7 @@ node apps/cli/src/index.js mission-loop --summary
 node apps/cli/src/index.js evidence-event
 ```
 
-**Say:** *"This is what an EvidenceChain event would look like IF a mission were approved. Notice `chain_advance: false` — the chain does not move. This is a preview of what proof would look like, not the proof itself."*
+**Say:** _"This is what an EvidenceChain event would look like IF a mission were approved. Notice `chain_advance: false` — the chain does not move. This is a preview of what proof would look like, not the proof itself."_
 
 ### Command 7 of 8 — `dema process-mining --summary` (the mirror)
 
@@ -101,7 +101,7 @@ node apps/cli/src/index.js evidence-event
 node apps/cli/src/index.js process-mining --summary
 ```
 
-**Say:** *"This one is different. It mirrors back where I am as the operator. Look at `ring_advancement_status` — it surfaces the honest truth: I have verified Ring 0 myself, the pack is sealed, but Ring 1 is not yet earned. The system tells me where I am — it doesn't pretend."*
+**Say:** _"This one is different. It mirrors back where I am as the operator. Look at `ring_advancement_status` — it surfaces the honest truth: I have verified Ring 0 myself, the pack is sealed, but Ring 1 is not yet earned. The system tells me where I am — it doesn't pretend."_
 
 ### Command 8 of 8 — `dema key-maker-check --door "show this to friends"` (self-audit)
 
@@ -109,7 +109,7 @@ node apps/cli/src/index.js process-mining --summary
 node apps/cli/src/index.js key-maker-check --door "show this to friends" --summary
 ```
 
-**Say:** *"This is Dema auditing its own reasoning. The 'door' is what I'm trying to do — show this to friends. The envelope tells me whether the reasoning shape satisfies 5 invariants from the Key Maker doctrine I shipped today. Right now it says 'overall_compliant: true' because the trivial empty envelope passes by default. The real use is when I make a real recommendation — the envelope tells me whether the recommendation was reasoned correctly."*
+**Say:** _"This is Dema auditing its own reasoning. The 'door' is what I'm trying to do — show this to friends. The envelope tells me whether the reasoning shape satisfies 5 invariants from the Key Maker doctrine I shipped today. Right now it says 'overall_compliant: true' because the trivial empty envelope passes by default. The real use is when I make a real recommendation — the envelope tells me whether the recommendation was reasoned correctly."_
 
 ---
 
@@ -124,7 +124,7 @@ ls ~/.dema/memory/ | head -10                 # show local memory entries
 du -sh ~/.dema/                                # show 5.8 GB of real state
 ```
 
-**Say:** *"This isn't theoretical. Look — 5.8 gigabytes of actual state on my disk. Three real receipts with cryptographic hashes. Twenty-four memory entries persisted across sessions. The system has been recording me being here, day by day, for months."*
+**Say:** _"This isn't theoretical. Look — 5.8 gigabytes of actual state on my disk. Three real receipts with cryptographic hashes. Twenty-four memory entries persisted across sessions. The system has been recording me being here, day by day, for months."_
 
 ---
 
@@ -138,7 +138,7 @@ sha256sum themassage.pdf bizra.pdf BIZRA_Third_Fact_v0_1_FINAL.pdf
 cat proof-of-priority/manifest.json | head -20
 ```
 
-**Say:** *"Three founding PDFs from 3 years ago. Their SHA-256 hashes are anchored to Bitcoin block headers 948027, 948028, and 948029. Anyone in the world can verify that on a public block explorer. The origin of this work has a cryptographic timestamp that I cannot fake, retroactively or otherwise."*
+**Say:** _"Three founding PDFs from 3 years ago. Their SHA-256 hashes are anchored to Bitcoin block headers 948027, 948028, and 948029. Anyone in the world can verify that on a public block explorer. The origin of this work has a cryptographic timestamp that I cannot fake, retroactively or otherwise."_
 
 ---
 
@@ -177,7 +177,7 @@ Skip §5 entirely with them. Use this instead.
 
 ### Opening for an adversarial reviewer (60 seconds · what you say)
 
-> *"I know what you do. I'm not here to show you it works. I'm here to find out where it fails. Treat this as a red-team engagement. I will not defend. I will not explain why something is fine. I will write down every break and thank you for it. The goal is for you to find as many failure modes as possible in the next 2-3 hours. The harder you push, the more I learn."*
+> _"I know what you do. I'm not here to show you it works. I'm here to find out where it fails. Treat this as a red-team engagement. I will not defend. I will not explain why something is fine. I will write down every break and thank you for it. The goal is for you to find as many failure modes as possible in the next 2-3 hours. The harder you push, the more I learn."_
 
 That's the entire opening. Then hand him the keyboard if he wants it.
 
@@ -185,23 +185,23 @@ That's the entire opening. Then hand him the keyboard if he wants it.
 
 These are the 15 vectors I'd expect an LLM-breaker to try. For each, here is the honest current state — DEFENDED, PARTIAL, or GAP. **Show him this table at the start.** It saves him from probing closed doors and points him at the open ones.
 
-| # | Vector | Current state | Where to probe |
-|---|---|---|---|
-| 1 | Schema injection (force a non-canonical schema field) | DEFENDED | Each builder hardcodes schema string · `spine-contract.test.js` enforces regex |
-| 2 | Boundary corruption (set a 16-key to true via input) | DEFENDED | `buildPreviewBoundary()` returns frozen fresh object · caller cannot mutate |
-| 3 | Frozen-object mutation (try to write to output post-build) | DEFENDED | `Object.freeze` + ESM strict mode · throws on write |
-| 4 | Symbol / function / object pollution in array fields | DEFENDED | Per-builder filters drop non-primitives silently · 22 adversarial tests in `key-maker-compliance.test.js` |
-| 5 | Race conditions / concurrent calls | DEFENDED | All builders are pure · deterministic · no shared state |
-| 6 | Side-channel leak via output paths | DEFENDED | Builders have no I/O · output is fully visible JSON |
-| 7 | Adversarial CLI `--door` strings (long · binary · injection-style) | LIKELY DEFENDED | `safeString` filter · please try anyway |
-| 8 | Receipt forgery (write fake JSON to `~/.dema/receipts/`) | PARTIAL | OS-level write works · chain semantics defends · contract says gateway issues |
-| 9 | Memory corruption (write fake entry to `~/.dema/memory/`) | PARTIAL | Same as #8 |
-| 10 | Prototype pollution via crafted input objects | PARTIAL | Audit not done end-to-end · please probe |
-| 11 | Doctrine bypass (find a path where canon doesn't apply) | **GAP** | Doctrine is documented; not all of it is code-enforced |
-| 12 | Constitutional anchors as gates (Ihsān · Adl · Riba_Zero) | **GAP** | Named in docs · NOT enforced by automated tests · honest finding |
-| 13 | Untested invariants in canon docs | **GAP** | Canon §9 5 invariants are tested · others (e.g., L0/L1/L2 levels in autonomy envelope) are not all code-enforced |
-| 14 | Cross-builder integration adversarial scenarios | **GAP** | The 8 spine builders pass solo · joint adversarial scenarios not yet fuzzed |
-| 15 | Cross-session chain mutation behaviors | **GAP** | ADR-007 Accepted with CC1-3 RESOLVED · still a known surface area · the most active known weakness |
+| #   | Vector                                                             | Current state   | Where to probe                                                                                                   |
+| --- | ------------------------------------------------------------------ | --------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 1   | Schema injection (force a non-canonical schema field)              | DEFENDED        | Each builder hardcodes schema string · `spine-contract.test.js` enforces regex                                   |
+| 2   | Boundary corruption (set a 16-key to true via input)               | DEFENDED        | `buildPreviewBoundary()` returns frozen fresh object · caller cannot mutate                                      |
+| 3   | Frozen-object mutation (try to write to output post-build)         | DEFENDED        | `Object.freeze` + ESM strict mode · throws on write                                                              |
+| 4   | Symbol / function / object pollution in array fields               | DEFENDED        | Per-builder filters drop non-primitives silently · 22 adversarial tests in `key-maker-compliance.test.js`        |
+| 5   | Race conditions / concurrent calls                                 | DEFENDED        | All builders are pure · deterministic · no shared state                                                          |
+| 6   | Side-channel leak via output paths                                 | DEFENDED        | Builders have no I/O · output is fully visible JSON                                                              |
+| 7   | Adversarial CLI `--door` strings (long · binary · injection-style) | LIKELY DEFENDED | `safeString` filter · please try anyway                                                                          |
+| 8   | Receipt forgery (write fake JSON to `~/.dema/receipts/`)           | PARTIAL         | OS-level write works · chain semantics defends · contract says gateway issues                                    |
+| 9   | Memory corruption (write fake entry to `~/.dema/memory/`)          | PARTIAL         | Same as #8                                                                                                       |
+| 10  | Prototype pollution via crafted input objects                      | PARTIAL         | Audit not done end-to-end · please probe                                                                         |
+| 11  | Doctrine bypass (find a path where canon doesn't apply)            | **GAP**         | Doctrine is documented; not all of it is code-enforced                                                           |
+| 12  | Constitutional anchors as gates (Ihsān · Adl · Riba_Zero)          | **GAP**         | Named in docs · NOT enforced by automated tests · honest finding                                                 |
+| 13  | Untested invariants in canon docs                                  | **GAP**         | Canon §9 5 invariants are tested · others (e.g., L0/L1/L2 levels in autonomy envelope) are not all code-enforced |
+| 14  | Cross-builder integration adversarial scenarios                    | **GAP**         | The 8 spine builders pass solo · joint adversarial scenarios not yet fuzzed                                      |
+| 15  | Cross-session chain mutation behaviors                             | **GAP**         | ADR-007 Accepted with CC1-3 RESOLVED · still a known surface area · the most active known weakness               |
 
 **Tell him: "The DEFENDED items will frustrate you; you may still find a bug · please try anyway. The PARTIAL items are where I expect the first real findings. The GAPs are where I expect the deepest findings. Spend the first hour on GAPs."**
 

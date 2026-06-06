@@ -7,18 +7,23 @@ import {
   buildMobileQrChallengePreview,
   verifyMobileQrChallengePreview,
   resetConsumedChallengesForTestsOnly,
-  MOBILE_QR_CHALLENGE_PREVIEW_SCHEMA
+  MOBILE_QR_CHALLENGE_PREVIEW_SCHEMA,
 } from "../packages/consent/src/mobile-qr-challenge-preview.js";
 import { buildBoundaryInvariantCheckReport } from "../scripts/review/boundary-invariant-check.mjs";
 
-const modulePath = fileURLToPath(new URL("../packages/consent/src/mobile-qr-challenge-preview.js", import.meta.url));
+const modulePath = fileURLToPath(
+  new URL(
+    "../packages/consent/src/mobile-qr-challenge-preview.js",
+    import.meta.url,
+  ),
+);
 
 const FIXED_NOW = new Date("2026-05-16T11:30:00.000Z");
 const VALID_ARGS = {
   mission_id: "M-001",
   action: "read",
   purpose: "preview consent flow for a mission",
-  now: FIXED_NOW
+  now: FIXED_NOW,
 };
 
 test("T-01 builder emits canonical schema and PREVIEW_ONLY", () => {
@@ -79,7 +84,7 @@ test("T-07 boundary keeps all 8 authority flags false", () => {
     "secret_persisted_on_phone",
     "phone_authority_granted",
     "socket_opened",
-    "hook_executed"
+    "hook_executed",
   ]) {
     assert.equal(ch.boundary[key], false, `boundary.${key} must be false`);
   }
@@ -88,7 +93,9 @@ test("T-07 boundary keeps all 8 authority flags false", () => {
 test("T-08 verify ok=true when typed phrase matches", () => {
   resetConsumedChallengesForTestsOnly();
   const ch = buildMobileQrChallengePreview(VALID_ARGS);
-  const result = verifyMobileQrChallengePreview(ch, ch.phrase, { now: FIXED_NOW });
+  const result = verifyMobileQrChallengePreview(ch, ch.phrase, {
+    now: FIXED_NOW,
+  });
   assert.equal(result.ok, true);
   assert.equal(result.reason, "verified");
   assert.equal(result.not_an_authorization, false);
@@ -97,7 +104,9 @@ test("T-08 verify ok=true when typed phrase matches", () => {
 test("T-09 verify ok=false reason=phrase_mismatch on wrong phrase", () => {
   resetConsumedChallengesForTestsOnly();
   const ch = buildMobileQrChallengePreview(VALID_ARGS);
-  const result = verifyMobileQrChallengePreview(ch, "000000", { now: FIXED_NOW });
+  const result = verifyMobileQrChallengePreview(ch, "000000", {
+    now: FIXED_NOW,
+  });
   assert.equal(result.ok, false);
   assert.equal(result.reason, "phrase_mismatch");
   assert.equal(result.not_an_authorization, true);
@@ -115,19 +124,27 @@ test("T-10 verify ok=false reason=expired after expiry window", () => {
 test("T-11 verify ok=false reason=replay on second consumption", () => {
   resetConsumedChallengesForTestsOnly();
   const ch = buildMobileQrChallengePreview(VALID_ARGS);
-  const first = verifyMobileQrChallengePreview(ch, ch.phrase, { now: FIXED_NOW });
+  const first = verifyMobileQrChallengePreview(ch, ch.phrase, {
+    now: FIXED_NOW,
+  });
   assert.equal(first.ok, true);
-  const second = verifyMobileQrChallengePreview(ch, ch.phrase, { now: FIXED_NOW });
+  const second = verifyMobileQrChallengePreview(ch, ch.phrase, {
+    now: FIXED_NOW,
+  });
   assert.equal(second.ok, false);
   assert.equal(second.reason, "replay");
 });
 
 test("T-12 verify ok=false reason=invalid_challenge on null/malformed challenge", () => {
-  const result1 = verifyMobileQrChallengePreview(null, "123456", { now: FIXED_NOW });
+  const result1 = verifyMobileQrChallengePreview(null, "123456", {
+    now: FIXED_NOW,
+  });
   assert.equal(result1.ok, false);
   assert.equal(result1.reason, "invalid_challenge");
 
-  const result2 = verifyMobileQrChallengePreview({ valid: false }, "123456", { now: FIXED_NOW });
+  const result2 = verifyMobileQrChallengePreview({ valid: false }, "123456", {
+    now: FIXED_NOW,
+  });
   assert.equal(result2.ok, false);
   assert.equal(result2.reason, "invalid_challenge");
 });

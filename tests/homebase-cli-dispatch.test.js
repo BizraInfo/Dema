@@ -8,7 +8,9 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 async function makeIsolatedHome() {
   return mkdtemp(join(tmpdir(), "dema-homebase-cli-"));
@@ -25,7 +27,9 @@ function homebaseEnv(home) {
 test("TDD-25: `dema --json` emits JSON parseable as HomebasePreview", async () => {
   const home = await makeIsolatedHome();
   try {
-    const { stdout } = await execFileAsync("node", [cliPath, "--json"], { env: homebaseEnv(home) });
+    const { stdout } = await execFileAsync("node", [cliPath, "--json"], {
+      env: homebaseEnv(home),
+    });
     const parsed = JSON.parse(stdout);
     assert.equal(parsed.schema, "bizra.dema.homebase_v0_1.v0.1");
     assert.equal(parsed.truth_label, "NODE0_LOCAL_SEED");
@@ -40,7 +44,9 @@ test("TDD-25: `dema --json` emits JSON parseable as HomebasePreview", async () =
 test("TDD-26: bare `dema` with stdout redirected (non-TTY) emits same JSON shape as --json", async () => {
   const home = await makeIsolatedHome();
   try {
-    const { stdout } = await execFileAsync("node", [cliPath], { env: homebaseEnv(home) });
+    const { stdout } = await execFileAsync("node", [cliPath], {
+      env: homebaseEnv(home),
+    });
     const parsed = JSON.parse(stdout);
     assert.equal(parsed.schema, "bizra.dema.homebase_v0_1.v0.1");
     assert.equal(parsed.boundary.runtime_execution_performed, false);
@@ -81,7 +87,9 @@ test("TDD-30: `dema --json | head -1` does not hang on EPIPE · exits cleanly", 
   const home = await makeIsolatedHome();
   try {
     const exitCode = await new Promise((resolve, reject) => {
-      const proc = spawn("node", [cliPath, "--json"], { env: homebaseEnv(home) });
+      const proc = spawn("node", [cliPath, "--json"], {
+        env: homebaseEnv(home),
+      });
       let buf = "";
       proc.stdout.on("data", (chunk) => {
         buf += chunk;
@@ -94,14 +102,20 @@ test("TDD-30: `dema --json | head -1` does not hang on EPIPE · exits cleanly", 
         reject(new Error("dema hung beyond 5s"));
       }, 5000).unref();
     });
-    assert.ok(exitCode === 0 || exitCode === null, `expected 0 or null close-code · got ${exitCode}`);
+    assert.ok(
+      exitCode === 0 || exitCode === null,
+      `expected 0 or null close-code · got ${exitCode}`,
+    );
   } finally {
     await rm(home, { recursive: true, force: true });
   }
 });
 
 test("ADV: `dema --json` does not crash when ~/.dema/ is missing entirely · partial flag set", async () => {
-  const missingHome = join(tmpdir(), `dema-homebase-cli-nonexistent-${process.pid}-${Date.now()}`);
+  const missingHome = join(
+    tmpdir(),
+    `dema-homebase-cli-nonexistent-${process.pid}-${Date.now()}`,
+  );
   const { stdout } = await execFileAsync("node", [cliPath, "--json"], {
     env: { ...process.env, DEMA_HOME: missingHome, DEMA_NODE0_ADAPTER: "" },
   });
@@ -114,7 +128,9 @@ test("ADV: `dema --json` does not crash when ~/.dema/ is missing entirely · par
 test("backwards compat: known subcommands still work · `dema task` still emits task list JSON", async () => {
   const home = await makeIsolatedHome();
   try {
-    const { stdout } = await execFileAsync("node", [cliPath, "task"], { env: homebaseEnv(home) });
+    const { stdout } = await execFileAsync("node", [cliPath, "task"], {
+      env: homebaseEnv(home),
+    });
     const parsed = JSON.parse(stdout);
     assert.equal(parsed.schema, "bizra.dema.task_list.v0.1");
   } finally {

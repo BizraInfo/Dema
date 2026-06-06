@@ -47,8 +47,10 @@ async function scanFlat(root) {
   try {
     names = await readdir(root);
   } catch (err) {
-    if (err.code === "ENOENT") return { error: `not_found:${root}`, entries: [] };
-    if (err.code === "EACCES") return { error: `permission_denied:${root}`, entries: [] };
+    if (err.code === "ENOENT")
+      return { error: `not_found:${root}`, entries: [] };
+    if (err.code === "EACCES")
+      return { error: `permission_denied:${root}`, entries: [] };
     throw err;
   }
   for (const name of names) {
@@ -60,14 +62,14 @@ async function scanFlat(root) {
         name,
         ext: extname(name).toLowerCase() || "(none)",
         size: s.size,
-        mtime: s.mtime.toISOString()
+        mtime: s.mtime.toISOString(),
       });
     } else if (s.isDirectory()) {
       entries.push({
         name,
         ext: "(dir)",
         size: 0,
-        mtime: s.mtime.toISOString()
+        mtime: s.mtime.toISOString(),
       });
     }
   }
@@ -92,7 +94,7 @@ function summarize(entries) {
     dir_count: entries.filter((e) => e.ext === "(dir)").length,
     total_bytes: totalBytes,
     by_extension: byExt,
-    top_largest: topLargest
+    top_largest: topLargest,
   };
 }
 
@@ -104,11 +106,12 @@ export async function runDownloadsAuditPreview({
   downloadsRoot = defaultDownloadsRoot(),
   demaRoot = defaultDemaRoot(),
   now = new Date(),
-  writeReceipt = true
+  writeReceipt = true,
 } = {}) {
   const startedAt = now.toISOString();
   const scan = await scanFlat(downloadsRoot);
-  const summary = scan.entries.length > 0 || !scan.error ? summarize(scan.entries) : null;
+  const summary =
+    scan.entries.length > 0 || !scan.error ? summarize(scan.entries) : null;
   const finishedAt = new Date().toISOString();
 
   const receipt = {
@@ -127,14 +130,14 @@ export async function runDownloadsAuditPreview({
       "SAT verifier sibling not yet implemented in v0.3.0; verdict is a placeholder. Real verification arrives with v0.3.2.",
     error: scan.error ?? null,
     result: summary,
-    payload_digest: null
+    payload_digest: null,
   };
   receipt.payload_digest = digest({
     task_id: receipt.task_id,
     target: receipt.target,
     scope: receipt.scope,
     result: receipt.result,
-    error: receipt.error
+    error: receipt.error,
   });
 
   if (writeReceipt) {
@@ -158,7 +161,7 @@ export function formatTaskReceipt(receipt) {
     `Scope:          ${receipt.scope}`,
     `Target:         ${receipt.target}`,
     `SAT verdict:    ${receipt.sat_verdict} — ${receipt.sat_verdict_reason}`,
-    `Created:        ${receipt.created_at}`
+    `Created:        ${receipt.created_at}`,
   ];
   if (receipt.error) lines.push(`Error:          ${receipt.error}`);
   if (receipt.result) {
@@ -176,7 +179,9 @@ export function formatTaskReceipt(receipt) {
     if (receipt.result.top_largest.length > 0) {
       lines.push(`  largest:`);
       for (const e of receipt.result.top_largest.slice(0, 5)) {
-        lines.push(`    ${e.size.toString().padStart(12)}  ${basename(e.name)}`);
+        lines.push(
+          `    ${e.size.toString().padStart(12)}  ${basename(e.name)}`,
+        );
       }
     }
   }
@@ -195,6 +200,6 @@ export const TASK_REGISTRY = {
       "Read-only inspection of ~/Downloads. No moves, deletes, renames, network, or mutation. Writes one local receipt.",
     autonomy_level: "L0/L1",
     run: runDownloadsAuditPreview,
-    format: formatTaskReceipt
-  }
+    format: formatTaskReceipt,
+  },
 };

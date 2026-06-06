@@ -3,17 +3,26 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
-import { defaultStatus, formatStatus, shouldUseColor } from "../packages/core/src/status.js";
+import {
+  defaultStatus,
+  formatStatus,
+  shouldUseColor,
+} from "../packages/core/src/status.js";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 const ANSI_RE = /\x1b\[[0-9;]*m/;
 
 function statusWithFindings() {
   return {
     ...defaultStatus(),
-    findings: ["Gateway /health unreachable: fetch failed", "Gateway /chain failed: fetch failed"]
+    findings: [
+      "Gateway /health unreachable: fetch failed",
+      "Gateway /chain failed: fetch failed",
+    ],
   };
 }
 
@@ -33,17 +42,26 @@ test("plain mode: all 3 zone titles present without ANSI", () => {
   assert.match(out, /Identity/);
   assert.match(out, /Readiness/);
   assert.match(out, /Findings/);
-  assert.ok(!ANSI_RE.test(out), "plain mode must emit zero ANSI escape sequences");
+  assert.ok(
+    !ANSI_RE.test(out),
+    "plain mode must emit zero ANSI escape sequences",
+  );
 });
 
 test("color mode emits at least one ANSI escape sequence", () => {
   const out = formatStatus(defaultStatus(), { color: true });
-  assert.ok(ANSI_RE.test(out), "color mode must emit at least one ANSI escape sequence");
+  assert.ok(
+    ANSI_RE.test(out),
+    "color mode must emit at least one ANSI escape sequence",
+  );
 });
 
 test("plain mode emits zero ANSI escape sequences", () => {
   const out = formatStatus(defaultStatus(), { color: false });
-  assert.ok(!ANSI_RE.test(out), "plain mode must emit zero ANSI escape sequences");
+  assert.ok(
+    !ANSI_RE.test(out),
+    "plain mode must emit zero ANSI escape sequences",
+  );
 });
 
 test("shouldUseColor: NO_COLOR env suppresses color", () => {
@@ -115,15 +133,22 @@ test("boundary footer always present regardless of color mode", () => {
 
 // Integration test: dema status --no-color → no ANSI, 3 zones present
 test("dema status --no-color: no ANSI codes and 3 zones present", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "status", "--no-color"], {
-    env: {
-      ...process.env,
-      DEMA_NODE0_ADAPTER: "",
-      DEMA_GATEWAY_URL: "",
-      DEMA_NODE0_STATUS_COMMAND: ""
-    }
-  });
-  assert.ok(!ANSI_RE.test(stdout), "dema status --no-color must emit no ANSI codes");
+  const { stdout } = await execFileAsync(
+    "node",
+    [cliPath, "status", "--no-color"],
+    {
+      env: {
+        ...process.env,
+        DEMA_NODE0_ADAPTER: "",
+        DEMA_GATEWAY_URL: "",
+        DEMA_NODE0_STATUS_COMMAND: "",
+      },
+    },
+  );
+  assert.ok(
+    !ANSI_RE.test(stdout),
+    "dema status --no-color must emit no ANSI codes",
+  );
   assert.match(stdout, /Identity/);
   assert.match(stdout, /Readiness/);
   assert.match(stdout, /Findings/);

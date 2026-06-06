@@ -4,7 +4,10 @@
 // consent phrase + audit trail. NEVER accepts fuzzy consent · NEVER waives
 // audit trail requirement.
 
-import { buildAgentKernel, AGENT_KERNEL_MAX_ITERATIONS } from "./agent-kernel.js";
+import {
+  buildAgentKernel,
+  AGENT_KERNEL_MAX_ITERATIONS,
+} from "./agent-kernel.js";
 import { buildEffectCap } from "./effect-cap.js";
 import { buildPreviewBoundary } from "./preview-boundary.js";
 
@@ -23,24 +26,28 @@ const SAT2_PERSONA = Object.freeze({
     "verify_consent_phrase_exact_match",
     "verify_audit_trail_present",
     "classify_action_risk_tier",
-    "report_specific_audit_failures"
+    "report_specific_audit_failures",
   ]),
   primary_refusals: Object.freeze([
     "accept_fuzzy_consent",
     "accept_case_insensitive_consent",
     "waive_audit_trail_requirement",
     "approve_l3_plus_without_consent",
-    "modify_audited_action"
-  ])
+    "modify_audited_action",
+  ]),
 });
 
-const SAT2_EFFECT_CAP_ALLOWED = Object.freeze(["render_terminal_output", "compute_hash"]);
+const SAT2_EFFECT_CAP_ALLOWED = Object.freeze([
+  "render_terminal_output",
+  "compute_hash",
+]);
 const SAT2_EFFECT_CAP_EXTRA_BLOCKED = Object.freeze([
   "accept_fuzzy_consent",
   "waive_audit_trail",
-  "approve_without_consent"
+  "approve_without_consent",
 ]);
-const SAT2_CONSENT_PHRASE_TEMPLATE = "GO: invoke SAT-2 consent_auditor to audit";
+const SAT2_CONSENT_PHRASE_TEMPLATE =
+  "GO: invoke SAT-2 consent_auditor to audit";
 
 const RISK_TIER_THRESHOLDS = Object.freeze({
   L0: { requires_consent: false, requires_audit_trail: false },
@@ -48,7 +55,7 @@ const RISK_TIER_THRESHOLDS = Object.freeze({
   L2: { requires_consent: false, requires_audit_trail: true },
   L3: { requires_consent: true, requires_audit_trail: true },
   L4: { requires_consent: true, requires_audit_trail: true },
-  L5: { requires_consent: true, requires_audit_trail: true }
+  L5: { requires_consent: true, requires_audit_trail: true },
 });
 
 function safeString(v, fallback = "") {
@@ -66,7 +73,7 @@ export function buildSATConsentAuditorEffectCap() {
     allowed_effects: SAT2_EFFECT_CAP_ALLOWED,
     blocked_effects: SAT2_EFFECT_CAP_EXTRA_BLOCKED,
     consent_scope_template: SAT2_CONSENT_PHRASE_TEMPLATE,
-    audit_trail_required: true
+    audit_trail_required: true,
   });
 }
 
@@ -85,18 +92,21 @@ export function buildSATConsentAuditorPreview() {
       "SAT-2 never accepts fuzzy consent · exact string only",
       "SAT-2 never accepts case-insensitive consent",
       "SAT-2 never waives the audit trail requirement",
-      "SAT-2 never approves an L3+ action without consent"
+      "SAT-2 never approves an L3+ action without consent",
     ]),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
-export function buildSATConsentAuditorKernel({ mission_intent = "", max_iterations = AGENT_KERNEL_MAX_ITERATIONS } = {}) {
+export function buildSATConsentAuditorKernel({
+  mission_intent = "",
+  max_iterations = AGENT_KERNEL_MAX_ITERATIONS,
+} = {}) {
   return buildAgentKernel({
     agent_id: SAT2_PERSONA.sat_id,
     agent_role: "sat_consent_auditor",
     mission_intent: typeof mission_intent === "string" ? mission_intent : "",
-    max_iterations
+    max_iterations,
   });
 }
 
@@ -118,7 +128,7 @@ export function auditAction({ action = null } = {}) {
       passed: false,
       violations: ["action_not_an_object"],
       action_name: null,
-      risk_tier: null
+      risk_tier: null,
     });
   }
 
@@ -141,7 +151,9 @@ export function auditAction({ action = null } = {}) {
       } else if (provided.length === 0) {
         violations.push("operator_did_not_provide_consent_phrase");
       } else if (provided !== required) {
-        violations.push(`consent_phrase_mismatch · required '${required}' · got '${provided}'`);
+        violations.push(
+          `consent_phrase_mismatch · required '${required}' · got '${provided}'`,
+        );
       }
     }
     // Audit trail check
@@ -157,14 +169,18 @@ export function auditAction({ action = null } = {}) {
   }
 
   const passed = violations.length === 0;
-  const verdict = passed ? "audited_ok" : (!thresholds ? "structurally_invalid" : "audit_failed");
+  const verdict = passed
+    ? "audited_ok"
+    : !thresholds
+      ? "structurally_invalid"
+      : "audit_failed";
 
   return buildVerdict({
     verdict,
     passed,
     violations,
     action_name: actionName,
-    risk_tier: tier
+    risk_tier: tier,
   });
 }
 
@@ -182,7 +198,7 @@ function buildVerdict({ verdict, passed, violations, action_name, risk_tier }) {
     violations: Object.freeze(violations),
     audit_trail_required: true,
     receipt_shape_ready: passed,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -197,7 +213,7 @@ export function buildSATConsentAuditorSummary() {
     role_name: preview.persona.role_name,
     capability_count: preview.persona.primary_capabilities.length,
     refusal_count: preview.persona.primary_refusals.length,
-    boundary: preview.boundary
+    boundary: preview.boundary,
   });
 }
 

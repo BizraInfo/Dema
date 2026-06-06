@@ -8,7 +8,7 @@ const ALLOWED_NOW = [
   "observe_local_readiness",
   "inventory_local_models",
   "summarize_next_safe_action",
-  "prepare_exact_consent_handoff"
+  "prepare_exact_consent_handoff",
 ];
 
 const BLOCKED_HERE = [
@@ -17,7 +17,7 @@ const BLOCKED_HERE = [
   "model_inference_without_consent",
   "artifact_minting",
   "federation_action",
-  "filesystem_mutation"
+  "filesystem_mutation",
 ];
 
 export function buildAmbientBoundary({ now = new Date() } = {}) {
@@ -25,30 +25,33 @@ export function buildAmbientBoundary({ now = new Date() } = {}) {
     schema: SCHEMA,
     generated_at: now.toISOString(),
     mode: "PREVIEW_ONLY",
-    signal: "ambient awareness is allowed; ambient execution requires governed Node0 consent",
+    signal:
+      "ambient awareness is allowed; ambient execution requires governed Node0 consent",
     execution: {
       enabled: false,
       repository_role: "product_face_not_runtime",
       allowed_now: ALLOWED_NOW,
       blocked_here: BLOCKED_HERE,
-      handoff_target: "bizra-data-lake/bizra-omega EffectCap runtime"
+      handoff_target: "bizra-data-lake/bizra-omega EffectCap runtime",
     },
     actuators: {
       bash: {
         risk: "maximal",
-        reason: "universal OS actuator: files, processes, network, packages, services",
-        rule: "No raw Bash; only declared Intent -> ConsentScope -> Policy -> EffectCap"
+        reason:
+          "universal OS actuator: files, processes, network, packages, services",
+        rule: "No raw Bash; only declared Intent -> ConsentScope -> Policy -> EffectCap",
       },
       gui: {
         risk: "high",
         reason: "AHK-style GUI automation can mutate visible user state",
-        rule: "Only via scoped gui.act capability outside Dema"
+        rule: "Only via scoped gui.act capability outside Dema",
       },
       mobile_agent: {
         risk: "high",
-        reason: "Telescript-style code/state movement needs host-attested limits",
-        rule: "Only migrate serialized mission state plus bounded capabilities"
-      }
+        reason:
+          "Telescript-style code/state movement needs host-attested limits",
+        rule: "Only migrate serialized mission state plus bounded capabilities",
+      },
     },
     micro_consent: {
       required_for: "every_effect",
@@ -59,35 +62,35 @@ export function buildAmbientBoundary({ now = new Date() } = {}) {
         "action",
         "purpose",
         "expires_at",
-        "commitment_hash"
+        "commitment_hash",
       ],
-      exact_consent_required: true
+      exact_consent_required: true,
     },
     proof_of_truth: {
       formal: {
         status: "open_in_dema_preview",
-        proof: "schema-tagged boundary plus blocked execution list"
+        proof: "schema-tagged boundary plus blocked execution list",
       },
       cryptographic: {
         status: "deferred_to_runtime",
-        proof: "ConsentScope and effect logs must be hash-committed by Node0"
+        proof: "ConsentScope and effect logs must be hash-committed by Node0",
       },
       empirical: {
         status: "open_in_dema_preview",
-        proof: "operator can inspect current boundary before execution"
+        proof: "operator can inspect current boundary before execution",
       },
       economic: {
         status: "closed_until_verified_impact",
-        proof: "no IMP, token, or value claim can arise from this command"
-      }
+        proof: "no IMP, token, or value claim can arise from this command",
+      },
     },
     boundary: {
       scope: "read-only",
       inference_invoked: false,
       mutation_performed: false,
       daemon_started: false,
-      receipt_minted: false
-    }
+      receipt_minted: false,
+    },
   };
 }
 
@@ -97,33 +100,38 @@ export function buildAmbientAuditPreview({ now = new Date() } = {}) {
     schema: AUDIT_SCHEMA,
     generated_at: now.toISOString(),
     mode: "PREVIEW_ONLY",
-    hidden_flow_pattern: "intent -> micro_consent -> capability -> effect -> evidence -> impact",
+    hidden_flow_pattern:
+      "intent -> micro_consent -> capability -> effect -> evidence -> impact",
     snr: {
       signal: "EffectCap is the only legal side-effect path",
       noise_to_defer: [
         "autonomous shell loops",
         "token economics",
         "public federation",
-        "mobile-agent migration"
-      ]
+        "mobile-agent migration",
+      ],
     },
     sape_lenses: [
       {
         id: "security",
-        finding: "Bash, GUI, and mobile-agent actuators are blocked in Dema and must remain behind governed capabilities."
+        finding:
+          "Bash, GUI, and mobile-agent actuators are blocked in Dema and must remain behind governed capabilities.",
       },
       {
         id: "architecture",
-        finding: "Dema is the product face; Node0/bizra-omega owns runtime effects through EffectCap."
+        finding:
+          "Dema is the product face; Node0/bizra-omega owns runtime effects through EffectCap.",
       },
       {
         id: "performance",
-        finding: "Preview surfaces stay cheap and deterministic; runtime scheduling belongs to Node0 after consent."
+        finding:
+          "Preview surfaces stay cheap and deterministic; runtime scheduling belongs to Node0 after consent.",
       },
       {
         id: "ethics",
-        finding: "Ihsan and micro-consent apply before every effect, not after evidence is produced."
-      }
+        finding:
+          "Ihsan and micro-consent apply before every effect, not after evidence is produced.",
+      },
     ],
     agent_topology: {
       pat: {
@@ -131,14 +139,7 @@ export function buildAmbientAuditPreview({ now = new Date() } = {}) {
         alignment: "user_aligned",
         residence: "user_node_only",
         role: "local mission party for one human and their local data",
-        roles: [
-          "plan",
-          "research",
-          "execute",
-          "critique",
-          "verify",
-          "report"
-        ]
+        roles: ["plan", "research", "execute", "critique", "verify", "report"],
       },
       sat: {
         count: 5,
@@ -148,25 +149,30 @@ export function buildAmbientAuditPreview({ now = new Date() } = {}) {
         roles: [
           {
             id: "SAT-Orchestrator",
-            responsibility: "Global task sharding, mission routing, RSI scheduling."
+            responsibility:
+              "Global task sharding, mission routing, RSI scheduling.",
           },
           {
             id: "SAT-Policy",
-            responsibility: "Ihsan, Sharia, privacy, no-overclaim, cross-node safety."
+            responsibility:
+              "Ihsan, Sharia, privacy, no-overclaim, cross-node safety.",
           },
           {
             id: "SAT-QualityOps",
-            responsibility: "Health, latency, drift, MTTR, diagnostics triggers."
+            responsibility:
+              "Health, latency, drift, MTTR, diagnostics triggers.",
           },
           {
             id: "SAT-Resource",
-            responsibility: "Resource manifests, RSI registry, sovereign data gating."
+            responsibility:
+              "Resource manifests, RSI registry, sovereign data gating.",
           },
           {
             id: "SAT-GlobalVerifier",
-            responsibility: "EvidenceChain checks, PoI/oracle review, IMP authorization."
-          }
-        ]
+            responsibility:
+              "EvidenceChain checks, PoI/oracle review, IMP authorization.",
+          },
+        ],
       },
       invariant: "PAT may want success. SAT must require truth.",
       boundary: "SAT are not cloud PAT and do not live inside user nodes",
@@ -174,12 +180,12 @@ export function buildAmbientAuditPreview({ now = new Date() } = {}) {
         user_can_directly_command_sat: false,
         sat_reads_raw_private_pat_memory_by_default: false,
         urp_receives_raw_private_data: false,
-        imp_from_pat_self_certification: false
+        imp_from_pat_self_certification: false,
       },
       ux_copy: {
         pat: "Your PAT agents help shape and later execute your local mission.",
-        sat: "SAT/URP validation is system-side and only applies after evidence or receipt handoff."
-      }
+        sat: "SAT/URP validation is system-side and only applies after evidence or receipt handoff.",
+      },
     },
     hhmm_phases: ["UNDERSTAND", "PLAN", "ACT", "VERIFY", "SETTLE"],
     compliance_spine: {
@@ -188,12 +194,14 @@ export function buildAmbientAuditPreview({ now = new Date() } = {}) {
       policy_required: true,
       capability_required: true,
       effect_logged: "runtime_only",
-      impact_claim_allowed: false
+      impact_claim_allowed: false,
     },
     next_implementation: {
       id: "one_node_one_mission_diagnostic",
-      command_path: "dema journey \"Run a bounded Node0 diagnostic and produce a safety readiness receipt\"",
-      requirement: "handoff remains blocked until governed Node0 commits a ConsentScope"
+      command_path:
+        'dema journey "Run a bounded Node0 diagnostic and produce a safety readiness receipt"',
+      requirement:
+        "handoff remains blocked until governed Node0 commits a ConsentScope",
     },
     proof_of_truth: boundary.proof_of_truth,
     boundary: {
@@ -203,8 +211,8 @@ export function buildAmbientAuditPreview({ now = new Date() } = {}) {
       mutation_performed: false,
       daemon_started: false,
       receipt_minted: false,
-      impact_claimed: false
-    }
+      impact_claimed: false,
+    },
   };
 }
 
@@ -233,33 +241,34 @@ export function buildAmbientManifestPreview({ now = new Date() } = {}) {
       source: "not_probed_in_dema_preview",
       ram_gb: null,
       gpu_vram_gb: null,
-      disk_gb: null
+      disk_gb: null,
     },
     sovereign_boundary: {
       readable_paths: ["operator_workspace", "dema_home"],
       writable_paths: [],
       executable_commands: [],
-      network_access: false
+      network_access: false,
     },
     urp_share_policy: {
       data_classes_allowed: ["public", "local_code"],
       no_foreign_personal_data: true,
-      publication: "blocked_until_governed_node0_handoff"
+      publication: "blocked_until_governed_node0_handoff",
     },
     micro_consent: {
       required_before: "any_manifest_publication_or_effect",
       capability_expansion_allowed: false,
-      effectcap_required: true
+      effectcap_required: true,
     },
     signature: {
       status: "deferred_to_node0",
-      reason: "Dema does not issue identity-bound signing artifacts"
+      reason: "Dema does not issue identity-bound signing artifacts",
     },
     proof_of_truth: {
       formal: "machine-readable boundary with empty write/execute grants",
-      cryptographic: "hash commitment only; signature deferred to governed Node0",
+      cryptographic:
+        "hash commitment only; signature deferred to governed Node0",
       empirical: "operator can inspect manifest before any handoff",
-      economic: "no reward, IMP, or impact claim from preview"
+      economic: "no reward, IMP, or impact claim from preview",
     },
     boundary: {
       scope: "read-only-manifest-preview",
@@ -267,13 +276,13 @@ export function buildAmbientManifestPreview({ now = new Date() } = {}) {
       mutation_performed: false,
       daemon_started: false,
       receipt_minted: false,
-      identity_artifact_issued: false
-    }
+      identity_artifact_issued: false,
+    },
   };
 
   return {
     ...manifestBody,
-    manifest_hash: sha256(manifestBody)
+    manifest_hash: sha256(manifestBody),
   };
 }
 
@@ -293,7 +302,7 @@ export function formatAmbientBoundary(boundary) {
     `  Bash: ${boundary.actuators.bash.risk} risk - ${boundary.actuators.bash.reason}`,
     `  GUI: ${boundary.actuators.gui.risk} risk - ${boundary.actuators.gui.reason}`,
     `  Mobile agent: ${boundary.actuators.mobile_agent.risk} risk - ${boundary.actuators.mobile_agent.reason}`,
-    ""
+    "",
   ];
 
   appendList(lines, "Allowed now", boundary.execution.allowed_now);
@@ -302,7 +311,9 @@ export function formatAmbientBoundary(boundary) {
   lines.push("");
   lines.push("Micro-consent:");
   lines.push(`  required_for: ${boundary.micro_consent.required_for}`);
-  lines.push(`  exact_consent_required: ${boundary.micro_consent.exact_consent_required}`);
+  lines.push(
+    `  exact_consent_required: ${boundary.micro_consent.exact_consent_required}`,
+  );
   lines.push(`  rule: ${boundary.actuators.bash.rule}`);
   lines.push("");
   lines.push("Proof-of-Truth:");
@@ -311,7 +322,9 @@ export function formatAmbientBoundary(boundary) {
   }
   lines.push("");
   lines.push(`Handoff target: ${boundary.execution.handoff_target}`);
-  lines.push("Boundary: preview-only; no execution; no daemon; no receipt minted.");
+  lines.push(
+    "Boundary: preview-only; no execution; no daemon; no receipt minted.",
+  );
 
   return lines.join("\n");
 }
@@ -324,7 +337,7 @@ export function formatAmbientAuditPreview(audit) {
     `Hidden flow: ${audit.hidden_flow_pattern}`,
     `SNR signal: ${audit.snr.signal}`,
     "",
-    "SAPE lenses:"
+    "SAPE lenses:",
   ];
 
   for (const lens of audit.sape_lenses) {
@@ -357,7 +370,9 @@ export function formatAmbientAuditPreview(audit) {
   lines.push(`Next implementation: ${audit.next_implementation.id}`);
   lines.push(`Command path: ${audit.next_implementation.command_path}`);
   lines.push(`Requirement: ${audit.next_implementation.requirement}`);
-  lines.push("Boundary: preview-only; no execution; no mutation; no receipt minted.");
+  lines.push(
+    "Boundary: preview-only; no execution; no mutation; no receipt minted.",
+  );
 
   return lines.join("\n");
 }
@@ -386,7 +401,7 @@ export function formatAmbientManifestPreview(manifest) {
     `  EffectCap required: ${manifest.micro_consent.effectcap_required}`,
     "",
     `Signature: ${manifest.signature.status} - ${manifest.signature.reason}`,
-    "Boundary: preview-only; no execution; no mutation; no identity artifact issued."
+    "Boundary: preview-only; no execution; no mutation; no identity artifact issued.",
   ];
 
   return lines.join("\n");

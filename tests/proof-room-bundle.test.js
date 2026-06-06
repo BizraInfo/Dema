@@ -16,19 +16,25 @@ import {
   formatProofRoomReport,
   parseTapSummary,
   readJsonOk,
-  redactProofRoomBundle
+  redactProofRoomBundle,
 } from "../packages/core/src/proof-room-bundle.js";
 import { evaluateArtifactSafety } from "../packages/core/src/artifact-safety-eval.js";
 
 const execFileAsync = promisify(execFile);
-const scriptPath = fileURLToPath(new URL("../scripts/proof-room-bundle.mjs", import.meta.url));
+const scriptPath = fileURLToPath(
+  new URL("../scripts/proof-room-bundle.mjs", import.meta.url),
+);
 
 test("evaluateProofRoomWrite requires exact micro-consent phrase", () => {
-  const deny = evaluateProofRoomWrite({ consent_phrase: "GO: write something else" });
+  const deny = evaluateProofRoomWrite({
+    consent_phrase: "GO: write something else",
+  });
   assert.equal(deny.allowed, false);
   assert.ok(deny.violations.some((v) => v.code === "consent_phrase_mismatch"));
 
-  const allow = evaluateProofRoomWrite({ consent_phrase: PROOF_ROOM_WRITE_CONSENT });
+  const allow = evaluateProofRoomWrite({
+    consent_phrase: PROOF_ROOM_WRITE_CONSENT,
+  });
   assert.equal(allow.allowed, true);
   assert.equal(allow.filesystem_write_performed, false);
 });
@@ -50,15 +56,18 @@ test("buildProofRoomBundle composes mocked gates", async () => {
     ok: true,
     stdout_sha256: "abc",
     stdout_bytes: 3,
-    summary: gate.id === "npm_test" ? { pass: 2437, fail: 0, total: 2437, ok: true } : { json_ok: true },
+    summary:
+      gate.id === "npm_test"
+        ? { pass: 2437, fail: 0, total: 2437, ok: true }
+        : { json_ok: true },
     error: null,
-    duration_ms: 1
+    duration_ms: 1,
   });
 
   const report = await buildProofRoomBundle({
     root: "/tmp/dema",
     full: true,
-    run
+    run,
   });
 
   assert.equal(report.schema, PROOF_ROOM_BUNDLE_SCHEMA);
@@ -79,12 +88,16 @@ test("buildProofRoomBundle fails closed when a mocked gate fails", async () => {
     stdout_bytes: 4,
     summary: null,
     error: "simulated failure",
-    duration_ms: 1
+    duration_ms: 1,
   });
 
   const report = await buildProofRoomBundle({ root: "/tmp/dema", run });
   assert.equal(report.ok, false);
-  assert.ok(report.self_harness.self_critique.some((line) => line.includes("do not publish")));
+  assert.ok(
+    report.self_harness.self_critique.some((line) =>
+      line.includes("do not publish"),
+    ),
+  );
 });
 
 test("formatProofRoomReport renders human summary", async () => {
@@ -99,8 +112,8 @@ test("formatProofRoomReport renders human summary", async () => {
       stdout_bytes: 1,
       summary: null,
       error: null,
-      duration_ms: 2
-    })
+      duration_ms: 2,
+    }),
   });
   const text = formatProofRoomReport(report);
   assert.match(text, /DEMA Proof Room Bundle/);
@@ -108,11 +121,15 @@ test("formatProofRoomReport renders human summary", async () => {
 });
 
 test("proof-room-bundle CLI --json exits 0 on current repo", async () => {
-  const { stdout } = await execFileAsync(process.execPath, [scriptPath, "--json"], {
-    encoding: "utf8",
-    maxBuffer: 8 * 1024 * 1024,
-    timeout: 300_000
-  });
+  const { stdout } = await execFileAsync(
+    process.execPath,
+    [scriptPath, "--json"],
+    {
+      encoding: "utf8",
+      maxBuffer: 8 * 1024 * 1024,
+      timeout: 300_000,
+    },
+  );
   const report = JSON.parse(stdout);
   assert.equal(report.schema, PROOF_ROOM_BUNDLE_SCHEMA);
   assert.equal(report.ok, true);
@@ -127,9 +144,18 @@ test("redactProofRoomBundle scrubs repo_root + emits basename + sha256", () => {
     generated_at: "2026-05-23T06:00:00.000Z",
     repo_root: "/home/operator/Downloads/Dema",
     gates: [],
-    self_harness: { gates_run: 0, gates_passed: 0, gates_failed: 0, failed_gate_ids: [], replay_command: "x", full_replay_command: "y", micro_consent_write: "z", self_critique: [] },
+    self_harness: {
+      gates_run: 0,
+      gates_passed: 0,
+      gates_failed: 0,
+      failed_gate_ids: [],
+      replay_command: "x",
+      full_replay_command: "y",
+      micro_consent_write: "z",
+      self_critique: [],
+    },
     boundary: {},
-    next_safe_action: "x"
+    next_safe_action: "x",
   };
   const redacted = redactProofRoomBundle(original);
   assert.equal(redacted.repo_root, REDACTED_REPO_ROOT_PLACEHOLDER);
@@ -137,7 +163,11 @@ test("redactProofRoomBundle scrubs repo_root + emits basename + sha256", () => {
   assert.match(redacted.repo_root_sha256, /^[0-9a-f]{64}$/);
   assert.equal(redacted.redacted, true);
   assert.equal(redacted.truth_label, "PUBLIC_SAFE");
-  assert.equal(original.repo_root, "/home/operator/Downloads/Dema", "input must not be mutated");
+  assert.equal(
+    original.repo_root,
+    "/home/operator/Downloads/Dema",
+    "input must not be mutated",
+  );
 });
 
 test("redactProofRoomBundle is idempotent", () => {
@@ -147,8 +177,17 @@ test("redactProofRoomBundle is idempotent", () => {
     ok: true,
     repo_root: "/tmp/x",
     gates: [],
-    self_harness: { gates_run: 0, gates_passed: 0, gates_failed: 0, failed_gate_ids: [], replay_command: "x", full_replay_command: "y", micro_consent_write: "z", self_critique: [] },
-    boundary: {}
+    self_harness: {
+      gates_run: 0,
+      gates_passed: 0,
+      gates_failed: 0,
+      failed_gate_ids: [],
+      replay_command: "x",
+      full_replay_command: "y",
+      micro_consent_write: "z",
+      self_critique: [],
+    },
+    boundary: {},
   };
   const once = redactProofRoomBundle(original);
   const twice = redactProofRoomBundle(once);
@@ -165,36 +204,62 @@ test("redacted bundle passes Layer 1 artifact-safety eval as PUBLIC_SAFE", () =>
     ok: true,
     repo_root: "/home/operator/Downloads/Dema",
     gates: [],
-    self_harness: { gates_run: 0, gates_passed: 0, gates_failed: 0, failed_gate_ids: [], replay_command: "npm run proof:room", full_replay_command: "npm run proof:room -- --full", micro_consent_write: PROOF_ROOM_WRITE_CONSENT, self_critique: ["safe"] },
-    boundary: { read_only: true, runtime_execution_performed: false, receipt_mint_performed: false, network_used: false, federation_invoked: false }
+    self_harness: {
+      gates_run: 0,
+      gates_passed: 0,
+      gates_failed: 0,
+      failed_gate_ids: [],
+      replay_command: "npm run proof:room",
+      full_replay_command: "npm run proof:room -- --full",
+      micro_consent_write: PROOF_ROOM_WRITE_CONSENT,
+      self_critique: ["safe"],
+    },
+    boundary: {
+      read_only: true,
+      runtime_execution_performed: false,
+      receipt_mint_performed: false,
+      network_used: false,
+      federation_invoked: false,
+    },
   };
   const redacted = redactProofRoomBundle(bundle);
   const eval1 = evaluateArtifactSafety(JSON.stringify(redacted, null, 2));
-  assert.equal(eval1.verdict, "PUBLIC_SAFE", `got ${eval1.verdict}; findings: ${JSON.stringify(eval1.findings)}`);
+  assert.equal(
+    eval1.verdict,
+    "PUBLIC_SAFE",
+    `got ${eval1.verdict}; findings: ${JSON.stringify(eval1.findings)}`,
+  );
   assert.equal(eval1.score, 1);
 });
 
 test("evaluateProofRoomWrite accepts public-safe required_phrase override", () => {
   const accepted = evaluateProofRoomWrite({
     consent_phrase: PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT,
-    required_phrase: PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT
+    required_phrase: PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT,
   });
   assert.equal(accepted.allowed, true);
-  assert.equal(accepted.consent_phrase_required, PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT);
+  assert.equal(
+    accepted.consent_phrase_required,
+    PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT,
+  );
 
   // Default required_phrase must still be the non-public-safe one (back-compat).
   const refused = evaluateProofRoomWrite({
-    consent_phrase: PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT
+    consent_phrase: PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT,
   });
   assert.equal(refused.allowed, false);
 });
 
 test("proof-room-bundle CLI --public-safe --json emits redacted bundle", async () => {
-  const { stdout } = await execFileAsync(process.execPath, [scriptPath, "--public-safe", "--json"], {
-    encoding: "utf8",
-    maxBuffer: 8 * 1024 * 1024,
-    timeout: 300_000
-  });
+  const { stdout } = await execFileAsync(
+    process.execPath,
+    [scriptPath, "--public-safe", "--json"],
+    {
+      encoding: "utf8",
+      maxBuffer: 8 * 1024 * 1024,
+      timeout: 300_000,
+    },
+  );
   const report = JSON.parse(stdout);
   assert.equal(report.redacted, true);
   assert.equal(report.repo_root, REDACTED_REPO_ROOT_PLACEHOLDER);
@@ -202,7 +267,11 @@ test("proof-room-bundle CLI --public-safe --json emits redacted bundle", async (
   assert.match(report.repo_root_sha256, /^[0-9a-f]{64}$/);
   // Verify the rendered JSON passes Layer 1 artifact-safety eval.
   const safety = evaluateArtifactSafety(stdout);
-  assert.equal(safety.verdict, "PUBLIC_SAFE", `findings: ${JSON.stringify(safety.findings)}`);
+  assert.equal(
+    safety.verdict,
+    "PUBLIC_SAFE",
+    `findings: ${JSON.stringify(safety.findings)}`,
+  );
 });
 
 test("formatProofRoomReport flags redacted bundle in header", async () => {
@@ -217,8 +286,8 @@ test("formatProofRoomReport flags redacted bundle in header", async () => {
       stdout_bytes: 1,
       summary: null,
       error: null,
-      duration_ms: 1
-    })
+      duration_ms: 1,
+    }),
   });
   const redacted = redactProofRoomBundle(bundle);
   const text = formatProofRoomReport(redacted);
@@ -227,5 +296,8 @@ test("formatProofRoomReport flags redacted bundle in header", async () => {
 });
 
 test("PROOF_ROOM_PUBLIC_SAFE_ARTIFACT_RELATIVE_DIR is the parallel public-safe dir", () => {
-  assert.equal(PROOF_ROOM_PUBLIC_SAFE_ARTIFACT_RELATIVE_DIR, "artifacts/proofs/proof-room-v0.1-public-safe");
+  assert.equal(
+    PROOF_ROOM_PUBLIC_SAFE_ARTIFACT_RELATIVE_DIR,
+    "artifacts/proofs/proof-room-v0.1-public-safe",
+  );
 });

@@ -6,11 +6,13 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildMissionDraftPreview,
-  formatMissionDraftPreview
+  formatMissionDraftPreview,
 } from "../packages/mission/src/mission-draft.js";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 test("buildMissionDraftPreview creates deterministic Intent -> MissionDraft -> ConsentPlan envelope", () => {
   const intent = "Fix auth.py and run pytest";
@@ -24,8 +26,15 @@ test("buildMissionDraftPreview creates deterministic Intent -> MissionDraft -> C
   assert.equal(first.mission.category, "software_change");
   assert.equal(first.mission.risk_level, "high");
   assert.deepEqual(first.mission.data_domains, ["auth"]);
-  assert.equal(first.consent_plan.schema, "bizra.dema.consent_plan_preview.v0.1");
-  assert.ok(first.consent_plan.permissions.some((p) => p.resource_id === "file:auth.py"));
+  assert.equal(
+    first.consent_plan.schema,
+    "bizra.dema.consent_plan_preview.v0.1",
+  );
+  assert.ok(
+    first.consent_plan.permissions.some(
+      (p) => p.resource_id === "file:auth.py",
+    ),
+  );
   assert.equal(first.phase_gate.next_phase, "CONSENT_NEGOTIATION");
   assert.equal(first.phase_gate.effect_caps_minted, false);
   assert.equal(first.boundary.execution_enabled, false);
@@ -35,26 +44,33 @@ test("buildMissionDraftPreview creates deterministic Intent -> MissionDraft -> C
 
 test("buildMissionDraftPreview preserves audit/external-call warning through consent plan", () => {
   const draft = buildMissionDraftPreview({
-    intent: "Audit Downloads and send to Slack"
+    intent: "Audit Downloads and send to Slack",
   });
 
   assert.equal(draft.mission.category, "audit");
   assert.deepEqual(draft.mission.data_domains, ["Downloads", "slack"]);
-  assert.ok(draft.consent_plan.analogical_notes.some((note) => (
-    note.code === "audit_with_external_call"
-  )));
+  assert.ok(
+    draft.consent_plan.analogical_notes.some(
+      (note) => note.code === "audit_with_external_call",
+    ),
+  );
 });
 
 test("formatMissionDraftPreview renders mission, consent, and boundary", () => {
-  const output = formatMissionDraftPreview(buildMissionDraftPreview({
-    intent: "Fix auth.py and run pytest"
-  }));
+  const output = formatMissionDraftPreview(
+    buildMissionDraftPreview({
+      intent: "Fix auth.py and run pytest",
+    }),
+  );
 
   assert.match(output, /DEMA Mission Draft Preview/);
   assert.match(output, /current_phase: DRAFT_INTENT/);
   assert.match(output, /next_phase: CONSENT_NEGOTIATION/);
   assert.match(output, /file:auth\.py\s+read/);
-  assert.match(output, /Boundary: preview-only; no approval; no capability minted; no execution/);
+  assert.match(
+    output,
+    /Boundary: preview-only; no approval; no capability minted; no execution/,
+  );
   assert.match(output, /no network; no external posting/);
 });
 
@@ -63,14 +79,17 @@ test("dema mission draft prints a human-readable preview", async () => {
     cliPath,
     "mission",
     "draft",
-    "Fix auth.py and run pytest"
+    "Fix auth.py and run pytest",
   ]);
 
   assert.match(stdout, /DEMA Mission Draft Preview/);
   assert.match(stdout, /DRAFT_INTENT/);
   assert.match(stdout, /CONSENT_NEGOTIATION/);
   assert.match(stdout, /command:pytest/);
-  assert.match(stdout, /Boundary: preview-only; no approval; no capability minted; no execution/);
+  assert.match(
+    stdout,
+    /Boundary: preview-only; no approval; no capability minted; no execution/,
+  );
   assert.match(stdout, /no network; no external posting/);
 });
 
@@ -80,7 +99,7 @@ test("dema mission draft --json emits schema-tagged preview", async () => {
     "mission",
     "draft",
     "--json",
-    "Audit Downloads and send to Slack"
+    "Audit Downloads and send to Slack",
   ]);
   const draft = JSON.parse(stdout);
 
@@ -93,6 +112,6 @@ test("dema mission draft --json emits schema-tagged preview", async () => {
 test("dema mission draft rejects missing intent", async () => {
   await assert.rejects(
     execFileAsync("node", [cliPath, "mission", "draft"]),
-    /Usage: dema mission draft/
+    /Usage: dema mission draft/,
   );
 });

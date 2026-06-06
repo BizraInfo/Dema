@@ -5,7 +5,7 @@ import {
   formatOnboardingLifecyclePreview,
   formatNodeRegistryPreview,
   resolveFormatterOptsFromEnv,
-  TUI_FORMATTER_DEFAULT_WIDTH
+  TUI_FORMATTER_DEFAULT_WIDTH,
 } from "../packages/core/src/tui-formatter.js";
 
 import { buildOnboardingLifecyclePreview } from "../packages/core/src/onboarding-lifecycle.js";
@@ -31,7 +31,10 @@ test("formatOnboardingLifecyclePreview renders a non-empty string", () => {
 });
 
 test("Onboarding formatter renders all 7 stage IDs", () => {
-  const preview = buildOnboardingLifecyclePreview({ candidate_name: "Samy", candidate_ordinal: 1 });
+  const preview = buildOnboardingLifecyclePreview({
+    candidate_name: "Samy",
+    candidate_ordinal: 1,
+  });
   const out = stripAnsi(formatOnboardingLifecyclePreview(preview));
   assert.match(out, /language/);
   assert.match(out, /technical_level/);
@@ -43,7 +46,10 @@ test("Onboarding formatter renders all 7 stage IDs", () => {
 });
 
 test("Onboarding formatter renders candidate name and node label in header", () => {
-  const preview = buildOnboardingLifecyclePreview({ candidate_name: "Samy", candidate_ordinal: 1 });
+  const preview = buildOnboardingLifecyclePreview({
+    candidate_name: "Samy",
+    candidate_ordinal: 1,
+  });
   const out = stripAnsi(formatOnboardingLifecyclePreview(preview));
   assert.match(out, /Samy/);
   assert.match(out, /Node1/);
@@ -58,7 +64,7 @@ test("Onboarding formatter shows progress bar at 0% on default state", () => {
 
 test("Onboarding formatter shows progress bar at ~43% with 3 stages complete", () => {
   const preview = buildOnboardingLifecyclePreview({
-    progress: { completed: ["language", "technical_level", "node_role"] }
+    progress: { completed: ["language", "technical_level", "node_role"] },
   });
   const out = stripAnsi(formatOnboardingLifecyclePreview(preview));
   assert.match(out, /\s+43%/);
@@ -66,8 +72,18 @@ test("Onboarding formatter shows progress bar at ~43% with 3 stages complete", (
 });
 
 test("Onboarding formatter shows 'Lifecycle complete.' at 100%", () => {
-  const allDone = ["language", "technical_level", "node_role", "purpose", "resources", "consent_constitution", "first_mission"];
-  const preview = buildOnboardingLifecyclePreview({ progress: { completed: allDone } });
+  const allDone = [
+    "language",
+    "technical_level",
+    "node_role",
+    "purpose",
+    "resources",
+    "consent_constitution",
+    "first_mission",
+  ];
+  const preview = buildOnboardingLifecyclePreview({
+    progress: { completed: allDone },
+  });
   const out = stripAnsi(formatOnboardingLifecyclePreview(preview));
   assert.match(out, /Lifecycle complete/);
   assert.match(out, /100%/);
@@ -75,7 +91,9 @@ test("Onboarding formatter shows 'Lifecycle complete.' at 100%", () => {
 });
 
 test("Onboarding formatter renders boundary footer", () => {
-  const out = stripAnsi(formatOnboardingLifecyclePreview(buildOnboardingLifecyclePreview()));
+  const out = stripAnsi(
+    formatOnboardingLifecyclePreview(buildOnboardingLifecyclePreview()),
+  );
   assert.match(out, /no network/);
   assert.match(out, /no federation/);
   assert.match(out, /no runtime/);
@@ -86,8 +104,13 @@ test("formatNodeRegistryPreview renders connected_node_count prominently", () =>
   const preview = buildNodeRegistryPreview({
     active: [
       { node_ordinal: 0, node_label: "Node0", status: "accepted_primary" },
-      { node_ordinal: 1, node_label: "Node1", status: "accepted_primary", candidate_name: "Samy" }
-    ]
+      {
+        node_ordinal: 1,
+        node_label: "Node1",
+        status: "accepted_primary",
+        candidate_name: "Samy",
+      },
+    ],
   });
   const out = stripAnsi(formatNodeRegistryPreview(preview));
   assert.match(out, /Connected nodes:\s+2/);
@@ -97,8 +120,13 @@ test("Registry formatter shows PAT/SAT scaling totals", () => {
   const preview = buildNodeRegistryPreview({
     active: [
       { node_ordinal: 0, node_label: "Node0", status: "accepted_primary" },
-      { node_ordinal: 1, node_label: "Node1", status: "accepted_primary", candidate_name: "Samy" }
-    ]
+      {
+        node_ordinal: 1,
+        node_label: "Node1",
+        status: "accepted_primary",
+        candidate_name: "Samy",
+      },
+    ],
   });
   const out = stripAnsi(formatNodeRegistryPreview(preview));
   assert.match(out, /PAT agents.*14/);
@@ -107,7 +135,9 @@ test("Registry formatter shows PAT/SAT scaling totals", () => {
 
 test("Registry formatter shows ghost node + claim phrase", () => {
   const preview = buildNodeRegistryPreview({
-    ghosts: [{ node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" }]
+    ghosts: [
+      { node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" },
+    ],
   });
   const out = stripAnsi(formatNodeRegistryPreview(preview));
   assert.match(out, /Ghost \(pending acceptance\)/);
@@ -121,7 +151,10 @@ test("Registry formatter shows forbidden ordinals from canon", () => {
 });
 
 test("Default width is 76 columns · no line exceeds 76 chars (after ANSI strip)", () => {
-  const preview = buildOnboardingLifecyclePreview({ candidate_name: "Samy", candidate_ordinal: 1 });
+  const preview = buildOnboardingLifecyclePreview({
+    candidate_name: "Samy",
+    candidate_ordinal: 1,
+  });
   const out = formatOnboardingLifecyclePreview(preview);
   assert.equal(TUI_FORMATTER_DEFAULT_WIDTH, 76);
   assert.ok(maxLineWidth(out) <= 76, `max line width was ${maxLineWidth(out)}`);
@@ -130,14 +163,20 @@ test("Default width is 76 columns · no line exceeds 76 chars (after ANSI strip)
 // ─── ACCESSIBILITY TESTS (5) ────────────────────────────────────────────────
 
 test("noColor: true suppresses all ANSI escape sequences", () => {
-  const preview = buildOnboardingLifecyclePreview({ candidate_name: "Samy", candidate_ordinal: 1 });
+  const preview = buildOnboardingLifecyclePreview({
+    candidate_name: "Samy",
+    candidate_ordinal: 1,
+  });
   const out = formatOnboardingLifecyclePreview(preview, { noColor: true });
   // No ANSI escape sequences at all
   assert.equal(out.includes("\x1b["), false);
 });
 
 test("termDumb: true uses ASCII fallback for box-drawing", () => {
-  const preview = buildOnboardingLifecyclePreview({ candidate_name: "Samy", candidate_ordinal: 1 });
+  const preview = buildOnboardingLifecyclePreview({
+    candidate_name: "Samy",
+    candidate_ordinal: 1,
+  });
   const out = formatOnboardingLifecyclePreview(preview, { termDumb: true });
   // Plain ASCII border characters
   assert.match(out, /\+-+\+/);
@@ -150,7 +189,10 @@ test("termDumb: true uses ASCII fallback for box-drawing", () => {
 
 test("noColor + termDumb combined produces pure plain-text output", () => {
   const preview = buildOnboardingLifecyclePreview();
-  const out = formatOnboardingLifecyclePreview(preview, { noColor: true, termDumb: true });
+  const out = formatOnboardingLifecyclePreview(preview, {
+    noColor: true,
+    termDumb: true,
+  });
   // No ANSI, no Unicode box-drawing
   assert.equal(out.includes("\x1b["), false);
   assert.equal(out.includes("┌"), false);
@@ -190,7 +232,10 @@ test("ADVERSARIAL: registry formatter on wrong-schema input returns error string
 
 test("ADVERSARIAL: very long candidate name does not break formatter (no throw)", () => {
   const longName = "A".repeat(200);
-  const preview = buildOnboardingLifecyclePreview({ candidate_name: longName, candidate_ordinal: 1 });
+  const preview = buildOnboardingLifecyclePreview({
+    candidate_name: longName,
+    candidate_ordinal: 1,
+  });
   const out = formatOnboardingLifecyclePreview(preview);
   // Should not throw; lines may exceed 76 (truncation is downstream concern),
   // but the formatter must produce valid output.
@@ -198,7 +243,10 @@ test("ADVERSARIAL: very long candidate name does not break formatter (no throw)"
 });
 
 test("ADVERSARIAL: RTL candidate name preserved verbatim", () => {
-  const preview = buildOnboardingLifecyclePreview({ candidate_name: "محمد بشر", candidate_ordinal: 1 });
+  const preview = buildOnboardingLifecyclePreview({
+    candidate_name: "محمد بشر",
+    candidate_ordinal: 1,
+  });
   const out = stripAnsi(formatOnboardingLifecyclePreview(preview));
   assert.match(out, /محمد بشر/);
 });
@@ -206,11 +254,17 @@ test("ADVERSARIAL: RTL candidate name preserved verbatim", () => {
 test("ADVERSARIAL: width=40 produces narrower output (lines respect width)", () => {
   const preview = buildOnboardingLifecyclePreview();
   const out = formatOnboardingLifecyclePreview(preview, { width: 40 });
-  assert.ok(maxLineWidth(out) <= 40, `max line width was ${maxLineWidth(out)} (expected ≤ 40)`);
+  assert.ok(
+    maxLineWidth(out) <= 40,
+    `max line width was ${maxLineWidth(out)} (expected ≤ 40)`,
+  );
 });
 
 test("ADVERSARIAL: formatter output is deterministic given identical inputs", () => {
-  const preview = buildOnboardingLifecyclePreview({ candidate_name: "Samy", candidate_ordinal: 1 });
+  const preview = buildOnboardingLifecyclePreview({
+    candidate_name: "Samy",
+    candidate_ordinal: 1,
+  });
   const a = formatOnboardingLifecyclePreview(preview);
   const b = formatOnboardingLifecyclePreview(preview);
   assert.equal(a, b);

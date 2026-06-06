@@ -31,28 +31,28 @@
 
 ## What DEMA owns
 
-| Domain | Examples |
-|--------|----------|
-| Product UX | Dashboard, onboarding, settings, command surface |
-| Rendering | Trust strip, receipt chain, manifest cards, state gap |
-| Research surface | Perplexity integration, citation display, research library |
-| Operator surfaces | Browser actions, computer actions, permission dialogs |
-| Local state | Preferences, UI state, research cache, local memory |
-| CLI packaging | Command definitions, TUI rendering, output formatting |
-| Desktop shell | Window management, tray, native integrations |
-| Design system | Tokens, typography, icons, component library |
+| Domain            | Examples                                                   |
+| ----------------- | ---------------------------------------------------------- |
+| Product UX        | Dashboard, onboarding, settings, command surface           |
+| Rendering         | Trust strip, receipt chain, manifest cards, state gap      |
+| Research surface  | Perplexity integration, citation display, research library |
+| Operator surfaces | Browser actions, computer actions, permission dialogs      |
+| Local state       | Preferences, UI state, research cache, local memory        |
+| CLI packaging     | Command definitions, TUI rendering, output formatting      |
+| Desktop shell     | Window management, tray, native integrations               |
+| Design system     | Tokens, typography, icons, component library               |
 
 ## What bizra-omega owns
 
-| Domain | Examples |
-|--------|----------|
-| Mission law | Mission types, state machines, lifecycle |
-| Admissibility | Input validation, constitutional checks |
-| Receipts | Receipt creation, signing, chain integrity |
-| Trust engine | Trust scoring, state transitions, decay |
-| Manifests | Manifest creation, artifact binding |
-| Chain | Append-only history, integrity verification |
-| Gateway | API contracts, auth, rate limiting |
+| Domain        | Examples                                    |
+| ------------- | ------------------------------------------- |
+| Mission law   | Mission types, state machines, lifecycle    |
+| Admissibility | Input validation, constitutional checks     |
+| Receipts      | Receipt creation, signing, chain integrity  |
+| Trust engine  | Trust scoring, state transitions, decay     |
+| Manifests     | Manifest creation, artifact binding         |
+| Chain         | Append-only history, integrity verification |
+| Gateway       | API contracts, auth, rate limiting          |
 
 ## What crosses the boundary
 

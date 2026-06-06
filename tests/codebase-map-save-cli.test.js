@@ -8,7 +8,9 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 const SAVE_MAP_CONSENT = "GO: save local codebase architecture map";
 
 function runCli(args, { env = {}, timeout = 30000 } = {}) {
@@ -17,17 +19,26 @@ function runCli(args, { env = {}, timeout = 30000 } = {}) {
       "node",
       [cliPath, ...args],
       {
-        env: { ...process.env, DEMA_BANNER_INTERACTIVE: "0", NODE_ENV: "test", ...env },
+        env: {
+          ...process.env,
+          DEMA_BANNER_INTERACTIVE: "0",
+          NODE_ENV: "test",
+          ...env,
+        },
         timeout,
-        maxBuffer: 16 * 1024 * 1024
+        maxBuffer: 16 * 1024 * 1024,
       },
       (err, stdout, stderr) => {
         if (err && err.killed) {
-          reject(new Error(`Process timed out. stdout=${stdout.slice(0,500)} stderr=${stderr.slice(0,500)}`));
+          reject(
+            new Error(
+              `Process timed out. stdout=${stdout.slice(0, 500)} stderr=${stderr.slice(0, 500)}`,
+            ),
+          );
           return;
         }
         resolve({ stdout, stderr, exitCode: err?.code ?? 0 });
-      }
+      },
     );
   });
 }
@@ -53,13 +64,26 @@ test("'--save-map' with valid consent writes file under $DEMA_HOME/receipts/code
   const repo = await makeRepo({ "a.js": "export const x = 1;\n" });
   const home = await makeDemaHome();
   const { exitCode } = await runCli(
-    ["codebase", "map", repo, "--save-map", "--save-map-consent", SAVE_MAP_CONSENT],
-    { env: { DEMA_HOME: home } }
+    [
+      "codebase",
+      "map",
+      repo,
+      "--save-map",
+      "--save-map-consent",
+      SAVE_MAP_CONSENT,
+    ],
+    { env: { DEMA_HOME: home } },
   );
   assert.equal(exitCode, 0);
   const files = await readdir(join(home, "receipts"));
-  const mapFiles = files.filter((f) => f.startsWith("codebase-map-") && f.endsWith(".json"));
-  assert.equal(mapFiles.length, 1, `expected 1 codebase-map file; got ${mapFiles.length}: ${files.join(",")}`);
+  const mapFiles = files.filter(
+    (f) => f.startsWith("codebase-map-") && f.endsWith(".json"),
+  );
+  assert.equal(
+    mapFiles.length,
+    1,
+    `expected 1 codebase-map file; got ${mapFiles.length}: ${files.join(",")}`,
+  );
   assert.match(mapFiles[0], /^codebase-map-[a-f0-9]{64}\.json$/);
 });
 
@@ -69,7 +93,7 @@ test("'--save-map' without --save-map-consent exits non-zero and names required 
   const home = await makeDemaHome();
   const { stderr, exitCode } = await runCli(
     ["codebase", "map", repo, "--save-map"],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /requires --save-map-consent/);
@@ -81,8 +105,15 @@ test("'--save-map' with wrong consent exits non-zero with consent mismatch", asy
   const repo = await makeRepo({ "a.js": "" });
   const home = await makeDemaHome();
   const { stderr, exitCode } = await runCli(
-    ["codebase", "map", repo, "--save-map", "--save-map-consent", "wrong phrase"],
-    { env: { DEMA_HOME: home } }
+    [
+      "codebase",
+      "map",
+      repo,
+      "--save-map",
+      "--save-map-consent",
+      "wrong phrase",
+    ],
+    { env: { DEMA_HOME: home } },
   );
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /consent phrase mismatch/);
@@ -93,8 +124,15 @@ test("with valid consent, stdout still emits parseable codebase architecture map
   const repo = await makeRepo({ "a.js": "" });
   const home = await makeDemaHome();
   const { stdout } = await runCli(
-    ["codebase", "map", repo, "--save-map", "--save-map-consent", SAVE_MAP_CONSENT],
-    { env: { DEMA_HOME: home } }
+    [
+      "codebase",
+      "map",
+      repo,
+      "--save-map",
+      "--save-map-consent",
+      SAVE_MAP_CONSENT,
+    ],
+    { env: { DEMA_HOME: home } },
   );
   const envelope = JSON.parse(stdout);
   assert.equal(envelope.schema, "bizra.dema.codebase_architecture_map.v0.1");
@@ -107,11 +145,20 @@ test("with valid consent, saved file matches stdout byte-for-byte", async () => 
   const repo = await makeRepo({ "a.js": "" });
   const home = await makeDemaHome();
   const { stdout } = await runCli(
-    ["codebase", "map", repo, "--save-map", "--save-map-consent", SAVE_MAP_CONSENT],
-    { env: { DEMA_HOME: home } }
+    [
+      "codebase",
+      "map",
+      repo,
+      "--save-map",
+      "--save-map-consent",
+      SAVE_MAP_CONSENT,
+    ],
+    { env: { DEMA_HOME: home } },
   );
   const files = await readdir(join(home, "receipts"));
-  const mapFile = files.find((f) => f.startsWith("codebase-map-") && f.endsWith(".json"));
+  const mapFile = files.find(
+    (f) => f.startsWith("codebase-map-") && f.endsWith(".json"),
+  );
   assert.ok(mapFile, "expected codebase-map file");
   const onDisk = await readFile(join(home, "receipts", mapFile), "utf8");
   assert.equal(onDisk, stdout, "on-disk file must match stdout byte-for-byte");
@@ -125,8 +172,15 @@ test("with valid consent, stderr contains 'saved codebase map to:' info line", a
   const repo = await makeRepo({ "a.js": "" });
   const home = await makeDemaHome();
   const { stderr } = await runCli(
-    ["codebase", "map", repo, "--save-map", "--save-map-consent", SAVE_MAP_CONSENT],
-    { env: { DEMA_HOME: home } }
+    [
+      "codebase",
+      "map",
+      repo,
+      "--save-map",
+      "--save-map-consent",
+      SAVE_MAP_CONSENT,
+    ],
+    { env: { DEMA_HOME: home } },
   );
   assert.match(stderr, /saved codebase map to:/);
   assert.match(stderr, new RegExp(home.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
@@ -138,11 +192,16 @@ test("partial envelope is STILL saved (auditability for incomplete scans)", asyn
   const home = await makeDemaHome();
   const { stdout, exitCode } = await runCli(
     [
-      "codebase", "map", repo,
-      "--max-files", "1",
-      "--save-map", "--save-map-consent", SAVE_MAP_CONSENT
+      "codebase",
+      "map",
+      repo,
+      "--max-files",
+      "1",
+      "--save-map",
+      "--save-map-consent",
+      SAVE_MAP_CONSENT,
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   // Partial → non-zero exit per existing codebase-map contract.
   assert.notEqual(exitCode, 0);
@@ -151,9 +210,13 @@ test("partial envelope is STILL saved (auditability for incomplete scans)", asyn
   assert.equal(envelope.error_reason, "file_limit_exceeded");
   // Save still happened.
   const files = await readdir(join(home, "receipts"));
-  const mapFile = files.find((f) => f.startsWith("codebase-map-") && f.endsWith(".json"));
+  const mapFile = files.find(
+    (f) => f.startsWith("codebase-map-") && f.endsWith(".json"),
+  );
   assert.ok(mapFile, "partial envelope must still be saved");
-  const onDisk = JSON.parse(await readFile(join(home, "receipts", mapFile), "utf8"));
+  const onDisk = JSON.parse(
+    await readFile(join(home, "receipts", mapFile), "utf8"),
+  );
   assert.equal(onDisk.partial, true);
   assert.equal(onDisk.error_reason, "file_limit_exceeded");
 });
@@ -162,15 +225,18 @@ test("partial envelope is STILL saved (auditability for incomplete scans)", asyn
 test("no --save-map flag means no codebase-map-*.json file is written", async () => {
   const repo = await makeRepo({ "a.js": "" });
   const home = await makeDemaHome();
-  const { exitCode } = await runCli(
-    ["codebase", "map", repo],
-    { env: { DEMA_HOME: home } }
-  );
+  const { exitCode } = await runCli(["codebase", "map", repo], {
+    env: { DEMA_HOME: home },
+  });
   assert.equal(exitCode, 0);
   if (existsSync(join(home, "receipts"))) {
     const files = await readdir(join(home, "receipts"));
     const mapFiles = files.filter((f) => f.startsWith("codebase-map-"));
-    assert.equal(mapFiles.length, 0, "no codebase-map-* file should exist without --save-map");
+    assert.equal(
+      mapFiles.length,
+      0,
+      "no codebase-map-* file should exist without --save-map",
+    );
   }
 });
 
@@ -179,8 +245,16 @@ test("'--save-map --summary' without --json exits non-zero", async () => {
   const repo = await makeRepo({ "a.js": "" });
   const home = await makeDemaHome();
   const { stderr, exitCode } = await runCli(
-    ["codebase", "map", repo, "--summary", "--save-map", "--save-map-consent", SAVE_MAP_CONSENT],
-    { env: { DEMA_HOME: home } }
+    [
+      "codebase",
+      "map",
+      repo,
+      "--summary",
+      "--save-map",
+      "--save-map-consent",
+      SAVE_MAP_CONSENT,
+    ],
+    { env: { DEMA_HOME: home } },
   );
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /--save-map requires JSON output/);
@@ -192,9 +266,17 @@ test("'--save-map --summary --json' saves successfully with JSON stdout (json wi
   const repo = await makeRepo({ "a.js": "" });
   const home = await makeDemaHome();
   const { stdout, exitCode } = await runCli(
-    ["codebase", "map", repo, "--summary", "--json",
-     "--save-map", "--save-map-consent", SAVE_MAP_CONSENT],
-    { env: { DEMA_HOME: home } }
+    [
+      "codebase",
+      "map",
+      repo,
+      "--summary",
+      "--json",
+      "--save-map",
+      "--save-map-consent",
+      SAVE_MAP_CONSENT,
+    ],
+    { env: { DEMA_HOME: home } },
   );
   assert.equal(exitCode, 0);
   const envelope = JSON.parse(stdout);
@@ -208,17 +290,37 @@ test("re-running same scan creates distinct files (scanned_at differs)", async (
   const repo = await makeRepo({ "a.js": "" });
   const home = await makeDemaHome();
   await runCli(
-    ["codebase", "map", repo, "--save-map", "--save-map-consent", SAVE_MAP_CONSENT],
-    { env: { DEMA_HOME: home } }
+    [
+      "codebase",
+      "map",
+      repo,
+      "--save-map",
+      "--save-map-consent",
+      SAVE_MAP_CONSENT,
+    ],
+    { env: { DEMA_HOME: home } },
   );
   await new Promise((res) => setTimeout(res, 20));
   await runCli(
-    ["codebase", "map", repo, "--save-map", "--save-map-consent", SAVE_MAP_CONSENT],
-    { env: { DEMA_HOME: home } }
+    [
+      "codebase",
+      "map",
+      repo,
+      "--save-map",
+      "--save-map-consent",
+      SAVE_MAP_CONSENT,
+    ],
+    { env: { DEMA_HOME: home } },
   );
   const files = await readdir(join(home, "receipts"));
-  const mapFiles = files.filter((f) => f.startsWith("codebase-map-") && f.endsWith(".json")).sort();
-  assert.equal(mapFiles.length, 2, `expected 2 distinct files; got ${mapFiles.length}`);
+  const mapFiles = files
+    .filter((f) => f.startsWith("codebase-map-") && f.endsWith(".json"))
+    .sort();
+  assert.equal(
+    mapFiles.length,
+    2,
+    `expected 2 distinct files; got ${mapFiles.length}`,
+  );
   assert.notEqual(mapFiles[0], mapFiles[1]);
   for (const f of mapFiles) {
     const onDisk = await readFile(join(home, "receipts", f), "utf8");
@@ -233,16 +335,26 @@ test("re-running same scan creates distinct files (scanned_at differs)", async (
 test("input-validation failure before build does NOT save (relative path)", async () => {
   const home = await makeDemaHome();
   const { stderr, exitCode } = await runCli(
-    ["codebase", "map", "relative/path",
-     "--save-map", "--save-map-consent", SAVE_MAP_CONSENT],
-    { env: { DEMA_HOME: home } }
+    [
+      "codebase",
+      "map",
+      "relative/path",
+      "--save-map",
+      "--save-map-consent",
+      SAVE_MAP_CONSENT,
+    ],
+    { env: { DEMA_HOME: home } },
   );
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /must be absolute/);
   if (existsSync(join(home, "receipts"))) {
     const files = await readdir(join(home, "receipts"));
     const mapFiles = files.filter((f) => f.startsWith("codebase-map-"));
-    assert.equal(mapFiles.length, 0, "no save should happen if envelope was never built");
+    assert.equal(
+      mapFiles.length,
+      0,
+      "no save should happen if envelope was never built",
+    );
   }
 });
 
@@ -253,15 +365,21 @@ test("error_reason envelope (path_not_found) IS saved when --save-map is set", a
   const home = await makeDemaHome();
   const { stdout, exitCode } = await runCli(
     [
-      "codebase", "map", "/tmp/dema-codebase-save-nonexistent-zzz-12345",
-      "--save-map", "--save-map-consent", SAVE_MAP_CONSENT
+      "codebase",
+      "map",
+      "/tmp/dema-codebase-save-nonexistent-zzz-12345",
+      "--save-map",
+      "--save-map-consent",
+      SAVE_MAP_CONSENT,
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   assert.notEqual(exitCode, 0);
   const envelope = JSON.parse(stdout);
   assert.equal(envelope.error_reason, "path_not_found");
   const files = await readdir(join(home, "receipts"));
-  const mapFile = files.find((f) => f.startsWith("codebase-map-") && f.endsWith(".json"));
+  const mapFile = files.find(
+    (f) => f.startsWith("codebase-map-") && f.endsWith(".json"),
+  );
   assert.ok(mapFile, "error_reason envelope must still be saved for audit");
 });

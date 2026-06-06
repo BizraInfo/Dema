@@ -1,4 +1,5 @@
-export const AMANA_CONTRACTS_PREVIEW_SCHEMA = "bizra.dema.amana_contracts_preview.v0.1";
+export const AMANA_CONTRACTS_PREVIEW_SCHEMA =
+  "bizra.dema.amana_contracts_preview.v0.1";
 
 const BLOCKED_ACTIONS = [
   "runtime_start",
@@ -9,7 +10,7 @@ const BLOCKED_ACTIONS = [
   "receipt_mint",
   "capability_mint",
   "external_posting",
-  "network_egress"
+  "network_egress",
 ];
 
 const PROOF_GATES = {
@@ -17,95 +18,104 @@ const PROOF_GATES = {
   no_overclaim: "node scripts/review/no-overclaim.mjs",
   actuator_boundary: "node scripts/review/actuator-check.mjs",
   effectcap_invariant: "node --test tests/effectcap-invariant.test.js",
-  release_readiness: "npm run release:readiness"
+  release_readiness: "npm run release:readiness",
 };
 
 const PRIMITIVES = [
   {
     id: "consent_hash_table",
     name: "ConsentHashTable",
-    purpose: "Preview exact micro-consent scope commitments before any capability decision.",
+    purpose:
+      "Preview exact micro-consent scope commitments before any capability decision.",
     status: "external_candidate_not_imported",
     current_repo_overlap: [
       "packages/consent/src/consent-planner.js",
-      "docs/superpowers/specs/2026-05-14-effectcap-invariant/01_specification.md"
+      "docs/superpowers/specs/2026-05-14-effectcap-invariant/01_specification.md",
     ],
-    external_source_hint: "Downloads audit Dema amana kernel contracts snapshot",
+    external_source_hint:
+      "Downloads audit Dema amana kernel contracts snapshot",
     import_risk: "medium",
     required_proof: [
       "deterministic canonical hashing",
       "revocation represented before allow",
       "no secrets in commitment payload",
-      "exact scope lookup only"
+      "exact scope lookup only",
     ],
-    blocked_actions: BLOCKED_ACTIONS
+    blocked_actions: BLOCKED_ACTIONS,
   },
   {
     id: "effect_cap_decision",
     name: "EffectCapDecision",
-    purpose: "Preview deny-by-default capability decisions bound to committed consent.",
+    purpose:
+      "Preview deny-by-default capability decisions bound to committed consent.",
     status: "specified_not_runtime",
     current_repo_overlap: [
       "scripts/review/actuator-check.mjs",
       "tests/effectcap-invariant.test.js",
-      "docs/superpowers/specs/2026-05-14-effectcap-invariant/03_negative_tests.md"
+      "docs/superpowers/specs/2026-05-14-effectcap-invariant/03_negative_tests.md",
     ],
-    external_source_hint: "Downloads audit Dema amana kernel contracts snapshot",
+    external_source_hint:
+      "Downloads audit Dema amana kernel contracts snapshot",
     import_risk: "high",
     required_proof: [
       "no caller provided execution closure",
       "unknown operation denies",
       "high risk actuator requires explicit consent",
-      "policy rules cannot execute code"
+      "policy rules cannot execute code",
     ],
-    blocked_actions: BLOCKED_ACTIONS
+    blocked_actions: BLOCKED_ACTIONS,
   },
   {
     id: "evidence_chain",
     name: "EvidenceChain",
-    purpose: "Preview append-only evidence links without writing or advancing a governed chain.",
+    purpose:
+      "Preview append-only evidence links without writing or advancing a governed chain.",
     status: "external_candidate_not_imported",
     current_repo_overlap: [
       "packages/verifier/src/evidence-receipt-preview.js",
-      "tests/evidence-receipt-preview.test.js"
+      "tests/evidence-receipt-preview.test.js",
     ],
-    external_source_hint: "Downloads audit Dema amana kernel contracts snapshot",
+    external_source_hint:
+      "Downloads audit Dema amana kernel contracts snapshot",
     import_risk: "medium",
     required_proof: [
       "prev hash required after genesis",
       "tamper changes root",
       "no filesystem mutation",
-      "no signature or receipt mint"
+      "no signature or receipt mint",
     ],
-    blocked_actions: BLOCKED_ACTIONS
+    blocked_actions: BLOCKED_ACTIONS,
   },
   {
     id: "impact_event",
     name: "ImpactEvent",
-    purpose: "Preview why impact and economic claims stay blocked until measured evidence exists.",
+    purpose:
+      "Preview why impact and economic claims stay blocked until measured evidence exists.",
     status: "external_candidate_not_imported",
     current_repo_overlap: [
       "packages/core/src/optimization-roadmap.js",
-      "scripts/review/no-overclaim.mjs"
+      "scripts/review/no-overclaim.mjs",
     ],
-    external_source_hint: "Downloads audit Dema amana kernel contracts snapshot",
+    external_source_hint:
+      "Downloads audit Dema amana kernel contracts snapshot",
     import_risk: "high",
     required_proof: [
       "measured evidence required",
       "economic mint remains false",
       "reward claim remains false",
-      "global verification remains false"
+      "global verification remains false",
     ],
-    blocked_actions: BLOCKED_ACTIONS
+    blocked_actions: BLOCKED_ACTIONS,
   },
   {
     id: "claim_ledger_checker",
     name: "ClaimLedgerChecker",
-    purpose: "Preview a Markdown claim gate for measured, cited, declared, planned, or removal labels.",
+    purpose:
+      "Preview a Markdown claim gate for measured, cited, declared, planned, or removal labels.",
     status: "external_candidate_not_imported",
     current_repo_overlap: [
       "scripts/review/no-overclaim.mjs",
-      "docs/LLM_SYSTEM_FLOW.md"
+      "docs/LLM_SYSTEM_FLOW.md",
     ],
     external_source_hint: "Downloads audit claim ledger checker snapshots",
     import_risk: "low",
@@ -113,18 +123,19 @@ const PRIMITIVES = [
       "public claims are truth labeled",
       "economic claims require measured evidence",
       "planned claims cannot read as live",
-      "existing no overclaim gate is not duplicated"
+      "existing no overclaim gate is not duplicated",
     ],
-    blocked_actions: BLOCKED_ACTIONS
+    blocked_actions: BLOCKED_ACTIONS,
   },
   {
     id: "journey_preview",
     name: "JourneyPreview",
-    purpose: "Preview first-run to proof journey language without implying live handoff.",
+    purpose:
+      "Preview first-run to proof journey language without implying live handoff.",
     status: "historical_preview_requires_truth_review",
     current_repo_overlap: [
       "packages/core/src/onboarding.js",
-      "docs/USER_LIFECYCLE.md"
+      "docs/USER_LIFECYCLE.md",
     ],
     external_source_hint: "Downloads audit journey preview snapshots",
     import_risk: "high",
@@ -132,10 +143,10 @@ const PRIMITIVES = [
       "command names match current CLI truth",
       "handoff language is future labeled",
       "no runtime or mission execution implied",
-      "Step 7 remains blocked"
+      "Step 7 remains blocked",
     ],
-    blocked_actions: BLOCKED_ACTIONS
-  }
+    blocked_actions: BLOCKED_ACTIONS,
+  },
 ];
 
 const BOUNDARY = {
@@ -151,7 +162,7 @@ const BOUNDARY = {
   federation_initiated: false,
   node_handshake_performed: false,
   step7_mint_performed: false,
-  external_posting_performed: false
+  external_posting_performed: false,
 };
 
 function clone(value) {
@@ -173,11 +184,11 @@ export function buildAmanaContractsPreview() {
       external_code_imported: false,
       external_code_invoked: false,
       implementation_copied: false,
-      source_hints_are_descriptive_only: true
+      source_hints_are_descriptive_only: true,
     },
     proof_gates: clone(PROOF_GATES),
     primitives: clone(PRIMITIVES),
-    boundary: clone(BOUNDARY)
+    boundary: clone(BOUNDARY),
   };
 }
 
@@ -196,16 +207,15 @@ export function formatAmanaContractsPreview(preview) {
     "",
     preview.summary,
     "",
-    "Primitives:"
+    "Primitives:",
   ];
 
   appendRows(
     lines,
     preview.primitives,
-    (primitive) => (
+    (primitive) =>
       `${primitive.id} (${primitive.name}) status="${primitive.status}" ` +
-      `risk="${primitive.import_risk}" purpose="${primitive.purpose}"`
-    )
+      `risk="${primitive.import_risk}" purpose="${primitive.purpose}"`,
   );
 
   lines.push("");
@@ -213,12 +223,12 @@ export function formatAmanaContractsPreview(preview) {
   appendRows(
     lines,
     Object.entries(preview.proof_gates),
-    ([id, command]) => `${id}: ${command}`
+    ([id, command]) => `${id}: ${command}`,
   );
 
   lines.push("");
   lines.push(
-    "Boundary: preview-only; no external code import; no runtime; no execution; no mutation; no capability mint; no receipt mint; no network; no federation; no Step 7 mint."
+    "Boundary: preview-only; no external code import; no runtime; no execution; no mutation; no capability mint; no receipt mint; no network; no federation; no Step 7 mint.",
   );
 
   return lines.join("\n");

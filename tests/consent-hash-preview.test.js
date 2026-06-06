@@ -9,15 +9,26 @@ import {
   CONSENT_HASH_TABLE_PREVIEW_SCHEMA,
   formatConsentHashTablePreview,
   lookupConsentHashTablePreview,
-  verifyConsentHashTablePreview
+  verifyConsentHashTablePreview,
 } from "../packages/consent/src/consent-hash-preview.js";
-import { sha256, stableStringify } from "../packages/consent/src/consent-common.js";
+import {
+  sha256,
+  stableStringify,
+} from "../packages/consent/src/consent-common.js";
 import { buildConsentPlanPreview } from "../packages/consent/src/consent-planner.js";
 
-const modulePath = fileURLToPath(new URL("../packages/consent/src/consent-hash-preview.js", import.meta.url));
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
-const checkPath = fileURLToPath(new URL("../scripts/check.mjs", import.meta.url));
-const architecturePath = fileURLToPath(new URL("../docs/ARCHITECTURE.md", import.meta.url));
+const modulePath = fileURLToPath(
+  new URL("../packages/consent/src/consent-hash-preview.js", import.meta.url),
+);
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
+const checkPath = fileURLToPath(
+  new URL("../scripts/check.mjs", import.meta.url),
+);
+const architecturePath = fileURLToPath(
+  new URL("../docs/ARCHITECTURE.md", import.meta.url),
+);
 const fixedNow = new Date("2026-05-15T00:00:00.000Z");
 const expiresAt = "2026-05-16T00:00:00.000Z";
 
@@ -32,7 +43,7 @@ function makePlan(overrides = {}) {
         purpose: "inspect referenced file for mission context",
         reason: "file path mentioned in intent",
         confidence: 0.78,
-        requires_human_consent: false
+        requires_human_consent: false,
       },
       {
         resource_id: "file:auth.py",
@@ -40,7 +51,7 @@ function makePlan(overrides = {}) {
         purpose: "apply requested change only to referenced file",
         reason: "write verb plus explicit file path",
         confidence: 0.78,
-        requires_human_consent: true
+        requires_human_consent: true,
       },
       {
         resource_id: "command:pytest",
@@ -48,10 +59,10 @@ function makePlan(overrides = {}) {
         purpose: "verify mission result with bounded test command",
         reason: "pytest mentioned in intent",
         confidence: 0.84,
-        requires_human_consent: true
-      }
+        requires_human_consent: true,
+      },
     ],
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -60,7 +71,7 @@ function build(overrides = {}) {
     plan: makePlan(),
     expiresAt,
     now: fixedNow,
-    ...overrides
+    ...overrides,
   });
 }
 
@@ -88,10 +99,13 @@ test("builder can derive the table from current consent plan intent", () => {
   const table = buildConsentHashTablePreview({
     intent: "Audit Downloads and send to Slack",
     expiresAt,
-    now: fixedNow
+    now: fixedNow,
   });
 
-  assert.equal(table.source.plan_schema, "bizra.dema.consent_plan_preview.v0.1");
+  assert.equal(
+    table.source.plan_schema,
+    "bizra.dema.consent_plan_preview.v0.1",
+  );
   assert.ok(table.entries.some((entry) => entry.key === "path:Downloads:read"));
   assert.ok(table.entries.some((entry) => entry.key === "service:slack:call"));
 });
@@ -118,17 +132,22 @@ test("permissions normalize into exact keys and source permission hashes", () =>
   assert.deepEqual(keys, [
     "command:pytest:execute",
     "file:auth.py:read",
-    "file:auth.py:write"
+    "file:auth.py:write",
   ]);
 
-  const readEntry = table.entries.find((entry) => entry.key === "file:auth.py:read");
+  const readEntry = table.entries.find(
+    (entry) => entry.key === "file:auth.py:read",
+  );
   assert.equal(readEntry.resource_type, "file");
   assert.equal(readEntry.resource_id, "auth.py");
   assert.equal(readEntry.operation, "read");
   assert.equal(readEntry.expires_at, expiresAt);
 
   const original = makePlan().permissions[0];
-  assert.equal(readEntry.source_permission_hash, `sha256:${sha256(stableStringify(original))}`);
+  assert.equal(
+    readEntry.source_permission_hash,
+    `sha256:${sha256(stableStringify(original))}`,
+  );
 });
 
 test("invalid permissions and revocations become denials without throwing", () => {
@@ -138,35 +157,46 @@ test("invalid permissions and revocations become denials without throwing", () =
         ...makePlan().permissions,
         null,
         { resource_id: "socket:prod", action: "read", purpose: "bad resource" },
-        { resource_id: "file:auth.py", action: "delete", purpose: "bad operation" },
-        { resource_id: "file:   ", action: "read", purpose: "blank resource tail" },
-        { resource_id: "file:auth.py", action: "read" }
-      ]
+        {
+          resource_id: "file:auth.py",
+          action: "delete",
+          purpose: "bad operation",
+        },
+        {
+          resource_id: "file:   ",
+          action: "read",
+          purpose: "blank resource tail",
+        },
+        { resource_id: "file:auth.py", action: "read" },
+      ],
     }),
     revoked: [
       null,
       { key: "file:auth.py:write", revoked_at: "bad", reason: "x" },
-      { key: "file:auth.py:write", revoked_at: fixedNow.toISOString() }
-    ]
+      { key: "file:auth.py:write", revoked_at: fixedNow.toISOString() },
+    ],
   });
 
   assert.equal(table.valid, false);
-  assert.deepEqual(table.denials.map((item) => item.code), [
-    "invalid_permission",
-    "unknown_resource_type",
-    "unknown_operation",
-    "missing_resource_id",
-    "missing_purpose",
-    "invalid_revocation",
-    "invalid_revoked_at",
-    "missing_revocation_reason"
-  ]);
+  assert.deepEqual(
+    table.denials.map((item) => item.code),
+    [
+      "invalid_permission",
+      "unknown_resource_type",
+      "unknown_operation",
+      "missing_resource_id",
+      "missing_purpose",
+      "invalid_revocation",
+      "invalid_revoked_at",
+      "missing_revocation_reason",
+    ],
+  );
 });
 
 test("expiresAt is required but expired scopes are represented for lookup denial", () => {
   const missing = buildConsentHashTablePreview({
     plan: makePlan(),
-    now: fixedNow
+    now: fixedNow,
   });
   assert.equal(missing.valid, false);
   assert.ok(missing.denials.every((item) => item.code === "missing_expiry"));
@@ -176,12 +206,16 @@ test("expiresAt is required but expired scopes are represented for lookup denial
   assert.equal(expired.valid, true);
   assert.equal(expired.entries.length, 3);
   assert.equal(
-    lookupConsentHashTablePreview(expired, {
-      resource_type: "file",
-      resource_id: "auth.py",
-      operation: "read"
-    }, { now: fixedNow }).reason,
-    "expired_scope"
+    lookupConsentHashTablePreview(
+      expired,
+      {
+        resource_type: "file",
+        resource_id: "auth.py",
+        operation: "read",
+      },
+      { now: fixedNow },
+    ).reason,
+    "expired_scope",
   );
 });
 
@@ -197,27 +231,35 @@ test("invalid now input returns preview denials instead of throwing", () => {
   const fromIntent = buildConsentHashTablePreview({
     intent: "Fix auth.py",
     expiresAt,
-    now: "invalid"
+    now: "invalid",
   });
   assert.equal(fromIntent.valid, false);
   assert.equal(fromIntent.denials[0].code, "invalid_now");
 
-  const lookup = lookupConsentHashTablePreview(build(), {
-    resource_type: "file",
-    resource_id: "auth.py",
-    operation: "read"
-  }, { now: null });
+  const lookup = lookupConsentHashTablePreview(
+    build(),
+    {
+      resource_type: "file",
+      resource_id: "auth.py",
+      operation: "read",
+    },
+    { now: null },
+  );
   assert.equal(lookup.allowed, false);
   assert.equal(lookup.not_an_authorization, true);
   assert.equal(lookup.reason, "invalid_now");
 
   assert.equal(
-    lookupConsentHashTablePreview(build(), {
-      resource_type: "file",
-      resource_id: "auth.py",
-      operation: "read"
-    }, { now: 123 }).reason,
-    "invalid_now"
+    lookupConsentHashTablePreview(
+      build(),
+      {
+        resource_type: "file",
+        resource_id: "auth.py",
+        operation: "read",
+      },
+      { now: 123 },
+    ).reason,
+    "invalid_now",
   );
 });
 
@@ -227,24 +269,33 @@ test("verification recomputes commitment and detects entry tampering", () => {
 
   const tampered = {
     ...table,
-    entries: table.entries.map((entry) => (
-      entry.key === "file:auth.py:read" ? { ...entry, purpose: "changed" } : entry
-    ))
+    entries: table.entries.map((entry) =>
+      entry.key === "file:auth.py:read"
+        ? { ...entry, purpose: "changed" }
+        : entry,
+    ),
   };
   const verdict = verifyConsentHashTablePreview(tampered);
 
-  assert.equal(verdict.schema, "bizra.dema.consent_hash_table_verification_preview.v0.1");
+  assert.equal(
+    verdict.schema,
+    "bizra.dema.consent_hash_table_verification_preview.v0.1",
+  );
   assert.equal(verdict.ok, false);
   assert.equal(verdict.actual_commitment_hash, table.commitment_hash);
 });
 
 test("lookup is exact, non-authorizing, and deny-by-default", () => {
   const table = build();
-  const allowed = lookupConsentHashTablePreview(table, {
-    resource_type: "file",
-    resource_id: "auth.py",
-    operation: "read"
-  }, { now: fixedNow });
+  const allowed = lookupConsentHashTablePreview(
+    table,
+    {
+      resource_type: "file",
+      resource_id: "auth.py",
+      operation: "read",
+    },
+    { now: fixedNow },
+  );
 
   assert.equal(allowed.schema, CONSENT_HASH_LOOKUP_PREVIEW_SCHEMA);
   assert.equal(allowed.allowed, true);
@@ -252,24 +303,32 @@ test("lookup is exact, non-authorizing, and deny-by-default", () => {
   assert.equal(allowed.reason, "exact_consent_scope_found");
 
   assert.equal(
-    lookupConsentHashTablePreview(table, {
-      resource_type: "file",
-      resource_id: "auth.py",
-      operation: "execute"
-    }, { now: fixedNow }).reason,
-    "permission_not_found"
+    lookupConsentHashTablePreview(
+      table,
+      {
+        resource_type: "file",
+        resource_id: "auth.py",
+        operation: "execute",
+      },
+      { now: fixedNow },
+    ).reason,
+    "permission_not_found",
   );
   assert.equal(
-    lookupConsentHashTablePreview(table, {
-      resource_type: "socket",
-      resource_id: "prod",
-      operation: "read"
-    }, { now: fixedNow }).reason,
-    "unknown_resource_type"
+    lookupConsentHashTablePreview(
+      table,
+      {
+        resource_type: "socket",
+        resource_id: "prod",
+        operation: "read",
+      },
+      { now: fixedNow },
+    ).reason,
+    "unknown_resource_type",
   );
   assert.equal(
     lookupConsentHashTablePreview(table, null, { now: fixedNow }).reason,
-    "invalid_request"
+    "invalid_request",
   );
 });
 
@@ -280,15 +339,19 @@ test("lookup denies revoked scope before expiry", () => {
       {
         key: "file:auth.py:read",
         revoked_at: fixedNow.toISOString(),
-        reason: "operator narrowed scope"
-      }
-    ]
+        reason: "operator narrowed scope",
+      },
+    ],
   });
-  const result = lookupConsentHashTablePreview(table, {
-    resource_type: "file",
-    resource_id: "auth.py",
-    operation: "read"
-  }, { now: fixedNow });
+  const result = lookupConsentHashTablePreview(
+    table,
+    {
+      resource_type: "file",
+      resource_id: "auth.py",
+      operation: "read",
+    },
+    { now: fixedNow },
+  );
 
   assert.equal(result.allowed, false);
   assert.equal(result.not_an_authorization, true);
@@ -297,14 +360,18 @@ test("lookup denies revoked scope before expiry", () => {
 
 test("lookup denies when commitment mismatches", () => {
   const table = build();
-  const result = lookupConsentHashTablePreview({
-    ...table,
-    commitment_hash: "sha256:bad"
-  }, {
-    resource_type: "file",
-    resource_id: "auth.py",
-    operation: "read"
-  }, { now: fixedNow });
+  const result = lookupConsentHashTablePreview(
+    {
+      ...table,
+      commitment_hash: "sha256:bad",
+    },
+    {
+      resource_type: "file",
+      resource_id: "auth.py",
+      operation: "read",
+    },
+    { now: fixedNow },
+  );
 
   assert.equal(result.allowed, false);
   assert.equal(result.reason, "commitment_hash_mismatch");
@@ -317,8 +384,8 @@ test("source plan hash is bound but denials are not bound into commitment", () =
     ...table,
     source: {
       ...table.source,
-      plan_commitment_hash: "different-plan-hash"
-    }
+      plan_commitment_hash: "different-plan-hash",
+    },
   };
   assert.equal(verifyConsentHashTablePreview(swappedSource).ok, false);
 
@@ -327,9 +394,9 @@ test("source plan hash is bound but denials are not bound into commitment", () =
       commitment_hash: table.source.plan_commitment_hash,
       permissions: [
         ...makePlan().permissions,
-        { resource_id: "bad", action: "read", purpose: "debug denial only" }
-      ]
-    })
+        { resource_id: "bad", action: "read", purpose: "debug denial only" },
+      ],
+    }),
   });
   assert.equal(withDenials.valid, false);
   assert.equal(withDenials.commitment_hash, table.commitment_hash);
@@ -342,8 +409,8 @@ test("builder does not mutate plan or revoked inputs", () => {
       key: "file:auth.py:write",
       revoked_at: fixedNow.toISOString(),
       reason: "operator narrowed scope",
-      ignored: "drop me"
-    }
+      ignored: "drop me",
+    },
   ];
   const beforePlan = JSON.stringify(plan);
   const beforeRevoked = JSON.stringify(revoked);
@@ -362,7 +429,7 @@ test("semantic object key order does not affect commitment", () => {
     purpose: "inspect referenced file for mission context",
     reason: "file path mentioned in intent",
     confidence: 0.78,
-    requires_human_consent: false
+    requires_human_consent: false,
   };
   const permissionB = {
     requires_human_consent: false,
@@ -370,7 +437,7 @@ test("semantic object key order does not affect commitment", () => {
     reason: "file path mentioned in intent",
     purpose: "inspect referenced file for mission context",
     action: "read",
-    resource_id: "file:auth.py"
+    resource_id: "file:auth.py",
   };
 
   const first = build({ plan: makePlan({ permissions: [permissionA] }) });
@@ -396,17 +463,23 @@ test("consent hash preview source has no external implementation or side-effect 
   assert.doesNotMatch(source, /\brequire\s*\(/);
   assert.doesNotMatch(source, /\bimport\s*\(/);
   assert.doesNotMatch(source, /\bcreateRequire\b/);
-  assert.doesNotMatch(source, /from "node:(?:fs|fs\/promises|net|http|https|http2|tls|dgram|dns|child_process|worker_threads|vm|cluster|repl)"/);
+  assert.doesNotMatch(
+    source,
+    /from "node:(?:fs|fs\/promises|net|http|https|http2|tls|dgram|dns|child_process|worker_threads|vm|cluster|repl)"/,
+  );
   assert.doesNotMatch(source, /\beval\s*\(/);
   assert.doesNotMatch(source, /\bnew\s+Function\s*\(/);
-  assert.doesNotMatch(source, /\b(?:writeFile|appendFile|mkdir|rename|unlink|createWriteStream|fetch)\b/);
+  assert.doesNotMatch(
+    source,
+    /\b(?:writeFile|appendFile|mkdir|rename|unlink|createWriteStream|fetch)\b/,
+  );
 });
 
 test("pure module slice has no CLI, smoke, or architecture command wiring", async () => {
   const [cliSource, checkSource, architectureSource] = await Promise.all([
     readFile(cliPath, "utf8"),
     readFile(checkPath, "utf8"),
-    readFile(architecturePath, "utf8")
+    readFile(architecturePath, "utf8"),
   ]);
 
   assert.doesNotMatch(cliSource, /consent hash preview/);
@@ -417,7 +490,7 @@ test("pure module slice has no CLI, smoke, or architecture command wiring", asyn
 test("current consent planner commitment remains unchanged", () => {
   const plan = buildConsentPlanPreview({
     intent: "Fix auth.py and run pytest",
-    now: fixedNow
+    now: fixedNow,
   });
 
   assert.equal(plan.commitment_hash, sha256(stableStringify(plan.permissions)));

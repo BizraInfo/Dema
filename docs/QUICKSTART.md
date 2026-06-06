@@ -80,6 +80,7 @@ Boundary: no action without explicit consent.
 ```
 
 **What this tells you in one read:**
+
 - Dema knows your node is **Node0**.
 - Activation is **BLOCKED** — by design, until you complete setup.
 - Nothing is running. No daemon, no model, no mission.
@@ -133,11 +134,11 @@ Verdict: blocked
 
 Three paths from here:
 
-| If you want to... | Run | Time |
-|---|---|---|
-| Continue first-run setup | `node bin/dema setup` | ~10s |
-| See the bounded preview of a real task | `node bin/dema journey "Fix auth.py and run pytest"` | ~5s |
-| Read everything once before acting | [`docs/USER_LIFECYCLE.md`](USER_LIFECYCLE.md) + [`docs/CURRENT_LIMITS.md`](CURRENT_LIMITS.md) | ~10 min |
+| If you want to...                      | Run                                                                                           | Time    |
+| -------------------------------------- | --------------------------------------------------------------------------------------------- | ------- |
+| Continue first-run setup               | `node bin/dema setup`                                                                         | ~10s    |
+| See the bounded preview of a real task | `node bin/dema journey "Fix auth.py and run pytest"`                                          | ~5s     |
+| Read everything once before acting     | [`docs/USER_LIFECYCLE.md`](USER_LIFECYCLE.md) + [`docs/CURRENT_LIMITS.md`](CURRENT_LIMITS.md) | ~10 min |
 
 All commands at this stage are **preview-only**. Nothing mints a receipt. Nothing calls a remote provider. Nothing writes outside `~/.dema/`. To do anything binding, you have to type explicit consent — that's [ADR-005](06-adr/ADR-005-operator-actions-require-explicit-consent.md) and you'll see it referenced everywhere.
 
@@ -145,13 +146,13 @@ All commands at this stage are **preview-only**. Nothing mints a receipt. Nothin
 
 ## If something goes wrong
 
-| Symptom | Fix |
-|---|---|
-| `node: command not found` | Install Node 20+ from [nodejs.org](https://nodejs.org) |
-| `dema --version` prints nothing | Check `node --version` is ≥ 20; on macOS, your default `node` may be old — try `nvm use 22` |
-| `dema status` hangs in a fancy terminal | Set `DEMA_NO_TUI=1` and re-run; some terminals enter the TTY keypress loop unexpectedly |
-| `dema doctor` exits 1 against fresh state | **Expected.** There is no gateway yet. See the doctor section above. |
-| You want to test without touching `~/.dema/` | Set `DEMA_HOME=$(mktemp -d)` before running; isolates state under tmpdir |
+| Symptom                                      | Fix                                                                                         |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `node: command not found`                    | Install Node 20+ from [nodejs.org](https://nodejs.org)                                      |
+| `dema --version` prints nothing              | Check `node --version` is ≥ 20; on macOS, your default `node` may be old — try `nvm use 22` |
+| `dema status` hangs in a fancy terminal      | Set `DEMA_NO_TUI=1` and re-run; some terminals enter the TTY keypress loop unexpectedly     |
+| `dema doctor` exits 1 against fresh state    | **Expected.** There is no gateway yet. See the doctor section above.                        |
+| You want to test without touching `~/.dema/` | Set `DEMA_HOME=$(mktemp -d)` before running; isolates state under tmpdir                    |
 
 ---
 

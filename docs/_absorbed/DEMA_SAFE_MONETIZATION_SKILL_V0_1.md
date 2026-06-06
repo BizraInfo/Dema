@@ -1,4 +1,5 @@
 # Dema Safe Monetization Skill
+
 ## `docs/skills/DEMA_SAFE_MONETIZATION_SKILL_V0_1.md`
 
 ```
@@ -22,6 +23,7 @@ Dependencies: DEMA_PRODUCT_CONSTITUTION_V0_1.md
 ## The Core Problem This Skill Solves
 
 BIZRA's founder has real, proven, and rare capabilities:
+
 - 3+ years of solo sovereign AI system architecture
 - Node0 is running, tested, and documented
 - The FATE gate system is implemented and fail-closed
@@ -343,4 +345,4 @@ If any box is unchecked: do not present the offer. Revise first.
 
 ---
 
-*This skill is the guardian between capability and claim. It does not limit ambition — it ensures that ambition is backed by evidence before it is presented as a promise.*
+_This skill is the guardian between capability and claim. It does not limit ambition — it ensures that ambition is backed by evidence before it is presented as a promise._

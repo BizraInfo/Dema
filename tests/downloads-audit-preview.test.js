@@ -7,15 +7,17 @@ import { tmpdir } from "node:os";
 import {
   TASK_REGISTRY,
   formatTaskReceipt,
-  runDownloadsAuditPreview
+  runDownloadsAuditPreview,
 } from "../packages/tasks/src/downloads-audit-preview.js";
 import {
   formatVerdict,
-  verifyReceiptPlaceholder
+  verifyReceiptPlaceholder,
 } from "../packages/verifier/src/sat-placeholder.js";
 
 async function makeFixtureDownloads() {
-  const downloadsRoot = await mkdtemp(join(tmpdir(), "dema-fixture-downloads-"));
+  const downloadsRoot = await mkdtemp(
+    join(tmpdir(), "dema-fixture-downloads-"),
+  );
   const demaRoot = await mkdtemp(join(tmpdir(), "dema-fixture-home-"));
   await writeFile(join(downloadsRoot, "alpha.txt"), "hello\n");
   await writeFile(join(downloadsRoot, "bravo.pdf"), "fake-pdf\n");
@@ -46,7 +48,11 @@ test("runDownloadsAuditPreview produces a schema-tagged read-only receipt with p
 
   const after = await readdir(downloadsRoot);
   after.sort();
-  assert.deepEqual(after, before, "downloads dir must not be mutated by a read-only preview");
+  assert.deepEqual(
+    after,
+    before,
+    "downloads dir must not be mutated by a read-only preview",
+  );
 });
 
 test("runDownloadsAuditPreview writes the receipt under ~/.dema/receipts/", async () => {
@@ -62,7 +68,7 @@ test("runDownloadsAuditPreview reports error gracefully when target missing", as
   const { demaRoot } = await makeFixtureDownloads();
   const receipt = await runDownloadsAuditPreview({
     downloadsRoot: "/nonexistent-dema-test-target-xyz",
-    demaRoot
+    demaRoot,
   });
   assert.match(receipt.error, /not_found/);
   assert.equal(receipt.scope, "read-only");
@@ -90,7 +96,10 @@ test("verifyReceiptPlaceholder returns PARTIAL_PLACEHOLDER on a valid task recei
   const verdict = verifyReceiptPlaceholder(receipt);
   assert.equal(verdict.verdict, "PARTIAL_PLACEHOLDER");
   assert.equal(verdict.truth_label, "DECLARED");
-  assert.ok(verdict.checks.every((c) => c.pass), `all shallow checks should pass; got ${JSON.stringify(verdict.checks)}`);
+  assert.ok(
+    verdict.checks.every((c) => c.pass),
+    `all shallow checks should pass; got ${JSON.stringify(verdict.checks)}`,
+  );
 });
 
 test("verifyReceiptPlaceholder REJECTs a tampered receipt that claims a stronger verdict", async () => {
@@ -99,14 +108,18 @@ test("verifyReceiptPlaceholder REJECTs a tampered receipt that claims a stronger
   const tampered = { ...receipt, sat_verdict: "PERMIT" };
   const verdict = verifyReceiptPlaceholder(tampered);
   assert.equal(verdict.verdict, "REJECT");
-  assert.ok(verdict.checks.find((c) => c.check === "verdict_honestly_declared_as_placeholder" && !c.pass));
+  assert.ok(
+    verdict.checks.find(
+      (c) => c.check === "verdict_honestly_declared_as_placeholder" && !c.pass,
+    ),
+  );
 });
 
 test("verifyReceiptPlaceholder REJECTs receipt missing payload_digest", () => {
   const verdict = verifyReceiptPlaceholder({
     scope: "read-only",
     rollback_required: false,
-    sat_verdict: "PARTIAL_PLACEHOLDER"
+    sat_verdict: "PARTIAL_PLACEHOLDER",
   });
   assert.equal(verdict.verdict, "REJECT");
 });

@@ -20,7 +20,10 @@ import { COLORS } from "../packages/core/src/dema-theme.js";
 // Candidate paths where bizra-cli/src/theme.rs might live.
 const CANDIDATE_PATHS = [
   // The operator's local layout (verified 2026-05-19 by the author).
-  join(homedir(), "BIZRA Node0/bizra-data-lake/bizra-omega/bizra-cli/src/theme.rs"),
+  join(
+    homedir(),
+    "BIZRA Node0/bizra-data-lake/bizra-omega/bizra-cli/src/theme.rs",
+  ),
   // Alternate layout some operators use.
   "/data/bizra/bizra-omega/bizra-cli/src/theme.rs",
 ];
@@ -33,7 +36,8 @@ function findRustSource() {
 }
 
 // Parse `pub const NAME: Color = Color::Rgb(R, G, B);` lines.
-const RUST_COLOR_RE = /pub const (\w+):\s*Color\s*=\s*Color::Rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\);/g;
+const RUST_COLOR_RE =
+  /pub const (\w+):\s*Color\s*=\s*Color::Rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\);/g;
 
 function parseRustColors(src) {
   const out = new Map();
@@ -45,51 +49,84 @@ function parseRustColors(src) {
   return out;
 }
 
-test("SYNC-01: Rust theme.rs source can be located (or skip if absent)", { skip: !findRustSource() }, () => {
-  const path = findRustSource();
-  assert.ok(path, "Rust source must be reachable for the sync gate to run");
-  const src = readFileSync(path, "utf8");
-  assert.ok(src.includes("BIZRA Visual Theme"), "Rust source header must identify the file");
-});
+test(
+  "SYNC-01: Rust theme.rs source can be located (or skip if absent)",
+  { skip: !findRustSource() },
+  () => {
+    const path = findRustSource();
+    assert.ok(path, "Rust source must be reachable for the sync gate to run");
+    const src = readFileSync(path, "utf8");
+    assert.ok(
+      src.includes("BIZRA Visual Theme"),
+      "Rust source header must identify the file",
+    );
+  },
+);
 
-test("SYNC-02: every Color::Rgb in theme.rs has a matching RGB tuple in dema-theme COLORS", { skip: !findRustSource() }, () => {
-  const path = findRustSource();
-  const src = readFileSync(path, "utf8");
-  const rustColors = parseRustColors(src);
-  assert.ok(rustColors.size > 0, "parser must find at least one Color::Rgb in Rust source");
+test(
+  "SYNC-02: every Color::Rgb in theme.rs has a matching RGB tuple in dema-theme COLORS",
+  { skip: !findRustSource() },
+  () => {
+    const path = findRustSource();
+    const src = readFileSync(path, "utf8");
+    const rustColors = parseRustColors(src);
+    assert.ok(
+      rustColors.size > 0,
+      "parser must find at least one Color::Rgb in Rust source",
+    );
 
-  const missing = [];
-  const mismatched = [];
-  for (const [name, rustRgb] of rustColors) {
-    const jsColor = COLORS[name];
-    if (!jsColor) {
-      missing.push(name);
-      continue;
+    const missing = [];
+    const mismatched = [];
+    for (const [name, rustRgb] of rustColors) {
+      const jsColor = COLORS[name];
+      if (!jsColor) {
+        missing.push(name);
+        continue;
+      }
+      const jsRgb = jsColor.rgb;
+      if (
+        jsRgb[0] !== rustRgb[0] ||
+        jsRgb[1] !== rustRgb[1] ||
+        jsRgb[2] !== rustRgb[2]
+      ) {
+        mismatched.push(`${name}: rust=[${rustRgb}] js=[${jsRgb}]`);
+      }
     }
-    const jsRgb = jsColor.rgb;
-    if (jsRgb[0] !== rustRgb[0] || jsRgb[1] !== rustRgb[1] || jsRgb[2] !== rustRgb[2]) {
-      mismatched.push(`${name}: rust=[${rustRgb}] js=[${jsRgb}]`);
-    }
-  }
 
-  assert.equal(missing.length, 0, `dema-theme.js is missing ${missing.length} colors from theme.rs: ${missing.join(", ")}`);
-  assert.equal(mismatched.length, 0, `RGB mismatches: ${mismatched.join(" · ")}`);
-});
+    assert.equal(
+      missing.length,
+      0,
+      `dema-theme.js is missing ${missing.length} colors from theme.rs: ${missing.join(", ")}`,
+    );
+    assert.equal(
+      mismatched.length,
+      0,
+      `RGB mismatches: ${mismatched.join(" · ")}`,
+    );
+  },
+);
 
-test("SYNC-03: alias keys (IHSAN=GOLD, ACTIVE=EMERALD, PAT_GUARDIAN=GOLD) preserve identity across runtimes", { skip: !findRustSource() }, () => {
-  // theme.rs lines 28-29 + 41 establish these aliases:
-  //   pub const IHSAN: Color = GOLD;
-  //   pub const ACTIVE: Color = EMERALD;
-  //   pub const PAT_GUARDIAN: Color = GOLD;
-  // The Rust regex only matches Color::Rgb literals, so these alias lines
-  // are skipped by the parser. We verify the JS port preserves the alias.
-  assert.deepEqual([...COLORS.IHSAN.rgb],   [...COLORS.GOLD.rgb]);
-  assert.deepEqual([...COLORS.ACTIVE.rgb],  [...COLORS.EMERALD.rgb]);
-  assert.deepEqual([...COLORS.PAT_GUARDIAN.rgb], [...COLORS.GOLD.rgb]);
-});
+test(
+  "SYNC-03: alias keys (IHSAN=GOLD, ACTIVE=EMERALD, PAT_GUARDIAN=GOLD) preserve identity across runtimes",
+  { skip: !findRustSource() },
+  () => {
+    // theme.rs lines 28-29 + 41 establish these aliases:
+    //   pub const IHSAN: Color = GOLD;
+    //   pub const ACTIVE: Color = EMERALD;
+    //   pub const PAT_GUARDIAN: Color = GOLD;
+    // The Rust regex only matches Color::Rgb literals, so these alias lines
+    // are skipped by the parser. We verify the JS port preserves the alias.
+    assert.deepEqual([...COLORS.IHSAN.rgb], [...COLORS.GOLD.rgb]);
+    assert.deepEqual([...COLORS.ACTIVE.rgb], [...COLORS.EMERALD.rgb]);
+    assert.deepEqual([...COLORS.PAT_GUARDIAN.rgb], [...COLORS.GOLD.rgb]);
+  },
+);
 
 test("SYNC-04: skip is reported clearly when Rust source absent (CI safe)", () => {
   // Sanity check: the test file itself must always run (this very test)
   // even when other SYNC-* are skipped due to Rust source absence.
-  assert.equal(typeof findRustSource(), findRustSource() === null ? "object" : "string");
+  assert.equal(
+    typeof findRustSource(),
+    findRustSource() === null ? "object" : "string",
+  );
 });

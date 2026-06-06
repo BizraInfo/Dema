@@ -10,12 +10,19 @@ import {
   canonicalJson,
   formatEvidenceReceiptPreview,
   sha256Canonical,
-  verifyEvidenceReceiptPreview
+  verifyEvidenceReceiptPreview,
 } from "../packages/verifier/src/evidence-receipt-preview.js";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
-const modulePath = fileURLToPath(new URL("../packages/verifier/src/evidence-receipt-preview.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
+const modulePath = fileURLToPath(
+  new URL(
+    "../packages/verifier/src/evidence-receipt-preview.js",
+    import.meta.url,
+  ),
+);
 const fixedNow = new Date("2026-05-15T00:00:00.000Z");
 
 function makeReceipt(overrides = {}) {
@@ -26,10 +33,10 @@ function makeReceipt(overrides = {}) {
     toolCalls: [{ name: "none", executed: false }],
     decision: {
       verdict: "PREVIEW_REVIEW",
-      ihsan_floor_preview: null
+      ihsan_floor_preview: null,
     },
     now: fixedNow,
-    ...overrides
+    ...overrides,
   });
 }
 
@@ -38,9 +45,12 @@ test("canonicalJson sorts nested keys and preserves JSON text", () => {
 
   assert.equal(
     canonicalJson(value),
-    '{"a":{"a":true,"b":"light"},"list":[{"x":1,"y":2}],"z":1}'
+    '{"a":{"a":true,"b":"light"},"list":[{"x":1,"y":2}],"z":1}',
   );
-  assert.equal(sha256Canonical({ a: 1, b: 2 }), sha256Canonical({ b: 2, a: 1 }));
+  assert.equal(
+    sha256Canonical({ a: 1, b: 2 }),
+    sha256Canonical({ b: 2, a: 1 }),
+  );
 });
 
 test("buildEvidenceReceiptPreview emits a no-mint preview receipt shape", () => {
@@ -80,12 +90,15 @@ test("receipt preview exists for rejected decisions too", () => {
   const receipt = makeReceipt({
     decision: {
       verdict: "PREVIEW_REJECT",
-      ihsan_floor_preview: null
-    }
+      ihsan_floor_preview: null,
+    },
   });
 
   assert.equal(receipt.decision.verdict, "PREVIEW_REJECT");
-  assert.equal(verifyEvidenceReceiptPreview(receipt).verdict, "PARTIAL_PLACEHOLDER");
+  assert.equal(
+    verifyEvidenceReceiptPreview(receipt).verdict,
+    "PARTIAL_PLACEHOLDER",
+  );
 });
 
 test("tampering with each load-bearing field changes or breaks self_digest", () => {
@@ -94,18 +107,24 @@ test("tampering with each load-bearing field changes or breaks self_digest", () 
     { ...original, input_hash: sha256Canonical({ changed: "input" }) },
     { ...original, output_hash: sha256Canonical({ changed: "output" }) },
     { ...original, policy_hash: sha256Canonical({ changed: "policy" }) },
-    { ...original, tool_calls_hash: sha256Canonical([{ changed: "tool" }]) }
+    { ...original, tool_calls_hash: sha256Canonical([{ changed: "tool" }]) },
   ];
 
   for (const mutated of mutations) {
-    assert.equal(verifyEvidenceReceiptPreview(mutated).verdict, "PREVIEW_REJECT");
+    assert.equal(
+      verifyEvidenceReceiptPreview(mutated).verdict,
+      "PREVIEW_REJECT",
+    );
   }
 });
 
 test("evidence receipt preview source contains no filesystem mutation primitives", async () => {
   const source = await readFile(modulePath, "utf8");
 
-  assert.doesNotMatch(source, /\b(writeFile|appendFile|mkdir|rename|unlink|createWriteStream)\b/);
+  assert.doesNotMatch(
+    source,
+    /\b(writeFile|appendFile|mkdir|rename|unlink|createWriteStream)\b/,
+  );
 });
 
 test("formatEvidenceReceiptPreview renders hashes, checks, and no-mint boundary", () => {
@@ -119,7 +138,12 @@ test("formatEvidenceReceiptPreview renders hashes, checks, and no-mint boundary"
 });
 
 test("dema evidence receipt preview prints a human-readable placeholder", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "evidence", "receipt", "preview"]);
+  const { stdout } = await execFileAsync("node", [
+    cliPath,
+    "evidence",
+    "receipt",
+    "preview",
+  ]);
 
   assert.match(stdout, /DEMA Evidence Receipt Preview/);
   assert.match(stdout, /preview-only/);
@@ -127,7 +151,13 @@ test("dema evidence receipt preview prints a human-readable placeholder", async 
 });
 
 test("dema evidence receipt preview --json emits the schema-tagged receipt", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "evidence", "receipt", "preview", "--json"]);
+  const { stdout } = await execFileAsync("node", [
+    cliPath,
+    "evidence",
+    "receipt",
+    "preview",
+    "--json",
+  ]);
   const receipt = JSON.parse(stdout);
 
   assert.equal(receipt.schema, "bizra.dema.evidence_receipt_preview.v0.1");
@@ -140,6 +170,6 @@ test("dema evidence receipt preview --json emits the schema-tagged receipt", asy
 test("dema evidence rejects unknown receipt subcommands", async () => {
   await assert.rejects(
     execFileAsync("node", [cliPath, "evidence", "receipt", "mint"]),
-    /Unknown evidence command/
+    /Unknown evidence command/,
   );
 });

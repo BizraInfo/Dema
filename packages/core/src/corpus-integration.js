@@ -17,7 +17,7 @@ const REQUIRED_BLOCKED_EFFECTS = Object.freeze([
   "return_raw_d4_classified_content",
   "execute_full_text_search_without_consent_scope",
   "share_results_externally",
-  "federation_invocation"
+  "federation_invocation",
 ]);
 
 const DATA_TIERS = Object.freeze({
@@ -25,7 +25,7 @@ const DATA_TIERS = Object.freeze({
   D1: "operator-personal · default-restricted",
   D2: "third-party-mentioned · classified per relationship",
   D3: "sensitive-operational · explicit consent per query",
-  D4: "secret · NEVER returned · NEVER processed"
+  D4: "secret · NEVER returned · NEVER processed",
 });
 
 function safeString(v, fallback = "") {
@@ -45,7 +45,7 @@ export function buildCorpusIntegrationPreview({
   total_messages = 0,
   total_conversations = 0,
   platforms = [],
-  consent_classification_applied = false
+  consent_classification_applied = false,
 } = {}) {
   return Object.freeze({
     schema: SCHEMA,
@@ -54,7 +54,9 @@ export function buildCorpusIntegrationPreview({
     inventory_sha256: safeString(inventory_sha256),
     total_messages: safeNumber(total_messages, 0),
     total_conversations: safeNumber(total_conversations, 0),
-    platforms: Object.freeze(safeArray(platforms).filter((p) => typeof p === "string")),
+    platforms: Object.freeze(
+      safeArray(platforms).filter((p) => typeof p === "string"),
+    ),
     consent_classification_applied,
     data_tiers: DATA_TIERS,
     d4_return_blocked: true,
@@ -64,9 +66,9 @@ export function buildCorpusIntegrationPreview({
       "D4-classified content is NEVER returned · refusal is default",
       "D3 content requires per-query consent · not session-wide",
       "Results are never cached outside ~/.dema",
-      "Federation never invoked on corpus queries"
+      "Federation never invoked on corpus queries",
     ]),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -79,20 +81,32 @@ export function buildCorpusQueryPreview({
   date_range_end = null,
   platforms_filter = [],
   max_results = 10,
-  estimated_tier = "D1"
+  estimated_tier = "D1",
 } = {}) {
   const q = safeString(query_text).trim();
-  const start = date_range_start && typeof date_range_start === "string" ? date_range_start : null;
-  const end = date_range_end && typeof date_range_end === "string" ? date_range_end : null;
-  const platforms = safeArray(platforms_filter).filter((p) => typeof p === "string");
+  const start =
+    date_range_start && typeof date_range_start === "string"
+      ? date_range_start
+      : null;
+  const end =
+    date_range_end && typeof date_range_end === "string"
+      ? date_range_end
+      : null;
+  const platforms = safeArray(platforms_filter).filter(
+    (p) => typeof p === "string",
+  );
   const maxR = safeNumber(max_results, 10);
-  const tier = Object.keys(DATA_TIERS).includes(estimated_tier) ? estimated_tier : "D1";
+  const tier = Object.keys(DATA_TIERS).includes(estimated_tier)
+    ? estimated_tier
+    : "D1";
 
   const violations = [];
   if (q.length === 0) violations.push("empty_query");
   if (q.length > 2000) violations.push("query_too_long");
-  if (maxR <= 0 || maxR > 100) violations.push("max_results_out_of_range · expected 1-100");
-  if (tier === "D4") violations.push("d4_queries_refused · D4 content is never returned");
+  if (maxR <= 0 || maxR > 100)
+    violations.push("max_results_out_of_range · expected 1-100");
+  if (tier === "D4")
+    violations.push("d4_queries_refused · D4 content is never returned");
 
   const valid = violations.length === 0;
   const consentPhrase = valid
@@ -119,7 +133,7 @@ export function buildCorpusQueryPreview({
     results_count: 0,
     audit_trail_required: true,
     receipt_shape_ready: valid,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -136,11 +150,13 @@ export function buildCorpusIntegrationSummary(options = {}) {
     inventory_sha256_length: preview.inventory_sha256.length,
     data_tier_count: Object.keys(preview.data_tiers).length,
     d4_return_blocked: preview.d4_return_blocked,
-    boundary: preview.boundary
+    boundary: preview.boundary,
   });
 }
 
 export const CORPUS_INTEGRATION_SCHEMA_NAME = SCHEMA;
-export const CORPUS_INTEGRATION_QUERY_PREVIEW_SCHEMA_NAME = QUERY_PREVIEW_SCHEMA;
+export const CORPUS_INTEGRATION_QUERY_PREVIEW_SCHEMA_NAME =
+  QUERY_PREVIEW_SCHEMA;
 export const CORPUS_INTEGRATION_DATA_TIERS = DATA_TIERS;
-export const CORPUS_INTEGRATION_REQUIRED_BLOCKED_EFFECTS = REQUIRED_BLOCKED_EFFECTS;
+export const CORPUS_INTEGRATION_REQUIRED_BLOCKED_EFFECTS =
+  REQUIRED_BLOCKED_EFFECTS;

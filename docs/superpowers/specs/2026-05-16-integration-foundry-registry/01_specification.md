@@ -20,7 +20,7 @@ This spec covers one module. It does **not** cover the broader "Integration Foun
 - `packages/core/src/shared-urp-world-preview.js` (committed `13f32c5`) declares the locked shared-URP world surface with nodes 1-4 in `ghost_hold`.
 - `scripts/review/boundary-invariant-check.mjs` (committed `7e24611`) walks every `packages/*/src/*-preview.js` and asserts no authority-flag-named key is set to `true`. The new module **must** pass this lint.
 - `~/.claude/.../memory/project_giants_integration_map.md` (operator memory, 2026-05-11) documents 11 giants and the "BIZRA absorbs value, not identity" doctrine. This spec lifts the in-tree-testable subset of that operator canon into the repo.
-- 7-line operating canon (Mumu, 2026-05-16): *Observe the giant. Extract the pattern. Translate into BIZRA primitive. Put behind consent + EffectCap. Record with EvidenceChain. Expose through DEMA UX. Only then allow use.*
+- 7-line operating canon (Mumu, 2026-05-16): _Observe the giant. Extract the pattern. Translate into BIZRA primitive. Put behind consent + EffectCap. Record with EvidenceChain. Expose through DEMA UX. Only then allow use._
 
 ## Product objective
 
@@ -43,6 +43,7 @@ The module emits this record set deterministically. Two calls return deeply-equa
 ### F-01 · Module exports
 
 The module must export:
+
 - `EXTERNAL_PATTERN_REGISTRY_PREVIEW_SCHEMA` — const string `"bizra.dema.external_pattern_registry_preview.v0.1"`
 - `buildExternalPatternRegistryPreview()` — builder returning the registry envelope
 
@@ -51,6 +52,7 @@ No other exports are required at v0.
 ### F-02 · Registry envelope shape
 
 The envelope returned by the builder must contain:
+
 - `schema` (string, const)
 - `mode` (string, const `"PREVIEW_ONLY"`)
 - `truth_label` (string, const `"DECLARED"`)
@@ -63,6 +65,7 @@ The envelope returned by the builder must contain:
 ### F-03 · Pattern record shape
 
 Each entry in `patterns[]` must be a frozen object with:
+
 - `source` (string) — e.g. `"mcp"`, `"a2a"`, `"autohotkey"`, `"hooks"`, `"smart_contracts"`, `"telescript"`, `"pi_dev_onboarding"`, `"openclaw_control_plane"`, `"hermes_messaging"`, `"agent_as_a_service"`, `"harberger_cost"`
 - `extracted_peak` (string) — one-sentence description of the borrowable mechanism
 - `bizra_binding` (object) with:
@@ -79,6 +82,7 @@ Each entry in `patterns[]` must be a frozen object with:
 ### F-04 · Boundary invariant
 
 The envelope's `boundary` object must include and set to `false`:
+
 - `runtime`, `federation`, `mint`, `node_connection`, `economic_settlement`, `raw_data_exchange`, `authority_imported`, `mcp_server_invoked`, `a2a_network_call_made`, `hook_executed`, `automation_run`, `contract_executed`
 
 The new module must pass `scripts/review/boundary-invariant-check.mjs` cleanly.

@@ -9,7 +9,7 @@ import {
   draftCodeChangePlan,
   PAT_CODE_APPRENTICE_SCHEMA_NAME,
   PAT_CODE_APPRENTICE_CHANGE_PLAN_SCHEMA_NAME,
-  PAT_CODE_APPRENTICE_PERSONA
+  PAT_CODE_APPRENTICE_PERSONA,
 } from "../packages/core/src/pat-code-apprentice.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 
@@ -66,7 +66,7 @@ test("draftCodeChangePlan emits valid plan with allowed paths", () => {
     change_intent: "add a new test file",
     paths_to_edit: ["packages/core/src/new.js"],
     change_type: "create",
-    declared_scope_root: "packages/core/src/"
+    declared_scope_root: "packages/core/src/",
   });
   assert.equal(plan.schema, "bizra.dema.code_change_plan.v0.1");
   assert.equal(plan.valid, true);
@@ -78,7 +78,7 @@ test("draftCodeChangePlan refuses path in .github/workflows/", () => {
   const plan = draftCodeChangePlan({
     change_intent: "modify CI",
     paths_to_edit: [".github/workflows/check.yml"],
-    declared_scope_root: ".github/"
+    declared_scope_root: ".github/",
   });
   assert.equal(plan.valid, false);
   assert.match(plan.refusal_reason, /forbidden_path/);
@@ -88,12 +88,12 @@ test("draftCodeChangePlan refuses path matching credentials/secrets/.env", () =>
   const plan1 = draftCodeChangePlan({
     change_intent: "modify env",
     paths_to_edit: [".env"],
-    declared_scope_root: "."
+    declared_scope_root: ".",
   });
   const plan2 = draftCodeChangePlan({
     change_intent: "modify",
     paths_to_edit: ["packages/secrets/api.js"],
-    declared_scope_root: "packages/"
+    declared_scope_root: "packages/",
   });
   assert.equal(plan1.valid, false);
   assert.equal(plan2.valid, false);
@@ -103,7 +103,7 @@ test("draftCodeChangePlan refuses path outside declared scope root", () => {
   const plan = draftCodeChangePlan({
     change_intent: "edit outside scope",
     paths_to_edit: ["packages/other/file.js"],
-    declared_scope_root: "packages/core/"
+    declared_scope_root: "packages/core/",
   });
   assert.equal(plan.valid, false);
   assert.match(plan.refusal_reason, /outside_declared_scope/);
@@ -112,7 +112,7 @@ test("draftCodeChangePlan refuses path outside declared scope root", () => {
 test("draftCodeChangePlan refuses missing declared_scope_root", () => {
   const plan = draftCodeChangePlan({
     change_intent: "edit something",
-    paths_to_edit: ["packages/core/src/x.js"]
+    paths_to_edit: ["packages/core/src/x.js"],
   });
   assert.equal(plan.valid, false);
   assert.match(plan.refusal_reason, /missing_declared_scope_root/);
@@ -122,7 +122,7 @@ test("Adversarial · non-string paths filtered", () => {
   const plan = draftCodeChangePlan({
     change_intent: "test",
     paths_to_edit: ["valid.js", () => "evil", Symbol("x"), 42],
-    declared_scope_root: "."
+    declared_scope_root: ".",
   });
   assert.equal(plan.path_analysis.length, 1);
   assert.equal(plan.path_analysis[0].path, "valid.js");
@@ -133,7 +133,7 @@ test("Adversarial · change_type defaults to 'edit' for unknown types", () => {
     change_intent: "test",
     paths_to_edit: ["x.js"],
     change_type: "malicious",
-    declared_scope_root: "."
+    declared_scope_root: ".",
   });
   assert.equal(plan.change_type, "edit");
 });
@@ -142,7 +142,7 @@ test("Plan output is deep-frozen", () => {
   const plan = draftCodeChangePlan({
     change_intent: "test",
     paths_to_edit: ["x.js"],
-    declared_scope_root: "."
+    declared_scope_root: ".",
   });
   assert.ok(Object.isFrozen(plan));
   assert.ok(Object.isFrozen(plan.path_analysis));

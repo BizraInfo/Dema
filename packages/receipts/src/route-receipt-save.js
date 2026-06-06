@@ -36,7 +36,8 @@ import { homedir } from "node:os";
 
 export const ROUTE_RECEIPT_SAVE_CONSENT = "GO: save local model route receipt";
 
-export const ROUTE_RECEIPT_SAVE_SCHEMA = "bizra.dema.local_model_route_receipt_save.v0.1";
+export const ROUTE_RECEIPT_SAVE_SCHEMA =
+  "bizra.dema.local_model_route_receipt_save.v0.1";
 
 function sha256Hex(content) {
   return createHash("sha256").update(content).digest("hex");
@@ -60,7 +61,10 @@ function resolveDemaHome(demaHome) {
 // Compute the target save path (and content) for a route receipt without
 // performing any I/O. Useful for callers that want the path BEFORE deciding
 // to write.
-export function buildRouteReceiptSavePath(receipt, { demaHome, pretty = false } = {}) {
+export function buildRouteReceiptSavePath(
+  receipt,
+  { demaHome, pretty = false } = {},
+) {
   const home = resolveDemaHome(demaHome);
   const content = serializeRouteReceiptForSave(receipt, { pretty });
   const sha = sha256Hex(content);
@@ -72,7 +76,7 @@ export function buildRouteReceiptSavePath(receipt, { demaHome, pretty = false } 
     path: join(dir, filename),
     sha256: sha,
     content,
-    dema_home: home
+    dema_home: home,
   };
 }
 
@@ -84,7 +88,9 @@ async function assertContained(receiptsDir, finalPath) {
   const absFinal = resolve(receiptsDir, finalPath);
   const rel = relative(realRoot, absFinal);
   if (rel === ".." || rel.startsWith(".." + sep) || isAbsolute(rel)) {
-    throw new Error(`route-receipt-save: save target escapes receipts dir: ${absFinal}`);
+    throw new Error(
+      `route-receipt-save: save target escapes receipts dir: ${absFinal}`,
+    );
   }
 }
 
@@ -97,24 +103,33 @@ async function assertContained(receiptsDir, finalPath) {
 //
 // Never raises on consent failure. Raises only on unexpected I/O errors
 // the caller should surface verbatim.
-export async function saveRouteReceipt(receipt, { demaHome, consent, pretty = false } = {}) {
+export async function saveRouteReceipt(
+  receipt,
+  { demaHome, consent, pretty = false } = {},
+) {
   if (typeof consent !== "string" || consent.length === 0) {
     return {
       saved: false,
       reason: "consent_missing",
-      expected: ROUTE_RECEIPT_SAVE_CONSENT
+      expected: ROUTE_RECEIPT_SAVE_CONSENT,
     };
   }
   if (consent !== ROUTE_RECEIPT_SAVE_CONSENT) {
     return {
       saved: false,
       reason: "consent_mismatch",
-      expected: ROUTE_RECEIPT_SAVE_CONSENT
+      expected: ROUTE_RECEIPT_SAVE_CONSENT,
     };
   }
 
-  const { dir: receiptsDir, filename, path: finalPath, sha256: sha, content, dema_home } =
-    buildRouteReceiptSavePath(receipt, { demaHome, pretty });
+  const {
+    dir: receiptsDir,
+    filename,
+    path: finalPath,
+    sha256: sha,
+    content,
+    dema_home,
+  } = buildRouteReceiptSavePath(receipt, { demaHome, pretty });
 
   await mkdir(receiptsDir, { recursive: true });
 
@@ -135,12 +150,16 @@ export async function saveRouteReceipt(receipt, { demaHome, consent, pretty = fa
   } catch (err) {
     // Best-effort cleanup of the temp file. Ignore unlink failures (the
     // original error is what matters).
-    try { await unlink(tmpPath); } catch { /* swallow */ }
+    try {
+      await unlink(tmpPath);
+    } catch {
+      /* swallow */
+    }
     return {
       saved: false,
       reason: "io_error",
       expected: ROUTE_RECEIPT_SAVE_CONSENT,
-      error_message: err?.message ?? String(err)
+      error_message: err?.message ?? String(err),
     };
   }
 
@@ -149,6 +168,6 @@ export async function saveRouteReceipt(receipt, { demaHome, consent, pretty = fa
     path: finalPath,
     filename,
     sha256: sha,
-    dema_home
+    dema_home,
   });
 }

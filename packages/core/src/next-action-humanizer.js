@@ -24,8 +24,7 @@ export const OBSERVATION_HUMANIZER = Object.freeze({
     "Fix malformed process inputs before the next slice.",
   restore_clean_baseline:
     "Restore a clean baseline — current state has drift to reconcile.",
-  hold_step7_ceremony:
-    "Hold the Step 7 ceremony — preconditions are ready.",
+  hold_step7_ceremony: "Hold the Step 7 ceremony — preconditions are ready.",
   reduce_noise_before_next_slice:
     "Reduce signal-to-noise before starting the next slice.",
   continue_verified_micro_slice:

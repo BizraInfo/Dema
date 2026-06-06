@@ -6,12 +6,12 @@ Frozen snapshots of measurable-now engineering metrics. Each baseline binds to a
 
 Per [key-maker-epistemic-conduct-v0.1.md §6](../02-architecture/key-maker-epistemic-conduct-v0.1.md), Dema performance has four layers — only **L1** is captured here:
 
-| Layer | What it measures | Measurable at Ring-0? |
-|---|---|---|
-| **L1 — engineering** | LOC · test count · pass rate · schema count · CLI count · gate state | YES — this folder |
-| L2 — reasoning-shape | fixture + scorer against the 5 invariants | Requires fixture-set + scorer (deferred) |
-| L3 — reviewer experience | time-to-falsification · form scores | Requires Ring-1 reviewer feedback |
-| L4 — operator-life impact | did Dema actually help over time | NOT measurable empirically at Ring-0 |
+| Layer                     | What it measures                                                     | Measurable at Ring-0?                    |
+| ------------------------- | -------------------------------------------------------------------- | ---------------------------------------- |
+| **L1 — engineering**      | LOC · test count · pass rate · schema count · CLI count · gate state | YES — this folder                        |
+| L2 — reasoning-shape      | fixture + scorer against the 5 invariants                            | Requires fixture-set + scorer (deferred) |
+| L3 — reviewer experience  | time-to-falsification · form scores                                  | Requires Ring-1 reviewer feedback        |
+| L4 — operator-life impact | did Dema actually help over time                                     | NOT measurable empirically at Ring-0     |
 
 L2/L3/L4 are intentionally out-of-scope for L1 baselines. Mixing layers would violate the certainty-mapping invariant.
 
@@ -61,21 +61,25 @@ A baseline is one row in a continuous ledger. Trend matters more than any single
 {
   "schema": "bizra.dema.baseline_l1.v0.1",
   "git": {
-    "commit_sha": "...",       // deterministic per source state
+    "commit_sha": "...", // deterministic per source state
     "branch": "...",
-    "working_tree_clean": true // false if uncommitted changes present
+    "working_tree_clean": true, // false if uncommitted changes present
   },
   "source_state": {
-    "packages_loc": 12860,            // wc -l equivalent
-    "tests_files": 61,                // count of *.test.js files
-    "schemas_declared_unique": 68,    // unique bizra.dema.* strings
-    "cli_commands_in_help": 34        // commands listed in HELP text
+    "packages_loc": 12860, // wc -l equivalent
+    "tests_files": 61, // count of *.test.js files
+    "schemas_declared_unique": 68, // unique bizra.dema.* strings
+    "cli_commands_in_help": 34, // commands listed in HELP text
   },
   "test_state": {
-    "pass": 677, "fail": 0, "total": 677,
-    "completed": true                  // false if --include-tests was omitted
+    "pass": 677,
+    "fail": 0,
+    "total": 677,
+    "completed": true, // false if --include-tests was omitted
   },
-  "boundary": { /* canonical 16-key all-false */ }
+  "boundary": {
+    /* canonical 16-key all-false */
+  },
 }
 ```
 

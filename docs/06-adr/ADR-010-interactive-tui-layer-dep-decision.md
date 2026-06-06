@@ -135,20 +135,20 @@ Option D differs from Option B in scope: B writes the FULL phase_04 spec at zero
 
 ## Trade-off matrix
 
-| Dimension | Option A · Ink | Option B · Full zero-dep | Option C · Other lib | Option D · Minimal zero-dep |
-|---|---|---|---|---|
-| Doctrine cost | High (first deps) | Zero | Medium (1 lib) | **Zero** |
-| Supply-chain surface | High (~120 deps) | Zero | Medium (1 lib) | **Zero** |
-| Build step required | Yes (JSX) | No | No | **No** |
-| Time-to-v0.2 | 3-5 days | 1-2 days | Variable | **1-1.5 days** |
-| LOC delta | ~317 | ~150-200 | Variable | **~180** |
-| Match to existing pattern | No (new architecture) | Yes (extends tui-formatter convention) | No | **Yes** |
-| `dema receipts` cold-start cost | Same (dynamic import) | Same | Same | **Same** |
-| Subscreen complexity (memory browser) | Native Ink | Re-render loop | Library-specific | Deferred to v0.3 (subprocess spawn `dema memory list`) |
-| Daughter Test posture | Marginal | Pass | Per-library | **Pass** |
-| Reversibility (`git revert` cost) | Hard (deps + build) | Easy | Medium | **Easy** |
-| ADR-005 consent gate fit | Native | Native | Native | **Native** |
-| Riba-Zero coherence | N/A · UI layer only | N/A · UI layer only | N/A · UI layer only | **N/A · UI layer only** |
+| Dimension                             | Option A · Ink        | Option B · Full zero-dep               | Option C · Other lib | Option D · Minimal zero-dep                            |
+| ------------------------------------- | --------------------- | -------------------------------------- | -------------------- | ------------------------------------------------------ |
+| Doctrine cost                         | High (first deps)     | Zero                                   | Medium (1 lib)       | **Zero**                                               |
+| Supply-chain surface                  | High (~120 deps)      | Zero                                   | Medium (1 lib)       | **Zero**                                               |
+| Build step required                   | Yes (JSX)             | No                                     | No                   | **No**                                                 |
+| Time-to-v0.2                          | 3-5 days              | 1-2 days                               | Variable             | **1-1.5 days**                                         |
+| LOC delta                             | ~317                  | ~150-200                               | Variable             | **~180**                                               |
+| Match to existing pattern             | No (new architecture) | Yes (extends tui-formatter convention) | No                   | **Yes**                                                |
+| `dema receipts` cold-start cost       | Same (dynamic import) | Same                                   | Same                 | **Same**                                               |
+| Subscreen complexity (memory browser) | Native Ink            | Re-render loop                         | Library-specific     | Deferred to v0.3 (subprocess spawn `dema memory list`) |
+| Daughter Test posture                 | Marginal              | Pass                                   | Per-library          | **Pass**                                               |
+| Reversibility (`git revert` cost)     | Hard (deps + build)   | Easy                                   | Medium               | **Easy**                                               |
+| ADR-005 consent gate fit              | Native                | Native                                 | Native               | **Native**                                             |
+| Riba-Zero coherence                   | N/A · UI layer only   | N/A · UI layer only                    | N/A · UI layer only  | **N/A · UI layer only**                                |
 
 **Recommendation: Option D.**
 

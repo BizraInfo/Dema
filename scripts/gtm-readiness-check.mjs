@@ -11,7 +11,8 @@ const REPO_ROOT = dirname(SCRIPT_DIR);
 
 const GTM_PLAN_FILE = "docs/gtm/BIZRA_90_Day_GTM_v0_1.md";
 const ADR_009_FILE = "docs/06-adr/ADR-009-poi-proof-of-impact-design.md";
-const ADR_014_FILE = "docs/06-adr/ADR-014-three-runtime-architecture-canonization.md";
+const ADR_014_FILE =
+  "docs/06-adr/ADR-014-three-runtime-architecture-canonization.md";
 
 const REQUIRED_FILES = [
   "docs/gtm/BIZRA_90_Day_GTM_v0_1.md",
@@ -22,7 +23,7 @@ const REQUIRED_FILES = [
   "docs/LLM_SYSTEM_FLOW.md",
   "docs/HOUSE_OF_WISDOM_UKE_URP_CANON_v0_1.md",
   ADR_009_FILE,
-  ADR_014_FILE
+  ADR_014_FILE,
 ];
 
 const OPEN_OPERATOR_GATES = [
@@ -32,7 +33,7 @@ const OPEN_OPERATOR_GATES = [
     phase: 1,
     status: "open_operator_required",
     phrase: "GO send pack to <name>",
-    expected_evidence: "~/.dema/lighthouse/ring-1/send-receipts/"
+    expected_evidence: "~/.dema/lighthouse/ring-1/send-receipts/",
   },
   {
     id: "author_poi_v0_1_test_plan",
@@ -40,7 +41,7 @@ const OPEN_OPERATOR_GATES = [
     phase: 1,
     status: "open_exact_go_required",
     phrase: "GO author POI v0.1 test plan (no impl)",
-    expected_evidence: "dedicated POI v0.1 test-plan artifact"
+    expected_evidence: "dedicated POI v0.1 test-plan artifact",
   },
   {
     id: "urp_local_pool_init_n1",
@@ -48,7 +49,7 @@ const OPEN_OPERATOR_GATES = [
     phase: 2,
     status: "open_phase2_exact_go_required",
     phrase: "GO urp local init N=1",
-    expected_evidence: "dema urp status --json"
+    expected_evidence: "dema urp status --json",
   },
   {
     id: "impl_poi_v0_1",
@@ -56,7 +57,7 @@ const OPEN_OPERATOR_GATES = [
     phase: 2,
     status: "open_phase2_exact_go_required",
     phrase: "GO impl POI v0.1",
-    expected_evidence: "tests/poi-v0_1*.test.js"
+    expected_evidence: "tests/poi-v0_1*.test.js",
   },
   {
     id: "sync_adr_013_status",
@@ -64,7 +65,8 @@ const OPEN_OPERATOR_GATES = [
     phase: 1,
     status: "open_exact_go_required",
     phrase: "GO sync ADR-013 status to Accepted",
-    expected_evidence: "docs/06-adr/ADR-013-visual-language-isomorphism-bizra-cli-to-dema.md"
+    expected_evidence:
+      "docs/06-adr/ADR-013-visual-language-isomorphism-bizra-cli-to-dema.md",
   },
   {
     id: "resolve_sat5_schema_canon_drift",
@@ -73,9 +75,9 @@ const OPEN_OPERATOR_GATES = [
     status: "open_exact_go_required",
     phrases: [
       "GO resolve SAT-5 canon drift by founding-doc verification",
-      "GO accept SAT-5 parallel vocabularies"
+      "GO accept SAT-5 parallel vocabularies",
     ],
-    expected_evidence: "self-contained SAT-5 canon note"
+    expected_evidence: "self-contained SAT-5 canon note",
   },
   {
     id: "materialize_11_agents",
@@ -83,7 +85,7 @@ const OPEN_OPERATOR_GATES = [
     phase: 2,
     status: "open_phase2_exact_go_required",
     phrase: "GO materialize 11 agents",
-    expected_evidence: "~/.dema/agents/*/capability.yaml"
+    expected_evidence: "~/.dema/agents/*/capability.yaml",
   },
   {
     id: "send_ring3_cohort",
@@ -91,8 +93,8 @@ const OPEN_OPERATOR_GATES = [
     phase: 3,
     status: "open_phase3_exact_go_required",
     phrase: "GO send v1.1 pack to <cohort>",
-    expected_evidence: "Ring-3 send receipt after Phase 2 close"
-  }
+    expected_evidence: "Ring-3 send receipt after Phase 2 close",
+  },
 ].map((gate) => ({ ...gate, boundary_effect_performed: false }));
 
 const PHASE_STATUS_TEMPLATE = [
@@ -104,19 +106,20 @@ const PHASE_STATUS_TEMPLATE = [
       "send_lighthouse_pack_ring1",
       "author_poi_v0_1_test_plan",
       "sync_adr_013_status",
-      "resolve_sat5_schema_canon_drift"
+      "resolve_sat5_schema_canon_drift",
     ],
     external_evidence_required: [
       "~/.dema/lighthouse/ring-1/send-receipts/",
       "~/.dema/lighthouse/ring-1/feedback/",
-      "phase-1-close receipt after authorized Ring-1 feedback parsing"
+      "phase-1-close receipt after authorized Ring-1 feedback parsing",
     ],
     milestone_gate_phrases: [
       "GO author amendment ADR from <finding>",
       "GO mint phase-1-close",
-      "GO phase-2 kick-off authorized"
+      "GO phase-2 kick-off authorized",
     ],
-    next_safe_action: "Await one Phase 1 exact-GO phrase from the operator or external Ring-1 feedback evidence."
+    next_safe_action:
+      "Await one Phase 1 exact-GO phrase from the operator or external Ring-1 feedback evidence.",
   },
   {
     id: "phase_2",
@@ -125,48 +128,64 @@ const PHASE_STATUS_TEMPLATE = [
     open_gate_ids: [
       "urp_local_pool_init_n1",
       "impl_poi_v0_1",
-      "materialize_11_agents"
+      "materialize_11_agents",
     ],
     external_evidence_required: [
       "all Phase 1 success criteria closed",
-      "phase-2 kick-off authorization"
+      "phase-2 kick-off authorization",
     ],
     milestone_gate_phrases: [
       "GO receipt POI envelope #1 to chain",
       "GO refresh lighthouse pack to v1.1",
       "GO send v1.1 pack to <names>",
-      "GO mint phase-2-close"
+      "GO mint phase-2-close",
     ],
-    next_safe_action: "Keep POI, URP local init, and agent materialization in planning mode until Phase 1 closes."
+    next_safe_action:
+      "Keep POI, URP local init, and agent materialization in planning mode until Phase 1 closes.",
   },
   {
     id: "phase_3",
     label: "Phase 3 · design-partner cohort and pre-public readiness",
     status: "blocked_until_phase_2_closes",
-    open_gate_ids: [
-      "send_ring3_cohort"
-    ],
+    open_gate_ids: ["send_ring3_cohort"],
     external_evidence_required: [
       "phase-2-close receipt",
-      "Ring-2 cohort evidence"
+      "Ring-2 cohort evidence",
     ],
     milestone_gate_phrases: [
       "GO impl <amendment N>",
       "GO impl URP PAT-SAT allocation preview",
       "GO ots anchor current main",
-      "GO mint 90-day close"
+      "GO mint 90-day close",
     ],
-    next_safe_action: "Keep Ring-3 send and public-adjacent activity blocked until Phase 2 closes."
-  }
+    next_safe_action:
+      "Keep Ring-3 send and public-adjacent activity blocked until Phase 2 closes.",
+  },
 ].map((phase) => ({ ...phase, boundary_effect_performed: false }));
 
 const STALE_MARKERS = [
   { pattern: /~2240|~2280|~2340/, reason: "stale projected test counts" },
-  { pattern: /#N where N|N ≥ (?:71|75|80|90)/, reason: "stale projected receipt thresholds" },
-  { pattern: /Phase-1-close receipt minted|Phase-2-close receipt minted|90-day close receipt minted/, reason: "ungated receipt-mint wording" },
-  { pattern: /Next exact phrases after Ring-1 feedback/, reason: "POI test-plan phrase must be independent from Ring-1 feedback" },
-  { pattern: /\/tmp\/bizra-overnight\/lighthouse-pack\/ AND/, reason: "non-durable Lighthouse pack path promoted as current" },
-  { pattern: /Issue #56 open|see prior turn|TBD|TODO/, reason: "open placeholder or stale issue wording" }
+  {
+    pattern: /#N where N|N ≥ (?:71|75|80|90)/,
+    reason: "stale projected receipt thresholds",
+  },
+  {
+    pattern:
+      /Phase-1-close receipt minted|Phase-2-close receipt minted|90-day close receipt minted/,
+    reason: "ungated receipt-mint wording",
+  },
+  {
+    pattern: /Next exact phrases after Ring-1 feedback/,
+    reason: "POI test-plan phrase must be independent from Ring-1 feedback",
+  },
+  {
+    pattern: /\/tmp\/bizra-overnight\/lighthouse-pack\/ AND/,
+    reason: "non-durable Lighthouse pack path promoted as current",
+  },
+  {
+    pattern: /Issue #56 open|see prior turn|TBD|TODO/,
+    reason: "open placeholder or stale issue wording",
+  },
 ];
 
 const REQUIRED_MARKERS = [
@@ -181,8 +200,8 @@ const REQUIRED_MARKERS = [
       "GO author POI v0.1 test plan (no impl)",
       "npm run urp:discovery",
       "npm run proof:room",
-      "~/.dema/lighthouse/ring-1/feedback/"
-    ]
+      "~/.dema/lighthouse/ring-1/feedback/",
+    ],
   },
   {
     name: "phase1_packet_required_phrases",
@@ -194,8 +213,8 @@ const REQUIRED_MARKERS = [
       "GO impl POI v0.1",
       "independent of the Ring-1 send",
       "~/.dema/lighthouse/ring-1/send-receipts/",
-      "~/.dema/lighthouse/ring-1/feedback/"
-    ]
+      "~/.dema/lighthouse/ring-1/feedback/",
+    ],
   },
   {
     name: "lighthouse_operator_packet_link",
@@ -203,8 +222,8 @@ const REQUIRED_MARKERS = [
     markers: [
       "docs/gtm/BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md",
       "GO send pack to <name>",
-      "authorize a public post, a batch send, a receipt mint, or any runtime action"
-    ]
+      "authorize a public post, a batch send, a receipt mint, or any runtime action",
+    ],
   },
   {
     name: "claim_register_uke_urp_boundary",
@@ -212,9 +231,9 @@ const REQUIRED_MARKERS = [
     markers: [
       "UKE is the designed SAT-governed House of Wisdom knowledge cortex inside URP",
       "URP is the designed shared substrate",
-      "DESIGNED_NOT_LIVE"
-    ]
-  }
+      "DESIGNED_NOT_LIVE",
+    ],
+  },
 ];
 
 const IN_REPO_LAUNCH_PACK_DIR = "docs/launch-pack-v0.1";
@@ -232,11 +251,14 @@ export function resolveDemaHome({ explicit = null } = {}) {
 }
 
 /** Prefer operator pack on disk; fall back to vendored launch pack for CI and fresh clones. */
-export function resolveLighthousePackDir({ root = REPO_ROOT, explicit = null } = {}) {
+export function resolveLighthousePackDir({
+  root = REPO_ROOT,
+  explicit = null,
+} = {}) {
   if (explicit) return explicit;
   const candidates = [
     defaultLighthousePackDir(),
-    join(root, IN_REPO_LAUNCH_PACK_DIR)
+    join(root, IN_REPO_LAUNCH_PACK_DIR),
   ].filter(Boolean);
   for (const dir of candidates) {
     if (existsSync(join(dir, "MANIFEST.sha256"))) return dir;
@@ -269,18 +291,33 @@ export async function verifyManifestLines({ dir, manifestText }) {
 
     const match = trimmed.match(/^([a-f0-9]{64})\s+\*?(.+)$/i);
     if (!match) {
-      entries.push({ path: null, expected_sha256: null, actual_sha256: null, status: "invalid_manifest_line" });
+      entries.push({
+        path: null,
+        expected_sha256: null,
+        actual_sha256: null,
+        status: "invalid_manifest_line",
+      });
       continue;
     }
 
     const [, expected, relativePath] = match;
     const fullPath = resolve(dir, relativePath);
     if (!withinDirectory(dir, fullPath)) {
-      entries.push({ path: relativePath, expected_sha256: expected, actual_sha256: null, status: "path_outside_pack" });
+      entries.push({
+        path: relativePath,
+        expected_sha256: expected,
+        actual_sha256: null,
+        status: "path_outside_pack",
+      });
       continue;
     }
     if (!existsSync(fullPath)) {
-      entries.push({ path: relativePath, expected_sha256: expected, actual_sha256: null, status: "missing" });
+      entries.push({
+        path: relativePath,
+        expected_sha256: expected,
+        actual_sha256: null,
+        status: "missing",
+      });
       continue;
     }
 
@@ -289,14 +326,14 @@ export async function verifyManifestLines({ dir, manifestText }) {
       path: relativePath,
       expected_sha256: expected,
       actual_sha256: actual,
-      status: actual === expected ? "ok" : "mismatch"
+      status: actual === expected ? "ok" : "mismatch",
     });
   }
 
   return {
     ok: entries.length > 0 && entries.every((entry) => entry.status === "ok"),
     entry_count: entries.length,
-    entries
+    entries,
   };
 }
 
@@ -304,7 +341,7 @@ function checkRequiredFiles({ root }) {
   return REQUIRED_FILES.map((path) => ({
     name: `file:${path}`,
     ok: existsSync(join(root, path)),
-    file: path
+    file: path,
   }));
 }
 
@@ -316,7 +353,7 @@ function checkRequiredMarkers(fileTexts) {
       name: check.name,
       ok: missing.length === 0,
       file: check.file,
-      missing
+      missing,
     };
   });
 }
@@ -333,7 +370,7 @@ function checkStaleMarkers(fileTexts) {
           line: index + 1,
           kind: "stale_gtm_marker",
           reason: stale.reason,
-          text: line.trim()
+          text: line.trim(),
         });
       }
     });
@@ -342,7 +379,7 @@ function checkStaleMarkers(fileTexts) {
   return {
     name: "stale_gtm_markers_absent",
     ok: findings.length === 0,
-    findings
+    findings,
   };
 }
 
@@ -365,7 +402,7 @@ function checkOpenOperatorGates(fileTexts) {
     ok: missing.length === 0,
     file: GTM_PLAN_FILE,
     gate_count: OPEN_OPERATOR_GATES.length,
-    missing
+    missing,
   };
 }
 
@@ -383,8 +420,11 @@ function checkPhaseMilestoneGates(fileTexts) {
     name: "phase_milestone_gates_declared",
     ok: missing.length === 0,
     file: GTM_PLAN_FILE,
-    gate_count: PHASE_STATUS_TEMPLATE.reduce((count, phase) => count + phase.milestone_gate_phrases.length, 0),
-    missing
+    gate_count: PHASE_STATUS_TEMPLATE.reduce(
+      (count, phase) => count + phase.milestone_gate_phrases.length,
+      0,
+    ),
+    missing,
   };
 }
 
@@ -392,7 +432,9 @@ function buildPhaseStatus(openOperatorGates = OPEN_OPERATOR_GATES) {
   const gatesById = new Map(openOperatorGates.map((gate) => [gate.id, gate]));
   return PHASE_STATUS_TEMPLATE.map((phase) => ({
     ...phase,
-    open_gates: phase.open_gate_ids.map((id) => gatesById.get(id)).filter(Boolean)
+    open_gates: phase.open_gate_ids
+      .map((id) => gatesById.get(id))
+      .filter(Boolean),
   }));
 }
 
@@ -406,7 +448,7 @@ async function listMarkdownEvidenceFiles(dir) {
     return {
       ok: false,
       error: "dema_home_unavailable",
-      entries: []
+      entries: [],
     };
   }
 
@@ -421,27 +463,27 @@ async function listMarkdownEvidenceFiles(dir) {
       entries.push({
         name: dirent.name,
         path: fullPath,
-        size_bytes: fileStat.size
+        size_bytes: fileStat.size,
       });
     }
     entries.sort((a, b) => a.name.localeCompare(b.name));
     return {
       ok: true,
       error: null,
-      entries
+      entries,
     };
   } catch (error) {
     if (error?.code === "ENOENT") {
       return {
         ok: true,
         error: null,
-        entries: []
+        entries: [],
       };
     }
     return {
       ok: false,
       error: error?.code ?? error?.message ?? "evidence_scan_failed",
-      entries: []
+      entries: [],
     };
   }
 }
@@ -450,8 +492,10 @@ function phase1EvidenceStatus(counts) {
   if (counts.send_receipts > 0 && counts.feedback_documents > 0) {
     return "evidence_present_ready_for_operator_review";
   }
-  if (counts.send_receipts > 0) return "send_recorded_waiting_for_reviewer_feedback";
-  if (counts.feedback_documents > 0) return "feedback_recorded_waiting_for_send_receipt";
+  if (counts.send_receipts > 0)
+    return "send_recorded_waiting_for_reviewer_feedback";
+  if (counts.feedback_documents > 0)
+    return "feedback_recorded_waiting_for_send_receipt";
   return "waiting_for_operator_send_and_reviewer_feedback";
 }
 
@@ -471,21 +515,31 @@ function phase1EvidenceNextSafeAction(status) {
   return "Await exact `GO send pack to <name>` and then one Ring-1 feedback document; no send, outreach, or receipt mint is performed by this audit.";
 }
 
-async function buildPhase1EvidenceReport({ demaHome = resolveDemaHome() } = {}) {
-  const sendReceiptsDir = demaHome ? join(demaHome, "lighthouse", "ring-1", "send-receipts") : null;
-  const feedbackDir = demaHome ? join(demaHome, "lighthouse", "ring-1", "feedback") : null;
+async function buildPhase1EvidenceReport({
+  demaHome = resolveDemaHome(),
+} = {}) {
+  const sendReceiptsDir = demaHome
+    ? join(demaHome, "lighthouse", "ring-1", "send-receipts")
+    : null;
+  const feedbackDir = demaHome
+    ? join(demaHome, "lighthouse", "ring-1", "feedback")
+    : null;
   const sendReceipts = await listMarkdownEvidenceFiles(sendReceiptsDir);
   const feedbackDocuments = await listMarkdownEvidenceFiles(feedbackDir);
   const counts = {
     send_receipts: sendReceipts.entries.length,
-    feedback_documents: feedbackDocuments.entries.length
+    feedback_documents: feedbackDocuments.entries.length,
   };
   const scanErrors = [
     sendReceipts.ok ? null : `send_receipts:${sendReceipts.error}`,
-    feedbackDocuments.ok ? null : `feedback_documents:${feedbackDocuments.error}`
+    feedbackDocuments.ok
+      ? null
+      : `feedback_documents:${feedbackDocuments.error}`,
   ].filter(Boolean);
   const scanOk = Boolean(demaHome) && scanErrors.length === 0;
-  const status = scanOk ? phase1EvidenceStatus(counts) : "evidence_scan_unavailable";
+  const status = scanOk
+    ? phase1EvidenceStatus(counts)
+    : "evidence_scan_unavailable";
 
   return {
     schema: "bizra.dema.gtm.phase1_evidence.v0.1",
@@ -494,11 +548,11 @@ async function buildPhase1EvidenceReport({ demaHome = resolveDemaHome() } = {}) 
     dema_home: demaHome,
     private_paths: {
       send_receipts_dir: sendReceiptsDir,
-      feedback_dir: feedbackDir
+      feedback_dir: feedbackDir,
     },
     required_counts: {
       send_receipts: 1,
-      feedback_documents: 1
+      feedback_documents: 1,
     },
     counts,
     send_receipts: sendReceipts.entries,
@@ -513,8 +567,8 @@ async function buildPhase1EvidenceReport({ demaHome = resolveDemaHome() } = {}) 
       feedback_published: false,
       send_performed: false,
       receipt_minted: false,
-      runtime_execution: false
-    }
+      runtime_execution: false,
+    },
   };
 }
 
@@ -525,7 +579,7 @@ function phase1Criterion({
   status,
   evidence = [],
   required_evidence = [],
-  exact_phrase = null
+  exact_phrase = null,
 }) {
   return {
     id,
@@ -535,7 +589,7 @@ function phase1Criterion({
     evidence,
     required_evidence,
     exact_phrase,
-    boundary_effect_performed: false
+    boundary_effect_performed: false,
   };
 }
 
@@ -551,75 +605,102 @@ function buildPhase1SuccessCriteria({ fileTexts, phase1Evidence }) {
       label: "ADR-009 status: Accepted",
       satisfied: adr009Accepted,
       status: adr009Accepted ? "satisfied" : "open_adr_status_required",
-      evidence: adr009Accepted ? [`${ADR_009_FILE} declares **Status:** Accepted`] : [],
-      required_evidence: adr009Accepted ? [] : [`${ADR_009_FILE} status field must declare Accepted`]
+      evidence: adr009Accepted
+        ? [`${ADR_009_FILE} declares **Status:** Accepted`]
+        : [],
+      required_evidence: adr009Accepted
+        ? []
+        : [`${ADR_009_FILE} status field must declare Accepted`],
     }),
     phase1Criterion({
       id: "adr_014_accepted",
       label: "ADR-014 status: Accepted",
       satisfied: adr014Accepted,
       status: adr014Accepted ? "satisfied" : "open_adr_status_required",
-      evidence: adr014Accepted ? [`${ADR_014_FILE} declares **Status:** Accepted`] : [],
-      required_evidence: adr014Accepted ? [] : [`${ADR_014_FILE} status field must declare Accepted`]
+      evidence: adr014Accepted
+        ? [`${ADR_014_FILE} declares **Status:** Accepted`]
+        : [],
+      required_evidence: adr014Accepted
+        ? []
+        : [`${ADR_014_FILE} status field must declare Accepted`],
     }),
     phase1Criterion({
       id: "ring1_feedback_on_record",
       label: "Ring-1 N=1 reviewer has signed feedback on record",
       satisfied: hasFeedback,
       status: hasFeedback ? "satisfied" : "open_external_evidence_required",
-      evidence: hasFeedback ? [`${phase1Evidence.counts.feedback_documents} private feedback document(s) counted metadata-only`] : [],
-      required_evidence: hasFeedback ? [] : ["~/.dema/lighthouse/ring-1/feedback/*.md"]
+      evidence: hasFeedback
+        ? [
+            `${phase1Evidence.counts.feedback_documents} private feedback document(s) counted metadata-only`,
+          ]
+        : [],
+      required_evidence: hasFeedback
+        ? []
+        : ["~/.dema/lighthouse/ring-1/feedback/*.md"],
     }),
     phase1Criterion({
       id: "poi_gate_1_ring1_feedback_closed",
       label: "POI v0.1 Gate 1 (Ring-1 feedback) closed",
       satisfied: false,
-      status: hasSendAndFeedback ? "evidence_present_operator_review_required" : "blocked_until_send_receipt_and_feedback_exist",
+      status: hasSendAndFeedback
+        ? "evidence_present_operator_review_required"
+        : "blocked_until_send_receipt_and_feedback_exist",
       evidence: [
         `${phase1Evidence.counts.send_receipts} private send receipt(s) counted metadata-only`,
-        `${phase1Evidence.counts.feedback_documents} private feedback document(s) counted metadata-only`
+        `${phase1Evidence.counts.feedback_documents} private feedback document(s) counted metadata-only`,
       ],
       required_evidence: [
         "private send receipt for one Ring-1 reviewer",
         "filled feedback form from that reviewer",
         "at least one finding classified as hold, fixable gap, or structural blocker",
-        "written operator decision on whether Phase 1 advances, repeats, or halts"
-      ]
+        "written operator decision on whether Phase 1 advances, repeats, or halts",
+      ],
     }),
     phase1Criterion({
       id: "poi_gate_4_test_plan_closed",
       label: "POI v0.1 Gate 4 (>=15 adversarial test plan) closed",
       satisfied: false,
       status: "open_exact_go_required",
-      required_evidence: ["dedicated POI v0.1 test-plan artifact; no implementation"],
-      exact_phrase: "GO author POI v0.1 test plan (no impl)"
+      required_evidence: [
+        "dedicated POI v0.1 test-plan artifact; no implementation",
+      ],
+      exact_phrase: "GO author POI v0.1 test plan (no impl)",
     }),
     phase1Criterion({
       id: "phase1_close_receipt_recorded",
       label: "Phase-1-close proof-forge receipt recorded",
       satisfied: false,
       status: "blocked_until_phase1_evidence_and_exact_go",
-      required_evidence: ["authorized phase-1-close proof-forge receipt after Ring-1 evidence review"],
-      exact_phrase: "GO mint phase-1-close"
+      required_evidence: [
+        "authorized phase-1-close proof-forge receipt after Ring-1 evidence review",
+      ],
+      exact_phrase: "GO mint phase-1-close",
     }),
     phase1Criterion({
       id: "reviewer_surprising_finding_memory",
       label: "Memory entry captures reviewer's most surprising finding",
       satisfied: false,
       status: "blocked_until_feedback_review",
-      required_evidence: ["operator-local memory entry after authorized private feedback review"]
-    })
+      required_evidence: [
+        "operator-local memory entry after authorized private feedback review",
+      ],
+    }),
   ];
-  const satisfiedCount = criteria.filter((criterion) => criterion.satisfied).length;
+  const satisfiedCount = criteria.filter(
+    (criterion) => criterion.satisfied,
+  ).length;
 
   return {
     schema: "bizra.dema.gtm.phase1_success_criteria.v0.1",
     mode: "READ_ONLY_AUDIT",
-    status: satisfiedCount === criteria.length ? "phase1_success_criteria_satisfied" : "phase1_open",
+    status:
+      satisfiedCount === criteria.length
+        ? "phase1_success_criteria_satisfied"
+        : "phase1_open",
     summary: {
       total: criteria.length,
       satisfied: satisfiedCount,
-      open: criteria.length - satisfiedCount
+      open: criteria.length - satisfiedCount,
     },
     criteria,
     boundary: {
@@ -628,8 +709,8 @@ function buildPhase1SuccessCriteria({ fileTexts, phase1Evidence }) {
       operator_memory_written: false,
       receipt_minted: false,
       poi_implemented: false,
-      runtime_execution: false
-    }
+      runtime_execution: false,
+    },
   };
 }
 
@@ -640,7 +721,7 @@ async function checkLighthousePack(lighthousePackDir) {
       dir: null,
       manifest_path: null,
       finding: "lighthouse_pack_dir_unavailable",
-      entries: []
+      entries: [],
     };
   }
 
@@ -651,13 +732,13 @@ async function checkLighthousePack(lighthousePackDir) {
       dir: lighthousePackDir,
       manifest_path: manifestPath,
       finding: "manifest_missing",
-      entries: []
+      entries: [],
     };
   }
 
   const manifest = await verifyManifestLines({
     dir: lighthousePackDir,
-    manifestText: await readFile(manifestPath, "utf8")
+    manifestText: await readFile(manifestPath, "utf8"),
   });
 
   return {
@@ -665,19 +746,39 @@ async function checkLighthousePack(lighthousePackDir) {
     dir: lighthousePackDir,
     manifest_path: manifestPath,
     finding: manifest.ok ? null : "manifest_mismatch_or_invalid",
-    entries: manifest.entries
+    entries: manifest.entries,
   };
 }
 
-function flattenFindings({ fileChecks, markerChecks, staleCheck, openGateCheck, phaseMilestoneCheck, phase1Evidence, lighthousePack }) {
+function flattenFindings({
+  fileChecks,
+  markerChecks,
+  staleCheck,
+  openGateCheck,
+  phaseMilestoneCheck,
+  phase1Evidence,
+  lighthousePack,
+}) {
   const findings = [];
   for (const check of fileChecks) {
     if (check.ok) continue;
-    findings.push({ file: check.file, line: null, kind: "missing_file", reason: "required GTM readiness file is missing", text: check.file });
+    findings.push({
+      file: check.file,
+      line: null,
+      kind: "missing_file",
+      reason: "required GTM readiness file is missing",
+      text: check.file,
+    });
   }
   for (const check of markerChecks) {
     for (const marker of check.missing) {
-      findings.push({ file: check.file, line: null, kind: "missing_marker", reason: check.name, text: marker });
+      findings.push({
+        file: check.file,
+        line: null,
+        kind: "missing_marker",
+        reason: check.name,
+        text: marker,
+      });
     }
   }
   findings.push(...staleCheck.findings);
@@ -687,7 +788,7 @@ function flattenFindings({ fileChecks, markerChecks, staleCheck, openGateCheck, 
       line: null,
       kind: "missing_open_operator_gate",
       reason: missing.id,
-      text: missing.phrase
+      text: missing.phrase,
     });
   }
   for (const missing of phaseMilestoneCheck.missing) {
@@ -696,7 +797,7 @@ function flattenFindings({ fileChecks, markerChecks, staleCheck, openGateCheck, 
       line: null,
       kind: "missing_phase_milestone_gate",
       reason: missing.id,
-      text: missing.phrase
+      text: missing.phrase,
     });
   }
   if (!phase1Evidence.scan_ok) {
@@ -705,7 +806,7 @@ function flattenFindings({ fileChecks, markerChecks, staleCheck, openGateCheck, 
       line: null,
       kind: "phase1_evidence_scan",
       reason: phase1Evidence.scan_errors.join(", ") || "dema_home_unavailable",
-      text: "Phase 1 evidence scan could not resolve DEMA_HOME or ~/.dema"
+      text: "Phase 1 evidence scan could not resolve DEMA_HOME or ~/.dema",
     });
   }
   if (!lighthousePack.ok) {
@@ -714,7 +815,7 @@ function flattenFindings({ fileChecks, markerChecks, staleCheck, openGateCheck, 
       line: null,
       kind: "lighthouse_manifest",
       reason: lighthousePack.finding,
-      text: lighthousePack.dir
+      text: lighthousePack.dir,
     });
   }
   return findings;
@@ -723,7 +824,7 @@ function flattenFindings({ fileChecks, markerChecks, staleCheck, openGateCheck, 
 export async function buildGtmReadinessReport({
   root = REPO_ROOT,
   lighthousePackDir = resolveLighthousePackDir({ root }),
-  demaHome = resolveDemaHome()
+  demaHome = resolveDemaHome(),
 } = {}) {
   const fileTexts = new Map();
   for (const file of REQUIRED_FILES) {
@@ -738,7 +839,10 @@ export async function buildGtmReadinessReport({
   const phaseMilestoneCheck = checkPhaseMilestoneGates(fileTexts);
   const phaseStatus = buildPhaseStatus(OPEN_OPERATOR_GATES);
   const phase1Evidence = await buildPhase1EvidenceReport({ demaHome });
-  const phase1SuccessCriteria = buildPhase1SuccessCriteria({ fileTexts, phase1Evidence });
+  const phase1SuccessCriteria = buildPhase1SuccessCriteria({
+    fileTexts,
+    phase1Evidence,
+  });
   const lighthousePack = await checkLighthousePack(lighthousePackDir);
   const checks = [
     ...fileChecks,
@@ -746,40 +850,48 @@ export async function buildGtmReadinessReport({
     {
       name: staleCheck.name,
       ok: staleCheck.ok,
-      finding_count: staleCheck.findings.length
+      finding_count: staleCheck.findings.length,
     },
     {
       name: openGateCheck.name,
       ok: openGateCheck.ok,
       gate_count: openGateCheck.gate_count,
-      missing_count: openGateCheck.missing.length
+      missing_count: openGateCheck.missing.length,
     },
     {
       name: phaseMilestoneCheck.name,
       ok: phaseMilestoneCheck.ok,
       gate_count: phaseMilestoneCheck.gate_count,
-      missing_count: phaseMilestoneCheck.missing.length
+      missing_count: phaseMilestoneCheck.missing.length,
     },
     {
       name: "phase1_evidence_scanned",
       ok: phase1Evidence.scan_ok,
       send_receipt_count: phase1Evidence.counts.send_receipts,
-      feedback_document_count: phase1Evidence.counts.feedback_documents
+      feedback_document_count: phase1Evidence.counts.feedback_documents,
     },
     {
       name: "phase1_success_criteria_tracked",
       ok: true,
       total: phase1SuccessCriteria.summary.total,
       satisfied: phase1SuccessCriteria.summary.satisfied,
-      open: phase1SuccessCriteria.summary.open
+      open: phase1SuccessCriteria.summary.open,
     },
     {
       name: "lighthouse_pack_manifest",
       ok: lighthousePack.ok,
-      entry_count: lighthousePack.entries.length
-    }
+      entry_count: lighthousePack.entries.length,
+    },
   ];
-  const findings = flattenFindings({ fileChecks, markerChecks, staleCheck, openGateCheck, phaseMilestoneCheck, phase1Evidence, lighthousePack });
+  const findings = flattenFindings({
+    fileChecks,
+    markerChecks,
+    staleCheck,
+    openGateCheck,
+    phaseMilestoneCheck,
+    phase1Evidence,
+    lighthousePack,
+  });
 
   return {
     schema: SCHEMA,
@@ -802,8 +914,8 @@ export async function buildGtmReadinessReport({
       receipt_minted: false,
       urp_initialized: false,
       poi_implemented: false,
-      public_post_performed: false
-    }
+      public_post_performed: false,
+    },
   };
 }
 
@@ -819,7 +931,7 @@ export function formatGtmReadinessReport(report) {
     `Mode: ${report.mode}`,
     `Result: ${report.ok ? "PASS" : "FAIL"}`,
     "",
-    "Checks:"
+    "Checks:",
   ];
 
   for (const check of report.checks) {
@@ -829,28 +941,38 @@ export function formatGtmReadinessReport(report) {
   if (report.open_operator_gates?.length > 0) {
     lines.push("", "Open Operator Gates:");
     for (const gate of report.open_operator_gates) {
-      lines.push(`- Phase ${gate.phase} ${gate.id}: ${gate.status}; phrase: ${formatGatePhrase(gate)}`);
+      lines.push(
+        `- Phase ${gate.phase} ${gate.id}: ${gate.status}; phrase: ${formatGatePhrase(gate)}`,
+      );
     }
   }
 
   if (report.phase_status?.length > 0) {
     lines.push("", "Phase Status:");
     for (const phase of report.phase_status) {
-      lines.push(`- ${phase.id}: ${phase.status}; milestone phrases: ${phase.milestone_gate_phrases.length}`);
+      lines.push(
+        `- ${phase.id}: ${phase.status}; milestone phrases: ${phase.milestone_gate_phrases.length}`,
+      );
     }
   }
 
   if (report.phase1_evidence) {
     lines.push("", "Phase 1 Evidence:");
     lines.push(`- status: ${report.phase1_evidence.status}`);
-    lines.push(`- send receipts: ${report.phase1_evidence.counts.send_receipts}/${report.phase1_evidence.required_counts.send_receipts}`);
-    lines.push(`- feedback documents: ${report.phase1_evidence.counts.feedback_documents}/${report.phase1_evidence.required_counts.feedback_documents}`);
+    lines.push(
+      `- send receipts: ${report.phase1_evidence.counts.send_receipts}/${report.phase1_evidence.required_counts.send_receipts}`,
+    );
+    lines.push(
+      `- feedback documents: ${report.phase1_evidence.counts.feedback_documents}/${report.phase1_evidence.required_counts.feedback_documents}`,
+    );
     lines.push(`- next: ${report.phase1_evidence.next_safe_action}`);
   }
 
   if (report.phase1_success_criteria) {
     lines.push("", "Phase 1 Success Criteria:");
-    lines.push(`- satisfied: ${report.phase1_success_criteria.summary.satisfied}/${report.phase1_success_criteria.summary.total}`);
+    lines.push(
+      `- satisfied: ${report.phase1_success_criteria.summary.satisfied}/${report.phase1_success_criteria.summary.total}`,
+    );
     for (const criterion of report.phase1_success_criteria.criteria) {
       lines.push(`- ${criterion.id}: ${criterion.status}`);
     }
@@ -859,13 +981,18 @@ export function formatGtmReadinessReport(report) {
   if (report.findings.length > 0) {
     lines.push("", "Findings:");
     for (const finding of report.findings) {
-      const location = finding.line ? `${finding.file}:${finding.line}` : finding.file;
+      const location = finding.line
+        ? `${finding.file}:${finding.line}`
+        : finding.file;
       lines.push(`- ${location} ${finding.kind}: ${finding.reason}`);
       if (finding.text) lines.push(`  ${finding.text}`);
     }
   }
 
-  lines.push("", "Boundary: read-only audit; no send; no runtime; no receipt mint.");
+  lines.push(
+    "",
+    "Boundary: read-only audit; no send; no runtime; no receipt mint.",
+  );
   return lines.join("\n");
 }
 
@@ -873,7 +1000,7 @@ function usage() {
   return [
     "Usage: node scripts/gtm-readiness-check.mjs [--json] [--root DIR] [--lighthouse-pack-dir DIR] [--dema-home DIR]",
     "",
-    "Runs a read-only GTM readiness audit for current docs and the Lighthouse pack manifest."
+    "Runs a read-only GTM readiness audit for current docs and the Lighthouse pack manifest.",
   ].join("\n");
 }
 
@@ -895,8 +1022,11 @@ async function main(argv = process.argv.slice(2)) {
   const explicitDemaHome = valueAfter(argv, "--dema-home");
   const report = await buildGtmReadinessReport({
     root,
-    lighthousePackDir: resolveLighthousePackDir({ root, explicit: explicitPack }),
-    demaHome: resolveDemaHome({ explicit: explicitDemaHome })
+    lighthousePackDir: resolveLighthousePackDir({
+      root,
+      explicit: explicitPack,
+    }),
+    demaHome: resolveDemaHome({ explicit: explicitDemaHome }),
   });
 
   if (json) {
@@ -908,11 +1038,17 @@ async function main(argv = process.argv.slice(2)) {
   return report.ok ? 0 : 1;
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
-  main().then((code) => {
-    process.exitCode = code;
-  }, (error) => {
-    console.error(error.message);
-    process.exitCode = 1;
-  });
+if (
+  process.argv[1] &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
+  main().then(
+    (code) => {
+      process.exitCode = code;
+    },
+    (error) => {
+      console.error(error.message);
+      process.exitCode = 1;
+    },
+  );
 }

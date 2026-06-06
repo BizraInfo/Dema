@@ -27,6 +27,7 @@ ADR-007 codifies this finding and proposes policy options without yet locking a 
 **Status field in ADR:** `Proposed` (NOT `Accepted` — this ADR proposes options · the decision among A/B/C is deferred to operator typed-GO)
 
 **Header schema:** match `docs/06-adr/ADR-006-continuous-assurance-and-no-mint-verification.md` exactly:
+
 ```markdown
 # ADR-007: Multi-Session Chain Policy
 
@@ -136,6 +137,7 @@ ADR-007 codifies this finding and proposes policy options without yet locking a 
 ## Methodology notes
 
 This plan is intentionally a SINGLE task:
+
 - One file authored
 - One commit
 - One spec-compliance review

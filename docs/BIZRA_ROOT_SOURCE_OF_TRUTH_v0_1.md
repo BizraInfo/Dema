@@ -59,12 +59,12 @@ The order of these clauses is binding. A decision that inverts them — that shi
 
 This Root Source sits on top of the four-pillar A+ backbone already merged to `main`. It does **not** replace any of them:
 
-| Pillar | Role | This doc's posture |
-|---|---|---|
-| `THREE_REPO_PRODUCT_STACK_CANON_v0_1.md` | Repo authority | Inherits: only Dema speaks for the product face; only the substrate speaks for runtime/proof; only genesis is archive/R&D. |
-| `NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md` | Component status | Inherits: every layer in the origin chain carries its DNA status label. PAT-7, SAT-5, UKE, URP, PoI, dual token = `DESIGNED_NOT_LIVE` until evidence shifts that. |
-| `DELIVERY_SPINE_v0_1.md` | Release gates | Inherits: this doc itself was authored under Spine class `governance`; any public reuse of its paragraphs goes through the Spine's Release Candidate Gate. |
-| `CLAIM_REGISTER_v0_1.md` | Public-claim authority | **Binding**: every paragraph below that becomes public copy must satisfy the Claim Review Gate (Register Section 20). |
+| Pillar                                      | Role                   | This doc's posture                                                                                                                                                |
+| ------------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `THREE_REPO_PRODUCT_STACK_CANON_v0_1.md`    | Repo authority         | Inherits: only Dema speaks for the product face; only the substrate speaks for runtime/proof; only genesis is archive/R&D.                                        |
+| `NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md` | Component status       | Inherits: every layer in the origin chain carries its DNA status label. PAT-7, SAT-5, UKE, URP, PoI, dual token = `DESIGNED_NOT_LIVE` until evidence shifts that. |
+| `DELIVERY_SPINE_v0_1.md`                    | Release gates          | Inherits: this doc itself was authored under Spine class `governance`; any public reuse of its paragraphs goes through the Spine's Release Candidate Gate.        |
+| `CLAIM_REGISTER_v0_1.md`                    | Public-claim authority | **Binding**: every paragraph below that becomes public copy must satisfy the Claim Review Gate (Register Section 20).                                             |
 
 When a Root Source paragraph and a Claim Register row appear to conflict, **the Claim Register governs** the wording; this document governs the meaning.
 
@@ -109,7 +109,7 @@ The seed is small **by design**. Its smallness is not a limitation — it is the
 - **Status (v0.2 evidence-binding update)**:
   - **Emotional canon**: preserved in full by `docs/BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` (transcript Section 7, four-beat narrative spine Section 8 — declared inviolate).
   - **Primary artifact identity**: hash-bound. Local primary artifact at `/data/bizra/cloud-archive/gdrive-wizard/Google AI Studio/…(1693522543490).mp4.mp4`, sha256 `8b89b6dd…3d5af`, 149,888,720 bytes. Label `FILE_IDENTITY_VERIFIED`.
-  - **Creation / export date**: filename-embedded Unix-ms timestamp `1693522543490` decodes to 2023-08-31 22:55:43 UTC. Label `DATE_DERIVED_SINGLE_WITNESS` — *derived from a single witness, not fully verified*. Promotion to `VERIFIED` requires Google Drive `createdTime`, Google AI Studio export metadata, Runway/Midjourney provenance, or another independent witness.
+  - **Creation / export date**: filename-embedded Unix-ms timestamp `1693522543490` decodes to 2023-08-31 22:55:43 UTC. Label `DATE_DERIVED_SINGLE_WITNESS` — _derived from a single witness, not fully verified_. Promotion to `VERIFIED` requires Google Drive `createdTime`, Google AI Studio export metadata, Runway/Midjourney provenance, or another independent witness.
   - **Production tool**: Google AI Studio (from folder + filename convention). Label `TOOL_PROVENANCE_DERIVED_STRONG`. Promotion to `VERIFIED` requires documented GAI Studio export-format behavior or live Drive metadata corroboration.
   - **Public release status**: `PUBLIC_RELEASE_SOURCE_PENDING`.
   - **Pristine-original status**: `PRISTINE_ORIGINAL_SOURCE_PENDING`.
@@ -159,12 +159,12 @@ Dema is the doorway. Behind Dema, the governed runtime, the receipt chain, and t
 
 These four are the **designed** layers of the forest. Each carries `DESIGNED_NOT_LIVE` status until pilot evidence shifts it.
 
-| Layer | Root meaning | Status | Allowed wording |
-|---|---|---|---|
-| **PAT-7** (Personal Agents) | The local intelligence layer. PAT **may discover**. | `DESIGNED_NOT_LIVE` | "PAT-7 is the designed seven-Personal-Agent local intelligence layer; PAT may discover, never finalize." |
-| **SAT-5** (Sovereign Agents) | The governance layer. SAT **must govern**. | `DESIGNED_NOT_LIVE` | "SAT-5 is the designed five-Sovereign-Agent governance layer; SAT must govern any consequential action." |
-| **UKE** (House of Wisdom) | The designed long-memory of the forest. | `DESIGNED_NOT_LIVE` | "UKE is the designed shared knowledge fabric; specification only at this stage." |
-| **URP** (Shared Resource Pool) | The designed shared soil where nodes contribute and consume under consent. | `DESIGNED_NOT_LIVE` | "URP is the designed shared resource substrate; a live public URP is gated behind pilot proof." |
+| Layer                          | Root meaning                                                               | Status              | Allowed wording                                                                                          |
+| ------------------------------ | -------------------------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
+| **PAT-7** (Personal Agents)    | The local intelligence layer. PAT **may discover**.                        | `DESIGNED_NOT_LIVE` | "PAT-7 is the designed seven-Personal-Agent local intelligence layer; PAT may discover, never finalize." |
+| **SAT-5** (Sovereign Agents)   | The governance layer. SAT **must govern**.                                 | `DESIGNED_NOT_LIVE` | "SAT-5 is the designed five-Sovereign-Agent governance layer; SAT must govern any consequential action." |
+| **UKE** (House of Wisdom)      | The designed long-memory of the forest.                                    | `DESIGNED_NOT_LIVE` | "UKE is the designed shared knowledge fabric; specification only at this stage."                         |
+| **URP** (Shared Resource Pool) | The designed shared soil where nodes contribute and consume under consent. | `DESIGNED_NOT_LIVE` | "URP is the designed shared resource substrate; a live public URP is gated behind pilot proof."          |
 
 The operating law that binds them (already canonized in Component DNA §2 and Delivery Spine context):
 
@@ -381,4 +381,4 @@ The load-bearing surfaces of this Root are Section 6 (Origin Chain), Section 14 
 ---
 
 > **The seed is small by design. Its smallness is the proof.**
-> *(Internal note, not public copy.)*
+> _(Internal note, not public copy.)_

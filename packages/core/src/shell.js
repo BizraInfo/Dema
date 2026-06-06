@@ -74,7 +74,7 @@ const HELP = [
   "  task NAME            run a registered task (read-only in this release)",
   "  help                 this list",
   "  exit | quit          leave the shell",
-  ""
+  "",
 ].join("\n");
 
 export async function runShell({
@@ -84,7 +84,7 @@ export async function runShell({
   greeting = "(no greeting)",
   installSigintHandler,
   noBanner = false,
-  statusProvider = null
+  statusProvider = null,
 } = {}) {
   if (typeof dispatchCommand !== "function") {
     throw new Error("runShell requires a dispatchCommand(argv) function.");
@@ -121,7 +121,12 @@ export async function runShell({
   }
   output.write(HELP);
 
-  const rl = createInterface({ input, output, prompt: PROMPT, terminal: false });
+  const rl = createInterface({
+    input,
+    output,
+    prompt: PROMPT,
+    terminal: false,
+  });
 
   let sigintCount = 0;
   let sigintTimer = null;

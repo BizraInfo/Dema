@@ -15,32 +15,50 @@ import {
 // ----- resolvePaletteFromEnv direct ---------------------------------------
 
 test("PAL-01: DEMA_PALETTE=24bit overrides everything", () => {
-  assert.equal(resolvePaletteFromEnv({ DEMA_PALETTE: "24bit", NO_COLOR: "1" }), "24bit");
+  assert.equal(
+    resolvePaletteFromEnv({ DEMA_PALETTE: "24bit", NO_COLOR: "1" }),
+    "24bit",
+  );
 });
 
 test("PAL-02: DEMA_PALETTE=256 overrides COLORTERM", () => {
-  assert.equal(resolvePaletteFromEnv({ DEMA_PALETTE: "256", COLORTERM: "truecolor" }), "256");
+  assert.equal(
+    resolvePaletteFromEnv({ DEMA_PALETTE: "256", COLORTERM: "truecolor" }),
+    "256",
+  );
 });
 
 test("PAL-03: DEMA_PALETTE=none overrides COLORTERM=truecolor", () => {
-  assert.equal(resolvePaletteFromEnv({ DEMA_PALETTE: "none", COLORTERM: "truecolor" }), "none");
+  assert.equal(
+    resolvePaletteFromEnv({ DEMA_PALETTE: "none", COLORTERM: "truecolor" }),
+    "none",
+  );
 });
 
 test("PAL-04: invalid DEMA_PALETTE falls through to normal resolution", () => {
-  assert.equal(resolvePaletteFromEnv({ DEMA_PALETTE: "weird", COLORTERM: "truecolor" }), "24bit");
+  assert.equal(
+    resolvePaletteFromEnv({ DEMA_PALETTE: "weird", COLORTERM: "truecolor" }),
+    "24bit",
+  );
 });
 
 test("PAL-05: NO_COLOR (any non-empty value) → none", () => {
   assert.equal(resolvePaletteFromEnv({ NO_COLOR: "1" }), "none");
   assert.equal(resolvePaletteFromEnv({ NO_COLOR: "true" }), "none");
-  assert.equal(resolvePaletteFromEnv({ NO_COLOR: "yes", COLORTERM: "truecolor" }), "none");
+  assert.equal(
+    resolvePaletteFromEnv({ NO_COLOR: "yes", COLORTERM: "truecolor" }),
+    "none",
+  );
 });
 
 test("PAL-06: NO_COLOR empty string falls through (per no-color.org spec)", () => {
   // Per https://no-color.org: "if NO_COLOR is set to a non-empty value"
   // An empty string SHOULD NOT trigger no-color. Our implementation uses
   // `if (env.NO_COLOR)` which is falsy for "" → correct behavior.
-  assert.equal(resolvePaletteFromEnv({ NO_COLOR: "", COLORTERM: "truecolor" }), "24bit");
+  assert.equal(
+    resolvePaletteFromEnv({ NO_COLOR: "", COLORTERM: "truecolor" }),
+    "24bit",
+  );
 });
 
 test("PAL-07: TERM=dumb → none", () => {
@@ -105,7 +123,10 @@ test("PAL-18: TERM=dumb sets termDumb=true AND palette=none", () => {
 });
 
 test("PAL-19: DEMA_TUI_WIDTH still works alongside palette", () => {
-  const opts = resolveFormatterOptsFromEnv({ DEMA_TUI_WIDTH: "100", COLORTERM: "truecolor" });
+  const opts = resolveFormatterOptsFromEnv({
+    DEMA_TUI_WIDTH: "100",
+    COLORTERM: "truecolor",
+  });
   assert.equal(opts.width, 100);
   assert.equal(opts.palette, "24bit");
 });

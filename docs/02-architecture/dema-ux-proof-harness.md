@@ -21,30 +21,32 @@ If no, because the screen depends on Node0 + URP + PAT-7 + SAT-5 + EvidenceChain
 
 Every UX surface must answer "Pass" to all 12 before it advances past preview status.
 
-| ID | Criterion | Pass condition | Anchor primitive (on-disk) |
-|---|---|---|---|
-| A | Sovereignty | The user can answer "where am I / who am I / what is allowed / what is blocked / what proof exists" in ≤30 seconds | `node0-homebase-state-preview` |
-| B | Mission-centricity | Every screen surfaces a current or next-safe mission | `consent-planner` + `next_safe_action` field |
-| C | Living-homebase feeling | First-screen renders the operator's identity, primary device, companion device, PAT party, SAT guardians visibly | `node0-homebase-state-preview` |
-| D | Consent before capability | Every action with side effects is preceded by a consent card displaying allowed/denied effects, required `MICRO_CONSENT_SHAPE` field, and receipt-preview state | `consent-hash-preview` |
-| E | Proof visibility | No claim displays without a truth label (MEASURED / EMERGING / LATENT / ASPIRATIONAL / EXTRAPOLATED) | `melae-preview` |
-| F | PAT/SAT separation | PAT language reads as support; SAT language reads as protection; ownership never confused | `pat-builder-sat-validator.md` + Homebase preview registries |
-| G | Local-LLM-as-resource | No screen reads "the model decided." Screens read "PAT proposed · SAT reviewed · DEMA displayed · operator consented." | `models` CLI verb output |
-| H | Standing-on-shoulders discipline | Every external-pattern reference maps to a BIZRA primitive via the External Pattern Registry; no naked import of MCP/A2A/hook/AHK/contract authority | `external-pattern-registry-preview` |
-| I | Emotional integrity | Onboarding reduces cognitive burden rather than adding new commands to memorize | composition of existing 27 CLI verbs |
-| J | Boundary honesty | Blocked states render as protection with named pre-condition, not as failure | `blocked_actions` + `unlock_condition` fields |
-| K | Replayability | A completed mission can be reconstructed from intent → consent → PAT proposal → SAT verdict → evidence → receipt → impact | `evidence-chain-preview` |
-| L | Non-generic language | No generic-agent vocabulary: "agent swarm", "AI employee", "autonomous magic", "growth dashboard", "prompt runner" do not appear in any rendered string | static-source review of UX source files |
+| ID  | Criterion                        | Pass condition                                                                                                                                                  | Anchor primitive (on-disk)                                   |
+| --- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| A   | Sovereignty                      | The user can answer "where am I / who am I / what is allowed / what is blocked / what proof exists" in ≤30 seconds                                              | `node0-homebase-state-preview`                               |
+| B   | Mission-centricity               | Every screen surfaces a current or next-safe mission                                                                                                            | `consent-planner` + `next_safe_action` field                 |
+| C   | Living-homebase feeling          | First-screen renders the operator's identity, primary device, companion device, PAT party, SAT guardians visibly                                                | `node0-homebase-state-preview`                               |
+| D   | Consent before capability        | Every action with side effects is preceded by a consent card displaying allowed/denied effects, required `MICRO_CONSENT_SHAPE` field, and receipt-preview state | `consent-hash-preview`                                       |
+| E   | Proof visibility                 | No claim displays without a truth label (MEASURED / EMERGING / LATENT / ASPIRATIONAL / EXTRAPOLATED)                                                            | `melae-preview`                                              |
+| F   | PAT/SAT separation               | PAT language reads as support; SAT language reads as protection; ownership never confused                                                                       | `pat-builder-sat-validator.md` + Homebase preview registries |
+| G   | Local-LLM-as-resource            | No screen reads "the model decided." Screens read "PAT proposed · SAT reviewed · DEMA displayed · operator consented."                                          | `models` CLI verb output                                     |
+| H   | Standing-on-shoulders discipline | Every external-pattern reference maps to a BIZRA primitive via the External Pattern Registry; no naked import of MCP/A2A/hook/AHK/contract authority            | `external-pattern-registry-preview`                          |
+| I   | Emotional integrity              | Onboarding reduces cognitive burden rather than adding new commands to memorize                                                                                 | composition of existing 27 CLI verbs                         |
+| J   | Boundary honesty                 | Blocked states render as protection with named pre-condition, not as failure                                                                                    | `blocked_actions` + `unlock_condition` fields                |
+| K   | Replayability                    | A completed mission can be reconstructed from intent → consent → PAT proposal → SAT verdict → evidence → receipt → impact                                       | `evidence-chain-preview`                                     |
+| L   | Non-generic language             | No generic-agent vocabulary: "agent swarm", "AI employee", "autonomous magic", "growth dashboard", "prompt runner" do not appear in any rendered string         | static-source review of UX source files                      |
 
 ## 5-round design review ritual
 
 Every new UX surface (or non-trivial change to an existing one) runs these 5 rounds in order. Any "No" answer halts promotion.
 
 ### Round 1 · SNR review
+
 - Remove: jargon, vanity claims, duplicated panels, unclear buttons, ambiguous status indicators, unverified phrases.
 - Keep: mission, state, proof, consent, blocked actions, next-safe-action.
 
 ### Round 2 · Ihsān review
+
 - Is this truthful (no MEASURED claim without measurement)?
 - Is this protective (does the screen prevent foreseeable operator error)?
 - Is this beneficial (does the screen reduce operator burden)?
@@ -53,7 +55,9 @@ Every new UX surface (or non-trivial change to an existing one) runs these 5 rou
 - Does it respect attention (no spinners without progress; no decorative noise)?
 
 ### Round 3 · Boundary review
+
 For each rendered statement, ask:
+
 - Could a reader infer runtime is live? (must be `false` if so)
 - Could a reader infer federation is open?
 - Could a reader infer SAT belongs to the user rather than the system?
@@ -61,11 +65,13 @@ For each rendered statement, ask:
 - Could a reader infer MEASURED proof exists where only PREVIEW exists?
 
 ### Round 4 · Story review
+
 - Does this screen continue the journey from seed to homebase to mission to receipt to impact?
 - Does it preserve operator dignity (no "you screwed up" framing for blocked states)?
 - Does it turn pain into structure and proof, or does it perform suffering?
 
 ### Round 5 · Competitor review (the one-sentence discriminator)
+
 - Could a generic agent product copy this screen verbatim and still make sense? If yes → fail.
 
 ## The 7-minute acceptance test
@@ -96,20 +102,20 @@ If any of the 9 cannot be reported, the surface holds at PREVIEW. The 9 are not 
 
 Applied to `dema-tui-onboarding-design.md` (commit `aca328f`):
 
-| Criterion | Pass on disk? | Evidence |
-|---|---|---|
-| A Sovereignty | ✅ | 10 cards expose where/who/what-allowed/what-blocked/proof state |
-| B Mission-centricity | ✅ | Mission Card present; Next-Safe-Action Card present on every screen |
-| C Living-homebase feeling | ✅ | Identity Card renders MoMo + MSI laptop + Z Fold 6 + PAT-7 + SAT-5 |
-| D Consent before capability | ✅ | Consent Card sources from `consent-hash-preview`; "Approve" requires exact MICRO_CONSENT_SHAPE phrase per boundary invariant |
-| E Proof visibility | ✅ | "Every card displays" pattern + truth-label rule from boundary invariants |
-| F PAT/SAT separation | ✅ | Party Card lists PAT-7 by role + SAT-5 with their verdict surface; no role conflation |
-| G Local-LLM-as-resource | ✅ | Card sourcing pattern: "PAT proposed · SAT reviewed · DEMA displayed · operator consented" |
-| H Standing-on-shoulders | ✅ | `external-pattern-registry-preview` exists at HEAD; 11 external patterns mapped to BIZRA primitives |
-| I Emotional integrity | ✅ | Composes existing 27 verbs; introduces zero new commands to memorize |
-| J Boundary honesty | ✅ | Shared URP World Card shows ghost_hold + unlock_condition rendering |
-| K Replayability | ✅ | Evidence Card sources from `evidence-chain-preview` (chain_id + prev_hash + event_hash) |
-| L Non-generic language | ✅ | Vocabulary used: homebase, mission, guardian, receipt, proof, local URP, shared world, consent, ghost-hold, next-safe-action. None of the generic-agent terms appear. |
+| Criterion                   | Pass on disk? | Evidence                                                                                                                                                              |
+| --------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A Sovereignty               | ✅            | 10 cards expose where/who/what-allowed/what-blocked/proof state                                                                                                       |
+| B Mission-centricity        | ✅            | Mission Card present; Next-Safe-Action Card present on every screen                                                                                                   |
+| C Living-homebase feeling   | ✅            | Identity Card renders MoMo + MSI laptop + Z Fold 6 + PAT-7 + SAT-5                                                                                                    |
+| D Consent before capability | ✅            | Consent Card sources from `consent-hash-preview`; "Approve" requires exact MICRO_CONSENT_SHAPE phrase per boundary invariant                                          |
+| E Proof visibility          | ✅            | "Every card displays" pattern + truth-label rule from boundary invariants                                                                                             |
+| F PAT/SAT separation        | ✅            | Party Card lists PAT-7 by role + SAT-5 with their verdict surface; no role conflation                                                                                 |
+| G Local-LLM-as-resource     | ✅            | Card sourcing pattern: "PAT proposed · SAT reviewed · DEMA displayed · operator consented"                                                                            |
+| H Standing-on-shoulders     | ✅            | `external-pattern-registry-preview` exists at HEAD; 11 external patterns mapped to BIZRA primitives                                                                   |
+| I Emotional integrity       | ✅            | Composes existing 27 verbs; introduces zero new commands to memorize                                                                                                  |
+| J Boundary honesty          | ✅            | Shared URP World Card shows ghost_hold + unlock_condition rendering                                                                                                   |
+| K Replayability             | ✅            | Evidence Card sources from `evidence-chain-preview` (chain_id + prev_hash + event_hash)                                                                               |
+| L Non-generic language      | ✅            | Vocabulary used: homebase, mission, guardian, receipt, proof, local URP, shared world, consent, ghost-hold, next-safe-action. None of the generic-agent terms appear. |
 
 The TUI design at `aca328f` passes all 12 criteria. **This is evidence that the harness is operative, not aspirational.**
 

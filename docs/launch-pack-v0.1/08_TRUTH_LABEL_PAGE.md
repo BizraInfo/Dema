@@ -2,11 +2,11 @@
 
 > Read this **before** reading any other document in the binder. Every claim in the GTM document, the ADRs, the Known Gaps register, and the runbook is labeled with one of the four labels below. The labels are the protection.
 
-| Field | Value |
-|---|---|
-| **Canon source** | `[[feedback_law_of_assumption_canon_of_canons]]` · 2026-05-09 entry · "FIRST corpus entry · bounded autonomy under V/D/P/U" |
-| **Aliases** | LoA (Law of Assumption) · V/D/A/U · V/D/P/U (older alias · same taxonomy) |
-| **Constitutional binding** | All 14 ADRs use this taxonomy · all session memory uses it · all receipt descriptions use it |
+| Field                      | Value                                                                                                                       |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **Canon source**           | `[[feedback_law_of_assumption_canon_of_canons]]` · 2026-05-09 entry · "FIRST corpus entry · bounded autonomy under V/D/P/U" |
+| **Aliases**                | LoA (Law of Assumption) · V/D/A/U · V/D/P/U (older alias · same taxonomy)                                                   |
+| **Constitutional binding** | All 14 ADRs use this taxonomy · all session memory uses it · all receipt descriptions use it                                |
 
 ---
 
@@ -17,6 +17,7 @@
 **Definition**: A direct check on disk · in the chain · or in a test run · NOW · returns the claim as true.
 
 **Example uses**:
+
 - "ADR-009 status is Accepted" — VERIFIED (you can `cat docs/06-adr/ADR-009-poi-proof-of-impact-design.md | grep Status`)
 - "70 receipts in chain at HEAD" — VERIFIED (you can `ls .proof-forge/receipts/*.json | wc -l`)
 - "Zero runtime dependencies" — VERIFIED (you can `grep dependencies package.json`)
@@ -33,6 +34,7 @@
 **Definition**: Not directly grep-able · but **follows by reasoning** from VERIFIED inputs. The reasoning is shown explicitly so the reviewer can re-derive.
 
 **Example uses**:
+
 - "The architect-self-binding is structurally preserved" — DERIVED (because: 3 years of work on disk + no token mint event in chain + ADR-009 POI-C1 binding refusal = no founder pre-allocation possible)
 - "Dema is the right tool for non-Rust contributors" — DERIVED (because: zero runtime deps + plain JS + node --test + 2223 passing tests = no toolchain barrier)
 - "ADR-014 closes the wrong-codebase audit pattern" — DERIVED (because: ADR-014 names 3 runtimes explicitly + future audits can be evaluated against the topology = wrong-codebase becomes fast-resolution)
@@ -48,6 +50,7 @@
 **Definition**: Cannot be directly verified · cannot be derived from verified inputs · BUT the architect is willing to STATE the assumption explicitly so the reviewer can challenge it. The "with Ihsān" suffix means: the assumption is made carefully · would survive the Daughter Test · would survive Mumu personally being subject to its consequences.
 
 **Example uses**:
+
 - "A typical Ring-1 reviewer will spend 30-60 minutes verifying" — ASSUMED-with-Ihsān (no data yet · this is the first reviewer · estimate based on the complexity of the 6-command demo and 7-claim falsification path)
 - "The 90-day plan is right-sized for one operator + one coordinator" — ASSUMED-with-Ihsān (no prior comparable session-arc · this is the first GTM execution at this scope)
 - "Samy or alternative reviewer will respond within 20 days" — ASSUMED-with-Ihsān (estimate based on Mumu's relationship · explicit as a risk in §VIII.R1)
@@ -63,6 +66,7 @@
 **Definition**: Cannot be verified · cannot be derived · cannot be honestly assumed. The architect declares ignorance rather than fabricate.
 
 **Example uses**:
+
 - "Whether Ring-1 reviewer feedback will be primarily positive or negative" — UNKNOWN (no precedent · don't assume)
 - "Whether competing OSS agent frameworks (Pi · Hermes · OpenClaw) will copy the receipt-chain pattern" — UNKNOWN (predicting other actors)
 - "Whether Bitcoin will exist at Day 90 for OTS anchoring" — UNKNOWN (extreme · listed to demonstrate the discipline · the actual probability is high but it's still UNKNOWN by canon)
@@ -118,10 +122,10 @@ If you (the reviewer) believe a label is wrong:
 
 BIZRA's constitution rejects two failure modes:
 
-| Failure mode | Why rejected |
-|---|---|
-| **ZANN** (zhann · speculation passed off as certainty) | Riba-Zero invariant: extracting value from time-decay of unverified claims is the same root structure as financial usury. Confidence theatre is its rhetorical form. |
-| **Hidden assumption laundering** | When an architect builds on assumptions they refuse to NAME, the system becomes load-bearing on invisible scaffolding. The first stress event reveals the hidden truth — usually painfully. |
+| Failure mode                                           | Why rejected                                                                                                                                                                                |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ZANN** (zhann · speculation passed off as certainty) | Riba-Zero invariant: extracting value from time-decay of unverified claims is the same root structure as financial usury. Confidence theatre is its rhetorical form.                        |
+| **Hidden assumption laundering**                       | When an architect builds on assumptions they refuse to NAME, the system becomes load-bearing on invisible scaffolding. The first stress event reveals the hidden truth — usually painfully. |
 
 The 4-label taxonomy makes both impossible. Every claim either names its verification path (VERIFIED · DERIVED) or names its uncertainty (ASSUMED-with-Ihsān · UNKNOWN). No claim hides in the gap between.
 
@@ -133,12 +137,12 @@ This is what `[[feedback_law_of_assumption_killer_behavior]]` calls "the canon o
 
 After reading the GTM document and the 2 ADRs, count:
 
-| Label | Approximate count in binder | Is the ratio reasonable? |
-|---|---|---|
-| VERIFIED | _____ (you fill in) | Should be the majority for disk-state claims |
-| DERIVED | _____ | Should be moderate · most strategic conclusions |
-| ASSUMED-with-Ihsān | _____ | Should be small · explicit forward-looking claims |
-| UNKNOWN | _____ | Should be non-zero · architect declaring ignorance is healthy |
+| Label              | Approximate count in binder | Is the ratio reasonable?                                      |
+| ------------------ | --------------------------- | ------------------------------------------------------------- |
+| VERIFIED           | **\_** (you fill in)        | Should be the majority for disk-state claims                  |
+| DERIVED            | **\_**                      | Should be moderate · most strategic conclusions               |
+| ASSUMED-with-Ihsān | **\_**                      | Should be small · explicit forward-looking claims             |
+| UNKNOWN            | **\_**                      | Should be non-zero · architect declaring ignorance is healthy |
 
 **If you see a binder where everything is VERIFIED, suspect zann.** Even disk truth requires interpretation. The 4-label taxonomy creates space for that interpretation.
 

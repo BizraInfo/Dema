@@ -45,11 +45,11 @@ opaque "agent doing things behind your back."
 
 Roughly three early personas, in order of fit:
 
-| Persona | What they get from Dema |
-|---|---|
-| Operator who runs local AI and wants receipts for what it actually did | A consent-bound runtime envelope around their local models |
-| Developer integrating a local model into a workflow they need to audit later | A way to preview, gate, and record bounded diagnostic actions |
-| Researcher / reviewer evaluating "sovereign AI" claims | A working, reproducible, stdlib-only example of what consent-gated proof discipline looks like in code |
+| Persona                                                                      | What they get from Dema                                                                                |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Operator who runs local AI and wants receipts for what it actually did       | A consent-bound runtime envelope around their local models                                             |
+| Developer integrating a local model into a workflow they need to audit later | A way to preview, gate, and record bounded diagnostic actions                                          |
+| Researcher / reviewer evaluating "sovereign AI" claims                       | A working, reproducible, stdlib-only example of what consent-gated proof discipline looks like in code |
 
 Dema is **not** intended for users who want a no-friction assistant
 that decides things for them. The friction is the product.
@@ -62,16 +62,16 @@ Remember → Inspect → Propose → Ask Consent → Act Boundedly → Prove →
 
 Mapped to commands:
 
-| Step | Command |
-|---|---|
-| Remember | `dema setup` (creates `~/.dema/profile.json`, idempotent) |
-| Inspect | `dema status`, `dema doctor` |
-| Propose | `dema journey "<intent>"`, `dema consent plan "<intent>"`, `dema mission draft "<intent>"` |
-| Ask Consent | Operator types the exact phrase the consent plan named |
+| Step          | Command                                                                                          |
+| ------------- | ------------------------------------------------------------------------------------------------ |
+| Remember      | `dema setup` (creates `~/.dema/profile.json`, idempotent)                                        |
+| Inspect       | `dema status`, `dema doctor`                                                                     |
+| Propose       | `dema journey "<intent>"`, `dema consent plan "<intent>"`, `dema mission draft "<intent>"`       |
+| Ask Consent   | Operator types the exact phrase the consent plan named                                           |
 | Act Boundedly | Currently handled upstream by the governed gateway (Dema-local execution is `DESIGNED_NOT_LIVE`) |
-| Prove | `dema receipts`, `dema receipts <artifact-id>` |
-| Learn | The receipt's `next_safe_action` field |
-| Next Action | Single suggested step shown in the active kernel banner |
+| Prove         | `dema receipts`, `dema receipts <artifact-id>`                                                   |
+| Learn         | The receipt's `next_safe_action` field                                                           |
+| Next Action   | Single suggested step shown in the active kernel banner                                          |
 
 ## The product promise
 
@@ -104,7 +104,7 @@ position is that all three are non-negotiable.
 ## Boundary and refusals
 
 The first-class product surfaces are **previews** and **refusals**, not
-actions. A refusal that names *why* and *what next* is a successful
+actions. A refusal that names _why_ and _what next_ is a successful
 output, not a failure.
 
 The full L0–L5 autonomy envelope lives in

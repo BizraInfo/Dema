@@ -96,16 +96,16 @@ Preview commands stop at the boundary. Do not reinterpret a preview as permissio
 
 ## Non-negotiable invariants
 
-| Invariant | Source |
-|---|---|
-| Dema is one face, not the whole ecosystem. | [06-adr/ADR-001-dema-is-one-face.md](06-adr/ADR-001-dema-is-one-face.md) |
-| No runtime execution in this repo. | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| No hidden daemon. | [06-adr/ADR-002-no-shadow-state.md](06-adr/ADR-002-no-shadow-state.md) |
-| Exact-string consent only. | [06-adr/ADR-005-operator-actions-require-explicit-consent.md](06-adr/ADR-005-operator-actions-require-explicit-consent.md) |
-| All local Dema state is under `DEMA_HOME` or `~/.dema`. | [06-adr/ADR-004-local-first-memory.md](06-adr/ADR-004-local-first-memory.md) |
-| Adapter input is untrusted. | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| Receipts are read/list here; governed runtime issues. | [RECEIPTS.md](RECEIPTS.md) |
-| Node1 / Node2 are preview-only until proof gates pass. | [GTM.md](GTM.md) |
+| Invariant                                               | Source                                                                                                                     |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Dema is one face, not the whole ecosystem.              | [06-adr/ADR-001-dema-is-one-face.md](06-adr/ADR-001-dema-is-one-face.md)                                                   |
+| No runtime execution in this repo.                      | [ARCHITECTURE.md](ARCHITECTURE.md)                                                                                         |
+| No hidden daemon.                                       | [06-adr/ADR-002-no-shadow-state.md](06-adr/ADR-002-no-shadow-state.md)                                                     |
+| Exact-string consent only.                              | [06-adr/ADR-005-operator-actions-require-explicit-consent.md](06-adr/ADR-005-operator-actions-require-explicit-consent.md) |
+| All local Dema state is under `DEMA_HOME` or `~/.dema`. | [06-adr/ADR-004-local-first-memory.md](06-adr/ADR-004-local-first-memory.md)                                               |
+| Adapter input is untrusted.                             | [ARCHITECTURE.md](ARCHITECTURE.md)                                                                                         |
+| Receipts are read/list here; governed runtime issues.   | [RECEIPTS.md](RECEIPTS.md)                                                                                                 |
+| Node1 / Node2 are preview-only until proof gates pass.  | [GTM.md](GTM.md)                                                                                                           |
 
 ## Hard stop gates
 
@@ -154,15 +154,15 @@ It is acceptable to mention those phrases only when explicitly labeling them as 
 
 Use [INDEX.md](INDEX.md) to decide what is authoritative.
 
-| Area | Classification |
-|---|---|
-| `README.md` | Public front door. |
-| `docs/INDEX.md` | Navigation source of truth. |
-| `docs/06-adr/` | Binding decisions. |
-| `docs/_absorbed/` | Historical, non-authoritative unless re-promoted. |
-| `docs/superpowers/` | Working design artifacts, not public onboarding. |
-| `proof-of-priority/` | Canonical proof-of-priority pin and artifacts. |
-| `.artifacts/`, `.proof-forge/`, `.qodo/`, `.claude/` | Local/tool output ignored by git. |
+| Area                                                 | Classification                                    |
+| ---------------------------------------------------- | ------------------------------------------------- |
+| `README.md`                                          | Public front door.                                |
+| `docs/INDEX.md`                                      | Navigation source of truth.                       |
+| `docs/06-adr/`                                       | Binding decisions.                                |
+| `docs/_absorbed/`                                    | Historical, non-authoritative unless re-promoted. |
+| `docs/superpowers/`                                  | Working design artifacts, not public onboarding.  |
+| `proof-of-priority/`                                 | Canonical proof-of-priority pin and artifacts.    |
+| `.artifacts/`, `.proof-forge/`, `.qodo/`, `.claude/` | Local/tool output ignored by git.                 |
 
 Do not delete historical docs to reduce noise. Classify them and route readers to the current source.
 

@@ -40,7 +40,8 @@ import { mkdir, writeFile, rename, unlink, realpath } from "node:fs/promises";
 import { join, isAbsolute, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
 
-export const CODEBASE_MAP_SAVE_CONSENT = "GO: save local codebase architecture map";
+export const CODEBASE_MAP_SAVE_CONSENT =
+  "GO: save local codebase architecture map";
 
 export const CODEBASE_MAP_SAVE_SCHEMA =
   "bizra.dema.codebase_architecture_map_save.v0.1";
@@ -74,7 +75,10 @@ function resolveDemaHome(demaHome) {
 // Compute the target save path (and content) for a codebase-map envelope
 // without performing any I/O. Useful for callers that want the path BEFORE
 // deciding to write.
-export function buildCodebaseMapSavePath(envelope, { demaHome, pretty = false } = {}) {
+export function buildCodebaseMapSavePath(
+  envelope,
+  { demaHome, pretty = false } = {},
+) {
   const home = resolveDemaHome(demaHome);
   const content = serializeCodebaseMapForSave(envelope, { pretty });
   const sha = sha256Hex(content);
@@ -87,7 +91,7 @@ export function buildCodebaseMapSavePath(envelope, { demaHome, pretty = false } 
     sha256: sha,
     content,
     dema_home: home,
-    serialized_bytes: Buffer.byteLength(content, "utf8")
+    serialized_bytes: Buffer.byteLength(content, "utf8"),
   };
 }
 
@@ -100,7 +104,9 @@ async function assertContained(receiptsDir, finalPath) {
   const absFinal = resolve(receiptsDir, finalPath);
   const rel = relative(realRoot, absFinal);
   if (rel === ".." || rel.startsWith(".." + sep) || isAbsolute(rel)) {
-    throw new Error(`codebase-map-save: save target escapes receipts dir: ${absFinal}`);
+    throw new Error(
+      `codebase-map-save: save target escapes receipts dir: ${absFinal}`,
+    );
   }
 }
 
@@ -124,25 +130,35 @@ async function assertContained(receiptsDir, finalPath) {
 // for test injection — tests can use a tiny cap to exercise the
 // oversized_serialized_envelope path without allocating 270 MiB strings.
 // Production callers should NEVER override it.
-export async function saveCodebaseMap(envelope, { demaHome, consent, pretty = false, maxBytes = MAX_SAVED_BYTES } = {}) {
+export async function saveCodebaseMap(
+  envelope,
+  { demaHome, consent, pretty = false, maxBytes = MAX_SAVED_BYTES } = {},
+) {
   if (typeof consent !== "string" || consent.length === 0) {
     return {
       saved: false,
       reason: "consent_missing",
-      expected: CODEBASE_MAP_SAVE_CONSENT
+      expected: CODEBASE_MAP_SAVE_CONSENT,
     };
   }
   if (consent !== CODEBASE_MAP_SAVE_CONSENT) {
     return {
       saved: false,
       reason: "consent_mismatch",
-      expected: CODEBASE_MAP_SAVE_CONSENT
+      expected: CODEBASE_MAP_SAVE_CONSENT,
     };
   }
 
   const built = buildCodebaseMapSavePath(envelope, { demaHome, pretty });
-  const { dir: receiptsDir, filename, path: finalPath, sha256: sha,
-          content, dema_home, serialized_bytes } = built;
+  const {
+    dir: receiptsDir,
+    filename,
+    path: finalPath,
+    sha256: sha,
+    content,
+    dema_home,
+    serialized_bytes,
+  } = built;
 
   // NEW (v0.2): hard cap on serialized envelope size. Unique to codebase-map
   // because architecture maps grow with repo size. Default cap is 256 MiB;
@@ -153,7 +169,7 @@ export async function saveCodebaseMap(envelope, { demaHome, consent, pretty = fa
       reason: "oversized_serialized_envelope",
       expected: CODEBASE_MAP_SAVE_CONSENT,
       max_saved_bytes: maxBytes,
-      serialized_bytes
+      serialized_bytes,
     };
   }
 
@@ -176,12 +192,16 @@ export async function saveCodebaseMap(envelope, { demaHome, consent, pretty = fa
   } catch (err) {
     // Best-effort cleanup of the temp file. Ignore unlink failures (the
     // original error is what matters).
-    try { await unlink(tmpPath); } catch { /* swallow */ }
+    try {
+      await unlink(tmpPath);
+    } catch {
+      /* swallow */
+    }
     return {
       saved: false,
       reason: "io_error",
       expected: CODEBASE_MAP_SAVE_CONSENT,
-      error_message: err?.message ?? String(err)
+      error_message: err?.message ?? String(err),
     };
   }
 
@@ -191,6 +211,6 @@ export async function saveCodebaseMap(envelope, { demaHome, consent, pretty = fa
     filename,
     sha256: sha,
     dema_home,
-    serialized_bytes
+    serialized_bytes,
   });
 }

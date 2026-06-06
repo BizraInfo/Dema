@@ -9,6 +9,7 @@
 Browser and computer operator modes give DEMA real-world agency — clicking links, reading files, running commands, launching apps. This is powerful but dangerous.
 
 Market products handle this inconsistently:
+
 - Some auto-act and apologize later
 - Some ask for permission in ways that train users to click "yes" reflexively
 - Some provide no audit trail of what was done

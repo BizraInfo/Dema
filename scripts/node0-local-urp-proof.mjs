@@ -17,7 +17,7 @@ export const ARTIFACT_FILES = [
   "urp_skill_registry_receipt.json",
   "urp_knowledge_pack_receipt.json",
   "urp_resource_offer_receipt.json",
-  "poi_sandbox_record.json"
+  "poi_sandbox_record.json",
 ];
 
 const TRUTH_FIELDS = {
@@ -28,7 +28,7 @@ const TRUTH_FIELDS = {
   visibility: "local_only",
   poi_mode: "sandbox_no_cash_value",
   federation: "not_implemented",
-  token_value_claim: false
+  token_value_claim: false,
 };
 
 const LOCAL_BOUNDARY = {
@@ -38,7 +38,7 @@ const LOCAL_BOUNDARY = {
   raw_private_data_included: false,
   token_value_claim: false,
   real_reward_claim: false,
-  federation_claim: false
+  federation_claim: false,
 };
 
 const RECEIPT_BOUNDARY = {
@@ -46,7 +46,7 @@ const RECEIPT_BOUNDARY = {
   signing_key_used: null,
   artifact_011_class: false,
   issuer: "node0_local_sandbox",
-  receipt_authority: "local_proof_preview_not_canonical_runtime"
+  receipt_authority: "local_proof_preview_not_canonical_runtime",
 };
 
 const SAT_ROLES = [
@@ -54,21 +54,23 @@ const SAT_ROLES = [
   ["S2", "Oracle", "frozen truth axioms / impact-event review"],
   ["S3", "Mediator", "policy conflict resolution"],
   ["S4", "Archivist", "system memory / evidence retention"],
-  ["S5", "Sentinel", "security / tamper / privacy boundary"]
+  ["S5", "Sentinel", "security / tamper / privacy boundary"],
 ].map(([id, name, responsibility]) => ({
   id,
   name,
   responsibility,
   residence: "URP",
   service_scope: "system_serving",
-  verdict_authority: "placeholder_only_never_permit"
+  verdict_authority: "placeholder_only_never_permit",
 }));
 
 function ordered(value) {
   if (Array.isArray(value)) return value.map(ordered);
   if (value && typeof value === "object") {
     return Object.fromEntries(
-      Object.keys(value).sort().map((key) => [key, ordered(value[key])])
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, ordered(value[key])]),
     );
   }
   return value;
@@ -104,16 +106,16 @@ function localReceipt(schema, receiptId, subject, payload) {
     ...LOCAL_BOUNDARY,
     scope: "local_only_read_only_proof",
     subject,
-    payload
+    payload,
   });
 }
 
 function buildArtifacts(root) {
   const node0StandalonePath = join(root, "scripts", "node0_standalone.py");
-    const status = withContentHash({
-      schema: "bizra.dema.urp_local.status.v0.1",
-      proof_id: "node0-local-urp-proof-v0.1",
-      proof_date: PROOF_DATE,
+  const status = withContentHash({
+    schema: "bizra.dema.urp_local.status.v0.1",
+    proof_id: "node0-local-urp-proof-v0.1",
+    proof_date: PROOF_DATE,
     ...TRUTH_FIELDS,
     ...LOCAL_BOUNDARY,
     component_count: 7,
@@ -124,13 +126,15 @@ function buildArtifacts(root) {
       "no_federation",
       "no_node1_handshake",
       "no_external_network",
-      "no_raw_private_data"
+      "no_raw_private_data",
     ],
     prereq_checks: {
-      node0_standalone_py: existsSync(node0StandalonePath) ? "present" : "missing_not_in_this_checkout"
+      node0_standalone_py: existsSync(node0StandalonePath)
+        ? "present"
+        : "missing_not_in_this_checkout",
     },
     boundary_note:
-      "This is a local proof artifact set, not ARTIFACT-011, not a SAT PERMIT, and not a runtime execution."
+      "This is a local proof artifact set, not ARTIFACT-011, not a SAT PERMIT, and not a runtime execution.",
   });
 
   const sat5 = withContentHash({
@@ -142,7 +146,7 @@ function buildArtifacts(root) {
     canon_status: "declared_by_operator_prompt_for_local_proof_only",
     roles: SAT_ROLES,
     boundary_note:
-      "SAT-5 registration here is a local seed proof; real SAT-5 PERMIT authority remains upstream."
+      "SAT-5 registration here is a local seed proof; real SAT-5 PERMIT authority remains upstream.",
   });
 
   const skillReceipt = localReceipt(
@@ -154,8 +158,12 @@ function buildArtifacts(root) {
       name: "Dema Local Readiness Preview",
       autonomy_level: "L1",
       allowed_effects: ["read_local_status", "render_preview_report"],
-      blocked_effects: ["network_call", "filesystem_mutation", "runtime_execution"]
-    }
+      blocked_effects: [
+        "network_call",
+        "filesystem_mutation",
+        "runtime_execution",
+      ],
+    },
   );
 
   const knowledgeReceipt = localReceipt(
@@ -168,10 +176,10 @@ function buildArtifacts(root) {
       truth_sources: [
         "docs/ARCHITECTURE.md",
         "docs/ENGINEERING_DISCIPLINE.md",
-        "docs/02-architecture/dema-autonomy-envelope.md"
+        "docs/02-architecture/dema-autonomy-envelope.md",
       ],
-      excludes_private_user_data: true
-    }
+      excludes_private_user_data: true,
+    },
   );
 
   const resourceReceipt = localReceipt(
@@ -184,8 +192,8 @@ function buildArtifacts(root) {
       visibility: "local_only",
       economic_mode: "sandbox_no_cash_value",
       duplicate_policy: "duplicate_offer_id_is_same_offer",
-      external_access: false
-    }
+      external_access: false,
+    },
   );
 
   const poi = withContentHash({
@@ -202,10 +210,10 @@ function buildArtifacts(root) {
     evidence_hashes: [
       skillReceipt.content_sha256,
       knowledgeReceipt.content_sha256,
-      resourceReceipt.content_sha256
+      resourceReceipt.content_sha256,
     ],
     kpi_type: "proof_integrity",
-    kpi_value: 1
+    kpi_value: 1,
   });
 
   const registry = withContentHash({
@@ -217,40 +225,40 @@ function buildArtifacts(root) {
       {
         skill_id: skillReceipt.payload.skill_id,
         receipt_id: skillReceipt.receipt_id,
-        content_sha256: skillReceipt.content_sha256
-      }
+        content_sha256: skillReceipt.content_sha256,
+      },
     ],
     knowledge_packs: [
       {
         pack_id: knowledgeReceipt.payload.pack_id,
         receipt_id: knowledgeReceipt.receipt_id,
-        content_sha256: knowledgeReceipt.content_sha256
-      }
+        content_sha256: knowledgeReceipt.content_sha256,
+      },
     ],
     resource_offers: [
       {
         offer_id: resourceReceipt.payload.offer_id,
         receipt_id: resourceReceipt.receipt_id,
-        content_sha256: resourceReceipt.content_sha256
-      }
+        content_sha256: resourceReceipt.content_sha256,
+      },
     ],
     sat_registrations: [
       {
         registration_id: "sat5-local-seed-v0.1",
         roles: SAT_ROLES.map((role) => role.name),
-        binding: sat5.binding
-      }
+        binding: sat5.binding,
+      },
     ],
     poi_sandbox_records: [
       {
         record_id: poi.record_id,
-        content_sha256: poi.content_sha256
-      }
+        content_sha256: poi.content_sha256,
+      },
     ],
     idempotency: {
       duplicate_policy: "duplicate_offer_id_is_same_offer",
-      duplicate_resource_offer_rejected_or_idempotent: true
-    }
+      duplicate_resource_offer_rejected_or_idempotent: true,
+    },
   });
 
   return {
@@ -260,7 +268,7 @@ function buildArtifacts(root) {
     urp_skill_registry_receipt: skillReceipt,
     urp_knowledge_pack_receipt: knowledgeReceipt,
     urp_resource_offer_receipt: resourceReceipt,
-    poi_sandbox_record: poi
+    poi_sandbox_record: poi,
   };
 }
 
@@ -272,11 +280,14 @@ function fileEntries(artifacts) {
     ["urp_skill_registry_receipt.json", artifacts.urp_skill_registry_receipt],
     ["urp_knowledge_pack_receipt.json", artifacts.urp_knowledge_pack_receipt],
     ["urp_resource_offer_receipt.json", artifacts.urp_resource_offer_receipt],
-    ["poi_sandbox_record.json", artifacts.poi_sandbox_record]
+    ["poi_sandbox_record.json", artifacts.poi_sandbox_record],
   ];
 }
 
-export async function buildProofArtifacts({ root = REPO_ROOT, write = false } = {}) {
+export async function buildProofArtifacts({
+  root = REPO_ROOT,
+  write = false,
+} = {}) {
   const artifacts = buildArtifacts(root);
   const dir = join(root, PROOF_DIR);
   if (write) await mkdir(dir, { recursive: true });
@@ -289,7 +300,7 @@ export async function buildProofArtifacts({ root = REPO_ROOT, write = false } = 
     files.push({
       path: name,
       sha256: sha256(body),
-      written: write
+      written: write,
     });
   }
 
@@ -303,8 +314,8 @@ export async function buildProofArtifacts({ root = REPO_ROOT, write = false } = 
       network_used: false,
       token_value_claim: false,
       node1_handshake: false,
-      private_data_scanned: false
-    }
+      private_data_scanned: false,
+    },
   };
 }
 
@@ -326,7 +337,7 @@ export async function verifyProofArtifacts({ root = REPO_ROOT } = {}) {
       exists: actualBody !== null,
       matches: actualBody === expectedBody,
       expected_sha256: sha256(expectedBody),
-      actual_sha256: actualBody === null ? null : sha256(actualBody)
+      actual_sha256: actualBody === null ? null : sha256(actualBody),
     });
   }
 
@@ -335,11 +346,14 @@ export async function verifyProofArtifacts({ root = REPO_ROOT } = {}) {
     proof_dir: PROOF_DIR,
     ok: files.every((file) => file.exists && file.matches),
     files,
-    boundary: expected.boundary
+    boundary: expected.boundary,
   };
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (
+  process.argv[1] &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
   const verify = process.argv.includes("--verify");
   const report = verify
     ? await verifyProofArtifacts()

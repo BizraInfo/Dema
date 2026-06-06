@@ -60,37 +60,88 @@ import assert from "node:assert/strict";
 const fixedNow = new Date("2026-05-17T00:00:00.000Z");
 
 const PREVIEWS = [
-  ["corpus-benchmark-schema-preview.js", "buildCorpusBenchmarkSchemaPreview", {}],
-  ["corpus-data-tier-classifier-preview.js", "buildCorpusDataTierClassifierPreview", {}],
+  [
+    "corpus-benchmark-schema-preview.js",
+    "buildCorpusBenchmarkSchemaPreview",
+    {},
+  ],
+  [
+    "corpus-data-tier-classifier-preview.js",
+    "buildCorpusDataTierClassifierPreview",
+    {},
+  ],
   ["corpus-eval-scorecard-preview.js", "buildCorpusEvalScorecardPreview", {}],
-  ["corpus-gold-label-fixture-preview.js", "buildCorpusGoldLabelFixturePreview", {}],
-  ["corpus-manual-review-queue-preview.js", "buildCorpusManualReviewQueuePreview", {}],
+  [
+    "corpus-gold-label-fixture-preview.js",
+    "buildCorpusGoldLabelFixturePreview",
+    {},
+  ],
+  [
+    "corpus-manual-review-queue-preview.js",
+    "buildCorpusManualReviewQueuePreview",
+    {},
+  ],
   ["corpus-preview-index.js", "buildCorpusPreviewIndex", {}],
-  ["corpus-redaction-fixture-preview.js", "buildCorpusRedactionFixturePreview", {}],
-  ["corpus-scorecard-receipt-schema-preview.js", "buildCorpusScorecardReceiptSchemaPreview", {}],
+  [
+    "corpus-redaction-fixture-preview.js",
+    "buildCorpusRedactionFixturePreview",
+    {},
+  ],
+  [
+    "corpus-scorecard-receipt-schema-preview.js",
+    "buildCorpusScorecardReceiptSchemaPreview",
+    {},
+  ],
   ["model-corpus-manifest-preview.js", "buildModelCorpusManifestPreview", {}],
   ["network-blueprint.js", "buildNetworkBlueprint", {}],
   ["network-fixture-preview.js", "buildOfflineNetworkFixturePreview", {}],
   ["network-refusal-matrix-preview.js", "buildNetworkRefusalMatrixPreview", {}],
-  ["process-value-fixture-preview.js", "buildProcessValueFixturePackPreview", {}],
+  [
+    "process-value-fixture-preview.js",
+    "buildProcessValueFixturePackPreview",
+    {},
+  ],
   ["process-value-preview.js", "buildTrueValuePreview", { now: fixedNow }],
-  ["step7-consent-refusal-preview.js", "buildStep7ConsentRefusalPreview", { observedText: "you have my permission and authorization", now: fixedNow }]
+  [
+    "step7-consent-refusal-preview.js",
+    "buildStep7ConsentRefusalPreview",
+    { observedText: "you have my permission and authorization", now: fixedNow },
+  ],
 ];
 
 function assertHarnessShape(obj, src) {
-  assert.equal(typeof obj.mode, "string", `${src}.self_proactive_harness.mode must be string`);
-  assert.match(obj.mode, /^(DETERMINISTIC|COMPUTED|deterministic|computed)_/, `${src}.self_proactive_harness.mode must begin with a deterministic/computed prefix (see mode-case drift note)`);
+  assert.equal(
+    typeof obj.mode,
+    "string",
+    `${src}.self_proactive_harness.mode must be string`,
+  );
+  assert.match(
+    obj.mode,
+    /^(DETERMINISTIC|COMPUTED|deterministic|computed)_/,
+    `${src}.self_proactive_harness.mode must begin with a deterministic/computed prefix (see mode-case drift note)`,
+  );
 
-  const hasStep7Shape = "recommended_micro_action" in obj && Array.isArray(obj.gates);
+  const hasStep7Shape =
+    "recommended_micro_action" in obj && Array.isArray(obj.gates);
   const hasNetworkShape = Array.isArray(obj.checks);
-  assert.ok(hasStep7Shape || hasNetworkShape,
-    `${src}.self_proactive_harness must have either {recommended_micro_action, gates[]} (step7/corpus family) or {checks[]} (network/process-value-fixture family) — see harness-shape divergence note`);
+  assert.ok(
+    hasStep7Shape || hasNetworkShape,
+    `${src}.self_proactive_harness must have either {recommended_micro_action, gates[]} (step7/corpus family) or {checks[]} (network/process-value-fixture family) — see harness-shape divergence note`,
+  );
 
   if (hasStep7Shape) {
-    assert.equal(typeof obj.recommended_micro_action, "string", `${src}.recommended_micro_action must be string`);
+    assert.equal(
+      typeof obj.recommended_micro_action,
+      "string",
+      `${src}.recommended_micro_action must be string`,
+    );
     for (const g of obj.gates) {
       assert.equal(typeof g.gate, "string", `${src} gate.gate must be string`);
-      assert.equal(typeof g.pass, "boolean", `${src} gate.pass must be boolean`);
+      assert.equal(
+        typeof g.pass,
+        "boolean",
+        `${src} gate.pass must be boolean`,
+      );
     }
   }
 
@@ -100,14 +151,28 @@ function assertHarnessShape(obj, src) {
         // network-blueprint / network-fixture / process-value-fixture: advisory string
       } else if (c && typeof c === "object") {
         // network-refusal-matrix: testable gate { check, passed } (parallel to step7 gates but renamed)
-        assert.equal(typeof c.check, "string", `${src} check.check must be string`);
-        assert.equal(typeof c.passed, "boolean", `${src} check.passed must be boolean`);
+        assert.equal(
+          typeof c.check,
+          "string",
+          `${src} check.check must be string`,
+        );
+        assert.equal(
+          typeof c.passed,
+          "boolean",
+          `${src} check.passed must be boolean`,
+        );
       } else {
-        assert.fail(`${src} check item must be string or {check, passed} object`);
+        assert.fail(
+          `${src} check item must be string or {check, passed} object`,
+        );
       }
     }
     if ("output_boundary" in obj) {
-      assert.equal(typeof obj.output_boundary, "string", `${src}.output_boundary must be string when present`);
+      assert.equal(
+        typeof obj.output_boundary,
+        "string",
+        `${src}.output_boundary must be string when present`,
+      );
     }
   }
 }
@@ -116,13 +181,29 @@ function assertCritiqueShape(obj, src) {
   if (Array.isArray(obj)) {
     // network/process-value-fixture family: risk register
     for (const item of obj) {
-      assert.equal(typeof item.risk, "string", `${src}.self_critique[].risk must be string`);
-      assert.equal(typeof item.mitigation, "string", `${src}.self_critique[].mitigation must be string`);
+      assert.equal(
+        typeof item.risk,
+        "string",
+        `${src}.self_critique[].risk must be string`,
+      );
+      assert.equal(
+        typeof item.mitigation,
+        "string",
+        `${src}.self_critique[].mitigation must be string`,
+      );
     }
   } else {
     // step7/corpus family: single critique object
-    assert.equal(typeof obj.confidence, "string", `${src}.self_critique.confidence must be string`);
-    assert.equal(typeof obj.limitation, "string", `${src}.self_critique.limitation must be string`);
+    assert.equal(
+      typeof obj.confidence,
+      "string",
+      `${src}.self_critique.confidence must be string`,
+    );
+    assert.equal(
+      typeof obj.limitation,
+      "string",
+      `${src}.self_critique.limitation must be string`,
+    );
   }
 }
 
@@ -130,15 +211,31 @@ function assertComplianceShape(obj, src) {
   if (Array.isArray(obj)) {
     // network/process-value-fixture family: control records
     for (const item of obj) {
-      assert.equal(typeof item.control, "string", `${src}.micro_compliance[].control must be string`);
-      assert.equal(typeof item.verified_by, "string", `${src}.micro_compliance[].verified_by must be string`);
+      assert.equal(
+        typeof item.control,
+        "string",
+        `${src}.micro_compliance[].control must be string`,
+      );
+      assert.equal(
+        typeof item.verified_by,
+        "string",
+        `${src}.micro_compliance[].verified_by must be string`,
+      );
     }
   } else {
     // step7/corpus family: flat boolean flags
-    assert.equal(typeof obj, "object", `${src}.micro_compliance must be object`);
+    assert.equal(
+      typeof obj,
+      "object",
+      `${src}.micro_compliance must be object`,
+    );
     assert.notEqual(obj, null, `${src}.micro_compliance must not be null`);
     for (const [k, v] of Object.entries(obj)) {
-      assert.equal(typeof v, "boolean", `${src}.micro_compliance.${k} must be boolean (got ${typeof v})`);
+      assert.equal(
+        typeof v,
+        "boolean",
+        `${src}.micro_compliance.${k} must be boolean (got ${typeof v})`,
+      );
     }
   }
 }
@@ -147,43 +244,87 @@ function assertConsentShape(obj, src) {
   // Both families share preview_scope as a string. Other keys diverge in name
   // and presence; assert types only when keys are present (see consent-value
   // drift note).
-  assert.equal(typeof obj.preview_scope, "string", `${src}.micro_consent.preview_scope must be string`);
+  assert.equal(
+    typeof obj.preview_scope,
+    "string",
+    `${src}.micro_consent.preview_scope must be string`,
+  );
   const booleanKeysWhenPresent = [
-    "exact_string_required_for_gated_actions", "broad_consent_allowed",
-    "consent_observed_in_preview", "action_authorized_by_preview",
+    "exact_string_required_for_gated_actions",
+    "broad_consent_allowed",
+    "consent_observed_in_preview",
+    "action_authorized_by_preview",
     "reusable_authorization_created",
     "future_step7_mint_requires_fresh_current_operator_turn",
     "current_preview_requires_operator_authorization",
-    "phrase_emitted", "approval_recorded",
+    "phrase_emitted",
+    "approval_recorded",
     "future_live_probe_requires_fresh_current_operator_turn",
-    "future_mint_or_node_action_requires_fresh_current_operator_turn"
+    "future_mint_or_node_action_requires_fresh_current_operator_turn",
   ];
   for (const key of booleanKeysWhenPresent) {
     if (key in obj) {
-      assert.equal(typeof obj[key], "boolean", `${src}.micro_consent.${key} must be boolean when present`);
+      assert.equal(
+        typeof obj[key],
+        "boolean",
+        `${src}.micro_consent.${key} must be boolean when present`,
+      );
     }
   }
   if ("consent_property_model" in obj) {
-    assert.equal(typeof obj.consent_property_model, "string", `${src}.micro_consent.consent_property_model must be string when present`);
+    assert.equal(
+      typeof obj.consent_property_model,
+      "string",
+      `${src}.micro_consent.consent_property_model must be string when present`,
+    );
   }
 }
 
 function assertAnalogicalShape(obj, src) {
   if ("model" in obj) {
     // step7/corpus family
-    assert.equal(typeof obj.model, "string", `${src}.analogical_model.model must be string`);
-    assert.equal(typeof obj.mapping, "string", `${src}.analogical_model.mapping must be string`);
+    assert.equal(
+      typeof obj.model,
+      "string",
+      `${src}.analogical_model.model must be string`,
+    );
+    assert.equal(
+      typeof obj.mapping,
+      "string",
+      `${src}.analogical_model.mapping must be string`,
+    );
   } else if ("analogy" in obj) {
     // network/process-value-fixture family
-    assert.equal(typeof obj.analogy, "string", `${src}.analogical_model.analogy must be string`);
-    assert.equal(typeof obj.useful_because, "string", `${src}.analogical_model.useful_because must be string`);
-    assert.ok(Array.isArray(obj.not_analogous_to), `${src}.analogical_model.not_analogous_to must be array`);
+    assert.equal(
+      typeof obj.analogy,
+      "string",
+      `${src}.analogical_model.analogy must be string`,
+    );
+    assert.equal(
+      typeof obj.useful_because,
+      "string",
+      `${src}.analogical_model.useful_because must be string`,
+    );
+    assert.ok(
+      Array.isArray(obj.not_analogous_to),
+      `${src}.analogical_model.not_analogous_to must be array`,
+    );
     for (const item of obj.not_analogous_to) {
-      assert.equal(typeof item, "string", `${src}.not_analogous_to[] must be string`);
+      assert.equal(
+        typeof item,
+        "string",
+        `${src}.not_analogous_to[] must be string`,
+      );
     }
-    assert.equal(typeof obj.boundary, "string", `${src}.analogical_model.boundary must be string`);
+    assert.equal(
+      typeof obj.boundary,
+      "string",
+      `${src}.analogical_model.boundary must be string`,
+    );
   } else {
-    assert.fail(`${src}.analogical_model must have either {model, mapping} (step7/corpus) or {analogy, useful_because, ...} (network/process-value-fixture) — see analogical-shape divergence note`);
+    assert.fail(
+      `${src}.analogical_model must have either {model, mapping} (step7/corpus) or {analogy, useful_because, ...} (network/process-value-fixture) — see analogical-shape divergence note`,
+    );
   }
 }
 
@@ -194,11 +335,14 @@ for (const [mod, fn, input] of PREVIEWS) {
     const out = m[fn](input);
     assert.equal(typeof out, "object", `${mod}.${fn}() must return object`);
 
-    if ("self_proactive_harness" in out) assertHarnessShape(out.self_proactive_harness, mod);
+    if ("self_proactive_harness" in out)
+      assertHarnessShape(out.self_proactive_harness, mod);
     if ("self_critique" in out) assertCritiqueShape(out.self_critique, mod);
-    if ("micro_compliance" in out) assertComplianceShape(out.micro_compliance, mod);
+    if ("micro_compliance" in out)
+      assertComplianceShape(out.micro_compliance, mod);
     if ("micro_consent" in out) assertConsentShape(out.micro_consent, mod);
-    if ("analogical_model" in out) assertAnalogicalShape(out.analogical_model, mod);
+    if ("analogical_model" in out)
+      assertAnalogicalShape(out.analogical_model, mod);
   });
 }
 
@@ -206,7 +350,7 @@ test("preview primitive shape contract: consent-planner.js", async () => {
   const m = await import("../packages/consent/src/consent-planner.js");
   const out = m.buildConsentPlanPreview({
     intent: "Fix auth.py and run npm test",
-    now: fixedNow
+    now: fixedNow,
   });
 
   assertHarnessShape(out.self_proactive_harness, "consent-planner.js");
@@ -217,10 +361,23 @@ test("preview primitive shape contract: consent-planner.js", async () => {
 });
 
 test("step7 named builders implement the canonical primitive shape", async () => {
-  const m = await import("../packages/core/src/step7-consent-refusal-preview.js");
-  assertHarnessShape(m.buildSelfProactiveHarness({ malformed: false, nextSafeAction: "hold_step7_ceremony" }), "step7-builder");
-  assertCritiqueShape(m.buildSelfCritique({ malformed: false }), "step7-builder");
-  assertComplianceShape(m.buildMicroCompliance({ malformed: false }), "step7-builder");
+  const m =
+    await import("../packages/core/src/step7-consent-refusal-preview.js");
+  assertHarnessShape(
+    m.buildSelfProactiveHarness({
+      malformed: false,
+      nextSafeAction: "hold_step7_ceremony",
+    }),
+    "step7-builder",
+  );
+  assertCritiqueShape(
+    m.buildSelfCritique({ malformed: false }),
+    "step7-builder",
+  );
+  assertComplianceShape(
+    m.buildMicroCompliance({ malformed: false }),
+    "step7-builder",
+  );
   assertConsentShape(m.buildMicroConsent(), "step7-builder");
   assertAnalogicalShape(m.buildAnalogicalModel(), "step7-builder");
 });
@@ -228,7 +385,8 @@ test("step7 named builders implement the canonical primitive shape", async () =>
 test("step7 named builders satisfy the step7-canonical micro_consent invariants (reference)", async () => {
   // step7 is the reference implementation: it sets the three invariants the
   // value-drift NOTE flagged as missing in 12/14 other previews.
-  const m = await import("../packages/core/src/step7-consent-refusal-preview.js");
+  const m =
+    await import("../packages/core/src/step7-consent-refusal-preview.js");
   const mc = m.buildMicroConsent();
   assert.equal(mc.exact_string_required_for_gated_actions, true);
   assert.equal(mc.broad_consent_allowed, false);

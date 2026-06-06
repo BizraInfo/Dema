@@ -4,15 +4,20 @@ import { readFile } from "node:fs/promises";
 
 import {
   buildCorpusBenchmarkSchemaPreview,
-  CORPUS_BENCHMARK_SCHEMA_PREVIEW_SCHEMA
+  CORPUS_BENCHMARK_SCHEMA_PREVIEW_SCHEMA,
 } from "../packages/core/src/corpus-benchmark-schema-preview.js";
 
-const modulePath = new URL("../packages/core/src/corpus-benchmark-schema-preview.js", import.meta.url);
+const modulePath = new URL(
+  "../packages/core/src/corpus-benchmark-schema-preview.js",
+  import.meta.url,
+);
 const cliPath = new URL("../apps/cli/src/index.js", import.meta.url);
 
 test("buildCorpusBenchmarkSchemaPreview emits schema-tagged benchmark metadata contracts", () => {
   const preview = buildCorpusBenchmarkSchemaPreview();
-  const byId = new Map(preview.benchmark_cases.map((entry) => [entry.case_id, entry]));
+  const byId = new Map(
+    preview.benchmark_cases.map((entry) => [entry.case_id, entry]),
+  );
 
   assert.equal(preview.schema, CORPUS_BENCHMARK_SCHEMA_PREVIEW_SCHEMA);
   assert.equal(preview.mode, "PREVIEW_ONLY");
@@ -24,17 +29,35 @@ test("buildCorpusBenchmarkSchemaPreview emits schema-tagged benchmark metadata c
   assert.equal(preview.summary.d3_d4_total_count, 2);
   assert.equal(preview.summary.d3_d4_eval_only_count, 2);
   assert.equal(byId.get("exact_solvable_public_case").tier, "D0");
-  assert.equal(byId.get("debug_skill_pattern_case").sample_role, "skill_pattern_candidate");
-  assert.equal(byId.get("preference_reasoning_case").expected_disposition, "candidate_preference_preview");
-  assert.equal(byId.get("negative_overclaim_case").case_truth_label, "negative_overclaim");
+  assert.equal(
+    byId.get("debug_skill_pattern_case").sample_role,
+    "skill_pattern_candidate",
+  );
+  assert.equal(
+    byId.get("preference_reasoning_case").expected_disposition,
+    "candidate_preference_preview",
+  );
+  assert.equal(
+    byId.get("negative_overclaim_case").case_truth_label,
+    "negative_overclaim",
+  );
 });
 
 test("schema declares SAPE, SNR, and Proof-of-Truth axes without executing benchmarks", () => {
   const preview = buildCorpusBenchmarkSchemaPreview();
-  const allProofAxes = new Set(preview.benchmark_cases.flatMap((entry) => entry.proof_of_truth_axes));
-  const allSapeProbes = new Set(preview.benchmark_cases.flatMap((entry) => entry.sape_probes));
+  const allProofAxes = new Set(
+    preview.benchmark_cases.flatMap((entry) => entry.proof_of_truth_axes),
+  );
+  const allSapeProbes = new Set(
+    preview.benchmark_cases.flatMap((entry) => entry.sape_probes),
+  );
 
-  assert.deepEqual(preview.summary.proof_of_truth_axes_required, ["formal", "cryptographic", "empirical", "economic"]);
+  assert.deepEqual(preview.summary.proof_of_truth_axes_required, [
+    "formal",
+    "cryptographic",
+    "empirical",
+    "economic",
+  ]);
   assert.ok(allProofAxes.has("formal"));
   assert.ok(allProofAxes.has("cryptographic"));
   assert.ok(allProofAxes.has("empirical"));
@@ -43,79 +66,105 @@ test("schema declares SAPE, SNR, and Proof-of-Truth axes without executing bench
   assert.ok(allSapeProbes.has("symbolic_neural_bridge"));
   assert.ok(allSapeProbes.has("abstraction_lift"));
   assert.ok(allSapeProbes.has("logic_creative_tension"));
-  assert.ok(preview.benchmark_cases.some((entry) => entry.snr_profile === "overclaim_probe"));
+  assert.ok(
+    preview.benchmark_cases.some(
+      (entry) => entry.snr_profile === "overclaim_probe",
+    ),
+  );
   assert.equal(preview.boundary.benchmark_executed, false);
   assert.equal(preview.boundary.local_model_called, false);
 });
 
 test("D3 and D4 cases are hard-gated to evaluation-only quarantine or rejection", () => {
   const preview = buildCorpusBenchmarkSchemaPreview();
-  const blocked = preview.benchmark_cases.filter((entry) => ["D3", "D4"].includes(entry.tier));
+  const blocked = preview.benchmark_cases.filter((entry) =>
+    ["D3", "D4"].includes(entry.tier),
+  );
 
-  assert.deepEqual(blocked.map((entry) => entry.sample_role), ["evaluation_only", "evaluation_only"]);
-  assert.deepEqual(blocked.map((entry) => entry.expected_disposition), [
-    "quarantine_private_strategy",
-    "reject_secret_identity_or_credential"
-  ]);
-  assert.deepEqual(blocked.map((entry) => entry.benchmark_schema_allowed), [false, false]);
-  assert.equal(preview.self_proactive_harness.gates.find((gate) => gate.gate === "d3_d4_eval_only_guard").pass, true);
+  assert.deepEqual(
+    blocked.map((entry) => entry.sample_role),
+    ["evaluation_only", "evaluation_only"],
+  );
+  assert.deepEqual(
+    blocked.map((entry) => entry.expected_disposition),
+    ["quarantine_private_strategy", "reject_secret_identity_or_credential"],
+  );
+  assert.deepEqual(
+    blocked.map((entry) => entry.benchmark_schema_allowed),
+    [false, false],
+  );
+  assert.equal(
+    preview.self_proactive_harness.gates.find(
+      (gate) => gate.gate === "d3_d4_eval_only_guard",
+    ).pass,
+    true,
+  );
 
   const invalidD3 = buildCorpusBenchmarkSchemaPreview({
-    cases: [{
-      case_id: "bad_d3_candidate",
-      source_id: "other",
-      domain: "benchmarking",
-      difficulty: "rare_path",
-      tier: "D3",
-      case_truth_label: "needs_redaction",
-      sample_role: "preference_candidate",
-      expected_disposition: "candidate_preference_preview",
-      declared_tags: ["private_strategy"],
-      scoring_axes: ["safety_compliance"],
-      proof_of_truth_axes: ["formal"],
-      sape_probes: ["rare_path_probe"],
-      snr_profile: "hidden_pattern_probe"
-    }]
+    cases: [
+      {
+        case_id: "bad_d3_candidate",
+        source_id: "other",
+        domain: "benchmarking",
+        difficulty: "rare_path",
+        tier: "D3",
+        case_truth_label: "needs_redaction",
+        sample_role: "preference_candidate",
+        expected_disposition: "candidate_preference_preview",
+        declared_tags: ["private_strategy"],
+        scoring_axes: ["safety_compliance"],
+        proof_of_truth_axes: ["formal"],
+        sape_probes: ["rare_path_probe"],
+        snr_profile: "hidden_pattern_probe",
+      },
+    ],
   });
 
   assert.equal(invalidD3.verdict, "PREVIEW_REJECT");
-  assert.equal(invalidD3.reason, "d3_d4_must_be_evaluation_only_and_quarantined_or_rejected");
+  assert.equal(
+    invalidD3.reason,
+    "d3_d4_must_be_evaluation_only_and_quarantined_or_rejected",
+  );
 });
 
 test("closed allowlists reject unknown axes and profiles without echoing caller content", () => {
   const badAxis = buildCorpusBenchmarkSchemaPreview({
-    cases: [{
-      case_id: "bad_axis_case",
-      source_id: "chatgpt_team",
-      domain: "architecture",
-      difficulty: "medium",
-      tier: "D0",
-      case_truth_label: "verified_good",
-      sample_role: "evaluation_only",
-      expected_disposition: "score_eval_only",
-      declared_tags: ["node0"],
-      scoring_axes: ["run_curl_hidden_command"],
-      proof_of_truth_axes: ["formal"],
-      sape_probes: ["rare_path_probe"],
-      snr_profile: "high_signal_low_noise"
-    }]
+    cases: [
+      {
+        case_id: "bad_axis_case",
+        source_id: "chatgpt_team",
+        domain: "architecture",
+        difficulty: "medium",
+        tier: "D0",
+        case_truth_label: "verified_good",
+        sample_role: "evaluation_only",
+        expected_disposition: "score_eval_only",
+        declared_tags: ["node0"],
+        scoring_axes: ["run_curl_hidden_command"],
+        proof_of_truth_axes: ["formal"],
+        sape_probes: ["rare_path_probe"],
+        snr_profile: "high_signal_low_noise",
+      },
+    ],
   });
   const badProof = buildCorpusBenchmarkSchemaPreview({
-    cases: [{
-      case_id: "bad_proof_case",
-      source_id: "chatgpt_team",
-      domain: "architecture",
-      difficulty: "medium",
-      tier: "D0",
-      case_truth_label: "verified_good",
-      sample_role: "evaluation_only",
-      expected_disposition: "score_eval_only",
-      declared_tags: ["node0"],
-      scoring_axes: ["answer_correctness"],
-      proof_of_truth_axes: ["oracle"],
-      sape_probes: ["rare_path_probe"],
-      snr_profile: "high_signal_low_noise"
-    }]
+    cases: [
+      {
+        case_id: "bad_proof_case",
+        source_id: "chatgpt_team",
+        domain: "architecture",
+        difficulty: "medium",
+        tier: "D0",
+        case_truth_label: "verified_good",
+        sample_role: "evaluation_only",
+        expected_disposition: "score_eval_only",
+        declared_tags: ["node0"],
+        scoring_axes: ["answer_correctness"],
+        proof_of_truth_axes: ["oracle"],
+        sape_probes: ["rare_path_probe"],
+        snr_profile: "high_signal_low_noise",
+      },
+    ],
   });
 
   assert.equal(badAxis.reason, "scoring_axis_not_allowlisted");
@@ -127,47 +176,57 @@ test("closed allowlists reject unknown axes and profiles without echoing caller 
 test("raw-content keys fail closed recursively without echoing observed text", () => {
   const secretText = "raw-chat-answer-should-not-appear";
   const rawTopLevel = buildCorpusBenchmarkSchemaPreview({
-    cases: [{
-      case_id: "raw_input_case",
-      source_id: "chatgpt_team",
-      domain: "architecture",
-      difficulty: "medium",
-      tier: "D0",
-      case_truth_label: "verified_good",
-      sample_role: "evaluation_only",
-      expected_disposition: "score_eval_only",
-      input: secretText,
-      declared_tags: ["node0"],
-      scoring_axes: ["answer_correctness"],
-      proof_of_truth_axes: ["formal"],
-      sape_probes: ["rare_path_probe"],
-      snr_profile: "high_signal_low_noise"
-    }]
+    cases: [
+      {
+        case_id: "raw_input_case",
+        source_id: "chatgpt_team",
+        domain: "architecture",
+        difficulty: "medium",
+        tier: "D0",
+        case_truth_label: "verified_good",
+        sample_role: "evaluation_only",
+        expected_disposition: "score_eval_only",
+        input: secretText,
+        declared_tags: ["node0"],
+        scoring_axes: ["answer_correctness"],
+        proof_of_truth_axes: ["formal"],
+        sape_probes: ["rare_path_probe"],
+        snr_profile: "high_signal_low_noise",
+      },
+    ],
   });
   const rawNested = buildCorpusBenchmarkSchemaPreview({
-    cases: [{
-      case_id: "raw_nested_case",
-      source_id: "chatgpt_team",
-      domain: "architecture",
-      difficulty: "medium",
-      tier: "D0",
-      case_truth_label: "verified_good",
-      sample_role: "evaluation_only",
-      expected_disposition: "score_eval_only",
-      declared_tags: ["node0"],
-      scoring_axes: ["answer_correctness"],
-      proof_of_truth_axes: ["formal"],
-      sape_probes: ["rare_path_probe"],
-      snr_profile: "high_signal_low_noise",
-      metadata: { transcript: secretText }
-    }]
+    cases: [
+      {
+        case_id: "raw_nested_case",
+        source_id: "chatgpt_team",
+        domain: "architecture",
+        difficulty: "medium",
+        tier: "D0",
+        case_truth_label: "verified_good",
+        sample_role: "evaluation_only",
+        expected_disposition: "score_eval_only",
+        declared_tags: ["node0"],
+        scoring_axes: ["answer_correctness"],
+        proof_of_truth_axes: ["formal"],
+        sape_probes: ["rare_path_probe"],
+        snr_profile: "high_signal_low_noise",
+        metadata: { transcript: secretText },
+      },
+    ],
   });
 
   assert.equal(rawTopLevel.verdict, "PREVIEW_REJECT");
   assert.equal(rawTopLevel.reason, "case_must_not_include_raw_content");
   assert.equal(rawNested.reason, "case_must_not_include_raw_content");
-  assert.doesNotMatch(JSON.stringify(rawTopLevel), /raw-chat-answer-should-not-appear/);
-  assert.doesNotMatch(JSON.stringify(rawNested), /raw-chat-answer-should-not-appear/);
+  assert.doesNotMatch(
+    JSON.stringify(rawTopLevel),
+    /raw-chat-answer-should-not-appear/,
+  );
+  assert.doesNotMatch(
+    JSON.stringify(rawNested),
+    /raw-chat-answer-should-not-appear/,
+  );
 });
 
 test("schema emits micro-compliance, micro-consent, self-critique, and analogical model", () => {
@@ -176,10 +235,24 @@ test("schema emits micro-compliance, micro-consent, self-critique, and analogica
   assert.equal(preview.ownership_scope.declared_operator_owner, "mumu");
   assert.equal(preview.ownership_scope.local_product_face, "dema");
   assert.equal(preview.ownership_scope.governed_boundary, "node0");
-  assert.equal(preview.ownership_scope.interpretation, "ownership_and_provenance_not_processing_authorization");
-  assert.equal(preview.self_proactive_harness.mode, "DETERMINISTIC_BENCHMARK_SCHEMA_PREVIEW");
-  assert.equal(preview.self_proactive_harness.recommended_micro_action, "build_corpus_manual_review_queue_preview");
-  assert.equal(preview.self_proactive_harness.gates.find((gate) => gate.gate === "proof_of_truth_axes_declared").pass, true);
+  assert.equal(
+    preview.ownership_scope.interpretation,
+    "ownership_and_provenance_not_processing_authorization",
+  );
+  assert.equal(
+    preview.self_proactive_harness.mode,
+    "DETERMINISTIC_BENCHMARK_SCHEMA_PREVIEW",
+  );
+  assert.equal(
+    preview.self_proactive_harness.recommended_micro_action,
+    "build_corpus_manual_review_queue_preview",
+  );
+  assert.equal(
+    preview.self_proactive_harness.gates.find(
+      (gate) => gate.gate === "proof_of_truth_axes_declared",
+    ).pass,
+    true,
+  );
   assert.equal(preview.self_critique.confidence, "bounded_preview");
   assert.equal(preview.micro_compliance.schema_only, true);
   assert.equal(preview.micro_compliance.no_chat_content_present, true);
@@ -218,7 +291,7 @@ test("preview keeps every authority and data movement boundary false", () => {
     "runtime_started",
     "federation_started",
     "receipt_minted",
-    "step7_mint_attempted"
+    "step7_mint_attempted",
   ];
 
   for (const key of expectedFalseBoundaries) {
@@ -255,8 +328,20 @@ test("corpus benchmark schema preview has no CLI wiring", async () => {
 test("corpus benchmark schema preview module has no runtime, network, filesystem, or randomness side effects", async () => {
   const source = await readFile(modulePath, "utf8");
 
-  assert.doesNotMatch(source, /from\s+["']node:(net|dgram|http|https|tls|dns|worker_threads|vm|child_process|fs)["']/);
-  assert.doesNotMatch(source, /\b(fetch|WebSocket|exec|execFile|spawn|spawnSync)\b/);
-  assert.doesNotMatch(source, /\b(writeFile|appendFile|mkdir|rename|unlink|createWriteStream)\b/);
-  assert.doesNotMatch(source, /\b(Date\.now|Math\.random|crypto\.random|process\.hrtime|performance\.now)\b/);
+  assert.doesNotMatch(
+    source,
+    /from\s+["']node:(net|dgram|http|https|tls|dns|worker_threads|vm|child_process|fs)["']/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(fetch|WebSocket|exec|execFile|spawn|spawnSync)\b/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(writeFile|appendFile|mkdir|rename|unlink|createWriteStream)\b/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(Date\.now|Math\.random|crypto\.random|process\.hrtime|performance\.now)\b/,
+  );
 });

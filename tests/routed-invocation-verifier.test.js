@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   verifyRoutedInvocationEnvelope,
   ROUTED_INVOCATION_VERIFICATION_SCHEMA,
-  INVARIANT_NAMES
+  INVARIANT_NAMES,
 } from "../packages/core/src/routed-invocation-verifier.js";
 
 // =============================================================================
@@ -21,11 +21,14 @@ function baseRouteReceipt({ selectedModelId = "llama3.1:8b" } = {}) {
     selected_model_id: selectedModelId,
     selected_model_role: selectedModelId === null ? null : "dema_face",
     selected_model_locality: selectedModelId === null ? null : "local",
-    reason: selectedModelId === null ? "no_acceptable_candidate" : "matched_preferred_role_dema_face",
+    reason:
+      selectedModelId === null
+        ? "no_acceptable_candidate"
+        : "matched_preferred_role_dema_face",
     rejected_candidates: [],
     canon_refs: [],
     warnings: [],
-    boundary: {}
+    boundary: {},
   };
 }
 
@@ -48,7 +51,7 @@ function makeCompletedEnvelope() {
       target_is_localhost: true,
       consent_phrase_verified: true,
       effects_observed: {},
-      blocked_effects: []
+      blocked_effects: [],
     },
     boundary: {
       runtime: true,
@@ -59,9 +62,9 @@ function makeCompletedEnvelope() {
       federation: false,
       mint: false,
       token_economy: false,
-      urp_networking: false
+      urp_networking: false,
     },
-    warnings: []
+    warnings: [],
   };
 }
 
@@ -70,7 +73,8 @@ function makeFailedConsentMismatchEnvelope() {
   env.invocation_result = {
     schema: "bizra.dema.llm_invocation_result.v0.1",
     invocation_status: "failed",
-    error_reason: "consent_phrase_mismatch · required exact string: 'GO: invoke local LLM at llama3.1:8b' · invocation refused",
+    error_reason:
+      "consent_phrase_mismatch · required exact string: 'GO: invoke local LLM at llama3.1:8b' · invocation refused",
     model_invoked: "llama3.1:8b",
     prompt_length_chars: 5,
     response_length_chars: 0,
@@ -81,7 +85,7 @@ function makeFailedConsentMismatchEnvelope() {
     target_is_localhost: true,
     consent_phrase_verified: false,
     effects_observed: {},
-    blocked_effects: []
+    blocked_effects: [],
   };
   env.boundary.model_invocation = false;
   env.boundary.network_used = false;
@@ -103,9 +107,9 @@ function makeNullSelectionEnvelope() {
       federation: false,
       mint: false,
       token_economy: false,
-      urp_networking: false
+      urp_networking: false,
     },
-    warnings: ["no_selected_model_pre_invocation"]
+    warnings: ["no_selected_model_pre_invocation"],
   };
 }
 
@@ -127,7 +131,10 @@ test("compliant consent-mismatch failed envelope → verdict=compliant + next_st
   const v = verifyRoutedInvocationEnvelope(makeFailedConsentMismatchEnvelope());
   assert.equal(v.verdict, "compliant");
   assert.equal(v.invocation_status_summary, "failed");
-  assert.equal(v.next_step, "retry_with_correct_invoke_consent_for_selected_model");
+  assert.equal(
+    v.next_step,
+    "retry_with_correct_invoke_consent_for_selected_model",
+  );
   assert.ok(v.warnings.some((w) => w.startsWith("invocation_failed:")));
 });
 
@@ -135,7 +142,10 @@ test("compliant null-selection envelope → verdict=compliant + next_step=popula
   const v = verifyRoutedInvocationEnvelope(makeNullSelectionEnvelope());
   assert.equal(v.verdict, "compliant");
   assert.equal(v.invocation_status_summary, "no_selection");
-  assert.equal(v.next_step, "populate_operator_registry_with_active_local_models");
+  assert.equal(
+    v.next_step,
+    "populate_operator_registry_with_active_local_models",
+  );
 });
 
 test("tampered selected_model_id (mismatch with route_receipt) → verdict=non_compliant", () => {
@@ -143,9 +153,14 @@ test("tampered selected_model_id (mismatch with route_receipt) → verdict=non_c
   env.selected_model_id = "tampered-model:99b";
   const v = verifyRoutedInvocationEnvelope(env);
   assert.equal(v.verdict, "non_compliant");
-  const failed = v.invariants.find((i) => i.name === "selected_model_id_consistent");
+  const failed = v.invariants.find(
+    (i) => i.name === "selected_model_id_consistent",
+  );
   assert.equal(failed.satisfied, false);
-  assert.equal(v.next_step, "investigate_invariant_failures_in_verification_envelope");
+  assert.equal(
+    v.next_step,
+    "investigate_invariant_failures_in_verification_envelope",
+  );
 });
 
 test("tampered boundary.federation=true → verdict=non_compliant", () => {
@@ -153,7 +168,9 @@ test("tampered boundary.federation=true → verdict=non_compliant", () => {
   env.boundary.federation = true;
   const v = verifyRoutedInvocationEnvelope(env);
   assert.equal(v.verdict, "non_compliant");
-  const failed = v.invariants.find((i) => i.name === "boundary_federation_false");
+  const failed = v.invariants.find(
+    (i) => i.name === "boundary_federation_false",
+  );
   assert.equal(failed.satisfied, false);
 });
 
@@ -184,7 +201,10 @@ test("verification envelope is frozen + all 17 invariant names present + correct
   // All 17 expected invariant names appear in the envelope.
   const namesInEnvelope = v.invariants.map((i) => i.name);
   for (const expectedName of INVARIANT_NAMES) {
-    assert.ok(namesInEnvelope.includes(expectedName), `missing invariant: ${expectedName}`);
+    assert.ok(
+      namesInEnvelope.includes(expectedName),
+      `missing invariant: ${expectedName}`,
+    );
   }
   assert.equal(v.invariants_total_count, 17);
   // Verifier's own boundary.

@@ -4,6 +4,7 @@
 **Date:** 2026-05-19
 **Authors:** Coordinator (Claude Opus 4.7, 1M ctx) at MoMo's direction
 **Cross-references:**
+
 - `bizra-omega/bizra-cli/src/theme.rs` (source · authored by MoMo (محمد))
 - `[[feedback_per_module_domain_boundary_pattern]]` (parallel-vocabulary canon)
 - `[[feedback_external_ai_audit_wrong_codebase_pattern]]` (why this is NOT acting on the Kimi audit)
@@ -45,7 +46,7 @@ We port `bizra-cli/src/theme.rs` to a new `packages/core/src/dema-theme.js` Java
 ## Why this respects Dema's competitive moat
 
 - **Zero new runtime dependencies.** ANSI escape codes are plain strings; no `chalk`, no `kleur`, no `blessed`, no `ink`.
-- **Zero Rust in Dema.** The Rust source is a *reference*, not an *import*. We translate the design, not the code.
+- **Zero Rust in Dema.** The Rust source is a _reference_, not an _import_. We translate the design, not the code.
 - **Schema-stable.** All existing TUI tests continue to pass; the new module is additive.
 - **Per-module domain vocabulary preserved.** Following [[feedback_per_module_domain_boundary_pattern]], `dema-theme.js` becomes Dema's universal visual vocabulary, but individual modules may continue to compose their own additions where domain-specific.
 
@@ -90,17 +91,18 @@ Would Mumu willingly subject his own family to this output?
 
 ## Trade-offs
 
-| Choice | Trade-off |
-|---|---|
-| Translate 24-bit RGB → ANSI escapes | Some terminals don't support true-color; mitigated by 3-level palette fallback |
-| Keep `noColor` suppression | Maintains parity with existing `resolveFormatterOptsFromEnv()` behavior |
-| Port only the design, not the widget code | Faster · lower-risk · maintains zero-dep moat · but Dema TUI remains less rich than `bizra-cli` until separate widget effort |
-| One proof-of-isomorphism site, not full refactor | Reduces blast radius · proves the port works · defers the busywork of 117 call-site updates |
-| Mirror exact RGB values from `theme.rs` | Visual continuity across runtimes; both look the same when bizra-cli + Dema run side-by-side |
+| Choice                                           | Trade-off                                                                                                                    |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| Translate 24-bit RGB → ANSI escapes              | Some terminals don't support true-color; mitigated by 3-level palette fallback                                               |
+| Keep `noColor` suppression                       | Maintains parity with existing `resolveFormatterOptsFromEnv()` behavior                                                      |
+| Port only the design, not the widget code        | Faster · lower-risk · maintains zero-dep moat · but Dema TUI remains less rich than `bizra-cli` until separate widget effort |
+| One proof-of-isomorphism site, not full refactor | Reduces blast radius · proves the port works · defers the busywork of 117 call-site updates                                  |
+| Mirror exact RGB values from `theme.rs`          | Visual continuity across runtimes; both look the same when bizra-cli + Dema run side-by-side                                 |
 
 ## Consequences
 
 **Positive:**
+
 - Mumu's existing design language gets a JavaScript runtime
 - Cross-runtime visual continuity (Rust + JS BIZRA tools look the same)
 - Path to incremental refactor of all 117 color call-sites
@@ -108,10 +110,12 @@ Would Mumu willingly subject his own family to this output?
 - ANSI true-color support modernizes Dema TUI without dep cost
 
 **Negative:**
+
 - Maintenance burden: any change to `bizra-cli/theme.rs` must now be mirrored in `dema-theme.js` (mitigated by structural-test that asserts each color constant from theme.rs is present in dema-theme.js — could be added as a CI check that reads the Rust file)
 - ANSI true-color won't render on legacy terminals (mitigated by fallback)
 
 **Neutral:**
+
 - The full 14-widget TUI remains in bizra-omega/bizra-cli for now. Dema TUI stays minimal until separate widget effort.
 
 ## Status sequence
@@ -125,4 +129,4 @@ Proposed (this ADR)
 
 ---
 
-**Operating law:** *Design wisdom transfers across runtime boundaries. Code does not.*
+**Operating law:** _Design wisdom transfers across runtime boundaries. Code does not._

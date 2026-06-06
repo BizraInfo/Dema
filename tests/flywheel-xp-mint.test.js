@@ -129,9 +129,7 @@ async function buildMintConsent(home, context, overrides = {}) {
 
   const consent = await buildConsentProof({
     phrase: "SIGN AUTHORSHIP RECEIPT",
-    actionScope:
-      overrides.actionScope ||
-      scope.action_scope,
+    actionScope: overrides.actionScope || scope.action_scope,
     demaHome: home,
     nonce: overrides.nonce || "1e000002".repeat(8),
     createdAtIso: MINT_NOW,

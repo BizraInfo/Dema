@@ -31,7 +31,7 @@ const CANONICAL_ROLES = Object.freeze([
   "pat_proposal_draft",
   "consent_phrase_generate",
   "evidence_summary",
-  "abstain_or_unknown"
+  "abstain_or_unknown",
 ]);
 
 const ALLOWED_FAMILIES = Object.freeze([
@@ -42,7 +42,7 @@ const ALLOWED_FAMILIES = Object.freeze([
   "deepseek",
   "phi",
   "gemma",
-  "other"
+  "other",
 ]);
 
 import { buildPreviewBoundary } from "./preview-boundary.js";
@@ -53,16 +53,21 @@ function buildBoundary() {
 
 function sanitizeModelEntry(entry) {
   if (!entry || typeof entry !== "object") return null;
-  const id = typeof entry.id === "string" && entry.id.length > 0 ? entry.id : null;
+  const id =
+    typeof entry.id === "string" && entry.id.length > 0 ? entry.id : null;
   if (id === null) return null;
   const familyRaw = typeof entry.family === "string" ? entry.family : "other";
   const family = ALLOWED_FAMILIES.includes(familyRaw) ? familyRaw : "other";
-  const role = typeof entry.role === "string" && CANONICAL_ROLES.includes(entry.role)
-    ? entry.role
-    : "abstain_or_unknown";
-  const sizeGb = typeof entry.size_gb === "number" && entry.size_gb >= 0 && entry.size_gb < 10000
-    ? entry.size_gb
-    : null;
+  const role =
+    typeof entry.role === "string" && CANONICAL_ROLES.includes(entry.role)
+      ? entry.role
+      : "abstain_or_unknown";
+  const sizeGb =
+    typeof entry.size_gb === "number" &&
+    entry.size_gb >= 0 &&
+    entry.size_gb < 10000
+      ? entry.size_gb
+      : null;
   return Object.freeze({
     id,
     family,
@@ -71,7 +76,7 @@ function sanitizeModelEntry(entry) {
     status: "declared_preview_only",
     routing_allowed: false,
     invocation_status: "not_invoked_preview_only",
-    source: "operator_declared"
+    source: "operator_declared",
   });
 }
 
@@ -90,21 +95,23 @@ function sanitizeInventory(inventoryHints) {
 }
 
 function buildRoleMap(sanitizedInventory) {
-  return Object.freeze(CANONICAL_ROLES.map((role) => {
-    const assigned = sanitizedInventory.find((m) => m.role === role);
-    return Object.freeze({
-      role,
-      assigned_model_id: assigned ? assigned.id : null,
-      routing_allowed: false,
-      invocation_status: "not_invoked_preview_only",
-      fallback: "abstain"
-    });
-  }));
+  return Object.freeze(
+    CANONICAL_ROLES.map((role) => {
+      const assigned = sanitizedInventory.find((m) => m.role === role);
+      return Object.freeze({
+        role,
+        assigned_model_id: assigned ? assigned.id : null,
+        routing_allowed: false,
+        invocation_status: "not_invoked_preview_only",
+        fallback: "abstain",
+      });
+    }),
+  );
 }
 
 export function buildLocalLLMRouterPreview({
   operator = "MoMo",
-  inventoryHints = []
+  inventoryHints = [],
 } = {}) {
   const sanitizedInventory = sanitizeInventory(inventoryHints);
   const roleMap = buildRoleMap(sanitizedInventory);
@@ -123,17 +130,18 @@ export function buildLocalLLMRouterPreview({
       default_when_no_routing_authorized: true,
       default_when_role_unassigned: true,
       default_when_consent_not_collected: true,
-      output_on_abstain: null
+      output_on_abstain: null,
     }),
     consent_boundary: Object.freeze({
       routing_requires: "typed_GO_plus_chain_advance",
       typed_go_present_in_preview: false,
-      chain_advance_present_in_preview: false
+      chain_advance_present_in_preview: false,
     }),
-    next_safe_action: sanitizedInventory.length === 0
-      ? "declare_local_model_inventory"
-      : "review_role_assignments",
-    boundary: buildBoundary()
+    next_safe_action:
+      sanitizedInventory.length === 0
+        ? "declare_local_model_inventory"
+        : "review_role_assignments",
+    boundary: buildBoundary(),
   });
 }
 

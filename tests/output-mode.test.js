@@ -39,13 +39,13 @@ test("wantsJson does not match --json=true as the flag (exact token only)", () =
 test("humanHintLine interpolates the command name", () => {
   assert.equal(
     humanHintLine("state"),
-    "Type `dema state --json` for machine-readable output."
+    "Type `dema state --json` for machine-readable output.",
   );
 });
 
 test("humanHintLine works for multi-word command names", () => {
   assert.equal(
     humanHintLine("models scan"),
-    "Type `dema models scan --json` for machine-readable output."
+    "Type `dema models scan --json` for machine-readable output.",
   );
 });

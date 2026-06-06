@@ -9,6 +9,7 @@
 BIZRA's architecture has multiple specialist systems — core runtime, chain engine, trust engine, admissibility, missions. Users should never interact with these directly. There must be exactly one product-facing surface.
 
 Market analysis shows three proven patterns competing in this space:
+
 - **Claude Code** — terminal-first, codebase-aware, MCP-connected
 - **Perplexity** — citation-first research, library, local MCP bridge
 - **Manus** — browser/desktop operator with explicit permissions
@@ -61,34 +62,34 @@ The spine commands do not replace the modes. They provide the truth, identity, c
 
 ### Product modes (the original six)
 
-| Mode | Status | Notes |
-|---|---|---|
-| Ask | PLANNED | No CLI/UI surface yet; future mode atop the spine |
-| Code | PLANNED | No CLI/UI surface yet; future mode atop the spine |
-| Research | PLANNED | No CLI/UI surface yet; future mode atop the spine |
-| Browser | PLANNED | No CLI/UI surface yet; future mode atop the spine |
-| Computer | PLANNED | No CLI/UI surface yet; future mode atop the spine |
+| Mode         | Status          | Notes                                                                                               |
+| ------------ | --------------- | --------------------------------------------------------------------------------------------------- |
+| Ask          | PLANNED         | No CLI/UI surface yet; future mode atop the spine                                                   |
+| Code         | PLANNED         | No CLI/UI surface yet; future mode atop the spine                                                   |
+| Research     | PLANNED         | No CLI/UI surface yet; future mode atop the spine                                                   |
+| Browser      | PLANNED         | No CLI/UI surface yet; future mode atop the spine                                                   |
+| Computer     | PLANNED         | No CLI/UI surface yet; future mode atop the spine                                                   |
 | Memory/Trust | PARTIAL PREVIEW | Substrate is partially present via `state`, `profiles`, context capsule. Full mode UX not yet built |
 
 ### Infrastructure spine (the eight implemented previews)
 
-| Surface | Status | Source |
-|---|---|---|
-| `state` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/state.js` · schema `bizra.dema.node0_state.v0.1` |
-| `profiles` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/profiles.js` · 5 actor profiles + ContextCapsule · `--summary` variant |
-| `consent-card` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/consent-card-preview.js` |
-| `mission-loop` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/mission-loop-preview.js` · `--summary` variant |
-| `evidence-event` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/evidence-chain-event-preview.js` |
-| `llm-router` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/local-llm-router-preview.js` |
-| `process-mining` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/process-mining-preview.js` · operator-pattern mirror · `--summary` variant |
+| Surface           | Status                    | Source                                                                                                                                                                                       |
+| ----------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state`           | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/state.js` · schema `bizra.dema.node0_state.v0.1`                                                                                                                          |
+| `profiles`        | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/profiles.js` · 5 actor profiles + ContextCapsule · `--summary` variant                                                                                                    |
+| `consent-card`    | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/consent-card-preview.js`                                                                                                                                                  |
+| `mission-loop`    | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/mission-loop-preview.js` · `--summary` variant                                                                                                                            |
+| `evidence-event`  | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/evidence-chain-event-preview.js`                                                                                                                                          |
+| `llm-router`      | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/local-llm-router-preview.js`                                                                                                                                              |
+| `process-mining`  | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/process-mining-preview.js` · operator-pattern mirror · `--summary` variant                                                                                                |
 | `key-maker-check` | LOCAL PREVIEW IMPLEMENTED | `packages/core/src/key-maker-compliance.js` · self-audits 5 invariants from [Key Maker Epistemic Conduct v0.1](../02-architecture/key-maker-epistemic-conduct-v0.1.md) · `--summary` variant |
 
 ### Cross-layer trust primitives
 
-| Surface | Status | Source |
-|---|---|---|
+| Surface                    | Status      | Source                                                                            |
+| -------------------------- | ----------- | --------------------------------------------------------------------------------- |
 | Canonical preview boundary | IMPLEMENTED | `packages/core/src/preview-boundary.js` · 16 canonical keys · 2 verifier variants |
-| Smoke-boundary canary | IMPLEMENTED | `scripts/smoke-boundary.mjs` · `npm run smoke-boundary` |
+| Smoke-boundary canary      | IMPLEMENTED | `scripts/smoke-boundary.mjs` · `npm run smoke-boundary`                           |
 
 ## Open questions for reviewers
 

@@ -3,12 +3,12 @@
 // No new npm deps. ANSI codes hand-rolled.
 // NO_COLOR env and --no-color flag both strip all ANSI sequences.
 
-const ANSI_GREEN  = "\x1b[32m";
-const ANSI_RED    = "\x1b[31m";
+const ANSI_GREEN = "\x1b[32m";
+const ANSI_RED = "\x1b[31m";
 const ANSI_YELLOW = "\x1b[33m";
-const ANSI_RESET  = "\x1b[0m";
+const ANSI_RESET = "\x1b[0m";
 
-const ICON_OK   = "✅"; // ✅
+const ICON_OK = "✅"; // ✅
 const ICON_FAIL = "❌"; // ❌
 const ICON_WARN = "⚠️"; // ⚠️
 
@@ -32,7 +32,7 @@ export function evaluatePredicates(status) {
   // Gateway probe synthesized from findings array.
   const findings = Array.isArray(s.findings) ? s.findings : [];
   const gatewayUnreachable = findings.some(
-    (f) => typeof f === "string" && f.toLowerCase().includes("not connected")
+    (f) => typeof f === "string" && f.toLowerCase().includes("not connected"),
   );
 
   const predicates = [];
@@ -42,27 +42,30 @@ export function evaluatePredicates(status) {
     key: "activationGate",
     label: "Activation gate",
     value: activationGate,
-    status: gateOk ? "ok" : (gateFail ? "fail" : "warn"),
+    status: gateOk ? "ok" : gateFail ? "fail" : "warn",
     ...(gateOk
       ? {}
       : {
           fix: gateFail
             ? "activation gate is BLOCKED; run `dema setup` to initialize and check doctrine consent"
-            : `unexpected gate value ${activationGate}; expected EXPLICIT_GO_REQUIRED`
-        })
+            : `unexpected gate value ${activationGate}; expected EXPLICIT_GO_REQUIRED`,
+        }),
   });
 
   // 2. Daemon
   predicates.push({
     key: "daemonStatus",
     label: "Daemon",
-    value: daemonStatus === "unknown" ? "n/a-via-gateway (no hidden daemon)" : daemonStatus,
+    value:
+      daemonStatus === "unknown"
+        ? "n/a-via-gateway (no hidden daemon)"
+        : daemonStatus,
     status: daemonRunning ? "fail" : "ok",
     ...(daemonRunning
       ? {
-          fix: "daemon is running — Dema does not run a daemon; a hidden process has been detected. Investigate before proceeding."
+          fix: "daemon is running — Dema does not run a daemon; a hidden process has been detected. Investigate before proceeding.",
         }
-      : {})
+      : {}),
   });
 
   // 3. Ready
@@ -75,8 +78,8 @@ export function evaluatePredicates(status) {
     ...(ready
       ? {}
       : {
-          fix: "complete first-run setup with `dema setup`, then verify with `dema status`"
-        })
+          fix: "complete first-run setup with `dema setup`, then verify with `dema status`",
+        }),
   });
 
   // 4. Console ready
@@ -89,8 +92,8 @@ export function evaluatePredicates(status) {
     ...(consoleReady
       ? {}
       : {
-          fix: "gateway unreachable; if you intend to run governed runtime, confirm it's started (separate repo). For preview-only use, this is expected."
-        })
+          fix: "gateway unreachable; if you intend to run governed runtime, confirm it's started (separate repo). For preview-only use, this is expected.",
+        }),
   });
 
   // 5. Gateway probe (warn-only by design)
@@ -100,7 +103,7 @@ export function evaluatePredicates(status) {
     value: gatewayUnreachable
       ? "unreachable (by design when no runtime running)"
       : "reachable",
-    status: gatewayUnreachable ? "warn" : "ok"
+    status: gatewayUnreachable ? "warn" : "ok",
   });
 
   return predicates;
@@ -114,7 +117,7 @@ export function formatDoctorDashboard(predicates, { color = true } = {}) {
 
   const failCount = predicates.filter((p) => p.status === "fail").length;
   const warnCount = predicates.filter((p) => p.status === "warn").length;
-  const okCount   = predicates.filter((p) => p.status === "ok").length;
+  const okCount = predicates.filter((p) => p.status === "ok").length;
 
   const maxLabel = Math.max(...predicates.map((p) => p.label.length));
 
@@ -151,14 +154,20 @@ export function formatDoctorDashboard(predicates, { color = true } = {}) {
   const allOk = failCount === 0 && warnCount === 0;
   const verdict = allOk ? "ready and consent-gated" : "blocked";
   const verdictColored = color
-    ? (allOk ? colorize(verdict, ANSI_GREEN, true) : colorize(verdict, ANSI_RED, true))
+    ? allOk
+      ? colorize(verdict, ANSI_GREEN, true)
+      : colorize(verdict, ANSI_RED, true)
     : verdict;
 
   lines.push(`Verdict: ${verdictColored}`);
 
   const summaryParts = [];
-  if (failCount > 0) summaryParts.push(`${failCount} predicate${failCount > 1 ? "s" : ""} failed`);
-  if (warnCount > 0) summaryParts.push(`${warnCount} warning${warnCount > 1 ? "s" : ""}`);
+  if (failCount > 0)
+    summaryParts.push(
+      `${failCount} predicate${failCount > 1 ? "s" : ""} failed`,
+    );
+  if (warnCount > 0)
+    summaryParts.push(`${warnCount} warning${warnCount > 1 ? "s" : ""}`);
   if (okCount > 0) summaryParts.push(`${okCount} OK`);
   lines.push(`  ${summaryParts.join(" · ")}`);
 

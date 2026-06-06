@@ -64,6 +64,33 @@ const FAIL_BOUNDARY = Object.freeze({
   raw_artifact_included: false,
 });
 
+const CHOOSE_TRANSITION_OBJECTIVE_FLAGS = Object.freeze([
+  "explicit",
+  "bounded",
+  "receipt_backed",
+  "rare_circuit_tested",
+  "human_consent_aware",
+  "ihsan_aligned",
+  "ci_enforced",
+]);
+
+const CHOOSE_TRANSITION_RARE_CIRCUIT_REFS = Object.freeze([
+  "invalid_index_input_refusal",
+  "wrong_schema_refusal",
+  "wrong_mode_refusal",
+  "wrong_truth_label_refusal",
+  "invalid_transition_refusal",
+  "consent_required_or_mismatch_refusal",
+  "forbidden_field_in_source_index_refusal",
+  "invalid_now_refusal",
+]);
+
+const CHOOSE_TRANSITION_CI_REFS = Object.freeze([
+  "tests/urp-choose-decision.test.js",
+  "scripts/review/transition-assurance-check.mjs",
+  "npm run check",
+]);
+
 function fail(error, details = {}) {
   return Object.freeze({
     schema: URP_CHOOSE_RECEIPT_SCHEMA,
@@ -102,6 +129,134 @@ function isValidSourceShareStatus(decision, current) {
     return current === SHARE_STATUS_LOCAL || current === SHARE_STATUS_CANDIDATE;
   }
   return false;
+}
+
+function freezeDeep(value) {
+  if (value === null || value === undefined) return value;
+  if (Array.isArray(value)) {
+    value.forEach(freezeDeep);
+    return Object.freeze(value);
+  }
+  if (typeof value === "object") {
+    for (const key of Object.keys(value)) {
+      freezeDeep(value[key]);
+    }
+    return Object.freeze(value);
+  }
+  return value;
+}
+
+export function buildUrpChooseTransitionContract({
+  indexHash,
+  decision,
+  previousShareStatus,
+  nextShareStatus,
+  consentPhraseHash,
+}) {
+  return freezeDeep({
+    explicit: true,
+    bounded: true,
+    receipt_backed: true,
+    rare_circuit_tested: true,
+    human_consent_aware: true,
+    ihsan_aligned: true,
+    ci_enforced: true,
+    transition_id: `urp_choose:${indexHash}:${previousShareStatus}->${nextShareStatus}:${decision}`,
+    proof_scope: "PURE_URP_CHOOSE_DECISION",
+    bounds: {
+      allowed_decisions: [DECISION_MARK_SHAREABLE, DECISION_MARK_LOCAL_ONLY],
+      source_index_hash: indexHash,
+      previous_share_status: previousShareStatus,
+      next_share_status: nextShareStatus,
+      file_write_performed: false,
+      share_published: false,
+    },
+    receipt_backing: {
+      receipt_schema: URP_CHOOSE_RECEIPT_SCHEMA,
+      choose_hash_commits_to_contract: true,
+      chain_advance_performed: false,
+      file_write_performed: false,
+      source_index_hash: indexHash,
+    },
+    consent: {
+      exact_string_required_for_decision: true,
+      consent_phrase_hash: consentPhraseHash,
+      consent_verified: true,
+    },
+    ihsan: {
+      refusal_is_valid_proof_event: true,
+      overclaim_guard: "local_choose_decision_not_share_publication",
+    },
+    rare_circuit_test_refs: [...CHOOSE_TRANSITION_RARE_CIRCUIT_REFS],
+    ci_enforcement_refs: [...CHOOSE_TRANSITION_CI_REFS],
+  });
+}
+
+export function validateUrpChooseTransitionContract({ receipt }) {
+  const contract = receipt?.transition_contract;
+  if (!contract || typeof contract !== "object" || Array.isArray(contract)) {
+    return "transition_contract_missing";
+  }
+  for (const flag of CHOOSE_TRANSITION_OBJECTIVE_FLAGS) {
+    if (contract[flag] !== true) {
+      return `transition_contract_${flag}_not_true`;
+    }
+  }
+  const expectedTransitionId = `urp_choose:${receipt.source_index_hash}:${receipt.previous_share_status}->${receipt.next_share_status}:${receipt.decision}`;
+  if (contract.transition_id !== expectedTransitionId) {
+    return "transition_contract_transition_id_mismatch";
+  }
+  if (contract.proof_scope !== "PURE_URP_CHOOSE_DECISION") {
+    return "transition_contract_proof_scope_invalid";
+  }
+  if (contract.bounds?.source_index_hash !== receipt.source_index_hash) {
+    return "transition_contract_source_index_hash_mismatch";
+  }
+  if (
+    contract.bounds?.previous_share_status !== receipt.previous_share_status
+  ) {
+    return "transition_contract_previous_status_mismatch";
+  }
+  if (contract.bounds?.next_share_status !== receipt.next_share_status) {
+    return "transition_contract_next_status_mismatch";
+  }
+  if (contract.receipt_backing?.receipt_schema !== receipt.schema) {
+    return "transition_contract_receipt_schema_mismatch";
+  }
+  const {
+    decided_at_iso: _decidedAtIso,
+    choose_hash: chooseHash,
+    ...stableBody
+  } = receipt;
+  if (sha256(stableStringify(stableBody)) !== chooseHash) {
+    return "transition_contract_choose_hash_mismatch";
+  }
+  if (contract.receipt_backing?.choose_hash_commits_to_contract !== true) {
+    return "transition_contract_choose_hash_commit_not_true";
+  }
+  if (contract.receipt_backing?.chain_advance_performed !== false) {
+    return "transition_contract_chain_advance_not_false";
+  }
+  if (contract.consent?.exact_string_required_for_decision !== true) {
+    return "transition_contract_exact_consent_not_true";
+  }
+  if (contract.consent?.consent_phrase_hash !== receipt.consent_phrase_hash) {
+    return "transition_contract_consent_hash_mismatch";
+  }
+  if (contract.ihsan?.refusal_is_valid_proof_event !== true) {
+    return "transition_contract_ihsan_refusal_not_true";
+  }
+  for (const ref of CHOOSE_TRANSITION_RARE_CIRCUIT_REFS) {
+    if (!contract.rare_circuit_test_refs?.includes(ref)) {
+      return "transition_contract_rare_circuit_ref_missing";
+    }
+  }
+  for (const ref of CHOOSE_TRANSITION_CI_REFS) {
+    if (!contract.ci_enforcement_refs?.includes(ref)) {
+      return "transition_contract_ci_ref_missing";
+    }
+  }
+  return null;
 }
 
 export function buildChooseDecision(
@@ -171,6 +326,13 @@ export function buildChooseDecision(
   }
 
   const consentPhraseHash = sha256(expectedConsent);
+  const transitionContract = buildUrpChooseTransitionContract({
+    indexHash: index.index_hash,
+    decision,
+    previousShareStatus,
+    nextShareStatus,
+    consentPhraseHash,
+  });
 
   const body = {
     schema: URP_CHOOSE_RECEIPT_SCHEMA,
@@ -184,6 +346,7 @@ export function buildChooseDecision(
     consent_phrase_hash: consentPhraseHash,
     decided_at_iso: decidedAtIso,
     boundary: PASS_BOUNDARY,
+    transition_contract: transitionContract,
   };
 
   const { decided_at_iso: _decidedAtIso, ...stableBody } = body;

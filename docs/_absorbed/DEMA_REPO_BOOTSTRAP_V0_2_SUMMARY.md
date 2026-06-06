@@ -18,6 +18,7 @@ Files: 26
 Suggested repo name: `BizraInfo/Dema`.
 
 Next step:
+
 1. Create ARTIFACT-011 when ready.
 2. Create the `Dema` repo.
 3. Unzip this package into that repo.

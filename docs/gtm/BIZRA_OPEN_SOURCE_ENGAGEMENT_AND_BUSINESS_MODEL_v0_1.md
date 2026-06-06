@@ -1,13 +1,13 @@
 # BIZRA · Open Source Engagement and Business Model v0.1
 
-> **Truth discipline:** This file is a **claim-governed digest** for GTM and investor alignment. It does not authorize runtime actions, token mint, public claims, or economic assignment. Source: operator PDF `BIZRA_Open_Source_Engagement_and_Business_Model_v0_1.pdf` (Downloads). Academic framing: Guizani et al., *Open Source Engagement Model* (arXiv:2303.08266).
+> **Truth discipline:** This file is a **claim-governed digest** for GTM and investor alignment. It does not authorize runtime actions, token mint, public claims, or economic assignment. Source: operator PDF `BIZRA_Open_Source_Engagement_and_Business_Model_v0_1.pdf` (Downloads). Academic framing: Guizani et al., _Open Source Engagement Model_ (arXiv:2303.08266).
 
-| Field | Value |
-|---|---|
-| **Status** | WORKING_CANON · docs-only |
-| **Repo HEAD at ingest** | `004e887` |
-| **Local test gate** | `2443/2443` (`npm test`) |
-| **Spearpoint gate** | `npm run proof:room` |
+| Field                   | Value                     |
+| ----------------------- | ------------------------- |
+| **Status**              | WORKING_CANON · docs-only |
+| **Repo HEAD at ingest** | `004e887`                 |
+| **Local test gate**     | `2443/2443` (`npm test`)  |
+| **Spearpoint gate**     | `npm run proof:room`      |
 
 ## BLUF
 
@@ -15,12 +15,12 @@ BIZRA monetizes **assurance and replayable proof**, not speculation on a token. 
 
 ## Engagement model (research mapping)
 
-| Stage | OSS research lens | BIZRA operational meaning | Truth label |
-|---|---|---|---|
-| Founders vision | Motivation | Constitutional execution + receipts as product thesis | VERIFIED (docs + gates on disk) |
-| Reputation | Trust | Lighthouse Ring-1 private witness; proof-room bundle for outsider replay | WIRED_PARTIAL (gates SHIPPED; external witness OPEN) |
-| Business advantage | Differentiation | Zero-runtime-dependency preview face + SAT-governed consent | VERIFIED |
-| Reciprocity | Sustainability | Paid assurance lane funds continued open core | PLANNED |
+| Stage              | OSS research lens | BIZRA operational meaning                                                | Truth label                                          |
+| ------------------ | ----------------- | ------------------------------------------------------------------------ | ---------------------------------------------------- |
+| Founders vision    | Motivation        | Constitutional execution + receipts as product thesis                    | VERIFIED (docs + gates on disk)                      |
+| Reputation         | Trust             | Lighthouse Ring-1 private witness; proof-room bundle for outsider replay | WIRED_PARTIAL (gates SHIPPED; external witness OPEN) |
+| Business advantage | Differentiation   | Zero-runtime-dependency preview face + SAT-governed consent              | VERIFIED                                             |
+| Reciprocity        | Sustainability    | Paid assurance lane funds continued open core                            | PLANNED                                              |
 
 ## Commercial lanes (no riba framing)
 
@@ -44,11 +44,11 @@ PDFs and early GTM drafts may cite `2394`, `2423`, or `2437` tests. **Current ve
 
 ## Halt gates (unchanged)
 
-| Action | Required phrase |
-|---|---|
-| Ring-1 pack send | `GO send pack to <name>` |
-| POI test plan (no impl) | `GO author POI v0.1 test plan (no impl)` |
-| POI implementation | `GO impl POI v0.1` |
+| Action                    | Required phrase                                                   |
+| ------------------------- | ----------------------------------------------------------------- |
+| Ring-1 pack send          | `GO send pack to <name>`                                          |
+| POI test plan (no impl)   | `GO author POI v0.1 test plan (no impl)`                          |
+| POI implementation        | `GO impl POI v0.1`                                                |
 | Proof room artifact write | `GO: write proof room bundle to artifacts/proofs/proof-room-v0.1` |
 
 ## Daughter test

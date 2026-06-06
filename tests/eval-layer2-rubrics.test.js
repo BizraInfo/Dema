@@ -19,31 +19,26 @@ import {
   RUBRICS,
   getRubricPack,
   getPromptFor,
-  formatRubricPackReport
+  formatRubricPackReport,
 } from "../packages/core/src/eval-layer2-rubrics.js";
 
-import {
-  validateAgainstRegistry
-} from "../packages/core/src/envelope-schema-validator.js";
+import { validateAgainstRegistry } from "../packages/core/src/envelope-schema-validator.js";
 
-import {
-  evaluateArtifactSafety
-} from "../packages/core/src/artifact-safety-eval.js";
+import { evaluateArtifactSafety } from "../packages/core/src/artifact-safety-eval.js";
 
 test("EVAL_LAYER2_RUBRIC_PACK_SCHEMA matches v0.1", () => {
   assert.equal(
     EVAL_LAYER2_RUBRIC_PACK_SCHEMA,
-    "bizra.dema.eval_layer2_rubric_pack.v0.1"
+    "bizra.dema.eval_layer2_rubric_pack.v0.1",
   );
   assert.equal(EVAL_LAYER2_RUBRIC_PACK_VERSION, "v0.1");
 });
 
 test("RUBRIC_IDS lists the 3 v0.1 rubrics in canonical order", () => {
-  assert.deepEqual([...RUBRIC_IDS], [
-    "truthfulness",
-    "actionability",
-    "boundary_compliance"
-  ]);
+  assert.deepEqual(
+    [...RUBRIC_IDS],
+    ["truthfulness", "actionability", "boundary_compliance"],
+  );
   assert.ok(Object.isFrozen(RUBRIC_IDS));
 });
 
@@ -98,7 +93,7 @@ test("getRubricPack boundary is the canonical 16-key all-false preview boundary"
     "raw_data_included",
     "receipt_mint_performed",
     "runtime_execution_performed",
-    "tool_executed"
+    "tool_executed",
   ]);
   for (const k of keys) {
     assert.equal(pack.boundary[k], false, `${k} must be false`);
@@ -112,7 +107,7 @@ test("getRubricPack self-validates against its own schema via registry", () => {
   assert.equal(
     validation.ok,
     true,
-    `expected pack to self-validate; errors: ${JSON.stringify(validation.errors)}`
+    `expected pack to self-validate; errors: ${JSON.stringify(validation.errors)}`,
   );
   assert.equal(validation.truth_label, "MEASURED");
 });
@@ -134,7 +129,7 @@ test("rubric pack JSON passes Layer 1 eval as PUBLIC_SAFE", () => {
   assert.equal(
     result.verdict,
     "PUBLIC_SAFE",
-    `expected PUBLIC_SAFE; got ${result.verdict} with findings ${JSON.stringify(result.findings)}`
+    `expected PUBLIC_SAFE; got ${result.verdict} with findings ${JSON.stringify(result.findings)}`,
   );
   assert.equal(result.score, 1);
   assert.equal(result.findings.length, 0);
@@ -156,9 +151,9 @@ test("rubric module is pure (no fs · http · net · child_process imports)", as
   const { fileURLToPath } = await import("node:url");
   const src = readFileSync(
     fileURLToPath(
-      new URL("../packages/core/src/eval-layer2-rubrics.js", import.meta.url)
+      new URL("../packages/core/src/eval-layer2-rubrics.js", import.meta.url),
     ),
-    "utf8"
+    "utf8",
   );
   assert.equal(/from\s+["']node:fs["']/.test(src), false);
   assert.equal(/from\s+["']node:http["']/.test(src), false);

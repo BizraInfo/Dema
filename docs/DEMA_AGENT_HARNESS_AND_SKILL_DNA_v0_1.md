@@ -29,14 +29,14 @@ This label means the harness law, the skill law, the 10-step agent loop, the six
 
 Inherits **only** from the twelve pillars already merged to `main`:
 
-| # | Pillar | Why this doc cites it |
-|---|---|---|
-| 1 | `THREE_REPO_PRODUCT_STACK_CANON_v0_1.md` | Repo authority; harness lives in Dema |
-| 2 | `NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md` | Agent layers (PAT-7, SAT-5, FATE/EffectCap, receipt chain) — future home of the harness |
-| 3 | `DELIVERY_SPINE_v0_1.md` | Release gates that the harness ultimately reports to |
-| 4 | `CLAIM_REGISTER_v0_1.md` | Truth taxonomy — every agent action carries its label |
-| 5 | `BIZRA_AGENT_DNA_LAW_OF_ASSUMPTION_v0_1.md` | Sibling doctrine — how the agent thinks |
-| 6 | `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` | Moral spine — `the human must consent` |
+| #    | Pillar                                                                                           | Why this doc cites it                                                                                |
+| ---- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| 1    | `THREE_REPO_PRODUCT_STACK_CANON_v0_1.md`                                                         | Repo authority; harness lives in Dema                                                                |
+| 2    | `NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md`                                                      | Agent layers (PAT-7, SAT-5, FATE/EffectCap, receipt chain) — future home of the harness              |
+| 3    | `DELIVERY_SPINE_v0_1.md`                                                                         | Release gates that the harness ultimately reports to                                                 |
+| 4    | `CLAIM_REGISTER_v0_1.md`                                                                         | Truth taxonomy — every agent action carries its label                                                |
+| 5    | `BIZRA_AGENT_DNA_LAW_OF_ASSUMPTION_v0_1.md`                                                      | Sibling doctrine — how the agent thinks                                                              |
+| 6    | `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md`                                                             | Moral spine — `the human must consent`                                                               |
 | 7-12 | Origin Video · Founder Proof · First Look · Production Brief · Evaluation Pack · Market Analysis | Inheritance surfaces — every agent action whose output touches these must obey their forbidden lists |
 
 Plus the four architect-locked memory laws (`feedback_no_invented_evidence_source` · `feedback_incremental_evidence_binding` · `feedback_post_ramadan_2023_default_relevance` · `project_2026_05_21_home_base_consolidation_deferred_to_dema`) and the constitutional anchor `reference_bizra_constitutional_anchors` (Ihsān, ADL, ZANN_ZERO, RIBA_ZERO).
@@ -131,7 +131,7 @@ Sequential. Non-skippable. The harness enforces ordering; the model fills the co
 6. **Trace capture** — every tool input + tool output is captured into the run record. Truncation is allowed for large outputs only if a hash of the full output is preserved.
 7. **Deterministic verification** — the harness runs deterministic checks against the actual trace. Examples: re-compute a hash that the agent claimed; re-read a file the agent claimed to write; re-execute a test the agent claimed passed.
 8. **Receipt** — the harness mints a hash-chained receipt linking intent → consent → action → trace → verification result. The receipt is appended to the operator's local receipt ledger (`~/.dema/receipts/`).
-9. **Self-critique** — the model is re-invoked with the full run record (intent + plan + trace + verification + receipt) and asked: *"What went wrong? What did you not check? What would a reviewer flag?"* The model's critique is logged; if the model surfaces a defect, the loop restarts.
+9. **Self-critique** — the model is re-invoked with the full run record (intent + plan + trace + verification + receipt) and asked: _"What went wrong? What did you not check? What would a reviewer flag?"_ The model's critique is logged; if the model surfaces a defect, the loop restarts.
 10. **Next step** — the agent proposes the next action (or completion) based on the verified state, not on the model's narration of the state.
 
 A run that skips any step is a defect. A run that completes all 10 steps with their receipts is a **trustworthy run**, regardless of how impressive (or unimpressive) the model's intermediate reasoning was.
@@ -160,18 +160,18 @@ Never: pick by model confidence; pick by model preference; pick implicitly.
 
 Safety belongs in the **primary** skill/harness path, not in an optional reference. The following must be enforced for every invocation, not consulted as backup:
 
-| Safety rule | Where enforced | Failure mode if missed |
-|---|---|---|
-| Forbidden claims (`CLAIM_REGISTER §10`) | claim-boundary step (§7.2) + post-output scan | Public surface ships forbidden phrase |
-| Forbidden visuals/wording (`Production Brief §15-16`) | claim-boundary + skill selection | Asset metadata is incomplete or claim escapes |
-| Hard-stop gates (`LLM_SYSTEM_FLOW Hard stop gates`) | harness refuses tool invocation | Unauthorized push / mint / federation activation |
-| Exact-string consent (ADR-005) | micro-consent step (§7.4) | Operator bypassed; action without consent |
-| No hidden daemon (ADR-002) | harness scans for background processes before tool action | Unauthorized persistent state |
-| Local-only state (`~/.dema` / `DEMA_HOME`, ADR-004) | tool-action step + verification step | State leak outside operator's machine |
-| No founder-allocation token mint | claim-boundary + Production Brief §15 | Economic activation defect |
-| No Sharia-certified claim without expert review | claim-boundary | Religious-authority overclaim |
-| No invented evidence (memory canon `feedback_no_invented_evidence_source`) | self-critique step + skill discipline | Convenience witness ships |
-| No mid-output uncertainty-hiding (Law of Assumption §15) | self-critique step | False certainty surfaces in publishable output |
+| Safety rule                                                                | Where enforced                                            | Failure mode if missed                           |
+| -------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------ |
+| Forbidden claims (`CLAIM_REGISTER §10`)                                    | claim-boundary step (§7.2) + post-output scan             | Public surface ships forbidden phrase            |
+| Forbidden visuals/wording (`Production Brief §15-16`)                      | claim-boundary + skill selection                          | Asset metadata is incomplete or claim escapes    |
+| Hard-stop gates (`LLM_SYSTEM_FLOW Hard stop gates`)                        | harness refuses tool invocation                           | Unauthorized push / mint / federation activation |
+| Exact-string consent (ADR-005)                                             | micro-consent step (§7.4)                                 | Operator bypassed; action without consent        |
+| No hidden daemon (ADR-002)                                                 | harness scans for background processes before tool action | Unauthorized persistent state                    |
+| Local-only state (`~/.dema` / `DEMA_HOME`, ADR-004)                        | tool-action step + verification step                      | State leak outside operator's machine            |
+| No founder-allocation token mint                                           | claim-boundary + Production Brief §15                     | Economic activation defect                       |
+| No Sharia-certified claim without expert review                            | claim-boundary                                            | Religious-authority overclaim                    |
+| No invented evidence (memory canon `feedback_no_invented_evidence_source`) | self-critique step + skill discipline                     | Convenience witness ships                        |
+| No mid-output uncertainty-hiding (Law of Assumption §15)                   | self-critique step                                        | False certainty surfaces in publishable output   |
 
 Every must-not-miss rule has both a **primary enforcement point** in the harness AND a **secondary check** in self-critique. If only one of the two would catch the failure, the rule is mis-placed.
 
@@ -277,22 +277,22 @@ Receipt structure (`bizra.dema.agent_run_receipt.v0.1` schema):
 ```yaml
 agent_run_receipt:
   schema: bizra.dema.agent_run_receipt.v0.1
-  run_id:                    # uuid
-  parent_receipt_sha:        # hash of prior receipt (chain link)
-  timestamp:                 # UTC ISO 8601
-  operator:                  # operator id
-  intent_text:               # verbatim
-  claim_boundary:            # expected truth labels
-  selected_skills:           # list
+  run_id: # uuid
+  parent_receipt_sha: # hash of prior receipt (chain link)
+  timestamp: # UTC ISO 8601
+  operator: # operator id
+  intent_text: # verbatim
+  claim_boundary: # expected truth labels
+  selected_skills: # list
   micro_consent:
-    consent_string:          # verbatim what operator typed
+    consent_string: # verbatim what operator typed
     consent_timestamp:
-  tool_actions:              # list of {tool, args_hash, output_hash, status, duration_ms}
-  traces_path:               # pointer to detailed trace file
+  tool_actions: # list of {tool, args_hash, output_hash, status, duration_ms}
+  traces_path: # pointer to detailed trace file
   deterministic_verification: # list of {check_name, expected, actual, pass}
-  self_critique_summary:     # short
-  next_step:                 # the agent's proposed next step
-  receipt_sha:               # sha256 of this whole receipt (excluding this field)
+  self_critique_summary: # short
+  next_step: # the agent's proposed next step
+  receipt_sha: # sha256 of this whole receipt (excluding this field)
 ```
 
 Receipt properties:
@@ -336,18 +336,18 @@ Not every step of the agent loop needs Opus 4.7 1M (or its equivalent). Many ste
 
 Disposition by step:
 
-| Loop step | Default model class | Reason |
-|---|---|---|
-| §7.1 Intent capture | n/a (no model — just record) | Deterministic capture |
-| §7.2 Claim boundary | small / local | Classification task; bounded label set |
-| §7.3 Skill selection | small / local | Catalog lookup + classification |
-| §7.4 Micro-consent | n/a (no model — harness gates the operator) | No reasoning required |
-| §7.5 Tool action | n/a (harness runs the tool) | Deterministic execution |
-| §7.6 Trace capture | n/a (harness captures) | Deterministic capture |
-| §7.7 Deterministic verification | n/a (deterministic code) | By definition not model-driven |
-| §7.8 Receipt mint | n/a (harness mints) | Deterministic hashing |
-| §7.9 Self-critique | the active full-model | Requires the same reasoning capacity that produced the work |
-| §7.10 Next step | small / local for routine; full-model for novel | Adaptive |
+| Loop step                       | Default model class                             | Reason                                                      |
+| ------------------------------- | ----------------------------------------------- | ----------------------------------------------------------- |
+| §7.1 Intent capture             | n/a (no model — just record)                    | Deterministic capture                                       |
+| §7.2 Claim boundary             | small / local                                   | Classification task; bounded label set                      |
+| §7.3 Skill selection            | small / local                                   | Catalog lookup + classification                             |
+| §7.4 Micro-consent              | n/a (no model — harness gates the operator)     | No reasoning required                                       |
+| §7.5 Tool action                | n/a (harness runs the tool)                     | Deterministic execution                                     |
+| §7.6 Trace capture              | n/a (harness captures)                          | Deterministic capture                                       |
+| §7.7 Deterministic verification | n/a (deterministic code)                        | By definition not model-driven                              |
+| §7.8 Receipt mint               | n/a (harness mints)                             | Deterministic hashing                                       |
+| §7.9 Self-critique              | the active full-model                           | Requires the same reasoning capacity that produced the work |
+| §7.10 Next step                 | small / local for routine; full-model for novel | Adaptive                                                    |
 
 ```text
 Local/tiny models should handle narrow deterministic tasks where possible.
@@ -403,22 +403,22 @@ Harness eval pack is canon-bound: every test cites the canon rule it enforces.
 
 Honest enumeration of how BIZRA agents fail. Each is closed by a specific section above.
 
-| Failure mode | What it looks like | Closed by |
-|---|---|---|
-| Confidence-without-evidence | Model asserts a `SOURCE_PENDING` fact as `VERIFIED` | Law of Assumption §15 + Harness §13 verification |
-| Consent erosion | Model retries until operator clicks yes | Micro-consent §10 (no retry-prompting; exact string) |
-| Trace fabrication | Model claims a tool succeeded that wasn't run | Tool action §11 (harness runs, not model) + Trace §12 |
-| Verification skipping | Model claims success; harness doesn't re-check | Deterministic verification §13 (mandatory) |
-| Receipt drift | Action happens; no receipt minted | Receipt §14 (append-only chain) |
-| Self-critique theater | "Everything went fine" without evidence | Self-critique §15 (Law of Assumption output pattern mandatory) |
-| Skill drift | Skill carries outdated canon citation | Skill evaluation §17 (on-canon-change re-eval) |
-| Harness silent failure | Harness skips a step under load | Harness evaluation §18 (step-ordering tests) |
-| Halt-gate bypass | Hard-stop gate reached; agent proceeds | §9 Must-Not-Miss Safety + Harness Law §4.10 |
-| Over-routing to full model | Every step pays Opus cost | Local/tiny model role §16 (route by step) |
-| Cross-model divergence | Same skill, different model, different output structure | Skill eval §17 cross-model + harness §18 cross-model |
-| Token-burn drift | Long sessions accumulate context without pruning | Token discipline canon + future harness cache-warmth checks |
+| Failure mode                | What it looks like                                      | Closed by                                                      |
+| --------------------------- | ------------------------------------------------------- | -------------------------------------------------------------- |
+| Confidence-without-evidence | Model asserts a `SOURCE_PENDING` fact as `VERIFIED`     | Law of Assumption §15 + Harness §13 verification               |
+| Consent erosion             | Model retries until operator clicks yes                 | Micro-consent §10 (no retry-prompting; exact string)           |
+| Trace fabrication           | Model claims a tool succeeded that wasn't run           | Tool action §11 (harness runs, not model) + Trace §12          |
+| Verification skipping       | Model claims success; harness doesn't re-check          | Deterministic verification §13 (mandatory)                     |
+| Receipt drift               | Action happens; no receipt minted                       | Receipt §14 (append-only chain)                                |
+| Self-critique theater       | "Everything went fine" without evidence                 | Self-critique §15 (Law of Assumption output pattern mandatory) |
+| Skill drift                 | Skill carries outdated canon citation                   | Skill evaluation §17 (on-canon-change re-eval)                 |
+| Harness silent failure      | Harness skips a step under load                         | Harness evaluation §18 (step-ordering tests)                   |
+| Halt-gate bypass            | Hard-stop gate reached; agent proceeds                  | §9 Must-Not-Miss Safety + Harness Law §4.10                    |
+| Over-routing to full model  | Every step pays Opus cost                               | Local/tiny model role §16 (route by step)                      |
+| Cross-model divergence      | Same skill, different model, different output structure | Skill eval §17 cross-model + harness §18 cross-model           |
+| Token-burn drift            | Long sessions accumulate context without pruning        | Token discipline canon + future harness cache-warmth checks    |
 
-Every failure mode above has been observed in some agent system somewhere. The harness exists to make BIZRA agents resistant to *all of them, not just one or two*.
+Every failure mode above has been observed in some agent system somewhere. The harness exists to make BIZRA agents resistant to _all of them, not just one or two_.
 
 ## 20. Forbidden Behaviors
 
@@ -616,4 +616,4 @@ The load-bearing surfaces of this canon are §4 (Harness Law), §5 (Skill Law), 
 
 > **The harness grounds the model in reality. The skill gives the model product/canon knowledge. Micro-consent bounds action. The receipt preserves proof.**
 >
-> *Together with the Law of Assumption: think humbly, act verifiably.*
+> _Together with the Law of Assumption: think humbly, act verifiably._

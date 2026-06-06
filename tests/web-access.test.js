@@ -6,7 +6,7 @@ import {
   buildWebAccessSummary,
   buildWebFetchRequest,
   WEB_ACCESS_ALLOWLIST_HOSTS_DEFAULT,
-  WEB_ACCESS_REQUIRED_BLOCKED_EFFECTS
+  WEB_ACCESS_REQUIRED_BLOCKED_EFFECTS,
 } from "../packages/core/src/web-access.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 
@@ -25,7 +25,11 @@ test("Web access · method_allowlist is GET + HEAD only", () => {
 test("Web access · boundary canonical · refusals enumerated", () => {
   const p = buildWebAccessPreview();
   assert.ok(isCanonicalBoundary(p.boundary));
-  assert.ok(p.refusal_invariants.some((r) => r.includes("never fetches without typed per-URL consent")));
+  assert.ok(
+    p.refusal_invariants.some((r) =>
+      r.includes("never fetches without typed per-URL consent"),
+    ),
+  );
   assert.ok(p.refusal_invariants.some((r) => r.includes("only uses GET/HEAD")));
 });
 
@@ -39,7 +43,7 @@ test("Web access · blocked_effects · fetch-without-consent · non-allowlist ·
 test("Fetch request · allowlisted host + valid URL → valid", () => {
   const r = buildWebFetchRequest({
     url: "https://www.localfirst.fm/",
-    purpose: "browse episode list"
+    purpose: "browse episode list",
   });
   assert.equal(r.valid, true);
   assert.equal(r.host, "www.localfirst.fm");
@@ -51,7 +55,7 @@ test("Fetch request · allowlisted host + valid URL → valid", () => {
 test("Fetch request · non-allowlisted host → invalid", () => {
   const r = buildWebFetchRequest({
     url: "https://evil.example.com/",
-    purpose: "test"
+    purpose: "test",
   });
   assert.equal(r.valid, false);
   assert.ok(r.violations.some((v) => v.includes("host_not_in_allowlist")));
@@ -60,7 +64,7 @@ test("Fetch request · non-allowlisted host → invalid", () => {
 test("Fetch request · disallowed protocol (ftp/file) → invalid", () => {
   const r = buildWebFetchRequest({
     url: "ftp://localhost/file",
-    purpose: "test"
+    purpose: "test",
   });
   assert.equal(r.valid, false);
   assert.ok(r.violations.some((v) => v.includes("disallowed_protocol")));
@@ -69,7 +73,7 @@ test("Fetch request · disallowed protocol (ftp/file) → invalid", () => {
 test("Fetch request · malformed URL → invalid", () => {
   const r = buildWebFetchRequest({
     url: "not a url",
-    purpose: "test"
+    purpose: "test",
   });
   assert.equal(r.valid, false);
   assert.ok(r.violations.includes("invalid_url_format"));
@@ -77,15 +81,21 @@ test("Fetch request · malformed URL → invalid", () => {
 
 test("Fetch request · missing purpose → invalid", () => {
   const r = buildWebFetchRequest({
-    url: "https://localhost/"
+    url: "https://localhost/",
   });
   assert.equal(r.valid, false);
   assert.ok(r.violations.includes("no_purpose"));
 });
 
 test("Fetch request · URL hash deterministic (sha256 of URL)", () => {
-  const r1 = buildWebFetchRequest({ url: "https://localhost/x", purpose: "test" });
-  const r2 = buildWebFetchRequest({ url: "https://localhost/x", purpose: "test2" });
+  const r1 = buildWebFetchRequest({
+    url: "https://localhost/x",
+    purpose: "test",
+  });
+  const r2 = buildWebFetchRequest({
+    url: "https://localhost/x",
+    purpose: "test2",
+  });
   assert.equal(r1.url_hash, r2.url_hash);
   assert.equal(r1.url_hash.length, 64);
 });
@@ -94,7 +104,7 @@ test("Fetch request · custom allowlist overrides default", () => {
   const r = buildWebFetchRequest({
     url: "https://allowed.test/",
     purpose: "test",
-    allowlist_hosts: ["allowed.test"]
+    allowlist_hosts: ["allowed.test"],
   });
   assert.equal(r.valid, true);
 });
@@ -102,7 +112,7 @@ test("Fetch request · custom allowlist overrides default", () => {
 test("Fetch request · deep-frozen + canonical boundary", () => {
   const r = buildWebFetchRequest({
     url: "https://localhost/",
-    purpose: "test"
+    purpose: "test",
   });
   assert.ok(Object.isFrozen(r));
   assert.ok(isCanonicalBoundary(r.boundary));

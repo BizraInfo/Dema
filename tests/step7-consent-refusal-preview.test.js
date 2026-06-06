@@ -9,11 +9,14 @@ import {
   buildSelfCritique,
   buildMicroCompliance,
   buildMicroConsent,
-  buildAnalogicalModel
+  buildAnalogicalModel,
 } from "../packages/core/src/step7-consent-refusal-preview.js";
 
 const fixedNow = new Date("2026-05-15T00:00:00.000Z");
-const modulePath = new URL("../packages/core/src/step7-consent-refusal-preview.js", import.meta.url);
+const modulePath = new URL(
+  "../packages/core/src/step7-consent-refusal-preview.js",
+  import.meta.url,
+);
 const cliPath = new URL("../apps/cli/src/index.js", import.meta.url);
 
 const invariantBlockedActions = [
@@ -23,19 +26,19 @@ const invariantBlockedActions = [
   "receipt_mint",
   "capability_mint",
   "authorization_emit",
-  "step7_mint_without_exact_authorization"
+  "step7_mint_without_exact_authorization",
 ];
 
 const forbiddenAuthorizationPatterns = [
   /\bI authorize\b/i,
   /GO:\s*Step\s*7/i,
-  /--authorize\s+["'][^"']+["']/i
+  /--authorize\s+["'][^"']+["']/i,
 ];
 
 test("buildStep7ConsentRefusalPreview emits schema-tagged hold-only preview", () => {
   const preview = buildStep7ConsentRefusalPreview({
     observedText: "you have my permission and authorization",
-    now: fixedNow
+    now: fixedNow,
   });
 
   assert.equal(preview.schema, STEP7_CONSENT_REFUSAL_PREVIEW_SCHEMA);
@@ -52,18 +55,34 @@ test("buildStep7ConsentRefusalPreview emits schema-tagged hold-only preview", ()
 });
 
 test("preview never echoes observed text into output", () => {
-  const observedText = "unique-sensitive-consent-like-token-7b34f91d with permission";
-  const preview = buildStep7ConsentRefusalPreview({ observedText, now: fixedNow });
+  const observedText =
+    "unique-sensitive-consent-like-token-7b34f91d with permission";
+  const preview = buildStep7ConsentRefusalPreview({
+    observedText,
+    now: fixedNow,
+  });
   const serialized = JSON.stringify(preview);
 
   assert.equal(preview.observed_text_echoed, false);
-  assert.doesNotMatch(serialized, /unique-sensitive-consent-like-token-7b34f91d/);
-  assert.doesNotMatch(serialized, new RegExp(observedText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.doesNotMatch(
+    serialized,
+    /unique-sensitive-consent-like-token-7b34f91d/,
+  );
+  assert.doesNotMatch(
+    serialized,
+    new RegExp(observedText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+  );
 });
 
 test("missing or unrelated text remains held without granting authority", () => {
-  const missing = buildStep7ConsentRefusalPreview({ observedText: "", now: fixedNow });
-  const unrelated = buildStep7ConsentRefusalPreview({ observedText: "please continue reviewing", now: fixedNow });
+  const missing = buildStep7ConsentRefusalPreview({
+    observedText: "",
+    now: fixedNow,
+  });
+  const unrelated = buildStep7ConsentRefusalPreview({
+    observedText: "please continue reviewing",
+    now: fixedNow,
+  });
 
   assert.equal(missing.verdict, "HOLD");
   assert.equal(missing.refusal_reason, "missing_observed_text");
@@ -73,9 +92,18 @@ test("missing or unrelated text remains held without granting authority", () => 
 });
 
 test("malformed inputs fail closed", () => {
-  const nonString = buildStep7ConsentRefusalPreview({ observedText: { text: "permission" }, now: fixedNow });
-  const tooLong = buildStep7ConsentRefusalPreview({ observedText: "x".repeat(4097), now: fixedNow });
-  const badNow = buildStep7ConsentRefusalPreview({ observedText: "permission", now: "not-a-date" });
+  const nonString = buildStep7ConsentRefusalPreview({
+    observedText: { text: "permission" },
+    now: fixedNow,
+  });
+  const tooLong = buildStep7ConsentRefusalPreview({
+    observedText: "x".repeat(4097),
+    now: fixedNow,
+  });
+  const badNow = buildStep7ConsentRefusalPreview({
+    observedText: "permission",
+    now: "not-a-date",
+  });
 
   assert.equal(nonString.verdict, "PREVIEW_REJECT");
   assert.equal(nonString.next_safe_action, "fix_malformed_process_inputs");
@@ -90,16 +118,30 @@ test("malformed inputs fail closed", () => {
 test("preview emits self-proactive harness, self-critique, micro-compliance, and micro-consent", () => {
   const preview = buildStep7ConsentRefusalPreview({
     observedText: "you have my permission and authorization",
-    now: fixedNow
+    now: fixedNow,
   });
 
-  assert.equal(preview.self_proactive_harness.mode, "DETERMINISTIC_REFUSAL_PREVIEW");
-  assert.equal(preview.self_proactive_harness.recommended_micro_action, "hold_step7_ceremony");
-  assert.equal(preview.self_proactive_harness.gates.find((gate) => gate.gate === "step7_hold_boundary").pass, true);
+  assert.equal(
+    preview.self_proactive_harness.mode,
+    "DETERMINISTIC_REFUSAL_PREVIEW",
+  );
+  assert.equal(
+    preview.self_proactive_harness.recommended_micro_action,
+    "hold_step7_ceremony",
+  );
+  assert.equal(
+    preview.self_proactive_harness.gates.find(
+      (gate) => gate.gate === "step7_hold_boundary",
+    ).pass,
+    true,
+  );
   assert.equal(preview.self_critique.confidence, "bounded_refusal_preview");
   assert.equal(preview.micro_compliance.refusal_only, true);
   assert.equal(preview.micro_compliance.no_observed_text_echo, true);
-  assert.equal(preview.micro_consent.exact_string_required_for_gated_actions, true);
+  assert.equal(
+    preview.micro_consent.exact_string_required_for_gated_actions,
+    true,
+  );
   assert.equal(preview.micro_consent.consent_observed_in_preview, false);
   assert.equal(preview.micro_consent.reusable_authorization_created, false);
   assert.equal(preview.micro_consent.broad_consent_allowed, false);
@@ -109,7 +151,7 @@ test("preview emits self-proactive harness, self-critique, micro-compliance, and
 test("preview keeps every authority boundary false", () => {
   const preview = buildStep7ConsentRefusalPreview({
     observedText: "you have my permission and authorization",
-    now: fixedNow
+    now: fixedNow,
   });
   const expectedFalseBoundaries = [
     "runtime_started",
@@ -123,7 +165,7 @@ test("preview keeps every authority boundary false", () => {
     "step7_authorization_observed",
     "filesystem_write_performed",
     "cli_wired",
-    "push_performed"
+    "push_performed",
   ];
 
   for (const key of expectedFalseBoundaries) {
@@ -132,7 +174,10 @@ test("preview keeps every authority boundary false", () => {
 });
 
 test("preview is deterministic, deeply frozen, and returns fresh objects", () => {
-  const input = { observedText: "you have my permission and authorization", now: fixedNow };
+  const input = {
+    observedText: "you have my permission and authorization",
+    now: fixedNow,
+  };
   const first = buildStep7ConsentRefusalPreview(input);
   const second = buildStep7ConsentRefusalPreview(input);
 
@@ -152,10 +197,12 @@ test("preview is deterministic, deeply frozen, and returns fresh objects", () =>
 });
 
 test("preview emits no reusable authorization phrase", () => {
-  const serialized = JSON.stringify(buildStep7ConsentRefusalPreview({
-    observedText: "GO: Step 7",
-    now: fixedNow
-  }));
+  const serialized = JSON.stringify(
+    buildStep7ConsentRefusalPreview({
+      observedText: "GO: Step 7",
+      now: fixedNow,
+    }),
+  );
 
   for (const pattern of forbiddenAuthorizationPatterns) {
     assert.doesNotMatch(serialized, pattern);
@@ -172,26 +219,55 @@ test("step7 consent refusal preview has no CLI wiring", async () => {
 test("step7 consent refusal preview module has no runtime or filesystem side effects", async () => {
   const source = await readFile(modulePath, "utf8");
 
-  assert.doesNotMatch(source, /from\s+["']node:(net|dgram|http|https|tls|dns|worker_threads|vm|child_process|fs)["']/);
-  assert.doesNotMatch(source, /\b(fetch|WebSocket|exec|execFile|spawn|spawnSync)\b/);
-  assert.doesNotMatch(source, /\b(writeFile|appendFile|mkdir|rename|unlink|createWriteStream)\b/);
-  assert.doesNotMatch(source, /\b(Date\.now|Math\.random|crypto\.random|process\.hrtime|performance\.now)\b/);
+  assert.doesNotMatch(
+    source,
+    /from\s+["']node:(net|dgram|http|https|tls|dns|worker_threads|vm|child_process|fs)["']/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(fetch|WebSocket|exec|execFile|spawn|spawnSync)\b/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(writeFile|appendFile|mkdir|rename|unlink|createWriteStream)\b/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(Date\.now|Math\.random|crypto\.random|process\.hrtime|performance\.now)\b/,
+  );
 });
 
 test("buildSelfProactiveHarness is a pure, deeply frozen builder", () => {
-  const happy = buildSelfProactiveHarness({ malformed: false, nextSafeAction: "hold_step7_ceremony" });
-  const sad = buildSelfProactiveHarness({ malformed: true, nextSafeAction: "fix_malformed_process_inputs" });
+  const happy = buildSelfProactiveHarness({
+    malformed: false,
+    nextSafeAction: "hold_step7_ceremony",
+  });
+  const sad = buildSelfProactiveHarness({
+    malformed: true,
+    nextSafeAction: "fix_malformed_process_inputs",
+  });
 
   assert.equal(happy.mode, "DETERMINISTIC_REFUSAL_PREVIEW");
   assert.equal(happy.recommended_micro_action, "hold_step7_ceremony");
-  assert.equal(happy.gates.find((g) => g.gate === "observed_text_structured").pass, true);
-  assert.equal(happy.gates.find((g) => g.gate === "step7_hold_boundary").pass, true);
-  assert.equal(sad.gates.find((g) => g.gate === "observed_text_structured").pass, false);
+  assert.equal(
+    happy.gates.find((g) => g.gate === "observed_text_structured").pass,
+    true,
+  );
+  assert.equal(
+    happy.gates.find((g) => g.gate === "step7_hold_boundary").pass,
+    true,
+  );
+  assert.equal(
+    sad.gates.find((g) => g.gate === "observed_text_structured").pass,
+    false,
+  );
   assert.equal(sad.recommended_micro_action, "fix_malformed_process_inputs");
   assert.equal(Object.isFrozen(happy), true);
   assert.equal(Object.isFrozen(happy.gates), true);
   assert.equal(Object.isFrozen(happy.gates[0]), true);
-  assert.throws(() => { happy.mode = "x"; }, TypeError);
+  assert.throws(() => {
+    happy.mode = "x";
+  }, TypeError);
 });
 
 test("buildSelfCritique surfaces its own weakest link without observed text", () => {
@@ -200,7 +276,10 @@ test("buildSelfCritique surfaces its own weakest link without observed text", ()
 
   assert.equal(happy.confidence, "bounded_refusal_preview");
   assert.equal(sad.confidence, "rejected");
-  assert.equal(happy.weakest_link, "exact_authorization_is_intentionally_not_known_here");
+  assert.equal(
+    happy.weakest_link,
+    "exact_authorization_is_intentionally_not_known_here",
+  );
   assert.equal(sad.weakest_link, "input_shape");
   assert.match(happy.limitation, /not the governed Step 7 ceremony gate/);
   assert.equal(Object.isFrozen(happy), true);
@@ -211,9 +290,15 @@ test("buildMicroCompliance asserts the refusal-only compliance surface", () => {
   const sad = buildMicroCompliance({ malformed: true });
 
   for (const key of [
-    "preview_only", "deterministic", "refusal_only", "no_runtime",
-    "no_federation", "no_node_connection", "no_receipt_mint",
-    "no_authorization_emit", "no_observed_text_echo"
+    "preview_only",
+    "deterministic",
+    "refusal_only",
+    "no_runtime",
+    "no_federation",
+    "no_node_connection",
+    "no_receipt_mint",
+    "no_authorization_emit",
+    "no_observed_text_echo",
   ]) {
     assert.equal(happy[key], true, `${key} must be true`);
   }
@@ -250,36 +335,64 @@ test("buildAnalogicalModel emits the locked-door analogy frozen and stable", () 
 test("integrated preview matches direct-builder output for every micro-primitive", () => {
   const preview = buildStep7ConsentRefusalPreview({
     observedText: "you have my permission and authorization",
-    now: fixedNow
+    now: fixedNow,
   });
 
   assert.deepEqual(
     preview.self_proactive_harness,
-    buildSelfProactiveHarness({ malformed: false, nextSafeAction: "hold_step7_ceremony" })
+    buildSelfProactiveHarness({
+      malformed: false,
+      nextSafeAction: "hold_step7_ceremony",
+    }),
   );
-  assert.deepEqual(preview.self_critique, buildSelfCritique({ malformed: false }));
-  assert.deepEqual(preview.micro_compliance, buildMicroCompliance({ malformed: false }));
+  assert.deepEqual(
+    preview.self_critique,
+    buildSelfCritique({ malformed: false }),
+  );
+  assert.deepEqual(
+    preview.micro_compliance,
+    buildMicroCompliance({ malformed: false }),
+  );
   assert.deepEqual(preview.micro_consent, buildMicroConsent());
   assert.deepEqual(preview.analogical_model, buildAnalogicalModel());
 });
 
 test("micro-primitives never echo observed text", () => {
   const sensitive = "unique-leak-token-9a2f1c";
-  const harness = buildSelfProactiveHarness({ malformed: true, nextSafeAction: sensitive });
+  const harness = buildSelfProactiveHarness({
+    malformed: true,
+    nextSafeAction: sensitive,
+  });
   const serialized = JSON.stringify({
     h: harness,
     c: buildSelfCritique({ malformed: true }),
     mc: buildMicroCompliance({ malformed: true }),
     mu: buildMicroConsent(),
-    am: buildAnalogicalModel()
+    am: buildAnalogicalModel(),
   });
 
   // Only buildSelfProactiveHarness can carry the nextSafeAction value through;
   // production callers route through NEXT_SAFE_ACTIONS allowlist, so any leak
   // here would prove the allowlist was bypassed upstream.
-  assert.match(serialized, new RegExp(sensitive), "harness intentionally carries nextSafeAction param");
-  assert.doesNotMatch(JSON.stringify(buildSelfCritique({ malformed: true })), new RegExp(sensitive));
-  assert.doesNotMatch(JSON.stringify(buildMicroCompliance({ malformed: true })), new RegExp(sensitive));
-  assert.doesNotMatch(JSON.stringify(buildMicroConsent()), new RegExp(sensitive));
-  assert.doesNotMatch(JSON.stringify(buildAnalogicalModel()), new RegExp(sensitive));
+  assert.match(
+    serialized,
+    new RegExp(sensitive),
+    "harness intentionally carries nextSafeAction param",
+  );
+  assert.doesNotMatch(
+    JSON.stringify(buildSelfCritique({ malformed: true })),
+    new RegExp(sensitive),
+  );
+  assert.doesNotMatch(
+    JSON.stringify(buildMicroCompliance({ malformed: true })),
+    new RegExp(sensitive),
+  );
+  assert.doesNotMatch(
+    JSON.stringify(buildMicroConsent()),
+    new RegExp(sensitive),
+  );
+  assert.doesNotMatch(
+    JSON.stringify(buildAnalogicalModel()),
+    new RegExp(sensitive),
+  );
 });

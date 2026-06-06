@@ -21,15 +21,15 @@ Dema ships with a **zero-dependency** supply chain:
 
 Dema runs on the Node.js standard library only. Statically-imported builtins `[M]`:
 
-| `node:` builtin               | Purpose                                                      |
-| ----------------------------- | ------------------------------------------------------------ |
-| `node:crypto`                 | Ed25519 signing/verification, SHA-256 content addressing     |
-| `node:fs`, `node:fs/promises` | local receipt / profile / index read-write under `DEMA_HOME` |
-| `node:os`                     | home-dir resolution (`~/.dema`)                              |
-| `node:path`                   | path composition                                             |
-| `node:readline`               | interactive `dema chat` REPL                                 |
-| `node:url`                    | module-path resolution (`fileURLToPath`)                     |
-| `node:util`                   | `promisify` and formatting                                   |
+| `node:` builtin               | Purpose                                                                                                                                          |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `node:crypto`                 | Ed25519 signing/verification, SHA-256 content addressing                                                                                         |
+| `node:fs`, `node:fs/promises` | local receipt / profile / index read-write under `DEMA_HOME`                                                                                     |
+| `node:os`                     | home-dir resolution (`~/.dema`)                                                                                                                  |
+| `node:path`                   | path composition                                                                                                                                 |
+| `node:readline`               | interactive `dema chat` REPL                                                                                                                     |
+| `node:url`                    | module-path resolution (`fileURLToPath`)                                                                                                         |
+| `node:util`                   | `promisify` and formatting                                                                                                                       |
 | `node:child_process`          | argv-array subprocess execution for review/check gates, CLI smoke, local Node0 shellout adapter, model safety probes, and guarded local wrappers |
 
 `node:child_process` is used both statically and dynamically; it is not a third-party dependency. The actuator gate permits `execFile`/`execFileSync` and `spawn`/`spawnSync` with argv arrays, and rejects raw shell execution patterns (`child_process.exec`, `execSync`, or `shell:true`). Loopback HTTP surfaces use platform `fetch`/`AbortController`, not npm packages: Node0 gateway `127.0.0.1:7421`, Ollama `localhost`/`127.0.0.1:11434`, and LM Studio `127.0.0.1:1234` where applicable.

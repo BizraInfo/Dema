@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildConsentCardPreview,
   CONSENT_CARD_REQUIRED_BLOCKED_EFFECTS,
-  CONSENT_CARD_DECISION_OPTIONS
+  CONSENT_CARD_DECISION_OPTIONS,
 } from "../packages/core/src/consent-card-preview.js";
 
 import { PREVIEW_BOUNDARY_CANONICAL_KEYS as REQUIRED_BOUNDARY_FALSE_KEYS } from "../packages/core/src/preview-boundary.js";
@@ -35,14 +35,14 @@ test("ConsentCard required blocked_effects always present, even with empty addit
   for (const effect of CONSENT_CARD_REQUIRED_BLOCKED_EFFECTS) {
     assert.ok(
       card.blocked_effects.includes(effect),
-      `blocked_effects must contain required ${effect}`
+      `blocked_effects must contain required ${effect}`,
     );
   }
 });
 
 test("ConsentCard merges additional blocked_effects without losing required ones", () => {
   const card = buildConsentCardPreview({
-    additionalBlockedEffects: ["custom_extra_block", "another_block"]
+    additionalBlockedEffects: ["custom_extra_block", "another_block"],
   });
   for (const effect of CONSENT_CARD_REQUIRED_BLOCKED_EFFECTS) {
     assert.ok(card.blocked_effects.includes(effect));
@@ -53,11 +53,19 @@ test("ConsentCard merges additional blocked_effects without losing required ones
 
 test("ConsentCard ADVERSARIAL: caller cannot smuggle runtime_execution into allowed_effects", () => {
   const card = buildConsentCardPreview({
-    allowedEffects: ["draft_preview", "runtime_execution", "canonical_minting", "federation_invocation"]
+    allowedEffects: [
+      "draft_preview",
+      "runtime_execution",
+      "canonical_minting",
+      "federation_invocation",
+    ],
   });
   assert.ok(card.allowed_effects.includes("draft_preview"));
-  assert.equal(card.allowed_effects.includes("runtime_execution"), false,
-    "runtime_execution MUST be filtered out of allowed_effects");
+  assert.equal(
+    card.allowed_effects.includes("runtime_execution"),
+    false,
+    "runtime_execution MUST be filtered out of allowed_effects",
+  );
   assert.equal(card.allowed_effects.includes("canonical_minting"), false);
   assert.equal(card.allowed_effects.includes("federation_invocation"), false);
 });
@@ -65,7 +73,9 @@ test("ConsentCard ADVERSARIAL: caller cannot smuggle runtime_execution into allo
 test("ConsentCard ADVERSARIAL: empty allowedEffects falls back to draft_preview", () => {
   const card1 = buildConsentCardPreview({ allowedEffects: [] });
   assert.deepEqual([...card1.allowed_effects], ["draft_preview"]);
-  const card2 = buildConsentCardPreview({ allowedEffects: ["runtime_execution"] }); // only-blocked
+  const card2 = buildConsentCardPreview({
+    allowedEffects: ["runtime_execution"],
+  }); // only-blocked
   assert.deepEqual([...card2.allowed_effects], ["draft_preview"]);
 });
 
@@ -76,14 +86,24 @@ test("ConsentCard ADVERSARIAL: allowedEffects accepting non-array silently defau
 
 test("ConsentCard ADVERSARIAL: non-string items in allowedEffects are filtered", () => {
   const card = buildConsentCardPreview({
-    allowedEffects: ["draft_preview", 42, null, undefined, { hack: true }, "another_safe"]
+    allowedEffects: [
+      "draft_preview",
+      42,
+      null,
+      undefined,
+      { hack: true },
+      "another_safe",
+    ],
   });
-  assert.deepEqual([...card.allowed_effects], ["draft_preview", "another_safe"]);
+  assert.deepEqual(
+    [...card.allowed_effects],
+    ["draft_preview", "another_safe"],
+  );
 });
 
 test("ConsentCard ADVERSARIAL: duplicates in allowedEffects deduplicated", () => {
   const card = buildConsentCardPreview({
-    allowedEffects: ["draft_preview", "draft_preview", "draft_preview"]
+    allowedEffects: ["draft_preview", "draft_preview", "draft_preview"],
   });
   assert.deepEqual([...card.allowed_effects], ["draft_preview"]);
 });
@@ -96,10 +116,13 @@ test("ConsentCard SAT verdict defaults to status=policy_preview", () => {
 
 test("ConsentCard SAT verdict status always policy_preview, even if caller injects PERMIT", () => {
   const card = buildConsentCardPreview({
-    satVerdict: { status: "PERMIT", reason: "trying to escalate" }
+    satVerdict: { status: "PERMIT", reason: "trying to escalate" },
   });
-  assert.equal(card.sat_verdict.status, "policy_preview",
-    "SAT verdict status MUST be pinned to policy_preview in preview-only card");
+  assert.equal(
+    card.sat_verdict.status,
+    "policy_preview",
+    "SAT verdict status MUST be pinned to policy_preview in preview-only card",
+  );
 });
 
 test("ConsentCard mission view is selective (no raw intent body)", () => {
@@ -109,13 +132,21 @@ test("ConsentCard mission view is selective (no raw intent body)", () => {
       status: "draft_preview",
       center: "user_mission",
       intent: "SENSITIVE_INTENT_BODY_THAT_SHOULD_NOT_LEAK",
-      raw_payload: "EVEN_RAWER_SHOULD_NOT_LEAK"
-    }
+      raw_payload: "EVEN_RAWER_SHOULD_NOT_LEAK",
+    },
   });
   assert.equal(card.mission.missionId, "m-001");
   assert.equal(card.mission.center, "user_mission");
-  assert.equal("intent" in card.mission, false, "card.mission must not carry raw intent");
-  assert.equal("raw_payload" in card.mission, false, "card.mission must not carry raw payload");
+  assert.equal(
+    "intent" in card.mission,
+    false,
+    "card.mission must not carry raw intent",
+  );
+  assert.equal(
+    "raw_payload" in card.mission,
+    false,
+    "card.mission must not carry raw payload",
+  );
 });
 
 test("ConsentCard PAT proposal: string proposal is truncated at 240 chars", () => {
@@ -132,8 +163,8 @@ test("ConsentCard PAT proposal: object proposal exposes step_count and summary o
       summary: "short summary",
       steps: ["a", "b", "c"],
       raw_internal_state: "SHOULD_NOT_LEAK",
-      reasoning: "ALSO_NOT_LEAK"
-    }
+      reasoning: "ALSO_NOT_LEAK",
+    },
   });
   assert.equal(card.pat_proposal.summary, "short summary");
   assert.equal(card.pat_proposal.step_count, 3);
@@ -152,7 +183,11 @@ test("ConsentCard PAT proposal: null/undefined yield provided=false", () => {
 test("ConsentCard required_consent is exact-string per ADR-005", () => {
   const card = buildConsentCardPreview();
   assert.equal(card.required_consent.required, true);
-  assert.equal(card.required_consent.phrase, null, "phrase is not minted in preview");
+  assert.equal(
+    card.required_consent.phrase,
+    null,
+    "phrase is not minted in preview",
+  );
   assert.equal(card.required_consent.match_rule, "exact_string");
 });
 
@@ -164,11 +199,10 @@ test("ConsentCard receipt_preview is not_minted", () => {
 
 test("ConsentCard decision_options exact list", () => {
   const card = buildConsentCardPreview();
-  assert.deepEqual([...card.decision_options], [
-    "approve_c2_draft_only",
-    "narrow_scope",
-    "decline"
-  ]);
+  assert.deepEqual(
+    [...card.decision_options],
+    ["approve_c2_draft_only", "narrow_scope", "decline"],
+  );
   assert.equal(CONSENT_CARD_DECISION_OPTIONS.length, 3);
 });
 
@@ -183,7 +217,7 @@ test("ConsentCard is deeply frozen (top + all sub-views)", () => {
     mission: { missionId: "m-001" },
     patProposal: { summary: "test", steps: [1, 2] },
     satVerdict: { reason: "test reason" },
-    additionalBlockedEffects: ["extra"]
+    additionalBlockedEffects: ["extra"],
   });
   assert.equal(Object.isFrozen(card), true);
   assert.equal(Object.isFrozen(card.mission), true);
@@ -201,7 +235,7 @@ test("ConsentCard canonical_mint and federation are PINNED FALSE regardless of c
   const card = buildConsentCardPreview({
     mission: { missionId: "m", canonical_mint: true, federation: true },
     patProposal: { summary: "x", canonical_mint: true },
-    satVerdict: { status: "PERMIT", canonical_mint: true, federation: true }
+    satVerdict: { status: "PERMIT", canonical_mint: true, federation: true },
   });
   assert.equal(card.canonical_mint, false);
   assert.equal(card.boundary.receipt_mint_performed, false);

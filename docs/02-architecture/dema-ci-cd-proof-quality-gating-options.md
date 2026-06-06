@@ -22,7 +22,7 @@ This is well-tuned for **feature-class PRs** — narrow scope, well-defined surf
 
 It is **mismatched for broad-scope acceptance PRs** like the ADR-007 acceptance (PR #44, 53 files across 8+ top-level directories). The acceptance PR is broad by design: ADR file + Node0 Homebase + Shared URP + Integration Foundry registry + 5 sibling implementations + TUI design + UX Proof Harness + 2 review scripts + RDR-001 + dependency closure. No existing class fits. Inventing one with a 53-file allowlist would be brittle.
 
-PR #44's `proof-quality` failure is purely structural — it fails at the *"Resolve BIZRA review class"* step because the branch name `adr/007-accept-clean` matches none of the workflow's existing cases. All other CI checks (test 20.x, test 22.x, CodeQL, Socket, Analyze) pass cleanly.
+PR #44's `proof-quality` failure is purely structural — it fails at the _"Resolve BIZRA review class"_ step because the branch name `adr/007-accept-clean` matches none of the workflow's existing cases. All other CI checks (test 20.x, test 22.x, CodeQL, Socket, Analyze) pass cleanly.
 
 ## Three resolution shapes (conceptual only — no edits prescribed)
 
@@ -52,15 +52,15 @@ Make `proof-quality` non-blocking (advisory) for branches matching a broad-scope
 
 ## Decision matrix
 
-| Criterion | Q | R | S |
-|---|---|---|---|
-| Approx. delta size | small | large | medium |
-| Workflow file edit required | yes | no | yes |
-| Class-config file edit required | yes | yes | yes |
-| Maintenance burden | low | high | low |
-| Faithful to one-class-per-PR | partial | yes | partial |
-| Unblocks PR #44 | yes | yes | yes |
-| Forward-compat for future acceptance PRs | medium | low | high |
+| Criterion                                | Q       | R     | S       |
+| ---------------------------------------- | ------- | ----- | ------- |
+| Approx. delta size                       | small   | large | medium  |
+| Workflow file edit required              | yes     | no    | yes     |
+| Class-config file edit required          | yes     | yes   | yes     |
+| Maintenance burden                       | low     | high  | low     |
+| Faithful to one-class-per-PR             | partial | yes   | partial |
+| Unblocks PR #44                          | yes     | yes   | yes     |
+| Forward-compat for future acceptance PRs | medium  | low   | high    |
 
 ## Recommendation
 

@@ -17,18 +17,24 @@ const REQUIRED_BLOCKED_EFFECTS = Object.freeze([
   "fetch_credentials_or_secrets",
   "modify_remote_resource",
   "execute_received_code",
-  "federation_invocation"
+  "federation_invocation",
 ]);
 
 const ALLOWLIST_HOSTS_DEFAULT = Object.freeze([
-  "localhost", "127.0.0.1",
-  "github.com", "api.github.com", "raw.githubusercontent.com",
+  "localhost",
+  "127.0.0.1",
+  "github.com",
+  "api.github.com",
+  "raw.githubusercontent.com",
   "huggingface.co",
-  "localfirst.fm", "www.localfirst.fm",
+  "localfirst.fm",
+  "www.localfirst.fm",
   "inkandswitch.com",
-  "automerge.org", "yjs.dev",
+  "automerge.org",
+  "yjs.dev",
   "crdt.tech",
-  "kleppmann.com", "martin.kleppmann.com"
+  "kleppmann.com",
+  "martin.kleppmann.com",
 ]);
 
 function safeString(v, fallback = "") {
@@ -48,7 +54,9 @@ function sha256(input) {
   return createHash("sha256").update(String(input)).digest("hex");
 }
 
-export function buildWebAccessPreview({ allowlist_hosts = ALLOWLIST_HOSTS_DEFAULT } = {}) {
+export function buildWebAccessPreview({
+  allowlist_hosts = ALLOWLIST_HOSTS_DEFAULT,
+} = {}) {
   const allowlist = Array.isArray(allowlist_hosts)
     ? Object.freeze(allowlist_hosts.filter((h) => typeof h === "string"))
     : ALLOWLIST_HOSTS_DEFAULT;
@@ -67,9 +75,9 @@ export function buildWebAccessPreview({ allowlist_hosts = ALLOWLIST_HOSTS_DEFAUL
       "Web access never stores outside ~/.dema/web-cache/",
       "Web access never fetches from non-allowlisted host",
       "Web access never executes received code",
-      "Web access only uses GET/HEAD methods"
+      "Web access only uses GET/HEAD methods",
     ]),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -77,11 +85,13 @@ export function buildWebFetchRequest({
   url = "",
   purpose = "",
   expected_content_type = null,
-  allowlist_hosts = ALLOWLIST_HOSTS_DEFAULT
+  allowlist_hosts = ALLOWLIST_HOSTS_DEFAULT,
 } = {}) {
   const urlSafe = safeString(url);
   const purposeSafe = safeString(purpose).trim();
-  const allowlist = Array.isArray(allowlist_hosts) ? allowlist_hosts : ALLOWLIST_HOSTS_DEFAULT;
+  const allowlist = Array.isArray(allowlist_hosts)
+    ? allowlist_hosts
+    : ALLOWLIST_HOSTS_DEFAULT;
 
   const violations = [];
   let parsedUrl = null;
@@ -119,7 +129,8 @@ export function buildWebFetchRequest({
     host: parsedUrl?.hostname || null,
     purpose: purposeSafe,
     method: "GET",
-    expected_content_type: typeof expected_content_type === "string" ? expected_content_type : null,
+    expected_content_type:
+      typeof expected_content_type === "string" ? expected_content_type : null,
     cache_path: cachePath,
     valid,
     violations: Object.freeze(violations),
@@ -129,7 +140,7 @@ export function buildWebFetchRequest({
     requires_typed_go: true,
     audit_trail_required: true,
     receipt_shape_ready: valid,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -144,7 +155,7 @@ export function buildWebAccessSummary(options = {}) {
     response_store_path: preview.response_store_path,
     method_allowlist: preview.method_allowlist,
     blocked_effect_count: preview.blocked_effects.length,
-    boundary: preview.boundary
+    boundary: preview.boundary,
   });
 }
 

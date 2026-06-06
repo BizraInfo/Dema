@@ -12,32 +12,33 @@ export const FIRST_RUN_STEPS = Object.freeze([
     id: "welcome",
     label: "Welcome",
     command: "dema welcome",
-    description: "Read the product promise. No side effects."
+    description: "Read the product promise. No side effects.",
   }),
   Object.freeze({
     id: "setup",
     label: "Setup",
     command: "dema setup",
-    description: "Create ~/.dema/ (idempotent, non-destructive). Writes only inside DEMA_HOME."
+    description:
+      "Create ~/.dema/ (idempotent, non-destructive). Writes only inside DEMA_HOME.",
   }),
   Object.freeze({
     id: "status",
     label: "Status",
     command: "dema status",
-    description: "Show what is ready and what is blocked. Read-only."
+    description: "Show what is ready and what is blocked. Read-only.",
   }),
   Object.freeze({
     id: "doctor",
     label: "Doctor",
     command: "dema doctor",
-    description: "Row-by-row readiness check with fix hints. Read-only."
+    description: "Row-by-row readiness check with fix hints. Read-only.",
   }),
   Object.freeze({
     id: "next",
     label: "Next safe action",
     command: "(suggestion only)",
-    description: "Single suggested next command based on the doctor verdict."
-  })
+    description: "Single suggested next command based on the doctor verdict.",
+  }),
 ]);
 
 const BOUNDARY = Object.freeze({
@@ -46,13 +47,13 @@ const BOUNDARY = Object.freeze({
   mint: false,
   external_send: false,
   urp_runtime: false,
-  filesystem_write_performed_by_setup: true
+  filesystem_write_performed_by_setup: true,
 });
 
 const DRY_RUN_BOUNDARY = Object.freeze({
   ...BOUNDARY,
   read_only: true,
-  filesystem_write_performed_by_setup: false
+  filesystem_write_performed_by_setup: false,
 });
 
 export function buildFirstRunPlan({ dry_run = false } = {}) {
@@ -60,8 +61,9 @@ export function buildFirstRunPlan({ dry_run = false } = {}) {
     schema: FIRST_RUN_SCHEMA,
     mode: dry_run ? "DRY_RUN" : "EXECUTE",
     steps: FIRST_RUN_STEPS,
-    next_safe_action: "Run `dema first-run` to step through · `--dry-run` to preview only · `--json` for machine output",
-    boundary: dry_run ? DRY_RUN_BOUNDARY : BOUNDARY
+    next_safe_action:
+      "Run `dema first-run` to step through · `--dry-run` to preview only · `--json` for machine output",
+    boundary: dry_run ? DRY_RUN_BOUNDARY : BOUNDARY,
   });
 }
 
@@ -72,7 +74,7 @@ export function formatFirstRunPlan(plan) {
     `Schema: ${plan.schema}`,
     `Mode:   ${plan.mode}`,
     "",
-    "Steps:"
+    "Steps:",
   ];
   plan.steps.forEach((s, i) => {
     lines.push(`  ${i + 1}. ${s.label.padEnd(18)} ${s.command}`);
@@ -88,12 +90,16 @@ export function formatFirstRunPlan(plan) {
     `  mint:                                   ${plan.boundary.mint}`,
     `  external_send:                          ${plan.boundary.external_send}`,
     `  urp_runtime:                            ${plan.boundary.urp_runtime}`,
-    `  filesystem_write_performed_by_setup:    ${plan.boundary.filesystem_write_performed_by_setup}`
+    `  filesystem_write_performed_by_setup:    ${plan.boundary.filesystem_write_performed_by_setup}`,
   );
   return lines.join("\n");
 }
 
-export function summarizeFirstRunOutcome({ status, predicates, dry_run = false } = {}) {
+export function summarizeFirstRunOutcome({
+  status,
+  predicates,
+  dry_run = false,
+} = {}) {
   const failed = Array.isArray(predicates)
     ? predicates.filter((p) => p && p.status === "fail")
     : [];
@@ -104,8 +110,8 @@ export function summarizeFirstRunOutcome({ status, predicates, dry_run = false }
     ok,
     failed_predicates: Object.freeze(failed.map((p) => p.key)),
     suggested_next: ok
-      ? "Try `dema journey \"Fix auth.py and run pytest\"` to preview a bounded mission"
+      ? 'Try `dema journey "Fix auth.py and run pytest"` to preview a bounded mission'
       : `Resolve doctor predicates: ${failed.map((p) => p.key).join(", ")} (run \`dema doctor\` for fix hints)`,
-    status_snapshot_present: status !== null && status !== undefined
+    status_snapshot_present: status !== null && status !== undefined,
   });
 }

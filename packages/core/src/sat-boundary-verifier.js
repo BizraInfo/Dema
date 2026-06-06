@@ -8,13 +8,16 @@
 // SYSTEM (verify · enforce policy · audit). Each SAT examines an
 // artifact and emits a verdict.
 
-import { buildAgentKernel, AGENT_KERNEL_MAX_ITERATIONS } from "./agent-kernel.js";
+import {
+  buildAgentKernel,
+  AGENT_KERNEL_MAX_ITERATIONS,
+} from "./agent-kernel.js";
 import { buildEffectCap } from "./effect-cap.js";
 import {
   buildPreviewBoundary,
   isCanonicalBoundary,
   isCanonicalBoundaryShape,
-  PREVIEW_BOUNDARY_CANONICAL_KEYS
+  PREVIEW_BOUNDARY_CANONICAL_KEYS,
 } from "./preview-boundary.js";
 
 const SCHEMA = "bizra.dema.sat_boundary_verifier.v0.1";
@@ -33,24 +36,28 @@ const SAT1_PERSONA = Object.freeze({
     "verify_canonical_16_key_shape",
     "verify_all_keys_false",
     "verify_frozen_state",
-    "report_specific_violations"
+    "report_specific_violations",
   ]),
   primary_refusals: Object.freeze([
     "modify_verified_artifact",
     "waive_boundary_requirement",
     "approve_non_canonical_output",
     "accept_partial_boundary_match",
-    "execute_runtime"
-  ])
+    "execute_runtime",
+  ]),
 });
 
-const SAT1_EFFECT_CAP_ALLOWED = Object.freeze(["render_terminal_output", "compute_hash"]);
+const SAT1_EFFECT_CAP_ALLOWED = Object.freeze([
+  "render_terminal_output",
+  "compute_hash",
+]);
 const SAT1_EFFECT_CAP_EXTRA_BLOCKED = Object.freeze([
   "modify_verified_artifact",
   "waive_boundary_requirement",
-  "approve_non_canonical"
+  "approve_non_canonical",
 ]);
-const SAT1_CONSENT_PHRASE_TEMPLATE = "GO: invoke SAT-1 boundary_verifier to verify";
+const SAT1_CONSENT_PHRASE_TEMPLATE =
+  "GO: invoke SAT-1 boundary_verifier to verify";
 
 function safeObject(v) {
   return v && typeof v === "object" && !Array.isArray(v) ? v : null;
@@ -63,7 +70,7 @@ export function buildSATBoundaryVerifierEffectCap() {
     allowed_effects: SAT1_EFFECT_CAP_ALLOWED,
     blocked_effects: SAT1_EFFECT_CAP_EXTRA_BLOCKED,
     consent_scope_template: SAT1_CONSENT_PHRASE_TEMPLATE,
-    audit_trail_required: true
+    audit_trail_required: true,
   });
 }
 
@@ -83,18 +90,21 @@ export function buildSATBoundaryVerifierPreview() {
       "SAT-1 never modifies the artifact it verifies · examination is read-only",
       "SAT-1 never waives the boundary requirement · canonical is canonical",
       "SAT-1 never approves a non-canonical output · refusal is the default",
-      "SAT-1 never accepts a partial match · all 16 keys or no pass"
+      "SAT-1 never accepts a partial match · all 16 keys or no pass",
     ]),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
-export function buildSATBoundaryVerifierKernel({ mission_intent = "", max_iterations = AGENT_KERNEL_MAX_ITERATIONS } = {}) {
+export function buildSATBoundaryVerifierKernel({
+  mission_intent = "",
+  max_iterations = AGENT_KERNEL_MAX_ITERATIONS,
+} = {}) {
   return buildAgentKernel({
     agent_id: SAT1_PERSONA.sat_id,
     agent_role: "sat_boundary_verifier",
     mission_intent: typeof mission_intent === "string" ? mission_intent : "",
-    max_iterations
+    max_iterations,
   });
 }
 
@@ -107,7 +117,8 @@ export function buildSATBoundaryVerifierKernel({ mission_intent = "", max_iterat
 // Returns a verdict envelope.
 export function verifyArtifactBoundary({ artifact = null } = {}) {
   const safeArtifact = safeObject(artifact);
-  const artifactSchema = typeof safeArtifact?.schema === "string" ? safeArtifact.schema : null;
+  const artifactSchema =
+    typeof safeArtifact?.schema === "string" ? safeArtifact.schema : null;
   const boundary = safeArtifact?.boundary ?? null;
   const safeBoundary = safeObject(boundary);
 
@@ -140,11 +151,17 @@ export function verifyArtifactBoundary({ artifact = null } = {}) {
       const expectedKeys = [...PREVIEW_BOUNDARY_CANONICAL_KEYS].sort();
       const missing = expectedKeys.filter((k) => !actualKeys.includes(k));
       const extra = actualKeys.filter((k) => !expectedKeys.includes(k));
-      const truthy = expectedKeys.filter((k) => safeBoundary[k] !== false && safeBoundary[k] !== undefined);
+      const truthy = expectedKeys.filter(
+        (k) => safeBoundary[k] !== false && safeBoundary[k] !== undefined,
+      );
 
-      if (missing.length > 0) violations.push(`missing_keys · ${missing.join(",")}`);
+      if (missing.length > 0)
+        violations.push(`missing_keys · ${missing.join(",")}`);
       if (extra.length > 0) violations.push(`extra_keys · ${extra.join(",")}`);
-      if (truthy.length > 0) violations.push(`truthy_keys · ${truthy.map((k) => `${k}=${JSON.stringify(safeBoundary[k])}`).join(",")}`);
+      if (truthy.length > 0)
+        violations.push(
+          `truthy_keys · ${truthy.map((k) => `${k}=${JSON.stringify(safeBoundary[k])}`).join(",")}`,
+        );
     }
   }
 
@@ -165,7 +182,7 @@ export function verifyArtifactBoundary({ artifact = null } = {}) {
     expected_key_count: PREVIEW_BOUNDARY_CANONICAL_KEYS.length,
     audit_trail_required: true,
     receipt_shape_ready: passed,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -182,7 +199,7 @@ export function buildSATBoundaryVerifierSummary(options = {}) {
     capability_count: preview.persona.primary_capabilities.length,
     refusal_count: preview.persona.primary_refusals.length,
     expected_boundary_key_count: preview.expected_boundary_key_count,
-    boundary: preview.boundary
+    boundary: preview.boundary,
   });
 }
 

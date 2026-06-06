@@ -29,7 +29,12 @@ async function fetchEndpoint(url, label, signal) {
     }
     const ct = response.headers.get("content-type") || "";
     if (!ct.includes("application/json")) {
-      return { ok: false, label, url, error: `non-JSON response (content-type: ${ct})` };
+      return {
+        ok: false,
+        label,
+        url,
+        error: `non-JSON response (content-type: ${ct})`,
+      };
     }
     return { ok: true, label, url, json: await response.json() };
   } catch (err) {
@@ -37,7 +42,10 @@ async function fetchEndpoint(url, label, signal) {
   }
 }
 
-export async function fetchGatewayState(baseUrl = DEFAULT_GATEWAY_URL, { timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+export async function fetchGatewayState(
+  baseUrl = DEFAULT_GATEWAY_URL,
+  { timeoutMs = DEFAULT_TIMEOUT_MS } = {},
+) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -45,7 +53,11 @@ export async function fetchGatewayState(baseUrl = DEFAULT_GATEWAY_URL, { timeout
       fetchEndpoint(`${baseUrl}/health`, "health", controller.signal),
       fetchEndpoint(`${baseUrl}/chain`, "chain", controller.signal),
       fetchEndpoint(`${baseUrl}/poi/summary`, "poi", controller.signal),
-      fetchEndpoint(`${baseUrl}/resources/list`, "resources", controller.signal)
+      fetchEndpoint(
+        `${baseUrl}/resources/list`,
+        "resources",
+        controller.signal,
+      ),
     ]);
     return { baseUrl, health, chain, poi, resources };
   } finally {
@@ -58,19 +70,23 @@ export function composeNode0StatusFromGateway(state) {
   const findings = [];
 
   const gatewayReachable =
-    health.ok && health.json?.status === "ok" && health.json?.domain === GATEWAY_DOMAIN;
+    health.ok &&
+    health.json?.status === "ok" &&
+    health.json?.domain === GATEWAY_DOMAIN;
 
   if (!health.ok) {
     findings.push(`Gateway /health unreachable: ${health.error}`);
   } else if (!gatewayReachable) {
     findings.push(
-      `Gateway /health responded but domain mismatch (got '${health.json?.domain}', expected '${GATEWAY_DOMAIN}')`
+      `Gateway /health responded but domain mismatch (got '${health.json?.domain}', expected '${GATEWAY_DOMAIN}')`,
     );
   }
 
   const chainHead = chain.ok ? (chain.json?.head ?? null) : null;
   const chainLength = chain.ok ? Number(chain.json?.length ?? 0) : 0;
-  const latestTimestamp = chain.ok ? (chain.json?.latestTimestamp ?? null) : null;
+  const latestTimestamp = chain.ok
+    ? (chain.json?.latestTimestamp ?? null)
+    : null;
   if (!chain.ok) findings.push(`Gateway /chain failed: ${chain.error}`);
 
   const poiTotalEntries = poi.ok ? Number(poi.json?.totalEntries ?? 0) : 0;
@@ -78,8 +94,11 @@ export function composeNode0StatusFromGateway(state) {
   const poiAvgImpact = poi.ok ? Number(poi.json?.avgImpact ?? 0) : 0;
   if (!poi.ok) findings.push(`Gateway /poi/summary failed: ${poi.error}`);
 
-  const resourcesCount = resources.ok ? (resources.json?.resources?.length ?? 0) : 0;
-  if (!resources.ok) findings.push(`Gateway /resources/list failed: ${resources.error}`);
+  const resourcesCount = resources.ok
+    ? (resources.json?.resources?.length ?? 0)
+    : 0;
+  if (!resources.ok)
+    findings.push(`Gateway /resources/list failed: ${resources.error}`);
 
   if (gatewayReachable && chainLength === 0) {
     findings.push("Gateway live, first mission/receipt has not been issued.");
@@ -108,39 +127,39 @@ export function composeNode0StatusFromGateway(state) {
       connected: false,
       loadedModelIds: [],
       tokenPresent: false,
-      _truth: "NOT_EXPOSED_BY_GATEWAY"
+      _truth: "NOT_EXPOSED_BY_GATEWAY",
     },
     rustBus: { ready: gatewayReachable },
     proof: {
       latestChainHash: chainHead,
-      nextArtifact: "ARTIFACT-011"
+      nextArtifact: "ARTIFACT-011",
     },
     nextAdmissibleAction: "bounded_diagnostic_activation",
     gateway: {
       reachable: gatewayReachable,
       base_url: baseUrl,
       domain: health.ok ? (health.json?.domain ?? null) : null,
-      health: health.ok ? (health.json?.status ?? null) : null
+      health: health.ok ? (health.json?.status ?? null) : null,
     },
     chain: {
       head: chainHead,
       length: chainLength,
-      latestTimestamp
+      latestTimestamp,
     },
     poi: {
       totalEntries: poiTotalEntries,
       totalImpact: poiTotalImpact,
-      avgImpact: poiAvgImpact
+      avgImpact: poiAvgImpact,
     },
     resources: {
-      count: resourcesCount
+      count: resourcesCount,
     },
     unknown: [
       "lm_studio_status_not_exposed_by_gateway",
       "pyO3_bridge_status_not_exposed_by_gateway",
       "preferred_name_not_exposed_by_gateway",
-      "rust_bus_health_inferred_from_gateway_uptime"
-    ]
+      "rust_bus_health_inferred_from_gateway_uptime",
+    ],
   };
 }
 
@@ -160,8 +179,8 @@ export function createGatewayHttpAdapter({ baseUrl, timeoutMs } = {}) {
       const status = await this.status();
       return {
         status,
-        requiredConsentPhrase: "GO: Node0 bounded diagnostic activation only"
+        requiredConsentPhrase: "GO: Node0 bounded diagnostic activation only",
       };
-    }
+    },
   };
 }

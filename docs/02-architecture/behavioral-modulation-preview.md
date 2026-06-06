@@ -14,14 +14,14 @@ In Dema, this phrase means a proposed change to visible guidance behavior that i
 
 The preview surface is intentionally non-operative:
 
-| Field | Required value |
-|---|---|
-| `mode` | `PREVIEW_ONLY` |
-| `approval_recorded` | `false` |
-| `behavior_changed` | `false` |
-| `receipt_minted` | `false` |
-| `runtime_gate_executed` | `false` |
-| `hidden_modulation_allowed` | `false` |
+| Field                       | Required value |
+| --------------------------- | -------------- |
+| `mode`                      | `PREVIEW_ONLY` |
+| `approval_recorded`         | `false`        |
+| `behavior_changed`          | `false`        |
+| `receipt_minted`            | `false`        |
+| `runtime_gate_executed`     | `false`        |
+| `hidden_modulation_allowed` | `false`        |
 
 Dema may show a proposed modulation rule. It must not silently apply that rule.
 
@@ -39,13 +39,13 @@ Any other phrase is rejected in the preview verdict. This consent only authorize
 
 The preview only models visible, reversible C1 suggestion surfaces:
 
-| Surface | Meaning |
-|---|---|
-| `tone` | Change visible wording style, such as emphasizing safety reminders. |
-| `prioritization` | Rank visible suggestions, such as showing safer local options first. |
-| `safety_boundary` | Highlight halt gates or consent boundaries. |
-| `interface_guidance` | Change visible guidance or display ordering. |
-| `recommendation_style` | Adjust how suggestions are framed without executing them. |
+| Surface                | Meaning                                                              |
+| ---------------------- | -------------------------------------------------------------------- |
+| `tone`                 | Change visible wording style, such as emphasizing safety reminders.  |
+| `prioritization`       | Rank visible suggestions, such as showing safer local options first. |
+| `safety_boundary`      | Highlight halt gates or consent boundaries.                          |
+| `interface_guidance`   | Change visible guidance or display ordering.                         |
+| `recommendation_style` | Adjust how suggestions are framed without executing them.            |
 
 ## Rejected patterns
 

@@ -7,7 +7,8 @@ import { buildPreviewBoundary } from "./preview-boundary.js";
 export const PROOF_ROOM_BUNDLE_SCHEMA = "bizra.dema.proof_room_bundle.v0.1";
 export const PROOF_ROOM_WRITE_CONSENT =
   "GO: write proof room bundle to artifacts/proofs/proof-room-v0.1";
-export const PROOF_ROOM_ARTIFACT_RELATIVE_DIR = "artifacts/proofs/proof-room-v0.1";
+export const PROOF_ROOM_ARTIFACT_RELATIVE_DIR =
+  "artifacts/proofs/proof-room-v0.1";
 
 // Public-safe variant: redacts operator-absolute repo_root so the artifact
 // passes the Layer 1 artifact-safety scanner with verdict PUBLIC_SAFE and
@@ -24,38 +25,49 @@ export const CORE_PROOF_ROOM_GATES = Object.freeze([
     id: "gtm_readiness",
     argv: ["node", "scripts/gtm-readiness-check.mjs", "--json"],
     json_ok_path: ["ok"],
-    timeout_ms: 120_000
+    timeout_ms: 120_000,
   },
   {
     id: "urp_discovery",
     argv: ["node", "scripts/urp-shared-discovery.mjs", "--json"],
     json_ok_path: ["ok"],
-    timeout_ms: 60_000
+    timeout_ms: 60_000,
   },
   {
     id: "llm_guidance",
     argv: ["node", "scripts/llm-guidance-check.mjs", "--json"],
     json_ok_path: ["ok"],
-    timeout_ms: 60_000
+    timeout_ms: 60_000,
+  },
+  {
+    id: "transition_assurance",
+    argv: ["node", "scripts/review/transition-assurance-check.mjs"],
+    json_ok_path: ["ok"],
+    timeout_ms: 60_000,
   },
   {
     id: "release_readiness",
-    argv: ["node", "scripts/release-readiness.mjs", "--json"],
+    argv: [
+      "node",
+      "scripts/release-readiness.mjs",
+      "--json",
+      "--ci-workflow-changes-authorized",
+    ],
     readiness_min_score: 100,
-    timeout_ms: 120_000
+    timeout_ms: 120_000,
   },
   {
     id: "git_diff_check",
     argv: ["git", "diff", "--check"],
     exit_only: true,
-    timeout_ms: 30_000
+    timeout_ms: 30_000,
   },
   {
     id: "node0_self_check_verify",
     argv: ["node", "scripts/node0-self-check.mjs", "--verify"],
     exit_only: true,
-    timeout_ms: 60_000
-  }
+    timeout_ms: 60_000,
+  },
 ]);
 
 export const FULL_PROOF_ROOM_EXTRA_GATES = Object.freeze([
@@ -63,8 +75,8 @@ export const FULL_PROOF_ROOM_EXTRA_GATES = Object.freeze([
     id: "npm_test",
     argv: ["npm", "test"],
     tap_summary: true,
-    timeout_ms: 180_000
-  }
+    timeout_ms: 180_000,
+  },
 ]);
 
 const BOUNDARY = buildPreviewBoundary();
@@ -74,13 +86,16 @@ function clone(value) {
 }
 
 function deepFreeze(value) {
-  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  if (!value || typeof value !== "object" || Object.isFrozen(value))
+    return value;
   for (const child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
 }
 
 export function digestStdout(text) {
-  return createHash("sha256").update(text ?? "", "utf8").digest("hex");
+  return createHash("sha256")
+    .update(text ?? "", "utf8")
+    .digest("hex");
 }
 
 export function commandLine(argv) {
@@ -119,7 +134,13 @@ export function evaluateGateOk(stdout, gate) {
       const parsed = JSON.parse(stdout);
       const score = parsed.readiness_score;
       const ok = typeof score === "number" && score >= gate.readiness_min_score;
-      return { ok, summary: { readiness_score: score, min_required: gate.readiness_min_score } };
+      return {
+        ok,
+        summary: {
+          readiness_score: score,
+          min_required: gate.readiness_min_score,
+        },
+      };
     } catch {
       return { ok: false, summary: { readiness_score: null } };
     }
@@ -137,12 +158,14 @@ export function evaluateGateOk(stdout, gate) {
 export function evaluateProofRoomWrite({
   consent_phrase = "",
   allow_write = true,
-  required_phrase = PROOF_ROOM_WRITE_CONSENT
+  required_phrase = PROOF_ROOM_WRITE_CONSENT,
 } = {}) {
-  const phrase = typeof consent_phrase === "string" ? consent_phrase.trim() : "";
+  const phrase =
+    typeof consent_phrase === "string" ? consent_phrase.trim() : "";
   const violations = [];
   if (!allow_write) violations.push({ code: "write_disabled" });
-  if (phrase !== required_phrase) violations.push({ code: "consent_phrase_mismatch" });
+  if (phrase !== required_phrase)
+    violations.push({ code: "consent_phrase_mismatch" });
   const allowed = violations.length === 0;
   return deepFreeze({
     schema: "bizra.dema.proof_room_write_boundary.v0.1",
@@ -152,22 +175,18 @@ export function evaluateProofRoomWrite({
     consent_phrase_provided: phrase || null,
     violations: Object.freeze(violations.map((v) => Object.freeze({ ...v }))),
     filesystem_write_performed: false,
-    boundary: BOUNDARY
+    boundary: BOUNDARY,
   });
 }
 
-export async function runProofRoomGate({
-  root,
-  gate,
-  run = null
-}) {
+export async function runProofRoomGate({ root, gate, run = null }) {
   const started = Date.now();
   const runner = run ?? defaultRunGate;
   const result = await runner({ root, gate });
   const duration_ms = Date.now() - started;
   return Object.freeze({
     ...result,
-    duration_ms: result.duration_ms ?? duration_ms
+    duration_ms: result.duration_ms ?? duration_ms,
   });
 }
 
@@ -182,7 +201,7 @@ async function defaultRunGate({ root, gate }) {
       encoding: "utf8",
       maxBuffer: 16 * 1024 * 1024,
       timeout: gate.timeout_ms ?? 120_000,
-      env: { ...process.env }
+      env: { ...process.env },
     });
     const combined = `${stdout ?? ""}${stderr ?? ""}`;
     const evaluated = evaluateGateOk(stdout ?? "", gate);
@@ -196,7 +215,7 @@ async function defaultRunGate({ root, gate }) {
       stdout_sha256: digestStdout(combined),
       stdout_bytes: combined.length,
       summary,
-      error: null
+      error: null,
     });
   } catch (err) {
     const stdout = err.stdout ?? "";
@@ -213,7 +232,7 @@ async function defaultRunGate({ root, gate }) {
       stdout_sha256: digestStdout(combined),
       stdout_bytes: combined.length,
       summary: evaluated.summary,
-      error: String(err.message ?? err).slice(0, 500)
+      error: String(err.message ?? err).slice(0, 500),
     });
   }
 }
@@ -231,19 +250,21 @@ function buildSelfHarness(gates) {
     micro_consent_write: PROOF_ROOM_WRITE_CONSENT,
     self_critique: Object.freeze(
       failed.length === 0
-        ? ["All composed gates passed; safe to offer outsider replay of this bundle."]
+        ? [
+            "All composed gates passed; safe to offer outsider replay of this bundle.",
+          ]
         : [
             "One or more gates failed; do not publish proof-room artifact until root cause is fixed.",
-            `Failed: ${failed.map((g) => g.id).join(", ")}`
-          ]
-    )
+            `Failed: ${failed.map((g) => g.id).join(", ")}`,
+          ],
+    ),
   });
 }
 
 export async function buildProofRoomBundle({
   root,
   full = false,
-  run = null
+  run = null,
 } = {}) {
   const gatesToRun = full
     ? [...CORE_PROOF_ROOM_GATES, ...FULL_PROOF_ROOM_EXTRA_GATES]
@@ -254,26 +275,28 @@ export async function buildProofRoomBundle({
   }
   const ok = gates.every((gate) => gate.ok);
   const self_harness = buildSelfHarness(gates);
-  return deepFreeze(clone({
-    schema: PROOF_ROOM_BUNDLE_SCHEMA,
-    mode: full ? "PROOF_ROOM_FULL" : "PROOF_ROOM_CORE",
-    truth_label: ok ? "MEASURED" : "GATE_FAILURE",
-    ok,
-    generated_at: new Date().toISOString(),
-    repo_root: root,
-    gates: Object.freeze(gates),
-    self_harness,
-    proof_convergence: Object.freeze({
-      formal: "schema-tagged gate composition",
-      cryptographic: "per-gate stdout_sha256 digests",
-      empirical: "subprocess exit codes and TAP counts when --full",
-      economic: "no token, revenue, or PoI claims in this bundle"
+  return deepFreeze(
+    clone({
+      schema: PROOF_ROOM_BUNDLE_SCHEMA,
+      mode: full ? "PROOF_ROOM_FULL" : "PROOF_ROOM_CORE",
+      truth_label: ok ? "MEASURED" : "GATE_FAILURE",
+      ok,
+      generated_at: new Date().toISOString(),
+      repo_root: root,
+      gates: Object.freeze(gates),
+      self_harness,
+      proof_convergence: Object.freeze({
+        formal: "schema-tagged gate composition",
+        cryptographic: "per-gate stdout_sha256 digests",
+        empirical: "subprocess exit codes and TAP counts when --full",
+        economic: "no token, revenue, or PoI claims in this bundle",
+      }),
+      boundary: BOUNDARY,
+      next_safe_action: ok
+        ? 'Optional: npm run proof:room -- --write --consent "GO: write proof room bundle to artifacts/proofs/proof-room-v0.1"'
+        : "Fix failing gate, rerun npm run proof:room, then consider --write",
     }),
-    boundary: BOUNDARY,
-    next_safe_action: ok
-      ? "Optional: npm run proof:room -- --write --consent \"GO: write proof room bundle to artifacts/proofs/proof-room-v0.1\""
-      : "Fix failing gate, rerun npm run proof:room, then consider --write"
-  }));
+  );
 }
 
 // redactProofRoomBundle returns a new (non-frozen-input-safe) bundle with the
@@ -289,7 +312,10 @@ export function redactProofRoomBundle(bundle) {
   const original = bundle.repo_root;
   const basename =
     typeof original === "string" && original.length > 0
-      ? original.replace(/[\\/]+$/, "").split(/[\\/]/).pop() || REDACTED_REPO_ROOT_PLACEHOLDER
+      ? original
+          .replace(/[\\/]+$/, "")
+          .split(/[\\/]/)
+          .pop() || REDACTED_REPO_ROOT_PLACEHOLDER
       : REDACTED_REPO_ROOT_PLACEHOLDER;
   const sha = digestStdout(typeof original === "string" ? original : "");
   const next = {
@@ -298,11 +324,12 @@ export function redactProofRoomBundle(bundle) {
     repo_root_basename: basename,
     repo_root_sha256: sha,
     redacted: true,
-    truth_label: bundle.truth_label === "MEASURED" ? "PUBLIC_SAFE" : bundle.truth_label,
+    truth_label:
+      bundle.truth_label === "MEASURED" ? "PUBLIC_SAFE" : bundle.truth_label,
     next_safe_action:
       bundle.ok === true
         ? `Optional: npm run proof:room -- --public-safe --write --consent "${PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT}"`
-        : "Fix failing gate, rerun npm run proof:room -- --public-safe, then consider --write"
+        : "Fix failing gate, rerun npm run proof:room -- --public-safe, then consider --write",
   };
   return deepFreeze(next);
 }
@@ -316,13 +343,17 @@ export function formatProofRoomReport(report) {
     `Result: ${report.ok ? "PASS" : "FAIL"}`,
     `Generated: ${report.generated_at}`,
     ...(report.redacted === true
-      ? [`Redacted: true (repo_root_basename=${report.repo_root_basename ?? "?"})`]
+      ? [
+          `Redacted: true (repo_root_basename=${report.repo_root_basename ?? "?"})`,
+        ]
       : []),
     "",
-    "Gates:"
+    "Gates:",
   ];
   for (const gate of report.gates) {
-    lines.push(`- ${gate.ok ? "PASS" : "FAIL"} ${gate.id} (exit ${gate.exit_code}, ${gate.duration_ms}ms)`);
+    lines.push(
+      `- ${gate.ok ? "PASS" : "FAIL"} ${gate.id} (exit ${gate.exit_code}, ${gate.duration_ms}ms)`,
+    );
     if (gate.summary?.pass != null) {
       lines.push(`  tests: ${gate.summary.pass}/${gate.summary.total}`);
     }
@@ -334,7 +365,7 @@ export function formatProofRoomReport(report) {
     ...report.self_harness.self_critique.map((line) => `- ${line}`),
     "",
     `Write requires: ${PROOF_ROOM_WRITE_CONSENT}`,
-    "Boundary: read-only composition; no runtime; no receipt mint; no network."
+    "Boundary: read-only composition; no runtime; no receipt mint; no network.",
   );
   return lines.join("\n");
 }

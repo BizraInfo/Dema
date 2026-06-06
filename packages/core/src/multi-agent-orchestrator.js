@@ -9,21 +9,58 @@
 // Pure-function v0.1 · message-bus pattern as data structures · no I/O.
 
 import { buildPreviewBoundary } from "./preview-boundary.js";
-import { buildPATMissionScribePreview, buildPATMissionScribeEffectCap } from "./pat-mission-scribe.js";
-import { buildPATResearchCompanionPreview, buildPATResearchCompanionEffectCap } from "./pat-research-companion.js";
-import { buildPATCodeApprenticePreview, buildPATCodeApprenticeEffectCap } from "./pat-code-apprentice.js";
-import { buildPATMemoryCuratorPreview, buildPATMemoryCuratorEffectCap } from "./pat-memory-curator.js";
-import { buildPATConsentDrafterPreview, buildPATConsentDrafterEffectCap } from "./pat-consent-drafter.js";
-import { buildPATReceiptRecorderPreview, buildPATReceiptRecorderEffectCap } from "./pat-receipt-recorder.js";
-import { buildPATReflectionWitnessPreview, buildPATReflectionWitnessEffectCap } from "./pat-reflection-witness.js";
-import { buildSATBoundaryVerifierPreview, verifyArtifactBoundary } from "./sat-boundary-verifier.js";
-import { buildSATConsentAuditorPreview, auditAction } from "./sat-consent-auditor.js";
-import { buildSATDoctrineCompliancePreview, auditArtifactDoctrine } from "./sat-doctrine-compliance.js";
-import { buildSATReceiptChainVerifierPreview, verifyReceiptChain } from "./sat-receipt-chain-verifier.js";
-import { buildSATIdentityVerifierPreview, verifyIdentity } from "./sat-identity-verifier.js";
+import {
+  buildPATMissionScribePreview,
+  buildPATMissionScribeEffectCap,
+} from "./pat-mission-scribe.js";
+import {
+  buildPATResearchCompanionPreview,
+  buildPATResearchCompanionEffectCap,
+} from "./pat-research-companion.js";
+import {
+  buildPATCodeApprenticePreview,
+  buildPATCodeApprenticeEffectCap,
+} from "./pat-code-apprentice.js";
+import {
+  buildPATMemoryCuratorPreview,
+  buildPATMemoryCuratorEffectCap,
+} from "./pat-memory-curator.js";
+import {
+  buildPATConsentDrafterPreview,
+  buildPATConsentDrafterEffectCap,
+} from "./pat-consent-drafter.js";
+import {
+  buildPATReceiptRecorderPreview,
+  buildPATReceiptRecorderEffectCap,
+} from "./pat-receipt-recorder.js";
+import {
+  buildPATReflectionWitnessPreview,
+  buildPATReflectionWitnessEffectCap,
+} from "./pat-reflection-witness.js";
+import {
+  buildSATBoundaryVerifierPreview,
+  verifyArtifactBoundary,
+} from "./sat-boundary-verifier.js";
+import {
+  buildSATConsentAuditorPreview,
+  auditAction,
+} from "./sat-consent-auditor.js";
+import {
+  buildSATDoctrineCompliancePreview,
+  auditArtifactDoctrine,
+} from "./sat-doctrine-compliance.js";
+import {
+  buildSATReceiptChainVerifierPreview,
+  verifyReceiptChain,
+} from "./sat-receipt-chain-verifier.js";
+import {
+  buildSATIdentityVerifierPreview,
+  verifyIdentity,
+} from "./sat-identity-verifier.js";
 
 const SCHEMA = "bizra.dema.multi_agent_orchestrator.v0.1";
-const VERIFICATION_PIPELINE_SCHEMA = "bizra.dema.orchestrator_verification_pipeline.v0.1";
+const VERIFICATION_PIPELINE_SCHEMA =
+  "bizra.dema.orchestrator_verification_pipeline.v0.1";
 
 const PAT_IDS = Object.freeze([
   "pat-1-mission-scribe",
@@ -32,7 +69,7 @@ const PAT_IDS = Object.freeze([
   "pat-4-memory-curator",
   "pat-5-consent-drafter",
   "pat-6-receipt-recorder",
-  "pat-7-reflection-witness"
+  "pat-7-reflection-witness",
 ]);
 
 const SAT_IDS = Object.freeze([
@@ -40,7 +77,7 @@ const SAT_IDS = Object.freeze([
   "sat-2-consent-auditor",
   "sat-3-doctrine-compliance",
   "sat-4-receipt-chain-verifier",
-  "sat-5-identity-verifier"
+  "sat-5-identity-verifier",
 ]);
 
 const REQUIRED_BLOCKED_EFFECTS = Object.freeze([
@@ -51,7 +88,7 @@ const REQUIRED_BLOCKED_EFFECTS = Object.freeze([
   "chain_advance_without_full_verification",
   "federation_invocation",
   "mint_without_consent",
-  "modify_agent_personas"
+  "modify_agent_personas",
 ]);
 
 function safeObject(v) {
@@ -62,32 +99,32 @@ function buildPatRegistry() {
   return Object.freeze({
     "pat-1-mission-scribe": {
       preview: buildPATMissionScribePreview(),
-      effect_cap: buildPATMissionScribeEffectCap()
+      effect_cap: buildPATMissionScribeEffectCap(),
     },
     "pat-2-research-companion": {
       preview: buildPATResearchCompanionPreview(),
-      effect_cap: buildPATResearchCompanionEffectCap()
+      effect_cap: buildPATResearchCompanionEffectCap(),
     },
     "pat-3-code-apprentice": {
       preview: buildPATCodeApprenticePreview(),
-      effect_cap: buildPATCodeApprenticeEffectCap()
+      effect_cap: buildPATCodeApprenticeEffectCap(),
     },
     "pat-4-memory-curator": {
       preview: buildPATMemoryCuratorPreview(),
-      effect_cap: buildPATMemoryCuratorEffectCap()
+      effect_cap: buildPATMemoryCuratorEffectCap(),
     },
     "pat-5-consent-drafter": {
       preview: buildPATConsentDrafterPreview(),
-      effect_cap: buildPATConsentDrafterEffectCap()
+      effect_cap: buildPATConsentDrafterEffectCap(),
     },
     "pat-6-receipt-recorder": {
       preview: buildPATReceiptRecorderPreview(),
-      effect_cap: buildPATReceiptRecorderEffectCap()
+      effect_cap: buildPATReceiptRecorderEffectCap(),
     },
     "pat-7-reflection-witness": {
       preview: buildPATReflectionWitnessPreview(),
-      effect_cap: buildPATReflectionWitnessEffectCap()
-    }
+      effect_cap: buildPATReflectionWitnessEffectCap(),
+    },
   });
 }
 
@@ -95,9 +132,13 @@ function buildSatRegistry() {
   return Object.freeze({
     "sat-1-boundary-verifier": { preview: buildSATBoundaryVerifierPreview() },
     "sat-2-consent-auditor": { preview: buildSATConsentAuditorPreview() },
-    "sat-3-doctrine-compliance": { preview: buildSATDoctrineCompliancePreview() },
-    "sat-4-receipt-chain-verifier": { preview: buildSATReceiptChainVerifierPreview() },
-    "sat-5-identity-verifier": { preview: buildSATIdentityVerifierPreview() }
+    "sat-3-doctrine-compliance": {
+      preview: buildSATDoctrineCompliancePreview(),
+    },
+    "sat-4-receipt-chain-verifier": {
+      preview: buildSATReceiptChainVerifierPreview(),
+    },
+    "sat-5-identity-verifier": { preview: buildSATIdentityVerifierPreview() },
   });
 }
 
@@ -123,9 +164,9 @@ export function buildMultiAgentOrchestrator() {
       "SAT-2 (consent) runs before any L3+ action",
       "SAT-5 (identity) runs at session boundaries",
       "SAT-4 (chain) runs before receipt mint (C12 territory)",
-      "Operator typed consent required between propose and act · always"
+      "Operator typed consent required between propose and act · always",
     ]),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -145,7 +186,7 @@ export function runVerificationPipeline({
   action = null,
   receipts = null,
   profile = null,
-  previous_snapshot = null
+  previous_snapshot = null,
 } = {}) {
   const safeArtifact = safeObject(artifact);
   const sats_run = [];
@@ -165,7 +206,10 @@ export function runVerificationPipeline({
   // SAT-3 runs if doctrine inputs provided
   if (doctrine_inputs && typeof doctrine_inputs === "object") {
     sats_run.push("sat-3-doctrine-compliance");
-    const v3 = auditArtifactDoctrine({ artifact: safeArtifact, ...doctrine_inputs });
+    const v3 = auditArtifactDoctrine({
+      artifact: safeArtifact,
+      ...doctrine_inputs,
+    });
     per_sat_verdicts["sat-3-doctrine-compliance"] = v3;
     if (v3.passed) sats_passed.push("sat-3-doctrine-compliance");
     else sats_failed.push("sat-3-doctrine-compliance");
@@ -199,15 +243,20 @@ export function runVerificationPipeline({
   }
 
   const all_passed = sats_run.length > 0 && sats_failed.length === 0;
-  const overall_verdict = sats_run.length === 0
-    ? "no_inputs_no_verdict"
-    : all_passed
-      ? "pipeline_verified"
-      : "pipeline_violated";
+  const overall_verdict =
+    sats_run.length === 0
+      ? "no_inputs_no_verdict"
+      : all_passed
+        ? "pipeline_verified"
+        : "pipeline_violated";
 
   return Object.freeze({
     schema: VERIFICATION_PIPELINE_SCHEMA,
-    truth_label: all_passed ? "MEASURED" : sats_run.length === 0 ? "NO_VERDICT" : "PIPELINE_VIOLATION",
+    truth_label: all_passed
+      ? "MEASURED"
+      : sats_run.length === 0
+        ? "NO_VERDICT"
+        : "PIPELINE_VIOLATION",
     mode: "pipeline_result",
     artifact_schema: safeArtifact?.schema || null,
     sats_run: Object.freeze(sats_run),
@@ -218,7 +267,7 @@ export function runVerificationPipeline({
     passed: all_passed,
     audit_trail_required: true,
     receipt_shape_ready: all_passed,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -234,11 +283,12 @@ export function buildMultiAgentOrchestratorSummary() {
     total_agent_count: orch.pat_count + orch.sat_count,
     routing_law_count: orch.routing_law.length,
     blocked_effect_count: orch.blocked_effects.length,
-    boundary: orch.boundary
+    boundary: orch.boundary,
   });
 }
 
 export const MULTI_AGENT_ORCHESTRATOR_SCHEMA_NAME = SCHEMA;
-export const MULTI_AGENT_ORCHESTRATOR_PIPELINE_SCHEMA_NAME = VERIFICATION_PIPELINE_SCHEMA;
+export const MULTI_AGENT_ORCHESTRATOR_PIPELINE_SCHEMA_NAME =
+  VERIFICATION_PIPELINE_SCHEMA;
 export const MULTI_AGENT_PAT_IDS = PAT_IDS;
 export const MULTI_AGENT_SAT_IDS = SAT_IDS;

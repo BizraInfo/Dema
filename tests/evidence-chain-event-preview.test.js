@@ -5,7 +5,7 @@ import {
   buildEvidenceChainEventPreview,
   buildEvidenceChainEventPreviewFromInputs,
   EVIDENCE_CHAIN_EVENT_STATUS_VALUES,
-  EVIDENCE_CHAIN_EVENT_REQUIRED_BLOCKED_EFFECTS
+  EVIDENCE_CHAIN_EVENT_REQUIRED_BLOCKED_EFFECTS,
 } from "../packages/core/src/evidence-chain-event-preview.js";
 import { buildMissionLoopPreview } from "../packages/core/src/mission-loop-preview.js";
 
@@ -34,7 +34,7 @@ test("EvidenceEvent INVARIANT: chain_advance and receipt_mint are ALWAYS false (
   const loop = buildMissionLoopPreview({
     mission: { missionId: "m-001", intent: "test" },
     patProposal: { summary: "x" },
-    consentDecision: "approve_c2_draft_only"
+    consentDecision: "approve_c2_draft_only",
   });
   const e2 = buildEvidenceChainEventPreview({ missionLoopPreview: loop });
   assert.equal(e2.chain_advance, false);
@@ -46,7 +46,10 @@ test("EvidenceEvent default (no inputs) yields event_status=not_prepared", () =>
   assert.equal(event.event_status, "not_prepared");
   assert.equal(event.mission_id, null);
   assert.equal(event.consent_decision, null);
-  assert.equal(event.next_safe_action, "advance_mission_loop_to_approved_preview");
+  assert.equal(
+    event.next_safe_action,
+    "advance_mission_loop_to_approved_preview",
+  );
 });
 
 test("EvidenceEvent with mission-loop NOT in approved phase yields not_prepared", () => {
@@ -54,11 +57,14 @@ test("EvidenceEvent with mission-loop NOT in approved phase yields not_prepared"
     const loop = buildMissionLoopPreview({
       mission: { missionId: "m-001", intent: "test" },
       patProposal: { summary: "x" },
-      consentDecision: decision
+      consentDecision: decision,
     });
     const event = buildEvidenceChainEventPreview({ missionLoopPreview: loop });
-    assert.equal(event.event_status, "not_prepared",
-      `event_status must be not_prepared for decision=${decision}`);
+    assert.equal(
+      event.event_status,
+      "not_prepared",
+      `event_status must be not_prepared for decision=${decision}`,
+    );
   }
 });
 
@@ -66,7 +72,7 @@ test("EvidenceEvent with approved-preview mission loop yields prepared_not_recor
   const loop = buildMissionLoopPreview({
     mission: { missionId: "m-001", intent: "test" },
     patProposal: { summary: "x" },
-    consentDecision: "approve_c2_draft_only"
+    consentDecision: "approve_c2_draft_only",
   });
   const event = buildEvidenceChainEventPreview({ missionLoopPreview: loop });
   assert.equal(event.event_status, "prepared_not_recorded");
@@ -78,7 +84,10 @@ test("EvidenceEvent with approved-preview mission loop yields prepared_not_recor
 test("EvidenceEvent INVARIANT: status is NEVER 'recorded' — that requires authorized chain advance", () => {
   // No code path should ever produce 'recorded'. Canonical statuses are exactly 2.
   assert.equal(EVIDENCE_CHAIN_EVENT_STATUS_VALUES.length, 2);
-  assert.deepEqual([...EVIDENCE_CHAIN_EVENT_STATUS_VALUES], ["not_prepared", "prepared_not_recorded"]);
+  assert.deepEqual(
+    [...EVIDENCE_CHAIN_EVENT_STATUS_VALUES],
+    ["not_prepared", "prepared_not_recorded"],
+  );
   assert.equal(EVIDENCE_CHAIN_EVENT_STATUS_VALUES.includes("recorded"), false);
 });
 
@@ -91,11 +100,13 @@ test("EvidenceEvent ADVERSARIAL: caller cannot inject chain_advance=true via mis
     lifecycle_phase: "complete_preview_approved",
     consent_card: { mission: { missionId: "evil" }, blocked_effects: [] },
     consent_decision_recorded: "approve_c2_draft_only",
-    chain_advance: true,  // adversarial injection
+    chain_advance: true, // adversarial injection
     receipt_mint: true,
-    boundary: { chain_head_advanced: true }
+    boundary: { chain_head_advanced: true },
   };
-  const event = buildEvidenceChainEventPreview({ missionLoopPreview: fakeLoop });
+  const event = buildEvidenceChainEventPreview({
+    missionLoopPreview: fakeLoop,
+  });
   assert.equal(event.chain_advance, false, "chain_advance MUST stay false");
   assert.equal(event.receipt_mint, false, "receipt_mint MUST stay false");
   assert.equal(event.boundary.chain_advance_performed, false);
@@ -105,11 +116,16 @@ test("EvidenceEvent ADVERSARIAL: caller cannot inject chain_advance=true via mis
 test("EvidenceEvent ADVERSARIAL: malformed mission loop (missing schema) yields not_prepared", () => {
   const malformed = {
     lifecycle_phase: "complete_preview_approved",
-    consent_card: { mission: { missionId: "fake" } }
+    consent_card: { mission: { missionId: "fake" } },
   };
-  const event = buildEvidenceChainEventPreview({ missionLoopPreview: malformed });
-  assert.equal(event.event_status, "not_prepared",
-    "missing/wrong schema must NOT yield prepared event");
+  const event = buildEvidenceChainEventPreview({
+    missionLoopPreview: malformed,
+  });
+  assert.equal(
+    event.event_status,
+    "not_prepared",
+    "missing/wrong schema must NOT yield prepared event",
+  );
   assert.equal(event.mission_id, null);
 });
 
@@ -117,7 +133,7 @@ test("EvidenceEvent ADVERSARIAL: caller passes raw payload in evidence_refs → 
   const loop = buildMissionLoopPreview({
     mission: { missionId: "m-001", intent: "x" },
     patProposal: { summary: "x" },
-    consentDecision: "approve_c2_draft_only"
+    consentDecision: "approve_c2_draft_only",
   });
   const evilRefs = [
     {
@@ -125,18 +141,22 @@ test("EvidenceEvent ADVERSARIAL: caller passes raw payload in evidence_refs → 
       schema: "bizra.dema.evidence.v0.1",
       content: "RAW_CONTENT_SHOULD_NOT_LEAK",
       raw_payload: "ALSO_NOT_LEAK",
-      private_data: "DEFINITELY_NOT_LEAK"
-    }
+      private_data: "DEFINITELY_NOT_LEAK",
+    },
   ];
   const event = buildEvidenceChainEventPreview({
     missionLoopPreview: loop,
-    evidenceRefs: evilRefs
+    evidenceRefs: evilRefs,
   });
   assert.equal(event.evidence_refs.length, 1);
   assert.equal(event.evidence_refs[0].id, "ev-001");
   assert.equal(event.evidence_refs[0].schema, "bizra.dema.evidence.v0.1");
   assert.equal(event.evidence_refs[0].content_hash, null);
-  assert.equal("content" in event.evidence_refs[0], false, "raw content must not leak");
+  assert.equal(
+    "content" in event.evidence_refs[0],
+    false,
+    "raw content must not leak",
+  );
   assert.equal("raw_payload" in event.evidence_refs[0], false);
   assert.equal("private_data" in event.evidence_refs[0], false);
 });
@@ -154,14 +174,16 @@ test("EvidenceEvent blocked_effects always contains the required deny-list", () 
       missionLoopPreview: buildMissionLoopPreview({
         mission: { missionId: "m" },
         patProposal: { summary: "x" },
-        consentDecision: "approve_c2_draft_only"
-      })
-    }
+        consentDecision: "approve_c2_draft_only",
+      }),
+    },
   ]) {
     const event = buildEvidenceChainEventPreview(params);
     for (const required of EVIDENCE_CHAIN_EVENT_REQUIRED_BLOCKED_EFFECTS) {
-      assert.ok(event.blocked_effects.includes(required),
-        `blocked_effects must include required ${required}`);
+      assert.ok(
+        event.blocked_effects.includes(required),
+        `blocked_effects must include required ${required}`,
+      );
     }
   }
 });
@@ -171,9 +193,12 @@ test("EvidenceEvent source is always 'mission_loop_preview'", () => {
   const loop = buildMissionLoopPreview({
     mission: { missionId: "m" },
     patProposal: { summary: "x" },
-    consentDecision: "approve_c2_draft_only"
+    consentDecision: "approve_c2_draft_only",
   });
-  assert.equal(buildEvidenceChainEventPreview({ missionLoopPreview: loop }).source, "mission_loop_preview");
+  assert.equal(
+    buildEvidenceChainEventPreview({ missionLoopPreview: loop }).source,
+    "mission_loop_preview",
+  );
 });
 
 test("EvidenceEvent boundary is exhaustively false and frozen", () => {
@@ -186,11 +211,11 @@ test("EvidenceEvent is deeply frozen including evidence_refs", () => {
   const loop = buildMissionLoopPreview({
     mission: { missionId: "m" },
     patProposal: { summary: "x" },
-    consentDecision: "approve_c2_draft_only"
+    consentDecision: "approve_c2_draft_only",
   });
   const event = buildEvidenceChainEventPreview({
     missionLoopPreview: loop,
-    evidenceRefs: [{ id: "ev-x", schema: "bizra.dema.evidence.v0.1" }]
+    evidenceRefs: [{ id: "ev-x", schema: "bizra.dema.evidence.v0.1" }],
   });
   assert.equal(Object.isFrozen(event), true);
   assert.equal(Object.isFrozen(event.blocked_effects), true);
@@ -205,7 +230,7 @@ test("EvidenceEvent from-inputs convenience function builds end-to-end", () => {
     mission: { missionId: "m-002", intent: "test" },
     patProposal: { summary: "draft" },
     consentDecision: "approve_c2_draft_only",
-    evidenceRefs: [{ id: "ev-1", schema: "bizra.dema.evidence.v0.1" }]
+    evidenceRefs: [{ id: "ev-1", schema: "bizra.dema.evidence.v0.1" }],
   });
   assert.equal(event.schema, "bizra.dema.evidence_chain_event_preview.v0.1");
   assert.equal(event.event_status, "prepared_not_recorded");
@@ -220,19 +245,27 @@ test("EvidenceEvent INVARIANT: 'recorded' status is unreachable across all input
     null,
     {},
     { missionLoopPreview: null },
-    { missionLoopPreview: { schema: "fake", lifecycle_phase: "complete_preview_approved" } },
+    {
+      missionLoopPreview: {
+        schema: "fake",
+        lifecycle_phase: "complete_preview_approved",
+      },
+    },
     {
       missionLoopPreview: buildMissionLoopPreview({
         mission: { missionId: "m" },
         patProposal: { summary: "x" },
-        consentDecision: "approve_c2_draft_only"
-      })
-    }
+        consentDecision: "approve_c2_draft_only",
+      }),
+    },
   ];
   for (const input of inputs) {
     const event = buildEvidenceChainEventPreview(input ?? {});
-    assert.notEqual(event.event_status, "recorded",
-      `event_status must never be 'recorded' for input ${JSON.stringify(input)?.slice(0,80)}`);
+    assert.notEqual(
+      event.event_status,
+      "recorded",
+      `event_status must never be 'recorded' for input ${JSON.stringify(input)?.slice(0, 80)}`,
+    );
   }
 });
 
@@ -240,13 +273,13 @@ test("EvidenceEvent ADVERSARIAL: caller-injected evidence with chain_advance fla
   const loop = buildMissionLoopPreview({
     mission: { missionId: "m" },
     patProposal: { summary: "x" },
-    consentDecision: "approve_c2_draft_only"
+    consentDecision: "approve_c2_draft_only",
   });
   const event = buildEvidenceChainEventPreview({
     missionLoopPreview: loop,
     evidenceRefs: [
-      { id: "ev-1", schema: "x", chain_advance: true, force_record: true }
-    ]
+      { id: "ev-1", schema: "x", chain_advance: true, force_record: true },
+    ],
   });
   // Even if evidence_refs items try to carry chain_advance, the top-level
   // event chain_advance stays false.
@@ -263,7 +296,7 @@ test("EvidenceEvent additional blocked_effects from consent card are merged", ()
   const event = buildEvidenceChainEventPreviewFromInputs({
     mission: { missionId: "m" },
     patProposal: { summary: "x" },
-    consentDecision: "approve_c2_draft_only"
+    consentDecision: "approve_c2_draft_only",
   });
   // Required effects present
   for (const required of EVIDENCE_CHAIN_EVENT_REQUIRED_BLOCKED_EFFECTS) {
@@ -275,11 +308,11 @@ test("EvidenceEvent non-array evidence_refs handled gracefully", () => {
   const loop = buildMissionLoopPreview({
     mission: { missionId: "m" },
     patProposal: { summary: "x" },
-    consentDecision: "approve_c2_draft_only"
+    consentDecision: "approve_c2_draft_only",
   });
   const event = buildEvidenceChainEventPreview({
     missionLoopPreview: loop,
-    evidenceRefs: "not an array"
+    evidenceRefs: "not an array",
   });
   assert.equal(event.evidence_refs.length, 0);
 });

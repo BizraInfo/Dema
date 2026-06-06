@@ -8,14 +8,14 @@
 
 ## 6.1 · Test budget summary
 
-| Group | Count | Cumulative |
-|---|---|---|
-| Phase_03 builder · base | 14 | 14 |
-| Phase_02 gather · base + edge | 5 | 19 |
-| Phase_04 render · base | 5 | 24 |
-| Phase_05 CLI dispatch · base | 7 | 31 |
-| Adversarial · cross-phase | 11 | **42** |
-| **Total minimum** | **42 tests** | |
+| Group                         | Count        | Cumulative |
+| ----------------------------- | ------------ | ---------- |
+| Phase_03 builder · base       | 14           | 14         |
+| Phase_02 gather · base + edge | 5            | 19         |
+| Phase_04 render · base        | 5            | 24         |
+| Phase_05 CLI dispatch · base  | 7            | 31         |
+| Adversarial · cross-phase     | 11           | **42**     |
+| **Total minimum**             | **42 tests** |            |
 
 Master Craftsmanship invariant #2 requires ≥80% coverage AND ≥15 adversarial scenarios per component. Phase_06 specifies 42 tests across 4 components → ~10 tests/component average, well above the floor; adversarial 11 against the spec floor of 15 — phase_06 may extend to 15 adversarial during impl (room reserved in budget).
 
@@ -186,18 +186,18 @@ No new HELP entry needed (no new command). `npm run check` should remain green w
 
 ## 6.9 · Master Craftsmanship 10-invariant binding (cross-cut)
 
-| # | Invariant | Where in this bundle |
-|---|---|---|
-| 1 | Canon-bound (schema · truth_label · 16-key boundary) | phase_03 §3.2 |
-| 2 | Test-backed (≥80% · ≥15 adversarial) | this file (42 tests · ≥11 adversarial · room to 15) |
-| 3 | Consent-gated (exact-string per ADR-005) | phase_04 §4.5 spawnWithConsentGate |
-| 4 | Receipt-emitting (`receipt_shape_ready` flag) | NOT YET · v0.1 homebase is preview-only · no receipt emitted by the homebase itself · downstream affordance commands emit their own |
-| 5 | Doctrine-coherent (Key Maker V/D/A/U) | phase_01 §1.4 + phase_03 doesn't add new V/D/A/U claims · downstream commands carry their own |
-| 6 | Boundary-disciplined (declared blocked_effects) | phase_05 §5.7 + phase_03 §3.8 (16-key canonical) |
-| 7 | Adversarial-tested | phase_06 §6.6 |
-| 8 | Verify-before-asserting | phase_01 §1.4 V/D/A/U + every test has an explicit predicate |
-| 9 | Reversible (pure functions · preview-only · no I/O in builders) | phase_03 §3.6 |
-| 10 | Cross-referenced (links to ADR + canon) | phase_01 §1.6 + README |
+| #   | Invariant                                                       | Where in this bundle                                                                                                                |
+| --- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Canon-bound (schema · truth_label · 16-key boundary)            | phase_03 §3.2                                                                                                                       |
+| 2   | Test-backed (≥80% · ≥15 adversarial)                            | this file (42 tests · ≥11 adversarial · room to 15)                                                                                 |
+| 3   | Consent-gated (exact-string per ADR-005)                        | phase_04 §4.5 spawnWithConsentGate                                                                                                  |
+| 4   | Receipt-emitting (`receipt_shape_ready` flag)                   | NOT YET · v0.1 homebase is preview-only · no receipt emitted by the homebase itself · downstream affordance commands emit their own |
+| 5   | Doctrine-coherent (Key Maker V/D/A/U)                           | phase_01 §1.4 + phase_03 doesn't add new V/D/A/U claims · downstream commands carry their own                                       |
+| 6   | Boundary-disciplined (declared blocked_effects)                 | phase_05 §5.7 + phase_03 §3.8 (16-key canonical)                                                                                    |
+| 7   | Adversarial-tested                                              | phase_06 §6.6                                                                                                                       |
+| 8   | Verify-before-asserting                                         | phase_01 §1.4 V/D/A/U + every test has an explicit predicate                                                                        |
+| 9   | Reversible (pure functions · preview-only · no I/O in builders) | phase_03 §3.6                                                                                                                       |
+| 10  | Cross-referenced (links to ADR + canon)                         | phase_01 §1.6 + README                                                                                                              |
 
 Invariant #4 is the most delicate one: the homebase TUI itself is a viewer, not an actor. It does not need to be receipt-emitting because every affordance invocation routes through an existing command that already emits its own receipt-shaped output. Phase_07 may revisit this if v0.2 adds in-TUI consent actions.
 

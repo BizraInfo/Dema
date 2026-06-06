@@ -1,14 +1,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 const packagePath = fileURLToPath(new URL("../package.json", import.meta.url));
 
 async function packageVersion() {
@@ -16,7 +25,9 @@ async function packageVersion() {
 }
 
 async function makeFixtureDownloads() {
-  const downloadsRoot = await mkdtemp(join(tmpdir(), "dema-fixture-downloads-"));
+  const downloadsRoot = await mkdtemp(
+    join(tmpdir(), "dema-fixture-downloads-"),
+  );
   const demaRoot = await mkdtemp(join(tmpdir(), "dema-fixture-home-"));
   await writeFile(join(downloadsRoot, "alpha.txt"), "hello\n");
   await writeFile(join(downloadsRoot, "bravo.pdf"), "fake-pdf\n");
@@ -34,13 +45,17 @@ test("dema task (no arg) lists registered tasks as schema-tagged JSON", async ()
 
 test("dema task downloads.audit.preview runs end-to-end with DEMA_DOWNLOADS_ROOT override", async () => {
   const { downloadsRoot, demaRoot } = await makeFixtureDownloads();
-  const { stdout } = await execFileAsync("node", [cliPath, "task", "downloads.audit.preview"], {
-    env: {
-      ...process.env,
-      DEMA_DOWNLOADS_ROOT: downloadsRoot,
-      DEMA_HOME: demaRoot
-    }
-  });
+  const { stdout } = await execFileAsync(
+    "node",
+    [cliPath, "task", "downloads.audit.preview"],
+    {
+      env: {
+        ...process.env,
+        DEMA_DOWNLOADS_ROOT: downloadsRoot,
+        DEMA_HOME: demaRoot,
+      },
+    },
+  );
   assert.match(stdout, /Task:\s+downloads\.audit\.preview/);
   assert.match(stdout, /SAT verdict:\s+PARTIAL_PLACEHOLDER/);
   assert.match(stdout, /✓ scope_declared_read_only/);
@@ -60,8 +75,8 @@ test("dema bare invocation (no args · non-TTY) emits homebase canonical JSON (1
     env: {
       ...process.env,
       DEMA_HOME: demaRoot,
-      DEMA_NODE0_ADAPTER: ""
-    }
+      DEMA_NODE0_ADAPTER: "",
+    },
   });
   const parsed = JSON.parse(stdout);
   assert.equal(parsed.schema, "bizra.dema.homebase_v0_1.v0.1");
@@ -89,7 +104,10 @@ test("dema help --all still emits the full flat HELP list", async () => {
   assert.match(stdout, /dema onboard/);
   assert.match(stdout, /dema task/);
   assert.match(stdout, /dema sovereign/);
-  assert.match(stdout, new RegExp(`Dema v${expectedVersion.replaceAll(".", "\\.")}`));
+  assert.match(
+    stdout,
+    new RegExp(`Dema v${expectedVersion.replaceAll(".", "\\.")}`),
+  );
   assert.doesNotMatch(stdout, /Dema v0\.3\.0/);
 });
 
@@ -97,12 +115,15 @@ test("dema sovereign respects DEMA_HOME and fails clearly when scaffold is absen
   const fakeHome = await mkdtemp(join(tmpdir(), "dema-sovereign-home-"));
   const demaRoot = await mkdtemp(join(tmpdir(), "dema-sovereign-root-"));
   const result = await execFileAsync("node", [cliPath, "sovereign"], {
-    env: { ...process.env, HOME: fakeHome, DEMA_HOME: demaRoot }
+    env: { ...process.env, HOME: fakeHome, DEMA_HOME: demaRoot },
   }).catch((e) => e);
 
   assert.equal(result.code, 1);
   assert.match(result.stderr, /dema sovereign: scaffold not found/);
-  assert.ok(result.stderr.includes(demaRoot), "error should point at DEMA_HOME, not HOME");
+  assert.ok(
+    result.stderr.includes(demaRoot),
+    "error should point at DEMA_HOME, not HOME",
+  );
   assert.doesNotMatch(result.stderr, /can't open file/);
 });
 

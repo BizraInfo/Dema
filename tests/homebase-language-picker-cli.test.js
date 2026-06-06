@@ -8,7 +8,9 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 async function makeHome() {
   return mkdtemp(join(tmpdir(), "dema-lang-cli-"));
@@ -29,16 +31,16 @@ test("dema language show with profile language_code 'ar' → stdout contains 'ar
   try {
     await writeFile(
       join(home, "profile.json"),
-      JSON.stringify({ preferred_name: "Test", language_code: "ar" })
+      JSON.stringify({ preferred_name: "Test", language_code: "ar" }),
     );
     const { stdout } = await execFileAsync(
       "node",
       [cliPath, "language", "show"],
-      { env: cliEnv(home) }
+      { env: cliEnv(home) },
     );
     assert.ok(
       stdout.includes("ar") || stdout.toLowerCase().includes("arabic"),
-      `expected 'ar' or 'Arabic' in: ${stdout}`
+      `expected 'ar' or 'Arabic' in: ${stdout}`,
     );
   } finally {
     await rm(home, { recursive: true, force: true });
@@ -50,12 +52,16 @@ test("dema language show --json → JSON.parse succeeds with {language_code, sec
   try {
     await writeFile(
       join(home, "profile.json"),
-      JSON.stringify({ preferred_name: "Test", language_code: "fr", secondary_language_code: "en" })
+      JSON.stringify({
+        preferred_name: "Test",
+        language_code: "fr",
+        secondary_language_code: "en",
+      }),
     );
     const { stdout } = await execFileAsync(
       "node",
       [cliPath, "language", "show", "--json"],
-      { env: cliEnv(home) }
+      { env: cliEnv(home) },
     );
     const parsed = JSON.parse(stdout);
     assert.equal(typeof parsed.language_code, "string");
@@ -73,11 +79,11 @@ test("dema language show with empty DEMA_HOME → stdout contains 'not set yet'"
     const { stdout } = await execFileAsync(
       "node",
       [cliPath, "language", "show"],
-      { env: cliEnv(home) }
+      { env: cliEnv(home) },
     );
     assert.ok(
       stdout.toLowerCase().includes("not set"),
-      `expected 'not set' in: ${stdout}`
+      `expected 'not set' in: ${stdout}`,
     );
   } finally {
     await rm(home, { recursive: true, force: true });
@@ -89,19 +95,18 @@ test("bare dema --json with profile language_code 'es' + preferred_name → gree
   try {
     await writeFile(
       join(home, "profile.json"),
-      JSON.stringify({ preferred_name: "Samy", language_code: "es" })
+      JSON.stringify({ preferred_name: "Samy", language_code: "es" }),
     );
-    const { stdout } = await execFileAsync(
-      "node",
-      [cliPath, "--json"],
-      { env: cliEnv(home) }
-    );
+    const { stdout } = await execFileAsync("node", [cliPath, "--json"], {
+      env: cliEnv(home),
+    });
     const parsed = JSON.parse(stdout);
     const greetingText = parsed?.greeting?.text ?? "";
     // Spanish template: "Bienvenido de nuevo, Samy."
     assert.ok(
-      greetingText.toLowerCase().includes("bienvenido") || greetingText.includes("Samy"),
-      `expected Spanish greeting containing 'Bienvenido' or operator name, got: ${greetingText}`
+      greetingText.toLowerCase().includes("bienvenido") ||
+        greetingText.includes("Samy"),
+      `expected Spanish greeting containing 'Bienvenido' or operator name, got: ${greetingText}`,
     );
   } finally {
     await rm(home, { recursive: true, force: true });

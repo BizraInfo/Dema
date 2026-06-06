@@ -39,13 +39,13 @@ const BOUNDARY = Object.freeze({
   mint: false,
   external_send: false,
   urp_runtime: false,
-  filesystem_write_performed: false
+  filesystem_write_performed: false,
 });
 
 export const SEMANTIC_ERROR_CODES = Object.freeze({
   UNKNOWN_RUBRIC: "semantic_unknown_rubric",
   EMPTY_EVIDENCE: "semantic_empty_evidence",
-  WRONG_SCHEMA_FIELD: "semantic_wrong_schema_field"
+  WRONG_SCHEMA_FIELD: "semantic_wrong_schema_field",
 });
 
 function err(path, code, message) {
@@ -60,18 +60,21 @@ function semanticChecks(verdict) {
       err(
         "$.schema",
         SEMANTIC_ERROR_CODES.WRONG_SCHEMA_FIELD,
-        `expected ${EXPECTED_VERDICT_SCHEMA}, got ${JSON.stringify(verdict.schema)}`
-      )
+        `expected ${EXPECTED_VERDICT_SCHEMA}, got ${JSON.stringify(verdict.schema)}`,
+      ),
     );
   }
 
-  if (typeof verdict.rubric_id === "string" && !RUBRIC_IDS.includes(verdict.rubric_id)) {
+  if (
+    typeof verdict.rubric_id === "string" &&
+    !RUBRIC_IDS.includes(verdict.rubric_id)
+  ) {
     errors.push(
       err(
         "$.rubric_id",
         SEMANTIC_ERROR_CODES.UNKNOWN_RUBRIC,
-        `rubric_id ${JSON.stringify(verdict.rubric_id)} is not in v0.1 RUBRIC_IDS (${JSON.stringify([...RUBRIC_IDS])})`
-      )
+        `rubric_id ${JSON.stringify(verdict.rubric_id)} is not in v0.1 RUBRIC_IDS (${JSON.stringify([...RUBRIC_IDS])})`,
+      ),
     );
   }
 
@@ -83,8 +86,8 @@ function semanticChecks(verdict) {
       err(
         "$.evidence_excerpt",
         SEMANTIC_ERROR_CODES.EMPTY_EVIDENCE,
-        "evidence_excerpt is empty after trim"
-      )
+        "evidence_excerpt is empty after trim",
+      ),
     );
   }
 
@@ -98,7 +101,11 @@ function semanticChecks(verdict) {
 
 export function validatePastedJudgeVerdict(parsedJson) {
   // Hostile-input shielding: only objects can be validated.
-  if (parsedJson === null || typeof parsedJson !== "object" || Array.isArray(parsedJson)) {
+  if (
+    parsedJson === null ||
+    typeof parsedJson !== "object" ||
+    Array.isArray(parsedJson)
+  ) {
     return Object.freeze({
       schema: EVAL_LAYER2_VERDICT_VALIDATOR_SCHEMA,
       envelope_schema: null,
@@ -109,10 +116,10 @@ export function validatePastedJudgeVerdict(parsedJson) {
         err(
           "$",
           "wrong_type",
-          `expected object envelope, got ${parsedJson === null ? "null" : typeof parsedJson}`
-        )
+          `expected object envelope, got ${parsedJson === null ? "null" : typeof parsedJson}`,
+        ),
       ]),
-      boundary: BOUNDARY
+      boundary: BOUNDARY,
     });
   }
 
@@ -127,7 +134,7 @@ export function validatePastedJudgeVerdict(parsedJson) {
       ok: false,
       truth_label: "SCHEMA_UNKNOWN",
       errors: Object.freeze([]),
-      boundary: BOUNDARY
+      boundary: BOUNDARY,
     });
   }
 
@@ -156,7 +163,7 @@ export function validatePastedJudgeVerdict(parsedJson) {
     ok,
     truth_label,
     errors: Object.freeze(allErrors),
-    boundary: BOUNDARY
+    boundary: BOUNDARY,
   });
 }
 
@@ -168,7 +175,7 @@ export function formatVerdictReport(result) {
     `Envelope schema:  ${result.envelope_schema ?? "(none)"}`,
     `Recognized:       ${result.recognized}`,
     `OK:               ${result.ok}`,
-    `Truth label:      ${result.truth_label}`
+    `Truth label:      ${result.truth_label}`,
   ];
   if (result.errors.length === 0) {
     lines.push("Errors:           (none)");
@@ -180,7 +187,7 @@ export function formatVerdictReport(result) {
   }
   lines.push(
     "",
-    `Boundary: read_only=${result.boundary.read_only}, network=${result.boundary.network}, mint=${result.boundary.mint}, external_send=${result.boundary.external_send}, urp_runtime=${result.boundary.urp_runtime}, filesystem_write_performed=${result.boundary.filesystem_write_performed}`
+    `Boundary: read_only=${result.boundary.read_only}, network=${result.boundary.network}, mint=${result.boundary.mint}, external_send=${result.boundary.external_send}, urp_runtime=${result.boundary.urp_runtime}, filesystem_write_performed=${result.boundary.filesystem_write_performed}`,
   );
   return lines.join("\n");
 }

@@ -7,23 +7,30 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildOfflineNetworkFixturePreview,
-  formatOfflineNetworkFixturePreview
+  formatOfflineNetworkFixturePreview,
 } from "../packages/core/src/network-fixture-preview.js";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
-const modulePath = fileURLToPath(new URL("../packages/core/src/network-fixture-preview.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
+const modulePath = fileURLToPath(
+  new URL("../packages/core/src/network-fixture-preview.js", import.meta.url),
+);
 
 const forbiddenAuthorizationPatterns = [
   /\bI authorize\b/i,
   /GO:\s*/i,
-  /--authorize\s+["'][^"']+["']/i
+  /--authorize\s+["'][^"']+["']/i,
 ];
 
 test("buildOfflineNetworkFixturePreview emits a schema-tagged inert preview", () => {
   const preview = buildOfflineNetworkFixturePreview();
 
-  assert.equal(preview.schema, "bizra.dema.offline_network_fixture_preview.v0.1");
+  assert.equal(
+    preview.schema,
+    "bizra.dema.offline_network_fixture_preview.v0.1",
+  );
   assert.equal(preview.mode, "PREVIEW_ONLY");
   assert.equal(preview.fixture.fixture_slot_count, 5);
   assert.equal(preview.fixture.live_nodes, 0);
@@ -43,8 +50,10 @@ test("buildOfflineNetworkFixturePreview avoids invented node names", () => {
   assert.ok(preview.slots.some((slot) => slot.role_target === "Node1"));
   assert.ok(preview.slots.some((slot) => slot.role_target === "Node2"));
   assert.equal(
-    preview.slots.filter((slot) => slot.role_target === "phase_3_simulation_slot").length,
-    2
+    preview.slots.filter(
+      (slot) => slot.role_target === "phase_3_simulation_slot",
+    ).length,
+    2,
   );
   assert.ok(preview.slots.every((slot) => slot.named_identity === null));
 });
@@ -70,7 +79,7 @@ test("buildOfflineNetworkFixturePreview keeps every effect boundary false", () =
     "fixture_file_written",
     "simulation_executed",
     "scenario_emitted_authorization_phrase",
-    "topology_claim_made"
+    "topology_claim_made",
   ];
 
   for (const key of expectedFalseBoundaries) {
@@ -97,15 +106,27 @@ test("buildOfflineNetworkFixturePreview maps micro-compliance to falsifiable bou
   assert.ok(controls.includes("no_runtime_start"));
   assert.ok(controls.includes("no_receipt_or_capability_mint"));
   assert.ok(controls.includes("no_authorization_text"));
-  assert.ok(preview.micro_compliance.every((item) => item.verified_by.includes("===")));
+  assert.ok(
+    preview.micro_compliance.every((item) => item.verified_by.includes("===")),
+  );
 });
 
 test("buildOfflineNetworkFixturePreview emits micro-consent requirements without approval", () => {
   const preview = buildOfflineNetworkFixturePreview();
 
-  assert.equal(preview.micro_consent.preview_scope, "offline fixture preview only");
-  assert.equal(preview.micro_consent.current_preview_requires_operator_authorization, false);
-  assert.equal(preview.micro_consent.future_live_probe_requires_fresh_current_operator_turn, true);
+  assert.equal(
+    preview.micro_consent.preview_scope,
+    "offline fixture preview only",
+  );
+  assert.equal(
+    preview.micro_consent.current_preview_requires_operator_authorization,
+    false,
+  );
+  assert.equal(
+    preview.micro_consent
+      .future_live_probe_requires_fresh_current_operator_turn,
+    true,
+  );
   assert.equal(preview.micro_consent.phrase_emitted, false);
   assert.equal(preview.micro_consent.approval_recorded, false);
   assert.equal(preview.micro_consent.reusable_authorization_created, false);
@@ -116,15 +137,20 @@ test("buildOfflineNetworkFixturePreview uses a non-live analogy", () => {
   const preview = buildOfflineNetworkFixturePreview();
 
   assert.equal(preview.analogical_model.analogy, "static lab bench schematic");
-  assert.equal(preview.analogical_model.boundary, "paper_model_not_running_system");
+  assert.equal(
+    preview.analogical_model.boundary,
+    "paper_model_not_running_system",
+  );
   assert.ok(preview.analogical_model.not_analogous_to.includes("live network"));
-  assert.ok(preview.analogical_model.not_analogous_to.includes("security testbed"));
+  assert.ok(
+    preview.analogical_model.not_analogous_to.includes("security testbed"),
+  );
 });
 
 test("buildOfflineNetworkFixturePreview emits no reusable authorization phrase", () => {
   const outputs = [
     JSON.stringify(buildOfflineNetworkFixturePreview()),
-    formatOfflineNetworkFixturePreview(buildOfflineNetworkFixturePreview())
+    formatOfflineNetworkFixturePreview(buildOfflineNetworkFixturePreview()),
   ];
 
   for (const output of outputs) {
@@ -154,14 +180,22 @@ test("buildOfflineNetworkFixturePreview is deterministic and returns fresh objec
 test("network fixture preview module has no execution or nondeterministic imports", async () => {
   const source = await readFile(modulePath, "utf8");
 
-  assert.doesNotMatch(source, /from\s+["']node:(net|dgram|http|https|tls|dns|worker_threads|vm|child_process)["']/);
+  assert.doesNotMatch(
+    source,
+    /from\s+["']node:(net|dgram|http|https|tls|dns|worker_threads|vm|child_process)["']/,
+  );
   assert.doesNotMatch(source, /\bfetch\s*\(/);
-  assert.doesNotMatch(source, /\b(Date\.now|Math\.random|crypto\.random|process\.hrtime|performance\.now)\b/);
+  assert.doesNotMatch(
+    source,
+    /\b(Date\.now|Math\.random|crypto\.random|process\.hrtime|performance\.now)\b/,
+  );
   assert.doesNotMatch(source, /\bwriteFile\b|\bappendFile\b|\bmkdir\b/);
 });
 
 test("formatOfflineNetworkFixturePreview renders the safety posture", () => {
-  const output = formatOfflineNetworkFixturePreview(buildOfflineNetworkFixturePreview());
+  const output = formatOfflineNetworkFixturePreview(
+    buildOfflineNetworkFixturePreview(),
+  );
 
   assert.match(output, /DEMA Offline Network Fixture Preview/);
   assert.match(output, /0 live nodes; 0 sockets/);
@@ -169,11 +203,19 @@ test("formatOfflineNetworkFixturePreview renders the safety posture", () => {
   assert.match(output, /Micro-compliance/);
   assert.match(output, /Micro-consent/);
   assert.match(output, /static lab bench schematic/);
-  assert.match(output, /no live nodes; no sockets; no federation; no handshake/);
+  assert.match(
+    output,
+    /no live nodes; no sockets; no federation; no handshake/,
+  );
 });
 
 test("dema network fixture preview prints a human-readable preview", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "network", "fixture", "preview"]);
+  const { stdout } = await execFileAsync("node", [
+    cliPath,
+    "network",
+    "fixture",
+    "preview",
+  ]);
 
   assert.match(stdout, /DEMA Offline Network Fixture Preview/);
   assert.match(stdout, /0 live nodes; 0 sockets/);
@@ -181,10 +223,19 @@ test("dema network fixture preview prints a human-readable preview", async () =>
 });
 
 test("dema network fixture preview --json emits the schema-tagged preview", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "network", "fixture", "preview", "--json"]);
+  const { stdout } = await execFileAsync("node", [
+    cliPath,
+    "network",
+    "fixture",
+    "preview",
+    "--json",
+  ]);
   const preview = JSON.parse(stdout);
 
-  assert.equal(preview.schema, "bizra.dema.offline_network_fixture_preview.v0.1");
+  assert.equal(
+    preview.schema,
+    "bizra.dema.offline_network_fixture_preview.v0.1",
+  );
   assert.equal(preview.mode, "PREVIEW_ONLY");
   assert.equal(preview.fixture.fixture_slot_count, 5);
   assert.equal(preview.fixture.live_nodes, 0);

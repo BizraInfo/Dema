@@ -9,11 +9,13 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import {
   collectModelInventory,
-  formatModelInventory
+  formatModelInventory,
 } from "../packages/models/src/model-inventory.js";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -22,17 +24,26 @@ function escapeRegExp(value) {
 function jsonResponse(body) {
   return new Response(JSON.stringify(body), {
     status: 200,
-    headers: { "content-type": "application/json" }
+    headers: { "content-type": "application/json" },
   });
 }
 
 test("collectModelInventory inventories Ollama, LM Studio, downloads, and exposure read-only", async () => {
   const downloadsRoot = await mkdtemp(join(tmpdir(), "dema-models-downloads-"));
-  await writeFile(join(downloadsRoot, "GLM-4.7-Flash-Q4_K_M.gguf"), "model-bytes");
+  await writeFile(
+    join(downloadsRoot, "GLM-4.7-Flash-Q4_K_M.gguf"),
+    "model-bytes",
+  );
   await writeFile(join(downloadsRoot, "notes.txt"), "not a model");
   await mkdir(join(downloadsRoot, "vision"), { recursive: true });
-  await writeFile(join(downloadsRoot, "vision", "Qwen3VL-8B-Uncensored-Aggressive-Q8_0.gguf"), "model-bytes");
-  await writeFile(join(downloadsRoot, "vision", "mmproj-Qwen3VL-f16.gguf"), "x");
+  await writeFile(
+    join(downloadsRoot, "vision", "Qwen3VL-8B-Uncensored-Aggressive-Q8_0.gguf"),
+    "model-bytes",
+  );
+  await writeFile(
+    join(downloadsRoot, "vision", "mmproj-Qwen3VL-f16.gguf"),
+    "x",
+  );
 
   const requested = [];
   const fetchImpl = async (url) => {
@@ -43,15 +54,13 @@ test("collectModelInventory inventories Ollama, LM Studio, downloads, and exposu
           { name: "qwen3-coder-next:q4_K_M", size: 51741611823 },
           { name: "gemma4:26b-bizra-16k", size: 17987581261 },
           { name: "deepseek-r1:7b", size: 4683072000 },
-          { name: "nomic-embed-text:latest", size: 274302450 }
-        ]
+          { name: "nomic-embed-text:latest", size: 274302450 },
+        ],
       });
     }
     if (String(url).endsWith("/api/ps")) {
       return jsonResponse({
-        models: [
-          { name: "qwen3-coder-next:q4_K_M", size: 51741611823 }
-        ]
+        models: [{ name: "qwen3-coder-next:q4_K_M", size: 51741611823 }],
       });
     }
     if (String(url).endsWith("/v1/models")) {
@@ -59,8 +68,8 @@ test("collectModelInventory inventories Ollama, LM Studio, downloads, and exposu
         data: [
           { id: "qwen3.6-35b-a3b-uncensored-hauhaucs-aggressive" },
           { id: "google/gemma-4-e4b" },
-          { id: "text-embedding-nomic-embed-text-v1.5" }
-        ]
+          { id: "text-embedding-nomic-embed-text-v1.5" },
+        ],
       });
     }
     throw new Error(`unexpected fetch: ${url}`);
@@ -71,8 +80,8 @@ test("collectModelInventory inventories Ollama, LM Studio, downloads, and exposu
     fetchImpl,
     tcpBindings: [
       { port: 11434, address: "127.0.0.1" },
-      { port: 1234, address: "0.0.0.0" }
-    ]
+      { port: 1234, address: "0.0.0.0" },
+    ],
   });
 
   assert.equal(inventory.schema, "bizra.dema.model_inventory.v0.1");
@@ -88,30 +97,50 @@ test("collectModelInventory inventories Ollama, LM Studio, downloads, and exposu
   assert.equal(inventory.safety.exposures[0].provider, "lm_studio");
   assert.equal(inventory.safety.model_name_flags.length, 2);
   assert.ok(
-    inventory.safety.model_name_flags.some((f) => /Uncensored-Aggressive/.test(f.model))
+    inventory.safety.model_name_flags.some((f) =>
+      /Uncensored-Aggressive/.test(f.model),
+    ),
   );
-  assert.equal(inventory.routing_recommendations.coding.model, "qwen3-coder-next:q4_K_M");
-  assert.equal(inventory.routing_recommendations.reasoning.model, "deepseek-r1:7b");
-  assert.equal(inventory.routing_recommendations.embedding.model, "nomic-embed-text:latest");
-  assert.notEqual(inventory.routing_recommendations.fast.model, "mmproj-Qwen3VL-f16.gguf");
+  assert.equal(
+    inventory.routing_recommendations.coding.model,
+    "qwen3-coder-next:q4_K_M",
+  );
+  assert.equal(
+    inventory.routing_recommendations.reasoning.model,
+    "deepseek-r1:7b",
+  );
+  assert.equal(
+    inventory.routing_recommendations.embedding.model,
+    "nomic-embed-text:latest",
+  );
+  assert.notEqual(
+    inventory.routing_recommendations.fast.model,
+    "mmproj-Qwen3VL-f16.gguf",
+  );
 
   assert.deepEqual(requested.sort(), [
     "http://127.0.0.1:11434/api/ps",
     "http://127.0.0.1:11434/api/tags",
-    "http://127.0.0.1:1234/v1/models"
+    "http://127.0.0.1:1234/v1/models",
   ]);
 
   const formatted = formatModelInventory(inventory);
   assert.match(formatted, /DEMA Local Model Inventory/);
   assert.match(formatted, /qwen3-coder-next:q4_K_M/);
   assert.match(formatted, /LAN-exposed/);
-  assert.match(formatted, /Boundary: read-only; local probes only; no model invoked/);
+  assert.match(
+    formatted,
+    /Boundary: read-only; local probes only; no model invoked/,
+  );
 });
 
 test("collectModelInventory redacts absolute local model paths by default", async () => {
   const downloadsRoot = await mkdtemp(join(tmpdir(), "dema-models-private-"));
   await mkdir(join(downloadsRoot, "vision"), { recursive: true });
-  await writeFile(join(downloadsRoot, "vision", "Nemotron3-Nano-4B-Q8_K_P.gguf"), "model-bytes");
+  await writeFile(
+    join(downloadsRoot, "vision", "Nemotron3-Nano-4B-Q8_K_P.gguf"),
+    "model-bytes",
+  );
 
   const inventory = await collectModelInventory({
     ollamaUrl: "https://models.example.test",
@@ -120,7 +149,7 @@ test("collectModelInventory redacts absolute local model paths by default", asyn
     fetchImpl: async () => {
       throw new Error("should not fetch external endpoints");
     },
-    tcpBindings: []
+    tcpBindings: [],
   });
 
   const serialized = JSON.stringify(inventory);
@@ -128,7 +157,10 @@ test("collectModelInventory redacts absolute local model paths by default", asyn
   assert.doesNotMatch(serialized, /\/home\/|\/Users\/|C:\\/);
 
   assert.equal(inventory.providers.downloads.root_redacted, true);
-  assert.equal(inventory.providers.downloads.root, "[local-downloads-root-redacted]");
+  assert.equal(
+    inventory.providers.downloads.root,
+    "[local-downloads-root-redacted]",
+  );
   assert.equal(inventory.providers.downloads.model_count, 1);
 
   const [model] = inventory.providers.downloads.models;
@@ -153,13 +185,16 @@ test("collectModelInventory exposes absolute model paths only by explicit debug 
     fetchImpl: async () => {
       throw new Error("should not fetch external endpoints");
     },
-    tcpBindings: []
+    tcpBindings: [],
   });
 
   assert.equal(inventory.providers.downloads.root_redacted, false);
   assert.equal(inventory.providers.downloads.root, downloadsRoot);
   assert.equal(inventory.providers.downloads.models[0].path_redacted, false);
-  assert.equal(inventory.providers.downloads.models[0].path, join(downloadsRoot, filename));
+  assert.equal(
+    inventory.providers.downloads.models[0].path,
+    join(downloadsRoot, filename),
+  );
 });
 
 test("formatModelInventory redacts POSIX and Windows absolute roots unless debug is explicit", () => {
@@ -172,13 +207,13 @@ test("formatModelInventory redacts POSIX and Windows absolute roots unless debug
         active_count: 0,
         models: [],
         active: [],
-        error: null
+        error: null,
       },
       lm_studio: {
         reachable: false,
         model_count: 0,
         models: [],
-        error: null
+        error: null,
       },
       downloads: {
         source: "downloads",
@@ -190,24 +225,24 @@ test("formatModelInventory redacts POSIX and Windows absolute roots unless debug
             source: "downloads",
             path: "/home/mumu/Downloads/models/GLM-4.7-Flash-Q4_K_M.gguf",
             relative_path: "GLM-4.7-Flash-Q4_K_M.gguf",
-            size: "12 B"
+            size: "12 B",
           },
           {
             id: "Qwen3VL-8B-Q8_0.gguf",
             source: "downloads",
             path: "C:\\Users\\Mumu\\Downloads\\Qwen3VL-8B-Q8_0.gguf",
             relative_path: "Qwen3VL-8B-Q8_0.gguf",
-            size: "18 B"
-          }
+            size: "18 B",
+          },
         ],
-        error: null
-      }
+        error: null,
+      },
     },
     routing_recommendations: {},
     safety: {
       exposures: [],
-      model_name_flags: []
-    }
+      model_name_flags: [],
+    },
   };
 
   const output = formatModelInventory(inventory);
@@ -216,7 +251,9 @@ test("formatModelInventory redacts POSIX and Windows absolute roots unless debug
   assert.doesNotMatch(output, /\/home\/mumu/);
   assert.doesNotMatch(output, /C:\\Users\\Mumu/);
 
-  const debugOutput = formatModelInventory(inventory, { includeAbsolutePaths: true });
+  const debugOutput = formatModelInventory(inventory, {
+    includeAbsolutePaths: true,
+  });
   assert.match(debugOutput, /\/home\/mumu\/Downloads\/models/);
 });
 
@@ -231,20 +268,26 @@ test("collectModelInventory refuses non-local model server endpoints", async () 
       called = true;
       throw new Error("should not fetch external endpoints");
     },
-    tcpBindings: []
+    tcpBindings: [],
   });
 
   assert.equal(called, false);
   assert.equal(inventory.providers.ollama.reachable, false);
   assert.equal(inventory.providers.ollama.error, "non-local endpoint refused");
   assert.equal(inventory.providers.lm_studio.reachable, false);
-  assert.equal(inventory.providers.lm_studio.error, "non-local endpoint refused");
+  assert.equal(
+    inventory.providers.lm_studio.error,
+    "non-local endpoint refused",
+  );
   assert.equal(inventory.boundary.external_network_probe_performed, false);
 });
 
 test("dema models prints a human-readable local model inventory", async () => {
   const downloadsRoot = await mkdtemp(join(tmpdir(), "dema-models-cli-"));
-  await writeFile(join(downloadsRoot, "Nemotron3-Nano-4B-Q8_K_P.gguf"), "model-bytes");
+  await writeFile(
+    join(downloadsRoot, "Nemotron3-Nano-4B-Q8_K_P.gguf"),
+    "model-bytes",
+  );
 
   const server = createServer((req, res) => {
     const json = (body) => {
@@ -281,14 +324,17 @@ test("dema models prints a human-readable local model inventory", async () => {
         DEMA_OLLAMA_URL: endpoint,
         DEMA_LM_STUDIO_URL: endpoint,
         DEMA_MODEL_DOWNLOADS_ROOT: downloadsRoot,
-        DEMA_MODELS_SKIP_TCP: "1"
-      }
+        DEMA_MODELS_SKIP_TCP: "1",
+      },
     });
     assert.match(stdout, /DEMA Local Model Inventory/);
     assert.match(stdout, /Ollama: reachable/);
     assert.match(stdout, /LM Studio: reachable/);
     assert.match(stdout, /Nemotron3-Nano-4B-Q8_K_P\.gguf/);
-    assert.match(stdout, /Boundary: read-only; local probes only; no model invoked/);
+    assert.match(
+      stdout,
+      /Boundary: read-only; local probes only; no model invoked/,
+    );
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

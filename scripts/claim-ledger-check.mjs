@@ -3,39 +3,53 @@ import { readFile } from "node:fs/promises";
 
 const SCHEMA = "bizra.dema.claim_ledger_check.v0.1";
 
-export const LABELS = ["MEASURED", "CITED", "DECLARED", "PLANNED", "REMOVE_OR_HARDEN"];
+export const LABELS = [
+  "MEASURED",
+  "CITED",
+  "DECLARED",
+  "PLANNED",
+  "REMOVE_OR_HARDEN",
+];
 
 export const RISK_PATTERNS = [
   {
     kind: "benchmark",
-    pattern: /\b\d+(?:,\d{3})*(?:\.\d+)?\s*(?:requests\/second|req\/s|milliseconds?|ms|%|F1-score|F1|x improvement|fold improvement)(?=\s|$|[^\w%])/i,
-    reason: "numeric benchmark claims require measured or cited evidence"
+    pattern:
+      /\b\d+(?:,\d{3})*(?:\.\d+)?\s*(?:requests\/second|req\/s|milliseconds?|ms|%|F1-score|F1|x improvement|fold improvement)(?=\s|$|[^\w%])/i,
+    reason: "numeric benchmark claims require measured or cited evidence",
   },
   {
     kind: "first_or_only",
-    pattern: /\b(first|only|definitive|world['’]?s first|first formally verified)\b/i,
-    reason: "first-ever or exclusivity claims require hard evidence"
+    pattern:
+      /\b(first|only|definitive|world['’]?s first|first formally verified)\b/i,
+    reason: "first-ever or exclusivity claims require hard evidence",
   },
   {
     kind: "formal_verification",
-    pattern: /\b(formally verified|formal safety proof|Z3|SMT|necessary and sufficient)\b/i,
-    reason: "formal-methods claims require proof artifacts or declared-theory framing"
+    pattern:
+      /\b(formally verified|formal safety proof|Z3|SMT|necessary and sufficient)\b/i,
+    reason:
+      "formal-methods claims require proof artifacts or declared-theory framing",
   },
   {
     kind: "cryptographic",
-    pattern: /\b(post-quantum|Ed25519|ML-KEM|Dilithium|cryptographic receipt|signed receipt|hash-committed)\b/i,
-    reason: "cryptographic claims require implementation evidence or planned status"
+    pattern:
+      /\b(post-quantum|Ed25519|ML-KEM|Dilithium|cryptographic receipt|signed receipt|hash-committed)\b/i,
+    reason:
+      "cryptographic claims require implementation evidence or planned status",
   },
   {
     kind: "economic",
-    pattern: /\b(IMP|mint(?:ed|ing)?|reward(?:s)?|token(?:s)?|economic value|cash value)\b/i,
-    reason: "economic claims require verified impact and governance evidence"
+    pattern:
+      /\b(IMP|mint(?:ed|ing)?|reward(?:s)?|token(?:s)?|economic value|cash value)\b/i,
+    reason: "economic claims require verified impact and governance evidence",
   },
   {
     kind: "deployment",
-    pattern: /\b(production-ready|deployable|autonomous deployment|public network live|URP\s+network\s+live)\b/i,
-    reason: "deployment claims require operational evidence"
-  }
+    pattern:
+      /\b(production-ready|deployable|autonomous deployment|public network live|URP\s+network\s+live)\b/i,
+    reason: "deployment claims require operational evidence",
+  },
 ];
 
 function hasLabel(text) {
@@ -43,7 +57,9 @@ function hasLabel(text) {
     const bracketed = `[${label}]`;
     const markdown = `**${label}**`;
     const code = `\`${label}\``;
-    return text.includes(bracketed) || text.includes(markdown) || text.includes(code);
+    return (
+      text.includes(bracketed) || text.includes(markdown) || text.includes(code)
+    );
   });
 }
 
@@ -92,7 +108,7 @@ export function auditMarkdown({ file, body }) {
         line: index + 1,
         kind: risk.kind,
         reason: risk.reason,
-        text: line.trim()
+        text: line.trim(),
       });
     }
   });
@@ -100,7 +116,7 @@ export function auditMarkdown({ file, body }) {
   return {
     file,
     ok: findings.length === 0,
-    findings
+    findings,
   };
 }
 
@@ -114,7 +130,7 @@ function usage() {
     "Usage: node scripts/claim-ledger-check.mjs [--json] FILE.md [FILE.md...]",
     "",
     "Flags risky research-paper claims that lack one of:",
-    LABELS.map((label) => `  [${label}]`).join("\n")
+    LABELS.map((label) => `  [${label}]`).join("\n"),
   ].join("\n");
 }
 
@@ -135,17 +151,21 @@ async function main(argv = process.argv.slice(2)) {
     scanned_files: files,
     labels: LABELS,
     risk_patterns: RISK_PATTERNS.map(({ kind, reason }) => ({ kind, reason })),
-    findings
+    findings,
   };
 
   if (json) {
     console.log(JSON.stringify(report, null, 2));
   } else if (report.ok) {
-    console.log(`Claim ledger check passed: ${files.length} file(s), 0 findings.`);
+    console.log(
+      `Claim ledger check passed: ${files.length} file(s), 0 findings.`,
+    );
   } else {
     console.log(`Claim ledger check failed: ${findings.length} finding(s).`);
     for (const finding of findings) {
-      console.log(`${finding.file}:${finding.line} ${finding.kind} — ${finding.reason}`);
+      console.log(
+        `${finding.file}:${finding.line} ${finding.kind} — ${finding.reason}`,
+      );
       console.log(`  ${finding.text}`);
     }
   }
@@ -154,10 +174,13 @@ async function main(argv = process.argv.slice(2)) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main().then((code) => {
-    process.exitCode = code;
-  }, (error) => {
-    console.error(error.message);
-    process.exitCode = 1;
-  });
+  main().then(
+    (code) => {
+      process.exitCode = code;
+    },
+    (error) => {
+      console.error(error.message);
+      process.exitCode = 1;
+    },
+  );
 }

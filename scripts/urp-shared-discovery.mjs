@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   buildUrpSharedRuntimeDiscovery,
   buildUrpSharedStateManifest,
-  URP_SHARED_MANIFEST_RELATIVE_PATH
+  URP_SHARED_MANIFEST_RELATIVE_PATH,
 } from "../packages/core/src/urp-shared-runtime-discovery.js";
 import { runVerificationPipeline } from "../packages/core/src/multi-agent-orchestrator.js";
 
@@ -15,8 +15,11 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = dirname(SCRIPT_DIR);
 
 const CANON_MARKERS = [
-  { file: "docs/HOUSE_OF_WISDOM_UKE_URP_CANON_v0_1.md", markers: ["URP shared runtime is connected", "no automatic ingestion"] },
-  { file: "docs/CLAIM_REGISTER_v0_1.md", markers: ["DESIGNED_NOT_LIVE"] }
+  {
+    file: "docs/HOUSE_OF_WISDOM_UKE_URP_CANON_v0_1.md",
+    markers: ["URP shared runtime is connected", "no automatic ingestion"],
+  },
+  { file: "docs/CLAIM_REGISTER_v0_1.md", markers: ["DESIGNED_NOT_LIVE"] },
 ];
 
 async function readTextIfExists(root, relPath) {
@@ -30,7 +33,12 @@ async function checkCanonMarkersAsync(root) {
   for (const { file, markers } of CANON_MARKERS) {
     const text = await readTextIfExists(root, file);
     const missing = markers.filter((marker) => !text || !text.includes(marker));
-    checks.push({ name: `canon:${file}`, ok: missing.length === 0, file, missing });
+    checks.push({
+      name: `canon:${file}`,
+      ok: missing.length === 0,
+      file,
+      missing,
+    });
   }
   return checks;
 }
@@ -44,13 +52,16 @@ function formatReport(report, canonChecks) {
     `Manifest path (under DEMA_HOME): ${URP_SHARED_MANIFEST_RELATIVE_PATH}`,
     `Write sample allowed: ${report.write_boundary_sample.allowed ? "yes (theoretical)" : "no"}`,
     "",
-    "Canon doc markers:"
+    "Canon doc markers:",
   ];
   for (const check of canonChecks) {
     lines.push(`- ${check.ok ? "PASS" : "FAIL"} ${check.name}`);
     if (!check.ok) lines.push(`  missing: ${check.missing.join(", ")}`);
   }
-  lines.push("", "Boundary: discovery-only; no network; no UKE auto-ingest; no PAT private export; no persist.");
+  lines.push(
+    "",
+    "Boundary: discovery-only; no network; no UKE auto-ingest; no PAT private export; no persist.",
+  );
   return lines.join("\n");
 }
 
@@ -58,7 +69,7 @@ function usage() {
   return [
     "Usage: node scripts/urp-shared-discovery.mjs [--json] [--root DIR]",
     "",
-    "Emits the URP shared runtime discovery manifest template and SAT-governed write boundary sample."
+    "Emits the URP shared runtime discovery manifest template and SAT-governed write boundary sample.",
   ].join("\n");
 }
 
@@ -77,7 +88,9 @@ async function main(argv = process.argv.slice(2)) {
   const root = valueAfter(argv, "--root") ?? REPO_ROOT;
   const json = argv.includes("--json");
 
-  const sat_pipeline = runVerificationPipeline({ artifact: buildUrpSharedStateManifest() });
+  const sat_pipeline = runVerificationPipeline({
+    artifact: buildUrpSharedStateManifest(),
+  });
   const discovery = buildUrpSharedRuntimeDiscovery({ sat_pipeline });
   const canonChecks = await checkCanonMarkersAsync(root);
   const ok = canonChecks.every((check) => check.ok);
@@ -93,7 +106,10 @@ async function main(argv = process.argv.slice(2)) {
   return ok ? 0 : 1;
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (
+  process.argv[1] &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
   main().then((code) => {
     if (code !== 0) process.exitCode = code;
   });

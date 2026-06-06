@@ -19,12 +19,12 @@ The shellout backend is unchanged. Existing tests that exercise it pass without 
 
 ## Endpoints consumed (read-only)
 
-| Endpoint | Purpose | Composed into |
-|---|---|---|
-| `GET /health` | Domain identity + reachability | `gateway.{reachable, domain, health}` |
-| `GET /chain` | Receipt chain head + length | `chain.{head, length, latestTimestamp}`, `proof.latestChainHash`, `missionExecuted` |
-| `GET /poi/summary` | POI ledger summary | `poi.{totalEntries, totalImpact, avgImpact}` |
-| `GET /resources/list` | Registered resources | `resources.count` |
+| Endpoint              | Purpose                        | Composed into                                                                       |
+| --------------------- | ------------------------------ | ----------------------------------------------------------------------------------- |
+| `GET /health`         | Domain identity + reachability | `gateway.{reachable, domain, health}`                                               |
+| `GET /chain`          | Receipt chain head + length    | `chain.{head, length, latestTimestamp}`, `proof.latestChainHash`, `missionExecuted` |
+| `GET /poi/summary`    | POI ledger summary             | `poi.{totalEntries, totalImpact, avgImpact}`                                        |
+| `GET /resources/list` | Registered resources           | `resources.count`                                                                   |
 
 The adapter NEVER calls `POST` and NEVER calls any of `/missions/*`, `/principal/activate`, `/resources/register`, `/missions/organize`. It is a pure read surface.
 

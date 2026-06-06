@@ -73,6 +73,58 @@ describe("buildChooseDecision — happy paths", () => {
     assert.match(r.choose_hash, /^[a-f0-9]{64}$/);
   });
 
+  it("MARK_SHAREABLE transition carries the explicit assurance contract", () => {
+    const index = validIndex();
+    const r = buildChooseDecision(index, {
+      decision: DECISION_MARK_SHAREABLE,
+      consent: CONSENT_MARK_SHAREABLE,
+      now: FIXED_NOW,
+    });
+
+    const contract = r.transition_contract;
+    assert.equal(contract.explicit, true);
+    assert.equal(contract.bounded, true);
+    assert.equal(contract.receipt_backed, true);
+    assert.equal(contract.rare_circuit_tested, true);
+    assert.equal(contract.human_consent_aware, true);
+    assert.equal(contract.ihsan_aligned, true);
+    assert.equal(contract.ci_enforced, true);
+    assert.equal(
+      contract.transition_id,
+      `urp_choose:${index.index_hash}:MARKED_LOCAL_ONLY->CANDIDATE_SHAREABLE:MARK_SHAREABLE`,
+    );
+    assert.equal(contract.proof_scope, "PURE_URP_CHOOSE_DECISION");
+    assert.equal(
+      contract.receipt_backing.receipt_schema,
+      URP_CHOOSE_RECEIPT_SCHEMA,
+    );
+    assert.equal(
+      contract.receipt_backing.choose_hash_commits_to_contract,
+      true,
+    );
+    assert.equal(contract.receipt_backing.chain_advance_performed, false);
+    assert.equal(contract.consent.exact_string_required_for_decision, true);
+    assert.equal(
+      contract.consent.consent_phrase_hash,
+      sha256(CONSENT_MARK_SHAREABLE),
+    );
+    assert.ok(
+      contract.rare_circuit_test_refs.includes("invalid_transition_refusal"),
+    );
+    assert.ok(
+      contract.rare_circuit_test_refs.includes(
+        "consent_required_or_mismatch_refusal",
+      ),
+    );
+    assert.ok(
+      contract.ci_enforcement_refs.includes(
+        "tests/urp-choose-decision.test.js",
+      ),
+    );
+    assert.ok(contract.ci_enforcement_refs.includes("npm run check"));
+    assert.equal(Object.isFrozen(contract), true);
+  });
+
   it("MARK_LOCAL_ONLY on MARKED_LOCAL_ONLY index returns chosen:true", () => {
     const r = buildChooseDecision(validIndex(), {
       decision: DECISION_MARK_LOCAL_ONLY,

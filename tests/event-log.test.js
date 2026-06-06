@@ -213,16 +213,12 @@ test("readEvents: a corrupt line is skipped and flagged, never throws", () => {
   }
 });
 
-
 test("appendEvent rejects tampered event_id before writing", () => {
   const home = freshHome();
   try {
     const event = buildEvent(VALID);
     const tampered = { ...event, event_id: "0".repeat(64) };
-    assert.throws(
-      () => appendEvent({ home, event: tampered }),
-      /event_id/,
-    );
+    assert.throws(() => appendEvent({ home, event: tampered }), /event_id/);
     assert.equal(readEvents({ home }).count, 0);
   } finally {
     rmSync(home, { recursive: true, force: true });
@@ -251,7 +247,10 @@ test("events reader exits nonzero when corrupt lines are present", () => {
   const home = freshHome();
   try {
     const res = appendEvent({ home, event: buildEvent(VALID) });
-    writeFileSync(res.path, readFileSync(res.path, "utf8") + "{not valid json\n");
+    writeFileSync(
+      res.path,
+      readFileSync(res.path, "utf8") + "{not valid json\n",
+    );
     const cli = runEvents(home, ["--json"]);
     assert.equal(
       cli.status,

@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-05-12 (proposed) · **Accepted:** 2026-05-16 (commit `ab757a1` on branch `adr/007-accept`; cherry-picked to `main` via commit `0ef5998` / PR #44)
-**Status-sync note (2026-05-18):** the season-* foundation arc branches were branched off `adr/007-accept` before the acceptance commit landed and inherited `Status: Proposed`. This in-place amendment reconciles the current branch with main's authoritative state. No re-decision; only repo-internal consistency.
+**Status-sync note (2026-05-18):** the season-\* foundation arc branches were branched off `adr/007-accept` before the acceptance commit landed and inherited `Status: Proposed`. This in-place amendment reconciles the current branch with main's authoritative state. No re-decision; only repo-internal consistency.
 **Decision makers:** Mumu (Mohamed Beshr)
 **Supersedes:** none
 **Related:** [ADR-002 No Shadow State](ADR-002-no-shadow-state.md), [ADR-006 Continuous Assurance and No-mint Verification](ADR-006-continuous-assurance-and-no-mint-verification.md)
@@ -79,11 +79,11 @@ The following three changes can land regardless of which option is selected. The
 
 All three companion changes have been executed end-to-end with disk evidence. Status verified by direct file inspection on 2026-05-18 GST.
 
-| # | Change | Status | Evidence anchor |
-|---|---|---|---|
-| 1 | Lift `head -c 500` bash hook truncation | **RESOLVED** | `~/.claude/settings.json:330` — cap is now `head -c 4000` |
-| 2 | Add `session_id` field to receipt envelope | **RESOLVED** | `~/.dema/kernel/assurance/mint_lib.py:95` — `_resolve_session_id()` function carries explicit "ADR-007 §6 CC2 + audit P0-2" reference; env-var resolution chain `session_id arg → CLAUDE_SESSION_ID → CLAUDE_CODE_SESSION_ID → "unknown"` |
-| 3 | Add session-scope qualifiers to memory canons | **RESOLVED** | 12 qualifiers applied across 8 operator-memory files; 0 unqualified claims remain in canonical scope. Documented in operator-side memory canon (path redacted) on 2026-05-16 07:32 GST |
+| #   | Change                                        | Status       | Evidence anchor                                                                                                                                                                                                                           |
+| --- | --------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Lift `head -c 500` bash hook truncation       | **RESOLVED** | `~/.claude/settings.json:330` — cap is now `head -c 4000`                                                                                                                                                                                 |
+| 2   | Add `session_id` field to receipt envelope    | **RESOLVED** | `~/.dema/kernel/assurance/mint_lib.py:95` — `_resolve_session_id()` function carries explicit "ADR-007 §6 CC2 + audit P0-2" reference; env-var resolution chain `session_id arg → CLAUDE_SESSION_ID → CLAUDE_CODE_SESSION_ID → "unknown"` |
+| 3   | Add session-scope qualifiers to memory canons | **RESOLVED** | 12 qualifiers applied across 8 operator-memory files; 0 unqualified claims remain in canonical scope. Documented in operator-side memory canon (path redacted) on 2026-05-16 07:32 GST                                                    |
 
 The companion changes are independent of the A/B/C selection. They are operational without committing the chain architecture to any of the three options. The A/B/C decision remains an open typed-GO halt-gate.
 

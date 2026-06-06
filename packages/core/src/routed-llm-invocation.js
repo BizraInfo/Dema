@@ -33,7 +33,7 @@ const PRE_FETCH_FAILURE_PREFIXES = Object.freeze([
   "prompt_empty",
   "prompt_too_long",
   "consent_phrase_mismatch",
-  "fetch_not_available"
+  "fetch_not_available",
 ]);
 
 function inferNetworkUsed(adapterResult) {
@@ -41,7 +41,10 @@ function inferNetworkUsed(adapterResult) {
   // → no adapter call → no network.
   if (!adapterResult) return false;
   if (adapterResult.invocation_status === "completed") return true;
-  const reason = typeof adapterResult.error_reason === "string" ? adapterResult.error_reason : "";
+  const reason =
+    typeof adapterResult.error_reason === "string"
+      ? adapterResult.error_reason
+      : "";
   if (reason.length === 0) return false;
   // If error_reason matches any pre-fetch failure prefix, no network was used.
   for (const prefix of PRE_FETCH_FAILURE_PREFIXES) {
@@ -58,14 +61,15 @@ function buildBoundary({ adapterResult, attemptedAdapterCall }) {
   // per the rules above. The remaining flags are statically false at v0.1.
   return Object.freeze({
     runtime: true,
-    model_invocation: attemptedAdapterCall && adapterResult?.invocation_status === "completed",
+    model_invocation:
+      attemptedAdapterCall && adapterResult?.invocation_status === "completed",
     network_used: attemptedAdapterCall && inferNetworkUsed(adapterResult),
     localhost_only: true,
     remote_provider: false,
     federation: false,
     mint: false,
     token_economy: false,
-    urp_networking: false
+    urp_networking: false,
   });
 }
 
@@ -100,10 +104,12 @@ export async function invokeRoutedLocalModel({
   prompt = "",
   invokeConsent = "",
   timeoutMs,
-  fetchImpl
+  fetchImpl,
 } = {}) {
   const selectedModelId =
-    routeReceipt && typeof routeReceipt.selected_model_id === "string" && routeReceipt.selected_model_id.length > 0
+    routeReceipt &&
+    typeof routeReceipt.selected_model_id === "string" &&
+    routeReceipt.selected_model_id.length > 0
       ? routeReceipt.selected_model_id
       : null;
 
@@ -113,10 +119,13 @@ export async function invokeRoutedLocalModel({
       route_receipt: routeReceipt,
       selected_model_id: null,
       invocation_result: null,
-      boundary: buildBoundary({ adapterResult: null, attemptedAdapterCall: false }),
+      boundary: buildBoundary({
+        adapterResult: null,
+        attemptedAdapterCall: false,
+      }),
       warnings: Object.freeze([
-        "no_selected_model_pre_invocation: route did not select any model; nothing to invoke"
-      ])
+        "no_selected_model_pre_invocation: route did not select any model; nothing to invoke",
+      ]),
     });
   }
 
@@ -125,9 +134,10 @@ export async function invokeRoutedLocalModel({
   const adapterCallArgs = {
     model: selectedModelId,
     prompt,
-    consentPhrase: invokeConsent
+    consentPhrase: invokeConsent,
   };
-  if (typeof timeoutMs === "number" && timeoutMs > 0) adapterCallArgs.timeoutMs = timeoutMs;
+  if (typeof timeoutMs === "number" && timeoutMs > 0)
+    adapterCallArgs.timeoutMs = timeoutMs;
   if (typeof fetchImpl === "function") adapterCallArgs.fetchImpl = fetchImpl;
 
   const adapterResult = await invokeLocalLLM(adapterCallArgs);
@@ -143,6 +153,6 @@ export async function invokeRoutedLocalModel({
     selected_model_id: selectedModelId,
     invocation_result: adapterResult,
     boundary: buildBoundary({ adapterResult, attemptedAdapterCall: true }),
-    warnings: Object.freeze(warnings)
+    warnings: Object.freeze(warnings),
   });
 }

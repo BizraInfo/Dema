@@ -18,23 +18,23 @@ import {
   hasKnownSchema,
   loadKnownSchemas,
   validateEnvelope,
-  validateAgainstRegistry
+  validateAgainstRegistry,
 } from "../packages/core/src/envelope-schema-validator.js";
 
 import {
   ONBOARDING_SEAL_SCHEMA,
-  evaluateOnboardingSeal
+  evaluateOnboardingSeal,
 } from "../packages/core/src/onboarding-seal.js";
 
 import {
   ARTIFACT_SAFETY_SCHEMA,
-  evaluateArtifactSafety
+  evaluateArtifactSafety,
 } from "../packages/core/src/artifact-safety-eval.js";
 
 test("ENVELOPE_SCHEMA_VALIDATOR_SCHEMA matches v0.1", () => {
   assert.equal(
     ENVELOPE_SCHEMA_VALIDATOR_SCHEMA,
-    "bizra.dema.envelope_schema_validator.v0.1"
+    "bizra.dema.envelope_schema_validator.v0.1",
   );
 });
 
@@ -47,12 +47,9 @@ test("KNOWN_SCHEMA_IDS exposes the 3 v0.1 envelope schemas", () => {
 test("KNOWN_SCHEMA_IDS is a truly immutable frozen array", () => {
   assert.ok(Array.isArray(KNOWN_SCHEMA_IDS));
   assert.ok(Object.isFrozen(KNOWN_SCHEMA_IDS));
-  assert.throws(
-    () => {
-      KNOWN_SCHEMA_IDS.push("bizra.dema.injected_fake.v0.1");
-    },
-    /(read.only|frozen|extensible)/i
-  );
+  assert.throws(() => {
+    KNOWN_SCHEMA_IDS.push("bizra.dema.injected_fake.v0.1");
+  }, /(read.only|frozen|extensible)/i);
 });
 
 test("getKnownSchema returns frozen schema or undefined; cannot be mutated", () => {
@@ -89,12 +86,12 @@ test("validateEnvelope · ok on a minimal valid envelope", () => {
     required: ["schema", "ok"],
     properties: {
       schema: { const: "bizra.test.minimal.v0.1" },
-      ok: { type: "boolean" }
-    }
+      ok: { type: "boolean" },
+    },
   };
   const result = validateEnvelope(
     { schema: "bizra.test.minimal.v0.1", ok: true },
-    schemaDef
+    schemaDef,
   );
   assert.equal(result.ok, true);
   assert.deepEqual([...result.errors], []);
@@ -104,12 +101,12 @@ test("validateEnvelope · const mismatch on the schema field", () => {
   const schemaDef = {
     type: "object",
     properties: {
-      schema: { const: "bizra.test.minimal.v0.1" }
-    }
+      schema: { const: "bizra.test.minimal.v0.1" },
+    },
   };
   const result = validateEnvelope(
     { schema: "bizra.test.wrong.v0.1" },
-    schemaDef
+    schemaDef,
   );
   assert.equal(result.ok, false);
   assert.equal(result.errors[0].code, ERROR_CODES.CONST_MISMATCH);
@@ -122,8 +119,8 @@ test("validateEnvelope · missing_required when a required key is absent", () =>
     required: ["ok", "verdict"],
     properties: {
       ok: { type: "boolean" },
-      verdict: { type: "string" }
-    }
+      verdict: { type: "string" },
+    },
   };
   const result = validateEnvelope({ ok: true }, schemaDef);
   assert.equal(result.ok, false);
@@ -136,8 +133,8 @@ test("validateEnvelope · wrong_type when a property has the wrong shape", () =>
   const schemaDef = {
     type: "object",
     properties: {
-      score: { type: "integer" }
-    }
+      score: { type: "integer" },
+    },
   };
   const result = validateEnvelope({ score: "not a number" }, schemaDef);
   assert.equal(result.ok, false);
@@ -148,8 +145,8 @@ test("validateEnvelope · enum_mismatch on a constrained string", () => {
   const schemaDef = {
     type: "object",
     properties: {
-      verdict: { enum: ["PUBLIC_SAFE", "LOCAL_ONLY"] }
-    }
+      verdict: { enum: ["PUBLIC_SAFE", "LOCAL_ONLY"] },
+    },
   };
   const result = validateEnvelope({ verdict: "WHATEVER" }, schemaDef);
   assert.equal(result.ok, false);
@@ -160,8 +157,8 @@ test("validateEnvelope · pattern_mismatch on a regex-constrained string", () =>
   const schemaDef = {
     type: "object",
     properties: {
-      artifact_sha256: { type: "string", pattern: "^[a-f0-9]{64}$" }
-    }
+      artifact_sha256: { type: "string", pattern: "^[a-f0-9]{64}$" },
+    },
   };
   const result = validateEnvelope({ artifact_sha256: "not-a-hash" }, schemaDef);
   assert.equal(result.ok, false);
@@ -173,8 +170,8 @@ test("validateEnvelope · invalid_pattern when schema regex is malformed (no thr
   const schemaDef = {
     type: "object",
     properties: {
-      thing: { type: "string", pattern: "^[a-z" }
-    }
+      thing: { type: "string", pattern: "^[a-z" },
+    },
   };
   // Must not throw — the validator should surface the error structurally.
   const result = validateEnvelope({ thing: "anything" }, schemaDef);
@@ -187,8 +184,8 @@ test("validateEnvelope · union type accepts each branch", () => {
   const schemaDef = {
     type: "object",
     properties: {
-      severity: { type: ["string", "null"] }
-    }
+      severity: { type: ["string", "null"] },
+    },
   };
   const a = validateEnvelope({ severity: "BLOCKER" }, schemaDef);
   const b = validateEnvelope({ severity: null }, schemaDef);
@@ -202,7 +199,9 @@ test("validateEnvelope · union type accepts each branch", () => {
 test("validateEnvelope · minItems triggers array_too_short", () => {
   const schemaDef = {
     type: "object",
-    properties: { tags: { type: "array", minItems: 2, items: { type: "string" } } }
+    properties: {
+      tags: { type: "array", minItems: 2, items: { type: "string" } },
+    },
   };
   const ok = validateEnvelope({ tags: ["a", "b"] }, schemaDef);
   assert.equal(ok.ok, true);
@@ -214,7 +213,9 @@ test("validateEnvelope · minItems triggers array_too_short", () => {
 test("validateEnvelope · maxItems triggers array_too_long", () => {
   const schemaDef = {
     type: "object",
-    properties: { tags: { type: "array", maxItems: 2, items: { type: "string" } } }
+    properties: {
+      tags: { type: "array", maxItems: 2, items: { type: "string" } },
+    },
   };
   const ok = validateEnvelope({ tags: ["a", "b"] }, schemaDef);
   assert.equal(ok.ok, true);
@@ -229,9 +230,9 @@ test("validateEnvelope · nested items array validation", () => {
     properties: {
       tags: {
         type: "array",
-        items: { type: "string" }
-      }
-    }
+        items: { type: "string" },
+      },
+    },
   };
   const result = validateEnvelope({ tags: ["a", "b", 3] }, schemaDef);
   assert.equal(result.ok, false);
@@ -247,12 +248,12 @@ test("validateAgainstRegistry · routes onboarding seal envelope correctly", () 
       daemonStatus: "stopped",
       missionExecuted: false,
       runtimePulse: { fired: false },
-      human: null
+      human: null,
     },
     profile_present: true,
     today_tick: "2026-05-23T10:00:00Z",
     os_username: "mumu",
-    receipt_module: null
+    receipt_module: null,
   });
   assert.equal(sealResult.schema, ONBOARDING_SEAL_SCHEMA);
   const validation = validateAgainstRegistry(sealResult);
@@ -265,7 +266,9 @@ test("validateAgainstRegistry · routes onboarding seal envelope correctly", () 
 });
 
 test("validateAgainstRegistry · routes artifact safety envelope correctly", () => {
-  const evalResult = evaluateArtifactSafety("a clean prose snippet with no leakage");
+  const evalResult = evaluateArtifactSafety(
+    "a clean prose snippet with no leakage",
+  );
   assert.equal(evalResult.schema, ARTIFACT_SAFETY_SCHEMA);
   const validation = validateAgainstRegistry(evalResult);
   assert.equal(validation.recognized, true);
@@ -276,7 +279,7 @@ test("validateAgainstRegistry · routes artifact safety envelope correctly", () 
 test("validateAgainstRegistry · returns SCHEMA_UNKNOWN for an unrecognized schema id", () => {
   const validation = validateAgainstRegistry({
     schema: "bizra.unknown.v9.9",
-    foo: "bar"
+    foo: "bar",
   });
   assert.equal(validation.recognized, false);
   assert.equal(validation.ok, false);
@@ -288,7 +291,7 @@ test("validateAgainstRegistry · catches structurally-broken seal envelope", () 
   const broken = {
     schema: "bizra.dema.onboarding_seal.v0.1",
     ok: true,
-    score: 1
+    score: 1,
   };
   const validation = validateAgainstRegistry(broken);
   assert.equal(validation.recognized, true);
@@ -313,14 +316,14 @@ test("validateAgainstRegistry · accepts an injected registry (testability)", ()
         required: ["schema", "answer"],
         properties: {
           schema: { const: "bizra.test.custom.v0.1" },
-          answer: { type: "integer" }
-        }
-      }
-    ]
+          answer: { type: "integer" },
+        },
+      },
+    ],
   ]);
   const validation = validateAgainstRegistry(
     { schema: "bizra.test.custom.v0.1", answer: 42 },
-    { registry: customRegistry }
+    { registry: customRegistry },
   );
   assert.equal(validation.recognized, true);
   assert.equal(validation.ok, true);
@@ -328,7 +331,7 @@ test("validateAgainstRegistry · accepts an injected registry (testability)", ()
 
 test("result envelope is deep-frozen", () => {
   const validation = validateAgainstRegistry({
-    schema: "bizra.dema.onboarding_seal.v0.1"
+    schema: "bizra.dema.onboarding_seal.v0.1",
   });
   assert.ok(Object.isFrozen(validation));
   assert.ok(Object.isFrozen(validation.errors));
@@ -342,7 +345,7 @@ test("ENVELOPE_SCHEMA_VALIDATOR_BOUNDARY denies network/mint/external_send/urp_r
     mint: false,
     external_send: false,
     urp_runtime: false,
-    filesystem_write_performed: false
+    filesystem_write_performed: false,
   });
 });
 
@@ -351,9 +354,7 @@ test("validator finds real structural breakage in a forged onboarding seal", () 
     schema: "bizra.dema.onboarding_seal.v0.1",
     ok: true,
     score: 2,
-    invariants: [
-      { key: "profile_exists", label: "x", status: "weird-status" }
-    ],
+    invariants: [{ key: "profile_exists", label: "x", status: "weird-status" }],
     failed_invariants: [],
     boundary: {
       read_only: true,
@@ -361,9 +362,9 @@ test("validator finds real structural breakage in a forged onboarding seal", () 
       mint: false,
       external_send: false,
       urp_runtime: false,
-      filesystem_write_performed: false
+      filesystem_write_performed: false,
     },
-    next_safe_action: "ok"
+    next_safe_action: "ok",
   };
   const validation = validateAgainstRegistry(broken);
   assert.equal(validation.ok, false);

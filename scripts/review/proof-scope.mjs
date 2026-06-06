@@ -16,7 +16,7 @@ const U1_FILES = new Set([
   "scripts/node0-local-urp-proof.mjs",
   "scripts/node0-self-check.mjs",
   "tests/node0-local-urp-proof.test.js",
-  "tests/node0-self-check.test.js"
+  "tests/node0-self-check.test.js",
 ]);
 
 const GATE_FILES = new Set([
@@ -25,11 +25,11 @@ const GATE_FILES = new Set([
   "scripts/review/pr-class.mjs",
   "scripts/review/proof-scope.mjs",
   "scripts/review/receipt-integrity.mjs",
-  "tests/review-gate.test.js"
+  "tests/review-gate.test.js",
 ]);
 
 const U1_PROOF_PIN_FILES = new Set([
-  "docs/08-quality/U1_NODE0_LOCAL_URP_PROOF_PIN.md"
+  "docs/08-quality/U1_NODE0_LOCAL_URP_PROOF_PIN.md",
 ]);
 
 const DEVOPS_RELEASE_READINESS_FILES = new Set([
@@ -37,7 +37,7 @@ const DEVOPS_RELEASE_READINESS_FILES = new Set([
   "package.json",
   "scripts/check.mjs",
   "scripts/release-readiness.mjs",
-  "tests/release-readiness.test.js"
+  "tests/release-readiness.test.js",
 ]);
 
 const U2_DEMA_PREVIEW_SURFACE_FILES = new Set([
@@ -66,13 +66,13 @@ const U2_DEMA_PREVIEW_SURFACE_FILES = new Set([
   "tests/journey.test.js",
   "tests/mission-draft.test.js",
   "tests/models.test.js",
-  "tests/safety-report.test.js"
+  "tests/safety-report.test.js",
 ]);
 
 const CLAIM_LEDGER_CHECKER_FILES = new Set([
   "package.json",
   "scripts/claim-ledger-check.mjs",
-  "tests/claim-ledger-check.test.js"
+  "tests/claim-ledger-check.test.js",
 ]);
 
 const AMANA_KERNEL_CONTRACT_FILES = new Set([
@@ -83,7 +83,7 @@ const AMANA_KERNEL_CONTRACT_FILES = new Set([
   "tests/consent-hash-table.test.js",
   "tests/effect-cap.test.js",
   "tests/evidence-chain.test.js",
-  "tests/impact-event.test.js"
+  "tests/impact-event.test.js",
 ]);
 
 const REVIEW_CLASSES = {
@@ -93,12 +93,12 @@ const REVIEW_CLASSES = {
       "scripts/node0-local-urp-proof.mjs",
       "scripts/node0-self-check.mjs",
       "tests/node0-local-urp-proof.test.js",
-      "tests/node0-self-check.test.js"
-    ]
+      "tests/node0-self-check.test.js",
+    ],
   },
   "docs/u1-proof-pin": {
     primaryFiles: U1_PROOF_PIN_FILES,
-    requiredFiles: []
+    requiredFiles: [],
   },
   "devops/release-readiness": {
     primaryFiles: DEVOPS_RELEASE_READINESS_FILES,
@@ -107,20 +107,20 @@ const REVIEW_CLASSES = {
       "package.json",
       "scripts/check.mjs",
       "scripts/release-readiness.mjs",
-      "tests/release-readiness.test.js"
-    ]
+      "tests/release-readiness.test.js",
+    ],
   },
   "u2/dema-preview-surfaces": {
     primaryFiles: U2_DEMA_PREVIEW_SURFACE_FILES,
-    requiredFiles: []
+    requiredFiles: [],
   },
   "tooling/claim-ledger-checker": {
     primaryFiles: CLAIM_LEDGER_CHECKER_FILES,
     requiredFiles: [
       "package.json",
       "scripts/claim-ledger-check.mjs",
-      "tests/claim-ledger-check.test.js"
-    ]
+      "tests/claim-ledger-check.test.js",
+    ],
   },
   "u2.1/amana-kernel-contracts": {
     primaryFiles: AMANA_KERNEL_CONTRACT_FILES,
@@ -132,17 +132,17 @@ const REVIEW_CLASSES = {
       "tests/consent-hash-table.test.js",
       "tests/effect-cap.test.js",
       "tests/evidence-chain.test.js",
-      "tests/impact-event.test.js"
-    ]
+      "tests/impact-event.test.js",
+    ],
   },
   "policy/broad-scope": {
     primaryFiles: new Set(),
-    requiredFiles: []
+    requiredFiles: [],
   },
   "policy/merged-to-main": {
     primaryFiles: new Set(),
-    requiredFiles: []
-  }
+    requiredFiles: [],
+  },
 };
 
 function argValue(name) {
@@ -151,12 +151,18 @@ function argValue(name) {
 }
 
 function baseRef() {
-  return process.env.BIZRA_REVIEW_BASE ||
-    (process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : "origin/main");
+  return (
+    process.env.BIZRA_REVIEW_BASE ||
+    (process.env.GITHUB_BASE_REF
+      ? `origin/${process.env.GITHUB_BASE_REF}`
+      : "origin/main")
+  );
 }
 
 export function changedFiles() {
-  return execFileSync("git", ["diff", "--name-only", `${baseRef()}...HEAD`], { encoding: "utf8" })
+  return execFileSync("git", ["diff", "--name-only", `${baseRef()}...HEAD`], {
+    encoding: "utf8",
+  })
     .split("\n")
     .filter(Boolean);
 }
@@ -177,19 +183,28 @@ export function validateProofScope({ reviewClass, files }) {
       changed_files: files,
       enforcement: "advisory_reviewer_discipline",
       allowed_files: [],
-      allowed_gate_files: [...GATE_FILES]
+      allowed_gate_files: [...GATE_FILES],
     };
   }
 
-  const unexpected = files.filter((file) => !policy.primaryFiles.has(file) && !GATE_FILES.has(file));
+  const unexpected = files.filter(
+    (file) => !policy.primaryFiles.has(file) && !GATE_FILES.has(file),
+  );
   if (unexpected.length > 0) {
-    throw new Error(`${reviewClass} scope contains unexpected files: ${unexpected.join(", ")}`);
+    throw new Error(
+      `${reviewClass} scope contains unexpected files: ${unexpected.join(", ")}`,
+    );
   }
 
-  const includesPrimaryFile = files.some((file) => policy.primaryFiles.has(file));
+  const includesPrimaryFile = files.some((file) =>
+    policy.primaryFiles.has(file),
+  );
   if (includesPrimaryFile) {
     for (const required of policy.requiredFiles) {
-      if (!files.includes(required)) throw new Error(`${reviewClass} scope missing required file: ${required}`);
+      if (!files.includes(required))
+        throw new Error(
+          `${reviewClass} scope missing required file: ${required}`,
+        );
     }
   }
 
@@ -199,14 +214,17 @@ export function validateProofScope({ reviewClass, files }) {
     class: reviewClass,
     changed_files: files,
     allowed_files: [...policy.primaryFiles],
-    allowed_gate_files: [...GATE_FILES]
+    allowed_gate_files: [...GATE_FILES],
   };
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (
+  process.argv[1] &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
   const report = validateProofScope({
     reviewClass: argValue("--class"),
-    files: changedFiles()
+    files: changedFiles(),
   });
   console.log(JSON.stringify(report, null, 2));
 }

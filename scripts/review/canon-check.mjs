@@ -55,7 +55,7 @@ function phraseFindings({ root, rules, scannedFiles }) {
         findings.push({
           file,
           line: lineNumber(body, index),
-          phrase: rule.phrase
+          phrase: rule.phrase,
         });
         index = body.indexOf(rule.phrase, index + rule.phrase.length);
       }
@@ -66,7 +66,7 @@ function phraseFindings({ root, rules, scannedFiles }) {
 
 export function buildCanonCheckReport({
   root = process.cwd(),
-  registryPath = DEFAULT_REGISTRY
+  registryPath = DEFAULT_REGISTRY,
 } = {}) {
   const fullRegistryPath = join(root, registryPath);
   if (!existsSync(fullRegistryPath)) {
@@ -74,26 +74,34 @@ export function buildCanonCheckReport({
   }
 
   const registry = readJson(fullRegistryPath);
-  const missingFiles = (registry.required_files ?? []).filter((file) => !existsSync(join(root, file)));
+  const missingFiles = (registry.required_files ?? []).filter(
+    (file) => !existsSync(join(root, file)),
+  );
   const canonicalFile = join(root, "docs/canon/BIZRA_TOPOLOGY_CANON.md");
-  const canonicalBody = existsSync(canonicalFile) ? readFileSync(canonicalFile, "utf8") : "";
-  const canonicalSentencePresent = canonicalBody.includes(registry.canonical_sentence);
+  const canonicalBody = existsSync(canonicalFile)
+    ? readFileSync(canonicalFile, "utf8")
+    : "";
+  const canonicalSentencePresent = canonicalBody.includes(
+    registry.canonical_sentence,
+  );
   const markdownFiles = listMarkdownFiles(join(root, "docs"), root);
-  const sourceFiles = (registry.source_scan_roots ?? [])
-    .flatMap((scanRoot) => listSourceFiles(join(root, scanRoot), root));
+  const sourceFiles = (registry.source_scan_roots ?? []).flatMap((scanRoot) =>
+    listSourceFiles(join(root, scanRoot), root),
+  );
   const scannedFiles = [...new Set([...markdownFiles, ...sourceFiles])].sort();
   const forbiddenTopologyFindings = phraseFindings({
     root,
     rules: registry.forbidden_topology_phrases,
-    scannedFiles
+    scannedFiles,
   });
   const forbiddenAuthorizationFindings = phraseFindings({
     root,
     rules: registry.forbidden_authorization_phrases,
-    scannedFiles
+    scannedFiles,
   });
 
-  const ok = missingFiles.length === 0 &&
+  const ok =
+    missingFiles.length === 0 &&
     canonicalSentencePresent &&
     forbiddenTopologyFindings.length === 0 &&
     forbiddenAuthorizationFindings.length === 0;
@@ -114,12 +122,15 @@ export function buildCanonCheckReport({
       runtime_execution: false,
       federation_started: false,
       receipt_minted: false,
-      ci_modified: false
-    }
+      ci_modified: false,
+    },
   };
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (
+  process.argv[1] &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
   const report = buildCanonCheckReport();
   console.log(JSON.stringify(report, null, 2));
   if (!report.ok) process.exitCode = 1;

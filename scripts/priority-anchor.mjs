@@ -83,7 +83,7 @@ export async function buildManifest(inputPaths) {
   const entries = await entriesFromInputs(inputPaths);
 
   entries.sort((a, b) =>
-    a.filename < b.filename ? -1 : a.filename > b.filename ? 1 : 0
+    a.filename < b.filename ? -1 : a.filename > b.filename ? 1 : 0,
   );
 
   const filesWithLeaves = entries.map((e) => ({
@@ -93,8 +93,8 @@ export async function buildManifest(inputPaths) {
     leaf_hash: leafHash({
       filename: e.filename,
       size: e.file_size_bytes,
-      file_sha256: e.file_sha256
-    })
+      file_sha256: e.file_sha256,
+    }),
   }));
 
   const tree = buildMerkleTree(filesWithLeaves.map((e) => e.leaf_hash));
@@ -108,49 +108,63 @@ export async function buildManifest(inputPaths) {
     input_files: filesWithLeaves.map((e) => e.filename),
     files: filesWithLeaves,
     root_hash: tree.root,
-    layers: tree.layers
+    layers: tree.layers,
   };
 }
 
 export function verifyManifest(manifest) {
   if (manifest.algorithm_id !== ALGORITHM_ID) {
-    return { ok: false, reason: `unknown algorithm_id: ${manifest.algorithm_id}` };
+    return {
+      ok: false,
+      reason: `unknown algorithm_id: ${manifest.algorithm_id}`,
+    };
   }
   if (manifest.tree_order !== TREE_ORDER) {
-    return { ok: false, reason: `unexpected tree_order: ${manifest.tree_order}` };
+    return {
+      ok: false,
+      reason: `unexpected tree_order: ${manifest.tree_order}`,
+    };
   }
   // Re-derive each leaf from the per-file metadata.
   for (const f of manifest.files) {
     const recomputedLeaf = leafHash({
       filename: f.filename,
       size: f.file_size_bytes,
-      file_sha256: f.file_sha256
+      file_sha256: f.file_sha256,
     });
     if (recomputedLeaf !== f.leaf_hash) {
       return {
         ok: false,
-        reason: `leaf_hash mismatch for ${f.filename}: manifest=${f.leaf_hash} recomputed=${recomputedLeaf}`
+        reason: `leaf_hash mismatch for ${f.filename}: manifest=${f.leaf_hash} recomputed=${recomputedLeaf}`,
       };
     }
   }
   // Re-derive the root from the leaves.
-  const recomputedRoot = buildMerkleTree(manifest.files.map((f) => f.leaf_hash)).root;
+  const recomputedRoot = buildMerkleTree(
+    manifest.files.map((f) => f.leaf_hash),
+  ).root;
   if (recomputedRoot !== manifest.root_hash) {
     return {
       ok: false,
-      reason: `root_hash mismatch: manifest=${manifest.root_hash} recomputed=${recomputedRoot}`
+      reason: `root_hash mismatch: manifest=${manifest.root_hash} recomputed=${recomputedRoot}`,
     };
   }
   return { ok: true, root: recomputedRoot };
 }
 
-export async function verifyManifestFiles(manifest, { baseDir = process.cwd() } = {}) {
+export async function verifyManifestFiles(
+  manifest,
+  { baseDir = process.cwd() } = {},
+) {
   const metadataCheck = verifyManifest(manifest);
   if (!metadataCheck.ok) return metadataCheck;
 
   for (const f of manifest.files) {
     if (!f.filename || basename(f.filename) !== f.filename) {
-      return { ok: false, reason: `unsafe filename in manifest: ${JSON.stringify(f.filename)}` };
+      return {
+        ok: false,
+        reason: `unsafe filename in manifest: ${JSON.stringify(f.filename)}`,
+      };
     }
 
     const path = resolve(baseDir, f.filename);
@@ -158,17 +172,23 @@ export async function verifyManifestFiles(manifest, { baseDir = process.cwd() } 
     try {
       stat = statSync(path);
     } catch {
-      return { ok: false, reason: `manifest file missing or unreadable: ${path}` };
+      return {
+        ok: false,
+        reason: `manifest file missing or unreadable: ${path}`,
+      };
     }
     if (!stat.isFile()) {
-      return { ok: false, reason: `manifest input is not a regular file: ${path}` };
+      return {
+        ok: false,
+        reason: `manifest input is not a regular file: ${path}`,
+      };
     }
     if (stat.size !== f.file_size_bytes) {
       return {
         ok: false,
         reason:
           `file_size mismatch for ${f.filename}: manifest=${f.file_size_bytes} ` +
-          `current=${stat.size}`
+          `current=${stat.size}`,
       };
     }
 
@@ -178,7 +198,7 @@ export async function verifyManifestFiles(manifest, { baseDir = process.cwd() } 
         ok: false,
         reason:
           `file_sha256 mismatch for ${f.filename}: manifest=${f.file_sha256} ` +
-          `current=${actualSha256}`
+          `current=${actualSha256}`,
       };
     }
   }
@@ -186,7 +206,7 @@ export async function verifyManifestFiles(manifest, { baseDir = process.cwd() } 
   return {
     ...metadataCheck,
     checked_files: manifest.files.length,
-    base_dir: resolve(baseDir)
+    base_dir: resolve(baseDir),
   };
 }
 
@@ -237,8 +257,8 @@ function printHelpAndExit(code) {
       "The OpenTimestamps stamp (`ots stamp merkle-root.txt`) is NOT run",
       "by this script. It is a halt-gated, identity-binding follow-up.",
       "",
-      "See docs/PRIORITY_ANCHOR.md for the algorithm specification."
-    ].join("\n")
+      "See docs/PRIORITY_ANCHOR.md for the algorithm specification.",
+    ].join("\n"),
   );
   process.exit(code);
 }
@@ -254,15 +274,19 @@ async function runBuild(opts) {
   await fsp.mkdir(opts.outDir, { recursive: true });
   await fsp.writeFile(
     resolve(opts.outDir, "manifest.json"),
-    JSON.stringify(manifest, null, 2) + "\n"
+    JSON.stringify(manifest, null, 2) + "\n",
   );
   await fsp.writeFile(
     resolve(opts.outDir, "merkle-root.txt"),
-    manifest.root_hash + "\n"
+    manifest.root_hash + "\n",
   );
   await fsp.writeFile(
     resolve(opts.outDir, "merkle-tree.json"),
-    JSON.stringify({ layers: manifest.layers, root: manifest.root_hash }, null, 2) + "\n"
+    JSON.stringify(
+      { layers: manifest.layers, root: manifest.root_hash },
+      null,
+      2,
+    ) + "\n",
   );
 
   console.log(`algorithm_id: ${manifest.algorithm_id}`);
@@ -270,7 +294,7 @@ async function runBuild(opts) {
   console.log(`files:        ${manifest.input_files.length}`);
   for (const f of manifest.files) {
     console.log(
-      `  ${f.filename}  size=${f.file_size_bytes}  sha=${f.file_sha256.slice(0, 16)}…  leaf=${f.leaf_hash.slice(0, 16)}…`
+      `  ${f.filename}  size=${f.file_size_bytes}  sha=${f.file_sha256.slice(0, 16)}…  leaf=${f.leaf_hash.slice(0, 16)}…`,
     );
   }
   console.log(`root_hash:    ${manifest.root_hash}`);
@@ -292,7 +316,9 @@ async function runVerify(opts) {
   }
   console.log(`✔ ${manifest.algorithm_id}`);
   console.log(`✔ root_hash reproduced: ${result.root}`);
-  console.log(`✔ file bytes matched manifest: ${result.checked_files} files from ${result.base_dir}`);
+  console.log(
+    `✔ file bytes matched manifest: ${result.checked_files} files from ${result.base_dir}`,
+  );
 }
 
 async function main() {
@@ -305,7 +331,8 @@ async function main() {
 }
 
 const invokedDirectly =
-  process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pathname;
+  process.argv[1] &&
+  resolve(process.argv[1]) === new URL(import.meta.url).pathname;
 
 if (invokedDirectly) {
   main().catch((err) => {

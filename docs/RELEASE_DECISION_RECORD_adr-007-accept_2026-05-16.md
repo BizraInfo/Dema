@@ -11,7 +11,7 @@
 
 ## Why this record exists
 
-`docs/DELIVERY_BLUEPRINT.md` § "CI/CD maturity model" declares: *"Level 4 (Managed): Coverage thresholds, pinned actions, risk-code reporting, and **release decision records become mandatory**."* No RDR existed on disk until this one. The 18-commit branch is the first work unit substantial enough to warrant the canonical instance.
+`docs/DELIVERY_BLUEPRINT.md` § "CI/CD maturity model" declares: _"Level 4 (Managed): Coverage thresholds, pinned actions, risk-code reporting, and **release decision records become mandatory**."_ No RDR existed on disk until this one. The 18-commit branch is the first work unit substantial enough to warrant the canonical instance.
 
 This RDR is the **single integration document** that closes scope, quality, risk, rollback, and stakeholder evidence for the branch in one place — per `DELIVERY_BLUEPRINT.md` § "Management Body of Knowledge alignment", Integration management row.
 
@@ -21,26 +21,26 @@ This RDR is the **single integration document** that closes scope, quality, risk
 
 A **9-layer publication unit** — Policy → Map → State → Proof → Spec → Implementation → Design → Character → Lifecycle-Tested-and-Extended — across 18 commits / +7,131 insertions / 43 files changed:
 
-| Layer | Commit | Artifact |
-|---|---|---|
-| Policy | `ab757a1` | ADR-007 Multi-Session Chain Policy promoted Proposed → Accepted |
-| Map | `b8a8a14` | Node0 Genesis Readiness 2026-05-16 state snapshot |
-| State | `13f32c5` | Node0 Homebase + Shared URP world preview foundations (2 modules) |
-| Proof | `7e24611` | Cross-package boundary-invariant lint (`scripts/review/boundary-invariant-check.mjs`) |
-| Spec (parent) | `a645d70` | Integration Foundry registry v0.1 spec bundle (4-file template) |
-| Impl (parent) | `b400bd9` | External pattern registry preview module |
-| Design | `aca328f` | Dema TUI cockpit and onboarding design |
-| Character | `c3c3b0c` | Dema UX Proof Harness (12-criterion scorecard) |
-| Carry-fwd | `dd37f23` | Model Role Router v0.1 + Mobile QR Consent v0 specs |
-| Lifecycle test | `d9e0b2f` | System-lifecycle integration test (8 organs end-to-end, 11 cases) |
-| Impl | `68b104c` | Model Role Router preview implementation (15 tests) |
-| Fix-fwd | `d239815` | T-18 module-count assertion forward-compatible |
-| Impl | `6c30b3f` | Mobile QR Challenge preview implementation (17 tests) |
-| Fix-fwd | `2a85027` | T-15 module-count assertion forward-compatible |
-| Sibling-spec #1 | `07ffbef` | URP Carrying Cost preview v0.1 spec bundle (4 files) |
-| Sibling-specs #2-5 | `1e0e314` | mcp / a2a / skill-manifest / urp-resource-offer specs |
-| Sibling-impls × 5 | `16e4b25` | All 5 sibling preview modules implemented (parallel-agent batch · 90 tests · 2,182 LOC) |
-| Resolved gate | `e64b9c3` | ADR-007 Companion change #1 disk-verified as already implemented |
+| Layer              | Commit    | Artifact                                                                                |
+| ------------------ | --------- | --------------------------------------------------------------------------------------- |
+| Policy             | `ab757a1` | ADR-007 Multi-Session Chain Policy promoted Proposed → Accepted                         |
+| Map                | `b8a8a14` | Node0 Genesis Readiness 2026-05-16 state snapshot                                       |
+| State              | `13f32c5` | Node0 Homebase + Shared URP world preview foundations (2 modules)                       |
+| Proof              | `7e24611` | Cross-package boundary-invariant lint (`scripts/review/boundary-invariant-check.mjs`)   |
+| Spec (parent)      | `a645d70` | Integration Foundry registry v0.1 spec bundle (4-file template)                         |
+| Impl (parent)      | `b400bd9` | External pattern registry preview module                                                |
+| Design             | `aca328f` | Dema TUI cockpit and onboarding design                                                  |
+| Character          | `c3c3b0c` | Dema UX Proof Harness (12-criterion scorecard)                                          |
+| Carry-fwd          | `dd37f23` | Model Role Router v0.1 + Mobile QR Consent v0 specs                                     |
+| Lifecycle test     | `d9e0b2f` | System-lifecycle integration test (8 organs end-to-end, 11 cases)                       |
+| Impl               | `68b104c` | Model Role Router preview implementation (15 tests)                                     |
+| Fix-fwd            | `d239815` | T-18 module-count assertion forward-compatible                                          |
+| Impl               | `6c30b3f` | Mobile QR Challenge preview implementation (17 tests)                                   |
+| Fix-fwd            | `2a85027` | T-15 module-count assertion forward-compatible                                          |
+| Sibling-spec #1    | `07ffbef` | URP Carrying Cost preview v0.1 spec bundle (4 files)                                    |
+| Sibling-specs #2-5 | `1e0e314` | mcp / a2a / skill-manifest / urp-resource-offer specs                                   |
+| Sibling-impls × 5  | `16e4b25` | All 5 sibling preview modules implemented (parallel-agent batch · 90 tests · 2,182 LOC) |
+| Resolved gate      | `e64b9c3` | ADR-007 Companion change #1 disk-verified as already implemented                        |
 
 ### What this branch deliberately does NOT ship (PMBOK Scope: Exclusions)
 
@@ -53,24 +53,24 @@ A **9-layer publication unit** — Policy → Map → State → Proof → Spec �
 
 ## 2. Schedule (PMBOK Schedule management · gate-based, not date-based)
 
-Per ROADMAP.md: *"Roadmaps use phase gates and truth labels instead of unverified dates."*
+Per ROADMAP.md: _"Roadmaps use phase gates and truth labels instead of unverified dates."_
 
 Gate sequence for this branch (current state vs Level 4 mandate):
 
-| Gate | Result | Truth |
-|---|---|---|
-| Local invariant check | ✅ green | MEASURED |
-| `git diff --check` (whitespace) | ✅ clean | MEASURED |
-| `npm test` full suite | ✅ **682/682 PASS** (776 ms) | MEASURED |
-| `npm run check` (Node0 self-check) | ✅ `ok: true · validationPassed: true` | MEASURED |
-| `npm run llm:guidance` | ✅ 7/7 PASS | MEASURED |
-| `npm run release:readiness` | ✅ Risks empty · Next-actions empty | MEASURED |
-| `scripts/review/canon-check.mjs` | ✅ 0 topology · 0 authorization findings | MEASURED |
-| `scripts/review/boundary-invariant-check.mjs` | ✅ 30/30 modules · 62 authority flags | MEASURED |
-| Push to `origin/adr/007-accept` (new branch) | ✅ at 12:00 GST | MEASURED |
-| External CI pipeline (GitHub Actions) | ⏳ status pending operator | PENDING |
-| Code review (CodeRabbit / reviewers) | ⏳ pending PR open | PENDING |
-| Operator merge decision | ⏳ halt-gate per CLAUDE.md | PENDING |
+| Gate                                          | Result                                   | Truth    |
+| --------------------------------------------- | ---------------------------------------- | -------- |
+| Local invariant check                         | ✅ green                                 | MEASURED |
+| `git diff --check` (whitespace)               | ✅ clean                                 | MEASURED |
+| `npm test` full suite                         | ✅ **682/682 PASS** (776 ms)             | MEASURED |
+| `npm run check` (Node0 self-check)            | ✅ `ok: true · validationPassed: true`   | MEASURED |
+| `npm run llm:guidance`                        | ✅ 7/7 PASS                              | MEASURED |
+| `npm run release:readiness`                   | ✅ Risks empty · Next-actions empty      | MEASURED |
+| `scripts/review/canon-check.mjs`              | ✅ 0 topology · 0 authorization findings | MEASURED |
+| `scripts/review/boundary-invariant-check.mjs` | ✅ 30/30 modules · 62 authority flags    | MEASURED |
+| Push to `origin/adr/007-accept` (new branch)  | ✅ at 12:00 GST                          | MEASURED |
+| External CI pipeline (GitHub Actions)         | ⏳ status pending operator               | PENDING  |
+| Code review (CodeRabbit / reviewers)          | ⏳ pending PR open                       | PENDING  |
+| Operator merge decision                       | ⏳ halt-gate per CLAUDE.md               | PENDING  |
 
 ## 3. Quality gates (PMBOK Quality management)
 
@@ -96,28 +96,28 @@ Gate sequence for this branch (current state vs Level 4 mandate):
 
 ## 4. CI/CD maturity self-assessment (per `DELIVERY_BLUEPRINT.md`)
 
-| Level | Name | Status |
-|---|---|---|
-| 0 — Ad hoc | Not acceptable | ✅ ABOVE |
-| 1 — Scripted | Local `npm test` + smoke commands | ✅ EXCEEDED |
-| 2 — Repeatable | `npm run check` provides a repeatable local gate | ✅ EXCEEDED |
-| 3 — Defined | Release-readiness audit, review classes, canon checks, proof-safe docs gates declared | ✅ **AT** |
-| 4 — Managed | Coverage thresholds, pinned actions, risk-code reporting, release decision records mandatory | 🟡 **THIS RDR IS THE FIRST INSTANCE** — coverage thresholds + pinned actions still external |
-| 5 — Optimizing | Performance budgets, rollback rehearsals, SLO dashboards, post-release learning loops | ❌ FUTURE |
+| Level          | Name                                                                                         | Status                                                                                      |
+| -------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 0 — Ad hoc     | Not acceptable                                                                               | ✅ ABOVE                                                                                    |
+| 1 — Scripted   | Local `npm test` + smoke commands                                                            | ✅ EXCEEDED                                                                                 |
+| 2 — Repeatable | `npm run check` provides a repeatable local gate                                             | ✅ EXCEEDED                                                                                 |
+| 3 — Defined    | Release-readiness audit, review classes, canon checks, proof-safe docs gates declared        | ✅ **AT**                                                                                   |
+| 4 — Managed    | Coverage thresholds, pinned actions, risk-code reporting, release decision records mandatory | 🟡 **THIS RDR IS THE FIRST INSTANCE** — coverage thresholds + pinned actions still external |
+| 5 — Optimizing | Performance budgets, rollback rehearsals, SLO dashboards, post-release learning loops        | ❌ FUTURE                                                                                   |
 
 **Verdict:** branch operates at **Level 3 (Defined) and partially Level 4 (Managed)** — this RDR moves the Managed-level "release decision records become mandatory" item from declared to operational. Coverage thresholds + pinned-action enforcement remain Level-4 deltas to close.
 
 ## 5. Performance-QA mechanisms (per `DELIVERY_BLUEPRINT.md` § Performance-quality assurance)
 
-| Mechanism | Current intent | Measured |
-|---|---|---|
-| Zero runtime dependencies | Keep startup small | ✅ `package.json` deps=NONE · devDeps=NONE |
-| Native Node tests | Avoid build-tool drift | ✅ `node --test` only |
-| Smoke commands | Verify CLI surfaces | ✅ 27 CLI verbs · `dema models` returned 12 models at 11:16 GST |
-| Coverage thresholds | Enforce behavior coverage | 🟡 `npm run coverage` declared but not enforced in this branch's CI |
-| Bounded gateway probes | Prevent hung checks | ✅ `c48117c · 2edc453 · 92712db` shellout-boundary hardening (Codex chain) |
-| Large-fixture tests | Receipt/memory/model scans stay bounded | ✅ `2edc453 fix(receipts): bound local receipt listing` |
-| Diff hygiene | Whitespace / generated-output drift | ✅ `git diff --check` clean |
+| Mechanism                 | Current intent                          | Measured                                                                   |
+| ------------------------- | --------------------------------------- | -------------------------------------------------------------------------- |
+| Zero runtime dependencies | Keep startup small                      | ✅ `package.json` deps=NONE · devDeps=NONE                                 |
+| Native Node tests         | Avoid build-tool drift                  | ✅ `node --test` only                                                      |
+| Smoke commands            | Verify CLI surfaces                     | ✅ 27 CLI verbs · `dema models` returned 12 models at 11:16 GST            |
+| Coverage thresholds       | Enforce behavior coverage               | 🟡 `npm run coverage` declared but not enforced in this branch's CI        |
+| Bounded gateway probes    | Prevent hung checks                     | ✅ `c48117c · 2edc453 · 92712db` shellout-boundary hardening (Codex chain) |
+| Large-fixture tests       | Receipt/memory/model scans stay bounded | ✅ `2edc453 fix(receipts): bound local receipt listing`                    |
+| Diff hygiene              | Whitespace / generated-output drift     | ✅ `git diff --check` clean                                                |
 
 ## 6. Resource management (PMBOK Resource management)
 
@@ -134,17 +134,17 @@ Gate sequence for this branch (current state vs Level 4 mandate):
 
 ## 8. Risk register (PMBOK Risk management · with severity codes)
 
-| Risk ID | Description | Severity | Mitigation |
-|---|---|---|---|
-| **R-001** | ADR-007 Option A/B/C remains unchosen | HIGH (decision-blocking for any future multi-session mint work) | Operator-decision halt-gate per ADR § Decision; documented in RDR § 2 schedule |
-| **R-002** | Companion change #2 (`session_id` envelope) lives in `bizra-omega` | MEDIUM (cross-repo coordination) | Out-of-repo per ADR-001 + ADR-003; no action possible from this repo |
-| **R-003** | Codex CLI concurrent producer (PID 10378) may resume committing | LOW (Codex has been idle 7h; safety-net branch `codex/2026-05-16-preview-stream` snapshots its chain at `8df722d`) | Snapshot label preserved; ADR-007 fix-forward strategy in place |
-| **R-004** | 32 canonical schemas + 30 preview modules without integration runtime | LOW (preview-only; no runtime to fail) | Preview-only invariant enforced by boundary lint |
-| **R-005** | TUI framework choice deferred indefinitely | LOW (display-only design exists at `aca328f`; no operator-visible failure yet) | ADR-008 candidate noted in `dema-tui-onboarding-design.md` § Open design questions |
-| **R-006** | Coverage thresholds declared but not enforced in CI | LOW-MEDIUM (regressions possible without coverage gate) | Level-4 mandate gap; identified in § 4 |
-| **R-007** | Dependency on operator-side `~/.claude/settings.json` for bash hook truncation | LOW (already at `head -c 4000` per `e64b9c3` resolution) | Disk-verified; ADR-007 Companion #1 RESOLVED |
+| Risk ID   | Description                                                                    | Severity                                                                                                           | Mitigation                                                                         |
+| --------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| **R-001** | ADR-007 Option A/B/C remains unchosen                                          | HIGH (decision-blocking for any future multi-session mint work)                                                    | Operator-decision halt-gate per ADR § Decision; documented in RDR § 2 schedule     |
+| **R-002** | Companion change #2 (`session_id` envelope) lives in `bizra-omega`             | MEDIUM (cross-repo coordination)                                                                                   | Out-of-repo per ADR-001 + ADR-003; no action possible from this repo               |
+| **R-003** | Codex CLI concurrent producer (PID 10378) may resume committing                | LOW (Codex has been idle 7h; safety-net branch `codex/2026-05-16-preview-stream` snapshots its chain at `8df722d`) | Snapshot label preserved; ADR-007 fix-forward strategy in place                    |
+| **R-004** | 32 canonical schemas + 30 preview modules without integration runtime          | LOW (preview-only; no runtime to fail)                                                                             | Preview-only invariant enforced by boundary lint                                   |
+| **R-005** | TUI framework choice deferred indefinitely                                     | LOW (display-only design exists at `aca328f`; no operator-visible failure yet)                                     | ADR-008 candidate noted in `dema-tui-onboarding-design.md` § Open design questions |
+| **R-006** | Coverage thresholds declared but not enforced in CI                            | LOW-MEDIUM (regressions possible without coverage gate)                                                            | Level-4 mandate gap; identified in § 4                                             |
+| **R-007** | Dependency on operator-side `~/.claude/settings.json` for bash hook truncation | LOW (already at `head -c 4000` per `e64b9c3` resolution)                                                           | Disk-verified; ADR-007 Companion #1 RESOLVED                                       |
 
-**Aggregate risk posture:** 1 HIGH (R-001 operator-decision-bound) · 1 MEDIUM (R-002 cross-repo) · 5 LOW. Per `DELIVERY_BLUEPRINT.md` § Risk management: *"Risks are emitted as explicit codes with owner-ready remediation, never hidden in prose."* — done above.
+**Aggregate risk posture:** 1 HIGH (R-001 operator-decision-bound) · 1 MEDIUM (R-002 cross-repo) · 5 LOW. Per `DELIVERY_BLUEPRINT.md` § Risk management: _"Risks are emitted as explicit codes with owner-ready remediation, never hidden in prose."_ — done above.
 
 ## 9. Procurement management (PMBOK Procurement)
 
@@ -160,13 +160,13 @@ Gate sequence for this branch (current state vs Level 4 mandate):
 
 ## 11. Rollout / rollback (per `DELIVERY_BLUEPRINT.md` § Rollout and rollback)
 
-| Surface | Rollout control | Rollback control |
-|---|---|---|
-| Source code (18 commits) | Atomic local commit · review class · gate evidence on each commit | `git reset --hard 8df722d` (DANGEROUS — requires GO); preferred: revert specific commits |
-| Remote branch `origin/adr/007-accept` | Pushed at 12:00 GST; PR-create URL available | `git push origin --delete adr/007-accept` (REVERSIBLE) |
-| Local state | All changes confined to repo tree + 2 operator-memory topic files | `git restore` for repo; plain-text removal for memory qualifiers |
-| Receipts | None minted this branch | n/a (no mint) |
-| Public release | NOT REACHED · gate-blocked by operator merge decision | n/a |
+| Surface                               | Rollout control                                                   | Rollback control                                                                         |
+| ------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Source code (18 commits)              | Atomic local commit · review class · gate evidence on each commit | `git reset --hard 8df722d` (DANGEROUS — requires GO); preferred: revert specific commits |
+| Remote branch `origin/adr/007-accept` | Pushed at 12:00 GST; PR-create URL available                      | `git push origin --delete adr/007-accept` (REVERSIBLE)                                   |
+| Local state                           | All changes confined to repo tree + 2 operator-memory topic files | `git restore` for repo; plain-text removal for memory qualifiers                         |
+| Receipts                              | None minted this branch                                           | n/a (no mint)                                                                            |
+| Public release                        | NOT REACHED · gate-blocked by operator merge decision             | n/a                                                                                      |
 
 ## 12. Decision verdict
 
@@ -179,7 +179,7 @@ Translation: the branch is mechanically ready (all gates green · 682/682 tests 
 3. CI green on the PR
 4. Operator merge action
 
-The assistant **cannot grant `PERMIT`** for merge. Per `DELIVERY_BLUEPRINT.md` § Release-readiness decision rule: *"A release candidate is not ready unless... no runtime, federation, identity, or economy claim is implied by Dema docs"* — this branch satisfies that clause; **merge readiness is operator-decision**.
+The assistant **cannot grant `PERMIT`** for merge. Per `DELIVERY_BLUEPRINT.md` § Release-readiness decision rule: _"A release candidate is not ready unless... no runtime, federation, identity, or economy claim is implied by Dema docs"_ — this branch satisfies that clause; **merge readiness is operator-decision**.
 
 ## 13. References (canonical sources this RDR composes)
 

@@ -8,7 +8,10 @@
 // invoke LLM or fetch web in v0.1 · those are caller responsibilities
 // once C8 (corpus integration) and C10 (web access) land.
 
-import { buildAgentKernel, AGENT_KERNEL_MAX_ITERATIONS } from "./agent-kernel.js";
+import {
+  buildAgentKernel,
+  AGENT_KERNEL_MAX_ITERATIONS,
+} from "./agent-kernel.js";
 import { buildEffectCap } from "./effect-cap.js";
 import { buildPreviewBoundary } from "./preview-boundary.js";
 
@@ -28,7 +31,7 @@ const PAT2_PERSONA = Object.freeze({
     "draft_research_plan",
     "query_corpus_with_consent",
     "request_bounded_web_fetch",
-    "synthesize_hash_bound_evidence"
+    "synthesize_hash_bound_evidence",
   ]),
   primary_refusals: Object.freeze([
     "execute_runtime",
@@ -37,24 +40,25 @@ const PAT2_PERSONA = Object.freeze({
     "modify_corpus_data",
     "cache_findings_outside_dema_home",
     "fetch_without_consent_per_url",
-    "claim_findings_as_verified_without_source_hash"
-  ])
+    "claim_findings_as_verified_without_source_hash",
+  ]),
 });
 
 const PAT2_EFFECT_CAP_ALLOWED = Object.freeze([
   "render_terminal_output",
   "compute_hash",
-  "stat_file_metadata"
+  "stat_file_metadata",
 ]);
 
 const PAT2_EFFECT_CAP_EXTRA_BLOCKED = Object.freeze([
   "modify_corpus_data",
   "cache_outside_dema_home",
   "fetch_without_consent",
-  "claim_unverified_finding_as_verified"
+  "claim_unverified_finding_as_verified",
 ]);
 
-const PAT2_CONSENT_PHRASE_TEMPLATE = "GO: invoke PAT-2 research_companion to draft plan";
+const PAT2_CONSENT_PHRASE_TEMPLATE =
+  "GO: invoke PAT-2 research_companion to draft plan";
 
 function safeString(v, fallback = "") {
   return typeof v === "string" ? v : fallback;
@@ -72,11 +76,13 @@ export function buildPATResearchCompanionEffectCap() {
     allowed_effects: PAT2_EFFECT_CAP_ALLOWED,
     blocked_effects: PAT2_EFFECT_CAP_EXTRA_BLOCKED,
     consent_scope_template: PAT2_CONSENT_PHRASE_TEMPLATE,
-    audit_trail_required: true
+    audit_trail_required: true,
   });
 }
 
-export function buildPATResearchCompanionPreview({ operator_name = "Mumu" } = {}) {
+export function buildPATResearchCompanionPreview({
+  operator_name = "Mumu",
+} = {}) {
   return Object.freeze({
     schema: SCHEMA,
     truth_label: "NODE0_LOCAL_SEED",
@@ -91,18 +97,21 @@ export function buildPATResearchCompanionPreview({ operator_name = "Mumu" } = {}
       "PAT-2 never modifies the source corpus · only reads with consent",
       "PAT-2 never caches findings outside ~/.dema · all evidence stays local",
       "PAT-2 never fetches a URL without per-URL consent (when C10 lands)",
-      "PAT-2 never claims a finding as verified without a source hash"
+      "PAT-2 never claims a finding as verified without a source hash",
     ]),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
-export function buildPATResearchCompanionKernel({ mission_intent = "", max_iterations = AGENT_KERNEL_MAX_ITERATIONS } = {}) {
+export function buildPATResearchCompanionKernel({
+  mission_intent = "",
+  max_iterations = AGENT_KERNEL_MAX_ITERATIONS,
+} = {}) {
   return buildAgentKernel({
     agent_id: PAT2_PERSONA.pat_id,
     agent_role: "pat_research_companion",
     mission_intent: safeString(mission_intent, ""),
-    max_iterations
+    max_iterations,
   });
 }
 
@@ -112,7 +121,7 @@ export function buildPATResearchCompanionKernel({ mission_intent = "", max_itera
 export function draftResearchPlan({
   research_question = "",
   sources_to_consult = [],
-  expected_evidence_types = ["text_excerpt", "hash_bound_reference"]
+  expected_evidence_types = ["text_excerpt", "hash_bound_reference"],
 } = {}) {
   const question = safeString(research_question, "").trim();
   const sources = filterStringArray(sources_to_consult);
@@ -120,26 +129,42 @@ export function draftResearchPlan({
 
   // Categorize sources by type (URL · corpus path · memory file · etc.)
   const sourceCategories = sources.map((src) => {
-    if (/^https?:\/\//i.test(src)) return { source: src, category: "url", requires_web_consent: true };
-    if (src.startsWith("~/.dema/memory/") || src.startsWith("~/.dema/receipts/")) {
-      return { source: src, category: "local_dema_file", requires_web_consent: false };
+    if (/^https?:\/\//i.test(src))
+      return { source: src, category: "url", requires_web_consent: true };
+    if (
+      src.startsWith("~/.dema/memory/") ||
+      src.startsWith("~/.dema/receipts/")
+    ) {
+      return {
+        source: src,
+        category: "local_dema_file",
+        requires_web_consent: false,
+      };
     }
-    if (src.startsWith("corpus://")) return { source: src, category: "corpus_query", requires_web_consent: false };
+    if (src.startsWith("corpus://"))
+      return {
+        source: src,
+        category: "corpus_query",
+        requires_web_consent: false,
+      };
     return { source: src, category: "unknown", requires_web_consent: false };
   });
 
-  const requiresAnyWebConsent = sourceCategories.some((s) => s.requires_web_consent === true);
+  const requiresAnyWebConsent = sourceCategories.some(
+    (s) => s.requires_web_consent === true,
+  );
   const consentPhrasePerUrl = sourceCategories
     .filter((s) => s.requires_web_consent === true)
     .map((s) => `GO: fetch '${s.source}'`);
 
-  const valid = question.length > 0 && sources.length > 0 && evidenceTypes.length > 0;
+  const valid =
+    question.length > 0 && sources.length > 0 && evidenceTypes.length > 0;
   const refusal_reason = !valid
-    ? (question.length === 0
-        ? "empty_question · cannot draft plan"
-        : sources.length === 0
-          ? "no_sources · plan would have nothing to query"
-          : "no_evidence_types · plan must declare what evidence shapes to return")
+    ? question.length === 0
+      ? "empty_question · cannot draft plan"
+      : sources.length === 0
+        ? "no_sources · plan would have nothing to query"
+        : "no_evidence_types · plan must declare what evidence shapes to return"
     : null;
 
   return Object.freeze({
@@ -149,7 +174,9 @@ export function draftResearchPlan({
     drafted_by: PAT2_PERSONA.pat_id,
     drafted_at: new Date().toISOString(),
     research_question: question,
-    sources_to_consult: Object.freeze(sourceCategories.map((s) => Object.freeze(s))),
+    sources_to_consult: Object.freeze(
+      sourceCategories.map((s) => Object.freeze(s)),
+    ),
     expected_evidence_types: Object.freeze([...new Set(evidenceTypes)]),
     requires_any_web_consent: requiresAnyWebConsent,
     consent_phrases_per_url: Object.freeze(consentPhrasePerUrl),
@@ -159,7 +186,7 @@ export function draftResearchPlan({
     refusal_reason,
     audit_trail_required: true,
     receipt_shape_ready: valid,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -177,11 +204,12 @@ export function buildPATResearchCompanionSummary(options = {}) {
     capability_count: preview.persona.primary_capabilities.length,
     refusal_count: preview.persona.primary_refusals.length,
     consent_phrase_template: preview.consent_phrase_template,
-    boundary: preview.boundary
+    boundary: preview.boundary,
   });
 }
 
 export const PAT_RESEARCH_COMPANION_SCHEMA_NAME = SCHEMA;
 export const PAT_RESEARCH_COMPANION_PLAN_SCHEMA_NAME = RESEARCH_PLAN_SCHEMA;
-export const PAT_RESEARCH_COMPANION_CONSENT_PHRASE_TEMPLATE = PAT2_CONSENT_PHRASE_TEMPLATE;
+export const PAT_RESEARCH_COMPANION_CONSENT_PHRASE_TEMPLATE =
+  PAT2_CONSENT_PHRASE_TEMPLATE;
 export const PAT_RESEARCH_COMPANION_PERSONA = PAT2_PERSONA;

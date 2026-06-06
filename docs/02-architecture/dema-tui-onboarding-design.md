@@ -16,10 +16,12 @@
 ## Current UX surface (disk-verified)
 
 ### Screen specs already on disk
+
 - `docs/FIRST_RUN_WIZARD.md` — 7-step flow: Welcome → Privacy → Profile → Model detection → Local health check → Receipt folder → First safe action.
 - `docs/USER_LIFECYCLE.md` — mermaid flowchart with 10 nodes from "Open Dema" to "Choose the next safe action."
 
 ### Onboarding-bound CLI verbs already wired
+
 - `dema active` / `dema` (empty) → `runActiveKernel({interactive})` — current default landing surface
 - `dema welcome` → `formatOnboardingGuide(buildOnboardingGuide())` — onboarding text
 - `dema onboard` → same `buildOnboardingGuide()` with json variant
@@ -29,6 +31,7 @@
 - Plus 21 other verbs covering consent, mission, receipts, evidence, ihsan, memory, models, network, amana, behavior, design, task, etc.
 
 ### State sources already on disk (this branch)
+
 - `node0-homebase-state-preview` (commit `13f32c5`) — emits identity + PAT-7 + SAT-5 + local-URP-status + shared-URP-status + boundary + blocked_actions + next_safe_action
 - `shared-urp-world-preview` (commit `13f32c5`) — emits locked world + 4 ghost-hold nodes + 0-length offer arrays + boundary + unlock_condition
 - `process-value-preview.true_value_preview.v0.1` — emits state + risk + momentum + next_safe_action + self_proactive_harness + self_critique + step7_hold_posture
@@ -53,8 +56,10 @@ The cockpit displays. It does not act. Every action stays gated by the existing 
 All components are **display-only**. Each receives a frozen-object input from an existing builder and renders text. No component mutates state, calls a CLI verb, or invokes a runtime.
 
 ### Identity Card
+
 Source: `buildNode0HomebaseStatePreview().{player, primary_device, companion_device}`
 Display:
+
 ```text
 ┌─ Node0 Homebase ────────────────────┐
 │ Player:    momo                     │
@@ -64,12 +69,15 @@ Display:
 ```
 
 ### Party Card
+
 Source: `buildNode0HomebaseStatePreview().{pat_registry, sat_registry, pat_count, sat_count}`
 Display: roster of PAT-1..PAT-7 (intent_extractor, permission_planner, evidence_collector, consent_drafter, mission_proposer, receipt_renderer, memory_steward) and SAT-1..SAT-5 (consent_verifier, boundary_auditor, ihsan_floor_checker, evidence_chain_validator, step7_gate_keeper). One line per agent. Scope and verdict_surface inline.
 
 ### World Card
+
 Source: `buildSharedUrpWorldPreview().{status, nodes, unlock_condition}`
 Display:
+
 ```text
 ┌─ Shared URP World ──────────────────┐
 │ Status: locked_preview_only         │
@@ -83,30 +91,37 @@ Display:
 ```
 
 ### Boundary Card
+
 Source: union of `homebase.boundary` + `shared_urp.boundary`
 Display: every authority flag with its current `false` state, grouped by concern (runtime / federation / mint / node_connection / economic / etc.). Renders red until the corresponding gate closes (none in v0; all flags remain false).
 
 ### Mission Card
+
 Source: `buildConsentPlanPreview({intent})` when an intent is being drafted; otherwise empty.
 Display: pending mission text + extracted permissions + analogical notes + commitment hash. **Action buttons absent.** Approval requires typed consent at a separate command.
 
 ### Consent Card
+
 Source: `buildConsentHashTablePreview({plan})`
 Display: hash-table entries with `key`, `expires_at`, `revoked`, `purpose`. Shows whether each scope is `allowed: true/false` from `lookupConsentHashTablePreview(...)`. Read-only.
 
 ### Evidence Card
+
 Source: `buildEvidenceChainPreview(...)`
 Display: chain depth, last `event_hash` (truncated to 12 chars), `prev_hash` link integrity, `GENESIS_SENTINEL` if at root.
 
 ### Ihsan Card
+
 Source: `evaluateIhsanFloorPreview({score, floor})`
 Display: current score vs `DEFAULT_IHSAN_FLOOR = 0.95`, scorer ID, floor-met boolean, accepted-shape boolean.
 
 ### Next-Safe-Action Card
+
 Source: `buildNode0HomebaseStatePreview().next_safe_action` ∪ `buildSharedUrpWorldPreview().next_safe_action` ∪ `buildTrueValuePreview(...).next_safe_action`
 Display: deduplicated list of recommended next steps. Highlighted in green if all sources agree.
 
 ### Blocked-Actions Card
+
 Source: union of `blocked_actions` across all preview modules
 Display: 9-11 entries (`connect_node1`, `shared_urp_publish`, `runtime_start`, `federation_start`, `receipt_mint`, `capability_mint`, `step7_mint_without_exact_authorization`, `raw_data_exchange`, `economic_settlement`, etc.). Always visible.
 
@@ -114,15 +129,15 @@ Display: 9-11 entries (`connect_node1`, `shared_urp_publish`, `runtime_start`, `
 
 The existing 7-step flow stays. The TUI design adds a state-snapshot column rendered alongside each step, so the operator sees what each step changes in real-time state.
 
-| FIRST_RUN_WIZARD step | TUI right-column state snapshot |
-|---|---|
-| 1. Welcome | empty Identity Card, empty Party Card |
-| 2. Privacy mode | Identity Card populated with player name only |
-| 3. Profile | Identity Card complete; Party Card lights up to "PAT-7 + SAT-5 declared, not yet active" |
-| 4. Model detection | Status Card updates with model surface (out of scope this branch) |
-| 5. Local health check | Boundary Card renders; all authority flags red-but-correctly-false |
-| 6. Receipt folder | Evidence Card lights up at `GENESIS_SENTINEL` |
-| 7. First safe action preview | Next-Safe-Action Card emits its first recommendation |
+| FIRST_RUN_WIZARD step        | TUI right-column state snapshot                                                          |
+| ---------------------------- | ---------------------------------------------------------------------------------------- |
+| 1. Welcome                   | empty Identity Card, empty Party Card                                                    |
+| 2. Privacy mode              | Identity Card populated with player name only                                            |
+| 3. Profile                   | Identity Card complete; Party Card lights up to "PAT-7 + SAT-5 declared, not yet active" |
+| 4. Model detection           | Status Card updates with model surface (out of scope this branch)                        |
+| 5. Local health check        | Boundary Card renders; all authority flags red-but-correctly-false                       |
+| 6. Receipt folder            | Evidence Card lights up at `GENESIS_SENTINEL`                                            |
+| 7. First safe action preview | Next-Safe-Action Card emits its first recommendation                                     |
 
 After step 7, the cockpit transitions from "wizard mode" to "daily mode" (default landing for `dema active`). Daily mode renders the same cards continuously; the wizard's linear sequence is replaced by a free-navigation surface across the cards.
 
@@ -134,14 +149,14 @@ A single refresh keypress (e.g., `r`) re-invokes every visible card's builder. T
 
 ## Boundary invariants (every implementation must honor)
 
-| Invariant | Why |
-|---|---|
-| The TUI never invokes a CLI verb that mutates state without first showing the operator a consent card. | Per ADR-005 explicit consent. |
-| The TUI never displays a value labeled `MEASURED` unless the underlying primitive's `truth_label === "MEASURED"`. | Per existing MELAE discipline. |
+| Invariant                                                                                                         | Why                                         |
+| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| The TUI never invokes a CLI verb that mutates state without first showing the operator a consent card.            | Per ADR-005 explicit consent.               |
+| The TUI never displays a value labeled `MEASURED` unless the underlying primitive's `truth_label === "MEASURED"`. | Per existing MELAE discipline.              |
 | The TUI never shows an "Approve" button that does not require the exact consent phrase per `MICRO_CONSENT_SHAPE`. | Per existing consent-hash-preview contract. |
-| The TUI runs no background timer, no scheduled tick, no socket. | Per Dema CLAUDE.md "no hidden daemon". |
-| The TUI's source code (when implemented) must pass `scripts/review/boundary-invariant-check.mjs`. | Per the just-shipped lint (`7e24611`). |
-| The TUI reads operator memory only at user-initiated requests; it never preemptively walks `~/.dema/`. | Per `validate-must-be-state-read-only`. |
+| The TUI runs no background timer, no scheduled tick, no socket.                                                   | Per Dema CLAUDE.md "no hidden daemon".      |
+| The TUI's source code (when implemented) must pass `scripts/review/boundary-invariant-check.mjs`.                 | Per the just-shipped lint (`7e24611`).      |
+| The TUI reads operator memory only at user-initiated requests; it never preemptively walks `~/.dema/`.            | Per `validate-must-be-state-read-only`.     |
 
 ## Acceptance criteria (for a future TUI implementation)
 

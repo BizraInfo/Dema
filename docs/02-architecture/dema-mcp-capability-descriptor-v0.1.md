@@ -2,7 +2,7 @@
 
 **Status:** DECLARED design (preview-only spec; no implementation, no MCP server invocation).
 **Date:** 2026-05-16
-**Scope:** Specify a preview-only module that records a typed descriptor for an external MCP (Model Context Protocol) tool. The descriptor declares what the tool *could* do; it does not grant authority, invoke the tool, or open any network channel. Sibling of `urp-carrying-cost-preview` in the Integration Foundry family.
+**Scope:** Specify a preview-only module that records a typed descriptor for an external MCP (Model Context Protocol) tool. The descriptor declares what the tool _could_ do; it does not grant authority, invoke the tool, or open any network channel. Sibling of `urp-carrying-cost-preview` in the Integration Foundry family.
 
 ## Current facts
 
@@ -17,7 +17,7 @@ For each external MCP tool the operator might want to reference, emit a typed de
 
 1. **Source** — `"mcp"` (this is the BIZRA tag for the giant)
 2. **Tool ID** — the MCP tool identifier (string, opaque)
-3. **Declared effects** — subset of `OPERATIONS` that the tool *would* perform if invoked
+3. **Declared effects** — subset of `OPERATIONS` that the tool _would_ perform if invoked
 4. **Denied effects** — subset of `OPERATIONS` that are explicitly refused
 5. **Resource scope** — which `RESOURCE_TYPES` the tool touches
 6. **Required consent field** — which `MICRO_CONSENT_SHAPE` entry must be filled before any future invocation
@@ -27,6 +27,7 @@ For each external MCP tool the operator might want to reference, emit a typed de
 ## Functional requirements
 
 ### F-01 · Module exports
+
 ```
 packages/consent/src/mcp-capability-descriptor-preview.js
 
@@ -39,6 +40,7 @@ export function buildMcpCapabilityDescriptorPreview({
 ```
 
 ### F-02 · Envelope shape (success)
+
 ```
 {
   schema:                  "bizra.dema.mcp_capability_descriptor_preview.v0.1",
@@ -59,6 +61,7 @@ export function buildMcpCapabilityDescriptorPreview({
 ```
 
 ### F-03 · Boundary invariants
+
 ```
 runtime:                  false
 federation:               false
@@ -71,6 +74,7 @@ remote_access_granted:    false  (NEW flag, add to allowlist)
 ```
 
 ### F-04 · Validation
+
 - `declared_effects` ∩ `denied_effects` must be empty (no field appears in both)
 - Every entry of `declared_effects` and `denied_effects` must be in `OPERATIONS`
 - `resource_type` must be in `RESOURCE_TYPES`
@@ -79,14 +83,17 @@ remote_access_granted:    false  (NEW flag, add to allowlist)
 - `tool_id` must be a non-empty string
 
 ### F-05 · v0.1 invariants
+
 - `invocable_now` always `false`
 - `declared_effects` cannot include `execute` or `call` without `sat_verdict_required === "REVIEW"` (defensive)
 - The module imports zero `fs / net / http / child_process`
 
 ### F-06 · Determinism + purity
+
 Same inputs → deeply-equal frozen output with fresh references.
 
 ## Out of scope
+
 - MCP server invocation, handshake, tool execution
 - Persistent storage of descriptors
 - CLI verb (`dema mcp descriptor ...` is not proposed for v0.1)
@@ -94,6 +101,7 @@ Same inputs → deeply-equal frozen output with fresh references.
 - Credential management
 
 ## Acceptance criteria
+
 1. New file at `packages/consent/src/mcp-capability-descriptor-preview.js`
 2. New test file with ≥ 12 TDD anchors
 3. `AUTHORITY_FLAGS` extended by 2 new flags (`credential_persisted`, `remote_access_granted`)
@@ -101,6 +109,7 @@ Same inputs → deeply-equal frozen output with fresh references.
 5. All 7 gates green; `boundary-invariant-check` `modules_scanned ≥ 26`
 
 ## References
+
 - `packages/consent/src/consent-hash-preview.js` — `OPERATIONS`, `RESOURCE_TYPES`
 - `packages/consent/src/consent-common.js` — `MICRO_CONSENT_SHAPE`
 - `docs/02-architecture/pat-builder-sat-validator.md` — `GateVerdict`
@@ -108,6 +117,7 @@ Same inputs → deeply-equal frozen output with fresh references.
 - `docs/superpowers/specs/2026-05-16-urp-carrying-cost/` — first sibling, template followed here
 
 ## Operating law
+
 ```
 MCP describes capability.
 The descriptor records what could happen.

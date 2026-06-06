@@ -36,7 +36,7 @@ function makeStdin(lines) {
   const r = Readable.from(
     (async function* () {
       yield buf;
-    })()
+    })(),
   );
   r.isTTY = true;
   return r;
@@ -76,7 +76,11 @@ function nonTtyStdout() {
 
 function eofStdin() {
   // A Readable that immediately ends without any data
-  const r = new Readable({ read() { this.push(null); } });
+  const r = new Readable({
+    read() {
+      this.push(null);
+    },
+  });
   r.isTTY = true;
   return r;
 }
@@ -89,8 +93,16 @@ test("LANGUAGE_OPTIONS has exactly 7 entries", () => {
 
 test("LANGUAGE_OPTIONS: each entry has {code, label} strings", () => {
   for (const opt of LANGUAGE_OPTIONS) {
-    assert.equal(typeof opt.code, "string", `code must be string: ${JSON.stringify(opt)}`);
-    assert.equal(typeof opt.label, "string", `label must be string: ${JSON.stringify(opt)}`);
+    assert.equal(
+      typeof opt.code,
+      "string",
+      `code must be string: ${JSON.stringify(opt)}`,
+    );
+    assert.equal(
+      typeof opt.label,
+      "string",
+      `label must be string: ${JSON.stringify(opt)}`,
+    );
     assert.ok(opt.code.length > 0, "code must be non-empty");
     assert.ok(opt.label.length > 0, "label must be non-empty");
   }
@@ -104,8 +116,12 @@ test("LANGUAGE_OPTIONS includes expected codes: ar en fr es ur hi other", () => 
 });
 
 test("LANGUAGE_OPTIONS is deep-frozen (mutation rejected)", () => {
-  assert.throws(() => { LANGUAGE_OPTIONS[0] = { code: "xx", label: "XX" }; });
-  assert.throws(() => { LANGUAGE_OPTIONS[0].code = "mutated"; });
+  assert.throws(() => {
+    LANGUAGE_OPTIONS[0] = { code: "xx", label: "XX" };
+  });
+  assert.throws(() => {
+    LANGUAGE_OPTIONS[0].code = "mutated";
+  });
 });
 
 // ─── GREETING_TEMPLATES shape ─────────────────────────────────────────────────
@@ -122,7 +138,10 @@ const REQUIRED_KEYS = [
 test("GREETING_TEMPLATES has entries for all 7 codes", () => {
   const codes = LANGUAGE_OPTIONS.map((o) => o.code);
   for (const code of codes) {
-    assert.ok(GREETING_TEMPLATES[code] !== undefined, `missing template for: ${code}`);
+    assert.ok(
+      GREETING_TEMPLATES[code] !== undefined,
+      `missing template for: ${code}`,
+    );
   }
 });
 
@@ -132,7 +151,7 @@ test("GREETING_TEMPLATES: each template has all 6 required keys", () => {
       assert.equal(
         typeof tmpl[key],
         "string",
-        `${code}.${key} must be a string`
+        `${code}.${key} must be a string`,
       );
     }
   }
@@ -145,20 +164,32 @@ test("GREETING_TEMPLATES: each template has truth_label", () => {
     "PLACEHOLDER_PENDING_NATIVE_AUTHOR",
   ]);
   for (const [code, tmpl] of Object.entries(GREETING_TEMPLATES)) {
-    assert.ok(valid.has(tmpl.truth_label), `${code}.truth_label invalid: ${tmpl.truth_label}`);
+    assert.ok(
+      valid.has(tmpl.truth_label),
+      `${code}.truth_label invalid: ${tmpl.truth_label}`,
+    );
   }
 });
 
 test("Arabic template uses Arabic Unicode characters", () => {
   const ar = GREETING_TEMPLATES.ar;
   // Arabic Unicode block: U+0600–U+06FF (Arabic script)
-  const hasArabic = /[؀-ۿ]/.test(ar.welcome_back + ar.welcome_new + ar.picker_prompt);
-  assert.ok(hasArabic, "Arabic template must contain Arabic Unicode characters");
+  const hasArabic = /[؀-ۿ]/.test(
+    ar.welcome_back + ar.welcome_new + ar.picker_prompt,
+  );
+  assert.ok(
+    hasArabic,
+    "Arabic template must contain Arabic Unicode characters",
+  );
 });
 
 test("GREETING_TEMPLATES is deep-frozen (mutation rejected)", () => {
-  assert.throws(() => { GREETING_TEMPLATES.en.welcome_back = "MUTATED"; });
-  assert.throws(() => { GREETING_TEMPLATES.en = {}; });
+  assert.throws(() => {
+    GREETING_TEMPLATES.en.welcome_back = "MUTATED";
+  });
+  assert.throws(() => {
+    GREETING_TEMPLATES.en = {};
+  });
 });
 
 test("English welcome_back contains {name} placeholder", () => {
@@ -166,7 +197,9 @@ test("English welcome_back contains {name} placeholder", () => {
 });
 
 test("English selection_confirmed contains {language_label} placeholder", () => {
-  assert.ok(GREETING_TEMPLATES.en.selection_confirmed.includes("{language_label}"));
+  assert.ok(
+    GREETING_TEMPLATES.en.selection_confirmed.includes("{language_label}"),
+  );
 });
 
 // ─── Algorithm — Law #9 returning-user load ───────────────────────────────────
@@ -175,7 +208,7 @@ test("Law #9: profile with language_code 'ar' → silent load, no prompt, return
   await withHome(async (home) => {
     await writeFile(
       join(home, "profile.json"),
-      JSON.stringify({ preferred_name: "Test", language_code: "ar" })
+      JSON.stringify({ preferred_name: "Test", language_code: "ar" }),
     );
     const stdout = makeStdout();
     // Even with TTY stdin, must not prompt
@@ -201,7 +234,7 @@ test("Law #9: profile without language_code → triggers interactive picker", as
   await withHome(async (home) => {
     await writeFile(
       join(home, "profile.json"),
-      JSON.stringify({ preferred_name: "Test" })
+      JSON.stringify({ preferred_name: "Test" }),
     );
     const stdout = makeStdout();
     // Pick "en" (option 2), then skip secondary
@@ -226,7 +259,7 @@ test("Law #9 escape hatch: resetLanguage=true + valid profile → run picker, la
   await withHome(async (home) => {
     await writeFile(
       join(home, "profile.json"),
-      JSON.stringify({ preferred_name: "Test", language_code: "ar" })
+      JSON.stringify({ preferred_name: "Test", language_code: "ar" }),
     );
     const stdout = makeStdout();
     // Pick "fr" (option 3), then skip secondary
@@ -241,7 +274,10 @@ test("Law #9 escape hatch: resetLanguage=true + valid profile → run picker, la
     assert.equal(result.language_code, "fr");
     assert.equal(result.language_source, "reset_explicit");
     assert.equal(result.returning_user_load, false);
-    assert.equal(result.candidate_lifecycle.onboarding_trigger, "reset_explicit");
+    assert.equal(
+      result.candidate_lifecycle.onboarding_trigger,
+      "reset_explicit",
+    );
   });
 });
 
@@ -321,15 +357,21 @@ test("EOF before language selection → language_code=null, warnings populated, 
     assert.equal(result.language_code, null);
     assert.ok(
       result.warnings.some((w) => w.includes("stdin closed")),
-      `expected stdin-closed warning, got: ${JSON.stringify(result.warnings)}`
+      `expected stdin-closed warning, got: ${JSON.stringify(result.warnings)}`,
     );
     // Profile must NOT have been written
     let profileExists = false;
     try {
       await readFile(join(home, "profile.json"), "utf8");
       profileExists = true;
-    } catch { /* absent — correct */ }
-    assert.equal(profileExists, false, "profile.json must NOT be written on EOF");
+    } catch {
+      /* absent — correct */
+    }
+    assert.equal(
+      profileExists,
+      false,
+      "profile.json must NOT be written on EOF",
+    );
   });
 });
 
@@ -337,7 +379,11 @@ test("EOF before language selection → language_code=null, warnings populated, 
 
 test("writeOperatorLanguage: creates profile.json with v0.1 schema when absent", async () => {
   await withHome(async (home) => {
-    await writeOperatorLanguage({ home, language_code: "en", secondary_language_code: null });
+    await writeOperatorLanguage({
+      home,
+      language_code: "en",
+      secondary_language_code: null,
+    });
     const raw = await readFile(join(home, "profile.json"), "utf8");
     const data = JSON.parse(raw);
     assert.equal(data.schema, "bizra.dema.profile.v0.1");
@@ -350,13 +396,29 @@ test("writeOperatorLanguage: preserves existing fields when merging", async () =
   await withHome(async (home) => {
     await writeFile(
       join(home, "profile.json"),
-      JSON.stringify({ schema: "bizra.dema.profile.v0.1", preferred_name: "Mumu", memory_consent: "local" })
+      JSON.stringify({
+        schema: "bizra.dema.profile.v0.1",
+        preferred_name: "Mumu",
+        memory_consent: "local",
+      }),
     );
-    await writeOperatorLanguage({ home, language_code: "ar", secondary_language_code: "en" });
+    await writeOperatorLanguage({
+      home,
+      language_code: "ar",
+      secondary_language_code: "en",
+    });
     const raw = await readFile(join(home, "profile.json"), "utf8");
     const data = JSON.parse(raw);
-    assert.equal(data.preferred_name, "Mumu", "preferred_name must be preserved");
-    assert.equal(data.memory_consent, "local", "memory_consent must be preserved");
+    assert.equal(
+      data.preferred_name,
+      "Mumu",
+      "preferred_name must be preserved",
+    );
+    assert.equal(
+      data.memory_consent,
+      "local",
+      "memory_consent must be preserved",
+    );
     assert.equal(data.language_code, "ar");
     assert.equal(data.secondary_language_code, "en");
   });
@@ -378,7 +440,7 @@ test("readOperatorLanguage with profile present + language_code → returns it",
   await withHome(async (home) => {
     await writeFile(
       join(home, "profile.json"),
-      JSON.stringify({ language_code: "ar", secondary_language_code: "en" })
+      JSON.stringify({ language_code: "ar", secondary_language_code: "en" }),
     );
     const result = await readOperatorLanguage(home);
     assert.equal(result.language_code, "ar");
@@ -399,7 +461,7 @@ test("readOperatorLanguage: legacy 'language' field fallback", async () => {
   await withHome(async (home) => {
     await writeFile(
       join(home, "profile.json"),
-      JSON.stringify({ language: "fr" })
+      JSON.stringify({ language: "fr" }),
     );
     const result = await readOperatorLanguage(home);
     assert.equal(result.language_code, "fr");

@@ -6,7 +6,9 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 const SAVE_CONSENT = "GO: save local model route receipt";
 
 function runCli(args, { stdin = null, env = {}, timeout = 10000 } = {}) {
@@ -15,16 +17,23 @@ function runCli(args, { stdin = null, env = {}, timeout = 10000 } = {}) {
       "node",
       [cliPath, ...args],
       {
-        env: { ...process.env, DEMA_BANNER_INTERACTIVE: "0", NODE_ENV: "test", ...env },
-        timeout
+        env: {
+          ...process.env,
+          DEMA_BANNER_INTERACTIVE: "0",
+          NODE_ENV: "test",
+          ...env,
+        },
+        timeout,
       },
       (err, stdout, stderr) => {
         if (err && err.killed) {
-          reject(new Error(`Process timed out. stdout=${stdout} stderr=${stderr}`));
+          reject(
+            new Error(`Process timed out. stdout=${stdout} stderr=${stderr}`),
+          );
           return;
         }
         resolve({ stdout, stderr, exitCode: err?.code ?? 0 });
-      }
+      },
     );
     if (stdin !== null) child.stdin.write(stdin);
     child.stdin.end();
@@ -44,8 +53,18 @@ async function makeDemaHome() {
 test("'--invoke' without --save-receipt exits non-zero with durability requirement", async () => {
   const home = await makeDemaHome();
   const { stderr, exitCode } = await runCli(
-    ["model-broker", "route", "--task", "synthesis", "--invoke", "--prompt", "x", "--invoke-consent", "phrase"],
-    { env: { DEMA_HOME: home } }
+    [
+      "model-broker",
+      "route",
+      "--task",
+      "synthesis",
+      "--invoke",
+      "--prompt",
+      "x",
+      "--invoke-consent",
+      "phrase",
+    ],
+    { env: { DEMA_HOME: home } },
   );
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /--invoke requires --save-receipt/);
@@ -56,11 +75,18 @@ test("'--invoke --save-receipt' without --invoke-consent exits non-zero with hel
   const home = await makeDemaHome();
   const { stderr, exitCode } = await runCli(
     [
-      "model-broker", "route", "--task", "synthesis",
-      "--save-receipt", "--consent", SAVE_CONSENT,
-      "--invoke", "--prompt", "hello"
+      "model-broker",
+      "route",
+      "--task",
+      "synthesis",
+      "--save-receipt",
+      "--consent",
+      SAVE_CONSENT,
+      "--invoke",
+      "--prompt",
+      "hello",
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /--invoke requires --invoke-consent/);
@@ -83,26 +109,40 @@ test("'--invoke --save-receipt --invoke-consent <wrong>' fails at adapter consen
         allowed_tasks: ["synthesis"],
         max_concurrency: 1,
         context_limit: 8192,
-        status: "active"
-      }
-    ]
+        status: "active",
+      },
+    ],
   });
   const { stdout, stderr, exitCode } = await runCli(
     [
-      "model-broker", "route", "--task", "synthesis",
+      "model-broker",
+      "route",
+      "--task",
+      "synthesis",
       "--registry-stdin",
-      "--save-receipt", "--consent", SAVE_CONSENT,
-      "--invoke", "--prompt", "hello",
-      "--invoke-consent", "definitely wrong phrase"
+      "--save-receipt",
+      "--consent",
+      SAVE_CONSENT,
+      "--invoke",
+      "--prompt",
+      "hello",
+      "--invoke-consent",
+      "definitely wrong phrase",
     ],
-    { env: { DEMA_HOME: home }, stdin: fixture }
+    { env: { DEMA_HOME: home }, stdin: fixture },
   );
   assert.notEqual(exitCode, 0);
   // Envelope appears on stdout with failed invocation status.
   const envelope = JSON.parse(stdout);
-  assert.equal(envelope.schema, "bizra.dema.local_model_routed_invocation_result.v0.1");
+  assert.equal(
+    envelope.schema,
+    "bizra.dema.local_model_routed_invocation_result.v0.1",
+  );
   assert.equal(envelope.invocation_result.invocation_status, "failed");
-  assert.match(envelope.invocation_result.error_reason, /consent_phrase_mismatch/);
+  assert.match(
+    envelope.invocation_result.error_reason,
+    /consent_phrase_mismatch/,
+  );
   // Save fired before invocation → stderr has the saved-receipt line.
   assert.match(stderr, /saved receipt to:/);
 });
@@ -111,11 +151,18 @@ test("'--invoke' with missing --prompt exits non-zero", async () => {
   const home = await makeDemaHome();
   const { stderr, exitCode } = await runCli(
     [
-      "model-broker", "route", "--task", "synthesis",
-      "--save-receipt", "--consent", SAVE_CONSENT,
-      "--invoke", "--invoke-consent", "GO: invoke local LLM at llama3.1:8b"
+      "model-broker",
+      "route",
+      "--task",
+      "synthesis",
+      "--save-receipt",
+      "--consent",
+      SAVE_CONSENT,
+      "--invoke",
+      "--invoke-consent",
+      "GO: invoke local LLM at llama3.1:8b",
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /--invoke requires --prompt/);
@@ -125,17 +172,28 @@ test("'--invoke' with default placeholder registry fails closed (no selected_mod
   const home = await makeDemaHome();
   const { stdout, stderr, exitCode } = await runCli(
     [
-      "model-broker", "route", "--task", "synthesis",
-      "--save-receipt", "--consent", SAVE_CONSENT,
-      "--invoke", "--prompt", "hello",
-      "--invoke-consent", "GO: invoke local LLM at anything"
+      "model-broker",
+      "route",
+      "--task",
+      "synthesis",
+      "--save-receipt",
+      "--consent",
+      SAVE_CONSENT,
+      "--invoke",
+      "--prompt",
+      "hello",
+      "--invoke-consent",
+      "GO: invoke local LLM at anything",
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   assert.notEqual(exitCode, 0);
   // Envelope reports null selection and null invocation_result.
   const envelope = JSON.parse(stdout);
-  assert.equal(envelope.schema, "bizra.dema.local_model_routed_invocation_result.v0.1");
+  assert.equal(
+    envelope.schema,
+    "bizra.dema.local_model_routed_invocation_result.v0.1",
+  );
   assert.equal(envelope.selected_model_id, null);
   assert.equal(envelope.invocation_result, null);
   // Save still fired with the saved-receipt stderr note.
@@ -146,13 +204,22 @@ test("'--invoke' with multiple registry input flags still fails mutual exclusion
   const home = await makeDemaHome();
   const { stderr, exitCode } = await runCli(
     [
-      "model-broker", "route", "--task", "synthesis",
-      "--registry-stdin", "--use-local-registry",
-      "--save-receipt", "--consent", SAVE_CONSENT,
-      "--invoke", "--prompt", "hello",
-      "--invoke-consent", "GO: invoke local LLM at llama3.1:8b"
+      "model-broker",
+      "route",
+      "--task",
+      "synthesis",
+      "--registry-stdin",
+      "--use-local-registry",
+      "--save-receipt",
+      "--consent",
+      SAVE_CONSENT,
+      "--invoke",
+      "--prompt",
+      "hello",
+      "--invoke-consent",
+      "GO: invoke local LLM at llama3.1:8b",
     ],
-    { env: { DEMA_HOME: home }, stdin: "{}" }
+    { env: { DEMA_HOME: home }, stdin: "{}" },
   );
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /mutually exclusive/);

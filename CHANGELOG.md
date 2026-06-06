@@ -22,7 +22,7 @@ release is an L5 act per the A4.5 autonomy envelope and requires
 explicit in-the-moment GO from the operator at the moment of tagging.
 
 > **Note.** Earlier revisions of this file referenced
-> `v0.3.1` as a *pending* tag. `v0.3.1` was tagged shortly after that
+> `v0.3.1` as a _pending_ tag. `v0.3.1` was tagged shortly after that
 > note was written and is now an immutable git tag. The current pending
 > work is post-`v0.3.5`.
 
@@ -100,7 +100,7 @@ explicit in-the-moment GO from the operator at the moment of tagging.
   Defines the L0–L5 levels, gating, reversibility, receipt
   requirements, and five named anti-patterns including
   cloud-side-authorization-laundering and shadow-consent-surfaces.
-- Ships *before* A5 (the first ARTIFACT-011) so that the first
+- Ships _before_ A5 (the first ARTIFACT-011) so that the first
   receipt is born inside a declared autonomy constitution rather
   than implied by precedent.
 - Also pins SPROUT state ([`SPROUT_PIN.md`](SPROUT_PIN.md)) capturing
@@ -139,9 +139,9 @@ explicit in-the-moment GO from the operator at the moment of tagging.
   reproducible SHA-256 Merkle root over the three founding PDFs
   (`themassage.pdf`, `bizra.pdf`, `BIZRA_Third_Fact_v0_1_FINAL.pdf`).
 - Algorithm spec ([`docs/PRIORITY_ANCHOR.md`](docs/PRIORITY_ANCHOR.md))
-  + script ([`scripts/priority-anchor.mjs`](scripts/priority-anchor.mjs))
-  + canonical pin ([`proof-of-priority/PIN.md`](proof-of-priority/PIN.md))
-  + per-file `.ots` insurance receipts.
+  - script ([`scripts/priority-anchor.mjs`](scripts/priority-anchor.mjs))
+  - canonical pin ([`proof-of-priority/PIN.md`](proof-of-priority/PIN.md))
+  - per-file `.ots` insurance receipts.
 - Stamp lifecycle: `PENDING` → **`STAMPED`** (OpenTimestamps
   submission accepted) → **`UPGRADED`** (Bitcoin block-header
   attestations embedded across blocks 948027 + 948028 + 948029,

@@ -25,7 +25,7 @@ import { dirname, join } from "node:path";
 
 import {
   isCanonicalBoundaryShape,
-  PREVIEW_BOUNDARY_CANONICAL_KEYS
+  PREVIEW_BOUNDARY_CANONICAL_KEYS,
 } from "../packages/core/src/preview-boundary.js";
 
 const execFileAsync = promisify(execFile);
@@ -53,7 +53,7 @@ const SPINE_COMMANDS = Object.freeze([
   "skill-growth-governor",
   "project-status",
   Object.freeze({ name: "homebase", args: ["--json"] }),
-  "craftsmanship-witness"
+  "craftsmanship-witness",
 ]);
 
 async function checkOne(spec) {
@@ -61,13 +61,15 @@ async function checkOne(spec) {
   const args = typeof spec === "string" ? [spec] : spec.args;
   let stdout;
   try {
-    const result = await execFileAsync("node", [CLI_PATH, ...args], { timeout: 10000 });
+    const result = await execFileAsync("node", [CLI_PATH, ...args], {
+      timeout: 10000,
+    });
     stdout = result.stdout;
   } catch (err) {
     return {
       cmd: name,
       ok: false,
-      reason: `exec_error: ${err.message?.split("\n")[0] ?? "unknown"}`
+      reason: `exec_error: ${err.message?.split("\n")[0] ?? "unknown"}`,
     };
   }
 
@@ -109,20 +111,22 @@ export async function runSmokeBoundary() {
     results,
     next_safe_action: allCanonical
       ? "promote_new_preview_surface_with_confidence"
-      : "investigate_non_canonical_emitter"
+      : "investigate_non_canonical_emitter",
   };
 }
 
 export const SMOKE_BOUNDARY_SPINE_COMMANDS = SPINE_COMMANDS;
 
 if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
-  runSmokeBoundary().then((report) => {
-    console.log(JSON.stringify(report, null, 2));
-    if (!report.all_canonical) {
-      process.exit(1);
-    }
-  }).catch((err) => {
-    console.error("smoke-boundary failed:", err);
-    process.exit(2);
-  });
+  runSmokeBoundary()
+    .then((report) => {
+      console.log(JSON.stringify(report, null, 2));
+      if (!report.all_canonical) {
+        process.exit(1);
+      }
+    })
+    .catch((err) => {
+      console.error("smoke-boundary failed:", err);
+      process.exit(2);
+    });
 }

@@ -16,7 +16,9 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 async function freshEnv() {
   const root = await mkdtemp(join(tmpdir(), "dema-intro-cli-"));
@@ -35,24 +37,30 @@ async function writeCounter(root, seenCount, suppressedBy = "count-cap") {
   await mkdir(join(root, "state"), { recursive: true });
   await writeFile(
     join(root, "state", "intro-seen-count.json"),
-    JSON.stringify({
-      schema: "bizra.dema.intro_state.v0.1",
-      seenCount,
-      lastSeen: new Date().toISOString(),
-      suppressedBy,
-    }, null, 2) + "\n",
-    "utf8"
+    JSON.stringify(
+      {
+        schema: "bizra.dema.intro_state.v0.1",
+        seenCount,
+        lastSeen: new Date().toISOString(),
+        suppressedBy,
+      },
+      null,
+      2,
+    ) + "\n",
+    "utf8",
   );
 }
 
 test("bare dema with empty tmpdir → stderr contains 'local-first sovereign-AI node companion' (non-TTY sends intro to stderr)", async () => {
   const { root, env } = await freshEnv();
   try {
-    const result = await execFileAsync("node", [cliPath], { env }).catch((e) => e);
+    const result = await execFileAsync("node", [cliPath], { env }).catch(
+      (e) => e,
+    );
     // Non-TTY mode routes intro to stderr so stdout stays JSON-parseable.
     assert.ok(
       result.stderr.includes("local-first sovereign-AI node companion"),
-      `Expected intro in stderr. Got stderr:\n${result.stderr}\nstdout:\n${result.stdout}`
+      `Expected intro in stderr. Got stderr:\n${result.stderr}\nstdout:\n${result.stdout}`,
     );
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -64,10 +72,12 @@ test("after 3 bare dema runs → 4th run does NOT contain intro text in stderr",
   try {
     // Pre-load counter at 3 (cap reached).
     await writeCounter(root, 3, "count-cap");
-    const result = await execFileAsync("node", [cliPath], { env }).catch((e) => e);
+    const result = await execFileAsync("node", [cliPath], { env }).catch(
+      (e) => e,
+    );
     assert.ok(
       !result.stderr.includes("local-first sovereign-AI node companion"),
-      `Expected intro absent on 4th run. Got stderr:\n${result.stderr}`
+      `Expected intro absent on 4th run. Got stderr:\n${result.stderr}`,
     );
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -77,10 +87,12 @@ test("after 3 bare dema runs → 4th run does NOT contain intro text in stderr",
 test("dema today (no flags) → stdout does NOT contain 'undefined'", async () => {
   const { root, env } = await freshEnv();
   try {
-    const result = await execFileAsync("node", [cliPath, "today"], { env }).catch((e) => e);
+    const result = await execFileAsync("node", [cliPath, "today"], {
+      env,
+    }).catch((e) => e);
     assert.ok(
       !result.stdout.includes("undefined"),
-      `'undefined' found in dema today output. Got:\n${result.stdout}`
+      `'undefined' found in dema today output. Got:\n${result.stdout}`,
     );
   } finally {
     await rm(root, { recursive: true, force: true });

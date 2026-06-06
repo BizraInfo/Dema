@@ -7,7 +7,7 @@ import {
   buildSATReceiptChainVerifierKernel,
   buildSATReceiptChainVerifierSummary,
   verifyReceiptChain,
-  SAT_RECEIPT_CHAIN_VERIFIER_PERSONA
+  SAT_RECEIPT_CHAIN_VERIFIER_PERSONA,
 } from "../packages/core/src/sat-receipt-chain-verifier.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 
@@ -43,7 +43,7 @@ test("verifyReceiptChain · empty chain → trivially compliant", () => {
 
 test("verifyReceiptChain · single genesis receipt with null prev → verified", () => {
   const v = verifyReceiptChain({
-    receipts: [{ receipt_id: HASH_A, prev_hash: null }]
+    receipts: [{ receipt_id: HASH_A, prev_hash: null }],
   });
   assert.equal(v.passed, true);
   assert.equal(v.verdict, "chain_verified");
@@ -51,7 +51,7 @@ test("verifyReceiptChain · single genesis receipt with null prev → verified",
 
 test("verifyReceiptChain · single genesis with 'genesis' prev_hash → verified", () => {
   const v = verifyReceiptChain({
-    receipts: [{ receipt_id: HASH_A, prev_hash: "genesis" }]
+    receipts: [{ receipt_id: HASH_A, prev_hash: "genesis" }],
   });
   assert.equal(v.passed, true);
 });
@@ -60,8 +60,8 @@ test("verifyReceiptChain · two correctly linked receipts → verified", () => {
   const v = verifyReceiptChain({
     receipts: [
       { receipt_id: HASH_A, prev_hash: null },
-      { receipt_id: HASH_B, prev_hash: HASH_A }
-    ]
+      { receipt_id: HASH_B, prev_hash: HASH_A },
+    ],
   });
   assert.equal(v.passed, true);
   assert.equal(v.receipt_count, 2);
@@ -72,8 +72,8 @@ test("verifyReceiptChain · prev_hash mismatch → violated", () => {
   const v = verifyReceiptChain({
     receipts: [
       { receipt_id: HASH_A, prev_hash: null },
-      { receipt_id: HASH_B, prev_hash: HASH_C } // should be HASH_A
-    ]
+      { receipt_id: HASH_B, prev_hash: HASH_C }, // should be HASH_A
+    ],
   });
   assert.equal(v.passed, false);
   assert.ok(v.violations.some((vio) => vio.includes("prev_hash_mismatch")));
@@ -81,7 +81,7 @@ test("verifyReceiptChain · prev_hash mismatch → violated", () => {
 
 test("verifyReceiptChain · invalid hash format → violated", () => {
   const v = verifyReceiptChain({
-    receipts: [{ receipt_id: "not-a-hash", prev_hash: null }]
+    receipts: [{ receipt_id: "not-a-hash", prev_hash: null }],
   });
   assert.equal(v.passed, false);
   assert.ok(v.violations.some((vio) => vio.includes("invalid_hash_format")));
@@ -91,8 +91,8 @@ test("verifyReceiptChain · missing prev_hash on non-genesis → violated", () =
   const v = verifyReceiptChain({
     receipts: [
       { receipt_id: HASH_A, prev_hash: null },
-      { receipt_id: HASH_B } // no prev_hash field
-    ]
+      { receipt_id: HASH_B }, // no prev_hash field
+    ],
   });
   assert.equal(v.passed, false);
   assert.ok(v.violations.some((vio) => vio.includes("missing_prev_hash")));
@@ -100,7 +100,7 @@ test("verifyReceiptChain · missing prev_hash on non-genesis → violated", () =
 
 test("verifyReceiptChain · receipt without any hash field → violated", () => {
   const v = verifyReceiptChain({
-    receipts: [{ some_other_field: "value" }]
+    receipts: [{ some_other_field: "value" }],
   });
   assert.equal(v.passed, false);
   assert.ok(v.violations.some((vio) => vio.includes("no_hash_field")));
@@ -108,9 +108,7 @@ test("verifyReceiptChain · receipt without any hash field → violated", () => 
 
 test("verifyReceiptChain · accepts content_hash or candidate_hash as alternate hash field", () => {
   const v = verifyReceiptChain({
-    receipts: [
-      { candidate_hash: HASH_A, prev_receipt_hash: null }
-    ]
+    receipts: [{ candidate_hash: HASH_A, prev_receipt_hash: null }],
   });
   assert.equal(v.passed, true);
 });

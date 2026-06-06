@@ -9,9 +9,11 @@ export const DEFAULT_TIMEOUT_MS = 1500;
 const MODEL_EXTENSIONS = new Set([".gguf", ".safetensors", ".bin", ".onnx"]);
 
 export function defaultDownloadsRoot() {
-  return process.env.DEMA_MODEL_DOWNLOADS_ROOT
-    || process.env.DEMA_DOWNLOADS_ROOT
-    || join(homedir(), "Downloads");
+  return (
+    process.env.DEMA_MODEL_DOWNLOADS_ROOT ||
+    process.env.DEMA_DOWNLOADS_ROOT ||
+    join(homedir(), "Downloads")
+  );
 }
 
 export function urlFor(baseUrl, path) {

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   invokeRoutedLocalModel,
-  ROUTED_LLM_INVOCATION_RESULT_SCHEMA
+  ROUTED_LLM_INVOCATION_RESULT_SCHEMA,
 } from "../packages/core/src/routed-llm-invocation.js";
 
 // Mock route receipt builders -------------------------------------------------
@@ -26,7 +26,7 @@ function routeReceiptWithSelectedModel(modelId = "llama3.1:8b") {
       "CLAIM_REGISTER_v0_1.md",
       "BIZRA_AGENT_DNA_LAW_OF_ASSUMPTION_v0_1.md",
       "DEMA_AGENT_HARNESS_AND_SKILL_DNA_v0_1.md",
-      "NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md"
+      "NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md",
     ],
     warnings: [],
     boundary: Object.freeze({
@@ -37,8 +37,8 @@ function routeReceiptWithSelectedModel(modelId = "llama3.1:8b") {
       mint: false,
       token_economy: false,
       urp_networking: false,
-      prompt_invocation_allowed: false
-    })
+      prompt_invocation_allowed: false,
+    }),
   });
 }
 
@@ -54,7 +54,7 @@ function routeReceiptWithNoSelection() {
     rejected_candidates: [],
     canon_refs: [],
     warnings: [],
-    boundary: {}
+    boundary: {},
   });
 }
 
@@ -63,22 +63,30 @@ function mockFetchSuccess(responseText = "hello world") {
   return async () => ({
     ok: true,
     status: 200,
-    headers: { get: (h) => (h.toLowerCase() === "content-type" ? "application/json" : null) },
-    json: async () => ({ response: responseText, model: "ignored", done: true })
+    headers: {
+      get: (h) =>
+        h.toLowerCase() === "content-type" ? "application/json" : null,
+    },
+    json: async () => ({
+      response: responseText,
+      model: "ignored",
+      done: true,
+    }),
   });
 }
 
 // Mock fetch: hangs until aborted (simulates timeout).
 function mockFetchTimeout() {
-  return (_url, opts) => new Promise((_resolve, reject) => {
-    if (opts?.signal) {
-      opts.signal.addEventListener("abort", () => {
-        const err = new Error("aborted");
-        err.name = "AbortError";
-        reject(err);
-      });
-    }
-  });
+  return (_url, opts) =>
+    new Promise((_resolve, reject) => {
+      if (opts?.signal) {
+        opts.signal.addEventListener("abort", () => {
+          const err = new Error("aborted");
+          err.name = "AbortError";
+          reject(err);
+        });
+      }
+    });
 }
 
 // === TESTS ===================================================================
@@ -89,13 +97,16 @@ test("successful routed invocation: whitelisted model + valid consent + mocked l
     routeReceipt: route,
     prompt: "hello",
     invokeConsent: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mockFetchSuccess("hello world")
+    fetchImpl: mockFetchSuccess("hello world"),
   });
   assert.equal(envelope.schema, ROUTED_LLM_INVOCATION_RESULT_SCHEMA);
   assert.equal(envelope.selected_model_id, "llama3.1:8b");
   assert.equal(envelope.invocation_result.invocation_status, "completed");
   assert.equal(envelope.invocation_result.model_invoked, "llama3.1:8b");
-  assert.match(envelope.invocation_result.response_text_preview ?? "", /hello world/);
+  assert.match(
+    envelope.invocation_result.response_text_preview ?? "",
+    /hello world/,
+  );
   assert.equal(envelope.boundary.runtime, true);
   assert.equal(envelope.boundary.model_invocation, true);
   assert.equal(envelope.boundary.network_used, true);
@@ -113,7 +124,7 @@ test("envelope includes original route receipt and selected_model_id unchanged",
     routeReceipt: route,
     prompt: "ping",
     invokeConsent: "GO: invoke local LLM at qwen2.5:7b",
-    fetchImpl: mockFetchSuccess("pong")
+    fetchImpl: mockFetchSuccess("pong"),
   });
   assert.deepEqual(envelope.route_receipt, route);
   assert.equal(envelope.selected_model_id, "qwen2.5:7b");
@@ -121,15 +132,21 @@ test("envelope includes original route receipt and selected_model_id unchanged",
 
 test("placeholder / non-whitelisted selected_model_id fails closed through adapter whitelist gate", async () => {
   // operator-test-dema-face does NOT match the family[:tag] whitelist regex.
-  const route = routeReceiptWithSelectedModel("operator-test-dema-face-placeholder");
+  const route = routeReceiptWithSelectedModel(
+    "operator-test-dema-face-placeholder",
+  );
   const envelope = await invokeRoutedLocalModel({
     routeReceipt: route,
     prompt: "x",
-    invokeConsent: "GO: invoke local LLM at operator-test-dema-face-placeholder",
-    fetchImpl: mockFetchSuccess()
+    invokeConsent:
+      "GO: invoke local LLM at operator-test-dema-face-placeholder",
+    fetchImpl: mockFetchSuccess(),
   });
   assert.equal(envelope.invocation_result.invocation_status, "failed");
-  assert.match(envelope.invocation_result.error_reason ?? "", /model_not_in_whitelist/);
+  assert.match(
+    envelope.invocation_result.error_reason ?? "",
+    /model_not_in_whitelist/,
+  );
   // Pre-fetch failure → no network used.
   assert.equal(envelope.boundary.network_used, false);
   assert.equal(envelope.boundary.model_invocation, false);
@@ -141,7 +158,7 @@ test("empty prompt fails closed at adapter gate (no network used)", async () => 
     routeReceipt: route,
     prompt: "",
     invokeConsent: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mockFetchSuccess()
+    fetchImpl: mockFetchSuccess(),
   });
   assert.equal(envelope.invocation_result.invocation_status, "failed");
   assert.match(envelope.invocation_result.error_reason ?? "", /prompt_empty/);
@@ -156,10 +173,13 @@ test("prompt too long fails closed at adapter gate (no network used)", async () 
     routeReceipt: route,
     prompt: tooLong,
     invokeConsent: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mockFetchSuccess()
+    fetchImpl: mockFetchSuccess(),
   });
   assert.equal(envelope.invocation_result.invocation_status, "failed");
-  assert.match(envelope.invocation_result.error_reason ?? "", /prompt_too_long/);
+  assert.match(
+    envelope.invocation_result.error_reason ?? "",
+    /prompt_too_long/,
+  );
   assert.equal(envelope.boundary.network_used, false);
 });
 
@@ -169,10 +189,13 @@ test("consent phrase mismatch fails closed at adapter gate (no network used)", a
     routeReceipt: route,
     prompt: "hello",
     invokeConsent: "wrong phrase",
-    fetchImpl: mockFetchSuccess()
+    fetchImpl: mockFetchSuccess(),
   });
   assert.equal(envelope.invocation_result.invocation_status, "failed");
-  assert.match(envelope.invocation_result.error_reason ?? "", /consent_phrase_mismatch/);
+  assert.match(
+    envelope.invocation_result.error_reason ?? "",
+    /consent_phrase_mismatch/,
+  );
   assert.equal(envelope.boundary.network_used, false);
 });
 
@@ -183,7 +206,7 @@ test("timeout path: aborted fetch → failed envelope, network_used=true (fetch 
     prompt: "hello",
     invokeConsent: "GO: invoke local LLM at llama3.1:8b",
     timeoutMs: 1, // 1 ms — guaranteed timeout
-    fetchImpl: mockFetchTimeout()
+    fetchImpl: mockFetchTimeout(),
   });
   assert.equal(envelope.invocation_result.invocation_status, "failed");
   // The fetch was attempted (network was used), even though it timed out.
@@ -198,14 +221,18 @@ test("no selected_model_id (placeholder default registry routes nothing) short-c
     routeReceipt: route,
     prompt: "hello",
     invokeConsent: "GO: invoke local LLM at anything",
-    fetchImpl: mockFetchSuccess()
+    fetchImpl: mockFetchSuccess(),
   });
   assert.equal(envelope.selected_model_id, null);
   // adapter was NOT called → invocation_result is null
   assert.equal(envelope.invocation_result, null);
   assert.equal(envelope.boundary.network_used, false);
   assert.equal(envelope.boundary.model_invocation, false);
-  assert.ok(envelope.warnings.some((w) => w.startsWith("no_selected_model_pre_invocation")));
+  assert.ok(
+    envelope.warnings.some((w) =>
+      w.startsWith("no_selected_model_pre_invocation"),
+    ),
+  );
 });
 
 test("envelope is deep-frozen + 9-key boundary structure preserved across all paths", async () => {
@@ -214,7 +241,7 @@ test("envelope is deep-frozen + 9-key boundary structure preserved across all pa
     routeReceipt: route,
     prompt: "hello",
     invokeConsent: "GO: invoke local LLM at llama3.1:8b",
-    fetchImpl: mockFetchSuccess("ok")
+    fetchImpl: mockFetchSuccess("ok"),
   });
   assert.ok(Object.isFrozen(envelope));
   assert.ok(Object.isFrozen(envelope.boundary));
@@ -229,6 +256,6 @@ test("envelope is deep-frozen + 9-key boundary structure preserved across all pa
     "remote_provider",
     "runtime",
     "token_economy",
-    "urp_networking"
+    "urp_networking",
   ]);
 });

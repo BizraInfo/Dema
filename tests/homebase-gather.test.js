@@ -15,7 +15,10 @@ async function makeHome(seed = {}) {
     await mkdir(join(home, "memory"), { recursive: true });
     for (const [name, body, mtimeMs] of seed.memoryFiles) {
       const path = join(home, "memory", name);
-      await writeFile(path, typeof body === "string" ? body : JSON.stringify(body));
+      await writeFile(
+        path,
+        typeof body === "string" ? body : JSON.stringify(body),
+      );
       if (mtimeMs != null) {
         const t = new Date(mtimeMs);
         await utimes(path, t, t);
@@ -30,7 +33,10 @@ async function tearDown(home) {
 }
 
 test("TDD-15: gather() resolves with valid GatherResult when ~/.dema/ does not exist", async () => {
-  const home = join(tmpdir(), `dema-homebase-gather-missing-${process.pid}-${Date.now()}`);
+  const home = join(
+    tmpdir(),
+    `dema-homebase-gather-missing-${process.pid}-${Date.now()}`,
+  );
   const result = await gather({ home });
   assert.equal(result.schema_version, "bizra.dema.homebase_gather.v0.1");
   assert.equal(result.profile.source_present, false);
@@ -90,12 +96,21 @@ test("TDD-18: gather() with malformed JSON in memory returns partial: true and w
   try {
     const result = await gather({ home });
     assert.equal(result.partial, true);
-    assert.ok(result.warnings.length > 0, "warnings must be non-empty when memory entry is malformed");
     assert.ok(
-      result.warnings.some((w) => w.includes("broken.json") || w.toLowerCase().includes("json")),
+      result.warnings.length > 0,
+      "warnings must be non-empty when memory entry is malformed",
+    );
+    assert.ok(
+      result.warnings.some(
+        (w) => w.includes("broken.json") || w.toLowerCase().includes("json"),
+      ),
       "warning must reference the malformed file or json error",
     );
-    assert.equal(result.memory_recent.length, 1, "only the valid entry surfaces");
+    assert.equal(
+      result.memory_recent.length,
+      1,
+      "only the valid entry surfaces",
+    );
     assert.equal(result.memory_recent[0].name, "good");
   } finally {
     await tearDown(home);
@@ -123,11 +138,21 @@ test("ISSUE-2: gather() surfaces real receipts populated under <home>/receipts/"
   await mkdir(join(home, "receipts"), { recursive: true });
   await writeFile(
     join(home, "receipts", "01_alpha.json"),
-    JSON.stringify({ receipt_id: "alpha-001", artifact_id: "art-1", action: "test", created_at: "2026-05-18T00:00:00Z" }),
+    JSON.stringify({
+      receipt_id: "alpha-001",
+      artifact_id: "art-1",
+      action: "test",
+      created_at: "2026-05-18T00:00:00Z",
+    }),
   );
   await writeFile(
     join(home, "receipts", "02_beta.json"),
-    JSON.stringify({ receipt_id: "beta-002", artifact_id: "art-2", action: "test", created_at: "2026-05-18T01:00:00Z" }),
+    JSON.stringify({
+      receipt_id: "beta-002",
+      artifact_id: "art-2",
+      action: "test",
+      created_at: "2026-05-18T01:00:00Z",
+    }),
   );
   try {
     const result = await gather({ home });
@@ -140,7 +165,9 @@ test("ISSUE-2: gather() surfaces real receipts populated under <home>/receipts/"
 });
 
 test("ISSUE-1: gather() warns + sets partial when receipts path exists but is not a directory", async () => {
-  const home = await mkdtemp(join(tmpdir(), "dema-homebase-gather-receipts-bad-"));
+  const home = await mkdtemp(
+    join(tmpdir(), "dema-homebase-gather-receipts-bad-"),
+  );
   await writeFile(join(home, "receipts"), "this is a file, not a directory");
   try {
     const result = await gather({ home });
@@ -185,7 +212,11 @@ test("CANONICAL-PROFILE: gather() reads `preferred_name` per bizra.dema.profile.
   try {
     const result = await gather({ home });
     assert.equal(result.profile.source_present, true);
-    assert.equal(result.profile.name, "Mumu", "gather must surface preferred_name as profile.name");
+    assert.equal(
+      result.profile.name,
+      "Mumu",
+      "gather must surface preferred_name as profile.name",
+    );
     assert.equal(result.profile.node, "Node0");
   } finally {
     await tearDown(home);
@@ -206,7 +237,11 @@ test("CANONICAL-PROFILE: when both `preferred_name` and `name` exist, `preferred
   });
   try {
     const result = await gather({ home });
-    assert.equal(result.profile.name, "CanonicalName", "preferred_name must take precedence over name");
+    assert.equal(
+      result.profile.name,
+      "CanonicalName",
+      "preferred_name must take precedence over name",
+    );
   } finally {
     await tearDown(home);
   }
@@ -218,11 +253,20 @@ test("WALK-01: walkDirSize counts files at depths within DIR_WALK_MAX_DEPTH (pos
   const home = await makeHome({});
   try {
     await mkdir(join(home, "memory", "a", "b", "c"), { recursive: true });
-    await writeFile(join(home, "memory", "a", "b", "c", "leaf.txt"), "hello-leaf");
+    await writeFile(
+      join(home, "memory", "a", "b", "c", "leaf.txt"),
+      "hello-leaf",
+    );
     await writeFile(join(home, "memory", "a", "root.txt"), "hello-root");
     const result = await gather({ home });
-    assert.ok(result.memory_size.entries >= 2, `expected ≥2 entries, got ${result.memory_size.entries}`);
-    assert.ok(result.memory_size.bytes > 0, `expected bytes>0, got ${result.memory_size.bytes}`);
+    assert.ok(
+      result.memory_size.entries >= 2,
+      `expected ≥2 entries, got ${result.memory_size.entries}`,
+    );
+    assert.ok(
+      result.memory_size.bytes > 0,
+      `expected bytes>0, got ${result.memory_size.bytes}`,
+    );
   } finally {
     await tearDown(home);
   }
@@ -234,7 +278,18 @@ test("WALK-02: walkDirSize respects DIR_WALK_MAX_DEPTH=6 — deeper files NOT co
     // Files at depth 0-6 count; files at depth ≥7 do not.
     // The walker enters `home/memory`, so the inner depth path begins inside memory/.
     // Build memory/d1/d2/d3/d4/d5/d6/d7/d8/deep.txt — beyond cap.
-    const deepDir = join(home, "memory", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8");
+    const deepDir = join(
+      home,
+      "memory",
+      "d1",
+      "d2",
+      "d3",
+      "d4",
+      "d5",
+      "d6",
+      "d7",
+      "d8",
+    );
     await mkdir(deepDir, { recursive: true });
     await writeFile(join(deepDir, "beyond-cap.txt"), "should-not-count");
     // Also add a shallow file at depth 1 (memory/shallow.txt) as positive control.
@@ -258,7 +313,7 @@ test("WALK-02: walkDirSize respects DIR_WALK_MAX_DEPTH=6 — deeper files NOT co
     await countFiles(join(home, "memory"));
     assert.ok(
       result.memory_size.entries < actualFiles,
-      `depth-cap must skip at least the beyond-cap file. on-disk=${actualFiles} counted=${result.memory_size.entries}`
+      `depth-cap must skip at least the beyond-cap file. on-disk=${actualFiles} counted=${result.memory_size.entries}`,
     );
   } finally {
     await tearDown(home);
@@ -273,11 +328,14 @@ test("WALK-03: walkDirSize tolerates broken symlinks (silent skip · no crash)",
     // Create a symlink to a nonexistent target — race-vanish surrogate.
     await symlink(
       join(home, "memory", "does-not-exist.txt"),
-      join(home, "memory", "broken-link")
+      join(home, "memory", "broken-link"),
     );
     // Must not throw, and real.txt should still be counted.
     const result = await gather({ home });
-    assert.ok(result.memory_size.entries >= 1, "real.txt must still be counted despite broken symlink");
+    assert.ok(
+      result.memory_size.entries >= 1,
+      "real.txt must still be counted despite broken symlink",
+    );
     // Broken symlink may or may not be counted depending on whether item.isFile()
     // returns true for it (filesystem-dependent); the critical assertion is no crash.
     assert.equal(Array.isArray(result.warnings), true);
@@ -299,7 +357,10 @@ test("WALK-04: walkDirSize handles in-flight vanish — file removed between rea
     // a different ordering — broken-symlink-style race tolerance.
     await unlink(join(home, "memory", "ephemeral.txt"));
     const result = await gather({ home });
-    assert.ok(result.memory_size.entries >= 1, "stable.txt must still be counted");
+    assert.ok(
+      result.memory_size.entries >= 1,
+      "stable.txt must still be counted",
+    );
   } finally {
     await tearDown(home);
   }

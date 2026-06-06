@@ -58,7 +58,10 @@ test("formatHomebasePreview output respects 76-col visible-width budget", () => 
   const out = formatHomebasePreview(makePreview());
   for (const line of out.split("\n")) {
     const visible = stripAnsi(line);
-    assert.ok(visible.length <= 76, `line exceeded 76 cols: "${visible}" (${visible.length})`);
+    assert.ok(
+      visible.length <= 76,
+      `line exceeded 76 cols: "${visible}" (${visible.length})`,
+    );
   }
 });
 
@@ -68,40 +71,63 @@ test("formatHomebasePreview under noColor=true emits zero ANSI escape sequences"
 });
 
 test("formatHomebasePreview under termDumb=true uses ASCII box-drawing chars", () => {
-  const out = formatHomebasePreview(makePreview(), { noColor: true, termDumb: true });
-  assert.ok(!out.includes("┌") && !out.includes("─") && !out.includes("│"), "found Unicode box chars under termDumb");
-  assert.ok(out.includes("+") || out.includes("-") || out.includes("|"), "expected ASCII fallback chars");
+  const out = formatHomebasePreview(makePreview(), {
+    noColor: true,
+    termDumb: true,
+  });
+  assert.ok(
+    !out.includes("┌") && !out.includes("─") && !out.includes("│"),
+    "found Unicode box chars under termDumb",
+  );
+  assert.ok(
+    out.includes("+") || out.includes("-") || out.includes("|"),
+    "expected ASCII fallback chars",
+  );
 });
 
 test("formatHomebasePreview displays the greeting verbatim", () => {
-  const out = formatHomebasePreview(makePreview({
-    profile: { name: "Samy", node: "Node0", source_present: true },
-  }), { noColor: true });
+  const out = formatHomebasePreview(
+    makePreview({
+      profile: { name: "Samy", node: "Node0", source_present: true },
+    }),
+    { noColor: true },
+  );
   assert.match(out, /Welcome back, Samy\./);
 });
 
 test("formatHomebasePreview displays welcome text when profile is absent", () => {
-  const out = formatHomebasePreview(makePreview({
-    profile: { name: null, node: "Node0", source_present: false },
-  }), { noColor: true });
+  const out = formatHomebasePreview(
+    makePreview({
+      profile: { name: null, node: "Node0", source_present: false },
+    }),
+    { noColor: true },
+  );
   // ADR-011 phase-2: welcome_new template is "Welcome to Dema." (English default)
   assert.match(out, /Welcome/);
-  assert.ok(!/Welcome back/.test(out), "should NOT show 'Welcome back' for absent profile");
+  assert.ok(
+    !/Welcome back/.test(out),
+    "should NOT show 'Welcome back' for absent profile",
+  );
 });
 
 test("formatHomebasePreview shows 'no prior sessions' fallback for empty memory_recent", () => {
-  const out = formatHomebasePreview(makePreview({ memory_recent: [] }), { noColor: true });
+  const out = formatHomebasePreview(makePreview({ memory_recent: [] }), {
+    noColor: true,
+  });
   assert.match(out, /no prior sessions/);
 });
 
 test("formatHomebasePreview renders all 3 memory entries when present", () => {
-  const out = formatHomebasePreview(makePreview({
-    memory_recent: [
-      { name: "entry-a", mtime_ms: 3, summary: "alpha summary" },
-      { name: "entry-b", mtime_ms: 2, summary: "beta summary" },
-      { name: "entry-c", mtime_ms: 1, summary: "gamma summary" },
-    ],
-  }), { noColor: true });
+  const out = formatHomebasePreview(
+    makePreview({
+      memory_recent: [
+        { name: "entry-a", mtime_ms: 3, summary: "alpha summary" },
+        { name: "entry-b", mtime_ms: 2, summary: "beta summary" },
+        { name: "entry-c", mtime_ms: 1, summary: "gamma summary" },
+      ],
+    }),
+    { noColor: true },
+  );
   assert.match(out, /Three things I remember/);
   assert.match(out, /alpha summary/);
   assert.match(out, /beta summary/);
@@ -130,9 +156,14 @@ test("formatHomebasePreview displays gateway status as unreachable-by-design", (
 });
 
 test("formatHomebasePreview displays next safe action text", () => {
-  const out = formatHomebasePreview(makePreview({
-    process_mining: { next_step_observable: "look at the lighthouse pack receipts" },
-  }), { noColor: true });
+  const out = formatHomebasePreview(
+    makePreview({
+      process_mining: {
+        next_step_observable: "look at the lighthouse pack receipts",
+      },
+    }),
+    { noColor: true },
+  );
   assert.match(out, /Next safe action/);
   assert.match(out, /look at the lighthouse pack receipts/);
 });
@@ -145,17 +176,24 @@ test("formatHomebasePreview is deterministic given identical input", () => {
 });
 
 test("ADV: formatHomebasePreview surfaces partial-state warning marker when preview.partial=true", () => {
-  const out = formatHomebasePreview(makePreview({
-    partial: true,
-    warnings: ["disk-flake-one", "memory-file-corrupt"],
-  }), { noColor: true });
+  const out = formatHomebasePreview(
+    makePreview({
+      partial: true,
+      warnings: ["disk-flake-one", "memory-file-corrupt"],
+    }),
+    { noColor: true },
+  );
   assert.match(out, /partial state/);
   assert.match(out, /2 warning/);
 });
 
 test("ADV: formatHomebasePreview does NOT display the keyboard-hints-only disclaimer (keys are now functional)", () => {
   const out = formatHomebasePreview(makePreview(), { noColor: true });
-  assert.doesNotMatch(out, /keyboard hints only/, "disclaimer must be absent now that keys are wired");
+  assert.doesNotMatch(
+    out,
+    /keyboard hints only/,
+    "disclaimer must be absent now that keys are wired",
+  );
 });
 
 test("LAW-OF-ASSUMPTION: footer carries the LoA citation per docs/canon/LAW_OF_ASSUMPTION.md", () => {
@@ -167,12 +205,21 @@ test("LAW-OF-ASSUMPTION: footer carries the LoA citation per docs/canon/LAW_OF_A
   // preserved (Law of Assumption · declare · boundary · evidence · uncertainty).
   // Full canonical phrasing lives at docs/canon/LAW_OF_ASSUMPTION.md.
   const out = formatHomebasePreview(makePreview(), { noColor: true });
-  assert.match(out, /Boundary: preview-only · no action without explicit consent\./);
-  assert.match(out, /Law of Assumption: declare boundary between evidence and uncertainty\./);
+  assert.match(
+    out,
+    /Boundary: preview-only · no action without explicit consent\./,
+  );
+  assert.match(
+    out,
+    /Law of Assumption: declare boundary between evidence and uncertainty\./,
+  );
 });
 
 test("LAW-OF-ASSUMPTION: both boundary lines render under termDumb (ASCII fallback)", () => {
-  const out = formatHomebasePreview(makePreview(), { noColor: true, termDumb: true });
+  const out = formatHomebasePreview(makePreview(), {
+    noColor: true,
+    termDumb: true,
+  });
   assert.match(out, /no action without explicit consent/);
   assert.match(out, /declare boundary between evidence and uncertainty/);
 });

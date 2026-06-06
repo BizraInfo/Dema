@@ -10,7 +10,9 @@ import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 // Runs the CLI and returns { stdout, stderr, exitCode }. Never throws on non-zero exit.
@@ -36,7 +38,7 @@ test("CLI-01: dema master-craftsmanship audit (no args) → COMPLIANT (10/10 in 
   const { stdout, exitCode } = await runCLI(["master-craftsmanship", "audit"]);
   assert.ok(
     stdout.includes("COMPLIANT (10/10"),
-    `Expected "COMPLIANT (10/10" in stdout, got:\n${stdout}`
+    `Expected "COMPLIANT (10/10" in stdout, got:\n${stdout}`,
   );
   assert.equal(exitCode, 0, "exit code must be 0 for compliant result");
 });
@@ -44,7 +46,11 @@ test("CLI-01: dema master-craftsmanship audit (no args) → COMPLIANT (10/10 in 
 // ─── CLI-02: --json flag → JSON.parse succeeds · schema matches ───────────────
 
 test("CLI-02: dema master-craftsmanship audit --json → valid JSON with correct schema", async () => {
-  const { stdout, exitCode } = await runCLI(["master-craftsmanship", "audit", "--json"]);
+  const { stdout, exitCode } = await runCLI([
+    "master-craftsmanship",
+    "audit",
+    "--json",
+  ]);
   let parsed;
   assert.doesNotThrow(() => {
     parsed = JSON.parse(stdout);
@@ -64,7 +70,7 @@ test("CLI-03: dema master-craftsmanship audit packages/core/src/craftsmanship-wi
   ]);
   assert.ok(
     stdout.includes("COMPLIANT (10/10"),
-    `Expected "COMPLIANT (10/10" in stdout, got:\n${stdout}`
+    `Expected "COMPLIANT (10/10" in stdout, got:\n${stdout}`,
   );
   assert.equal(exitCode, 0);
 });
@@ -80,9 +86,9 @@ test("CLI-04: dema master-craftsmanship audit nonexistent.js → graceful error,
   // Must not crash; output must indicate failure
   assert.ok(
     stdout.includes("NON-COMPLIANT") ||
-    stdout.includes("read_fail") ||
-    stdout.includes("PARTIAL"),
-    `Expected failure indication in stdout, got:\n${stdout}`
+      stdout.includes("read_fail") ||
+      stdout.includes("PARTIAL"),
+    `Expected failure indication in stdout, got:\n${stdout}`,
   );
   assert.equal(exitCode, 1, "exit code must be 1 for non-compliant result");
 });

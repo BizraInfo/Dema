@@ -17,8 +17,18 @@ function levenshtein(a, b) {
 }
 
 const NATURAL_LANGUAGE_STARTERS = new Set([
-  "tell", "what", "how", "why", "when", "who", "where",
-  "is", "are", "can", "do", "does"
+  "tell",
+  "what",
+  "how",
+  "why",
+  "when",
+  "who",
+  "where",
+  "is",
+  "are",
+  "can",
+  "do",
+  "does",
 ]);
 
 /**
@@ -37,7 +47,12 @@ function suggestCommands(rawInput, registeredCommands) {
 
   // Empty input
   if (!firstToken) {
-    return { matched: "unknown", suggestions: [], originalInput, missingToken: "" };
+    return {
+      matched: "unknown",
+      suggestions: [],
+      originalInput,
+      missingToken: "",
+    };
   }
 
   // Natural-language detection: starts with question word or contains '?'
@@ -45,24 +60,27 @@ function suggestCommands(rawInput, registeredCommands) {
     return {
       matched: "natural-language",
       suggestions: [
-        { command: "memory show bizra-context", description: "read what I know about BIZRA" },
-        { command: "help", description: "full command list" }
+        {
+          command: "memory show bizra-context",
+          description: "read what I know about BIZRA",
+        },
+        { command: "help", description: "full command list" },
       ],
       originalInput,
-      missingToken
+      missingToken,
     };
   }
 
   // Exact match check (case-insensitive)
   const exactMatch = registeredCommands.find(
-    (c) => c.command.toLowerCase() === firstToken
+    (c) => c.command.toLowerCase() === firstToken,
   );
   if (exactMatch) {
     return {
       matched: "exact",
       suggestions: [exactMatch],
       originalInput,
-      missingToken
+      missingToken,
     };
   }
 
@@ -71,7 +89,10 @@ function suggestCommands(rawInput, registeredCommands) {
   const threshold = firstToken.length < 6 ? 2 : 3;
 
   const scored = registeredCommands
-    .map((c) => ({ ...c, dist: levenshtein(firstToken, c.command.toLowerCase()) }))
+    .map((c) => ({
+      ...c,
+      dist: levenshtein(firstToken, c.command.toLowerCase()),
+    }))
     .filter((c) => c.dist <= threshold)
     .sort((a, b) => a.dist - b.dist)
     .slice(0, 3);
@@ -79,9 +100,12 @@ function suggestCommands(rawInput, registeredCommands) {
   if (scored.length > 0) {
     return {
       matched: "close",
-      suggestions: scored.map(({ command, description }) => ({ command, description })),
+      suggestions: scored.map(({ command, description }) => ({
+        command,
+        description,
+      })),
       originalInput,
-      missingToken
+      missingToken,
     };
   }
 

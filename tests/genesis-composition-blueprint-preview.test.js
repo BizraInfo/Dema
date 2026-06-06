@@ -12,7 +12,9 @@ import {
 } from "../packages/core/src/genesis-composition-blueprint-preview.js";
 
 const execFileAsync = promisify(execFile);
-const CLI_PATH = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const CLI_PATH = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 const NODE = process.execPath;
 
 function assertCanonicalBoundary(boundary) {
@@ -74,14 +76,15 @@ test("Genesis composition blueprint lists the real local gate ladder and blocks 
     assert.ok(commands.includes(command), `missing gate command: ${command}`);
   }
   assert.equal(preview.pipeline.ci_workflow_mutation_allowed, false);
-  assert.ok(
-    preview.blocked_until_explicit_go.includes("modify_ci_workflows"),
-  );
+  assert.ok(preview.blocked_until_explicit_go.includes("modify_ci_workflows"));
 });
 
 test("Genesis composition blueprint declares performance and quality thresholds", () => {
   const preview = buildGenesisCompositionBlueprintPreview();
-  assert.equal(preview.performance_model.algorithmic_shape, "O(n) over supplied composition payload");
+  assert.equal(
+    preview.performance_model.algorithmic_shape,
+    "O(n) over supplied composition payload",
+  );
   assert.equal(preview.performance_model.repo_scan_performed, false);
   assert.equal(preview.quality_thresholds.coverage.lines, 95);
   assert.equal(preview.quality_thresholds.coverage.branches, 85);

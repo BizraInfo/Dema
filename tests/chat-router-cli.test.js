@@ -6,7 +6,9 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 async function makeDemaHome() {
   const demaHome = await mkdtemp(join(tmpdir(), "dema-chat-cli-"));
@@ -14,7 +16,7 @@ async function makeDemaHome() {
   // Minimal profile so onboarding reads don't crash.
   await writeFile(
     join(demaHome, "profile.json"),
-    JSON.stringify({ preferred_name: "Tester" })
+    JSON.stringify({ preferred_name: "Tester" }),
   );
   return demaHome;
 }
@@ -29,9 +31,9 @@ function runChat(stdinLines, demaHome) {
           ...process.env,
           DEMA_BANNER_INTERACTIVE: "0",
           DEMA_HOME: demaHome,
-          NODE_ENV: "test"
+          NODE_ENV: "test",
         },
-        timeout: 10000
+        timeout: 10000,
       },
       (err, stdout, stderr) => {
         if (err && err.killed) {
@@ -40,7 +42,7 @@ function runChat(stdinLines, demaHome) {
         }
         // Non-zero exit is acceptable — chat exits on EOF after "exit".
         resolve({ stdout, stderr });
-      }
+      },
     );
     // Write all lines then close stdin to trigger EOF.
     child.stdin.write(stdinLines.join("\n") + "\n");
@@ -83,7 +85,10 @@ test("'show my status\\nexit' → stdout contains 'Routing your request to' and 
 
 test("'help me draft a mission\\nexit' → stdout contains mission draft preview header", async () => {
   const demaHome = await makeDemaHome();
-  const { stdout } = await runChat(["help me draft a mission", "exit"], demaHome);
+  const { stdout } = await runChat(
+    ["help me draft a mission", "exit"],
+    demaHome,
+  );
   // mission draft without intent arg throws — REPL catches and writes error line
   // The test verifies routing fired (routing line present OR error about intent).
   assert.match(stdout, /Routing your request to|dema mission draft|intent/i);

@@ -32,7 +32,7 @@ const BOUNDARY = Object.freeze({
   mint: false,
   external_send: false,
   urp_runtime: false,
-  filesystem_write_performed: false
+  filesystem_write_performed: false,
 });
 
 const ERROR_CODES = Object.freeze({
@@ -43,7 +43,7 @@ const ERROR_CODES = Object.freeze({
   PATTERN_MISMATCH: "pattern_mismatch",
   INVALID_PATTERN: "invalid_pattern",
   ARRAY_TOO_SHORT: "array_too_short",
-  ARRAY_TOO_LONG: "array_too_long"
+  ARRAY_TOO_LONG: "array_too_long",
 });
 
 const __filename = fileURLToPath(import.meta.url);
@@ -89,7 +89,7 @@ function walk(value, schema, path, errors) {
         errors,
         path,
         ERROR_CODES.CONST_MISMATCH,
-        `expected constant ${JSON.stringify(schema.const)}, got ${JSON.stringify(value)}`
+        `expected constant ${JSON.stringify(schema.const)}, got ${JSON.stringify(value)}`,
       );
       return;
     }
@@ -101,7 +101,7 @@ function walk(value, schema, path, errors) {
         errors,
         path,
         ERROR_CODES.ENUM_MISMATCH,
-        `value ${JSON.stringify(value)} is not in enum ${JSON.stringify(schema.enum)}`
+        `value ${JSON.stringify(value)} is not in enum ${JSON.stringify(schema.enum)}`,
       );
       return;
     }
@@ -113,16 +113,13 @@ function walk(value, schema, path, errors) {
         errors,
         path,
         ERROR_CODES.WRONG_TYPE,
-        `expected type ${JSON.stringify(schema.type)}, got ${actualType(value)}`
+        `expected type ${JSON.stringify(schema.type)}, got ${actualType(value)}`,
       );
       return;
     }
   }
 
-  if (
-    typeof schema.pattern === "string" &&
-    typeof value === "string"
-  ) {
+  if (typeof schema.pattern === "string" && typeof value === "string") {
     let re = null;
     try {
       re = new RegExp(schema.pattern);
@@ -131,7 +128,7 @@ function walk(value, schema, path, errors) {
         errors,
         path,
         ERROR_CODES.INVALID_PATTERN,
-        `schema pattern is not a valid regex: ${JSON.stringify(schema.pattern)} (${err && err.message ? err.message : "syntax error"})`
+        `schema pattern is not a valid regex: ${JSON.stringify(schema.pattern)} (${err && err.message ? err.message : "syntax error"})`,
       );
     }
     if (re && !re.test(value)) {
@@ -139,7 +136,7 @@ function walk(value, schema, path, errors) {
         errors,
         path,
         ERROR_CODES.PATTERN_MISMATCH,
-        `string ${JSON.stringify(value)} does not match pattern /${schema.pattern}/`
+        `string ${JSON.stringify(value)} does not match pattern /${schema.pattern}/`,
       );
     }
   }
@@ -154,7 +151,7 @@ function walk(value, schema, path, errors) {
           errors,
           `${path}.${key}`,
           ERROR_CODES.MISSING_REQUIRED,
-          `required property "${key}" is missing`
+          `required property "${key}" is missing`,
         );
       }
     }
@@ -174,7 +171,7 @@ function walk(value, schema, path, errors) {
         errors,
         path,
         ERROR_CODES.ARRAY_TOO_SHORT,
-        `array has ${value.length} items, schema requires at least ${schema.minItems}`
+        `array has ${value.length} items, schema requires at least ${schema.minItems}`,
       );
     }
     if (typeof schema.maxItems === "number" && value.length > schema.maxItems) {
@@ -182,7 +179,7 @@ function walk(value, schema, path, errors) {
         errors,
         path,
         ERROR_CODES.ARRAY_TOO_LONG,
-        `array has ${value.length} items, schema allows at most ${schema.maxItems}`
+        `array has ${value.length} items, schema allows at most ${schema.maxItems}`,
       );
     }
     if (schema.items) {
@@ -198,7 +195,7 @@ export function validateEnvelope(envelope, schemaDef) {
   walk(envelope, schemaDef, "$", errors);
   return Object.freeze({
     ok: errors.length === 0,
-    errors: Object.freeze(errors)
+    errors: Object.freeze(errors),
   });
 }
 
@@ -231,9 +228,7 @@ const _knownSchemas = (() => {
   }
 })();
 
-export const KNOWN_SCHEMA_IDS = Object.freeze(
-  [..._knownSchemas.keys()].sort()
-);
+export const KNOWN_SCHEMA_IDS = Object.freeze([..._knownSchemas.keys()].sort());
 
 export function getKnownSchema(id) {
   if (typeof id !== "string") return undefined;
@@ -257,8 +252,7 @@ export function validateAgainstRegistry(envelope, { registry } = {}) {
       ? envelope.schema
       : null;
   const lookup = resolveLookup(registry);
-  const schemaDef =
-    typeof declared === "string" ? lookup(declared) : undefined;
+  const schemaDef = typeof declared === "string" ? lookup(declared) : undefined;
   const recognized = Boolean(schemaDef);
   let truth_label;
   let errors;
@@ -282,7 +276,7 @@ export function validateAgainstRegistry(envelope, { registry } = {}) {
     ok,
     truth_label,
     errors: Object.freeze([...errors]),
-    boundary: BOUNDARY
+    boundary: BOUNDARY,
   });
 }
 

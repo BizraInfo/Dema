@@ -59,11 +59,11 @@ Layer 2 v0.1 ships:
 
 ### Why path (b) over (a) or (c)
 
-| Path | Issue | Verdict |
-|---|---|---|
-| **(a) Local-model lane** | `packages/models` (model-broker) is currently `DESIGNED_NOT_LIVE` per `docs/CURRENT_LIMITS.md`. Shipping (a) inside v0.1 would convert a preview surface into a runtime authority dependency before model-broker hardens — expanding blast radius beyond a v0.1 scaffold and crossing ADR-015 ("LLM never as authority"). | Defer to v0.2 once model-broker is `MEASURED`. |
-| **(b) Scaffold-only** | Operator must run the judge externally and paste results back. Some friction, but the friction is the boundary: Dema does not invoke remote LLMs and does not authorize what an external judge produced — Dema only validates the structure + semantics of the pasted verdict. | **Adopt.** |
-| **(c) DESIGNED_NOT_LIVE only** | Ships zero new capability. Honest but doesn't move the eval spine forward. | Reject. |
+| Path                           | Issue                                                                                                                                                                                                                                                                                                                     | Verdict                                        |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| **(a) Local-model lane**       | `packages/models` (model-broker) is currently `DESIGNED_NOT_LIVE` per `docs/CURRENT_LIMITS.md`. Shipping (a) inside v0.1 would convert a preview surface into a runtime authority dependency before model-broker hardens — expanding blast radius beyond a v0.1 scaffold and crossing ADR-015 ("LLM never as authority"). | Defer to v0.2 once model-broker is `MEASURED`. |
+| **(b) Scaffold-only**          | Operator must run the judge externally and paste results back. Some friction, but the friction is the boundary: Dema does not invoke remote LLMs and does not authorize what an external judge produced — Dema only validates the structure + semantics of the pasted verdict.                                            | **Adopt.**                                     |
+| **(c) DESIGNED_NOT_LIVE only** | Ships zero new capability. Honest but doesn't move the eval spine forward.                                                                                                                                                                                                                                                | Reject.                                        |
 
 ### v0.2 promotion path
 
@@ -115,24 +115,24 @@ Validator module. Pure.
 
 File: `packages/core/schemas/eval-layer2-rubric-pack.v0.1.json`
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `schema` | const `bizra.dema.eval_layer2_rubric_pack.v0.1` | ✓ | |
-| `version` | string (pattern `^v0\.1$`) | ✓ | |
-| `rubrics` | array of RubricDef | ✓ | length ≥ 3 |
-| `boundary` | canonical 16-key preview-boundary all-`const:false` | ✓ | matches `packages/core/src/preview-boundary.js` |
-| `notes` | string | optional | |
-| `non_goals` | array of strings | optional | |
+| Field       | Type                                                | Required | Notes                                           |
+| ----------- | --------------------------------------------------- | -------- | ----------------------------------------------- |
+| `schema`    | const `bizra.dema.eval_layer2_rubric_pack.v0.1`     | ✓        |                                                 |
+| `version`   | string (pattern `^v0\.1$`)                          | ✓        |                                                 |
+| `rubrics`   | array of RubricDef                                  | ✓        | length ≥ 3                                      |
+| `boundary`  | canonical 16-key preview-boundary all-`const:false` | ✓        | matches `packages/core/src/preview-boundary.js` |
+| `notes`     | string                                              | optional |                                                 |
+| `non_goals` | array of strings                                    | optional |                                                 |
 
 Per-rubric `RubricDef`:
 
-| Field | Type | Required |
-|---|---|---|
-| `id` | enum `truthfulness \| actionability \| boundary_compliance` | ✓ |
-| `title` | string | ✓ |
-| `score_scale` | object `{ min: 0, max: 2 }` | ✓ |
-| `prompt` | object `{ system: string, user_template: string }` | ✓ |
-| `score_meanings` | array of strings (length 3) | ✓ |
+| Field            | Type                                                        | Required |
+| ---------------- | ----------------------------------------------------------- | -------- |
+| `id`             | enum `truthfulness \| actionability \| boundary_compliance` | ✓        |
+| `title`          | string                                                      | ✓        |
+| `score_scale`    | object `{ min: 0, max: 2 }`                                 | ✓        |
+| `prompt`         | object `{ system: string, user_template: string }`          | ✓        |
+| `score_meanings` | array of strings (length 3)                                 | ✓        |
 
 Consumed by: `getRubricPack()` for self-validation in tests; the `dema eval layer2 prompts` CLI subcommand.
 
@@ -140,18 +140,18 @@ Consumed by: `getRubricPack()` for self-validation in tests; the `dema eval laye
 
 File: `packages/core/schemas/eval-layer2-judge-verdict.v0.1.json`
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `schema` | const `bizra.dema.eval_layer2_judge_verdict.v0.1` | ✓ | |
-| `rubric_id` | enum matching `RUBRIC_IDS` | ✓ | |
-| `judged_artifact_sha256` | string · pattern `^[a-f0-9]{64}$` | ✓ | |
-| `score` | integer `{0, 1, 2}` | ✓ | |
-| `evidence_excerpt` | string · min 1 char (post-trim) | ✓ | |
-| `judge_origin` | enum `external_paste_back` | ✓ | v0.1 schema enum is restricted to the single value Dema actually supports. v0.2 will bump the schema id (`...v0.2`) and add additional invocation surfaces (e.g., `local_model_via_broker`) once `dema model-broker` hardens out of `DESIGNED_NOT_LIVE`. Non-v0.1 values are caught structurally as `enum_mismatch`; no semantic re-check needed |
-| `judged_at` | ISO-8601 string | ✓ | |
-| `judge_model_name` | string | optional | |
-| `judge_run_id` | string | optional | |
-| `notes` | string | optional | |
+| Field                    | Type                                              | Required | Notes                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------ | ------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `schema`                 | const `bizra.dema.eval_layer2_judge_verdict.v0.1` | ✓        |                                                                                                                                                                                                                                                                                                                                                  |
+| `rubric_id`              | enum matching `RUBRIC_IDS`                        | ✓        |                                                                                                                                                                                                                                                                                                                                                  |
+| `judged_artifact_sha256` | string · pattern `^[a-f0-9]{64}$`                 | ✓        |                                                                                                                                                                                                                                                                                                                                                  |
+| `score`                  | integer `{0, 1, 2}`                               | ✓        |                                                                                                                                                                                                                                                                                                                                                  |
+| `evidence_excerpt`       | string · min 1 char (post-trim)                   | ✓        |                                                                                                                                                                                                                                                                                                                                                  |
+| `judge_origin`           | enum `external_paste_back`                        | ✓        | v0.1 schema enum is restricted to the single value Dema actually supports. v0.2 will bump the schema id (`...v0.2`) and add additional invocation surfaces (e.g., `local_model_via_broker`) once `dema model-broker` hardens out of `DESIGNED_NOT_LIVE`. Non-v0.1 values are caught structurally as `enum_mismatch`; no semantic re-check needed |
+| `judged_at`              | ISO-8601 string                                   | ✓        |                                                                                                                                                                                                                                                                                                                                                  |
+| `judge_model_name`       | string                                            | optional |                                                                                                                                                                                                                                                                                                                                                  |
+| `judge_run_id`           | string                                            | optional |                                                                                                                                                                                                                                                                                                                                                  |
+| `notes`                  | string                                            | optional |                                                                                                                                                                                                                                                                                                                                                  |
 
 Consumed by: `validatePastedJudgeVerdict()`; `dema eval layer2 verify` CLI.
 
@@ -159,16 +159,16 @@ Consumed by: `validatePastedJudgeVerdict()`; `dema eval layer2 verify` CLI.
 
 ## Risks
 
-| # | Risk | Severity | Mitigation |
-|---|---|---|---|
-| 1 | Operator (or future contributor) mistakes the scaffold for a live evaluator and ships overclaim ("Layer 2 is live") | HIGH | Explicit `docs/CURRENT_LIMITS.md` row at v0.1: validator = `MEASURED`; judge runtime = `DESIGNED_NOT_LIVE`. Layer 1 claim-boundary scanner already gates docs against overclaim. |
-| 2 | Hidden network call slips in ("just a convenience" Anthropic fetch) | HIGH | Tests assert no `fetch(` / `node:https` / `node:http` reference in any new Layer 2 source file. CI grep can be added as a guard. |
-| 3 | Schema namespace drift — new envelopes added but not auto-picked-up by validator registry | MED | New `tests/eval-layer2-schema-registry-wiring.test.js` asserts both schema IDs appear in `KNOWN_SCHEMA_IDS` and have non-empty `properties`. |
-| 4 | Deep-freeze invariant broken on emitted envelopes | MED | Every exported function returns `Object.freeze(...)`; tests assert `Object.isFrozen()` on result + nested arrays/objects. |
-| 5 | Test count drops below 2,549 floor | MED | Add ≥ 28 new tests across 4 files; floor moves to ~2,577. |
-| 6 | Filesystem write performed by the scaffold | MED | No write surface in v0.1. Tests snapshot `~/.dema/` and repo root for mtime stability across CLI subprocess invocations. |
-| 7 | Path leakage / secret-like strings in rubric prompt text | MED | Pipe `getRubricPack()` JSON through `evaluateArtifactSafety` in a test; assert verdict = `PUBLIC_SAFE`. |
-| 8 | ADR drift — design shipped without ADR | LOW | This ADR (016) ships ahead of any code. |
+| #   | Risk                                                                                                                | Severity | Mitigation                                                                                                                                                                       |
+| --- | ------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Operator (or future contributor) mistakes the scaffold for a live evaluator and ships overclaim ("Layer 2 is live") | HIGH     | Explicit `docs/CURRENT_LIMITS.md` row at v0.1: validator = `MEASURED`; judge runtime = `DESIGNED_NOT_LIVE`. Layer 1 claim-boundary scanner already gates docs against overclaim. |
+| 2   | Hidden network call slips in ("just a convenience" Anthropic fetch)                                                 | HIGH     | Tests assert no `fetch(` / `node:https` / `node:http` reference in any new Layer 2 source file. CI grep can be added as a guard.                                                 |
+| 3   | Schema namespace drift — new envelopes added but not auto-picked-up by validator registry                           | MED      | New `tests/eval-layer2-schema-registry-wiring.test.js` asserts both schema IDs appear in `KNOWN_SCHEMA_IDS` and have non-empty `properties`.                                     |
+| 4   | Deep-freeze invariant broken on emitted envelopes                                                                   | MED      | Every exported function returns `Object.freeze(...)`; tests assert `Object.isFrozen()` on result + nested arrays/objects.                                                        |
+| 5   | Test count drops below 2,549 floor                                                                                  | MED      | Add ≥ 28 new tests across 4 files; floor moves to ~2,577.                                                                                                                        |
+| 6   | Filesystem write performed by the scaffold                                                                          | MED      | No write surface in v0.1. Tests snapshot `~/.dema/` and repo root for mtime stability across CLI subprocess invocations.                                                         |
+| 7   | Path leakage / secret-like strings in rubric prompt text                                                            | MED      | Pipe `getRubricPack()` JSON through `evaluateArtifactSafety` in a test; assert verdict = `PUBLIC_SAFE`.                                                                          |
+| 8   | ADR drift — design shipped without ADR                                                                              | LOW      | This ADR (016) ships ahead of any code.                                                                                                                                          |
 
 ---
 
@@ -193,12 +193,12 @@ All Layer 1 tests (artifact-safety-eval · artifact-safety-eval-schema-wiring ·
 
 ### New tests added (~28 total)
 
-| File | Approx tests | Locks |
-|---|---|---|
-| `tests/eval-layer2-rubrics.test.js` | ~8 | pack shape · all 3 rubric IDs · prompt strings non-empty · self-validate via `validateAgainstRegistry` · deep-frozen · boundary stamp · `getPromptFor("unknown")` returns null · pack passes Layer 1 `evaluateArtifactSafety` with verdict PUBLIC_SAFE |
-| `tests/eval-layer2-verdict-validator.test.js` | ~15 | happy path · missing required → `VALIDATION_FAILED` · unknown `rubric_id` (structural `enum_mismatch` + semantic `UNKNOWN_RUBRIC`) · `score=3` → structural `enum_mismatch` → `VALIDATION_FAILED` (score is enforced by schema enum, not by semantic layer) · empty `evidence_excerpt` → semantic `EMPTY_EVIDENCE` → `SEMANTIC_VIOLATION` · bad sha256 → `pattern_mismatch` · wrong schema → `SCHEMA_UNKNOWN` · v0.2-style `judge_origin` → structural `enum_mismatch` (no semantic re-check; schema enum is now restricted to `external_paste_back`) · hostile input (null / array / string / number) → `VALIDATION_FAILED` · frozen result · 6-key boundary stamp · formatter renders both happy + sad paths · module pure |
-| `tests/eval-layer2-schema-registry-wiring.test.js` | ~3 | both new schemas appear in `KNOWN_SCHEMA_IDS` · both have non-empty `properties` · both `$id` matches filename convention |
-| `tests/eval-layer2-cli.test.js` | ~5 | `dema eval layer2 prompts` exits 0 + emits JSON · `verify <good>` exits 0 · `verify <bad>` exits 1 · `verify <missing-file>` exits 1 with helpful message · stdout from `prompts` passes Layer 1 PUBLIC_SAFE when piped through `evaluateArtifactSafety` |
+| File                                               | Approx tests | Locks                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| -------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/eval-layer2-rubrics.test.js`                | ~8           | pack shape · all 3 rubric IDs · prompt strings non-empty · self-validate via `validateAgainstRegistry` · deep-frozen · boundary stamp · `getPromptFor("unknown")` returns null · pack passes Layer 1 `evaluateArtifactSafety` with verdict PUBLIC_SAFE                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `tests/eval-layer2-verdict-validator.test.js`      | ~15          | happy path · missing required → `VALIDATION_FAILED` · unknown `rubric_id` (structural `enum_mismatch` + semantic `UNKNOWN_RUBRIC`) · `score=3` → structural `enum_mismatch` → `VALIDATION_FAILED` (score is enforced by schema enum, not by semantic layer) · empty `evidence_excerpt` → semantic `EMPTY_EVIDENCE` → `SEMANTIC_VIOLATION` · bad sha256 → `pattern_mismatch` · wrong schema → `SCHEMA_UNKNOWN` · v0.2-style `judge_origin` → structural `enum_mismatch` (no semantic re-check; schema enum is now restricted to `external_paste_back`) · hostile input (null / array / string / number) → `VALIDATION_FAILED` · frozen result · 6-key boundary stamp · formatter renders both happy + sad paths · module pure |
+| `tests/eval-layer2-schema-registry-wiring.test.js` | ~3           | both new schemas appear in `KNOWN_SCHEMA_IDS` · both have non-empty `properties` · both `$id` matches filename convention                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `tests/eval-layer2-cli.test.js`                    | ~5           | `dema eval layer2 prompts` exits 0 + emits JSON · `verify <good>` exits 0 · `verify <bad>` exits 1 · `verify <missing-file>` exits 1 with helpful message · stdout from `prompts` passes Layer 1 PUBLIC_SAFE when piped through `evaluateArtifactSafety`                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 ### Local pre-merge gate (run exactly per repo `CLAUDE.md`)
 

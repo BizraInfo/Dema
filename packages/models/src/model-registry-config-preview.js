@@ -36,7 +36,7 @@
 import {
   BROKER_ROLES,
   BROKER_SIZE_CLASSES,
-  sanitizeRegistryEntry
+  sanitizeRegistryEntry,
 } from "./model-broker-preview.js";
 
 export { BROKER_ROLES, BROKER_SIZE_CLASSES, sanitizeRegistryEntry };
@@ -67,7 +67,7 @@ function placeholderEntry(role) {
     allowed_tasks: Object.freeze([]),
     max_concurrency: 0,
     context_limit: null,
-    status: "source_pending"
+    status: "source_pending",
   });
 }
 
@@ -77,11 +77,11 @@ const PLACEHOLDER_ROLES = Object.freeze([
   "sat_validator",
   "router",
   "classifier",
-  "consent_detector"
+  "consent_detector",
 ]);
 
 export const DEFAULT_SAMPLE_REGISTRY = Object.freeze(
-  PLACEHOLDER_ROLES.map((role) => placeholderEntry(role))
+  PLACEHOLDER_ROLES.map((role) => placeholderEntry(role)),
 );
 
 // Minimum required fields for a registry entry — used by validateRegistryEntry
@@ -91,7 +91,7 @@ const REQUIRED_REGISTRY_FIELDS = Object.freeze([
   "role",
   "size_class",
   "locality",
-  "status"
+  "status",
 ]);
 
 // Validate the minimum-shape contract. Returns boolean (true = valid).
@@ -103,10 +103,21 @@ export function validateRegistryEntry(entry) {
     if (!(field in entry)) return false;
   }
   if (typeof entry.id !== "string" || entry.id.length === 0) return false;
-  if (typeof entry.role !== "string" || !BROKER_ROLES.includes(entry.role)) return false;
-  if (typeof entry.size_class !== "string" || !BROKER_SIZE_CLASSES.includes(entry.size_class)) return false;
-  if (!["local", "remote", "disabled", "unknown"].includes(entry.locality)) return false;
-  if (!["active", "available", "disabled", "source_pending"].includes(entry.status)) return false;
+  if (typeof entry.role !== "string" || !BROKER_ROLES.includes(entry.role))
+    return false;
+  if (
+    typeof entry.size_class !== "string" ||
+    !BROKER_SIZE_CLASSES.includes(entry.size_class)
+  )
+    return false;
+  if (!["local", "remote", "disabled", "unknown"].includes(entry.locality))
+    return false;
+  if (
+    !["active", "available", "disabled", "source_pending"].includes(
+      entry.status,
+    )
+  )
+    return false;
   return true;
 }
 
@@ -130,7 +141,11 @@ function buildRegistryArray(entries) {
 // No file I/O. No network. No side effects.
 export function buildRegistryFromConfig(configInput) {
   if (Array.isArray(configInput)) return buildRegistryArray(configInput);
-  if (configInput && typeof configInput === "object" && Array.isArray(configInput.entries)) {
+  if (
+    configInput &&
+    typeof configInput === "object" &&
+    Array.isArray(configInput.entries)
+  ) {
     return buildRegistryArray(configInput.entries);
   }
   return Object.freeze([]);
@@ -173,7 +188,7 @@ export function buildLocalModelRegistryConfigPreview(configInput) {
       "CLAIM_REGISTER_v0_1.md",
       "BIZRA_AGENT_DNA_LAW_OF_ASSUMPTION_v0_1.md",
       "DEMA_AGENT_HARNESS_AND_SKILL_DNA_v0_1.md",
-      "NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md"
+      "NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md",
     ]),
     boundary: Object.freeze({
       runtime: false,
@@ -183,7 +198,7 @@ export function buildLocalModelRegistryConfigPreview(configInput) {
       federation: false,
       mint: false,
       token_economy: false,
-      urp_networking: false
-    })
+      urp_networking: false,
+    }),
   });
 }

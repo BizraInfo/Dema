@@ -12,7 +12,7 @@ const PREVIEW_DIRS = [
   "packages/core/src",
   "packages/models/src",
   "packages/tasks/src",
-  "packages/verifier/src"
+  "packages/verifier/src",
 ];
 
 const AUTHORITY_FLAGS = new Set([
@@ -77,7 +77,7 @@ const AUTHORITY_FLAGS = new Set([
   "private_memory_accessed",
   "license_issued",
   "offer_published",
-  "ownership_transferred"
+  "ownership_transferred",
 ]);
 
 function listPreviewModules(root = REPO_ROOT) {
@@ -109,7 +109,7 @@ export function findBoundaryViolations(source, filePath) {
           file: filePath,
           line: i + 1,
           key,
-          snippet: trimmed.slice(0, 160)
+          snippet: trimmed.slice(0, 160),
         });
       }
     }
@@ -128,7 +128,7 @@ export function buildBoundaryInvariantCheckReport(root = REPO_ROOT) {
     moduleResults.push({
       file,
       violations_count: violations.length,
-      ok: violations.length === 0
+      ok: violations.length === 0,
     });
     for (const v of violations) allViolations.push(v);
   }
@@ -149,13 +149,16 @@ export function buildBoundaryInvariantCheckReport(root = REPO_ROOT) {
       mutation_performed: false,
       receipt_minted: false,
       filesystem_write_performed: false,
-      ci_modified: false
+      ci_modified: false,
     },
-    note: "Walks all packages/*/src/*-preview.js modules and asserts that no authority-flag-named key (per the conservative AUTHORITY_FLAGS allowlist) is set to `true` anywhere in the source. Pure static-source check; no runtime import, no module execution, no network, no mutation. Fails closed on any violation."
+    note: "Walks all packages/*/src/*-preview.js modules and asserts that no authority-flag-named key (per the conservative AUTHORITY_FLAGS allowlist) is set to `true` anywhere in the source. Pure static-source check; no runtime import, no module execution, no network, no mutation. Fails closed on any violation.",
   };
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (
+  process.argv[1] &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
   const report = buildBoundaryInvariantCheckReport();
   console.log(JSON.stringify(report, null, 2));
   if (!report.ok) process.exitCode = 1;

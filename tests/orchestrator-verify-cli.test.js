@@ -8,7 +8,9 @@ import { fileURLToPath } from "node:url";
 
 import { buildPreviewBoundary } from "../packages/core/src/preview-boundary.js";
 
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 function runCli(args, { env = {}, timeout = 30000 } = {}) {
   return new Promise((resolve, reject) => {
@@ -16,17 +18,26 @@ function runCli(args, { env = {}, timeout = 30000 } = {}) {
       "node",
       [cliPath, ...args],
       {
-        env: { ...process.env, DEMA_BANNER_INTERACTIVE: "0", NODE_ENV: "test", ...env },
+        env: {
+          ...process.env,
+          DEMA_BANNER_INTERACTIVE: "0",
+          NODE_ENV: "test",
+          ...env,
+        },
         timeout,
-        maxBuffer: 16 * 1024 * 1024
+        maxBuffer: 16 * 1024 * 1024,
       },
       (err, stdout, stderr) => {
         if (err && err.killed) {
-          reject(new Error(`Process timed out. stdout=${stdout.slice(0,500)} stderr=${stderr.slice(0,500)}`));
+          reject(
+            new Error(
+              `Process timed out. stdout=${stdout.slice(0, 500)} stderr=${stderr.slice(0, 500)}`,
+            ),
+          );
           return;
         }
         resolve({ stdout, stderr, exitCode: err?.code ?? 0 });
-      }
+      },
     );
   });
 }
@@ -37,7 +48,7 @@ function runCli(args, { env = {}, timeout = 30000 } = {}) {
 function canonicalArtifact() {
   return {
     schema: "bizra.dema.test_artifact.v0.1",
-    boundary: { ...buildPreviewBoundary() }
+    boundary: { ...buildPreviewBoundary() },
   };
 }
 
@@ -48,7 +59,10 @@ function nonCanonicalArtifact() {
   return base;
 }
 
-async function makeHomeWithEnvelope(envelope, { filename = "invocation-deadbeef.json" } = {}) {
+async function makeHomeWithEnvelope(
+  envelope,
+  { filename = "invocation-deadbeef.json" } = {},
+) {
   const home = await mkdtemp(join(tmpdir(), "dema-orchestrator-cli-"));
   await mkdir(join(home, "receipts"), { recursive: true });
   const p = join(home, "receipts", filename);
@@ -59,10 +73,18 @@ async function makeHomeWithEnvelope(envelope, { filename = "invocation-deadbeef.
 // 1. --invocation-file <abs> happy path → pipeline schema + passed=true + exit 0
 test("--invocation-file <abs> with canonical artifact → pipeline_verified + exit 0", async () => {
   const { path } = await makeHomeWithEnvelope(canonicalArtifact());
-  const { stdout, exitCode } = await runCli(["orchestrator", "verify", "--invocation-file", path]);
+  const { stdout, exitCode } = await runCli([
+    "orchestrator",
+    "verify",
+    "--invocation-file",
+    path,
+  ]);
   assert.equal(exitCode, 0);
   const env = JSON.parse(stdout);
-  assert.equal(env.schema, "bizra.dema.orchestrator_verification_pipeline.v0.1");
+  assert.equal(
+    env.schema,
+    "bizra.dema.orchestrator_verification_pipeline.v0.1",
+  );
   assert.equal(env.passed, true);
   assert.equal(env.overall_verdict, "pipeline_verified");
   assert.ok(env.sats_run.includes("sat-1-boundary-verifier"));
@@ -70,7 +92,12 @@ test("--invocation-file <abs> with canonical artifact → pipeline_verified + ex
 
 // 2. Relative --invocation-file → non-zero + 'must be absolute'
 test("relative --invocation-file exits non-zero with 'must be absolute'", async () => {
-  const { stderr, exitCode } = await runCli(["orchestrator", "verify", "--invocation-file", "relative/path.json"]);
+  const { stderr, exitCode } = await runCli([
+    "orchestrator",
+    "verify",
+    "--invocation-file",
+    "relative/path.json",
+  ]);
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /must be absolute/);
 });
@@ -78,7 +105,10 @@ test("relative --invocation-file exits non-zero with 'must be absolute'", async 
 // 3. Nonexistent file → non-zero + 'envelope file not found'
 test("nonexistent --invocation-file exits non-zero with 'envelope file not found'", async () => {
   const { stderr, exitCode } = await runCli([
-    "orchestrator", "verify", "--invocation-file", "/tmp/dema-orch-nonexistent-zzz-12345.json"
+    "orchestrator",
+    "verify",
+    "--invocation-file",
+    "/tmp/dema-orch-nonexistent-zzz-12345.json",
   ]);
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /envelope file not found/);
@@ -90,24 +120,37 @@ test("malformed JSON exits non-zero with 'malformed envelope JSON'", async () =>
   await mkdir(join(home, "receipts"), { recursive: true });
   const p = join(home, "receipts", "invocation-bad.json");
   await writeFile(p, "{ not valid json :::");
-  const { stderr, exitCode } = await runCli(["orchestrator", "verify", "--invocation-file", p]);
+  const { stderr, exitCode } = await runCli([
+    "orchestrator",
+    "verify",
+    "--invocation-file",
+    p,
+  ]);
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /malformed envelope JSON/);
 });
 
 // 5. --latest reads newest invocation-*.json
 test("--latest reads newest invocation-*.json from $DEMA_HOME/receipts/", async () => {
-  const { home } = await makeHomeWithEnvelope(canonicalArtifact(), { filename: "invocation-aaa.json" });
+  const { home } = await makeHomeWithEnvelope(canonicalArtifact(), {
+    filename: "invocation-aaa.json",
+  });
   // Add a second envelope with later mtime
   const second = canonicalArtifact();
   second.schema = "bizra.dema.test_artifact_two.v0.1";
   const p2 = join(home, "receipts", "invocation-bbb.json");
   await new Promise((res) => setTimeout(res, 20));
   await writeFile(p2, JSON.stringify(second) + "\n");
-  const { stdout, exitCode } = await runCli(["orchestrator", "verify", "--latest"], { env: { DEMA_HOME: home } });
+  const { stdout, exitCode } = await runCli(
+    ["orchestrator", "verify", "--latest"],
+    { env: { DEMA_HOME: home } },
+  );
   assert.equal(exitCode, 0);
   const env = JSON.parse(stdout);
-  assert.equal(env.schema, "bizra.dema.orchestrator_verification_pipeline.v0.1");
+  assert.equal(
+    env.schema,
+    "bizra.dema.orchestrator_verification_pipeline.v0.1",
+  );
   // source path should reference one of the two written files
   assert.match(env.source.path, /invocation-[a-z]+\.json$/);
 });
@@ -116,7 +159,10 @@ test("--latest reads newest invocation-*.json from $DEMA_HOME/receipts/", async 
 test("--latest with no invocation files exits non-zero", async () => {
   const home = await mkdtemp(join(tmpdir(), "dema-orch-empty-"));
   await mkdir(join(home, "receipts"), { recursive: true });
-  const { stderr, exitCode } = await runCli(["orchestrator", "verify", "--latest"], { env: { DEMA_HOME: home } });
+  const { stderr, exitCode } = await runCli(
+    ["orchestrator", "verify", "--latest"],
+    { env: { DEMA_HOME: home } },
+  );
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /no invocation-\*\.json files found/);
 });
@@ -125,9 +171,11 @@ test("--latest with no invocation files exits non-zero", async () => {
 test("--invocation-file + --latest together exits non-zero (mutually exclusive)", async () => {
   const { path } = await makeHomeWithEnvelope(canonicalArtifact());
   const { stderr, exitCode } = await runCli([
-    "orchestrator", "verify",
-    "--invocation-file", path,
-    "--latest"
+    "orchestrator",
+    "verify",
+    "--invocation-file",
+    path,
+    "--latest",
   ]);
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /mutually exclusive/);
@@ -136,7 +184,12 @@ test("--invocation-file + --latest together exits non-zero (mutually exclusive)"
 // 8. Crafted non-passed pipeline (flip a boundary key) → non-zero + passed=false
 test("non-canonical artifact (one boundary key flipped) exits non-zero with passed=false", async () => {
   const { path } = await makeHomeWithEnvelope(nonCanonicalArtifact());
-  const { stdout, exitCode } = await runCli(["orchestrator", "verify", "--invocation-file", path]);
+  const { stdout, exitCode } = await runCli([
+    "orchestrator",
+    "verify",
+    "--invocation-file",
+    path,
+  ]);
   assert.notEqual(exitCode, 0);
   const env = JSON.parse(stdout);
   assert.equal(env.passed, false);
@@ -147,7 +200,12 @@ test("non-canonical artifact (one boundary key flipped) exits non-zero with pass
 // 9. sats_run array + per-SAT verdict are present
 test("pipeline envelope includes sats_run array + per_sat_verdicts map", async () => {
   const { path } = await makeHomeWithEnvelope(canonicalArtifact());
-  const { stdout } = await runCli(["orchestrator", "verify", "--invocation-file", path]);
+  const { stdout } = await runCli([
+    "orchestrator",
+    "verify",
+    "--invocation-file",
+    path,
+  ]);
   const env = JSON.parse(stdout);
   assert.ok(Array.isArray(env.sats_run));
   assert.ok(env.sats_run.length >= 1);
@@ -161,10 +219,19 @@ test("pipeline envelope includes sats_run array + per_sat_verdicts map", async (
 // 10. --pretty emits indented JSON
 test("--pretty emits indented JSON", async () => {
   const { path } = await makeHomeWithEnvelope(canonicalArtifact());
-  const { stdout } = await runCli(["orchestrator", "verify", "--invocation-file", path, "--pretty"]);
+  const { stdout } = await runCli([
+    "orchestrator",
+    "verify",
+    "--invocation-file",
+    path,
+    "--pretty",
+  ]);
   // Pretty output has at least one newline inside braces (not just the trailing one)
   const lines = stdout.split("\n");
-  assert.ok(lines.length > 3, `expected multi-line pretty output; got ${lines.length} lines`);
+  assert.ok(
+    lines.length > 3,
+    `expected multi-line pretty output; got ${lines.length} lines`,
+  );
   // First non-empty line should be `{`
   assert.equal(lines[0].trim(), "{");
 });
@@ -180,5 +247,8 @@ test("missing 'verify' subcommand prints Usage and exits non-zero", async () => 
 test("neither --invocation-file nor --latest exits non-zero", async () => {
   const { stderr, exitCode } = await runCli(["orchestrator", "verify"]);
   assert.notEqual(exitCode, 0);
-  assert.match(stderr, /one of --invocation-file <abs-path> or --latest is required/);
+  assert.match(
+    stderr,
+    /one of --invocation-file <abs-path> or --latest is required/,
+  );
 });

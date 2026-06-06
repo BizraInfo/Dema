@@ -130,7 +130,12 @@
     "repo_canon_anchor": "docs/canon/LAW_OF_ASSUMPTION.md",
     "statement_bilingual_source_present": true,
     "claim_states": ["VERIFIED", "DERIVED", "ASSUMED_WITH_IHSAN", "UNKNOWN"],
-    "assumption_shape_fields": ["assumption", "ground", "boundary", "rejectable"],
+    "assumption_shape_fields": [
+      "assumption",
+      "ground",
+      "boundary",
+      "rejectable"
+    ],
     "third_path_named": "bounded_autonomy_through_declared_epistemic_ground",
     "deeper_gate": "can Dema honestly declare the boundary between evidence and uncertainty?",
     "refusal_as_product_corollary": true,
@@ -151,7 +156,11 @@
       "every_refusal_emitted",
       "every_operator_facing_render"
     ],
-    "companion_to": ["node_ordinal_law", "seed_pattern_invariant", "skill_growth_law"],
+    "companion_to": [
+      "node_ordinal_law",
+      "seed_pattern_invariant",
+      "skill_growth_law"
+    ],
     "operating_frame_one_line": "Evidence > Assumption. When assumption is unavoidable, assume with Ihsān. Declare the boundary between evidence and uncertainty. Refusal is a product, not an error."
   },
   "forbidden_topology_phrases": [

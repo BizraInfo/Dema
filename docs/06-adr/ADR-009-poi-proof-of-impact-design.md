@@ -25,7 +25,7 @@ Contribution → Verification → Receipt → Impact Score → Reward Eligibilit
                                     1831aa9)
 ```
 
-Three of the five stations are operational at HEAD `1831aa9`. The POI station is the unbuilt bridge between a verified receipt and an impact score that could *eventually* gate reward eligibility. The fifth station (proof gates → reward) is downstream of POI and out of scope for this ADR.
+Three of the five stations are operational at HEAD `1831aa9`. The POI station is the unbuilt bridge between a verified receipt and an impact score that could _eventually_ gate reward eligibility. The fifth station (proof gates → reward) is downstream of POI and out of scope for this ADR.
 
 ## Problem
 
@@ -85,7 +85,7 @@ POI v0.1 MUST refuse:
 2. **Cross-node score comparison.** Two POI scores from different nodes cannot be compared at v0.1 — federation has not yet shipped (`federation_invoked` is canonically `false`).
 3. **External attestation.** POI scores are not published, broadcast, or signed for external consumption at v0.1.
 4. **Time-weighted scoring.** No bonus for "earliest contribution" or "longest holder" — Riba-Zero invariant.
-5. **Speculation surface.** No `expected_future_poi`, no `poi_velocity`, no `poi_appreciation`. POI is what *has been verified*, not what *might be*.
+5. **Speculation surface.** No `expected_future_poi`, no `poi_velocity`, no `poi_appreciation`. POI is what _has been verified_, not what _might be_.
 
 ### Five rules of POI v0.1
 
@@ -110,16 +110,16 @@ POI v0.1 MUST refuse:
 
 ## Constraints (binding)
 
-| ID | Constraint | Rationale |
-|---|---|---|
-| POI-C1 | No reward issuance at v0.1 | RIBA_ZERO invariant; Founder Asset Inventory v0.3 50% pool oath does not activate before proof |
-| POI-C2 | No public economic claim | Third Fact §229 binding ("makes no token, payout, income, IMP, or live economic claim") |
-| POI-C3 | No cross-node comparison | federation_invoked = false canonically at v0.1 |
-| POI-C4 | No time-weighted scoring | Riba-Zero invariant — no value extraction from time-decay |
-| POI-C5 | Receipt-bound inputs only | Every POI input must already exist as a verified receipt |
-| POI-C6 | Preview-only emission | mode: "preview_only" · canonical 16-key boundary all-false |
-| POI-C7 | Deterministic | same chain → same score · no randomness · no clock dependency |
-| POI-C8 | Master Craftsmanship binding | when POI lands, all 10 invariants must hold (see ADR-008) |
+| ID     | Constraint                   | Rationale                                                                                      |
+| ------ | ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| POI-C1 | No reward issuance at v0.1   | RIBA_ZERO invariant; Founder Asset Inventory v0.3 50% pool oath does not activate before proof |
+| POI-C2 | No public economic claim     | Third Fact §229 binding ("makes no token, payout, income, IMP, or live economic claim")        |
+| POI-C3 | No cross-node comparison     | federation_invoked = false canonically at v0.1                                                 |
+| POI-C4 | No time-weighted scoring     | Riba-Zero invariant — no value extraction from time-decay                                      |
+| POI-C5 | Receipt-bound inputs only    | Every POI input must already exist as a verified receipt                                       |
+| POI-C6 | Preview-only emission        | mode: "preview_only" · canonical 16-key boundary all-false                                     |
+| POI-C7 | Deterministic                | same chain → same score · no randomness · no clock dependency                                  |
+| POI-C8 | Master Craftsmanship binding | when POI lands, all 10 invariants must hold (see ADR-008)                                      |
 
 ## Implementation activation gates (when POI v0.1 can land)
 
@@ -163,6 +163,7 @@ If any gate fails to hold, POI implementation is deferred.
 **Accept this design contract for POI v0.1.** No implementation lands under this ADR. Implementation is deferred to the activation gates above. This ADR establishes the canonical refusal-as-product taxonomy for POI: what POI is, what POI is not, and what POI v0.1 must never become.
 
 The proposed status holds until either:
+
 - Operator types `GO accept ADR-009` (promotes to Accepted), or
 - An identified flaw in the design fires a typed `GO revise ADR-009 <reason>`.
 
@@ -177,7 +178,7 @@ The proposed status holds until either:
 
 **Risks:**
 
-- A reviewer or external observer may interpret the design as a *commitment* to ship POI. Document language must be clear: this is a design contract, not a roadmap commitment.
+- A reviewer or external observer may interpret the design as a _commitment_ to ship POI. Document language must be clear: this is a design contract, not a roadmap commitment.
 - The canonical refusals must hold under future scope pressure. If a future ADR proposes "small reward issuance for testnet," it must explicitly amend POI-C1, not silently violate it.
 - A dual-token proposal that arrives before POI v0.1 implementation must be evaluated against this design as baseline, not as a parallel design.
 

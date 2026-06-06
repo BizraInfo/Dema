@@ -12,7 +12,7 @@ const COMMANDS = [
   { command: "setup", description: "create local folders" },
   { command: "doctor", description: "validate readiness" },
   { command: "today", description: "record continuity tick" },
-  { command: "models", description: "show local models" }
+  { command: "models", description: "show local models" },
 ];
 
 test("empty input → matched: unknown, no suggestions", () => {
@@ -56,7 +56,10 @@ test("natural language 'tell me what is bizra' → matched: natural-language", (
   const result = suggestCommands("tell me what is bizra", COMMANDS);
   assert.equal(result.matched, "natural-language");
   const commands = result.suggestions.map((s) => s.command);
-  assert.ok(commands.includes("memory show bizra-context"), "missing memory show bizra-context");
+  assert.ok(
+    commands.includes("memory show bizra-context"),
+    "missing memory show bizra-context",
+  );
   assert.ok(commands.includes("help"), "missing help");
 });
 
@@ -90,7 +93,10 @@ test("partial prefix 'stat' → matched: close, includes status and state", () =
 
 test("top 3 max: many close matches still returns at most 3 suggestions", () => {
   // Build a registry with 5 entries all distance 1 from 'x'
-  const many = ["xa", "xb", "xc", "xd", "xe"].map((c) => ({ command: c, description: c }));
+  const many = ["xa", "xb", "xc", "xd", "xe"].map((c) => ({
+    command: c,
+    description: c,
+  }));
   const result = suggestCommands("x", many);
   assert.ok(result.suggestions.length <= 3, "must not exceed 3 suggestions");
 });

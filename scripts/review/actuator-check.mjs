@@ -5,9 +5,7 @@ import { pathToFileURL } from "node:url";
 
 const DEFAULT_SCAN_ROOTS = ["apps", "packages", "scripts"];
 const SOURCE_EXTENSIONS = new Set([".js", ".mjs"]);
-const EXCLUDED_PATHS = new Set([
-  "scripts/review/actuator-check.mjs"
-]);
+const EXCLUDED_PATHS = new Set(["scripts/review/actuator-check.mjs"]);
 
 function extension(path) {
   const dot = path.lastIndexOf(".");
@@ -44,15 +42,30 @@ function lineNumber(body, index) {
 function collectRegexFindings(body, file, pattern, label) {
   const findings = [];
   for (const match of body.matchAll(pattern)) {
-    findings.push({ file, line: lineNumber(body, match.index), label, match: match[0] });
+    findings.push({
+      file,
+      line: lineNumber(body, match.index),
+      label,
+      match: match[0],
+    });
   }
   return findings;
 }
 
 export function analyzeActuatorSource(body, file = "(memory)") {
   const findings = [
-    ...collectRegexFindings(body, file, /\bexec\s*\(/g, "child_process.exec_raw_shell"),
-    ...collectRegexFindings(body, file, /\bexecSync\s*\(/g, "child_process.execSync_raw_shell")
+    ...collectRegexFindings(
+      body,
+      file,
+      /\bexec\s*\(/g,
+      "child_process.exec_raw_shell",
+    ),
+    ...collectRegexFindings(
+      body,
+      file,
+      /\bexecSync\s*\(/g,
+      "child_process.execSync_raw_shell",
+    ),
   ];
 
   const spawnPattern = /\bspawn(?:Sync)?\s*\(([\s\S]{0,320}?)\)/g;
@@ -62,7 +75,7 @@ export function analyzeActuatorSource(body, file = "(memory)") {
         file,
         line: lineNumber(body, match.index),
         label: "child_process.spawn_shell_true",
-        match: match[0].split("\n")[0]
+        match: match[0].split("\n")[0],
       });
     }
   }
@@ -76,26 +89,26 @@ export function analyzeEffectCapInvariantSource(body, file = "(memory)") {
       body,
       file,
       /\bEffectCap\.perform\s*\([^)]*\bexec\b/gi,
-      "effectcap.caller_exec_closure"
+      "effectcap.caller_exec_closure",
     ),
     ...collectRegexFindings(
       body,
       file,
       /\beffectingOperation\s*\([^)]*\bexec\b/gi,
-      "effectcap.caller_exec_closure"
+      "effectcap.caller_exec_closure",
     ),
     ...collectRegexFindings(
       body,
       file,
       /\bperform\s*\([^;\n]*(?:=>|function\s*\()/gi,
-      "effectcap.caller_exec_closure"
+      "effectcap.caller_exec_closure",
     ),
     ...collectRegexFindings(
       body,
       file,
       /\b(eval|Function)\s*\(/g,
-      "policy.executable_rule_code"
-    )
+      "policy.executable_rule_code",
+    ),
   ];
 
   return findings;
@@ -103,7 +116,7 @@ export function analyzeEffectCapInvariantSource(body, file = "(memory)") {
 
 export function buildActuatorCheckReport({
   root = process.cwd(),
-  scanRoots = DEFAULT_SCAN_ROOTS
+  scanRoots = DEFAULT_SCAN_ROOTS,
 } = {}) {
   const files = listSourceFiles(root, scanRoots);
   const findings = [];
@@ -111,7 +124,7 @@ export function buildActuatorCheckReport({
     const body = readFileSync(join(root, file), "utf8");
     findings.push(
       ...analyzeActuatorSource(body, file),
-      ...analyzeEffectCapInvariantSource(body, file)
+      ...analyzeEffectCapInvariantSource(body, file),
     );
   }
   return {
@@ -124,23 +137,26 @@ export function buildActuatorCheckReport({
       "child_process.execSync",
       "child_process.spawn/spawnSync with shell:true",
       "caller-provided EffectCap execution closures",
-      "executable policy rule code"
+      "executable policy rule code",
     ],
     allowed_patterns: [
       "execFile/execFileSync with argv array",
-      "spawn/spawnSync without shell:true"
+      "spawn/spawnSync without shell:true",
     ],
     findings,
     boundary: {
       read_only_audit: true,
       runtime_execution: false,
       mutation_performed: false,
-      receipt_minted: false
-    }
+      receipt_minted: false,
+    },
   };
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (
+  process.argv[1] &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
   const report = buildActuatorCheckReport();
   console.log(JSON.stringify(report, null, 2));
   if (!report.ok) process.exitCode = 1;

@@ -4,7 +4,7 @@
 
 **Bound by:** [ADR-001](../06-adr/ADR-001-dema-is-one-face.md), [ADR-003](../06-adr/ADR-003-core-truth-lives-in-bizra-omega.md), [ADR-005](../06-adr/ADR-005-operator-actions-require-explicit-consent.md), and the repo invariants in [CLAUDE.md](../../CLAUDE.md).
 
-**One-line summary:** Today's SAT verifier handles only the *task-receipt* schema. Production receipts use *two* schemas. v0.3.2 closes the asymmetry while preserving the L0-only / placeholder-honest posture until the real SAT-5 Rust roster lands upstream.
+**One-line summary:** Today's SAT verifier handles only the _task-receipt_ schema. Production receipts use _two_ schemas. v0.3.2 closes the asymmetry while preserving the L0-only / placeholder-honest posture until the real SAT-5 Rust roster lands upstream.
 
 ---
 
@@ -22,7 +22,7 @@ verifyReceiptPlaceholder(<artifact-011>)
               payload_digest missing, sat_verdict missing)
 ```
 
-The REJECT is *technically correct conservative behavior* — but it also reveals that **the placeholder has no schema-aware path for gateway-issued receipts at all.** The honest framing is: today's verifier is for one of two real shapes; the other shape has zero coverage, placeholder or otherwise.
+The REJECT is _technically correct conservative behavior_ — but it also reveals that **the placeholder has no schema-aware path for gateway-issued receipts at all.** The honest framing is: today's verifier is for one of two real shapes; the other shape has zero coverage, placeholder or otherwise.
 
 v0.3.2 closes this asymmetry **without over-claiming.** The verifier remains placeholder-grade until the real SAT-5 Rust roster (PLANNED upstream in `bizra-data-lake/bizra-omega/bizra-cognition/`) replaces it. v0.3.2's job is to make the placeholder **schema-aware**, not to certify.
 
@@ -98,14 +98,14 @@ Produced by `bizra-cognition-gateway` POST `/missions` upstream; mirrored locall
 
 **Verifier checks v0.3.2 must add:**
 
-| Check | Requirement |
-|---|---|
-| `gateway.admissibility_verdict === "Permit"` | required for non-REJECT verdict |
-| `preserved_post_response_body.admissibility.gateVerdicts` (when exposed) | all required scorers Permit (ZANN_ZERO, CLAIM_MUST_BIND, RIBA_ZERO, NO_SHADOW_STATE, IHSAN_FLOOR ≥ 0.95). When NOT exposed, treat as informational/soft finding — does NOT block PARTIAL_PLACEHOLDER verdict (the gateway's top-level `admissibility_verdict` is the load-bearing field). |
-| `consent_phrase_record === BOUNDED_DIAGNOSTIC_CONSENT_PHRASE` | byte-for-byte for ARTIFACT-011 receipts; future actions may have other phrases |
-| `proof_anchors.evidence_hash_niyyah_sha256` matches the niyyah on disk if available | optional; report `evidence_hash_unverified_locally` if niyyah file absent |
-| `gateway.chain_head` matches live gateway `/chain` response if gateway reachable | optional; report `chain_head_unverified_offline` if gateway unreachable |
-| `truth_label === "GATEWAY_ISSUED_HANDOFF"` | required |
+| Check                                                                               | Requirement                                                                                                                                                                                                                                                                               |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gateway.admissibility_verdict === "Permit"`                                        | required for non-REJECT verdict                                                                                                                                                                                                                                                           |
+| `preserved_post_response_body.admissibility.gateVerdicts` (when exposed)            | all required scorers Permit (ZANN_ZERO, CLAIM_MUST_BIND, RIBA_ZERO, NO_SHADOW_STATE, IHSAN_FLOOR ≥ 0.95). When NOT exposed, treat as informational/soft finding — does NOT block PARTIAL_PLACEHOLDER verdict (the gateway's top-level `admissibility_verdict` is the load-bearing field). |
+| `consent_phrase_record === BOUNDED_DIAGNOSTIC_CONSENT_PHRASE`                       | byte-for-byte for ARTIFACT-011 receipts; future actions may have other phrases                                                                                                                                                                                                            |
+| `proof_anchors.evidence_hash_niyyah_sha256` matches the niyyah on disk if available | optional; report `evidence_hash_unverified_locally` if niyyah file absent                                                                                                                                                                                                                 |
+| `gateway.chain_head` matches live gateway `/chain` response if gateway reachable    | optional; report `chain_head_unverified_offline` if gateway unreachable                                                                                                                                                                                                                   |
+| `truth_label === "GATEWAY_ISSUED_HANDOFF"`                                          | required                                                                                                                                                                                                                                                                                  |
 
 **Verdict shape:** the existing `bizra.dema.sat_verdict.v0.1` schema already maps to upstream `GateVerdict` (`PERMIT` / `REJECT` / `REVIEW` / `SCORE_ONLY`). v0.3.2 reuses that schema for both receipt shapes; the per-schema check list differs but the verdict envelope is uniform.
 
@@ -153,6 +153,7 @@ v0.3.2 also formalizes the post-action verification pattern that the active kern
 The contract is: **every L1+ act that produces a receipt must call `verifyReceipt` before declaring success.** A failure to verify is itself a finding to surface — never a silent pass.
 
 This contract is enforced by tests:
+
 - For each task-receipt-producing path in `apps/cli/src/index.js`, a CLI integration test asserts `verifyReceipt` was called and its verdict is rendered in stdout.
 - For each gateway-receipt-handling code path, a test fixtures a known-good and a tampered receipt, asserting Permit and REJECT verdicts respectively.
 
@@ -180,7 +181,7 @@ These items are **NOT** in v0.3.2 scope and remain PLANNED for v0.3.3+ or upstre
 - Real SAT-5 admissibility chain (Ihsān ≥0.95, Adl, Guardian, Confidence ≥0.80) — lives upstream in `bizra-omega/bizra-cognition/src/admissibility_freeze_v1.rs`. v0.3.2 reuses the verdict shape; v0.3.2 does NOT implement the chain.
 - Cryptographic signature verification on receipts — needs identity material (DIDs, signing keys) which is L5 and out of scope for any Dema-side surface.
 - Receipt chain validator (`prev_hash` walk over `~/.dema/receipts/`) — this is v0.3.6 per ROADMAP.
-- POI score derivation — lives upstream; v0.3.2 may *read* POI summaries but never *derives* impact scores.
+- POI score derivation — lives upstream; v0.3.2 may _read_ POI summaries but never _derives_ impact scores.
 - Schema migration tooling — when the receipt schema bumps from v0.1 to v0.2, that's a separate concern.
 
 ---
@@ -245,6 +246,7 @@ The cycle ships when ALL of these hold. Boxes marked `[x]` are done in this PR; 
 This document is **v0.1**. Tightening edits (more checks, narrower acceptance criteria, additional schemas) → standard PR review. Loosening edits (fewer checks, weaker truth-label rules, autonomous verification cycles) → require operator typed GO and a new ADR.
 
 Doc-level invariants:
+
 - The verifier never claims to be SAT-5.
 - The verifier never returns `PERMIT` from local logic.
 - The verifier preserves L0–L5 boundary at all times.

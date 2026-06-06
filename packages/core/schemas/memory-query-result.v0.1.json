@@ -20,7 +20,10 @@
     "memory_domain_boundary"
   ],
   "properties": {
-    "schema": { "type": "string", "const": "bizra.dema.memory_query_result.v0.1" },
+    "schema": {
+      "type": "string",
+      "const": "bizra.dema.memory_query_result.v0.1"
+    },
     "tool_version": { "type": "string", "const": "dema-memory-query-v0.1" },
     "generated_at": { "type": "string" },
     "query": { "type": "string" },
@@ -47,10 +50,20 @@
     "verdict_role": { "type": "string", "const": "suggestion" },
     "consent": {
       "type": "object",
-      "required": ["consent_mode", "consent_level", "exact_string_consent_required"],
+      "required": [
+        "consent_mode",
+        "consent_level",
+        "exact_string_consent_required"
+      ],
       "properties": {
-        "consent_mode": { "type": "string", "const": "typed_command_read_only" },
-        "consent_level": { "type": "string", "const": "C0_OPERATOR_LOCAL_READ" },
+        "consent_mode": {
+          "type": "string",
+          "const": "typed_command_read_only"
+        },
+        "consent_level": {
+          "type": "string",
+          "const": "C0_OPERATOR_LOCAL_READ"
+        },
         "exact_string_consent_required": { "type": "boolean", "const": false }
       }
     },
@@ -95,7 +108,13 @@
     },
     "memory_domain_boundary": {
       "type": "object",
-      "required": ["memory_snippet_included", "raw_memory_dump_included", "snippet_max_chars", "public_safe", "operator_local_only"],
+      "required": [
+        "memory_snippet_included",
+        "raw_memory_dump_included",
+        "snippet_max_chars",
+        "public_safe",
+        "operator_local_only"
+      ],
       "properties": {
         "memory_snippet_included": { "type": "boolean", "const": true },
         "raw_memory_dump_included": { "type": "boolean", "const": false },

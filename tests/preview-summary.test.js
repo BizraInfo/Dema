@@ -3,15 +3,15 @@ import assert from "node:assert/strict";
 
 import {
   buildProfileFoundationPreview,
-  buildProfileFoundationSummary
+  buildProfileFoundationSummary,
 } from "../packages/core/src/profiles.js";
 import {
   buildMissionLoopPreview,
-  buildMissionLoopSummary
+  buildMissionLoopSummary,
 } from "../packages/core/src/mission-loop-preview.js";
 import {
   isCanonicalBoundary,
-  PREVIEW_BOUNDARY_CANONICAL_KEYS
+  PREVIEW_BOUNDARY_CANONICAL_KEYS,
 } from "../packages/core/src/preview-boundary.js";
 
 // The canonical 16-key boundary alone is 18 lines pretty-printed, so any
@@ -34,12 +34,18 @@ test("ProfileFoundationSummary surfaces all 4 actor schemas + capsule schema", (
   assert.equal(summary.actors.pat, "bizra.dema.pat_profile.v0.1");
   assert.equal(summary.actors.sat, "bizra.dema.sat_profile.v0.1");
   assert.equal(summary.actors.mission, "bizra.dema.mission_profile.v0.1");
-  assert.equal(summary.context_capsule_schema, "bizra.dema.context_capsule.v0.1");
+  assert.equal(
+    summary.context_capsule_schema,
+    "bizra.dema.context_capsule.v0.1",
+  );
 });
 
 test("ProfileFoundationSummary boundary is the canonical 16-key frozen object", () => {
   const summary = buildProfileFoundationSummary();
-  assert.ok(isCanonicalBoundary(summary.boundary), "boundary must be canonical");
+  assert.ok(
+    isCanonicalBoundary(summary.boundary),
+    "boundary must be canonical",
+  );
   for (const key of PREVIEW_BOUNDARY_CANONICAL_KEYS) {
     assert.equal(summary.boundary[key], false, `boundary.${key} must be false`);
   }
@@ -50,7 +56,7 @@ test("ProfileFoundationSummary fits within line budget pretty-printed", () => {
   const lines = JSON.stringify(summary, null, 2).split("\n").length;
   assert.ok(
     lines <= SUMMARY_LINE_BUDGET,
-    `summary must be <= ${SUMMARY_LINE_BUDGET} lines, got ${lines}`
+    `summary must be <= ${SUMMARY_LINE_BUDGET} lines, got ${lines}`,
   );
 });
 
@@ -68,7 +74,7 @@ test("ProfileFoundationSummary is materially smaller than full preview", () => {
   const summaryLines = JSON.stringify(summary, null, 2).split("\n").length;
   assert.ok(
     summaryLines < fullLines / 4,
-    `summary (${summaryLines}) must be < 1/4 of full (${fullLines})`
+    `summary (${summaryLines}) must be < 1/4 of full (${fullLines})`,
   );
 });
 
@@ -92,16 +98,28 @@ test("MissionLoopSummary surfaces lifecycle phase and next safe action", () => {
 test("MissionLoopSummary surfaces all 6 child schemas/statuses", () => {
   const summary = buildMissionLoopSummary();
   assert.equal(summary.children.state_load, "bizra.dema.node0_state.v0.1");
-  assert.equal(summary.children.profile_foundation, "bizra.dema.profile_foundation.v0.1");
-  assert.equal(summary.children.consent_card, "bizra.dema.consent_card_preview.v0.1");
-  assert.equal(summary.children.local_model_invocation_status, "not_executed_preview_only");
+  assert.equal(
+    summary.children.profile_foundation,
+    "bizra.dema.profile_foundation.v0.1",
+  );
+  assert.equal(
+    summary.children.consent_card,
+    "bizra.dema.consent_card_preview.v0.1",
+  );
+  assert.equal(
+    summary.children.local_model_invocation_status,
+    "not_executed_preview_only",
+  );
   assert.equal(summary.children.evidence_chain_event_status, "not_prepared");
   assert.equal(summary.children.receipt_preview_status, "not_prepared");
 });
 
 test("MissionLoopSummary boundary is the canonical 16-key frozen object", () => {
   const summary = buildMissionLoopSummary();
-  assert.ok(isCanonicalBoundary(summary.boundary), "boundary must be canonical");
+  assert.ok(
+    isCanonicalBoundary(summary.boundary),
+    "boundary must be canonical",
+  );
   for (const key of PREVIEW_BOUNDARY_CANONICAL_KEYS) {
     assert.equal(summary.boundary[key], false, `boundary.${key} must be false`);
   }
@@ -112,7 +130,7 @@ test("MissionLoopSummary fits within line budget pretty-printed", () => {
   const lines = JSON.stringify(summary, null, 2).split("\n").length;
   assert.ok(
     lines <= SUMMARY_LINE_BUDGET,
-    `summary must be <= ${SUMMARY_LINE_BUDGET} lines, got ${lines}`
+    `summary must be <= ${SUMMARY_LINE_BUDGET} lines, got ${lines}`,
   );
 });
 
@@ -130,7 +148,7 @@ test("MissionLoopSummary is materially smaller than full preview", () => {
   const summaryLines = JSON.stringify(summary, null, 2).split("\n").length;
   assert.ok(
     summaryLines < fullLines / 8,
-    `summary (${summaryLines}) must be < 1/8 of full (${fullLines})`
+    `summary (${summaryLines}) must be < 1/8 of full (${fullLines})`,
   );
 });
 

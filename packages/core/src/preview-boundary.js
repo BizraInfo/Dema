@@ -51,7 +51,7 @@ const CANONICAL_BOUNDARY_KEYS = Object.freeze([
   "federation_invoked",
   "node_connection_performed",
   "public_network_used",
-  "consent_collected"
+  "consent_collected",
 ]);
 
 export function buildPreviewBoundary() {
@@ -114,7 +114,7 @@ const RUNTIME_EMISSION_PERMISSIVE_KEYS = Object.freeze([
   "model_invocation_performed",
   "prompt_executed",
   "network_used",
-  "consent_collected"
+  "consent_collected",
 ]);
 
 const RUNTIME_EMISSION_STRICTLY_FALSE_KEYS = Object.freeze([
@@ -127,12 +127,14 @@ const RUNTIME_EMISSION_STRICTLY_FALSE_KEYS = Object.freeze([
   "raw_corpus_scan_performed",
   "raw_data_included",
   "tool_executed",
-  "filesystem_write_performed"
+  "filesystem_write_performed",
 ]);
 
 export const RUNTIME_EMISSION_BOUNDARY_KEYS = CANONICAL_BOUNDARY_KEYS;
-export const RUNTIME_EMISSION_PERMISSIVE_KEY_SET = RUNTIME_EMISSION_PERMISSIVE_KEYS;
-export const RUNTIME_EMISSION_STRICTLY_FALSE_KEY_SET = RUNTIME_EMISSION_STRICTLY_FALSE_KEYS;
+export const RUNTIME_EMISSION_PERMISSIVE_KEY_SET =
+  RUNTIME_EMISSION_PERMISSIVE_KEYS;
+export const RUNTIME_EMISSION_STRICTLY_FALSE_KEY_SET =
+  RUNTIME_EMISSION_STRICTLY_FALSE_KEYS;
 
 export function buildRuntimeEmissionBoundary(observed = {}) {
   const out = Object.create(null);

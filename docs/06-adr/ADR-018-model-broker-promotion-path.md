@@ -61,12 +61,14 @@ The current canonical preview-boundary (`packages/core/src/preview-boundary.js`)
 When Dema sends operator-supplied input to a local model, the input could contain prompt-injection content. The model's output could be hijacked.
 
 **Resolution**: Layer 1 `evaluateArtifactSafety` is run on BOTH directions of every model call.
+
 - Inbound: prompt scanned pre-fetch. Forbidden-live-claim or path-leak → `truth_label: INVOCATION_BLOCKED`, `prompt_safety_verdict: BLOCKED`, refuse to call Ollama.
 - Outbound: response_text scanned post-fetch. Leakage → `response_safety_verdict: REDACTED`, `response_text_preview: [REDACTED: <verdict>]`. Operator sees redaction-only preview.
 
 ### C5 · SAT/FATE honest framing — not agent-team
 
 The operator's draft GO referenced "SAT and FATE inspect model output." Honest framing:
+
 - **SAT-1..5 verification pipeline** (orchestrator-verify v0.1, MEASURED, PR #90) inspects the model-invocation-result envelope **structurally**.
 - **PAT-7 / SAT-5 live agent teams** are `DESIGNED_NOT_LIVE`. They cannot inspect anything yet. **NOT promoted by this slice.**
 - **FATE** exact-string consent gate (MEASURED) gates the operator's authorization to act on model output (not the inspection itself).
@@ -88,6 +90,7 @@ This slice promotes the structural lane only. Live agent teams remain deferred.
 ### v0.2 promotion path
 
 Once v0.1 implementation lands MEASURED:
+
 - LM Studio adapter as second provider (separate ADR if needed)
 - `dema model-broker pick` TUI surface (still consent-bound)
 - Streaming protocol with progressive Layer 1 scan (requires its own ADR on partial-output safety)
@@ -98,16 +101,16 @@ Once v0.1 implementation lands MEASURED:
 
 ## Decomposition · 8 sub-tasks (~10h total)
 
-| # | Goal | Effort | Touched / new files | Promotion delta |
-|---|---|---|---|---|
-| **S1** | Author this ADR | 1h | NEW: `docs/06-adr/ADR-018-model-broker-promotion-path.md` (THIS FILE) | docs-only |
-| **S2** | Materialize 5 schema files for already-emitted envelopes | 2h | NEW: `packages/core/schemas/llm-invocation-request.v0.1.json` · `packages/core/schemas/llm-invocation-result.v0.1.json` · `packages/core/schemas/local-model-availability-probe.v0.1.json` · `packages/core/schemas/local-model-route-receipt.v0.1.json` · `packages/core/schemas/local-model-routed-invocation-result.v0.1.json` · TOUCH: `packages/core/src/envelope-schema-validator.js` (auto-registers via `loadKnownSchemasFromDir`) | PROMOTE: in-code string-constants → on-disk validated registry entries |
-| **S3** | Add `isRuntimeEmissionBoundary()` sibling-vocab distinct from `isCanonicalBoundary()` | 1.5h | TOUCH: `packages/core/src/preview-boundary.js` (export `RUNTIME_EMISSION_BOUNDARY_KEYS` + `isRuntimeEmissionBoundary()` + `isRuntimeEmissionBoundaryShape()` + `buildRuntimeEmissionBoundary()`) · TOUCH: `tests/preview-boundary.test.js` | NEW sibling shape: 6 keys MAY be `true` on MEASURED truth_label; 10 keys MUST be `false` always |
-| **S4** | Migrate `llm-adapter.js` result envelope to canonical sibling boundary shape | 1h | TOUCH: `packages/core/src/llm-adapter.js` (rename `effects_observed` → `boundary`; key set unified) · TOUCH: `tests/llm-adapter.test.js` | PROMOTE: result envelope now passes `isRuntimeEmissionBoundaryShape()`; backwards-compat alias `effects_observed` retained one cycle |
-| **S5** | Bidirectional Layer 1 scan (inbound prompt + outbound response) | 2h | TOUCH: `packages/core/src/llm-adapter.js` (call `evaluateArtifactSafety()` on prompt pre-fetch and on response_text post-fetch; result envelope carries `prompt_safety_verdict` + `response_safety_verdict`) · NEW test block in `tests/llm-adapter.test.js` | PROMOTE: Layer 1 gates BOTH directions; failures → `truth_label: INVOCATION_BLOCKED` or `response_safety_verdict: REDACTED` |
-| **S6** | Monotonic per-invocation consent freshness | 0.5h | TOUCH: `packages/core/src/llm-adapter.js` (consent token bound to monotonic counter + per-process random) · TOUCH: `tests/llm-adapter.test.js` (one-shot consent test) | PROMOTE: replaying the same consent phrase in the same process does NOT re-authorize a second invocation |
-| **S7** | Update truth-map docs | 0.5h | TOUCH: `docs/CURRENT_LIMITS.md` (move llm-adapter + routed-llm-invocation + route-receipt + verifier rows into MEASURED table) · TOUCH: `docs/ROADMAP.md` (mark slice closed) · TOUCH: `docs/ARCHITECTURE.md` (command map rows for new CLI surfaces) | PROMOTE: `CURRENT_LIMITS.md` row movement IS the promotion |
-| **S8** | Verification + sample-fixture round-trip | 1.5h | NEW: `tests/fixtures/model-broker-promotion/` (1 valid availability-probe · 1 valid invocation-result · 1 valid request · 1 valid route-receipt · 1 valid routed envelope · 3 invalid variants) · NEW: `tests/model-broker-promotion-fixtures.test.js` | PROMOTE: fixtures are the durable evidence that schemas validate runtime envelopes |
+| #      | Goal                                                                                  | Effort | Touched / new files                                                                                                                                                                                                                                                                                                                                                                                                                        | Promotion delta                                                                                                                      |
+| ------ | ------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **S1** | Author this ADR                                                                       | 1h     | NEW: `docs/06-adr/ADR-018-model-broker-promotion-path.md` (THIS FILE)                                                                                                                                                                                                                                                                                                                                                                      | docs-only                                                                                                                            |
+| **S2** | Materialize 5 schema files for already-emitted envelopes                              | 2h     | NEW: `packages/core/schemas/llm-invocation-request.v0.1.json` · `packages/core/schemas/llm-invocation-result.v0.1.json` · `packages/core/schemas/local-model-availability-probe.v0.1.json` · `packages/core/schemas/local-model-route-receipt.v0.1.json` · `packages/core/schemas/local-model-routed-invocation-result.v0.1.json` · TOUCH: `packages/core/src/envelope-schema-validator.js` (auto-registers via `loadKnownSchemasFromDir`) | PROMOTE: in-code string-constants → on-disk validated registry entries                                                               |
+| **S3** | Add `isRuntimeEmissionBoundary()` sibling-vocab distinct from `isCanonicalBoundary()` | 1.5h   | TOUCH: `packages/core/src/preview-boundary.js` (export `RUNTIME_EMISSION_BOUNDARY_KEYS` + `isRuntimeEmissionBoundary()` + `isRuntimeEmissionBoundaryShape()` + `buildRuntimeEmissionBoundary()`) · TOUCH: `tests/preview-boundary.test.js`                                                                                                                                                                                                 | NEW sibling shape: 6 keys MAY be `true` on MEASURED truth_label; 10 keys MUST be `false` always                                      |
+| **S4** | Migrate `llm-adapter.js` result envelope to canonical sibling boundary shape          | 1h     | TOUCH: `packages/core/src/llm-adapter.js` (rename `effects_observed` → `boundary`; key set unified) · TOUCH: `tests/llm-adapter.test.js`                                                                                                                                                                                                                                                                                                   | PROMOTE: result envelope now passes `isRuntimeEmissionBoundaryShape()`; backwards-compat alias `effects_observed` retained one cycle |
+| **S5** | Bidirectional Layer 1 scan (inbound prompt + outbound response)                       | 2h     | TOUCH: `packages/core/src/llm-adapter.js` (call `evaluateArtifactSafety()` on prompt pre-fetch and on response_text post-fetch; result envelope carries `prompt_safety_verdict` + `response_safety_verdict`) · NEW test block in `tests/llm-adapter.test.js`                                                                                                                                                                               | PROMOTE: Layer 1 gates BOTH directions; failures → `truth_label: INVOCATION_BLOCKED` or `response_safety_verdict: REDACTED`          |
+| **S6** | Monotonic per-invocation consent freshness                                            | 0.5h   | TOUCH: `packages/core/src/llm-adapter.js` (consent token bound to monotonic counter + per-process random) · TOUCH: `tests/llm-adapter.test.js` (one-shot consent test)                                                                                                                                                                                                                                                                     | PROMOTE: replaying the same consent phrase in the same process does NOT re-authorize a second invocation                             |
+| **S7** | Update truth-map docs                                                                 | 0.5h   | TOUCH: `docs/CURRENT_LIMITS.md` (move llm-adapter + routed-llm-invocation + route-receipt + verifier rows into MEASURED table) · TOUCH: `docs/ROADMAP.md` (mark slice closed) · TOUCH: `docs/ARCHITECTURE.md` (command map rows for new CLI surfaces)                                                                                                                                                                                      | PROMOTE: `CURRENT_LIMITS.md` row movement IS the promotion                                                                           |
+| **S8** | Verification + sample-fixture round-trip                                              | 1.5h   | NEW: `tests/fixtures/model-broker-promotion/` (1 valid availability-probe · 1 valid invocation-result · 1 valid request · 1 valid route-receipt · 1 valid routed envelope · 3 invalid variants) · NEW: `tests/model-broker-promotion-fixtures.test.js`                                                                                                                                                                                     | PROMOTE: fixtures are the durable evidence that schemas validate runtime envelopes                                                   |
 
 Test-count budget: floor **2,588** · expected new floor after IMPLEMENTATION slice ≥ **2,616**.
 
@@ -115,15 +118,15 @@ Test-count budget: floor **2,588** · expected new floor after IMPLEMENTATION sl
 
 ## Module boundary (after the IMPLEMENTATION slice lands)
 
-| Module | Path | Schema id(s) emitted | Exported surface | Status |
-|---|---|---|---|---|
-| **Local LLM adapter** (Ollama HTTP, localhost-only) | `packages/core/src/llm-adapter.js` | `bizra.dema.llm_invocation_request.v0.1` (NEW · materialized) · `bizra.dema.llm_invocation_result.v0.1` (PROMOTED · schema file NEW) | `invokeLocalLLM({ model, prompt, consentPhrase, ollamaBaseUrl, timeoutMs, fetchImpl })` · `buildLLMInvocationPreview({...})` · `llmAdapterConsentPhraseFor(model)` | **PROMOTED FROM preview** |
-| **Routed invocation bridge** | `packages/core/src/routed-llm-invocation.js` | `bizra.dema.local_model_routed_invocation_result.v0.1` (PROMOTED · schema file NEW) | `invokeRoutedLocalModel({ routeReceipt, prompt, invokeConsent, timeoutMs, fetchImpl })` | **PROMOTED FROM preview** |
-| **Routed invocation verifier** (17→18 probes) | `packages/core/src/routed-invocation-verifier.js` | `bizra.dema.local_model_routed_invocation_verification.v0.1` | `verifyRoutedInvocationEnvelope(envelope, { source })` · `readEnvelopeFromFile(absPath)` · `INVARIANT_NAMES` | **EXTENDED** (new invariant `verdict_role_is_suggestion` per R12) |
-| **Model broker route receipt** | `packages/models/src/model-broker-preview.js` | `bizra.dema.local_model_route_receipt.v0.1` (PROMOTED · schema file NEW) | `buildModelBrokerPreview({ registry, providers })` · `routeForTask(broker, opts)` · `brokerRouteOnce({ registry, providers, ...routeOpts })` | **PROMOTED** (file rename deferred to v0.2) |
-| **Local model availability probe** | `packages/core/src/llm-adapter.js` (extend) | `bizra.dema.local_model_availability_probe.v0.1` (NEW · schema file NEW) | `probeLocalModelAvailability({ ollamaBaseUrl, timeoutMs, fetchImpl })` | **NEW** |
-| **Preview boundary** (now bifurcated) | `packages/core/src/preview-boundary.js` | n/a | `buildPreviewBoundary()` (UNCHANGED) · `isCanonicalBoundary(b)` (UNCHANGED) · `RUNTIME_EMISSION_BOUNDARY_KEYS` (NEW) · `isRuntimeEmissionBoundary(b)` (NEW) · `isRuntimeEmissionBoundaryShape(b)` (NEW) · `buildRuntimeEmissionBoundary()` (NEW) | **EXTENDED** · canonical preview-boundary semantics preserved verbatim |
-| **FATE consent gate** | `packages/fate/src/fate.js` | `bizra.dema.fate_consent.v0.1` | `evaluateConsent({ phrase, requiredPhrase })` | **UNCHANGED** · authoritative gate inside `invokeLocalLLM` |
+| Module                                              | Path                                              | Schema id(s) emitted                                                                                                                 | Exported surface                                                                                                                                                                                                                                 | Status                                                                 |
+| --------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| **Local LLM adapter** (Ollama HTTP, localhost-only) | `packages/core/src/llm-adapter.js`                | `bizra.dema.llm_invocation_request.v0.1` (NEW · materialized) · `bizra.dema.llm_invocation_result.v0.1` (PROMOTED · schema file NEW) | `invokeLocalLLM({ model, prompt, consentPhrase, ollamaBaseUrl, timeoutMs, fetchImpl })` · `buildLLMInvocationPreview({...})` · `llmAdapterConsentPhraseFor(model)`                                                                               | **PROMOTED FROM preview**                                              |
+| **Routed invocation bridge**                        | `packages/core/src/routed-llm-invocation.js`      | `bizra.dema.local_model_routed_invocation_result.v0.1` (PROMOTED · schema file NEW)                                                  | `invokeRoutedLocalModel({ routeReceipt, prompt, invokeConsent, timeoutMs, fetchImpl })`                                                                                                                                                          | **PROMOTED FROM preview**                                              |
+| **Routed invocation verifier** (17→18 probes)       | `packages/core/src/routed-invocation-verifier.js` | `bizra.dema.local_model_routed_invocation_verification.v0.1`                                                                         | `verifyRoutedInvocationEnvelope(envelope, { source })` · `readEnvelopeFromFile(absPath)` · `INVARIANT_NAMES`                                                                                                                                     | **EXTENDED** (new invariant `verdict_role_is_suggestion` per R12)      |
+| **Model broker route receipt**                      | `packages/models/src/model-broker-preview.js`     | `bizra.dema.local_model_route_receipt.v0.1` (PROMOTED · schema file NEW)                                                             | `buildModelBrokerPreview({ registry, providers })` · `routeForTask(broker, opts)` · `brokerRouteOnce({ registry, providers, ...routeOpts })`                                                                                                     | **PROMOTED** (file rename deferred to v0.2)                            |
+| **Local model availability probe**                  | `packages/core/src/llm-adapter.js` (extend)       | `bizra.dema.local_model_availability_probe.v0.1` (NEW · schema file NEW)                                                             | `probeLocalModelAvailability({ ollamaBaseUrl, timeoutMs, fetchImpl })`                                                                                                                                                                           | **NEW**                                                                |
+| **Preview boundary** (now bifurcated)               | `packages/core/src/preview-boundary.js`           | n/a                                                                                                                                  | `buildPreviewBoundary()` (UNCHANGED) · `isCanonicalBoundary(b)` (UNCHANGED) · `RUNTIME_EMISSION_BOUNDARY_KEYS` (NEW) · `isRuntimeEmissionBoundary(b)` (NEW) · `isRuntimeEmissionBoundaryShape(b)` (NEW) · `buildRuntimeEmissionBoundary()` (NEW) | **EXTENDED** · canonical preview-boundary semantics preserved verbatim |
+| **FATE consent gate**                               | `packages/fate/src/fate.js`                       | `bizra.dema.fate_consent.v0.1`                                                                                                       | `evaluateConsent({ phrase, requiredPhrase })`                                                                                                                                                                                                    | **UNCHANGED** · authoritative gate inside `invokeLocalLLM`             |
 
 Total: 7 modules. 2 PROMOTED · 1 NEW · 2 EXTENDED · 2 UNCHANGED.
 
@@ -132,50 +135,56 @@ Total: 7 modules. 2 PROMOTED · 1 NEW · 2 EXTENDED · 2 UNCHANGED.
 ## Envelope schemas needed (5 new files on disk)
 
 ### `bizra.dema.llm_invocation_request.v0.1`
+
 Required: `schema` (const) · `truth_label` (enum: `OPERATOR_INTENT`) · `requested_model` (string · whitelisted family) · `prompt_length_chars` (uint ≤ 100,000) · `target_endpoint` (string · regex localhost) · `consent_required` (string · exact-pattern) · `boundary` (preview-boundary all-false).
 Optional: `prompt_truncated` (bool) · `timeout_ms` (uint ≤ 600,000) · `requested_by` (string) · `request_id` (uuid v4).
 Consumed by: `invokeLocalLLM()` pre-check · paste-back preview UX.
 
 ### `bizra.dema.llm_invocation_result.v0.1` (PROMOTED)
+
 Required: `schema` · `truth_label` (enum: `MEASURED` | `INVOCATION_FAILED` | `INVOCATION_BLOCKED`) · `mode` (const `invocation_result`) · `invocation_status` (enum: `completed` | `failed` | `blocked`) · `model_invoked` (string) · `prompt_length_chars` (uint) · `response_length_chars` (uint) · `response_text_preview` (string ≤ 500 chars) · `duration_ms` (uint) · `target_endpoint` (regex localhost) · `target_is_localhost` (const `true`) · `consent_phrase_verified` (bool · MUST be `true` on `completed`) · `verdict_role` (const `suggestion`) · `boundary` (runtime-emission · 6 keys may be `true` per S3 spec).
 Optional: `error_reason` (string · required when status ≠ `completed`) · `prompt_safety_verdict` (Layer 1 verdict) · `response_safety_verdict` (Layer 1 verdict) · `request_id` (uuid v4) · `response_raw_keys` (array ≤ 50).
 **This is the envelope that legitimately carries `boundary.model_invocation_performed: true`.** No other envelope in v0.1 does.
 Consumed by: `routed-llm-invocation.js` · `routed-invocation-verifier.js` · `dema model-broker invoke` CLI · `dema orchestrator verify` SAT-1..5 pipeline · `invocation-result-save` to `$DEMA_HOME/receipts/`.
 
 ### `bizra.dema.local_model_availability_probe.v0.1` (NEW)
+
 Required: `schema` · `truth_label` (enum: `LOCALHOST_READ_ONLY_SCAN`) · `target_endpoint` (regex localhost) · `target_is_localhost` (const `true`) · `reachable` (bool) · `boundary` (runtime-emission · only `network_used` MAY be `true`).
 Optional: `http_status` (uint) · `model_count` (uint) · `models_seen` (array ≤ 50 · IDs only) · `error_reason` (string · required when `reachable=false`) · `probe_duration_ms` (uint).
 Consumed by: `dema model-broker status` · `dema doctor` health surface.
 
 ### `bizra.dema.local_model_route_receipt.v0.1` (PROMOTED)
+
 Required: `schema` · `timestamp` (iso) · `selected_model_id` (string · nullable) · `selected_model_role` (enum · nullable) · `selected_model_locality` (enum: `local`) · `reason` (string) · `rejected_candidates` (array ≤ 100) · `verdict_role` (const `suggestion`) · `boundary` (8-key broker-boundary all-false) · `canon_refs` (array).
 Consumed by: `invokeRoutedLocalModel()` · `routed-invocation-verifier.js`.
 
 ### `bizra.dema.local_model_routed_invocation_result.v0.1` (PROMOTED)
+
 Required: `schema` · `route_receipt` (embedded) · `selected_model_id` (string · nullable) · `invocation_result` (embedded · nullable when `selected_model_id===null`) · `boundary` (9-key envelope-boundary) · `warnings` (array).
 Consumed by: `dema model-broker invoke` · `invocation-result-save` · `routed-invocation-verifier` · `dema orchestrator verify`.
 
 ### Registration step (mandatory)
+
 All schemas above must be auto-picked-up by `validateAgainstRegistry()` via the existing `loadKnownSchemasFromDir` mechanism. This wires them into `npm run eval:layer1` — any envelope claiming one of these schemas is structurally validated by Layer 1 in CI.
 
 ---
 
 ## Risks (12 enumerated)
 
-| # | Risk | Severity | Mitigation |
-|---|---|---|---|
-| R1 | Network egress slips in (Ollama proxied to remote, or `OLLAMA_HOST` env var pointing non-localhost) | **CRITICAL** | Existing `baseUrl.startsWith` gate + NEW `dns.lookup` post-check rejecting non-loopback resolution. Test: pass `http://localhost.attacker.com` → expect rejection. |
-| R2 | Operator-private prompt content leaks into a shareable artifact | HIGH | Saved `invocation-result.json` subject to Layer 1 scan; `LEAKAGE_DETECTED` blocks save unless operator types `GO save private invocation result locally only`. |
-| R3 | Prompt injection from operator-supplied input | HIGH | S5 inbound Layer 1 scan; injection → refuse-to-call, NOT sanitize-and-pass-through. |
-| R4 | Model output contains forbidden_live_claims / path leakage / secret tokens | HIGH | S5 outbound Layer 1 scan; on hit → `REDACTED` verdict + redacted preview. |
-| R5 | Local Ollama unavailable / not running / wrong port | MED | `probeLocalModelAvailability()` runs first; unreachable → CLI exits 1 with `next_step: "ensure local Ollama is running at <endpoint>"`. |
-| R6 | Model loading timeout / no bound | MED | `AbortController` + default 60s + hard ceiling 600s. Test: `timeoutMs=10` against slow-mock → expect `error_reason: "timeout_after_10ms"`. |
-| R7 | Model invocation result treated as authoritative (ADR-015 violation) | **CRITICAL** | `verdict_role: "suggestion"` enum-const enforced by schema; SAT-1..5 18th probe `verdict_role_is_suggestion`; Layer 1 adds `FORBIDDEN_AUTHORITY_CLAIM` check. |
-| R8 | Hidden persistence — invocation results auto-saved without consent | HIGH | `invokeLocalLLM()` does NOT touch fs (line 27 comment + no `fs` import). Save lane is SEPARATE `invocation-result-save` CLI with own save-consent. Invariant: invoke and save are two consents, never one. |
-| R9 | Canonical-boundary-all-false invariant broken by careless test rewrites | HIGH | `isRuntimeEmissionBoundary` distinct from `isCanonicalBoundary`. Existing tests using `isCanonicalBoundary` on preview envelopes unchanged. New tests use new check. Lint: no production source sets canonical-boundary key `true` and still emits `buildPreviewBoundary()`. |
-| R10 | Operator types GO once and runtime keeps invoking model on subsequent runs (consent freshness) | **CRITICAL** | S6 monotonic per-invocation consent. Amended exact-string: `"GO: invoke local LLM at <model> · attempt <N>"` where `<N>` is per-process counter the operator reads from the preview and types back. Replay of old phrase fails byte-comparison. |
-| R11 | Schema-registry drift — schema file present but `validateAgainstRegistry` missing | MED | S8 lint: registry export must contain every `*.v0.1.json` file under `packages/core/schemas/`. Test `tests/model-broker-promotion-fixtures.test.js` asserts every new schema id is in `KNOWN_SCHEMA_IDS`. |
-| R12 | `verdict_role: "suggestion"` field stripped or forged downstream | MED | Field required by schema; structural validation rejects missing field. `routed-invocation-verifier.js` gets 18th invariant probe `verdict_role_is_suggestion` enforcing the const. |
+| #   | Risk                                                                                                | Severity     | Mitigation                                                                                                                                                                                                                                                                   |
+| --- | --------------------------------------------------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | Network egress slips in (Ollama proxied to remote, or `OLLAMA_HOST` env var pointing non-localhost) | **CRITICAL** | Existing `baseUrl.startsWith` gate + NEW `dns.lookup` post-check rejecting non-loopback resolution. Test: pass `http://localhost.attacker.com` → expect rejection.                                                                                                           |
+| R2  | Operator-private prompt content leaks into a shareable artifact                                     | HIGH         | Saved `invocation-result.json` subject to Layer 1 scan; `LEAKAGE_DETECTED` blocks save unless operator types `GO save private invocation result locally only`.                                                                                                               |
+| R3  | Prompt injection from operator-supplied input                                                       | HIGH         | S5 inbound Layer 1 scan; injection → refuse-to-call, NOT sanitize-and-pass-through.                                                                                                                                                                                          |
+| R4  | Model output contains forbidden_live_claims / path leakage / secret tokens                          | HIGH         | S5 outbound Layer 1 scan; on hit → `REDACTED` verdict + redacted preview.                                                                                                                                                                                                    |
+| R5  | Local Ollama unavailable / not running / wrong port                                                 | MED          | `probeLocalModelAvailability()` runs first; unreachable → CLI exits 1 with `next_step: "ensure local Ollama is running at <endpoint>"`.                                                                                                                                      |
+| R6  | Model loading timeout / no bound                                                                    | MED          | `AbortController` + default 60s + hard ceiling 600s. Test: `timeoutMs=10` against slow-mock → expect `error_reason: "timeout_after_10ms"`.                                                                                                                                   |
+| R7  | Model invocation result treated as authoritative (ADR-015 violation)                                | **CRITICAL** | `verdict_role: "suggestion"` enum-const enforced by schema; SAT-1..5 18th probe `verdict_role_is_suggestion`; Layer 1 adds `FORBIDDEN_AUTHORITY_CLAIM` check.                                                                                                                |
+| R8  | Hidden persistence — invocation results auto-saved without consent                                  | HIGH         | `invokeLocalLLM()` does NOT touch fs (line 27 comment + no `fs` import). Save lane is SEPARATE `invocation-result-save` CLI with own save-consent. Invariant: invoke and save are two consents, never one.                                                                   |
+| R9  | Canonical-boundary-all-false invariant broken by careless test rewrites                             | HIGH         | `isRuntimeEmissionBoundary` distinct from `isCanonicalBoundary`. Existing tests using `isCanonicalBoundary` on preview envelopes unchanged. New tests use new check. Lint: no production source sets canonical-boundary key `true` and still emits `buildPreviewBoundary()`. |
+| R10 | Operator types GO once and runtime keeps invoking model on subsequent runs (consent freshness)      | **CRITICAL** | S6 monotonic per-invocation consent. Amended exact-string: `"GO: invoke local LLM at <model> · attempt <N>"` where `<N>` is per-process counter the operator reads from the preview and types back. Replay of old phrase fails byte-comparison.                              |
+| R11 | Schema-registry drift — schema file present but `validateAgainstRegistry` missing                   | MED          | S8 lint: registry export must contain every `*.v0.1.json` file under `packages/core/schemas/`. Test `tests/model-broker-promotion-fixtures.test.js` asserts every new schema id is in `KNOWN_SCHEMA_IDS`.                                                                    |
+| R12 | `verdict_role: "suggestion"` field stripped or forged downstream                                    | MED          | Field required by schema; structural validation rejects missing field. `routed-invocation-verifier.js` gets 18th invariant probe `verdict_role_is_suggestion` enforcing the const.                                                                                           |
 
 ---
 
@@ -204,13 +213,13 @@ All schemas above must be auto-picked-up by `validateAgainstRegistry()` via the 
 
 ### New tests added (~28 estimated)
 
-| File | Approx | Locks |
-|---|---|---|
-| `tests/preview-boundary.test.js` | +4 | runtime-emission shape · strict freeze · disagreement with `isCanonicalBoundary` · key-set equality |
-| `tests/llm-adapter.test.js` | +8 | prompt-injection inbound → blocked · response-leak outbound → redacted · monotonic consent · DNS loopback check · runtime-emission boundary shape on result · backwards-compatible `effects_observed` alias one cycle · `verdict_role: "suggestion"` present · deep-freeze |
-| `tests/routed-invocation-verifier.test.js` | +1 | probe #18 `verdict_role_is_suggestion` |
-| `tests/envelope-schema-validator.test.js` | +5 | one per new schema id |
-| `tests/model-broker-promotion-fixtures.test.js` (NEW) | ≥10 | valid availability-probe · valid invocation-result · valid request · valid route-receipt · valid routed envelope · 3 invalid variants (missing `verdict_role` · canonical-boundary forged-true · `target_is_localhost: false`) · registry-completeness · deep-freeze |
+| File                                                  | Approx | Locks                                                                                                                                                                                                                                                                      |
+| ----------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/preview-boundary.test.js`                      | +4     | runtime-emission shape · strict freeze · disagreement with `isCanonicalBoundary` · key-set equality                                                                                                                                                                        |
+| `tests/llm-adapter.test.js`                           | +8     | prompt-injection inbound → blocked · response-leak outbound → redacted · monotonic consent · DNS loopback check · runtime-emission boundary shape on result · backwards-compatible `effects_observed` alias one cycle · `verdict_role: "suggestion"` present · deep-freeze |
+| `tests/routed-invocation-verifier.test.js`            | +1     | probe #18 `verdict_role_is_suggestion`                                                                                                                                                                                                                                     |
+| `tests/envelope-schema-validator.test.js`             | +5     | one per new schema id                                                                                                                                                                                                                                                      |
+| `tests/model-broker-promotion-fixtures.test.js` (NEW) | ≥10    | valid availability-probe · valid invocation-result · valid request · valid route-receipt · valid routed envelope · 3 invalid variants (missing `verdict_role` · canonical-boundary forged-true · `target_is_localhost: false`) · registry-completeness · deep-freeze       |
 
 Estimated new floor: **≥ 2,616**.
 
@@ -243,35 +252,35 @@ dema orchestrator verify <env-path>               # SAT-1..5 over the envelope
 
 ### Tests proving constitutional invariants
 
-| Invariant | Test |
-|---|---|
-| No remote call | reject `http://attacker.com` · reject `http://localhost.attacker.com` (DNS-loopback) |
-| No hidden write | grep `fs.write` / `writeFile` in `llm-adapter.js` returns zero; explicit test mocks `fs` and asserts no calls |
-| No daemon | grep `setInterval` / `setTimeout` (except one-shot abort timer) in adapter + bridge returns expected lines only |
-| No federation | every fixture has `boundary.federation_invoked === false` |
-| No token claim | grep `token_economy` / `mint` / `chain_advance` in adapter source — all assignments `false` |
-| Timeout-handled | mock `fetch` that never resolves → `error_reason` startsWith `timeout_after_` |
-| Injection-bounded | inbound scan blocks · outbound scan redacts |
-| Layer 1 self-validation | `eval:layer1 --artifact <invocation-result.valid.json>` exits 0; `<missing-verdict-role.invalid.json>` exits 1 |
+| Invariant               | Test                                                                                                            |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------- |
+| No remote call          | reject `http://attacker.com` · reject `http://localhost.attacker.com` (DNS-loopback)                            |
+| No hidden write         | grep `fs.write` / `writeFile` in `llm-adapter.js` returns zero; explicit test mocks `fs` and asserts no calls   |
+| No daemon               | grep `setInterval` / `setTimeout` (except one-shot abort timer) in adapter + bridge returns expected lines only |
+| No federation           | every fixture has `boundary.federation_invoked === false`                                                       |
+| No token claim          | grep `token_economy` / `mint` / `chain_advance` in adapter source — all assignments `false`                     |
+| Timeout-handled         | mock `fetch` that never resolves → `error_reason` startsWith `timeout_after_`                                   |
+| Injection-bounded       | inbound scan blocks · outbound scan redacts                                                                     |
+| Layer 1 self-validation | `eval:layer1 --artifact <invocation-result.valid.json>` exits 0; `<missing-verdict-role.invalid.json>` exits 1  |
 
 ---
 
 ## Explicit non-goals (12)
 
-| # | Non-goal | v0.2+ candidate |
-|---|---|---|
-| NG1 | No remote provider (Anthropic / OpenAI / non-loopback) | Reserved to never-or-future amendment ADR superseding §C1. |
-| NG2 | No PAT-7 promotion. PAT-* modules remain `DESIGNED_NOT_LIVE`. | v0.x via separate slice gated on Mission Lifecycle Kernel runtime activation. |
-| NG3 | No SAT-5 live agent-team. `sat-*-verifier.js` modules remain deterministic structural verifiers. | v0.3 candidate: SAT probes optionally wrapped by an LLM-suggestion lane via this same broker. Requires its own ADR. |
-| NG4 | No model fine-tuning · no training · no LoRA. | Out of scope forever for Dema-runtime; belongs to `bizra-omega` Python lane per ADR-014. |
-| NG5 | No model selection UI / TUI picker. Operator picks model by typing model name into consent phrase. | v0.2: `dema model-broker pick` TUI surface, still consent-bound. |
-| NG6 | No auto-retry on failure. One invocation per typed consent. | v0.2: `--retry-on <reason>` flag with own per-retry consent. |
-| NG7 | No result persistence by default. `invokeLocalLLM` does not write. | Already partitioned correctly; this NG re-asserts the invariant. |
-| NG8 | No streaming protocol in v0.1. `stream: false` hardcoded. | v0.2: streaming with progressive Layer 1 scan; needs own ADR on partial-output safety. |
-| NG9 | No multi-model routing within a single invocation. One route → one model → one result. | v0.2: ensemble routing; 1 consent per model. |
-| NG10 | No MCP integration in v0.1. | v0.x slice tied to MCP runtime ADR (separate). |
-| NG11 | No LLM judgment over constitutional gates. Per ADR-015. | Never. ADR-015 is the upper bound. |
-| NG12 | No autonomy on receipts. Model never authorizes a mint, never decides chain advancement, never approves a FATE refusal. | Per ADR-005 + ADR-015. Hardline. |
+| #    | Non-goal                                                                                                                | v0.2+ candidate                                                                                                     |
+| ---- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| NG1  | No remote provider (Anthropic / OpenAI / non-loopback)                                                                  | Reserved to never-or-future amendment ADR superseding §C1.                                                          |
+| NG2  | No PAT-7 promotion. PAT-\* modules remain `DESIGNED_NOT_LIVE`.                                                          | v0.x via separate slice gated on Mission Lifecycle Kernel runtime activation.                                       |
+| NG3  | No SAT-5 live agent-team. `sat-*-verifier.js` modules remain deterministic structural verifiers.                        | v0.3 candidate: SAT probes optionally wrapped by an LLM-suggestion lane via this same broker. Requires its own ADR. |
+| NG4  | No model fine-tuning · no training · no LoRA.                                                                           | Out of scope forever for Dema-runtime; belongs to `bizra-omega` Python lane per ADR-014.                            |
+| NG5  | No model selection UI / TUI picker. Operator picks model by typing model name into consent phrase.                      | v0.2: `dema model-broker pick` TUI surface, still consent-bound.                                                    |
+| NG6  | No auto-retry on failure. One invocation per typed consent.                                                             | v0.2: `--retry-on <reason>` flag with own per-retry consent.                                                        |
+| NG7  | No result persistence by default. `invokeLocalLLM` does not write.                                                      | Already partitioned correctly; this NG re-asserts the invariant.                                                    |
+| NG8  | No streaming protocol in v0.1. `stream: false` hardcoded.                                                               | v0.2: streaming with progressive Layer 1 scan; needs own ADR on partial-output safety.                              |
+| NG9  | No multi-model routing within a single invocation. One route → one model → one result.                                  | v0.2: ensemble routing; 1 consent per model.                                                                        |
+| NG10 | No MCP integration in v0.1.                                                                                             | v0.x slice tied to MCP runtime ADR (separate).                                                                      |
+| NG11 | No LLM judgment over constitutional gates. Per ADR-015.                                                                 | Never. ADR-015 is the upper bound.                                                                                  |
+| NG12 | No autonomy on receipts. Model never authorizes a mint, never decides chain advancement, never approves a FATE refusal. | Per ADR-005 + ADR-015. Hardline.                                                                                    |
 
 ---
 
@@ -321,6 +330,7 @@ The slice is small (~10h) and load-bearing. The narrowness of "Ollama-only · lo
 ## When this ADR changes
 
 This ADR is `v0.1`. Material edits to:
+
 - §C1 (localhost vs remote) require a new ADR + operator-typed GO + invariant update.
 - §C3 (sibling boundary vocabulary) require an extension ADR if more boundary keys flip to legitimate-true.
 - §C5 (SAT/FATE framing) require a separate ADR for PAT-7 or SAT-5 live-agent promotion.

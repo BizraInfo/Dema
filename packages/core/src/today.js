@@ -14,7 +14,7 @@ export async function recordTodayTick({
   root = localDemaHome(),
   now = new Date(),
   status,
-  source = "dema.cli.today"
+  source = "dema.cli.today",
 } = {}) {
   const memoryRoot = join(root, "memory");
   await mkdir(memoryRoot, { recursive: true });
@@ -31,7 +31,7 @@ export async function recordTodayTick({
     missionExecuted: false,
     runtimePulse: { fired: false },
     nextArtifact: status?.proof?.nextArtifact ?? "ARTIFACT-011",
-    nextAdmissibleAction: status?.nextAdmissibleAction ?? "complete_setup"
+    nextAdmissibleAction: status?.nextAdmissibleAction ?? "complete_setup",
   };
 
   const tickPath = join(memoryRoot, "today.json");

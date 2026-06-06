@@ -29,11 +29,11 @@ to match the convention of every existing builder/preview (`state.js`,
 This is a known design debt. When phase-4 (TUI render) lands and creates the
 `@bizra/dema-cli-tui` package, either:
 
-  (a) `homebase-gather.js` moves there and `@bizra/dema-core` no longer
-      depends on it; or
-  (b) the gather adapter stays in core (read-only adapter is fine in core)
-      and phase-4 imports from core via the established
-      `@bizra/dema-core` export surface.
+(a) `homebase-gather.js` moves there and `@bizra/dema-core` no longer
+depends on it; or
+(b) the gather adapter stays in core (read-only adapter is fine in core)
+and phase-4 imports from core via the established
+`@bizra/dema-core` export surface.
 
 Option (b) is preferred — phase-2 has no TUI semantics; it is a read-only
 disk adapter that any consumer can use. Phase-4 should treat it as a core
@@ -275,15 +275,15 @@ No secrets · no API keys · no auth tokens. The module reads only filesystem + 
 
 ## 2.6 · Error taxonomy
 
-| Source | Error | Behavior |
-|---|---|---|
-| profile.json missing | ENOENT | EC-1 path · `source_present: false` |
-| profile.json malformed | SyntaxError | warning + EC-1 path |
-| ~/.dema/memory missing | ENOENT | EC-4 path · empty array |
-| memory entry malformed | SyntaxError | EC-7 path · `partial: true` |
-| builder throws | any | EC-8 path · null + warning + `partial: true` |
-| disk race vanish | ENOENT mid-flow | EC-9 path · same as missing |
-| permission denied | EACCES | warning · `partial: true` · no crash |
+| Source                 | Error           | Behavior                                     |
+| ---------------------- | --------------- | -------------------------------------------- |
+| profile.json missing   | ENOENT          | EC-1 path · `source_present: false`          |
+| profile.json malformed | SyntaxError     | warning + EC-1 path                          |
+| ~/.dema/memory missing | ENOENT          | EC-4 path · empty array                      |
+| memory entry malformed | SyntaxError     | EC-7 path · `partial: true`                  |
+| builder throws         | any             | EC-8 path · null + warning + `partial: true` |
+| disk race vanish       | ENOENT mid-flow | EC-9 path · same as missing                  |
+| permission denied      | EACCES          | warning · `partial: true` · no crash         |
 
 **Never throw out of `gather()`.** Phase_03 always receives a valid `GatherResult`.
 

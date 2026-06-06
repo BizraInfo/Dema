@@ -192,6 +192,62 @@ describe("mission-lifecycle · buildMissionLifecycle (DOD-1, 2, 3, 4 + envelope 
     }
   });
 
+  it("mission lifecycle carries a signed transition contract for the objective", async () => {
+    const { home, result } = await happyBuild();
+    try {
+      const contract = result.lifecycle.transition_contract;
+      assert.equal(contract.explicit, true);
+      assert.equal(contract.bounded, true);
+      assert.equal(contract.receipt_backed, true);
+      assert.equal(contract.rare_circuit_tested, true);
+      assert.equal(contract.human_consent_aware, true);
+      assert.equal(contract.ihsan_aligned, true);
+      assert.equal(contract.ci_enforced, true);
+      assert.equal(
+        contract.transition_id,
+        `mission_lifecycle:${result.lifecycle.mission_id}:intent_to_closeout`,
+      );
+      assert.equal(
+        contract.proof_scope,
+        "SIGNED_MISSION_LIFECYCLE_STRUCTURAL_PROOF",
+      );
+      assert.equal(
+        contract.receipt_backing.lifecycle_schema,
+        MISSION_LIFECYCLE_SCHEMA,
+      );
+      assert.equal(contract.receipt_backing.lifecycle_proof_hash_ready, true);
+      assert.equal(contract.receipt_backing.signature_performed, true);
+      assert.equal(contract.receipt_backing.chain_advance_performed, false);
+      assert.equal(contract.consent.mutation_receipts_present, false);
+      assert.equal(contract.consent.consent_proof_observed, false);
+      assert.equal(contract.consent.exact_string_required_for_mutation, true);
+      assert.deepEqual(contract.bounds.required_stages, [
+        "intent",
+        "dod",
+        "blockers",
+        "consent",
+        "action_receipts",
+        "verification_receipts",
+        "closeout",
+      ]);
+      assert.ok(
+        contract.rare_circuit_test_refs.includes(
+          "mutation_without_consent_refusal",
+        ),
+      );
+      assert.ok(
+        contract.ci_enforcement_refs.includes(
+          "tests/mission-lifecycle.test.js",
+        ),
+      );
+      assert.ok(contract.ci_enforcement_refs.includes("npm run check"));
+      assert.ok(Object.isFrozen(contract));
+      assert.ok(Object.isFrozen(contract.receipt_backing));
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   it("DOD-2 frozen envelope — mutation throws in strict mode", async () => {
     const { home, result } = await happyBuild();
     try {
@@ -530,6 +586,26 @@ describe("mission-lifecycle · buildMissionLifecycle (DOD-1, 2, 3, 4 + envelope 
       await rm(home, { recursive: true, force: true });
     }
   });
+
+  it("mutation lifecycle transition contract records consent proof and receipt counts", async () => {
+    const { home, result, consentProof } = await happyBuild({
+      withMutation: true,
+    });
+    try {
+      const contract = result.lifecycle.transition_contract;
+      assert.equal(contract.consent.mutation_receipts_present, true);
+      assert.equal(contract.consent.consent_proof_observed, true);
+      assert.equal(
+        contract.consent.consent_proof_hash,
+        consentProof.consent_proof_hash,
+      );
+      assert.equal(contract.receipt_backing.action_receipt_count, 2);
+      assert.equal(contract.receipt_backing.verification_receipt_count, 1);
+      assert.equal(contract.receipt_backing.chain_advance_performed, false);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("mission-lifecycle · verifyMissionLifecycle (signature + proof_hash + hash-shape)", () => {
@@ -744,6 +820,64 @@ describe("mission-lifecycle · verifyMissionLifecycle (signature + proof_hash + 
     }
   });
 
+  it("verifier rejects lifecycle missing transition_contract", async () => {
+    const { home, result } = await happyBuild();
+    try {
+      const pubkey = await loadPublicKey(home);
+      const {
+        lifecycle_signature_b64: _signature,
+        lifecycle_proof_hash: _proofHash,
+        transition_contract: _contract,
+        ...stableBody
+      } = result.lifecycle;
+      const tampered = {
+        ...stableBody,
+        lifecycle_signature_b64: result.lifecycle.lifecycle_signature_b64,
+        lifecycle_proof_hash: sha256(stableStringify(stableBody)),
+      };
+      const v = verifyMissionLifecycle({
+        lifecycle: tampered,
+        pubkeyPem: pubkey,
+      });
+      assert.equal(v.verified, false);
+      assert.equal(v.reason, "structural_missing_field_transition_contract");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("verifier rejects lifecycle transition_contract with missing objective flag", async () => {
+    const { home, result } = await happyBuild();
+    try {
+      const pubkey = await loadPublicKey(home);
+      const {
+        lifecycle_signature_b64,
+        lifecycle_proof_hash: _proofHash,
+        ...stableBody
+      } = result.lifecycle;
+      const tamperedStable = {
+        ...stableBody,
+        transition_contract: {
+          ...stableBody.transition_contract,
+          ihsan_aligned: false,
+        },
+      };
+      const tampered = {
+        ...tamperedStable,
+        lifecycle_signature_b64,
+        lifecycle_proof_hash: sha256(stableStringify(tamperedStable)),
+      };
+      const v = verifyMissionLifecycle({
+        lifecycle: tampered,
+        pubkeyPem: pubkey,
+      });
+      assert.equal(v.verified, false);
+      assert.equal(v.reason, "transition_contract_ihsan_aligned_not_true");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   // SP6-SIM-HARNESS-1A: direct tests for proposeFeedbackBridge (pure, before any wiring)
   describe("proposeFeedbackBridge (SP6-SIM-HARNESS-1A)", () => {
     it("refuses without exact consent → consent_required", async () => {
@@ -791,9 +925,15 @@ describe("mission-lifecycle · verifyMissionLifecycle (signature + proof_hash + 
         assert.ok(r.receipt, "should return receipt");
         // The outer receipt is canonical (from 1A build); the feedback proposal is in canonical_body
         assert.equal(r.receipt.schema, "bizra.dema.canonical_receipt.v0.1");
-        assert.equal(r.receipt.canonical_body.schema, "bizra.dema.feedback_proposal.v0.1");
+        assert.equal(
+          r.receipt.canonical_body.schema,
+          "bizra.dema.feedback_proposal.v0.1",
+        );
         assert.equal(r.receipt.canonical_body.lesson_candidate_hash, HASH_A);
-        assert.ok(r.receipt.receipt_signature_b64, "should have Ed25519 signature");
+        assert.ok(
+          r.receipt.receipt_signature_b64,
+          "should have Ed25519 signature",
+        );
         assert.equal(r.receipt.prev_hash, null);
         // 1A guards ensure no QUARANTINED etc.
         assert.notEqual(r.receipt.truth_label, "QUARANTINED");

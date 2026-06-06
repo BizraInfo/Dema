@@ -154,16 +154,16 @@ META_CANON
 
 ### 3.1 Tier definitions
 
-| Tier | Definition | Authority | Receipt expected |
-|---|---|---|---|
-| **RAW_CLAIM** | Any unstructured assertion: an LLM output, an operator note, an external citation, a heuristic | none (input only) | none |
-| **LOCAL_CANDIDATE** | A RAW_CLAIM that has been structured into a schema-tagged artifact in the operator's local environment | operator | local-only · not yet seen by SAT |
-| **PAT_PROPOSED** | A LOCAL_CANDIDATE that PAT has shaped into a candidate envelope (e.g. PAT-6 `shapeReceiptCandidate()`) ready for SAT examination | PAT | `bizra.dema.receipt_candidate.v0.1` |
-| **SAT_QUARANTINED** | A PAT_PROPOSED candidate currently under SAT-1..5 examination · not yet verified · not yet refused | SAT | per-SAT verdict envelopes (boundary, consent, doctrine, chain, identity) |
-| **SAT_VERIFIED** | A candidate that has passed ALL applicable SAT-1..5 verdicts with `passed=true` and `overall_verdict="pipeline_verified"` | SAT | `bizra.dema.orchestrator_verification_pipeline.v0.1` with `passed=true` (PR #90 save layer) |
-| **HOUSE_OF_WISDOM_ACCEPTED** | A SAT_VERIFIED claim that has been accepted into UKE as shared verified knowledge · the human has consented to its inclusion · EvidenceChain acceptance entry written | SAT + operator consent | UKE acceptance receipt (PLANNED) |
-| **URP_SHAREABLE** | A HOUSE_OF_WISDOM_ACCEPTED claim that has additionally been cleared for URP sharing (anonymization rules applied, public-disclosure boundaries satisfied) | SAT + operator consent | URP-share receipt (PLANNED) |
-| **META_CANON** | A claim that is **about the canon system itself** — see §4 | SAT + founder-grade consent + ADR amendment | META_CANON receipt (PLANNED) |
+| Tier                         | Definition                                                                                                                                                            | Authority                                   | Receipt expected                                                                            |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| **RAW_CLAIM**                | Any unstructured assertion: an LLM output, an operator note, an external citation, a heuristic                                                                        | none (input only)                           | none                                                                                        |
+| **LOCAL_CANDIDATE**          | A RAW_CLAIM that has been structured into a schema-tagged artifact in the operator's local environment                                                                | operator                                    | local-only · not yet seen by SAT                                                            |
+| **PAT_PROPOSED**             | A LOCAL_CANDIDATE that PAT has shaped into a candidate envelope (e.g. PAT-6 `shapeReceiptCandidate()`) ready for SAT examination                                      | PAT                                         | `bizra.dema.receipt_candidate.v0.1`                                                         |
+| **SAT_QUARANTINED**          | A PAT_PROPOSED candidate currently under SAT-1..5 examination · not yet verified · not yet refused                                                                    | SAT                                         | per-SAT verdict envelopes (boundary, consent, doctrine, chain, identity)                    |
+| **SAT_VERIFIED**             | A candidate that has passed ALL applicable SAT-1..5 verdicts with `passed=true` and `overall_verdict="pipeline_verified"`                                             | SAT                                         | `bizra.dema.orchestrator_verification_pipeline.v0.1` with `passed=true` (PR #90 save layer) |
+| **HOUSE_OF_WISDOM_ACCEPTED** | A SAT_VERIFIED claim that has been accepted into UKE as shared verified knowledge · the human has consented to its inclusion · EvidenceChain acceptance entry written | SAT + operator consent                      | UKE acceptance receipt (PLANNED)                                                            |
+| **URP_SHAREABLE**            | A HOUSE_OF_WISDOM_ACCEPTED claim that has additionally been cleared for URP sharing (anonymization rules applied, public-disclosure boundaries satisfied)             | SAT + operator consent                      | URP-share receipt (PLANNED)                                                                 |
+| **META_CANON**               | A claim that is **about the canon system itself** — see §4                                                                                                            | SAT + founder-grade consent + ADR amendment | META_CANON receipt (PLANNED)                                                                |
 
 ### 3.2 Refusal at each tier
 
@@ -196,11 +196,11 @@ In short: **META_CANON describes how the House of Wisdom works**, not what it kn
 
 Without META_CANON, the promotion rules themselves would have no canonical home. Three alternatives were considered and rejected:
 
-| Alternative | Why rejected |
-|---|---|
-| **A. META_CANON = founder-only bedrock** | Makes the rules opaque and personalistic. Mumu's death or absence would freeze the system. Bad for sovereignty propagation. |
-| **B. META_CANON = system-recursive** | **CHOSEN.** Rules about the canon system itself are themselves canonical, and themselves must pass SAT verification + founder-grade consent + ADR amendment to change. The rules have rules. |
-| **C. drop the tier** | The 7-tier ladder ending at URP_SHAREABLE leaves promotion rules implicit and tribal. Bad for external auditability. |
+| Alternative                              | Why rejected                                                                                                                                                                                 |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A. META_CANON = founder-only bedrock** | Makes the rules opaque and personalistic. Mumu's death or absence would freeze the system. Bad for sovereignty propagation.                                                                  |
+| **B. META_CANON = system-recursive**     | **CHOSEN.** Rules about the canon system itself are themselves canonical, and themselves must pass SAT verification + founder-grade consent + ADR amendment to change. The rules have rules. |
+| **C. drop the tier**                     | The 7-tier ladder ending at URP_SHAREABLE leaves promotion rules implicit and tribal. Bad for external auditability.                                                                         |
 
 ### 4.3 Constraints on META_CANON entries
 
@@ -436,20 +436,20 @@ This canon sits in the BIZRA constitutional read order between component DNA and
 
 Honest summary of what currently exists vs. what is PLANNED:
 
-| Component | Status | Where |
-|---|---|---|
-| Dema CLI | **SHIPPED** | `apps/cli/src/index.js` · current local test gate: 2443/2443 pass |
-| PAT-1..7 substrate | **SHIPPED** (preview) | `packages/core/src/pat-*.js` · CLI execution PLANNED |
-| SAT-1..5 substrate | **SHIPPED** (preview) | `packages/core/src/sat-*.js` |
-| SAT-1..5 operator CLI | **SHIPPED** (preview verifier surface) | `dema orchestrator verify` (PR #90) |
-| Multi-agent orchestrator | **SHIPPED** | `packages/core/src/multi-agent-orchestrator.js` |
-| C12 mint-request validator | **SHIPPED** (preview) | `packages/core/src/receipt-mint-integration.js` · actual mint PLANNED |
-| EvidenceChain (5 receipt layers) | **SHIPPED** | route + invocation + verification + codebase-map + pipeline |
-| UKE knowledge cortex | **PLANNED** | not yet implemented |
-| URP shared runtime | **DISCOVERY_ONLY + PLANNED** | `packages/core/src/urp-shared-runtime-discovery.js` + `npm run urp:discovery`; shared runtime remains not connected |
-| Chain-bound mint | **PLANNED** | freeze-point item #4 · halt-gated |
-| Promotion ladder runtime | **PLANNED** | depends on UKE implementation |
-| META_CANON entries | **PLANNED** | tier defined here; entries are not live |
+| Component                        | Status                                 | Where                                                                                                               |
+| -------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Dema CLI                         | **SHIPPED**                            | `apps/cli/src/index.js` · current local test gate: 2443/2443 pass                                                   |
+| PAT-1..7 substrate               | **SHIPPED** (preview)                  | `packages/core/src/pat-*.js` · CLI execution PLANNED                                                                |
+| SAT-1..5 substrate               | **SHIPPED** (preview)                  | `packages/core/src/sat-*.js`                                                                                        |
+| SAT-1..5 operator CLI            | **SHIPPED** (preview verifier surface) | `dema orchestrator verify` (PR #90)                                                                                 |
+| Multi-agent orchestrator         | **SHIPPED**                            | `packages/core/src/multi-agent-orchestrator.js`                                                                     |
+| C12 mint-request validator       | **SHIPPED** (preview)                  | `packages/core/src/receipt-mint-integration.js` · actual mint PLANNED                                               |
+| EvidenceChain (5 receipt layers) | **SHIPPED**                            | route + invocation + verification + codebase-map + pipeline                                                         |
+| UKE knowledge cortex             | **PLANNED**                            | not yet implemented                                                                                                 |
+| URP shared runtime               | **DISCOVERY_ONLY + PLANNED**           | `packages/core/src/urp-shared-runtime-discovery.js` + `npm run urp:discovery`; shared runtime remains not connected |
+| Chain-bound mint                 | **PLANNED**                            | freeze-point item #4 · halt-gated                                                                                   |
+| Promotion ladder runtime         | **PLANNED**                            | depends on UKE implementation                                                                                       |
+| META_CANON entries               | **PLANNED**                            | tier defined here; entries are not live                                                                             |
 
 ## 14. Refusal-Becomes-Rule Anchor
 

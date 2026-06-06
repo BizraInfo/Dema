@@ -51,11 +51,15 @@ function assertHome(home) {
 
 function validateRecordedAtIso(recorded_at_iso) {
   if (!isNonEmptyString(recorded_at_iso)) {
-    throw new TypeError("event-log: recorded_at_iso must be an ISO timestamp string");
+    throw new TypeError(
+      "event-log: recorded_at_iso must be an ISO timestamp string",
+    );
   }
   const parsed = Date.parse(recorded_at_iso);
   if (!Number.isFinite(parsed)) {
-    throw new TypeError("event-log: recorded_at_iso must be an ISO timestamp string");
+    throw new TypeError(
+      "event-log: recorded_at_iso must be an ISO timestamp string",
+    );
   }
   return recorded_at_iso;
 }

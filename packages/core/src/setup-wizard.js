@@ -66,14 +66,18 @@ function buildLineQueue(stdin) {
 async function askPreferredName(lq, stdout, defaultName) {
   const defaultLabel = defaultName ? `"${defaultName}"` : null;
   while (true) {
-    const hint = defaultLabel ? `[Enter for ${defaultLabel}]: ` : "[Required]: ";
+    const hint = defaultLabel
+      ? `[Enter for ${defaultLabel}]: `
+      : "[Required]: ";
     stdout.write(`   ${hint}▸ `);
     const raw = await lq.nextLine();
     if (raw === lq.EOF) return lq.EOF;
     const value = raw.trim();
     if (value === "" && defaultName) return defaultName;
     if (value === "") {
-      stdout.write("   A name is required. Please enter your preferred name.\n");
+      stdout.write(
+        "   A name is required. Please enter your preferred name.\n",
+      );
       continue;
     }
     return value;
@@ -97,7 +101,7 @@ async function askLanguage(lq, stdout, defaultLang) {
     if (value === "") return defaultLabel;
     if (VALID_LANGUAGES.includes(value)) return value;
     stdout.write(
-      `   Invalid language code. Valid codes: ${VALID_LANGUAGES.join(" / ")}.\n`
+      `   Invalid language code. Valid codes: ${VALID_LANGUAGES.join(" / ")}.\n`,
     );
   }
 }
@@ -130,7 +134,7 @@ export async function runSetupWizard({
   stdin = process.stdin,
   stdout = process.stdout,
   defaults = {},
-  writeProfile = defaultWriteProfile
+  writeProfile = defaultWriteProfile,
 } = {}) {
   const lq = buildLineQueue(stdin);
 
@@ -147,19 +151,25 @@ export async function runSetupWizard({
     "Dema is local-first. Nothing leaves this machine unless you type explicit\n" +
       "consent. This wizard creates the local skeleton at ~/.dema and writes your\n" +
       "operator profile. Everything is reversible — you can edit ~/.dema/profile.json\n" +
-      "or re-run setup.\n\n"
+      "or re-run setup.\n\n",
   );
 
   write("Q1 of 5 — Your preferred name (what should Dema call you?)\n");
   write("   This is local-only; it's not posted anywhere.\n");
-  const preferredName = await askPreferredName(lq, stdout, defaults.preferred_name || null);
+  const preferredName = await askPreferredName(
+    lq,
+    stdout,
+    defaults.preferred_name || null,
+  );
   if (canceled(preferredName)) {
     lq.close();
     stdout.write("Setup canceled. No changes written.\n");
     return null;
   }
 
-  write("\nQ2 of 5 — Device label (a short name for this machine, e.g., \"MSI-Titan\")\n");
+  write(
+    '\nQ2 of 5 — Device label (a short name for this machine, e.g., "MSI-Titan")\n',
+  );
   write("   Optional; used for multi-device companion identity.\n");
   const deviceLabel = await askDeviceLabel(lq, stdout);
   if (canceled(deviceLabel)) {
@@ -168,7 +178,9 @@ export async function runSetupWizard({
     return null;
   }
 
-  write("\nQ3 of 5 — Preferred language (ar / en / fr / es / ur / hi / other)\n");
+  write(
+    "\nQ3 of 5 — Preferred language (ar / en / fr / es / ur / hi / other)\n",
+  );
   write("   Affects display only. Identity is language-independent.\n");
   const language = await askLanguage(lq, stdout, defaults.language || "en");
   if (canceled(language)) {
@@ -179,8 +191,12 @@ export async function runSetupWizard({
 
   write("\nQ4 of 5 — Memory consent\n");
   write("   Dema stores memory entries under ~/.dema/memory/. Choose:\n");
-  write("     (1) local-only      — nothing leaves this machine (recommended)\n");
-  write("     (2) local-encrypted — same as (1) plus at-rest encryption (preview)\n");
+  write(
+    "     (1) local-only      — nothing leaves this machine (recommended)\n",
+  );
+  write(
+    "     (2) local-encrypted — same as (1) plus at-rest encryption (preview)\n",
+  );
   write("     (3) skip            — no memory store created\n");
   const memoryConsent = await askMemoryConsent(lq, stdout);
   if (canceled(memoryConsent)) {
@@ -193,7 +209,7 @@ export async function runSetupWizard({
   write(
     '   Daughter Test (BIZRA canon): "Would you be willing to subject your own\n' +
       '   family to this output?" Acknowledging means you commit to applying this\n' +
-      "   test before sharing any Dema output externally.\n"
+      "   test before sharing any Dema output externally.\n",
   );
   const daughterTestAcknowledged = await askDaughterTest(lq, stdout);
   if (canceled(daughterTestAcknowledged)) {
@@ -212,13 +228,14 @@ export async function runSetupWizard({
     created_at: new Date().toISOString(),
     device_label: deviceLabel,
     language,
-    daughter_test_acknowledged: daughterTestAcknowledged
+    daughter_test_acknowledged: daughterTestAcknowledged,
   };
 
   const profilePath = await writeProfile(profile);
 
   const root = process.env.DEMA_HOME || join(homedir(), ".dema");
-  const displayPath = typeof profilePath === "string" ? profilePath : join(root, "profile.json");
+  const displayPath =
+    typeof profilePath === "string" ? profilePath : join(root, "profile.json");
 
   write(`\nSetup complete. Profile written to ${displayPath}\n`);
   write("Next: dema doctor    — verify readiness\n");

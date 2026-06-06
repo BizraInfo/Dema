@@ -18,6 +18,7 @@ You are about to install and verify **Dema** — the JavaScript preview face of 
 - **Receipt-emitting** — every preview event can produce a chain entry
 
 **Dema is NOT**:
+
 - A token / wallet / DEX / NFT thing
 - A SaaS or cloud service
 - A coding agent that runs Bash without your typed consent
@@ -217,15 +218,15 @@ NO_COLOR=1 bin/dema 2>&1 | head -3
 
 ## What you do NOT need to do
 
-| Action | Why not |
-|---|---|
-| Mint a token | POI-C1 forbids · no economic activation at v0.1 |
-| Register on a website | Dema has no website registration |
-| Connect a wallet | Dema doesn't connect wallets |
-| Pay anything | Dema costs nothing · MIT licensed |
-| Sign a CLA | No CLA at v0.1 · contribution path is through standard GitHub PR |
-| Talk to a salesperson | There is no salesperson |
-| Provide your real name | Pseudonym is fine for the reviewer form |
+| Action                 | Why not                                                          |
+| ---------------------- | ---------------------------------------------------------------- |
+| Mint a token           | POI-C1 forbids · no economic activation at v0.1                  |
+| Register on a website  | Dema has no website registration                                 |
+| Connect a wallet       | Dema doesn't connect wallets                                     |
+| Pay anything           | Dema costs nothing · MIT licensed                                |
+| Sign a CLA             | No CLA at v0.1 · contribution path is through standard GitHub PR |
+| Talk to a salesperson  | There is no salesperson                                          |
+| Provide your real name | Pseudonym is fine for the reviewer form                          |
 
 ## What you SHOULD do
 
@@ -257,4 +258,4 @@ NO_COLOR=1 bin/dema 2>&1 | head -3
 
 **Time check**: if you've reached this line in under 12 minutes, you've completed the Day-1 path. Send the feedback form back.
 
-**Operating canon**: *A deterministic constitutional execution engine with replayable receipts.* You just verified that this is true on disk.
+**Operating canon**: _A deterministic constitutional execution engine with replayable receipts._ You just verified that this is true on disk.

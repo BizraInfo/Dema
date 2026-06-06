@@ -7,11 +7,13 @@ import {
   buildUrpCarryingCostPreview,
   URP_CARRYING_COST_PREVIEW_SCHEMA,
   SHAREABLE_RESOURCE_TYPES,
-  FORBIDDEN_RESOURCE_TYPES
+  FORBIDDEN_RESOURCE_TYPES,
 } from "../packages/core/src/urp-carrying-cost-preview.js";
 import { buildBoundaryInvariantCheckReport } from "../scripts/review/boundary-invariant-check.mjs";
 
-const modulePath = fileURLToPath(new URL("../packages/core/src/urp-carrying-cost-preview.js", import.meta.url));
+const modulePath = fileURLToPath(
+  new URL("../packages/core/src/urp-carrying-cost-preview.js", import.meta.url),
+);
 
 const FIXED_NOW = new Date("2026-05-16T11:40:00.000Z");
 
@@ -22,8 +24,9 @@ const VALID_ARGS = Object.freeze({
   self_assessed_value: 100,
   carrying_cost_rate: 0.02,
   license_challenge_allowed: true,
-  no_raw_data_proof: "skill manifest contains only public templates and rubric metadata",
-  now: FIXED_NOW
+  no_raw_data_proof:
+    "skill manifest contains only public templates and rubric metadata",
+  now: FIXED_NOW,
 });
 
 test("T-01 canonical schema", () => {
@@ -54,7 +57,10 @@ test("T-03 valid case has all required fields", () => {
 });
 
 test("T-04 simulated_carrying_cost is computed, not user-supplied", () => {
-  const env = buildUrpCarryingCostPreview({ ...VALID_ARGS, simulated_carrying_cost: 999 });
+  const env = buildUrpCarryingCostPreview({
+    ...VALID_ARGS,
+    simulated_carrying_cost: 999,
+  });
   assert.equal(env.simulated_carrying_cost, 2);
 });
 
@@ -67,33 +73,61 @@ test("T-05 forbidden resource type returns fail-closed envelope", () => {
     "raw_corpus",
     "unpublished_personal_memory",
     "credentials",
-    "finance_data"
+    "finance_data",
   ]) {
-    const env = buildUrpCarryingCostPreview({ ...VALID_ARGS, resource_type: type });
-    assert.equal(env.valid, false, `forbidden type ${type} must be fail-closed`);
-    assert.equal(env.denial.code, "forbidden_resource_type", `forbidden type ${type} must produce forbidden_resource_type denial`);
+    const env = buildUrpCarryingCostPreview({
+      ...VALID_ARGS,
+      resource_type: type,
+    });
+    assert.equal(
+      env.valid,
+      false,
+      `forbidden type ${type} must be fail-closed`,
+    );
+    assert.equal(
+      env.denial.code,
+      "forbidden_resource_type",
+      `forbidden type ${type} must produce forbidden_resource_type denial`,
+    );
   }
 });
 
 test("T-06 unknown resource type returns fail-closed envelope", () => {
-  const env = buildUrpCarryingCostPreview({ ...VALID_ARGS, resource_type: "random_unlisted_type" });
+  const env = buildUrpCarryingCostPreview({
+    ...VALID_ARGS,
+    resource_type: "random_unlisted_type",
+  });
   assert.equal(env.valid, false);
   assert.equal(env.denial.code, "unknown_resource_type");
 });
 
 test("T-07 invalid value (zero / negative / NaN) is rejected", () => {
   for (const value of [0, -1, NaN, Number.POSITIVE_INFINITY, "not a number"]) {
-    const env = buildUrpCarryingCostPreview({ ...VALID_ARGS, self_assessed_value: value });
+    const env = buildUrpCarryingCostPreview({
+      ...VALID_ARGS,
+      self_assessed_value: value,
+    });
     assert.equal(env.valid, false, `value ${String(value)} must be rejected`);
-    assert.equal(env.denial.code, "invalid_value", `value ${String(value)} must produce invalid_value`);
+    assert.equal(
+      env.denial.code,
+      "invalid_value",
+      `value ${String(value)} must produce invalid_value`,
+    );
   }
 });
 
 test("T-08 invalid rate (<=0 or >=1 or NaN) is rejected", () => {
   for (const rate of [0, 1, 1.5, -0.1, NaN]) {
-    const env = buildUrpCarryingCostPreview({ ...VALID_ARGS, carrying_cost_rate: rate });
+    const env = buildUrpCarryingCostPreview({
+      ...VALID_ARGS,
+      carrying_cost_rate: rate,
+    });
     assert.equal(env.valid, false, `rate ${String(rate)} must be rejected`);
-    assert.equal(env.denial.code, "invalid_rate", `rate ${String(rate)} must produce invalid_rate`);
+    assert.equal(
+      env.denial.code,
+      "invalid_rate",
+      `rate ${String(rate)} must produce invalid_rate`,
+    );
   }
 });
 
@@ -101,13 +135,20 @@ test("T-09 missing required strings (resource_id / owner_node / no_raw_data_proo
   for (const field of ["resource_id", "owner_node", "no_raw_data_proof"]) {
     const env = buildUrpCarryingCostPreview({ ...VALID_ARGS, [field]: "" });
     assert.equal(env.valid, false, `empty ${field} must be rejected`);
-    assert.equal(env.denial.code, "missing_field", `empty ${field} must produce missing_field`);
+    assert.equal(
+      env.denial.code,
+      "missing_field",
+      `empty ${field} must produce missing_field`,
+    );
   }
 });
 
 test("T-10 boundary keeps all 9 authority flags false (valid + failure envelopes)", () => {
   const validEnv = buildUrpCarryingCostPreview({ ...VALID_ARGS });
-  const failureEnv = buildUrpCarryingCostPreview({ ...VALID_ARGS, resource_type: "secrets" });
+  const failureEnv = buildUrpCarryingCostPreview({
+    ...VALID_ARGS,
+    resource_type: "secrets",
+  });
   const KEYS = [
     "runtime",
     "federation",
@@ -117,11 +158,19 @@ test("T-10 boundary keeps all 9 authority flags false (valid + failure envelopes
     "private_memory_accessed",
     "raw_data_exchange",
     "license_issued",
-    "shared_urp_published"
+    "shared_urp_published",
   ];
   for (const key of KEYS) {
-    assert.equal(validEnv.boundary[key], false, `valid envelope: boundary.${key} must be false`);
-    assert.equal(failureEnv.boundary[key], false, `failure envelope: boundary.${key} must be false`);
+    assert.equal(
+      validEnv.boundary[key],
+      false,
+      `valid envelope: boundary.${key} must be false`,
+    );
+    assert.equal(
+      failureEnv.boundary[key],
+      false,
+      `failure envelope: boundary.${key} must be false`,
+    );
   }
 });
 
@@ -134,9 +183,12 @@ test("T-11 all 8 shareable resource types are accepted", () => {
     "verified_proof_bundle",
     "resource_offer",
     "compute_offer",
-    "agent_service_offer"
+    "agent_service_offer",
   ]) {
-    const env = buildUrpCarryingCostPreview({ ...VALID_ARGS, resource_type: type });
+    const env = buildUrpCarryingCostPreview({
+      ...VALID_ARGS,
+      resource_type: type,
+    });
     assert.equal(env.valid, true, `shareable type ${type} must be accepted`);
   }
 });
@@ -159,14 +211,26 @@ test("T-13 fresh objects per call", () => {
 test("T-14 pure-module imports", async () => {
   const body = await readFile(modulePath, "utf8");
   assert.ok(!/from ['"]node:fs/.test(body), "module must not import node:fs");
-  assert.ok(!/from ['"]node:http/.test(body), "module must not import node:http");
+  assert.ok(
+    !/from ['"]node:http/.test(body),
+    "module must not import node:http",
+  );
   assert.ok(!/from ['"]node:net/.test(body), "module must not import node:net");
-  assert.ok(!/from ['"]node:child_process/.test(body), "module must not import node:child_process");
-  assert.ok(!/spawn\(|execSync\(|execFile\(|spawnSync\(/.test(body), "module must not invoke processes");
+  assert.ok(
+    !/from ['"]node:child_process/.test(body),
+    "module must not import node:child_process",
+  );
+  assert.ok(
+    !/spawn\(|execSync\(|execFile\(|spawnSync\(/.test(body),
+    "module must not invoke processes",
+  );
 });
 
 test("T-15 invalid now Date is rejected", () => {
-  const env = buildUrpCarryingCostPreview({ ...VALID_ARGS, now: new Date("not-a-date") });
+  const env = buildUrpCarryingCostPreview({
+    ...VALID_ARGS,
+    now: new Date("not-a-date"),
+  });
   assert.equal(env.valid, false);
   assert.equal(env.denial.code, "invalid_now");
 });
@@ -174,7 +238,10 @@ test("T-15 invalid now Date is rejected", () => {
 test("T-16 boundary-invariant lint passes with new module included", () => {
   const report = buildBoundaryInvariantCheckReport();
   assert.equal(report.ok, true);
-  assert.ok(report.modules_scanned > 0, `expected at least 26 modules scanned, got ${report.modules_scanned}`);
+  assert.ok(
+    report.modules_scanned > 0,
+    `expected at least 26 modules scanned, got ${report.modules_scanned}`,
+  );
   assert.equal(report.modules_clean, report.modules_scanned);
 });
 

@@ -18,7 +18,11 @@ async function readCounter(home) {
   try {
     const raw = await readFile(join(home, COUNTER_REL), "utf8");
     const parsed = JSON.parse(raw);
-    if (parsed && parsed.schema === COUNTER_SCHEMA && typeof parsed.seenCount === "number") {
+    if (
+      parsed &&
+      parsed.schema === COUNTER_SCHEMA &&
+      typeof parsed.seenCount === "number"
+    ) {
       return parsed;
     }
     // Malformed but parseable — treat as first-time.
@@ -55,7 +59,11 @@ export async function shouldShowIntro({ home, now = new Date() }) {
   const counter = await readCounter(home);
 
   // Explicitly suppressed.
-  if (counter && (counter.suppressedBy === "user-explain" || counter.seenCount >= SUPPRESS_AFTER)) {
+  if (
+    counter &&
+    (counter.suppressedBy === "user-explain" ||
+      counter.seenCount >= SUPPRESS_AFTER)
+  ) {
     return false;
   }
 
@@ -66,7 +74,7 @@ export async function shouldShowIntro({ home, now = new Date() }) {
       const count = await receiptCount(home);
       if (count === 0) return true;
       const createdAt = await profileCreatedAt(home);
-      if (createdAt && (now - createdAt) < NEW_OPERATOR_WINDOW_MS) return true;
+      if (createdAt && now - createdAt < NEW_OPERATOR_WINDOW_MS) return true;
       // Fall through to seenCount check — counter absent means 0.
     }
     return true;
@@ -79,15 +87,24 @@ export function renderIntroLine() {
   return INTRO_TEXT;
 }
 
-export async function recordIntroSeen({ home, now = new Date(), suppressedBy = null }) {
+export async function recordIntroSeen({
+  home,
+  now = new Date(),
+  suppressedBy = null,
+}) {
   const counter = await readCounter(home);
   const seenCount = (counter?.seenCount ?? 0) + 1;
   const updated = {
     schema: COUNTER_SCHEMA,
     seenCount,
     lastSeen: (now instanceof Date ? now : new Date(now)).toISOString(),
-    suppressedBy: suppressedBy ?? (seenCount >= SUPPRESS_AFTER ? "count-cap" : null),
+    suppressedBy:
+      suppressedBy ?? (seenCount >= SUPPRESS_AFTER ? "count-cap" : null),
   };
   await mkdir(join(home, "state"), { recursive: true });
-  await writeFile(join(home, COUNTER_REL), JSON.stringify(updated, null, 2) + "\n", "utf8");
+  await writeFile(
+    join(home, COUNTER_REL),
+    JSON.stringify(updated, null, 2) + "\n",
+    "utf8",
+  );
 }

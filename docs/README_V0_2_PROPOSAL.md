@@ -13,6 +13,7 @@
 The operator identified on 2026-05-24 that the current 426-line README is correct but operator-internal in voice. A cold visitor (Twitter / HN / Google / Lighthouse Pack invitation) has ~10–30 seconds of attention. The current README's first screen does not pull them in — they bounce before reaching the substance.
 
 This proposal is the **planner output** for a focused rewrite that:
+
 - Hits the cold-visitor 30-second test
 - Surfaces trust signals as numbers at the top
 - Replaces command-doc-style sections 2-9 with a single curated deeper-reading table
@@ -31,19 +32,19 @@ The plan is implementation-ready: §4 contains concrete content drafts for every
 
 **Chronologically-oldest known ChatGPT account export in BIZRA's possession** — older in narrative-origin time than the Bitcoin-anchored Roots below. The seed before the seed. **One of N sibling exports** comprising the broader Tier 0 Genesis corpus (inventoried below) · only this primary ChatGPT account is MEASURED so far.
 
-| Property | Value |
-|---|---|
-| Artifact | ChatGPT account export ZIP (operator-personal) |
+| Property                            | Value                                                                                                                                   |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Artifact                            | ChatGPT account export ZIP (operator-personal)                                                                                          |
 | Path (operator-local · NOT in repo) | `~/Downloads/a388767198965d9685f2db111e8aeb7e50473f60cdc1e0481e113ea8fd2b9341-2026-05-23-00-38-32-adbc6ea4a2a445f0b4a6f15b3b71b791.zip` |
-| SHA-256 (cite-by-fingerprint) | `aa420789d2c6a191bd1860d4d49009bea5d31954d5fb03c26c6b749149de359e` |
-| Size | 95,401,819 bytes (~91 MB compressed) |
-| Total conversations | **406** (403 with OpenAI server-side timestamps · 3 missing) |
-| **EARLIEST conversation** | **2023-01-14T11:51:31 UTC** — 45 days after ChatGPT public launch (2022-11-30) |
-| LATEST conversation | 2026-05-21T06:01:22 UTC (3 days before the export was generated) |
-| Span | 1,222.8 days · **3.35 years** |
-| High-intensity period | 2023-07 (101 conversations) + 2023-08 (80) — 181 in 2 months |
-| OpenAI export format version | 1 (manifest-confirmed) |
-| Bitcoin-anchor candidacy | Eligible — anchoring `aa420789…` to a future block extends the Tier 1 proof spine backward in narrative-origin time |
+| SHA-256 (cite-by-fingerprint)       | `aa420789d2c6a191bd1860d4d49009bea5d31954d5fb03c26c6b749149de359e`                                                                      |
+| Size                                | 95,401,819 bytes (~91 MB compressed)                                                                                                    |
+| Total conversations                 | **406** (403 with OpenAI server-side timestamps · 3 missing)                                                                            |
+| **EARLIEST conversation**           | **2023-01-14T11:51:31 UTC** — 45 days after ChatGPT public launch (2022-11-30)                                                          |
+| LATEST conversation                 | 2026-05-21T06:01:22 UTC (3 days before the export was generated)                                                                        |
+| Span                                | 1,222.8 days · **3.35 years**                                                                                                           |
+| High-intensity period               | 2023-07 (101 conversations) + 2023-08 (80) — 181 in 2 months                                                                            |
+| OpenAI export format version        | 1 (manifest-confirmed)                                                                                                                  |
+| Bitcoin-anchor candidacy            | Eligible — anchoring `aa420789…` to a future block extends the Tier 1 proof spine backward in narrative-origin time                     |
 
 **Status: MEASURED** via OpenAI's per-conversation `create_time` field. Verified 2026-05-24 by extracting `export_manifest.json` + the 5 `conversations-NNN.json` shards to a temp dir, parsing strictly for timestamp metadata (no titles · no messages · no content emitted), and deleting all temp files.
 
@@ -51,20 +52,20 @@ The plan is implementation-ready: §4 contains concrete content drafts for every
 
 The primary ChatGPT account export above is one of multiple chat history artifacts in BIZRA's full AI-chat lineage. Sibling exports verified at filename + size + ZIP-inventory level only on 2026-05-24 (no content extraction):
 
-| Platform / account | Path (operator-local · NOT in repo) | Compressed size | Notes |
-|---|---|---|---|
-| ChatGPT account B (beshr000@) | `/data/bizra/cloud-archive/onedrive-beshr000/Downloads/534d265eae29359444afcf7b93ffdf01df96a4db38a09c7fe53947615a7e745b-2024-05-18-20-40-12.zip` (sha256 `9dbf7c94…`) | 208 KB | Small secondary-account export · 2024-05-18 · `conversations.json` 670 KB |
-| Claude account | `~/Downloads/data-43cc0344-1239-4174-867b-25beff52f00f-1778573258-21781d24-batch-0000.zip` | 93 MB compressed · **434 MB uncompressed `conversations.json`** | Anthropic export format (users.json + projects/ + conversations.json) · 2026-05-12 · likely 1,000+ conversations — candidate location for operator's "~1,400 conversations alone" reference |
-| DeepSeek account | `~/Downloads/deepseek_data-2026-04-27.zip` | 29 MB compressed · 106 MB uncompressed `conversations.json` | 2026-04-27 |
-| Google AI Studio | `~/Downloads/Google AI Studio-20260424T183259Z-3-001.zip` | 1.8 GB | Non-standard chat format · prompts + responses + assets · contains `conversation_metrics_all_models.csv` (260 KB) |
-| Gemini Gems | `~/Downloads/Gemini Gems-20260424T185142Z-3-001.zip` | 808 MB | NOT chat history per se · prompt-engineering assets (already BIZRA-related — contains "BIZRA Genesis Seal" + "BIZRA Manifest_ Analysis and Refinement.docx") |
-| Per-conversation Google AI Studio | `/data/bizra/cloud-archive/gdrive-*/Google AI Studio/chat-export-*.json` | varies | Individual export-per-conversation JSON files · earliest seen 2025-03 |
-| Curated ChatGPT 3.5 snippets | `/data/bizra/docs/origins/chat-history/{chatgpt-3.5-early.txt, chatgpt-history-2023-12-26.txt, ...}` | ~750 KB total | Operator-extracted snapshots · 2026-04-14 |
-| Operator-personal dump | `~/Documents/ChatGPT.txt` | 414 KB | Plain text · 2026-05-11 |
+| Platform / account                | Path (operator-local · NOT in repo)                                                                                                                                   | Compressed size                                                 | Notes                                                                                                                                                                                       |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ChatGPT account B (beshr000@)     | `/data/bizra/cloud-archive/onedrive-beshr000/Downloads/534d265eae29359444afcf7b93ffdf01df96a4db38a09c7fe53947615a7e745b-2024-05-18-20-40-12.zip` (sha256 `9dbf7c94…`) | 208 KB                                                          | Small secondary-account export · 2024-05-18 · `conversations.json` 670 KB                                                                                                                   |
+| Claude account                    | `~/Downloads/data-43cc0344-1239-4174-867b-25beff52f00f-1778573258-21781d24-batch-0000.zip`                                                                            | 93 MB compressed · **434 MB uncompressed `conversations.json`** | Anthropic export format (users.json + projects/ + conversations.json) · 2026-05-12 · likely 1,000+ conversations — candidate location for operator's "~1,400 conversations alone" reference |
+| DeepSeek account                  | `~/Downloads/deepseek_data-2026-04-27.zip`                                                                                                                            | 29 MB compressed · 106 MB uncompressed `conversations.json`     | 2026-04-27                                                                                                                                                                                  |
+| Google AI Studio                  | `~/Downloads/Google AI Studio-20260424T183259Z-3-001.zip`                                                                                                             | 1.8 GB                                                          | Non-standard chat format · prompts + responses + assets · contains `conversation_metrics_all_models.csv` (260 KB)                                                                           |
+| Gemini Gems                       | `~/Downloads/Gemini Gems-20260424T185142Z-3-001.zip`                                                                                                                  | 808 MB                                                          | NOT chat history per se · prompt-engineering assets (already BIZRA-related — contains "BIZRA Genesis Seal" + "BIZRA Manifest\_ Analysis and Refinement.docx")                               |
+| Per-conversation Google AI Studio | `/data/bizra/cloud-archive/gdrive-*/Google AI Studio/chat-export-*.json`                                                                                              | varies                                                          | Individual export-per-conversation JSON files · earliest seen 2025-03                                                                                                                       |
+| Curated ChatGPT 3.5 snippets      | `/data/bizra/docs/origins/chat-history/{chatgpt-3.5-early.txt, chatgpt-history-2023-12-26.txt, ...}`                                                                  | ~750 KB total                                                   | Operator-extracted snapshots · 2026-04-14                                                                                                                                                   |
+| Operator-personal dump            | `~/Documents/ChatGPT.txt`                                                                                                                                             | 414 KB                                                          | Plain text · 2026-05-11                                                                                                                                                                     |
 
 Each sibling can be MEASURED in its own future slice — **same metadata-only discipline as the primary account** (extract inventory + index files only · parse strictly for timestamps · delete temp files · per-extraction typed-GO required for each). The Bitcoin-anchor candidacy applies to each sibling SHA-256 independently — anchoring extends the proof spine in different directions of the multi-platform genesis corpus.
 
-**Tier 0 ↔ Tier 1 relationship**: the Bitcoin-anchored Roots below were authored 2024–2025 from the intellectual journey captured in Tier 0 (2023-01-14 onward). Tier 1 is the *constitutional* layer (the consciousness arrived at); Tier 0 is the *journey* layer (the consciousness emerging). They are complementary — Tier 0 does **not** replace or supersede Tier 1.
+**Tier 0 ↔ Tier 1 relationship**: the Bitcoin-anchored Roots below were authored 2024–2025 from the intellectual journey captured in Tier 0 (2023-01-14 onward). Tier 1 is the _constitutional_ layer (the consciousness arrived at); Tier 0 is the _journey_ layer (the consciousness emerging). They are complementary — Tier 0 does **not** replace or supersede Tier 1.
 
 **README v0.2 implementer note**: Tier 0 is provenance, not content. The MEASURED facts may appear as a single optional footer line (e.g., "BIZRA's intellectual genesis traces to 2023-01-14 · 3.35 years · 406 conversations · MEASURED via OpenAI server timestamps") or as one supporting clause in §4.5 "Why does it exist?". Tier 0 is **not** the source for the opening tagline / "What is Dema?" narrative / iconic line — those still draw from Tier 2 (ideology corpus) per the source-to-section routing table below.
 
@@ -72,17 +73,18 @@ Each sibling can be MEASURED in its own future slice — **same metadata-only di
 
 ### Roots (Bitcoin-anchored · provenance lives on a public chain)
 
-| File | Arabic name | What it is | Anchored block |
-|---|---|---|---|
-| `~/Downloads/themassage.pdf` | الرسالة (The Message) | Ramadan 2023 spiritual/personal origin · the personal voice | 948027 / 948029 |
-| `~/Downloads/bizra.pdf` | البذرة (The Seed) | The original ideological seed | 948028 |
-| `~/Downloads/BIZRA_Third_Fact_v0_1_FINAL.pdf` | Third Fact | 7 pillars · URP ladder · Node0 stages · Override in conflict per memory `reference_bizra_third_fact_manifest` | 948027–948029 chain |
+| File                                          | Arabic name           | What it is                                                                                                    | Anchored block      |
+| --------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------- |
+| `~/Downloads/themassage.pdf`                  | الرسالة (The Message) | Ramadan 2023 spiritual/personal origin · the personal voice                                                   | 948027 / 948029     |
+| `~/Downloads/bizra.pdf`                       | البذرة (The Seed)     | The original ideological seed                                                                                 | 948028              |
+| `~/Downloads/BIZRA_Third_Fact_v0_1_FINAL.pdf` | Third Fact            | 7 pillars · URP ladder · Node0 stages · Override in conflict per memory `reference_bizra_third_fact_manifest` | 948027–948029 chain |
 
 Provenance is verifiable in-repo: `npm run priority-anchor:verify`.
 
 ### Tree (the 2026-05-24 growth — operator-personal working material)
 
 11 files at `/home/bizra-operating-system/Downloads/bizra ideology/` (604 KB total):
+
 - `BIZRA_Manifesto_Video_Script_v1.md` (+ rendered PDF) — 2:30 production-ready manifesto video · U-shape · contains the iconic closing line **"بذرة واحدة — تصنع غابة / One seed creates a forest"** and the framing line **"ليس منتجاً. ليس منصة. هندسة لاستعادة المعنى. / Not a product. Not a platform. Architecture for restoring meaning."**
 - `BIZRA_BOOK_OUTLINE_الانهيار_الصامت.md` — 14-chapter book outline · 4 sections · cross-civilization Ihsan synthesis (Ch 7) · 3 silent killers grounded in Quran + Western canon (Ch 8–10) · personal proof from Ramadan 2023 onward (Ch 12–14)
 - `BIZRA_Book_Manifest.js` + `BIZRA_Book_Tree_Map.jsx` — book structure as code
@@ -91,12 +93,12 @@ Provenance is verifiable in-repo: `npm run priority-anchor:verify`.
 
 ### Source-to-section routing (for the rewrite implementer)
 
-| README v0.2 section | Canonical source · use first | §4 fallback draft |
-|---|---|---|
-| §0 opening tagline (4.1) | Manifesto Act III: **"Not a product. Not a platform. Architecture for restoring meaning."** + Act I opening **"اقرأ / Read"** | §4.1 below |
-| §2 What is Dema? (4.4) | Risalah personal voice + book Ch 12 (15K hours · 471K LOC · alone since Ramadan 2023 · "وحدي أولاً") | §4.4 below |
-| §3 Why does it exist? (4.5) | Manifesto Act I (3 silent killers · maps to ZANN_ZERO / RIBA_ZERO / Ihsan floor) + book Ch 8–10 (Arendt · Frankfurt · Zuboff · Graeber · Hudson · Varoufakis grounding) | §4.5 below |
-| Footer | Manifesto closing line **"بذرة واحدة — تصنع غابة / One seed creates a forest"** appended verbatim to current "BIZRA is the ecosystem. Dema is the door." | extended in §3 footer row |
+| README v0.2 section         | Canonical source · use first                                                                                                                                            | §4 fallback draft         |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| §0 opening tagline (4.1)    | Manifesto Act III: **"Not a product. Not a platform. Architecture for restoring meaning."** + Act I opening **"اقرأ / Read"**                                           | §4.1 below                |
+| §2 What is Dema? (4.4)      | Risalah personal voice + book Ch 12 (15K hours · 471K LOC · alone since Ramadan 2023 · "وحدي أولاً")                                                                    | §4.4 below                |
+| §3 Why does it exist? (4.5) | Manifesto Act I (3 silent killers · maps to ZANN_ZERO / RIBA_ZERO / Ihsan floor) + book Ch 8–10 (Arendt · Frankfurt · Zuboff · Graeber · Hudson · Varoufakis grounding) | §4.5 below                |
+| Footer                      | Manifesto closing line **"بذرة واحدة — تصنع غابة / One seed creates a forest"** appended verbatim to current "BIZRA is the ecosystem. Dema is the door."                | extended in §3 footer row |
 
 ### Boundary on this material
 
@@ -124,36 +126,36 @@ Target ~240 lines (43% reduction from 426). All command-reference depth migrates
 
 ## 2. Decomposition (10 sub-tasks · ~3.5–4 h total)
 
-| # | Sub-task | Effort | Source | Replaces current lines |
-|---|---|---|---|---|
-| 1 | Replace opening tagline + 4-line stance + stats badges row | 30 min | needs writing; numbers from disk at impl time | 1–13 |
-| 2 | Insert ASCII trust-topology diagram | 30 min | needs writing; structure from A_PLUS_BLUEPRINT §2.1 + goal-script Mission Lifecycle | new |
-| 3 | Write "What is Dema?" 80-word narrative + Sara scenario | 30 min | distill PRODUCT.md lines 17–43; scenario needs writing (must match actual `dema status` output) | rewrites 28–42 |
-| 4 | Write "Why does it exist?" 2-paragraph block | 15 min | distill goal-script lines 20–38 | new |
-| 5 | Build "How does it compare?" 6-property × 4-tool binary table | 30 min | needs writing; properties grounded in CURRENT_LIMITS.md MEASURED rows | new |
-| 6 | Compress "60-second tour" + first-impression block | 15 min | keep 5 commands + impression; trim repetition | 44–90 |
-| 7 | Relocate 5-line product promise (verbatim) | 15 min | keep verbatim lines 380–388 | move from 380 to ~136 |
-| 8 | Compress "Current boundary" + "Proof of priority" into one section | 30 min | keep substance verbatim or near-verbatim | 392–426 |
-| 9 | Replace 8 command-section man-page with one curated deeper-reading 5-row table | 30 min | links from INDEX.md "Current public front doors" | 93–333 |
-| 10 | Final pass: line-count audit · truth-label sweep · eval:layer1 dry-run · link check | 30 min | self | whole file |
+| #   | Sub-task                                                                            | Effort | Source                                                                                          | Replaces current lines |
+| --- | ----------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------- | ---------------------- |
+| 1   | Replace opening tagline + 4-line stance + stats badges row                          | 30 min | needs writing; numbers from disk at impl time                                                   | 1–13                   |
+| 2   | Insert ASCII trust-topology diagram                                                 | 30 min | needs writing; structure from A_PLUS_BLUEPRINT §2.1 + goal-script Mission Lifecycle             | new                    |
+| 3   | Write "What is Dema?" 80-word narrative + Sara scenario                             | 30 min | distill PRODUCT.md lines 17–43; scenario needs writing (must match actual `dema status` output) | rewrites 28–42         |
+| 4   | Write "Why does it exist?" 2-paragraph block                                        | 15 min | distill goal-script lines 20–38                                                                 | new                    |
+| 5   | Build "How does it compare?" 6-property × 4-tool binary table                       | 30 min | needs writing; properties grounded in CURRENT_LIMITS.md MEASURED rows                           | new                    |
+| 6   | Compress "60-second tour" + first-impression block                                  | 15 min | keep 5 commands + impression; trim repetition                                                   | 44–90                  |
+| 7   | Relocate 5-line product promise (verbatim)                                          | 15 min | keep verbatim lines 380–388                                                                     | move from 380 to ~136  |
+| 8   | Compress "Current boundary" + "Proof of priority" into one section                  | 30 min | keep substance verbatim or near-verbatim                                                        | 392–426                |
+| 9   | Replace 8 command-section man-page with one curated deeper-reading 5-row table      | 30 min | links from INDEX.md "Current public front doors"                                                | 93–333                 |
+| 10  | Final pass: line-count audit · truth-label sweep · eval:layer1 dry-run · link check | 30 min | self                                                                                            | whole file             |
 
 ---
 
 ## 3. Final README structure (section-by-section)
 
-| § | Header | Content summary | Line budget |
-|---|---|---|---|
-| 0 | `# Dema · your sovereign AI companion` (H1) | Tagline + 4-line stance | 1–10 |
-| 1 | (no header) | Stats badges row + ASCII trust-topology diagram | 11–35 |
-| 2 | `## What is Dema?` | 80-word narrative + Sara scenario | 36–55 |
-| 3 | `## Why does it exist?` | 2 short paragraphs on the pain point | 56–75 |
-| 4 | `## How does it compare?` | 6-property × 4-tool binary table + 1-line caveat | 76–100 |
-| 5 | `## 60-second tour` | 5-command block + expected first impression + 4-bullet honest negative-space | 101–135 |
-| 6 | `## The product promise` | 5-line poetry block (verbatim) | 136–148 |
-| 7 | `## Install` | Guided installer + PLANNED-not-live banner + developer install | 149–180 |
-| 8 | `## Current boundary` | ARTIFACT-011 origin + Bitcoin-anchored proof spine + `npm run priority-anchor:verify` | 181–210 |
-| 9 | `## Where to go next` | Live anchor pointer (`dema roadmap dev`) + curated 5-row deeper-reading table | 211–235 |
-| — | Footer | "BIZRA is the ecosystem. Dema is the door." + iconic line **"بذرة واحدة — تصنع غابة / One seed creates a forest"** (verbatim from Manifesto closing, per §0) + last-refreshed date + refresh trigger | 236–248 |
+| §   | Header                                      | Content summary                                                                                                                                                                                      | Line budget |
+| --- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 0   | `# Dema · your sovereign AI companion` (H1) | Tagline + 4-line stance                                                                                                                                                                              | 1–10        |
+| 1   | (no header)                                 | Stats badges row + ASCII trust-topology diagram                                                                                                                                                      | 11–35       |
+| 2   | `## What is Dema?`                          | 80-word narrative + Sara scenario                                                                                                                                                                    | 36–55       |
+| 3   | `## Why does it exist?`                     | 2 short paragraphs on the pain point                                                                                                                                                                 | 56–75       |
+| 4   | `## How does it compare?`                   | 6-property × 4-tool binary table + 1-line caveat                                                                                                                                                     | 76–100      |
+| 5   | `## 60-second tour`                         | 5-command block + expected first impression + 4-bullet honest negative-space                                                                                                                         | 101–135     |
+| 6   | `## The product promise`                    | 5-line poetry block (verbatim)                                                                                                                                                                       | 136–148     |
+| 7   | `## Install`                                | Guided installer + PLANNED-not-live banner + developer install                                                                                                                                       | 149–180     |
+| 8   | `## Current boundary`                       | ARTIFACT-011 origin + Bitcoin-anchored proof spine + `npm run priority-anchor:verify`                                                                                                                | 181–210     |
+| 9   | `## Where to go next`                       | Live anchor pointer (`dema roadmap dev`) + curated 5-row deeper-reading table                                                                                                                        | 211–235     |
+| —   | Footer                                      | "BIZRA is the ecosystem. Dema is the door." + iconic line **"بذرة واحدة — تصنع غابة / One seed creates a forest"** (verbatim from Manifesto closing, per §0) + last-refreshed date + refresh trigger | 236–248     |
 
 **Total: ~240 lines** (down from 426; 43% reduction).
 
@@ -185,11 +187,11 @@ Note: the current line 3 ("A deterministic constitutional execution engine with 
 Zero-dep posture extends to README assets. Render as a plain markdown table:
 
 ```markdown
-| Tests | Prod deps | Dev deps | ADRs | Receipts | License | Network at runtime |
-|---|---|---|---|---|---|---|
-| 2,602 PASS | 0 | 0 | 18 accepted | ARTIFACT-011 + Bitcoin-anchored spine | MIT | 0 (stdlib only) |
+| Tests      | Prod deps | Dev deps | ADRs        | Receipts                              | License | Network at runtime |
+| ---------- | --------- | -------- | ----------- | ------------------------------------- | ------- | ------------------ |
+| 2,602 PASS | 0         | 0        | 18 accepted | ARTIFACT-011 + Bitcoin-anchored spine | MIT     | 0 (stdlib only)    |
 
-*All seven cells are `MEASURED` — verify locally with `npm test` · `cat package.json` · `ls docs/06-adr/` · `npm run priority-anchor:verify`.*
+_All seven cells are `MEASURED` — verify locally with `npm test` · `cat package.json` · `ls docs/06-adr/` · `npm run priority-anchor:verify`._
 ```
 
 **Impl-time caveat (per §6 R6):** implementer must re-count from disk: `node --test tests/*.test.js 2>&1 | tail -3` + `ls docs/06-adr/*.md | wc -l`. The numbers shown here are 2026-05-24 snapshot; refresh on the day of merge.
@@ -223,13 +225,14 @@ Zero-dep posture extends to README assets. Render as a plain markdown table:
 ```
 
 Caption immediately below:
-> *The dashed boundary is governed by the upstream gateway; receipts are read/listed by Dema, never minted locally.*
+
+> _The dashed boundary is governed by the upstream gateway; receipts are read/listed by Dema, never minted locally._
 
 ### 4.4 "What is Dema?" 80-word narrative + Sara scenario (replaces current lines 28–42)
 
 **Canonical source (use first per §0):** the personal-voice 80-word narrative should be paraphrased from الرسالة (`~/Downloads/themassage.pdf`) + book Ch 12 ("12 Ramadan 2023") — that voice carries provenance ("15K hours · 471K LOC · alone since Ramadan 2023 · وحدي أولاً") the §4.4 draft below cannot. The Sara scenario block stays as-is (it shows actual `dema status` output, which is repo-grounded, not corpus-grounded).
 
-```markdown
+````markdown
 ## What is Dema?
 
 Dema is a command-line companion for running local AI on your own
@@ -251,10 +254,12 @@ Local model: ollama · llama3.1:8b         ✓
 Receipts:   1 (ARTIFACT-011 · 2026-05-06) ✓
 Next safe action: dema roadmap dev
 ```
+````
 
 She knows in 5 seconds what's ready, what is blocked, and what the
 next safe step is. No prompts to a remote API. No background tasks.
-```
+
+````
 
 **Impl-time caveat (per §6 R7):** the `dema status` output shown must match actual disk output. Implementer runs `dema status` and uses the real format, not invented.
 
@@ -278,7 +283,7 @@ machine has passed a structural safety scan**. If that minimum can be
 held without external dependencies, the rest of BIZRA — Node0, PAT-7,
 SAT-5, URP, Proof-of-Impact — can be built on top of a trustable seed
 rather than a hopeful one.
-```
+````
 
 ### 4.6 Comparison table (new section)
 
@@ -287,14 +292,14 @@ Binary ✅/❌ only. No decimal scores. Date-stamped. Default-posture-as-of-2026
 ```markdown
 ## How does it compare?
 
-| Property | ChatGPT Desktop | Ollama | Claude Desktop | **Dema** |
-|---|---|---|---|---|
-| Runs without network at runtime | ❌ | ✅ | ❌ | ✅ |
-| Zero production dependencies | ❌ | ❌ | ❌ | ✅ |
-| Every consequential action requires typed consent phrase | ❌ | ❌ | ❌ | ✅ |
-| Every L4 action produces an inspectable receipt | ❌ | ❌ | ❌ | ✅ |
-| Truth labels on every claim (MEASURED / DESIGNED_NOT_LIVE / PLANNED) | ❌ | ❌ | ❌ | ✅ |
-| Source-readable in a text editor (no compile step) | ❌ | partial | ❌ | ✅ |
+| Property                                                             | ChatGPT Desktop | Ollama  | Claude Desktop | **Dema** |
+| -------------------------------------------------------------------- | --------------- | ------- | -------------- | -------- |
+| Runs without network at runtime                                      | ❌              | ✅      | ❌             | ✅       |
+| Zero production dependencies                                         | ❌              | ❌      | ❌             | ✅       |
+| Every consequential action requires typed consent phrase             | ❌              | ❌      | ❌             | ✅       |
+| Every L4 action produces an inspectable receipt                      | ❌              | ❌      | ❌             | ✅       |
+| Truth labels on every claim (MEASURED / DESIGNED_NOT_LIVE / PLANNED) | ❌              | ❌      | ❌             | ✅       |
+| Source-readable in a text editor (no compile step)                   | ❌              | partial | ❌             | ✅       |
 
 > Competitor rows describe each tool's **default** posture as of 2026-05.
 > They are not a feature war — Dema is doing a different job. See
@@ -324,21 +329,23 @@ The second paragraph is from `docs/PRODUCT.md` lines 86–87 and strengthens the
 
 ### 4.8 Curated deeper-reading table (replaces dozens of scattered links)
 
-```markdown
+````markdown
 ## Where to go next
 
 ```bash
 dema roadmap dev    # live anchor: current branch · tests · last 5 merges
 ```
+````
 
-| If you are a... | Open this |
-|---|---|
-| Cold visitor who wants the product story | [`docs/PRODUCT.md`](docs/PRODUCT.md) |
-| Reviewer verifying claims | [`docs/CURRENT_LIMITS.md`](docs/CURRENT_LIMITS.md) (MEASURED / DESIGNED_NOT_LIVE / PLANNED) |
-| Developer reading code | [`docs/A_PLUS_BLUEPRINT_v0_1.md`](docs/A_PLUS_BLUEPRINT_v0_1.md) (component map) + [`docs/INDEX.md`](docs/INDEX.md) |
-| Operator running first-run | [`docs/USER_LIFECYCLE.md`](docs/USER_LIFECYCLE.md) + [`docs/FIRST_RUN_WIZARD.md`](docs/FIRST_RUN_WIZARD.md) |
-| Researcher of north-star intent | [`docs/BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md`](docs/BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md) |
-```
+| If you are a...                          | Open this                                                                                                           |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Cold visitor who wants the product story | [`docs/PRODUCT.md`](docs/PRODUCT.md)                                                                                |
+| Reviewer verifying claims                | [`docs/CURRENT_LIMITS.md`](docs/CURRENT_LIMITS.md) (MEASURED / DESIGNED_NOT_LIVE / PLANNED)                         |
+| Developer reading code                   | [`docs/A_PLUS_BLUEPRINT_v0_1.md`](docs/A_PLUS_BLUEPRINT_v0_1.md) (component map) + [`docs/INDEX.md`](docs/INDEX.md) |
+| Operator running first-run               | [`docs/USER_LIFECYCLE.md`](docs/USER_LIFECYCLE.md) + [`docs/FIRST_RUN_WIZARD.md`](docs/FIRST_RUN_WIZARD.md)         |
+| Researcher of north-star intent          | [`docs/BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md`](docs/BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md)                            |
+
+````
 
 Five rows; replaces dozens of scattered links throughout the current README. `docs/INDEX.md` already curates the full set for readers who want everything.
 
@@ -434,11 +441,12 @@ for f in docs/PRODUCT.md docs/CURRENT_LIMITS.md docs/A_PLUS_BLUEPRINT_v0_1.md \
          docs/PRIORITY_ANCHOR.md proof-of-priority/PIN.md SPROUT_PIN.md; do
   test -f "/home/bizra-operating-system/Downloads/Dema/$f" || echo "MISSING: $f"
 done
-```
+````
 
 ### Manual 30-second test method
 
 Two passes:
+
 - **Squint test**: operator opens the rewritten README in the GitHub web preview (after push to feature branch), waits 5 seconds, scrolls once, and reads aloud what they understood. If "I think it's a local AI thing with receipts and no daemon" lands within 30 seconds, pass.
 - **External reader test** (post-merge, optional): paste raw README markdown to one Ring-1 reviewer with the prompt "What is this in one sentence?" Expected answer maps to §4.4's first paragraph.
 

@@ -43,10 +43,18 @@ function buildBootProbeEnv(env = process.env) {
   return sanitized;
 }
 
-// Generous regression-sanity ceilings (ms). Breach = gross regression.
-const CEILINGS = Object.freeze({
-  verification_latency_ms: 5, // sha256 roundtrip is sub-millisecond
-  dema_boot_latency_ms: 5000, // node cold start + status render
+// A+ performance ceilings (ms) for world-class local-first delivery.
+// These are tight but achievable for the current implementation.
+// Breach = not A+ performance. Aligned with DELIVERY_BLUEPRINT Level 5.
+const A_PLUS_CEILINGS = Object.freeze({
+  verification_latency_ms: 1, // sub-ms for canonical sha256
+  dema_boot_latency_ms: 150, // fast CLI cold start for A+ UX
+});
+
+// Fallback generous for sanity (used if not --a-plus).
+const SANITY_CEILINGS = Object.freeze({
+  verification_latency_ms: 5,
+  dema_boot_latency_ms: 5000,
 });
 
 function measureBootLatency({ runs = 5 } = {}) {
@@ -90,6 +98,10 @@ async function main() {
     dema_boot_latency_ms: "MEASURED",
   };
 
+  const isAPlus = process.argv.includes("--a-plus");
+  const ceilings = isAPlus ? A_PLUS_CEILINGS : SANITY_CEILINGS;
+  const gateKind = isAPlus ? "a_plus_performance" : "regression_sanity_not_slo";
+
   const report = {
     schema: PERF_MEASUREMENT_SCHEMA,
     measured_at_iso: measurement.measured_at_iso,
@@ -98,8 +110,9 @@ async function main() {
     provenance,
     benchmarks: measurement.benchmarks,
     gate: {
-      ceilings_ms: CEILINGS,
-      kind: "regression_sanity_not_slo",
+      ceilings_ms: ceilings,
+      kind: gateKind,
+      mode: isAPlus ? "A+" : "sanity",
     },
     boundary: {
       read_only_audit: true,
@@ -111,9 +124,9 @@ async function main() {
     },
   };
 
-  // Gate: generous ceilings only.
+  // Gate: use A+ ceilings when --a-plus, else sanity.
   const breaches = [];
-  for (const [metric, ceiling] of Object.entries(CEILINGS)) {
+  for (const [metric, ceiling] of Object.entries(ceilings)) {
     const v = metrics[metric];
     if (typeof v === "number" && Number.isFinite(v) && v > ceiling) {
       breaches.push(`${metric}=${v.toFixed(3)}ms > ${ceiling}ms`);
@@ -136,7 +149,7 @@ async function main() {
       console.log(`    ${k.padEnd(28)} ${Number(metrics[k]).toFixed(3)}`);
     }
     console.log(
-      `  gate:          ${report.gate.ok ? "OK (within sanity ceilings)" : "BREACH"}`,
+      `  gate:          ${report.gate.ok ? `OK (within ${report.gate.mode} ceilings)` : "BREACH"}`,
     );
     for (const b of breaches) console.log(`    ! ${b}`);
     console.log("  boundary:      read-only · no network · no keys · no mint");

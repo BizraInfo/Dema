@@ -34,49 +34,97 @@ Phase_03 is the surface that smoke-boundary verifies as the 10th canonical spine
   "viewport": { "cols_target": 76, "rows_target": 22 },
 
   "header": {
-    "node_name":       "<string>",     // from gather.profile.node · default "Node0"
-    "date_human_gst":  "<string>",     // "Mon 18 May 2026"
-    "time_human_gst":  "<string>",     // "03:42 GST"
-    "dema_version":    "<string>"      // from package.json
+    "node_name": "<string>", // from gather.profile.node · default "Node0"
+    "date_human_gst": "<string>", // "Mon 18 May 2026"
+    "time_human_gst": "<string>", // "03:42 GST"
+    "dema_version": "<string>", // from package.json
   },
 
   "greeting": {
-    "text":            "<string>",     // "Welcome back, Mumu." · or "Welcome."
-    "has_name":        true,           // false if profile missing
-    "name_source":     "profile_json"  // or "absent"
+    "text": "<string>", // "Welcome back, Mumu." · or "Welcome."
+    "has_name": true, // false if profile missing
+    "name_source": "profile_json", // or "absent"
   },
 
   "memory3": {
-    "entries": [                       // length 0..3 · pad with nulls only in JSON form
-      { "name": "<string>", "summary": "<string|null>" }
+    "entries": [
+      // length 0..3 · pad with nulls only in JSON form
+      { "name": "<string>", "summary": "<string|null>" },
     ],
-    "fallback_text":   null            // "no prior sessions" when empty
+    "fallback_text": null, // "no prior sessions" when empty
   },
 
   "status": {
-    "ring":            { "label": "Ring 0 verified · Ring 1 pack sealed", "bar": "▓▓░░░░░░░░", "ratio": 0.2 },
-    "mission":         { "label": "clear", "icon": "◉", "active_count": 0 },
-    "gateway":         { "label": "unreachable (by design · no runtime here)", "icon": "○", "reachable": false, "by_design": true },
-    "memory_bar":      { "label": "24 entries · 5.8 GB", "bar": "▓▓▓▓▓▓▓▓▓▓", "ratio": 1.0, "bytes": 0, "entries": 0 }
+    "ring": {
+      "label": "Ring 0 verified · Ring 1 pack sealed",
+      "bar": "▓▓░░░░░░░░",
+      "ratio": 0.2,
+    },
+    "mission": { "label": "clear", "icon": "◉", "active_count": 0 },
+    "gateway": {
+      "label": "unreachable (by design · no runtime here)",
+      "icon": "○",
+      "reachable": false,
+      "by_design": true,
+    },
+    "memory_bar": {
+      "label": "24 entries · 5.8 GB",
+      "bar": "▓▓▓▓▓▓▓▓▓▓",
+      "ratio": 1.0,
+      "bytes": 0,
+      "entries": 0,
+    },
   },
 
   "next_action": {
-    "text":            "choose a Lighthouse N=1 candidate (~14 min · localfirst.fm)",
-    "kind":            "operator_act",      // operator_act | preview | journal | quit
-    "source":          "process_mining_preview",
-    "command":         null                  // null when next action is operator-side
+    "text": "choose a Lighthouse N=1 candidate (~14 min · localfirst.fm)",
+    "kind": "operator_act", // operator_act | preview | journal | quit
+    "source": "process_mining_preview",
+    "command": null, // null when next action is operator-side
   },
 
   "affordances": [
-    { "key": "m", "label": "Mission",  "command": "dema mission draft",  "boundary_level": "L2_propose"  },
-    { "key": "j", "label": "Journal",  "command": "dema today",          "boundary_level": "L1_remember" },
-    { "key": "r", "label": "Receipts", "command": "dema receipts",       "boundary_level": "L0_observe"  },
-    { "key": "b", "label": "Browse",   "command": "<sub_screen:memory>", "boundary_level": "L0_observe"  },
-    { "key": "?", "label": "Help",     "command": "dema help",           "boundary_level": "L0_observe"  },
-    { "key": "q", "label": "Quit",     "command": "<exit>",              "boundary_level": "L0_observe"  }
+    {
+      "key": "m",
+      "label": "Mission",
+      "command": "dema mission draft",
+      "boundary_level": "L2_propose",
+    },
+    {
+      "key": "j",
+      "label": "Journal",
+      "command": "dema today",
+      "boundary_level": "L1_remember",
+    },
+    {
+      "key": "r",
+      "label": "Receipts",
+      "command": "dema receipts",
+      "boundary_level": "L0_observe",
+    },
+    {
+      "key": "b",
+      "label": "Browse",
+      "command": "<sub_screen:memory>",
+      "boundary_level": "L0_observe",
+    },
+    {
+      "key": "?",
+      "label": "Help",
+      "command": "dema help",
+      "boundary_level": "L0_observe",
+    },
+    {
+      "key": "q",
+      "label": "Quit",
+      "command": "<exit>",
+      "boundary_level": "L0_observe",
+    },
   ],
 
-  "boundary": { /* canonical 16-key · all false · §8 of v0.1 spec */ }
+  "boundary": {
+    /* canonical 16-key · all false · §8 of v0.1 spec */
+  },
 }
 ```
 

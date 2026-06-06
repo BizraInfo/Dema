@@ -7,12 +7,16 @@ import { readFile } from "node:fs/promises";
 
 import {
   buildMcpIntegrationBlueprint,
-  formatMcpIntegrationBlueprint
+  formatMcpIntegrationBlueprint,
 } from "../packages/core/src/mcp-blueprint.js";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
-const modulePath = fileURLToPath(new URL("../packages/core/src/mcp-blueprint.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
+const modulePath = fileURLToPath(
+  new URL("../packages/core/src/mcp-blueprint.js", import.meta.url),
+);
 
 test("buildMcpIntegrationBlueprint emits a schema-tagged preview without MCP effects", () => {
   const blueprint = buildMcpIntegrationBlueprint();
@@ -30,11 +34,16 @@ test("MCP integration points keep credentials host-managed and mutations forbidd
   const blueprint = buildMcpIntegrationBlueprint();
 
   assert.ok(blueprint.integration_points.length >= 2);
-  assert.ok(blueprint.integration_points.every((point) => (
-    point.credential_source === "host_mcp_configuration" &&
-    point.allowed_methods.length > 0 &&
-    point.forbidden_methods.some((method) => /secret|mutation|posting/i.test(method))
-  )));
+  assert.ok(
+    blueprint.integration_points.every(
+      (point) =>
+        point.credential_source === "host_mcp_configuration" &&
+        point.allowed_methods.length > 0 &&
+        point.forbidden_methods.some((method) =>
+          /secret|mutation|posting/i.test(method),
+        ),
+    ),
+  );
 });
 
 test("MCP blueprint keeps proof pillars canonical and non-certifying", () => {
@@ -44,22 +53,37 @@ test("MCP blueprint keeps proof pillars canonical and non-certifying", () => {
     "formal",
     "cryptographic",
     "empirical",
-    "economic"
+    "economic",
   ]);
-  assert.ok(Object.values(blueprint.proof_of_truth_convergence).every((pillar) => (
-    pillar.certifies === false &&
-    pillar.status !== "PERMIT" &&
-    pillar.evidence_kind
-  )));
+  assert.ok(
+    Object.values(blueprint.proof_of_truth_convergence).every(
+      (pillar) =>
+        pillar.certifies === false &&
+        pillar.status !== "PERMIT" &&
+        pillar.evidence_kind,
+    ),
+  );
 });
 
 test("MCP blueprint includes validation, batching, retries, and circuit breakers", () => {
   const blueprint = buildMcpIntegrationBlueprint();
 
-  assert.ok(blueprint.api_discipline.validation.some((item) => /validate/i.test(item)));
-  assert.ok(blueprint.api_discipline.batching.some((item) => /batch|bounded/i.test(item)));
-  assert.ok(blueprint.api_discipline.retries.some((item) => /idempotent/i.test(item)));
-  assert.ok(blueprint.api_discipline.circuit_breakers.some((item) => /auth|rate-limit/i.test(item)));
+  assert.ok(
+    blueprint.api_discipline.validation.some((item) => /validate/i.test(item)),
+  );
+  assert.ok(
+    blueprint.api_discipline.batching.some((item) =>
+      /batch|bounded/i.test(item),
+    ),
+  );
+  assert.ok(
+    blueprint.api_discipline.retries.some((item) => /idempotent/i.test(item)),
+  );
+  assert.ok(
+    blueprint.api_discipline.circuit_breakers.some((item) =>
+      /auth|rate-limit/i.test(item),
+    ),
+  );
   assert.ok(blueprint.data_transformations.every((item) => item.redaction));
 });
 
@@ -91,7 +115,10 @@ test("formatMcpIntegrationBlueprint renders integration controls and boundary", 
 test("MCP blueprint module has no network or child process side effects", async () => {
   const source = await readFile(modulePath, "utf8");
 
-  assert.doesNotMatch(source, /from "node:(net|http|https|tls|dgram|child_process)"/);
+  assert.doesNotMatch(
+    source,
+    /from "node:(net|http|https|tls|dgram|child_process)"/,
+  );
   assert.doesNotMatch(source, /\bfetch\s*\(/);
 });
 
@@ -104,18 +131,27 @@ test("dema mcp blueprint prints a human-readable preview", async () => {
 });
 
 test("dema mcp blueprint --json emits the schema-tagged blueprint", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "mcp", "blueprint", "--json"]);
+  const { stdout } = await execFileAsync("node", [
+    cliPath,
+    "mcp",
+    "blueprint",
+    "--json",
+  ]);
   const blueprint = JSON.parse(stdout);
 
   assert.equal(blueprint.schema, "bizra.dema.mcp_integration_blueprint.v0.1");
   assert.equal(blueprint.mode, "PREVIEW_ONLY");
   assert.equal(blueprint.boundary.credentials_stored, false);
-  assert.ok(blueprint.integration_points.some((point) => point.server === "github-mcp-server"));
+  assert.ok(
+    blueprint.integration_points.some(
+      (point) => point.server === "github-mcp-server",
+    ),
+  );
 });
 
 test("dema mcp rejects unknown subcommands", async () => {
   await assert.rejects(
     execFileAsync("node", [cliPath, "mcp", "connect"]),
-    /Unknown mcp command/
+    /Unknown mcp command/,
   );
 });

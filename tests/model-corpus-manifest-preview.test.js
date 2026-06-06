@@ -4,18 +4,23 @@ import { readFile } from "node:fs/promises";
 
 import {
   buildModelCorpusManifestPreview,
-  MODEL_CORPUS_MANIFEST_PREVIEW_SCHEMA
+  MODEL_CORPUS_MANIFEST_PREVIEW_SCHEMA,
 } from "../packages/core/src/model-corpus-manifest-preview.js";
 
-const modulePath = new URL("../packages/core/src/model-corpus-manifest-preview.js", import.meta.url);
+const modulePath = new URL(
+  "../packages/core/src/model-corpus-manifest-preview.js",
+  import.meta.url,
+);
 const cliPath = new URL("../apps/cli/src/index.js", import.meta.url);
 
 test("buildModelCorpusManifestPreview emits a schema-tagged multi-model source inventory", () => {
   const preview = buildModelCorpusManifestPreview();
-  const counts = Object.fromEntries(preview.sources.map((source) => [
-    source.source_id,
-    source.estimated_conversations
-  ]));
+  const counts = Object.fromEntries(
+    preview.sources.map((source) => [
+      source.source_id,
+      source.estimated_conversations,
+    ]),
+  );
 
   assert.equal(preview.schema, MODEL_CORPUS_MANIFEST_PREVIEW_SCHEMA);
   assert.equal(preview.mode, "PREVIEW_ONLY");
@@ -61,9 +66,20 @@ test("preview emits data tiers and marks D3/D4 unavailable for preview use", () 
 test("preview emits self-proactive harness, self-critique, micro-compliance, and analogy", () => {
   const preview = buildModelCorpusManifestPreview();
 
-  assert.equal(preview.self_proactive_harness.mode, "DETERMINISTIC_MANIFEST_PREVIEW");
-  assert.equal(preview.self_proactive_harness.recommended_micro_action, "build_corpus_data_tier_classifier_preview");
-  assert.equal(preview.self_proactive_harness.gates.find((gate) => gate.gate === "raw_content_absent").pass, true);
+  assert.equal(
+    preview.self_proactive_harness.mode,
+    "DETERMINISTIC_MANIFEST_PREVIEW",
+  );
+  assert.equal(
+    preview.self_proactive_harness.recommended_micro_action,
+    "build_corpus_data_tier_classifier_preview",
+  );
+  assert.equal(
+    preview.self_proactive_harness.gates.find(
+      (gate) => gate.gate === "raw_content_absent",
+    ).pass,
+    true,
+  );
   assert.equal(preview.self_critique.confidence, "bounded_preview");
   assert.equal(preview.micro_compliance.no_ingestion, true);
   assert.equal(preview.micro_compliance.no_embeddings, true);
@@ -87,7 +103,7 @@ test("preview keeps every authority and data movement boundary false", () => {
     "runtime_started",
     "federation_started",
     "receipt_minted",
-    "step7_mint_attempted"
+    "step7_mint_attempted",
   ];
 
   for (const key of expectedFalseBoundaries) {
@@ -98,42 +114,59 @@ test("preview keeps every authority and data movement boundary false", () => {
 test("malformed manifests fail closed without echoing raw content", () => {
   const secretText = "raw-sensitive-chat-transcript-should-not-appear";
   const raw = buildModelCorpusManifestPreview({
-    sources: [{
-      source_id: "claude_desktop",
-      estimated_conversations: 1,
-      source_type: "frontier_llm_chat",
-      expected_strengths: [],
-      risk_notes: [],
-      content: secretText
-    }]
+    sources: [
+      {
+        source_id: "claude_desktop",
+        estimated_conversations: 1,
+        source_type: "frontier_llm_chat",
+        expected_strengths: [],
+        risk_notes: [],
+        content: secretText,
+      },
+    ],
   });
   const unknown = buildModelCorpusManifestPreview({
-    sources: [{
-      source_id: "unknown_model",
-      estimated_conversations: 1,
-      source_type: "frontier_llm_chat",
-      expected_strengths: [],
-      risk_notes: []
-    }]
+    sources: [
+      {
+        source_id: "unknown_model",
+        estimated_conversations: 1,
+        source_type: "frontier_llm_chat",
+        expected_strengths: [],
+        risk_notes: [],
+      },
+    ],
   });
   const invalidCount = buildModelCorpusManifestPreview({
-    sources: [{
-      source_id: "claude_desktop",
-      estimated_conversations: -1,
-      source_type: "frontier_llm_chat",
-      expected_strengths: [],
-      risk_notes: []
-    }]
+    sources: [
+      {
+        source_id: "claude_desktop",
+        estimated_conversations: -1,
+        source_type: "frontier_llm_chat",
+        expected_strengths: [],
+        risk_notes: [],
+      },
+    ],
   });
-  const invalidTotal = buildModelCorpusManifestPreview({ totalEstimatedConversations: 1 });
+  const invalidTotal = buildModelCorpusManifestPreview({
+    totalEstimatedConversations: 1,
+  });
 
   assert.equal(raw.verdict, "PREVIEW_REJECT");
   assert.equal(raw.reason, "source_must_not_include_raw_content");
-  assert.doesNotMatch(JSON.stringify(raw), /raw-sensitive-chat-transcript-should-not-appear/);
+  assert.doesNotMatch(
+    JSON.stringify(raw),
+    /raw-sensitive-chat-transcript-should-not-appear/,
+  );
   assert.equal(unknown.verdict, "PREVIEW_REJECT");
   assert.equal(unknown.reason, "source_id_not_allowlisted");
-  assert.equal(invalidCount.reason, "estimated_conversations_must_be_non_negative_integer_or_null");
-  assert.equal(invalidTotal.reason, "total_estimated_conversations_must_cover_known_source_counts");
+  assert.equal(
+    invalidCount.reason,
+    "estimated_conversations_must_be_non_negative_integer_or_null",
+  );
+  assert.equal(
+    invalidTotal.reason,
+    "total_estimated_conversations_must_cover_known_source_counts",
+  );
 });
 
 test("preview is deterministic, deeply frozen, and returns fresh objects", () => {
@@ -166,8 +199,20 @@ test("model corpus manifest preview has no CLI wiring", async () => {
 test("model corpus manifest preview module has no runtime, network, filesystem, or randomness side effects", async () => {
   const source = await readFile(modulePath, "utf8");
 
-  assert.doesNotMatch(source, /from\s+["']node:(net|dgram|http|https|tls|dns|worker_threads|vm|child_process|fs)["']/);
-  assert.doesNotMatch(source, /\b(fetch|WebSocket|exec|execFile|spawn|spawnSync)\b/);
-  assert.doesNotMatch(source, /\b(writeFile|appendFile|mkdir|rename|unlink|createWriteStream)\b/);
-  assert.doesNotMatch(source, /\b(Date\.now|Math\.random|crypto\.random|process\.hrtime|performance\.now)\b/);
+  assert.doesNotMatch(
+    source,
+    /from\s+["']node:(net|dgram|http|https|tls|dns|worker_threads|vm|child_process|fs)["']/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(fetch|WebSocket|exec|execFile|spawn|spawnSync)\b/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(writeFile|appendFile|mkdir|rename|unlink|createWriteStream)\b/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(Date\.now|Math\.random|crypto\.random|process\.hrtime|performance\.now)\b/,
+  );
 });

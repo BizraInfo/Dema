@@ -7,11 +7,13 @@ import { readFile } from "node:fs/promises";
 
 import {
   buildOnboardingPreview,
-  formatOnboardingPreview
+  formatOnboardingPreview,
 } from "../packages/core/src/onboarding.js";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 test("buildOnboardingPreview emits a schema-tagged preview-only first-run state", () => {
   const guide = buildOnboardingPreview();
@@ -20,7 +22,11 @@ test("buildOnboardingPreview emits a schema-tagged preview-only first-run state"
   assert.equal(guide.mode, "preview_only");
   assert.equal(guide.user_state.phase, "first_run");
   assert.equal(guide.user_state.node_role, "momo_node0");
-  assert.deepEqual(guide.user_state.allowed_actions, ["read", "preview", "verify"]);
+  assert.deepEqual(guide.user_state.allowed_actions, [
+    "read",
+    "preview",
+    "verify",
+  ]);
   assert.equal(guide.steps.length, 7);
   assert.equal(guide.boundary.consent_required_to_view, false);
   assert.equal(guide.boundary.files_mutated, false);
@@ -71,7 +77,10 @@ test("buildOnboardingPreview returns mutation-isolated guide collections", () =>
   const nextGuide = buildOnboardingPreview();
   assert.equal(nextGuide.inspiration[0].source, "OpenClaw");
   assert.equal(nextGuide.steps[0].title, "Create the local home");
-  assert.doesNotMatch(nextGuide.user_state.blocked_actions.join(","), /mutated/);
+  assert.doesNotMatch(
+    nextGuide.user_state.blocked_actions.join(","),
+    /mutated/,
+  );
   assert.notEqual(nextGuide.inspiration, guide.inspiration);
   assert.notEqual(nextGuide.steps, guide.steps);
 });
@@ -79,10 +88,18 @@ test("buildOnboardingPreview returns mutation-isolated guide collections", () =>
 test("buildOnboardingPreview surfaces node_identity with Node0 ordinal, uid, and null language", () => {
   const guide = buildOnboardingPreview();
   assert.ok(guide.node_identity, "node_identity block present");
-  assert.equal(guide.node_identity.node_ordinal, 0, "Node0 has ordinal=0 by canon");
+  assert.equal(
+    guide.node_identity.node_ordinal,
+    0,
+    "Node0 has ordinal=0 by canon",
+  );
   assert.equal(guide.node_identity.node_label, "Node0");
   assert.match(guide.node_identity.node_uid, /^bizra_node_0_[0-9a-f]{12}$/);
-  assert.equal(guide.node_identity.language, null, "language null until first-run prompt");
+  assert.equal(
+    guide.node_identity.language,
+    null,
+    "language null until first-run prompt",
+  );
   assert.equal(guide.node_identity.device_label, null);
   assert.equal(guide.node_identity.companion_of, null);
 });
@@ -90,11 +107,19 @@ test("buildOnboardingPreview surfaces node_identity with Node0 ordinal, uid, and
 test("node_identity is stable across calls AND mutation-isolated from prior guide", () => {
   const first = buildOnboardingPreview();
   const second = buildOnboardingPreview();
-  assert.equal(first.node_identity.node_uid, second.node_identity.node_uid, "uid is deterministic");
+  assert.equal(
+    first.node_identity.node_uid,
+    second.node_identity.node_uid,
+    "uid is deterministic",
+  );
   // mutate first → does not leak into second
   first.node_identity.language = "ar";
   const third = buildOnboardingPreview();
-  assert.equal(third.node_identity.language, null, "mutation on prior guide must not leak");
+  assert.equal(
+    third.node_identity.language,
+    null,
+    "mutation on prior guide must not leak",
+  );
 });
 
 test("formatOnboardingGuide renders nontechnical CLI/TUI orientation", () => {
@@ -124,12 +149,16 @@ test("dema onboard supports human output and --json", async () => {
 });
 
 test("dema onboard does not call runtime adapters or network surfaces", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "onboard", "--json"]);
+  const { stdout } = await execFileAsync("node", [
+    cliPath,
+    "onboard",
+    "--json",
+  ]);
   const guide = JSON.parse(stdout);
   const source = await readFile(cliPath, "utf8");
   const onboardCase = source.slice(
     source.indexOf('case "welcome"'),
-    source.indexOf('case "setup"')
+    source.indexOf('case "setup"'),
   );
 
   assert.equal(guide.boundary.runtime_started, false);

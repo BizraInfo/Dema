@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import {
   formatBanner,
   gatherBannerInputs,
-  probeGateway
+  probeGateway,
 } from "../packages/core/src/banner.js";
 import { tokenize } from "../packages/core/src/shell.js";
 
@@ -23,8 +23,15 @@ function startFakeGateway(routes) {
       return;
     }
     const result = handler(req);
-    res.writeHead(result.status ?? 200, result.headers ?? { "content-type": "application/json" });
-    res.end(typeof result.body === "string" ? result.body : JSON.stringify(result.body));
+    res.writeHead(
+      result.status ?? 200,
+      result.headers ?? { "content-type": "application/json" },
+    );
+    res.end(
+      typeof result.body === "string"
+        ? result.body
+        : JSON.stringify(result.body),
+    );
   });
   return new Promise((resolve) => {
     server.listen(0, "127.0.0.1", () => {
@@ -33,7 +40,7 @@ function startFakeGateway(routes) {
         url: `http://127.0.0.1:${port}`,
         async stop() {
           await new Promise((r) => server.close(r));
-        }
+        },
       });
     });
   });
@@ -41,7 +48,7 @@ function startFakeGateway(routes) {
 
 test("probeGateway returns reachable when /health responds with correct domain", async () => {
   const gw = await startFakeGateway({
-    "/health": () => ({ body: { status: "ok", domain: HEALTHY_DOMAIN } })
+    "/health": () => ({ body: { status: "ok", domain: HEALTHY_DOMAIN } }),
   });
   try {
     const result = await probeGateway(gw.url);
@@ -55,7 +62,7 @@ test("probeGateway returns reachable when /health responds with correct domain",
 
 test("probeGateway returns unreachable when domain mismatches", async () => {
   const gw = await startFakeGateway({
-    "/health": () => ({ body: { status: "ok", domain: "some-other-server" } })
+    "/health": () => ({ body: { status: "ok", domain: "some-other-server" } }),
   });
   try {
     const result = await probeGateway(gw.url);
@@ -77,7 +84,7 @@ test("gatherBannerInputs returns null profile + null bizraContext when ~/.dema i
   await mkdir(join(root, "memory"), { recursive: true });
   const inputs = await gatherBannerInputs({
     home: root,
-    gatewayUrl: "http://127.0.0.1:1"
+    gatewayUrl: "http://127.0.0.1:1",
   });
   assert.equal(inputs.profile, null);
   assert.equal(inputs.bizraContext, null);
@@ -91,11 +98,14 @@ test("gatherBannerInputs surfaces profile name + stage + receipt count", async (
   await mkdir(join(root, "receipts"), { recursive: true });
   await writeFile(
     join(root, "profile.json"),
-    JSON.stringify({ schema: "bizra.dema.profile.v0.1", preferred_name: "Mumu" })
+    JSON.stringify({
+      schema: "bizra.dema.profile.v0.1",
+      preferred_name: "Mumu",
+    }),
   );
   await writeFile(
     join(root, "memory", "bizra-context.json"),
-    JSON.stringify({ stage: { current: "SPROUT", next: "TREE" } })
+    JSON.stringify({ stage: { current: "SPROUT", next: "TREE" } }),
   );
   await writeFile(
     join(root, "receipts", "artifact-011.json"),
@@ -104,24 +114,29 @@ test("gatherBannerInputs surfaces profile name + stage + receipt count", async (
       artifact_id: "ARTIFACT-011",
       action: "bounded_diagnostic_activation",
       truth_label: "MEASURED",
-      created_at: "2026-05-06T00:00:00Z"
-    })
+      created_at: "2026-05-06T00:00:00Z",
+    }),
   );
 
   const inputs = await gatherBannerInputs({
     home: root,
-    gatewayUrl: "http://127.0.0.1:1"
+    gatewayUrl: "http://127.0.0.1:1",
   });
   assert.equal(inputs.profile.preferred_name, "Mumu");
   assert.equal(inputs.bizraContext.stage.current, "SPROUT");
   assert.equal(inputs.receiptCount, 1);
-  assert.ok(inputs.receiptHighlights.find((r) => r.artifact_id === "ARTIFACT-011"));
+  assert.ok(
+    inputs.receiptHighlights.find((r) => r.artifact_id === "ARTIFACT-011"),
+  );
 });
 
 test("formatBanner suggests setup when profile is missing", async () => {
   const root = await mkdtemp(join(tmpdir(), "dema-banner-no-profile-"));
   await mkdir(join(root, "memory"), { recursive: true });
-  const inputs = await gatherBannerInputs({ home: root, gatewayUrl: "http://127.0.0.1:1" });
+  const inputs = await gatherBannerInputs({
+    home: root,
+    gatewayUrl: "http://127.0.0.1:1",
+  });
   const banner = formatBanner(inputs);
   assert.match(banner, /name\s+:\s+operator/);
   assert.match(banner, /Local-first cockpit/);
@@ -134,18 +149,21 @@ test("formatBanner suggests downloads.audit.preview when fully ready", async () 
   const root = await mkdtemp(join(tmpdir(), "dema-banner-ready-"));
   await mkdir(join(root, "memory"), { recursive: true });
   await mkdir(join(root, "receipts"), { recursive: true });
-  await writeFile(join(root, "profile.json"), JSON.stringify({ preferred_name: "Mumu" }));
+  await writeFile(
+    join(root, "profile.json"),
+    JSON.stringify({ preferred_name: "Mumu" }),
+  );
   await writeFile(
     join(root, "memory", "bizra-context.json"),
-    JSON.stringify({ stage: { current: "SPROUT", next: "TREE" } })
+    JSON.stringify({ stage: { current: "SPROUT", next: "TREE" } }),
   );
   await writeFile(
     join(root, "receipts", "artifact-011.json"),
-    JSON.stringify({ receipt_id: "r-1", artifact_id: "ARTIFACT-011" })
+    JSON.stringify({ receipt_id: "r-1", artifact_id: "ARTIFACT-011" }),
   );
 
   const gw = await startFakeGateway({
-    "/health": () => ({ body: { status: "ok", domain: HEALTHY_DOMAIN } })
+    "/health": () => ({ body: { status: "ok", domain: HEALTHY_DOMAIN } }),
   });
   try {
     const inputs = await gatherBannerInputs({ home: root, gatewayUrl: gw.url });
@@ -161,12 +179,16 @@ test("formatBanner suggests downloads.audit.preview when fully ready", async () 
 
 test("shell tokenize handles plain words, quotes, and escapes", () => {
   assert.deepEqual(tokenize("status"), ["status"]);
-  assert.deepEqual(tokenize("memory show profile"), ["memory", "show", "profile"]);
+  assert.deepEqual(tokenize("memory show profile"), [
+    "memory",
+    "show",
+    "profile",
+  ]);
   assert.deepEqual(tokenize('mission propose --consent "GO: phrase"'), [
     "mission",
     "propose",
     "--consent",
-    "GO: phrase"
+    "GO: phrase",
   ]);
   assert.deepEqual(tokenize("a\\ b c"), ["a b", "c"]);
 });

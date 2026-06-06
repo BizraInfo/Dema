@@ -16,14 +16,14 @@ This aligns with the Third Fact principle that BIZRA is not model-centric: the h
 
 ## 2. Truth-safe state labels
 
-| Label | Meaning |
-|---|---|
-| `NODE0_LOCAL_SEED` | Current implementation stage. Seed pattern exists, preview modules exist, but active local mission runtime is not yet complete. |
-| `NODE0_LOCAL_ACTIVE_PREVIEW` | DEMA can render state, prepare mission, preview PAT/SAT policy flow, and generate receipt preview. |
-| `NODE0_LOCAL_ACTIVE_BOUNDED` | One local mission loop runs with local-model support, micro-consent, evidence preview, and receipt preview. |
-| `PRIVATE_5_NODE_GHOST` | Node1–4 exist only as ghost/hold profiles. No live mesh. |
-| `PRIVATE_5_NODE_PILOT` | Only after Node0 diagnostic, Step 7 decision, offline fixture, and read-only probe gates pass. |
-| `PUBLIC_BIZRA` | Only after legal, security, UX, memory, performance, and proof gates pass. |
+| Label                        | Meaning                                                                                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE0_LOCAL_SEED`           | Current implementation stage. Seed pattern exists, preview modules exist, but active local mission runtime is not yet complete. |
+| `NODE0_LOCAL_ACTIVE_PREVIEW` | DEMA can render state, prepare mission, preview PAT/SAT policy flow, and generate receipt preview.                              |
+| `NODE0_LOCAL_ACTIVE_BOUNDED` | One local mission loop runs with local-model support, micro-consent, evidence preview, and receipt preview.                     |
+| `PRIVATE_5_NODE_GHOST`       | Node1–4 exist only as ghost/hold profiles. No live mesh.                                                                        |
+| `PRIVATE_5_NODE_PILOT`       | Only after Node0 diagnostic, Step 7 decision, offline fixture, and read-only probe gates pass.                                  |
+| `PUBLIC_BIZRA`               | Only after legal, security, UX, memory, performance, and proof gates pass.                                                      |
 
 **Nuance:** the Third Fact uses `URP_LOCAL_ACTIVE` as the public stage name for Node0 alone. For implementation precision we use `URP_LOCAL_SEED` internally until runtime instrumentation and the local mission loop are green. `URP_LOCAL_ACTIVE` is reserved for quoting the public Third Fact stage language.
 
@@ -49,12 +49,12 @@ Receipts     = proof witnesses
 
 ## 4. Wording discipline (corrections vs v0.1)
 
-| Replace (v0.1) | With (v0.2) |
-|---|---|
-| "SAT can approve/block through protocol verdicts." | "SAT-style policy verdicts are previewed locally until shared URP/SAT runtime is proven." |
-| "Evidence is recorded. A receipt preview is created." | "Evidence is prepared or preview-recorded. A receipt preview is created; canonical receipt minting remains typed-GO gated." |
-| `URP_LOCAL_ACTIVE` (when describing implementation state) | `URP_LOCAL_SEED` |
-| "No runtime is required." | "No autonomous runtime, federation, canonical mint, public network, or raw-data sharing is required." (because local model calls are still bounded runtime actions) |
+| Replace (v0.1)                                            | With (v0.2)                                                                                                                                                         |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "SAT can approve/block through protocol verdicts."        | "SAT-style policy verdicts are previewed locally until shared URP/SAT runtime is proven."                                                                           |
+| "Evidence is recorded. A receipt preview is created."     | "Evidence is prepared or preview-recorded. A receipt preview is created; canonical receipt minting remains typed-GO gated."                                         |
+| `URP_LOCAL_ACTIVE` (when describing implementation state) | `URP_LOCAL_SEED`                                                                                                                                                    |
+| "No runtime is required."                                 | "No autonomous runtime, federation, canonical mint, public network, or raw-data sharing is required." (because local model calls are still bounded runtime actions) |
 
 ---
 
@@ -113,10 +113,12 @@ Aligned with the Third Fact value chain: contribution → verification → recei
 ## 7. Execution order (canonical)
 
 ### Phase 0 — Stabilize current branch
+
 - Settle PR #48 CI (proof-quality green; Node 20 coverage is a separate fix).
 - Do not mix CI proof-class repair with DEMA local-active work.
 
 ### Phase 1 — Build the truth object: `dema state --json`
+
 Required output shape (see §10):
 
 ```json
@@ -132,15 +134,28 @@ Required output shape (see §10):
     "minting": false,
     "public_network": false
   },
-  "pat": { "status": "planned_or_preview", "owner": "human", "loyalty": "user_mission" },
-  "sat": { "status": "policy_preview_or_stub", "owner": "system", "loyalty": "system_integrity" },
-  "local_models": { "status": "inventory_or_available", "role": "bounded_supporting_resource", "routing_allowed": false },
+  "pat": {
+    "status": "planned_or_preview",
+    "owner": "human",
+    "loyalty": "user_mission"
+  },
+  "sat": {
+    "status": "policy_preview_or_stub",
+    "owner": "system",
+    "loyalty": "system_integrity"
+  },
+  "local_models": {
+    "status": "inventory_or_available",
+    "role": "bounded_supporting_resource",
+    "routing_allowed": false
+  },
   "shared_urp": { "status": "locked_preview" },
   "next_safe_action": "..."
 }
 ```
 
 ### Phase 2 — Living cockpit foundation
+
 1. DEMA Homebase first screen
 2. Profile / context-capsule preview
 3. Local model inventory + router preview
@@ -150,9 +165,11 @@ Required output shape (see §10):
 7. Receipt preview
 
 ### Phase 3 — Node0 bounded diagnostic
+
 Diagnostic must prove: mission object · profile capsule · PAT proposal · SAT-style policy preview · consent state · bounded local-model output · EvidenceChain preview event · receipt preview · blocked-actions list · release-readiness pass.
 
 ### Phase 4 — Private 5-node ghost fixture
+
 Node1–4 as ghost profiles only. No sockets. No raw-data exchange. No runtime delegation. Handoff / refusal / rollback schemas exist. Partition / rejoin / malicious-node scenarios pass.
 
 ---
@@ -186,6 +203,7 @@ Node1–4 as ghost profiles only. No sockets. No raw-data exchange. No runtime d
 The first implementation slice (`dema state --json`) emits a frozen JSON object conforming to `bizra.dema.node0_state.v0.1`. Source of truth: `packages/core/src/state.js` (`buildNode0StatePreview`).
 
 Boundary invariants enforced by the schema:
+
 - `runtime.autonomous_daemon` = `false`
 - `runtime.federation` = `false`
 - `runtime.minting` = `false`

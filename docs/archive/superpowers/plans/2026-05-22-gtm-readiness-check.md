@@ -13,6 +13,7 @@
 ### Task 1: Add Failing GTM Readiness Tests
 
 **Files:**
+
 - Create: `tests/gtm-readiness-check.test.js`
 - Later create: `scripts/gtm-readiness-check.mjs`
 
@@ -24,7 +25,7 @@ Create `tests/gtm-readiness-check.test.js` with tests that import:
 import {
   buildGtmReadinessReport,
   formatGtmReadinessReport,
-  verifyManifestLines
+  verifyManifestLines,
 } from "../scripts/gtm-readiness-check.mjs";
 ```
 
@@ -53,6 +54,7 @@ Expected: fail with `ERR_MODULE_NOT_FOUND` for `scripts/gtm-readiness-check.mjs`
 ### Task 2: Implement The Read-Only Checker
 
 **Files:**
+
 - Create: `scripts/gtm-readiness-check.mjs`
 
 - [x] **Step 1: Write minimal implementation**
@@ -60,7 +62,10 @@ Expected: fail with `ERR_MODULE_NOT_FOUND` for `scripts/gtm-readiness-check.mjs`
 Implement:
 
 ```js
-export async function buildGtmReadinessReport({ root = REPO_ROOT, lighthousePackDir = defaultLighthousePackDir() } = {}) {}
+export async function buildGtmReadinessReport({
+  root = REPO_ROOT,
+  lighthousePackDir = defaultLighthousePackDir(),
+} = {}) {}
 export function formatGtmReadinessReport(report) {}
 export async function verifyManifestLines({ dir, manifestText }) {}
 ```
@@ -87,6 +92,7 @@ Expected: all tests in that file pass.
 ### Task 3: Expose The Check In Local Gates
 
 **Files:**
+
 - Modify: `package.json`
 - Modify: `scripts/check.mjs`
 - Modify: `docs/LLM_SYSTEM_FLOW.md`

@@ -23,12 +23,16 @@ async function writeCounter(home, data) {
   await writeFile(
     join(home, "state", "intro-seen-count.json"),
     JSON.stringify(data, null, 2) + "\n",
-    "utf8"
+    "utf8",
   );
 }
 
 async function writeProfile(home, data) {
-  await writeFile(join(home, "profile.json"), JSON.stringify(data, null, 2) + "\n", "utf8");
+  await writeFile(
+    join(home, "profile.json"),
+    JSON.stringify(data, null, 2) + "\n",
+    "utf8",
+  );
 }
 
 test("first-time: no counter, no receipts → shouldShowIntro returns true", async () => {
@@ -80,7 +84,10 @@ test("young profile (within 7 days) + no counter → shouldShowIntro returns tru
     await mkdir(join(home, "receipts"), { recursive: true });
     await writeFile(join(home, "receipts", "r1.json"), "{}", "utf8");
     const recentDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // 2 days ago
-    await writeProfile(home, { preferred_name: "Tester", created_at: recentDate.toISOString() });
+    await writeProfile(home, {
+      preferred_name: "Tester",
+      created_at: recentDate.toISOString(),
+    });
     const result = await shouldShowIntro({ home, now: new Date() });
     assert.equal(result, true);
   } finally {
@@ -92,7 +99,10 @@ test("old profile (>7 days) + counter at 3 → shouldShowIntro returns false", a
   const home = await freshHome();
   try {
     const oldDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
-    await writeProfile(home, { preferred_name: "Tester", created_at: oldDate.toISOString() });
+    await writeProfile(home, {
+      preferred_name: "Tester",
+      created_at: oldDate.toISOString(),
+    });
     await writeCounter(home, {
       schema: "bizra.dema.intro_state.v0.1",
       seenCount: 3,
@@ -111,7 +121,10 @@ test("recordIntroSeen creates the counter file with proper schema", async () => 
   try {
     const now = new Date("2026-05-19T10:00:00.000Z");
     await recordIntroSeen({ home, now });
-    const raw = await readFile(join(home, "state", "intro-seen-count.json"), "utf8");
+    const raw = await readFile(
+      join(home, "state", "intro-seen-count.json"),
+      "utf8",
+    );
     const parsed = JSON.parse(raw);
     assert.equal(parsed.schema, "bizra.dema.intro_state.v0.1");
     assert.equal(parsed.seenCount, 1);
@@ -132,7 +145,10 @@ test("counter already at 3 → recordIntroSeen increments to 4, shouldShowIntro 
       suppressedBy: "count-cap",
     });
     await recordIntroSeen({ home, now: new Date() });
-    const raw = await readFile(join(home, "state", "intro-seen-count.json"), "utf8");
+    const raw = await readFile(
+      join(home, "state", "intro-seen-count.json"),
+      "utf8",
+    );
     const parsed = JSON.parse(raw);
     assert.equal(parsed.seenCount, 4);
     const show = await shouldShowIntro({ home, now: new Date() });
@@ -146,7 +162,11 @@ test("malformed counter file → graceful default: shouldShowIntro returns true"
   const home = await freshHome();
   try {
     await mkdir(join(home, "state"), { recursive: true });
-    await writeFile(join(home, "state", "intro-seen-count.json"), "NOT JSON }{", "utf8");
+    await writeFile(
+      join(home, "state", "intro-seen-count.json"),
+      "NOT JSON }{",
+      "utf8",
+    );
     const result = await shouldShowIntro({ home, now: new Date() });
     assert.equal(result, true);
   } finally {

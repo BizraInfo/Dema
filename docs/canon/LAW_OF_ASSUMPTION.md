@@ -5,6 +5,7 @@
 **Authored by:** Mumu (Mohamed Beshr · Node0 operator · First Architect of BIZRA)
 **Operator-local sibling:** `~/.dema/memory/foundational-mindset.{json,md}` (2026-05-09 origin · 2026-05-11 last edit)
 **Companion canon:**
+
 - [`BIZRA_TOPOLOGY_CANON.md`](BIZRA_TOPOLOGY_CANON.md) — the three structural laws (Node ordinal · Seed-pattern invariant · Skill Growth)
 - [`ADR-005`](../06-adr/ADR-005-operator-actions-require-explicit-consent.md) — exact-string consent
 - [`ADR-009`](../06-adr/ADR-009-poi-proof-of-impact-design.md) — Proof-of-Impact design
@@ -53,7 +54,7 @@ The agent gains freedom; the receipt gains epistemic granularity. The freedom is
 
 ## The deeper gate
 
-The gate is not only *"did the operator approve?"*
+The gate is not only _"did the operator approve?"_
 
 The deeper gate is:
 
@@ -67,12 +68,12 @@ That is BIZRA's unique autonomy DNA · the structural counterpart of ZANN_ZERO (
 
 Every claim, every act, every receipt, every proposal must be labeled with exactly one of:
 
-| Label | Meaning | Operational shape |
-|---|---|---|
-| **V** · Verified | A fact checked against direct evidence | The evidence pointer is named (file:line · SHA · receipt id · in-person witness) |
-| **D** · Derived | An inference from one or more verified facts | The derivation chain is shown (V₁ ∧ V₂ → D) |
-| **A** · Assumed with Iḥsān | An assumption with declared ground, boundary, and rejection path | The assumption shape (below) is filled in completely |
-| **U** · Unknown | When honest declaration of ground fails — say so plainly | The label itself is the deliverable · no fabrication |
+| Label                      | Meaning                                                          | Operational shape                                                                |
+| -------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **V** · Verified           | A fact checked against direct evidence                           | The evidence pointer is named (file:line · SHA · receipt id · in-person witness) |
+| **D** · Derived            | An inference from one or more verified facts                     | The derivation chain is shown (V₁ ∧ V₂ → D)                                      |
+| **A** · Assumed with Iḥsān | An assumption with declared ground, boundary, and rejection path | The assumption shape (below) is filled in completely                             |
+| **U** · Unknown            | When honest declaration of ground fails — say so plainly         | The label itself is the deliverable · no fabrication                             |
 
 A claim without a V/D/A/U label is a **doctrine violation** · the same severity as flipping a 16-key boundary key from `false` to `true` without consent.
 
@@ -172,7 +173,7 @@ docs/canon/LAW_OF_ASSUMPTION.md (this file)   repo-distributable · ships with e
 
 When a candidate node (Samy's Asus VivoBook · per `~/.dema/memory/node1-acceptance-2026-05-18.json`) installs Dema, this canon file ships with the clone. The operator-local `foundational-mindset.{json,md}` is then generated on first boot by the installer, sourcing its content from this canon file.
 
-This satisfies the seed-pattern invariant: *every seed contains full tree DNA · every tree carries full forest*. The Law of Assumption is part of the DNA.
+This satisfies the seed-pattern invariant: _every seed contains full tree DNA · every tree carries full forest_. The Law of Assumption is part of the DNA.
 
 ---
 

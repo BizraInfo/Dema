@@ -5,10 +5,12 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildSharedUrpWorldPreview,
-  SHARED_URP_WORLD_PREVIEW_SCHEMA
+  SHARED_URP_WORLD_PREVIEW_SCHEMA,
 } from "../packages/core/src/shared-urp-world-preview.js";
 
-const modulePath = fileURLToPath(new URL("../packages/core/src/shared-urp-world-preview.js", import.meta.url));
+const modulePath = fileURLToPath(
+  new URL("../packages/core/src/shared-urp-world-preview.js", import.meta.url),
+);
 
 test("Shared URP world preview emits the canonical schema", () => {
   const preview = buildSharedUrpWorldPreview();
@@ -50,7 +52,7 @@ test("Shared URP world preview boundary keeps every authority flag false", () =>
     "shared_urp_publish",
     "cross_node_receipt_emission",
     "node_connection_attempted",
-    "filesystem_write_performed"
+    "filesystem_write_performed",
   ]) {
     assert.equal(preview.boundary[key], false, `boundary.${key} must be false`);
   }
@@ -70,9 +72,12 @@ test("Shared URP world preview blocked_actions includes the required slugs", () 
     "connect_node1",
     "shared_urp_publish",
     "runtime_start",
-    "federation_start"
+    "federation_start",
   ]) {
-    assert.ok(preview.blocked_actions.includes(required), `blocked_actions must include ${required}`);
+    assert.ok(
+      preview.blocked_actions.includes(required),
+      `blocked_actions must include ${required}`,
+    );
   }
 });
 
@@ -105,8 +110,14 @@ test("Shared URP world preview returns fresh objects on each call", () => {
 test("Shared URP world preview module has no runtime or filesystem side effects", async () => {
   const body = await readFile(modulePath, "utf8");
   assert.ok(!/from ['"]node:fs/.test(body), "must not import node:fs");
-  assert.ok(!/from ['"]node:child_process/.test(body), "must not import node:child_process");
+  assert.ok(
+    !/from ['"]node:child_process/.test(body),
+    "must not import node:child_process",
+  );
   assert.ok(!/from ['"]node:http/.test(body), "must not import node:http");
   assert.ok(!/from ['"]node:net/.test(body), "must not import node:net");
-  assert.ok(!/spawn\(|execSync\(|execFile\(|spawnSync\(/.test(body), "must not invoke processes");
+  assert.ok(
+    !/spawn\(|execSync\(|execFile\(|spawnSync\(/.test(body),
+    "must not invoke processes",
+  );
 });

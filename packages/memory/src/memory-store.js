@@ -25,7 +25,7 @@ function entryPath(name, root) {
   }
   if (!SAFE_MEMORY_NAME.test(name)) {
     throw new Error(
-      `Memory entry name must contain only letters, digits, hyphens, or underscores: ${JSON.stringify(name)}`
+      `Memory entry name must contain only letters, digits, hyphens, or underscores: ${JSON.stringify(name)}`,
     );
   }
   return join(root, MEMORY_DIR, `${name}.json`);
@@ -82,6 +82,6 @@ export async function summarizeMemory(root = defaultRoot()) {
     schema: "bizra.dema.memory_index.v0.1",
     root,
     count: entries.length,
-    entries
+    entries,
   };
 }

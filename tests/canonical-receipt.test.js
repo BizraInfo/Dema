@@ -295,11 +295,16 @@ describe("RECEIPT-CHAIN-1A · build + verify canonical chain", () => {
         commonArgs(home, { canonicalBody: {}, prevHash: null }),
       );
       assert.equal(emptyGenesis.built, false);
-      assert.equal(emptyGenesis.error, "genesis_receipt_body_must_not_be_empty");
+      assert.equal(
+        emptyGenesis.error,
+        "genesis_receipt_body_must_not_be_empty",
+      );
 
       // #102: refuse on QUARANTINED (economic rail)
       const quarantined = await buildCanonicalReceipt(
-        commonArgs(home, { canonicalBody: { pulse_state: "QUARANTINED", value: 1 } }),
+        commonArgs(home, {
+          canonicalBody: { pulse_state: "QUARANTINED", value: 1 },
+        }),
       );
       assert.equal(quarantined.built, false);
       assert.equal(quarantined.error, "refuse_on_quarantined_pulse");
@@ -310,7 +315,10 @@ describe("RECEIPT-CHAIN-1A · build + verify canonical chain", () => {
 
       // #107: verify rejects empty/missing signature (cryptographic)
       const noSig = { ...g.receipt, receipt_signature_b64: "" };
-      const vNoSig = verifyCanonicalChain({ entries: [noSig], pubkeyPem: pubkey });
+      const vNoSig = verifyCanonicalChain({
+        entries: [noSig],
+        pubkeyPem: pubkey,
+      });
       assert.equal(vNoSig.verified, false);
       assert.equal(vNoSig.reason, "empty_or_missing_signature");
 
@@ -321,7 +329,10 @@ describe("RECEIPT-CHAIN-1A · build + verify canonical chain", () => {
         body_hash: sha256(stableStringify({})),
       };
       const resealedEmpty = reseal(emptyBodyGenesis); // keep id/sig consistent for the test
-      const vEmptyBody = verifyCanonicalChain({ entries: [resealedEmpty], pubkeyPem: pubkey });
+      const vEmptyBody = verifyCanonicalChain({
+        entries: [resealedEmpty],
+        pubkeyPem: pubkey,
+      });
       assert.equal(vEmptyBody.verified, false);
       assert.equal(vEmptyBody.reason, "genesis_receipt_body_empty");
     } finally {

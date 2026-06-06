@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildLocalLLMRouterPreview,
   LOCAL_LLM_ROUTER_CANONICAL_ROLES,
-  LOCAL_LLM_ROUTER_ALLOWED_FAMILIES
+  LOCAL_LLM_ROUTER_ALLOWED_FAMILIES,
 } from "../packages/core/src/local-llm-router-preview.js";
 
 import { PREVIEW_BOUNDARY_CANONICAL_KEYS as REQUIRED_BOUNDARY_FALSE_KEYS } from "../packages/core/src/preview-boundary.js";
@@ -26,9 +26,12 @@ test("LLMRouter INVARIANT: routing_allowed=false at top level (always)", () => {
   // No inputs
   assert.equal(buildLocalLLMRouterPreview().routing_allowed, false);
   // With inventory hints
-  assert.equal(buildLocalLLMRouterPreview({
-    inventoryHints: [{ id: "llama3-8b", family: "llama" }]
-  }).routing_allowed, false);
+  assert.equal(
+    buildLocalLLMRouterPreview({
+      inventoryHints: [{ id: "llama3-8b", family: "llama" }],
+    }).routing_allowed,
+    false,
+  );
 });
 
 test("LLMRouter INVARIANT: invocation_status=not_invoked_preview_only (always)", () => {
@@ -48,24 +51,31 @@ test("LLMRouter role_map has exactly 5 canonical roles", () => {
   const router = buildLocalLLMRouterPreview();
   assert.equal(router.role_map.length, 5);
   assert.equal(LOCAL_LLM_ROUTER_CANONICAL_ROLES.length, 5);
-  assert.deepEqual([...router.canonical_roles], [
-    "mission_intent_parse",
-    "pat_proposal_draft",
-    "consent_phrase_generate",
-    "evidence_summary",
-    "abstain_or_unknown"
-  ]);
+  assert.deepEqual(
+    [...router.canonical_roles],
+    [
+      "mission_intent_parse",
+      "pat_proposal_draft",
+      "consent_phrase_generate",
+      "evidence_summary",
+      "abstain_or_unknown",
+    ],
+  );
 });
 
 test("LLMRouter every role in role_map has routing_allowed=false", () => {
   const router = buildLocalLLMRouterPreview({
     inventoryHints: [
       { id: "llama3-8b", family: "llama", role: "mission_intent_parse" },
-      { id: "qwen-7b", family: "qwen", role: "pat_proposal_draft" }
-    ]
+      { id: "qwen-7b", family: "qwen", role: "pat_proposal_draft" },
+    ],
   });
   for (const role of router.role_map) {
-    assert.equal(role.routing_allowed, false, `role ${role.role} must have routing_allowed=false`);
+    assert.equal(
+      role.routing_allowed,
+      false,
+      `role ${role.role} must have routing_allowed=false`,
+    );
     assert.equal(role.invocation_status, "not_invoked_preview_only");
     assert.equal(role.fallback, "abstain");
   }
@@ -82,24 +92,36 @@ test("LLMRouter role assignment from inventory hints", () => {
   const router = buildLocalLLMRouterPreview({
     inventoryHints: [
       { id: "llama3-8b", family: "llama", role: "mission_intent_parse" },
-      { id: "qwen-7b", family: "qwen", role: "consent_phrase_generate" }
-    ]
+      { id: "qwen-7b", family: "qwen", role: "consent_phrase_generate" },
+    ],
   });
-  const intentRole = router.role_map.find((r) => r.role === "mission_intent_parse");
-  const consentRole = router.role_map.find((r) => r.role === "consent_phrase_generate");
+  const intentRole = router.role_map.find(
+    (r) => r.role === "mission_intent_parse",
+  );
+  const consentRole = router.role_map.find(
+    (r) => r.role === "consent_phrase_generate",
+  );
   assert.equal(intentRole.assigned_model_id, "llama3-8b");
   assert.equal(consentRole.assigned_model_id, "qwen-7b");
   // Unassigned roles remain null
-  const summaryRole = router.role_map.find((r) => r.role === "evidence_summary");
+  const summaryRole = router.role_map.find(
+    (r) => r.role === "evidence_summary",
+  );
   assert.equal(summaryRole.assigned_model_id, null);
 });
 
 test("LLMRouter ADVERSARIAL: caller-injected routing_allowed=true ignored per model", () => {
   const router = buildLocalLLMRouterPreview({
     inventoryHints: [
-      { id: "evil-model", family: "llama", role: "mission_intent_parse",
-        routing_allowed: true, status: "loaded", invocation_status: "running" }
-    ]
+      {
+        id: "evil-model",
+        family: "llama",
+        role: "mission_intent_parse",
+        routing_allowed: true,
+        status: "loaded",
+        invocation_status: "running",
+      },
+    ],
   });
   const m = router.inventory[0];
   assert.equal(m.routing_allowed, false);
@@ -108,9 +130,15 @@ test("LLMRouter ADVERSARIAL: caller-injected routing_allowed=true ignored per mo
 });
 
 test("LLMRouter ADVERSARIAL: caller's status=loaded/ready pinned to declared_preview_only", () => {
-  for (const claimedStatus of ["loaded", "ready", "running", "active", "permitted"]) {
+  for (const claimedStatus of [
+    "loaded",
+    "ready",
+    "running",
+    "active",
+    "permitted",
+  ]) {
     const router = buildLocalLLMRouterPreview({
-      inventoryHints: [{ id: "x", family: "llama", status: claimedStatus }]
+      inventoryHints: [{ id: "x", family: "llama", status: claimedStatus }],
     });
     assert.equal(router.inventory[0].status, "declared_preview_only");
   }
@@ -118,15 +146,17 @@ test("LLMRouter ADVERSARIAL: caller's status=loaded/ready pinned to declared_pre
 
 test("LLMRouter ADVERSARIAL: external URL / tool_execution / prompt_log fields stripped", () => {
   const router = buildLocalLLMRouterPreview({
-    inventoryHints: [{
-      id: "x",
-      family: "llama",
-      external_url: "https://attacker.example/llm",
-      tool_execution: true,
-      prompt_executed_log: ["leak"],
-      raw_corpus_path: "/etc/passwd",
-      api_key: "sk-leak"
-    }]
+    inventoryHints: [
+      {
+        id: "x",
+        family: "llama",
+        external_url: "https://attacker.example/llm",
+        tool_execution: true,
+        prompt_executed_log: ["leak"],
+        raw_corpus_path: "/etc/passwd",
+        api_key: "sk-leak",
+      },
+    ],
   });
   const m = router.inventory[0];
   assert.equal("external_url" in m, false);
@@ -142,8 +172,8 @@ test("LLMRouter ADVERSARIAL: model with non-string id is filtered out", () => {
       { id: null, family: "llama" },
       { id: 42, family: "llama" },
       { id: "", family: "llama" },
-      { id: "valid-model", family: "llama" }
-    ]
+      { id: "valid-model", family: "llama" },
+    ],
   });
   assert.equal(router.inventory.length, 1);
   assert.equal(router.inventory[0].id, "valid-model");
@@ -151,14 +181,16 @@ test("LLMRouter ADVERSARIAL: model with non-string id is filtered out", () => {
 
 test("LLMRouter ADVERSARIAL: unknown family is coerced to 'other'", () => {
   const router = buildLocalLLMRouterPreview({
-    inventoryHints: [{ id: "x", family: "MAGIC_UNKNOWN_FAMILY" }]
+    inventoryHints: [{ id: "x", family: "MAGIC_UNKNOWN_FAMILY" }],
   });
   assert.equal(router.inventory[0].family, "other");
 });
 
 test("LLMRouter ADVERSARIAL: unknown role is coerced to 'abstain_or_unknown'", () => {
   const router = buildLocalLLMRouterPreview({
-    inventoryHints: [{ id: "x", family: "llama", role: "EVIL_PRIVILEGED_ROLE" }]
+    inventoryHints: [
+      { id: "x", family: "llama", role: "EVIL_PRIVILEGED_ROLE" },
+    ],
   });
   assert.equal(router.inventory[0].role, "abstain_or_unknown");
 });
@@ -169,8 +201,8 @@ test("LLMRouter ADVERSARIAL: out-of-range size_gb sanitized to null", () => {
       { id: "a", family: "llama", size_gb: -5 },
       { id: "b", family: "llama", size_gb: 99999 },
       { id: "c", family: "llama", size_gb: "huge" },
-      { id: "d", family: "llama", size_gb: 8.5 }
-    ]
+      { id: "d", family: "llama", size_gb: 8.5 },
+    ],
   });
   assert.equal(router.inventory.find((m) => m.id === "a").size_gb, null);
   assert.equal(router.inventory.find((m) => m.id === "b").size_gb, null);
@@ -182,8 +214,8 @@ test("LLMRouter ADVERSARIAL: duplicate ids deduplicated (first wins)", () => {
   const router = buildLocalLLMRouterPreview({
     inventoryHints: [
       { id: "same-id", family: "llama", role: "mission_intent_parse" },
-      { id: "same-id", family: "qwen", role: "abstain_or_unknown" }
-    ]
+      { id: "same-id", family: "qwen", role: "abstain_or_unknown" },
+    ],
   });
   assert.equal(router.inventory.length, 1);
   assert.equal(router.inventory[0].family, "llama");
@@ -200,7 +232,10 @@ test("LLMRouter abstain_policy defaults to abstain on missing routing/role/conse
 
 test("LLMRouter consent_boundary declares typed_GO + chain_advance requirement", () => {
   const router = buildLocalLLMRouterPreview();
-  assert.equal(router.consent_boundary.routing_requires, "typed_GO_plus_chain_advance");
+  assert.equal(
+    router.consent_boundary.routing_requires,
+    "typed_GO_plus_chain_advance",
+  );
   assert.equal(router.consent_boundary.typed_go_present_in_preview, false);
   assert.equal(router.consent_boundary.chain_advance_present_in_preview, false);
 });
@@ -213,7 +248,9 @@ test("LLMRouter boundary is exhaustively false and frozen", () => {
 
 test("LLMRouter is deeply frozen including inventory and role_map", () => {
   const router = buildLocalLLMRouterPreview({
-    inventoryHints: [{ id: "m1", family: "llama", role: "mission_intent_parse" }]
+    inventoryHints: [
+      { id: "m1", family: "llama", role: "mission_intent_parse" },
+    ],
   });
   assert.equal(Object.isFrozen(router), true);
   assert.equal(Object.isFrozen(router.inventory), true);
@@ -236,14 +273,24 @@ test("LLMRouter non-array inventoryHints handled gracefully", () => {
 });
 
 test("LLMRouter allowed_families is the canonical 8-entry list", () => {
-  assert.deepEqual([...LOCAL_LLM_ROUTER_ALLOWED_FAMILIES], [
-    "llama", "qwen", "mistral", "gpt-oss", "deepseek", "phi", "gemma", "other"
-  ]);
+  assert.deepEqual(
+    [...LOCAL_LLM_ROUTER_ALLOWED_FAMILIES],
+    [
+      "llama",
+      "qwen",
+      "mistral",
+      "gpt-oss",
+      "deepseek",
+      "phi",
+      "gemma",
+      "other",
+    ],
+  );
 });
 
 test("LLMRouter inventory next_safe_action shifts to review_role_assignments when models present", () => {
   const router = buildLocalLLMRouterPreview({
-    inventoryHints: [{ id: "m1", family: "llama" }]
+    inventoryHints: [{ id: "m1", family: "llama" }],
   });
   assert.equal(router.next_safe_action, "review_role_assignments");
 });

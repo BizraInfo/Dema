@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 function runCli(args, { stdin = null, timeout = 10000 } = {}) {
   return new Promise((resolve, reject) => {
@@ -12,19 +14,21 @@ function runCli(args, { stdin = null, timeout = 10000 } = {}) {
       [cliPath, ...args],
       {
         env: { ...process.env, DEMA_BANNER_INTERACTIVE: "0", NODE_ENV: "test" },
-        timeout
+        timeout,
       },
       (err, stdout, stderr) => {
         if (err && err.killed) {
-          reject(new Error(`Process timed out. stdout=${stdout} stderr=${stderr}`));
+          reject(
+            new Error(`Process timed out. stdout=${stdout} stderr=${stderr}`),
+          );
           return;
         }
         resolve({
           stdout,
           stderr,
-          exitCode: err?.code ?? 0
+          exitCode: err?.code ?? 0,
         });
-      }
+      },
     );
     if (stdin !== null) {
       child.stdin.write(stdin);
@@ -34,7 +38,12 @@ function runCli(args, { stdin = null, timeout = 10000 } = {}) {
 }
 
 test("'dema model-broker route --task synthesis' (no registry) → exit 0; placeholder discipline returns selected_model_id=null", async () => {
-  const { stdout, exitCode } = await runCli(["model-broker", "route", "--task", "synthesis"]);
+  const { stdout, exitCode } = await runCli([
+    "model-broker",
+    "route",
+    "--task",
+    "synthesis",
+  ]);
   assert.equal(exitCode, 0, "expected exit 0");
   const receipt = JSON.parse(stdout);
   assert.equal(receipt.schema, "bizra.dema.local_model_route_receipt.v0.1");
@@ -43,9 +52,12 @@ test("'dema model-broker route --task synthesis' (no registry) → exit 0; place
   // Every sample placeholder should appear in rejected_candidates with source_pending reason.
   assert.ok(receipt.rejected_candidates.length >= 1);
   const placeholderRejection = receipt.rejected_candidates.find(
-    (r) => typeof r.model_id === "string" && r.model_id.includes("placeholder")
+    (r) => typeof r.model_id === "string" && r.model_id.includes("placeholder"),
   );
-  assert.ok(placeholderRejection, "expected at least one placeholder rejection");
+  assert.ok(
+    placeholderRejection,
+    "expected at least one placeholder rejection",
+  );
   assert.match(placeholderRejection.reason, /source_pending/);
 });
 
@@ -62,13 +74,13 @@ test("'dema model-broker route --task synthesis --registry-stdin' with operator 
         allowed_tasks: ["synthesis"],
         max_concurrency: 1,
         context_limit: 32768,
-        status: "active"
-      }
-    ]
+        status: "active",
+      },
+    ],
   });
   const { stdout, exitCode } = await runCli(
     ["model-broker", "route", "--task", "synthesis", "--registry-stdin"],
-    { stdin: operatorFixture }
+    { stdin: operatorFixture },
   );
   assert.equal(exitCode, 0);
   const receipt = JSON.parse(stdout);
@@ -92,22 +104,40 @@ test("'dema model-broker bogus' (unknown action) → exit non-zero", async () =>
 });
 
 test("'--pretty' flag produces indented JSON (contains newlines)", async () => {
-  const { stdout, exitCode } = await runCli(["model-broker", "route", "--task", "synthesis", "--pretty"]);
+  const { stdout, exitCode } = await runCli([
+    "model-broker",
+    "route",
+    "--task",
+    "synthesis",
+    "--pretty",
+  ]);
   assert.equal(exitCode, 0);
   // Indented JSON has newlines BETWEEN keys.
   const lines = stdout.trim().split("\n");
-  assert.ok(lines.length > 5, `expected multi-line pretty output, got ${lines.length} lines`);
+  assert.ok(
+    lines.length > 5,
+    `expected multi-line pretty output, got ${lines.length} lines`,
+  );
   // Still parseable.
   const receipt = JSON.parse(stdout);
   assert.equal(receipt.schema, "bizra.dema.local_model_route_receipt.v0.1");
 });
 
 test("default (non-pretty) output is single-line JSON", async () => {
-  const { stdout, exitCode } = await runCli(["model-broker", "route", "--task", "synthesis"]);
+  const { stdout, exitCode } = await runCli([
+    "model-broker",
+    "route",
+    "--task",
+    "synthesis",
+  ]);
   assert.equal(exitCode, 0);
   // Single-line JSON has no internal newlines (trailing newline from process.stdout.write is the only one).
   const lines = stdout.split("\n").filter((s) => s.length > 0);
-  assert.equal(lines.length, 1, `expected single-line JSON, got ${lines.length} lines`);
+  assert.equal(
+    lines.length,
+    1,
+    `expected single-line JSON, got ${lines.length} lines`,
+  );
   // Still parseable.
   JSON.parse(stdout);
 });
@@ -125,35 +155,42 @@ test("'--no-local-only' permits a remote operator fixture to be selected", async
         allowed_tasks: ["planning"],
         max_concurrency: 4,
         context_limit: 16384,
-        status: "active"
-      }
-    ]
+        status: "active",
+      },
+    ],
   });
   // First confirm local-only rejects this entry.
   const localOnly = await runCli(
     ["model-broker", "route", "--task", "planning", "--registry-stdin"],
-    { stdin: remoteFixture }
+    { stdin: remoteFixture },
   );
   const rejectedReceipt = JSON.parse(localOnly.stdout);
   assert.equal(rejectedReceipt.selected_model_id, null);
   // Then confirm --no-local-only routes to it.
   const allowRemote = await runCli(
-    ["model-broker", "route", "--task", "planning", "--no-local-only", "--registry-stdin"],
-    { stdin: remoteFixture }
+    [
+      "model-broker",
+      "route",
+      "--task",
+      "planning",
+      "--no-local-only",
+      "--registry-stdin",
+    ],
+    { stdin: remoteFixture },
   );
   assert.equal(allowRemote.exitCode, 0);
   const acceptedReceipt = JSON.parse(allowRemote.stdout);
   assert.equal(acceptedReceipt.selected_model_id, "operator-remote-pat");
   assert.ok(
     acceptedReceipt.warnings.includes("local_only_disabled"),
-    "expected warning when local_only is disabled"
+    "expected warning when local_only is disabled",
   );
 });
 
 test("malformed --registry-stdin JSON exits non-zero gracefully (no crash)", async () => {
   const { stdout, stderr, exitCode } = await runCli(
     ["model-broker", "route", "--task", "synthesis", "--registry-stdin"],
-    { stdin: "{not valid json" }
+    { stdin: "{not valid json" },
   );
   assert.notEqual(exitCode, 0);
   assert.equal(stdout, "", "expected empty stdout on malformed input");
@@ -161,7 +198,12 @@ test("malformed --registry-stdin JSON exits non-zero gracefully (no crash)", asy
 });
 
 test("receipt boundary declares zero effects (no model_invocation, no network, no federation, no mint, no token_economy, no urp_networking)", async () => {
-  const { stdout, exitCode } = await runCli(["model-broker", "route", "--task", "synthesis"]);
+  const { stdout, exitCode } = await runCli([
+    "model-broker",
+    "route",
+    "--task",
+    "synthesis",
+  ]);
   assert.equal(exitCode, 0);
   const receipt = JSON.parse(stdout);
   assert.equal(receipt.boundary.runtime, false);
@@ -187,13 +229,21 @@ test("'--required-role sat_validator' for claim_review task selects sat_validato
         allowed_tasks: ["claim_review"],
         max_concurrency: 1,
         context_limit: 8192,
-        status: "active"
-      }
-    ]
+        status: "active",
+      },
+    ],
   });
   const { stdout, exitCode } = await runCli(
-    ["model-broker", "route", "--task", "claim_review", "--required-role", "sat_validator", "--registry-stdin"],
-    { stdin: fixture }
+    [
+      "model-broker",
+      "route",
+      "--task",
+      "claim_review",
+      "--required-role",
+      "sat_validator",
+      "--registry-stdin",
+    ],
+    { stdin: fixture },
   );
   assert.equal(exitCode, 0);
   const receipt = JSON.parse(stdout);

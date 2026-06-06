@@ -5,7 +5,9 @@ export function evaluateConsent({ phrase, requiredPhrase }) {
     accepted,
     verdict: accepted ? "PERMIT_PREVIEW" : "BLOCK",
     truthLabel: "MEASURED",
-    reason: accepted ? "Exact consent phrase matched." : "Exact consent phrase not provided.",
-    requirement: "Exact phrase match; no fuzzy consent."
+    reason: accepted
+      ? "Exact consent phrase matched."
+      : "Exact consent phrase not provided.",
+    requirement: "Exact phrase match; no fuzzy consent.",
   };
 }

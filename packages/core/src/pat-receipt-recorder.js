@@ -6,7 +6,10 @@
 // modifies an existing receipt.
 
 import { createHash } from "node:crypto";
-import { buildAgentKernel, AGENT_KERNEL_MAX_ITERATIONS } from "./agent-kernel.js";
+import {
+  buildAgentKernel,
+  AGENT_KERNEL_MAX_ITERATIONS,
+} from "./agent-kernel.js";
 import { buildEffectCap } from "./effect-cap.js";
 import { buildPreviewBoundary } from "./preview-boundary.js";
 
@@ -26,7 +29,7 @@ const PAT6_PERSONA = Object.freeze({
     "shape_event_to_receipt_candidate",
     "compute_content_hash",
     "verify_existing_receipt_hash",
-    "draft_chain_position_descriptor"
+    "draft_chain_position_descriptor",
   ]),
   primary_refusals: Object.freeze([
     "mint_canonical_receipt",
@@ -34,15 +37,15 @@ const PAT6_PERSONA = Object.freeze({
     "sign_receipt_without_consent",
     "modify_existing_receipt",
     "forge_prev_hash_chain",
-    "infer_chain_position_without_evidence"
-  ])
+    "infer_chain_position_without_evidence",
+  ]),
 });
 
 const PAT6_EFFECT_CAP_ALLOWED = Object.freeze([
   "read_local_file",
   "compute_hash",
   "stat_file_metadata",
-  "render_terminal_output"
+  "render_terminal_output",
 ]);
 
 const PAT6_EFFECT_CAP_EXTRA_BLOCKED = Object.freeze([
@@ -50,10 +53,11 @@ const PAT6_EFFECT_CAP_EXTRA_BLOCKED = Object.freeze([
   "advance_chain",
   "modify_existing_receipt",
   "forge_prev_hash_chain",
-  "sign_without_consent"
+  "sign_without_consent",
 ]);
 
-const PAT6_CONSENT_PHRASE_TEMPLATE = "GO: invoke PAT-6 receipt_recorder to shape candidate";
+const PAT6_CONSENT_PHRASE_TEMPLATE =
+  "GO: invoke PAT-6 receipt_recorder to shape candidate";
 
 function safeString(v, fallback = "") {
   return typeof v === "string" ? v : fallback;
@@ -78,11 +82,13 @@ export function buildPATReceiptRecorderEffectCap() {
     allowed_effects: PAT6_EFFECT_CAP_ALLOWED,
     blocked_effects: PAT6_EFFECT_CAP_EXTRA_BLOCKED,
     consent_scope_template: PAT6_CONSENT_PHRASE_TEMPLATE,
-    audit_trail_required: true
+    audit_trail_required: true,
   });
 }
 
-export function buildPATReceiptRecorderPreview({ operator_name = "Mumu" } = {}) {
+export function buildPATReceiptRecorderPreview({
+  operator_name = "Mumu",
+} = {}) {
   return Object.freeze({
     schema: SCHEMA,
     truth_label: "NODE0_LOCAL_SEED",
@@ -98,18 +104,21 @@ export function buildPATReceiptRecorderPreview({ operator_name = "Mumu" } = {}) 
       "PAT-6 never advances the chain · operator + gateway do that",
       "PAT-6 never signs · only computes content hashes for verification",
       "PAT-6 never modifies an existing receipt · the chain is append-only",
-      "PAT-6 never forges a prev_hash · honest unknown is named"
+      "PAT-6 never forges a prev_hash · honest unknown is named",
     ]),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
-export function buildPATReceiptRecorderKernel({ mission_intent = "", max_iterations = AGENT_KERNEL_MAX_ITERATIONS } = {}) {
+export function buildPATReceiptRecorderKernel({
+  mission_intent = "",
+  max_iterations = AGENT_KERNEL_MAX_ITERATIONS,
+} = {}) {
   return buildAgentKernel({
     agent_id: PAT6_PERSONA.pat_id,
     agent_role: "pat_receipt_recorder",
     mission_intent: safeString(mission_intent, ""),
-    max_iterations
+    max_iterations,
   });
 }
 
@@ -121,17 +130,24 @@ export function shapeReceiptCandidate({
   event_summary = {},
   action_class = "preview",
   prev_receipt_hash = null,
-  truth_label_for_action = "NODE0_LOCAL_SEED"
+  truth_label_for_action = "NODE0_LOCAL_SEED",
 } = {}) {
   const schemaSafe = safeString(event_schema, "");
   const summary = safeObject(event_summary, {});
-  const actionClass = ["preview", "execute", "mint", "irreversible"].includes(action_class)
+  const actionClass = ["preview", "execute", "mint", "irreversible"].includes(
+    action_class,
+  )
     ? action_class
     : "preview";
-  const prevHashSafe = prev_receipt_hash && typeof prev_receipt_hash === "string"
-    ? prev_receipt_hash
-    : null;
-  const truthLabel = ["NODE0_LOCAL_SEED", "MEASURED", "GATEWAY_ISSUED_HANDOFF"].includes(truth_label_for_action)
+  const prevHashSafe =
+    prev_receipt_hash && typeof prev_receipt_hash === "string"
+      ? prev_receipt_hash
+      : null;
+  const truthLabel = [
+    "NODE0_LOCAL_SEED",
+    "MEASURED",
+    "GATEWAY_ISSUED_HANDOFF",
+  ].includes(truth_label_for_action)
     ? truth_label_for_action
     : "NODE0_LOCAL_SEED";
 
@@ -141,15 +157,15 @@ export function shapeReceiptCandidate({
     event_summary_keys: Object.keys(summary).sort(),
     action_class: actionClass,
     truth_label: truthLabel,
-    prev_hash: prevHashSafe
+    prev_hash: prevHashSafe,
   });
   const candidateHash = sha256Hex(canonicalContent);
 
   const valid = schemaSafe.length > 0 && Object.keys(summary).length > 0;
   const refusal_reason = !valid
-    ? (schemaSafe.length === 0
-        ? "missing_event_schema · cannot shape candidate without source schema"
-        : "empty_event_summary · candidate would have no content")
+    ? schemaSafe.length === 0
+      ? "missing_event_schema · cannot shape candidate without source schema"
+      : "empty_event_summary · candidate would have no content"
     : null;
 
   return Object.freeze({
@@ -172,7 +188,7 @@ export function shapeReceiptCandidate({
     refusal_reason,
     audit_trail_required: true,
     receipt_shape_ready: valid,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -180,7 +196,10 @@ export function shapeReceiptCandidate({
 // Pure function · takes the receipt object · returns verification result.
 export function verifyReceiptHash({ receipt = {} } = {}) {
   const r = safeObject(receipt, {});
-  const declared = safeString(r.receipt_id || r.candidate_hash || r.content_hash, "");
+  const declared = safeString(
+    r.receipt_id || r.candidate_hash || r.content_hash,
+    "",
+  );
   const valid = declared.length === 64; // sha256 hex length
 
   return Object.freeze({
@@ -190,9 +209,11 @@ export function verifyReceiptHash({ receipt = {} } = {}) {
     declared_hash: declared,
     hash_format_valid: valid,
     verified_against_content: false, // would require recomputing · v0.1 declarative only
-    verification_status: valid ? "declared_format_ok_content_unverified" : "declared_format_invalid",
+    verification_status: valid
+      ? "declared_format_ok_content_unverified"
+      : "declared_format_invalid",
     audit_trail_required: true,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -209,10 +230,11 @@ export function buildPATReceiptRecorderSummary(options = {}) {
     serves_operator: preview.serves_operator,
     capability_count: preview.persona.primary_capabilities.length,
     refusal_count: preview.persona.primary_refusals.length,
-    boundary: preview.boundary
+    boundary: preview.boundary,
   });
 }
 
 export const PAT_RECEIPT_RECORDER_SCHEMA_NAME = SCHEMA;
-export const PAT_RECEIPT_RECORDER_CANDIDATE_SCHEMA_NAME = RECEIPT_CANDIDATE_SCHEMA;
+export const PAT_RECEIPT_RECORDER_CANDIDATE_SCHEMA_NAME =
+  RECEIPT_CANDIDATE_SCHEMA;
 export const PAT_RECEIPT_RECORDER_PERSONA = PAT6_PERSONA;

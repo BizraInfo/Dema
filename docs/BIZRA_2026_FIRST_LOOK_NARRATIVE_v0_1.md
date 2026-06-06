@@ -55,17 +55,17 @@ Every paragraph, frame, line, and caption derived from this canon must satisfy b
 
 This doc sits **on top of** the seven public-canon pillars already merged to `main`:
 
-| Pillar | What it gives First Look |
-|---|---|
-| `THREE_REPO_PRODUCT_STACK_CANON_v0_1.md` | Repo authority. First Look must speak only as `Dema` / product face; never on behalf of the substrate or genesis archive. |
-| `NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md` | Component status labels. Anything `DESIGNED_NOT_LIVE` may be shown only with that label visible. |
-| `DELIVERY_SPINE_v0_1.md` | Release gates. Any public First-Look artifact passes through the Section 22 Claim Gate of the Spine before publication. |
-| `CLAIM_REGISTER_v0_1.md` | Public-claim authority. Every First-Look claim carries a truth label from §8 of the Register. **The Register governs all wording.** |
-| `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` | Public meaning. First Look's narrative arc must respect Root Source's origin chain and operating law. |
-| `BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` | Pre-technical emotional anchor. First Look's Scene 2 *opens from* Origin Video 001 but does not replace it. |
+| Pillar                                         | What it gives First Look                                                                                                                                                    |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `THREE_REPO_PRODUCT_STACK_CANON_v0_1.md`       | Repo authority. First Look must speak only as `Dema` / product face; never on behalf of the substrate or genesis archive.                                                   |
+| `NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md`    | Component status labels. Anything `DESIGNED_NOT_LIVE` may be shown only with that label visible.                                                                            |
+| `DELIVERY_SPINE_v0_1.md`                       | Release gates. Any public First-Look artifact passes through the Section 22 Claim Gate of the Spine before publication.                                                     |
+| `CLAIM_REGISTER_v0_1.md`                       | Public-claim authority. Every First-Look claim carries a truth label from §8 of the Register. **The Register governs all wording.**                                         |
+| `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md`           | Public meaning. First Look's narrative arc must respect Root Source's origin chain and operating law.                                                                       |
+| `BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md`         | Pre-technical emotional anchor. First Look's Scene 2 _opens from_ Origin Video 001 but does not replace it.                                                                 |
 | `NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md` | What one seed has become. First Look's Scene 3 inherits the founder-proof boundaries verbatim (no founder worship; founder is the **first** path, not the final authority). |
 
-When this doc and a pillar disagree on wording, **the pillar governs the wording**; this doc governs the *narrative ordering and stitch*.
+When this doc and a pillar disagree on wording, **the pillar governs the wording**; this doc governs the _narrative ordering and stitch_.
 
 ## 6. Claim Inheritance Rule
 
@@ -136,7 +136,7 @@ The First-Look narrative arc is a concise 10-beat sequence inherited from the se
 
 1. Humanity has always asked who we are and why we are here.
 2. BIZRA began as an Arabic root-paper seed: `الرسالة` and `البذرة`.
-3. The first cinematic expression said BIZRA was about *choice, goodness, solidarity, kindness, and support*.
+3. The first cinematic expression said BIZRA was about _choice, goodness, solidarity, kindness, and support_.
 4. One human then carried the seed into code, docs, receipts, Node0, and Dema.
 5. Node0 is the living local proof: one human, one node, one task, inspectable and improvable.
 6. Dema is the product face / home base for the user's local node.
@@ -149,100 +149,100 @@ This spine is the load-bearing structure under every scene below. A First-Look a
 
 ## 11. Scene 0 — The Question Before the System
 
-| Field | Value |
-|---|---|
-| **Title** | The Question Before the System |
-| **Emotional purpose** | Establish humanity's eternal question as the ground from which BIZRA grows — *not* a product feature, but a human inheritance. |
-| **What may be shown** | The opening of Origin Video 001's transcript: *"In the beginning, when the Earth was still young, humanity awakened with an insatiable curiosity. Questions filled our minds, mysteries that transcended time and generations… Who are we? What is our purpose?"* Visual cues drawn from the Origin Video's four-beat spine. |
-| **Evidence anchor** | `BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` §7 (Known Transcript, verbatim) + §8 (Narrative Meaning, four-beat). |
-| **Allowed wording** | Quotes from Origin Video 001 transcript verbatim (the transcript is inviolate per Origin Video canon §4). |
-| **Forbidden wording** | Any paraphrase or "improvement" of the transcript opening. Any mention of BIZRA, Dema, Node0, or product at this beat — the question is human, not product. |
+| Field                 | Value                                                                                                                                                                                                                                                                                                                        |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Title**             | The Question Before the System                                                                                                                                                                                                                                                                                               |
+| **Emotional purpose** | Establish humanity's eternal question as the ground from which BIZRA grows — _not_ a product feature, but a human inheritance.                                                                                                                                                                                               |
+| **What may be shown** | The opening of Origin Video 001's transcript: _"In the beginning, when the Earth was still young, humanity awakened with an insatiable curiosity. Questions filled our minds, mysteries that transcended time and generations… Who are we? What is our purpose?"_ Visual cues drawn from the Origin Video's four-beat spine. |
+| **Evidence anchor**   | `BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` §7 (Known Transcript, verbatim) + §8 (Narrative Meaning, four-beat).                                                                                                                                                                                                                  |
+| **Allowed wording**   | Quotes from Origin Video 001 transcript verbatim (the transcript is inviolate per Origin Video canon §4).                                                                                                                                                                                                                    |
+| **Forbidden wording** | Any paraphrase or "improvement" of the transcript opening. Any mention of BIZRA, Dema, Node0, or product at this beat — the question is human, not product.                                                                                                                                                                  |
 
 ## 12. Scene 1 — الرسالة + البذرة Root Papers
 
-| Field | Value |
-|---|---|
-| **Title** | The Arabic Root Papers |
-| **Emotional purpose** | Show that BIZRA's first form was Arabic root papers, not code. The seed predates the engineering. |
+| Field                 | Value                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Title**             | The Arabic Root Papers                                                                                                                                                                                                                                                                                                                                     |
+| **Emotional purpose** | Show that BIZRA's first form was Arabic root papers, not code. The seed predates the engineering.                                                                                                                                                                                                                                                          |
 | **What may be shown** | The two anchored documents `themassage.pdf` (الرسالة) and `bizra.pdf` (البذرة), referenced visually as the Arabic foundational papers. The July 2023 Drive screenshot witness (per Founder Proof §13.4) showing `الرسالة.pdf` visible on 2023-07-08. The hash-binding fact: `بذرة` exists on disk as a `FILE_IDENTITY_VERIFIED` Bitcoin-anchored artifact. |
-| **Evidence anchor** | `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` §7-8 + `NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md` §13.3 + §13.4 + `proof-of-priority/manifest.json` (Bitcoin merkle root). |
-| **Allowed wording** | "BIZRA began as two Arabic root papers — `الرسالة` (The Message) and `البذرة` (The Seed) — written during 2023 and anchored to a public timestamp." "The Arabic Seed's first on-disk evidence carries a July 2023 timestamp floor." |
-| **Forbidden wording** | "Written in Ramadan 2023" cited as `VERIFIED` (still `OPERATOR_ATTESTED` — Ramadan 2023 start date is not yet evidence-bound). "Completed in June 2023" as `VERIFIED` (June 2023 completion remains `SOURCE_PENDING`). Any wording that promotes the timestamp floor to a verified creation date. |
+| **Evidence anchor**   | `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` §7-8 + `NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md` §13.3 + §13.4 + `proof-of-priority/manifest.json` (Bitcoin merkle root).                                                                                                                                                                                        |
+| **Allowed wording**   | "BIZRA began as two Arabic root papers — `الرسالة` (The Message) and `البذرة` (The Seed) — written during 2023 and anchored to a public timestamp." "The Arabic Seed's first on-disk evidence carries a July 2023 timestamp floor."                                                                                                                        |
+| **Forbidden wording** | "Written in Ramadan 2023" cited as `VERIFIED` (still `OPERATOR_ATTESTED` — Ramadan 2023 start date is not yet evidence-bound). "Completed in June 2023" as `VERIFIED` (June 2023 completion remains `SOURCE_PENDING`). Any wording that promotes the timestamp floor to a verified creation date.                                                          |
 
 ## 13. Scene 2 — Origin Video 001 Emotional Receipt
 
-| Field | Value |
-|---|---|
-| **Title** | The First Emotional Receipt |
-| **Emotional purpose** | Show that before BIZRA had code, it had voice. The 2023 cinematic message is the emotional receipt of the seed. |
-| **What may be shown** | Origin Video 001 itself, opening from its transcript. The four-beat narrative spine (Origin → Crisis → Awakening → Choice) visualized as the structural skeleton. The filename-embedded 2023-08-31 timestamp as a hard date anchor. |
-| **Evidence anchor** | `BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` (full doc, including v0.2 evidence binding: sha256 `8b89b6dd…3d5af`, filename ms timestamp `1693522543490` → 2023-08-31 22:55:43 UTC, label `DATE_DERIVED_SINGLE_WITNESS`). |
-| **Allowed wording** | "Before BIZRA had code, it had voice." "The first BIZRA cinematic message was generated August 31, 2023." Quote the transcript closing question: *"What will you choose?"* |
+| Field                 | Value                                                                                                                                                                                                                                                                                        |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Title**             | The First Emotional Receipt                                                                                                                                                                                                                                                                  |
+| **Emotional purpose** | Show that before BIZRA had code, it had voice. The 2023 cinematic message is the emotional receipt of the seed.                                                                                                                                                                              |
+| **What may be shown** | Origin Video 001 itself, opening from its transcript. The four-beat narrative spine (Origin → Crisis → Awakening → Choice) visualized as the structural skeleton. The filename-embedded 2023-08-31 timestamp as a hard date anchor.                                                          |
+| **Evidence anchor**   | `BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` (full doc, including v0.2 evidence binding: sha256 `8b89b6dd…3d5af`, filename ms timestamp `1693522543490` → 2023-08-31 22:55:43 UTC, label `DATE_DERIVED_SINGLE_WITNESS`).                                                                           |
+| **Allowed wording**   | "Before BIZRA had code, it had voice." "The first BIZRA cinematic message was generated August 31, 2023." Quote the transcript closing question: _"What will you choose?"_                                                                                                                   |
 | **Forbidden wording** | "Released publicly in 2023" (no evidence of public release; per Origin Video canon, `PUBLIC_RELEASE_SOURCE_PENDING`). "Produced by [specific tool] in [specific way]" beyond Google AI Studio (which is `TOOL_PROVENANCE_DERIVED_STRONG`, not `VERIFIED`). Any alteration of the transcript. |
 
 ## 14. Scene 3 — Founder Proof / One Human Seed
 
-| Field | Value |
-|---|---|
-| **Title** | One Human / One Node / One Task |
-| **Emotional purpose** | Show that one human carried the seed far enough that the work is now inspectable. The founder is the **first** proof path, not the final authority. |
-| **What may be shown** | The GitHub `BizraInfo` account profile (156 total repos = 142 public + 14 private, created 2024-01-04, contribution graph). The 2,260-contributions-in-the-last-year graph as visible evidence. The local cloud-mirror footprint (~507 GB across 11 mirrors, ~110K 2023-dated files) as background scale, with `OPERATOR_ATTESTED` labeling. |
-| **Evidence anchor** | `NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md` §11 (GitHub Account Evidence, `VERIFIED`) + §12 (Local Corpus Evidence, `DERIVED`) + §26 (Public-Facing Founder Proof Wording, `DECLARED_PUBLIC_WORDING`). |
-| **Allowed wording** | The full Founder Proof §26 paragraph verbatim: *"One human carried the first BIZRA seed far enough to become inspectable. The proof is not perfection. The invitation is for better, wiser, more capable humans to test what is here, reject what is wrong, improve what is partial, and surpass what is current."* "142 public repositories. 14 private. 2,260 contributions in the last twelve months. One human." |
-| **Forbidden wording** | "15,000+ hours" as `VERIFIED`. "600 GB+ R&D" as `VERIFIED`. "5,000+ AI conversations" as `VERIFIED`. "3 years on GitHub" (GitHub starts 2024-01-04). "BizraInfo organization" (it's a user account). Any "world's first," "the founder is the final authority," or worship framing. Founder Proof §24 forbidden list applies verbatim. |
+| Field                 | Value                                                                                                                                                                                                                                                                                                                                                                                                                |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Title**             | One Human / One Node / One Task                                                                                                                                                                                                                                                                                                                                                                                      |
+| **Emotional purpose** | Show that one human carried the seed far enough that the work is now inspectable. The founder is the **first** proof path, not the final authority.                                                                                                                                                                                                                                                                  |
+| **What may be shown** | The GitHub `BizraInfo` account profile (156 total repos = 142 public + 14 private, created 2024-01-04, contribution graph). The 2,260-contributions-in-the-last-year graph as visible evidence. The local cloud-mirror footprint (~507 GB across 11 mirrors, ~110K 2023-dated files) as background scale, with `OPERATOR_ATTESTED` labeling.                                                                         |
+| **Evidence anchor**   | `NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md` §11 (GitHub Account Evidence, `VERIFIED`) + §12 (Local Corpus Evidence, `DERIVED`) + §26 (Public-Facing Founder Proof Wording, `DECLARED_PUBLIC_WORDING`).                                                                                                                                                                                                            |
+| **Allowed wording**   | The full Founder Proof §26 paragraph verbatim: _"One human carried the first BIZRA seed far enough to become inspectable. The proof is not perfection. The invitation is for better, wiser, more capable humans to test what is here, reject what is wrong, improve what is partial, and surpass what is current."_ "142 public repositories. 14 private. 2,260 contributions in the last twelve months. One human." |
+| **Forbidden wording** | "15,000+ hours" as `VERIFIED`. "600 GB+ R&D" as `VERIFIED`. "5,000+ AI conversations" as `VERIFIED`. "3 years on GitHub" (GitHub starts 2024-01-04). "BizraInfo organization" (it's a user account). Any "world's first," "the founder is the final authority," or worship framing. Founder Proof §24 forbidden list applies verbatim.                                                                               |
 
 ## 15. Scene 4 — Node0 and Dema as the Local Home Base
 
-| Field | Value |
-|---|---|
-| **Title** | Dema Home Base |
-| **Emotional purpose** | Show that BIZRA's product face is local-first: this machine, governed by this human, with every consequential event recorded in a receipt this human can inspect. |
+| Field                 | Value                                                                                                                                                                                                                                                                                                                                  |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Title**             | Dema Home Base                                                                                                                                                                                                                                                                                                                         |
+| **Emotional purpose** | Show that BIZRA's product face is local-first: this machine, governed by this human, with every consequential event recorded in a receipt this human can inspect.                                                                                                                                                                      |
 | **What may be shown** | Dema CLI surfaces (`dema status`, `dema mission draft`, `dema receipts`, the first-run wizard). The local receipt chain at `~/.dema/receipts/`. The fact that **there is no hidden daemon, no cloud service required, no third-party watching**. The doorway framing: Dema is the face; behind Dema, the governed runtime + substrate. |
-| **Evidence anchor** | `NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md` Layer 8 (Dema Product Face = `ACTIVE`) + Layer 7 (Node0 Homebase = `ACTIVE`) + `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` §12 + ADR-001 (Dema is one face) + ADR-004 (local-first memory) + ADR-005 (exact-string consent). |
-| **Allowed wording** | "Dema is the public face and operator doorway of BIZRA Node0." "All local state stays under `~/.dema` on the operator's own machine." "Every consequential action is recorded in a hash-chained receipt the operator can verify." |
-| **Forbidden wording** | "Dema is the whole BIZRA system." "Dema mints runtime receipts" (Dema reads; governed runtime mints). "Dema is federated" (single-node by definition at v0.1). "Cloud service" framing of any kind. |
+| **Evidence anchor**   | `NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md` Layer 8 (Dema Product Face = `ACTIVE`) + Layer 7 (Node0 Homebase = `ACTIVE`) + `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` §12 + ADR-001 (Dema is one face) + ADR-004 (local-first memory) + ADR-005 (exact-string consent).                                                                      |
+| **Allowed wording**   | "Dema is the public face and operator doorway of BIZRA Node0." "All local state stays under `~/.dema` on the operator's own machine." "Every consequential action is recorded in a hash-chained receipt the operator can verify."                                                                                                      |
+| **Forbidden wording** | "Dema is the whole BIZRA system." "Dema mints runtime receipts" (Dema reads; governed runtime mints). "Dema is federated" (single-node by definition at v0.1). "Cloud service" framing of any kind.                                                                                                                                    |
 
 ## 16. Scene 5 — PAT / SAT / UKE / URP as Designed Forest DNA
 
-| Field | Value |
-|---|---|
-| **Title** | The Designed Forest DNA |
-| **Emotional purpose** | Show what comes *after* the seed — but only as **designed architecture**, never as live runtime. Every visual must carry the `DESIGNED_NOT_LIVE` qualifier. |
-| **What may be shown** | The PAT-7 / SAT-5 / UKE / URP layer diagram, with every layer **explicitly captioned** "designed, not live." The operating-law verse: *"PAT may discover. SAT must govern. UKE may remember. URP may share. Dema may show. The human must consent. Receipts must prove."* The 5-node pilot framed as **planned**, not run. |
-| **Evidence anchor** | `NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md` §9-15 (each labeled `DESIGNED_NOT_LIVE`) + `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` §13 + `docs/canon/BIZRA_TOPOLOGY_CANON.md` (topology authority for PAT-7 / SAT-5 / URP). |
-| **Allowed wording** | "Designed Personal-Agent layer (PAT-7) — local intelligence." "Designed Sovereign-Agent layer (SAT-5) — governance." "Designed shared knowledge fabric (UKE) — specification only." "Designed shared resource substrate (URP) — gated behind pilot proof." "Proof-of-Impact is the designed accountability layer." |
+| Field                 | Value                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Title**             | The Designed Forest DNA                                                                                                                                                                                                                                                                                                                                    |
+| **Emotional purpose** | Show what comes _after_ the seed — but only as **designed architecture**, never as live runtime. Every visual must carry the `DESIGNED_NOT_LIVE` qualifier.                                                                                                                                                                                                |
+| **What may be shown** | The PAT-7 / SAT-5 / UKE / URP layer diagram, with every layer **explicitly captioned** "designed, not live." The operating-law verse: _"PAT may discover. SAT must govern. UKE may remember. URP may share. Dema may show. The human must consent. Receipts must prove."_ The 5-node pilot framed as **planned**, not run.                                 |
+| **Evidence anchor**   | `NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md` §9-15 (each labeled `DESIGNED_NOT_LIVE`) + `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` §13 + `docs/canon/BIZRA_TOPOLOGY_CANON.md` (topology authority for PAT-7 / SAT-5 / URP).                                                                                                                                       |
+| **Allowed wording**   | "Designed Personal-Agent layer (PAT-7) — local intelligence." "Designed Sovereign-Agent layer (SAT-5) — governance." "Designed shared knowledge fabric (UKE) — specification only." "Designed shared resource substrate (URP) — gated behind pilot proof." "Proof-of-Impact is the designed accountability layer."                                         |
 | **Forbidden wording** | "PAT-7 is live." "SAT-5 governs in production." "UKE remembers your contributions across the forest" (as live behavior). "URP marketplace is open." "Proof-of-Impact pays contributors" (as live). Any token, mint, value, yield, or economy claim. Any reading of the parallel-track crypto/smart-contract research history as live BIZRA-token activity. |
 
 ## 17. Scene 6 — The Choice Offered to Humanity
 
-| Field | Value |
-|---|---|
-| **Title** | The Forest Choice |
-| **Emotional purpose** | End not with pressure but with invitation. The audience is given **the choice**: inspect, reject, improve, or become a node of their own. |
-| **What may be shown** | The Founder Proof §26 invitation paragraph. The transcript closing question from Origin Video 001: *"What will you choose?"* Visual cue: a single seed becoming several seeds, but only as scenario — every multi-node frame must carry the `SCENARIO` caption per Claim Register §12. |
-| **Evidence anchor** | `BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` §7 (closing transcript) + `NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md` §26 (canonical public wording) + `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` §22 (canonical public paragraph). |
-| **Allowed wording** | *"What will you choose?"* (verbatim from transcript). *"Every human may choose to become a node — a seed of their own — without surrendering dignity, consent, or memory."* (verbatim from Root Source §22 / Founder Proof §26). |
-| **Forbidden wording** | "Buy now," "Join the token," "Limited spots," "Early access" framed as economic. Any pressure framing. Any "must" replacing "may." Any closing without the choice element. |
+| Field                 | Value                                                                                                                                                                                                                                                                                  |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Title**             | The Forest Choice                                                                                                                                                                                                                                                                      |
+| **Emotional purpose** | End not with pressure but with invitation. The audience is given **the choice**: inspect, reject, improve, or become a node of their own.                                                                                                                                              |
+| **What may be shown** | The Founder Proof §26 invitation paragraph. The transcript closing question from Origin Video 001: _"What will you choose?"_ Visual cue: a single seed becoming several seeds, but only as scenario — every multi-node frame must carry the `SCENARIO` caption per Claim Register §12. |
+| **Evidence anchor**   | `BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` §7 (closing transcript) + `NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md` §26 (canonical public wording) + `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` §22 (canonical public paragraph).                                                                |
+| **Allowed wording**   | _"What will you choose?"_ (verbatim from transcript). _"Every human may choose to become a node — a seed of their own — without surrendering dignity, consent, or memory."_ (verbatim from Root Source §22 / Founder Proof §26).                                                       |
+| **Forbidden wording** | "Buy now," "Join the token," "Limited spots," "Early access" framed as economic. Any pressure framing. Any "must" replacing "may." Any closing without the choice element.                                                                                                             |
 
 ## 18. Evidence Anchor Map
 
 Each scene's evidence anchor in one table for quick reviewer reference:
 
-| Scene | Primary anchor | Secondary anchors |
-|---|---|---|
-| 0 | `BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` §7 + §8 | — |
-| 1 | `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` §7 + §8 | `NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md` §13.3 + §13.4; `proof-of-priority/manifest.json` |
-| 2 | `BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` (full) | — |
-| 3 | `NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md` §11 + §12 + §26 | `CLAIM_REGISTER_v0_1.md` §9 + §17 |
-| 4 | `NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md` §7-8 | `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` §12; ADRs 001/004/005 |
-| 5 | `NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md` §9-15 | `docs/canon/BIZRA_TOPOLOGY_CANON.md`; `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` §13 |
-| 6 | `BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` §7 (closing) | `NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md` §26; `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` §22 |
+| Scene | Primary anchor                                                 | Secondary anchors                                                                               |
+| ----- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 0     | `BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` §7 + §8                 | —                                                                                               |
+| 1     | `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` §7 + §8                   | `NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md` §13.3 + §13.4; `proof-of-priority/manifest.json` |
+| 2     | `BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` (full)                  | —                                                                                               |
+| 3     | `NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md` §11 + §12 + §26 | `CLAIM_REGISTER_v0_1.md` §9 + §17                                                               |
+| 4     | `NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md` §7-8               | `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` §12; ADRs 001/004/005                                      |
+| 5     | `NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md` §9-15              | `docs/canon/BIZRA_TOPOLOGY_CANON.md`; `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` §13                  |
+| 6     | `BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md` §7 (closing)            | `NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md` §26; `BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` §22    |
 
 A claim in any future artifact that cannot be traced back to a row in this table is not yet First-Look-ready.
 
 ## 19. Allowed Claims
 
-All claims allowed in First-Look artifacts inherit from the seven-pillar canon. The canonical *allowed* set:
+All claims allowed in First-Look artifacts inherit from the seven-pillar canon. The canonical _allowed_ set:
 
 - The Arabic root papers `الرسالة` and `بذرة` are hash-bound to a public Bitcoin merkle anchor.
 - Origin Video 001 was generated 2023-08-31 (filename-embedded ms timestamp; `DATE_DERIVED_SINGLE_WITNESS`).
@@ -289,7 +289,7 @@ The First Look may **describe** the following only with the `DESIGNED_NOT_LIVE` 
 - PAT / SAT / UKE / URP runtimes — described as architecture or design; not as live behavior.
 - The full BIZRA forest — does not exist today.
 
-Any frame that shows one of these must carry an on-screen caption like *"designed, not live"*, *"projection"*, *"scenario"*, or equivalent qualifier that a viewer cannot miss.
+Any frame that shows one of these must carry an on-screen caption like _"designed, not live"_, _"projection"_, _"scenario"_, or equivalent qualifier that a viewer cannot miss.
 
 ## 22. Visual Direction
 
@@ -309,18 +309,18 @@ Tone:
 - **No hype voice** — no fast-cut Silicon Valley narrator; no urgency manufactured by tone.
 - **No investment-pump tone** — no FOMO cadence; no countdown.
 - **No "world's first"** unless the Claim Register explicitly allows it (it currently does not).
-- **End with choice, not pressure** — Scene 6 closes on *"What will you choose?"*, not on a CTA button.
+- **End with choice, not pressure** — Scene 6 closes on _"What will you choose?"_, not on a CTA button.
 
 ## 24. On-Screen Text Direction
 
 Short reusable lines that may appear on-screen across artifacts (`DECLARED_PUBLIC_WORDING_DRAFT`):
 
-- *"Every human is a node."*
-- *"Every node is a seed."*
-- *"Every seed carries potential."*
-- *"The proof is not perfection."*
-- *"The proof is that one seed became inspectable."*
-- *"The forest belongs to those who choose to nurture it."*
+- _"Every human is a node."_
+- _"Every node is a seed."_
+- _"Every seed carries potential."_
+- _"The proof is not perfection."_
+- _"The proof is that one seed became inspectable."_
+- _"The forest belongs to those who choose to nurture it."_
 
 These six lines may be combined, sequenced, or used standalone. They may not be altered without revisiting this canon. They draw from `BIZRA_ROOT_SOURCE_OF_TRUTH §22` and `NODE0_FOUNDER_PROOF §26` operating laws.
 
@@ -330,26 +330,26 @@ Three drafts. All labeled `DECLARED_PUBLIC_WORDING_DRAFT`. **Not final marketing
 
 ### 25.1 30-second teaser
 
-> Before BIZRA had code, it had a question. *Who are we? What is our purpose?* The first answers were two Arabic papers — a Message and a Seed — written in 2023 and anchored to a public timestamp. One human then carried the seed into code. Today the seed is inspectable. The forest is not built yet. The choice is yours. *(`DECLARED_PUBLIC_WORDING_DRAFT`)*
+> Before BIZRA had code, it had a question. _Who are we? What is our purpose?_ The first answers were two Arabic papers — a Message and a Seed — written in 2023 and anchored to a public timestamp. One human then carried the seed into code. Today the seed is inspectable. The forest is not built yet. The choice is yours. _(`DECLARED_PUBLIC_WORDING_DRAFT`)_
 
 ### 25.2 90-second first-look
 
-> Before BIZRA had code, it had a question, and the question was ancient: *Who are we? What is our purpose?* In 2023, the first answers took the shape of two Arabic root papers — `الرسالة` (The Message) and `البذرة` (The Seed) — anchored to a public Bitcoin timestamp. A cinematic message followed: *technology, power, greed have clouded our vision; we have forgotten our roots; the keys are righteousness, social solidarity, kindness, and support*. One human then spent the next years carrying that seed into code, documentation, receipts, and a local product face called Dema. Dema runs on the user's own machine. Every consequential action leaves a receipt. There is no hidden daemon, no cloud service required, no third party watching. The wider design — shared knowledge, shared resources, proof-of-impact — is sketched, not live. The forest is not built. The seed is inspectable. The invitation is not to believe; the invitation is to inspect, test, improve, or surpass. *What will you choose?* *(`DECLARED_PUBLIC_WORDING_DRAFT`)*
+> Before BIZRA had code, it had a question, and the question was ancient: _Who are we? What is our purpose?_ In 2023, the first answers took the shape of two Arabic root papers — `الرسالة` (The Message) and `البذرة` (The Seed) — anchored to a public Bitcoin timestamp. A cinematic message followed: _technology, power, greed have clouded our vision; we have forgotten our roots; the keys are righteousness, social solidarity, kindness, and support_. One human then spent the next years carrying that seed into code, documentation, receipts, and a local product face called Dema. Dema runs on the user's own machine. Every consequential action leaves a receipt. There is no hidden daemon, no cloud service required, no third party watching. The wider design — shared knowledge, shared resources, proof-of-impact — is sketched, not live. The forest is not built. The seed is inspectable. The invitation is not to believe; the invitation is to inspect, test, improve, or surpass. _What will you choose?_ _(`DECLARED_PUBLIC_WORDING_DRAFT`)_
 
 ### 25.3 3-minute founder-proof
 
-> Most stories about AI begin with what a system can do. This one begins with what a human did. In 2023, one person — without a formal technical background — wrote two Arabic papers, `الرسالة` and `البذرة`. They are anchored today to a Bitcoin merkle root; their hashes match across multiple personal cloud mirrors stretching back to July 2023. Soon after, a first cinematic expression was generated on August 31, 2023, carrying the same message into voice and image. Then came two years of solo work: prompt-engineering alongside crypto and smart-contract research as parallel exploration tracks; then GitHub. The founder's GitHub account `BizraInfo` opened in January 2024. It now holds 156 repositories — 142 public, 14 private — with 2,260 contributions in the last twelve months. 89% of that activity is commits. One human, one node, one task. The work is inspectable. The receipts live on disk. The doors are open. The wider design — Personal Agents that may discover, Sovereign Agents that must govern, a shared knowledge fabric, a shared resource substrate, proof-of-impact accountability — is described in the same repository as architecture and labeled clearly: designed, not live. There is no token to buy. There is no marketplace to join. There is no certification to claim. There is one human, one home base, and an invitation to every other human: come, inspect, reject what is wrong, improve what is partial, or carry your own seed into your own node. The forest is not built yet. The first seed is. The proof is not perfection. The proof is that the seed became inspectable. *What will you choose?* *(`DECLARED_PUBLIC_WORDING_DRAFT`)*
+> Most stories about AI begin with what a system can do. This one begins with what a human did. In 2023, one person — without a formal technical background — wrote two Arabic papers, `الرسالة` and `البذرة`. They are anchored today to a Bitcoin merkle root; their hashes match across multiple personal cloud mirrors stretching back to July 2023. Soon after, a first cinematic expression was generated on August 31, 2023, carrying the same message into voice and image. Then came two years of solo work: prompt-engineering alongside crypto and smart-contract research as parallel exploration tracks; then GitHub. The founder's GitHub account `BizraInfo` opened in January 2024. It now holds 156 repositories — 142 public, 14 private — with 2,260 contributions in the last twelve months. 89% of that activity is commits. One human, one node, one task. The work is inspectable. The receipts live on disk. The doors are open. The wider design — Personal Agents that may discover, Sovereign Agents that must govern, a shared knowledge fabric, a shared resource substrate, proof-of-impact accountability — is described in the same repository as architecture and labeled clearly: designed, not live. There is no token to buy. There is no marketplace to join. There is no certification to claim. There is one human, one home base, and an invitation to every other human: come, inspect, reject what is wrong, improve what is partial, or carry your own seed into your own node. The forest is not built yet. The first seed is. The proof is not perfection. The proof is that the seed became inspectable. _What will you choose?_ _(`DECLARED_PUBLIC_WORDING_DRAFT`)_
 
 Permitted variants (any of the three blocks):
 
 - Substitute "the human" for "humanity" / "one person" where transcript-faithful.
-- Trim numbers when length is critical, but keep the qualifying labels (e.g., "*roughly 150 public repositories*" with the source citation footer).
+- Trim numbers when length is critical, but keep the qualifying labels (e.g., "_roughly 150 public repositories_" with the source citation footer).
 - Replace "Bitcoin merkle root" with "public timestamp anchor" if audience requires.
 
 Forbidden mutations across all three blocks:
 
 - Removing the closing question or its choice-framing.
-- Replacing "*may*" with "*must*" or "*will*" anywhere the source text said "*may*".
+- Replacing "_may_" with "_must_" or "_will_" anywhere the source text said "_may_".
 - Adding any token-buy / sign-up / join / pre-sale / yield / reward language.
 - Adding "world's first" / "centralized AI obsolete" / "the future is here".
 - Citing any numeric figure as `VERIFIED` when its source labels it `OPERATOR_ATTESTED` or `SOURCE_PENDING`.
@@ -401,7 +401,7 @@ Before any First-Look artifact ships externally, the producer (operator or desig
 - [ ] No forbidden phrase from Section 20 appears anywhere (text, image alt-text, captions, audio).
 - [ ] Any `DESIGNED_NOT_LIVE` element carries the visible qualifier on-screen.
 - [ ] Any `SCENARIO` element (multi-node, scale projection) carries the visible "scenario" or "projection" caption.
-- [ ] The closing beat includes a *choice* framing — never a CTA-button-only close.
+- [ ] The closing beat includes a _choice_ framing — never a CTA-button-only close.
 - [ ] The artifact respects the four-beat emotional spine (Origin → Crisis → Awakening → Choice) if it carries a narrative arc.
 - [ ] The artifact does not introduce a new claim area not already in Section 19 (Allowed Claims) without explicit canon update.
 - [ ] The Claim Review Gate from `CLAIM_REGISTER §20` has been applied to every non-trivial sentence.
@@ -447,4 +447,4 @@ When any pillar in the seven-pillar canon changes, this doc is re-read for drift
 ---
 
 > **The proof is not perfection. The proof is that one seed became inspectable.**
-> *(Reusable closing line for First-Look artifacts; paired with the choice-question from Origin Video 001.)*
+> _(Reusable closing line for First-Look artifacts; paired with the choice-question from Origin Video 001.)_

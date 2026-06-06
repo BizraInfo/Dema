@@ -4,10 +4,13 @@ import { readFile } from "node:fs/promises";
 
 import {
   buildCorpusPreviewIndex,
-  CORPUS_PREVIEW_INDEX_SCHEMA
+  CORPUS_PREVIEW_INDEX_SCHEMA,
 } from "../packages/core/src/corpus-preview-index.js";
 
-const modulePath = new URL("../packages/core/src/corpus-preview-index.js", import.meta.url);
+const modulePath = new URL(
+  "../packages/core/src/corpus-preview-index.js",
+  import.meta.url,
+);
 const cliPath = new URL("../apps/cli/src/index.js", import.meta.url);
 
 test("buildCorpusPreviewIndex integrates every corpus preview surface in order", () => {
@@ -19,16 +22,19 @@ test("buildCorpusPreviewIndex integrates every corpus preview surface in order",
   assert.equal(preview.summary.total_surfaces, 8);
   assert.equal(preview.summary.ready_surface_count, 8);
   assert.equal(preview.summary.rejected_surface_count, 0);
-  assert.deepEqual(preview.surfaces.map((surface) => surface.surface_id), [
-    "model_corpus_manifest",
-    "corpus_data_tier_classifier",
-    "corpus_redaction_fixture",
-    "corpus_benchmark_schema",
-    "corpus_manual_review_queue",
-    "corpus_gold_label_fixture",
-    "corpus_eval_scorecard",
-    "corpus_scorecard_receipt_schema"
-  ]);
+  assert.deepEqual(
+    preview.surfaces.map((surface) => surface.surface_id),
+    [
+      "model_corpus_manifest",
+      "corpus_data_tier_classifier",
+      "corpus_redaction_fixture",
+      "corpus_benchmark_schema",
+      "corpus_manual_review_queue",
+      "corpus_gold_label_fixture",
+      "corpus_eval_scorecard",
+      "corpus_scorecard_receipt_schema",
+    ],
+  );
 });
 
 test("index verifies child schema compatibility and closed child boundaries", () => {
@@ -41,20 +47,30 @@ test("index verifies child schema compatibility and closed child boundaries", ()
     assert.equal(surface.boundary_ok, true);
     assert.equal(surface.authority_state, "no_authority_expansion");
   }
-  assert.equal(preview.self_proactive_harness.gates.find((gate) => gate.gate === "all_children_preview_only").pass, true);
-  assert.equal(preview.self_proactive_harness.gates.find((gate) => gate.gate === "all_child_boundaries_closed").pass, true);
+  assert.equal(
+    preview.self_proactive_harness.gates.find(
+      (gate) => gate.gate === "all_children_preview_only",
+    ).pass,
+    true,
+  );
+  assert.equal(
+    preview.self_proactive_harness.gates.find(
+      (gate) => gate.gate === "all_child_boundaries_closed",
+    ).pass,
+    true,
+  );
 });
 
 test("index can select an allowlisted subset without changing authority", () => {
   const preview = buildCorpusPreviewIndex({
-    surfaceIds: ["model_corpus_manifest", "corpus_scorecard_receipt_schema"]
+    surfaceIds: ["model_corpus_manifest", "corpus_scorecard_receipt_schema"],
   });
 
   assert.equal(preview.summary.total_surfaces, 2);
-  assert.deepEqual(preview.surfaces.map((surface) => surface.surface_id), [
-    "model_corpus_manifest",
-    "corpus_scorecard_receipt_schema"
-  ]);
+  assert.deepEqual(
+    preview.surfaces.map((surface) => surface.surface_id),
+    ["model_corpus_manifest", "corpus_scorecard_receipt_schema"],
+  );
   assert.equal(preview.boundary.receipt_minted, false);
   assert.equal(preview.micro_consent.receipt_mint_authorized, false);
 });
@@ -63,11 +79,16 @@ test("malformed index inputs fail closed without echoing raw content", () => {
   const secretText = "raw-index-content-should-not-appear";
   const raw = buildCorpusPreviewIndex({ metadata: { prompt: secretText } });
   const unknown = buildCorpusPreviewIndex({ surfaceIds: ["unknown_surface"] });
-  const duplicate = buildCorpusPreviewIndex({ surfaceIds: ["model_corpus_manifest", "model_corpus_manifest"] });
+  const duplicate = buildCorpusPreviewIndex({
+    surfaceIds: ["model_corpus_manifest", "model_corpus_manifest"],
+  });
 
   assert.equal(raw.verdict, "PREVIEW_REJECT");
   assert.equal(raw.reason, "index_must_not_include_raw_content_or_scores");
-  assert.doesNotMatch(JSON.stringify(raw), /raw-index-content-should-not-appear/);
+  assert.doesNotMatch(
+    JSON.stringify(raw),
+    /raw-index-content-should-not-appear/,
+  );
   assert.equal(unknown.reason, "surface_id_not_allowlisted");
   assert.equal(duplicate.reason, "surface_id_must_be_unique");
 });
@@ -89,14 +110,23 @@ test("ownership is provenance and not processing authorization", () => {
 test("index emits self-proactive harness, self-critique, compliance, and analogy", () => {
   const preview = buildCorpusPreviewIndex();
 
-  assert.equal(preview.self_proactive_harness.mode, "DETERMINISTIC_CORPUS_INDEX_PREVIEW");
-  assert.equal(preview.self_proactive_harness.recommended_micro_action, "hold_until_authorized_scorecard_measurement_preview");
+  assert.equal(
+    preview.self_proactive_harness.mode,
+    "DETERMINISTIC_CORPUS_INDEX_PREVIEW",
+  );
+  assert.equal(
+    preview.self_proactive_harness.recommended_micro_action,
+    "hold_until_authorized_scorecard_measurement_preview",
+  );
   assert.equal(preview.self_critique.confidence, "bounded_preview");
   assert.equal(preview.micro_compliance.index_only, true);
   assert.equal(preview.micro_compliance.metadata_only, true);
   assert.equal(preview.micro_compliance.no_child_authority_expansion, true);
   assert.equal(preview.micro_compliance.no_runtime, true);
-  assert.equal(preview.analogical_model.model, "library_index_not_library_checkout");
+  assert.equal(
+    preview.analogical_model.model,
+    "library_index_not_library_checkout",
+  );
 });
 
 test("index keeps every authority and data movement boundary false", () => {
@@ -124,7 +154,7 @@ test("index keeps every authority and data movement boundary false", () => {
     "network_called",
     "runtime_started",
     "federation_started",
-    "step7_mint_attempted"
+    "step7_mint_attempted",
   ];
 
   for (const key of expectedFalseBoundaries) {
@@ -160,8 +190,20 @@ test("corpus preview index has no CLI wiring", async () => {
 test("corpus preview index module has no runtime, network, filesystem, or randomness side effects", async () => {
   const source = await readFile(modulePath, "utf8");
 
-  assert.doesNotMatch(source, /from\s+["']node:(net|dgram|http|https|tls|dns|worker_threads|vm|child_process|fs)["']/);
-  assert.doesNotMatch(source, /\b(fetch|WebSocket|exec|execFile|spawn|spawnSync)\b/);
-  assert.doesNotMatch(source, /\b(writeFile|appendFile|mkdir|rename|unlink|createWriteStream)\b/);
-  assert.doesNotMatch(source, /\b(Date\.now|Math\.random|crypto\.random|process\.hrtime|performance\.now)\b/);
+  assert.doesNotMatch(
+    source,
+    /from\s+["']node:(net|dgram|http|https|tls|dns|worker_threads|vm|child_process|fs)["']/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(fetch|WebSocket|exec|execFile|spawn|spawnSync)\b/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(writeFile|appendFile|mkdir|rename|unlink|createWriteStream)\b/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(Date\.now|Math\.random|crypto\.random|process\.hrtime|performance\.now)\b/,
+  );
 });

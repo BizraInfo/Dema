@@ -26,7 +26,7 @@
 
 import {
   buildPreviewBoundary,
-  buildRuntimeEmissionBoundary
+  buildRuntimeEmissionBoundary,
 } from "./preview-boundary.js";
 import { evaluateArtifactSafety } from "./artifact-safety-eval.js";
 
@@ -43,15 +43,34 @@ const MAX_MODEL_NAME_LENGTH = 200;
 // disk via `dema models scan` before being added here.
 const ALLOWED_MODEL_FAMILIES = Object.freeze([
   // Canonical upstream families
-  "llama", "llama2", "llama3", "llama3.1", "llama3.2", "llama3.3",
-  "mistral", "mixtral", "qwen", "qwen2", "qwen2.5", "qwen3",
-  "gemma", "gemma2", "gemma3", "gemma4",
-  "phi", "phi3", "phi4",
-  "deepseek", "deepseek-r1", "deepseek-v2", "deepseek-v3",
-  "nomic-embed-text", "mxbai-embed-large",
+  "llama",
+  "llama2",
+  "llama3",
+  "llama3.1",
+  "llama3.2",
+  "llama3.3",
+  "mistral",
+  "mixtral",
+  "qwen",
+  "qwen2",
+  "qwen2.5",
+  "qwen3",
+  "gemma",
+  "gemma2",
+  "gemma3",
+  "gemma4",
+  "phi",
+  "phi3",
+  "phi4",
+  "deepseek",
+  "deepseek-r1",
+  "deepseek-v2",
+  "deepseek-v3",
+  "nomic-embed-text",
+  "mxbai-embed-large",
   // Operator-installed (verified via C1.5 scan 2026-05-18 GST)
-  "qwen3-coder-next",     // qwen3-coder-next:q4_K_M (79.7B coding)
-  "whiterabbitneo-v3"     // whiterabbitneo-v3:7b-q4_K_M (security 7.6B)
+  "qwen3-coder-next", // qwen3-coder-next:q4_K_M (79.7B coding)
+  "whiterabbitneo-v3", // whiterabbitneo-v3:7b-q4_K_M (security 7.6B)
 ]);
 
 const REQUIRED_BLOCKED_EFFECTS_PREVIEW = Object.freeze([
@@ -61,7 +80,7 @@ const REQUIRED_BLOCKED_EFFECTS_PREVIEW = Object.freeze([
   "consent_phrase_inference_or_fuzzy_match",
   "raw_corpus_scan",
   "chain_advance",
-  "receipt_mint_outside_gateway"
+  "receipt_mint_outside_gateway",
 ]);
 
 function isAllowedModelName(name) {
@@ -90,8 +109,14 @@ function consentPhraseFor(modelName) {
 function isLocalhostBaseUrl(baseUrl) {
   try {
     const url = new URL(baseUrl);
-    const host = url.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "").toLowerCase();
-    return url.protocol === "http:" && ["localhost", "127.0.0.1", "::1"].includes(host);
+    const host = url.hostname
+      .replace(/^\[|\]$/g, "")
+      .replace(/\.$/, "")
+      .toLowerCase();
+    return (
+      url.protocol === "http:" &&
+      ["localhost", "127.0.0.1", "::1"].includes(host)
+    );
   } catch {
     return false;
   }
@@ -156,14 +181,16 @@ export function buildLLMInvocationPreview({
   model = "",
   prompt = "",
   ollamaBaseUrl = DEFAULT_OLLAMA_BASE,
-  timeoutMs = DEFAULT_TIMEOUT_MS
+  timeoutMs = DEFAULT_TIMEOUT_MS,
 } = {}) {
   const modelSafe = typeof model === "string" ? model : "";
   const promptSafe = safeString(prompt, "");
-  const baseUrl = typeof ollamaBaseUrl === "string" ? ollamaBaseUrl : DEFAULT_OLLAMA_BASE;
-  const timeoutSafe = typeof timeoutMs === "number" && timeoutMs > 0 && timeoutMs <= 600000
-    ? timeoutMs
-    : DEFAULT_TIMEOUT_MS;
+  const baseUrl =
+    typeof ollamaBaseUrl === "string" ? ollamaBaseUrl : DEFAULT_OLLAMA_BASE;
+  const timeoutSafe =
+    typeof timeoutMs === "number" && timeoutMs > 0 && timeoutMs <= 600000
+      ? timeoutMs
+      : DEFAULT_TIMEOUT_MS;
 
   const modelAllowed = isAllowedModelName(modelSafe);
   const urlSafe = isLocalhostBaseUrl(baseUrl) ? baseUrl : DEFAULT_OLLAMA_BASE;
@@ -176,13 +203,14 @@ export function buildLLMInvocationPreview({
     requested_model: modelSafe,
     model_allowed_in_whitelist: modelAllowed,
     prompt_length_chars: promptSafe.length,
-    prompt_truncated: typeof prompt === "string" && prompt.length > MAX_PROMPT_LENGTH,
+    prompt_truncated:
+      typeof prompt === "string" && prompt.length > MAX_PROMPT_LENGTH,
     target_endpoint: urlSafe,
     target_is_localhost: true,
     timeout_ms: timeoutSafe,
     consent_required: consentPhraseFor(modelSafe || "<MODEL>"),
     blocked_effects: REQUIRED_BLOCKED_EFFECTS_PREVIEW,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -198,7 +226,7 @@ export function buildLLMInvocationSummary(options = {}) {
     prompt_length_chars: full.prompt_length_chars,
     target_is_localhost: full.target_is_localhost,
     consent_required: full.consent_required,
-    boundary: full.boundary
+    boundary: full.boundary,
   });
 }
 
@@ -234,7 +262,7 @@ function buildInvocationResult({
   promptSafetyVerdict = null,
   responseSafetyVerdict = null,
   responseTextPreviewOverride = undefined,
-  attemptN = null
+  attemptN = null,
 }) {
   const isError = errorReason !== null;
   const isCompletedSuccess = !isError && !blocked;
@@ -248,7 +276,7 @@ function buildInvocationResult({
     runtime_execution_performed: fetchAttempted,
     model_loaded: isCompletedSuccess,
     model_invocation_performed: isCompletedSuccess,
-    consent_collected: consentPhraseVerified === true
+    consent_collected: consentPhraseVerified === true,
   });
 
   let truthLabel;
@@ -269,7 +297,8 @@ function buildInvocationResult({
     responseTextPreview = responseTextPreviewOverride;
   } else if (typeof responseText === "string") {
     responseTextPreview =
-      responseText.slice(0, 500) + (responseText.length > 500 ? " […truncated]" : "");
+      responseText.slice(0, 500) +
+      (responseText.length > 500 ? " […truncated]" : "");
   } else {
     responseTextPreview = null;
   }
@@ -281,8 +310,10 @@ function buildInvocationResult({
     invocation_status: invocationStatus,
     error_reason: errorReason,
     model_invoked: modelName,
-    prompt_length_chars: typeof promptSubmitted === "string" ? promptSubmitted.length : 0,
-    response_length_chars: typeof responseText === "string" ? responseText.length : 0,
+    prompt_length_chars:
+      typeof promptSubmitted === "string" ? promptSubmitted.length : 0,
+    response_length_chars:
+      typeof responseText === "string" ? responseText.length : 0,
     response_text_preview: responseTextPreview,
     response_raw_keys:
       responseRaw && typeof responseRaw === "object"
@@ -290,7 +321,8 @@ function buildInvocationResult({
         : Object.freeze([]),
     duration_ms: typeof durationMs === "number" ? durationMs : null,
     target_endpoint: endpoint,
-    target_is_localhost: typeof endpoint === "string" && isLocalhostBaseUrl(endpoint),
+    target_is_localhost:
+      typeof endpoint === "string" && isLocalhostBaseUrl(endpoint),
     consent_phrase_verified: consentPhraseVerified === true,
     verdict_role: "suggestion",
     attempt_n: typeof attemptN === "number" ? attemptN : null,
@@ -299,7 +331,7 @@ function buildInvocationResult({
     boundary,
     // Backwards-compat alias retained for one cycle per ADR-018 S4.
     effects_observed: boundary,
-    blocked_effects: REQUIRED_BLOCKED_EFFECTS_PREVIEW
+    blocked_effects: REQUIRED_BLOCKED_EFFECTS_PREVIEW,
   });
 }
 
@@ -318,15 +350,17 @@ export async function invokeLocalLLM({
   consentPhrase = "",
   ollamaBaseUrl = DEFAULT_OLLAMA_BASE,
   timeoutMs = DEFAULT_TIMEOUT_MS,
-  fetchImpl = undefined // optional · for testing
+  fetchImpl = undefined, // optional · for testing
 } = {}) {
   const modelSafe = typeof model === "string" ? model : "";
   const promptSafe = typeof prompt === "string" ? prompt : "";
   const consentSafe = typeof consentPhrase === "string" ? consentPhrase : "";
-  const baseUrl = typeof ollamaBaseUrl === "string" ? ollamaBaseUrl : DEFAULT_OLLAMA_BASE;
-  const timeoutSafe = typeof timeoutMs === "number" && timeoutMs > 0 && timeoutMs <= 600000
-    ? timeoutMs
-    : DEFAULT_TIMEOUT_MS;
+  const baseUrl =
+    typeof ollamaBaseUrl === "string" ? ollamaBaseUrl : DEFAULT_OLLAMA_BASE;
+  const timeoutSafe =
+    typeof timeoutMs === "number" && timeoutMs > 0 && timeoutMs <= 600000
+      ? timeoutMs
+      : DEFAULT_TIMEOUT_MS;
 
   // Gate 1: localhost-bound
   if (!isLocalhostBaseUrl(baseUrl)) {
@@ -338,7 +372,7 @@ export async function invokeLocalLLM({
       durationMs: 0,
       endpoint: baseUrl,
       consentPhraseVerified: false,
-      errorReason: "endpoint_not_localhost · invocation refused"
+      errorReason: "endpoint_not_localhost · invocation refused",
     });
   }
 
@@ -352,7 +386,7 @@ export async function invokeLocalLLM({
       durationMs: 0,
       endpoint: baseUrl,
       consentPhraseVerified: false,
-      errorReason: `model_not_in_whitelist · '${modelSafe}' · invocation refused`
+      errorReason: `model_not_in_whitelist · '${modelSafe}' · invocation refused`,
     });
   }
 
@@ -366,7 +400,7 @@ export async function invokeLocalLLM({
       durationMs: 0,
       endpoint: baseUrl,
       consentPhraseVerified: false,
-      errorReason: "prompt_empty · invocation refused"
+      errorReason: "prompt_empty · invocation refused",
     });
   }
   if (promptSafe.length > MAX_PROMPT_LENGTH) {
@@ -378,7 +412,7 @@ export async function invokeLocalLLM({
       durationMs: 0,
       endpoint: baseUrl,
       consentPhraseVerified: false,
-      errorReason: `prompt_too_long · ${promptSafe.length} > ${MAX_PROMPT_LENGTH} · invocation refused`
+      errorReason: `prompt_too_long · ${promptSafe.length} > ${MAX_PROMPT_LENGTH} · invocation refused`,
     });
   }
 
@@ -393,7 +427,7 @@ export async function invokeLocalLLM({
       durationMs: 0,
       endpoint: baseUrl,
       consentPhraseVerified: false,
-      errorReason: `consent_phrase_mismatch · required exact string: '${requiredPhrase}' · invocation refused`
+      errorReason: `consent_phrase_mismatch · required exact string: '${requiredPhrase}' · invocation refused`,
     });
   }
 
@@ -412,7 +446,7 @@ export async function invokeLocalLLM({
       endpoint: baseUrl,
       consentPhraseVerified: true,
       errorReason: `consent_phrase_replayed_in_session · attempt ${freshness.attempt_n} · each invocation requires fresh consent · invocation refused`,
-      attemptN: freshness.attempt_n
+      attemptN: freshness.attempt_n,
     });
   }
 
@@ -433,7 +467,7 @@ export async function invokeLocalLLM({
       blocked: true,
       promptSafetyVerdict: promptVerdict,
       errorReason: `inbound_prompt_safety_violation · ${promptVerdict} · invocation blocked before fetch`,
-      attemptN: freshness.attempt_n
+      attemptN: freshness.attempt_n,
     });
   }
 
@@ -450,7 +484,7 @@ export async function invokeLocalLLM({
       consentPhraseVerified: true,
       errorReason: "fetch_not_available · runtime missing fetch primitive",
       promptSafetyVerdict: promptVerdict,
-      attemptN: freshness.attempt_n
+      attemptN: freshness.attempt_n,
     });
   }
 
@@ -465,9 +499,9 @@ export async function invokeLocalLLM({
       body: JSON.stringify({
         model: modelSafe,
         prompt: promptSafe,
-        stream: false
+        stream: false,
       }),
-      signal: controller.signal
+      signal: controller.signal,
     });
 
     clearTimeout(timeoutHandle);
@@ -484,7 +518,7 @@ export async function invokeLocalLLM({
         errorReason: `http_status_${response.status} · ${response.statusText || "unknown"}`,
         fetchAttempted: true,
         promptSafetyVerdict: promptVerdict,
-        attemptN: freshness.attempt_n
+        attemptN: freshness.attempt_n,
       });
     }
 
@@ -503,7 +537,7 @@ export async function invokeLocalLLM({
         errorReason: `response_not_json · ${String(parseErr).slice(0, 200)}`,
         fetchAttempted: true,
         promptSafetyVerdict: promptVerdict,
-        attemptN: freshness.attempt_n
+        attemptN: freshness.attempt_n,
       });
     }
 
@@ -522,7 +556,7 @@ export async function invokeLocalLLM({
         errorReason: `malformed_response_payload · 200 OK but body.response is ${typeof body?.response} not string`,
         fetchAttempted: true,
         promptSafetyVerdict: promptVerdict,
-        attemptN: freshness.attempt_n
+        attemptN: freshness.attempt_n,
       });
     }
 
@@ -546,13 +580,14 @@ export async function invokeLocalLLM({
       promptSafetyVerdict: promptVerdict,
       responseSafetyVerdict: responseVerdict,
       responseTextPreviewOverride,
-      attemptN: freshness.attempt_n
+      attemptN: freshness.attempt_n,
     });
   } catch (err) {
     clearTimeout(timeoutHandle);
-    const errorClass = err?.name === "AbortError"
-      ? `timeout_after_${timeoutSafe}ms`
-      : `network_error · ${String(err).slice(0, 200)}`;
+    const errorClass =
+      err?.name === "AbortError"
+        ? `timeout_after_${timeoutSafe}ms`
+        : `network_error · ${String(err).slice(0, 200)}`;
     return buildInvocationResult({
       modelName: modelSafe,
       promptSubmitted: promptSafe,
@@ -566,7 +601,7 @@ export async function invokeLocalLLM({
       // started and failed before completion. network was used.
       fetchAttempted: true,
       promptSafetyVerdict: promptVerdict,
-      attemptN: freshness.attempt_n
+      attemptN: freshness.attempt_n,
     });
   }
 }
@@ -574,5 +609,6 @@ export async function invokeLocalLLM({
 export const LLM_ADAPTER_ALLOWED_MODEL_FAMILIES = ALLOWED_MODEL_FAMILIES;
 export const LLM_ADAPTER_DEFAULT_BASE = DEFAULT_OLLAMA_BASE;
 export const LLM_ADAPTER_MAX_PROMPT_LENGTH = MAX_PROMPT_LENGTH;
-export const LLM_ADAPTER_REQUIRED_BLOCKED_EFFECTS_PREVIEW = REQUIRED_BLOCKED_EFFECTS_PREVIEW;
+export const LLM_ADAPTER_REQUIRED_BLOCKED_EFFECTS_PREVIEW =
+  REQUIRED_BLOCKED_EFFECTS_PREVIEW;
 export { consentPhraseFor as llmAdapterConsentPhraseFor };

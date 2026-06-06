@@ -30,7 +30,7 @@ function parseSsLine(line, wantedPorts) {
 
   return {
     port,
-    address: match[1].replace(/^\[|\]$/g, "")
+    address: match[1].replace(/^\[|\]$/g, ""),
   };
 }
 
@@ -41,47 +41,62 @@ async function detectTcpBindings(ports) {
 
   try {
     const { stdout } = await execFileAsync("ss", ["-tln"], { timeout: 1500 });
-    return { available: true, skipped: false, bindings: parseSsBindings(stdout, ports) };
+    return {
+      available: true,
+      skipped: false,
+      bindings: parseSsBindings(stdout, ports),
+    };
   } catch (err) {
     return {
       available: false,
       skipped: false,
       bindings: [],
-      error: err?.message ?? String(err)
+      error: err?.message ?? String(err),
     };
   }
 }
 
 export function resolveTcpBindings(ports, tcpBindings) {
   if (tcpBindings) {
-    return Promise.resolve({ available: true, skipped: false, bindings: tcpBindings });
+    return Promise.resolve({
+      available: true,
+      skipped: false,
+      bindings: tcpBindings,
+    });
   }
   return detectTcpBindings(ports);
 }
 
 export function buildSafety({ ollamaUrl, lmStudioUrl, tcp, providers }) {
   return {
-    exposure_check: tcp.available ? "measured" : tcp.skipped ? "skipped" : "unavailable",
+    exposure_check: tcp.available
+      ? "measured"
+      : tcp.skipped
+        ? "skipped"
+        : "unavailable",
     exposures: buildExposures(ollamaUrl, lmStudioUrl, tcp.bindings),
-    model_name_flags: buildModelNameFlags(providers)
+    model_name_flags: buildModelNameFlags(providers),
   };
 }
 
 function buildExposures(ollamaUrl, lmStudioUrl, bindings) {
   const providerPorts = [
     { provider: "ollama", port: portFor(ollamaUrl) },
-    { provider: "lm_studio", port: portFor(lmStudioUrl) }
+    { provider: "lm_studio", port: portFor(lmStudioUrl) },
   ];
 
   return providerPorts.flatMap((entry) => {
     return bindings
-      .filter((binding) => binding.port === entry.port && isExposedAddress(binding.address))
+      .filter(
+        (binding) =>
+          binding.port === entry.port && isExposedAddress(binding.address),
+      )
       .map((binding) => ({
         provider: entry.provider,
         port: binding.port,
         address: binding.address,
         severity: "review",
-        message: `${entry.provider} is listening beyond localhost on ${binding.address}:${binding.port}`
+        message: `${entry.provider} is listening beyond localhost on ${binding.address}:${binding.port}`,
       }));
   });
 }
@@ -93,6 +108,7 @@ function buildModelNameFlags(providers) {
       model: model.id,
       source: model.source,
       severity: "review",
-      message: "model name signals uncensored/aggressive behavior; route only by explicit operator choice"
+      message:
+        "model name signals uncensored/aggressive behavior; route only by explicit operator choice",
     }));
 }

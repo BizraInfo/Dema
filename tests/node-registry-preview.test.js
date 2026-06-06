@@ -7,14 +7,18 @@ import {
   NODE_REGISTRY_FORBIDDEN_ORDINALS,
   NODE_REGISTRY_ORDINAL_CLAIM_PHRASE_TEMPLATE,
   NODE_REGISTRY_VALID_STATUSES,
-  NODE_REGISTRY_PRIMARY_REFUSALS
+  NODE_REGISTRY_PRIMARY_REFUSALS,
 } from "../packages/core/src/node-registry-preview.js";
 
 import { PREVIEW_BOUNDARY_CANONICAL_KEYS } from "../packages/core/src/preview-boundary.js";
 
 function assertCanonicalBoundary(boundary, label) {
   for (const key of PREVIEW_BOUNDARY_CANONICAL_KEYS) {
-    assert.equal(boundary[key], false, `${label}.boundary.${key} must be false`);
+    assert.equal(
+      boundary[key],
+      false,
+      `${label}.boundary.${key} must be false`,
+    );
   }
 }
 
@@ -44,7 +48,11 @@ test("NodeRegistryPreview emits canonical 16-key boundary all false", () => {
 });
 
 test("NodeRegistryPreview output is deep-frozen at every level", () => {
-  const r = buildNodeRegistryPreview({ ghosts: [{ node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" }] });
+  const r = buildNodeRegistryPreview({
+    ghosts: [
+      { node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" },
+    ],
+  });
   assert.equal(Object.isFrozen(r), true);
   assert.equal(Object.isFrozen(r.registry_state), true);
   assert.equal(Object.isFrozen(r.registry_state.accepted), true);
@@ -58,9 +66,21 @@ test("NodeRegistryPreview output is deep-frozen at every level", () => {
 });
 
 test("NodeRegistryPreview is deterministic given identical inputs", () => {
-  const a = buildNodeRegistryPreview({ ghosts: [{ node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" }] });
-  const b = buildNodeRegistryPreview({ ghosts: [{ node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" }] });
-  assert.equal(JSON.stringify(a), JSON.stringify(b), "same inputs must produce byte-equal JSON");
+  const a = buildNodeRegistryPreview({
+    ghosts: [
+      { node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" },
+    ],
+  });
+  const b = buildNodeRegistryPreview({
+    ghosts: [
+      { node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" },
+    ],
+  });
+  assert.equal(
+    JSON.stringify(a),
+    JSON.stringify(b),
+    "same inputs must produce byte-equal JSON",
+  );
 });
 
 test("next_available_ordinal computed correctly with only Node0 accepted", () => {
@@ -75,8 +95,8 @@ test("next_available_ordinal skips FORBIDDEN_ORDINALS (3 and 4)", () => {
     active: [
       { node_ordinal: 0, node_label: "Node0", status: "accepted_primary" },
       { node_ordinal: 1, node_label: "Node1", status: "accepted_primary" },
-      { node_ordinal: 2, node_label: "Node2", status: "accepted_primary" }
-    ]
+      { node_ordinal: 2, node_label: "Node2", status: "accepted_primary" },
+    ],
   });
   assert.equal(r.registry_state.next_available_ordinal, 5);
   assert.equal(r.registry_state.highest_assigned_ordinal, 2);
@@ -84,8 +104,12 @@ test("next_available_ordinal skips FORBIDDEN_ORDINALS (3 and 4)", () => {
 
 test("highest_assigned_ordinal tracks the max assigned ordinal", () => {
   const r = buildNodeRegistryPreview({
-    active: [{ node_ordinal: 0, node_label: "Node0", status: "accepted_primary" }],
-    ghosts: [{ node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" }]
+    active: [
+      { node_ordinal: 0, node_label: "Node0", status: "accepted_primary" },
+    ],
+    ghosts: [
+      { node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" },
+    ],
   });
   assert.equal(r.registry_state.highest_assigned_ordinal, 1);
 });
@@ -99,12 +123,20 @@ test("FORBIDDEN_ORDINALS contains 3 and 4 per canon_registry", () => {
 });
 
 test("ORDINAL_CLAIM_PHRASE_TEMPLATE matches exact-string canon", () => {
-  assert.equal(NODE_REGISTRY_ORDINAL_CLAIM_PHRASE_TEMPLATE, "GO accept Node<N> ordinal");
+  assert.equal(
+    NODE_REGISTRY_ORDINAL_CLAIM_PHRASE_TEMPLATE,
+    "GO accept Node<N> ordinal",
+  );
   // Verify the substitution in a ghost entry
   const r = buildNodeRegistryPreview({
-    ghosts: [{ node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" }]
+    ghosts: [
+      { node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" },
+    ],
   });
-  assert.equal(r.registry_state.ghost[0].ordinal_claim_phrase, "GO accept Node1 ordinal");
+  assert.equal(
+    r.registry_state.ghost[0].ordinal_claim_phrase,
+    "GO accept Node1 ordinal",
+  );
 });
 
 test("VALID_STATUSES contains exactly accepted_primary, accepted_companion, ghost_preview", () => {
@@ -116,7 +148,9 @@ test("VALID_STATUSES contains exactly accepted_primary, accepted_companion, ghos
 
 test("Ghost Node1 with candidate_name produces a frozen ghost entry", () => {
   const r = buildNodeRegistryPreview({
-    ghosts: [{ node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" }]
+    ghosts: [
+      { node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" },
+    ],
   });
   assert.equal(r.registry_state.ghost.length, 1);
   assert.equal(r.registry_state.ghost[0].node_ordinal, 1);
@@ -130,28 +164,44 @@ test("Multiple ghosts coexist (Node1 + Node2)", () => {
   const r = buildNodeRegistryPreview({
     ghosts: [
       { node_ordinal: 1, status: "ghost_preview", candidate_name: "FriendA" },
-      { node_ordinal: 2, status: "ghost_preview", candidate_name: "FriendB" }
-    ]
+      { node_ordinal: 2, status: "ghost_preview", candidate_name: "FriendB" },
+    ],
   });
   assert.equal(r.registry_state.ghost.length, 2);
   assert.equal(r.registry_state.ghost[0].node_ordinal, 1);
   assert.equal(r.registry_state.ghost[1].node_ordinal, 2);
-  assert.equal(r.registry_state.next_available_ordinal, 5, "5 = 3 forbidden, 4 forbidden, next is 5");
+  assert.equal(
+    r.registry_state.next_available_ordinal,
+    5,
+    "5 = 3 forbidden, 4 forbidden, next is 5",
+  );
 });
 
 test("blocked_effects includes federation, node_connection, and ordinal-assignment guards", () => {
   const r = buildNodeRegistryPreview();
   assert.ok(r.blocked_effects.includes("federation"));
   assert.ok(r.blocked_effects.includes("node_connection"));
-  assert.ok(r.blocked_effects.includes("ordinal_assignment_without_typed_consent"));
-  assert.ok(r.blocked_effects.includes("ordinal_assignment_into_forbidden_list"));
+  assert.ok(
+    r.blocked_effects.includes("ordinal_assignment_without_typed_consent"),
+  );
+  assert.ok(
+    r.blocked_effects.includes("ordinal_assignment_into_forbidden_list"),
+  );
 });
 
 test("primary_refusals surfaces the structural refusal taxonomy", () => {
   const r = buildNodeRegistryPreview();
   assert.equal(r.primary_refusals, NODE_REGISTRY_PRIMARY_REFUSALS);
-  assert.ok(r.primary_refusals.includes("refuse_to_skip_ordinals_without_canon_authorization"));
-  assert.ok(r.primary_refusals.includes("refuse_to_register_ordinal_in_forbidden_list_until_canon_amends"));
+  assert.ok(
+    r.primary_refusals.includes(
+      "refuse_to_skip_ordinals_without_canon_authorization",
+    ),
+  );
+  assert.ok(
+    r.primary_refusals.includes(
+      "refuse_to_register_ordinal_in_forbidden_list_until_canon_amends",
+    ),
+  );
   assert.ok(r.primary_refusals.includes("refuse_to_assign_duplicate_ordinals"));
 });
 
@@ -167,32 +217,49 @@ test("consent block locks the exact-string discipline (ADR-005 binding)", () => 
 
 test("ADVERSARIAL: ghost with ordinal -1 is refused with ordinal_not_a_non_negative_integer", () => {
   const r = buildNodeRegistryPreview({
-    ghosts: [{ node_ordinal: -1, status: "ghost_preview", candidate_name: "Bad" }]
+    ghosts: [
+      { node_ordinal: -1, status: "ghost_preview", candidate_name: "Bad" },
+    ],
   });
   assert.equal(r.registry_state.ghost.length, 0);
   assert.equal(r.refusals.length, 1);
-  assert.equal(r.refusals[0].refusal_reason, "ordinal_not_a_non_negative_integer");
+  assert.equal(
+    r.refusals[0].refusal_reason,
+    "ordinal_not_a_non_negative_integer",
+  );
 });
 
 test("ADVERSARIAL: ghost with ordinal 3 is refused (forbidden by canon_registry)", () => {
   const r = buildNodeRegistryPreview({
-    ghosts: [{ node_ordinal: 3, status: "ghost_preview", candidate_name: "Bad" }]
+    ghosts: [
+      { node_ordinal: 3, status: "ghost_preview", candidate_name: "Bad" },
+    ],
   });
   assert.equal(r.registry_state.ghost.length, 0);
-  assert.equal(r.refusals[0].refusal_reason, "ordinal_forbidden_by_canon_registry");
+  assert.equal(
+    r.refusals[0].refusal_reason,
+    "ordinal_forbidden_by_canon_registry",
+  );
 });
 
 test("ADVERSARIAL: ghost with ordinal 4 is refused (forbidden by canon_registry)", () => {
   const r = buildNodeRegistryPreview({
-    ghosts: [{ node_ordinal: 4, status: "ghost_preview", candidate_name: "Bad" }]
+    ghosts: [
+      { node_ordinal: 4, status: "ghost_preview", candidate_name: "Bad" },
+    ],
   });
   assert.equal(r.registry_state.ghost.length, 0);
-  assert.equal(r.refusals[0].refusal_reason, "ordinal_forbidden_by_canon_registry");
+  assert.equal(
+    r.refusals[0].refusal_reason,
+    "ordinal_forbidden_by_canon_registry",
+  );
 });
 
 test("ADVERSARIAL: ghost with ordinal 0 collides with Node0 and is refused (duplicate_ordinal)", () => {
   const r = buildNodeRegistryPreview({
-    ghosts: [{ node_ordinal: 0, status: "ghost_preview", candidate_name: "Bad" }]
+    ghosts: [
+      { node_ordinal: 0, status: "ghost_preview", candidate_name: "Bad" },
+    ],
   });
   assert.equal(r.registry_state.ghost.length, 0);
   assert.equal(r.refusals[0].refusal_reason, "duplicate_ordinal");
@@ -202,8 +269,8 @@ test("ADVERSARIAL: two ghosts with identical ordinal 1 — only first accepted, 
   const r = buildNodeRegistryPreview({
     ghosts: [
       { node_ordinal: 1, status: "ghost_preview", candidate_name: "FriendA" },
-      { node_ordinal: 1, status: "ghost_preview", candidate_name: "FriendB" }
-    ]
+      { node_ordinal: 1, status: "ghost_preview", candidate_name: "FriendB" },
+    ],
   });
   assert.equal(r.registry_state.ghost.length, 1);
   assert.equal(r.refusals.length, 1);
@@ -212,23 +279,29 @@ test("ADVERSARIAL: two ghosts with identical ordinal 1 — only first accepted, 
 
 test("ADVERSARIAL: ghost without candidate_name is refused", () => {
   const r = buildNodeRegistryPreview({
-    ghosts: [{ node_ordinal: 1, status: "ghost_preview" }]
+    ghosts: [{ node_ordinal: 1, status: "ghost_preview" }],
   });
   assert.equal(r.registry_state.ghost.length, 0);
-  assert.equal(r.refusals[0].refusal_reason, "ghost_preview_requires_candidate_name");
+  assert.equal(
+    r.refusals[0].refusal_reason,
+    "ghost_preview_requires_candidate_name",
+  );
 });
 
 test("ADVERSARIAL: ghost with empty-string candidate_name is refused", () => {
   const r = buildNodeRegistryPreview({
-    ghosts: [{ node_ordinal: 1, status: "ghost_preview", candidate_name: "" }]
+    ghosts: [{ node_ordinal: 1, status: "ghost_preview", candidate_name: "" }],
   });
   assert.equal(r.registry_state.ghost.length, 0);
-  assert.equal(r.refusals[0].refusal_reason, "ghost_preview_requires_candidate_name");
+  assert.equal(
+    r.refusals[0].refusal_reason,
+    "ghost_preview_requires_candidate_name",
+  );
 });
 
 test("ADVERSARIAL: ghost with unknown status 'active' is refused (status must be ghost_preview)", () => {
   const r = buildNodeRegistryPreview({
-    ghosts: [{ node_ordinal: 1, status: "active", candidate_name: "Friend" }]
+    ghosts: [{ node_ordinal: 1, status: "active", candidate_name: "Friend" }],
   });
   assert.equal(r.registry_state.ghost.length, 0);
   // status is recognized as unknown (not in VALID_STATUSES) — reason fires unknown_status_value path
@@ -237,40 +310,65 @@ test("ADVERSARIAL: ghost with unknown status 'active' is refused (status must be
 
 test("ADVERSARIAL: active entry with status ghost_preview is refused (status mismatch)", () => {
   const r = buildNodeRegistryPreview({
-    active: [{ node_ordinal: 0, node_label: "Node0", status: "ghost_preview" }]
+    active: [{ node_ordinal: 0, node_label: "Node0", status: "ghost_preview" }],
   });
   assert.equal(r.registry_state.accepted.length, 0);
-  assert.equal(r.refusals[0].refusal_reason, "active_entry_cannot_be_ghost_preview");
+  assert.equal(
+    r.refusals[0].refusal_reason,
+    "active_entry_cannot_be_ghost_preview",
+  );
 });
 
 test("ADVERSARIAL: active entry with companion_of equal to own node_label is refused", () => {
   const r = buildNodeRegistryPreview({
-    active: [{ node_ordinal: 0, node_label: "Node0", status: "accepted_primary", companion_of: "Node0" }]
+    active: [
+      {
+        node_ordinal: 0,
+        node_label: "Node0",
+        status: "accepted_primary",
+        companion_of: "Node0",
+      },
+    ],
   });
   assert.equal(r.registry_state.accepted.length, 0);
-  assert.equal(r.refusals[0].refusal_reason, "companion_of_must_not_self_reference");
+  assert.equal(
+    r.refusals[0].refusal_reason,
+    "companion_of_must_not_self_reference",
+  );
 });
 
 test("ADVERSARIAL: ordinal as string '1' is refused (not a number)", () => {
   const r = buildNodeRegistryPreview({
-    ghosts: [{ node_ordinal: "1", status: "ghost_preview", candidate_name: "Friend" }]
+    ghosts: [
+      { node_ordinal: "1", status: "ghost_preview", candidate_name: "Friend" },
+    ],
   });
   assert.equal(r.registry_state.ghost.length, 0);
-  assert.equal(r.refusals[0].refusal_reason, "ordinal_not_a_non_negative_integer");
+  assert.equal(
+    r.refusals[0].refusal_reason,
+    "ordinal_not_a_non_negative_integer",
+  );
 });
 
 test("ADVERSARIAL: ordinal 1.5 (non-integer) is refused", () => {
   const r = buildNodeRegistryPreview({
-    ghosts: [{ node_ordinal: 1.5, status: "ghost_preview", candidate_name: "Friend" }]
+    ghosts: [
+      { node_ordinal: 1.5, status: "ghost_preview", candidate_name: "Friend" },
+    ],
   });
   assert.equal(r.registry_state.ghost.length, 0);
-  assert.equal(r.refusals[0].refusal_reason, "ordinal_not_a_non_negative_integer");
+  assert.equal(
+    r.refusals[0].refusal_reason,
+    "ordinal_not_a_non_negative_integer",
+  );
 });
 
 test("ADVERSARIAL: skipping Node1 to register Node2 ghost is refused (would_skip_ordinal)", () => {
   // Node0 accepted, no Node1, ghost requests Node2
   const r = buildNodeRegistryPreview({
-    ghosts: [{ node_ordinal: 2, status: "ghost_preview", candidate_name: "Friend" }]
+    ghosts: [
+      { node_ordinal: 2, status: "ghost_preview", candidate_name: "Friend" },
+    ],
   });
   assert.equal(r.registry_state.ghost.length, 0);
   assert.equal(r.refusals[0].refusal_reason, "would_skip_ordinal");
@@ -278,7 +376,9 @@ test("ADVERSARIAL: skipping Node1 to register Node2 ghost is refused (would_skip
 
 test("ADVERSARIAL: mutation attempt on returned registry has no effect (deep-frozen)", () => {
   const r = buildNodeRegistryPreview({
-    ghosts: [{ node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" }]
+    ghosts: [
+      { node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" },
+    ],
   });
   let threw = false;
   try {
@@ -286,18 +386,33 @@ test("ADVERSARIAL: mutation attempt on returned registry has no effect (deep-fro
   } catch (e) {
     threw = true;
   }
-  assert.equal(r.registry_state.ghost[0].candidate_name, "Friend", "candidate_name must stay Friend after attempted mutation");
+  assert.equal(
+    r.registry_state.ghost[0].candidate_name,
+    "Friend",
+    "candidate_name must stay Friend after attempted mutation",
+  );
   // also try pushing into accepted array
   try {
-    r.registry_state.accepted.push({ node_ordinal: 99, status: "accepted_primary" });
+    r.registry_state.accepted.push({
+      node_ordinal: 99,
+      status: "accepted_primary",
+    });
   } catch (e) {
     threw = true;
   }
-  assert.equal(r.registry_state.accepted.length, 1, "accepted must stay length 1");
+  assert.equal(
+    r.registry_state.accepted.length,
+    1,
+    "accepted must stay length 1",
+  );
 });
 
 test("ADVERSARIAL: prototype-pollution attempt via ghost input does not leak", () => {
-  const polluted = { node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" };
+  const polluted = {
+    node_ordinal: 1,
+    status: "ghost_preview",
+    candidate_name: "Friend",
+  };
   // attempt to pollute the entry's prototype chain
   Object.setPrototypeOf(polluted, { secret_token: "SHOULD_NOT_LEAK" });
   const r = buildNodeRegistryPreview({ ghosts: [polluted] });
@@ -309,19 +424,28 @@ test("ADVERSARIAL: prototype-pollution attempt via ghost input does not leak", (
 
 test("ADVERSARIAL: RTL candidate name preserved verbatim in ghost slot", () => {
   const r = buildNodeRegistryPreview({
-    ghosts: [{ node_ordinal: 1, status: "ghost_preview", candidate_name: "محمد بشر" }]
+    ghosts: [
+      { node_ordinal: 1, status: "ghost_preview", candidate_name: "محمد بشر" },
+    ],
   });
   assert.equal(r.registry_state.ghost.length, 1);
   assert.equal(r.registry_state.ghost[0].candidate_name, "محمد بشر");
   // claim phrase still uses LTR ordinal substitution
-  assert.equal(r.registry_state.ghost[0].ordinal_claim_phrase, "GO accept Node1 ordinal");
+  assert.equal(
+    r.registry_state.ghost[0].ordinal_claim_phrase,
+    "GO accept Node1 ordinal",
+  );
 });
 
 // ─── v0.1f COUNT + URP INVENTORY TESTS ──────────────────────────────────────
 
 test("v0.1f: default state has connected_node_count: 1 and zero ghosts pending", () => {
   const r = buildNodeRegistryPreview();
-  assert.equal(r.registry_state.connected_node_count, 1, "Node0 alone → 1 connected");
+  assert.equal(
+    r.registry_state.connected_node_count,
+    1,
+    "Node0 alone → 1 connected",
+  );
   assert.equal(r.registry_state.primary_node_count, 1);
   assert.equal(r.registry_state.companion_device_count, 0);
   assert.equal(r.registry_state.ghost_pending_count, 0);
@@ -337,12 +461,29 @@ test("v0.1f: companion device shares ordinal but counts as companion, not connec
   const r = buildNodeRegistryPreview({
     active: [
       { node_ordinal: 0, node_label: "Node0", status: "accepted_primary" },
-      { node_ordinal: 1, node_label: "Node1", status: "accepted_companion", companion_of: "Node0" }
-    ]
+      {
+        node_ordinal: 1,
+        node_label: "Node1",
+        status: "accepted_companion",
+        companion_of: "Node0",
+      },
+    ],
   });
-  assert.equal(r.registry_state.accepted.length, 2, "both entries accepted (different ordinals)");
-  assert.equal(r.registry_state.connected_node_count, 1, "only primary counts as connected human");
-  assert.equal(r.registry_state.companion_device_count, 1, "one companion registered");
+  assert.equal(
+    r.registry_state.accepted.length,
+    2,
+    "both entries accepted (different ordinals)",
+  );
+  assert.equal(
+    r.registry_state.connected_node_count,
+    1,
+    "only primary counts as connected human",
+  );
+  assert.equal(
+    r.registry_state.companion_device_count,
+    1,
+    "one companion registered",
+  );
   assert.equal(r.registry_state.primary_node_count, 1);
 });
 
@@ -350,40 +491,71 @@ test("v0.1f: ceremony moment — Node0 + accepted Node1 → connected_node_count
   const r = buildNodeRegistryPreview({
     active: [
       { node_ordinal: 0, node_label: "Node0", status: "accepted_primary" },
-      { node_ordinal: 1, node_label: "Node1", status: "accepted_primary", candidate_name: "Friend" }
-    ]
+      {
+        node_ordinal: 1,
+        node_label: "Node1",
+        status: "accepted_primary",
+        candidate_name: "Friend",
+      },
+    ],
   });
-  assert.equal(r.registry_state.connected_node_count, 2, "the moment friend accepts → 2 connected");
+  assert.equal(
+    r.registry_state.connected_node_count,
+    2,
+    "the moment friend accepts → 2 connected",
+  );
   assert.equal(r.registry_state.ghost_pending_count, 0);
 });
 
 test("v0.1f: ghost slot is counted as pending, not connected", () => {
   const r = buildNodeRegistryPreview({
-    ghosts: [{ node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" }]
+    ghosts: [
+      { node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" },
+    ],
   });
-  assert.equal(r.registry_state.connected_node_count, 1, "Node0 alone is still 1");
-  assert.equal(r.registry_state.ghost_pending_count, 1, "Friend pending acceptance");
+  assert.equal(
+    r.registry_state.connected_node_count,
+    1,
+    "Node0 alone is still 1",
+  );
+  assert.equal(
+    r.registry_state.ghost_pending_count,
+    1,
+    "Friend pending acceptance",
+  );
 });
 
 test("v0.1f: total_pat_agents_planned = primary_node_count × 7", () => {
   const r = buildNodeRegistryPreview({
     active: [
       { node_ordinal: 0, node_label: "Node0", status: "accepted_primary" },
-      { node_ordinal: 1, node_label: "Node1", status: "accepted_primary" }
-    ]
+      { node_ordinal: 1, node_label: "Node1", status: "accepted_primary" },
+    ],
   });
-  assert.equal(r.urp_shared_pool_inventory.current_totals_if_each_node_were_to_activate.pat_agents, 14);
+  assert.equal(
+    r.urp_shared_pool_inventory.current_totals_if_each_node_were_to_activate
+      .pat_agents,
+    14,
+  );
 });
 
 test("v0.1f: total_sat_agents_planned = primary_node_count × 5", () => {
   const r = buildNodeRegistryPreview({
     active: [
       { node_ordinal: 0, node_label: "Node0", status: "accepted_primary" },
-      { node_ordinal: 1, node_label: "Node1", status: "accepted_primary" }
-    ]
+      { node_ordinal: 1, node_label: "Node1", status: "accepted_primary" },
+    ],
   });
-  assert.equal(r.urp_shared_pool_inventory.current_totals_if_each_node_were_to_activate.sat_agents, 10);
-  assert.equal(r.urp_shared_pool_inventory.current_totals_if_each_node_were_to_activate.total_agents, 24);
+  assert.equal(
+    r.urp_shared_pool_inventory.current_totals_if_each_node_were_to_activate
+      .sat_agents,
+    10,
+  );
+  assert.equal(
+    r.urp_shared_pool_inventory.current_totals_if_each_node_were_to_activate
+      .total_agents,
+    24,
+  );
 });
 
 test("v0.1f: urp_shared_pool_inventory.federation_active is FALSE at v0.1f stage", () => {
@@ -396,24 +568,41 @@ test("v0.1f: urp_shared_pool_inventory.federation_active is FALSE at v0.1f stage
 test("v0.1f: urp_shared_pool_inventory carries the 5 canonical resource categories", () => {
   const r = buildNodeRegistryPreview();
   const cats = r.urp_shared_pool_inventory.resource_categories;
-  assert.deepEqual([...cats], [
-    "hardware",
-    "data_corpus",
-    "knowledge_base",
-    "experience_history",
-    "skill_library"
-  ]);
+  assert.deepEqual(
+    [...cats],
+    [
+      "hardware",
+      "data_corpus",
+      "knowledge_base",
+      "experience_history",
+      "skill_library",
+    ],
+  );
   // contributed_resources empty per category (no node has federated)
   for (const cat of cats) {
-    assert.deepEqual([...r.urp_shared_pool_inventory.contributed_resources[cat]], []);
+    assert.deepEqual(
+      [...r.urp_shared_pool_inventory.contributed_resources[cat]],
+      [],
+    );
   }
-  assert.equal(r.urp_shared_pool_inventory.contribution_status, "preview_only_no_node_has_federated");
+  assert.equal(
+    r.urp_shared_pool_inventory.contribution_status,
+    "preview_only_no_node_has_federated",
+  );
 });
 
 test("v0.1f: per_primary_node_contribution declares PAT=7 + SAT=5 (canonical Scaling table)", () => {
   const r = buildNodeRegistryPreview();
-  assert.equal(r.urp_shared_pool_inventory.per_primary_node_contribution.pat_agents_local_per_node, 7);
-  assert.equal(r.urp_shared_pool_inventory.per_primary_node_contribution.sat_agents_into_shared_urp_per_node, 5);
+  assert.equal(
+    r.urp_shared_pool_inventory.per_primary_node_contribution
+      .pat_agents_local_per_node,
+    7,
+  );
+  assert.equal(
+    r.urp_shared_pool_inventory.per_primary_node_contribution
+      .sat_agents_into_shared_urp_per_node,
+    5,
+  );
 });
 
 test("ADVERSARIAL v0.1f: count fields ignore refused ghost entries", () => {
@@ -422,10 +611,14 @@ test("ADVERSARIAL v0.1f: count fields ignore refused ghost entries", () => {
   const r = buildNodeRegistryPreview({
     ghosts: [
       { node_ordinal: 1, status: "ghost_preview", candidate_name: "Friend" },
-      { node_ordinal: 5, status: "ghost_preview", candidate_name: "TooSoon" }
-    ]
+      { node_ordinal: 5, status: "ghost_preview", candidate_name: "TooSoon" },
+    ],
   });
-  assert.equal(r.registry_state.ghost_pending_count, 1, "only the validly-ordered ghost counts");
+  assert.equal(
+    r.registry_state.ghost_pending_count,
+    1,
+    "only the validly-ordered ghost counts",
+  );
   assert.equal(r.refusals.length, 1, "one refusal recorded");
   assert.equal(r.refusals[0].refusal_reason, "would_skip_ordinal");
 });
@@ -438,6 +631,18 @@ test("ADVERSARIAL v0.1f: count fields are integers · zero allocations possible"
   assert.equal(Number.isInteger(r.registry_state.connected_node_count), true);
   assert.equal(Number.isInteger(r.registry_state.companion_device_count), true);
   assert.equal(Number.isInteger(r.registry_state.ghost_pending_count), true);
-  assert.equal(Number.isInteger(r.urp_shared_pool_inventory.current_totals_if_each_node_were_to_activate.pat_agents), true);
-  assert.equal(Number.isInteger(r.urp_shared_pool_inventory.current_totals_if_each_node_were_to_activate.sat_agents), true);
+  assert.equal(
+    Number.isInteger(
+      r.urp_shared_pool_inventory.current_totals_if_each_node_were_to_activate
+        .pat_agents,
+    ),
+    true,
+  );
+  assert.equal(
+    Number.isInteger(
+      r.urp_shared_pool_inventory.current_totals_if_each_node_were_to_activate
+        .sat_agents,
+    ),
+    true,
+  );
 });

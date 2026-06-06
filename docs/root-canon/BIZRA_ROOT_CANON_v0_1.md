@@ -27,9 +27,9 @@ These roots are not normal documentation. They are BIZRA's immutable constitutio
 
 The BIZRA Root Canon consists of three origin documents:
 
-1. The Message  
-2. The Seed / البذرة  
-3. The Third Fact  
+1. The Message
+2. The Seed / البذرة
+3. The Third Fact
 
 These roots are immutable.
 
@@ -49,12 +49,12 @@ It is a fork.
 
 ## Governance Status
 
-- **founder_can_modify**: false  
-- **network_vote_can_modify**: false  
-- **agent_can_modify**: false  
-- **model_can_modify**: false  
-- **validator_can_modify**: false  
-- **fork_if_modified**: true  
+- **founder_can_modify**: false
+- **network_vote_can_modify**: false
+- **agent_can_modify**: false
+- **model_can_modify**: false
+- **validator_can_modify**: false
+- **fork_if_modified**: true
 
 The Root Canon is pre-governance. Network law, community governance, technical protocols, and agent behavior may evolve above the root, but never against it or by changing it.
 
@@ -92,11 +92,11 @@ Any violation results in "FORK_NOT_BIZRA".
 
 ## Proof-of-Truth Convergence for Root Canon
 
-| Rail              | Requirement                                                                 |
-|-------------------|-----------------------------------------------------------------------------|
-| **Formal**        | Manifest declares exactly three roots, immutable status, and governance authority (all false except fork). |
-| **Cryptographic** | Each root file sealed with SHA-256 + SHA3-512. Double-hash provides defense in depth. |
-| **Empirical**     | Test proves byte change or missing file or wrong count fails verification. |
+| Rail              | Requirement                                                                                                       |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Formal**        | Manifest declares exactly three roots, immutable status, and governance authority (all false except fork).        |
+| **Cryptographic** | Each root file sealed with SHA-256 + SHA3-512. Double-hash provides defense in depth.                             |
+| **Empirical**     | Test proves byte change or missing file or wrong count fails verification.                                        |
 | **Economic**      | No reward, settlement, token, PoI, or network identity can legitimately claim "BIZRA" if root verification fails. |
 
 This extends the 1A fail-closed doctrine to the constitutional layer:

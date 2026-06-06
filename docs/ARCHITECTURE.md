@@ -135,8 +135,8 @@ Dema includes professional management, DevOps, and QA blueprint surfaces for pla
 - `dema behavior modulation preview` models visible, reversible guidance modulation under exact consent while rejecting covert persuasion, manipulation, and other unsafe shaping.
 - `npm run release:readiness` reports release risks and launch blockers without deployment, certification, runtime execution, or token/economic claims.
 
-| Command | Primary surface | Effect boundary |
-| --- | --- | --- |
+| Command                              | Primary surface                                              | Effect boundary                                                                                                                                            |
+| ------------------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `dema genesis composition blueprint` | `packages/core/src/genesis-composition-blueprint-preview.js` | Read-only schema-tagged preview. No libostree, daemon, deploy/rollback surface, federation, network, receipt mint, chain advance, or CI workflow mutation. |
 
 ## Behavioral modulation preview

@@ -10,13 +10,15 @@ import { fileURLToPath } from "node:url";
 import {
   composeNode0StatusFromGateway,
   createGatewayHttpAdapter,
-  fetchGatewayState
+  fetchGatewayState,
 } from "../packages/node-adapter/src/gateway-http-adapter.js";
 import { createNode0Adapter } from "../packages/node-adapter/src/node0-adapter.js";
 
 const HEALTHY_GATEWAY_DOMAIN = "bizra-cognition-gateway-v1";
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 function restoreEnv(name, value) {
   if (value === undefined) {
@@ -30,16 +32,19 @@ async function withNode0AdapterEnv(values, fn) {
   const names = [
     "DEMA_NODE0_ADAPTER",
     "DEMA_GATEWAY_URL",
-    "DEMA_NODE0_STATUS_COMMAND"
+    "DEMA_NODE0_STATUS_COMMAND",
   ];
-  const originals = Object.fromEntries(names.map((name) => [name, process.env[name]]));
+  const originals = Object.fromEntries(
+    names.map((name) => [name, process.env[name]]),
+  );
   try {
     for (const name of names) {
       if (Object.hasOwn(values, name)) restoreEnv(name, values[name]);
     }
     return await fn();
   } finally {
-    for (const [name, value] of Object.entries(originals)) restoreEnv(name, value);
+    for (const [name, value] of Object.entries(originals))
+      restoreEnv(name, value);
   }
 }
 
@@ -58,8 +63,15 @@ function startFakeGateway(routes) {
       return;
     }
     const result = handler(req);
-    res.writeHead(result.status ?? 200, result.headers ?? { "content-type": "application/json" });
-    res.end(typeof result.body === "string" ? result.body : JSON.stringify(result.body));
+    res.writeHead(
+      result.status ?? 200,
+      result.headers ?? { "content-type": "application/json" },
+    );
+    res.end(
+      typeof result.body === "string"
+        ? result.body
+        : JSON.stringify(result.body),
+    );
   });
   return new Promise((resolve) => {
     server.listen(0, "127.0.0.1", () => {
@@ -69,23 +81,25 @@ function startFakeGateway(routes) {
         calls,
         async stop() {
           await new Promise((r) => server.close(r));
-        }
+        },
       });
     });
   });
 }
 
 const HEALTHY_ROUTES = {
-  "/health": () => jsonResponse({ status: "ok", domain: HEALTHY_GATEWAY_DOMAIN }),
-  "/chain": () => jsonResponse({ head: "0".repeat(64), length: 0, latestTimestamp: null }),
+  "/health": () =>
+    jsonResponse({ status: "ok", domain: HEALTHY_GATEWAY_DOMAIN }),
+  "/chain": () =>
+    jsonResponse({ head: "0".repeat(64), length: 0, latestTimestamp: null }),
   "/poi/summary": () =>
     jsonResponse({
       chainHead: "0".repeat(64),
       totalEntries: 0,
       totalImpact: 0,
-      avgImpact: 0
+      avgImpact: 0,
     }),
-  "/resources/list": () => jsonResponse({ resources: [] })
+  "/resources/list": () => jsonResponse({ resources: [] }),
 };
 
 test("gateway-http adapter composes v0.2 status from /health + /chain + /poi + /resources", async () => {
@@ -110,7 +124,12 @@ test("gateway-http adapter composes v0.2 status from /health + /chain + /poi + /
     const methods = new Set(gw.calls.map((c) => c.method));
     assert.deepEqual([...methods], ["GET"]);
     const paths = new Set(gw.calls.map((c) => c.url));
-    assert.deepEqual([...paths].sort(), ["/chain", "/health", "/poi/summary", "/resources/list"]);
+    assert.deepEqual([...paths].sort(), [
+      "/chain",
+      "/health",
+      "/poi/summary",
+      "/resources/list",
+    ]);
   } finally {
     await gw.stop();
   }
@@ -118,16 +137,18 @@ test("gateway-http adapter composes v0.2 status from /health + /chain + /poi + /
 
 test("gateway-http adapter never claims ready=true even with a populated chain", async () => {
   const gw = await startFakeGateway({
-    "/health": () => jsonResponse({ status: "ok", domain: HEALTHY_GATEWAY_DOMAIN }),
+    "/health": () =>
+      jsonResponse({ status: "ok", domain: HEALTHY_GATEWAY_DOMAIN }),
     "/chain": () =>
       jsonResponse({
         head: "ab".repeat(32),
         length: 5,
-        latestTimestamp: 1234567890
+        latestTimestamp: 1234567890,
       }),
     "/poi/summary": () =>
       jsonResponse({ totalEntries: 5, totalImpact: 1.5, avgImpact: 0.3 }),
-    "/resources/list": () => jsonResponse({ resources: [{ id: "r1" }, { id: "r2" }] })
+    "/resources/list": () =>
+      jsonResponse({ resources: [{ id: "r1" }, { id: "r2" }] }),
   });
   try {
     const adapter = createGatewayHttpAdapter({ baseUrl: gw.url });
@@ -150,9 +171,11 @@ test("gateway-http adapter never claims ready=true even with a populated chain",
 test("gateway-http adapter labels DEGRADED + records finding when /health is missing", async () => {
   const gw = await startFakeGateway({
     // no /health route → 404
-    "/chain": () => jsonResponse({ head: "0".repeat(64), length: 0, latestTimestamp: null }),
-    "/poi/summary": () => jsonResponse({ totalEntries: 0, totalImpact: 0, avgImpact: 0 }),
-    "/resources/list": () => jsonResponse({ resources: [] })
+    "/chain": () =>
+      jsonResponse({ head: "0".repeat(64), length: 0, latestTimestamp: null }),
+    "/poi/summary": () =>
+      jsonResponse({ totalEntries: 0, totalImpact: 0, avgImpact: 0 }),
+    "/resources/list": () => jsonResponse({ resources: [] }),
   });
   try {
     const adapter = createGatewayHttpAdapter({ baseUrl: gw.url });
@@ -169,7 +192,8 @@ test("gateway-http adapter labels DEGRADED + records finding when /health is mis
 test("gateway-http adapter handles a domain mismatch on /health honestly", async () => {
   const gw = await startFakeGateway({
     ...HEALTHY_ROUTES,
-    "/health": () => jsonResponse({ status: "ok", domain: "some-other-server-v3" })
+    "/health": () =>
+      jsonResponse({ status: "ok", domain: "some-other-server-v3" }),
   });
   try {
     const adapter = createGatewayHttpAdapter({ baseUrl: gw.url });
@@ -177,7 +201,10 @@ test("gateway-http adapter handles a domain mismatch on /health honestly", async
     assert.equal(status.gateway.reachable, false);
     assert.equal(status.truth_label, "DEGRADED");
     assert.ok(
-      status.findings.some((f) => f.includes("domain mismatch") && f.includes("some-other-server-v3"))
+      status.findings.some(
+        (f) =>
+          f.includes("domain mismatch") && f.includes("some-other-server-v3"),
+      ),
     );
   } finally {
     await gw.stop();
@@ -186,7 +213,10 @@ test("gateway-http adapter handles a domain mismatch on /health honestly", async
 
 test("gateway-http adapter network failure is reported, never thrown", async () => {
   // Port 1 is reserved on Linux + unlikely to be bound; should fail to connect.
-  const adapter = createGatewayHttpAdapter({ baseUrl: "http://127.0.0.1:1", timeoutMs: 500 });
+  const adapter = createGatewayHttpAdapter({
+    baseUrl: "http://127.0.0.1:1",
+    timeoutMs: 500,
+  });
   const status = await adapter.status();
 
   assert.equal(status.schema, "bizra.dema.node0_status.v0.2");
@@ -219,7 +249,7 @@ test("createNode0Adapter dispatches to gateway-http when DEMA_NODE0_ADAPTER=gate
   try {
     const adapter = createNode0Adapter({
       adapterMode: "gateway-http",
-      gatewayUrl: gw.url
+      gatewayUrl: gw.url,
     });
     const status = await adapter.status();
     assert.equal(status.schema, "bizra.dema.node0_status.v0.2");
@@ -236,7 +266,7 @@ test("createNode0Adapter prefers a configured gateway URL over legacy status com
       {
         DEMA_NODE0_ADAPTER: undefined,
         DEMA_GATEWAY_URL: gw.url,
-        DEMA_NODE0_STATUS_COMMAND: 'node -e "process.exit(42)"'
+        DEMA_NODE0_STATUS_COMMAND: 'node -e "process.exit(42)"',
       },
       async () => {
         const adapter = createNode0Adapter({ timeoutMs: 1000 });
@@ -245,8 +275,11 @@ test("createNode0Adapter prefers a configured gateway URL over legacy status com
         assert.equal(status.schema, "bizra.dema.node0_status.v0.2");
         assert.equal(status.source, "gateway-http-composed");
         assert.equal(status.gateway.base_url, gw.url);
-        assert.deepEqual(gw.calls.map((call) => call.method), ["GET", "GET", "GET", "GET"]);
-      }
+        assert.deepEqual(
+          gw.calls.map((call) => call.method),
+          ["GET", "GET", "GET", "GET"],
+        );
+      },
     );
   } finally {
     await gw.stop();
@@ -256,7 +289,8 @@ test("createNode0Adapter prefers a configured gateway URL over legacy status com
 test("createNode0Adapter labels shellout status as legacy and operator-owned", async () => {
   const adapter = createNode0Adapter({
     adapterMode: "shellout",
-    command: 'node -e "process.stdout.write(JSON.stringify({ ready: true, findings: [] }))"'
+    command:
+      'node -e "process.stdout.write(JSON.stringify({ ready: true, findings: [] }))"',
   });
   const status = await adapter.status();
 
@@ -268,7 +302,7 @@ test("createNode0Adapter labels shellout status as legacy and operator-owned", a
     operator_owned: true,
     execution: "execFile",
     shell: false,
-    available: true
+    available: true,
   });
 });
 
@@ -276,18 +310,18 @@ test("createNode0Adapter treats shell metacharacters as literal argv in shellout
   const adapter = createNode0Adapter({
     adapterMode: "shellout",
     command:
-      'node -e "process.stdout.write(JSON.stringify({ human: process.argv.slice(1).join(`|`), findings: process.argv.slice(1) }))" "semi;echo SHOULD_NOT_RUN" "$(echo SHOULD_NOT_EXPAND)" "plain&&echo NO"'
+      'node -e "process.stdout.write(JSON.stringify({ human: process.argv.slice(1).join(`|`), findings: process.argv.slice(1) }))" "semi;echo SHOULD_NOT_RUN" "$(echo SHOULD_NOT_EXPAND)" "plain&&echo NO"',
   });
   const status = await adapter.status();
 
   assert.equal(
     status.human,
-    "semi;echo SHOULD_NOT_RUN|$(echo SHOULD_NOT_EXPAND)|plain&&echo NO"
+    "semi;echo SHOULD_NOT_RUN|$(echo SHOULD_NOT_EXPAND)|plain&&echo NO",
   );
   assert.deepEqual(status.findings, [
     "semi;echo SHOULD_NOT_RUN",
     "$(echo SHOULD_NOT_EXPAND)",
-    "plain&&echo NO"
+    "plain&&echo NO",
   ]);
   assert.equal(status.adapter.shell, false);
 });
@@ -295,7 +329,7 @@ test("createNode0Adapter treats shell metacharacters as literal argv in shellout
 test("createNode0Adapter reports missing legacy shellout command as unavailable status", async () => {
   const adapter = createNode0Adapter({
     adapterMode: "shellout",
-    command: "dema-node0-status-command-that-should-not-exist"
+    command: "dema-node0-status-command-that-should-not-exist",
   });
   const status = await adapter.status();
 
@@ -308,7 +342,11 @@ test("createNode0Adapter reports missing legacy shellout command as unavailable 
   assert.equal(status.adapter.shell, false);
   assert.equal(status.adapter.available, false);
   assert.equal(status.adapter.reason, "legacy_status_command_unavailable");
-  assert.ok(status.findings.some((finding) => finding.includes("DEMA_NODE0_STATUS_COMMAND unavailable")));
+  assert.ok(
+    status.findings.some((finding) =>
+      finding.includes("DEMA_NODE0_STATUS_COMMAND unavailable"),
+    ),
+  );
 });
 
 test("createNode0Adapter reports absent legacy shellout command as unavailable status", async () => {
@@ -316,7 +354,7 @@ test("createNode0Adapter reports absent legacy shellout command as unavailable s
     {
       DEMA_NODE0_ADAPTER: "shellout",
       DEMA_GATEWAY_URL: undefined,
-      DEMA_NODE0_STATUS_COMMAND: undefined
+      DEMA_NODE0_STATUS_COMMAND: undefined,
     },
     async () => {
       const status = await createNode0Adapter().status();
@@ -325,8 +363,11 @@ test("createNode0Adapter reports absent legacy shellout command as unavailable s
       assert.equal(status.ready, false);
       assert.equal(status.source, "legacy-shellout-unavailable");
       assert.equal(status.adapter.available, false);
-      assert.equal(status.adapter.reason, "legacy_status_command_not_configured");
-    }
+      assert.equal(
+        status.adapter.reason,
+        "legacy_status_command_not_configured",
+      );
+    },
   );
 });
 
@@ -334,25 +375,28 @@ test("node0 adapter env test helper restores adapter environment variables", asy
   const originals = {
     DEMA_NODE0_ADAPTER: process.env.DEMA_NODE0_ADAPTER,
     DEMA_GATEWAY_URL: process.env.DEMA_GATEWAY_URL,
-    DEMA_NODE0_STATUS_COMMAND: process.env.DEMA_NODE0_STATUS_COMMAND
+    DEMA_NODE0_STATUS_COMMAND: process.env.DEMA_NODE0_STATUS_COMMAND,
   };
 
   await withNode0AdapterEnv(
     {
       DEMA_NODE0_ADAPTER: "gateway-http",
       DEMA_GATEWAY_URL: "http://127.0.0.1:65534",
-      DEMA_NODE0_STATUS_COMMAND: "node fake.js"
+      DEMA_NODE0_STATUS_COMMAND: "node fake.js",
     },
     async () => {
       assert.equal(process.env.DEMA_NODE0_ADAPTER, "gateway-http");
       assert.equal(process.env.DEMA_GATEWAY_URL, "http://127.0.0.1:65534");
       assert.equal(process.env.DEMA_NODE0_STATUS_COMMAND, "node fake.js");
-    }
+    },
   );
 
   assert.equal(process.env.DEMA_NODE0_ADAPTER, originals.DEMA_NODE0_ADAPTER);
   assert.equal(process.env.DEMA_GATEWAY_URL, originals.DEMA_GATEWAY_URL);
-  assert.equal(process.env.DEMA_NODE0_STATUS_COMMAND, originals.DEMA_NODE0_STATUS_COMMAND);
+  assert.equal(
+    process.env.DEMA_NODE0_STATUS_COMMAND,
+    originals.DEMA_NODE0_STATUS_COMMAND,
+  );
 });
 
 test("createNode0Adapter still honors the shellout path when adapterMode is unset", async () => {
@@ -401,7 +445,7 @@ test("dema status:json under gateway-http adapter overlays local profile.preferr
   try {
     await writeFile(
       join(demaRoot, "profile.json"),
-      JSON.stringify({ preferred_name: "Mumu" })
+      JSON.stringify({ preferred_name: "Mumu" }),
     );
     const { stdout } = await execFileAsync("node", [cliPath, "status:json"], {
       env: {
@@ -409,8 +453,8 @@ test("dema status:json under gateway-http adapter overlays local profile.preferr
         DEMA_NODE0_ADAPTER: "gateway-http",
         DEMA_GATEWAY_URL: gw.url,
         DEMA_HOME: demaRoot,
-        DEMA_NODE0_STATUS_COMMAND: ""
-      }
+        DEMA_NODE0_STATUS_COMMAND: "",
+      },
     });
     const status = JSON.parse(stdout);
     assert.equal(status.schema, "bizra.dema.node0_status.v0.2");

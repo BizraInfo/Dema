@@ -6,14 +6,17 @@ import {
   buildFileAccessSummary,
   buildFileOpRequest,
   FILE_ACCESS_OP_KINDS,
-  FILE_ACCESS_REQUIRED_BLOCKED_EFFECTS
+  FILE_ACCESS_REQUIRED_BLOCKED_EFFECTS,
 } from "../packages/core/src/file-access.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 
 test("File access canonical schema · op kinds = read/write/append/stat/list", () => {
   const p = buildFileAccessPreview();
   assert.equal(p.schema, "bizra.dema.file_access.v0.1");
-  assert.deepEqual([...p.op_kinds_allowed], ["read", "write", "append", "stat", "list"]);
+  assert.deepEqual(
+    [...p.op_kinds_allowed],
+    ["read", "write", "append", "stat", "list"],
+  );
 });
 
 test("File access · forbidden_path_patterns include .env · .git · secrets · credentials", () => {
@@ -28,8 +31,16 @@ test("File access · forbidden_path_patterns include .env · .git · secrets · 
 test("File access · boundary canonical · refusals enumerated", () => {
   const p = buildFileAccessPreview();
   assert.ok(isCanonicalBoundary(p.boundary));
-  assert.ok(p.refusal_invariants.some((r) => r.includes("never touches paths outside declared scope_root")));
-  assert.ok(p.refusal_invariants.some((r) => r.includes("never reads secrets/credentials/.env")));
+  assert.ok(
+    p.refusal_invariants.some((r) =>
+      r.includes("never touches paths outside declared scope_root"),
+    ),
+  );
+  assert.ok(
+    p.refusal_invariants.some((r) =>
+      r.includes("never reads secrets/credentials/.env"),
+    ),
+  );
 });
 
 test("File access · blocked_effects · outside-scope · secrets · execute · CI · git", () => {
@@ -46,7 +57,7 @@ test("File op request · valid path within scope → valid", () => {
     path: "packages/core/src/x.js",
     op_kind: "read",
     scope_root: "packages/core/",
-    purpose: "verify file content"
+    purpose: "verify file content",
   });
   assert.equal(r.valid, true);
   assert.equal(r.op_kind, "read");
@@ -60,7 +71,7 @@ test("File op request · .env path → forbidden", () => {
     path: ".env",
     op_kind: "read",
     scope_root: ".",
-    purpose: "test"
+    purpose: "test",
   });
   assert.equal(r.valid, false);
   assert.ok(r.violations.some((v) => v.includes("forbidden_path_pattern")));
@@ -71,7 +82,7 @@ test("File op request · .github/workflows/ path → forbidden", () => {
     path: ".github/workflows/check.yml",
     op_kind: "write",
     scope_root: ".",
-    purpose: "test"
+    purpose: "test",
   });
   assert.equal(r.valid, false);
   assert.ok(r.in_forbidden_zone, true);
@@ -82,7 +93,7 @@ test("File op request · path outside scope_root → invalid", () => {
     path: "packages/other/x.js",
     op_kind: "read",
     scope_root: "packages/core/",
-    purpose: "test"
+    purpose: "test",
   });
   assert.equal(r.valid, false);
   assert.equal(r.within_declared_scope, false);
@@ -93,7 +104,7 @@ test("File op request · missing scope_root → invalid", () => {
   const r = buildFileOpRequest({
     path: "x.js",
     op_kind: "read",
-    purpose: "test"
+    purpose: "test",
   });
   assert.equal(r.valid, false);
   assert.ok(r.violations.includes("no_scope_root · scope must be declared"));
@@ -104,24 +115,33 @@ test("File op request · invalid op_kind coerced to 'read'", () => {
     path: "packages/x.js",
     op_kind: "malicious_op",
     scope_root: "packages/",
-    purpose: "test"
+    purpose: "test",
   });
   assert.equal(r.op_kind, "read");
 });
 
 test("File op request · path hash deterministic", () => {
   const r1 = buildFileOpRequest({
-    path: "a.js", op_kind: "read", scope_root: ".", purpose: "x"
+    path: "a.js",
+    op_kind: "read",
+    scope_root: ".",
+    purpose: "x",
   });
   const r2 = buildFileOpRequest({
-    path: "a.js", op_kind: "write", scope_root: ".", purpose: "y"
+    path: "a.js",
+    op_kind: "write",
+    scope_root: ".",
+    purpose: "y",
   });
   assert.equal(r1.path_hash, r2.path_hash);
 });
 
 test("File op request · deep frozen + canonical boundary", () => {
   const r = buildFileOpRequest({
-    path: "x.js", op_kind: "read", scope_root: ".", purpose: "test"
+    path: "x.js",
+    op_kind: "read",
+    scope_root: ".",
+    purpose: "test",
   });
   assert.ok(Object.isFrozen(r));
   assert.ok(isCanonicalBoundary(r.boundary));

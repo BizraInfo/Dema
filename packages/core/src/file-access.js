@@ -18,7 +18,7 @@ const REQUIRED_BLOCKED_EFFECTS = Object.freeze([
   "modify_git_internals",
   "overwrite_without_consent",
   "follow_symlink_outside_scope",
-  "federation_invocation"
+  "federation_invocation",
 ]);
 
 const FORBIDDEN_PATH_PATTERNS = Object.freeze([
@@ -32,7 +32,7 @@ const FORBIDDEN_PATH_PATTERNS = Object.freeze([
   /secrets/i,
   /private[_-]?key/i,
   /id_rsa/i,
-  /\.ssh\//
+  /\.ssh\//,
 ]);
 
 const OP_KINDS = Object.freeze(["read", "write", "append", "stat", "list"]);
@@ -51,7 +51,12 @@ function isPathInForbiddenZone(path) {
 }
 
 function isPathWithinScope(path, scopeRoot) {
-  if (typeof path !== "string" || typeof scopeRoot !== "string" || scopeRoot.length === 0) return false;
+  if (
+    typeof path !== "string" ||
+    typeof scopeRoot !== "string" ||
+    scopeRoot.length === 0
+  )
+    return false;
   return path.startsWith(scopeRoot);
 }
 
@@ -71,9 +76,9 @@ export function buildFileAccessPreview({ declared_scope_root = "" } = {}) {
       "File access never reads secrets/credentials/.env*",
       "File access never modifies .git/ or .github/workflows/",
       "File access never overwrites without per-write consent",
-      "File access never follows symlinks outside scope"
+      "File access never follows symlinks outside scope",
     ]),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -82,7 +87,7 @@ export function buildFileOpRequest({
   op_kind = "read",
   scope_root = "",
   purpose = "",
-  size_estimate_bytes = 0
+  size_estimate_bytes = 0,
 } = {}) {
   const pathSafe = safeString(path);
   const op = OP_KINDS.includes(op_kind) ? op_kind : "read";
@@ -91,11 +96,19 @@ export function buildFileOpRequest({
 
   const violations = [];
   if (pathSafe.length === 0) violations.push("no_path");
-  if (scopeSafe.length === 0) violations.push("no_scope_root · scope must be declared");
+  if (scopeSafe.length === 0)
+    violations.push("no_scope_root · scope must be declared");
   if (purposeSafe.length === 0) violations.push("no_purpose");
-  if (isPathInForbiddenZone(pathSafe)) violations.push(`forbidden_path_pattern · ${pathSafe}`);
-  if (pathSafe.length > 0 && scopeSafe.length > 0 && !isPathWithinScope(pathSafe, scopeSafe)) {
-    violations.push(`path_outside_scope · '${pathSafe}' not under '${scopeSafe}'`);
+  if (isPathInForbiddenZone(pathSafe))
+    violations.push(`forbidden_path_pattern · ${pathSafe}`);
+  if (
+    pathSafe.length > 0 &&
+    scopeSafe.length > 0 &&
+    !isPathWithinScope(pathSafe, scopeSafe)
+  ) {
+    violations.push(
+      `path_outside_scope · '${pathSafe}' not under '${scopeSafe}'`,
+    );
   }
 
   const valid = violations.length === 0;
@@ -114,9 +127,11 @@ export function buildFileOpRequest({
     op_kind: op,
     scope_root: scopeSafe,
     purpose: purposeSafe,
-    size_estimate_bytes: typeof size_estimate_bytes === "number" ? size_estimate_bytes : 0,
+    size_estimate_bytes:
+      typeof size_estimate_bytes === "number" ? size_estimate_bytes : 0,
     in_forbidden_zone: isPathInForbiddenZone(pathSafe),
-    within_declared_scope: scopeSafe.length > 0 && isPathWithinScope(pathSafe, scopeSafe),
+    within_declared_scope:
+      scopeSafe.length > 0 && isPathWithinScope(pathSafe, scopeSafe),
     valid,
     violations: Object.freeze(violations),
     consent_phrase: consentPhrase,
@@ -124,7 +139,7 @@ export function buildFileOpRequest({
     requires_typed_go: true,
     audit_trail_required: true,
     receipt_shape_ready: valid,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -140,7 +155,7 @@ export function buildFileAccessSummary(options = {}) {
     op_kinds_allowed: preview.op_kinds_allowed,
     forbidden_pattern_count: preview.forbidden_path_patterns.length,
     blocked_effect_count: preview.blocked_effects.length,
-    boundary: preview.boundary
+    boundary: preview.boundary,
   });
 }
 

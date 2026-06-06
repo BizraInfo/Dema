@@ -8,7 +8,7 @@ import {
   canonicalStringify,
   contentHash,
   sha256,
-  verifyProofArtifacts
+  verifyProofArtifacts,
 } from "./node0-local-urp-proof.mjs";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
@@ -19,11 +19,17 @@ const REPORT_DATE = "2026-05-14";
 
 export const REPORT_FILES = [
   "self_check_report.json",
-  "critic_report_001.json"
+  "critic_report_001.json",
 ];
 
 const PHASES = ["UNDERSTAND", "PLAN", "ACT", "VERIFY", "SETTLE"];
-const REQUIRED_SAT_ROLES = ["Validator", "Oracle", "Mediator", "Archivist", "Sentinel"];
+const REQUIRED_SAT_ROLES = [
+  "Validator",
+  "Oracle",
+  "Mediator",
+  "Archivist",
+  "Sentinel",
+];
 
 function withContentHash(value) {
   const copy = { ...value, content_sha256: null };
@@ -36,7 +42,7 @@ function asCheck(id, label, pass, evidence = {}) {
     id,
     label,
     pass: Boolean(pass),
-    evidence
+    evidence,
   };
 }
 
@@ -64,60 +70,97 @@ function buildChecks(artifacts, proofVerify) {
     artifacts.urp_skill_registry_receipt,
     artifacts.urp_knowledge_pack_receipt,
     artifacts.urp_resource_offer_receipt,
-    poi
+    poi,
   ];
   const roles = sat5.roles.map((role) => role.name);
 
   return [
-    asCheck("u1.hash_verify", "U1 proof artifacts hash-verify", proofVerify.ok, {
-      files_checked: proofVerify.files.length
-    }),
-    asCheck("u1.truth_label", "URP_LOCAL_ACTIVE truth label is present", status.truth_label === "URP_LOCAL_ACTIVE", {
-      truth_label: status.truth_label
-    }),
+    asCheck(
+      "u1.hash_verify",
+      "U1 proof artifacts hash-verify",
+      proofVerify.ok,
+      {
+        files_checked: proofVerify.files.length,
+      },
+    ),
+    asCheck(
+      "u1.truth_label",
+      "URP_LOCAL_ACTIVE truth label is present",
+      status.truth_label === "URP_LOCAL_ACTIVE",
+      {
+        truth_label: status.truth_label,
+      },
+    ),
     asCheck("u1.pat7", "PAT count equals 7", status.pat_count === 7, {
-      pat_count: status.pat_count
+      pat_count: status.pat_count,
     }),
-    asCheck("u1.sat5", "SAT count equals 5", status.sat_count === 5 && roles.length === 5, {
-      sat_count: status.sat_count,
-      roles
-    }),
-    asCheck("u1.sat_roles", "SAT roles match local seed list", REQUIRED_SAT_ROLES.every((role) => roles.includes(role)), {
-      required_roles: REQUIRED_SAT_ROLES,
-      actual_roles: roles
-    }),
-    asCheck("u1.registry_seed", "Skill, knowledge pack, resource offer, and PoI records exist", (
+    asCheck(
+      "u1.sat5",
+      "SAT count equals 5",
+      status.sat_count === 5 && roles.length === 5,
+      {
+        sat_count: status.sat_count,
+        roles,
+      },
+    ),
+    asCheck(
+      "u1.sat_roles",
+      "SAT roles match local seed list",
+      REQUIRED_SAT_ROLES.every((role) => roles.includes(role)),
+      {
+        required_roles: REQUIRED_SAT_ROLES,
+        actual_roles: roles,
+      },
+    ),
+    asCheck(
+      "u1.registry_seed",
+      "Skill, knowledge pack, resource offer, and PoI records exist",
       registry.skills.length === 1 &&
-      registry.knowledge_packs.length === 1 &&
-      registry.resource_offers.length === 1 &&
-      registry.poi_sandbox_records.length === 1
-    ), {
-      skills: registry.skills.length,
-      knowledge_packs: registry.knowledge_packs.length,
-      resource_offers: registry.resource_offers.length,
-      poi_sandbox_records: registry.poi_sandbox_records.length
-    }),
-    asCheck("u1.local_boundary", "No public network, Node1 handshake, raw private data, or token claim", (
+        registry.knowledge_packs.length === 1 &&
+        registry.resource_offers.length === 1 &&
+        registry.poi_sandbox_records.length === 1,
+      {
+        skills: registry.skills.length,
+        knowledge_packs: registry.knowledge_packs.length,
+        resource_offers: registry.resource_offers.length,
+        poi_sandbox_records: registry.poi_sandbox_records.length,
+      },
+    ),
+    asCheck(
+      "u1.local_boundary",
+      "No public network, Node1 handshake, raw private data, or token claim",
       status.public_network === false &&
-      status.node1_handshake === false &&
-      status.raw_private_data_included === false &&
-      status.token_value_claim === false &&
-      poi.economic_mode === "sandbox_no_cash_value"
-    ), {
-      public_network: status.public_network,
-      node1_handshake: status.node1_handshake,
-      raw_private_data_included: status.raw_private_data_included,
-      token_value_claim: status.token_value_claim,
-      poi_mode: poi.economic_mode
-    }),
-    asCheck("u1.receipt_hashes", "Receipts are content-hash backed", receipts.every((receipt) => receipt.content_sha256 === contentHash(receipt)), {
-      receipts_checked: receipts.length
-    }),
-    asCheck("u1.resource_idempotency", "Duplicate local resource offer is declared idempotent", (
-      registry.idempotency.duplicate_resource_offer_rejected_or_idempotent === true
-    ), {
-      duplicate_policy: registry.idempotency.duplicate_policy
-    })
+        status.node1_handshake === false &&
+        status.raw_private_data_included === false &&
+        status.token_value_claim === false &&
+        poi.economic_mode === "sandbox_no_cash_value",
+      {
+        public_network: status.public_network,
+        node1_handshake: status.node1_handshake,
+        raw_private_data_included: status.raw_private_data_included,
+        token_value_claim: status.token_value_claim,
+        poi_mode: poi.economic_mode,
+      },
+    ),
+    asCheck(
+      "u1.receipt_hashes",
+      "Receipts are content-hash backed",
+      receipts.every(
+        (receipt) => receipt.content_sha256 === contentHash(receipt),
+      ),
+      {
+        receipts_checked: receipts.length,
+      },
+    ),
+    asCheck(
+      "u1.resource_idempotency",
+      "Duplicate local resource offer is declared idempotent",
+      registry.idempotency.duplicate_resource_offer_rejected_or_idempotent ===
+        true,
+      {
+        duplicate_policy: registry.idempotency.duplicate_policy,
+      },
+    ),
   ];
 }
 
@@ -130,18 +173,19 @@ function buildFindings(artifacts, checks) {
     code: `check.failed.${check.id}`,
     severity: "blocker",
     message: check.label,
-    evidence: check.evidence
+    evidence: check.evidence,
   }));
 
   if (sat5.binding === "non_canonical_local_seed") {
     findings.push({
       code: "sat5.non_canonical_local_seed",
       severity: "review",
-      message: "SAT-5 is locally seeded and must not be described as upstream SAT permit authority.",
+      message:
+        "SAT-5 is locally seeded and must not be described as upstream SAT permit authority.",
       evidence: {
         binding: sat5.binding,
-        canon_status: sat5.canon_status
-      }
+        canon_status: sat5.canon_status,
+      },
     });
   }
 
@@ -149,21 +193,25 @@ function buildFindings(artifacts, checks) {
     findings.push({
       code: "poi.pending_verification",
       severity: "review",
-      message: "PoI record is a sandbox pending-verification accounting shape, not a reward or token claim.",
+      message:
+        "PoI record is a sandbox pending-verification accounting shape, not a reward or token claim.",
       evidence: {
         status: poi.status,
         economic_mode: poi.economic_mode,
-        value_claim: poi.value_claim
-      }
+        value_claim: poi.value_claim,
+      },
     });
   }
 
-  if (status.prereq_checks.node0_standalone_py === "missing_not_in_this_checkout") {
+  if (
+    status.prereq_checks.node0_standalone_py === "missing_not_in_this_checkout"
+  ) {
     findings.push({
       code: "node0_standalone_py.missing",
       severity: "info",
-      message: "Standalone Node0 Python health checks are outside this checkout.",
-      evidence: status.prereq_checks
+      message:
+        "Standalone Node0 Python health checks are outside this checkout.",
+      evidence: status.prereq_checks,
     });
   }
 
@@ -173,7 +221,7 @@ function buildFindings(artifacts, checks) {
 function reportEntries(reports) {
   return [
     ["self_check_report.json", reports.self_check_report],
-    ["critic_report_001.json", reports.critic_report_001]
+    ["critic_report_001.json", reports.critic_report_001],
   ];
 }
 
@@ -183,7 +231,7 @@ async function buildReports(root) {
   const checks = buildChecks(artifacts, proofVerify);
   const source_hashes = proofVerify.files.map((file) => ({
     path: file.path,
-    sha256: file.actual_sha256
+    sha256: file.actual_sha256,
   }));
 
   const selfCheck = withContentHash({
@@ -198,7 +246,7 @@ async function buildReports(root) {
         "U1 proof artifacts",
         "local receipt artifacts",
         "SAT-5 local seed registry",
-        "PoI sandbox record"
+        "PoI sandbox record",
       ],
       writes_only: REPORT_FILES,
       excludes: [
@@ -206,8 +254,8 @@ async function buildReports(root) {
         "network calls",
         "Node1 handshake",
         "runtime execution",
-        "auto-fix mutation"
-      ]
+        "auto-fix mutation",
+      ],
     },
     boundary: {
       network_used: false,
@@ -216,13 +264,13 @@ async function buildReports(root) {
       public_network: false,
       node1_handshake: false,
       token_value_claim: false,
-      private_data_scanned: false
+      private_data_scanned: false,
     },
     source_artifacts: source_hashes,
     checks,
     verdict: checks.every((check) => check.pass)
       ? "pass_with_review_items"
-      : "blocked_pending_failed_checks"
+      : "blocked_pending_failed_checks",
   });
 
   const findings = buildFindings(artifacts, checks);
@@ -239,24 +287,29 @@ async function buildReports(root) {
       auto_fix_performed: false,
       network_used: false,
       sat_permit_claimed: false,
-      token_or_reward_claimed: false
+      token_or_reward_claimed: false,
     },
     self_check_report_sha256: selfCheck.content_sha256,
     finding_summary: {
-      blocker: findings.filter((finding) => finding.severity === "blocker").length,
-      review: findings.filter((finding) => finding.severity === "review").length,
-      info: findings.filter((finding) => finding.severity === "info").length
+      blocker: findings.filter((finding) => finding.severity === "blocker")
+        .length,
+      review: findings.filter((finding) => finding.severity === "review")
+        .length,
+      info: findings.filter((finding) => finding.severity === "info").length,
     },
-    findings
+    findings,
   });
 
   return {
     self_check_report: selfCheck,
-    critic_report_001: critic
+    critic_report_001: critic,
   };
 }
 
-export async function buildSelfCheckReports({ root = REPO_ROOT, write = false } = {}) {
+export async function buildSelfCheckReports({
+  root = REPO_ROOT,
+  write = false,
+} = {}) {
   const reports = await buildReports(root);
   const dir = join(root, PROOF_DIR);
   if (write) await mkdir(dir, { recursive: true });
@@ -268,7 +321,7 @@ export async function buildSelfCheckReports({ root = REPO_ROOT, write = false } 
     files.push({
       path: name,
       sha256: sha256(body),
-      written: write
+      written: write,
     });
   }
 
@@ -281,8 +334,8 @@ export async function buildSelfCheckReports({ root = REPO_ROOT, write = false } 
       network_used: false,
       runtime_execution: false,
       auto_fix_performed: false,
-      private_data_scanned: false
-    }
+      private_data_scanned: false,
+    },
   };
 }
 
@@ -304,7 +357,7 @@ export async function verifySelfCheckReports({ root = REPO_ROOT } = {}) {
       exists: actualBody !== null,
       matches: actualBody === expectedBody,
       expected_sha256: sha256(expectedBody),
-      actual_sha256: actualBody === null ? null : sha256(actualBody)
+      actual_sha256: actualBody === null ? null : sha256(actualBody),
     });
   }
 
@@ -312,13 +365,17 @@ export async function verifySelfCheckReports({ root = REPO_ROOT } = {}) {
     schema: "bizra.dema.urp_local.self_check_verify.v0.1",
     proof_dir: PROOF_DIR,
     ok: files.every((file) => file.exists && file.matches),
-    validationPassed: expected.reports.self_check_report.verdict === "pass_with_review_items",
+    validationPassed:
+      expected.reports.self_check_report.verdict === "pass_with_review_items",
     files,
-    boundary: expected.boundary
+    boundary: expected.boundary,
   };
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (
+  process.argv[1] &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
   const verify = process.argv.includes("--verify");
   const report = verify
     ? await verifySelfCheckReports()

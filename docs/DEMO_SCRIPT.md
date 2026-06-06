@@ -25,7 +25,7 @@ export DEMA_NO_TUI=1
 export NO_COLOR=1
 ```
 
-If you're streaming, mention the isolation: *"I'm running this against a fresh tmpdir so what you see is exactly what a new user would see on first install."*
+If you're streaming, mention the isolation: _"I'm running this against a fresh tmpdir so what you see is exactly what a new user would see on first install."_
 
 ---
 
@@ -45,7 +45,7 @@ Expected:
 dema 0.1.0-alpha.0
 ```
 
-**Say:** *"Dema is stdlib-only. Zero production dependencies. Runs from source on any machine with Node 20."*
+**Say:** _"Dema is stdlib-only. Zero production dependencies. Runs from source on any machine with Node 20."_
 
 ### Step 2 · see your node (~60 seconds, including narration)
 
@@ -83,9 +83,9 @@ Findings
 Boundary: no action without explicit consent.
 ```
 
-**Say:** *"This is the honest state. Dema doesn't pretend readiness it doesn't have. Nothing is running. The next safe action is named: complete setup."*
+**Say:** _"This is the honest state. Dema doesn't pretend readiness it doesn't have. Nothing is running. The next safe action is named: complete setup."_
 
-**Point at:** the `Boundary` line. *"That's the contract — no action without explicit consent."*
+**Point at:** the `Boundary` line. _"That's the contract — no action without explicit consent."_
 
 ### Step 3 · the Verified Refusal Pattern (~90 seconds)
 
@@ -115,7 +115,7 @@ Verdict: blocked
 
 **Exit code: 1.**
 
-**Say (the closer):** *"This is the strongest single product behavior in Dema. It **refuses unsafe state**, **names the gap**, and **prints the fix** — by design. Doctor exits 1 because there's no gateway yet. That's the **Verified Refusal Pattern**. Honest about what's broken. Specific about how to fix it. Never silently green."*
+**Say (the closer):** _"This is the strongest single product behavior in Dema. It **refuses unsafe state**, **names the gap**, and **prints the fix** — by design. Doctor exits 1 because there's no gateway yet. That's the **Verified Refusal Pattern**. Honest about what's broken. Specific about how to fix it. Never silently green."_
 
 **End the 3-min demo here.** Total elapsed: ~3 minutes.
 
@@ -161,7 +161,7 @@ Blocked in Dema:
   - filesystem_mutation
 ```
 
-**Say:** *"Ambient is the boundary doc — what Dema observes, what it never touches. Notice raw Bash is **explicitly blocked in Dema**. It belongs behind Node0's governed runtime, not the product face."*
+**Say:** _"Ambient is the boundary doc — what Dema observes, what it never touches. Notice raw Bash is **explicitly blocked in Dema**. It belongs behind Node0's governed runtime, not the product face."_
 
 ### Step 5 · the bounded journey preview (~120 seconds)
 
@@ -203,7 +203,7 @@ Chapter 2: Node0 handoff
   outcome: mission waits for explicit governed Node0 approval before effects
 ```
 
-**Say:** *"Journey takes a plain-language intent and decomposes it. You see the mission ID, the risk class, the exact permissions requested, and the chapter sequence before anything runs. Dema does not run the mission. It hands it to Node0 only when you type explicit consent."*
+**Say:** _"Journey takes a plain-language intent and decomposes it. You see the mission ID, the risk class, the exact permissions requested, and the chapter sequence before anything runs. Dema does not run the mission. It hands it to Node0 only when you type explicit consent."_
 
 ### Step 6 · consent ladder preview (~90 seconds)
 
@@ -236,7 +236,7 @@ Self-proactive harness:
   recommended_micro_action: narrow_intent_before_approval
 ```
 
-**Say:** *"Consent plan turns a sentence into a narrow ConsentPlan with a hash commitment. The hash binds the consent — if you change the intent one byte, the hash changes and the plan must be re-reviewed. This is exact-string consent (ADR-005), fail-closed."*
+**Say:** _"Consent plan turns a sentence into a narrow ConsentPlan with a hash commitment. The hash binds the consent — if you change the intent one byte, the hash changes and the plan must be re-reviewed. This is exact-string consent (ADR-005), fail-closed."_
 
 ### Step 7 · safety posture (machine view) (~60 seconds)
 
@@ -263,7 +263,7 @@ Expected:
       "status": "schema_preview_only",
 ```
 
-**Say:** *"Every Dema output that an external system might consume carries a schema tag — `bizra.dema.safety_report_preview.v0.1` — so the consumer knows exactly which contract it's binding to. Machine-readable, versioned, no hidden fields."*
+**Say:** _"Every Dema output that an external system might consume carries a schema tag — `bizra.dema.safety_report_preview.v0.1` — so the consumer knows exactly which contract it's binding to. Machine-readable, versioned, no hidden fields."_
 
 ### Step 8 · receipt surface (~60 seconds)
 
@@ -277,7 +277,7 @@ Expected on fresh `DEMA_HOME`:
 []
 ```
 
-**Say:** *"Dema reads and lists receipts. It does NOT mint them. Minting is the governed Node0 gateway's responsibility. This separation is ADR-006 — verify is state-read-only, mint is bifurcated. On a fresh machine you see an empty array; once the gateway issues your first ARTIFACT-011 you'll see it here."*
+**Say:** _"Dema reads and lists receipts. It does NOT mint them. Minting is the governed Node0 gateway's responsibility. This separation is ADR-006 — verify is state-read-only, mint is bifurcated. On a fresh machine you see an empty array; once the gateway issues your first ARTIFACT-011 you'll see it here."_
 
 ### Step 9 · the test surface (~60 seconds)
 
@@ -300,7 +300,7 @@ Expected:
 # duration_ms ~7700
 ```
 
-**Say:** *"2,618 unit tests, all passing. Zero production dependencies — stdlib only. The whole product surface is testable in under 8 seconds."*
+**Say:** _"2,618 unit tests, all passing. Zero production dependencies — stdlib only. The whole product surface is testable in under 8 seconds."_
 
 **End the 10-min demo here.** Total elapsed: ~10 minutes.
 
@@ -308,7 +308,7 @@ Expected:
 
 ## Closing line (use for either demo)
 
-*"Dema isn't trying to impress you with what AI can do. It's trying to **prove** what AI can do **safely on your own machine, under your own consent**, with **receipts you can audit**. That's the BIZRA seed."*
+_"Dema isn't trying to impress you with what AI can do. It's trying to **prove** what AI can do **safely on your own machine, under your own consent**, with **receipts you can audit**. That's the BIZRA seed."_
 
 ---
 
@@ -316,29 +316,29 @@ Expected:
 
 If something during the demo doesn't match the expected output, recover gracefully:
 
-| Symptom | What it means | Recovery line |
-|---|---|---|
-| `dema --version` prints empty / errors | Node version too old | *"Let me check the Node version — Dema needs 20 or newer."* — run `node --version`, then re-run |
-| `dema status` hangs at a fancy prompt | TTY auto-detected · keypress loop active | Type `q` or `Ctrl-C`; re-run with `DEMA_NO_TUI=1` set |
-| `dema doctor` exits 0 (unexpected) | You're not on a fresh `DEMA_HOME` | *"My local state is already set up — let me show you against a fresh tmpdir."* — run `export DEMA_HOME=$(mktemp -d)` and re-run |
-| `dema doctor` shows extra failing rows | Real failure on the machine, not the demo | Read the row's `Fix:` line aloud — *"Dema told us exactly what to do."* — and either fix or note it for follow-up |
-| Any command shows an ANSI escape mess | `NO_COLOR=1` not set | *"Quick aside — let me strip the colors so you can read the screen."* — `export NO_COLOR=1` and re-run |
-| Audience asks "can I run something?" mid-demo | The Verified Refusal moment | *"Type your intent — let's see what consent plan Dema generates."* — run `dema consent plan "<their intent>"` |
-| Audience asks "where does the data go?" | Boundary question — answer with evidence | *"All state stays under `$DEMA_HOME`, default `~/.dema/`. Let me show you the audit gate."* — run `dema audit` or `dema report safety` |
+| Symptom                                       | What it means                             | Recovery line                                                                                                                          |
+| --------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `dema --version` prints empty / errors        | Node version too old                      | _"Let me check the Node version — Dema needs 20 or newer."_ — run `node --version`, then re-run                                        |
+| `dema status` hangs at a fancy prompt         | TTY auto-detected · keypress loop active  | Type `q` or `Ctrl-C`; re-run with `DEMA_NO_TUI=1` set                                                                                  |
+| `dema doctor` exits 0 (unexpected)            | You're not on a fresh `DEMA_HOME`         | _"My local state is already set up — let me show you against a fresh tmpdir."_ — run `export DEMA_HOME=$(mktemp -d)` and re-run        |
+| `dema doctor` shows extra failing rows        | Real failure on the machine, not the demo | Read the row's `Fix:` line aloud — _"Dema told us exactly what to do."_ — and either fix or note it for follow-up                      |
+| Any command shows an ANSI escape mess         | `NO_COLOR=1` not set                      | _"Quick aside — let me strip the colors so you can read the screen."_ — `export NO_COLOR=1` and re-run                                 |
+| Audience asks "can I run something?" mid-demo | The Verified Refusal moment               | _"Type your intent — let's see what consent plan Dema generates."_ — run `dema consent plan "<their intent>"`                          |
+| Audience asks "where does the data go?"       | Boundary question — answer with evidence  | _"All state stays under `$DEMA_HOME`, default `~/.dema/`. Let me show you the audit gate."_ — run `dema audit` or `dema report safety` |
 
-**Do not pretend a failure didn't happen.** Dema's whole story is honesty about state. If something breaks on stage, the recovery IS the demo: *"This is exactly what I mean — Dema is telling us precisely where the gap is, and what to do next."*
+**Do not pretend a failure didn't happen.** Dema's whole story is honesty about state. If something breaks on stage, the recovery IS the demo: _"This is exactly what I mean — Dema is telling us precisely where the gap is, and what to do next."_
 
 ---
 
 ## What this demo does NOT cover
 
-| Capability | Why excluded from demo | Show this if asked |
-|---|---|---|
-| Live model invocation | Requires local Ollama + exact-string consent + 6 sequential gates (ADR-018) | `dema model-broker --help` for the surface; **do not invoke a model live** unless the audience has agreed to wait 30+ seconds |
-| Receipt mint | Lives in governed gateway, not Dema (ADR-006) | Open `~/.dema/receipts/artifact-011.json` from your operator machine if you want to show a real receipt |
-| Node1 federation | `DESIGNED_NOT_LIVE` (ADR-007 + ROADMAP §205) | *"That's parked work. The handshake design is in ADR-007; the runtime is not live yet."* |
-| Token economy / PoI | `DESIGNED_NOT_LIVE` (ADR-009 scaffold-only) | *"No live economic claim today. The design is in ADR-009 as scaffold-only."* |
-| MC-A memory query | Requires operator-side Python wrapper (per ADR-022) | *"That's the JS↔Python bridge; needs operator wrapper setup. I can show the dry-run."* — `dema memory query "test" --json` will error cleanly |
+| Capability            | Why excluded from demo                                                      | Show this if asked                                                                                                                            |
+| --------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Live model invocation | Requires local Ollama + exact-string consent + 6 sequential gates (ADR-018) | `dema model-broker --help` for the surface; **do not invoke a model live** unless the audience has agreed to wait 30+ seconds                 |
+| Receipt mint          | Lives in governed gateway, not Dema (ADR-006)                               | Open `~/.dema/receipts/artifact-011.json` from your operator machine if you want to show a real receipt                                       |
+| Node1 federation      | `DESIGNED_NOT_LIVE` (ADR-007 + ROADMAP §205)                                | _"That's parked work. The handshake design is in ADR-007; the runtime is not live yet."_                                                      |
+| Token economy / PoI   | `DESIGNED_NOT_LIVE` (ADR-009 scaffold-only)                                 | _"No live economic claim today. The design is in ADR-009 as scaffold-only."_                                                                  |
+| MC-A memory query     | Requires operator-side Python wrapper (per ADR-022)                         | _"That's the JS↔Python bridge; needs operator wrapper setup. I can show the dry-run."_ — `dema memory query "test" --json` will error cleanly |
 
 These are intentionally not in the demo path. The demo's job is to prove what IS measured. Anything `DESIGNED_NOT_LIVE` or `ASPIRATIONAL` belongs in the follow-up conversation, not the live walkthrough.
 
@@ -386,6 +386,7 @@ If any of the above fails, **don't demo today**. The Verified Refusal Pattern ap
 ## Update protocol
 
 Re-refresh this script when:
+
 - Any command in the 3-min or 10-min path changes its output shape.
 - A subcommand is renamed or removed (e.g., `dema receipts` argument change).
 - A new high-signal preview surface ships that belongs in the demo (rare — only add if it changes the story).

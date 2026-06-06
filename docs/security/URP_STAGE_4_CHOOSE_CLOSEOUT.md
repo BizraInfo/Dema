@@ -17,11 +17,11 @@ runtime authority and not a new product claim.
 
 Stage 4 uses three contracts together:
 
-| Contract | Value | Meaning |
-| --- | --- | --- |
-| Source index | `LOCAL_VERIFIED_RESOURCE_INDEX` | Choose can only operate on a Stage 3 local index that has already passed the local index verifier. |
-| Decision | `MARK_SHAREABLE` or `MARK_LOCAL_ONLY` | The operator records local intent only. No bytes are published. |
-| Receipt truth | `LOCAL_CHOOSE_RECEIPT_PERSISTED` / `LOCAL_CHOOSE_RECEIPT_FILE_VERIFIED` | A local content-addressed choose receipt exists and can be verified by path. |
+| Contract      | Value                                                                   | Meaning                                                                                            |
+| ------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Source index  | `LOCAL_VERIFIED_RESOURCE_INDEX`                                         | Choose can only operate on a Stage 3 local index that has already passed the local index verifier. |
+| Decision      | `MARK_SHAREABLE` or `MARK_LOCAL_ONLY`                                   | The operator records local intent only. No bytes are published.                                    |
+| Receipt truth | `LOCAL_CHOOSE_RECEIPT_PERSISTED` / `LOCAL_CHOOSE_RECEIPT_FILE_VERIFIED` | A local content-addressed choose receipt exists and can be verified by path.                       |
 
 The forbidden-field discipline carries forward from Stage 3: no private key,
 raw artifact, full receipt JSON, personal memory, mint candidate, token
@@ -97,12 +97,12 @@ truth label `URP_STAGE_4_CHOOSE_CLOSEOUT_VERIFIED`; on failure it uses
 
 ## 7. Proof-of-truth convergence
 
-| Lens | Evidence |
-| --- | --- |
-| Formal | Schema-tagged envelopes and explicit truth labels. |
-| Cryptographic | SHA-256 content addressing for index and choose receipt files. |
-| Empirical | Real CLI chain replayed in `scripts/urp-stage4-closeout.mjs`. |
-| Economic | Explicit non-claim boundary: no token, PoI, mint, reward, or economic value field. |
+| Lens          | Evidence                                                                           |
+| ------------- | ---------------------------------------------------------------------------------- |
+| Formal        | Schema-tagged envelopes and explicit truth labels.                                 |
+| Cryptographic | SHA-256 content addressing for index and choose receipt files.                     |
+| Empirical     | Real CLI chain replayed in `scripts/urp-stage4-closeout.mjs`.                      |
+| Economic      | Explicit non-claim boundary: no token, PoI, mint, reward, or economic value field. |
 
 ## 8. What unlocks next
 

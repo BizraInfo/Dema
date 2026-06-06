@@ -2,7 +2,7 @@ import { buildSafetyReportPreview } from "../../core/src/safety-report.js";
 import {
   MICRO_CONSENT_SHAPE,
   sha256,
-  stableStringify
+  stableStringify,
 } from "../../consent/src/consent-common.js";
 
 const SCHEMA = "bizra.dema.diagnostics_mission_plan.v0.1";
@@ -17,38 +17,39 @@ const CHECKS = [
     id: "models.inventory",
     phase: "UNDERSTAND",
     command: "dema models",
-    purpose: "Inventory local model surfaces without inference."
+    purpose: "Inventory local model surfaces without inference.",
   },
   {
     id: "ambient.boundary",
     phase: "UNDERSTAND",
     command: "dema ambient",
-    purpose: "Expose allowed versus blocked ambient execution surfaces."
+    purpose: "Expose allowed versus blocked ambient execution surfaces.",
   },
   {
     id: "safety.preview",
     phase: "PLAN",
     command: "dema report safety",
-    purpose: "Render proof gaps, self-critique, and lighthouse safety posture."
+    purpose: "Render proof gaps, self-critique, and lighthouse safety posture.",
   },
   {
     id: "tests.formal",
     phase: "ACT",
     command: "npm test",
-    purpose: "Run the formal repo test suite after explicit runtime consent."
+    purpose: "Run the formal repo test suite after explicit runtime consent.",
   },
   {
     id: "check.empirical",
     phase: "VERIFY",
     command: "npm run check",
-    purpose: "Run CLI smoke checks and Node0 self-check verifier after explicit runtime consent."
+    purpose:
+      "Run CLI smoke checks and Node0 self-check verifier after explicit runtime consent.",
   },
   {
     id: "node0.self_check",
     phase: "VERIFY",
     command: "node scripts/node0-self-check.mjs --verify",
-    purpose: "Verify committed self-check artifacts byte-for-byte."
-  }
+    purpose: "Verify committed self-check artifacts byte-for-byte.",
+  },
 ];
 
 const PERMISSIONS = [
@@ -56,26 +57,26 @@ const PERMISSIONS = [
     resource_id: "repo:Dema",
     action: "read",
     purpose: "inspect Dema repo diagnostics surfaces",
-    requires_human_consent: false
+    requires_human_consent: false,
   },
   {
     resource_id: "command:npm-test",
     action: "execute",
     purpose: "run formal Dema test suite",
-    requires_human_consent: true
+    requires_human_consent: true,
   },
   {
     resource_id: "command:npm-run-check",
     action: "execute",
     purpose: "run Dema check gate and smoke commands",
-    requires_human_consent: true
+    requires_human_consent: true,
   },
   {
     resource_id: "command:node0-self-check-verify",
     action: "execute",
     purpose: "verify Node0 self-check proof artifacts",
-    requires_human_consent: true
-  }
+    requires_human_consent: true,
+  },
 ];
 
 const BOUNDARY = {
@@ -88,7 +89,7 @@ const BOUNDARY = {
   receipt_minted: false,
   daemon_started: false,
   network_connection_attempted: false,
-  external_posting_performed: false
+  external_posting_performed: false,
 };
 
 function missionIdFor(intent) {
@@ -97,15 +98,17 @@ function missionIdFor(intent) {
 
 function proofFromSafetyReport(safetyReport) {
   return Object.fromEntries(
-    Object.entries(safetyReport.proof_of_truth_convergence).map(([key, value]) => [
-      key,
-      {
-        status: value.status,
-        evidence_kind: value.evidence_kind,
-        certifies: value.certifies,
-        claim: value.claim
-      }
-    ])
+    Object.entries(safetyReport.proof_of_truth_convergence).map(
+      ([key, value]) => [
+        key,
+        {
+          status: value.status,
+          evidence_kind: value.evidence_kind,
+          certifies: value.certifies,
+          claim: value.claim,
+        },
+      ],
+    ),
   );
 }
 
@@ -124,14 +127,16 @@ function previewBoundaryClosed(boundary) {
     "receipt_minted",
     "daemon_started",
     "network_connection_attempted",
-    "external_posting_performed"
+    "external_posting_performed",
   ].every((key) => boundary[key] === false);
 }
 
 function buildMicroCompliance({ permissions, boundary }) {
-  const allEffectingChecksRequireConsent = effectingPermissionsRequireConsent(permissions);
+  const allEffectingChecksRequireConsent =
+    effectingPermissionsRequireConsent(permissions);
   const boundaryClosed = previewBoundaryClosed(boundary);
-  const noRuntime = boundary.execution_enabled === false && boundary.daemon_started === false;
+  const noRuntime =
+    boundary.execution_enabled === false && boundary.daemon_started === false;
   const noNetwork = boundary.network_connection_attempted === false;
   const noExternalPosting = boundary.external_posting_performed === false;
 
@@ -146,7 +151,7 @@ function buildMicroCompliance({ permissions, boundary }) {
     no_approval_recorded: boundary.approval_recorded === false,
     all_effecting_checks_require_consent: allEffectingChecksRequireConsent,
     preview_boundary_closed: boundaryClosed,
-    no_policy_contradiction: allEffectingChecksRequireConsent && boundaryClosed
+    no_policy_contradiction: allEffectingChecksRequireConsent && boundaryClosed,
   };
 }
 
@@ -154,32 +159,34 @@ function buildProactiveHarness({ microCompliance }) {
   return {
     mode: "DETERMINISTIC_DIAGNOSTICS_POLICY_PREVIEW",
     status: "planned",
-    trigger: "before lighthouse installs, Node0 activation attempts, or public trust claims",
-    recommended_micro_action: "narrow_diagnostics_scope_then_request_exact_consent",
+    trigger:
+      "before lighthouse installs, Node0 activation attempts, or public trust claims",
+    recommended_micro_action:
+      "narrow_diagnostics_scope_then_request_exact_consent",
     gates: [
       {
         gate: "all_effecting_checks_require_consent",
-        pass: microCompliance.all_effecting_checks_require_consent
+        pass: microCompliance.all_effecting_checks_require_consent,
       },
       {
         gate: "preview_boundary_closed",
-        pass: microCompliance.preview_boundary_closed
+        pass: microCompliance.preview_boundary_closed,
       },
       {
         gate: "approval_not_recorded",
-        pass: microCompliance.no_approval_recorded
+        pass: microCompliance.no_approval_recorded,
       },
       {
         gate: "effect_capability_not_minted",
-        pass: microCompliance.no_capability_mint
+        pass: microCompliance.no_capability_mint,
       },
       {
         gate: "runtime_boundary_closed",
-        pass: microCompliance.no_runtime
-      }
+        pass: microCompliance.no_runtime,
+      },
     ],
     next_action:
-      "operator reviews this plan, narrows scope, then separately authorizes any governed runtime handoff"
+      "operator reviews this plan, narrows scope, then separately authorizes any governed runtime handoff",
   };
 }
 
@@ -193,7 +200,7 @@ function buildMicroConsent() {
     action_authorized_by_preview: false,
     reusable_authorization_created: false,
     broad_consent_allowed: false,
-    minimum_shape: MICRO_CONSENT_SHAPE
+    minimum_shape: MICRO_CONSENT_SHAPE,
   };
 }
 
@@ -204,7 +211,7 @@ function buildSelfCritique(safetyReport) {
     weakest_link: "operator_scope_selection",
     limitation:
       "Diagnostics planning can name checks and consent requirements, but it cannot certify results until the operator authorizes execution and verification reads actual traces.",
-    open_risk_count: safetyReport.self_critique.gaps.length
+    open_risk_count: safetyReport.self_critique.gaps.length,
   };
 }
 
@@ -216,18 +223,18 @@ export function buildDiagnosticsMissionPlan({ now = new Date() } = {}) {
     category: "self_diagnostics",
     risk_level: "high",
     current_phase: "DRAFT_INTENT",
-    hhmm_phases: HHMM_PHASES
+    hhmm_phases: HHMM_PHASES,
   };
   const consentScopePreview = {
     schema: "bizra.dema.diagnostics_consent_scope_preview.v0.1",
     status: "draft_only",
     approval_recorded: false,
     permissions: PERMISSIONS,
-    commitment_hash: sha256(stableStringify(PERMISSIONS))
+    commitment_hash: sha256(stableStringify(PERMISSIONS)),
   };
   const microCompliance = buildMicroCompliance({
     permissions: PERMISSIONS,
-    boundary: BOUNDARY
+    boundary: BOUNDARY,
   });
 
   return {
@@ -246,23 +253,28 @@ export function buildDiagnosticsMissionPlan({ now = new Date() } = {}) {
     phase_gate: {
       current_phase: "DRAFT_INTENT",
       next_phase: "CONSENT_NEGOTIATION",
-      requirement: "human reviews diagnostics permissions before any check command can execute",
+      requirement:
+        "human reviews diagnostics permissions before any check command can execute",
       consent_scope_committed: false,
-      effect_caps_minted: false
+      effect_caps_minted: false,
     },
-    boundary: BOUNDARY
+    boundary: BOUNDARY,
   };
 }
 
 function appendChecks(lines, checks) {
   for (const check of checks) {
-    lines.push(`  - ${check.phase}: ${check.command}  purpose="${check.purpose}"`);
+    lines.push(
+      `  - ${check.phase}: ${check.command}  purpose="${check.purpose}"`,
+    );
   }
 }
 
 function appendPermissions(lines, permissions) {
   for (const permission of permissions) {
-    lines.push(`  - ${permission.resource_id}  ${permission.action}  purpose="${permission.purpose}"`);
+    lines.push(
+      `  - ${permission.resource_id}  ${permission.action}  purpose="${permission.purpose}"`,
+    );
   }
 }
 
@@ -285,7 +297,7 @@ export function formatDiagnosticsMissionPlan(plan) {
     `mission_commitment_hash: ${plan.mission_commitment_hash}`,
     `consent_commitment_hash: ${plan.consent_scope_preview.commitment_hash}`,
     "",
-    "Planned checks:"
+    "Planned checks:",
   ];
 
   appendChecks(lines, plan.checks);
@@ -294,13 +306,19 @@ export function formatDiagnosticsMissionPlan(plan) {
   appendPermissions(lines, plan.consent_scope_preview.permissions);
   lines.push("");
   lines.push("Proof-of-Truth Convergence:");
-  for (const [pillar, value] of Object.entries(plan.proof_of_truth_convergence)) {
-    lines.push(`  ${pillar}: ${value.status} (${value.evidence_kind}; certifies=${value.certifies})`);
+  for (const [pillar, value] of Object.entries(
+    plan.proof_of_truth_convergence,
+  )) {
+    lines.push(
+      `  ${pillar}: ${value.status} (${value.evidence_kind}; certifies=${value.certifies})`,
+    );
   }
   lines.push("");
   lines.push("Self-proactive harness:");
   lines.push(`  mode: ${plan.proactive_harness.mode}`);
-  lines.push(`  recommended_micro_action: ${plan.proactive_harness.recommended_micro_action}`);
+  lines.push(
+    `  recommended_micro_action: ${plan.proactive_harness.recommended_micro_action}`,
+  );
   appendGates(lines, plan.proactive_harness.gates);
   lines.push("");
   lines.push("Micro-compliance:");
@@ -311,8 +329,12 @@ export function formatDiagnosticsMissionPlan(plan) {
   lines.push("Micro-consent:");
   lines.push(`  scope: ${plan.micro_consent.preview_scope}`);
   lines.push(`  status: ${plan.micro_consent.status}`);
-  lines.push(`  exact_consent_required_for_effecting_checks: ${plan.micro_consent.exact_consent_required_for_effecting_checks}`);
-  lines.push(`  action_authorized_by_preview: ${plan.micro_consent.action_authorized_by_preview}`);
+  lines.push(
+    `  exact_consent_required_for_effecting_checks: ${plan.micro_consent.exact_consent_required_for_effecting_checks}`,
+  );
+  lines.push(
+    `  action_authorized_by_preview: ${plan.micro_consent.action_authorized_by_preview}`,
+  );
   lines.push("");
   lines.push("Self-critique:");
   lines.push(`  confidence: ${plan.self_critique.confidence}`);
@@ -323,7 +345,7 @@ export function formatDiagnosticsMissionPlan(plan) {
   lines.push("");
   lines.push(`Gate: ${plan.phase_gate.requirement}`);
   lines.push(
-    "Boundary: preview-only; no execution; no mutation; no receipt minted; no network; no external posting."
+    "Boundary: preview-only; no execution; no mutation; no receipt minted; no network; no external posting.",
   );
 
   return lines.join("\n");

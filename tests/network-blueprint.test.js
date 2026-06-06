@@ -8,13 +8,19 @@ import { join } from "node:path";
 
 import {
   buildNetworkBlueprint,
-  formatNetworkBlueprint
+  formatNetworkBlueprint,
 } from "../packages/core/src/network-blueprint.js";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
-const modulePath = fileURLToPath(new URL("../packages/core/src/network-blueprint.js", import.meta.url));
-const coreSrcPath = fileURLToPath(new URL("../packages/core/src", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
+const modulePath = fileURLToPath(
+  new URL("../packages/core/src/network-blueprint.js", import.meta.url),
+);
+const coreSrcPath = fileURLToPath(
+  new URL("../packages/core/src", import.meta.url),
+);
 
 async function networkPreviewFiles() {
   const entries = await readdir(coreSrcPath);
@@ -41,27 +47,47 @@ test("buildNetworkBlueprint names Node1 and Node2 readiness gates without invent
   const blueprint = buildNetworkBlueprint();
   const serialized = JSON.stringify(blueprint);
 
-  assert.ok(blueprint.related_schemas.includes("bizra.dema.mission_preview.v0.1"));
-  assert.ok(blueprint.readiness_gates.some((gate) => (
-    gate.target === "Node1" &&
-    gate.id === "node1.handoff_contract_defined" &&
-    gate.status === "blocked"
-  )));
-  assert.ok(blueprint.readiness_gates.some((gate) => (
-    gate.target === "Node2" &&
-    gate.id === "node2.propagation_policy" &&
-    gate.status === "blocked"
-  )));
+  assert.ok(
+    blueprint.related_schemas.includes("bizra.dema.mission_preview.v0.1"),
+  );
+  assert.ok(
+    blueprint.readiness_gates.some(
+      (gate) =>
+        gate.target === "Node1" &&
+        gate.id === "node1.handoff_contract_defined" &&
+        gate.status === "blocked",
+    ),
+  );
+  assert.ok(
+    blueprint.readiness_gates.some(
+      (gate) =>
+        gate.target === "Node2" &&
+        gate.id === "node2.propagation_policy" &&
+        gate.status === "blocked",
+    ),
+  );
   assert.doesNotMatch(serialized, /Node3|Node4/);
-  assert.ok(blueprint.canonical_expansion_phases.some((phase) => phase.id === "phase_3"));
-  assert.ok(blueprint.canonical_expansion_phases.some((phase) => phase.id === "phase_4"));
-  assert.ok(blueprint.gtm_blockers.some((blocker) => blocker.severity === "launch_blocker"));
+  assert.ok(
+    blueprint.canonical_expansion_phases.some(
+      (phase) => phase.id === "phase_3",
+    ),
+  );
+  assert.ok(
+    blueprint.canonical_expansion_phases.some(
+      (phase) => phase.id === "phase_4",
+    ),
+  );
+  assert.ok(
+    blueprint.gtm_blockers.some(
+      (blocker) => blocker.severity === "launch_blocker",
+    ),
+  );
 });
 
 test("buildNetworkBlueprint keeps downstream gates blocked while Node0 proof is blocked", () => {
   const blueprint = buildNetworkBlueprint();
   const node0Repeatability = blueprint.readiness_gates.find(
-    (gate) => gate.id === "node0.bounded_receipt_repeatable"
+    (gate) => gate.id === "node0.bounded_receipt_repeatable",
   );
 
   assert.equal(node0Repeatability.status, "blocked");
@@ -88,7 +114,7 @@ test("buildNetworkBlueprint keeps every boundary switch false", () => {
     "identity_artifact_issued",
     "downstream_node_started",
     "liveness_probe_implemented",
-    "authorization_phrase_emitted"
+    "authorization_phrase_emitted",
   ];
 
   for (const key of expectedFalseBoundaries) {
@@ -99,15 +125,24 @@ test("buildNetworkBlueprint keeps every boundary switch false", () => {
 test("buildNetworkBlueprint includes preview-only handoff and harness contracts", () => {
   const blueprint = buildNetworkBlueprint();
 
-  assert.ok(blueprint.handoff_contract_preview.some((contract) => (
-    contract.id === "handoff.receipt_read_verification" &&
-    contract.repo_boundary === "Dema_reads_governed_runtime_issues"
-  )));
-  assert.ok(blueprint.offline_integration_harness.some((item) => (
-    item.id === "matrix.boundary_assertions" &&
-    item.status === "preview_ready"
-  )));
-  assert.equal(blueprint.self_proactive_harness.mode, "deterministic_preview_checks");
+  assert.ok(
+    blueprint.handoff_contract_preview.some(
+      (contract) =>
+        contract.id === "handoff.receipt_read_verification" &&
+        contract.repo_boundary === "Dema_reads_governed_runtime_issues",
+    ),
+  );
+  assert.ok(
+    blueprint.offline_integration_harness.some(
+      (item) =>
+        item.id === "matrix.boundary_assertions" &&
+        item.status === "preview_ready",
+    ),
+  );
+  assert.equal(
+    blueprint.self_proactive_harness.mode,
+    "deterministic_preview_checks",
+  );
 });
 
 test("buildNetworkBlueprint emits no reusable operator authorization phrase", () => {
@@ -137,7 +172,10 @@ test("buildNetworkBlueprint returns fresh objects on every call", () => {
 
   const second = buildNetworkBlueprint();
   assert.equal(second.readiness_gates[0].status, "pending");
-  assert.equal(second.handoff_contract_preview[0].repo_boundary, "documented_only_not_executed");
+  assert.equal(
+    second.handoff_contract_preview[0].repo_boundary,
+    "documented_only_not_executed",
+  );
   assert.equal(second.offline_integration_harness[0].status, "preview_ready");
   assert.notEqual(second.self_proactive_harness.checks[0], "mutated");
   assert.notEqual(second.self_critique[0].risk, "mutated");
@@ -155,7 +193,10 @@ test("formatNetworkBlueprint renders full-stack layers, gates, and boundary", ()
   assert.match(output, /handoff\.receipt_read_verification/);
   assert.match(output, /Offline integration harness/);
   assert.match(output, /Self-critique/);
-  assert.match(output, /Boundary: preview-only; no network connection; no federation; no handshake/);
+  assert.match(
+    output,
+    /Boundary: preview-only; no network connection; no federation; no handshake/,
+  );
 });
 
 test("network preview modules have no network side effects", async () => {
@@ -170,7 +211,11 @@ test("network preview modules have no network side effects", async () => {
 });
 
 test("dema network blueprint prints a human-readable preview", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "network", "blueprint"]);
+  const { stdout } = await execFileAsync("node", [
+    cliPath,
+    "network",
+    "blueprint",
+  ]);
 
   assert.match(stdout, /DEMA Node Network Blueprint/);
   assert.match(stdout, /node1\.handoff_contract_defined/);
@@ -179,12 +224,19 @@ test("dema network blueprint prints a human-readable preview", async () => {
 });
 
 test("dema network blueprint --json emits the schema-tagged plan", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "network", "blueprint", "--json"]);
+  const { stdout } = await execFileAsync("node", [
+    cliPath,
+    "network",
+    "blueprint",
+    "--json",
+  ]);
   const blueprint = JSON.parse(stdout);
 
   assert.equal(blueprint.schema, "bizra.dema.node_network_blueprint.v0.1");
   assert.equal(blueprint.mode, "PREVIEW_ONLY");
   assert.equal(blueprint.boundary.network_connection_attempted, false);
   assert.ok(blueprint.readiness_gates.some((gate) => gate.target === "Node1"));
-  assert.ok(blueprint.readiness_gates.some((gate) => gate.target === "phase_3"));
+  assert.ok(
+    blueprint.readiness_gates.some((gate) => gate.target === "phase_3"),
+  );
 });

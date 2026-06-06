@@ -42,37 +42,37 @@ These three blocks bind every layer below. A component may not be promoted past 
 
 Every component is labeled with exactly one of:
 
-| Label | Meaning |
-|---|---|
-| `ACTIVE` | Shipped, exercised on disk today, covered by tests and receipts. |
-| `MVP_REQUIRED` | Must exist (even as a static or read-only artifact) before first public look. |
-| `PILOT_REQUIRED` | Must exist before a private pilot operator can run a real session. |
-| `FUTURE_FOREST` | Belongs to a later node generation; out of scope for first seed. |
-| `RESEARCH_QUARANTINE` | Documented in research, must not leak into public surface or runtime. |
-| `DESIGNED_NOT_LIVE` | Spec or ADR exists, no runtime; safe to reference, forbidden to claim as live. |
+| Label                 | Meaning                                                                        |
+| --------------------- | ------------------------------------------------------------------------------ |
+| `ACTIVE`              | Shipped, exercised on disk today, covered by tests and receipts.               |
+| `MVP_REQUIRED`        | Must exist (even as a static or read-only artifact) before first public look.  |
+| `PILOT_REQUIRED`      | Must exist before a private pilot operator can run a real session.             |
+| `FUTURE_FOREST`       | Belongs to a later node generation; out of scope for first seed.               |
+| `RESEARCH_QUARANTINE` | Documented in research, must not leak into public surface or runtime.          |
+| `DESIGNED_NOT_LIVE`   | Spec or ADR exists, no runtime; safe to reference, forbidden to claim as live. |
 
 `ACTIVE` is the only label that authorizes user-facing language like "this works today." Every other label requires explicit qualification.
 
 ## 4. Component DNA Table
 
-| Layer | Component | Purpose | Current status | Proof boundary | Forbidden overclaim |
-|---|---|---|---|---|---|
-| Root Canon | Three founding files (themassage.pdf, البذرة, Third Fact) | Doctrinal source bound to Bitcoin merkle anchor | `ACTIVE` | Proof-of-priority pin + Bitcoin block 948027/8/9 | Treating later docs as superseding root canon |
-| Human Sovereignty | Exact-string consent, operator-grounding gate | Human is the only legal mutator | `ACTIVE` | ADR-005, consent receipts | Implying consent can be inferred from behavior |
-| Node0 Homebase | Homebase TUI, local state under `~/.dema` | Hardware-aware operator surface | `ACTIVE` | TUI surfaces + Node0 awakening receipt | Claiming federation or multi-node from a single node |
-| Dema Product Face | dema CLI, public README, status/mission/receipt views | One face for the human | `ACTIVE` | dema commands + first-run wizard evidence | Pretending Dema is the whole BIZRA system |
-| PAT-7 | Seven Personal Agents (local intelligence) | Discover, draft, propose | `DESIGNED_NOT_LIVE` | Topology canon + PAT/SAT bridge spec | Claiming PAT actions without SAT/receipt cover |
-| SAT-5 | Five Sovereign Agents (governance) | Verify, gate, refuse | `DESIGNED_NOT_LIVE` | SAT verifier sibling spec | Naming SAT as authority before verifier runtime ships |
-| FATE / EffectCap | Capability-based effect boundary | Bound side effects to typed capability | `DESIGNED_NOT_LIVE` | EffectCap invariant working artifact | Asserting boundary enforcement without runtime |
-| EvidenceChain / Receipts | Hash-chained receipts, proof-forge | The truth substrate of the node | `ACTIVE` | Local receipt chain + proof-forge IRONCLAD seals | Treating absence of receipt as absence of risk |
-| UKE House of Wisdom | Cross-node knowledge fabric | Long-memory of the forest | `DESIGNED_NOT_LIVE` | Spec only; no runtime fabric | Naming UKE as a live store |
-| URP Soil | Shared resource / agent-as-a-service substrate | One shared substrate across nodes | `DESIGNED_NOT_LIVE` | Topology canon; no public URP | Claiming a live public URP |
-| Proof-of-Impact | Outcome-bound reward signal | Decides what value deserves reward | `DESIGNED_NOT_LIVE` | Spec dependency on UKE/URP | Implying any reward is guaranteed |
-| Dual Token Economy | Stable utility token + earned reputation token | Economic accounting layer | `RESEARCH_QUARANTINE` | Research notes only | Any public token claim, value claim, or yield language |
-| MMORPG Experience | Game-feel interface for collaborative work | Engagement surface for the forest | `FUTURE_FOREST` | None until interface canon exists | Building hype assets before proof exists |
-| Visual Emulator | Static or simulated visual of node + forest behavior | Lets a viewer see system intent without a live network | `PILOT_REQUIRED` | Static prototype or sandboxed sim | Showing emulator output as measured live data |
-| DevOps / Quality | Test gates, receipt gates, llm-guidance gate | The gates that keep doctrine load-bearing | `ACTIVE` | `npm test`, `npm run check`, `npm run llm:guidance`, `git diff --check` | Skipping gates with `--no-verify` |
-| Public Face / GTM | README, Lighthouse Invitation, Claim Register | The first contact surface with humans | `PILOT_REQUIRED` | Lighthouse doc + claim register | Marketing claims that outrun proof labels |
+| Layer                    | Component                                                 | Purpose                                                | Current status        | Proof boundary                                                          | Forbidden overclaim                                    |
+| ------------------------ | --------------------------------------------------------- | ------------------------------------------------------ | --------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------ |
+| Root Canon               | Three founding files (themassage.pdf, البذرة, Third Fact) | Doctrinal source bound to Bitcoin merkle anchor        | `ACTIVE`              | Proof-of-priority pin + Bitcoin block 948027/8/9                        | Treating later docs as superseding root canon          |
+| Human Sovereignty        | Exact-string consent, operator-grounding gate             | Human is the only legal mutator                        | `ACTIVE`              | ADR-005, consent receipts                                               | Implying consent can be inferred from behavior         |
+| Node0 Homebase           | Homebase TUI, local state under `~/.dema`                 | Hardware-aware operator surface                        | `ACTIVE`              | TUI surfaces + Node0 awakening receipt                                  | Claiming federation or multi-node from a single node   |
+| Dema Product Face        | dema CLI, public README, status/mission/receipt views     | One face for the human                                 | `ACTIVE`              | dema commands + first-run wizard evidence                               | Pretending Dema is the whole BIZRA system              |
+| PAT-7                    | Seven Personal Agents (local intelligence)                | Discover, draft, propose                               | `DESIGNED_NOT_LIVE`   | Topology canon + PAT/SAT bridge spec                                    | Claiming PAT actions without SAT/receipt cover         |
+| SAT-5                    | Five Sovereign Agents (governance)                        | Verify, gate, refuse                                   | `DESIGNED_NOT_LIVE`   | SAT verifier sibling spec                                               | Naming SAT as authority before verifier runtime ships  |
+| FATE / EffectCap         | Capability-based effect boundary                          | Bound side effects to typed capability                 | `DESIGNED_NOT_LIVE`   | EffectCap invariant working artifact                                    | Asserting boundary enforcement without runtime         |
+| EvidenceChain / Receipts | Hash-chained receipts, proof-forge                        | The truth substrate of the node                        | `ACTIVE`              | Local receipt chain + proof-forge IRONCLAD seals                        | Treating absence of receipt as absence of risk         |
+| UKE House of Wisdom      | Cross-node knowledge fabric                               | Long-memory of the forest                              | `DESIGNED_NOT_LIVE`   | Spec only; no runtime fabric                                            | Naming UKE as a live store                             |
+| URP Soil                 | Shared resource / agent-as-a-service substrate            | One shared substrate across nodes                      | `DESIGNED_NOT_LIVE`   | Topology canon; no public URP                                           | Claiming a live public URP                             |
+| Proof-of-Impact          | Outcome-bound reward signal                               | Decides what value deserves reward                     | `DESIGNED_NOT_LIVE`   | Spec dependency on UKE/URP                                              | Implying any reward is guaranteed                      |
+| Dual Token Economy       | Stable utility token + earned reputation token            | Economic accounting layer                              | `RESEARCH_QUARANTINE` | Research notes only                                                     | Any public token claim, value claim, or yield language |
+| MMORPG Experience        | Game-feel interface for collaborative work                | Engagement surface for the forest                      | `FUTURE_FOREST`       | None until interface canon exists                                       | Building hype assets before proof exists               |
+| Visual Emulator          | Static or simulated visual of node + forest behavior      | Lets a viewer see system intent without a live network | `PILOT_REQUIRED`      | Static prototype or sandboxed sim                                       | Showing emulator output as measured live data          |
+| DevOps / Quality         | Test gates, receipt gates, llm-guidance gate              | The gates that keep doctrine load-bearing              | `ACTIVE`              | `npm test`, `npm run check`, `npm run llm:guidance`, `git diff --check` | Skipping gates with `--no-verify`                      |
+| Public Face / GTM        | README, Lighthouse Invitation, Claim Register             | The first contact surface with humans                  | `PILOT_REQUIRED`      | Lighthouse doc + claim register                                         | Marketing claims that outrun proof labels              |
 
 Read this table top-to-bottom whenever a proposal touches any of these components. If your proposal contradicts a row, fix the proposal, not the row.
 

@@ -13,7 +13,8 @@
 import { createHash } from "node:crypto";
 import { buildPreviewBoundary } from "./preview-boundary.js";
 
-export const GENESIS_PREVIEW_CARD_SCHEMA = "bizra.dema.genesis_preview_card.v0.1";
+export const GENESIS_PREVIEW_CARD_SCHEMA =
+  "bizra.dema.genesis_preview_card.v0.1";
 
 // Deterministic placeholder used when no timestamp is injected (test environments).
 const DETERMINISTIC_TIMESTAMP_PLACEHOLDER = "1970-01-01T00:00:00.000Z";
@@ -23,7 +24,7 @@ const VALID_MODEL_READINESS = new Set([
   "MODEL_LESS_DECLARED",
   "MODEL_INVENTORY_PENDING_CONSENT",
   "MODEL_INVENTORY_DECLARED",
-  "MODEL_AVAILABLE"
+  "MODEL_AVAILABLE",
 ]);
 
 // Consent phrase templates keyed by ISO 639-1 code.
@@ -33,7 +34,8 @@ const VALID_MODEL_READINESS = new Set([
 export const CONSENT_PHRASE_TEMPLATES = Object.freeze({
   en: Object.freeze({
     truth_label: "DECLARED",
-    template: "GO: mint node-onboarding-genesis receipt for card {receipt_id_preview}",
+    template:
+      "GO: mint node-onboarding-genesis receipt for card {receipt_id_preview}",
   }),
   ar: Object.freeze({
     truth_label: "DECLARED_NEEDS_NATIVE_REVIEW",
@@ -41,11 +43,13 @@ export const CONSENT_PHRASE_TEMPLATES = Object.freeze({
   }),
   fr: Object.freeze({
     truth_label: "DECLARED",
-    template: "GO: créer le reçu d'inscription pour la carte {receipt_id_preview}",
+    template:
+      "GO: créer le reçu d'inscription pour la carte {receipt_id_preview}",
   }),
   es: Object.freeze({
     truth_label: "DECLARED",
-    template: "GO: crear el recibo de incorporación para la tarjeta {receipt_id_preview}",
+    template:
+      "GO: crear el recibo de incorporación para la tarjeta {receipt_id_preview}",
   }),
 });
 
@@ -112,7 +116,9 @@ export function buildGenesisPreviewCard(input = {}) {
 
   const preferredName = sanitizeName(candidateRaw.preferred_name);
   const primaryLanguage = sanitizeLanguageCode(candidateRaw.primary_language);
-  const secondaryLanguage = sanitizeLanguageCode(candidateRaw.secondary_language);
+  const secondaryLanguage = sanitizeLanguageCode(
+    candidateRaw.secondary_language,
+  );
   const deviceLabel = sanitizeName(candidateRaw.device_label);
 
   const modelReadiness =
@@ -154,34 +160,35 @@ export function buildGenesisPreviewCard(input = {}) {
     CONSENT_PHRASE_TEMPLATES[primaryLang] ?? CONSENT_PHRASE_TEMPLATES.en;
   const consentPhraseRequired = renderConsentPhrase(
     primaryTemplate.template,
-    receiptIdPreview
+    receiptIdPreview,
   );
 
   let consentPhraseSecondary = null;
   if (secondaryLanguage !== null) {
     const secondaryTemplate =
-      CONSENT_PHRASE_TEMPLATES[secondaryLanguage] ?? CONSENT_PHRASE_TEMPLATES.en;
+      CONSENT_PHRASE_TEMPLATES[secondaryLanguage] ??
+      CONSENT_PHRASE_TEMPLATES.en;
     consentPhraseSecondary = renderConsentPhrase(
       secondaryTemplate.template,
-      receiptIdPreview
+      receiptIdPreview,
     );
   }
 
   // card_storage path
-  const cardStoragePathHint = typeof raw.card_storage_path_hint === "string"
-    ? raw.card_storage_path_hint
-    : null;
+  const cardStoragePathHint =
+    typeof raw.card_storage_path_hint === "string"
+      ? raw.card_storage_path_hint
+      : null;
 
   const cardStoragePath =
-    cardStoragePathHint ??
-    `~/.dema/state/genesis-preview-${timestamp}.json`;
+    cardStoragePathHint ?? `~/.dema/state/genesis-preview-${timestamp}.json`;
 
   const card = {
     schema: GENESIS_PREVIEW_CARD_SCHEMA,
-    truth_label: "NODE0_LOCAL_SEED",   // structurally constant — Law #11
-    mode: "preview_only",              // structurally constant — Law #11
+    truth_label: "NODE0_LOCAL_SEED", // structurally constant — Law #11
+    mode: "preview_only", // structurally constant — Law #11
     card_type: "onboarding_completion_genesis",
-    rendered_at: timestamp,            // render metadata — excluded from hash payload
+    rendered_at: timestamp, // render metadata — excluded from hash payload
     candidate: normalizedCandidate,
     would_mint_if_consented: {
       receipt_type: "node_onboarding_genesis.v0.1",
@@ -202,9 +209,10 @@ export function buildGenesisPreviewCard(input = {}) {
       path: cardStoragePath,
       store_scope: "local_preview_only",
       expires_after: "session_end_or_24h",
-      purpose: "auditable record that the candidate SAW this exact preview before any mint",
+      purpose:
+        "auditable record that the candidate SAW this exact preview before any mint",
     },
-    boundary: buildPreviewBoundary(),   // canonical 16-key · ALL false · Law #11
+    boundary: buildPreviewBoundary(), // canonical 16-key · ALL false · Law #11
   };
 
   return deepFreeze(card);
@@ -214,7 +222,10 @@ export function buildGenesisPreviewCard(input = {}) {
 // Hash comparison is case-sensitive: SHA-256 hex is lowercase; the canonical phrase
 // embeds it as lowercase hex. Accepting case-insensitive variants would expand the
 // attack surface and contradict ADR-005 exact-string consent.
-export function refuseMintWithoutQuotedHash({ typedPhrase, expectedReceiptIdPreview }) {
+export function refuseMintWithoutQuotedHash({
+  typedPhrase,
+  expectedReceiptIdPreview,
+}) {
   if (typeof typedPhrase !== "string" || typedPhrase.trim().length === 0) {
     return Object.freeze({
       accepted: false,

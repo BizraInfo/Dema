@@ -4,7 +4,10 @@
 // exists · profile fields match expected shape · profile hasn't been
 // silently overwritten · session-to-session identity continuity holds.
 
-import { buildAgentKernel, AGENT_KERNEL_MAX_ITERATIONS } from "./agent-kernel.js";
+import {
+  buildAgentKernel,
+  AGENT_KERNEL_MAX_ITERATIONS,
+} from "./agent-kernel.js";
 import { buildEffectCap } from "./effect-cap.js";
 import { buildPreviewBoundary } from "./preview-boundary.js";
 
@@ -24,23 +27,28 @@ const SAT5_PERSONA = Object.freeze({
     "verify_profile_exists",
     "verify_profile_field_shape",
     "compare_to_previous_snapshot",
-    "detect_silent_overwrites"
+    "detect_silent_overwrites",
   ]),
   primary_refusals: Object.freeze([
     "modify_profile",
     "infer_identity_from_absent_profile",
     "waive_identity_check",
-    "merge_identity_silently_across_sessions"
-  ])
+    "merge_identity_silently_across_sessions",
+  ]),
 });
 
-const SAT5_EFFECT_CAP_ALLOWED = Object.freeze(["read_local_file", "compute_hash", "stat_file_metadata"]);
+const SAT5_EFFECT_CAP_ALLOWED = Object.freeze([
+  "read_local_file",
+  "compute_hash",
+  "stat_file_metadata",
+]);
 const SAT5_EFFECT_CAP_EXTRA_BLOCKED = Object.freeze([
   "modify_profile",
   "infer_identity_from_absent_profile",
-  "waive_identity_check"
+  "waive_identity_check",
 ]);
-const SAT5_CONSENT_PHRASE_TEMPLATE = "GO: invoke SAT-5 identity_verifier to verify";
+const SAT5_CONSENT_PHRASE_TEMPLATE =
+  "GO: invoke SAT-5 identity_verifier to verify";
 
 const REQUIRED_PROFILE_FIELDS = Object.freeze(["name", "node"]);
 
@@ -59,7 +67,7 @@ export function buildSATIdentityVerifierEffectCap() {
     allowed_effects: SAT5_EFFECT_CAP_ALLOWED,
     blocked_effects: SAT5_EFFECT_CAP_EXTRA_BLOCKED,
     consent_scope_template: SAT5_CONSENT_PHRASE_TEMPLATE,
-    audit_trail_required: true
+    audit_trail_required: true,
   });
 }
 
@@ -78,23 +86,29 @@ export function buildSATIdentityVerifierPreview() {
       "SAT-5 never modifies the profile · examination is read-only",
       "SAT-5 never infers identity from absent profile · honest refusal instead",
       "SAT-5 never waives identity check",
-      "SAT-5 never silently merges identities across sessions"
+      "SAT-5 never silently merges identities across sessions",
     ]),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
-export function buildSATIdentityVerifierKernel({ mission_intent = "", max_iterations = AGENT_KERNEL_MAX_ITERATIONS } = {}) {
+export function buildSATIdentityVerifierKernel({
+  mission_intent = "",
+  max_iterations = AGENT_KERNEL_MAX_ITERATIONS,
+} = {}) {
   return buildAgentKernel({
     agent_id: SAT5_PERSONA.sat_id,
     agent_role: "sat_identity_verifier",
     mission_intent: typeof mission_intent === "string" ? mission_intent : "",
-    max_iterations
+    max_iterations,
   });
 }
 
 // Verify an identity profile + optional previous snapshot for continuity.
-export function verifyIdentity({ profile = null, previous_snapshot = null } = {}) {
+export function verifyIdentity({
+  profile = null,
+  previous_snapshot = null,
+} = {}) {
   const safeProfile = safeObject(profile);
   const previousSnap = safeObject(previous_snapshot);
   const violations = [];
@@ -103,7 +117,7 @@ export function verifyIdentity({ profile = null, previous_snapshot = null } = {}
     return buildVerdict({
       verdict: "profile_absent",
       passed: false,
-      violations: ["profile_missing_or_invalid"]
+      violations: ["profile_missing_or_invalid"],
     });
   }
 
@@ -127,13 +141,19 @@ export function verifyIdentity({ profile = null, previous_snapshot = null } = {}
     continuity_check = {
       previous_snapshot_present: true,
       drifted_fields: driftedFields,
-      continuity_held: driftedFields.length === 0
+      continuity_held: driftedFields.length === 0,
     };
     if (driftedFields.length > 0) {
-      violations.push(`silent_identity_drift · fields: ${driftedFields.join(",")}`);
+      violations.push(
+        `silent_identity_drift · fields: ${driftedFields.join(",")}`,
+      );
     }
   } else {
-    continuity_check = { previous_snapshot_present: false, drifted_fields: [], continuity_held: null };
+    continuity_check = {
+      previous_snapshot_present: false,
+      drifted_fields: [],
+      continuity_held: null,
+    };
   }
 
   const passed = violations.length === 0;
@@ -143,11 +163,18 @@ export function verifyIdentity({ profile = null, previous_snapshot = null } = {}
     violations,
     profile_name: safeString(safeProfile.name),
     profile_node: safeString(safeProfile.node),
-    continuity_check
+    continuity_check,
   });
 }
 
-function buildVerdict({ verdict, passed, violations, profile_name = null, profile_node = null, continuity_check = null }) {
+function buildVerdict({
+  verdict,
+  passed,
+  violations,
+  profile_name = null,
+  profile_node = null,
+  continuity_check = null,
+}) {
   return Object.freeze({
     schema: VERDICT_SCHEMA,
     truth_label: passed ? "MEASURED" : "IDENTITY_VIOLATION",
@@ -159,13 +186,15 @@ function buildVerdict({ verdict, passed, violations, profile_name = null, profil
     verdict,
     passed,
     violations: Object.freeze(violations),
-    continuity_check: continuity_check ? Object.freeze({
-      ...continuity_check,
-      drifted_fields: Object.freeze(continuity_check.drifted_fields || [])
-    }) : null,
+    continuity_check: continuity_check
+      ? Object.freeze({
+          ...continuity_check,
+          drifted_fields: Object.freeze(continuity_check.drifted_fields || []),
+        })
+      : null,
     audit_trail_required: true,
     receipt_shape_ready: passed,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -181,7 +210,7 @@ export function buildSATIdentityVerifierSummary() {
     capability_count: preview.persona.primary_capabilities.length,
     refusal_count: preview.persona.primary_refusals.length,
     required_field_count: preview.required_profile_fields.length,
-    boundary: preview.boundary
+    boundary: preview.boundary,
   });
 }
 

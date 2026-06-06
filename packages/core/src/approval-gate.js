@@ -38,7 +38,16 @@ async function readOneLine(input, output, prompt) {
   });
 }
 
-function envelopeBase({ autonomyLevel, action, scope, target, mode, approved, refusedReason, input }) {
+function envelopeBase({
+  autonomyLevel,
+  action,
+  scope,
+  target,
+  mode,
+  approved,
+  refusedReason,
+  input,
+}) {
   return {
     schema: APPROVAL_SCHEMA,
     autonomy_level: autonomyLevel,
@@ -49,7 +58,7 @@ function envelopeBase({ autonomyLevel, action, scope, target, mode, approved, re
     approved,
     refused_reason: refusedReason ?? null,
     input: input ?? null,
-    decided_at: new Date().toISOString()
+    decided_at: new Date().toISOString(),
   };
 }
 
@@ -60,7 +69,7 @@ export async function requestApproval({
   target,
   requireExactPhrase,
   input = process.stdin,
-  output = process.stdout
+  output = process.stdout,
 } = {}) {
   if (!action || typeof action !== "string") {
     // `action` is the human-readable label of what's being gated. Missing
@@ -79,11 +88,15 @@ export async function requestApproval({
       approved: false,
       refusedReason:
         "autonomyLevel is missing or non-string. Refused by default per A4.5 fail-closed rule (rejective by default).",
-      input: null
+      input: null,
     });
   }
 
-  if (autonomyLevel === "L0" || autonomyLevel === "L1" || autonomyLevel === "L2") {
+  if (
+    autonomyLevel === "L0" ||
+    autonomyLevel === "L1" ||
+    autonomyLevel === "L2"
+  ) {
     return envelopeBase({
       autonomyLevel,
       action,
@@ -92,7 +105,7 @@ export async function requestApproval({
       mode: "auto",
       approved: true,
       refusedReason: null,
-      input: null
+      input: null,
     });
   }
 
@@ -108,8 +121,10 @@ export async function requestApproval({
       target,
       mode: "interactive",
       approved,
-      refusedReason: approved ? null : "no affirmative response (silence, EOF, or non-y/yes/proceed input)",
-      input: received
+      refusedReason: approved
+        ? null
+        : "no affirmative response (silence, EOF, or non-y/yes/proceed input)",
+      input: received,
     });
   }
 
@@ -122,8 +137,9 @@ export async function requestApproval({
         target,
         mode: "exact_phrase",
         approved: false,
-        refusedReason: "L4 approval requires requireExactPhrase argument; none provided",
-        input: null
+        refusedReason:
+          "L4 approval requires requireExactPhrase argument; none provided",
+        input: null,
       });
     }
     const promptText =
@@ -132,7 +148,10 @@ export async function requestApproval({
       `  ${requireExactPhrase}\n` +
       `> `;
     const received = await readOneLine(input, output, promptText);
-    const verdict = evaluateConsent({ phrase: received ?? "", requiredPhrase: requireExactPhrase });
+    const verdict = evaluateConsent({
+      phrase: received ?? "",
+      requiredPhrase: requireExactPhrase,
+    });
     return envelopeBase({
       autonomyLevel,
       action,
@@ -141,7 +160,7 @@ export async function requestApproval({
       mode: "exact_phrase",
       approved: verdict.accepted,
       refusedReason: verdict.accepted ? null : verdict.reason,
-      input: received
+      input: received,
     });
   }
 
@@ -155,7 +174,7 @@ export async function requestApproval({
       approved: false,
       refusedReason:
         "L5 acts cannot be approved from the interactive shell — they require a typed in-the-moment GO outside the shell context (push to main, GitHub PR, ots stamp, identity-bound artifacts, federation handshake, public posting). See docs/02-architecture/dema-autonomy-envelope.md anti-pattern #5.",
-      input: null
+      input: null,
     });
   }
 
@@ -171,7 +190,7 @@ export async function requestApproval({
     mode: "refused",
     approved: false,
     refusedReason: `unknown autonomyLevel: ${JSON.stringify(autonomyLevel)} (expected L0-L5). Refused by default per A4.5 fail-closed rule.`,
-    input: null
+    input: null,
   });
 }
 
@@ -186,7 +205,7 @@ const STRICT_LEVEL_TOKEN = /\bL([0-5])\b/g;
 export function highestLevel(autonomyLevelString) {
   if (typeof autonomyLevelString !== "string") return null;
   const matches = [...autonomyLevelString.matchAll(STRICT_LEVEL_TOKEN)].map(
-    (m) => parseInt(m[1], 10)
+    (m) => parseInt(m[1], 10),
   );
   if (matches.length === 0) return null;
   return Math.max(...matches);

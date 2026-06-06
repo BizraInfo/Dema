@@ -24,7 +24,7 @@ const FORBIDDEN_PHRASES = Object.freeze([
   "AI employee",
   "autonomous magic",
   "growth dashboard",
-  "prompt runner"
+  "prompt runner",
 ]);
 
 const SCAN_PATHS = Object.freeze([
@@ -35,13 +35,13 @@ const SCAN_PATHS = Object.freeze([
   "docs/PRODUCT.md",
   "docs/ECOSYSTEM.md",
   "docs/GTM.md",
-  "docs/02-architecture/dema-tui-onboarding-design.md"
+  "docs/02-architecture/dema-tui-onboarding-design.md",
 ]);
 
 const EXCLUDED_PATHS = new Set([
   "scripts/review/non-generic-vocabulary-check.mjs",
   "tests/non-generic-vocabulary-check.test.js",
-  "docs/02-architecture/dema-ux-proof-harness.md"
+  "docs/02-architecture/dema-ux-proof-harness.md",
 ]);
 
 const SOURCE_EXTENSIONS = new Set([".js", ".mjs", ".md"]);
@@ -93,12 +93,15 @@ export function findGenericVocabularyViolations(body, filePath) {
       if (index < 0) break;
       const line = lineFor(body, index);
       const snippetStart = Math.max(0, index - 30);
-      const snippet = body.slice(snippetStart, index + needle.length + 30).replace(/\s+/g, " ").trim();
+      const snippet = body
+        .slice(snippetStart, index + needle.length + 30)
+        .replace(/\s+/g, " ")
+        .trim();
       violations.push({
         file: filePath,
         line,
         phrase,
-        snippet: snippet.slice(0, 160)
+        snippet: snippet.slice(0, 160),
       });
       from = index + needle.length;
     }
@@ -117,7 +120,7 @@ export function buildNonGenericVocabularyCheckReport(root = REPO_ROOT) {
     fileResults.push({
       file,
       violations_count: violations.length,
-      ok: violations.length === 0
+      ok: violations.length === 0,
     });
     for (const v of violations) allViolations.push(v);
   }
@@ -139,13 +142,16 @@ export function buildNonGenericVocabularyCheckReport(root = REPO_ROOT) {
       mutation_performed: false,
       receipt_minted: false,
       filesystem_write_performed: false,
-      ci_modified: false
+      ci_modified: false,
     },
-    note: "Operationalizes UX Proof Harness criterion L. Read-only audit; no mutation. Forbidden phrases come from the harness verbatim. Excludes the harness doc + this script + its test (self-trigger avoidance)."
+    note: "Operationalizes UX Proof Harness criterion L. Read-only audit; no mutation. Forbidden phrases come from the harness verbatim. Excludes the harness doc + this script + its test (self-trigger avoidance).",
   };
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (
+  process.argv[1] &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
   const report = buildNonGenericVocabularyCheckReport();
   console.log(JSON.stringify(report, null, 2));
   if (!report.ok) process.exitCode = 1;

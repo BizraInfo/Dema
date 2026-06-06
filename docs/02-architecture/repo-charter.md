@@ -6,11 +6,11 @@ This repository contains the complete product-facing surface of BIZRA. Every use
 
 ## Ownership
 
-| Area | Owner |
-|------|-------|
-| Product surface, UX, packaging | DEMA (this repo) |
-| Constitutional runtime, chain, trust engine | `bizra-omega` |
-| Knowledge substrate, data lake | `bizra-data-lake` |
+| Area                                        | Owner             |
+| ------------------------------------------- | ----------------- |
+| Product surface, UX, packaging              | DEMA (this repo)  |
+| Constitutional runtime, chain, trust engine | `bizra-omega`     |
+| Knowledge substrate, data lake              | `bizra-data-lake` |
 
 ## Principles
 

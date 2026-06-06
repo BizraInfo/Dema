@@ -5,7 +5,10 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { humanizeNextAction, OBSERVATION_HUMANIZER } from "../packages/core/src/next-action-humanizer.js";
+import {
+  humanizeNextAction,
+  OBSERVATION_HUMANIZER,
+} from "../packages/core/src/next-action-humanizer.js";
 
 test("HUM-01: known process-mining code humanizes to mapped sentence", () => {
   const out = humanizeNextAction("no_ring_1_artifact_observable");
@@ -27,16 +30,23 @@ test("HUM-03: all 6 process-value-preview allowlist codes have explicit humaniza
     "hold_step7_ceremony",
     "continue_preview_only_readiness",
     "reduce_noise_before_next_slice",
-    "continue_verified_micro_slice"
+    "continue_verified_micro_slice",
   ];
   for (const code of allowlist) {
     assert.ok(
       OBSERVATION_HUMANIZER[code],
-      `expected explicit humanization for allowlisted code '${code}', missing from OBSERVATION_HUMANIZER`
+      `expected explicit humanization for allowlisted code '${code}', missing from OBSERVATION_HUMANIZER`,
     );
     const human = humanizeNextAction(code);
-    assert.equal(human.includes("_"), false, `humanized '${code}' must not contain underscores`);
-    assert.ok(human.length > 20, `humanized '${code}' must be a real sentence: ${human}`);
+    assert.equal(
+      human.includes("_"),
+      false,
+      `humanized '${code}' must not contain underscores`,
+    );
+    assert.ok(
+      human.length > 20,
+      `humanized '${code}' must be a real sentence: ${human}`,
+    );
   }
 });
 
@@ -51,7 +61,7 @@ test("HUM-05: pre-humanized input (has spaces or capitals) passes through unchan
   const inputs = [
     "Already a sentence.",
     "Ring 1 candidate response in inbox",
-    "MIXED_CASE_NOT_SNAKE"
+    "MIXED_CASE_NOT_SNAKE",
   ];
   for (const s of inputs) {
     assert.equal(humanizeNextAction(s), s);
@@ -67,15 +77,21 @@ test("HUM-06: non-string input returned as-is (no crash, no transformation)", ()
 
 test("HUM-07: OBSERVATION_HUMANIZER is frozen and cannot be mutated", () => {
   assert.equal(Object.isFrozen(OBSERVATION_HUMANIZER), true);
-  assert.throws(
-    () => { OBSERVATION_HUMANIZER.injected = "evil"; },
-    TypeError
-  );
+  assert.throws(() => {
+    OBSERVATION_HUMANIZER.injected = "evil";
+  }, TypeError);
 });
 
 test("HUM-08: every mapped value is non-empty + does not contain underscores", () => {
   for (const [code, human] of Object.entries(OBSERVATION_HUMANIZER)) {
-    assert.ok(typeof human === "string" && human.length > 0, `${code}: value missing`);
-    assert.equal(human.includes("_"), false, `${code}: humanized form has underscore: ${human}`);
+    assert.ok(
+      typeof human === "string" && human.length > 0,
+      `${code}: value missing`,
+    );
+    assert.equal(
+      human.includes("_"),
+      false,
+      `${code}: humanized form has underscore: ${human}`,
+    );
   }
 });

@@ -7,17 +7,25 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildExternalPatternRegistryPreview,
-  EXTERNAL_PATTERN_REGISTRY_PREVIEW_SCHEMA
+  EXTERNAL_PATTERN_REGISTRY_PREVIEW_SCHEMA,
 } from "../packages/core/src/external-pattern-registry-preview.js";
 import { buildBoundaryInvariantCheckReport } from "../scripts/review/boundary-invariant-check.mjs";
 
-const modulePath = fileURLToPath(new URL("../packages/core/src/external-pattern-registry-preview.js", import.meta.url));
+const modulePath = fileURLToPath(
+  new URL(
+    "../packages/core/src/external-pattern-registry-preview.js",
+    import.meta.url,
+  ),
+);
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 
 test("T-01 external pattern registry preview emits the canonical schema", () => {
   const preview = buildExternalPatternRegistryPreview();
   assert.equal(preview.schema, EXTERNAL_PATTERN_REGISTRY_PREVIEW_SCHEMA);
-  assert.equal(preview.schema, "bizra.dema.external_pattern_registry_preview.v0.1");
+  assert.equal(
+    preview.schema,
+    "bizra.dema.external_pattern_registry_preview.v0.1",
+  );
 });
 
 test("T-02 external pattern registry preview is PREVIEW_ONLY and DECLARED", () => {
@@ -36,7 +44,7 @@ test("T-03 operating canon is exactly 7 lines", () => {
     "Put behind consent + EffectCap.",
     "Record with EvidenceChain.",
     "Expose through DEMA UX.",
-    "Only then allow use."
+    "Only then allow use.",
   ]);
 });
 
@@ -59,7 +67,7 @@ test("T-05 every pattern has the required keys", () => {
     "effects_declared",
     "effects_denied",
     "current_status",
-    "blocked_by"
+    "blocked_by",
   ];
   for (const pattern of preview.patterns) {
     for (const key of REQUIRED_KEYS) {
@@ -74,7 +82,7 @@ test("T-06 every pattern's status is in the valid enum", () => {
   for (const pattern of preview.patterns) {
     assert.ok(
       VALID_STATUSES.has(pattern.current_status),
-      `pattern ${pattern.source} has invalid status ${pattern.current_status}`
+      `pattern ${pattern.source} has invalid status ${pattern.current_status}`,
     );
   }
 });
@@ -91,7 +99,7 @@ test("T-08 every sat_verdict_required is in GateVerdict", () => {
   for (const pattern of preview.patterns) {
     assert.ok(
       VALID.has(pattern.sat_verdict_required),
-      `pattern ${pattern.source} has invalid sat_verdict_required ${pattern.sat_verdict_required}`
+      `pattern ${pattern.source} has invalid sat_verdict_required ${pattern.sat_verdict_required}`,
     );
   }
 });
@@ -105,13 +113,13 @@ test("T-09 every micro_consent_field is in MICRO_CONSENT_SHAPE or null", () => {
     "action",
     "purpose",
     "expires_at",
-    "commitment_hash"
+    "commitment_hash",
   ]);
   for (const pattern of preview.patterns) {
     const f = pattern.micro_consent_field_required;
     assert.ok(
       f === null || VALID_FIELDS.has(f),
-      `pattern ${pattern.source} field ${f} not in MICRO_CONSENT_SHAPE`
+      `pattern ${pattern.source} field ${f} not in MICRO_CONSENT_SHAPE`,
     );
   }
 });
@@ -121,10 +129,16 @@ test("T-10 every effect is a valid OPERATION", () => {
   const VALID_OPS = new Set(["read", "write", "execute", "call"]);
   for (const pattern of preview.patterns) {
     for (const op of pattern.effects_declared) {
-      assert.ok(VALID_OPS.has(op), `pattern ${pattern.source} declares invalid op ${op}`);
+      assert.ok(
+        VALID_OPS.has(op),
+        `pattern ${pattern.source} declares invalid op ${op}`,
+      );
     }
     for (const op of pattern.effects_denied) {
-      assert.ok(VALID_OPS.has(op), `pattern ${pattern.source} denies invalid op ${op}`);
+      assert.ok(
+        VALID_OPS.has(op),
+        `pattern ${pattern.source} denies invalid op ${op}`,
+      );
     }
   }
 });
@@ -136,7 +150,7 @@ test("T-11 no pattern declares an effect it also denies", () => {
     for (const denied of pattern.effects_denied) {
       assert.ok(
         !declared.has(denied),
-        `pattern ${pattern.source} both declares and denies ${denied}`
+        `pattern ${pattern.source} both declares and denies ${denied}`,
       );
     }
   }
@@ -148,7 +162,7 @@ test("T-12 every on_disk_anchor exists at acceptance time", () => {
     const path = join(repoRoot, pattern.bizra_binding.on_disk_anchor);
     assert.ok(
       existsSync(path),
-      `anchor missing for ${pattern.source}: ${pattern.bizra_binding.on_disk_anchor}`
+      `anchor missing for ${pattern.source}: ${pattern.bizra_binding.on_disk_anchor}`,
     );
   }
 });
@@ -167,7 +181,7 @@ test("T-13 boundary keeps every authority flag false", () => {
     "a2a_network_call_made",
     "hook_executed",
     "automation_run",
-    "contract_executed"
+    "contract_executed",
   ]) {
     assert.equal(preview.boundary[key], false, `boundary.${key} must be false`);
   }
@@ -194,10 +208,19 @@ test("T-15 fresh objects per call", () => {
 test("T-16 module is pure (no fs/http/net/child_process imports)", async () => {
   const body = await readFile(modulePath, "utf8");
   assert.ok(!/from ['"]node:fs/.test(body), "module must not import node:fs");
-  assert.ok(!/from ['"]node:http/.test(body), "module must not import node:http");
+  assert.ok(
+    !/from ['"]node:http/.test(body),
+    "module must not import node:http",
+  );
   assert.ok(!/from ['"]node:net/.test(body), "module must not import node:net");
-  assert.ok(!/from ['"]node:child_process/.test(body), "module must not import node:child_process");
-  assert.ok(!/spawn\(|execSync\(|execFile\(|spawnSync\(/.test(body), "module must not invoke processes");
+  assert.ok(
+    !/from ['"]node:child_process/.test(body),
+    "module must not import node:child_process",
+  );
+  assert.ok(
+    !/spawn\(|execSync\(|execFile\(|spawnSync\(/.test(body),
+    "module must not invoke processes",
+  );
 });
 
 test("T-17 summary counts match status occurrences", () => {
@@ -212,6 +235,9 @@ test("T-17 summary counts match status occurrences", () => {
 test("T-18 boundary-invariant lint passes with the new module included", () => {
   const report = buildBoundaryInvariantCheckReport();
   assert.equal(report.ok, true);
-  assert.ok(report.modules_scanned > 0, `expected at least 23 modules scanned, got ${report.modules_scanned}`);
+  assert.ok(
+    report.modules_scanned > 0,
+    `expected at least 23 modules scanned, got ${report.modules_scanned}`,
+  );
   assert.equal(report.modules_clean, report.modules_scanned);
 });

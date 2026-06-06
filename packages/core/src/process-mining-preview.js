@@ -32,24 +32,31 @@ const REQUIRED_BLOCKED_EFFECTS = Object.freeze([
   "canonical_minting",
   "federation_invocation",
   "external_network_call",
-  "raw_corpus_scan"
+  "raw_corpus_scan",
 ]);
 
-const MINING_SCOPE_DEFAULT = "git_log + memory_index + working_tree (READ_ONLY · no chain)";
+const MINING_SCOPE_DEFAULT =
+  "git_log + memory_index + working_tree (READ_ONLY · no chain)";
 
 function freezeMetrics(metrics) {
   if (metrics === null || metrics === undefined) {
     return Object.freeze({
       status: "metrics_unavailable",
-      hint: "pass metrics object from gather-on-disk caller"
+      hint: "pass metrics object from gather-on-disk caller",
     });
   }
   const safe = {};
   for (const [key, value] of Object.entries(metrics)) {
-    if (typeof value === "number" || typeof value === "string" || typeof value === "boolean") {
+    if (
+      typeof value === "number" ||
+      typeof value === "string" ||
+      typeof value === "boolean"
+    ) {
       safe[key] = value;
     } else if (Array.isArray(value)) {
-      safe[key] = Object.freeze(value.filter((v) => typeof v === "string").map((v) => String(v)));
+      safe[key] = Object.freeze(
+        value.filter((v) => typeof v === "string").map((v) => String(v)),
+      );
     } else {
       // Drop non-primitive non-array values (defense against caller-injected
       // functions, symbols, objects with prototype pollution risk).
@@ -58,13 +65,22 @@ function freezeMetrics(metrics) {
   return Object.freeze(safe);
 }
 
-function deriveRingStatus({ ringArtifactsPresent = false, externalReviewerForms = 0 } = {}) {
-  if (externalReviewerForms > 0) return "Ring 1 earned — external reviewer form on record";
-  if (ringArtifactsPresent) return "Ring 0 verified; Ring 1 pack sealed; Ring 1 not yet earned";
+function deriveRingStatus({
+  ringArtifactsPresent = false,
+  externalReviewerForms = 0,
+} = {}) {
+  if (externalReviewerForms > 0)
+    return "Ring 1 earned — external reviewer form on record";
+  if (ringArtifactsPresent)
+    return "Ring 0 verified; Ring 1 pack sealed; Ring 1 not yet earned";
   return "Ring 0 verified; Ring 1 pack status unknown";
 }
 
-function deriveObservableNextStep({ commitsHeldFromOrigin = 0, externalReviewerForms = 0, ringArtifactsPresent = false } = {}) {
+function deriveObservableNextStep({
+  commitsHeldFromOrigin = 0,
+  externalReviewerForms = 0,
+  ringArtifactsPresent = false,
+} = {}) {
   // OBSERVATIONAL only — never prescriptive. The miner reports what
   // pattern exists; the operator decides what to do.
   if (externalReviewerForms > 0) {
@@ -83,7 +99,7 @@ export function buildProcessMiningPreview({
   decisionMetrics = null,
   doctrineMetrics = null,
   operatorPatternMetrics = null,
-  miningScope = MINING_SCOPE_DEFAULT
+  miningScope = MINING_SCOPE_DEFAULT,
 } = {}) {
   const operatorMetrics = operatorPatternMetrics ?? {};
   const ringStatus = deriveRingStatus(operatorMetrics);
@@ -93,22 +109,23 @@ export function buildProcessMiningPreview({
     schema: "bizra.dema.process_mining_preview.v0.1",
     truth_label: "NODE0_LOCAL_SEED",
     mode: "preview_only",
-    mining_scope: typeof miningScope === "string" ? miningScope : MINING_SCOPE_DEFAULT,
+    mining_scope:
+      typeof miningScope === "string" ? miningScope : MINING_SCOPE_DEFAULT,
     decision_metrics: freezeMetrics(decisionMetrics),
     doctrine_metrics: freezeMetrics(doctrineMetrics),
     operator_pattern_metrics: Object.freeze({
       ...freezeMetrics(operatorPatternMetrics),
       ring_advancement_status: ringStatus,
-      next_step_observable: nextObservable
+      next_step_observable: nextObservable,
     }),
     blocked_effects: REQUIRED_BLOCKED_EFFECTS,
     self_critique: Object.freeze({
       this_preview_acts_on_data: false,
       this_preview_judges_operator: false,
       this_preview_offers_a_mirror: true,
-      this_preview_prescribes_action: false
+      this_preview_prescribes_action: false,
     }),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -122,12 +139,15 @@ export function buildProcessMiningSummary(options = {}) {
     truth_label: full.truth_label,
     mode: "summary",
     source_schema: full.schema,
-    ring_advancement_status: full.operator_pattern_metrics.ring_advancement_status,
+    ring_advancement_status:
+      full.operator_pattern_metrics.ring_advancement_status,
     next_step_observable: full.operator_pattern_metrics.next_step_observable,
     decision_metric_keys: Object.freeze(Object.keys(full.decision_metrics)),
     doctrine_metric_keys: Object.freeze(Object.keys(full.doctrine_metrics)),
-    operator_pattern_metric_keys: Object.freeze(Object.keys(full.operator_pattern_metrics)),
-    boundary: full.boundary
+    operator_pattern_metric_keys: Object.freeze(
+      Object.keys(full.operator_pattern_metrics),
+    ),
+    boundary: full.boundary,
   });
 }
 

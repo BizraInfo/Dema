@@ -26,6 +26,7 @@ For any future A2A-style message, emit a typed envelope that records:
 ## Functional requirements
 
 ### F-01 · Module exports
+
 ```
 packages/consent/src/a2a-message-envelope-preview.js
 
@@ -43,6 +44,7 @@ export function buildA2aMessageEnvelopePreview({
 ```
 
 ### F-02 · Envelope shape (success)
+
 ```
 {
   schema:               "bizra.dema.a2a_message_envelope_preview.v0.1",
@@ -63,6 +65,7 @@ export function buildA2aMessageEnvelopePreview({
 ```
 
 ### F-03 · Boundary invariants
+
 ```
 runtime:                       false
 federation:                    false
@@ -74,6 +77,7 @@ cross_node_handoff_executed:   false  (NEW flag, add to allowlist)
 ```
 
 ### F-04 · Validation
+
 - `from` and `to` must be non-empty strings; `from !== to`
 - `mission_id` must be non-empty
 - `message_type` must be in `A2A_MESSAGE_TYPES`
@@ -82,15 +86,18 @@ cross_node_handoff_executed:   false  (NEW flag, add to allowlist)
 - `now` must be a valid Date
 
 ### F-05 · v0.1 invariants
+
 - `authority_transfer` always `false`
 - `dispatched` always `false`
 - `effect_level` cannot contain `write`, `execute`, or `call` (validation rejects)
 - Module imports zero `fs / net / http / child_process`
 
 ### F-06 · Determinism + purity
+
 Same inputs → deeply-equal frozen output with fresh references.
 
 ## Out of scope
+
 - Network dispatch
 - Cross-node handshake
 - Persistent envelope storage
@@ -98,6 +105,7 @@ Same inputs → deeply-equal frozen output with fresh references.
 - Cryptographic signing of the envelope (Phase B; would require key-management spec)
 
 ## Acceptance criteria
+
 1. New file at `packages/consent/src/a2a-message-envelope-preview.js`
 2. New test file with ≥ 12 TDD anchors
 3. `AUTHORITY_FLAGS` extended by 2 new flags (`authority_transferred`, `cross_node_handoff_executed`)
@@ -105,6 +113,7 @@ Same inputs → deeply-equal frozen output with fresh references.
 5. All 7 gates green; `boundary-invariant-check` `modules_scanned ≥ 27`
 
 ## References
+
 - `packages/verifier/src/sat-placeholder.js` — `sat_verdict` primitive this envelope routes toward
 - `packages/consent/src/consent-common.js` — `MICRO_CONSENT_SHAPE`
 - `packages/consent/src/consent-hash-preview.js` — `OPERATIONS`
@@ -112,6 +121,7 @@ Same inputs → deeply-equal frozen output with fresh references.
 - `packages/core/src/external-pattern-registry-preview.js` — `a2a` entry this spec serves
 
 ## Operating law
+
 ```
 Agents may exchange messages.
 Agents may not exchange authority.

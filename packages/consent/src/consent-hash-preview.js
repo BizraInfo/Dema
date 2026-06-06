@@ -1,13 +1,16 @@
 import {
   SCHEMA as CONSENT_PLAN_SCHEMA,
   sha256,
-  stableStringify
+  stableStringify,
 } from "./consent-common.js";
 import { buildConsentPlanPreview } from "./consent-planner.js";
 
-export const CONSENT_HASH_TABLE_PREVIEW_SCHEMA = "bizra.dema.consent_hash_table_preview.v0.1";
-export const CONSENT_HASH_LOOKUP_PREVIEW_SCHEMA = "bizra.dema.consent_hash_lookup_preview.v0.1";
-export const CONSENT_HASH_VERIFICATION_PREVIEW_SCHEMA = "bizra.dema.consent_hash_table_verification_preview.v0.1";
+export const CONSENT_HASH_TABLE_PREVIEW_SCHEMA =
+  "bizra.dema.consent_hash_table_preview.v0.1";
+export const CONSENT_HASH_LOOKUP_PREVIEW_SCHEMA =
+  "bizra.dema.consent_hash_lookup_preview.v0.1";
+export const CONSENT_HASH_VERIFICATION_PREVIEW_SCHEMA =
+  "bizra.dema.consent_hash_table_verification_preview.v0.1";
 
 const MODE = "PREVIEW_ONLY";
 const TRUTH_LABEL = "DECLARED";
@@ -18,7 +21,7 @@ const POLICY = {
   exact_lookup_only: true,
   revocation_precedes_allow: true,
   expires_at_required: true,
-  secrets_in_commitment_payload: false
+  secrets_in_commitment_payload: false,
 };
 
 const BOUNDARY = {
@@ -33,7 +36,7 @@ const BOUNDARY = {
   network_connection_attempted: false,
   federation_initiated: false,
   step7_mint_performed: false,
-  external_posting_performed: false
+  external_posting_performed: false,
 };
 
 function clone(value) {
@@ -79,37 +82,66 @@ function parseIsoTime(value) {
 
 function parsePermissionResource(resourceId) {
   if (!nonEmptyString(resourceId)) {
-    return { ok: false, code: "missing_resource_id", detail: "resource_id must be a non-empty string" };
+    return {
+      ok: false,
+      code: "missing_resource_id",
+      detail: "resource_id must be a non-empty string",
+    };
   }
 
   const separator = resourceId.indexOf(":");
   if (separator <= 0 || separator === resourceId.length - 1) {
-    return { ok: false, code: "invalid_resource_id", detail: "resource_id must use <resource_type>:<resource_id>" };
+    return {
+      ok: false,
+      code: "invalid_resource_id",
+      detail: "resource_id must use <resource_type>:<resource_id>",
+    };
   }
 
   const resourceType = resourceId.slice(0, separator);
   const resourceTail = resourceId.slice(separator + 1);
   if (!RESOURCE_TYPES.has(resourceType)) {
-    return { ok: false, code: "unknown_resource_type", detail: `unsupported resource_type: ${resourceType}` };
+    return {
+      ok: false,
+      code: "unknown_resource_type",
+      detail: `unsupported resource_type: ${resourceType}`,
+    };
   }
   if (!nonEmptyString(resourceTail)) {
-    return { ok: false, code: "missing_resource_id", detail: "resource_id must be a non-empty string" };
+    return {
+      ok: false,
+      code: "missing_resource_id",
+      detail: "resource_id must be a non-empty string",
+    };
   }
 
   return { ok: true, resource_type: resourceType, resource_id: resourceTail };
 }
 
-function canonicalKey({ resource_type: resourceType, resource_id: resourceId, operation }) {
+function canonicalKey({
+  resource_type: resourceType,
+  resource_id: resourceId,
+  operation,
+}) {
   return `${resourceType}:${resourceId}:${operation}`;
 }
 
 function parseCanonicalKey(key) {
-  if (!nonEmptyString(key)) return { ok: false, code: "missing_key", detail: "key must be a non-empty string" };
+  if (!nonEmptyString(key))
+    return {
+      ok: false,
+      code: "missing_key",
+      detail: "key must be a non-empty string",
+    };
 
   const first = key.indexOf(":");
   const last = key.lastIndexOf(":");
   if (first <= 0 || last <= first || last === key.length - 1) {
-    return { ok: false, code: "invalid_key", detail: "key must use <resource_type>:<resource_id>:<operation>" };
+    return {
+      ok: false,
+      code: "invalid_key",
+      detail: "key must use <resource_type>:<resource_id>:<operation>",
+    };
   }
 
   const resourceType = key.slice(0, first);
@@ -117,13 +149,25 @@ function parseCanonicalKey(key) {
   const operation = key.slice(last + 1);
 
   if (!RESOURCE_TYPES.has(resourceType)) {
-    return { ok: false, code: "unknown_resource_type", detail: `unsupported resource_type: ${resourceType}` };
+    return {
+      ok: false,
+      code: "unknown_resource_type",
+      detail: `unsupported resource_type: ${resourceType}`,
+    };
   }
   if (!nonEmptyString(resourceId)) {
-    return { ok: false, code: "missing_resource_id", detail: "resource_id must be a non-empty string" };
+    return {
+      ok: false,
+      code: "missing_resource_id",
+      detail: "resource_id must be a non-empty string",
+    };
   }
   if (!OPERATIONS.has(operation)) {
-    return { ok: false, code: "unknown_operation", detail: `unsupported operation: ${operation}` };
+    return {
+      ok: false,
+      code: "unknown_operation",
+      detail: `unsupported operation: ${operation}`,
+    };
   }
 
   return {
@@ -131,59 +175,123 @@ function parseCanonicalKey(key) {
     resource_type: resourceType,
     resource_id: resourceId,
     operation,
-    key: canonicalKey({ resource_type: resourceType, resource_id: resourceId, operation })
+    key: canonicalKey({
+      resource_type: resourceType,
+      resource_id: resourceId,
+      operation,
+    }),
   };
 }
 
 function normalizePermission(permission, index, expiresAt) {
   if (!isObject(permission)) {
-    return { ok: false, denial: denial("invalid_permission", "permission must be an object", index) };
+    return {
+      ok: false,
+      denial: denial(
+        "invalid_permission",
+        "permission must be an object",
+        index,
+      ),
+    };
   }
 
   const resource = parsePermissionResource(permission.resource_id);
-  if (!resource.ok) return { ok: false, denial: denial(resource.code, resource.detail, index) };
+  if (!resource.ok)
+    return { ok: false, denial: denial(resource.code, resource.detail, index) };
 
   if (!nonEmptyString(permission.action)) {
-    return { ok: false, denial: denial("missing_operation", "action must be a non-empty string", index) };
+    return {
+      ok: false,
+      denial: denial(
+        "missing_operation",
+        "action must be a non-empty string",
+        index,
+      ),
+    };
   }
   if (!OPERATIONS.has(permission.action)) {
     return {
       ok: false,
-      denial: denial("unknown_operation", `unsupported operation: ${permission.action}`, index)
+      denial: denial(
+        "unknown_operation",
+        `unsupported operation: ${permission.action}`,
+        index,
+      ),
     };
   }
   if (!nonEmptyString(permission.purpose)) {
-    return { ok: false, denial: denial("missing_purpose", "purpose must be a non-empty string", index) };
+    return {
+      ok: false,
+      denial: denial(
+        "missing_purpose",
+        "purpose must be a non-empty string",
+        index,
+      ),
+    };
   }
   if (parseIsoTime(expiresAt) === null) {
-    return { ok: false, denial: denial("missing_expiry", "expiresAt must be a valid timestamp string", index) };
+    return {
+      ok: false,
+      denial: denial(
+        "missing_expiry",
+        "expiresAt must be a valid timestamp string",
+        index,
+      ),
+    };
   }
 
   const entry = {
-    key: canonicalKey({ resource_type: resource.resource_type, resource_id: resource.resource_id, operation: permission.action }),
+    key: canonicalKey({
+      resource_type: resource.resource_type,
+      resource_id: resource.resource_id,
+      operation: permission.action,
+    }),
     resource_type: resource.resource_type,
     resource_id: resource.resource_id,
     operation: permission.action,
     purpose: permission.purpose,
     expires_at: expiresAt,
     revoked: false,
-    source_permission_hash: digest(stripUndefined(permission))
+    source_permission_hash: digest(stripUndefined(permission)),
   };
 
   return { ok: true, entry };
 }
 
 function normalizeRevocation(record, index) {
-  if (!isObject(record)) return { ok: false, denial: denial("invalid_revocation", "revocation must be an object", index) };
+  if (!isObject(record))
+    return {
+      ok: false,
+      denial: denial(
+        "invalid_revocation",
+        "revocation must be an object",
+        index,
+      ),
+    };
 
   const parsed = parseCanonicalKey(record.key);
-  if (!parsed.ok) return { ok: false, denial: denial(parsed.code, parsed.detail, index) };
+  if (!parsed.ok)
+    return { ok: false, denial: denial(parsed.code, parsed.detail, index) };
 
   if (parseIsoTime(record.revoked_at) === null) {
-    return { ok: false, denial: denial("invalid_revoked_at", "revoked_at must be a valid timestamp string", index) };
+    return {
+      ok: false,
+      denial: denial(
+        "invalid_revoked_at",
+        "revoked_at must be a valid timestamp string",
+        index,
+      ),
+    };
   }
   if (!nonEmptyString(record.reason)) {
-    return { ok: false, denial: denial("missing_revocation_reason", "reason must be a non-empty string", index) };
+    return {
+      ok: false,
+      denial: denial(
+        "missing_revocation_reason",
+        "reason must be a non-empty string",
+        index,
+      ),
+    };
   }
 
   return {
@@ -191,8 +299,8 @@ function normalizeRevocation(record, index) {
     revocation: {
       key: parsed.key,
       revoked_at: record.revoked_at,
-      reason: record.reason
-    }
+      reason: record.reason,
+    },
   };
 }
 
@@ -201,15 +309,16 @@ function sortEntries(entries) {
 }
 
 function sortRevocations(revocations) {
-  return revocations.toSorted((a, b) => (
-    a.key.localeCompare(b.key) || a.revoked_at.localeCompare(b.revoked_at)
-  ));
+  return revocations.toSorted(
+    (a, b) =>
+      a.key.localeCompare(b.key) || a.revoked_at.localeCompare(b.revoked_at),
+  );
 }
 
 function buildSource(plan) {
   return {
     plan_schema: plan?.schema ?? null,
-    plan_commitment_hash: plan?.commitment_hash ?? null
+    plan_commitment_hash: plan?.commitment_hash ?? null,
   };
 }
 
@@ -222,8 +331,8 @@ function commitmentPayload({ source, entries, revocations, policy }) {
     policy: {
       exact_lookup_only: policy?.exact_lookup_only === true,
       revocation_precedes_allow: policy?.revocation_precedes_allow === true,
-      expires_at_required: policy?.expires_at_required === true
-    }
+      expires_at_required: policy?.expires_at_required === true,
+    },
   };
 }
 
@@ -244,7 +353,7 @@ function emptyTable({ plan, denials }) {
     revocations: [],
     denials,
     commitment_hash: null,
-    boundary: clone(BOUNDARY)
+    boundary: clone(BOUNDARY),
   };
   table.commitment_hash = commitmentFor(table);
   return table;
@@ -255,24 +364,44 @@ export function buildConsentHashTablePreview({
   plan,
   expiresAt,
   revoked = [],
-  now = new Date()
+  now = new Date(),
 } = {}) {
   const denials = [];
   let sourcePlan = plan;
 
   if (!isValidDate(now)) {
-    return emptyTable({ plan: sourcePlan ?? null, denials: [denial("invalid_now", "now must be a valid Date")] });
+    return emptyTable({
+      plan: sourcePlan ?? null,
+      denials: [denial("invalid_now", "now must be a valid Date")],
+    });
   }
-  if (!sourcePlan && nonEmptyString(intent)) sourcePlan = buildConsentPlanPreview({ intent, now });
+  if (!sourcePlan && nonEmptyString(intent))
+    sourcePlan = buildConsentPlanPreview({ intent, now });
 
   if (!isObject(sourcePlan)) {
-    return emptyTable({ plan: null, denials: [denial("missing_plan", "buildConsentHashTablePreview requires a consent plan or non-empty intent")] });
+    return emptyTable({
+      plan: null,
+      denials: [
+        denial(
+          "missing_plan",
+          "buildConsentHashTablePreview requires a consent plan or non-empty intent",
+        ),
+      ],
+    });
   }
   if (sourcePlan.schema !== CONSENT_PLAN_SCHEMA) {
-    denials.push(denial("invalid_plan_schema", `expected ${CONSENT_PLAN_SCHEMA}`));
+    denials.push(
+      denial("invalid_plan_schema", `expected ${CONSENT_PLAN_SCHEMA}`),
+    );
   }
   if (!Array.isArray(sourcePlan.permissions)) {
-    return emptyTable({ plan: sourcePlan, denials: [...denials, denial("invalid_permissions", "plan.permissions must be an array")] });
+    return emptyTable({
+      plan: sourcePlan,
+      denials: [
+        ...denials,
+        denial("invalid_permissions", "plan.permissions must be an array"),
+      ],
+    });
   }
 
   const entries = [];
@@ -303,7 +432,7 @@ export function buildConsentHashTablePreview({
   const revokedKeys = new Set(revocations.map((record) => record.key));
   const sortedEntries = sortEntries(entries).map((entry) => ({
     ...entry,
-    revoked: revokedKeys.has(entry.key)
+    revoked: revokedKeys.has(entry.key),
   }));
   const sortedRevocations = sortRevocations(revocations);
 
@@ -318,7 +447,7 @@ export function buildConsentHashTablePreview({
     revocations: sortedRevocations,
     denials,
     commitment_hash: null,
-    boundary: clone(BOUNDARY)
+    boundary: clone(BOUNDARY),
   };
   table.commitment_hash = commitmentFor(table);
   table.valid = verifyConsentHashTablePreview(table).ok && denials.length === 0;
@@ -330,7 +459,7 @@ export function verifyConsentHashTablePreview(table) {
     source: table?.source ?? buildSource(null),
     entries: Array.isArray(table?.entries) ? table.entries : [],
     revocations: Array.isArray(table?.revocations) ? table.revocations : [],
-    policy: table?.policy ?? POLICY
+    policy: table?.policy ?? POLICY,
   });
   const actual = table?.commitment_hash ?? null;
 
@@ -340,44 +469,71 @@ export function verifyConsentHashTablePreview(table) {
     ok: actual === expected,
     expected_commitment_hash: expected,
     actual_commitment_hash: actual,
-    boundary: clone(BOUNDARY)
+    boundary: clone(BOUNDARY),
   };
 }
 
 function validateLookupRequest(request) {
   if (!isObject(request)) {
-    return { ok: false, reason: "invalid_request", detail: "lookup request must be an object", key: null };
+    return {
+      ok: false,
+      reason: "invalid_request",
+      detail: "lookup request must be an object",
+      key: null,
+    };
   }
   if (!nonEmptyString(request.resource_type)) {
-    return { ok: false, reason: "missing_resource_type", detail: "resource_type must be a non-empty string", key: null };
+    return {
+      ok: false,
+      reason: "missing_resource_type",
+      detail: "resource_type must be a non-empty string",
+      key: null,
+    };
   }
   if (!RESOURCE_TYPES.has(request.resource_type)) {
     return {
       ok: false,
       reason: "unknown_resource_type",
       detail: `unsupported resource_type: ${request.resource_type}`,
-      key: null
+      key: null,
     };
   }
   if (!nonEmptyString(request.resource_id)) {
-    return { ok: false, reason: "missing_resource_id", detail: "resource_id must be a non-empty string", key: null };
+    return {
+      ok: false,
+      reason: "missing_resource_id",
+      detail: "resource_id must be a non-empty string",
+      key: null,
+    };
   }
   if (!nonEmptyString(request.operation)) {
-    return { ok: false, reason: "missing_operation", detail: "operation must be a non-empty string", key: null };
+    return {
+      ok: false,
+      reason: "missing_operation",
+      detail: "operation must be a non-empty string",
+      key: null,
+    };
   }
   if (!OPERATIONS.has(request.operation)) {
     return {
       ok: false,
       reason: "unknown_operation",
       detail: `unsupported operation: ${request.operation}`,
-      key: canonicalKey(request)
+      key: canonicalKey(request),
     };
   }
 
   return { ok: true, key: canonicalKey(request) };
 }
 
-function lookupResult({ allowed = false, reason, detail, key = null, entry = null, integrity = null }) {
+function lookupResult({
+  allowed = false,
+  reason,
+  detail,
+  key = null,
+  entry = null,
+  integrity = null,
+}) {
   return {
     schema: CONSENT_HASH_LOOKUP_PREVIEW_SCHEMA,
     mode: MODE,
@@ -388,17 +544,29 @@ function lookupResult({ allowed = false, reason, detail, key = null, entry = nul
     key,
     entry,
     integrity,
-    boundary: clone(BOUNDARY)
+    boundary: clone(BOUNDARY),
   };
 }
 
-export function lookupConsentHashTablePreview(table, request, { now = new Date() } = {}) {
+export function lookupConsentHashTablePreview(
+  table,
+  request,
+  { now = new Date() } = {},
+) {
   const validated = validateLookupRequest(request);
   if (!validated.ok) {
-    return lookupResult({ reason: validated.reason, detail: validated.detail, key: validated.key });
+    return lookupResult({
+      reason: validated.reason,
+      detail: validated.detail,
+      key: validated.key,
+    });
   }
   if (!isValidDate(now)) {
-    return lookupResult({ reason: "invalid_now", detail: "now must be a valid Date", key: validated.key });
+    return lookupResult({
+      reason: "invalid_now",
+      detail: "now must be a valid Date",
+      key: validated.key,
+    });
   }
 
   const integrity = verifyConsentHashTablePreview(table);
@@ -407,32 +575,50 @@ export function lookupConsentHashTablePreview(table, request, { now = new Date()
       reason: "commitment_hash_mismatch",
       detail: "ConsentHashTable preview entries do not match commitment_hash.",
       key: validated.key,
-      integrity
+      integrity,
     });
   }
 
-  const entry = table?.entries?.find((candidate) => candidate.key === validated.key);
+  const entry = table?.entries?.find(
+    (candidate) => candidate.key === validated.key,
+  );
   if (!entry) {
-    return lookupResult({ reason: "permission_not_found", detail: `No exact consent scope for ${validated.key}`, key: validated.key });
+    return lookupResult({
+      reason: "permission_not_found",
+      detail: `No exact consent scope for ${validated.key}`,
+      key: validated.key,
+    });
   }
 
-  const revoked = entry.revoked === true ||
+  const revoked =
+    entry.revoked === true ||
     table?.revocations?.some((record) => record.key === validated.key);
   if (revoked) {
-    return lookupResult({ reason: "revoked_scope", detail: `Consent scope revoked for ${validated.key}`, key: validated.key, entry });
+    return lookupResult({
+      reason: "revoked_scope",
+      detail: `Consent scope revoked for ${validated.key}`,
+      key: validated.key,
+      entry,
+    });
   }
 
   const expiry = parseIsoTime(entry.expires_at);
   if (expiry === null || expiry <= now.getTime()) {
-    return lookupResult({ reason: "expired_scope", detail: `Consent scope expired for ${validated.key}`, key: validated.key, entry });
+    return lookupResult({
+      reason: "expired_scope",
+      detail: `Consent scope expired for ${validated.key}`,
+      key: validated.key,
+      entry,
+    });
   }
 
   return lookupResult({
     allowed: true,
     reason: "exact_consent_scope_found",
-    detail: "Preview lookup only. This is not an authorization and cannot execute effects.",
+    detail:
+      "Preview lookup only. This is not an authorization and cannot execute effects.",
     key: validated.key,
-    entry
+    entry,
   });
 }
 
@@ -446,22 +632,25 @@ export function formatConsentHashTablePreview(table) {
     `Commitment: ${table.commitment_hash}`,
     `Plan commitment: ${table.source.plan_commitment_hash ?? "none"}`,
     "",
-    "Entries:"
+    "Entries:",
   ];
 
   if (table.entries.length === 0) lines.push("  - none");
   for (const entry of table.entries) {
-    lines.push(`  - ${entry.key} expires_at="${entry.expires_at}" revoked=${entry.revoked} purpose="${entry.purpose}"`);
+    lines.push(
+      `  - ${entry.key} expires_at="${entry.expires_at}" revoked=${entry.revoked} purpose="${entry.purpose}"`,
+    );
   }
 
   lines.push("");
   lines.push("Denials:");
   if (table.denials.length === 0) lines.push("  - none");
-  for (const item of table.denials) lines.push(`  - ${item.code}: ${item.detail}`);
+  for (const item of table.denials)
+    lines.push(`  - ${item.code}: ${item.detail}`);
 
   lines.push("");
   lines.push(
-    "Boundary: preview-only; not an authorization; no approval; no runtime; no execution; no mutation; no capability mint; no receipt mint; no network; no federation; no Step 7 mint."
+    "Boundary: preview-only; not an authorization; no approval; no runtime; no execution; no mutation; no capability mint; no receipt mint; no network; no federation; no Step 7 mint.",
   );
 
   return lines.join("\n");

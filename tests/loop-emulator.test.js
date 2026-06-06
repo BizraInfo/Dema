@@ -7,11 +7,15 @@ import { promisify } from "node:util";
 
 import {
   emulateLoopDesign,
-  formatLoopDesignEmulation
+  formatLoopDesignEmulation,
 } from "../packages/core/src/loop-emulator.js";
 
-const modulePath = fileURLToPath(new URL("../packages/core/src/loop-emulator.js", import.meta.url));
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const modulePath = fileURLToPath(
+  new URL("../packages/core/src/loop-emulator.js", import.meta.url),
+);
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 const execFileAsync = promisify(execFile);
 
 test("emulateLoopDesign emits a schema-tagged preview without effects", () => {
@@ -20,7 +24,12 @@ test("emulateLoopDesign emits a schema-tagged preview without effects", () => {
   assert.equal(report.schema, "bizra.dema.loop_design_emulation_preview.v0.1");
   assert.equal(report.mode, "PREVIEW_ONLY");
   assert.equal(report.truth_label, "DESIGN_EMULATION_NOT_RUNTIME_RECEIPT");
-  assert.deepEqual(report.lenses, ["hardware", "performance", "data", "impact"]);
+  assert.deepEqual(report.lenses, [
+    "hardware",
+    "performance",
+    "data",
+    "impact",
+  ]);
   assert.equal(report.boundary.runtime_execution, false);
   assert.equal(report.boundary.pat_sat_runtime_spawned, false);
   assert.equal(report.boundary.receipt_minted, false);
@@ -34,7 +43,7 @@ test("emulateLoopDesign is deterministic for a fixed seed", () => {
   assert.equal(JSON.stringify(first), JSON.stringify(second));
   assert.notEqual(
     JSON.stringify(emulateLoopDesign({ seed: 7 }).scales.node0_solo.raw_counts),
-    JSON.stringify(first.scales.node0_solo.raw_counts)
+    JSON.stringify(first.scales.node0_solo.raw_counts),
   );
 });
 
@@ -61,7 +70,12 @@ test("formatLoopDesignEmulation renders boundary and scale summaries", () => {
 });
 
 test("dema design emulate-loop exposes the preview without runtime execution", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "design", "emulate-loop", "--json"]);
+  const { stdout } = await execFileAsync("node", [
+    cliPath,
+    "design",
+    "emulate-loop",
+    "--json",
+  ]);
   const output = JSON.parse(stdout);
 
   assert.equal(output.schema, "bizra.dema.loop_design_emulation_preview.v0.1");
@@ -80,6 +94,9 @@ test("loop emulator module has no filesystem or network side effects", async () 
 test("loop emulator spawns SAT work only after PAT DoD pass", async () => {
   const source = await readFile(modulePath, "utf8");
 
-  assert.doesNotMatch(source, /pat\.dod_result === "PASS" \|\| pat\.gate_decision === "PERMIT"/);
+  assert.doesNotMatch(
+    source,
+    /pat\.dod_result === "PASS" \|\| pat\.gate_decision === "PERMIT"/,
+  );
   assert.match(source, /pat\.dod_result === "PASS"/);
 });

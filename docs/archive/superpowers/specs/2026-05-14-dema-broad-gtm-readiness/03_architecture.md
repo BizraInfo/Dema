@@ -21,13 +21,13 @@ Never:
 
 ## Proposed module placement
 
-| Concern | Placement | Reason |
-|---|---|---|
-| Installer check/dry-run | `packages/installer/` | Existing setup ownership |
-| Verifier explanation | `packages/verifier/` | Same domain as SAT placeholder |
-| Typed errors | `packages/core/` | Shared across CLI and packages |
-| Receipt schema docs | `docs/` | Contract for operators/integrators |
-| Subprocess policy | `apps/cli/` + `packages/core/` | CLI owns invocation; core can own policy helpers |
+| Concern                 | Placement                      | Reason                                           |
+| ----------------------- | ------------------------------ | ------------------------------------------------ |
+| Installer check/dry-run | `packages/installer/`          | Existing setup ownership                         |
+| Verifier explanation    | `packages/verifier/`           | Same domain as SAT placeholder                   |
+| Typed errors            | `packages/core/`               | Shared across CLI and packages                   |
+| Receipt schema docs     | `docs/`                        | Contract for operators/integrators               |
+| Subprocess policy       | `apps/cli/` + `packages/core/` | CLI owns invocation; core can own policy helpers |
 
 ## Boundaries
 

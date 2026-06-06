@@ -113,11 +113,24 @@ export const commands = [
   ["node", ["scripts/llm-guidance-check.mjs"]],
   ["node", ["scripts/gtm-readiness-check.mjs"]],
   ["node", ["scripts/urp-shared-discovery.mjs"]],
+  ["node", ["scripts/review/transition-assurance-check.mjs"]],
   ["node", ["scripts/proof-room-bundle.mjs", "--json"]],
   ["node", ["scripts/node0-self-check.mjs", "--verify"]],
   ["node", ["scripts/review/harness-gate.mjs"]],
   ["node", ["scripts/urp-stage3-closeout.mjs"]],
   ["node", ["scripts/urp-stage4-closeout.mjs"]],
+  // Hermetic provenance and resource pool scans (important for root canon and A+ local state).
+  // Run before perf so resource scans don't affect perf measurement.
+  [
+    "node",
+    ["scripts/review/cross-repo-genesis-provenance.mjs", "--no-block0"],
+    { CROSS_REPO_SKIP_GH: "1" },
+  ],
+  [
+    "node",
+    ["scripts/review/node0-local-resource-pool.mjs"],
+    { NODE0_POOL_SKIP_SCAN: "1" },
+  ],
   // PERF-MEASURE-1A regression-sanity gate: measures keyless hot-path latency +
   // process metrics and fails only on a gross regression (generous ceilings,
   // not SLOs). Runs last so a perf blip never masks a correctness failure.
@@ -125,9 +138,14 @@ export const commands = [
 ];
 
 export function runChecks(checks = commands) {
-  for (const [bin, args] of checks) {
+  for (const entry of checks) {
+    const [bin, args, extraEnv] = entry;
     console.log(`> ${bin} ${args.join(" ")}`);
-    execFileSync(bin, args, { stdio: "inherit" });
+    const options = { stdio: "inherit" };
+    if (extraEnv && typeof extraEnv === "object") {
+      options.env = { ...process.env, ...extraEnv };
+    }
+    execFileSync(bin, args, options);
   }
 }
 

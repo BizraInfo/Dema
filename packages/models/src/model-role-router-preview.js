@@ -6,45 +6,46 @@
 
 import { buildRoutingRecommendations } from "./model-routing.js";
 
-export const MODEL_ROLE_ROUTER_PREVIEW_SCHEMA = "bizra.dema.model_role_router_preview.v0.1";
+export const MODEL_ROLE_ROUTER_PREVIEW_SCHEMA =
+  "bizra.dema.model_role_router_preview.v0.1";
 
 const ROLE_BINDINGS = Object.freeze({
   coding: Object.freeze({
     effects_declared: Object.freeze(["read"]),
     effects_denied: Object.freeze(["write", "execute", "call"]),
     consent_field_required: "action",
-    sat_verdict_required: "REVIEW"
+    sat_verdict_required: "REVIEW",
   }),
   governance: Object.freeze({
     effects_declared: Object.freeze(["read"]),
     effects_denied: Object.freeze(["write", "execute", "call"]),
     consent_field_required: "purpose",
-    sat_verdict_required: "REVIEW"
+    sat_verdict_required: "REVIEW",
   }),
   reasoning: Object.freeze({
     effects_declared: Object.freeze(["read"]),
     effects_denied: Object.freeze(["write", "execute", "call"]),
     consent_field_required: "purpose",
-    sat_verdict_required: "REVIEW"
+    sat_verdict_required: "REVIEW",
   }),
   fast: Object.freeze({
     effects_declared: Object.freeze(["read"]),
     effects_denied: Object.freeze(["write", "execute", "call"]),
     consent_field_required: null,
-    sat_verdict_required: "SCORE_ONLY"
+    sat_verdict_required: "SCORE_ONLY",
   }),
   embedding: Object.freeze({
     effects_declared: Object.freeze(["read"]),
     effects_denied: Object.freeze(["write", "execute", "call"]),
     consent_field_required: "resource_id",
-    sat_verdict_required: "REVIEW"
+    sat_verdict_required: "REVIEW",
   }),
   vision: Object.freeze({
     effects_declared: Object.freeze(["read"]),
     effects_denied: Object.freeze(["write", "execute", "call"]),
     consent_field_required: "resource_id",
-    sat_verdict_required: "REVIEW"
-  })
+    sat_verdict_required: "REVIEW",
+  }),
 });
 
 const ROLE_NAMES = Object.freeze(Object.keys(ROLE_BINDINGS));
@@ -58,7 +59,7 @@ const BOUNDARY = Object.freeze({
   network_used: false,
   authority_imported: false,
   hook_executed: false,
-  contract_executed: false
+  contract_executed: false,
 });
 
 function clone(value) {
@@ -66,7 +67,8 @@ function clone(value) {
 }
 
 function deepFreeze(value) {
-  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  if (!value || typeof value !== "object" || Object.isFrozen(value))
+    return value;
   for (const child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
 }
@@ -81,7 +83,7 @@ function buildRoleRecord(role, recommendation) {
     consent_field_required: binding.consent_field_required,
     sat_verdict_required: binding.sat_verdict_required,
     local_only: true,
-    prompt_invocation_allowed: false
+    prompt_invocation_allowed: false,
   };
 }
 
@@ -95,14 +97,16 @@ export function buildModelRoleRouterPreview(providers) {
     roles[role] = buildRoleRecord(role, recommendations[role] ?? null);
   }
 
-  return deepFreeze(clone({
-    schema: MODEL_ROLE_ROUTER_PREVIEW_SCHEMA,
-    mode: "PREVIEW_ONLY",
-    truth_label: "DECLARED",
-    roles,
-    role_count: ROLE_NAMES.length,
-    role_names: ROLE_NAMES,
-    boundary: BOUNDARY,
-    note: "Role router only. Does not invoke models. Does not start runtime. Does not mint."
-  }));
+  return deepFreeze(
+    clone({
+      schema: MODEL_ROLE_ROUTER_PREVIEW_SCHEMA,
+      mode: "PREVIEW_ONLY",
+      truth_label: "DECLARED",
+      roles,
+      role_count: ROLE_NAMES.length,
+      role_names: ROLE_NAMES,
+      boundary: BOUNDARY,
+      note: "Role router only. Does not invoke models. Does not start runtime. Does not mint.",
+    }),
+  );
 }

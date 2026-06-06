@@ -6,14 +6,18 @@ import {
   ONBOARDING_LIFECYCLE_SCHEMA,
   ONBOARDING_LIFECYCLE_STAGE_COUNT,
   ONBOARDING_LIFECYCLE_STAGE_IDS,
-  ONBOARDING_LIFECYCLE_PRIMARY_REFUSALS
+  ONBOARDING_LIFECYCLE_PRIMARY_REFUSALS,
 } from "../packages/core/src/onboarding-lifecycle.js";
 
 import { PREVIEW_BOUNDARY_CANONICAL_KEYS } from "../packages/core/src/preview-boundary.js";
 
 function assertCanonicalBoundary(boundary, label) {
   for (const key of PREVIEW_BOUNDARY_CANONICAL_KEYS) {
-    assert.equal(boundary[key], false, `${label}.boundary.${key} must be false`);
+    assert.equal(
+      boundary[key],
+      false,
+      `${label}.boundary.${key} must be false`,
+    );
   }
 }
 
@@ -46,8 +50,14 @@ test("OnboardingLifecycle returns deep-frozen output", () => {
 });
 
 test("OnboardingLifecycle is deterministic given identical inputs", () => {
-  const a = buildOnboardingLifecyclePreview({ candidate_name: "Samy", candidate_ordinal: 1 });
-  const b = buildOnboardingLifecyclePreview({ candidate_name: "Samy", candidate_ordinal: 1 });
+  const a = buildOnboardingLifecyclePreview({
+    candidate_name: "Samy",
+    candidate_ordinal: 1,
+  });
+  const b = buildOnboardingLifecyclePreview({
+    candidate_name: "Samy",
+    candidate_ordinal: 1,
+  });
   assert.equal(JSON.stringify(a), JSON.stringify(b));
 });
 
@@ -81,7 +91,7 @@ test("All 7 canonical stage IDs are present", () => {
     "purpose",
     "resources",
     "consent_constitution",
-    "first_mission"
+    "first_mission",
   ]);
   assert.deepEqual([...ONBOARDING_LIFECYCLE_STAGE_IDS], ids);
 });
@@ -96,7 +106,10 @@ test("Default state · current_stage is language (no progress yet)", () => {
 });
 
 test("Candidate ordinal substituted into Node{ordinal} title", () => {
-  const r = buildOnboardingLifecyclePreview({ candidate_name: "Samy", candidate_ordinal: 1 });
+  const r = buildOnboardingLifecyclePreview({
+    candidate_name: "Samy",
+    candidate_ordinal: 1,
+  });
   const nodeRoleStage = r.stages.find((s) => s.id === "node_role");
   assert.match(nodeRoleStage.title, /Node1/);
   // Other stages with no {ordinal} placeholder unchanged
@@ -147,15 +160,29 @@ test("Operating law surfaces comprehension-before-consent + safest defaults", ()
   assert.equal(r.operating_law.comprehension_before_consent, true);
   assert.equal(r.operating_law.language_before_capability, true);
   assert.equal(r.operating_law.human_dignity_before_configuration, true);
-  assert.equal(r.operating_law.safest_default_on_resource_consent, "nothing_yet");
-  assert.equal(r.operating_law.consent_form, "exact_string_typed_character_by_character");
+  assert.equal(
+    r.operating_law.safest_default_on_resource_consent,
+    "nothing_yet",
+  );
+  assert.equal(
+    r.operating_law.consent_form,
+    "exact_string_typed_character_by_character",
+  );
 });
 
 test("primary_refusals surfaces the refuse-as-product taxonomy (8 entries)", () => {
   const r = buildOnboardingLifecyclePreview();
   assert.equal(r.primary_refusals, ONBOARDING_LIFECYCLE_PRIMARY_REFUSALS);
-  assert.ok(r.primary_refusals.includes("refuse_to_advance_past_language_stage_without_language_set"));
-  assert.ok(r.primary_refusals.includes("refuse_to_default_to_select_all_on_resource_consent_safest_default_is_nothing_yet"));
+  assert.ok(
+    r.primary_refusals.includes(
+      "refuse_to_advance_past_language_stage_without_language_set",
+    ),
+  );
+  assert.ok(
+    r.primary_refusals.includes(
+      "refuse_to_default_to_select_all_on_resource_consent_safest_default_is_nothing_yet",
+    ),
+  );
   assert.equal(r.primary_refusals.length, 8);
 });
 
@@ -171,7 +198,9 @@ test("blocked_effects includes federation, network_used, node_connection, receip
 // ─── PROGRESS / STAGE TRANSITION TESTS (5) ──────────────────────────────────
 
 test("Progress tracking: 1 stage complete → current_stage advances", () => {
-  const r = buildOnboardingLifecyclePreview({ progress: { completed: ["language"] } });
+  const r = buildOnboardingLifecyclePreview({
+    progress: { completed: ["language"] },
+  });
   assert.equal(r.current_stage.id, "technical_level");
   assert.equal(r.current_stage.order, 1);
   assert.equal(r.progress.completion_ratio, 1 / 7);
@@ -179,7 +208,7 @@ test("Progress tracking: 1 stage complete → current_stage advances", () => {
 
 test("Progress tracking: 3 stages complete → current_stage is purpose", () => {
   const r = buildOnboardingLifecyclePreview({
-    progress: { completed: ["language", "technical_level", "node_role"] }
+    progress: { completed: ["language", "technical_level", "node_role"] },
   });
   assert.equal(r.current_stage.id, "purpose");
   assert.equal(r.current_stage.order, 3);
@@ -187,7 +216,17 @@ test("Progress tracking: 3 stages complete → current_stage is purpose", () => 
 
 test("Progress tracking: all 7 stages complete → lifecycle_complete: true", () => {
   const r = buildOnboardingLifecyclePreview({
-    progress: { completed: ["language", "technical_level", "node_role", "purpose", "resources", "consent_constitution", "first_mission"] }
+    progress: {
+      completed: [
+        "language",
+        "technical_level",
+        "node_role",
+        "purpose",
+        "resources",
+        "consent_constitution",
+        "first_mission",
+      ],
+    },
   });
   assert.equal(r.current_stage.id, null);
   assert.equal(r.progress.lifecycle_complete, true);
@@ -243,14 +282,22 @@ test("ADVERSARIAL: candidate_ordinal as -1 (negative) coerced to null", () => {
 });
 
 test("ADVERSARIAL: progress.completed with unknown stage 'fake' still works (ignored)", () => {
-  const r = buildOnboardingLifecyclePreview({ progress: { completed: ["language", "fake"] } });
+  const r = buildOnboardingLifecyclePreview({
+    progress: { completed: ["language", "fake"] },
+  });
   // current advances to technical_level (language is complete)
   assert.equal(r.current_stage.id, "technical_level");
 });
 
 test("ADVERSARIAL: progress.completed non-array coerced to empty", () => {
-  const r = buildOnboardingLifecyclePreview({ progress: { completed: "not-an-array" } });
-  assert.equal(r.current_stage.id, "language", "non-array completed → empty → current = language");
+  const r = buildOnboardingLifecyclePreview({
+    progress: { completed: "not-an-array" },
+  });
+  assert.equal(
+    r.current_stage.id,
+    "language",
+    "non-array completed → empty → current = language",
+  );
 });
 
 test("ADVERSARIAL: mutation attempt on returned stages array is rejected (deep-frozen)", () => {
@@ -261,7 +308,11 @@ test("ADVERSARIAL: mutation attempt on returned stages array is rejected (deep-f
   } catch (e) {
     threw = true;
   }
-  assert.equal(r.stages.length, 7, "stages must stay at 7 after mutation attempt");
+  assert.equal(
+    r.stages.length,
+    7,
+    "stages must stay at 7 after mutation attempt",
+  );
 });
 
 test("ADVERSARIAL: mutation attempt on stage options is rejected (deep-frozen)", () => {

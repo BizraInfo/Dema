@@ -30,12 +30,27 @@ test("THEME-02: 21 color constants present (4 primary + 3 background + 5 semanti
   const keys = Object.keys(COLORS);
   assert.equal(keys.length, 21, `expected 21 colors, got ${keys.length}`);
   const expected = [
-    "GOLD", "EMERALD", "AZURE", "PEARL",
-    "DEEP_SPACE", "MIDNIGHT", "TWILIGHT",
-    "IHSAN", "ACTIVE", "WARNING", "DANGER", "MUTED",
-    "PAT_STRATEGIST", "PAT_RESEARCHER", "PAT_DEVELOPER", "PAT_ANALYST",
-    "PAT_REVIEWER", "PAT_EXECUTOR", "PAT_GUARDIAN",
-    "VOICE_ACTIVE", "VOICE_LISTENING",
+    "GOLD",
+    "EMERALD",
+    "AZURE",
+    "PEARL",
+    "DEEP_SPACE",
+    "MIDNIGHT",
+    "TWILIGHT",
+    "IHSAN",
+    "ACTIVE",
+    "WARNING",
+    "DANGER",
+    "MUTED",
+    "PAT_STRATEGIST",
+    "PAT_RESEARCHER",
+    "PAT_DEVELOPER",
+    "PAT_ANALYST",
+    "PAT_REVIEWER",
+    "PAT_EXECUTOR",
+    "PAT_GUARDIAN",
+    "VOICE_ACTIVE",
+    "VOICE_LISTENING",
   ];
   for (const k of expected) assert.ok(keys.includes(k), `missing color: ${k}`);
 });
@@ -48,10 +63,10 @@ test("THEME-03: GOLD = RGB(212,175,55) — Ihsān anchor · byte-for-byte with R
 test("THEME-04: PAT-7 colors match Rust theme.rs exactly", () => {
   assert.deepEqual([...COLORS.PAT_STRATEGIST.rgb], [147, 112, 219]);
   assert.deepEqual([...COLORS.PAT_RESEARCHER.rgb], [70, 130, 180]);
-  assert.deepEqual([...COLORS.PAT_DEVELOPER.rgb],  [34, 139, 34]);
-  assert.deepEqual([...COLORS.PAT_ANALYST.rgb],    [255, 140, 0]);
-  assert.deepEqual([...COLORS.PAT_REVIEWER.rgb],   [178, 34, 34]);
-  assert.deepEqual([...COLORS.PAT_EXECUTOR.rgb],   [70, 70, 70]);
+  assert.deepEqual([...COLORS.PAT_DEVELOPER.rgb], [34, 139, 34]);
+  assert.deepEqual([...COLORS.PAT_ANALYST.rgb], [255, 140, 0]);
+  assert.deepEqual([...COLORS.PAT_REVIEWER.rgb], [178, 34, 34]);
+  assert.deepEqual([...COLORS.PAT_EXECUTOR.rgb], [70, 70, 70]);
   // PAT_GUARDIAN is intentionally equal to GOLD per theme.rs:41
   assert.deepEqual([...COLORS.PAT_GUARDIAN.rgb], [...COLORS.GOLD.rgb]);
 });
@@ -64,14 +79,20 @@ test("THEME-05: semantic IHSAN equals GOLD; ACTIVE equals EMERALD (Rust aliases)
 test("THEME-06: COLORS is deep-frozen (mutation rejected)", () => {
   assert.equal(Object.isFrozen(COLORS), true);
   assert.equal(Object.isFrozen(COLORS.GOLD), true);
-  assert.throws(() => { COLORS.NEW_COLOR = "evil"; }, TypeError);
+  assert.throws(() => {
+    COLORS.NEW_COLOR = "evil";
+  }, TypeError);
 });
 
 // ----- Borders + symbols --------------------------------------------------
 
 test("THEME-07: 4 border sets present (STANDARD/IMPORTANT/FOCUSED/ARABIC)", () => {
-  assert.deepEqual(Object.keys(BORDERS).sort(),
-    ["ARABIC", "FOCUSED", "IMPORTANT", "STANDARD"]);
+  assert.deepEqual(Object.keys(BORDERS).sort(), [
+    "ARABIC",
+    "FOCUSED",
+    "IMPORTANT",
+    "STANDARD",
+  ]);
   assert.equal(BORDERS.STANDARD.tl, "╭");
   assert.equal(BORDERS.IMPORTANT.tl, "╔");
   assert.equal(BORDERS.FOCUSED.tl, "┏");
@@ -92,8 +113,14 @@ test("THEME-08: core SYMBOLS present (status + arrow + Arabic bismillah)", () =>
 test("THEME-09: paint with 24bit palette emits true-color escape sequences", () => {
   const out = paint("hello", COLORS.GOLD);
   // Default palette is 24bit. Open escape contains 38;2;212;175;55, close contains 39.
-  assert.ok(out.includes("\x1b[38;2;212;175;55m"), `expected true-color open in: ${JSON.stringify(out)}`);
-  assert.ok(out.includes("\x1b[39m"), `expected fg-reset in: ${JSON.stringify(out)}`);
+  assert.ok(
+    out.includes("\x1b[38;2;212;175;55m"),
+    `expected true-color open in: ${JSON.stringify(out)}`,
+  );
+  assert.ok(
+    out.includes("\x1b[39m"),
+    `expected fg-reset in: ${JSON.stringify(out)}`,
+  );
   assert.ok(out.includes("hello"));
 });
 
@@ -110,11 +137,15 @@ test("THEME-11: paint with palette:'256' emits 8-bit indexed escape sequences", 
 });
 
 test("THEME-12: paint with bold/italic/underline composes ANSI modifiers", () => {
-  const out = paint("h", COLORS.PEARL, { bold: true, italic: true, underline: true });
-  assert.ok(out.includes("\x1b[1m"));   // bold on
-  assert.ok(out.includes("\x1b[3m"));   // italic on
-  assert.ok(out.includes("\x1b[4m"));   // underline on
-  assert.ok(out.includes("\x1b[22m"));  // bold off
+  const out = paint("h", COLORS.PEARL, {
+    bold: true,
+    italic: true,
+    underline: true,
+  });
+  assert.ok(out.includes("\x1b[1m")); // bold on
+  assert.ok(out.includes("\x1b[3m")); // italic on
+  assert.ok(out.includes("\x1b[4m")); // underline on
+  assert.ok(out.includes("\x1b[22m")); // bold off
 });
 
 test("THEME-13: paint with null/undefined input returns empty string", () => {
@@ -133,7 +164,11 @@ test("THEME-14: Theme.title applies GOLD + bold", () => {
 test("THEME-15: Theme.ihsan applies GOLD + bold (= title visually, semantic difference)", () => {
   const titleOut = Theme.title("X");
   const ihsanOut = Theme.ihsan("X");
-  assert.equal(titleOut, ihsanOut, "title and ihsan share the GOLD+bold style by design");
+  assert.equal(
+    titleOut,
+    ihsanOut,
+    "title and ihsan share the GOLD+bold style by design",
+  );
 });
 
 test("THEME-16: Theme.muted applies MUTED RGB(108,117,125)", () => {
@@ -153,25 +188,34 @@ test("THEME-18: Theme.patAgent fallback for unknown role uses PEARL", () => {
 
 test("THEME-19: Theme.patAgentActive adds bold + underline to role color", () => {
   const out = Theme.patAgentActive("guardian", "G");
-  assert.ok(out.includes("\x1b[1m"));  // bold
-  assert.ok(out.includes("\x1b[4m"));  // underline
+  assert.ok(out.includes("\x1b[1m")); // bold
+  assert.ok(out.includes("\x1b[4m")); // underline
 });
 
 // ----- ihsanStyle threshold (mirrors Rust theme.rs:275 ihsan_style) -------
 
 test("THEME-20: ihsanStyle ≥0.95 uses GOLD/IHSAN style", () => {
   const out = ihsanStyle(0.97);
-  assert.ok(out.includes("\x1b[38;2;212;175;55m"), `expected GOLD for 0.97: ${JSON.stringify(out)}`);
+  assert.ok(
+    out.includes("\x1b[38;2;212;175;55m"),
+    `expected GOLD for 0.97: ${JSON.stringify(out)}`,
+  );
 });
 
 test("THEME-21: ihsanStyle ≥0.85 and <0.95 uses WARNING", () => {
-  const out = ihsanStyle(0.90);
-  assert.ok(out.includes("\x1b[38;2;255;191;0m"), `expected WARNING amber: ${JSON.stringify(out)}`);
+  const out = ihsanStyle(0.9);
+  assert.ok(
+    out.includes("\x1b[38;2;255;191;0m"),
+    `expected WARNING amber: ${JSON.stringify(out)}`,
+  );
 });
 
 test("THEME-22: ihsanStyle <0.85 uses DANGER", () => {
-  const out = ihsanStyle(0.50);
-  assert.ok(out.includes("\x1b[38;2;220;53;69m"), `expected DANGER red: ${JSON.stringify(out)}`);
+  const out = ihsanStyle(0.5);
+  assert.ok(
+    out.includes("\x1b[38;2;220;53;69m"),
+    `expected DANGER red: ${JSON.stringify(out)}`,
+  );
 });
 
 // ----- metricStyle (mirrors Rust theme.rs:259 metric_style) ---------------

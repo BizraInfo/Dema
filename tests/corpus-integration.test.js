@@ -6,7 +6,7 @@ import {
   buildCorpusIntegrationSummary,
   buildCorpusQueryPreview,
   CORPUS_INTEGRATION_DATA_TIERS,
-  CORPUS_INTEGRATION_REQUIRED_BLOCKED_EFFECTS
+  CORPUS_INTEGRATION_REQUIRED_BLOCKED_EFFECTS,
 } from "../packages/core/src/corpus-integration.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 
@@ -39,7 +39,11 @@ test("Corpus integration · blocked_effects include modify · cache_outside · s
 test("Corpus integration · refusal_invariants include 'never modify' + 'never D4 return'", () => {
   const p = buildCorpusIntegrationPreview();
   assert.ok(p.refusal_invariants.some((r) => r.includes("never modified")));
-  assert.ok(p.refusal_invariants.some((r) => r.includes("D4-classified content is NEVER returned")));
+  assert.ok(
+    p.refusal_invariants.some((r) =>
+      r.includes("D4-classified content is NEVER returned"),
+    ),
+  );
 });
 
 test("Corpus integration · boundary canonical · deep frozen", () => {
@@ -54,7 +58,7 @@ test("Corpus integration · accepts inventory metadata from v0.3 inventory", () 
     total_messages: 27044,
     total_conversations: 1545,
     platforms: ["claude", "chatgpt", "gemini", "copilot"],
-    consent_classification_applied: true
+    consent_classification_applied: true,
   });
   assert.equal(p.total_messages, 27044);
   assert.equal(p.total_conversations, 1545);
@@ -65,7 +69,7 @@ test("Corpus integration · accepts inventory metadata from v0.3 inventory", () 
 test("Query preview · valid input → consent phrase generated · query_executed=false", () => {
   const q = buildCorpusQueryPreview({
     query_text: "what did I say about consent gates",
-    estimated_tier: "D1"
+    estimated_tier: "D1",
   });
   assert.equal(q.schema, "bizra.dema.corpus_query_preview.v0.1");
   assert.equal(q.valid, true);
@@ -82,10 +86,12 @@ test("Query preview · empty query → refused", () => {
 test("Query preview · D4 query → REFUSED · never executed", () => {
   const q = buildCorpusQueryPreview({
     query_text: "test",
-    estimated_tier: "D4"
+    estimated_tier: "D4",
   });
   assert.equal(q.valid, false);
-  assert.ok(q.violations.includes("d4_queries_refused · D4 content is never returned"));
+  assert.ok(
+    q.violations.includes("d4_queries_refused · D4 content is never returned"),
+  );
 });
 
 test("Query preview · max_results out of range → refused", () => {
@@ -104,7 +110,7 @@ test("Query preview · oversized query → refused", () => {
 test("Query preview · unknown tier coerced to D1 default", () => {
   const q = buildCorpusQueryPreview({
     query_text: "test",
-    estimated_tier: "MADE_UP"
+    estimated_tier: "MADE_UP",
   });
   assert.equal(q.estimated_data_tier, "D1");
   assert.equal(q.valid, true);
@@ -127,7 +133,7 @@ test("Query preview deep-frozen + canonical boundary", () => {
 test("Summary + exports", () => {
   const s = buildCorpusIntegrationSummary({
     total_messages: 27044,
-    inventory_sha256: "x".repeat(64)
+    inventory_sha256: "x".repeat(64),
   });
   assert.equal(s.total_messages, 27044);
   assert.equal(s.d4_return_blocked, true);

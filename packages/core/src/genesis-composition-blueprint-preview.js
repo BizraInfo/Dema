@@ -15,28 +15,32 @@ const MANIFEST_SCHEMA = "bizra.dema.node0_composition_manifest.v0.1";
 const BLUEPRINT_DOMAINS = Object.freeze([
   Object.freeze({
     id: "management_body_of_knowledge",
-    standard: "PMBOK-style value, stakeholder, risk, quality, and change control",
+    standard:
+      "PMBOK-style value, stakeholder, risk, quality, and change control",
     dema_embodiment:
       "project-status preview, explicit typed-GO gates, risk register discipline, and proof-first phase progression",
     evidence_anchor: "packages/core/src/project-status-preview.js",
   }),
   Object.freeze({
     id: "devops_operating_model",
-    standard: "immutable, rollback-aware, no-secret, no-hidden-daemon operations",
+    standard:
+      "immutable, rollback-aware, no-secret, no-hidden-daemon operations",
     dema_embodiment:
       "stdlib-only preview kernel, no libostree dependency, no daemon, no deploy surface, local-only verification",
     evidence_anchor: "docs/02-architecture/NODE0_OSTREE_TAD_v0_1.md",
   }),
   Object.freeze({
     id: "ci_cd_pipeline_automation",
-    standard: "repeatable gate ladder with machine-readable evidence before release claims",
+    standard:
+      "repeatable gate ladder with machine-readable evidence before release claims",
     dema_embodiment:
       "native Node tests, review scripts, release readiness, GTM readiness, URP discovery, proof-room replay, and git diff hygiene",
     evidence_anchor: "package.json",
   }),
   Object.freeze({
     id: "performance_quality_assurance",
-    standard: "deterministic, adversarial, thresholded quality with bounded resource use",
+    standard:
+      "deterministic, adversarial, thresholded quality with bounded resource use",
     dema_embodiment:
       "composition manifest tests, canonical 16-key boundary, coverage thresholds, no repo scan, no clock in pure kernels",
     evidence_anchor: "tests/node0-composition-manifest.test.js",
@@ -48,7 +52,8 @@ const PIPELINE_GATES = Object.freeze([
     id: "composition_manifest_unit",
     command: "node --test tests/node0-composition-manifest.test.js",
     stage: "verify",
-    purpose: "prove the manifest builder/verifier remains deterministic, signed, and fail-closed",
+    purpose:
+      "prove the manifest builder/verifier remains deterministic, signed, and fail-closed",
   }),
   Object.freeze({
     id: "full_native_test",
@@ -60,13 +65,15 @@ const PIPELINE_GATES = Object.freeze([
     id: "repo_check",
     command: "npm run check",
     stage: "quality_gate",
-    purpose: "run review, canon, integration, readiness, proof-room, and closeout checks",
+    purpose:
+      "run review, canon, integration, readiness, proof-room, and closeout checks",
   }),
   Object.freeze({
     id: "llm_guidance",
     command: "npm run llm:guidance",
     stage: "governance_gate",
-    purpose: "ensure agent routing still points to the canonical Dema system flow",
+    purpose:
+      "ensure agent routing still points to the canonical Dema system flow",
   }),
   Object.freeze({
     id: "release_readiness",

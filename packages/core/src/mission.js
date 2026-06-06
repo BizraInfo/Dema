@@ -12,7 +12,7 @@ export const BOUNDED_DIAGNOSTIC_FORBIDDEN = Object.freeze([
   "public_demo",
   "external_provider_routing",
   "economic_token_claim",
-  "unbounded_daemon_autonomy"
+  "unbounded_daemon_autonomy",
 ]);
 
 export function proposeBoundedDiagnostic(status) {
@@ -20,7 +20,7 @@ export function proposeBoundedDiagnostic(status) {
     return {
       allowed: false,
       reason: "Node is not ready.",
-      nextAction: status.nextAdmissibleAction ?? "complete_setup"
+      nextAction: status.nextAdmissibleAction ?? "complete_setup",
     };
   }
 
@@ -28,7 +28,7 @@ export function proposeBoundedDiagnostic(status) {
     return {
       allowed: false,
       reason: "Dema Console is not ready.",
-      nextAction: "run_dema_status"
+      nextAction: "run_dema_status",
     };
   }
 
@@ -36,15 +36,16 @@ export function proposeBoundedDiagnostic(status) {
     return {
       allowed: false,
       reason: "Activation gate is not explicit-consent gated.",
-      nextAction: "inspect_gate"
+      nextAction: "inspect_gate",
     };
   }
 
   if (status.daemonStatus === "running") {
     return {
       allowed: false,
-      reason: "Daemon is already running; bounded diagnostic requires a one-shot consent path.",
-      nextAction: "stop_daemon_or_use_one_shot_service"
+      reason:
+        "Daemon is already running; bounded diagnostic requires a one-shot consent path.",
+      nextAction: "stop_daemon_or_use_one_shot_service",
     };
   }
 
@@ -52,7 +53,7 @@ export function proposeBoundedDiagnostic(status) {
     return {
       allowed: false,
       reason: "Runtime pulse or mission execution has already been recorded.",
-      nextAction: "inspect_receipts"
+      nextAction: "inspect_receipts",
     };
   }
 
@@ -61,7 +62,7 @@ export function proposeBoundedDiagnostic(status) {
     missionType: "bounded_diagnostic",
     consentPhrase: BOUNDED_DIAGNOSTIC_CONSENT_PHRASE,
     forbidden: [...BOUNDED_DIAGNOSTIC_FORBIDDEN],
-    expectedArtifact: "ARTIFACT-011"
+    expectedArtifact: "ARTIFACT-011",
   };
 }
 
@@ -69,7 +70,7 @@ export function previewBoundedDiagnostic(status, phrase = "") {
   const proposal = proposeBoundedDiagnostic(status);
   const consent = evaluateConsent({
     phrase,
-    requiredPhrase: BOUNDED_DIAGNOSTIC_CONSENT_PHRASE
+    requiredPhrase: BOUNDED_DIAGNOSTIC_CONSENT_PHRASE,
   });
 
   return {
@@ -81,6 +82,6 @@ export function previewBoundedDiagnostic(status, phrase = "") {
     next:
       proposal.allowed && consent.accepted
         ? "Consent phrase accepted. Use the governed Node0 one-shot runtime path to create ARTIFACT-011."
-        : "No runtime action executed. Resolve readiness and provide the exact consent phrase first."
+        : "No runtime action executed. Resolve readiness and provide the exact consent phrase first.",
   };
 }

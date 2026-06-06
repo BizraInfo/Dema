@@ -6,7 +6,7 @@
 **Scope**: BIZRA Node0 and DEMA, considered together
 
 > This file is the **north-star goal script** for Node0 and Dema. It
-> states *why* the work exists and *what A+ quality looks like*. It is
+> states _why_ the work exists and _what A+ quality looks like_. It is
 > not a status page.
 >
 > Every subsystem named below (DEMA, PAT, SAT, FATE, URP, EvidenceChain,

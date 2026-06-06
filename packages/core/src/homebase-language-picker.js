@@ -9,7 +9,10 @@
 // All I/O is injected via { stdin, stdout } — pure testable boundary.
 
 import { createInterface } from "node:readline";
-import { readOperatorLanguage, writeOperatorLanguage } from "./operator-profile.js";
+import {
+  readOperatorLanguage,
+  writeOperatorLanguage,
+} from "./operator-profile.js";
 
 export const LANGUAGE_OPTIONS = Object.freeze([
   Object.freeze({ code: "ar", label: "العربية (Arabic)" }),
@@ -37,7 +40,8 @@ export const GREETING_TEMPLATES = Object.freeze(
         welcome_new: "أهلاً بك في ديما.",
         picker_prompt: "ما هي لغتك المفضلة؟",
         selection_confirmed: "تم تعيين اللغة إلى {language_label}.",
-        second_language_prompt: "اختر لغة ثانوية اختياريًا (اضغط Enter للتخطي).",
+        second_language_prompt:
+          "اختر لغة ثانوية اختياريًا (اضغط Enter للتخطي).",
         second_language_skipped: "تم التخطي. اللغة الأساسية فقط.",
       }),
       en: Object.freeze({
@@ -101,8 +105,8 @@ export const GREETING_TEMPLATES = Object.freeze(
           "Optionally, a second language for fallback display? (Press Enter to skip.)",
         second_language_skipped: "Skipped. Primary language only.",
       }),
-    }).map(([k, v]) => [k, Object.freeze(v)])
-  )
+    }).map(([k, v]) => [k, Object.freeze(v)]),
+  ),
 );
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
@@ -210,7 +214,9 @@ async function runInteractivePicker(lq, stdout, onboarding_trigger) {
 
     // "other" free-text branch: if they typed something that looks ISO 639-1
     if (value === "other") {
-      stdout.write("Enter your language code (2 lowercase letters, e.g. 'sw'): ");
+      stdout.write(
+        "Enter your language code (2 lowercase letters, e.g. 'sw'): ",
+      );
       const freeRaw = await lq.nextLine();
       if (freeRaw === lq.EOF) {
         warnings.push("stdin closed before language selection");
@@ -223,7 +229,7 @@ async function runInteractivePicker(lq, stdout, onboarding_trigger) {
         break;
       }
       stdout.write(
-        `  Invalid code "${freeVal}". Must be exactly 2 lowercase letters. Try again.\n`
+        `  Invalid code "${freeVal}". Must be exactly 2 lowercase letters. Try again.\n`,
       );
       stdout.write("Enter number or code: ");
       continue;
@@ -237,7 +243,7 @@ async function runInteractivePicker(lq, stdout, onboarding_trigger) {
     }
 
     stdout.write(
-      `  Invalid. Enter a number (1-${LANGUAGE_OPTIONS.length}) or a language code.\n`
+      `  Invalid. Enter a number (1-${LANGUAGE_OPTIONS.length}) or a language code.\n`,
     );
     stdout.write("Enter number or code: ");
   }
@@ -245,7 +251,7 @@ async function runInteractivePicker(lq, stdout, onboarding_trigger) {
   // Print selection_confirmed in chosen language
   const chosenTmpl = templateFor(primary_code);
   stdout.write(
-    `\n${chosenTmpl.selection_confirmed.replace("{language_label}", primary_label)}\n`
+    `\n${chosenTmpl.selection_confirmed.replace("{language_label}", primary_label)}\n`,
   );
 
   return { primary_code, primary_label, warnings, eof: false };
@@ -273,9 +279,7 @@ async function runSecondLanguagePicker(lq, stdout, primary_code) {
   }
 
   // Invalid secondary — treat as skip (Law #10: NEVER block advancement)
-  stdout.write(
-    `  Invalid secondary code. ${tmpl.second_language_skipped}\n`
-  );
+  stdout.write(`  Invalid secondary code. ${tmpl.second_language_skipped}\n`);
   return { secondary_code: null, offered: true };
 }
 
@@ -333,7 +337,7 @@ export async function resolveOperatorLanguage({
   const isTTY = stdout.isTTY && stdin.isTTY;
   if (!isTTY) {
     warnings.push(
-      "non-TTY context: language not interactively pickable; profile.json absent or missing language_code"
+      "non-TTY context: language not interactively pickable; profile.json absent or missing language_code",
     );
     return {
       language_code: null,
@@ -373,7 +377,11 @@ export async function resolveOperatorLanguage({
 
   const lq = buildLineQueue(stdin);
 
-  const pickerResult = await runInteractivePicker(lq, stdout, onboarding_trigger);
+  const pickerResult = await runInteractivePicker(
+    lq,
+    stdout,
+    onboarding_trigger,
+  );
 
   if (pickerResult.eof || pickerResult.primary_code === null) {
     lq.close();

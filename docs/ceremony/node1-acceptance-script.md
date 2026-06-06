@@ -137,7 +137,7 @@ Come back. Ask:
 > Did anything in there feel wrong or off? Anything you'd want to push back
 > on? Anything that surprised you in a good or bad way?
 
-**Critical:** *Do not defend the system.* Listen. Take notes if useful. Their
+**Critical:** _Do not defend the system._ Listen. Take notes if useful. Their
 honest reaction is the reason they're here.
 
 ---
@@ -488,13 +488,13 @@ Then update MEMORY.md index with a one-line pointer to the new anchor.
 
 The ceremony is **successful** in all of these outcomes:
 
-| Outcome | Ring-1 engagement | Node1 acceptance | Worth recording? |
-|---|---|---|---|
-| Friend reads pack + types consent verbatim | ✅ closed | ✅ accepted as ghost | **YES — full ceremony · receipt #21** |
-| Friend reads pack + declines Node1 | ✅ closed | refused (their right) | **YES — Ring-1 feedback only · no receipt #21** |
-| Friend reads pack + asks for more time | ✅ closed | deferred | **YES — Ring-1 feedback + deferral note** |
-| Friend halts during pack reading | partial | not asked | **YES — record what they saw + what they paused at** |
-| Friend types wrong phrase 3 times | ✅ closed | non-acceptance | **YES — that's the system working correctly** |
+| Outcome                                    | Ring-1 engagement | Node1 acceptance      | Worth recording?                                     |
+| ------------------------------------------ | ----------------- | --------------------- | ---------------------------------------------------- |
+| Friend reads pack + types consent verbatim | ✅ closed         | ✅ accepted as ghost  | **YES — full ceremony · receipt #21**                |
+| Friend reads pack + declines Node1         | ✅ closed         | refused (their right) | **YES — Ring-1 feedback only · no receipt #21**      |
+| Friend reads pack + asks for more time     | ✅ closed         | deferred              | **YES — Ring-1 feedback + deferral note**            |
+| Friend halts during pack reading           | partial           | not asked             | **YES — record what they saw + what they paused at** |
+| Friend types wrong phrase 3 times          | ✅ closed         | non-acceptance        | **YES — that's the system working correctly**        |
 
 A friend declining to be Node1 is NOT a failed ceremony. It is a successful
 refusal. The system that lets the friend say no is the system worth being

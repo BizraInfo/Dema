@@ -36,9 +36,13 @@ export function buildUserProfile({
   language = null,
   node_ordinal = 0,
   device_label = null,
-  companion_of = null
+  companion_of = null,
 } = {}) {
-  const node_uid = deriveNodeUid({ operator, ordinal: node_ordinal, device: device_label });
+  const node_uid = deriveNodeUid({
+    operator,
+    ordinal: node_ordinal,
+    device: device_label,
+  });
   return Object.freeze({
     schema: "bizra.dema.user_profile.v0.1",
     truth_label: "NODE0_LOCAL_SEED",
@@ -52,16 +56,16 @@ export function buildUserProfile({
       node_ordinal,
       node_uid,
       device_label,
-      companion_of
+      companion_of,
     }),
     authority: Object.freeze({
       can_consent: true,
       can_revoke: true,
       can_override_pat: true,
-      can_override_sat: false
+      can_override_sat: false,
     }),
     status: "planned_or_preview",
-    boundary: buildBoundary()
+    boundary: buildBoundary(),
   });
 }
 
@@ -79,10 +83,10 @@ export function buildPATProfile({ operator = "MoMo" } = {}) {
       can_propose: true,
       can_execute: false,
       can_mint: false,
-      requires_consent: true
+      requires_consent: true,
     }),
     status: "planned_or_preview",
-    boundary: buildBoundary()
+    boundary: buildBoundary(),
   });
 }
 
@@ -99,17 +103,17 @@ export function buildSATProfile() {
       can_verdict: true,
       can_block: true,
       can_propose: false,
-      verdicts_are: "policy_preview_until_shared_urp_runtime_proven"
+      verdicts_are: "policy_preview_until_shared_urp_runtime_proven",
     }),
     status: "policy_preview_or_stub",
-    boundary: buildBoundary()
+    boundary: buildBoundary(),
   });
 }
 
 export function buildMissionProfile({
   missionId = null,
   intent = null,
-  center = "user_mission"
+  center = "user_mission",
 } = {}) {
   return Object.freeze({
     schema: "bizra.dema.mission_profile.v0.1",
@@ -122,7 +126,7 @@ export function buildMissionProfile({
     validated_by: null,
     consent_state: "not_collected",
     receipt_preview: null,
-    boundary: buildBoundary()
+    boundary: buildBoundary(),
   });
 }
 
@@ -133,7 +137,7 @@ function selectUserFields(profile) {
   return Object.freeze({
     schema: profile.schema,
     role: profile.role,
-    operator: profile.identity.name
+    operator: profile.identity.name,
   });
 }
 
@@ -142,7 +146,7 @@ function selectPATFields(profile) {
     schema: profile.schema,
     role: profile.role,
     agents_planned: profile.agents_planned,
-    status: profile.status
+    status: profile.status,
   });
 }
 
@@ -152,7 +156,7 @@ function selectSATFields(profile) {
     role: profile.role,
     agents_planned: profile.agents_planned,
     user_control: profile.user_control,
-    status: profile.status
+    status: profile.status,
   });
 }
 
@@ -161,18 +165,20 @@ function selectMissionFields(profile) {
     schema: profile.schema,
     center: profile.center,
     missionId: profile.missionId,
-    status: profile.status
+    status: profile.status,
   });
 }
 
 function selectEvidenceRefs(refs) {
   if (!Array.isArray(refs)) return Object.freeze([]);
-  return Object.freeze(refs.map((ref) =>
-    Object.freeze({
-      id: ref?.id ?? null,
-      schema: ref?.schema ?? null
-    })
-  ));
+  return Object.freeze(
+    refs.map((ref) =>
+      Object.freeze({
+        id: ref?.id ?? null,
+        schema: ref?.schema ?? null,
+      }),
+    ),
+  );
 }
 
 export function buildContextCapsule({
@@ -180,7 +186,7 @@ export function buildContextCapsule({
   patProfile = buildPATProfile(),
   satProfile = buildSATProfile(),
   missionProfile = buildMissionProfile(),
-  evidenceRefs = []
+  evidenceRefs = [],
 } = {}) {
   return Object.freeze({
     schema: "bizra.dema.context_capsule.v0.1",
@@ -191,7 +197,7 @@ export function buildContextCapsule({
     sat: selectSATFields(satProfile),
     mission: selectMissionFields(missionProfile),
     evidence_refs: selectEvidenceRefs(evidenceRefs),
-    boundary: buildBoundary()
+    boundary: buildBoundary(),
   });
 }
 
@@ -205,7 +211,7 @@ export function buildProfileFoundationPreview(options = {}) {
     patProfile: pat,
     satProfile: sat,
     missionProfile: mission,
-    evidenceRefs: options.evidenceRefs ?? []
+    evidenceRefs: options.evidenceRefs ?? [],
   });
   return Object.freeze({
     schema: "bizra.dema.profile_foundation.v0.1",
@@ -215,7 +221,7 @@ export function buildProfileFoundationPreview(options = {}) {
     sat,
     mission,
     context_capsule: capsule,
-    boundary: buildBoundary()
+    boundary: buildBoundary(),
   });
 }
 
@@ -240,9 +246,9 @@ export function buildProfileFoundationSummary(options = {}) {
       user: full.user.schema,
       pat: full.pat.schema,
       sat: full.sat.schema,
-      mission: full.mission.schema
+      mission: full.mission.schema,
     }),
     context_capsule_schema: full.context_capsule.schema,
-    boundary: full.boundary
+    boundary: full.boundary,
   });
 }

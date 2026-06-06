@@ -6,7 +6,7 @@
 
 ## Current facts (disk-verified)
 
-- `~/.claude/projects/.../memory/node0-space.md` (operator canon, 2026-05-09) declares: *"Node0 = MSI Titan + Z Fold 6 = single node."* The phone is the canonical companion device.
+- `~/.claude/projects/.../memory/node0-space.md` (operator canon, 2026-05-09) declares: _"Node0 = MSI Titan + Z Fold 6 = single node."_ The phone is the canonical companion device.
 - `packages/core/src/node0-homebase-state-preview.js` (commit `13f32c5`) declares `companion_device: "Z Fold 6"`. No mobile communication protocol on disk.
 - `packages/consent/src/consent-common.js` declares `MICRO_CONSENT_SHAPE` (7 fields).
 - `packages/consent/src/consent-hash-preview.js` declares `OPERATIONS = {read, write, execute, call}` and `RESOURCE_TYPES = {file, path, command, service}`.
@@ -74,15 +74,15 @@ Step 7 (laptop · receipt):
 
 ## Boundary invariants (every implementation must honor)
 
-| Invariant | Why |
-|---|---|
-| Phone holds no secret. The phrase appears on screen, not in app storage. | Mitigates phone-loss exfiltration. |
-| Phone has no network endpoint for Dema. No socket open, no API, no push. | Mitigates implicit-authority and daemon risk. |
-| Laptop verification is exact-byte phrase comparison. | Per `MICRO_CONSENT_SHAPE` exact-string consent canon. |
-| Challenge `expires_at` is enforced (default 90 s). | Mitigates phrase-screenshot replay. |
-| `challenge_id` is one-time-use. | Mitigates within-window replay. |
-| Receipt records phrase fingerprint, not the phrase itself. | Phrase is a per-event secret; receipt audits the event, not the secret. |
-| Phone-side software is a generic QR/text viewer. No Dema-specific app required for v0. | Reduces operator install burden + attack surface. |
+| Invariant                                                                              | Why                                                                     |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Phone holds no secret. The phrase appears on screen, not in app storage.               | Mitigates phone-loss exfiltration.                                      |
+| Phone has no network endpoint for Dema. No socket open, no API, no push.               | Mitigates implicit-authority and daemon risk.                           |
+| Laptop verification is exact-byte phrase comparison.                                   | Per `MICRO_CONSENT_SHAPE` exact-string consent canon.                   |
+| Challenge `expires_at` is enforced (default 90 s).                                     | Mitigates phrase-screenshot replay.                                     |
+| `challenge_id` is one-time-use.                                                        | Mitigates within-window replay.                                         |
+| Receipt records phrase fingerprint, not the phrase itself.                             | Phrase is a per-event secret; receipt audits the event, not the secret. |
+| Phone-side software is a generic QR/text viewer. No Dema-specific app required for v0. | Reduces operator install burden + attack surface.                       |
 
 ## Out of scope (v0)
 

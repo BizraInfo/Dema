@@ -53,19 +53,19 @@ Illegal transitions:
 
 ## Risk decomposition (per upstream giant)
 
-| Giant | Imported-authority risk if naively adopted | Mitigation in spec |
-|---|---|---|
-| MCP | Tool with `write`/`execute` invoked unconditionally; credential or RCE leak path. | Record declares `effects_declared = [read]`, `effects_denied = [write, execute, call]`; `sat_verdict_required = REVIEW` before any invocation. Reference: `arxiv.org/abs/2504.03767` (MCP safety audit). |
-| A2A | Two agents implicitly transfer authority via message scope drift. | `authority_imported: false` in BOUNDARY; record's `bizra_binding` points at `sat_verdict` not at the message envelope itself. |
-| AHK / AutoKey | Hotkey escalates from "preview" intent to shell execution. | Record declares `effects_denied = [write, execute, call]`; `current_status: PLANNED` until an EffectCap-bound shortcut runner exists. |
-| Hooks | Hook chain runs arbitrary shell. | `current_status: BLOCKED`; explicit blocker on Companion Change #1 (audit-hook truncation lift) per ADR-007. |
-| Smart contracts | On-chain settlement before any local proof. | Bind to `amana_contracts_preview` (local-JSON-only); `current_status: PREVIEW` is acceptable because the local primitive already exists and is `preview-only`. |
-| Telescript | Code travels before proof. | "State may travel before code; proof must travel with state." Bind to `shared_urp_world_preview` which currently keeps every node in `ghost_hold`. |
-| Pi.dev onboarding | First-run skips proof gates. | Bind to `node0_homebase_state_preview`; no proof gate is skippable because the preview emits no `LIVE` status. |
-| OpenClaw-style | Hidden agent task lifecycle. | Bind to `process_value_preview` which already emits a `self_proactive_harness` block per call. |
-| Hermes-style | Authority leaks via envelope routing. | Bind to `sat_verdict`; record declares zero side-effecting effects. |
-| Agent-as-a-Service | Public API before URP pilot. | `current_status: BLOCKED` until URP pilot has been reached and proven. |
-| Harberger/COST | Forced transfer or application to private memory. | Spec explicitly forbids: `effects_denied = [write, execute, call]`, `sat_verdict_required = REJECT` until ADR allows it, blocker enumerates "private memory must remain forever excluded". |
+| Giant              | Imported-authority risk if naively adopted                                        | Mitigation in spec                                                                                                                                                                                       |
+| ------------------ | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MCP                | Tool with `write`/`execute` invoked unconditionally; credential or RCE leak path. | Record declares `effects_declared = [read]`, `effects_denied = [write, execute, call]`; `sat_verdict_required = REVIEW` before any invocation. Reference: `arxiv.org/abs/2504.03767` (MCP safety audit). |
+| A2A                | Two agents implicitly transfer authority via message scope drift.                 | `authority_imported: false` in BOUNDARY; record's `bizra_binding` points at `sat_verdict` not at the message envelope itself.                                                                            |
+| AHK / AutoKey      | Hotkey escalates from "preview" intent to shell execution.                        | Record declares `effects_denied = [write, execute, call]`; `current_status: PLANNED` until an EffectCap-bound shortcut runner exists.                                                                    |
+| Hooks              | Hook chain runs arbitrary shell.                                                  | `current_status: BLOCKED`; explicit blocker on Companion Change #1 (audit-hook truncation lift) per ADR-007.                                                                                             |
+| Smart contracts    | On-chain settlement before any local proof.                                       | Bind to `amana_contracts_preview` (local-JSON-only); `current_status: PREVIEW` is acceptable because the local primitive already exists and is `preview-only`.                                           |
+| Telescript         | Code travels before proof.                                                        | "State may travel before code; proof must travel with state." Bind to `shared_urp_world_preview` which currently keeps every node in `ghost_hold`.                                                       |
+| Pi.dev onboarding  | First-run skips proof gates.                                                      | Bind to `node0_homebase_state_preview`; no proof gate is skippable because the preview emits no `LIVE` status.                                                                                           |
+| OpenClaw-style     | Hidden agent task lifecycle.                                                      | Bind to `process_value_preview` which already emits a `self_proactive_harness` block per call.                                                                                                           |
+| Hermes-style       | Authority leaks via envelope routing.                                             | Bind to `sat_verdict`; record declares zero side-effecting effects.                                                                                                                                      |
+| Agent-as-a-Service | Public API before URP pilot.                                                      | `current_status: BLOCKED` until URP pilot has been reached and proven.                                                                                                                                   |
+| Harberger/COST     | Forced transfer or application to private memory.                                 | Spec explicitly forbids: `effects_denied = [write, execute, call]`, `sat_verdict_required = REJECT` until ADR allows it, blocker enumerates "private memory must remain forever excluded".               |
 
 ## Boundary integration
 

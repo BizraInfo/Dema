@@ -13,18 +13,18 @@ export function defaultStatus() {
     model: { connected: false, loadedModelIds: [], tokenPresent: false },
     rustBus: { ready: false },
     proof: { nextArtifact: "ARTIFACT-011" },
-    nextAdmissibleAction: "complete_setup"
+    nextAdmissibleAction: "complete_setup",
   };
 }
 
 export function isReadyForBoundedDiagnostic(status) {
   return Boolean(
     status?.ready &&
-      status?.consoleReady &&
-      status?.activationGate === "EXPLICIT_GO_REQUIRED" &&
-      status?.daemonStatus !== "running" &&
-      status?.missionExecuted !== true &&
-      status?.runtimePulse?.fired !== true
+    status?.consoleReady &&
+    status?.activationGate === "EXPLICIT_GO_REQUIRED" &&
+    status?.daemonStatus !== "running" &&
+    status?.missionExecuted !== true &&
+    status?.runtimePulse?.fired !== true,
   );
 }
 
@@ -41,7 +41,7 @@ const ANSI = {
   boldCyan: "\x1b[1;36m",
   boldYellow: "\x1b[1;33m",
   boldRed: "\x1b[1;31m",
-  boldGreen: "\x1b[1;32m"
+  boldGreen: "\x1b[1;32m",
 };
 
 function colorize(text, code, useColor) {
@@ -68,7 +68,9 @@ export function formatStatus(status, opts = {}) {
   lines.push(`  Mission executed: ${Boolean(status.missionExecuted)}`);
   lines.push(`  Runtime pulse fired: ${runtimePulseFired}`);
   lines.push(`  Model connected: ${Boolean(status.model?.connected)}`);
-  lines.push(`  Loaded models: ${(status.model?.loadedModelIds ?? []).join(", ") || "none"}`);
+  lines.push(
+    `  Loaded models: ${(status.model?.loadedModelIds ?? []).join(", ") || "none"}`,
+  );
   lines.push(`  Model token visible: ${Boolean(status.model?.tokenPresent)}`);
   lines.push(`  Rust Bus: ${status.rustBus?.ready ? "READY" : "not ready"}`);
   lines.push(`  Next artifact: ${status.proof?.nextArtifact ?? "unknown"}`);

@@ -1,8 +1,8 @@
 # Dema Architecture · Focused View
 
-> **Purpose:** Dema-focused architectural view organized around the four roles Dema plays in the BIZRA ecosystem: **face · cockpit · consent layer · bridge**. The companion to [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), which is the full system architecture with the complete command-to-surface map (75+ rows). This doc compresses the *Dema* slice for reviewers who want to understand Dema-as-product without parsing every command.
+> **Purpose:** Dema-focused architectural view organized around the four roles Dema plays in the BIZRA ecosystem: **face · cockpit · consent layer · bridge**. The companion to [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), which is the full system architecture with the complete command-to-surface map (75+ rows). This doc compresses the _Dema_ slice for reviewers who want to understand Dema-as-product without parsing every command.
 >
-> **Why a separate file:** ARCHITECTURE.md is 40 KB and covers every surface in detail. New engineers need a focused entry that names Dema's load-bearing roles before they dive into the per-command schema. Per GTM Readiness Matrix row #7 DoD: *"Dema as face / cockpit / consent layer / bridge · separate file for focus"*.
+> **Why a separate file:** ARCHITECTURE.md is 40 KB and covers every surface in detail. New engineers need a focused entry that names Dema's load-bearing roles before they dive into the per-command schema. Per GTM Readiness Matrix row #7 DoD: _"Dema as face / cockpit / consent layer / bridge · separate file for focus"_.
 >
 > **Scope:** This doc covers Dema only. The BIZRA Omega substrate (Rust workspace inside `bizra-data-lake`, per [ADR-003](06-adr/ADR-003-core-truth-lives-in-bizra-omega.md)) is referenced by boundary, not described.
 >
@@ -16,11 +16,11 @@ Dema is intentionally small. It plays exactly four roles in the BIZRA stack — 
 
 ### Role 1 · Face
 
-> *"Dema is the One Face"* — [ADR-001](06-adr/ADR-001-dema-is-one-face.md)
+> _"Dema is the One Face"_ — [ADR-001](06-adr/ADR-001-dema-is-one-face.md)
 
 Dema is the **sole product-facing surface** of the BIZRA ecosystem. Specialist systems (BIZRA Omega substrate · Rust workspace · governed gateway · mint pipeline · agent runtime) do not bind to users directly. Users see Dema. Dema talks to the substrate.
 
-Translation: when a reviewer asks *"what does the user actually run?"* — the answer is `node bin/dema <subcommand>`, full stop. There is no parallel user-facing surface.
+Translation: when a reviewer asks _"what does the user actually run?"_ — the answer is `node bin/dema <subcommand>`, full stop. There is no parallel user-facing surface.
 
 ### Role 2 · Cockpit
 
@@ -36,7 +36,7 @@ The cockpit's whole product property is **Verified Refusal**: it refuses cleanly
 
 ### Role 3 · Consent Layer
 
-> *"Operator Actions Require Explicit Consent"* — [ADR-005](06-adr/ADR-005-operator-actions-require-explicit-consent.md)
+> _"Operator Actions Require Explicit Consent"_ — [ADR-005](06-adr/ADR-005-operator-actions-require-explicit-consent.md)
 
 Dema is where the operator's **typed-GO consent is bound to a narrow ConsentPlan** before any action crosses into the governed runtime:
 
@@ -51,11 +51,11 @@ Consent is **exact**, **narrow**, and **action-specific**. The commitment_hash b
 
 Dema is the bridge between three things that are otherwise siloed:
 
-| Bridge endpoint A | Bridge endpoint B | How Dema bridges them |
-|---|---|---|
+| Bridge endpoint A                  | Bridge endpoint B                                         | How Dema bridges them                                                                                                                                                                          |
+| ---------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Local operator (human at terminal) | Governed Node0 runtime (separate process · separate repo) | `dema mission propose` + Node0 adapter (`DEMA_NODE0_STATUS_COMMAND` env var · or future bizra-cognition-gateway HTTP surface per [ADR-003](06-adr/ADR-003-core-truth-lives-in-bizra-omega.md)) |
-| Local operator | BIZRA Omega AgentDB memory store | `dema memory query "<query>"` MC-A v0.1 · JS→Python wrapper bridge · localhost-only · ADR-022 substrate-out doctrine |
-| Local operator | Local LLM (Ollama) | `dema model-broker route --invoke` · ADR-018 · 6 sequential safety gates · localhost-bound · exact-string consent |
+| Local operator                     | BIZRA Omega AgentDB memory store                          | `dema memory query "<query>"` MC-A v0.1 · JS→Python wrapper bridge · localhost-only · ADR-022 substrate-out doctrine                                                                           |
+| Local operator                     | Local LLM (Ollama)                                        | `dema model-broker route --invoke` · ADR-018 · 6 sequential safety gates · localhost-bound · exact-string consent                                                                              |
 
 Dema does **not** own the substrate, the gateway, the AgentDB, or the LLM. It owns the **contract** with each — the schema-tagged envelope, the consent gate, the boundary keys.
 
@@ -113,12 +113,12 @@ flowchart TD
 
 The 12 internal packages map to the four roles:
 
-| Role | Packages | Purpose |
-|---|---|---|
-| **Face** | `apps/cli/src/index.js` · `packages/core` | The CLI entrypoint + shared core primitives |
-| **Cockpit** | `packages/node-adapter` · `packages/receipts` · `packages/memory` · `packages/verifier` | State reading from adapter · receipt list · memory inspection · invariant checks |
-| **Consent Layer** | `packages/fate` · `packages/consent` · `packages/mission` | Constitutional gate · ConsentPlan draft · Mission draft |
-| **Bridge** | `packages/installer` · `packages/models` · `packages/tasks` | Local-skeleton install · model broker · task scheduling |
+| Role              | Packages                                                                                | Purpose                                                                          |
+| ----------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **Face**          | `apps/cli/src/index.js` · `packages/core`                                               | The CLI entrypoint + shared core primitives                                      |
+| **Cockpit**       | `packages/node-adapter` · `packages/receipts` · `packages/memory` · `packages/verifier` | State reading from adapter · receipt list · memory inspection · invariant checks |
+| **Consent Layer** | `packages/fate` · `packages/consent` · `packages/mission`                               | Constitutional gate · ConsentPlan draft · Mission draft                          |
+| **Bridge**        | `packages/installer` · `packages/models` · `packages/tasks`                             | Local-skeleton install · model broker · task scheduling                          |
 
 ---
 
@@ -177,7 +177,7 @@ The Node0 adapter (`packages/node-adapter`) defaults to **blocked**. If no gover
 
 ## Consent model
 
-> *"Consent is exact, narrow, and action-specific."*
+> _"Consent is exact, narrow, and action-specific."_
 
 The consent flow:
 
@@ -230,16 +230,16 @@ Per [`THIRD_FACT_CURRENT_STATE_DELTA.md`](THIRD_FACT_CURRENT_STATE_DELTA.md) TF-
 
 ## Engineering constraints
 
-| Constraint | Source |
-|---|---|
-| Node.js ≥ 20 | `package.json` engines |
-| ESM modules | `package.json` `"type": "module"` |
-| Zero runtime dependencies | `package.json` (no `dependencies`) |
-| Zero dev dependencies | `package.json` (no `devDependencies`) |
-| No build step | `node bin/dema` runs from source |
-| No npm workspaces | Package imports use relative paths |
-| Tests use `node:test` | `node --test tests/*.test.js` · 2618/2618 PASS |
-| Stdlib-only posture | No `node_modules` directory at all |
+| Constraint                | Source                                         |
+| ------------------------- | ---------------------------------------------- |
+| Node.js ≥ 20              | `package.json` engines                         |
+| ESM modules               | `package.json` `"type": "module"`              |
+| Zero runtime dependencies | `package.json` (no `dependencies`)             |
+| Zero dev dependencies     | `package.json` (no `devDependencies`)          |
+| No build step             | `node bin/dema` runs from source               |
+| No npm workspaces         | Package imports use relative paths             |
+| Tests use `node:test`     | `node --test tests/*.test.js` · 2618/2618 PASS |
+| Stdlib-only posture       | No `node_modules` directory at all             |
 
 These are **invariants**, not preferences. The smoke matrix and the test surface verify them on every CI run.
 
@@ -261,17 +261,17 @@ See [`docs/RELEASE_PROCESS.md`](RELEASE_PROCESS.md) §2 for the full 3-layer gat
 
 ## What this doc deliberately does NOT cover
 
-| Topic | Where it lives |
-|---|---|
-| Per-command schema detail (75+ subcommands) | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) §"Command-to-surface map" |
-| BIZRA Omega substrate (Rust workspace) | [ADR-003](06-adr/ADR-003-core-truth-lives-in-bizra-omega.md) · operator-side at `/data/bizra/dema-runtime-arch-wt/` |
-| PAT-7 / SAT-5 agent designs | Third Fact §III · ROADMAP §220+ · TF-008 in [`THIRD_FACT_CURRENT_STATE_DELTA.md`](THIRD_FACT_CURRENT_STATE_DELTA.md) |
-| Receipt mint flow | [ADR-006](06-adr/ADR-006-continuous-assurance-and-no-mint-verification.md) · governed gateway (separate repo) |
-| First-runner walkthrough | [`docs/QUICKSTART.md`](QUICKSTART.md) |
-| Daily operator ops | [`docs/NODE0_OPERATOR_GUIDE.md`](NODE0_OPERATOR_GUIDE.md) |
-| Demo flow | [`docs/DEMO_SCRIPT.md`](DEMO_SCRIPT.md) |
-| CI workflow internals | [`docs/CI_CD_PIPELINE.md`](CI_CD_PIPELINE.md) |
-| Release lifecycle | [`docs/RELEASE_PROCESS.md`](RELEASE_PROCESS.md) |
+| Topic                                       | Where it lives                                                                                                       |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Per-command schema detail (75+ subcommands) | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) §"Command-to-surface map"                                                  |
+| BIZRA Omega substrate (Rust workspace)      | [ADR-003](06-adr/ADR-003-core-truth-lives-in-bizra-omega.md) · operator-side at `/data/bizra/dema-runtime-arch-wt/`  |
+| PAT-7 / SAT-5 agent designs                 | Third Fact §III · ROADMAP §220+ · TF-008 in [`THIRD_FACT_CURRENT_STATE_DELTA.md`](THIRD_FACT_CURRENT_STATE_DELTA.md) |
+| Receipt mint flow                           | [ADR-006](06-adr/ADR-006-continuous-assurance-and-no-mint-verification.md) · governed gateway (separate repo)        |
+| First-runner walkthrough                    | [`docs/QUICKSTART.md`](QUICKSTART.md)                                                                                |
+| Daily operator ops                          | [`docs/NODE0_OPERATOR_GUIDE.md`](NODE0_OPERATOR_GUIDE.md)                                                            |
+| Demo flow                                   | [`docs/DEMO_SCRIPT.md`](DEMO_SCRIPT.md)                                                                              |
+| CI workflow internals                       | [`docs/CI_CD_PIPELINE.md`](CI_CD_PIPELINE.md)                                                                        |
+| Release lifecycle                           | [`docs/RELEASE_PROCESS.md`](RELEASE_PROCESS.md)                                                                      |
 
 This doc is a focused architectural overview, not a comprehensive reference. Use the links above when you need the detail.
 
@@ -291,6 +291,7 @@ This doc is a focused architectural overview, not a comprehensive reference. Use
 ## Update protocol
 
 Re-refresh this doc when:
+
 - A new top-level role emerges in Dema's design (currently 4 · Face · Cockpit · Consent · Bridge).
 - A new package lands in `packages/` and changes the role mapping table.
 - An ADR materially shifts Dema's relationship to the substrate (e.g., bizra-cognition-gateway promotion from future to current adapter path).

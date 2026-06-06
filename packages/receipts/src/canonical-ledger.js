@@ -98,8 +98,16 @@ export async function appendCanonicalReceipt({
   // (defense in depth; verifyCanonicalChain will also catch).
   for (let i = 0; i < entries.length; i++) {
     const e = entries[i];
-    if (!e.receipt_signature_b64 || typeof e.receipt_signature_b64 !== "string" || e.receipt_signature_b64.trim().length === 0) {
-      return Object.freeze({ appended: false, error: "ledger_contains_empty_signature", at_index: i });
+    if (
+      !e.receipt_signature_b64 ||
+      typeof e.receipt_signature_b64 !== "string" ||
+      e.receipt_signature_b64.trim().length === 0
+    ) {
+      return Object.freeze({
+        appended: false,
+        error: "ledger_contains_empty_signature",
+        at_index: i,
+      });
     }
   }
   if (entries.length > 0) {

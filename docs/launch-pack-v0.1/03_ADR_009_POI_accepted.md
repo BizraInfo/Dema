@@ -13,13 +13,13 @@ POI (Proof-of-Impact · 7th BIZRA pillar) is the canonical mapping from a verifi
 
 ## The 5 canonical refusals (binding)
 
-| # | Refusal |
-|---|---|
-| 1 | NO reward issuance · NO token · NO payment · NO IMP · NO entitlement claim |
-| 2 | NO cross-node score comparison (federation not yet shipped) |
-| 3 | NO external attestation (scores not published/broadcast/signed) |
-| 4 | NO time-weighted scoring (Riba-Zero invariant) |
-| 5 | NO speculation surface (no expected_future_poi · no poi_velocity) |
+| #   | Refusal                                                                    |
+| --- | -------------------------------------------------------------------------- |
+| 1   | NO reward issuance · NO token · NO payment · NO IMP · NO entitlement claim |
+| 2   | NO cross-node score comparison (federation not yet shipped)                |
+| 3   | NO external attestation (scores not published/broadcast/signed)            |
+| 4   | NO time-weighted scoring (Riba-Zero invariant)                             |
+| 5   | NO speculation surface (no expected_future_poi · no poi_velocity)          |
 
 ## The output envelope shape (when POI v0.1 ships)
 
@@ -38,13 +38,13 @@ POI (Proof-of-Impact · 7th BIZRA pillar) is the canonical mapping from a verifi
 
 ## The 5 activation gates (when POI v0.1 implementation may begin)
 
-| Gate | Required | Current state (2026-05-19) |
-|---|---|---|
-| 1 | Ring-1 N=1 reviewer engaged with Lighthouse Pack + written feedback | ❌ NOT YET (your reading of this binder is the start of this gate) |
-| 2 | v0.1c onboarding landed (profile.language wiring) | ✅ DONE (ADR-011 + language picker shipped) |
-| 3 | Operator types `GO impl POI v0.1` | ⏸️ awaits your feedback first |
-| 4 | ≥15 adversarial tests prepared | ❌ NOT YET |
-| 5 | Proof-Forge receipt upon completion | ⏸️ automatic post-impl |
+| Gate | Required                                                            | Current state (2026-05-19)                                         |
+| ---- | ------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 1    | Ring-1 N=1 reviewer engaged with Lighthouse Pack + written feedback | ❌ NOT YET (your reading of this binder is the start of this gate) |
+| 2    | v0.1c onboarding landed (profile.language wiring)                   | ✅ DONE (ADR-011 + language picker shipped)                        |
+| 3    | Operator types `GO impl POI v0.1`                                   | ⏸️ awaits your feedback first                                      |
+| 4    | ≥15 adversarial tests prepared                                      | ❌ NOT YET                                                         |
+| 5    | Proof-Forge receipt upon completion                                 | ⏸️ automatic post-impl                                             |
 
 ## Cross-reference
 

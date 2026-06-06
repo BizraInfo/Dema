@@ -18,16 +18,22 @@ const OVERCLAIM_PATTERNS = [
   [/\bNode1 federation\b/i, "Node1 federation claim"],
   [/\breal SAT permit\b/i, "real SAT permit claim"],
   [/\bpublic Proof-of-Impact rewards\b/i, "public PoI rewards claim"],
-  [/\bautonomous supervisor\b/i, "autonomous supervisor claim"]
+  [/\bautonomous supervisor\b/i, "autonomous supervisor claim"],
 ];
 
 function baseRef() {
-  return process.env.BIZRA_REVIEW_BASE ||
-    (process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : "origin/main");
+  return (
+    process.env.BIZRA_REVIEW_BASE ||
+    (process.env.GITHUB_BASE_REF
+      ? `origin/${process.env.GITHUB_BASE_REF}`
+      : "origin/main")
+  );
 }
 
 function changedFiles() {
-  return execFileSync("git", ["diff", "--name-only", `${baseRef()}...HEAD`], { encoding: "utf8" })
+  return execFileSync("git", ["diff", "--name-only", `${baseRef()}...HEAD`], {
+    encoding: "utf8",
+  })
     .split("\n")
     .filter(Boolean);
 }
@@ -41,17 +47,26 @@ for (const file of changedFiles()) {
   const body = readFileSync(file, "utf8");
   scanned.push(file);
   for (const [pattern, label] of OVERCLAIM_PATTERNS) {
-    if (pattern.test(body)) findings.push({ file, label, pattern: String(pattern) });
+    if (pattern.test(body))
+      findings.push({ file, label, pattern: String(pattern) });
   }
 }
 
 if (findings.length > 0) {
-  throw new Error(`BIZRA no-overclaim gate failed: ${JSON.stringify(findings, null, 2)}`);
+  throw new Error(
+    `BIZRA no-overclaim gate failed: ${JSON.stringify(findings, null, 2)}`,
+  );
 }
 
-console.log(JSON.stringify({
-  schema: "bizra.dema.review.no_overclaim.v0.1",
-  ok: true,
-  scanned_files: scanned,
-  blocked_claims: OVERCLAIM_PATTERNS.map(([, label]) => label)
-}, null, 2));
+console.log(
+  JSON.stringify(
+    {
+      schema: "bizra.dema.review.no_overclaim.v0.1",
+      ok: true,
+      scanned_files: scanned,
+      blocked_claims: OVERCLAIM_PATTERNS.map(([, label]) => label),
+    },
+    null,
+    2,
+  ),
+);

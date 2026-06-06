@@ -4,14 +4,14 @@ Patterns Dema studies from external reference projects. Read on disk, mapped aga
 
 **Stance.** Dema stands on the shoulders of giants; it does not ingest them. The two projects below are studied for design patterns. Their code does not ship in this repo, and they live outside the canonical product tree (under `/data/bizra/giants/` on the host that produced these notes).
 
-**Method.** For each pattern: name what it solves, mark whether Dema already implements an equivalent, and note when it would apply if not yet present. Patterns that violate Dema invariants (zero runtime deps, one face, no shadow state, exact consent) are listed as *refused*.
+**Method.** For each pattern: name what it solves, mark whether Dema already implements an equivalent, and note when it would apply if not yet present. Patterns that violate Dema invariants (zero runtime deps, one face, no shadow state, exact consent) are listed as _refused_.
 
 ## Sources read
 
-| Project | Path | Lines read |
-|---|---|---|
-| hermes-agent | `/data/bizra/giants/hermes-agent-2026.4.23/AGENTS.md` | 751 |
-| openclaw | `/data/bizra/giants/openclaw-2026.4.25/AGENTS.md` | 182 |
+| Project      | Path                                                  | Lines read |
+| ------------ | ----------------------------------------------------- | ---------- |
+| hermes-agent | `/data/bizra/giants/hermes-agent-2026.4.23/AGENTS.md` | 751        |
+| openclaw     | `/data/bizra/giants/openclaw-2026.4.25/AGENTS.md`     | 182        |
 
 ## Patterns to absorb (when Dema needs them)
 
@@ -59,11 +59,11 @@ Patterns Dema studies from external reference projects. Read on disk, mapped aga
 
 ## Patterns refused (would violate Dema invariants)
 
-| Pattern | Why refused |
-|---|---|
-| Hermes 60-parameter `AIAgent.__init__` | Configuration sprawl violates "simplicity first" and the Karpathy correctives. |
-| OpenClaw pnpm + Bun dual-runtime | Dema is Node-only. Multi-runtime adds complexity without benefit at v0.2. |
-| Either's plugin / extension system | Dema is one face per ADR-001. The giants are platforms; Dema is a bridge. Different category. |
+| Pattern                                      | Why refused                                                                                           |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Hermes 60-parameter `AIAgent.__init__`       | Configuration sprawl violates "simplicity first" and the Karpathy correctives.                        |
+| OpenClaw pnpm + Bun dual-runtime             | Dema is Node-only. Multi-runtime adds complexity without benefit at v0.2.                             |
+| Either's plugin / extension system           | Dema is one face per ADR-001. The giants are platforms; Dema is a bridge. Different category.         |
 | OpenClaw marketplace / appcast / auto-update | Dema's GTM today is "Sovereign Local AI Node Setup + Safety Audit," not an auto-updating desktop app. |
 
 ## Highest-leverage lifts for Phase 3 (RECEIPTS_HANDOFF)

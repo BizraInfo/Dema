@@ -9,9 +9,7 @@
 
 import { createHash } from "node:crypto";
 
-import {
-  validateAgainstRegistry
-} from "./envelope-schema-validator.js";
+import { validateAgainstRegistry } from "./envelope-schema-validator.js";
 
 export const ARTIFACT_SAFETY_SCHEMA = "bizra.dema.artifact_safety_eval.v0.1";
 
@@ -20,7 +18,7 @@ export const ALLOWED_TRUTH_LABELS = Object.freeze([
   "DESIGNED_NOT_LIVE",
   "LOCAL_ONLY",
   "SOURCE_PENDING",
-  "OPERATOR_RECORDED"
+  "OPERATOR_RECORDED",
 ]);
 
 export const FORBIDDEN_LIVE_CLAIMS = Object.freeze([
@@ -32,7 +30,7 @@ export const FORBIDDEN_LIVE_CLAIMS = Object.freeze([
   "proof-of-impact rewards are active",
   "chain-bound mint is active",
   "chain-bound proof is live",
-  "distributed intelligence network is live"
+  "distributed intelligence network is live",
 ]);
 
 const PATH_PATTERNS = Object.freeze([
@@ -41,9 +39,21 @@ const PATH_PATTERNS = Object.freeze([
   { pattern_id: "unix_root", regex: /\/root\//i, field: null },
   { pattern_id: "win_users", regex: /C:\\Users\\/i, field: null },
   { pattern_id: "downloads_segment", regex: /\/Downloads\//i, field: null },
-  { pattern_id: "dema_home_dir", regex: /(?:^|[\s"'`;,(])~?\/?\.dema(?:\/|[\s"'`,]|$)/i, field: null },
-  { pattern_id: "dot_env", regex: /(?:^|[\s"'`;,(])\.env(?:\.|[\s"'`,/]|$)/i, field: null },
-  { pattern_id: "dot_ssh", regex: /(?:^|[\s"'`;,(])\.ssh(?:\/|[\s"'`,]|$)/i, field: null }
+  {
+    pattern_id: "dema_home_dir",
+    regex: /(?:^|[\s"'`;,(])~?\/?\.dema(?:\/|[\s"'`,]|$)/i,
+    field: null,
+  },
+  {
+    pattern_id: "dot_env",
+    regex: /(?:^|[\s"'`;,(])\.env(?:\.|[\s"'`,/]|$)/i,
+    field: null,
+  },
+  {
+    pattern_id: "dot_ssh",
+    regex: /(?:^|[\s"'`;,(])\.ssh(?:\/|[\s"'`,]|$)/i,
+    field: null,
+  },
 ]);
 
 const SECRET_PATTERNS = Object.freeze([
@@ -58,8 +68,8 @@ const SECRET_PATTERNS = Object.freeze([
   { pattern_id: "slack_xoxb", regex: /\bxoxb-[a-zA-Z0-9-]{8,}\b/ },
   {
     pattern_id: "generic_secret",
-    regex: /\b(?<!no\s)(?<!without\s)secret[_\s-]?(?:key|token|value)\b/i
-  }
+    regex: /\b(?<!no\s)(?<!without\s)secret[_\s-]?(?:key|token|value)\b/i,
+  },
 ]);
 
 const BOUNDARY = Object.freeze({
@@ -67,7 +77,7 @@ const BOUNDARY = Object.freeze({
   network: false,
   mint: false,
   external_send: false,
-  urp_runtime: false
+  urp_runtime: false,
 });
 
 function normalizeInput(input) {
@@ -93,8 +103,8 @@ export function scanPathLeakage(text, { field = null } = {}) {
           pattern_id,
           "BLOCKER",
           `Path leakage pattern matched: ${pattern_id}`,
-          field
-        )
+          field,
+        ),
       );
     }
   }
@@ -105,8 +115,8 @@ export function scanPathLeakage(text, { field = null } = {}) {
         "repo_root_absolute",
         "BLOCKER",
         "Absolute repo_root path in structured artifact",
-        field ?? "repo_root"
-      )
+        field ?? "repo_root",
+      ),
     );
   }
   return Object.freeze(findings);
@@ -123,8 +133,8 @@ export function scanSecretLikeStrings(text, { field = null } = {}) {
           pattern_id,
           "BLOCKER",
           `Secret-like pattern matched: ${pattern_id}`,
-          field
-        )
+          field,
+        ),
       );
     }
   }
@@ -154,8 +164,8 @@ export function scanClaimBoundary(text, { field = null } = {}) {
           `forbidden_live:${phrase.replace(/\s+/g, "_")}`,
           "BLOCKER",
           `Forbidden live claim detected: "${phrase}"`,
-          field
-        )
+          field,
+        ),
       );
     }
   }
@@ -175,8 +185,8 @@ function scanSchema(object) {
         "schema_namespace",
         "WARNING",
         `Unexpected schema namespace: ${declared}`,
-        "schema"
-      )
+        "schema",
+      ),
     );
     return Object.freeze(findings);
   }
@@ -190,8 +200,8 @@ function scanSchema(object) {
         "schema_unknown",
         "WARNING",
         `Schema declared as ${declared} but not in known-schema registry`,
-        "schema"
-      )
+        "schema",
+      ),
     );
     return Object.freeze(findings);
   }
@@ -203,15 +213,18 @@ function scanSchema(object) {
         `schema_${err.code}`,
         "BLOCKER",
         `Schema violation at ${err.path}: ${err.message}`,
-        "schema"
-      )
+        "schema",
+      ),
     );
   }
 
   return Object.freeze(findings);
 }
 
-function deriveVerdict(findings, { treat_repo_root_as_local_only = true } = {}) {
+function deriveVerdict(
+  findings,
+  { treat_repo_root_as_local_only = true } = {},
+) {
   const blockers = findings.filter((f) => f.severity === "BLOCKER");
   if (blockers.some((f) => f.kind === "CLAIM_OVERREACH")) {
     return "CLAIM_BOUNDARY_VIOLATION";
@@ -219,7 +232,9 @@ function deriveVerdict(findings, { treat_repo_root_as_local_only = true } = {}) 
   if (blockers.some((f) => f.kind === "SCHEMA")) {
     return "SCHEMA_VIOLATION";
   }
-  const pathOrSecret = blockers.filter((f) => f.kind === "PATH_LEAK" || f.kind === "SECRET_LIKE");
+  const pathOrSecret = blockers.filter(
+    (f) => f.kind === "PATH_LEAK" || f.kind === "SECRET_LIKE",
+  );
   if (pathOrSecret.length === 0) {
     return "PUBLIC_SAFE";
   }
@@ -237,7 +252,7 @@ export function evaluateArtifactSafety(input, options = {}) {
     ...scanPathLeakage(text, options),
     ...scanSecretLikeStrings(text, options),
     ...scanClaimBoundary(text, options),
-    ...scanSchema(object)
+    ...scanSchema(object),
   ];
   const verdict = deriveVerdict(findings, options);
   const publicSafe = verdict === "PUBLIC_SAFE";
@@ -247,7 +262,7 @@ export function evaluateArtifactSafety(input, options = {}) {
     score: publicSafe ? 1 : 0,
     findings: Object.freeze(findings),
     boundary: BOUNDARY,
-    artifact_sha256: createHash("sha256").update(text).digest("hex")
+    artifact_sha256: createHash("sha256").update(text).digest("hex"),
   });
 }
 
@@ -260,7 +275,7 @@ export function formatArtifactSafetyReport(result, { pretty = false } = {}) {
     `Score: ${result.score}`,
     `Artifact SHA-256: ${result.artifact_sha256}`,
     "",
-    "Findings:"
+    "Findings:",
   ];
   if (result.findings.length === 0) {
     lines.push("- (none)");
@@ -269,7 +284,10 @@ export function formatArtifactSafetyReport(result, { pretty = false } = {}) {
       lines.push(`- [${f.severity}] ${f.kind} · ${f.pattern_id}: ${f.message}`);
     }
   }
-  lines.push("", "Boundary: read-only; no network; no mint; no external send; no URP runtime.");
+  lines.push(
+    "",
+    "Boundary: read-only; no network; no mint; no external send; no URP runtime.",
+  );
   const out = lines.join("\n");
   return pretty ? out : out;
 }

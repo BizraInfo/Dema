@@ -10,11 +10,11 @@
 
 ## Why this exists (and why now)
 
-The Autonomy Envelope (A4.5, merged as PR #11) named *what* Dema may do at L0–L5. This doc names *which side of the BIZRA topology handles each level* and codifies the constitutional separation between local PAT authority and shared-URP SAT authority.
+The Autonomy Envelope (A4.5, merged as PR #11) named _what_ Dema may do at L0–L5. This doc names _which side of the BIZRA topology handles each level_ and codifies the constitutional separation between local PAT authority and shared-URP SAT authority.
 
 The Pi Verifier Agent ([ABSORPTION_NOTES_v2.md](../ABSORPTION_NOTES_v2.md)) gave Dema the doctrine-as-template pattern (V1) and the CONFIDENCE ladder (V2). But that reference project has no constitutional layer above persona — its own author can edit the persona file and silently weaken the rules. **PAT/SAT separation IS the constitutional layer the verifier-agent lacks.**
 
-The need is now: SEED has just closed via ARTIFACT-011 (chain length > 0; gateway POST `/missions` returned PERMIT; local handoff receipt mirrored to `~/.dema/receipts/artifact-011.json`). SPROUT begins. The "operator cannot bypass system law, including me" invariant must be on disk *before* SPROUT's continuous bounded diagnostics start producing receipts that depend on it.
+The need is now: SEED has just closed via ARTIFACT-011 (chain length > 0; gateway POST `/missions` returned PERMIT; local handoff receipt mirrored to `~/.dema/receipts/artifact-011.json`). SPROUT begins. The "operator cannot bypass system law, including me" invariant must be on disk _before_ SPROUT's continuous bounded diagnostics start producing receipts that depend on it.
 
 ## The architecture: local PAT, shared-URP SAT
 
@@ -28,23 +28,23 @@ The PAT-builder / SAT-validator separation is therefore a **membrane-mediated** 
 
 ## The two sides
 
-| Side | Role | Members | Visible to operator? | Authority |
-|---|---|---|---|---|
-| **PAT + Dema** | Builder | 7 PAT agents (`bizra-omega/bizra-agent/src/roster.rs:128`, `PAT_SIZE: usize = 7`) + Dema bridge | Yes — only Dema is surfaced | Proposes, executes reversible work, drafts |
-| **SAT in shared URP** | Validator | 5 SAT agents per node contribution (S1 Validator, S2 Oracle [FROZEN], S3 Mediator, S4 Archivist, S5 Sentinel) live in the one shared URP | No — Dema does not surface SAT | Certifies. Cannot be bypassed. |
+| Side                  | Role      | Members                                                                                                                                  | Visible to operator?           | Authority                                  |
+| --------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ------------------------------------------ |
+| **PAT + Dema**        | Builder   | 7 PAT agents (`bizra-omega/bizra-agent/src/roster.rs:128`, `PAT_SIZE: usize = 7`) + Dema bridge                                          | Yes — only Dema is surfaced    | Proposes, executes reversible work, drafts |
+| **SAT in shared URP** | Validator | 5 SAT agents per node contribution (S1 Validator, S2 Oracle [FROZEN], S3 Mediator, S4 Archivist, S5 Sentinel) live in the one shared URP | No — Dema does not surface SAT | Certifies. Cannot be bypassed.             |
 
 The Forge/Crown pattern at `SYSTEM_INSTRUCTION_CHAIN.md:189-194` (P3 Forge ≡ Builder; P5 Crown ≡ Verifier) is the existing pre-figuration of this split. PAT/SAT generalizes it to system-wide separation across the local node membrane and shared URP.
 
 ## The PAT/SAT × A4.5 level matrix
 
-| A4.5 Level | PAT-Builder action | SAT-Validator action | Receipt? |
-|---|---|---|---|
-| **L0** Observe | PAT/Dema reads | SAT silent (read does not require certification) | No |
-| **L1** Remember | PAT/Dema writes `~/.dema/` | SAT silent (local memory is builder-scoped) | No |
-| **L2** Propose | PAT/Dema generates proposal (`executes:false`) | SAT silent (proposals are data, not acts) | The proposal IS the artifact |
-| **L3** Reversible local | PAT/Dema edits/commits on feature branch | SAT silent (reversible, undoable) | Optional |
+| A4.5 Level               | PAT-Builder action                                                                                   | SAT-Validator action                                                                                                                                                                          | Receipt?                                 |
+| ------------------------ | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **L0** Observe           | PAT/Dema reads                                                                                       | SAT silent (read does not require certification)                                                                                                                                              | No                                       |
+| **L1** Remember          | PAT/Dema writes `~/.dema/`                                                                           | SAT silent (local memory is builder-scoped)                                                                                                                                                   | No                                       |
+| **L2** Propose           | PAT/Dema generates proposal (`executes:false`)                                                       | SAT silent (proposals are data, not acts)                                                                                                                                                     | The proposal IS the artifact             |
+| **L3** Reversible local  | PAT/Dema edits/commits on feature branch                                                             | SAT silent (reversible, undoable)                                                                                                                                                             | Optional                                 |
 | **L4** Governed mutation | PAT/Dema submits via governed gateway boundary (`packages/node-adapter/src/gateway-http-adapter.js`) | **SAT in the shared URP runs admissibility chain** (`bizra-omega/bizra-cognition/src/admissibility_freeze_v1.rs`) — Ihsān ≥0.95, Adl, Guardian, Confidence ≥0.80; emits `GateVerdict::PERMIT` | **Required.** No PERMIT → no L4 receipt. |
-| **L5** Irreversible | PAT/Dema prepares the act (push, PR, stamp, sign) | **SAT certifies + cross-references** the external commitment | Required + external ref |
+| **L5** Irreversible      | PAT/Dema prepares the act (push, PR, stamp, sign)                                                    | **SAT certifies + cross-references** the external commitment                                                                                                                                  | Required + external ref                  |
 
 The matrix's mechanic: **L4 is the constitutional crossing.** Below L4, PAT acts alone. At L4 and above, SAT must certify or no receipt is born.
 
@@ -52,28 +52,28 @@ The matrix's mechanic: **L4 is the constitutional crossing.** Below L4, PAT acts
 
 Cite `bizra-omega/bizra-agent/src/runtime.rs:6` (R1 = "chain is truth, graph is derived state"). The receipt chain implements Lamport-style happens-before: each receipt carries `prev_hash`; the chain enforces a total order over the system's history (Genesis → Entry1 → Entry2 …). Tampered chains fail `continuity_verification` (`receipts.rs:369`).
 
-In Lamport terms: **an event has not "happened" in the system until it appears on the hash-chained receipt log.** PAT proposes (L2/L3 artifacts) → SAT validates (admissibility chain returns PERMIT) → chain appends (L4 receipt with `prev_hash`). Until that append, the act is unwitnessed and therefore *did not occur for the system*.
+In Lamport terms: **an event has not "happened" in the system until it appears on the hash-chained receipt log.** PAT proposes (L2/L3 artifacts) → SAT validates (admissibility chain returns PERMIT) → chain appends (L4 receipt with `prev_hash`). Until that append, the act is unwitnessed and therefore _did not occur for the system_.
 
-Contrast with the verifier-agent (per [ABSORPTION_NOTES_v2.md](../ABSORPTION_NOTES_v2.md) V1–V6): its `CONFIDENCE: VERIFIED` is a *report*, not a certification — the build proceeds either way. SAT's `PERMIT` is a *certification* — without it, no receipt, no system-recognized event. **This is the constitutional layer above persona that the verifier-agent does not have.**
+Contrast with the verifier-agent (per [ABSORPTION_NOTES_v2.md](../ABSORPTION_NOTES_v2.md) V1–V6): its `CONFIDENCE: VERIFIED` is a _report_, not a certification — the build proceeds either way. SAT's `PERMIT` is a _certification_ — without it, no receipt, no system-recognized event. **This is the constitutional layer above persona that the verifier-agent does not have.**
 
 ## The "sovereign-bypass" anti-pattern
 
 This extends [A4.5 §"Anti-patterns explicitly forbidden"](dema-autonomy-envelope.md) (which lists patterns 1–5). Add as **anti-pattern 6**:
 
-> **Sovereign-bypass.** No actor — PAT agent, Dema bridge, gateway, or operator — may issue an L4+ receipt without SAT certification. Operator typing the consent phrase satisfies *gating* (per ADR-005); it does NOT satisfy *certification*. The two are independent: consent authorizes the *attempt*; SAT decides whether the *attempt* is admissible. An L4 receipt absent a SAT verdict is malformed and MUST be rejected by the chain reader. The receipt schema SHOULD carry a `sat_verdict` field with values from `GateVerdict` (`PERMIT` / `REJECT` / `REVIEW` / `SCORE_ONLY`); only `PERMIT` permits `truth_label: MEASURED` for the receipt.
+> **Sovereign-bypass.** No actor — PAT agent, Dema bridge, gateway, or operator — may issue an L4+ receipt without SAT certification. Operator typing the consent phrase satisfies _gating_ (per ADR-005); it does NOT satisfy _certification_. The two are independent: consent authorizes the _attempt_; SAT decides whether the _attempt_ is admissible. An L4 receipt absent a SAT verdict is malformed and MUST be rejected by the chain reader. The receipt schema SHOULD carry a `sat_verdict` field with values from `GateVerdict` (`PERMIT` / `REJECT` / `REVIEW` / `SCORE_ONLY`); only `PERMIT` permits `truth_label: MEASURED` for the receipt.
 
-This is the operator's own stated invariant codified: *"we will not accept any exception about system law, including me."*
+This is the operator's own stated invariant codified: _"we will not accept any exception about system law, including me."_
 
 ## V1–V6 mapping (verifier-agent absorbed patterns → PAT/SAT positions)
 
-| Pattern | Lives on | How |
-|---|---|---|
-| V1 doctrine-as-template | PAT side (Dema persona; future verifier sibling persona) | Builder agents have prompt templates; SAT does not — SAT is a chain of typed gates, not a persona |
-| V2 CONFIDENCE ladder | PAT report shape | Builder emits CONFIDENCE; SAT emits GateVerdict — different vocabularies, both required |
-| V3 unverifiable[] gaps | PAT receipt payload | Builder records what it could not verify; SAT records what it would not certify |
-| V4 decomposition discipline | PAT side (CLAIM_MUST_BIND extended) | Builder breaks claims atomic; SAT certifies atom-by-atom |
-| V5 three-layer bash defense | PAT side (L0 enforcement on Dema + verifier sibling) | SAT does not run bash — it consumes payloads |
-| V6 max_loops escalation | PAT-side persona constant | After N corrective cycles without SAT PERMIT → escalate to operator |
+| Pattern                     | Lives on                                                 | How                                                                                               |
+| --------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| V1 doctrine-as-template     | PAT side (Dema persona; future verifier sibling persona) | Builder agents have prompt templates; SAT does not — SAT is a chain of typed gates, not a persona |
+| V2 CONFIDENCE ladder        | PAT report shape                                         | Builder emits CONFIDENCE; SAT emits GateVerdict — different vocabularies, both required           |
+| V3 unverifiable[] gaps      | PAT receipt payload                                      | Builder records what it could not verify; SAT records what it would not certify                   |
+| V4 decomposition discipline | PAT side (CLAIM_MUST_BIND extended)                      | Builder breaks claims atomic; SAT certifies atom-by-atom                                          |
+| V5 three-layer bash defense | PAT side (L0 enforcement on Dema + verifier sibling)     | SAT does not run bash — it consumes payloads                                                      |
+| V6 max_loops escalation     | PAT-side persona constant                                | After N corrective cycles without SAT PERMIT → escalate to operator                               |
 
 **Conclusion: all six absorbed patterns live on the PAT side. SAT is a separate axis the verifier-agent did not have.**
 
@@ -91,21 +91,21 @@ Three-step lifecycle:
 
 Today's docs occasionally conflate two distinct FATE gates. This doc draws the line:
 
-- **Dema-side FATE** (`packages/fate/src/fate.js`) = **consent gate**. Operator authorization (exact-string phrase). Authorizes the *attempt* at L4.
-- **Rust-side FATE** (4-gate chain: Ihsān ≥0.95, Adl, Guardian, Confidence ≥0.80) = **SAT's substrate**. Certifies the *admissibility* of the attempt at L4.
+- **Dema-side FATE** (`packages/fate/src/fate.js`) = **consent gate**. Operator authorization (exact-string phrase). Authorizes the _attempt_ at L4.
+- **Rust-side FATE** (4-gate chain: Ihsān ≥0.95, Adl, Guardian, Confidence ≥0.80) = **SAT's substrate**. Certifies the _admissibility_ of the attempt at L4.
 
 These are NOT the same gate. Consent and certification are independent. Both required.
 
 ## Where today's code sits
 
-| Surface | Side | Notes |
-|---|---|---|
-| Dema CLI commands (`apps/cli/src/index.js`) | PAT-Builder | All L0–L2; one L4-gating surface (`mission propose`) |
-| Gateway HTTP adapter (`packages/node-adapter/src/gateway-http-adapter.js`) | PAT-Builder transport | GET-only; submission path is upstream |
-| `packages/fate/src/fate.js` | PAT-Builder consent gate | Authorizes the *attempt* at L4 |
-| `~/.dema/memory/a5-niyyah.json` | PAT-Builder L1 declared intent | Operator's typed niyyah; L1 until SAT certifies its carrying receipt at L4 |
-| `bizra-omega/bizra-cognition/src/admissibility_freeze_v1.rs` | SAT substrate (lives upstream) | Certifies admissibility at L4 |
-| **SAT-5 Rust roster (S1–S5 structs)** | **GAP** — DECLARED in the [BIZRA Topology Canon](../canon/BIZRA_TOPOLOGY_CANON.md), not MEASURED | Follow-up for `bizra-data-lake`, NOT Dema scope |
+| Surface                                                                    | Side                                                                                             | Notes                                                                      |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| Dema CLI commands (`apps/cli/src/index.js`)                                | PAT-Builder                                                                                      | All L0–L2; one L4-gating surface (`mission propose`)                       |
+| Gateway HTTP adapter (`packages/node-adapter/src/gateway-http-adapter.js`) | PAT-Builder transport                                                                            | GET-only; submission path is upstream                                      |
+| `packages/fate/src/fate.js`                                                | PAT-Builder consent gate                                                                         | Authorizes the _attempt_ at L4                                             |
+| `~/.dema/memory/a5-niyyah.json`                                            | PAT-Builder L1 declared intent                                                                   | Operator's typed niyyah; L1 until SAT certifies its carrying receipt at L4 |
+| `bizra-omega/bizra-cognition/src/admissibility_freeze_v1.rs`               | SAT substrate (lives upstream)                                                                   | Certifies admissibility at L4                                              |
+| **SAT-5 Rust roster (S1–S5 structs)**                                      | **GAP** — DECLARED in the [BIZRA Topology Canon](../canon/BIZRA_TOPOLOGY_CANON.md), not MEASURED | Follow-up for `bizra-data-lake`, NOT Dema scope                            |
 
 Every Dema CLI surface today is **L0–L2**. ARTIFACT-011 was the first L4 act (issued via gateway POST /missions Path A; chain length 8). L4 lives upstream of this repo per CLAUDE.md invariant #1.
 
@@ -113,11 +113,11 @@ Every Dema CLI surface today is **L0–L2**. ARTIFACT-011 was the first L4 act (
 
 PAT-7 has a Rust roster (`PAT_SIZE: usize = 7` at `bizra-omega/bizra-agent/src/roster.rs:128`). SAT-5 does not yet have an equivalent struct. This doc DECLARES the architecture; the Rust-side instantiation of SAT as a live roster is a `bizra-data-lake` concern, out of Dema scope.
 
-| Artifact | Truth label |
-|---|---|
-| This doctrine doc | **DECLARED** |
-| PAT-7 Rust roster | MEASURED |
-| SAT-5 Rust roster | **PLANNED** (bizra-data-lake-scoped) |
+| Artifact                    | Truth label                                 |
+| --------------------------- | ------------------------------------------- |
+| This doctrine doc           | **DECLARED**                                |
+| PAT-7 Rust roster           | MEASURED                                    |
+| SAT-5 Rust roster           | **PLANNED** (bizra-data-lake-scoped)        |
 | `sat_verdict` receipt field | **DECLARED** (no implementation in this PR) |
 
 ## How to confirm this doc landed cleanly

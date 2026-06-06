@@ -33,7 +33,7 @@ const TRUTH_LABEL = "LOCALHOST_READ_ONLY_SCAN";
 
 const SECONDARY_SCAN_ROOTS_DEFAULT = Object.freeze([
   "/data/bizra/models",
-  "/data/bizra"
+  "/data/bizra",
 ]);
 
 const REQUIRED_BLOCKED_EFFECTS = Object.freeze([
@@ -45,7 +45,7 @@ const REQUIRED_BLOCKED_EFFECTS = Object.freeze([
   "chain_advance",
   "receipt_mint",
   "federation_invocation",
-  "node1_connection"
+  "node1_connection",
 ]);
 
 // Inference-only · NEVER claimed verified · per Key Maker §3.
@@ -61,7 +61,8 @@ function inferUsableFor(modelId) {
   if (/whisper/.test(id)) hints.add("speech_to_text");
   if (/kokoro|piper|tts|xtts/.test(id)) hints.add("text_to_speech");
   if (/(small|nano|tiny|mini)|[:-][1-7]b/.test(id)) hints.add("fast_chat");
-  if (/26b|34b|70b|72b|79b|80b/.test(id)) hints.add("strong_reasoning_candidate");
+  if (/26b|34b|70b|72b|79b|80b/.test(id))
+    hints.add("strong_reasoning_candidate");
   if (/bizra/.test(id)) hints.add("bizra_custom");
   if (hints.size === 0) hints.add("unknown");
   return Object.freeze([...hints].sort());
@@ -91,7 +92,7 @@ function augmentRecord(record) {
       modified_at: null,
       source: "unknown",
       load_status: "not_loaded_by_scan",
-      usable_for: Object.freeze(["unknown"])
+      usable_for: Object.freeze(["unknown"]),
     });
   }
   return Object.freeze({
@@ -100,14 +101,20 @@ function augmentRecord(record) {
     path: typeof record.path === "string" ? record.path : null,
     file_type: inferFileType(record),
     size_bytes: typeof record.size_bytes === "number" ? record.size_bytes : 0,
-    modified_at: typeof record.modified_at === "string" ? record.modified_at : null,
-    source: record.source === "ollama" || record.source === "lm_studio" ? "api" : "filesystem",
+    modified_at:
+      typeof record.modified_at === "string" ? record.modified_at : null,
+    source:
+      record.source === "ollama" || record.source === "lm_studio"
+        ? "api"
+        : "filesystem",
     load_status: "not_loaded_by_scan",
-    usable_for: inferUsableFor(record.id)
+    usable_for: inferUsableFor(record.id),
   });
 }
 
-function scanHuggingFaceCache(cacheRoot = join(homedir(), ".cache", "huggingface", "hub")) {
+function scanHuggingFaceCache(
+  cacheRoot = join(homedir(), ".cache", "huggingface", "hub"),
+) {
   if (!existsSync(cacheRoot)) {
     return Object.freeze({ root_present: false, models: Object.freeze([]) });
   }
@@ -115,7 +122,11 @@ function scanHuggingFaceCache(cacheRoot = join(homedir(), ".cache", "huggingface
   try {
     entries = readdirSync(cacheRoot, { withFileTypes: true });
   } catch {
-    return Object.freeze({ root_present: true, models: Object.freeze([]), error: "read_failed" });
+    return Object.freeze({
+      root_present: true,
+      models: Object.freeze([]),
+      error: "read_failed",
+    });
   }
   const models = [];
   for (const entry of entries) {
@@ -126,28 +137,38 @@ function scanHuggingFaceCache(cacheRoot = join(homedir(), ".cache", "huggingface
     try {
       const s = statSync(fullPath);
       modifiedAt = s.mtime.toISOString();
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     // Convert "models--org--name" → "org/name"
     const niceName = entry.name.slice("models--".length).replace(/--/g, "/");
-    models.push(augmentRecord({
-      id: niceName,
-      source: "huggingface",
-      path: fullPath,
-      size_bytes: sizeBytes,
-      modified_at: modifiedAt
-    }));
+    models.push(
+      augmentRecord({
+        id: niceName,
+        source: "huggingface",
+        path: fullPath,
+        size_bytes: sizeBytes,
+        modified_at: modifiedAt,
+      }),
+    );
   }
   return Object.freeze({
     root: cacheRoot,
     root_present: true,
     model_count: models.length,
-    models: Object.freeze(models.sort((a, b) => a.model_id.localeCompare(b.model_id)))
+    models: Object.freeze(
+      models.sort((a, b) => a.model_id.localeCompare(b.model_id)),
+    ),
   });
 }
 
 function scanSecondaryRoot(root, { maxDepth = 3, maxFiles = 200 } = {}) {
   if (!existsSync(root)) {
-    return Object.freeze({ root, root_present: false, models: Object.freeze([]) });
+    return Object.freeze({
+      root,
+      root_present: false,
+      models: Object.freeze([]),
+    });
   }
   const found = [];
   function walk(dir, depth) {
@@ -164,24 +185,36 @@ function scanSecondaryRoot(root, { maxDepth = 3, maxFiles = 200 } = {}) {
       const fullPath = join(dir, entry.name);
       if (entry.isDirectory()) {
         // Skip git/target/node_modules/.cache for speed
-        if (/^(\.git|target|node_modules|\.cache|incremental)$/.test(entry.name)) continue;
+        if (
+          /^(\.git|target|node_modules|\.cache|incremental)$/.test(entry.name)
+        )
+          continue;
         walk(fullPath, depth + 1);
-      } else if (entry.isFile() && /\.(gguf|safetensors|onnx|pt|pth|bin)$/i.test(entry.name)) {
+      } else if (
+        entry.isFile() &&
+        /\.(gguf|safetensors|onnx|pt|pth|bin)$/i.test(entry.name)
+      ) {
         // Skip Rust compile artifacts (.bin in target/ paths, dep-graph etc.)
-        if (/dep-graph|query-cache|postings|chains|index\.bin/.test(entry.name)) continue;
+        if (/dep-graph|query-cache|postings|chains|index\.bin/.test(entry.name))
+          continue;
         if (/\/target\//.test(fullPath)) continue;
         try {
           const s = statSync(fullPath);
-          if (s.isFile() && s.size > 1024 * 1024) { // > 1 MB
-            found.push(augmentRecord({
-              id: entry.name,
-              source: "filesystem",
-              path: fullPath,
-              size_bytes: s.size,
-              modified_at: s.mtime.toISOString()
-            }));
+          if (s.isFile() && s.size > 1024 * 1024) {
+            // > 1 MB
+            found.push(
+              augmentRecord({
+                id: entry.name,
+                source: "filesystem",
+                path: fullPath,
+                size_bytes: s.size,
+                modified_at: s.mtime.toISOString(),
+              }),
+            );
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     }
   }
@@ -191,49 +224,61 @@ function scanSecondaryRoot(root, { maxDepth = 3, maxFiles = 200 } = {}) {
     root_present: true,
     model_count: found.length,
     truncated_at_max_files: found.length >= maxFiles,
-    models: Object.freeze(found.sort((a, b) => b.size_bytes - a.size_bytes))
+    models: Object.freeze(found.sort((a, b) => b.size_bytes - a.size_bytes)),
   });
 }
 
 // Pure wrapper around an existing collectModelInventory result. No I/O here.
 // Used by tests + by the main scanner.
-export function wrapInventoryAsLocalScan(inventory, { hfScan = null, secondaryScans = [] } = {}) {
-  const safeInventory = inventory && typeof inventory === "object" ? inventory : {};
+export function wrapInventoryAsLocalScan(
+  inventory,
+  { hfScan = null, secondaryScans = [] } = {},
+) {
+  const safeInventory =
+    inventory && typeof inventory === "object" ? inventory : {};
   const ollamaSource = safeInventory.providers?.ollama || {};
   const lmStudioSource = safeInventory.providers?.lm_studio || {};
   const downloadsSource = safeInventory.providers?.downloads || {};
 
   const ollamaModels = Array.isArray(ollamaSource.available)
     ? ollamaSource.available.map(augmentRecord)
-    : (Array.isArray(ollamaSource.models) ? ollamaSource.models.map(augmentRecord) : []);
+    : Array.isArray(ollamaSource.models)
+      ? ollamaSource.models.map(augmentRecord)
+      : [];
   const lmStudioModels = Array.isArray(lmStudioSource.available)
     ? lmStudioSource.available.map(augmentRecord)
-    : (Array.isArray(lmStudioSource.models) ? lmStudioSource.models.map(augmentRecord) : []);
+    : Array.isArray(lmStudioSource.models)
+      ? lmStudioSource.models.map(augmentRecord)
+      : [];
   const downloadsModels = Array.isArray(downloadsSource.files)
     ? downloadsSource.files.map(augmentRecord)
-    : (Array.isArray(downloadsSource.models) ? downloadsSource.models.map(augmentRecord) : []);
+    : Array.isArray(downloadsSource.models)
+      ? downloadsSource.models.map(augmentRecord)
+      : [];
 
   const providers = Object.freeze({
     ollama: Object.freeze({
       reachable: ollamaSource.reachable === true,
       error: ollamaSource.error ?? null,
       model_count: ollamaModels.length,
-      models: Object.freeze(ollamaModels)
+      models: Object.freeze(ollamaModels),
     }),
     lm_studio: Object.freeze({
       reachable: lmStudioSource.reachable === true,
       error: lmStudioSource.error ?? null,
       model_count: lmStudioModels.length,
-      models: Object.freeze(lmStudioModels)
+      models: Object.freeze(lmStudioModels),
     }),
     downloads: Object.freeze({
       root: downloadsSource.root ?? null,
       root_present: downloadsSource.root_present !== false,
       model_count: downloadsModels.length,
-      models: Object.freeze(downloadsModels)
+      models: Object.freeze(downloadsModels),
     }),
-    huggingface_cache: hfScan ?? Object.freeze({ root_present: false, models: Object.freeze([]) }),
-    secondary_filesystem_scans: Object.freeze(secondaryScans)
+    huggingface_cache:
+      hfScan ??
+      Object.freeze({ root_present: false, models: Object.freeze([]) }),
+    secondary_filesystem_scans: Object.freeze(secondaryScans),
   });
 
   const totalModels =
@@ -247,11 +292,14 @@ export function wrapInventoryAsLocalScan(inventory, { hfScan = null, secondarySc
     schema: SCHEMA,
     truth_label: TRUTH_LABEL,
     mode: "preview_only",
-    generated_at: typeof safeInventory.generated_at === "string" ? safeInventory.generated_at : new Date().toISOString(),
+    generated_at:
+      typeof safeInventory.generated_at === "string"
+        ? safeInventory.generated_at
+        : new Date().toISOString(),
     total_models: totalModels,
     providers,
     blocked_effects: REQUIRED_BLOCKED_EFFECTS,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -261,7 +309,7 @@ export async function buildLocalModelInventoryScan({
   collectFn = collectModelInventory,
   hfCacheRoot = join(homedir(), ".cache", "huggingface", "hub"),
   secondaryRoots = SECONDARY_SCAN_ROOTS_DEFAULT,
-  inventoryOptions = {}
+  inventoryOptions = {},
 } = {}) {
   const inventory = await collectFn(inventoryOptions);
   const hfScan = scanHuggingFaceCache(hfCacheRoot);
@@ -287,25 +335,33 @@ export function buildLocalModelInventorySummary(scan) {
       lm_studio_count: safe.providers?.lm_studio?.model_count || 0,
       downloads_count: safe.providers?.downloads?.model_count || 0,
       hf_cache_count: safe.providers?.huggingface_cache?.model_count || 0,
-      secondary_scans_total: (safe.providers?.secondary_filesystem_scans || [])
-        .reduce((sum, s) => sum + (s.model_count || 0), 0)
+      secondary_scans_total: (
+        safe.providers?.secondary_filesystem_scans || []
+      ).reduce((sum, s) => sum + (s.model_count || 0), 0),
     }),
     routing_readiness: Object.freeze({
-      has_chat_capable: (safe.total_models || 0) > 0 &&
+      has_chat_capable:
+        (safe.total_models || 0) > 0 &&
         safe.providers?.ollama?.reachable === true,
-      has_embedding_capable: (safe.providers?.ollama?.models || [])
-        .some((m) => (m.usable_for || []).includes("embedding")),
-      has_coding_capable: (safe.providers?.ollama?.models || [])
-        .some((m) => (m.usable_for || []).includes("coding")),
-      has_vision_capable: (safe.providers?.ollama?.models || [])
-        .some((m) => (m.usable_for || []).includes("vision")) ||
-        (safe.providers?.downloads?.models || [])
-          .some((m) => (m.usable_for || []).includes("vision"))
+      has_embedding_capable: (safe.providers?.ollama?.models || []).some((m) =>
+        (m.usable_for || []).includes("embedding"),
+      ),
+      has_coding_capable: (safe.providers?.ollama?.models || []).some((m) =>
+        (m.usable_for || []).includes("coding"),
+      ),
+      has_vision_capable:
+        (safe.providers?.ollama?.models || []).some((m) =>
+          (m.usable_for || []).includes("vision"),
+        ) ||
+        (safe.providers?.downloads?.models || []).some((m) =>
+          (m.usable_for || []).includes("vision"),
+        ),
     }),
-    boundary: safe.boundary || buildPreviewBoundary()
+    boundary: safe.boundary || buildPreviewBoundary(),
   });
 }
 
-export const LOCAL_MODEL_INVENTORY_REQUIRED_BLOCKED_EFFECTS = REQUIRED_BLOCKED_EFFECTS;
+export const LOCAL_MODEL_INVENTORY_REQUIRED_BLOCKED_EFFECTS =
+  REQUIRED_BLOCKED_EFFECTS;
 export const LOCAL_MODEL_INVENTORY_SCHEMA = SCHEMA;
 export const LOCAL_MODEL_INVENTORY_TRUTH_LABEL = TRUTH_LABEL;

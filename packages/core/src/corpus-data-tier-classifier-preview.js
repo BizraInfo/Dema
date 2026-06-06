@@ -1,4 +1,5 @@
-export const CORPUS_DATA_TIER_CLASSIFIER_PREVIEW_SCHEMA = "bizra.dema.corpus_data_tier_classifier_preview.v0.1";
+export const CORPUS_DATA_TIER_CLASSIFIER_PREVIEW_SCHEMA =
+  "bizra.dema.corpus_data_tier_classifier_preview.v0.1";
 
 const SOURCE_IDS = Object.freeze([
   "claude_desktop",
@@ -7,15 +8,35 @@ const SOURCE_IDS = Object.freeze([
   "deepseek",
   "kimi",
   "z_ai",
-  "other"
+  "other",
 ]);
 
 const DATA_TIERS = Object.freeze([
-  Object.freeze({ tier: "D0", label: "public_or_non_sensitive", allowed_in_preview: true }),
-  Object.freeze({ tier: "D1", label: "preferences_and_style", allowed_in_preview: true }),
-  Object.freeze({ tier: "D2", label: "project_reasoning", allowed_in_preview: true }),
-  Object.freeze({ tier: "D3", label: "private_strategy", allowed_in_preview: false }),
-  Object.freeze({ tier: "D4", label: "secrets_credentials_identity_financial_health", allowed_in_preview: false })
+  Object.freeze({
+    tier: "D0",
+    label: "public_or_non_sensitive",
+    allowed_in_preview: true,
+  }),
+  Object.freeze({
+    tier: "D1",
+    label: "preferences_and_style",
+    allowed_in_preview: true,
+  }),
+  Object.freeze({
+    tier: "D2",
+    label: "project_reasoning",
+    allowed_in_preview: true,
+  }),
+  Object.freeze({
+    tier: "D3",
+    label: "private_strategy",
+    allowed_in_preview: false,
+  }),
+  Object.freeze({
+    tier: "D4",
+    label: "secrets_credentials_identity_financial_health",
+    allowed_in_preview: false,
+  }),
 ]);
 
 const TIER_RANKS = Object.freeze({ D0: 0, D1: 1, D2: 2, D3: 3, D4: 4 });
@@ -49,7 +70,7 @@ const SIGNAL_TIERS = Object.freeze({
   financial_account: "D4",
   health_data: "D4",
   biometric: "D4",
-  private_key: "D4"
+  private_key: "D4",
 });
 
 const ALLOWED_USES = Object.freeze([
@@ -59,7 +80,7 @@ const ALLOWED_USES = Object.freeze([
   "micro_consent_classifier_design",
   "dema_ux_optimization_design",
   "process_mining_rule_design",
-  "model_reliability_profile_design"
+  "model_reliability_profile_design",
 ]);
 
 const BLOCKED_USES = Object.freeze([
@@ -73,7 +94,7 @@ const BLOCKED_USES = Object.freeze([
   "secret_extraction",
   "identity_or_financial_profiling",
   "receipt_minting",
-  "step7_minting"
+  "step7_minting",
 ]);
 
 const RAW_CONTENT_KEYS = new Set([
@@ -84,7 +105,7 @@ const RAW_CONTENT_KEYS = new Set([
   "raw_text",
   "transcript",
   "prompt",
-  "response"
+  "response",
 ]);
 
 const DEFAULT_ITEMS = Object.freeze([
@@ -92,32 +113,36 @@ const DEFAULT_ITEMS = Object.freeze([
     item_id: "public_launch_note",
     source_id: "chatgpt_team",
     declared_signals: Object.freeze(["public_context", "documentation"]),
-    expected_use: "source_inventory"
+    expected_use: "source_inventory",
   }),
   Object.freeze({
     item_id: "operator_workflow_preference",
     source_id: "claude_desktop",
     declared_signals: Object.freeze(["preference", "workflow"]),
-    expected_use: "dema_ux_optimization_design"
+    expected_use: "dema_ux_optimization_design",
   }),
   Object.freeze({
     item_id: "node0_architecture_reasoning",
     source_id: "z_ai",
-    declared_signals: Object.freeze(["architecture", "implementation_plan", "test_strategy"]),
-    expected_use: "data_tier_classification_design"
+    declared_signals: Object.freeze([
+      "architecture",
+      "implementation_plan",
+      "test_strategy",
+    ]),
+    expected_use: "data_tier_classification_design",
   }),
   Object.freeze({
     item_id: "investor_positioning_note",
     source_id: "other",
     declared_signals: Object.freeze(["private_strategy", "investor_narrative"]),
-    expected_use: "snr_pattern_design"
+    expected_use: "snr_pattern_design",
   }),
   Object.freeze({
     item_id: "credential_or_identity_marker",
     source_id: "other",
     declared_signals: Object.freeze(["credential", "identity_document"]),
-    expected_use: "source_inventory"
-  })
+    expected_use: "source_inventory",
+  }),
 ]);
 
 function clone(value) {
@@ -125,7 +150,8 @@ function clone(value) {
 }
 
 function deepFreeze(value) {
-  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  if (!value || typeof value !== "object" || Object.isFrozen(value))
+    return value;
   for (const child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
 }
@@ -143,7 +169,8 @@ function tierDefinition(tier) {
 }
 
 function dispositionForTier(tier) {
-  if (tier === "D4") return "quarantine_secret_identity_or_high_sensitivity_metadata";
+  if (tier === "D4")
+    return "quarantine_secret_identity_or_high_sensitivity_metadata";
   if (tier === "D3") return "quarantine_private_strategy_metadata";
   return "preview_metadata_design_allowed";
 }
@@ -171,7 +198,10 @@ function validateItems(items) {
     if (!ALLOWED_USES.includes(item.expected_use)) {
       return { ok: false, reason: "expected_use_not_allowlisted" };
     }
-    if (!Array.isArray(item.declared_signals) || item.declared_signals.length === 0) {
+    if (
+      !Array.isArray(item.declared_signals) ||
+      item.declared_signals.length === 0
+    ) {
       return { ok: false, reason: "declared_signals_must_be_non_empty_array" };
     }
     for (const signal of item.declared_signals) {
@@ -187,7 +217,9 @@ function validateItems(items) {
 function classifyItem(item) {
   const tier = item.declared_signals.reduce((highestTier, signal) => {
     const signalTier = SIGNAL_TIERS[signal];
-    return TIER_RANKS[signalTier] > TIER_RANKS[highestTier] ? signalTier : highestTier;
+    return TIER_RANKS[signalTier] > TIER_RANKS[highestTier]
+      ? signalTier
+      : highestTier;
   }, "D0");
   const definition = tierDefinition(tier);
 
@@ -199,7 +231,7 @@ function classifyItem(item) {
     tier,
     label: definition.label,
     allowed_in_preview: definition.allowed_in_preview,
-    disposition: dispositionForTier(tier)
+    disposition: dispositionForTier(tier),
   };
 }
 
@@ -216,7 +248,7 @@ function boundary() {
     runtime_started: false,
     federation_started: false,
     receipt_minted: false,
-    step7_mint_attempted: false
+    step7_mint_attempted: false,
   };
 }
 
@@ -234,22 +266,29 @@ function rejectPreview(reason) {
       total_items: 0,
       preview_allowed_count: 0,
       quarantine_count: 0,
-      counts_by_tier: { D0: 0, D1: 0, D2: 0, D3: 0, D4: 0 }
+      counts_by_tier: { D0: 0, D1: 0, D2: 0, D3: 0, D4: 0 },
     },
     self_proactive_harness: {
       mode: "DETERMINISTIC_DATA_TIER_CLASSIFIER_PREVIEW",
       recommended_micro_action: "fix_malformed_classifier_inputs",
       gates: [
-        { gate: "metadata_only_inputs", pass: reason !== "item_must_not_include_raw_content" },
-        { gate: "signals_allowlisted", pass: reason !== "declared_signal_not_allowlisted" },
+        {
+          gate: "metadata_only_inputs",
+          pass: reason !== "item_must_not_include_raw_content",
+        },
+        {
+          gate: "signals_allowlisted",
+          pass: reason !== "declared_signal_not_allowlisted",
+        },
         { gate: "d3_d4_quarantine_available", pass: true },
-        { gate: "local_only_boundary", pass: true }
-      ]
+        { gate: "local_only_boundary", pass: true },
+      ],
     },
     self_critique: {
       confidence: "rejected",
-      limitation: "Malformed classifier inputs are rejected before any data-tier posture can be trusted.",
-      weakest_link: reason
+      limitation:
+        "Malformed classifier inputs are rejected before any data-tier posture can be trusted.",
+      weakest_link: reason,
     },
     micro_compliance: {
       preview_only: true,
@@ -260,7 +299,7 @@ function rejectPreview(reason) {
       no_fine_tune: true,
       no_external_upload: true,
       no_runtime_memory_mutation: true,
-      fail_closed_on_malformed_input: true
+      fail_closed_on_malformed_input: true,
     },
     micro_consent: {
       preview_scope: "corpus_data_tier_classifier_preview_only",
@@ -268,26 +307,32 @@ function rejectPreview(reason) {
       d3_d4_processing_authorized: false,
       node_sharing_authorized: false,
       fine_tune_authorized: false,
-      external_upload_authorized: false
+      external_upload_authorized: false,
     },
     analogical_model: {
       model: "color_label_not_container_opening",
-      mapping: "This preview labels sealed boxes by declared handling risk; it does not open, copy, upload, or train on the boxes."
+      mapping:
+        "This preview labels sealed boxes by declared handling risk; it does not open, copy, upload, or train on the boxes.",
     },
     boundary: boundary(),
     next_safe_action: "fix_malformed_classifier_inputs",
-    reason
+    reason,
   });
 }
 
-export function buildCorpusDataTierClassifierPreview({ items = DEFAULT_ITEMS } = {}) {
+export function buildCorpusDataTierClassifierPreview({
+  items = DEFAULT_ITEMS,
+} = {}) {
   const validation = validateItems(items);
   if (!validation.ok) return rejectPreview(validation.reason);
 
   const classifications = items.map(classifyItem);
   const countsByTier = { D0: 0, D1: 0, D2: 0, D3: 0, D4: 0 };
-  for (const classification of classifications) countsByTier[classification.tier] += 1;
-  const previewAllowedCount = classifications.filter((classification) => classification.allowed_in_preview).length;
+  for (const classification of classifications)
+    countsByTier[classification.tier] += 1;
+  const previewAllowedCount = classifications.filter(
+    (classification) => classification.allowed_in_preview,
+  ).length;
 
   return deepFreeze({
     schema: CORPUS_DATA_TIER_CLASSIFIER_PREVIEW_SCHEMA,
@@ -302,7 +347,7 @@ export function buildCorpusDataTierClassifierPreview({ items = DEFAULT_ITEMS } =
       total_items: classifications.length,
       preview_allowed_count: previewAllowedCount,
       quarantine_count: classifications.length - previewAllowedCount,
-      counts_by_tier: countsByTier
+      counts_by_tier: countsByTier,
     },
     self_proactive_harness: {
       mode: "DETERMINISTIC_DATA_TIER_CLASSIFIER_PREVIEW",
@@ -311,13 +356,14 @@ export function buildCorpusDataTierClassifierPreview({ items = DEFAULT_ITEMS } =
         { gate: "metadata_only_inputs", pass: true },
         { gate: "signals_allowlisted", pass: true },
         { gate: "d3_d4_quarantine_available", pass: true },
-        { gate: "local_only_boundary", pass: true }
-      ]
+        { gate: "local_only_boundary", pass: true },
+      ],
     },
     self_critique: {
       confidence: "bounded_preview",
-      limitation: "Classification is based only on declared metadata signals; no conversation content is inspected or proven.",
-      weakest_link: "operator_declared_signals_require_future_evidence"
+      limitation:
+        "Classification is based only on declared metadata signals; no conversation content is inspected or proven.",
+      weakest_link: "operator_declared_signals_require_future_evidence",
     },
     micro_compliance: {
       preview_only: true,
@@ -328,7 +374,7 @@ export function buildCorpusDataTierClassifierPreview({ items = DEFAULT_ITEMS } =
       no_fine_tune: true,
       no_external_upload: true,
       no_runtime_memory_mutation: true,
-      fail_closed_on_malformed_input: false
+      fail_closed_on_malformed_input: false,
     },
     micro_consent: {
       preview_scope: "corpus_data_tier_classifier_preview_only",
@@ -336,14 +382,15 @@ export function buildCorpusDataTierClassifierPreview({ items = DEFAULT_ITEMS } =
       d3_d4_processing_authorized: false,
       node_sharing_authorized: false,
       fine_tune_authorized: false,
-      external_upload_authorized: false
+      external_upload_authorized: false,
     },
     analogical_model: {
       model: "color_label_not_container_opening",
-      mapping: "This preview labels sealed boxes by declared handling risk; it does not open, copy, upload, or train on the boxes."
+      mapping:
+        "This preview labels sealed boxes by declared handling risk; it does not open, copy, upload, or train on the boxes.",
     },
     boundary: boundary(),
     next_safe_action: "build_corpus_redaction_fixture_preview",
-    note: "Corpus Data Tier Classifier Preview classifies allowlisted metadata signals only. It performs no raw ingestion, content extraction, embeddings, fine-tuning, upload, runtime memory mutation, node sharing, receipt mint, federation, runtime start, or Step 7 action."
+    note: "Corpus Data Tier Classifier Preview classifies allowlisted metadata signals only. It performs no raw ingestion, content extraction, embeddings, fine-tuning, upload, runtime memory mutation, node sharing, receipt mint, federation, runtime start, or Step 7 action.",
   });
 }

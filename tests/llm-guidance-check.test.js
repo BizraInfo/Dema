@@ -9,11 +9,13 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildLlmGuidanceReport,
-  formatLlmGuidanceReport
+  formatLlmGuidanceReport,
 } from "../scripts/llm-guidance-check.mjs";
 
 const execFileAsync = promisify(execFile);
-const scriptPath = fileURLToPath(new URL("../scripts/llm-guidance-check.mjs", import.meta.url));
+const scriptPath = fileURLToPath(
+  new URL("../scripts/llm-guidance-check.mjs", import.meta.url),
+);
 
 test("buildLlmGuidanceReport verifies canonical LLM flow alignment", () => {
   const report = buildLlmGuidanceReport();
@@ -22,7 +24,11 @@ test("buildLlmGuidanceReport verifies canonical LLM flow alignment", () => {
   assert.equal(report.mode, "READ_ONLY_AUDIT");
   assert.equal(report.ok, true);
   assert.equal(report.boundary.runtime_started, false);
-  assert.ok(report.checks.some((check) => check.name === "canonical_flow_invariants_present"));
+  assert.ok(
+    report.checks.some(
+      (check) => check.name === "canonical_flow_invariants_present",
+    ),
+  );
 });
 
 test("formatLlmGuidanceReport renders concise human output", () => {
@@ -51,7 +57,7 @@ test("llm-guidance-check fails when the canonical flow loses required invariants
       "docs/ARCHITECTURE.md",
       "docs/ENGINEERING_DISCIPLINE.md",
       "docs/06-adr/ADR-001-dema-is-one-face.md",
-      "docs/06-adr/ADR-005-operator-actions-require-explicit-consent.md"
+      "docs/06-adr/ADR-005-operator-actions-require-explicit-consent.md",
     ]) {
       writeFileSync(join(root, path), "# placeholder\n");
     }
@@ -60,17 +66,22 @@ test("llm-guidance-check fails when the canonical flow loses required invariants
     writeFileSync(join(root, "CLAUDE.md"), "[flow](docs/LLM_SYSTEM_FLOW.md)\n");
     writeFileSync(
       join(root, "docs", "INDEX.md"),
-      "Historical and reference material\n\ndocs/_absorbed\n\nsuperpowers\n\nWorking design artifacts\n"
+      "Historical and reference material\n\ndocs/_absorbed\n\nsuperpowers\n\nWorking design artifacts\n",
     );
-    writeFileSync(join(root, "docs", "LLM_SYSTEM_FLOW.md"), "# LLM System Flow Contract\n");
+    writeFileSync(
+      join(root, "docs", "LLM_SYSTEM_FLOW.md"),
+      "# LLM System Flow Contract\n",
+    );
 
     const report = buildLlmGuidanceReport({ root });
 
     assert.equal(report.ok, false);
     assert.ok(
       report.checks.some(
-        (check) => check.name === "canonical_flow_invariants_present" && check.ok === false
-      )
+        (check) =>
+          check.name === "canonical_flow_invariants_present" &&
+          check.ok === false,
+      ),
     );
   } finally {
     rmSync(root, { recursive: true, force: true });

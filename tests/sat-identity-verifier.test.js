@@ -8,7 +8,7 @@ import {
   buildSATIdentityVerifierSummary,
   verifyIdentity,
   SAT_IDENTITY_VERIFIER_PERSONA,
-  SAT_IDENTITY_VERIFIER_REQUIRED_FIELDS
+  SAT_IDENTITY_VERIFIER_REQUIRED_FIELDS,
 } from "../packages/core/src/sat-identity-verifier.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 
@@ -23,7 +23,9 @@ test("SAT-5 boundary canonical · refusals never-modify never-infer-from-absent"
   const p = buildSATIdentityVerifierPreview();
   assert.ok(isCanonicalBoundary(p.boundary));
   assert.ok(p.persona.primary_refusals.includes("modify_profile"));
-  assert.ok(p.persona.primary_refusals.includes("infer_identity_from_absent_profile"));
+  assert.ok(
+    p.persona.primary_refusals.includes("infer_identity_from_absent_profile"),
+  );
   assert.ok(p.persona.primary_refusals.includes("waive_identity_check"));
 });
 
@@ -49,7 +51,7 @@ test("verifyIdentity · null profile → profile_absent", () => {
 
 test("verifyIdentity · valid profile no snapshot → identity_verified", () => {
   const v = verifyIdentity({
-    profile: { name: "Mumu", node: "Node0" }
+    profile: { name: "Mumu", node: "Node0" },
   });
   assert.equal(v.verdict, "identity_verified");
   assert.equal(v.passed, true);
@@ -59,15 +61,19 @@ test("verifyIdentity · valid profile no snapshot → identity_verified", () => 
 
 test("verifyIdentity · missing required field → identity_violation", () => {
   const v = verifyIdentity({
-    profile: { name: "Mumu" } // missing node
+    profile: { name: "Mumu" }, // missing node
   });
   assert.equal(v.passed, false);
-  assert.ok(v.violations.some((vio) => vio.includes("missing_or_empty_field") && vio.includes("node")));
+  assert.ok(
+    v.violations.some(
+      (vio) => vio.includes("missing_or_empty_field") && vio.includes("node"),
+    ),
+  );
 });
 
 test("verifyIdentity · empty required field → identity_violation", () => {
   const v = verifyIdentity({
-    profile: { name: "Mumu", node: "" }
+    profile: { name: "Mumu", node: "" },
   });
   assert.equal(v.passed, false);
 });
@@ -75,7 +81,7 @@ test("verifyIdentity · empty required field → identity_violation", () => {
 test("verifyIdentity · continuity check with matching snapshot → continuity_held=true", () => {
   const v = verifyIdentity({
     profile: { name: "Mumu", node: "Node0" },
-    previous_snapshot: { name: "Mumu", node: "Node0" }
+    previous_snapshot: { name: "Mumu", node: "Node0" },
   });
   assert.equal(v.passed, true);
   assert.equal(v.continuity_check.continuity_held, true);
@@ -85,7 +91,7 @@ test("verifyIdentity · continuity check with matching snapshot → continuity_h
 test("verifyIdentity · continuity drift detected → identity_violation with named fields", () => {
   const v = verifyIdentity({
     profile: { name: "Different", node: "Node0" },
-    previous_snapshot: { name: "Mumu", node: "Node0" }
+    previous_snapshot: { name: "Mumu", node: "Node0" },
   });
   assert.equal(v.passed, false);
   assert.equal(v.continuity_check.continuity_held, false);
@@ -95,7 +101,7 @@ test("verifyIdentity · continuity drift detected → identity_violation with na
 
 test("verifyIdentity · no snapshot → continuity_held=null (not asked)", () => {
   const v = verifyIdentity({
-    profile: { name: "Mumu", node: "Node0" }
+    profile: { name: "Mumu", node: "Node0" },
   });
   assert.equal(v.continuity_check.previous_snapshot_present, false);
   assert.equal(v.continuity_check.continuity_held, null);

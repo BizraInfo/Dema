@@ -40,7 +40,7 @@ const CANONICAL_EFFECTS = Object.freeze([
   "invoke_local_llm",
   "compute_hash",
   "stat_file_metadata",
-  "render_terminal_output"
+  "render_terminal_output",
 ]);
 
 // Effects that MUST appear in blocked_effects on every tool · no exceptions.
@@ -53,7 +53,7 @@ const ALWAYS_BLOCKED_EFFECTS = Object.freeze([
   "mint_canonical_receipt",
   "invoke_federation",
   "connect_node1_or_node2",
-  "modify_consent_phrase_check"
+  "modify_consent_phrase_check",
 ]);
 
 function safeString(v, fallback = "") {
@@ -66,7 +66,9 @@ function safeBool(v, fallback = false) {
 
 function filterStringArray(arr, validator) {
   if (!Array.isArray(arr)) return Object.freeze([]);
-  const filtered = arr.filter((v) => typeof v === "string" && (!validator || validator(v)));
+  const filtered = arr.filter(
+    (v) => typeof v === "string" && (!validator || validator(v)),
+  );
   // dedupe while preserving order
   const seen = new Set();
   const deduped = [];
@@ -85,23 +87,22 @@ export function buildEffectCap({
   allowed_effects = [],
   blocked_effects = [],
   consent_scope_template = "",
-  audit_trail_required = true
+  audit_trail_required = true,
 } = {}) {
   const safeName = safeString(name, "");
-  const allowedFiltered = filterStringArray(
-    allowed_effects,
-    (e) => CANONICAL_EFFECTS.includes(e)
+  const allowedFiltered = filterStringArray(allowed_effects, (e) =>
+    CANONICAL_EFFECTS.includes(e),
   );
   // blocked_effects = union of caller-provided (filtered to strings) + ALWAYS_BLOCKED
   const callerBlocked = filterStringArray(blocked_effects);
   const blockedUnion = Object.freeze(
-    [...new Set([...callerBlocked, ...ALWAYS_BLOCKED_EFFECTS])].sort()
+    [...new Set([...callerBlocked, ...ALWAYS_BLOCKED_EFFECTS])].sort(),
   );
 
   // Cross-check: any effect appearing in BOTH allowed and blocked is a
   // contradiction · resolve in favor of blocked (refusal wins).
   const allowedFinal = Object.freeze(
-    allowedFiltered.filter((e) => !blockedUnion.includes(e))
+    allowedFiltered.filter((e) => !blockedUnion.includes(e)),
   );
 
   const consentTemplate = safeString(consent_scope_template, "");
@@ -110,7 +111,7 @@ export function buildEffectCap({
   // Compliance check: every cap must declare ALL of the ALWAYS_BLOCKED
   // effects. If the caller stripped them somehow, mark as invalid.
   const missingRequiredBlocked = ALWAYS_BLOCKED_EFFECTS.filter(
-    (e) => !blockedUnion.includes(e)
+    (e) => !blockedUnion.includes(e),
   );
   const valid =
     safeName.length > 0 &&
@@ -132,12 +133,12 @@ export function buildEffectCap({
     missing_required_blocked: Object.freeze(missingRequiredBlocked),
     canonical_effects_vocabulary: CANONICAL_EFFECTS,
     always_blocked_effects: ALWAYS_BLOCKED_EFFECTS,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
 export function buildToolRegistry({ tools = {} } = {}) {
-  const safeTools = (tools && typeof tools === "object") ? tools : {};
+  const safeTools = tools && typeof tools === "object" ? tools : {};
   const registry = {};
   const invalidEntries = [];
 
@@ -169,7 +170,7 @@ export function buildToolRegistry({ tools = {} } = {}) {
     registry[toolName] = Object.freeze({
       name: toolName,
       cap: entry.cap,
-      invoke: entry.invoke
+      invoke: entry.invoke,
     });
   }
 
@@ -184,7 +185,7 @@ export function buildToolRegistry({ tools = {} } = {}) {
     tool_names: toolNames,
     tools: frozenRegistry,
     invalid_entries: Object.freeze(invalidEntries),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -195,11 +196,12 @@ function buildInvocationEvent({
   invocation_status,
   error_reason = null,
   result_summary = null,
-  duration_ms = 0
+  duration_ms = 0,
 }) {
   return Object.freeze({
     schema: EFFECT_CAP_INVOCATION_SCHEMA,
-    truth_label: invocation_status === "completed" ? "MEASURED" : "INVOCATION_REFUSED",
+    truth_label:
+      invocation_status === "completed" ? "MEASURED" : "INVOCATION_REFUSED",
     mode: "invocation_event",
     tool_name: toolName,
     cap_name: capName,
@@ -209,7 +211,7 @@ function buildInvocationEvent({
     result_summary,
     duration_ms,
     audit_trail_required: true,
-    receipt_shape_ready: invocation_status === "completed"
+    receipt_shape_ready: invocation_status === "completed",
   });
 }
 
@@ -226,10 +228,11 @@ export async function invokeWithEffectCap({
   registry,
   toolName,
   args = {},
-  consentPhrase = ""
+  consentPhrase = "",
 } = {}) {
   const safeToolName = safeString(toolName, "");
-  const safeArgs = (args && typeof args === "object" && !Array.isArray(args)) ? args : {};
+  const safeArgs =
+    args && typeof args === "object" && !Array.isArray(args) ? args : {};
   const safeConsent = safeString(consentPhrase, "");
 
   // Gate 1: registry exists and has tools
@@ -239,7 +242,7 @@ export async function invokeWithEffectCap({
       capName: null,
       consentPhraseVerified: false,
       invocation_status: "refused",
-      error_reason: "registry_invalid · cannot resolve tool"
+      error_reason: "registry_invalid · cannot resolve tool",
     });
   }
 
@@ -251,7 +254,7 @@ export async function invokeWithEffectCap({
       capName: null,
       consentPhraseVerified: false,
       invocation_status: "refused",
-      error_reason: `tool_not_registered · '${safeToolName}' not in registry`
+      error_reason: `tool_not_registered · '${safeToolName}' not in registry`,
     });
   }
 
@@ -262,7 +265,7 @@ export async function invokeWithEffectCap({
       capName: entry.cap?.name ?? null,
       consentPhraseVerified: false,
       invocation_status: "refused",
-      error_reason: "cap_invalid · registered entry has invalid EffectCap"
+      error_reason: "cap_invalid · registered entry has invalid EffectCap",
     });
   }
 
@@ -277,7 +280,7 @@ export async function invokeWithEffectCap({
       capName: entry.cap.name,
       consentPhraseVerified: false,
       invocation_status: "refused",
-      error_reason: `consent_phrase_mismatch · required exact: '${entry.cap.consent_scope_template}'`
+      error_reason: `consent_phrase_mismatch · required exact: '${entry.cap.consent_scope_template}'`,
     });
   }
 
@@ -289,13 +292,18 @@ export async function invokeWithEffectCap({
 
   try {
     const result = await entry.invoke(safeArgs);
-    resultSummary = typeof result === "object" && result !== null
-      ? Object.freeze({
-          keys: Object.freeze(Object.keys(result).slice(0, 20)),
-          has_schema: typeof result.schema === "string",
-          schema: typeof result.schema === "string" ? result.schema : null
-        })
-      : Object.freeze({ keys: Object.freeze([]), has_schema: false, schema: null });
+    resultSummary =
+      typeof result === "object" && result !== null
+        ? Object.freeze({
+            keys: Object.freeze(Object.keys(result).slice(0, 20)),
+            has_schema: typeof result.schema === "string",
+            schema: typeof result.schema === "string" ? result.schema : null,
+          })
+        : Object.freeze({
+            keys: Object.freeze([]),
+            has_schema: false,
+            schema: null,
+          });
   } catch (err) {
     invocation_status = "errored";
     error_reason = `tool_threw · ${String(err).slice(0, 200)}`;
@@ -308,7 +316,7 @@ export async function invokeWithEffectCap({
     invocation_status,
     error_reason,
     result_summary: resultSummary,
-    duration_ms: Date.now() - startedAt
+    duration_ms: Date.now() - startedAt,
   });
 }
 

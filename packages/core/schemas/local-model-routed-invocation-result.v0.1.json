@@ -12,7 +12,9 @@
     "warnings"
   ],
   "properties": {
-    "schema": { "const": "bizra.dema.local_model_routed_invocation_result.v0.1" },
+    "schema": {
+      "const": "bizra.dema.local_model_routed_invocation_result.v0.1"
+    },
     "route_receipt": { "type": "object" },
     "selected_model_id": { "type": ["string", "null"] },
     "invocation_result": { "type": ["object", "null"] },

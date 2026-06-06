@@ -35,30 +35,30 @@ steer intent -> valid path -> autonomy level -> gate -> artifact / denial
 
 Any future machine-readable steer vector should carry these fields:
 
-| Field | Meaning |
-|---|---|
-| `steer_id` | Stable local identifier for the steer vector. |
-| `origin` | Human, Dema, PAT, SAT, receipt, policy, or external adapter. |
-| `path` | One of the valid steering paths in this spec. |
-| `autonomy_level` | L0, L1, L2, L3, L4, or L5. |
-| `target` | What the steer changes: attention, memory, proposal, local work, runtime mission, or external commitment. |
-| `declared_purpose` | Human-readable reason for the steer. |
-| `allowed_effect` | Maximum effect the steer may produce at this level. |
-| `required_gate` | Consent, SAT verdict, exact GO, or none. |
-| `receipt_expectation` | None, memory write, proposal artifact, local commit, runtime receipt, or external cross-reference. |
-| `reversibility` | Inherent, local undo, append-only record, or irreversible. |
-| `forbidden_escalations` | Higher-level actions this steer must not trigger. |
+| Field                   | Meaning                                                                                                   |
+| ----------------------- | --------------------------------------------------------------------------------------------------------- |
+| `steer_id`              | Stable local identifier for the steer vector.                                                             |
+| `origin`                | Human, Dema, PAT, SAT, receipt, policy, or external adapter.                                              |
+| `path`                  | One of the valid steering paths in this spec.                                                             |
+| `autonomy_level`        | L0, L1, L2, L3, L4, or L5.                                                                                |
+| `target`                | What the steer changes: attention, memory, proposal, local work, runtime mission, or external commitment. |
+| `declared_purpose`      | Human-readable reason for the steer.                                                                      |
+| `allowed_effect`        | Maximum effect the steer may produce at this level.                                                       |
+| `required_gate`         | Consent, SAT verdict, exact GO, or none.                                                                  |
+| `receipt_expectation`   | None, memory write, proposal artifact, local commit, runtime receipt, or external cross-reference.        |
+| `reversibility`         | Inherent, local undo, append-only record, or irreversible.                                                |
+| `forbidden_escalations` | Higher-level actions this steer must not trigger.                                                         |
 
 ## Valid steering paths
 
-| Path | Name | Autonomy level | Valid origin | Valid target | Gate |
-|---|---|---:|---|---|---|
-| `SV0_OBSERVE` | Attention steer | L0 | Human, Dema, PAT, SAT report | What to inspect or prioritize | None |
-| `SV1_REMEMBER` | Memory steer | L1 | Human, Dema, PAT | Local preference, goal, note, or avoidance pattern under `DEMA_HOME` / `~/.dema` | Scope declared in current task |
-| `SV2_PROPOSE` | Proposal steer | L2 | Human, Dema, PAT, SAT report | Plan, mission draft, consent draft, refusal explanation, or option ranking | None for proposal; later action must re-gate |
-| `SV3_LOCAL_WORK` | Local work steer | L3 | Human, Dema, PAT | Repo edit, local artifact, local commit, or reversible local state update | Explicit bounded scope |
-| `SV4_GOVERNED_RUNTIME` | Runtime mission steer | L4 | Human through Dema/PAT, then SAT validation | Governed mission submission or receipt-chain mutation outside this repo | Exact-string consent plus governed runtime path plus SAT admissibility |
-| `SV5_EXTERNAL_COMMITMENT` | External commitment steer | L5 | Human only, mediated by Dema/PAT and certified by SAT where applicable | Push, PR, publication, timestamp, identity artifact, federation, payment, governance, or economy action | Typed in-the-moment GO for the specific irreversible action |
+| Path                      | Name                      | Autonomy level | Valid origin                                                           | Valid target                                                                                            | Gate                                                                   |
+| ------------------------- | ------------------------- | -------------: | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `SV0_OBSERVE`             | Attention steer           |             L0 | Human, Dema, PAT, SAT report                                           | What to inspect or prioritize                                                                           | None                                                                   |
+| `SV1_REMEMBER`            | Memory steer              |             L1 | Human, Dema, PAT                                                       | Local preference, goal, note, or avoidance pattern under `DEMA_HOME` / `~/.dema`                        | Scope declared in current task                                         |
+| `SV2_PROPOSE`             | Proposal steer            |             L2 | Human, Dema, PAT, SAT report                                           | Plan, mission draft, consent draft, refusal explanation, or option ranking                              | None for proposal; later action must re-gate                           |
+| `SV3_LOCAL_WORK`          | Local work steer          |             L3 | Human, Dema, PAT                                                       | Repo edit, local artifact, local commit, or reversible local state update                               | Explicit bounded scope                                                 |
+| `SV4_GOVERNED_RUNTIME`    | Runtime mission steer     |             L4 | Human through Dema/PAT, then SAT validation                            | Governed mission submission or receipt-chain mutation outside this repo                                 | Exact-string consent plus governed runtime path plus SAT admissibility |
+| `SV5_EXTERNAL_COMMITMENT` | External commitment steer |             L5 | Human only, mediated by Dema/PAT and certified by SAT where applicable | Push, PR, publication, timestamp, identity artifact, federation, payment, governance, or economy action | Typed in-the-moment GO for the specific irreversible action            |
 
 No other steering path is valid in v0.1.
 
@@ -142,31 +142,31 @@ Steer vectors must not introduce:
 
 ## Constitutional bounds
 
-| Bound | Requirement |
-|---|---|
-| Dema boundary | Dema is the local face, not the whole BIZRA system. |
-| Runtime boundary | No runtime execution is authorized by this spec. |
-| Consent boundary | L4 requires exact-string consent; L5 requires typed in-the-moment GO. |
-| SAT boundary | L4+ cannot become system-recognized without SAT admissibility where the doctrine requires it. |
-| Receipt boundary | Dema reads/lists receipts; governed runtime issues them. |
-| State boundary | Operator-scoped local state stays under `DEMA_HOME` or `~/.dema`. |
-| Data boundary | Raw private data, secrets, keys, and identity documents must not be inserted into steer vectors. |
-| Federation boundary | Node1, Node2, and broader mesh operations remain preview-only until proof gates pass. |
-| Economy boundary | No token, reward, payment, or governance action is valid below SV5. |
-| Proof language | Use preview, declared, planned, measured, and blocked labels honestly; do not overclaim. |
+| Bound               | Requirement                                                                                      |
+| ------------------- | ------------------------------------------------------------------------------------------------ |
+| Dema boundary       | Dema is the local face, not the whole BIZRA system.                                              |
+| Runtime boundary    | No runtime execution is authorized by this spec.                                                 |
+| Consent boundary    | L4 requires exact-string consent; L5 requires typed in-the-moment GO.                            |
+| SAT boundary        | L4+ cannot become system-recognized without SAT admissibility where the doctrine requires it.    |
+| Receipt boundary    | Dema reads/lists receipts; governed runtime issues them.                                         |
+| State boundary      | Operator-scoped local state stays under `DEMA_HOME` or `~/.dema`.                                |
+| Data boundary       | Raw private data, secrets, keys, and identity documents must not be inserted into steer vectors. |
+| Federation boundary | Node1, Node2, and broader mesh operations remain preview-only until proof gates pass.            |
+| Economy boundary    | No token, reward, payment, or governance action is valid below SV5.                              |
+| Proof language      | Use preview, declared, planned, measured, and blocked labels honestly; do not overclaim.         |
 
 ## Invalid steering patterns
 
-| Invalid pattern | Why it is rejected |
-|---|---|
-| `SV2_PROPOSE -> SV4_GOVERNED_RUNTIME` without fresh exact consent | Proposal is data, not permission. |
-| `SV1_REMEMBER -> SV5_EXTERNAL_COMMITMENT` | Memory cannot authorize irreversible action. |
-| `SV3_LOCAL_WORK -> git push` | Local work does not include external publication. |
-| `SV4_GOVERNED_RUNTIME -> receipt minted by Dema repo` | Dema reads/lists; governed runtime issues. |
-| `SAT report -> direct file edit` | SAT validates; PAT/Dema performs local builder work if allowed. |
-| `Human broad goal -> federation handshake` | Federation is L5 and needs exact action GO plus proof gates. |
-| `Auto-mode -> identity artifact` | Identity-bound artifacts are L5 hard stops. |
-| `Steer vector -> hidden daemon` | Hidden daemons are forbidden at every level. |
+| Invalid pattern                                                   | Why it is rejected                                              |
+| ----------------------------------------------------------------- | --------------------------------------------------------------- |
+| `SV2_PROPOSE -> SV4_GOVERNED_RUNTIME` without fresh exact consent | Proposal is data, not permission.                               |
+| `SV1_REMEMBER -> SV5_EXTERNAL_COMMITMENT`                         | Memory cannot authorize irreversible action.                    |
+| `SV3_LOCAL_WORK -> git push`                                      | Local work does not include external publication.               |
+| `SV4_GOVERNED_RUNTIME -> receipt minted by Dema repo`             | Dema reads/lists; governed runtime issues.                      |
+| `SAT report -> direct file edit`                                  | SAT validates; PAT/Dema performs local builder work if allowed. |
+| `Human broad goal -> federation handshake`                        | Federation is L5 and needs exact action GO plus proof gates.    |
+| `Auto-mode -> identity artifact`                                  | Identity-bound artifacts are L5 hard stops.                     |
+| `Steer vector -> hidden daemon`                                   | Hidden daemons are forbidden at every level.                    |
 
 ## Refusal rules
 

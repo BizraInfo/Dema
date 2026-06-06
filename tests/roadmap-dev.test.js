@@ -12,11 +12,13 @@ import { fileURLToPath } from "node:url";
 import {
   ROADMAP_DEV_SCHEMA,
   gatherDevRoadmapState,
-  formatDevRoadmapReport
+  formatDevRoadmapReport,
 } from "../packages/core/src/roadmap-dev.js";
 
 const execFileAsync = promisify(execFile);
-const indexPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const indexPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 // Canned git stdout for unit tests (avoid touching the real repo).
 function fakeRunGit(table) {
@@ -41,7 +43,8 @@ test("gatherDevRoadmapState — clean tree + synced main", async () => {
   const runGit = fakeRunGit({
     "branch --show-current": "main\n",
     "rev-parse --short HEAD": "ab47dbe\n",
-    "log -1 --pretty=%s": "feat(cli): add `dema first-run` (5-step entry) + `dema --version` v0.1\n",
+    "log -1 --pretty=%s":
+      "feat(cli): add `dema first-run` (5-step entry) + `dema --version` v0.1\n",
     "status --short": "",
     "log main -12 --pretty=%h %s":
       "ab47dbe feat(cli): add dema first-run\n" +
@@ -50,7 +53,7 @@ test("gatherDevRoadmapState — clean tree + synced main", async () => {
     "for-each-ref --count=20 --sort=-committerdate refs/heads/feat/ --format=%(refname:short)|%(committerdate:relative)|%(objectname:short)":
       "feat/dema-a-plus|2 hours ago|e8a4d89\n" +
       "feat/dev-roadmap-v0-1|now|aaaaaaa\n",
-    "rev-list --left-right --count main...origin/main": "0\t0\n"
+    "rev-list --left-right --count main...origin/main": "0\t0\n",
   });
   const state = await gatherDevRoadmapState({ cwd: process.cwd(), runGit });
 
@@ -76,16 +79,14 @@ test("gatherDevRoadmapState — dirty tree + ahead+behind reflected", async () =
     "log -1 --pretty=%s": "wip\n",
     "status --short": " M docs/ROADMAP.md\n?? new-file.js\n",
     "log main -12 --pretty=%h %s": "ab47dbe last on main\n",
-    "for-each-ref --count=20 --sort=-committerdate refs/heads/feat/ --format=%(refname:short)|%(committerdate:relative)|%(objectname:short)": "",
-    "rev-list --left-right --count main...origin/main": "2\t3\n"
+    "for-each-ref --count=20 --sort=-committerdate refs/heads/feat/ --format=%(refname:short)|%(committerdate:relative)|%(objectname:short)":
+      "",
+    "rev-list --left-right --count main...origin/main": "2\t3\n",
   });
   const state = await gatherDevRoadmapState({ cwd: process.cwd(), runGit });
   assert.equal(state.anchor.branch, "feat/something");
   assert.equal(state.anchor.dirty_count, 2);
-  assert.deepEqual(state.anchor.dirty, [
-    "M docs/ROADMAP.md",
-    "?? new-file.js"
-  ]);
+  assert.deepEqual(state.anchor.dirty, ["M docs/ROADMAP.md", "?? new-file.js"]);
   assert.equal(state.main_vs_origin.synced, false);
   assert.equal(state.main_vs_origin.ahead_of_origin, 2);
   assert.equal(state.main_vs_origin.behind_origin, 3);
@@ -143,7 +144,7 @@ test("gatherDevRoadmapState — synced is null when only ahead/behind git call f
 test("boundary stamp denies network/mint/external_send/urp_runtime/fs_write", async () => {
   const state = await gatherDevRoadmapState({
     cwd: process.cwd(),
-    runGit: fakeRunGit({})
+    runGit: fakeRunGit({}),
   });
   assert.deepEqual(state.boundary, {
     read_only: true,
@@ -151,14 +152,14 @@ test("boundary stamp denies network/mint/external_send/urp_runtime/fs_write", as
     mint: false,
     external_send: false,
     urp_runtime: false,
-    filesystem_write_performed: false
+    filesystem_write_performed: false,
   });
 });
 
 test("state is deep-frozen including pointer objects and git_call_status", async () => {
   const state = await gatherDevRoadmapState({
     cwd: process.cwd(),
-    runGit: fakeRunGit({})
+    runGit: fakeRunGit({}),
   });
   assert.ok(Object.isFrozen(state));
   assert.ok(Object.isFrozen(state.anchor));
@@ -182,8 +183,8 @@ test("formatDevRoadmapReport renders anchor + recent + branches + docs", async (
       "log -1 --pretty=%s": "feat(cli) test subject\n",
       "log main -12 --pretty=%h %s": "ab47dbe feat(cli)\nd8aa7b9 docs\n",
       "for-each-ref --count=20 --sort=-committerdate refs/heads/feat/ --format=%(refname:short)|%(committerdate:relative)|%(objectname:short)":
-        "feat/something|now|abc\n"
-    })
+        "feat/something|now|abc\n",
+    }),
   });
   const text = formatDevRoadmapReport(state);
   assert.match(text, /Dev Roadmap \(live anchor\)/);
@@ -200,7 +201,10 @@ test("formatDevRoadmapReport renders anchor + recent + branches + docs", async (
 
 test("anchor_docs presence check on real cwd includes the canonical docs", async () => {
   // Run against the real repo cwd; docs were written by this same slice.
-  const state = await gatherDevRoadmapState({ cwd: process.cwd(), runGit: fakeRunGit({}) });
+  const state = await gatherDevRoadmapState({
+    cwd: process.cwd(),
+    runGit: fakeRunGit({}),
+  });
   const paths = state.anchor_docs.map((d) => d.path);
   for (const expected of [
     "docs/ROADMAP.md",
@@ -208,7 +212,7 @@ test("anchor_docs presence check on real cwd includes the canonical docs", async
     "docs/PRODUCT.md",
     "docs/INDEX.md",
     "CHANGELOG.md",
-    "README.md"
+    "README.md",
   ]) {
     assert.ok(paths.includes(expected), `missing ${expected} in anchor_docs`);
   }
@@ -220,9 +224,14 @@ test("`dema roadmap dev --json` exits 0 and emits the v0.1 envelope", async () =
     [indexPath, "roadmap", "dev", "--json"],
     {
       encoding: "utf8",
-      env: { ...process.env, DEMA_NO_TUI: "1", NODE_ENV: "test", NO_COLOR: "1" },
-      maxBuffer: 8 * 1024 * 1024
-    }
+      env: {
+        ...process.env,
+        DEMA_NO_TUI: "1",
+        NODE_ENV: "test",
+        NO_COLOR: "1",
+      },
+      maxBuffer: 8 * 1024 * 1024,
+    },
   );
   const parsed = JSON.parse(stdout);
   assert.equal(parsed.schema, ROADMAP_DEV_SCHEMA);
@@ -237,9 +246,14 @@ test("`dema roadmap dev` (plain) renders the live anchor block", async () => {
     [indexPath, "roadmap", "dev"],
     {
       encoding: "utf8",
-      env: { ...process.env, DEMA_NO_TUI: "1", NODE_ENV: "test", NO_COLOR: "1" },
-      maxBuffer: 8 * 1024 * 1024
-    }
+      env: {
+        ...process.env,
+        DEMA_NO_TUI: "1",
+        NODE_ENV: "test",
+        NO_COLOR: "1",
+      },
+      maxBuffer: 8 * 1024 * 1024,
+    },
   );
   assert.match(stdout, /Dev Roadmap \(live anchor\)/);
   assert.match(stdout, /Anchor:/);
@@ -252,9 +266,14 @@ test("`dema roadmap preview` (existing surface) still works unchanged", async ()
     [indexPath, "roadmap", "preview", "--json"],
     {
       encoding: "utf8",
-      env: { ...process.env, DEMA_NO_TUI: "1", NODE_ENV: "test", NO_COLOR: "1" },
-      maxBuffer: 8 * 1024 * 1024
-    }
+      env: {
+        ...process.env,
+        DEMA_NO_TUI: "1",
+        NODE_ENV: "test",
+        NO_COLOR: "1",
+      },
+      maxBuffer: 8 * 1024 * 1024,
+    },
   );
   const parsed = JSON.parse(stdout);
   // The original optimization-roadmap preview schema (back-compat).
@@ -268,8 +287,10 @@ test("`dema roadmap unknown` errors with a usage hint", async () => {
       execFileAsync("node", [indexPath, "roadmap", "bogus"], {
         encoding: "utf8",
         env: { ...process.env, DEMA_NO_TUI: "1", NODE_ENV: "test" },
-        maxBuffer: 4 * 1024 * 1024
+        maxBuffer: 4 * 1024 * 1024,
       }),
-    (err) => err.code === 1 && /Unknown roadmap command/.test(`${err.stdout ?? ""}${err.stderr ?? ""}`)
+    (err) =>
+      err.code === 1 &&
+      /Unknown roadmap command/.test(`${err.stdout ?? ""}${err.stderr ?? ""}`),
   );
 });

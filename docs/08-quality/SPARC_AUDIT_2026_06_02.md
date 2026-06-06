@@ -9,23 +9,23 @@
 
 ## Evidence base (all [M])
 
-| Metric                     | Value                                                                                   |
-| -------------------------- | --------------------------------------------------------------------------------------- |
-| Packages / apps            | 21 packages + 1 CLI                                                                     |
-| Production deps / dev deps | **0 / 0** (empty `node_modules`, no lockfile)                                           |
-| Runtime / module system    | Node ≥20, ESM                                                                           |
-| Source code                | 59,666 LOC / 226 `.js` files                                                            |
-| Test code                  | 73,195 LOC / 284 `.test.js` (test:src 1.23:1)                                           |
-| Test result                | 4008 / 4008 pass                                                                        |
-| Coverage                   | 96.71% line / 87.15% branch / 97.78% func (gates 95/85/95)                              |
-| True e2e tests             | 110 / 284 files spawn the CLI                                                           |
-| Docs                       | 198 `.md`, 18 ADRs                                                                      |
-| Quality gate               | `npm run check` = 59 sub-commands, 11 review scripts, EXIT 0                            |
-| Crypto                     | `node:crypto` in 48 files; SHA-256 ×431, Ed25519 ×46, sign/verify, `generateKeyPair` ×2 |
+| Metric                     | Value                                                                                                                                          |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Packages / apps            | 21 packages + 1 CLI                                                                                                                            |
+| Production deps / dev deps | **0 / 0** (empty `node_modules`, no lockfile)                                                                                                  |
+| Runtime / module system    | Node ≥20, ESM                                                                                                                                  |
+| Source code                | 59,666 LOC / 226 `.js` files                                                                                                                   |
+| Test code                  | 73,195 LOC / 284 `.test.js` (test:src 1.23:1)                                                                                                  |
+| Test result                | 4008 / 4008 pass                                                                                                                               |
+| Coverage                   | 96.71% line / 87.15% branch / 97.78% func (gates 95/85/95)                                                                                     |
+| True e2e tests             | 110 / 284 files spawn the CLI                                                                                                                  |
+| Docs                       | 198 `.md`, 18 ADRs                                                                                                                             |
+| Quality gate               | `npm run check` = 59 sub-commands, 11 review scripts, EXIT 0                                                                                   |
+| Crypto                     | `node:crypto` in 48 files; SHA-256 ×431, Ed25519 ×46, sign/verify, `generateKeyPair` ×2                                                        |
 | Network surface            | **loopback-only**: Node0 gateway `127.0.0.1:7421`; Ollama `localhost`/`127.0.0.1:11434`; LM Studio `127.0.0.1:1234` where model commands apply |
-| Immutability               | 1,892 `Object.freeze`                                                                   |
-| Bounded limits             | `timeoutMs` ×47, `MAX_ITERATIONS` ×37, `maxFiles` ×27, `MAX_*_BYTES`, `maxDepth` ×13    |
-| Error handling             | 246 `try`, 87 `throw`, 124 `process.exit`                                               |
+| Immutability               | 1,892 `Object.freeze`                                                                                                                          |
+| Bounded limits             | `timeoutMs` ×47, `MAX_ITERATIONS` ×37, `maxFiles` ×27, `MAX_*_BYTES`, `maxDepth` ×13                                                           |
+| Error handling             | 246 `try`, 87 `throw`, 124 `process.exit`                                                                                                      |
 
 ## Master scorecard — Elite Agentic Pillars (20)
 

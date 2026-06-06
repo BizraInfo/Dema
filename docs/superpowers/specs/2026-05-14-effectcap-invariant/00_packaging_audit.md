@@ -89,8 +89,9 @@ Runtime work waits for EffectCap invariants.
    - Rationale: policy gate lands before contracts that rely on it.
 
 10. `amana-contracts-pr`
-   - Include: Amana contract schemas/tests only.
-   - Rationale: contracts remain local/proof-only until runtime gates exist.
+
+- Include: Amana contract schemas/tests only.
+- Rationale: contracts remain local/proof-only until runtime gates exist.
 
 ## Current PR recommendation
 

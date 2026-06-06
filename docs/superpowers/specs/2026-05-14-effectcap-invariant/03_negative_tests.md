@@ -16,7 +16,7 @@ Expected denial: `ambient_authority_forbidden`.
 `EffectCap.perform` accepts intent data only. The dangerous form is:
 
 ```ts
-effectingOperation(cap, resourceId, action, exec)
+effectingOperation(cap, resourceId, action, exec);
 ```
 
 because the caller can declare one action and execute another.

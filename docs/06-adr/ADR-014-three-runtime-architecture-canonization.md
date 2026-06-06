@@ -4,6 +4,7 @@
 **Date:** 2026-05-19 (Proposed) · 2026-05-19 (Accepted via typed-GO `GO accept ADR-009 and ADR-014` · truth label `ADR_009_AND_ADR_014_ACCEPTED_FOR_PRIVATE_WITNESS_GTM`)
 **Authors:** Coordinator (Claude Opus 4.7, 1M ctx) at MoMo's direction
 **Cross-references:**
+
 - ADR-013 (visual language isomorphism — sibling slice)
 - `[[canon_deterministic_constitutional_execution_engine]]` (the irreducible product definition this ADR architecturally binds)
 - `[[reference_bizra_three_runtime_architecture]]` (the disk-verified survey this ADR formalizes)
@@ -27,7 +28,7 @@ The 2026-05-19 session uncovered a structural truth that had never been canonize
 - `bizra-data-lake/bizra-omega/` — **Rust** · 20-crate sovereign appliance + ratatui TUI + Z3 SMT + Ed25519 + Dilithium-5
 - `Dema/` (this repo) — **JavaScript** · zero-dep preview face + lightweight cockpit
 
-Repeatedly during this session, external AI audits (Kimi 2026-05-19, ChatGPT 2026-05-16 NTU spec, ChatGPT 2026-05-16 Interactive CLI TUI conversation) referenced architecture from *one* runtime and applied recommendations to *another* — what the canonized memory entry `[[feedback_external_ai_audit_wrong_codebase_pattern]]` calls the wrong-codebase pattern. The Kimi audit, for instance, correctly named `Ed25519 + BLAKE3 + Rust IPC` as missing — but the codebase it was actually examining (bizra-omega) **already has all three** (`fate-binding/lib.rs:6-7`, `bizra-cli/Cargo.toml` ed25519-dalek + blake3 workspace deps). Acting on that audit as written would inject Rust into Dema's deliberately zero-dep JS layer — wrong runtime, right concern.
+Repeatedly during this session, external AI audits (Kimi 2026-05-19, ChatGPT 2026-05-16 NTU spec, ChatGPT 2026-05-16 Interactive CLI TUI conversation) referenced architecture from _one_ runtime and applied recommendations to _another_ — what the canonized memory entry `[[feedback_external_ai_audit_wrong_codebase_pattern]]` calls the wrong-codebase pattern. The Kimi audit, for instance, correctly named `Ed25519 + BLAKE3 + Rust IPC` as missing — but the codebase it was actually examining (bizra-omega) **already has all three** (`fate-binding/lib.rs:6-7`, `bizra-cli/Cargo.toml` ed25519-dalek + blake3 workspace deps). Acting on that audit as written would inject Rust into Dema's deliberately zero-dep JS layer — wrong runtime, right concern.
 
 This ADR canonizes the three-runtime architecture so the next session does not re-discover it, and so external AI artifacts can be evaluated against an explicit topology rather than implicit assumption.
 
@@ -58,7 +59,7 @@ We canonize the three-runtime architecture as follows. Each runtime has an expli
 - **Bridges to:** Runtime A via PyO3 (bizra-python crate) · Runtime C via design-language port only (ADR-013, no runtime IPC)
 - **Author:** MoMo (محمد) per `bizra-cli/Cargo.toml` and other crate authorship
 
-### Runtime C — `Dema/` (JavaScript) ← *this repo*
+### Runtime C — `Dema/` (JavaScript) ← _this repo_
 
 - **Purpose:** Preview face · accessibility surface · web-friendly demonstration layer
 - **Constraint:** Zero runtime dependencies (verified: `dependencies` and `devDependencies` both absent from `package.json`)
@@ -76,24 +77,24 @@ Each runtime serves a distinct risk profile and audience:
 - **Rust appliance (Runtime B):** delivers the proof guarantees the constitution requires. Z3 SMT verification, Ed25519 + Dilithium-5 post-quantum signatures, BFT consensus, formal Ihsān gates — these all benefit dramatically from Rust's type system + memory safety + zero-cost abstractions. Python or JS would be irresponsible here.
 - **JS preview face (Runtime C):** stays accessible. No Rust toolchain, no Z3 dep, no Python venv. A new user can `git clone` and `npm test` in under 60 seconds without installing 200MB of dependencies. Necessary because Lighthouse adoption requires friction-free first-touch.
 
-**The deterministic constitutional execution engine with replayable receipts** is the *runtime contract*. Each language implements the half of the contract its operating system + audience demand.
+**The deterministic constitutional execution engine with replayable receipts** is the _runtime contract_. Each language implements the half of the contract its operating system + audience demand.
 
 ## Cross-runtime bridges (verified)
 
-| Bridge | Direction | Mechanism | Status |
-|---|---|---|---|
-| Runtime A ↔ Runtime B | Both | PyO3 (`bizra-python` crate) | Verified in disk · Python can call Rust kernels · Rust can call Python ML |
+| Bridge                | Direction   | Mechanism                                | Status                                                                           |
+| --------------------- | ----------- | ---------------------------------------- | -------------------------------------------------------------------------------- |
+| Runtime A ↔ Runtime B | Both        | PyO3 (`bizra-python` crate)              | Verified in disk · Python can call Rust kernels · Rust can call Python ML        |
 | Runtime B → Runtime C | Design only | ADR-013 visual-language port + sync gate | Verified · `dema-theme.js` byte-aligned with `theme.rs` · machine-enforced by CI |
-| Runtime A ↔ Runtime C | None | — | Not currently needed · would be future work if required |
+| Runtime A ↔ Runtime C | None        | —                                        | Not currently needed · would be future work if required                          |
 
-**No bridge introduces runtime coupling.** Each runtime can be developed, tested, and deployed independently. The cross-runtime invariant is the *constitution* (visible in all three runtimes), not the *implementation*.
+**No bridge introduces runtime coupling.** Each runtime can be developed, tested, and deployed independently. The cross-runtime invariant is the _constitution_ (visible in all three runtimes), not the _implementation_.
 
 ## What this ADR canonizes
 
 1. **Three-runtime topology** is intentional and load-bearing, not accidental drift.
 2. **The wrong-codebase pattern** (audits or specs that mix runtimes) is now formally rejectable by reference to this ADR.
 3. **Dema is the preview face**, not the proof appliance. Dema's zero-dep moat is preserved because the proof work happens in Runtime B.
-4. **The 8-word definition** (above) is the *runtime contract* binding all three runtimes — not a Dema-only claim.
+4. **The 8-word definition** (above) is the _runtime contract_ binding all three runtimes — not a Dema-only claim.
 5. **Future runtime additions** (a hypothetical mobile-native runtime, or a future WASM runtime) MUST be added via ADR amendment to this one, not silently introduced.
 
 ## What this ADR explicitly does NOT do
@@ -121,16 +122,19 @@ Would Mumu willingly subject his own family to running this three-runtime system
 ## Consequences
 
 **Positive:**
+
 - Future external AI audits can be evaluated against an explicit topology
 - New contributors can locate the right runtime for their skillset (Python, Rust, or JS) and contribute without learning all three
 - The wrong-codebase pattern that consumed several turns this session becomes a fast-resolution case (point at this ADR)
 - The 8-word definition gets architectural binding, not just operator-facing tagline
 
 **Negative:**
+
 - Three runtimes is more complex than one (mitigated by each runtime owning a clean responsibility)
 - Architectural drift between runtimes is possible (mitigated by the design-language sync gate from ADR-013 · could be extended to other shared concerns)
 
 **Neutral:**
+
 - The relationship of Dema (Runtime C) to bizra-omega (Runtime B) is now formal rather than implicit. This was the case in reality; this ADR makes it documented.
 
 ---
@@ -146,8 +150,8 @@ Proposed (this ADR)
 
 **Operating canon (primary, ecosystem-wide):**
 
-> *A deterministic constitutional execution engine with replayable receipts.*
+> _A deterministic constitutional execution engine with replayable receipts._
 
 **Operating law (secondary, for cross-runtime ports — from ADR-013):**
 
-> *Design wisdom transfers across runtime boundaries. Code does not.*
+> _Design wisdom transfers across runtime boundaries. Code does not._

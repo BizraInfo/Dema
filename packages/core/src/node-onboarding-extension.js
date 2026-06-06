@@ -27,20 +27,20 @@ const VALID_MODEL_STATUSES = new Set([
   "MODEL_LESS_DECLARED",
   "MODEL_INVENTORY_PENDING_CONSENT",
   "MODEL_INVENTORY_DECLARED",
-  "MODEL_AVAILABLE"
+  "MODEL_AVAILABLE",
 ]);
 
 const VALID_LANGUAGE_SOURCES = new Set([
   "unset",
   "first_run_picker",
   "profile_load",
-  "reset_explicit"
+  "reset_explicit",
 ]);
 
 const VALID_ONBOARDING_TRIGGERS = new Set([
   "first_run",
   "reset_explicit",
-  "candidate_invite"
+  "candidate_invite",
 ]);
 
 function deepFreeze(obj) {
@@ -86,7 +86,7 @@ export function buildNodeOnboardingExtension(input = {}) {
     is_first_run,
     is_returning_user,
     onboarding_trigger,
-    stage_skipped_due_to_profile
+    stage_skipped_due_to_profile,
   } = Object.assign({}, input);
 
   // ── node_topology ───────────────────────────────────────────────────────────
@@ -116,7 +116,7 @@ export function buildNodeOnboardingExtension(input = {}) {
     resolvedCandidateOrdinal !== null && resolvedCandidateOrdinal >= 1;
 
   const resolvedPairedReceiptId = sanitizeLongString(
-    typeof paired_receipt_id === "string" ? paired_receipt_id : null
+    typeof paired_receipt_id === "string" ? paired_receipt_id : null,
   );
 
   const resolvedOrdinalMonotonicityVerified =
@@ -127,7 +127,7 @@ export function buildNodeOnboardingExtension(input = {}) {
     candidate_ordinal: resolvedCandidateOrdinal,
     paired_receipt_required: pairedReceiptRequired,
     paired_receipt_id: resolvedPairedReceiptId,
-    ordinal_monotonicity_verified: resolvedOrdinalMonotonicityVerified
+    ordinal_monotonicity_verified: resolvedOrdinalMonotonicityVerified,
   };
 
   // ── model_readiness ─────────────────────────────────────────────────────────
@@ -139,11 +139,11 @@ export function buildNodeOnboardingExtension(input = {}) {
 
   const model_readiness = {
     status: resolvedModelStatus,
-    local_models_required: false,      // Law #5: structurally false — cannot be injected true
-    scan_consent_required: true,       // Law #3: structurally true — cannot be injected false
+    local_models_required: false, // Law #5: structurally false — cannot be injected true
+    scan_consent_required: true, // Law #3: structurally true — cannot be injected false
     scan_performed: scan_performed === true,
     model_invocation_allowed: model_invocation_allowed === true,
-    fallback_path: "continue_model_less_onboarding"
+    fallback_path: "continue_model_less_onboarding",
   };
 
   // ── language_state ──────────────────────────────────────────────────────────
@@ -164,7 +164,7 @@ export function buildNodeOnboardingExtension(input = {}) {
     secondary_language_code: resolvedSecondaryCode,
     secondary_language_offered: secondary_language_offered === true,
     returning_user_load: returning_user_load === true,
-    language_source: resolvedLanguageSource
+    language_source: resolvedLanguageSource,
   };
 
   // ── candidate_lifecycle ─────────────────────────────────────────────────────
@@ -180,10 +180,10 @@ export function buildNodeOnboardingExtension(input = {}) {
     : [];
 
   const candidate_lifecycle = {
-    is_first_run: is_first_run !== false,   // default true; only false if explicitly false
+    is_first_run: is_first_run !== false, // default true; only false if explicitly false
     is_returning_user: is_returning_user === true,
     onboarding_trigger: resolvedOnboardingTrigger,
-    stage_skipped_due_to_profile: resolvedStageSkipped
+    stage_skipped_due_to_profile: resolvedStageSkipped,
   };
 
   // ── blocked_effects ─────────────────────────────────────────────────────────
@@ -197,7 +197,7 @@ export function buildNodeOnboardingExtension(input = {}) {
     poi_scoring: true,
     model_scan_without_consent: true,
     model_invocation: true,
-    auto_advance_to_node_n_plus_1: true
+    auto_advance_to_node_n_plus_1: true,
   };
 
   return deepFreeze({
@@ -205,6 +205,6 @@ export function buildNodeOnboardingExtension(input = {}) {
     model_readiness,
     language_state,
     candidate_lifecycle,
-    blocked_effects
+    blocked_effects,
   });
 }

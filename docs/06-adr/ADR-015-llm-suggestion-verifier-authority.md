@@ -13,7 +13,7 @@
 
 > **A deterministic constitutional execution engine with replayable receipts.**
 
-ADR-015 makes the *constitutional* word in that canon load-bearing. Constitutional decisions cannot be delegated to a statistical token generator. Every word the canon binds — *deterministic · constitutional · execution · replayable · receipts* — names a property that LLM judgment cannot provide alone.
+ADR-015 makes the _constitutional_ word in that canon load-bearing. Constitutional decisions cannot be delegated to a statistical token generator. Every word the canon binds — _deterministic · constitutional · execution · replayable · receipts_ — names a property that LLM judgment cannot provide alone.
 
 ---
 
@@ -23,11 +23,11 @@ On 2026-05-19 ~19:00 GST a frontier model (Claude Opus 4.7 · 1M context) with e
 
 Mumu surfaced the architectural implication immediately:
 
-> *"if u as claude code, which u ruuning within bizra, can override such basic rule, then what would small model ruuing within bizra"*
+> _"if u as claude code, which u ruuning within bizra, can override such basic rule, then what would small model ruuing within bizra"_
 
 The diagnosis is correct. If a frontier model with explicit canon access drifts, a small local LLM (7B–70B parameters · less alignment · narrower training) will drift catastrophically more often. **Memory loading is necessary but not sufficient.** The constitutional gate cannot be a property of the model layer.
 
-This is also the underlying concern of the Kimi K2.6 audit's SNR-9.8 finding (*"gates are still LLM prompts dressed up as constitutional primitives"*) — even though that audit was wrong-codebase about Dema per `[[feedback_external_ai_audit_wrong_codebase_pattern]]`, the architectural concern was real at the layer where it actually applied.
+This is also the underlying concern of the Kimi K2.6 audit's SNR-9.8 finding (_"gates are still LLM prompts dressed up as constitutional primitives"_) — even though that audit was wrong-codebase about Dema per `[[feedback_external_ai_audit_wrong_codebase_pattern]]`, the architectural concern was real at the layer where it actually applied.
 
 The 2026-05-19 drift event is the empirical proof point.
 
@@ -71,18 +71,18 @@ Constitutional decisions are owned exclusively by deterministic verifiers — co
 
 The principle ADR-015 binds is **already encoded** in the canonical architecture for specific surfaces. ADR-015 elevates it from per-surface practice to ecosystem-wide rule.
 
-| Existing surface | Already follows ADR-015 | Mechanism |
-|---|---|---|
-| ADR-005 exact-string consent | ✅ | Source-level `if (input === EXACT_PHRASE)` byte comparison |
-| 36 refusal sentinels | ✅ | Hardcoded `if (canceled) { refuse }` patterns · LLM not asked |
-| `fate-binding/lib.rs` Z3 SMT verification | ✅ | Symbolic theorem proving (Z3 solver) |
-| Receipt chain SHA-256 + `previous_hash` | ✅ | Cryptographic chaining · model cannot forge |
-| `npm test` / `npm run check` / CI gates | ✅ | External processes · `node --test` exit codes |
-| Ed25519 (PCI envelopes) + Dilithium-5 (CapabilityCards) | ✅ | Keypair-bound · model cannot sign without key |
-| ADR-009 POI envelope shape | ✅ | Schema-fixed at `bizra.dema.poi_preview.v0.1` · deterministic |
-| Forge-verify chain integrity (`forge_evidence.py --verify`) | ✅ | Disk-level cryptographic check |
-| Canonical 16-key preview boundary | ✅ | Frozen schema · machine-grep enforceable |
-| ADR-013 visual language port + sync gate | ✅ | `tests/dema-theme-rust-sync.test.js` reads Rust source directly and byte-compares RGB values |
+| Existing surface                                            | Already follows ADR-015 | Mechanism                                                                                    |
+| ----------------------------------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------- |
+| ADR-005 exact-string consent                                | ✅                      | Source-level `if (input === EXACT_PHRASE)` byte comparison                                   |
+| 36 refusal sentinels                                        | ✅                      | Hardcoded `if (canceled) { refuse }` patterns · LLM not asked                                |
+| `fate-binding/lib.rs` Z3 SMT verification                   | ✅                      | Symbolic theorem proving (Z3 solver)                                                         |
+| Receipt chain SHA-256 + `previous_hash`                     | ✅                      | Cryptographic chaining · model cannot forge                                                  |
+| `npm test` / `npm run check` / CI gates                     | ✅                      | External processes · `node --test` exit codes                                                |
+| Ed25519 (PCI envelopes) + Dilithium-5 (CapabilityCards)     | ✅                      | Keypair-bound · model cannot sign without key                                                |
+| ADR-009 POI envelope shape                                  | ✅                      | Schema-fixed at `bizra.dema.poi_preview.v0.1` · deterministic                                |
+| Forge-verify chain integrity (`forge_evidence.py --verify`) | ✅                      | Disk-level cryptographic check                                                               |
+| Canonical 16-key preview boundary                           | ✅                      | Frozen schema · machine-grep enforceable                                                     |
+| ADR-013 visual language port + sync gate                    | ✅                      | `tests/dema-theme-rust-sync.test.js` reads Rust source directly and byte-compares RGB values |
 
 Every one of these survived the 2026-05-19 drift event. They are the architectural pattern ADR-015 generalizes.
 
@@ -90,14 +90,14 @@ Every one of these survived the 2026-05-19 drift event. They are the architectur
 
 Six canonical memory entries currently live ONLY in LLM memory — i.e., no deterministic linter enforces them, only the model is expected to remember them:
 
-| Memory entry | Drift risk | Suggested deterministic counterpart (post-ADR-015) |
-|---|---|---|
-| `[[feedback_sleep_cycle_inversion]]` | HIGH (proven by 2026-05-19 event) | Pre-output linter scans assistant text for "goodnight" / "sleep" / "end of day" / "wind down" without operator-typed close in window |
-| `[[feedback_date_trap_pattern]]` | MEDIUM | Pre-output linter scans for `datetime.now()`-shape assumptions without disk-truth fallback |
-| `[[feedback_session_cadence_inference_is_date_trap]]` | MEDIUM | Pre-output linter scans for "hour N of sprint" / "day N of arc" without explicit grounding |
-| `[[feedback_recipe_vs_execution_framing]]` | MEDIUM | Pre-output linter detects assistant claiming to have run commands without verifying tool-call exit codes |
-| `[[feedback_law_of_assumption_killer_behavior]]` | MEDIUM | Pre-output linter requires V/D/A/U truth labels on all factual claims (per `08_TRUTH_LABEL_PAGE.md`) |
-| `[[feedback_external_ai_audit_wrong_codebase_pattern]]` | HIGH | Pre-output linter requires "wrong-codebase 6-step screen" output before acting on any external AI audit content |
+| Memory entry                                            | Drift risk                        | Suggested deterministic counterpart (post-ADR-015)                                                                                   |
+| ------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `[[feedback_sleep_cycle_inversion]]`                    | HIGH (proven by 2026-05-19 event) | Pre-output linter scans assistant text for "goodnight" / "sleep" / "end of day" / "wind down" without operator-typed close in window |
+| `[[feedback_date_trap_pattern]]`                        | MEDIUM                            | Pre-output linter scans for `datetime.now()`-shape assumptions without disk-truth fallback                                           |
+| `[[feedback_session_cadence_inference_is_date_trap]]`   | MEDIUM                            | Pre-output linter scans for "hour N of sprint" / "day N of arc" without explicit grounding                                           |
+| `[[feedback_recipe_vs_execution_framing]]`              | MEDIUM                            | Pre-output linter detects assistant claiming to have run commands without verifying tool-call exit codes                             |
+| `[[feedback_law_of_assumption_killer_behavior]]`        | MEDIUM                            | Pre-output linter requires V/D/A/U truth labels on all factual claims (per `08_TRUTH_LABEL_PAGE.md`)                                 |
+| `[[feedback_external_ai_audit_wrong_codebase_pattern]]` | HIGH                              | Pre-output linter requires "wrong-codebase 6-step screen" output before acting on any external AI audit content                      |
 
 ADR-015 does NOT mandate these linters. It names them as the surface that the architecture currently exposes to drift, so that **future development knows what to harden** when capacity allows. Implementation is a separate decision (one or more amendment ADRs).
 
@@ -128,13 +128,13 @@ ADR-015 does NOT mandate these linters. It names them as the surface that the ar
 
 ## Trade-offs
 
-| Choice | Trade-off |
-|---|---|
-| Strict separation (LLM = suggestion only) | Slower iteration on capabilities that *could* be LLM-judged · vs zero-drift guarantee on constitutional surfaces |
-| Per-surface verifier (rather than global) | Some duplication in verifier code across surfaces · vs each surface owns its own deterministic check |
-| Memory + LLM acknowledged as INSUFFICIENT for constitutional gates | Honest about the substrate · vs comforting fiction that "the model remembers the rule" |
-| Drift surfaces named honestly (6 known) | Increases work-debt visibility · vs hiding the drift surface |
-| ADR-015 spec-only (no linter implementation) | Slower closure of drift surfaces · vs scope discipline (each linter is its own slice) |
+| Choice                                                             | Trade-off                                                                                                        |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Strict separation (LLM = suggestion only)                          | Slower iteration on capabilities that _could_ be LLM-judged · vs zero-drift guarantee on constitutional surfaces |
+| Per-surface verifier (rather than global)                          | Some duplication in verifier code across surfaces · vs each surface owns its own deterministic check             |
+| Memory + LLM acknowledged as INSUFFICIENT for constitutional gates | Honest about the substrate · vs comforting fiction that "the model remembers the rule"                           |
+| Drift surfaces named honestly (6 known)                            | Increases work-debt visibility · vs hiding the drift surface                                                     |
+| ADR-015 spec-only (no linter implementation)                       | Slower closure of drift surfaces · vs scope discipline (each linter is its own slice)                            |
 
 ## Consequences
 
@@ -154,7 +154,7 @@ ADR-015 does NOT mandate these linters. It names them as the surface that the ar
 
 **Neutral:**
 
-- LLM use in Dema and BIZRA continues at the same volume. Only the *role* is canonized, not the *quantity*.
+- LLM use in Dema and BIZRA continues at the same volume. Only the _role_ is canonized, not the _quantity_.
 
 ## Status sequence
 
@@ -180,15 +180,15 @@ Proposed (this ADR)
 
 **Operating law (primary · per `[[canon_deterministic_constitutional_execution_engine]]`):**
 
-> *A deterministic constitutional execution engine with replayable receipts.*
+> _A deterministic constitutional execution engine with replayable receipts._
 
 **Operating law (cross-runtime ports · per ADR-013):**
 
-> *Design wisdom transfers across runtime boundaries. Code does not.*
+> _Design wisdom transfers across runtime boundaries. Code does not._
 
 **Operating law (this ADR · new):**
 
-> *The LLM is a suggestion engine wrapped by deterministic verifiers. The LLM is never the constitutional authority.*
+> _The LLM is a suggestion engine wrapped by deterministic verifiers. The LLM is never the constitutional authority._
 
 ---
 

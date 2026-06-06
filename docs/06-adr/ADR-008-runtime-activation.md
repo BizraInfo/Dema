@@ -14,6 +14,7 @@ Build the full Node0 runtime stack — local LLM integration · 7 PAT · 5 SAT �
 ## Context
 
 After 3 years of foundational work, Dema at HEAD `bc59e32` consists of:
+
 - 12 commits this session
 - 737/737 tests · 8 spine preview surfaces · ~75 schemas
 - Canonical 16-key boundary discipline (`packages/core/src/preview-boundary.js`)
@@ -48,32 +49,32 @@ Nothing ships that fails any of these 10 checks.
 
 ## Component implementation status (ALL 12 COMPLETED · 2026-05-18 GST)
 
-| # | Component | Status | Commit |
-|---|---|---|---|
-| C1 | Local LLM Adapter (Ollama HTTP API) | ✅ COMPLETED | b6ff91a |
-| C1 (whitelist) | Whitelist amendment (gemma4 · qwen3-coder-next · whiterabbitneo-v3) | ✅ COMPLETED | 5adec40 |
-| C1.5 | Local Model Inventory Scan | ✅ COMPLETED | d221e2e |
-| C2 | Effect-Capability layer | ✅ COMPLETED | 8c9bc0c |
-| C3 | Agent Loop Kernel (8-state machine) | ✅ COMPLETED | c50cc70 |
-| C4-PAT-1 | Mission Scribe | ✅ COMPLETED | 9c86f96 |
-| C4-PAT-2 | Research Companion | ✅ COMPLETED | f620d12 + 8e64a3a |
-| C4-PAT-3 | Code Apprentice | ✅ COMPLETED | d65460b |
-| C4-PAT-4 | Memory Curator | ✅ COMPLETED | 76bba70 |
-| C4-PAT-5 | Consent Drafter | ✅ COMPLETED | 1997d19 |
-| C4-PAT-6 | Receipt Recorder | ✅ COMPLETED | 0939d1b |
-| C4-PAT-7 | Reflection Witness | ✅ COMPLETED | 5374432 |
-| C5-SAT-1 | Boundary Verifier | ✅ COMPLETED | 8d4feaa |
-| C5-SAT-2 | Consent Auditor | ✅ COMPLETED | a68b99d |
-| C5-SAT-3 | Doctrine Compliance | ✅ COMPLETED | 6d513e8 |
-| C5-SAT-4 | Receipt Chain Verifier | ✅ COMPLETED | 272fdbb + b9ac92f |
-| C5-SAT-5 | Identity Verifier | ✅ COMPLETED | 272fdbb |
-| C6 | Multi-Agent Orchestrator | ✅ COMPLETED | a4edbdd |
-| C7 | BIZRA URP local | ✅ COMPLETED | b3db91f |
-| C8 | Corpus integration | ✅ COMPLETED | cb33763 |
-| C9 | Asset access | ✅ COMPLETED | ffec9b1 |
-| C10 | Bounded web access | ✅ COMPLETED | 6504781 |
-| C11 | Bounded local-file access | ✅ COMPLETED | 6504781 |
-| C12 | Receipt mint integration | ✅ COMPLETED | 3c1fae1 |
+| #              | Component                                                           | Status       | Commit            |
+| -------------- | ------------------------------------------------------------------- | ------------ | ----------------- |
+| C1             | Local LLM Adapter (Ollama HTTP API)                                 | ✅ COMPLETED | b6ff91a           |
+| C1 (whitelist) | Whitelist amendment (gemma4 · qwen3-coder-next · whiterabbitneo-v3) | ✅ COMPLETED | 5adec40           |
+| C1.5           | Local Model Inventory Scan                                          | ✅ COMPLETED | d221e2e           |
+| C2             | Effect-Capability layer                                             | ✅ COMPLETED | 8c9bc0c           |
+| C3             | Agent Loop Kernel (8-state machine)                                 | ✅ COMPLETED | c50cc70           |
+| C4-PAT-1       | Mission Scribe                                                      | ✅ COMPLETED | 9c86f96           |
+| C4-PAT-2       | Research Companion                                                  | ✅ COMPLETED | f620d12 + 8e64a3a |
+| C4-PAT-3       | Code Apprentice                                                     | ✅ COMPLETED | d65460b           |
+| C4-PAT-4       | Memory Curator                                                      | ✅ COMPLETED | 76bba70           |
+| C4-PAT-5       | Consent Drafter                                                     | ✅ COMPLETED | 1997d19           |
+| C4-PAT-6       | Receipt Recorder                                                    | ✅ COMPLETED | 0939d1b           |
+| C4-PAT-7       | Reflection Witness                                                  | ✅ COMPLETED | 5374432           |
+| C5-SAT-1       | Boundary Verifier                                                   | ✅ COMPLETED | 8d4feaa           |
+| C5-SAT-2       | Consent Auditor                                                     | ✅ COMPLETED | a68b99d           |
+| C5-SAT-3       | Doctrine Compliance                                                 | ✅ COMPLETED | 6d513e8           |
+| C5-SAT-4       | Receipt Chain Verifier                                              | ✅ COMPLETED | 272fdbb + b9ac92f |
+| C5-SAT-5       | Identity Verifier                                                   | ✅ COMPLETED | 272fdbb           |
+| C6             | Multi-Agent Orchestrator                                            | ✅ COMPLETED | a4edbdd           |
+| C7             | BIZRA URP local                                                     | ✅ COMPLETED | b3db91f           |
+| C8             | Corpus integration                                                  | ✅ COMPLETED | cb33763           |
+| C9             | Asset access                                                        | ✅ COMPLETED | ffec9b1           |
+| C10            | Bounded web access                                                  | ✅ COMPLETED | 6504781           |
+| C11            | Bounded local-file access                                           | ✅ COMPLETED | 6504781           |
+| C12            | Receipt mint integration                                            | ✅ COMPLETED | 3c1fae1           |
 
 **ALL 12 components shipped at Master Craftsmanship quality.**
 **1159/1159 tests passing across the runtime stack.**
@@ -131,6 +132,7 @@ flowchart TD
 **Purpose:** Single Node.js adapter that talks to local LLMs (Ollama first · others later) under canonical boundary discipline.
 
 **Scope:**
+
 - `packages/core/src/llm-adapter.js` (~250-400 LOC)
 - Supports Ollama HTTP API (`/api/chat`, `/api/generate`)
 - Connection-only invocation (no caller-provided URL · localhost-bound by default)
@@ -139,6 +141,7 @@ flowchart TD
 - Failure modes: timeout · connection refused · model not loaded · invalid response · all bubble up as schema-tagged errors
 
 **Boundary discipline:**
+
 - New canonical boundary keys may need: `model_loaded=true`, `prompt_executed=true`, `model_invocation_performed=true` — these flip when invocation succeeds
 - Per-invocation receipt with `truth_label=MEASURED` and full input/output hashes
 
@@ -155,6 +158,7 @@ flowchart TD
 **Purpose:** Tool registry with EffectCap descriptors. Every effect (file read · file write · network call · LLM invocation · receipt mint) is a declared capability with explicit consent scope.
 
 **Scope:**
+
 - `packages/effect-cap/` (new package · ~600-1000 LOC)
 - EffectCap descriptor schema: `{name, allowed_effects, blocked_effects, consent_scope, audit_trail_required}`
 - Tool registry with verify-before-bind semantics
@@ -162,6 +166,7 @@ flowchart TD
 - Per-effect receipt emission
 
 **Boundary discipline:**
+
 - Builds on existing canonical 16-key boundary
 - Each tool declares which boundary keys it WILL flip
 - Tools cannot flip keys not declared in their EffectCap
@@ -180,6 +185,7 @@ flowchart TD
 **Purpose:** The act-observe-decide loop that runs an agent. Pure state machine. No conversational defaults. Halt-gates at every transition.
 
 **Scope:**
+
 - `packages/agent-kernel/` (new package · ~500-800 LOC)
 - State machine: `INIT → PERCEIVE → PROPOSE → CONSENT_REQUEST → ACT_OR_HOLD → OBSERVE → DECIDE_NEXT → COMPLETE_OR_LOOP`
 - At every state, can halt to operator
@@ -201,6 +207,7 @@ flowchart TD
 **Purpose:** Seven private agents serving the operator's mission. Each has a distinct role per Third Fact canon.
 
 **Per-agent spec (each):**
+
 - `packages/pat-agents/<role>/` directory
 - Persona declaration (role · capabilities · refusals)
 - Per-agent memory file
@@ -209,15 +216,15 @@ flowchart TD
 
 **The 7 PAT roles (per canon):**
 
-| PAT | Role | Primary capability |
-|---|---|---|
-| PAT-1 | Mission Scribe | Captures operator intent · drafts mission proposals |
-| PAT-2 | Research Companion | Bounded web fetch · corpus query · evidence synthesis |
-| PAT-3 | Code Apprentice | Reads/writes within declared boundary · runs tests |
-| PAT-4 | Memory Curator | Maintains `~/.dema/memory/` · classifies entries · indexes |
-| PAT-5 | Consent Drafter | Drafts consent phrases · presents decision card · never approves |
-| PAT-6 | Receipt Recorder | Mints local receipts · emits chain-shaped events |
-| PAT-7 | Reflection Witness | Daily summary · pattern detection · doctrine catches |
+| PAT   | Role               | Primary capability                                               |
+| ----- | ------------------ | ---------------------------------------------------------------- |
+| PAT-1 | Mission Scribe     | Captures operator intent · drafts mission proposals              |
+| PAT-2 | Research Companion | Bounded web fetch · corpus query · evidence synthesis            |
+| PAT-3 | Code Apprentice    | Reads/writes within declared boundary · runs tests               |
+| PAT-4 | Memory Curator     | Maintains `~/.dema/memory/` · classifies entries · indexes       |
+| PAT-5 | Consent Drafter    | Drafts consent phrases · presents decision card · never approves |
+| PAT-6 | Receipt Recorder   | Mints local receipts · emits chain-shaped events                 |
+| PAT-7 | Reflection Witness | Daily summary · pattern detection · doctrine catches             |
 
 **Estimated:** 1-1.5 days per PAT · 7-10 total (some can be parallelized in structure).
 
@@ -229,13 +236,13 @@ flowchart TD
 
 **The 5 SAT roles (per canon):**
 
-| SAT | Role | Primary capability |
-|---|---|---|
-| SAT-1 | Boundary Verifier | Verifies every output has canonical 16-key boundary |
-| SAT-2 | Consent Auditor | Verifies every L3+ action has exact-string consent · audit trail |
-| SAT-3 | Doctrine Compliance | Runs `dema key-maker-check` on outputs · flags failed invariants |
-| SAT-4 | Receipt Chain Verifier | Verifies receipt-chain integrity · OTS attestation valid |
-| SAT-5 | Identity Verifier | Verifies operator identity persistence · profile consistency |
+| SAT   | Role                   | Primary capability                                               |
+| ----- | ---------------------- | ---------------------------------------------------------------- |
+| SAT-1 | Boundary Verifier      | Verifies every output has canonical 16-key boundary              |
+| SAT-2 | Consent Auditor        | Verifies every L3+ action has exact-string consent · audit trail |
+| SAT-3 | Doctrine Compliance    | Runs `dema key-maker-check` on outputs · flags failed invariants |
+| SAT-4 | Receipt Chain Verifier | Verifies receipt-chain integrity · OTS attestation valid         |
+| SAT-5 | Identity Verifier      | Verifies operator identity persistence · profile consistency     |
 
 **Estimated:** 1-1.5 days per SAT · 5-7 total.
 
@@ -327,6 +334,7 @@ C2 · EffectCap          C12 · Receipt mint      (parallel)            (joins e
 ```
 
 **Each component is a separate scoped GO. Each ships with:**
+
 - Full schema-tagged source
 - Adversarial test suite (≥80% coverage · ≥15 adversarial scenarios)
 - ADR amendment or new ADR if architecturally significant

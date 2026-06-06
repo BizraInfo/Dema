@@ -40,7 +40,8 @@ import { mkdir, writeFile, rename, unlink, realpath } from "node:fs/promises";
 import { join, isAbsolute, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
 
-export const PIPELINE_RESULT_SAVE_CONSENT = "GO: save local orchestrator pipeline result";
+export const PIPELINE_RESULT_SAVE_CONSENT =
+  "GO: save local orchestrator pipeline result";
 
 export const PIPELINE_RESULT_SAVE_SCHEMA =
   "bizra.dema.orchestrator_pipeline_result_save.v0.1";
@@ -53,7 +54,10 @@ function sha256Hex(content) {
 // BOTH stdout and disk. Callers pass the SAME options to this function and
 // to their stdout writer so the on-disk file matches stdout byte-for-byte
 // (architect-locked invariant from PR #83).
-export function serializePipelineResultForSave(envelope, { pretty = false } = {}) {
+export function serializePipelineResultForSave(
+  envelope,
+  { pretty = false } = {},
+) {
   const body = pretty
     ? JSON.stringify(envelope, null, 2)
     : JSON.stringify(envelope);
@@ -68,7 +72,10 @@ function resolveDemaHome(demaHome) {
 // Compute the target save path (and content) for a pipeline envelope
 // without performing any I/O. Useful for callers that want the path BEFORE
 // deciding to write.
-export function buildPipelineResultSavePath(envelope, { demaHome, pretty = false } = {}) {
+export function buildPipelineResultSavePath(
+  envelope,
+  { demaHome, pretty = false } = {},
+) {
   const home = resolveDemaHome(demaHome);
   const content = serializePipelineResultForSave(envelope, { pretty });
   const sha = sha256Hex(content);
@@ -80,7 +87,7 @@ export function buildPipelineResultSavePath(envelope, { demaHome, pretty = false
     path: join(dir, filename),
     sha256: sha,
     content,
-    dema_home: home
+    dema_home: home,
   };
 }
 
@@ -93,7 +100,9 @@ async function assertContained(receiptsDir, finalPath) {
   const absFinal = resolve(receiptsDir, finalPath);
   const rel = relative(realRoot, absFinal);
   if (rel === ".." || rel.startsWith(".." + sep) || isAbsolute(rel)) {
-    throw new Error(`pipeline-result-save: save target escapes receipts dir: ${absFinal}`);
+    throw new Error(
+      `pipeline-result-save: save target escapes receipts dir: ${absFinal}`,
+    );
   }
 }
 
@@ -111,24 +120,33 @@ async function assertContained(receiptsDir, finalPath) {
 // Saves BOTH passed and non-passed pipeline envelopes equally — the
 // architect-locked rule per ADR-005 audit principle (operator should be
 // able to review WHY the pipeline failed by reading the saved envelope).
-export async function savePipelineResult(envelope, { demaHome, consent, pretty = false } = {}) {
+export async function savePipelineResult(
+  envelope,
+  { demaHome, consent, pretty = false } = {},
+) {
   if (typeof consent !== "string" || consent.length === 0) {
     return {
       saved: false,
       reason: "consent_missing",
-      expected: PIPELINE_RESULT_SAVE_CONSENT
+      expected: PIPELINE_RESULT_SAVE_CONSENT,
     };
   }
   if (consent !== PIPELINE_RESULT_SAVE_CONSENT) {
     return {
       saved: false,
       reason: "consent_mismatch",
-      expected: PIPELINE_RESULT_SAVE_CONSENT
+      expected: PIPELINE_RESULT_SAVE_CONSENT,
     };
   }
 
-  const { dir: receiptsDir, filename, path: finalPath, sha256: sha, content, dema_home } =
-    buildPipelineResultSavePath(envelope, { demaHome, pretty });
+  const {
+    dir: receiptsDir,
+    filename,
+    path: finalPath,
+    sha256: sha,
+    content,
+    dema_home,
+  } = buildPipelineResultSavePath(envelope, { demaHome, pretty });
 
   await mkdir(receiptsDir, { recursive: true });
 
@@ -149,12 +167,16 @@ export async function savePipelineResult(envelope, { demaHome, consent, pretty =
   } catch (err) {
     // Best-effort cleanup of the temp file. Ignore unlink failures (the
     // original error is what matters).
-    try { await unlink(tmpPath); } catch { /* swallow */ }
+    try {
+      await unlink(tmpPath);
+    } catch {
+      /* swallow */
+    }
     return {
       saved: false,
       reason: "io_error",
       expected: PIPELINE_RESULT_SAVE_CONSENT,
-      error_message: err?.message ?? String(err)
+      error_message: err?.message ?? String(err),
     };
   }
 
@@ -163,6 +185,6 @@ export async function savePipelineResult(envelope, { demaHome, consent, pretty =
     path: finalPath,
     filename,
     sha256: sha,
-    dema_home
+    dema_home,
   });
 }

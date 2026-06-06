@@ -39,7 +39,7 @@ const CANONICAL_ENVELOPE_BOUNDARY_KEYS = Object.freeze([
   "remote_provider",
   "runtime",
   "token_economy",
-  "urp_networking"
+  "urp_networking",
 ]);
 
 const MAX_ENVELOPE_FILE_BYTES = 1024 * 1024;
@@ -60,7 +60,7 @@ export async function resolveLatestInvocationPath({ demaHome } = {}) {
     return null;
   }
   const invocationFiles = entries.filter(
-    (f) => f.startsWith("invocation-") && f.endsWith(".json")
+    (f) => f.startsWith("invocation-") && f.endsWith(".json"),
   );
   if (invocationFiles.length === 0) return null;
   const withMtimes = await Promise.all(
@@ -72,7 +72,7 @@ export async function resolveLatestInvocationPath({ demaHome } = {}) {
       } catch {
         return null;
       }
-    })
+    }),
   );
   const usable = withMtimes.filter(Boolean);
   if (usable.length === 0) return null;
@@ -91,9 +91,16 @@ export async function readEnvelopeFromFile(filePath) {
   try {
     fh = await open(filePath, "r");
     const buffer = Buffer.alloc(MAX_ENVELOPE_FILE_BYTES + 1);
-    const { bytesRead } = await fh.read(buffer, 0, MAX_ENVELOPE_FILE_BYTES + 1, 0);
+    const { bytesRead } = await fh.read(
+      buffer,
+      0,
+      MAX_ENVELOPE_FILE_BYTES + 1,
+      0,
+    );
     if (bytesRead > MAX_ENVELOPE_FILE_BYTES) {
-      throw new Error(`envelope file too large: exceeds ${MAX_ENVELOPE_FILE_BYTES} bytes`);
+      throw new Error(
+        `envelope file too large: exceeds ${MAX_ENVELOPE_FILE_BYTES} bytes`,
+      );
     }
     const raw = buffer.subarray(0, bytesRead).toString("utf8");
     const sourceHash = createHash("sha256").update(raw).digest("hex");
@@ -101,7 +108,11 @@ export async function readEnvelopeFromFile(filePath) {
     return { envelope, sourceHash, raw };
   } finally {
     if (fh) {
-      try { await fh.close(); } catch { /* swallow */ }
+      try {
+        await fh.close();
+      } catch {
+        /* swallow */
+      }
     }
   }
 }
@@ -118,7 +129,9 @@ function probeEnvelopeIsObject(envelope) {
     !Array.isArray(envelope);
   return {
     satisfied: isPlainObject,
-    evidence: { actual_type: Array.isArray(envelope) ? "array" : typeof envelope }
+    evidence: {
+      actual_type: Array.isArray(envelope) ? "array" : typeof envelope,
+    },
   };
 }
 
@@ -126,17 +139,22 @@ function probeEnvelopeSchemaMatches(envelope) {
   const actual = envelope?.schema ?? null;
   return {
     satisfied: actual === ENVELOPE_SCHEMA,
-    evidence: { expected: ENVELOPE_SCHEMA, actual }
+    evidence: { expected: ENVELOPE_SCHEMA, actual },
   };
 }
 
 function probeRouteReceiptPresent(envelope) {
-  const ok = envelope?.route_receipt !== null &&
+  const ok =
+    envelope?.route_receipt !== null &&
     typeof envelope?.route_receipt === "object" &&
     !Array.isArray(envelope?.route_receipt);
   return {
     satisfied: ok,
-    evidence: { route_receipt_type: Array.isArray(envelope?.route_receipt) ? "array" : typeof envelope?.route_receipt }
+    evidence: {
+      route_receipt_type: Array.isArray(envelope?.route_receipt)
+        ? "array"
+        : typeof envelope?.route_receipt,
+    },
   };
 }
 
@@ -144,7 +162,7 @@ function probeRouteReceiptSchemaMatches(envelope) {
   const actual = envelope?.route_receipt?.schema ?? null;
   return {
     satisfied: actual === ROUTE_RECEIPT_SCHEMA,
-    evidence: { expected: ROUTE_RECEIPT_SCHEMA, actual }
+    evidence: { expected: ROUTE_RECEIPT_SCHEMA, actual },
   };
 }
 
@@ -153,22 +171,26 @@ function probeSelectedModelIdConsistent(envelope) {
   const routeSelected = envelope?.route_receipt?.selected_model_id ?? null;
   return {
     satisfied: envelopeSelected === routeSelected,
-    evidence: { envelope_value: envelopeSelected, route_value: routeSelected }
+    evidence: { envelope_value: envelopeSelected, route_value: routeSelected },
   };
 }
 
 function probeBoundaryShape9Key(envelope) {
   const boundary = envelope?.boundary;
   if (!boundary || typeof boundary !== "object") {
-    return { satisfied: false, evidence: { reason: "boundary_missing_or_not_object" } };
+    return {
+      satisfied: false,
+      evidence: { reason: "boundary_missing_or_not_object" },
+    };
   }
   const actualKeys = Object.keys(boundary).sort();
   const expectedKeys = Array.from(CANONICAL_ENVELOPE_BOUNDARY_KEYS);
-  const matches = actualKeys.length === expectedKeys.length &&
+  const matches =
+    actualKeys.length === expectedKeys.length &&
     actualKeys.every((k, i) => k === expectedKeys[i]);
   return {
     satisfied: matches,
-    evidence: { actual_keys: actualKeys, expected_keys: expectedKeys }
+    evidence: { actual_keys: actualKeys, expected_keys: expectedKeys },
   };
 }
 
@@ -177,7 +199,7 @@ function makeBoundaryFalseProbe(flagName) {
     const actual = envelope?.boundary?.[flagName];
     return {
       satisfied: actual === false,
-      evidence: { flag: flagName, expected: false, actual }
+      evidence: { flag: flagName, expected: false, actual },
     };
   };
 }
@@ -186,7 +208,7 @@ function probeBoundaryLocalhostOnlyTrue(envelope) {
   const actual = envelope?.boundary?.localhost_only;
   return {
     satisfied: actual === true,
-    evidence: { flag: "localhost_only", expected: true, actual }
+    evidence: { flag: "localhost_only", expected: true, actual },
   };
 }
 
@@ -196,14 +218,18 @@ function probeInvocationStatusShape(envelope) {
   if (result === null || result === undefined) {
     return {
       satisfied: true,
-      evidence: { applicable: false, reason: "invocation_result_is_null" }
+      evidence: { applicable: false, reason: "invocation_result_is_null" },
     };
   }
   const status = result?.invocation_status;
   const ok = status === "completed" || status === "failed";
   return {
     satisfied: ok,
-    evidence: { applicable: true, actual: status, allowed: ["completed", "failed"] }
+    evidence: {
+      applicable: true,
+      actual: status,
+      allowed: ["completed", "failed"],
+    },
   };
 }
 
@@ -213,12 +239,21 @@ function probeCompletedHasResponse(envelope) {
     return { satisfied: true, evidence: { applicable: false } };
   }
   const responseLen =
-    typeof result.response_length_chars === "number" ? result.response_length_chars : 0;
-  const preview = typeof result.response_text_preview === "string" ? result.response_text_preview : "";
+    typeof result.response_length_chars === "number"
+      ? result.response_length_chars
+      : 0;
+  const preview =
+    typeof result.response_text_preview === "string"
+      ? result.response_text_preview
+      : "";
   const ok = responseLen > 0 || preview.length > 0;
   return {
     satisfied: ok,
-    evidence: { applicable: true, response_length_chars: responseLen, preview_length: preview.length }
+    evidence: {
+      applicable: true,
+      response_length_chars: responseLen,
+      preview_length: preview.length,
+    },
   };
 }
 
@@ -231,7 +266,7 @@ function probeFailedHasErrorReason(envelope) {
   const ok = typeof reason === "string" && reason.length > 0;
   return {
     satisfied: ok,
-    evidence: { applicable: true, error_reason_present: ok, actual: reason }
+    evidence: { applicable: true, error_reason_present: ok, actual: reason },
   };
 }
 
@@ -240,7 +275,14 @@ function probeNoSelectedModelMeansNullResult(envelope) {
   const result = envelope?.invocation_result;
   if (sel === null) {
     const ok = result === null;
-    return { satisfied: ok, evidence: { applicable: true, selected_model_id: null, invocation_result_is_null: result === null } };
+    return {
+      satisfied: ok,
+      evidence: {
+        applicable: true,
+        selected_model_id: null,
+        invocation_result_is_null: result === null,
+      },
+    };
   }
   return { satisfied: true, evidence: { applicable: false } };
 }
@@ -249,7 +291,11 @@ function probeParsedObjectIsPlain(envelope) {
   // After JSON.parse, a valid envelope is a plain object (not frozen by
   // parse). This probe confirms the parsed value is a plain object with
   // no surprising prototype.
-  if (envelope === null || typeof envelope !== "object" || Array.isArray(envelope)) {
+  if (
+    envelope === null ||
+    typeof envelope !== "object" ||
+    Array.isArray(envelope)
+  ) {
     return { satisfied: false, evidence: { reason: "not_a_plain_object" } };
   }
   const proto = Object.getPrototypeOf(envelope);
@@ -261,23 +307,49 @@ const INVARIANT_PROBES = Object.freeze([
   { name: "envelope_is_object", probe: probeEnvelopeIsObject },
   { name: "envelope_schema_matches", probe: probeEnvelopeSchemaMatches },
   { name: "route_receipt_present", probe: probeRouteReceiptPresent },
-  { name: "route_receipt_schema_matches", probe: probeRouteReceiptSchemaMatches },
-  { name: "selected_model_id_consistent", probe: probeSelectedModelIdConsistent },
+  {
+    name: "route_receipt_schema_matches",
+    probe: probeRouteReceiptSchemaMatches,
+  },
+  {
+    name: "selected_model_id_consistent",
+    probe: probeSelectedModelIdConsistent,
+  },
   { name: "boundary_shape_9key", probe: probeBoundaryShape9Key },
-  { name: "boundary_localhost_only_true", probe: probeBoundaryLocalhostOnlyTrue },
-  { name: "boundary_remote_provider_false", probe: makeBoundaryFalseProbe("remote_provider") },
-  { name: "boundary_federation_false", probe: makeBoundaryFalseProbe("federation") },
+  {
+    name: "boundary_localhost_only_true",
+    probe: probeBoundaryLocalhostOnlyTrue,
+  },
+  {
+    name: "boundary_remote_provider_false",
+    probe: makeBoundaryFalseProbe("remote_provider"),
+  },
+  {
+    name: "boundary_federation_false",
+    probe: makeBoundaryFalseProbe("federation"),
+  },
   { name: "boundary_mint_false", probe: makeBoundaryFalseProbe("mint") },
-  { name: "boundary_token_economy_false", probe: makeBoundaryFalseProbe("token_economy") },
-  { name: "boundary_urp_networking_false", probe: makeBoundaryFalseProbe("urp_networking") },
+  {
+    name: "boundary_token_economy_false",
+    probe: makeBoundaryFalseProbe("token_economy"),
+  },
+  {
+    name: "boundary_urp_networking_false",
+    probe: makeBoundaryFalseProbe("urp_networking"),
+  },
   { name: "invocation_status_shape", probe: probeInvocationStatusShape },
   { name: "completed_has_response", probe: probeCompletedHasResponse },
   { name: "failed_has_error_reason", probe: probeFailedHasErrorReason },
-  { name: "no_selected_model_means_null_result", probe: probeNoSelectedModelMeansNullResult },
-  { name: "parsed_object_is_plain", probe: probeParsedObjectIsPlain }
+  {
+    name: "no_selected_model_means_null_result",
+    probe: probeNoSelectedModelMeansNullResult,
+  },
+  { name: "parsed_object_is_plain", probe: probeParsedObjectIsPlain },
 ]);
 
-export const INVARIANT_NAMES = Object.freeze(INVARIANT_PROBES.map((p) => p.name));
+export const INVARIANT_NAMES = Object.freeze(
+  INVARIANT_PROBES.map((p) => p.name),
+);
 
 // ─── Summaries + next_step decision ──────────────────────────────────────────
 
@@ -298,20 +370,35 @@ function determineInvocationStatusSummary(envelope) {
   return "unknown";
 }
 
-function determineNextStep({ verdict, invocationStatusSummary, errorReason, selectedModelId }) {
-  if (verdict === "non_compliant") return "investigate_invariant_failures_in_verification_envelope";
-  if (verdict === "inconclusive") return "investigate_source_envelope_readability";
+function determineNextStep({
+  verdict,
+  invocationStatusSummary,
+  errorReason,
+  selectedModelId,
+}) {
+  if (verdict === "non_compliant")
+    return "investigate_invariant_failures_in_verification_envelope";
+  if (verdict === "inconclusive")
+    return "investigate_source_envelope_readability";
   // compliant
   if (selectedModelId === null || invocationStatusSummary === "no_selection") {
     return "populate_operator_registry_with_active_local_models";
   }
-  if (invocationStatusSummary === "completed") return "review_response_in_saved_envelope";
+  if (invocationStatusSummary === "completed")
+    return "review_response_in_saved_envelope";
   if (invocationStatusSummary === "failed") {
     const reason = typeof errorReason === "string" ? errorReason : "";
-    if (reason.includes("consent_phrase_mismatch")) return "retry_with_correct_invoke_consent_for_selected_model";
-    if (reason.includes("model_not_in_whitelist")) return "update_operator_registry_to_use_whitelisted_model";
-    if (reason.includes("prompt_empty") || reason.includes("prompt_too_long")) return "adjust_prompt_length_or_content";
-    if (reason.includes("aborted") || reason.includes("timeout") || reason.includes("AbortError")) {
+    if (reason.includes("consent_phrase_mismatch"))
+      return "retry_with_correct_invoke_consent_for_selected_model";
+    if (reason.includes("model_not_in_whitelist"))
+      return "update_operator_registry_to_use_whitelisted_model";
+    if (reason.includes("prompt_empty") || reason.includes("prompt_too_long"))
+      return "adjust_prompt_length_or_content";
+    if (
+      reason.includes("aborted") ||
+      reason.includes("timeout") ||
+      reason.includes("AbortError")
+    ) {
       return "increase_timeout_ms_or_check_local_model_load_state";
     }
     return "review_error_reason_in_saved_envelope";
@@ -327,8 +414,11 @@ function buildSelfCritique(invariants) {
 function buildRouteConsistencySummary(envelope) {
   return Object.freeze({
     envelope_selected_model_id: envelope?.selected_model_id ?? null,
-    route_receipt_selected_model_id: envelope?.route_receipt?.selected_model_id ?? null,
-    match: (envelope?.selected_model_id ?? null) === (envelope?.route_receipt?.selected_model_id ?? null)
+    route_receipt_selected_model_id:
+      envelope?.route_receipt?.selected_model_id ?? null,
+    match:
+      (envelope?.selected_model_id ?? null) ===
+      (envelope?.route_receipt?.selected_model_id ?? null),
   });
 }
 
@@ -345,7 +435,7 @@ function buildBoundaryConsistencySummary(envelope) {
     federation: b.federation === false,
     mint: b.mint === false,
     token_economy: b.token_economy === false,
-    urp_networking: b.urp_networking === false
+    urp_networking: b.urp_networking === false,
   });
 }
 
@@ -357,12 +447,13 @@ export function verifyRoutedInvocationEnvelope(envelope, { source } = {}) {
     return Object.freeze({
       name,
       satisfied: result.satisfied === true,
-      evidence: Object.freeze(result.evidence ?? {})
+      evidence: Object.freeze(result.evidence ?? {}),
     });
   });
 
   const satisfiedCount = invariants.filter((i) => i.satisfied).length;
-  const verdict = satisfiedCount === invariants.length ? "compliant" : "non_compliant";
+  const verdict =
+    satisfiedCount === invariants.length ? "compliant" : "non_compliant";
 
   const invocationStatusSummary = determineInvocationStatusSummary(envelope);
   const errorReason = envelope?.invocation_result?.error_reason ?? null;
@@ -372,7 +463,7 @@ export function verifyRoutedInvocationEnvelope(envelope, { source } = {}) {
     verdict,
     invocationStatusSummary,
     errorReason,
-    selectedModelId
+    selectedModelId,
   });
 
   const warnings = [];
@@ -407,7 +498,7 @@ export function verifyRoutedInvocationEnvelope(envelope, { source } = {}) {
       federation: false,
       mint: false,
       token_economy: false,
-      urp_networking: false
-    })
+      urp_networking: false,
+    }),
   });
 }

@@ -1,865 +1,1330 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DEMA — Node0 Homebase Dashboard</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DEMA — Node0 Homebase Dashboard</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-  :root {
-    --bg: #0F172A;
-    --bg-surface: #1E293B;
-    --bg-deeper: #0B1120;
-    --bg-card: rgba(255,255,255,0.03);
-    --border: rgba(255,255,255,0.10);
-    --border-bright: rgba(255,255,255,0.20);
-    --border-accent: rgba(99,179,237,0.35);
-    --text: #F1F5F9;
-    --text-sub: #B0BEC5;
-    --text-muted: #64748B;
-    --accent-blue: #63B3ED;
-    --accent-cyan: #67E8F9;
-    --accent-amber: #FCD34D;
-    --accent-emerald: #6EE7B7;
-    --accent-rose: #FDA4AF;
-    --accent-violet: #C4B5FD;
-    --radius: 10px;
-    --radius-sm: 6px;
-    --glow-cyan: rgba(103,232,249,0.06);
-    --glow-blue: rgba(99,179,237,0.06);
-  }
+      :root {
+        --bg: #0f172a;
+        --bg-surface: #1e293b;
+        --bg-deeper: #0b1120;
+        --bg-card: rgba(255, 255, 255, 0.03);
+        --border: rgba(255, 255, 255, 0.1);
+        --border-bright: rgba(255, 255, 255, 0.2);
+        --border-accent: rgba(99, 179, 237, 0.35);
+        --text: #f1f5f9;
+        --text-sub: #b0bec5;
+        --text-muted: #64748b;
+        --accent-blue: #63b3ed;
+        --accent-cyan: #67e8f9;
+        --accent-amber: #fcd34d;
+        --accent-emerald: #6ee7b7;
+        --accent-rose: #fda4af;
+        --accent-violet: #c4b5fd;
+        --radius: 10px;
+        --radius-sm: 6px;
+        --glow-cyan: rgba(103, 232, 249, 0.06);
+        --glow-blue: rgba(99, 179, 237, 0.06);
+      }
 
-  body {
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
-    background: var(--bg);
-    color: var(--text);
-    -webkit-font-smoothing: antialiased;
-    min-height: 100vh;
-  }
+      body {
+        font-family:
+          "SF Mono", "Fira Code", "Cascadia Code", "JetBrains Mono", "Menlo",
+          "Consolas", monospace;
+        background: var(--bg);
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+      }
 
-  .grid-bg {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: -1;
-    background-image: radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px);
-    background-size: 24px 24px;
-  }
+      .grid-bg {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: -1;
+        background-image: radial-gradient(
+          circle,
+          rgba(255, 255, 255, 0.025) 1px,
+          transparent 1px
+        );
+        background-size: 24px 24px;
+      }
 
-  .root {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 48px 40px 64px;
-  }
+      .root {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 48px 40px 64px;
+      }
 
-  /* ─── HEADER ─── */
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 40px;
-    padding-bottom: 24px;
-    border-bottom: 1px solid var(--border);
-  }
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  .logo {
-    width: 48px;
-    height: 48px;
-    border: 2px solid rgba(103,232,249,0.3);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 2px;
-    color: var(--accent-cyan);
-    background: rgba(103,232,249,0.04);
-  }
-  .header-text h1 {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-  }
-  .header-text h1 span { color: var(--accent-cyan); }
-  .header-text .subtitle {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 2px;
-    letter-spacing: 0.5px;
-  }
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.8px;
-    padding: 5px 14px;
-    border-radius: 20px;
-  }
-  .badge-version {
-    color: var(--accent-cyan);
-    border: 1px solid rgba(103,232,249,0.25);
-    background: rgba(103,232,249,0.06);
-  }
-  .badge-blocked {
-    color: var(--accent-rose);
-    border: 1px solid rgba(253,164,175,0.3);
-    background: rgba(253,164,175,0.06);
-  }
-  .badge-blocked .pulse {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent-rose);
-    animation: pulse 2s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-  }
+      /* ─── HEADER ─── */
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 40px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--border);
+      }
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .logo {
+        width: 48px;
+        height: 48px;
+        border: 2px solid rgba(103, 232, 249, 0.3);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        color: var(--accent-cyan);
+        background: rgba(103, 232, 249, 0.04);
+      }
+      .header-text h1 {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.3px;
+      }
+      .header-text h1 span {
+        color: var(--accent-cyan);
+      }
+      .header-text .subtitle {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 2px;
+        letter-spacing: 0.5px;
+      }
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.8px;
+        padding: 5px 14px;
+        border-radius: 20px;
+      }
+      .badge-version {
+        color: var(--accent-cyan);
+        border: 1px solid rgba(103, 232, 249, 0.25);
+        background: rgba(103, 232, 249, 0.06);
+      }
+      .badge-blocked {
+        color: var(--accent-rose);
+        border: 1px solid rgba(253, 164, 175, 0.3);
+        background: rgba(253, 164, 175, 0.06);
+      }
+      .badge-blocked .pulse {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent-rose);
+        animation: pulse 2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
 
-  /* ─── LAYOUT ─── */
-  .dashboard {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: 28px;
-  }
+      /* ─── LAYOUT ─── */
+      .dashboard {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 28px;
+      }
 
-  /* ─── SIDEBAR (IDENTITY + ROLES) ─── */
-  .sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
+      /* ─── SIDEBAR (IDENTITY + ROLES) ─── */
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
 
-  .panel {
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-  .panel-header {
-    padding: 14px 18px 10px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .panel-title {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--text-sub);
-  }
-  .panel-badge {
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 2px 8px;
-    border-radius: 3px;
-  }
-  .panel-badge-cyan {
-    background: rgba(103,232,249,0.12);
-    color: var(--accent-cyan);
-    border: 1px solid rgba(103,232,249,0.2);
-  }
-  .panel-body { padding: 16px 18px; }
+      .panel {
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+      .panel-header {
+        padding: 14px 18px 10px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .panel-title {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-sub);
+      }
+      .panel-badge {
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 3px;
+      }
+      .panel-badge-cyan {
+        background: rgba(103, 232, 249, 0.12);
+        color: var(--accent-cyan);
+        border: 1px solid rgba(103, 232, 249, 0.2);
+      }
+      .panel-body {
+        padding: 16px 18px;
+      }
 
-  /* Identity card */
-  .identity-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-  }
-  .identity-row:last-child { border-bottom: none; }
-  .identity-key {
-    font-size: 11px;
-    color: var(--text-muted);
-  }
-  .identity-val {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text);
-  }
-  .identity-val.unknown {
-    color: var(--text-muted);
-    font-style: italic;
-    font-weight: 400;
-  }
+      /* Identity card */
+      .identity-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      }
+      .identity-row:last-child {
+        border-bottom: none;
+      }
+      .identity-key {
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+      .identity-val {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .identity-val.unknown {
+        color: var(--text-muted);
+        font-style: italic;
+        font-weight: 400;
+      }
 
-  /* Roles sidebar */
-  .role-card {
-    padding: 12px 18px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-  }
-  .role-card:last-child { border-bottom: none; }
-  .role-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    font-size: 10px;
-    font-weight: 800;
-    margin-bottom: 6px;
-  }
-  .role-icon.face { background: rgba(99,179,237,0.12); color: var(--accent-blue); border: 1px solid rgba(99,179,237,0.2); }
-  .role-icon.cockpit { background: rgba(103,232,249,0.12); color: var(--accent-cyan); border: 1px solid rgba(103,232,249,0.2); }
-  .role-icon.consent { background: rgba(252,211,77,0.12); color: var(--accent-amber); border: 1px solid rgba(252,211,77,0.2); }
-  .role-icon.bridge { background: rgba(196,181,253,0.12); color: var(--accent-violet); border: 1px solid rgba(196,181,253,0.2); }
-  .role-name {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 2px;
-  }
-  .role-desc {
-    font-size: 10px;
-    color: var(--text-muted);
-    line-height: 1.5;
-  }
+      /* Roles sidebar */
+      .role-card {
+        padding: 12px 18px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      }
+      .role-card:last-child {
+        border-bottom: none;
+      }
+      .role-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 800;
+        margin-bottom: 6px;
+      }
+      .role-icon.face {
+        background: rgba(99, 179, 237, 0.12);
+        color: var(--accent-blue);
+        border: 1px solid rgba(99, 179, 237, 0.2);
+      }
+      .role-icon.cockpit {
+        background: rgba(103, 232, 249, 0.12);
+        color: var(--accent-cyan);
+        border: 1px solid rgba(103, 232, 249, 0.2);
+      }
+      .role-icon.consent {
+        background: rgba(252, 211, 77, 0.12);
+        color: var(--accent-amber);
+        border: 1px solid rgba(252, 211, 77, 0.2);
+      }
+      .role-icon.bridge {
+        background: rgba(196, 181, 253, 0.12);
+        color: var(--accent-violet);
+        border: 1px solid rgba(196, 181, 253, 0.2);
+      }
+      .role-name {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 2px;
+      }
+      .role-desc {
+        font-size: 10px;
+        color: var(--text-muted);
+        line-height: 1.5;
+      }
 
-  /* ─── MAIN CONTENT ─── */
-  .main {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
+      /* ─── MAIN CONTENT ─── */
+      .main {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
 
-  /* Readiness grid */
-  .readiness-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-  }
-  .readiness-cell {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 14px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    position: relative;
-    transition: border-color 0.2s;
-  }
-  .readiness-cell:hover { border-color: var(--border-bright); }
-  .readiness-cell .cell-label {
-    font-size: 10px;
-    color: var(--text-muted);
-    letter-spacing: 0.5px;
-  }
-  .readiness-cell .cell-value {
-    font-size: 14px;
-    font-weight: 700;
-  }
-  .readiness-cell .cell-detail {
-    font-size: 9px;
-    color: var(--text-muted);
-    line-height: 1.5;
-  }
+      /* Readiness grid */
+      .readiness-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+      .readiness-cell {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        position: relative;
+        transition: border-color 0.2s;
+      }
+      .readiness-cell:hover {
+        border-color: var(--border-bright);
+      }
+      .readiness-cell .cell-label {
+        font-size: 10px;
+        color: var(--text-muted);
+        letter-spacing: 0.5px;
+      }
+      .readiness-cell .cell-value {
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .readiness-cell .cell-detail {
+        font-size: 9px;
+        color: var(--text-muted);
+        line-height: 1.5;
+      }
 
-  /* Status indicators */
-  .status-dot {
-    display: inline-block;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    margin-right: 6px;
-    vertical-align: middle;
-  }
-  .status-dot.pass { background: var(--accent-emerald); box-shadow: 0 0 6px rgba(110,231,183,0.4); }
-  .status-dot.fail { background: var(--accent-rose); box-shadow: 0 0 6px rgba(253,164,175,0.4); }
-  .status-dot.warn { background: var(--accent-amber); box-shadow: 0 0 6px rgba(252,211,77,0.4); }
-  .status-dot.muted { background: var(--text-muted); }
+      /* Status indicators */
+      .status-dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: middle;
+      }
+      .status-dot.pass {
+        background: var(--accent-emerald);
+        box-shadow: 0 0 6px rgba(110, 231, 183, 0.4);
+      }
+      .status-dot.fail {
+        background: var(--accent-rose);
+        box-shadow: 0 0 6px rgba(253, 164, 175, 0.4);
+      }
+      .status-dot.warn {
+        background: var(--accent-amber);
+        box-shadow: 0 0 6px rgba(252, 211, 77, 0.4);
+      }
+      .status-dot.muted {
+        background: var(--text-muted);
+      }
 
-  .val-pass { color: var(--accent-emerald); }
-  .val-fail { color: var(--accent-rose); }
-  .val-warn { color: var(--accent-amber); }
-  .val-muted { color: var(--text-muted); }
-  .val-info { color: var(--accent-blue); }
+      .val-pass {
+        color: var(--accent-emerald);
+      }
+      .val-fail {
+        color: var(--accent-rose);
+      }
+      .val-warn {
+        color: var(--accent-amber);
+      }
+      .val-muted {
+        color: var(--text-muted);
+      }
+      .val-info {
+        color: var(--accent-blue);
+      }
 
-  /* Findings panel */
-  .finding {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 10px 14px;
-    background: rgba(253,164,175,0.04);
-    border: 1px solid rgba(253,164,175,0.12);
-    border-radius: var(--radius-sm);
-    margin-bottom: 8px;
-  }
-  .finding:last-child { margin-bottom: 0; }
-  .finding-icon {
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    background: rgba(253,164,175,0.12);
-    color: var(--accent-rose);
-    border: 1px solid rgba(253,164,175,0.2);
-    font-weight: 700;
-  }
-  .finding-text {
-    font-size: 11px;
-    color: var(--text-sub);
-    line-height: 1.6;
-  }
+      /* Findings panel */
+      .finding {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px 14px;
+        background: rgba(253, 164, 175, 0.04);
+        border: 1px solid rgba(253, 164, 175, 0.12);
+        border-radius: var(--radius-sm);
+        margin-bottom: 8px;
+      }
+      .finding:last-child {
+        margin-bottom: 0;
+      }
+      .finding-icon {
+        flex-shrink: 0;
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        background: rgba(253, 164, 175, 0.12);
+        color: var(--accent-rose);
+        border: 1px solid rgba(253, 164, 175, 0.2);
+        font-weight: 700;
+      }
+      .finding-text {
+        font-size: 11px;
+        color: var(--text-sub);
+        line-height: 1.6;
+      }
 
-  /* Next action panel */
-  .next-action {
-    background: linear-gradient(135deg, rgba(99,179,237,0.08) 0%, rgba(103,232,249,0.05) 100%);
-    border-color: rgba(99,179,237,0.25);
-    padding: 20px 22px;
-  }
-  .next-action-label {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--accent-blue);
-    margin-bottom: 8px;
-  }
-  .next-action-cmd {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--accent-cyan);
-    margin-bottom: 6px;
-  }
-  .next-action-desc {
-    font-size: 11px;
-    color: var(--text-sub);
-    line-height: 1.6;
-  }
+      /* Next action panel */
+      .next-action {
+        background: linear-gradient(
+          135deg,
+          rgba(99, 179, 237, 0.08) 0%,
+          rgba(103, 232, 249, 0.05) 100%
+        );
+        border-color: rgba(99, 179, 237, 0.25);
+        padding: 20px 22px;
+      }
+      .next-action-label {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--accent-blue);
+        margin-bottom: 8px;
+      }
+      .next-action-cmd {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--accent-cyan);
+        margin-bottom: 6px;
+      }
+      .next-action-desc {
+        font-size: 11px;
+        color: var(--text-sub);
+        line-height: 1.6;
+      }
 
-  /* Boundary bar */
-  .boundary-bar {
-    text-align: center;
-    padding: 14px 20px;
-    border: 1px dashed rgba(252,211,77,0.2);
-    border-radius: var(--radius-sm);
-    background: rgba(252,211,77,0.03);
-  }
-  .boundary-text {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--accent-amber);
-  }
+      /* Boundary bar */
+      .boundary-bar {
+        text-align: center;
+        padding: 14px 20px;
+        border: 1px dashed rgba(252, 211, 77, 0.2);
+        border-radius: var(--radius-sm);
+        background: rgba(252, 211, 77, 0.03);
+      }
+      .boundary-text {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--accent-amber);
+      }
 
-  /* Doctor predicates */
-  .doctor-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .doctor-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    transition: border-color 0.2s;
-  }
-  .doctor-row:hover { border-color: var(--border-bright); }
-  .doctor-row .predicate-name {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text);
-    flex: 1;
-  }
-  .doctor-row .predicate-val {
-    font-size: 11px;
-    font-weight: 600;
-    min-width: 100px;
-    text-align: right;
-  }
-  .doctor-row .fix-hint {
-    font-size: 9px;
-    color: var(--text-muted);
-    flex-basis: 100%;
-    margin-top: 4px;
-    padding-left: 24px;
-    line-height: 1.5;
-  }
-  .doctor-row.has-fix {
-    flex-wrap: wrap;
-  }
+      /* Doctor predicates */
+      .doctor-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .doctor-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        transition: border-color 0.2s;
+      }
+      .doctor-row:hover {
+        border-color: var(--border-bright);
+      }
+      .doctor-row .predicate-name {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text);
+        flex: 1;
+      }
+      .doctor-row .predicate-val {
+        font-size: 11px;
+        font-weight: 600;
+        min-width: 100px;
+        text-align: right;
+      }
+      .doctor-row .fix-hint {
+        font-size: 9px;
+        color: var(--text-muted);
+        flex-basis: 100%;
+        margin-top: 4px;
+        padding-left: 24px;
+        line-height: 1.5;
+      }
+      .doctor-row.has-fix {
+        flex-wrap: wrap;
+      }
 
-  /* Metrics bar */
-  .metrics-bar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 32px;
-    padding: 18px 24px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    flex-wrap: wrap;
-  }
-  .metric {
-    text-align: center;
-  }
-  .metric-val {
-    font-size: 16px;
-    font-weight: 800;
-    color: var(--accent-blue);
-  }
-  .metric-label {
-    font-size: 8px;
-    font-weight: 600;
-    color: var(--text-muted);
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    margin-top: 3px;
-  }
-  .truth-badge {
-    display: inline-block;
-    font-size: 7px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    padding: 1px 5px;
-    border-radius: 3px;
-    margin-left: 4px;
-    vertical-align: middle;
-  }
-  .truth-measured { background: rgba(110,231,183,0.2); color: var(--accent-emerald); border: 1px solid rgba(110,231,183,0.3); }
+      /* Metrics bar */
+      .metrics-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 32px;
+        padding: 18px 24px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        flex-wrap: wrap;
+      }
+      .metric {
+        text-align: center;
+      }
+      .metric-val {
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--accent-blue);
+      }
+      .metric-label {
+        font-size: 8px;
+        font-weight: 600;
+        color: var(--text-muted);
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        margin-top: 3px;
+      }
+      .truth-badge {
+        display: inline-block;
+        font-size: 7px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        padding: 1px 5px;
+        border-radius: 3px;
+        margin-left: 4px;
+        vertical-align: middle;
+      }
+      .truth-measured {
+        background: rgba(110, 231, 183, 0.2);
+        color: var(--accent-emerald);
+        border: 1px solid rgba(110, 231, 183, 0.3);
+      }
 
-  /* Footer */
-  .footer {
-    margin-top: 32px;
-    text-align: center;
-    padding-top: 20px;
-    border-top: 1px solid var(--border);
-  }
-  .footer-constitution {
-    font-size: 10px;
-    color: var(--text-muted);
-    letter-spacing: 0.5px;
-    line-height: 1.8;
-  }
-  .footer-constitution strong { color: var(--accent-cyan); }
-  .footer-meta {
-    margin-top: 12px;
-    font-size: 9px;
-    color: var(--text-muted);
-    letter-spacing: 0.5px;
-  }
+      /* Footer */
+      .footer {
+        margin-top: 32px;
+        text-align: center;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+      }
+      .footer-constitution {
+        font-size: 10px;
+        color: var(--text-muted);
+        letter-spacing: 0.5px;
+        line-height: 1.8;
+      }
+      .footer-constitution strong {
+        color: var(--accent-cyan);
+      }
+      .footer-meta {
+        margin-top: 12px;
+        font-size: 9px;
+        color: var(--text-muted);
+        letter-spacing: 0.5px;
+      }
 
-  /* ─── RESPONSIVE ─── */
-  @media (max-width: 900px) {
-    .dashboard { grid-template-columns: 1fr; }
-    .readiness-grid { grid-template-columns: repeat(2, 1fr); }
-    .root { padding: 24px 16px 48px; }
-  }
+      /* ─── RESPONSIVE ─── */
+      @media (max-width: 900px) {
+        .dashboard {
+          grid-template-columns: 1fr;
+        }
+        .readiness-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .root {
+          padding: 24px 16px 48px;
+        }
+      }
 
-  /* ─── PRINT ─── */
-  @media print {
-    .grid-bg { display: none; }
-    body { background: #fff; color: #1a1a1a; }
-    .panel, .readiness-cell, .doctor-row, .finding, .next-action, .boundary-bar, .metrics-bar {
-      border-color: #ccc !important;
-      background: #f8f8f8 !important;
-    }
-    .header { border-bottom-color: #ccc; }
-    .footer { border-top-color: #ccc; }
-    .logo { border-color: #999; color: #0e7490; background: #f5f5f5; }
-    .metric-val { color: #2563eb !important; }
-    .val-pass { color: #059669 !important; }
-    .val-fail { color: #dc2626 !important; }
-    .val-warn { color: #d97706 !important; }
-    .badge { border-color: #999 !important; }
-  }
-</style>
-</head>
-<body>
-<div class="grid-bg"></div>
-<div class="root">
-
-  <!-- ═══ HEADER ═══ -->
-  <div class="header">
-    <div class="header-left">
-      <div class="logo">DEMA</div>
-      <div class="header-text">
-        <h1><span>DEMA</span> — Node0 Homebase</h1>
-        <div class="subtitle">Sovereign AI Node Companion · Local-first · Consent-bound · Receipt-aware</div>
-      </div>
-    </div>
-    <div class="header-right">
-      <div class="badge badge-version" id="d-version">v0.1.0-alpha.0</div>
-      <div class="badge badge-blocked" id="d-gate-badge"><div class="pulse"></div> BLOCKED</div>
-    </div>
-  </div>
-
-  <!-- ═══ DASHBOARD LAYOUT ═══ -->
-  <div class="dashboard">
-
-    <!-- ─── SIDEBAR ─── -->
-    <div class="sidebar">
-
-      <!-- Identity -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Identity</div>
-          <div class="panel-badge panel-badge-cyan">Node0</div>
-        </div>
-        <div class="panel-body">
-          <div class="identity-row">
-            <span class="identity-key">Node</span>
-            <span class="identity-val" id="d-node">Node0</span>
+      /* ─── PRINT ─── */
+      @media print {
+        .grid-bg {
+          display: none;
+        }
+        body {
+          background: #fff;
+          color: #1a1a1a;
+        }
+        .panel,
+        .readiness-cell,
+        .doctor-row,
+        .finding,
+        .next-action,
+        .boundary-bar,
+        .metrics-bar {
+          border-color: #ccc !important;
+          background: #f8f8f8 !important;
+        }
+        .header {
+          border-bottom-color: #ccc;
+        }
+        .footer {
+          border-top-color: #ccc;
+        }
+        .logo {
+          border-color: #999;
+          color: #0e7490;
+          background: #f5f5f5;
+        }
+        .metric-val {
+          color: #2563eb !important;
+        }
+        .val-pass {
+          color: #059669 !important;
+        }
+        .val-fail {
+          color: #dc2626 !important;
+        }
+        .val-warn {
+          color: #d97706 !important;
+        }
+        .badge {
+          border-color: #999 !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="grid-bg"></div>
+    <div class="root">
+      <!-- ═══ HEADER ═══ -->
+      <div class="header">
+        <div class="header-left">
+          <div class="logo">DEMA</div>
+          <div class="header-text">
+            <h1><span>DEMA</span> — Node0 Homebase</h1>
+            <div class="subtitle">
+              Sovereign AI Node Companion · Local-first · Consent-bound ·
+              Receipt-aware
+            </div>
           </div>
-          <div class="identity-row">
-            <span class="identity-key">Human</span>
-            <span class="identity-val unknown" id="d-human">unknown</span>
-          </div>
-          <div class="identity-row">
-            <span class="identity-key">Phase</span>
-            <span class="identity-val val-warn" id="d-phase">first_run</span>
-          </div>
-          <div class="identity-row">
-            <span class="identity-key">Role</span>
-            <span class="identity-val" id="d-role">momo_node0</span>
-          </div>
         </div>
-      </div>
-
-      <!-- 4 Roles -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Dema Roles</div>
-        </div>
-        <div class="role-card">
-          <div class="role-icon face">F</div>
-          <div class="role-name">Face</div>
-          <div class="role-desc">Sole product surface. Users see Dema, nothing else.</div>
-        </div>
-        <div class="role-card">
-          <div class="role-icon cockpit">C</div>
-          <div class="role-name">Cockpit</div>
-          <div class="role-desc">Read-only state view. Status, doctor, receipts.</div>
-        </div>
-        <div class="role-card">
-          <div class="role-icon consent">G</div>
-          <div class="role-name">Consent Gate</div>
-          <div class="role-desc">FATE exact-string consent. Fail-closed by default.</div>
-        </div>
-        <div class="role-card">
-          <div class="role-icon bridge">B</div>
-          <div class="role-name">Bridge</div>
-          <div class="role-desc">Connects operator to Omega substrate, AgentDB, local LLM.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ─── MAIN CONTENT ─── -->
-    <div class="main">
-
-      <!-- Readiness Matrix -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Readiness</div>
-          <div class="panel-badge" style="background:rgba(253,164,175,0.12); color:var(--accent-rose); border:1px solid rgba(253,164,175,0.2);">3 FAIL · 1 WARN · 1 OK</div>
-        </div>
-        <div class="panel-body">
-          <div class="readiness-grid">
-
-            <div class="readiness-cell">
-              <div class="cell-label">Ready</div>
-              <div class="cell-value"><span class="status-dot fail"></span><span class="val-fail">false</span></div>
-            </div>
-
-            <div class="readiness-cell">
-              <div class="cell-label">Console Ready</div>
-              <div class="cell-value"><span class="status-dot fail"></span><span class="val-fail">false</span></div>
-            </div>
-
-            <div class="readiness-cell">
-              <div class="cell-label">Activation Gate</div>
-              <div class="cell-value"><span class="status-dot warn"></span><span class="val-warn">BLOCKED</span></div>
-            </div>
-
-            <div class="readiness-cell">
-              <div class="cell-label">Daemon</div>
-              <div class="cell-value"><span class="status-dot pass"></span><span class="val-pass">n/a-via-gateway</span></div>
-              <div class="cell-detail">No hidden daemon — by design</div>
-            </div>
-
-            <div class="readiness-cell">
-              <div class="cell-label">Mission Executed</div>
-              <div class="cell-value"><span class="status-dot muted"></span><span class="val-muted">false</span></div>
-            </div>
-
-            <div class="readiness-cell">
-              <div class="cell-label">Runtime Pulse</div>
-              <div class="cell-value"><span class="status-dot muted"></span><span class="val-muted">not fired</span></div>
-            </div>
-
-            <div class="readiness-cell">
-              <div class="cell-label">Model Connected</div>
-              <div class="cell-value"><span class="status-dot muted"></span><span class="val-muted">false</span></div>
-              <div class="cell-detail">Loaded: none</div>
-            </div>
-
-            <div class="readiness-cell">
-              <div class="cell-label">Rust Bus</div>
-              <div class="cell-value"><span class="status-dot muted"></span><span class="val-muted">not ready</span></div>
-            </div>
-
-            <div class="readiness-cell">
-              <div class="cell-label">Next Artifact</div>
-              <div class="cell-value"><span class="val-info">ARTIFACT-011</span></div>
-              <div class="cell-detail">Awaiting governed gateway</div>
-            </div>
-
+        <div class="header-right">
+          <div class="badge badge-version" id="d-version">v0.1.0-alpha.0</div>
+          <div class="badge badge-blocked" id="d-gate-badge">
+            <div class="pulse"></div>
+            BLOCKED
           </div>
         </div>
       </div>
 
-      <!-- Doctor Predicates -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Doctor Predicates</div>
-          <div class="panel-badge" style="background:rgba(253,164,175,0.12); color:var(--accent-rose); border:1px solid rgba(253,164,175,0.2);">EXIT 1</div>
-        </div>
-        <div class="panel-body">
-          <div class="doctor-grid">
-
-            <div class="doctor-row has-fix">
-              <span class="status-dot fail"></span>
-              <span class="predicate-name">Activation Gate</span>
-              <span class="predicate-val val-fail">BLOCKED</span>
-              <div class="fix-hint">→ Fix: run <code style="color:var(--accent-cyan);">dema setup</code> to initialize and check doctrine consent</div>
+      <!-- ═══ DASHBOARD LAYOUT ═══ -->
+      <div class="dashboard">
+        <!-- ─── SIDEBAR ─── -->
+        <div class="sidebar">
+          <!-- Identity -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Identity</div>
+              <div class="panel-badge panel-badge-cyan">Node0</div>
             </div>
-
-            <div class="doctor-row">
-              <span class="status-dot pass"></span>
-              <span class="predicate-name">Daemon</span>
-              <span class="predicate-val val-pass">n/a-via-gateway</span>
-            </div>
-
-            <div class="doctor-row has-fix">
-              <span class="status-dot fail"></span>
-              <span class="predicate-name">Ready</span>
-              <span class="predicate-val val-fail">false</span>
-              <div class="fix-hint">→ Fix: complete first-run setup with <code style="color:var(--accent-cyan);">dema setup</code>, then verify with <code style="color:var(--accent-cyan);">dema status</code></div>
-            </div>
-
-            <div class="doctor-row has-fix">
-              <span class="status-dot fail"></span>
-              <span class="predicate-name">Console Ready</span>
-              <span class="predicate-val val-fail">false</span>
-              <div class="fix-hint">→ Fix: gateway unreachable — for preview-only use, this is expected</div>
-            </div>
-
-            <div class="doctor-row has-fix">
-              <span class="status-dot warn"></span>
-              <span class="predicate-name">Gateway Probe</span>
-              <span class="predicate-val val-warn">unreachable</span>
-              <div class="fix-hint">By design when no governed runtime is running</div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-
-      <!-- Findings -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Findings</div>
-        </div>
-        <div class="panel-body">
-          <div class="finding">
-            <div class="finding-icon">!</div>
-            <div class="finding-text">Node0 adapter not connected — no governed runtime detected on this machine</div>
-          </div>
-          <div class="finding">
-            <div class="finding-icon">!</div>
-            <div class="finding-text">DEMA_NODE0_STATUS_COMMAND unavailable — environment variable not configured</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Next Safe Action -->
-      <div class="panel next-action">
-        <div class="next-action-label">→ Next Safe Action</div>
-        <div class="next-action-cmd">dema setup</div>
-        <div class="next-action-desc">
-          Create the local <code style="color:var(--accent-cyan);">~/.dema/</code> skeleton — profile, config, receipts directory, memory store, logs, skills. Idempotent and non-destructive. Does not start a daemon, call a remote provider, or mutate anything outside <code style="color:var(--accent-cyan);">$DEMA_HOME</code>.
-        </div>
-      </div>
-
-      <!-- Boundary -->
-      <div class="boundary-bar">
-        <div class="boundary-text">No action without explicit consent</div>
-      </div>
-
-      <!-- ═══ COMMAND SURFACE · AgentCraft-inspired "cycle to what needs attention" ═══ -->
-      <div class="panel" style="margin-top: 20px;">
-        <div class="panel-header">
-          <div class="panel-title">Command Surface</div>
-          <div class="panel-badge" style="background:rgba(99,179,237,0.12); color:var(--accent-blue); border:1px solid rgba(99,179,237,0.2);">4 ROLES · 60+ COMMANDS</div>
-        </div>
-        <div class="panel-body">
-          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px;">
-
-            <!-- FACE -->
-            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; border-top:2px solid var(--accent-blue);">
-              <div style="font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--accent-blue); margin-bottom:10px;">Face</div>
-              <div style="font-size:10px; color:var(--text-sub); line-height:2.2;">
-                <div><code style="color:var(--accent-cyan); font-size:9px;">welcome</code> orientation</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">onboard</code> guided path</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">explain</code> 28 concepts</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">language</code> set locale</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">setup</code> create skeleton</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">dashboard</code> this view</div>
+            <div class="panel-body">
+              <div class="identity-row">
+                <span class="identity-key">Node</span>
+                <span class="identity-val" id="d-node">Node0</span>
+              </div>
+              <div class="identity-row">
+                <span class="identity-key">Human</span>
+                <span class="identity-val unknown" id="d-human">unknown</span>
+              </div>
+              <div class="identity-row">
+                <span class="identity-key">Phase</span>
+                <span class="identity-val val-warn" id="d-phase"
+                  >first_run</span
+                >
+              </div>
+              <div class="identity-row">
+                <span class="identity-key">Role</span>
+                <span class="identity-val" id="d-role">momo_node0</span>
               </div>
             </div>
-
-            <!-- COCKPIT -->
-            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; border-top:2px solid var(--accent-cyan);">
-              <div style="font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--accent-cyan); margin-bottom:10px;">Cockpit</div>
-              <div style="font-size:10px; color:var(--text-sub); line-height:2.2;">
-                <div><code style="color:var(--accent-cyan); font-size:9px;">status</code> readiness</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">doctor</code> predicates</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">today</code> continuity tick</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">receipts</code> evidence chain</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">memory</code> local + AgentDB</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">models</code> inventory</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">report safety</code> audit</div>
-              </div>
-            </div>
-
-            <!-- CONSENT GATE -->
-            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; border-top:2px solid var(--accent-amber);">
-              <div style="font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--accent-amber); margin-bottom:10px;">Consent Gate</div>
-              <div style="font-size:10px; color:var(--text-sub); line-height:2.2;">
-                <div><code style="color:var(--accent-cyan); font-size:9px;">consent plan</code> scope preview</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">mission draft</code> intent shape</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">mission propose</code> readiness</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">ambient</code> boundary map</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">journey</code> full preview</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">diagnostics</code> plan harness</div>
-              </div>
-            </div>
-
-            <!-- BRIDGE -->
-            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; border-top:2px solid var(--accent-violet);">
-              <div style="font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--accent-violet); margin-bottom:10px;">Bridge</div>
-              <div style="font-size:10px; color:var(--text-sub); line-height:2.2;">
-                <div><code style="color:var(--accent-cyan); font-size:9px;">model-broker</code> route + invoke</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">orchestrator</code> SAT pipeline</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">codebase map</code> architecture</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">eval layer2</code> judge surface</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">network</code> blueprint</div>
-                <div><code style="color:var(--accent-cyan); font-size:9px;">evidence</code> receipt preview</div>
-              </div>
-            </div>
-
           </div>
+
+          <!-- 4 Roles -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Dema Roles</div>
+            </div>
+            <div class="role-card">
+              <div class="role-icon face">F</div>
+              <div class="role-name">Face</div>
+              <div class="role-desc">
+                Sole product surface. Users see Dema, nothing else.
+              </div>
+            </div>
+            <div class="role-card">
+              <div class="role-icon cockpit">C</div>
+              <div class="role-name">Cockpit</div>
+              <div class="role-desc">
+                Read-only state view. Status, doctor, receipts.
+              </div>
+            </div>
+            <div class="role-card">
+              <div class="role-icon consent">G</div>
+              <div class="role-name">Consent Gate</div>
+              <div class="role-desc">
+                FATE exact-string consent. Fail-closed by default.
+              </div>
+            </div>
+            <div class="role-card">
+              <div class="role-icon bridge">B</div>
+              <div class="role-name">Bridge</div>
+              <div class="role-desc">
+                Connects operator to Omega substrate, AgentDB, local LLM.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── MAIN CONTENT ─── -->
+        <div class="main">
+          <!-- Readiness Matrix -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Readiness</div>
+              <div
+                class="panel-badge"
+                style="
+                  background: rgba(253, 164, 175, 0.12);
+                  color: var(--accent-rose);
+                  border: 1px solid rgba(253, 164, 175, 0.2);
+                "
+              >
+                3 FAIL · 1 WARN · 1 OK
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="readiness-grid">
+                <div class="readiness-cell">
+                  <div class="cell-label">Ready</div>
+                  <div class="cell-value">
+                    <span class="status-dot fail"></span
+                    ><span class="val-fail">false</span>
+                  </div>
+                </div>
+
+                <div class="readiness-cell">
+                  <div class="cell-label">Console Ready</div>
+                  <div class="cell-value">
+                    <span class="status-dot fail"></span
+                    ><span class="val-fail">false</span>
+                  </div>
+                </div>
+
+                <div class="readiness-cell">
+                  <div class="cell-label">Activation Gate</div>
+                  <div class="cell-value">
+                    <span class="status-dot warn"></span
+                    ><span class="val-warn">BLOCKED</span>
+                  </div>
+                </div>
+
+                <div class="readiness-cell">
+                  <div class="cell-label">Daemon</div>
+                  <div class="cell-value">
+                    <span class="status-dot pass"></span
+                    ><span class="val-pass">n/a-via-gateway</span>
+                  </div>
+                  <div class="cell-detail">No hidden daemon — by design</div>
+                </div>
+
+                <div class="readiness-cell">
+                  <div class="cell-label">Mission Executed</div>
+                  <div class="cell-value">
+                    <span class="status-dot muted"></span
+                    ><span class="val-muted">false</span>
+                  </div>
+                </div>
+
+                <div class="readiness-cell">
+                  <div class="cell-label">Runtime Pulse</div>
+                  <div class="cell-value">
+                    <span class="status-dot muted"></span
+                    ><span class="val-muted">not fired</span>
+                  </div>
+                </div>
+
+                <div class="readiness-cell">
+                  <div class="cell-label">Model Connected</div>
+                  <div class="cell-value">
+                    <span class="status-dot muted"></span
+                    ><span class="val-muted">false</span>
+                  </div>
+                  <div class="cell-detail">Loaded: none</div>
+                </div>
+
+                <div class="readiness-cell">
+                  <div class="cell-label">Rust Bus</div>
+                  <div class="cell-value">
+                    <span class="status-dot muted"></span
+                    ><span class="val-muted">not ready</span>
+                  </div>
+                </div>
+
+                <div class="readiness-cell">
+                  <div class="cell-label">Next Artifact</div>
+                  <div class="cell-value">
+                    <span class="val-info">ARTIFACT-011</span>
+                  </div>
+                  <div class="cell-detail">Awaiting governed gateway</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Doctor Predicates -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Doctor Predicates</div>
+              <div
+                class="panel-badge"
+                style="
+                  background: rgba(253, 164, 175, 0.12);
+                  color: var(--accent-rose);
+                  border: 1px solid rgba(253, 164, 175, 0.2);
+                "
+              >
+                EXIT 1
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="doctor-grid">
+                <div class="doctor-row has-fix">
+                  <span class="status-dot fail"></span>
+                  <span class="predicate-name">Activation Gate</span>
+                  <span class="predicate-val val-fail">BLOCKED</span>
+                  <div class="fix-hint">
+                    → Fix: run
+                    <code style="color: var(--accent-cyan)">dema setup</code> to
+                    initialize and check doctrine consent
+                  </div>
+                </div>
+
+                <div class="doctor-row">
+                  <span class="status-dot pass"></span>
+                  <span class="predicate-name">Daemon</span>
+                  <span class="predicate-val val-pass">n/a-via-gateway</span>
+                </div>
+
+                <div class="doctor-row has-fix">
+                  <span class="status-dot fail"></span>
+                  <span class="predicate-name">Ready</span>
+                  <span class="predicate-val val-fail">false</span>
+                  <div class="fix-hint">
+                    → Fix: complete first-run setup with
+                    <code style="color: var(--accent-cyan)">dema setup</code>,
+                    then verify with
+                    <code style="color: var(--accent-cyan)">dema status</code>
+                  </div>
+                </div>
+
+                <div class="doctor-row has-fix">
+                  <span class="status-dot fail"></span>
+                  <span class="predicate-name">Console Ready</span>
+                  <span class="predicate-val val-fail">false</span>
+                  <div class="fix-hint">
+                    → Fix: gateway unreachable — for preview-only use, this is
+                    expected
+                  </div>
+                </div>
+
+                <div class="doctor-row has-fix">
+                  <span class="status-dot warn"></span>
+                  <span class="predicate-name">Gateway Probe</span>
+                  <span class="predicate-val val-warn">unreachable</span>
+                  <div class="fix-hint">
+                    By design when no governed runtime is running
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Findings -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Findings</div>
+            </div>
+            <div class="panel-body">
+              <div class="finding">
+                <div class="finding-icon">!</div>
+                <div class="finding-text">
+                  Node0 adapter not connected — no governed runtime detected on
+                  this machine
+                </div>
+              </div>
+              <div class="finding">
+                <div class="finding-icon">!</div>
+                <div class="finding-text">
+                  DEMA_NODE0_STATUS_COMMAND unavailable — environment variable
+                  not configured
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Next Safe Action -->
+          <div class="panel next-action">
+            <div class="next-action-label">→ Next Safe Action</div>
+            <div class="next-action-cmd">dema setup</div>
+            <div class="next-action-desc">
+              Create the local
+              <code style="color: var(--accent-cyan)">~/.dema/</code> skeleton —
+              profile, config, receipts directory, memory store, logs, skills.
+              Idempotent and non-destructive. Does not start a daemon, call a
+              remote provider, or mutate anything outside
+              <code style="color: var(--accent-cyan)">$DEMA_HOME</code>.
+            </div>
+          </div>
+
+          <!-- Boundary -->
+          <div class="boundary-bar">
+            <div class="boundary-text">No action without explicit consent</div>
+          </div>
+
+          <!-- ═══ COMMAND SURFACE · AgentCraft-inspired "cycle to what needs attention" ═══ -->
+          <div class="panel" style="margin-top: 20px">
+            <div class="panel-header">
+              <div class="panel-title">Command Surface</div>
+              <div
+                class="panel-badge"
+                style="
+                  background: rgba(99, 179, 237, 0.12);
+                  color: var(--accent-blue);
+                  border: 1px solid rgba(99, 179, 237, 0.2);
+                "
+              >
+                4 ROLES · 60+ COMMANDS
+              </div>
+            </div>
+            <div class="panel-body">
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(4, 1fr);
+                  gap: 12px;
+                "
+              >
+                <!-- FACE -->
+                <div
+                  style="
+                    background: var(--bg-card);
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius-sm);
+                    padding: 14px 16px;
+                    border-top: 2px solid var(--accent-blue);
+                  "
+                >
+                  <div
+                    style="
+                      font-size: 10px;
+                      font-weight: 700;
+                      letter-spacing: 1.5px;
+                      text-transform: uppercase;
+                      color: var(--accent-blue);
+                      margin-bottom: 10px;
+                    "
+                  >
+                    Face
+                  </div>
+                  <div
+                    style="
+                      font-size: 10px;
+                      color: var(--text-sub);
+                      line-height: 2.2;
+                    "
+                  >
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >welcome</code
+                      >
+                      orientation
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >onboard</code
+                      >
+                      guided path
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >explain</code
+                      >
+                      28 concepts
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >language</code
+                      >
+                      set locale
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >setup</code
+                      >
+                      create skeleton
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >dashboard</code
+                      >
+                      this view
+                    </div>
+                  </div>
+                </div>
+
+                <!-- COCKPIT -->
+                <div
+                  style="
+                    background: var(--bg-card);
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius-sm);
+                    padding: 14px 16px;
+                    border-top: 2px solid var(--accent-cyan);
+                  "
+                >
+                  <div
+                    style="
+                      font-size: 10px;
+                      font-weight: 700;
+                      letter-spacing: 1.5px;
+                      text-transform: uppercase;
+                      color: var(--accent-cyan);
+                      margin-bottom: 10px;
+                    "
+                  >
+                    Cockpit
+                  </div>
+                  <div
+                    style="
+                      font-size: 10px;
+                      color: var(--text-sub);
+                      line-height: 2.2;
+                    "
+                  >
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >status</code
+                      >
+                      readiness
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >doctor</code
+                      >
+                      predicates
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >today</code
+                      >
+                      continuity tick
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >receipts</code
+                      >
+                      evidence chain
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >memory</code
+                      >
+                      local + AgentDB
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >models</code
+                      >
+                      inventory
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >report safety</code
+                      >
+                      audit
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CONSENT GATE -->
+                <div
+                  style="
+                    background: var(--bg-card);
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius-sm);
+                    padding: 14px 16px;
+                    border-top: 2px solid var(--accent-amber);
+                  "
+                >
+                  <div
+                    style="
+                      font-size: 10px;
+                      font-weight: 700;
+                      letter-spacing: 1.5px;
+                      text-transform: uppercase;
+                      color: var(--accent-amber);
+                      margin-bottom: 10px;
+                    "
+                  >
+                    Consent Gate
+                  </div>
+                  <div
+                    style="
+                      font-size: 10px;
+                      color: var(--text-sub);
+                      line-height: 2.2;
+                    "
+                  >
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >consent plan</code
+                      >
+                      scope preview
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >mission draft</code
+                      >
+                      intent shape
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >mission propose</code
+                      >
+                      readiness
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >ambient</code
+                      >
+                      boundary map
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >journey</code
+                      >
+                      full preview
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >diagnostics</code
+                      >
+                      plan harness
+                    </div>
+                  </div>
+                </div>
+
+                <!-- BRIDGE -->
+                <div
+                  style="
+                    background: var(--bg-card);
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius-sm);
+                    padding: 14px 16px;
+                    border-top: 2px solid var(--accent-violet);
+                  "
+                >
+                  <div
+                    style="
+                      font-size: 10px;
+                      font-weight: 700;
+                      letter-spacing: 1.5px;
+                      text-transform: uppercase;
+                      color: var(--accent-violet);
+                      margin-bottom: 10px;
+                    "
+                  >
+                    Bridge
+                  </div>
+                  <div
+                    style="
+                      font-size: 10px;
+                      color: var(--text-sub);
+                      line-height: 2.2;
+                    "
+                  >
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >model-broker</code
+                      >
+                      route + invoke
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >orchestrator</code
+                      >
+                      SAT pipeline
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >codebase map</code
+                      >
+                      architecture
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >eval layer2</code
+                      >
+                      judge surface
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >network</code
+                      >
+                      blueprint
+                    </div>
+                    <div>
+                      <code style="color: var(--accent-cyan); font-size: 9px"
+                        >evidence</code
+                      >
+                      receipt preview
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- /main -->
+      </div>
+      <!-- /dashboard -->
+
+      <!-- ═══ METRICS BAR ═══ -->
+      <div class="metrics-bar" style="margin-top: 28px">
+        <div class="metric">
+          <div class="metric-val">
+            2,618 <span class="truth-badge truth-measured">MEASURED</span>
+          </div>
+          <div class="metric-label">Tests Pass</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val">
+            18 <span class="truth-badge truth-measured">MEASURED</span>
+          </div>
+          <div class="metric-label">ADRs</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val">
+            0 <span class="truth-badge truth-measured">MEASURED</span>
+          </div>
+          <div class="metric-label">Prod Deps</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val">
+            48% <span class="truth-badge truth-measured">MEASURED</span>
+          </div>
+          <div class="metric-label">GTM (12/25)</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val">
+            97.6% <span class="truth-badge truth-measured">MEASURED</span>
+          </div>
+          <div class="metric-label">Line Coverage</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val">
+            A <span class="truth-badge truth-measured">MEASURED</span>
+          </div>
+          <div class="metric-label">Audit Grade</div>
         </div>
       </div>
 
-    </div><!-- /main -->
-  </div><!-- /dashboard -->
-
-  <!-- ═══ METRICS BAR ═══ -->
-  <div class="metrics-bar" style="margin-top: 28px;">
-    <div class="metric">
-      <div class="metric-val">2,618 <span class="truth-badge truth-measured">MEASURED</span></div>
-      <div class="metric-label">Tests Pass</div>
+      <!-- ═══ FOOTER ═══ -->
+      <div class="footer">
+        <div class="footer-constitution">
+          <strong>State before screen.</strong> Contract before runtime.
+          <strong>Consent before capability.</strong> Evidence before trust.
+          <strong>MoMo before mesh.</strong>
+        </div>
+        <div class="footer-meta">
+          <span id="d-footer-meta"
+            >DEMA Homebase Dashboard v0.1 · static design reference</span
+          >
+          ·
+          <a
+            href="https://github.com/BizraInfo/Dema"
+            style="color: var(--accent-blue); text-decoration: none"
+            >github.com/BizraInfo/Dema</a
+          >
+        </div>
+      </div>
     </div>
-    <div class="metric">
-      <div class="metric-val">18 <span class="truth-badge truth-measured">MEASURED</span></div>
-      <div class="metric-label">ADRs</div>
-    </div>
-    <div class="metric">
-      <div class="metric-val">0 <span class="truth-badge truth-measured">MEASURED</span></div>
-      <div class="metric-label">Prod Deps</div>
-    </div>
-    <div class="metric">
-      <div class="metric-val">48% <span class="truth-badge truth-measured">MEASURED</span></div>
-      <div class="metric-label">GTM (12/25)</div>
-    </div>
-    <div class="metric">
-      <div class="metric-val">97.6% <span class="truth-badge truth-measured">MEASURED</span></div>
-      <div class="metric-label">Line Coverage</div>
-    </div>
-    <div class="metric">
-      <div class="metric-val">A <span class="truth-badge truth-measured">MEASURED</span></div>
-      <div class="metric-label">Audit Grade</div>
-    </div>
-  </div>
-
-  <!-- ═══ FOOTER ═══ -->
-  <div class="footer">
-    <div class="footer-constitution">
-      <strong>State before screen.</strong> Contract before runtime.
-      <strong>Consent before capability.</strong> Evidence before trust.
-      <strong>MoMo before mesh.</strong>
-    </div>
-    <div class="footer-meta">
-      <span id="d-footer-meta">DEMA Homebase Dashboard v0.1 · static design reference</span> ·
-      <a href="https://github.com/BizraInfo/Dema" style="color:var(--accent-blue); text-decoration:none;">github.com/BizraInfo/Dema</a>
-    </div>
-  </div>
-
-</div><!-- /root -->
-<script>
-(function(){
-  var s = window.__DEMA_STATUS__;
-  if (!s) return;
-  function t(id, v) { var e = document.getElementById(id); if (e && v != null) e.textContent = String(v); }
-  t('d-node', s.node || 'Node0');
-  t('d-human', s.human || 'unknown');
-  t('d-version', 'v' + (s.version || '0.0.0'));
-  t('d-footer-meta', 'DEMA Homebase Dashboard · live from dema status · ' + (s.generated_at || ''));
-  if (s.human && s.human !== 'unknown') {
-    var el = document.getElementById('d-human');
-    if (el) { el.classList.remove('unknown'); }
-  }
-  if (s.activationGate && s.activationGate !== 'BLOCKED') {
-    var gb = document.getElementById('d-gate-badge');
-    if (gb) { gb.textContent = s.activationGate; gb.classList.remove('badge-blocked'); gb.classList.add('badge-version'); }
-  }
-  var actionMap = { complete_setup:'setup', run_doctor:'doctor', check_status:'status', view_receipts:'receipts', connect_model:'models' };
-  var cmd = actionMap[s.nextAction] || s.nextAction || '';
-  var codes = document.querySelectorAll('code');
-  for (var i = 0; i < codes.length; i++) {
-    if (codes[i].textContent.trim() === cmd) {
-      codes[i].style.background = 'rgba(110,231,183,0.2)';
-      codes[i].style.padding = '2px 6px';
-      codes[i].style.borderRadius = '3px';
-      codes[i].style.border = '1px solid rgba(110,231,183,0.4)';
-      codes[i].style.boxShadow = '0 0 8px rgba(110,231,183,0.25)';
-    }
-  }
-})();
-</script>
-</body>
+    <!-- /root -->
+    <script>
+      (function () {
+        var s = window.__DEMA_STATUS__;
+        if (!s) return;
+        function t(id, v) {
+          var e = document.getElementById(id);
+          if (e && v != null) e.textContent = String(v);
+        }
+        t("d-node", s.node || "Node0");
+        t("d-human", s.human || "unknown");
+        t("d-version", "v" + (s.version || "0.0.0"));
+        t(
+          "d-footer-meta",
+          "DEMA Homebase Dashboard · live from dema status · " +
+            (s.generated_at || ""),
+        );
+        if (s.human && s.human !== "unknown") {
+          var el = document.getElementById("d-human");
+          if (el) {
+            el.classList.remove("unknown");
+          }
+        }
+        if (s.activationGate && s.activationGate !== "BLOCKED") {
+          var gb = document.getElementById("d-gate-badge");
+          if (gb) {
+            gb.textContent = s.activationGate;
+            gb.classList.remove("badge-blocked");
+            gb.classList.add("badge-version");
+          }
+        }
+        var actionMap = {
+          complete_setup: "setup",
+          run_doctor: "doctor",
+          check_status: "status",
+          view_receipts: "receipts",
+          connect_model: "models",
+        };
+        var cmd = actionMap[s.nextAction] || s.nextAction || "";
+        var codes = document.querySelectorAll("code");
+        for (var i = 0; i < codes.length; i++) {
+          if (codes[i].textContent.trim() === cmd) {
+            codes[i].style.background = "rgba(110,231,183,0.2)";
+            codes[i].style.padding = "2px 6px";
+            codes[i].style.borderRadius = "3px";
+            codes[i].style.border = "1px solid rgba(110,231,183,0.4)";
+            codes[i].style.boxShadow = "0 0 8px rgba(110,231,183,0.25)";
+          }
+        }
+      })();
+    </script>
+  </body>
 </html>

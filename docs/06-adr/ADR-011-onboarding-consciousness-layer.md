@@ -7,11 +7,12 @@
 **Related:** [ADR-001 Dema Is One Face](ADR-001-dema-is-one-face.md), [ADR-002 No Shadow State](ADR-002-no-shadow-state.md), [ADR-005 Operator Actions Require Explicit Consent](ADR-005-operator-actions-require-explicit-consent.md), [ADR-008 Runtime Activation](ADR-008-runtime-activation.md), [ADR-009 POI Design](ADR-009-poi-proof-of-impact-design.md), [ADR-010 Interactive TUI Layer · Dep Decision](ADR-010-interactive-tui-layer-dep-decision.md), [Law of Assumption](../canon/LAW_OF_ASSUMPTION.md), [BIZRA Topology Canon](../canon/BIZRA_TOPOLOGY_CANON.md)
 **Implements:** the constitutional framework for **how a human enters BIZRA**. Defines the law that every operator-facing onboarding surface must obey — the existing 11th canonical spine surface `onboarding-lifecycle` (shipped 2026-05-18 commit 70e3233), the planned v0.1c language picker for Samy's Node1 device first-boot (named in `~/.dema/memory/node1-acceptance-2026-05-18.json` next_phase), and any future onboarding-adjacent surface (welcome flow · install handshake · invitation rendering).
 **Evidence:**
+
 - 11th spine surface `onboarding-lifecycle` operational at HEAD `89d5eff` via `packages/core/src/onboarding-lifecycle.js` (CANONICAL_STAGES exports 7-stage flow · stage 0 is `language` · enforces `refuse_to_advance_past_language_stage_without_language_set` · forbids `skip_language_stage`)
 - Memory anchor `~/.dema/memory/node1-acceptance-2026-05-18.json` next_phase names `v0_1c_language_picker_for_samys_device_first_run` as deferred work
 - Memory `feedback_ux_storytelling_data_viz_onboarding_key_to_user_in.md` (2026-05-18) names the 5 dimensions (UX · onboarding flow · feeling real · storytelling · data viz) as the load-bearing test for every operator-facing surface
 - Memory `project_2026_05_18_law_of_assumption_canonized_repo_level.md` (this morning's session) canonizes the 4-claim-state discipline (V/D/A/U) that every onboarding emission must carry
-- Operator quote on this ADR's commit context: *"dema must embody this dna inside its persona · whis will make sure that dema output have deeply meaning"*
+- Operator quote on this ADR's commit context: _"dema must embody this dna inside its persona · whis will make sure that dema output have deeply meaning"_
 
 ---
 
@@ -39,8 +40,8 @@ This ADR closes that gap **before** Samy's operational install or any second ext
 Without an ADR-level onboarding law:
 
 1. **Onboarding can drift into UX feature work** instead of constitutional integrity work. The 5-dimensions feedback canon (2026-05-18) names this risk: technical correctness without UX/storytelling/feeling-real doesn't reach humans.
-2. **Each new external human becomes a one-off** rather than a structurally-receivable case. Samy's install at HEAD `89d5eff` would test whether the install path works; it would *not* test whether the onboarding law is canonical because the law isn't yet inscribed.
-3. **The existing onboarding-lifecycle surface ships a 7-stage flow but its laws are implicit** — they live in source-code constants (`CANONICAL_STAGES`) and refusal arrays without a canon-doc explaining *why language must be stage 0* or *why model-less nodes are valid*.
+2. **Each new external human becomes a one-off** rather than a structurally-receivable case. Samy's install at HEAD `89d5eff` would test whether the install path works; it would _not_ test whether the onboarding law is canonical because the law isn't yet inscribed.
+3. **The existing onboarding-lifecycle surface ships a 7-stage flow but its laws are implicit** — they live in source-code constants (`CANONICAL_STAGES`) and refusal arrays without a canon-doc explaining _why language must be stage 0_ or _why model-less nodes are valid_.
 4. **Model-readiness ambiguity is unresolved.** ADR-008 §C1.5 (Local Model Inventory Scan) declared model scanning requires consent · but onboarding doesn't yet enforce that a model-less node is a valid sovereign node. A new user without local LLMs must still be able to fully onboard and use Dema preview-only.
 5. **Daughter Test failure mode**: a non-technical, non-English-speaking, model-less candidate must be able to enter BIZRA without being confused, scanned without consent, connected without choice, or coerced into any technical assumption they didn't make. If the first 60 seconds fail the Daughter Test, the message has not reached them.
 6. **POI/federation contamination risk**: without explicit onboarding-doesn't-imply-federation/POI law, future implementers may bind onboarding outputs to federation activation by mistake.
@@ -205,45 +206,51 @@ The existing 11th surface emits `bizra.dema.onboarding_lifecycle.v0.1`. ADR-011 
   "schema": "bizra.dema.onboarding_lifecycle.v0.1",
   "truth_label": "NODE0_LOCAL_SEED",
   "mode": "preview_only",
-  "stages": [/* 7 canonical stages · language is stage 0 */],
+  "stages": [
+    /* 7 canonical stages · language is stage 0 */
+  ],
   "current_stage": "<stage_id>",
-  "boundary": { /* canonical 16-key · all false */ },
+  "boundary": {
+    /* canonical 16-key · all false */
+  },
 
   // ADR-011 extensions (proposed · not yet implemented):
   "node_topology": {
-    "current_ordinal": 0,                   // Node0 by default
-    "candidate_ordinal": null,              // null until onboarding for a new node
-    "paired_receipt_required": true,        // for ordinal ≥ 1
-    "paired_receipt_id": null,              // populated from prior-node witness
-    "ordinal_monotonicity_verified": false  // gate
+    "current_ordinal": 0, // Node0 by default
+    "candidate_ordinal": null, // null until onboarding for a new node
+    "paired_receipt_required": true, // for ordinal ≥ 1
+    "paired_receipt_id": null, // populated from prior-node witness
+    "ordinal_monotonicity_verified": false, // gate
   },
   "model_readiness": {
-    "status": "MODEL_UNKNOWN",              // MODEL_UNKNOWN | MODEL_LESS_DECLARED |
-                                            // MODEL_INVENTORY_PENDING_CONSENT |
-                                            // MODEL_INVENTORY_DECLARED | MODEL_AVAILABLE
-    "local_models_required": false,         // never true
+    "status": "MODEL_UNKNOWN", // MODEL_UNKNOWN | MODEL_LESS_DECLARED |
+    // MODEL_INVENTORY_PENDING_CONSENT |
+    // MODEL_INVENTORY_DECLARED | MODEL_AVAILABLE
+    "local_models_required": false, // never true
     "scan_consent_required": true,
     "scan_performed": false,
     "model_invocation_allowed": false,
-    "fallback_path": "continue_model_less_onboarding"
+    "fallback_path": "continue_model_less_onboarding",
   },
   "language_state": {
     "language_set": false,
-    "language_code": null,                  // ISO 639-1 when set (primary / mother tongue)
+    "language_code": null, // ISO 639-1 when set (primary / mother tongue)
     "consent_phrases_will_render_in": null, // matches language_code when set
-    "secondary_language_code": null,        // ISO 639-1 · optional · operator-declared
-    "secondary_language_offered": false,    // true once Law #10 prompt fires
-    "returning_user_load": false,           // true if loaded silently from profile.json (Law #9)
-    "language_source": "unset"              // unset | first_run_picker | profile_load | reset_explicit
+    "secondary_language_code": null, // ISO 639-1 · optional · operator-declared
+    "secondary_language_offered": false, // true once Law #10 prompt fires
+    "returning_user_load": false, // true if loaded silently from profile.json (Law #9)
+    "language_source": "unset", // unset | first_run_picker | profile_load | reset_explicit
   },
-  "candidate_lifecycle": {                  // NEW · explicit first-run vs returning-user
-    "is_first_run": true,                   // false when profile.json exists with required fields
-    "is_returning_user": false,             // true when profile.json loaded silently
-    "onboarding_trigger": null,             // "first_run" | "reset_explicit" | "candidate_invite"
-    "stage_skipped_due_to_profile": []      // list of stage_ids skipped via Law #9 / returning-user load
+  "candidate_lifecycle": {
+    // NEW · explicit first-run vs returning-user
+    "is_first_run": true, // false when profile.json exists with required fields
+    "is_returning_user": false, // true when profile.json loaded silently
+    "onboarding_trigger": null, // "first_run" | "reset_explicit" | "candidate_invite"
+    "stage_skipped_due_to_profile": [], // list of stage_ids skipped via Law #9 / returning-user load
   },
-  "blocked_effects": {                      // separate from canonical boundary · 
-                                            //   these are onboarding-specific blocks
+  "blocked_effects": {
+    // separate from canonical boundary ·
+    //   these are onboarding-specific blocks
     "federation": true,
     "raw_data_sharing": true,
     "public_broadcast": true,
@@ -251,8 +258,8 @@ The existing 11th surface emits `bizra.dema.onboarding_lifecycle.v0.1`. ADR-011 
     "poi_scoring": true,
     "model_scan_without_consent": true,
     "model_invocation": true,
-    "auto_advance_to_node_n_plus_1": true
-  }
+    "auto_advance_to_node_n_plus_1": true,
+  },
 }
 ```
 
@@ -321,38 +328,39 @@ The Genesis Preview Card is the canonical preview-only artifact that represents 
   "mode": "preview_only",
   "card_type": "onboarding_completion_genesis",
   "candidate": {
-    "node_ordinal": 0,                          // or 1, 2 per ordinal law
+    "node_ordinal": 0, // or 1, 2 per ordinal law
     "preferred_name": "<operator-declared>",
     "primary_language": "<ISO 639-1>",
     "secondary_language": "<ISO 639-1 | null>",
     "device_label": "<string | null>",
-    "model_readiness": "MODEL_UNKNOWN",         // per model_readiness enum
-    "technical_level": "<self-declared scale>"
+    "model_readiness": "MODEL_UNKNOWN", // per model_readiness enum
+    "technical_level": "<self-declared scale>",
   },
   "would_mint_if_consented": {
     "receipt_type": "node_onboarding_genesis.v0.1",
     "receipt_id_preview": "<sha256 of canonical card payload>",
     "consent_phrase_required": "<exact ADR-005 phrase rendered in primary_language>",
     "consent_phrase_secondary": "<same phrase in secondary_language · null if not set>",
-    "mint_destination": "~/.dema/receipts/node-onboarding-genesis-<receipt_id>.json"
+    "mint_destination": "~/.dema/receipts/node-onboarding-genesis-<receipt_id>.json",
   },
   "blocked_until_typed_GO": [
     "actual_receipt_mint",
     "chain_advance_performed",
     "federation_handshake",
     "external_publication",
-    "node_ordinal_increment"
+    "node_ordinal_increment",
   ],
   "card_storage": {
     "path": "~/.dema/state/genesis-preview-<timestamp>.json",
     "store_scope": "local_preview_only",
     "expires_after": "session_end_or_24h",
-    "purpose": "auditable record that the candidate SAW this exact preview before any mint"
+    "purpose": "auditable record that the candidate SAW this exact preview before any mint",
   },
-  "boundary": {                                  // canonical 16-key · ALL false
+  "boundary": {
+    // canonical 16-key · ALL false
     "network_used": false,
     "runtime_execution": false,
-    "filesystem_write_performed": false,         // card storage is NOT a content write
+    "filesystem_write_performed": false, // card storage is NOT a content write
     "receipt_mint_performed": false,
     "chain_advance_performed": false,
     "federation_invoked": false,
@@ -365,8 +373,8 @@ The Genesis Preview Card is the canonical preview-only artifact that represents 
     "raw_corpus_scan_performed": false,
     "raw_data_included": false,
     "tool_executed": false,
-    "public_network_used": false
-  }
+    "public_network_used": false,
+  },
 }
 ```
 
@@ -393,7 +401,7 @@ The phrase MUST quote the exact `receipt_id_preview` from a card written to disk
 
 Without a Genesis Preview Card, the candidate would consent to receipt-mint without seeing the receipt's structure. That violates **Law #2 (Understanding before consent)** at the receipt-content level: they understood the consent phrase, but did they understand what would be recorded about them?
 
-The Genesis Preview Card closes that loop: the canonical preview-only card shows the receipt's exact payload before the mint, ensuring the candidate consents to the *content*, not just to the *event*.
+The Genesis Preview Card closes that loop: the canonical preview-only card shows the receipt's exact payload before the mint, ensuring the candidate consents to the _content_, not just to the _event_.
 
 ---
 
@@ -476,7 +484,7 @@ T-1 through T-9 are unit-test-shape. T-10..T-14 may need integration-test scaffo
 
 ## Implementation outline · informative-only · once typed-GO is received
 
-This ADR DOES NOT bind implementation. Implementation requires separate typed-GO per ADR-005 + Skill Growth Law's *"no skill promotion without receipt"*.
+This ADR DOES NOT bind implementation. Implementation requires separate typed-GO per ADR-005 + Skill Growth Law's _"no skill promotion without receipt"_.
 
 ```text
 NEW MODULES:  packages/core/src/node-onboarding-extension.js  (~80 LOC)

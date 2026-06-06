@@ -19,16 +19,12 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import {
-  evaluateArtifactSafety
-} from "../packages/core/src/artifact-safety-eval.js";
-import {
-  validateAgainstRegistry
-} from "../packages/core/src/envelope-schema-validator.js";
+import { evaluateArtifactSafety } from "../packages/core/src/artifact-safety-eval.js";
+import { validateAgainstRegistry } from "../packages/core/src/envelope-schema-validator.js";
 
 const execFileAsync = promisify(execFile);
 const scriptPath = fileURLToPath(
-  new URL("../scripts/artifact-safety-check.mjs", import.meta.url)
+  new URL("../scripts/artifact-safety-check.mjs", import.meta.url),
 );
 
 // Minimal-but-valid proof-room bundle satisfying every required field of
@@ -47,7 +43,7 @@ const VALID_PROOF_ROOM_BUNDLE = Object.freeze({
     formal: "schema-tagged gate composition",
     cryptographic: "per-gate stdout_sha256 digests",
     empirical: "subprocess exit codes and TAP counts when --full",
-    economic: "no token, revenue, or PoI claims in this bundle"
+    economic: "no token, revenue, or PoI claims in this bundle",
   },
   // Canonical 16-key preview boundary (see packages/core/src/preview-boundary.js).
   // The proof-room-bundle.v0.1.json schema now requires every key to be present
@@ -68,13 +64,13 @@ const VALID_PROOF_ROOM_BUNDLE = Object.freeze({
     federation_invoked: false,
     node_connection_performed: false,
     public_network_used: false,
-    consent_collected: false
+    consent_collected: false,
   },
   next_safe_action: "Optional: redacted variant ready to share",
   redacted: true,
   repo_root_basename: "Dema",
   repo_root_sha256:
-    "0000000000000000000000000000000000000000000000000000000000000000"
+    "0000000000000000000000000000000000000000000000000000000000000000",
 });
 
 test("1 · valid proof-room bundle passes schema validation", () => {
@@ -83,7 +79,7 @@ test("1 · valid proof-room bundle passes schema validation", () => {
   assert.equal(
     schemaFindings.length,
     0,
-    `expected no SCHEMA findings, got: ${JSON.stringify(schemaFindings)}`
+    `expected no SCHEMA findings, got: ${JSON.stringify(schemaFindings)}`,
   );
   assert.equal(result.verdict, "PUBLIC_SAFE");
 });
@@ -93,17 +89,17 @@ test("2 · malformed proof-room bundle yields SCHEMA_VIOLATION", () => {
     schema: "bizra.dema.proof_room_bundle.v0.1",
     mode: "INVALID_MODE",
     ok: "not-a-boolean",
-    repo_root: "<repo_root:redacted>"
+    repo_root: "<repo_root:redacted>",
   };
   const result = evaluateArtifactSafety(broken);
   assert.equal(result.verdict, "SCHEMA_VIOLATION");
 
   const schemaBlockers = result.findings.filter(
-    (f) => f.kind === "SCHEMA" && f.severity === "BLOCKER"
+    (f) => f.kind === "SCHEMA" && f.severity === "BLOCKER",
   );
   assert.ok(
     schemaBlockers.length >= 3,
-    `expected ≥3 schema blockers, got ${schemaBlockers.length}`
+    `expected ≥3 schema blockers, got ${schemaBlockers.length}`,
   );
 
   const codes = schemaBlockers.map((f) => f.pattern_id);
@@ -114,7 +110,7 @@ test("3 · unknown schema is reported but does not block PUBLIC_SAFE", () => {
   const result = evaluateArtifactSafety({
     schema: "bizra.dema.unknown_envelope.v9.9",
     ok: true,
-    payload: "some prose"
+    payload: "some prose",
   });
   const schemaFindings = result.findings.filter((f) => f.kind === "SCHEMA");
   assert.equal(schemaFindings.length, 1);
@@ -126,7 +122,7 @@ test("3 · unknown schema is reported but does not block PUBLIC_SAFE", () => {
 test("3a · non-bizra namespace gets schema_namespace WARNING only", () => {
   const result = evaluateArtifactSafety({
     schema: "com.example.other.v1",
-    ok: true
+    ok: true,
   });
   const schemaFindings = result.findings.filter((f) => f.kind === "SCHEMA");
   assert.equal(schemaFindings.length, 1);
@@ -144,8 +140,8 @@ test("4 · artifact-safety eval output validates against its own schema", () => 
     validation.ok,
     true,
     `expected artifact-safety envelope to self-validate; errors: ${JSON.stringify(
-      validation.errors
-    )}`
+      validation.errors,
+    )}`,
   );
   assert.equal(validation.truth_label, "MEASURED");
 });
@@ -153,7 +149,7 @@ test("4 · artifact-safety eval output validates against its own schema", () => 
 test("4a · self-validation also holds when verdict is SCHEMA_VIOLATION", () => {
   const inner = evaluateArtifactSafety({
     schema: "bizra.dema.proof_room_bundle.v0.1",
-    mode: "INVALID_MODE"
+    mode: "INVALID_MODE",
   });
   assert.equal(inner.verdict, "SCHEMA_VIOLATION");
   const validation = validateAgainstRegistry(inner);
@@ -167,9 +163,9 @@ test("5 · eval:layer1 CLI surfaces SCHEMA findings in --json output", async () 
     path,
     JSON.stringify({
       schema: "bizra.dema.proof_room_bundle.v0.1",
-      mode: "INVALID_MODE"
+      mode: "INVALID_MODE",
     }),
-    "utf8"
+    "utf8",
   );
   await assert.rejects(
     async () => {
@@ -180,11 +176,11 @@ test("5 · eval:layer1 CLI surfaces SCHEMA findings in --json output", async () 
       const report = JSON.parse(error.stdout);
       assert.equal(report.verdict, "SCHEMA_VIOLATION");
       const schemaBlockers = report.findings.filter(
-        (f) => f.kind === "SCHEMA" && f.severity === "BLOCKER"
+        (f) => f.kind === "SCHEMA" && f.severity === "BLOCKER",
       );
       assert.ok(schemaBlockers.length >= 1);
       return true;
-    }
+    },
   );
 });
 
@@ -196,7 +192,7 @@ test("5a · eval:layer1 CLI exits 0 + reports no SCHEMA findings on valid public
     scriptPath,
     "--artifact",
     path,
-    "--json"
+    "--json",
   ]);
   const report = JSON.parse(stdout);
   assert.equal(report.verdict, "PUBLIC_SAFE");

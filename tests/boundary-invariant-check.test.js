@@ -6,18 +6,26 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildBoundaryInvariantCheckReport,
-  findBoundaryViolations
+  findBoundaryViolations,
 } from "../scripts/review/boundary-invariant-check.mjs";
 
 const execFileAsync = promisify(execFile);
-const scriptPath = fileURLToPath(new URL("../scripts/review/boundary-invariant-check.mjs", import.meta.url));
+const scriptPath = fileURLToPath(
+  new URL("../scripts/review/boundary-invariant-check.mjs", import.meta.url),
+);
 
 test("boundary invariant check passes on current preview modules", () => {
   const report = buildBoundaryInvariantCheckReport();
-  assert.equal(report.schema, "bizra.dema.review.boundary_invariant_check.v0.1");
+  assert.equal(
+    report.schema,
+    "bizra.dema.review.boundary_invariant_check.v0.1",
+  );
   assert.equal(report.mode, "READ_ONLY_AUDIT");
   assert.equal(report.ok, true);
-  assert.ok(report.modules_scanned > 0, "must discover at least one preview module");
+  assert.ok(
+    report.modules_scanned > 0,
+    "must discover at least one preview module",
+  );
   assert.equal(report.modules_violated, 0);
   assert.deepEqual(report.violations, []);
 });
@@ -35,7 +43,10 @@ test("boundary invariant check is a read-only audit with all authority flags fal
 test("boundary invariant check CLI emits a schema-tagged report", async () => {
   const { stdout } = await execFileAsync("node", [scriptPath]);
   const report = JSON.parse(stdout);
-  assert.equal(report.schema, "bizra.dema.review.boundary_invariant_check.v0.1");
+  assert.equal(
+    report.schema,
+    "bizra.dema.review.boundary_invariant_check.v0.1",
+  );
   assert.equal(report.ok, true);
   assert.equal(report.boundary.read_only_audit, true);
 });
@@ -70,7 +81,11 @@ const OK = Object.freeze({
   federation: false
 });`;
   const violations = findBoundaryViolations(sample, "(memory)");
-  assert.equal(violations.length, 0, "comment-only lines must not produce violations");
+  assert.equal(
+    violations.length,
+    0,
+    "comment-only lines must not produce violations",
+  );
 });
 
 test("findBoundaryViolations clean source produces zero violations", () => {
@@ -88,7 +103,10 @@ test("findBoundaryViolations clean source produces zero violations", () => {
 
 test("boundary invariant check scans every authority flag listed in the allowlist", () => {
   const report = buildBoundaryInvariantCheckReport();
-  assert.ok(report.authority_flags_checked >= 30, "must check at least 30 authority flags");
+  assert.ok(
+    report.authority_flags_checked >= 30,
+    "must check at least 30 authority flags",
+  );
 });
 
 test("boundary invariant check module imports only Node built-ins (no fs/network/process spawn beyond audit primitives)", async () => {
@@ -96,6 +114,12 @@ test("boundary invariant check module imports only Node built-ins (no fs/network
   const body = await readFile(scriptPath, "utf8");
   assert.ok(!/from ['"]node:http/.test(body), "must not import node:http");
   assert.ok(!/from ['"]node:net/.test(body), "must not import node:net");
-  assert.ok(!/from ['"]node:child_process/.test(body), "must not import node:child_process");
-  assert.ok(!/spawn\(|execSync\(|execFile\(|spawnSync\(/.test(body), "must not invoke processes from the script body");
+  assert.ok(
+    !/from ['"]node:child_process/.test(body),
+    "must not import node:child_process",
+  );
+  assert.ok(
+    !/spawn\(|execSync\(|execFile\(|spawnSync\(/.test(body),
+    "must not invoke processes from the script body",
+  );
 });

@@ -1,7 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, writeFile, readFile, rm, symlink } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  writeFile,
+  readFile,
+  rm,
+  symlink,
+} from "node:fs/promises";
 import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
@@ -10,7 +17,7 @@ import { defaultStatus, formatStatus } from "../packages/core/src/status.js";
 import {
   BOUNDED_DIAGNOSTIC_CONSENT_PHRASE,
   previewBoundedDiagnostic,
-  proposeBoundedDiagnostic
+  proposeBoundedDiagnostic,
 } from "../packages/core/src/mission.js";
 import { readTodayTick, recordTodayTick } from "../packages/core/src/today.js";
 import { evaluateConsent } from "../packages/fate/src/fate.js";
@@ -18,12 +25,17 @@ import { runSetup } from "../packages/installer/src/setup.js";
 import {
   createNode0Adapter,
   normalizeNode0Status,
-  parseCommandLine
+  parseCommandLine,
 } from "../packages/node-adapter/src/node0-adapter.js";
-import { listReceipts, readReceipt } from "../packages/receipts/src/receipt-store.js";
+import {
+  listReceipts,
+  readReceipt,
+} from "../packages/receipts/src/receipt-store.js";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 test("default status is safe and blocked", () => {
   const status = defaultStatus();
@@ -45,7 +57,7 @@ test("bounded diagnostic requires ready node and explicit gate", () => {
     activationGate: "EXPLICIT_GO_REQUIRED",
     daemonStatus: "stopped",
     missionExecuted: false,
-    runtimePulse: { fired: false }
+    runtimePulse: { fired: false },
   });
   assert.equal(proposal.allowed, true);
   assert.equal(proposal.expectedArtifact, "ARTIFACT-011");
@@ -58,7 +70,7 @@ test("bounded diagnostic blocks hidden daemon and previous runtime pulse", () =>
     activationGate: "EXPLICIT_GO_REQUIRED",
     daemonStatus: "running",
     missionExecuted: false,
-    runtimePulse: { fired: false }
+    runtimePulse: { fired: false },
   });
   assert.equal(daemon.allowed, false);
   assert.match(daemon.reason, /Daemon/);
@@ -69,7 +81,7 @@ test("bounded diagnostic blocks hidden daemon and previous runtime pulse", () =>
     activationGate: "EXPLICIT_GO_REQUIRED",
     daemonStatus: "stopped",
     missionExecuted: false,
-    runtimePulse: { fired: true }
+    runtimePulse: { fired: true },
   });
   assert.equal(pulse.allowed, false);
   assert.match(pulse.reason, /Runtime pulse/);
@@ -82,13 +94,16 @@ test("mission preview does not execute runtime and requires exact consent", () =
     activationGate: "EXPLICIT_GO_REQUIRED",
     daemonStatus: "stopped",
     missionExecuted: false,
-    runtimePulse: { fired: false }
+    runtimePulse: { fired: false },
   };
   const rejected = previewBoundedDiagnostic(status, "GO");
   assert.equal(rejected.executes, false);
   assert.equal(rejected.consent.accepted, false);
 
-  const accepted = previewBoundedDiagnostic(status, BOUNDED_DIAGNOSTIC_CONSENT_PHRASE);
+  const accepted = previewBoundedDiagnostic(
+    status,
+    BOUNDED_DIAGNOSTIC_CONSENT_PHRASE,
+  );
   assert.equal(accepted.executes, false);
   assert.equal(accepted.consent.accepted, true);
 });
@@ -97,9 +112,9 @@ test("fate consent requires exact phrase", () => {
   assert.equal(
     evaluateConsent({
       phrase: `${BOUNDED_DIAGNOSTIC_CONSENT_PHRASE} `,
-      requiredPhrase: BOUNDED_DIAGNOSTIC_CONSENT_PHRASE
+      requiredPhrase: BOUNDED_DIAGNOSTIC_CONSENT_PHRASE,
     }).accepted,
-    false
+    false,
   );
 });
 
@@ -114,10 +129,14 @@ test("setup creates local profile and config without daemon activation", async (
   assert.equal(result.boundaries.missionExecuted, false);
   assert.equal(result.boundaries.artifact011Issued, false);
 
-  const profile = JSON.parse(await readFile(join(root, "profile.json"), "utf8"));
+  const profile = JSON.parse(
+    await readFile(join(root, "profile.json"), "utf8"),
+  );
   assert.equal(profile.hidden_autonomy, false);
 
-  const config = JSON.parse(await readFile(join(root, "config.local.json"), "utf8"));
+  const config = JSON.parse(
+    await readFile(join(root, "config.local.json"), "utf8"),
+  );
   assert.equal(config.noHiddenDaemon, true);
   assert.equal(config.requireExplicitConsent, true);
 
@@ -137,7 +156,7 @@ test("welcome CLI gives non-technical first-run orientation", async () => {
 test("setup CLI reports untouched runtime boundaries", async () => {
   const root = await mkdtemp(join(tmpdir(), "dema-cli-setup-"));
   const { stdout } = await execFileAsync("node", [cliPath, "setup"], {
-    env: { ...process.env, DEMA_HOME: root }
+    env: { ...process.env, DEMA_HOME: root },
   });
   const output = JSON.parse(stdout);
   assert.equal(output.paths.home, root);
@@ -152,7 +171,11 @@ test("doctor CLI lists specific failing predicates when gateway is not configure
   const env = { ...process.env, DEMA_HOME: root };
   delete env.DEMA_NODE0_ADAPTER;
   delete env.DEMA_NODE0_STATUS_COMMAND;
-  const result = await execFileAsync("node", [cliPath, "doctor", "--no-color"], { env }).catch((e) => e);
+  const result = await execFileAsync(
+    "node",
+    [cliPath, "doctor", "--no-color"],
+    { env },
+  ).catch((e) => e);
   assert.equal(result.code, 1);
   // Dashboard format: row-based predicates with ❌ icons and Verdict line.
   // Default-status fingerprint: ready=false, consoleReady=false, activationGate=BLOCKED,
@@ -165,9 +188,13 @@ test("doctor CLI lists specific failing predicates when gateway is not configure
 
 test("mission propose CLI remains preview-only", async () => {
   const root = await mkdtemp(join(tmpdir(), "dema-cli-mission-"));
-  const { stdout } = await execFileAsync("node", [cliPath, "mission", "propose", "--json"], {
-    env: { ...process.env, DEMA_HOME: root }
-  });
+  const { stdout } = await execFileAsync(
+    "node",
+    [cliPath, "mission", "propose", "--json"],
+    {
+      env: { ...process.env, DEMA_HOME: root },
+    },
+  );
   const output = JSON.parse(stdout);
   assert.equal(output.executes, false);
   assert.equal(output.action, "bounded_diagnostic_activation");
@@ -184,13 +211,16 @@ test("today tick records continuity without mission execution", async () => {
       activationGate: "EXPLICIT_GO_REQUIRED",
       daemonStatus: "stopped",
       proof: { nextArtifact: "ARTIFACT-011" },
-      nextAdmissibleAction: "bounded_diagnostic_activation"
-    }
+      nextAdmissibleAction: "bounded_diagnostic_activation",
+    },
   });
   assert.equal(tick.date, "2026-05-04");
   assert.equal(tick.missionExecuted, false);
   assert.equal(tick.runtimePulse.fired, false);
-  assert.equal(JSON.parse(await readFile(path, "utf8")).activationGate, "EXPLICIT_GO_REQUIRED");
+  assert.equal(
+    JSON.parse(await readFile(path, "utf8")).activationGate,
+    "EXPLICIT_GO_REQUIRED",
+  );
   assert.equal((await readTodayTick(root)).nextArtifact, "ARTIFACT-011");
 });
 
@@ -198,17 +228,20 @@ test("node0 status normalization preserves measured onboarding seal fields", () 
   const status = normalizeNode0Status({
     profile: { preferred_name: "Mumu" },
     ready: true,
-    dema_console: { console_ready: true, activation_gate: "EXPLICIT_GO_REQUIRED" },
+    dema_console: {
+      console_ready: true,
+      activation_gate: "EXPLICIT_GO_REQUIRED",
+    },
     daemon_status: "stopped",
     mission_executed: false,
     runtime_pulse: { fired: false },
     lm_studio: {
       connected: true,
       loaded_model_ids: ["qwen/qwen3.5-9b"],
-      token_present: true
+      token_present: true,
     },
     rust_bus: { ready: true },
-    findings: []
+    findings: [],
   });
 
   assert.equal(status.human, "Mumu");
@@ -230,12 +263,12 @@ test("node0 status normalization coerces non-array loaded_model_ids to []", () =
   // like `loaded_model_ids: "phi-2"` must not crash `.join(", ")` downstream.
   for (const malformed of ["phi-2", 42, true, { id: "x" }]) {
     const status = normalizeNode0Status({
-      lm_studio: { loaded_model_ids: malformed }
+      lm_studio: { loaded_model_ids: malformed },
     });
     assert.deepEqual(
       status.model.loadedModelIds,
       [],
-      `expected [] for non-array input ${JSON.stringify(malformed)}`
+      `expected [] for non-array input ${JSON.stringify(malformed)}`,
     );
   }
 });
@@ -243,30 +276,43 @@ test("node0 status normalization coerces non-array loaded_model_ids to []", () =
 test("node0 adapter explains malformed command output", async () => {
   const adapter = createNode0Adapter({
     adapterMode: "shellout",
-    command: 'node -e "process.stdout.write(`not-json`)"'
+    command: 'node -e "process.stdout.write(`not-json`)"',
   });
   await assert.rejects(
     () => adapter.status(),
-    /DEMA_NODE0_STATUS_COMMAND returned non-JSON output/
+    /DEMA_NODE0_STATUS_COMMAND returned non-JSON output/,
   );
 });
 
 test("node0 command parser preserves quoted paths with spaces", () => {
   assert.deepEqual(
-    parseCommandLine('python -m core.sovereign node0 status --root "/tmp/my node"'),
-    ["python", "-m", "core.sovereign", "node0", "status", "--root", "/tmp/my node"]
+    parseCommandLine(
+      'python -m core.sovereign node0 status --root "/tmp/my node"',
+    ),
+    [
+      "python",
+      "-m",
+      "core.sovereign",
+      "node0",
+      "status",
+      "--root",
+      "/tmp/my node",
+    ],
   );
 });
 
 test("receipt store lists and reads receipts by artifact id", async () => {
   await withReceiptFixture("dema-receipts-", async (root) => {
-    await writeFile(join(root, "receipts", "artifact-011.json"), JSON.stringify({
-      receipt_id: "receipt-1",
-      artifact_id: "ARTIFACT-011",
-      action: "bounded_diagnostic_activation",
-      truth_label: "MEASURED",
-      created_at: "2026-05-04T18:20:00.000Z"
-    }));
+    await writeFile(
+      join(root, "receipts", "artifact-011.json"),
+      JSON.stringify({
+        receipt_id: "receipt-1",
+        artifact_id: "ARTIFACT-011",
+        action: "bounded_diagnostic_activation",
+        truth_label: "MEASURED",
+        created_at: "2026-05-04T18:20:00.000Z",
+      }),
+    );
 
     const receipts = await listReceipts(root);
     assert.equal(receipts.length, 1);
@@ -284,27 +330,39 @@ test("receipt store rejects ambiguous filename selectors", async () => {
   await withReceiptFixture("dema-receipts-", async (root) => {
     await mkdir(join(root, "receipts", "a"), { recursive: true });
     await mkdir(join(root, "receipts", "b"), { recursive: true });
-    await writeFile(join(root, "receipts", "a", "handoff.json"), JSON.stringify({
-      receipt_id: "receipt-a",
-      artifact_id: "ARTIFACT-A",
-      action: "bounded_diagnostic_activation",
-      truth_label: "MEASURED",
-      created_at: "2026-05-04T18:20:00.000Z"
-    }));
-    await writeFile(join(root, "receipts", "b", "handoff.json"), JSON.stringify({
-      receipt_id: "receipt-b",
-      artifact_id: "ARTIFACT-B",
-      action: "bounded_diagnostic_activation",
-      truth_label: "MEASURED",
-      created_at: "2026-05-04T18:21:00.000Z"
-    }));
+    await writeFile(
+      join(root, "receipts", "a", "handoff.json"),
+      JSON.stringify({
+        receipt_id: "receipt-a",
+        artifact_id: "ARTIFACT-A",
+        action: "bounded_diagnostic_activation",
+        truth_label: "MEASURED",
+        created_at: "2026-05-04T18:20:00.000Z",
+      }),
+    );
+    await writeFile(
+      join(root, "receipts", "b", "handoff.json"),
+      JSON.stringify({
+        receipt_id: "receipt-b",
+        artifact_id: "ARTIFACT-B",
+        action: "bounded_diagnostic_activation",
+        truth_label: "MEASURED",
+        created_at: "2026-05-04T18:21:00.000Z",
+      }),
+    );
 
     await assert.rejects(
       () => readReceipt("handoff.json", root),
-      /Ambiguous receipt selector/
+      /Ambiguous receipt selector/,
     );
-    assert.equal((await readReceipt("ARTIFACT-A", root)).receipt_id, "receipt-a");
-    assert.equal((await readReceipt("receipt-b", root)).artifact_id, "ARTIFACT-B");
+    assert.equal(
+      (await readReceipt("ARTIFACT-A", root)).receipt_id,
+      "receipt-a",
+    );
+    assert.equal(
+      (await readReceipt("receipt-b", root)).artifact_id,
+      "ARTIFACT-B",
+    );
   });
 });
 
@@ -319,53 +377,72 @@ async function withReceiptFixture(prefix, fn) {
 }
 
 async function writeReceiptFixture(root, filename, fields = {}) {
-  await writeFile(join(root, "receipts", filename), JSON.stringify({
-    receipt_id: `receipt-${filename}`,
-    artifact_id: `ARTIFACT-${filename}`,
-    action: "bounded_diagnostic_activation",
-    truth_label: "MEASURED",
-    created_at: "2026-05-04T18:20:00.000Z",
-    ...fields
-  }));
+  await writeFile(
+    join(root, "receipts", filename),
+    JSON.stringify({
+      receipt_id: `receipt-${filename}`,
+      artifact_id: `ARTIFACT-${filename}`,
+      action: "bounded_diagnostic_activation",
+      truth_label: "MEASURED",
+      created_at: "2026-05-04T18:20:00.000Z",
+      ...fields,
+    }),
+  );
 }
 
 test("receipt store respects deterministic max file count and pagination", async () => {
   await withReceiptFixture("dema-receipts-limit-", async (root) => {
-    await writeReceiptFixture(root, "003.json", { artifact_id: "ARTIFACT-003" });
-    await writeReceiptFixture(root, "001.json", { artifact_id: "ARTIFACT-001" });
-    await writeReceiptFixture(root, "004.json", { artifact_id: "ARTIFACT-004" });
-    await writeReceiptFixture(root, "002.json", { artifact_id: "ARTIFACT-002" });
+    await writeReceiptFixture(root, "003.json", {
+      artifact_id: "ARTIFACT-003",
+    });
+    await writeReceiptFixture(root, "001.json", {
+      artifact_id: "ARTIFACT-001",
+    });
+    await writeReceiptFixture(root, "004.json", {
+      artifact_id: "ARTIFACT-004",
+    });
+    await writeReceiptFixture(root, "002.json", {
+      artifact_id: "ARTIFACT-002",
+    });
 
     const capped = await listReceipts(root, { maxFiles: 2 });
-    assert.deepEqual(capped.map((receipt) => receipt.artifact_id), [
-      "ARTIFACT-001",
-      "ARTIFACT-002"
-    ]);
+    assert.deepEqual(
+      capped.map((receipt) => receipt.artifact_id),
+      ["ARTIFACT-001", "ARTIFACT-002"],
+    );
 
     const page = await listReceipts(root, { limit: 2, offset: 1 });
-    assert.deepEqual(page.map((receipt) => receipt.artifact_id), [
-      "ARTIFACT-002",
-      "ARTIFACT-003"
-    ]);
+    assert.deepEqual(
+      page.map((receipt) => receipt.artifact_id),
+      ["ARTIFACT-002", "ARTIFACT-003"],
+    );
   });
 });
 
 test("receipt store marks oversized and malformed JSON without crashing", async () => {
   await withReceiptFixture("dema-receipts-safety-", async (root) => {
     await writeReceiptFixture(root, "ok.json", { artifact_id: "ARTIFACT-OK" });
-    await writeFile(join(root, "receipts", "oversized.json"), JSON.stringify({
-      receipt_id: "receipt-oversized",
-      artifact_id: "ARTIFACT-OVERSIZED",
-      payload: "x".repeat(256)
-    }));
+    await writeFile(
+      join(root, "receipts", "oversized.json"),
+      JSON.stringify({
+        receipt_id: "receipt-oversized",
+        artifact_id: "ARTIFACT-OVERSIZED",
+        payload: "x".repeat(256),
+      }),
+    );
     await writeFile(join(root, "receipts", "malformed.json"), "{not-json");
 
     const receipts = await listReceipts(root, { maxJsonBytes: 256 });
-    const byFilename = new Map(receipts.map((receipt) => [basename(receipt.path), receipt]));
+    const byFilename = new Map(
+      receipts.map((receipt) => [basename(receipt.path), receipt]),
+    );
 
     assert.equal(byFilename.get("ok.json").artifact_id, "ARTIFACT-OK");
     assert.equal(byFilename.get("oversized.json").unreadable, true);
-    assert.equal(byFilename.get("oversized.json").reason, "receipt_json_too_large");
+    assert.equal(
+      byFilename.get("oversized.json").reason,
+      "receipt_json_too_large",
+    );
     assert.match(byFilename.get("oversized.json").error, /maxJsonBytes/);
     assert.equal(byFilename.get("malformed.json").unreadable, true);
     assert.equal(byFilename.get("malformed.json").reason, "malformed_json");
@@ -378,7 +455,7 @@ test("receipt store labels listing as local read/list rather than governed runti
     fixtureRoot = root;
     await writeReceiptFixture(root, "artifact-011.json", {
       receipt_id: "receipt-boundary",
-      artifact_id: "ARTIFACT-011"
+      artifact_id: "ARTIFACT-011",
     });
 
     const [receipt] = await listReceipts(root);
@@ -389,7 +466,7 @@ test("receipt store labels listing as local read/list rather than governed runti
 
   await assert.rejects(
     () => readFile(join(fixtureRoot, "receipts", "artifact-011.json"), "utf8"),
-    /ENOENT/
+    /ENOENT/,
   );
 });
 
@@ -412,12 +489,19 @@ test("F-3 v0.1.2 · AC-1: custom project-local DEMA_HOME outside home/tmp accept
   // We can't easily write to /opt in tests, so we verify via no-throw +
   // expected fail-soft (no receipts dir there).
   const result = await listReceipts("/opt/dema-nonexistent-project-x");
-  assert.deepEqual(result, [], "non-existent operator-declared root returns [] (fail-soft)");
+  assert.deepEqual(
+    result,
+    [],
+    "non-existent operator-declared root returns [] (fail-soft)",
+  );
 });
 
 test("F-3 v0.1.2 · AC-2: tmpdir fixture pattern still works (backward compat)", async () => {
   await withReceiptFixture("dema-v012-tmpdir-", async (root) => {
-    await writeReceiptFixture(root, "x.json", { receipt_id: "r", artifact_id: "A" });
+    await writeReceiptFixture(root, "x.json", {
+      receipt_id: "r",
+      artifact_id: "A",
+    });
     const receipts = await listReceipts(root);
     assert.equal(receipts.length, 1);
     assert.equal(receipts[0].artifact_id, "A");
@@ -427,18 +511,31 @@ test("F-3 v0.1.2 · AC-2: tmpdir fixture pattern still works (backward compat)",
 test("F-3 v0.1.2 · AC-3: receipts symlink escaping DEMA_HOME is rejected (skipped during enumeration)", async () => {
   await withReceiptFixture("dema-v012-symlink-", async (root) => {
     // legitimate receipt inside
-    await writeReceiptFixture(root, "real.json", { receipt_id: "r-real", artifact_id: "A-REAL" });
+    await writeReceiptFixture(root, "real.json", {
+      receipt_id: "r-real",
+      artifact_id: "A-REAL",
+    });
     // adversarial: plant a file OUTSIDE the receipts root, then symlink IN
     const outsideDir = await mkdtemp(join(tmpdir(), "dema-v012-outside-"));
     try {
       const outsideFile = join(outsideDir, "evil.json");
-      await writeFile(outsideFile, JSON.stringify({ receipt_id: "r-evil", artifact_id: "A-EVIL" }));
+      await writeFile(
+        outsideFile,
+        JSON.stringify({ receipt_id: "r-evil", artifact_id: "A-EVIL" }),
+      );
       await symlink(outsideFile, join(root, "receipts", "evil.json"));
       const receipts = await listReceipts(root);
-      const hasEvil = receipts.some(r => r.artifact_id === "A-EVIL");
-      assert.equal(hasEvil, false, "symlinked receipt escaping root must NOT appear in listing");
+      const hasEvil = receipts.some((r) => r.artifact_id === "A-EVIL");
+      assert.equal(
+        hasEvil,
+        false,
+        "symlinked receipt escaping root must NOT appear in listing",
+      );
       // real receipt is still surfaced
-      assert.equal(receipts.some(r => r.artifact_id === "A-REAL"), true);
+      assert.equal(
+        receipts.some((r) => r.artifact_id === "A-REAL"),
+        true,
+      );
     } finally {
       await rm(outsideDir, { recursive: true, force: true });
     }
@@ -454,13 +551,16 @@ test("F-3 v0.1.2 · AC-5: readReceipt hard-fail on nonexistent receipt throws", 
   await assert.rejects(
     () => readReceipt("nonexistent-id", "/tmp/dema-truly-nonexistent-12345"),
     /Receipt not found/,
-    "readReceipt must throw with clear 'not found' error"
+    "readReceipt must throw with clear 'not found' error",
   );
 });
 
 test("F-3 v0.1.2 · AC-6: traversal segments in DEMA_HOME collapse via resolve()", async () => {
   await withReceiptFixture("dema-v012-traversal-", async (root) => {
-    await writeReceiptFixture(root, "t.json", { receipt_id: "rt", artifact_id: "AT" });
+    await writeReceiptFixture(root, "t.json", {
+      receipt_id: "rt",
+      artifact_id: "AT",
+    });
     // DEMA_HOME value with `..` segments · resolve() inside safeReceiptsRoot collapses them
     const indirectRoot = join(root, "sub", "..");
     const receipts = await listReceipts(indirectRoot);
@@ -471,7 +571,10 @@ test("F-3 v0.1.2 · AC-6: traversal segments in DEMA_HOME collapse via resolve()
 
 test("F-3 v0.1.2 · AC-7: equivalent paths produce equivalent listings (path normalization)", async () => {
   await withReceiptFixture("dema-v012-norm-", async (root) => {
-    await writeReceiptFixture(root, "n.json", { receipt_id: "rn", artifact_id: "AN" });
+    await writeReceiptFixture(root, "n.json", {
+      receipt_id: "rn",
+      artifact_id: "AN",
+    });
     // Pass root with trailing separator vs without · normalized identically
     const withTrailing = root.endsWith("/") ? root : `${root}/`;
     const a = await listReceipts(root);
@@ -486,7 +589,7 @@ test("dema status:json injects human from profile.json::preferred_name (local-fi
   try {
     await writeFile(
       join(demaRoot, "profile.json"),
-      JSON.stringify({ preferred_name: "Mumu" })
+      JSON.stringify({ preferred_name: "Mumu" }),
     );
     const { stdout } = await execFileAsync("node", [cliPath, "status:json"], {
       env: {
@@ -494,8 +597,8 @@ test("dema status:json injects human from profile.json::preferred_name (local-fi
         DEMA_HOME: demaRoot,
         DEMA_NODE0_ADAPTER: "",
         DEMA_GATEWAY_URL: "",
-        DEMA_NODE0_STATUS_COMMAND: ""
-      }
+        DEMA_NODE0_STATUS_COMMAND: "",
+      },
     });
     const status = JSON.parse(stdout);
     assert.equal(status.human, "Mumu");
@@ -513,8 +616,8 @@ test("dema status:json human falls back to null when profile.json absent (gracef
         DEMA_HOME: demaRoot,
         DEMA_NODE0_ADAPTER: "",
         DEMA_GATEWAY_URL: "",
-        DEMA_NODE0_STATUS_COMMAND: ""
-      }
+        DEMA_NODE0_STATUS_COMMAND: "",
+      },
     });
     const status = JSON.parse(stdout);
     assert.equal(status.human, null);
@@ -528,7 +631,7 @@ test("dema status (formatter) renders Human: <preferred_name> when profile popul
   try {
     await writeFile(
       join(demaRoot, "profile.json"),
-      JSON.stringify({ preferred_name: "Mumu" })
+      JSON.stringify({ preferred_name: "Mumu" }),
     );
     const { stdout } = await execFileAsync("node", [cliPath, "status"], {
       env: {
@@ -536,8 +639,8 @@ test("dema status (formatter) renders Human: <preferred_name> when profile popul
         DEMA_HOME: demaRoot,
         DEMA_NODE0_ADAPTER: "",
         DEMA_GATEWAY_URL: "",
-        DEMA_NODE0_STATUS_COMMAND: ""
-      }
+        DEMA_NODE0_STATUS_COMMAND: "",
+      },
     });
     assert.match(stdout, /Human: Mumu/);
   } finally {

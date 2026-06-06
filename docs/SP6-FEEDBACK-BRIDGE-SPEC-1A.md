@@ -13,6 +13,7 @@
 - **Noise Rejected:** No new runtime in Dema, no token/mint, no federation, no Block0, no data-lake edits yet, no SP6 implementation (spec only).
 
 **Proof-of-Truth Convergence (Formal ‖ Cryptographic ‖ Empirical ‖ Economic):**
+
 - Formal: Lessons must produce canonical receipts with non-empty genesis bodies and full chain (using 1A guards).
 - Cryptographic: All feedback uses Ed25519 signatures + proof hashes (no empty sigs).
 - Empirical: Measurable via mission closeout receipts + test harness (now in 82032ae).
@@ -23,6 +24,7 @@
 **Interdisciplinary Thinking:** Combines AI agentic systems (Professor Synapse self-optimization loop /SO), formal methods (proof receipts, HHMM for state transitions), systems engineering (mission lifecycle as 10-phase cycle), cryptography (Ed25519 + canonical hash), and ethics (Ihsān: transparent refusal as excellence, micro-consent for every feedback action).
 
 **Graph of Thoughts:**
+
 ```
 Mission Closeout (lesson + next_step)
           |
@@ -35,14 +37,17 @@ Proof Spine Update (hash chain) --> Lesson Learned Receipt (refusal = success)
           v
 Node0/Data-Lake Improvement Proposal (SP6 bridge output)
 ```
+
 Nodes = states (intent, lesson, feedback); Edges = transitions with consent + signature.
 
 **Analogical Thinking:**
+
 - Like Professor Synapse /SO (self-optimization scan: review last 3, adapt) but for the BIZRA system.
 - Like biological autopoiesis (Maturana/Varela): the system produces its own feedback to maintain identity via proof spine.
 - Like HHMM in speech recognition: hidden states (e.g., "unprocessed lesson", "proposed improvement", "sealed feedback") with observations (receipts) and transitions guarded by consent/proof.
 
 **Sequential Reasoning:**
+
 1. Read mission closeout inputs.
 2. Extract lesson/next_step.
 3. Build feedback body (reuse canonical-receipt guards).
@@ -54,12 +59,14 @@ Nodes = states (intent, lesson, feedback); Edges = transitions with consent + si
 **Ultra Creative Thinking:** Invent "diffusion reasoning amplifier": lessons "diffuse" probabilistically across the graph (hash table for O(1) lookup of similar past lessons by lesson_candidate_hash). Use HHMM to model uncertainty in "improvement quality" (hidden states: High/Med/Low impact, with emission probabilities from receipt verification).
 
 **Critical Thinking + Self-Critique:**
+
 - Risk: Feedback loop could amplify bad lessons (mitigated by FROZEN P5/S2 + refusal receipts + 1A guards).
 - Tension: Dema (face, no runtime) vs Node0 (substrate). Bridge is one-way proposal only (Dema proposes via receipt; substrate decides).
 - Ihsān verification: Every step uses exact consent phrases, produces refusal-as-success receipts, no hidden state (all in visible ~/.dema/memory + receipts).
 - SNR self-critique: This spec scores 95/100 signal (actionable wiring of existing gems) vs 5 noise (defers substrate).
 
 **Standing on the Shoulders of Giants Protocol:**
+
 - Mission lifecycle (Dema canon).
 - Canonical proof spine (1A we implemented in 82032ae).
 - Professor Synapse skill (self-optimization, memory DB, proactive scan).
@@ -67,6 +74,7 @@ Nodes = states (intent, lesson, feedback); Edges = transitions with consent + si
 - HHMM (Rabiner), diffusion models (Sohl-Dickstein), hash tables (standard), Ihsān (Islamic excellence in action).
 
 **HHMM + Hash Table + Diffusion Reasoning Amplifier:**
+
 - **HHMM:** Hierarchical states: Top (Mission Phase: Closeout), Mid (Feedback State: Proposed/Consented/Sealed/Refused), Low (Quality: High/Med/Low based on verification receipts). Transitions guarded by consent + 1A.
 - **Hash Table:** O(1) lookup of past lessons by `lesson_candidate_hash` for analogical reuse ("has this lesson been learned before?").
 - **Diffusion Amplifier:** "Diffuse" the lesson across similar past receipts (using hash similarity) to amplify high-quality patterns and dampen low ones before proposing to substrate. Implemented as deterministic hash-based scoring (no ML runtime in Dema).
@@ -74,6 +82,7 @@ Nodes = states (intent, lesson, feedback); Edges = transitions with consent + si
 ## Design
 
 ### Requirements (Micro Compliance + Micro-Consent)
+
 - All feedback actions require exact-string micro-consent (e.g., "PROPOSE FEEDBACK BRIDGE LESSON").
 - Produce only canonical receipts (reuse 1A guards for empty body, empty sig, QUARANTINED).
 - No mutation of substrate; one-way proposals only.
@@ -90,6 +99,7 @@ Nodes = states (intent, lesson, feedback); Edges = transitions with consent + si
 5. **Proposal Output** (for DEMA-NODE0-CONTRACT-HARNESS later).
 
 **HHMM State Machine (ASCII):**
+
 ```
 Start (Closeout)
   |
@@ -131,6 +141,7 @@ In `packages/mission/src/mission-lifecycle.js`, at closeout, add a hook (non-bre
 **Harness:** This spec was proactively generated after the 82032ae seal, using /# (maximize sources) + graph of thoughts on the 5 gems + 1A guards. No user prompt needed for the next step in sequence.
 
 **Self-Critique (Critical Thinking + Ihsān excellence):**
+
 - Strength: Reuses 100% existing (no new crypto, no new surfaces) — efficiency > verbosity.
 - Weakness: The diffusion is hash-based (deterministic, no true probabilistic diffusion yet; substrate can add ML later).
 - Risk Mitigation: All paths produce receipts; low-quality feedback can be refused at consent or guard layer.
@@ -158,6 +169,7 @@ if (closeout_text && lesson_candidate_hash) {
 (This stub is non-executing comment + TODO for micro compliance. No behavior change.)
 
 **State of Art Performance:**
+
 - Reuses existing (O(1) hash lookups, no new allocations in hot path).
 - Maintainable: documented with gems, HHMM, graph.
 - Error-free: fail-closed everywhere, matching 1A patterns.

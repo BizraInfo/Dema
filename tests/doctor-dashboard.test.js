@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
   evaluatePredicates,
-  formatDoctorDashboard
+  formatDoctorDashboard,
 } from "../packages/core/src/doctor-dashboard.js";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -13,7 +13,7 @@ function defaultFailStatus() {
     consoleReady: false,
     activationGate: "BLOCKED",
     daemonStatus: "unknown",
-    findings: ["Node0 adapter not connected"]
+    findings: ["Node0 adapter not connected"],
   };
 }
 
@@ -23,7 +23,7 @@ function defaultOkStatus() {
     consoleReady: true,
     activationGate: "EXPLICIT_GO_REQUIRED",
     daemonStatus: "stopped",
-    findings: []
+    findings: [],
   };
 }
 
@@ -42,7 +42,10 @@ test("evaluatePredicates: all-fail status → failing predicates carry fix field
   const failPreds = preds.filter((p) => p.status === "fail");
   assert.ok(failPreds.length >= 2, "at least 2 fail predicates expected");
   for (const p of failPreds) {
-    assert.ok(typeof p.fix === "string" && p.fix.length > 0, `fix missing for ${p.key}`);
+    assert.ok(
+      typeof p.fix === "string" && p.fix.length > 0,
+      `fix missing for ${p.key}`,
+    );
   }
 });
 
@@ -61,7 +64,10 @@ test("evaluatePredicates: activation gate BLOCKED → fail with fix", () => {
 });
 
 test("evaluatePredicates: daemon running → fail", () => {
-  const preds = evaluatePredicates({ ...defaultOkStatus(), daemonStatus: "running" });
+  const preds = evaluatePredicates({
+    ...defaultOkStatus(),
+    daemonStatus: "running",
+  });
   const daemon = preds.find((p) => p.key === "daemonStatus");
   assert.equal(daemon.status, "fail");
   assert.ok(daemon.fix.length > 0);
@@ -70,7 +76,7 @@ test("evaluatePredicates: daemon running → fail", () => {
 test("evaluatePredicates: gateway unreachable → warn (not fail)", () => {
   const preds = evaluatePredicates({
     ...defaultOkStatus(),
-    findings: ["Node0 adapter not connected"]
+    findings: ["Node0 adapter not connected"],
   });
   const gw = preds.find((p) => p.key === "gatewayProbe");
   assert.equal(gw.status, "warn");
@@ -94,13 +100,19 @@ test("evaluatePredicates: empty/null status → all predicates render without th
 test("formatDoctorDashboard: color=true → contains ANSI escape codes", () => {
   const preds = evaluatePredicates(defaultFailStatus());
   const output = formatDoctorDashboard(preds, { color: true });
-  assert.ok(output.includes("\x1b["), "ANSI codes should be present when color=true");
+  assert.ok(
+    output.includes("\x1b["),
+    "ANSI codes should be present when color=true",
+  );
 });
 
 test("formatDoctorDashboard: color=false → no ANSI escape codes", () => {
   const preds = evaluatePredicates(defaultFailStatus());
   const output = formatDoctorDashboard(preds, { color: false });
-  assert.ok(!output.includes("\x1b["), "ANSI codes must be absent when color=false");
+  assert.ok(
+    !output.includes("\x1b["),
+    "ANSI codes must be absent when color=false",
+  );
 });
 
 test("formatDoctorDashboard: all-fail → output contains 'Verdict: blocked'", () => {
@@ -141,7 +153,7 @@ test("evaluatePredicates: JSON output schema tag present", () => {
   const status = defaultFailStatus();
   const predicates = evaluatePredicates(status);
   const json = JSON.parse(
-    JSON.stringify({ schema: "bizra.dema.doctor_dashboard.v0.1", predicates })
+    JSON.stringify({ schema: "bizra.dema.doctor_dashboard.v0.1", predicates }),
   );
   assert.equal(json.schema, "bizra.dema.doctor_dashboard.v0.1");
   assert.ok(Array.isArray(json.predicates));

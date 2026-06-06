@@ -9,11 +9,13 @@ import { fileURLToPath } from "node:url";
 import {
   listMemoryEntries,
   readMemoryEntry,
-  summarizeMemory
+  summarizeMemory,
 } from "../packages/memory/src/memory-store.js";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 async function makeMemoryRoot() {
   const root = await mkdtemp(join(tmpdir(), "dema-memory-"));
@@ -31,19 +33,22 @@ test("listMemoryEntries surfaces profile + memory entries, sorted, excludes toda
   const root = await makeMemoryRoot();
   await writeFile(
     join(root, "profile.json"),
-    JSON.stringify({ schema: "bizra.dema.profile.v0.1", preferred_name: "Mumu" })
+    JSON.stringify({
+      schema: "bizra.dema.profile.v0.1",
+      preferred_name: "Mumu",
+    }),
   );
   await writeFile(
     join(root, "memory", "bizra-context.json"),
-    JSON.stringify({ schema: "bizra.dema.project_memory.v0.1" })
+    JSON.stringify({ schema: "bizra.dema.project_memory.v0.1" }),
   );
   await writeFile(
     join(root, "memory", "space-env.json"),
-    JSON.stringify({ schema: "bizra.dema.environment.v0.1" })
+    JSON.stringify({ schema: "bizra.dema.environment.v0.1" }),
   );
   await writeFile(
     join(root, "memory", "today.json"),
-    JSON.stringify({ schema: "bizra.dema.today_tick.v0.1" })
+    JSON.stringify({ schema: "bizra.dema.today_tick.v0.1" }),
   );
 
   const entries = await listMemoryEntries(root);
@@ -56,7 +61,7 @@ test("readMemoryEntry returns the parsed JSON for a named entry", async () => {
   const root = await makeMemoryRoot();
   await writeFile(
     join(root, "memory", "bizra-context.json"),
-    JSON.stringify({ project: "BIZRA Node0", stage: "SEED" })
+    JSON.stringify({ project: "BIZRA Node0", stage: "SEED" }),
   );
 
   const entry = await readMemoryEntry("bizra-context", root);
@@ -68,7 +73,10 @@ test("readMemoryEntry resolves 'profile' to ~/.dema/profile.json", async () => {
   const root = await makeMemoryRoot();
   await writeFile(
     join(root, "profile.json"),
-    JSON.stringify({ schema: "bizra.dema.profile.v0.1", preferred_name: "Mumu" })
+    JSON.stringify({
+      schema: "bizra.dema.profile.v0.1",
+      preferred_name: "Mumu",
+    }),
   );
 
   const entry = await readMemoryEntry("profile", root);
@@ -79,13 +87,19 @@ test("readMemoryEntry throws a clear error for missing entries", async () => {
   const root = await makeMemoryRoot();
   await assert.rejects(
     () => readMemoryEntry("nope", root),
-    /Memory entry not found: nope/
+    /Memory entry not found: nope/,
   );
 });
 
 test("readMemoryEntry rejects empty/non-string names", async () => {
-  await assert.rejects(() => readMemoryEntry(""), /Memory entry name is required/);
-  await assert.rejects(() => readMemoryEntry(undefined), /Memory entry name is required/);
+  await assert.rejects(
+    () => readMemoryEntry(""),
+    /Memory entry name is required/,
+  );
+  await assert.rejects(
+    () => readMemoryEntry(undefined),
+    /Memory entry name is required/,
+  );
 });
 
 test("readMemoryEntry rejects unsafe names (path traversal, separators, special chars)", async () => {
@@ -99,13 +113,13 @@ test("readMemoryEntry rejects unsafe names (path traversal, separators, special 
     "name with spaces",
     "name.with.dots",
     "name;injection",
-    "/absolute/path"
+    "/absolute/path",
   ];
   for (const name of unsafe) {
     await assert.rejects(
       () => readMemoryEntry(name, root),
       /Memory entry name must contain only letters, digits, hyphens, or underscores/,
-      `expected unsafe name to be rejected: ${JSON.stringify(name)}`
+      `expected unsafe name to be rejected: ${JSON.stringify(name)}`,
     );
   }
 });
@@ -114,7 +128,7 @@ test("summarizeMemory returns a schema-tagged index", async () => {
   const root = await makeMemoryRoot();
   await writeFile(
     join(root, "memory", "bizra-context.json"),
-    JSON.stringify({ x: 1 })
+    JSON.stringify({ x: 1 }),
   );
 
   const summary = await summarizeMemory(root);
@@ -128,11 +142,11 @@ test("dema memory CLI lists schema-tagged index when no subcommand given", async
   const root = await makeMemoryRoot();
   await writeFile(
     join(root, "memory", "space-env.json"),
-    JSON.stringify({ platform: "linux" })
+    JSON.stringify({ platform: "linux" }),
   );
 
   const { stdout } = await execFileAsync("node", [cliPath, "memory"], {
-    env: { ...process.env, DEMA_HOME: root }
+    env: { ...process.env, DEMA_HOME: root },
   });
   const output = JSON.parse(stdout);
   assert.equal(output.schema, "bizra.dema.memory_index.v0.1");
@@ -143,12 +157,16 @@ test("dema memory show CLI returns the named entry", async () => {
   const root = await makeMemoryRoot();
   await writeFile(
     join(root, "memory", "bizra-context.json"),
-    JSON.stringify({ project: "BIZRA Node0", stage: "SEED" })
+    JSON.stringify({ project: "BIZRA Node0", stage: "SEED" }),
   );
 
-  const { stdout } = await execFileAsync("node", [cliPath, "memory", "show", "bizra-context"], {
-    env: { ...process.env, DEMA_HOME: root }
-  });
+  const { stdout } = await execFileAsync(
+    "node",
+    [cliPath, "memory", "show", "bizra-context"],
+    {
+      env: { ...process.env, DEMA_HOME: root },
+    },
+  );
   const output = JSON.parse(stdout);
   assert.equal(output.project, "BIZRA Node0");
   assert.equal(output.stage, "SEED");
@@ -158,15 +176,18 @@ test("dema today CLI now includes a memory summary alongside the tick", async ()
   const root = await makeMemoryRoot();
   await writeFile(
     join(root, "profile.json"),
-    JSON.stringify({ schema: "bizra.dema.profile.v0.1", preferred_name: "Mumu" })
+    JSON.stringify({
+      schema: "bizra.dema.profile.v0.1",
+      preferred_name: "Mumu",
+    }),
   );
   await writeFile(
     join(root, "memory", "bizra-context.json"),
-    JSON.stringify({ project: "BIZRA Node0" })
+    JSON.stringify({ project: "BIZRA Node0" }),
   );
 
   const { stdout } = await execFileAsync("node", [cliPath, "today", "--json"], {
-    env: { ...process.env, DEMA_HOME: root }
+    env: { ...process.env, DEMA_HOME: root },
   });
   const output = JSON.parse(stdout);
   assert.equal(output.tick.schema, "bizra.dema.today_tick.v0.1");

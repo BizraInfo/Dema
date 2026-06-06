@@ -6,7 +6,9 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 function runCli(args, { env = {}, timeout = 10000 } = {}) {
   return new Promise((resolve, reject) => {
@@ -14,16 +16,23 @@ function runCli(args, { env = {}, timeout = 10000 } = {}) {
       "node",
       [cliPath, ...args],
       {
-        env: { ...process.env, DEMA_BANNER_INTERACTIVE: "0", NODE_ENV: "test", ...env },
-        timeout
+        env: {
+          ...process.env,
+          DEMA_BANNER_INTERACTIVE: "0",
+          NODE_ENV: "test",
+          ...env,
+        },
+        timeout,
       },
       (err, stdout, stderr) => {
         if (err && err.killed) {
-          reject(new Error(`Process timed out. stdout=${stdout} stderr=${stderr}`));
+          reject(
+            new Error(`Process timed out. stdout=${stdout} stderr=${stderr}`),
+          );
           return;
         }
         resolve({ stdout, stderr, exitCode: err?.code ?? 0 });
-      }
+      },
     );
   });
 }
@@ -47,7 +56,7 @@ function compliantEnvelope() {
       task_kind: "synthesis",
       selected_model_id: "llama3.1:8b",
       selected_model_role: "dema_face",
-      selected_model_locality: "local"
+      selected_model_locality: "local",
     },
     selected_model_id: "llama3.1:8b",
     invocation_result: {
@@ -55,7 +64,7 @@ function compliantEnvelope() {
       error_reason: null,
       model_invoked: "llama3.1:8b",
       response_length_chars: 11,
-      response_text_preview: "hello world"
+      response_text_preview: "hello world",
     },
     boundary: {
       runtime: true,
@@ -66,31 +75,49 @@ function compliantEnvelope() {
       federation: false,
       mint: false,
       token_economy: false,
-      urp_networking: false
+      urp_networking: false,
     },
-    warnings: []
+    warnings: [],
   };
 }
 
 test("--invocation-result-file <abs> with compliant envelope → verdict=compliant + exit 0", async () => {
   const { path } = await makeDemaHomeWithEnvelope(compliantEnvelope());
-  const { stdout, exitCode } = await runCli(["model-broker", "verify-invocation", "--invocation-result-file", path]);
+  const { stdout, exitCode } = await runCli([
+    "model-broker",
+    "verify-invocation",
+    "--invocation-result-file",
+    path,
+  ]);
   assert.equal(exitCode, 0);
   const verification = JSON.parse(stdout);
-  assert.equal(verification.schema, "bizra.dema.local_model_routed_invocation_verification.v0.1");
+  assert.equal(
+    verification.schema,
+    "bizra.dema.local_model_routed_invocation_verification.v0.1",
+  );
   assert.equal(verification.verdict, "compliant");
   assert.equal(verification.source.kind, "file");
   assert.equal(verification.source.path, path);
 });
 
 test("--invocation-result-file with relative path → non-zero exit + 'must be absolute' stderr", async () => {
-  const { stderr, exitCode } = await runCli(["model-broker", "verify-invocation", "--invocation-result-file", "relative/path.json"]);
+  const { stderr, exitCode } = await runCli([
+    "model-broker",
+    "verify-invocation",
+    "--invocation-result-file",
+    "relative/path.json",
+  ]);
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /must be absolute/);
 });
 
 test("--invocation-result-file with nonexistent file → non-zero exit + 'envelope file not found' stderr", async () => {
-  const { stderr, exitCode } = await runCli(["model-broker", "verify-invocation", "--invocation-result-file", "/tmp/dema-verify-nonexistent-12345.json"]);
+  const { stderr, exitCode } = await runCli([
+    "model-broker",
+    "verify-invocation",
+    "--invocation-result-file",
+    "/tmp/dema-verify-nonexistent-12345.json",
+  ]);
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /envelope file not found/);
 });
@@ -100,7 +127,12 @@ test("--invocation-result-file with malformed JSON → non-zero exit + 'malforme
   await mkdir(join(home, "receipts"), { recursive: true });
   const path = join(home, "receipts", "invocation-bad.json");
   await writeFile(path, "{ not valid json :::");
-  const { stderr, exitCode } = await runCli(["model-broker", "verify-invocation", "--invocation-result-file", path]);
+  const { stderr, exitCode } = await runCli([
+    "model-broker",
+    "verify-invocation",
+    "--invocation-result-file",
+    path,
+  ]);
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /malformed envelope JSON/);
 });
@@ -113,7 +145,10 @@ test("--latest with invocation-*.json present → reads newest", async () => {
   const path2 = join(home, "receipts", "invocation-feedfacefeedfacefeed.json");
   await new Promise((res) => setTimeout(res, 20));
   await writeFile(path2, JSON.stringify(env2) + "\n");
-  const { stdout, exitCode } = await runCli(["model-broker", "verify-invocation", "--latest"], { env: { DEMA_HOME: home } });
+  const { stdout, exitCode } = await runCli(
+    ["model-broker", "verify-invocation", "--latest"],
+    { env: { DEMA_HOME: home } },
+  );
   assert.equal(exitCode, 0);
   const verification = JSON.parse(stdout);
   assert.equal(verification.source.kind, "latest");
@@ -124,14 +159,23 @@ test("--latest with invocation-*.json present → reads newest", async () => {
 test("--latest with no invocation files → non-zero exit", async () => {
   const home = await mkdtemp(join(tmpdir(), "dema-verify-empty-"));
   await mkdir(join(home, "receipts"), { recursive: true });
-  const { stderr, exitCode } = await runCli(["model-broker", "verify-invocation", "--latest"], { env: { DEMA_HOME: home } });
+  const { stderr, exitCode } = await runCli(
+    ["model-broker", "verify-invocation", "--latest"],
+    { env: { DEMA_HOME: home } },
+  );
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /no invocation-\*\.json files found/);
 });
 
 test("--invocation-result-file AND --latest together → non-zero exit (mutually exclusive)", async () => {
   const { path } = await makeDemaHomeWithEnvelope(compliantEnvelope());
-  const { stderr, exitCode } = await runCli(["model-broker", "verify-invocation", "--invocation-result-file", path, "--latest"]);
+  const { stderr, exitCode } = await runCli([
+    "model-broker",
+    "verify-invocation",
+    "--invocation-result-file",
+    path,
+    "--latest",
+  ]);
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /mutually exclusive/);
 });

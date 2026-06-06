@@ -3,11 +3,11 @@ import assert from "node:assert/strict";
 
 import {
   runSmokeBoundary,
-  SMOKE_BOUNDARY_SPINE_COMMANDS
+  SMOKE_BOUNDARY_SPINE_COMMANDS,
 } from "../scripts/smoke-boundary.mjs";
 import {
   isCanonicalBoundary,
-  PREVIEW_BOUNDARY_CANONICAL_KEYS
+  PREVIEW_BOUNDARY_CANONICAL_KEYS,
 } from "../packages/core/src/preview-boundary.js";
 
 // In-process verification: import the 10 builders directly and assert that
@@ -41,12 +41,12 @@ const IN_PROCESS_BUILDERS = [
   ["node-registry", buildNodeRegistryPreview],
   ["onboarding-lifecycle", buildOnboardingLifecyclePreview],
   ["skill-growth-governor", buildSkillGrowthGovernorPreview],
-  ["project-status", buildProjectStatusPreview]
+  ["project-status", buildProjectStatusPreview],
 ];
 
 test("SMOKE_BOUNDARY_SPINE_COMMANDS lists exactly the 15 spine surfaces", () => {
   const labels = [...SMOKE_BOUNDARY_SPINE_COMMANDS].map((s) =>
-    typeof s === "string" ? s : s.name
+    typeof s === "string" ? s : s.name,
   );
   assert.deepEqual(labels, [
     "state",
@@ -63,7 +63,7 @@ test("SMOKE_BOUNDARY_SPINE_COMMANDS lists exactly the 15 spine surfaces", () => 
     "skill-growth-governor",
     "project-status",
     "homebase",
-    "craftsmanship-witness"
+    "craftsmanship-witness",
   ]);
 });
 
@@ -74,7 +74,7 @@ test("Every spine builder emits a canonical boundary (in-process · fast)", () =
     assert.equal(
       isCanonicalBoundary(out.boundary),
       true,
-      `${name}.boundary must satisfy isCanonicalBoundary()`
+      `${name}.boundary must satisfy isCanonicalBoundary()`,
     );
   }
 });
@@ -85,14 +85,20 @@ test("runSmokeBoundary returns the canonical report schema (subprocess path)", a
   assert.equal(report.truth_label, "NODE0_LOCAL_SEED");
   assert.equal(report.mode, "preview_only");
   assert.equal(report.commands_checked, 15);
-  assert.equal(report.canonical_keys_expected, PREVIEW_BOUNDARY_CANONICAL_KEYS.length);
+  assert.equal(
+    report.canonical_keys_expected,
+    PREVIEW_BOUNDARY_CANONICAL_KEYS.length,
+  );
   assert.equal(report.canonical_keys_expected, 16);
 });
 
 test("runSmokeBoundary all_canonical=true on the current spine", async () => {
   const report = await runSmokeBoundary();
-  assert.equal(report.all_canonical, true,
-    `at least one spine command emitted a non-canonical boundary: ${JSON.stringify(report.results)}`);
+  assert.equal(
+    report.all_canonical,
+    true,
+    `at least one spine command emitted a non-canonical boundary: ${JSON.stringify(report.results)}`,
+  );
   for (const r of report.results) {
     assert.equal(r.ok, true, `${r.cmd} not canonical: ${r.reason}`);
   }
@@ -116,14 +122,17 @@ test("runSmokeBoundary report results include all 15 spine commands", async () =
     "profiles",
     "project-status",
     "skill-growth-governor",
-    "state"
+    "state",
   ]);
 });
 
 test("runSmokeBoundary next_safe_action reflects canonical state", async () => {
   const report = await runSmokeBoundary();
   if (report.all_canonical) {
-    assert.equal(report.next_safe_action, "promote_new_preview_surface_with_confidence");
+    assert.equal(
+      report.next_safe_action,
+      "promote_new_preview_surface_with_confidence",
+    );
   } else {
     assert.equal(report.next_safe_action, "investigate_non_canonical_emitter");
   }

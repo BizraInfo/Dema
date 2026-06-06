@@ -12,7 +12,7 @@ import {
   digestStdout,
   evaluateProofRoomWrite,
   formatProofRoomReport,
-  redactProofRoomBundle
+  redactProofRoomBundle,
 } from "../packages/core/src/proof-room-bundle.js";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
@@ -21,14 +21,14 @@ const REPO_ROOT = dirname(SCRIPT_DIR);
 function usage() {
   return [
     "Usage: node scripts/proof-room-bundle.mjs [--json] [--full] [--public-safe]",
-    "       [--write --consent \"GO: write proof room bundle to artifacts/proofs/proof-room-v0.1\"]",
-    "       [--public-safe --write --consent \"GO: write proof room bundle to artifacts/proofs/proof-room-v0.1-public-safe\"]",
+    '       [--write --consent "GO: write proof room bundle to artifacts/proofs/proof-room-v0.1"]',
+    '       [--public-safe --write --consent "GO: write proof room bundle to artifacts/proofs/proof-room-v0.1-public-safe"]',
     "",
     "Composes local proof gates (GTM readiness, URP discovery, LLM guidance,",
     "release readiness, git diff --check, node0 self-check verify).",
     "--full also runs npm test. Default mode skips npm test for faster iteration.",
     "--public-safe redacts the operator-absolute repo_root so the artifact",
-    "is share-safe (passes Layer 1 artifact-safety eval with PUBLIC_SAFE)."
+    "is share-safe (passes Layer 1 artifact-safety eval with PUBLIC_SAFE).",
   ].join("\n");
 }
 
@@ -42,7 +42,9 @@ function ordered(value) {
   if (Array.isArray(value)) return value.map(ordered);
   if (value && typeof value === "object") {
     return Object.fromEntries(
-      Object.keys(value).sort().map((key) => [key, ordered(value[key])])
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, ordered(value[key])]),
     );
   }
   return value;
@@ -55,14 +57,19 @@ function contentHash(report) {
   return digestStdout(text);
 }
 
-async function writeBundleArtifacts({ root, report, consent_phrase, public_safe = false }) {
+async function writeBundleArtifacts({
+  root,
+  report,
+  consent_phrase,
+  public_safe = false,
+}) {
   const requiredPhrase = public_safe
     ? PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT
     : PROOF_ROOM_WRITE_CONSENT;
   const writeCheck = evaluateProofRoomWrite({
     consent_phrase,
     allow_write: true,
-    required_phrase: requiredPhrase
+    required_phrase: requiredPhrase,
   });
   if (!writeCheck.allowed) {
     return { ok: false, reason: "consent_denied", write_check: writeCheck };
@@ -86,7 +93,7 @@ async function writeBundleArtifacts({ root, report, consent_phrase, public_safe 
     text_path: textPath,
     content_sha256: payload.content_sha256,
     filesystem_write_performed: true,
-    public_safe
+    public_safe,
   };
 }
 
@@ -112,12 +119,15 @@ async function main(argv = process.argv.slice(2)) {
       root: REPO_ROOT,
       report,
       consent_phrase: consent,
-      public_safe: publicSafe
+      public_safe: publicSafe,
     });
     if (!report.artifact_write.ok) {
       report.ok = false;
     } else {
-      report.boundary = { ...report.boundary, filesystem_write_performed: true };
+      report.boundary = {
+        ...report.boundary,
+        filesystem_write_performed: true,
+      };
     }
   }
 
@@ -138,7 +148,10 @@ async function main(argv = process.argv.slice(2)) {
   return report.ok ? 0 : 1;
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (
+  process.argv[1] &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
   main().then((code) => {
     if (code !== 0) process.exitCode = code;
   });

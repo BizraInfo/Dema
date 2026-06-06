@@ -16,7 +16,7 @@ It exists so that a future contributor, reviewer, or connected LLM can:
 - find one release receipt template that bounds every release to an auditable record,
 - and find an explicit list of automation that is deliberately deferred.
 
-This is the *spine*: load-bearing, narrow, opinionated. The companion `DELIVERY_BLUEPRINT.md` is the *body*: broader DevOps posture, MBOK alignment, CI maturity model. When the two differ on a specific gate, this spine governs.
+This is the _spine_: load-bearing, narrow, opinionated. The companion `DELIVERY_BLUEPRINT.md` is the _body_: broader DevOps posture, MBOK alignment, CI maturity model. When the two differ on a specific gate, this spine governs.
 
 ## 2. Truth Label
 
@@ -88,14 +88,14 @@ When Component DNA labels change, the Claim Gate (Section 22) is re-evaluated fo
 
 ## 7. Authority Table
 
-| Surface | Owner | Allowed authority | Forbidden authority | Evidence path |
-|---|---|---|---|---|
-| **Dema** | This repo | Product face, local UX, docs, consent preview, product-facing proof-safe language, release receipt for Dema-scoped changes | Minting governed-runtime receipts; speaking for the substrate; issuing identity-bound artifacts; activating runtime, federation, or economy | This repo's `docs/`, `tests/`, `proof-of-priority/`, `SPROUT_PIN.md`, and gate output |
-| **bizra-data-lake / bizra-omega** | Substrate repo(s) | Runtime, proof substrate, governed-runtime receipt issuance where applicable | Acting as Dema's product face; bypassing Dema's consent preview | Substrate repo's own receipts and gate output (out of scope for this spine) |
-| **bizra-node0-genesis** | Archive / R&D | Historical reference, research notes, design exploration | Live runtime authority; direct import into Dema release; certification claims; market-facing claims | Archive only; not consulted at release time |
-| **Operator-local μ-layer** | Operator's machine (`~/.dema/bin/`) | Extended Node0 discipline gate beyond the clean checkout | Acting as a clean-checkout repo requirement; gating contributors who do not have the μ-layer | Operator-side gate output; not a CI requirement |
-| **Canva / public-face assets** | GTM workstream | GTM and public-face design artifacts; declarative branding | Proof authority; measurement claims; receipt language; certification language | Canva exports linked from GTM doc, never from proof-of-priority |
-| **GitHub PR / CI** | Hosting / CI environment | Running declared gates and recording results; code review surface | Mutating runtime; minting; issuing artifacts; bypassing local gate failures | CI logs; PR check status |
+| Surface                           | Owner                               | Allowed authority                                                                                                          | Forbidden authority                                                                                                                         | Evidence path                                                                         |
+| --------------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **Dema**                          | This repo                           | Product face, local UX, docs, consent preview, product-facing proof-safe language, release receipt for Dema-scoped changes | Minting governed-runtime receipts; speaking for the substrate; issuing identity-bound artifacts; activating runtime, federation, or economy | This repo's `docs/`, `tests/`, `proof-of-priority/`, `SPROUT_PIN.md`, and gate output |
+| **bizra-data-lake / bizra-omega** | Substrate repo(s)                   | Runtime, proof substrate, governed-runtime receipt issuance where applicable                                               | Acting as Dema's product face; bypassing Dema's consent preview                                                                             | Substrate repo's own receipts and gate output (out of scope for this spine)           |
+| **bizra-node0-genesis**           | Archive / R&D                       | Historical reference, research notes, design exploration                                                                   | Live runtime authority; direct import into Dema release; certification claims; market-facing claims                                         | Archive only; not consulted at release time                                           |
+| **Operator-local μ-layer**        | Operator's machine (`~/.dema/bin/`) | Extended Node0 discipline gate beyond the clean checkout                                                                   | Acting as a clean-checkout repo requirement; gating contributors who do not have the μ-layer                                                | Operator-side gate output; not a CI requirement                                       |
+| **Canva / public-face assets**    | GTM workstream                      | GTM and public-face design artifacts; declarative branding                                                                 | Proof authority; measurement claims; receipt language; certification language                                                               | Canva exports linked from GTM doc, never from proof-of-priority                       |
+| **GitHub PR / CI**                | Hosting / CI environment            | Running declared gates and recording results; code review surface                                                          | Mutating runtime; minting; issuing artifacts; bypassing local gate failures                                                                 | CI logs; PR check status                                                              |
 
 A claim that exceeds a surface's allowed authority is treated as a release-blocking defect.
 
@@ -103,14 +103,14 @@ A claim that exceeds a surface's allowed authority is treated as a release-block
 
 Every change is classified before it begins. The class determines which gates apply.
 
-| Class | Examples | Gate ceiling |
-|---|---|---|
-| `docs-only` | Doc add/edit, link wiring | Local Gate Ladder (Section 9) |
-| `tests-only` | New tests, test refactors with no production change | Local Gate Ladder |
-| `surface` | New CLI command or non-runtime UX | Local Gate Ladder + Release Candidate Gate if user-facing |
-| `boundary` | Consent surface, adapter input parsing, receipt reader | Local Gate Ladder + Release Candidate Gate + explicit ADR cross-check |
-| `release` | Release-readiness, installer artifacts | Full ladder through Release Gate (Sections 9-14) |
-| `governance` | ADR, charter, this spine, Component DNA, canon | Local Gate Ladder + Operator-Local Extended Gate + explicit human review |
+| Class        | Examples                                               | Gate ceiling                                                             |
+| ------------ | ------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `docs-only`  | Doc add/edit, link wiring                              | Local Gate Ladder (Section 9)                                            |
+| `tests-only` | New tests, test refactors with no production change    | Local Gate Ladder                                                        |
+| `surface`    | New CLI command or non-runtime UX                      | Local Gate Ladder + Release Candidate Gate if user-facing                |
+| `boundary`   | Consent surface, adapter input parsing, receipt reader | Local Gate Ladder + Release Candidate Gate + explicit ADR cross-check    |
+| `release`    | Release-readiness, installer artifacts                 | Full ladder through Release Gate (Sections 9-14)                         |
+| `governance` | ADR, charter, this spine, Component DNA, canon         | Local Gate Ladder + Operator-Local Extended Gate + explicit human review |
 
 Multiple classes in one branch are split before the branch is opened.
 
@@ -235,12 +235,12 @@ A soft-stop promoted to hard-stop must be named in the release receipt.
 
 Tracked under their canonical names:
 
-| Metric | Definition (per DORA) |
-|---|---|
-| Lead time for changes | Time from code committed to code running successfully in the target environment. For Dema's current state, target environment is "merged main passing the Local Gate Ladder." |
-| Deployment frequency | How often the team successfully releases to the target environment. For Dema, this is release-tag frequency on `main`. |
-| Time to restore service | How long it takes to recover from a release-induced regression. For Dema, this is time from regression detection to corrective release. |
-| Change failure rate | Percentage of releases that result in degraded service or require rollback. |
+| Metric                  | Definition (per DORA)                                                                                                                                                         |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lead time for changes   | Time from code committed to code running successfully in the target environment. For Dema's current state, target environment is "merged main passing the Local Gate Ladder." |
+| Deployment frequency    | How often the team successfully releases to the target environment. For Dema, this is release-tag frequency on `main`.                                                        |
+| Time to restore service | How long it takes to recover from a release-induced regression. For Dema, this is time from regression detection to corrective release.                                       |
+| Change failure rate     | Percentage of releases that result in degraded service or require rollback.                                                                                                   |
 
 These four are the canonical DORA names. Any internal Dema metric must not be presented as DORA.
 
@@ -248,13 +248,13 @@ These four are the canonical DORA names. Any internal Dema metric must not be pr
 
 Tracked beside DORA, labeled separately so reviewers cannot conflate them with DORA:
 
-| Metric | Definition |
-|---|---|
-| Proof verification rate | Fraction of release receipts whose claimed proof artifacts verify on independent re-run. |
-| Claim correction rate | Fraction of public claims that required a post-publication correction. |
-| Refusal-path coverage | Fraction of forbidden-shortcut scenarios that have an exercised refusal path in tests or doc. |
-| Receipt-backed release ratio | Fraction of releases that ship with a Release Receipt (Section 24) drafted and recorded. |
-| Delivery rework rate | Fraction of PRs that require >1 round of substantial rework before merge. |
+| Metric                       | Definition                                                                                    |
+| ---------------------------- | --------------------------------------------------------------------------------------------- |
+| Proof verification rate      | Fraction of release receipts whose claimed proof artifacts verify on independent re-run.      |
+| Claim correction rate        | Fraction of public claims that required a post-publication correction.                        |
+| Refusal-path coverage        | Fraction of forbidden-shortcut scenarios that have an exercised refusal path in tests or doc. |
+| Receipt-backed release ratio | Fraction of releases that ship with a Release Receipt (Section 24) drafted and recorded.      |
+| Delivery rework rate         | Fraction of PRs that require >1 round of substantial rework before merge.                     |
 
 These are **BIZRA internal extension metrics**. They do not extend or rename DORA.
 
@@ -298,15 +298,15 @@ Until that document exists, no performance number may appear in release notes, R
 
 Every public claim is labeled with exactly one of:
 
-| Label | Meaning |
-|---|---|
-| `VERIFIED` | Verified by repeatable mechanism with evidence artifact reachable from the repo. |
-| `MEASURED` | Measured under recorded conditions with reproducible command and artifact. |
-| `DERIVED` | Logically follows from a `VERIFIED` or `MEASURED` claim, with the derivation made explicit. |
-| `SCENARIO` | Hypothetical, simulated, or scenario-based output; not a measurement. |
-| `DESIGNED_NOT_LIVE` | Spec or design exists; no runtime; must not be presented as live. |
-| `UNKNOWN` | Honest absence of evidence; must not be paired with confident language. |
-| `FORBIDDEN` | A claim that may not be made anywhere on public surfaces. |
+| Label               | Meaning                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| `VERIFIED`          | Verified by repeatable mechanism with evidence artifact reachable from the repo.            |
+| `MEASURED`          | Measured under recorded conditions with reproducible command and artifact.                  |
+| `DERIVED`           | Logically follows from a `VERIFIED` or `MEASURED` claim, with the derivation made explicit. |
+| `SCENARIO`          | Hypothetical, simulated, or scenario-based output; not a measurement.                       |
+| `DESIGNED_NOT_LIVE` | Spec or design exists; no runtime; must not be presented as live.                           |
+| `UNKNOWN`           | Honest absence of evidence; must not be paired with confident language.                     |
+| `FORBIDDEN`         | A claim that may not be made anywhere on public surfaces.                                   |
 
 Public GTM, Canva assets, README, landing page, emulator output, decks, and any external presentation must not claim:
 
@@ -334,20 +334,20 @@ Every Dema release records a receipt in the operator-local receipt chain. The Re
 ```yaml
 release_receipt:
   schema: bizra.dema.release_receipt.v0.1
-  release_id:           # e.g. dema-v0.4.0
-  repo:                 # this repo
-  branch:               # release branch or main
-  commit_sha:           # full SHA at release point
-  change_class:         # docs-only | tests-only | surface | boundary | release | governance
+  release_id: # e.g. dema-v0.4.0
+  repo: # this repo
+  branch: # release branch or main
+  commit_sha: # full SHA at release point
+  change_class: # docs-only | tests-only | surface | boundary | release | governance
   gates_run:
     - npm run check
     - npm run llm:guidance
     - git diff --check
     - npm test
     - npm run release:readiness
-    - "~/.dema/bin/mu-test-all"        # if operator extended gate ran
+    - "~/.dema/bin/mu-test-all" # if operator extended gate ran
   gate_results:
-    npm_run_check:           # PASS | FAIL | SKIPPED, with reason if skipped
+    npm_run_check: # PASS | FAIL | SKIPPED, with reason if skipped
     npm_run_llm_guidance:
     git_diff_check:
     npm_test:
@@ -356,20 +356,20 @@ release_receipt:
   truth_labels:
     public_claims:
       - claim: ""
-        label: ""           # VERIFIED | MEASURED | DERIVED | SCENARIO | DESIGNED_NOT_LIVE | UNKNOWN | FORBIDDEN
-        evidence: ""        # path or hash
+        label: "" # VERIFIED | MEASURED | DERIVED | SCENARIO | DESIGNED_NOT_LIVE | UNKNOWN | FORBIDDEN
+        evidence: "" # path or hash
   risks:
     - id: ""
       severity: low | medium | high
       mitigation: ""
-  rollback_plan: ""         # exact action that reverses the release
+  rollback_plan: "" # exact action that reverses the release
   artifacts:
     - name: ""
       hash: ""
       location: ""
   operator_approval:
-    typed_consent: ""       # the exact string the operator typed
-    timestamp: ""           # UTC ISO 8601
+    typed_consent: "" # the exact string the operator typed
+    timestamp: "" # UTC ISO 8601
   notes: ""
 ```
 
@@ -377,13 +377,13 @@ A release without a drafted Release Receipt is incomplete.
 
 ## 25. Rollback and Recovery Rules
 
-| Surface | Rollback action | Recovery time target |
-|---|---|---|
-| Local commit / merge | `git revert <sha>` on `main`, new release with corrective notes | Same session |
-| Installer artifact | Pull unpublished candidate; or publish corrective release with new version | < 24 hours |
-| Local state under `~/.dema` | Operator-driven cleanup with explicit scope; no Dema-side automatic mutation | Operator-paced |
-| Public doc claim | Doc correction PR + claim correction noted in next Release Receipt | < 48 hours |
-| Receipt chain | Append-only; corrections shipped as new receipt entries by the governed runtime, never as rewrites | Substrate-paced |
+| Surface                     | Rollback action                                                                                    | Recovery time target |
+| --------------------------- | -------------------------------------------------------------------------------------------------- | -------------------- |
+| Local commit / merge        | `git revert <sha>` on `main`, new release with corrective notes                                    | Same session         |
+| Installer artifact          | Pull unpublished candidate; or publish corrective release with new version                         | < 24 hours           |
+| Local state under `~/.dema` | Operator-driven cleanup with explicit scope; no Dema-side automatic mutation                       | Operator-paced       |
+| Public doc claim            | Doc correction PR + claim correction noted in next Release Receipt                                 | < 48 hours           |
+| Receipt chain               | Append-only; corrections shipped as new receipt entries by the governed runtime, never as rewrites | Substrate-paced      |
 
 Every release with a non-trivial blast radius names a rollback action **before** the release is cut, recorded in the Release Receipt.
 

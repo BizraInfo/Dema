@@ -51,16 +51,16 @@ Illegal transitions:
 
 ## Risk decomposition
 
-| Risk | Mitigation in spec |
-|---|---|
-| Module applied to private memory | `FORBIDDEN_RESOURCE_TYPES` allowlist + type-enforcement before any other validation; 8 explicit forbidden types covering the named operator-side private categories |
-| Forced transfer slips into v0.1 | `forced_transfer: false` is a constant in the envelope; the user cannot override it through the builder API |
-| Owner identity leaks | `owner_node` is a node identifier (e.g., "node0"), not a person; spec explicitly forbids using a person identifier |
-| `no_raw_data_proof` rendered missing | Required string field; empty string fails validation; the field is the operator's articulated proof that this resource contains no raw private data |
-| `carrying_cost_rate` set to 0 or ≥ 1 | Validation: open interval `(0, 1)`; rate=0 means "no cost" (defeats the purpose); rate≥1 means "cost > value" (nonsensical) |
-| `self_assessed_value === 0` | Rejected as `invalid_value`; zero-value resources don't carry cost and shouldn't be in this layer |
-| Confusing "tax" / "rent" language | Spec § 1 explicitly names "Carrying Cost" and explains why; no "tax" word appears in the module source |
-| Bypass via private data smuggled in `no_raw_data_proof` text | Module is data-emitting only; the no-raw-data-proof string is not parsed for content; a future linter could check for forbidden-substring patterns (separate spec) |
+| Risk                                                         | Mitigation in spec                                                                                                                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Module applied to private memory                             | `FORBIDDEN_RESOURCE_TYPES` allowlist + type-enforcement before any other validation; 8 explicit forbidden types covering the named operator-side private categories |
+| Forced transfer slips into v0.1                              | `forced_transfer: false` is a constant in the envelope; the user cannot override it through the builder API                                                         |
+| Owner identity leaks                                         | `owner_node` is a node identifier (e.g., "node0"), not a person; spec explicitly forbids using a person identifier                                                  |
+| `no_raw_data_proof` rendered missing                         | Required string field; empty string fails validation; the field is the operator's articulated proof that this resource contains no raw private data                 |
+| `carrying_cost_rate` set to 0 or ≥ 1                         | Validation: open interval `(0, 1)`; rate=0 means "no cost" (defeats the purpose); rate≥1 means "cost > value" (nonsensical)                                         |
+| `self_assessed_value === 0`                                  | Rejected as `invalid_value`; zero-value resources don't carry cost and shouldn't be in this layer                                                                   |
+| Confusing "tax" / "rent" language                            | Spec § 1 explicitly names "Carrying Cost" and explains why; no "tax" word appears in the module source                                                              |
+| Bypass via private data smuggled in `no_raw_data_proof` text | Module is data-emitting only; the no-raw-data-proof string is not parsed for content; a future linter could check for forbidden-substring patterns (separate spec)  |
 
 ## Boundary integration
 
@@ -118,12 +118,12 @@ This spec does NOT require:
 
 The pattern this spec establishes for **type-enforced refusal of private data** is reusable across the remaining sibling specs:
 
-| Sibling spec | Type-enforcement target |
-|---|---|
-| `mcp-capability-descriptor-preview` | MCP tools that declare `write/execute/call` effects must require SAT REVIEW or REJECT |
-| `a2a-message-envelope-preview` | A2A messages cannot transfer authority; envelope must declare `authority_transfer: false` invariant |
-| `skill-manifest-preview` | Skills must declare `effects_denied` explicitly; skills with `effects_denied` empty fail validation |
-| `urp-resource-offer-preview` | Resource offers cannot include `raw_corpus`, `secrets`, etc. (same FORBIDDEN_RESOURCE_TYPES list) |
+| Sibling spec                        | Type-enforcement target                                                                             |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `mcp-capability-descriptor-preview` | MCP tools that declare `write/execute/call` effects must require SAT REVIEW or REJECT               |
+| `a2a-message-envelope-preview`      | A2A messages cannot transfer authority; envelope must declare `authority_transfer: false` invariant |
+| `skill-manifest-preview`            | Skills must declare `effects_denied` explicitly; skills with `effects_denied` empty fail validation |
+| `urp-resource-offer-preview`        | Resource offers cannot include `raw_corpus`, `secrets`, etc. (same FORBIDDEN_RESOURCE_TYPES list)   |
 
 The `FORBIDDEN_RESOURCE_TYPES` allowlist defined here may be lifted to a shared `packages/core/src/_shared/private-data-types.js` constant in a later refactor (separate spec).
 

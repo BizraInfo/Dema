@@ -18,7 +18,8 @@ jobs:
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm install --no-audit --no-fund
+          cache: "npm"
+      - run: npm install --no-audit --no-fund --prefer-offline
       - run: npm test
       # `npm run coverage` and `npm run check` (which internally calls coverage
       # via scripts/check.mjs) both depend on --test-coverage-{lines,branches,
@@ -28,3 +29,5 @@ jobs:
         run: npm run coverage
       - if: matrix.node-version == '22.x'
         run: npm run check
+      - if: matrix.node-version == '22.x'
+        run: npm run perf

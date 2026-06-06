@@ -62,18 +62,18 @@ IHSAN_FLOOR >= 0.95
 
 ### What exists today
 
-| Component | Ecosystem location | Role |
-|---|---|---|
-| Sovereign runtime | `core/sovereign/`, `bizra-omega/bizra-node` | Mission orchestration on one machine. |
-| DEMA = P7 of PAT-7 | `dema-console/`, `bizra-omega/target/release/dema`, `bizra-omega/bizra-cognition-gateway/src/bin/dema.rs` | Single surface the human talks to. |
-| PAT-7, Personal Agentic Team | `bizra-omega/bizra-core/src/topology_canon.rs` | Seven agents on the human's hardware: P1 Planner, P2 Researcher, P3 Coder, P4 Evaluator, P5 Ethicist, P6 Publisher, P7 DEMA/Nexus. |
-| SAT-5, System Agentic Team | Minted into the URP at activation | Five agents in the shared URP: S1 Validator, S2 Oracle, S3 Mediator, S4 Archivist, S5 Sentinel. |
-| Mission kernel, Trust Compiler | `bizra-omega/bizra-mission` | Fourteen-state lifecycle, signed receipts. |
-| Five-gate admissibility chain | `bizra-omega/fate-binding/`, `core/proof_engine/fate_gate.py` | Enforces ZANN_ZERO, CLAIM_MUST_BIND, RIBA_ZERO, NO_SHADOW_STATE, IHSAN_FLOOR >= 0.95. |
-| Receipt protocol | `bizra-omega/bizra-core/src/canonical_receipt.rs` plus Python mirror | BLAKE3-chained, Ed25519-signed; cross-language parity proven. |
-| Replay verifier | Spearpoint replay path | Re-derives state from receipt chain. |
-| Identity / genesis seal | `bizra-omega/bizra-core/src/genesis_seal.rs` | Deterministic root of trust. |
-| The Membrane | Between every local node and the shared URP | Fail-closed crossing discipline. |
+| Component                      | Ecosystem location                                                                                        | Role                                                                                                                               |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Sovereign runtime              | `core/sovereign/`, `bizra-omega/bizra-node`                                                               | Mission orchestration on one machine.                                                                                              |
+| DEMA = P7 of PAT-7             | `dema-console/`, `bizra-omega/target/release/dema`, `bizra-omega/bizra-cognition-gateway/src/bin/dema.rs` | Single surface the human talks to.                                                                                                 |
+| PAT-7, Personal Agentic Team   | `bizra-omega/bizra-core/src/topology_canon.rs`                                                            | Seven agents on the human's hardware: P1 Planner, P2 Researcher, P3 Coder, P4 Evaluator, P5 Ethicist, P6 Publisher, P7 DEMA/Nexus. |
+| SAT-5, System Agentic Team     | Minted into the URP at activation                                                                         | Five agents in the shared URP: S1 Validator, S2 Oracle, S3 Mediator, S4 Archivist, S5 Sentinel.                                    |
+| Mission kernel, Trust Compiler | `bizra-omega/bizra-mission`                                                                               | Fourteen-state lifecycle, signed receipts.                                                                                         |
+| Five-gate admissibility chain  | `bizra-omega/fate-binding/`, `core/proof_engine/fate_gate.py`                                             | Enforces ZANN_ZERO, CLAIM_MUST_BIND, RIBA_ZERO, NO_SHADOW_STATE, IHSAN_FLOOR >= 0.95.                                              |
+| Receipt protocol               | `bizra-omega/bizra-core/src/canonical_receipt.rs` plus Python mirror                                      | BLAKE3-chained, Ed25519-signed; cross-language parity proven.                                                                      |
+| Replay verifier                | Spearpoint replay path                                                                                    | Re-derives state from receipt chain.                                                                                               |
+| Identity / genesis seal        | `bizra-omega/bizra-core/src/genesis_seal.rs`                                                              | Deterministic root of trust.                                                                                                       |
+| The Membrane                   | Between every local node and the shared URP                                                               | Fail-closed crossing discipline.                                                                                                   |
 
 ### What this proves
 
@@ -84,17 +84,17 @@ IHSAN_FLOOR >= 0.95
 
 ### Closure gates in flight
 
-| PR | Lane | Status |
-|---|---|---|
-| #49 | Row 4 replay, canonical spearpoint replay | MEASURED — 38/38 tests green; awaiting merge. |
-| #50 | Mission receipt full-payload Ed25519 signature | MEASURED — 4 tests green; awaiting merge. |
-| #51 | Python 3.12 baseline restored across 874 tests | MEASURED — full pass; awaiting merge; unblocks #49 and #50. |
-| #52 | Credential purge, CVE-class | MEASURED — 8 files; awaiting merge. |
-| #53 | Genesis Manifest v0.1 | MEASURED — chain hash recorded; side-track. |
-| #54 | Public-claim discipline recert v0.1 | MEASURED — claim register published. |
-| #55 | This architecture transition note | MEASURED — v0.2 corrective patch. |
-| #56 | Queue Closure Receipt 2026-04-25 | MEASURED — STOP_DUE_TO_RED_CHECKS recorded. |
-| #57 | CI pip-audit allowlist update for CVE-2026-3219 | MEASURED — single-line workflow change. |
+| PR  | Lane                                            | Status                                                      |
+| --- | ----------------------------------------------- | ----------------------------------------------------------- |
+| #49 | Row 4 replay, canonical spearpoint replay       | MEASURED — 38/38 tests green; awaiting merge.               |
+| #50 | Mission receipt full-payload Ed25519 signature  | MEASURED — 4 tests green; awaiting merge.                   |
+| #51 | Python 3.12 baseline restored across 874 tests  | MEASURED — full pass; awaiting merge; unblocks #49 and #50. |
+| #52 | Credential purge, CVE-class                     | MEASURED — 8 files; awaiting merge.                         |
+| #53 | Genesis Manifest v0.1                           | MEASURED — chain hash recorded; side-track.                 |
+| #54 | Public-claim discipline recert v0.1             | MEASURED — claim register published.                        |
+| #55 | This architecture transition note               | MEASURED — v0.2 corrective patch.                           |
+| #56 | Queue Closure Receipt 2026-04-25                | MEASURED — STOP_DUE_TO_RED_CHECKS recorded.                 |
+| #57 | CI pip-audit allowlist update for CVE-2026-3219 | MEASURED — single-line workflow change.                     |
 
 Phase 0 closes when:
 
@@ -132,13 +132,13 @@ There is one URP: not per-node, not per-user, not middleware. It is one shared l
 
 ### Required components
 
-| Component | Readiness | Required state |
-|---|---|---|
-| URP transport | Heartbeat prototype | Production substrate with discovery, peer attestation, receipt-channel ABI. |
+| Component                         | Readiness              | Required state                                                                      |
+| --------------------------------- | ---------------------- | ----------------------------------------------------------------------------------- |
+| URP transport                     | Heartbeat prototype    | Production substrate with discovery, peer attestation, receipt-channel ABI.         |
 | Identity attestation across nodes | Single-node primitives | Cross-node Ed25519 plus Dilithium verification; both ends agree on chain integrity. |
-| Bootnode list / DHT | NOT BUILT | Stable bootnode addressing. |
-| First second-node join ceremony | NOT BUILT | Constitutional onboarding sequence. |
-| URP wake-up sequence | Partial | Node0 wakes URP locally; cross-node membership not demonstrated. |
+| Bootnode list / DHT               | NOT BUILT              | Stable bootnode addressing.                                                         |
+| First second-node join ceremony   | NOT BUILT              | Constitutional onboarding sequence.                                                 |
+| URP wake-up sequence              | Partial                | Node0 wakes URP locally; cross-node membership not demonstrated.                    |
 
 ### Closure criterion
 
@@ -172,13 +172,13 @@ PAT-7 runs inside each Node. SAT-5 lives inside the shared URP, not between Node
 
 SAT-5 does not run peer-to-peer. SAT-5 lives in the URP.
 
-| Capability | Readiness | Required state |
-|---|---|---|
-| URP federation gossip | Scaffolded | Gossip protocol operational across SAT-in-URP layer; signed-message exchange respects membrane discipline. |
-| BFT consensus inside URP | Scaffolded | SAT-5 layer in URP achieves BFT agreement on chain integrity. |
-| Membrane-mediated receipt exchange | Receipt protocol exists; membrane scaffolded | Transport, replication policy, deduplication; all crossings signed and receipted. |
-| Constitutional gate enforcement | Scaffolded | Five-gate admissibility runs at every membrane crossing. |
-| SAT-5 wired into runtime gateway | Drift flagged | Gateway routes SAT calls to URP-resident SAT layer, not to a per-node stub. |
+| Capability                         | Readiness                                    | Required state                                                                                             |
+| ---------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| URP federation gossip              | Scaffolded                                   | Gossip protocol operational across SAT-in-URP layer; signed-message exchange respects membrane discipline. |
+| BFT consensus inside URP           | Scaffolded                                   | SAT-5 layer in URP achieves BFT agreement on chain integrity.                                              |
+| Membrane-mediated receipt exchange | Receipt protocol exists; membrane scaffolded | Transport, replication policy, deduplication; all crossings signed and receipted.                          |
+| Constitutional gate enforcement    | Scaffolded                                   | Five-gate admissibility runs at every membrane crossing.                                                   |
+| SAT-5 wired into runtime gateway   | Drift flagged                                | Gateway routes SAT calls to URP-resident SAT layer, not to a per-node stub.                                |
 
 ### Closure criterion
 
@@ -215,12 +215,12 @@ Local mission execution (PAT-7, on private data)
 - Network-wide model ownership by any party.
 - Peer-to-peer between Nodes.
 
-| Capability | Readiness |
-|---|---|
-| `bizra-ttrl` on-device RL with SSO spectral norm | Scaffolded. |
-| `bizra-memory` synthesis pipeline | Scaffolded for local; URP pooling layer NOT BUILT. |
-| `bizra-autopoiesis` self-healing | Scaffolded. |
-| Federated signal protocol via Membrane and URP Shared Reflex Registry | NOT BUILT. |
+| Capability                                                            | Readiness                                          |
+| --------------------------------------------------------------------- | -------------------------------------------------- |
+| `bizra-ttrl` on-device RL with SSO spectral norm                      | Scaffolded.                                        |
+| `bizra-memory` synthesis pipeline                                     | Scaffolded for local; URP pooling layer NOT BUILT. |
+| `bizra-autopoiesis` self-healing                                      | Scaffolded.                                        |
+| Federated signal protocol via Membrane and URP Shared Reflex Registry | NOT BUILT.                                         |
 
 ## 6. Phase 4 — Decentralized self-growing agentic ecosystem
 
@@ -228,12 +228,12 @@ Local mission execution (PAT-7, on private data)
 
 The architectural intent is a network of sovereign Nodes that becomes more capable as more Nodes join, without any single Node ceding sovereignty over data, identity, or mission gates.
 
-| Nodes | Local PAT total | SAT in shared URP total | Effect |
-|---|---:|---:|---|
-| 1 | 7 | 5 | System alive, flywheel starts. |
-| 1,000 | 7,000 | 5,000 | Serious governance capacity. |
-| 1,000,000 | 7,000,000 | 5,000,000 | Self-securing, self-evolving. |
-| 8,000,000,000 | 56,000,000,000 | 40,000,000,000 | Planetary intelligence, directional only. |
+| Nodes         | Local PAT total | SAT in shared URP total | Effect                                    |
+| ------------- | --------------: | ----------------------: | ----------------------------------------- |
+| 1             |               7 |                       5 | System alive, flywheel starts.            |
+| 1,000         |           7,000 |                   5,000 | Serious governance capacity.              |
+| 1,000,000     |       7,000,000 |               5,000,000 | Self-securing, self-evolving.             |
+| 8,000,000,000 |  56,000,000,000 |          40,000,000,000 | Planetary intelligence, directional only. |
 
 ### What this is not
 
@@ -253,13 +253,13 @@ These metrics become measurable when Phases 2 and 3 complete. They are unmeasura
 
 ## 7. Truth labels — phase summary
 
-| Phase | Label | Rationale |
-|---|---|---|
-| Phase 0 | CANDIDATE_CANONICAL | Two of five promotion gates passed; three pending: CI green, push, external review. |
-| Phase 1 | PLANNED | URP heartbeat exists; production substrate does not; cross-Node URP-mediated handshake not demonstrated. |
-| Phase 2 | PLANNED | Federation crate scaffolded; SAT-in-URP at multi-node scale not operational. |
-| Phase 3 | PLANNED | TTRL and memory crates scaffolded; URP Shared Reflex Registry not built. |
-| Phase 4 | DIRECTIONAL | Architectural intent only; depends on Phases 0-3. |
+| Phase   | Label               | Rationale                                                                                                |
+| ------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
+| Phase 0 | CANDIDATE_CANONICAL | Two of five promotion gates passed; three pending: CI green, push, external review.                      |
+| Phase 1 | PLANNED             | URP heartbeat exists; production substrate does not; cross-Node URP-mediated handshake not demonstrated. |
+| Phase 2 | PLANNED             | Federation crate scaffolded; SAT-in-URP at multi-node scale not operational.                             |
+| Phase 3 | PLANNED             | TTRL and memory crates scaffolded; URP Shared Reflex Registry not built.                                 |
+| Phase 4 | DIRECTIONAL         | Architectural intent only; depends on Phases 0-3.                                                        |
 
 These labels follow BIZRA Genesis Manifest truth-label discipline, public-claim discipline, and Topology Canon's CANDIDATE to CANONICAL promotion ladder.
 
@@ -305,24 +305,24 @@ The Kernel itself is not runtime canon and is not committed to `origin/main` in 
 
 ## Appendix A — Ecosystem evidence map
 
-| Phase | Crate / module | Ecosystem path | Current state |
-|---|---|---|---|
-| Phase 0 | `bizra-node` | `bizra-omega/bizra-node/` | Operational on single machine. |
-| Phase 0 | `bizra-mission` | `bizra-omega/bizra-mission/` | Fourteen-state lifecycle, signed receipts. |
-| Phase 0 | `bizra-core` | `bizra-omega/bizra-core/src/` | Five frozen root objects. |
-| Phase 0 | `bizra-cognition` | `bizra-omega/bizra-cognition/src/` | Five frozen contracts. |
-| Phase 0 | `bizra-cognition-gateway` | `bizra-omega/bizra-cognition-gateway/` | Axum gateway and `src/bin/dema.rs` projection. |
-| Phase 0 | PAT-7 / SAT-5 topology | `bizra-omega/bizra-core/src/topology_canon.rs` | Names canonical; SAT-in-URP wiring partial. |
-| Phase 0 | FATE gate | `bizra-omega/fate-binding/` | Z3 plus Dilithium post-quantum. |
-| Phase 0 | Active Node0 receipt chain | `sovereign_state/bridge_receipts/` | Local chain reference. |
-| Phase 0 | DEMA/P7 surface | `dema-console/` plus Rust `dema` binary | Ecosystem face reference. |
-| Phase 1 | URP heartbeat | `bizra-omega/bizra-resourcepool/` | Prototype only. |
-| Phase 1 | Identity attestation | `bizra-omega/bizra-core/src/genesis_seal.rs` | Single-node operational. |
-| Phase 1/2 | Membrane | `bizra-omega/bizra-protocol/` | Scaffolded. |
-| Phase 2 | Federation gossip | `bizra-omega/bizra-federation/` | Scaffolded. |
-| Phase 3 | TTRL on-device RL | `bizra-omega/bizra-ttrl/` | Scaffolded. |
-| Phase 3 | Memory synthesis | `bizra-omega/bizra-memory/` | Local layer present; URP pooling not built. |
-| Phase 3 | Autopoiesis | `bizra-omega/bizra-autopoiesis/` | Scaffolded. |
+| Phase     | Crate / module             | Ecosystem path                                 | Current state                                  |
+| --------- | -------------------------- | ---------------------------------------------- | ---------------------------------------------- |
+| Phase 0   | `bizra-node`               | `bizra-omega/bizra-node/`                      | Operational on single machine.                 |
+| Phase 0   | `bizra-mission`            | `bizra-omega/bizra-mission/`                   | Fourteen-state lifecycle, signed receipts.     |
+| Phase 0   | `bizra-core`               | `bizra-omega/bizra-core/src/`                  | Five frozen root objects.                      |
+| Phase 0   | `bizra-cognition`          | `bizra-omega/bizra-cognition/src/`             | Five frozen contracts.                         |
+| Phase 0   | `bizra-cognition-gateway`  | `bizra-omega/bizra-cognition-gateway/`         | Axum gateway and `src/bin/dema.rs` projection. |
+| Phase 0   | PAT-7 / SAT-5 topology     | `bizra-omega/bizra-core/src/topology_canon.rs` | Names canonical; SAT-in-URP wiring partial.    |
+| Phase 0   | FATE gate                  | `bizra-omega/fate-binding/`                    | Z3 plus Dilithium post-quantum.                |
+| Phase 0   | Active Node0 receipt chain | `sovereign_state/bridge_receipts/`             | Local chain reference.                         |
+| Phase 0   | DEMA/P7 surface            | `dema-console/` plus Rust `dema` binary        | Ecosystem face reference.                      |
+| Phase 1   | URP heartbeat              | `bizra-omega/bizra-resourcepool/`              | Prototype only.                                |
+| Phase 1   | Identity attestation       | `bizra-omega/bizra-core/src/genesis_seal.rs`   | Single-node operational.                       |
+| Phase 1/2 | Membrane                   | `bizra-omega/bizra-protocol/`                  | Scaffolded.                                    |
+| Phase 2   | Federation gossip          | `bizra-omega/bizra-federation/`                | Scaffolded.                                    |
+| Phase 3   | TTRL on-device RL          | `bizra-omega/bizra-ttrl/`                      | Scaffolded.                                    |
+| Phase 3   | Memory synthesis           | `bizra-omega/bizra-memory/`                    | Local layer present; URP pooling not built.    |
+| Phase 3   | Autopoiesis                | `bizra-omega/bizra-autopoiesis/`               | Scaffolded.                                    |
 
 ## Appendix B — Memory anchors
 

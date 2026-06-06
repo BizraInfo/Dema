@@ -30,6 +30,7 @@ For each shareable URP resource the operator might offer, emit a typed envelope 
 ## Functional requirements
 
 ### F-01 · Module exports
+
 ```
 packages/core/src/urp-resource-offer-preview.js
 
@@ -47,6 +48,7 @@ export function buildUrpResourceOfferPreview({
 ```
 
 ### F-02 · Envelope shape (success)
+
 ```
 {
   schema:                   "bizra.dema.urp_resource_offer_preview.v0.1",
@@ -70,6 +72,7 @@ export function buildUrpResourceOfferPreview({
 ```
 
 ### F-03 · Boundary invariants
+
 ```
 runtime:                   false
 federation:                false
@@ -82,6 +85,7 @@ ownership_transferred:     false  (NEW flag, add to allowlist)
 ```
 
 ### F-04 · Validation
+
 - `resource_type` MUST be in `SHAREABLE_RESOURCE_TYPES`; explicit error if in `FORBIDDEN_RESOURCE_TYPES`
 - `declared_effects` ∩ `denied_effects` empty
 - All effect entries in `OPERATIONS`
@@ -93,15 +97,18 @@ ownership_transferred:     false  (NEW flag, add to allowlist)
 - `owner_node` non-empty (never a person identifier; validation rejects strings that contain `@` or `:` characters as a heuristic against person-identifier leakage)
 
 ### F-05 · v0.1 invariants
+
 - `settlement` always `"preview_only"`
 - `published` always `false`
 - `denied_effects` always includes write + execute + call
 - Module imports `SHAREABLE_RESOURCE_TYPES` + `FORBIDDEN_RESOURCE_TYPES` from `urp-carrying-cost-preview` (single source of truth)
 
 ### F-06 · Determinism + purity
+
 Same inputs → deeply-equal frozen output with fresh references.
 
 ## Out of scope
+
 - Publication to a shared URP surface (separate ADR + halt-gate)
 - Receiver-side acceptance flow
 - Cross-node transport
@@ -111,6 +118,7 @@ Same inputs → deeply-equal frozen output with fresh references.
 - Cryptographic signing
 
 ## Acceptance criteria
+
 1. New file at `packages/core/src/urp-resource-offer-preview.js`
 2. New test file with ≥ 14 TDD anchors
 3. `AUTHORITY_FLAGS` extended by 2 new flags (`offer_published`, `ownership_transferred`)
@@ -119,12 +127,14 @@ Same inputs → deeply-equal frozen output with fresh references.
 6. Cross-spec test: a paired urp-carrying-cost-preview + urp-resource-offer-preview envelope on the same resource_id is consistent (out of scope for this spec's tests but recommended for a v0.2 integration)
 
 ## References
+
 - `docs/superpowers/specs/2026-05-16-urp-carrying-cost/01_specification.md` — paired spec; shares `SHAREABLE_RESOURCE_TYPES` + `FORBIDDEN_RESOURCE_TYPES`
 - `packages/core/src/shared-urp-world-preview.js` — locked-world surface this spec composes with
 - `packages/consent/src/consent-hash-preview.js` — `OPERATIONS`
 - `packages/core/src/external-pattern-registry-preview.js` — `harberger_cost` entry references shared-URP resources
 
 ## Operating law
+
 ```
 The offer declares the resource.
 The offer is not the publication.

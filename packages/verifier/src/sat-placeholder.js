@@ -34,7 +34,7 @@ export function verifyReceiptPlaceholder(receipt) {
     pass: scopeOk,
     detail: scopeOk
       ? `scope: read-only`
-      : `expected scope: read-only, got: ${receipt?.scope ?? "(missing)"}`
+      : `expected scope: read-only, got: ${receipt?.scope ?? "(missing)"}`,
   });
 
   // Shallow check 2: rollback_required must be false (no mutation to undo).
@@ -44,18 +44,19 @@ export function verifyReceiptPlaceholder(receipt) {
     pass: rollbackOk,
     detail: rollbackOk
       ? `rollback_required: false`
-      : `expected rollback_required: false, got: ${receipt?.rollback_required}`
+      : `expected rollback_required: false, got: ${receipt?.rollback_required}`,
   });
 
   // Shallow check 3: payload digest present (binds the receipt to its own contents).
   const digestOk =
-    typeof receipt?.payload_digest === "string" && /^[0-9a-f]{64}$/.test(receipt.payload_digest);
+    typeof receipt?.payload_digest === "string" &&
+    /^[0-9a-f]{64}$/.test(receipt.payload_digest);
   checks.push({
     check: "payload_digest_present",
     pass: digestOk,
     detail: digestOk
       ? `payload_digest: ${receipt.payload_digest.slice(0, 16)}…`
-      : `payload_digest missing or malformed`
+      : `payload_digest missing or malformed`,
   });
 
   // Shallow check 4: receipt declares the placeholder verdict honestly.
@@ -65,7 +66,7 @@ export function verifyReceiptPlaceholder(receipt) {
     pass: honestyOk,
     detail: honestyOk
       ? `receipt declares sat_verdict: PARTIAL_PLACEHOLDER (honest)`
-      : `receipt claims sat_verdict: ${receipt?.sat_verdict} — placeholder MUST decline to over-claim`
+      : `receipt claims sat_verdict: ${receipt?.sat_verdict} — placeholder MUST decline to over-claim`,
   });
 
   const allPassed = checks.every((c) => c.pass);
@@ -78,8 +79,7 @@ export function verifyReceiptPlaceholder(receipt) {
     checked_at: new Date().toISOString(),
     receipt_id: receipt?.receipt_id ?? null,
     checks,
-    note:
-      "SAT verifier is a placeholder in v0.3.0. The shallow checks above only confirm the receipt declares the right shape — they do NOT certify admissibility. Real SAT verification arrives with v0.3.2 (verifier sibling) and the SAT-5 Rust roster (PLANNED upstream in bizra-data-lake). Per the autonomy envelope: an L4 receipt absent a real SAT verdict MUST be rejected by the chain reader."
+    note: "SAT verifier is a placeholder in v0.3.0. The shallow checks above only confirm the receipt declares the right shape — they do NOT certify admissibility. Real SAT verification arrives with v0.3.2 (verifier sibling) and the SAT-5 Rust roster (PLANNED upstream in bizra-data-lake). Per the autonomy envelope: an L4 receipt absent a real SAT verdict MUST be rejected by the chain reader.",
   };
 }
 
@@ -90,7 +90,7 @@ export function formatVerdict(verdict) {
     `Truth label:    ${verdict.truth_label}`,
     `Checked:        ${verdict.checked_at}`,
     ``,
-    `Shallow checks:`
+    `Shallow checks:`,
   ];
   for (const c of verdict.checks) {
     const mark = c.pass ? "✓" : "✗";
@@ -133,7 +133,7 @@ const REQUIRED_GATEWAY_SCORERS = Object.freeze([
   "CLAIM_MUST_BIND",
   "RIBA_ZERO",
   "NO_SHADOW_STATE",
-  "IHSAN_FLOOR"
+  "IHSAN_FLOOR",
 ]);
 const IHSAN_FLOOR = 0.95;
 
@@ -141,7 +141,7 @@ const IHSAN_FLOOR = 0.95;
 // only ARTIFACT-011's phrase. Future actions add entries; receipts
 // with an unknown `action` fall back to "non-empty string" — informational.
 const KNOWN_ACTION_PHRASES = Object.freeze({
-  bounded_diagnostic_activation: BOUNDED_DIAGNOSTIC_CONSENT_PHRASE
+  bounded_diagnostic_activation: BOUNDED_DIAGNOSTIC_CONSENT_PHRASE,
 });
 
 export function verifyReceipt(receipt) {
@@ -166,11 +166,10 @@ export function verifyReceipt(receipt) {
       {
         check: "schema_supported",
         pass: false,
-        detail: `unsupported_schema: ${JSON.stringify(schema ?? null)} (expected ${TASK_RECEIPT_SCHEMA} or ${GATEWAY_HANDOFF_SCHEMA})`
-      }
+        detail: `unsupported_schema: ${JSON.stringify(schema ?? null)} (expected ${TASK_RECEIPT_SCHEMA} or ${GATEWAY_HANDOFF_SCHEMA})`,
+      },
     ],
-    note:
-      "verifyReceipt: schema is missing or not in the supported set. Refused by default per A4.5 fail-closed rule. New schemas require an explicit handler before they may pass."
+    note: "verifyReceipt: schema is missing or not in the supported set. Refused by default per A4.5 fail-closed rule. New schemas require an explicit handler before they may pass.",
   };
 }
 
@@ -184,7 +183,7 @@ export function verifyGatewayHandoffReceipt(receipt) {
     pass: schemaOk,
     detail: schemaOk
       ? `schema: ${GATEWAY_HANDOFF_SCHEMA}`
-      : `expected ${GATEWAY_HANDOFF_SCHEMA}, got: ${receipt?.schema ?? "(missing)"}`
+      : `expected ${GATEWAY_HANDOFF_SCHEMA}, got: ${receipt?.schema ?? "(missing)"}`,
   });
 
   // Check 2: truth_label is GATEWAY_ISSUED_HANDOFF (the Dema-side mirror label).
@@ -194,7 +193,7 @@ export function verifyGatewayHandoffReceipt(receipt) {
     pass: labelOk,
     detail: labelOk
       ? `truth_label: GATEWAY_ISSUED_HANDOFF`
-      : `expected GATEWAY_ISSUED_HANDOFF, got: ${receipt?.truth_label ?? "(missing)"}`
+      : `expected GATEWAY_ISSUED_HANDOFF, got: ${receipt?.truth_label ?? "(missing)"}`,
   });
 
   // Check 3: gateway.admissibility_verdict === "Permit" (top-level recorded verdict).
@@ -204,19 +203,20 @@ export function verifyGatewayHandoffReceipt(receipt) {
     pass: verdictOk,
     detail: verdictOk
       ? `gateway.admissibility_verdict: Permit`
-      : `expected Permit, got: ${receipt?.gateway?.admissibility_verdict ?? "(missing)"}`
+      : `expected Permit, got: ${receipt?.gateway?.admissibility_verdict ?? "(missing)"}`,
   });
 
   // Check 4: chain_head present and 64-hex (the upstream chain head this receipt was
   // sealed against).
   const chainHead = receipt?.gateway?.chain_head;
-  const chainHeadOk = typeof chainHead === "string" && /^[0-9a-f]{64}$/.test(chainHead);
+  const chainHeadOk =
+    typeof chainHead === "string" && /^[0-9a-f]{64}$/.test(chainHead);
   checks.push({
     check: "chain_head_present_64hex",
     pass: chainHeadOk,
     detail: chainHeadOk
       ? `chain_head: ${chainHead.slice(0, 16)}…`
-      : `chain_head missing or not 64-hex`
+      : `chain_head missing or not 64-hex`,
   });
 
   // Check 5: consent_phrase_record present AND, when the action is known to
@@ -225,7 +225,8 @@ export function verifyGatewayHandoffReceipt(receipt) {
   // string was too loose for ARTIFACT-011, which the spec says MUST match
   // BOUNDED_DIAGNOSTIC_CONSENT_PHRASE byte-for-byte.
   const consentValue = receipt?.consent_phrase_record;
-  const consentNonEmpty = typeof consentValue === "string" && consentValue.length > 0;
+  const consentNonEmpty =
+    typeof consentValue === "string" && consentValue.length > 0;
   const expectedPhrase = KNOWN_ACTION_PHRASES[receipt?.action];
 
   let consentPass;
@@ -254,16 +255,21 @@ export function verifyGatewayHandoffReceipt(receipt) {
   checks.push({
     check: "consent_phrase_recorded_and_canonical",
     pass: consentPass,
-    detail: consentDetail
+    detail: consentDetail,
   });
 
   // Check 6: gate verdicts (when exposed) — all required scorers Permit, IHSAN ≥ 0.95.
-  const gateVerdicts = receipt?.preserved_post_response_body?.admissibility?.gateVerdicts;
+  const gateVerdicts =
+    receipt?.preserved_post_response_body?.admissibility?.gateVerdicts;
   if (Array.isArray(gateVerdicts) && gateVerdicts.length > 0) {
     const allPermit = gateVerdicts.every((v) => v?.verdict === "Permit");
     const presentScorers = new Set(gateVerdicts.map((v) => v?.scorerId));
-    const missingScorers = REQUIRED_GATEWAY_SCORERS.filter((s) => !presentScorers.has(s));
-    const ihsanScore = gateVerdicts.find((v) => v?.scorerId === "IHSAN_FLOOR")?.score;
+    const missingScorers = REQUIRED_GATEWAY_SCORERS.filter(
+      (s) => !presentScorers.has(s),
+    );
+    const ihsanScore = gateVerdicts.find(
+      (v) => v?.scorerId === "IHSAN_FLOOR",
+    )?.score;
     const ihsanOk = typeof ihsanScore === "number" && ihsanScore >= IHSAN_FLOOR;
     const gatesOk = allPermit && missingScorers.length === 0 && ihsanOk;
     checks.push({
@@ -271,7 +277,7 @@ export function verifyGatewayHandoffReceipt(receipt) {
       pass: gatesOk,
       detail: gatesOk
         ? `${gateVerdicts.length} gates Permit; required scorers present; IHSAN ${ihsanScore.toFixed(2)} ≥ ${IHSAN_FLOOR}`
-        : `gate issue: missing=[${missingScorers.join(",") || "none"}], all_permit=${allPermit}, ihsan=${ihsanScore ?? "missing"}`
+        : `gate issue: missing=[${missingScorers.join(",") || "none"}], all_permit=${allPermit}, ihsan=${ihsanScore ?? "missing"}`,
     });
   } else {
     // SOFT finding — informational, not blocking. Per spec §"Receipt-shape
@@ -285,7 +291,7 @@ export function verifyGatewayHandoffReceipt(receipt) {
       check: "gate_verdicts_exposed",
       pass: true,
       detail:
-        "preserved_post_response_body.admissibility.gateVerdicts not exposed in this receipt — informational; live cross-check (PLANNED with real SAT-5 upstream) would resolve"
+        "preserved_post_response_body.admissibility.gateVerdicts not exposed in this receipt — informational; live cross-check (PLANNED with real SAT-5 upstream) would resolve",
     });
   }
 
@@ -306,6 +312,6 @@ export function verifyGatewayHandoffReceipt(receipt) {
       "the live gateway /chain (offline-safe), do NOT re-derive the niyyah evidence " +
       "hash, and do NOT certify the upstream admissibility chain's verdict beyond " +
       "reading the recorded value. Real verification with live cross-check arrives " +
-      "when the SAT-5 Rust roster lands upstream in bizra-data-lake."
+      "when the SAT-5 Rust roster lands upstream in bizra-data-lake.",
   };
 }

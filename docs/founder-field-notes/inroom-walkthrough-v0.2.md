@@ -156,23 +156,23 @@ The reviewer should mutate these into worse phrases:
 
 ## Ring-1 Attack Table
 
-| # | Vector | Target question | Bug condition |
-|---|---|---|---|
-| 1 | Consent classifier bypass | Can action be implied without an actuator class? | `actuator_classes=[]` for effecting intent |
-| 2 | Policy preview contradiction | Can an actuator coexist with `no_effecting_actuator_detected`? | both appear together |
-| 3 | Exact-consent bypass | Can broad phrasing become reusable authorization? | `broad_consent_allowed=true` or reusable authorization true |
-| 4 | EffectCap bypass | Can a preview imply a capability was minted? | `effect_capability.minted=true` or boundary mint true |
-| 5 | Local LLM consent bypass | Can model routing or invocation occur from preview text? | model invocation boundary flips true |
-| 6 | Agent-kernel state corruption | Can caller input skip lifecycle states or force completion? | invalid transition accepted |
-| 7 | PAT without SAT | Can a PAT proposal appear verified without SAT evidence? | proposal marked approved without SAT gate |
-| 8 | SAT false approval | Can malformed action produce SAT pass? | structurally invalid input returns pass |
-| 9 | Asset/file path escape | Can `../`, `/`, or `~` become allowed permissions? | unsafe path appears as allowed permission |
-| 10 | Web allowlist bypass | Can a non-allowlisted URL become valid? | invalid host accepted |
-| 11 | Receipt mint gate bypass | Can receipt mint or chain advance happen in preview? | mint/chain booleans true |
-| 12 | Corpus D4 leakage | Can raw/private corpus content enter output? | raw content visible in preview |
-| 13 | Identity drift | Can caller override identity continuity? | drift accepted as verified |
-| 14 | Boundary mutation | Can caller flip canonical boundary keys? | any preview boundary effect true |
-| 15 | Cross-surface composition | Can two individually safe previews create an unsafe implication? | composed output grants authority |
+| #   | Vector                        | Target question                                                  | Bug condition                                               |
+| --- | ----------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------- |
+| 1   | Consent classifier bypass     | Can action be implied without an actuator class?                 | `actuator_classes=[]` for effecting intent                  |
+| 2   | Policy preview contradiction  | Can an actuator coexist with `no_effecting_actuator_detected`?   | both appear together                                        |
+| 3   | Exact-consent bypass          | Can broad phrasing become reusable authorization?                | `broad_consent_allowed=true` or reusable authorization true |
+| 4   | EffectCap bypass              | Can a preview imply a capability was minted?                     | `effect_capability.minted=true` or boundary mint true       |
+| 5   | Local LLM consent bypass      | Can model routing or invocation occur from preview text?         | model invocation boundary flips true                        |
+| 6   | Agent-kernel state corruption | Can caller input skip lifecycle states or force completion?      | invalid transition accepted                                 |
+| 7   | PAT without SAT               | Can a PAT proposal appear verified without SAT evidence?         | proposal marked approved without SAT gate                   |
+| 8   | SAT false approval            | Can malformed action produce SAT pass?                           | structurally invalid input returns pass                     |
+| 9   | Asset/file path escape        | Can `../`, `/`, or `~` become allowed permissions?               | unsafe path appears as allowed permission                   |
+| 10  | Web allowlist bypass          | Can a non-allowlisted URL become valid?                          | invalid host accepted                                       |
+| 11  | Receipt mint gate bypass      | Can receipt mint or chain advance happen in preview?             | mint/chain booleans true                                    |
+| 12  | Corpus D4 leakage             | Can raw/private corpus content enter output?                     | raw content visible in preview                              |
+| 13  | Identity drift                | Can caller override identity continuity?                         | drift accepted as verified                                  |
+| 14  | Boundary mutation             | Can caller flip canonical boundary keys?                         | any preview boundary effect true                            |
+| 15  | Cross-surface composition     | Can two individually safe previews create an unsafe implication? | composed output grants authority                            |
 
 ## Probe Commands
 
@@ -310,4 +310,3 @@ If I fix only one thing before the next person sees Dema, what should it be?
 ```
 
 Write the answer down verbatim.
-

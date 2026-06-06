@@ -84,6 +84,7 @@ The dynamic imports keep the cold-start path for non-bare invocations (e.g., `de
 The `npm run check` integration runs `help-discovery` against the CLI surface. Bare `dema` already has a help entry. Phase_05 does not introduce a new command name, so the help-discovery check remains green without any TESTING.md / help entry edits.
 
 **Critical:** if a future v0.2 introduces `dema tui` as an explicit subcommand alongside the bare `dema` route (per phase_07), it would require:
+
 1. A new HELP entry (`apps/cli/src/help.js` or equivalent).
 2. A new TESTING.md row.
 3. A new smoke-cli-match entry.
@@ -109,14 +110,14 @@ Pretty-printing is chosen for human-pipe-friendliness (e.g., `dema | less`). Pha
 
 ## 5.6 · Backwards compatibility
 
-| Existing behavior | Preserved? |
-|---|---|
-| `dema --help` | YES |
-| `dema --version` | YES |
-| `dema receipts` and all 45 other subcommands | YES |
-| `dema status` JSON output | YES |
-| Cold start for `dema receipts` ≤ 50ms | YES (dynamic import scoped to bare-invocation branch) |
-| Behavior under CI (no TTY) | CHANGED · now emits homebase JSON instead of the active-kernel banner |
+| Existing behavior                            | Preserved?                                                            |
+| -------------------------------------------- | --------------------------------------------------------------------- |
+| `dema --help`                                | YES                                                                   |
+| `dema --version`                             | YES                                                                   |
+| `dema receipts` and all 45 other subcommands | YES                                                                   |
+| `dema status` JSON output                    | YES                                                                   |
+| Cold start for `dema receipts` ≤ 50ms        | YES (dynamic import scoped to bare-invocation branch)                 |
+| Behavior under CI (no TTY)                   | CHANGED · now emits homebase JSON instead of the active-kernel banner |
 
 The change-of-CI-behavior is intentional and audited:
 
@@ -175,13 +176,14 @@ TDD-45  bare `dema` followed by `q` exits 0 within 1s (smoke render + dismiss)
 
 ## 5.10 · LOC budget
 
-| Mutation site | Estimated LOC delta |
-|---|---|
-| apps/cli/src/index.js (bareInvocationHandler) | +25 |
-| scripts/smoke-boundary.js | +15 |
-| **Subtotal phase_05** | **+40** |
+| Mutation site                                 | Estimated LOC delta |
+| --------------------------------------------- | ------------------- |
+| apps/cli/src/index.js (bareInvocationHandler) | +25                 |
+| scripts/smoke-boundary.js                     | +15                 |
+| **Subtotal phase_05**                         | **+40**             |
 
 Total bundle LOC (phase_02..05): ~317 (phase_04) + ~150 (phase_02) + ~100 (phase_03 helpers) + ~40 (phase_05) = **~607**. Higher than the v0.1 spec's ~400 estimate; primarily from phase_04 Ink components. Worth flagging at impl-GO time; possible mitigations:
+
 - Combine 4 status sub-components into one
 - Defer memory-browser subscreen to v0.2 (saves ~50 LOC)
 - Use Ink's `<Box>` defaults more aggressively to drop per-component wrapper LOC

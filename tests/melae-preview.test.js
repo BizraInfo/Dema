@@ -6,7 +6,7 @@ import {
   buildSapeScorecardPreview,
   DEFAULT_MELAE_FLOOR,
   evaluateMelaeGatePreview,
-  SAPE_PROBES
+  SAPE_PROBES,
 } from "../packages/verifier/src/melae-preview.js";
 
 const fixedNow = new Date("2026-05-15T00:00:00.000Z");
@@ -15,7 +15,7 @@ function passingProbeScores(score = 0.97) {
   return SAPE_PROBES.map((probe) => ({
     probe_id: probe.id,
     score,
-    notes: [`${probe.id} passed in preview`]
+    notes: [`${probe.id} passed in preview`],
   }));
 }
 
@@ -31,19 +31,19 @@ test("SAPE probe registry is complete and normalized", () => {
       "compression",
       "expansion",
       "adversarial",
-      "ethical_overlay"
-    ]
+      "ethical_overlay",
+    ],
   );
   assert.equal(
     SAPE_PROBES.reduce((total, probe) => total + probe.weight, 0).toFixed(2),
-    "1.00"
+    "1.00",
   );
 });
 
 test("buildSapeScorecardPreview emits deterministic preview scorecard", () => {
   const scorecard = buildSapeScorecardPreview({
     probeScores: passingProbeScores(),
-    now: fixedNow
+    now: fixedNow,
   });
 
   assert.equal(scorecard.schema, "bizra.dema.sape_scorecard_preview.v0.1");
@@ -57,7 +57,7 @@ test("buildSapeScorecardPreview emits deterministic preview scorecard", () => {
 
   const second = buildSapeScorecardPreview({
     probeScores: passingProbeScores(),
-    now: fixedNow
+    now: fixedNow,
   });
   assert.equal(second.scorecard_digest, scorecard.scorecard_digest);
 });
@@ -65,7 +65,7 @@ test("buildSapeScorecardPreview emits deterministic preview scorecard", () => {
 test("buildSapeScorecardPreview fails closed for missing or malformed probes", () => {
   const missing = buildSapeScorecardPreview({
     probeScores: passingProbeScores().slice(1),
-    now: fixedNow
+    now: fixedNow,
   });
   assert.equal(missing.verdict, "PREVIEW_REJECT");
   assert.deepEqual(missing.missing_probe_ids, ["counterfactual"]);
@@ -73,9 +73,9 @@ test("buildSapeScorecardPreview fails closed for missing or malformed probes", (
   const malformed = buildSapeScorecardPreview({
     probeScores: [
       ...passingProbeScores().slice(0, -1),
-      { probe_id: "ethical_overlay", score: Number.NaN }
+      { probe_id: "ethical_overlay", score: Number.NaN },
     ],
-    now: fixedNow
+    now: fixedNow,
   });
   assert.equal(malformed.verdict, "PREVIEW_REJECT");
   assert.equal(malformed.probes.at(-1).score, null);
@@ -86,7 +86,7 @@ test("evaluateMelaeGatePreview requires SAPE, SNR, and Ihsan floors", () => {
     probeScores: passingProbeScores(),
     snr: 0.98,
     ihsan: 0.96,
-    now: fixedNow
+    now: fixedNow,
   });
   assert.equal(accepted.schema, "bizra.dema.melae_gate_preview.v0.1");
   assert.equal(accepted.floor, DEFAULT_MELAE_FLOOR);
@@ -97,18 +97,27 @@ test("evaluateMelaeGatePreview requires SAPE, SNR, and Ihsan floors", () => {
     probeScores: passingProbeScores(),
     snr: 0.94,
     ihsan: 0.96,
-    now: fixedNow
+    now: fixedNow,
   });
   assert.equal(rejected.verdict, "PREVIEW_REJECT");
-  assert.equal(rejected.checks.find((check) => check.check === "snr_floor_met").pass, false);
+  assert.equal(
+    rejected.checks.find((check) => check.check === "snr_floor_met").pass,
+    false,
+  );
 });
 
 test("MELAE preview source has no runtime, network, or filesystem side effects", async () => {
   const source = await readFile(
     new URL("../packages/verifier/src/melae-preview.js", import.meta.url),
-    "utf8"
+    "utf8",
   );
 
-  assert.doesNotMatch(source, /\b(writeFile|appendFile|mkdir|rename|unlink|createWriteStream)\b/);
-  assert.doesNotMatch(source, /\b(fetch|WebSocket|exec|execFile|spawn|spawnSync)\b/);
+  assert.doesNotMatch(
+    source,
+    /\b(writeFile|appendFile|mkdir|rename|unlink|createWriteStream)\b/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(fetch|WebSocket|exec|execFile|spawn|spawnSync)\b/,
+  );
 });

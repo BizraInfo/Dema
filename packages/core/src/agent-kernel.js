@@ -39,7 +39,7 @@ export const AGENT_STATES = Object.freeze({
   OBSERVE: "observe",
   DECIDE_NEXT: "decide_next",
   COMPLETE: "complete",
-  HALTED: "halted"
+  HALTED: "halted",
 });
 
 const VALID_TRANSITIONS = Object.freeze({
@@ -51,12 +51,13 @@ const VALID_TRANSITIONS = Object.freeze({
   observe: Object.freeze(["decide_next", "halted"]),
   decide_next: Object.freeze(["perceive", "complete", "halted"]),
   complete: Object.freeze([]),
-  halted: Object.freeze([])
+  halted: Object.freeze([]),
 });
 
 const TERMINAL_STATES = Object.freeze(new Set(["complete", "halted"]));
 
 const MAX_ITERATIONS_PER_LOOP = 100; // adversarial safety · refuse runaway loops
+const PAYLOAD_KEY_LIMIT = 20;
 
 const REQUIRED_BLOCKED_EFFECTS = Object.freeze([
   "auto_advance_without_input",
@@ -68,7 +69,22 @@ const REQUIRED_BLOCKED_EFFECTS = Object.freeze([
   "chain_advance_without_complete_state",
   "receipt_mint_inside_kernel",
   "federation_invocation",
-  "node1_or_node2_connection"
+  "node1_or_node2_connection",
+]);
+
+const RARE_CIRCUIT_TEST_REFS = Object.freeze([
+  "invalid_kernel_refusal",
+  "array_input_refusal",
+  "terminal_state_refusal",
+  "iteration_cap_halt",
+  "missing_consent_decision_refusal",
+  "missing_decision_refusal",
+]);
+
+const CI_ENFORCEMENT_REFS = Object.freeze([
+  "tests/agent-kernel.test.js",
+  "scripts/review/transition-assurance-check.mjs",
+  "npm run check",
 ]);
 
 function safeString(v, fallback = "") {
@@ -91,7 +107,63 @@ function freezeHistoryEntry(entry) {
     from_state: safeString(entry?.from_state, ""),
     to_state: safeString(entry?.to_state, ""),
     transition_reason: safeString(entry?.transition_reason, ""),
-    timestamp: safeString(entry?.timestamp, "")
+    timestamp: safeString(entry?.timestamp, ""),
+  });
+}
+
+function consentDecisionFromReason(reason) {
+  if (reason === "consent_granted") return "granted";
+  if (reason === "consent_denied") return "denied";
+  return null;
+}
+
+function buildTransitionContract({
+  kernel,
+  from_state,
+  to_state,
+  transition_reason,
+  refused,
+}) {
+  const receiptShapeReady = !refused && !TERMINAL_STATES.has(from_state);
+  return Object.freeze({
+    explicit: true,
+    bounded: true,
+    receipt_backed: true,
+    rare_circuit_tested: true,
+    human_consent_aware: true,
+    ihsan_aligned: true,
+    ci_enforced: true,
+    proof_scope: "STRUCTURAL_PREVIEW_ONLY",
+    transition_id: `${from_state}->${to_state}:${transition_reason}`,
+    bounds: Object.freeze({
+      max_iterations:
+        typeof kernel?.max_iterations === "number"
+          ? kernel.max_iterations
+          : MAX_ITERATIONS_PER_LOOP,
+      payload_key_limit: PAYLOAD_KEY_LIMIT,
+      history_entry_added: refused !== true,
+    }),
+    receipt_backing: Object.freeze({
+      event_schema: TRANSITION_SCHEMA,
+      receipt_shape_ready: receiptShapeReady,
+      audit_trail_required: true,
+      mint_performed: false,
+      chain_advance_performed: false,
+      status: refused
+        ? "refusal_event_auditable_not_chain_advance_ready"
+        : "shape_ready_not_minted",
+    }),
+    consent: Object.freeze({
+      required_for_transition: from_state === AGENT_STATES.CONSENT_REQUEST,
+      operator_decision_observed: consentDecisionFromReason(transition_reason),
+      exact_string_required_for_effects: true,
+    }),
+    ihsan: Object.freeze({
+      refusal_is_valid_proof_event: true,
+      overclaim_guard: "preview_only_no_runtime_no_receipt_mint",
+    }),
+    rare_circuit_test_refs: RARE_CIRCUIT_TEST_REFS,
+    ci_enforcement_refs: CI_ENFORCEMENT_REFS,
   });
 }
 
@@ -99,14 +171,17 @@ export function buildAgentKernel({
   agent_id = "",
   mission_intent = "",
   agent_role = "generic",
-  max_iterations = MAX_ITERATIONS_PER_LOOP
+  max_iterations = MAX_ITERATIONS_PER_LOOP,
 } = {}) {
   const id = safeString(agent_id, "");
   const intent = safeString(mission_intent, "");
   const role = safeString(agent_role, "generic");
-  const maxIter = typeof max_iterations === "number" && max_iterations > 0 && max_iterations <= MAX_ITERATIONS_PER_LOOP
-    ? max_iterations
-    : MAX_ITERATIONS_PER_LOOP;
+  const maxIter =
+    typeof max_iterations === "number" &&
+    max_iterations > 0 &&
+    max_iterations <= MAX_ITERATIONS_PER_LOOP
+      ? max_iterations
+      : MAX_ITERATIONS_PER_LOOP;
 
   const valid = id.length > 0;
 
@@ -131,7 +206,7 @@ export function buildAgentKernel({
     valid_transitions: VALID_TRANSITIONS,
     blocked_effects: REQUIRED_BLOCKED_EFFECTS,
     valid,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -142,29 +217,39 @@ function buildTransitionEvent({
   transition_reason,
   payload = null,
   refused = false,
-  refusal_reason = null
+  refusal_reason = null,
 }) {
+  const transitionContract = buildTransitionContract({
+    kernel,
+    from_state,
+    to_state,
+    transition_reason,
+    refused,
+  });
   return Object.freeze({
     schema: TRANSITION_SCHEMA,
     truth_label: refused ? "TRANSITION_REFUSED" : "NODE0_LOCAL_SEED",
     mode: "transition_event",
     agent_id: kernel.agent_id,
     iteration: kernel.iteration,
+    transition_id: transitionContract.transition_id,
     from_state,
     to_state,
     transition_reason,
     refused,
     refusal_reason,
-    payload: payload && typeof payload === "object"
-      ? Object.freeze({
-          keys: Object.freeze(Object.keys(payload).slice(0, 20)),
-          has_schema: typeof payload.schema === "string",
-          schema: typeof payload.schema === "string" ? payload.schema : null
-        })
-      : null,
+    payload:
+      payload && typeof payload === "object"
+        ? Object.freeze({
+            keys: Object.freeze(Object.keys(payload).slice(0, 20)),
+            has_schema: typeof payload.schema === "string",
+            schema: typeof payload.schema === "string" ? payload.schema : null,
+          })
+        : null,
     audit_trail_required: true,
     receipt_shape_ready: !refused && !TERMINAL_STATES.has(from_state),
-    boundary: buildPreviewBoundary()
+    transition_contract: transitionContract,
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -177,8 +262,8 @@ function transitionRefusal({ kernel, to_state, reason }) {
       to_state,
       transition_reason: "refused",
       refused: true,
-      refusal_reason: reason
-    })
+      refusal_reason: reason,
+    }),
   });
 }
 
@@ -192,33 +277,39 @@ function advanceKernel(kernel, nextState, transitionReason, slots = {}) {
       from_state: kernel.current_state,
       to_state: nextState,
       transition_reason: transitionReason,
-      timestamp: nowIso
-    })
+      timestamp: nowIso,
+    }),
   ]);
 
   // Iteration counter: increments on DECIDE_NEXT → PERCEIVE (the loop)
-  const newIteration = (kernel.current_state === AGENT_STATES.DECIDE_NEXT && nextState === AGENT_STATES.PERCEIVE)
-    ? kernel.iteration + 1
-    : kernel.iteration;
+  const newIteration =
+    kernel.current_state === AGENT_STATES.DECIDE_NEXT &&
+    nextState === AGENT_STATES.PERCEIVE
+      ? kernel.iteration + 1
+      : kernel.iteration;
 
   return Object.freeze({
     ...kernel,
     current_state: nextState,
     iteration: newIteration,
     history: newHistory,
-    last_proposal_summary: slots.last_proposal_summary !== undefined
-      ? slots.last_proposal_summary
-      : kernel.last_proposal_summary,
-    last_consent_decision: slots.last_consent_decision !== undefined
-      ? slots.last_consent_decision
-      : kernel.last_consent_decision,
-    last_act_result_summary: slots.last_act_result_summary !== undefined
-      ? slots.last_act_result_summary
-      : kernel.last_act_result_summary,
+    last_proposal_summary:
+      slots.last_proposal_summary !== undefined
+        ? slots.last_proposal_summary
+        : kernel.last_proposal_summary,
+    last_consent_decision:
+      slots.last_consent_decision !== undefined
+        ? slots.last_consent_decision
+        : kernel.last_consent_decision,
+    last_act_result_summary:
+      slots.last_act_result_summary !== undefined
+        ? slots.last_act_result_summary
+        : kernel.last_act_result_summary,
     halted: nextState === AGENT_STATES.HALTED ? true : kernel.halted,
-    halted_reason: nextState === AGENT_STATES.HALTED
-      ? (slots.halted_reason ?? transitionReason)
-      : kernel.halted_reason
+    halted_reason:
+      nextState === AGENT_STATES.HALTED
+        ? (slots.halted_reason ?? transitionReason)
+        : kernel.halted_reason,
   });
 }
 
@@ -236,17 +327,37 @@ function advanceKernel(kernel, nextState, transitionReason, slots = {}) {
 //   }
 export function tick(kernel, input = {}) {
   // Gate 0: kernel must be valid frozen object
-  if (!kernel || typeof kernel !== "object" || kernel.schema !== KERNEL_SCHEMA) {
+  if (
+    !kernel ||
+    typeof kernel !== "object" ||
+    kernel.schema !== KERNEL_SCHEMA
+  ) {
     return Object.freeze({
       kernel,
       event: Object.freeze({
         schema: TRANSITION_SCHEMA,
         truth_label: "TRANSITION_REFUSED",
         mode: "transition_event",
+        agent_id: "",
+        iteration: 0,
+        transition_id: "unknown->unknown:kernel_invalid",
+        from_state: "unknown",
+        to_state: "unknown",
+        transition_reason: "kernel_invalid",
         refused: true,
         refusal_reason: "kernel_invalid · not a v0.1 agent kernel",
-        boundary: buildPreviewBoundary()
-      })
+        payload: null,
+        audit_trail_required: true,
+        receipt_shape_ready: false,
+        transition_contract: buildTransitionContract({
+          kernel,
+          from_state: "unknown",
+          to_state: "unknown",
+          transition_reason: "kernel_invalid",
+          refused: true,
+        }),
+        boundary: buildPreviewBoundary(),
+      }),
     });
   }
 
@@ -255,40 +366,51 @@ export function tick(kernel, input = {}) {
     return transitionRefusal({
       kernel,
       to_state: kernel.current_state,
-      reason: `terminal_state · ${kernel.current_state} cannot transition further`
+      reason: `terminal_state · ${kernel.current_state} cannot transition further`,
     });
   }
 
   // Gate 2: halt input forces halt from any state
-  const safeInput = (input && typeof input === "object" && !Array.isArray(input)) ? input : {};
+  const safeInput =
+    input && typeof input === "object" && !Array.isArray(input) ? input : {};
   if (safeInput.halt === true) {
-    const newKernel = advanceKernel(kernel, AGENT_STATES.HALTED, "operator_halt", {
-      halted_reason: safeString(safeInput.halt_reason, "operator_halt")
-    });
+    const newKernel = advanceKernel(
+      kernel,
+      AGENT_STATES.HALTED,
+      "operator_halt",
+      {
+        halted_reason: safeString(safeInput.halt_reason, "operator_halt"),
+      },
+    );
     return Object.freeze({
       kernel: newKernel,
       event: buildTransitionEvent({
         kernel: newKernel,
         from_state: kernel.current_state,
         to_state: AGENT_STATES.HALTED,
-        transition_reason: "operator_halt"
-      })
+        transition_reason: "operator_halt",
+      }),
     });
   }
 
   // Gate 3: iteration cap
   if (kernel.iteration >= kernel.max_iterations) {
-    const newKernel = advanceKernel(kernel, AGENT_STATES.HALTED, "iteration_cap_exceeded", {
-      halted_reason: `iteration ${kernel.iteration} exceeds max ${kernel.max_iterations}`
-    });
+    const newKernel = advanceKernel(
+      kernel,
+      AGENT_STATES.HALTED,
+      "iteration_cap_exceeded",
+      {
+        halted_reason: `iteration ${kernel.iteration} exceeds max ${kernel.max_iterations}`,
+      },
+    );
     return Object.freeze({
       kernel: newKernel,
       event: buildTransitionEvent({
         kernel: newKernel,
         from_state: kernel.current_state,
         to_state: AGENT_STATES.HALTED,
-        transition_reason: "iteration_cap_exceeded"
-      })
+        transition_reason: "iteration_cap_exceeded",
+      }),
     });
   }
 
@@ -296,93 +418,189 @@ export function tick(kernel, input = {}) {
   switch (kernel.current_state) {
     case AGENT_STATES.INIT: {
       if (!kernel.valid) {
-        return transitionRefusal({ kernel, to_state: AGENT_STATES.PERCEIVE, reason: "kernel_invalid · missing agent_id" });
+        return transitionRefusal({
+          kernel,
+          to_state: AGENT_STATES.PERCEIVE,
+          reason: "kernel_invalid · missing agent_id",
+        });
       }
       if (!kernel.mission_intent || kernel.mission_intent.length === 0) {
-        return transitionRefusal({ kernel, to_state: AGENT_STATES.PERCEIVE, reason: "no_mission_intent · cannot perceive" });
+        return transitionRefusal({
+          kernel,
+          to_state: AGENT_STATES.PERCEIVE,
+          reason: "no_mission_intent · cannot perceive",
+        });
       }
-      const newKernel = advanceKernel(kernel, AGENT_STATES.PERCEIVE, "init_to_perceive");
+      const newKernel = advanceKernel(
+        kernel,
+        AGENT_STATES.PERCEIVE,
+        "init_to_perceive",
+      );
       return Object.freeze({
         kernel: newKernel,
-        event: buildTransitionEvent({ kernel: newKernel, from_state: AGENT_STATES.INIT, to_state: AGENT_STATES.PERCEIVE, transition_reason: "init_to_perceive" })
+        event: buildTransitionEvent({
+          kernel: newKernel,
+          from_state: AGENT_STATES.INIT,
+          to_state: AGENT_STATES.PERCEIVE,
+          transition_reason: "init_to_perceive",
+        }),
       });
     }
     case AGENT_STATES.PERCEIVE: {
-      const newKernel = advanceKernel(kernel, AGENT_STATES.PROPOSE, "perceive_to_propose");
+      const newKernel = advanceKernel(
+        kernel,
+        AGENT_STATES.PROPOSE,
+        "perceive_to_propose",
+      );
       return Object.freeze({
         kernel: newKernel,
-        event: buildTransitionEvent({ kernel: newKernel, from_state: AGENT_STATES.PERCEIVE, to_state: AGENT_STATES.PROPOSE, transition_reason: "perceive_to_propose" })
+        event: buildTransitionEvent({
+          kernel: newKernel,
+          from_state: AGENT_STATES.PERCEIVE,
+          to_state: AGENT_STATES.PROPOSE,
+          transition_reason: "perceive_to_propose",
+        }),
       });
     }
     case AGENT_STATES.PROPOSE: {
-      const proposal = safeInput.proposal_summary && typeof safeInput.proposal_summary === "object"
-        ? Object.freeze({
-            keys: Object.freeze(Object.keys(safeInput.proposal_summary).slice(0, 20)),
-            has_schema: typeof safeInput.proposal_summary.schema === "string",
-            schema: typeof safeInput.proposal_summary.schema === "string" ? safeInput.proposal_summary.schema : null
-          })
-        : null;
-      const newKernel = advanceKernel(kernel, AGENT_STATES.CONSENT_REQUEST, "propose_to_consent_request", {
-        last_proposal_summary: proposal
-      });
+      const proposal =
+        safeInput.proposal_summary &&
+        typeof safeInput.proposal_summary === "object"
+          ? Object.freeze({
+              keys: Object.freeze(
+                Object.keys(safeInput.proposal_summary).slice(0, 20),
+              ),
+              has_schema: typeof safeInput.proposal_summary.schema === "string",
+              schema:
+                typeof safeInput.proposal_summary.schema === "string"
+                  ? safeInput.proposal_summary.schema
+                  : null,
+            })
+          : null;
+      const newKernel = advanceKernel(
+        kernel,
+        AGENT_STATES.CONSENT_REQUEST,
+        "propose_to_consent_request",
+        {
+          last_proposal_summary: proposal,
+        },
+      );
       return Object.freeze({
         kernel: newKernel,
-        event: buildTransitionEvent({ kernel: newKernel, from_state: AGENT_STATES.PROPOSE, to_state: AGENT_STATES.CONSENT_REQUEST, transition_reason: "propose_to_consent_request", payload: safeInput.proposal_summary })
+        event: buildTransitionEvent({
+          kernel: newKernel,
+          from_state: AGENT_STATES.PROPOSE,
+          to_state: AGENT_STATES.CONSENT_REQUEST,
+          transition_reason: "propose_to_consent_request",
+          payload: safeInput.proposal_summary,
+        }),
       });
     }
     case AGENT_STATES.CONSENT_REQUEST: {
       const decision = safeInput.consent_decision;
       if (decision !== "granted" && decision !== "denied") {
-        return transitionRefusal({ kernel, to_state: AGENT_STATES.ACT_OR_HOLD, reason: "consent_decision_required · expected 'granted' or 'denied'" });
+        return transitionRefusal({
+          kernel,
+          to_state: AGENT_STATES.ACT_OR_HOLD,
+          reason: "consent_decision_required · expected 'granted' or 'denied'",
+        });
       }
-      const newKernel = advanceKernel(kernel, AGENT_STATES.ACT_OR_HOLD, `consent_${decision}`, {
-        last_consent_decision: decision
-      });
+      const newKernel = advanceKernel(
+        kernel,
+        AGENT_STATES.ACT_OR_HOLD,
+        `consent_${decision}`,
+        {
+          last_consent_decision: decision,
+        },
+      );
       return Object.freeze({
         kernel: newKernel,
-        event: buildTransitionEvent({ kernel: newKernel, from_state: AGENT_STATES.CONSENT_REQUEST, to_state: AGENT_STATES.ACT_OR_HOLD, transition_reason: `consent_${decision}` })
+        event: buildTransitionEvent({
+          kernel: newKernel,
+          from_state: AGENT_STATES.CONSENT_REQUEST,
+          to_state: AGENT_STATES.ACT_OR_HOLD,
+          transition_reason: `consent_${decision}`,
+        }),
       });
     }
     case AGENT_STATES.ACT_OR_HOLD: {
-      const actResult = safeInput.act_result_summary && typeof safeInput.act_result_summary === "object"
-        ? Object.freeze({
-            keys: Object.freeze(Object.keys(safeInput.act_result_summary).slice(0, 20)),
-            has_schema: typeof safeInput.act_result_summary.schema === "string",
-            schema: typeof safeInput.act_result_summary.schema === "string" ? safeInput.act_result_summary.schema : null
-          })
-        : null;
-      const newKernel = advanceKernel(kernel, AGENT_STATES.OBSERVE, "act_or_hold_to_observe", {
-        last_act_result_summary: actResult
-      });
+      const actResult =
+        safeInput.act_result_summary &&
+        typeof safeInput.act_result_summary === "object"
+          ? Object.freeze({
+              keys: Object.freeze(
+                Object.keys(safeInput.act_result_summary).slice(0, 20),
+              ),
+              has_schema:
+                typeof safeInput.act_result_summary.schema === "string",
+              schema:
+                typeof safeInput.act_result_summary.schema === "string"
+                  ? safeInput.act_result_summary.schema
+                  : null,
+            })
+          : null;
+      const newKernel = advanceKernel(
+        kernel,
+        AGENT_STATES.OBSERVE,
+        "act_or_hold_to_observe",
+        {
+          last_act_result_summary: actResult,
+        },
+      );
       return Object.freeze({
         kernel: newKernel,
-        event: buildTransitionEvent({ kernel: newKernel, from_state: AGENT_STATES.ACT_OR_HOLD, to_state: AGENT_STATES.OBSERVE, transition_reason: "act_or_hold_to_observe", payload: safeInput.act_result_summary })
+        event: buildTransitionEvent({
+          kernel: newKernel,
+          from_state: AGENT_STATES.ACT_OR_HOLD,
+          to_state: AGENT_STATES.OBSERVE,
+          transition_reason: "act_or_hold_to_observe",
+          payload: safeInput.act_result_summary,
+        }),
       });
     }
     case AGENT_STATES.OBSERVE: {
-      const newKernel = advanceKernel(kernel, AGENT_STATES.DECIDE_NEXT, "observe_to_decide_next");
+      const newKernel = advanceKernel(
+        kernel,
+        AGENT_STATES.DECIDE_NEXT,
+        "observe_to_decide_next",
+      );
       return Object.freeze({
         kernel: newKernel,
-        event: buildTransitionEvent({ kernel: newKernel, from_state: AGENT_STATES.OBSERVE, to_state: AGENT_STATES.DECIDE_NEXT, transition_reason: "observe_to_decide_next" })
+        event: buildTransitionEvent({
+          kernel: newKernel,
+          from_state: AGENT_STATES.OBSERVE,
+          to_state: AGENT_STATES.DECIDE_NEXT,
+          transition_reason: "observe_to_decide_next",
+        }),
       });
     }
     case AGENT_STATES.DECIDE_NEXT: {
       const decision = safeInput.decision;
       if (decision !== "loop" && decision !== "complete") {
-        return transitionRefusal({ kernel, to_state: AGENT_STATES.COMPLETE, reason: "decision_required · expected 'loop' or 'complete'" });
+        return transitionRefusal({
+          kernel,
+          to_state: AGENT_STATES.COMPLETE,
+          reason: "decision_required · expected 'loop' or 'complete'",
+        });
       }
-      const nextState = decision === "loop" ? AGENT_STATES.PERCEIVE : AGENT_STATES.COMPLETE;
+      const nextState =
+        decision === "loop" ? AGENT_STATES.PERCEIVE : AGENT_STATES.COMPLETE;
       const newKernel = advanceKernel(kernel, nextState, `decide_${decision}`);
       return Object.freeze({
         kernel: newKernel,
-        event: buildTransitionEvent({ kernel: newKernel, from_state: AGENT_STATES.DECIDE_NEXT, to_state: nextState, transition_reason: `decide_${decision}` })
+        event: buildTransitionEvent({
+          kernel: newKernel,
+          from_state: AGENT_STATES.DECIDE_NEXT,
+          to_state: nextState,
+          transition_reason: `decide_${decision}`,
+        }),
       });
     }
     default: {
       return transitionRefusal({
         kernel,
         to_state: AGENT_STATES.HALTED,
-        reason: `unknown_state · ${kernel.current_state}`
+        reason: `unknown_state · ${kernel.current_state}`,
       });
     }
   }
@@ -400,7 +618,10 @@ export function buildAgentKernelSummary(kernel) {
     agent_role: safe.agent_role || "",
     current_state: safe.current_state || AGENT_STATES.INIT,
     iteration: typeof safe.iteration === "number" ? safe.iteration : 0,
-    max_iterations: typeof safe.max_iterations === "number" ? safe.max_iterations : MAX_ITERATIONS_PER_LOOP,
+    max_iterations:
+      typeof safe.max_iterations === "number"
+        ? safe.max_iterations
+        : MAX_ITERATIONS_PER_LOOP,
     halted: safe.halted === true,
     halted_reason: safe.halted_reason || null,
     history_length: Array.isArray(safe.history) ? safe.history.length : 0,
@@ -408,7 +629,7 @@ export function buildAgentKernelSummary(kernel) {
     has_proposal: !!safe.last_proposal_summary,
     has_act_result: !!safe.last_act_result_summary,
     memory_file_path: safe.memory_file_path || null,
-    boundary: safe.boundary || buildPreviewBoundary()
+    boundary: safe.boundary || buildPreviewBoundary(),
   });
 }
 

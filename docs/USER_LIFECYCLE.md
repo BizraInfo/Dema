@@ -94,13 +94,13 @@ dema status
 
 Read the output as a traffic light:
 
-| Field | What it means |
-|---|---|
-| `Ready` | Whether Dema sees enough local Node0 readiness. |
-| `Console ready` | Whether the operator console path appears ready. |
-| `Activation gate` | Whether action is blocked or waiting for explicit GO. |
-| `Daemon` | Must not show a hidden running daemon for the safe default. |
-| `Findings` | Plain-language reasons for any blocked state. |
+| Field             | What it means                                               |
+| ----------------- | ----------------------------------------------------------- |
+| `Ready`           | Whether Dema sees enough local Node0 readiness.             |
+| `Console ready`   | Whether the operator console path appears ready.            |
+| `Activation gate` | Whether action is blocked or waiting for explicit GO.       |
+| `Daemon`          | Must not show a hidden running daemon for the safe default. |
+| `Findings`        | Plain-language reasons for any blocked state.               |
 
 If readiness is blocked, that is not a failure. It is Dema refusing to pretend.
 
@@ -220,12 +220,12 @@ dema receipts
 
 ## Troubleshooting in plain language
 
-| Message | Plain meaning | Safe response |
-|---|---|---|
-| `Node0 adapter not connected` | The deeper runtime is not connected. | Continue with previews or ask a technical operator to connect Node0. |
-| `Activation gate: BLOCKED` | Dema will not act yet. | Read the findings and fix prerequisites first. |
-| `No receipts found` | There are no local receipt files. | Run `dema setup`; then check whether a governed runtime produced a handoff. |
-| `doctor` fails | Dema found a safety or readiness gap. | Treat the failure as useful protection. |
+| Message                       | Plain meaning                         | Safe response                                                               |
+| ----------------------------- | ------------------------------------- | --------------------------------------------------------------------------- |
+| `Node0 adapter not connected` | The deeper runtime is not connected.  | Continue with previews or ask a technical operator to connect Node0.        |
+| `Activation gate: BLOCKED`    | Dema will not act yet.                | Read the findings and fix prerequisites first.                              |
+| `No receipts found`           | There are no local receipt files.     | Run `dema setup`; then check whether a governed runtime produced a handoff. |
+| `doctor` fails                | Dema found a safety or readiness gap. | Treat the failure as useful protection.                                     |
 
 ## If you need help
 

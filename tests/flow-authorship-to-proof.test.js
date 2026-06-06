@@ -84,12 +84,7 @@ describe("flow: consent-gated authorship → proof passport (persistent home)", 
       writeFileSync(join(home, "a.txt"), "hello bizra proof");
       const res = runJson(
         home,
-        [
-          "authorship",
-          "sign",
-          join(home, "a.txt"),
-          "--json",
-        ],
+        ["authorship", "sign", join(home, "a.txt"), "--json"],
         { status: 1 },
       );
       assert.equal(res.signed, false);
@@ -232,14 +227,7 @@ describe("flow: consent-gated authorship → proof passport (persistent home)", 
       const passportPath = writePassport(home, { status: 1 });
       const deep = runJson(
         home,
-        [
-          "proof",
-          "passport",
-          "verify",
-          passportPath,
-          "--deep",
-          "--json",
-        ],
+        ["proof", "passport", "verify", passportPath, "--deep", "--json"],
         { status: 1 },
       );
       assert.equal(deep.verified, false);

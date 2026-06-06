@@ -6,7 +6,9 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 function runSetupJson(demaHome) {
   return new Promise((resolve, reject) => {
@@ -15,15 +17,19 @@ function runSetupJson(demaHome) {
       [cliPath, "setup", "--json"],
       {
         env: { ...process.env, DEMA_HOME: demaHome },
-        timeout: 10000
+        timeout: 10000,
       },
       (err, stdout, stderr) => {
         if (err) {
-          reject(new Error(`setup --json failed: ${err.message}\nstdout: ${stdout}\nstderr: ${stderr}`));
+          reject(
+            new Error(
+              `setup --json failed: ${err.message}\nstdout: ${stdout}\nstderr: ${stderr}`,
+            ),
+          );
           return;
         }
         resolve({ stdout, stderr });
-      }
+      },
     );
   });
 }

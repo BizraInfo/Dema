@@ -37,7 +37,7 @@ const CANONICAL_KEY_TYPES = Object.freeze([
   "boundary_marker",
   "lens",
   "lantern",
-  "silence"
+  "silence",
 ]);
 
 const INVARIANT_NAMES = Object.freeze([
@@ -45,13 +45,15 @@ const INVARIANT_NAMES = Object.freeze([
   "certainty_mapping",
   "constructive_reading",
   "opposing_view_search",
-  "boundary_marker"
+  "boundary_marker",
 ]);
 
 function freezeStringArray(arr) {
   if (!Array.isArray(arr)) return Object.freeze([]);
   return Object.freeze(
-    arr.filter((v) => typeof v === "string" && v.length > 0).map((v) => String(v))
+    arr
+      .filter((v) => typeof v === "string" && v.length > 0)
+      .map((v) => String(v)),
   );
 }
 
@@ -65,7 +67,9 @@ function safeBoolean(v, fallback = false) {
 
 function filterCanonicalKeyTypes(arr) {
   if (!Array.isArray(arr)) return Object.freeze([]);
-  const valid = arr.filter((v) => typeof v === "string" && CANONICAL_KEY_TYPES.includes(v));
+  const valid = arr.filter(
+    (v) => typeof v === "string" && CANONICAL_KEY_TYPES.includes(v),
+  );
   // Deduplicate while preserving order
   const seen = new Set();
   const deduped = [];
@@ -81,8 +85,10 @@ function filterCanonicalKeyTypes(arr) {
 // Invariant 1: if any assumed_with_ihsan claim exists, the assumption was named.
 // An empty assumed_with_ihsan trivially passes (no assumption was needed).
 function checkInvariant1AssumptionDeclaration(certainty) {
-  return certainty.assumed_with_ihsan.length === 0 ||
-         certainty.assumed_with_ihsan.every((s) => s.length > 0);
+  return (
+    certainty.assumed_with_ihsan.length === 0 ||
+    certainty.assumed_with_ihsan.every((s) => s.length > 0)
+  );
 }
 
 // Invariant 2: claims are decomposed into V/D/A/U states. At least one
@@ -112,12 +118,17 @@ function checkInvariant3ConstructiveReading(constructiveReadingApplied) {
 // If no critique is present (no opposing_view_examined), invariant is N/A
 // (treated as trivially compliant).
 function checkInvariant4OpposingViewSearch(opposingViewSearch) {
-  if (!opposingViewSearch.view_examined || opposingViewSearch.view_examined.length === 0) {
+  if (
+    !opposingViewSearch.view_examined ||
+    opposingViewSearch.view_examined.length === 0
+  ) {
     return true; // no critique · invariant trivially compliant
   }
   if (!opposingViewSearch.performed) return false;
-  const hasTruthFound = opposingViewSearch.truth_found && opposingViewSearch.truth_found.length > 0;
-  const hasHonestNullDeclaration = opposingViewSearch.searched_and_found_no_articulable_truth === true;
+  const hasTruthFound =
+    opposingViewSearch.truth_found && opposingViewSearch.truth_found.length > 0;
+  const hasHonestNullDeclaration =
+    opposingViewSearch.searched_and_found_no_articulable_truth === true;
   return hasTruthFound || hasHonestNullDeclaration;
 }
 
@@ -126,8 +137,7 @@ function checkInvariant4OpposingViewSearch(opposingViewSearch) {
 // must be non-empty.
 function checkInvariant5BoundaryMarker(certainty, boundaryMarker) {
   const hasUncertainty =
-    certainty.uncertain.length > 0 ||
-    certainty.assumed_with_ihsan.length > 0;
+    certainty.uncertain.length > 0 || certainty.assumed_with_ihsan.length > 0;
   if (!hasUncertainty) return true; // no uncertainty · marker not required
   return boundaryMarker.length > 0;
 }
@@ -144,32 +154,34 @@ export function buildKeyMakerCompliancePreview({
   searched_and_found_no_articulable_truth = false,
   boundary_marker = "",
   micro_consent_scope = "",
-  constructive_reading_applied = true
+  constructive_reading_applied = true,
 } = {}) {
   const certainty = Object.freeze({
     known: freezeStringArray(known),
     uncertain: freezeStringArray(uncertain),
     assumed_with_ihsan: freezeStringArray(assumed_with_ihsan),
-    unknown: freezeStringArray(unknown)
+    unknown: freezeStringArray(unknown),
   });
 
   const opposingViewSearch = Object.freeze({
     performed:
       typeof opposing_view_examined === "string" &&
       opposing_view_examined.length > 0 &&
-      (
-        (typeof opposing_view_truth_found === "string" && opposing_view_truth_found.length > 0) ||
-        searched_and_found_no_articulable_truth === true
-      ),
+      ((typeof opposing_view_truth_found === "string" &&
+        opposing_view_truth_found.length > 0) ||
+        searched_and_found_no_articulable_truth === true),
     view_examined: safeString(opposing_view_examined, ""),
     truth_found: safeString(opposing_view_truth_found, ""),
-    searched_and_found_no_articulable_truth: safeBoolean(searched_and_found_no_articulable_truth, false)
+    searched_and_found_no_articulable_truth: safeBoolean(
+      searched_and_found_no_articulable_truth,
+      false,
+    ),
   });
 
   const microConsent = Object.freeze({
     mutation_authorized: false,
     requires_typed_go: true,
-    scope_named: safeString(micro_consent_scope, "")
+    scope_named: safeString(micro_consent_scope, ""),
   });
 
   const boundaryMarkerSafe = safeString(boundary_marker, "");
@@ -178,14 +190,22 @@ export function buildKeyMakerCompliancePreview({
   const checks = Object.freeze({
     assumption_declaration: checkInvariant1AssumptionDeclaration(certainty),
     certainty_mapping: checkInvariant2CertaintyMapping(certainty),
-    constructive_reading: checkInvariant3ConstructiveReading(constructiveApplied),
+    constructive_reading:
+      checkInvariant3ConstructiveReading(constructiveApplied),
     opposing_view_search: checkInvariant4OpposingViewSearch(opposingViewSearch),
-    boundary_marker: checkInvariant5BoundaryMarker(certainty, boundaryMarkerSafe)
+    boundary_marker: checkInvariant5BoundaryMarker(
+      certainty,
+      boundaryMarkerSafe,
+    ),
   });
 
-  const overall_compliant = INVARIANT_NAMES.every((name) => checks[name] === true);
+  const overall_compliant = INVARIANT_NAMES.every(
+    (name) => checks[name] === true,
+  );
 
-  const failedInvariants = INVARIANT_NAMES.filter((name) => checks[name] !== true);
+  const failedInvariants = INVARIANT_NAMES.filter(
+    (name) => checks[name] !== true,
+  );
 
   return Object.freeze({
     schema: "bizra.dema.key_maker_compliance.v0.1",
@@ -201,10 +221,10 @@ export function buildKeyMakerCompliancePreview({
     invariant_compliance: Object.freeze({
       ...checks,
       overall_compliant,
-      failed_invariants: Object.freeze(failedInvariants)
+      failed_invariants: Object.freeze(failedInvariants),
     }),
     canonical_key_types: CANONICAL_KEY_TYPES,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -225,11 +245,11 @@ export function buildKeyMakerComplianceSummary(options = {}) {
       known: full.certainty.known.length,
       uncertain: full.certainty.uncertain.length,
       assumed_with_ihsan: full.certainty.assumed_with_ihsan.length,
-      unknown: full.certainty.unknown.length
+      unknown: full.certainty.unknown.length,
     }),
     key_types_count: full.key_types.length,
     boundary_marker_present: full.boundary_marker.length > 0,
-    boundary: full.boundary
+    boundary: full.boundary,
   });
 }
 

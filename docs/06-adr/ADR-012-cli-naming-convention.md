@@ -14,12 +14,12 @@ different authors at different times. A naming audit on 2026-05-19 (branch
 
 ### Pattern count (verified against `REGISTERED_COMMANDS_LIST` in `apps/cli/src/index.js`)
 
-| Pattern | Example(s) | Count |
-|---|---|---|
-| **single-word** | `status`, `doctor`, `today`, `welcome`, `setup`, `onboard`, `explain`, `ambient`, `state`, `profiles`, `receipts`, `memory`, `models`, `task`, `sovereign`, `monetize`, `help` | 17 |
+| Pattern              | Example(s)                                                                                                                                                                                                                                                                                                                                                               | Count                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
+| **single-word**      | `status`, `doctor`, `today`, `welcome`, `setup`, `onboard`, `explain`, `ambient`, `state`, `profiles`, `receipts`, `memory`, `models`, `task`, `sovereign`, `monetize`, `help`                                                                                                                                                                                           | 17                                     |
 | **space-subcommand** | `mission draft`, `mission propose`, `consent plan`, `diagnostics plan`, `models scan`, `memory show`, `report safety`, `network blueprint`, `network fixture preview`, `network refusal preview`, `amana contracts preview`, `mcp blueprint`, `roadmap preview`, `evidence receipt preview`, `ihsan floor preview`, `behavior modulation preview`, `design emulate-loop` | 17 (grouped under 13 top-level tokens) |
-| **kebab** | `consent-card`, `mission-loop`, `evidence-event`, `node-registry`, `onboarding-lifecycle`, `skill-growth-governor`, `project-status`, `craftsmanship-witness`, `llm-router`, `process-mining`, `key-maker-check`, `llm-invoke`, `master-craftsmanship` *(amendment 2026-05-19)* | 13 |
-| **colon-format** | `status:json`, `ambient:json` | 2 |
+| **kebab**            | `consent-card`, `mission-loop`, `evidence-event`, `node-registry`, `onboarding-lifecycle`, `skill-growth-governor`, `project-status`, `craftsmanship-witness`, `llm-router`, `process-mining`, `key-maker-check`, `llm-invoke`, `master-craftsmanship` _(amendment 2026-05-19)_                                                                                          | 13                                     |
+| **colon-format**     | `status:json`, `ambient:json`                                                                                                                                                                                                                                                                                                                                            | 2                                      |
 
 Total tokens in `REGISTERED_COMMANDS_LIST`: 42 (including top-level dispatch tokens for
 space-subcommand groups).
@@ -69,12 +69,12 @@ cost/benefit is unfavorable at this stage.
 
 ## Alternatives considered
 
-| Alternative | Rejected reason |
-|---|---|
-| Full normalization (rename all kebab to space-subcommand) | Breaking change. Any script or CI job using `dema consent-card` would break. Requires major version bump, migration guide, and deprecation shims. |
-| Full colon convention (`dema status:json`, `dema missions:list`) | Non-standard CLI idiom. Colon is typically a namespace separator, not a subcommand separator. Would confuse users familiar with Heroku/GitHub CLI patterns. |
-| Full kebab for all commands | Harder to type and read for multi-word concepts. Space-subcommand (`dema mission draft`) is more natural and matches the Heroku CLI pattern that has proven UX success. |
-| Full single-word for all commands | Would require either very long single words (`dema networkrefulsal`) or abbreviations (`dema nrp`) — both poor for discoverability. |
+| Alternative                                                      | Rejected reason                                                                                                                                                         |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Full normalization (rename all kebab to space-subcommand)        | Breaking change. Any script or CI job using `dema consent-card` would break. Requires major version bump, migration guide, and deprecation shims.                       |
+| Full colon convention (`dema status:json`, `dema missions:list`) | Non-standard CLI idiom. Colon is typically a namespace separator, not a subcommand separator. Would confuse users familiar with Heroku/GitHub CLI patterns.             |
+| Full kebab for all commands                                      | Harder to type and read for multi-word concepts. Space-subcommand (`dema mission draft`) is more natural and matches the Heroku CLI pattern that has proven UX success. |
+| Full single-word for all commands                                | Would require either very long single words (`dema networkrefulsal`) or abbreviations (`dema nrp`) — both poor for discoverability.                                     |
 
 ---
 
@@ -83,20 +83,20 @@ cost/benefit is unfavorable at this stage.
 The following renames would improve consistency and MAY be executed in a future breaking-change
 release with a scoped GO and deprecation shims:
 
-| Current (kebab) | Preferred (space-subcommand) |
-|---|---|
-| `dema consent-card` | `dema consent card` |
-| `dema mission-loop` | `dema mission loop` |
-| `dema evidence-event` | `dema evidence event` |
-| `dema node-registry` | `dema node registry` |
-| `dema onboarding-lifecycle` | `dema onboarding lifecycle` |
-| `dema skill-growth-governor` | `dema skill governor` |
-| `dema project-status` | `dema project status` |
+| Current (kebab)              | Preferred (space-subcommand) |
+| ---------------------------- | ---------------------------- |
+| `dema consent-card`          | `dema consent card`          |
+| `dema mission-loop`          | `dema mission loop`          |
+| `dema evidence-event`        | `dema evidence event`        |
+| `dema node-registry`         | `dema node registry`         |
+| `dema onboarding-lifecycle`  | `dema onboarding lifecycle`  |
+| `dema skill-growth-governor` | `dema skill governor`        |
+| `dema project-status`        | `dema project status`        |
 | `dema craftsmanship-witness` | `dema craftsmanship witness` |
-| `dema llm-router` | `dema llm router` |
-| `dema process-mining` | `dema process mining` |
-| `dema key-maker-check` | `dema key check` |
-| `dema llm-invoke` | `dema llm invoke` |
+| `dema llm-router`            | `dema llm router`            |
+| `dema process-mining`        | `dema process mining`        |
+| `dema key-maker-check`       | `dema key check`             |
+| `dema llm-invoke`            | `dema llm invoke`            |
 
 Each rename requires: (a) explicit typed GO, (b) deprecation shim for the old name printing a
 one-line migration hint for ≥1 release cycle, (c) update to `REGISTERED_COMMANDS_LIST`,
@@ -134,11 +134,11 @@ source of truth — so it does not drift from the actual command surface.
 
 **Alternatives considered.**
 
-| Option | Why rejected |
-|---|---|
+| Option                                                                    | Why rejected                                                                                                                                                                                                                     |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rename to `craftsmanship-witness audit` (subcommand under existing kebab) | Would conflate the SELF-witness surface (the existing builder asserts its own MC compliance) with the EXTERNAL-witness surface (the new auditor judges other artifacts). Different semantics deserve different top-level tokens. |
-| Rename to `audit` (single-word) | Too generic. `dema audit` could mean many things in the future; the master-craftsmanship dimension would be invisible. |
-| Skip the allowlist extension and ship the command anyway | Violates the ADR's own drift-guard rule and creates silent precedent that lint can be ignored. ADR governance requires the amendment to be explicit. |
+| Rename to `audit` (single-word)                                           | Too generic. `dema audit` could mean many things in the future; the master-craftsmanship dimension would be invisible.                                                                                                           |
+| Skip the allowlist extension and ship the command anyway                  | Violates the ADR's own drift-guard rule and creates silent precedent that lint can be ignored. ADR governance requires the amendment to be explicit.                                                                             |
 
 **Consequence.** Future amendments must follow the same pattern: typed-GO + ADR-012 amendment block + KEBAB_ALLOWLIST update + commit message reference. The amendment cap remains at 4-5 conventions (no new pattern is introduced); allowlist growth is bounded by the principle that NEW commands should prefer space-subcommand and only request kebab when a strong semantic-linkage argument applies.
 

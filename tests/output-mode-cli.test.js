@@ -16,13 +16,18 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 // --- dema state ---
 
 test("dema state (no flag) emits human output, not JSON", async () => {
   const { stdout } = await execFileAsync("node", [cliPath, "state"]);
-  assert.ok(!stdout.trimStart().startsWith("{"), "output must not start with {");
+  assert.ok(
+    !stdout.trimStart().startsWith("{"),
+    "output must not start with {",
+  );
   assert.match(stdout, /Dema state/);
   assert.match(stdout, /dema state --json/);
 });
@@ -39,13 +44,20 @@ test("dema state --json emits valid JSON with canonical schema", async () => {
 
 test("dema profiles (no flag) emits human output, not JSON", async () => {
   const { stdout } = await execFileAsync("node", [cliPath, "profiles"]);
-  assert.ok(!stdout.trimStart().startsWith("{"), "output must not start with {");
+  assert.ok(
+    !stdout.trimStart().startsWith("{"),
+    "output must not start with {",
+  );
   assert.match(stdout, /Dema profiles/);
   assert.match(stdout, /dema profiles --json/);
 });
 
 test("dema profiles --json emits valid JSON with canonical schema", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "profiles", "--json"]);
+  const { stdout } = await execFileAsync("node", [
+    cliPath,
+    "profiles",
+    "--json",
+  ]);
   const data = JSON.parse(stdout);
   assert.equal(data.schema, "bizra.dema.profile_foundation.v0.1");
   assert.equal(data.boundary.federation_invoked, false);
@@ -56,9 +68,12 @@ test("dema profiles --json emits valid JSON with canonical schema", async () => 
 test("dema today (no flag) emits human output, not JSON", async () => {
   const root = await mkdtemp(join(tmpdir(), "dema-today-human-"));
   const { stdout } = await execFileAsync("node", [cliPath, "today"], {
-    env: { ...process.env, DEMA_HOME: root }
+    env: { ...process.env, DEMA_HOME: root },
   });
-  assert.ok(!stdout.trimStart().startsWith("{"), "output must not start with {");
+  assert.ok(
+    !stdout.trimStart().startsWith("{"),
+    "output must not start with {",
+  );
   assert.match(stdout, /Dema today/);
   assert.match(stdout, /Continuity tick recorded/);
   assert.match(stdout, /dema today --json/);
@@ -67,7 +82,7 @@ test("dema today (no flag) emits human output, not JSON", async () => {
 test("dema today --json emits valid JSON with tick + memory", async () => {
   const root = await mkdtemp(join(tmpdir(), "dema-today-json-"));
   const { stdout } = await execFileAsync("node", [cliPath, "today", "--json"], {
-    env: { ...process.env, DEMA_HOME: root }
+    env: { ...process.env, DEMA_HOME: root },
   });
   const data = JSON.parse(stdout);
   assert.equal(data.tick.schema, "bizra.dema.today_tick.v0.1");
@@ -78,15 +93,26 @@ test("dema today --json emits valid JSON with tick + memory", async () => {
 
 test("dema models scan (no flag) emits human output, not JSON", async () => {
   const { stdout } = await execFileAsync("node", [cliPath, "models", "scan"]);
-  assert.ok(!stdout.trimStart().startsWith("{"), "output must not start with {");
+  assert.ok(
+    !stdout.trimStart().startsWith("{"),
+    "output must not start with {",
+  );
   assert.match(stdout, /Dema models scan/);
   assert.match(stdout, /dema models scan --json/);
 });
 
 test("dema models scan --json emits valid JSON with canonical schema", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "models", "scan", "--json"]);
+  const { stdout } = await execFileAsync("node", [
+    cliPath,
+    "models",
+    "scan",
+    "--json",
+  ]);
   const data = JSON.parse(stdout);
-  assert.ok(data.schema.startsWith("bizra.dema.local_model_inventory"), `got: ${data.schema}`);
+  assert.ok(
+    data.schema.startsWith("bizra.dema.local_model_inventory"),
+    `got: ${data.schema}`,
+  );
   assert.equal(data.boundary.model_invocation_performed, false);
 });
 
@@ -94,19 +120,30 @@ test("dema models scan --json emits valid JSON with canonical schema", async () 
 
 test("dema mission propose (no flag) emits human output, not JSON", async () => {
   const root = await mkdtemp(join(tmpdir(), "dema-propose-human-"));
-  const { stdout } = await execFileAsync("node", [cliPath, "mission", "propose"], {
-    env: { ...process.env, DEMA_HOME: root }
-  });
-  assert.ok(!stdout.trimStart().startsWith("{"), "output must not start with {");
+  const { stdout } = await execFileAsync(
+    "node",
+    [cliPath, "mission", "propose"],
+    {
+      env: { ...process.env, DEMA_HOME: root },
+    },
+  );
+  assert.ok(
+    !stdout.trimStart().startsWith("{"),
+    "output must not start with {",
+  );
   assert.match(stdout, /Dema mission propose/);
   assert.match(stdout, /dema mission propose --json/);
 });
 
 test("dema mission propose --json emits valid JSON with executes=false", async () => {
   const root = await mkdtemp(join(tmpdir(), "dema-propose-json-"));
-  const { stdout } = await execFileAsync("node", [cliPath, "mission", "propose", "--json"], {
-    env: { ...process.env, DEMA_HOME: root }
-  });
+  const { stdout } = await execFileAsync(
+    "node",
+    [cliPath, "mission", "propose", "--json"],
+    {
+      env: { ...process.env, DEMA_HOME: root },
+    },
+  );
   const data = JSON.parse(stdout);
   assert.equal(data.executes, false);
   assert.equal(data.action, "bounded_diagnostic_activation");

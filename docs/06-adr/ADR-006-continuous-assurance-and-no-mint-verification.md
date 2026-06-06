@@ -15,7 +15,7 @@ Phase 2 (2026-05-12 02:09 UTC) shipped the local Continuous Assurance module: `m
 
 Phase 2 had exactly one chain-extension entrypoint (`mint_lib.mint_receipt`). Every assurance act extended the agent chain by one receipt. This is correct for normal operation but creates two problems when verification is needed:
 
-1. **Observer effect.** Running `dema-assure all` to "verify the system is healthy" mints 5 new receipts. The act of verification changes the state being verified. A reviewer reading a verification report cannot trust that the report describes the chain as it was *before* review.
+1. **Observer effect.** Running `dema-assure all` to "verify the system is healthy" mints 5 new receipts. The act of verification changes the state being verified. A reviewer reading a verification report cannot trust that the report describes the chain as it was _before_ review.
 2. **Chain pollution under routine checks.** A daily or PR-gate verification would balloon the receipt count without information gain.
 
 The risk was empirical, not hypothetical. On 2026-05-12 06:25 GST, a `/V` (validate) review of Phase 2 was labeled "strict read-only validation" but actually minted 5 receipts during its run. The verification report described a chain state that no longer existed by the time the review concluded.
@@ -80,7 +80,7 @@ Each migration is its own bounded GO. Each migration is gated on the 9-step read
 
 Phase 3.1 (the `audit.py` migration) is scoped in `~/.dema/kernel/assurance/spec/phase3_audit_migration_v0_1.md`. See that spec for invariants `M-I1…M-I12` and tests `AUDIT-MIG-T01…T08`.
 
-Historical legacy receipts MUST NOT be modified in any byte during migration. Per `feedback_hash_binding_no_forge`: never modify bytes to match a hash; never modify a hash to match bytes. Migration changes the producer's *future emits*, never historical witnesses.
+Historical legacy receipts MUST NOT be modified in any byte during migration. Per `feedback_hash_binding_no_forge`: never modify bytes to match a hash; never modify a hash to match bytes. Migration changes the producer's _future emits_, never historical witnesses.
 
 ## CI/CD implications
 
@@ -96,12 +96,12 @@ The verify-mode surface (`dema-assure verify`) is the CORRECT surface for any fu
 
 The `dema-assure` family is the local Continuous Assurance gate:
 
-| Before this act | Run this assurance |
-|---|---|
-| Any implementation begins | `dema-assure verify` (no-mint pre-flight) |
-| Capability receipt anchor | `dema-assure all` (canonical mint) |
-| Producer migration acceptance | `verify` + `all` + `diff` + full test runner — all green |
-| Release tag | local assurance + GHA witness (future) + Node0 reconcile (future) |
+| Before this act               | Run this assurance                                                |
+| ----------------------------- | ----------------------------------------------------------------- |
+| Any implementation begins     | `dema-assure verify` (no-mint pre-flight)                         |
+| Capability receipt anchor     | `dema-assure all` (canonical mint)                                |
+| Producer migration acceptance | `verify` + `all` + `diff` + full test runner — all green          |
+| Release tag                   | local assurance + GHA witness (future) + Node0 reconcile (future) |
 
 ## Performance-quality tracking
 
@@ -174,17 +174,17 @@ This sentence is the constitutional anchor of all future CI/CD work. Any future 
 
 ADR-006 codifies what was shipped on 2026-05-12 and tested at 71/71 PASS:
 
-| Surface | State | Path |
-|---|---|---|
-| `mint_lib.preview_receipt` | shipped | `~/.dema/kernel/assurance/mint_lib.py` |
-| `preflight/security/chain/perf.run(minter=)` | shipped | `~/.dema/kernel/assurance/{preflight,security,chain,perf}.py` |
-| `verify.py` orchestrator | shipped | `~/.dema/kernel/assurance/verify.py` |
-| `legacy_freeze_diff.py` | shipped | `~/.dema/kernel/assurance/legacy_freeze_diff.py` |
-| `dema-assure` shim with `verify` + `diff` cases | shipped | `~/.dema/bin/dema-assure` |
-| 7 VERIFY-T tests in Node0 runner | shipped | `~/.dema/kernel/test_runner/runner.py` |
-| Capability receipt | minted | agent chain `5654cc11…b188af` (schema `bizra.dema.assurance.verify_capability.v0.1`) |
-| Proof-forge anchor | minted | proof-forge position 9, evidence_hash `fe2e83a8…3f6614` |
-| Phase 3.1 migration plan | designed | `~/.dema/kernel/assurance/spec/phase3_audit_migration_v0_1.md` |
+| Surface                                         | State    | Path                                                                                 |
+| ----------------------------------------------- | -------- | ------------------------------------------------------------------------------------ |
+| `mint_lib.preview_receipt`                      | shipped  | `~/.dema/kernel/assurance/mint_lib.py`                                               |
+| `preflight/security/chain/perf.run(minter=)`    | shipped  | `~/.dema/kernel/assurance/{preflight,security,chain,perf}.py`                        |
+| `verify.py` orchestrator                        | shipped  | `~/.dema/kernel/assurance/verify.py`                                                 |
+| `legacy_freeze_diff.py`                         | shipped  | `~/.dema/kernel/assurance/legacy_freeze_diff.py`                                     |
+| `dema-assure` shim with `verify` + `diff` cases | shipped  | `~/.dema/bin/dema-assure`                                                            |
+| 7 VERIFY-T tests in Node0 runner                | shipped  | `~/.dema/kernel/test_runner/runner.py`                                               |
+| Capability receipt                              | minted   | agent chain `5654cc11…b188af` (schema `bizra.dema.assurance.verify_capability.v0.1`) |
+| Proof-forge anchor                              | minted   | proof-forge position 9, evidence_hash `fe2e83a8…3f6614`                              |
+| Phase 3.1 migration plan                        | designed | `~/.dema/kernel/assurance/spec/phase3_audit_migration_v0_1.md`                       |
 
 ## Effect on existing ADRs
 

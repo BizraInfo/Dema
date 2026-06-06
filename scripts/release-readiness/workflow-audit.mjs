@@ -16,7 +16,7 @@ export function findActionRefs(workflowText) {
     const version = at >= 0 ? ref.slice(at + 1) : "";
     return {
       ref,
-      pinned: /^[0-9a-f]{40}$/i.test(version)
+      pinned: /^[0-9a-f]{40}$/i.test(version),
     };
   });
 }
@@ -24,7 +24,10 @@ export function findActionRefs(workflowText) {
 export function findNodeMatrix(workflowText) {
   const match = workflowText.match(/node-version:\s*\[([^\]]+)\]/);
   if (!match) return [];
-  return match[1].split(",").map((entry) => `node-${entry.trim()}`).filter(Boolean);
+  return match[1]
+    .split(",")
+    .map((entry) => `node-${entry.trim()}`)
+    .filter(Boolean);
 }
 
 export function findRunCommands(workflowText) {
@@ -61,11 +64,15 @@ export function findRunCommands(workflowText) {
 }
 
 export function findWorkflowEvents(workflowText) {
-  return ["pull_request", "push", "schedule", "workflow_dispatch"]
-    .filter((event) => new RegExp(`^\\s{0,4}${event}:`, "m").test(workflowText));
+  return ["pull_request", "push", "schedule", "workflow_dispatch"].filter(
+    (event) => new RegExp(`^\\s{0,4}${event}:`, "m").test(workflowText),
+  );
 }
 
-export function parseWorkflowWorktreeChanges(statusText, workflowDir = WORKFLOW_DIR) {
+export function parseWorkflowWorktreeChanges(
+  statusText,
+  workflowDir = WORKFLOW_DIR,
+) {
   return String(statusText ?? "")
     .split(/\r?\n/)
     .map((line) => line.trimEnd())
@@ -73,22 +80,26 @@ export function parseWorkflowWorktreeChanges(statusText, workflowDir = WORKFLOW_
     .map((line) => {
       const rawStatus = line.slice(0, 2);
       const rawPath = line.slice(3).trim();
-      const path = rawPath.includes(" -> ") ? rawPath.split(" -> ").at(-1) : rawPath;
+      const path = rawPath.includes(" -> ")
+        ? rawPath.split(" -> ").at(-1)
+        : rawPath;
       return {
         status: rawStatus.trim() || rawStatus,
-        path
+        path,
       };
     })
-    .filter((change) => (
-      change.path.startsWith(`${workflowDir}/`) && /\.ya?ml$/i.test(change.path)
-    ));
+    .filter(
+      (change) =>
+        change.path.startsWith(`${workflowDir}/`) &&
+        /\.ya?ml$/i.test(change.path),
+    );
 }
 
 export function readWorkflowWorktreeStatus(root, workflowStatusText) {
   if (typeof workflowStatusText === "string") {
     return {
       available: true,
-      changes: parseWorkflowWorktreeChanges(workflowStatusText)
+      changes: parseWorkflowWorktreeChanges(workflowStatusText),
     };
   }
 
@@ -96,16 +107,16 @@ export function readWorkflowWorktreeStatus(root, workflowStatusText) {
     const statusText = execFileSync(
       "git",
       ["-C", root, "status", "--short", "--", WORKFLOW_DIR],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
     );
     return {
       available: true,
-      changes: parseWorkflowWorktreeChanges(statusText)
+      changes: parseWorkflowWorktreeChanges(statusText),
     };
   } catch {
     return {
       available: false,
-      changes: []
+      changes: [],
     };
   }
 }
@@ -117,9 +128,11 @@ export async function readWorkflowFiles(root) {
   const names = (await readdir(dir))
     .filter((name) => /\.ya?ml$/i.test(name))
     .sort();
-  return await Promise.all(names.map(async (name) => {
-    const path = `${WORKFLOW_DIR}/${name}`;
-    const text = await readText(root, path);
-    return { path, text };
-  }));
+  return await Promise.all(
+    names.map(async (name) => {
+      const path = `${WORKFLOW_DIR}/${name}`;
+      const text = await readText(root, path);
+      return { path, text };
+    }),
+  );
 }

@@ -4,10 +4,13 @@ import { readFile } from "node:fs/promises";
 
 import {
   buildCorpusScorecardReceiptSchemaPreview,
-  CORPUS_SCORECARD_RECEIPT_SCHEMA_PREVIEW_SCHEMA
+  CORPUS_SCORECARD_RECEIPT_SCHEMA_PREVIEW_SCHEMA,
 } from "../packages/core/src/corpus-scorecard-receipt-schema-preview.js";
 
-const modulePath = new URL("../packages/core/src/corpus-scorecard-receipt-schema-preview.js", import.meta.url);
+const modulePath = new URL(
+  "../packages/core/src/corpus-scorecard-receipt-schema-preview.js",
+  import.meta.url,
+);
 const cliPath = new URL("../apps/cli/src/index.js", import.meta.url);
 
 test("buildCorpusScorecardReceiptSchemaPreview emits a schema-only receipt field contract", () => {
@@ -33,48 +36,61 @@ test("buildCorpusScorecardReceiptSchemaPreview emits a schema-only receipt field
     "measurement_summary",
     "boundary",
     "prev_receipt_hash",
-    "seal"
+    "seal",
   ]);
 });
 
 test("future hash and seal fields stay uncomputed", () => {
   const preview = buildCorpusScorecardReceiptSchemaPreview();
-  const hashFields = preview.field_slots.filter((field) => field.value_kind === "future_hash");
+  const hashFields = preview.field_slots.filter(
+    (field) => field.value_kind === "future_hash",
+  );
 
   assert.equal(hashFields.length, 5);
   for (const field of hashFields) {
     assert.equal(field.source_state, "not_computed");
     assert.equal(field.computation_state, "not_computed");
   }
-  assert.equal(preview.self_proactive_harness.gates.find((gate) => gate.gate === "no_hash_or_seal_computation").pass, true);
+  assert.equal(
+    preview.self_proactive_harness.gates.find(
+      (gate) => gate.gate === "no_hash_or_seal_computation",
+    ).pass,
+    true,
+  );
 
   const invalid = buildCorpusScorecardReceiptSchemaPreview({
-    fields: [{
-      field_id: "schema",
-      value_kind: "constant_identifier",
-      required: true,
-      source_state: "declared_schema_value"
-    }, {
-      field_id: "producer",
-      value_kind: "constant_identifier",
-      required: true,
-      source_state: "declared_producer_value"
-    }, {
-      field_id: "scorecard_schema",
-      value_kind: "schema_ref",
-      required: true,
-      source_state: "declared_schema_value"
-    }, {
-      field_id: "boundary",
-      value_kind: "boundary_flags",
-      required: true,
-      source_state: "declared_no_side_effects"
-    }, {
-      field_id: "seal",
-      value_kind: "future_hash",
-      required: true,
-      source_state: "computed"
-    }]
+    fields: [
+      {
+        field_id: "schema",
+        value_kind: "constant_identifier",
+        required: true,
+        source_state: "declared_schema_value",
+      },
+      {
+        field_id: "producer",
+        value_kind: "constant_identifier",
+        required: true,
+        source_state: "declared_producer_value",
+      },
+      {
+        field_id: "scorecard_schema",
+        value_kind: "schema_ref",
+        required: true,
+        source_state: "declared_schema_value",
+      },
+      {
+        field_id: "boundary",
+        value_kind: "boundary_flags",
+        required: true,
+        source_state: "declared_no_side_effects",
+      },
+      {
+        field_id: "seal",
+        value_kind: "future_hash",
+        required: true,
+        source_state: "computed",
+      },
+    ],
   });
 
   assert.equal(invalid.verdict, "PREVIEW_REJECT");
@@ -83,30 +99,36 @@ test("future hash and seal fields stay uncomputed", () => {
 
 test("required receipt fields are enforced", () => {
   const missing = buildCorpusScorecardReceiptSchemaPreview({
-    fields: [{
-      field_id: "schema",
-      value_kind: "constant_identifier",
-      required: true,
-      source_state: "declared_schema_value"
-    }, {
-      field_id: "producer",
-      value_kind: "constant_identifier",
-      required: true,
-      source_state: "declared_producer_value"
-    }, {
-      field_id: "seal",
-      value_kind: "future_hash",
-      required: true,
-      source_state: "not_computed"
-    }]
+    fields: [
+      {
+        field_id: "schema",
+        value_kind: "constant_identifier",
+        required: true,
+        source_state: "declared_schema_value",
+      },
+      {
+        field_id: "producer",
+        value_kind: "constant_identifier",
+        required: true,
+        source_state: "declared_producer_value",
+      },
+      {
+        field_id: "seal",
+        value_kind: "future_hash",
+        required: true,
+        source_state: "not_computed",
+      },
+    ],
   });
   const mismatch = buildCorpusScorecardReceiptSchemaPreview({
-    fields: [{
-      field_id: "schema",
-      value_kind: "constant_identifier",
-      required: false,
-      source_state: "declared_schema_value"
-    }]
+    fields: [
+      {
+        field_id: "schema",
+        value_kind: "constant_identifier",
+        required: false,
+        source_state: "declared_schema_value",
+      },
+    ],
   });
 
   assert.equal(missing.reason, "required_field_missing");
@@ -129,41 +151,57 @@ test("ownership is provenance and not receipt mint consent", () => {
 test("malformed receipt fields fail closed without echoing raw content or scores", () => {
   const secretText = "raw-receipt-score-should-not-appear";
   const raw = buildCorpusScorecardReceiptSchemaPreview({
-    fields: [{
-      field_id: "schema",
-      value_kind: "constant_identifier",
-      required: true,
-      source_state: "declared_schema_value",
-      metadata: { score: secretText }
-    }]
+    fields: [
+      {
+        field_id: "schema",
+        value_kind: "constant_identifier",
+        required: true,
+        source_state: "declared_schema_value",
+        metadata: { score: secretText },
+      },
+    ],
   });
   const unknown = buildCorpusScorecardReceiptSchemaPreview({
-    fields: [{
-      field_id: "unknown_field",
-      value_kind: "constant_identifier",
-      required: false,
-      source_state: "declared_schema_value"
-    }]
+    fields: [
+      {
+        field_id: "unknown_field",
+        value_kind: "constant_identifier",
+        required: false,
+        source_state: "declared_schema_value",
+      },
+    ],
   });
 
   assert.equal(raw.verdict, "PREVIEW_REJECT");
   assert.equal(raw.reason, "field_must_not_include_raw_content_or_scores");
-  assert.doesNotMatch(JSON.stringify(raw), /raw-receipt-score-should-not-appear/);
+  assert.doesNotMatch(
+    JSON.stringify(raw),
+    /raw-receipt-score-should-not-appear/,
+  );
   assert.equal(unknown.reason, "field_id_not_allowlisted");
 });
 
 test("preview emits self-proactive harness, self-critique, micro-compliance, and analogical model", () => {
   const preview = buildCorpusScorecardReceiptSchemaPreview();
 
-  assert.equal(preview.self_proactive_harness.mode, "DETERMINISTIC_SCORECARD_RECEIPT_SCHEMA_PREVIEW");
-  assert.equal(preview.self_proactive_harness.recommended_micro_action, "hold_until_authorized_scorecard_measurement_preview");
+  assert.equal(
+    preview.self_proactive_harness.mode,
+    "DETERMINISTIC_SCORECARD_RECEIPT_SCHEMA_PREVIEW",
+  );
+  assert.equal(
+    preview.self_proactive_harness.recommended_micro_action,
+    "hold_until_authorized_scorecard_measurement_preview",
+  );
   assert.equal(preview.self_critique.confidence, "bounded_preview");
   assert.equal(preview.micro_compliance.schema_only, true);
   assert.equal(preview.micro_compliance.no_receipt_minted, true);
   assert.equal(preview.micro_compliance.no_hashes_computed, true);
   assert.equal(preview.micro_compliance.no_scores_computed, true);
   assert.equal(preview.micro_compliance.no_benchmark_execution, true);
-  assert.equal(preview.analogical_model.model, "receipt_form_not_receipt_issued");
+  assert.equal(
+    preview.analogical_model.model,
+    "receipt_form_not_receipt_issued",
+  );
 });
 
 test("preview keeps every authority and data movement boundary false", () => {
@@ -190,7 +228,7 @@ test("preview keeps every authority and data movement boundary false", () => {
     "network_called",
     "runtime_started",
     "federation_started",
-    "step7_mint_attempted"
+    "step7_mint_attempted",
   ];
 
   for (const key of expectedFalseBoundaries) {
@@ -226,8 +264,20 @@ test("corpus scorecard receipt schema preview has no CLI wiring", async () => {
 test("corpus scorecard receipt schema preview module has no runtime, network, filesystem, or randomness side effects", async () => {
   const source = await readFile(modulePath, "utf8");
 
-  assert.doesNotMatch(source, /from\s+["']node:(net|dgram|http|https|tls|dns|worker_threads|vm|child_process|fs)["']/);
-  assert.doesNotMatch(source, /\b(fetch|WebSocket|exec|execFile|spawn|spawnSync)\b/);
-  assert.doesNotMatch(source, /\b(writeFile|appendFile|mkdir|rename|unlink|createWriteStream)\b/);
-  assert.doesNotMatch(source, /\b(Date\.now|Math\.random|crypto\.random|process\.hrtime|performance\.now)\b/);
+  assert.doesNotMatch(
+    source,
+    /from\s+["']node:(net|dgram|http|https|tls|dns|worker_threads|vm|child_process|fs)["']/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(fetch|WebSocket|exec|execFile|spawn|spawnSync)\b/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(writeFile|appendFile|mkdir|rename|unlink|createWriteStream)\b/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(Date\.now|Math\.random|crypto\.random|process\.hrtime|performance\.now)\b/,
+  );
 });

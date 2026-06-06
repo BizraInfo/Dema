@@ -251,7 +251,11 @@ Boundary: no action without explicit consent.
 **Capture (verbatim):**
 
 ```json
-{"head":"9391e6fe08cb1671daa99eb28f3d574b06ea6c9c88736111436ccec89ad78483","length":8,"latestTimestamp":1778018491968479587}
+{
+  "head": "9391e6fe08cb1671daa99eb28f3d574b06ea6c9c88736111436ccec89ad78483",
+  "length": 8,
+  "latestTimestamp": 1778018491968479587
+}
 ```
 
 ---

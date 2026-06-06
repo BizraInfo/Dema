@@ -13,8 +13,8 @@ const USER_STATE = {
     "node_handshake",
     "step7_mint",
     "receipt_mint",
-    "external_posting"
-  ]
+    "external_posting",
+  ],
 };
 
 // v0.1a node-identity primitives — surfaced on the onboarding preview so the
@@ -30,7 +30,7 @@ function buildNodeIdentity() {
     node_uid: profile.identity.node_uid,
     language: profile.identity.language,
     device_label: profile.identity.device_label,
-    companion_of: profile.identity.companion_of
+    companion_of: profile.identity.companion_of,
   };
 }
 
@@ -38,7 +38,7 @@ const NEXT_STEPS = [
   "verify local gates",
   "review consent ladder",
   "run read-only safety report",
-  "prepare MoMo self-use checklist"
+  "prepare MoMo self-use checklist",
 ];
 
 const BOUNDARIES = {
@@ -49,25 +49,27 @@ const BOUNDARIES = {
   no_mission_execution: true,
   no_step7_mint: true,
   no_federation: true,
-  no_node_handshake: true
+  no_node_handshake: true,
 };
 
 const inspiration = [
   {
     source: "OpenClaw",
     pattern: "doctor and repair clarity",
-    absorbed_as: "make blocked states obvious and route repair through explicit commands"
+    absorbed_as:
+      "make blocked states obvious and route repair through explicit commands",
   },
   {
     source: "Hermes Agent",
     pattern: "profile-aware memory continuity",
-    absorbed_as: "keep local memory visible without hiding state or spreading config"
+    absorbed_as:
+      "keep local memory visible without hiding state or spreading config",
   },
   {
     source: "Pi.dev",
     pattern: "approachable guided flow",
-    absorbed_as: "give a simple path a nontechnical operator can follow"
-  }
+    absorbed_as: "give a simple path a nontechnical operator can follow",
+  },
 ];
 
 const steps = [
@@ -75,51 +77,57 @@ const steps = [
     id: "setup",
     title: "Create the local home",
     command: "dema setup",
-    user_value: "Creates ~/.dema so Dema has a safe local place to remember state.",
-    boundary: "Does not overwrite profile/config, start a daemon, or execute a mission."
+    user_value:
+      "Creates ~/.dema so Dema has a safe local place to remember state.",
+    boundary:
+      "Does not overwrite profile/config, start a daemon, or execute a mission.",
   },
   {
     id: "status",
     title: "Read the node state",
     command: "dema status",
     user_value: "Shows what is ready, blocked, unknown, and safe to do next.",
-    boundary: "Does not repair, connect, or mutate anything."
+    boundary: "Does not repair, connect, or mutate anything.",
   },
   {
     id: "diagnostics",
     title: "Preview a health plan",
     command: "dema diagnostics plan",
-    user_value: "Shows the checks Dema would run in a governed diagnostic mission.",
-    boundary: "Does not run tests or shell commands."
+    user_value:
+      "Shows the checks Dema would run in a governed diagnostic mission.",
+    boundary: "Does not run tests or shell commands.",
   },
   {
     id: "consent",
     title: "Preview micro-consent",
     command: 'dema consent plan "Check my local node health"',
     user_value: "Turns plain intent into a narrow permission draft.",
-    boundary: "Does not approve consent or mint capability."
+    boundary: "Does not approve consent or mint capability.",
   },
   {
     id: "mission",
     title: "Draft the mission preview",
     command: 'dema mission draft "Check my local node health"',
-    user_value: "Converts intent into a mission draft with the matching consent preview.",
-    boundary: "Does not execute, submit, or authorize the mission."
+    user_value:
+      "Converts intent into a mission draft with the matching consent preview.",
+    boundary: "Does not execute, submit, or authorize the mission.",
   },
   {
     id: "safety",
     title: "Read the safety posture",
     command: "dema report safety",
-    user_value: "Explains proof gaps, safe defaults, and the current local boundary.",
-    boundary: "Does not certify production readiness."
+    user_value:
+      "Explains proof gaps, safe defaults, and the current local boundary.",
+    boundary: "Does not certify production readiness.",
   },
   {
     id: "receipts",
     title: "Inspect local proof records",
     command: "dema receipts",
-    user_value: "Lists local receipt handoffs that prove what happened elsewhere.",
-    boundary: "Does not create receipts."
-  }
+    user_value:
+      "Lists local receipt handoffs that prove what happened elsewhere.",
+    boundary: "Does not create receipts.",
+  },
 ];
 
 function cloneItems(items) {
@@ -141,12 +149,13 @@ export function buildOnboardingPreview() {
     product: {
       name: "Dema",
       role: "local product face for BIZRA Node0",
-      promise: "show what is true, what is safe, what is blocked, and what needs consent"
+      promise:
+        "show what is true, what is safe, what is blocked, and what needs consent",
     },
     inspiration: cloneItems(inspiration),
     doctrine: {
       stance: "stand_on_shoulders_do_not_copy",
-      note: "Reference projects inform patterns only; no code, naming, UI, or transport is copied."
+      note: "Reference projects inform patterns only; no code, naming, UI, or transport is copied.",
     },
     steps: cloneItems(steps),
     boundary: {
@@ -159,13 +168,13 @@ export function buildOnboardingPreview() {
       receipt_minted: false,
       network_connection_attempted: false,
       federation_initiated: false,
-      node1_or_node2_connected: false
+      node1_or_node2_connected: false,
     },
     next: {
       first_command: "dema setup",
       guided_command: "dema onboard",
-      interactive_command: "dema chat"
-    }
+      interactive_command: "dema chat",
+    },
   };
 }
 
@@ -176,7 +185,7 @@ function renderStep(index, step) {
     `${index}. ${step.title}`,
     `   command : ${step.command}`,
     `   value   : ${step.user_value}`,
-    `   guard   : ${step.boundary}`
+    `   guard   : ${step.boundary}`,
   ].join("\n");
 }
 
@@ -206,14 +215,11 @@ export function formatOnboardingPreview(guide) {
     "",
     "Standing on shoulders, not copying:",
     ...guide.inspiration.map(
-      (item) => `  - ${item.source}: ${item.pattern} -> ${item.absorbed_as}.`
+      (item) => `  - ${item.source}: ${item.pattern} -> ${item.absorbed_as}.`,
     ),
     "",
     "Guided first run:",
-    ...guide.steps.flatMap((step, index) => [
-      renderStep(index + 1, step),
-      ""
-    ]),
+    ...guide.steps.flatMap((step, index) => [renderStep(index + 1, step), ""]),
     "Boundary:",
     "  This guide is preview-only. It does not mutate files, start runtime,",
     "  start a daemon, execute missions, mint receipts, connect Node1/Node2,",
@@ -223,7 +229,7 @@ export function formatOnboardingPreview(guide) {
     "Next:",
     ...guide.next_steps.map((step, index) => `  ${index + 1}. ${step}`),
     "",
-    "For the interactive shell: dema chat"
+    "For the interactive shell: dema chat",
   ];
 
   return lines.join("\n");

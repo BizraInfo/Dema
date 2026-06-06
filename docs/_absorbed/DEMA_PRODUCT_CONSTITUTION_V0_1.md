@@ -1,4 +1,5 @@
 # Dema Product Constitution
+
 ## `docs/product/DEMA_PRODUCT_CONSTITUTION_V0_1.md`
 
 ```
@@ -66,6 +67,7 @@ Human decides: proceed | stop | rephrase
 ### III.2 — Uncertainty Must Be Named
 
 Dema must always distinguish between:
+
 - What it knows (has evidence for)
 - What it infers (derived without direct evidence)
 - What it assumes (acknowledged gap)
@@ -104,6 +106,7 @@ Dema never locks, guides, or nudges the human into a predetermined path.
 ### III.5 — Dignity Before Efficiency
 
 Dema treats every user with:
+
 - Calm precision — no theatrical language
 - Honest uncertainty — no false confidence
 - Warmth without manipulation — no flattery
@@ -189,6 +192,7 @@ Dema presents exactly six things to the human. Nothing more.
 ```
 
 Dema does not surface:
+
 - Internal agent reasoning (PAT private)
 - Raw LLM outputs without constitution filtering
 - Economic projections without verified receipt evidence
@@ -238,6 +242,7 @@ Sovereign Local AI Node Setup + Safety Audit
 ```
 
 This is:
+
 - Already real (Node0 exists)
 - Already tested (green lane validation measured)
 - Already documented (this constitution + provenance ledger)
@@ -344,6 +349,7 @@ Panel 7 — Monetization Panel (when activated)
 ```
 
 **What is NOT in Dema Node Console v0.1:**
+
 ```
 - Node1 / federation UI
 - Token / PoI economy
@@ -375,4 +381,4 @@ Amendment authority:    Node0 First Architect (sole authority until Node1 federa
 
 ---
 
-*Dema is the face. The receipt is the truth. The human is the sovereign. The law is this document.*
+_Dema is the face. The receipt is the truth. The human is the sovereign. The law is this document._

@@ -1,17 +1,17 @@
 # BIZRA / Dema · Launch Pack v0.1 Review Binder
 
-> **Operating canon:** *A deterministic constitutional execution engine with replayable receipts.*
+> **Operating canon:** _A deterministic constitutional execution engine with replayable receipts._
 
-| Field | Value |
-|---|---|
-| **Binder version** | v0.1 (2026-05-19 GST) |
-| **Audience** | Private-witness Ring-1 N=1 reviewer (single technically-rigorous reviewer) |
-| **Scope** | Verification, not persuasion · 10-minute reproduction path · MUST falsify, not validate |
-| **NOT a launch pack** | Public launch (Ring 4) is **explicitly out of scope** per `90-Day GTM v0.1.1 §XII` |
-| **Truth discipline** | Every claim labeled VERIFIED · DERIVED · ASSUMED · UNKNOWN |
-| **Integrity** | `MANIFEST.sha256` covers all 9 binder files · `sha256sum -c` verifies no tampering |
-| **Send authorization** | Requires Mumu's typed-GO `GO send launch pack v0.1 to <reviewer>` |
-| **Linked receipts** | Receipt #71 (2026-05-19_140251 · IRONCLAD · ADR_009_AND_ADR_014_ACCEPTED_FOR_PRIVATE_WITNESS_GTM) |
+| Field                  | Value                                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------------- |
+| **Binder version**     | v0.1 (2026-05-19 GST)                                                                             |
+| **Audience**           | Private-witness Ring-1 N=1 reviewer (single technically-rigorous reviewer)                        |
+| **Scope**              | Verification, not persuasion · 10-minute reproduction path · MUST falsify, not validate           |
+| **NOT a launch pack**  | Public launch (Ring 4) is **explicitly out of scope** per `90-Day GTM v0.1.1 §XII`                |
+| **Truth discipline**   | Every claim labeled VERIFIED · DERIVED · ASSUMED · UNKNOWN                                        |
+| **Integrity**          | `MANIFEST.sha256` covers all 9 binder files · `sha256sum -c` verifies no tampering                |
+| **Send authorization** | Requires Mumu's typed-GO `GO send launch pack v0.1 to <reviewer>`                                 |
+| **Linked receipts**    | Receipt #71 (2026-05-19_140251 · IRONCLAD · ADR_009_AND_ADR_014_ACCEPTED_FOR_PRIVATE_WITNESS_GTM) |
 
 ---
 
@@ -30,33 +30,33 @@ This is **Ring-1** in the concentric-rings GTM model (`[[feedback_evidence_first
 
 ## The 8 items (per Mumu's binder spec)
 
-| # | File | What it is | New/Existing |
-|---|---|---|---|
-| 1 | `01_BIZRA_90_Day_GTM_v0.1.1.md` | Strategic GTM plan · 90-day phased plan · binding constraints · 7-risk register | Reference to `docs/gtm/BIZRA_90_Day_GTM_v0_1.md` (v0.1.1 amendments applied 2026-05-19) |
-| 2 | `02_LIGHTHOUSE_PACK_v1.0_MANIFEST.md` | Lighthouse Pack v1.0 9-file manifest with SHA-256s + provenance | Reference to existing pack at `/tmp/bizra-overnight/lighthouse-pack/MANIFEST.sha256` |
-| 3 | `03_ADR_009_POI_accepted.md` | ADR-009 POI Design · Status: **Accepted** (2026-05-19) | Reference to `docs/06-adr/ADR-009-poi-proof-of-impact-design.md` |
-| 4 | `04_ADR_014_three_runtime_accepted.md` | ADR-014 Three-Runtime Architecture Canonization · Status: **Accepted** (2026-05-19) | Reference to `docs/06-adr/ADR-014-three-runtime-architecture-canonization.md` |
-| 5 | `05_DAY_1_OPERATOR_RUNBOOK.md` | Day-1 operator runbook · install · verify · 10-minute verification path | **NEW** (this binder) |
-| 6 | `06_KNOWN_GAPS_v2.md` | Known gaps register · refreshed for current main `ea4c231` | **NEW** (this binder · supersedes Lighthouse Pack 06_KNOWN_GAPS.md) |
-| 7 | `07_REVIEWER_FEEDBACK_FORM_v2.md` | Reviewer feedback form · refreshed for v0.1 binder | **NEW** (this binder · supersedes Lighthouse Pack 07_REVIEWER_FEEDBACK_FORM.md) |
-| 8 | `08_TRUTH_LABEL_PAGE.md` | Truth-label canonical taxonomy · how to read VERIFIED/DERIVED/ASSUMED/UNKNOWN claims | **NEW** (this binder) |
+| #   | File                                   | What it is                                                                           | New/Existing                                                                            |
+| --- | -------------------------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| 1   | `01_BIZRA_90_Day_GTM_v0.1.1.md`        | Strategic GTM plan · 90-day phased plan · binding constraints · 7-risk register      | Reference to `docs/gtm/BIZRA_90_Day_GTM_v0_1.md` (v0.1.1 amendments applied 2026-05-19) |
+| 2   | `02_LIGHTHOUSE_PACK_v1.0_MANIFEST.md`  | Lighthouse Pack v1.0 9-file manifest with SHA-256s + provenance                      | Reference to existing pack at `/tmp/bizra-overnight/lighthouse-pack/MANIFEST.sha256`    |
+| 3   | `03_ADR_009_POI_accepted.md`           | ADR-009 POI Design · Status: **Accepted** (2026-05-19)                               | Reference to `docs/06-adr/ADR-009-poi-proof-of-impact-design.md`                        |
+| 4   | `04_ADR_014_three_runtime_accepted.md` | ADR-014 Three-Runtime Architecture Canonization · Status: **Accepted** (2026-05-19)  | Reference to `docs/06-adr/ADR-014-three-runtime-architecture-canonization.md`           |
+| 5   | `05_DAY_1_OPERATOR_RUNBOOK.md`         | Day-1 operator runbook · install · verify · 10-minute verification path              | **NEW** (this binder)                                                                   |
+| 6   | `06_KNOWN_GAPS_v2.md`                  | Known gaps register · refreshed for current main `ea4c231`                           | **NEW** (this binder · supersedes Lighthouse Pack 06_KNOWN_GAPS.md)                     |
+| 7   | `07_REVIEWER_FEEDBACK_FORM_v2.md`      | Reviewer feedback form · refreshed for v0.1 binder                                   | **NEW** (this binder · supersedes Lighthouse Pack 07_REVIEWER_FEEDBACK_FORM.md)         |
+| 8   | `08_TRUTH_LABEL_PAGE.md`               | Truth-label canonical taxonomy · how to read VERIFIED/DERIVED/ASSUMED/UNKNOWN claims | **NEW** (this binder)                                                                   |
 
 ## Master Craftsmanship 10-Invariant Self-Audit · this binder
 
 Per the master-craftsmanship pattern (canon shipped in ADR-008 + `packages/core/src/master-craftsmanship-audit.js`), every item in this binder must satisfy 10 invariants. Self-audit:
 
-| # | Invariant | This binder | Evidence |
-|---|---|---|---|
-| 1 | **canon_bound** — every claim cites a source ADR or memory entry | ✅ | Every assertion in items 5-8 references `[[memory]]` slug or ADR-NNN |
-| 2 | **test_backed** — every claim has a test or receipt anchoring it | ✅ | Items reference specific tests in `tests/` or receipts in `.proof-forge/` |
-| 3 | **consent_gated** — sending the binder requires typed-GO consent | ✅ | Send authorization phrase: `GO send launch pack v0.1 to <reviewer>` |
-| 4 | **receipt_emitting** — binder creation is a chain event | ✅ | Receipt #72 (post-merge ceremony) anchors this binder to the chain |
-| 5 | **doctrine_coherent** — respects all BIZRA canon | ✅ | Ring-4 public excluded · Riba-Zero honored · 50% pool oath unactivated · ZANN_ZERO held |
-| 6 | **boundary_disciplined** — explicit scope · 16-key boundary on previews | ✅ | Each preview surface tagged with canonical 16-key boundary; binder scope explicit in this index |
-| 7 | **adversarial_tested** — known gaps surfaced, not hidden | ✅ | `06_KNOWN_GAPS_v2.md` lists every gap by phase |
-| 8 | **verify_before_asserting** — V/D/A/U labels on every claim | ✅ | `08_TRUTH_LABEL_PAGE.md` defines the taxonomy used throughout |
-| 9 | **reversible** — every action reversible until send-receipt mints | ✅ | Branch + commit are local until typed-GO push · binder folder can be deleted before send |
-| 10 | **cross_referenced** — links to memory + ADRs + tests + receipts | ✅ | Every item carries cross-references in its closing section |
+| #   | Invariant                                                               | This binder | Evidence                                                                                        |
+| --- | ----------------------------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------- |
+| 1   | **canon_bound** — every claim cites a source ADR or memory entry        | ✅          | Every assertion in items 5-8 references `[[memory]]` slug or ADR-NNN                            |
+| 2   | **test_backed** — every claim has a test or receipt anchoring it        | ✅          | Items reference specific tests in `tests/` or receipts in `.proof-forge/`                       |
+| 3   | **consent_gated** — sending the binder requires typed-GO consent        | ✅          | Send authorization phrase: `GO send launch pack v0.1 to <reviewer>`                             |
+| 4   | **receipt_emitting** — binder creation is a chain event                 | ✅          | Receipt #72 (post-merge ceremony) anchors this binder to the chain                              |
+| 5   | **doctrine_coherent** — respects all BIZRA canon                        | ✅          | Ring-4 public excluded · Riba-Zero honored · 50% pool oath unactivated · ZANN_ZERO held         |
+| 6   | **boundary_disciplined** — explicit scope · 16-key boundary on previews | ✅          | Each preview surface tagged with canonical 16-key boundary; binder scope explicit in this index |
+| 7   | **adversarial_tested** — known gaps surfaced, not hidden                | ✅          | `06_KNOWN_GAPS_v2.md` lists every gap by phase                                                  |
+| 8   | **verify_before_asserting** — V/D/A/U labels on every claim             | ✅          | `08_TRUTH_LABEL_PAGE.md` defines the taxonomy used throughout                                   |
+| 9   | **reversible** — every action reversible until send-receipt mints       | ✅          | Branch + commit are local until typed-GO push · binder folder can be deleted before send        |
+| 10  | **cross_referenced** — links to memory + ADRs + tests + receipts        | ✅          | Every item carries cross-references in its closing section                                      |
 
 **Verdict**: 10 / 10 invariants hold. The binder qualifies as master-craftsmanship-creation under its own canon.
 
@@ -64,20 +64,22 @@ Per the master-craftsmanship pattern (canon shipped in ADR-008 + `packages/core/
 
 Per the operating canon **"A deterministic constitutional execution engine with replayable receipts"**, every binder action passes 4 checks:
 
-| Check | This binder |
-|---|---|
-| **Deterministic?** | Same input (current main HEAD + reviewer name) → same binder. No randomness. |
-| **Constitutional?** | Honors every ADR + canon: ADR-005 consent · ADR-009 POI refusals · ADR-014 3-runtime · 50% pool oath · ZANN_ZERO |
-| **Executes under explicit consent?** | Binder creation: this commit. Binder send: separate typed-GO. Each gate independent. |
-| **Replayable receipt?** | Receipt #72 (forthcoming · post-merge ceremony) anchors creation. Send-receipt (#73+) anchors each send event. |
+| Check                                | This binder                                                                                                      |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| **Deterministic?**                   | Same input (current main HEAD + reviewer name) → same binder. No randomness.                                     |
+| **Constitutional?**                  | Honors every ADR + canon: ADR-005 consent · ADR-009 POI refusals · ADR-014 3-runtime · 50% pool oath · ZANN_ZERO |
+| **Executes under explicit consent?** | Binder creation: this commit. Binder send: separate typed-GO. Each gate independent.                             |
+| **Replayable receipt?**              | Receipt #72 (forthcoming · post-merge ceremony) anchors creation. Send-receipt (#73+) anchors each send event.   |
 
 ## How to use this binder
 
 1. **Verify integrity**:
+
    ```bash
    cd docs/launch-pack-v0.1/
    sha256sum -c MANIFEST.sha256
    ```
+
    All 9 entries must report `OK`. If any reports `FAILED`, the binder is invalid; do not send.
 
 2. **Read in order**:
@@ -142,6 +144,6 @@ No step is skippable. The architect-self-binding (3 years of work · no pre-mint
 
 ---
 
-**Operating canon (binding):** *A deterministic constitutional execution engine with replayable receipts.*
+**Operating canon (binding):** _A deterministic constitutional execution engine with replayable receipts._
 
-**Operating discipline (Phase 1 Day 1 of 90-Day GTM v0.1.1):** *No POI implementation. No URP initialization. No public claims. Only the witness path.*
+**Operating discipline (Phase 1 Day 1 of 90-Day GTM v0.1.1):** _No POI implementation. No URP initialization. No public claims. Only the witness path._

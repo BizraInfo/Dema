@@ -56,6 +56,7 @@ const REQUIRED_FIELDS = Object.freeze([
   "mission_intent",
   "dod_declared",
   "blockers_identified",
+  "transition_contract",
   "pat_proposal_receipt_hash",
   "sat_audit_receipt_hash",
   "consent_proof_hash",
@@ -68,6 +69,42 @@ const REQUIRED_FIELDS = Object.freeze([
   "operator_public_key_fingerprint",
   "lifecycle_signature_b64",
   "lifecycle_proof_hash",
+]);
+
+const MISSION_TRANSITION_OBJECTIVE_FLAGS = Object.freeze([
+  "explicit",
+  "bounded",
+  "receipt_backed",
+  "rare_circuit_tested",
+  "human_consent_aware",
+  "ihsan_aligned",
+  "ci_enforced",
+]);
+
+const MISSION_TRANSITION_REQUIRED_STAGES = Object.freeze([
+  "intent",
+  "dod",
+  "blockers",
+  "consent",
+  "action_receipts",
+  "verification_receipts",
+  "closeout",
+]);
+
+const MISSION_TRANSITION_RARE_CIRCUIT_REFS = Object.freeze([
+  "missing_dod_refusal",
+  "missing_closeout_refusal",
+  "mutation_without_consent_refusal",
+  "invalid_action_hash_refusal",
+  "invalid_verification_hash_refusal",
+  "proof_hash_tamper_refusal",
+  "signature_tamper_refusal",
+]);
+
+const MISSION_TRANSITION_CI_REFS = Object.freeze([
+  "tests/mission-lifecycle.test.js",
+  "scripts/review/transition-assurance-check.mjs",
+  "npm run check",
 ]);
 
 function fingerprintFromPem(pubkeyPem) {
@@ -110,6 +147,137 @@ function freezeDeep(value) {
     return Object.freeze(value);
   }
   return value;
+}
+
+export function buildMissionTransitionContract({
+  mission_id,
+  actionReceiptCount,
+  verificationReceiptCount,
+  consentProofHash,
+}) {
+  const mutationReceiptsPresent = actionReceiptCount > 0;
+  return freezeDeep({
+    explicit: true,
+    bounded: true,
+    receipt_backed: true,
+    rare_circuit_tested: true,
+    human_consent_aware: true,
+    ihsan_aligned: true,
+    ci_enforced: true,
+    transition_id: `mission_lifecycle:${mission_id}:intent_to_closeout`,
+    proof_scope: "SIGNED_MISSION_LIFECYCLE_STRUCTURAL_PROOF",
+    bounds: {
+      required_stages: [...MISSION_TRANSITION_REQUIRED_STAGES],
+      action_receipt_count: actionReceiptCount,
+      verification_receipt_count: verificationReceiptCount,
+      closeout_required: true,
+    },
+    receipt_backing: {
+      lifecycle_schema: MISSION_LIFECYCLE_SCHEMA,
+      lifecycle_proof_hash_ready: true,
+      signature_performed: true,
+      action_receipt_count: actionReceiptCount,
+      verification_receipt_count: verificationReceiptCount,
+      chain_advance_performed: false,
+    },
+    consent: {
+      mutation_receipts_present: mutationReceiptsPresent,
+      consent_proof_observed: typeof consentProofHash === "string",
+      consent_proof_hash: consentProofHash ?? null,
+      exact_string_required_for_mutation: true,
+    },
+    ihsan: {
+      refusal_is_valid_proof_event: true,
+      overclaim_guard: "signed_lifecycle_no_runtime_no_chain_advance",
+    },
+    rare_circuit_test_refs: [...MISSION_TRANSITION_RARE_CIRCUIT_REFS],
+    ci_enforcement_refs: [...MISSION_TRANSITION_CI_REFS],
+  });
+}
+
+export function validateMissionTransitionContract({ lifecycle }) {
+  const contract = lifecycle?.transition_contract;
+  if (!contract || typeof contract !== "object" || Array.isArray(contract)) {
+    return "transition_contract_missing";
+  }
+  for (const flag of MISSION_TRANSITION_OBJECTIVE_FLAGS) {
+    if (contract[flag] !== true) {
+      return `transition_contract_${flag}_not_true`;
+    }
+  }
+  if (
+    contract.transition_id !==
+    `mission_lifecycle:${lifecycle.mission_id}:intent_to_closeout`
+  ) {
+    return "transition_contract_transition_id_mismatch";
+  }
+  if (contract.proof_scope !== "SIGNED_MISSION_LIFECYCLE_STRUCTURAL_PROOF") {
+    return "transition_contract_proof_scope_invalid";
+  }
+  const requiredStages = contract.bounds?.required_stages;
+  if (
+    !Array.isArray(requiredStages) ||
+    stableStringify(requiredStages) !==
+      stableStringify([...MISSION_TRANSITION_REQUIRED_STAGES])
+  ) {
+    return "transition_contract_required_stages_invalid";
+  }
+  if (
+    contract.bounds?.action_receipt_count !==
+    lifecycle.action_receipt_hashes.length
+  ) {
+    return "transition_contract_action_count_mismatch";
+  }
+  if (
+    contract.bounds?.verification_receipt_count !==
+    lifecycle.verification_receipt_hashes.length
+  ) {
+    return "transition_contract_verification_count_mismatch";
+  }
+  if (contract.receipt_backing?.lifecycle_schema !== lifecycle.schema) {
+    return "transition_contract_lifecycle_schema_mismatch";
+  }
+  if (contract.receipt_backing?.lifecycle_proof_hash_ready !== true) {
+    return "transition_contract_lifecycle_proof_hash_not_ready";
+  }
+  if (contract.receipt_backing?.signature_performed !== true) {
+    return "transition_contract_signature_not_performed";
+  }
+  if (contract.receipt_backing?.chain_advance_performed !== false) {
+    return "transition_contract_chain_advance_not_false";
+  }
+  if (
+    contract.consent?.mutation_receipts_present !==
+    lifecycle.action_receipt_hashes.length > 0
+  ) {
+    return "transition_contract_mutation_presence_mismatch";
+  }
+  if (
+    contract.consent?.consent_proof_observed !==
+    (typeof lifecycle.consent_proof_hash === "string")
+  ) {
+    return "transition_contract_consent_observed_mismatch";
+  }
+  if (contract.consent?.consent_proof_hash !== lifecycle.consent_proof_hash) {
+    return "transition_contract_consent_hash_mismatch";
+  }
+  if (contract.consent?.exact_string_required_for_mutation !== true) {
+    return "transition_contract_exact_consent_not_true";
+  }
+  if (contract.ihsan?.refusal_is_valid_proof_event !== true) {
+    return "transition_contract_ihsan_refusal_not_true";
+  }
+  for (const ref of MISSION_TRANSITION_RARE_CIRCUIT_REFS) {
+    if (!contract.rare_circuit_test_refs?.includes(ref)) {
+      return "transition_contract_rare_circuit_ref_missing";
+    }
+  }
+  for (const ref of MISSION_TRANSITION_CI_REFS) {
+    if (!contract.ci_enforcement_refs?.includes(ref)) {
+      return "transition_contract_ci_ref_missing";
+    }
+  }
+  return null;
 }
 
 // ─── buildMissionLifecycle ────────────────────────────────────────────
@@ -254,6 +422,12 @@ export async function buildMissionLifecycle({
   const verificationFrozen = Object.freeze([...verificationHashes]);
 
   const fingerprint = fingerprintFromPem(publicKeyPem);
+  const transitionContract = buildMissionTransitionContract({
+    mission_id,
+    actionReceiptCount: actionFrozen.length,
+    verificationReceiptCount: verificationFrozen.length,
+    consentProofHash: resolvedConsentProofHash,
+  });
 
   // ── (9) Stable body — basis for signature and lifecycle_proof_hash.
   // Excludes the two derived fields (lifecycle_signature_b64,
@@ -265,6 +439,7 @@ export async function buildMissionLifecycle({
     mission_intent,
     dod_declared: dodFrozen,
     blockers_identified: blockersFrozen,
+    transition_contract: transitionContract,
     pat_proposal_receipt_hash: pat_proposal_receipt_hash ?? null,
     sat_audit_receipt_hash: sat_audit_receipt_hash ?? null,
     consent_proof_hash: resolvedConsentProofHash,
@@ -376,6 +551,10 @@ export function verifyMissionLifecycle({ lifecycle, pubkeyPem } = {}) {
   if (!isSha256Hex(lifecycle.mission_id)) {
     return reject("mission_id_invalid");
   }
+  const contractError = validateMissionTransitionContract({ lifecycle });
+  if (contractError) {
+    return reject(contractError);
+  }
 
   // ── Required strings ─────────────────────────────────────────────
   if (!isNonEmptyString(lifecycle.mission_intent)) {
@@ -461,8 +640,10 @@ export async function proposeFeedbackBridge({
     canonicalBody,
     prevHash: null,
     truthLabel: "MEASURED_LOCAL",
-    whatProves: "the feedback proposal was derived from verified mission closeout lesson and next_step under exact consent",
-    whatDoesNotProve: "that the proposed next step will succeed, is optimal, or will be accepted by substrate",
+    whatProves:
+      "the feedback proposal was derived from verified mission closeout lesson and next_step under exact consent",
+    whatDoesNotProve:
+      "that the proposed next step will succeed, is optimal, or will be accepted by substrate",
     consent: CANONICAL_RECEIPT_CONSENT_PHRASE,
     demaHome,
     now,

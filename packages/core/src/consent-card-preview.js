@@ -30,13 +30,13 @@ const REQUIRED_BLOCKED_EFFECTS = Object.freeze([
   "node1_connection",
   "node2_connection",
   "raw_data_scan",
-  "public_network"
+  "public_network",
 ]);
 
 const DECISION_OPTIONS = Object.freeze([
   "approve_c2_draft_only",
   "narrow_scope",
-  "decline"
+  "decline",
 ]);
 
 const REQUIRED_BLOCKED_SET = new Set(REQUIRED_BLOCKED_EFFECTS);
@@ -53,14 +53,14 @@ function selectMissionView(mission) {
       provided: false,
       missionId: null,
       status: "unset_preview",
-      center: "user_mission"
+      center: "user_mission",
     });
   }
   return Object.freeze({
     provided: true,
     missionId: mission.missionId ?? null,
     status: mission.status ?? "draft_preview",
-    center: mission.center ?? "user_mission"
+    center: mission.center ?? "user_mission",
   });
 }
 
@@ -69,22 +69,27 @@ function selectPATProposalView(proposal) {
     return Object.freeze({
       provided: false,
       summary: null,
-      step_count: null
+      step_count: null,
     });
   }
   if (typeof proposal === "string") {
     return Object.freeze({
       provided: true,
-      summary: proposal.length > 240 ? `${proposal.slice(0, 237)}...` : proposal,
-      step_count: null
+      summary:
+        proposal.length > 240 ? `${proposal.slice(0, 237)}...` : proposal,
+      step_count: null,
     });
   }
   return Object.freeze({
     provided: true,
-    summary: typeof proposal.summary === "string"
-      ? (proposal.summary.length > 240 ? `${proposal.summary.slice(0, 237)}...` : proposal.summary)
-      : null,
-    step_count: typeof proposal.steps?.length === "number" ? proposal.steps.length : null
+    summary:
+      typeof proposal.summary === "string"
+        ? proposal.summary.length > 240
+          ? `${proposal.summary.slice(0, 237)}...`
+          : proposal.summary
+        : null,
+    step_count:
+      typeof proposal.steps?.length === "number" ? proposal.steps.length : null,
   });
 }
 
@@ -93,13 +98,13 @@ function selectSATVerdictView(verdict) {
     return Object.freeze({
       status: "policy_preview",
       reason: null,
-      authority: "policy_preview_until_shared_urp_runtime_proven"
+      authority: "policy_preview_until_shared_urp_runtime_proven",
     });
   }
   return Object.freeze({
     status: "policy_preview",
     reason: typeof verdict.reason === "string" ? verdict.reason : null,
-    authority: "policy_preview_until_shared_urp_runtime_proven"
+    authority: "policy_preview_until_shared_urp_runtime_proven",
   });
 }
 
@@ -133,7 +138,7 @@ export function buildConsentCardPreview({
   patProposal = null,
   satVerdict = null,
   allowedEffects = ["draft_preview"],
-  additionalBlockedEffects = []
+  additionalBlockedEffects = [],
 } = {}) {
   return Object.freeze({
     schema: "bizra.dema.consent_card_preview.v0.1",
@@ -149,16 +154,16 @@ export function buildConsentCardPreview({
       required: true,
       phrase: null,
       phrase_status: "not_yet_generated_preview_only",
-      match_rule: "exact_string"
+      match_rule: "exact_string",
     }),
     receipt_preview: Object.freeze({
       status: "not_minted",
-      schema: null
+      schema: null,
     }),
     decision_options: DECISION_OPTIONS,
     canonical_mint: false,
     human_consent_required: true,
-    boundary: buildBoundary()
+    boundary: buildBoundary(),
   });
 }
 

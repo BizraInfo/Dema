@@ -238,6 +238,7 @@ function spawnWithConsentGate(slug, { unmount, onExit }) {
 ```
 
 `promptConsent` is a pseudo-helper backed by Ink input that:
+
 1. Renders the consent phrase verbatim.
 2. Waits for the user to type the phrase character-by-character.
 3. Rejects clipboard paste (detected by suspicious-timing heuristic: > 50 chars within 100ms of last input).
@@ -266,14 +267,14 @@ The memory browser is in scope for v0.1 because [b] is in the affordance set. Th
 
 ## 4.7 · Accessibility hooks
 
-| Constraint | Implementation |
-|---|---|
-| NO_COLOR | Ink honors `NO_COLOR` env automatically; verify in TDD-19 |
-| TERM=dumb | Ink falls back to plain text; verify in TDD-20 |
-| 80×24 viewport | Width fixed at 76; height computed; viewport_too_small marker emitted from phase_03 |
-| Keyboard-only | All input via `useInput` from Ink; no mouse event handler bound |
-| Screen reader | The JSON form (phase_05) carries `alt_text` equivalents; readers consume that, not the TUI directly |
-| Bidi RTL | Ink does NOT bidi-render in v0.1; profile.name with RTL script is rendered LTR with a marker in JSON form; v0.2 fix |
+| Constraint     | Implementation                                                                                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------------- |
+| NO_COLOR       | Ink honors `NO_COLOR` env automatically; verify in TDD-19                                                           |
+| TERM=dumb      | Ink falls back to plain text; verify in TDD-20                                                                      |
+| 80×24 viewport | Width fixed at 76; height computed; viewport_too_small marker emitted from phase_03                                 |
+| Keyboard-only  | All input via `useInput` from Ink; no mouse event handler bound                                                     |
+| Screen reader  | The JSON form (phase_05) carries `alt_text` equivalents; readers consume that, not the TUI directly                 |
+| Bidi RTL       | Ink does NOT bidi-render in v0.1; profile.name with RTL script is rendered LTR with a marker in JSON form; v0.2 fix |
 
 ---
 
@@ -317,19 +318,19 @@ TDD-38  consent gate rejects paste (>50 chars in <100ms) for L1+ affordances
 
 ## 4.10 · LOC budget
 
-| Component | Estimated LOC |
-|---|---|
-| homebase-render.jsx | 70 |
-| Header.jsx | 15 |
-| Greeting.jsx | 10 |
-| Memory3.jsx | 35 |
-| Status.jsx | 50 |
-| NextAction.jsx | 12 |
-| Affordances.jsx | 12 |
-| BoundaryFooter.jsx | 8 |
-| key-handler.js | 80 |
-| package.json | 25 |
-| **Total** | **~317** |
+| Component           | Estimated LOC |
+| ------------------- | ------------- |
+| homebase-render.jsx | 70            |
+| Header.jsx          | 15            |
+| Greeting.jsx        | 10            |
+| Memory3.jsx         | 35            |
+| Status.jsx          | 50            |
+| NextAction.jsx      | 12            |
+| Affordances.jsx     | 12            |
+| BoundaryFooter.jsx  | 8             |
+| key-handler.js      | 80            |
+| package.json        | 25            |
+| **Total**           | **~317**      |
 
 Under the C-2 ceiling of ~400 (which also includes phase_02 gather + phase_05 dispatch glue).
 

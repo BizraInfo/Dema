@@ -71,8 +71,11 @@ test("buildNode0StatePreview ADVERSARIAL: caller cannot mutate frozen output", (
     threw = true;
   }
   // strict mode throws; non-strict silently fails. Either way, value unchanged.
-  assert.equal(state.runtime.autonomous_daemon, false,
-    "mutation attempt must not change frozen value");
+  assert.equal(
+    state.runtime.autonomous_daemon,
+    false,
+    "mutation attempt must not change frozen value",
+  );
 });
 
 test("buildNode0StatePreview ADVERSARIAL: caller cannot inject boundary override", () => {

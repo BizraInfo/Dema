@@ -10,7 +10,7 @@ import {
   PAT_MISSION_SCRIBE_SCHEMA_NAME,
   PAT_MISSION_SCRIBE_PROPOSAL_SCHEMA_NAME,
   PAT_MISSION_SCRIBE_CONSENT_PHRASE_TEMPLATE,
-  PAT_MISSION_SCRIBE_PERSONA
+  PAT_MISSION_SCRIBE_PERSONA,
 } from "../packages/core/src/pat-mission-scribe.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 import { AGENT_STATES } from "../packages/core/src/agent-kernel.js";
@@ -66,12 +66,17 @@ test("PAT-1 EffectCap is valid · name = 'pat_mission_scribe' · consent_templat
   const cap = buildPATMissionScribeEffectCap();
   assert.equal(cap.valid, true);
   assert.equal(cap.name, "pat_mission_scribe");
-  assert.equal(cap.consent_scope_template, PAT_MISSION_SCRIBE_CONSENT_PHRASE_TEMPLATE);
+  assert.equal(
+    cap.consent_scope_template,
+    PAT_MISSION_SCRIBE_CONSENT_PHRASE_TEMPLATE,
+  );
 });
 
 test("PAT-1 EffectCap blocks consent-related effects explicitly", () => {
   const cap = buildPATMissionScribeEffectCap();
-  assert.ok(cap.blocked_effects.includes("approve_consent_on_behalf_of_operator"));
+  assert.ok(
+    cap.blocked_effects.includes("approve_consent_on_behalf_of_operator"),
+  );
   assert.ok(cap.blocked_effects.includes("fuzzy_match_consent_phrase"));
   assert.ok(cap.blocked_effects.includes("auto_approve_proposal"));
   // Plus all 8 ALWAYS_BLOCKED
@@ -100,11 +105,17 @@ test("PAT-1 kernel pre-configured with correct agent_id and role", () => {
 test("PAT-1 kernel emits canonical schema + memory_file_path scoped to agent", () => {
   const k = buildPATMissionScribeKernel();
   assert.equal(k.schema, "bizra.dema.agent_kernel.v0.1");
-  assert.equal(k.memory_file_path, "~/.dema/agents/pat-1-mission-scribe/memory.json");
+  assert.equal(
+    k.memory_file_path,
+    "~/.dema/agents/pat-1-mission-scribe/memory.json",
+  );
 });
 
 test("PAT-1 kernel respects custom max_iterations within bounds", () => {
-  const k = buildPATMissionScribeKernel({ mission_intent: "x", max_iterations: 50 });
+  const k = buildPATMissionScribeKernel({
+    mission_intent: "x",
+    max_iterations: 50,
+  });
   assert.equal(k.max_iterations, 50);
 });
 
@@ -114,7 +125,7 @@ test("PAT-1 kernel respects custom max_iterations within bounds", () => {
 
 test("draftMissionProposal with valid intent produces a valid frozen proposal", () => {
   const p = draftMissionProposal({
-    operator_intent: "review my today.json and tell me what changed"
+    operator_intent: "review my today.json and tell me what changed",
   });
   assert.equal(p.schema, PAT_MISSION_SCRIBE_PROPOSAL_SCHEMA_NAME);
   assert.equal(p.schema, "bizra.dema.mission_proposal.v0.1");
@@ -128,7 +139,8 @@ test("draftMissionProposal with valid intent produces a valid frozen proposal", 
 });
 
 test("draftMissionProposal preserves operator intent verbatim", () => {
-  const intent = "compile a list of my recent commits with their boundary discipline status";
+  const intent =
+    "compile a list of my recent commits with their boundary discipline status";
   const p = draftMissionProposal({ operator_intent: intent });
   assert.equal(p.operator_intent_verbatim, intent);
   assert.equal(p.intent_length_chars, intent.length);
@@ -143,7 +155,9 @@ test("draftMissionProposal normalizes scope to first 8 words", () => {
 });
 
 test("draftMissionProposal authors a consent phrase matching the normalized scope", () => {
-  const p = draftMissionProposal({ operator_intent: "audit my recent commits for canon compliance" });
+  const p = draftMissionProposal({
+    operator_intent: "audit my recent commits for canon compliance",
+  });
   assert.match(p.proposal_consent_phrase, /^GO: act on proposal /);
   assert.match(p.proposal_consent_phrase, /audit my recent commits/);
   assert.equal(p.requires_typed_go, true);
@@ -153,7 +167,7 @@ test("draftMissionProposal valid=true requires intent + allowed + blocked all no
   const p = draftMissionProposal({
     operator_intent: "test",
     suggested_allowed_effects: ["render_terminal_output"],
-    always_blocked_effects: ["execute_runtime"]
+    always_blocked_effects: ["execute_runtime"],
   });
   assert.equal(p.valid, true);
   assert.equal(p.receipt_shape_ready, true);
@@ -173,7 +187,7 @@ test("draftMissionProposal refuses empty intent · explicit refusal_reason", () 
 test("draftMissionProposal refuses empty allowed_effects", () => {
   const p = draftMissionProposal({
     operator_intent: "test",
-    suggested_allowed_effects: []
+    suggested_allowed_effects: [],
   });
   assert.equal(p.valid, false);
   assert.match(p.refusal_reason, /no_allowed_effects/);
@@ -183,7 +197,7 @@ test("draftMissionProposal refuses empty blocked_effects", () => {
   const p = draftMissionProposal({
     operator_intent: "test",
     suggested_allowed_effects: ["render_terminal_output"],
-    always_blocked_effects: []
+    always_blocked_effects: [],
   });
   assert.equal(p.valid, false);
   assert.match(p.refusal_reason, /no_blocked_effects/);
@@ -202,7 +216,7 @@ test("Adversarial · non-string operator_intent coerced to empty · refused", ()
 test("Adversarial · non-array allowed_effects defaults to empty · refused", () => {
   const p = draftMissionProposal({
     operator_intent: "test",
-    suggested_allowed_effects: "not-an-array"
+    suggested_allowed_effects: "not-an-array",
   });
   assert.equal(p.valid, false);
   assert.match(p.refusal_reason, /no_allowed_effects/);
@@ -211,16 +225,25 @@ test("Adversarial · non-array allowed_effects defaults to empty · refused", ()
 test("Adversarial · non-string entries in allowed_effects are filtered", () => {
   const p = draftMissionProposal({
     operator_intent: "test",
-    suggested_allowed_effects: ["valid_effect", () => "malicious", Symbol("evil"), 42, "another_valid"]
+    suggested_allowed_effects: [
+      "valid_effect",
+      () => "malicious",
+      Symbol("evil"),
+      42,
+      "another_valid",
+    ],
   });
-  assert.deepEqual([...p.suggested_allowed_effects], ["valid_effect", "another_valid"]);
+  assert.deepEqual(
+    [...p.suggested_allowed_effects],
+    ["valid_effect", "another_valid"],
+  );
 });
 
 test("Adversarial · duplicate allowed/blocked effects deduped", () => {
   const p = draftMissionProposal({
     operator_intent: "test",
     suggested_allowed_effects: ["a", "a", "b", "a"],
-    always_blocked_effects: ["x", "x", "y"]
+    always_blocked_effects: ["x", "x", "y"],
   });
   assert.equal(p.suggested_allowed_effects.length, 2);
   assert.equal(p.always_blocked_effects.length, 2);

@@ -1,12 +1,13 @@
 import { createHash } from "node:crypto";
 
-export const EVIDENCE_RECEIPT_PREVIEW_SCHEMA = "bizra.dema.evidence_receipt_preview.v0.1";
+export const EVIDENCE_RECEIPT_PREVIEW_SCHEMA =
+  "bizra.dema.evidence_receipt_preview.v0.1";
 export const EVIDENCE_RECEIPT_PREVIEW_DIGEST_ALGO = "sha256";
 export const PREVIEW_CHAIN_ID = "preview-no-chain";
 export const PREVIEW_VERDICTS = Object.freeze([
   "PARTIAL_PLACEHOLDER",
   "PREVIEW_REJECT",
-  "PREVIEW_REVIEW"
+  "PREVIEW_REVIEW",
 ]);
 
 function assertSupportedJson(value, path = "$") {
@@ -14,11 +15,14 @@ function assertSupportedJson(value, path = "$") {
   const type = typeof value;
   if (type === "string" || type === "boolean") return;
   if (type === "number") {
-    if (!Number.isFinite(value)) throw new TypeError(`${path} must be a finite number`);
+    if (!Number.isFinite(value))
+      throw new TypeError(`${path} must be a finite number`);
     return;
   }
   if (Array.isArray(value)) {
-    value.forEach((item, index) => assertSupportedJson(item, `${path}[${index}]`));
+    value.forEach((item, index) =>
+      assertSupportedJson(item, `${path}[${index}]`),
+    );
     return;
   }
   if (type === "object") {
@@ -43,9 +47,9 @@ export function canonicalJson(value) {
     return `[${value.map(canonicalJson).join(",")}]`;
   }
 
-  const entries = Object.keys(value).sort().map((key) => (
-    `${JSON.stringify(key)}:${canonicalJson(value[key])}`
-  ));
+  const entries = Object.keys(value)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`);
   return `{${entries.join(",")}}`;
 }
 
@@ -70,7 +74,7 @@ export function buildEvidenceReceiptPreview({
   policy,
   toolCalls = [],
   decision,
-  now = new Date()
+  now = new Date(),
 } = {}) {
   const verdict = decision?.verdict ?? "PREVIEW_REVIEW";
   requirePreviewVerdict(verdict);
@@ -92,7 +96,7 @@ export function buildEvidenceReceiptPreview({
     tool_calls_hash: sha256Canonical(toolCalls),
     decision: {
       verdict,
-      ihsan_floor_preview: decision?.ihsan_floor_preview ?? null
+      ihsan_floor_preview: decision?.ihsan_floor_preview ?? null,
     },
     boundary: {
       filesystem_write_performed: false,
@@ -102,11 +106,11 @@ export function buildEvidenceReceiptPreview({
       signature_emitted: false,
       runtime_gate_executed: false,
       network_connection_attempted: false,
-      external_posting_performed: false
+      external_posting_performed: false,
     },
     note:
       "This is a deterministic Dema preview artifact, not a canonical Node0 receipt. " +
-      "It does not extend a chain, bind an identity, sign a payload, or certify runtime admissibility."
+      "It does not extend a chain, bind an identity, sign a payload, or certify runtime admissibility.",
   };
 
   receipt.self_digest = sha256Canonical(withoutSelfDigest(receipt));
@@ -121,21 +125,26 @@ export function verifyEvidenceReceiptPreview(receipt) {
     pass: schemaOk,
     detail: schemaOk
       ? `schema=${EVIDENCE_RECEIPT_PREVIEW_SCHEMA}`
-      : `expected ${EVIDENCE_RECEIPT_PREVIEW_SCHEMA}`
+      : `expected ${EVIDENCE_RECEIPT_PREVIEW_SCHEMA}`,
   });
 
-  const chainOk = receipt?.chain_id === PREVIEW_CHAIN_ID && receipt?.prev_digest === null;
+  const chainOk =
+    receipt?.chain_id === PREVIEW_CHAIN_ID && receipt?.prev_digest === null;
   checks.push({
     check: "preview_has_no_chain_link",
     pass: chainOk,
-    detail: chainOk ? "chain_id=preview-no-chain; prev_digest=null" : "preview must not link to a chain"
+    detail: chainOk
+      ? "chain_id=preview-no-chain; prev_digest=null"
+      : "preview must not link to a chain",
   });
 
   const noIdentityOk = receipt?.producer_identity === null;
   checks.push({
     check: "preview_has_no_producer_identity",
     pass: noIdentityOk,
-    detail: noIdentityOk ? "producer_identity=null" : "preview must not bind producer identity"
+    detail: noIdentityOk
+      ? "producer_identity=null"
+      : "preview must not bind producer identity",
   });
 
   const noSignatureOk =
@@ -145,7 +154,9 @@ export function verifyEvidenceReceiptPreview(receipt) {
   checks.push({
     check: "preview_has_no_signature_fields",
     pass: noSignatureOk,
-    detail: noSignatureOk ? "no signature/pubkey/key_id fields" : "signature-like fields are forbidden"
+    detail: noSignatureOk
+      ? "no signature/pubkey/key_id fields"
+      : "signature-like fields are forbidden",
   });
 
   const boundaryOk =
@@ -160,12 +171,17 @@ export function verifyEvidenceReceiptPreview(receipt) {
   checks.push({
     check: "preview_boundary_declares_no_effects",
     pass: boundaryOk,
-    detail: boundaryOk ? "no effects declared" : "preview boundary must declare no effects"
+    detail: boundaryOk
+      ? "no effects declared"
+      : "preview boundary must declare no effects",
   });
 
   let digestOk = false;
   let digestDetail = "self_digest missing or malformed";
-  if (typeof receipt?.self_digest === "string" && /^[0-9a-f]{64}$/.test(receipt.self_digest)) {
+  if (
+    typeof receipt?.self_digest === "string" &&
+    /^[0-9a-f]{64}$/.test(receipt.self_digest)
+  ) {
     const recomputed = sha256Canonical(withoutSelfDigest(receipt));
     digestOk = recomputed === receipt.self_digest;
     digestDetail = digestOk
@@ -175,16 +191,18 @@ export function verifyEvidenceReceiptPreview(receipt) {
   checks.push({
     check: "self_digest_recomputes",
     pass: digestOk,
-    detail: digestDetail
+    detail: digestDetail,
   });
 
   return {
     schema: "bizra.dema.evidence_receipt_preview_verdict.v0.1",
     truth_label: "DECLARED",
-    verdict: checks.every((check) => check.pass) ? "PARTIAL_PLACEHOLDER" : "PREVIEW_REJECT",
+    verdict: checks.every((check) => check.pass)
+      ? "PARTIAL_PLACEHOLDER"
+      : "PREVIEW_REJECT",
     checked_at: new Date().toISOString(),
     checks,
-    certifies: false
+    certifies: false,
   };
 }
 
@@ -208,9 +226,12 @@ export function formatEvidenceReceiptPreview(receipt) {
     `  tool calls: ${receipt.tool_calls_hash}`,
     "",
     "Verification checks:",
-    ...verification.checks.map((check) => `  - ${check.pass ? "pass" : "fail"} ${check.check}: ${check.detail}`),
+    ...verification.checks.map(
+      (check) =>
+        `  - ${check.pass ? "pass" : "fail"} ${check.check}: ${check.detail}`,
+    ),
     "",
-    "Boundary: preview-only; no filesystem write; no chain advance; no receipt mint; no identity binding; no signature; no runtime gate; no network; no external posting."
+    "Boundary: preview-only; no filesystem write; no chain advance; no receipt mint; no identity binding; no signature; no runtime gate; no network; no external posting.",
   ];
 
   return lines.join("\n");

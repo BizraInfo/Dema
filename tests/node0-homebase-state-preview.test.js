@@ -5,10 +5,15 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildNode0HomebaseStatePreview,
-  NODE0_HOMEBASE_STATE_PREVIEW_SCHEMA
+  NODE0_HOMEBASE_STATE_PREVIEW_SCHEMA,
 } from "../packages/core/src/node0-homebase-state-preview.js";
 
-const modulePath = fileURLToPath(new URL("../packages/core/src/node0-homebase-state-preview.js", import.meta.url));
+const modulePath = fileURLToPath(
+  new URL(
+    "../packages/core/src/node0-homebase-state-preview.js",
+    import.meta.url,
+  ),
+);
 
 test("Node0 homebase state preview emits the canonical schema", () => {
   const preview = buildNode0HomebaseStatePreview();
@@ -61,7 +66,7 @@ test("Node0 homebase state preview boundary keeps every authority flag false", (
     "economic_settlement",
     "raw_data_exchange",
     "step7_authorization_observed",
-    "filesystem_write_performed"
+    "filesystem_write_performed",
   ]) {
     assert.equal(preview.boundary[key], false, `boundary.${key} must be false`);
   }
@@ -73,9 +78,12 @@ test("Node0 homebase state preview blocked_actions includes the required slugs",
     "connect_node1",
     "shared_urp_publish",
     "runtime_start",
-    "federation_start"
+    "federation_start",
   ]) {
-    assert.ok(preview.blocked_actions.includes(required), `blocked_actions must include ${required}`);
+    assert.ok(
+      preview.blocked_actions.includes(required),
+      `blocked_actions must include ${required}`,
+    );
   }
 });
 
@@ -106,8 +114,14 @@ test("Node0 homebase state preview returns fresh objects on each call", () => {
 test("Node0 homebase state preview module has no runtime or filesystem side effects", async () => {
   const body = await readFile(modulePath, "utf8");
   assert.ok(!/from ['"]node:fs/.test(body), "must not import node:fs");
-  assert.ok(!/from ['"]node:child_process/.test(body), "must not import node:child_process");
+  assert.ok(
+    !/from ['"]node:child_process/.test(body),
+    "must not import node:child_process",
+  );
   assert.ok(!/from ['"]node:http/.test(body), "must not import node:http");
   assert.ok(!/from ['"]node:net/.test(body), "must not import node:net");
-  assert.ok(!/spawn\(|execSync\(|execFile\(|spawnSync\(/.test(body), "must not invoke processes");
+  assert.ok(
+    !/spawn\(|execSync\(|execFile\(|spawnSync\(/.test(body),
+    "must not invoke processes",
+  );
 });

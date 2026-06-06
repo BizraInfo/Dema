@@ -46,12 +46,12 @@ A Lighthouse operator must:
 
 ## Sourcing surface
 
-| Allowed | Forbidden |
-|---|---|
-| 1:1 conversations with people in the existing trust circle | Twitter/X open call |
-| Small private channels the program owner is already trusted in | Hacker News post |
-| | Discord blast / mailing list announcement |
-| | Any recruitment message that itself becomes a marketing artifact |
+| Allowed                                                        | Forbidden                                                        |
+| -------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 1:1 conversations with people in the existing trust circle     | Twitter/X open call                                              |
+| Small private channels the program owner is already trusted in | Hacker News post                                                 |
+|                                                                | Discord blast / mailing list announcement                        |
+|                                                                | Any recruitment message that itself becomes a marketing artifact |
 
 Public outreach for operators **is** a public federation claim. Per [`dema monetize`](../apps/cli/src/index.js) blocklist, that is forbidden.
 

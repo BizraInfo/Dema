@@ -44,17 +44,17 @@ If all 5 return as expected, **the system is verifiable at HEAD as committed.** 
 
 ## §2 · Reading order for understanding
 
-| Phase | Document | Purpose |
-|---|---|---|
-| 1 | [README.md](README.md) | Product overview · usage examples |
-| 2 | [docs/founder-field-notes/v0.1.md](docs/founder-field-notes/v0.1.md) | Why this project exists · the empowerment thesis |
-| 3 | [GLOSSARY.md](GLOSSARY.md) | BIZRA vocabulary (PAT · SAT · URP · Ihsān · etc.) |
-| 4 | [docs/02-architecture/dema-autonomy-envelope.md](docs/02-architecture/dema-autonomy-envelope.md) | L0-L5 autonomy levels · what Dema may do |
-| 5 | [docs/02-architecture/key-maker-epistemic-conduct-v0.1.md](docs/02-architecture/key-maker-epistemic-conduct-v0.1.md) | Reasoning discipline · 5 invariants |
-| 6 | [docs/06-adr/ADR-008-runtime-activation.md](docs/06-adr/ADR-008-runtime-activation.md) | The 12-component runtime spec |
-| 7 | [API_REFERENCE.md](API_REFERENCE.md) | All 9 spine CLI commands with examples |
-| 8 | [SECURITY.md](SECURITY.md) | Threat model · refusal taxonomy · boundary discipline |
-| 9 | [docs/founder-field-notes/inroom-walkthrough-v0.1.md](docs/founder-field-notes/inroom-walkthrough-v0.1.md) | In-person review script (gentle + adversarial modes) |
+| Phase | Document                                                                                                             | Purpose                                               |
+| ----- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| 1     | [README.md](README.md)                                                                                               | Product overview · usage examples                     |
+| 2     | [docs/founder-field-notes/v0.1.md](docs/founder-field-notes/v0.1.md)                                                 | Why this project exists · the empowerment thesis      |
+| 3     | [GLOSSARY.md](GLOSSARY.md)                                                                                           | BIZRA vocabulary (PAT · SAT · URP · Ihsān · etc.)     |
+| 4     | [docs/02-architecture/dema-autonomy-envelope.md](docs/02-architecture/dema-autonomy-envelope.md)                     | L0-L5 autonomy levels · what Dema may do              |
+| 5     | [docs/02-architecture/key-maker-epistemic-conduct-v0.1.md](docs/02-architecture/key-maker-epistemic-conduct-v0.1.md) | Reasoning discipline · 5 invariants                   |
+| 6     | [docs/06-adr/ADR-008-runtime-activation.md](docs/06-adr/ADR-008-runtime-activation.md)                               | The 12-component runtime spec                         |
+| 7     | [API_REFERENCE.md](API_REFERENCE.md)                                                                                 | All 9 spine CLI commands with examples                |
+| 8     | [SECURITY.md](SECURITY.md)                                                                                           | Threat model · refusal taxonomy · boundary discipline |
+| 9     | [docs/founder-field-notes/inroom-walkthrough-v0.1.md](docs/founder-field-notes/inroom-walkthrough-v0.1.md)           | In-person review script (gentle + adversarial modes)  |
 
 **Estimated full-context reading time: 90 minutes.** A reviewer can produce useful feedback after step 5 (45 minutes).
 
@@ -147,6 +147,7 @@ network_used
 A spine command output with any key set to `true` is structurally invalid · SAT-1 (boundary verifier) rejects it on sight.
 
 **To cross this boundary requires:**
+
 1. Typed-GO with exact consent phrase (per ADR-005)
 2. SAT pipeline pass (all applicable SATs run via the orchestrator)
 3. Governed gateway handoff (per ADR-001 · runtime lives upstream of this repo)
@@ -180,18 +181,21 @@ Receipt #55 2026-05-19  master-craftsmanship polish (discoverability + ADR-012 a
 ```
 
 Bitcoin attestations:
+
 ```
 Founding documents (3 PDFs) → blocks 948027 + 948028 + 948029 (CONFIRMED 2026-04)
 PROOF_SUMMARY.md            → submitted to 4 OTS calendars (PENDING 2026-05-18)
 ```
 
 **Verify the chain:**
+
 ```bash
 python3 scripts/forge_evidence.py --verify --project-dir .
 # Walks all 55 receipts · recomputes hashes · reports any breaks
 ```
 
 **Verify the Bitcoin anchor (after confirmation):**
+
 ```bash
 ots upgrade PROOF_SUMMARY.md.ots
 ots verify PROOF_SUMMARY.md.ots
@@ -204,16 +208,16 @@ ots verify PROOF_SUMMARY.md.ots
 ```
 ✗ Runtime activation                Lives upstream in governed gateway (per ADR-001)
                                     This repo is "the face" · preview + consent only
-                                    
+
 ✗ Push to origin enabled            Held due to CI dispatch incident (external · since 2026-05-17)
                                     13+ commits in local history await resolution
-                                    
+
 ✗ Federation / Node1 connection     Phase 3 readiness · gated by Ring-1 reviewer feedback
                                     (per concentric rings GTM in field notes)
-                                    
+
 ✗ Public token / economic claim     RIBA_ZERO constitutional anchor · no economic activation
                                     until proven useful impact + ADR-008 §C12 readiness
-                                    
+
 ✗ Chain advance from CLI            C12 prepares mint requests · governed gateway issues canonical
                                     receipts · this CLI cannot mint canonically itself
 ```

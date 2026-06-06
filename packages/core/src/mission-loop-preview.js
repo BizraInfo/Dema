@@ -30,7 +30,7 @@ const LIFECYCLE_PHASES = Object.freeze([
   "awaiting_consent",
   "narrowing_scope",
   "complete_preview_declined",
-  "complete_preview_approved"
+  "complete_preview_approved",
 ]);
 
 function deriveLifecyclePhase({ mission, patProposal, consentDecision }) {
@@ -40,19 +40,27 @@ function deriveLifecyclePhase({ mission, patProposal, consentDecision }) {
   if (!hasProposal) return "needs_pat_proposal";
   if (consentDecision === "decline") return "complete_preview_declined";
   if (consentDecision === "narrow_scope") return "narrowing_scope";
-  if (consentDecision === "approve_c2_draft_only") return "complete_preview_approved";
+  if (consentDecision === "approve_c2_draft_only")
+    return "complete_preview_approved";
   return "awaiting_consent";
 }
 
 function deriveNextSafeAction(phase) {
   switch (phase) {
-    case "ready": return "provide_mission_intent";
-    case "needs_pat_proposal": return "draft_pat_proposal_preview";
-    case "awaiting_consent": return "review_consent_card";
-    case "narrowing_scope": return "redraft_pat_proposal_with_narrower_scope";
-    case "complete_preview_declined": return "decline_recorded_choose_new_mission";
-    case "complete_preview_approved": return "preview_complete_typed_go_required_for_any_execution";
-    default: return "hold";
+    case "ready":
+      return "provide_mission_intent";
+    case "needs_pat_proposal":
+      return "draft_pat_proposal_preview";
+    case "awaiting_consent":
+      return "review_consent_card";
+    case "narrowing_scope":
+      return "redraft_pat_proposal_with_narrower_scope";
+    case "complete_preview_declined":
+      return "decline_recorded_choose_new_mission";
+    case "complete_preview_approved":
+      return "preview_complete_typed_go_required_for_any_execution";
+    default:
+      return "hold";
   }
 }
 
@@ -64,9 +72,10 @@ function buildLocalModelInvocationView(phase) {
     output: null,
     output_truth_label: null,
     output_schema: null,
-    output_invocation_recorded_in: phase === "complete_preview_approved"
-      ? "would_be_evidence_chain_event_if_typed_go"
-      : "not_applicable"
+    output_invocation_recorded_in:
+      phase === "complete_preview_approved"
+        ? "would_be_evidence_chain_event_if_typed_go"
+        : "not_applicable",
   });
 }
 
@@ -78,14 +87,16 @@ function buildEvidenceChainEventView(phase, evidenceRefs) {
       schema: null,
       chain_advance: false,
       status: "not_prepared",
-      referenced_evidence: Object.freeze([])
+      referenced_evidence: Object.freeze([]),
     });
   }
   const safeRefs = Array.isArray(evidenceRefs)
-    ? evidenceRefs.map((ref) => Object.freeze({
-        id: ref?.id ?? null,
-        schema: ref?.schema ?? null
-      }))
+    ? evidenceRefs.map((ref) =>
+        Object.freeze({
+          id: ref?.id ?? null,
+          schema: ref?.schema ?? null,
+        }),
+      )
     : [];
   return Object.freeze({
     event_id: null,
@@ -93,7 +104,7 @@ function buildEvidenceChainEventView(phase, evidenceRefs) {
     schema: "bizra.dema.evidence_chain_event.preview.v0.1",
     chain_advance: false,
     status: "prepared_preview_only",
-    referenced_evidence: Object.freeze(safeRefs)
+    referenced_evidence: Object.freeze(safeRefs),
   });
 }
 
@@ -103,14 +114,14 @@ function buildReceiptPreviewView(phase) {
       status: "not_prepared",
       schema: null,
       chain_advance: false,
-      receipt_id: null
+      receipt_id: null,
     });
   }
   return Object.freeze({
     status: "prepared_preview_only",
     schema: "bizra.dema.mission_loop_receipt.preview.v0.1",
     chain_advance: false,
-    receipt_id: null
+    receipt_id: null,
   });
 }
 
@@ -124,7 +135,7 @@ export function buildMissionLoopPreview({
   patProposal = null,
   satVerdictReason = null,
   consentDecision = null,
-  evidenceRefs = []
+  evidenceRefs = [],
 } = {}) {
   const phase = deriveLifecyclePhase({ mission, patProposal, consentDecision });
   const stateLoad = buildNode0StatePreview({ operator });
@@ -132,13 +143,13 @@ export function buildMissionLoopPreview({
     operator,
     missionId: mission?.missionId ?? null,
     intent: mission?.intent ?? null,
-    evidenceRefs
+    evidenceRefs,
   });
   const consentCard = buildConsentCardPreview({
     mission,
     patProposal,
     satVerdict: satVerdictReason ? { reason: satVerdictReason } : null,
-    allowedEffects: ["draft_preview"]
+    allowedEffects: ["draft_preview"],
   });
 
   return Object.freeze({
@@ -155,7 +166,7 @@ export function buildMissionLoopPreview({
     receipt_preview: buildReceiptPreviewView(phase),
     next_safe_action: deriveNextSafeAction(phase),
     consent_decision_recorded: consentDecision ?? null,
-    boundary: buildBoundary()
+    boundary: buildBoundary(),
   });
 }
 
@@ -183,12 +194,13 @@ export function buildMissionLoopSummary(options = {}) {
       state_load: full.state_load.schema,
       profile_foundation: full.profile_foundation.schema,
       consent_card: full.consent_card.schema,
-      local_model_invocation_status: full.local_model_invocation.invocation_status,
+      local_model_invocation_status:
+        full.local_model_invocation.invocation_status,
       evidence_chain_event_status: full.evidence_chain_event.status,
-      receipt_preview_status: full.receipt_preview.status
+      receipt_preview_status: full.receipt_preview.status,
     }),
     consent_decision_recorded: full.consent_decision_recorded,
-    boundary: full.boundary
+    boundary: full.boundary,
   });
 }
 

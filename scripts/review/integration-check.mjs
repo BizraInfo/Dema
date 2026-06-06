@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -108,10 +109,20 @@ function cliCommandFromArgs(args, helpCommands) {
 function listTestFiles(root) {
   const testsDir = join(root, "tests");
   if (!existsSync(testsDir)) return [];
-  return readdirSync(testsDir)
-    .filter((entry) => entry.endsWith(".test.js"))
-    .map((entry) => `tests/${entry}`)
-    .sort();
+  // Hermetic: use git ls-files to only consider tracked .test.js (ignore ?? untracked noise).
+  try {
+    const out = execFileSync("git", ["ls-files", "tests/*.test.js"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    return out.trim().split("\n").filter(Boolean).sort();
+  } catch {
+    return readdirSync(testsDir)
+      .filter((entry) => entry.endsWith(".test.js"))
+      .map((entry) => `tests/${entry}`)
+      .sort();
+  }
 }
 
 function makeCheck(name, ok, details = {}) {

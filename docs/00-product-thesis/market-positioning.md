@@ -7,6 +7,7 @@ DEMA is the sovereign operator for people who need an AI assistant they can trus
 ## Target user
 
 Knowledge workers and technical leaders who:
+
 - Need an AI that can act (not just advise)
 - Require proof of what was done (not just output)
 - Work across code, research, and operations daily
@@ -15,16 +16,16 @@ Knowledge workers and technical leaders who:
 
 ## Competitive differentiation
 
-| Feature | Claude Code | Perplexity | Manus | **DEMA** |
-|---------|------------|------------|-------|----------|
-| Terminal coding | ★★★ | — | ★ | ★★★ |
-| Research + citations | ★ | ★★★ | ★ | ★★★ |
-| Browser operator | — | — | ★★★ | ★★★ |
-| Computer operator | ★★ | — | ★★★ | ★★★ |
-| Trust/proof system | — | — | — | ★★★ |
-| Local-first memory | — | ★ | — | ★★★ |
-| Unified face | — | — | — | ★★★ |
-| MCP extensibility | ★★★ | ★★ | — | ★★★ |
+| Feature              | Claude Code | Perplexity | Manus | **DEMA** |
+| -------------------- | ----------- | ---------- | ----- | -------- |
+| Terminal coding      | ★★★         | —          | ★     | ★★★      |
+| Research + citations | ★           | ★★★        | ★     | ★★★      |
+| Browser operator     | —           | —          | ★★★   | ★★★      |
+| Computer operator    | ★★          | —          | ★★★   | ★★★      |
+| Trust/proof system   | —           | —          | —     | ★★★      |
+| Local-first memory   | —           | ★          | —     | ★★★      |
+| Unified face         | —           | —          | —     | ★★★      |
+| MCP extensibility    | ★★★         | ★★         | —     | ★★★      |
 
 ## The 7 killer screens
 

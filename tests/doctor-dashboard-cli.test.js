@@ -13,7 +13,9 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 async function freshEnv() {
   const root = await mkdtemp(join(tmpdir(), "dema-doctor-cli-"));
@@ -25,14 +27,18 @@ async function freshEnv() {
 
 test("dema doctor (no flags) → stdout contains header and Verdict", async () => {
   const env = await freshEnv();
-  const result = await execFileAsync("node", [cliPath, "doctor"], { env }).catch((e) => e);
+  const result = await execFileAsync("node", [cliPath, "doctor"], {
+    env,
+  }).catch((e) => e);
   assert.match(result.stdout, /Dema Doctor —/);
   assert.match(result.stdout, /Verdict:/);
 });
 
 test("dema doctor --json → JSON.parse succeeds, schema field present", async () => {
   const env = await freshEnv();
-  const result = await execFileAsync("node", [cliPath, "doctor", "--json"], { env }).catch((e) => e);
+  const result = await execFileAsync("node", [cliPath, "doctor", "--json"], {
+    env,
+  }).catch((e) => e);
   const parsed = JSON.parse(result.stdout);
   assert.equal(parsed.schema, "bizra.dema.doctor_dashboard.v0.1");
   assert.ok(Array.isArray(parsed.predicates));
@@ -41,6 +47,13 @@ test("dema doctor --json → JSON.parse succeeds, schema field present", async (
 
 test("dema doctor --no-color → stdout contains no ANSI escape codes", async () => {
   const env = await freshEnv();
-  const result = await execFileAsync("node", [cliPath, "doctor", "--no-color"], { env }).catch((e) => e);
-  assert.ok(!result.stdout.includes("\x1b["), "ANSI codes must be absent with --no-color");
+  const result = await execFileAsync(
+    "node",
+    [cliPath, "doctor", "--no-color"],
+    { env },
+  ).catch((e) => e);
+  assert.ok(
+    !result.stdout.includes("\x1b["),
+    "ANSI codes must be absent with --no-color",
+  );
 });

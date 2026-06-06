@@ -21,7 +21,7 @@ export function formatReleaseReadinessReport(report) {
     `  cd status: ${report.pipeline.cd_status}`,
     `  maturity: ${report.ci_cd_maturity.current_level.id} (${report.ci_cd_maturity.current_level.label})`,
     `  workflow worktree: ${report.ci.workflow.worktree_changes.length > 0 ? "dirty" : "clean"}`,
-    `  workflow authorization: ${workflowAuthorizationLabel(report.ci.workflow)}`
+    `  workflow authorization: ${workflowAuthorizationLabel(report.ci.workflow)}`,
   ];
 
   if (report.ci.workflow.worktree_changes.length > 0) {
@@ -47,7 +47,9 @@ export function formatReleaseReadinessReport(report) {
   lines.push("World-class gate posture:");
   lines.push(`  ${report.world_class_quality_gates.posture}`);
   for (const gate of report.world_class_quality_gates.gates) {
-    lines.push(`  - ${gate.currently_enforced ? "observed" : "advisory"}: ${gate.id}`);
+    lines.push(
+      `  - ${gate.currently_enforced ? "observed" : "advisory"}: ${gate.id}`,
+    );
   }
   lines.push("");
   lines.push("Rollout / rollback:");
@@ -60,9 +62,13 @@ export function formatReleaseReadinessReport(report) {
   lines.push("");
   lines.push("Installer artifacts:");
   for (const artifact of report.installer_artifacts.required) {
-    lines.push(`  - ${artifact.exists ? "present" : "missing"}: ${artifact.path}`);
+    lines.push(
+      `  - ${artifact.exists ? "present" : "missing"}: ${artifact.path}`,
+    );
   }
-  lines.push(`  capabilities: ${report.installer_artifacts.capabilities.join(", ") || "none"}`);
+  lines.push(
+    `  capabilities: ${report.installer_artifacts.capabilities.join(", ") || "none"}`,
+  );
 
   lines.push("");
   lines.push("Risks:");

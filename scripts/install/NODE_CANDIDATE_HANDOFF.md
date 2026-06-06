@@ -45,13 +45,13 @@ it with identity flags the host gave you alongside this document.
 
 The host should have given you these values together with this document:
 
-| Parameter | Example | What it means |
-|---|---|---|
-| `--operator "<your name>"` | `"Samy"` | Your name in the registry |
-| `--ordinal N` | `1` | Your node number (Node1 = first invited, Node2 = second, ...) |
-| `--paired-receipt-id "<id>"` | `"2026-05-18_082658"` | The Proof-Forge receipt of your in-person acceptance |
-| `--paired-receipt-hash "<hash>"` | `"8ac3d72699be..."` | The evidence hash of that receipt (64 hex chars) |
-| `--paired-receipt-date "<YYYY-MM-DD>"` | `"2026-05-18"` | The date your in-person ceremony happened |
+| Parameter                              | Example               | What it means                                                 |
+| -------------------------------------- | --------------------- | ------------------------------------------------------------- |
+| `--operator "<your name>"`             | `"Samy"`              | Your name in the registry                                     |
+| `--ordinal N`                          | `1`                   | Your node number (Node1 = first invited, Node2 = second, ...) |
+| `--paired-receipt-id "<id>"`           | `"2026-05-18_082658"` | The Proof-Forge receipt of your in-person acceptance          |
+| `--paired-receipt-hash "<hash>"`       | `"8ac3d72699be..."`   | The evidence hash of that receipt (64 hex chars)              |
+| `--paired-receipt-date "<YYYY-MM-DD>"` | `"2026-05-18"`        | The date your in-person ceremony happened                     |
 
 Keep these values handy. You'll paste them into the install command.
 
@@ -218,12 +218,14 @@ boundary visible, not hidden.
 ```
 
 That removes:
+
 - Your Node-N profile
 - Your self-witness
 - Any local receipts you generated
 - The entire `~/.dema/` directory
 
 That does NOT remove:
+
 - The Dema source code (delete that directory separately if you want)
 - The Proof-Forge receipt on the host's machine (their local evidence;
   ask them to update their memory if you want it noted)

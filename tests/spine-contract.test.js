@@ -25,7 +25,7 @@ import { buildKeyMakerCompliancePreview } from "../packages/core/src/key-maker-c
 
 import {
   isCanonicalBoundary,
-  PREVIEW_BOUNDARY_CANONICAL_KEYS
+  PREVIEW_BOUNDARY_CANONICAL_KEYS,
 } from "../packages/core/src/preview-boundary.js";
 
 const SPINE_BUILDERS = Object.freeze([
@@ -36,31 +36,42 @@ const SPINE_BUILDERS = Object.freeze([
   ["evidence-event", buildEvidenceChainEventPreviewFromInputs],
   ["llm-router", buildLocalLLMRouterPreview],
   ["process-mining", buildProcessMiningPreview],
-  ["key-maker-check", buildKeyMakerCompliancePreview]
+  ["key-maker-check", buildKeyMakerCompliancePreview],
 ]);
 
 const SCHEMA_PATTERN = /^bizra\.dema\.[a-z0-9_]+\.v\d+\.\d+$/;
 
 test("Spine has exactly 8 canonical surfaces", () => {
-  assert.equal(SPINE_BUILDERS.length, 8,
-    "spine count must match smoke-boundary and TESTING.md");
+  assert.equal(
+    SPINE_BUILDERS.length,
+    8,
+    "spine count must match smoke-boundary and TESTING.md",
+  );
 });
 
 test("Every spine builder emits a schema matching bizra.dema.<name>.vX.Y", () => {
   for (const [name, builder] of SPINE_BUILDERS) {
     const out = builder();
-    assert.ok(typeof out.schema === "string",
-      `${name}.schema must be a string`);
-    assert.match(out.schema, SCHEMA_PATTERN,
-      `${name}.schema ('${out.schema}') must match bizra.dema.<name>.vN.M`);
+    assert.ok(
+      typeof out.schema === "string",
+      `${name}.schema must be a string`,
+    );
+    assert.match(
+      out.schema,
+      SCHEMA_PATTERN,
+      `${name}.schema ('${out.schema}') must match bizra.dema.<name>.vN.M`,
+    );
   }
 });
 
 test("Every spine builder emits truth_label = NODE0_LOCAL_SEED", () => {
   for (const [name, builder] of SPINE_BUILDERS) {
     const out = builder();
-    assert.equal(out.truth_label, "NODE0_LOCAL_SEED",
-      `${name}.truth_label must be NODE0_LOCAL_SEED`);
+    assert.equal(
+      out.truth_label,
+      "NODE0_LOCAL_SEED",
+      `${name}.truth_label must be NODE0_LOCAL_SEED`,
+    );
   }
 });
 
@@ -71,11 +82,14 @@ test("Every spine builder emits canonical 16-key boundary", () => {
     assert.equal(
       isCanonicalBoundary(out.boundary),
       true,
-      `${name}.boundary must satisfy isCanonicalBoundary() (canonical 16-key all-false frozen)`
+      `${name}.boundary must satisfy isCanonicalBoundary() (canonical 16-key all-false frozen)`,
     );
     for (const key of PREVIEW_BOUNDARY_CANONICAL_KEYS) {
-      assert.equal(out.boundary[key], false,
-        `${name}.boundary.${key} must be false`);
+      assert.equal(
+        out.boundary[key],
+        false,
+        `${name}.boundary.${key} must be false`,
+      );
     }
   }
 });
@@ -83,18 +97,21 @@ test("Every spine builder emits canonical 16-key boundary", () => {
 test("Every spine builder output is deep-frozen at top level", () => {
   for (const [name, builder] of SPINE_BUILDERS) {
     const out = builder();
-    assert.ok(Object.isFrozen(out),
-      `${name} output must be deep-frozen at top level`);
-    assert.ok(Object.isFrozen(out.boundary),
-      `${name}.boundary must be frozen`);
+    assert.ok(
+      Object.isFrozen(out),
+      `${name} output must be deep-frozen at top level`,
+    );
+    assert.ok(Object.isFrozen(out.boundary), `${name}.boundary must be frozen`);
   }
 });
 
 test("Every spine builder emits a mode field as a string", () => {
   for (const [name, builder] of SPINE_BUILDERS) {
     const out = builder();
-    assert.ok(typeof out.mode === "string" || out.mode === undefined,
-      `${name}.mode must be a string if present (got ${typeof out.mode})`);
+    assert.ok(
+      typeof out.mode === "string" || out.mode === undefined,
+      `${name}.mode must be a string if present (got ${typeof out.mode})`,
+    );
   }
 });
 
@@ -106,14 +123,16 @@ test("Every spine builder is deterministic when called with no args", () => {
     // deep equality, so we use deepEqual on the JSON-cloned form.
     const aJson = JSON.parse(JSON.stringify(a));
     const bJson = JSON.parse(JSON.stringify(b));
-    assert.deepEqual(aJson, bJson,
-      `${name} must be deterministic when called with no args`);
+    assert.deepEqual(
+      aJson,
+      bJson,
+      `${name} must be deterministic when called with no args`,
+    );
   }
 });
 
 test("All 8 spine surface names are unique", () => {
   const names = SPINE_BUILDERS.map(([n]) => n);
   const unique = new Set(names);
-  assert.equal(unique.size, names.length,
-    "spine surface names must be unique");
+  assert.equal(unique.size, names.length, "spine surface names must be unique");
 });

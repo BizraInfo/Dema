@@ -5,7 +5,10 @@
 // never bypasses pre-commit hooks · never modifies CI workflows · never
 // touches files outside declared scope.
 
-import { buildAgentKernel, AGENT_KERNEL_MAX_ITERATIONS } from "./agent-kernel.js";
+import {
+  buildAgentKernel,
+  AGENT_KERNEL_MAX_ITERATIONS,
+} from "./agent-kernel.js";
 import { buildEffectCap } from "./effect-cap.js";
 import { buildPreviewBoundary } from "./preview-boundary.js";
 
@@ -25,7 +28,7 @@ const PAT3_PERSONA = Object.freeze({
     "read_local_source",
     "draft_code_change",
     "run_tests_under_consent",
-    "classify_change_against_canon"
+    "classify_change_against_canon",
   ]),
   primary_refusals: Object.freeze([
     "push_to_remote",
@@ -34,8 +37,8 @@ const PAT3_PERSONA = Object.freeze({
     "touch_files_outside_declared_scope",
     "execute_arbitrary_shell",
     "amend_published_commits",
-    "force_push"
-  ])
+    "force_push",
+  ]),
 });
 
 const PAT3_EFFECT_CAP_ALLOWED = Object.freeze([
@@ -43,7 +46,7 @@ const PAT3_EFFECT_CAP_ALLOWED = Object.freeze([
   "list_local_directory",
   "stat_file_metadata",
   "compute_hash",
-  "render_terminal_output"
+  "render_terminal_output",
 ]);
 
 const PAT3_EFFECT_CAP_EXTRA_BLOCKED = Object.freeze([
@@ -52,10 +55,11 @@ const PAT3_EFFECT_CAP_EXTRA_BLOCKED = Object.freeze([
   "amend_published_commit",
   "modify_ci_workflows",
   "bypass_pre_commit_hook",
-  "touch_outside_declared_scope"
+  "touch_outside_declared_scope",
 ]);
 
-const PAT3_CONSENT_PHRASE_TEMPLATE = "GO: invoke PAT-3 code_apprentice to draft change";
+const PAT3_CONSENT_PHRASE_TEMPLATE =
+  "GO: invoke PAT-3 code_apprentice to draft change";
 
 function safeString(v, fallback = "") {
   return typeof v === "string" ? v : fallback;
@@ -72,7 +76,7 @@ const FORBIDDEN_PATH_PATTERNS = Object.freeze([
   /node_modules\//,
   /\.env(\..*)?$/,
   /credentials/i,
-  /secrets/i
+  /secrets/i,
 ]);
 
 function isPathInForbiddenZone(path) {
@@ -87,7 +91,7 @@ export function buildPATCodeApprenticeEffectCap() {
     allowed_effects: PAT3_EFFECT_CAP_ALLOWED,
     blocked_effects: PAT3_EFFECT_CAP_EXTRA_BLOCKED,
     consent_scope_template: PAT3_CONSENT_PHRASE_TEMPLATE,
-    audit_trail_required: true
+    audit_trail_required: true,
   });
 }
 
@@ -102,24 +106,29 @@ export function buildPATCodeApprenticePreview({ operator_name = "Mumu" } = {}) {
     consent_phrase_template: PAT3_CONSENT_PHRASE_TEMPLATE,
     memory_file_path: `~/.dema/agents/${PAT3_PERSONA.pat_id}/memory.json`,
     max_iterations: AGENT_KERNEL_MAX_ITERATIONS,
-    forbidden_path_patterns: Object.freeze(FORBIDDEN_PATH_PATTERNS.map((p) => String(p))),
+    forbidden_path_patterns: Object.freeze(
+      FORBIDDEN_PATH_PATTERNS.map((p) => String(p)),
+    ),
     refusal_invariants: Object.freeze([
       "PAT-3 never pushes to a remote · operator pushes manually",
       "PAT-3 never bypasses pre-commit hooks · --no-verify is forbidden",
       "PAT-3 never modifies .github/workflows/*.yml · CI policy is operator-scoped",
       "PAT-3 never touches secrets/credentials/.env* files",
-      "PAT-3 never amends a published commit · creates new commits instead"
+      "PAT-3 never amends a published commit · creates new commits instead",
     ]),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
-export function buildPATCodeApprenticeKernel({ mission_intent = "", max_iterations = AGENT_KERNEL_MAX_ITERATIONS } = {}) {
+export function buildPATCodeApprenticeKernel({
+  mission_intent = "",
+  max_iterations = AGENT_KERNEL_MAX_ITERATIONS,
+} = {}) {
   return buildAgentKernel({
     agent_id: PAT3_PERSONA.pat_id,
     agent_role: "pat_code_apprentice",
     mission_intent: safeString(mission_intent, ""),
-    max_iterations
+    max_iterations,
   });
 }
 
@@ -129,40 +138,54 @@ export function draftCodeChangePlan({
   change_intent = "",
   paths_to_edit = [],
   change_type = "edit",
-  declared_scope_root = ""
+  declared_scope_root = "",
 } = {}) {
   const intent = safeString(change_intent, "").trim();
   const paths = filterStringArray(paths_to_edit);
-  const safeChangeType = ["edit", "create", "delete", "rename"].includes(change_type) ? change_type : "edit";
+  const safeChangeType = ["edit", "create", "delete", "rename"].includes(
+    change_type,
+  )
+    ? change_type
+    : "edit";
   const safeScopeRoot = safeString(declared_scope_root, "").trim();
 
   // Path analysis
   const pathAnalysis = paths.map((path) => {
     const forbidden = isPathInForbiddenZone(path);
-    const outsideScope = safeScopeRoot.length > 0 && !path.startsWith(safeScopeRoot);
+    const outsideScope =
+      safeScopeRoot.length > 0 && !path.startsWith(safeScopeRoot);
     return Object.freeze({
       path,
       in_forbidden_zone: forbidden,
       outside_declared_scope: outsideScope,
-      allowed_for_change: !forbidden && !outsideScope
+      allowed_for_change: !forbidden && !outsideScope,
     });
   });
 
-  const allPathsAllowed = pathAnalysis.length > 0 && pathAnalysis.every((p) => p.allowed_for_change);
-  const forbiddenHits = pathAnalysis.filter((p) => p.in_forbidden_zone).map((p) => p.path);
-  const outsideScopeHits = pathAnalysis.filter((p) => p.outside_declared_scope).map((p) => p.path);
+  const allPathsAllowed =
+    pathAnalysis.length > 0 && pathAnalysis.every((p) => p.allowed_for_change);
+  const forbiddenHits = pathAnalysis
+    .filter((p) => p.in_forbidden_zone)
+    .map((p) => p.path);
+  const outsideScopeHits = pathAnalysis
+    .filter((p) => p.outside_declared_scope)
+    .map((p) => p.path);
 
-  const valid = intent.length > 0 && paths.length > 0 && allPathsAllowed && safeScopeRoot.length > 0;
+  const valid =
+    intent.length > 0 &&
+    paths.length > 0 &&
+    allPathsAllowed &&
+    safeScopeRoot.length > 0;
   const refusal_reason = !valid
-    ? (intent.length === 0
-        ? "empty_change_intent"
-        : safeScopeRoot.length === 0
-          ? "missing_declared_scope_root · scope must be named explicitly"
-          : paths.length === 0
-            ? "no_paths · plan would have nothing to change"
-            : forbiddenHits.length > 0
-              ? `forbidden_path · ${forbiddenHits.join(",")}`
-              : `outside_declared_scope · ${outsideScopeHits.join(",")}`)
+    ? intent.length === 0
+      ? "empty_change_intent"
+      : safeScopeRoot.length === 0
+        ? "missing_declared_scope_root · scope must be named explicitly"
+        : paths.length === 0
+          ? "no_paths · plan would have nothing to change"
+          : forbiddenHits.length > 0
+            ? `forbidden_path · ${forbiddenHits.join(",")}`
+            : `outside_declared_scope · ${outsideScopeHits.join(",")}`
     : null;
 
   return Object.freeze({
@@ -183,7 +206,7 @@ export function draftCodeChangePlan({
     refusal_reason,
     audit_trail_required: true,
     receipt_shape_ready: valid,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -202,11 +225,12 @@ export function buildPATCodeApprenticeSummary(options = {}) {
     refusal_count: preview.persona.primary_refusals.length,
     forbidden_pattern_count: preview.forbidden_path_patterns.length,
     consent_phrase_template: preview.consent_phrase_template,
-    boundary: preview.boundary
+    boundary: preview.boundary,
   });
 }
 
 export const PAT_CODE_APPRENTICE_SCHEMA_NAME = SCHEMA;
 export const PAT_CODE_APPRENTICE_CHANGE_PLAN_SCHEMA_NAME = CHANGE_PLAN_SCHEMA;
-export const PAT_CODE_APPRENTICE_CONSENT_PHRASE_TEMPLATE = PAT3_CONSENT_PHRASE_TEMPLATE;
+export const PAT_CODE_APPRENTICE_CONSENT_PHRASE_TEMPLATE =
+  PAT3_CONSENT_PHRASE_TEMPLATE;
 export const PAT_CODE_APPRENTICE_PERSONA = PAT3_PERSONA;

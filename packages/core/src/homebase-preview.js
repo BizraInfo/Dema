@@ -256,8 +256,7 @@ function buildStatus(g) {
             icon: buildMissionIcon(g.last_mission),
             active_count: 1,
             mission_id: g.last_mission.mission_id ?? null,
-            verification_verdict:
-              g.last_mission.verification_verdict ?? null,
+            verification_verdict: g.last_mission.verification_verdict ?? null,
             mission_verdict: g.last_mission.mission_verdict ?? null,
           }
         : {

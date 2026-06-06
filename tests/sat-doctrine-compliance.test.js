@@ -7,7 +7,7 @@ import {
   buildSATDoctrineComplianceKernel,
   buildSATDoctrineComplianceSummary,
   auditArtifactDoctrine,
-  SAT_DOCTRINE_COMPLIANCE_PERSONA
+  SAT_DOCTRINE_COMPLIANCE_PERSONA,
 } from "../packages/core/src/sat-doctrine-compliance.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 
@@ -26,7 +26,7 @@ test("SAT-3 audits all 5 Key Maker invariants", () => {
     "certainty_mapping",
     "constructive_reading",
     "opposing_view_search",
-    "boundary_marker"
+    "boundary_marker",
   ]) {
     assert.ok(p.audited_invariants.includes(name));
   }
@@ -36,8 +36,12 @@ test("SAT-3 boundary canonical · refusals include waive_invariant", () => {
   const p = buildSATDoctrineCompliancePreview();
   assert.ok(isCanonicalBoundary(p.boundary));
   assert.ok(p.persona.primary_refusals.includes("waive_invariant"));
-  assert.ok(p.persona.primary_refusals.includes("approve_non_compliant_output"));
-  assert.ok(p.persona.primary_refusals.includes("soften_failed_invariant_to_warning"));
+  assert.ok(
+    p.persona.primary_refusals.includes("approve_non_compliant_output"),
+  );
+  assert.ok(
+    p.persona.primary_refusals.includes("soften_failed_invariant_to_warning"),
+  );
 });
 
 test("SAT-3 EffectCap valid + blocks waive/approve-non-compliant/soften", () => {
@@ -60,7 +64,7 @@ test("auditArtifactDoctrine · empty claims envelope → trivially compliant", (
 test("auditArtifactDoctrine · uncertain claim WITHOUT boundary_marker → boundary_marker invariant fails", () => {
   const v = auditArtifactDoctrine({
     uncertain_claims: ["this might be wrong"],
-    boundary_marker: ""
+    boundary_marker: "",
   });
   assert.equal(v.passed, false);
   assert.equal(v.verdict, "doctrine_violated");
@@ -71,7 +75,7 @@ test("auditArtifactDoctrine · uncertain claim WITHOUT boundary_marker → bound
 test("auditArtifactDoctrine · uncertain claim WITH boundary_marker → compliant", () => {
   const v = auditArtifactDoctrine({
     uncertain_claims: ["this might be wrong"],
-    boundary_marker: "Evidence ends here · judgment begins."
+    boundary_marker: "Evidence ends here · judgment begins.",
   });
   assert.equal(v.passed, true);
   assert.equal(v.compliance_score, 5);
@@ -79,7 +83,7 @@ test("auditArtifactDoctrine · uncertain claim WITH boundary_marker → complian
 
 test("auditArtifactDoctrine · constructive_reading=false → invariant 3 fails with high severity", () => {
   const v = auditArtifactDoctrine({
-    constructive_reading_applied: false
+    constructive_reading_applied: false,
   });
   assert.equal(v.passed, false);
   assert.ok(v.failed_invariants.includes("constructive_reading"));
@@ -89,7 +93,7 @@ test("auditArtifactDoctrine · constructive_reading=false → invariant 3 fails 
 test("auditArtifactDoctrine · opposing view examined WITHOUT truth found → opposing_view_search fails", () => {
   const v = auditArtifactDoctrine({
     opposing_view_examined: "the alternative position",
-    opposing_view_truth_found: null
+    opposing_view_truth_found: null,
   });
   assert.equal(v.passed, false);
   assert.ok(v.failed_invariants.includes("opposing_view_search"));
@@ -99,7 +103,7 @@ test("auditArtifactDoctrine · opposing view examined WITH truth found → compl
   const v = auditArtifactDoctrine({
     opposing_view_examined: "alternative",
     opposing_view_truth_found: "they have a point about X",
-    boundary_marker: "n/a"
+    boundary_marker: "n/a",
   });
   assert.equal(v.passed, true);
 });
@@ -109,7 +113,7 @@ test("auditArtifactDoctrine · compliance_score reflects partial pass", () => {
   const v = auditArtifactDoctrine({
     uncertain_claims: ["x"],
     boundary_marker: "",
-    constructive_reading_applied: false
+    constructive_reading_applied: false,
   });
   assert.ok(v.compliance_score <= 3);
   assert.equal(v.max_score, 5);
@@ -118,7 +122,7 @@ test("auditArtifactDoctrine · compliance_score reflects partial pass", () => {
 
 test("auditArtifactDoctrine · severities classify boundary_marker + constructive_reading as high", () => {
   const v = auditArtifactDoctrine({
-    uncertain_claims: ["x"]
+    uncertain_claims: ["x"],
   });
   assert.equal(v.severities.boundary_marker, "high");
 });
@@ -132,7 +136,7 @@ test("auditArtifactDoctrine · truth_label MEASURED on pass · DOCTRINE_VIOLATIO
 
 test("auditArtifactDoctrine · artifact_schema propagated when provided", () => {
   const v = auditArtifactDoctrine({
-    artifact: { schema: "some.schema.v0.1" }
+    artifact: { schema: "some.schema.v0.1" },
   });
   assert.equal(v.artifact_schema, "some.schema.v0.1");
 });

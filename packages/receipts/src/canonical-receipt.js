@@ -129,7 +129,12 @@ export async function buildCanonicalReceipt({
 
   // PROOF-SPINE-GUARD-1A #102: refuse builds that would settle/mint on
   // QUARANTINED or bad pulse state (Dema face guard; substrate must match).
-  if (canonicalBody && (canonicalBody.pulse_state === "QUARANTINED" || canonicalBody.quarantined === true || canonicalBody.state === "QUARANTINED")) {
+  if (
+    canonicalBody &&
+    (canonicalBody.pulse_state === "QUARANTINED" ||
+      canonicalBody.quarantined === true ||
+      canonicalBody.state === "QUARANTINED")
+  ) {
     return fail("refuse_on_quarantined_pulse");
   }
 
@@ -200,10 +205,18 @@ export function verifyCanonicalChain({ entries, pubkeyPem } = {}) {
 
     // PROOF-SPINE-GUARD-1A: reject empty/missing sig (#107) and empty genesis body (#101)
     // even on historical bad data. Ed25519 sig verification remains mandatory (#103).
-    if (!entry.receipt_signature_b64 || typeof entry.receipt_signature_b64 !== "string" || entry.receipt_signature_b64.trim().length === 0) {
+    if (
+      !entry.receipt_signature_b64 ||
+      typeof entry.receipt_signature_b64 !== "string" ||
+      entry.receipt_signature_b64.trim().length === 0
+    ) {
       return reject("empty_or_missing_signature", i);
     }
-    if (i === 0 && (!entry.canonical_body || Object.keys(entry.canonical_body || {}).length === 0)) {
+    if (
+      i === 0 &&
+      (!entry.canonical_body ||
+        Object.keys(entry.canonical_body || {}).length === 0)
+    ) {
       return reject("genesis_receipt_body_empty", i);
     }
 

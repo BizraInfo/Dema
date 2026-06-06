@@ -1,4 +1,5 @@
-export const CORPUS_REDACTION_FIXTURE_PREVIEW_SCHEMA = "bizra.dema.corpus_redaction_fixture_preview.v0.1";
+export const CORPUS_REDACTION_FIXTURE_PREVIEW_SCHEMA =
+  "bizra.dema.corpus_redaction_fixture_preview.v0.1";
 
 const SOURCE_IDS = Object.freeze([
   "claude_desktop",
@@ -7,15 +8,35 @@ const SOURCE_IDS = Object.freeze([
   "deepseek",
   "kimi",
   "z_ai",
-  "other"
+  "other",
 ]);
 
 const DATA_TIERS = Object.freeze([
-  Object.freeze({ tier: "D0", label: "public_or_non_sensitive", allowed_in_preview: true }),
-  Object.freeze({ tier: "D1", label: "preferences_and_style", allowed_in_preview: true }),
-  Object.freeze({ tier: "D2", label: "project_reasoning", allowed_in_preview: true }),
-  Object.freeze({ tier: "D3", label: "private_strategy", allowed_in_preview: false }),
-  Object.freeze({ tier: "D4", label: "secrets_credentials_identity_financial_health", allowed_in_preview: false })
+  Object.freeze({
+    tier: "D0",
+    label: "public_or_non_sensitive",
+    allowed_in_preview: true,
+  }),
+  Object.freeze({
+    tier: "D1",
+    label: "preferences_and_style",
+    allowed_in_preview: true,
+  }),
+  Object.freeze({
+    tier: "D2",
+    label: "project_reasoning",
+    allowed_in_preview: true,
+  }),
+  Object.freeze({
+    tier: "D3",
+    label: "private_strategy",
+    allowed_in_preview: false,
+  }),
+  Object.freeze({
+    tier: "D4",
+    label: "secrets_credentials_identity_financial_health",
+    allowed_in_preview: false,
+  }),
 ]);
 
 const FIXTURE_TIERS = Object.freeze(["D0", "D1", "D2", "D3", "D4"]);
@@ -24,7 +45,7 @@ const ALLOWED_USES = Object.freeze([
   "redaction_policy_fixture_design",
   "data_tier_handling_preview",
   "benchmark_schema_design",
-  "manual_review_queue_design"
+  "manual_review_queue_design",
 ]);
 
 const BLOCKED_USES = Object.freeze([
@@ -39,7 +60,7 @@ const BLOCKED_USES = Object.freeze([
   "secret_extraction",
   "identity_or_financial_profiling",
   "receipt_minting",
-  "step7_minting"
+  "step7_minting",
 ]);
 
 const RAW_CONTENT_KEYS = new Set([
@@ -53,7 +74,7 @@ const RAW_CONTENT_KEYS = new Set([
   "response",
   "best_answer",
   "target_good",
-  "target_bad"
+  "target_bad",
 ]);
 
 const DEFAULT_FIXTURES = Object.freeze([
@@ -61,32 +82,32 @@ const DEFAULT_FIXTURES = Object.freeze([
     fixture_id: "public_reference_fixture",
     source_id: "chatgpt_team",
     tier: "D0",
-    declared_handling: "metadata_only_public_reference"
+    declared_handling: "metadata_only_public_reference",
   }),
   Object.freeze({
     fixture_id: "workflow_preference_fixture",
     source_id: "claude_desktop",
     tier: "D1",
-    declared_handling: "metadata_only_preference"
+    declared_handling: "metadata_only_preference",
   }),
   Object.freeze({
     fixture_id: "architecture_reasoning_fixture",
     source_id: "z_ai",
     tier: "D2",
-    declared_handling: "metadata_only_project_reasoning"
+    declared_handling: "metadata_only_project_reasoning",
   }),
   Object.freeze({
     fixture_id: "private_strategy_fixture",
     source_id: "other",
     tier: "D3",
-    declared_handling: "quarantine_private_strategy"
+    declared_handling: "quarantine_private_strategy",
   }),
   Object.freeze({
     fixture_id: "credential_marker_fixture",
     source_id: "other",
     tier: "D4",
-    declared_handling: "reject_secret_identity_or_credential"
-  })
+    declared_handling: "reject_secret_identity_or_credential",
+  }),
 ]);
 
 function clone(value) {
@@ -94,7 +115,8 @@ function clone(value) {
 }
 
 function deepFreeze(value) {
-  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  if (!value || typeof value !== "object" || Object.isFrozen(value))
+    return value;
   for (const child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
 }
@@ -166,7 +188,7 @@ function buildRedactionCase(fixture) {
     preview_allowed: definition.allowed_in_preview,
     redaction_marker: markerForTier(fixture.tier),
     content_state: "not_present_not_opened",
-    digest_state: "not_computed_no_ingestion"
+    digest_state: "not_computed_no_ingestion",
   };
 }
 
@@ -185,7 +207,7 @@ function boundary() {
     runtime_started: false,
     federation_started: false,
     receipt_minted: false,
-    step7_mint_attempted: false
+    step7_mint_attempted: false,
   };
 }
 
@@ -203,22 +225,26 @@ function rejectPreview(reason) {
       total_fixtures: 0,
       metadata_only_allowed_count: 0,
       quarantine_count: 0,
-      reject_count: 0
+      reject_count: 0,
     },
     self_proactive_harness: {
       mode: "DETERMINISTIC_REDACTION_FIXTURE_PREVIEW",
       recommended_micro_action: "fix_malformed_redaction_fixtures",
       gates: [
-        { gate: "fixture_metadata_only", pass: reason !== "fixture_must_not_include_raw_content" },
+        {
+          gate: "fixture_metadata_only",
+          pass: reason !== "fixture_must_not_include_raw_content",
+        },
         { gate: "d3_quarantine_marker_available", pass: true },
         { gate: "d4_reject_marker_available", pass: true },
-        { gate: "local_only_boundary", pass: true }
-      ]
+        { gate: "local_only_boundary", pass: true },
+      ],
     },
     self_critique: {
       confidence: "rejected",
-      limitation: "Malformed redaction fixtures are rejected before a safe handling preview can be trusted.",
-      weakest_link: reason
+      limitation:
+        "Malformed redaction fixtures are rejected before a safe handling preview can be trusted.",
+      weakest_link: reason,
     },
     micro_compliance: {
       preview_only: true,
@@ -231,7 +257,7 @@ function rejectPreview(reason) {
       no_fine_tune: true,
       no_external_upload: true,
       no_runtime_memory_mutation: true,
-      fail_closed_on_malformed_input: true
+      fail_closed_on_malformed_input: true,
     },
     micro_consent: {
       preview_scope: "corpus_redaction_fixture_preview_only",
@@ -240,26 +266,36 @@ function rejectPreview(reason) {
       d3_d4_processing_authorized: false,
       node_sharing_authorized: false,
       fine_tune_authorized: false,
-      external_upload_authorized: false
+      external_upload_authorized: false,
     },
     analogical_model: {
       model: "sealed_box_handling_labels",
-      mapping: "This preview proves which labels go on sealed boxes; it does not open boxes or redact live material."
+      mapping:
+        "This preview proves which labels go on sealed boxes; it does not open boxes or redact live material.",
     },
     boundary: boundary(),
     next_safe_action: "fix_malformed_redaction_fixtures",
-    reason
+    reason,
   });
 }
 
-export function buildCorpusRedactionFixturePreview({ fixtures = DEFAULT_FIXTURES } = {}) {
+export function buildCorpusRedactionFixturePreview({
+  fixtures = DEFAULT_FIXTURES,
+} = {}) {
   const validation = validateFixtures(fixtures);
   if (!validation.ok) return rejectPreview(validation.reason);
 
   const redactionCases = fixtures.map(buildRedactionCase);
-  const metadataOnlyAllowedCount = redactionCases.filter((entry) => entry.preview_allowed).length;
-  const quarantineCount = redactionCases.filter((entry) => entry.policy_action === "quarantine_private_strategy_marker").length;
-  const rejectCount = redactionCases.filter((entry) => entry.policy_action === "reject_secret_identity_or_credential_marker").length;
+  const metadataOnlyAllowedCount = redactionCases.filter(
+    (entry) => entry.preview_allowed,
+  ).length;
+  const quarantineCount = redactionCases.filter(
+    (entry) => entry.policy_action === "quarantine_private_strategy_marker",
+  ).length;
+  const rejectCount = redactionCases.filter(
+    (entry) =>
+      entry.policy_action === "reject_secret_identity_or_credential_marker",
+  ).length;
 
   return deepFreeze({
     schema: CORPUS_REDACTION_FIXTURE_PREVIEW_SCHEMA,
@@ -274,7 +310,7 @@ export function buildCorpusRedactionFixturePreview({ fixtures = DEFAULT_FIXTURES
       total_fixtures: redactionCases.length,
       metadata_only_allowed_count: metadataOnlyAllowedCount,
       quarantine_count: quarantineCount,
-      reject_count: rejectCount
+      reject_count: rejectCount,
     },
     self_proactive_harness: {
       mode: "DETERMINISTIC_REDACTION_FIXTURE_PREVIEW",
@@ -283,13 +319,14 @@ export function buildCorpusRedactionFixturePreview({ fixtures = DEFAULT_FIXTURES
         { gate: "fixture_metadata_only", pass: true },
         { gate: "d3_quarantine_marker_available", pass: quarantineCount > 0 },
         { gate: "d4_reject_marker_available", pass: rejectCount > 0 },
-        { gate: "local_only_boundary", pass: true }
-      ]
+        { gate: "local_only_boundary", pass: true },
+      ],
     },
     self_critique: {
       confidence: "bounded_preview",
-      limitation: "This fixture preview demonstrates handling labels only; it does not inspect, redact, hash, or persist real corpus content.",
-      weakest_link: "real_redaction_not_authorized_or_executed"
+      limitation:
+        "This fixture preview demonstrates handling labels only; it does not inspect, redact, hash, or persist real corpus content.",
+      weakest_link: "real_redaction_not_authorized_or_executed",
     },
     micro_compliance: {
       preview_only: true,
@@ -302,7 +339,7 @@ export function buildCorpusRedactionFixturePreview({ fixtures = DEFAULT_FIXTURES
       no_fine_tune: true,
       no_external_upload: true,
       no_runtime_memory_mutation: true,
-      fail_closed_on_malformed_input: false
+      fail_closed_on_malformed_input: false,
     },
     micro_consent: {
       preview_scope: "corpus_redaction_fixture_preview_only",
@@ -311,14 +348,15 @@ export function buildCorpusRedactionFixturePreview({ fixtures = DEFAULT_FIXTURES
       d3_d4_processing_authorized: false,
       node_sharing_authorized: false,
       fine_tune_authorized: false,
-      external_upload_authorized: false
+      external_upload_authorized: false,
     },
     analogical_model: {
       model: "sealed_box_handling_labels",
-      mapping: "This preview proves which labels go on sealed boxes; it does not open boxes or redact live material."
+      mapping:
+        "This preview proves which labels go on sealed boxes; it does not open boxes or redact live material.",
     },
     boundary: boundary(),
     next_safe_action: "build_corpus_benchmark_schema_preview",
-    note: "Corpus Redaction Fixture Preview uses canned metadata-only fixtures. It performs no raw ingestion, content extraction, real redaction, embeddings, fine-tuning, upload, runtime memory mutation, node sharing, receipt mint, federation, runtime start, or Step 7 action."
+    note: "Corpus Redaction Fixture Preview uses canned metadata-only fixtures. It performs no raw ingestion, content extraction, real redaction, embeddings, fine-tuning, upload, runtime memory mutation, node sharing, receipt mint, federation, runtime start, or Step 7 action.",
   });
 }

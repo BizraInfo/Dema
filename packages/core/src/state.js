@@ -19,27 +19,27 @@ export function buildNode0StatePreview({ operator = "MoMo" } = {}) {
       autonomous_daemon: false,
       federation: false,
       minting: false,
-      public_network: false
+      public_network: false,
     }),
     pat: Object.freeze({
       status: "planned_or_preview",
       owner: "human",
-      loyalty: "user_mission"
+      loyalty: "user_mission",
     }),
     sat: Object.freeze({
       status: "policy_preview_or_stub",
       owner: "system",
-      loyalty: "system_integrity"
+      loyalty: "system_integrity",
     }),
     local_models: Object.freeze({
       status: "inventory_or_available",
       role: "bounded_supporting_resource",
-      routing_allowed: false
+      routing_allowed: false,
     }),
     shared_urp: Object.freeze({
-      status: "locked_preview"
+      status: "locked_preview",
     }),
     next_safe_action: "open_homebase_view",
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }

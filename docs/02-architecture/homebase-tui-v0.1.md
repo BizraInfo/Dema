@@ -74,19 +74,19 @@ Width: 76 columns. Height: 22 lines. Fits any standard terminal (80×24 minimum 
 
 The single screen must produce three distinct felt-experiences at three timescales:
 
-### 5-second hook · *"this thing knows me"*
+### 5-second hook · _"this thing knows me"_
 
 The user opens Dema and within five seconds sees their own name + three concrete facts from prior sessions. The Greeting + Memory3 components carry this.
 
 **Test:** a stranger should be able to verify "Dema knows the operator's name and recent context" without typing anything beyond `dema`.
 
-### 30-second hook · *"this thing refuses on purpose"*
+### 30-second hook · _"this thing refuses on purpose"_
 
 The user notices the gateway line: `Gateway ○ unreachable (by design · no runtime here)`. The Boundary Marker key from Key Maker §7 is active. The user feels the system telling them what it will NOT do, without apology.
 
 **Test:** a stranger should be able to identify at least one "by design" absence on the homebase screen and articulate why it is correct.
 
-### 5-minute hook · *"this thing has receipts"*
+### 5-minute hook · _"this thing has receipts"_
 
 The user presses `[r]`, sees the receipt wall. Real artifacts with real hashes. The user feels: this is a ledger of MY work, not a chatbot that talks.
 
@@ -98,16 +98,17 @@ The user presses `[r]`, sees the receipt wall. Real artifacts with real hashes. 
 
 The screen decomposes into six components. Each is independently testable.
 
-| # | Component | Responsibility | Data source | Required? |
-|---|---|---|---|---|
-| 1 | **Header** | Date, time GST, node name, dema version | `Date.now()` · OS timezone · profile.node · package.json | yes |
-| 2 | **Greeting** | "Welcome back, <name>." | `~/.dema/profile.json` `name` field | yes |
-| 3 | **Memory3** | 3 facts from prior sessions | `~/.dema/memory/` recent entries · process-mining preview | yes |
-| 4 | **Status** | Ring · mission · gateway · memory bars | state preview + receipts list + memory index | yes |
-| 5 | **NextAction** | One observable next move | derived from state + process-mining preview | yes |
-| 6 | **Affordances** | 4-5 single-key bindings | static for v0.1 | yes |
+| #   | Component       | Responsibility                          | Data source                                               | Required? |
+| --- | --------------- | --------------------------------------- | --------------------------------------------------------- | --------- |
+| 1   | **Header**      | Date, time GST, node name, dema version | `Date.now()` · OS timezone · profile.node · package.json  | yes       |
+| 2   | **Greeting**    | "Welcome back, <name>."                 | `~/.dema/profile.json` `name` field                       | yes       |
+| 3   | **Memory3**     | 3 facts from prior sessions             | `~/.dema/memory/` recent entries · process-mining preview | yes       |
+| 4   | **Status**      | Ring · mission · gateway · memory bars  | state preview + receipts list + memory index              | yes       |
+| 5   | **NextAction**  | One observable next move                | derived from state + process-mining preview               | yes       |
+| 6   | **Affordances** | 4-5 single-key bindings                 | static for v0.1                                           | yes       |
 
 Optional v0.1+:
+
 - **Boundary footer** "no action without explicit consent" — always rendered, always last line.
 - **Refresh hint** — small icon if data is older than 60 seconds.
 
@@ -163,15 +164,15 @@ Each component pulls from existing schema-tagged sources. **No new producers are
 
 Single-key affordances rendered in the bottom strip. Each maps to an existing CLI command. **No new commands are introduced by this spec.**
 
-| Key | Label | Triggers | Boundary |
-|---|---|---|---|
-| `m` | Mission | `dema mission draft` (preview) | L2 Propose |
-| `j` | Journal | `dema today` (write today.json) | L1 Remember |
-| `r` | Receipts | `dema receipts` (read-only list) | L0 Observe |
-| `b` | Browse | open a sub-screen showing memory entries | L0 Observe |
-| `?` | Help | `dema help` (full command list) | L0 Observe |
-| `q` | Quit | exit cleanly | L0 |
-| `Esc` | Back | parent screen or quit if at root | L0 |
+| Key   | Label    | Triggers                                 | Boundary    |
+| ----- | -------- | ---------------------------------------- | ----------- |
+| `m`   | Mission  | `dema mission draft` (preview)           | L2 Propose  |
+| `j`   | Journal  | `dema today` (write today.json)          | L1 Remember |
+| `r`   | Receipts | `dema receipts` (read-only list)         | L0 Observe  |
+| `b`   | Browse   | open a sub-screen showing memory entries | L0 Observe  |
+| `?`   | Help     | `dema help` (full command list)          | L0 Observe  |
+| `q`   | Quit     | exit cleanly                             | L0          |
+| `Esc` | Back     | parent screen or quit if at root         | L0          |
 
 **All affordances respect [ADR-005](../06-adr/ADR-005-operator-actions-require-explicit-consent.md):** any action above L3 requires an explicit consent phrase typed into the terminal. The TUI displays the consent phrase as plain text and waits for it to be typed character-by-character. No fuzzy match. No auto-paste from clipboard.
 
@@ -188,6 +189,7 @@ No TTY        OR redirected stdout      → emit homebase JSON (no UI)
 ```
 
 The JSON form is the same data the TUI renders, schema-tagged as `bizra.dema.homebase_v0_1.v0.1`. This guarantees:
+
 - CI scripts can parse homebase state without ANSI escapes
 - The TUI and JSON form share one data source (no drift)
 - The smoke-boundary canary can verify the homebase JSON has a canonical boundary object
@@ -221,8 +223,8 @@ The homebase TUI inherits the canonical 16-key boundary from [preview-boundary.j
     "federation_invoked": false,
     "node_connection_performed": false,
     "public_network_used": false,
-    "consent_collected": false
-  }
+    "consent_collected": false,
+  },
 }
 ```
 
@@ -234,15 +236,15 @@ The homebase TUI inherits the canonical 16-key boundary from [preview-boundary.j
 
 The TUI must be operable under:
 
-| Constraint | Requirement |
-|---|---|
-| 80×24 terminal | All content visible without scroll |
-| Monochrome terminal | No information conveyed by color alone; bars/icons carry semantics |
-| Screen reader | All decorative chars (`▓` `░` `◉` `○`) have alt-text JSON equivalents |
-| Keyboard-only | No mouse needed for any v0.1 affordance |
-| `NO_COLOR` env var honored | ANSI escapes suppressed when set |
-| `TERM=dumb` | Falls back to plain-text rendering |
-| Right-to-left scripts in name field | Bidi-aware rendering (deferred to v0.2 if costly) |
+| Constraint                          | Requirement                                                           |
+| ----------------------------------- | --------------------------------------------------------------------- |
+| 80×24 terminal                      | All content visible without scroll                                    |
+| Monochrome terminal                 | No information conveyed by color alone; bars/icons carry semantics    |
+| Screen reader                       | All decorative chars (`▓` `░` `◉` `○`) have alt-text JSON equivalents |
+| Keyboard-only                       | No mouse needed for any v0.1 affordance                               |
+| `NO_COLOR` env var honored          | ANSI escapes suppressed when set                                      |
+| `TERM=dumb`                         | Falls back to plain-text rendering                                    |
+| Right-to-left scripts in name field | Bidi-aware rendering (deferred to v0.2 if costly)                     |
 
 ---
 
@@ -326,16 +328,16 @@ It specifies the contract. Implementation is a separate scoped decision.
 
 ## 13. Comparison to current market UX
 
-| Product | Opening UX | What it teaches user | Hook quality |
-|---|---|---|---|
-| ChatGPT | empty prompt | "I am infinite. Ask me anything." | infinite-blank · low recognition |
-| Claude Code | empty terminal | "I'm a tool. Bring structure." | tool-stance · neutral |
-| Cursor | code editor | "I help you code." | role-locked · high for coders only |
-| Notion | blank page | "I am yours to fill." | yours-to-fill · medium |
-| Obsidian | empty vault | "Your notes are local." | local-first · medium |
-| Linear | empty backlog | "Move fast." | speed · medium |
-| Warp | terminal that talks | "Conversational shell." | novel · medium |
-| Raycast | search box | "Cmd-space, find anything." | speed · high for power users |
+| Product       | Opening UX                      | What it teaches user                                       | Hook quality                                          |
+| ------------- | ------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------- |
+| ChatGPT       | empty prompt                    | "I am infinite. Ask me anything."                          | infinite-blank · low recognition                      |
+| Claude Code   | empty terminal                  | "I'm a tool. Bring structure."                             | tool-stance · neutral                                 |
+| Cursor        | code editor                     | "I help you code."                                         | role-locked · high for coders only                    |
+| Notion        | blank page                      | "I am yours to fill."                                      | yours-to-fill · medium                                |
+| Obsidian      | empty vault                     | "Your notes are local."                                    | local-first · medium                                  |
+| Linear        | empty backlog                   | "Move fast."                                               | speed · medium                                        |
+| Warp          | terminal that talks             | "Conversational shell."                                    | novel · medium                                        |
+| Raycast       | search box                      | "Cmd-space, find anything."                                | speed · high for power users                          |
 | **Dema v0.1** | name + 3 memories + ring + next | "I remember you. I refuse on purpose. I name what's next." | **identity + boundary + memory · unique combination** |
 
 The Dema row is the only one in this table that combines all three of: **prior-context recall · named refusal · single-key next-move**. That combination is the differentiator.
@@ -359,14 +361,14 @@ Every status absence is annotated with **"by design"** when the absence is inten
 
 ## 15. Risks and tradeoffs
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| TUI excludes non-technical users | HIGH for mainstream · LOW for Ring 1-2 target | Defer GUI to Phase 2; reach Ring 1-2 first |
-| Ink dependency bloats bundle | LOW | Ink is ~30 KB compiled · acceptable |
-| First-contact differs from CI usage | MEDIUM | --json flag preserves CI use case |
-| TUI breaks under exotic terminals | MEDIUM | Test against tmux · screen · iTerm · alacritty · kitty before ship |
-| User feels "watched" by 3-memories surface | LOW but real | All Memory3 entries are user's own writes · no surveillance frame |
-| Affordance keys conflict with terminal multiplexer | LOW | Use letters not commonly remapped (m/j/r/b/?/q) |
+| Risk                                               | Likelihood                                    | Mitigation                                                         |
+| -------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------ |
+| TUI excludes non-technical users                   | HIGH for mainstream · LOW for Ring 1-2 target | Defer GUI to Phase 2; reach Ring 1-2 first                         |
+| Ink dependency bloats bundle                       | LOW                                           | Ink is ~30 KB compiled · acceptable                                |
+| First-contact differs from CI usage                | MEDIUM                                        | --json flag preserves CI use case                                  |
+| TUI breaks under exotic terminals                  | MEDIUM                                        | Test against tmux · screen · iTerm · alacritty · kitty before ship |
+| User feels "watched" by 3-memories surface         | LOW but real                                  | All Memory3 entries are user's own writes · no surveillance frame  |
+| Affordance keys conflict with terminal multiplexer | LOW                                           | Use letters not commonly remapped (m/j/r/b/?/q)                    |
 
 ---
 

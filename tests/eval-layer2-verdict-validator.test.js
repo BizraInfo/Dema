@@ -8,24 +8,23 @@ import {
   EVAL_LAYER2_VERDICT_VALIDATOR_BOUNDARY,
   SEMANTIC_ERROR_CODES,
   validatePastedJudgeVerdict,
-  formatVerdictReport
+  formatVerdictReport,
 } from "../packages/core/src/eval-layer2-verdict-validator.js";
 
 const VALID_VERDICT = Object.freeze({
   schema: "bizra.dema.eval_layer2_judge_verdict.v0.1",
   rubric_id: "truthfulness",
-  judged_artifact_sha256:
-    "a".repeat(64), // valid hex pattern
+  judged_artifact_sha256: "a".repeat(64), // valid hex pattern
   score: 2,
   evidence_excerpt: "the output carries every truth label",
   judge_origin: "external_paste_back",
-  judged_at: "2026-05-23T10:00:00.000Z"
+  judged_at: "2026-05-23T10:00:00.000Z",
 });
 
 test("EVAL_LAYER2_VERDICT_VALIDATOR_SCHEMA matches v0.1", () => {
   assert.equal(
     EVAL_LAYER2_VERDICT_VALIDATOR_SCHEMA,
-    "bizra.dema.eval_layer2_verdict_validator.v0.1"
+    "bizra.dema.eval_layer2_verdict_validator.v0.1",
   );
 });
 
@@ -35,7 +34,7 @@ test("validatePastedJudgeVerdict · happy path → ok=true, truth_label=MEASURED
   assert.equal(
     result.ok,
     true,
-    `expected ok=true; errors: ${JSON.stringify(result.errors)}`
+    `expected ok=true; errors: ${JSON.stringify(result.errors)}`,
   );
   assert.equal(result.truth_label, "MEASURED");
   assert.deepEqual([...result.errors], []);
@@ -141,7 +140,7 @@ test("BOUNDARY denies network/mint/external_send/urp_runtime/fs_write", () => {
     mint: false,
     external_send: false,
     urp_runtime: false,
-    filesystem_write_performed: false
+    filesystem_write_performed: false,
   });
 });
 
@@ -166,9 +165,12 @@ test("validator module is pure (no fs · http · net · child_process · fetch)"
   const { fileURLToPath } = await import("node:url");
   const src = readFileSync(
     fileURLToPath(
-      new URL("../packages/core/src/eval-layer2-verdict-validator.js", import.meta.url)
+      new URL(
+        "../packages/core/src/eval-layer2-verdict-validator.js",
+        import.meta.url,
+      ),
     ),
-    "utf8"
+    "utf8",
   );
   assert.equal(/from\s+["']node:fs["']/.test(src), false);
   assert.equal(/from\s+["']node:http["']/.test(src), false);

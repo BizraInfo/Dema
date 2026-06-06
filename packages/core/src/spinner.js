@@ -12,9 +12,7 @@ const MAX_LABEL_LENGTH = 120;
 
 function shouldSuppress(stdout) {
   return (
-    !stdout.isTTY ||
-    Boolean(process.env.NO_COLOR) ||
-    Boolean(process.env.CI)
+    !stdout.isTTY || Boolean(process.env.NO_COLOR) || Boolean(process.env.CI)
   );
 }
 
@@ -28,7 +26,7 @@ export function createSpinner({
   stdout,
   label,
   intervalMs = 80,
-  suppressed = shouldSuppress(stdout)
+  suppressed = shouldSuppress(stdout),
 }) {
   let frameIndex = 0;
   let timer = null;
@@ -62,6 +60,6 @@ export function createSpinner({
       clearInterval(timer);
       timer = null;
       clearLine();
-    }
+    },
   };
 }

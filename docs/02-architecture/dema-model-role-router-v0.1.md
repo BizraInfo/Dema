@@ -87,14 +87,14 @@ Each entry under `roles` must be:
 
 ### F-04 · v0.1 per-role bindings (proposed)
 
-| Role | effects_declared | effects_denied | consent_field | sat_verdict |
-|---|---|---|---|---|
-| `coding` | `[read]` | `[write, execute, call]` | `action` | `REVIEW` |
-| `governance` | `[read]` | `[write, execute, call]` | `purpose` | `REVIEW` |
-| `reasoning` | `[read]` | `[write, execute, call]` | `purpose` | `REVIEW` |
-| `fast` | `[read]` | `[write, execute, call]` | `null` | `SCORE_ONLY` |
-| `embedding` | `[read]` | `[write, execute, call]` | `resource_id` | `REVIEW` |
-| `vision` | `[read]` | `[write, execute, call]` | `resource_id` | `REVIEW` |
+| Role         | effects_declared | effects_denied           | consent_field | sat_verdict  |
+| ------------ | ---------------- | ------------------------ | ------------- | ------------ |
+| `coding`     | `[read]`         | `[write, execute, call]` | `action`      | `REVIEW`     |
+| `governance` | `[read]`         | `[write, execute, call]` | `purpose`     | `REVIEW`     |
+| `reasoning`  | `[read]`         | `[write, execute, call]` | `purpose`     | `REVIEW`     |
+| `fast`       | `[read]`         | `[write, execute, call]` | `null`        | `SCORE_ONLY` |
+| `embedding`  | `[read]`         | `[write, execute, call]` | `resource_id` | `REVIEW`     |
+| `vision`     | `[read]`         | `[write, execute, call]` | `resource_id` | `REVIEW`     |
 
 Every role declares `effects_denied` strictly. None permits write/execute/call in v0.1.
 

@@ -108,23 +108,23 @@ The human never touches the network directly.
 
 ## Common mistakes
 
-| Wrong | Right |
-|---|---|
-| Each user has their own URP. | There is one URP. |
-| SAT-5 lives inside each user's local node. | SAT-5 lives in the shared URP. |
-| PAT connects directly to other nodes. | PAT -> Membrane -> SAT. No peer-to-peer. |
-| The URP is a server that nodes are clients of. | The URP is a shared organism that grows with every node. |
-| The operator's second device is Node1. | The operator's second device is a companion of the same node. Node1 is a different human, after onboarding. |
-| Node ordinals can be assigned freely. | Node ordinals are registry-assigned. No skip. No duplicate. No reassign. |
+| Wrong                                          | Right                                                                                                       |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Each user has their own URP.                   | There is one URP.                                                                                           |
+| SAT-5 lives inside each user's local node.     | SAT-5 lives in the shared URP.                                                                              |
+| PAT connects directly to other nodes.          | PAT -> Membrane -> SAT. No peer-to-peer.                                                                    |
+| The URP is a server that nodes are clients of. | The URP is a shared organism that grows with every node.                                                    |
+| The operator's second device is Node1.         | The operator's second device is a companion of the same node. Node1 is a different human, after onboarding. |
+| Node ordinals can be assigned freely.          | Node ordinals are registry-assigned. No skip. No duplicate. No reassign.                                    |
 
 ## Scaling
 
-| Nodes | Local PAT | SAT in URP | Effect |
-|---:|---:|---:|---|
-| 1 | 7 | 5 | System alive, flywheel starts. |
-| 1,000 | 7,000 | 5,000 | Serious governance capacity. |
-| 1,000,000 | 7,000,000 | 5,000,000 | Self-securing, self-evolving. |
-| 8,000,000,000 | 56,000,000,000 | 40,000,000,000 | Planetary intelligence. |
+|         Nodes |      Local PAT |     SAT in URP | Effect                         |
+| ------------: | -------------: | -------------: | ------------------------------ |
+|             1 |              7 |              5 | System alive, flywheel starts. |
+|         1,000 |          7,000 |          5,000 | Serious governance capacity.   |
+|     1,000,000 |      7,000,000 |      5,000,000 | Self-securing, self-evolving.  |
+| 8,000,000,000 | 56,000,000,000 | 40,000,000,000 | Planetary intelligence.        |
 
 ## Node ordinal law
 
@@ -167,7 +167,7 @@ Concretely:
 
 1. **A node is a seed.** Every node carries the constitutional spine, the canonical 16-key boundary, the V/D/A/U claim discipline, the 7-pillar architecture pointer, and the receipt-shape contract. There is no "lite" node.
 2. **A seed contains the tree.** Node0 alone, with no federation, already runs the discipline that the whole BIZRA ecosystem will run at planetary scale. The PAT-7 + SAT-5 + URP layout at one human is the same layout at one billion humans, only with a different SAT-count multiple.
-3. **A tree contains the forest.** No node *owns* the system; each node *carries* it. Federation grows what is already present; it does not introduce missing pieces.
+3. **A tree contains the forest.** No node _owns_ the system; each node _carries_ it. Federation grows what is already present; it does not introduce missing pieces.
 4. **Bitcoin-anchored.** The Third Fact PDF (blocks 948027 + 948028 + 948029) anchors this fractality at the founding-doc level.
 
 **Operational consequences:**
@@ -186,7 +186,7 @@ Concretely:
 
 ## Skill Growth Law
 
-**Amendment:** 2026-05-18 GST. Inscribes the law that governs how DEMA learns. Companion to [Node ordinal law](#node-ordinal-law) (which node) and [Seed-pattern invariant](#seed-pattern-invariant-fractality) (what every node carries). This law specifies *how a node may safely grow without betraying its human*.
+**Amendment:** 2026-05-18 GST. Inscribes the law that governs how DEMA learns. Companion to [Node ordinal law](#node-ordinal-law) (which node) and [Seed-pattern invariant](#seed-pattern-invariant-fractality) (what every node carries). This law specifies _how a node may safely grow without betraying its human_.
 
 The four-line law:
 
@@ -209,7 +209,7 @@ Every skill candidate must pass ALL FIVE before it may be promoted:
 
 **The eight refusal paths** (refuse-as-product taxonomy):
 
-1. `refuse_to_overwrite_human_edited_skill` — human-edited skills are sacred. DEMA reads them but never writes over them. It may propose a *new version beside* the human's, never *in place of*.
+1. `refuse_to_overwrite_human_edited_skill` — human-edited skills are sacred. DEMA reads them but never writes over them. It may propose a _new version beside_ the human's, never _in place of_.
 2. `refuse_to_promote_without_evidence` — gate 1 short-circuit.
 3. `refuse_to_promote_failed_task_outcome` — a candidate whose source task was marked `task_outcome: "failure"` cannot become a skill.
 4. `refuse_to_promote_without_success_metric` — gate 2 short-circuit.
@@ -221,10 +221,10 @@ Every skill candidate must pass ALL FIVE before it may be promoted:
 **Operational consequences:**
 
 - A skill that "improves on every run" is not BIZRA-coherent. Improvement is gated by receipts, not by self-assessment.
-- A reflection note like *"I think that worked better this time"* is a candidate, not a fact. The chain decides.
+- A reflection note like _"I think that worked better this time"_ is a candidate, not a fact. The chain decides.
 - A human edit to any skill file is canonized at the moment the file mtime updates with human authorship. DEMA SHALL NOT touch human-edited skill bytes.
 - "Reflection is not proof." This phrase is binding across all skill-related code paths.
-- The TUI Growth Dashboard surfaces what DEMA *would* promote vs what it *refuses*. Refusal is product, not defect.
+- The TUI Growth Dashboard surfaces what DEMA _would_ promote vs what it _refuses_. Refusal is product, not defect.
 
 **Implementation anchors:**
 
@@ -246,8 +246,8 @@ A BIZRA node that violates any of these three is not a BIZRA node. It may be imp
 
 ## Canonicalized subsystems
 
-| Subsystem | Status | Cycle | BLAKE3 Hash | Tests |
-|---|---|---|---|---|
+| Subsystem        | Status              | Cycle               | BLAKE3 Hash                                                        | Tests |
+| ---------------- | ------------------- | ------------------- | ------------------------------------------------------------------ | ----- |
 | Node0 Activation | CANDIDATE_CANONICAL | Cycle 1, 2026-04-14 | `7b555875abdbe61527ff81b3184299de6cdb2171d0c998164c318a015f71db9c` | 21/21 |
 
 Status note, 2026-04-14: local re-verification passes 12/12 checks, 21/21 tests, stable BLAKE3 hash. Node0 Activation is promoted to CANDIDATE_CANONICAL pending:

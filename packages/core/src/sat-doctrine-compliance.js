@@ -5,12 +5,15 @@
 // surface the failed_invariants explicitly. Integrates with existing
 // C1.5-era key-maker-compliance.js · uses it as the verification engine.
 
-import { buildAgentKernel, AGENT_KERNEL_MAX_ITERATIONS } from "./agent-kernel.js";
+import {
+  buildAgentKernel,
+  AGENT_KERNEL_MAX_ITERATIONS,
+} from "./agent-kernel.js";
 import { buildEffectCap } from "./effect-cap.js";
 import { buildPreviewBoundary } from "./preview-boundary.js";
 import {
   buildKeyMakerCompliancePreview,
-  KEY_MAKER_INVARIANT_NAMES
+  KEY_MAKER_INVARIANT_NAMES,
 } from "./key-maker-compliance.js";
 
 const SCHEMA = "bizra.dema.sat_doctrine_compliance.v0.1";
@@ -29,24 +32,28 @@ const SAT3_PERSONA = Object.freeze({
     "run_key_maker_compliance_check",
     "identify_failed_invariants",
     "classify_severity_per_invariant",
-    "report_compliance_score"
+    "report_compliance_score",
   ]),
   primary_refusals: Object.freeze([
     "waive_invariant",
     "approve_non_compliant_output",
     "soften_failed_invariant_to_warning",
     "infer_implicit_compliance",
-    "execute_runtime"
-  ])
+    "execute_runtime",
+  ]),
 });
 
-const SAT3_EFFECT_CAP_ALLOWED = Object.freeze(["render_terminal_output", "compute_hash"]);
+const SAT3_EFFECT_CAP_ALLOWED = Object.freeze([
+  "render_terminal_output",
+  "compute_hash",
+]);
 const SAT3_EFFECT_CAP_EXTRA_BLOCKED = Object.freeze([
   "waive_invariant",
   "approve_non_compliant",
-  "soften_invariant_to_warning"
+  "soften_invariant_to_warning",
 ]);
-const SAT3_CONSENT_PHRASE_TEMPLATE = "GO: invoke SAT-3 doctrine_compliance to audit";
+const SAT3_CONSENT_PHRASE_TEMPLATE =
+  "GO: invoke SAT-3 doctrine_compliance to audit";
 
 function safeObject(v) {
   return v && typeof v === "object" && !Array.isArray(v) ? v : null;
@@ -59,7 +66,7 @@ export function buildSATDoctrineComplianceEffectCap() {
     allowed_effects: SAT3_EFFECT_CAP_ALLOWED,
     blocked_effects: SAT3_EFFECT_CAP_EXTRA_BLOCKED,
     consent_scope_template: SAT3_CONSENT_PHRASE_TEMPLATE,
-    audit_trail_required: true
+    audit_trail_required: true,
   });
 }
 
@@ -78,18 +85,21 @@ export function buildSATDoctrineCompliancePreview() {
       "SAT-3 never waives an invariant · all 5 must pass",
       "SAT-3 never approves a non-compliant output",
       "SAT-3 never softens a failed invariant to warning · pass or fail only",
-      "SAT-3 never infers implicit compliance · explicit declaration required"
+      "SAT-3 never infers implicit compliance · explicit declaration required",
     ]),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
-export function buildSATDoctrineComplianceKernel({ mission_intent = "", max_iterations = AGENT_KERNEL_MAX_ITERATIONS } = {}) {
+export function buildSATDoctrineComplianceKernel({
+  mission_intent = "",
+  max_iterations = AGENT_KERNEL_MAX_ITERATIONS,
+} = {}) {
   return buildAgentKernel({
     agent_id: SAT3_PERSONA.sat_id,
     agent_role: "sat_doctrine_compliance",
     mission_intent: typeof mission_intent === "string" ? mission_intent : "",
-    max_iterations
+    max_iterations,
   });
 }
 
@@ -108,7 +118,7 @@ export function auditArtifactDoctrine({
   boundary_marker = "",
   opposing_view_examined = null,
   opposing_view_truth_found = null,
-  constructive_reading_applied = true
+  constructive_reading_applied = true,
 } = {}) {
   const safeArtifact = safeObject(artifact);
 
@@ -122,7 +132,7 @@ export function auditArtifactDoctrine({
     boundary_marker,
     opposing_view_examined,
     opposing_view_truth_found,
-    constructive_reading_applied
+    constructive_reading_applied,
   });
 
   const compliance = envelope.invariant_compliance;
@@ -134,11 +144,17 @@ export function auditArtifactDoctrine({
   const severities = {};
   for (const inv of KEY_MAKER_INVARIANT_NAMES) {
     if (compliance[inv] === true) severities[inv] = "passed";
-    else severities[inv] = inv === "boundary_marker" || inv === "constructive_reading" ? "high" : "medium";
+    else
+      severities[inv] =
+        inv === "boundary_marker" || inv === "constructive_reading"
+          ? "high"
+          : "medium";
   }
 
   // Compliance score (0-5)
-  const passCount = KEY_MAKER_INVARIANT_NAMES.filter((n) => compliance[n] === true).length;
+  const passCount = KEY_MAKER_INVARIANT_NAMES.filter(
+    (n) => compliance[n] === true,
+  ).length;
 
   return Object.freeze({
     schema: VERDICT_SCHEMA,
@@ -157,7 +173,7 @@ export function auditArtifactDoctrine({
     source_envelope_schema: envelope.schema,
     audit_trail_required: true,
     receipt_shape_ready: passed,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -173,7 +189,7 @@ export function buildSATDoctrineComplianceSummary() {
     capability_count: preview.persona.primary_capabilities.length,
     refusal_count: preview.persona.primary_refusals.length,
     invariants_audited: preview.audited_invariants,
-    boundary: preview.boundary
+    boundary: preview.boundary,
   });
 }
 

@@ -7,24 +7,28 @@ DEMA is the first calm, sovereign, full-stack operator face — competing by fus
 ## Competitive landscape (April 2026)
 
 ### Claude Code — Terminal-first seriousness
+
 - Codebase-aware, action-taking, MCP-connected
 - "Describe → plan → edit → test → commit" flow
 - Scriptable, composable workflows
 - **What we take:** terminal seriousness, repo-wide context, MCP extensibility
 
 ### Perplexity — Citation-first research
+
 - Source-backed answers with inline citations
 - Research library and history
 - Local MCP bridge for trusted personal context
 - **What we take:** citation-first answers, research as first-class mode, library
 
 ### Manus — Explicit operator
+
 - Browser and computer operator with explicit permissions
 - Visible action logs, human takeover, stop-anytime
 - One-task sandboxed execution
 - **What we take:** permission model, action transparency, human takeover
 
 ### BIZRA's own doctrine
+
 - Dema is the primary orchestration hub
 - Specialist systems stay behind the face
 - Git-based knowledge repository
@@ -35,14 +39,14 @@ DEMA is the first calm, sovereign, full-stack operator face — competing by fus
 
 DEMA does not clone any one of these. It fuses them:
 
-| Capability | Source pattern | DEMA's version |
-|-----------|---------------|----------------|
-| Terminal coding | Claude Code | Code mode with repo context |
-| Research | Perplexity | Research mode with citations + library |
-| Browser control | Manus | Browser mode with explicit consent |
-| Desktop control | Manus | Computer mode with bounded access |
-| Trust & memory | BIZRA doctrine | Trust strip + receipt chain + local memory |
-| Calm answers | All three | Ask mode with confidence + state + next action |
+| Capability      | Source pattern | DEMA's version                                 |
+| --------------- | -------------- | ---------------------------------------------- |
+| Terminal coding | Claude Code    | Code mode with repo context                    |
+| Research        | Perplexity     | Research mode with citations + library         |
+| Browser control | Manus          | Browser mode with explicit consent             |
+| Desktop control | Manus          | Computer mode with bounded access              |
+| Trust & memory  | BIZRA doctrine | Trust strip + receipt chain + local memory     |
+| Calm answers    | All three      | Ask mode with confidence + state + next action |
 
 ## The moat
 

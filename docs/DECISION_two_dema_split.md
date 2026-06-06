@@ -8,10 +8,10 @@
 
 Two unrelated git histories named "Dema" exist on this host:
 
-| Slot | Path | Remote | Commits | Latest | First |
-| --- | --- | --- | --- | --- | --- |
-| **A** | `/home/bizra-operating-system/Downloads/Dema` | `github.com/BizraInfo/Dema.git` | 4 | `1685e80` 2026-05-04 *polish first-run* | `5057af3` 2026-04-18 *Initialize BIZRA Genesis application structure* |
-| **B** | `/data/bizra/repos/DEMA` | none (local-only) | 1 | `ed1c313` 2026-04-17 *R1 scaffold — one face, six modes, zero shadow state* | same |
+| Slot  | Path                                          | Remote                          | Commits | Latest                                                                      | First                                                                 |
+| ----- | --------------------------------------------- | ------------------------------- | ------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| **A** | `/home/bizra-operating-system/Downloads/Dema` | `github.com/BizraInfo/Dema.git` | 4       | `1685e80` 2026-05-04 _polish first-run_                                     | `5057af3` 2026-04-18 _Initialize BIZRA Genesis application structure_ |
+| **B** | `/data/bizra/repos/DEMA`                      | none (local-only)               | 1       | `ed1c313` 2026-04-17 _R1 scaffold — one face, six modes, zero shadow state_ | same                                                                  |
 
 `comm -12` over `git log --all --format=%H` returns empty — **no shared commits, no fork relationship**. They are independent lineages started one day apart.
 
@@ -41,7 +41,7 @@ Two unrelated git histories named "Dema" exist on this host:
 
 - **A is the only thing that runs.** It has working code, tests, a public GitHub remote, and four commits of iterative polish. You can `npm test` today.
 - **B is the better long-term blueprint.** Its boundary doctrine (one-face, no-shadow-state, core-truth-elsewhere, SDK-as-only-bridge) is sharper than A's narrative docs. Its toolchain (Turbo + pnpm + TS-strict + Biome + Vitest + Playwright) is what a serious product needs. Its ADRs are real ADRs.
-- **A and B disagree about what Dema *is*.** A is "sovereign AI node companion, ARTIFACT-011 preview." B is "one face, six modes, full-stack operator surface for BIZRA-Omega." Same name, different products.
+- **A and B disagree about what Dema _is_.** A is "sovereign AI node companion, ARTIFACT-011 preview." B is "one face, six modes, full-stack operator surface for BIZRA-Omega." Same name, different products.
 - **Nothing references B from anywhere productive.** `grep -r "/data/bizra/repos/DEMA"` returns only Claude session logs and one host-topology memory note. No code, no docs, no other repo points at it.
 
 This is not a fork to merge. It is two design sketches that happen to share a name.
@@ -61,12 +61,12 @@ This is not a fork to merge. It is two design sketches that happen to share a na
 
 Each PR is small, reversible, and lands a working tree before the next one starts.
 
-| PR | Scope | Risk | Verifies |
-| --- | --- | --- | --- |
-| **0.2.0 — ADR import** | Copy B's `docs/06-adr/ADR-00{1..5}.md` into A's `docs/`, renumber if needed; copy `docs/00-product-thesis/dema-one-face.md` and `docs/02-architecture/repo-charter.md`. Update [docs/PRODUCT.md](PRODUCT.md) to cite ADR-001. No code changes. | Trivial | `npm run check` still green |
-| **0.2.1 — Schema package import** | Add `packages/schemas/` with Zod versions of A's existing JSON envelopes (`bizra.dema.status.v0.1`, `…profile.v0.1`, `…local_config.v0.1`, `…fate_consent.v0.1`, `…mission_preview.v0.1`, `…today_tick.v0.1`, `…setup.v0.1`). Plus B's `receipt.ts` (already aligned with [packages/receipts/src/receipt-store.js](../packages/receipts/src/receipt-store.js)). | Low — schemas only | New tests parse fixtures |
-| **0.2.2 — Monorepo migration** | Add `pnpm-workspace.yaml` + `turbo.json` + Biome. Convert `apps/cli` and `packages/{core,fate,installer,node-adapter,receipts}` into proper workspaces with `package.json` each. Keep code as JS for this PR — no TS port yet. | Medium — touches all package boundaries | `pnpm install && pnpm test && pnpm run check` |
-| **0.2.3 — TS strict port** | Move package-by-package to TS strict. Start with `fate` (12 LoC) and `receipts`, end with `node-adapter` (most surface). Ship `tsconfig.base.json` with project references. | Medium — type errors will surface real bugs | `pnpm typecheck` clean |
+| PR                                | Scope                                                                                                                                                                                                                                                                                                                                                           | Risk                                        | Verifies                                      |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | --------------------------------------------- |
+| **0.2.0 — ADR import**            | Copy B's `docs/06-adr/ADR-00{1..5}.md` into A's `docs/`, renumber if needed; copy `docs/00-product-thesis/dema-one-face.md` and `docs/02-architecture/repo-charter.md`. Update [docs/PRODUCT.md](PRODUCT.md) to cite ADR-001. No code changes.                                                                                                                  | Trivial                                     | `npm run check` still green                   |
+| **0.2.1 — Schema package import** | Add `packages/schemas/` with Zod versions of A's existing JSON envelopes (`bizra.dema.status.v0.1`, `…profile.v0.1`, `…local_config.v0.1`, `…fate_consent.v0.1`, `…mission_preview.v0.1`, `…today_tick.v0.1`, `…setup.v0.1`). Plus B's `receipt.ts` (already aligned with [packages/receipts/src/receipt-store.js](../packages/receipts/src/receipt-store.js)). | Low — schemas only                          | New tests parse fixtures                      |
+| **0.2.2 — Monorepo migration**    | Add `pnpm-workspace.yaml` + `turbo.json` + Biome. Convert `apps/cli` and `packages/{core,fate,installer,node-adapter,receipts}` into proper workspaces with `package.json` each. Keep code as JS for this PR — no TS port yet.                                                                                                                                  | Medium — touches all package boundaries     | `pnpm install && pnpm test && pnpm run check` |
+| **0.2.3 — TS strict port**        | Move package-by-package to TS strict. Start with `fate` (12 LoC) and `receipts`, end with `node-adapter` (most surface). Ship `tsconfig.base.json` with project references.                                                                                                                                                                                     | Medium — type errors will surface real bugs | `pnpm typecheck` clean                        |
 
 After PR 0.2.3, `/data/bizra/repos/DEMA` is archivable. Recommended action: `tar -czf /data/bizra/archive/DEMA-R1-scaffold-2026-04-17.tar.gz` then delete the working copy. Do NOT push it to a remote — single-commit scaffolds with no install create exactly the kind of doctrine confusion this memo exists to end.
 

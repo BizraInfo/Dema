@@ -1,31 +1,84 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { routeChatInput, STOPWORDS, GREETING_WORDS, NEXT_ACTION_PHRASES, DISPATCH_INTENT_MAP } from "../packages/core/src/chat-router.js";
+import {
+  routeChatInput,
+  STOPWORDS,
+  GREETING_WORDS,
+  NEXT_ACTION_PHRASES,
+  DISPATCH_INTENT_MAP,
+} from "../packages/core/src/chat-router.js";
 
 // ── Dependency-injection helpers ──────────────────────────────────────────────
 
 const MOCK_GLOSSARY = new Map([
-  ["bizra", { concept: "bizra", title: "BIZRA · The 7-Pillar Ecosystem", short: "The sovereign-AI ecosystem.", see_also: ["pat", "dema"] }],
-  ["ihsan", { concept: "ihsan", title: "Ihsan", short: "Excellence as the minimum bar.", see_also: ["adl"] }],
-  ["adl",   { concept: "adl",   title: "Adl",   short: "Fairness and bounded inequality.", see_also: ["ihsan"] }],
-  ["node0", { concept: "node0", title: "Node0", short: "The origin device.", see_also: ["node1"] }]
+  [
+    "bizra",
+    {
+      concept: "bizra",
+      title: "BIZRA · The 7-Pillar Ecosystem",
+      short: "The sovereign-AI ecosystem.",
+      see_also: ["pat", "dema"],
+    },
+  ],
+  [
+    "ihsan",
+    {
+      concept: "ihsan",
+      title: "Ihsan",
+      short: "Excellence as the minimum bar.",
+      see_also: ["adl"],
+    },
+  ],
+  [
+    "adl",
+    {
+      concept: "adl",
+      title: "Adl",
+      short: "Fairness and bounded inequality.",
+      see_also: ["ihsan"],
+    },
+  ],
+  [
+    "node0",
+    {
+      concept: "node0",
+      title: "Node0",
+      short: "The origin device.",
+      see_also: ["node1"],
+    },
+  ],
 ]);
 
 const MOCK_COMMANDS = [
   { command: "status", description: "show Node0 readiness" },
-  { command: "state",  description: "Node0 state preview" },
+  { command: "state", description: "Node0 state preview" },
   { command: "memory", description: "list local memory entries" },
-  { command: "help",   description: "show command list" }
+  { command: "help", description: "show command list" },
 ];
 
 function mockSuggester(input, cmds) {
   const lower = input.toLowerCase();
   const exact = cmds.find((c) => c.command === lower);
-  if (exact) return { matched: "exact", suggestions: [exact], originalInput: input, missingToken: lower };
-  return { matched: "unknown", suggestions: [], originalInput: input, missingToken: lower };
+  if (exact)
+    return {
+      matched: "exact",
+      suggestions: [exact],
+      originalInput: input,
+      missingToken: lower,
+    };
+  return {
+    matched: "unknown",
+    suggestions: [],
+    originalInput: input,
+    missingToken: lower,
+  };
 }
 
-const DI = { glossary: MOCK_GLOSSARY, suggester: mockSuggester, registeredCommands: MOCK_COMMANDS };
+const DI = {
+  glossary: MOCK_GLOSSARY,
+  suggester: mockSuggester,
+  registeredCommands: MOCK_COMMANDS,
+};
 
 // ── Structural invariants ─────────────────────────────────────────────────────
 
@@ -149,7 +202,10 @@ test("stopwords alone 'the the the' → unknown (no concept match)", () => {
 
 test("'?' alone → command-suggestion or unknown, not a throw", () => {
   const r = routeChatInput("?");
-  assert.ok(["command-suggestion", "unknown"].includes(r.intent), `unexpected intent: ${r.intent}`);
+  assert.ok(
+    ["command-suggestion", "unknown"].includes(r.intent),
+    `unexpected intent: ${r.intent}`,
+  );
   assert.equal(typeof r.response, "string");
 });
 
@@ -192,7 +248,10 @@ test("DI: mock suggester exact-match 'memory' → registered-command", () => {
 test("suggestedCommands is always an array", () => {
   for (const input of ["", "hello", "bizra", "xyzqwerty", "status"]) {
     const r = routeChatInput(input, DI);
-    assert.ok(Array.isArray(r.suggestedCommands), `suggestedCommands not array for input '${input}'`);
+    assert.ok(
+      Array.isArray(r.suggestedCommands),
+      `suggestedCommands not array for input '${input}'`,
+    );
   }
 });
 
@@ -225,9 +284,12 @@ test("next-action response uses injected status (activationGate + nextAdmissible
   const mockStatus = {
     activationGate: "EXPLICIT_GO_REQUIRED",
     findings: [],
-    nextAdmissibleAction: "bounded_setup_complete"
+    nextAdmissibleAction: "bounded_setup_complete",
   };
-  const r = routeChatInput("what should I do next", { ...DI, status: mockStatus });
+  const r = routeChatInput("what should I do next", {
+    ...DI,
+    status: mockStatus,
+  });
   assert.equal(r.intent, "next-action");
   assert.match(r.response, /EXPLICIT_GO_REQUIRED/);
   assert.match(r.response, /bounded_setup_complete/);

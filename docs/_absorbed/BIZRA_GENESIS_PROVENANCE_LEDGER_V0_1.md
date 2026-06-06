@@ -1,4 +1,5 @@
 # BIZRA Genesis Provenance Ledger
+
 ## `docs/provenance/BIZRA_GENESIS_PROVENANCE_LEDGER_V0_1.md`
 
 ```
@@ -113,6 +114,7 @@ Hash (SHA256): To be computed from canonical architecture document
 ```
 
 **Canonical node contents (current):**
+
 ```
 PAT   — 7 Personal Agentic Team agents (serve the human sovereign, private)
 SAT   — 5 System Agentic Team agents  (serve the ecosystem, constitution-bound)
@@ -139,6 +141,7 @@ Truth label:  MEASURED (directly observed in diagnostic output)
 ```
 
 **Evidence (from validated diagnostic runs):**
+
 ```
 LM Studio endpoint:    http://127.0.0.1:1234 → connected ✅
 Model loaded:          qwen/qwen3.5-9b        → active ✅
@@ -152,6 +155,7 @@ Evidence ledger:        empty                 → expected at this stage ✅
 ```
 
 **What is NOT yet measured:**
+
 ```
 First mission receipt:  PENDING — Node0 pulse not yet fired
 PoI accounting:         PENDING — requires first receipt
@@ -171,6 +175,7 @@ Truth label:  LOCAL → becomes MEASURED on merge
 ```
 
 **PR history (feat/identity-bound-receipt-v1 → feat/economic-constitution-v1):**
+
 ```
 PR #85 — Identity-bound receipt v1 + ADK evidence-preserving refusal
   7197cb99  test(node0): use active Python for CLI smoke
@@ -187,6 +192,7 @@ External blocker: Vercel cancellation (not code) → rerun pending
 ```
 
 **Core cryptographic invariants now enforced:**
+
 ```
 1. Gates are FAIL-CLOSED   — pass: false on any LLM error
 2. Receipt is IDENTITY-BOUND — signer must match registry
@@ -210,6 +216,7 @@ Truth label:  MEASURED (directly observed, artifacts produced)
 ```
 
 **Results:**
+
 ```
 swe_bench_verified:  score=0.876901  variance=2.25e-6  p95=2294ms  ✅ all gates
 hle:                 score=0.862037  variance=1.10e-5  p95=1607ms  ✅ all gates
@@ -235,6 +242,7 @@ Truth label:  MEASURED for cited claims / DIRECTION for future states
 ```
 
 **Canonical claims (verified with citations):**
+
 ```
 Global public debt 2024:      $102T       [UNCTAD]    MEASURED
 3.4B people debt burden:      3.4B people [UNCTAD]    MEASURED
@@ -244,6 +252,7 @@ Big Tech CapEx 2025:          $400B+      [IEA 2026]  MEASURED
 ```
 
 **The core public doctrine:**
+
 ```
 The human is the node.
 The machine is only the substrate.
@@ -265,6 +274,7 @@ Truth label:  MEASURED (stable design constants)
 ```
 
 **Token constants:**
+
 ```
 Genesis Gold:    #C9A962 — value, light, trust, covenant
 Celestial Navy:  #0A1628 — depth, sovereignty, contemplation
@@ -287,6 +297,7 @@ Truth label:  DESIGN_INVARIANT
 ```
 
 **The contract:**
+
 ```
 ARMED state:           Infrastructure ready, substrate validated.
                        Pulse is possible. Not yet materialized.
@@ -340,6 +351,7 @@ Verification command:
 ```
 
 **This receipt must exist before any of the following:**
+
 ```
 → Node1 federation
 → Public product demo
@@ -401,4 +413,4 @@ python -m core.mission_kernel.chain append \
 
 ---
 
-*This ledger is a living document. Each DIRECTION entry becomes MEASURED when its verification command runs and produces evidence. The ledger is the chain. The chain is the proof. The proof is BIZRA.*
+_This ledger is a living document. Each DIRECTION entry becomes MEASURED when its verification command runs and produces evidence. The ledger is the chain. The chain is the proof. The proof is BIZRA._

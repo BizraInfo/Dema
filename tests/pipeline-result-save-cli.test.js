@@ -10,7 +10,9 @@ import { createHash } from "node:crypto";
 
 import { buildPreviewBoundary } from "../packages/core/src/preview-boundary.js";
 
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 const SAVE_PIPELINE_CONSENT = "GO: save local orchestrator pipeline result";
 
 function runCli(args, { env = {}, timeout = 30000 } = {}) {
@@ -19,17 +21,26 @@ function runCli(args, { env = {}, timeout = 30000 } = {}) {
       "node",
       [cliPath, ...args],
       {
-        env: { ...process.env, DEMA_BANNER_INTERACTIVE: "0", NODE_ENV: "test", ...env },
+        env: {
+          ...process.env,
+          DEMA_BANNER_INTERACTIVE: "0",
+          NODE_ENV: "test",
+          ...env,
+        },
         timeout,
-        maxBuffer: 16 * 1024 * 1024
+        maxBuffer: 16 * 1024 * 1024,
       },
       (err, stdout, stderr) => {
         if (err && err.killed) {
-          reject(new Error(`Process timed out. stdout=${stdout.slice(0,500)} stderr=${stderr.slice(0,500)}`));
+          reject(
+            new Error(
+              `Process timed out. stdout=${stdout.slice(0, 500)} stderr=${stderr.slice(0, 500)}`,
+            ),
+          );
           return;
         }
         resolve({ stdout, stderr, exitCode: err?.code ?? 0 });
-      }
+      },
     );
   });
 }
@@ -37,7 +48,7 @@ function runCli(args, { env = {}, timeout = 30000 } = {}) {
 function canonicalArtifact() {
   return {
     schema: "bizra.dema.test_artifact.v0.1",
-    boundary: { ...buildPreviewBoundary() }
+    boundary: { ...buildPreviewBoundary() },
   };
 }
 
@@ -47,7 +58,10 @@ function nonCanonicalArtifact() {
   return a;
 }
 
-async function makeHomeWithEnvelope(envelope, { filename = "invocation-deadbeef.json" } = {}) {
+async function makeHomeWithEnvelope(
+  envelope,
+  { filename = "invocation-deadbeef.json" } = {},
+) {
   const home = await mkdtemp(join(tmpdir(), "dema-pipeline-save-cli-"));
   await mkdir(join(home, "receipts"), { recursive: true });
   const p = join(home, "receipts", filename);
@@ -60,17 +74,26 @@ test("'--save-pipeline-result' with valid consent writes file under $DEMA_HOME/r
   const { home, path } = await makeHomeWithEnvelope(canonicalArtifact());
   const { exitCode } = await runCli(
     [
-      "orchestrator", "verify",
-      "--invocation-file", path,
+      "orchestrator",
+      "verify",
+      "--invocation-file",
+      path,
       "--save-pipeline-result",
-      "--save-pipeline-consent", SAVE_PIPELINE_CONSENT
+      "--save-pipeline-consent",
+      SAVE_PIPELINE_CONSENT,
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   assert.equal(exitCode, 0);
   const files = await readdir(join(home, "receipts"));
-  const pipelineFiles = files.filter((f) => f.startsWith("pipeline-") && f.endsWith(".json"));
-  assert.equal(pipelineFiles.length, 1, `expected 1 pipeline file; got ${pipelineFiles.length}: ${files.join(",")}`);
+  const pipelineFiles = files.filter(
+    (f) => f.startsWith("pipeline-") && f.endsWith(".json"),
+  );
+  assert.equal(
+    pipelineFiles.length,
+    1,
+    `expected 1 pipeline file; got ${pipelineFiles.length}: ${files.join(",")}`,
+  );
   assert.match(pipelineFiles[0], /^pipeline-[a-f0-9]{64}\.json$/);
 });
 
@@ -78,8 +101,14 @@ test("'--save-pipeline-result' with valid consent writes file under $DEMA_HOME/r
 test("'--save-pipeline-result' without consent exits non-zero and names required phrase", async () => {
   const { home, path } = await makeHomeWithEnvelope(canonicalArtifact());
   const { stderr, exitCode } = await runCli(
-    ["orchestrator", "verify", "--invocation-file", path, "--save-pipeline-result"],
-    { env: { DEMA_HOME: home } }
+    [
+      "orchestrator",
+      "verify",
+      "--invocation-file",
+      path,
+      "--save-pipeline-result",
+    ],
+    { env: { DEMA_HOME: home } },
   );
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /requires --save-pipeline-consent/);
@@ -91,12 +120,15 @@ test("'--save-pipeline-result' with wrong consent exits non-zero with consent mi
   const { home, path } = await makeHomeWithEnvelope(canonicalArtifact());
   const { stderr, exitCode } = await runCli(
     [
-      "orchestrator", "verify",
-      "--invocation-file", path,
+      "orchestrator",
+      "verify",
+      "--invocation-file",
+      path,
       "--save-pipeline-result",
-      "--save-pipeline-consent", "wrong phrase"
+      "--save-pipeline-consent",
+      "wrong phrase",
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /consent phrase mismatch/);
@@ -107,15 +139,20 @@ test("saved file matches stdout byte-for-byte", async () => {
   const { home, path } = await makeHomeWithEnvelope(canonicalArtifact());
   const { stdout } = await runCli(
     [
-      "orchestrator", "verify",
-      "--invocation-file", path,
+      "orchestrator",
+      "verify",
+      "--invocation-file",
+      path,
       "--save-pipeline-result",
-      "--save-pipeline-consent", SAVE_PIPELINE_CONSENT
+      "--save-pipeline-consent",
+      SAVE_PIPELINE_CONSENT,
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   const files = await readdir(join(home, "receipts"));
-  const pipelineFile = files.find((f) => f.startsWith("pipeline-") && f.endsWith(".json"));
+  const pipelineFile = files.find(
+    (f) => f.startsWith("pipeline-") && f.endsWith(".json"),
+  );
   assert.ok(pipelineFile);
   const onDisk = await readFile(join(home, "receipts", pipelineFile), "utf8");
   assert.equal(onDisk, stdout, "on-disk file must match stdout byte-for-byte");
@@ -126,15 +163,20 @@ test("sha256 filename matches exact stdout bytes", async () => {
   const { home, path } = await makeHomeWithEnvelope(canonicalArtifact());
   const { stdout } = await runCli(
     [
-      "orchestrator", "verify",
-      "--invocation-file", path,
+      "orchestrator",
+      "verify",
+      "--invocation-file",
+      path,
       "--save-pipeline-result",
-      "--save-pipeline-consent", SAVE_PIPELINE_CONSENT
+      "--save-pipeline-consent",
+      SAVE_PIPELINE_CONSENT,
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   const files = await readdir(join(home, "receipts"));
-  const pipelineFile = files.find((f) => f.startsWith("pipeline-") && f.endsWith(".json"));
+  const pipelineFile = files.find(
+    (f) => f.startsWith("pipeline-") && f.endsWith(".json"),
+  );
   const expectedSha = createHash("sha256").update(stdout).digest("hex");
   assert.equal(pipelineFile, `pipeline-${expectedSha}.json`);
 });
@@ -144,12 +186,15 @@ test("stderr contains 'saved pipeline result to:' info line", async () => {
   const { home, path } = await makeHomeWithEnvelope(canonicalArtifact());
   const { stderr } = await runCli(
     [
-      "orchestrator", "verify",
-      "--invocation-file", path,
+      "orchestrator",
+      "verify",
+      "--invocation-file",
+      path,
       "--save-pipeline-result",
-      "--save-pipeline-consent", SAVE_PIPELINE_CONSENT
+      "--save-pipeline-consent",
+      SAVE_PIPELINE_CONSENT,
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   assert.match(stderr, /saved pipeline result to:/);
   assert.match(stderr, new RegExp(home.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
@@ -160,20 +205,27 @@ test("non-passed pipeline envelope is STILL saved (auditability for failures)", 
   const { home, path } = await makeHomeWithEnvelope(nonCanonicalArtifact());
   const { stdout, exitCode } = await runCli(
     [
-      "orchestrator", "verify",
-      "--invocation-file", path,
+      "orchestrator",
+      "verify",
+      "--invocation-file",
+      path,
       "--save-pipeline-result",
-      "--save-pipeline-consent", SAVE_PIPELINE_CONSENT
+      "--save-pipeline-consent",
+      SAVE_PIPELINE_CONSENT,
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   assert.notEqual(exitCode, 0);
   const env = JSON.parse(stdout);
   assert.equal(env.passed, false);
   const files = await readdir(join(home, "receipts"));
-  const pipelineFile = files.find((f) => f.startsWith("pipeline-") && f.endsWith(".json"));
+  const pipelineFile = files.find(
+    (f) => f.startsWith("pipeline-") && f.endsWith(".json"),
+  );
   assert.ok(pipelineFile, "non-passed envelope must still be saved");
-  const onDisk = JSON.parse(await readFile(join(home, "receipts", pipelineFile), "utf8"));
+  const onDisk = JSON.parse(
+    await readFile(join(home, "receipts", pipelineFile), "utf8"),
+  );
   assert.equal(onDisk.passed, false);
 });
 
@@ -182,13 +234,17 @@ test("no --save-pipeline-result means no pipeline-*.json file is written", async
   const { home, path } = await makeHomeWithEnvelope(canonicalArtifact());
   const { exitCode } = await runCli(
     ["orchestrator", "verify", "--invocation-file", path],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   assert.equal(exitCode, 0);
   if (existsSync(join(home, "receipts"))) {
     const files = await readdir(join(home, "receipts"));
     const pipelineFiles = files.filter((f) => f.startsWith("pipeline-"));
-    assert.equal(pipelineFiles.length, 0, "no pipeline-* file should exist without --save-pipeline-result");
+    assert.equal(
+      pipelineFiles.length,
+      0,
+      "no pipeline-* file should exist without --save-pipeline-result",
+    );
   }
 });
 
@@ -197,16 +253,20 @@ test("--latest source mode also supports --save-pipeline-result", async () => {
   const { home } = await makeHomeWithEnvelope(canonicalArtifact());
   const { exitCode } = await runCli(
     [
-      "orchestrator", "verify",
+      "orchestrator",
+      "verify",
       "--latest",
       "--save-pipeline-result",
-      "--save-pipeline-consent", SAVE_PIPELINE_CONSENT
+      "--save-pipeline-consent",
+      SAVE_PIPELINE_CONSENT,
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   assert.equal(exitCode, 0);
   const files = await readdir(join(home, "receipts"));
-  const pipelineFiles = files.filter((f) => f.startsWith("pipeline-") && f.endsWith(".json"));
+  const pipelineFiles = files.filter(
+    (f) => f.startsWith("pipeline-") && f.endsWith(".json"),
+  );
   assert.equal(pipelineFiles.length, 1);
 });
 
@@ -215,16 +275,21 @@ test("--invocation-file source mode supports --save-pipeline-result", async () =
   const { home, path } = await makeHomeWithEnvelope(canonicalArtifact());
   const { exitCode } = await runCli(
     [
-      "orchestrator", "verify",
-      "--invocation-file", path,
+      "orchestrator",
+      "verify",
+      "--invocation-file",
+      path,
       "--save-pipeline-result",
-      "--save-pipeline-consent", SAVE_PIPELINE_CONSENT
+      "--save-pipeline-consent",
+      SAVE_PIPELINE_CONSENT,
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   assert.equal(exitCode, 0);
   const files = await readdir(join(home, "receipts"));
-  assert.ok(files.some((f) => f.startsWith("pipeline-") && f.endsWith(".json")));
+  assert.ok(
+    files.some((f) => f.startsWith("pipeline-") && f.endsWith(".json")),
+  );
 });
 
 // 11. --pretty save preserves byte-for-byte pretty JSON
@@ -232,21 +297,30 @@ test("--pretty save preserves byte-for-byte pretty JSON", async () => {
   const { home, path } = await makeHomeWithEnvelope(canonicalArtifact());
   const { stdout, exitCode } = await runCli(
     [
-      "orchestrator", "verify",
-      "--invocation-file", path,
+      "orchestrator",
+      "verify",
+      "--invocation-file",
+      path,
       "--pretty",
       "--save-pipeline-result",
-      "--save-pipeline-consent", SAVE_PIPELINE_CONSENT
+      "--save-pipeline-consent",
+      SAVE_PIPELINE_CONSENT,
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   assert.equal(exitCode, 0);
   // Pretty output is multi-line
   assert.ok(stdout.split("\n").length > 3);
   const files = await readdir(join(home, "receipts"));
-  const pipelineFile = files.find((f) => f.startsWith("pipeline-") && f.endsWith(".json"));
+  const pipelineFile = files.find(
+    (f) => f.startsWith("pipeline-") && f.endsWith(".json"),
+  );
   const onDisk = await readFile(join(home, "receipts", pipelineFile), "utf8");
-  assert.equal(onDisk, stdout, "pretty on-disk must match pretty stdout byte-for-byte");
+  assert.equal(
+    onDisk,
+    stdout,
+    "pretty on-disk must match pretty stdout byte-for-byte",
+  );
 });
 
 // 12. Re-running the same scan produces 2 distinct files (verified_at /
@@ -255,27 +329,39 @@ test("re-running verify produces 2 distinct pipeline files (per-SAT verified_at 
   const { home, path } = await makeHomeWithEnvelope(canonicalArtifact());
   const r1 = await runCli(
     [
-      "orchestrator", "verify",
-      "--invocation-file", path,
+      "orchestrator",
+      "verify",
+      "--invocation-file",
+      path,
       "--save-pipeline-result",
-      "--save-pipeline-consent", SAVE_PIPELINE_CONSENT
+      "--save-pipeline-consent",
+      SAVE_PIPELINE_CONSENT,
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   await new Promise((res) => setTimeout(res, 20));
   const r2 = await runCli(
     [
-      "orchestrator", "verify",
-      "--invocation-file", path,
+      "orchestrator",
+      "verify",
+      "--invocation-file",
+      path,
       "--save-pipeline-result",
-      "--save-pipeline-consent", SAVE_PIPELINE_CONSENT
+      "--save-pipeline-consent",
+      SAVE_PIPELINE_CONSENT,
     ],
-    { env: { DEMA_HOME: home } }
+    { env: { DEMA_HOME: home } },
   );
   assert.equal(r1.exitCode, 0);
   assert.equal(r2.exitCode, 0);
   const files = await readdir(join(home, "receipts"));
-  const pipelineFiles = files.filter((f) => f.startsWith("pipeline-") && f.endsWith(".json")).sort();
-  assert.equal(pipelineFiles.length, 2, `expected 2 distinct files; got ${pipelineFiles.length}`);
+  const pipelineFiles = files
+    .filter((f) => f.startsWith("pipeline-") && f.endsWith(".json"))
+    .sort();
+  assert.equal(
+    pipelineFiles.length,
+    2,
+    `expected 2 distinct files; got ${pipelineFiles.length}`,
+  );
   assert.notEqual(pipelineFiles[0], pipelineFiles[1]);
 });

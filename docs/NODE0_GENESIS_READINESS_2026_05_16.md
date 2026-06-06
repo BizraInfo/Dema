@@ -16,17 +16,17 @@
 
 ## 1. Host topology — MEASURED
 
-| Field | Value | Evidence |
-|---|---|---|
-| Host name | `Bizra-Node0` | `uname -a` |
-| Kernel | `Linux 6.17.0-23-generic` · Ubuntu 24.04.1 · x86_64 | `uname -a` |
-| Uptime | 1d 1h 48m (at audit time) | `uptime` |
-| Memory | 125 GiB total · 102 GiB free | `free -h` |
-| Disk `/` | 937 GiB · 32% used · 611 GiB free | `df -h /` |
-| Disk `/data` | 1.9 TiB · 42% used · 1.1 TiB free | `df -h /data` |
-| Primary device | MSI Titan (DECLARED per operator canon) | operator memory `node0-space.md` |
-| Companion device | Z Fold 6 (DECLARED, no daemon, no socket) | operator memory `node0-space.md` |
-| Concurrent producers | `claude` PID 845865 (3h 16m) · `@openai/codex` PID 10378 (1d 1h 52m, idle since 05:07 GST) | `ps -eo pid,etime,cmd` |
+| Field                | Value                                                                                      | Evidence                         |
+| -------------------- | ------------------------------------------------------------------------------------------ | -------------------------------- |
+| Host name            | `Bizra-Node0`                                                                              | `uname -a`                       |
+| Kernel               | `Linux 6.17.0-23-generic` · Ubuntu 24.04.1 · x86_64                                        | `uname -a`                       |
+| Uptime               | 1d 1h 48m (at audit time)                                                                  | `uptime`                         |
+| Memory               | 125 GiB total · 102 GiB free                                                               | `free -h`                        |
+| Disk `/`             | 937 GiB · 32% used · 611 GiB free                                                          | `df -h /`                        |
+| Disk `/data`         | 1.9 TiB · 42% used · 1.1 TiB free                                                          | `df -h /data`                    |
+| Primary device       | MSI Titan (DECLARED per operator canon)                                                    | operator memory `node0-space.md` |
+| Companion device     | Z Fold 6 (DECLARED, no daemon, no socket)                                                  | operator memory `node0-space.md` |
+| Concurrent producers | `claude` PID 845865 (3h 16m) · `@openai/codex` PID 10378 (1d 1h 52m, idle since 05:07 GST) | `ps -eo pid,etime,cmd`           |
 
 Node0-IS-Dema's-space embodiment doctrine (per operator canon): the hardware is the node; software organs are aspects of one local sovereign system, not a multi-tenant service.
 
@@ -82,12 +82,12 @@ Plus operator profile (`profile.json`) and local config (`config.local.json`).
 
 Last full local-gate run on `8df722d` at 05:14 GST returned:
 
-| Gate | Result | Source |
-|---|---|---|
-| `npm test` | **500/500 PASS** · 0 fail · 0 skip · 740 ms | `tests/*.test.js` |
-| `npm run check` | **PASS** · `network_used:false · runtime_execution:false · auto_fix_performed:false · private_data_scanned:false` · 2 proofs SHA-256 verified | `scripts/node0-self-check.mjs --verify` |
-| `npm run llm:guidance` | **PASS** · 7/7 schema checks | `scripts/llm-guidance-check.mjs` |
-| `git diff --check` | clean | git plumbing |
+| Gate                   | Result                                                                                                                                        | Source                                  |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `npm test`             | **500/500 PASS** · 0 fail · 0 skip · 740 ms                                                                                                   | `tests/*.test.js`                       |
+| `npm run check`        | **PASS** · `network_used:false · runtime_execution:false · auto_fix_performed:false · private_data_scanned:false` · 2 proofs SHA-256 verified | `scripts/node0-self-check.mjs --verify` |
+| `npm run llm:guidance` | **PASS** · 7/7 schema checks                                                                                                                  | `scripts/llm-guidance-check.mjs`        |
+| `git diff --check`     | clean                                                                                                                                         | git plumbing                            |
 
 Per Dema CLAUDE.md invariant: "No runtime execution in this repo. No hidden daemon. Exact-string consent only. All local state stays under DEMA_HOME or ~/.dema. Receipts are read/list here; governed runtime issues. Node1/Node2 remain preview-only until proof gates pass." All four conditions hold in this snapshot.
 
@@ -97,44 +97,44 @@ The "production ready" target is layered. Each layer must close before the next 
 
 ### 4.1 Layer A — Local genesis (SEED → ARTIFACT-011)
 
-| Step | State | Truth | Evidence |
-|---|---|---|---|
-| A1 v0.2.3 memory awareness on `main` | shipped | MEASURED | `git log` shows v0.2.3 merged |
-| A2 OpenTimestamps `ots upgrade` (Bitcoin anchor) | **status not re-verified in this snapshot** | DECLARED-then-stale-check-needed | `proof-of-priority/PIN.md` exists; UPGRADED status not re-confirmed today |
-| A3 `bizra-cognition-gateway` running | depends on out-of-tree state | EXTERNAL | gateway lives in `bizra-data-lake`, not this repo |
-| A4 Dema adapter migrated to gateway HTTP | shipped | MEASURED | `92712db fix(node-adapter): harden legacy shellout boundary` (today) + ADR-003 |
-| A5 **ARTIFACT-011 first receipt** | **NOT ISSUED** | PLANNED | `~/.dema/receipts/` contains 3 preview/audit JSONs (May 6) but no canonical `ARTIFACT-011.json` with `truth_label:"MEASURED"` |
+| Step                                             | State                                       | Truth                            | Evidence                                                                                                                      |
+| ------------------------------------------------ | ------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| A1 v0.2.3 memory awareness on `main`             | shipped                                     | MEASURED                         | `git log` shows v0.2.3 merged                                                                                                 |
+| A2 OpenTimestamps `ots upgrade` (Bitcoin anchor) | **status not re-verified in this snapshot** | DECLARED-then-stale-check-needed | `proof-of-priority/PIN.md` exists; UPGRADED status not re-confirmed today                                                     |
+| A3 `bizra-cognition-gateway` running             | depends on out-of-tree state                | EXTERNAL                         | gateway lives in `bizra-data-lake`, not this repo                                                                             |
+| A4 Dema adapter migrated to gateway HTTP         | shipped                                     | MEASURED                         | `92712db fix(node-adapter): harden legacy shellout boundary` (today) + ADR-003                                                |
+| A5 **ARTIFACT-011 first receipt**                | **NOT ISSUED**                              | PLANNED                          | `~/.dema/receipts/` contains 3 preview/audit JSONs (May 6) but no canonical `ARTIFACT-011.json` with `truth_label:"MEASURED"` |
 
 **Layer A close gate:** A5 (ARTIFACT-011 issuance) requires (a) live `bizra-cognition-gateway` reachable, (b) `dema doctor` exit 0 against live gateway, (c) loaded local model with `lm_studio.connected=true`, (d) operator types exact phrase `GO: Node0 bounded diagnostic activation only`. None of (a)-(d) is observable from this snapshot's read-only audit.
 
-**Layer A status: OPEN.** Local genesis node is *infrastructurally ready* (adapter hardened, gates closed, 500 tests pass) but the *certifying receipt* has not been issued.
+**Layer A status: OPEN.** Local genesis node is _infrastructurally ready_ (adapter hardened, gates closed, 500 tests pass) but the _certifying receipt_ has not been issued.
 
 ### 4.2 Layer B — SPROUT (continuous bounded diagnostics → multi-action proof chain)
 
-| Step | State | Truth |
-|---|---|---|
-| B1 Continuous bounded diagnostics (7+ receipts, no daemon) | NOT STARTED | PLANNED |
+| Step                                                          | State       | Truth   |
+| ------------------------------------------------------------- | ----------- | ------- |
+| B1 Continuous bounded diagnostics (7+ receipts, no daemon)    | NOT STARTED | PLANNED |
 | B2 Receipt cross-repo handoff (Dema ↔ bizra-omega round-trip) | NOT STARTED | PLANNED |
 | B3 Local model probe receipts (`bizra.dema.model_probe.v0.1`) | NOT STARTED | PLANNED |
-| B4 First multi-action proof chain (5-step chained receipts) | NOT STARTED | PLANNED |
+| B4 First multi-action proof chain (5-step chained receipts)   | NOT STARTED | PLANNED |
 
 **Layer B status: GATED on Layer A close.** No Stage B step is meaningful until A5 is MEASURED.
 
 ### 4.3 Layer C — TREE (Federation between sovereign nodes)
 
-| Step | State | Truth |
-|---|---|---|
-| C1 Node1 onboarding kit | NOT STARTED | ASPIRATIONAL |
+| Step                                                                       | State       | Truth        |
+| -------------------------------------------------------------------------- | ----------- | ------------ |
+| C1 Node1 onboarding kit                                                    | NOT STARTED | ASPIRATIONAL |
 | C2 First inter-node handshake (Node0 ↔ next-node, federation-preview only) | NOT STARTED | ASPIRATIONAL |
-| C3 Cross-node receipt verification | NOT STARTED | ASPIRATIONAL |
+| C3 Cross-node receipt verification                                         | NOT STARTED | ASPIRATIONAL |
 
 **Layer C status: GATED on Layer B complete + multi-operator validation framework.**
 
 ### 4.4 Layer D — FOREST (Public network)
 
-| Step | State | Truth |
-|---|---|---|
-| D1 3-5 node pilot (PILOT_SHARED_URP) | NOT STARTED | ASPIRATIONAL |
+| Step                                              | State       | Truth        |
+| ------------------------------------------------- | ----------- | ------------ |
+| D1 3-5 node pilot (PILOT_SHARED_URP)              | NOT STARTED | ASPIRATIONAL |
 | D2 Public network surface (UNIVERSAL_NETWORK_URP) | NOT STARTED | ASPIRATIONAL |
 
 **Layer D status: GATED on Layer C complete + legal/tech/security/social validation per the manifest § V table.**

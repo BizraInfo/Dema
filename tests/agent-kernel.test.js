@@ -305,6 +305,31 @@ test("Adversarial · non-kernel input refused gracefully", () => {
   assert.match(result.event.refusal_reason, /kernel_invalid/);
 });
 
+test("Adversarial · invalid kernel refusal still emits canonical transition event fields", () => {
+  const result = tick({ schema: "wrong.schema", current_state: "init" });
+  const { event } = result;
+
+  assert.equal(event.schema, AGENT_KERNEL_TRANSITION_SCHEMA_NAME);
+  assert.equal(event.truth_label, "TRANSITION_REFUSED");
+  assert.equal(event.mode, "transition_event");
+  assert.equal(event.agent_id, "");
+  assert.equal(event.iteration, 0);
+  assert.equal(event.from_state, "unknown");
+  assert.equal(event.to_state, "unknown");
+  assert.equal(event.transition_reason, "kernel_invalid");
+  assert.equal(event.audit_trail_required, true);
+  assert.equal(event.receipt_shape_ready, false);
+  assert.equal(
+    event.transition_contract.receipt_backing.status,
+    "refusal_event_auditable_not_chain_advance_ready",
+  );
+  assert.equal(
+    event.transition_contract.receipt_backing.receipt_shape_ready,
+    false,
+  );
+  assert.ok(isCanonicalBoundary(event.boundary));
+});
+
 test("Adversarial · null/undefined input arg refused gracefully", () => {
   const k = validKernel();
   const a = tick(k, null);
@@ -362,6 +387,78 @@ test("Transition event boundary is canonical 16-key", () => {
 test("Transition event is deep-frozen · cannot be tampered post-build", () => {
   const { event } = tick(validKernel());
   assert.ok(Object.isFrozen(event));
+});
+
+test("Transition event carries explicit assurance contract for the objective", () => {
+  const { event } = tick(validKernel());
+
+  assert.equal(event.transition_id, "init->perceive:init_to_perceive");
+  assert.equal(event.transition_contract.explicit, true);
+  assert.equal(event.transition_contract.bounded, true);
+  assert.equal(event.transition_contract.receipt_backed, true);
+  assert.equal(event.transition_contract.rare_circuit_tested, true);
+  assert.equal(event.transition_contract.human_consent_aware, true);
+  assert.equal(event.transition_contract.ihsan_aligned, true);
+  assert.equal(event.transition_contract.ci_enforced, true);
+  assert.equal(
+    event.transition_contract.receipt_backing.event_schema,
+    AGENT_KERNEL_TRANSITION_SCHEMA_NAME,
+  );
+  assert.equal(
+    event.transition_contract.receipt_backing.receipt_shape_ready,
+    event.receipt_shape_ready,
+  );
+  assert.equal(event.transition_contract.receipt_backing.mint_performed, false);
+  assert.equal(
+    event.transition_contract.receipt_backing.chain_advance_performed,
+    false,
+  );
+  assert.equal(
+    event.transition_contract.bounds.max_iterations,
+    AGENT_KERNEL_MAX_ITERATIONS,
+  );
+  assert.equal(event.transition_contract.bounds.payload_key_limit, 20);
+  assert.ok(Object.isFrozen(event.transition_contract));
+  assert.ok(Object.isFrozen(event.transition_contract.receipt_backing));
+});
+
+test("Consent transition event records the observed human decision without broadening authority", () => {
+  let { kernel } = tick(validKernel());
+  ({ kernel } = tick(kernel));
+  ({ kernel } = tick(kernel, { proposal_summary: { action: "draft" } }));
+  const { event } = tick(kernel, { consent_decision: "granted" });
+
+  assert.equal(event.from_state, AGENT_STATES.CONSENT_REQUEST);
+  assert.equal(event.transition_contract.consent.required_for_transition, true);
+  assert.equal(
+    event.transition_contract.consent.operator_decision_observed,
+    "granted",
+  );
+  assert.equal(
+    event.transition_contract.consent.exact_string_required_for_effects,
+    true,
+  );
+  assert.equal(event.transition_contract.receipt_backing.mint_performed, false);
+});
+
+test("Refused transition still carries assurance contract and no chain advance", () => {
+  let { kernel } = tick(validKernel());
+  ({ kernel } = tick(kernel));
+  ({ kernel } = tick(kernel, { proposal_summary: { action: "draft" } }));
+  const { event } = tick(kernel);
+
+  assert.equal(event.refused, true);
+  assert.equal(event.transition_contract.explicit, true);
+  assert.equal(event.transition_contract.receipt_backed, true);
+  assert.equal(
+    event.transition_contract.receipt_backing.status,
+    "refusal_event_auditable_not_chain_advance_ready",
+  );
+  assert.equal(
+    event.transition_contract.receipt_backing.chain_advance_performed,
+    false,
+  );
+  assert.equal(event.transition_contract.consent.required_for_transition, true);
 });
 
 // =========================================================================

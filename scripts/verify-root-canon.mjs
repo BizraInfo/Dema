@@ -6,7 +6,10 @@ import path from "node:path";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
-const manifestPath = path.join(repoRoot, "docs/root-canon/root-canon.manifest.json");
+const manifestPath = path.join(
+  repoRoot,
+  "docs/root-canon/root-canon.manifest.json",
+);
 
 function digest(buffer, algorithm) {
   return createHash(algorithm).update(buffer).digest("hex");

@@ -10,15 +10,21 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildAmanaContractsPreview,
-  formatAmanaContractsPreview
+  formatAmanaContractsPreview,
 } from "../packages/core/src/amana-contracts-preview.js";
 import { runShell } from "../packages/core/src/shell.js";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
-const modulePath = fileURLToPath(new URL("../packages/core/src/amana-contracts-preview.js", import.meta.url));
-const shellPath = fileURLToPath(new URL("../packages/core/src/shell.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
+const modulePath = fileURLToPath(
+  new URL("../packages/core/src/amana-contracts-preview.js", import.meta.url),
+);
+const shellPath = fileURLToPath(
+  new URL("../packages/core/src/shell.js", import.meta.url),
+);
 
 function makeOutputSink() {
   let output = "";
@@ -27,9 +33,9 @@ function makeOutputSink() {
       write(chunk, _encoding, callback) {
         output += chunk.toString();
         callback();
-      }
+      },
     }),
-    text: () => output
+    text: () => output,
   };
 }
 
@@ -66,7 +72,7 @@ test("Amana primitives cover expected external audit candidates and blocked acti
     "evidence_chain",
     "impact_event",
     "claim_ledger_checker",
-    "journey_preview"
+    "journey_preview",
   ]);
   for (const primitive of preview.primitives) {
     assert.ok(primitive.blocked_actions.includes("runtime_start"));
@@ -98,14 +104,19 @@ test("current repo overlap paths exist", () => {
   for (const primitive of preview.primitives) {
     assert.ok(Array.isArray(primitive.current_repo_overlap));
     for (const relativePath of primitive.current_repo_overlap) {
-      assert.equal(existsSync(join(repoRoot, relativePath)), true, `${relativePath} should exist`);
+      assert.equal(
+        existsSync(join(repoRoot, relativePath)),
+        true,
+        `${relativePath} should exist`,
+      );
     }
   }
 });
 
 test("external source hints stay descriptive and non-addressable", () => {
   const preview = buildAmanaContractsPreview();
-  const forbidden = /:\/\/|(?:^|[\s.])(?:com|org|io)\b|sha256:|\bcommit\b|[a-f0-9]{40}|[\\/]|@\w+/i;
+  const forbidden =
+    /:\/\/|(?:^|[\s.])(?:com|org|io)\b|sha256:|\bcommit\b|[a-f0-9]{40}|[\\/]|@\w+/i;
 
   for (const primitive of preview.primitives) {
     assert.doesNotMatch(primitive.external_source_hint, forbidden);
@@ -119,9 +130,15 @@ test("Amana registry module imports no external implementation or side-effect AP
   assert.doesNotMatch(source, /\brequire\s*\(/);
   assert.doesNotMatch(source, /\bimport\s*\(/);
   assert.doesNotMatch(source, /\bcreateRequire\b/);
-  assert.doesNotMatch(source, /from "node:(?:fs|fs\/promises|net|http|https|http2|tls|dgram|dns|child_process|worker_threads|vm|cluster|repl)"/);
+  assert.doesNotMatch(
+    source,
+    /from "node:(?:fs|fs\/promises|net|http|https|http2|tls|dgram|dns|child_process|worker_threads|vm|cluster|repl)"/,
+  );
   assert.doesNotMatch(source, /\b(?:eval|Function)\s*\(/);
-  assert.doesNotMatch(source, /\b(?:writeFile|appendFile|mkdir|rename|unlink|createWriteStream)\b/);
+  assert.doesNotMatch(
+    source,
+    /\b(?:writeFile|appendFile|mkdir|rename|unlink|createWriteStream)\b/,
+  );
 });
 
 test("Amana registry module does not define copied primitive implementations", async () => {
@@ -135,10 +152,10 @@ test("Amana registry module does not define copied primitive implementations", a
     "ClaimLedger",
     "ClaimLedgerChecker",
     "Journey",
-    "JourneyPreview"
+    "JourneyPreview",
   ].join("|");
   const definitionPattern = new RegExp(
-    `\\b(?:class|function)\\s+(?:${implementationNames})\\b|\\b(?:const|let|var)\\s+(?:${implementationNames})\\s*=`
+    `\\b(?:class|function)\\s+(?:${implementationNames})\\b|\\b(?:const|let|var)\\s+(?:${implementationNames})\\s*=`,
   );
 
   assert.doesNotMatch(source, definitionPattern);
@@ -156,7 +173,12 @@ test("formatAmanaContractsPreview renders registry, gates, and no-mint boundary"
 });
 
 test("dema amana contracts preview prints a human-readable registry", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "amana", "contracts", "preview"]);
+  const { stdout } = await execFileAsync("node", [
+    cliPath,
+    "amana",
+    "contracts",
+    "preview",
+  ]);
 
   assert.match(stdout, /DEMA Amana Contract Registry Preview/);
   assert.match(stdout, /Step 7: BLOCKED_PRE_AMANA/);
@@ -164,7 +186,13 @@ test("dema amana contracts preview prints a human-readable registry", async () =
 });
 
 test("dema amana contracts preview --json emits the schema-tagged registry", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "amana", "contracts", "preview", "--json"]);
+  const { stdout } = await execFileAsync("node", [
+    cliPath,
+    "amana",
+    "contracts",
+    "preview",
+    "--json",
+  ]);
   const preview = JSON.parse(stdout);
 
   assert.equal(preview.schema, "bizra.dema.amana_contracts_preview.v0.1");
@@ -175,7 +203,12 @@ test("dema amana contracts preview --json emits the schema-tagged registry", asy
 });
 
 test("dema amana rejects unknown subcommands", async () => {
-  const result = await execFileAsync("node", [cliPath, "amana", "contracts", "mint"]).catch((error) => error);
+  const result = await execFileAsync("node", [
+    cliPath,
+    "amana",
+    "contracts",
+    "mint",
+  ]).catch((error) => error);
 
   assert.equal(result.code, 1);
   assert.match(result.stderr, /Unknown amana command/);
@@ -194,7 +227,7 @@ test("interactive shell advertises and dispatches the Amana registry command", a
     installSigintHandler: false,
     dispatchCommand(argv) {
       dispatched.push(argv);
-    }
+    },
   });
 
   assert.deepEqual(dispatched, [["amana", "contracts", "preview"]]);

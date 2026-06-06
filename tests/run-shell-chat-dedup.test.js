@@ -18,7 +18,7 @@ function buildOutputSink({ isTTY }) {
     write(chunk, _enc, cb) {
       chunks.push(chunk.toString("utf8"));
       cb();
-    }
+    },
   });
   out.isTTY = isTTY;
   return { out, text: () => chunks.join("") };
@@ -47,17 +47,22 @@ test("DEDUP-01: runShell with TTY output shows chat banner and skips legacy gree
       output: out,
       dispatchCommand: async () => {},
       greeting: "LEGACY_GREETING_MARKER_SHOULD_NOT_APPEAR",
-      installSigintHandler: false
+      installSigintHandler: false,
     });
   } finally {
-    if (prevHome === undefined) delete process.env.DEMA_HOME; else process.env.DEMA_HOME = prevHome;
-    if (prevInteractive !== undefined) process.env.DEMA_BANNER_INTERACTIVE = prevInteractive;
+    if (prevHome === undefined) delete process.env.DEMA_HOME;
+    else process.env.DEMA_HOME = prevHome;
+    if (prevInteractive !== undefined)
+      process.env.DEMA_BANNER_INTERACTIVE = prevInteractive;
   }
 
   const captured = text();
   assert.match(captured, /DEMA CHAT/, "chat banner must be rendered");
-  assert.doesNotMatch(captured, /LEGACY_GREETING_MARKER_SHOULD_NOT_APPEAR/,
-    "legacy greeting must be suppressed when chat banner shown");
+  assert.doesNotMatch(
+    captured,
+    /LEGACY_GREETING_MARKER_SHOULD_NOT_APPEAR/,
+    "legacy greeting must be suppressed when chat banner shown",
+  );
 });
 
 test("DEDUP-02: runShell with non-TTY output suppresses chat banner AND emits legacy greeting (back-compat)", async () => {
@@ -69,12 +74,20 @@ test("DEDUP-02: runShell with non-TTY output suppresses chat banner AND emits le
     output: out,
     dispatchCommand: async () => {},
     greeting: "LEGACY_GREETING_MARKER_BACKCOMPAT",
-    installSigintHandler: false
+    installSigintHandler: false,
   });
 
   const captured = text();
-  assert.doesNotMatch(captured, /DEMA CHAT/, "chat banner suppressed in non-TTY mode");
-  assert.match(captured, /LEGACY_GREETING_MARKER_BACKCOMPAT/, "legacy greeting still present in non-TTY mode");
+  assert.doesNotMatch(
+    captured,
+    /DEMA CHAT/,
+    "chat banner suppressed in non-TTY mode",
+  );
+  assert.match(
+    captured,
+    /LEGACY_GREETING_MARKER_BACKCOMPAT/,
+    "legacy greeting still present in non-TTY mode",
+  );
 });
 
 test("DEDUP-03: runShell with noBanner=true suppresses chat banner AND emits legacy greeting", async () => {
@@ -87,7 +100,7 @@ test("DEDUP-03: runShell with noBanner=true suppresses chat banner AND emits leg
     dispatchCommand: async () => {},
     greeting: "LEGACY_GREETING_NO_BANNER",
     installSigintHandler: false,
-    noBanner: true
+    noBanner: true,
   });
 
   const captured = text();
@@ -110,16 +123,30 @@ test("DEDUP-04: HELP block is always emitted (chat banner does not remove it)", 
       output: out,
       dispatchCommand: async () => {},
       greeting: "ignored",
-      installSigintHandler: false
+      installSigintHandler: false,
     });
   } finally {
-    if (prevHome === undefined) delete process.env.DEMA_HOME; else process.env.DEMA_HOME = prevHome;
-    if (prevInteractive !== undefined) process.env.DEMA_BANNER_INTERACTIVE = prevInteractive;
+    if (prevHome === undefined) delete process.env.DEMA_HOME;
+    else process.env.DEMA_HOME = prevHome;
+    if (prevInteractive !== undefined)
+      process.env.DEMA_BANNER_INTERACTIVE = prevInteractive;
   }
 
   const captured = text();
   // HELP includes section heads like "Readiness:" and "Local evidence:"
-  assert.match(captured, /Readiness:/, "HELP block must still appear after chat banner");
-  assert.match(captured, /Local evidence:/, "HELP block must include local-evidence section");
-  assert.doesNotMatch(captured, /read-only in v0\.3\.0/, "shell help must not carry stale release wording");
+  assert.match(
+    captured,
+    /Readiness:/,
+    "HELP block must still appear after chat banner",
+  );
+  assert.match(
+    captured,
+    /Local evidence:/,
+    "HELP block must include local-evidence section",
+  );
+  assert.doesNotMatch(
+    captured,
+    /read-only in v0\.3\.0/,
+    "shell help must not carry stale release wording",
+  );
 });

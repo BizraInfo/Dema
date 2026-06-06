@@ -30,7 +30,7 @@ In scope:
 
 - The full transcript of Origin Video 001 as remembered and provided by the operator.
 - The bounded meaning of the video.
-- The visual / audio direction *as known* — not as reconstructed from imagination.
+- The visual / audio direction _as known_ — not as reconstructed from imagination.
 - The timestamp-evidence boundary: what is verified, what is `SOURCE_PENDING`, what is forbidden.
 - The relationship between Origin Video 001 and every doc in the five-pillar A+ backbone.
 - The canonical public wording (Section 21) reusable under `DECLARED_PUBLIC_WORDING`.
@@ -59,29 +59,29 @@ The transcript section (Section 7) is **inviolate**. It may be quoted, excerpted
 
 This canon is the binding **expansion** of that Section 9. Together:
 
-- **Root Source** says *where* Origin Video 001 sits in the origin chain and *what status* it carries (`SOURCE_PENDING` for file metadata at Root Source v0.1).
+- **Root Source** says _where_ Origin Video 001 sits in the origin chain and _what status_ it carries (`SOURCE_PENDING` for file metadata at Root Source v0.1).
 - **This canon** preserves the actual transcript, the meaning, and the verification tasks that, when completed, promote the artifact's label.
 
 When this canon's label changes (e.g., timestamp promoted from `SOURCE_PENDING` to `VERIFIED`), the Root Source's Section 9 row is updated to match.
 
 ## 6. Artifact Identity
 
-| Field | Value | Truth label (v0.2) |
-|---|---|---|
-| Artifact name | **BIZRA Origin Video 001** | declared |
-| Format (declared) | Cinematic video with voice narration | declared |
-| Transcript | Full text preserved in Section 7 | declared |
-| Primary artifact path (local) | `/data/bizra/cloud-archive/gdrive-wizard/Google AI Studio/In the beginning, when the Earth was still young, …(1693522543490).mp4.mp4` | `FILE_IDENTITY_VERIFIED` |
-| File size | 149,888,720 bytes (~143 MB) | `FILE_IDENTITY_VERIFIED` |
-| SHA-256 | `8b89b6ddebd331db1216844f1825ef1dea99c68d0ad8492ad2e682b7c703d5af` | `FILE_IDENTITY_VERIFIED` |
-| Creation / export date (filename-embedded ms timestamp `1693522543490`) | **2023-08-31 22:55:43 UTC** (2023-09-01 02:55:43 GST) | `DATE_DERIVED_SINGLE_WITNESS` |
-| Production tool | Google AI Studio (from parent directory + filename convention) | `TOOL_PROVENANCE_DERIVED_STRONG` |
-| Content continuity with Section 7 transcript | Filename quotes Section 7 opening line verbatim | `CONTENT_CONTINUITY_DERIVED_FROM_FILENAME` |
-| Source drive (mirrored locally) | `gdrive-wizard` (mirror of `bizra.wizard@bizra.ai` Drive, captured 2026-04-14) | declared |
-| Filesystem mtime | 2025-06-01 10:17 GST — later re-save, not creation evidence | declared |
-| Public release status | Unknown / not asserted | `PUBLIC_RELEASE_SOURCE_PENDING` |
-| Pristine-original status | Primary artifact candidate; not yet corroborated by Drive metadata or export history | `PRISTINE_ORIGINAL_SOURCE_PENDING` |
-| Canon binding | This document (`docs/BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md`) | declared |
+| Field                                                                   | Value                                                                                                                                 | Truth label (v0.2)                         |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Artifact name                                                           | **BIZRA Origin Video 001**                                                                                                            | declared                                   |
+| Format (declared)                                                       | Cinematic video with voice narration                                                                                                  | declared                                   |
+| Transcript                                                              | Full text preserved in Section 7                                                                                                      | declared                                   |
+| Primary artifact path (local)                                           | `/data/bizra/cloud-archive/gdrive-wizard/Google AI Studio/In the beginning, when the Earth was still young, …(1693522543490).mp4.mp4` | `FILE_IDENTITY_VERIFIED`                   |
+| File size                                                               | 149,888,720 bytes (~143 MB)                                                                                                           | `FILE_IDENTITY_VERIFIED`                   |
+| SHA-256                                                                 | `8b89b6ddebd331db1216844f1825ef1dea99c68d0ad8492ad2e682b7c703d5af`                                                                    | `FILE_IDENTITY_VERIFIED`                   |
+| Creation / export date (filename-embedded ms timestamp `1693522543490`) | **2023-08-31 22:55:43 UTC** (2023-09-01 02:55:43 GST)                                                                                 | `DATE_DERIVED_SINGLE_WITNESS`              |
+| Production tool                                                         | Google AI Studio (from parent directory + filename convention)                                                                        | `TOOL_PROVENANCE_DERIVED_STRONG`           |
+| Content continuity with Section 7 transcript                            | Filename quotes Section 7 opening line verbatim                                                                                       | `CONTENT_CONTINUITY_DERIVED_FROM_FILENAME` |
+| Source drive (mirrored locally)                                         | `gdrive-wizard` (mirror of `bizra.wizard@bizra.ai` Drive, captured 2026-04-14)                                                        | declared                                   |
+| Filesystem mtime                                                        | 2025-06-01 10:17 GST — later re-save, not creation evidence                                                                           | declared                                   |
+| Public release status                                                   | Unknown / not asserted                                                                                                                | `PUBLIC_RELEASE_SOURCE_PENDING`            |
+| Pristine-original status                                                | Primary artifact candidate; not yet corroborated by Drive metadata or export history                                                  | `PRISTINE_ORIGINAL_SOURCE_PENDING`         |
+| Canon binding                                                           | This document (`docs/BIZRA_ORIGIN_VIDEO_001_CANON_v0_1.md`)                                                                           | declared                                   |
 
 The artifact is **named, hash-bound, and located** by this canon at v0.2. The detailed evidence binding (with derivative-file classification and precision rule) lives in the **Evidence Binding v0.2** subsection inside Section 22.
 
@@ -89,7 +89,7 @@ The artifact is **named, hash-bound, and located** by this canon at v0.2. The de
 
 The following transcript is preserved exactly as provided by the operator. **Do not alter** for dramatic effect in this canon document or in any derivative artifact. Excerpts may be used in public copy, but each excerpt must be true to this source.
 
-> *In the beginning, when the Earth was still young, humanity awakened with an insatiable curiosity. Questions filled our minds, mysteries that transcended time and generations, pulling at the very core of our existence. Who are we? What is our purpose? These questions remained, echoing through the ages, unanswered and elusive. Fast forward to our present time, a world both advanced and lost. We stand at a crossroads, where the once vibrant curiosity has dimmed. Technology, power, greed - they have clouded our vision, and we have forgotten our roots. We chase after shadows, illusions that lead us deeper into darkness. The world teeters on the brink of chaos; hunger, war, and despair are no longer strangers but daily realities. Amid this turmoil, a beacon of hope emerges. Three seekers, thinkers, believers, each wandering on their own path, each grappling with the same eternal questions. Their journeys intertwine, guided by a shared thirst for truth. And then, in a profound, universe-aligning moment, it happens: The BIZRA. A flash of understanding, a concept both new and ancient, a truth hidden in plain sight. Time stands still. Righteousness, social solidarity, kindness, and support - these are the keys. They are the essence of humanity, the values that have sustained us from the dawn of time. The BIZRA project is born, a testament to the goodness inside all of us, a call to remember who we are. It's not just an idea; it's a movement, a choice to return to our roots, to believe in one another once again. We are at a pivotal moment in our story, a moment where the past meets the present, where choices define our future. We have chosen to believe in goodness, in connection, in the power of human kindness. Now, dear listener, the choice is yours. Will you join us on this journey? Will you embrace the BIZRA and become a part of something greater? For in the end, it's all about the choice, and the story is still being written. What will you choose?*
+> _In the beginning, when the Earth was still young, humanity awakened with an insatiable curiosity. Questions filled our minds, mysteries that transcended time and generations, pulling at the very core of our existence. Who are we? What is our purpose? These questions remained, echoing through the ages, unanswered and elusive. Fast forward to our present time, a world both advanced and lost. We stand at a crossroads, where the once vibrant curiosity has dimmed. Technology, power, greed - they have clouded our vision, and we have forgotten our roots. We chase after shadows, illusions that lead us deeper into darkness. The world teeters on the brink of chaos; hunger, war, and despair are no longer strangers but daily realities. Amid this turmoil, a beacon of hope emerges. Three seekers, thinkers, believers, each wandering on their own path, each grappling with the same eternal questions. Their journeys intertwine, guided by a shared thirst for truth. And then, in a profound, universe-aligning moment, it happens: The BIZRA. A flash of understanding, a concept both new and ancient, a truth hidden in plain sight. Time stands still. Righteousness, social solidarity, kindness, and support - these are the keys. They are the essence of humanity, the values that have sustained us from the dawn of time. The BIZRA project is born, a testament to the goodness inside all of us, a call to remember who we are. It's not just an idea; it's a movement, a choice to return to our roots, to believe in one another once again. We are at a pivotal moment in our story, a moment where the past meets the present, where choices define our future. We have chosen to believe in goodness, in connection, in the power of human kindness. Now, dear listener, the choice is yours. Will you join us on this journey? Will you embrace the BIZRA and become a part of something greater? For in the end, it's all about the choice, and the story is still being written. What will you choose?_
 
 The transcript is the binding artifact of this canon. If a future audio/video recovery produces a slightly different transcript, **both** are recorded and the difference is noted — the earlier-canonized version is not silently overwritten.
 
@@ -99,10 +99,10 @@ Before BIZRA became technical, it was already about human choice, goodness, soli
 
 The transcript moves through four beats:
 
-1. **Origin** — humanity awakens with curiosity; eternal questions (*who are we, what is our purpose*) echo through generations.
-2. **Crisis** — a world *both advanced and lost*; technology, power, greed cloud the vision; hunger, war, despair become daily realities.
-3. **Awakening** — three seekers converge; *The BIZRA* arrives as both new and ancient; the keys are *righteousness, social solidarity, kindness, and support*.
-4. **Choice** — the listener is addressed directly: *the story is still being written; what will you choose?*
+1. **Origin** — humanity awakens with curiosity; eternal questions (_who are we, what is our purpose_) echo through generations.
+2. **Crisis** — a world _both advanced and lost_; technology, power, greed cloud the vision; hunger, war, despair become daily realities.
+3. **Awakening** — three seekers converge; _The BIZRA_ arrives as both new and ancient; the keys are _righteousness, social solidarity, kindness, and support_.
+4. **Choice** — the listener is addressed directly: _the story is still being written; what will you choose?_
 
 This four-beat structure is the **emotional spine** of every later BIZRA public artifact. A public artifact that loses one of these beats has drifted from the origin.
 
@@ -147,7 +147,7 @@ The emotional direction is allowed to be **referenced** in future direction docs
 - **Exact original file timestamp** (creation/export date promoted to `VERIFIED`): `SOURCE_PENDING`. The filename-embedded ms timestamp is `DERIVED` only. Promotion to `VERIFIED` requires corroboration by Google Drive `createdTime`, Google AI Studio export metadata, Runway/Midjourney provenance (if applicable), or another independent witness.
 - **Public release status**: `PUBLIC_RELEASE_SOURCE_PENDING` — no claim that the video was publicly released until evidence is bound.
 - **Pristine-original status**: `PRISTINE_ORIGINAL_SOURCE_PENDING` — the primary artifact at `gdrive-wizard/.../(1693522543490).mp4.mp4` is the strongest candidate, but pristine-original proof still requires export/Drive metadata.
-- **Bitcoin / external timestamp anchor for the video file**: **not yet bound**. The three founding *documents* (الرسالة, البذرة, The Third Fact) are bound to a Bitcoin merkle anchor; the **video file** has no such binding at v0.2 of this canon.
+- **Bitcoin / external timestamp anchor for the video file**: **not yet bound**. The three founding _documents_ (الرسالة, البذرة, The Third Fact) are bound to a Bitcoin merkle anchor; the **video file** has no such binding at v0.2 of this canon.
 
 Until the remaining Verification Tasks complete, **no public artifact** may state the exact creation date as `VERIFIED`. `DERIVED` is the highest label permitted for the 2023-08-31 timestamp at v0.2.
 
@@ -188,12 +188,12 @@ The bridge between them is years of solo work whose evidence is being assembled 
 
 The **2026 First Look** is the planned modern cinematic narrative for BIZRA's public introduction in 2026. Origin Video 001 is its **emotional Scene 0**.
 
-| Field | Value |
-|---|---|
-| 2026 First Look status | `DESIGNED_NOT_LIVE` — not yet produced |
-| Doc home (future) | `docs/public/BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md` |
-| Origin Video 001's role | Scene 0 / emotional root / opening receipt |
-| Binding rule | The 2026 First Look may *open from* Origin Video 001; it may not *replace* Origin Video 001; it must preserve the four-beat emotional spine (Origin → Crisis → Awakening → Choice). |
+| Field                   | Value                                                                                                                                                                               |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026 First Look status  | `DESIGNED_NOT_LIVE` — not yet produced                                                                                                                                              |
+| Doc home (future)       | `docs/public/BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md`                                                                                                                               |
+| Origin Video 001's role | Scene 0 / emotional root / opening receipt                                                                                                                                          |
+| Binding rule            | The 2026 First Look may _open from_ Origin Video 001; it may not _replace_ Origin Video 001; it must preserve the four-beat emotional spine (Origin → Crisis → Awakening → Choice). |
 
 - Allowed wording: "The 2026 First Look opens from Origin Video 001 and carries its emotional spine into a modern cinematic narrative."
 - Forbidden: "The 2026 First Look video is already produced." (It is not.)
@@ -252,7 +252,7 @@ Origin Video 001 may be used as:
 Each GTM use must:
 
 - preserve the four-beat structure (Origin → Crisis → Awakening → Choice),
-- preserve the closing question (*What will you choose?*) when length permits, or at minimum the **choice** beat,
+- preserve the closing question (_What will you choose?_) when length permits, or at minimum the **choice** beat,
 - carry a Claim Register label per `CLAIM_REGISTER §9` row for Origin Video 001 when one is added (next slice),
 - not present operator-reported metadata as `VERIFIED` until Verification Tasks land.
 
@@ -260,7 +260,7 @@ Each GTM use must:
 
 The following short paragraph is `DECLARED_PUBLIC_WORDING` (not final marketing copy; reusable as a starting point on README, website draft, deck, lighthouse invitation, or 2026 First Look opening, with the Claim Review Gate from `CLAIM_REGISTER §20` applied each time):
 
-> **The first BIZRA video began with humanity, not with tokens or code. It asked who we are and what our purpose is. It saw a world both advanced and lost — a world that had forgotten its roots. And it returned to four keys: righteousness, social solidarity, kindness, and support. It ended with a single question: *what will you choose?*** *(`DECLARED_PUBLIC_WORDING`)*
+> **The first BIZRA video began with humanity, not with tokens or code. It asked who we are and what our purpose is. It saw a world both advanced and lost — a world that had forgotten its roots. And it returned to four keys: righteousness, social solidarity, kindness, and support. It ended with a single question: _what will you choose?_** _(`DECLARED_PUBLIC_WORDING`)_
 
 Permitted variants (same label, same boundary):
 
@@ -270,7 +270,7 @@ Permitted variants (same label, same boundary):
 
 Forbidden mutations:
 
-- Removing the closing question or the *choice* framing.
+- Removing the closing question or the _choice_ framing.
 - Replacing "humanity / the human" with a product noun (BIZRA, Dema, Node0, the network).
 - Inserting any token, economic, or reward language.
 - Inserting any claim of imminent release of the 2026 First Look.
@@ -279,14 +279,14 @@ Forbidden mutations:
 
 Each task below is a future slice that, when completed, promotes a `SOURCE_PENDING` field to a higher label.
 
-| Task | Promotes |
-|---|---|
-| Locate original video file in operator's drive / cloud, capture hash + reachable path | Artifact Identity row → `VERIFIED` for file existence + hash; original location bound |
-| Inspect file metadata (creation date, modified date, codec, duration) | Section 11 timestamp claim → `VERIFIED` for inspected fields |
-| Capture file in repo-adjacent evidence directory (or hash-only reference if size prohibits) | Reachable evidence path for future audit |
-| Optional: re-transcribe audio independently; record any deltas vs Section 7 | Both transcripts preserved; canonical text governed by operator unless audio proves otherwise |
-| Optional: confirm or deny any public release; if released, bind platform + date | `Public release status` row → `VERIFIED` or `UNKNOWN` (not assumed) |
-| Optional: anchor video file hash to a public timestamp (Bitcoin, OpenTimestamps, or equivalent) | Timestamp anchor row → `VERIFIED` |
+| Task                                                                                            | Promotes                                                                                      |
+| ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Locate original video file in operator's drive / cloud, capture hash + reachable path           | Artifact Identity row → `VERIFIED` for file existence + hash; original location bound         |
+| Inspect file metadata (creation date, modified date, codec, duration)                           | Section 11 timestamp claim → `VERIFIED` for inspected fields                                  |
+| Capture file in repo-adjacent evidence directory (or hash-only reference if size prohibits)     | Reachable evidence path for future audit                                                      |
+| Optional: re-transcribe audio independently; record any deltas vs Section 7                     | Both transcripts preserved; canonical text governed by operator unless audio proves otherwise |
+| Optional: confirm or deny any public release; if released, bind platform + date                 | `Public release status` row → `VERIFIED` or `UNKNOWN` (not assumed)                           |
+| Optional: anchor video file hash to a public timestamp (Bitcoin, OpenTimestamps, or equivalent) | Timestamp anchor row → `VERIFIED`                                                             |
 
 When any task lands, this canon's `truth_label` may be promoted from `DECLARED_ORIGIN_VIDEO_001_CANON_v0_1` to a higher canon version that reflects the new evidence.
 
@@ -296,50 +296,50 @@ This subsection records the partial evidence binding performed in the v0.2 slice
 
 #### Precision rule
 
-> *A timestamp proves only what the evidence path can honestly support. The filename-embedded Unix-ms timestamp supports a derived creation/export-date claim, but it does not become `VERIFIED` until corroborated by Google Drive metadata, Google AI Studio export metadata, Runway/Midjourney provenance, or another independent witness.*
+> _A timestamp proves only what the evidence path can honestly support. The filename-embedded Unix-ms timestamp supports a derived creation/export-date claim, but it does not become `VERIFIED` until corroborated by Google Drive metadata, Google AI Studio export metadata, Runway/Midjourney provenance, or another independent witness._
 
 #### Evidence inventory
 
-| Evidence item | Value | What it proves | Truth label (v0.2) | What it does NOT prove |
-|---|---|---|---|---|
-| Primary-artifact path (local) | `/data/bizra/cloud-archive/gdrive-wizard/Google AI Studio/In the beginning, when the Earth was still young, humanity awakened with an insatiable curiosity. Questions filled our minds, mysteries that transcend (1693522543490).mp4.mp4` | A file at this path exists and is readable. | `FILE_IDENTITY_VERIFIED` | That this is the pristine original; that it has never been re-encoded. |
-| File size | 149,888,720 bytes (~143 MB) | Current artifact size. | `FILE_IDENTITY_VERIFIED` | Original size at 2023 creation. |
-| SHA-256 | `8b89b6ddebd331db1216844f1825ef1dea99c68d0ad8492ad2e682b7c703d5af` | Current content identity. | `FILE_IDENTITY_VERIFIED` | That this content equals the 2023 original byte-for-byte (a re-export would have a different hash). |
-| Filename-embedded Unix-ms timestamp `1693522543490` | Decodes to **2023-08-31 22:55:43 UTC** (= 2023-09-01 02:55:43 GST) | When Google AI Studio's filename convention says the artifact was produced. | `DATE_DERIVED_SINGLE_WITNESS` | A `VERIFIED` 2023-08-31 creation date. Requires a second independent witness (Drive `createdTime`, GAI Studio export history, Runway/Midjourney job history, etc.) to promote. |
-| Parent directory `Google AI Studio` + filename pattern `<text-prefix> (ms-timestamp).mp4.mp4` | Google AI Studio is the production tool. | `TOOL_PROVENANCE_DERIVED_STRONG` | A `VERIFIED` GAI Studio provenance. Requires documented GAI Studio export behavior or Drive metadata `source` field to promote. |
-| Filename quotes Section 7 transcript opening line verbatim | Filename text matches the first sentence of the canonical transcript. | `CONTENT_CONTINUITY_DERIVED_FROM_FILENAME` | That every spoken word in the audio matches Section 7 in full. Audio extraction + transcription would promote further. |
-| Filesystem mtime | 2025-06-01 10:17 GST | When the local mirror's copy of this file was last touched/re-saved. | declared (descriptive) | The creation date (mtime is post-2023 by design — local mirror was captured 2026-04-14). |
-| Source mirror | `gdrive-wizard` (= `bizra.wizard@bizra.ai` Drive, mirrored locally 2026-04-14) | The file lived in the `bizra.wizard` Drive at mirror-capture time. | declared (descriptive) | That this was the original drive at 2023 creation — the operator-reported original was `mohamedbeshr000@gmail.com`; binding the original Drive is a future Verification Task. |
-| Public release status | not asserted | nothing | `PUBLIC_RELEASE_SOURCE_PENDING` | Anything about public release. |
-| Pristine-original status | primary candidate only | nothing | `PRISTINE_ORIGINAL_SOURCE_PENDING` | Pristine-original status. |
+| Evidence item                                                                                 | Value                                                                                                                                                                                                                                     | What it proves                                                              | Truth label (v0.2)                                                                                                              | What it does NOT prove                                                                                                                                                         |
+| --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Primary-artifact path (local)                                                                 | `/data/bizra/cloud-archive/gdrive-wizard/Google AI Studio/In the beginning, when the Earth was still young, humanity awakened with an insatiable curiosity. Questions filled our minds, mysteries that transcend (1693522543490).mp4.mp4` | A file at this path exists and is readable.                                 | `FILE_IDENTITY_VERIFIED`                                                                                                        | That this is the pristine original; that it has never been re-encoded.                                                                                                         |
+| File size                                                                                     | 149,888,720 bytes (~143 MB)                                                                                                                                                                                                               | Current artifact size.                                                      | `FILE_IDENTITY_VERIFIED`                                                                                                        | Original size at 2023 creation.                                                                                                                                                |
+| SHA-256                                                                                       | `8b89b6ddebd331db1216844f1825ef1dea99c68d0ad8492ad2e682b7c703d5af`                                                                                                                                                                        | Current content identity.                                                   | `FILE_IDENTITY_VERIFIED`                                                                                                        | That this content equals the 2023 original byte-for-byte (a re-export would have a different hash).                                                                            |
+| Filename-embedded Unix-ms timestamp `1693522543490`                                           | Decodes to **2023-08-31 22:55:43 UTC** (= 2023-09-01 02:55:43 GST)                                                                                                                                                                        | When Google AI Studio's filename convention says the artifact was produced. | `DATE_DERIVED_SINGLE_WITNESS`                                                                                                   | A `VERIFIED` 2023-08-31 creation date. Requires a second independent witness (Drive `createdTime`, GAI Studio export history, Runway/Midjourney job history, etc.) to promote. |
+| Parent directory `Google AI Studio` + filename pattern `<text-prefix> (ms-timestamp).mp4.mp4` | Google AI Studio is the production tool.                                                                                                                                                                                                  | `TOOL_PROVENANCE_DERIVED_STRONG`                                            | A `VERIFIED` GAI Studio provenance. Requires documented GAI Studio export behavior or Drive metadata `source` field to promote. |
+| Filename quotes Section 7 transcript opening line verbatim                                    | Filename text matches the first sentence of the canonical transcript.                                                                                                                                                                     | `CONTENT_CONTINUITY_DERIVED_FROM_FILENAME`                                  | That every spoken word in the audio matches Section 7 in full. Audio extraction + transcription would promote further.          |
+| Filesystem mtime                                                                              | 2025-06-01 10:17 GST                                                                                                                                                                                                                      | When the local mirror's copy of this file was last touched/re-saved.        | declared (descriptive)                                                                                                          | The creation date (mtime is post-2023 by design — local mirror was captured 2026-04-14).                                                                                       |
+| Source mirror                                                                                 | `gdrive-wizard` (= `bizra.wizard@bizra.ai` Drive, mirrored locally 2026-04-14)                                                                                                                                                            | The file lived in the `bizra.wizard` Drive at mirror-capture time.          | declared (descriptive)                                                                                                          | That this was the original drive at 2023 creation — the operator-reported original was `mohamedbeshr000@gmail.com`; binding the original Drive is a future Verification Task.  |
+| Public release status                                                                         | not asserted                                                                                                                                                                                                                              | nothing                                                                     | `PUBLIC_RELEASE_SOURCE_PENDING`                                                                                                 | Anything about public release.                                                                                                                                                 |
+| Pristine-original status                                                                      | primary candidate only                                                                                                                                                                                                                    | nothing                                                                     | `PRISTINE_ORIGINAL_SOURCE_PENDING`                                                                                              | Pristine-original status.                                                                                                                                                      |
 
 #### Derivative-file classification (NOT primary proof)
 
 The following two files were placed by the operator in `~/Downloads/` on 2026-05-21 and inspected:
 
-| Filename | SHA-256 | Classification | Why |
-|---|---|---|---|
-| `db7116c8-ab6c-419b-94d0-0bcf0e91a7dc_restyled.mp4` (157,506,788 bytes) | `870d12d5e02d20688ec2a313ed1dea11ca658d8a70247e2e623c84e0e722ab0d` | **Derivative / re-styling** — not primary proof. | Filename literally contains `_restyled`; different size and hash from the primary artifact. |
-| `My Video-2.mp4` (100,078,409 bytes) | `1f635540c4b1e88b89d01d9c998d9441ab5beed5d304cd4b69721a65d560b681` | **Derivative / re-export** — not primary proof. | mp4 `mvhd` creation_time is zeroed (typical re-export artifact); `-2` suffix implies a numbered variant; different size and hash from the primary artifact. |
+| Filename                                                                | SHA-256                                                            | Classification                                   | Why                                                                                                                                                         |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `db7116c8-ab6c-419b-94d0-0bcf0e91a7dc_restyled.mp4` (157,506,788 bytes) | `870d12d5e02d20688ec2a313ed1dea11ca658d8a70247e2e623c84e0e722ab0d` | **Derivative / re-styling** — not primary proof. | Filename literally contains `_restyled`; different size and hash from the primary artifact.                                                                 |
+| `My Video-2.mp4` (100,078,409 bytes)                                    | `1f635540c4b1e88b89d01d9c998d9441ab5beed5d304cd4b69721a65d560b681` | **Derivative / re-export** — not primary proof.  | mp4 `mvhd` creation_time is zeroed (typical re-export artifact); `-2` suffix implies a numbered variant; different size and hash from the primary artifact. |
 
 Both derivatives have mtime 2026-05-21 (the day they were placed in Downloads). Neither file is the primary artifact. Future GTM uses must source from the primary artifact path, not from either derivative.
 
 #### Explicit not-evidence
 
-**Claude upload history is not used as evidence anywhere in this canon, the Claim Register, the Root Source of Truth, or any derivative artifact.** A casual operator mention that the file was once uploaded to a Claude conversation was correctly excluded by the architect per the operating law captured in memory at `feedback_no_invented_evidence_source.md`: *"No witness enters canon unless it actually exists. No evidence source is invented for convenience."*
+**Claude upload history is not used as evidence anywhere in this canon, the Claim Register, the Root Source of Truth, or any derivative artifact.** A casual operator mention that the file was once uploaded to a Claude conversation was correctly excluded by the architect per the operating law captured in memory at `feedback_no_invented_evidence_source.md`: _"No witness enters canon unless it actually exists. No evidence source is invented for convenience."_
 
 #### Remaining Verification Tasks (post-v0.2)
 
 The Section 22 table above lists the original v0.1 tasks. v0.2 advances them as follows:
 
-| Original task | v0.2 status |
-|---|---|
-| Locate original video file in operator's drive / cloud, capture hash + reachable path | **PARTIAL** — strongest known primary artifact candidate found in `gdrive-wizard` mirror; path + sha256 captured above. Pristine-original status remains `PRISTINE_ORIGINAL_SOURCE_PENDING` until Drive/export metadata or source-project history confirms it. |
-| Inspect file metadata (creation date, modified date, codec, duration) | **Partial** — filename-embedded ms timestamp captured; mp4 `mvhd` atom parsing pending (no `ffprobe` installed at v0.2 capture time) |
-| Capture file in repo-adjacent evidence directory (or hash-only reference if size prohibits) | **Done via hash-only reference** (file is ~143 MB, not committed to repo; identity bound by sha256) |
-| Optional: re-transcribe audio independently; record any deltas vs Section 7 | **Deferred** to a future slice (requires `ffmpeg` + transcription tool) |
-| Optional: confirm or deny any public release; if released, bind platform + date | **Deferred** |
-| Optional: anchor video file hash to a public timestamp (Bitcoin, OpenTimestamps, or equivalent) | **Deferred** |
+| Original task                                                                                   | v0.2 status                                                                                                                                                                                                                                                    |
+| ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Locate original video file in operator's drive / cloud, capture hash + reachable path           | **PARTIAL** — strongest known primary artifact candidate found in `gdrive-wizard` mirror; path + sha256 captured above. Pristine-original status remains `PRISTINE_ORIGINAL_SOURCE_PENDING` until Drive/export metadata or source-project history confirms it. |
+| Inspect file metadata (creation date, modified date, codec, duration)                           | **Partial** — filename-embedded ms timestamp captured; mp4 `mvhd` atom parsing pending (no `ffprobe` installed at v0.2 capture time)                                                                                                                           |
+| Capture file in repo-adjacent evidence directory (or hash-only reference if size prohibits)     | **Done via hash-only reference** (file is ~143 MB, not committed to repo; identity bound by sha256)                                                                                                                                                            |
+| Optional: re-transcribe audio independently; record any deltas vs Section 7                     | **Deferred** to a future slice (requires `ffmpeg` + transcription tool)                                                                                                                                                                                        |
+| Optional: confirm or deny any public release; if released, bind platform + date                 | **Deferred**                                                                                                                                                                                                                                                   |
+| Optional: anchor video file hash to a public timestamp (Bitcoin, OpenTimestamps, or equivalent) | **Deferred**                                                                                                                                                                                                                                                   |
 
 A future v0.3 slice may promote `DATE_DERIVED_SINGLE_WITNESS` → `VERIFIED` by capturing a second independent witness (Drive metadata, GAI Studio project export, Runway / Midjourney job history if applicable), and may promote `PRISTINE_ORIGINAL_SOURCE_PENDING` → `VERIFIED` by retrieving the original from the source drive with intact metadata.
 
@@ -391,4 +391,4 @@ When this canon changes, every public-face slice that quotes Origin Video 001 is
 ---
 
 > **The first video is not just media. It is the emotional receipt of the seed before the system had code.**
-> *(Operating-law clause, also fit for public copy when paired with `DECLARED_PUBLIC_WORDING`.)*
+> _(Operating-law clause, also fit for public copy when paired with `DECLARED_PUBLIC_WORDING`.)_

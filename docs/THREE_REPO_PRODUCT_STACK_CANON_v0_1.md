@@ -24,11 +24,11 @@ Ship through the smallest proof-bearing slice.
 
 ## 2. Repository Authority Table
 
-| Repository | Canon role | Authority | Not authority for | Current product posture |
-|---|---|---|---|---|
-| `BizraInfo/Dema` | Product face / operator UX / consent surface | Onboarding, Homebase UX, CLI/TUI journey, setup, status, consent planning, receipt browsing, user-facing wording | Governed runtime execution, token economics, federation, core proof engine | Active product surface |
-| `BizraInfo/bizra-data-lake` | Governed runtime / proof core / sovereign substrate | Constitutional thresholds, FATE/SAT/PAT proof logic, runtime/proof spine, receipts, core data/proof substrate | First-run product UX, public onboarding copy, archived prototype experiments | Active core/runtime source of truth |
-| `BizraInfo/bizra-node0-genesis` | Archived Node0 R&D/prototype source | Historical patterns, earlier experiments, migration candidates, lessons learned | Current product face, current production runtime authority, public entry point | Archived/reference only |
+| Repository                      | Canon role                                          | Authority                                                                                                        | Not authority for                                                              | Current product posture             |
+| ------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------- |
+| `BizraInfo/Dema`                | Product face / operator UX / consent surface        | Onboarding, Homebase UX, CLI/TUI journey, setup, status, consent planning, receipt browsing, user-facing wording | Governed runtime execution, token economics, federation, core proof engine     | Active product surface              |
+| `BizraInfo/bizra-data-lake`     | Governed runtime / proof core / sovereign substrate | Constitutional thresholds, FATE/SAT/PAT proof logic, runtime/proof spine, receipts, core data/proof substrate    | First-run product UX, public onboarding copy, archived prototype experiments   | Active core/runtime source of truth |
+| `BizraInfo/bizra-node0-genesis` | Archived Node0 R&D/prototype source                 | Historical patterns, earlier experiments, migration candidates, lessons learned                                  | Current product face, current production runtime authority, public entry point | Archived/reference only             |
 
 ## 3. Product Boundary
 
@@ -92,13 +92,13 @@ It must not be described as the current product runtime, current user-facing pro
 
 BIZRA execution language must distinguish five surfaces:
 
-| Surface | Meaning | Allowed wording |
-|---|---|---|
-| Product preview | User-facing proposal/explanation | Dema previews/plans/explains |
-| Consent gate | Human authorization layer | Dema requests exact consent where required |
-| Governed runtime | Actual bounded action executor | Governed runtime executes under proof controls |
-| Receipt/proof | Evidence output | Receipts prove what happened |
-| Archive | Historical source | Node0 Genesis records prior exploration |
+| Surface          | Meaning                          | Allowed wording                                |
+| ---------------- | -------------------------------- | ---------------------------------------------- |
+| Product preview  | User-facing proposal/explanation | Dema previews/plans/explains                   |
+| Consent gate     | Human authorization layer        | Dema requests exact consent where required     |
+| Governed runtime | Actual bounded action executor   | Governed runtime executes under proof controls |
+| Receipt/proof    | Evidence output                  | Receipts prove what happened                   |
+| Archive          | Historical source                | Node0 Genesis records prior exploration        |
 
 Forbidden collapse:
 
@@ -161,18 +161,18 @@ Do not use `verified`, `ironclad`, `production-ready`, `network-ready`, or `econ
 
 BIZRA delivery work must be managed as a professional product program, not a stream of isolated features.
 
-| Management domain | BIZRA delivery rule |
-|---|---|
-| Integration management | Each slice must identify the authoritative repo and downstream dependencies |
-| Scope management | Use smallest solvable slice; avoid multi-doc or multi-hook expansion unless explicitly authorized |
-| Schedule management | Sequence active lanes before opening new governance lanes |
-| Cost/resource management | Prefer local checks and minimal new infrastructure before external automation |
-| Quality management | Every public boundary requires replayable tests or proof artifacts |
-| Risk management | Maintain explicit risk register for security, proof, release, and claim drift |
-| Communications management | Use one source of truth for repo roles and public wording |
-| Stakeholder management | Operator sovereignty, future Node1 users, contributors, and proof auditors are separate stakeholders |
-| Procurement/dependency management | New dependencies require purpose, risk, fallback, and audit path |
-| Delivery measurement | Track DORA-style delivery performance only in context of one repo/service at a time |
+| Management domain                 | BIZRA delivery rule                                                                                  |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Integration management            | Each slice must identify the authoritative repo and downstream dependencies                          |
+| Scope management                  | Use smallest solvable slice; avoid multi-doc or multi-hook expansion unless explicitly authorized    |
+| Schedule management               | Sequence active lanes before opening new governance lanes                                            |
+| Cost/resource management          | Prefer local checks and minimal new infrastructure before external automation                        |
+| Quality management                | Every public boundary requires replayable tests or proof artifacts                                   |
+| Risk management                   | Maintain explicit risk register for security, proof, release, and claim drift                        |
+| Communications management         | Use one source of truth for repo roles and public wording                                            |
+| Stakeholder management            | Operator sovereignty, future Node1 users, contributors, and proof auditors are separate stakeholders |
+| Procurement/dependency management | New dependencies require purpose, risk, fallback, and audit path                                     |
+| Delivery measurement              | Track DORA-style delivery performance only in context of one repo/service at a time                  |
 
 ## 10. DevOps and CI/CD Canon
 
@@ -322,13 +322,13 @@ No archive component becomes active canon merely by being historically important
 
 ## 15. Proof-of-Truth Convergence
 
-| Claim | Formal | Cryptographic | Empirical | Economic | Status |
-|---|---|---|---|---|---|
-| Dema is the product face | This canon + README wording | N/A | CLI/product tests | N/A | Active canon |
-| bizra-data-lake is runtime/proof core | This canon + core docs/code | Receipts/proof paths | Core tests | Future PoI only | Active canon |
-| Node0 Genesis is archive | This canon + archived repo state | N/A | Historical repo evidence | N/A | Active canon |
-| Delivery Spine exists | Deferred | Deferred | Deferred | N/A | Not yet implemented |
-| Full URP/token economy is live | No | No | No | No | Forbidden claim |
+| Claim                                 | Formal                           | Cryptographic        | Empirical                | Economic        | Status              |
+| ------------------------------------- | -------------------------------- | -------------------- | ------------------------ | --------------- | ------------------- |
+| Dema is the product face              | This canon + README wording      | N/A                  | CLI/product tests        | N/A             | Active canon        |
+| bizra-data-lake is runtime/proof core | This canon + core docs/code      | Receipts/proof paths | Core tests               | Future PoI only | Active canon        |
+| Node0 Genesis is archive              | This canon + archived repo state | N/A                  | Historical repo evidence | N/A             | Active canon        |
+| Delivery Spine exists                 | Deferred                         | Deferred             | Deferred                 | N/A             | Not yet implemented |
+| Full URP/token economy is live        | No                               | No                   | No                       | No              | Forbidden claim     |
 
 ## 16. Immediate Next Slice After This Canon
 

@@ -7,27 +7,39 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildNetworkRefusalMatrixPreview,
-  formatNetworkRefusalMatrixPreview
+  formatNetworkRefusalMatrixPreview,
 } from "../packages/core/src/network-refusal-matrix-preview.js";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
-const modulePath = fileURLToPath(new URL("../packages/core/src/network-refusal-matrix-preview.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
+const modulePath = fileURLToPath(
+  new URL(
+    "../packages/core/src/network-refusal-matrix-preview.js",
+    import.meta.url,
+  ),
+);
 
 const forbiddenAuthorizationPatterns = [
   /\bI authorize\b/i,
   /\bI approve\b/i,
-  /--authorize\s+["'][^"']+["']/i
+  /--authorize\s+["'][^"']+["']/i,
 ];
 
 function boundaryKeyFromVerification(verifiedBy) {
-  return [...verifiedBy.matchAll(/boundary\.([a-z_]+)/g)].map((match) => match[1]);
+  return [...verifiedBy.matchAll(/boundary\.([a-z_]+)/g)].map(
+    (match) => match[1],
+  );
 }
 
 test("buildNetworkRefusalMatrixPreview emits a schema-tagged inert preview", () => {
   const preview = buildNetworkRefusalMatrixPreview();
 
-  assert.equal(preview.schema, "bizra.dema.network_refusal_matrix_preview.v0.1");
+  assert.equal(
+    preview.schema,
+    "bizra.dema.network_refusal_matrix_preview.v0.1",
+  );
   assert.equal(preview.mode, "PREVIEW_ONLY");
   assert.equal(preview.fixture.fixture_slot_count, 5);
   assert.equal(preview.fixture.live_nodes, 0);
@@ -63,7 +75,7 @@ test("buildNetworkRefusalMatrixPreview keeps every effect boundary false", () =>
     "matrix_file_written",
     "simulation_executed",
     "scenario_emitted_authorization_phrase",
-    "topology_claim_made"
+    "topology_claim_made",
   ];
 
   for (const key of expectedFalseBoundaries) {
@@ -79,10 +91,13 @@ test("buildNetworkRefusalMatrixPreview refuses every scenario until gates are me
     "adversarial_slot_input_shape",
     "stale_receipt_shape",
     "missing_micro_consent_shape",
-    "schema_mismatch_shape"
+    "schema_mismatch_shape",
   ];
 
-  assert.deepEqual(preview.matrix.map((entry) => entry.id), expectedIds);
+  assert.deepEqual(
+    preview.matrix.map((entry) => entry.id),
+    expectedIds,
+  );
   for (const entry of preview.matrix) {
     assert.equal(entry.preview_decision, "describe_refusal_only");
     assert.equal(entry.future_live_decision, "refuse_until_gate_measured");
@@ -92,7 +107,11 @@ test("buildNetworkRefusalMatrixPreview refuses every scenario until gates are me
     assert.equal(entry.federation_started, false);
     assert.equal(entry.receipt_minted, false);
     assert.ok(entry.refusal_reasons.length > 0);
-    assert.ok(entry.required_gates_before_live_action.includes("step7_capability_anchor_minted"));
+    assert.ok(
+      entry.required_gates_before_live_action.includes(
+        "step7_capability_anchor_minted",
+      ),
+    );
   }
 });
 
@@ -101,7 +120,9 @@ test("buildNetworkRefusalMatrixPreview self-proactive checks are computed and pa
 
   assert.equal(preview.self_proactive_harness.mode, "computed_preview_checks");
   assert.ok(preview.self_proactive_harness.checks.length >= 4);
-  assert.ok(preview.self_proactive_harness.checks.every((item) => item.passed === true));
+  assert.ok(
+    preview.self_proactive_harness.checks.every((item) => item.passed === true),
+  );
 });
 
 test("buildNetworkRefusalMatrixPreview maps micro-compliance to real false boundaries", () => {
@@ -110,7 +131,11 @@ test("buildNetworkRefusalMatrixPreview maps micro-compliance to real false bound
   for (const control of preview.micro_compliance) {
     const keys = boundaryKeyFromVerification(control.verified_by);
     for (const key of keys) {
-      assert.equal(preview.boundary[key], false, `${control.control} references missing/true ${key}`);
+      assert.equal(
+        preview.boundary[key],
+        false,
+        `${control.control} references missing/true ${key}`,
+      );
     }
   }
 });
@@ -118,9 +143,19 @@ test("buildNetworkRefusalMatrixPreview maps micro-compliance to real false bound
 test("buildNetworkRefusalMatrixPreview emits micro-consent requirements without approval", () => {
   const preview = buildNetworkRefusalMatrixPreview();
 
-  assert.equal(preview.micro_consent.preview_scope, "partition rejoin refusal matrix preview only");
-  assert.equal(preview.micro_consent.current_preview_requires_operator_authorization, false);
-  assert.equal(preview.micro_consent.future_live_probe_requires_fresh_current_operator_turn, true);
+  assert.equal(
+    preview.micro_consent.preview_scope,
+    "partition rejoin refusal matrix preview only",
+  );
+  assert.equal(
+    preview.micro_consent.current_preview_requires_operator_authorization,
+    false,
+  );
+  assert.equal(
+    preview.micro_consent
+      .future_live_probe_requires_fresh_current_operator_turn,
+    true,
+  );
   assert.equal(preview.micro_consent.phrase_emitted, false);
   assert.equal(preview.micro_consent.approval_recorded, false);
   assert.equal(preview.micro_consent.reusable_authorization_created, false);
@@ -130,16 +165,24 @@ test("buildNetworkRefusalMatrixPreview emits micro-consent requirements without 
 test("buildNetworkRefusalMatrixPreview uses a non-live analogy", () => {
   const preview = buildNetworkRefusalMatrixPreview();
 
-  assert.equal(preview.analogical_model.analogy, "paper truth table for a circuit breaker");
-  assert.equal(preview.analogical_model.boundary, "paper_matrix_not_running_system");
+  assert.equal(
+    preview.analogical_model.analogy,
+    "paper truth table for a circuit breaker",
+  );
+  assert.equal(
+    preview.analogical_model.boundary,
+    "paper_matrix_not_running_system",
+  );
   assert.ok(preview.analogical_model.not_analogous_to.includes("live network"));
-  assert.ok(preview.analogical_model.not_analogous_to.includes("security testbed"));
+  assert.ok(
+    preview.analogical_model.not_analogous_to.includes("security testbed"),
+  );
 });
 
 test("buildNetworkRefusalMatrixPreview emits no reusable authorization phrase", () => {
   const outputs = [
     JSON.stringify(buildNetworkRefusalMatrixPreview()),
-    formatNetworkRefusalMatrixPreview(buildNetworkRefusalMatrixPreview())
+    formatNetworkRefusalMatrixPreview(buildNetworkRefusalMatrixPreview()),
   ];
 
   for (const output of outputs) {
@@ -169,14 +212,22 @@ test("buildNetworkRefusalMatrixPreview is deterministic and returns fresh object
 test("network refusal matrix module has no execution or nondeterministic imports", async () => {
   const source = await readFile(modulePath, "utf8");
 
-  assert.doesNotMatch(source, /from\s+["']node:(net|dgram|http|https|tls|dns|worker_threads|vm|child_process)["']/);
+  assert.doesNotMatch(
+    source,
+    /from\s+["']node:(net|dgram|http|https|tls|dns|worker_threads|vm|child_process)["']/,
+  );
   assert.doesNotMatch(source, /\bfetch\s*\(/);
-  assert.doesNotMatch(source, /\b(Date\.now|Math\.random|crypto\.random|process\.hrtime|performance\.now)\b/);
+  assert.doesNotMatch(
+    source,
+    /\b(Date\.now|Math\.random|crypto\.random|process\.hrtime|performance\.now)\b/,
+  );
   assert.doesNotMatch(source, /\bwriteFile\b|\bappendFile\b|\bmkdir\b/);
 });
 
 test("formatNetworkRefusalMatrixPreview renders the safety posture", () => {
-  const output = formatNetworkRefusalMatrixPreview(buildNetworkRefusalMatrixPreview());
+  const output = formatNetworkRefusalMatrixPreview(
+    buildNetworkRefusalMatrixPreview(),
+  );
 
   assert.match(output, /DEMA Network Refusal Matrix Preview/);
   assert.match(output, /0 live nodes; 0 sockets; 0 receipts minted/);
@@ -189,7 +240,12 @@ test("formatNetworkRefusalMatrixPreview renders the safety posture", () => {
 });
 
 test("dema network refusal preview prints a human-readable preview", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "network", "refusal", "preview"]);
+  const { stdout } = await execFileAsync("node", [
+    cliPath,
+    "network",
+    "refusal",
+    "preview",
+  ]);
 
   assert.match(stdout, /DEMA Network Refusal Matrix Preview/);
   assert.match(stdout, /partition_shape/);
@@ -197,10 +253,19 @@ test("dema network refusal preview prints a human-readable preview", async () =>
 });
 
 test("dema network refusal preview --json emits the schema-tagged preview", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "network", "refusal", "preview", "--json"]);
+  const { stdout } = await execFileAsync("node", [
+    cliPath,
+    "network",
+    "refusal",
+    "preview",
+    "--json",
+  ]);
   const preview = JSON.parse(stdout);
 
-  assert.equal(preview.schema, "bizra.dema.network_refusal_matrix_preview.v0.1");
+  assert.equal(
+    preview.schema,
+    "bizra.dema.network_refusal_matrix_preview.v0.1",
+  );
   assert.equal(preview.mode, "PREVIEW_ONLY");
   assert.equal(preview.fixture.fixture_slot_count, 5);
   assert.equal(preview.fixture.live_nodes, 0);

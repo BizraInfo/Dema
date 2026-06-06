@@ -7,11 +7,11 @@ import {
   wrapInventoryAsLocalScan,
   LOCAL_MODEL_INVENTORY_SCHEMA,
   LOCAL_MODEL_INVENTORY_TRUTH_LABEL,
-  LOCAL_MODEL_INVENTORY_REQUIRED_BLOCKED_EFFECTS
+  LOCAL_MODEL_INVENTORY_REQUIRED_BLOCKED_EFFECTS,
 } from "../packages/core/src/local-model-inventory-scan.js";
 import {
   isCanonicalBoundary,
-  PREVIEW_BOUNDARY_CANONICAL_KEYS
+  PREVIEW_BOUNDARY_CANONICAL_KEYS,
 } from "../packages/core/src/preview-boundary.js";
 
 function mockInventory(overrides = {}) {
@@ -23,21 +23,42 @@ function mockInventory(overrides = {}) {
       ollama: {
         reachable: true,
         available: [
-          { id: "llama3.1:8b", source: "ollama", size_bytes: 4683075440, modified_at: "2026-05-18T00:00:00.000Z" },
-          { id: "qwen3-coder-next:q4_K_M", source: "ollama", size_bytes: 51741611823, modified_at: "2026-04-20T05:59:13.275Z" },
-          { id: "nomic-embed-text:latest", source: "ollama", size_bytes: 274302450, modified_at: "2026-04-12T01:54:10.349Z" }
-        ]
+          {
+            id: "llama3.1:8b",
+            source: "ollama",
+            size_bytes: 4683075440,
+            modified_at: "2026-05-18T00:00:00.000Z",
+          },
+          {
+            id: "qwen3-coder-next:q4_K_M",
+            source: "ollama",
+            size_bytes: 51741611823,
+            modified_at: "2026-04-20T05:59:13.275Z",
+          },
+          {
+            id: "nomic-embed-text:latest",
+            source: "ollama",
+            size_bytes: 274302450,
+            modified_at: "2026-04-12T01:54:10.349Z",
+          },
+        ],
       },
       lm_studio: { reachable: false, error: "fetch failed" },
       downloads: {
         root: "/home/test/Downloads",
         root_present: true,
         files: [
-          { id: "Qwen3VL-8B.gguf", source: "filesystem", path: "/home/test/Downloads/Qwen3VL-8B.gguf", size_bytes: 8709519456, modified_at: "2026-05-13T00:00:00.000Z" }
-        ]
-      }
+          {
+            id: "Qwen3VL-8B.gguf",
+            source: "filesystem",
+            path: "/home/test/Downloads/Qwen3VL-8B.gguf",
+            size_bytes: 8709519456,
+            modified_at: "2026-05-13T00:00:00.000Z",
+          },
+        ],
+      },
     },
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -80,7 +101,14 @@ test("Scan surfaces total_models correctly across providers", () => {
 
 test("Scan declares required blocked_effects (no chain advance · no mint · etc.)", () => {
   const s = wrapInventoryAsLocalScan(mockInventory());
-  for (const required of ["model_load", "prompt_execution", "public_network_use", "chain_advance", "receipt_mint", "federation_invocation"]) {
+  for (const required of [
+    "model_load",
+    "prompt_execution",
+    "public_network_use",
+    "chain_advance",
+    "receipt_mint",
+    "federation_invocation",
+  ]) {
     assert.ok(s.blocked_effects.includes(required), `must block ${required}`);
   }
 });
@@ -91,7 +119,9 @@ test("Scan declares required blocked_effects (no chain advance · no mint · etc
 
 test("Record augmentation classifies ollama provider correctly", () => {
   const s = wrapInventoryAsLocalScan(mockInventory());
-  const llama = s.providers.ollama.models.find((m) => m.model_id === "llama3.1:8b");
+  const llama = s.providers.ollama.models.find(
+    (m) => m.model_id === "llama3.1:8b",
+  );
   assert.equal(llama.provider, "ollama");
   assert.equal(llama.file_type, "ollama");
   assert.equal(llama.source, "api");
@@ -100,21 +130,31 @@ test("Record augmentation classifies ollama provider correctly", () => {
 
 test("Record augmentation infers usable_for from naming · embedding case", () => {
   const s = wrapInventoryAsLocalScan(mockInventory());
-  const embed = s.providers.ollama.models.find((m) => m.model_id === "nomic-embed-text:latest");
-  assert.ok(embed.usable_for.includes("embedding"),
-    `embedding model should classify · got ${JSON.stringify(embed.usable_for)}`);
+  const embed = s.providers.ollama.models.find(
+    (m) => m.model_id === "nomic-embed-text:latest",
+  );
+  assert.ok(
+    embed.usable_for.includes("embedding"),
+    `embedding model should classify · got ${JSON.stringify(embed.usable_for)}`,
+  );
 });
 
 test("Record augmentation infers usable_for from naming · coding case", () => {
   const s = wrapInventoryAsLocalScan(mockInventory());
-  const coder = s.providers.ollama.models.find((m) => m.model_id.startsWith("qwen3-coder"));
-  assert.ok(coder.usable_for.includes("coding"),
-    `coder model should classify · got ${JSON.stringify(coder.usable_for)}`);
+  const coder = s.providers.ollama.models.find((m) =>
+    m.model_id.startsWith("qwen3-coder"),
+  );
+  assert.ok(
+    coder.usable_for.includes("coding"),
+    `coder model should classify · got ${JSON.stringify(coder.usable_for)}`,
+  );
 });
 
 test("Record augmentation infers file_type from path · gguf case", () => {
   const s = wrapInventoryAsLocalScan(mockInventory());
-  const gguf = s.providers.downloads.models.find((m) => m.path.endsWith(".gguf"));
+  const gguf = s.providers.downloads.models.find((m) =>
+    m.path.endsWith(".gguf"),
+  );
   assert.equal(gguf.file_type, "gguf");
   assert.equal(gguf.source, "filesystem");
 });
@@ -122,8 +162,8 @@ test("Record augmentation infers file_type from path · gguf case", () => {
 test("Record augmentation handles missing fields with safe defaults", () => {
   const malformed = {
     providers: {
-      ollama: { reachable: true, available: [{ size_bytes: "not-a-number" }] }
-    }
+      ollama: { reachable: true, available: [{ size_bytes: "not-a-number" }] },
+    },
   };
   const s = wrapInventoryAsLocalScan(malformed);
   const record = s.providers.ollama.models[0];
@@ -152,10 +192,10 @@ test("Adversarial · models with function/symbol fields are filtered", () => {
         available: [
           { id: "ok-model:1b", source: "ollama", size_bytes: 100 },
           { id: () => "malicious", source: "ollama", size_bytes: 100 },
-          { id: Symbol("evil"), source: "ollama", size_bytes: 100 }
-        ]
-      }
-    }
+          { id: Symbol("evil"), source: "ollama", size_bytes: 100 },
+        ],
+      },
+    },
   };
   const s = wrapInventoryAsLocalScan(adversarial);
   // All 3 are present but malicious id values are coerced to "unknown"
@@ -170,8 +210,8 @@ test("Adversarial · non-localhost endpoint reachable=false propagates honestly"
     providers: {
       ollama: { reachable: false, error: "non_localhost_endpoint" },
       lm_studio: { reachable: false, error: "fetch failed" },
-      downloads: { root: "/x", root_present: false, files: [] }
-    }
+      downloads: { root: "/x", root_present: false, files: [] },
+    },
   });
   const s = wrapInventoryAsLocalScan(adversarial);
   assert.equal(s.providers.ollama.reachable, false);
@@ -199,9 +239,29 @@ test("HF cache scan included in providers when provided · model_count > 0", () 
     root_present: true,
     model_count: 2,
     models: Object.freeze([
-      Object.freeze({ provider: "huggingface", model_id: "hexgrad/Kokoro-82M", file_type: "hf_snapshot", source: "filesystem", load_status: "not_loaded_by_scan", path: "/x", size_bytes: 0, modified_at: null, usable_for: Object.freeze(["text_to_speech"]) }),
-      Object.freeze({ provider: "huggingface", model_id: "Systran/faster-whisper-large-v3", file_type: "hf_snapshot", source: "filesystem", load_status: "not_loaded_by_scan", path: "/x", size_bytes: 0, modified_at: null, usable_for: Object.freeze(["speech_to_text"]) })
-    ])
+      Object.freeze({
+        provider: "huggingface",
+        model_id: "hexgrad/Kokoro-82M",
+        file_type: "hf_snapshot",
+        source: "filesystem",
+        load_status: "not_loaded_by_scan",
+        path: "/x",
+        size_bytes: 0,
+        modified_at: null,
+        usable_for: Object.freeze(["text_to_speech"]),
+      }),
+      Object.freeze({
+        provider: "huggingface",
+        model_id: "Systran/faster-whisper-large-v3",
+        file_type: "hf_snapshot",
+        source: "filesystem",
+        load_status: "not_loaded_by_scan",
+        path: "/x",
+        size_bytes: 0,
+        modified_at: null,
+        usable_for: Object.freeze(["speech_to_text"]),
+      }),
+    ]),
   });
   const s = wrapInventoryAsLocalScan(inv, { hfScan: hfMock });
   assert.equal(s.providers.huggingface_cache.model_count, 2);
@@ -216,9 +276,19 @@ test("Secondary filesystem scans propagate to total_models honestly", () => {
       root_present: true,
       model_count: 1,
       models: Object.freeze([
-        Object.freeze({ provider: "filesystem", model_id: "WhiteRabbitNeo.gguf", file_type: "gguf", source: "filesystem", load_status: "not_loaded_by_scan", path: "/x", size_bytes: 4683074752, modified_at: null, usable_for: Object.freeze(["unknown"]) })
-      ])
-    })
+        Object.freeze({
+          provider: "filesystem",
+          model_id: "WhiteRabbitNeo.gguf",
+          file_type: "gguf",
+          source: "filesystem",
+          load_status: "not_loaded_by_scan",
+          path: "/x",
+          size_bytes: 4683074752,
+          modified_at: null,
+          usable_for: Object.freeze(["unknown"]),
+        }),
+      ]),
+    }),
   ];
   const s = wrapInventoryAsLocalScan(inv, { secondaryScans: secondaryMock });
   assert.equal(s.providers.secondary_filesystem_scans.length, 1);
@@ -242,7 +312,7 @@ test("buildLocalModelInventoryScan composes inventory + HF + secondary without I
   const s = await buildLocalModelInventoryScan({
     collectFn: mockCollect,
     hfCacheRoot: "/nonexistent/path/that/does/not/exist",
-    secondaryRoots: ["/nonexistent/secondary/path"]
+    secondaryRoots: ["/nonexistent/secondary/path"],
   });
   assert.equal(s.schema, LOCAL_MODEL_INVENTORY_SCHEMA);
   assert.equal(s.truth_label, LOCAL_MODEL_INVENTORY_TRUTH_LABEL);
@@ -260,7 +330,11 @@ test("Exported constants are present and frozen", () => {
   assert.equal(typeof LOCAL_MODEL_INVENTORY_TRUTH_LABEL, "string");
   assert.ok(Array.isArray(LOCAL_MODEL_INVENTORY_REQUIRED_BLOCKED_EFFECTS));
   assert.ok(Object.isFrozen(LOCAL_MODEL_INVENTORY_REQUIRED_BLOCKED_EFFECTS));
-  assert.ok(LOCAL_MODEL_INVENTORY_REQUIRED_BLOCKED_EFFECTS.includes("public_network_use"));
+  assert.ok(
+    LOCAL_MODEL_INVENTORY_REQUIRED_BLOCKED_EFFECTS.includes(
+      "public_network_use",
+    ),
+  );
 });
 
 test("Summary preserves canonical 16-key boundary from source scan", () => {

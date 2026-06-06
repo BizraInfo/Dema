@@ -10,7 +10,7 @@ const LEGACY_SHELLOUT_ADAPTER = {
   legacy: true,
   operator_owned: true,
   execution: "execFile",
-  shell: false
+  shell: false,
 };
 
 export function parseCommandLine(command) {
@@ -40,7 +40,7 @@ export function parseCommandLine(command) {
       continue;
     }
 
-    if (char === "'" || char === "\"") {
+    if (char === "'" || char === '"') {
       quote = char;
       continue;
     }
@@ -76,27 +76,37 @@ export function normalizeNode0Status(raw) {
     node: "Node0",
     human: raw?.profile?.preferred_name ?? raw?.human ?? null,
     ready: Boolean(raw?.ready),
-    consoleReady: Boolean(raw?.console_ready ?? raw?.dema_console?.console_ready),
-    activationGate: raw?.activation_gate ?? raw?.dema_console?.activation_gate ?? "BLOCKED",
+    consoleReady: Boolean(
+      raw?.console_ready ?? raw?.dema_console?.console_ready,
+    ),
+    activationGate:
+      raw?.activation_gate ?? raw?.dema_console?.activation_gate ?? "BLOCKED",
     daemonStatus: raw?.daemon_status ?? raw?.daemon?.status ?? "unknown",
     missionExecuted: Boolean(raw?.mission_executed),
     runtimePulse: {
-      fired: Boolean(raw?.runtime_pulse?.fired ?? raw?.runtime_pulse_fired)
+      fired: Boolean(raw?.runtime_pulse?.fired ?? raw?.runtime_pulse_fired),
     },
     findings: raw?.findings ?? [],
     model: {
-      connected: Boolean(raw?.lm_studio?.connected ?? raw?.model_backend?.connected),
+      connected: Boolean(
+        raw?.lm_studio?.connected ?? raw?.model_backend?.connected,
+      ),
       loadedModelIds,
-      tokenPresent: Boolean(raw?.lm_studio?.token_present ?? raw?.model_backend?.token_present)
+      tokenPresent: Boolean(
+        raw?.lm_studio?.token_present ?? raw?.model_backend?.token_present,
+      ),
     },
     rustBus: {
-      ready: Boolean(raw?.rust_bus?.ready ?? raw?.dependencies?.rust_bus?.ready)
+      ready: Boolean(
+        raw?.rust_bus?.ready ?? raw?.dependencies?.rust_bus?.ready,
+      ),
     },
     proof: {
       latestChainHash: raw?.proof?.latest_chain_hash,
-      nextArtifact: "ARTIFACT-011"
+      nextArtifact: "ARTIFACT-011",
     },
-    nextAdmissibleAction: raw?.next_admissible_action ?? "bounded_diagnostic_activation"
+    nextAdmissibleAction:
+      raw?.next_admissible_action ?? "bounded_diagnostic_activation",
   };
 }
 
@@ -107,8 +117,8 @@ function withLegacyShelloutMetadata(status, extra = {}) {
     adapter: {
       ...LEGACY_SHELLOUT_ADAPTER,
       available: extra.available ?? true,
-      ...(extra.reason ? { reason: extra.reason } : {})
-    }
+      ...(extra.reason ? { reason: extra.reason } : {}),
+    },
   };
 }
 
@@ -118,9 +128,9 @@ function legacyShelloutUnavailable(reason, finding) {
     {
       ...status,
       source: "legacy-shellout-unavailable",
-      findings: [...(status.findings ?? []), finding]
+      findings: [...(status.findings ?? []), finding],
     },
-    { available: false, reason, source: "legacy-shellout-unavailable" }
+    { available: false, reason, source: "legacy-shellout-unavailable" },
   );
 }
 
@@ -133,14 +143,14 @@ export function createNode0Adapter(options = {}) {
   if (adapterMode === "gateway-http") {
     return createGatewayHttpAdapter({
       baseUrl: gatewayUrl,
-      timeoutMs: options.timeoutMs
+      timeoutMs: options.timeoutMs,
     });
   }
 
   if (!adapterMode && gatewayUrl) {
     return createGatewayHttpAdapter({
       baseUrl: gatewayUrl,
-      timeoutMs: options.timeoutMs
+      timeoutMs: options.timeoutMs,
     });
   }
 
@@ -151,7 +161,7 @@ export function createNode0Adapter(options = {}) {
       if (!command) {
         return legacyShelloutUnavailable(
           "legacy_status_command_not_configured",
-          "DEMA_NODE0_STATUS_COMMAND unavailable: not configured"
+          "DEMA_NODE0_STATUS_COMMAND unavailable: not configured",
         );
       }
 
@@ -164,16 +174,18 @@ export function createNode0Adapter(options = {}) {
         if (error?.code === "ENOENT") {
           return legacyShelloutUnavailable(
             "legacy_status_command_unavailable",
-            `DEMA_NODE0_STATUS_COMMAND unavailable: ${error.message}`
+            `DEMA_NODE0_STATUS_COMMAND unavailable: ${error.message}`,
           );
         }
         throw error;
       }
       try {
-        return withLegacyShelloutMetadata(normalizeNode0Status(JSON.parse(stdout)));
+        return withLegacyShelloutMetadata(
+          normalizeNode0Status(JSON.parse(stdout)),
+        );
       } catch (error) {
         throw new Error(
-          `DEMA_NODE0_STATUS_COMMAND returned non-JSON output: ${error.message}`
+          `DEMA_NODE0_STATUS_COMMAND returned non-JSON output: ${error.message}`,
         );
       }
     },
@@ -186,8 +198,8 @@ export function createNode0Adapter(options = {}) {
       const status = await this.status();
       return {
         status,
-        requiredConsentPhrase: "GO: Node0 bounded diagnostic activation only"
+        requiredConsentPhrase: "GO: Node0 bounded diagnostic activation only",
       };
-    }
+    },
   };
 }

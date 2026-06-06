@@ -1,6 +1,6 @@
 import {
   NETWORK_PREVIEW_BOUNDARY,
-  NETWORK_PREVIEW_SELF_CRITIQUE
+  NETWORK_PREVIEW_SELF_CRITIQUE,
 } from "./network-blueprint.js";
 
 const SCHEMA = "bizra.dema.offline_network_fixture_preview.v0.1";
@@ -12,7 +12,7 @@ const FIXTURE_META = {
   sockets_opened: 0,
   named_nodes_introduced: false,
   topology_claim: "none",
-  fixture_kind: "static_lab_bench_schematic"
+  fixture_kind: "static_lab_bench_schematic",
 };
 
 const FIXTURE_SLOTS = [
@@ -21,36 +21,36 @@ const FIXTURE_SLOTS = [
     role_target: "Node0",
     named_identity: null,
     state: "baseline_reference_only",
-    boundary: "does_not_start_node0_runtime"
+    boundary: "does_not_start_node0_runtime",
   },
   {
     slot: "slot_1",
     role_target: "Node1",
     named_identity: null,
     state: "handoff_contract_placeholder",
-    boundary: "does_not_start_node1"
+    boundary: "does_not_start_node1",
   },
   {
     slot: "slot_2",
     role_target: "Node2",
     named_identity: null,
     state: "propagation_policy_placeholder",
-    boundary: "does_not_start_node2"
+    boundary: "does_not_start_node2",
   },
   {
     slot: "slot_3",
     role_target: "phase_3_simulation_slot",
     named_identity: null,
     state: "unnamed_private_pilot_slot",
-    boundary: "shape_only_no_named_node"
+    boundary: "shape_only_no_named_node",
   },
   {
     slot: "slot_4",
     role_target: "phase_3_simulation_slot",
     named_identity: null,
     state: "unnamed_private_pilot_slot",
-    boundary: "shape_only_no_named_node"
-  }
+    boundary: "shape_only_no_named_node",
+  },
 ];
 
 const STATIC_RELATIONSHIPS = [
@@ -59,29 +59,29 @@ const STATIC_RELATIONSHIPS = [
     to: "slot_1",
     relationship: "handoff_shape_only",
     socket_opened: false,
-    handshake_performed: false
+    handshake_performed: false,
   },
   {
     from: "slot_0",
     to: "slot_2",
     relationship: "propagation_policy_shape_only",
     socket_opened: false,
-    handshake_performed: false
+    handshake_performed: false,
   },
   {
     from: "slot_1",
     to: "slot_3",
     relationship: "private_pilot_shape_only",
     socket_opened: false,
-    handshake_performed: false
+    handshake_performed: false,
   },
   {
     from: "slot_2",
     to: "slot_4",
     relationship: "private_pilot_shape_only",
     socket_opened: false,
-    handshake_performed: false
-  }
+    handshake_performed: false,
+  },
 ];
 
 export const NETWORK_INERT_SCENARIOS = [
@@ -91,7 +91,7 @@ export const NETWORK_INERT_SCENARIOS = [
     simulation_status: "describes_shape_only",
     executed: false,
     produces_receipt: false,
-    not_executed_because: "no runtime in this repo"
+    not_executed_because: "no runtime in this repo",
   },
   {
     id: "rejoin_shape",
@@ -99,7 +99,7 @@ export const NETWORK_INERT_SCENARIOS = [
     simulation_status: "describes_shape_only",
     executed: false,
     produces_receipt: false,
-    not_executed_because: "no runtime in this repo"
+    not_executed_because: "no runtime in this repo",
   },
   {
     id: "adversarial_slot_input_shape",
@@ -107,7 +107,7 @@ export const NETWORK_INERT_SCENARIOS = [
     simulation_status: "describes_shape_only",
     executed: false,
     produces_receipt: false,
-    not_executed_because: "no runtime in this repo"
+    not_executed_because: "no runtime in this repo",
   },
   {
     id: "stale_receipt_shape",
@@ -115,7 +115,7 @@ export const NETWORK_INERT_SCENARIOS = [
     simulation_status: "describes_shape_only",
     executed: false,
     produces_receipt: false,
-    not_executed_because: "no runtime in this repo"
+    not_executed_because: "no runtime in this repo",
   },
   {
     id: "missing_micro_consent_shape",
@@ -123,7 +123,7 @@ export const NETWORK_INERT_SCENARIOS = [
     simulation_status: "describes_shape_only",
     executed: false,
     produces_receipt: false,
-    not_executed_because: "no runtime in this repo"
+    not_executed_because: "no runtime in this repo",
   },
   {
     id: "schema_mismatch_shape",
@@ -131,41 +131,43 @@ export const NETWORK_INERT_SCENARIOS = [
     simulation_status: "describes_shape_only",
     executed: false,
     produces_receipt: false,
-    not_executed_because: "no runtime in this repo"
-  }
+    not_executed_because: "no runtime in this repo",
+  },
 ];
 
 const MICRO_COMPLIANCE = [
   {
     control: "no_outbound_sockets",
     statement: "fixture preview opens no outbound sockets",
-    verified_by: "boundary.outbound_socket_opened === false"
+    verified_by: "boundary.outbound_socket_opened === false",
   },
   {
     control: "no_runtime_start",
     statement: "fixture preview starts no runtime or daemon",
-    verified_by: "boundary.runtime_started === false && boundary.daemon_started === false"
+    verified_by:
+      "boundary.runtime_started === false && boundary.daemon_started === false",
   },
   {
     control: "no_receipt_or_capability_mint",
     statement: "fixture preview mints no receipt or capability",
-    verified_by: "boundary.receipt_minted === false && boundary.capability_minted === false"
+    verified_by:
+      "boundary.receipt_minted === false && boundary.capability_minted === false",
   },
   {
     control: "no_identity_artifact",
     statement: "fixture preview issues no identity artifact",
-    verified_by: "boundary.identity_artifact_issued === false"
+    verified_by: "boundary.identity_artifact_issued === false",
   },
   {
     control: "no_authorization_text",
     statement: "fixture preview emits no reusable operator authorization text",
-    verified_by: "boundary.authorization_phrase_emitted === false"
+    verified_by: "boundary.authorization_phrase_emitted === false",
   },
   {
     control: "no_topology_claim",
     statement: "fixture preview makes no live topology claim",
-    verified_by: "fixture.topology_claim === 'none'"
-  }
+    verified_by: "fixture.topology_claim === 'none'",
+  },
 ];
 
 const MICRO_CONSENT = {
@@ -175,7 +177,7 @@ const MICRO_CONSENT = {
   phrase_emitted: false,
   approval_recorded: false,
   reusable_authorization_created: false,
-  broad_consent_allowed: false
+  broad_consent_allowed: false,
 };
 
 const ANALOGICAL_MODEL = {
@@ -186,9 +188,9 @@ const ANALOGICAL_MODEL = {
     "live network",
     "airport runway",
     "wind tunnel",
-    "security testbed"
+    "security testbed",
   ],
-  boundary: "paper_model_not_running_system"
+  boundary: "paper_model_not_running_system",
 };
 
 const SELF_PROACTIVE_HARNESS = {
@@ -198,9 +200,10 @@ const SELF_PROACTIVE_HARNESS = {
     "report Step 7 blocker before any future liveness probe language",
     "report no named nodes introduced beyond Node0, Node1, and Node2",
     "report no socket, runtime, handshake, mint, or identity artifact",
-    "report micro-consent requirements without emitting an authorization phrase"
+    "report micro-consent requirements without emitting an authorization phrase",
   ],
-  output_boundary: "advisory only; no agent loop, shell command, socket, mint, or authorization text"
+  output_boundary:
+    "advisory only; no agent loop, shell command, socket, mint, or authorization text",
 };
 
 const BLOCKERS = [
@@ -208,45 +211,48 @@ const BLOCKERS = [
     id: "node0.step7_capability_anchor_pending",
     severity: "halt_gate",
     status: "blocked",
-    note: "Step 7 command path is ready, but its append-only receipt remains unminted."
+    note: "Step 7 command path is ready, but its append-only receipt remains unminted.",
   },
   {
     id: "node0.repeatable_receipts_pending",
     severity: "halt_gate",
     status: "blocked",
-    note: "Repeatable governed Node0 bounded diagnostic receipts are not yet measured."
+    note: "Repeatable governed Node0 bounded diagnostic receipts are not yet measured.",
   },
   {
     id: "node1.node2_contracts_missing",
     severity: "design_gate",
     status: "blocked",
-    note: "Handoff, refusal, propagation, and rollback schemas are not execution-ready."
+    note: "Handoff, refusal, propagation, and rollback schemas are not execution-ready.",
   },
   {
     id: "phase_3.private_pilot_not_authorized",
     severity: "halt_gate",
     status: "blocked",
-    note: "Private pilot and live probe work remain outside this repo until proof gates pass."
-  }
+    note: "Private pilot and live probe work remain outside this repo until proof gates pass.",
+  },
 ];
 
 const FIXTURE_SELF_CRITIQUE = [
   {
     risk: "fixture slots could be misread as live nodes",
-    mitigation: "emit live_nodes: 0, runtime_nodes: 0, topology_claim: none, and 0 sockets"
+    mitigation:
+      "emit live_nodes: 0, runtime_nodes: 0, topology_claim: none, and 0 sockets",
   },
   {
     risk: "unnamed phase slots could become invented topology names",
-    mitigation: "keep named_identity null and forbid invented ordinal nodes or alphabetic peer aliases"
+    mitigation:
+      "keep named_identity null and forbid invented ordinal nodes or alphabetic peer aliases",
   },
   {
     risk: "scenario text could be misread as executed security simulation",
-    mitigation: "mark every scenario executed: false and produces_receipt: false"
+    mitigation:
+      "mark every scenario executed: false and produces_receipt: false",
   },
   {
     risk: "micro-consent text could become authorization",
-    mitigation: "emit requirements only and no reusable authorization phrase"
-  }
+    mitigation: "emit requirements only and no reusable authorization phrase",
+  },
 ];
 
 const BOUNDARY = {
@@ -255,7 +261,7 @@ const BOUNDARY = {
   fixture_file_written: false,
   simulation_executed: false,
   scenario_emitted_authorization_phrase: false,
-  topology_claim_made: false
+  topology_claim_made: false,
 };
 
 function clone(value) {
@@ -277,9 +283,9 @@ export function buildOfflineNetworkFixturePreview() {
     blockers: clone(BLOCKERS),
     self_critique: [
       ...clone(NETWORK_PREVIEW_SELF_CRITIQUE),
-      ...clone(FIXTURE_SELF_CRITIQUE)
+      ...clone(FIXTURE_SELF_CRITIQUE),
     ],
-    boundary: clone(BOUNDARY)
+    boundary: clone(BOUNDARY),
   };
 }
 
@@ -296,13 +302,14 @@ export function formatOfflineNetworkFixturePreview(preview) {
     `Topology claim: ${preview.fixture.topology_claim}`,
     `Named nodes introduced: ${preview.fixture.named_nodes_introduced}`,
     "",
-    "Fixture slots:"
+    "Fixture slots:",
   ];
 
   appendRows(
     lines,
     preview.slots,
-    (slot) => `${slot.slot}: target="${slot.role_target}" state="${slot.state}" boundary="${slot.boundary}"`
+    (slot) =>
+      `${slot.slot}: target="${slot.role_target}" state="${slot.state}" boundary="${slot.boundary}"`,
   );
 
   lines.push("");
@@ -310,7 +317,8 @@ export function formatOfflineNetworkFixturePreview(preview) {
   appendRows(
     lines,
     preview.inert_scenarios,
-    (scenario) => `${scenario.id}: ${scenario.simulation_status}; executed=${scenario.executed}; receipt=${scenario.produces_receipt}`
+    (scenario) =>
+      `${scenario.id}: ${scenario.simulation_status}; executed=${scenario.executed}; receipt=${scenario.produces_receipt}`,
   );
 
   lines.push("");
@@ -318,18 +326,22 @@ export function formatOfflineNetworkFixturePreview(preview) {
   appendRows(
     lines,
     preview.micro_compliance,
-    (control) => `${control.control}: ${control.verified_by}`
+    (control) => `${control.control}: ${control.verified_by}`,
   );
 
   lines.push("");
   lines.push("Micro-consent:");
   lines.push(`  - scope: ${preview.micro_consent.preview_scope}`);
   lines.push(`  - phrase emitted: ${preview.micro_consent.phrase_emitted}`);
-  lines.push(`  - approval recorded: ${preview.micro_consent.approval_recorded}`);
+  lines.push(
+    `  - approval recorded: ${preview.micro_consent.approval_recorded}`,
+  );
 
   lines.push("");
   lines.push("Analogical model:");
-  lines.push(`  - ${preview.analogical_model.analogy}: ${preview.analogical_model.useful_because}`);
+  lines.push(
+    `  - ${preview.analogical_model.analogy}: ${preview.analogical_model.useful_because}`,
+  );
   lines.push(`  - boundary: ${preview.analogical_model.boundary}`);
 
   lines.push("");
@@ -341,7 +353,8 @@ export function formatOfflineNetworkFixturePreview(preview) {
   appendRows(
     lines,
     preview.blockers,
-    (blocker) => `${blocker.status}: ${blocker.id} (${blocker.severity}) - ${blocker.note}`
+    (blocker) =>
+      `${blocker.status}: ${blocker.id} (${blocker.severity}) - ${blocker.note}`,
   );
 
   lines.push("");
@@ -349,12 +362,12 @@ export function formatOfflineNetworkFixturePreview(preview) {
   appendRows(
     lines,
     preview.self_critique,
-    (item) => `${item.risk} -> ${item.mitigation}`
+    (item) => `${item.risk} -> ${item.mitigation}`,
   );
 
   lines.push("");
   lines.push(
-    "Boundary: preview-only; no live nodes; no sockets; no federation; no handshake; no runtime; no daemon; no receipt minted."
+    "Boundary: preview-only; no live nodes; no sockets; no federation; no handshake; no runtime; no daemon; no receipt minted.",
   );
 
   return lines.join("\n");

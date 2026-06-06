@@ -6,7 +6,9 @@ import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
-const cliPath = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 function runCli(args, { env = {}, timeout = 30000 } = {}) {
@@ -15,17 +17,26 @@ function runCli(args, { env = {}, timeout = 30000 } = {}) {
       "node",
       [cliPath, ...args],
       {
-        env: { ...process.env, DEMA_BANNER_INTERACTIVE: "0", NODE_ENV: "test", ...env },
+        env: {
+          ...process.env,
+          DEMA_BANNER_INTERACTIVE: "0",
+          NODE_ENV: "test",
+          ...env,
+        },
         timeout,
-        maxBuffer: 16 * 1024 * 1024
+        maxBuffer: 16 * 1024 * 1024,
       },
       (err, stdout, stderr) => {
         if (err && err.killed) {
-          reject(new Error(`Process timed out. stdout=${stdout.slice(0,500)} stderr=${stderr.slice(0,500)}`));
+          reject(
+            new Error(
+              `Process timed out. stdout=${stdout.slice(0, 500)} stderr=${stderr.slice(0, 500)}`,
+            ),
+          );
           return;
         }
         resolve({ stdout, stderr, exitCode: err?.code ?? 0 });
-      }
+      },
     );
   });
 }
@@ -43,7 +54,11 @@ async function makeRepo(initial = {}) {
 
 // 1. Relative path → non-zero exit + "must be absolute"
 test("relative path exits non-zero with 'must be absolute' stderr", async () => {
-  const { stderr, exitCode } = await runCli(["codebase", "map", "relative/path"]);
+  const { stderr, exitCode } = await runCli([
+    "codebase",
+    "map",
+    "relative/path",
+  ]);
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /must be absolute/);
 });
@@ -65,7 +80,9 @@ test("missing <abs-path> after 'map' exits non-zero", async () => {
 // 4. Nonexistent absolute path
 test("nonexistent absolute path exits non-zero with 'path_not_found' stderr", async () => {
   const { stderr, exitCode } = await runCli([
-    "codebase", "map", "/tmp/dema-codebase-cli-nonexistent-zzz-12345"
+    "codebase",
+    "map",
+    "/tmp/dema-codebase-cli-nonexistent-zzz-12345",
   ]);
   assert.notEqual(exitCode, 0);
   assert.match(stderr, /path_not_found/);
@@ -73,7 +90,10 @@ test("nonexistent absolute path exits non-zero with 'path_not_found' stderr", as
 
 // 5. Valid absolute path emits parseable JSON with correct schema.
 test("valid absolute path emits parseable JSON envelope with canonical schema", async () => {
-  const repo = await makeRepo({ "a.js": "export const x = 1;\n", "README.md": "# t\n" });
+  const repo = await makeRepo({
+    "a.js": "export const x = 1;\n",
+    "README.md": "# t\n",
+  });
   const { stdout, exitCode } = await runCli(["codebase", "map", repo]);
   assert.equal(exitCode, 0);
   const env = JSON.parse(stdout);
@@ -87,7 +107,12 @@ test("valid absolute path emits parseable JSON envelope with canonical schema", 
 // 6. --summary emits human-readable text (not JSON).
 test("--summary emits compact human summary instead of JSON", async () => {
   const repo = await makeRepo({ "a.js": "" });
-  const { stdout, exitCode } = await runCli(["codebase", "map", repo, "--summary"]);
+  const { stdout, exitCode } = await runCli([
+    "codebase",
+    "map",
+    repo,
+    "--summary",
+  ]);
   assert.equal(exitCode, 0);
   assert.match(stdout, /^Codebase map ·/m);
   assert.match(stdout, /Files: 1/);
@@ -99,7 +124,11 @@ test("--summary emits compact human summary instead of JSON", async () => {
 test("--max-files 1 on multi-file repo emits partial=true + exit non-zero", async () => {
   const repo = await makeRepo({ "a.js": "", "b.js": "", "c.js": "" });
   const { stdout, exitCode } = await runCli([
-    "codebase", "map", repo, "--max-files", "1"
+    "codebase",
+    "map",
+    repo,
+    "--max-files",
+    "1",
   ]);
   assert.notEqual(exitCode, 0);
   const env = JSON.parse(stdout);
@@ -111,7 +140,7 @@ test("--max-files 1 on multi-file repo emits partial=true + exit non-zero", asyn
 test("--include-tests includes *.test.* files in the files[] array", async () => {
   const repo = await makeRepo({
     "src/a.js": "",
-    "src/a.test.js": "test('x', () => {});\n"
+    "src/a.test.js": "test('x', () => {});\n",
   });
   const without = await runCli(["codebase", "map", repo]);
   const wEnv = JSON.parse(without.stdout);
@@ -141,12 +170,18 @@ test("--hotspots emits hotspots[] for a >500 LOC fixture", async () => {
 test("--exclude PAT skips a directory not in the default exclusion set", async () => {
   const repo = await makeRepo({
     "src/a.js": "",
-    "experiments/draft.js": ""
+    "experiments/draft.js": "",
   });
   const without = await runCli(["codebase", "map", repo]);
   const wEnv = JSON.parse(without.stdout);
   assert.ok(wEnv.files.some((f) => f.path === "experiments/draft.js"));
-  const withExcl = await runCli(["codebase", "map", repo, "--exclude", "experiments"]);
+  const withExcl = await runCli([
+    "codebase",
+    "map",
+    repo,
+    "--exclude",
+    "experiments",
+  ]);
   const eEnv = JSON.parse(withExcl.stdout);
   assert.ok(!eEnv.files.some((f) => f.path === "experiments/draft.js"));
 });
@@ -157,8 +192,15 @@ test("self-scan against the Dema repo root exits 0 with non-empty files[]", asyn
   assert.equal(exitCode, 0);
   const env = JSON.parse(stdout);
   assert.equal(env.schema, "bizra.dema.codebase_architecture_map.v0.1");
-  assert.ok(env.totals.file_count > 100, `expected >100 files in self-scan; got ${env.totals.file_count}`);
-  assert.ok(env.packages.some((p) => p.path === "." || p.manifests.some((m) => m === "package.json")));
+  assert.ok(
+    env.totals.file_count > 100,
+    `expected >100 files in self-scan; got ${env.totals.file_count}`,
+  );
+  assert.ok(
+    env.packages.some(
+      (p) => p.path === "." || p.manifests.some((m) => m === "package.json"),
+    ),
+  );
   // Domain boundary intact
   assert.equal(env.boundary.network_used, false);
   assert.equal(env.boundary.mutation, false);

@@ -16,11 +16,13 @@ import {
   leafHash,
   nodeHash,
   verifyManifest,
-  verifyManifestFiles
+  verifyManifestFiles,
 } from "../scripts/priority-anchor.mjs";
 
 const execFileAsync = promisify(execFile);
-const scriptPath = fileURLToPath(new URL("../scripts/priority-anchor.mjs", import.meta.url));
+const scriptPath = fileURLToPath(
+  new URL("../scripts/priority-anchor.mjs", import.meta.url),
+);
 
 test("priority-anchor algorithm constants are bound to v1", () => {
   assert.equal(ALGORITHM_ID, "bizra.priority-anchor.v1");
@@ -30,14 +32,31 @@ test("priority-anchor algorithm constants are bound to v1", () => {
 });
 
 test("leafHash is deterministic and includes filename, size, and sha256", () => {
-  const a = leafHash({ filename: "x.pdf", size: 10, file_sha256: "ab".repeat(32) });
-  const b = leafHash({ filename: "x.pdf", size: 10, file_sha256: "ab".repeat(32) });
+  const a = leafHash({
+    filename: "x.pdf",
+    size: 10,
+    file_sha256: "ab".repeat(32),
+  });
+  const b = leafHash({
+    filename: "x.pdf",
+    size: 10,
+    file_sha256: "ab".repeat(32),
+  });
   assert.equal(a, b);
 
   // Any field change must change the leaf hash.
-  assert.notEqual(a, leafHash({ filename: "y.pdf", size: 10, file_sha256: "ab".repeat(32) }));
-  assert.notEqual(a, leafHash({ filename: "x.pdf", size: 11, file_sha256: "ab".repeat(32) }));
-  assert.notEqual(a, leafHash({ filename: "x.pdf", size: 10, file_sha256: "cd".repeat(32) }));
+  assert.notEqual(
+    a,
+    leafHash({ filename: "y.pdf", size: 10, file_sha256: "ab".repeat(32) }),
+  );
+  assert.notEqual(
+    a,
+    leafHash({ filename: "x.pdf", size: 11, file_sha256: "ab".repeat(32) }),
+  );
+  assert.notEqual(
+    a,
+    leafHash({ filename: "x.pdf", size: 10, file_sha256: "cd".repeat(32) }),
+  );
 });
 
 test("nodeHash uses domain separation and is order-sensitive", () => {
@@ -71,7 +90,7 @@ test("buildManifest sorts inputs by filename and round-trips through verifyManif
   const manifest = await buildManifest([
     join(root, "c.txt"),
     join(root, "a.txt"),
-    join(root, "b.txt")
+    join(root, "b.txt"),
   ]);
 
   assert.deepEqual(manifest.input_files, ["a.txt", "b.txt", "c.txt"]);
@@ -98,11 +117,15 @@ test("CLI build + verify round-trip on fixture files", async () => {
     out,
     join(root, "a.txt"),
     join(root, "b.txt"),
-    join(root, "c.txt")
+    join(root, "c.txt"),
   ]);
 
-  const manifest = JSON.parse(await readFile(join(out, "manifest.json"), "utf8"));
-  const rootFile = (await readFile(join(out, "merkle-root.txt"), "utf8")).trim();
+  const manifest = JSON.parse(
+    await readFile(join(out, "manifest.json"), "utf8"),
+  );
+  const rootFile = (
+    await readFile(join(out, "merkle-root.txt"), "utf8")
+  ).trim();
   assert.equal(rootFile, manifest.root_hash);
 
   // Order independence: same inputs in a different CLI order produce the same root.
@@ -113,13 +136,19 @@ test("CLI build + verify round-trip on fixture files", async () => {
     out2,
     join(root, "c.txt"),
     join(root, "a.txt"),
-    join(root, "b.txt")
+    join(root, "b.txt"),
   ]);
-  const manifest2 = JSON.parse(await readFile(join(out2, "manifest.json"), "utf8"));
+  const manifest2 = JSON.parse(
+    await readFile(join(out2, "manifest.json"), "utf8"),
+  );
   assert.equal(manifest2.root_hash, manifest.root_hash);
 
   // --verify mode reproduces the root from the manifest.
-  const { stdout } = await execFileAsync("node", [scriptPath, "--verify", join(out, "manifest.json")]);
+  const { stdout } = await execFileAsync("node", [
+    scriptPath,
+    "--verify",
+    join(out, "manifest.json"),
+  ]);
   assert.match(stdout, /root_hash reproduced/);
   assert.match(stdout, /file bytes matched manifest: 3 files/);
   assert.match(stdout, new RegExp(manifest.root_hash));
@@ -130,7 +159,10 @@ test("verifyManifest rejects a tampered root_hash", async () => {
   await writeFile(join(root, "a.txt"), "alpha\n");
   await writeFile(join(root, "b.txt"), "beta\n");
 
-  const manifest = await buildManifest([join(root, "a.txt"), join(root, "b.txt")]);
+  const manifest = await buildManifest([
+    join(root, "a.txt"),
+    join(root, "b.txt"),
+  ]);
   const tampered = { ...manifest, root_hash: "f".repeat(64) };
   const result = verifyManifest(tampered);
   assert.equal(result.ok, false);
@@ -142,13 +174,16 @@ test("verifyManifest rejects a tampered file_sha256", async () => {
   await writeFile(join(root, "a.txt"), "alpha\n");
   await writeFile(join(root, "b.txt"), "beta\n");
 
-  const manifest = await buildManifest([join(root, "a.txt"), join(root, "b.txt")]);
+  const manifest = await buildManifest([
+    join(root, "a.txt"),
+    join(root, "b.txt"),
+  ]);
   const tampered = {
     ...manifest,
     files: [
       { ...manifest.files[0], file_sha256: "0".repeat(64) },
-      manifest.files[1]
-    ]
+      manifest.files[1],
+    ],
   };
   const result = verifyManifest(tampered);
   assert.equal(result.ok, false);
@@ -160,12 +195,18 @@ test("verifyManifestFiles rejects when current file bytes drift from manifest", 
   await writeFile(join(root, "a.txt"), "alpha\n");
   await writeFile(join(root, "b.txt"), "beta\n");
 
-  const manifest = await buildManifest([join(root, "a.txt"), join(root, "b.txt")]);
+  const manifest = await buildManifest([
+    join(root, "a.txt"),
+    join(root, "b.txt"),
+  ]);
   await writeFile(join(root, "a.txt"), "changed\n");
 
   const result = await verifyManifestFiles(manifest, { baseDir: root });
   assert.equal(result.ok, false);
-  assert.match(result.reason, /file_sha256 mismatch for a\.txt|file_size mismatch for a\.txt/);
+  assert.match(
+    result.reason,
+    /file_sha256 mismatch for a\.txt|file_size mismatch for a\.txt/,
+  );
 });
 
 test("CLI verify fails when current file bytes drift from manifest", async () => {
@@ -179,13 +220,18 @@ test("CLI verify fails when current file bytes drift from manifest", async () =>
     "--out",
     out,
     join(root, "a.txt"),
-    join(root, "b.txt")
+    join(root, "b.txt"),
   ]);
   await writeFile(join(root, "a.txt"), "changed\n");
 
-  const result = await execFileAsync("node", [scriptPath, "--verify", join(out, "manifest.json")]).catch(
-    (e) => e
-  );
+  const result = await execFileAsync("node", [
+    scriptPath,
+    "--verify",
+    join(out, "manifest.json"),
+  ]).catch((e) => e);
   assert.equal(result.code, 1);
-  assert.match(result.stderr, /file_sha256 mismatch for a\.txt|file_size mismatch for a\.txt/);
+  assert.match(
+    result.stderr,
+    /file_sha256 mismatch for a\.txt|file_size mismatch for a\.txt/,
+  );
 });

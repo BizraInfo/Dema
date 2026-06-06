@@ -3,7 +3,7 @@ const SCHEMA = "bizra.dema.node_network_blueprint.v0.1";
 const RELATED_SCHEMAS = [
   "bizra.dema.mission_preview.v0.1",
   "bizra.dema.diagnostics_mission_plan.v0.1",
-  "bizra.dema.safety_report_preview.v0.1"
+  "bizra.dema.safety_report_preview.v0.1",
 ];
 
 const CURRENT_STATE = {
@@ -11,7 +11,7 @@ const CURRENT_STATE = {
   summary:
     "Node0 and Dema are local-first preview surfaces. Node1/Node2 and later multi-node phases are not connected.",
   gtm_position:
-    "Lighthouse alpha for Sovereign Local AI Node Setup + Safety Audit."
+    "Lighthouse alpha for Sovereign Local AI Node Setup + Safety Audit.",
 };
 
 const CANONICAL_EXPANSION_PHASES = [
@@ -19,71 +19,73 @@ const CANONICAL_EXPANSION_PHASES = [
     id: "phase_0",
     label: "CANDIDATE_CANONICAL",
     scope: "single-node Node0 sovereign runtime candidate",
-    readiness: "current_preview_only"
+    readiness: "current_preview_only",
   },
   {
     id: "phase_1",
     label: "PLANNED",
     scope: "second-node membrane-mediated handshake",
-    readiness: "blocked_until_node0_receipts_repeat"
+    readiness: "blocked_until_node0_receipts_repeat",
   },
   {
     id: "phase_2",
     label: "PLANNED",
     scope: "SAT-5 operational inside one shared URP at multi-node scale",
-    readiness: "blocked_until_second_node_proves_local_receipts"
+    readiness: "blocked_until_second_node_proves_local_receipts",
   },
   {
     id: "phase_3",
     label: "PLANNED",
     scope: "opt-in federated cognition via membrane and Shared Reflex Registry",
-    readiness: "blocked_until_private_pilot_receipts_cross_verify"
+    readiness: "blocked_until_private_pilot_receipts_cross_verify",
   },
   {
     id: "phase_4",
     label: "DIRECTIONAL",
     scope: "long-range decentralized self-growing agentic ecosystem",
-    readiness: "direction_only_not_a_product_claim"
-  }
+    readiness: "direction_only_not_a_product_claim",
+  },
 ];
 
 const FULL_STACK_LAYERS = [
   {
     id: "product_face",
     owner: "Dema",
-    responsibility: "operator CLI, local setup, previews, status, receipts viewer",
-    readiness: "measured_local_preview"
+    responsibility:
+      "operator CLI, local setup, previews, status, receipts viewer",
+    readiness: "measured_local_preview",
   },
   {
     id: "runtime_authority",
     owner: "Node0 / bizra-omega",
     responsibility: "bounded execution, receipt issuance, proof authority",
-    readiness: "upstream_required"
+    readiness: "upstream_required",
   },
   {
     id: "consent_plane",
     owner: "FATE / Amana contracts",
     responsibility: "exact consent scopes, commitments, EffectCap decisions",
-    readiness: "contract_first"
+    readiness: "contract_first",
   },
   {
     id: "evidence_plane",
     owner: "Node0 receipts",
     responsibility: "hash-linked evidence, replay, audit trail",
-    readiness: "first_bounded_receipt_pending"
+    readiness: "first_bounded_receipt_pending",
   },
   {
     id: "network_plane",
     owner: "future Node1 / Node2 handoff and phase-gated multi-node pilot",
-    responsibility: "federation handshake after Node0 has repeatable local receipts",
-    readiness: "blocked_until_node0_receipts_repeat"
+    responsibility:
+      "federation handshake after Node0 has repeatable local receipts",
+    readiness: "blocked_until_node0_receipts_repeat",
   },
   {
     id: "gtm_plane",
     owner: "Dema",
     responsibility: "proof-safe offer language and operator onboarding",
-    readiness: "private_lighthouse_only"
-  }
+    readiness: "private_lighthouse_only",
+  },
 ];
 
 const READINESS_GATES = [
@@ -91,116 +93,126 @@ const READINESS_GATES = [
     id: "node0.local_contracts_landed",
     target: "Node0",
     status: "pending",
-    requirement: "Amana contract surfaces are merged and reviewed under exact proof scope."
+    requirement:
+      "Amana contract surfaces are merged and reviewed under exact proof scope.",
   },
   {
     id: "node0.bounded_receipt_repeatable",
     target: "Node0",
     status: "blocked",
-    requirement: "One boring local diagnostic can produce repeatable governed receipts."
+    requirement:
+      "One boring local diagnostic can produce repeatable governed receipts.",
   },
   {
     id: "node0.step7_capability_anchor",
     target: "Node0",
     status: "blocked",
     requirement:
-      "Step 7 single capability anchor is minted exactly once by governed local tooling after fresh operator authorization."
+      "Step 7 single capability anchor is minted exactly once by governed local tooling after fresh operator authorization.",
   },
   {
     id: "node1.handoff_contract_defined",
     target: "Node1",
     status: "blocked",
-    requirement: "Define handoff request, consent, receipt, rollback, and refusal schemas."
+    requirement:
+      "Define handoff request, consent, receipt, rollback, and refusal schemas.",
   },
   {
     id: "node1.read_only_probe",
     target: "Node1",
     status: "blocked",
     requirement:
-      "Define preview-only schema for a future read-only liveness probe; probe implementation does not live in this repo."
+      "Define preview-only schema for a future read-only liveness probe; probe implementation does not live in this repo.",
   },
   {
     id: "node2.propagation_policy",
     target: "Node2",
     status: "blocked",
-    requirement: "Define what cannot propagate: secrets, private data, unsigned claims, and rewards."
+    requirement:
+      "Define what cannot propagate: secrets, private data, unsigned claims, and rewards.",
   },
   {
     id: "phase_3.private_pilot_framework",
     target: "phase_3",
     status: "blocked",
     requirement:
-      "Define private pilot validation for multiple independent operators only after Node0 and second-node proof gates are measured."
+      "Define private pilot validation for multiple independent operators only after Node0 and second-node proof gates are measured.",
   },
   {
     id: "phase_4.public_network_boundary",
     target: "phase_4",
     status: "blocked",
     requirement:
-      "Keep public network language directional until private pilot receipts cross-verify without trusted infrastructure."
+      "Keep public network language directional until private pilot receipts cross-verify without trusted infrastructure.",
   },
   {
     id: "gtm.claim_gate_green",
     target: "GTM",
     status: "review",
-    requirement: "Offer copy remains limited to local setup, safety audit, and explicit proof gaps."
-  }
+    requirement:
+      "Offer copy remains limited to local setup, safety audit, and explicit proof gaps.",
+  },
 ];
 
 const HANDOFF_CONTRACT_PREVIEW = [
   {
     id: "handoff.request",
     owner: "governed runtime",
-    shape: "schema-tagged request containing node role, consent scope reference, receipt root, and refusal policy",
-    repo_boundary: "documented_only_not_executed"
+    shape:
+      "schema-tagged request containing node role, consent scope reference, receipt root, and refusal policy",
+    repo_boundary: "documented_only_not_executed",
   },
   {
     id: "handoff.refusal",
     owner: "Dema preview",
-    shape: "fail-closed reasons for missing consent, missing receipt proof, schema mismatch, or propagation denial",
-    repo_boundary: "may_be_rendered_as_static_preview"
+    shape:
+      "fail-closed reasons for missing consent, missing receipt proof, schema mismatch, or propagation denial",
+    repo_boundary: "may_be_rendered_as_static_preview",
   },
   {
     id: "handoff.consent",
     owner: "FATE / Amana contracts",
     shape: "exact narrow consent commitment for one future handoff attempt",
-    repo_boundary: "no_approval_or_authorization_phrase_emitted"
+    repo_boundary: "no_approval_or_authorization_phrase_emitted",
   },
   {
     id: "handoff.receipt_read_verification",
     owner: "receipts / evidence handoff",
-    shape: "read-only inspection of an already-issued receipt, including schema, producer, digest, and chain linkage",
-    repo_boundary: "Dema_reads_governed_runtime_issues"
+    shape:
+      "read-only inspection of an already-issued receipt, including schema, producer, digest, and chain linkage",
+    repo_boundary: "Dema_reads_governed_runtime_issues",
   },
   {
     id: "handoff.rollback",
     owner: "governed runtime",
     shape: "rollback receipt shape for a failed future probe",
-    repo_boundary: "shape_only_no_receipt_mint"
-  }
+    repo_boundary: "shape_only_no_receipt_mint",
+  },
 ];
 
 const OFFLINE_INTEGRATION_HARNESS = [
   {
     id: "fixture.node0_receipt_inventory",
     purpose: "capture receipt inventory shape without writing receipts",
-    status: "preview_ready"
+    status: "preview_ready",
   },
   {
     id: "fixture.node1_candidate_state",
     purpose: "represent a second-node candidate as static JSON with no sockets",
-    status: "blocked_until_contract_spec"
+    status: "blocked_until_contract_spec",
   },
   {
     id: "matrix.refusal_cases",
-    purpose: "enumerate missing consent, schema mismatch, tampered digest, and propagation-denied cases",
-    status: "blocked_until_contract_spec"
+    purpose:
+      "enumerate missing consent, schema mismatch, tampered digest, and propagation-denied cases",
+    status: "blocked_until_contract_spec",
   },
   {
     id: "matrix.boundary_assertions",
-    purpose: "prove every preview path has zero execution, zero mutation, zero socket, and zero receipt mint",
-    status: "preview_ready"
-  }
+    purpose:
+      "prove every preview path has zero execution, zero mutation, zero socket, and zero receipt mint",
+    status: "preview_ready",
+  },
 ];
 
 const SELF_PROACTIVE_HARNESS = {
@@ -209,103 +221,106 @@ const SELF_PROACTIVE_HARNESS = {
     "surface Step 7 anchor blocker before any handoff claim",
     "surface repeatable Node0 receipt blocker before any liveness probe",
     "surface missing handoff contract before any fixture is treated as connectivity",
-    "surface propagation denylist before any multi-node pilot language"
+    "surface propagation denylist before any multi-node pilot language",
   ],
   output_boundary:
-    "advisory strings only; no agent loop, no shell command, no network call, no authorization text"
+    "advisory strings only; no agent loop, no shell command, no network call, no authorization text",
 };
 
 export const NETWORK_PREVIEW_SELF_CRITIQUE = [
   {
     risk: "preview readiness could be mistaken for permission",
-    mitigation: "keep Node1, Node2, phase_3, and phase_4 gates blocked while Node0 proof gates are blocked"
+    mitigation:
+      "keep Node1, Node2, phase_3, and phase_4 gates blocked while Node0 proof gates are blocked",
   },
   {
     risk: "offline fixture could be mistaken for a live probe",
-    mitigation: "fixtures are static contract examples only and must never open sockets"
+    mitigation:
+      "fixtures are static contract examples only and must never open sockets",
   },
   {
     risk: "receipt inspection could drift into receipt issuance",
-    mitigation: "Dema reads receipt handoffs; governed runtime issues receipts"
+    mitigation: "Dema reads receipt handoffs; governed runtime issues receipts",
   },
   {
     risk: "planning text could become an authorization source",
-    mitigation: "do not emit operator authorization phrases or reusable consent strings"
-  }
+    mitigation:
+      "do not emit operator authorization phrases or reusable consent strings",
+  },
 ];
 
 const LIFECYCLE = [
   {
     phase: "specify",
-    output: "node handoff contracts and refusal conditions"
+    output: "node handoff contracts and refusal conditions",
   },
   {
     phase: "prove_locally",
-    output: "repeatable Node0 diagnostic receipt before any network handoff"
+    output: "repeatable Node0 diagnostic receipt before any network handoff",
   },
   {
     phase: "simulate",
-    output: "offline Node1/Node2 fixtures with no sockets"
+    output: "offline Node1/Node2 fixtures with no sockets",
   },
   {
     phase: "authorize",
-    output: "exact consent phrase and EffectCap gate for the first live probe"
+    output: "exact consent phrase and EffectCap gate for the first live probe",
   },
   {
     phase: "observe",
-    output: "receipt-backed monitoring and rollback receipt on failure"
-  }
+    output: "receipt-backed monitoring and rollback receipt on failure",
+  },
 ];
 
 const GTM_BLOCKERS = [
   {
     code: "node0.first_bounded_receipt_pending",
     severity: "launch_blocker",
-    note: "Node1/Node2 connection cannot start until Node0 proves repeatable local receipts."
+    note: "Node1/Node2 connection cannot start until Node0 proves repeatable local receipts.",
   },
   {
     code: "node0.step7_capability_anchor_pending",
     severity: "launch_blocker",
-    note:
-      "The Step 7 single capability anchor command path is ready, but the append-only receipt remains unminted."
+    note: "The Step 7 single capability anchor command path is ready, but the append-only receipt remains unminted.",
   },
   {
     code: "handoff.schema_missing",
     severity: "launch_blocker",
-    note: "No Node1/Node2 handoff schema is committed yet."
+    note: "No Node1/Node2 handoff schema is committed yet.",
   },
   {
     code: "network.safety_policy_missing",
     severity: "review",
-    note: "Propagation denylist and rollback receipt policy must exist before live probes."
+    note: "Propagation denylist and rollback receipt policy must exist before live probes.",
   },
   {
     code: "canon.multi_node_language_guard",
     severity: "review",
-    note:
-      "Use Node1/Node2 and canonical phase labels; do not invent additional named nodes in Dema preview copy."
-  }
+    note: "Use Node1/Node2 and canonical phase labels; do not invent additional named nodes in Dema preview copy.",
+  },
 ];
 
 const PROPOSED_NEXT_ACTIONS = [
   {
     id: "publish_amana_contracts_pr",
     action:
-      "Prepare the already verified Amana contracts PR draft; do not publish without explicit operator authorization."
+      "Prepare the already verified Amana contracts PR draft; do not publish without explicit operator authorization.",
   },
   {
     id: "add_node_handoff_contract_spec",
-    action: "Define Node1/Node2 handoff request, refusal, consent, and receipt-read schemas."
+    action:
+      "Define Node1/Node2 handoff request, refusal, consent, and receipt-read schemas.",
   },
   {
     id: "build_offline_network_fixture",
-    action: "Create an offline fixture that simulates Node1/Node2 state without sockets."
+    action:
+      "Create an offline fixture that simulates Node1/Node2 state without sockets.",
   },
   {
     id: "keep_step7_gate_explicit",
     action:
-      "Keep the Step 7 anchor blocker visible until an operator chooses a fresh authorized ceremony."
-  }
+      "Keep the Step 7 anchor blocker visible until an operator chooses a fresh authorized ceremony.",
+  },
 ];
 
 export const NETWORK_PREVIEW_BOUNDARY = {
@@ -324,7 +339,7 @@ export const NETWORK_PREVIEW_BOUNDARY = {
   identity_artifact_issued: false,
   downstream_node_started: false,
   liveness_probe_implemented: false,
-  authorization_phrase_emitted: false
+  authorization_phrase_emitted: false,
 };
 
 function clone(value) {
@@ -347,7 +362,7 @@ export function buildNetworkBlueprint() {
     lifecycle: clone(LIFECYCLE),
     gtm_blockers: clone(GTM_BLOCKERS),
     proposed_next_actions: clone(PROPOSED_NEXT_ACTIONS),
-    boundary: clone(NETWORK_PREVIEW_BOUNDARY)
+    boundary: clone(NETWORK_PREVIEW_BOUNDARY),
   };
 }
 
@@ -364,13 +379,14 @@ export function formatNetworkBlueprint(blueprint) {
     `Summary: ${blueprint.current_state.summary}`,
     `GTM: ${blueprint.current_state.gtm_position}`,
     "",
-    "Full-stack layers:"
+    "Full-stack layers:",
   ];
 
   appendRows(
     lines,
     blueprint.full_stack_layers,
-    (layer) => `${layer.id}  owner="${layer.owner}"  readiness="${layer.readiness}"`
+    (layer) =>
+      `${layer.id}  owner="${layer.owner}"  readiness="${layer.readiness}"`,
   );
 
   lines.push("");
@@ -378,7 +394,8 @@ export function formatNetworkBlueprint(blueprint) {
   appendRows(
     lines,
     blueprint.canonical_expansion_phases,
-    (phase) => `${phase.id} ${phase.label} - ${phase.scope} (${phase.readiness})`
+    (phase) =>
+      `${phase.id} ${phase.label} - ${phase.scope} (${phase.readiness})`,
   );
 
   lines.push("");
@@ -386,7 +403,8 @@ export function formatNetworkBlueprint(blueprint) {
   appendRows(
     lines,
     blueprint.readiness_gates,
-    (gate) => `${gate.status}: ${gate.id} (${gate.target}) - ${gate.requirement}`
+    (gate) =>
+      `${gate.status}: ${gate.id} (${gate.target}) - ${gate.requirement}`,
   );
 
   lines.push("");
@@ -394,7 +412,8 @@ export function formatNetworkBlueprint(blueprint) {
   appendRows(
     lines,
     blueprint.handoff_contract_preview,
-    (contract) => `${contract.id} owner="${contract.owner}" boundary="${contract.repo_boundary}"`
+    (contract) =>
+      `${contract.id} owner="${contract.owner}" boundary="${contract.repo_boundary}"`,
   );
 
   lines.push("");
@@ -402,41 +421,51 @@ export function formatNetworkBlueprint(blueprint) {
   appendRows(
     lines,
     blueprint.offline_integration_harness,
-    (item) => `${item.status}: ${item.id} - ${item.purpose}`
+    (item) => `${item.status}: ${item.id} - ${item.purpose}`,
   );
 
   lines.push("");
   lines.push("Self-proactive harness:");
   appendRows(lines, blueprint.self_proactive_harness.checks, (check) => check);
-  lines.push(`  - boundary: ${blueprint.self_proactive_harness.output_boundary}`);
+  lines.push(
+    `  - boundary: ${blueprint.self_proactive_harness.output_boundary}`,
+  );
 
   lines.push("");
   lines.push("Lifecycle:");
-  appendRows(lines, blueprint.lifecycle, (phase) => `${phase.phase}: ${phase.output}`);
+  appendRows(
+    lines,
+    blueprint.lifecycle,
+    (phase) => `${phase.phase}: ${phase.output}`,
+  );
 
   lines.push("");
   lines.push("GTM blockers:");
   appendRows(
     lines,
     blueprint.gtm_blockers,
-    (blocker) => `${blocker.severity}: ${blocker.code} - ${blocker.note}`
+    (blocker) => `${blocker.severity}: ${blocker.code} - ${blocker.note}`,
   );
 
   lines.push("");
   lines.push("Proposed next actions:");
-  appendRows(lines, blueprint.proposed_next_actions, (item) => `${item.id}: ${item.action}`);
+  appendRows(
+    lines,
+    blueprint.proposed_next_actions,
+    (item) => `${item.id}: ${item.action}`,
+  );
 
   lines.push("");
   lines.push("Self-critique:");
   appendRows(
     lines,
     blueprint.self_critique,
-    (item) => `${item.risk} -> ${item.mitigation}`
+    (item) => `${item.risk} -> ${item.mitigation}`,
   );
 
   lines.push("");
   lines.push(
-    "Boundary: preview-only; no network connection; no federation; no handshake; no execution; no mutation; no receipt minted."
+    "Boundary: preview-only; no network connection; no federation; no handshake; no execution; no mutation; no receipt minted.",
   );
 
   return lines.join("\n");

@@ -17,7 +17,8 @@
 // Preview-only: no I/O, no settlement, no forced transfer, no license issuance,
 // no shared-URP publication. Pure data emitter.
 
-export const URP_CARRYING_COST_PREVIEW_SCHEMA = "bizra.dema.urp_carrying_cost_preview.v0.1";
+export const URP_CARRYING_COST_PREVIEW_SCHEMA =
+  "bizra.dema.urp_carrying_cost_preview.v0.1";
 
 export const SHAREABLE_RESOURCE_TYPES = Object.freeze([
   "skill_pack",
@@ -27,7 +28,7 @@ export const SHAREABLE_RESOURCE_TYPES = Object.freeze([
   "verified_proof_bundle",
   "resource_offer",
   "compute_offer",
-  "agent_service_offer"
+  "agent_service_offer",
 ]);
 
 export const FORBIDDEN_RESOURCE_TYPES = Object.freeze([
@@ -38,7 +39,7 @@ export const FORBIDDEN_RESOURCE_TYPES = Object.freeze([
   "raw_corpus",
   "unpublished_personal_memory",
   "credentials",
-  "finance_data"
+  "finance_data",
 ]);
 
 const BOUNDARY = Object.freeze({
@@ -50,17 +51,19 @@ const BOUNDARY = Object.freeze({
   private_memory_accessed: false,
   raw_data_exchange: false,
   license_issued: false,
-  shared_urp_published: false
+  shared_urp_published: false,
 });
 
-const NOTE = "Owner may license-challenge. No forced transfer. No economic settlement. No private memory.";
+const NOTE =
+  "Owner may license-challenge. No forced transfer. No economic settlement. No private memory.";
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
 function deepFreeze(value) {
-  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  if (!value || typeof value !== "object" || Object.isFrozen(value))
+    return value;
   for (const child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
 }
@@ -78,14 +81,14 @@ function validateResourceType(resource_type) {
     return {
       ok: false,
       code: "forbidden_resource_type",
-      detail: `${resource_type} is private; this module refuses by construction`
+      detail: `${resource_type} is private; this module refuses by construction`,
     };
   }
   if (!SHAREABLE_RESOURCE_TYPES.includes(resource_type)) {
     return {
       ok: false,
       code: "unknown_resource_type",
-      detail: `${resource_type} is not on the shareable allowlist`
+      detail: `${resource_type} is not on the shareable allowlist`,
     };
   }
   return { ok: true };
@@ -96,14 +99,18 @@ function validateNumericInputs(self_assessed_value, carrying_cost_rate) {
     return {
       ok: false,
       code: "invalid_value",
-      detail: "self_assessed_value must be a positive finite number"
+      detail: "self_assessed_value must be a positive finite number",
     };
   }
-  if (!isFiniteNumber(carrying_cost_rate) || carrying_cost_rate <= 0 || carrying_cost_rate >= 1) {
+  if (
+    !isFiniteNumber(carrying_cost_rate) ||
+    carrying_cost_rate <= 0 ||
+    carrying_cost_rate >= 1
+  ) {
     return {
       ok: false,
       code: "invalid_rate",
-      detail: "carrying_cost_rate must be in the open interval (0, 1)"
+      detail: "carrying_cost_rate must be in the open interval (0, 1)",
     };
   }
   return { ok: true };
@@ -116,7 +123,7 @@ function validateRequired({ resource_id, owner_node, no_raw_data_proof }) {
       return {
         ok: false,
         code: "missing_field",
-        detail: `${name} must be a non-empty string`
+        detail: `${name} must be a non-empty string`,
       };
     }
   }
@@ -128,44 +135,48 @@ function validateNow(now) {
     return {
       ok: false,
       code: "invalid_now",
-      detail: "now must be a valid Date"
+      detail: "now must be a valid Date",
     };
   }
   return { ok: true };
 }
 
 function buildSuccessEnvelope(payload) {
-  return deepFreeze(clone({
-    schema: URP_CARRYING_COST_PREVIEW_SCHEMA,
-    mode: "PREVIEW_ONLY",
-    truth_label: "DECLARED",
-    valid: true,
-    resource_id: payload.resource_id,
-    resource_type: payload.resource_type,
-    owner_node: payload.owner_node,
-    self_assessed_value: payload.self_assessed_value,
-    carrying_cost_rate: payload.carrying_cost_rate,
-    simulated_carrying_cost: payload.simulated_carrying_cost,
-    license_challenge_allowed: payload.license_challenge_allowed,
-    forced_transfer: false,
-    raw_data_shared: false,
-    no_raw_data_proof: payload.no_raw_data_proof,
-    settlement: "preview_only",
-    generated_at: payload.generated_at,
-    boundary: BOUNDARY,
-    note: NOTE
-  }));
+  return deepFreeze(
+    clone({
+      schema: URP_CARRYING_COST_PREVIEW_SCHEMA,
+      mode: "PREVIEW_ONLY",
+      truth_label: "DECLARED",
+      valid: true,
+      resource_id: payload.resource_id,
+      resource_type: payload.resource_type,
+      owner_node: payload.owner_node,
+      self_assessed_value: payload.self_assessed_value,
+      carrying_cost_rate: payload.carrying_cost_rate,
+      simulated_carrying_cost: payload.simulated_carrying_cost,
+      license_challenge_allowed: payload.license_challenge_allowed,
+      forced_transfer: false,
+      raw_data_shared: false,
+      no_raw_data_proof: payload.no_raw_data_proof,
+      settlement: "preview_only",
+      generated_at: payload.generated_at,
+      boundary: BOUNDARY,
+      note: NOTE,
+    }),
+  );
 }
 
 function buildFailureEnvelope(code, detail) {
-  return deepFreeze(clone({
-    schema: URP_CARRYING_COST_PREVIEW_SCHEMA,
-    mode: "PREVIEW_ONLY",
-    truth_label: "DECLARED",
-    valid: false,
-    denial: { code, detail },
-    boundary: BOUNDARY
-  }));
+  return deepFreeze(
+    clone({
+      schema: URP_CARRYING_COST_PREVIEW_SCHEMA,
+      mode: "PREVIEW_ONLY",
+      truth_label: "DECLARED",
+      valid: false,
+      denial: { code, detail },
+      boundary: BOUNDARY,
+    }),
+  );
 }
 
 export function buildUrpCarryingCostPreview({
@@ -176,14 +187,14 @@ export function buildUrpCarryingCostPreview({
   carrying_cost_rate,
   license_challenge_allowed = true,
   no_raw_data_proof,
-  now = new Date()
+  now = new Date(),
 } = {}) {
   // Order matters: type check first, then numeric, then required strings, then date.
   const checks = [
     validateResourceType(resource_type),
     validateNumericInputs(self_assessed_value, carrying_cost_rate),
     validateRequired({ resource_id, owner_node, no_raw_data_proof }),
-    validateNow(now)
+    validateNow(now),
   ];
   for (const check of checks) {
     if (!check.ok) {
@@ -200,6 +211,6 @@ export function buildUrpCarryingCostPreview({
     simulated_carrying_cost: self_assessed_value * carrying_cost_rate,
     license_challenge_allowed: license_challenge_allowed === true,
     no_raw_data_proof,
-    generated_at: now.toISOString()
+    generated_at: now.toISOString(),
   });
 }

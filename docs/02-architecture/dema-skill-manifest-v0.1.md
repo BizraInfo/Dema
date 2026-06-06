@@ -29,6 +29,7 @@ For each Dema skill (a capability the operator might invoke through PAT roles), 
 ## Functional requirements
 
 ### F-01 · Module exports
+
 ```
 packages/core/src/skill-manifest-preview.js
 
@@ -55,6 +56,7 @@ export function buildSkillManifestPreview({
 ```
 
 ### F-02 · Envelope shape (success)
+
 ```
 {
   schema:               "bizra.dema.skill_manifest_preview.v0.1",
@@ -76,6 +78,7 @@ export function buildSkillManifestPreview({
 ```
 
 ### F-03 · Boundary invariants
+
 ```
 runtime:               false
 federation:            false
@@ -87,6 +90,7 @@ authority_imported:    false  (already in AUTHORITY_FLAGS)
 ```
 
 ### F-04 · Validation
+
 - `skill_id` must be a non-empty string matching `/^[a-z][a-z0-9_]*$/`
 - `risk_level` must be in `SKILL_RISK_LEVELS`
 - `declared_effects` ∩ `denied_effects` empty; both subsets of `OPERATIONS`
@@ -97,14 +101,17 @@ authority_imported:    false  (already in AUTHORITY_FLAGS)
 - If `risk_level === "step_seven_tier"`, then `receipt_policy` must be `"step_seven_receipt"` and `step7_gate_keeper ∈ required_sat`
 
 ### F-05 · v0.1 invariants
+
 - `active_now` always `false`
 - Module imports zero `fs / net / http / child_process`
 - Skills with `declared_effects` containing `execute` require `risk_level >= "high"`
 
 ### F-06 · Determinism + purity
+
 Same inputs → deeply-equal frozen output with fresh references.
 
 ## Out of scope
+
 - Skill activation / registration
 - Skill execution surface
 - Sandbox / quarantine implementation (ASPIRATIONAL per ROADMAP.md v0.4)
@@ -113,6 +120,7 @@ Same inputs → deeply-equal frozen output with fresh references.
 - CLI verb
 
 ## Acceptance criteria
+
 1. New file at `packages/core/src/skill-manifest-preview.js`
 2. New test file with ≥ 14 TDD anchors
 3. `AUTHORITY_FLAGS` extended by 2 new flags (`skill_activated`, `skill_invoked`)
@@ -120,6 +128,7 @@ Same inputs → deeply-equal frozen output with fresh references.
 5. All 7 gates green; `boundary-invariant-check` `modules_scanned ≥ 28`
 
 ## References
+
 - `packages/core/src/node0-homebase-state-preview.js` — PAT-7 + SAT-5 registries (role IDs source)
 - `packages/consent/src/consent-hash-preview.js` — `OPERATIONS`
 - `docs/02-architecture/pat-builder-sat-validator.md` — PAT/SAT model + `GateVerdict`
@@ -127,6 +136,7 @@ Same inputs → deeply-equal frozen output with fresh references.
 - `~/.dema/skills/` — operator-side directory (currently empty surface)
 
 ## Operating law
+
 ```
 A skill declares its authority.
 A skill names its tests.

@@ -8,7 +8,7 @@ import {
   RECEIPT_MINT_INTEGRATION_SCHEMA_NAME,
   RECEIPT_MINT_REQUEST_SCHEMA_NAME,
   RECEIPT_MINT_RECEIPT_GRADES,
-  RECEIPT_MINT_REQUIRED_BLOCKED_EFFECTS
+  RECEIPT_MINT_REQUIRED_BLOCKED_EFFECTS,
 } from "../packages/core/src/receipt-mint-integration.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 import { shapeReceiptCandidate } from "../packages/core/src/pat-receipt-recorder.js";
@@ -19,7 +19,7 @@ function validCandidate() {
   return shapeReceiptCandidate({
     event_schema: "bizra.dema.node0_state.v0.1",
     event_summary: { x: 1, schema_present: true },
-    action_class: "preview"
+    action_class: "preview",
   });
 }
 
@@ -53,7 +53,9 @@ test("Receipt mint · blocked_effects include mint-without-SAT · without-consen
   const p = buildReceiptMintIntegrationPreview();
   assert.ok(p.blocked_effects.includes("mint_without_all_sat_verifications"));
   assert.ok(p.blocked_effects.includes("mint_without_per_receipt_consent"));
-  assert.ok(p.blocked_effects.includes("advance_chain_without_governed_gateway"));
+  assert.ok(
+    p.blocked_effects.includes("advance_chain_without_governed_gateway"),
+  );
   assert.ok(p.blocked_effects.includes("modify_existing_receipt"));
 });
 
@@ -62,13 +64,16 @@ test("Mint request · valid candidate + passing pipeline + preview grade → val
     candidate: validCandidate(),
     sat_pipeline_result: passingPipeline(),
     receipt_grade: "preview",
-    prev_chain_head_hash: null
+    prev_chain_head_hash: null,
   });
   assert.equal(r.schema, RECEIPT_MINT_REQUEST_SCHEMA_NAME);
   assert.equal(r.valid, true);
   assert.equal(r.mint_performed, false);
   assert.equal(r.chain_advance_performed, false);
-  assert.match(r.consent_phrase_for_mint, /^GO: mint preview-grade receipt at [a-f0-9]{64}$/);
+  assert.match(
+    r.consent_phrase_for_mint,
+    /^GO: mint preview-grade receipt at [a-f0-9]{64}$/,
+  );
   assert.match(r.proposed_receipt_id, /^[a-f0-9]{64}$/);
 });
 
@@ -76,7 +81,7 @@ test("Mint request · founding grade WITHOUT OTS → invalid", () => {
   const r = buildReceiptMintRequest({
     candidate: validCandidate(),
     sat_pipeline_result: passingPipeline(),
-    receipt_grade: "founding"
+    receipt_grade: "founding",
   });
   assert.equal(r.valid, false);
   assert.ok(r.violations.includes("founding_grade_requires_ots_attestation"));
@@ -87,7 +92,7 @@ test("Mint request · founding grade WITH OTS proof → valid", () => {
     candidate: validCandidate(),
     sat_pipeline_result: passingPipeline(),
     receipt_grade: "founding",
-    ots_attestation_proof: "ots_proof_948027_948029"
+    ots_attestation_proof: "ots_proof_948027_948029",
   });
   assert.equal(r.valid, true);
   assert.equal(r.ots_attestation_required, true);
@@ -96,7 +101,7 @@ test("Mint request · founding grade WITH OTS proof → valid", () => {
 
 test("Mint request · missing candidate → invalid", () => {
   const r = buildReceiptMintRequest({
-    sat_pipeline_result: passingPipeline()
+    sat_pipeline_result: passingPipeline(),
   });
   assert.equal(r.valid, false);
   assert.ok(r.violations.includes("no_candidate"));
@@ -105,7 +110,7 @@ test("Mint request · missing candidate → invalid", () => {
 test("Mint request · candidate with wrong schema → invalid", () => {
   const r = buildReceiptMintRequest({
     candidate: { schema: "made.up.v0.1", valid: true },
-    sat_pipeline_result: passingPipeline()
+    sat_pipeline_result: passingPipeline(),
   });
   assert.equal(r.valid, false);
   assert.ok(r.violations.some((v) => v.includes("candidate_wrong_schema")));
@@ -114,11 +119,14 @@ test("Mint request · candidate with wrong schema → invalid", () => {
 test("Mint request · pipeline did not pass → invalid", () => {
   // Use a broken artifact to fail pipeline
   const brokenPipeline = runVerificationPipeline({
-    artifact: { schema: "broken.v0.1", boundary: { runtime_execution_performed: true } }
+    artifact: {
+      schema: "broken.v0.1",
+      boundary: { runtime_execution_performed: true },
+    },
   });
   const r = buildReceiptMintRequest({
     candidate: validCandidate(),
-    sat_pipeline_result: brokenPipeline
+    sat_pipeline_result: brokenPipeline,
   });
   assert.equal(r.valid, false);
   assert.ok(r.violations.some((v) => v.includes("sat_pipeline_did_not_pass")));
@@ -128,17 +136,19 @@ test("Mint request · prev_chain_head_hash invalid format → invalid", () => {
   const r = buildReceiptMintRequest({
     candidate: validCandidate(),
     sat_pipeline_result: passingPipeline(),
-    prev_chain_head_hash: "not-a-valid-hash"
+    prev_chain_head_hash: "not-a-valid-hash",
   });
   assert.equal(r.valid, false);
-  assert.ok(r.violations.some((v) => v.includes("prev_chain_head_hash_format_invalid")));
+  assert.ok(
+    r.violations.some((v) => v.includes("prev_chain_head_hash_format_invalid")),
+  );
 });
 
 test("Mint request · prev_chain_head_hash='genesis' → accepted", () => {
   const r = buildReceiptMintRequest({
     candidate: validCandidate(),
     sat_pipeline_result: passingPipeline(),
-    prev_chain_head_hash: "genesis"
+    prev_chain_head_hash: "genesis",
   });
   assert.equal(r.valid, true);
 });
@@ -147,10 +157,16 @@ test("Mint request · proposed_receipt_id is deterministic given same inputs", (
   const c = validCandidate();
   const p = passingPipeline();
   const r1 = buildReceiptMintRequest({
-    candidate: c, sat_pipeline_result: p, receipt_grade: "preview", prev_chain_head_hash: "genesis"
+    candidate: c,
+    sat_pipeline_result: p,
+    receipt_grade: "preview",
+    prev_chain_head_hash: "genesis",
   });
   const r2 = buildReceiptMintRequest({
-    candidate: c, sat_pipeline_result: p, receipt_grade: "preview", prev_chain_head_hash: "genesis"
+    candidate: c,
+    sat_pipeline_result: p,
+    receipt_grade: "preview",
+    prev_chain_head_hash: "genesis",
   });
   assert.equal(r1.proposed_receipt_id, r2.proposed_receipt_id);
 });
@@ -158,7 +174,7 @@ test("Mint request · proposed_receipt_id is deterministic given same inputs", (
 test("Mint request · requires_typed_go=true AND requires_governed_gateway_handoff=true ALWAYS", () => {
   const r = buildReceiptMintRequest({
     candidate: validCandidate(),
-    sat_pipeline_result: passingPipeline()
+    sat_pipeline_result: passingPipeline(),
   });
   assert.equal(r.requires_typed_go, true);
   assert.equal(r.requires_governed_gateway_handoff, true);
@@ -167,7 +183,7 @@ test("Mint request · requires_typed_go=true AND requires_governed_gateway_hando
 test("Mint request · deep frozen + canonical boundary", () => {
   const r = buildReceiptMintRequest({
     candidate: validCandidate(),
-    sat_pipeline_result: passingPipeline()
+    sat_pipeline_result: passingPipeline(),
   });
   assert.ok(Object.isFrozen(r));
   assert.ok(Object.isFrozen(r.violations));
@@ -178,7 +194,7 @@ test("Mint request · unknown grade coerced to 'preview' default", () => {
   const r = buildReceiptMintRequest({
     candidate: validCandidate(),
     sat_pipeline_result: passingPipeline(),
-    receipt_grade: "fake_grade"
+    receipt_grade: "fake_grade",
   });
   assert.equal(r.receipt_grade, "preview");
 });

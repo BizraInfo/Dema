@@ -5,7 +5,10 @@
 // operator · NEVER claims a doctrine catch without evidence · NEVER
 // modifies the history it observes.
 
-import { buildAgentKernel, AGENT_KERNEL_MAX_ITERATIONS } from "./agent-kernel.js";
+import {
+  buildAgentKernel,
+  AGENT_KERNEL_MAX_ITERATIONS,
+} from "./agent-kernel.js";
 import { buildEffectCap } from "./effect-cap.js";
 import { buildPreviewBoundary } from "./preview-boundary.js";
 
@@ -25,7 +28,7 @@ const PAT7_PERSONA = Object.freeze({
     "compose_daily_summary",
     "detect_repetitive_patterns",
     "surface_doctrine_catch_with_evidence",
-    "compute_session_metrics"
+    "compute_session_metrics",
   ]),
   primary_refusals: Object.freeze([
     "judge_the_operator",
@@ -33,8 +36,8 @@ const PAT7_PERSONA = Object.freeze({
     "modify_observed_history",
     "infer_intent_from_silence",
     "score_or_grade_the_operator",
-    "extrapolate_pattern_from_n_eq_1"
-  ])
+    "extrapolate_pattern_from_n_eq_1",
+  ]),
 });
 
 const PAT7_EFFECT_CAP_ALLOWED = Object.freeze([
@@ -42,7 +45,7 @@ const PAT7_EFFECT_CAP_ALLOWED = Object.freeze([
   "list_local_directory",
   "stat_file_metadata",
   "compute_hash",
-  "render_terminal_output"
+  "render_terminal_output",
 ]);
 
 const PAT7_EFFECT_CAP_EXTRA_BLOCKED = Object.freeze([
@@ -50,10 +53,11 @@ const PAT7_EFFECT_CAP_EXTRA_BLOCKED = Object.freeze([
   "modify_observed_history",
   "infer_intent_from_silence",
   "claim_pattern_from_single_instance",
-  "score_operator_performance"
+  "score_operator_performance",
 ]);
 
-const PAT7_CONSENT_PHRASE_TEMPLATE = "GO: invoke PAT-7 reflection_witness to compose summary";
+const PAT7_CONSENT_PHRASE_TEMPLATE =
+  "GO: invoke PAT-7 reflection_witness to compose summary";
 
 function safeString(v, fallback = "") {
   return typeof v === "string" ? v : fallback;
@@ -74,11 +78,13 @@ export function buildPATReflectionWitnessEffectCap() {
     allowed_effects: PAT7_EFFECT_CAP_ALLOWED,
     blocked_effects: PAT7_EFFECT_CAP_EXTRA_BLOCKED,
     consent_scope_template: PAT7_CONSENT_PHRASE_TEMPLATE,
-    audit_trail_required: true
+    audit_trail_required: true,
   });
 }
 
-export function buildPATReflectionWitnessPreview({ operator_name = "Mumu" } = {}) {
+export function buildPATReflectionWitnessPreview({
+  operator_name = "Mumu",
+} = {}) {
   return Object.freeze({
     schema: SCHEMA,
     truth_label: "NODE0_LOCAL_SEED",
@@ -95,18 +101,21 @@ export function buildPATReflectionWitnessPreview({ operator_name = "Mumu" } = {}
       "PAT-7 never modifies the history it observes · the past is the past",
       "PAT-7 never infers operator intent from silence",
       "PAT-7 never scores or grades · operator self-assesses",
-      "PAT-7 never extrapolates from a single instance · pattern requires N≥2"
+      "PAT-7 never extrapolates from a single instance · pattern requires N≥2",
     ]),
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
-export function buildPATReflectionWitnessKernel({ mission_intent = "", max_iterations = AGENT_KERNEL_MAX_ITERATIONS } = {}) {
+export function buildPATReflectionWitnessKernel({
+  mission_intent = "",
+  max_iterations = AGENT_KERNEL_MAX_ITERATIONS,
+} = {}) {
   return buildAgentKernel({
     agent_id: PAT7_PERSONA.pat_id,
     agent_role: "pat_reflection_witness",
     mission_intent: safeString(mission_intent, ""),
-    max_iterations
+    max_iterations,
   });
 }
 
@@ -119,28 +128,39 @@ export function composeDailyReflection({
   commits_today = [],
   doctrine_catches = [],
   memory_writes_today = [],
-  session_metrics = {}
+  session_metrics = {},
 } = {}) {
   const dateSafe = safeString(date, new Date().toISOString().slice(0, 10));
-  const commits = safeArray(commits_today).filter((c) => c && typeof c === "object");
-  const catches = safeArray(doctrine_catches).filter((c) => c && typeof c === "object");
-  const writes = safeArray(memory_writes_today).filter((w) => typeof w === "string");
+  const commits = safeArray(commits_today).filter(
+    (c) => c && typeof c === "object",
+  );
+  const catches = safeArray(doctrine_catches).filter(
+    (c) => c && typeof c === "object",
+  );
+  const writes = safeArray(memory_writes_today).filter(
+    (w) => typeof w === "string",
+  );
   const metrics = safeObject(session_metrics, {});
 
   // Classify catches by evidence quality
   const catchesClassified = catches.map((c) => {
-    const hasEvidence = typeof c.evidence_pointer === "string" && c.evidence_pointer.length > 0;
+    const hasEvidence =
+      typeof c.evidence_pointer === "string" && c.evidence_pointer.length > 0;
     const claim = safeString(c.claim, "");
     return Object.freeze({
       claim,
       evidence_pointer: hasEvidence ? c.evidence_pointer : null,
       evidence_grade: hasEvidence ? "V" : "A",
-      doctrine_canon_referenced: safeString(c.doctrine_canon_referenced, "")
+      doctrine_canon_referenced: safeString(c.doctrine_canon_referenced, ""),
     });
   });
 
-  const verifiedCatches = catchesClassified.filter((c) => c.evidence_grade === "V");
-  const assumedCatches = catchesClassified.filter((c) => c.evidence_grade === "A");
+  const verifiedCatches = catchesClassified.filter(
+    (c) => c.evidence_grade === "V",
+  );
+  const assumedCatches = catchesClassified.filter(
+    (c) => c.evidence_grade === "A",
+  );
 
   // Pattern detection: only fire when N≥2 same-named patterns exist
   const patternCounts = {};
@@ -166,10 +186,14 @@ export function composeDailyReflection({
       verified_catches_count: verifiedCatches.length,
       assumed_catches_count: assumedCatches.length,
       session_metrics: Object.freeze({
-        tests_pass: typeof metrics.tests_pass === "number" ? metrics.tests_pass : null,
+        tests_pass:
+          typeof metrics.tests_pass === "number" ? metrics.tests_pass : null,
         gates_green: metrics.gates_green === true,
-        spine_surfaces: typeof metrics.spine_surfaces === "number" ? metrics.spine_surfaces : null
-      })
+        spine_surfaces:
+          typeof metrics.spine_surfaces === "number"
+            ? metrics.spine_surfaces
+            : null,
+      }),
     }),
     doctrine_catches_classified: Object.freeze(catchesClassified),
     verified_catches: Object.freeze(verifiedCatches),
@@ -179,7 +203,7 @@ export function composeDailyReflection({
     operator_judgment_offered: false,
     audit_trail_required: true,
     receipt_shape_ready: true,
-    boundary: buildPreviewBoundary()
+    boundary: buildPreviewBoundary(),
   });
 }
 
@@ -196,7 +220,7 @@ export function buildPATReflectionWitnessSummary(options = {}) {
     serves_operator: preview.serves_operator,
     capability_count: preview.persona.primary_capabilities.length,
     refusal_count: preview.persona.primary_refusals.length,
-    boundary: preview.boundary
+    boundary: preview.boundary,
   });
 }
 

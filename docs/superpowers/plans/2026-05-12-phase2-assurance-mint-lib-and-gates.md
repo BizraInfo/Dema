@@ -11,6 +11,7 @@
 **Testing pattern:** The Node0 kernel uses a bespoke test runner at `~/.dema/kernel/test_runner/runner.py`. New tests are functions returning `passed()`/`failed()`/`deferred()` results, added to the `ALL_TESTS` list at the bottom of `runner.py`. Run all tests via `python ~/.dema/kernel/test_runner/runner.py` or `~/.dema/bin/test-runner`. Run a single test: there is no CLI filter; you must check the specific test's line in the output for PASS/FAIL.
 
 **Key canon to know:**
+
 - `mint_lib` writes ALL new receipts with canonical names: `digest_algo` + `prev_digest` + `self_digest` + `producer_identity` + `timestamp` + `chain_id` + `schema`.
 - Legacy receipts use `blake3_prev` + `blake3_self` (with sha256 hash content). **Never modify their bytes** (hash-binding canon).
 - Canonicalization recipe: `json.dumps(obj, sort_keys=True, separators=(',', ':'), ensure_ascii=False)`, excluding `self_digest`.
@@ -21,6 +22,7 @@
 ## Task 1: Module Scaffolding + Shim Skeleton
 
 **Files:**
+
 - Create: `~/.dema/kernel/assurance/__init__.py`
 - Create: `~/.dema/bin/dema-assure`
 - Modify: `~/.dema/kernel/test_runner/runner.py` (add STRUCT-ASSURE-MODULE-EXISTS test to ALL_TESTS)
@@ -137,6 +139,7 @@ cd ~/Downloads/Dema  # (not committing kernel files; commit is for tracking the 
 ## Task 2: mint_lib.py — canonicalize_payload
 
 **Files:**
+
 - Create: `~/.dema/kernel/assurance/mint_lib.py` (skeleton + first function)
 - Modify: `~/.dema/kernel/test_runner/runner.py` (add UNIT-MINT-CANONICALIZE test)
 
@@ -160,7 +163,7 @@ def t_unit_mint_canonicalize():
         importlib.reload(mint_lib)
     except ImportError as e:
         return failed("UNIT-MINT-CANONICALIZE", "unit", f"import failed: {e}")
-    
+
     # Test 1: dict with unsorted keys produces sorted output
     sample = {"zebra": 1, "alpha": 2, "self_digest": "should_be_excluded"}
     out = mint_lib.canonicalize_payload(sample)
@@ -168,7 +171,7 @@ def t_unit_mint_canonicalize():
     if out != expected:
         return failed("UNIT-MINT-CANONICALIZE", "unit",
                       f"got {out!r}, expected {expected!r}")
-    
+
     # Test 2: nested dict canonicalizes recursively
     nested = {"outer": {"b": 1, "a": 2}, "self_digest": "x"}
     out2 = mint_lib.canonicalize_payload(nested)
@@ -176,14 +179,14 @@ def t_unit_mint_canonicalize():
     if out2 != expected2:
         return failed("UNIT-MINT-CANONICALIZE", "unit",
                       f"nested: got {out2!r}, expected {expected2!r}")
-    
+
     # Test 3: unicode preserved (ensure_ascii=False)
     unicode_sample = {"name": "Mumu", "lang": "العربية", "self_digest": "x"}
     out3 = mint_lib.canonicalize_payload(unicode_sample)
     if "العربية" not in out3:
         return failed("UNIT-MINT-CANONICALIZE", "unit",
                       "unicode not preserved (ensure_ascii=False expected)")
-    
+
     return passed("UNIT-MINT-CANONICALIZE", "unit",
                   evidence=["sorted keys output", "nested recursion correct",
                             "self_digest excluded", "unicode preserved"])
@@ -251,7 +254,7 @@ class NonChainConformantError(MintLibError):
 
 def canonicalize_payload(receipt: dict, exclude_field: str = "self_digest") -> str:
     """Stable JSON serialization for hashing.
-    
+
     sort_keys=True, separators=(',', ':'), ensure_ascii=False.
     Excludes the named field (default: self_digest) so the digest can be
     computed over everything-else.
@@ -276,6 +279,7 @@ Expected: `✅ PASS  UNIT-MINT-CANONICALIZE (unit)`
 ## Task 3: mint_lib.py — read_chain_head
 
 **Files:**
+
 - Modify: `~/.dema/kernel/assurance/mint_lib.py` (add function)
 - Modify: `~/.dema/kernel/test_runner/runner.py` (add UNIT-MINT-READ-CHAIN-HEAD)
 
@@ -291,7 +295,7 @@ def t_unit_mint_read_chain_head():
     _sys.path.insert(0, str(assurance_dir))
     import mint_lib
     import importlib; importlib.reload(mint_lib)
-    
+
     with tempfile.TemporaryDirectory() as td:
         td = Path(td)
         # Test 1: file present with hash content → returns the hash
@@ -300,13 +304,13 @@ def t_unit_mint_read_chain_head():
         if mint_lib.read_chain_head(chain_head) != "a" * 64:
             return failed("UNIT-MINT-READ-CHAIN-HEAD", "unit",
                           "expected hash, got different value")
-        
+
         # Test 2: file missing + allow_genesis=True → returns "GENESIS"
         missing = td / "missing-chain.txt"
         if mint_lib.read_chain_head(missing, allow_genesis=True) != "GENESIS":
             return failed("UNIT-MINT-READ-CHAIN-HEAD", "unit",
                           "allow_genesis=True should return GENESIS")
-        
+
         # Test 3: file missing + allow_genesis=False → raises ChainHeadMissingError
         try:
             mint_lib.read_chain_head(missing, allow_genesis=False)
@@ -314,14 +318,14 @@ def t_unit_mint_read_chain_head():
                           "missing chain without allow_genesis should raise")
         except mint_lib.ChainHeadMissingError:
             pass  # expected
-        
+
         # Test 4: trailing whitespace stripped
         chain_head2 = td / "chain2.txt"
         chain_head2.write_text("  abc123  \n", encoding="utf-8")
         if mint_lib.read_chain_head(chain_head2) != "abc123":
             return failed("UNIT-MINT-READ-CHAIN-HEAD", "unit",
                           "whitespace should be stripped")
-    
+
     return passed("UNIT-MINT-READ-CHAIN-HEAD", "unit",
                   evidence=["present hash returned", "GENESIS path works",
                             "missing+disallow raises ChainHeadMissingError",
@@ -345,7 +349,7 @@ Add to `~/.dema/kernel/assurance/mint_lib.py` after `canonicalize_payload`:
 ```python
 def read_chain_head(chain_head_path: Path, allow_genesis: bool = False) -> str:
     """Return current chain head from chain_head_path.
-    
+
     Returns "GENESIS" if file is missing AND allow_genesis=True.
     Otherwise raises ChainHeadMissingError if file is missing.
     Trailing whitespace stripped.
@@ -372,6 +376,7 @@ Expected: `✅ PASS  UNIT-MINT-READ-CHAIN-HEAD (unit)`
 ## Task 4: mint_lib.py — mint_receipt (basic)
 
 **Files:**
+
 - Modify: `~/.dema/kernel/assurance/mint_lib.py` (add mint_receipt + helpers)
 - Modify: `~/.dema/kernel/test_runner/runner.py` (add UNIT-MINT-RECEIPT-BASIC)
 
@@ -387,12 +392,12 @@ def t_unit_mint_receipt_basic():
     _sys.path.insert(0, str(assurance_dir))
     import mint_lib
     import importlib; importlib.reload(mint_lib)
-    
+
     with tempfile.TemporaryDirectory() as td:
         td = Path(td)
         chain_head = td / "chain-head.txt"
         receipt_dir = td / "receipts"
-        
+
         # Mint first receipt with allow_genesis
         r1 = mint_lib.mint_receipt(
             chain_id="assurance",
@@ -404,7 +409,7 @@ def t_unit_mint_receipt_basic():
             receipt_filename_pattern="r-{short_hash}.json",
             allow_genesis=True,
         )
-        
+
         if r1["digest_algo"] != "sha256":
             return failed("UNIT-MINT-RECEIPT-BASIC", "unit",
                           f"digest_algo should be sha256, got {r1.get('digest_algo')}")
@@ -419,12 +424,12 @@ def t_unit_mint_receipt_basic():
                           "producer_identity not preserved")
         if r1["chain_id"] != "assurance":
             return failed("UNIT-MINT-RECEIPT-BASIC", "unit", "chain_id not set")
-        
+
         # Verify chain-head was updated atomically
         if chain_head.read_text(encoding="utf-8").strip() != r1["self_digest"]:
             return failed("UNIT-MINT-RECEIPT-BASIC", "unit",
                           "chain_head_path not updated to new self_digest")
-        
+
         # Mint second receipt — should chain to first
         r2 = mint_lib.mint_receipt(
             chain_id="assurance",
@@ -438,19 +443,19 @@ def t_unit_mint_receipt_basic():
         if r2["prev_digest"] != r1["self_digest"]:
             return failed("UNIT-MINT-RECEIPT-BASIC", "unit",
                           f"r2 should chain to r1: prev_digest={r2['prev_digest']} != {r1['self_digest']}")
-        
+
         # Verify both receipt files exist on disk
         if not any(receipt_dir.glob("r-*.json")):
             return failed("UNIT-MINT-RECEIPT-BASIC", "unit",
                           "receipt files not written to receipt_dir")
-        
+
         # Verify receipt file content matches returned dict
         first_file = sorted(receipt_dir.glob("r-*.json"))[0]
         first_disk = _json.loads(first_file.read_text(encoding="utf-8"))
         if first_disk["self_digest"] != r1["self_digest"]:
             return failed("UNIT-MINT-RECEIPT-BASIC", "unit",
                           "disk file self_digest mismatch with returned receipt")
-    
+
     return passed("UNIT-MINT-RECEIPT-BASIC", "unit",
                   evidence=["canonical fields present", "chain linkage correct",
                             "chain-head atomically updated", "receipt written to disk"])
@@ -502,17 +507,17 @@ def mint_receipt(
     extra_canonical_fields: dict | None = None,
 ) -> dict:
     """Mint a receipt. Atomic chain-head update + receipt write.
-    
+
     Returns the full receipt dict (with self_digest computed).
-    
+
     Raises:
         ProducerIdentityMissingError — producer_identity blank or invalid
         ChainHeadMissingError — chain_head_path missing AND allow_genesis=False
     """
     _validate_producer_identity(producer_identity)
-    
+
     prev_digest = read_chain_head(chain_head_path, allow_genesis=allow_genesis)
-    
+
     receipt = {
         "schema": schema,
         "timestamp": _now_iso(),
@@ -539,12 +544,12 @@ def mint_receipt(
                 f"payload field {k!r} conflicts with canonical or self_digest field"
             )
         receipt[k] = v
-    
+
     # Compute self_digest over canonicalized receipt (excluding self_digest field)
     canonical = canonicalize_payload(receipt)
     self_digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     receipt["self_digest"] = self_digest
-    
+
     # Write receipt to disk
     receipt_dir.mkdir(parents=True, exist_ok=True)
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -558,11 +563,11 @@ def mint_receipt(
     out_path.write_text(
         json.dumps(receipt, indent=2, ensure_ascii=False), encoding="utf-8"
     )
-    
+
     # Atomically update chain-head.txt
     chain_head_path.parent.mkdir(parents=True, exist_ok=True)
     chain_head_path.write_text(self_digest, encoding="utf-8")
-    
+
     return receipt
 ```
 
@@ -579,6 +584,7 @@ Expected: `✅ PASS  UNIT-MINT-RECEIPT-BASIC (unit)`
 ## Task 5: mint_lib.py — producer_identity enforcement
 
 **Files:**
+
 - Modify: `~/.dema/kernel/test_runner/runner.py` (add UNIT-MINT-PRODUCER-IDENTITY)
 - No code changes — implementation already validates in Task 4; this test just exercises edges.
 
@@ -594,12 +600,12 @@ def t_unit_mint_producer_identity():
     _sys.path.insert(0, str(assurance_dir))
     import mint_lib
     import importlib; importlib.reload(mint_lib)
-    
+
     with tempfile.TemporaryDirectory() as td:
         td = Path(td)
         chain_head = td / "chain-head.txt"
         receipt_dir = td / "receipts"
-        
+
         common = dict(
             chain_id="assurance",
             schema="bizra.dema.assurance.test.v0.1",
@@ -609,7 +615,7 @@ def t_unit_mint_producer_identity():
             receipt_filename_pattern="r-{short_hash}.json",
             allow_genesis=True,
         )
-        
+
         # 1. Empty producer_identity → raise
         try:
             mint_lib.mint_receipt(producer_identity="", **common)
@@ -617,7 +623,7 @@ def t_unit_mint_producer_identity():
                           "empty producer_identity should raise")
         except mint_lib.ProducerIdentityMissingError:
             pass
-        
+
         # 2. Invalid regex (no dema prefix) → raise
         try:
             mint_lib.mint_receipt(producer_identity="random.name", **common)
@@ -625,7 +631,7 @@ def t_unit_mint_producer_identity():
                           "invalid regex producer_identity should raise")
         except mint_lib.ProducerIdentityMissingError:
             pass
-        
+
         # 3. Invalid regex (uppercase) → raise
         try:
             mint_lib.mint_receipt(producer_identity="dema.Foo.bar", **common)
@@ -633,13 +639,13 @@ def t_unit_mint_producer_identity():
                           "uppercase producer_identity should raise")
         except mint_lib.ProducerIdentityMissingError:
             pass
-        
+
         # 4. Valid + no version → succeeds, no producer_version field
         r1 = mint_lib.mint_receipt(producer_identity="dema.kernel.assurance.test", **common)
         if "producer_version" in r1:
             return failed("UNIT-MINT-PRODUCER-IDENTITY", "unit",
                           "producer_version should be absent when not provided")
-        
+
         # 5. Valid + version → succeeds, version included in canonicalization
         r2 = mint_lib.mint_receipt(
             producer_identity="dema.kernel.assurance.test",
@@ -649,7 +655,7 @@ def t_unit_mint_producer_identity():
         if r2.get("producer_version") != "0.1.0":
             return failed("UNIT-MINT-PRODUCER-IDENTITY", "unit",
                           "producer_version not preserved")
-    
+
     return passed("UNIT-MINT-PRODUCER-IDENTITY", "unit",
                   evidence=["empty rejected", "invalid regex rejected",
                             "uppercase rejected", "version optional, preserved when present"])
@@ -674,6 +680,7 @@ If it fails, fix `_validate_producer_identity` in `mint_lib.py` to match expecte
 ## Task 6: mint_lib.py — verify_receipt_self_digest
 
 **Files:**
+
 - Modify: `~/.dema/kernel/assurance/mint_lib.py`
 - Modify: `~/.dema/kernel/test_runner/runner.py` (add UNIT-MINT-VERIFY-SELF-DIGEST)
 
@@ -687,12 +694,12 @@ def t_unit_mint_verify_self_digest():
     _sys.path.insert(0, str(assurance_dir))
     import mint_lib
     import importlib; importlib.reload(mint_lib)
-    
+
     with tempfile.TemporaryDirectory() as td:
         td = Path(td)
         chain_head = td / "chain-head.txt"
         receipt_dir = td / "receipts"
-        
+
         r = mint_lib.mint_receipt(
             chain_id="assurance",
             schema="bizra.dema.assurance.test.v0.1",
@@ -703,13 +710,13 @@ def t_unit_mint_verify_self_digest():
             receipt_filename_pattern="r-{short_hash}.json",
             allow_genesis=True,
         )
-        
+
         # Verify pristine receipt → True
         ok, recomputed = mint_lib.verify_receipt_self_digest(r)
         if not ok:
             return failed("UNIT-MINT-VERIFY-SELF-DIGEST", "unit",
                           f"pristine receipt should verify, recomputed={recomputed}")
-        
+
         # Tamper with payload → False
         r_tampered = dict(r)
         r_tampered["data"] = "xyz"  # modified payload field
@@ -717,7 +724,7 @@ def t_unit_mint_verify_self_digest():
         if ok2:
             return failed("UNIT-MINT-VERIFY-SELF-DIGEST", "unit",
                           "tampered receipt should NOT verify")
-    
+
     return passed("UNIT-MINT-VERIFY-SELF-DIGEST", "unit",
                   evidence=["pristine verifies", "tampered does not verify"])
 ```
@@ -739,7 +746,7 @@ Append to `mint_lib.py`:
 ```python
 def verify_receipt_self_digest(receipt: dict) -> tuple[bool, str]:
     """Re-derive self_digest from canonicalized payload and compare.
-    
+
     Returns (verified, recomputed_self_digest).
     """
     stored = receipt.get("self_digest")
@@ -761,6 +768,7 @@ Expected: `✅ PASS  UNIT-MINT-VERIFY-SELF-DIGEST (unit)`
 ## Task 7: mint_lib.py — extract_chain_fields (legacy alias support)
 
 **Files:**
+
 - Modify: `~/.dema/kernel/assurance/mint_lib.py`
 - Modify: `~/.dema/kernel/test_runner/runner.py` (add UNIT-MINT-EXTRACT-LEGACY)
 
@@ -774,7 +782,7 @@ def t_unit_mint_extract_chain_fields():
     _sys.path.insert(0, str(assurance_dir))
     import mint_lib
     import importlib; importlib.reload(mint_lib)
-    
+
     # Canonical receipt
     r_new = {
         "schema": "bizra.dema.assurance.test.v0.1",
@@ -789,7 +797,7 @@ def t_unit_mint_extract_chain_fields():
     if fields.get("warnings"):
         return failed("UNIT-MINT-EXTRACT-CHAIN-FIELDS", "unit",
                       f"canonical should have no warnings, got {fields['warnings']}")
-    
+
     # Legacy receipt (blake3_prev/self, no digest_algo, no producer_identity)
     r_legacy = {
         "schema": "bizra.dema.mission_act_handler.v0.1",
@@ -806,7 +814,7 @@ def t_unit_mint_extract_chain_fields():
     if "producer_identity_missing" not in fields2.get("warnings", []):
         return failed("UNIT-MINT-EXTRACT-CHAIN-FIELDS", "unit",
                       "legacy should warn about missing producer_identity")
-    
+
     # New-shape receipt missing producer_identity → fail (raise)
     r_bad_new = {
         "schema": "bizra.dema.assurance.test.v0.1",
@@ -821,7 +829,7 @@ def t_unit_mint_extract_chain_fields():
                       "new-shape missing producer_identity should raise")
     except mint_lib.NonChainConformantError:
         pass
-    
+
     # Non-chain-conformant (neither field set)
     r_none = {"schema": "bizra.dema.something.v0.1"}
     try:
@@ -830,7 +838,7 @@ def t_unit_mint_extract_chain_fields():
                       "non-conformant should raise")
     except mint_lib.NonChainConformantError:
         pass
-    
+
     return passed("UNIT-MINT-EXTRACT-CHAIN-FIELDS", "unit",
                   evidence=["canonical pass-through", "legacy alias map",
                             "warn on legacy missing producer_identity",
@@ -855,9 +863,9 @@ Append to `mint_lib.py`:
 ```python
 def extract_chain_fields(receipt: dict) -> dict:
     """Alias-aware reader for chain-linkage fields.
-    
+
     Returns dict with canonical names: {digest_algo, prev_digest, self_digest, warnings}.
-    
+
     Resolution:
       - Canonical shape (has digest_algo): pass through. producer_identity required.
       - Legacy shape (blake3_*, no digest_algo): treat as sha256; warn about missing
@@ -868,7 +876,7 @@ def extract_chain_fields(receipt: dict) -> dict:
     warnings: list[str] = []
     has_canonical = "digest_algo" in receipt
     has_legacy = "blake3_prev" in receipt or "blake3_self" in receipt
-    
+
     if has_canonical:
         if has_legacy:
             warnings.append("mixed_naming")
@@ -889,7 +897,7 @@ def extract_chain_fields(receipt: dict) -> dict:
             "self_digest": self_d,
             "warnings": warnings,
         }
-    
+
     if has_legacy:
         if "blake3_prev" not in receipt or "blake3_self" not in receipt:
             raise NonChainConformantError(
@@ -903,7 +911,7 @@ def extract_chain_fields(receipt: dict) -> dict:
             "self_digest": receipt["blake3_self"],
             "warnings": warnings,
         }
-    
+
     raise NonChainConformantError(
         "receipt has neither canonical (digest_algo) nor legacy (blake3_*) chain fields"
     )
@@ -922,6 +930,7 @@ Expected: `✅ PASS  UNIT-MINT-EXTRACT-CHAIN-FIELDS (unit)`
 ## Task 8: preflight.py — tests + STRUCT-NO-BASH + canon-load
 
 **Files:**
+
 - Create: `~/.dema/kernel/assurance/preflight.py`
 - Modify: `~/.dema/kernel/test_runner/runner.py` (add STRUCT-ASSURE-PREFLIGHT-SMOKE)
 
@@ -1046,7 +1055,7 @@ def run_test_runner() -> dict:
 
 def scan_no_bash(target_dir: Path) -> list[dict]:
     """AST scan for subprocess(shell=True), os.system, os.popen, eval/exec, pty.spawn.
-    
+
     Returns list of {file, line, call, classification}.
     Classification rules:
       - If function/file has a comment '# DEV-ONLY' on the same line or previous line → development_only
@@ -1153,17 +1162,17 @@ def run() -> dict:
     handlers_dir = KERNEL_DIR / "mission_lifecycle" / "handlers"
     no_bash_findings = scan_no_bash(handlers_dir)
     metadata_only = scan_metadata_only_invariants()
-    
+
     # Production-tier no-bash findings are the gate
     production_violations = [f for f in no_bash_findings if f["classification"] == "production"]
-    
+
     gate_passed = (
         canon["ok"]
         and tests.get("ok", False)
         and not production_violations
         and metadata_only["ok"]
     )
-    
+
     receipt = mint_lib.mint_receipt(
         chain_id="agent",
         schema="bizra.dema.assurance.preflight.v0.1",
@@ -1186,7 +1195,7 @@ def run() -> dict:
         receipt_dir=AGENT_DIR / "receipts",
         receipt_filename_pattern="{date}/assurance-preflight-{short_hash}.json",
     )
-    
+
     return {"gate_passed": gate_passed, "receipt_self_digest": receipt["self_digest"]}
 
 
@@ -1226,6 +1235,7 @@ Expected: JSON with `"schema": "bizra.dema.assurance.preflight.v0.1"`, `"digest_
 ## Task 9: security.py — SAST + SCA + License + Secret + Sensitivity
 
 **Files:**
+
 - Create: `~/.dema/kernel/assurance/security.py`
 - Modify: `~/.dema/kernel/test_runner/runner.py` (add STRUCT-ASSURE-SECURITY-SMOKE)
 
@@ -1331,7 +1341,7 @@ def check_sca(project_root: Path) -> dict:
         project_root / "package.json",
     ]
     found_manifests = [m for m in manifests if m.exists()]
-    
+
     if not found_manifests:
         # Look for ambient venv as environment_drift signal
         venv_candidates = list(project_root.glob("*venv*")) + list(project_root.glob(".venv*"))
@@ -1349,7 +1359,7 @@ def check_sca(project_root: Path) -> dict:
             "result": "no_declared_manifest",
             "environment_drift": False,
         }
-    
+
     # Scan declared manifests with pip-audit (if available)
     if not _tool_available("pip-audit"):
         return {
@@ -1436,7 +1446,7 @@ def check_sensitivity_fixtures() -> dict:
     import tempfile, sys as _sys
     _sys.path.insert(0, str(KERNEL_DIR / "atlas"))
     import atlas
-    
+
     with tempfile.TemporaryDirectory() as td:
         td = Path(td)
         # Build fixture tree
@@ -1445,16 +1455,16 @@ def check_sensitivity_fixtures() -> dict:
         (ssh_dir / "id_rsa").write_text("-----BEGIN PRIVATE KEY-----\nfakekey\n")
         (ssh_dir / "id_rsa").chmod(0o600)
         ssh_dir.chmod(0o700)  # mode-0700 trigger
-        
+
         # Non-sensitive sibling
         (td / "fake_home" / "Documents").mkdir(parents=True)
         (td / "fake_home" / "Documents" / "readme.txt").write_text("not secret")
-        
+
         # Run scan
         doc = atlas.scan_metadata([str(td / "fake_home")],
                                   excluded_zones_extra=[str(ssh_dir)],
                                   max_entries=100)
-        
+
         # Verify: NO entry in inventory has path containing "/.ssh/" or basename "id_rsa"
         violations = [e for e in doc["inventory"]
                       if "ssh" in e.get("parent_basename", "").lower()
@@ -1475,13 +1485,13 @@ def run() -> dict:
                            repo_root / "docs"])
     license_check = check_license(KERNEL_DIR)
     sensitivity = check_sensitivity_fixtures()
-    
+
     gate_passed = all([
         sast.get("ok", False), sca.get("ok", False),
         secret.get("ok", False), license_check.get("ok", False),
         sensitivity.get("ok", False),
     ])
-    
+
     receipt = mint_lib.mint_receipt(
         chain_id="agent",
         schema="bizra.dema.assurance.security.v0.1",
@@ -1526,6 +1536,7 @@ Expected: `security: PASS` followed by receipt self_digest. (Tools bandit/pip-au
 ## Task 10: chain.py — snapshot-then-walk-then-mint
 
 **Files:**
+
 - Create: `~/.dema/kernel/assurance/chain.py`
 - Modify: `~/.dema/kernel/test_runner/runner.py` (add STRUCT-ASSURE-CHAIN-SNAPSHOT-PATTERN)
 
@@ -1667,7 +1678,7 @@ def walk_chain(chain_id: str, snapshot_head: str) -> dict:
     # For Phase 2, basic implementation:
     walk_count = 0
     broken_links = []
-    
+
     if chain_id == "proof-forge":
         files = sorted((PROOF_FORGE_DIR / "receipts").glob("*.json"))
         prev_hash = None
@@ -1703,7 +1714,7 @@ def walk_chain(chain_id: str, snapshot_head: str) -> dict:
                 # Chain may have side-branches; not necessarily broken; count as warning
                 pass
             prev_self = r["self"]
-    
+
     return {"chain_id": chain_id, "snapshot_head": snapshot_head,
             "walk_count": walk_count, "broken_links": broken_links,
             "head_hash": snapshot_head}
@@ -1711,19 +1722,19 @@ def walk_chain(chain_id: str, snapshot_head: str) -> dict:
 
 def run() -> dict:
     snapshot = capture_snapshot()
-    
+
     # Walk all 4 chains using snapshot heads (the snapshot is the validation boundary)
     validation_scope = []
     for chain_id, head in snapshot.items():
         result = walk_chain(chain_id, head)
         validation_scope.append(result)
-    
+
     # Mint AFTER walks — receipt records BOTH snapshot AND post-mint head
     pre_mint_head = (AGENT_DIR / "receipts" / "chain-head.txt").read_text(encoding="utf-8").strip() if (AGENT_DIR / "receipts" / "chain-head.txt").exists() else "GENESIS"
-    
+
     gate_passed = all(s.get("walk_count", 0) >= 0 and not s.get("broken_links")
                       for s in validation_scope)
-    
+
     receipt = mint_lib.mint_receipt(
         chain_id="agent",
         schema="bizra.dema.assurance.chain.v0.1",
@@ -1737,7 +1748,7 @@ def run() -> dict:
         receipt_dir=AGENT_DIR / "receipts",
         receipt_filename_pattern="{date}/assurance-chain-{short_hash}.json",
     )
-    
+
     # Post-mint: append chain_head_after_receipt as separate metadata (not in canonicalized payload)
     # Note: this is informational only; the receipt is already sealed.
     return {"gate_passed": gate_passed,
@@ -1776,6 +1787,7 @@ Expected: `chain: PASS` + 4 snapshot heads + chain_head_after_receipt.
 ## Task 11: perf.py — 6 metrics with baselines
 
 **Files:**
+
 - Create: `~/.dema/kernel/assurance/perf.py`
 - Create: `~/.dema/kernel/assurance/baselines/.gitkeep` (empty placeholder)
 - Modify: `~/.dema/kernel/test_runner/runner.py` (add STRUCT-ASSURE-PERF-SMOKE)
@@ -1862,7 +1874,7 @@ def measure_scan_time(mode: str = "quick") -> dict:
     sys.path.insert(0, str(KERNEL_DIR / "atlas"))
     import atlas
     importlib_reload(atlas)
-    
+
     max_entries = 1500 if mode == "quick" else 500_000
     roots = [str(Path.home() / "Downloads")]
     t0 = time.perf_counter()
@@ -1952,14 +1964,14 @@ def compute_regression(metric_name: str, current: float, baseline: float | None)
 
 def run(mode: str = "quick") -> dict:
     baselines = load_baselines()
-    
+
     scan_time = measure_scan_time(mode)
     chain_walk = measure_chain_walk()
     test_runtime = measure_test_runtime()
     audit_runtime = measure_audit_runtime()
     smi_render = measure_smi_render()
     memory_peak = measure_memory_peak(mode)
-    
+
     metrics = [
         {"name": "scan_time", "value": scan_time["value_seconds"],
          "baseline": baselines.get("scan_time"),
@@ -1981,10 +1993,10 @@ def run(mode: str = "quick") -> dict:
          "baseline": baselines.get("memory_peak_mb"),
          "regression": compute_regression("memory_peak", memory_peak["value_mb"], baselines.get("memory_peak_mb"))},
     ]
-    
+
     regressions = [m for m in metrics if m["regression"]["flag"] == "regression"]
     gate_passed = len(regressions) == 0
-    
+
     receipt = mint_lib.mint_receipt(
         chain_id="agent",
         schema="bizra.dema.assurance.perf.v0.1",
@@ -2031,6 +2043,7 @@ Expected: `perf: PASS` + receipt hash. First run has no baseline → all metrics
 ## Task 12: dema-assure `all` — composite receipt
 
 **Files:**
+
 - Create: `~/.dema/kernel/assurance/all.py`
 - Modify: `~/.dema/kernel/test_runner/runner.py` (add STRUCT-ASSURE-ALL-COMPOSITE)
 
@@ -2116,7 +2129,7 @@ def run() -> dict:
     # chain runs LAST among walks but BEFORE composite, per spec § 3.5
     ch = chain_mod.run()
     pf = perf.run("quick")
-    
+
     sub_receipts = [
         {"schema": "bizra.dema.assurance.preflight.v0.1",
          "self_digest": pre["receipt_self_digest"],
@@ -2131,9 +2144,9 @@ def run() -> dict:
          "self_digest": pf["receipt_self_digest"],
          "gate_status": "pass" if pf["gate_passed"] else "fail"},
     ]
-    
+
     composite_gate = all(s["gate_status"] == "pass" for s in sub_receipts)
-    
+
     # Step 2: Mint composite receipt
     composite = mint_lib.mint_receipt(
         chain_id="agent",
@@ -2145,7 +2158,7 @@ def run() -> dict:
         receipt_dir=AGENT_DIR / "receipts",
         receipt_filename_pattern="{date}/assurance-composite-{short_hash}.json",
     )
-    
+
     return {"gate_passed": composite_gate,
             "composite_self_digest": composite["self_digest"],
             "sub_receipts": sub_receipts}
@@ -2176,6 +2189,7 @@ Expected: `✅ PASS`.
 ```
 
 Expected output:
+
 ```text
 === dema assure all ===
   bizra.dema.assurance.preflight.v0.1: PASS  (<hash>…)
@@ -2199,6 +2213,7 @@ Expected: at least 5 (more if prior runs).
 ## Task 13: STRUCT tests for invariants I1, I3, I6, I9
 
 **Files:**
+
 - Modify: `~/.dema/kernel/test_runner/runner.py` (add 4 STRUCT tests)
 
 - [ ] **Step 1: Add STRUCT-I1-KERNEL-MIRROR-CONTRACT test**
@@ -2342,6 +2357,7 @@ If any FAIL, fix the relevant module to satisfy the invariant.
 ## Task 14: STRUCT-I2-COMPOSITE-DOES-NOT-REPLACE-SUB
 
 **Files:**
+
 - Modify: `~/.dema/kernel/test_runner/runner.py` (add STRUCT-I2-COMPOSITE-DOES-NOT-REPLACE-SUB)
 
 - [ ] **Step 1: Write the failing test**
@@ -2362,7 +2378,7 @@ def t_struct_i2_composite_does_not_replace_sub():
     if not candidates:
         return deferred("STRUCT-I2-COMPOSITE-DOES-NOT-REPLACE-SUB", "structural",
                         "no composite receipts yet — run `dema assure all` first")
-    
+
     candidates.sort(key=lambda c: c[1].get("timestamp", ""))
     latest_file, latest = candidates[-1]
     sub_refs = latest.get("sub_receipts", [])
@@ -2406,6 +2422,7 @@ Expected: `✅ PASS  STRUCT-I2-COMPOSITE-DOES-NOT-REPLACE-SUB (structural)`
 ## Task 15: End-to-end smoke + proof-forge receipt #8
 
 **Files:**
+
 - No new file (a one-off mint script can be inlined into Bash; use the pattern from Task 14's predecessor in session memory)
 
 - [ ] **Step 1: Re-run full smoke**
@@ -2416,6 +2433,7 @@ Expected: `✅ PASS  STRUCT-I2-COMPOSITE-DOES-NOT-REPLACE-SUB (structural)`
 ```
 
 Expected:
+
 - Test runner: `Total: 61 · PASS: 61 · FAIL: 0 · DEFERRED: 0` (was 47 before Phase 2; +14 new tests = 61)
 - dema assure all: 4 sub-receipts + 1 composite + all PASS
 
@@ -2573,6 +2591,7 @@ If you want to commit just `PROOF_SUMMARY.md` (gitignored per memory — verify 
 ## Self-Review
 
 **Spec coverage:**
+
 - Section 1 invariants I1-I9: I1, I2, I3 (P2-scope), I6, I9 (P2 subset) all have STRUCT tests (Tasks 13, 14). I4, I5, I7, I8 deferred to Phase 6 (out of scope per task description).
 - Section 2 inner gates: preflight (Task 8), security (Task 9), chain (Task 10), perf (Task 11), all/composite (Task 12) all implemented.
 - Section 3 mint_lib API: canonicalize_payload (T2), read_chain_head (T3), mint_receipt (T4), producer_identity enforcement (T5), verify_receipt_self_digest (T6), extract_chain_fields (T7) all covered.
@@ -2580,16 +2599,18 @@ If you want to commit just `PROOF_SUMMARY.md` (gitignored per memory — verify 
 - Section 2 Note 2 (snapshot-then-mint): chain.py has explicit `capture_snapshot()` before `walk_chain()`.
 - Section 2 Note 3 (manifest-first SCA): security.check_sca scans declared manifests first; venv → drift warning only.
 - Section 2 Note 4 (license stdlib skip): security.check_license uses pip-licenses (which by default lists only installed third-party).
-- Section 2 Note 5 (secret scan precision): security.check_secret skips known-large bodies (`atlas_inventory_*.json`) + receipts dir.
+- Section 2 Note 5 (secret scan precision): security.check*secret skips known-large bodies (`atlas_inventory*\*.json`) + receipts dir.
 - Section 2 Note 6 (no-bash classification): preflight.scan_no_bash classifies as production/development_only/exact_allowlist.
 - Section 2 Note 7 (composite preserves sub-receipts): STRUCT-I2 test verifies on-disk coexistence.
 
 **Placeholder scan:**
+
 - No "TBD", "TODO", "implement later" patterns.
 - All code blocks contain complete code.
 - All commands are exact with expected output.
 
 **Type consistency:**
+
 - `mint_receipt()` signature stable across Tasks 4-12 (kwargs match across all consumers).
 - `extract_chain_fields()` return shape `{digest_algo, prev_digest, self_digest, warnings}` consistent.
 - Schema names follow `bizra.dema.assurance.<gate>.v0.1` convention throughout.

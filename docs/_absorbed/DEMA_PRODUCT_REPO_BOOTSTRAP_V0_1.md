@@ -123,7 +123,6 @@ Dema: Done. Here is the receipt. Here is what changed. Here is what did not happ
 
 That is the product.
 
-
 ---
 
 # Dema Product Strategy v0.1
@@ -248,7 +247,6 @@ It runs locally.
 It asks before acting.
 It proves what happened.
 ```
-
 
 ---
 

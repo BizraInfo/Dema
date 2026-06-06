@@ -67,11 +67,11 @@ Not touched:
 
 Both `install-unix.sh` and `install-windows.ps1` accept three modes:
 
-| Mode | Flag | Effect |
-|---|---|---|
-| Apply | (no flag) | Create missing dirs/files; preserve existing. |
-| Dry-run | `--dry-run` (sh) / `-DryRun` (ps1) | Print what would be created; write nothing. |
-| Check | `--check` (sh) / `-Check` (ps1) | Report current state of `$DEMA_HOME`; write nothing. |
+| Mode    | Flag                               | Effect                                               |
+| ------- | ---------------------------------- | ---------------------------------------------------- |
+| Apply   | (no flag)                          | Create missing dirs/files; preserve existing.        |
+| Dry-run | `--dry-run` (sh) / `-DryRun` (ps1) | Print what would be created; write nothing.          |
+| Check   | `--check` (sh) / `-Check` (ps1)    | Report current state of `$DEMA_HOME`; write nothing. |
 
 `--help` / `-Help` prints usage on either platform.
 
@@ -99,13 +99,13 @@ sh /tmp/install.sh
 
 Published paths:
 
-| Path | Source-of-truth file |
-|---|---|
-| `/dema/install.sh` | `scripts/install/install.sh` (unified · since commit 70e3233) |
-| `/dema/install.ps1` | `scripts/install/install-windows.ps1` |
-| `/dema/uninstall.sh` | `scripts/install/uninstall-unix.sh` |
-| `/dema/uninstall.ps1` | `scripts/install/uninstall-windows.ps1` |
-| `/dema/` | `vercel/index.html` (index page listing the four scripts) |
+| Path                  | Source-of-truth file                                          |
+| --------------------- | ------------------------------------------------------------- |
+| `/dema/install.sh`    | `scripts/install/install.sh` (unified · since commit 70e3233) |
+| `/dema/install.ps1`   | `scripts/install/install-windows.ps1`                         |
+| `/dema/uninstall.sh`  | `scripts/install/uninstall-unix.sh`                           |
+| `/dema/uninstall.ps1` | `scripts/install/uninstall-windows.ps1`                       |
+| `/dema/`              | `vercel/index.html` (index page listing the four scripts)     |
 
 `scripts/install/install-unix.sh` exists in the repo as a backward-compat wrapper (13 lines, exec's `install.sh`) for local references that target the legacy filename. It is NOT published to `/dema/install.sh` directly because the wrapper would have no sibling `install.sh` to exec at the published URL. The published Linux/macOS installer IS the unified `install.sh`.
 

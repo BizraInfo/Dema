@@ -32,7 +32,9 @@ function appendPolicyDecisions(lines, decisions) {
     return;
   }
   for (const decision of decisions) {
-    lines.push(`  - ${decision.verdict}: ${decision.code} - ${decision.reason}`);
+    lines.push(
+      `  - ${decision.verdict}: ${decision.code} - ${decision.reason}`,
+    );
   }
 }
 
@@ -56,7 +58,7 @@ export function formatConsentPlanPreview(plan) {
     `Risk: ${plan.mission_draft.risk_level}`,
     `commitment_hash: ${plan.commitment_hash}`,
     "",
-    "Proposed permissions:"
+    "Proposed permissions:",
   ];
 
   appendPermissions(lines, plan.permissions);
@@ -66,17 +68,27 @@ export function formatConsentPlanPreview(plan) {
   lines.push("");
   lines.push("Policy preview:");
   appendPolicyDecisions(lines, plan.policy_preview?.decisions);
-  lines.push(`  effect_capability: ${plan.effect_capability.status}; minted=${plan.effect_capability.minted}`);
+  lines.push(
+    `  effect_capability: ${plan.effect_capability.status}; minted=${plan.effect_capability.minted}`,
+  );
   lines.push("");
   lines.push("Self-proactive harness:");
-  lines.push(`  recommended_micro_action: ${plan.self_proactive_harness.recommended_micro_action}`);
+  lines.push(
+    `  recommended_micro_action: ${plan.self_proactive_harness.recommended_micro_action}`,
+  );
   appendHarnessGates(lines, plan.self_proactive_harness.gates);
   lines.push("");
   lines.push("Micro-compliance:");
-  lines.push(`  policy_covers_detected_actuators: ${plan.micro_compliance.policy_covers_detected_actuators}`);
-  lines.push(`  no_policy_contradiction: ${plan.micro_compliance.no_policy_contradiction}`);
+  lines.push(
+    `  policy_covers_detected_actuators: ${plan.micro_compliance.policy_covers_detected_actuators}`,
+  );
+  lines.push(
+    `  no_policy_contradiction: ${plan.micro_compliance.no_policy_contradiction}`,
+  );
   lines.push(`  no_runtime: ${plan.micro_compliance.no_runtime}`);
-  lines.push(`  no_capability_mint: ${plan.micro_compliance.no_capability_mint}`);
+  lines.push(
+    `  no_capability_mint: ${plan.micro_compliance.no_capability_mint}`,
+  );
   lines.push("");
   lines.push("Self-critique:");
   lines.push(`  confidence: ${plan.self_critique.confidence}`);
@@ -84,7 +96,9 @@ export function formatConsentPlanPreview(plan) {
   lines.push(`  limitation: ${plan.self_critique.limitation}`);
   lines.push("");
   lines.push("Analogical model:");
-  lines.push(`  ${plan.analogical_model.model}: ${plan.analogical_model.mapping}`);
+  lines.push(
+    `  ${plan.analogical_model.model}: ${plan.analogical_model.mapping}`,
+  );
   lines.push("");
   lines.push("Analogical notes:");
   appendAnalogicalNotes(lines, plan.analogical_notes);
@@ -92,7 +106,9 @@ export function formatConsentPlanPreview(plan) {
   lines.push("Proof-of-Truth:");
   appendProofOfTruth(lines, plan.proof_of_truth);
   lines.push("");
-  lines.push("Boundary: preview-only; no approval; no capability minted; no execution.");
+  lines.push(
+    "Boundary: preview-only; no approval; no capability minted; no execution.",
+  );
 
   return lines.join("\n");
 }

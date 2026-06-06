@@ -31,7 +31,7 @@ export const SEAL_INVARIANT_KEYS = Object.freeze([
   "daemon_not_running",
   "mission_not_executed",
   "runtime_pulse_not_fired",
-  "receipt_store_read_only"
+  "receipt_store_read_only",
 ]);
 
 const BOUNDARY = Object.freeze({
@@ -40,11 +40,12 @@ const BOUNDARY = Object.freeze({
   mint: false,
   external_send: false,
   urp_runtime: false,
-  filesystem_write_performed: false
+  filesystem_write_performed: false,
 });
 
 function freeze(value) {
-  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  if (!value || typeof value !== "object" || Object.isFrozen(value))
+    return value;
   for (const child of Object.values(value)) freeze(child);
   return Object.freeze(value);
 }
@@ -56,7 +57,7 @@ function inv(key, label, ok, value, { fix = null, severity = "BLOCKER" } = {}) {
     status: ok ? "ok" : "fail",
     value,
     severity: ok ? null : severity,
-    fix: ok ? null : fix
+    fix: ok ? null : fix,
   });
 }
 
@@ -70,7 +71,7 @@ const LEAK_LIKE_DEFAULTS = Object.freeze([
   "guest",
   "default",
   "unknown",
-  "anonymous"
+  "anonymous",
 ]);
 
 function humanIdentitySafe(human, { os_username = null } = {}) {
@@ -97,7 +98,13 @@ function receiptStoreReadOnly(receiptModule) {
   if (!receiptModule || typeof receiptModule !== "object") return false;
   const exports = Object.keys(receiptModule);
   // Forbidden names that imply mint/write capability on the local receipt store.
-  const forbidden = ["mint", "mintReceipt", "writeReceipt", "createReceipt", "issueReceipt"];
+  const forbidden = [
+    "mint",
+    "mintReceipt",
+    "writeReceipt",
+    "createReceipt",
+    "issueReceipt",
+  ];
   for (const name of exports) {
     const lower = name.toLowerCase();
     for (const f of forbidden) {
@@ -112,7 +119,7 @@ export function evaluateOnboardingSeal({
   profile_present = null,
   today_tick = null,
   os_username = null,
-  receipt_module = null
+  receipt_module = null,
 } = {}) {
   const s = status ?? {};
   const invariants = [];
@@ -124,8 +131,8 @@ export function evaluateOnboardingSeal({
       "profile.json exists (created by `dema setup` if missing)",
       Boolean(profile_present),
       Boolean(profile_present),
-      { fix: "run `dema setup` to create ~/.dema/profile.json idempotently" }
-    )
+      { fix: "run `dema setup` to create ~/.dema/profile.json idempotently" },
+    ),
   );
 
   // 2. today_tick_recorded
@@ -141,8 +148,8 @@ export function evaluateOnboardingSeal({
       "today tick has a timestamp",
       tickOk,
       tickOk ? tick.timestamp : null,
-      { fix: "run `dema today` to record the daily tick" }
-    )
+      { fix: "run `dema today` to record the daily tick" },
+    ),
   );
 
   // 3. human_identity_safe
@@ -154,21 +161,17 @@ export function evaluateOnboardingSeal({
       humanOk,
       s.human ?? null,
       {
-        fix: "set `preferred_name` explicitly in ~/.dema/profile.json (must not equal OS username unless typed by operator)"
-      }
-    )
+        fix: "set `preferred_name` explicitly in ~/.dema/profile.json (must not equal OS username unless typed by operator)",
+      },
+    ),
   );
 
   // 4. console_ready
   const consoleReady = Boolean(s.consoleReady);
   invariants.push(
-    inv(
-      "console_ready",
-      "consoleReady=true",
-      consoleReady,
-      consoleReady,
-      { fix: "gateway reachable; if you intend governed runtime, confirm it's started" }
-    )
+    inv("console_ready", "consoleReady=true", consoleReady, consoleReady, {
+      fix: "gateway reachable; if you intend governed runtime, confirm it's started",
+    }),
   );
 
   // 5. activation_gate_explicit_go
@@ -179,8 +182,10 @@ export function evaluateOnboardingSeal({
       "activationGate=EXPLICIT_GO_REQUIRED",
       gateOk,
       s.activationGate ?? null,
-      { fix: "no automatic activation; activationGate must require typed L4 GO" }
-    )
+      {
+        fix: "no automatic activation; activationGate must require typed L4 GO",
+      },
+    ),
   );
 
   // 6. daemon_not_running (hidden daemon is the canonical anti-pattern)
@@ -192,9 +197,9 @@ export function evaluateOnboardingSeal({
       daemonOk,
       s.daemonStatus ?? null,
       {
-        fix: "hidden daemon detected — Dema does not run a daemon. Investigate before proceeding."
-      }
-    )
+        fix: "hidden daemon detected — Dema does not run a daemon. Investigate before proceeding.",
+      },
+    ),
   );
 
   // 7. mission_not_executed
@@ -205,8 +210,10 @@ export function evaluateOnboardingSeal({
       "missionExecuted=false (no mission has been run yet)",
       missionOk,
       Boolean(s.missionExecuted),
-      { fix: "Seal must be evaluated BEFORE first mission; this snapshot shows post-mission state" }
-    )
+      {
+        fix: "Seal must be evaluated BEFORE first mission; this snapshot shows post-mission state",
+      },
+    ),
   );
 
   // 8. runtime_pulse_not_fired
@@ -217,23 +224,25 @@ export function evaluateOnboardingSeal({
       "runtimePulse.fired=false (no runtime pulse has fired)",
       pulseOk,
       Boolean(s.runtimePulse?.fired),
-      { fix: "Seal must be evaluated before first runtime pulse" }
-    )
+      { fix: "Seal must be evaluated before first runtime pulse" },
+    ),
   );
 
   // 9. receipt_store_read_only
-  const storeOk = receipt_module === null ? null : receiptStoreReadOnly(receipt_module);
+  const storeOk =
+    receipt_module === null ? null : receiptStoreReadOnly(receipt_module);
   // When receipt_module is not provided, we cannot evaluate — return warn.
   if (storeOk === null) {
     invariants.push(
       Object.freeze({
         key: "receipt_store_read_only",
-        label: "receipt store surface exports read/list-only API (no mint surface)",
+        label:
+          "receipt store surface exports read/list-only API (no mint surface)",
         status: "warn",
         value: "not_evaluated (pass receipt_module to evaluate)",
         severity: null,
-        fix: null
-      })
+        fix: null,
+      }),
     );
   } else {
     invariants.push(
@@ -243,9 +252,9 @@ export function evaluateOnboardingSeal({
         storeOk,
         storeOk,
         {
-          fix: "remove any mint/write surface from packages/receipts/src/receipt-store.js exports"
-        }
-      )
+          fix: "remove any mint/write surface from packages/receipts/src/receipt-store.js exports",
+        },
+      ),
     );
   }
 
@@ -261,7 +270,7 @@ export function evaluateOnboardingSeal({
     boundary: BOUNDARY,
     next_safe_action: ok
       ? "Onboarding Seal HOLDS · safe to consider first L4 bounded-diagnostic ceremony"
-      : `Onboarding Seal BROKEN · fix: ${failed.map((i) => i.key).join(", ")}`
+      : `Onboarding Seal BROKEN · fix: ${failed.map((i) => i.key).join(", ")}`,
   });
 }
 
@@ -273,15 +282,18 @@ export function formatOnboardingSealReport(result) {
     `Verdict: ${result.ok ? "HOLDS" : "BROKEN"}`,
     `Score: ${result.score}`,
     "",
-    "Invariants:"
+    "Invariants:",
   ];
   for (const inv of result.invariants) {
-    const icon = inv.status === "ok" ? "✅" : inv.status === "warn" ? "⚠️ " : "❌";
+    const icon =
+      inv.status === "ok" ? "✅" : inv.status === "warn" ? "⚠️ " : "❌";
     lines.push(`  ${icon} ${inv.label}`);
     lines.push(`     value: ${JSON.stringify(inv.value)}`);
     if (inv.fix) lines.push(`     fix: ${inv.fix}`);
   }
   lines.push("", `Next: ${result.next_safe_action}`);
-  lines.push("Boundary: read-only · no network · no mint · no external send · no URP runtime.");
+  lines.push(
+    "Boundary: read-only · no network · no mint · no external send · no URP runtime.",
+  );
   return lines.join("\n");
 }

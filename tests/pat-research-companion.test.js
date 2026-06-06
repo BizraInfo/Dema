@@ -10,7 +10,7 @@ import {
   PAT_RESEARCH_COMPANION_SCHEMA_NAME,
   PAT_RESEARCH_COMPANION_PLAN_SCHEMA_NAME,
   PAT_RESEARCH_COMPANION_CONSENT_PHRASE_TEMPLATE,
-  PAT_RESEARCH_COMPANION_PERSONA
+  PAT_RESEARCH_COMPANION_PERSONA,
 } from "../packages/core/src/pat-research-companion.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 
@@ -35,16 +35,28 @@ test("PAT-2 persona declares pat_number=2 and role=research_companion", () => {
 
 test("PAT-2 capabilities include query_corpus and request_bounded_web_fetch", () => {
   const p = buildPATResearchCompanionPreview();
-  assert.ok(p.persona.primary_capabilities.includes("query_corpus_with_consent"));
-  assert.ok(p.persona.primary_capabilities.includes("request_bounded_web_fetch"));
-  assert.ok(p.persona.primary_capabilities.includes("synthesize_hash_bound_evidence"));
+  assert.ok(
+    p.persona.primary_capabilities.includes("query_corpus_with_consent"),
+  );
+  assert.ok(
+    p.persona.primary_capabilities.includes("request_bounded_web_fetch"),
+  );
+  assert.ok(
+    p.persona.primary_capabilities.includes("synthesize_hash_bound_evidence"),
+  );
 });
 
 test("PAT-2 refusals include 'never modify corpus' and 'never cache outside dema home'", () => {
   const p = buildPATResearchCompanionPreview();
   assert.ok(p.persona.primary_refusals.includes("modify_corpus_data"));
-  assert.ok(p.persona.primary_refusals.includes("cache_findings_outside_dema_home"));
-  assert.ok(p.persona.primary_refusals.includes("claim_findings_as_verified_without_source_hash"));
+  assert.ok(
+    p.persona.primary_refusals.includes("cache_findings_outside_dema_home"),
+  );
+  assert.ok(
+    p.persona.primary_refusals.includes(
+      "claim_findings_as_verified_without_source_hash",
+    ),
+  );
 });
 
 test("PAT-2 is deep-frozen at all sub-views", () => {
@@ -58,7 +70,10 @@ test("PAT-2 EffectCap valid with research-specific consent template", () => {
   const cap = buildPATResearchCompanionEffectCap();
   assert.equal(cap.valid, true);
   assert.equal(cap.name, "pat_research_companion");
-  assert.equal(cap.consent_scope_template, PAT_RESEARCH_COMPANION_CONSENT_PHRASE_TEMPLATE);
+  assert.equal(
+    cap.consent_scope_template,
+    PAT_RESEARCH_COMPANION_CONSENT_PHRASE_TEMPLATE,
+  );
 });
 
 test("PAT-2 EffectCap blocks corpus-modification and external caching", () => {
@@ -66,11 +81,15 @@ test("PAT-2 EffectCap blocks corpus-modification and external caching", () => {
   assert.ok(cap.blocked_effects.includes("modify_corpus_data"));
   assert.ok(cap.blocked_effects.includes("cache_outside_dema_home"));
   assert.ok(cap.blocked_effects.includes("fetch_without_consent"));
-  assert.ok(cap.blocked_effects.includes("claim_unverified_finding_as_verified"));
+  assert.ok(
+    cap.blocked_effects.includes("claim_unverified_finding_as_verified"),
+  );
 });
 
 test("PAT-2 kernel pre-configured correctly", () => {
-  const k = buildPATResearchCompanionKernel({ mission_intent: "research test" });
+  const k = buildPATResearchCompanionKernel({
+    mission_intent: "research test",
+  });
   assert.equal(k.agent_id, "pat-2-research-companion");
   assert.equal(k.agent_role, "pat_research_companion");
   assert.equal(k.mission_intent, "research test");
@@ -79,7 +98,7 @@ test("PAT-2 kernel pre-configured correctly", () => {
 test("draftResearchPlan emits canonical plan schema + valid=true with question + sources", () => {
   const plan = draftResearchPlan({
     research_question: "what changed in my receipts this week",
-    sources_to_consult: ["~/.dema/receipts/", "corpus://2026-05"]
+    sources_to_consult: ["~/.dema/receipts/", "corpus://2026-05"],
   });
   assert.equal(plan.schema, "bizra.dema.research_plan.v0.1");
   assert.equal(plan.valid, true);
@@ -94,8 +113,8 @@ test("draftResearchPlan categorizes sources by type", () => {
       "https://example.com/doc",
       "~/.dema/memory/today.json",
       "corpus://archive",
-      "random-thing"
-    ]
+      "random-thing",
+    ],
   });
   const cats = plan.sources_to_consult.map((s) => s.category);
   assert.ok(cats.includes("url"));
@@ -107,7 +126,7 @@ test("draftResearchPlan categorizes sources by type", () => {
 test("draftResearchPlan emits per-URL consent phrases when URLs present", () => {
   const plan = draftResearchPlan({
     research_question: "test",
-    sources_to_consult: ["https://a.example/x", "https://b.example/y"]
+    sources_to_consult: ["https://a.example/x", "https://b.example/y"],
   });
   assert.equal(plan.requires_any_web_consent, true);
   assert.equal(plan.consent_phrases_per_url.length, 2);
@@ -123,7 +142,7 @@ test("draftResearchPlan refuses empty question", () => {
 test("draftResearchPlan refuses empty sources", () => {
   const plan = draftResearchPlan({
     research_question: "test",
-    sources_to_consult: []
+    sources_to_consult: [],
   });
   assert.equal(plan.valid, false);
   assert.match(plan.refusal_reason, /no_sources/);
@@ -135,14 +154,17 @@ test("Adversarial · non-string question coerced to empty · refused", () => {
 });
 
 test("Adversarial · non-array sources defaults to empty · refused", () => {
-  const plan = draftResearchPlan({ research_question: "x", sources_to_consult: "not-array" });
+  const plan = draftResearchPlan({
+    research_question: "x",
+    sources_to_consult: "not-array",
+  });
   assert.equal(plan.valid, false);
 });
 
 test("Adversarial · function/symbol entries in sources filtered", () => {
   const plan = draftResearchPlan({
     research_question: "test",
-    sources_to_consult: ["valid", () => "evil", Symbol("x"), 42, "another"]
+    sources_to_consult: ["valid", () => "evil", Symbol("x"), 42, "another"],
   });
   assert.equal(plan.sources_to_consult.length, 2);
 });
@@ -150,7 +172,7 @@ test("Adversarial · function/symbol entries in sources filtered", () => {
 test("Plan output is deep-frozen at all sub-views", () => {
   const plan = draftResearchPlan({
     research_question: "test",
-    sources_to_consult: ["https://x"]
+    sources_to_consult: ["https://x"],
   });
   assert.ok(Object.isFrozen(plan));
   assert.ok(Object.isFrozen(plan.sources_to_consult));

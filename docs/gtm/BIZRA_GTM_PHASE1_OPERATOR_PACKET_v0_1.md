@@ -30,19 +30,19 @@ Read these before acting:
 
 ## 3. Current evidence
 
-| Item | Evidence | Status |
-|---|---|---|
-| Dema audit HEAD | `004e887` | Current-state audit baseline (PR #93) |
-| Test gate | `npm test` -> `2443/2443` | Verified by current GTM readiness gate |
-| Proof room gate | `npm run proof:room` | Composed outsider-replay bundle (read-only; optional write under micro-consent) |
-| Proof-forge chain | `.proof-forge/EVIDENCE_INDEX.json` -> `chain_length: 73` | Verified in v0.1.2 GTM audit |
-| ADR-009 | `docs/06-adr/ADR-009-poi-proof-of-impact-design.md` | Accepted |
-| ADR-014 | `docs/06-adr/ADR-014-three-runtime-architecture-canonization.md` | Accepted |
-| ADR-013 | ADR file still says `Proposed` | Implementation verified; status-sync still open |
-| Lighthouse Pack v1.0 | `~/Documents/bizra/lighthouse-pack-v1.0/` | Durable local copy |
-| Pack manifest | `sha256sum -c MANIFEST.sha256` from pack directory | All 9 files verified in v0.1.2 audit |
-| Issue #56 | GitHub issue state | Closed |
-| Issues #57 and #58 | GitHub issue state | Open |
+| Item                 | Evidence                                                         | Status                                                                          |
+| -------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Dema audit HEAD      | `004e887`                                                        | Current-state audit baseline (PR #93)                                           |
+| Test gate            | `npm test` -> `2443/2443`                                        | Verified by current GTM readiness gate                                          |
+| Proof room gate      | `npm run proof:room`                                             | Composed outsider-replay bundle (read-only; optional write under micro-consent) |
+| Proof-forge chain    | `.proof-forge/EVIDENCE_INDEX.json` -> `chain_length: 73`         | Verified in v0.1.2 GTM audit                                                    |
+| ADR-009              | `docs/06-adr/ADR-009-poi-proof-of-impact-design.md`              | Accepted                                                                        |
+| ADR-014              | `docs/06-adr/ADR-014-three-runtime-architecture-canonization.md` | Accepted                                                                        |
+| ADR-013              | ADR file still says `Proposed`                                   | Implementation verified; status-sync still open                                 |
+| Lighthouse Pack v1.0 | `~/Documents/bizra/lighthouse-pack-v1.0/`                        | Durable local copy                                                              |
+| Pack manifest        | `sha256sum -c MANIFEST.sha256` from pack directory               | All 9 files verified in v0.1.2 audit                                            |
+| Issue #56            | GitHub issue state                                               | Closed                                                                          |
+| Issues #57 and #58   | GitHub issue state                                               | Open                                                                            |
 
 ## 4. This packet does not authorize
 

@@ -14,7 +14,7 @@ function makeStdinEOF(linesBeforeEOF) {
     read() {
       this.push(text);
       this.push(null);
-    }
+    },
   });
   return r;
 }
@@ -25,14 +25,17 @@ function makeStdout() {
     write(chunk, _enc, cb) {
       chunks.push(chunk.toString());
       cb();
-    }
+    },
   });
   w.getOutput = () => chunks.join("");
   return w;
 }
 
 async function wizard(lines, defaults = {}, eofAfter = null) {
-  const stdin = eofAfter !== null ? makeStdinEOF(lines.slice(0, eofAfter)) : makeStdin(lines);
+  const stdin =
+    eofAfter !== null
+      ? makeStdinEOF(lines.slice(0, eofAfter))
+      : makeStdin(lines);
   const stdout = makeStdout();
   let writtenProfile = null;
 
@@ -43,7 +46,7 @@ async function wizard(lines, defaults = {}, eofAfter = null) {
     writeProfile: async (p) => {
       writtenProfile = p;
       return "/tmp/test-profile.json";
-    }
+    },
   });
 
   return { profile, output: stdout.getOutput(), writtenProfile };
@@ -55,7 +58,7 @@ test("full happy path — 5 valid answers returns profile with all fields", asyn
     "MSI-Titan",
     "en",
     "1",
-    "I acknowledge"
+    "I acknowledge",
   ]);
   assert.ok(profile, "profile returned");
   assert.equal(profile.preferred_name, "Mumu");
@@ -72,7 +75,7 @@ test("full happy path — 5 valid answers returns profile with all fields", asyn
 test("enter-defaults path — all empty strings uses defaults", async () => {
   const { profile } = await wizard(["", "", "", "", ""], {
     preferred_name: "DefaultUser",
-    language: "fr"
+    language: "fr",
   });
   assert.ok(profile);
   assert.equal(profile.preferred_name, "DefaultUser");
@@ -89,7 +92,7 @@ test("invalid language code re-prompts, then accepts valid code", async () => {
     "klingon",
     "en",
     "1",
-    ""
+    "",
   ]);
   assert.ok(profile);
   assert.equal(profile.language, "en");
@@ -103,7 +106,7 @@ test("invalid memory consent re-prompts, then accepts valid choice", async () =>
     "en",
     "9",
     "2",
-    ""
+    "",
   ]);
   assert.ok(profile);
   assert.equal(profile.memory_consent, "local-encrypted");
@@ -122,7 +125,7 @@ test("daughter test acknowledged — exact phrase sets true", async () => {
     "",
     "en",
     "1",
-    "I acknowledge"
+    "I acknowledge",
   ]);
   assert.ok(profile);
   assert.equal(profile.daughter_test_acknowledged, true);
@@ -135,7 +138,10 @@ test("EOF on stdin mid-wizard returns null, no write", async () => {
 });
 
 test("preferred_name empty with no default re-prompts", async () => {
-  const { profile, output } = await wizard(["", "ActualName", "", "en", "1", ""], {});
+  const { profile, output } = await wizard(
+    ["", "ActualName", "", "en", "1", ""],
+    {},
+  );
   assert.ok(profile);
   assert.equal(profile.preferred_name, "ActualName");
   assert.match(output, /A name is required/);
@@ -144,7 +150,7 @@ test("preferred_name empty with no default re-prompts", async () => {
 test("preferred_name whitespace-only re-prompts", async () => {
   const { profile, output } = await wizard(
     ["   ", "RealName", "", "en", "1", ""],
-    {}
+    {},
   );
   assert.ok(profile);
   assert.equal(profile.preferred_name, "RealName");
@@ -154,7 +160,7 @@ test("preferred_name whitespace-only re-prompts", async () => {
 test("defaults pre-fill from existing profile — used on Enter", async () => {
   const { profile } = await wizard(["", "", "", "1", ""], {
     preferred_name: "ExistingUser",
-    language: "ar"
+    language: "ar",
   });
   assert.ok(profile);
   assert.equal(profile.preferred_name, "ExistingUser");
@@ -162,9 +168,13 @@ test("defaults pre-fill from existing profile — used on Enter", async () => {
 });
 
 test("writeProfile injection — mock receives correct shape", async () => {
-  const { writtenProfile } = await wizard(
-    ["ShapeTest", "MyDevice", "es", "3", "I acknowledge"]
-  );
+  const { writtenProfile } = await wizard([
+    "ShapeTest",
+    "MyDevice",
+    "es",
+    "3",
+    "I acknowledge",
+  ]);
   assert.ok(writtenProfile);
   assert.equal(writtenProfile.schema, "bizra.dema.profile.v0.1");
   assert.equal(writtenProfile.preferred_name, "ShapeTest");
@@ -211,24 +221,36 @@ test("REGRESSION: every 'Setup canceled' branch in setup-wizard.js calls lq.clos
   const { readFileSync } = await import("node:fs");
   const { fileURLToPath } = await import("node:url");
   const src = readFileSync(
-    fileURLToPath(new URL("../packages/core/src/setup-wizard.js", import.meta.url)),
-    "utf8"
+    fileURLToPath(
+      new URL("../packages/core/src/setup-wizard.js", import.meta.url),
+    ),
+    "utf8",
   );
   const lines = src.split("\n");
   let canceledBranchesChecked = 0;
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes('"Setup canceled') && lines[i].includes("stdout.write")) {
+    if (
+      lines[i].includes('"Setup canceled') &&
+      lines[i].includes("stdout.write")
+    ) {
       let foundClose = false;
       for (let j = i - 1; j >= Math.max(0, i - 4); j--) {
-        if (lines[j].includes("lq.close()")) { foundClose = true; break; }
+        if (lines[j].includes("lq.close()")) {
+          foundClose = true;
+          break;
+        }
         if (lines[j].trim().startsWith("if (canceled")) break;
       }
       assert.ok(
         foundClose,
-        `setup-wizard.js:${i + 1}: 'Setup canceled' write must be preceded by lq.close() within its cancel branch`
+        `setup-wizard.js:${i + 1}: 'Setup canceled' write must be preceded by lq.close() within its cancel branch`,
       );
       canceledBranchesChecked++;
     }
   }
-  assert.equal(canceledBranchesChecked, 5, "expected exactly 5 'Setup canceled' branches (Q1..Q5)");
+  assert.equal(
+    canceledBranchesChecked,
+    5,
+    "expected exactly 5 'Setup canceled' branches (Q1..Q5)",
+  );
 });

@@ -48,7 +48,9 @@ export function buildChatBanner({ human = null, suppressed = false } = {}) {
     _row(`DEMA CHAT · Node0 · ${name} · Local Companion Mode`),
     _mid(),
     _row("I am here inside Node0."),
-    _row("I can help with missions, memory, models, receipts, and next actions."),
+    _row(
+      "I can help with missions, memory, models, receipts, and next actions.",
+    ),
     _blank(),
     _row("Current state: local · preview-first · no federation · no mint"),
     _row("Memory: available locally"),
@@ -62,8 +64,10 @@ export function buildChatBanner({ human = null, suppressed = false } = {}) {
     _row("  · Help me draft a mission"),
     _mid(),
     _row("Boundary: no action without explicit consent"),
-    _row("Law of Assumption: declare boundary between evidence and uncertainty"),
-    _bot()
+    _row(
+      "Law of Assumption: declare boundary between evidence and uncertainty",
+    ),
+    _bot(),
   ];
 
   return lines.join("\n");

@@ -31,7 +31,7 @@ const BOUNDARY = Object.freeze({
   mint: false,
   external_send: false,
   urp_runtime: false,
-  filesystem_write_performed: false
+  filesystem_write_performed: false,
 });
 
 const DEFAULT_RUN_GIT = async (args, { cwd } = {}) => {
@@ -40,7 +40,7 @@ const DEFAULT_RUN_GIT = async (args, { cwd } = {}) => {
       cwd: cwd ?? process.cwd(),
       encoding: "utf8",
       maxBuffer: 4 * 1024 * 1024,
-      timeout: 5000
+      timeout: 5000,
     });
     return stdout;
   } catch (err) {
@@ -51,7 +51,10 @@ const DEFAULT_RUN_GIT = async (args, { cwd } = {}) => {
 function parseLines(stdout) {
   if (typeof stdout !== "string") return [];
   if (stdout.startsWith("__GIT_ERROR__")) return [];
-  return stdout.split("\n").map((l) => l.trim()).filter(Boolean);
+  return stdout
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
 }
 
 function isGitError(stdout) {
@@ -62,7 +65,7 @@ export async function gatherDevRoadmapState({
   cwd = process.cwd(),
   runGit = DEFAULT_RUN_GIT,
   recent_window = 12,
-  branch_window = 20
+  branch_window = 20,
 } = {}) {
   // 1. anchor: branch · HEAD short SHA + subject · dirty/clean
   const branchOut = await runGit(["branch", "--show-current"], { cwd });
@@ -77,19 +80,25 @@ export async function gatherDevRoadmapState({
   // 2. recent merged work on main
   const recentMainOut = await runGit(
     ["log", "main", `-${recent_window}`, "--pretty=%h %s"],
-    { cwd }
+    { cwd },
   );
 
   // 3. active feat/* branches (local)
   const localBranchesOut = await runGit(
-    ["for-each-ref", `--count=${branch_window}`, "--sort=-committerdate", "refs/heads/feat/", "--format=%(refname:short)|%(committerdate:relative)|%(objectname:short)"],
-    { cwd }
+    [
+      "for-each-ref",
+      `--count=${branch_window}`,
+      "--sort=-committerdate",
+      "refs/heads/feat/",
+      "--format=%(refname:short)|%(committerdate:relative)|%(objectname:short)",
+    ],
+    { cwd },
   );
 
   // 4. upstream alignment (main vs origin/main)
   const aheadBehindOut = await runGit(
     ["rev-list", "--left-right", "--count", "main...origin/main"],
-    { cwd }
+    { cwd },
   );
 
   // Per-call availability flags (clarifies which sections are reliable).
@@ -101,7 +110,7 @@ export async function gatherDevRoadmapState({
     repo_root: !isGitError(repoRootOut),
     recent_main: !isGitError(recentMainOut),
     feat_branches: !isGitError(localBranchesOut),
-    ahead_behind: !isGitError(aheadBehindOut)
+    ahead_behind: !isGitError(aheadBehindOut),
   });
 
   // git_available now means "every git call this module makes succeeded".
@@ -119,11 +128,11 @@ export async function gatherDevRoadmapState({
     "docs/PRODUCT.md",
     "docs/INDEX.md",
     "CHANGELOG.md",
-    "README.md"
+    "README.md",
   ];
   const anchorDocsStatus = anchorDocs.map((relPath) => ({
     path: relPath,
-    exists: existsSync(join(repoRoot, relPath))
+    exists: existsSync(join(repoRoot, relPath)),
   }));
 
   // Compose
@@ -152,8 +161,8 @@ export async function gatherDevRoadmapState({
   const [aheadStr, behindStr] = aheadBehindParsable
     ? aheadBehindLine.split(/\s+/)
     : [null, null];
-  const ahead = aheadBehindParsable ? (Number(aheadStr) || 0) : null;
-  const behind = aheadBehindParsable ? (Number(behindStr) || 0) : null;
+  const ahead = aheadBehindParsable ? Number(aheadStr) || 0 : null;
+  const behind = aheadBehindParsable ? Number(behindStr) || 0 : null;
   const synced = aheadBehindParsable ? ahead === 0 && behind === 0 : null;
 
   return Object.freeze({
@@ -166,25 +175,25 @@ export async function gatherDevRoadmapState({
       head_sha: headSha,
       head_subject: headSubject,
       dirty_count: dirty.length,
-      dirty: Object.freeze(dirty.slice(0, 20))
+      dirty: Object.freeze(dirty.slice(0, 20)),
     }),
     main_vs_origin: Object.freeze({
       ahead_of_origin: ahead,
       behind_origin: behind,
-      synced
+      synced,
     }),
     recent_on_main: Object.freeze(recentCommits.map((c) => Object.freeze(c))),
     feat_branches: Object.freeze(featBranches.map((b) => Object.freeze(b))),
     anchor_docs: Object.freeze(anchorDocsStatus.map((d) => Object.freeze(d))),
     next_moves_pointer: Object.freeze({
       doc: ROADMAP_DOC_PATH,
-      section: "Next 5 moves (curated, prioritized)"
+      section: "Next 5 moves (curated, prioritized)",
     }),
     parking_lot_pointer: Object.freeze({
       doc: ROADMAP_DOC_PATH,
-      section: "Parking lot — deferred with unblock-GO lines"
+      section: "Parking lot — deferred with unblock-GO lines",
     }),
-    boundary: BOUNDARY
+    boundary: BOUNDARY,
   });
 }
 
@@ -195,12 +204,14 @@ export function formatDevRoadmapReport(state) {
     `Schema: ${state.schema}`,
     `Generated: ${state.generated_at}`,
     "",
-    "Anchor:"
+    "Anchor:",
   ];
   lines.push(`  Branch:      ${state.anchor.branch ?? "(detached)"}`);
-  lines.push(`  HEAD:        ${state.anchor.head_sha ?? "?"} ${state.anchor.head_subject ?? ""}`);
   lines.push(
-    `  Tree:        ${state.anchor.dirty_count === 0 ? "clean" : `dirty (${state.anchor.dirty_count} file${state.anchor.dirty_count > 1 ? "s" : ""})`}`
+    `  HEAD:        ${state.anchor.head_sha ?? "?"} ${state.anchor.head_subject ?? ""}`,
+  );
+  lines.push(
+    `  Tree:        ${state.anchor.dirty_count === 0 ? "clean" : `dirty (${state.anchor.dirty_count} file${state.anchor.dirty_count > 1 ? "s" : ""})`}`,
   );
   if (state.main_vs_origin.synced === null) {
     lines.push(`  main/origin: (upstream comparison unavailable)`);
@@ -208,7 +219,7 @@ export function formatDevRoadmapReport(state) {
     lines.push(`  main/origin: synced`);
   } else {
     lines.push(
-      `  main/origin: ${state.main_vs_origin.ahead_of_origin} ahead · ${state.main_vs_origin.behind_origin} behind`
+      `  main/origin: ${state.main_vs_origin.ahead_of_origin} ahead · ${state.main_vs_origin.behind_origin} behind`,
     );
   }
 
@@ -241,7 +252,7 @@ export function formatDevRoadmapReport(state) {
     `  See ${state.next_moves_pointer.doc} § "${state.next_moves_pointer.section}"`,
     `  See ${state.parking_lot_pointer.doc} § "${state.parking_lot_pointer.section}"`,
     "",
-    `Boundary: read-only · network=${state.boundary.network} · mint=${state.boundary.mint} · external_send=${state.boundary.external_send}`
+    `Boundary: read-only · network=${state.boundary.network} · mint=${state.boundary.mint} · external_send=${state.boundary.external_send}`,
   );
 
   return lines.join("\n");

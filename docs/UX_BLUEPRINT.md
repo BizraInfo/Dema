@@ -28,23 +28,23 @@ The first screen must answer four questions:
 
 ## Prior-art signals
 
-| Prior art | Signal to keep | Dema interpretation |
-| --- | --- | --- |
-| OpenClaw | One understandable agent shape on user hardware. | One local `dema` entry point with visible boundaries. |
-| Hermes Agent | Memory, skills, and improving workflow posture. | Diagnostics and self-critique previews before runtime claims. |
-| Pi.dev | Small composable terminal harness. | Zero-dependency CLI/TUI surfaces with JSON envelopes. |
+| Prior art    | Signal to keep                                   | Dema interpretation                                           |
+| ------------ | ------------------------------------------------ | ------------------------------------------------------------- |
+| OpenClaw     | One understandable agent shape on user hardware. | One local `dema` entry point with visible boundaries.         |
+| Hermes Agent | Memory, skills, and improving workflow posture.  | Diagnostics and self-critique previews before runtime claims. |
+| Pi.dev       | Small composable terminal harness.               | Zero-dependency CLI/TUI surfaces with JSON envelopes.         |
 
 Dema's distinction is that sovereignty, micro-consent, and proof are visible UX
 objects, not hidden policy notes.
 
 ## Journey chapters
 
-| Chapter | User question | Dema surface | Boundary |
-| --- | --- | --- | --- |
-| 0. First launch | Is this safe on my machine? | `dema setup`, `dema ambient`, `dema models` | Read-only; no model invoked. |
-| 1. Mission and consent | What would happen if I asked this? | `dema journey`, `dema mission draft`, `dema consent plan` | Preview-only; no approval. |
-| 2. Node0 handoff | When does real work begin? | `dema diagnostics plan`, future handoff JSON | Blocked until governed Node0 consent. |
-| 3. Receipts and impact | What evidence remains? | `dema receipts`, `dema report safety` | Local evidence posture only. |
+| Chapter                | User question                      | Dema surface                                              | Boundary                              |
+| ---------------------- | ---------------------------------- | --------------------------------------------------------- | ------------------------------------- |
+| 0. First launch        | Is this safe on my machine?        | `dema setup`, `dema ambient`, `dema models`               | Read-only; no model invoked.          |
+| 1. Mission and consent | What would happen if I asked this? | `dema journey`, `dema mission draft`, `dema consent plan` | Preview-only; no approval.            |
+| 2. Node0 handoff       | When does real work begin?         | `dema diagnostics plan`, future handoff JSON              | Blocked until governed Node0 consent. |
+| 3. Receipts and impact | What evidence remains?             | `dema receipts`, `dema report safety`                     | Local evidence posture only.          |
 
 ## First mission flow
 

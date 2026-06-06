@@ -8,19 +8,20 @@
 // Dema skill. It does NOT activate the skill, register a runner, invoke a
 // model, mint a receipt, or import authority. active_now is always false.
 
-export const SKILL_MANIFEST_PREVIEW_SCHEMA = "bizra.dema.skill_manifest_preview.v0.1";
+export const SKILL_MANIFEST_PREVIEW_SCHEMA =
+  "bizra.dema.skill_manifest_preview.v0.1";
 
 export const SKILL_RISK_LEVELS = Object.freeze([
   "low",
   "medium",
   "high",
-  "step_seven_tier"
+  "step_seven_tier",
 ]);
 
 export const SKILL_RECEIPT_POLICIES = Object.freeze([
   "no_receipt",
   "preview_receipt",
-  "step_seven_receipt"
+  "step_seven_receipt",
 ]);
 
 export const PAT_ROLE_IDS = Object.freeze([
@@ -30,7 +31,7 @@ export const PAT_ROLE_IDS = Object.freeze([
   "consent_drafter",
   "mission_proposer",
   "receipt_renderer",
-  "memory_steward"
+  "memory_steward",
 ]);
 
 export const SAT_ROLE_IDS = Object.freeze([
@@ -38,7 +39,7 @@ export const SAT_ROLE_IDS = Object.freeze([
   "boundary_auditor",
   "ihsan_floor_checker",
   "evidence_chain_validator",
-  "step7_gate_keeper"
+  "step7_gate_keeper",
 ]);
 
 const OPERATIONS = Object.freeze(["read", "write", "execute", "call"]);
@@ -55,7 +56,8 @@ function clone(value) {
 }
 
 function deepFreeze(value) {
-  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  if (!value || typeof value !== "object" || Object.isFrozen(value))
+    return value;
   for (const child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
 }
@@ -72,7 +74,7 @@ function buildBoundary() {
     skill_activated: false,
     skill_invoked: false,
     receipt_minted: false,
-    authority_imported: false
+    authority_imported: false,
   };
 }
 
@@ -86,7 +88,7 @@ function validate(input) {
     required_pat,
     required_sat,
     tests,
-    receipt_policy
+    receipt_policy,
   } = input;
 
   // skill_id
@@ -106,21 +108,25 @@ function validate(input) {
     errors.push("declared_effects must be an array of strings");
   } else {
     for (const op of declared_effects) {
-      if (!OPERATIONS_SET.has(op)) errors.push(`declared_effects contains unknown op ${op}`);
+      if (!OPERATIONS_SET.has(op))
+        errors.push(`declared_effects contains unknown op ${op}`);
     }
   }
   if (!isStringArray(denied_effects)) {
     errors.push("denied_effects must be an array of strings");
   } else {
     for (const op of denied_effects) {
-      if (!OPERATIONS_SET.has(op)) errors.push(`denied_effects contains unknown op ${op}`);
+      if (!OPERATIONS_SET.has(op))
+        errors.push(`denied_effects contains unknown op ${op}`);
     }
   }
   if (isStringArray(declared_effects) && isStringArray(denied_effects)) {
     const declSet = new Set(declared_effects);
     const overlap = denied_effects.filter((op) => declSet.has(op));
     if (overlap.length > 0) {
-      errors.push(`declared_effects and denied_effects overlap: ${overlap.join(", ")}`);
+      errors.push(
+        `declared_effects and denied_effects overlap: ${overlap.join(", ")}`,
+      );
     }
   }
 
@@ -129,7 +135,8 @@ function validate(input) {
     errors.push("required_pat must be a non-empty array of PAT role ids");
   } else {
     for (const r of required_pat) {
-      if (!PAT_ROLE_SET.has(r)) errors.push(`required_pat contains unknown role ${r}`);
+      if (!PAT_ROLE_SET.has(r))
+        errors.push(`required_pat contains unknown role ${r}`);
     }
   }
 
@@ -138,7 +145,8 @@ function validate(input) {
     errors.push("required_sat must be a non-empty array of SAT role ids");
   } else {
     for (const r of required_sat) {
-      if (!SAT_ROLE_SET.has(r)) errors.push(`required_sat contains unknown role ${r}`);
+      if (!SAT_ROLE_SET.has(r))
+        errors.push(`required_sat contains unknown role ${r}`);
     }
   }
 
@@ -149,23 +157,34 @@ function validate(input) {
 
   // receipt_policy
   if (!RECEIPT_POLICIES_SET.has(receipt_policy)) {
-    errors.push(`receipt_policy must be one of ${SKILL_RECEIPT_POLICIES.join(", ")}`);
+    errors.push(
+      `receipt_policy must be one of ${SKILL_RECEIPT_POLICIES.join(", ")}`,
+    );
   }
 
   // step_seven_tier coupling
   if (risk_level === "step_seven_tier") {
     if (receipt_policy !== "step_seven_receipt") {
-      errors.push("risk_level=step_seven_tier requires receipt_policy=step_seven_receipt");
+      errors.push(
+        "risk_level=step_seven_tier requires receipt_policy=step_seven_receipt",
+      );
     }
-    if (!isStringArray(required_sat) || !required_sat.includes("step7_gate_keeper")) {
-      errors.push("risk_level=step_seven_tier requires step7_gate_keeper in required_sat");
+    if (
+      !isStringArray(required_sat) ||
+      !required_sat.includes("step7_gate_keeper")
+    ) {
+      errors.push(
+        "risk_level=step_seven_tier requires step7_gate_keeper in required_sat",
+      );
     }
   }
 
   // execute requires high or step_seven_tier
   if (isStringArray(declared_effects) && declared_effects.includes("execute")) {
     if (risk_level !== "high" && risk_level !== "step_seven_tier") {
-      errors.push("declared_effects containing 'execute' requires risk_level high or step_seven_tier");
+      errors.push(
+        "declared_effects containing 'execute' requires risk_level high or step_seven_tier",
+      );
     }
   }
 
@@ -181,7 +200,7 @@ export function buildSkillManifestPreview({
   required_sat,
   tests,
   receipt_policy,
-  now
+  now,
 } = {}) {
   const input = {
     skill_id,
@@ -191,11 +210,14 @@ export function buildSkillManifestPreview({
     required_pat,
     required_sat,
     tests,
-    receipt_policy
+    receipt_policy,
   };
   const errors = validate(input);
   const valid = errors.length === 0;
-  const generated_at = typeof now === "string" && now.length > 0 ? now : "1970-01-01T00:00:00.000Z";
+  const generated_at =
+    typeof now === "string" && now.length > 0
+      ? now
+      : "1970-01-01T00:00:00.000Z";
 
   const envelope = {
     schema: SKILL_MANIFEST_PREVIEW_SCHEMA,
@@ -205,16 +227,20 @@ export function buildSkillManifestPreview({
     errors,
     skill_id: typeof skill_id === "string" ? skill_id : null,
     risk_level: RISK_LEVELS_SET.has(risk_level) ? risk_level : null,
-    declared_effects: isStringArray(declared_effects) ? [...declared_effects] : [],
+    declared_effects: isStringArray(declared_effects)
+      ? [...declared_effects]
+      : [],
     denied_effects: isStringArray(denied_effects) ? [...denied_effects] : [],
     required_pat: isStringArray(required_pat) ? [...required_pat] : [],
     required_sat: isStringArray(required_sat) ? [...required_sat] : [],
     tests: isStringArray(tests) ? [...tests] : [],
-    receipt_policy: RECEIPT_POLICIES_SET.has(receipt_policy) ? receipt_policy : null,
+    receipt_policy: RECEIPT_POLICIES_SET.has(receipt_policy)
+      ? receipt_policy
+      : null,
     active_now: false, // invariant — always false in v0.1
     generated_at,
     boundary: buildBoundary(),
-    note: "Skill manifest only. Records a typed declaration. Does not activate or invoke the skill, does not mint, does not import authority."
+    note: "Skill manifest only. Records a typed declaration. Does not activate or invoke the skill, does not mint, does not import authority.",
   };
 
   return deepFreeze(clone(envelope));

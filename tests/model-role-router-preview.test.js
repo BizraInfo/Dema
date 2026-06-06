@@ -5,11 +5,16 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildModelRoleRouterPreview,
-  MODEL_ROLE_ROUTER_PREVIEW_SCHEMA
+  MODEL_ROLE_ROUTER_PREVIEW_SCHEMA,
 } from "../packages/models/src/model-role-router-preview.js";
 import { buildBoundaryInvariantCheckReport } from "../scripts/review/boundary-invariant-check.mjs";
 
-const modulePath = fileURLToPath(new URL("../packages/models/src/model-role-router-preview.js", import.meta.url));
+const modulePath = fileURLToPath(
+  new URL(
+    "../packages/models/src/model-role-router-preview.js",
+    import.meta.url,
+  ),
+);
 
 const SAMPLE_PROVIDERS = {
   ollama: {
@@ -17,12 +22,20 @@ const SAMPLE_PROVIDERS = {
       { id: "deepseek-r1:7b", source: "ollama", size_bytes: 4_360_000_000 },
       { id: "qwen3-coder:14b", source: "ollama", size_bytes: 8_000_000_000 },
       { id: "gemma4:e4b", source: "ollama", size_bytes: 4_000_000_000 },
-      { id: "nomic-embed-text:latest", source: "ollama", size_bytes: 260_000_000 },
-      { id: "vision-multimodal-vl:7b", source: "ollama", size_bytes: 7_500_000_000 }
-    ]
+      {
+        id: "nomic-embed-text:latest",
+        source: "ollama",
+        size_bytes: 260_000_000,
+      },
+      {
+        id: "vision-multimodal-vl:7b",
+        source: "ollama",
+        size_bytes: 7_500_000_000,
+      },
+    ],
   },
   lm_studio: { models: [] },
-  downloads: { models: [] }
+  downloads: { models: [] },
 };
 
 test("T-01 model role router emits the canonical schema", () => {
@@ -40,10 +53,14 @@ test("T-02 is PREVIEW_ONLY and DECLARED", () => {
 test("T-03 declares exactly 6 roles matching model-routing.js taxonomy", () => {
   const preview = buildModelRoleRouterPreview(SAMPLE_PROVIDERS);
   assert.equal(preview.role_count, 6);
-  assert.deepEqual(
-    [...preview.role_names].sort(),
-    ["coding", "embedding", "fast", "governance", "reasoning", "vision"]
-  );
+  assert.deepEqual([...preview.role_names].sort(), [
+    "coding",
+    "embedding",
+    "fast",
+    "governance",
+    "reasoning",
+    "vision",
+  ]);
 });
 
 test("T-04 every role declares effects_declared and effects_denied", () => {
@@ -61,8 +78,14 @@ test("T-05 every role denies write, execute, and call in v0.1", () => {
   const preview = buildModelRoleRouterPreview(SAMPLE_PROVIDERS);
   for (const role of Object.values(preview.roles)) {
     for (const op of ["write", "execute", "call"]) {
-      assert.ok(role.effects_denied.includes(op), `role ${role.role} must deny ${op}`);
-      assert.ok(!role.effects_declared.includes(op), `role ${role.role} must NOT declare ${op}`);
+      assert.ok(
+        role.effects_denied.includes(op),
+        `role ${role.role} must deny ${op}`,
+      );
+      assert.ok(
+        !role.effects_declared.includes(op),
+        `role ${role.role} must NOT declare ${op}`,
+      );
     }
   }
 });
@@ -71,7 +94,10 @@ test("T-06 every role has a valid sat_verdict_required value", () => {
   const preview = buildModelRoleRouterPreview(SAMPLE_PROVIDERS);
   const VALID = new Set(["PERMIT", "REJECT", "REVIEW", "SCORE_ONLY"]);
   for (const role of Object.values(preview.roles)) {
-    assert.ok(VALID.has(role.sat_verdict_required), `role ${role.role} verdict invalid`);
+    assert.ok(
+      VALID.has(role.sat_verdict_required),
+      `role ${role.role} verdict invalid`,
+    );
   }
 });
 
@@ -84,11 +110,14 @@ test("T-07 every role's consent_field_required is in MICRO_CONSENT_SHAPE or null
     "action",
     "purpose",
     "expires_at",
-    "commitment_hash"
+    "commitment_hash",
   ]);
   for (const role of Object.values(preview.roles)) {
     const f = role.consent_field_required;
-    assert.ok(f === null || VALID.has(f), `role ${role.role} field ${f} invalid`);
+    assert.ok(
+      f === null || VALID.has(f),
+      `role ${role.role} field ${f} invalid`,
+    );
   }
 });
 
@@ -124,7 +153,7 @@ test("T-10 boundary keeps all 9 authority flags false", () => {
     "network_used",
     "authority_imported",
     "hook_executed",
-    "contract_executed"
+    "contract_executed",
   ]) {
     assert.equal(preview.boundary[key], false, `boundary.${key} must be false`);
   }
@@ -167,6 +196,9 @@ test("T-14 missing providers argument still produces a valid envelope with null 
 test("T-15 boundary-invariant lint passes with the new module included", () => {
   const report = buildBoundaryInvariantCheckReport();
   assert.equal(report.ok, true);
-  assert.ok(report.modules_scanned > 0, `expected >= 24, got ${report.modules_scanned}`);
+  assert.ok(
+    report.modules_scanned > 0,
+    `expected >= 24, got ${report.modules_scanned}`,
+  );
   assert.equal(report.modules_clean, report.modules_scanned);
 });

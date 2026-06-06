@@ -58,8 +58,8 @@ Every claim in this doc obeys both clauses. A claim that elevates the founder to
 
 `docs/BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md` Section 11 lists "Node0 Founder Proof" as one element of the BIZRA origin chain. This doc is the binding **expansion** of that Section 11.
 
-- **Root Source** says what Node0 Founder Proof *means* (the founder is the first proof path, not the final authority).
-- **This doc** binds the *current evidence* behind that meaning with explicit truth labels.
+- **Root Source** says what Node0 Founder Proof _means_ (the founder is the first proof path, not the final authority).
+- **This doc** binds the _current evidence_ behind that meaning with explicit truth labels.
 
 When Root Source's framing or wording changes, this doc is re-read for drift. When this doc's evidence labels are promoted (v0.2+), Root Source's Section 11 is updated to match.
 
@@ -105,14 +105,14 @@ Human choice means **no surrender of dignity, no surrender of consent, no surren
 
 Every claim in this doc carries exactly one of:
 
-| Label | Meaning |
-|---|---|
-| `VERIFIED` | Verified by mechanism reachable from this repo or its external witnesses (GitHub API, disk probe, hash binding). Anyone can reproduce. |
-| `DERIVED` | Logically follows from a `VERIFIED` witness with the derivation made explicit. |
+| Label               | Meaning                                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VERIFIED`          | Verified by mechanism reachable from this repo or its external witnesses (GitHub API, disk probe, hash binding). Anyone can reproduce.            |
+| `DERIVED`           | Logically follows from a `VERIFIED` witness with the derivation made explicit.                                                                    |
 | `OPERATOR_ATTESTED` | The founder has stated it; no third-party-verifiable evidence path is named at v0.1. Reusable in public language only when paired with the label. |
-| `SOURCE_PENDING` | Known to exist or be assemblable but not yet bound to inspected evidence in this repo. A future slice will bind it. |
-| `DESIGNED_NOT_LIVE` | Spec / design exists; no runtime. Used here only when the claim depends on a `DESIGNED_NOT_LIVE` component layer (per Component DNA). |
-| `FORBIDDEN` | A claim that may not be made anywhere on public surfaces under any wording. |
+| `SOURCE_PENDING`    | Known to exist or be assemblable but not yet bound to inspected evidence in this repo. A future slice will bind it.                               |
+| `DESIGNED_NOT_LIVE` | Spec / design exists; no runtime. Used here only when the claim depends on a `DESIGNED_NOT_LIVE` component layer (per Component DNA).             |
+| `FORBIDDEN`         | A claim that may not be made anywhere on public surfaces under any wording.                                                                       |
 
 This doc binds to four architect-locked evidence laws preserved in memory canon:
 
@@ -125,43 +125,43 @@ This doc binds to four architect-locked evidence laws preserved in memory canon:
 
 Captured via `gh api users/BizraInfo` and the operator-provided 2026-05-21 profile screenshot. Two independent witnesses agree on every field below — both citable.
 
-| Fact | Value | Label |
-|---|---|---|
-| Account login | `BizraInfo` | `VERIFIED` |
-| Account type | **User** (not Organization — common-misread point; see Section 24) | `VERIFIED` |
-| Account name | `BIZRA` | `VERIFIED` |
-| Account `created_at` | **2024-01-04T15:57:05Z** | `VERIFIED` |
-| Public bio / tagline | *"Every human is a node, and every node is a seed, and every seed has infinite potential."* | `VERIFIED` |
-| Total repositories | **156** | `VERIFIED` |
-| Public repositories | **142** | `VERIFIED` (anyone can confirm via `gh api users/BizraInfo` or browser) |
-| Private repositories | **14** | `VERIFIED` (requires authenticated view; cross-witness with operator screenshot) |
-| Followers | 15 | `VERIFIED` |
-| Following | 70 | `VERIFIED` |
-| Contributions in the last year | 2,260 (per profile screenshot graph) | `VERIFIED` from screenshot witness; `DERIVED` until re-confirmed via `gh api` events |
-| Activity composition | ~89% Commits / 3% Code review / 1% Issues / remainder other (per profile screenshot) | `DERIVED` from screenshot witness |
-| Earliest repo on this account | `open-interpreter` at 2024-01-18 (a **fork**, not an original BIZRA repo) | `VERIFIED` |
-| Latest repo on this account | `the-verifier-agent` at 2026-05-05 | `VERIFIED` |
+| Fact                           | Value                                                                                       | Label                                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Account login                  | `BizraInfo`                                                                                 | `VERIFIED`                                                                           |
+| Account type                   | **User** (not Organization — common-misread point; see Section 24)                          | `VERIFIED`                                                                           |
+| Account name                   | `BIZRA`                                                                                     | `VERIFIED`                                                                           |
+| Account `created_at`           | **2024-01-04T15:57:05Z**                                                                    | `VERIFIED`                                                                           |
+| Public bio / tagline           | _"Every human is a node, and every node is a seed, and every seed has infinite potential."_ | `VERIFIED`                                                                           |
+| Total repositories             | **156**                                                                                     | `VERIFIED`                                                                           |
+| Public repositories            | **142**                                                                                     | `VERIFIED` (anyone can confirm via `gh api users/BizraInfo` or browser)              |
+| Private repositories           | **14**                                                                                      | `VERIFIED` (requires authenticated view; cross-witness with operator screenshot)     |
+| Followers                      | 15                                                                                          | `VERIFIED`                                                                           |
+| Following                      | 70                                                                                          | `VERIFIED`                                                                           |
+| Contributions in the last year | 2,260 (per profile screenshot graph)                                                        | `VERIFIED` from screenshot witness; `DERIVED` until re-confirmed via `gh api` events |
+| Activity composition           | ~89% Commits / 3% Code review / 1% Issues / remainder other (per profile screenshot)        | `DERIVED` from screenshot witness                                                    |
+| Earliest repo on this account  | `open-interpreter` at 2024-01-18 (a **fork**, not an original BIZRA repo)                   | `VERIFIED`                                                                           |
+| Latest repo on this account    | `the-verifier-agent` at 2026-05-05                                                          | `VERIFIED`                                                                           |
 
 **Important precision**:
 
 - GitHub activity on `BizraInfo` begins **January 2024**. The broader BIZRA evidence chain reaches back into 2023 through Origin Video 001 (2023-08-31 hard date from filename ms timestamp) and through ~110,000 files dated 2023 in operator-owned cloud mirrors (see Section 12).
-- **Do not** say "3 years on GitHub." Say: *GitHub activity on this account begins in January 2024, while the broader BIZRA evidence chain reaches back into 2023.*
+- **Do not** say "3 years on GitHub." Say: _GitHub activity on this account begins in January 2024, while the broader BIZRA evidence chain reaches back into 2023._
 
 ## 12. Local Corpus Evidence
 
 Captured 2026-05-21 by a `find ... -newermt '2023-01-01' ! -newermt '2024-01-01'` probe across operator-owned cloud-archive mirrors at `/data/bizra/cloud-archive/`. These counts are `DERIVED` from the probe; they are not a final audited corpus measurement.
 
-| Mirror | 2023-dated files | Label |
-|---|---|---|
-| `onedrive-beshr000` | **72,023** | `DERIVED` (from disk probe; reproducible by re-running the same `find` command) |
-| `gdrive-beshr000` | **24,361** | `DERIVED` |
-| `onedrive-wizard` | **13,350** | `DERIVED` |
-| `gdrive-bizra-info` | **503** | `DERIVED` |
-| Other operator mirrors (small subsets) | ~3 + ~3 (gdrive-beshr0000, beshr000-duplicates) | `DERIVED` |
-| **Sampled total** | **~110,237 files dated 2023 across these mirrors** | `DERIVED` |
-| Total cross-mirror disk size (all dates) | ~507 GB across 11 mirrors | `DERIVED` (from `du -sh`) |
+| Mirror                                   | 2023-dated files                                   | Label                                                                           |
+| ---------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `onedrive-beshr000`                      | **72,023**                                         | `DERIVED` (from disk probe; reproducible by re-running the same `find` command) |
+| `gdrive-beshr000`                        | **24,361**                                         | `DERIVED`                                                                       |
+| `onedrive-wizard`                        | **13,350**                                         | `DERIVED`                                                                       |
+| `gdrive-bizra-info`                      | **503**                                            | `DERIVED`                                                                       |
+| Other operator mirrors (small subsets)   | ~3 + ~3 (gdrive-beshr0000, beshr000-duplicates)    | `DERIVED`                                                                       |
+| **Sampled total**                        | **~110,237 files dated 2023 across these mirrors** | `DERIVED`                                                                       |
+| Total cross-mirror disk size (all dates) | ~507 GB across 11 mirrors                          | `DERIVED` (from `du -sh`)                                                       |
 
-> *These counts support the existence of a large 2023 local/cloud research corpus. They do not yet prove final deduplicated corpus size, exact total R&D GB, or exact conversation count.*
+> _These counts support the existence of a large 2023 local/cloud research corpus. They do not yet prove final deduplicated corpus size, exact total R&D GB, or exact conversation count._
 
 Specific 2023 witnesses already identified in the probe:
 
@@ -202,24 +202,24 @@ Origin Video 001 sits **after** the two Arabic root papers in the origin chain (
 
 Captured by read-only local probe 2026-05-21. The two Arabic root papers' evidence binds across three layers: the Bitcoin-anchored repository originals, the OneDrive 2023-dated hash-identical copies, and the source-document DOCX with a filename-embedded creation timestamp.
 
-| Artifact | Path | Size | mtime | SHA-256 | Truth label | What it proves | What it does NOT prove |
-|---|---|---|---|---|---|---|---|
-| **البذرة → `bizra.pdf` (Bitcoin-anchored canonical Seed)** | `Dema/bizra.pdf` (repo root) | 691,327 B | 2026-05-04 (repo touch) | `f95bc6f76acdc9339e005411a17810c50624784f18b55811d8339fcef6601538` | `FILE_IDENTITY_VERIFIED` + ANCHORED in `proof-of-priority/manifest.json` (root `45aa2789…1477a`) | Hash identity; canon binding via Bitcoin merkle anchor | — |
-| **البذرة Arabic OneDrive cross-witness** | `/data/bizra/cloud-archive/onedrive-beshr000/البذرة.pdf` (plus two identical copies in same mirror) | 691,327 B each | **2023-07-22 05:58:41 +04** (OneDrive mtime preserved) | **`f95bc6f76acdc9339e005411a17810c50624784f18b55811d8339fcef6601538`** — IDENTICAL to anchored `bizra.pdf` | `FILE_IDENTITY_VERIFIED` + `DATE_DERIVED_FROM_FILESYSTEM` (OneDrive mirror preserved 2023 mtime) | بذرة.pdf existed under the anchored hash on OneDrive on **2023-07-22**; the Arabic Seed and the Bitcoin-anchored `bizra.pdf` are the same file by hash | Original creation date (mtime ≠ createdTime); Ramadan 2023 start date |
-| **البذرة source DOCX (two-witness corroborated 2023-07-22 timestamp floor)** | `/data/bizra/cloud-archive/onedrive-beshr000/Documents/البذرة_230722_051419.docx` | 11,481,680 B (~11 MB) | **2023-07-22 05:18:14 +04** | `1e5b80cdd3bb12395d53058550b3a4aa79453082a31fc42328a8892294fddfdd` | `DATE_DERIVED_FROM_FILESYSTEM` + `FILENAME_TIMESTAMP_CORROBORATED` (filename-embedded `230722_051419` = 2023-07-22 05:14:19 + OneDrive mirror mtime 2023-07-22 05:18:14, agreeing to within 4 minutes) | The Arabic Seed source document existed on disk under this hash by **2023-07-22** — i.e., a **July 2023 existence / export-date floor**, not a full creation-proof. Two corroborating timestamp witnesses (filename + mirror mtime); the DOCX precedes the PDF export by ~44 minutes | Ramadan 2023 START date; June 2023 COMPLETION date; **pristine original creation / export metadata** (Drive `createdTime` not yet captured — filename + mirror mtime do not verify pristine provenance); content equivalence with anchored `bizra.pdf` (different format, similar period — text-extraction + diff would be required for content match) |
-| **الرسالة → `themassage.pdf` (Bitcoin-anchored canonical Message)** | `Dema/themassage.pdf` (repo root) | 186,502 B | 2026-05-04 (repo touch) | `e05b73b933df31964b96255dca673300b01caea3bce8bd283e7f6440a876d3ce` | `FILE_IDENTITY_VERIFIED` + ANCHORED in `proof-of-priority/manifest.json` | Hash identity; canon binding via Bitcoin merkle anchor | — |
-| **الرسالة Arabic GDrive copy (revision, NOT pristine original)** | `/data/bizra/cloud-archive/gdrive-bizra-info-duplicates/Google AI Studio/الرسالة.dup--hwsEPWjIys.pdf` (and `.dup--S--qeVd364.pdf` — identical duplicate) | 1,061,379 B (~1 MB) | **2025-09-28 02:27:29 +04** (NOT 2023) | `100e0e2318b506706a6add99c173ea627242adfd85e201d7832e311ffb305446` — **DIFFERENT** from anchored `themassage.pdf` | `FILE_IDENTITY_VERIFIED` (for this revision) + `FILE_IDENTITY_DIVERGENCE_VERIFIED` (this is a revision, not the anchored original — matches existing memory canon `project_themassage_vs_alrisala_hash_drift`) | A divergent Arabic revision exists | The 2023 creation date; the original Ramadan-2023 writing window; the original الرسالة file's hash |
+| Artifact                                                                     | Path                                                                                                                                                     | Size                  | mtime                                                  | SHA-256                                                                                                           | Truth label                                                                                                                                                                                                    | What it proves                                                                                                                                                                                                                                                                       | What it does NOT prove                                                                                                                                                                                                                                                                                                                                 |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **البذرة → `bizra.pdf` (Bitcoin-anchored canonical Seed)**                   | `Dema/bizra.pdf` (repo root)                                                                                                                             | 691,327 B             | 2026-05-04 (repo touch)                                | `f95bc6f76acdc9339e005411a17810c50624784f18b55811d8339fcef6601538`                                                | `FILE_IDENTITY_VERIFIED` + ANCHORED in `proof-of-priority/manifest.json` (root `45aa2789…1477a`)                                                                                                               | Hash identity; canon binding via Bitcoin merkle anchor                                                                                                                                                                                                                               | —                                                                                                                                                                                                                                                                                                                                                      |
+| **البذرة Arabic OneDrive cross-witness**                                     | `/data/bizra/cloud-archive/onedrive-beshr000/البذرة.pdf` (plus two identical copies in same mirror)                                                      | 691,327 B each        | **2023-07-22 05:58:41 +04** (OneDrive mtime preserved) | **`f95bc6f76acdc9339e005411a17810c50624784f18b55811d8339fcef6601538`** — IDENTICAL to anchored `bizra.pdf`        | `FILE_IDENTITY_VERIFIED` + `DATE_DERIVED_FROM_FILESYSTEM` (OneDrive mirror preserved 2023 mtime)                                                                                                               | بذرة.pdf existed under the anchored hash on OneDrive on **2023-07-22**; the Arabic Seed and the Bitcoin-anchored `bizra.pdf` are the same file by hash                                                                                                                               | Original creation date (mtime ≠ createdTime); Ramadan 2023 start date                                                                                                                                                                                                                                                                                  |
+| **البذرة source DOCX (two-witness corroborated 2023-07-22 timestamp floor)** | `/data/bizra/cloud-archive/onedrive-beshr000/Documents/البذرة_230722_051419.docx`                                                                        | 11,481,680 B (~11 MB) | **2023-07-22 05:18:14 +04**                            | `1e5b80cdd3bb12395d53058550b3a4aa79453082a31fc42328a8892294fddfdd`                                                | `DATE_DERIVED_FROM_FILESYSTEM` + `FILENAME_TIMESTAMP_CORROBORATED` (filename-embedded `230722_051419` = 2023-07-22 05:14:19 + OneDrive mirror mtime 2023-07-22 05:18:14, agreeing to within 4 minutes)         | The Arabic Seed source document existed on disk under this hash by **2023-07-22** — i.e., a **July 2023 existence / export-date floor**, not a full creation-proof. Two corroborating timestamp witnesses (filename + mirror mtime); the DOCX precedes the PDF export by ~44 minutes | Ramadan 2023 START date; June 2023 COMPLETION date; **pristine original creation / export metadata** (Drive `createdTime` not yet captured — filename + mirror mtime do not verify pristine provenance); content equivalence with anchored `bizra.pdf` (different format, similar period — text-extraction + diff would be required for content match) |
+| **الرسالة → `themassage.pdf` (Bitcoin-anchored canonical Message)**          | `Dema/themassage.pdf` (repo root)                                                                                                                        | 186,502 B             | 2026-05-04 (repo touch)                                | `e05b73b933df31964b96255dca673300b01caea3bce8bd283e7f6440a876d3ce`                                                | `FILE_IDENTITY_VERIFIED` + ANCHORED in `proof-of-priority/manifest.json`                                                                                                                                       | Hash identity; canon binding via Bitcoin merkle anchor                                                                                                                                                                                                                               | —                                                                                                                                                                                                                                                                                                                                                      |
+| **الرسالة Arabic GDrive copy (revision, NOT pristine original)**             | `/data/bizra/cloud-archive/gdrive-bizra-info-duplicates/Google AI Studio/الرسالة.dup--hwsEPWjIys.pdf` (and `.dup--S--qeVd364.pdf` — identical duplicate) | 1,061,379 B (~1 MB)   | **2025-09-28 02:27:29 +04** (NOT 2023)                 | `100e0e2318b506706a6add99c173ea627242adfd85e201d7832e311ffb305446` — **DIFFERENT** from anchored `themassage.pdf` | `FILE_IDENTITY_VERIFIED` (for this revision) + `FILE_IDENTITY_DIVERGENCE_VERIFIED` (this is a revision, not the anchored original — matches existing memory canon `project_themassage_vs_alrisala_hash_drift`) | A divergent Arabic revision exists                                                                                                                                                                                                                                                   | The 2023 creation date; the original Ramadan-2023 writing window; the original الرسالة file's hash                                                                                                                                                                                                                                                     |
 
 ### 13.4 Google Drive Root-Paper Visual Witness
 
 On 2026-05-21 the operator provided a Google Drive screenshot showing search results for "the massage" with the following visible entries:
 
-| Visible entry | Date modified (per screenshot) |
-|---|---|
-| `الرسالة.pdf` | **8 Jul 2023** |
-| `the massage.docx` | **17 Jul 2023** |
-| `the massage.docx` (second revision) | **20 Sept 2023** |
-| `معجم الدخيل…txt` (related Arabic dictionary) | **24 Sept 2023** |
+| Visible entry                                 | Date modified (per screenshot) |
+| --------------------------------------------- | ------------------------------ |
+| `الرسالة.pdf`                                 | **8 Jul 2023**                 |
+| `the massage.docx`                            | **17 Jul 2023**                |
+| `the massage.docx` (second revision)          | **20 Sept 2023**               |
+| `معجم الدخيل…txt` (related Arabic dictionary) | **24 Sept 2023**               |
 
 - **Truth label**: `DRIVE_SCREENSHOT_WITNESS` / `SOURCE_PENDING_FOR_METADATA`.
 - **Proves**: `الرسالة` / "The Message" artifacts were visible in the operator's Google Drive records by **July 2023**.
@@ -233,65 +233,65 @@ These four interpretation rules govern every promotion in §13.3 and §13.4:
 
 - **Screenshot proves visible record**, not file content integrity. A Drive screenshot witnesses "this entry was visible in search results on date X"; it does NOT bind the file's bytes.
 - **Hash proves artifact identity**, not creation date. A matching sha256 binds two files as byte-identical; it says nothing about when either was created.
-- **Drive metadata proves date** (`createdTime` / `modifiedTime`). Filesystem mtime in a mirror is a *secondary* witness that the mirror preserved Drive's `modifiedTime`; the authoritative date evidence is Drive metadata export, not local mtime alone.
-- **Content summary proves semantic continuity**. To claim "the Arabic Seed *content* became the canonical `bizra.pdf` content," text extraction and diff are required; hash-identity alone proves byte-identity, not semantic continuity across format conversions (DOCX → PDF).
+- **Drive metadata proves date** (`createdTime` / `modifiedTime`). Filesystem mtime in a mirror is a _secondary_ witness that the mirror preserved Drive's `modifiedTime`; the authoritative date evidence is Drive metadata export, not local mtime alone.
+- **Content summary proves semantic continuity**. To claim "the Arabic Seed _content_ became the canonical `bizra.pdf` content," text extraction and diff are required; hash-identity alone proves byte-identity, not semantic continuity across format conversions (DOCX → PDF).
 
 ### 13.6 Early-track boundaries
 
 The corrected origin chain (Section 13.1) names two parallel pre-Origin-Video tracks:
 
 - **Prompt-engineering exploration** — `OPERATOR_ATTESTED`. Evidence binding is deferred to the chat-history reconstruction roadmap (Section 27).
-- **Parallel crypto token trading and smart-contract exploration** — `OPERATOR_ATTESTED` *as research history only*. **This MUST NOT be read as evidence of a live BIZRA token, a live BIZRA smart contract, or any live economic activity** (see Section 24).
+- **Parallel crypto token trading and smart-contract exploration** — `OPERATOR_ATTESTED` _as research history only_. **This MUST NOT be read as evidence of a live BIZRA token, a live BIZRA smart contract, or any live economic activity** (see Section 24).
 
 ## 14. Time and Effort Claims
 
-| Claim | v0.1 label | Allowed wording |
-|---|---|---|
-| "3 years solo work" | `DERIVED` for the broad project-origin window (Ramadan 2023 → today is ~3 years 2 months elapsed, anchored by Origin Video 001 + local 2023 corpus + 2024+ GitHub activity) | "BIZRA's development arc spans the period from Ramadan 2023 to today, carried by a single human, with witnesses graduated by period: pre-2023-08 = operator-attested + cloud-mirror dating; 2023-08+ = Origin Video 001 hard date; 2024-01+ = `BizraInfo` GitHub account." |
-| "15,000+ hours" | `OPERATOR_ATTESTED` | "The founder attests to ~15,000+ hours of solo work; precise hours are operator-attested and not yet derived from time logs, calendar records, or commit-time aggregation." |
-| Precise hours figure as `VERIFIED` | **forbidden in v0.1** | — |
+| Claim                              | v0.1 label                                                                                                                                                                  | Allowed wording                                                                                                                                                                                                                                                            |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "3 years solo work"                | `DERIVED` for the broad project-origin window (Ramadan 2023 → today is ~3 years 2 months elapsed, anchored by Origin Video 001 + local 2023 corpus + 2024+ GitHub activity) | "BIZRA's development arc spans the period from Ramadan 2023 to today, carried by a single human, with witnesses graduated by period: pre-2023-08 = operator-attested + cloud-mirror dating; 2023-08+ = Origin Video 001 hard date; 2024-01+ = `BizraInfo` GitHub account." |
+| "15,000+ hours"                    | `OPERATOR_ATTESTED`                                                                                                                                                         | "The founder attests to ~15,000+ hours of solo work; precise hours are operator-attested and not yet derived from time logs, calendar records, or commit-time aggregation."                                                                                                |
+| Precise hours figure as `VERIFIED` | **forbidden in v0.1**                                                                                                                                                       | —                                                                                                                                                                                                                                                                          |
 
 A future v0.2+ slice may promote the hours claim from `OPERATOR_ATTESTED` toward `DERIVED` via commit-time aggregation across the BizraInfo account, calendar-export evidence, or activity-aggregation tooling.
 
 ## 15. Repo and Code Surface Claims
 
-| Claim | v0.1 label | Allowed wording |
-|---|---|---|
-| "156 total repositories under `BizraInfo` GitHub account" | `VERIFIED` | "The founder's `BizraInfo` GitHub account holds 156 total repositories (142 public, 14 private) as of 2026-05-21." |
-| "142 public repositories" | `VERIFIED` (anyone-viewable) | "142 of those repositories are public and inspectable by any third party." |
-| "155+ repos" (per architect's queued draft) | `VERIFIED` if paired with the 156-repo binding | "155+ repos" is acceptable shorthand only when tied to the underlying 156-repo evidence. |
-| "All repos are production-ready" | **forbidden** | — |
-| "All repos are active runtime authority" | **forbidden** | — |
+| Claim                                                     | v0.1 label                                     | Allowed wording                                                                                                    |
+| --------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| "156 total repositories under `BizraInfo` GitHub account" | `VERIFIED`                                     | "The founder's `BizraInfo` GitHub account holds 156 total repositories (142 public, 14 private) as of 2026-05-21." |
+| "142 public repositories"                                 | `VERIFIED` (anyone-viewable)                   | "142 of those repositories are public and inspectable by any third party."                                         |
+| "155+ repos" (per architect's queued draft)               | `VERIFIED` if paired with the 156-repo binding | "155+ repos" is acceptable shorthand only when tied to the underlying 156-repo evidence.                           |
+| "All repos are production-ready"                          | **forbidden**                                  | —                                                                                                                  |
+| "All repos are active runtime authority"                  | **forbidden**                                  | —                                                                                                                  |
 
 ## 16. R&D Data Claims
 
-| Claim | v0.1 label | Allowed wording |
-|---|---|---|
-| "600 GB+ of R&D data" | `OPERATOR_ATTESTED` / `SOURCE_PENDING` | "The founder's home-base cloud-archive mirrors total ~507 GB of operator data across 11 source mirrors (per `du -sh` probe 2026-05-21). The post-Ramadan-2023 subset (BIZRA-relevant by default per `feedback_post_ramadan_2023_default_relevance`) is the candidate for a `~600 GB+ R&D` claim; final deduplicated, audited size remains source-pending until Dema's home-base consolidation feature ships." |
-| Exact deduplicated R&D total as `VERIFIED` | **forbidden in v0.1** | — |
+| Claim                                      | v0.1 label                             | Allowed wording                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "600 GB+ of R&D data"                      | `OPERATOR_ATTESTED` / `SOURCE_PENDING` | "The founder's home-base cloud-archive mirrors total ~507 GB of operator data across 11 source mirrors (per `du -sh` probe 2026-05-21). The post-Ramadan-2023 subset (BIZRA-relevant by default per `feedback_post_ramadan_2023_default_relevance`) is the candidate for a `~600 GB+ R&D` claim; final deduplicated, audited size remains source-pending until Dema's home-base consolidation feature ships." |
+| Exact deduplicated R&D total as `VERIFIED` | **forbidden in v0.1**                  | —                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 ## 17. AI Conversation Claims
 
-| Claim | v0.1 label | Allowed wording |
-|---|---|---|
+| Claim                                      | v0.1 label                             | Allowed wording                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | "5,000+ AI conversations across providers" | `OPERATOR_ATTESTED` / `SOURCE_PENDING` | "The founder attests to 5,000+ AI conversations across providers (ChatGPT, Claude, Google AI Studio, others) spanning multiple email accounts. Existing repo tooling (`bizra-normalizers/normalizers/chatgpt.py`) provides the parser infrastructure for a future evidence-binding slice. Full normalized inventory is deferred to a Dema home-base consolidation slice." |
-| Exact conversation count as `VERIFIED` | **forbidden in v0.1** | — |
+| Exact conversation count as `VERIFIED`     | **forbidden in v0.1**                  | —                                                                                                                                                                                                                                                                                                                                                                         |
 
 Per `feedback_post_ramadan_2023_default_relevance`, **every** AI conversation in operator-owned exports from 2023-03-22 onwards is presumed BIZRA-relevant by default — keyword filtering for "bizra" understates the true corpus.
 
 ## 18. No-Token Claim Boundary
 
-| Claim | v0.1 label | Allowed wording |
-|---|---|---|
-| "The founder has not minted a token for himself" | `OPERATOR_ATTESTED` | "The founder attests that no founder-allocation token has been minted, and that BIZRA has no live token at this stage. Verification requires a ledger absence-proof (a public on-chain or off-chain audit showing no founder mint occurred) and is source-pending." |
-| Live tokenomics, founder mint, or any token economic claim | **forbidden** per `CLAIM_REGISTER §13` (Economic and Token Claims) | — |
+| Claim                                                      | v0.1 label                                                         | Allowed wording                                                                                                                                                                                                                                                     |
+| ---------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "The founder has not minted a token for himself"           | `OPERATOR_ATTESTED`                                                | "The founder attests that no founder-allocation token has been minted, and that BIZRA has no live token at this stage. Verification requires a ledger absence-proof (a public on-chain or off-chain audit showing no founder mint occurred) and is source-pending." |
+| Live tokenomics, founder mint, or any token economic claim | **forbidden** per `CLAIM_REGISTER §13` (Economic and Token Claims) | —                                                                                                                                                                                                                                                                   |
 
 ## 19. No-Formal-Technical-Background Claim Boundary
 
-| Claim | v0.1 label | Allowed wording |
-|---|---|---|
-| "No formal technical background before Ramadan 2023" | `OPERATOR_ATTESTED` | "The founder attests to having no formal technical background prior to Ramadan 2023 (Gregorian 2023-03-22 onwards). Verification would require education / employment history evidence and is source-pending." |
-| Precise prior background claim as `VERIFIED` | **forbidden in v0.1** | — |
+| Claim                                                | v0.1 label            | Allowed wording                                                                                                                                                                                                |
+| ---------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "No formal technical background before Ramadan 2023" | `OPERATOR_ATTESTED`   | "The founder attests to having no formal technical background prior to Ramadan 2023 (Gregorian 2023-03-22 onwards). Verification would require education / employment history evidence and is source-pending." |
+| Precise prior background claim as `VERIFIED`         | **forbidden in v0.1** | —                                                                                                                                                                                                              |
 
 This is part of the founder narrative arc — that the seed grew from scratch under one human's choice — but it is **not** to be cited as verified fact without supporting evidence.
 
@@ -367,12 +367,12 @@ A surface that contains any of these is a release-blocking defect.
 
 ## 25. Dema Home-Base Consolidation Deferred
 
-> *The home-base corpus should eventually be cleaned, indexed, deduplicated, typed, and made searchable by Dema itself as a Node0-local capability. This document does not manually consolidate that corpus.*
+> _The home-base corpus should eventually be cleaned, indexed, deduplicated, typed, and made searchable by Dema itself as a Node0-local capability. This document does not manually consolidate that corpus._
 
 Per `project_2026_05_21_home_base_consolidation_deferred_to_dema` (memory canon, architect-locked):
 
 - This Linux machine is BIZRA's home base local space.
-- ~507 GB / ~110K 2023-files corpus is mirrored locally across 11 source mirrors (gdrive-* and onedrive-* under operator email accounts).
+- ~507 GB / ~110K 2023-files corpus is mirrored locally across 11 source mirrors (gdrive-_ and onedrive-_ under operator email accounts).
 - **Consolidation is deferred** until Dema itself can perform it as a Node0 operator capability.
 - Reason: don't manually rake what the tool should do; a manual snapshot would drift and would compete with Dema's eventual receipt-bound consolidation.
 
@@ -394,7 +394,7 @@ Founder Proof v0.2+ corpus-volume claims are bound to ship **after** that Dema f
 
 The following short paragraph is `DECLARED_PUBLIC_WORDING` (not final marketing copy; reusable on README, lighthouse invitation, deck opening, 2026 First Look bridge, with the Claim Review Gate from `CLAIM_REGISTER §20` applied each time):
 
-> **One human carried the first BIZRA seed far enough to become inspectable. The proof is not perfection. The invitation is for better, wiser, more capable humans to test what is here, reject what is wrong, improve what is partial, and surpass what is current. Every human may choose to become a node — a seed of their own — without surrendering dignity, consent, or memory.** *(`DECLARED_PUBLIC_WORDING`)*
+> **One human carried the first BIZRA seed far enough to become inspectable. The proof is not perfection. The invitation is for better, wiser, more capable humans to test what is here, reject what is wrong, improve what is partial, and surpass what is current. Every human may choose to become a node — a seed of their own — without surrendering dignity, consent, or memory.** _(`DECLARED_PUBLIC_WORDING`)_
 
 Permitted variants (same label, same boundary):
 
@@ -414,19 +414,19 @@ Forbidden mutations:
 
 Named and deferred, per `feedback_incremental_evidence_binding`:
 
-| Slice | Will bind | Target label promotion |
-|---|---|---|
-| **v0.2 — hours derivation** | Commit-time aggregation across `BizraInfo` repos + activity-aggregation evidence | "15k+ hours" `OPERATOR_ATTESTED` → `DERIVED` |
-| **v0.3 — chat-history single-provider binding** | Sample export from ChatGPT data folder + run through `bizra-normalizers/normalizers/chatgpt.py` to produce a structured inventory | Subset of "5k+ AI conversations" `OPERATOR_ATTESTED` → `DERIVED` |
-| **v0.4 — cross-provider chat-history binding** | Equivalent normalizers for Claude, Google AI Studio, others | Full "5k+ AI conversations" claim promoted toward `DERIVED` / `VERIFIED` |
-| **v0.5 — Dema home-base consolidation** | Awaits `dema consolidate home-base` feature shipping | "600 GB+ R&D" promoted from `OPERATOR_ATTESTED` to `DERIVED` with measured number |
-| **v0.6 — ledger absence-proof** | Public on-chain or off-chain audit showing no founder-allocation token mint | "No founder token" `OPERATOR_ATTESTED` → `VERIFIED` |
-| **v0.7 — background claim** | Education / employment history evidence (if and only if the operator chooses to publish it) | "No formal technical background" `OPERATOR_ATTESTED` → `DERIVED` or `VERIFIED` (or kept `OPERATOR_ATTESTED` by choice) |
-| **v0.8 — Arabic root-paper original-file binding** | Bind `الرسالة` and `البذرة` **original** files by path, hash, language, content summary, and (if available) Drive `createdTime` export. The current v0.1 binding establishes the **2023-07-22 floor** for `البذرة` via two-witness corroboration; v0.8 targets pre-2023-07 evidence for the actual writing window. | Ramadan-2023 → June-2023 writing window `OPERATOR_ATTESTED` → `DERIVED` or `VERIFIED` (per witnesses found) |
-| **v0.9 — Google Drive metadata capture** | Capture `createdTime` + `modifiedTime` + file ID + owner-account context for `الرسالة.pdf`, `the massage.docx`, `البذرة.pdf`, `البذرة_230722_051419.docx`, and the Drive search screenshot itself (hash the PNG + bind to repo evidence inventory). | Drive screenshot witness `DRIVE_SCREENSHOT_WITNESS` / `SOURCE_PENDING_FOR_METADATA` → `DATE_DERIVED_VERIFIED` when Drive `createdTime` corroborates |
-| **v0.10 — Early prompt-engineering session binding** | Bind early prompt-engineering sessions from the chat-history corpus (post-Ramadan-2023 window per `feedback_post_ramadan_2023_default_relevance`) as a parallel development track | Early prompt-engineering `OPERATOR_ATTESTED` → `DERIVED` |
-| **v0.11 — Early crypto / smart-contract exploration binding** | Bind early crypto token trading + smart-contract exploration as research history only: folders, notes, chat traces, tool screenshots, contract experiments, and wallet/tool evidence only if the operator chooses to expose them. No token/economy activation language. | Early crypto/smart-contract exploration `OPERATOR_ATTESTED` → `DERIVED` as research history only; never evidence of a live BIZRA token/economy |
-| **v0.12 — Incremental 2023 dev-pattern reconstruction** | Reconstruct the 2023 BIZRA development pattern from chat history incrementally (single provider first, then cross-provider), feeding the founder asset inventory ladder | "2023 development pattern reconstructed" remains `SOURCE_PENDING` at v0.1; v0.12 produces the first partial reconstruction; full reconstruction is itself an open-ended growing artifact per `feedback_incremental_evidence_binding` |
+| Slice                                                         | Will bind                                                                                                                                                                                                                                                                                                          | Target label promotion                                                                                                                                                                                                               |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **v0.2 — hours derivation**                                   | Commit-time aggregation across `BizraInfo` repos + activity-aggregation evidence                                                                                                                                                                                                                                   | "15k+ hours" `OPERATOR_ATTESTED` → `DERIVED`                                                                                                                                                                                         |
+| **v0.3 — chat-history single-provider binding**               | Sample export from ChatGPT data folder + run through `bizra-normalizers/normalizers/chatgpt.py` to produce a structured inventory                                                                                                                                                                                  | Subset of "5k+ AI conversations" `OPERATOR_ATTESTED` → `DERIVED`                                                                                                                                                                     |
+| **v0.4 — cross-provider chat-history binding**                | Equivalent normalizers for Claude, Google AI Studio, others                                                                                                                                                                                                                                                        | Full "5k+ AI conversations" claim promoted toward `DERIVED` / `VERIFIED`                                                                                                                                                             |
+| **v0.5 — Dema home-base consolidation**                       | Awaits `dema consolidate home-base` feature shipping                                                                                                                                                                                                                                                               | "600 GB+ R&D" promoted from `OPERATOR_ATTESTED` to `DERIVED` with measured number                                                                                                                                                    |
+| **v0.6 — ledger absence-proof**                               | Public on-chain or off-chain audit showing no founder-allocation token mint                                                                                                                                                                                                                                        | "No founder token" `OPERATOR_ATTESTED` → `VERIFIED`                                                                                                                                                                                  |
+| **v0.7 — background claim**                                   | Education / employment history evidence (if and only if the operator chooses to publish it)                                                                                                                                                                                                                        | "No formal technical background" `OPERATOR_ATTESTED` → `DERIVED` or `VERIFIED` (or kept `OPERATOR_ATTESTED` by choice)                                                                                                               |
+| **v0.8 — Arabic root-paper original-file binding**            | Bind `الرسالة` and `البذرة` **original** files by path, hash, language, content summary, and (if available) Drive `createdTime` export. The current v0.1 binding establishes the **2023-07-22 floor** for `البذرة` via two-witness corroboration; v0.8 targets pre-2023-07 evidence for the actual writing window. | Ramadan-2023 → June-2023 writing window `OPERATOR_ATTESTED` → `DERIVED` or `VERIFIED` (per witnesses found)                                                                                                                          |
+| **v0.9 — Google Drive metadata capture**                      | Capture `createdTime` + `modifiedTime` + file ID + owner-account context for `الرسالة.pdf`, `the massage.docx`, `البذرة.pdf`, `البذرة_230722_051419.docx`, and the Drive search screenshot itself (hash the PNG + bind to repo evidence inventory).                                                                | Drive screenshot witness `DRIVE_SCREENSHOT_WITNESS` / `SOURCE_PENDING_FOR_METADATA` → `DATE_DERIVED_VERIFIED` when Drive `createdTime` corroborates                                                                                  |
+| **v0.10 — Early prompt-engineering session binding**          | Bind early prompt-engineering sessions from the chat-history corpus (post-Ramadan-2023 window per `feedback_post_ramadan_2023_default_relevance`) as a parallel development track                                                                                                                                  | Early prompt-engineering `OPERATOR_ATTESTED` → `DERIVED`                                                                                                                                                                             |
+| **v0.11 — Early crypto / smart-contract exploration binding** | Bind early crypto token trading + smart-contract exploration as research history only: folders, notes, chat traces, tool screenshots, contract experiments, and wallet/tool evidence only if the operator chooses to expose them. No token/economy activation language.                                            | Early crypto/smart-contract exploration `OPERATOR_ATTESTED` → `DERIVED` as research history only; never evidence of a live BIZRA token/economy                                                                                       |
+| **v0.12 — Incremental 2023 dev-pattern reconstruction**       | Reconstruct the 2023 BIZRA development pattern from chat history incrementally (single provider first, then cross-provider), feeding the founder asset inventory ladder                                                                                                                                            | "2023 development pattern reconstructed" remains `SOURCE_PENDING` at v0.1; v0.12 produces the first partial reconstruction; full reconstruction is itself an open-ended growing artifact per `feedback_incremental_evidence_binding` |
 
 Each slice is small, scoped, and adds binding without revisiting prior bindings. v0.8–v0.12 are explicitly bounded by the four architect-locked evidence laws.
 
@@ -469,4 +469,4 @@ When this canon's labels are promoted in v0.2+ slices, the Root Source's Section
 ---
 
 > **Founder proof is not founder worship. It is the first inspectable path others may test, reject, improve, or surpass.**
-> *(Operating-law clause, also fit for public copy when paired with `DECLARED_PUBLIC_WORDING`.)*
+> _(Operating-law clause, also fit for public copy when paired with `DECLARED_PUBLIC_WORDING`.)_

@@ -1,58 +1,133 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dema — install</title>
-<style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; max-width: 720px; margin: 4rem auto; padding: 0 1.5rem; line-height: 1.55; color: #111; }
-  h1 { font-size: 1.6rem; margin-bottom: 0.4rem; }
-  h2 { font-size: 1.05rem; margin-top: 2rem; }
-  p { margin: 0.6rem 0; }
-  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
-  pre { background: #f5f5f5; padding: 0.8rem 1rem; border-radius: 6px; overflow-x: auto; }
-  ul { padding-left: 1.4rem; }
-  li { margin: 0.3rem 0; }
-  a { color: #0a5; text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  .meta { color: #666; font-size: 0.9em; }
-  .hash { font-family: ui-monospace, monospace; font-size: 0.78em; color: #888; word-break: break-all; }
-</style>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dema — install</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        max-width: 720px;
+        margin: 4rem auto;
+        padding: 0 1.5rem;
+        line-height: 1.55;
+        color: #111;
+      }
+      h1 {
+        font-size: 1.6rem;
+        margin-bottom: 0.4rem;
+      }
+      h2 {
+        font-size: 1.05rem;
+        margin-top: 2rem;
+      }
+      p {
+        margin: 0.6rem 0;
+      }
+      code,
+      pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.92em;
+      }
+      pre {
+        background: #f5f5f5;
+        padding: 0.8rem 1rem;
+        border-radius: 6px;
+        overflow-x: auto;
+      }
+      ul {
+        padding-left: 1.4rem;
+      }
+      li {
+        margin: 0.3rem 0;
+      }
+      a {
+        color: #0a5;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      .meta {
+        color: #666;
+        font-size: 0.9em;
+      }
+      .hash {
+        font-family: ui-monospace, monospace;
+        font-size: 0.78em;
+        color: #888;
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Dema — install</h1>
 
-<h1>Dema — install</h1>
+    <p>
+      Dema is a sovereign local AI node companion. Local-first. Consent-bound.
+      Receipt-aware.
+    </p>
 
-<p>Dema is a sovereign local AI node companion. Local-first. Consent-bound. Receipt-aware.</p>
+    <p>
+      This page hosts install + uninstall scripts for the current release. Bytes
+      match the SHA-256 hashes published in the repo's
+      <code>docs/INSTALLER_ARCHITECTURE.md</code> at each tag.
+    </p>
 
-<p>This page hosts install + uninstall scripts for the current release. Bytes match the SHA-256 hashes published in the repo's <code>docs/INSTALLER_ARCHITECTURE.md</code> at each tag.</p>
+    <h2>Install (Linux / macOS)</h2>
+    <pre>curl -fsSL https://install.bizra.ai/dema/install.sh | sh</pre>
 
-<h2>Install (Linux / macOS)</h2>
-<pre>curl -fsSL https://install.bizra.ai/dema/install.sh | sh</pre>
+    <h2>Install (Windows / PowerShell)</h2>
+    <pre>irm https://install.bizra.ai/dema/install.ps1 | iex</pre>
 
-<h2>Install (Windows / PowerShell)</h2>
-<pre>irm https://install.bizra.ai/dema/install.ps1 | iex</pre>
+    <h2>Files</h2>
+    <ul>
+      <li>
+        <a href="install.sh">install.sh</a>
+        <span class="meta">(Linux / macOS)</span>
+      </li>
+      <li>
+        <a href="install.ps1">install.ps1</a>
+        <span class="meta">(Windows)</span>
+      </li>
+      <li>
+        <a href="uninstall.sh">uninstall.sh</a>
+        <span class="meta">(Linux / macOS)</span>
+      </li>
+      <li>
+        <a href="uninstall.ps1">uninstall.ps1</a>
+        <span class="meta">(Windows)</span>
+      </li>
+    </ul>
 
-<h2>Files</h2>
-<ul>
-  <li><a href="install.sh">install.sh</a> <span class="meta">(Linux / macOS)</span></li>
-  <li><a href="install.ps1">install.ps1</a> <span class="meta">(Windows)</span></li>
-  <li><a href="uninstall.sh">uninstall.sh</a> <span class="meta">(Linux / macOS)</span></li>
-  <li><a href="uninstall.ps1">uninstall.ps1</a> <span class="meta">(Windows)</span></li>
-</ul>
+    <h2>Verify before running</h2>
+    <p>
+      The hash table at the current release pins exact byte content. Verify
+      with:
+    </p>
+    <pre>
+curl -fsSL https://install.bizra.ai/dema/install.sh | sha256sum
+# Compare to the hash published at the v0.3.5 release notes</pre
+    >
 
-<h2>Verify before running</h2>
-<p>The hash table at the current release pins exact byte content. Verify with:</p>
-<pre>curl -fsSL https://install.bizra.ai/dema/install.sh | sha256sum
-# Compare to the hash published at the v0.3.5 release notes</pre>
+    <h2>Source</h2>
+    <p>
+      Repository:
+      <a href="https://github.com/BizraInfo/Dema">github.com/BizraInfo/Dema</a
+      ><br />
+      Latest release:
+      <a href="https://github.com/BizraInfo/Dema/releases/latest"
+        >github.com/BizraInfo/Dema/releases/latest</a
+      >
+    </p>
 
-<h2>Source</h2>
-<p>
-  Repository: <a href="https://github.com/BizraInfo/Dema">github.com/BizraInfo/Dema</a><br>
-  Latest release: <a href="https://github.com/BizraInfo/Dema/releases/latest">github.com/BizraInfo/Dema/releases/latest</a>
-</p>
-
-<p class="meta">No tokens. No passive income. No federation claims. No hidden background process. <a href="https://github.com/BizraInfo/Dema/blob/main/docs/GTM.md">Forbidden claims list</a>.</p>
-
-</body>
+    <p class="meta">
+      No tokens. No passive income. No federation claims. No hidden background
+      process.
+      <a href="https://github.com/BizraInfo/Dema/blob/main/docs/GTM.md"
+        >Forbidden claims list</a
+      >.
+    </p>
+  </body>
 </html>

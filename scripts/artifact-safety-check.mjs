@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 
 import {
   evaluateArtifactSafety,
-  formatArtifactSafetyReport
+  formatArtifactSafetyReport,
 } from "../packages/core/src/artifact-safety-eval.js";
 
 function usage() {
@@ -14,7 +14,7 @@ function usage() {
     "",
     "Read-only Layer 1 eval: path leakage, secret-like strings, claim boundary.",
     "Exits 0 only when verdict is PUBLIC_SAFE (share-safe external mode).",
-    "LOCAL_ONLY, LEAKAGE_DETECTED, CLAIM_BOUNDARY_VIOLATION, SCHEMA_VIOLATION → exit 1."
+    "LOCAL_ONLY, LEAKAGE_DETECTED, CLAIM_BOUNDARY_VIOLATION, SCHEMA_VIOLATION → exit 1.",
   ].join("\n");
 }
 
@@ -32,7 +32,9 @@ async function main() {
     process.exit(2);
   }
   if (!isAbsolute(artifactPath)) {
-    process.stderr.write("artifact-safety-check: --artifact must be an absolute path\n");
+    process.stderr.write(
+      "artifact-safety-check: --artifact must be an absolute path\n",
+    );
     process.exit(2);
   }
 
@@ -43,7 +45,9 @@ async function main() {
     try {
       input = JSON.parse(raw);
     } catch (error) {
-      process.stderr.write(`artifact-safety-check: invalid JSON: ${error.message}\n`);
+      process.stderr.write(
+        `artifact-safety-check: invalid JSON: ${error.message}\n`,
+      );
       process.exit(2);
     }
   }
@@ -52,7 +56,9 @@ async function main() {
   const result = evaluateArtifactSafety(input, { external_share_mode: true });
   const afterHash = evaluateArtifactSafety(input).artifact_sha256;
   if (beforeHash !== afterHash) {
-    process.stderr.write("artifact-safety-check: input mutated during scan (refusing)\n");
+    process.stderr.write(
+      "artifact-safety-check: input mutated during scan (refusing)\n",
+    );
     process.exit(2);
   }
 
@@ -65,7 +71,10 @@ async function main() {
   process.exit(result.verdict === "PUBLIC_SAFE" ? 0 : 1);
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (
+  process.argv[1] &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
   main().catch((error) => {
     process.stderr.write(`artifact-safety-check: ${error.message}\n`);
     process.exit(2);
