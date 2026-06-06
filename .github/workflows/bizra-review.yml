@@ -60,8 +60,8 @@ jobs:
             adr/*|policy/*|governance/*|tooling/*|season-*|fix/*|ci/*|docs/*|feat/*|chore/*|copilot/*|pr/*|refactor/*|test/*)
               # pr/* is the clean release-train convention (single-commit
               # cherry-picks off main). copilot/*, refactor/*, and test/* are
-              # accepted as
-              # broad-scope too. No proof gate is weakened: pr-class,
+              # accepted as broad-scope too. No proof gate is weakened:
+              # pr-class,
               # proof-scope, no-overclaim, and receipt-integrity all still run
               # under the broad-scope class below.
               echo "BIZRA_REVIEW_CLASS=policy/broad-scope" >> "$GITHUB_ENV"
