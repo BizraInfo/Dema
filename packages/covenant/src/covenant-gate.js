@@ -14,6 +14,11 @@
  */
 
 import { createHmac, randomBytes } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export const COVENANT_GATE_SCHEMA = 'bizra.dema.covenant_gate.v0.1';
 export const GRADUATION_DECISION_SCHEMA = 'bizra.dema.graduation_decision.v0.1';
@@ -171,3 +176,13 @@ export default {
   COVENANT_GATE_SCHEMA,
   GRADUATION_DECISION_SCHEMA,
 };
+
+/**
+ * Load the canonical example proposal from fixture (ultra micro for reproducible QA).
+ * [PROTOTYPE] — Fixture-based example from audit for the elite blueprint's Covenant Gate QA.
+ * This enables the delivery-check to use deterministic input without embedding.
+ */
+export function loadExampleProposal() {
+  const proposalPath = path.resolve(__dirname, '../../../fixtures/covenant/example-impact-proposal.json');
+  return JSON.parse(readFileSync(proposalPath, 'utf8'));
+}

@@ -114,10 +114,9 @@ function checkGates() {
 async function checkCovenantGate() {
   console.log('\n[COVENANT GATE A+ QA (Omnidirectional Audit kernel)]');
   try {
-    const { screenProposal } = await import('../packages/covenant/src/covenant-gate.js');
-    // Load canonical fixture (ultra micro: replaces inline embedding for reproducibility per audit)
-    const proposalPath = path.join(REPO_ROOT, 'fixtures/covenant/example-impact-proposal.json');
-    const proposal = JSON.parse(readFileSync(proposalPath, 'utf8'));
+    const { screenProposal, loadExampleProposal } = await import('../packages/covenant/src/covenant-gate.js');
+    // Load from gate module (ultra micro deepening: fixture logic now in Covenant Gate for the elite blueprint)
+    const proposal = loadExampleProposal();
     const decision = screenProposal(proposal);
     const hasNeedsConsent = decision.status === 'needs_human_consent';
     const hasNoAprVerification = decision.thought_packets.some(p =>
