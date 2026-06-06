@@ -23,6 +23,7 @@ import { buildEvidenceChainEventPreviewFromInputs } from "../../../packages/core
 import { buildNodeRegistryPreview } from "../../../packages/core/src/node-registry-preview.js";
 import { buildOnboardingLifecyclePreview } from "../../../packages/core/src/onboarding-lifecycle.js";
 import { buildSkillGrowthGovernorPreview } from "../../../packages/core/src/skill-growth-governor.js";
+import { screenProposal, signReceipt } from "../../../packages/covenant/src/covenant-gate.js";
 import { buildProjectStatusPreview } from "../../../packages/core/src/project-status-preview.js";
 import { buildCraftsmanshipWitnessPreview } from "../../../packages/core/src/craftsmanship-witness-preview.js";
 import {
@@ -532,6 +533,18 @@ Dema Realm (UX-1A, UX-1B):
                     Boundary honestly declares file_write_performed:true and
                     mutation_performed:true.
 
+Covenant Gate (v0.1 PROTOTYPE — per Omnidirectional Audit):
+  dema covenant screen <proposal.json> [--json]
+                    Run the deterministic screening engine on a project proposal.
+                    Emits GraduationDecision with screening results, structured
+                    Thought Packets, and explicit proof_gap. [PROTOTYPE] only.
+                    LOCAL ONLY. No runtime, no claims, no network.
+  dema covenant consent <decision.json> --typed-go "GO" [--json]
+                    Emit a signed consent receipt. Requires exact micro-consent
+                    string "GO". Produces demo receipt with payload + signature.
+                    [PROTOTYPE] (HMAC demo only; replace with Ed25519 before use).
+                    Does not execute any external action.
+
 Readiness:
   dema status       Show human-readable Node0 status
   dema status:json  Show machine-readable status
@@ -730,6 +743,10 @@ const REGISTERED_COMMANDS_LIST = [
   },
   { command: "today", description: "record a local continuity tick" },
   { command: "doctor", description: "validate readiness and consent gate" },
+  {
+    command: "covenant",
+    description: "Covenant Gate v0.1 screening + micro-consent (PROTOTYPE per audit)",
+  },
   { command: "dashboard", description: "open homebase dashboard in browser" },
   {
     command: "ambient",
@@ -4689,6 +4706,61 @@ async function cmd_help(ctx) {
   return;
 }
 
+// Covenant Gate v0.1 (PROTOTYPE) — terminal surface for the audit-derived screening gate.
+// [PROTOTYPE] only. Requires exact "GO" micro-consent. Demo receipt. Local face only.
+async function cmdCovenant(ctx) {
+  const { argv } = ctx;
+  const sub = argv[1];
+  const wantJson = argv.includes("--json");
+
+  if (sub === "screen") {
+    const file = argv[2];
+    if (!file) {
+      console.error("usage: dema covenant screen <proposal.json> [--json]");
+      process.exit(1);
+    }
+    try {
+      const proposal = JSON.parse(require("node:fs").readFileSync(file, "utf8"));
+      const decision = screenProposal(proposal);
+      if (wantJson) {
+        console.log(JSON.stringify(decision, null, 2));
+      } else {
+        console.log(JSON.stringify(decision, null, 2));
+      }
+    } catch (e) {
+      console.error("covenant screen error:", e.message);
+      process.exit(1);
+    }
+    return;
+  }
+
+  if (sub === "consent") {
+    const file = argv[2];
+    const typedGoIdx = argv.indexOf("--typed-go");
+    const typedGo = typedGoIdx >= 0 ? argv[typedGoIdx + 1] : "";
+    if (!file || !typedGo) {
+      console.error('usage: dema covenant consent <decision.json> --typed-go "GO" [--json]');
+      process.exit(1);
+    }
+    try {
+      const decision = JSON.parse(require("node:fs").readFileSync(file, "utf8"));
+      const receipt = signReceipt(decision, typedGo);
+      if (wantJson) {
+        console.log(JSON.stringify(receipt, null, 2));
+      } else {
+        console.log(JSON.stringify(receipt, null, 2));
+      }
+    } catch (e) {
+      console.error("covenant consent error:", e.message);
+      process.exit(1);
+    }
+    return;
+  }
+
+  console.error("unknown covenant subcommand (screen | consent)");
+  process.exit(1);
+}
+
 const COMMAND_TABLE = {
   active: cmdActive,
   "": cmdActive,
@@ -4728,6 +4800,7 @@ const COMMAND_TABLE = {
   "master-craftsmanship": cmd_master_craftsmanship,
   codebase: cmd_codebase,
   orchestrator: cmd_orchestrator,
+  covenant: cmdCovenant,
   "llm-router": cmd_llm_router,
   "model-broker": cmd_model_broker,
   harness: cmd_harness,
