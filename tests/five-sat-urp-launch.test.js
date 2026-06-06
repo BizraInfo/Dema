@@ -8,13 +8,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  buildNode05SatU rpLaunch,
-  verifyNode05SatU rpLaunch,
+  buildNode05SatUrpLaunch,
+  verifyNode05SatUrpLaunch,
   NODE0_5SAT_URP_LAUNCH_RESULT_SCHEMA,
 } from "../packages/urp/src/five-sat-urp-launch.js";
 
 test("buildNode05SatU rpLaunch declares exactly 5 SAT, active, locked", () => {
-  const result = buildNode05SatU rpLaunch();
+  const result = buildNode05SatUrpLaunch();
   assert.equal(result.schema, NODE0_5SAT_URP_LAUNCH_RESULT_SCHEMA);
   assert.equal(result.launched, true);
   assert.equal(result.locked, true);
@@ -32,8 +32,8 @@ test("buildNode05SatU rpLaunch declares exactly 5 SAT, active, locked", () => {
 });
 
 test("verifyNode05SatU rpLaunch succeeds on valid launch result", () => {
-  const built = buildNode05SatU rpLaunch();
-  const verified = verifyNode05SatU rpLaunch(built);
+  const built = buildNode05SatUrpLaunch();
+  const verified = verifyNode05SatUrpLaunch(built);
   assert.equal(verified.verified, true);
   assert.equal(verified.active_sat.length, 5);
   assert.equal(verified.locked, true);
