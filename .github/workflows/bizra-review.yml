@@ -57,10 +57,10 @@ jobs:
             proof/u1-*)
               echo "BIZRA_REVIEW_CLASS=proof/u1" >> "$GITHUB_ENV"
               ;;
-            adr/*|policy/*|governance/*|tooling/*|season-*|fix/*|ci/*|docs/*|feat/*|chore/*|pr/*|refactor/*|test/*)
+            adr/*|policy/*|governance/*|tooling/*|season-*|fix/*|ci/*|docs/*|feat/*|chore/*|pr/*|refactor/*|test/*|copilot/*)
               # pr/* is the clean release-train convention (single-commit
-              # cherry-picks off main). refactor/* and test/* are accepted as
-              # broad-scope too. No proof gate is weakened: pr-class,
+              # cherry-picks off main). refactor/*, test/*, and copilot/* are
+              # accepted as broad-scope too. No proof gate is weakened: pr-class,
               # proof-scope, no-overclaim, and receipt-integrity all still run
               # under the broad-scope class below.
               echo "BIZRA_REVIEW_CLASS=policy/broad-scope" >> "$GITHUB_ENV"
