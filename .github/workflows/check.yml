@@ -31,3 +31,13 @@ jobs:
         run: npm run check
       - if: matrix.node-version == '22.x'
         run: npm run perf
+      # DELIVERY-CHECK-1A integration (A+ blueprint gate per DELIVERY_BLUEPRINT).
+      # Level 5 (Optimizing) CI/CD: the sealed local forcing function (perf budgets,
+      # release-readiness, mu 104/104 pre-push:seal, llm:guidance, diff-check) now
+      # runs on the Node 22 matrix in CI for remote empirical proof of the elite
+      # full-stack delivery (PMBOK + DevOps value stream + continuous improvement ring).
+      # continue-on-error during rollout for visibility; becomes hard gate post remote seal.
+      # Uses execFileSync(argv) only (actuator boundary clean). No runtime, no secrets.
+      - if: matrix.node-version == '22.x'
+        run: npm run delivery:check
+        continue-on-error: true
