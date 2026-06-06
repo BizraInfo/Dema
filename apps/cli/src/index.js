@@ -897,7 +897,7 @@ async function cmd_first_run(ctx) {
 
   if (wantJson && argv.includes("--plan-only")) {
     console.log(JSON.stringify(plan, null, 2));
-    return;
+    process.exit(0);
   }
 
   // Human header. In JSON mode we still emit the header on stderr so
@@ -958,7 +958,7 @@ async function cmd_first_run(ctx) {
   // is not yet fully ready — that's exactly the state first-run is
   // designed to help diagnose.
   process.exitCode = 0;
-  return;
+    process.exit(0);
 }
 
 async function cmd_onboard(ctx) {
@@ -999,7 +999,7 @@ async function cmd_onboard(ctx) {
         `\nNo mint has occurred. Type the consent phrase to mint (separate typed-GO required).`,
       );
     }
-    return;
+    process.exit(0);
   }
   const guide = buildOnboardingGuide();
   console.log(
@@ -1007,7 +1007,7 @@ async function cmd_onboard(ctx) {
       ? JSON.stringify(guide, null, 2)
       : formatOnboardingGuide(guide),
   );
-  return;
+    process.exit(0);
 }
 
 async function cmd_preview_card(ctx) {
@@ -1030,33 +1030,33 @@ async function cmd_preview_card(ctx) {
       );
       if (!match) {
         console.log(`preview-card: card not found for hash ${hashArg}`);
-        return;
+    process.exit(0);
       }
       console.log(
         wantJson2
           ? JSON.stringify(match, null, 2)
           : `receipt_id_preview: ${match.would_mint_if_consented.receipt_id_preview}`,
       );
-      return;
+    process.exit(0);
     }
 
     if (cards.length === 0) {
       console.log("no preview cards stored yet");
-      return;
+    process.exit(0);
     }
 
     if (wantJson2) {
       console.log(JSON.stringify(cards, null, 2));
-      return;
+    process.exit(0);
     }
     for (const c of cards) {
       console.log(
         `  ${c?.would_mint_if_consented?.receipt_id_preview ?? "unknown"}`,
       );
     }
-    return;
+    process.exit(0);
   }
-  return;
+    process.exit(0);
 }
 
 async function cmd_language(ctx) {
@@ -1085,7 +1085,7 @@ async function cmd_language(ctx) {
           2,
         ),
       );
-      return;
+    process.exit(0);
     }
     if (result.source === "absent" || result.language_code === null) {
       console.log(
@@ -1103,7 +1103,7 @@ async function cmd_language(ctx) {
         console.log(`Secondary: ${label2} (${result.secondary_language_code})`);
       }
     }
-    return;
+    process.exit(0);
   }
 
   // dema language [--reset] — interactive picker
@@ -1118,7 +1118,7 @@ async function cmd_language(ctx) {
   if (argv.includes("--json")) {
     console.log(JSON.stringify(picked, null, 2));
   }
-  return;
+    process.exit(0);
 }
 
 async function cmd_explain(ctx) {
@@ -1154,7 +1154,7 @@ async function cmd_explain(ctx) {
       const out =
         persp !== undefined ? { ...preview, perspectives: persp } : preview;
       console.log(JSON.stringify(out, null, 2));
-      return;
+    process.exit(0);
     }
     console.log(formatExplainPreview(preview));
     if (concept === "dema") {
@@ -1166,7 +1166,7 @@ async function cmd_explain(ctx) {
         suppressedBy: "user-explain",
       });
     }
-    return;
+    process.exit(0);
   }
 
   // --all, --technical, --arabic, --game paths require a concept.
@@ -1175,7 +1175,7 @@ async function cmd_explain(ctx) {
   // Listing or not-found fall through to standard formatter for these flags too.
   if (!concept || preview.mode === "listing" || preview.matched === false) {
     console.log(formatExplainPreview(preview));
-    return;
+    process.exit(0);
   }
 
   const PERSPECTIVES_ORDER = ["simple", "technical", "game", "arabic"];
@@ -1190,7 +1190,7 @@ async function cmd_explain(ctx) {
       console.log(
         JSON.stringify({ ...preview, perspectives: perspMap }, null, 2),
       );
-      return;
+    process.exit(0);
     }
     const lines = [preview.title, ""];
     for (const p of PERSPECTIVES_ORDER) {
@@ -1211,7 +1211,7 @@ async function cmd_explain(ctx) {
       lines.push("  See also: " + preview.see_also.join(", "));
     }
     console.log(lines.join("\n"));
-    return;
+    process.exit(0);
   }
 
   // Single named perspective: --technical, --arabic, --game.
@@ -1223,7 +1223,7 @@ async function cmd_explain(ctx) {
     console.log(
       JSON.stringify({ ...preview, perspectives: perspMap }, null, 2),
     );
-    return;
+    process.exit(0);
   }
 
   if (text === null) {
@@ -1241,7 +1241,7 @@ async function cmd_explain(ctx) {
         `       \`dema explain --all ${concept}\` for all available perspectives.`,
       ].join("\n"),
     );
-    return;
+    process.exit(0);
   }
 
   console.log(
@@ -1257,7 +1257,7 @@ async function cmd_explain(ctx) {
       .filter(Boolean)
       .join("\n"),
   );
-  return;
+    process.exit(0);
 }
 
 async function cmd_setup(ctx) {
@@ -1269,14 +1269,14 @@ async function cmd_setup(ctx) {
     await runSetupWizard();
     await runSetup();
   }
-  return;
+    process.exit(0);
 }
 
 async function cmd_setup_check(ctx) {
   const result = await checkSetup();
   console.log(JSON.stringify(result, null, 2));
   if (result.verdict !== "INTACT") process.exitCode = 1;
-  return;
+    process.exit(0);
 }
 
 async function cmd_uninstall(ctx) {
@@ -1286,7 +1286,7 @@ async function cmd_uninstall(ctx) {
   const result = await removeSetup(undefined, { consent, dryRun });
   console.log(JSON.stringify(result, null, 2));
   if (!result.removed && result.reason !== "dry_run") process.exitCode = 1;
-  return;
+    process.exit(0);
 }
 
 async function cmd_witness(ctx) {
@@ -1301,7 +1301,7 @@ async function cmd_witness(ctx) {
         'No witness receipt found. Run `dema witness --consent "WITNESS NODE0 STATE"` first.',
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     const vResult = await verifyWitnessReceipt(receiptPath);
     if (wantJsonV) {
@@ -1310,7 +1310,7 @@ async function cmd_witness(ctx) {
       console.log(formatWitnessVerification(vResult));
     }
     if (vResult.verdict !== "VERIFIED") process.exitCode = 1;
-    return;
+    process.exit(0);
   }
   const consent = argValue(argv, "--consent") ?? "";
   const dryRun = argv.includes("--dry-run");
@@ -1330,7 +1330,7 @@ async function cmd_witness(ctx) {
         formatWitnessReceipt({ ...att, saved: false, reason: "dry_run" }),
       );
     }
-    return;
+    process.exit(0);
   }
   const result = await saveWitnessReceipt({ consent, dryRun });
   if (wantJson) {
@@ -1339,7 +1339,7 @@ async function cmd_witness(ctx) {
     console.log(formatWitnessReceipt(result));
   }
   if (!result.saved && result.reason !== "dry_run") process.exitCode = 1;
-  return;
+    process.exit(0);
 }
 
 async function cmd_authorship(ctx) {
@@ -1368,7 +1368,7 @@ async function cmd_authorship(ctx) {
       );
     }
     if (!result.initialized) process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   if (subCmdA === "sign") {
@@ -1392,7 +1392,7 @@ async function cmd_authorship(ctx) {
       console.error(`Signing failed: ${result.error}`);
     }
     if (!result.signed) process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   if (subCmdA === "latest") {
@@ -1408,7 +1408,7 @@ async function cmd_authorship(ctx) {
       console.log("No authorship receipts found.");
     }
     if (!summary.found) process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   if (subCmdA === "closeout") {
@@ -1419,7 +1419,7 @@ async function cmd_authorship(ctx) {
       console.log(formatAuthorshipCloseout(closeout));
     }
     if (!closeout.verified) process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   if (subCmdA === "verify") {
@@ -1441,7 +1441,7 @@ async function cmd_authorship(ctx) {
             : "No authorship receipts found.",
         );
         process.exitCode = 1;
-        return;
+    process.exit(0);
       }
       receiptPath = latest.path;
     }
@@ -1451,7 +1451,7 @@ async function cmd_authorship(ctx) {
         "Usage: dema authorship verify <receipt.json> | --latest [--json]",
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
 
     const result = await verifyAuthorshipReceiptFile(receiptPath);
@@ -1461,7 +1461,7 @@ async function cmd_authorship(ctx) {
       console.log(formatAuthorshipVerification(result));
     }
     if (!result.verified) process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   if (subCmdA === "demo") {
@@ -1502,14 +1502,14 @@ async function cmd_authorship(ctx) {
       console.log("  No keys or receipts were saved to disk.");
     }
     if (!ok) process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   console.error(
     "Usage: dema authorship key init | sign <path> | latest | closeout | verify <receipt> | demo",
   );
   process.exitCode = 1;
-  return;
+    process.exit(0);
 }
 
 async function cmd_proof(ctx) {
@@ -1528,7 +1528,7 @@ async function cmd_proof(ctx) {
         "Usage: dema proof passport verify <passport.json> [--deep] [--receipts-dir <dir>] [--json]",
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
 
     if (deep) {
@@ -1549,7 +1549,7 @@ async function cmd_proof(ctx) {
             : `FAILED: cannot read ${passportPath}`,
         );
         process.exitCode = 1;
-        return;
+    process.exit(0);
       }
       const { join: joinPath } = await import("node:path");
       const { homedir: getHome } = await import("node:os");
@@ -1581,7 +1581,7 @@ async function cmd_proof(ctx) {
         console.log(lines.join("\n"));
       }
       if (!deepResult.verified) process.exitCode = 1;
-      return;
+    process.exit(0);
     }
 
     const result = await verifyProofPassportFile(passportPath);
@@ -1591,7 +1591,7 @@ async function cmd_proof(ctx) {
       console.log(formatProofPassportVerification(result));
     }
     if (!result.verified) process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   if (proofSub === "passport") {
@@ -1607,13 +1607,13 @@ async function cmd_proof(ctx) {
     ) {
       process.exitCode = 1;
     }
-    return;
+    process.exit(0);
   }
   console.error(
     "Usage: dema proof passport [--json] | dema proof passport verify <path>",
   );
   process.exitCode = 1;
-  return;
+    process.exit(0);
 }
 
 async function cmd_genesis(ctx) {
@@ -1628,11 +1628,11 @@ async function cmd_genesis(ctx) {
         ? JSON.stringify(preview, null, 2)
         : formatGenesisCompositionBlueprintPreview(preview),
     );
-    return;
+    process.exit(0);
   }
   console.error("Usage: dema genesis composition blueprint [--json]");
   process.exitCode = 1;
-  return;
+    process.exit(0);
 }
 
 async function cmd_attest(ctx) {
@@ -1673,7 +1673,7 @@ async function cmd_attest(ctx) {
     console.error(`Attest failed: ${result.error}`);
   }
   if (!result.attested) process.exitCode = 1;
-  return;
+    process.exit(0);
 }
 
 async function cmd_verify_grounded(ctx) {
@@ -1698,7 +1698,7 @@ async function cmd_verify_grounded(ctx) {
     console.error(`REJECTED:${result.reason}`);
   }
   if (!result.verified) process.exitCode = 1;
-  return;
+    process.exit(0);
 }
 
 async function cmd_urp(ctx) {
@@ -1715,7 +1715,7 @@ async function cmd_urp(ctx) {
         "Usage: dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]",
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
 
     const { readFile } = await import("node:fs/promises");
@@ -1738,7 +1738,7 @@ async function cmd_urp(ctx) {
             : `FAILED: invalid JSON in ${passportPath}`,
         );
         process.exitCode = 1;
-        return;
+    process.exit(0);
       }
     } catch {
       const err = {
@@ -1754,7 +1754,7 @@ async function cmd_urp(ctx) {
           : `FAILED: cannot read ${passportPath}`,
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
 
     const { join: joinPath } = await import("node:path");
@@ -1782,7 +1782,7 @@ async function cmd_urp(ctx) {
         );
       }
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
 
     const writeResult = await saveUrpLocalIndex(buildResult);
@@ -1814,7 +1814,7 @@ async function cmd_urp(ctx) {
       );
     }
     if (!writeResult.written) process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   if (urpSub === "list") {
@@ -1851,7 +1851,7 @@ async function cmd_urp(ctx) {
       console.log(lines.join("\n"));
     }
     if (result.corruption_detected) process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   if (urpSub === "verify") {
@@ -1861,7 +1861,7 @@ async function cmd_urp(ctx) {
     if (!indexPath) {
       console.error("Usage: dema urp verify <index.json> [--json]");
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
 
     const result = await verifyUrpLocalIndexFile(indexPath);
@@ -1894,7 +1894,7 @@ async function cmd_urp(ctx) {
       console.log(lines.join("\n"));
     }
     if (!result.verified) process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   if (urpSub === "choose") {
@@ -1907,7 +1907,7 @@ async function cmd_urp(ctx) {
           "Usage: dema urp choose verify <choose-receipt.json> [--json]",
         );
         process.exitCode = 1;
-        return;
+    process.exit(0);
       }
       const result = await verifyChooseReceiptFile(filePath);
       if (wantJsonU) {
@@ -1945,7 +1945,7 @@ async function cmd_urp(ctx) {
         console.log(lines.join("\n"));
       }
       if (!result.verified) process.exitCode = 1;
-      return;
+    process.exit(0);
     }
 
     // Sub-action: `dema urp choose list [--json]` (lists persisted choose receipts).
@@ -1983,7 +1983,7 @@ async function cmd_urp(ctx) {
         console.log(lines.join("\n"));
       }
       if (r.corruption_detected) process.exitCode = 1;
-      return;
+    process.exit(0);
     }
 
     const positional = argv.slice(2).filter((a) => !a.startsWith("--"));
@@ -1996,14 +1996,14 @@ async function cmd_urp(ctx) {
         'Usage: dema urp choose <index.json> --decision MARK_SHAREABLE|MARK_LOCAL_ONLY --consent "<exact phrase>" [--json]',
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     if (!decision) {
       console.error(
         "dema urp choose: --decision is required (MARK_SHAREABLE or MARK_LOCAL_ONLY)",
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     if (
       decision !== DECISION_MARK_SHAREABLE &&
@@ -2013,7 +2013,7 @@ async function cmd_urp(ctx) {
         `dema urp choose: invalid --decision "${decision}"; must be MARK_SHAREABLE or MARK_LOCAL_ONLY`,
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
 
     const { readFile: rf } = await import("node:fs/promises");
@@ -2036,7 +2036,7 @@ async function cmd_urp(ctx) {
             : `FAILED: invalid JSON in ${indexPath}`,
         );
         process.exitCode = 1;
-        return;
+    process.exit(0);
       }
     } catch {
       const err = {
@@ -2052,7 +2052,7 @@ async function cmd_urp(ctx) {
           : `FAILED: cannot read ${indexPath}`,
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
 
     const kernelResult = buildChooseDecision(index, {
@@ -2080,7 +2080,7 @@ async function cmd_urp(ctx) {
         );
       }
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
 
     const writeResult = await saveChooseDecision(kernelResult);
@@ -2123,14 +2123,14 @@ async function cmd_urp(ctx) {
       );
       process.exitCode = 1;
     }
-    return;
+    process.exit(0);
   }
 
   console.error(
     'Usage: dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]\n       dema urp list [--json]\n       dema urp verify <index.json> [--json]\n       dema urp choose <index.json> --decision MARK_SHAREABLE|MARK_LOCAL_ONLY --consent "<exact phrase>" [--json]',
   );
   process.exitCode = 1;
-  return;
+    process.exit(0);
 }
 
 // Sub-action: `dema urp launch-5sat` (URP-5SAT-1A Node0 5 SAT launch/lock).
@@ -2141,7 +2141,7 @@ if (argv[2] === "launch-5sat") {
   if (!consent || consent !== exactConsent) {
     console.error(`dema urp launch-5sat: exact --consent "${exactConsent}" required`);
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
   const launch = buildNode05SatUrpLaunch();
   // Save as content-addressed receipt (atomic). Self-contained for micro.
@@ -2192,7 +2192,7 @@ if (argv[2] === "launch-5sat") {
     console.log("  LOCAL ONLY · no federation · no mint · declared active state");
     console.log(`  Truth: ${result.truth_label}`);
   }
-  return;
+    process.exit(0);
 }
 
 // Sub-action: `dema urp node1-5sat-preview` (preview "mint" for Node1 via universal pool).
@@ -2202,7 +2202,7 @@ if (argv[2] === "node1-5sat-preview") {
   if (!consent || consent !== exact) {
     console.error(`dema urp node1-5sat-preview: exact --consent "${exact}" required`);
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
   const preview = buildNode15SatPreview();
   const { join } = await import("node:path");
@@ -2232,7 +2232,7 @@ if (argv[2] === "node1-5sat-preview") {
     console.log("  PREVIEW ONLY · no mint in Dema");
     console.log(`  Truth: ${result.truth_label}`);
   }
-  return;
+    process.exit(0);
 }
 
 async function cmd_realm(ctx) {
@@ -2245,30 +2245,30 @@ async function cmd_realm(ctx) {
     const board = await gatherDemaRealmBoard();
     if (wantJsonR) {
       console.log(JSON.stringify(board, null, 2));
-      return;
+    process.exit(0);
     }
     console.log(renderDemaRealmBoard(board, { useColor: !noColor }));
-    return;
+    process.exit(0);
   }
 
   if (realmSub === "status") {
     const status = await gatherDemaRealmStatus();
     if (wantJsonR) {
       console.log(JSON.stringify(status, null, 2));
-      return;
+    process.exit(0);
     }
     console.log(renderDemaRealmStatus(status, { useColor: !noColor }));
-    return;
+    process.exit(0);
   }
 
   if (realmSub === "council") {
     const council = gatherDemaRealmCouncil();
     if (wantJsonR) {
       console.log(JSON.stringify(council, null, 2));
-      return;
+    process.exit(0);
     }
     console.log(renderDemaRealmCouncil(council, { useColor: !noColor }));
-    return;
+    process.exit(0);
   }
 
   if (realmSub === "checkpoint") {
@@ -2313,25 +2313,25 @@ async function cmd_realm(ctx) {
         );
         process.exitCode = 1;
       }
-      return;
+    process.exit(0);
     }
 
     const cp = await gatherDemaRealmCheckpoint();
     if (wantJsonR) {
       console.log(JSON.stringify(cp, null, 2));
-      return;
+    process.exit(0);
     }
     console.log(renderDemaRealmCheckpoint(cp, { useColor: !noColor }));
-    return;
+    process.exit(0);
   }
 
   const state = await gatherDemaRealmState();
   if (wantJsonR) {
     console.log(JSON.stringify(state, null, 2));
-    return;
+    process.exit(0);
   }
   console.log(renderDemaRealmHome(state, { useColor: !noColor }));
-  return;
+    process.exit(0);
 }
 
 async function cmd_status(ctx) {
@@ -2343,18 +2343,18 @@ async function cmd_status(ctx) {
     } else {
       console.log(formatSystemSnapshot(snapshot));
     }
-    return;
+    process.exit(0);
   }
   const status = await statusWithLocalIdentity();
   const color = argv.includes("--no-color") ? false : shouldUseColor();
   console.log(formatStatus(status, { color }));
-  return;
+    process.exit(0);
 }
 
 async function cmd_status_json(ctx) {
   const status = await statusWithLocalIdentity();
   console.log(JSON.stringify(status, null, 2));
-  return;
+    process.exit(0);
 }
 
 async function cmd_state(ctx) {
@@ -2362,7 +2362,7 @@ async function cmd_state(ctx) {
   const statePreview = buildNode0StatePreview();
   if (wantsJson(argv)) {
     console.log(JSON.stringify(statePreview, null, 2));
-    return;
+    process.exit(0);
   }
   console.log(
     [
@@ -2376,7 +2376,7 @@ async function cmd_state(ctx) {
       humanHintLine("state"),
     ].join("\n"),
   );
-  return;
+    process.exit(0);
 }
 
 async function cmd_profiles(ctx) {
@@ -2387,7 +2387,7 @@ async function cmd_profiles(ctx) {
     : buildProfileFoundationPreview();
   if (wantsJson(argv)) {
     console.log(JSON.stringify(profilePreview, null, 2));
-    return;
+    process.exit(0);
   }
   if (wantsSummary) {
     const actors = profilePreview.actors;
@@ -2416,12 +2416,12 @@ async function cmd_profiles(ctx) {
       ].join("\n"),
     );
   }
-  return;
+    process.exit(0);
 }
 
 async function cmd_consent_card(ctx) {
   console.log(JSON.stringify(buildConsentCardPreview(), null, 2));
-  return;
+    process.exit(0);
 }
 
 async function cmd_mission_loop(ctx) {
@@ -2430,14 +2430,14 @@ async function cmd_mission_loop(ctx) {
     ? buildMissionLoopSummary()
     : buildMissionLoopPreview();
   console.log(JSON.stringify(preview, null, 2));
-  return;
+    process.exit(0);
 }
 
 async function cmd_evidence_event(ctx) {
   console.log(
     JSON.stringify(buildEvidenceChainEventPreviewFromInputs(), null, 2),
   );
-  return;
+    process.exit(0);
 }
 
 async function cmd_node_registry(ctx) {
@@ -2447,10 +2447,10 @@ async function cmd_node_registry(ctx) {
     console.log(
       formatNodeRegistryPreview(preview, resolveFormatterOptsFromEnv()),
     );
-    return;
+    process.exit(0);
   }
   console.log(JSON.stringify(preview, null, 2));
-  return;
+    process.exit(0);
 }
 
 async function cmd_onboarding_lifecycle(ctx) {
@@ -2458,7 +2458,7 @@ async function cmd_onboarding_lifecycle(ctx) {
   const preview = buildOnboardingLifecyclePreview();
   if (argv.includes("--json")) {
     console.log(JSON.stringify(preview, null, 2));
-    return;
+    process.exit(0);
   }
   // Default: pretty TUI on TTY, JSON when redirected
   if (process.stdout.isTTY) {
@@ -2468,7 +2468,7 @@ async function cmd_onboarding_lifecycle(ctx) {
   } else {
     console.log(JSON.stringify(preview, null, 2));
   }
-  return;
+    process.exit(0);
 }
 
 async function cmd_skill_growth_governor(ctx) {
@@ -2476,7 +2476,7 @@ async function cmd_skill_growth_governor(ctx) {
   const preview = buildSkillGrowthGovernorPreview();
   if (argv.includes("--json")) {
     console.log(JSON.stringify(preview, null, 2));
-    return;
+    process.exit(0);
   }
   if (process.stdout.isTTY) {
     console.log(
@@ -2485,7 +2485,7 @@ async function cmd_skill_growth_governor(ctx) {
   } else {
     console.log(JSON.stringify(preview, null, 2));
   }
-  return;
+    process.exit(0);
 }
 
 async function cmd_project_status(ctx) {
@@ -2493,7 +2493,7 @@ async function cmd_project_status(ctx) {
   const preview = buildProjectStatusPreview();
   if (argv.includes("--json")) {
     console.log(JSON.stringify(preview, null, 2));
-    return;
+    process.exit(0);
   }
   if (process.stdout.isTTY) {
     console.log(
@@ -2502,7 +2502,7 @@ async function cmd_project_status(ctx) {
   } else {
     console.log(JSON.stringify(preview, null, 2));
   }
-  return;
+    process.exit(0);
 }
 
 async function cmd_craftsmanship_witness(ctx) {
@@ -2512,7 +2512,7 @@ async function cmd_craftsmanship_witness(ctx) {
   // Inputs are caller-declared (zero I/O in builder); CLI passes empty
   // defaults · operator can pipe their own slice_history/rsi_signals etc.
   console.log(JSON.stringify(buildCraftsmanshipWitnessPreview(), null, 2));
-  return;
+    process.exit(0);
 }
 
 async function cmd_master_craftsmanship(ctx) {
@@ -2529,7 +2529,7 @@ async function cmd_master_craftsmanship(ctx) {
         "  Default path: tests/node-onboarding-adr011-compliance.test.js",
     );
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
   const mcJsonFlag = argv.includes("--json");
   // Path is any non-flag arg after the subcommand
@@ -2547,7 +2547,7 @@ async function cmd_master_craftsmanship(ctx) {
     console.log(formatAuditReport(result));
   }
   if (!result.overall_compliant) process.exitCode = 1;
-  return;
+    process.exit(0);
 }
 
 async function cmd_codebase(ctx) {
@@ -2560,21 +2560,21 @@ async function cmd_codebase(ctx) {
       "Usage: dema codebase map <abs-path> [--summary] [--json] [--max-files N] [--max-depth N] [--max-file-size N] [--include-tests] [--hotspots] [--exclude PAT] [--no-default-exclude]\n",
     );
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
   const { isAbsolute: cbIsAbsolute } = await import("node:path");
   const cbPath = argv.slice(2).find((a) => !a.startsWith("--"));
   if (!cbPath) {
     process.stderr.write("dema codebase map: <abs-path> is required\n");
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
   if (!cbIsAbsolute(cbPath)) {
     process.stderr.write(
       `dema codebase map: <abs-path> must be absolute (got: ${cbPath})\n`,
     );
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
   const cbSummary = argv.includes("--summary");
   const cbJsonForce = argv.includes("--json");
@@ -2592,7 +2592,7 @@ async function cmd_codebase(ctx) {
       "dema codebase map: --save-map requires JSON output; cannot combine with --summary unless --json is also provided\n",
     );
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
   const parseIntOrNull = (s) => {
     if (typeof s !== "string") return undefined;
@@ -2647,7 +2647,7 @@ async function cmd_codebase(ctx) {
         );
       }
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     process.stderr.write(`saved codebase map to: ${cbSaveResult.path}\n`);
   }
@@ -2657,7 +2657,7 @@ async function cmd_codebase(ctx) {
     );
     process.stdout.write(cbOut);
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
   if (cbSummary && !cbJsonForce) {
     process.stdout.write(formatCodebaseMapSummary(envelope) + "\n");
@@ -2665,7 +2665,7 @@ async function cmd_codebase(ctx) {
     process.stdout.write(cbOut);
   }
   if (envelope.partial) process.exitCode = 1;
-  return;
+    process.exit(0);
 }
 
 async function cmd_orchestrator(ctx) {
@@ -2680,7 +2680,7 @@ async function cmd_orchestrator(ctx) {
       'Usage: dema orchestrator verify [--invocation-file <abs-path> | --latest] [--pretty] [--save-pipeline-result --save-pipeline-consent "GO: save local orchestrator pipeline result"]\n',
     );
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
   const { isAbsolute: orcIsAbsolute } = await import("node:path");
   const orcFile = argValue(argv, "--invocation-file") ?? null;
@@ -2693,14 +2693,14 @@ async function cmd_orchestrator(ctx) {
       "dema orchestrator verify: --invocation-file and --latest are mutually exclusive\n",
     );
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
   if (!orcFile && !orcLatest) {
     process.stderr.write(
       "dema orchestrator verify: one of --invocation-file <abs-path> or --latest is required\n",
     );
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   let orcTargetPath;
@@ -2710,7 +2710,7 @@ async function cmd_orchestrator(ctx) {
         `dema orchestrator verify: --invocation-file path must be absolute (got: ${orcFile})\n`,
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     orcTargetPath = orcFile;
   } else {
@@ -2722,7 +2722,7 @@ async function cmd_orchestrator(ctx) {
         "dema orchestrator verify: no invocation-*.json files found in $DEMA_HOME/receipts/\n",
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     orcTargetPath = latest;
   }
@@ -2745,7 +2745,7 @@ async function cmd_orchestrator(ctx) {
       );
     }
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   const pipeline = runVerificationPipeline({
@@ -2787,19 +2787,19 @@ async function cmd_orchestrator(ctx) {
         );
       }
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     process.stderr.write(`saved pipeline result to: ${saveResult.path}\n`);
   }
 
   process.stdout.write(pipelineOut);
   if (!pipelineWithSource.passed) process.exitCode = 1;
-  return;
+    process.exit(0);
 }
 
 async function cmd_llm_router(ctx) {
   console.log(JSON.stringify(buildLocalLLMRouterPreview(), null, 2));
-  return;
+    process.exit(0);
 }
 
 async function cmd_model_broker(ctx) {
@@ -2828,14 +2828,14 @@ async function cmd_model_broker(ctx) {
         "dema model-broker verify-invocation: --invocation-result-file and --latest are mutually exclusive\n",
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     if (!explicitFile && !useLatest) {
       process.stderr.write(
         "dema model-broker verify-invocation: one of --invocation-result-file <abs-path> or --latest is required\n",
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
 
     const { isAbsolute: pathIsAbsolute } = await import("node:path");
@@ -2848,7 +2848,7 @@ async function cmd_model_broker(ctx) {
           `dema model-broker verify-invocation: --invocation-result-file path must be absolute (got: ${explicitFile})\n`,
         );
         process.exitCode = 1;
-        return;
+    process.exit(0);
       }
       targetPath = explicitFile;
       sourceKind = "file";
@@ -2861,7 +2861,7 @@ async function cmd_model_broker(ctx) {
           "dema model-broker verify-invocation: no invocation-*.json files found in $DEMA_HOME/receipts/\n",
         );
         process.exitCode = 1;
-        return;
+    process.exit(0);
       }
       targetPath = latest;
       sourceKind = "latest";
@@ -2885,7 +2885,7 @@ async function cmd_model_broker(ctx) {
         );
       }
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
 
     const verification = verifyRoutedInvocationEnvelope(readResult.envelope, {
@@ -2924,7 +2924,7 @@ async function cmd_model_broker(ctx) {
           );
         }
         process.exitCode = 1;
-        return;
+    process.exit(0);
       }
       process.stderr.write(
         `saved verification result to: ${saveResult.path}\n`,
@@ -2936,7 +2936,7 @@ async function cmd_model_broker(ctx) {
     if (verification.verdict !== "compliant") {
       process.exitCode = 1;
     }
-    return;
+    process.exit(0);
   }
 
   if (action !== "route") {
@@ -2944,7 +2944,7 @@ async function cmd_model_broker(ctx) {
       `dema model-broker: unknown action '${action ?? ""}' (expected: route | verify-invocation)\n`,
     );
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   // --save-verification-result is only valid for verify-invocation; reject
@@ -2957,7 +2957,7 @@ async function cmd_model_broker(ctx) {
       "dema model-broker route: --save-verification-result is only valid for the 'verify-invocation' action\n",
     );
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   const taskKind = argValue(argv, "--task") ?? null;
@@ -2980,7 +2980,7 @@ async function cmd_model_broker(ctx) {
       "dema model-broker route: --registry-stdin, --registry-file, and --use-local-registry are mutually exclusive (pass at most one)\n",
     );
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   if (!taskKind && !requiredRole) {
@@ -2988,7 +2988,7 @@ async function cmd_model_broker(ctx) {
       "dema model-broker route: --task <kind> or --required-role <role> is required\n",
     );
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   // 1 MB cap on registry file size (matches packages/receipts/src/receipt-store.js).
@@ -3004,7 +3004,7 @@ async function cmd_model_broker(ctx) {
         `dema model-broker route: stdin read failed: ${err?.message ?? err}\n`,
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     try {
       const parsed = JSON.parse(raw);
@@ -3014,7 +3014,7 @@ async function cmd_model_broker(ctx) {
         `dema model-broker route: malformed --registry-stdin JSON: ${err?.message ?? err}\n`,
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
   } else if (useLocalRegistry || explicitRegistryFile) {
     // Resolve target path.
@@ -3030,7 +3030,7 @@ async function cmd_model_broker(ctx) {
           `dema model-broker route: --registry-file path must be absolute (got: ${explicitRegistryFile}). Use --use-local-registry for default DEMA_HOME location.\n`,
         );
         process.exitCode = 1;
-        return;
+    process.exit(0);
       }
       targetPath = explicitRegistryFile;
     } else {
@@ -3062,7 +3062,7 @@ async function cmd_model_broker(ctx) {
           `dema model-broker route: registry file too large: exceeds ${MAX_REGISTRY_FILE_BYTES} bytes\n`,
         );
         process.exitCode = 1;
-        return;
+    process.exit(0);
       }
       const raw = buffer.subarray(0, bytesRead).toString("utf8");
       const parsed = JSON.parse(raw);
@@ -3082,7 +3082,7 @@ async function cmd_model_broker(ctx) {
         );
       }
       process.exitCode = 1;
-      return;
+    process.exit(0);
     } finally {
       if (fh) {
         try {
@@ -3116,7 +3116,7 @@ async function cmd_model_broker(ctx) {
       "dema model-broker route: --save-invocation-result requires --invoke (no envelope to save without invocation)\n",
     );
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   // v0.1 (this slice): --invoke runs the routed local-LLM invocation.
@@ -3128,7 +3128,7 @@ async function cmd_model_broker(ctx) {
         "dema model-broker route: --invoke requires --save-receipt for route durability before invocation.\n",
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     const prompt = argValue(argv, "--prompt") ?? "";
     if (typeof prompt !== "string" || prompt.length === 0) {
@@ -3136,7 +3136,7 @@ async function cmd_model_broker(ctx) {
         'dema model-broker route: --invoke requires --prompt "<text>"\n',
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     const invokeConsent = argValue(argv, "--invoke-consent") ?? "";
     if (typeof invokeConsent !== "string" || invokeConsent.length === 0) {
@@ -3144,7 +3144,7 @@ async function cmd_model_broker(ctx) {
         'dema model-broker route: --invoke requires --invoke-consent "GO: invoke local LLM at <selected_model_id>"\n',
       );
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     // Step 1: save first (route durability before invocation).
     const consent = argValue(argv, "--consent") ?? "";
@@ -3168,7 +3168,7 @@ async function cmd_model_broker(ctx) {
         );
       }
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     process.stderr.write(`saved receipt to: ${saveResult.path}\n`);
 
@@ -3221,7 +3221,7 @@ async function cmd_model_broker(ctx) {
         // result they were trying to save.
         process.stdout.write(envelopeContent);
         process.exitCode = 1;
-        return;
+    process.exit(0);
       }
       process.stderr.write(
         `saved invocation result to: ${saveInvResult.path}\n`,
@@ -3240,7 +3240,7 @@ async function cmd_model_broker(ctx) {
     ) {
       process.exitCode = 1;
     }
-    return;
+    process.exit(0);
   }
 
   // Non-invoke path: stdout = route receipt; optionally save.
@@ -3272,11 +3272,11 @@ async function cmd_model_broker(ctx) {
         );
       }
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     process.stderr.write(`saved receipt to: ${result.path}\n`);
   }
-  return;
+    process.exit(0);
 }
 
 async function cmd_harness(ctx) {
@@ -3289,7 +3289,7 @@ async function cmd_harness(ctx) {
   } else {
     console.log(formatHarnessIntegration(buildHarnessIntegration()));
   }
-  return;
+    process.exit(0);
 }
 
 async function cmd_process_mining(ctx) {
@@ -3298,7 +3298,7 @@ async function cmd_process_mining(ctx) {
     ? buildProcessMiningSummary()
     : buildProcessMiningPreview();
   console.log(JSON.stringify(preview, null, 2));
-  return;
+    process.exit(0);
 }
 
 async function cmd_key_maker_check(ctx) {
@@ -3308,7 +3308,7 @@ async function cmd_key_maker_check(ctx) {
     ? buildKeyMakerComplianceSummary({ door })
     : buildKeyMakerCompliancePreview({ door });
   console.log(JSON.stringify(preview, null, 2));
-  return;
+    process.exit(0);
 }
 
 async function cmd_llm_invoke(ctx) {
@@ -3328,7 +3328,7 @@ async function cmd_llm_invoke(ctx) {
       ? buildLLMInvocationSummary({ model, prompt, ollamaBaseUrl })
       : buildLLMInvocationPreview({ model, prompt, ollamaBaseUrl });
     console.log(JSON.stringify(preview, null, 2));
-    return;
+    process.exit(0);
   }
 
   // --invoke flag present · real HTTP call to Ollama · consent-gated
@@ -3342,7 +3342,7 @@ async function cmd_llm_invoke(ctx) {
   if (result.invocation_status === "failed") {
     process.exitCode = 1;
   }
-  return;
+    process.exit(0);
 }
 
 async function cmd_today(ctx) {
@@ -3352,7 +3352,7 @@ async function cmd_today(ctx) {
   const memory = await summarizeMemory();
   if (wantsJson(argv)) {
     console.log(JSON.stringify({ ...result, memory }, null, 2));
-    return;
+    process.exit(0);
   }
   const tick = result.tick;
   console.log(
@@ -3365,7 +3365,7 @@ async function cmd_today(ctx) {
       humanHintLine("today"),
     ].join("\n"),
   );
-  return;
+    process.exit(0);
 }
 
 async function cmd_doctor(ctx) {
@@ -3389,7 +3389,7 @@ async function cmd_doctor(ctx) {
       ),
     );
     process.exitCode = anyFail ? 1 : 0;
-    return;
+    process.exit(0);
   }
 
   const noColor =
@@ -3398,7 +3398,7 @@ async function cmd_doctor(ctx) {
     argv.includes("--no-color");
   console.log(formatDoctorDashboard(predicates, { color: !noColor }));
   process.exitCode = anyFail ? 1 : 0;
-  return;
+    process.exit(0);
 }
 
 async function cmd_dashboard(ctx) {
@@ -3427,7 +3427,7 @@ async function cmd_dashboard(ctx) {
   } catch {
     console.log("Dashboard not found: " + htmlPath);
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   if (wantsJson(argv)) {
@@ -3438,7 +3438,7 @@ async function cmd_dashboard(ctx) {
         2,
       ),
     );
-    return;
+    process.exit(0);
   }
 
   const status = await statusWithLocalIdentity();
@@ -3483,7 +3483,7 @@ async function cmd_dashboard(ctx) {
       ? "Opening static dashboard: " + openPath
       : "Opening live dashboard: " + openPath,
   );
-  return;
+    process.exit(0);
 }
 
 async function cmd_ambient(ctx) {
@@ -3495,7 +3495,7 @@ async function cmd_ambient(ctx) {
         ? JSON.stringify(manifest, null, 2)
         : formatAmbientManifestPreview(manifest),
     );
-    return;
+    process.exit(0);
   }
   if (subcommand === "audit") {
     const audit = buildAmbientAuditPreview();
@@ -3504,15 +3504,15 @@ async function cmd_ambient(ctx) {
         ? JSON.stringify(audit, null, 2)
         : formatAmbientAuditPreview(audit),
     );
-    return;
+    process.exit(0);
   }
   console.log(formatAmbientBoundary(buildAmbientBoundary()));
-  return;
+    process.exit(0);
 }
 
 async function cmd_ambient_json(ctx) {
   console.log(JSON.stringify(buildAmbientBoundary(), null, 2));
-  return;
+    process.exit(0);
 }
 
 async function cmd_journey(ctx) {
@@ -3529,7 +3529,7 @@ async function cmd_journey(ctx) {
       ? JSON.stringify(journey, null, 2)
       : formatSovereignJourneyPreview(journey),
   );
-  return;
+    process.exit(0);
 }
 
 async function cmd_diagnostics(ctx) {
@@ -3545,7 +3545,7 @@ async function cmd_diagnostics(ctx) {
       ? JSON.stringify(plan, null, 2)
       : formatDiagnosticsMissionPlan(plan),
   );
-  return;
+    process.exit(0);
 }
 
 async function cmd_consent(ctx) {
@@ -3563,7 +3563,7 @@ async function cmd_consent(ctx) {
     console.log(
       json ? JSON.stringify(plan, null, 2) : formatConsentPlanPreview(plan),
     );
-    return;
+    process.exit(0);
   }
   if (subcommand === "prove") {
     const wantJsonC = wantsJson(argv);
@@ -3604,7 +3604,7 @@ async function cmd_consent(ctx) {
       console.error(`Consent proof failed: ${result.error}`);
     }
     if (!result.built) process.exitCode = 1;
-    return;
+    process.exit(0);
   }
   if (subcommand === "verify") {
     const wantJsonC = wantsJson(argv);
@@ -3628,7 +3628,7 @@ async function cmd_consent(ctx) {
       console.error(`REJECTED:${result.reason}`);
     }
     if (!result.verified) process.exitCode = 1;
-    return;
+    process.exit(0);
   }
   throw new Error(
     'Unknown consent command. Use `dema consent plan "<intent>"`, `dema consent prove --phrase ... --action-type ... --target-hash ... [--rule-id ...] [--out <path>] [--json]`, or `dema consent verify <proof.json> --pubkey <pem-path> [--expected-action-type ...] [--expected-target-hash ...] [--json]`.',
@@ -3660,7 +3660,7 @@ async function cmd_mission(ctx) {
           }),
         );
       }
-      return;
+    process.exit(0);
     }
     const result = await saveHealthSnapshotReceipt({ consent, dryRun });
     if (wantJsonM) {
@@ -3669,7 +3669,7 @@ async function cmd_mission(ctx) {
       console.log(formatHealthSnapshotReceipt(result));
     }
     if (!result.saved && result.reason !== "dry_run") process.exitCode = 1;
-    return;
+    process.exit(0);
   }
   if (subcommand === "verify" && argv[2]) {
     const mPath = argv[2];
@@ -3679,7 +3679,7 @@ async function cmd_mission(ctx) {
       wantJsonMV ? JSON.stringify(mv, null, 2) : JSON.stringify(mv, null, 2),
     );
     if (mv.verdict !== "VERIFIED") process.exitCode = 1;
-    return;
+    process.exit(0);
   }
   if (subcommand === "draft") {
     const json = argv.includes("--json");
@@ -3697,7 +3697,7 @@ async function cmd_mission(ctx) {
     console.log(
       json ? JSON.stringify(draft, null, 2) : formatMissionDraftPreview(draft),
     );
-    return;
+    process.exit(0);
   }
   if (subcommand === "manifest") {
     const missionType =
@@ -3720,14 +3720,14 @@ async function cmd_mission(ctx) {
         console.error(manifest.error);
       }
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     if (wantJsonMF) {
       console.log(JSON.stringify(manifest, null, 2));
     } else {
       console.log(formatMissionManifest(manifest));
     }
-    return;
+    process.exit(0);
   }
   if (subcommand === "probe") {
     const wantJsonPR = wantsJson(argv);
@@ -3765,7 +3765,7 @@ async function cmd_mission(ctx) {
       }
       process.exitCode = 2;
     }
-    return;
+    process.exit(0);
   }
   if (subcommand === "closeout") {
     const missionId = argv[2] && !argv[2].startsWith("-") ? argv[2] : undefined;
@@ -3787,7 +3787,7 @@ async function cmd_mission(ctx) {
         console.error(resolved.error);
       }
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     const report = buildCloseoutReport(
       resolved.receipt,
@@ -3810,14 +3810,14 @@ async function cmd_mission(ctx) {
         console.error(report.error);
       }
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     if (wantJsonCO) {
       console.log(JSON.stringify(report, null, 2));
     } else {
       console.log(renderCloseoutText(report));
     }
-    return;
+    process.exit(0);
   }
   if (subcommand !== "propose") {
     throw new Error(
@@ -3829,7 +3829,7 @@ async function cmd_mission(ctx) {
   const proposePreview = previewBoundedDiagnostic(status, consent);
   if (wantsJson(argv)) {
     console.log(JSON.stringify(proposePreview, null, 2));
-    return;
+    process.exit(0);
   }
   console.log(
     [
@@ -3842,7 +3842,7 @@ async function cmd_mission(ctx) {
       humanHintLine("mission propose"),
     ].join("\n"),
   );
-  return;
+    process.exit(0);
 }
 
 async function cmd_receipts(ctx) {
@@ -3858,7 +3858,7 @@ async function cmd_receipts(ctx) {
       console.log(formatReceiptList(allReceipts));
     }
   }
-  return;
+    process.exit(0);
 }
 
 async function cmd_memory(ctx) {
@@ -3881,7 +3881,7 @@ async function cmd_memory(ctx) {
         "  Override wrapper path with DEMA_AGENT_DB_QUERY_PATH (test only)",
       ].join("\n"),
     );
-    return;
+    process.exit(0);
   }
   if (!action || action === "list") {
     console.log(JSON.stringify(await summarizeMemory(), null, 2));
@@ -3901,7 +3901,7 @@ async function cmd_memory(ctx) {
         'dema memory query: missing <text> argument. Usage: dema memory query "<text>" [--top N]',
       );
       process.exitCode = 2;
-      return;
+    process.exit(0);
     }
     const memTopArg = argValue(argv, "--top");
     let memTop = memTopArg ? parseInt(memTopArg, 10) : 3;
@@ -3910,7 +3910,7 @@ async function cmd_memory(ctx) {
         `dema memory query: --top out of range: must be integer in [1, 20] (got '${memTopArg}')`,
       );
       process.exitCode = 2;
-      return;
+    process.exit(0);
     }
     const memWantsJson = argv.includes("--json");
 
@@ -4002,7 +4002,7 @@ async function cmd_memory(ctx) {
         );
       }
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     const memT0 = Date.now();
     const memResult = memSpawnSync(
@@ -4057,13 +4057,13 @@ async function cmd_memory(ctx) {
       if (env.error) console.error(`error: ${env.error}`);
     }
     process.exitCode = env.error ? 1 : 0;
-    return;
+    process.exit(0);
   } else {
     throw new Error(
       'Unknown memory command. Use `dema memory [list]` or `dema memory show <name>` or `dema memory query "<text>" [--top N]`.',
     );
   }
-  return;
+    process.exit(0);
 }
 
 async function cmd_think(ctx) {
@@ -4103,7 +4103,7 @@ async function cmd_think(ctx) {
       }
       process.exitCode = 2;
     }
-    return;
+    process.exit(0);
   }
 
   const closeoutPath = argValue(argv, "--closeout");
@@ -4144,7 +4144,7 @@ async function cmd_think(ctx) {
             console.error(noMsg);
           }
           process.exitCode = 1;
-          return;
+    process.exit(0);
         }
         const withMtime = await Promise.all(
           tcFiles.map(async (f) => {
@@ -4198,7 +4198,7 @@ async function cmd_think(ctx) {
       }
       process.exitCode = 2;
     }
-    return;
+    process.exit(0);
   }
 
   const hasDryRun = argv.includes("--dry-run");
@@ -4221,7 +4221,7 @@ async function cmd_think(ctx) {
       console.error(msg);
     }
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   if (!hasDryRun && !thinkConsent) {
@@ -4242,7 +4242,7 @@ async function cmd_think(ctx) {
       console.error(msg);
     }
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   const saveConsentVal = argValue(argv, "--save-consent") ?? "";
@@ -4280,7 +4280,7 @@ async function cmd_think(ctx) {
       console.error(msg);
     }
     process.exitCode = 1;
-    return;
+    process.exit(0);
   }
 
   if (hasDryRun) {
@@ -4302,7 +4302,7 @@ async function cmd_think(ctx) {
           console.error(thinkEnvelope.error);
         }
         process.exitCode = 1;
-        return;
+    process.exit(0);
       }
       if (wantJsonTH) {
         console.log(JSON.stringify(thinkEnvelope, null, 2));
@@ -4323,7 +4323,7 @@ async function cmd_think(ctx) {
       }
       process.exitCode = 2;
     }
-    return;
+    process.exit(0);
   }
 
   try {
@@ -4348,7 +4348,7 @@ async function cmd_think(ctx) {
         console.error(liveEnvelope.error);
       }
       process.exitCode = 1;
-      return;
+    process.exit(0);
     }
     if (wantJsonTH) {
       console.log(JSON.stringify(liveEnvelope, null, 2));
@@ -4396,7 +4396,7 @@ async function cmd_think(ctx) {
     }
     process.exitCode = 2;
   }
-  return;
+    process.exit(0);
 }
 
 async function cmd_models(ctx) {
@@ -4416,7 +4416,7 @@ async function cmd_models(ctx) {
       : scan;
     if (wantsJson(argv)) {
       console.log(JSON.stringify(scanOutput, null, 2));
-      return;
+    process.exit(0);
     }
     const providers = scan.providers || {};
     const ollama = providers.ollama || {};
@@ -4433,11 +4433,11 @@ async function cmd_models(ctx) {
         humanHintLine("models scan"),
       ].join("\n"),
     );
-    return;
+    process.exit(0);
   }
   const inventory = await collectModelInventory();
   console.log(formatModelInventory(inventory));
-  return;
+    process.exit(0);
 }
 
 async function cmd_report(ctx) {
@@ -4453,7 +4453,7 @@ async function cmd_report(ctx) {
       ? JSON.stringify(report, null, 2)
       : formatSafetyReportPreview(report),
   );
-  return;
+    process.exit(0);
 }
 
 async function cmd_network(ctx) {
@@ -4465,7 +4465,7 @@ async function cmd_network(ctx) {
         ? JSON.stringify(blueprint, null, 2)
         : formatNetworkBlueprint(blueprint),
     );
-    return;
+    process.exit(0);
   }
   if (subcommand === "fixture" && argv[2] === "preview") {
     const preview = buildOfflineNetworkFixturePreview();
@@ -4474,7 +4474,7 @@ async function cmd_network(ctx) {
         ? JSON.stringify(preview, null, 2)
         : formatOfflineNetworkFixturePreview(preview),
     );
-    return;
+    process.exit(0);
   }
   if (subcommand === "refusal" && argv[2] === "preview") {
     const preview = buildNetworkRefusalMatrixPreview();
@@ -4483,7 +4483,7 @@ async function cmd_network(ctx) {
         ? JSON.stringify(preview, null, 2)
         : formatNetworkRefusalMatrixPreview(preview),
     );
-    return;
+    process.exit(0);
   }
   throw new Error(
     "Unknown network command. Use `dema network blueprint [--json]`, `dema network fixture preview [--json]`, or `dema network refusal preview [--json]`.",
@@ -4505,7 +4505,7 @@ async function cmd_amana(ctx) {
       ? JSON.stringify(preview, null, 2)
       : formatAmanaContractsPreview(preview),
   );
-  return;
+    process.exit(0);
 }
 
 async function cmd_mcp(ctx) {
@@ -4519,7 +4519,7 @@ async function cmd_mcp(ctx) {
       ? JSON.stringify(blueprint, null, 2)
       : formatMcpIntegrationBlueprint(blueprint),
   );
-  return;
+    process.exit(0);
 }
 
 async function cmd_roadmap(ctx) {
@@ -4531,7 +4531,7 @@ async function cmd_roadmap(ctx) {
         ? JSON.stringify(report, null, 2)
         : formatOptimizationRoadmapPreview(report),
     );
-    return;
+    process.exit(0);
   }
   if (subcommand === "dev") {
     const state = await gatherDevRoadmapState({ cwd: process.cwd() });
@@ -4540,7 +4540,7 @@ async function cmd_roadmap(ctx) {
         ? JSON.stringify(state, null, 2)
         : formatDevRoadmapReport(state),
     );
-    return;
+    process.exit(0);
   }
   throw new Error(
     "Unknown roadmap command. Use `dema roadmap preview [--json]` or `dema roadmap dev [--json]`.",
@@ -4564,7 +4564,7 @@ async function cmd_eval(ctx) {
     console.log(
       asJson ? JSON.stringify(pack, null, 2) : formatRubricPackReport(pack),
     );
-    return;
+    process.exit(0);
   }
 
   if (evalSubcommand === "verify") {
@@ -4601,7 +4601,7 @@ async function cmd_eval(ctx) {
     if (result.truth_label !== "MEASURED") {
       process.exitCode = 1;
     }
-    return;
+    process.exit(0);
   }
 
   throw new Error(
@@ -4624,7 +4624,7 @@ async function cmd_evidence(ctx) {
       ? JSON.stringify(receipt, null, 2)
       : formatEvidenceReceiptPreview(receipt),
   );
-  return;
+    process.exit(0);
 }
 
 async function cmd_ihsan(ctx) {
@@ -4644,7 +4644,7 @@ async function cmd_ihsan(ctx) {
       ? JSON.stringify(preview, null, 2)
       : formatIhsanFloorPreview(preview),
   );
-  return;
+    process.exit(0);
 }
 
 async function cmd_behavior(ctx) {
@@ -4679,7 +4679,7 @@ async function cmd_behavior(ctx) {
       ? JSON.stringify(preview, null, 2)
       : formatBehavioralModulationPreview(preview),
   );
-  return;
+    process.exit(0);
 }
 
 async function cmd_design(ctx) {
@@ -4695,7 +4695,7 @@ async function cmd_design(ctx) {
       ? JSON.stringify(report, null, 2)
       : formatLoopDesignEmulation(report),
   );
-  return;
+    process.exit(0);
 }
 
 async function cmd_task(ctx) {
@@ -4714,7 +4714,7 @@ async function cmd_task(ctx) {
         2,
       ),
     );
-    return;
+    process.exit(0);
   }
   const task = TASK_REGISTRY[subcommand];
   if (!task) throw new Error(`Unknown task: ${subcommand}`);
@@ -4762,7 +4762,7 @@ async function cmd_task(ctx) {
   console.log(task.format(receipt));
   console.log("");
   console.log(formatVerdict(verdict));
-  return;
+    process.exit(0);
 }
 
 async function cmd_sovereign(ctx) {
@@ -4804,25 +4804,25 @@ async function cmd_help(ctx) {
   const helpArg = argv[1];
   if (!helpArg) {
     console.log(renderHelpRoot());
-    return;
+    process.exit(0);
   }
   if (helpArg === "--all") {
     console.log(await renderFullHelp());
-    return;
+    process.exit(0);
   }
   // Try topic first, then command detail, then unknown.
   const topicOutput = renderHelpTopic(helpArg);
   if (topicOutput !== null) {
     console.log(topicOutput);
-    return;
+    process.exit(0);
   }
   const commandOutput = renderHelpCommand(helpArg);
   if (commandOutput !== null) {
     console.log(commandOutput);
-    return;
+    process.exit(0);
   }
   console.log(renderHelpUnknown(helpArg));
-  return;
+    process.exit(0);
 }
 
 // Covenant Gate v0.1 (PROTOTYPE) — terminal surface for the audit-derived screening gate.
@@ -4850,7 +4850,7 @@ async function cmdCovenant(ctx) {
       console.error("covenant screen error:", e.message);
       process.exit(1);
     }
-    return;
+    process.exit(0);
   }
 
   if (sub === "consent") {
@@ -4873,7 +4873,7 @@ async function cmdCovenant(ctx) {
       console.error("covenant consent error:", e.message);
       process.exit(1);
     }
-    return;
+    process.exit(0);
   }
 
   console.error("unknown covenant subcommand (screen | consent)");
@@ -4979,7 +4979,7 @@ async function dispatch(argv) {
     } else {
       console.log(`dema ${version}`);
     }
-    return;
+    process.exit(0);
   }
 
   // Homebase TUI v0.1 phases 4+5 dispatch · 14th canonical spine surface.
@@ -5019,7 +5019,7 @@ async function dispatch(argv) {
     const preview = buildHomebasePreview({ gather: gathered });
     if (wantJson) {
       process.stdout.write(JSON.stringify(preview, null, 2) + "\n");
-      return;
+    process.exit(0);
     }
     // TTY path · render ANSI frame via existing zero-dep formatter.
     const [{ formatHomebasePreview }, { resolveFormatterOptsFromEnv }] =
@@ -5054,7 +5054,7 @@ async function dispatch(argv) {
         });
       }
     }
-    return;
+    process.exit(0);
   }
 
   // Route through the command table (Track 2 dispatcher refactor). Each command
@@ -5096,7 +5096,7 @@ async function runActiveKernel({ interactive = false, force = false } = {}) {
       dispatchCommand: dispatch,
       statusProvider: () => statusWithLocalIdentity(),
     });
-    return;
+    process.exit(0);
   }
 
   console.log(banner);
