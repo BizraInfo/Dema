@@ -255,6 +255,8 @@ describe("renderDemaRealmBoard (no color)", () => {
       const out = renderDemaRealmBoard(b, { useColor: false });
       assert.match(out, /DEMA REALM · MISSION BOARD/);
       assert.match(out, /truth: LOCAL_REALM_QUEST_BOARD/);
+      // Ultra-micro Realm Party roster coverage (vision + giants: WoW/AgentCraft units + Hermes presence + current assigned_agent)
+      assert.match(out, /ACTIVE PARTY \/ MAJLIS/);
     } finally {
       rmSync(home, { recursive: true, force: true });
     }

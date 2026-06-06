@@ -330,6 +330,21 @@ export function renderDemaRealmBoard(state, { useColor = true } = {}) {
     "",
   ];
 
+  // ULTRA-MICRO REALM PARTY ROSTER (peak SNR integration of vision + giants)
+  // Stands on: AgentCraft (WoW/RTS "units on map" for agent orchestration to fight cognitive overload),
+  // Hermes (rich grouped TUI with presence + streaming), Agent Zero (visible process groups + "world" canvas),
+  // OpenClaw (multi-agent team "hatch"/presence in TUI), current board (assigned_agent) + council (declared profiles).
+  // Embodies user vision: "Agent Party" table, "Majlis/Shura", "who walks with me", human-centric "walk through intelligence system".
+  // One-line "thought packet" style status (structured, not raw CoT). No runtime. Declared-only.
+  // HHMM echo: stages as hidden states; party "diffuses" across FORGE→VERIFY. Graph: assigned agents as nodes on quest map.
+  // Islamic: Mufti-Advisor (Shariah declared) standing companion for ethical flows (per Mudarabah/Musharakah vision).
+  // Micro: pure, reuses ANSI, <20 lines, no new files, no side effects, boundary-honest.
+  const partyLines = renderActivePartyRoster(state, useColor);
+  if (partyLines.length) {
+    lines.push(...partyLines);
+    lines.push("");
+  }
+
   for (const stage of STAGES) {
     const bucket = state.buckets[stage];
     const count = bucket.length;
@@ -354,4 +369,41 @@ export function renderDemaRealmBoard(state, { useColor = true } = {}) {
   );
 
   return lines.join("\n");
+}
+
+// Peak ultra-micro helper: extracts active companions from assigned_agent + vision roles.
+// Human-centric: shows "who is walking with you" for the current FORGE mission.
+// WoW/AgentCraft flavor: "PARTY ROSTER" like RTS units. Majlis flavor: deliberation status.
+function renderActivePartyRoster(state, useColor) {
+  const active = (state.quests || []).filter(
+    (q) => q.stage !== "ARCHIVE" && q.assigned_agent,
+  );
+  if (active.length === 0) return [];
+
+  const unique = [...new Set(active.map((q) => q.assigned_agent))];
+  // Map to vision roles (polymath analogical: Builder=Builder, Guardian=Guardian, add Mufti for Shariah per Islamic primitives).
+  const roles = unique.map((a) => {
+    if (a === "Builder") return "Builder (Code/Implementation)";
+    if (a === "Guardian") return "Guardian (Boundary/Consent)";
+    if (a === "Reasoner") return "Reasoner (SAPE/Graph)";
+    if (a === "Critic") return "Critic (Self-review)";
+    if (a === "Archivist") return "Archivist (Memory/Proof)";
+    return a;
+  });
+  // Standing Mufti-Advisor (Shariah declared) per vision "Mufti-Advisor" class + finance quests (e.g. tokenomics in ledger).
+  if (!roles.some((r) => r.includes("Mufti"))) {
+    roles.push("Mufti-Advisor (Shariah declared)");
+  }
+
+  const roster = roles.join(" | ");
+  const status = color(
+    " · deliberation (Shura/Majlis active — thought packets flowing)",
+    ANSI.ash + ANSI.dim,
+    useColor,
+  );
+
+  return [
+    color("ACTIVE PARTY / MAJLIS (Realm vision · WoW units + Hermes presence)", ANSI.gold, useColor),
+    `  ${roster}${status}`,
+  ];
 }
