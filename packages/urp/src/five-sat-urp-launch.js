@@ -54,6 +54,14 @@ export function buildNode05SatU rpLaunch({ now = new Date() } = {}) {
     manipulators_blocked: Object.freeze(["PAT", "Dema", "Momo"]),
     launched_at_iso: now.toISOString(),
     truth_label: "NODE0_5SAT_URP_LAUNCHED_AND_LOCKED",
+    // After launch: Node0 connects to network via its URP.
+    // Node1 connects to BIZRA universal resource pool and declares (preview) new 5 SAT.
+    // [PREVIEW] for Node1 – mint/declaration is governed runtime outside Dema face.
+    connection_rules: Object.freeze({
+      node0_connects_to_network_via_its_urp: true,
+      node1_connects_to_bizra_universal_resource_pool: true,
+      node1_declares_new_5_sat: "preview_only_not_minted_in_dema",
+    }),
   });
 
   const launch_hash = sha256(stableStringify(body));
@@ -92,5 +100,6 @@ export function verifyNode05SatU rpLaunch(launchResult) {
     locked: true,
     manipulators_blocked: launchResult.body.manipulators_blocked,
     truth_label: launchResult.body.truth_label,
+    connection_rules: launchResult.body.connection_rules || null,
   });
 }

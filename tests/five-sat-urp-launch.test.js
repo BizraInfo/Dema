@@ -37,4 +37,8 @@ test("verifyNode05SatU rpLaunch succeeds on valid launch result", () => {
   assert.equal(verified.verified, true);
   assert.equal(verified.active_sat.length, 5);
   assert.equal(verified.locked, true);
+  assert.ok(verified.connection_rules);
+  assert.equal(verified.connection_rules.node0_connects_to_network_via_its_urp, true);
+  assert.equal(verified.connection_rules.node1_connects_to_bizra_universal_resource_pool, true);
+  assert.equal(verified.connection_rules.node1_declares_new_5_sat, "preview_only_not_minted_in_dema");
 });
