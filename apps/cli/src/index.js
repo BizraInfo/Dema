@@ -2126,112 +2126,114 @@ async function cmd_urp(ctx) {
     process.exit(process.exitCode ?? 0);
   }
 
+
+  // Sub-action: `dema urp launch-5sat` (URP-5SAT-1A Node0 5 SAT launch/lock).
+  if (urpSub === "launch-5sat") {
+    const consent = argValue(argv, "--consent");
+    const exactConsent = "LAUNCH NODE0 URP WITH 5 SAT ONLY AND LOCK AGAINST PAT/DEMA/MOMO";
+    if (!consent || consent !== exactConsent) {
+      console.error(`dema urp launch-5sat: exact --consent "${exactConsent}" required`);
+      process.exitCode = 1;
+      process.exit(process.exitCode ?? 0);
+    }
+    const launch = buildNode05SatUrpLaunch();
+    // Save as content-addressed receipt (atomic). Self-contained for micro.
+    const { join } = await import("node:path");
+    const { homedir } = await import("node:os");
+    const { writeFile, rename, mkdir } = await import("node:fs/promises");
+    const home = process.env.DEMA_HOME || join(homedir(), ".dema");
+    const receiptsDir = join(home, "receipts");
+    await mkdir(receiptsDir, { recursive: true });
+    const receiptPath = join(receiptsDir, `node0-5sat-urp-launch-${launch.launch_hash}.json`);
+    const tmpPath = receiptPath + ".tmp";
+    await writeFile(tmpPath, JSON.stringify(launch, null, 2));
+    await rename(tmpPath, receiptPath);
+    // Write active state for "always on active" (the system treats URP 5SAT as active and locked once launched).
+    const activeDir = join(home, "urp");
+    await mkdir(activeDir, { recursive: true });
+    const activePath = join(activeDir, "5sat-active-locked.json");
+    const activeTmp = activePath + ".tmp";
+    const activeState = {
+      schema: "bizra.dema.node0_5sat_urp_active.v0.1",
+      active: true,
+      locked: true,
+      active_sat: launch.body.active_sat,
+      manipulators_blocked: launch.body.manipulators_blocked,
+      connection_rules: launch.body.connection_rules,
+      launched_at: launch.body.launched_at_iso,
+      truth_label: "NODE0_5SAT_URP_ACTIVE_AND_LOCKED",
+    };
+    await writeFile(activeTmp, JSON.stringify(activeState, null, 2));
+    await rename(activeTmp, activePath);
+    const result = {
+      launched: true,
+      launch_hash: launch.launch_hash,
+      receipt_path: receiptPath,
+      active_state_path: activePath,
+      active_sat: launch.body.active_sat,
+      locked: true,
+      manipulators_blocked: launch.body.manipulators_blocked,
+      truth_label: launch.body.truth_label,
+    };
+    const wantJsonLocal = argv.includes("--json");
+    if (wantJsonLocal) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log("Node0 5 SAT URP launched and locked.");
+      console.log(`  Active SAT: ${result.active_sat.join(" | ")}`);
+      console.log(`  Locked against: ${result.manipulators_blocked.join(", ")}`);
+      console.log(`  Receipt: ${receiptPath}`);
+      console.log(`  Active State: ${activePath}`);
+      console.log("  LOCAL ONLY · no federation · no mint · declared active state");
+      console.log(`  Truth: ${result.truth_label}`);
+    }
+      process.exit(process.exitCode ?? 0);
+  }
+
+  // Sub-action: `dema urp node1-5sat-preview` (preview "mint" for Node1 via universal pool).
+  if (urpSub === "node1-5sat-preview") {
+    const consent = argValue(argv, "--consent");
+    const exact = "DECLARE NODE1 5 SAT VIA UNIVERSAL POOL";
+    if (!consent || consent !== exact) {
+      console.error(`dema urp node1-5sat-preview: exact --consent "${exact}" required`);
+      process.exitCode = 1;
+      process.exit(process.exitCode ?? 0);
+    }
+    const preview = buildNode15SatPreview();
+    const { join } = await import("node:path");
+    const { homedir } = await import("node:os");
+    const { writeFile, rename, mkdir } = await import("node:fs/promises");
+    const home = process.env.DEMA_HOME || join(homedir(), ".dema");
+    const receiptsDir = join(home, "receipts");
+    await mkdir(receiptsDir, { recursive: true });
+    const receiptPath = join(receiptsDir, `node1-5sat-preview-${preview.preview_hash}.json`);
+    const tmpPath = receiptPath + ".tmp";
+    await writeFile(tmpPath, JSON.stringify(preview, null, 2));
+    await rename(tmpPath, receiptPath);
+    const result = {
+      preview: true,
+      preview_hash: preview.preview_hash,
+      receipt_path: receiptPath,
+      new_5_sat: preview.body.new_5_sat,
+      truth_label: preview.body.truth_label,
+    };
+    const wantJsonLocal = argv.includes("--json");
+    if (wantJsonLocal) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log("Node1 5 SAT preview declared via universal pool.");
+      console.log(`  New 5 SAT: ${result.new_5_sat.join(" | ")}`);
+      console.log(`  Receipt: ${receiptPath}`);
+      console.log("  PREVIEW ONLY · no mint in Dema");
+      console.log(`  Truth: ${result.truth_label}`);
+    }
+      process.exit(process.exitCode ?? 0);
+  }
+
   console.error(
     'Usage: dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]\n       dema urp list [--json]\n       dema urp verify <index.json> [--json]\n       dema urp choose <index.json> --decision MARK_SHAREABLE|MARK_LOCAL_ONLY --consent "<exact phrase>" [--json]',
   );
   process.exitCode = 1;
-    process.exit(process.exitCode ?? 0);
-}
-
-// Sub-action: `dema urp launch-5sat` (URP-5SAT-1A Node0 5 SAT launch/lock).
-(async () => {
-if (argv[2] === "launch-5sat") {
-  const consent = argValue(argv, "--consent");
-  const exactConsent = "LAUNCH NODE0 URP WITH 5 SAT ONLY AND LOCK AGAINST PAT/DEMA/MOMO";
-  if (!consent || consent !== exactConsent) {
-    console.error(`dema urp launch-5sat: exact --consent "${exactConsent}" required`);
-    process.exitCode = 1;
-    process.exit(process.exitCode ?? 0);
-  }
-  const launch = buildNode05SatUrpLaunch();
-  // Save as content-addressed receipt (atomic). Self-contained for micro.
-  const { join } = await import("node:path");
-  const { homedir } = await import("node:os");
-  const { writeFile, rename, mkdir } = await import("node:fs/promises");
-  const home = process.env.DEMA_HOME || join(homedir(), ".dema");
-  const receiptsDir = join(home, "receipts");
-  await mkdir(receiptsDir, { recursive: true });
-  const receiptPath = join(receiptsDir, `node0-5sat-urp-launch-${launch.launch_hash}.json`);
-  const tmpPath = receiptPath + ".tmp";
-  await writeFile(tmpPath, JSON.stringify(launch, null, 2));
-  await rename(tmpPath, receiptPath);
-  // Write active state for "always on active" (the system treats URP 5SAT as active and locked once launched).
-  const activePath = join(home, "urp", "5sat-active-locked.json");
-  const activeTmp = activePath + ".tmp";
-  const activeState = {
-    schema: "bizra.dema.node0_5sat_urp_active.v0.1",
-    active: true,
-    locked: true,
-    active_sat: launch.body.active_sat,
-    manipulators_blocked: launch.body.manipulators_blocked,
-    connection_rules: launch.body.connection_rules,
-    launched_at: launch.body.launched_at_iso,
-    truth_label: "NODE0_5SAT_URP_ACTIVE_AND_LOCKED",
-  };
-  await writeFile(activeTmp, JSON.stringify(activeState, null, 2));
-  await rename(activeTmp, activePath);
-  const result = {
-    launched: true,
-    launch_hash: launch.launch_hash,
-    receipt_path: receiptPath,
-    active_state_path: activePath,
-    active_sat: launch.body.active_sat,
-    locked: true,
-    manipulators_blocked: launch.body.manipulators_blocked,
-    truth_label: launch.body.truth_label,
-  };
-  const wantJsonLocal = argv.includes("--json");
-  if (wantJsonLocal) {
-    console.log(JSON.stringify(result, null, 2));
-  } else {
-    console.log("Node0 5 SAT URP launched and locked.");
-    console.log(`  Active SAT: ${result.active_sat.join(" | ")}`);
-    console.log(`  Locked against: ${result.manipulators_blocked.join(", ")}`);
-    console.log(`  Receipt: ${receiptPath}`);
-    console.log(`  Active State: ${activePath}`);
-    console.log("  LOCAL ONLY · no federation · no mint · declared active state");
-    console.log(`  Truth: ${result.truth_label}`);
-  }
-    process.exit(process.exitCode ?? 0);
-}
-
-// Sub-action: `dema urp node1-5sat-preview` (preview "mint" for Node1 via universal pool).
-if (argv[2] === "node1-5sat-preview") {
-  const consent = argValue(argv, "--consent");
-  const exact = "DECLARE NODE1 5 SAT VIA UNIVERSAL POOL";
-  if (!consent || consent !== exact) {
-    console.error(`dema urp node1-5sat-preview: exact --consent "${exact}" required`);
-    process.exitCode = 1;
-    process.exit(process.exitCode ?? 0);
-  }
-  const preview = buildNode15SatPreview();
-  const { join } = await import("node:path");
-  const { homedir } = await import("node:os");
-  const { writeFile, rename, mkdir } = await import("node:fs/promises");
-  const home = process.env.DEMA_HOME || join(homedir(), ".dema");
-  const receiptsDir = join(home, "receipts");
-  await mkdir(receiptsDir, { recursive: true });
-  const receiptPath = join(receiptsDir, `node1-5sat-preview-${preview.preview_hash}.json`);
-  const tmpPath = receiptPath + ".tmp";
-  await writeFile(tmpPath, JSON.stringify(preview, null, 2));
-  await rename(tmpPath, receiptPath);
-  const result = {
-    preview: true,
-    preview_hash: preview.preview_hash,
-    receipt_path: receiptPath,
-    new_5_sat: preview.body.new_5_sat,
-    truth_label: preview.body.truth_label,
-  };
-  const wantJsonLocal = argv.includes("--json");
-  if (wantJsonLocal) {
-    console.log(JSON.stringify(result, null, 2));
-  } else {
-    console.log("Node1 5 SAT preview declared via universal pool.");
-    console.log(`  New 5 SAT: ${result.new_5_sat.join(" | ")}`);
-    console.log(`  Receipt: ${receiptPath}`);
-    console.log("  PREVIEW ONLY · no mint in Dema");
-    console.log(`  Truth: ${result.truth_label}`);
-  }
     process.exit(process.exitCode ?? 0);
 }
 
@@ -2619,6 +2621,13 @@ async function cmd_codebase(ctx) {
   // pretty=false matches the v0.1 CLI behavior; --pretty is not exposed
   // by codebase-map yet.
   const cbOut = serializeCodebaseMapForSave(envelope, { pretty: false });
+  const writeCodebaseStdout = (text) =>
+    new Promise((resolve, reject) => {
+      process.stdout.write(text, (error) => {
+        if (error) reject(error);
+        else resolve();
+      });
+    });
   // v0.2: save BEFORE any stdout write. If save fails, exit non-zero
   // without polluting stdout.
   if (cbSaveMap) {
@@ -2655,14 +2664,14 @@ async function cmd_codebase(ctx) {
     process.stderr.write(
       `dema codebase map: ${envelope.error_reason}${envelope.error_message ? ": " + envelope.error_message : ""}\n`,
     );
-    process.stdout.write(cbOut);
+    await writeCodebaseStdout(cbOut);
     process.exitCode = 1;
     process.exit(process.exitCode ?? 0);
   }
   if (cbSummary && !cbJsonForce) {
-    process.stdout.write(formatCodebaseMapSummary(envelope) + "\n");
+    await writeCodebaseStdout(formatCodebaseMapSummary(envelope) + "\n");
   } else {
-    process.stdout.write(cbOut);
+    await writeCodebaseStdout(cbOut);
   }
   if (envelope.partial) process.exitCode = 1;
     process.exit(process.exitCode ?? 0);
@@ -5107,7 +5116,6 @@ async function runActiveKernel({ interactive = false, force = false } = {}) {
   }
 }
 
-})();
 // Allow tests to import dispatch + runActiveKernel without firing main().
 const isDirectInvocation =
   process.argv[1] &&

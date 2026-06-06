@@ -49,6 +49,7 @@ const COMMAND_SURFACE = [
   "master-craftsmanship",
   "codebase",
   "orchestrator",
+  "covenant",
   "llm-router",
   "model-broker",
   "harness",

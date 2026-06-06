@@ -26,7 +26,7 @@
 // Truth labels respected: REMOTE_VISIBLE != REMOTE_CI_VERIFIED until a green run on a commit
 // containing this isolation (or the fixture boundary) is captured.
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 const DRIFT_NOTE = "pre-existing B-bucket URP drift (Omnidirectional Audit 2026-06-06, commit 448711b [PROTOTYPE CI ISOLATION])";
 
@@ -35,8 +35,8 @@ console.log("[CI ISOLATION] This is temporary; replace with artifact fixture bou
 console.log("[CI ISOLATION] Do not use to hide legitimate artifact changes.");
 
 try {
-  execSync("git restore artifacts/proofs/node0-local-urp/ 2>/dev/null || true", {
-    stdio: "inherit",
+  execFileSync("git", ["restore", "artifacts/proofs/node0-local-urp/"], {
+    stdio: ["ignore", "inherit", "ignore"],
   });
   console.log("[CI ISOLATION] Restore complete. Running tests on clean harness state.");
 } catch (err) {

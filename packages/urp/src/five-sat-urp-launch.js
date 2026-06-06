@@ -43,7 +43,7 @@ const FAIL_BOUNDARY = Object.freeze({
   economic_claim_made: false,
 });
 
-export function buildNode05SatU rpLaunch({ now = new Date() } = {}) {
+export function buildNode05SatUrpLaunch({ now = new Date() } = {}) {
   const body = Object.freeze({
     schema: NODE0_5SAT_URP_LAUNCH_SCHEMA,
     node0: "declared",
@@ -78,7 +78,7 @@ export function buildNode05SatU rpLaunch({ now = new Date() } = {}) {
   });
 }
 
-export function verifyNode05SatU rpLaunch(launchResult) {
+export function verifyNode05SatUrpLaunch(launchResult) {
   if (!launchResult || launchResult.schema !== NODE0_5SAT_URP_LAUNCH_RESULT_SCHEMA) {
     return Object.freeze({ verified: false, reason: "wrong_schema" });
   }

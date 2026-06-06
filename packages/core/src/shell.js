@@ -149,13 +149,37 @@ export async function runShell({
   }
 
   return await new Promise((resolve) => {
-    rl.prompt();
+    let closed = false;
+    let resolved = false;
+    let processing = Promise.resolve();
 
-    rl.on("line", async (rawLine) => {
+    const cleanupAndResolve = () => {
+      if (resolved) return;
+      resolved = true;
+      if (shouldInstallSigint) {
+        process.removeListener("SIGINT", onSigint);
+      }
+      if (sigintTimer) clearTimeout(sigintTimer);
+      resolve({ exited: true });
+    };
+
+    const maybeResolve = () => {
+      if (!closed || resolved) return;
+      processing.then(cleanupAndResolve, (err) => {
+        output.write(`error: ${err?.message ?? String(err)}\n`);
+        cleanupAndResolve();
+      });
+    };
+
+    const promptIfOpen = () => {
+      if (!closed) rl.prompt();
+    };
+
+    async function handleLine(rawLine) {
       const line = rawLine.trim();
       sigintCount = 0;
       if (line === "") {
-        rl.prompt();
+        promptIfOpen();
         return;
       }
       if (line === "exit" || line === "quit") {
@@ -165,7 +189,7 @@ export async function runShell({
       }
       if (line === "help") {
         output.write(HELP);
-        rl.prompt();
+        promptIfOpen();
         return;
       }
 
@@ -174,7 +198,7 @@ export async function runShell({
         argv = tokenize(line);
       } catch (err) {
         output.write(`error: ${err?.message ?? String(err)}\n`);
-        rl.prompt();
+        promptIfOpen();
         return;
       }
 
@@ -187,7 +211,7 @@ export async function runShell({
 
       if (chatResult.intent === "next-action") {
         output.write(chatResult.response + "\n");
-        rl.prompt();
+        promptIfOpen();
         return;
       }
 
@@ -199,13 +223,13 @@ export async function runShell({
         } catch (err) {
           output.write(`error: ${err?.message ?? String(err)}\n`);
         }
-        rl.prompt();
+        promptIfOpen();
         return;
       }
 
       if (!PASS_THROUGH_INTENTS.has(chatResult.intent)) {
         output.write(chatResult.response + "\n");
-        rl.prompt();
+        promptIfOpen();
         return;
       }
 
@@ -214,15 +238,24 @@ export async function runShell({
       } catch (err) {
         output.write(`error: ${err?.message ?? String(err)}\n`);
       }
-      rl.prompt();
+      promptIfOpen();
+    }
+
+    rl.prompt();
+
+    rl.on("line", (rawLine) => {
+      processing = processing
+        .then(() => handleLine(rawLine))
+        .catch((err) => {
+          output.write(`error: ${err?.message ?? String(err)}\n`);
+          promptIfOpen();
+        });
+      maybeResolve();
     });
 
     rl.on("close", () => {
-      if (shouldInstallSigint) {
-        process.removeListener("SIGINT", onSigint);
-      }
-      if (sigintTimer) clearTimeout(sigintTimer);
-      resolve({ exited: true });
+      closed = true;
+      maybeResolve();
     });
   });
 }
