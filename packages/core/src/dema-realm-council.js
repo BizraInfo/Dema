@@ -133,7 +133,7 @@ export function gatherDemaRealmCouncil({ now = new Date() } = {}) {
         current_state: "LOCKED",
         boundary_note:
           p.boundary_note +
-          " | Locked by URP 5SAT launch (always active), cannot be manipulated by PAT or Dema or Momo.",
+          " | Locked by URP 5SAT launch (declared active state), cannot be changed without consent by PAT or Dema or Momo.",
       }))
     : COUNCIL;
   return Object.freeze({

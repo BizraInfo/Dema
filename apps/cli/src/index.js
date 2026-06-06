@@ -492,16 +492,16 @@ URP:
   dema urp launch-5sat --consent "LAUNCH NODE0 URP WITH 5 SAT ONLY AND LOCK AGAINST PAT/DEMA/MOMO" [--json]
                     URP-5SAT-1A (Node0 only): Launch BIZRA URP with *only* the Node0 5 SAT
                     (Guardian/Reasoner/Builder/Critic/Archivist from council). Declares
-                    URP "always on active" with locked:true and manipulators_blocked.
-                    The 5 SAT cannot be manipulated by PAT or Dema or Momo.
+                    URP declared active state with locked:true and manipulators_blocked.
+                    The 5 SAT cannot be changed without consent by PAT or Dema or Momo.
                     Writes content-addressed launch receipt. Exact consent required.
                     [PROTOTYPE] — declaration/lock only. No runtime URP. Local face.
-                    LOCAL ONLY — no network, no federation, no mint.
+                    LOCAL ONLY — no federation, no mint.
   dema urp node1-5sat-preview --consent "DECLARE NODE1 5 SAT VIA UNIVERSAL POOL" [--json]
-                    Node1 5 SAT preview "mint" declaration (connects to BIZRA universal
+                    Node1 5 SAT preview declaration (connects to BIZRA universal
                     resource pool). Declares new 5 SAT for Node1. [PREVIEW] only.
                     Exact consent required. Writes preview receipt.
-                    LOCAL ONLY — no network, no federation, no mint.
+                    LOCAL ONLY — no federation, no mint.
                     UX-4.1C operator choose CLI. Reads a verified URP local
                     index, builds a kernel envelope, persists it to
                     $DEMA_HOME/urp/choices/choose-<sha256>.json (mode 0o600,
@@ -2188,7 +2188,7 @@ if (argv[2] === "launch-5sat") {
     console.log(`  Locked against: ${result.manipulators_blocked.join(", ")}`);
     console.log(`  Receipt: ${receiptPath}`);
     console.log(`  Active State: ${activePath}`);
-    console.log("  LOCAL ONLY · no network · no federation · no mint · always active");
+    console.log("  LOCAL ONLY · no federation · no mint · declared active state");
     console.log(`  Truth: ${result.truth_label}`);
   }
   return;
