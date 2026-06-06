@@ -103,3 +103,28 @@ export function verifyNode05SatU rpLaunch(launchResult) {
     connection_rules: launchResult.body.connection_rules || null,
   });
 }
+
+/**
+ * Node1 5 SAT preview "mint" declaration (for the universal resource pool connection).
+ * [PREVIEW] — Node1 connects to BIZRA universal resource pool and declares new 5 SAT.
+ * Not minted in Dema; governed runtime outside.
+ */
+export function buildNode15SatPreview({ now = new Date() } = {}) {
+  const body = Object.freeze({
+    schema: "bizra.dema.node1_5sat_preview.v0.1",
+    node1: "preview",
+    connects_to: "bizra_universal_resource_pool",
+    new_5_sat: FIVE_SAT_PROFILES,
+    mint: "preview_only_not_minted_in_dema",
+    declared_at_iso: now.toISOString(),
+    truth_label: "NODE1_5SAT_PREVIEW",
+  });
+  const preview_hash = sha256(stableStringify(body));
+  return Object.freeze({
+    schema: "bizra.dema.node1_5sat_preview_result.v0.1",
+    preview: true,
+    preview_hash,
+    body,
+    truth_label: "NODE1_5SAT_PREVIEW",
+  });
+}

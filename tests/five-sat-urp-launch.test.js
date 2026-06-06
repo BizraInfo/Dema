@@ -42,3 +42,18 @@ test("verifyNode05SatU rpLaunch succeeds on valid launch result", () => {
   assert.equal(verified.connection_rules.node1_connects_to_bizra_universal_resource_pool, true);
   assert.equal(verified.connection_rules.node1_declares_new_5_sat, "preview_only_not_minted_in_dema");
 });
+
+test("buildNode15SatPreview for Node1 new 5 SAT via universal pool", () => {
+  const preview = buildNode15SatPreview();
+  assert.equal(preview.schema, "bizra.dema.node1_5sat_preview_result.v0.1");
+  assert.equal(preview.preview, true);
+  assert.equal(preview.body.connects_to, "bizra_universal_resource_pool");
+  assert.equal(preview.body.mint, "preview_only_not_minted_in_dema");
+  assert.deepEqual(preview.body.new_5_sat, [
+    "Guardian",
+    "Reasoner",
+    "Builder",
+    "Critic",
+    "Archivist",
+  ]);
+});

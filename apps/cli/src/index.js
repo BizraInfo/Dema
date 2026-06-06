@@ -497,6 +497,11 @@ URP:
                     Writes content-addressed launch receipt. Exact consent required.
                     [PROTOTYPE] — declaration/lock only. No runtime URP. Local face.
                     LOCAL ONLY — no network, no federation, no mint.
+  dema urp node1-5sat-preview --consent "DECLARE NODE1 5 SAT VIA UNIVERSAL POOL" [--json]
+                    Node1 5 SAT preview "mint" declaration (connects to BIZRA universal
+                    resource pool). Declares new 5 SAT for Node1. [PREVIEW] only.
+                    Exact consent required. Writes preview receipt.
+                    LOCAL ONLY — no network, no federation, no mint.
                     UX-4.1C operator choose CLI. Reads a verified URP local
                     index, builds a kernel envelope, persists it to
                     $DEMA_HOME/urp/choices/choose-<sha256>.json (mode 0o600,
@@ -2184,6 +2189,46 @@ if (argv[2] === "launch-5sat") {
     console.log(`  Receipt: ${receiptPath}`);
     console.log(`  Active State: ${activePath}`);
     console.log("  LOCAL ONLY · no network · no federation · no mint · always active");
+    console.log(`  Truth: ${result.truth_label}`);
+  }
+  return;
+}
+
+// Sub-action: `dema urp node1-5sat-preview` (preview "mint" for Node1 via universal pool).
+if (argv[2] === "node1-5sat-preview") {
+  const consent = argValue(argv, "--consent");
+  const exact = "DECLARE NODE1 5 SAT VIA UNIVERSAL POOL";
+  if (!consent || consent !== exact) {
+    console.error(`dema urp node1-5sat-preview: exact --consent "${exact}" required`);
+    process.exitCode = 1;
+    return;
+  }
+  const preview = buildNode15SatPreview();
+  const { join } = await import("node:path");
+  const { homedir } = await import("node:os");
+  const { writeFile, rename, mkdir } = await import("node:fs/promises");
+  const home = process.env.DEMA_HOME || join(homedir(), ".dema");
+  const receiptsDir = join(home, "receipts");
+  await mkdir(receiptsDir, { recursive: true });
+  const receiptPath = join(receiptsDir, `node1-5sat-preview-${preview.preview_hash}.json`);
+  const tmpPath = receiptPath + ".tmp";
+  await writeFile(tmpPath, JSON.stringify(preview, null, 2));
+  await rename(tmpPath, receiptPath);
+  const result = {
+    preview: true,
+    preview_hash: preview.preview_hash,
+    receipt_path: receiptPath,
+    new_5_sat: preview.body.new_5_sat,
+    truth_label: preview.body.truth_label,
+  };
+  const wantJsonLocal = argv.includes("--json");
+  if (wantJsonLocal) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log("Node1 5 SAT preview declared via universal pool.");
+    console.log(`  New 5 SAT: ${result.new_5_sat.join(" | ")}`);
+    console.log(`  Receipt: ${receiptPath}`);
+    console.log("  PREVIEW ONLY · no mint in Dema");
     console.log(`  Truth: ${result.truth_label}`);
   }
   return;
