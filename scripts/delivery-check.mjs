@@ -111,6 +111,37 @@ function checkGates() {
   return allOk;
 }
 
+async function checkCovenantGate() {
+  console.log('\n[COVENANT GATE A+ QA (Omnidirectional Audit kernel)]');
+  try {
+    const { screenProposal } = await import('../packages/covenant/src/covenant-gate.js');
+    // Minimal solvable special case proposal from audit
+    const proposal = {
+      project_id: "ocean-cleanup-dao",
+      sector: "environmental",
+      team_disclosure: true,
+      guaranteed_apr: false,
+      debt_ratio: 0.05,
+      impact_evidence: [{ type: "oracle_attestation", source: "demo_oracle_1", hash: "sha256:demo" }]
+    };
+    const decision = screenProposal(proposal);
+    const hasNeedsConsent = decision.status === 'needs_human_consent';
+    const hasNoAprVerification = decision.thought_packets.some(p =>
+      p.type === 'verification' && /No guaranteed APR/.test(p.claim)
+    );
+    const hasProofGap = decision.proof_gap.length > 0;
+    const ok = hasNeedsConsent && hasNoAprVerification && hasProofGap;
+    console.log(`  status: ${decision.status} (expected needs_human_consent)`);
+    console.log(`  no-APR verification packet: ${hasNoAprVerification ? 'PRESENT' : 'MISSING'}`);
+    console.log(`  proof_gap present: ${hasProofGap ? 'YES' : 'NO'}`);
+    console.log(`  gate: ${ok ? 'PASS (A+ verifiable consent QA)' : 'FAIL'}`);
+    return ok;
+  } catch (e) {
+    console.log(`  gate: FAIL (error: ${e.message})`);
+    return false;
+  }
+}
+
 async function main() {
   console.log('DELIVERY-CHECK-1A · Elite Full-Stack A+ Gate Stack');
   console.log('Blueprint: PMBOK + DevOps + CI/CD + Perf-QA Level 5 (A+)');
@@ -121,8 +152,9 @@ async function main() {
   const releaseOk = checkReleaseReadiness();
   const muOk = checkMuPrePush();
   const gatesOk = checkGates();
+  const covenantOk = await checkCovenantGate();
 
-  const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk;
+  const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');
   console.log(`PERF A+: ${perfOk ? 'PASS' : 'FAIL'}`);
@@ -130,6 +162,7 @@ async function main() {
   console.log(`RELEASE + PERF QA: ${releaseOk ? 'PASS' : 'FAIL'}`);
   console.log(`MU PRE-PUSH A+: ${muOk ? 'PASS' : 'FAIL'}`);
   console.log(`LOCAL GATES: ${gatesOk ? 'PASS' : 'FAIL'}`);
+  console.log(`COVENANT GATE QA: ${covenantOk ? 'PASS' : 'FAIL'}`);
   console.log(`OVERALL A+: ${overallOk ? 'PASS — Blueprint delivered locally' : 'FAIL — resolve before push'}`);
 
   if (overallOk) {
