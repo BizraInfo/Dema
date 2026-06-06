@@ -16,6 +16,8 @@ This index is the clean map for the repo. It separates current user-facing docs,
 ## Current public front doors
 
 - [BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md](BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md) — north-star goal for BIZRA Node0 + DEMA. Operating law, A+ quality definition, mission lifecycle, flagship test. Companion to CURRENT_LIMITS and PRODUCT.
+- [genesis/BIZRA_GENESIS_BLOCK_v0.1.md](genesis/BIZRA_GENESIS_BLOCK_v0.1.md) — Genesis Block proof contract for BIZRA Node0: seed-before-forest, remote-green baseline, Node0/Dema/URP/5SAT/Covenant/Proof-before-Mint boundaries, and non-claims before Node1.
+- [NODE0_DEMA_URP_FLAGSHIP_DOD.md](NODE0_DEMA_URP_FLAGSHIP_DOD.md) — Definition of Done for the Node0 + Dema + URP flagship loop: clean-state replay gates, 5SAT local declaration, Covenant prototype, receipt proof, public bridge spec, Node1 handshake hold, and economy quarantine.
 - [NODE0_MASTER_CRAFTSMANSHIP_CHECKLIST.md](NODE0_MASTER_CRAFTSMANSHIP_CHECKLIST.md) — evidence-bound Genesis Node completion scorecard: master flywheel acceptance test, domain scorecard, forbidden overclaims, and next implementation spearpoint.
 - [NODE0_MASTER_PLAN_v0_1.md](NODE0_MASTER_PLAN_v0_1.md) — ordered, exit-gated build sequence to Block0 seal (Phases A→E + SEAL), disk-anchored current truth, critical path, non-goals, halt gates.
 - [02-architecture/NODE0_OSTREE_TAD_v0_1.md](02-architecture/NODE0_OSTREE_TAD_v0_1.md) — OSTree-model technical architecture: maps the content-addressed signed receipt chain / Block0 to OSTree (object store, commit, fsck, deployment), then proposes the stdlib composition manifest before any libostree adoption.
