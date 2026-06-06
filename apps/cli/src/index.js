@@ -189,8 +189,8 @@ import { saveChooseDecision } from "../../../packages/urp/src/choose-writer.js";
 import { listChooseDecisions } from "../../../packages/urp/src/choose-list.js";
 import { verifyChooseReceiptFile } from "../../../packages/urp/src/choose-verify.js";
 import {
-  buildNode05SatU rpLaunch,
-  verifyNode05SatU rpLaunch,
+  buildNode05SatUrpLaunch,
+  verifyNode05SatUrpLaunch,
 } from "../../../packages/urp/src/five-sat-urp-launch.js";
 import {
   gatherDemaRealmState,
@@ -2142,7 +2142,7 @@ if (argv[2] === "launch-5sat") {
     process.exitCode = 1;
     return;
   }
-  const launch = buildNode05SatU rpLaunch();
+  const launch = buildNode05SatUrpLaunch();
   // Save as content-addressed receipt (atomic). Self-contained for micro.
   const { join } = await import("node:path");
   const { homedir } = await import("node:os");
