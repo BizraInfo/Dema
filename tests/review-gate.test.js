@@ -528,6 +528,11 @@ test("MAIN-06: feat/* branches map to policy/broad-scope (parity with adr/* fix/
   assert.equal(out.ok, true);
 });
 
+test("MAIN-07: copilot/* branches map to policy/broad-scope (parity with ci/* docs/* feat/*)", () => {
+  const out = validatePrClass({ reviewClass: "policy/broad-scope", branch: "copilot/fix-github-actions-job-test-22-x" });
+  assert.equal(out.ok, true);
+});
+
 test("policy/broad-scope proof scope accepts any file list and skips allowlist enforcement", () => {
   const broadFileSet = [
     "docs/anything.md",
