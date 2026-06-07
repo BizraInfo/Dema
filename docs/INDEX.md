@@ -89,6 +89,10 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [06-adr/ADR-006-continuous-assurance-and-no-mint-verification.md](06-adr/ADR-006-continuous-assurance-and-no-mint-verification.md) — no-mint verification.
 - [06-adr/ADR-007-multi-session-chain-policy.md](06-adr/ADR-007-multi-session-chain-policy.md) — multi-session chain policy.
 
+## Proposed ADRs and boundary drafts
+
+- [06-adr/ADR-019-impact-launchpad-mvp-contract-boundary.md](06-adr/ADR-019-impact-launchpad-mvp-contract-boundary.md) — Proposed docs-only software/governance boundary for the Impact Launchpad MVP before proposal-flow implementation, review-envelope shape, PoI, reward, token, marketplace, or public economic work.
+
 ## Proof, evidence, and priority
 
 - [../proof-of-priority/PIN.md](../proof-of-priority/PIN.md) — canonical proof-of-priority pin.

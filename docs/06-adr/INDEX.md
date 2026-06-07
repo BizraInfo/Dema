@@ -4,7 +4,7 @@
 >
 > **Format:** Lightweight ADR records (`# ADR-NNN: Title` · `**Status:**` · `**Date:**` · `## Context` / `## Decision` / `## Consequences` sections, with the older records lighter on the consequences section). Status values: `Accepted` · `Proposed` · `Parking lot` · `Superseded`.
 >
-> **Last refreshed:** 2026-05-24 GST against `main @ d14b267`.
+> **Last refreshed:** 2026-06-07 GST against `main @ 1f9e1c5`.
 
 ---
 
@@ -30,8 +30,9 @@
 |                     [016](ADR-016-eval-layer2-scaffold-only.md) | Layer 2 (LLM-as-judge) Ships as Scaffold-Only                | Accepted    | 2026-05-23 (typed-GO `GO save planner output as docs/06-adr/ADR-016-eval-layer2-scaffold-only.md`) | Remote LLM is never invoked from runtime; Layer 2 stays scaffold.                                                                       |
 |      [017](ADR-017-youtube-channel-hypergraph-scaffold-only.md) | YouTube Channel Hypergraph Miner v0.1                        | Parking lot | 2026-05-23 (execution explicitly deferred per operator pivot to ADR-018)                           | Planner-output scaffold preserved; not flagship critical path.                                                                          |
 |                   [018](ADR-018-model-broker-promotion-path.md) | Model Broker Promotion Path — localhost-only · Ollama v0.1   | Accepted    | 2026-05-23 (typed-GO `a + c in parallel`)                                                          | Localhost-only model broker via Ollama selected as the load-bearing next slice.                                                         |
+|       [019](ADR-019-impact-launchpad-mvp-contract-boundary.md) | Impact Launchpad MVP Contract Boundary                       | Proposed    | Pending typed GO                                                                                    | Proposed docs-only software/governance boundary before contribution proposal flow, review-envelope shape, PoI, reward, token, marketplace, or public economic work. |
 
-**Tally:** 17 Accepted · 1 Parking lot · 0 Proposed · 0 Superseded · **18 total**
+**Tally:** 17 Accepted · 1 Parking lot · 1 Proposed · 0 Superseded · **19 total**
 
 ---
 
@@ -48,7 +49,7 @@
 - **Status flow:** `Proposed → Accepted` (most common) · `Proposed → Parking lot` (scaffold-only / deferred execution) · `Accepted → Superseded` (replaced by a later ADR; none currently).
 - **Accepted date:** the date of operator typed-GO or merge — whichever is later. When an ADR was proposed earlier than accepted, both dates appear.
 - **File shape:** every ADR file begins with `# ADR-NNN: Title` · `**Status:**` · `**Date:**` followed by `## Context` / `## Decision` / `## Consequences` sections. The older records (ADR-001..ADR-005) are lighter on the consequences section; later records are progressively more rigorous.
-- **Authorship:** "Decision makers" (older convention) or "Authorized by" / "Authors" (newer convention). Operator (Mumu) is the sole accept-authority across all 18 records.
+- **Authorship:** "Decision makers" (older convention) or "Authorized by" / "Authors" (newer convention). Operator (Mumu) is the sole accept-authority across all 19 records.
 
 ---
 
