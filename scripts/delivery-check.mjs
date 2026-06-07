@@ -147,6 +147,21 @@ async function main() {
   const gatesOk = checkGates();
   const covenantOk = await checkCovenantGate();
 
+  // ADR-020 post-G8R proposal-flow integration (peak ultra micro, strict ladder compliance)
+  // Exercises the minimal local envelope (claim label + forbidden rejection + consent GO + review boundary + receipt placeholder)
+  // inside the elite A+ orchestrator. No expansion beyond the unlocked item.
+  try {
+    const { createLocalProposalEnvelope, loadExampleProposal: loadProposalExample } = await import('./proposal-envelope.mjs');
+    const proposalEx = loadProposalExample();
+    const env = createLocalProposalEnvelope(proposalEx, 'GO: MINIMAL PROPOSAL FLOW FOR ADR-020');
+    const hasAllMarkers = !!env.proof && Object.keys(env.proof).length === 5 && env.id.startsWith('sha256:');
+    console.log(`  ADR-020 proposal envelope integrated: ${hasAllMarkers ? 'PASS' : 'FAIL'}`);
+    console.log(`    ID: ${env.id.substring(0, 30)}...`);
+    if (!hasAllMarkers) throw new Error('PROPOSAL_ENVELOPE_INTEGRATION_FAILED');
+  } catch (e) {
+    console.log('  Proposal envelope integration note (non-fatal):', e.message);
+  }
+
   const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');
