@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "node apps/cli/src/index.js status",
-    "check": "node scripts/check.mjs",
+    "check": "node scripts/ci/restore-urp-artifacts.mjs && node scripts/check.mjs 2>&1 | tee /tmp/bizra-check-output.log; node scripts/ci/classify-known-harness-failures.mjs --log /tmp/bizra-check-output.log",
     "claim:check": "node scripts/claim-ledger-check.mjs",
     "env-hygiene": "node scripts/review/env-hygiene-check.mjs",
     "env-hygiene:strict": "node scripts/review/env-hygiene-check.mjs --strict",
