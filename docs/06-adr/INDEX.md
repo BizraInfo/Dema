@@ -4,7 +4,7 @@
 >
 > **Format:** Lightweight ADR records (`# ADR-NNN: Title` · `**Status:**` · `**Date:**` · `## Context` / `## Decision` / `## Consequences` sections, with the older records lighter on the consequences section). Status values: `Accepted` · `Proposed` · `Parking lot` · `Superseded`.
 >
-> **Last refreshed:** 2026-06-07 GST against `main @ 1f9e1c5`.
+> **Last refreshed:** 2026-06-07 GST against `main @ eac8627`.
 
 ---
 

@@ -92,6 +92,11 @@ This index is the clean map for the repo. It separates current user-facing docs,
 ## Proposed ADRs and boundary drafts
 
 - [06-adr/ADR-019-impact-launchpad-mvp-contract-boundary.md](06-adr/ADR-019-impact-launchpad-mvp-contract-boundary.md) — Proposed docs-only software/governance boundary for the Impact Launchpad MVP before proposal-flow implementation, review-envelope shape, PoI, reward, token, marketplace, or public economic work.
+- [06-adr/ADR-020-impact-launchpad-mvp-test-boundary.md](06-adr/ADR-020-impact-launchpad-mvp-test-boundary.md) — Proposed docs-only test boundary for the Impact Launchpad MVP: claim label validation, forbidden promotion rejection (token/reward/marketplace/public claims), consent and review boundary checks, receipt expectations, and non-claim regressions before any implementation.
+
+## Proposed ADRs and boundary drafts
+
+- [06-adr/ADR-020-impact-launchpad-mvp-test-boundary.md](06-adr/ADR-020-impact-launchpad-mvp-test-boundary.md) — Proposed docs-only test boundary for the Impact Launchpad MVP: claim label validation, forbidden promotion rejection (token/reward/marketplace/public claims), consent and review boundary checks, receipt expectations, and non-claim regressions before any implementation.
 
 ## Proof, evidence, and priority
 
