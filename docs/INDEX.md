@@ -109,6 +109,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [08-quality/CROSS_REPO_GENESIS_PROVENANCE_2026_06_05.md](08-quality/CROSS_REPO_GENESIS_PROVENANCE_2026_06_05.md) — read-only cross-repo genesis/key/proof provenance audit (six repos); gates Node0 key ceremony.
 - [../themassage.pdf](../themassage.pdf), [../bizra.pdf](../bizra.pdf), [../BIZRA_Third_Fact_v0_1_FINAL.pdf](../BIZRA_Third_Fact_v0_1_FINAL.pdf) — three founding files bound by the priority anchor.
 
+- [ELITE_FULL_STACK_BLUEPRINT.md](ELITE_FULL_STACK_BLUEPRINT.md) — elite full-stack software project blueprint integrating MBOK/PMBOK 10 domains, DevOps value stream, CI/CD pipeline automation (4 remote rails + local gates), rigorous performance-quality assurance (artifacts, thresholds, world-class standards). State-of-the-art for the pinnacle masterpiece.
 ## Quality, delivery, and contribution
 
 - [DELIVERY_SPINE_v0_1.md](DELIVERY_SPINE_v0_1.md) — Defines Dema's canonical delivery gates, CI/CD ownership, release truth labels, quality spine, and operator-local extended gate boundaries.
