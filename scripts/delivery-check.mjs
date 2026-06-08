@@ -212,6 +212,49 @@ async function main() {
     console.log('  Reward eligibility mock integration note (non-fatal):', e.message);
   }
 
+  // ADR-025/G23 reward receipt mock local prototype integration (G24).
+  // Exercises a local mock receipt review object only (eligibility/score/contribution/proposal refs + claim label + consent + review boundary + receipt placeholder + proof_gaps + anti-gaming).
+  // Non-fatal verification marker only inside the A+ orchestrator.
+  // No receipt writing, no minting, no publishing, no bridging, no reward authorization, no token logic, no contracts, no marketplace, no Node1, no URP bridge, no Shariah-compliant claim.
+  try {
+    const {
+      createMockRewardReceiptReview,
+      loadExampleRewardReceiptInput,
+      REWARD_RECEIPT_MOCK_CONSENT
+    } = await import('./reward-receipt-mock.mjs');
+    const receiptInput = loadExampleRewardReceiptInput();
+    const mockReview = createMockRewardReceiptReview(
+      { requireConsent: REWARD_RECEIPT_MOCK_CONSENT },
+      receiptInput
+    );
+    const hasId = mockReview.receipt_review_id && mockReview.receipt_review_id.startsWith('sha256:');
+    const hasClaim = !!mockReview.claim_label;
+    const hasProofGaps = Array.isArray(mockReview.proof_gaps) && mockReview.proof_gaps.length > 0;
+    const hasReceiptExpectation = mockReview.receipt_expectation && mockReview.receipt_expectation.placeholder === true;
+    const hasStatuses = mockReview.consent_status === 'required' &&
+      mockReview.review_status === 'boundary_local_only' &&
+      mockReview.anti_gaming_status === 'enforced' &&
+      !!mockReview.receipt_status;
+    const hasPosture = !!mockReview.prototype_posture && mockReview.prototype_posture.includes('PROTOTYPE');
+    // Assert forbidden economic/receipt-publication fields absent (per mock boundary + test discipline)
+    const hasNoForbiddenKeys = !('receipt_written' in mockReview) &&
+      !('receipt_minted' in mockReview) &&
+      !('reward_authorized' in mockReview) &&
+      !('token_amount' in mockReview) &&
+      !('contract_call' in mockReview) &&
+      !('mint' in mockReview) &&
+      !('write' in mockReview);
+    const noteExcludes = mockReview.receipt_expectation &&
+      mockReview.receipt_expectation.note &&
+      mockReview.receipt_expectation.note.includes('NO MINT/WRITE/PUBLISH/BRIDGE');
+    const hasAllMarkers = hasId && hasClaim && hasProofGaps && hasReceiptExpectation && hasStatuses && hasPosture && hasNoForbiddenKeys && noteExcludes;
+    console.log('  ADR-025 reward receipt mock integrated: ' + (hasAllMarkers ? 'PASS' : 'FAIL'));
+    console.log('    ID: ' + (mockReview.receipt_review_id || '').substring(0, 30) + '...');
+    if (!hasAllMarkers) throw new Error('REWARD_RECEIPT_MOCK_INTEGRATION_FAILED');
+  } catch (e) {
+    console.log('  Reward receipt mock integration note (non-fatal):', e.message);
+  }
+
   const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');
