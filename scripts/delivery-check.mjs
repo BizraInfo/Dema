@@ -299,6 +299,58 @@ async function main() {
     console.log('  Reward receipt local write plan integration note (non-fatal):', e.message);
   }
 
+  // ADR-027/G31 reward receipt local writer prototype integration (G32).
+  // Exercises the local writer prototype only (plan-driven, temp DEMA_HOME, atomic write, read-back verification).
+  // Non-fatal verification marker only inside the A+ orchestrator.
+  // No production writer, no public receipt writing, no minting, no publishing, no bridging, no reward authorization, no token logic, no contracts, no marketplace, no Node1, no URP bridge, no Shariah-compliant claim.
+  try {
+    const {
+      writeLocalRewardReceipt,
+      loadExampleLocalWriterInput,
+      REWARD_RECEIPT_LOCAL_WRITER_CONSENT
+    } = await import('./reward-receipt-local-writer.mjs');
+    const { mkdtemp, rm } = await import('node:fs/promises');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const tempRoot = await mkdtemp(join(tmpdir(), 'dema-g32-writer-'));
+    try {
+      const writerInput = loadExampleLocalWriterInput();
+      const result = await writeLocalRewardReceipt(
+        { requireConsent: REWARD_RECEIPT_LOCAL_WRITER_CONSENT, demaHome: tempRoot },
+        writerInput
+      );
+      const hasId = result.local_writer_result_id && result.local_writer_result_id.startsWith('sha256:');
+      const hasPerformed = result.write_result_status === 'local_write_performed_local_only';
+      const hasPathInside = result.final_local_path && result.final_local_path.startsWith(tempRoot);
+      const hasHashes = !!result.content_hash && !!result.integrity_hash;
+      const hasVerified = result.read_back_verified === true;
+      const hasMode = result.file_mode_expected === '0o600';
+      const forbiddenFields = [
+        'receipt_written',
+        'receipt_minted',
+        'reward_authorized',
+        'token_amount',
+        'reward_amount',
+        'contract_call',
+        'marketplace_listing',
+        'public_url',
+        'bridge_id',
+        'node1_sync',
+        'urp_publication',
+        'shariah_compliant'
+      ];
+      const hasNoForbidden = !forbiddenFields.some(f => f in result);
+      const hasAllMarkers = hasId && hasPerformed && hasPathInside && hasHashes && hasVerified && hasMode && hasNoForbidden;
+      console.log('  ADR-027 reward receipt local writer integrated: ' + (hasAllMarkers ? 'PASS' : 'FAIL'));
+      console.log('    ID: ' + (result.local_writer_result_id || '').substring(0, 30) + '...');
+      if (!hasAllMarkers) throw new Error('REWARD_RECEIPT_LOCAL_WRITER_INTEGRATION_FAILED');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  } catch (e) {
+    console.log('  Reward receipt local writer integration note (non-fatal):', e.message);
+  }
+
   const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');
