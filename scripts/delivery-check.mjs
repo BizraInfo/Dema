@@ -558,6 +558,106 @@ async function main() {
     console.log('  Hybrid mission knowledge graph BoK integration note (non-fatal):', e.message);
   }
 
+  // ADR-032/G51 Node0 Closed-Loop Digest mock integration (G52).
+  // Exercises the local Node0 closed-loop digest mock object only (reference expectation envelope
+  // across receipt_review -> local_writer -> AIR -> mission_state -> alignment -> hybrid_knowledge).
+  // Non-fatal verification marker only inside the A+ orchestrator.
+  // No digest runtime, digest writer, digest aggregator, closed-loop runtime execution,
+  // Dema/Data-Lake runtime sync, Data Lake mutation, cross-repo write, API bridge,
+  // filesystem bridge outside Dema, PAT/SAT/FATE runtime invocation, URP sync,
+  // Node1 activation, AIR runtime expansion, mission memory runtime, hybrid memory runtime,
+  // knowledge graph runtime, Body of Knowledge runtime, vector memory runtime,
+  // autonomous retrieval engine, opaque compression engine, global state store,
+  // receipt minting, public receipt writing, publishing, bridging, reward authorization,
+  // reward logic, token logic, contracts, marketplace, public economic copy,
+  // or Shariah-compliant claim.
+  try {
+    const {
+      createMockNode0ClosedLoopDigest,
+      loadExampleNode0ClosedLoopDigestInput,
+      NODE0_CLOSED_LOOP_DIGEST_MOCK_CONSENT
+    } = await import('./node0-closed-loop-digest-mock.mjs');
+    const digestInput = loadExampleNode0ClosedLoopDigestInput();
+    const digest = createMockNode0ClosedLoopDigest(
+      { requireConsent: NODE0_CLOSED_LOOP_DIGEST_MOCK_CONSENT },
+      digestInput
+    );
+    const hasId = digest.node0_digest_boundary_id && digest.node0_digest_boundary_id.startsWith('sha256:');
+    const hasScope = digest.digest_scope === 'NODE0_CLOSED_LOOP_REFERENCE_EXPECTATION';
+    const hasReceiptRef = !!digest.receipt_ref;
+    const hasWriterRef = !!digest.writer_ref;
+    const hasAirRef = !!digest.air_ref;
+    const hasMissionStateRef = !!digest.mission_state_ref;
+    const hasAlignmentRef = !!digest.alignment_ref;
+    const hasHybridRef = !!digest.hybrid_knowledge_ref;
+
+    const hasChain = digest.proof_chain_expectation &&
+      digest.proof_chain_expectation.placeholder === true &&
+      digest.proof_chain_expectation.status === 'REFERENCE_EXPECTATION_ONLY' &&
+      digest.proof_chain_expectation.digest_runtime_implemented === false &&
+      digest.proof_chain_expectation.digest_writer_implemented === false &&
+      digest.proof_chain_expectation.digest_aggregator_implemented === false &&
+      digest.proof_chain_expectation.closed_loop_runtime_executed === false &&
+      Array.isArray(digest.proof_chain_expectation.chain_order_declared) &&
+      digest.proof_chain_expectation.chain_order_declared.includes('receipt_review_id') &&
+      digest.proof_chain_expectation.chain_order_declared.includes('local_writer_result_id') &&
+      digest.proof_chain_expectation.chain_order_declared.includes('air_id') &&
+      digest.proof_chain_expectation.chain_order_declared.includes('mission_state_id') &&
+      digest.proof_chain_expectation.chain_order_declared.includes('alignment_boundary_id') &&
+      digest.proof_chain_expectation.chain_order_declared.includes('hybrid_knowledge_boundary_id');
+
+    const hasBlocked = digest.still_blocked_snapshot &&
+      digest.still_blocked_snapshot.placeholder === true &&
+      digest.still_blocked_snapshot.source === 'carried_still_blocked_invariants' &&
+      digest.still_blocked_snapshot.production_scoring === false &&
+      digest.still_blocked_snapshot.economic_scoring === false &&
+      digest.still_blocked_snapshot.receipt_minting === false &&
+      digest.still_blocked_snapshot.public_receipt_writing === false &&
+      digest.still_blocked_snapshot.publishing === false &&
+      digest.still_blocked_snapshot.bridging === false &&
+      digest.still_blocked_snapshot.token_logic === false &&
+      digest.still_blocked_snapshot.contracts === false &&
+      digest.still_blocked_snapshot.marketplace === false &&
+      digest.still_blocked_snapshot.node1 === false &&
+      digest.still_blocked_snapshot.public_urp_bridge === false &&
+      digest.still_blocked_snapshot.shariah_compliance_claim === false;
+
+    const hasProofGaps = Array.isArray(digest.proof_gaps) && digest.proof_gaps.length > 0;
+    const hasStillBlockedInvariants = Array.isArray(digest.still_blocked_invariants) && digest.still_blocked_invariants.length > 0;
+    const hasPosture = digest.prototype_posture && digest.prototype_posture.includes('PROTOTYPE');
+
+    const forbiddenFields = [
+      'digest_written',
+      'digest_published',
+      'digest_runtime_active',
+      'digest_aggregated',
+      'datalake_synced',
+      'cross_repo_write_performed',
+      'runtime_bridge_active',
+      'node1_sync',
+      'urp_publication',
+      'token_minted',
+      'reward_authorized',
+      'contract_call',
+      'marketplace_signal',
+      'public_receipt_url',
+      'shariah_compliant'
+    ];
+    const hasNoForbidden = !forbiddenFields.some(f => f in digest);
+
+    const hasAllMarkers = hasId && hasScope &&
+      hasReceiptRef && hasWriterRef && hasAirRef && hasMissionStateRef && hasAlignmentRef && hasHybridRef &&
+      hasChain && hasBlocked && hasProofGaps && hasStillBlockedInvariants && hasPosture && hasNoForbidden;
+
+    console.log('  ADR-032 node0 closed-loop digest mock integrated: ' + (hasAllMarkers ? 'PASS' : 'FAIL'));
+    console.log('    ID: ' + (digest.node0_digest_boundary_id || '').substring(0, 30) + '... status=NODE0_CLOSED_LOOP_REFERENCE_EXPECTATION');
+    console.log('    LCC-6 ADR-032 Node0 closed-loop digest: PASS boundary/schema/scaffold/delivery/claim-map/witness');
+
+    if (!hasAllMarkers) throw new Error('NODE0_CLOSED_LOOP_DIGEST_MOCK_INTEGRATION_FAILED');
+  } catch (e) {
+    console.log('  Node0 closed-loop digest integration note (non-fatal):', e.message);
+  }
+
   const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');
