@@ -397,6 +397,56 @@ async function main() {
     console.log('  Atomic impact receipt lifecycle mock integration note (non-fatal):', e.message);
   }
 
+  // ADR-029/G39 mission-centric state ecosystem mock integration (G40).
+  // Exercises the local mission-centric state ecosystem mock object only (in-memory envelope + placeholder expectations for re-check, stale-belief policy, HHMM, writer, AgentFold, Data Lake, URP).
+  // Non-fatal verification marker only inside the A+ orchestrator.
+  // No mission/vector memory runtime, no automatic context rewriting, no opaque compression, no autonomous retrieval, no global state store,
+  // no AIR runtime expansion, no MCP/A2A runtime, no HHMM engine, no AgentFold/Data Lake/URP sync/implementation, no receipt minting,
+  // no public receipt writing, no publishing, no bridging, no reward authorization, no reward logic, no token logic,
+  // no contracts, no marketplace, no Node1, no public URP bridge, no Shariah-compliant claim.
+  try {
+    const {
+      createMockMissionCentricStateEcosystem,
+      loadExampleMissionCentricStateInput,
+      MISSION_CENTRIC_STATE_ECOSYSTEM_MOCK_CONSENT
+    } = await import('./mission-centric-state-ecosystem-mock.mjs');
+    const missionStateInput = loadExampleMissionCentricStateInput();
+    const result = createMockMissionCentricStateEcosystem(
+      { requireConsent: MISSION_CENTRIC_STATE_ECOSYSTEM_MOCK_CONSENT },
+      missionStateInput
+    );
+    const hasMissionStateId = result.mission_state_id && result.mission_state_id.startsWith('sha256:');
+    const hasMissionId = !!result.mission_id;
+    const hasCurrent = result.current_state === 'MISSION_STATE_DECLARED';
+    const hasPrev = result.previous_state === 'READY_FOR_REVIEW';
+    const hasAirRef = !!result.air_ref;
+    const hasTransRef = !!result.state_transition_ref;
+    const hasEnv = result.environment_recheck_result && result.environment_recheck_result.placeholder === true && result.environment_recheck_result.source_of_truth === 'environment_over_memory' && result.environment_recheck_result.runtime_implemented === false;
+    const hasStale = result.stale_belief_policy && result.stale_belief_policy.placeholder === true && result.stale_belief_policy.invalidation_required === true && result.stale_belief_policy.opaque_compression_forbidden === true && result.stale_belief_policy.autonomous_retrieval_forbidden === true;
+    const hasHhmm = result.hhmm_state && result.hhmm_state.placeholder === true && result.hhmm_state.engine_implemented === false;
+    const hasProofGaps = Array.isArray(result.proof_gaps) && result.proof_gaps.length > 0;
+    const hasWriterRef = !!result.writer_ref && result.writer_ref.includes(missionStateInput.local_writer_result_id || 'sha256:');
+    const hasAgent = result.agentfold_expectation && result.agentfold_expectation.placeholder === true && result.agentfold_expectation.agentfold_l3_implemented === false;
+    const hasDl = result.datalake_alignment_expectation && result.datalake_alignment_expectation.placeholder === true && result.datalake_alignment_expectation.datalake_sync_implemented === false && result.datalake_alignment_expectation.face_body_alignment_expected === true;
+    const hasUrp = result.urp_expectation && result.urp_expectation.placeholder === true && result.urp_expectation.urp_sync_implemented === false && result.urp_expectation.public_publication === false;
+    const hasPosture = result.prototype_posture && result.prototype_posture.includes('PROTOTYPE');
+    const forbiddenFields = [
+      'token_minted', 'reward_authorized', 'reward_amount', 'token_amount',
+      'contract_call', 'marketplace_signal', 'public_receipt_url', 'public_url',
+      'bridge_id', 'node1_sync', 'urp_publication', 'shariah_compliant',
+      'vector_memory_runtime', 'automatic_context_rewriting_engine',
+      'opaque_compression_engine', 'autonomous_retrieval_engine', 'global_state_store'
+    ];
+    const hasNoForbidden = !forbiddenFields.some(f => f in result);
+    const hasAllMarkers = hasMissionStateId && hasMissionId && hasCurrent && hasPrev && hasAirRef && hasTransRef &&
+      hasEnv && hasStale && hasHhmm && hasProofGaps && hasWriterRef && hasAgent && hasDl && hasUrp && hasPosture && hasNoForbidden;
+    console.log('  ADR-029 mission-centric state ecosystem mock integrated: ' + (hasAllMarkers ? 'PASS' : 'FAIL'));
+    console.log('    ID: ' + (result.mission_state_id || '').substring(0, 30) + '... mission=' + (result.mission_id || '') + ' state=' + (result.current_state || ''));
+    if (!hasAllMarkers) throw new Error('MISSION_CENTRIC_STATE_ECOSYSTEM_MOCK_INTEGRATION_FAILED');
+  } catch (e) {
+    console.log('  Mission-centric state ecosystem integration note (non-fatal):', e.message);
+  }
+
   const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');
