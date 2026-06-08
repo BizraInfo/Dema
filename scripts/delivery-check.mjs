@@ -183,6 +183,35 @@ async function main() {
     console.log('  Mock scoring integration note (non-fatal):', e.message);
   }
 
+  // ADR-024/G20 reward eligibility mock local prototype integration.
+  // Exercises a local mock review object only (claim label + consent + review boundary + receipt placeholder + no-reward boundary).
+  // No reward eligibility implementation, token logic, contract linkage, marketplace signal, public bridge, or receipt write.
+  try {
+    const {
+      createMockRewardEligibilityReview,
+      loadExampleRewardEligibilityInput,
+      REWARD_ELIGIBILITY_MOCK_CONSENT
+    } = await import('./reward-eligibility-mock.mjs');
+    const eligibilityInput = loadExampleRewardEligibilityInput();
+    const mockReview = createMockRewardEligibilityReview(
+      { requireConsent: REWARD_ELIGIBILITY_MOCK_CONSENT },
+      eligibilityInput
+    );
+    const hasAllMarkers = mockReview.id.startsWith('sha256:') &&
+      mockReview.review.claim_label &&
+      mockReview.review.consent_status === 'required' &&
+      mockReview.review.review_status === 'local_review_only' &&
+      mockReview.review.receipt_expectation &&
+      mockReview.review.receipt_expectation.placeholder === true &&
+      mockReview.boundary &&
+      mockReview.boundary.noReward === true;
+    console.log('  ADR-024 reward eligibility mock integrated: ' + (hasAllMarkers ? 'PASS' : 'FAIL'));
+    console.log('    ID: ' + mockReview.id.substring(0, 30) + '...');
+    if (!hasAllMarkers) throw new Error('REWARD_ELIGIBILITY_MOCK_INTEGRATION_FAILED');
+  } catch (e) {
+    console.log('  Reward eligibility mock integration note (non-fatal):', e.message);
+  }
+
   const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');
