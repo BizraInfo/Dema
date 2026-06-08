@@ -94,7 +94,13 @@ export function createMockRewardReceiptReview({ requireConsent }, input = loadEx
     prototype_posture: '[PROTOTYPE] [DESIGNED_NOT_LIVE] LOCAL_ONLY'
   };
 
-  const canonical = JSON.stringify(body, Object.keys(body).sort());
+  // Deterministic identity excludes volatile audit-time fields.
+  // `created_at` remains in the returned review object as observation metadata,
+  // but it must not affect receipt_review_id for the same semantic input.
+  const identityBody = Object.fromEntries(
+    Object.entries(body).filter(([key]) => key !== 'created_at'),
+  );
+  const canonical = JSON.stringify(identityBody, Object.keys(identityBody).sort());
   const receipt_review_id = 'sha256:' + createHash('sha256').update(canonical + REWARD_RECEIPT_MOCK_CONSENT).digest('hex');
 
   return {
