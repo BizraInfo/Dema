@@ -162,6 +162,27 @@ async function main() {
     console.log('  Proposal envelope integration note (non-fatal):', e.message);
   }
 
+  // ADR-021 post-boundary-proof mock scoring integration (peak ultra micro, strict ladder compliance)
+  // Exercises the minimal local mock (claim label + anti-gaming + consent GO + review boundary + receipt placeholder)
+  // inside the elite A+ orchestrator. No expansion beyond the unlocked item.
+  try {
+    const { createMockImpactScore, loadExampleScoringContext } = await import('./impact-scoring-mock.mjs');
+    const scoreCtx = loadExampleScoringContext();
+    const mock = createMockImpactScore({ requireConsent: "GO: MOCK SCORING FOR ADR-021" }, scoreCtx);
+    const hasAllMarkers = !!mock.mockScore.proof &&
+      mock.mockScore.proof.claim_label &&
+      mock.mockScore.proof.anti_gaming_enforced &&
+      mock.mockScore.proof.consent_required &&
+      mock.mockScore.proof.review_boundary &&
+      mock.mockScore.proof.receipt_expectation &&
+      mock.id.startsWith('sha256:');
+    console.log(`  ADR-021 mock scoring integrated: ${hasAllMarkers ? 'PASS' : 'FAIL'}`);
+    console.log(`    ID: ${mock.id.substring(0, 30)}...`);
+    if (!hasAllMarkers) throw new Error('MOCK_SCORING_INTEGRATION_FAILED');
+  } catch (e) {
+    console.log('  Mock scoring integration note (non-fatal):', e.message);
+  }
+
   const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');
