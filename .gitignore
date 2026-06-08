@@ -13,6 +13,10 @@ coverage/
 .artifacts/
 .qodo/
 
+# Downloaded/generated CI receipt evidence. Keep on disk for operator review,
+# but do not let local proof artifacts dirty the source tree.
+artifacts/receipts/ci/
+
 # OpenTimestamps creates *.ots.bak backups on each `ots upgrade` —
 # regenerable cruft, never the canonical receipt.
 *.ots.bak
