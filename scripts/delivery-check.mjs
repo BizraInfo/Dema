@@ -447,6 +447,60 @@ async function main() {
     console.log('  Mission-centric state ecosystem integration note (non-fatal):', e.message);
   }
 
+  // ADR-030/G43 Dema Data-Lake alignment mock integration (G44).
+  // Exercises the local Dema/Data-Lake alignment mock object only (in-memory reference/expectation envelope).
+  // Non-fatal verification marker only inside the A+ orchestrator.
+  // No Dema/Data-Lake runtime sync, no Data Lake mutation, no cross-repo write,
+  // no API bridge, no PAT/SAT/FATE/URP runtime invocation, no Node1,
+  // no receipt minting, no public writing, no publishing, no bridging,
+  // no reward/token/contract/marketplace, no Shariah-compliant claim.
+  try {
+    const {
+      createMockDemaDataLakeAlignment,
+      loadExampleDemaDataLakeAlignmentInput,
+      DEMA_DATALAKE_ALIGNMENT_MOCK_CONSENT
+    } = await import('./dema-datalake-alignment-mock.mjs');
+    const alignmentInput = loadExampleDemaDataLakeAlignmentInput();
+    const result = createMockDemaDataLakeAlignment(
+      { requireConsent: DEMA_DATALAKE_ALIGNMENT_MOCK_CONSENT },
+      alignmentInput
+    );
+    const hasId = result.alignment_boundary_id && result.alignment_boundary_id.startsWith('sha256:');
+    const hasDemaRef = !!result.dema_ref;
+    const hasDlRef = !!result.datalake_ref;
+    const hasStatus = result.face_body_alignment_status === 'REFERENCE_EXPECTATION_ONLY';
+    const hasPat = result.pat7_expectation && result.pat7_expectation.placeholder === true && result.pat7_expectation.runtime_implemented === false;
+    const hasSat = result.sat5_expectation && result.sat5_expectation.placeholder === true && result.sat5_expectation.runtime_implemented === false;
+    const hasFate = result.fate_expectation && result.fate_expectation.placeholder === true && result.fate_expectation.runtime_implemented === false;
+    const hasUrp = result.urp_expectation && result.urp_expectation.placeholder === true && result.urp_expectation.urp_sync_implemented === false && result.urp_expectation.public_publication === false;
+    const hasProofGaps = Array.isArray(result.proof_gaps) && result.proof_gaps.length > 0;
+    const hasPosture = result.prototype_posture && result.prototype_posture.includes('PROTOTYPE');
+    const forbiddenFields = [
+      'datalake_synced',
+      'cross_repo_write_performed',
+      'runtime_bridge_active',
+      'pat_runtime_invoked',
+      'sat_runtime_invoked',
+      'fate_decision_executed',
+      'node1_sync',
+      'urp_publication',
+      'token_minted',
+      'reward_authorized',
+      'contract_call',
+      'marketplace_signal',
+      'public_receipt_url',
+      'shariah_compliant'
+    ];
+    const hasNoForbidden = !forbiddenFields.some(f => f in result);
+    const hasAllMarkers = hasId && hasDemaRef && hasDlRef && hasStatus &&
+      hasPat && hasSat && hasFate && hasUrp && hasProofGaps && hasPosture && hasNoForbidden;
+    console.log('  ADR-030 Dema Data-Lake alignment mock integrated: ' + (hasAllMarkers ? 'PASS' : 'FAIL'));
+    console.log('    ID: ' + (result.alignment_boundary_id || '').substring(0, 30) + '... status=' + (result.face_body_alignment_status || ''));
+    if (!hasAllMarkers) throw new Error('DEMA_DATALAKE_ALIGNMENT_MOCK_INTEGRATION_FAILED');
+  } catch (e) {
+    console.log('  Dema Data-Lake alignment integration note (non-fatal):', e.message);
+  }
+
   const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');
