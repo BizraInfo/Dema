@@ -76,8 +76,8 @@ export function createMockImpactScore({ requireConsent }, context = loadExampleS
 export function loadExampleScoringContext() {
   return {
     id: 'ex-mock-score-001',
-    claim_label: 'Mock impact scoring test boundary only [PROTOTYPE] [DESIGNED_NOT_LIVE]',
-    description: 'Minimal local mock scoring only — after ADR-021 test boundary + scaffold proven. Excludes contracts, real scoring, token logic, rewards, public mechanisms, public copy, Node1, URP bridge, Shariah claim [DECLARED]',
+    claim_label: 'Mock contribution measurement test boundary only [PROTOTYPE] [DESIGNED_NOT_LIVE]',
+    description: 'Minimal local mock measurement only — after ADR-021 test boundary + scaffold proven. Excludes contracts, real measurement logic, token logic, rewards, public mechanisms, public copy, Node1, URP bridge, Shariah claim [DECLARED]',
     categories: ['claim_label', 'anti_gaming', 'consent', 'review_boundary', 'receipt'],
     evidence_refs: ['ADR-021', 'tests/impact-scoring-mvp.test.js'],
     // Deliberately no numeric "score" or eligibility fields that could be misinterpreted
