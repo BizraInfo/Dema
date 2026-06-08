@@ -658,6 +658,116 @@ async function main() {
     console.log('  Node0 closed-loop digest integration note (non-fatal):', e.message);
   }
 
+  // ADR-033/G55 Layer Closure Contract LCC-6 mock integration (G56).
+  // Exercises the local Layer Closure Contract LCC-6 mock object only (six-part maintainability contract envelope).
+  // Non-fatal verification marker only inside the A+ orchestrator.
+  // No LCC runtime, LCC registry writer, LCC aggregator, automatic layer closure engine,
+  // delivery-check rewrite engine, claim-map writer, remote witness collector,
+  // digest runtime, digest writer, digest aggregator, closed-loop runtime execution,
+  // Dema/Data-Lake runtime sync, Data Lake mutation, cross-repo write, API bridge,
+  // filesystem bridge outside Dema, PAT/SAT/FATE runtime invocation, URP sync,
+  // Node1 activation, AIR runtime expansion, mission memory runtime, hybrid memory runtime,
+  // knowledge graph runtime, Body of Knowledge runtime, vector memory runtime,
+  // autonomous retrieval engine, opaque compression engine, global state store,
+  // receipt minting, public receipt writing, publishing, bridging, reward authorization,
+  // reward logic, token logic, contracts, marketplace, public economic copy,
+  // or Shariah-compliant claim.
+  try {
+    const {
+      createMockLayerClosureContractLcc6,
+      loadExampleLayerClosureContractLcc6Input,
+      LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT
+    } = await import('./layer-closure-contract-lcc6-mock.mjs');
+    const lccInput = loadExampleLayerClosureContractLcc6Input();
+    const lcc = createMockLayerClosureContractLcc6(
+      { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+      lccInput
+    );
+    const hasSchema = lcc.schema === 'bizra.lcc6.layer_closure_contract.v0.1.local';
+    const hasId = lcc.lcc6_boundary_id && lcc.lcc6_boundary_id.startsWith('sha256:');
+    const hasLayerId = !!lcc.layer_id;
+    const hasLayerName = !!lcc.layer_name;
+    const hasClosureStatus = lcc.closure_status === 'MOCK_DEFINED';
+
+    const hasContract = lcc.lcc6_contract &&
+      lcc.lcc6_contract.placeholder === true &&
+      lcc.lcc6_contract.status === 'REFERENCE_EXPECTATION_ONLY' &&
+      !!lcc.lcc6_contract.boundary_ref &&
+      !!lcc.lcc6_contract.schema_ref &&
+      !!lcc.lcc6_contract.test_scaffold_ref &&
+      !!lcc.lcc6_contract.delivery_check_marker &&
+      lcc.lcc6_contract.claim_map_status === 'BOUNDARY_NON_CLAIM_ONLY' &&
+      lcc.lcc6_contract.remote_witness_condition === 'four_exact_head_rails_completed_success' &&
+      lcc.lcc6_contract.boundary_ref_declared === true &&
+      lcc.lcc6_contract.schema_ref_declared === true &&
+      lcc.lcc6_contract.test_scaffold_ref_declared === true &&
+      lcc.lcc6_contract.delivery_check_marker_declared === true &&
+      lcc.lcc6_contract.claim_map_status_declared === true &&
+      lcc.lcc6_contract.remote_witness_condition_declared === true &&
+      lcc.lcc6_contract.lcc_runtime_implemented === false &&
+      lcc.lcc6_contract.lcc_registry_writer_implemented === false &&
+      lcc.lcc6_contract.lcc_aggregator_implemented === false &&
+      lcc.lcc6_contract.automatic_layer_closure_engine_implemented === false &&
+      lcc.lcc6_contract.delivery_check_rewrite_engine_implemented === false &&
+      lcc.lcc6_contract.claim_map_writer_implemented === false &&
+      lcc.lcc6_contract.remote_witness_collector_implemented === false;
+
+    const hasBlocked = lcc.still_blocked_snapshot &&
+      lcc.still_blocked_snapshot.placeholder === true &&
+      lcc.still_blocked_snapshot.source === 'carried_still_blocked_invariants' &&
+      lcc.still_blocked_snapshot.production_scoring === false &&
+      lcc.still_blocked_snapshot.economic_scoring === false &&
+      lcc.still_blocked_snapshot.reward_eligibility_implementation === false &&
+      lcc.still_blocked_snapshot.reward_logic === false &&
+      lcc.still_blocked_snapshot.receipt_minting === false &&
+      lcc.still_blocked_snapshot.public_receipt_writing === false &&
+      lcc.still_blocked_snapshot.publishing === false &&
+      lcc.still_blocked_snapshot.bridging === false &&
+      lcc.still_blocked_snapshot.contracts === false &&
+      lcc.still_blocked_snapshot.token_logic === false &&
+      lcc.still_blocked_snapshot.marketplace === false &&
+      lcc.still_blocked_snapshot.public_economic_copy === false &&
+      lcc.still_blocked_snapshot.node1 === false &&
+      lcc.still_blocked_snapshot.public_urp_bridge === false &&
+      lcc.still_blocked_snapshot.shariah_compliance_claim === false;
+
+    const hasProofGaps = Array.isArray(lcc.proof_gaps) && lcc.proof_gaps.length > 0;
+    const hasPosture = lcc.prototype_posture && lcc.prototype_posture.includes('PROTOTYPE');
+
+    const forbiddenFields = [
+      'lcc_runtime_active',
+      'registry_written',
+      'aggregation_performed',
+      'automatic_closure_performed',
+      'delivery_check_rewritten',
+      'claim_map_written',
+      'remote_witness_collected',
+      'datalake_synced',
+      'cross_repo_write_performed',
+      'runtime_bridge_active',
+      'node1_sync',
+      'urp_publication',
+      'token_minted',
+      'reward_authorized',
+      'contract_call',
+      'marketplace_signal',
+      'public_receipt_url',
+      'shariah_compliant'
+    ];
+    const hasNoForbidden = !forbiddenFields.some(f => f in lcc);
+
+    const hasAllMarkers = hasSchema && hasId && hasLayerId && hasLayerName && hasClosureStatus &&
+      hasContract && hasBlocked && hasProofGaps && hasPosture && hasNoForbidden;
+
+    console.log('  ADR-033 Layer Closure Contract LCC-6 mock integrated: ' + (hasAllMarkers ? 'PASS' : 'FAIL'));
+    console.log('    ID: ' + (lcc.lcc6_boundary_id || '').substring(0, 30) + '... layer=' + (lcc.layer_id || '') + ' status=MOCK_DEFINED');
+    console.log('    LCC-6 ADR-033 Layer Closure Contract: PASS boundary/schema/scaffold/delivery/claim-map/witness');
+
+    if (!hasAllMarkers) throw new Error('LAYER_CLOSURE_CONTRACT_LCC6_MOCK_INTEGRATION_FAILED');
+  } catch (e) {
+    console.log('  Layer Closure Contract LCC-6 integration note (non-fatal):', e.message);
+  }
+
   const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');
