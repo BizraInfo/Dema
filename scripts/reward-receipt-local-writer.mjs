@@ -144,6 +144,41 @@ export async function writeLocalRewardReceipt({ requireConsent, demaHome }, writ
   const canonical = JSON.stringify(receiptContent, Object.keys(receiptContent).sort());
   const content_hash = 'sha256:' + createHash('sha256').update(canonical).digest('hex');
 
+  // Idempotent for same content: if file exists with matching hash, return success without re-write
+  try {
+    const existingRaw = await readFile(finalPath, 'utf8');
+    const existingObj = JSON.parse(existingRaw);
+    const existingCanonical = JSON.stringify(existingObj, Object.keys(existingObj).sort());
+    const existingHash = 'sha256:' + createHash('sha256').update(existingCanonical).digest('hex');
+    if (existingHash === content_hash) {
+      const integrity_hash = existingHash;
+      const read_back_verified = true;
+      const result = {
+        schema: 'bizra.reward.receipt.local_writer_result.v0.1',
+        local_writer_result_id: null,
+        local_write_plan_id: writePlan.local_write_plan_id,
+        receipt_review_id: writePlan.receipt_review_id,
+        proposed_path: proposed,
+        final_local_path: finalPath,
+        content_hash,
+        integrity_hash,
+        file_mode_expected: '0o600',
+        write_result_status: 'local_write_performed_local_only',
+        read_back_verified,
+        proof_gaps: writePlan.proof_gaps,
+        created_at: new Date().toISOString(),
+        prototype_posture: '[PROTOTYPE] [DESIGNED_NOT_LIVE] LOCAL_ONLY'
+      };
+      const identity = { ...result };
+      delete identity.created_at;
+      const idCanonical = JSON.stringify(identity, Object.keys(identity).sort());
+      result.local_writer_result_id = 'sha256:' + createHash('sha256').update(idCanonical + REWARD_RECEIPT_LOCAL_WRITER_CONSENT).digest('hex');
+      return result;
+    }
+  } catch (e) {
+    // file does not exist or invalid, proceed to write
+  }
+
   // Ensure directory
   await mkdir(dirname(finalPath), { recursive: true });
 
@@ -247,7 +282,24 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       console.log('5+6. canonical + read-back verified:', r1.content_hash && r1.read_back_verified);
 
       // 7. no forbidden
-      const hasForbidden = 'receipt_minted' in r1 || 'reward_authorized' in r1 || 'token_amount' in r1 || 'public_url' in r1;
+      const forbiddenFields = [
+        'receipt_written',
+        'receipt_minted',
+        'reward_authorized',
+        'token_amount',
+        'reward_amount',
+        'contract_call',
+        'marketplace_listing',
+        'public_url',
+        'bridge_id',
+        'node1_sync',
+        'urp_publication',
+        'shariah_compliant'
+      ];
+      let hasForbidden = false;
+      for (const field of forbiddenFields) {
+        if (field in r1) { hasForbidden = true; break; }
+      }
       console.log('7. never returns forbidden fields:', !hasForbidden);
 
       // 8. deterministic id (same input, different created_at)

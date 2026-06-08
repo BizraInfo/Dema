@@ -25,7 +25,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import {
   writeLocalRewardReceipt,
   loadExampleLocalWriterInput,
@@ -47,7 +47,8 @@ test('writes one local receipt artifact under temporary DEMA_HOME only', async (
     const input = loadExampleLocalWriterInput();
     const result = await writeLocalRewardReceipt({ requireConsent: REWARD_RECEIPT_LOCAL_WRITER_CONSENT, demaHome }, input);
     assert.strictEqual(result.write_result_status, 'local_write_performed_local_only', 'performs local write [DECLARED]');
-    assert.ok(result.final_local_path && result.final_local_path.startsWith(demaHome), 'path is under DEMA_HOME [DECLARED]');
+    const rel = relative(demaHome, result.final_local_path);
+    assert.ok(rel && !rel.startsWith('..') && !rel.startsWith('/'), 'path is contained under DEMA_HOME [DECLARED]');
     assert.ok(result.read_back_verified, 'read-back succeeded [DECLARED]');
   });
 });
@@ -106,9 +107,23 @@ test('never returns forbidden economic/public fields', async () => {
   await withTempDemaHome(async (demaHome) => {
     const input = loadExampleLocalWriterInput();
     const result = await writeLocalRewardReceipt({ requireConsent: REWARD_RECEIPT_LOCAL_WRITER_CONSENT, demaHome }, input);
-    const hasForbidden = 'receipt_minted' in result || 'reward_authorized' in result || 'token_amount' in result ||
-                         'public_url' in result || 'bridge_id' in result || 'node1_sync' in result;
-    assert.ok(!hasForbidden, 'never returns forbidden economic/public fields [DECLARED]');
+    const forbiddenFields = [
+      'receipt_written',
+      'receipt_minted',
+      'reward_authorized',
+      'token_amount',
+      'reward_amount',
+      'contract_call',
+      'marketplace_listing',
+      'public_url',
+      'bridge_id',
+      'node1_sync',
+      'urp_publication',
+      'shariah_compliant'
+    ];
+    for (const field of forbiddenFields) {
+      assert.ok(!(field in result), `forbidden field absent: ${field} [DECLARED]`);
+    }
   });
 });
 
