@@ -255,6 +255,50 @@ async function main() {
     console.log('  Reward receipt mock integration note (non-fatal):', e.message);
   }
 
+  // ADR-026/G27 reward receipt local write plan mock integration (G28).
+  // Exercises a local write-plan object only (receipt refs + claim label + content_hash + safe proposed_path + consent + proof_gaps + write_status + receipt_expectation placeholder).
+  // Non-fatal verification marker only inside the A+ orchestrator.
+  // No filesystem write, no receipt writing/minting, no publishing, no bridging, no reward authorization, no token logic, no contracts, no marketplace, no Node1, no URP bridge, no Shariah-compliant claim.
+  try {
+    const {
+      createMockRewardReceiptLocalWritePlan,
+      loadExampleRewardReceiptLocalWriteInput,
+      REWARD_RECEIPT_LOCAL_WRITE_PLAN_CONSENT
+    } = await import('./reward-receipt-local-write-plan.mjs');
+    const writePlanInput = loadExampleRewardReceiptLocalWriteInput();
+    const mockPlan = createMockRewardReceiptLocalWritePlan(
+      { requireConsent: REWARD_RECEIPT_LOCAL_WRITE_PLAN_CONSENT },
+      writePlanInput
+    );
+    const hasId = mockPlan.local_write_plan_id && mockPlan.local_write_plan_id.startsWith('sha256:');
+    const hasContentHash = !!mockPlan.content_hash;
+    const hasSafePath = !!mockPlan.proposed_path && !mockPlan.proposed_path.includes('..');
+    const hasReceiptExpectation = mockPlan.receipt_expectation && mockPlan.receipt_expectation.placeholder === true;
+    const hasProofGaps = Array.isArray(mockPlan.proof_gaps) && mockPlan.proof_gaps.length > 0;
+    const allowedWriteStatuses = [
+      'write_not_ready_needs_more_evidence',
+      'write_not_ready_needs_human_review',
+      'rejected_for_forbidden_claim',
+      'candidate_for_local_write_review_only'
+    ];
+    const hasWriteStatus = !!mockPlan.write_status && allowedWriteStatuses.includes(mockPlan.write_status);
+    const hasPosture = !!mockPlan.prototype_posture && mockPlan.prototype_posture.includes('PROTOTYPE');
+    // Assert forbidden economic/receipt-publication fields absent (per plan boundary + test discipline)
+    const hasNoForbiddenKeys = !('file_written' in mockPlan) &&
+      !('receipt_minted' in mockPlan) &&
+      !('reward_authorized' in mockPlan) &&
+      !('token_amount' in mockPlan) &&
+      !('contract_call' in mockPlan) &&
+      !('mint' in mockPlan) &&
+      !('write' in mockPlan);
+    const hasAllMarkers = hasId && hasContentHash && hasSafePath && hasReceiptExpectation && hasProofGaps && hasWriteStatus && hasPosture && hasNoForbiddenKeys;
+    console.log('  ADR-026 reward receipt local write plan integrated: ' + (hasAllMarkers ? 'PASS' : 'FAIL'));
+    console.log('    ID: ' + (mockPlan.local_write_plan_id || '').substring(0, 30) + '...');
+    if (!hasAllMarkers) throw new Error('REWARD_RECEIPT_LOCAL_WRITE_PLAN_INTEGRATION_FAILED');
+  } catch (e) {
+    console.log('  Reward receipt local write plan integration note (non-fatal):', e.message);
+  }
+
   const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');
