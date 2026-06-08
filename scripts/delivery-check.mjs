@@ -501,6 +501,63 @@ async function main() {
     console.log('  Dema Data-Lake alignment integration note (non-fatal):', e.message);
   }
 
+  // ADR-031/G47 hybrid mission knowledge graph BoK mock integration (G48).
+  // Exercises the local hybrid mission knowledge graph + BoK mock object only (in-memory envelope + placeholder expectations for mission tree, knowledge graph, BoK, environment re-check, stale-belief policy).
+  // Non-fatal verification marker only inside the A+ orchestrator.
+  // No hybrid memory runtime, knowledge graph runtime, BoK runtime, vector memory, autonomous retrieval, opaque compression, global state store,
+  // Data Lake mutation, Dema/Data-Lake runtime sync, cross-repo write, API bridge, PAT/SAT/FATE/URP runtime invocation, Node1 activation, AIR runtime expansion,
+  // mission memory runtime, receipt minting, public receipt writing, publishing, bridging, reward authorization, reward logic, token logic,
+  // contracts, marketplace, public economic copy, or Shariah-compliant claim.
+  try {
+    const {
+      createMockHybridMissionKnowledgeGraphBok,
+      loadExampleHybridMissionKnowledgeGraphBokInput,
+      HYBRID_MISSION_KNOWLEDGE_GRAPH_BOK_MOCK_CONSENT
+    } = await import('./hybrid-mission-knowledge-graph-bok-mock.mjs');
+    const hybridInput = loadExampleHybridMissionKnowledgeGraphBokInput();
+    const result = createMockHybridMissionKnowledgeGraphBok(
+      { requireConsent: HYBRID_MISSION_KNOWLEDGE_GRAPH_BOK_MOCK_CONSENT },
+      hybridInput
+    );
+    const hasId = result.hybrid_knowledge_boundary_id && result.hybrid_knowledge_boundary_id.startsWith('sha256:');
+    const hasMissionRef = !!result.mission_ref;
+    const hasMissionStateRef = !!result.mission_state_ref;
+    const hasAlignmentRef = !!result.alignment_ref;
+    const hasTree = result.mission_tree_expectation && result.mission_tree_expectation.placeholder === true && result.mission_tree_expectation.mission_tree_runtime_implemented === false && result.mission_tree_expectation.task_decomposition_expected === true;
+    const hasGraph = result.knowledge_graph_expectation && result.knowledge_graph_expectation.placeholder === true && result.knowledge_graph_expectation.graph_runtime_implemented === false && result.knowledge_graph_expectation.node_expectation_declared === true && result.knowledge_graph_expectation.edge_expectation_declared === true && result.knowledge_graph_expectation.autonomous_retrieval_enabled === false;
+    const hasBok = result.bok_expectation && result.bok_expectation.placeholder === true && result.bok_expectation.bok_runtime_implemented === false && result.bok_expectation.reusable_pattern_expected === true && result.bok_expectation.automatic_pattern_promotion === false;
+    const hasEnv = result.environment_recheck_expectation && result.environment_recheck_expectation.placeholder === true && result.environment_recheck_expectation.required_before_knowledge_update === true && result.environment_recheck_expectation.source_of_truth === 'environment_over_memory' && result.environment_recheck_expectation.runtime_implemented === false;
+    const hasStale = result.stale_belief_policy && result.stale_belief_policy.placeholder === true && result.stale_belief_policy.invalidation_required === true && result.stale_belief_policy.silent_overwrite_forbidden === true && result.stale_belief_policy.opaque_compression_forbidden === true && result.stale_belief_policy.autonomous_retrieval_forbidden === true;
+    const hasProofGaps = Array.isArray(result.proof_gaps) && result.proof_gaps.length > 0;
+    const hasPosture = result.prototype_posture && result.prototype_posture.includes('PROTOTYPE');
+    const forbiddenFields = [
+      'vector_memory_runtime_active',
+      'autonomous_retrieval_active',
+      'opaque_compression_active',
+      'global_state_store_active',
+      'context_rewrite_performed',
+      'datalake_synced',
+      'cross_repo_write_performed',
+      'runtime_bridge_active',
+      'node1_sync',
+      'urp_publication',
+      'token_minted',
+      'reward_authorized',
+      'contract_call',
+      'marketplace_signal',
+      'public_receipt_url',
+      'shariah_compliant'
+    ];
+    const hasNoForbidden = !forbiddenFields.some(f => f in result);
+    const hasAllMarkers = hasId && hasMissionRef && hasMissionStateRef && hasAlignmentRef &&
+      hasTree && hasGraph && hasBok && hasEnv && hasStale && hasProofGaps && hasPosture && hasNoForbidden;
+    console.log('  ADR-031 hybrid mission knowledge graph BoK mock integrated: ' + (hasAllMarkers ? 'PASS' : 'FAIL'));
+    console.log('    ID: ' + (result.hybrid_knowledge_boundary_id || '').substring(0, 30) + '... mission=' + (result.mission_ref || '') + ' status=REFERENCE_EXPECTATION_ONLY');
+    if (!hasAllMarkers) throw new Error('HYBRID_MISSION_KNOWLEDGE_GRAPH_BOK_MOCK_INTEGRATION_FAILED');
+  } catch (e) {
+    console.log('  Hybrid mission knowledge graph BoK integration note (non-fatal):', e.message);
+  }
+
   const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');
