@@ -351,6 +351,52 @@ async function main() {
     console.log('  Reward receipt local writer integration note (non-fatal):', e.message);
   }
 
+  // ADR-028/G35 atomic impact receipt lifecycle mock integration (G36).
+  // Exercises the local AIR lifecycle mock object only (in-memory envelope + placeholder expectations).
+  // Non-fatal verification marker only inside the A+ orchestrator.
+  // No AIR runtime engine, no MCP tool runtime, no A2A bridge runtime, no HHMM engine,
+  // no AgentFold seal implementation, no URP sync, no receipt minting, no public receipt writing,
+  // no publishing, no bridging, no reward authorization, no reward logic, no token logic,
+  // no contracts, no marketplace, no Node1, no public URP bridge, no Shariah-compliant claim.
+  try {
+    const {
+      createMockAtomicImpactReceiptLifecycle,
+      loadExampleAtomicImpactReceiptLifecycleInput,
+      ATOMIC_IMPACT_RECEIPT_LIFECYCLE_MOCK_CONSENT
+    } = await import('./atomic-impact-receipt-lifecycle-mock.mjs');
+    const input = loadExampleAtomicImpactReceiptLifecycleInput();
+    const result = createMockAtomicImpactReceiptLifecycle(
+      { requireConsent: ATOMIC_IMPACT_RECEIPT_LIFECYCLE_MOCK_CONSENT },
+      input
+    );
+    const hasAirId = result.air_id && result.air_id.startsWith('sha256:');
+    const hasStateTransId = result.state_transition_id && result.state_transition_id.startsWith('sha256:');
+    const hasLifecycle = result.lifecycle_state === 'READY_FOR_REVIEW';
+    const hasPrev = result.previous_state === 'PERSISTED';
+    const hasWriterRef = !!result.writer_ref && result.writer_ref.includes(input.local_writer_result_id || 'sha256:');
+    const hasReceiptRef = !!result.receipt_ref;
+    const hasMcp = result.mcp_expectation && result.mcp_expectation.placeholder === true && result.mcp_expectation.runtime_implemented === false;
+    const hasA2a = result.a2a_expectation && result.a2a_expectation.placeholder === true && result.a2a_expectation.pat_sat_bridge_runtime_implemented === false;
+    const hasHhmm = result.hhmm_expectation && result.hhmm_expectation.placeholder === true && result.hhmm_expectation.engine_implemented === false;
+    const hasSeal = result.seal_expectation && result.seal_expectation.placeholder === true && result.seal_expectation.agentfold_l3_implemented === false;
+    const hasUrp = result.urp_expectation && result.urp_expectation.placeholder === true && result.urp_expectation.urp_sync_implemented === false && result.urp_expectation.public_publication === false;
+    const hasProofGaps = Array.isArray(result.proof_gaps) && result.proof_gaps.length > 0;
+    const hasPosture = result.prototype_posture && result.prototype_posture.includes('PROTOTYPE');
+    const forbiddenFields = [
+      'token_minted', 'reward_authorized', 'reward_amount', 'token_amount',
+      'contract_call', 'marketplace_signal', 'public_receipt_url', 'public_url',
+      'bridge_id', 'node1_sync', 'urp_publication', 'shariah_compliant'
+    ];
+    const hasNoForbidden = !forbiddenFields.some(f => f in result);
+    const hasAllMarkers = hasAirId && hasStateTransId && hasLifecycle && hasPrev && hasWriterRef && hasReceiptRef &&
+      hasMcp && hasA2a && hasHhmm && hasSeal && hasUrp && hasProofGaps && hasPosture && hasNoForbidden;
+    console.log('  ADR-028 atomic impact receipt lifecycle mock integrated: ' + (hasAllMarkers ? 'PASS' : 'FAIL'));
+    console.log('    ID: ' + (result.air_id || '').substring(0, 30) + '... state=' + (result.lifecycle_state || ''));
+    if (!hasAllMarkers) throw new Error('ATOMIC_IMPACT_RECEIPT_LIFECYCLE_MOCK_INTEGRATION_FAILED');
+  } catch (e) {
+    console.log('  Atomic impact receipt lifecycle mock integration note (non-fatal):', e.message);
+  }
+
   const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');
