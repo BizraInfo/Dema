@@ -768,6 +768,106 @@ async function main() {
     console.log('  Layer Closure Contract LCC-6 integration note (non-fatal):', e.message);
   }
 
+  // ADR-034/G-Ladder Layer Index mock integration (closed-loop production checklist section 1).
+  // Exercises the local proof-layer index mock only.
+  // No G-Ladder runtime, index writer, registry, LCC aggregator, automatic layer closure,
+  // delivery-check rewrite engine, claim-map writer, remote witness collector, CI polling,
+  // GitHub API polling runtime, public publishing, economic activation, Node1 activation,
+  // URP bridge, token logic, contracts, marketplace, or Shariah-compliant claim.
+  try {
+    const {
+      createMockGLadderLayerIndex,
+      loadExampleGLadderLayerIndexInput,
+      G_LADDER_LAYER_INDEX_MOCK_CONSENT
+    } = await import('./g-ladder-layer-index-mock.mjs');
+    const indexInput = loadExampleGLadderLayerIndexInput();
+    const index = createMockGLadderLayerIndex(
+      { requireConsent: G_LADDER_LAYER_INDEX_MOCK_CONSENT },
+      indexInput
+    );
+
+    const hasSchema = index.schema === 'bizra.g_ladder.layer_index.v0.1.local';
+    const hasId = index.g_ladder_layer_index_id && index.g_ladder_layer_index_id.startsWith('sha256:');
+    const hasLayerIndex = index.layer_index &&
+      index.layer_index.boundary_to_scaffold_to_mock_to_delivery_check_complete === true &&
+      Array.isArray(index.layer_index.layers) &&
+      index.layer_index.layers.length >= 5 &&
+      index.layer_index.layers.every(layer =>
+        layer.boundary_ref &&
+        layer.schema_ref &&
+        layer.test_scaffold_ref &&
+        layer.delivery_check_marker &&
+        layer.claim_map_status &&
+        layer.remote_witness_condition === 'four_exact_head_rails_completed_success'
+      );
+    const hasMachineReadableIndex = index.machine_readable_layer_index &&
+      index.machine_readable_layer_index.exists === true &&
+      index.machine_readable_layer_index.local_only === true &&
+      index.machine_readable_layer_index.writer_implemented === false;
+    const hasClaimMap = index.claim_map &&
+      index.claim_map.exists === true &&
+      index.claim_map.writer_implemented === false &&
+      Array.isArray(index.claim_map.entries) &&
+      index.claim_map.entries.every(entry =>
+        entry.public_claim_allowed === false &&
+        entry.production_claim_allowed === false &&
+        entry.economic_claim_allowed === false &&
+        entry.shariah_claim_allowed === false
+      );
+    const hasProofGapRegister = index.proof_gap_register &&
+      index.proof_gap_register.exists === true &&
+      index.proof_gap_register.writer_implemented === false &&
+      Array.isArray(index.proof_gap_register.gaps) &&
+      index.proof_gap_register.gaps.length > 0;
+    const hasReleaseRollup = index.release_readiness_rollup &&
+      index.release_readiness_rollup.exists === true &&
+      index.release_readiness_rollup.local_proof_stream_ready === true &&
+      index.release_readiness_rollup.production_release_ready === false &&
+      index.release_readiness_rollup.public_claim_allowed === false;
+    const hasBlocked = index.still_blocked_snapshot &&
+      index.still_blocked_snapshot.production_scoring === false &&
+      index.still_blocked_snapshot.economic_scoring === false &&
+      index.still_blocked_snapshot.node1 === false &&
+      index.still_blocked_snapshot.public_urp_bridge === false &&
+      index.still_blocked_snapshot.shariah_compliance_claim === false;
+    const hasPosture = index.prototype_posture && index.prototype_posture.includes('PROTOTYPE');
+    const forbiddenFields = [
+      'index_written',
+      'registry_written',
+      'aggregation_performed',
+      'automatic_closure_performed',
+      'delivery_check_rewritten',
+      'claim_map_written',
+      'remote_witness_collected',
+      'ci_polling_performed',
+      'github_api_polling_performed',
+      'datalake_synced',
+      'cross_repo_write_performed',
+      'runtime_bridge_active',
+      'node1_sync',
+      'urp_publication',
+      'token_minted',
+      'reward_authorized',
+      'contract_call',
+      'marketplace_signal',
+      'public_receipt_url',
+      'shariah_compliant'
+    ];
+    const hasNoForbidden = !forbiddenFields.some(field => field in index);
+
+    const hasAllMarkers = hasSchema && hasId && hasLayerIndex &&
+      hasMachineReadableIndex && hasClaimMap && hasProofGapRegister &&
+      hasReleaseRollup && hasBlocked && hasPosture && hasNoForbidden;
+
+    console.log('  ADR-034 G-Ladder Layer Index mock integrated: ' + (hasAllMarkers ? 'PASS' : 'FAIL'));
+    console.log('    ID: ' + (index.g_ladder_layer_index_id || '').substring(0, 30) + '... section=proof-layer-closure');
+    console.log('    Checklist section 1: PASS layer-index/claim-map/proof-gap-register/release-rollup');
+
+    if (!hasAllMarkers) throw new Error('G_LADDER_LAYER_INDEX_MOCK_INTEGRATION_FAILED');
+  } catch (e) {
+    console.log('  G-Ladder Layer Index integration note (non-fatal):', e.message);
+  }
+
   const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');
