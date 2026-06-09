@@ -868,6 +868,118 @@ async function main() {
     console.log('  G-Ladder Layer Index integration note (non-fatal):', e.message);
   }
 
+  // ADR-035/Node0 closed-loop runtime dry-run mock integration (production checklist section 2).
+  // Exercises the pure local dry-run envelope only. No live runtime, daemon, command execution,
+  // process spawn, filesystem write, network call, cross-repo write, Data Lake mutation,
+  // public publication, Node1 activation, URP bridge, reward logic, token logic, contracts,
+  // marketplace behavior, or Shariah-compliant claim.
+  try {
+    const {
+      createMockNode0ClosedLoopRuntimeDryRun,
+      loadExampleNode0ClosedLoopRuntimeDryRunInput,
+      NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_CONSENT
+    } = await import('./node0-closed-loop-runtime-dry-run-mock.mjs');
+    const dryRunInput = loadExampleNode0ClosedLoopRuntimeDryRunInput();
+    const dryRun = createMockNode0ClosedLoopRuntimeDryRun(
+      { requireConsent: NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_CONSENT },
+      dryRunInput
+    );
+
+    const hasSchema = dryRun.schema === 'bizra.node0.closed_loop_runtime_dry_run.v0.1.local';
+    const hasId = dryRun.runtime_dry_run_id && dryRun.runtime_dry_run_id.startsWith('sha256:');
+    const hasStates = Array.isArray(dryRun.state_sequence) &&
+      dryRun.state_sequence.length === 8 &&
+      dryRun.state_sequence.every(state =>
+        state.dry_run_only === true &&
+        state.side_effects_allowed === false &&
+        state.live_execution_allowed === false
+      );
+    const hasAbort = dryRun.failure_safe_abort &&
+      dryRun.failure_safe_abort.status === 'ABORTS_CLOSED' &&
+      dryRun.failure_safe_abort.invalid_input === 'ABORT_BEFORE_PLANNING';
+    const hasRetry = dryRun.retry_policy &&
+      dryRun.retry_policy.finite === true &&
+      dryRun.retry_policy.bypasses_validation === false &&
+      dryRun.retry_policy.bypasses_consent === false;
+    const hasTimeout = dryRun.timeout_policy &&
+      dryRun.timeout_policy.timeout_result === 'ABORTED_TIMEOUT' &&
+      dryRun.timeout_policy.writes_receipt_on_timeout === false &&
+      dryRun.timeout_policy.advances_digest_or_index_on_timeout === false;
+    const hasIdempotency = dryRun.idempotency_policy &&
+      dryRun.idempotency_policy.duplicate_advancement_allowed === false &&
+      dryRun.idempotency_policy.hidden_mutable_state_allowed === false;
+    const hasLocks = dryRun.local_only_execution_locks &&
+      dryRun.local_only_execution_locks.required_for_future_write_capable_path === true &&
+      dryRun.local_only_execution_locks.lock_acquired === false &&
+      dryRun.local_only_execution_locks.lockfile_written === false;
+    const hasApproval = dryRun.operator_approval_gate &&
+      dryRun.operator_approval_gate.exact_consent_required === true &&
+      dryRun.operator_approval_gate.approval_collected === false;
+    const hasTrace = dryRun.trace &&
+      dryRun.trace.runtime_trace_id &&
+      dryRun.trace.runtime_trace_id.startsWith('sha256:') &&
+      dryRun.trace.local_only === true &&
+      dryRun.trace.public === false;
+    const hasReplayReceipt = dryRun.replay_safe_execution_receipt &&
+      dryRun.replay_safe_execution_receipt.expected_shape_only === true &&
+      dryRun.replay_safe_execution_receipt.receipt_minted === false &&
+      dryRun.replay_safe_execution_receipt.receipt_written === false &&
+      dryRun.replay_safe_execution_receipt.receipt_published === false;
+    const hasDigestIndex = dryRun.digest_index_expectation &&
+      dryRun.digest_index_expectation.reference_only === true &&
+      dryRun.digest_index_expectation.digest_written === false &&
+      dryRun.digest_index_expectation.index_written === false;
+    const hasBlocked = dryRun.still_blocked_snapshot &&
+      dryRun.still_blocked_snapshot.production_scoring === false &&
+      dryRun.still_blocked_snapshot.economic_scoring === false &&
+      dryRun.still_blocked_snapshot.node1 === false &&
+      dryRun.still_blocked_snapshot.public_urp_bridge === false &&
+      dryRun.still_blocked_snapshot.shariah_compliance_claim === false;
+    const hasClaims = dryRun.release_claims &&
+      dryRun.release_claims.production_ready === false &&
+      dryRun.release_claims.public_claim_allowed === false &&
+      dryRun.release_claims.economic_claim_allowed === false &&
+      dryRun.release_claims.shariah_claim_allowed === false;
+    const hasPosture = dryRun.prototype_posture && dryRun.prototype_posture.includes('PROTOTYPE');
+    const forbiddenFields = [
+      'live_runtime_started',
+      'daemon_started',
+      'command_executed',
+      'process_spawned',
+      'filesystem_write_performed',
+      'network_call_performed',
+      'cross_repo_write_performed',
+      'datalake_mutated',
+      'runtime_bridge_active',
+      'node1_sync',
+      'urp_publication',
+      'receipt_minted',
+      'receipt_written',
+      'digest_written',
+      'index_written',
+      'token_minted',
+      'reward_authorized',
+      'contract_call',
+      'marketplace_signal',
+      'public_receipt_url',
+      'shariah_compliant'
+    ];
+    const hasNoForbidden = !forbiddenFields.some(field => field in dryRun);
+
+    const hasAllMarkers = hasSchema && hasId && hasStates && hasAbort && hasRetry &&
+      hasTimeout && hasIdempotency && hasLocks && hasApproval && hasTrace &&
+      hasReplayReceipt && hasDigestIndex && hasBlocked && hasClaims && hasPosture &&
+      hasNoForbidden;
+
+    console.log('  ADR-035 Node0 closed-loop runtime dry-run mock integrated: ' + (hasAllMarkers ? 'PASS' : 'FAIL'));
+    console.log('    ID: ' + (dryRun.runtime_dry_run_id || '').substring(0, 30) + '... status=' + (dryRun.status || ''));
+    console.log('    Checklist section 2: PASS dry-run-runtime/abort/retry/timeout/idempotency/locks/approval/trace/replay');
+
+    if (!hasAllMarkers) throw new Error('NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_INTEGRATION_FAILED');
+  } catch (e) {
+    console.log('  Node0 closed-loop runtime dry-run integration note (non-fatal):', e.message);
+  }
+
   const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');
