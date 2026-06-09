@@ -2,6 +2,10 @@
 
 **Status:** Proposed / Boundary Spec / No Implementation
 
+**LCC-6 claim_map_status:** BOUNDARY_NON_CLAIM_ONLY
+
+**LCC-6 delivery_check_marker:** G60 Agent DNA Constitution boundary integrated: PASS
+
 **Date:** 2026-06-09
 
 **Truth Label:**
@@ -225,7 +229,7 @@ No Shariah-compliant claim.
 
 ## 12. Next Micro
 
-GO: BIZRA NODE0 AGENT DNA CONSTITUTION TEST SCAFFOLD
+GO: RE-EVALUATE G60 BIZRA NODE0 AGENT DNA CONSTITUTION LCC-6 CLOSURE
 
 ---
 

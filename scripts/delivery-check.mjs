@@ -980,6 +980,98 @@ async function main() {
     console.log('  Node0 closed-loop runtime dry-run integration note (non-fatal):', e.message);
   }
 
+  // G60 / BIZRA Node0 Agent DNA Constitution boundary integration (non-fatal proof marker).
+  // Verifies constitution file, 12 sections, Section 10 still-blocked invariants,
+  // claim-ledger cleanliness, and doctrine/boundary/no-implementation posture only.
+  // No runtime, PAT/SAT/FATE invocation, agent orchestration, memory runtime, Data Lake mutation,
+  // Node1, URP bridge, reward, token, contracts, marketplace, or Shariah-compliant claim.
+  try {
+    const constitutionPath = path.join(
+      REPO_ROOT,
+      'docs',
+      'constitution',
+      'BIZRA_NODE0_AGENT_DNA_CONSTITUTION.md',
+    );
+    const constitutionBody = readFileSync(constitutionPath, 'utf8');
+
+    const requiredSections = [
+      '## 1. Human Mission Center',
+      '## 2. Dema DNA',
+      '## 3. PAT-7 DNA',
+      '## 4. SAT-5 DNA',
+      '## 5. FATE DNA',
+      '## 6. Third Fact Proof Chain',
+      '## 7. Seven Pillars',
+      '## 8. Agent Prohibitions',
+      '## 9. Local Node0 Posture',
+      '## 10. Still-Blocked Invariants',
+      '## 11. Behavioral DoD',
+      '## 12. Next Micro',
+    ];
+    const hasAllSections = requiredSections.every((section) =>
+      constitutionBody.includes(section),
+    );
+
+    const stillBlocked = [
+      'No production scoring.',
+      'No economic scoring.',
+      'No reward eligibility implementation.',
+      'No reward logic.',
+      'No receipt minting.',
+      'No public receipt writing.',
+      'No publishing.',
+      'No bridging.',
+      'No contracts.',
+      'No token logic.',
+      'No marketplace.',
+      'No public economic copy.',
+      'No Node1.',
+      'No public URP bridge.',
+      'No Shariah-compliant claim.',
+    ];
+    const hasStillBlocked = stillBlocked.every((item) =>
+      constitutionBody.includes(item),
+    );
+
+    const { auditMarkdown } = await import('./claim-ledger-check.mjs');
+    const claimAudit = auditMarkdown({
+      file: constitutionPath,
+      body: constitutionBody,
+    });
+    const claimClean = claimAudit.ok && claimAudit.findings.length === 0;
+
+    const hasPosture =
+      constitutionBody.includes('No Implementation') &&
+      (constitutionBody.includes('doctrine') ||
+        constitutionBody.includes('boundary'));
+
+    const hasAllMarkers =
+      constitutionBody.length > 2000 &&
+      hasAllSections &&
+      hasStillBlocked &&
+      claimClean &&
+      hasPosture;
+
+    console.log(
+      '  G60 Agent DNA Constitution boundary integrated: ' +
+        (hasAllMarkers ? 'PASS' : 'FAIL'),
+    );
+    if (hasAllMarkers) {
+      console.log(
+        '    sections=12/12 claim_ledger=clean posture=doctrine/boundary/no-implementation',
+      );
+    }
+
+    if (!hasAllMarkers) {
+      throw new Error('G60_AGENT_DNA_CONSTITUTION_BOUNDARY_INTEGRATION_FAILED');
+    }
+  } catch (e) {
+    console.log(
+      '  G60 Agent DNA Constitution integration note (non-fatal):',
+      e.message,
+    );
+  }
+
   const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');

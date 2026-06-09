@@ -83,8 +83,19 @@ test('core DNA pillars and structures present', () => {
   assert.ok(constitution.includes('Behavioral DoD'), 'Behavioral DoD required');
 });
 
-test('next micro is explicitly the test scaffold GO', () => {
-  assert.ok(constitution.includes('GO: BIZRA NODE0 AGENT DNA CONSTITUTION TEST SCAFFOLD'), 'exact next micro GO string required');
+test('next micro is explicitly LCC-6 closure re-eval (not runtime activation)', () => {
+  assert.ok(
+    constitution.includes('GO: RE-EVALUATE G60 BIZRA NODE0 AGENT DNA CONSTITUTION LCC-6 CLOSURE'),
+    'exact next micro GO string required',
+  );
+  assert.ok(
+    constitution.includes('LCC-6 delivery_check_marker'),
+    'LCC-6 delivery_check_marker declaration required',
+  );
+  assert.ok(
+    constitution.includes('BOUNDARY_NON_CLAIM_ONLY'),
+    'LCC-6 claim_map_status BOUNDARY_NON_CLAIM_ONLY required',
+  );
 });
 
 test('forbidden runtime/economic/public/bridge/Node1/Shariah claims are not promoted', () => {
