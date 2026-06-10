@@ -3,7 +3,7 @@
 // 1-line inline restore for B-bucket URP drift (pre-existing environmental side-effect
 // of the ARTIFACT-011 / node0-local-urp harness preview writer).
 // Valid short-term emergency micro.
-// 
+//
 // Replaced by this explicit script for:
 //   - better logging
 //   - clear intent
@@ -28,19 +28,29 @@
 
 import { execFileSync } from "node:child_process";
 
-const DRIFT_NOTE = "pre-existing B-bucket URP drift (Omnidirectional Audit 2026-06-06, commit 448711b [PROTOTYPE CI ISOLATION])";
+const DRIFT_NOTE =
+  "pre-existing B-bucket URP drift (Omnidirectional Audit 2026-06-06, commit 448711b [PROTOTYPE CI ISOLATION])";
 
-console.log(`[CI ISOLATION] Restoring URP artifacts before test to isolate ${DRIFT_NOTE}.`);
-console.log("[CI ISOLATION] This is temporary; replace with artifact fixture boundary for production.");
+console.log(
+  `[CI ISOLATION] Restoring URP artifacts before test to isolate ${DRIFT_NOTE}.`,
+);
+console.log(
+  "[CI ISOLATION] This is temporary; replace with artifact fixture boundary for production.",
+);
 console.log("[CI ISOLATION] Do not use to hide legitimate artifact changes.");
 
 try {
   execFileSync("git", ["restore", "artifacts/proofs/node0-local-urp/"], {
     stdio: ["ignore", "inherit", "ignore"],
   });
-  console.log("[CI ISOLATION] Restore complete. Running tests on clean harness state.");
+  console.log(
+    "[CI ISOLATION] Restore complete. Running tests on clean harness state.",
+  );
 } catch (err) {
-  console.error("[CI ISOLATION] Restore step encountered non-fatal issue:", err?.message || err);
+  console.error(
+    "[CI ISOLATION] Restore step encountered non-fatal issue:",
+    err?.message || err,
+  );
   if (process.argv.includes("--strict")) {
     process.exit(1);
   }

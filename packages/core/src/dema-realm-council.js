@@ -14,9 +14,9 @@
 // NO model calls. NO autonomous agent runtime. NO memory mutation. NO tool
 // execution. NO network. NO federation. NO PoI. NO mint. NO file write.
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
 
 export const DEMA_REALM_COUNCIL_CHAMBER_SCHEMA =
   "bizra.dema.realm_council_chamber.v0.1";
@@ -120,7 +120,11 @@ export function gatherDemaRealmCouncil({ now = new Date() } = {}) {
   let urp5satActive = false;
   let locked = false;
   try {
-    const activePath = join(process.env.DEMA_HOME || join(homedir(), ".dema"), "urp", "5sat-active-locked.json");
+    const activePath = join(
+      process.env.DEMA_HOME || join(homedir(), ".dema"),
+      "urp",
+      "5sat-active-locked.json",
+    );
     const active = JSON.parse(readFileSync(activePath, "utf8"));
     if (active.active && active.locked) {
       urp5satActive = true;

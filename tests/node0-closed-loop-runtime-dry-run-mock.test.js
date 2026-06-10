@@ -9,76 +9,92 @@
  * Shariah-compliance claim is introduced.
  */
 
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import {
   createMockNode0ClosedLoopRuntimeDryRun,
   loadExampleNode0ClosedLoopRuntimeDryRunInput,
-  NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_CONSENT
-} from '../scripts/node0-closed-loop-runtime-dry-run-mock.mjs';
+  NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_CONSENT,
+} from "../scripts/node0-closed-loop-runtime-dry-run-mock.mjs";
 
 const forbiddenOutputKeys = [
-  'live_runtime_started',
-  'daemon_started',
-  'command_executed',
-  'process_spawned',
-  'filesystem_write_performed',
-  'network_call_performed',
-  'cross_repo_write_performed',
-  'datalake_mutated',
-  'runtime_bridge_active',
-  'node1_sync',
-  'urp_publication',
-  'receipt_minted',
-  'receipt_written',
-  'digest_written',
-  'index_written',
-  'token_minted',
-  'reward_authorized',
-  'contract_call',
-  'marketplace_signal',
-  'public_receipt_url',
-  'shariah_compliant'
+  "live_runtime_started",
+  "daemon_started",
+  "command_executed",
+  "process_spawned",
+  "filesystem_write_performed",
+  "network_call_performed",
+  "cross_repo_write_performed",
+  "datalake_mutated",
+  "runtime_bridge_active",
+  "node1_sync",
+  "urp_publication",
+  "receipt_minted",
+  "receipt_written",
+  "digest_written",
+  "index_written",
+  "token_minted",
+  "reward_authorized",
+  "contract_call",
+  "marketplace_signal",
+  "public_receipt_url",
+  "shariah_compliant",
 ];
 
-test('requires exact consent for the runtime dry-run mock', () => {
+test("requires exact consent for the runtime dry-run mock", () => {
   assert.throws(
-    () => createMockNode0ClosedLoopRuntimeDryRun(
-      { requireConsent: 'GO' },
-      loadExampleNode0ClosedLoopRuntimeDryRunInput()
-    ),
-    /CONSENT_REQUIRED/
+    () =>
+      createMockNode0ClosedLoopRuntimeDryRun(
+        { requireConsent: "GO" },
+        loadExampleNode0ClosedLoopRuntimeDryRunInput(),
+      ),
+    /CONSENT_REQUIRED/,
   );
 });
 
-test('emits deterministic dry-run envelope with sha256 ID', () => {
+test("emits deterministic dry-run envelope with sha256 ID", () => {
   const input = loadExampleNode0ClosedLoopRuntimeDryRunInput();
   const first = createMockNode0ClosedLoopRuntimeDryRun(
     { requireConsent: NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_CONSENT },
-    input
+    input,
   );
   const second = createMockNode0ClosedLoopRuntimeDryRun(
     { requireConsent: NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_CONSENT },
-    input
+    input,
   );
 
-  assert.equal(first.schema, 'bizra.node0.closed_loop_runtime_dry_run.v0.1.local');
+  assert.equal(
+    first.schema,
+    "bizra.node0.closed_loop_runtime_dry_run.v0.1.local",
+  );
   assert.match(first.runtime_dry_run_id, /^sha256:[a-f0-9]{64}$/);
   assert.equal(first.runtime_dry_run_id, second.runtime_dry_run_id);
-  assert.equal(first.prototype_posture, '[PROTOTYPE] [DESIGNED_NOT_LIVE] LOCAL_ONLY');
+  assert.equal(
+    first.prototype_posture,
+    "[PROTOTYPE] [DESIGNED_NOT_LIVE] LOCAL_ONLY",
+  );
 });
 
-test('defines all runtime loop states as dry-run-only labels', () => {
+test("defines all runtime loop states as dry-run-only labels", () => {
   const dryRun = createMockNode0ClosedLoopRuntimeDryRun(
     { requireConsent: NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_CONSENT },
-    loadExampleNode0ClosedLoopRuntimeDryRunInput()
+    loadExampleNode0ClosedLoopRuntimeDryRunInput(),
   );
 
   assert.deepEqual(
-    dryRun.state_sequence.map(state => state.name),
-    ['input', 'validation', 'planning', 'execution', 'reflection', 'receipt', 'digest', 'index']
+    dryRun.state_sequence.map((state) => state.name),
+    [
+      "input",
+      "validation",
+      "planning",
+      "execution",
+      "reflection",
+      "receipt",
+      "digest",
+      "index",
+    ],
   );
   for (const state of dryRun.state_sequence) {
     assert.equal(state.dry_run_only, true);
@@ -87,57 +103,66 @@ test('defines all runtime loop states as dry-run-only labels', () => {
   }
 });
 
-test('carries failure-safe abort, retry, timeout, and idempotency policies', () => {
+test("carries failure-safe abort, retry, timeout, and idempotency policies", () => {
   const dryRun = createMockNode0ClosedLoopRuntimeDryRun(
     { requireConsent: NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_CONSENT },
-    loadExampleNode0ClosedLoopRuntimeDryRunInput()
+    loadExampleNode0ClosedLoopRuntimeDryRunInput(),
   );
 
-  assert.equal(dryRun.failure_safe_abort.status, 'ABORTS_CLOSED');
-  assert.equal(dryRun.failure_safe_abort.invalid_input, 'ABORT_BEFORE_PLANNING');
+  assert.equal(dryRun.failure_safe_abort.status, "ABORTS_CLOSED");
+  assert.equal(
+    dryRun.failure_safe_abort.invalid_input,
+    "ABORT_BEFORE_PLANNING",
+  );
   assert.equal(dryRun.retry_policy.finite, true);
   assert.equal(dryRun.retry_policy.bypasses_validation, false);
-  assert.equal(dryRun.timeout_policy.timeout_result, 'ABORTED_TIMEOUT');
+  assert.equal(dryRun.timeout_policy.timeout_result, "ABORTED_TIMEOUT");
   assert.equal(dryRun.timeout_policy.writes_receipt_on_timeout, false);
   assert.equal(dryRun.idempotency_policy.duplicate_advancement_allowed, false);
   assert.equal(dryRun.idempotency_policy.hidden_mutable_state_allowed, false);
 });
 
-test('carries local-only lock policy, operator approval gate, and trace ID', () => {
+test("carries local-only lock policy, operator approval gate, and trace ID", () => {
   const dryRun = createMockNode0ClosedLoopRuntimeDryRun(
     { requireConsent: NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_CONSENT },
-    loadExampleNode0ClosedLoopRuntimeDryRunInput()
+    loadExampleNode0ClosedLoopRuntimeDryRunInput(),
   );
 
-  assert.equal(dryRun.local_only_execution_locks.required_for_future_write_capable_path, true);
+  assert.equal(
+    dryRun.local_only_execution_locks.required_for_future_write_capable_path,
+    true,
+  );
   assert.equal(dryRun.local_only_execution_locks.lock_acquired, false);
   assert.equal(dryRun.local_only_execution_locks.lockfile_written, false);
   assert.equal(dryRun.operator_approval_gate.exact_consent_required, true);
   assert.equal(dryRun.operator_approval_gate.approval_collected, false);
-  assert.equal(dryRun.trace.runtime_trace_id.startsWith('sha256:'), true);
+  assert.equal(dryRun.trace.runtime_trace_id.startsWith("sha256:"), true);
   assert.equal(dryRun.trace.local_only, true);
   assert.equal(dryRun.trace.public, false);
 });
 
-test('carries replay-safe receipt expectation without minting, writing, or publishing', () => {
+test("carries replay-safe receipt expectation without minting, writing, or publishing", () => {
   const dryRun = createMockNode0ClosedLoopRuntimeDryRun(
     { requireConsent: NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_CONSENT },
-    loadExampleNode0ClosedLoopRuntimeDryRunInput()
+    loadExampleNode0ClosedLoopRuntimeDryRunInput(),
   );
 
   assert.equal(dryRun.replay_safe_execution_receipt.expected_shape_only, true);
   assert.equal(dryRun.replay_safe_execution_receipt.receipt_minted, false);
   assert.equal(dryRun.replay_safe_execution_receipt.receipt_written, false);
   assert.equal(dryRun.replay_safe_execution_receipt.receipt_published, false);
-  assert.equal(dryRun.replay_safe_execution_receipt.replay_mismatch_policy, 'ABORT_CLOSED');
+  assert.equal(
+    dryRun.replay_safe_execution_receipt.replay_mismatch_policy,
+    "ABORT_CLOSED",
+  );
   assert.equal(dryRun.digest_index_expectation.digest_written, false);
   assert.equal(dryRun.digest_index_expectation.index_written, false);
 });
 
-test('preserves still-blocked invariants and production/public/economic non-claims', () => {
+test("preserves still-blocked invariants and production/public/economic non-claims", () => {
   const dryRun = createMockNode0ClosedLoopRuntimeDryRun(
     { requireConsent: NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_CONSENT },
-    loadExampleNode0ClosedLoopRuntimeDryRunInput()
+    loadExampleNode0ClosedLoopRuntimeDryRunInput(),
   );
 
   assert.equal(dryRun.still_blocked_snapshot.production_scoring, false);
@@ -150,41 +175,50 @@ test('preserves still-blocked invariants and production/public/economic non-clai
   assert.equal(dryRun.release_claims.economic_claim_allowed, false);
 });
 
-test('rejects forbidden inputs and live-runtime promotion language', () => {
+test("rejects forbidden inputs and live-runtime promotion language", () => {
   const input = loadExampleNode0ClosedLoopRuntimeDryRunInput();
 
   assert.throws(
-    () => createMockNode0ClosedLoopRuntimeDryRun(
-      { requireConsent: NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_CONSENT },
-      { ...input, command_execution_request: true }
-    ),
-    /FORBIDDEN_INPUT/
+    () =>
+      createMockNode0ClosedLoopRuntimeDryRun(
+        { requireConsent: NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_CONSENT },
+        { ...input, command_execution_request: true },
+      ),
+    /FORBIDDEN_INPUT/,
   );
 
   assert.throws(
-    () => createMockNode0ClosedLoopRuntimeDryRun(
-      { requireConsent: NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_CONSENT },
-      { ...input, dry_run_intent: 'start live runtime daemon' }
-    ),
-    /FORBIDDEN_PROMOTION/
+    () =>
+      createMockNode0ClosedLoopRuntimeDryRun(
+        { requireConsent: NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_CONSENT },
+        { ...input, dry_run_intent: "start live runtime daemon" },
+      ),
+    /FORBIDDEN_PROMOTION/,
   );
 });
 
-test('output excludes forbidden runtime, writer, public, economic, and certification fields', () => {
+test("output excludes forbidden runtime, writer, public, economic, and certification fields", () => {
   const dryRun = createMockNode0ClosedLoopRuntimeDryRun(
     { requireConsent: NODE0_CLOSED_LOOP_RUNTIME_DRY_RUN_MOCK_CONSENT },
-    loadExampleNode0ClosedLoopRuntimeDryRunInput()
+    loadExampleNode0ClosedLoopRuntimeDryRunInput(),
   );
 
   for (const key of forbiddenOutputKeys) {
-    assert.equal(Object.hasOwn(dryRun, key), false, `${key} must not be emitted`);
+    assert.equal(
+      Object.hasOwn(dryRun, key),
+      false,
+      `${key} must not be emitted`,
+    );
   }
 });
 
-test('mock module is pure local code without fs/http/net/child_process/fetch side effects', () => {
+test("mock module is pure local code without fs/http/net/child_process/fetch side effects", () => {
   const source = readFileSync(
-    new URL('../scripts/node0-closed-loop-runtime-dry-run-mock.mjs', import.meta.url),
-    'utf8'
+    new URL(
+      "../scripts/node0-closed-loop-runtime-dry-run-mock.mjs",
+      import.meta.url,
+    ),
+    "utf8",
   );
   assert.equal(/node:(fs|http|https|net|child_process)/.test(source), false);
   assert.equal(/\bfetch\s*\(/.test(source), false);

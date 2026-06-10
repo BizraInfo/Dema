@@ -79,7 +79,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [BIZRA_AGENT_DNA_LAW_OF_ASSUMPTION_v0_1.md](BIZRA_AGENT_DNA_LAW_OF_ASSUMPTION_v0_1.md) — Agent DNA · Law of Assumption: how every BIZRA agent (Dema CLI · connected LLMs · future PAT-7/SAT-5) handles uncertainty, disagreement, evidence, humility, and unavoidable assumptions. Arabic + English law text · operating-law clauses · 10 agent behavior requirements · 12 forbidden behaviors · 6-field Required Output Pattern (KNOWN / INFERRED / ASSUMED-WITH-IHSAN / UNKNOWN / BOUNDARY / NEXT EVIDENCE NEEDED) · 4 worked examples · future runtime path. Doctrine only; runtime enforcement deferred to PAT-7/SAT-5.
 - [DEMA_AGENT_HARNESS_AND_SKILL_DNA_v0_1.md](DEMA_AGENT_HARNESS_AND_SKILL_DNA_v0_1.md) — Agent DNA · acting layer (sibling to Law of Assumption): how Dema turns canon into executable agent behavior. Harness Law + Skill Law · 10-step Dema agent loop (intent → claim boundary → skill selection → micro-consent → tool action → trace capture → deterministic verification → receipt → self-critique → next step) · 6 runtime boundaries · must-not-miss safety rules · local/tiny-model routing · skill + harness eval requirements · 12 agent failure modes · 12 forbidden behaviors · 10-field Required Runtime Pattern · 3 worked examples. Doctrine only; runtime enforcement deferred to PAT-7/SAT-5.
 
-## Binding ADRs
+## Binding ADRs (current)
 
 - [06-adr/ADR-001-dema-is-one-face.md](06-adr/ADR-001-dema-is-one-face.md) — Dema is one face.
 - [06-adr/ADR-002-no-shadow-state.md](06-adr/ADR-002-no-shadow-state.md) — no shadow state.
@@ -88,15 +88,53 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [06-adr/ADR-005-operator-actions-require-explicit-consent.md](06-adr/ADR-005-operator-actions-require-explicit-consent.md) — explicit consent.
 - [06-adr/ADR-006-continuous-assurance-and-no-mint-verification.md](06-adr/ADR-006-continuous-assurance-and-no-mint-verification.md) — no-mint verification.
 - [06-adr/ADR-007-multi-session-chain-policy.md](06-adr/ADR-007-multi-session-chain-policy.md) — multi-session chain policy.
+- [06-adr/ADR-019-impact-launchpad-mvp-contract-boundary.md](06-adr/ADR-019-impact-launchpad-mvp-contract-boundary.md) — Impact Launchpad MVP contract boundary.
+- [06-adr/ADR-020-impact-launchpad-mvp-test-boundary.md](06-adr/ADR-020-impact-launchpad-mvp-test-boundary.md) — Impact Launchpad MVP test boundary.
 
-## Proposed ADRs and boundary drafts
+## Recent Proof ADRs (LCC-6 maintainability, G-Ladder index, runtime dry-run, persistence)
 
-- [06-adr/ADR-019-impact-launchpad-mvp-contract-boundary.md](06-adr/ADR-019-impact-launchpad-mvp-contract-boundary.md) — Proposed docs-only software/governance boundary for the Impact Launchpad MVP before proposal-flow implementation, review-envelope shape, PoI, reward, token, marketplace, or public economic work.
-- [06-adr/ADR-020-impact-launchpad-mvp-test-boundary.md](06-adr/ADR-020-impact-launchpad-mvp-test-boundary.md) — Proposed docs-only test boundary for the Impact Launchpad MVP: claim label validation, forbidden promotion rejection (token/reward/marketplace/public claims), consent and review boundary checks, receipt expectations, and non-claim regressions before any implementation.
+These complete the disciplined proof ladder (G52–G58+). Each follows LCC-6 (one boundary, one schema, one scaffold, one delivery-check marker, one claim-map status, one remote-witness condition = four exact-head rails).
 
-## Proposed ADRs and boundary drafts
+- [06-adr/ADR-028-atomic-impact-receipt-lifecycle-boundary.md](06-adr/ADR-028-atomic-impact-receipt-lifecycle-boundary.md)
+- [06-adr/ADR-029-mission-centric-state-ecosystem-boundary.md](06-adr/ADR-029-mission-centric-state-ecosystem-boundary.md)
+- [06-adr/ADR-030-dema-data-lake-alignment-boundary.md](06-adr/ADR-030-dema-data-lake-alignment-boundary.md)
+- [06-adr/ADR-031-hybrid-mission-knowledge-graph-bok-boundary.md](06-adr/ADR-031-hybrid-mission-knowledge-graph-bok-boundary.md)
+- [06-adr/ADR-032-node0-closed-loop-digest-boundary.md](06-adr/ADR-032-node0-closed-loop-digest-boundary.md)
+- [06-adr/ADR-033-layer-closure-contract-lcc6-boundary.md](06-adr/ADR-033-layer-closure-contract-lcc6-boundary.md) — LCC-6: the six-part maintainability contract (boundary/schema/scaffold/delivery/claim-map/remote-witness).
+- [06-adr/ADR-034-g-ladder-layer-index-boundary.md](06-adr/ADR-034-g-ladder-layer-index-boundary.md) — G-Ladder Layer Index boundary (machine-readable proof index direction).
+- [06-adr/ADR-035-node0-closed-loop-runtime-dry-run-boundary.md](06-adr/ADR-035-node0-closed-loop-runtime-dry-run-boundary.md) — Runtime dry-run boundary (planning/effect classification only; no side effects).
+- [06-adr/ADR-036-node0-local-persistence-boundary.md](06-adr/ADR-036-node0-local-persistence-boundary.md) — Local persistence boundary (append-only receipts/digests; no mutation authority yet).
 
-- [06-adr/ADR-020-impact-launchpad-mvp-test-boundary.md](06-adr/ADR-020-impact-launchpad-mvp-test-boundary.md) — Proposed docs-only test boundary for the Impact Launchpad MVP: claim label validation, forbidden promotion rejection (token/reward/marketplace/public claims), consent and review boundary checks, receipt expectations, and non-claim regressions before any implementation.
+## G-Ladder Layer Index (in progress per audit)
+
+The G-Ladder Layer Index is the canonical local proof index for layers. Current proven layers (LCC-6 closed or in closure):
+
+- ADR-030: Dema/Data-Lake alignment (G44R + prior)
+- ADR-031: Hybrid Mission Knowledge Graph + BoK (G48R)
+- ADR-032: Node0 Closed-Loop Digest (G52R)
+- ADR-033: Layer Closure Contract LCC-6 (G56R)
+- ADR-034: G-Ladder Layer Index boundary (G57R)
+- (Scaffold G58 complete; mock + full delivery-check + machine-readable register next per P0 recommendations in 2026-06 audit.)
+
+See also delivery-check.mjs for current LCC-6 markers and artifacts/receipts/ci/ for exact-head four-rail witnesses.
+
+## Proposed / draft ADRs (earlier)
+
+- [06-adr/ADR-019-impact-launchpad-mvp-contract-boundary.md](06-adr/ADR-019-impact-launchpad-mvp-contract-boundary.md)
+- [06-adr/ADR-020-impact-launchpad-mvp-test-boundary.md](06-adr/ADR-020-impact-launchpad-mvp-test-boundary.md)
+- (See full 06-adr/ for complete historical list; this index prioritizes current binding + recent proof spine.)
+
+## Note on index freshness (per 2026-06 audit)
+
+This INDEX.md was updated to address staleness (previously only reflected through ~ADR-019/020 in places). The live source of truth for the proof ladder is the combination of:
+
+- 06-adr/\*.md (current boundaries)
+- tests/_-boundary.test.js + _-mock.test.js (scaffolds + mocks)
+- scripts/delivery-check.mjs (A+ cockpit markers)
+- artifacts/receipts/ci/\* (exact-head CI receipts)
+- G-Ladder Layer Index (ADR-034 + upcoming machine-readable register)
+
+Always cross-check with `npm run llm:guidance`, `git diff --check`, `npm run claim:check`, and the four-rail on HEAD before claiming currency.
 
 ## Proof, evidence, and priority
 
@@ -110,6 +148,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [../themassage.pdf](../themassage.pdf), [../bizra.pdf](../bizra.pdf), [../BIZRA_Third_Fact_v0_1_FINAL.pdf](../BIZRA_Third_Fact_v0_1_FINAL.pdf) — three founding files bound by the priority anchor.
 
 - [ELITE_FULL_STACK_BLUEPRINT.md](ELITE_FULL_STACK_BLUEPRINT.md) — elite full-stack software project blueprint integrating MBOK/PMBOK 10 domains, DevOps value stream, CI/CD pipeline automation (4 remote rails + local gates), rigorous performance-quality assurance (artifacts, thresholds, world-class standards). State-of-the-art for the pinnacle masterpiece.
+
 ## Quality, delivery, and contribution
 
 - [DELIVERY_SPINE_v0_1.md](DELIVERY_SPINE_v0_1.md) — Defines Dema's canonical delivery gates, CI/CD ownership, release truth labels, quality spine, and operator-local extended gate boundaries.

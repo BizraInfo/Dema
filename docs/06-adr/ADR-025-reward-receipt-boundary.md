@@ -152,16 +152,16 @@ All claims remain local, consented, reviewed, gap-aware, and anti-gaming-checked
 
 ## MBOK / DevOps / CI-CD / A+ QA Mapping
 
-| Domain                  | Mapping |
-|-------------------------|---------|
-| Integration Management | Ladder continuity from G20R (reward eligibility mock local prototype) → ADR-025 receipt boundary spec → future scaffold → local proof → remote proof |
-| Scope Management       | Boundary/spec only (no implementation, no minting, no authorization, no receipt writing) |
+| Domain                 | Mapping                                                                                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Integration Management | Ladder continuity from G20R (reward eligibility mock local prototype) → ADR-025 receipt boundary spec → future scaffold → local proof → remote proof    |
+| Scope Management       | Boundary/spec only (no implementation, no minting, no authorization, no receipt writing)                                                                |
 | Quality Management     | Allowed/forbidden input-output rules; anti-gaming_status; proof_gaps required; receipt_status limited to 4 values; receipt_expectation placeholder only |
-| Risk Management        | Anti-gaming rule; proof_gaps array; no forbidden claim language; explicit non-claims; no receipt minting or economic leakage |
-| Stakeholder Management | Exact consent before any receipt expectation write; review boundary (expectation ≠ actual receipt or reward); human review separate |
-| DevOps                 | claim → ADR → (future) local proof → remote 4-rail |
-| CI/CD                  | Local gates (llm:guidance, diff --check, claim:check) then four remote rails |
-| A+ QA                  | No "receipt" or "reward" claim until artifacts exist, external review, and future gates proven |
+| Risk Management        | Anti-gaming rule; proof_gaps array; no forbidden claim language; explicit non-claims; no receipt minting or economic leakage                            |
+| Stakeholder Management | Exact consent before any receipt expectation write; review boundary (expectation ≠ actual receipt or reward); human review separate                     |
+| DevOps                 | claim → ADR → (future) local proof → remote 4-rail                                                                                                      |
+| CI/CD                  | Local gates (llm:guidance, diff --check, claim:check) then four remote rails                                                                            |
+| A+ QA                  | No "receipt" or "reward" claim until artifacts exist, external review, and future gates proven                                                          |
 
 ## Next Micro
 

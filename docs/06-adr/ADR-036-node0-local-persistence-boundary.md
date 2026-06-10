@@ -416,16 +416,16 @@ No Shariah-compliant claim. [DECLARED]
 
 G62R/G63 boundary progression -> ADR-036 -> persistence scaffold -> future persistence mock -> future delivery-check marker -> future four-rail proof.
 
-| Area | Status / Action |
-| --- | --- |
-| Integration Management | Defines the local data/persistence boundary after runtime dry-run proof. |
-| Scope Management | Limits the slice to may-store/must-never-store rules, log expectations, migration boundaries, retention/privacy boundaries, and Data Lake mutation prevention. |
-| Quality Management | Requires schema, trace, integrity, corruption, rollback, retention, and privacy expectations before any writer. |
-| Risk Management | Explicitly forbids credentials, private keys, tokens, raw secrets, public URLs, economic activation, Data Lake mutation, Node1, URP, and Shariah claims. | [DECLARED]
-| Stakeholder Management | Preserves operator-visible local storage and exact consent for any future write-capable path. |
-| DevOps | Local-only, [PROTOTYPE][DESIGNED_NOT_LIVE], proof-gated. No storage automation added here. | [DECLARED]
-| CI/CD | Closure requires scaffold, mock, delivery-check integration, clean pre-push seal, and exact-head four-rail remote proof. |
-| A+ Performance-Quality Assurance | No throughput, durability, backup, privacy, production, public, economic, or compliance claims until production DoD passes. | [DECLARED]
+| Area                             | Status / Action                                                                                                                                                |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Integration Management           | Defines the local data/persistence boundary after runtime dry-run proof.                                                                                       |
+| Scope Management                 | Limits the slice to may-store/must-never-store rules, log expectations, migration boundaries, retention/privacy boundaries, and Data Lake mutation prevention. |
+| Quality Management               | Requires schema, trace, integrity, corruption, rollback, retention, and privacy expectations before any writer.                                                |
+| Risk Management                  | Explicitly forbids credentials, private keys, tokens, raw secrets, public URLs, economic activation, Data Lake mutation, Node1, URP, and Shariah claims.       | [DECLARED] |
+| Stakeholder Management           | Preserves operator-visible local storage and exact consent for any future write-capable path.                                                                  |
+| DevOps                           | Local-only, [PROTOTYPE][DESIGNED_NOT_LIVE], proof-gated. No storage automation added here.                                                                     | [DECLARED] |
+| CI/CD                            | Closure requires scaffold, mock, delivery-check integration, clean pre-push seal, and exact-head four-rail remote proof.                                       |
+| A+ Performance-Quality Assurance | No throughput, durability, backup, privacy, production, public, economic, or compliance claims until production DoD passes.                                    | [DECLARED] |
 
 ## 27. Next Micro
 

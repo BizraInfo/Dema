@@ -7,6 +7,7 @@
 **Date:** 2026-06-09
 
 **Related:**
+
 - ADR-033 Layer Closure Contract LCC-6 Boundary
 - ADR-034 G-Ladder Layer Index Boundary
 - ADR-035 Node0 Closed-Loop Runtime Dry-Run Boundary
@@ -42,6 +43,7 @@ Dema = local face only. Data Lake and public/economic surfaces remain BLOCKED un
 BIZRA Node0 / Dema is a **local-first proof-engineering cockpit** advancing toward local alpha production readiness. The current posture (as of the G-ladder through ADR-036 and associated scaffolds/mocks/delivery markers) is a high-discipline prototype / designed-not-live local system.
 
 It enables an operator to:
+
 - Draft consent and missions locally.
 - Read deterministic receipts and AIRs.
 - Execute proof scaffolds, mocks, and delivery-check A+ gates.
@@ -84,18 +86,18 @@ Every layer must satisfy LCC-6 before the next micro-step is unlocked.
 
 ## 4. Management Body of Knowledge Mapping
 
-| Area                              | BIZRA Application                                                                 | Current Evidence                                      | Remaining Gap                                      | DoD Requirement                                      |
-|-----------------------------------|-----------------------------------------------------------------------------------|-------------------------------------------------------|----------------------------------------------------|------------------------------------------------------|
-| Integration Management            | Unified proof orchestrator (delivery-check + pre-push:seal) joins all domains into one A+ cockpit. | delivery-check.mjs (A+ gates), pre-push-proof-seal (104/104), G-ladder rings | Full machine-readable G-Ladder index + proof-gap register | Layer DoD + Local Alpha DoD require integrated gate evidence |
-| Scope Management                  | Each micro (ADR + scaffold + mock + delivery marker) carries one invariant or one surface. Bundles split. | LCC-6 (ADR-033), G-Ladder (ADR-034), ADR-035/036 boundaries | Machine-enforced scope in index/register           | Explicit "one boundary per layer" in every ADR + test |
-| Schedule / Increment Management   | Phase gates and truth labels (DESIGNED_NOT_LIVE, GxxR, remote green) instead of dates. | G-ladder history, exact-head RIDs in receipts, landing guard | Longitudinal schedule tracking                     | Remote four-rail green before "done" claim           |
-| Cost / Risk Awareness             | Zero new runtime deps unless justified. Local-first. Receipts under DEMA_HOME. | package.json (minimal), pre-push:seal, no hidden daemons | Full runtime cost model                            | Dependency review + risk register in every blueprint |
-| Quality Management                | Native tests, smoke gates, static review, diff hygiene, coverage, claim:check, perf artifacts. | 4,000+ tests, coverage ~96/86/97, delivery:check A+, claim:check | B-bucket noise fully eliminated; long-term benchmarks | A+ thresholds + claim:check + delivery:check in DoD  |
-| Resource Management               | Local compute/model surfaces inventoried. State under DEMA_HOME/~/.dema. No unbounded background. | receipts/ and artifacts/ layout, DEMA_HOME discipline | Operator resource pool dashboard                   | Inventory + quota in persistence blueprint           |
-| Communications Management         | Schema-tagged reports, claim labels, non-claims lists, "Proposed" status, evidence gates. | CLAIM_REGISTER, ADRs with [CITED]/[DECLARED], still-blocked lists | Public GTM surfaces (deferred)                     | Truth labels on every public-facing sentence         |
-| Risk Management                   | Explicit risk codes (B-bucket, observability, semantics) with remediation. Pre-push and delivery-check as forcing functions. | Known-harness classifier, threat model docs, still-blocked | Full runtime + persistence threat model            | Risk register + rollback rehearsal in Local Alpha DoD |
-| Procurement / Dependency Management | Standard-library preference, zero/minimal runtime deps, supply-chain scan, lockfile, deprecation policy. | package.json, scripts/ci/, no credentials in repo    | Future runtime deps (PAT/SAT clients)              | Dependency gate + SBOM in release engineering        |
-| Stakeholder Management            | Operator as primary stakeholder. Exact consent (GO strings). Claim safety for any future public/lighthouse user. | GO discipline, claim:check, Non-Claims in every ADR  | External reviewer / lighthouse onboarding          | Stakeholder map + consent audit in communications DoD |
+| Area                                | BIZRA Application                                                                                                            | Current Evidence                                                             | Remaining Gap                                             | DoD Requirement                                              |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------ |
+| Integration Management              | Unified proof orchestrator (delivery-check + pre-push:seal) joins all domains into one A+ cockpit.                           | delivery-check.mjs (A+ gates), pre-push-proof-seal (104/104), G-ladder rings | Full machine-readable G-Ladder index + proof-gap register | Layer DoD + Local Alpha DoD require integrated gate evidence |
+| Scope Management                    | Each micro (ADR + scaffold + mock + delivery marker) carries one invariant or one surface. Bundles split.                    | LCC-6 (ADR-033), G-Ladder (ADR-034), ADR-035/036 boundaries                  | Machine-enforced scope in index/register                  | Explicit "one boundary per layer" in every ADR + test        |
+| Schedule / Increment Management     | Phase gates and truth labels (DESIGNED_NOT_LIVE, GxxR, remote green) instead of dates.                                       | G-ladder history, exact-head RIDs in receipts, landing guard                 | Longitudinal schedule tracking                            | Remote four-rail green before "done" claim                   |
+| Cost / Risk Awareness               | Zero new runtime deps unless justified. Local-first. Receipts under DEMA_HOME.                                               | package.json (minimal), pre-push:seal, no hidden daemons                     | Full runtime cost model                                   | Dependency review + risk register in every blueprint         |
+| Quality Management                  | Native tests, smoke gates, static review, diff hygiene, coverage, claim:check, perf artifacts.                               | 4,000+ tests, coverage ~96/86/97, delivery:check A+, claim:check             | B-bucket noise fully eliminated; long-term benchmarks     | A+ thresholds + claim:check + delivery:check in DoD          |
+| Resource Management                 | Local compute/model surfaces inventoried. State under DEMA_HOME/~/.dema. No unbounded background.                            | receipts/ and artifacts/ layout, DEMA_HOME discipline                        | Operator resource pool dashboard                          | Inventory + quota in persistence blueprint                   |
+| Communications Management           | Schema-tagged reports, claim labels, non-claims lists, "Proposed" status, evidence gates.                                    | CLAIM_REGISTER, ADRs with [CITED]/[DECLARED], still-blocked lists            | Public GTM surfaces (deferred)                            | Truth labels on every public-facing sentence                 |
+| Risk Management                     | Explicit risk codes (B-bucket, observability, semantics) with remediation. Pre-push and delivery-check as forcing functions. | Known-harness classifier, threat model docs, still-blocked                   | Full runtime + persistence threat model                   | Risk register + rollback rehearsal in Local Alpha DoD        |
+| Procurement / Dependency Management | Standard-library preference, zero/minimal runtime deps, supply-chain scan, lockfile, deprecation policy.                     | package.json, scripts/ci/, no credentials in repo                            | Future runtime deps (PAT/SAT clients)                     | Dependency gate + SBOM in release engineering                |
+| Stakeholder Management              | Operator as primary stakeholder. Exact consent (GO strings). Claim safety for any future public/lighthouse user.             | GO discipline, claim:check, Non-Claims in every ADR                          | External reviewer / lighthouse onboarding                 | Stakeholder map + consent audit in communications DoD        |
 
 ## 5. DevOps Operating Model
 
@@ -113,6 +115,7 @@ Every layer must satisfy LCC-6 before the next micro-step is unlocked.
 ## 6. CI/CD Pipeline Blueprint
 
 **Local gates (always):**
+
 - llm:guidance
 - git diff --check
 - claim:check (on changed claim-bearing docs)
@@ -120,17 +123,20 @@ Every layer must satisfy LCC-6 before the next micro-step is unlocked.
 - delivery:check (A+)
 
 **Pre-push gates:**
+
 - mu-test-all (104/104 target via pre-push-proof-seal)
 - full `npm test` / `npm run check` / `npm run coverage` under known B-bucket classifier only
 - clean tree
 
 **Remote rails (mandatory witness condition):**
+
 - gitleaks
 - CodeQL
 - BIZRA Review Gate
 - check
 
 **Rules:**
+
 - Exact HEAD match required for RID extraction.
 - Receipts saved as JSON in artifacts/receipts/ci/${RID}-ci-receipt.json.
 - gitleaks transient: one `gh run rerun --failed` then resume.
@@ -241,6 +247,7 @@ No stage is skipped. Each requires its own LCC-6 closure and remote four-rail pr
 ## 15. Definition of Done
 
 **Layer DoD** (for any single proof layer):
+
 - ADR (or blueprint section) authored.
 - Test scaffold + mock (where applicable) written and passing.
 - delivery-check marker integrated and passing.
@@ -251,6 +258,7 @@ No stage is skipped. Each requires its own LCC-6 closure and remote four-rail pr
 - Four-rail remote green on exact HEAD (or documented blocker).
 
 **Local Alpha DoD**:
+
 - All foundational layers (receipt/AIR/mission/alignment/hybrid/digest/LCC-6/G-Ladder/index/persistence boundary/dry-run boundary) closed under Layer DoD.
 - Operator cockpit functional for consent, mission, receipt viewing, diagnostics, and rollback.
 - Local alpha package installable and self-contained.
@@ -259,6 +267,7 @@ No stage is skipped. Each requires its own LCC-6 closure and remote four-rail pr
 - External or peer review of the local alpha package.
 
 **Local Production DoD**:
+
 - Local Alpha DoD + longitudinal evidence (multiple clean runs, operator usage reports, rollback rehearsals).
 - Persistence writers + dry-run runtime proven under the same gates.
 - Backup/restore, corruption detection, and privacy controls operational.
@@ -267,6 +276,7 @@ No stage is skipped. Each requires its own LCC-6 closure and remote four-rail pr
 - claim:check + delivery:check + pre-push:seal + four-rail discipline sustained over time.
 
 **Public / Economic Production DoD** (explicitly BLOCKED):
+
 - All of Local Production DoD.
 - Separate legal, security, governance, and (where applicable) Shariah review boundaries closed.
 - Public release packaging, observability, support model, and claim safety proven.

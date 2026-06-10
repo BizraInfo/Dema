@@ -33,12 +33,12 @@ This ledger inherits from:
 
 Current remote-green witness for the Genesis/DOD docs slice:
 
-| Rail | Run ID | Conclusion | Head SHA |
-| --- | ---: | --- | --- |
-| `check` | `27077293690` | success | `af83f662b6256ebf2be891dfb8209d38318fe5ca` |
-| `BIZRA Review Gate` | `27077293678` | success | `af83f662b6256ebf2be891dfb8209d38318fe5ca` |
-| `gitleaks` | `27077293688` | success | `af83f662b6256ebf2be891dfb8209d38318fe5ca` |
-| `CodeQL` | `27077293694` | success | `af83f662b6256ebf2be891dfb8209d38318fe5ca` |
+| Rail                |        Run ID | Conclusion | Head SHA                                   |
+| ------------------- | ------------: | ---------- | ------------------------------------------ |
+| `check`             | `27077293690` | success    | `af83f662b6256ebf2be891dfb8209d38318fe5ca` |
+| `BIZRA Review Gate` | `27077293678` | success    | `af83f662b6256ebf2be891dfb8209d38318fe5ca` |
+| `gitleaks`          | `27077293688` | success    | `af83f662b6256ebf2be891dfb8209d38318fe5ca` |
+| `CodeQL`            | `27077293694` | success    | `af83f662b6256ebf2be891dfb8209d38318fe5ca` |
 
 These are CI witness records. Per ADR-006, GitHub Actions is not Node0
 authority and does not mint canonical Node0 receipts.
@@ -78,18 +78,18 @@ the same ledger fields.
 Every future Impact Launchpad claim must be recorded with this shape before it
 can leave internal drafting:
 
-| Field | Required content |
-| --- | --- |
-| `claim_id` | Stable identifier, for example `IL-001`. |
-| `claim_text` | Exact sentence being considered for external or public use. |
-| `claim_area` | One of: contribution, review, impact, reward eligibility, economy, launchpad. |
-| `current_label` | One Claim Register label: `VERIFIED`, `MEASURED`, `DERIVED`, `SCENARIO`, `DESIGNED_NOT_LIVE`, `UNKNOWN`, or `FORBIDDEN`. |
-| `source_path` | Repo path, receipt path, or external source request that supports the label. |
-| `evidence_gate` | The next concrete proof required for promotion. |
-| `forbidden_promotion` | The stronger claim that must not be made yet. |
-| `operator_consent_needed` | Exact consent phrase required before any governed action, if applicable. |
-| `review_boundary` | Technical, legal, Shariah, safety, or public-claim review boundary. |
-| `next_action` | The smallest next proof step. |
+| Field                     | Required content                                                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `claim_id`                | Stable identifier, for example `IL-001`.                                                                                 |
+| `claim_text`              | Exact sentence being considered for external or public use.                                                              |
+| `claim_area`              | One of: contribution, review, impact, reward eligibility, economy, launchpad.                                            |
+| `current_label`           | One Claim Register label: `VERIFIED`, `MEASURED`, `DERIVED`, `SCENARIO`, `DESIGNED_NOT_LIVE`, `UNKNOWN`, or `FORBIDDEN`. |
+| `source_path`             | Repo path, receipt path, or external source request that supports the label.                                             |
+| `evidence_gate`           | The next concrete proof required for promotion.                                                                          |
+| `forbidden_promotion`     | The stronger claim that must not be made yet.                                                                            |
+| `operator_consent_needed` | Exact consent phrase required before any governed action, if applicable.                                                 |
+| `review_boundary`         | Technical, legal, Shariah, safety, or public-claim review boundary.                                                      |
+| `next_action`             | The smallest next proof step.                                                                                            |
 
 A claim with no `source_path` is treated as `UNKNOWN`. A claim whose stronger
 version appears in the Claim Register forbidden list is treated as `FORBIDDEN`
@@ -97,25 +97,25 @@ until the required evidence and review gates exist.
 
 ## 6. Seed Rows
 
-| ID | Claim text | Current label | Evidence gate | Forbidden promotion |
-| --- | --- | --- | --- | --- |
-| `IL-001` | "Impact Launchpad is a proposed contribution-review lane for future Proof-of-Impact work." | `DESIGNED_NOT_LIVE` | Dedicated spec plus Claim Register alignment. | Claiming the launchpad is live. |
-| `IL-002` | "Proof-of-Impact is the designed outcome-bound reward signal." | `DESIGNED_NOT_LIVE` | ADR-009 activation gates plus implementation proof. | Claiming PoI rewards are live or guaranteed. |
-| `IL-003` | "A contribution can be submitted for future impact review." | `DESIGNED_NOT_LIVE` | Contribution proposal flow and review receipt shape. | Claiming submitted work is reward-eligible. |
-| `IL-004` | "Reward eligibility requires verified impact evidence." | `DERIVED` | Future PoI receipt chain plus review authority. | Claiming reward eligibility exists today. |
-| `IL-005` | "No public economic claim is allowed before legal and Shariah review boundaries are documented." | `DERIVED` | Legal/Shariah review boundary doc and Claim Review Gate. | Claiming certification, halal investment status, or financial return. |
-| `IL-006` | "No token, value, yield, airdrop, presale, rebate, or investment return exists in Dema today." | `VERIFIED` | Claim Register, Component DNA, Current Limits, and this repo state. | Any public token or investment claim. |
+| ID       | Claim text                                                                                       | Current label       | Evidence gate                                                       | Forbidden promotion                                                   |
+| -------- | ------------------------------------------------------------------------------------------------ | ------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `IL-001` | "Impact Launchpad is a proposed contribution-review lane for future Proof-of-Impact work."       | `DESIGNED_NOT_LIVE` | Dedicated spec plus Claim Register alignment.                       | Claiming the launchpad is live.                                       |
+| `IL-002` | "Proof-of-Impact is the designed outcome-bound reward signal."                                   | `DESIGNED_NOT_LIVE` | ADR-009 activation gates plus implementation proof.                 | Claiming PoI rewards are live or guaranteed.                          |
+| `IL-003` | "A contribution can be submitted for future impact review."                                      | `DESIGNED_NOT_LIVE` | Contribution proposal flow and review receipt shape.                | Claiming submitted work is reward-eligible.                           |
+| `IL-004` | "Reward eligibility requires verified impact evidence."                                          | `DERIVED`           | Future PoI receipt chain plus review authority.                     | Claiming reward eligibility exists today.                             |
+| `IL-005` | "No public economic claim is allowed before legal and Shariah review boundaries are documented." | `DERIVED`           | Legal/Shariah review boundary doc and Claim Review Gate.            | Claiming certification, halal investment status, or financial return. |
+| `IL-006` | "No token, value, yield, airdrop, presale, rebate, or investment return exists in Dema today."   | `VERIFIED`          | Claim Register, Component DNA, Current Limits, and this repo state. | Any public token or investment claim.                                 |
 
 ## 7. Proof-of-Truth Convergence
 
 Future promotion requires convergence across four rails:
 
-| Rail | Question | Minimum acceptable proof |
-| --- | --- | --- |
-| Formal | Does the claim follow from accepted docs, ADRs, and component labels? | Claim Register row plus source-chain references. |
+| Rail          | Question                                                                                      | Minimum acceptable proof                                           |
+| ------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Formal        | Does the claim follow from accepted docs, ADRs, and component labels?                         | Claim Register row plus source-chain references.                   |
 | Cryptographic | Is the underlying contribution hash-bound, receipt-bound, or signed by the correct authority? | Receipt or proof artifact with stable hash and authority boundary. |
-| Empirical | Can a reviewer replay the evidence from disk or rerun a command? | Reproducible command, fixture, or artifact bundle. |
-| Economic | Does the claim avoid unearned financial, reward, or value language? | Explicit no-premint, no-return, and review-boundary statement. |
+| Empirical     | Can a reviewer replay the evidence from disk or rerun a command?                              | Reproducible command, fixture, or artifact bundle.                 |
+| Economic      | Does the claim avoid unearned financial, reward, or value language?                           | Explicit no-premint, no-return, and review-boundary statement.     |
 
 If any rail is missing, the claim stays at its weaker label.
 
@@ -165,13 +165,13 @@ forbidden claims.
 No Impact Launchpad claim may be promoted beyond `DESIGNED_NOT_LIVE` until the
 relevant gate is satisfied:
 
-| Promotion target | Required gate |
-| --- | --- |
-| `DERIVED` | Claim follows from accepted docs and cites the exact source chain. |
-| `VERIFIED` | A repeatable artifact, receipt, or source path verifies the claim. |
-| `MEASURED` | A reproducible command records conditions, output, and SHA. |
-| Reward eligibility | Future PoI receipt chain, review authority, legal boundary, and exact operator consent. |
-| Public economic wording | Legal review, Shariah review boundary, Claim Register update, and operator approval. |
+| Promotion target        | Required gate                                                                           |
+| ----------------------- | --------------------------------------------------------------------------------------- |
+| `DERIVED`               | Claim follows from accepted docs and cites the exact source chain.                      |
+| `VERIFIED`              | A repeatable artifact, receipt, or source path verifies the claim.                      |
+| `MEASURED`              | A reproducible command records conditions, output, and SHA.                             |
+| Reward eligibility      | Future PoI receipt chain, review authority, legal boundary, and exact operator consent. |
+| Public economic wording | Legal review, Shariah review boundary, Claim Register update, and operator approval.    |
 
 Any proposed promotion that touches reward, token, value, or financial language
 requires a separate typed GO and must not be bundled into a docs cleanup.

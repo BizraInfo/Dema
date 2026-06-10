@@ -65,55 +65,61 @@
  * NO_SHARIAH_COMPLIANCE_CLAIM
  */
 
-import test from 'node:test';
-import assert from 'node:assert/strict';
+import test from "node:test";
+import assert from "node:assert/strict";
 
 // Category 1: boundary_ref rule scaffold
-test('ADR-033 boundary_ref rule scaffold', () => {
-  assert.ok(true, 'boundary_ref rule scaffold - [DECLARED]');
+test("ADR-033 boundary_ref rule scaffold", () => {
+  assert.ok(true, "boundary_ref rule scaffold - [DECLARED]");
 });
 
 // Category 2: schema_ref rule scaffold
-test('ADR-033 schema_ref rule scaffold', () => {
-  assert.ok(true, 'schema_ref rule scaffold - [DECLARED]');
+test("ADR-033 schema_ref rule scaffold", () => {
+  assert.ok(true, "schema_ref rule scaffold - [DECLARED]");
 });
 
 // Category 3: test_scaffold_ref rule scaffold
-test('ADR-033 test_scaffold_ref rule scaffold', () => {
-  assert.ok(true, 'test_scaffold_ref rule scaffold - [DECLARED]');
+test("ADR-033 test_scaffold_ref rule scaffold", () => {
+  assert.ok(true, "test_scaffold_ref rule scaffold - [DECLARED]");
 });
 
 // Category 4: delivery_check_marker rule scaffold
-test('ADR-033 delivery_check_marker rule scaffold', () => {
-  assert.ok(true, 'delivery_check_marker rule scaffold - [DECLARED]');
+test("ADR-033 delivery_check_marker rule scaffold", () => {
+  assert.ok(true, "delivery_check_marker rule scaffold - [DECLARED]");
 });
 
 // Category 5: claim_map_status rule scaffold
-test('ADR-033 claim_map_status rule scaffold', () => {
-  assert.ok(true, 'claim_map_status rule scaffold - [DECLARED]');
+test("ADR-033 claim_map_status rule scaffold", () => {
+  assert.ok(true, "claim_map_status rule scaffold - [DECLARED]");
 });
 
 // Category 6: remote_witness_condition rule scaffold
-test('ADR-033 remote_witness_condition rule scaffold', () => {
-  assert.ok(true, 'remote_witness_condition rule scaffold - [DECLARED]');
+test("ADR-033 remote_witness_condition rule scaffold", () => {
+  assert.ok(true, "remote_witness_condition rule scaffold - [DECLARED]");
 });
 
 // Category 7: layer closure status scaffold
-test('ADR-033 layer closure status scaffold', () => {
-  assert.ok(true, 'layer closure status scaffold - [DECLARED]');
+test("ADR-033 layer closure status scaffold", () => {
+  assert.ok(true, "layer closure status scaffold - [DECLARED]");
 });
 
 // Category 8: allowed LCC input/output envelope scaffold
-test('ADR-033 allowed LCC input output envelope scaffold', () => {
-  assert.ok(true, 'allowed LCC input/output envelope scaffold - [DECLARED]');
+test("ADR-033 allowed LCC input output envelope scaffold", () => {
+  assert.ok(true, "allowed LCC input/output envelope scaffold - [DECLARED]");
 });
 
 // Category 9: forbidden LCC runtime/registry/collector rejection scaffold
-test('ADR-033 forbidden LCC runtime registry collector rejection scaffold', () => {
-  assert.ok(true, 'forbidden LCC runtime/registry/collector rejection scaffold - [DECLARED]');
+test("ADR-033 forbidden LCC runtime registry collector rejection scaffold", () => {
+  assert.ok(
+    true,
+    "forbidden LCC runtime/registry/collector rejection scaffold - [DECLARED]",
+  );
 });
 
 // Category 10: ADR-032 closure example and still-blocked invariant scaffold
-test('ADR-033 ADR-032 closure example and still-blocked invariant scaffold', () => {
-  assert.ok(true, 'ADR-032 closure example and still-blocked invariant scaffold - [DECLARED]');
+test("ADR-033 ADR-032 closure example and still-blocked invariant scaffold", () => {
+  assert.ok(
+    true,
+    "ADR-032 closure example and still-blocked invariant scaffold - [DECLARED]",
+  );
 });

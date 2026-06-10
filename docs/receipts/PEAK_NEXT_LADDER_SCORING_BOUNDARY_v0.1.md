@@ -9,6 +9,7 @@
 **What this unlocks (per ladder):** Scoring boundary definition (what score means/doesn't, anti-gaming, oracle assumptions, manual fallback, no reward yet). Test scaffold next (7 categories like impact-launchpad-mvp.test.js).
 
 **Elite full-stack blueprint (MBOK/DevOps/CI/CD/A+ QA):**
+
 - MBOK Integration (4.0): Scoring ties to proposal flow as single verified contribution pipeline.
 - MBOK Quality (8.0) + Risk (11.0): Measurable impact with anti-gaming; explicit "does not mean" (no rewards/tokens).
 - DevOps value stream: Intent (ladder) → scoped test boundary (doc only) → local spec (ADR-021) → validation (future scaffold in A+).

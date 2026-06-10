@@ -58,82 +58,145 @@
  * NO_SHARIAH_COMPLIANCE_CLAIM
  */
 
-import test from 'node:test';
-import assert from 'node:assert/strict';
+import test from "node:test";
+import assert from "node:assert/strict";
 import {
   createMockLayerClosureContractLcc6,
   loadExampleLayerClosureContractLcc6Input,
-  LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT
-} from '../scripts/layer-closure-contract-lcc6-mock.mjs';
+  LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT,
+} from "../scripts/layer-closure-contract-lcc6-mock.mjs";
 
 // 1. creates a local LCC-6 envelope with sha256 lcc6_boundary_id
-test('creates a local LCC-6 envelope with sha256 lcc6_boundary_id', () => {
+test("creates a local LCC-6 envelope with sha256 lcc6_boundary_id", () => {
   const input = loadExampleLayerClosureContractLcc6Input();
-  const env = createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, input);
-  assert.ok(env.lcc6_boundary_id && env.lcc6_boundary_id.startsWith('sha256:'), 'creates envelope with sha256 lcc6_boundary_id [DECLARED]');
+  const env = createMockLayerClosureContractLcc6(
+    { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+    input,
+  );
+  assert.ok(
+    env.lcc6_boundary_id && env.lcc6_boundary_id.startsWith("sha256:"),
+    "creates envelope with sha256 lcc6_boundary_id [DECLARED]",
+  );
 });
 
 // 2. requires exact consent
-test('requires exact consent', () => {
+test("requires exact consent", () => {
   const input = loadExampleLayerClosureContractLcc6Input();
-  assert.throws(() => createMockLayerClosureContractLcc6({ requireConsent: 'WRONG' }, input), /CONSENT_REQUIRED/, 'rejects missing exact consent [DECLARED]');
+  assert.throws(
+    () =>
+      createMockLayerClosureContractLcc6({ requireConsent: "WRONG" }, input),
+    /CONSENT_REQUIRED/,
+    "rejects missing exact consent [DECLARED]",
+  );
 });
 
 // 3. requires layer_id
-test('requires layer_id', () => {
+test("requires layer_id", () => {
   const input = loadExampleLayerClosureContractLcc6Input();
   const bad = { ...input };
   delete bad.layer_id;
-  assert.throws(() => createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, bad), /layer_id/, 'requires layer_id [DECLARED]');
+  assert.throws(
+    () =>
+      createMockLayerClosureContractLcc6(
+        { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+        bad,
+      ),
+    /layer_id/,
+    "requires layer_id [DECLARED]",
+  );
 });
 
 // 4. requires layer_name
-test('requires layer_name', () => {
+test("requires layer_name", () => {
   const input = loadExampleLayerClosureContractLcc6Input();
   const bad = { ...input };
   delete bad.layer_name;
-  assert.throws(() => createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, bad), /layer_name/, 'requires layer_name [DECLARED]');
+  assert.throws(
+    () =>
+      createMockLayerClosureContractLcc6(
+        { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+        bad,
+      ),
+    /layer_name/,
+    "requires layer_name [DECLARED]",
+  );
 });
 
 // 5. requires boundary_ref
-test('requires boundary_ref', () => {
+test("requires boundary_ref", () => {
   const input = loadExampleLayerClosureContractLcc6Input();
   const bad = { ...input };
   delete bad.boundary_ref;
-  assert.throws(() => createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, bad), /boundary_ref/, 'requires boundary_ref [DECLARED]');
+  assert.throws(
+    () =>
+      createMockLayerClosureContractLcc6(
+        { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+        bad,
+      ),
+    /boundary_ref/,
+    "requires boundary_ref [DECLARED]",
+  );
 });
 
 // 6. requires schema_ref
-test('requires schema_ref', () => {
+test("requires schema_ref", () => {
   const input = loadExampleLayerClosureContractLcc6Input();
   const bad = { ...input };
   delete bad.schema_ref;
-  assert.throws(() => createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, bad), /schema_ref/, 'requires schema_ref [DECLARED]');
+  assert.throws(
+    () =>
+      createMockLayerClosureContractLcc6(
+        { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+        bad,
+      ),
+    /schema_ref/,
+    "requires schema_ref [DECLARED]",
+  );
 });
 
 // 7. requires test_scaffold_ref and delivery_check_marker
-test('requires test_scaffold_ref and delivery_check_marker', () => {
+test("requires test_scaffold_ref and delivery_check_marker", () => {
   const input = loadExampleLayerClosureContractLcc6Input();
   const bad = { ...input };
   delete bad.test_scaffold_ref;
-  assert.throws(() => createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, bad), /test_scaffold_ref/, 'requires test_scaffold_ref and delivery_check_marker [DECLARED]');
+  assert.throws(
+    () =>
+      createMockLayerClosureContractLcc6(
+        { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+        bad,
+      ),
+    /test_scaffold_ref/,
+    "requires test_scaffold_ref and delivery_check_marker [DECLARED]",
+  );
 });
 
 // 8. requires remote_witness_condition to equal four_exact_head_rails_completed_success
-test('requires remote_witness_condition to equal four_exact_head_rails_completed_success', () => {
+test("requires remote_witness_condition to equal four_exact_head_rails_completed_success", () => {
   const input = loadExampleLayerClosureContractLcc6Input();
   const bad = { ...input };
-  bad.remote_witness_condition = 'wrong_value';
-  assert.throws(() => createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, bad), /remote_witness_condition/, 'requires remote_witness_condition to equal four_exact_head_rails_completed_success [DECLARED]');
+  bad.remote_witness_condition = "wrong_value";
+  assert.throws(
+    () =>
+      createMockLayerClosureContractLcc6(
+        { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+        bad,
+      ),
+    /remote_witness_condition/,
+    "requires remote_witness_condition to equal four_exact_head_rails_completed_success [DECLARED]",
+  );
 });
 
 // 9. declares six LCC-6 references without LCC runtime, registry writer, aggregator, automatic closure, delivery rewrite, claim writer, or witness collector
-test('declares six LCC-6 references without LCC runtime, registry writer, aggregator, automatic closure, delivery rewrite, claim writer, or witness collector', () => {
+test("declares six LCC-6 references without LCC runtime, registry writer, aggregator, automatic closure, delivery rewrite, claim writer, or witness collector", () => {
   const input = loadExampleLayerClosureContractLcc6Input();
-  const env = createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, input);
-  const hasContract = env.lcc6_contract &&
+  const env = createMockLayerClosureContractLcc6(
+    { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+    input,
+  );
+  const hasContract =
+    env.lcc6_contract &&
     env.lcc6_contract.placeholder === true &&
-    env.lcc6_contract.status === 'REFERENCE_EXPECTATION_ONLY' &&
+    env.lcc6_contract.status === "REFERENCE_EXPECTATION_ONLY" &&
     env.lcc6_contract.lcc_runtime_implemented === false &&
     env.lcc6_contract.lcc_registry_writer_implemented === false &&
     env.lcc6_contract.lcc_aggregator_implemented === false &&
@@ -141,34 +204,62 @@ test('declares six LCC-6 references without LCC runtime, registry writer, aggreg
     env.lcc6_contract.delivery_check_rewrite_engine_implemented === false &&
     env.lcc6_contract.claim_map_writer_implemented === false &&
     env.lcc6_contract.remote_witness_collector_implemented === false;
-  assert.ok(hasContract, 'declares six LCC-6 references without runtime/registry/aggregator/closure/rewrite/claim/witness [DECLARED]');
+  assert.ok(
+    hasContract,
+    "declares six LCC-6 references without runtime/registry/aggregator/closure/rewrite/claim/witness [DECLARED]",
+  );
 });
 
 // 10. declares still-blocked snapshot without public/economic activation
-test('declares still-blocked snapshot without public/economic activation', () => {
+test("declares still-blocked snapshot without public/economic activation", () => {
   const input = loadExampleLayerClosureContractLcc6Input();
-  const env = createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, input);
-  const hasBlocked = env.still_blocked_snapshot &&
+  const env = createMockLayerClosureContractLcc6(
+    { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+    input,
+  );
+  const hasBlocked =
+    env.still_blocked_snapshot &&
     env.still_blocked_snapshot.placeholder === true &&
     env.still_blocked_snapshot.production_scoring === false &&
     env.still_blocked_snapshot.economic_scoring === false &&
     env.still_blocked_snapshot.receipt_minting === false &&
     env.still_blocked_snapshot.public_receipt_writing === false &&
     env.still_blocked_snapshot.publishing === false;
-  assert.ok(hasBlocked, 'declares still-blocked snapshot without public/economic activation [DECLARED]');
+  assert.ok(
+    hasBlocked,
+    "declares still-blocked snapshot without public/economic activation [DECLARED]",
+  );
 });
 
 // 11. rejects forbidden LCC/runtime/economic/public fields
-test('rejects forbidden LCC/runtime/economic/public fields', () => {
+test("rejects forbidden LCC/runtime/economic/public fields", () => {
   const input = loadExampleLayerClosureContractLcc6Input();
   const bad = { ...input, lcc_runtime_active: true };
-  assert.throws(() => createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, bad), /FORBIDDEN/, 'rejects forbidden fields [DECLARED]');
+  assert.throws(
+    () =>
+      createMockLayerClosureContractLcc6(
+        { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+        bad,
+      ),
+    /FORBIDDEN/,
+    "rejects forbidden fields [DECLARED]",
+  );
 });
 
 // 12. deterministic lcc6_boundary_id for same semantic input excluding created_at
-test('deterministic lcc6_boundary_id for same semantic input excluding created_at', () => {
+test("deterministic lcc6_boundary_id for same semantic input excluding created_at", () => {
   const input = loadExampleLayerClosureContractLcc6Input();
-  const r1 = createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, input);
-  const r2 = createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, input);
-  assert.strictEqual(r1.lcc6_boundary_id, r2.lcc6_boundary_id, 'deterministic lcc6_boundary_id (excl created_at) [DECLARED]');
+  const r1 = createMockLayerClosureContractLcc6(
+    { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+    input,
+  );
+  const r2 = createMockLayerClosureContractLcc6(
+    { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+    input,
+  );
+  assert.strictEqual(
+    r1.lcc6_boundary_id,
+    r2.lcc6_boundary_id,
+    "deterministic lcc6_boundary_id (excl created_at) [DECLARED]",
+  );
 });

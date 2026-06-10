@@ -403,7 +403,11 @@ function renderActivePartyRoster(state, useColor) {
   );
 
   return [
-    color("ACTIVE PARTY / MAJLIS (Realm vision · WoW units + Hermes presence)", ANSI.gold, useColor),
+    color(
+      "ACTIVE PARTY / MAJLIS (Realm vision · WoW units + Hermes presence)",
+      ANSI.gold,
+      useColor,
+    ),
     `  ${roster}${status}`,
   ];
 }

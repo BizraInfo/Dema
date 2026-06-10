@@ -28,18 +28,18 @@ Smallest complete change. Targeted gates. Truthful report.
 
 The 10 domains are mapped as first-class elements in every boundary, ADR, and implementation plan:
 
-| Domain | Integration in Blueprint |
-|--------|--------------------------|
-| Integration Management | Unified release-readiness orchestrator (delivery:check) joins scope, risk, QA, CI/CD, docs, dependencies, security, and rollback. Single source of truth for the "pinnacle masterpiece". |
-| Scope Management | Each micro (e.g., ADR-019/020) carries one invariant or one surface. Mixed bundles (contracts + token + marketplace) are split. "Full-stack" for Impact Launchpad means every layer has explicit boundary before code. |
-| Schedule Management | Phase gates and truth labels (DESIGNED_NOT_LIVE, G5R, G6R) instead of unverified dates. Remote CI proof before "done". |
-| Cost Management | Zero new runtime dependencies or hidden daemons unless justified with evidence, risk, and value. Local-first, operator-controlled. |
-| Quality Management | Native tests (4169/4169), smoke gates, static review, diff hygiene, coverage thresholds, claim:check, performance artifacts. World-class: every metric requires name, command, context, p50/p95, threshold, artifact, interpretation. |
-| Resource Management | Local compute/model surfaces inventoried. No unbounded background workloads. Receipts and state under DEMA_HOME/~/.dema. |
-| Communications Management | Schema-tagged reports, claim labels, non-claims lists, "Proposed" status, evidence gates. Distinguish preview/declared/measured/blocked. |
-| Risk Management | Explicit risk codes (B-bucket, D4 export scope, U1 observability, E3 semantics) with owner-ready remediation. Pre-push:seal and delivery:check as forcing functions. |
-| Procurement Management | Third-party tools, GitHub Actions, dependencies pinned, justified, replaceable. No supply-chain drift. |
-| Stakeholder Management | Operator consent (exact micro-consent phrases), reviewer evidence (receipts), user-facing safety (CURRENT_LIMITS, non-claims), legal/Shariah boundaries explicit before public claims. |
+| Domain                    | Integration in Blueprint                                                                                                                                                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Integration Management    | Unified release-readiness orchestrator (delivery:check) joins scope, risk, QA, CI/CD, docs, dependencies, security, and rollback. Single source of truth for the "pinnacle masterpiece".                                              |
+| Scope Management          | Each micro (e.g., ADR-019/020) carries one invariant or one surface. Mixed bundles (contracts + token + marketplace) are split. "Full-stack" for Impact Launchpad means every layer has explicit boundary before code.                |
+| Schedule Management       | Phase gates and truth labels (DESIGNED_NOT_LIVE, G5R, G6R) instead of unverified dates. Remote CI proof before "done".                                                                                                                |
+| Cost Management           | Zero new runtime dependencies or hidden daemons unless justified with evidence, risk, and value. Local-first, operator-controlled.                                                                                                    |
+| Quality Management        | Native tests (4169/4169), smoke gates, static review, diff hygiene, coverage thresholds, claim:check, performance artifacts. World-class: every metric requires name, command, context, p50/p95, threshold, artifact, interpretation. |
+| Resource Management       | Local compute/model surfaces inventoried. No unbounded background workloads. Receipts and state under DEMA_HOME/~/.dema.                                                                                                              |
+| Communications Management | Schema-tagged reports, claim labels, non-claims lists, "Proposed" status, evidence gates. Distinguish preview/declared/measured/blocked.                                                                                              |
+| Risk Management           | Explicit risk codes (B-bucket, D4 export scope, U1 observability, E3 semantics) with owner-ready remediation. Pre-push:seal and delivery:check as forcing functions.                                                                  |
+| Procurement Management    | Third-party tools, GitHub Actions, dependencies pinned, justified, replaceable. No supply-chain drift.                                                                                                                                |
+| Stakeholder Management    | Operator consent (exact micro-consent phrases), reviewer evidence (receipts), user-facing safety (CURRENT_LIMITS, non-claims), legal/Shariah boundaries explicit before public claims.                                                |
 
 ## DevOps Value Stream
 
@@ -75,6 +75,7 @@ Every performance or quality claim must include (per ADR-019/020 and this bluepr
 - Reviewer-readable interpretation ("not yet measured" until artifact exists)
 
 Current baseline (from gates on this lineage):
+
 - npm test: ~10-11s, 4169/4169 pass, 0 fail.
 - verification_latency_ms: ~0.005-0.006 ms
 - memory_rss_mb: ~55 MB

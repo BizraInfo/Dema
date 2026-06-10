@@ -18,7 +18,8 @@
 
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 
-export const NODE0_5SAT_URP_LAUNCH_SCHEMA = "bizra.dema.node0_5sat_urp_launch.v0.1";
+export const NODE0_5SAT_URP_LAUNCH_SCHEMA =
+  "bizra.dema.node0_5sat_urp_launch.v0.1";
 export const NODE0_5SAT_URP_LAUNCH_RESULT_SCHEMA =
   "bizra.dema.node0_5sat_urp_launch_result.v0.1";
 
@@ -79,13 +80,19 @@ export function buildNode05SatUrpLaunch({ now = new Date() } = {}) {
 }
 
 export function verifyNode05SatUrpLaunch(launchResult) {
-  if (!launchResult || launchResult.schema !== NODE0_5SAT_URP_LAUNCH_RESULT_SCHEMA) {
+  if (
+    !launchResult ||
+    launchResult.schema !== NODE0_5SAT_URP_LAUNCH_RESULT_SCHEMA
+  ) {
     return Object.freeze({ verified: false, reason: "wrong_schema" });
   }
   if (!launchResult.launched || !launchResult.locked) {
     return Object.freeze({ verified: false, reason: "not_launched_or_locked" });
   }
-  if (!Array.isArray(launchResult.body?.active_sat) || launchResult.body.active_sat.length !== 5) {
+  if (
+    !Array.isArray(launchResult.body?.active_sat) ||
+    launchResult.body.active_sat.length !== 5
+  ) {
     return Object.freeze({ verified: false, reason: "not_exactly_5_sat" });
   }
   // Recompute hash for integrity

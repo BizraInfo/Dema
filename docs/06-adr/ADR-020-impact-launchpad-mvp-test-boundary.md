@@ -29,6 +29,7 @@ The repository has a remote-green governance baseline for the Impact Launchpad s
 3. Genesis Block, Node0 URP Flagship DOD, CLAIM_REGISTER, DELIVERY_SPINE, and DELIVERY_BLUEPRINT already codify the claim-first, MBOK-aligned, DevOps/CI/CD/perf-QA, consent-bound, no-mint posture. [DECLARED]
 
 The next architectural risk is implementation pressure on the test surface. Without an explicit test boundary, future work could:
+
 - Write tests that assume reward eligibility or scoring exists. [DECLARED]
 - Omit refusal tests for token/marketplace/public-claim language. [DECLARED]
 - Treat green tests as proof of economic or legal properties.
@@ -39,6 +40,7 @@ The next architectural risk is implementation pressure on the test surface. With
 ADR-019 gives the "what" (the contract boundary). The project now needs the "how we will know it is respected" before any code is written.
 
 Without ADR-020:
+
 - Test writers have no canonical list of required assertions.
 - Forbidden promotion paths may not be tested.
 - Claim label and consent enforcement may be assumed rather than proven.
@@ -56,6 +58,7 @@ Before any implementation of proposal intake, review envelopes, or related surfa
 ```
 
 The future MVP test surface may define:
+
 - Claim label validation tests.
 - Forbidden promotion rejection tests (token, reward, marketplace, public launch, Shariah certification, smart contract, Node1, public URP bridge, runtime minting from Dema). [DECLARED]
 - Consent requirement checks (exact-string before any write or state change).
@@ -65,6 +68,7 @@ The future MVP test surface may define:
 - Future performance measurement test skeletons (metric name, command, context, p50/p95, threshold, artifact, interpretation) — marked as "not yet measured" until real artifacts exist.
 
 The future MVP test surface must not define or assume:
+
 - Reward eligibility computation or scoring. [DECLARED]
 - Token minting, value, airdrop, presale, rebate, yield, or return semantics. [DECLARED]
 - Marketplace behavior or public submission flows.
@@ -109,6 +113,7 @@ Impact Launchpad tests prove reward eligibility or token behavior.
 ## Required Gates (before any implementation)
 
 Local:
+
 - npm test
 - npm run check
 - npm run llm:guidance
@@ -116,6 +121,7 @@ Local:
 - npm run claim:check -- docs/06-adr/ADR-020-impact-launchpad-mvp-test-boundary.md
 
 Remote (the four rails):
+
 - check
 - BIZRA Review Gate
 - gitleaks
@@ -125,13 +131,13 @@ Activation rule: Implementation of any Impact Launchpad proposal intake, review 
 
 ## MBOK alignment (summary)
 
-| Management domain | Test boundary control |
-|-------------------|-----------------------|
-| Integration       | Binds claim, consent, review, receipt, and non-claim assertions into one canonical test list before code. |
-| Scope             | Only local proposal/review surfaces; splits out reward, token, marketplace, public, Node1, contracts. | [DECLARED]
-| Quality           | Requires explicit refusal tests and non-claim regressions; forbids assuming economic properties. |
+| Management domain | Test boundary control                                                                                             |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------- | ---------- |
+| Integration       | Binds claim, consent, review, receipt, and non-claim assertions into one canonical test list before code.         |
+| Scope             | Only local proposal/review surfaces; splits out reward, token, marketplace, public, Node1, contracts.             | [DECLARED] |
+| Quality           | Requires explicit refusal tests and non-claim regressions; forbids assuming economic properties.                  |
 | Risk              | Surfaces economic, legal, Shariah, runtime, and public-claim risks as test obligations and forbidden assumptions. |
-| Communications    | Every test category and refusal path must be traceable to the Claims Ledger and ADR-019. |
+| Communications    | Every test category and refusal path must be traceable to the Claims Ledger and ADR-019.                          |
 
 (Full 10-domain mapping follows the pattern established in ADR-019.)
 
@@ -152,6 +158,7 @@ Performance: Any future performance test for this surface must carry the artifac
 ## Non-claims
 
 This ADR does not claim:
+
 - Impact Launchpad tests exist or have been written.
 - Reward eligibility, token behavior, marketplace, or public economic properties can be tested. [DECLARED]
 - Any scoring, PoI implementation, or contract exists.
@@ -162,17 +169,20 @@ This ADR does not claim:
 ## Consequences
 
 Positive:
+
 - Future implementation has a canonical, reviewable list of what must be proven and refused.
 - The claim and contract boundaries from prior artifacts become enforceable at the test layer.
 - The "test boundary before implementation" canon is made concrete for this surface.
 - Economic, legal, Shariah, and public-claim risks are surfaced as explicit test obligations rather than implicit assumptions.
 
 Costs:
+
 - Implementation speed is deliberately gated behind test-boundary proof.
 - MVP test scope is narrow (local proposal/review only). [DECLARED]
 - Future contributors must route test ideas through the same claim/ADR discipline.
 
 Risk:
+
 - Reviewers may read "test boundary" as "implemented test suite." This ADR resolves that by remaining docs-only and requiring a separate remote-green step before fixtures or code. [DECLARED]
 
 ## Next micro

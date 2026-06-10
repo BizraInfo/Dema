@@ -63,90 +63,142 @@
  * NO_SHARIAH_COMPLIANCE_CLAIM
  */
 
-import { createHash } from 'node:crypto';
+import { createHash } from "node:crypto";
 
-export const LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT = 'GO: LAYER CLOSURE CONTRACT LCC-6 MOCK';
+export const LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT =
+  "GO: LAYER CLOSURE CONTRACT LCC-6 MOCK";
 
 const FORBIDDEN_TERMS = new Set([
-  'mint', 'publish', 'bridge', 'reward_authorized', 'token', 'contract',
-  'marketplace', 'Node1', 'URP', 'Shariah', 'guaranteed', 'payout',
-  'claimable', 'earn', 'authorized', 'transferable', 'public_url', 'public',
-  'vector_memory', 'autonomous_retrieval', 'opaque_compression',
-  'global_state_store', 'automatic_context_rewriting', 'datalake_mutation',
-  'cross_repo_write', 'runtime_sync', 'pat_runtime', 'sat_runtime',
-  'fate_runtime', 'lcc_runtime_active', 'registry_written', 'aggregation_performed',
-  'automatic_closure_performed', 'delivery_check_rewritten', 'claim_map_written',
-  'remote_witness_collected'
+  "mint",
+  "publish",
+  "bridge",
+  "reward_authorized",
+  "token",
+  "contract",
+  "marketplace",
+  "Node1",
+  "URP",
+  "Shariah",
+  "guaranteed",
+  "payout",
+  "claimable",
+  "earn",
+  "authorized",
+  "transferable",
+  "public_url",
+  "public",
+  "vector_memory",
+  "autonomous_retrieval",
+  "opaque_compression",
+  "global_state_store",
+  "automatic_context_rewriting",
+  "datalake_mutation",
+  "cross_repo_write",
+  "runtime_sync",
+  "pat_runtime",
+  "sat_runtime",
+  "fate_runtime",
+  "lcc_runtime_active",
+  "registry_written",
+  "aggregation_performed",
+  "automatic_closure_performed",
+  "delivery_check_rewritten",
+  "claim_map_written",
+  "remote_witness_collected",
 ]);
 
 const FORBIDDEN_OUTPUT_KEYS = [
-  'lcc_runtime_active',
-  'registry_written',
-  'aggregation_performed',
-  'automatic_closure_performed',
-  'delivery_check_rewritten',
-  'claim_map_written',
-  'remote_witness_collected',
-  'datalake_synced',
-  'cross_repo_write_performed',
-  'runtime_bridge_active',
-  'node1_sync',
-  'urp_publication',
-  'token_minted',
-  'reward_authorized',
-  'contract_call',
-  'marketplace_signal',
-  'public_receipt_url',
-  'shariah_compliant'
+  "lcc_runtime_active",
+  "registry_written",
+  "aggregation_performed",
+  "automatic_closure_performed",
+  "delivery_check_rewritten",
+  "claim_map_written",
+  "remote_witness_collected",
+  "datalake_synced",
+  "cross_repo_write_performed",
+  "runtime_bridge_active",
+  "node1_sync",
+  "urp_publication",
+  "token_minted",
+  "reward_authorized",
+  "contract_call",
+  "marketplace_signal",
+  "public_receipt_url",
+  "shariah_compliant",
 ];
 
-export function createMockLayerClosureContractLcc6({ requireConsent }, input = loadExampleLayerClosureContractLcc6Input()) {
+export function createMockLayerClosureContractLcc6(
+  { requireConsent },
+  input = loadExampleLayerClosureContractLcc6Input(),
+) {
   if (requireConsent !== LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT) {
-    throw new Error('CONSENT_REQUIRED: exact "GO: LAYER CLOSURE CONTRACT LCC-6 MOCK" required');
+    throw new Error(
+      'CONSENT_REQUIRED: exact "GO: LAYER CLOSURE CONTRACT LCC-6 MOCK" required',
+    );
   }
 
-  if (!input || typeof input !== 'object') {
-    throw new Error('VALIDATION_FAILED: input must be object');
+  if (!input || typeof input !== "object") {
+    throw new Error("VALIDATION_FAILED: input must be object");
   }
 
   // Required per ADR-033 + GO spec
   if (!input.layer_id) {
-    throw new Error('VALIDATION_FAILED: layer_id required');
+    throw new Error("VALIDATION_FAILED: layer_id required");
   }
   if (!input.layer_name) {
-    throw new Error('VALIDATION_FAILED: layer_name required');
+    throw new Error("VALIDATION_FAILED: layer_name required");
   }
   if (!input.boundary_ref) {
-    throw new Error('VALIDATION_FAILED: boundary_ref required');
+    throw new Error("VALIDATION_FAILED: boundary_ref required");
   }
   if (!input.schema_ref) {
-    throw new Error('VALIDATION_FAILED: schema_ref required');
+    throw new Error("VALIDATION_FAILED: schema_ref required");
   }
   if (!input.test_scaffold_ref) {
-    throw new Error('VALIDATION_FAILED: test_scaffold_ref required');
+    throw new Error("VALIDATION_FAILED: test_scaffold_ref required");
   }
   if (!input.delivery_check_marker) {
-    throw new Error('VALIDATION_FAILED: delivery_check_marker required');
+    throw new Error("VALIDATION_FAILED: delivery_check_marker required");
   }
   if (!input.claim_map_status) {
-    throw new Error('VALIDATION_FAILED: claim_map_status required');
+    throw new Error("VALIDATION_FAILED: claim_map_status required");
   }
-  if (!input.remote_witness_condition || input.remote_witness_condition !== 'four_exact_head_rails_completed_success') {
-    throw new Error('VALIDATION_FAILED: remote_witness_condition must equal four_exact_head_rails_completed_success');
+  if (
+    !input.remote_witness_condition ||
+    input.remote_witness_condition !== "four_exact_head_rails_completed_success"
+  ) {
+    throw new Error(
+      "VALIDATION_FAILED: remote_witness_condition must equal four_exact_head_rails_completed_success",
+    );
   }
   if (!Array.isArray(input.proof_gaps) || input.proof_gaps.length === 0) {
-    throw new Error('VALIDATION_FAILED: proof_gaps must be a non-empty array');
+    throw new Error("VALIDATION_FAILED: proof_gaps must be a non-empty array");
   }
-  if (!Array.isArray(input.still_blocked_invariants) || input.still_blocked_invariants.length === 0) {
-    throw new Error('VALIDATION_FAILED: still_blocked_invariants must be a non-empty array');
+  if (
+    !Array.isArray(input.still_blocked_invariants) ||
+    input.still_blocked_invariants.length === 0
+  ) {
+    throw new Error(
+      "VALIDATION_FAILED: still_blocked_invariants must be a non-empty array",
+    );
   }
 
   // Allowed input fields (from ADR-033 + GO)
   const allowedInput = [
-    'layer_id', 'layer_name', 'boundary_ref', 'schema_ref',
-    'test_scaffold_ref', 'delivery_check_marker', 'claim_map_status',
-    'remote_witness_condition', 'proof_gaps', 'still_blocked_invariants',
-    'consent_status', 'review_status', 'prototype_posture'
+    "layer_id",
+    "layer_name",
+    "boundary_ref",
+    "schema_ref",
+    "test_scaffold_ref",
+    "delivery_check_marker",
+    "claim_map_status",
+    "remote_witness_condition",
+    "proof_gaps",
+    "still_blocked_invariants",
+    "consent_status",
+    "review_status",
+    "prototype_posture",
   ];
   for (const k of Object.keys(input)) {
     if (!allowedInput.includes(k)) {
@@ -156,7 +208,8 @@ export function createMockLayerClosureContractLcc6({ requireConsent }, input = l
 
   // Reject promotion language (skip still_blocked/proof_gaps carriers)
   const checkInput = { ...input };
-  if (checkInput.still_blocked_invariants) delete checkInput.still_blocked_invariants;
+  if (checkInput.still_blocked_invariants)
+    delete checkInput.still_blocked_invariants;
   if (checkInput.proof_gaps) delete checkInput.proof_gaps;
   const serialized = JSON.stringify(checkInput).toLowerCase();
   for (const term of FORBIDDEN_TERMS) {
@@ -168,13 +221,13 @@ export function createMockLayerClosureContractLcc6({ requireConsent }, input = l
   const now = new Date().toISOString();
 
   const body = {
-    schema: 'bizra.lcc6.layer_closure_contract.v0.1.local',
+    schema: "bizra.lcc6.layer_closure_contract.v0.1.local",
     lcc6_boundary_id: null,
     layer_id: input.layer_id,
     layer_name: input.layer_name,
     lcc6_contract: {
       placeholder: true,
-      status: 'REFERENCE_EXPECTATION_ONLY',
+      status: "REFERENCE_EXPECTATION_ONLY",
       boundary_ref: input.boundary_ref,
       schema_ref: input.schema_ref,
       test_scaffold_ref: input.test_scaffold_ref,
@@ -193,13 +246,13 @@ export function createMockLayerClosureContractLcc6({ requireConsent }, input = l
       automatic_layer_closure_engine_implemented: false,
       delivery_check_rewrite_engine_implemented: false,
       claim_map_writer_implemented: false,
-      remote_witness_collector_implemented: false
+      remote_witness_collector_implemented: false,
     },
-    closure_status: 'MOCK_DEFINED',
+    closure_status: "MOCK_DEFINED",
     proof_gaps: input.proof_gaps,
     still_blocked_snapshot: {
       placeholder: true,
-      source: 'carried_still_blocked_invariants',
+      source: "carried_still_blocked_invariants",
       production_scoring: false,
       economic_scoring: false,
       reward_eligibility_implementation: false,
@@ -214,19 +267,27 @@ export function createMockLayerClosureContractLcc6({ requireConsent }, input = l
       public_economic_copy: false,
       node1: false,
       public_urp_bridge: false,
-      shariah_compliance_claim: false
+      shariah_compliance_claim: false,
     },
     still_blocked_invariants: input.still_blocked_invariants,
     created_at: now,
-    prototype_posture: input.prototype_posture || '[PROTOTYPE] [DESIGNED_NOT_LIVE] LOCAL_ONLY'
+    prototype_posture:
+      input.prototype_posture || "[PROTOTYPE] [DESIGNED_NOT_LIVE] LOCAL_ONLY",
   };
 
   // Deterministic id excludes created_at
   const identityBody = Object.fromEntries(
-    Object.entries(body).filter(([key]) => key !== 'created_at')
+    Object.entries(body).filter(([key]) => key !== "created_at"),
   );
-  const canonical = JSON.stringify(identityBody, Object.keys(identityBody).sort());
-  const lcc6_boundary_id = 'sha256:' + createHash('sha256').update(canonical + LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT).digest('hex');
+  const canonical = JSON.stringify(
+    identityBody,
+    Object.keys(identityBody).sort(),
+  );
+  const lcc6_boundary_id =
+    "sha256:" +
+    createHash("sha256")
+      .update(canonical + LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT)
+      .digest("hex");
 
   body.lcc6_boundary_id = lcc6_boundary_id;
 
@@ -242,69 +303,151 @@ export function createMockLayerClosureContractLcc6({ requireConsent }, input = l
 
 export function loadExampleLayerClosureContractLcc6Input() {
   return {
-    layer_id: 'layer-adr-032-node0-closed-loop-digest',
-    layer_name: 'ADR-032 Node0 Closed-Loop Digest',
-    boundary_ref: 'docs/06-adr/ADR-032-node0-closed-loop-digest-boundary.md',
-    schema_ref: 'bizra.node0.closed_loop_digest.v0.1.local',
-    test_scaffold_ref: 'tests/node0-closed-loop-digest-boundary.test.js',
-    delivery_check_marker: 'ADR-032 node0 closed-loop digest mock integrated: PASS',
-    claim_map_status: 'BOUNDARY_NON_CLAIM_ONLY',
-    remote_witness_condition: 'four_exact_head_rails_completed_success',
+    layer_id: "layer-adr-032-node0-closed-loop-digest",
+    layer_name: "ADR-032 Node0 Closed-Loop Digest",
+    boundary_ref: "docs/06-adr/ADR-032-node0-closed-loop-digest-boundary.md",
+    schema_ref: "bizra.node0.closed_loop_digest.v0.1.local",
+    test_scaffold_ref: "tests/node0-closed-loop-digest-boundary.test.js",
+    delivery_check_marker:
+      "ADR-032 node0 closed-loop digest mock integrated: PASS",
+    claim_map_status: "BOUNDARY_NON_CLAIM_ONLY",
+    remote_witness_condition: "four_exact_head_rails_completed_success",
     proof_gaps: [
-      'GAP_LCC6_MOCK_NOT_YET_INTEGRATED_INTO_REGISTRY',
-      'GAP_REFERENCE_EXPECTATION_ONLY'
+      "GAP_LCC6_MOCK_NOT_YET_INTEGRATED_INTO_REGISTRY",
+      "GAP_REFERENCE_EXPECTATION_ONLY",
     ],
     still_blocked_invariants: [
-      'NO_PRODUCTION_SCORING',
-      'NO_ECONOMIC_SCORING',
-      'NO_RECEIPT_MINTING',
-      'NO_PUBLIC_RECEIPT_WRITING',
-      'NO_PUBLISHING',
-      'NO_BRIDGING',
-      'NO_NODE1',
-      'NO_SHARIAH_COMPLIANCE_CLAIM'
+      "NO_PRODUCTION_SCORING",
+      "NO_ECONOMIC_SCORING",
+      "NO_RECEIPT_MINTING",
+      "NO_PUBLIC_RECEIPT_WRITING",
+      "NO_PUBLISHING",
+      "NO_BRIDGING",
+      "NO_NODE1",
+      "NO_SHARIAH_COMPLIANCE_CLAIM",
     ],
-    consent_status: 'required',
-    review_status: 'boundary_local_only',
-    prototype_posture: '[PROTOTYPE] [DESIGNED_NOT_LIVE] LOCAL_ONLY'
+    consent_status: "required",
+    review_status: "boundary_local_only",
+    prototype_posture: "[PROTOTYPE] [DESIGNED_NOT_LIVE] LOCAL_ONLY",
   };
 }
 
 // Self-test (executes when run directly)
 if (import.meta.url === `file://${process.argv[1]}`) {
-  console.log('--- BIZRA G55: LAYER CLOSURE CONTRACT LCC-6 MOCK SELF-TEST ---');
+  console.log("--- BIZRA G55: LAYER CLOSURE CONTRACT LCC-6 MOCK SELF-TEST ---");
   try {
     const base = loadExampleLayerClosureContractLcc6Input();
 
     // 1. creates a local LCC-6 envelope with sha256 lcc6_boundary_id
-    const r1 = createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, base);
-    console.log('1. creates local envelope: lcc6_boundary_id=', (r1.lcc6_boundary_id || '').substring(0, 30) + '...');
+    const r1 = createMockLayerClosureContractLcc6(
+      { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+      base,
+    );
+    console.log(
+      "1. creates local envelope: lcc6_boundary_id=",
+      (r1.lcc6_boundary_id || "").substring(0, 30) + "...",
+    );
 
     // 2. requires exact consent
-    try { createMockLayerClosureContractLcc6({ requireConsent: 'WRONG' }, base); throw new Error('should have thrown'); } catch (e) { if (!e.message.includes('CONSENT_REQUIRED')) throw e; console.log('2. rejects missing exact consent'); }
+    try {
+      createMockLayerClosureContractLcc6({ requireConsent: "WRONG" }, base);
+      throw new Error("should have thrown");
+    } catch (e) {
+      if (!e.message.includes("CONSENT_REQUIRED")) throw e;
+      console.log("2. rejects missing exact consent");
+    }
 
     // 3. requires layer_id
-    try { const bad = { ...base }; delete bad.layer_id; createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, bad); throw new Error('should have thrown'); } catch (e) { if (!e.message.includes('layer_id')) throw e; console.log('3. requires layer_id'); }
+    try {
+      const bad = { ...base };
+      delete bad.layer_id;
+      createMockLayerClosureContractLcc6(
+        { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+        bad,
+      );
+      throw new Error("should have thrown");
+    } catch (e) {
+      if (!e.message.includes("layer_id")) throw e;
+      console.log("3. requires layer_id");
+    }
 
     // 4. requires layer_name
-    try { const bad = { ...base }; delete bad.layer_name; createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, bad); throw new Error('should have thrown'); } catch (e) { if (!e.message.includes('layer_name')) throw e; console.log('4. requires layer_name'); }
+    try {
+      const bad = { ...base };
+      delete bad.layer_name;
+      createMockLayerClosureContractLcc6(
+        { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+        bad,
+      );
+      throw new Error("should have thrown");
+    } catch (e) {
+      if (!e.message.includes("layer_name")) throw e;
+      console.log("4. requires layer_name");
+    }
 
     // 5. requires boundary_ref
-    try { const bad = { ...base }; delete bad.boundary_ref; createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, bad); throw new Error('should have thrown'); } catch (e) { if (!e.message.includes('boundary_ref')) throw e; console.log('5. requires boundary_ref'); }
+    try {
+      const bad = { ...base };
+      delete bad.boundary_ref;
+      createMockLayerClosureContractLcc6(
+        { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+        bad,
+      );
+      throw new Error("should have thrown");
+    } catch (e) {
+      if (!e.message.includes("boundary_ref")) throw e;
+      console.log("5. requires boundary_ref");
+    }
 
     // 6. requires schema_ref
-    try { const bad = { ...base }; delete bad.schema_ref; createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, bad); throw new Error('should have thrown'); } catch (e) { if (!e.message.includes('schema_ref')) throw e; console.log('6. requires schema_ref'); }
+    try {
+      const bad = { ...base };
+      delete bad.schema_ref;
+      createMockLayerClosureContractLcc6(
+        { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+        bad,
+      );
+      throw new Error("should have thrown");
+    } catch (e) {
+      if (!e.message.includes("schema_ref")) throw e;
+      console.log("6. requires schema_ref");
+    }
 
     // 7. requires test_scaffold_ref and delivery_check_marker
-    try { const bad = { ...base }; delete bad.test_scaffold_ref; createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, bad); throw new Error('should have thrown'); } catch (e) { if (!e.message.includes('test_scaffold_ref')) throw e; console.log('7. requires test_scaffold_ref and delivery_check_marker'); }
+    try {
+      const bad = { ...base };
+      delete bad.test_scaffold_ref;
+      createMockLayerClosureContractLcc6(
+        { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+        bad,
+      );
+      throw new Error("should have thrown");
+    } catch (e) {
+      if (!e.message.includes("test_scaffold_ref")) throw e;
+      console.log("7. requires test_scaffold_ref and delivery_check_marker");
+    }
 
     // 8. requires remote_witness_condition to equal four_exact_head_rails_completed_success
-    try { const bad = { ...base }; bad.remote_witness_condition = 'wrong'; createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, bad); throw new Error('should have thrown'); } catch (e) { if (!e.message.includes('remote_witness_condition')) throw e; console.log('8. requires remote_witness_condition to equal four_exact_head_rails_completed_success'); }
+    try {
+      const bad = { ...base };
+      bad.remote_witness_condition = "wrong";
+      createMockLayerClosureContractLcc6(
+        { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+        bad,
+      );
+      throw new Error("should have thrown");
+    } catch (e) {
+      if (!e.message.includes("remote_witness_condition")) throw e;
+      console.log(
+        "8. requires remote_witness_condition to equal four_exact_head_rails_completed_success",
+      );
+    }
 
     // 9. declares six LCC-6 references without LCC runtime, registry writer, aggregator, automatic closure, delivery rewrite, claim writer, or witness collector
-    const hasContract = r1.lcc6_contract &&
+    const hasContract =
+      r1.lcc6_contract &&
       r1.lcc6_contract.placeholder === true &&
-      r1.lcc6_contract.status === 'REFERENCE_EXPECTATION_ONLY' &&
+      r1.lcc6_contract.status === "REFERENCE_EXPECTATION_ONLY" &&
       r1.lcc6_contract.lcc_runtime_implemented === false &&
       r1.lcc6_contract.lcc_registry_writer_implemented === false &&
       r1.lcc6_contract.lcc_aggregator_implemented === false &&
@@ -312,31 +455,58 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       r1.lcc6_contract.delivery_check_rewrite_engine_implemented === false &&
       r1.lcc6_contract.claim_map_writer_implemented === false &&
       r1.lcc6_contract.remote_witness_collector_implemented === false;
-    console.log('9. declares six LCC-6 references without runtime/registry/aggregator/closure/rewrite/claim/witness:', hasContract);
+    console.log(
+      "9. declares six LCC-6 references without runtime/registry/aggregator/closure/rewrite/claim/witness:",
+      hasContract,
+    );
 
     // 10. declares still-blocked snapshot without public/economic activation
-    const hasBlocked = r1.still_blocked_snapshot &&
+    const hasBlocked =
+      r1.still_blocked_snapshot &&
       r1.still_blocked_snapshot.placeholder === true &&
       r1.still_blocked_snapshot.production_scoring === false &&
       r1.still_blocked_snapshot.economic_scoring === false &&
       r1.still_blocked_snapshot.receipt_minting === false &&
       r1.still_blocked_snapshot.public_receipt_writing === false &&
       r1.still_blocked_snapshot.publishing === false;
-    console.log('10. declares still-blocked snapshot without public/economic activation:', hasBlocked);
+    console.log(
+      "10. declares still-blocked snapshot without public/economic activation:",
+      hasBlocked,
+    );
 
     // 11. rejects forbidden LCC/runtime/economic/public fields
     const badForbidden = { ...base, lcc_runtime_active: true };
-    try { createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, badForbidden); throw new Error('should have thrown'); } catch (e) { if (!e.message.includes('FORBIDDEN')) throw e; console.log('11. rejects forbidden LCC/runtime/economic/public fields'); }
+    try {
+      createMockLayerClosureContractLcc6(
+        { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+        badForbidden,
+      );
+      throw new Error("should have thrown");
+    } catch (e) {
+      if (!e.message.includes("FORBIDDEN")) throw e;
+      console.log("11. rejects forbidden LCC/runtime/economic/public fields");
+    }
 
     // 12. deterministic lcc6_boundary_id for same semantic input excluding created_at
-    const r12a = createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, base);
-    const r12b = createMockLayerClosureContractLcc6({ requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT }, base);
-    console.log('12. deterministic lcc6_boundary_id (excl created_at):', r12a.lcc6_boundary_id === r12b.lcc6_boundary_id);
+    const r12a = createMockLayerClosureContractLcc6(
+      { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+      base,
+    );
+    const r12b = createMockLayerClosureContractLcc6(
+      { requireConsent: LAYER_CLOSURE_CONTRACT_LCC6_MOCK_CONSENT },
+      base,
+    );
+    console.log(
+      "12. deterministic lcc6_boundary_id (excl created_at):",
+      r12a.lcc6_boundary_id === r12b.lcc6_boundary_id,
+    );
 
-    console.log('G55 self-test PASS (local mock, consented, required fields, LCC-6 contract + still-blocked placeholders, deterministic, no forbidden).');
+    console.log(
+      "G55 self-test PASS (local mock, consented, required fields, LCC-6 contract + still-blocked placeholders, deterministic, no forbidden).",
+    );
     process.exit(0);
   } catch (e) {
-    console.error('G55 SELF-TEST FAIL:', e.message);
+    console.error("G55 SELF-TEST FAIL:", e.message);
     process.exit(1);
   }
 }

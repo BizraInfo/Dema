@@ -128,32 +128,32 @@ Dema runs Impact Launchpad or makes contributions reward-eligible.
 
 ## Full-stack boundary map
 
-| Layer | MVP boundary | Forbidden promotion |
-| --- | --- | --- |
-| Product face | Dema may preview and draft local proposal envelopes after exact consent. | Claiming live launchpad, public submission, or marketplace behavior. |
-| Domain model | Contribution proposal, review candidate, claim label, evidence pointer, consent phrase. | Impact scoring, reward eligibility, token metadata, or public economic state. [DECLARED] |
-| Data contract | Schema-tagged local envelopes with explicit non-claims and source paths. | Economic ledger, balance ledger, token ledger, or investment record. [DECLARED] |
-| Application logic | Validate fields, classify claims, refuse forbidden wording, preserve local boundary. | Runtime execution, federation, external post, reviewer assignment, payout, or mint. [DECLARED] |
-| Security | No secrets, no network, no hidden daemon, no path escape, no unmanaged writes. | Remote provider call, raw private data publish, hidden state, or credentials in docs. |
-| DevOps | Local gates plus existing four remote CI witnesses. | CI minting canonical receipts, deploying contracts, or publishing artifacts. [DECLARED] |
-| QA | Refusal-path tests and claim-gate tests before any implementation acceptance. | Treating green tests as legal, Shariah, financial, or runtime proof. |
-| Observability | Local CLI/report evidence only; receipts are read/list in Dema. | Hidden telemetry or Dema-issued governed-runtime receipts. [DECLARED] |
-| CD | None configured. Publication requires a separate typed GO. | Auto-deploy, auto-publish, installer release, or network bridge activation. |
+| Layer             | MVP boundary                                                                            | Forbidden promotion                                                                            |
+| ----------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Product face      | Dema may preview and draft local proposal envelopes after exact consent.                | Claiming live launchpad, public submission, or marketplace behavior.                           |
+| Domain model      | Contribution proposal, review candidate, claim label, evidence pointer, consent phrase. | Impact scoring, reward eligibility, token metadata, or public economic state. [DECLARED]       |
+| Data contract     | Schema-tagged local envelopes with explicit non-claims and source paths.                | Economic ledger, balance ledger, token ledger, or investment record. [DECLARED]                |
+| Application logic | Validate fields, classify claims, refuse forbidden wording, preserve local boundary.    | Runtime execution, federation, external post, reviewer assignment, payout, or mint. [DECLARED] |
+| Security          | No secrets, no network, no hidden daemon, no path escape, no unmanaged writes.          | Remote provider call, raw private data publish, hidden state, or credentials in docs.          |
+| DevOps            | Local gates plus existing four remote CI witnesses.                                     | CI minting canonical receipts, deploying contracts, or publishing artifacts. [DECLARED]        |
+| QA                | Refusal-path tests and claim-gate tests before any implementation acceptance.           | Treating green tests as legal, Shariah, financial, or runtime proof.                           |
+| Observability     | Local CLI/report evidence only; receipts are read/list in Dema.                         | Hidden telemetry or Dema-issued governed-runtime receipts. [DECLARED]                          |
+| CD                | None configured. Publication requires a separate typed GO.                              | Auto-deploy, auto-publish, installer release, or network bridge activation.                    |
 
 ## MBOK alignment
 
-| Management domain | Impact Launchpad control |
-| --- | --- |
-| Integration | This ADR binds claims, delivery, security, QA, and implementation order before code. |
-| Scope | MVP is proposal-envelope and review-envelope boundary only. Mixed token or marketplace work is split out. [DECLARED] |
-| Schedule | No launch date is declared; readiness is gate-based. |
-| Cost | No new dependency, service, network, or deployment surface is authorized. |
-| Quality | Future implementation must add tests for valid proposal flow and forbidden promotion paths. |
-| Resource | No hidden daemon, background job, or public compute workload is introduced. |
-| Communications | Every sentence about Impact Launchpad routes through the Claims Ledger labels. |
-| Risk | Economic, legal, Shariah, public-claim, and runtime risks stay explicit. |
-| Procurement | No third-party action, oracle, marketplace, chain, or contract provider is selected. |
-| Stakeholder | Operator consent, technical review, legal review, Shariah review, and public claim approval remain distinct gates. |
+| Management domain | Impact Launchpad control                                                                                             |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Integration       | This ADR binds claims, delivery, security, QA, and implementation order before code.                                 |
+| Scope             | MVP is proposal-envelope and review-envelope boundary only. Mixed token or marketplace work is split out. [DECLARED] |
+| Schedule          | No launch date is declared; readiness is gate-based.                                                                 |
+| Cost              | No new dependency, service, network, or deployment surface is authorized.                                            |
+| Quality           | Future implementation must add tests for valid proposal flow and forbidden promotion paths.                          |
+| Resource          | No hidden daemon, background job, or public compute workload is introduced.                                          |
+| Communications    | Every sentence about Impact Launchpad routes through the Claims Ledger labels.                                       |
+| Risk              | Economic, legal, Shariah, public-claim, and runtime risks stay explicit.                                             |
+| Procurement       | No third-party action, oracle, marketplace, chain, or contract provider is selected.                                 |
+| Stakeholder       | Operator consent, technical review, legal review, Shariah review, and public claim approval remain distinct gates.   |
 
 ## DevOps and CI/CD gates
 
@@ -254,15 +254,15 @@ consent boundaries.
 
 Implementation may begin only when all of these hold: [DECLARED]
 
-| Gate | Requirement |
-| --- | --- |
-| G0 | Claims Ledger is remote-green. |
-| G1 | This ADR is accepted by explicit operator typed GO or an equivalent reviewed commit. |
-| G2 | Contribution proposal flow spec exists and links to this ADR. |
-| G3 | Test plan includes valid path, malformed path, forbidden reward claim, forbidden token claim, public launch overclaim, missing consent, path escape, and no-network cases. [DECLARED] |
-| G4 | Future code touches only Dema product-face surfaces; no runtime, federation, economy, or CI workflow edit is bundled. [DECLARED] |
-| G5 | Local gates pass and the four remote CI rails pass on the implementation commit. |
-| G6 | Public economic wording remains blocked until legal and Shariah review boundaries are documented and approved. |
+| Gate | Requirement                                                                                                                                                                           |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G0   | Claims Ledger is remote-green.                                                                                                                                                        |
+| G1   | This ADR is accepted by explicit operator typed GO or an equivalent reviewed commit.                                                                                                  |
+| G2   | Contribution proposal flow spec exists and links to this ADR.                                                                                                                         |
+| G3   | Test plan includes valid path, malformed path, forbidden reward claim, forbidden token claim, public launch overclaim, missing consent, path escape, and no-network cases. [DECLARED] |
+| G4   | Future code touches only Dema product-face surfaces; no runtime, federation, economy, or CI workflow edit is bundled. [DECLARED]                                                      |
+| G5   | Local gates pass and the four remote CI rails pass on the implementation commit.                                                                                                      |
+| G6   | Public economic wording remains blocked until legal and Shariah review boundaries are documented and approved.                                                                        |
 
 If any gate fails, the slice is deferred rather than weakened.
 

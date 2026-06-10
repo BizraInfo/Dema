@@ -43,12 +43,12 @@ Define LCC-6 as the mandatory closure contract for every future BIZRA proof laye
 
 LCC-6 is a six-part maintainability boundary requiring each proof layer to declare exactly:
 
-* one boundary
-* one schema
-* one test scaffold
-* one delivery-check entry
-* one claim-map status
-* one remote witness condition
+- one boundary
+- one schema
+- one test scaffold
+- one delivery-check entry
+- one claim-map status
+- one remote witness condition
 
 It is not a runtime registry, not an automatic validator, not a CI collector, not a claim-map writer, and not a bridge.
 
@@ -58,12 +58,12 @@ A layer is not closed unless it is operationally observable.
 
 ## 7. LCC-6 Fields
 
-* boundary_ref
-* schema_ref
-* test_scaffold_ref
-* delivery_check_marker
-* claim_map_status
-* remote_witness_condition
+- boundary_ref
+- schema_ref
+- test_scaffold_ref
+- delivery_check_marker
+- claim_map_status
+- remote_witness_condition
 
 ## 8. Boundary Reference Rule
 
@@ -85,115 +85,115 @@ Every layer must have one non-fatal delivery-check marker once the mock is prove
 
 Every layer must carry a claim-map status such as:
 
-* BOUNDARY_NON_CLAIM_ONLY
-* MOCK_NON_CLAIM_ONLY
-* DELIVERY_CHECK_NON_CLAIM_ONLY
-* BLOCKED_RUNTIME_CLAIM
-* EXTERNAL_REVIEW_REQUIRED
+- BOUNDARY_NON_CLAIM_ONLY
+- MOCK_NON_CLAIM_ONLY
+- DELIVERY_CHECK_NON_CLAIM_ONLY
+- BLOCKED_RUNTIME_CLAIM
+- EXTERNAL_REVIEW_REQUIRED
 
 ## 13. Remote Witness Condition Rule
 
 Every layer must have a remote witness condition: four exact-head rails completed success:
 
-* gitleaks
-* CodeQL
-* BIZRA Review Gate
-* check
+- gitleaks
+- CodeQL
+- BIZRA Review Gate
+- check
 
 ## 14. Layer Closure Statuses
 
-* OPEN
-* BOUNDARY_DEFINED
-* SCAFFOLD_DEFINED
-* MOCK_DEFINED
-* DELIVERY_MARKED
-* LCC6_CLOSED
-* BLOCKED
+- OPEN
+- BOUNDARY_DEFINED
+- SCAFFOLD_DEFINED
+- MOCK_DEFINED
+- DELIVERY_MARKED
+- LCC6_CLOSED
+- BLOCKED
 
 ## 15. Allowed Inputs
 
-* layer_id
-* layer_name
-* boundary_ref
-* schema_ref
-* test_scaffold_ref
-* delivery_check_marker
-* claim_map_status
-* remote_witness_condition
-* proof_gaps
-* still_blocked_invariants
-* consent_status
-* review_status
-* prototype_posture
+- layer_id
+- layer_name
+- boundary_ref
+- schema_ref
+- test_scaffold_ref
+- delivery_check_marker
+- claim_map_status
+- remote_witness_condition
+- proof_gaps
+- still_blocked_invariants
+- consent_status
+- review_status
+- prototype_posture
 
 ## 16. Forbidden Inputs
 
-* lcc_runtime_request
-* lcc_registry_write_request
-* lcc_aggregator_request
-* automatic_layer_closure_request
-* delivery_check_rewrite_request
-* claim_map_write_request
-* remote_witness_collection_request
-* runtime_sync_request
-* cross_repo_write_request
-* datalake_mutation_request
-* bridge_activation_request
-* node1_target
-* urp_publication
-* token_amount
-* reward_amount
-* payout
-* public_url
-* contract_address
-* marketplace_listing
-* Shariah-compliant assertion
-* APY/APR/yield/investment language
+- lcc_runtime_request
+- lcc_registry_write_request
+- lcc_aggregator_request
+- automatic_layer_closure_request
+- delivery_check_rewrite_request
+- claim_map_write_request
+- remote_witness_collection_request
+- runtime_sync_request
+- cross_repo_write_request
+- datalake_mutation_request
+- bridge_activation_request
+- node1_target
+- urp_publication
+- token_amount
+- reward_amount
+- payout
+- public_url
+- contract_address
+- marketplace_listing
+- Shariah-compliant assertion
+- APY/APR/yield/investment language
 
 ## 17. Allowed Outputs
 
-* schema
-* lcc6_boundary_id
-* layer_id
-* layer_name
-* lcc6_contract
-* closure_status
-* proof_gaps
-* still_blocked_snapshot
-* created_at
-* prototype_posture
+- schema
+- lcc6_boundary_id
+- layer_id
+- layer_name
+- lcc6_contract
+- closure_status
+- proof_gaps
+- still_blocked_snapshot
+- created_at
+- prototype_posture
 
 ## 18. Forbidden Outputs
 
-* lcc_runtime_active
-* registry_written
-* aggregation_performed
-* automatic_closure_performed
-* delivery_check_rewritten
-* claim_map_written
-* remote_witness_collected
-* datalake_synced
-* cross_repo_write_performed
-* runtime_bridge_active
-* node1_sync
-* urp_publication
-* token_minted
-* reward_authorized
-* contract_call
-* marketplace_signal
-* public_receipt_url
-* Shariah-compliant label
+- lcc_runtime_active
+- registry_written
+- aggregation_performed
+- automatic_closure_performed
+- delivery_check_rewritten
+- claim_map_written
+- remote_witness_collected
+- datalake_synced
+- cross_repo_write_performed
+- runtime_bridge_active
+- node1_sync
+- urp_publication
+- token_minted
+- reward_authorized
+- contract_call
+- marketplace_signal
+- public_receipt_url
+- Shariah-compliant label
 
 ## 19. ADR-032 Closure Example
 
 Document ADR-032 Node0 Closed-Loop Digest as the first explicit LCC-6 closure:
 
-* boundary_ref: docs/06-adr/ADR-032-node0-closed-loop-digest-boundary.md
-* schema_ref: bizra.node0.closed_loop_digest.v0.1.local
-* test_scaffold_ref: tests/node0-closed-loop-digest-boundary.test.js
-* delivery_check_marker: ADR-032 node0 closed-loop digest mock integrated: PASS
-* claim_map_status: BOUNDARY_NON_CLAIM_ONLY
-* remote_witness_condition: four_exact_head_rails_completed_success
+- boundary_ref: docs/06-adr/ADR-032-node0-closed-loop-digest-boundary.md
+- schema_ref: bizra.node0.closed_loop_digest.v0.1.local
+- test_scaffold_ref: tests/node0-closed-loop-digest-boundary.test.js
+- delivery_check_marker: ADR-032 node0 closed-loop digest mock integrated: PASS
+- claim_map_status: BOUNDARY_NON_CLAIM_ONLY
+- remote_witness_condition: four_exact_head_rails_completed_success
 
 ## 20. Non-Claims
 
@@ -234,16 +234,16 @@ No Shariah-compliant claim.
 
 G52R → ADR-033 → LCC-6 scaffold → LCC-6 mock → delivery-check integration → future registry boundary.
 
-| Area                              | Status / Action |
-|-----------------------------------|-----------------|
-| Integration Management            | Boundary/spec only (defines LCC-6 as the mandatory six-part maintainability contract for every future proof layer; G52R → ADR-033 → scaffold → mock → delivery-check marker → future registry boundary) |
-| Scope Management                  | Boundary/spec only (LCC-6 fields, layer closure statuses, allowed/forbidden inputs/outputs; no LCC runtime, registry, aggregator, or automatic closure) |
-| Quality Management                | Boundary/spec only (requires one test scaffold per layer + one delivery-check entry; enforces uniform observability via LCC-6) |
-| Risk Management                   | Boundary/spec only (proof gaps + still_blocked_invariants carried verbatim; remote witness condition requires four exact-head rails) |
-| Stakeholder Management            | Boundary/spec only (claim_map_status discipline: BOUNDARY_NON_CLAIM_ONLY etc.; Non-Claims section with full still-blocked list) |
-| DevOps                            | Local-only, [PROTOTYPE][DESIGNED_NOT_LIVE] posture. Delivery-check marker + LCC-6 print required for layer visibility in A+ cockpit. Pre-push seal + 4-rail required. |
-| CI/CD                             | Four-rail remote witness (gitleaks + CodeQL + BIZRA Review Gate + check on exact HEAD) is the mandatory closure condition. No automatic collection or rewrite. |
-| A+ Performance-Quality Assurance  | No public performance, TPS, or economic claims. All LCC references remain expectation-only until additional gates, benchmarks, and external review. |
+| Area                             | Status / Action                                                                                                                                                                                         |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Integration Management           | Boundary/spec only (defines LCC-6 as the mandatory six-part maintainability contract for every future proof layer; G52R → ADR-033 → scaffold → mock → delivery-check marker → future registry boundary) |
+| Scope Management                 | Boundary/spec only (LCC-6 fields, layer closure statuses, allowed/forbidden inputs/outputs; no LCC runtime, registry, aggregator, or automatic closure)                                                 |
+| Quality Management               | Boundary/spec only (requires one test scaffold per layer + one delivery-check entry; enforces uniform observability via LCC-6)                                                                          |
+| Risk Management                  | Boundary/spec only (proof gaps + still_blocked_invariants carried verbatim; remote witness condition requires four exact-head rails)                                                                    |
+| Stakeholder Management           | Boundary/spec only (claim_map_status discipline: BOUNDARY_NON_CLAIM_ONLY etc.; Non-Claims section with full still-blocked list)                                                                         |
+| DevOps                           | Local-only, [PROTOTYPE][DESIGNED_NOT_LIVE] posture. Delivery-check marker + LCC-6 print required for layer visibility in A+ cockpit. Pre-push seal + 4-rail required.                                   |
+| CI/CD                            | Four-rail remote witness (gitleaks + CodeQL + BIZRA Review Gate + check on exact HEAD) is the mandatory closure condition. No automatic collection or rewrite.                                          |
+| A+ Performance-Quality Assurance | No public performance, TPS, or economic claims. All LCC references remain expectation-only until additional gates, benchmarks, and external review.                                                     |
 
 ## 22. Next Micro
 

@@ -321,16 +321,16 @@ No Shariah-compliant claim.
 
 G60R/G61 boundary progression -> ADR-035 -> runtime dry-run scaffold -> future runtime dry-run mock -> future delivery-check marker -> future four-rail proof.
 
-| Area | Status / Action |
-| --- | --- |
-| Integration Management | Defines the first runtime-readiness boundary without live runtime authority. |
-| Scope Management | Limits the slice to dry-run state names, policies, consent gates, trace expectations, replay-safe receipt expectations, and still-blocked invariants. |
-| Quality Management | Requires failure-safe abort, retry, timeout, idempotency, trace, and replay-safe receipt boundaries before any implementation. |
-| Risk Management | Explicitly forbids runtime, daemon, process, network, filesystem, cross-repo, Data Lake, public, token, contract, marketplace, and Shariah-claim surfaces. |
-| Stakeholder Management | Preserves Dema as face and operator approval as exact-string future gate. |
-| DevOps | Local-only, [PROTOTYPE][DESIGNED_NOT_LIVE], proof-gated. No pipeline automation or runtime polling added here. |
-| CI/CD | Closure requires scaffold, mock, delivery-check integration, clean pre-push seal, and exact-head four-rail remote proof. |
-| A+ Performance-Quality Assurance | No throughput, autonomy, production, public, economic, or compliance claims until production DoD passes. |
+| Area                             | Status / Action                                                                                                                                            |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Integration Management           | Defines the first runtime-readiness boundary without live runtime authority.                                                                               |
+| Scope Management                 | Limits the slice to dry-run state names, policies, consent gates, trace expectations, replay-safe receipt expectations, and still-blocked invariants.      |
+| Quality Management               | Requires failure-safe abort, retry, timeout, idempotency, trace, and replay-safe receipt boundaries before any implementation.                             |
+| Risk Management                  | Explicitly forbids runtime, daemon, process, network, filesystem, cross-repo, Data Lake, public, token, contract, marketplace, and Shariah-claim surfaces. |
+| Stakeholder Management           | Preserves Dema as face and operator approval as exact-string future gate.                                                                                  |
+| DevOps                           | Local-only, [PROTOTYPE][DESIGNED_NOT_LIVE], proof-gated. No pipeline automation or runtime polling added here.                                             |
+| CI/CD                            | Closure requires scaffold, mock, delivery-check integration, clean pre-push seal, and exact-head four-rail remote proof.                                   |
+| A+ Performance-Quality Assurance | No throughput, autonomy, production, public, economic, or compliance claims until production DoD passes.                                                   |
 
 ## 24. Next Micro
 

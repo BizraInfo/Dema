@@ -177,15 +177,15 @@ No global state store.
 
 G36R (AIR mock delivery-check) → ADR-029 (mission-centric state ecosystem boundary) → future mission-state test scaffold → mission-state mock (local object only) → delivery-check integration of mission state → Data Lake / AgentFold / URP expectation alignment → governed activation under future proof gates.
 
-| Domain                  | Mapping |
-|-------------------------|---------|
-| Integration Management | Ladder continuity: G36R → ADR-029 mission-centric state boundary spec → future mission-state scaffold + mock → delivery-check integration → cross-layer (AIR + state + writer + expectations) alignment under proof gates |
-| Scope Management       | Boundary/spec only (defines mission ID as primary key, AIR as atom, re-check/invalidation rules, HHMM tracking, writer proof requirement, and placeholder expectations; no runtime memory, no compression, no execution) |
-| Quality Management     | Explicit allowed/forbidden schemas; mandatory environment re-check + stale-belief invalidation before persistence; proof_gaps carried; local writer proof required; all downstream layers as auditable expectations only |
+| Domain                 | Mapping                                                                                                                                                                                                                                              |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Integration Management | Ladder continuity: G36R → ADR-029 mission-centric state boundary spec → future mission-state scaffold + mock → delivery-check integration → cross-layer (AIR + state + writer + expectations) alignment under proof gates                            |
+| Scope Management       | Boundary/spec only (defines mission ID as primary key, AIR as atom, re-check/invalidation rules, HHMM tracking, writer proof requirement, and placeholder expectations; no runtime memory, no compression, no execution)                             |
+| Quality Management     | Explicit allowed/forbidden schemas; mandatory environment re-check + stale-belief invalidation before persistence; proof_gaps carried; local writer proof required; all downstream layers as auditable expectations only                             |
 | Risk Management        | Anti-gaming via re-check and invalidation; explicit non-claims; no economic leakage; dual-repo awareness (Dema face state vs Data Lake body); transcript-derived failure modes (stale belief, over-compression) are the explicit risks being bounded |
 | Stakeholder Management | Mission ID gives the operator explicit ownership and invalidation control; PAT-7 mission party shapes intent; SAT-5/URP provide truth gates; exact consent strings required at each transition; human review expectations at READY_FOR_REVIEW states |
-| DevOps                 | claim → ADR boundary → (future) local proof (mission-state scaffold + mock) → remote 4-rail → (much later) cross-repo (Dema face + Data Lake body) mission-state alignment |
-| CI/CD                  | Local gates (llm:guidance, diff --check, claim:check, delivery:check) then four remote rails; pre-push:seal (mu 104/104) as forcing function |
+| DevOps                 | claim → ADR boundary → (future) local proof (mission-state scaffold + mock) → remote 4-rail → (much later) cross-repo (Dema face + Data Lake body) mission-state alignment                                                                           |
+| CI/CD                  | Local gates (llm:guidance, diff --check, claim:check, delivery:check) then four remote rails; pre-push:seal (mu 104/104) as forcing function                                                                                                         |
 | A+ QA                  | No public performance, TPS, PoI, or economic claim without benchmark artifacts + external review. Mission-centric state remains the explicit, re-checkable, invalidation-aware local truth object — verify before any downstream use or propagation. |
 
 ## Next Micro

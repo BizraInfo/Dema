@@ -18,17 +18,17 @@ G24R closed: the reward receipt mock local prototype (scripts/reward-receipt-moc
 
 In the dual-repo Node0 model (Dema = constitutional face/control layer; Data Lake = deep computational body with Rust/Python/agent/federation/crypto layers, PAT-7, SAT-5, FATE Gate, five-layer governed stack, and O(1)→full inference cognitive cascade), the receipt layer is the embryo of the full economy. Dema's proof ladder (G0–G50) is the control plane that sequences safe activation of each DNA subsystem.
 
-This ADR defines the *local write boundary* for persisting reward receipt review objects (the output of the G23 mock or future equivalent) inside Node0. It does not implement any writer. It only specifies the rules, consent, anti-gaming, and non-activation constraints so that a future controlled local writer prototype can be built safely.
+This ADR defines the _local write boundary_ for persisting reward receipt review objects (the output of the G23 mock or future equivalent) inside Node0. It does not implement any writer. It only specifies the rules, consent, anti-gaming, and non-activation constraints so that a future controlled local writer prototype can be built safely.
 
 The technical report (Impact Bonding Curve Launchpad analysis) and Data Lake README reinforce that BIZRA Node0 must eventually contain the full closed loop (scoring, eligibility, receipt, ledger, token accounting mock, contract verifier mock, marketplace proof-object mock, Node1 handshake mock, public URP bridge mock/testnet, Shariah evidence package), but every dangerous or economic subsystem must first exist in Genesis/Test mode (LOCAL_ONLY, [PROTOTYPE][DESIGNED_NOT_LIVE], proof-gated, read/list only from outside the boundary) before any public activation.
 
 ## Purpose
 
-Define the minimum safe rules under which Node0 may later *locally persist* a reward receipt review artifact (content-addressed file under DEMA_HOME or equivalent local store) so that subsequent Node0 subsystems (ledger, integrity proofs, accounting mocks, etc.) have a trusted private source of truth — without ever performing minting, publishing, bridging, economic authorization, or public activation.
+Define the minimum safe rules under which Node0 may later _locally persist_ a reward receipt review artifact (content-addressed file under DEMA_HOME or equivalent local store) so that subsequent Node0 subsystems (ledger, integrity proofs, accounting mocks, etc.) have a trusted private source of truth — without ever performing minting, publishing, bridging, economic authorization, or public activation.
 
 ## Definition
 
-A local reward receipt write is a private, content-addressed, consent-gated, integrity-verified filesystem persistence of a receipt *review object* (or its expectation placeholder) inside the operator's Node0 home. It is not a minted receipt, not a transferable asset, not a public document, not an on-chain or federated record, and not an authorization or claim.
+A local reward receipt write is a private, content-addressed, consent-gated, integrity-verified filesystem persistence of a receipt _review object_ (or its expectation placeholder) inside the operator's Node0 home. It is not a minted receipt, not a transferable asset, not a public document, not an on-chain or federated record, and not an authorization or claim.
 
 Local write is the private Node0 memory step that precedes (and is a prerequisite for) any future ledger or economic layer. It remains fully inside the "still blocked" envelope until additional proof gates, external review, and explicit future G-rings close.
 
@@ -92,11 +92,11 @@ The persisted artifact must remain readable/listable only by the local operator 
 
 ## Consent Rule
 
-Exact-string consent (to be defined as REWARD_RECEIPT_LOCAL_WRITE_CONSENT or equivalent in the future writer module) is required for the write action. The string must be the literal GO command for the write boundary. No inferred, default, or broad consent. The consent is for *local private persistence only*.
+Exact-string consent (to be defined as REWARD*RECEIPT_LOCAL_WRITE_CONSENT or equivalent in the future writer module) is required for the write action. The string must be the literal GO command for the write boundary. No inferred, default, or broad consent. The consent is for \_local private persistence only*.
 
 ## Review Boundary
 
-The written local artifact is a private Node0 receipt *review record*. It does not constitute a minted receipt, does not authorize reward, does not create economic right, and does not become visible or actionable outside the local DEMA_HOME. Any later use (ledger append, accounting mock, contract verifier, marketplace proof object, Node1 sync, URP bridge, Shariah evidence) requires separate future boundaries, additional proof gates, exact consents, anti-gaming re-check, and human review.
+The written local artifact is a private Node0 receipt _review record_. It does not constitute a minted receipt, does not authorize reward, does not create economic right, and does not become visible or actionable outside the local DEMA_HOME. Any later use (ledger append, accounting mock, contract verifier, marketplace proof object, Node1 sync, URP bridge, Shariah evidence) requires separate future boundaries, additional proof gates, exact consents, anti-gaming re-check, and human review.
 
 ## Anti-Gaming Rule
 
@@ -148,15 +148,15 @@ All artifacts remain local, consented, reviewed, gap-aware, anti-gaming-checked,
 
 ## MBOK / DevOps / CI-CD / A+ QA Mapping
 
-| Domain                  | Mapping |
-|-------------------------|---------|
-| Integration Management | Ladder continuity: G24R (mock + delivery-check) → ADR-026 local write boundary spec → future test scaffold → local writer prototype → ledger / accounting mocks → full Node0 DNA (with Data Lake body) under proof gates |
-| Scope Management       | Boundary/spec only (defines safe local persistence rules; no implementation, no mint, no publish, no bridge, no economic activation) |
-| Quality Management     | Allowed/forbidden inputs/outputs; integrity_hash + atomic write; proof_gaps carried forward; anti_gaming_status at write time; restrictive file perms; read/list only outside boundary |
-| Risk Management        | Anti-gaming rule at write time; explicit non-claims; no economic leakage; dual-repo awareness (face vs body); technical report risks (key material, Halo2/ML-KEM, TPS/PoI benchmarks) deferred to later gates |
-| Stakeholder Management | Exact consent for the write action; review boundary (local file ≠ minted receipt or reward); operator owns the private DEMA_HOME artifact; human review / additional gates for later use |
-| DevOps                 | claim → ADR boundary → (future) local proof (writer) → remote 4-rail → (much later) cross-repo (Dema + Data Lake) alignment |
-| CI/CD                  | Local gates (llm:guidance, diff --check, claim:check, delivery:check) then four remote rails; pre-push:seal (mu 104/104) as forcing function |
+| Domain                 | Mapping                                                                                                                                                                                                                                                  |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Integration Management | Ladder continuity: G24R (mock + delivery-check) → ADR-026 local write boundary spec → future test scaffold → local writer prototype → ledger / accounting mocks → full Node0 DNA (with Data Lake body) under proof gates                                 |
+| Scope Management       | Boundary/spec only (defines safe local persistence rules; no implementation, no mint, no publish, no bridge, no economic activation)                                                                                                                     |
+| Quality Management     | Allowed/forbidden inputs/outputs; integrity_hash + atomic write; proof_gaps carried forward; anti_gaming_status at write time; restrictive file perms; read/list only outside boundary                                                                   |
+| Risk Management        | Anti-gaming rule at write time; explicit non-claims; no economic leakage; dual-repo awareness (face vs body); technical report risks (key material, Halo2/ML-KEM, TPS/PoI benchmarks) deferred to later gates                                            |
+| Stakeholder Management | Exact consent for the write action; review boundary (local file ≠ minted receipt or reward); operator owns the private DEMA_HOME artifact; human review / additional gates for later use                                                                 |
+| DevOps                 | claim → ADR boundary → (future) local proof (writer) → remote 4-rail → (much later) cross-repo (Dema + Data Lake) alignment                                                                                                                              |
+| CI/CD                  | Local gates (llm:guidance, diff --check, claim:check, delivery:check) then four remote rails; pre-push:seal (mu 104/104) as forcing function                                                                                                             |
 | A+ QA                  | No public performance, TPS, PoI, or economic claim without benchmark artifacts + external review. Local write must stay inside A+ ceilings for latency and integrity. Receipt is the first transferable truth object — verify before any downstream use. |
 
 ## Next Micro

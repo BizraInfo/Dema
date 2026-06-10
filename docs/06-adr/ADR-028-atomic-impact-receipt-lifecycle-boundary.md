@@ -177,16 +177,16 @@ No Shariah-compliant claim.
 
 G32R → ADR-028 → AIR lifecycle scaffold → AIR lifecycle mock → delivery-check integration → Data Lake alignment map → future URP bridge boundary.
 
-| Domain                  | Mapping |
-|-------------------------|---------|
+| Domain                 | Mapping                                                                                                                                                                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Integration Management | Ladder continuity: G32R (local writer + delivery-check) → ADR-028 AIR lifecycle boundary spec → future AIR test scaffold → AIR lifecycle mock → delivery-check integration of AIR → Data Lake body alignment → governed URP bridge boundary under proof gates |
-| Scope Management       | Boundary/spec only (defines the full Node0 receipt spine and layer boundaries; no AIR runtime, no MCP/A2A/HHMM/AgentFold/URP implementation) |
-| Quality Management     | Explicit allowed/forbidden input/output schemas per layer; consent + proof_gaps + anti-gaming carried through every transition; state machine (HHMM) auditable; local writer reference only; seal and URP as future expectations only |
-| Risk Management        | Anti-gaming at every boundary; explicit non-claims; no economic leakage across MCP/A2A/HHMM/Writer/Seal/URP; dual-repo awareness (Dema face vs Data Lake body); all public or economic surfaces remain fully blocked |
-| Stakeholder Management | Exact consent strings at each gate (writer already proven); PAT/SAT delegation rules; human review expectations at READY_FOR_REVIEW; operator owns local DEMA_HOME artifacts; no bypass of proof gaps or consent |
-| DevOps                 | claim → ADR boundary → (future) local proof (AIR scaffold + mock) → remote 4-rail → (much later) cross-repo (Dema + Data Lake) AIR alignment |
-| CI/CD                  | Local gates (llm:guidance, diff --check, claim:check, delivery:check) then four remote rails; pre-push:seal (mu 104/104) as forcing function |
-| A+ QA                  | No public performance, TPS, PoI, or economic claim without benchmark artifacts + external review. AIR remains the [MEASURED] immediate successor transferable local truth object — verify before any downstream use or propagation. |
+| Scope Management       | Boundary/spec only (defines the full Node0 receipt spine and layer boundaries; no AIR runtime, no MCP/A2A/HHMM/AgentFold/URP implementation)                                                                                                                  |
+| Quality Management     | Explicit allowed/forbidden input/output schemas per layer; consent + proof_gaps + anti-gaming carried through every transition; state machine (HHMM) auditable; local writer reference only; seal and URP as future expectations only                         |
+| Risk Management        | Anti-gaming at every boundary; explicit non-claims; no economic leakage across MCP/A2A/HHMM/Writer/Seal/URP; dual-repo awareness (Dema face vs Data Lake body); all public or economic surfaces remain fully blocked                                          |
+| Stakeholder Management | Exact consent strings at each gate (writer already proven); PAT/SAT delegation rules; human review expectations at READY_FOR_REVIEW; operator owns local DEMA_HOME artifacts; no bypass of proof gaps or consent                                              |
+| DevOps                 | claim → ADR boundary → (future) local proof (AIR scaffold + mock) → remote 4-rail → (much later) cross-repo (Dema + Data Lake) AIR alignment                                                                                                                  |
+| CI/CD                  | Local gates (llm:guidance, diff --check, claim:check, delivery:check) then four remote rails; pre-push:seal (mu 104/104) as forcing function                                                                                                                  |
+| A+ QA                  | No public performance, TPS, PoI, or economic claim without benchmark artifacts + external review. AIR remains the [MEASURED] immediate successor transferable local truth object — verify before any downstream use or propagation.                           |
 
 ## 20. Next Micro
 

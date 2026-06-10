@@ -6,7 +6,7 @@
 
 **The step:** After G8R ✅ + proposal impl + integration in delivery-check, created minimal test-only scaffold for ADR-021 (tests/impact-scoring-mvp.test.js with 7 categories as placeholders, [PROTOTYPE], DESIGNED_NOT_LIVE, no scoring logic).
 
-**Elite blueprint:** MBOK Quality (measurable with anti-gaming in boundary) + Integration (ties to proposal). DevOps/CI/CD (added to tests/*.test.js harness, will be in future 4-rail). A+ Perf-QA ("not yet measured").
+**Elite blueprint:** MBOK Quality (measurable with anti-gaming in boundary) + Integration (ties to proposal). DevOps/CI/CD (added to tests/\*.test.js harness, will be in future 4-rail). A+ Perf-QA ("not yet measured").
 
 **Ladder:** G8R ✅. Proposal unblocked + proven. Scoring boundary defined + test scaffold created (test-only). Other 9 blocked.
 

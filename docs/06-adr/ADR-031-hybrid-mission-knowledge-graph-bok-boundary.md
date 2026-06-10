@@ -201,16 +201,16 @@ No Dema/Data-Lake runtime sync.
 
 G44R → ADR-031 → hybrid knowledge scaffold → hybrid knowledge mock → delivery-check integration → future runtime boundary.
 
-| Domain                  | Boundary / Spec Status |
-|-------------------------|------------------------|
-| Integration Management  | Boundary/spec only (defines mission tree / knowledge graph / BoK reference expectations as future learning geometry; no runtime, no vector store, no autonomous retrieval, no Data Lake mutation, no public activation) |
-| Scope Management        | Explicitly limited to references, expectations, and proof gaps. Mission ID remains primary key. No hybrid memory runtime, graph runtime, BoK runtime, or economic surfaces. |
-| Quality Management      | Proof gaps required. Environment re-check and stale-belief invalidation as invariants. Deterministic boundary IDs (sha256 of semantic body). Forbidden lists for all runtime/sync/economic terms. |
-| Risk Management         | High-risk surfaces (vector memory, autonomous retrieval, global state, cross-repo mutation, public/economic claims) explicitly forbidden until future proof gates. |
-| Stakeholder Management  | Dema remains constitutional face. Data Lake remains deep body. Future hybrid learning must respect dual-repo separation and exact consent. |
-| DevOps                  | Local-only, [PROTOTYPE][DESIGNED_NOT_LIVE] posture. Delivery-check markers only after scaffold + mock + four-rail. Pre-push seal + 4-rail required. |
-| CI/CD                   | G-ring progression (ADR → scaffold → mock → delivery-check → remote 4-rail). Remote landing guard enforced before polling. |
-| A+ Performance-Quality Assurance | No public performance, TPS, or economic claims. All learning geometry remains expectation-only until additional gates, benchmarks, and external review. |
+| Domain                           | Boundary / Spec Status                                                                                                                                                                                                  |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Integration Management           | Boundary/spec only (defines mission tree / knowledge graph / BoK reference expectations as future learning geometry; no runtime, no vector store, no autonomous retrieval, no Data Lake mutation, no public activation) |
+| Scope Management                 | Explicitly limited to references, expectations, and proof gaps. Mission ID remains primary key. No hybrid memory runtime, graph runtime, BoK runtime, or economic surfaces.                                             |
+| Quality Management               | Proof gaps required. Environment re-check and stale-belief invalidation as invariants. Deterministic boundary IDs (sha256 of semantic body). Forbidden lists for all runtime/sync/economic terms.                       |
+| Risk Management                  | High-risk surfaces (vector memory, autonomous retrieval, global state, cross-repo mutation, public/economic claims) explicitly forbidden until future proof gates.                                                      |
+| Stakeholder Management           | Dema remains constitutional face. Data Lake remains deep body. Future hybrid learning must respect dual-repo separation and exact consent.                                                                              |
+| DevOps                           | Local-only, [PROTOTYPE][DESIGNED_NOT_LIVE] posture. Delivery-check markers only after scaffold + mock + four-rail. Pre-push seal + 4-rail required.                                                                     |
+| CI/CD                            | G-ring progression (ADR → scaffold → mock → delivery-check → remote 4-rail). Remote landing guard enforced before polling.                                                                                              |
+| A+ Performance-Quality Assurance | No public performance, TPS, or economic claims. All learning geometry remains expectation-only until additional gates, benchmarks, and external review.                                                                 |
 
 ## 21. Next Micro
 

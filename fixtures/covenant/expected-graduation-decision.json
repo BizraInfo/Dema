@@ -24,7 +24,5 @@
       "requires_human_review": true
     }
   ],
-  "proof_gap": [
-    "Impact evidence is not independently verified in v0.1."
-  ]
+  "proof_gap": ["Impact evidence is not independently verified in v0.1."]
 }

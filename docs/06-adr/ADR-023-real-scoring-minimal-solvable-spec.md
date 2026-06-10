@@ -208,16 +208,16 @@ Only after all of the above may a future GO for minimal implementation be consid
 
 ## MBOK / DevOps / CI-CD / A+ QA Mapping
 
-| Domain                  | Mapping |
-|-------------------------|---------|
+| Domain                 | Mapping                                                                                                                      |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | Integration Management | Ladder continuity from ADR-022 boundary + G14 scaffold → ADR-023 minimal spec → future scaffold → local proof → remote proof |
-| Scope Management       | Minimal solvable case only (one object, one evidence packet, one consent, one review, one receipt) |
-| Quality Management     | Allowed/forbidden input-output rules; anti-gaming_status; proof_gaps required |
-| Risk Management        | Anti-gaming rule; proof_gaps array; no forbidden claim language; explicit non-claims |
-| Stakeholder Management | Exact consent before write; review boundary (score ≠ final decision); human review separate |
-| DevOps                 | claim → ADR → minimal spec → (future) local proof → remote 4-rail |
-| CI/CD                  | Local gates (llm:guidance, diff --check, claim:check) then four remote rails |
-| A+ QA                  | No "measured" or "proven" claim until artifacts (receipts, test runs, CI logs) exist and are captured |
+| Scope Management       | Minimal solvable case only (one object, one evidence packet, one consent, one review, one receipt)                           |
+| Quality Management     | Allowed/forbidden input-output rules; anti-gaming_status; proof_gaps required                                                |
+| Risk Management        | Anti-gaming rule; proof_gaps array; no forbidden claim language; explicit non-claims                                         |
+| Stakeholder Management | Exact consent before write; review boundary (score ≠ final decision); human review separate                                  |
+| DevOps                 | claim → ADR → minimal spec → (future) local proof → remote 4-rail                                                            |
+| CI/CD                  | Local gates (llm:guidance, diff --check, claim:check) then four remote rails                                                 |
+| A+ QA                  | No "measured" or "proven" claim until artifacts (receipts, test runs, CI logs) exist and are captured                        |
 
 ## Next Micro
 
@@ -228,4 +228,3 @@ GO: REAL SCORING MINIMAL SPEC TEST SCAFFOLD
 Not implementation. Not reward logic. Not contracts. Not tokens.
 
 ---
-

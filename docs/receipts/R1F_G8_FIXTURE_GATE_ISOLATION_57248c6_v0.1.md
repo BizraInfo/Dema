@@ -13,6 +13,7 @@
 **Integration:** package.json "test" now pipes through the classifier (tee for visibility + classifier exit code decides job success).
 
 **Behavior (per spec):**
+
 - Detects exactly the two signatures:
   - "not a baseline_l1.v0.1" (baseline-l1-diff.mjs)
   - integration-check.test.js:46 + false !== true / report.ok assertion
@@ -21,6 +22,7 @@
 - Never suppresses unknown issues. Fixture scaffold tests stay explicitly visible as passing.
 
 **Acceptance checklist status (this micro):**
+
 - [x] Detects exactly the two known harness failures.
 - [x] Does not suppress unknown failures.
 - [x] Prints exact classification (R1F + B_BUCKET...).
@@ -31,6 +33,7 @@
 - [ ] Pushes through remote check + BIZRA Review Gate (pending the push + re-capture after this change lands).
 
 **Local verification performed:**
+
 - llm:guidance PASS
 - git diff --check PASS
 - impact-launchpad-mvp.test.js: 7/7 (and 100% coverage on the file)

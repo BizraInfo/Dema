@@ -18,13 +18,13 @@ G28R closed: the reward receipt local write plan mock (scripts/reward-receipt-lo
 
 In the dual-repo Node0 model (Dema = constitutional face/control layer; Data Lake = deep computational body with Rust/Python/agent/federation/crypto layers, PAT-7, SAT-5, FATE Gate, five-layer governed stack, and O(1)→full inference cognitive cascade), the receipt layer is the embryo of the full economy. Dema's proof ladder (G0–G50) is the control plane that sequences safe activation of each DNA subsystem.
 
-This ADR defines the *local writer boundary* for the actual code that will consume a validated local write-plan (from G27) and perform the filesystem persistence of a reward receipt review artifact inside Node0. It does not implement any writer. It only specifies the rules, consent, anti-gaming, path safety, integrity verification, and non-activation constraints so that a future controlled local writer prototype can be built safely.
+This ADR defines the _local writer boundary_ for the actual code that will consume a validated local write-plan (from G27) and perform the filesystem persistence of a reward receipt review artifact inside Node0. It does not implement any writer. It only specifies the rules, consent, anti-gaming, path safety, integrity verification, and non-activation constraints so that a future controlled local writer prototype can be built safely.
 
 The technical report (Impact Bonding Curve Launchpad analysis) and Data Lake README reinforce that BIZRA Node0 must eventually contain the full closed loop (scoring, eligibility, receipt, ledger, token accounting mock, contract verifier mock, marketplace proof-object mock, Node1 handshake mock, public URP bridge mock/testnet, Shariah evidence package), but every dangerous or economic subsystem must first exist in Genesis/Test mode (LOCAL_ONLY, [PROTOTYPE][DESIGNED_NOT_LIVE], proof-gated, read/list only from outside the boundary) before any public activation.
 
 ## Purpose
 
-Define the minimum safe rules under which a future local writer may take a validated reward receipt local write-plan and *execute the private persistence* (atomic content-addressed file write under DEMA_HOME with restrictive permissions and integrity verification) so that subsequent Node0 subsystems (ledger, integrity proofs, accounting mocks, etc.) have a trusted private source of truth — without ever performing minting, publishing, bridging, economic authorization, or public activation.
+Define the minimum safe rules under which a future local writer may take a validated reward receipt local write-plan and _execute the private persistence_ (atomic content-addressed file write under DEMA_HOME with restrictive permissions and integrity verification) so that subsequent Node0 subsystems (ledger, integrity proofs, accounting mocks, etc.) have a trusted private source of truth — without ever performing minting, publishing, bridging, economic authorization, or public activation.
 
 ## Definition
 
@@ -35,7 +35,7 @@ The writer boundary is the last pre-implementation gate before the actual writer
 ## What Local Reward Receipt Writer Means
 
 - consumes a validated local write-plan (from G27 mock or future equivalent)
-- exact-string consent required for the write *action*
+- exact-string consent required for the write _action_
 - atomic write (tmp + rename) to a content-addressed or stable-named file under DEMA_HOME
 - restrictive permissions (0o600) on the persisted artifact
 - integrity hash (sha256 of canonical form) computed before write and verified on read-back
@@ -97,7 +97,7 @@ The persisted artifact must remain readable/listable only by the local operator 
 
 ## Consent Rule
 
-Exact-string consent (to be defined as REWARD_RECEIPT_LOCAL_WRITER_CONSENT or equivalent in the future writer module) is required for the write *action*. The string must be the literal GO command for the writer boundary. No inferred, default, or broad consent. The consent is for *local private persistence only*, using a pre-validated plan.
+Exact-string consent (to be defined as REWARD*RECEIPT_LOCAL_WRITER_CONSENT or equivalent in the future writer module) is required for the write \_action*. The string must be the literal GO command for the writer boundary. No inferred, default, or broad consent. The consent is for _local private persistence only_, using a pre-validated plan.
 
 ## Review Boundary
 
@@ -154,15 +154,15 @@ All artifacts remain local, consented, reviewed, gap-aware, anti-gaming-checked,
 
 ## MBOK / DevOps / CI-CD / A+ QA Mapping
 
-| Domain                  | Mapping |
-|-------------------------|---------|
-| Integration Management | Ladder continuity: G28R (plan mock + delivery-check) → ADR-027 local writer boundary spec → future writer test scaffold → local writer prototype → ledger / accounting mocks → full Node0 DNA (with Data Lake body) under proof gates |
-| Scope Management       | Boundary/spec only (defines safe local writer rules; no implementation, no mint, no publish, no bridge, no economic activation) |
-| Quality Management     | Allowed/forbidden inputs/outputs; plan validation + re-check at write time; atomic write + 0o600 perms; integrity_hash pre/post verification; proof_gaps carried forward; read/list only outside boundary |
-| Risk Management        | Anti-gaming rule at write time; explicit non-claims; no economic leakage; dual-repo awareness (face vs body); technical report risks (key material, Halo2/ML-KEM, TPS/PoI benchmarks) deferred to later gates |
-| Stakeholder Management | Exact consent for the write action; review boundary (writer executes plan only; local file ≠ minted receipt or reward); operator owns the private DEMA_HOME artifact; human review / additional gates for later use |
-| DevOps                 | claim → ADR boundary → (future) local proof (writer) → remote 4-rail → (much later) cross-repo (Dema + Data Lake) alignment |
-| CI/CD                  | Local gates (llm:guidance, diff --check, claim:check, delivery:check) then four remote rails; pre-push:seal (mu 104/104) as forcing function |
+| Domain                 | Mapping                                                                                                                                                                                                                                                            |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Integration Management | Ladder continuity: G28R (plan mock + delivery-check) → ADR-027 local writer boundary spec → future writer test scaffold → local writer prototype → ledger / accounting mocks → full Node0 DNA (with Data Lake body) under proof gates                              |
+| Scope Management       | Boundary/spec only (defines safe local writer rules; no implementation, no mint, no publish, no bridge, no economic activation)                                                                                                                                    |
+| Quality Management     | Allowed/forbidden inputs/outputs; plan validation + re-check at write time; atomic write + 0o600 perms; integrity_hash pre/post verification; proof_gaps carried forward; read/list only outside boundary                                                          |
+| Risk Management        | Anti-gaming rule at write time; explicit non-claims; no economic leakage; dual-repo awareness (face vs body); technical report risks (key material, Halo2/ML-KEM, TPS/PoI benchmarks) deferred to later gates                                                      |
+| Stakeholder Management | Exact consent for the write action; review boundary (writer executes plan only; local file ≠ minted receipt or reward); operator owns the private DEMA_HOME artifact; human review / additional gates for later use                                                |
+| DevOps                 | claim → ADR boundary → (future) local proof (writer) → remote 4-rail → (much later) cross-repo (Dema + Data Lake) alignment                                                                                                                                        |
+| CI/CD                  | Local gates (llm:guidance, diff --check, claim:check, delivery:check) then four remote rails; pre-push:seal (mu 104/104) as forcing function                                                                                                                       |
 | A+ QA                  | No public performance, TPS, PoI, or economic claim without benchmark artifacts + external review. Local writer must stay inside A+ ceilings for latency, integrity, and safety. Receipt is the first transferable truth object — verify before any downstream use. |
 
 ## Next Micro

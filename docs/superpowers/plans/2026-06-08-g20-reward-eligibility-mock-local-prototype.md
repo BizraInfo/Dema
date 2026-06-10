@@ -13,6 +13,7 @@
 ### Task 1: RED Test For G20 Mock Review
 
 **Files:**
+
 - Create: `tests/reward-eligibility-mock.test.js`
 - Later create: `scripts/reward-eligibility-mock.mjs`
 
@@ -45,6 +46,7 @@ Expected: fail because `scripts/reward-eligibility-mock.mjs` does not exist yet.
 ### Task 2: GREEN Minimal Module
 
 **Files:**
+
 - Create: `scripts/reward-eligibility-mock.mjs`
 - Test: `tests/reward-eligibility-mock.test.js`
 
@@ -75,6 +77,7 @@ Expected: pass.
 ### Task 3: Delivery Check Integration
 
 **Files:**
+
 - Modify: `scripts/delivery-check.mjs`
 - Test: `npm run delivery:check`
 
@@ -102,6 +105,7 @@ Expected: exit 0 and print `ADR-024 reward eligibility mock integrated: PASS`.
 ### Task 4: Local Verification
 
 **Files:**
+
 - Verify all touched files.
 
 - [x] **Step 1: Run targeted and required local gates**

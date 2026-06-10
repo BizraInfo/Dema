@@ -33,7 +33,7 @@ node -e '
   const decision = screenProposal(JSON.parse(fs.readFileSync("proposal.json", "utf8")));
   const receipt = signReceipt(decision, "GO");
   console.log(JSON.stringify(receipt, null, 2));
-' 
+'
 ```
 
 ## Minimal schemas (as implemented)

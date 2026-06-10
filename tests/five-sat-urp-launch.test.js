@@ -39,9 +39,18 @@ test("verifyNode05SatUrpLaunch succeeds on valid launch result", () => {
   assert.equal(verified.active_sat.length, 5);
   assert.equal(verified.locked, true);
   assert.ok(verified.connection_rules);
-  assert.equal(verified.connection_rules.node0_connects_via_its_urp_layer, true);
-  assert.equal(verified.connection_rules.node1_connects_to_bizra_universal_resource_pool, true);
-  assert.equal(verified.connection_rules.node1_declares_new_5_sat, "preview_only_not_minted_in_dema");
+  assert.equal(
+    verified.connection_rules.node0_connects_via_its_urp_layer,
+    true,
+  );
+  assert.equal(
+    verified.connection_rules.node1_connects_to_bizra_universal_resource_pool,
+    true,
+  );
+  assert.equal(
+    verified.connection_rules.node1_declares_new_5_sat,
+    "preview_only_not_minted_in_dema",
+  );
 });
 
 test("buildNode15SatPreview for Node1 new 5 SAT via universal pool", () => {

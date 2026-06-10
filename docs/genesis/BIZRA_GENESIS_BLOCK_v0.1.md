@@ -31,12 +31,12 @@ This Genesis Block inherits from the current Dema canon:
 
 Current remote-green witness baseline:
 
-| Workflow | Run ID | Conclusion | Head SHA |
-| --- | ---: | --- | --- |
-| `check` | `27070525350` | success | `be42ab3c0be100921821dfdb28f814b3b1bf926f` |
-| `BIZRA Review Gate` | `27070525358` | success | `be42ab3c0be100921821dfdb28f814b3b1bf926f` |
-| `gitleaks` | `27070525343` | success | `be42ab3c0be100921821dfdb28f814b3b1bf926f` |
-| `CodeQL` | `27070525344` | success | `be42ab3c0be100921821dfdb28f814b3b1bf926f` |
+| Workflow            |        Run ID | Conclusion | Head SHA                                   |
+| ------------------- | ------------: | ---------- | ------------------------------------------ |
+| `check`             | `27070525350` | success    | `be42ab3c0be100921821dfdb28f814b3b1bf926f` |
+| `BIZRA Review Gate` | `27070525358` | success    | `be42ab3c0be100921821dfdb28f814b3b1bf926f` |
+| `gitleaks`          | `27070525343` | success    | `be42ab3c0be100921821dfdb28f814b3b1bf926f` |
+| `CodeQL`            | `27070525344` | success    | `be42ab3c0be100921821dfdb28f814b3b1bf926f` |
 
 These GitHub Actions runs are witness evidence. Per ADR-006, Node0 remains the
 authority; CI does not mint canonical Node0 receipts.
@@ -171,12 +171,12 @@ This preserves the ethical sequence: proof first, trust second, scale third.
 This document uses SAPE as an operator-side reasoning lens, not as a runtime
 claim:
 
-| Lens | Genesis application |
-| --- | --- |
-| Signal | Remote-green `be42ab3`, local gates, 5SAT declaration, Covenant prototype. |
-| Abstraction | Node0 is the seed pattern; Dema is the face; URP is designed shared soil. |
-| Probe | What breaks if Node1 starts before Node0 closes the loop? Trust and receipts. |
-| Elevation | Convert strategic vision into proof-gated Node0 DoD before network growth. |
+| Lens        | Genesis application                                                           |
+| ----------- | ----------------------------------------------------------------------------- |
+| Signal      | Remote-green `be42ab3`, local gates, 5SAT declaration, Covenant prototype.    |
+| Abstraction | Node0 is the seed pattern; Dema is the face; URP is designed shared soil.     |
+| Probe       | What breaks if Node1 starts before Node0 closes the loop? Trust and receipts. |
+| Elevation   | Convert strategic vision into proof-gated Node0 DoD before network growth.    |
 
 Ihsan discipline means the document must neither diminish real progress nor
 inflate unproven layers. Every claim is bounded by its current evidence label.

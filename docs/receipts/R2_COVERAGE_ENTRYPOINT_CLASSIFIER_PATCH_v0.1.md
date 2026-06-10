@@ -11,6 +11,7 @@
 **Root cause addressed:** R2A (workflows bypass npm test via direct coverage) + R2C (BIZRA proof-quality separate path). Both call `npm run coverage`.
 
 **Change:** Updated only the "coverage" script in package.json to:
+
 - restore URP artifacts (B-bucket hygiene)
 - run the exact coverage-flagged node --test
 - tee to /tmp/bizra-coverage-output.log
@@ -20,6 +21,7 @@
 This ensures the step that was actually failing the remote gates (coverage on 22.x in check + BIZRA) now goes through the same R1F classifier as "npm test".
 
 **Local proof executed (post-edit):**
+
 - npm run coverage → exercised (known B-bucket present; classifier should have classified)
 - npm run llm:guidance → PASS
 - git diff --check → clean

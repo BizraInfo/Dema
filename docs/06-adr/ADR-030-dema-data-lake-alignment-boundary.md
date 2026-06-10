@@ -186,16 +186,16 @@ No Shariah-compliant claim.
 
 G40R → ADR-030 → Dema/Data-Lake alignment scaffold → alignment mock → delivery-check integration → future bridge boundary.
 
-| Domain                  | Mapping |
-|-------------------------|---------|
-| Integration Management | Ladder continuity: G40R (mission-state delivery-check) → ADR-030 Dema/Data-Lake alignment boundary spec → future alignment scaffold + mock → delivery-check integration → cross-repo (Dema face + Data Lake body) alignment under proof gates |
-| Scope Management       | Boundary/spec only (defines face/body reference expectations, PAT/SAT/FATE/URP placeholders, and proof-gap requirements; no runtime sync, mutation, API bridge, cross-repo write, or activation) |
-| Quality Management     | Explicit allowed/forbidden schemas for alignment artifacts; proof_gaps carried forward; all downstream layers (PAT-7, SAT-5, FATE, URP) as auditable expectations only; dual-repo awareness enforced at every boundary |
-| Risk Management        | Anti-gaming via explicit non-claims and proof gaps; no economic leakage across the alignment; dual-repo separation (Dema face vs Data Lake body) prevents premature body-layer activation; transcript-derived risks (stale state, over-claim) bounded by placeholder discipline |
-| Stakeholder Management | Dema operator retains constitutional face control; PAT-7 as future personal agent expectation; SAT-5 as future system governance expectation; FATE as future review expectation; URP as future propagation expectation; exact consent strings required at future bridge gates |
-| DevOps                 | claim → ADR boundary → (future) local proof (alignment scaffold + mock) → remote 4-rail → (much later) cross-repo (Dema face + Data Lake body) alignment |
-| CI/CD                  | Local gates (llm:guidance, diff --check, claim:check, delivery:check) then four remote rails; pre-push:seal (mu 104/104) as forcing function |
-| A+ Performance-Quality Assurance | No public performance, TPS, PoI, or economic claim without benchmark artifacts + external review. Dema/Data-Lake alignment remains reference-and-expectation only — verify before any downstream bridge or propagation. |
+| Domain                           | Mapping                                                                                                                                                                                                                                                                         |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Integration Management           | Ladder continuity: G40R (mission-state delivery-check) → ADR-030 Dema/Data-Lake alignment boundary spec → future alignment scaffold + mock → delivery-check integration → cross-repo (Dema face + Data Lake body) alignment under proof gates                                   |
+| Scope Management                 | Boundary/spec only (defines face/body reference expectations, PAT/SAT/FATE/URP placeholders, and proof-gap requirements; no runtime sync, mutation, API bridge, cross-repo write, or activation)                                                                                |
+| Quality Management               | Explicit allowed/forbidden schemas for alignment artifacts; proof_gaps carried forward; all downstream layers (PAT-7, SAT-5, FATE, URP) as auditable expectations only; dual-repo awareness enforced at every boundary                                                          |
+| Risk Management                  | Anti-gaming via explicit non-claims and proof gaps; no economic leakage across the alignment; dual-repo separation (Dema face vs Data Lake body) prevents premature body-layer activation; transcript-derived risks (stale state, over-claim) bounded by placeholder discipline |
+| Stakeholder Management           | Dema operator retains constitutional face control; PAT-7 as future personal agent expectation; SAT-5 as future system governance expectation; FATE as future review expectation; URP as future propagation expectation; exact consent strings required at future bridge gates   |
+| DevOps                           | claim → ADR boundary → (future) local proof (alignment scaffold + mock) → remote 4-rail → (much later) cross-repo (Dema face + Data Lake body) alignment                                                                                                                        |
+| CI/CD                            | Local gates (llm:guidance, diff --check, claim:check, delivery:check) then four remote rails; pre-push:seal (mu 104/104) as forcing function                                                                                                                                    |
+| A+ Performance-Quality Assurance | No public performance, TPS, PoI, or economic claim without benchmark artifacts + external review. Dema/Data-Lake alignment remains reference-and-expectation only — verify before any downstream bridge or propagation.                                                         |
 
 ## 21. Next Micro
 

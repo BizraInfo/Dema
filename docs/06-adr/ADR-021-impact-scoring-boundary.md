@@ -96,15 +96,15 @@ Create ADR-021 as the **test boundary** for Impact Scoring (parallel to ADR-020 
 
 ## Full-Stack Boundary Map (MBOK + Blueprint)
 
-| Domain | MVP/Current Boundary | Forbidden Promotion |
-|--------|----------------------|---------------------|
-| Product | Local proposal envelope + scoring definition only | No public scoring dashboards, no "impact score = value" |
-| Domain Model | Score = verified contribution + evidence strength | No "score = reward points" |
-| Data Contract | Receipt expectation for scoring events (local only) | No on-chain score minting |
-| App Logic | Test scaffold only (claim/reject/ consent/review/receipt) | No auto-scoring engine |
-| Security | Exact consent "GO" for any scoring write; review separation | No public score exposure |
-| DevOps | delivery-check integration; 4-rail after test fixture | No CI changes without separate GO |
-| QA | A+ gates + targeted scoring tests; "not yet measured" until artifact | No perf claims on scoring |
+| Domain        | MVP/Current Boundary                                                 | Forbidden Promotion                                     |
+| ------------- | -------------------------------------------------------------------- | ------------------------------------------------------- |
+| Product       | Local proposal envelope + scoring definition only                    | No public scoring dashboards, no "impact score = value" |
+| Domain Model  | Score = verified contribution + evidence strength                    | No "score = reward points"                              |
+| Data Contract | Receipt expectation for scoring events (local only)                  | No on-chain score minting                               |
+| App Logic     | Test scaffold only (claim/reject/ consent/review/receipt)            | No auto-scoring engine                                  |
+| Security      | Exact consent "GO" for any scoring write; review separation          | No public score exposure                                |
+| DevOps        | delivery-check integration; 4-rail after test fixture                | No CI changes without separate GO                       |
+| QA            | A+ gates + targeted scoring tests; "not yet measured" until artifact | No perf claims on scoring                               |
 
 ## MBOK Alignment (10 Domains)
 

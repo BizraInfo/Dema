@@ -212,16 +212,16 @@ No global state store.
 
 G48R → ADR-032 → Node0 digest scaffold → Node0 digest mock → delivery-check integration → future bridge boundary.
 
-| Domain                  | Boundary / Spec Status |
-|-------------------------|------------------------|
-| Integration Management  | Boundary/spec only (defines Node0 Closed-Loop Digest as a traceable local proof-summary reference envelope across the receipt-to-hybrid-knowledge spine; no digest runtime, writer, aggregator, closed-loop execution, or public activation) |
-| Scope Management        | Explicitly limited to references and expectations. All prior proof layers (receipt, writer, AIR, mission-state, alignment, hybrid-knowledge) remain unchanged. No new runtime or economic surfaces. |
-| Quality Management      | Proof gaps required at every layer. Still-blocked invariants carried forward as a living snapshot. Deterministic boundary IDs (sha256 of semantic body). Forbidden lists for all runtime/sync/economic terms. |
-| Risk Management         | High-risk surfaces (digest runtime, aggregator, closed-loop execution, public/economic claims, cross-repo mutation) explicitly forbidden until future proof gates. |
-| Stakeholder Management  | Dema remains constitutional face. Data Lake remains deep body. Future digest must respect dual-repo separation, exact consent, and the full still-blocked list. |
-| DevOps                  | Local-only, [PROTOTYPE][DESIGNED_NOT_LIVE] posture. Delivery-check markers only after scaffold + mock + four-rail. Pre-push seal + 4-rail required. |
-| CI/CD                   | G-ring progression (ADR → scaffold → mock → delivery-check → remote 4-rail). Remote landing guard enforced before polling. |
-| A+ Performance-Quality Assurance | No public performance, TPS, or economic claims. All digest references remain expectation-only until additional gates, benchmarks, and external review. |
+| Domain                           | Boundary / Spec Status                                                                                                                                                                                                                       |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Integration Management           | Boundary/spec only (defines Node0 Closed-Loop Digest as a traceable local proof-summary reference envelope across the receipt-to-hybrid-knowledge spine; no digest runtime, writer, aggregator, closed-loop execution, or public activation) |
+| Scope Management                 | Explicitly limited to references and expectations. All prior proof layers (receipt, writer, AIR, mission-state, alignment, hybrid-knowledge) remain unchanged. No new runtime or economic surfaces.                                          |
+| Quality Management               | Proof gaps required at every layer. Still-blocked invariants carried forward as a living snapshot. Deterministic boundary IDs (sha256 of semantic body). Forbidden lists for all runtime/sync/economic terms.                                |
+| Risk Management                  | High-risk surfaces (digest runtime, aggregator, closed-loop execution, public/economic claims, cross-repo mutation) explicitly forbidden until future proof gates.                                                                           |
+| Stakeholder Management           | Dema remains constitutional face. Data Lake remains deep body. Future digest must respect dual-repo separation, exact consent, and the full still-blocked list.                                                                              |
+| DevOps                           | Local-only, [PROTOTYPE][DESIGNED_NOT_LIVE] posture. Delivery-check markers only after scaffold + mock + four-rail. Pre-push seal + 4-rail required.                                                                                          |
+| CI/CD                            | G-ring progression (ADR → scaffold → mock → delivery-check → remote 4-rail). Remote landing guard enforced before polling.                                                                                                                   |
+| A+ Performance-Quality Assurance | No public performance, TPS, or economic claims. All digest references remain expectation-only until additional gates, benchmarks, and external review.                                                                                       |
 
 ## 21. Next Micro
 

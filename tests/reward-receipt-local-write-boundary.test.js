@@ -23,40 +23,46 @@
  * NO_SHARIAH_COMPLIANCE_CLAIM
  */
 
-import test from 'node:test';
-import assert from 'node:assert/strict';
+import test from "node:test";
+import assert from "node:assert/strict";
 
 // Category 1: Claim label boundary
-test('ADR-026 local write claim label boundary', () => {
-  assert.ok(true, 'Local write claim label boundary scaffold - [DECLARED]');
+test("ADR-026 local write claim label boundary", () => {
+  assert.ok(true, "Local write claim label boundary scaffold - [DECLARED]");
 });
 
 // Category 2: Allowed write input object boundary
-test('ADR-026 allowed write input object boundary', () => {
-  assert.ok(true, 'Allowed write input object boundary scaffold - [DECLARED]');
+test("ADR-026 allowed write input object boundary", () => {
+  assert.ok(true, "Allowed write input object boundary scaffold - [DECLARED]");
 });
 
 // Category 3: Forbidden write input rejection boundary
-test('ADR-026 forbidden write input rejection boundary', () => {
-  assert.ok(true, 'Forbidden write input rejection boundary scaffold - [DECLARED]');
+test("ADR-026 forbidden write input rejection boundary", () => {
+  assert.ok(
+    true,
+    "Forbidden write input rejection boundary scaffold - [DECLARED]",
+  );
 });
 
 // Category 4: Allowed write plan output boundary
-test('ADR-026 allowed write plan output boundary', () => {
-  assert.ok(true, 'Allowed write plan output boundary scaffold - [DECLARED]');
+test("ADR-026 allowed write plan output boundary", () => {
+  assert.ok(true, "Allowed write plan output boundary scaffold - [DECLARED]");
 });
 
 // Category 5: Forbidden write output rejection boundary
-test('ADR-026 forbidden write output rejection boundary', () => {
-  assert.ok(true, 'Forbidden write output rejection boundary scaffold - [DECLARED]');
+test("ADR-026 forbidden write output rejection boundary", () => {
+  assert.ok(
+    true,
+    "Forbidden write output rejection boundary scaffold - [DECLARED]",
+  );
 });
 
 // Category 6: Path / integrity / consent boundary
-test('ADR-026 path integrity consent boundary', () => {
-  assert.ok(true, 'Path integrity consent boundary scaffold - [DECLARED]');
+test("ADR-026 path integrity consent boundary", () => {
+  assert.ok(true, "Path integrity consent boundary scaffold - [DECLARED]");
 });
 
 // Category 7: Non-claim and performance skeleton boundary
-test('ADR-026 non-claim and performance skeleton boundary', () => {
-  assert.ok(true, 'Non-claim and performance skeleton scaffold - [DECLARED]');
+test("ADR-026 non-claim and performance skeleton boundary", () => {
+  assert.ok(true, "Non-claim and performance skeleton scaffold - [DECLARED]");
 });

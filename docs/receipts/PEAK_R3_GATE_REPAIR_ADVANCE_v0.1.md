@@ -7,6 +7,7 @@
 **The step:** R3 patch (route "check" through classifier) as the peak ultra micro after the R3 trace. This completes end-to-end classifier for the 22.x sequence (test/coverage/check), directly fixing the bypass found in the trace.
 
 **State of art / elite practitioner embodiment:**
+
 - MBOK Integration (4.0): Pipeline automation now consistent.
 - MBOK Risk (11.0): Mitigated the exact CI bypass.
 - MBOK Quality (8.0) + A+ Perf-QA: Elevated "check" to same standard; supports delivery-check, mu 104/104, llm:guidance.

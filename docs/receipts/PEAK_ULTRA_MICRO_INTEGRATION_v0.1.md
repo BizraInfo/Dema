@@ -2,7 +2,8 @@
 
 **Truth label:** DECLARED_PEAK_ULTRA_MICRO_INTEGRATION_V0_1
 
-**Embodied thinking (per query):** 
+**Embodied thinking (per query):**
+
 - Polymath mastermind + interdisciplinary: MBOK (Integration/Quality/Risk) + DevOps (value stream) + CS (minimal ESM + pipeline) + Ihsān ethics.
 - Graph of Thoughts: Unlock ladder as DAG; this step adds the "integration/proof" edge after implementation node.
 - Analogical: Proposal envelope = "legal seed" being planted and exercised in the larger "A+ ecosystem" (like the classifier pattern diffusing across CI steps).
@@ -16,6 +17,7 @@
 **The peak ultra micro:** Post-G8R (green on 2150ff5), the proposal-flow was implemented as minimal local envelope (5 markers only). This step integrates it into the elite A+ orchestrator (`delivery-check.mjs` — the blueprint's central perf-QA gate). Now the proposal is not only coded but exercised in the continuous delivery loop.
 
 **Elite full-stack blueprint (MBOK/DevOps/CI/CD/A+ QA):**
+
 - MBOK Integration (4.0): Proposal now part of the automated gate stack.
 - MBOK Quality (8.0) + Risk (11.0): Proof that the unlocked item works inside A+ thresholds.
 - DevOps value stream: Intent (ladder unblock) → scoped (5 markers only) → spec (envelope.mjs) → validation (delivery-check now runs it) → witness (receipt + this note).
@@ -23,6 +25,7 @@
 - A+ Perf-QA: delivery-check now covers the new path; overall A+ preserved.
 
 **Local proofs (world-class standards, optimized/maintainable/error-free):**
+
 - llm:guidance PASS, git diff --check clean, fixture 7/7.
 - Coverage + check sequence exercised.
 - delivery-check now logs "ADR-020 proposal envelope integrated: PASS".

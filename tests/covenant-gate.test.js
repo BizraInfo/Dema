@@ -7,7 +7,10 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { screenProposal, signReceipt } from "../packages/covenant/src/covenant-gate.js";
+import {
+  screenProposal,
+  signReceipt,
+} from "../packages/covenant/src/covenant-gate.js";
 
 const EXAMPLE_PROPOSAL = {
   project_id: "ocean-cleanup-dao",
@@ -36,7 +39,9 @@ test("CovenantGate screens a clean proposal and requires micro-consent", () => {
   assert.ok(decision.claim_labels);
 
   // No guaranteed APR → verification packet exists
-  const hasVerification = decision.thought_packets.some(p => p.type === "verification" && /No guaranteed APR/.test(p.claim));
+  const hasVerification = decision.thought_packets.some(
+    (p) => p.type === "verification" && /No guaranteed APR/.test(p.claim),
+  );
   assert.equal(hasVerification, true);
 });
 
@@ -56,6 +61,8 @@ test("blocked on prohibited sector", () => {
   const bad = { ...EXAMPLE_PROPOSAL, sector: "gambling" };
   const decision = screenProposal(bad);
   assert.equal(decision.status, "blocked");
-  const hasObjection = decision.thought_packets.some(p => p.type === "objection" && /prohibited/.test(p.claim));
+  const hasObjection = decision.thought_packets.some(
+    (p) => p.type === "objection" && /prohibited/.test(p.claim),
+  );
   assert.equal(hasObjection, true);
 });

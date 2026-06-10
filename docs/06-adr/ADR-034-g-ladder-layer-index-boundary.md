@@ -72,33 +72,33 @@ g_ring_id
 
 Every indexed layer must map to the six LCC-6 fields:
 
-* boundary_ref
-* schema_ref
-* test_scaffold_ref
-* delivery_check_marker
-* claim_map_status
-* remote_witness_condition
+- boundary_ref
+- schema_ref
+- test_scaffold_ref
+- delivery_check_marker
+- claim_map_status
+- remote_witness_condition
 
 ## 9. Closure Status Rule
 
 The index may reference closure statuses only as declared statuses:
 
-* OPEN
-* BOUNDARY_DEFINED
-* SCAFFOLD_DEFINED
-* MOCK_DEFINED
-* DELIVERY_MARKED
-* LCC6_CLOSED
-* BLOCKED
+- OPEN
+- BOUNDARY_DEFINED
+- SCAFFOLD_DEFINED
+- MOCK_DEFINED
+- DELIVERY_MARKED
+- LCC6_CLOSED
+- BLOCKED
 
 ## 10. Remote Witness Rule
 
 The index may reference exact-head four-rail proof only:
 
-* gitleaks
-* CodeQL
-* BIZRA Review Gate
-* check
+- gitleaks
+- CodeQL
+- BIZRA Review Gate
+- check
 
 No witness collection, polling, GitHub API runtime, or CI automation is implemented here.
 
@@ -106,140 +106,144 @@ No witness collection, polling, GitHub API runtime, or CI automation is implemen
 
 The index may reference claim-map statuses such as:
 
-* BOUNDARY_NON_CLAIM_ONLY
-* MOCK_NON_CLAIM_ONLY
-* DELIVERY_CHECK_NON_CLAIM_ONLY
-* BLOCKED_RUNTIME_CLAIM
-* EXTERNAL_REVIEW_REQUIRED
+- BOUNDARY_NON_CLAIM_ONLY
+- MOCK_NON_CLAIM_ONLY
+- DELIVERY_CHECK_NON_CLAIM_ONLY
+- BLOCKED_RUNTIME_CLAIM
+- EXTERNAL_REVIEW_REQUIRED
 
 No claim-map writer or automatic claim classifier is implemented here.
 
 ## 12. Allowed Inputs
 
-* index_scope
-* g_ring_id
-* layer_id
-* layer_name
-* boundary_ref
-* schema_ref
-* test_scaffold_ref
-* mock_ref
-* delivery_check_marker
-* claim_map_status
-* remote_witness_condition
-* head_sha
-* run_ids
-* closure_status
-* proof_gaps
-* still_blocked_invariants
-* consent_status
-* review_status
-* prototype_posture
+- index_scope
+- g_ring_id
+- layer_id
+- layer_name
+- boundary_ref
+- schema_ref
+- test_scaffold_ref
+- mock_ref
+- delivery_check_marker
+- claim_map_status
+- remote_witness_condition
+- head_sha
+- run_ids
+- closure_status
+- proof_gaps
+- still_blocked_invariants
+- consent_status
+- review_status
+- prototype_posture
 
 ## 13. Forbidden Inputs
 
-* g_ladder_index_runtime_request
-* g_ladder_index_write_request
-* g_ladder_registry_request
-* lcc_registry_write_request
-* lcc_aggregator_request
-* automatic_layer_closure_request
-* delivery_check_rewrite_request
-* claim_map_write_request
-* remote_witness_collection_request
-* ci_polling_request
-* github_api_polling_request
-* runtime_sync_request
-* cross_repo_write_request
-* datalake_mutation_request
-* bridge_activation_request
-* node1_target
-* urp_publication
-* token_amount
-* reward_amount
-* payout
-* public_url
-* contract_address
-* marketplace_listing
-* Shariah-compliant assertion
-* APY/APR/yield/investment language
+- g_ladder_index_runtime_request
+- g_ladder_index_write_request
+- g_ladder_registry_request
+- lcc_registry_write_request
+- lcc_aggregator_request
+- automatic_layer_closure_request
+- delivery_check_rewrite_request
+- claim_map_write_request
+- remote_witness_collection_request
+- ci_polling_request
+- github_api_polling_request
+- runtime_sync_request
+- cross_repo_write_request
+- datalake_mutation_request
+- bridge_activation_request
+- node1_target
+- urp_publication
+- token_amount
+- reward_amount
+- payout
+- public_url
+- contract_address
+- marketplace_listing
+- Shariah-compliant assertion
+- APY/APR/yield/investment language
 
 ## 14. Allowed Outputs
 
-* schema
-* g_ladder_layer_index_boundary_id
-* index_scope
-* layer_index_expectation
-* lcc6_rollup_expectation
-* remote_witness_rollup_expectation
-* claim_map_rollup_expectation
-* proof_gaps
-* still_blocked_snapshot
-* created_at
-* prototype_posture
+- schema
+- g_ladder_layer_index_boundary_id
+- index_scope
+- layer_index_expectation
+- lcc6_rollup_expectation
+- remote_witness_rollup_expectation
+- claim_map_rollup_expectation
+- proof_gaps
+- still_blocked_snapshot
+- created_at
+- prototype_posture
 
 ## 15. Forbidden Outputs
 
-* index_written
-* registry_written
-* aggregation_performed
-* automatic_closure_performed
-* delivery_check_rewritten
-* claim_map_written
-* remote_witness_collected
-* ci_polling_performed
-* github_api_polling_performed
-* datalake_synced
-* cross_repo_write_performed
-* runtime_bridge_active
-* node1_sync
-* urp_publication
-* token_minted
-* reward_authorized
-* contract_call
-* marketplace_signal
-* public_receipt_url
-* Shariah-compliant label
+- index_written
+- registry_written
+- aggregation_performed
+- automatic_closure_performed
+- delivery_check_rewritten
+- claim_map_written
+- remote_witness_collected
+- ci_polling_performed
+- github_api_polling_performed
+- datalake_synced
+- cross_repo_write_performed
+- runtime_bridge_active
+- node1_sync
+- urp_publication
+- token_minted
+- reward_authorized
+- contract_call
+- marketplace_signal
+- public_receipt_url
+- Shariah-compliant label
 
 ## 16. Existing Layer Examples
 
 Document at least these currently proven layers as examples only:
 
 **ADR-030 Dema/Data-Lake Alignment**
-* boundary_ref: docs/06-adr/ADR-030-dema-data-lake-alignment-boundary.md
-* schema_ref: bizra.dema.datalake.alignment.v0.1.local
-* test_scaffold_ref: tests/dema-datalake-alignment-boundary.test.js
-* delivery_check_marker: ADR-030 Dema Data-Lake alignment mock integrated: PASS
-* claim_map_status: BOUNDARY_NON_CLAIM_ONLY
-* remote_witness_condition: four_exact_head_rails_completed_success
-* g_ring_reference: G44R (and related prior rings)
+
+- boundary_ref: docs/06-adr/ADR-030-dema-data-lake-alignment-boundary.md
+- schema_ref: bizra.dema.datalake.alignment.v0.1.local
+- test_scaffold_ref: tests/dema-datalake-alignment-boundary.test.js
+- delivery_check_marker: ADR-030 Dema Data-Lake alignment mock integrated: PASS
+- claim_map_status: BOUNDARY_NON_CLAIM_ONLY
+- remote_witness_condition: four_exact_head_rails_completed_success
+- g_ring_reference: G44R (and related prior rings)
 
 **ADR-031 Hybrid Mission Knowledge Graph + BoK**
-* boundary_ref: docs/06-adr/ADR-031-hybrid-mission-knowledge-graph-bok-boundary.md
-* schema_ref: bizra.hybrid.mission.knowledge.bok.v0.1.local
-* test_scaffold_ref: tests/hybrid-mission-knowledge-graph-bok-boundary.test.js
-* delivery_check_marker: ADR-031 hybrid mission knowledge graph BoK mock integrated: PASS
-* claim_map_status: BOUNDARY_NON_CLAIM_ONLY
-* remote_witness_condition: four_exact_head_rails_completed_success
-* g_ring_reference: G48R
+
+- boundary_ref: docs/06-adr/ADR-031-hybrid-mission-knowledge-graph-bok-boundary.md
+- schema_ref: bizra.hybrid.mission.knowledge.bok.v0.1.local
+- test_scaffold_ref: tests/hybrid-mission-knowledge-graph-bok-boundary.test.js
+- delivery_check_marker: ADR-031 hybrid mission knowledge graph BoK mock integrated: PASS
+- claim_map_status: BOUNDARY_NON_CLAIM_ONLY
+- remote_witness_condition: four_exact_head_rails_completed_success
+- g_ring_reference: G48R
 
 **ADR-032 Node0 Closed-Loop Digest**
-* boundary_ref: docs/06-adr/ADR-032-node0-closed-loop-digest-boundary.md
-* schema_ref: bizra.node0.closed_loop_digest.v0.1.local
-* test_scaffold_ref: tests/node0-closed-loop-digest-boundary.test.js
-* delivery_check_marker: ADR-032 node0 closed-loop digest mock integrated: PASS
-* claim_map_status: BOUNDARY_NON_CLAIM_ONLY
-* remote_witness_condition: four_exact_head_rails_completed_success
-* g_ring_reference: G52R
+
+- boundary_ref: docs/06-adr/ADR-032-node0-closed-loop-digest-boundary.md
+- schema_ref: bizra.node0.closed_loop_digest.v0.1.local
+- test_scaffold_ref: tests/node0-closed-loop-digest-boundary.test.js
+- delivery_check_marker: ADR-032 node0 closed-loop digest mock integrated: PASS
+- claim_map_status: BOUNDARY_NON_CLAIM_ONLY
+- remote_witness_condition: four_exact_head_rails_completed_success
+- g_ring_reference: G52R
 
 **ADR-033 Layer Closure Contract LCC-6**
-* boundary_ref: docs/06-adr/ADR-033-layer-closure-contract-lcc6-boundary.md
-* schema_ref: bizra.lcc6.layer_closure_contract.v0.1.local
-* test_scaffold_ref: tests/layer-closure-contract-lcc6-boundary.test.js
-* delivery_check_marker: ADR-033 Layer Closure Contract LCC-6 mock integrated: PASS
-* claim_map_status: BOUNDARY_NON_CLAIM_ONLY
-* remote_witness_condition: four_exact_head_rails_completed_success
-* g_ring_reference: G56R
+
+- boundary_ref: docs/06-adr/ADR-033-layer-closure-contract-lcc6-boundary.md
+- schema_ref: bizra.lcc6.layer_closure_contract.v0.1.local
+- test_scaffold_ref: tests/layer-closure-contract-lcc6-boundary.test.js
+- delivery_check_marker: ADR-033 Layer Closure Contract LCC-6 mock integrated: PASS
+- claim_map_status: BOUNDARY_NON_CLAIM_ONLY
+- remote_witness_condition: four_exact_head_rails_completed_success
+- g_ring_reference: G56R
 
 Each example must remain reference-only and must not imply a live index runtime.
 
@@ -290,16 +294,16 @@ No Shariah-compliant claim.
 
 G56R → ADR-034 → G-Ladder Layer Index scaffold → G-Ladder Layer Index mock → delivery-check integration → future index registry boundary.
 
-| Area                              | Status / Action |
-|-----------------------------------|-----------------|
-| Integration Management            | Boundary/spec only (defines G-Ladder Layer Index as the future local-first canonical index boundary for proof layers, G-rings, LCC-6 status, exact-head witnesses, claim-map status, proof gaps, and still-blocked invariants; G56R → ADR-034 → G-Ladder Layer Index scaffold → mock → delivery-check marker → future index registry boundary) |
-| Scope Management                  | Boundary/spec only (G-Ladder Layer Index spine, LCC-6 compatibility rule, closure statuses, allowed/forbidden inputs/outputs, G-ring references only; no G-Ladder index runtime, registry, LCC aggregator, CI polling, or claim writer) |
-| Quality Management                | Boundary/spec only (requires one test scaffold per layer + one delivery-check entry; enforces uniform observability and indexability via the index spine and LCC-6) |
-| Risk Management                   | Boundary/spec only (proof gaps + still_blocked_invariants carried verbatim for every layer; remote witness condition requires four exact-head rails; no downgrade of blocked invariants) |
-| Stakeholder Management            | Boundary/spec only (claim_map_status discipline: BOUNDARY_NON_CLAIM_ONLY etc.; Non-Claims section with full still-blocked list; reference-only examples for proven layers) |
-| DevOps                            | Local-only, [PROTOTYPE][DESIGNED_NOT_LIVE] posture. Delivery-check marker + G-Ladder index print required for layer visibility in A+ cockpit. Pre-push seal + 4-rail required. |
-| CI/CD                             | Four-rail remote witness (gitleaks + CodeQL + BIZRA Review Gate + check on exact HEAD) is the mandatory closure condition. No automatic collection, polling, or rewrite. |
-| A+ Performance-Quality Assurance  | No public performance, TPS, or economic claims. All G-Ladder Layer Index references remain expectation-only until additional gates, benchmarks, and external review. |
+| Area                             | Status / Action                                                                                                                                                                                                                                                                                                                                |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Integration Management           | Boundary/spec only (defines G-Ladder Layer Index as the future local-first canonical index boundary for proof layers, G-rings, LCC-6 status, exact-head witnesses, claim-map status, proof gaps, and still-blocked invariants; G56R → ADR-034 → G-Ladder Layer Index scaffold → mock → delivery-check marker → future index registry boundary) |
+| Scope Management                 | Boundary/spec only (G-Ladder Layer Index spine, LCC-6 compatibility rule, closure statuses, allowed/forbidden inputs/outputs, G-ring references only; no G-Ladder index runtime, registry, LCC aggregator, CI polling, or claim writer)                                                                                                        |
+| Quality Management               | Boundary/spec only (requires one test scaffold per layer + one delivery-check entry; enforces uniform observability and indexability via the index spine and LCC-6)                                                                                                                                                                            |
+| Risk Management                  | Boundary/spec only (proof gaps + still_blocked_invariants carried verbatim for every layer; remote witness condition requires four exact-head rails; no downgrade of blocked invariants)                                                                                                                                                       |
+| Stakeholder Management           | Boundary/spec only (claim_map_status discipline: BOUNDARY_NON_CLAIM_ONLY etc.; Non-Claims section with full still-blocked list; reference-only examples for proven layers)                                                                                                                                                                     |
+| DevOps                           | Local-only, [PROTOTYPE][DESIGNED_NOT_LIVE] posture. Delivery-check marker + G-Ladder index print required for layer visibility in A+ cockpit. Pre-push seal + 4-rail required.                                                                                                                                                                 |
+| CI/CD                            | Four-rail remote witness (gitleaks + CodeQL + BIZRA Review Gate + check on exact HEAD) is the mandatory closure condition. No automatic collection, polling, or rewrite.                                                                                                                                                                       |
+| A+ Performance-Quality Assurance | No public performance, TPS, or economic claims. All G-Ladder Layer Index references remain expectation-only until additional gates, benchmarks, and external review.                                                                                                                                                                           |
 
 ## 21. Next Micro
 

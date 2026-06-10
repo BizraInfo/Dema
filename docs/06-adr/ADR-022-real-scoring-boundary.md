@@ -17,11 +17,13 @@
 G12R achieved for the ADR-021 mock scoring integration commit (b0b102f): all four rails (gitleaks, CodeQL, BIZRA Review Gate, check) success. Receipts captured with real RIDs 27110741993/42010/42012/42025.
 
 Previous rings closed:
+
 - G8R (R3 classifier + fixture).
 - ADR-020 proposal flow (envelope + integration + 4-rail).
 - ADR-021 scoring test boundary + scaffold + mock module + delivery-check integration + push + 4-rail proof.
 
 Per unlock ladder (user explicit):
+
 - Prove mock integration (G12R) → unlock real scoring boundary (this ADR-022).
 - Prove real scoring boundary → unlock real scoring implementation (future).
 - ... (contracts, token, reward, marketplace, public copy, Node1, URP, Shariah).
@@ -35,6 +37,7 @@ The "pinnacle masterpiece" advances via ultra-micro, proof-first steps embodying
 Real scoring is the next logical unlock after mock (to enable actual verified impact measurement without jumping to rewards/contracts).
 
 Without a defined test boundary:
+
 - Risk of over-expansion (real scoring tied to rewards/tokens/contracts/marketplace too early).
 - No clear definition of allowed inputs (e.g., verified claims, evidence thresholds) or forbidden outputs (e.g., any reward eligibility language).
 - No anti-gaming rules, consent/review/receipt requirements for real scoring events.
@@ -78,15 +81,15 @@ Create ADR-022 as the **test boundary** for Real Scoring (parallel to ADR-021 fo
 
 ## Full-Stack Boundary Map (MBOK + Blueprint)
 
-| Domain | MVP/Current Boundary | Forbidden Promotion |
-|--------|----------------------|---------------------|
-| Product | Local mock + real scoring definition only | No public real scoring dashboards, no "real score = value/reward" |
-| Domain Model | Real score = verified contribution + evidence strength + anti-gaming proof | No "real score = reward points/token" |
-| Data Contract | Receipt expectation for real scoring events (local only) | No on-chain real score minting or linkage |
-| App Logic | Test boundary only (inputs/outputs/consent/review/receipt) | No real scoring engine |
-| Security | Exact consent "GO" for any real scoring write; review separation; anti-gaming | No public real score exposure or eligibility |
-| DevOps | delivery-check integration (future); 4-rail after test fixture | No CI changes without separate GO |
-| QA | A+ gates + targeted real scoring test boundary; "not yet measured" until artifact | No perf claims on real scoring |
+| Domain        | MVP/Current Boundary                                                              | Forbidden Promotion                                               |
+| ------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Product       | Local mock + real scoring definition only                                         | No public real scoring dashboards, no "real score = value/reward" |
+| Domain Model  | Real score = verified contribution + evidence strength + anti-gaming proof        | No "real score = reward points/token"                             |
+| Data Contract | Receipt expectation for real scoring events (local only)                          | No on-chain real score minting or linkage                         |
+| App Logic     | Test boundary only (inputs/outputs/consent/review/receipt)                        | No real scoring engine                                            |
+| Security      | Exact consent "GO" for any real scoring write; review separation; anti-gaming     | No public real score exposure or eligibility                      |
+| DevOps        | delivery-check integration (future); 4-rail after test fixture                    | No CI changes without separate GO                                 |
+| QA            | A+ gates + targeted real scoring test boundary; "not yet measured" until artifact | No perf claims on real scoring                                    |
 
 ## MBOK Alignment (10 Domains)
 

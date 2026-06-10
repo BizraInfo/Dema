@@ -133,6 +133,7 @@ Eligibility review is not final approval. It is not reward authorization. It is 
 ## Anti-Gaming Rule
 
 Reject or defer (mark as needs review or rejected_for_forbidden_claim) if the evidence shows:
+
 - reward-seeking language
 - circular proof (self-referential impact claims)
 - unverifiable impact
@@ -171,16 +172,16 @@ All claims remain local, consented, reviewed, receipted, and anti-gaming-checked
 
 ## MBOK / DevOps / CI-CD / A+ QA Mapping
 
-| Domain                  | Mapping |
-|-------------------------|---------|
+| Domain                 | Mapping                                                                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | Integration Management | Ladder continuity from G17R (minimal local real scoring) → ADR-024 boundary spec → future scaffold → local proof → remote proof |
-| Scope Management       | Boundary/spec only (no implementation, no economic activation) |
-| Quality Management     | Allowed/forbidden input-output rules; anti-gaming_status; proof_gaps required; eligibility_status limited to 4 values |
-| Risk Management        | Anti-gaming rule; proof_gaps array; no forbidden claim language; explicit non-claims |
-| Stakeholder Management | Exact consent before any write; review boundary (eligibility review ≠ final decision or reward); human review separate |
-| DevOps                 | claim → ADR → (future) local proof → remote 4-rail |
-| CI/CD                  | Local gates (llm:guidance, diff --check, claim:check) then four remote rails |
-| A+ QA                  | No "eligibility" or "reward" claim until artifacts exist, external review, and future gates proven |
+| Scope Management       | Boundary/spec only (no implementation, no economic activation)                                                                  |
+| Quality Management     | Allowed/forbidden input-output rules; anti-gaming_status; proof_gaps required; eligibility_status limited to 4 values           |
+| Risk Management        | Anti-gaming rule; proof_gaps array; no forbidden claim language; explicit non-claims                                            |
+| Stakeholder Management | Exact consent before any write; review boundary (eligibility review ≠ final decision or reward); human review separate          |
+| DevOps                 | claim → ADR → (future) local proof → remote 4-rail                                                                              |
+| CI/CD                  | Local gates (llm:guidance, diff --check, claim:check) then four remote rails                                                    |
+| A+ QA                  | No "eligibility" or "reward" claim until artifacts exist, external review, and future gates proven                              |
 
 ## Next Micro
 

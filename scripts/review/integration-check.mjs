@@ -20,7 +20,7 @@ function stopAtPlaceholder(token) {
   return (
     token.startsWith("[") ||
     token.startsWith("<") ||
-    token.startsWith("\"") ||
+    token.startsWith('"') ||
     token.charCodeAt(0) === 39 ||
     /^[A-Z]/.test(token)
   );
