@@ -1,6 +1,14 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, statSync, existsSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -9,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import {
   initAuthorshipKey,
   hasAuthorshipKey,
+  loadPrivateKey,
   loadPublicKey,
   keyPaths,
   KEY_INIT_CONSENT_PHRASE,
@@ -84,6 +93,26 @@ describe("initAuthorshipKey", () => {
     assert.ok(pub.startsWith("-----BEGIN PUBLIC KEY-----"));
   });
 
+  it("refuses private key symlink escape without writing outside DEMA_HOME", async () => {
+    const home = freshHome();
+    const outside = mkdtempSync(join(tmpdir(), "dema-key-escape-"));
+    const escapedTarget = join(outside, "escaped-private.pem");
+    const paths = keyPaths(home);
+    mkdirSync(paths.dir, { recursive: true });
+    symlinkSync(escapedTarget, paths.privateKey);
+
+    const result = await initAuthorshipKey({
+      consent: KEY_INIT_CONSENT_PHRASE,
+      demaHome: home,
+    });
+
+    assert.equal(result.initialized, false);
+    assert.equal(result.error, "unsafe_key_path");
+    assert.equal(result.boundary.key_persisted, false);
+    assert.equal(existsSync(escapedTarget), false);
+    assert.equal(existsSync(paths.publicKey), false);
+  });
+
   it("never includes private key in result JSON", async () => {
     const home = freshHome();
     const result = await initAuthorshipKey({
@@ -123,6 +152,29 @@ describe("hasAuthorshipKey", () => {
       demaHome: home,
     });
     assert.equal(await hasAuthorshipKey(home), true);
+  });
+
+  it("returns false when keys directory is a symlink outside DEMA_HOME", async () => {
+    const home = freshHome();
+    const outside = mkdtempSync(join(tmpdir(), "dema-key-status-escape-"));
+    writeFileSync(join(outside, "node0-ed25519.pem"), "outside-private");
+    symlinkSync(outside, join(home, "keys"), "dir");
+
+    assert.equal(await hasAuthorshipKey(home), false);
+  });
+});
+
+describe("loadPrivateKey", () => {
+  it("returns null when private key path is a symlink outside DEMA_HOME", async () => {
+    const home = freshHome();
+    const outside = mkdtempSync(join(tmpdir(), "dema-key-load-escape-"));
+    const escapedTarget = join(outside, "escaped-private.pem");
+    const paths = keyPaths(home);
+    mkdirSync(paths.dir, { recursive: true });
+    writeFileSync(escapedTarget, "outside-private");
+    symlinkSync(escapedTarget, paths.privateKey);
+
+    assert.equal(await loadPrivateKey(home), null);
   });
 });
 

@@ -1392,6 +1392,8 @@ async function cmd_authorship(ctx) {
       console.error(
         `Key already exists at ${result.private_key_path}. Use dema authorship key rotate (future) to replace.`,
       );
+    } else if (result.error === "unsafe_key_path") {
+      console.error(`Unsafe authorship key path refused: ${result.key_path}`);
     }
     if (!result.initialized) process.exitCode = 1;
     process.exit(process.exitCode ?? 0);
