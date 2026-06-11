@@ -56,6 +56,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [02-architecture/boundary-core-vs-face.md](02-architecture/boundary-core-vs-face.md) — core-vs-face boundary.
 - [02-architecture/behavioral-modulation-preview.md](02-architecture/behavioral-modulation-preview.md) — current preview model for consent-bound, no-mint behavioral modulation.
 - [02-architecture/dema-autonomy-envelope.md](02-architecture/dema-autonomy-envelope.md) — autonomy levels and consent.
+- [02-architecture/dema-local-asset-awareness-v0.1.md](02-architecture/dema-local-asset-awareness-v0.1.md) — B1 spec-only local asset awareness slice: metadata-only `~/Downloads` scanner, safe denylist, single local inventory artifact under `DEMA_HOME`, and read-only Realm World Map panel. No embeddings, network, content reads, file mutation, or economic claims.
 - [02-architecture/gateway-http-adapter.md](02-architecture/gateway-http-adapter.md) — gateway adapter target.
 - [02-architecture/pat-builder-sat-validator.md](02-architecture/pat-builder-sat-validator.md) — PAT/SAT bridge.
 - [02-architecture/SAT_ROLE_BOUNDARY.md](02-architecture/SAT_ROLE_BOUNDARY.md) — SAT constitutional guard contract: PAT proposes / SAT verifies-blocks-audits, the 5 role questions, verdict shape, and the registry-field contract (DECLARED, no runtime).
