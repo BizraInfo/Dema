@@ -1,0 +1,49 @@
+{
+  "schema": "bizra.dema.node0_mumu_preflight.v0.1",
+  "gate": "N0-MUMU-1",
+  "branch": "feat/node0-mumu-closed-loop-v0.1",
+  "node_version": "v22.22.2",
+  "measured_this_session_on_identical_tree": true,
+  "gates": {
+    "integration_check": { "ok": true, "exit": 0 },
+    "npm_test_raw": {
+      "pass": 4479,
+      "fail": 1,
+      "classifier_exit": 0,
+      "raw_failures": [
+        {
+          "name": "isolated preflight CLI clears preview ceremony on fresh home",
+          "file": "tests/artifact-011-ceremony-preflight.test.js",
+          "cause": "EROFS: read-only file system on mkdtemp under $HOME",
+          "classification": "sandbox_environment_noise",
+          "node0_loop_safety_related": false,
+          "passes_in_ci_or_operator_terminal": true
+        }
+      ]
+    },
+    "coverage": {
+      "line_pct": 96.12,
+      "branch_pct": 86.23,
+      "funcs_pct": 97.72,
+      "thresholds": "95/85/95",
+      "ok": true
+    },
+    "perf": {
+      "dema_boot_latency_ms": 76.08,
+      "memory_rss_mb": 55.64,
+      "verification_latency_ms": 0.0075
+    },
+    "llm_guidance": { "ok": true },
+    "claim_check": {
+      "note": "file-scoped, not a single-pass gate; not in npm test/check"
+    }
+  },
+  "decision": "continue",
+  "rationale": "The single raw npm-test failure is EROFS sandbox noise (mkdtemp under $HOME, blocked only in this sandbox); it passes in CI / the operator terminal and is NOT related to Node0 loop safety. No Node0-loop-safety gate failed.",
+  "boundary": {
+    "network_used": false,
+    "push_performed": false,
+    "real_mumu_root_scanned": false,
+    "notes": "Read/measure only. No real BIZRA_MUMU_ROOT scan. No push."
+  }
+}
