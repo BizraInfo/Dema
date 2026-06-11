@@ -10,7 +10,7 @@
  * [DO NOT CLAIM] — No autonomous execution, no fund movement, no formal Shariah compliance, no real oracle.
  * Dema is the local face only. No runtime in this module.
  *
- * Exact-string micro-consent required before any receipt is emitted ("GO").
+ * Exact-string decision-bound micro-consent required before any receipt is emitted.
  */
 
 import { createHmac, randomBytes } from 'node:crypto';
@@ -27,13 +27,22 @@ export const THOUGHT_PACKET_SCHEMA = 'bizra.dema.thought_packet.v0.1';
 export const CONSENT_RECEIPT_SCHEMA = 'bizra.dema.consent_receipt.v0.1';
 
 const PROHIBITED_SECTORS = new Set(['gambling', 'usury', 'alcohol', 'adult', 'weapons']);
+const SHA256_ID_PATTERN = /^sha256:[a-f0-9]{64}$/;
 
 export function canonicalizeCovenantObject(value) {
   return stableStringify(value);
 }
 
 export function createProposalHash(proposal) {
-  return 'sha256:' + sha256(canonicalizeCovenantObject(proposal));
+  return 'sha256:' + sha256(canonicalizeCovenantObject(proposal ?? {}));
+}
+
+export function expectedConsentPhrase(decision) {
+  const decisionId = String(decision?.decision_id || '');
+  if (!SHA256_ID_PATTERN.test(decisionId)) {
+    throw new Error('Invalid Covenant decision_id for micro-consent.');
+  }
+  return `GO: SIGN COVENANT RECEIPT ${decisionId}`;
 }
 
 /**
@@ -115,11 +124,21 @@ export function screenProposal(proposal) {
   }
 
   const createdAt = Math.floor(Date.now() / 1000);
-  const decisionId = createDecisionHash(projectId, screening, packets, proofGap, createdAt);
+  const proposalHash = createProposalHash(proposal);
+  const decisionId = createDecisionHash({
+    proposal_hash: proposalHash,
+    project_id: projectId,
+    status,
+    screening,
+    thought_packets: packets,
+    proof_gap: proofGap,
+    created_at: createdAt,
+  });
 
   return Object.freeze({
     schema: GRADUATION_DECISION_SCHEMA,
     decision_id: decisionId,
+    proposal_hash: proposalHash,
     project_id: projectId,
     status,
     screening,
@@ -136,24 +155,22 @@ export function screenProposal(proposal) {
   });
 }
 
-function createDecisionHash(projectId, screening, packets, proofGap, createdAt) {
-  const canonical = JSON.stringify({
-    project_id: projectId,
-    screening,
-    thought_packets: packets.map(p => ({ ...p })),
-    proof_gap: proofGap,
-    created_at: createdAt,
-  }, Object.keys({}).sort()); // deterministic
-  return 'sha256:' + createHmac('sha256', 'local-demo-only').update(canonical).digest('hex');
+function createDecisionHash(decisionFields) {
+  return 'sha256:' + sha256(stableStringify(decisionFields));
 }
 
 /**
  * Micro-consent + signed receipt (DEMO ONLY).
- * Requires exact-string "GO".
+ * Requires exact-string decision-bound consent.
  */
 export function signReceipt(decision, typedGo, secretKey = Buffer.from('local-demo-key-replace-me')) {
-  if (typedGo !== 'GO') {
-    throw new Error('Micro-consent failed: typed_go must equal "GO".');
+  if (decision?.status === 'blocked') {
+    throw new Error('Cannot sign blocked Covenant decision.');
+  }
+
+  const expectedPhrase = expectedConsentPhrase(decision);
+  if (typedGo !== expectedPhrase) {
+    throw new Error(`Micro-consent failed: typed_go must equal "${expectedPhrase}".`);
   }
 
   const nonce = randomBytes(16).toString('hex');
@@ -162,12 +179,14 @@ export function signReceipt(decision, typedGo, secretKey = Buffer.from('local-de
     decision,
     micro_consent: {
       typed_go: true,
+      decision_id: decision?.decision_id,
+      expected_phrase: expectedPhrase,
       nonce,
       signed_at: Math.floor(Date.now() / 1000),
     },
   };
 
-  const canonical = JSON.stringify(payload, Object.keys(payload).sort());
+  const canonical = stableStringify(payload);
   const signature = createHmac('sha256', secretKey).update(canonical).digest('hex');
 
   return Object.freeze({
@@ -182,6 +201,8 @@ export function signReceipt(decision, typedGo, secretKey = Buffer.from('local-de
 export default {
   screenProposal,
   signReceipt,
+  expectedConsentPhrase,
+  createProposalHash,
   COVENANT_GATE_SCHEMA,
   GRADUATION_DECISION_SCHEMA,
 };

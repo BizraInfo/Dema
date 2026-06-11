@@ -65,7 +65,7 @@ test("extractHelpCommands derives command names without prose descriptions", () 
     "  dema ambient:json Show the ambient boundary as schema-tagged JSON",
     '  dema consent plan [--json] "<intent>"',
     '  dema urp launch-5sat --consent "LAUNCH NODE0 URP WITH 5 SAT ONLY" [--json]',
-    '  dema covenant consent <decision.json> --typed-go "GO" [--json]',
+    '  dema covenant consent <decision.json> --typed-go "GO: SIGN COVENANT RECEIPT <decision_id>" [--json]',
     "  dema memory show NAME",
     "`;",
   ].join("\n");

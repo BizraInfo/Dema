@@ -556,9 +556,9 @@ Covenant Gate (v0.1 PROTOTYPE — per Omnidirectional Audit):
                     Emits GraduationDecision with screening results, structured
                     Thought Packets, and explicit proof_gap. [PROTOTYPE] only.
                     LOCAL ONLY. No runtime, no claims, no network.
-  dema covenant consent <decision.json> --typed-go "GO" [--json]
-                    Emit a signed consent receipt. Requires exact micro-consent
-                    string "GO". Produces demo receipt with payload + signature.
+  dema covenant consent <decision.json> --typed-go "GO: SIGN COVENANT RECEIPT <decision_id>" [--json]
+                    Emit a signed consent receipt. Requires exact decision-bound
+                    micro-consent string. Produces demo receipt with payload + signature.
                     [PROTOTYPE] (HMAC demo only; replace with Ed25519 before use).
                     Does not execute any external action.
 
@@ -4867,7 +4867,7 @@ async function cmdCovenant(ctx) {
     const typedGoIdx = argv.indexOf("--typed-go");
     const typedGo = typedGoIdx >= 0 ? argv[typedGoIdx + 1] : "";
     if (!file || !typedGo) {
-      console.error('usage: dema covenant consent <decision.json> --typed-go "GO" [--json]');
+      console.error('usage: dema covenant consent <decision.json> --typed-go "GO: SIGN COVENANT RECEIPT <decision_id>" [--json]');
       process.exit(1);
     }
     try {

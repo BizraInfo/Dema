@@ -3,7 +3,7 @@
 **Status labels (per Omnidirectional Audit rule):**
 
 - [PROTOTYPE] — The gate logic, ThoughtPacket emission, screening rules, and demo receipt are implemented and tested locally.
-- [DESIGN] — The overall state machine (Proposal → Screen → Packet → Micro-Consent "GO" → Receipt → GraduationDecision) is the intended kernel.
+- [DESIGN] — The overall state machine (Proposal → Screen → Packet → decision-bound Micro-Consent → Receipt → GraduationDecision) is the intended kernel.
 - [DO NOT CLAIM] — Not production cryptography. Not Shariah or legal opinion. Not real oracle verification. Not smart contract deployment. No fund movement. Dema remains the local face only.
 
 ## Purpose
@@ -28,10 +28,10 @@ node -e '
 
 # Emit receipt (exact micro-consent required)
 node -e '
-  const { screenProposal, signReceipt } = require("./packages/covenant/src/covenant-gate.js");
+  const { expectedConsentPhrase, screenProposal, signReceipt } = require("./packages/covenant/src/covenant-gate.js");
   const fs = require("fs");
   const decision = screenProposal(JSON.parse(fs.readFileSync("proposal.json", "utf8")));
-  const receipt = signReceipt(decision, "GO");
+  const receipt = signReceipt(decision, expectedConsentPhrase(decision));
   console.log(JSON.stringify(receipt, null, 2));
 '
 ```
@@ -45,7 +45,7 @@ The Python skeleton in the audit is the reference design.
 ## Claim Ledger (this document)
 
 - Screening rules + ThoughtPacket taxonomy: [PROTOTYPE]
-- Micro-consent via exact "GO" + receipt: [PROTOTYPE]
+- Micro-consent via exact decision-bound phrase + receipt: [PROTOTYPE]
 - Demo HMAC signature: [PROTOTYPE] (warning present in output)
 - No guaranteed APR / prohibited sector / debt ratio / team disclosure rules: [DESIGN]
 - Integration with full Impact Curve / AMM graduation / Waqf treasury: [HYPOTHESIS] — not implemented
@@ -54,7 +54,7 @@ The Python skeleton in the audit is the reference design.
 
 ## Next micro (if consented)
 
-- Wire `dema covenant screen <file>` and `dema covenant consent <decision> --typed-go GO` into the main CLI.
+- Wire `dema covenant screen <file>` and `dema covenant consent <decision> --typed-go "GO: SIGN COVENANT RECEIPT <decision_id>"` into the main CLI.
 - Add real Ed25519 receipt signing (using existing authorship key machinery).
 - Add fixtures + more adversarial test cases.
 - Extend ThoughtPacket taxonomy with "minority_report", "consensus".
