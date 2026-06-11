@@ -17,6 +17,7 @@ import { createHmac, randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { sha256, stableStringify } from '../../consent/src/consent-common.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -26,6 +27,14 @@ export const THOUGHT_PACKET_SCHEMA = 'bizra.dema.thought_packet.v0.1';
 export const CONSENT_RECEIPT_SCHEMA = 'bizra.dema.consent_receipt.v0.1';
 
 const PROHIBITED_SECTORS = new Set(['gambling', 'usury', 'alcohol', 'adult', 'weapons']);
+
+export function canonicalizeCovenantObject(value) {
+  return stableStringify(value);
+}
+
+export function createProposalHash(proposal) {
+  return 'sha256:' + sha256(canonicalizeCovenantObject(proposal));
+}
 
 /**
  * ThoughtPacket — structured, not raw hidden reasoning.
