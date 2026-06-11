@@ -151,6 +151,9 @@ function denyReason(name, kind) {
     return "wallet_or_secret_directory";
   }
   if (lower === ".env" || lower.startsWith(".env.")) return "secret_or_key_pattern";
+  if (name.startsWith(".")) {
+    return kind === "directory" ? "hidden_directory_skipped" : "hidden_file_skipped";
+  }
   if (/(secret|credential|password|token)/.test(lower)) {
     return "secret_or_key_pattern";
   }

@@ -137,6 +137,51 @@ describe("buildLocalAssetInventory", () => {
     }
   });
 
+  it("skips dotfiles by default without recording raw dotfile names", async () => {
+    const root = freshDir("local-asset-dotfiles");
+    try {
+      const dotfileNames = [
+        ".npmrc",
+        ".pypirc",
+        ".netrc",
+        ".dockerconfigjson",
+        ".git-credentials",
+      ];
+      writeFileSync(join(root, "visible-notes.md"), "public metadata candidate\n");
+      for (const name of dotfileNames) {
+        writeFileSync(join(root, name), "TOKEN=SHOULD_NOT_APPEAR\n");
+      }
+
+      const inventory = await buildLocalAssetInventory({
+        root,
+        now: FIXED_NOW,
+        limits: { maxDepth: 1, maxEntries: 50 },
+      });
+
+      assert.ok(inventory.records.some((r) => r.name === "visible-notes.md"));
+      for (const name of dotfileNames) {
+        assert.equal(
+          inventory.records.some((r) => r.name === name),
+          false,
+          `${name} should not be recorded`,
+        );
+      }
+      assert.ok(inventory.summary.denied_count >= dotfileNames.length);
+      assert.ok(
+        inventory.denied.filter((entry) => entry.reason === "hidden_file_skipped")
+          .length >= 4,
+      );
+
+      const raw = JSON.stringify(inventory);
+      assert.equal(raw.includes("SHOULD_NOT_APPEAR"), false);
+      for (const name of dotfileNames) {
+        assert.equal(raw.includes(name), false);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("does not call readFile and enforces max depth plus max entries", async () => {
     const root = freshDir("local-asset-depth");
     try {
