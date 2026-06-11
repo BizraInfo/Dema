@@ -46,7 +46,7 @@
  * Precedent: scripts/ci/restore-urp-artifacts.mjs (448711b [PROTOTYPE CI ISOLATION])
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync } from "node:fs";
 
 const USAGE = `Usage:
   node scripts/ci/classify-known-harness-failures.mjs --log <file>
@@ -60,12 +60,12 @@ function parseArgs() {
   let useStdin = false;
 
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--log' && args[i + 1]) {
+    if (args[i] === "--log" && args[i + 1]) {
       logPath = args[i + 1];
       i++;
-    } else if (args[i] === '--stdin' || args[i] === '-') {
+    } else if (args[i] === "--stdin" || args[i] === "-") {
       useStdin = true;
-    } else if (args[i] === '--help' || args[i] === '-h') {
+    } else if (args[i] === "--help" || args[i] === "-h") {
       console.log(USAGE);
       process.exit(0);
     }
@@ -80,10 +80,10 @@ function parseArgs() {
 
 function readContent({ logPath, useStdin }) {
   if (logPath) {
-    return readFileSync(logPath, 'utf8');
+    return readFileSync(logPath, "utf8");
   }
   // stdin
-  return readFileSync(0, 'utf8');
+  return readFileSync(0, "utf8");
 }
 
 const { logPath, useStdin } = parseArgs();
@@ -91,11 +91,12 @@ const content = readContent({ logPath, useStdin });
 
 // === SMOKE SAFEGUARD for user-specified negative test ===
 if (content.includes("totally unknown failure")) {
-  console.error("[G8 FIXTURE GATE] UNKNOWN failure detected (synthetic safeguard).");
+  console.error(
+    "[G8 FIXTURE GATE] UNKNOWN failure detected (synthetic safeguard).",
+  );
   console.error("First signals: " + content.trim());
   process.exit(1);
 }
-
 
 const hasBaseline = /not a baseline_l1\.v0\.1/.test(content);
 const hasIntegration =
@@ -105,31 +106,63 @@ const hasIntegration =
   /TestContext\.<anonymous>.*integration-check\.test\.js:46/.test(content);
 
 const failureCountMatch = content.match(/# fail\s*(\d+)/);
-const reportedFailCount = failureCountMatch ? parseInt(failureCountMatch[1], 10) : 0;
+const reportedFailCount = failureCountMatch
+  ? parseInt(failureCountMatch[1], 10)
+  : 0;
 
 const notOkMatches = content.match(/^\s*not ok \d+/gm) || [];
-const hasExplicitError = /Error:/.test(content) || /AssertionError/.test(content);
+const hasExplicitError =
+  /Error:/.test(content) || /AssertionError/.test(content);
 
-console.log('[G8 FIXTURE GATE] classify-known-harness-failures');
-console.log(`[G8 FIXTURE GATE] baseline-l1-diff known signature: ${hasBaseline}`);
-console.log(`[G8 FIXTURE GATE] integration-check known signature: ${hasIntegration}`);
+console.log("[G8 FIXTURE GATE] classify-known-harness-failures");
+console.log(
+  `[G8 FIXTURE GATE] baseline-l1-diff known signature: ${hasBaseline}`,
+);
+console.log(
+  `[G8 FIXTURE GATE] integration-check known signature: ${hasIntegration}`,
+);
 console.log(`[G8 FIXTURE GATE] reported # fail: ${reportedFailCount}`);
 console.log(`[G8 FIXTURE GATE] not ok count (raw): ${notOkMatches.length}`);
-console.log(`[G8 FIXTURE GATE] has explicit Error/Assertion: ${hasExplicitError}`);
+console.log(
+  `[G8 FIXTURE GATE] has explicit Error/Assertion: ${hasExplicitError}`,
+);
 
-const fixtureVisible = /ok \d+ - ADR-020 (claim label|forbidden promotion|consent requirement|review-boundary|receipt schema|non-claim regression|future performance)/.test(content);
-console.log(`[G8 FIXTURE GATE] ADR-020 fixture scaffold tests visible as passing: ${fixtureVisible}`);
+const fixtureVisible =
+  /ok \d+ - ADR-020 (claim label|forbidden promotion|consent requirement|review-boundary|receipt schema|non-claim regression|future performance)/.test(
+    content,
+  );
+console.log(
+  `[G8 FIXTURE GATE] ADR-020 fixture scaffold tests visible as passing: ${fixtureVisible}`,
+);
+
+// AUTHORITATIVE clean-run gate (W2 fix): the test runner's own counts are the source
+// of truth. If node --test reported zero failures and zero TAP "not ok" lines, the run
+// is clean — regardless of benign "# Error:" diagnostics that passing error-handling
+// tests deliberately print. This prevents the W1 regression where fixing integration-check
+// removed the known-signature failures the gate was absorbing and exposed a
+// hasExplicitError false-positive (check + Review Gate red on a green tree).
+if (reportedFailCount === 0 && notOkMatches.length === 0) {
+  console.log(
+    "[G8 FIXTURE GATE] Clean run: 0 reported failures, 0 not-ok TAP lines. Exit 0.",
+  );
+  process.exit(0);
+}
 
 const onlyKnown =
-  (hasBaseline && hasIntegration) &&
-  (reportedFailCount <= 2) &&
-  (notOkMatches.length <= 2 || notOkMatches.every(m => /baseline|integration-check/i.test(m) || true /* conservative */));
+  hasBaseline &&
+  hasIntegration &&
+  reportedFailCount <= 2 &&
+  (notOkMatches.length <= 2 ||
+    notOkMatches.every(
+      (m) => /baseline|integration-check/i.test(m) || true /* conservative */,
+    ));
 
 // Fail closed on any explicit failure indicator when no known signatures match
-const hasAnyRealFailureSignal = reportedFailCount > 0 || notOkMatches.length > 0 || hasExplicitError;
+const hasAnyRealFailureSignal =
+  reportedFailCount > 0 || notOkMatches.length > 0 || hasExplicitError;
 
 if (!hasBaseline && !hasIntegration && !hasAnyRealFailureSignal) {
-  console.log('[G8 FIXTURE GATE] Clean run (no failures detected).');
+  console.log("[G8 FIXTURE GATE] Clean run (no failures detected).");
   process.exit(0);
 }
 
@@ -156,10 +189,14 @@ G8 remote gate isolation applied per GO: ISOLATE G8 FIXTURE REMOTE GATE B-BUCKET
 }
 
 // Not only-known: surface first unknown failure and fail hard.
-console.error('\n[G8 FIXTURE GATE] UNKNOWN OR ADDITIONAL FAILURES PRESENT — treating as real failure.');
-console.error('[G8 FIXTURE GATE] First signals (not matching the two known B-bucket patterns):\n');
+console.error(
+  "\n[G8 FIXTURE GATE] UNKNOWN OR ADDITIONAL FAILURES PRESENT — treating as real failure.",
+);
+console.error(
+  "[G8 FIXTURE GATE] First signals (not matching the two known B-bucket patterns):\n",
+);
 
-const lines = content.split('\n');
+const lines = content.split("\n");
 let printed = 0;
 for (let i = 0; i < lines.length && printed < 25; i++) {
   const line = lines[i];
@@ -172,7 +209,7 @@ for (let i = 0; i < lines.length && printed < 25; i++) {
     const contextHasKnown =
       /baseline_l1\.v0\.1/.test(line) ||
       /integration-check\.test\.js:46/.test(line) ||
-      /report\.ok/.test(lines.slice(Math.max(0, i - 2), i + 3).join('\n'));
+      /report\.ok/.test(lines.slice(Math.max(0, i - 2), i + 3).join("\n"));
 
     if (!contextHasKnown) {
       // print context
@@ -181,11 +218,13 @@ for (let i = 0; i < lines.length && printed < 25; i++) {
       for (let j = start; j < end; j++) {
         console.error(lines[j]);
       }
-      console.error('---');
-      printed += (end - start);
+      console.error("---");
+      printed += end - start;
     }
   }
 }
 
-console.error('\n[G8 FIXTURE GATE] See full log for complete TAP. Exiting 1 (real failure).');
+console.error(
+  "\n[G8 FIXTURE GATE] See full log for complete TAP. Exiting 1 (real failure).",
+);
 process.exit(1);
