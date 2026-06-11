@@ -214,6 +214,14 @@ import {
   renderDemaRealmStatus,
 } from "../../../packages/core/src/dema-realm-status.js";
 import {
+  writeLocalAssetInventory,
+  renderLocalAssetInventorySummary,
+} from "../../../packages/core/src/local-asset-awareness.js";
+import {
+  gatherDemaRealmWorldMap,
+  renderDemaRealmWorldMap,
+} from "../../../packages/core/src/dema-realm-world-map.js";
+import {
   buildHealthSnapshot,
   saveHealthSnapshotReceipt,
   verifyHealthSnapshotReceipt,
@@ -510,6 +518,15 @@ URP:
                     MARK_LOCAL_ONLY requires "MARK URP ENTRY LOCAL-ONLY".
                     LOCAL ONLY — no network, no federation, no mint.
 
+Local asset awareness:
+  dema assets scan --root <path> [--json]
+                    B1A metadata-only local inventory scanner. Default root is
+                    ~/Downloads unless DEMA_LOCAL_ASSET_ROOT or --root is set.
+                    Writes exactly one artifact under
+                    DEMA_HOME/realm/local-assets/inventory-v0.1.json (mode
+                    0600). No content reads, no symlink following, no network,
+                    no mutation inside scanned root.
+
 Dema Realm (UX-1A, UX-1B):
   dema realm [--json] [--no-color]
                     Wake Node0. 7-step boot sequence + BIZRA NODE0 · DEMA HOME
@@ -528,6 +545,11 @@ Dema Realm (UX-1A, UX-1B):
                     authorship-receipts count, URP-indexes count, checkpoint
                     present/label, timeline events count + latest event.
                     Read-only · pure aggregation · 10-flag false boundary.
+  dema realm world-map [--json] [--no-color]
+                    B1A Local Asset Awareness world map. Reads only
+                    DEMA_HOME/realm/local-assets/inventory-v0.1.json and
+                    renders category clusters, denied/truncated counters, and
+                    next safe action. Read-only · no scan · no mutation.
   dema realm council [--json] [--no-color]
                     UX-1D Council Chamber: 5 declared council profiles —
                     Guardian (boundary/consent/risk), Reasoner (SAPE/graph
@@ -763,6 +785,10 @@ const REGISTERED_COMMANDS_LIST = [
   {
     command: "covenant",
     description: "Covenant Gate v0.1 screening + micro-consent (PROTOTYPE per audit)",
+  },
+  {
+    command: "assets",
+    description: "metadata-only local asset inventory scanner",
   },
   { command: "dashboard", description: "open homebase dashboard in browser" },
   {
@@ -2237,6 +2263,31 @@ async function cmd_urp(ctx) {
     process.exit(process.exitCode ?? 0);
 }
 
+async function cmd_assets(ctx) {
+  const { argv } = ctx;
+  const sub = argv[1] ?? "";
+  const wantJsonLocalAssets = wantsJson(argv);
+  if (sub !== "scan") {
+    console.error("Usage: dema assets scan --root <path> [--json]");
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
+  const root = argValue(argv, "--root") || process.env.DEMA_LOCAL_ASSET_ROOT;
+  const result = await writeLocalAssetInventory({ root });
+  if (wantJsonLocalAssets) {
+    console.log(JSON.stringify(result, null, 2));
+  } else if (result.written) {
+    console.log(renderLocalAssetInventorySummary(result));
+  } else {
+    console.error(
+      `Dema local assets: inventory not written · ${result.error ?? "unknown_error"}`,
+    );
+    process.exitCode = 1;
+  }
+  process.exit(process.exitCode ?? 0);
+}
+
 async function cmd_realm(ctx) {
   const { argv } = ctx;
   const realmSub = argv[1] ?? "";
@@ -2260,6 +2311,16 @@ async function cmd_realm(ctx) {
     process.exit(process.exitCode ?? 0);
     }
     console.log(renderDemaRealmStatus(status, { useColor: !noColor }));
+    process.exit(process.exitCode ?? 0);
+  }
+
+  if (realmSub === "world-map") {
+    const worldMap = await gatherDemaRealmWorldMap();
+    if (wantJsonR) {
+      console.log(JSON.stringify(worldMap, null, 2));
+      process.exit(process.exitCode ?? 0);
+    }
+    console.log(renderDemaRealmWorldMap(worldMap, { useColor: !noColor }));
     process.exit(process.exitCode ?? 0);
   }
 
@@ -4929,6 +4990,7 @@ const COMMAND_TABLE = {
   codebase: cmd_codebase,
   orchestrator: cmd_orchestrator,
   covenant: cmdCovenant,
+  assets: cmd_assets,
   "llm-router": cmd_llm_router,
   "model-broker": cmd_model_broker,
   harness: cmd_harness,

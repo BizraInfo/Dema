@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { pathToFileURL } from "node:url";
 
-// 9 DEMA_* env vars that affect test/runtime behavior. Discovery command
+// Known DEMA_* env vars that affect test/runtime behavior. Discovery command
 // (run from repo root):
 //   grep -rhE 'process\.env\.DEMA_[A-Z0-9_]+' tests/ packages/ apps/ scripts/
 //     | grep -oE 'DEMA_[A-Z0-9_]+' | sort -u
@@ -22,6 +22,7 @@ const KNOWN_DEMA_ENV_VARS = Object.freeze([
   "DEMA_HOME",
   "DEMA_HOMEBASE_LIVE",
   "DEMA_LM_STUDIO_URL",
+  "DEMA_LOCAL_ASSET_ROOT",
   "DEMA_MODELS_SKIP_TCP",
   "DEMA_MODEL_DOWNLOADS_ROOT",
   "DEMA_NODE0_ADAPTER",

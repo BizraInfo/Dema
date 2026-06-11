@@ -8,7 +8,7 @@
 
 | ID | Requirement | Verified by |
 | --- | --- | --- |
-| FR-1 | `dema local-assets scan` defaults to `~/Downloads` when no root is supplied | TDD-01 |
+| FR-1 | `dema assets scan` defaults to `~/Downloads` when no root is supplied | TDD-01 |
 | FR-2 | Tests can supply an isolated root without touching real `~/Downloads` | TDD-02 |
 | FR-3 | Scanner emits schema `bizra.dema.local_asset_awareness_inventory.v0.1` | TDD-03 |
 | FR-4 | Scanner writes exactly one artifact under `$DEMA_HOME/realm/local-assets/` | TDD-04 |

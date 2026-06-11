@@ -50,6 +50,7 @@ const COMMAND_SURFACE = [
   "codebase",
   "orchestrator",
   "covenant",
+  "assets",
   "llm-router",
   "model-broker",
   "harness",

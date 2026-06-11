@@ -1,6 +1,6 @@
 # Dema Local Asset Awareness v0.1
 
-**Status:** [DECLARED] Proposed · spec-only · pre-implementation.
+**Status:** [DECLARED] B1A implemented · scanner + Realm World Map v0.1.
 **Authored:** 2026-06-11 GST.
 **Trigger:** `GO: B1 SPEC DEMA LOCAL ASSET AWARENESS V0.1`.
 
@@ -21,7 +21,7 @@ write inside the scanned root.
 
 - Default root: `~/Downloads`.
 - Test override root: `DEMA_LOCAL_ASSET_ROOT` or an explicit `--root`.
-- Bounded scanner future command: `dema local-assets scan --root <path> [--json]`.
+- Bounded scanner command: `dema assets scan --root <path> [--json]`.
 - [DECLARED] Read-only Realm panel future command: `dema realm world-map [--json] [--no-color]`.
 - [DECLARED] Metadata-only records for files, directories, and symlinks.
 - One local artifact JSON written under:
@@ -32,6 +32,15 @@ $DEMA_HOME/realm/local-assets/inventory-v0.1.json
 
 - Atomic artifact write with parent directory mode `0o700` and file mode `0o600`.
 - No writes outside the artifact path.
+
+### Implemented in B1A
+
+- `packages/core/src/local-asset-awareness.js`
+- `packages/core/src/dema-realm-world-map.js`
+- `dema assets scan --root <path> [--json]`
+- `dema realm world-map [--json] [--no-color]`
+- `tests/local-asset-awareness.test.js`
+- `tests/dema-realm-world-map.test.js`
 
 ### Out of scope for v0.1
 
@@ -149,7 +158,7 @@ The denylist is a safety interlock, not a claim that non-denied paths are safe.
 [DECLARED] `dema realm world-map` is a read-only consumer of the inventory artifact. It must
 not rescan disk. Missing or malformed artifact states are rendered honestly:
 
-- `INVENTORY_ABSENT`: no artifact yet; suggest `dema local-assets scan`.
+- `INVENTORY_ABSENT`: no artifact yet; suggest `dema assets scan`.
 - `INVENTORY_STALE`: artifact exists but is older than the freshness window.
 - `INVENTORY_READY`: artifact parses, schema matches, and boundary is valid.
 

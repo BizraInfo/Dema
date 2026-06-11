@@ -31,7 +31,7 @@ if artifact does not exist:
   return state:
     status = INVENTORY_ABSENT
     inventory = null
-    next_safe_action = "Run dema local-assets scan --root ~/Downloads"
+    next_safe_action = "Run dema assets scan --root ~/Downloads"
     boundary all false
 
 parse JSON
@@ -39,7 +39,7 @@ if parse fails or schema mismatch:
   return state:
     status = INVENTORY_INVALID
     inventory = null
-    next_safe_action = "Re-run dema local-assets scan"
+    next_safe_action = "Re-run dema assets scan"
     boundary all false
 
 validate artifact boundary:
