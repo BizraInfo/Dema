@@ -58,10 +58,37 @@ const REQUIRED_FIELDS = [
   "verification_path",
 ];
 
-// A claim carrying blocked wording (token/federation/Shariah/production/private
-// data/Data-Lake mutation) may never be marked beyond synthetic maturity — it is
-// future/gated until real evidence exists. This is the hard overclaim gate.
+// The R4 overclaim gate distinguishes two kinds of blocked_wording:
+//
+//   FOREVER_GATED — forbidden CAPABILITIES (token economy, federation, public
+//     network, production readiness, Shariah certification). These need external
+//     scholarly/legal/operational validation and may NEVER be marked beyond
+//     synthetic maturity from inside the repo. R4 caps them hard.
+//
+//   sensitivity tags (e.g. private_data) — NOT capabilities. They flag that a
+//     claim touches sensitive ground, but a local, consented operator run over
+//     one's own data legitimately makes such a claim REAL_OPERATOR_VERIFIED.
+//     Capping these would forbid the loop's own purpose, so R4 ignores them.
+//
+// A claim is R4-capped only if its blocked_wording intersects FOREVER_GATED.
+export const FOREVER_GATED_WORDING = new Set([
+  "token",
+  "mint",
+  "reward",
+  "economic",
+  "federation",
+  "public_network",
+  "production",
+  "shariah",
+]);
 const ALLOWED_FOR_GATED = new Set(["DESIGNED", "MECHANISM_VERIFIED_SYNTHETIC"]);
+
+export function isCapabilityGated(claim) {
+  return (
+    Array.isArray(claim?.blocked_wording) &&
+    claim.blocked_wording.some((w) => FOREVER_GATED_WORDING.has(w))
+  );
+}
 
 // Statuses that assert real-world / production truth need hard evidence.
 const REAL_STATUSES = new Set(["REAL_OPERATOR_VERIFIED", "PRODUCTION_ACTIVE"]);
@@ -155,17 +182,16 @@ export function validateClaimRegister(register) {
       });
     }
 
-    // R4 — gated claims cannot exceed synthetic maturity.
-    if (
-      Array.isArray(c?.blocked_wording) &&
-      c.blocked_wording.length > 0 &&
-      c?.status &&
-      !ALLOWED_FOR_GATED.has(c.status)
-    ) {
+    // R4 — capability-gated claims cannot exceed synthetic maturity. Sensitivity
+    // tags (e.g. private_data) are not capped — see FOREVER_GATED_WORDING.
+    if (isCapabilityGated(c) && c?.status && !ALLOWED_FOR_GATED.has(c.status)) {
+      const gated = c.blocked_wording.filter((w) =>
+        FOREVER_GATED_WORDING.has(w),
+      );
       violations.push({
         id,
         rule: "R4_gating",
-        detail: `gated claim (blocked_wording: ${c.blocked_wording.join(", ")}) cannot be ${c.status}; max MECHANISM_VERIFIED_SYNTHETIC`,
+        detail: `capability-gated claim (${gated.join(", ")}) cannot be ${c.status}; max MECHANISM_VERIFIED_SYNTHETIC`,
       });
     }
 

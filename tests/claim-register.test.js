@@ -115,6 +115,40 @@ describe("claim register — validator", () => {
     assert.ok(!r.violations.some((v) => v.rule === "R4_gating"));
   });
 
+  it("R4 does NOT cap a sensitivity-only claim (private_data) — a local consented run can make it real", () => {
+    // private_data is a sensitivity tag, not a forbidden capability. After a real
+    // operator run on one's own data, the claim legitimately becomes verified.
+    const r = validateClaimRegister({
+      claims: [
+        goodClaim({
+          id: "C-REAL-RUN",
+          text: "The loop served the operator's real private data in a real run",
+          blocked_wording: ["private_data"],
+          status: "REAL_OPERATOR_VERIFIED",
+          evidence_class: "MEASURED",
+          verification_path:
+            "npm run node0 -- --root ... --consent ...; node0 mumu verify -> VERIFIED",
+        }),
+      ],
+    });
+    assert.equal(r.ok, true, JSON.stringify(r.violations));
+    assert.ok(!r.violations.some((v) => v.rule === "R4_gating"));
+  });
+
+  it("R4 still caps a capability-gated claim even when mixed with a sensitivity tag", () => {
+    const r = validateClaimRegister({
+      claims: [
+        goodClaim({
+          id: "C-MIX",
+          text: "token economy over private data",
+          blocked_wording: ["private_data", "token"],
+          status: "PRODUCTION_ACTIVE",
+        }),
+      ],
+    });
+    assert.ok(r.violations.some((v) => v.rule === "R4_gating"));
+  });
+
   it("real/production status requires strong evidence_class (R5)", () => {
     const r = validateClaimRegister({
       claims: [
