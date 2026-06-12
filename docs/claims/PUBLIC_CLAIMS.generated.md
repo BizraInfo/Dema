@@ -19,13 +19,14 @@
 | C-PRODUCTION-READY | Node0 / Dema is production-ready for closed-loop deployment. | node0 | DESIGNED | UNKNOWN | low |
 | C-IHSAN-ENFORCED | The Ihsan constitutional gate (>= 0.95) is enforced in code on every surface. | datalake | DESIGNED | DERIVED | low |
 
-## Gated — must NOT be stated as live
+## Capability-gated — must NOT be stated as live
 
-These carry blocked wording (token / federation / production / private data /
-Data-Lake mutation). They cannot exceed MECHANISM_VERIFIED_SYNTHETIC until real
-evidence exists. State them only with their status, never as live:
+These carry forbidden-capability wording (token / mint / reward / economic /
+federation / public_network / production / shariah). They need external
+validation and cannot exceed MECHANISM_VERIFIED_SYNTHETIC. (Sensitivity tags
+like `private_data` are NOT listed here — a local consented run can make those
+real; see each claim's row above for its status.)
 
-- **C-N0-MUMU-REAL-RUN** — `DESIGNED` · blocked: private_data · artifacts/node0/mumu/ is empty — no real operator chain on disk. Pending gate: N0-MUMU-REAL-ROOT-RUN.
 - **C-TOKEN-ECONOMY** — `DESIGNED` · blocked: token, mint, reward, economic · Simulation only. dual-token-preview.v0.1.json carries token_minted:false, wallet_used:false, network_used:false. Requires external scholarly/legal/economic validation before any live claim.
 - **C-FEDERATION** — `DESIGNED` · blocked: federation, public_network · network mode is GENESIS_SINGLE_NODE_ACTIVE_NETWORK; external_federation_active:false; node_count:1. Directional only.
 - **C-PRODUCTION-READY** — `DESIGNED` · blocked: production · Production checklist 13/134 (9.7%) complete; constitutional Ihsan gate 0.808 < 0.95. Blocked until checklist DoD passes.

@@ -9,6 +9,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
+import { isCapabilityGated } from "./claim-register-check.mjs";
 
 const REGISTER = "docs/claims/node0-claim-register.v0.1.json";
 const OUTPUT = "docs/claims/PUBLIC_CLAIMS.generated.md";
@@ -46,21 +47,23 @@ export function renderPublicClaims(register) {
     );
   }
   lines.push("");
-  lines.push("## Gated — must NOT be stated as live");
+  lines.push("## Capability-gated — must NOT be stated as live");
   lines.push("");
   lines.push(
-    "These carry blocked wording (token / federation / production / private data /",
+    "These carry forbidden-capability wording (token / mint / reward / economic /",
   );
   lines.push(
-    "Data-Lake mutation). They cannot exceed MECHANISM_VERIFIED_SYNTHETIC until real",
+    "federation / public_network / production / shariah). They need external",
   );
   lines.push(
-    "evidence exists. State them only with their status, never as live:",
+    "validation and cannot exceed MECHANISM_VERIFIED_SYNTHETIC. (Sensitivity tags",
   );
+  lines.push(
+    "like `private_data` are NOT listed here — a local consented run can make those",
+  );
+  lines.push("real; see each claim's row above for its status.)");
   lines.push("");
-  const gated = claims.filter(
-    (c) => Array.isArray(c.blocked_wording) && c.blocked_wording.length > 0,
-  );
+  const gated = claims.filter((c) => isCapabilityGated(c));
   for (const c of gated) {
     lines.push(
       `- **${cell(c.id)}** — \`${cell(c.status)}\` · blocked: ${cell(c.blocked_wording.join(", "))} · ${cell(c.verification_path)}`,

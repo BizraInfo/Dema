@@ -227,6 +227,46 @@ describe("claim register — public-claims generation", () => {
     }
   });
 
+  it("the not-live section lists capability-gated claims but not sensitivity-only ones (R4 consistency)", () => {
+    const reg = {
+      claims: [
+        {
+          id: "C-TOK",
+          text: "token economy",
+          scope: "economy",
+          source: "x",
+          evidence_class: "SCENARIO",
+          status: "DESIGNED",
+          confidence: "low",
+          blocked_wording: ["token"],
+          verification_path: "sim",
+        },
+        {
+          id: "C-PRIV",
+          text: "served real private data",
+          scope: "node0",
+          source: "x",
+          evidence_class: "UNKNOWN",
+          status: "DESIGNED",
+          confidence: "low",
+          blocked_wording: ["private_data"],
+          verification_path: "pending",
+        },
+      ],
+    };
+    const md = renderPublicClaims(reg);
+    assert.ok(md.includes("C-TOK") && md.includes("C-PRIV")); // both in the table
+    const section = md.split("must NOT be stated as live")[1] || "";
+    assert.ok(
+      section.includes("C-TOK"),
+      "capability-gated claim missing from not-live section",
+    );
+    assert.ok(
+      !section.includes("C-PRIV"),
+      "sensitivity-only (private_data) claim must NOT be capped by the not-live section",
+    );
+  });
+
   it("DRIFT GUARD: committed PUBLIC_CLAIMS.generated.md matches the register", () => {
     const committed = readFileSync(generatedPath, "utf8");
     const fresh = renderPublicClaims(register);
