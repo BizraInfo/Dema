@@ -297,6 +297,8 @@ node apps/cli/src/index.js monetize
 node scripts/review/actuator-check.mjs
 node scripts/review/canon-check.mjs
 node scripts/review/env-hygiene-check.mjs
+node scripts/claims/claim-register-check.mjs
+node scripts/claims/generate-public-claims.mjs --check
 node scripts/review/integration-check.mjs
 node scripts/llm-guidance-check.mjs
 node scripts/gtm-readiness-check.mjs

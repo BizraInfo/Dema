@@ -1,6 +1,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { readFileSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   validateClaimRegister,
@@ -8,6 +11,13 @@ import {
   EVIDENCE_CLASSES,
 } from "../scripts/claims/claim-register-check.mjs";
 import { renderPublicClaims } from "../scripts/claims/generate-public-claims.mjs";
+
+const GENERATOR_CLI = fileURLToPath(
+  new URL("../scripts/claims/generate-public-claims.mjs", import.meta.url),
+);
+const REGISTER_PATH = fileURLToPath(
+  new URL("../docs/claims/node0-claim-register.v0.1.json", import.meta.url),
+);
 
 // NODE0-CLAIM-MAP-PROOF-GAP-REGISTER-V0.1
 // The register is the claim-to-proof compiler: every claim carries its maturity
@@ -225,5 +235,51 @@ describe("claim register — public-claims generation", () => {
       fresh,
       "PUBLIC_CLAIMS.generated.md is stale — run `npm run claims:generate`",
     );
+  });
+});
+
+// The enforcing half: `claims:generate --check` is a release/hook gate that fails
+// closed when the doc has drifted from the register — so a stale public claim
+// can't reach main. Wired into scripts/check.mjs.
+describe("public-claims generation — --check drift gate (CLI)", () => {
+  function runCheck(regPath, docPath) {
+    try {
+      execFileSync(
+        "node",
+        [GENERATOR_CLI, "--check", "--register", regPath, "--out", docPath],
+        { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+      );
+      return 0;
+    } catch (e) {
+      return e.status ?? 1;
+    }
+  }
+
+  it("--check exits 0 when the doc matches the register", () => {
+    const dir = mkdtempSync(join(tmpdir(), "claims-check-"));
+    try {
+      const reg = JSON.parse(readFileSync(REGISTER_PATH, "utf8"));
+      const regPath = join(dir, "reg.json");
+      const docPath = join(dir, "doc.md");
+      writeFileSync(regPath, JSON.stringify(reg));
+      writeFileSync(docPath, renderPublicClaims(reg));
+      assert.equal(runCheck(regPath, docPath), 0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("--check exits 1 when the doc has drifted from the register", () => {
+    const dir = mkdtempSync(join(tmpdir(), "claims-check-"));
+    try {
+      const reg = JSON.parse(readFileSync(REGISTER_PATH, "utf8"));
+      const regPath = join(dir, "reg.json");
+      const docPath = join(dir, "doc.md");
+      writeFileSync(regPath, JSON.stringify(reg));
+      writeFileSync(docPath, "STALE — does not match the register\n");
+      assert.equal(runCheck(regPath, docPath), 1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

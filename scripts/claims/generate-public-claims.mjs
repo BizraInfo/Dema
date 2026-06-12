@@ -70,13 +70,52 @@ export function renderPublicClaims(register) {
   return lines.join("\n");
 }
 
-function main() {
+function parseArgs(argv) {
+  let check = false;
+  let register = null;
+  let out = null;
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--check") check = true;
+    else if (argv[i] === "--register" && argv[i + 1]) register = argv[++i];
+    else if (argv[i] === "--out" && argv[i + 1]) out = argv[++i];
+  }
+  return { check, register, out };
+}
+
+function main(argv = []) {
   const root = resolve(fileURLToPath(new URL("../..", import.meta.url)));
-  const register = JSON.parse(readFileSync(resolve(root, REGISTER), "utf8"));
+  const { check, register: regOverride, out: outOverride } = parseArgs(argv);
+  const registerPath = regOverride
+    ? resolve(regOverride)
+    : resolve(root, REGISTER);
+  const outPath = outOverride ? resolve(outOverride) : resolve(root, OUTPUT);
+  const register = JSON.parse(readFileSync(registerPath, "utf8"));
   const md = renderPublicClaims(register);
-  writeFileSync(resolve(root, OUTPUT), md, "utf8");
+
+  if (check) {
+    // Drift gate (release / git-hook): fail closed if the committed doc no longer
+    // matches a fresh render of the register. Read-only; never writes.
+    let committed = "";
+    try {
+      committed = readFileSync(outPath, "utf8");
+    } catch {
+      committed = "";
+    }
+    if (committed !== md) {
+      console.error(
+        `[CLAIMS] DRIFT: ${outPath} does not match the register. Run \`npm run claims:generate\`. Exit 1.`,
+      );
+      process.exit(1);
+    }
+    console.log(
+      `[CLAIMS] in sync: public claims doc matches the register (${register.claims.length} claims).`,
+    );
+    return;
+  }
+
+  writeFileSync(outPath, md, "utf8");
   console.log(
-    `[CLAIMS] generated ${OUTPUT} from ${REGISTER} (${register.claims.length} claims)`,
+    `[CLAIMS] generated ${outPath} from ${registerPath} (${register.claims.length} claims)`,
   );
 }
 
@@ -84,5 +123,5 @@ if (
   process.argv[1] &&
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
-  main();
+  main(process.argv.slice(2));
 }
