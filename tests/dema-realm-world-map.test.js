@@ -257,7 +257,9 @@ describe("dema realm world-map CLI", () => {
   it("--json emits parseable schema-tagged JSON", async () => {
     const home = freshHome();
     try {
-      writeInventory(home);
+      // The CLI path uses the real wall clock; keep this fixture fresh relative
+      // to that clock so the test proves JSON rendering rather than aging out.
+      writeInventory(home, { generated_at_iso: new Date().toISOString() });
       const r = await runCli(["realm", "world-map", "--json"], { demaHome: home });
       assert.equal(r.exitCode, 0, r.stderr);
       const out = JSON.parse(r.stdout);
@@ -271,7 +273,9 @@ describe("dema realm world-map CLI", () => {
   it("--no-color output contains no ANSI sequences", async () => {
     const home = freshHome();
     try {
-      writeInventory(home);
+      // Keep the CLI fixture fresh for the real wall clock; stale rendering is
+      // covered by the fixed-clock unit test above.
+      writeInventory(home, { generated_at_iso: new Date().toISOString() });
       const r = await runCli(["realm", "world-map", "--no-color"], { demaHome: home });
       assert.equal(r.exitCode, 0, r.stderr);
       assert.match(r.stdout, /DEMA REALM · WORLD MAP/);
