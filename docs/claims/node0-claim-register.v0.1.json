@@ -17,10 +17,10 @@
       "scope": "dema",
       "source": "README.md",
       "evidence_class": "MEASURED",
-      "status": "MECHANISM_VERIFIED_SYNTHETIC",
+      "status": "PUBLIC_MAIN_SYNCED",
       "confidence": "high",
       "blocked_wording": [],
-      "verification_path": "npm test (4517/4518 pass, 1 environmental); node .claude/skills/run-dema/driver.mjs --smoke (42/42)"
+      "verification_path": "README.md public-main boundary confirms Dema as local-first, consent-bound, receipt-backed proof cockpit; PR #146 squash fd88538 landed Node0 proof/claim surfaces on public main. Mechanism is main-synced; this does not imply production readiness or live federation/economy."
     },
     {
       "id": "C-DEMA-ZERODEP",
@@ -39,10 +39,10 @@
       "scope": "node0",
       "source": "docs/06-adr/ADR-037-node0-mumu-closed-loop-v0.1.md",
       "evidence_class": "MEASURED",
-      "status": "MECHANISM_VERIFIED_SYNTHETIC",
+      "status": "PUBLIC_MAIN_SYNCED",
       "confidence": "high",
       "blocked_wording": [],
-      "verification_path": "N0-MUMU-CLOSED-LOOP-ARTIFACT-AUDIT 2026-06-12: 23 artifacts, 11 receipts, replay VERIFIED, 0 tamper — controlled synthetic test-mode run over a throwaway root"
+      "verification_path": "N0-MUMU-CLOSED-LOOP-ARTIFACT-AUDIT 2026-06-12: 23 artifacts, 11 receipts, replay VERIFIED, 0 tamper — controlled synthetic test-mode run. Merged to public main in PR #146 (squash fd88538). Mechanism is main-synced; a REAL operator run is still pending (see C-N0-MUMU-REAL-RUN)."
     },
     {
       "id": "C-N0-MUMU-REAL-RUN",
@@ -61,10 +61,10 @@
       "scope": "ci",
       "source": "commit cf10a3b",
       "evidence_class": "VERIFIED",
-      "status": "MECHANISM_VERIFIED_SYNTHETIC",
+      "status": "PUBLIC_MAIN_SYNCED",
       "confidence": "high",
       "blocked_wording": [],
-      "verification_path": "tests/g8-classifier.test.js 15/15; commit cf10a3b on LOCAL branch feat/node0-mumu-closed-loop-v0.1 — NOT YET on public main (unpushed). Status is intentionally not PUBLIC_MAIN_SYNCED."
+      "verification_path": "tests/g8-classifier.test.js 15/15; commit cf10a3b, merged to public main in PR #146 (squash fd88538). evaluateLogFreshness + run-bound TAP logs now on main."
     },
     {
       "id": "C-RECEIPT-REPLAY",
@@ -72,10 +72,10 @@
       "scope": "node0",
       "source": "scripts/node0-mumu-replay.mjs",
       "evidence_class": "MEASURED",
-      "status": "MECHANISM_VERIFIED_SYNTHETIC",
+      "status": "PUBLIC_MAIN_SYNCED",
       "confidence": "high",
       "blocked_wording": [],
-      "verification_path": "tests/node0-mumu-cli.test.js: VERIFIED on clean chain, TAMPERED on corrupted inventory artifact"
+      "verification_path": "scripts/node0-mumu-replay.mjs and tests/node0-mumu-cli.test.js verify clean chains and tamper/corrupt inventory behavior; replay hardening merged to public main in PR #146 (squash fd88538)."
     },
     {
       "id": "C-TOKEN-ECONOMY",
