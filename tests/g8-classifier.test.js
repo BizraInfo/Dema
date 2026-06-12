@@ -111,6 +111,19 @@ describe("G8 classifier — hardened (per-failure allowlist)", () => {
       assert.ok(k.id && k.reason && k.pattern instanceof RegExp);
     }
   });
+
+  it("parses not-ok lines in linear time (regression guard: no polynomial ReDoS)", () => {
+    // The prior `(.+?)\s*$` regex backtracked O(n^2) on a long run of spaces
+    // before a non-space at line end (~4s at 60k spaces — measured). The linear
+    // `(.+)$`+trim parses instantly. 60k gives a wide margin vs the 500ms bound
+    // even with JIT warmup (vulnerable ~4s, linear ~0ms).
+    const crafted = "not ok 1 - " + " ".repeat(60000) + "x";
+    const t0 = Date.now();
+    const r = classifyFailures(crafted);
+    const elapsed = Date.now() - t0;
+    assert.ok(elapsed < 500, `parse took ${elapsed}ms — ReDoS regression`);
+    assert.equal(r.notOk[0].name, "x"); // name extracted + trimmed
+  });
 });
 
 // GO: G8-HARDEN-TEST-LOG-FRESHNESS

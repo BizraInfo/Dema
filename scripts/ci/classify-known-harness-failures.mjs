@@ -55,8 +55,16 @@ export function classifyFailures(content) {
   const failMatch = content.match(/# fail\s+(\d+)/);
   const reportedFailCount = failMatch ? parseInt(failMatch[1], 10) : 0;
 
-  const notOk = [...content.matchAll(/^\s*not ok (\d+) - (.+?)\s*$/gm)].map(
-    (m) => ({ num: Number(m[1]), name: m[2] }),
+  // Linear regex: greedy `(.+)$` (the `.` excludes newline, `$` anchors line-end
+  // under /m) has no quantifier ambiguity, so no polynomial backtracking. The
+  // prior `(.+?)\s*$` was O(n^2) on a long space run before a non-space at line
+  // end (CodeQL js/polynomial-redos). Trailing/leading whitespace is removed by
+  // `.trim()` in JS, preserving the old `\s*$` behavior.
+  const notOk = [...content.matchAll(/^\s*not ok (\d+) - (.+)$/gm)].map(
+    (m) => ({
+      num: Number(m[1]),
+      name: m[2].trim(),
+    }),
   );
 
   const recognized = [];
