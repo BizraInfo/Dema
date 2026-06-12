@@ -1,0 +1,125 @@
+{
+  "schema": "bizra.dema.claim_register.v0.1",
+  "version": "0.1",
+  "gate": "NODE0-CLAIM-MAP-PROOF-GAP-REGISTER-V0.1",
+  "note": "Machine-readable claim-to-proof register. Every public-facing claim (README, demo, report, agent output) should be generated from this register, not from memory. Validated by scripts/claims/claim-register-check.mjs; fails closed on overclaim. Two axes: evidence_class = how a claim is evidenced (docs/CLAIM_REGISTER_v0.1.md taxonomy); status = where it sits on the maturity ladder.",
+  "maturity_ladder": [
+    "DESIGNED",
+    "MECHANISM_VERIFIED_SYNTHETIC",
+    "REAL_OPERATOR_VERIFIED",
+    "PUBLIC_MAIN_SYNCED",
+    "PRODUCTION_ACTIVE"
+  ],
+  "claims": [
+    {
+      "id": "C-DEMA-COCKPIT",
+      "text": "Dema is a local-first, consent-bound, receipt-backed proof cockpit — the door into BIZRA, not the whole ecosystem.",
+      "scope": "dema",
+      "source": "README.md",
+      "evidence_class": "MEASURED",
+      "status": "MECHANISM_VERIFIED_SYNTHETIC",
+      "confidence": "high",
+      "blocked_wording": [],
+      "verification_path": "npm test (4517/4518 pass, 1 environmental); node .claude/skills/run-dema/driver.mjs --smoke (42/42)"
+    },
+    {
+      "id": "C-DEMA-ZERODEP",
+      "text": "Dema has zero production and zero dev dependencies (Node.js stdlib only; no package-lock).",
+      "scope": "dema",
+      "source": "package.json",
+      "evidence_class": "VERIFIED",
+      "status": "PUBLIC_MAIN_SYNCED",
+      "confidence": "high",
+      "blocked_wording": [],
+      "verification_path": "package.json has no dependencies/devDependencies fields; npm audit ENOLOCK; confirmed on public main"
+    },
+    {
+      "id": "C-N0-MUMU-MECHANISM",
+      "text": "The Node0/Mumu closed loop produces replay-verifiable, privacy-safe artifacts end-to-end (scan -> world map -> mission -> PAT/SAT -> consent -> action -> receipts -> reflection).",
+      "scope": "node0",
+      "source": "docs/06-adr/ADR-037-node0-mumu-closed-loop-v0.1.md",
+      "evidence_class": "MEASURED",
+      "status": "MECHANISM_VERIFIED_SYNTHETIC",
+      "confidence": "high",
+      "blocked_wording": [],
+      "verification_path": "N0-MUMU-CLOSED-LOOP-ARTIFACT-AUDIT 2026-06-12: 23 artifacts, 11 receipts, replay VERIFIED, 0 tamper — controlled synthetic test-mode run over a throwaway root"
+    },
+    {
+      "id": "C-N0-MUMU-REAL-RUN",
+      "text": "The Node0/Mumu loop has served Mumu's real private data in a real operator run.",
+      "scope": "node0",
+      "source": "audit-2026-06-12",
+      "evidence_class": "UNKNOWN",
+      "status": "DESIGNED",
+      "confidence": "low",
+      "blocked_wording": ["private_data"],
+      "verification_path": "artifacts/node0/mumu/ is empty — no real operator chain on disk. Pending gate: N0-MUMU-REAL-ROOT-RUN."
+    },
+    {
+      "id": "C-G8-FRESHNESS",
+      "text": "The G8 harness classifier fails closed on stale/empty/unbound test logs (a verifier verifies its evidence freshness before the result).",
+      "scope": "ci",
+      "source": "commit cf10a3b",
+      "evidence_class": "VERIFIED",
+      "status": "MECHANISM_VERIFIED_SYNTHETIC",
+      "confidence": "high",
+      "blocked_wording": [],
+      "verification_path": "tests/g8-classifier.test.js 15/15; commit cf10a3b on LOCAL branch feat/node0-mumu-closed-loop-v0.1 — NOT YET on public main (unpushed). Status is intentionally not PUBLIC_MAIN_SYNCED."
+    },
+    {
+      "id": "C-RECEIPT-REPLAY",
+      "text": "BIZRA receipt chains are hash-chained and replay-verifiable, with tamper detection on corrupted receipts or inventory.",
+      "scope": "node0",
+      "source": "scripts/node0-mumu-replay.mjs",
+      "evidence_class": "MEASURED",
+      "status": "MECHANISM_VERIFIED_SYNTHETIC",
+      "confidence": "high",
+      "blocked_wording": [],
+      "verification_path": "tests/node0-mumu-cli.test.js: VERIFIED on clean chain, TAMPERED on corrupted inventory artifact"
+    },
+    {
+      "id": "C-TOKEN-ECONOMY",
+      "text": "BIZRA mints token / economic rewards from verified impact.",
+      "scope": "economy",
+      "source": "dual-token-preview",
+      "evidence_class": "SCENARIO",
+      "status": "DESIGNED",
+      "confidence": "low",
+      "blocked_wording": ["token", "mint", "reward", "economic"],
+      "verification_path": "Simulation only. dual-token-preview.v0.1.json carries token_minted:false, wallet_used:false, network_used:false. Requires external scholarly/legal/economic validation before any live claim."
+    },
+    {
+      "id": "C-FEDERATION",
+      "text": "BIZRA operates a public federation / global URP network across multiple nodes.",
+      "scope": "federation",
+      "source": "network-mode.v0.1.json",
+      "evidence_class": "DESIGNED_NOT_LIVE",
+      "status": "DESIGNED",
+      "confidence": "low",
+      "blocked_wording": ["federation", "public_network"],
+      "verification_path": "network mode is GENESIS_SINGLE_NODE_ACTIVE_NETWORK; external_federation_active:false; node_count:1. Directional only."
+    },
+    {
+      "id": "C-PRODUCTION-READY",
+      "text": "Node0 / Dema is production-ready for closed-loop deployment.",
+      "scope": "node0",
+      "source": "production-checklist-2026-06-10",
+      "evidence_class": "UNKNOWN",
+      "status": "DESIGNED",
+      "confidence": "low",
+      "blocked_wording": ["production"],
+      "verification_path": "Production checklist 13/134 (9.7%) complete; constitutional Ihsan gate 0.808 < 0.95. Blocked until checklist DoD passes."
+    },
+    {
+      "id": "C-IHSAN-ENFORCED",
+      "text": "The Ihsan constitutional gate (>= 0.95) is enforced in code on every surface.",
+      "scope": "datalake",
+      "source": "genesis-node-report-2026-06-08",
+      "evidence_class": "DERIVED",
+      "status": "DESIGNED",
+      "confidence": "low",
+      "blocked_wording": ["production"],
+      "verification_path": "Composite Ihsan 0.808 < 0.95; gate is not CI-hard on every surface (audit finding). Designed, not uniformly live."
+    }
+  ]
+}

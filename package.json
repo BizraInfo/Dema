@@ -14,6 +14,7 @@
     "node0:test": "node --test tests/node0-mumu-loop.test.js tests/node0-mumu-replay.test.js",
     "check": "node scripts/ci/restore-urp-artifacts.mjs && node scripts/check.mjs 2>&1 | tee \"${TMPDIR:-/tmp}/bizra-check-output.$$.log\"; node scripts/ci/classify-known-harness-failures.mjs --log \"${TMPDIR:-/tmp}/bizra-check-output.$$.log\"",
     "claim:check": "node scripts/claim-ledger-check.mjs",
+    "claims:register": "node scripts/claims/claim-register-check.mjs",
     "env-hygiene": "node scripts/review/env-hygiene-check.mjs",
     "env-hygiene:strict": "node scripts/review/env-hygiene-check.mjs --strict",
     "test": "node scripts/ci/restore-urp-artifacts.mjs && node --test tests/*.test.js 2>&1 | tee \"${TMPDIR:-/tmp}/bizra-test-output.$$.log\"; node scripts/ci/classify-known-harness-failures.mjs --log \"${TMPDIR:-/tmp}/bizra-test-output.$$.log\"",
