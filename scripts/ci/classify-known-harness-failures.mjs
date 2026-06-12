@@ -76,7 +76,12 @@ export function classifyFailures(content) {
   }
 
   const cleanRun = reportedFailCount === 0 && notOk.length === 0;
-  const verdict = unrecognized.length === 0 ? "PASS" : "FAIL";
+  // Fail closed when the summary reports more failures than we captured as named
+  // `not ok` lines (a runner error or an unparseable failure). An uncaptured
+  // failure is real — it must never pass as clean just because it had no name.
+  const uncapturedFailures = Math.max(0, reportedFailCount - notOk.length);
+  const verdict =
+    unrecognized.length === 0 && uncapturedFailures === 0 ? "PASS" : "FAIL";
 
   return {
     reportedFailCount,
@@ -84,6 +89,7 @@ export function classifyFailures(content) {
     recognized,
     unrecognized,
     cleanRun,
+    uncapturedFailures,
     verdict,
   };
 }
@@ -152,7 +158,7 @@ function parseArgs(argv) {
 }
 
 function main() {
-  const { logPath, useStdin } = parseArgs(process.argv.slice(2));
+  const { logPath } = parseArgs(process.argv.slice(2));
 
   let content;
   try {
@@ -206,6 +212,13 @@ function main() {
     }
     console.error(
       "\n[G8 GATE] A real or new failure is present (or add it to KNOWN_MASKABLE if genuinely environmental). Exit 1.",
+    );
+    process.exit(1);
+  }
+
+  if (r.uncapturedFailures > 0) {
+    console.error(
+      `\n[G8 GATE] ${r.uncapturedFailures} reported failure(s) had no parseable 'not ok' line (runner error or unnamed failure). Failing closed — an uncaptured failure is still a failure. Exit 1.`,
     );
     process.exit(1);
   }

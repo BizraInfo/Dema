@@ -16,15 +16,7 @@ import {
   lstatSync,
   rmSync,
 } from "node:fs";
-import {
-  join,
-  resolve,
-  relative,
-  dirname,
-  basename,
-  extname,
-  sep,
-} from "node:path";
+import { join, resolve, relative, dirname, extname, sep } from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 

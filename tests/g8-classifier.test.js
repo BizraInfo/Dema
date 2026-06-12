@@ -112,6 +112,13 @@ describe("G8 classifier — hardened (per-failure allowlist)", () => {
     }
   });
 
+  it("fails closed when failures are reported but no not-ok names were captured", () => {
+    // A runner error or a summary line `# fail N` with no parseable `not ok`
+    // line must NOT pass as clean — the failure is real, just uncaptured.
+    const r = classifyFailures("# tests 10\n# pass 9\n# fail 1\n");
+    assert.equal(r.verdict, "FAIL");
+  });
+
   it("parses not-ok lines in linear time (regression guard: no polynomial ReDoS)", () => {
     // The prior `(.+?)\s*$` regex backtracked O(n^2) on a long run of spaces
     // before a non-space at line end (~4s at 60k spaces — measured). The linear
