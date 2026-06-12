@@ -99,6 +99,30 @@ function baseOpts(root, out, extra = {}) {
   };
 }
 
+describe("runMumuLoop — scan limit validation", () => {
+  it("fails closed on a non-finite --max-files (e.g. --max-files foo -> NaN)", () => {
+    const r = runMumuLoop(
+      baseOpts(makeFixture(), freshOut(), {
+        autoConsentTest: true,
+        maxFiles: NaN,
+      }),
+    );
+    assert.equal(r.ok, false);
+    assert.match(r.error, /max_files|scan_limit/);
+  });
+
+  it("fails closed on a non-finite --max-depth", () => {
+    const r = runMumuLoop(
+      baseOpts(makeFixture(), freshOut(), {
+        autoConsentTest: true,
+        maxDepth: NaN,
+      }),
+    );
+    assert.equal(r.ok, false);
+    assert.match(r.error, /max_depth|scan_limit/);
+  });
+});
+
 describe("runMumuLoop — happy path (test-mode + auto-consent)", () => {
   it("completes, writes artifacts, and never leaks content or secrets", () => {
     const root = makeFixture();

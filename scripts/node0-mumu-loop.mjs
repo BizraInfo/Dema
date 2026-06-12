@@ -704,6 +704,21 @@ export function runMumuLoop(opts) {
   if (opts.autoConsentTest && !opts.testMode) {
     return { ok: false, error: "auto_consent_requires_test_mode" };
   }
+  // Reject non-finite scan limits before walking the tree: a non-numeric
+  // `--max-files foo` becomes NaN, and `records.length >= NaN` is always false,
+  // so an unvalidated limit silently disables truncation (unbounded scan).
+  for (const [name, value] of [
+    ["max_files", opts.maxFiles],
+    ["max_depth", opts.maxDepth],
+  ]) {
+    if (!Number.isInteger(value) || value <= 0) {
+      return {
+        ok: false,
+        error: `invalid_${name}`,
+        message: `--${name.replace("_", "-")} must be a positive integer.`,
+      };
+    }
+  }
   const now = opts.testMode ? TEST_NOW : new Date().toISOString();
   const outDir = resolve(opts.out || join("artifacts", "node0", "mumu"));
   const absRoot = resolve(root);
