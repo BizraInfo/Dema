@@ -66,7 +66,10 @@ function makeFixture(root) {
 
   writeFileSync(join(root, "app", "package.json"), '{"private":true}\n');
   writeFileSync(join(root, "notes.md"), "do not read this content\n");
-  writeFileSync(join(root, "proofs", "impact-receipt.json"), '{"secret":false}\n');
+  writeFileSync(
+    join(root, "proofs", "impact-receipt.json"),
+    '{"secret":false}\n',
+  );
   writeFileSync(join(root, "media", "photo.png"), "png bytes\n");
   writeFileSync(join(root, "archive", "bundle.zip"), "zip bytes\n");
   writeFileSync(join(root, "data", "events.jsonl"), '{"a":1}\n');
@@ -147,7 +150,10 @@ describe("buildLocalAssetInventory", () => {
         ".dockerconfigjson",
         ".git-credentials",
       ];
-      writeFileSync(join(root, "visible-notes.md"), "public metadata candidate\n");
+      writeFileSync(
+        join(root, "visible-notes.md"),
+        "public metadata candidate\n",
+      );
       for (const name of dotfileNames) {
         writeFileSync(join(root, name), "TOKEN=SHOULD_NOT_APPEAR\n");
       }
@@ -168,8 +174,9 @@ describe("buildLocalAssetInventory", () => {
       }
       assert.ok(inventory.summary.denied_count >= dotfileNames.length);
       assert.ok(
-        inventory.denied.filter((entry) => entry.reason === "hidden_file_skipped")
-          .length >= 4,
+        inventory.denied.filter(
+          (entry) => entry.reason === "hidden_file_skipped",
+        ).length >= 4,
       );
 
       const raw = JSON.stringify(inventory);
@@ -252,10 +259,16 @@ describe("writeLocalAssetInventory", () => {
         "local-assets",
         "inventory-v0.1.json",
       );
-      assert.equal(result.schema, "bizra.dema.local_asset_awareness_write_result.v0.1");
+      assert.equal(
+        result.schema,
+        "bizra.dema.local_asset_awareness_write_result.v0.1",
+      );
       assert.equal(result.written, true);
       assert.equal(result.artifact_path, artifactPath);
-      assert.equal(existsSync(artifactPath), true);
+      // Existence is proven by the lstat (mode) and read (content) below — both
+      // throw if the file is absent. A separate existsSync check-then-use here
+      // tripped CodeQL js/file-system-race (a false positive in a test, but the
+      // assert was redundant anyway).
       assert.equal((lstatSync(artifactPath).mode & 0o777).toString(8), "600");
 
       const artifact = JSON.parse(readFileSync(artifactPath, "utf8"));
@@ -304,7 +317,10 @@ describe("dema assets scan CLI", () => {
       });
       assert.equal(r.exitCode, 0, r.stderr);
       const out = JSON.parse(r.stdout);
-      assert.equal(out.schema, "bizra.dema.local_asset_awareness_write_result.v0.1");
+      assert.equal(
+        out.schema,
+        "bizra.dema.local_asset_awareness_write_result.v0.1",
+      );
       assert.equal(out.written, true);
       assert.equal(
         out.artifact_path,
