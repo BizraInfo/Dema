@@ -142,4 +142,24 @@ describe("node0 mumu CLI — verify (read-only replay)", () => {
       rmSync(out, { recursive: true, force: true });
     }
   });
+
+  it("verdict TAMPERED (does not crash) when a receipt-chain line is malformed JSON", () => {
+    const { root, out } = generateChain();
+    try {
+      const chainPath = join(out, "receipts", "receipt-chain.v0.1.jsonl");
+      writeFileSync(
+        chainPath,
+        readFileSync(chainPath, "utf8") + "{ this is not valid json\n",
+      );
+      const v = buildMumuVerify({ outDir: out }); // must fail closed, not throw
+      assert.equal(v.verdict, "TAMPERED");
+      assert.ok(
+        v.replay.tamper_detected.some((t) => t.includes("malformed")),
+        `expected a malformed-line tamper signal, got ${JSON.stringify(v.replay.tamper_detected)}`,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(out, { recursive: true, force: true });
+    }
+  });
 });

@@ -29,13 +29,30 @@ const REQUIRED_ARTIFACTS = [
   "reflection/muhasabah-report.v0.1.md",
 ];
 
-export function readReceiptChain(outDir) {
+// Parse JSONL line-by-line, never throwing: a malformed line is tamper evidence,
+// not a crash. The replay verifier must fail closed on a corrupt chain, and the
+// read-only CLI (status/verify) must report it rather than blow up.
+export function parseReceiptChain(text) {
+  const receipts = [];
+  const malformed = [];
+  text.split("\n").forEach((line, index) => {
+    if (!line.trim()) return;
+    try {
+      receipts.push(JSON.parse(line));
+    } catch {
+      malformed.push(index + 1);
+    }
+  });
+  return { receipts, malformed };
+}
+
+function readChainText(outDir) {
   const path = join(outDir, "receipts", "receipt-chain.v0.1.jsonl");
-  if (!existsSync(path)) return [];
-  return readFileSync(path, "utf8")
-    .split("\n")
-    .filter((l) => l.trim())
-    .map((l) => JSON.parse(l));
+  return existsSync(path) ? readFileSync(path, "utf8") : "";
+}
+
+export function readReceiptChain(outDir) {
+  return parseReceiptChain(readChainText(outDir)).receipts;
 }
 
 export function verifyReplay({ outDir }) {
@@ -43,8 +60,11 @@ export function verifyReplay({ outDir }) {
   const tamper = [];
 
   // 1. receipt chain: recompute each hash + verify prev-link
-  const receipts = readReceiptChain(abs);
-  let chainOk = receipts.length > 0;
+  const { receipts, malformed } = parseReceiptChain(readChainText(abs));
+  let chainOk = receipts.length > 0 && malformed.length === 0;
+  if (malformed.length > 0) {
+    tamper.push(`malformed_receipt_line:${malformed.join(",")}`);
+  }
   let prev = null;
   for (const r of receipts) {
     const { receipt_hash, ...rest } = r;
