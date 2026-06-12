@@ -5,7 +5,7 @@ export const commands = [
   ["node", ["scripts/review/env-hygiene-check.mjs"]],
   ["node", ["scripts/claims/claim-register-check.mjs"]],
   ["node", ["scripts/claims/generate-public-claims.mjs", "--check"]],
-  ["node", ["--test"]],
+  ["node", ["--test", "--test-reporter=tap"]],
   ["npm", ["run", "coverage"]],
   ["node", ["apps/cli/src/index.js", "welcome"]],
   ["node", ["apps/cli/src/index.js", "help"]],

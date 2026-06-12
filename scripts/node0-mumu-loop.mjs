@@ -331,15 +331,21 @@ export function buildInventory({ root, maxFiles = 50000, maxDepth = 8 }) {
 export function buildWorldMap(inventory) {
   const classCounts = {};
   const dirClusters = {};
+  const codeByCluster = {};
   for (const r of inventory.records) {
     classCounts[r.class] = (classCounts[r.class] ?? 0) + 1;
     const top = r.relative_path.split("/")[0] || "(root)";
     if (r.class !== "dir") dirClusters[top] = (dirClusters[top] ?? 0) + 1;
+    if (r.class === "code") codeByCluster[top] = (codeByCluster[top] ?? 0) + 1;
   }
   const topClusters = Object.entries(dirClusters)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, 10)
-    .map(([dir, count]) => ({ dir, count }));
+    .map(([dir, count]) => ({
+      dir,
+      count,
+      code_files: codeByCluster[dir] ?? 0,
+    }));
   return {
     schema: `${SCHEMA_PREFIX}_world_map.v0.1`,
     total_files_scanned: inventory.file_count,
@@ -347,9 +353,9 @@ export function buildWorldMap(inventory) {
     skipped_denied_dir_count: inventory.skipped_denied_dir_count,
     class_counts: classCounts,
     top_project_clusters: topClusters,
-    likely_codebases: topClusters
-      .filter((c) => (classCounts.code ?? 0) > 0)
-      .slice(0, 5),
+    // A cluster is a likely codebase only if IT contains code — not merely
+    // because code exists somewhere in the scan (the prior global check).
+    likely_codebases: topClusters.filter((c) => c.code_files > 0).slice(0, 5),
     inventory_hash: inventory.inventory_hash,
   };
 }

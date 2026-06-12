@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import {
   runMumuLoop,
   buildSatPassports,
+  buildWorldMap,
   SAT_ROLES,
   isSecretName,
   runSatReview,
@@ -120,6 +121,26 @@ describe("runMumuLoop — scan limit validation", () => {
     );
     assert.equal(r.ok, false);
     assert.match(r.error, /max_depth|scan_limit/);
+  });
+});
+
+describe("buildWorldMap — likely_codebases is per-cluster", () => {
+  it("lists only clusters that actually contain code, not all clusters when code exists anywhere", () => {
+    const inventory = {
+      file_count: 2,
+      inventory_hash: "sha256:x",
+      skipped_secret_count: 0,
+      skipped_denied_dir_count: 0,
+      records: [
+        { class: "code", relative_path: "proj/app.js" },
+        { class: "docs", relative_path: "notes/readme.md" },
+      ],
+    };
+    const wm = buildWorldMap(inventory);
+    assert.deepEqual(
+      wm.likely_codebases.map((c) => c.dir),
+      ["proj"],
+    );
   });
 });
 

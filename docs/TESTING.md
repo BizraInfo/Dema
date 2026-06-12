@@ -258,7 +258,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 `npm run check` runs:
 
 ```text
-node --test
+node --test --test-reporter=tap
 npm run coverage
 node apps/cli/src/index.js welcome
 node apps/cli/src/index.js help
