@@ -17,6 +17,10 @@ coverage/
 # but do not let local proof artifacts dirty the source tree.
 artifacts/receipts/ci/
 
+# Node0 Mumu closed-loop runtime output (ADR-037: runtime artifacts are not
+# committed — they are run output, not source).
+artifacts/node0/mumu/
+
 # OpenTimestamps creates *.ots.bak backups on each `ots upgrade` —
 # regenerable cruft, never the canonical receipt.
 *.ots.bak

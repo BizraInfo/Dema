@@ -25,12 +25,13 @@ test("T-02 env-hygiene single DEMA_* var set produces one polluter", () => {
   assert.equal(report.remediation, "env -u DEMA_NODE0_ADAPTER <command>");
 });
 
-test("T-03 env-hygiene all 9 DEMA_* vars produce 9 polluters", () => {
+test("T-03 env-hygiene all 10 fixture DEMA_* vars produce 10 polluters", () => {
   const env = {
     DEMA_DOWNLOADS_ROOT: "/tmp/a",
     DEMA_GATEWAY_URL: "http://localhost:1",
     DEMA_HOME: "/tmp/b",
     DEMA_LM_STUDIO_URL: "http://localhost:2",
+    DEMA_LOCAL_ASSET_ROOT: "/tmp/local-assets",
     DEMA_MODEL_DOWNLOADS_ROOT: "/tmp/c",
     DEMA_MODELS_SKIP_TCP: "1",
     DEMA_NODE0_ADAPTER: "gateway-http",
@@ -39,7 +40,7 @@ test("T-03 env-hygiene all 9 DEMA_* vars produce 9 polluters", () => {
   };
   const report = checkEnvHygiene({ env });
   assert.equal(report.ok, false);
-  assert.equal(report.polluter_count, 9);
+  assert.equal(report.polluter_count, 10);
 });
 
 test("T-04 env-hygiene undefined value is NOT counted as set", () => {
