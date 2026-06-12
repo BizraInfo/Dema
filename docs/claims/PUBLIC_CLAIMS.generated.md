@@ -8,12 +8,12 @@
 
 | ID | Claim | Scope | Status | Evidence | Confidence |
 | --- | --- | --- | --- | --- | --- |
-| C-DEMA-COCKPIT | Dema is a local-first, consent-bound, receipt-backed proof cockpit — the door into BIZRA, not the whole ecosystem. | dema | MECHANISM_VERIFIED_SYNTHETIC | MEASURED | high |
+| C-DEMA-COCKPIT | Dema is a local-first, consent-bound, receipt-backed proof cockpit — the door into BIZRA, not the whole ecosystem. | dema | PUBLIC_MAIN_SYNCED | MEASURED | high |
 | C-DEMA-ZERODEP | Dema has zero production and zero dev dependencies (Node.js stdlib only; no package-lock). | dema | PUBLIC_MAIN_SYNCED | VERIFIED | high |
-| C-N0-MUMU-MECHANISM | The Node0/Mumu closed loop produces replay-verifiable, privacy-safe artifacts end-to-end (scan -> world map -> mission -> PAT/SAT -> consent -> action -> receipts -> reflection). | node0 | MECHANISM_VERIFIED_SYNTHETIC | MEASURED | high |
+| C-N0-MUMU-MECHANISM | The Node0/Mumu closed loop produces replay-verifiable, privacy-safe artifacts end-to-end (scan -> world map -> mission -> PAT/SAT -> consent -> action -> receipts -> reflection). | node0 | PUBLIC_MAIN_SYNCED | MEASURED | high |
 | C-N0-MUMU-REAL-RUN | The Node0/Mumu loop has served Mumu's real private data in a real operator run. | node0 | DESIGNED | UNKNOWN | low |
-| C-G8-FRESHNESS | The G8 harness classifier fails closed on stale/empty/unbound test logs (a verifier verifies its evidence freshness before the result). | ci | MECHANISM_VERIFIED_SYNTHETIC | VERIFIED | high |
-| C-RECEIPT-REPLAY | BIZRA receipt chains are hash-chained and replay-verifiable, with tamper detection on corrupted receipts or inventory. | node0 | MECHANISM_VERIFIED_SYNTHETIC | MEASURED | high |
+| C-G8-FRESHNESS | The G8 harness classifier fails closed on stale/empty/unbound test logs (a verifier verifies its evidence freshness before the result). | ci | PUBLIC_MAIN_SYNCED | VERIFIED | high |
+| C-RECEIPT-REPLAY | BIZRA receipt chains are hash-chained and replay-verifiable, with tamper detection on corrupted receipts or inventory. | node0 | PUBLIC_MAIN_SYNCED | MEASURED | high |
 | C-TOKEN-ECONOMY | BIZRA mints token / economic rewards from verified impact. | economy | DESIGNED | SCENARIO | low |
 | C-FEDERATION | BIZRA operates a public federation / global URP network across multiple nodes. | federation | DESIGNED | DESIGNED_NOT_LIVE | low |
 | C-PRODUCTION-READY | Node0 / Dema is production-ready for closed-loop deployment. | node0 | DESIGNED | UNKNOWN | low |
