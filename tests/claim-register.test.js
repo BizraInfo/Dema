@@ -7,6 +7,7 @@ import {
   MATURITY_STATUS,
   EVIDENCE_CLASSES,
 } from "../scripts/claims/claim-register-check.mjs";
+import { renderPublicClaims } from "../scripts/claims/generate-public-claims.mjs";
 
 // NODE0-CLAIM-MAP-PROOF-GAP-REGISTER-V0.1
 // The register is the claim-to-proof compiler: every claim carries its maturity
@@ -144,6 +145,51 @@ describe("claim register — the seeded register file is valid", () => {
       r.ok,
       true,
       `seed register has violations: ${JSON.stringify(r.violations, null, 2)}`,
+    );
+  });
+});
+
+// CLAIM-MAP-PUBLIC-SYNC-AND-DOC-GENERATION-V0.1: public docs are GENERATED from
+// the register, never hand-written — so they cannot drift from or overclaim past
+// the gated truth state.
+describe("claim register — public-claims generation", () => {
+  const registerPath = fileURLToPath(
+    new URL("../docs/claims/node0-claim-register.v0.1.json", import.meta.url),
+  );
+  const generatedPath = fileURLToPath(
+    new URL("../docs/claims/PUBLIC_CLAIMS.generated.md", import.meta.url),
+  );
+  const register = JSON.parse(readFileSync(registerPath, "utf8"));
+
+  it("renders one table row per claim", () => {
+    const md = renderPublicClaims(register);
+    for (const c of register.claims) {
+      assert.ok(md.includes(c.id), `missing claim ${c.id}`);
+    }
+  });
+
+  it("marks every gated claim as not-live (cannot read as a live assertion)", () => {
+    const md = renderPublicClaims(register);
+    const gated = register.claims.filter(
+      (c) => Array.isArray(c.blocked_wording) && c.blocked_wording.length > 0,
+    );
+    for (const c of gated) {
+      // each gated claim must be listed under the gated section with its status
+      assert.match(
+        md,
+        new RegExp(`${c.id}[^\\n]*${c.status}`),
+        `gated claim ${c.id} not labeled with its status`,
+      );
+    }
+  });
+
+  it("DRIFT GUARD: committed PUBLIC_CLAIMS.generated.md matches the register", () => {
+    const committed = readFileSync(generatedPath, "utf8");
+    const fresh = renderPublicClaims(register);
+    assert.equal(
+      committed,
+      fresh,
+      "PUBLIC_CLAIMS.generated.md is stale — run `npm run claims:generate`",
     );
   });
 });

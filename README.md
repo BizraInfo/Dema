@@ -417,7 +417,12 @@ Dema's public language remains local-first, consent-bound, and proof-safe.
 
 ## What is live
 
-As of commit `95b4a4d` (442 commits, 3030 tests passing, 4/4 CI green):
+Live counts (commit, test total, CI) are not snapshotted here — a pinned number
+drifts the moment it is written. For current truth: run `npm test` for the suite,
+`git log` for commit history, and see
+[`docs/claims/PUBLIC_CLAIMS.generated.md`](docs/claims/PUBLIC_CLAIMS.generated.md)
+(generated from the machine-readable claim register) for the maturity status of
+each capability below:
 
 **Operational proof loops:**
 

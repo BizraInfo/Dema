@@ -1,0 +1,88 @@
+#!/usr/bin/env node
+// CLAIM-MAP-PUBLIC-SYNC-AND-DOC-GENERATION-V0.1
+//
+// Generates the public-facing claims doc FROM the machine-readable register, so
+// public statements are derived-by-construction and cannot drift past the gated
+// truth state. The drift guard (tests/claim-register.test.js) fails if the
+// committed output and the register disagree — run `npm run claims:generate`.
+
+import { readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
+
+const REGISTER = "docs/claims/node0-claim-register.v0.1.json";
+const OUTPUT = "docs/claims/PUBLIC_CLAIMS.generated.md";
+
+function cell(s) {
+  return String(s).replaceAll("|", "\\|").replaceAll("\n", " ");
+}
+
+export function renderPublicClaims(register) {
+  const claims = Array.isArray(register?.claims) ? register.claims : [];
+  const lines = [];
+  lines.push("# BIZRA Public Claims (generated — do not edit by hand)");
+  lines.push("");
+  lines.push(
+    "> Generated from `docs/claims/node0-claim-register.v0.1.json` by",
+  );
+  lines.push(
+    "> `scripts/claims/generate-public-claims.mjs` (`npm run claims:generate`).",
+  );
+  lines.push(
+    "> Every public statement about BIZRA should trace to a row below. A claim's",
+  );
+  lines.push(
+    "> `status` is its maturity, not a marketing label: DESIGNED < MECHANISM_VERIFIED_SYNTHETIC",
+  );
+  lines.push(
+    "> < REAL_OPERATOR_VERIFIED < PUBLIC_MAIN_SYNCED < PRODUCTION_ACTIVE.",
+  );
+  lines.push("");
+  lines.push("| ID | Claim | Scope | Status | Evidence | Confidence |");
+  lines.push("| --- | --- | --- | --- | --- | --- |");
+  for (const c of claims) {
+    lines.push(
+      `| ${cell(c.id)} | ${cell(c.text)} | ${cell(c.scope)} | ${cell(c.status)} | ${cell(c.evidence_class)} | ${cell(c.confidence)} |`,
+    );
+  }
+  lines.push("");
+  lines.push("## Gated — must NOT be stated as live");
+  lines.push("");
+  lines.push(
+    "These carry blocked wording (token / federation / production / private data /",
+  );
+  lines.push(
+    "Data-Lake mutation). They cannot exceed MECHANISM_VERIFIED_SYNTHETIC until real",
+  );
+  lines.push(
+    "evidence exists. State them only with their status, never as live:",
+  );
+  lines.push("");
+  const gated = claims.filter(
+    (c) => Array.isArray(c.blocked_wording) && c.blocked_wording.length > 0,
+  );
+  for (const c of gated) {
+    lines.push(
+      `- **${cell(c.id)}** — \`${cell(c.status)}\` · blocked: ${cell(c.blocked_wording.join(", "))} · ${cell(c.verification_path)}`,
+    );
+  }
+  lines.push("");
+  return lines.join("\n");
+}
+
+function main() {
+  const root = resolve(fileURLToPath(new URL("../..", import.meta.url)));
+  const register = JSON.parse(readFileSync(resolve(root, REGISTER), "utf8"));
+  const md = renderPublicClaims(register);
+  writeFileSync(resolve(root, OUTPUT), md, "utf8");
+  console.log(
+    `[CLAIMS] generated ${OUTPUT} from ${REGISTER} (${register.claims.length} claims)`,
+  );
+}
+
+if (
+  process.argv[1] &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  main();
+}
