@@ -20,8 +20,13 @@ export const RISK_PATTERNS = [
   },
   {
     kind: "first_or_only",
+    // Keep this detector focused on exclusivity claims, not ordinary BIZRA
+    // boundary vocabulary such as local-first, metadata-only, read-only, or
+    // preview-only. Broad bare-word matching made the gate punish the project's
+    // own safety language and doc scopes. Exclusivity is still gated when a line
+    // asserts world's-first, first-ever, formal-first, definitive, or the-only-X.
     pattern:
-      /\b(first|only|definitive|world['’]?s first|first formally verified)\b/i,
+      /\b(world['’]?s\s+first|first[-\s]ever|first\s+formally\s+verified|definitive|the\s+only\s+[^.\n]{0,80}\b(?:that|to)\b)\b/i,
     reason: "first-ever or exclusivity claims require hard evidence",
   },
   {
