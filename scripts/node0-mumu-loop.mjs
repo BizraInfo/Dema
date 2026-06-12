@@ -15,13 +15,39 @@ import {
   readdirSync,
   lstatSync,
   rmSync,
+  existsSync,
+  realpathSync,
 } from "node:fs";
-import { join, resolve, relative, dirname, extname, sep } from "node:path";
+import {
+  join,
+  resolve,
+  relative,
+  dirname,
+  basename,
+  extname,
+  sep,
+} from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 export const SCHEMA_PREFIX = "bizra.dema.node0_mumu";
 const TEST_NOW = "2026-06-12T00:00:00.000Z";
+
+// Resolve symlinks so the "output must not be inside the scanned root" check
+// can't be bypassed by a symlinked path segment (resolve() is lexical only).
+// realpathSync needs the path to exist, so for a not-yet-created output dir we
+// canonicalize the deepest existing ancestor and re-append the remaining tail.
+export function canonicalize(p) {
+  let cur = resolve(p);
+  const tail = [];
+  while (!existsSync(cur)) {
+    const parent = dirname(cur);
+    if (parent === cur) return resolve(p);
+    tail.unshift(basename(cur));
+    cur = parent;
+  }
+  return tail.length ? join(realpathSync(cur), ...tail) : realpathSync(cur);
+}
 
 // ---- canonical primitives -------------------------------------------------
 
@@ -720,8 +746,8 @@ export function runMumuLoop(opts) {
     }
   }
   const now = opts.testMode ? TEST_NOW : new Date().toISOString();
-  const outDir = resolve(opts.out || join("artifacts", "node0", "mumu"));
-  const absRoot = resolve(root);
+  const outDir = canonicalize(opts.out || join("artifacts", "node0", "mumu"));
+  const absRoot = canonicalize(root);
 
   // boundary fact: output must NOT be inside the scanned root.
   // Fail closed BEFORE any write so the source tree is never mutated.

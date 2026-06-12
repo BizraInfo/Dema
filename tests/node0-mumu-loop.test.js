@@ -123,6 +123,24 @@ describe("runMumuLoop — scan limit validation", () => {
   });
 });
 
+describe("runMumuLoop — symlink containment", () => {
+  it("fails closed when --out is inside --root via a symlinked root path", () => {
+    const realRoot = makeFixture();
+    const linkRoot = realRoot + "-link";
+    symlinkSync(realRoot, linkRoot);
+    const out = join(realRoot, "node0-out"); // actually inside the real root
+    try {
+      const r = runMumuLoop(baseOpts(linkRoot, out, { autoConsentTest: true }));
+      assert.equal(r.ok, false);
+      assert.equal(r.error, "output_inside_scanned_root");
+    } finally {
+      rmSync(linkRoot, { force: true });
+      rmSync(realRoot, { recursive: true, force: true });
+      rmSync(out, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("runMumuLoop — happy path (test-mode + auto-consent)", () => {
   it("completes, writes artifacts, and never leaks content or secrets", () => {
     const root = makeFixture();
