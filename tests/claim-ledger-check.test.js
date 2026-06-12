@@ -95,6 +95,51 @@ test("auditMarkdown does not let a labeled claim label the next claim", () => {
   );
 });
 
+test("first_or_only does not flag BIZRA's own safety vocabulary", () => {
+  const benign = [
+    "Dema is local-first and offline by default.",
+    "The scanner is metadata-only; it never reads file content.",
+    "Node1 and Node2 remain preview-only until proof gates pass.",
+    "Receipts are read-only in this repo.",
+    "This is the first implementation of the realm cockpit.",
+    "There are only five screens in the seed realm.",
+    "The smoke test passes only if every artifact verifies.",
+  ];
+  for (const body of benign) {
+    const report = auditMarkdown({ file: "spec.md", body });
+    assert.deepEqual(
+      report.findings.filter((f) => f.kind === "first_or_only"),
+      [],
+      `benign safety vocab wrongly flagged: ${body}`,
+    );
+  }
+});
+
+test("first_or_only still flags real exclusivity overclaims", () => {
+  const overclaims = [
+    "BIZRA is the world's first Sovereign Digital Organism.",
+    "This is the first-ever constitutional execution engine.",
+    "Dema is the only system that proves every action.",
+    "It is the first proof cockpit in existence.",
+    "This is the definitive verification framework.",
+  ];
+  for (const body of overclaims) {
+    const report = auditMarkdown({ file: "paper.md", body });
+    assert.ok(
+      report.findings.some((f) => f.kind === "first_or_only"),
+      `real overclaim missed: ${body}`,
+    );
+  }
+});
+
+test("first_or_only is ReDoS-safe on adversarial input", () => {
+  const body = `the only ${"a".repeat(60000)}`;
+  const started = process.hrtime.bigint();
+  auditMarkdown({ file: "evil.md", body });
+  const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
+  assert.ok(elapsedMs < 1000, `regex took ${elapsedMs}ms — possible ReDoS`);
+});
+
 test("claim-ledger-check CLI emits schema-tagged JSON and exits nonzero on findings", async () => {
   const dir = await mkdtemp(join(tmpdir(), "dema-claims-"));
   const path = join(dir, "paper.md");
