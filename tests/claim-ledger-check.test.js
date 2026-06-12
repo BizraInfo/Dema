@@ -51,6 +51,40 @@ test("auditMarkdown flags risky unlabeled benchmark and first-ever claims", () =
   );
 });
 
+test("auditMarkdown flags real unlabeled exclusivity claims", () => {
+  const report = auditMarkdown({
+    file: "paper.md",
+    body: [
+      "This is the world's first decentralized proof cockpit.",
+      "BIZRA is the only AI system that provides verified impact.",
+      "This is the definitive proof of global readiness.",
+    ].join("\n"),
+  });
+
+  assert.equal(report.ok, false);
+  assert.deepEqual(
+    report.findings.map((finding) => finding.kind),
+    ["first_or_only", "first_or_only", "first_or_only"],
+  );
+});
+
+test("auditMarkdown does not flag benign boundary terms as exclusivity claims", () => {
+  const report = auditMarkdown({
+    file: "seed-realm.md",
+    body: [
+      "| Realm | Local operator workspace | Local-first, private by default |",
+      "| Blocks | Files, docs, receipts | Metadata-only until consent |",
+      "| Zakat/Waqf | Purification | Preview-only until external validation |",
+      "The first implementation MUST be exactly five screens.",
+      "The first shippable loop must stay bounded.",
+      "A Seed Realm TUI v0.1 PR passes only if the boundary checks are green.",
+      "This surface is read-only and local-only.",
+    ].join("\n"),
+  });
+
+  assert.equal(report.ok, true, JSON.stringify(report.findings, null, 2));
+});
+
 test("auditMarkdown flags unlabeled percentage benchmark claims", () => {
   const report = auditMarkdown({
     file: "paper.md",
