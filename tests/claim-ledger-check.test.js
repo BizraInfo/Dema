@@ -64,6 +64,44 @@ test("auditMarkdown flags unlabeled percentage benchmark claims", () => {
   );
 });
 
+test("benchmark flags metric percentages, hard units, and hyphenated fold", () => {
+  const claims = [
+    "BIZRA serves 523,793 requests/second.",
+    "Latency is 0.089 milliseconds.",
+    "The classifier reaches 99.94% F1.",
+    "The probe took 12 ms.",
+    "We measured a 10x improvement.",
+    "We measured a 10-fold improvement.",
+    "The model hits 95% accuracy.",
+    "The service holds 99.9% uptime.",
+  ];
+  for (const body of claims) {
+    const report = auditMarkdown({ file: "paper.md", body });
+    assert.ok(
+      report.findings.some((f) => f.kind === "benchmark"),
+      `benchmark claim missed: ${body}`,
+    );
+  }
+});
+
+test("benchmark does not flag posture or constitutional percentages", () => {
+  const benign = [
+    "Dema is 100% local-first.",
+    "Dema is 100% offline by default.",
+    "Zakat is 2.5% of holdings.",
+    "The project keeps a 50% community pool.",
+    "The founder promised a 50% sadaqah pool.",
+  ];
+  for (const body of benign) {
+    const report = auditMarkdown({ file: "spec.md", body });
+    assert.deepEqual(
+      report.findings.filter((f) => f.kind === "benchmark"),
+      [],
+      `posture percentage wrongly flagged: ${body}`,
+    );
+  }
+});
+
 test("auditMarkdown allows a label on the previous non-empty line", () => {
   const report = auditMarkdown({
     file: "paper.md",

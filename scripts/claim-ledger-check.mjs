@@ -14,8 +14,14 @@ export const LABELS = [
 export const RISK_PATTERNS = [
   {
     kind: "benchmark",
+    // Two shapes: (A) a number + an unambiguous performance unit (req/s, ms,
+    // F1, Nx / N-fold improvement — `[-\s]{0,2}` tolerates the "10-fold" hyphen);
+    // and (B) a percentage ONLY in measurement context (95% accuracy, 99.9%
+    // uptime). Bare `%` is intentionally NOT a unit so posture/constitutional
+    // percentages (100% local-first, 2.5% Zakat, 50% pool) do not flag —
+    // "99.94% F1" still trips via the F1 noun in (B). Bounded — ReDoS-safe.
     pattern:
-      /\b\d+(?:,\d{3})*(?:\.\d+)?\s*(?:requests\/second|req\/s|milliseconds?|ms|%|F1-score|F1|x improvement|fold improvement)(?=\s|$|[^\w%])/i,
+      /\b\d+(?:,\d{3})*(?:\.\d+)?[-\s]{0,2}(?:requests\/second|req\/s|milliseconds?|ms|F1-score|F1|x\s+improvement|fold\s+improvement)(?=\s|$|[^\w%])|\b\d+(?:\.\d+)?\s*%\s*(?:accuracy|precision|recall|f1(?:-score)?|score|uptime|improvement|reduction|faster|throughput|coverage|latency)\b/i,
     reason: "numeric benchmark claims require measured or cited evidence",
   },
   {
