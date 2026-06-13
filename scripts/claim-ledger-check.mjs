@@ -23,9 +23,12 @@ export const RISK_PATTERNS = [
     // Tightened to exclusivity *phrasing* so BIZRA's own safety vocabulary
     // (local-first, metadata-only, preview-only, read-only) is not flagged as
     // an overclaim, while real "world's first / the only X / first … in
-    // existence" claims still trip. Alternation of bounded literals — ReDoS-safe.
+    // existence / first-of-its-kind / truly unique" claims still trip. Note
+    // `unique` is caught only in its overclaim phrasing (truly/completely/…
+    // unique) — bare "unique" is reserved technical vocab (unique hash, unique
+    // identifier) and must NOT flag. Alternation of bounded literals — ReDoS-safe.
     pattern:
-      /\b(?:world['’]?s\s+first|first[-\s]ever|first\s+formally[-\s]verified|definitive|the\s+only\s+\w|first\b[^.\n]{0,60}\bin\s+existence\b)/i,
+      /\b(?:world['’]?s\s+first|first[-\s]ever|first\s+formally[-\s]verified|definitive|unprecedented|first[-\s]of[-\s]its[-\s]kind|one[-\s]of[-\s]a[-\s]kind|(?:truly|completely|wholly|entirely|utterly)\s+unique|the\s+only\s+\w|first\b[^.\n]{0,60}\bin\s+existence\b)/i,
     reason: "first-ever or exclusivity claims require hard evidence",
   },
   {

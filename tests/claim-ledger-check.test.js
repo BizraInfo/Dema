@@ -143,6 +143,38 @@ test("first_or_only flags hyphenated 'formally-verified' exclusivity", () => {
   );
 });
 
+test("first_or_only flags unprecedented / first-of-its-kind / one-of-a-kind / truly-unique", () => {
+  const overclaims = [
+    "Dema is an unprecedented breakthrough in agent design.",
+    "This is the first-of-its-kind proof ledger.",
+    "BIZRA is a one-of-a-kind Sovereign Digital Organism.",
+    "The realm cockpit is a truly unique architecture.",
+  ];
+  for (const body of overclaims) {
+    const report = auditMarkdown({ file: "paper.md", body });
+    assert.ok(
+      report.findings.some((f) => f.kind === "first_or_only"),
+      `exclusivity overclaim missed: ${body}`,
+    );
+  }
+});
+
+test("first_or_only does not flag technical 'unique' vocabulary", () => {
+  const benign = [
+    "Each receipt carries a unique hash committed to the chain.",
+    "Sessions are keyed by a unique identifier.",
+    "The index enforces a unique constraint per artifact.",
+  ];
+  for (const body of benign) {
+    const report = auditMarkdown({ file: "spec.md", body });
+    assert.deepEqual(
+      report.findings.filter((f) => f.kind === "first_or_only"),
+      [],
+      `technical 'unique' wrongly flagged: ${body}`,
+    );
+  }
+});
+
 test("first_or_only is ReDoS-safe on adversarial input", () => {
   const body = `the only ${"a".repeat(60000)}`;
   const started = process.hrtime.bigint();
