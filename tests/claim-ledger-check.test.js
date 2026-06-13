@@ -173,6 +173,36 @@ test("economic does not flag generic, ML, or incidental token/reward/mint vocab"
   }
 });
 
+test("a claim labeled with repo maturity vocab is not flagged (formatted forms)", () => {
+  const labeled = [
+    "| Token economy / PoI | **DESIGNED_NOT_LIVE** | future work |",
+    "Ed25519 signing is **MECHANISM_VERIFIED_SYNTHETIC** on local fixtures.",
+    "The token mint is `DESIGNED` only.",
+    "[PRODUCTION_ACTIVE] the gateway holds 99.9% uptime.",
+  ];
+  for (const body of labeled) {
+    const report = auditMarkdown({ file: "m.md", body });
+    assert.equal(
+      report.ok,
+      true,
+      `maturity-labeled claim wrongly flagged: ${body}`,
+    );
+  }
+});
+
+test("bare maturity words (unformatted) still flag the claim", () => {
+  // "designed" as prose is NOT a proof-state label; only **DESIGNED** / [DESIGNED]
+  // / `DESIGNED` count. The claim must still flag.
+  const report = auditMarkdown({
+    file: "p.md",
+    body: "BIZRA is designed to mint reward tokens for every user.",
+  });
+  assert.ok(
+    report.findings.some((f) => f.kind === "economic"),
+    "bare 'designed' must not suppress an unlabeled economic claim",
+  );
+});
+
 test("first_or_only does not flag BIZRA's own safety vocabulary", () => {
   const benign = [
     "Dema is local-first and offline by default.",

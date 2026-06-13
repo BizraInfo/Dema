@@ -11,6 +11,24 @@ export const LABELS = [
   "REMOVE_OR_HARDEN",
 ];
 
+// The repo's own maturity vocabulary (docs/CLAIM_REGISTER_v0.1 ladder + the
+// DESIGNED_NOT_LIVE / DERIVED / SCENARIO evidence states). A claim carrying one
+// of these in a FORMATTED form (**X** / [X] / `X`) already declares its
+// proof-state, so it is honestly labeled and must not be flagged as an
+// overclaim. Bare prose words (e.g. "designed to…") are NOT labels — the
+// formatting requirement in hasLabel() keeps that distinction. `UNKNOWN` is
+// deliberately excluded: it asserts no proof state, so it should not suppress.
+export const MATURITY_LABELS = [
+  "DESIGNED",
+  "DESIGNED_NOT_LIVE",
+  "MECHANISM_VERIFIED_SYNTHETIC",
+  "REAL_OPERATOR_VERIFIED",
+  "PUBLIC_MAIN_SYNCED",
+  "PRODUCTION_ACTIVE",
+  "DERIVED",
+  "SCENARIO",
+];
+
 export const RISK_PATTERNS = [
   {
     kind: "benchmark",
@@ -70,7 +88,7 @@ export const RISK_PATTERNS = [
 ];
 
 function hasLabel(text) {
-  return LABELS.some((label) => {
+  return [...LABELS, ...MATURITY_LABELS].some((label) => {
     const bracketed = `[${label}]`;
     const markdown = `**${label}**`;
     const code = `\`${label}\``;
