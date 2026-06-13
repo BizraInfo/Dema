@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import {
   evaluateCorpusGate,
   findingKey,
@@ -9,6 +13,7 @@ import {
   verifyCitations,
   scanCitations,
   registerIds,
+  loadBaseline,
 } from "../scripts/claims/claim-corpus-gate.mjs";
 
 const f = (file, kind, text) => ({ file, kind, text });
@@ -95,6 +100,53 @@ test("verifyCitations fails closed on a dangling citation (no knowledge object)"
   assert.equal(r.ok, false);
   assert.equal(r.dangling.length, 1);
   assert.equal(r.dangling[0].id, "C-GHOST");
+});
+
+// --- Reliability (mission step 5): the gate must fail CLOSED on degraded
+// inputs, never fail open. A missing/corrupt register or baseline must not
+// silently let claims or dangling citations through.
+test("registerIds fails closed on a missing register (empty set, no throw)", () => {
+  const ids = registerIds("/nonexistent/does-not-exist.json");
+  assert.equal(ids.size, 0);
+});
+
+test("registerIds fails closed on a corrupt register (invalid JSON, no throw)", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dema-reg-"));
+  const bad = join(dir, "register.json");
+  writeFileSync(bad, "{ this is not json ");
+  const ids = registerIds(bad);
+  assert.equal(ids.size, 0);
+});
+
+test("citations fail closed when the register cannot be read (not fail-open)", () => {
+  // Degraded register → no valid ids → any real citation is dangling → gate fails.
+  const r = verifyCitations({
+    citations: [{ file: "a.md", line: 1, id: "C-TOKEN-ECONOMY" }],
+    validIds: registerIds("/nonexistent/register.json"),
+  });
+  assert.equal(
+    r.ok,
+    false,
+    "a citation must not pass when provenance is unverifiable",
+  );
+});
+
+test("loadBaseline fails closed on a missing/corrupt baseline (empty, so all findings read as new)", () => {
+  assert.deepEqual(loadBaseline("/nonexistent/baseline.json"), []);
+  const dir = mkdtempSync(join(tmpdir(), "dema-base-"));
+  const bad = join(dir, "baseline.json");
+  writeFileSync(bad, "}{ corrupt");
+  assert.deepEqual(loadBaseline(bad), []);
+  // Empty baseline + real findings → all "added" → gate fails closed.
+  const gate = evaluateCorpusGate({
+    current: [{ file: "x.md", kind: "economic", text: "mints IMP" }],
+    baseline: loadBaseline(bad),
+  });
+  assert.equal(
+    gate.ok,
+    false,
+    "a corrupt baseline must not silently pass findings",
+  );
 });
 
 test("registerIds returns the real register claim ids", () => {
