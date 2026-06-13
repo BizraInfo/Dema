@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { cmd_language } from "./commands/language.js";
+import { cmd_journey } from "./commands/journey.js";
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
 import {
   formatStatus,
@@ -249,10 +250,6 @@ import {
   formatAmbientBoundary,
   formatAmbientManifestPreview,
 } from "../../../packages/core/src/ambient.js";
-import {
-  buildSovereignJourneyPreview,
-  formatSovereignJourneyPreview,
-} from "../../../packages/mission/src/journey.js";
 import {
   buildSafetyReportPreview,
   formatSafetyReportPreview,
@@ -3560,22 +3557,7 @@ async function cmd_ambient_json(ctx) {
   process.exit(process.exitCode ?? 0);
 }
 
-async function cmd_journey(ctx) {
-  const { argv } = ctx;
-  const json = argv.includes("--json");
-  const intent = argv
-    .slice(1)
-    .filter((arg) => arg !== "--json")
-    .join(" ")
-    .trim();
-  const journey = buildSovereignJourneyPreview({ intent });
-  console.log(
-    json
-      ? JSON.stringify(journey, null, 2)
-      : formatSovereignJourneyPreview(journey),
-  );
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_journey extracted to ./commands/journey.js (dispatcher decomposition ④).
 
 async function cmd_diagnostics(ctx) {
   const { argv, subcommand } = ctx;
