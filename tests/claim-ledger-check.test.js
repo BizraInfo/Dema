@@ -11,6 +11,7 @@ import {
   auditMarkdown,
   LABELS,
   RISK_PATTERNS,
+  extractClaimCitations,
 } from "../scripts/claim-ledger-check.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -354,6 +355,28 @@ test("claim-ledger-check CLI exits zero when risky claims are labeled", async ()
 
   assert.equal(report.ok, true);
   assert.equal(report.findings.length, 0);
+});
+
+test("extractClaimCitations pulls register ids from [claim:ID] syntax", () => {
+  assert.deepEqual(
+    extractClaimCitations(
+      "Bounded by [claim:C-TOKEN-ECONOMY] and [claim:C-FEDERATION].",
+    ),
+    ["C-TOKEN-ECONOMY", "C-FEDERATION"],
+  );
+  assert.deepEqual(extractClaimCitations("no citations here"), []);
+});
+
+test("a claim citing the register via [claim:ID] is credited as provenanced", () => {
+  const report = auditMarkdown({
+    file: "d.md",
+    body: "BIZRA mints token rewards [claim:C-TOKEN-ECONOMY].",
+  });
+  assert.equal(
+    report.ok,
+    true,
+    "a register-cited claim carries provenance and must not flag as unlabeled",
+  );
 });
 
 test("claim-ledger-check exposes stable labels and risk pattern metadata", () => {

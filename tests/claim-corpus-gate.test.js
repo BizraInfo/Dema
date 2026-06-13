@@ -6,6 +6,9 @@ import {
   findingKey,
   corpusFiles,
   scanCorpus,
+  verifyCitations,
+  scanCitations,
+  registerIds,
 } from "../scripts/claims/claim-corpus-gate.mjs";
 
 const f = (file, kind, text) => ({ file, kind, text });
@@ -70,6 +73,43 @@ test("corpusFiles includes README and top-level docs, returns absolute paths", (
     files.every((p) => p.startsWith("/")),
     "paths must be absolute",
   );
+});
+
+test("verifyCitations passes when every cited id resolves to the register", () => {
+  const r = verifyCitations({
+    citations: [{ file: "a.md", line: 1, id: "C-TOKEN-ECONOMY" }],
+    validIds: new Set(["C-TOKEN-ECONOMY", "C-FEDERATION"]),
+  });
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.dangling, []);
+});
+
+test("verifyCitations fails closed on a dangling citation (no knowledge object)", () => {
+  const r = verifyCitations({
+    citations: [
+      { file: "a.md", line: 1, id: "C-TOKEN-ECONOMY" },
+      { file: "b.md", line: 7, id: "C-GHOST" },
+    ],
+    validIds: new Set(["C-TOKEN-ECONOMY"]),
+  });
+  assert.equal(r.ok, false);
+  assert.equal(r.dangling.length, 1);
+  assert.equal(r.dangling[0].id, "C-GHOST");
+});
+
+test("registerIds returns the real register claim ids", () => {
+  const ids = registerIds();
+  assert.ok(ids.has("C-TOKEN-ECONOMY"), "register must expose C-TOKEN-ECONOMY");
+  assert.ok(ids.size >= 5, "register should have several claims");
+});
+
+test("scanCitations finds [claim:ID] citations across given files", () => {
+  // README has no citations yet → empty is fine; shape must be correct.
+  const cites = scanCitations(corpusFiles());
+  assert.ok(Array.isArray(cites));
+  for (const c of cites.slice(0, 3)) {
+    assert.ok(typeof c.id === "string" && typeof c.file === "string");
+  }
 });
 
 test("scanCorpus returns findings with relative file, kind, text shape", () => {

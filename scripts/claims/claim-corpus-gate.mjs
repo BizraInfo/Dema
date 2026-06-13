@@ -19,10 +19,17 @@ import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { resolve, relative, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { auditMarkdown } from "../claim-ledger-check.mjs";
+import {
+  auditMarkdown,
+  extractClaimCitations,
+} from "../claim-ledger-check.mjs";
 
 const REPO_ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
 const BASELINE_PATH = join(REPO_ROOT, "docs/claims/claim-corpus-baseline.json");
+const REGISTER_PATH = join(
+  REPO_ROOT,
+  "docs/claims/node0-claim-register.v0.1.json",
+);
 const SCHEMA = "bizra.dema.claim_corpus_gate.v0.1";
 
 // Defined corpus scope for v0.1: README + top-level docs/*.md. Subdirectories
@@ -41,6 +48,45 @@ export function corpusFiles(root = REPO_ROOT) {
 // claim text is stable, so the baseline survives unrelated edits.
 export function findingKey(f) {
   return `${f.file}::${f.kind}::${(f.text || "").trim()}`;
+}
+
+// --- Claim ↔ knowledge-object provenance (mission step 3) -------------------
+// A prose claim may cite its register entry via [claim:<ID>]. The scanner
+// credits the citation as provenance; this gate verifies the cited id actually
+// resolves to a real register entry — "no provenance without a knowledge
+// object". A dangling citation fails closed.
+
+export function registerIds(path = REGISTER_PATH) {
+  try {
+    const reg = JSON.parse(readFileSync(path, "utf8"));
+    return new Set((reg.claims || []).map((c) => c.id).filter(Boolean));
+  } catch {
+    return new Set();
+  }
+}
+
+export function scanCitations(files, root = REPO_ROOT) {
+  const citations = [];
+  for (const abs of files) {
+    let body;
+    try {
+      body = readFileSync(abs, "utf8");
+    } catch {
+      continue;
+    }
+    const rel = relative(root, abs);
+    body.split(/\r?\n/).forEach((line, i) => {
+      for (const id of extractClaimCitations(line)) {
+        citations.push({ file: rel, line: i + 1, id });
+      }
+    });
+  }
+  return citations;
+}
+
+export function verifyCitations({ citations, validIds }) {
+  const dangling = citations.filter((c) => !validIds.has(c.id));
+  return { ok: dangling.length === 0, dangling };
 }
 
 export function scanCorpus(files, root = REPO_ROOT) {
@@ -106,7 +152,15 @@ export function main(argv = process.argv.slice(2)) {
   }
 
   const baseline = loadBaseline();
-  const { ok, added, removed } = evaluateCorpusGate({ current, baseline });
+  const ratchet = evaluateCorpusGate({ current, baseline });
+  const { added, removed } = ratchet;
+
+  // Provenance integrity: every [claim:ID] citation in the corpus must resolve
+  // to a real register entry (mission: no provenance without a knowledge object).
+  const citations = scanCitations(files);
+  const cite = verifyCitations({ citations, validIds: registerIds() });
+
+  const ok = ratchet.ok && cite.ok;
 
   if (argv.includes("--json")) {
     console.log(
@@ -118,6 +172,8 @@ export function main(argv = process.argv.slice(2)) {
           baseline: baseline.length,
           added,
           removed,
+          citations: citations.length,
+          dangling_citations: cite.dangling,
         },
         null,
         2,
@@ -127,16 +183,30 @@ export function main(argv = process.argv.slice(2)) {
     console.log(
       `[corpus-gate] current=${current.length} baseline=${baseline.length} new=${added.length} resolved=${removed.length}`,
     );
+    console.log(
+      `[corpus-gate] citations=${citations.length} dangling=${cite.dangling.length}`,
+    );
     for (const a of added) {
       console.log(`  NEW  ${a.kind}  ${a.file}: ${a.text.slice(0, 80)}`);
     }
-    if (!ok) {
+    for (const d of cite.dangling) {
+      console.log(`  DANGLING CITATION  ${d.file}:${d.line}  [claim:${d.id}]`);
+    }
+    if (!ratchet.ok) {
       console.log(
         "\n[corpus-gate] FAIL — new unlabeled claim(s). Label them " +
-          "([MEASURED]/[CITED]/[DECLARED]/[PLANNED]) or, if accepted, run " +
-          "`node scripts/claims/claim-corpus-gate.mjs --update-baseline`.",
+          "([MEASURED]/[CITED]/[DECLARED]/[PLANNED]/[claim:<REGISTER-ID>]) or, " +
+          "if accepted, run `node scripts/claims/claim-corpus-gate.mjs --update-baseline`.",
       );
-    } else if (removed.length > 0) {
+    }
+    if (!cite.ok) {
+      console.log(
+        "\n[corpus-gate] FAIL — citation(s) reference a register id that does " +
+          "not exist. Add the claim to docs/claims/node0-claim-register.v0.1.json " +
+          "or fix the citation. No provenance without a knowledge object.",
+      );
+    }
+    if (ok && removed.length > 0) {
       console.log(
         `[corpus-gate] OK — ${removed.length} baseline finding(s) resolved; ` +
           "run --update-baseline to ratchet the baseline down.",

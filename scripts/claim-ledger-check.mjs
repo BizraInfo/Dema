@@ -87,7 +87,24 @@ export const RISK_PATTERNS = [
   },
 ];
 
+// A prose claim may cite its provenance in the machine-readable register via
+// [claim:<ID>] (e.g. [claim:C-TOKEN-ECONOMY]). The citation points the claim at
+// a knowledge object that carries its proof-state, so structurally it is a
+// provenance label and hasLabel() credits it. Integrity is enforced separately:
+// scripts/claims/claim-corpus-gate.mjs verifies every cited id resolves to a
+// real register entry (no provenance without a knowledge object).
+const CLAIM_CITATION = /\[claim:([A-Za-z0-9_-]+)\]/g;
+
+export function extractClaimCitations(text) {
+  return [...String(text).matchAll(CLAIM_CITATION)].map((m) => m[1]);
+}
+
+function hasClaimCitation(text) {
+  return /\[claim:[A-Za-z0-9_-]+\]/.test(text);
+}
+
 function hasLabel(text) {
+  if (hasClaimCitation(text)) return true;
   return [...LABELS, ...MATURITY_LABELS].some((label) => {
     const bracketed = `[${label}]`;
     const markdown = `**${label}**`;
