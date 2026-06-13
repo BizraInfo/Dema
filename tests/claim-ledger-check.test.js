@@ -132,6 +132,17 @@ test("first_or_only still flags real exclusivity overclaims", () => {
   }
 });
 
+test("first_or_only flags hyphenated 'formally-verified' exclusivity", () => {
+  const report = auditMarkdown({
+    file: "paper.md",
+    body: "Dema is the first formally-verified proof cockpit.",
+  });
+  assert.ok(
+    report.findings.some((f) => f.kind === "first_or_only"),
+    "hyphenated 'first formally-verified' overclaim missed",
+  );
+});
+
 test("first_or_only is ReDoS-safe on adversarial input", () => {
   const body = `the only ${"a".repeat(60000)}`;
   const started = process.hrtime.bigint();

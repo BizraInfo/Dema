@@ -25,7 +25,7 @@ export const RISK_PATTERNS = [
     // an overclaim, while real "world's first / the only X / first … in
     // existence" claims still trip. Alternation of bounded literals — ReDoS-safe.
     pattern:
-      /\b(?:world['’]?s\s+first|first[-\s]ever|first\s+formally\s+verified|definitive|the\s+only\s+\w|first\b[^.\n]{0,60}\bin\s+existence\b)/i,
+      /\b(?:world['’]?s\s+first|first[-\s]ever|first\s+formally[-\s]verified|definitive|the\s+only\s+\w|first\b[^.\n]{0,60}\bin\s+existence\b)/i,
     reason: "first-ever or exclusivity claims require hard evidence",
   },
   {
