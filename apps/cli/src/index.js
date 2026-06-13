@@ -8,6 +8,8 @@ import { cmd_genesis } from "./commands/genesis.js";
 import { cmd_harness } from "./commands/harness.js";
 import { cmd_state } from "./commands/state.js";
 import { cmd_setup } from "./commands/setup.js";
+import { cmd_ambient } from "./commands/ambient.js";
+import { cmd_onboarding_lifecycle } from "./commands/onboarding-lifecycle.js";
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
 import {
   formatStatus,
@@ -28,7 +30,6 @@ import {
   buildMissionLoopSummary,
 } from "../../../packages/core/src/mission-loop-preview.js";
 import { buildEvidenceChainEventPreviewFromInputs } from "../../../packages/core/src/evidence-chain-event-preview.js";
-import { buildOnboardingLifecyclePreview } from "../../../packages/core/src/onboarding-lifecycle.js";
 import {
   screenProposal,
   signReceipt,
@@ -53,10 +54,6 @@ import {
   serializePipelineResultForSave,
   savePipelineResult,
 } from "../../../packages/receipts/src/pipeline-result-save.js";
-import {
-  formatOnboardingLifecyclePreview,
-  resolveFormatterOptsFromEnv,
-} from "../../../packages/core/src/tui-formatter.js";
 import { buildLocalLLMRouterPreview } from "../../../packages/core/src/local-llm-router-preview.js";
 import {
   buildModelBrokerPreview,
@@ -236,14 +233,7 @@ import {
   gatherBannerInputs,
   probeGateway,
 } from "../../../packages/core/src/banner.js";
-import {
-  buildAmbientAuditPreview,
-  buildAmbientBoundary,
-  buildAmbientManifestPreview,
-  formatAmbientAuditPreview,
-  formatAmbientBoundary,
-  formatAmbientManifestPreview,
-} from "../../../packages/core/src/ambient.js";
+import { buildAmbientBoundary } from "../../../packages/core/src/ambient.js";
 import {
   buildSafetyReportPreview,
   formatSafetyReportPreview,
@@ -2419,23 +2409,7 @@ async function cmd_evidence_event(ctx) {
 
 // cmd_node_registry extracted to ./commands/node-registry.js (④).
 
-async function cmd_onboarding_lifecycle(ctx) {
-  const { argv } = ctx;
-  const preview = buildOnboardingLifecyclePreview();
-  if (argv.includes("--json")) {
-    console.log(JSON.stringify(preview, null, 2));
-    process.exit(process.exitCode ?? 0);
-  }
-  // Default: pretty TUI on TTY, JSON when redirected
-  if (process.stdout.isTTY) {
-    console.log(
-      formatOnboardingLifecyclePreview(preview, resolveFormatterOptsFromEnv()),
-    );
-  } else {
-    console.log(JSON.stringify(preview, null, 2));
-  }
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_onboarding_lifecycle extracted to ./commands/onboarding-lifecycle.js (④).
 
 // cmd_skill_growth_governor extracted to ./commands/skill-growth-governor.js (④).
 
@@ -3418,29 +3392,7 @@ async function cmd_dashboard(ctx) {
   process.exit(process.exitCode ?? 0);
 }
 
-async function cmd_ambient(ctx) {
-  const { argv, subcommand } = ctx;
-  if (subcommand === "--manifest") {
-    const manifest = buildAmbientManifestPreview();
-    console.log(
-      argv.includes("--json")
-        ? JSON.stringify(manifest, null, 2)
-        : formatAmbientManifestPreview(manifest),
-    );
-    process.exit(process.exitCode ?? 0);
-  }
-  if (subcommand === "audit") {
-    const audit = buildAmbientAuditPreview();
-    console.log(
-      argv.includes("--json")
-        ? JSON.stringify(audit, null, 2)
-        : formatAmbientAuditPreview(audit),
-    );
-    process.exit(process.exitCode ?? 0);
-  }
-  console.log(formatAmbientBoundary(buildAmbientBoundary()));
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_ambient extracted to ./commands/ambient.js (④).
 
 async function cmd_ambient_json(ctx) {
   console.log(JSON.stringify(buildAmbientBoundary(), null, 2));
