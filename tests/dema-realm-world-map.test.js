@@ -1,12 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import {
-  mkdtempSync,
-  mkdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -111,7 +106,11 @@ function writeInventory(home, overrides = {}) {
     ],
     denied: [
       { reason: "secret_or_key_pattern", path_hash: "sha256:1", kind: "file" },
-      { reason: "denylisted_directory", path_hash: "sha256:2", kind: "directory" },
+      {
+        reason: "denylisted_directory",
+        path_hash: "sha256:2",
+        kind: "directory",
+      },
     ],
     boundary: {
       file_write_performed: true,
@@ -180,7 +179,10 @@ describe("gatherDemaRealmWorldMap", () => {
     try {
       mkdirSync(dirname(inventoryPath(home)), { recursive: true });
       writeFileSync(inventoryPath(home), "{not valid json SECRET_RAW");
-      const state = await gatherDemaRealmWorldMap({ demaHome: home, now: FIXED_NOW });
+      const state = await gatherDemaRealmWorldMap({
+        demaHome: home,
+        now: FIXED_NOW,
+      });
       const out = renderDemaRealmWorldMap(state, { useColor: false });
       assert.equal(state.status, "INVENTORY_INVALID");
       assert.doesNotMatch(out, /SECRET_RAW/);
@@ -207,7 +209,10 @@ describe("gatherDemaRealmWorldMap", () => {
           economic_claim_made: false,
         },
       });
-      const state = await gatherDemaRealmWorldMap({ demaHome: home, now: FIXED_NOW });
+      const state = await gatherDemaRealmWorldMap({
+        demaHome: home,
+        now: FIXED_NOW,
+      });
       assert.equal(state.status, "INVENTORY_BOUNDARY_INVALID");
     } finally {
       rmSync(home, { recursive: true, force: true });
@@ -218,7 +223,10 @@ describe("gatherDemaRealmWorldMap", () => {
     const home = freshHome();
     try {
       writeInventory(home);
-      const state = await gatherDemaRealmWorldMap({ demaHome: home, now: FIXED_NOW });
+      const state = await gatherDemaRealmWorldMap({
+        demaHome: home,
+        now: FIXED_NOW,
+      });
       assert.equal(state.status, "INVENTORY_READY");
       assert.equal(state.summary.records_count, 4);
       assert.equal(state.denied_count, 2);
@@ -231,7 +239,10 @@ describe("gatherDemaRealmWorldMap", () => {
       assert.match(out, /DEMA REALM · WORLD MAP/);
       assert.match(out, /code_project\s+1/);
       assert.match(out, /denied:\s+2/);
-      assert.match(out, /Boundary: read-only · no scan · no mutation · no network · no content/);
+      assert.match(
+        out,
+        /Boundary: read-only · no scan · no mutation · no network · no content/,
+      );
     } finally {
       rmSync(home, { recursive: true, force: true });
     }
@@ -257,8 +268,16 @@ describe("dema realm world-map CLI", () => {
   it("--json emits parseable schema-tagged JSON", async () => {
     const home = freshHome();
     try {
-      writeInventory(home);
-      const r = await runCli(["realm", "world-map", "--json"], { demaHome: home });
+      // The CLI subprocess injects no `now` — it compares the inventory
+      // timestamp against real wall-clock with the 24h freshness window.
+      // Stamp the fixture relative to now so this READY assertion stays
+      // deterministic (a hardcoded past date is a wall-clock time-bomb).
+      writeInventory(home, {
+        generated_at_iso: new Date(Date.now() - 60_000).toISOString(),
+      });
+      const r = await runCli(["realm", "world-map", "--json"], {
+        demaHome: home,
+      });
       assert.equal(r.exitCode, 0, r.stderr);
       const out = JSON.parse(r.stdout);
       assert.equal(out.schema, DEMA_REALM_WORLD_MAP_SCHEMA);
@@ -272,7 +291,9 @@ describe("dema realm world-map CLI", () => {
     const home = freshHome();
     try {
       writeInventory(home);
-      const r = await runCli(["realm", "world-map", "--no-color"], { demaHome: home });
+      const r = await runCli(["realm", "world-map", "--no-color"], {
+        demaHome: home,
+      });
       assert.equal(r.exitCode, 0, r.stderr);
       assert.match(r.stdout, /DEMA REALM · WORLD MAP/);
       assert.doesNotMatch(r.stdout, /\x1b\[[0-9;]*m/);
