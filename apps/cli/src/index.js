@@ -4,6 +4,8 @@ import { cmd_journey } from "./commands/journey.js";
 import { cmd_node_registry } from "./commands/node-registry.js";
 import { cmd_project_status } from "./commands/project-status.js";
 import { cmd_skill_growth_governor } from "./commands/skill-growth-governor.js";
+import { cmd_genesis } from "./commands/genesis.js";
+import { cmd_harness } from "./commands/harness.js";
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
 import {
   formatStatus,
@@ -88,11 +90,6 @@ import {
   buildProcessMiningPreview,
   buildProcessMiningSummary,
 } from "../../../packages/core/src/process-mining-preview.js";
-import {
-  buildHarnessIntegration,
-  buildHarnessIntegrationSummary,
-  formatHarnessIntegration,
-} from "../../../packages/core/src/harness-integration.js";
 import {
   buildKeyMakerCompliancePreview,
   buildKeyMakerComplianceSummary,
@@ -365,10 +362,6 @@ import {
   buildMissionManifest,
   formatMissionManifest,
 } from "../../../packages/mission/src/mission-manifest.js";
-import {
-  buildGenesisCompositionBlueprintPreview,
-  formatGenesisCompositionBlueprintPreview,
-} from "../../../packages/core/src/genesis-composition-blueprint-preview.js";
 import {
   buildThinkDryRun,
   formatThinkDryRun,
@@ -1597,24 +1590,7 @@ async function cmd_proof(ctx) {
   process.exit(process.exitCode ?? 0);
 }
 
-async function cmd_genesis(ctx) {
-  const { argv } = ctx;
-  const genesisSub = argv[1] ?? "";
-  const genesisAction = argv[2] ?? "";
-  const wantJsonG = wantsJson(argv);
-  if (genesisSub === "composition" && genesisAction === "blueprint") {
-    const preview = buildGenesisCompositionBlueprintPreview();
-    console.log(
-      wantJsonG
-        ? JSON.stringify(preview, null, 2)
-        : formatGenesisCompositionBlueprintPreview(preview),
-    );
-    process.exit(process.exitCode ?? 0);
-  }
-  console.error("Usage: dema genesis composition blueprint [--json]");
-  process.exitCode = 1;
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_genesis extracted to ./commands/genesis.js (④).
 
 async function cmd_attest(ctx) {
   const { argv } = ctx;
@@ -3277,18 +3253,7 @@ async function cmd_model_broker(ctx) {
   process.exit(process.exitCode ?? 0);
 }
 
-async function cmd_harness(ctx) {
-  const { argv } = ctx;
-  const harness = argv.includes("--summary")
-    ? buildHarnessIntegrationSummary()
-    : buildHarnessIntegration();
-  if (argv.includes("--json")) {
-    console.log(JSON.stringify(harness, null, 2));
-  } else {
-    console.log(formatHarnessIntegration(buildHarnessIntegration()));
-  }
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_harness extracted to ./commands/harness.js (④).
 
 async function cmd_process_mining(ctx) {
   const { argv } = ctx;
