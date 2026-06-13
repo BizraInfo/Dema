@@ -95,6 +95,46 @@ test("auditMarkdown does not let a labeled claim label the next claim", () => {
   );
 });
 
+test("economic flags real token/reward/mint economic claims", () => {
+  const overclaims = [
+    "BIZRA mints IMP rewards from PAT self-certification.",
+    "The protocol is minting new tokens for contributors.",
+    "The token economy rewards verified work.",
+    "Rewards are minted on each verification.",
+    "Economic value accrues to participants.",
+    "Utility token issuance follows the schedule.",
+  ];
+  for (const body of overclaims) {
+    const report = auditMarkdown({ file: "paper.md", body });
+    assert.ok(
+      report.findings.some((f) => f.kind === "economic"),
+      `economic claim missed: ${body}`,
+    );
+  }
+});
+
+test("economic does not flag generic, ML, or incidental token/reward/mint vocab", () => {
+  const benign = [
+    "The wrapper passes an auth token to the gateway.",
+    "The RL reward function converges after training.",
+    "See the token discipline playbook for budget rules.",
+    "Next token prediction uses the local model.",
+    "The host runs Linux Mint.",
+    "Tokens are budgeted per session for cost hygiene.",
+    "Expected first impression of the cockpit.",
+    "It names the receipt and impact posture.",
+    "We implement the consent gate first.",
+  ];
+  for (const body of benign) {
+    const report = auditMarkdown({ file: "spec.md", body });
+    assert.deepEqual(
+      report.findings.filter((f) => f.kind === "economic"),
+      [],
+      `benign token/reward/mint vocab wrongly flagged: ${body}`,
+    );
+  }
+});
+
 test("first_or_only does not flag BIZRA's own safety vocabulary", () => {
   const benign = [
     "Dema is local-first and offline by default.",

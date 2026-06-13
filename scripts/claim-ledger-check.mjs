@@ -47,8 +47,12 @@ export const RISK_PATTERNS = [
   },
   {
     kind: "economic",
+    // Scoped to economic *phrasing* so generic/ML/incidental vocab (auth token,
+    // reward function, next-token prediction, token discipline, Linux Mint) is
+    // NOT flagged, while real IMP/token-economy/minted-reward claims still trip.
+    // The only quantifier is the bounded [^.\n]{0,20} mint→unit gap — ReDoS-safe.
     pattern:
-      /\b(IMP|mint(?:ed|ing)?|reward(?:s)?|token(?:s)?|economic value|cash value)\b/i,
+      /\b(?:IMP\b|tokenomics|economic\s+value|cash\s+value|mint(?:s|ed|ing)?\b[^.\n]{0,20}\b(?:tokens?|rewards?|coins?)\b|(?:utility|governance|staking)\s+tokens?\b|tokens?\s+(?:economy|economics|supply|issuance|rewards?|holders?)\b|(?:IMP|token|staking)\s+rewards?\b|rewards?\s+(?:are\s+|is\s+|get\s+)?(?:minted|issued|accrue|distributed|staked)\b)/i,
     reason: "economic claims require verified impact and governance evidence",
   },
   {
