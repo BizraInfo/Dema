@@ -6,6 +6,8 @@ import { cmd_project_status } from "./commands/project-status.js";
 import { cmd_skill_growth_governor } from "./commands/skill-growth-governor.js";
 import { cmd_genesis } from "./commands/genesis.js";
 import { cmd_harness } from "./commands/harness.js";
+import { cmd_state } from "./commands/state.js";
+import { cmd_setup } from "./commands/setup.js";
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
 import {
   formatStatus,
@@ -16,7 +18,6 @@ import {
   formatSystemSnapshot,
 } from "../../../packages/core/src/system-snapshot.js";
 import { readOperatorPreferredName } from "../../../packages/core/src/operator-profile.js";
-import { buildNode0StatePreview } from "../../../packages/core/src/state.js";
 import {
   buildProfileFoundationPreview,
   buildProfileFoundationSummary,
@@ -226,7 +227,6 @@ import {
   verifyHealthSnapshotReceipt,
   formatHealthSnapshotReceipt,
 } from "../../../packages/mission/src/health-snapshot.js";
-import { runSetupWizard } from "../../../packages/core/src/setup-wizard.js";
 import {
   readMemoryEntry,
   summarizeMemory,
@@ -337,7 +337,6 @@ import {
   runBannerKeyLoop,
 } from "../../../packages/core/src/banner-keys.js";
 import { runLiveHomebase } from "../../../packages/core/src/live-homebase.js";
-import { humanizeNextAction } from "../../../packages/core/src/next-action-humanizer.js";
 import {
   renderHelpRoot,
   renderHelpTopic,
@@ -1232,17 +1231,7 @@ async function cmd_explain(ctx) {
   process.exit(process.exitCode ?? 0);
 }
 
-async function cmd_setup(ctx) {
-  const { argv } = ctx;
-  const isJsonMode = argv.includes("--json") || !process.stdout.isTTY;
-  if (isJsonMode) {
-    console.log(JSON.stringify(await runSetup(), null, 2));
-  } else {
-    await runSetupWizard();
-    await runSetup();
-  }
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_setup extracted to ./commands/setup.js (④).
 
 async function cmd_setup_check(ctx) {
   const result = await checkSetup();
@@ -2365,27 +2354,7 @@ async function cmd_status_json(ctx) {
   process.exit(process.exitCode ?? 0);
 }
 
-async function cmd_state(ctx) {
-  const { argv } = ctx;
-  const statePreview = buildNode0StatePreview();
-  if (wantsJson(argv)) {
-    console.log(JSON.stringify(statePreview, null, 2));
-    process.exit(process.exitCode ?? 0);
-  }
-  console.log(
-    [
-      "Dema state",
-      `  Node: ${statePreview.node} · Operator: ${statePreview.operator}`,
-      `  Mission-centered: ${statePreview.mission_centered}`,
-      `  Runtime autonomous daemon: ${statePreview.runtime.autonomous_daemon}`,
-      `  Federation: ${statePreview.runtime.federation}`,
-      `  Minting: ${statePreview.runtime.minting}`,
-      `  Next safe action: ${humanizeNextAction(statePreview.next_safe_action)}`,
-      humanHintLine("state"),
-    ].join("\n"),
-  );
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_state extracted to ./commands/state.js (④).
 
 async function cmd_profiles(ctx) {
   const { argv } = ctx;
