@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 import { cmd_language } from "./commands/language.js";
 import { cmd_journey } from "./commands/journey.js";
+import { cmd_node_registry } from "./commands/node-registry.js";
+import { cmd_project_status } from "./commands/project-status.js";
+import { cmd_skill_growth_governor } from "./commands/skill-growth-governor.js";
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
 import {
   formatStatus,
@@ -22,14 +25,11 @@ import {
   buildMissionLoopSummary,
 } from "../../../packages/core/src/mission-loop-preview.js";
 import { buildEvidenceChainEventPreviewFromInputs } from "../../../packages/core/src/evidence-chain-event-preview.js";
-import { buildNodeRegistryPreview } from "../../../packages/core/src/node-registry-preview.js";
 import { buildOnboardingLifecyclePreview } from "../../../packages/core/src/onboarding-lifecycle.js";
-import { buildSkillGrowthGovernorPreview } from "../../../packages/core/src/skill-growth-governor.js";
 import {
   screenProposal,
   signReceipt,
 } from "../../../packages/covenant/src/covenant-gate.js";
-import { buildProjectStatusPreview } from "../../../packages/core/src/project-status-preview.js";
 import { buildCraftsmanshipWitnessPreview } from "../../../packages/core/src/craftsmanship-witness-preview.js";
 import {
   auditArtifact,
@@ -52,9 +52,6 @@ import {
 } from "../../../packages/receipts/src/pipeline-result-save.js";
 import {
   formatOnboardingLifecyclePreview,
-  formatNodeRegistryPreview,
-  formatSkillGrowthGovernorPreview,
-  formatProjectStatusPreview,
   resolveFormatterOptsFromEnv,
 } from "../../../packages/core/src/tui-formatter.js";
 import { buildLocalLLMRouterPreview } from "../../../packages/core/src/local-llm-router-preview.js";
@@ -2475,18 +2472,7 @@ async function cmd_evidence_event(ctx) {
   process.exit(process.exitCode ?? 0);
 }
 
-async function cmd_node_registry(ctx) {
-  const { argv } = ctx;
-  const preview = buildNodeRegistryPreview();
-  if (argv.includes("--pretty")) {
-    console.log(
-      formatNodeRegistryPreview(preview, resolveFormatterOptsFromEnv()),
-    );
-    process.exit(process.exitCode ?? 0);
-  }
-  console.log(JSON.stringify(preview, null, 2));
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_node_registry extracted to ./commands/node-registry.js (④).
 
 async function cmd_onboarding_lifecycle(ctx) {
   const { argv } = ctx;
@@ -2506,39 +2492,9 @@ async function cmd_onboarding_lifecycle(ctx) {
   process.exit(process.exitCode ?? 0);
 }
 
-async function cmd_skill_growth_governor(ctx) {
-  const { argv } = ctx;
-  const preview = buildSkillGrowthGovernorPreview();
-  if (argv.includes("--json")) {
-    console.log(JSON.stringify(preview, null, 2));
-    process.exit(process.exitCode ?? 0);
-  }
-  if (process.stdout.isTTY) {
-    console.log(
-      formatSkillGrowthGovernorPreview(preview, resolveFormatterOptsFromEnv()),
-    );
-  } else {
-    console.log(JSON.stringify(preview, null, 2));
-  }
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_skill_growth_governor extracted to ./commands/skill-growth-governor.js (④).
 
-async function cmd_project_status(ctx) {
-  const { argv } = ctx;
-  const preview = buildProjectStatusPreview();
-  if (argv.includes("--json")) {
-    console.log(JSON.stringify(preview, null, 2));
-    process.exit(process.exitCode ?? 0);
-  }
-  if (process.stdout.isTTY) {
-    console.log(
-      formatProjectStatusPreview(preview, resolveFormatterOptsFromEnv()),
-    );
-  } else {
-    console.log(JSON.stringify(preview, null, 2));
-  }
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_project_status extracted to ./commands/project-status.js (④).
 
 async function cmd_craftsmanship_witness(ctx) {
   // 15th canonical spine surface · the master-craftsmanship creation
