@@ -121,6 +121,18 @@ function lineIsCodeFence(line) {
   return line.trim().startsWith("```");
 }
 
+// Inline-code spans (`like-this`) are identifiers, command names, field names,
+// or terms being *referenced* — not prose claims. A risk word that appears ONLY
+// inside a code span is a reference, not an assertion (e.g. a style guide line
+// "Do not use `production-ready`", or a forbidden-terms list). Strip code spans
+// before matching so those don't flag; the original line is still used for
+// labels and for the reported `text`. A risk word in surrounding prose still
+// matches. Tradeoff: a claim whose subject sits only in code (`token economy`
+// is live) is not flagged — rare, and the ratchet baseline review catches it.
+function stripInlineCode(line) {
+  return line.replace(/`[^`]*`/g, " ");
+}
+
 export function auditMarkdown({ file, body }) {
   const lines = body.split(/\r?\n/);
   const findings = [];
@@ -136,8 +148,9 @@ export function auditMarkdown({ file, body }) {
     const prior = previousNonEmptyLine(lines, index);
     if (hasLabel(line) || (hasLabel(prior) && isStandaloneLabel(prior))) return;
 
+    const probe = stripInlineCode(line);
     for (const risk of RISK_PATTERNS) {
-      if (!risk.pattern.test(line)) continue;
+      if (!risk.pattern.test(probe)) continue;
       findings.push({
         file,
         line: index + 1,

@@ -190,6 +190,33 @@ test("a claim labeled with repo maturity vocab is not flagged (formatted forms)"
   }
 });
 
+test("risk vocab only inside inline-code is not flagged (references, not claims)", () => {
+  const benign = [
+    "Do not use `production-ready` in public copy.",
+    "Run `dema urp verify` against the index.",
+    "Forbidden terms include `token economy` and `PoI rewards`.",
+  ];
+  for (const body of benign) {
+    const report = auditMarkdown({ file: "g.md", body });
+    assert.equal(
+      report.ok,
+      true,
+      `inline-code reference wrongly flagged: ${body}`,
+    );
+  }
+});
+
+test("risk vocab in prose still flags even when other code spans exist on the line", () => {
+  const report = auditMarkdown({
+    file: "p.md",
+    body: "The `gateway` module is production-ready today.",
+  });
+  assert.ok(
+    report.findings.some((f) => f.kind === "deployment"),
+    "prose 'production-ready' must still flag despite an inline-code span",
+  );
+});
+
 test("bare maturity words (unformatted) still flag the claim", () => {
   // "designed" as prose is NOT a proof-state label; only **DESIGNED** / [DESIGNED]
   // / `DESIGNED` count. The claim must still flag.
