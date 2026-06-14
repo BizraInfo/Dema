@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -68,8 +68,36 @@ function queryMemory(query, top) {
   }
 }
 
-async function checkModelReadiness() {
-  const ollamaHome = join(homedir(), ".ollama", "models");
+function listDiskModels(modelsDir) {
+  try {
+    const libraryDir = join(
+      modelsDir,
+      "manifests",
+      "registry.ollama.ai",
+      "library",
+    );
+    const models = readdirSync(libraryDir);
+    const names = [];
+    for (const model of models) {
+      try {
+        const tags = readdirSync(join(libraryDir, model));
+        for (const tag of tags) {
+          const name = `${model}:${tag}`;
+          if (!name.includes("embed")) names.push(name);
+        }
+      } catch {
+        // skip unreadable model dirs
+      }
+    }
+    return names.sort();
+  } catch {
+    return [];
+  }
+}
+
+export async function checkModelReadiness() {
+  const ollamaHome =
+    process.env.OLLAMA_MODELS ?? join(homedir(), ".ollama", "models");
   const ollamaInstalled = existsSync(ollamaHome);
 
   let apiModels = [];
@@ -90,23 +118,41 @@ async function checkModelReadiness() {
     apiReachable = false;
   }
 
-  const textModels = apiModels
-    .filter((m) => !m.name.includes("embed"))
-    .sort((a, b) => (a.size ?? Infinity) - (b.size ?? Infinity));
-  const recommended = textModels.length > 0 ? textModels[0].name : null;
+  let availableModels;
+  let recommended;
+
+  if (apiReachable) {
+    const textModels = apiModels
+      .filter((m) => !m.name.includes("embed"))
+      .sort((a, b) => (a.size ?? Infinity) - (b.size ?? Infinity));
+    availableModels = textModels.map((m) => m.name);
+    recommended = availableModels.length > 0 ? availableModels[0] : null;
+  } else {
+    availableModels = ollamaInstalled ? listDiskModels(ollamaHome) : [];
+    recommended = availableModels.length > 0 ? availableModels[0] : null;
+  }
+
+  const diskModelsFound = !apiReachable && availableModels.length > 0;
 
   return {
     ollama_installed: ollamaInstalled || apiReachable,
     ollama_models_dir: ollamaInstalled ? ollamaHome : null,
     broker_reachable: apiReachable ? "LOCALHOST_API_OBSERVED" : "NOT_REACHABLE",
-    available_models: textModels.map((m) => m.name),
+    available_models: availableModels,
     recommended_model: recommended,
     consent_phrase_pattern: "GO: invoke local LLM at <model>",
     model_readiness_evidence: apiReachable
       ? "LOCALHOST_API_OBSERVED"
-      : ollamaInstalled
-        ? "DISK_CHECK_ONLY"
-        : "NOT_DETECTED",
+      : diskModelsFound
+        ? "DISK_MANIFESTS_OBSERVED"
+        : ollamaInstalled
+          ? "DISK_CHECK_ONLY"
+          : "NOT_DETECTED",
+    models_source: apiReachable
+      ? "api"
+      : diskModelsFound
+        ? "disk_manifests"
+        : "none",
   };
 }
 
