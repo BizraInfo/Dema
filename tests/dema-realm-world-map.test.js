@@ -262,6 +262,24 @@ describe("gatherDemaRealmWorldMap", () => {
       rmSync(home, { recursive: true, force: true });
     }
   });
+
+  it("renders canon gold (#C9A962 = 201;169;98) when colorized, not legacy #D4AF37", async () => {
+    const home = freshHome();
+    try {
+      writeInventory(home, {
+        generated_at_iso: new Date(Date.now() - 60_000).toISOString(),
+      });
+      const state = await gatherDemaRealmWorldMap({
+        demaHome: home,
+        now: FIXED_NOW,
+      });
+      const out = renderDemaRealmWorldMap(state, { useColor: true });
+      assert.match(out, /\x1b\[38;2;201;169;98m/);
+      assert.doesNotMatch(out, /\x1b\[38;2;212;175;55m/);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("dema realm world-map CLI", () => {
