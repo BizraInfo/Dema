@@ -37,6 +37,9 @@ export const ANSI = Object.freeze({
   neutral: truecolor(156, 163, 175),
 });
 
+// ROLE maps SEMANTIC FOREGROUND intent only. Surface/background colors
+// (navy, originBlack) intentionally have no ROLE alias: HEX is their source of
+// truth, and originBlack is HEX-only (no fg ANSI entry) since it is never a text color.
 export const ROLE = Object.freeze({
   brand: ANSI.gold,
   accent: ANSI.teal,

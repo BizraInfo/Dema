@@ -65,4 +65,21 @@ describe("theme", () => {
   it("supportsColor is false on a non-TTY", () => {
     assert.equal(supportsColor({}, { isTTY: false }), false);
   });
+
+  it("supportsColor honors the DEMA_NO_COLOR override", () => {
+    assert.equal(supportsColor({ DEMA_NO_COLOR: "1" }, { isTTY: true }), false);
+  });
+
+  it("supportsColor: empty NO_COLOR does NOT suppress color (no-color.org spec)", () => {
+    assert.equal(supportsColor({ NO_COLOR: "" }, { isTTY: true }), true);
+  });
+
+  it("supportsColor is false when the stream is null/absent", () => {
+    assert.equal(supportsColor({}, null), false);
+  });
+
+  it("paint default useColor path returns plain text in a non-TTY env", () => {
+    // third arg omitted → default supportsColor() reads process.stdout, non-TTY in test → plain
+    assert.equal(paint("x", ANSI.gold), "x");
+  });
 });
