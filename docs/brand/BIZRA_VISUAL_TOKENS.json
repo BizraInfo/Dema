@@ -1,0 +1,130 @@
+{
+  "version": "0.2",
+  "status": "brand_identity_tokens",
+  "brand": {
+    "name": "BIZRA",
+    "arabic_name": "بذرة",
+    "arabic_root": "البذرة",
+    "meaning": "Seed",
+    "primary_tagline": "The Seed of Sovereign Intelligence",
+    "primary_tagline_ar": "بذرة الذكاء السيادي",
+    "motto": "Build with meaning. Act with proof. Grow with Ihsan.",
+    "motto_ar": "ابنِ بالمعنى. اعمل بالبرهان. وانمُ بالإحسان."
+  },
+  "colors": {
+    "genesis_gold": {
+      "hex": "#C9A962",
+      "meaning": "value, light, trust, dignity, covenant",
+      "usage": "primary accent, logo strokes, ceremonial highlights"
+    },
+    "celestial_navy": {
+      "hex": "#0A1628",
+      "meaning": "depth, night, contemplation, sovereignty",
+      "usage": "primary surface"
+    },
+    "origin_black": {
+      "hex": "#050B14",
+      "meaning": "the void before the seed",
+      "usage": "background, cinematic depth"
+    },
+    "pure_white": {
+      "hex": "#FFFFFF",
+      "meaning": "clarity, evidence, readable truth",
+      "usage": "high-contrast text"
+    },
+    "ivory": {
+      "hex": "#F6F2E9",
+      "meaning": "warm human clarity",
+      "usage": "body text and surfaces"
+    },
+    "living_teal": {
+      "hex": "#2CB7A7",
+      "meaning": "system vitality",
+      "usage": "optional accent only; never primary brand color"
+    }
+  },
+  "typography": {
+    "arabic": {
+      "primary": "Amiri",
+      "fallback": "serif",
+      "usage": "Arabic manifesto, Arabic hero, ceremonial Arabic text"
+    },
+    "display": {
+      "primary": "Playfair Display",
+      "fallback": "Georgia, serif",
+      "usage": "ceremonial English headlines"
+    },
+    "interface": {
+      "primary": "Inter",
+      "fallback": "Arial, sans-serif",
+      "usage": "navigation, captions, interface copy"
+    },
+    "mono": {
+      "primary": "JetBrains Mono",
+      "fallback": "IBM Plex Mono, monospace",
+      "usage": "receipts, proof labels, code-like annotations"
+    }
+  },
+  "symbol": {
+    "core_motifs": [
+      "seed",
+      "nuqta",
+      "sixfold emergence",
+      "Seed of Life geometry",
+      "lawful growth",
+      "unity without uniformity"
+    ],
+    "preserve": [
+      "BIZRA wordmark",
+      "البذرة Arabic tag",
+      "Genesis Gold on Celestial Navy",
+      "central dot",
+      "Genesis Access card motif"
+    ],
+    "avoid": [
+      "generic sacred geometry without Arabic seed grounding",
+      "wellness-only visual language",
+      "crypto-hype visual tropes",
+      "unverified metric badges"
+    ]
+  },
+  "voice": {
+    "formula": "Strength without arrogance. Mercy without weakness. Proof without cruelty. Ambition without illusion.",
+    "formula_ar": "قوة بلا غرور. رحمة بلا ضعف. برهان بلا قسوة. طموح بلا أوهام.",
+    "dema_should_sound_like": [
+      "trusted companion",
+      "truthful mirror",
+      "disciplined guide",
+      "guardian of meaning",
+      "assistant that refuses unsupported certainty",
+      "bridge between heart, mind, and action"
+    ],
+    "dema_should_not_sound_like": [
+      "corporate chatbot",
+      "hype engine",
+      "manipulative guru",
+      "cold auditor only",
+      "all-knowing oracle"
+    ]
+  },
+  "claim_discipline": {
+    "rule": "If it has not been measured, say it as a direction. If it has been measured, cite the receipt. If it is uncertain, mark it as uncertain.",
+    "allowed_public_claims_now": [
+      "BIZRA began as an Arabic seed idea before implementation.",
+      "BIZRA means seed: بذرة.",
+      "BIZRA is built around human sovereignty, proof, Ihsan, and meaningful action.",
+      "BIZRA aims to move AI from model-centric interaction to mission-centric agency.",
+      "BIZRA treats unchecked assumption as a design risk.",
+      "BIZRA separates brand identity, philosophical canon, technical proof, and runtime claims."
+    ],
+    "avoid_until_verified": [
+      "exact latency claims",
+      "exact Ihsan metric claims",
+      "security hardening claims",
+      "cryptographic finality claims",
+      "AGI claims",
+      "financial return claims",
+      "first-in-world claims"
+    ]
+  }
+}
