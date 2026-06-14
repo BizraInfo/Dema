@@ -78,8 +78,9 @@ describe("theme", () => {
     assert.equal(supportsColor({}, null), false);
   });
 
-  it("paint default useColor path returns plain text in a non-TTY env", () => {
-    // third arg omitted → default supportsColor() reads process.stdout, non-TTY in test → plain
-    assert.equal(paint("x", ANSI.gold), "x");
+  it("paint default useColor arg resolves via supportsColor() (TTY-independent)", () => {
+    // Don't assert a TTY-dependent literal; assert the default-arg wiring:
+    // paint(text, code) must equal paint(text, code, supportsColor()).
+    assert.equal(paint("x", ANSI.gold), paint("x", ANSI.gold, supportsColor()));
   });
 });

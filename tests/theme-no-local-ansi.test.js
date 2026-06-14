@@ -15,9 +15,12 @@ describe("theme drift guard", () => {
   for (const rel of FILES) {
     it(`${rel} defines no local truecolor and imports theme.js`, () => {
       const src = readFileSync(join(here, "..", rel), "utf8");
+      // Match the LITERAL characters `\x1b[38;2;` as they appear in source text
+      // (escaped backslash), not the 0x1B escape byte — source files store the
+      // sequence as the 4 chars \ x 1 b, so a byte-class regex would never fire.
       assert.doesNotMatch(
         src,
-        /\x1b\[38;2;/,
+        /\\x1b\[38;2;/,
         "found a hardcoded truecolor escape",
       );
       assert.doesNotMatch(src, /const ANSI\s*=/, "found a local ANSI block");
