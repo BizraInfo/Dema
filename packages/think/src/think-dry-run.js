@@ -1,6 +1,6 @@
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { join } from "node:path";
+import { join, basename } from "node:path";
 import { homedir } from "node:os";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 import { llmAdapterConsentPhraseFor } from "../../core/src/llm-adapter.js";
@@ -95,6 +95,154 @@ function listDiskModels(modelsDir) {
   }
 }
 
+const QUANT_PATTERN =
+  /Q4_K_M|Q5_K_M|Q6_K|Q8_0|Q8_K_P|Q4_0|IQ\d\w*|BF16|F16|FP8|AWQ|GPTQ|INT4/i;
+
+function inferQuant(filename) {
+  const m = QUANT_PATTERN.exec(filename);
+  return m ? m[0].toUpperCase() : null;
+}
+
+function scanGgufFiles(dir, maxDepth = 1, currentDepth = 0) {
+  const results = [];
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return results;
+  }
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isFile() && entry.name.endsWith(".gguf")) {
+      let size_bytes = null;
+      let mtime_iso = null;
+      try {
+        const st = statSync(fullPath);
+        size_bytes = st.size;
+        mtime_iso = st.mtime.toISOString();
+      } catch {
+        // stat failed; leave nulls
+      }
+      results.push({
+        name: basename(entry.name),
+        path: fullPath,
+        size_bytes,
+        mtime_iso,
+        quant: inferQuant(entry.name),
+      });
+    } else if (entry.isDirectory() && currentDepth < maxDepth) {
+      results.push(...scanGgufFiles(fullPath, maxDepth, currentDepth + 1));
+    }
+  }
+  return results;
+}
+
+export async function discoverLocalRuntimes(opts = {}) {
+  // --- ollama ---
+  const ollamaHome =
+    opts.ollamaModelsDir ??
+    process.env.OLLAMA_MODELS ??
+    join(homedir(), ".ollama", "models");
+  const ollamaInstalled = existsSync(ollamaHome);
+
+  let ollamaApiModels = [];
+  let ollamaApiReachable = false;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch("http://localhost:11434/api/tags", {
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (res.ok) {
+      const data = await res.json();
+      ollamaApiModels = Array.isArray(data.models) ? data.models : [];
+      ollamaApiReachable = true;
+    }
+  } catch {
+    ollamaApiReachable = false;
+  }
+
+  let ollamaModels;
+  let ollamaModelsSource;
+  if (ollamaApiReachable) {
+    ollamaModels = ollamaApiModels
+      .filter((m) => !m.name.includes("embed"))
+      .map((m) => m.name);
+    ollamaModelsSource = "api";
+  } else if (ollamaInstalled) {
+    const diskModels = listDiskModels(ollamaHome);
+    ollamaModels = diskModels;
+    ollamaModelsSource = diskModels.length > 0 ? "disk_manifests" : "none";
+  } else {
+    ollamaModels = [];
+    ollamaModelsSource = "none";
+  }
+
+  const ollama = {
+    installed: ollamaInstalled || ollamaApiReachable,
+    daemon: ollamaApiReachable
+      ? "reachable"
+      : ollamaInstalled
+        ? "stopped"
+        : "unknown",
+    models_source: ollamaModelsSource,
+    models: ollamaModels,
+  };
+
+  // --- lm_studio ---
+  const lmStudioDir =
+    opts.lmStudioDir ?? join(homedir(), ".lmstudio", "models");
+  const lmStudioInstalled = existsSync(lmStudioDir);
+  const lmStudioModels = lmStudioInstalled ? scanGgufFiles(lmStudioDir, 5) : [];
+
+  const lm_studio = {
+    installed: lmStudioInstalled,
+    models_source: "filesystem",
+    models: lmStudioModels,
+  };
+
+  // --- loose_gguf ---
+  let ggufDirs;
+  if (opts.ggufDirs) {
+    ggufDirs = opts.ggufDirs;
+  } else if (process.env.DEMA_GGUF_DIRS) {
+    ggufDirs = process.env.DEMA_GGUF_DIRS.split(":");
+  } else {
+    ggufDirs = [join(homedir(), "Downloads"), "/data/bizra/models"];
+  }
+
+  const looseModels = [];
+  for (const dir of ggufDirs) {
+    // Real defaults: Downloads top-level only; all other dirs up to depth 3.
+    // Injected opts.ggufDirs get depth 3 (fixture tests use shallow trees).
+    const depth = !opts.ggufDirs && dir.includes("Downloads") ? 0 : 3;
+    looseModels.push(...scanGgufFiles(dir, depth));
+  }
+
+  const loose_gguf = {
+    installed: looseModels.length > 0,
+    models_source: "filesystem",
+    models: looseModels,
+  };
+
+  // --- llmfit ---
+  const llmfitPath = opts.llmfitPath ?? "/usr/local/bin/llmfit";
+  const llmfit = {
+    installed: existsSync(llmfitPath),
+    mode: "optional_external_tool",
+  };
+
+  const boundary = {
+    model_invoked: false,
+    network_used: ollamaApiReachable,
+    gpu_used: false,
+    files_content_read: false,
+  };
+
+  return { ollama, lm_studio, loose_gguf, llmfit, boundary };
+}
+
 export async function checkModelReadiness() {
   const ollamaHome =
     process.env.OLLAMA_MODELS ?? join(homedir(), ".ollama", "models");
@@ -167,6 +315,7 @@ export async function buildThinkDryRun(
   const trimmedQuery = query.trim();
   const memoryRaw = queryMemory(trimmedQuery, top);
   const modelReadiness = await checkModelReadiness();
+  const localRuntimes = await discoverLocalRuntimes();
 
   const contextLength = trimmedQuery.length;
 
@@ -186,6 +335,7 @@ export async function buildThinkDryRun(
     context_manifest: {
       memory: memoryResult,
       model_readiness: modelReadiness,
+      local_runtimes: localRuntimes,
       resource_estimate: {
         truth_label: "LOCAL_STATIC_ESTIMATE",
         estimated_wall_time_class: "low",
