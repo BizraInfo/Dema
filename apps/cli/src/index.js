@@ -8,7 +8,6 @@ import { cmd_genesis } from "./commands/genesis.js";
 import { cmd_harness } from "./commands/harness.js";
 import { cmd_state } from "./commands/state.js";
 import { cmd_setup } from "./commands/setup.js";
-import { cmd_ambient } from "./commands/ambient.js";
 import { cmd_onboarding_lifecycle } from "./commands/onboarding-lifecycle.js";
 import { cmd_explain } from "./commands/explain.js";
 import { cmd_urp } from "./commands/urp.js";
@@ -21,177 +20,68 @@ import { cmd_mission } from "./commands/mission.js";
 import { cmd_memory } from "./commands/memory.js";
 import { cmd_codebase } from "./commands/codebase.js";
 import { cmd_orchestrator } from "./commands/orchestrator.js";
+import { cmd_first_run } from "./commands/first-run.js";
+import { cmd_onboard } from "./commands/onboard.js";
+import { cmd_preview_card } from "./commands/preview-card.js";
+import { cmd_setup_check } from "./commands/setup-check.js";
+import { cmd_uninstall } from "./commands/uninstall.js";
+import { cmd_witness } from "./commands/witness.js";
+import { cmd_attest } from "./commands/attest.js";
+import { cmd_verify_grounded } from "./commands/verify-grounded.js";
+import { cmd_assets } from "./commands/assets.js";
+import { cmd_status, cmd_status_json } from "./commands/status.js";
+import { cmd_profiles } from "./commands/profiles.js";
+import { cmd_consent_card } from "./commands/consent-card.js";
+import { cmd_mission_loop } from "./commands/mission-loop.js";
+import { cmd_evidence_event } from "./commands/evidence-event.js";
+import { cmd_craftsmanship_witness } from "./commands/craftsmanship-witness.js";
+import { cmd_master_craftsmanship } from "./commands/master-craftsmanship.js";
+import { cmd_llm_router } from "./commands/llm-router.js";
+import { cmd_process_mining } from "./commands/process-mining.js";
+import { cmd_key_maker_check } from "./commands/key-maker-check.js";
+import { cmd_llm_invoke } from "./commands/llm-invoke.js";
+import { cmd_today } from "./commands/today.js";
+import { cmd_doctor } from "./commands/doctor.js";
+import { cmd_dashboard } from "./commands/dashboard.js";
+import { cmd_ambient } from "./commands/ambient.js";
+import { cmd_ambient_json } from "./commands/ambient-json.js";
+import { cmd_diagnostics } from "./commands/diagnostics.js";
+import { cmd_consent } from "./commands/consent.js";
+import { cmd_receipts } from "./commands/receipts.js";
+import { cmd_models } from "./commands/models.js";
+import { cmd_report } from "./commands/report.js";
+import { cmd_network } from "./commands/network.js";
+import { cmd_amana } from "./commands/amana.js";
+import { cmd_mcp } from "./commands/mcp.js";
+import { cmd_roadmap } from "./commands/roadmap.js";
+import { cmd_eval } from "./commands/eval.js";
+import { cmd_evidence } from "./commands/evidence.js";
+import { cmd_ihsan } from "./commands/ihsan.js";
+import { cmd_behavior } from "./commands/behavior.js";
+import { cmd_design } from "./commands/design.js";
+import { cmd_task } from "./commands/task.js";
+import { cmd_sovereign } from "./commands/sovereign.js";
+import { cmd_node0 } from "./commands/node0.js";
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
-import {
-  formatStatus,
-  shouldUseColor,
-} from "../../../packages/core/src/status.js";
-import {
-  buildSystemSnapshot,
-  formatSystemSnapshot,
-} from "../../../packages/core/src/system-snapshot.js";
 import { readOperatorPreferredName } from "../../../packages/core/src/operator-profile.js";
-import {
-  buildProfileFoundationPreview,
-  buildProfileFoundationSummary,
-} from "../../../packages/core/src/profiles.js";
-import { buildConsentCardPreview } from "../../../packages/core/src/consent-card-preview.js";
-import {
-  buildMissionLoopPreview,
-  buildMissionLoopSummary,
-} from "../../../packages/core/src/mission-loop-preview.js";
-import { buildEvidenceChainEventPreviewFromInputs } from "../../../packages/core/src/evidence-chain-event-preview.js";
 import {
   screenProposal,
   signReceipt,
 } from "../../../packages/covenant/src/covenant-gate.js";
-import { buildCraftsmanshipWitnessPreview } from "../../../packages/core/src/craftsmanship-witness-preview.js";
-import {
-  auditArtifact,
-  formatAuditReport,
-} from "../../../packages/core/src/master-craftsmanship-audit.js";
-import { buildLocalLLMRouterPreview } from "../../../packages/core/src/local-llm-router-preview.js";
 // model-broker imports moved to commands/model-broker.js
 // codebase imports moved to commands/codebase.js
 // orchestrator imports moved to commands/orchestrator.js
-import {
-  buildProcessMiningPreview,
-  buildProcessMiningSummary,
-} from "../../../packages/core/src/process-mining-preview.js";
-import {
-  buildKeyMakerCompliancePreview,
-  buildKeyMakerComplianceSummary,
-} from "../../../packages/core/src/key-maker-compliance.js";
-import {
-  buildLLMInvocationPreview,
-  buildLLMInvocationSummary,
-  invokeLocalLLM,
-} from "../../../packages/core/src/llm-adapter.js";
-import {
-  buildLocalModelInventoryScan,
-  buildLocalModelInventorySummary,
-} from "../../../packages/core/src/local-model-inventory-scan.js";
-import {
-  buildDiagnosticsMissionPlan,
-  formatDiagnosticsMissionPlan,
-} from "../../../packages/mission/src/diagnostics-plan.js";
-import { recordTodayTick } from "../../../packages/core/src/today.js";
-import {
-  listReceipts,
-  readReceipt,
-  formatReceiptList,
-} from "../../../packages/receipts/src/receipt-store.js";
-import {
-  runSetup,
-  checkSetup,
-  removeSetup,
-} from "../../../packages/installer/src/setup.js";
-import {
-  saveWitnessReceipt,
-  buildWitnessAttestation,
-  formatWitnessReceipt,
-} from "../../../packages/receipts/src/witness-receipt.js";
-import {
-  verifyWitnessReceipt,
-  findLatestWitness,
-  formatWitnessVerification,
-} from "../../../packages/receipts/src/witness-verify.js";
-import {
-  runAttestCli,
-  ATTEST_CONSENT_PHRASE,
-} from "../../../packages/receipts/src/verdict-attest-command.js";
-import { runVerifyGroundedCli } from "../../../packages/receipts/src/verdict-verify-command.js";
-import { runConsentProveCli } from "../../../packages/receipts/src/consent-prove-command.js";
-import { runConsentVerifyCli } from "../../../packages/receipts/src/consent-verify-command.js";
 // URP imports moved to commands/urp.js
-import {
-  writeLocalAssetInventory,
-  renderLocalAssetInventorySummary,
-} from "../../../packages/core/src/local-asset-awareness.js";
-import { summarizeMemory } from "../../../packages/memory/src/memory-store.js";
 import {
   formatBanner,
   gatherBannerInputs,
   probeGateway,
 } from "../../../packages/core/src/banner.js";
-import { buildAmbientBoundary } from "../../../packages/core/src/ambient.js";
-import {
-  buildSafetyReportPreview,
-  formatSafetyReportPreview,
-} from "../../../packages/core/src/safety-report.js";
-import {
-  buildNetworkBlueprint,
-  formatNetworkBlueprint,
-} from "../../../packages/core/src/network-blueprint.js";
-import {
-  buildOfflineNetworkFixturePreview,
-  formatOfflineNetworkFixturePreview,
-} from "../../../packages/core/src/network-fixture-preview.js";
-import {
-  buildNetworkRefusalMatrixPreview,
-  formatNetworkRefusalMatrixPreview,
-} from "../../../packages/core/src/network-refusal-matrix-preview.js";
-import {
-  buildAmanaContractsPreview,
-  formatAmanaContractsPreview,
-} from "../../../packages/core/src/amana-contracts-preview.js";
-import {
-  buildFirstRunPlan,
-  formatFirstRunPlan,
-  summarizeFirstRunOutcome,
-} from "../../../packages/core/src/first-run.js";
-import {
-  gatherDevRoadmapState,
-  formatDevRoadmapReport,
-} from "../../../packages/core/src/roadmap-dev.js";
-import {
-  buildMcpIntegrationBlueprint,
-  formatMcpIntegrationBlueprint,
-} from "../../../packages/core/src/mcp-blueprint.js";
-import {
-  buildOptimizationRoadmapPreview,
-  formatOptimizationRoadmapPreview,
-} from "../../../packages/core/src/optimization-roadmap.js";
-import {
-  buildEvidenceReceiptPreview,
-  formatEvidenceReceiptPreview,
-} from "../../../packages/verifier/src/evidence-receipt-preview.js";
-import {
-  DEFAULT_IHSAN_FLOOR,
-  evaluateIhsanFloorPreview,
-  formatIhsanFloorPreview,
-} from "../../../packages/verifier/src/ihsan-floor-preview.js";
-import {
-  emulateLoopDesign,
-  formatLoopDesignEmulation,
-} from "../../../packages/core/src/loop-emulator.js";
 import {
   buildOnboardingGuide,
   formatOnboardingGuide,
 } from "../../../packages/core/src/onboarding.js";
-import {
-  buildBehavioralModulationPreview,
-  formatBehavioralModulationPreview,
-} from "../../../packages/core/src/behavioral-modulation.js";
 import { runShell } from "../../../packages/core/src/shell.js";
-import { TASK_REGISTRY } from "../../../packages/tasks/src/downloads-audit-preview.js";
-import {
-  formatVerdict,
-  verifyReceipt,
-} from "../../../packages/verifier/src/sat-placeholder.js";
-import {
-  buildConsentPlanPreview,
-  formatConsentPlanPreview,
-} from "../../../packages/consent/src/consent-planner.js";
-import {
-  collectModelInventory,
-  formatModelInventory,
-} from "../../../packages/models/src/model-inventory.js";
-import {
-  highestLevel,
-  levelLabel,
-  requestApproval,
-} from "../../../packages/core/src/approval-gate.js";
 import { suggestCommands } from "../../../packages/core/src/command-suggester.js";
 // buildExplainPreview/formatExplainPreview/getPerspective moved to commands/explain.js
 import {
@@ -211,24 +101,7 @@ import {
   renderHelpFlat,
   renderHelpUnknown,
 } from "../../../packages/core/src/help-topics.js";
-import {
-  wantsJson,
-  humanHintLine,
-} from "../../../packages/core/src/output-mode.js";
 // think imports moved to commands/think.js
-import {
-  evaluatePredicates,
-  formatDoctorDashboard,
-} from "../../../packages/core/src/doctor-dashboard.js";
-import { createSpinner } from "../../../packages/core/src/spinner.js";
-import {
-  getRubricPack,
-  formatRubricPackReport,
-} from "../../../packages/core/src/eval-layer2-rubrics.js";
-import {
-  validatePastedJudgeVerdict,
-  formatVerdictReport,
-} from "../../../packages/core/src/eval-layer2-verdict-validator.js";
 
 const adapter = createNode0Adapter();
 
@@ -755,175 +628,11 @@ async function cmdHelpFlat() {
   console.log(await renderFullHelp());
 }
 
-async function cmd_first_run(ctx) {
-  const { argv } = ctx;
-  const dryRun = argv.includes("--dry-run");
-  const wantJson = argv.includes("--json");
-  const plan = buildFirstRunPlan({ dry_run: dryRun });
+// cmd_first_run extracted to ./commands/first-run.js
 
-  if (wantJson && argv.includes("--plan-only")) {
-    console.log(JSON.stringify(plan, null, 2));
-    process.exit(process.exitCode ?? 0);
-  }
+// cmd_onboard extracted to ./commands/onboard.js
 
-  // Human header. In JSON mode we still emit the header on stderr so
-  // stdout stays machine-parseable.
-  const headerStream = wantJson ? process.stderr : process.stdout;
-  headerStream.write(formatFirstRunPlan(plan) + "\n\n");
-
-  // Step 1: welcome
-  headerStream.write("==> 1. Welcome\n");
-  headerStream.write(formatOnboardingGuide(buildOnboardingGuide()) + "\n\n");
-
-  // Step 2: setup (skipped under --dry-run)
-  headerStream.write("==> 2. Setup\n");
-  if (dryRun) {
-    headerStream.write(
-      "[dry-run] would call runSetup() · would create ~/.dema/ if missing\n\n",
-    );
-  } else {
-    const result = await runSetup();
-    headerStream.write(JSON.stringify(result, null, 2) + "\n\n");
-  }
-
-  // Step 3: status
-  headerStream.write("==> 3. Status\n");
-  const status = await statusWithLocalIdentity();
-  const color = !argv.includes("--no-color") && shouldUseColor();
-  headerStream.write(formatStatus(status, { color }) + "\n\n");
-
-  // Step 4: doctor
-  headerStream.write("==> 4. Doctor\n");
-  const predicates = evaluatePredicates(status);
-  const noColor =
-    Boolean(process.env.NO_COLOR) ||
-    process.env.TERM === "dumb" ||
-    argv.includes("--no-color");
-  headerStream.write(
-    formatDoctorDashboard(predicates, { color: !noColor }) + "\n\n",
-  );
-
-  // Step 5: next safe action
-  headerStream.write("==> 5. Next safe action\n");
-  const outcome = summarizeFirstRunOutcome({
-    status,
-    predicates,
-    dry_run: dryRun,
-  });
-  headerStream.write(outcome.suggested_next + "\n");
-
-  if (wantJson) {
-    // stdout payload (machine-parseable) — separate from human header.
-    console.log(JSON.stringify({ plan, outcome, predicates, status }, null, 2));
-  }
-
-  // first-run exit semantics: the COMMAND succeeded if it walked all 5
-  // steps. Doctor verdicts are informational and surfaced via
-  // outcome.suggested_next, not via exit code. The operator should
-  // never see a "first-run failed" error simply because the system
-  // is not yet fully ready — that's exactly the state first-run is
-  // designed to help diagnose.
-  process.exitCode = 0;
-  process.exit(process.exitCode ?? 0);
-}
-
-async function cmd_onboard(ctx) {
-  const { argv } = ctx;
-  if (argv.includes("--preview-card")) {
-    const { join: pcJoin } = await import("node:path");
-    const { homedir: pcHd } = await import("node:os");
-    const { buildGenesisPreviewCard } =
-      await import("../../../packages/core/src/genesis-preview-card.js");
-    const { writeGenesisPreviewCard, readOperatorLanguage } =
-      await import("../../../packages/core/src/operator-profile.js");
-    const pcHome = process.env.DEMA_HOME || pcJoin(pcHd(), ".dema");
-    const langResult = await readOperatorLanguage(pcHome);
-    const timestamp = new Date().toISOString();
-    const card = buildGenesisPreviewCard({
-      candidate: {
-        primary_language: langResult.language_code,
-        secondary_language: langResult.secondary_language_code,
-      },
-      timestamp,
-    });
-    await writeGenesisPreviewCard({ home: pcHome, card });
-    if (argv.includes("--json")) {
-      console.log(JSON.stringify(card, null, 2));
-    } else {
-      console.log(`Genesis Preview Card`);
-      console.log(`  schema:             ${card.schema}`);
-      console.log(`  mode:               ${card.mode}`);
-      console.log(`  truth_label:        ${card.truth_label}`);
-      console.log(
-        `  receipt_id_preview: ${card.would_mint_if_consented.receipt_id_preview}`,
-      );
-      console.log(
-        `  consent_phrase:     ${card.would_mint_if_consented.consent_phrase_required}`,
-      );
-      console.log(`  stored_at:          ${card.card_storage.path}`);
-      console.log(
-        `\nNo mint has occurred. Type the consent phrase to mint (separate typed-GO required).`,
-      );
-    }
-    process.exit(process.exitCode ?? 0);
-  }
-  const guide = buildOnboardingGuide();
-  console.log(
-    argv.includes("--json")
-      ? JSON.stringify(guide, null, 2)
-      : formatOnboardingGuide(guide),
-  );
-  process.exit(process.exitCode ?? 0);
-}
-
-async function cmd_preview_card(ctx) {
-  const { argv, subcommand } = ctx;
-  const { join: pcJoin2 } = await import("node:path");
-  const { homedir: pcHd2 } = await import("node:os");
-  const { readGenesisPreviewCards } =
-    await import("../../../packages/core/src/operator-profile.js");
-  const pcHome2 = process.env.DEMA_HOME || pcJoin2(pcHd2(), ".dema");
-
-  if (!subcommand || subcommand === "show") {
-    // dema preview-card show [<receipt_id_preview>] [--json]
-    const hashArg = argv[2] && !argv[2].startsWith("--") ? argv[2] : null;
-    const wantJson2 = argv.includes("--json");
-    const cards = await readGenesisPreviewCards(pcHome2);
-
-    if (hashArg) {
-      const match = cards.find(
-        (c) => c?.would_mint_if_consented?.receipt_id_preview === hashArg,
-      );
-      if (!match) {
-        console.log(`preview-card: card not found for hash ${hashArg}`);
-        process.exit(process.exitCode ?? 0);
-      }
-      console.log(
-        wantJson2
-          ? JSON.stringify(match, null, 2)
-          : `receipt_id_preview: ${match.would_mint_if_consented.receipt_id_preview}`,
-      );
-      process.exit(process.exitCode ?? 0);
-    }
-
-    if (cards.length === 0) {
-      console.log("no preview cards stored yet");
-      process.exit(process.exitCode ?? 0);
-    }
-
-    if (wantJson2) {
-      console.log(JSON.stringify(cards, null, 2));
-      process.exit(process.exitCode ?? 0);
-    }
-    for (const c of cards) {
-      console.log(
-        `  ${c?.would_mint_if_consented?.receipt_id_preview ?? "unknown"}`,
-      );
-    }
-    process.exit(process.exitCode ?? 0);
-  }
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_preview_card extracted to ./commands/preview-card.js
 
 // cmd_language extracted to ./commands/language.js (dispatcher decomposition ④).
 
@@ -931,75 +640,11 @@ async function cmd_preview_card(ctx) {
 
 // cmd_setup extracted to ./commands/setup.js (④).
 
-async function cmd_setup_check(ctx) {
-  const result = await checkSetup();
-  console.log(JSON.stringify(result, null, 2));
-  if (result.verdict !== "INTACT") process.exitCode = 1;
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_setup_check extracted to ./commands/setup-check.js
 
-async function cmd_uninstall(ctx) {
-  const { argv } = ctx;
-  const consent = argValue(argv, "--consent") ?? "";
-  const dryRun = argv.includes("--dry-run");
-  const result = await removeSetup(undefined, { consent, dryRun });
-  console.log(JSON.stringify(result, null, 2));
-  if (!result.removed && result.reason !== "dry_run") process.exitCode = 1;
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_uninstall extracted to ./commands/uninstall.js
 
-async function cmd_witness(ctx) {
-  const { argv } = ctx;
-  const subCmd = argv[1] ?? "";
-  if (subCmd === "verify") {
-    const filePath = argValue(argv, "--file") ?? "";
-    const wantJsonV = argv.includes("--json") || !process.stdout.isTTY;
-    const receiptPath = filePath || (await findLatestWitness());
-    if (!receiptPath) {
-      console.error(
-        'No witness receipt found. Run `dema witness --consent "WITNESS NODE0 STATE"` first.',
-      );
-      process.exitCode = 1;
-      process.exit(process.exitCode ?? 0);
-    }
-    const vResult = await verifyWitnessReceipt(receiptPath);
-    if (wantJsonV) {
-      console.log(JSON.stringify(vResult, null, 2));
-    } else {
-      console.log(formatWitnessVerification(vResult));
-    }
-    if (vResult.verdict !== "VERIFIED") process.exitCode = 1;
-    process.exit(process.exitCode ?? 0);
-  }
-  const consent = argValue(argv, "--consent") ?? "";
-  const dryRun = argv.includes("--dry-run");
-  const wantJson = argv.includes("--json") || !process.stdout.isTTY;
-  if (dryRun && !consent) {
-    const att = await buildWitnessAttestation();
-    if (wantJson) {
-      console.log(
-        JSON.stringify(
-          { ...att, saved: false, reason: "dry_run", dry_run: true },
-          null,
-          2,
-        ),
-      );
-    } else {
-      console.log(
-        formatWitnessReceipt({ ...att, saved: false, reason: "dry_run" }),
-      );
-    }
-    process.exit(process.exitCode ?? 0);
-  }
-  const result = await saveWitnessReceipt({ consent, dryRun });
-  if (wantJson) {
-    console.log(JSON.stringify(result, null, 2));
-  } else {
-    console.log(formatWitnessReceipt(result));
-  }
-  if (!result.saved && result.reason !== "dry_run") process.exitCode = 1;
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_witness extracted to ./commands/witness.js
 
 // cmd_authorship extracted to ./commands/authorship.js
 
@@ -1007,186 +652,29 @@ async function cmd_witness(ctx) {
 
 // cmd_genesis extracted to ./commands/genesis.js (④).
 
-async function cmd_attest(ctx) {
-  const { argv } = ctx;
-  const wantJsonA2 = wantsJson(argv);
-  const rule = argValue(argv, "--rule");
-  const inputPath = argValue(argv, "--input");
-  const consent = argValue(argv, "--consent") ?? "";
-  const outPath = argValue(argv, "--out");
-  const result = await runAttestCli({
-    rule,
-    inputPath,
-    consent,
-    outPath,
-  });
-  if (wantJsonA2) {
-    console.log(JSON.stringify(result, null, 2));
-  } else if (result.attested) {
-    console.log("Verdict Receipt Attested");
-    console.log("=".repeat(40));
-    console.log(`  Rule:       ${result.body.rule_id}`);
-    console.log(`  Verdict:    ${result.body.verdict}`);
-    console.log(`  Input hash: ${result.body.input_hash}`);
-    console.log(`  Receipt:    ${result.receipt_path}`);
-    if (result.out_path) console.log(`  Bundle:     ${result.out_path}`);
-  } else if (result.error === "consent_required") {
-    console.error(
-      `Consent required. Use: --consent "${ATTEST_CONSENT_PHRASE}"`,
-    );
-  } else if (
-    result.error === "missing_rule" ||
-    result.error === "missing_input"
-  ) {
-    console.error(
-      `Usage: dema attest --rule <id> --input <path> --consent "${ATTEST_CONSENT_PHRASE}" [--out <bundle.json>] [--json]`,
-    );
-  } else {
-    console.error(`Attest failed: ${result.error}`);
-  }
-  if (!result.attested) process.exitCode = 1;
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_attest extracted to ./commands/attest.js
 
-async function cmd_verify_grounded(ctx) {
-  const { argv } = ctx;
-  const wantJsonV2 = wantsJson(argv);
-  // positional: bundle path is argv[1]
-  const bundlePath = argv[1] && !argv[1].startsWith("--") ? argv[1] : null;
-  const pubkeyPath = argValue(argv, "--pubkey");
-  const ruleId = argValue(argv, "--rule");
-  const result = await runVerifyGroundedCli({
-    bundlePath,
-    pubkeyPath,
-    ruleId,
-  });
-  if (wantJsonV2) {
-    console.log(JSON.stringify(result, null, 2));
-  } else if (result.verified) {
-    console.log(
-      `VERIFIED · rule=${result.rule_id} · verdict=${result.verdict}`,
-    );
-  } else {
-    console.error(`REJECTED:${result.reason}`);
-  }
-  if (!result.verified) process.exitCode = 1;
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_verify_grounded extracted to ./commands/verify-grounded.js
 
 // cmd_urp extracted to ./commands/urp.js
 
-async function cmd_assets(ctx) {
-  const { argv } = ctx;
-  const sub = argv[1] ?? "";
-  const wantJsonLocalAssets = wantsJson(argv);
-  if (sub !== "scan") {
-    console.error("Usage: dema assets scan --root <path> [--json]");
-    process.exitCode = 1;
-    process.exit(process.exitCode ?? 0);
-  }
-
-  const root = argValue(argv, "--root") || process.env.DEMA_LOCAL_ASSET_ROOT;
-  const result = await writeLocalAssetInventory({ root });
-  if (wantJsonLocalAssets) {
-    console.log(JSON.stringify(result, null, 2));
-  } else if (result.written) {
-    console.log(renderLocalAssetInventorySummary(result));
-  } else {
-    console.error(
-      `Dema local assets: inventory not written · ${result.error ?? "unknown_error"}`,
-    );
-    process.exitCode = 1;
-  }
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_assets extracted to ./commands/assets.js
 
 // cmd_realm extracted to ./commands/realm.js
 
-async function cmd_status(ctx) {
-  const { argv } = ctx;
-  if (argv.includes("--full")) {
-    const snapshot = buildSystemSnapshot();
-    if (wantsJson(argv)) {
-      console.log(JSON.stringify(snapshot, null, 2));
-    } else {
-      console.log(formatSystemSnapshot(snapshot));
-    }
-    process.exit(process.exitCode ?? 0);
-  }
-  const status = await statusWithLocalIdentity();
-  const color = argv.includes("--no-color") ? false : shouldUseColor();
-  console.log(formatStatus(status, { color }));
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_status extracted to ./commands/status.js
 
-async function cmd_status_json(ctx) {
-  const status = await statusWithLocalIdentity();
-  console.log(JSON.stringify(status, null, 2));
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_status_json extracted to ./commands/status-json.js
 
 // cmd_state extracted to ./commands/state.js (④).
 
-async function cmd_profiles(ctx) {
-  const { argv } = ctx;
-  const wantsSummary = argv.includes("--summary");
-  const profilePreview = wantsSummary
-    ? buildProfileFoundationSummary()
-    : buildProfileFoundationPreview();
-  if (wantsJson(argv)) {
-    console.log(JSON.stringify(profilePreview, null, 2));
-    process.exit(process.exitCode ?? 0);
-  }
-  if (wantsSummary) {
-    const actors = profilePreview.actors;
-    console.log(
-      [
-        "Dema profiles (summary)",
-        `  User: ${actors.user}`,
-        `  PAT:  ${actors.pat}`,
-        `  SAT:  ${actors.sat}`,
-        `  Mission: ${actors.mission}`,
-        `  Context capsule: ${profilePreview.context_capsule_schema}`,
-        humanHintLine("profiles"),
-      ].join("\n"),
-    );
-  } else {
-    const p = profilePreview;
-    console.log(
-      [
-        "Dema profiles",
-        `  User: ${p.user.schema} · operator: ${p.user.identity.name}`,
-        `  PAT:  ${p.pat.schema} · owner: ${p.pat.owner}`,
-        `  SAT:  ${p.sat.schema} · owner: ${p.sat.owner}`,
-        `  Mission: ${p.mission.schema} · status: ${p.mission.status}`,
-        `  Context capsule: ${p.context_capsule.schema}`,
-        humanHintLine("profiles"),
-      ].join("\n"),
-    );
-  }
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_profiles extracted to ./commands/profiles.js
 
-async function cmd_consent_card(ctx) {
-  console.log(JSON.stringify(buildConsentCardPreview(), null, 2));
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_consent_card extracted to ./commands/onsent-card.js
 
-async function cmd_mission_loop(ctx) {
-  const { argv } = ctx;
-  const preview = argv.includes("--summary")
-    ? buildMissionLoopSummary()
-    : buildMissionLoopPreview();
-  console.log(JSON.stringify(preview, null, 2));
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_mission_loop extracted to ./commands/ission-loop.js
 
-async function cmd_evidence_event(ctx) {
-  console.log(
-    JSON.stringify(buildEvidenceChainEventPreviewFromInputs(), null, 2),
-  );
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_evidence_event extracted to ./commands/evidence-event.js
 
 // cmd_node_registry extracted to ./commands/node-registry.js (④).
 
@@ -1196,791 +684,75 @@ async function cmd_evidence_event(ctx) {
 
 // cmd_project_status extracted to ./commands/project-status.js (④).
 
-async function cmd_craftsmanship_witness(ctx) {
-  // 15th canonical spine surface · the master-craftsmanship creation
-  // (proactive self micro harness + micro consent + RSI micro process
-  //  mining + master craftsmanship · all in one preview).
-  // Inputs are caller-declared (zero I/O in builder); CLI passes empty
-  // defaults · operator can pipe their own slice_history/rsi_signals etc.
-  console.log(JSON.stringify(buildCraftsmanshipWitnessPreview(), null, 2));
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_craftsmanship_witness extracted to ./commands/raftsmanship-witness.js
 
-async function cmd_master_craftsmanship(ctx) {
-  const { argv, subcommand } = ctx;
-  // External audit surface — audits arbitrary artifacts against the 10
-  // MASTER_CRAFTSMANSHIP_INVARIANTS. Default subject is the ADR-011
-  // phase-4 compliance suite.
-  // Usage:
-  //   dema master-craftsmanship audit [--json] [<path>]
-  const mcSubcommand = argv[1];
-  if (mcSubcommand !== "audit") {
-    console.log(
-      "Usage: dema master-craftsmanship audit [--json] [<path>]\n" +
-        "  Default path: tests/node-onboarding-adr011-compliance.test.js",
-    );
-    process.exitCode = 1;
-    process.exit(process.exitCode ?? 0);
-  }
-  const mcJsonFlag = argv.includes("--json");
-  // Path is any non-flag arg after the subcommand
-  const mcPathArg = argv.slice(2).find((a) => !a.startsWith("--"));
-  const { fileURLToPath: mcFURL } = await import("node:url");
-  const { dirname: mcDirname, join: mcJoin } = await import("node:path");
-  const projectRoot = mcJoin(mcDirname(mcFURL(import.meta.url)), "../../..");
-  const result = await auditArtifact({
-    artifactPath: mcPathArg,
-    projectRoot,
-  });
-  if (mcJsonFlag) {
-    console.log(JSON.stringify(result, null, 2));
-  } else {
-    console.log(formatAuditReport(result));
-  }
-  if (!result.overall_compliant) process.exitCode = 1;
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_master_craftsmanship extracted to ./commands/aster-craftsmanship.js
 
 // cmd_codebase extracted to ./commands/codebase.js
 
 // cmd_orchestrator extracted to ./commands/orchestrator.js
 
-async function cmd_llm_router(ctx) {
-  console.log(JSON.stringify(buildLocalLLMRouterPreview(), null, 2));
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_llm_router extracted to ./commands/llm-router.js
 
 // cmd_model_broker extracted to ./commands/model-broker.js
 
 // cmd_harness extracted to ./commands/harness.js (④).
 
-async function cmd_process_mining(ctx) {
-  const { argv } = ctx;
-  const preview = argv.includes("--summary")
-    ? buildProcessMiningSummary()
-    : buildProcessMiningPreview();
-  console.log(JSON.stringify(preview, null, 2));
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_process_mining extracted to ./commands/process-mining.js
 
-async function cmd_key_maker_check(ctx) {
-  const { argv } = ctx;
-  const door = argValue(argv, "--door") ?? "";
-  const preview = argv.includes("--summary")
-    ? buildKeyMakerComplianceSummary({ door })
-    : buildKeyMakerCompliancePreview({ door });
-  console.log(JSON.stringify(preview, null, 2));
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_key_maker_check extracted to ./commands/key-maker-check.js
 
-async function cmd_llm_invoke(ctx) {
-  const { argv } = ctx;
-  // C1 spine surface (per ADR-008 §C1) · two modes:
-  //   no --invoke    → preview-only · canonical boundary all false
-  //   --invoke       → actual Ollama call · requires --consent exact phrase
-  const model = argValue(argv, "--model") ?? "";
-  const prompt = argValue(argv, "--prompt") ?? "";
-  const consent = argValue(argv, "--consent") ?? "";
-  const ollamaBaseUrl = argValue(argv, "--base") ?? undefined;
-  const wantsSummary = argv.includes("--summary");
-  const wantsInvoke = argv.includes("--invoke");
+// cmd_llm_invoke extracted to ./commands/llm-invoke.js
 
-  if (!wantsInvoke) {
-    const preview = wantsSummary
-      ? buildLLMInvocationSummary({ model, prompt, ollamaBaseUrl })
-      : buildLLMInvocationPreview({ model, prompt, ollamaBaseUrl });
-    console.log(JSON.stringify(preview, null, 2));
-    process.exit(process.exitCode ?? 0);
-  }
+// cmd_today extracted to ./commands/today.js
 
-  // --invoke flag present · real HTTP call to Ollama · consent-gated
-  const result = await invokeLocalLLM({
-    model,
-    prompt,
-    consentPhrase: consent,
-    ollamaBaseUrl,
-  });
-  console.log(JSON.stringify(result, null, 2));
-  if (result.invocation_status === "failed") {
-    process.exitCode = 1;
-  }
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_doctor extracted to ./commands/octor.js
 
-async function cmd_today(ctx) {
-  const { argv } = ctx;
-  const status = await statusWithLocalIdentity();
-  const result = await recordTodayTick({ status });
-  const memory = await summarizeMemory();
-  if (wantsJson(argv)) {
-    console.log(JSON.stringify({ ...result, memory }, null, 2));
-    process.exit(process.exitCode ?? 0);
-  }
-  const tick = result.tick;
-  console.log(
-    [
-      "Dema today",
-      `  Continuity tick recorded — ${tick.date}`,
-      `  NODE0_READY=${tick.node0Ready} · Activation gate: ${tick.activationGate}`,
-      `  ${memory.count} memory entries summarized at ${result.path}`,
-      `  Next artifact: ${tick.nextArtifact}`,
-      humanHintLine("today"),
-    ].join("\n"),
-  );
-  process.exit(process.exitCode ?? 0);
-}
-
-async function cmd_doctor(ctx) {
-  const { argv } = ctx;
-  const status = await statusWithLocalIdentity();
-  const predicates = evaluatePredicates(status);
-  const anyFail = predicates.some((p) => p.status === "fail");
-
-  if (wantsJson(argv)) {
-    const verdict = anyFail ? "blocked" : "ready and consent-gated";
-    console.log(
-      JSON.stringify(
-        {
-          schema: "bizra.dema.doctor_dashboard.v0.1",
-          verdict,
-          predicates,
-          status,
-        },
-        null,
-        2,
-      ),
-    );
-    process.exitCode = anyFail ? 1 : 0;
-    process.exit(process.exitCode ?? 0);
-  }
-
-  const noColor =
-    Boolean(process.env.NO_COLOR) ||
-    process.env.TERM === "dumb" ||
-    argv.includes("--no-color");
-  console.log(formatDoctorDashboard(predicates, { color: !noColor }));
-  process.exitCode = anyFail ? 1 : 0;
-  process.exit(process.exitCode ?? 0);
-}
-
-async function cmd_dashboard(ctx) {
-  const { argv } = ctx;
-  const { fileURLToPath } = await import("node:url");
-  const { dirname, join, resolve } = await import("node:path");
-  const { readFileSync, writeFileSync, mkdtempSync } = await import("node:fs");
-  const { tmpdir } = await import("node:os");
-
-  const here = dirname(fileURLToPath(import.meta.url));
-  const htmlPath = resolve(
-    join(
-      here,
-      "..",
-      "..",
-      "..",
-      "docs",
-      "tui",
-      "dema-homebase-dashboard-v0.1.html",
-    ),
-  );
-
-  let dashboardHtml;
-  try {
-    dashboardHtml = readFileSync(htmlPath, "utf8");
-  } catch {
-    console.log("Dashboard not found: " + htmlPath);
-    process.exitCode = 1;
-    process.exit(process.exitCode ?? 0);
-  }
-
-  if (wantsJson(argv)) {
-    console.log(
-      JSON.stringify(
-        { schema: "bizra.dema.dashboard.v0.1", path: htmlPath },
-        null,
-        2,
-      ),
-    );
-    process.exit(process.exitCode ?? 0);
-  }
-
-  const status = await statusWithLocalIdentity();
-  const version = await readPackageVersion();
-  const statusPayload = {
-    node: status.node || "Node0",
-    human: status.human || "unknown",
-    ready: status.ready,
-    consoleReady: status.consoleReady,
-    activationGate: status.activationGate || "BLOCKED",
-    daemonStatus: status.daemonStatus,
-    missionExecuted: status.missionExecuted,
-    runtimePulse: status.runtimePulse,
-    modelConnected: status.modelConnected,
-    nextAction: status.nextAdmissibleAction || "complete_setup",
-    version,
-    generated_at: new Date().toISOString(),
-  };
-
-  const useStatic = argv.includes("--static");
-  let openPath = htmlPath;
-
-  if (!useStatic) {
-    const html = dashboardHtml;
-    const injection = `<script>window.__DEMA_STATUS__=${JSON.stringify(statusPayload)};</script>`;
-    const filled = html.replace("</body>", injection + "\n</body>");
-    const tmp = mkdtempSync(join(tmpdir(), "dema-dashboard-"));
-    openPath = join(tmp, "dashboard.html");
-    writeFileSync(openPath, filled, "utf8");
-  }
-
-  const opener =
-    process.platform === "darwin"
-      ? "open"
-      : process.platform === "win32"
-        ? "start"
-        : "xdg-open";
-  const { execFile } = await import("node:child_process");
-  execFile(opener, [openPath], () => {});
-  console.log(
-    useStatic
-      ? "Opening static dashboard: " + openPath
-      : "Opening live dashboard: " + openPath,
-  );
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_dashboard extracted to ./commands/ashboard.js
 
 // cmd_ambient extracted to ./commands/ambient.js (④).
 
-async function cmd_ambient_json(ctx) {
-  console.log(JSON.stringify(buildAmbientBoundary(), null, 2));
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_ambient_json extracted to ./commands/ambient-json.js
 
 // cmd_journey extracted to ./commands/journey.js (dispatcher decomposition ④).
 
-async function cmd_diagnostics(ctx) {
-  const { argv, subcommand } = ctx;
-  if (subcommand !== "plan") {
-    throw new Error(
-      "Unknown diagnostics command. Use `dema diagnostics plan [--json]`.",
-    );
-  }
-  const plan = buildDiagnosticsMissionPlan();
-  console.log(
-    argv.includes("--json")
-      ? JSON.stringify(plan, null, 2)
-      : formatDiagnosticsMissionPlan(plan),
-  );
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_diagnostics extracted to ./commands/iagnostics.js
 
-async function cmd_consent(ctx) {
-  const { argv, subcommand } = ctx;
-  if (subcommand === "plan") {
-    const json = argv.includes("--json");
-    const intent = argv
-      .slice(2)
-      .filter((arg) => arg !== "--json")
-      .join(" ")
-      .trim();
-    if (!intent)
-      throw new Error('Usage: dema consent plan [--json] "<intent>"');
-    const plan = buildConsentPlanPreview({ intent });
-    console.log(
-      json ? JSON.stringify(plan, null, 2) : formatConsentPlanPreview(plan),
-    );
-    process.exit(process.exitCode ?? 0);
-  }
-  if (subcommand === "prove") {
-    const wantJsonC = wantsJson(argv);
-    const phrase = argValue(argv, "--phrase") ?? "";
-    const actionType = argValue(argv, "--action-type") ?? "";
-    const targetHash = argValue(argv, "--target-hash") ?? "";
-    const ruleId = argValue(argv, "--rule-id");
-    const outPath = argValue(argv, "--out");
-    const result = await runConsentProveCli({
-      phrase,
-      actionType,
-      targetHash,
-      ruleId,
-      outPath,
-    });
-    if (wantJsonC) {
-      console.log(JSON.stringify(result, null, 2));
-    } else if (result.built) {
-      console.log("Consent Proof");
-      console.log("=".repeat(40));
-      console.log(`  Schema:       ${result.consent_proof.schema}`);
-      console.log(`  Phrase:       ${result.consent_proof.consent_phrase}`);
-      console.log(
-        `  Action type:  ${result.consent_proof.action_scope.action_type}`,
-      );
-      console.log(
-        `  Target hash:  ${result.consent_proof.action_scope.target_hash}`,
-      );
-      console.log(`  Nonce:        ${result.consent_proof.nonce}`);
-      console.log(`  Created at:   ${result.consent_proof.created_at_iso}`);
-      console.log(`  Expires at:   ${result.consent_proof.expires_at_iso}`);
-      console.log(
-        `  Fingerprint:  ${result.consent_proof.operator_public_key_fingerprint}`,
-      );
-      console.log(`  Proof hash:   ${result.consent_proof.consent_proof_hash}`);
-      if (result.out_path) console.log(`  Saved:        ${result.out_path}`);
-    } else {
-      console.error(`Consent proof failed: ${result.error}`);
-    }
-    if (!result.built) process.exitCode = 1;
-    process.exit(process.exitCode ?? 0);
-  }
-  if (subcommand === "verify") {
-    const wantJsonC = wantsJson(argv);
-    const proofPath = argv[2] && !argv[2].startsWith("--") ? argv[2] : null;
-    const pubkeyPath = argValue(argv, "--pubkey");
-    const expectedActionType = argValue(argv, "--expected-action-type");
-    const expectedTargetHash = argValue(argv, "--expected-target-hash");
-    const result = await runConsentVerifyCli({
-      proofPath,
-      pubkeyPath,
-      expectedActionType,
-      expectedTargetHash,
-    });
-    if (wantJsonC) {
-      console.log(JSON.stringify(result, null, 2));
-    } else if (result.verified) {
-      console.log(
-        `VERIFIED · proof_hash=${result.consent_proof_hash} · action_type=${result.action_scope?.action_type}`,
-      );
-    } else {
-      console.error(`REJECTED:${result.reason}`);
-    }
-    if (!result.verified) process.exitCode = 1;
-    process.exit(process.exitCode ?? 0);
-  }
-  throw new Error(
-    'Unknown consent command. Use `dema consent plan "<intent>"`, `dema consent prove --phrase ... --action-type ... --target-hash ... [--rule-id ...] [--out <path>] [--json]`, or `dema consent verify <proof.json> --pubkey <pem-path> [--expected-action-type ...] [--expected-target-hash ...] [--json]`.',
-  );
-}
+// cmd_consent extracted to ./commands/onsent.js
 
 // cmd_mission extracted to ./commands/mission.js
 
-async function cmd_receipts(ctx) {
-  const { argv } = ctx;
-  const selector = argv.slice(1).find((a) => !a.startsWith("-"));
-  if (selector) {
-    console.log(JSON.stringify(await readReceipt(selector), null, 2));
-  } else {
-    const allReceipts = await listReceipts();
-    if (wantsJson(argv)) {
-      console.log(JSON.stringify(allReceipts, null, 2));
-    } else {
-      console.log(formatReceiptList(allReceipts));
-    }
-  }
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_receipts extracted to ./commands/receipts.js
 
 // cmd_memory extracted to ./commands/memory.js
 
 // cmd_think extracted to ./commands/think.js
 
-async function cmd_models(ctx) {
-  const { argv, subcommand } = ctx;
-  // dema models scan [--json]      → C1.5 · schema-tagged local inventory scan
-  // dema models                    → existing human-readable inventory
-  if (subcommand === "scan") {
-    const spinner = createSpinner({
-      stdout: process.stdout,
-      label: "Scanning local model inventory…",
-    });
-    spinner.start();
-    const scan = await buildLocalModelInventoryScan();
-    spinner.stop();
-    const scanOutput = argv.includes("--summary")
-      ? buildLocalModelInventorySummary(scan)
-      : scan;
-    if (wantsJson(argv)) {
-      console.log(JSON.stringify(scanOutput, null, 2));
-      process.exit(process.exitCode ?? 0);
-    }
-    const providers = scan.providers || {};
-    const ollama = providers.ollama || {};
-    const lms = providers.lm_studio || {};
-    const dl = providers.downloads || {};
-    console.log(
-      [
-        "Dema models scan",
-        `  Total models found: ${scan.total_models ?? 0}`,
-        `  Ollama: ${ollama.reachable ? "reachable" : "unreachable"} · ${ollama.model_count ?? 0} model(s)`,
-        `  LM Studio: ${lms.reachable ? "reachable" : "unreachable"} · ${lms.model_count ?? 0} model(s)`,
-        `  Downloads: ${dl.model_count ?? 0} GGUF file(s)`,
-        `  Boundary: read-only; local probes only; no model invoked`,
-        humanHintLine("models scan"),
-      ].join("\n"),
-    );
-    process.exit(process.exitCode ?? 0);
-  }
-  const inventory = await collectModelInventory();
-  console.log(formatModelInventory(inventory));
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_models extracted to ./commands/odels.js
 
-async function cmd_report(ctx) {
-  const { argv, subcommand } = ctx;
-  if (subcommand !== "safety") {
-    throw new Error(
-      "Unknown report command. Use `dema report safety [--json]`.",
-    );
-  }
-  const report = buildSafetyReportPreview();
-  console.log(
-    argv.includes("--json")
-      ? JSON.stringify(report, null, 2)
-      : formatSafetyReportPreview(report),
-  );
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_report extracted to ./commands/report.js
 
-async function cmd_network(ctx) {
-  const { argv, subcommand } = ctx;
-  if (subcommand === "blueprint") {
-    const blueprint = buildNetworkBlueprint();
-    console.log(
-      argv.includes("--json")
-        ? JSON.stringify(blueprint, null, 2)
-        : formatNetworkBlueprint(blueprint),
-    );
-    process.exit(process.exitCode ?? 0);
-  }
-  if (subcommand === "fixture" && argv[2] === "preview") {
-    const preview = buildOfflineNetworkFixturePreview();
-    console.log(
-      argv.includes("--json")
-        ? JSON.stringify(preview, null, 2)
-        : formatOfflineNetworkFixturePreview(preview),
-    );
-    process.exit(process.exitCode ?? 0);
-  }
-  if (subcommand === "refusal" && argv[2] === "preview") {
-    const preview = buildNetworkRefusalMatrixPreview();
-    console.log(
-      argv.includes("--json")
-        ? JSON.stringify(preview, null, 2)
-        : formatNetworkRefusalMatrixPreview(preview),
-    );
-    process.exit(process.exitCode ?? 0);
-  }
-  throw new Error(
-    "Unknown network command. Use `dema network blueprint [--json]`, `dema network fixture preview [--json]`, or `dema network refusal preview [--json]`.",
-  );
-}
+// cmd_network extracted to ./commands/network.js
 
-async function cmd_amana(ctx) {
-  const { argv } = ctx;
-  const amanaCommand = argv[1];
-  const amanaSubcommand = argv[2];
-  if (amanaCommand !== "contracts" || amanaSubcommand !== "preview") {
-    throw new Error(
-      "Unknown amana command. Use `dema amana contracts preview [--json]`.",
-    );
-  }
-  const preview = buildAmanaContractsPreview();
-  console.log(
-    argv.includes("--json")
-      ? JSON.stringify(preview, null, 2)
-      : formatAmanaContractsPreview(preview),
-  );
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_amana extracted to ./commands/amana.js
 
-async function cmd_mcp(ctx) {
-  const { argv, subcommand } = ctx;
-  if (subcommand !== "blueprint") {
-    throw new Error("Unknown mcp command. Use `dema mcp blueprint [--json]`.");
-  }
-  const blueprint = buildMcpIntegrationBlueprint();
-  console.log(
-    argv.includes("--json")
-      ? JSON.stringify(blueprint, null, 2)
-      : formatMcpIntegrationBlueprint(blueprint),
-  );
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_mcp extracted to ./commands/p.js
 
-async function cmd_roadmap(ctx) {
-  const { argv, subcommand } = ctx;
-  if (subcommand === "preview") {
-    const report = buildOptimizationRoadmapPreview();
-    console.log(
-      argv.includes("--json")
-        ? JSON.stringify(report, null, 2)
-        : formatOptimizationRoadmapPreview(report),
-    );
-    process.exit(process.exitCode ?? 0);
-  }
-  if (subcommand === "dev") {
-    const state = await gatherDevRoadmapState({ cwd: process.cwd() });
-    console.log(
-      argv.includes("--json")
-        ? JSON.stringify(state, null, 2)
-        : formatDevRoadmapReport(state),
-    );
-    process.exit(process.exitCode ?? 0);
-  }
-  throw new Error(
-    "Unknown roadmap command. Use `dema roadmap preview [--json]` or `dema roadmap dev [--json]`.",
-  );
-}
+// cmd_roadmap extracted to ./commands/roadmap.js
 
-async function cmd_eval(ctx) {
-  const { argv, subcommand } = ctx;
-  const evalCommand = argv[1];
-  const evalSubcommand = argv[2];
-  const asJson = argv.includes("--json");
+// cmd_eval extracted to ./commands/eval.js
 
-  if (evalCommand !== "layer2") {
-    throw new Error(
-      "Unknown eval command. Use `dema eval layer2 prompts [--json]` or `dema eval layer2 verify <abs-path> [--json]`.",
-    );
-  }
+// cmd_evidence extracted to ./commands/evidence.js
 
-  if (evalSubcommand === "prompts") {
-    const pack = getRubricPack();
-    console.log(
-      asJson ? JSON.stringify(pack, null, 2) : formatRubricPackReport(pack),
-    );
-    process.exit(process.exitCode ?? 0);
-  }
+// cmd_ihsan extracted to ./commands/ihsan.js
 
-  if (evalSubcommand === "verify") {
-    const verdictPath = argv[3];
-    if (!verdictPath) {
-      throw new Error(
-        "Missing <abs-path>. Use `dema eval layer2 verify <abs-path-to-pasted-verdict.json> [--json]`.",
-      );
-    }
-    const { isAbsolute: pathIsAbsolute, resolve: pathResolve } =
-      await import("node:path");
-    if (!pathIsAbsolute(verdictPath)) {
-      throw new Error(
-        "`dema eval layer2 verify` requires an absolute path to the pasted verdict file.",
-      );
-    }
-    const { readFile: readVerdictFile } = await import("node:fs/promises");
-    let parsed;
-    try {
-      const raw = await readVerdictFile(pathResolve(verdictPath), "utf8");
-      parsed = JSON.parse(raw);
-    } catch (readErr) {
-      throw new Error(
-        `Failed to read or parse verdict file at ${verdictPath}: ${readErr && readErr.message ? readErr.message : readErr}`,
-      );
-    }
-    const result = validatePastedJudgeVerdict(parsed);
-    console.log(
-      asJson ? JSON.stringify(result, null, 2) : formatVerdictReport(result),
-    );
-    // Exit 0 only when the documented success state holds. truth_label is
-    // the authoritative contract surface (see docs/TESTING.md row); gating
-    // on it directly prevents drift if a future truth_label value is added.
-    if (result.truth_label !== "MEASURED") {
-      process.exitCode = 1;
-    }
-    process.exit(process.exitCode ?? 0);
-  }
+// cmd_behavior extracted to ./commands/behavior.js
 
-  throw new Error(
-    "Unknown eval layer2 subcommand. Use `dema eval layer2 prompts [--json]` or `dema eval layer2 verify <abs-path> [--json]`.",
-  );
-}
+// cmd_design extracted to ./commands/esign.js
 
-async function cmd_evidence(ctx) {
-  const { argv } = ctx;
-  const receiptCommand = argv[1];
-  const receiptSubcommand = argv[2];
-  if (receiptCommand !== "receipt" || receiptSubcommand !== "preview") {
-    throw new Error(
-      "Unknown evidence command. Use `dema evidence receipt preview [--json]`.",
-    );
-  }
-  const receipt = buildEvidenceReceiptPreview();
-  console.log(
-    argv.includes("--json")
-      ? JSON.stringify(receipt, null, 2)
-      : formatEvidenceReceiptPreview(receipt),
-  );
-  process.exit(process.exitCode ?? 0);
-}
+// cmd_task extracted to ./commands/task.js
 
-async function cmd_ihsan(ctx) {
-  const { argv } = ctx;
-  const floorCommand = argv[1];
-  const floorSubcommand = argv[2];
-  if (floorCommand !== "floor" || floorSubcommand !== "preview") {
-    throw new Error(
-      "Unknown ihsan command. Use `dema ihsan floor preview [--score N] [--json]`.",
-    );
-  }
-  const scoreArg = argValue(argv, "--score");
-  const score = scoreArg === undefined ? DEFAULT_IHSAN_FLOOR : Number(scoreArg);
-  const preview = evaluateIhsanFloorPreview({ score });
-  console.log(
-    argv.includes("--json")
-      ? JSON.stringify(preview, null, 2)
-      : formatIhsanFloorPreview(preview),
-  );
-  process.exit(process.exitCode ?? 0);
-}
-
-async function cmd_behavior(ctx) {
-  const { argv } = ctx;
-  const behaviorCommand = argv[1];
-  const behaviorSubcommand = argv[2];
-  if (behaviorCommand !== "modulation" || behaviorSubcommand !== "preview") {
-    throw new Error(
-      'Unknown behavior command. Use `dema behavior modulation preview [--consent TEXT] [--score N] [--json] "<intent>"`.',
-    );
-  }
-  const consentPhrase = argValue(argv, "--consent") ?? "";
-  const scoreArg = argValue(argv, "--score");
-  const ihsanScore = scoreArg === undefined ? 0.95 : Number(scoreArg);
-  const intentParts = [];
-  for (let index = 3; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === "--json") continue;
-    if (arg === "--consent" || arg === "--score") {
-      index += 1;
-      continue;
-    }
-    intentParts.push(arg);
-  }
-  const preview = buildBehavioralModulationPreview({
-    intent: intentParts.join(" ").trim(),
-    consentPhrase,
-    ihsanScore,
-  });
-  console.log(
-    argv.includes("--json")
-      ? JSON.stringify(preview, null, 2)
-      : formatBehavioralModulationPreview(preview),
-  );
-  process.exit(process.exitCode ?? 0);
-}
-
-async function cmd_design(ctx) {
-  const { argv, subcommand } = ctx;
-  if (subcommand !== "emulate-loop") {
-    throw new Error(
-      "Unknown design command. Use `dema design emulate-loop [--json]`.",
-    );
-  }
-  const report = emulateLoopDesign();
-  console.log(
-    argv.includes("--json")
-      ? JSON.stringify(report, null, 2)
-      : formatLoopDesignEmulation(report),
-  );
-  process.exit(process.exitCode ?? 0);
-}
-
-async function cmd_task(ctx) {
-  const { subcommand } = ctx;
-  if (!subcommand) {
-    // List tasks.
-    const list = Object.values(TASK_REGISTRY).map((t) => ({
-      id: t.id,
-      autonomy_level: t.autonomy_level,
-      description: t.description,
-    }));
-    console.log(
-      JSON.stringify(
-        { schema: "bizra.dema.task_list.v0.1", tasks: list },
-        null,
-        2,
-      ),
-    );
-    process.exit(process.exitCode ?? 0);
-  }
-  const task = TASK_REGISTRY[subcommand];
-  if (!task) throw new Error(`Unknown task: ${subcommand}`);
-
-  // Approval gate per A4.5 + B1.2 design. L0/L1/L2 auto-approve
-  // (no prompt). L3+ requires interactive approval. L4 routes
-  // through FATE evaluateConsent. L5 is unconditionally refused.
-  // Fail-closed: a malformed/missing autonomy_level (highestLevel
-  // returns null) is refused, not silently downgraded.
-  const level = highestLevel(task.autonomy_level);
-  if (level === null) {
-    console.log(
-      `Refused: task ${task.id} has malformed or missing autonomy_level ` +
-        `(got: ${JSON.stringify(task.autonomy_level)}). Expected L0..L5.`,
-    );
-    return { refused: true, reason: "malformed_autonomy_level" };
-  }
-  if (level >= 3) {
-    const approval = await requestApproval({
-      autonomyLevel: levelLabel(level),
-      action: `task ${task.id}`,
-      scope: task.scope ?? task.description ?? null,
-      requireExactPhrase: task.requireExactPhrase,
-    });
-    if (!approval.approved) {
-      console.log(`Refused: ${approval.refused_reason}`);
-      return { refused: true, reason: approval.refused_reason };
-    }
-  }
-
-  const taskSpinner = createSpinner({
-    stdout: process.stdout,
-    label: `Running ${task.id}…`,
-  });
-  taskSpinner.start();
-  const receipt = await task.run();
-  taskSpinner.stop();
-  // Route through verifyReceipt dispatcher (per v0.3.2 spec acceptance
-  // criterion #5; see docs/02-architecture/sat-verifier-sibling-spec.md).
-  // Dispatcher fails closed on unknown schema; task receipts route to the
-  // placeholder logic, gateway-issued receipts route to the gateway-handoff
-  // verifier. Caps at PARTIAL_PLACEHOLDER per spec — never returns PERMIT
-  // from local logic; SAT-5 PERMIT is reserved for upstream Rust roster.
-  const verdict = verifyReceipt(receipt);
-  console.log(task.format(receipt));
-  console.log("");
-  console.log(formatVerdict(verdict));
-  process.exit(process.exitCode ?? 0);
-}
-
-async function cmd_sovereign(ctx) {
-  const { argv } = ctx;
-  // Sovereign Mission Interface — 7-panel cockpit renderer
-  // Delegates to the Python scaffold at ~/.dema/kernel/sovereign_tui/sovereign.py
-  // Schema: bizra.dema.sovereign_tui_render.v0.1
-  const { existsSync } = await import("node:fs");
-  const { join } = await import("node:path");
-  const { spawnSync } = await import("node:child_process");
-  const home = process.env.HOME || process.env.USERPROFILE;
-  const demaHome = process.env.DEMA_HOME || (home ? join(home, ".dema") : null);
-  if (!demaHome) {
-    console.error(
-      "dema sovereign: unable to resolve DEMA_HOME (set DEMA_HOME or HOME).",
-    );
-    process.exit(1);
-  }
-  const scaffold = join(demaHome, "kernel", "sovereign_tui", "sovereign.py");
-  if (!existsSync(scaffold)) {
-    console.error(`dema sovereign: scaffold not found: ${scaffold}`);
-    process.exit(1);
-  }
-  const result = spawnSync("python3", [scaffold, ...argv.slice(1)], {
-    stdio: "inherit",
-  });
-  if (result.error) {
-    console.error(
-      `dema sovereign: failed to spawn python3: ${result.error.message}`,
-    );
-    process.exit(1);
-  }
-  // status null without error is unusual; fail-safe to non-zero
-  process.exit(result.status ?? 1);
-}
+// cmd_sovereign extracted to ./commands/sovereign.js
 
 async function cmd_help(ctx) {
   const { argv } = ctx;
@@ -2071,66 +843,7 @@ async function cmdCovenant(ctx) {
 
 // N0-MUMU-CLI-1: read-only face over the sealed Node0 Mumu closed loop.
 // Reads/reports receipts; never runs the governed runtime (`npm run node0`).
-async function cmd_node0(ctx) {
-  const { argv } = ctx;
-  const sub = argv[1];
-  const action = argv[2];
-  const wantJson = argv.includes("--json");
-  const outIdx = argv.indexOf("--out");
-  const outDir =
-    outIdx !== -1 && argv[outIdx + 1] ? argv[outIdx + 1] : undefined;
-
-  if (sub !== "mumu" || (action !== "status" && action !== "verify")) {
-    console.error(
-      "dema node0: read-only Mumu closed-loop face. Subcommands:\n" +
-        "  dema node0 mumu status [--json]\n" +
-        "  dema node0 mumu verify [--json]",
-    );
-    process.exitCode = 1;
-    return;
-  }
-
-  const { buildMumuStatus, buildMumuVerify } =
-    await import("../../../scripts/node0-mumu-cli.mjs");
-
-  if (action === "status") {
-    const report = buildMumuStatus(outDir ? { outDir } : {});
-    if (wantJson) {
-      console.log(JSON.stringify(report, null, 2));
-    } else {
-      console.log(
-        `Node0 Mumu closed loop — ${report.network_mode.network_mode}`,
-      );
-      console.log(
-        `  chain: ${report.chain_present ? `present (${report.receipt_count} receipts)` : "absent"}`,
-      );
-      console.log(`  out:   ${report.out_dir}`);
-      console.log(
-        `  token_minted: ${report.network_mode.token_minted} · federation: ${report.network_mode.external_federation_active}`,
-      );
-      console.log(`  next:  ${report.next_step}`);
-    }
-    return;
-  }
-
-  const report = buildMumuVerify(outDir ? { outDir } : {});
-  if (wantJson) {
-    console.log(JSON.stringify(report, null, 2));
-  } else {
-    console.log(`Node0 Mumu chain verify → ${report.verdict}`);
-    if (report.chain_present) {
-      for (const [k, v] of Object.entries(report.replay.checks)) {
-        console.log(`  ${v ? "ok  " : "FAIL"} ${k}`);
-      }
-      if (report.replay.tamper_detected.length) {
-        console.log(`  tamper: ${report.replay.tamper_detected.join(", ")}`);
-      }
-    } else {
-      console.log(`  ${report.note}`);
-    }
-  }
-  if (report.verdict !== "VERIFIED") process.exitCode = 1;
-}
+// cmd_node0 extracted to ./commands/node0.js
 
 const COMMAND_TABLE = {
   active: cmdActive,
