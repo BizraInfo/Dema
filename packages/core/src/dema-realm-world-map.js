@@ -11,20 +11,11 @@ import {
   LOCAL_ASSET_INVENTORY_SCHEMA,
   defaultLocalAssetInventoryPath,
 } from "./local-asset-awareness.js";
+import { ANSI } from "./theme.js";
 
 export const DEMA_REALM_WORLD_MAP_SCHEMA = "bizra.dema.realm_world_map.v0.1";
 
 const FRESHNESS_MS = 24 * 60 * 60 * 1000;
-
-const ANSI = Object.freeze({
-  reset: "\x1b[0m",
-  bold: "\x1b[1m",
-  dim: "\x1b[2m",
-  gold: "\x1b[38;2;212;175;55m",
-  emerald: "\x1b[38;2;16;185;129m",
-  crimson: "\x1b[38;2;239;68;68m",
-  ash: "\x1b[38;2;156;163;175m",
-});
 
 function color(s, code, useColor) {
   return useColor ? `${code}${s}${ANSI.reset}` : s;
@@ -88,27 +79,27 @@ function safeInventoryBoundary(inventory) {
   const b = inventory?.boundary;
   return Boolean(
     b &&
-      b.scanned_root_mutated === false &&
-      b.file_content_read === false &&
-      b.network_used === false &&
-      b.embedding_generated === false &&
-      b.model_invoked === false &&
-      b.symlink_followed === false &&
-      b.delete_or_move_performed === false &&
-      b.federation_used === false &&
-      b.economic_claim_made === false,
+    b.scanned_root_mutated === false &&
+    b.file_content_read === false &&
+    b.network_used === false &&
+    b.embedding_generated === false &&
+    b.model_invoked === false &&
+    b.symlink_followed === false &&
+    b.delete_or_move_performed === false &&
+    b.federation_used === false &&
+    b.economic_claim_made === false,
   );
 }
 
 function validInventoryShape(inventory) {
   return Boolean(
     inventory &&
-      typeof inventory === "object" &&
-      inventory.schema === LOCAL_ASSET_INVENTORY_SCHEMA &&
-      inventory.mode === "metadata_only" &&
-      inventory.summary &&
-      typeof inventory.summary === "object" &&
-      Array.isArray(inventory.records),
+    typeof inventory === "object" &&
+    inventory.schema === LOCAL_ASSET_INVENTORY_SCHEMA &&
+    inventory.mode === "metadata_only" &&
+    inventory.summary &&
+    typeof inventory.summary === "object" &&
+    Array.isArray(inventory.records),
   );
 }
 
@@ -116,14 +107,12 @@ function deriveClusters(records) {
   const byCategory = new Map();
   for (const record of records) {
     const category = record.category || "unknown";
-    const current =
-      byCategory.get(category) ||
-      {
-        category,
-        count: 0,
-        newest_mtime_iso: null,
-        total_size_bytes: 0,
-      };
+    const current = byCategory.get(category) || {
+      category,
+      count: 0,
+      newest_mtime_iso: null,
+      total_size_bytes: 0,
+    };
     current.count += 1;
     current.total_size_bytes +=
       typeof record.size_bytes === "number" ? record.size_bytes : 0;
@@ -247,9 +236,12 @@ export async function gatherDemaRealmWorldMap(options = {}) {
 }
 
 function statusColor(status) {
-  if (status === "INVENTORY_READY") return ANSI.emerald;
-  if (status === "INVENTORY_BOUNDARY_INVALID" || status === "INVENTORY_INVALID") {
-    return ANSI.crimson;
+  if (status === "INVENTORY_READY") return ANSI.proofVerified;
+  if (
+    status === "INVENTORY_BOUNDARY_INVALID" ||
+    status === "INVENTORY_INVALID"
+  ) {
+    return ANSI.proofFailed;
   }
   return ANSI.gold;
 }
@@ -277,7 +269,7 @@ export function renderDemaRealmWorldMap(state, { useColor = true } = {}) {
     lines.push(
       color(
         "Boundary: read-only · no scan · no mutation · no network · no content",
-        ANSI.dim + ANSI.ash,
+        ANSI.dim + ANSI.neutral,
         useColor,
       ),
     );
@@ -308,7 +300,7 @@ export function renderDemaRealmWorldMap(state, { useColor = true } = {}) {
   lines.push(
     color(
       "Boundary: read-only · no scan · no mutation · no network · no content",
-      ANSI.dim + ANSI.ash,
+      ANSI.dim + ANSI.neutral,
       useColor,
     ),
   );

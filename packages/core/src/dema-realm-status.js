@@ -20,19 +20,10 @@ import { readdir, readFile, access } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { ANSI } from "./theme.js";
 
 export const DEMA_REALM_LIVE_STATUS_SCHEMA =
   "bizra.dema.realm_live_status.v0.1";
-
-const ANSI = Object.freeze({
-  reset: "\x1b[0m",
-  bold: "\x1b[1m",
-  dim: "\x1b[2m",
-  gold: "\x1b[38;2;212;175;55m",
-  emerald: "\x1b[38;2;16;185;129m",
-  crimson: "\x1b[38;2;239;68;68m",
-  ash: "\x1b[38;2;156;163;175m",
-});
 
 function color(s, code, useColor) {
   return useColor ? `${code}${s}${ANSI.reset}` : s;
@@ -161,13 +152,13 @@ export async function gatherDemaRealmStatus({
 }
 
 function statusValueColor(value) {
-  if (value === "VERIFIED") return ANSI.emerald;
-  if (value === "UNINITIALIZED") return ANSI.ash;
-  return ANSI.ash;
+  if (value === "VERIFIED") return ANSI.proofVerified;
+  if (value === "UNINITIALIZED") return ANSI.neutral;
+  return ANSI.neutral;
 }
 
 function countColor(n) {
-  return n > 0 ? ANSI.emerald : ANSI.ash;
+  return n > 0 ? ANSI.proofVerified : ANSI.neutral;
 }
 
 export function renderDemaRealmStatus(state, { useColor = true } = {}) {
@@ -175,43 +166,43 @@ export function renderDemaRealmStatus(state, { useColor = true } = {}) {
     color("DEMA REALM · LIVE STATUS", ANSI.gold + ANSI.bold, useColor),
     color(
       `truth: ${state.truth_label}  ·  rendered: ${state.rendered_at_iso}`,
-      ANSI.dim + ANSI.ash,
+      ANSI.dim + ANSI.neutral,
       useColor,
     ),
     "",
     color("Identity:", ANSI.gold, useColor),
-    `  ${color(state.identity_status, statusValueColor(state.identity_status), useColor)}  ·  ${color(state.awakened_line, state.identity_status === "VERIFIED" ? ANSI.emerald : ANSI.gold, useColor)}`,
+    `  ${color(state.identity_status, statusValueColor(state.identity_status), useColor)}  ·  ${color(state.awakened_line, state.identity_status === "VERIFIED" ? ANSI.proofVerified : ANSI.gold, useColor)}`,
     "",
     color("Receipts:", ANSI.gold, useColor),
-    `  ${color("authorship", ANSI.ash, useColor)}  ${color(String(state.authorship_receipts_count), countColor(state.authorship_receipts_count) + ANSI.bold, useColor)}`,
-    `  ${color("URP indexes", ANSI.ash, useColor)} ${color(String(state.urp_indexes_count), countColor(state.urp_indexes_count) + ANSI.bold, useColor)}`,
+    `  ${color("authorship", ANSI.neutral, useColor)}  ${color(String(state.authorship_receipts_count), countColor(state.authorship_receipts_count) + ANSI.bold, useColor)}`,
+    `  ${color("URP indexes", ANSI.neutral, useColor)} ${color(String(state.urp_indexes_count), countColor(state.urp_indexes_count) + ANSI.bold, useColor)}`,
     "",
     color("Checkpoint:", ANSI.gold, useColor),
   ];
   if (state.checkpoint_present) {
     lines.push(
-      `  ${color("present", ANSI.emerald, useColor)}  ·  ${color(state.last_checkpoint_label, ANSI.emerald, useColor)}`,
+      `  ${color("present", ANSI.proofVerified, useColor)}  ·  ${color(state.last_checkpoint_label, ANSI.proofVerified, useColor)}`,
     );
   } else {
     lines.push(
-      `  ${color("—", ANSI.ash, useColor)}  ${color("(no checkpoint yet · use `dema realm checkpoint save`)", ANSI.dim + ANSI.ash, useColor)}`,
+      `  ${color("—", ANSI.neutral, useColor)}  ${color("(no checkpoint yet · use `dema realm checkpoint save`)", ANSI.dim + ANSI.neutral, useColor)}`,
     );
   }
   lines.push("", color("Timeline:", ANSI.gold, useColor));
   if (state.timeline_events_count > 0 && state.most_recent_timeline_event) {
     lines.push(
-      `  ${color(String(state.timeline_events_count) + " events", countColor(state.timeline_events_count) + ANSI.bold, useColor)}  ·  ${color("latest:", ANSI.ash, useColor)} ${color(state.most_recent_timeline_event.at, ANSI.dim + ANSI.ash, useColor)} · ${state.most_recent_timeline_event.label}`,
+      `  ${color(String(state.timeline_events_count) + " events", countColor(state.timeline_events_count) + ANSI.bold, useColor)}  ·  ${color("latest:", ANSI.neutral, useColor)} ${color(state.most_recent_timeline_event.at, ANSI.dim + ANSI.neutral, useColor)} · ${state.most_recent_timeline_event.label}`,
     );
   } else {
     lines.push(
-      `  ${color("0 events", ANSI.ash, useColor)}  ${color("(no persisted timeline yet)", ANSI.dim + ANSI.ash, useColor)}`,
+      `  ${color("0 events", ANSI.neutral, useColor)}  ${color("(no persisted timeline yet)", ANSI.dim + ANSI.neutral, useColor)}`,
     );
   }
   lines.push("");
   lines.push(
     color(
       "Boundary: file_write=false · network=false · federation=false · mutation=false (10 flags · all-false read-only)",
-      ANSI.dim + ANSI.ash,
+      ANSI.dim + ANSI.neutral,
       useColor,
     ),
   );
