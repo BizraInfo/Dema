@@ -18,6 +18,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { ANSI } from "./theme.js";
 
 export const DEMA_REALM_QUEST_BOARD_SCHEMA =
   "bizra.dema.realm_quest_board.v0.1";
@@ -30,18 +31,6 @@ export const STAGES = Object.freeze([
   "CLOSEOUT",
   "ARCHIVE",
 ]);
-
-// ANSI palette (mirrors UX-1A; kept module-local so each realm slice is
-// self-contained until UX-3A decides a framework or extracts a shared theme).
-const ANSI = Object.freeze({
-  reset: "\x1b[0m",
-  bold: "\x1b[1m",
-  dim: "\x1b[2m",
-  gold: "\x1b[38;2;212;175;55m",
-  emerald: "\x1b[38;2;16;185;129m",
-  crimson: "\x1b[38;2;239;68;68m",
-  ash: "\x1b[38;2;156;163;175m",
-});
 
 function color(s, code, useColor) {
   return useColor ? `${code}${s}${ANSI.reset}` : s;
@@ -294,12 +283,12 @@ export async function gatherDemaRealmBoard({
 }
 
 function statusColor(status) {
-  if (status === "DONE") return ANSI.emerald;
+  if (status === "DONE") return ANSI.proofVerified;
   if (status === "ACTIVE") return ANSI.gold + ANSI.bold;
   if (status === "NEXT") return ANSI.gold;
-  if (status === "READY") return ANSI.ash;
-  if (status === "BLOCKED") return ANSI.crimson;
-  return ANSI.ash;
+  if (status === "READY") return ANSI.neutral;
+  if (status === "BLOCKED") return ANSI.proofFailed;
+  return ANSI.neutral;
 }
 
 function renderQuestLine(q, useColor) {
@@ -309,12 +298,12 @@ function renderQuestLine(q, useColor) {
     q.blockers && q.blockers.length > 0
       ? color(
           ` · blocked: ${q.blockers.join("; ")}`,
-          ANSI.crimson + ANSI.dim,
+          ANSI.proofFailed + ANSI.dim,
           useColor,
         )
       : "";
   const agent = q.assigned_agent
-    ? color(` [${q.assigned_agent}]`, ANSI.ash + ANSI.dim, useColor)
+    ? color(` [${q.assigned_agent}]`, ANSI.neutral + ANSI.dim, useColor)
     : "";
   return `  ${id} ${status.padEnd(8)}  ${q.title}${agent}${blockerHint}`;
 }
@@ -324,7 +313,7 @@ export function renderDemaRealmBoard(state, { useColor = true } = {}) {
     color("DEMA REALM · MISSION BOARD", ANSI.gold + ANSI.bold, useColor),
     color(
       `source: ${state.source}  ·  ${state.quests.length} quests across 6 stages`,
-      ANSI.dim + ANSI.ash,
+      ANSI.dim + ANSI.neutral,
       useColor,
     ),
     "",
@@ -351,7 +340,7 @@ export function renderDemaRealmBoard(state, { useColor = true } = {}) {
     const header = `${stage}  (${count})`;
     lines.push(color(header, ANSI.gold + ANSI.bold, useColor));
     if (count === 0) {
-      lines.push(color("  —", ANSI.ash, useColor));
+      lines.push(color("  —", ANSI.neutral, useColor));
     } else {
       for (const q of bucket) {
         lines.push(renderQuestLine(q, useColor));
@@ -363,7 +352,7 @@ export function renderDemaRealmBoard(state, { useColor = true } = {}) {
   lines.push(
     color(
       `truth: ${state.truth_label}  ·  ${state.source === "BUILT_IN_SESSION_LEDGER" ? "(override via " + state.board_path + ")" : "(operator-curated)"}`,
-      ANSI.dim + ANSI.ash,
+      ANSI.dim + ANSI.neutral,
       useColor,
     ),
   );
@@ -398,12 +387,16 @@ function renderActivePartyRoster(state, useColor) {
   const roster = roles.join(" | ");
   const status = color(
     " · deliberation (Shura/Majlis active — thought packets flowing)",
-    ANSI.ash + ANSI.dim,
+    ANSI.neutral + ANSI.dim,
     useColor,
   );
 
   return [
-    color("ACTIVE PARTY / MAJLIS (Realm vision · WoW units + Hermes presence)", ANSI.gold, useColor),
+    color(
+      "ACTIVE PARTY / MAJLIS (Realm vision · WoW units + Hermes presence)",
+      ANSI.gold,
+      useColor,
+    ),
     `  ${roster}${status}`,
   ];
 }

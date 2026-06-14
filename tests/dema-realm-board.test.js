@@ -274,6 +274,20 @@ describe("renderDemaRealmBoard (no color)", () => {
   });
 });
 
+describe("renderDemaRealmBoard (color)", () => {
+  it("board renders canon gold (201;169;98), not legacy 212;175;55", async () => {
+    const home = freshHome();
+    try {
+      const b = await gatherDemaRealmBoard({ demaHome: home, now: FIXED_NOW });
+      const out = renderDemaRealmBoard(b, { useColor: true });
+      assert.match(out, /\x1b\[38;2;201;169;98m/);
+      assert.doesNotMatch(out, /\x1b\[38;2;212;175;55m/);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("dema realm board CLI", () => {
   it("--json on empty home emits BUILT_IN_SESSION_LEDGER envelope, exit 0", async () => {
     const home = freshHome();
