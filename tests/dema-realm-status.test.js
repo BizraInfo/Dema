@@ -348,3 +348,17 @@ describe("dema realm status CLI", () => {
     }
   });
 });
+
+describe("renderDemaRealmStatus (color theme)", () => {
+  it("realm-status renders canon gold (201;169;98), not legacy 212;175;55", async () => {
+    const home = freshHome();
+    try {
+      const s = await gatherDemaRealmStatus({ demaHome: home, now: FIXED_NOW });
+      const out = renderDemaRealmStatus(s, { useColor: true });
+      assert.match(out, /\x1b\[38;2;201;169;98m/);
+      assert.doesNotMatch(out, /\x1b\[38;2;212;175;55m/);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
