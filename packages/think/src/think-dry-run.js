@@ -148,32 +148,13 @@ export async function discoverLocalRuntimes(opts = {}) {
     join(homedir(), ".ollama", "models");
   const ollamaInstalled = existsSync(ollamaHome);
 
-  let ollamaApiModels = [];
-  let ollamaApiReachable = false;
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch("http://localhost:11434/api/tags", {
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
-    if (res.ok) {
-      const data = await res.json();
-      ollamaApiModels = Array.isArray(data.models) ? data.models : [];
-      ollamaApiReachable = true;
-    }
-  } catch {
-    ollamaApiReachable = false;
-  }
-
+  // Discovery is PURE-DISK and no-network by contract: it reads manifests only,
+  // never probes the daemon. Live daemon reachability belongs to
+  // checkModelReadiness (which is permitted to touch localhost), not here — so
+  // boundary.network_used below can honestly stay false.
   let ollamaModels;
   let ollamaModelsSource;
-  if (ollamaApiReachable) {
-    ollamaModels = ollamaApiModels
-      .filter((m) => !m.name.includes("embed"))
-      .map((m) => m.name);
-    ollamaModelsSource = "api";
-  } else if (ollamaInstalled) {
+  if (ollamaInstalled) {
     const diskModels = listDiskModels(ollamaHome);
     ollamaModels = diskModels;
     ollamaModelsSource = diskModels.length > 0 ? "disk_manifests" : "none";
@@ -183,12 +164,8 @@ export async function discoverLocalRuntimes(opts = {}) {
   }
 
   const ollama = {
-    installed: ollamaInstalled || ollamaApiReachable,
-    daemon: ollamaApiReachable
-      ? "reachable"
-      : ollamaInstalled
-        ? "stopped"
-        : "unknown",
+    installed: ollamaInstalled,
+    daemon: "unknown", // not probed — discovery makes no network call
     models_source: ollamaModelsSource,
     models: ollamaModels,
   };
@@ -238,7 +215,7 @@ export async function discoverLocalRuntimes(opts = {}) {
 
   const boundary = {
     model_invoked: false,
-    network_used: ollamaApiReachable,
+    network_used: false, // discovery is pure-disk — no probe attempted
     gpu_used: false,
     files_content_read: false,
   };
