@@ -11,7 +11,7 @@ import {
   LOCAL_ASSET_INVENTORY_SCHEMA,
   defaultLocalAssetInventoryPath,
 } from "./local-asset-awareness.js";
-import { ANSI, paint } from "./theme.js";
+import { ANSI } from "./theme.js";
 
 export const DEMA_REALM_WORLD_MAP_SCHEMA = "bizra.dema.realm_world_map.v0.1";
 

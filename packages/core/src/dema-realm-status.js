@@ -20,7 +20,7 @@ import { readdir, readFile, access } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { ANSI, paint } from "./theme.js";
+import { ANSI } from "./theme.js";
 
 export const DEMA_REALM_LIVE_STATUS_SCHEMA =
   "bizra.dema.realm_live_status.v0.1";
