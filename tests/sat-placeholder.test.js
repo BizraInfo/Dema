@@ -282,20 +282,26 @@ test("verifyGatewayHandoffReceipt never returns PERMIT", () => {
   assert.equal(verdict.verdict, "PARTIAL_PLACEHOLDER");
 });
 
-test("regression: apps/cli/src/index.js routes verification through verifyReceipt dispatcher", async () => {
-  const cliSrcPath = new URL("../apps/cli/src/index.js", import.meta.url);
-  const cliSrc = await readFile(cliSrcPath, "utf8");
+test("regression: apps/cli/src/commands/task.js routes verification through verifyReceipt dispatcher", async () => {
+  const taskSrcPath = new URL(
+    "../apps/cli/src/commands/task.js",
+    import.meta.url,
+  );
+  const taskSrc = await readFile(taskSrcPath, "utf8");
 
   assert.match(
-    cliSrc,
-    /import\s*\{[^}]*\bverifyReceipt\b(?!Placeholder)[^}]*\}\s*from\s*["']\.\.\/\.\.\/\.\.\/packages\/verifier\/src\/sat-placeholder\.js["']/s,
-    "apps/cli/src/index.js must import verifyReceipt from packages/verifier/src/sat-placeholder.js",
+    taskSrc,
+    /import\s*\{[^}]*\bverifyReceipt\b(?!Placeholder)[^}]*\}\s*from\s*["']\.\.\/\.\.\/\.\.\/\.\.\/packages\/verifier\/src\/sat-placeholder\.js["']/s,
+    "apps/cli/src/commands/task.js must import verifyReceipt from packages/verifier/src/sat-placeholder.js",
   );
   assert.doesNotMatch(
-    cliSrc,
-    /import\s*\{[^}]*\bverifyReceiptPlaceholder\b[^}]*\}\s*from\s*["']\.\.\/\.\.\/\.\.\/packages\/verifier\/src\/sat-placeholder\.js["']/s,
-    "apps/cli/src/index.js must NOT import verifyReceiptPlaceholder directly",
+    taskSrc,
+    /import\s*\{[^}]*\bverifyReceiptPlaceholder\b[^}]*\}\s*from\s*["']\.\.\/\.\.\/\.\.\/\.\.\/packages\/verifier\/src\/sat-placeholder\.js["']/s,
+    "apps/cli/src/commands/task.js must NOT import verifyReceiptPlaceholder directly",
   );
-  assert.match(cliSrc, /\bverifyReceipt\s*\(\s*receipt\s*\)/);
-  assert.doesNotMatch(cliSrc, /\bverifyReceiptPlaceholder\s*\(\s*receipt\s*\)/);
+  assert.match(taskSrc, /\bverifyReceipt\s*\(\s*receipt\s*\)/);
+  assert.doesNotMatch(
+    taskSrc,
+    /\bverifyReceiptPlaceholder\s*\(\s*receipt\s*\)/,
+  );
 });

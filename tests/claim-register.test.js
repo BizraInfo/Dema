@@ -9,8 +9,33 @@ import {
   validateClaimRegister,
   MATURITY_STATUS,
   EVIDENCE_CLASSES,
+  isCapabilityGated,
 } from "../scripts/claims/claim-register-check.mjs";
 import { renderPublicClaims } from "../scripts/claims/generate-public-claims.mjs";
+
+// Mission step 6: no evolution without governance. Autonomous-evolution-class
+// capabilities (token economy, federation, public network, production) must
+// never reach a live maturity in the LIVE register without proof. This locks
+// the invariant against real data — a regression guard on the governance
+// precondition for expanding autonomy.
+describe("evolution governance gate (mission step 6)", () => {
+  const ALLOWED_FOR_GATED = new Set([
+    "DESIGNED",
+    "MECHANISM_VERIFIED_SYNTHETIC",
+  ]);
+  it("no capability-gated claim in the live register exceeds MECHANISM_VERIFIED_SYNTHETIC", () => {
+    const register = JSON.parse(readFileSync(REGISTER_PATH, "utf8"));
+    const violations = (register.claims || [])
+      .filter((c) => isCapabilityGated(c))
+      .filter((c) => !ALLOWED_FOR_GATED.has(c.status))
+      .map((c) => `${c.id}=${c.status}`);
+    assert.deepEqual(
+      violations,
+      [],
+      `evolution-class capabilities must stay governed (<= MECHANISM_VERIFIED_SYNTHETIC): ${violations.join(", ")}`,
+    );
+  });
+});
 
 const GENERATOR_CLI = fileURLToPath(
   new URL("../scripts/claims/generate-public-claims.mjs", import.meta.url),

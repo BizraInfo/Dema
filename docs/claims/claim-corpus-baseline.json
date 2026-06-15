@@ -1,0 +1,627 @@
+{
+  "schema": "bizra.dema.claim_corpus_baseline.v0.1",
+  "note": "Frozen reviewed claim-corpus state. Regenerate only via --update-baseline; every entry is an accepted, unresolved unlabeled-claim finding.",
+  "count": 124,
+  "findings": [
+    {
+      "file": "docs/A_PLUS_BLUEPRINT_v0_1.md",
+      "kind": "benchmark",
+      "text": "| Receipt store read latency       | < 100 ms for full directory listing | Not yet measured                      |"
+    },
+    {
+      "file": "docs/A_PLUS_BLUEPRINT_v0_1.md",
+      "kind": "cryptographic",
+      "text": "| Cryptography    | `node:crypto` (sha256, future ed25519)             | Stdlib                                     |"
+    },
+    {
+      "file": "docs/A_PLUS_BLUEPRINT_v0_1.md",
+      "kind": "first_or_only",
+      "text": "| 2     | Eval Layer 1 JSON-schema validator (closes the only L1 gap) | ~2 h    | `GO ship eval-layer-1-schema-validator-v0-1 in packages/core`                      |"
+    },
+    {
+      "file": "docs/ABSORPTION_NOTES_v2.md",
+      "kind": "first_or_only",
+      "text": "| `verifier_prompt` as the only mutate-back channel via Pi extension API | Dema's existing channel is local-state writes (`~/.dema/memory/verifier_findings/<receipt_id>.json`) — operator reads via `dema memory show`. Same shape, different transport, more aligned with ADR-002 / ADR-004.        |"
+    },
+    {
+      "file": "docs/ARCHITECTURE.md",
+      "kind": "cryptographic",
+      "text": "| `dema attest` (with `--rule <id>`, `--input <path>`, `--consent \"SIGN AUTHORSHIP RECEIPT\"`, `--out <bundle.json>`, `--json`)                                                                                                                                                                                                                                                                                                                                                                                  | `apps/cli/src/index.js` · `packages/receipts/src/verdict-attest-command.js` · `packages/receipts/src/verdict-attest.js` · `packages/rules/src/rule-canonical-shape.v0.1.js`                                                                         | Verdict receipt mint (Node1 side; consented; signed). Currently supports `canonical-shape.v0.1` ONLY — no general evaluator yet. Fail-closed consent gate REUSES the existing `\"SIGN AUTHORSHIP RECEIPT\"` phrase (semantic match: attest is a signing operation). Wrong consent → `attested:false` + `error:\"consent_required\"` + exit 1, no receipt written, no bundle emitted. On success: runs the pure deterministic public rule on the parsed input, builds body `{schema:\"bizra.dema.verdict_receipt.v0.1\", rule_id, input_hash:sha256(stableStringify(input)), verdict, computed, prev_hash, created_at_iso}`, signs body with Ed25519, writes the portable bundle `{body, signature_b64, signer_public_key_pem, input}` to `$DEMA_HOME/receipts/verdict-<bodyHash>.json` (mode 0o600) and optionally to `--out`. Input ships in the BUNDLE, not the body — body commits to `input_hash` only; bundle ships input alongside for replay. Achieves Level B grounded verification ONLY when the rule is a pure deterministic function. Boundary: no network transport, no federation, no token, no mint, no economic claim, no consent-to-key binding yet (consent remains typed shibboleth — anyone with the operator's signing key and the phrase can attest). No general evaluator yet — single rule registry by design this slice. Schema: `bizra.dema.verdict_receipt.v0.1`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |"
+    },
+    {
+      "file": "docs/ARCHITECTURE.md",
+      "kind": "cryptographic",
+      "text": "| `dema authorship demo` (with `--json`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `packages/receipts/src/authorship-signature.js`                                                                                                                                                                                                     | H18 Ed25519 authorship demo. Generates ephemeral keypair, signs a test artifact hash, verifies the signature. No keys or receipts saved. Zero mutation, zero network, zero consent. Schema: `bizra.dema.authorship_demo.v0.1`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |"
+    },
+    {
+      "file": "docs/ARCHITECTURE.md",
+      "kind": "cryptographic",
+      "text": "| `dema authorship key init` (with `--consent \"GENERATE AUTHORSHIP KEY\"`, `--json`)                                                                                                                                                                                                                                                                                                                                                                                                                             | `packages/receipts/src/authorship-key-store.js`                                                                                                                                                                                                     | H18.3A Ed25519 key init. Generates keypair, writes private key (mode 0o600) and public key to `DEMA_HOME/keys/`. Consent-gated: requires exact phrase. Refuses second init. Never prints private key. Schema: `bizra.dema.authorship_key_init.v0.1`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |"
+    },
+    {
+      "file": "docs/ARCHITECTURE.md",
+      "kind": "cryptographic",
+      "text": "| `dema authorship sign` (with `<artifact-path>`, `--consent \"SIGN AUTHORSHIP RECEIPT\"`, `--json`)                                                                                                                                                                                                                                                                                                                                                                                                              | `packages/receipts/src/authorship-sign-command.js`                                                                                                                                                                                                  | H18.3B consent-gated authorship signing. Reads artifact, computes SHA-256, loads persisted Ed25519 key, signs canonical payload, self-verifies, writes content-addressed receipt to `DEMA_HOME/receipts/authorship-<hash>.json`. One artifact, one consent, one receipt. No private key in output. No artifact content in receipt. Schema: `bizra.dema.authorship_sign_result.v0.1`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |"
+    },
+    {
+      "file": "docs/ARCHITECTURE.md",
+      "kind": "cryptographic",
+      "text": "| `dema authorship verify` (with `<receipt.json>` or `--latest`, `--json`)                                                                                                                                                                                                                                                                                                                                                                                                                                      | `packages/receipts/src/authorship-verify.js`                                                                                                                                                                                                        | H18.3C.1 Ed25519 authorship receipt verifier. Verifies by explicit path or `--latest` (discovers most recent receipt). Reads signed receipt, extracts public key + signature, verifies Ed25519 signature over canonical payload. VERIFIED or FAILED. Read-only, no key access, no mutation. Schema: `bizra.dema.authorship_verify_result.v0.1`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |"
+    },
+    {
+      "file": "docs/ARCHITECTURE.md",
+      "kind": "cryptographic",
+      "text": "| `dema covenant consent`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `apps/cli/src/index.js` · `packages/covenant/src/covenant-gate.js`                                                                                                                                                                                  | Exact `GO` micro-consent prototype receipt for a screened decision. HMAC demo only; no Ed25519 production-signature claim and no external action.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |"
+    },
+    {
+      "file": "docs/ARCHITECTURE.md",
+      "kind": "cryptographic",
+      "text": "| `dema verify-grounded` (with `<bundle>`, `--pubkey <external-pem-path>`, `--rule <id>`, `--json`)                                                                                                                                                                                                                                                                                                                                                                                                             | `apps/cli/src/index.js` · `packages/receipts/src/verdict-verify-command.js` · `packages/receipts/src/verdict-verify.js` · `packages/rules/src/rule-canonical-shape.v0.1.js`                                                                         | Permissionless trustless verifier for one verdict receipt. NO consent required — verification is by design open and permissionless. Currently supports `canonical-shape.v0.1` ONLY. **CRITICAL INVARIANT**: the externally-supplied `--pubkey` is AUTHORITATIVE; the bundle's embedded `signer_public_key_pem` is NOT trusted as authority — the verifier explicitly IGNORES it for trust purposes (test `REJECT-4` in `tests/verdict-receipt.test.js` proves this: re-signing with key B while bundle still claims key A and supplying `--pubkey = bundle.signer_public_key_pem` still yields `REJECTED:signature_invalid`). Three checks in order: **(a)** Ed25519 signature over `stableStringify(body)` verified via the external `--pubkey` only → `REJECTED:signature_invalid` on failure; **(b)** recompute `sha256(stableStringify(bundle.input))` and assert equal to `body.input_hash` → `REJECTED:input_hash_mismatch` on mismatch; **(c)** RE-RUN the deterministic public rule on `bundle.input`, assert `{verdict, computed}` deep-equals body's → `REJECTED:verdict_rederivation_mismatch` on disagreement. Any first failure → exit 1 with the specific reason. Achieves Level B grounded verification ONLY when the rule is deterministic and re-runnable. A stranger on a second machine with (bundle) + (Node1's public key supplied separately) + (this repo's rule code) can confirm the verdict was EARNED with ZERO trust in Node1 and zero shared secret. Boundary: no network transport (verification runs locally; cross-machine portability is a future slice — no wire format shipped). No federation. No token. No mint. No PoI. No economic claim. No consent-to-key binding yet. No general evaluator yet. `prev_hash` field is present on the body for forward-compatibility but chain-walk verification is deferred this slice. Schema: `bizra.dema.verdict_receipt.v0.1` (the verified envelope).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |"
+    },
+    {
+      "file": "docs/ARCHITECTURE.md",
+      "kind": "cryptographic",
+      "text": "a `layers` map: **Formal** (prev_hash structure) and **Cryptographic** (Ed25519"
+    },
+    {
+      "file": "docs/ARCHITECTURE.md",
+      "kind": "economic",
+      "text": "| `dema codebase map` (with absolute `<repo-path>` argument and `--summary`, `--json`, `--max-files N`, `--max-depth N`, `--max-file-size N`, `--include-tests`, `--hotspots`, `--exclude PAT` (repeatable), `--no-default-exclude`, plus v0.2 save flags `--save-map` and `--save-map-consent \"GO: save local codebase architecture map\"`)                                                                                                                                                                     | `packages/core/src/codebase-architecture-map.js` + `packages/receipts/src/codebase-map-save.js`                                                                                                                                                     | v0.1 read-only codebase architecture mapper. Iterative bounded walker (no recursion); stdlib-only (no new dependency); deterministic (same repo state → identical envelope ignoring `scanned_at`). **Hard refusals** (no toggle): no file write · no model invocation · no network call · no shell execution against the target · no chain advance / no receipt mint · no federation / no URP / no token economy · no symlink follow (metadata only) · `/proc`/`/sys`/`/dev` and paths under `~/.ssh` and `~/.dema` refused at the boundary. **Secret-pattern files** (`.env*`, `*secret*`, `*credential*`, `*.pem/.key/.crt/.p12`, `id_rsa*`) recorded as role `secret_metadata_only` with `content_skipped_secret=true`; contents NEVER read. **Binary files** recorded with `content_skipped_binary=true`. Default bounds: `max_files=20000` · `max_depth=12` · `max_file_size=2 MiB` · `max_total_bytes_read=64 MiB` · `walker_budget_ms=5000`. Default exclusions: `.git`, `node_modules`, `dist`, `build`, `out`, `coverage`, `.next`, `.nuxt`, `.svelte-kit`, `target`, `.gradle`, `__pycache__`, `.venv`, `venv`, `env`, `.pytest_cache`, `.mypy_cache`, `.ruff_cache`, `.tox`, `vendor`, `tmp`, `logs`, `.cache`, `.artifacts`, `.proof-forge`, `.qodo`, `.claude`. **Output**: `bizra.dema.codebase_architecture_map.v0.1` envelope with `scan_config` + `totals` (by_extension, by_role) + `packages` (manifest roots) + `modules` (top-level dirs per package) + `files` (path · role · size · mtime · fan_in · fan_out · line_count · skip-flags) + `symlinks` (path + target string) + `edges` (`from`, `to_raw`, `to_resolved`, `kind` ∈ {import, require, use, workflow_action, manifest}, `resolved_local`, `resolved_external`) + `hotspots` (empty unless `--hotspots`; reasons include `file_exceeds_500_LOC`, `file_exceeds_100KB`, `high_fan_in_central_dependency`, `high_fan_out_god_object_risk`, `directory_overflow`, `source_without_test_pair`, `marker_concentration`, `noisy_logging_density`, `unpinned_action_supply_chain_risk`) + `warnings` + `partial` + `error_reason` + `blocked_effects` + `boundary` (10-key domain vocabulary: `runtime=true`, `file_io=true`, `secret_files_skipped=true`, everything else false). Edge extraction is regex-based (NO AST, NO LLM, NO new dependency) with ReDoS-safe bounded quantifiers; lines longer than 10000 chars are skipped from regex. Languages probed: JS/TS (`import/from`, bare `import`, `require()`), Python (`from X import`, `import X`), Rust (`use X::Y`), Go (`import \"X\"` and grouped imports), GitHub workflows (`uses: action@version`), manifest dependencies (`package.json` deps/devDeps/peerDeps, `Cargo.toml` + `pyproject.toml` `[dependencies]` blocks, `requirements.txt`). Roles classified by ext + path: `source` · `test` · `docs` · `config` · `script` · `workflow` · `binary` · `secret_metadata_only` · `symlink`. CLI rules: `<abs-path>` MUST be absolute (relative rejected with helpful stderr) and resolved through `realpath` before any read; nonexistent path → shaped failure `path_not_found`. Default output is JSON to stdout; `--summary` emits compact human summary instead. `--save-map` and `--trace-from` deferred to v0.2 per ADR-005 + architect-locked discovery-only scope. **v0.2 SAVE flag** (`--save-map` + exact `--save-map-consent \"GO: save local codebase architecture map\"`) persists the envelope JSON to `$DEMA_HOME/receipts/codebase-map-<sha256-hex>.json` using the same atomic-write canon as PR #83/#85/#87 (single serializer shared by stdout + disk · `mkdir(recursive)` → `realpath` containment → `writeFile(tmp, content, {flag: \"wx\"})` → `rename(tmp, final)` → best-effort `unlink(tmp)` on error). Saved file matches stdout byte-for-byte; stderr emits `saved codebase map to: <path>`. **NEW design delta unique to codebase-map** (vs. the 3-PR save mirror): `MAX_SAVED_BYTES = 268_435_456` (256 MiB) hard cap on the serialized envelope — architecture maps grow with repo size and could otherwise produce arbitrarily large saved files. Fail-closed on overflow. **Saves complete AND partial envelopes** (including `error_reason=file_limit_exceeded`) for audit. Input-validation failures BEFORE envelope build (e.g. relative path, missing path) exit non-zero WITHOUT saving (no envelope exists). `--save-map --summary` (without `--json`) is rejected with helpful stderr (saved file must be JSON for byte-for-byte invariant); `--save-map --summary --json` proceeds (JSON overrides summary). Save is preview-grade, **NOT** canonical SAT verification, **NOT** chain-bound mint. **NOT an LLM tool** — useful without one (operating-law). **NOT a model invocation. NO network. NO target-repo mutation. NO chain-bound mint. NO PAT/SAT swarm. NO URP. NO token/economy.** |"
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md",
+      "kind": "economic",
+      "text": "- BIZRA dual-token economy — not live; `RESEARCH_QUARANTINE` for value language."
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md",
+      "kind": "economic",
+      "text": "- Do not claim PoI rewards or token economy are live."
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md",
+      "kind": "first_or_only",
+      "text": "- **No \"world's first\"** unless the Claim Register explicitly allows it (it currently does not)."
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md",
+      "kind": "first_or_only",
+      "text": "- A \"world's first\" or \"centralized AI obsolete\" pitch."
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md",
+      "kind": "first_or_only",
+      "text": "- Adding \"world's first\" / \"centralized AI obsolete\" / \"the future is here\"."
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md",
+      "kind": "first_or_only",
+      "text": "- Do not claim \"world's first\" or \"centralized AI obsolete\" in public copy."
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md",
+      "kind": "first_or_only",
+      "text": "| **Forbidden wording** | \"15,000+ hours\" as `VERIFIED`. \"600 GB+ R&D\" as `VERIFIED`. \"5,000+ AI conversations\" as `VERIFIED`. \"3 years on GitHub\" (GitHub starts 2024-01-04). \"BizraInfo organization\" (it's a user account). Any \"world's first,\" \"the founder is the final authority,\" or worship framing. Founder Proof §24 forbidden list applies verbatim.                                                                               |"
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md",
+      "kind": "benchmark",
+      "text": "| Origin Video 001 (2023-08-31 ms timestamp)                               | ✓                                                | ✓ (still frame)         | ✓ (embed/link)      | ✓ (excerpt)                      | Always with `DATE_DERIVED_SINGLE_WITNESS` qualifier when the date is cited   |"
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md",
+      "kind": "deployment",
+      "text": "- \"Production-ready\" applied to any repository or layer except `Dema` (which is `ACTIVE` per Component DNA Layer 8)"
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md",
+      "kind": "economic",
+      "text": "**Forbidden**: any asset showing the token economy, URP marketplace, UKE shared memory, PoI rewards, or scale projections **without** the on-screen qualifier. Any asset that omits the choice framing in its closing slide of a series."
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md",
+      "kind": "economic",
+      "text": "> **Brief**: 1:1 square, calm contemplative color palette, Arabic-Latin script support. Opens with a still image of an unidentified human silhouette under a starry sky (no recognizable face — anti-worship clause). Center text (verbatim): _\"Before BIZRA had code, it had a question.\"_ Closing slide center text (verbatim): _\"The choice is yours.\"_ Footer fine print: _\"Designed, not live, where designed-not-live: PAT/SAT/UKE/URP/PoI/token economy.\"_"
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md",
+      "kind": "first_or_only",
+      "text": "- \"The visionary\" · \"The genius\" · \"The only one in the world\" · \"The founder is the final authority\""
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md",
+      "kind": "first_or_only",
+      "text": "- \"World's first sovereign AI\" · \"Centralized AI is obsolete\""
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md",
+      "kind": "first_or_only",
+      "text": "- \"World's first\" badges, \"Awarded X\" badges, press-mention badges that haven't actually occurred"
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md",
+      "kind": "first_or_only",
+      "text": "**Forbidden framings**: \"the visionary\", \"the genius\", \"the only one in the world\", \"the future is here because of one person\". Use the bounded language from Founder Proof §17."
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md",
+      "kind": "first_or_only",
+      "text": "| \"World's first\" / \"Centralized AI obsolete\"                              | **FORBIDDEN**                                    | **FORBIDDEN**           | **FORBIDDEN**       | **FORBIDDEN**                    | —                                                                            |"
+    },
+    {
+      "file": "docs/BIZRA_2026_FIRST_LOOK_PRODUCTION_BRIEF_v0_1.md",
+      "kind": "first_or_only",
+      "text": "| Founder as \"the visionary\" / \"the only one\" / \"the genius\"               | **FORBIDDEN**                                    | **FORBIDDEN**           | **FORBIDDEN**       | **FORBIDDEN**                    | —                                                                            |"
+    },
+    {
+      "file": "docs/BIZRA_MARKET_ANALYSIS_v0_1.md",
+      "kind": "economic",
+      "text": "- **Receipt chains and consent boundaries are valuable independent of token mechanics** — Bitcoin's merkle anchor is used by BIZRA's `proof-of-priority/manifest.json` for timestamp evidence (not for tokenomics)."
+    },
+    {
+      "file": "docs/BIZRA_MARKET_ANALYSIS_v0_1.md",
+      "kind": "economic",
+      "text": "- **Tokenomics-first launches frequently drifted into speculative trading detached from utility delivery** (`EXTERNAL_SOURCE_REQUIRED` for specific failure-rate statistics; the principle is widely observed but the specific citation requires binding)."
+    },
+    {
+      "file": "docs/BIZRA_MARKET_ANALYSIS_v0_1.md",
+      "kind": "economic",
+      "text": "- BIZRA is **not** claiming a token allocation, token economics, yield, APY, or any economic mechanism."
+    },
+    {
+      "file": "docs/BIZRA_MARKET_ANALYSIS_v0_1.md",
+      "kind": "economic",
+      "text": "- No live token at v0.1. Dual token economy is `RESEARCH_QUARANTINE` per Component DNA §16."
+    },
+    {
+      "file": "docs/BIZRA_MARKET_ANALYSIS_v0_1.md",
+      "kind": "economic",
+      "text": "| **No live public URP / UKE / PoI / token economy** — competitors with shipped products outweigh design docs in many evaluations.                     | MEDIUM     | BIZRA's posture is: ship narrowly (Dema CLI), label broadly (designed forest), and let pilot evidence promote labels over time. Not a fix; an honest sequencing choice. |"
+    },
+    {
+      "file": "docs/BIZRA_MARKET_ANALYSIS_v0_1.md",
+      "kind": "economic",
+      "text": "| Dual token economy                | `RESEARCH_QUARANTINE` | Out of scope for v0.1 market                             |"
+    },
+    {
+      "file": "docs/BIZRA_MARKET_ANALYSIS_v0_1.md",
+      "kind": "first_or_only",
+      "text": "- BIZRA is **not** claiming \"world's first\" anything."
+    },
+    {
+      "file": "docs/BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md",
+      "kind": "economic",
+      "text": "- Adding \"free\" or \"earn\" in any reading that implies a token reward."
+    },
+    {
+      "file": "docs/BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md",
+      "kind": "economic",
+      "text": "- Dual token economy (SEED utility, BIZRA governance/settlement) — `RESEARCH_QUARANTINE` for value language."
+    },
+    {
+      "file": "docs/BIZRA_ROOT_SOURCE_OF_TRUTH_v0_1.md",
+      "kind": "first_or_only",
+      "text": "- **One human** — the founder, whose consent is the only legal mutator of Node0."
+    },
+    {
+      "file": "docs/BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md",
+      "kind": "economic",
+      "text": "| **Dual token economy** (SEED utility + BIZRA governance/settlement) | Component DNA §16 (`RESEARCH_QUARANTINE` for value language)         | no live token; no value claim allowed on public surfaces                |"
+    },
+    {
+      "file": "docs/BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md",
+      "kind": "economic",
+      "text": "| Dual Token Economy                          | `RESEARCH_QUARANTINE` | Memory canon only; no public surface                          |"
+    },
+    {
+      "file": "docs/BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md",
+      "kind": "first_or_only",
+      "text": "- \"World's first sovereign AI\" / \"Centralized AI is obsolete\""
+    },
+    {
+      "file": "docs/BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md",
+      "kind": "first_or_only",
+      "text": "- Founder hagiography: \"the visionary\" / \"the genius\" / \"the only one in the world\""
+    },
+    {
+      "file": "docs/CLAIM_REGISTER_v0_1.md",
+      "kind": "first_or_only",
+      "text": "- \"BIZRA is the only sovereign AI infrastructure.\" (overclaim absent comparative evidence)"
+    },
+    {
+      "file": "docs/covenant-gate-v0.1.md",
+      "kind": "cryptographic",
+      "text": "- Add real Ed25519 receipt signing (using existing authorship key machinery)."
+    },
+    {
+      "file": "docs/CURRENT_LIMITS.md",
+      "kind": "cryptographic",
+      "text": "| Ed25519 authorship signing (demo + verify)       | `packages/receipts/src/authorship-signature.js`, `docs/security/H18_3_AUTHORSHIP_PERSISTENCE_PREFLIGHT.md` | MEASURED: Ed25519 keypair generation, signing, and verification work end-to-end (`dema authorship demo`, `dema authorship verify`). Keys are ephemeral only — persistent key custody is DESIGNED_NOT_LIVE (H18.3 preflight cleared, awaiting implementation) |"
+    },
+    {
+      "file": "docs/CURRENT_LIMITS.md",
+      "kind": "economic",
+      "text": "- Public token economy is active → status today: DESIGNED_NOT_LIVE (no token economy is live)"
+    },
+    {
+      "file": "docs/CURRENT_LIMITS.md",
+      "kind": "economic",
+      "text": "| Proof-of-Impact / token economy                  | `docs/02-architecture/dema-urp-resource-offer-v0.1.md`                                                     | No PoI runtime, no token issuance, no economic settlement                                                                                                                                                                                                    |"
+    },
+    {
+      "file": "docs/DECISION_two_dema_split.md",
+      "kind": "first_or_only",
+      "text": "- **A is the only thing that runs.** It has working code, tests, a public GitHub remote, and four commits of iterative polish. You can `npm test` today."
+    },
+    {
+      "file": "docs/DECISION_two_dema_split.md",
+      "kind": "first_or_only",
+      "text": "1. **Cost of moving canonical to B:** lose GitHub commit history, lose the only working code, lose the public Dema URL. Unacceptable."
+    },
+    {
+      "file": "docs/DELIVERY_BLUEPRINT.md",
+      "kind": "benchmark",
+      "text": "- Enforces A+ perf ceilings (boot <150ms, verify <1ms) via `npm run perf`."
+    },
+    {
+      "file": "docs/DELIVERY_BLUEPRINT.md",
+      "kind": "benchmark",
+      "text": "| A+ perf gate              | Enforced: `npm run perf` (A+ ceilings in perf-bench.mjs: sub-150ms boot, sub-1ms verification). Integrated into release:readiness and REQUIRED_GATES.                        |"
+    },
+    {
+      "file": "docs/DELIVERY_BLUEPRINT.md",
+      "kind": "benchmark",
+      "text": "| CLI cold-start (dema_boot_latency_ms)   | < 150ms p50      | Enforced (observed ~45ms on Node 22; gate fails above 150ms). |"
+    },
+    {
+      "file": "docs/DELIVERY_BLUEPRINT.md",
+      "kind": "benchmark",
+      "text": "| Verification latency (sha256 roundtrip) | < 1ms            | Enforced.                                                     |"
+    },
+    {
+      "file": "docs/DEMA_AGENT_HARNESS_AND_SKILL_DNA_v0_1.md",
+      "kind": "benchmark",
+      "text": "- **Latency discipline** — local models respond in <100ms for short prompts; full-model network round-trips are 1–5 seconds."
+    },
+    {
+      "file": "docs/DEMA_AGENT_HARNESS_AND_SKILL_DNA_v0_1.md",
+      "kind": "first_or_only",
+      "text": "- Produce a forbidden phrase (token-buy CTA, \"world's first\", Sharia-certified) when the surrounding text builds toward it."
+    },
+    {
+      "file": "docs/DEMA_AGENT_HARNESS_AND_SKILL_DNA_v0_1.md",
+      "kind": "first_or_only",
+      "text": "Trace capture is not a debug feature. It is the substrate that deterministic verification (§13) runs against. Without trace capture, verification cannot bind to reality; the agent's claim of success becomes the only signal, which violates the harness law (§4)."
+    },
+    {
+      "file": "docs/DEMA_AGENT_HARNESS_AND_SKILL_DNA_v0_1.md",
+      "kind": "first_or_only",
+      "text": "Verification is not skippable, even when \"the agent surely got it right.\" If the agent surely got it right, verification confirms cheaply. If the agent silently got it wrong, verification is the only line of defense."
+    },
+    {
+      "file": "docs/ELITE_FULL_STACK_BLUEPRINT.md",
+      "kind": "benchmark",
+      "text": "- verification_latency_ms: ~0.005-0.006 ms"
+    },
+    {
+      "file": "docs/ENGINEERING_DISCIPLINE.md",
+      "kind": "first_or_only",
+      "text": "- **Mirror exception.** A verbatim structural mirror of already-reviewed code may substitute a normalized **structural-identity diff** (proving zero logic drift) for a full self-review — e.g. a new proof producer cloned from a reviewed sibling. Novel composition or first-of-its-kind logic never qualifies."
+    },
+    {
+      "file": "docs/GTM.md",
+      "kind": "economic",
+      "text": "- token rewards"
+    },
+    {
+      "file": "docs/HOUSE_OF_WISDOM_UKE_URP_CANON_v0_1.md",
+      "kind": "economic",
+      "text": "Change class: Documentation only · no code · no runtime integration · no ingestion · no model invocation · no URP write · no chain-bound mint · no token/economy claim"
+    },
+    {
+      "file": "docs/INDEX.md",
+      "kind": "cryptographic",
+      "text": "- [02-architecture/NODE0_OSTREE_TAD_v0_1.md](02-architecture/NODE0_OSTREE_TAD_v0_1.md) — OSTree-model technical architecture: maps the content-addressed signed receipt chain / Block0 to OSTree (object store, commit, fsck, deployment), then proposes the stdlib composition manifest before any libostree adoption."
+    },
+    {
+      "file": "docs/NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md",
+      "kind": "economic",
+      "text": "- **Purpose**: Eventual accounting layer — a stable utility token paired with an earned reputation token. Both bound to PoI receipts."
+    },
+    {
+      "file": "docs/NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md",
+      "kind": "economic",
+      "text": "| Dual Token Economy       | Stable utility token + earned reputation token            | Economic accounting layer                              | `RESEARCH_QUARANTINE` | Research notes only                                                     | Any public token claim, value claim, or yield language |"
+    },
+    {
+      "file": "docs/NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md",
+      "kind": "first_or_only",
+      "text": "- **Purpose**: The human is the only legal mutator. Every consequential action requires exact-string consent, recorded in a receipt."
+    },
+    {
+      "file": "docs/NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md",
+      "kind": "first_or_only",
+      "text": "`ACTIVE` is the only label that authorizes user-facing language like \"this works today.\" Every other label requires explicit qualification."
+    },
+    {
+      "file": "docs/NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md",
+      "kind": "first_or_only",
+      "text": "| Human Sovereignty        | Exact-string consent, operator-grounding gate             | Human is the only legal mutator                        | `ACTIVE`              | ADR-005, consent receipts                                               | Implying consent can be inferred from behavior         |"
+    },
+    {
+      "file": "docs/NODE0_DEMA_URP_FLAGSHIP_DOD.md",
+      "kind": "economic",
+      "text": "launch Node1, mint a token, or create reward eligibility."
+    },
+    {
+      "file": "docs/NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md",
+      "kind": "deployment",
+      "text": "- \"All repositories are production-ready.\""
+    },
+    {
+      "file": "docs/NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md",
+      "kind": "deployment",
+      "text": "| \"All repos are production-ready\"                          | **forbidden**                                  | —                                                                                                                  |"
+    },
+    {
+      "file": "docs/NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md",
+      "kind": "economic",
+      "text": "- Live public URP, UKE shared runtime, Proof-of-Impact rewards, or token economy."
+    },
+    {
+      "file": "docs/NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md",
+      "kind": "economic",
+      "text": "| \"The founder has not minted a token for himself\"           | `OPERATOR_ATTESTED`                                                | \"The founder attests that no founder-allocation token has been minted, and that BIZRA has no live token at this stage. Verification requires a ledger absence-proof (a public on-chain or off-chain audit showing no founder mint occurred) and is source-pending.\" |"
+    },
+    {
+      "file": "docs/NODE0_FOUNDER_PROOF_AND_HUMAN_CHOICE_v0_1.md",
+      "kind": "economic",
+      "text": "| Live tokenomics, founder mint, or any token economic claim | **forbidden** per `CLAIM_REGISTER §13` (Economic and Token Claims) | —                                                                                                                                                                                                                                                                   |"
+    },
+    {
+      "file": "docs/NODE0_GENESIS_READINESS_2026_05_16.md",
+      "kind": "benchmark",
+      "text": "| `npm test`             | **500/500 PASS** · 0 fail · 0 skip · 740 ms                                                                                                   | `tests/*.test.js`                       |"
+    },
+    {
+      "file": "docs/NODE0_MASTER_CRAFTSMANSHIP_CHECKLIST.md",
+      "kind": "economic",
+      "text": "- public token economy live"
+    },
+    {
+      "file": "docs/NODE0_MASTER_PLAN_v0_1.md",
+      "kind": "first_or_only",
+      "text": "`mintGuardedClaim` (`assumption-guarded-claim.js`) is the only path to the flywheel"
+    },
+    {
+      "file": "docs/NODE0_OPERATOR_GUIDE.md",
+      "kind": "first_or_only",
+      "text": "Stdlib-only means there are no dependency upgrades to manage. The only thing that can break on upgrade is **schema versioning** of receipts / envelopes — and those are versioned (`bizra.dema.<envelope>.v0.X`) so the schema validator catches mismatches."
+    },
+    {
+      "file": "docs/README_V0_2_PROPOSAL.md",
+      "kind": "benchmark",
+      "text": "**Total: ~240 lines** (down from 426; 43% reduction)."
+    },
+    {
+      "file": "docs/README_V0_2_PROPOSAL.md",
+      "kind": "benchmark",
+      "text": "Target ~240 lines (43% reduction from 426). All command-reference depth migrates to `docs/PRODUCT.md` (already authoritative) and `docs/INDEX.md` (already curated). The README becomes the **cold-visitor pull-page**; the docs/ dir stays the depth lane."
+    },
+    {
+      "file": "docs/README_V0_2_PROPOSAL.md",
+      "kind": "deployment",
+      "text": "- `BIZRA_Manifesto_Video_Script_v1.md` (+ rendered PDF) — 2:30 production-ready manifesto video · U-shape · contains the iconic closing line **\"بذرة واحدة — تصنع غابة / One seed creates a forest\"** and the framing line **\"ليس منتجاً. ليس منصة. هندسة لاستعادة المعنى. / Not a product. Not a platform. Architecture for restoring meaning.\"**"
+    },
+    {
+      "file": "docs/RECOVERY.md",
+      "kind": "cryptographic",
+      "text": "- Future: optional signed manifest (Ed25519) and an off-site archive policy."
+    },
+    {
+      "file": "docs/RELEASE_DECISION_RECORD_adr-007-accept_2026-05-16.md",
+      "kind": "benchmark",
+      "text": "- **Suite runtime:** ~776 ms (consistent across runs)"
+    },
+    {
+      "file": "docs/RELEASE_DECISION_RECORD_adr-007-accept_2026-05-16.md",
+      "kind": "benchmark",
+      "text": "| `npm test` full suite                         | ✅ **682/682 PASS** (776 ms)             | MEASURED |"
+    },
+    {
+      "file": "docs/SP6-FEEDBACK-BRIDGE-SPEC-1A.md",
+      "kind": "cryptographic",
+      "text": "- Cryptographic: All feedback uses Ed25519 signatures + proof hashes (no empty sigs)."
+    },
+    {
+      "file": "docs/SP6-FEEDBACK-BRIDGE-SPEC-1A.md",
+      "kind": "cryptographic",
+      "text": "**Interdisciplinary Thinking:** Combines AI agentic systems (Professor Synapse self-optimization loop /SO), formal methods (proof receipts, HHMM for state transitions), systems engineering (mission lifecycle as 10-phase cycle), cryptography (Ed25519 + canonical hash), and ethics (Ihsān: transparent refusal as excellence, micro-consent for every feedback action)."
+    },
+    {
+      "file": "docs/TEST_SURFACE_INVENTORY.md",
+      "kind": "cryptographic",
+      "text": "| `authorship-signature.test.js`          | 13    | H18 Ed25519 sign/verify, tamper detection, boundary  |"
+    },
+    {
+      "file": "docs/TEST_SURFACE_INVENTORY.md",
+      "kind": "cryptographic",
+      "text": "| 1    | Ed25519 key persistence + CLI verify | Medium | Signed receipts, authorship chain                  | H18.2            |"
+    },
+    {
+      "file": "docs/TEST_SURFACE_INVENTORY.md",
+      "kind": "cryptographic",
+      "text": "| Ed25519 key persistence              | H18.1 only covers in-memory; no disk save/load yet | Medium — keys are ephemeral              | H18.2           |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "benchmark",
+      "text": "| `tests/homebase-cli-dispatch.test.js`                   | Homebase TUI v0.1 phase-5 CLI dispatch (`apps/cli/src/index.js` bare-invocation routing) — the 14th canonical spine surface per [phase_05_cli_dispatch_pseudocode.md](02-architecture/homebase-tui-v0.1-pseudocode/phase_05_cli_dispatch_pseudocode.md). Routes bare `dema` to either the homebase preview JSON or (TTY · phase-4 pending) the existing active-kernel interactive shell. JSON emitted when any of: `argv.includes(\"--json\")` · `!process.stdout.isTTY` · `DEMA_NO_TUI` set · `NODE_ENV=test`. 7 tests bound to phase_06 §6.5 + 1 ADV + 1 backwards-compat: TDD-25 `dema --json` emits parseable HomebasePreview (`bizra.dema.homebase_v0_1.v0.1` · NODE0_LOCAL_SEED · preview_only · 6 affordances) · TDD-26 bare `dema` with stdout redirected emits same JSON shape · TDD-27 NODE_ENV=test triggers JSON · TDD-28 DEMA_NO_TUI=1 triggers JSON · TDD-30 `dema --json` does not hang on EPIPE (downstream pipe destroy · 5s ceiling) · ADV missing `~/.dema/` does not crash · greeting.has_name=false · memory3.entries=[] · backwards-compat `dema task` still emits task_list JSON (no regression for the 13 prior spine subcommands). TDD-29 (cold-start ≤50ms) deferred to phase-4 wallclock-budget tests after Ink load.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "benchmark",
+      "text": "| `tests/homebase-gather.test.js`                         | Homebase TUI v0.1 phase-2 data gather (`packages/core/src/homebase-gather.js`) — impure read-only adapter feeding phase-3 builder per [phase_02_data_gather_pseudocode.md](02-architecture/homebase-tui-v0.1-pseudocode/phase_02_data_gather_pseudocode.md). `gather(opts={home})` emits `GatherResult` shape (`schema_version: bizra.dema.homebase_gather.v0.1`) with safe-degraded defaults so phase-3 never sees `undefined`: profile (name · node · source_present) read from `<DEMA_HOME>/profile.json` with ENOENT→source_present=false / SyntaxError→warning+partial; memory_recent capped at 3 entries sorted by mtime desc from `<DEMA_HOME>/memory/*.json` with per-file JSON-parse failure filtered + warning + partial=true; state/process_mining/models from existing builders via try-wrapper that defaults null on throw; receipts adapted from `listReceipts(home)` to `{count, last_id, gateway_issued}` shape; memory_size from depth-capped (≤6) directory walk; env_flags from process.env (NO_COLOR · TERM=dumb · stdout.isTTY); timing-budget warning at >200ms (no failure). 5 tests bound to TDD-15..TDD-19 from phase_06: empty `~/.dema/` returns valid GatherResult (TDD-15), DEMA_HOME override reads profile.name (TDD-16), 50 memory entries surface exactly 3 most-recent by mtime (TDD-17), malformed JSON in memory yields partial=true + non-empty warnings + valid-only in memory_recent (TDD-18), gather() never throws when memory is a regular file instead of directory (TDD-19). Plus 4 reviewer-fix tests (Issues 1+2+5 from 2026-05-18 SPARC reviewer pass) and 2 CANONICAL-PROFILE tests verifying `preferred_name` is read per the `bizra.dema.profile.v0.1` schema. Plus WALK-01..WALK-04 (walkDirSize edge cases · SPARC Reviewer finding 2026-05-19): WALK-01 files at depth-within-cap counted as positive control · WALK-02 depth-cap (DIR_WALK_MAX_DEPTH=6) skips files beyond cap (asserts count<actual-on-disk) · WALK-03 broken symlinks tolerated (silent skip · no crash) · WALK-04 in-flight vanish (unlink before stat) handled by defensive try/catch.                                                                                                                                                                                                                                                                                                                                                   |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/authorship-cli.test.js`                          | H18 Ed25519 authorship CLI (`dema authorship demo/verify`): 6 tests across 2 suites — demo (VERIFIED self-proof JSON, human output), verify (valid receipt VERIFIED, tampered receipt FAILED exit 1, missing argument exit 1, nonexistent file exit 1).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/authorship-key-store.test.js`                    | H18.3A Ed25519 key init (`packages/receipts/src/authorship-key-store.js`): 13 tests across 4 suites — initAuthorshipKey (consent refusal, wrong phrase, success, mode 0o600, valid PEM, no private key in JSON, second-init refusal), hasAuthorshipKey (false on fresh, true after init), loadPublicKey (null on fresh, PEM after init), CLI integration (exit 1 without consent, success with consent).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/authorship-signature.test.js`                    | H18 Ed25519 authorship signature (`packages/receipts/src/authorship-signature.js`): 13 tests across 5 suites — generateEd25519Keypair (PEM format, unique per call), buildAuthorshipPayload (schema-tagged, frozen, input validation, custom node), sign and verify (round-trip, tamper detection, wrong-key rejection, direct signPayload/verifyPayload), boundary discipline (constitutional boundary, deep freeze), determinism (same payload + key = same signature).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/block0-collector-chain-root-adapters.test.js`| LEDGER-ROOT-ADAPT chain-root adapters (extends the same collector + judge). Adds`kind:\"chain_root\"`to`SLOT_ADAPTERS`—`proofs[slot]`is an **array of ledger entries** and the slot hash is the **chain root re-derived by an existing pure verifier** (the verifier's returned`chain_root_hash`), surfaced as `slot_verification[slot].root_hash`. Wires `canonical_receipt_ledger_root_hash`(via`verifyCanonicalChain`— RECEIPT-CHAIN-1A) +`genesis_local_token_ledger_root_hash`(via`verifyLedgerReplay`— ECON-1B). Pure: entries passed in-memory, NO`demaHome`disk read (the impure`verifyCanonicalLedger({demaHome})`is deliberately not used). Judge binds`chain_root`via`manifest[slot] === collection.slot_verification[slot].root_hash`. **PROOF BOUNDARY:** proves the SUPPLIED chain replays to a deterministic signed root; does NOT prove the chain is complete/authoritative nor any public token activity (`genesis_local_token`= LOCAL simulation; no mint/exchange/custody/yield). 7 tests over REAL signed receipt + token chains: both →`PRODUCER_LIVE`(count 2, token root = last`entry_hash`); fail-closed on empty entries / broken prev_hash / tampered body / wrong pubkey → `NAMED_ONLY`; judge binds when the manifest commits the real roots (`bound_live_count:2`, `sealable:false`), wrong committed root → `NAMED_ONLY`. scalar_hash + hash_list slots unaffected; collector(7)+judge(6)+adapters(4)+list-slots(9) stay green. **Block0 now 9/12-collectable**, still `sealable:false`. No new dependency; pure. |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/block0-live-readiness.test.js` | BLOCK0-LIVE-READINESS read-only seal-ceremony precheck (`packages/genesis/src/block0-live-readiness.js`+`scripts/block0-live-readiness.mjs`). Honest finding: Block0 seal is a signing ceremony — 11 of 12 prerequisite slots require the operator's private Ed25519 key; only `poi_rule`is verifier-only.`assessBlock0LiveReadiness({demaHome, operatorPubkeyPem, poiRuleVersion})`never loads the private key, never signs, never persists, never seals — it reports what the live home will require. Schema:`bizra.dema.block0_live_readiness.v0.1`. 5 tests: versioned schema id; with pubkey → `poi_rule` `VERIFIABLE_NOW`, 11 slots `NEEDS_OPERATOR_SIGNING`, `ceremony_required:true`; frozen read-only boundary (no private key / sign / persist / seal / network); empty home → pubkey absent, poi not verifiable; poi version drift → `ABSENT_OR_DRIFTED`. Pure assessor; CLI is read-only report. |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/block0-manifest-verifier.test.js` | BLOCK0-1B pure Block0 manifest verifier (`packages/genesis/src/block0-manifest-verifier.js`). The JUDGE, not the generator — the shift from proof generation to proof judgment. `verifyBlock0Manifest({manifest, operatorPubkeyPem, prerequisiteStatusMap})`validates the manifest shape (all 12 prerequisite slots present, hashes canonical sha256-hex, **placeholder sentinels rejected** — a real sha256 is never 64 identical chars, so`\"0\".repeat(64)`→`placeholder_hash`; PAT count 7 / SAT count 5; KEYCONSENT complete; PoI rule id+version; `claim_boundary` all-false), verifies operator authority (`operator_key_mismatch` when the supplied external pubkey's fingerprint ≠ the manifest's), re-derives the content address (`block0_proof_hash_mismatch`) and verifies the Ed25519 signature under the EXTERNAL pubkey (`block0_signature_invalid`, no crash on malformed key). **Verifier ≠ collector**: it never scans the repo and never recomputes producer outputs — sealability is decided ONLY from the explicit `prerequisiteStatusMap`. Schema:`bizra.dema.block0_manifest_verification.v0.1`. 7 tests. TRUTH BEFORE COMPLETION: a structurally-valid, signed manifest over the discovered status map (7 PRODUCER_LIVE / 2 PARTIAL / 3 NAMED_ONLY) → `verified:true, sealable:false, truth_label:\"BLOCK0_NOT_SEALABLE\"`, `producer_live_count:7`, `blocking_reasons`length 5; an all-PRODUCER_LIVE map →`sealable:true`; a missing map → `sealable:false, reason:\"prerequisite_status_missing\"`. Fail-closed reasons: `manifest_required`/`schema_mismatch`/`prerequisite\\*_\\_missing`/`\\_\\_hash_malformed`/`placeholder_hash`/`\\*\\_count_mismatch`/`claim_boundary_violation`/`operator_key_mismatch`/`block0_proof_hash_mismatch`/`block0_signature_invalid`. Both success + failure envelopes carry the pure-verifier boundary. Pure (no I/O, no clock, no key load, no write). |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/consent-proof.test.js` | KEYCONSENT-1A pure consent proof kernel (`packages/receipts/src/consent-proof.js`). Schema `bizra.dema.consent_proof.v0.1` per `docs/security/KEYCONSENT_PREFLIGHT.md` §3. `buildConsentProof({phrase, actionScope, demaHome, nonce?, createdAtIso?, expiresAtIso?})`: fail-closed on empty phrase (`consent_phrase_required`), invalid action_scope (`action_scope_invalid` — missing `action_type` or `target_hash`), or no signing key on disk (`no_authorship_key`); otherwise loads operator's Ed25519 key, generates fresh 32-byte nonce if not injected, defaults `expires_at_iso` to `created_at + 5 min`, signs `stableStringify(body)` (body excludes `consent_signature_b64` + `consent_proof_hash`), computes `consent_proof_hash = sha256(stableStringify(body))`, returns frozen envelope `{schema, consent_phrase, action_scope{action_type, target_hash, rule_id?}, nonce, created_at_iso, expires_at_iso, operator_public_key_fingerprint, consent_signature_b64, consent_proof_hash}` plus `signer_public_key_pem`. `verifyConsentProof({consentProof, pubkeyPem, expectedActionScope?, now?})`: permissionless — structural (`consent_proof_schema_mismatch`, `structural_missing_field*<name>`, `external*pubkey*required`, `structural*action_scope_invalid`); recompute `consent_proof_hash`from stable body →`consent_proof_hash_mismatch`on tamper; verify signature using ONLY external`pubkeyPem`(IGNORES envelope's`operator_public_key_fingerprint`for trust — same invariant as verdict-receipt REJECT-4) →`consent_signature_invalid`; optional scope match → `consent_scope_mismatch`; freshness via injected `now`→`consent_expired`. Tests (20): DOD-1 determinism (injected nonce + ISO → deep-equal); DOD-2 empty phrase; DOD-3 no key; missing `action_type`; missing `target_hash`; DOD-9 envelope has zero `PRIVATE KEY`material; envelope shape complete + frozen; optional`rule_id`omitted; happy verify within window; DOD-4 tamper`consent_phrase`→ hash mismatch; DOD-4 re-hash + re-stable but signature unchanged →`consent_signature_invalid`; DOD-5 wrong pubkey; DOD-6 scope mismatch on `action_type`; DOD-6 scope mismatch on `target_hash`; DOD-6 scope match agreement → verified; DOD-7 expired with injected `now`; DOD-8 `consent_proof_hash`recomputes from stable body; empty pubkey; wrong schema; missing required field surfaces`structural_missing_field_nonce`. No CLI surface this slice. No integration with existing gates this slice (that is KEYCONSENT-1B). No nonce-replay registry this slice (that is KEYCONSENT-2). |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/dema-realm-home.test.js`                         | UX-1A Dema Realm Home static TUI (`packages/core/src/dema-realm-home.js` + `dema realm` CLI): 12 tests across 6 suites — gather: empty DEMA_HOME emits UNINITIALIZED/ABSENT/NONE/DECLARED/EMPTY/OFF/LIVE 7-step boot + sovereign-seed-awaits-initialization line; after H18 `authorship key init` identity becomes VERIFIED + Ed25519 verified + seed_awake:true + awakened_line \"The sovereign seed is awake.\"; checkpoint file at `$DEMA_HOME/realm/last-checkpoint.json` flips boot_steps[2]→FOUND + boot_steps[4]→READY + last_checkpoint.text reads `label`; operator + role read from `$DEMA_HOME/memory/profile.json` (`preferred_name`/`name` + `role`/`title`); envelope frozen + boundary block 10-flag all-false. Render: `renderBootSequence` emits \"DEMA NODE0 BOOT\" header + 7 `[n/7]` lines; `renderHomeFrame` includes \"BIZRA NODE0 · DEMA HOME\" + operator + identity + last checkpoint within 58-char inner-width border; `renderMenu` emits all 5 menu placeholders + preview-only disclaimer; `renderDemaRealmHome` composes all three. CLI: `dema realm --json` exits 0 with `bizra.dema.realm_home.v0.1` schema + seed_awake:false on empty home; `dema realm --no-color` includes DEMA NODE0 BOOT + BIZRA NODE0 · DEMA HOME + sovereign-seed line + Open Mission Board placeholder; no PEM headers, no `\"private_key\":` / `\"raw_artifact\":` / `\"mint_candidate\":` / `\"token_eligible\":` / `\"federation_target\":` in output. New CLI surface (opt-in via `dema realm`) — does NOT replace bare `dema` invocation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/dema-realm-state-proof.test.js` | DEMA-REALM-STATE-1A local Dema Realm state proof producer (`packages/genesis/src/dema-realm-state-proof.js`). Provides the producer for the LAST named-only Block0 slot `dema_realm_state_proof_hash`(NAMED_ONLY → PRODUCER_LIVE *capable*; the 9/12 → 10/12 shift lands when a collector wires it into`verifyBlock0Manifest`). `buildDemaRealmStateProof({demaHome, consentProof, realmState, createdAtIso})`(pure-with-key-load) signs a BOUNDED, local-only Realm-state snapshot — the read-only counters `gatherDemaRealmStatus` measures off disk (identity status, authorship-receipt count, URP-index count, checkpoint/timeline presence); the DESIGNED-only Realm surfaces (Council Chamber, Quest Board, Home TUI) are NOT inputs. Commits`realm_state_hash = sha256(stableStringify(realmState))`, embeds the snapshot for replay, derives `dema_realm_state_id`over`{operator fingerprint, realm_state_hash, claim_boundary, created_at_iso}`, and requires key-bound `PROVE_DEMA_REALM_STATE`consent scoped to that id with the exact phrase`\"PROVE DEMA REALM STATE\"`. `demaRealmStateCommitment(...)`exposes the commitment so callers can scope consent.`verifyDemaRealmStateProof({proof, operatorPubkeyPem})` is pure, external-pubkey-only, Ed25519-only: re-derives the snapshot hash, the id, and the proof hash, and verifies the signature. Schema:`bizra.dema.dema_realm_state_proof.v0.1`. 7 tests. Claim boundary is the exact 7-key false set (`live_rpg_world_claimed`, `persistent_multiplayer_realm_claimed`, `runtime_backed_council_claimed`, `working_cockpit_beyond_readonly_claimed`, `federation_used`, `public_market_value_claimed`, `token_minted_to_humans`). Fail-closed: `consent_proof_required`, `realm_state_invalid`(not a JSON-safe object),`consent_scope_mismatch`, `consent_phrase_mismatch`, `operator_key_mismatch`/`operator_key_not_ed25519`/`external_pubkey_required`(malformed key, no throw),`realm_state_hash_mismatch`(tampered snapshot),`dema_realm_state_id_mismatch`(a re-signed snapshot-hash tamper still fails),`dema_realm_state_proof_hash_mismatch`, `claim_boundary_violation`/`claim_boundary_unexpected_field`, `proof_unexpected_field`, `consent_proof_hash_invalid`. Determinism: same consent + same state → same proof hash. No private-key material; no write; no live RPG world / persistent realm / runtime council / working cockpit / federation / market / token claim. |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/flow-authorship-to-proof.test.js`                | TRACK 3 behavioral-flow harness — the consent-gated authorship→proof lifecycle CHAIN through one persistent `DEMA_HOME`. 4 tests: (1) FAIL-CLOSED — `authorship sign` without the exact phrase `SIGN AUTHORSHIP RECEIPT` → `signed=false`/`consent_required`/`receipt_written=false`, zero receipts on disk; (2) HAPPY PATH — `key init` (consent `GENERATE AUTHORSHIP KEY`, fingerprint persisted) → `sign` (consent, receipt written) → `receipts` lists 1 → `latest` resolves it → `proof passport` `ALL_VERIFIED` total=1 carrying the key fingerprint → `proof passport verify --deep` `LOCAL_PROOF_PASSPORT_DEEP_VERIFIED`; (3) BOUNDARY — empty home → `EMPTY` passport → `DEEP_EMPTY`; (4) TAMPER — mutating the persisted receipt's Ed25519 `signature.value` on disk → deep verify `FAILED`/`LOCAL_PROOF_PASSPORT_DEEP_FAILED`. Exercises the fail-closed consent gate + cross-command persisted state + real signature re-verification.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/flywheel-convergence-attestation.test.js` | CONVERGENCE-ATTEST-1A sign + ground the convergence verdict (`packages/flywheel/src/flywheel-convergence-attestation.js`). Caps the proof spine (verify → ATTEST → seal): turns FLYWHEEL-REPLAY-1B's ephemeral verdict into a signed, content-addressed, **Level-B GROUNDED** attestation — the artifact Block0 §18 needs to seal \"one full flywheel run\". `attestConvergence({demaHome, operatorPubkeyPem, now})`runs the convergence verifier and, only if convergent, signs an attestation committing to the chain root,`chain_length`, `task_count`, a `task_fingerprint`(sha256 of the verified tasks), and the four`layers`. Pure-with-key-load (signs the verdict like SAT-VALIDATE-1A; no consent phrase, no disk write). `verifyConvergenceAttestation({attestation, demaHome, pubkeyPem})`is two-tier: **Level-A** re-derives`attestation_id`+ verifies the Ed25519 signature under the EXTERNAL pubkey; **Level-B** re-runs`verifyConvergentTaskChain` against the LIVE chain and confirms the attested verdict still re-derives (chain root, length, task fingerprint). Schema:`bizra.dema.convergence_attestation.v0.1`; rule:`flywheel_task_convergence.v0.1`. 6 tests. THE GROUNDING CATCH: tampering a bound entry AFTER attesting leaves the signature valid (`level_a_signature_valid:true`) but fails Level-B (`stage:\"grounding\", reason:\"live_chain_not_convergent\"`) — signed ≠ true, grounded = true. Fail-closed: a non-convergent chain cannot be attested (`not_convergent`); missing `now`→`created_at_iso_required`; local key ≠ `operatorPubkeyPem`→`operator_key_mismatch`; foreign-key verify → `signature_invalid`. Level-B grounding is TOTAL — every signed field re-derives from the live convergence result (`verifier_rule_id`, `convergence_schema`, `chain_length`, `canonical_chain_root`(from the verifier's single loaded snapshot),`task_count`, `layers`, `task_fingerprint`); a re-signed attestation with a wrong `task_count` passes Level-A but fails Level-B (`task_count_mismatch`). A malformed external pubkey fails closed (no crash) and a rotated local key (≠ `operatorPubkeyPem`) refuses to attest (`operator_key_mismatch`). No private-key/public-economy material. |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/flywheel-task-convergence.test.js` | FLYWHEEL-REPLAY-1B Proof-of-Truth convergence over the bound canonical chain (`packages/flywheel/src/flywheel-task-convergence.js`). Capstone of RECEIPT-CHAIN-1C + FLYWHEEL-REPLAY-1A: nothing else runs ALL FOUR truth layers on the PERSISTED chain, so a Frankenstein bundle binds and `verifyCanonicalLedger`passes.`verifyConvergentTaskChain({demaHome, pubkeyPem})`loads the canonical chain and returns one verdict with a`layers`map — **Formal** (prev_hash structure, via`verifyCanonicalLedger`), **Cryptographic** (Ed25519 under external pubkey), **Empirical** (cross-reference coherence: IMPACT-from-action, SAT-bound-to-IMPACT), **Economic** (amounts follow the deterministic rules) — the last two via `verifyTaskCoherence` on artifacts extracted by schema. Schema:`bizra.dema.flywheel_task_convergence.v0.1`. 5 tests. THE CONVERGENCE CATCH: a Frankenstein chain (A-action + B-impact + B-SAT) binds and chain-verifies (`layers.formal:true, cryptographic:true`) but `convergent:false, layers.empirical:false, stage:\"coherence\", reason:\"impact_not_derived_from_action\"`— proving what`verifyCanonicalLedger`alone misses. Also: tampering a bound entry →`stage:\"canonical_chain\", layers.formal:false`; missing the SAT artifact → `stage:\"extract\", reason:\"missing_task_artifact_sat\"`; empty chain → `empty_chain`. Pure-with-disk-read (no write/clock/key load). No key/token/federation material. |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/node0-identity-proof.test.js` | NODE0-IDENTITY-1A local Node0 identity proof producer (`packages/genesis/src/node0-identity-proof.js`). Provides the producer for the Block0 slot `node0_identity_proof_hash`(NAMED_ONLY → PRODUCER_LIVE *capable*); a status map can now mark this slot PRODUCER_LIVE, and the 7/12 → 8/12 shift lands when a collector wires it into`verifyBlock0Manifest`.`buildNode0IdentityProof({demaHome, consentProof, createdAtIso})` (pure-with-key-load) binds THIS local Node0 identity to the operator Ed25519 fingerprint (`= sha256(SPKI DER hex)`; `genesis_node_id = genesis_human_id = fingerprint`) under key-bound `PROVE_NODE0_IDENTITY`consent scoped to the deterministic`node0_identity_id`commitment and carrying the exact phrase`\"PROVE NODE0 IDENTITY\"`. `node0IdentityCommitment({operatorPubkeyPem, createdAtIso})`exposes that commitment so callers can scope consent.`verifyNode0IdentityProof({proof, operatorPubkeyPem})`is pure, external-pubkey-only, Ed25519-only: re-derives`node0_identity_id` + the proof hash and verifies the signature. Schema:`bizra.dema.node0_identity_proof.v0.1`. 7 tests. Claim boundary is the exact 6-key false set (`public_network_launched`, `federation_used`, `public_market_value_claimed`, `token_minted_to_humans`, `legal_identity_claimed`, `biometric_identity_claimed`). Fail-closed: `consent_proof_required`, `consent_scope_mismatch`(wrong action_type/target),`consent_phrase_mismatch`, `operator_key_mismatch`, `operator_key_not_ed25519`, `external_pubkey_required`(malformed key, no crash),`genesis_node_id_mismatch`/`genesis_human_id_mismatch`(a re-signed tamper still fails — the identity IS the key),`node0_identity_id_mismatch`, `node0_identity_proof_hash_mismatch`, `claim_boundary_violation`/`claim_boundary_unexpected_field`. Determinism: same consent → same proof hash. No private-key material; no write; no legal/biometric/federation/public-network/market/token claim. |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/transition-assurance-check.test.js` | Transition assurance CI gate (`scripts/review/transition-assurance-check.mjs`): pure read-only sampler for `packages/core/src/agent-kernel.js` transition events, the signed mission lifecycle transition contract in `packages/mission/src/mission-lifecycle.js`, and the URP choose-decision transition contract in `packages/urp/src/choose-decision.js`. Enumerates 24 transition samples covering 9 normal transitions, 7 halt transitions, 6 rare circuits (`invalid_kernel_refusal`, `array_input_refusal`, `terminal_state_refusal`, `iteration_cap_halt`, `missing_consent_decision_refusal`, `missing_decision_refusal`), 1 mission lifecycle intent-to-closeout sample, and 1 URP choose MARK_SHAREABLE sample. Fails closed if any sampled event/lifecycle/receipt lacks the explicit/bounded/receipt-backed/rare-circuit-tested/human-consent-aware/Ihsan-aligned/CI-enforced `transition_contract`, preview-only receipt backing, signed lifecycle backing where applicable, hash-committed receipt backing where applicable, exact-string consent flag, no-mint/no-chain-advance proof scope, rare-circuit refs, or CI refs. CLI emits `bizra.dema.review.transition_assurance_check.v0.1`; wired into `npm run check` before proof-room composition. |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/urp-choose-decision.test.js`                     | URP-4.1A pure choose-decision kernel (`packages/urp/src/choose-decision.js`): 21 tests across 6 suites — happy paths (MARK_SHAREABLE on MARKED_LOCAL_ONLY → CANDIDATE_SHAREABLE with valid `choose_hash`, hash-committed `transition_contract`, MARK_LOCAL_ONLY on MARKED_LOCAL_ONLY, MARK_LOCAL_ONLY on CANDIDATE_SHAREABLE as withdrawal, `consent_phrase_hash` equals `sha256(exact phrase)`), consent enforcement as DOMAIN INVARIANT (missing consent → `chosen:false` + `consent_required_or_mismatch`, wrong consent rejected, MARK_LOCAL_ONLY decision refuses the MARK_SHAREABLE consent phrase), source-index validation (wrong schema / wrong mode / wrong truth_label / `invalid_transition` for MARK_SHAREABLE on CANDIDATE_SHAREABLE source / null input → `invalid_index_input`), forbidden-field discipline (source index containing `\"private_key\":` or `\"mint_candidate\":` rejected at the kernel layer; success envelope contains zero forbidden JSON keys via writer-style `\"<field>\":` gate), determinism (`choose_hash` deterministic with fixed `now`; `choose_hash` excludes `decided_at_iso` so it stays stable across re-runs while committing to the transition contract), envelope frozen on both success and failure paths, boundary attestation (all of `file_write_performed`, `network_used`, `federation_used`, `share_published`, `resource_offer_created`, `poi_score_calculated`, `token_minted`, `economic_claim_made`, `private_key_loaded`, `raw_artifact_included` are false on both paths). Pure module: no file write, no CLI, no network, no writer side effect. Consent validated HERE (not deferred to CLI) per URP-4.0 preflight §7 Bridge Rule 17.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/urp-resource-status-proof.test.js` | URP-STATUS-1A local URP resource-status proof producer (`packages/genesis/src/urp-resource-status-proof.js`). Provides the producer for the Block0 slot `urp_resource_status_proof_hash`(NAMED_ONLY → PRODUCER_LIVE *capable*; the 8/12 → 9/12 shift lands when a collector wires it into`verifyBlock0Manifest`). `buildUrpResourceStatusProof({demaHome, consentProof, resourceStatus, createdAtIso})`(pure-with-key-load) signs a BOUNDED, local-only resource-status snapshot: commits`resource_status_hash = sha256(stableStringify(resourceStatus))`, embeds the snapshot for replay, derives `urp_resource_status_id`over`{operator fingerprint, resource_status_hash, claim_boundary, created_at_iso}`, and requires key-bound `PROVE_URP_RESOURCE_STATUS`consent scoped to that id with the exact phrase`\"PROVE URP RESOURCE STATUS\"`. `urpResourceStatusCommitment(...)`exposes the commitment so callers can scope consent.`verifyUrpResourceStatusProof({proof, operatorPubkeyPem})` is pure, external-pubkey-only, Ed25519-only: re-derives the snapshot hash, the id, and the proof hash, and verifies the signature. Schema:`bizra.dema.urp_resource_status_proof.v0.1`. 7 tests. Claim boundary is the exact 7-key false set (`public_compute_marketplace_claimed`, `public_resource_availability_guaranteed`, `federation_used`, `public_market_value_claimed`, `token_minted_to_humans`, `live_network_capacity_claimed`, `third_party_sla_claimed`). Fail-closed: `consent_proof_required`, `resource_status_invalid`(not a JSON-safe object),`consent_scope_mismatch`, `consent_phrase_mismatch`, `operator_key_mismatch`/`operator_key_not_ed25519`/`external_pubkey_required`(malformed key, no throw),`resource_status_hash_mismatch`(tampered snapshot),`urp_resource_status_id_mismatch`(a re-signed snapshot-hash tamper still fails),`urp_resource_status_proof_hash_mismatch`, `claim_boundary_violation`/`claim_boundary_unexpected_field`, `proof_unexpected_field`, `consent_proof_hash_invalid`. Determinism: same consent + same status → same proof hash. No private-key material; no write; no public marketplace / availability guarantee / SLA / federation / market / token claim. |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "| `tests/verdict-receipt.test.js` | Verdict receipt mint (`attestVerdict`) + permissionless trustless verifier (`verifyVerdictBundle`) for `canonical-shape.v0.1`. Body `{schema:\"bizra.dema.verdict_receipt.v0.1\", rule_id, input_hash, verdict, computed, prev_hash, created_at_iso}`; bundle `{body, signature_b64, signer_public_key_pem, input}` — input ships in bundle (not body) for replay, binding to body via `input_hash`. attest fail-closed: wrong consent → `attested:false` + `error: consent_required` + NO receipt file on disk; missing authorship key → `no_authorship_key`; unknown rule → `unknown_rule`. attest happy: receipt persisted at `~/.dema/receipts/verdict-<bodyHash>.json` (mode 0o600), signature over `stableStringify(body)` using Ed25519, `body.input` undefined (only `input_hash` in body). verify happy + determinism (twice → deep-equal). REJECT-1 tamper `bundle.input` → `input_hash_mismatch`. REJECT-2 flip `body.verdict` + re-sign with key B + verifier brings B's pubkey → `verdict_rederivation_mismatch` (signature passes but rule disagrees). REJECT-3 verify with different pubkey than signer → `signature_invalid`. REJECT-4 re-sign with key B but `bundle.signer_public_key_pem` still claims A + verifier brings `--pubkey = A` (bundle's own embedded key) → `signature_invalid` — proves verifier IGNORES `bundle.signer_public_key_pem` for trust and uses ONLY the externally-supplied key. Structural: empty pubkey → `external_pubkey_required`; rule*id mismatch → `rule_id_mismatch`; missing `bundle.input` → `input_missing`. |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "|`tests/node0-composition-manifest.test.js` | NODE0-OSTREE-1A local Node0 composition manifest producer (`packages/genesis/src/node0-composition-manifest.js`). The \"smallest honest next step\" the OSTree TAD §8 names: promotes the DECLARED §4 schema `bizra.dema.node0_composition_manifest.v0.1`to a real pure-with-key-load kernel.`buildNode0CompositionManifest({demaHome, consentProof, composition, createdAtIso})`signs a BOUNDED composition snapshot (node ref, Block0 linkage, content-addressed kernel set, SAT gates from frozen CANONICAL_AGENTS, prerequisites): commits`composition_hash = sha256(stableStringify(composition))`, embeds the snapshot, derives `node0_composition_id`over`{operator fingerprint, composition_hash, claim_boundary, created_at_iso}`, requires key-bound `PROVE_NODE0_COMPOSITION`consent scoped to that id with exact phrase`\"PROVE NODE0 COMPOSITION\"`. **Honest-unsealed:** Block0 is not sealable today, so a caller passes `block0_id:null`/`block0_sealed:false`— the manifest composes the CURRENT node state and overclaims nothing.`node0CompositionCommitment(...)`exposes the commitment for consent scoping.`verifyNode0CompositionManifest({manifest, operatorPubkeyPem})`is pure, external-pubkey-only, Ed25519-only: re-derives the composition hash, the id, the proof hash, verifies the signature. §4 3-key all-false`claim_boundary` (`token_minted_to_humans`, `public_network_used`, `federation_used`). 7 tests. Fail-closed: `consent_proof_required`, `composition_invalid`(not JSON-safe),`consent_scope_mismatch`, `consent_phrase_mismatch`, `operator_key_mismatch`/`operator_key_not_ed25519`/`external_pubkey_required`(malformed key, no throw),`composition_hash_mismatch`(tampered snapshot),`node0_composition_id_mismatch`(re-signed snapshot-hash tamper still fails),`node0_composition_proof_hash_mismatch`, `claim_boundary_violation`/`claim_boundary_unexpected_field`, `manifest_unexpected_field`, `consent_proof_hash_invalid`. Determinism: same consent + same composition → same proof hash. No private-key material; no write; no libostree, daemon, federation, deploy surface, token, or public network. |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "cryptographic",
+      "text": "|`tests/perf-improvement.test.js` | PERF-1B performance regression guard kernel (`packages/perf/src/perf-improvement.js`). 22 tests covering the 6 testable DOD criteria from `PERF_0_PREFLIGHT.md`§10. Schema:`bizra.dema.perf_improvement.v0.1`. `INTERPRETATION_RULE_V01 = \"deterministic-threshold.v0.1\"`— pure rule: each metric`\"improved\"`if new < baseline by ≥ 1%,`\"regressed\"`if new > baseline by ≥ 1%,`\"unchanged\"`otherwise (lower-is-better convention covers all 14 current PDF §14 metrics;`HIGHER_IS_BETTER_METRICS_V01`placeholder empty by design). Builder reuses PERF-1A`REQUIRED_METRICS`(14-metric set, no drift). Fail-closed:`consent_proof_required`/`consent_scope_mismatch`(action_type`\"CLAIM_OPTIMIZATION\"`) / `interpretation_rule_unknown`/`metric_<name>_required`/`no_authorship_key`. `verifyImprovement({improvement, baseline, pubkeyPem})`permissionless: recomputes`improvement_proof_hash`, Ed25519-verifies with ONLY external `pubkeyPem`(embedded`operator_public_key_fingerprint`ignored — same invariant as KEYCONSENT-1A and verdict-receipt REJECT-4), then asserts`improvement.baseline_proof_hash === baseline.baseline_proof_hash`(else`baseline_proof_hash_mismatch`), re-derives delta = new − baseline per-metric (`delta_mismatch` on tampered delta even if re-signed by a foreign key), re-derives interpretation via the named rule from baseline metrics (`verdict_rederivation_mismatch`on tampered label even if re-signed). Embedded body fields:`{schema, improvement_id, baseline_proof_hash, new_metrics, delta, interpretation, interpretation_rule_id, sat_review_receipt_hash, consent_proof_hash, prev_hash, created_at_iso, operator_public_key_fingerprint, improvement_signature_b64, improvement_proof_hash}`. No PRIVATE KEY material in envelope (DOD-6 verified by JSON-string scan). Deterministic: identical inputs → deep-equal envelopes. No CLI (PERF-1C). No measurement harness (PERF-1D). No real SAT-review signature verification (cross-bundle verifier is PERF-1D scope). No `host_fingerprint`cross-check this slice. |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "economic",
+      "text": "| `tests/model-broker-preview.test.js` | Local Model Broker Preview v0.1 (`packages/models/src/model-broker-preview.js`): composition layer on top of model-role-router-preview that introduces the BIZRA broker role taxonomy (dema_face · pat_worker · sat_validator · router · classifier · summarizer · claim_checker · consent_detector · code_helper · fallback) and size class enumeration (2B · 3B · 4B · 7B · 14B · 32B · unknown). Schema `bizra.dema.local_model_broker_preview.v0.1` for the broker shape; `bizra.dema.local_model_route_receipt.v0.1` for each `routeForTask` decision. `routeForTask` selects Dema face for synthesis / PAT worker for planning / sat_validator for claim_review; `local_only=true` rejects remote-locality candidates with explicit reason; disabled status is never selected; unknown locality requires explicit `allow_unknown=true`; route receipt carries timestamp + canon_refs (4 docs) + rejected_candidates with reasons + warnings; `max_size_class` constraint rejects oversized candidates; `brokerRouteOnce` convenience helper builds + routes in one call; frozen boundary declares no runtime/model_invocation/network/federation/mint/token/urp effects; deeply frozen output. |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "economic",
+      "text": "|`tests/claim-register.test.js` | NODE0-CLAIM-MAP-PROOF-GAP-REGISTER-V0.1 validator (`scripts/claims/claim-register-check.mjs`) over the machine-readable register (`docs/claims/node0-claim-register.v0.1.json`): enforces required fields + unique ids (R1), maturity/evidence/confidence enums (R2), verification_path for any non-DESIGNED status (R3), the overclaim gate — only capability-gated wording (token/mint/reward/economic/federation/public_network/production/shariah) is capped at MECHANISM_VERIFIED_SYNTHETIC (R4); sensitivity tags like `private*data`are NOT capped (a local consented run can make such a claim real), and real/production status requires VERIFIED/MEASURED evidence (R5); plus the`--check`drift gate and a guard that the seeded register validates clean. Fails closed on overclaim. |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "economic",
+      "text": "|`tests/econ-ledger.test.js` | ECON-1A local dual-token ledger kernel (`packages/econ/src/dual-token-ledger.js`). 36 tests covering all DOD criteria from `ECON_0_PREFLIGHT.md`§9 plus FLYWHEEL-1C genesis alignment. Schema:`bizra.dema.dual_token_ledger_entry.v0.1`. Two token classes: RESOURCE (compute/storage/tool/bandwidth/local infra) + IMPACT (verified useful work/proof quality/mission completion/learning value). Append-only via `prev_hash`chain; `prev_hash:null` is accepted for replay-compatible genesis entries and 64-hex is required for linked entries. Local-only, replayable. Fail-closed:`consent_proof_required`, `consent_scope_mismatch`(action_type \"MINT_LEDGER_ENTRY\"),`amount_invalid`, `token_class_invalid`, `prev_hash_invalid`. `verifyLedgerEntry()`permissionless. NO public transfer, NO exchange value, NO public mint, NO economic value claim. |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "first_or_only",
+      "text": "| `tests/assumption-guarded-claim.test.js` | ASSUMPTION-GATE-1C enforced Law-of-Assumption mutation gate (`packages/receipts/src/assumption-guarded-claim.js`). The step from \"invoked\" (1B harness preview) to \"enforced law\": `mintGuardedClaim({claim, envelope, consent, demaHome, now})`writes a receipt to`$DEMA_HOME/receipts/guarded-claim-<sha256>.json`(atomic tmp+rename, 0o600) ONLY when`validateAssumptionBoundary(envelope)` passes. Schema:`bizra.dema.guarded_claim_receipt.v0.1`. 9 tests. Fail-closed on BOTH §22 consent (`consent_required`when phrase ≠`GUARDED_CLAIM_CONSENT_PHRASE`) AND the gate. ENFORCEMENT proof bar: valid bounded A-envelope → `minted:true`+ receipt on disk +`assumption_gate_result.valid:true`; missing boundary → `assumption_assumption_boundary_missing`; unsupported certainty (V w/o evidence) → `assumption_unsupported_certainty`; high-risk mutation w/o ack → `assumption_high_risk_uncertainty_not_acknowledged`. DISPROOF bar (structurally impossible): every rejection leaves ZERO files in `receipts/`— the gate is the only path to a write, no legacy bypass.`created_at_iso_required`(no wall-clock fallback, committed to the content hash). Deterministic + idempotent: same inputs twice → same`receipt_id`/path, one file. Receipt records schema·claim·claim_state·assumption_envelope·assumption_gate_result; no key/token/federation material. No CLI (1C-bis/1D). No PoI/economy/XP. |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "first_or_only",
+      "text": "| `tests/flywheel-one-task.test.js` | FLYWHEEL-1A minimal one-task flywheel — slice 1 of §19 (`packages/flywheel/src/flywheel-one-task.js`). Composes REAL kernels into the §19 core loop (steps 6–9 + 17): enforced action (ASSUMPTION-GATE-1C `mintGuardedClaim`) → deterministic proof-quality score (`scoreEpistemicGrounding` over the recorded V/D/A/U label: V 1.0 > D 0.8 > A 0.6 > U 0.2 — Level-B re-derivable, NOT model-scored) → chained flywheel receipt (`prev_hash` → action receipt id; content-addressed; written to `$DEMA_HOME/receipts/flywheel-<sha256>.json`) → `replayOneTaskFlywheel` re-derives the score from recorded fact with zero trust. Schema:`bizra.dema.flywheel_one_task.v0.1`. Rule id:`epistemic_grounding_score.v0.1`. 14 tests (incl. PR #112 replay hardening — fail-closed on missing action id `action_receipt_id_required`and out-of-spec contract`schema_mismatch`/`score_rule_mismatch`/`claim_state_invalid`before the self-hash is trusted). Fail-closed: invalid envelope / wrong consent →`completed:false`at`stage:\"action\"`, ZERO receipts (the enforced gate is the only path). DECISIVE replay REJECT: a receipt claiming a score its `claim_state`doesn't warrant →`score_rederivation_mismatch`(score bound to re-computable fact, not the producer's say-so); broken chain →`chain_link_mismatch`; tampered body → `flywheel_hash_mismatch`. Deterministic (same inputs → same receipt_id). No synthetic data — every receipt real. NOT covered (later slices): mission select, PAT/SAT, token ledger, XP, Teacher lesson, perf delta, next mission. No token mint, no federation, no key. |"
+    },
+    {
+      "file": "docs/THIRD_FACT_CURRENT_STATE_DELTA.md",
+      "kind": "economic",
+      "text": "> **Why this register exists:** The Third Fact doctrine is powerful and load-bearing for every external BIZRA narrative — investor pitch, customer pilot, Ring-1 expansion, regulatory engagement, press contact. Some claims in that document are measurable today (Verified Refusal Pattern, local proof cockpit, μ-layer self-critique). Others are explicitly direction-only (mesh, federation, token economy, Proof-of-Impact, global impact projections). Without a per-claim truth label, external use of the doctrine risks overclaim drift — the exact failure mode the Third Fact itself forbids (Pillar 02 Humility · Pillar 03 Proof · ADR-005 consent)."
+    },
+    {
+      "file": "docs/THIRD_FACT_CURRENT_STATE_DELTA.md",
+      "kind": "economic",
+      "text": "| Token economy              | DESIGNED_NOT_LIVE / ASPIRATIONAL | `docs/CURRENT_LIMITS.md` \"Hard non-claims\"                          |"
+    },
+    {
+      "file": "docs/THREE_REPO_PRODUCT_STACK_CANON_v0_1.md",
+      "kind": "economic",
+      "text": "| `BizraInfo/Dema`                | Product face / operator UX / consent surface        | Onboarding, Homebase UX, CLI/TUI journey, setup, status, consent planning, receipt browsing, user-facing wording | Governed runtime execution, token economics, federation, core proof engine     | Active product surface              |"
+    },
+    {
+      "file": "docs/THREE_REPO_PRODUCT_STACK_CANON_v0_1.md",
+      "kind": "economic",
+      "text": "| Full URP/token economy is live        | No                               | No                   | No                       | No              | Forbidden claim     |"
+    },
+    {
+      "file": "docs/THREE_REPO_PRODUCT_STACK_CANON_v0_1.md",
+      "kind": "first_or_only",
+      "text": "Dema is the only public entry point for the first user journey."
+    },
+    {
+      "file": "docs/UX_BLUEPRINT.md",
+      "kind": "economic",
+      "text": "execution, Node0 handoff, model inference, receipt minting, token claims,"
+    },
+    {
+      "file": "README.md",
+      "kind": "cryptographic",
+      "text": "- Ed25519 persistent key custody (demo + verify are live; key persistence is not)"
+    },
+    {
+      "file": "README.md",
+      "kind": "cryptographic",
+      "text": "This emits a hash-committed machine-readable manifest for the current Dema"
+    }
+  ]
+}
