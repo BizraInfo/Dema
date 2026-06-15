@@ -394,5 +394,17 @@ export function formatHarnessIntegration(harness) {
   return lines.join("\n");
 }
 
+export function formatHarnessIntegrationSummary(summary) {
+  return [
+    "DEMA Harness Summary",
+    `  Verdict:    ${summary.verdict}`,
+    `  Gates:      ${summary.gates}`,
+    `  Hooks:      ${summary.hooks_wired} wired`,
+    `  Probes:     ${summary.probe_count} (all_present: ${summary.probes_present})`,
+    `  Gaps:       ${summary.critique_gaps} (blockers: ${summary.critique_blockers})`,
+    "Boundary: preview-only; no execution; no mutation; no receipt minted.",
+  ].join("\n");
+}
+
 export const HARNESS_HOOK_CHECKS = HOOK_CHECKS;
 export const HARNESS_BEHAVIORAL_PROBES = BEHAVIORAL_PROBES;
