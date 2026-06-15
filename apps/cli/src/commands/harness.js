@@ -3,6 +3,7 @@ import {
   buildHarnessIntegration,
   buildHarnessIntegrationSummary,
   formatHarnessIntegration,
+  formatHarnessIntegrationSummary,
 } from "../../../../packages/core/src/harness-integration.js";
 
 export async function cmd_harness(ctx) {
@@ -12,8 +13,10 @@ export async function cmd_harness(ctx) {
     : buildHarnessIntegration();
   if (argv.includes("--json")) {
     console.log(JSON.stringify(harness, null, 2));
+  } else if (argv.includes("--summary")) {
+    console.log(formatHarnessIntegrationSummary(harness));
   } else {
-    console.log(formatHarnessIntegration(buildHarnessIntegration()));
+    console.log(formatHarnessIntegration(harness));
   }
   process.exit(process.exitCode ?? 0);
 }
