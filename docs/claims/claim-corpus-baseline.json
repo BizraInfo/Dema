@@ -566,7 +566,7 @@
     {
       "file": "docs/TESTING.md",
       "kind": "economic",
-      "text": "|`tests/claim-register.test.js` | NODE0-CLAIM-MAP-PROOF-GAP-REGISTER-V0.1 validator (`scripts/claims/claim-register-check.mjs`) over the machine-readable register (`docs/claims/node0-claim-register.v0.1.json`): enforces required fields + unique ids (R1), maturity/evidence/confidence enums (R2), verification_path for any non-DESIGNED status (R3), the overclaim gate — only capability-gated wording (token/mint/reward/economic/federation/public_network/production/shariah) is capped at MECHANISM_VERIFIED_SYNTHETIC (R4); sensitivity tags like `private*data`are NOT capped (a local consented run can make such a claim real), and real/production status requires VERIFIED/MEASURED evidence (R5); plus the`--check`drift gate and a guard that the seeded register validates clean. Fails closed on overclaim. |"
+      "text": "|`tests/claim-register.test.js` | NODE0-CLAIM-MAP-PROOF-GAP-REGISTER-V0.1 validator (`scripts/claims/claim-register-check.mjs`) over the machine-readable register (`docs/claims/node0-claim-register.v0.1.json`): enforces required fields + unique ids (R1), maturity/evidence/confidence enums (R2), verification_path for any non-DESIGNED status (R3), the overclaim gate — only capability-gated wording (token/mint/reward/economic/federation/public_network/production/shariah) is capped at MECHANISM_VERIFIED_SYNTHETIC (R4); sensitivity tags like `private\\*data`are NOT capped (a local consented run can make such a claim real), and real/production status requires VERIFIED/MEASURED evidence (R5); plus the`--check`drift gate and a guard that the seeded register validates clean. Fails closed on overclaim. |"
     },
     {
       "file": "docs/TESTING.md",
