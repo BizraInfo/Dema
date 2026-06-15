@@ -1,7 +1,9 @@
 import { createNode0Adapter } from "../../../../packages/node-adapter/src/node0-adapter.js";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
+import { htmlSafeJson } from "../../../../packages/core/src/html-safe.js";
 import { statusWithLocalIdentity } from "../lib/status-identity.js";
 import { readPackageVersion } from "../lib/package-version.js";
+import { openerArgv } from "../lib/browser-opener.js";
 
 const adapter = createNode0Adapter();
 
@@ -69,21 +71,16 @@ export async function cmd_dashboard(ctx) {
 
   if (!useStatic) {
     const html = dashboardHtml;
-    const injection = `<script>window.__DEMA_STATUS__=${JSON.stringify(statusPayload)};</script>`;
+    const injection = `<script>window.__DEMA_STATUS__=${htmlSafeJson(statusPayload)};</script>`;
     const filled = html.replace("</body>", injection + "\n</body>");
     const tmp = mkdtempSync(join(tmpdir(), "dema-dashboard-"));
     openPath = join(tmp, "dashboard.html");
     writeFileSync(openPath, filled, "utf8");
   }
 
-  const opener =
-    process.platform === "darwin"
-      ? "open"
-      : process.platform === "win32"
-        ? "start"
-        : "xdg-open";
+  const { cmd, args } = openerArgv(process.platform, openPath);
   const { execFile } = await import("node:child_process");
-  execFile(opener, [openPath], () => {});
+  execFile(cmd, args, () => {});
   console.log(
     useStatic
       ? "Opening static dashboard: " + openPath
