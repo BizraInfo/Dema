@@ -1,7 +1,7 @@
 {
   "schema": "bizra.dema.claim_corpus_baseline.v0.1",
   "note": "Frozen reviewed claim-corpus state. Regenerate only via --update-baseline; every entry is an accepted, unresolved unlabeled-claim finding.",
-  "count": 124,
+  "count": 123,
   "findings": [
     {
       "file": "docs/A_PLUS_BLUEPRINT_v0_1.md",
@@ -317,11 +317,6 @@
       "file": "docs/HOUSE_OF_WISDOM_UKE_URP_CANON_v0_1.md",
       "kind": "economic",
       "text": "Change class: Documentation only · no code · no runtime integration · no ingestion · no model invocation · no URP write · no chain-bound mint · no token/economy claim"
-    },
-    {
-      "file": "docs/INDEX.md",
-      "kind": "cryptographic",
-      "text": "- [02-architecture/NODE0_OSTREE_TAD_v0_1.md](02-architecture/NODE0_OSTREE_TAD_v0_1.md) — OSTree-model technical architecture: maps the content-addressed signed receipt chain / Block0 to OSTree (object store, commit, fsck, deployment), then proposes the stdlib composition manifest before any libostree adoption."
     },
     {
       "file": "docs/NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md",
