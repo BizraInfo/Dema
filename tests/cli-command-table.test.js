@@ -55,6 +55,7 @@ const COMMAND_SURFACE = [
   "llm-router",
   "model-broker",
   "harness",
+  "bootstrap",
   "process-mining",
   "key-maker-check",
   "llm-invoke",

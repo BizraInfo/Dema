@@ -6,6 +6,7 @@ import { cmd_project_status } from "./commands/project-status.js";
 import { cmd_skill_growth_governor } from "./commands/skill-growth-governor.js";
 import { cmd_genesis } from "./commands/genesis.js";
 import { cmd_harness } from "./commands/harness.js";
+import { cmd_bootstrap } from "./commands/bootstrap.js";
 import { cmd_state } from "./commands/state.js";
 import { cmd_setup } from "./commands/setup.js";
 import { cmd_onboarding_lifecycle } from "./commands/onboarding-lifecycle.js";
@@ -416,6 +417,8 @@ Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
   dema llm-router          Local LLM router preview; routing_allowed=false; abstain by default
   dema harness [--summary] [--json]
                            Unified harness integration; aggregates self-proactive, self-critique, micro-compliance, micro-consent, Law-of-Assumption gate + hook inventory
+  dema bootstrap [--summary] [--json]
+                           Bootstrap Mode preview (v0.1) · model-less ephemeral first-entry · composes model-less broker + 7-stage onboarding lifecycle + canonical all-false boundary · no write, no model invocation, no network
   dema process-mining [--summary]
                            Operator-pattern mirror; surfaces ring_advancement_status; blocks operator_judgment
   dema key-maker-check [--door "<text>"] [--summary]
@@ -483,6 +486,10 @@ const REGISTERED_COMMANDS_LIST = [
   },
   { command: "llm-router", description: "local LLM router preview" },
   { command: "harness", description: "unified harness integration" },
+  {
+    command: "bootstrap",
+    description: "model-less ephemeral onboarding preview",
+  },
   { command: "process-mining", description: "operator-pattern mirror" },
   {
     command: "key-maker-check",
@@ -890,6 +897,7 @@ const COMMAND_TABLE = {
   "llm-router": cmd_llm_router,
   "model-broker": cmd_model_broker,
   harness: cmd_harness,
+  bootstrap: cmd_bootstrap,
   "process-mining": cmd_process_mining,
   "key-maker-check": cmd_key_maker_check,
   "llm-invoke": cmd_llm_invoke,
