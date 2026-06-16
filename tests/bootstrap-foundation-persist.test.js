@@ -100,3 +100,40 @@ test("result is deeply frozen", async () => {
   assert.ok(Object.isFrozen(out));
   assert.ok(Object.isFrozen(out.boundary));
 });
+
+test("GO without an explicit root is refused — no ambient ~/.dema write", async () => {
+  // Safety: pin DEMA_HOME to a throwaway dir so even an ambient-default kernel
+  // could only touch the tmp dir, never the real ~/.dema, during this test.
+  const tmpHome = freshRoot();
+  const prev = process.env.DEMA_HOME;
+  process.env.DEMA_HOME = tmpHome;
+  try {
+    const out = await bootstrapFoundationPersist({
+      consent: FOUNDATION_PERSIST_CONSENT_PHRASE,
+    });
+    assert.equal(
+      out.persisted,
+      false,
+      "must not write without an explicit root",
+    );
+    assert.equal(out.mode, "refused");
+    assert.equal(out.reason, "explicit_root_required");
+    assert.equal(out.boundary.foundation_persist_performed, false);
+    assert.deepEqual(
+      readdirSync(tmpHome),
+      [],
+      "ambient location stays untouched",
+    );
+  } finally {
+    if (prev === undefined) delete process.env.DEMA_HOME;
+    else process.env.DEMA_HOME = prev;
+  }
+});
+
+test("dryRun without explicit root is harmless (no write, not gated)", async () => {
+  const out = await bootstrapFoundationPersist({
+    consent: FOUNDATION_PERSIST_CONSENT_PHRASE,
+    dryRun: true,
+  });
+  assert.equal(out.persisted, false);
+});
