@@ -424,8 +424,8 @@ Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
                            Unified harness integration; aggregates self-proactive, self-critique, micro-compliance, micro-consent, Law-of-Assumption gate + hook inventory
   dema bootstrap [--summary] [--json]
                            Bootstrap Mode preview (v0.1) · model-less ephemeral first-entry · composes model-less broker + 7-stage onboarding lifecycle + canonical all-false boundary · no write, no model invocation, no network
-  dema seed [--summary] [--json]
-                           Seed-loop preview (v0.1) · the gate over Seed→Assumption→Meaning→Consent→Receipt→Growth · composes assumption-state + proof-convergence into ADVANCE/HOLD/REFUSED · illustrative example · pure, no write
+  dema seed [--live] [--summary] [--json]
+                           Seed-loop preview (v0.1) · the gate over Seed→Assumption→Meaning→Consent→Receipt→Growth · composes assumption-state + proof-convergence into ADVANCE/HOLD/REFUSED · default = illustrative example · --live grades the real claim register · pure, no write
   dema proof convergence [--summary] [--json]
                            Proof-of-Truth Convergence preview (v0.1) · grades example claims across Formal/Cryptographic/Empirical/Economic rails · no-overclaim (level derived from evidence) · illustrative, not a live verdict
   dema process-mining [--summary]

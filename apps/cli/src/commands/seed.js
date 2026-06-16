@@ -10,6 +10,46 @@ import { buildSeedLoopPreview } from "../../../../packages/core/src/seed-loop-pr
 import { buildAssumptionStatePreview } from "../../../../packages/core/src/assumption-state-preview.js";
 import { buildProofConvergencePreview } from "../../../../packages/core/src/proof-convergence-preview.js";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
+import { buildSeedLoopFromRegister } from "../../../../packages/core/src/seed-loop-from-register.js";
+import { validateClaimRegister } from "../../../../scripts/claims/claim-register-check.mjs";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+const REGISTER_URL = new URL(
+  "../../../../docs/claims/node0-claim-register.v0.1.json",
+  import.meta.url,
+);
+
+// Impure: read + validate the repo's claim register, then compose the loop
+// (pure) over it. Fail-closed — an invalid/unreadable register exits 1, never
+// silently falls back to the example.
+function liveLoopOrExit() {
+  let register;
+  try {
+    register = JSON.parse(readFileSync(fileURLToPath(REGISTER_URL), "utf8"));
+  } catch (error) {
+    console.error(
+      `dema seed --live: cannot read claim register: ${error.message}`,
+    );
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+  const verdict = validateClaimRegister(register);
+  if (!verdict.ok) {
+    console.error(
+      `dema seed --live: claim register invalid: ${JSON.stringify(verdict.violations ?? verdict)}`,
+    );
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+  return buildSeedLoopFromRegister({ register });
+}
+
+function sourceLabel(env) {
+  return env.source === "claim-register"
+    ? "LIVE · claim register"
+    : "EXAMPLE — illustrative, not a live verdict";
+}
 
 function exampleLoop() {
   const assumption_state = buildAssumptionStatePreview({
@@ -46,7 +86,7 @@ function exampleLoop() {
 
 function formatSeed(env) {
   return [
-    "Dema · seed loop (EXAMPLE — illustrative, not a live verdict)",
+    `Dema · seed loop (${sourceLabel(env)})`,
     `  seed: "${env.seed.intent}"`,
     `  loop: ${env.stages.join(" → ")}`,
     `  assumption: ${env.assumption.posture} (admissible=${env.assumption.admissible})`,
@@ -58,12 +98,13 @@ function formatSeed(env) {
 }
 
 function formatSeedSummary(env) {
-  return `Dema seed loop (example) · ${env.posture} · ${env.stages.length} stages · ${env.next_safe_step}`;
+  const src = env.source === "claim-register" ? "live" : "example";
+  return `Dema seed loop (${src}) · ${env.posture} · ${env.stages.length} stages · ${env.next_safe_step}`;
 }
 
 export function cmd_seed(ctx) {
   const { argv } = ctx;
-  const env = exampleLoop();
+  const env = argv.includes("--live") ? liveLoopOrExit() : exampleLoop();
   if (wantsJson(argv)) {
     console.log(JSON.stringify(env, null, 2));
   } else if (argv.includes("--summary")) {
