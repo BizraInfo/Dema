@@ -67,3 +67,17 @@ test("dema seed writes nothing to DEMA_HOME", () => {
   assert.deepEqual(after, before);
   assert.deepEqual(after, []);
 });
+
+test("dema seed --live --json grades the real claim register (source=claim-register)", () => {
+  const home = freshHome();
+  const env = JSON.parse(runCLI(["seed", "--live", "--json"], home));
+  assert.equal(env.schema, SEED_LOOP_PREVIEW_SCHEMA);
+  assert.equal(env.source, "claim-register");
+  assert.ok(["ADVANCE", "HOLD", "REFUSED"].includes(env.posture));
+  assert.ok(env.claims_graded > 0, "graded real register claims");
+  assert.deepEqual(
+    readdirSync(home),
+    [],
+    "--live reads the register but writes nothing",
+  );
+});
