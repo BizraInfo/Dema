@@ -57,6 +57,7 @@ const COMMAND_SURFACE = [
   "model-broker",
   "harness",
   "bootstrap",
+  "seed",
   "process-mining",
   "key-maker-check",
   "llm-invoke",
