@@ -16,6 +16,7 @@ import { cmd_model_broker } from "./commands/model-broker.js";
 import { cmd_think } from "./commands/think.js";
 import { cmd_authorship } from "./commands/authorship.js";
 import { cmd_proof } from "./commands/proof.js";
+import { cmd_foundation } from "./commands/foundation.js";
 import { cmd_realm } from "./commands/realm.js";
 import { cmd_mission } from "./commands/mission.js";
 import { cmd_memory } from "./commands/memory.js";
@@ -155,6 +156,9 @@ Orientation:
   dema authorship demo [--json]
                     Generate ephemeral keypair, sign, verify (no disk write)
 
+Foundation:
+  dema foundation create [--consent <phrase>] [--json] [--dry-run]
+                    Consent-gated create of the local node foundation under DEMA_HOME · exact-phrase write · SKIP for ephemeral · changes no existing command
 Proof:
   dema proof passport [--json]
                     Generate portable proof passport from local receipts
@@ -527,6 +531,7 @@ const REGISTERED_COMMANDS_LIST = [
     description: "verify or demo Ed25519 authorship receipts",
   },
   { command: "proof", description: "generate portable proof passport" },
+  { command: "foundation", description: "consent-gated local node foundation" },
   {
     command: "genesis",
     description:
@@ -873,6 +878,7 @@ const COMMAND_TABLE = {
   witness: cmd_witness,
   authorship: cmd_authorship,
   proof: cmd_proof,
+  foundation: cmd_foundation,
   genesis: cmd_genesis,
   attest: cmd_attest,
   "verify-grounded": cmd_verify_grounded,
