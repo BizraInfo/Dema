@@ -8,6 +8,7 @@ import {
 } from "../../../../packages/receipts/src/proof-passport-verify.js";
 import { verifyProofPassportDeep } from "../../../../packages/receipts/src/proof-passport-deep-verify.js";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
+import { runProofConvergence } from "./proof-convergence.js";
 
 function argValue(argv, name) {
   const index = argv.indexOf(name);
@@ -18,6 +19,10 @@ export async function cmd_proof(ctx) {
   const { argv } = ctx;
   const proofSub = argv[1] ?? "";
   const wantJsonP = wantsJson(argv);
+
+  if (proofSub === "convergence") {
+    return runProofConvergence(ctx);
+  }
 
   if (proofSub === "passport" && argv[2] === "verify") {
     const positional = argv.slice(3).filter((a) => !a.startsWith("--"));
