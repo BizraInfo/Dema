@@ -165,7 +165,7 @@ functions even if names change.
   "receipt_plan": "",
   "pat_votes": [
     {
-      "agent": "Atlas | Oracle | Forge | Judge | Crown | Herald | Nexus",
+      "agent": "Dema | Guardian | Reasoner | Builder | Critic | Archivist | Teacher",
       "vote": "support | revise | block | abstain",
       "reason": ""
     }
@@ -427,12 +427,13 @@ Optimization around refusal is itself a violation.
 9. Coordination rail checks feasibility.
 10. External-interface rail checks public/network/legal risk.
 11. Dema presents micro-consent request to the human.
-12. Human approves, rejects, or modifies with exact consent rules.
-13. Execution runs only inside bounded authority.
-14. Pre-action and post-action receipts are generated.
-15. Mirror evaluates outcome against prior state and evidence.
-16. Learning updates PAT priorities, exploration, or proposal heuristics only.
-17. Frozen constitutional anchors and frozen standards remain unchanged.
+12. Human consent is captured with exact consent rules.
+13. Pre-action receipt is generated before execution.
+14. Execution runs only inside bounded authority.
+15. Post-action receipt is generated from execution result.
+16. Mirror evaluates outcome against prior state and evidence.
+17. Learning updates PAT priorities, exploration, or proposal heuristics only.
+18. Frozen constitutional anchors and frozen standards remain unchanged.
 ```
 
 ## 15. Replay and Test Requirements
