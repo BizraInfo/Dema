@@ -60,6 +60,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [02-architecture/gateway-http-adapter.md](02-architecture/gateway-http-adapter.md) — gateway adapter target.
 - [02-architecture/pat-builder-sat-validator.md](02-architecture/pat-builder-sat-validator.md) — PAT/SAT bridge.
 - [02-architecture/bizra-agent-governance-runtime-spec-v0.1.md](02-architecture/bizra-agent-governance-runtime-spec-v0.1.md) — DECLARED/DESIGNED_NOT_LIVE governance runtime contract for PAT proposals, FATE verdicts, SAT veto rails, micro-consent, two-phase receipts, Mirror evaluation, and bounded learning.
+- [02-architecture/dema-first-time-onboarding-protocol-v0.1.md](02-architecture/dema-first-time-onboarding-protocol-v0.1.md) — DECLARED_SPEC/DESIGNED_NOT_LIVE first-time onboarding protocol: the 7-stage mechanism (binds `ONBOARDING_LIFECYCLE_STAGE_IDS`), the 4-phase presentation view over it, and the four entry laws (ephemeral decline, zero-model bootstrap, model-discovery independence, preview-vs-live wording). Reconciles ADR-011; doc + enforcing test only, no runtime.
 - [02-architecture/SAT_ROLE_BOUNDARY.md](02-architecture/SAT_ROLE_BOUNDARY.md) — SAT constitutional guard contract: PAT proposes / SAT verifies-blocks-audits, the 5 role questions, verdict shape, and the registry-field contract (DECLARED, no runtime).
 - [02-architecture/sat-verifier-sibling-spec.md](02-architecture/sat-verifier-sibling-spec.md) — SAT verifier sibling spec.
 - [02-architecture/node0-urp-ecosystem-transition.md](02-architecture/node0-urp-ecosystem-transition.md) — internal Node0 to shared URP transition note; docs-only, not public roadmap.
@@ -112,6 +113,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [../themassage.pdf](../themassage.pdf), [../bizra.pdf](../bizra.pdf), [../BIZRA_Third_Fact_v0_1_FINAL.pdf](../BIZRA_Third_Fact_v0_1_FINAL.pdf) — three founding files bound by the priority anchor.
 
 - [ELITE_FULL_STACK_BLUEPRINT.md](ELITE_FULL_STACK_BLUEPRINT.md) — elite full-stack software project blueprint integrating MBOK/PMBOK 10 domains, DevOps value stream, CI/CD pipeline automation (4 remote rails + local gates), rigorous performance-quality assurance (artifacts, thresholds, world-class standards). State-of-the-art for the pinnacle masterpiece.
+
 ## Quality, delivery, and contribution
 
 - [DELIVERY_SPINE_v0_1.md](DELIVERY_SPINE_v0_1.md) — Defines Dema's canonical delivery gates, CI/CD ownership, release truth labels, quality spine, and operator-local extended gate boundaries.
