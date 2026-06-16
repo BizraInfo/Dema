@@ -1,7 +1,7 @@
 {
   "schema": "bizra.dema.claim_corpus_baseline.v0.1",
   "note": "Frozen reviewed claim-corpus state. Regenerate only via --update-baseline; every entry is an accepted, unresolved unlabeled-claim finding.",
-  "count": 124,
+  "count": 123,
   "findings": [
     {
       "file": "docs/A_PLUS_BLUEPRINT_v0_1.md",
@@ -319,11 +319,6 @@
       "text": "Change class: Documentation only · no code · no runtime integration · no ingestion · no model invocation · no URP write · no chain-bound mint · no token/economy claim"
     },
     {
-      "file": "docs/INDEX.md",
-      "kind": "cryptographic",
-      "text": "- [02-architecture/NODE0_OSTREE_TAD_v0_1.md](02-architecture/NODE0_OSTREE_TAD_v0_1.md) — OSTree-model technical architecture: maps the content-addressed signed receipt chain / Block0 to OSTree (object store, commit, fsck, deployment), then proposes the stdlib composition manifest before any libostree adoption."
-    },
-    {
       "file": "docs/NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md",
       "kind": "economic",
       "text": "- **Purpose**: Eventual accounting layer — a stable utility token paired with an earned reputation token. Both bound to PoI receipts."
@@ -566,7 +561,7 @@
     {
       "file": "docs/TESTING.md",
       "kind": "economic",
-      "text": "|`tests/claim-register.test.js` | NODE0-CLAIM-MAP-PROOF-GAP-REGISTER-V0.1 validator (`scripts/claims/claim-register-check.mjs`) over the machine-readable register (`docs/claims/node0-claim-register.v0.1.json`): enforces required fields + unique ids (R1), maturity/evidence/confidence enums (R2), verification_path for any non-DESIGNED status (R3), the overclaim gate — only capability-gated wording (token/mint/reward/economic/federation/public_network/production/shariah) is capped at MECHANISM_VERIFIED_SYNTHETIC (R4); sensitivity tags like `private*data`are NOT capped (a local consented run can make such a claim real), and real/production status requires VERIFIED/MEASURED evidence (R5); plus the`--check`drift gate and a guard that the seeded register validates clean. Fails closed on overclaim. |"
+      "text": "|`tests/claim-register.test.js` | NODE0-CLAIM-MAP-PROOF-GAP-REGISTER-V0.1 validator (`scripts/claims/claim-register-check.mjs`) over the machine-readable register (`docs/claims/node0-claim-register.v0.1.json`): enforces required fields + unique ids (R1), maturity/evidence/confidence enums (R2), verification_path for any non-DESIGNED status (R3), the overclaim gate — only capability-gated wording (token/mint/reward/economic/federation/public_network/production/shariah) is capped at MECHANISM_VERIFIED_SYNTHETIC (R4); sensitivity tags like `private\\*data`are NOT capped (a local consented run can make such a claim real), and real/production status requires VERIFIED/MEASURED evidence (R5); plus the`--check`drift gate and a guard that the seeded register validates clean. Fails closed on overclaim. |"
     },
     {
       "file": "docs/TESTING.md",
