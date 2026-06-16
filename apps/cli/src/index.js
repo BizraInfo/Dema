@@ -7,6 +7,7 @@ import { cmd_skill_growth_governor } from "./commands/skill-growth-governor.js";
 import { cmd_genesis } from "./commands/genesis.js";
 import { cmd_harness } from "./commands/harness.js";
 import { cmd_bootstrap } from "./commands/bootstrap.js";
+import { cmd_seed } from "./commands/seed.js";
 import { cmd_state } from "./commands/state.js";
 import { cmd_setup } from "./commands/setup.js";
 import { cmd_onboarding_lifecycle } from "./commands/onboarding-lifecycle.js";
@@ -423,6 +424,8 @@ Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
                            Unified harness integration; aggregates self-proactive, self-critique, micro-compliance, micro-consent, Law-of-Assumption gate + hook inventory
   dema bootstrap [--summary] [--json]
                            Bootstrap Mode preview (v0.1) · model-less ephemeral first-entry · composes model-less broker + 7-stage onboarding lifecycle + canonical all-false boundary · no write, no model invocation, no network
+  dema seed [--summary] [--json]
+                           Seed-loop preview (v0.1) · the gate over Seed→Assumption→Meaning→Consent→Receipt→Growth · composes assumption-state + proof-convergence into ADVANCE/HOLD/REFUSED · illustrative example · pure, no write
   dema proof convergence [--summary] [--json]
                            Proof-of-Truth Convergence preview (v0.1) · grades example claims across Formal/Cryptographic/Empirical/Economic rails · no-overclaim (level derived from evidence) · illustrative, not a live verdict
   dema process-mining [--summary]
@@ -495,6 +498,10 @@ const REGISTERED_COMMANDS_LIST = [
   {
     command: "bootstrap",
     description: "model-less ephemeral onboarding preview",
+  },
+  {
+    command: "seed",
+    description: "seed-loop gate preview (ADVANCE/HOLD/REFUSED)",
   },
   { command: "process-mining", description: "operator-pattern mirror" },
   {
@@ -906,6 +913,7 @@ const COMMAND_TABLE = {
   "model-broker": cmd_model_broker,
   harness: cmd_harness,
   bootstrap: cmd_bootstrap,
+  seed: cmd_seed,
   "process-mining": cmd_process_mining,
   "key-maker-check": cmd_key_maker_check,
   "llm-invoke": cmd_llm_invoke,
