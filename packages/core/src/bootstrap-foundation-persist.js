@@ -3,7 +3,7 @@
 // Every prior kernel was pure/ephemeral (no write). This one composes the
 // existing atomic, idempotent runSetup (packages/installer/src/setup.js) behind
 // an exact-string consent gate, making ADR-005 real for the node foundation:
-//   - "GO: CREATE LOCAL NODE FOUNDATION ONLY" → write the foundation under DEMA_HOME.
+//   - "GO: CREATE LOCAL NODE FOUNDATION ONLY" → write the foundation under an EXPLICIT root.
 //   - "SKIP: EPHEMERAL MODE ONLY"             → write nothing (operator declines).
 //   - anything else                           → fail closed, no write.
 //
@@ -17,8 +17,6 @@
 // still call runSetup directly (un-gated) today; routing them through this gate is
 // a separate, deliberate behavior-change slice.
 
-import { join } from "node:path";
-import { homedir } from "node:os";
 import { runSetup } from "../../installer/src/setup.js";
 
 export const FOUNDATION_PERSIST_CONSENT_PHRASE =
@@ -49,18 +47,21 @@ function buildBoundary({ wrote, consented }) {
   };
 }
 
-function defaultRoot() {
-  return process.env.DEMA_HOME || join(homedir(), ".dema");
+// Root hardening: a real write requires an EXPLICIT root. The kernel never reads
+// DEMA_HOME or homedir itself — the caller (e.g. a future CLI) must resolve and pass
+// the write location, so no ambient `~/.dema` write can happen by default.
+function isExplicitRoot(root) {
+  return typeof root === "string" && root.trim().length > 0;
 }
 
 export async function bootstrapFoundationPersist({
   consent = "",
-  root = defaultRoot(),
+  root,
   dryRun = false,
 } = {}) {
   const base = {
     schema: BOOTSTRAP_FOUNDATION_PERSIST_SCHEMA,
-    root,
+    root: root ?? null,
     consent_required: FOUNDATION_PERSIST_CONSENT_PHRASE,
     ephemeral_phrase: FOUNDATION_EPHEMERAL_PHRASE,
   };
@@ -104,7 +105,22 @@ export async function bootstrapFoundationPersist({
     });
   }
 
-  // Consent verified → compose the existing atomic, idempotent writer.
+  // Root hardening: refuse to write to an ambient/implicit location. A real
+  // foundation write must name its root explicitly (consent alone is not enough).
+  if (!isExplicitRoot(root)) {
+    return deepFreeze({
+      ...base,
+      mode: "refused",
+      persisted: false,
+      reason: "explicit_root_required",
+      message:
+        "a real foundation write requires an explicit root; refusing the ambient default",
+      setup_result: null,
+      boundary: buildBoundary({ wrote: false, consented: true }),
+    });
+  }
+
+  // Consent verified + explicit root → compose the existing atomic, idempotent writer.
   const setup_result = await runSetup(root);
   return deepFreeze({
     ...base,
