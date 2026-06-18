@@ -501,7 +501,7 @@ TRACE:                   stdout, stderr, exit code, duration captured
 DETERMINISTIC VERIFICATION:  exit code = 0 AND last line matches "tests N pass / 0 fail"
 RECEIPT:                 receipt minted with test count + duration
 SELF-CRITIQUE:
-  KNOWN: 2232/2232 tests passed in 5.8s
+  KNOWN: 4861/4861 tests passed in ~18s
   INFERRED: no production-code regression
   ASSUMED-WITH-IHSAN: none
   UNKNOWN: any flaky tests not surfaced by a single run

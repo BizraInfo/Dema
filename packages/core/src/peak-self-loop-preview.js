@@ -295,10 +295,10 @@ export function buildPeakSelfLoopPreview({
     slice_history,
     next_slice_signals: [
       {
-        id: "eval-pack-test-count-refresh",
-        text: "Refresh third-party eval pack test count to match current npm test",
+        id: "ux-3-council-seat-pat-routing",
+        text: "Wire council seat selection to PAT role routing in dema chat preview",
         evidence:
-          "BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md cites 2232 tests; local gate runs 4860+",
+          "Delivery spine UX-3 deferred; realm menu and peak-self-loop shipped on PR #185",
       },
     ],
   });

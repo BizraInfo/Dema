@@ -98,8 +98,8 @@ test("PSL-10: high noise input triggers HOLD merged verdict", () => {
 test("PSL-11: next slice observable is post-integration with text and evidence", () => {
   const out = buildPeakSelfLoopPreview();
   const next = out.craftsmanship_witness.next_slice_observables[0];
-  assert.equal(next.id, "eval-pack-test-count-refresh");
-  assert.notEqual(next.id, "peak-self-loop-integration");
+  assert.equal(next.id, "ux-3-council-seat-pat-routing");
+  assert.notEqual(next.id, "eval-pack-test-count-refresh");
   assert.ok(next.text.length > 0);
   assert.ok(next.evidence.length > 0);
 });
