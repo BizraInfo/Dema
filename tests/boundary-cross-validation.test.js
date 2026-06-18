@@ -236,23 +236,36 @@ describe("boundary-cross-validation", () => {
   // ─── Cross-system semantic coherence ────────────────────────────────────
 
   describe("cross-system semantic coherence", () => {
-    it("harness and think agree on all false boundary keys (both are preview-only)", async () => {
+    it("harness stays all-false while think may truth-label observed local probes", async () => {
       const harness = buildHarnessIntegration({ now: FIXED_NOW });
       const think = await buildThinkDryRun("test query", { now: FIXED_NOW });
+      const allowedThinkTrueKeys = new Set([
+        "network_used",
+        "runtime_execution_performed",
+      ]);
 
       for (const key of CANONICAL_SET) {
-        if (key === "runtime_execution_performed") continue; // think may spawn wrapper
         assert.equal(
           harness.boundary[key],
           false,
           `Harness boundary.${key} should be false in preview mode`,
         );
-        assert.equal(
-          think.boundary[key],
-          false,
-          `Think boundary.${key} should be false in dry-run mode`,
-        );
+        if (!allowedThinkTrueKeys.has(key)) {
+          assert.equal(
+            think.boundary[key],
+            false,
+            `Think boundary.${key} should be false unless a local probe is observed`,
+          );
+        }
       }
+      assert.equal(
+        think.boundary.network_used,
+        think.probe_profile.localhost_readiness_probe_performed,
+      );
+      assert.equal(
+        think.boundary.runtime_execution_performed,
+        think.probe_profile.runtime_wrapper_probe_performed,
+      );
     });
 
     it("manifest expected boundary predicts what probe will find", () => {
