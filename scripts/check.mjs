@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 export const commands = [
   ["node", ["scripts/review/env-hygiene-check.mjs"]],
   ["node", ["scripts/review/kernel-purity-check.mjs"]],
+  ["node", ["scripts/review/proof-spine-guard.mjs"]],
   ["node", ["scripts/claims/claim-register-check.mjs"]],
   ["node", ["scripts/claims/generate-public-claims.mjs", "--check"]],
   ["node", ["scripts/claims/claim-corpus-gate.mjs"]],
