@@ -44,6 +44,16 @@ export function formatReleaseReadinessReport(report) {
     lines.push(`  - ${mechanism.status}: ${mechanism.id}`);
   }
   lines.push("");
+  lines.push("Dependency audit:");
+  lines.push(`  status: ${report.dependency_management.audit_policy.status}`);
+  lines.push(
+    `  npm audit: ${report.dependency_management.audit_policy.npm_audit_command}`,
+  );
+  lines.push(
+    `  lockfile required: ${report.dependency_management.audit_policy.lockfile_required ? "yes" : "no"}`,
+  );
+  lines.push(`  evidence: ${report.dependency_management.audit_policy.evidence}`);
+  lines.push("");
   lines.push("World-class gate posture:");
   lines.push(`  ${report.world_class_quality_gates.posture}`);
   for (const gate of report.world_class_quality_gates.gates) {

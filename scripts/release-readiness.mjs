@@ -25,6 +25,12 @@ const REQUIRED_INSTALLER_ARTIFACTS = [
   "scripts/install/uninstall-unix.sh",
   "scripts/install/uninstall-windows.ps1",
 ];
+const LOCKFILE_PATHS = [
+  "package-lock.json",
+  "npm-shrinkwrap.json",
+  "yarn.lock",
+  "pnpm-lock.yaml",
+];
 
 const REQUIRED_GATES = [
   "npm test",
@@ -213,6 +219,43 @@ function buildInstallerCapabilities(artifactTexts) {
       ? "no-hidden-daemon-disclosure"
       : null,
   ].filter(Boolean);
+}
+
+function buildDependencyAuditPolicy({ root, runtimeDeps, devDeps }) {
+  const lockfiles = LOCKFILE_PATHS.map((path) => ({
+    path,
+    exists: existsSync(join(root, path)),
+  }));
+  const presentLockfiles = lockfiles.filter((lockfile) => lockfile.exists);
+  const dependencyCount = runtimeDeps + devDeps;
+
+  if (dependencyCount === 0 && presentLockfiles.length === 0) {
+    return {
+      status: "not_applicable_zero_dependencies",
+      npm_audit_command: "skipped_no_lockfile_required",
+      lockfile_required: false,
+      lockfiles,
+      evidence: "0 runtime dependencies, 0 dev dependencies, no lockfile present",
+    };
+  }
+
+  if (presentLockfiles.length > 0) {
+    return {
+      status: "auditable_lockfile_present",
+      npm_audit_command: "npm audit --audit-level=moderate",
+      lockfile_required: dependencyCount > 0,
+      lockfiles,
+      evidence: `${dependencyCount} dependencies, ${presentLockfiles.length} lockfile(s) present`,
+    };
+  }
+
+  return {
+    status: "review_no_lockfile_with_dependencies",
+    npm_audit_command: "blocked_requires_lockfile",
+    lockfile_required: true,
+    lockfiles,
+    evidence: `${dependencyCount} dependencies, no lockfile present`,
+  };
 }
 
 function buildPipelineAutomation({ workflowFiles, packageJson, nodeMatrix }) {
@@ -613,6 +656,11 @@ export async function buildReleaseReadinessReport({
   };
   const runtimeDeps = Object.keys(packageJson.dependencies ?? {}).length;
   const devDeps = Object.keys(packageJson.devDependencies ?? {}).length;
+  const dependencyAuditPolicy = buildDependencyAuditPolicy({
+    root,
+    runtimeDeps,
+    devDeps,
+  });
 
   const installerCapabilities = buildInstallerCapabilities(installerTexts);
   const pipelineAutomation = buildPipelineAutomation({
@@ -680,6 +728,7 @@ export async function buildReleaseReadinessReport({
       runtime_dependencies: runtimeDeps,
       dev_dependencies: devDeps,
       zero_dependency_posture: runtimeDeps === 0 && devDeps === 0,
+      audit_policy: dependencyAuditPolicy,
     },
     installer_artifacts: {
       required: installerArtifacts,

@@ -97,6 +97,15 @@ test("buildReleaseReadinessReport scores dependency and installer posture", asyn
 
   assert.equal(report.dependency_management.runtime_dependencies, 0);
   assert.equal(report.dependency_management.dev_dependencies, 0);
+  assert.equal(
+    report.dependency_management.audit_policy.status,
+    "not_applicable_zero_dependencies",
+  );
+  assert.equal(
+    report.dependency_management.audit_policy.npm_audit_command,
+    "skipped_no_lockfile_required",
+  );
+  assert.equal(report.dependency_management.audit_policy.lockfile_required, false);
   assert.equal(report.installer_artifacts.required.length, 5);
   assert.ok(
     report.installer_artifacts.required.every((artifact) => artifact.exists),
@@ -373,6 +382,8 @@ test("formatReleaseReadinessReport renders executive DevOps output", async () =>
   assert.match(output, /Management BoK/);
   assert.match(output, /CI\/CD/);
   assert.match(output, /Performance QA/);
+  assert.match(output, /Dependency audit/);
+  assert.match(output, /not_applicable_zero_dependencies/);
   assert.match(output, /World-class gate posture/);
   assert.match(output, /Rollout \/ rollback/);
   assert.match(output, /Traceability evidence/);
