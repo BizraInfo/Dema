@@ -35,6 +35,45 @@ const ANSI = Object.freeze({
 
 const BOOT_DOTS_WIDTH = 32;
 
+// UX-2A · numbered hub menu → `dema realm go <n>` dispatch.
+export const REALM_MENU_ITEMS = Object.freeze([
+  Object.freeze({
+    key: "1",
+    label: "Continue from Last Checkpoint",
+    command: "dema realm checkpoint",
+    realm_sub: "checkpoint",
+  }),
+  Object.freeze({
+    key: "2",
+    label: "Open Mission Board",
+    command: "dema realm board",
+    realm_sub: "board",
+  }),
+  Object.freeze({
+    key: "3",
+    label: "Enter Council Chamber",
+    command: "dema realm council",
+    realm_sub: "council",
+  }),
+  Object.freeze({
+    key: "4",
+    label: "Resource Wallet",
+    command: "dema realm wallet",
+    realm_sub: "wallet",
+  }),
+  Object.freeze({
+    key: "5",
+    label: "Proof Studio",
+    command: "dema realm proof-studio",
+    realm_sub: "proof-studio",
+  }),
+]);
+
+export function realmMenuItemByKey(key) {
+  const k = String(key ?? "");
+  return REALM_MENU_ITEMS.find((item) => item.key === k) ?? null;
+}
+
 function color(s, code, useColor) {
   return useColor ? `${code}${s}${ANSI.reset}` : s;
 }
@@ -121,13 +160,8 @@ export async function gatherDemaRealmState({
     ? "The sovereign seed is awake."
     : "The sovereign seed awaits initialization.";
 
-  const menuOptions = [
-    "[ Continue from Last Checkpoint ]",
-    "[ Open Mission Board ]",
-    "[ Enter Council Chamber ]",
-    "[ Resource Wallet ]",
-    "[ Proof Studio ]",
-  ];
+  const menuItems = REALM_MENU_ITEMS;
+  const menuOptions = menuItems.map((item) => `[ ${item.label} ]`);
 
   return Object.freeze({
     schema: DEMA_REALM_HOME_SCHEMA,
@@ -149,6 +183,7 @@ export async function gatherDemaRealmState({
     boot_steps: Object.freeze(bootSteps.map((s) => Object.freeze(s))),
     seed_awake: seedAwake,
     awakened_line: awakenedLine,
+    menu_items: Object.freeze(menuItems),
     menu_options: Object.freeze(menuOptions),
     boundary: Object.freeze({
       file_write_performed: false,
@@ -239,17 +274,20 @@ export function renderHomeFrame(state, { useColor = true } = {}) {
 
 export function renderMenu(state, { useColor = true } = {}) {
   const accent = state.seed_awake ? ANSI.emerald : ANSI.gold;
+  const items = state.menu_items ?? REALM_MENU_ITEMS;
   const lines = [color(state.awakened_line, accent + ANSI.bold, useColor), ""];
-  for (const opt of state.menu_options) {
-    lines.push(color(opt, ANSI.gold, useColor));
+  for (const item of items) {
+    lines.push(
+      `  ${color(`[${item.key}]`, ANSI.emerald + ANSI.bold, useColor)} ${color(item.label, ANSI.gold, useColor)}`,
+    );
+    lines.push(
+      color(`      ${item.command}`, ANSI.dim + ANSI.ash, useColor),
+    );
   }
   lines.push(
     "",
-    color(
-      "(menu dispatch is preview-only in v0 · UX-2A will wire it)",
-      ANSI.dim + ANSI.ash,
-      useColor,
-    ),
+    color("Navigate:", ANSI.ash, useColor),
+    color("  dema realm go <n>   (1–5)", ANSI.gold, useColor),
   );
   return lines.join("\n");
 }

@@ -147,7 +147,7 @@ Each pattern below uses the same template: describe the pattern · why it matter
 
 - **Pattern description**: Tooling that integrates AI cognition into the development lifecycle — code generation, code review, refactoring, testing, CI/CD. Includes IDE-native agents (Cursor, Continue), code-review agents (CodeRabbit, Greptile), CI/CD agents (Devin, Replit Agents). `EXTERNAL_SOURCE_REQUIRED` for category sizing and specific product growth data.
 - **Why it matters to BIZRA**: tangential. BIZRA's DevOps gates are receipt-bound and disciplined, but BIZRA does not target developer-tools as its primary market. The relevant pattern is: BIZRA's _own_ gates demonstrate a receipt-bound CI/CD posture that this market category does not yet practice.
-- **BIZRA active**: 2232 tests on Node 20.x + 22.x; Delivery Spine 5-step gate ladder; release-readiness audit (`npm run release:readiness`); CodeQL + Socket Security + proof-quality + CodeRabbit CI integration; μ-layer pre-push hook with receipt emission.
+- **BIZRA active**: 4861 tests on Node 20.x + 22.x; Delivery Spine 5-step gate ladder; release-readiness audit (`npm run release:readiness`); CodeQL + Socket Security + proof-quality + CodeRabbit CI integration; μ-layer pre-push hook with receipt emission.
 - **BIZRA designed-not-live**: receipt-bound CI/CD as a product offering (not currently sold or positioned externally); CD (deployment automation) deliberately not configured per `DELIVERY_SPINE §17`.
 - **Evidence still needed**: comparison of BIZRA's receipt-bound CI vs typical CI posture (`EXTERNAL_SOURCE_REQUIRED`); whether the BIZRA gate ladder would scale to a non-Dema codebase.
 

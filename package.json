@@ -39,6 +39,9 @@
     "perf": "node scripts/perf-bench.mjs --a-plus",
     "perf:json": "node scripts/perf-bench.mjs --a-plus --json",
     "delivery:check": "node scripts/delivery-check.mjs",
+    "delivery:ux-gate": "node scripts/review/ux-first-look-gate.mjs",
+    "delivery:readiness-gate": "node scripts/review/delivery-readiness-gate.mjs",
+    "delivery:perf-gate": "node scripts/review/performance-budget-gate.mjs",
     "artifact-011:preflight": "node scripts/artifact-011-ceremony-preflight.mjs --isolated --json",
     "pre-push:seal": "node scripts/pre-push-proof-seal.mjs",
     "layer-a5:prep": "node scripts/layer-a5-operator-prep.mjs --json"

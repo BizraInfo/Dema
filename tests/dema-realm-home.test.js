@@ -12,6 +12,8 @@ import {
   renderMenu,
   renderDemaRealmHome,
   DEMA_REALM_HOME_SCHEMA,
+  REALM_MENU_ITEMS,
+  realmMenuItemByKey,
 } from "../packages/core/src/dema-realm-home.js";
 import {
   initAuthorshipKey,
@@ -154,6 +156,7 @@ describe("gatherDemaRealmState — boundary + freeze discipline", () => {
       assert.equal(Object.isFrozen(s), true);
       assert.equal(Object.isFrozen(s.boot_steps), true);
       assert.equal(Object.isFrozen(s.menu_options), true);
+      assert.equal(Object.isFrozen(s.menu_items), true);
       assert.equal(s.boundary.file_write_performed, false);
       assert.equal(s.boundary.network_used, false);
       assert.equal(s.boundary.federation_used, false);
@@ -204,20 +207,28 @@ describe("renderBootSequence + renderHomeFrame + renderMenu (no color)", () => {
     }
   });
 
-  it("renderMenu includes the 5 menu options + preview-only disclaimer", async () => {
+  it("renderMenu includes numbered keys, commands, and go dispatch hint", async () => {
     const home = freshHome();
     try {
       const s = await gatherDemaRealmState({ demaHome: home, now: FIXED_NOW });
       const out = renderMenu(s, { useColor: false });
+      assert.ok(out.includes("[1]"));
       assert.ok(out.includes("Continue from Last Checkpoint"));
-      assert.ok(out.includes("Open Mission Board"));
-      assert.ok(out.includes("Enter Council Chamber"));
+      assert.ok(out.includes("dema realm checkpoint"));
       assert.ok(out.includes("Resource Wallet"));
-      assert.ok(out.includes("Proof Studio"));
-      assert.ok(out.includes("menu dispatch is preview-only in v0"));
+      assert.ok(out.includes("dema realm wallet"));
+      assert.ok(out.includes("dema realm go <n>"));
+      assert.equal(out.includes("preview-only in v0"), false);
     } finally {
       rmSync(home, { recursive: true, force: true });
     }
+  });
+
+  it("realmMenuItemByKey resolves menu dispatch targets", () => {
+    assert.equal(realmMenuItemByKey("2")?.realm_sub, "board");
+    assert.equal(realmMenuItemByKey("5")?.realm_sub, "proof-studio");
+    assert.equal(realmMenuItemByKey("9"), null);
+    assert.equal(REALM_MENU_ITEMS.length, 5);
   });
 
   it("renderDemaRealmHome composes boot + frame + menu in one pass", async () => {
@@ -227,7 +238,8 @@ describe("renderBootSequence + renderHomeFrame + renderMenu (no color)", () => {
       const out = renderDemaRealmHome(s, { useColor: false });
       assert.ok(out.includes("DEMA NODE0 BOOT"));
       assert.ok(out.includes("BIZRA NODE0 · DEMA HOME"));
-      assert.ok(out.includes("[ Continue from Last Checkpoint ]"));
+      assert.ok(out.includes("[1]"));
+      assert.ok(out.includes("Continue from Last Checkpoint"));
     } finally {
       rmSync(home, { recursive: true, force: true });
     }
@@ -260,7 +272,8 @@ describe("dema realm CLI", () => {
         r.stdout,
         /sovereign seed awaits initialization|sovereign seed is awake/,
       );
-      assert.match(r.stdout, /\[ Open Mission Board \]/);
+      assert.match(r.stdout, /\[2\]/);
+      assert.match(r.stdout, /dema realm go <n>/);
     } finally {
       rmSync(home, { recursive: true, force: true });
     }

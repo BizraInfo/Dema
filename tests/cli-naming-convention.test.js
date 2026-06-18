@@ -14,6 +14,7 @@ const KEBAB_ALLOWLIST = new Set([
   "skill-growth-governor",
   "project-status",
   "craftsmanship-witness",
+  "peak-self-loop",
   "llm-router",
   "process-mining",
   "key-maker-check",
@@ -115,12 +116,12 @@ test("pattern distribution matches ADR-012 counts (drift guard)", () => {
     counts[classify(command)] += 1;
   }
   // ADR-012 documents: single-word=17→18, space-subcommand=13 (top-level tokens),
-  // kebab=14 (setup-check added 2026-05-25), colon=2.
+  // kebab=15 (peak-self-loop added 2026-06-18), colon=2.
   // If this test fails, update ADR-012 alongside.
   assert.equal(
     counts.kebab,
-    14,
-    `Kebab count changed (expected 14, got ${counts.kebab}). Update ADR-012 allowlist.`,
+    15,
+    `Kebab count changed (expected 15, got ${counts.kebab}). Update ADR-012 allowlist.`,
   );
   assert.equal(
     counts.colon,

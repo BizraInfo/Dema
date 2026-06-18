@@ -143,3 +143,11 @@ source of truth — so it does not drift from the actual command surface.
 **Consequence.** Future amendments must follow the same pattern: typed-GO + ADR-012 amendment block + KEBAB_ALLOWLIST update + commit message reference. The amendment cap remains at 4-5 conventions (no new pattern is introduced); allowlist growth is bounded by the principle that NEW commands should prefer space-subcommand and only request kebab when a strong semantic-linkage argument applies.
 
 **Future work.** If audit becomes a recurring class (e.g., `master-craftsmanship audit`, `provenance audit`, `dependency audit`), promote `audit` to a top-level space-subcommand pattern with `dema audit <subject>` and deprecate the kebab `master-craftsmanship` entry in a future major version.
+
+### 2026-06-18 · +1 kebab allowlist entry: `peak-self-loop`
+
+**Context.** PEAK-SELF-LOOP-1A ships `dema peak-self-loop` and routes `dema realm proof-studio` / menu item 5 to the same ultra-micro self-loop preview (SNR · convergence · HHMM diffusion · proactive self harness). The token is kebab-linked to `craftsmanship-witness` as a composed spine surface.
+
+**Decision.** Extend the kebab allowlist to 15 entries with `peak-self-loop`. Semantic linkage to the existing craftsmanship witness family; no new naming convention introduced.
+
+**Consequence.** `tests/cli-naming-convention.test.js` kebab count guard expects 15.

@@ -64,12 +64,7 @@ test("dema task downloads.audit.preview runs end-to-end with DEMA_DOWNLOADS_ROOT
   assert.ok(files.find((f) => f.includes("downloads.audit.preview")));
 });
 
-test("dema bare invocation (no args · non-TTY) emits homebase canonical JSON (14th spine surface)", async () => {
-  // Backwards-compat-impacting change per Homebase TUI v0.1 phase-5 spec §5.6:
-  // bare `dema` on a non-TTY (e.g., piped stdout · CI · execFile) now emits
-  // the schema-tagged homebase preview JSON instead of the active-kernel
-  // banner text. TTY interactive shell behavior is preserved (separate path).
-  // Banner formatter is still tested directly in active-kernel-banner.test.js.
+test("dema bare invocation (no args · non-TTY) emits first-look companion JSON", async () => {
   const { demaRoot } = await makeFixtureDownloads();
   const { stdout } = await execFileAsync("node", [cliPath], {
     env: {
@@ -79,8 +74,7 @@ test("dema bare invocation (no args · non-TTY) emits homebase canonical JSON (1
     },
   });
   const parsed = JSON.parse(stdout);
-  assert.equal(parsed.schema, "bizra.dema.homebase_v0_1.v0.1");
-  assert.equal(parsed.truth_label, "NODE0_LOCAL_SEED");
+  assert.equal(parsed.schema, "bizra.dema.first_look_home.v1");
   assert.equal(parsed.mode, "preview_only");
   assert.equal(parsed.boundary.runtime_execution_performed, false);
 });

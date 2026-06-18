@@ -38,6 +38,7 @@ import { cmd_consent_card } from "./commands/consent-card.js";
 import { cmd_mission_loop } from "./commands/mission-loop.js";
 import { cmd_evidence_event } from "./commands/evidence-event.js";
 import { cmd_craftsmanship_witness } from "./commands/craftsmanship-witness.js";
+import { cmd_peak_self_loop } from "./commands/peak-self-loop.js";
 import { cmd_master_craftsmanship } from "./commands/master-craftsmanship.js";
 import { cmd_llm_router } from "./commands/llm-router.js";
 import { cmd_process_mining } from "./commands/process-mining.js";
@@ -67,6 +68,7 @@ import { cmd_task } from "./commands/task.js";
 import { cmd_sovereign } from "./commands/sovereign.js";
 import { cmd_node0 } from "./commands/node0.js";
 import { cmd_adk } from "./commands/adk.js";
+import { cmd_homebase, runHomebaseInvocation } from "./commands/homebase.js";
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
 import { readOperatorPreferredName } from "../../../packages/core/src/operator-profile.js";
 import {
@@ -94,11 +96,6 @@ import {
   renderIntroLine,
   recordIntroSeen,
 } from "../../../packages/core/src/intro-line.js";
-import {
-  readBannerKey,
-  runBannerKeyLoop,
-} from "../../../packages/core/src/banner-keys.js";
-import { runLiveHomebase } from "../../../packages/core/src/live-homebase.js";
 import {
   renderHelpRoot,
   renderHelpTopic,
@@ -267,7 +264,7 @@ Local asset awareness:
                     no mutation inside scanned root.
 
 Dema Realm (UX-1A, UX-1B):
-  dema realm [--json] [--no-color]
+  dema realm [--json] [--no-color] [--debug]
                     Wake Node0. 7-step boot sequence + BIZRA NODE0 · DEMA HOME
                     frame + 5 menu placeholders. Truth-labeled (DECLARED for
                     surfaces with no runtime yet). Read-only. No mutation, no
@@ -338,6 +335,7 @@ Readiness:
   dema status:json  Show machine-readable status
   dema today        Record a local continuity tick + memory summary
   dema doctor       Validate readiness and consent gate
+  dema homebase     Technical homebase preview (operator surface) [--json]
   dema dashboard    Open homebase dashboard in browser [--json for path only]
 
 Preview planning:
@@ -511,6 +509,11 @@ const REGISTERED_COMMANDS_LIST = [
     description: "master-craftsmanship creation preview",
   },
   {
+    command: "peak-self-loop",
+    description:
+      "peak ultra-micro self-loop preview (SNR · convergence · HHMM · proactive self)",
+  },
+  {
     command: "master-craftsmanship",
     description:
       "audit an artifact against the 10 master-craftsmanship invariants",
@@ -556,6 +559,10 @@ const REGISTERED_COMMANDS_LIST = [
     description: "metadata-only local asset inventory scanner",
   },
   { command: "dashboard", description: "open homebase dashboard in browser" },
+  {
+    command: "homebase",
+    description: "technical homebase preview (operator/debug surface)",
+  },
   {
     command: "ambient",
     description: "show Ambient Sovereign Execution boundary",
@@ -924,6 +931,7 @@ const COMMAND_TABLE = {
   urp: cmd_urp,
   datalake: cmd_datalake,
   realm: cmd_realm,
+  homebase: (ctx) => cmd_homebase(ctx, { dispatchFn: dispatch }),
   node0: cmd_node0,
   adk: cmd_adk,
   status: cmd_status,
@@ -938,6 +946,7 @@ const COMMAND_TABLE = {
   "skill-growth-governor": cmd_skill_growth_governor,
   "project-status": cmd_project_status,
   "craftsmanship-witness": cmd_craftsmanship_witness,
+  "peak-self-loop": cmd_peak_self_loop,
   "master-craftsmanship": cmd_master_craftsmanship,
   codebase: cmd_codebase,
   orchestrator: cmd_orchestrator,
@@ -1007,15 +1016,9 @@ async function dispatch(argv) {
     process.exit(process.exitCode ?? 0);
   }
 
-  // Homebase TUI v0.1 phases 4+5 dispatch · 14th canonical spine surface.
-  // Bare `dema` routes to either:
-  //   · TTY → ANSI homebase frame (phase-4 · static render · v0.1a)
-  //   · non-TTY / --json / DEMA_NO_TUI / NODE_ENV=test → JSON form (phase-5)
-  // The active-kernel interactive shell remains accessible via explicit
-  // `dema chat` or `dema --interactive` opt-outs (preserved for backwards-compat).
-  // v0.1 ships the STATIC frame · no interactive keypress · no affordance
-  // spawn · operator types subcommands explicitly (e.g., `dema receipts`).
-  // Interactive layer deferred to v0.2 with explicit ADR for the dep decision.
+  // First-look companion home (DEMA-QUALITY-DELIVERY-SPINE-1A).
+  // Bare `dema` routes to human-first companion output.
+  // Technical homebase preview: `dema homebase` (JSON/TUI · phase-5 legacy surface).
   const isBareInvocation =
     (command === "active" || command === "" || command === "--json") &&
     !argv.includes("--chat") &&
@@ -1031,54 +1034,24 @@ async function dispatch(argv) {
     const demaHome = process.env.DEMA_HOME || pathJoin(homedir(), ".dema");
     const showIntro = await shouldShowIntro({ home: demaHome });
     if (showIntro) {
-      // In JSON mode write intro to stderr so stdout stays machine-parseable.
       const introStream = wantJson ? process.stderr : process.stdout;
       introStream.write(renderIntroLine() + "\n\n");
       await recordIntroSeen({ home: demaHome });
     }
-    const [{ gather }, { buildHomebasePreview }] = await Promise.all([
-      import("../../../packages/core/src/homebase-gather.js"),
-      import("../../../packages/core/src/homebase-preview.js"),
-    ]);
-    const gathered = await gather();
-    const preview = buildHomebasePreview({ gather: gathered });
+    const { gatherFirstLookContext, buildFirstLookHome, renderFirstLookHome } =
+      await import("../../../packages/core/src/dema-first-look-home.js");
+    const { resolveFormatterOptsFromEnv } =
+      await import("../../../packages/core/src/tui-formatter.js");
+    const ctx = await gatherFirstLookContext({ demaHome });
+    const envelope = buildFirstLookHome(ctx);
     if (wantJson) {
-      process.stdout.write(JSON.stringify(preview, null, 2) + "\n");
+      process.stdout.write(JSON.stringify(envelope, null, 2) + "\n");
       process.exit(process.exitCode ?? 0);
     }
-    // TTY path · render ANSI frame via existing zero-dep formatter.
-    const [{ formatHomebasePreview }, { resolveFormatterOptsFromEnv }] =
-      await Promise.all([
-        import("../../../packages/core/src/tui-formatter.js"),
-        import("../../../packages/core/src/tui-formatter.js"),
-      ]);
     const opts = resolveFormatterOptsFromEnv(process.env);
-    process.stdout.write(formatHomebasePreview(preview, opts) + "\n");
-
-    const bannerInteractive =
-      process.stdin.isTTY &&
-      process.stdout.isTTY &&
-      process.env.DEMA_BANNER_INTERACTIVE !== "0";
-
-    if (bannerInteractive) {
-      const liveMode = process.env.DEMA_HOMEBASE_LIVE !== "0";
-      if (liveMode) {
-        await runLiveHomebase({
-          gatherFn: gather,
-          buildPreviewFn: buildHomebasePreview,
-          dispatchFn: dispatch,
-          stdin: process.stdin,
-          stdout: process.stdout,
-          opts,
-        });
-      } else {
-        await runBannerKeyLoop({
-          readKey: readBannerKey,
-          dispatchFn: dispatch,
-          readKeyOpts: { stdin: process.stdin, stdout: process.stdout },
-        });
-      }
-    }
+    process.stdout.write(
+      renderFirstLookHome(envelope, { noColor: opts.noColor }) + "\n",
+    );
     process.exit(process.exitCode ?? 0);
   }
 

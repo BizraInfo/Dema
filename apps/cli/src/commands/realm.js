@@ -1,6 +1,7 @@
 import {
   gatherDemaRealmState,
   renderDemaRealmHome,
+  realmMenuItemByKey,
 } from "../../../../packages/core/src/dema-realm-home.js";
 import {
   gatherDemaRealmBoard,
@@ -27,8 +28,13 @@ import {
   gatherHomebaseAssetGraph,
   renderHomebaseAssetGraph,
 } from "../../../../packages/core/src/homebase-asset-graph.js";
+import {
+  gatherDemaRealmWallet,
+  renderDemaRealmWallet,
+} from "../../../../packages/core/src/dema-realm-wallet.js";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
 import { shouldUseColor } from "../../../../packages/core/src/status.js";
+import { cmd_peak_self_loop } from "./peak-self-loop.js";
 
 function argValue(argv, name) {
   const index = argv.indexOf(name);
@@ -40,6 +46,27 @@ export async function cmd_realm(ctx) {
   const realmSub = argv[1] ?? "";
   const wantJsonR = wantsJson(argv);
   const noColor = argv.includes("--no-color") || !shouldUseColor();
+
+  if (realmSub === "go") {
+    const pick = argv[2];
+    const item = realmMenuItemByKey(pick);
+    if (!item) {
+      console.error(
+        `Unknown menu key: ${pick ?? "(missing)"}. Use dema realm go <n> where n is 1–5.`,
+      );
+      process.exitCode = 1;
+      process.exit(process.exitCode ?? 1);
+    }
+    if (item.realm_sub) {
+      return cmd_realm({
+        ...ctx,
+        argv: ["realm", item.realm_sub, ...argv.slice(3)],
+      });
+    }
+    console.error(`Menu item ${item.key} has no dispatch target.`);
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 1);
+  }
 
   if (realmSub === "board") {
     const board = await gatherDemaRealmBoard();
@@ -89,6 +116,23 @@ export async function cmd_realm(ctx) {
     }
     console.log(renderDemaRealmCouncil(council, { useColor: !noColor }));
     process.exit(process.exitCode ?? 0);
+  }
+
+  if (realmSub === "wallet") {
+    const wallet = await gatherDemaRealmWallet();
+    if (wantJsonR) {
+      console.log(JSON.stringify(wallet, null, 2));
+      process.exit(process.exitCode ?? 0);
+    }
+    console.log(renderDemaRealmWallet(wallet, { useColor: !noColor }));
+    process.exit(process.exitCode ?? 0);
+  }
+
+  if (realmSub === "proof-studio") {
+    return cmd_peak_self_loop({
+      ...ctx,
+      argv: ["peak-self-loop", ...argv.slice(2)],
+    });
   }
 
   if (realmSub === "checkpoint") {
@@ -146,20 +190,32 @@ export async function cmd_realm(ctx) {
   }
 
   const state = await gatherDemaRealmState();
+  const debugMode = argv.includes("--debug");
   if (wantJsonR) {
     const { buildMumuJourney } =
       await import("../../../../scripts/node0-mumu-cli.mjs");
     const mumu = buildMumuJourney({ operator: state.operator });
-    console.log(JSON.stringify({ ...state, node0_mumu: mumu }, null, 2));
+    const payload = { ...state, node0_mumu: mumu };
+    if (debugMode) {
+      const status = await gatherDemaRealmStatus();
+      payload.debug_status = status;
+    }
+    console.log(JSON.stringify(payload, null, 2));
     process.exit(process.exitCode ?? 0);
   }
   console.log(renderDemaRealmHome(state, { useColor: !noColor }));
-  const { buildMumuJourney } =
-    await import("../../../../scripts/node0-mumu-cli.mjs");
-  const { renderNode0MumuCockpit } =
-    await import("../../../../packages/core/src/node0-mumu-cockpit.js");
-  const mumu = buildMumuJourney({ operator: state.operator });
-  console.log("");
-  console.log(renderNode0MumuCockpit(mumu, { useColor: !noColor }));
+  if (debugMode) {
+    const status = await gatherDemaRealmStatus();
+    console.log("");
+    console.log(renderDemaRealmStatus(status, { useColor: !noColor }));
+  } else {
+    const { buildMumuJourney } =
+      await import("../../../../scripts/node0-mumu-cli.mjs");
+    const { renderNode0MumuCockpit } =
+      await import("../../../../packages/core/src/node0-mumu-cockpit.js");
+    const mumu = buildMumuJourney({ operator: state.operator });
+    console.log("");
+    console.log(renderNode0MumuCockpit(mumu, { useColor: !noColor }));
+  }
   process.exit(process.exitCode ?? 0);
 }

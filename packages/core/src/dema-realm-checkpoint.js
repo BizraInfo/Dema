@@ -9,9 +9,9 @@
 // the world remembers you between sessions.
 //
 // Read-only. Reads `$DEMA_HOME/realm/last-checkpoint.json` if present.
-// Optional `$DEMA_HOME/realm/timeline.json` is read for the timeline section;
-// absent is honest CHECKPOINT_ABSENT or "no persisted timeline yet"
-// (UX-2B will wire the writer). NO mutation, NO network, NO file write.
+// Optional `$DEMA_HOME/realm/timeline.json` is read for the journey timeline;
+// absent is honest CHECKPOINT_ABSENT or "no persisted timeline yet".
+// Timeline events append via `dema realm checkpoint save --timeline-label`.
 //
 // Truth labels:
 //   LOCAL_CHECKPOINT_DECLARED  when last-checkpoint.json exists
@@ -179,17 +179,50 @@ export function renderDemaRealmCheckpoint(state, { useColor = true } = {}) {
   }
 
   lines.push("");
-  lines.push(color("Timeline:", ANSI.gold, useColor));
+  lines.push(color("Journey timeline:", ANSI.gold, useColor));
   if (state.timeline_present && state.timeline.length > 0) {
-    for (const e of state.timeline) {
+    const events = state.timeline;
+    lines.push(
+      color(
+        `  ${events.length} event${events.length === 1 ? "" : "s"} recorded`,
+        ANSI.dim + ANSI.ash,
+        useColor,
+      ),
+    );
+    events.forEach((e, i) => {
+      const isLast = i === events.length - 1;
+      const branch = isLast ? "└─" : "├─";
+      const marker = isLast ? "●" : "○";
+      const timeLabel = color(e.at, ANSI.dim + ANSI.ash, useColor);
+      const eventLabel = isLast
+        ? color(e.label, ANSI.emerald, useColor)
+        : e.label;
+      lines.push(`  ${branch} ${marker} ${timeLabel} · ${eventLabel}`);
+    });
+    if (events.length > 0) {
+      const latest = events[events.length - 1];
       lines.push(
-        `  ${color(e.at, ANSI.dim + ANSI.ash, useColor)} · ${e.label}`,
+        "",
+        color("Resume from latest:", ANSI.ash, useColor),
+        color(
+          `  ${state.checkpoint?.resume_command ?? "dema realm board"}`,
+          ANSI.gold,
+          useColor,
+        ),
+        color(`  (${latest.at} · ${latest.label})`, ANSI.dim + ANSI.ash, useColor),
       );
     }
   } else {
     lines.push(
       color(
-        "  — no persisted timeline yet (UX-2B will wire it)",
+        "  — no persisted timeline yet",
+        ANSI.dim + ANSI.ash,
+        useColor,
+      ),
+    );
+    lines.push(
+      color(
+        "  Grow it: dema realm checkpoint save --label \"…\" --timeline-label \"…\"",
         ANSI.dim + ANSI.ash,
         useColor,
       ),
