@@ -20,7 +20,20 @@ test("dema bare (non-TTY · DEMA_BANNER_INTERACTIVE=0) exits 0 without hanging",
       NODE_ENV: "test",
     },
   });
-  // Non-TTY path emits homebase JSON.
+  // Non-TTY path emits first-look companion JSON.
+  const parsed = JSON.parse(stdout);
+  assert.equal(parsed.schema, "bizra.dema.first_look_home.v1");
+});
+
+test("dema homebase (non-TTY) still emits technical homebase JSON", async () => {
+  const { stdout } = await execFileAsync("node", [cliPath, "homebase"], {
+    timeout: 5000,
+    env: {
+      ...process.env,
+      DEMA_BANNER_INTERACTIVE: "0",
+      NODE_ENV: "test",
+    },
+  });
   const parsed = JSON.parse(stdout);
   assert.equal(parsed.schema, "bizra.dema.homebase_v0_1.v0.1");
 });
@@ -39,7 +52,7 @@ test("dema bare (non-TTY) stdout does NOT contain the disclaimer text", async ()
   );
 });
 
-test("dema bare (DEMA_NO_TUI=1) emits homebase JSON not banner text", async () => {
+test("dema bare (DEMA_NO_TUI=1) emits first-look JSON not banner text", async () => {
   const { stdout } = await execFileAsync("node", [cliPath], {
     timeout: 5000,
     env: {
@@ -48,6 +61,6 @@ test("dema bare (DEMA_NO_TUI=1) emits homebase JSON not banner text", async () =
     },
   });
   const parsed = JSON.parse(stdout);
-  assert.equal(parsed.schema, "bizra.dema.homebase_v0_1.v0.1");
-  assert.equal(parsed.truth_label, "NODE0_LOCAL_SEED");
+  assert.equal(parsed.schema, "bizra.dema.first_look_home.v1");
+  assert.equal(parsed.mode, "preview_only");
 });

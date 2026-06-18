@@ -304,7 +304,9 @@ describe("renderDemaRealmCheckpoint (no color)", () => {
       assert.match(out, /DEMA REALM · CHECKPOINT JOURNAL/);
       assert.match(out, /No checkpoint found\./);
       assert.match(out, /Truth:\s+CHECKPOINT_ABSENT/);
+      assert.match(out, /Journey timeline:/);
       assert.match(out, /no persisted timeline yet/);
+      assert.match(out, /checkpoint save/);
     } finally {
       rmSync(home, { recursive: true, force: true });
     }
@@ -337,10 +339,13 @@ describe("renderDemaRealmCheckpoint (no color)", () => {
     }
   });
 
-  it("present timeline renders each event as `at · label`", async () => {
+  it("present timeline renders journey tree with latest highlighted", async () => {
     const home = freshHome();
     try {
-      writeCheckpoint(home, { label: "x" });
+      writeCheckpoint(home, {
+        label: "x",
+        resume_command: "dema realm board",
+      });
       writeTimeline(home, [
         { at: "20:08", label: "UX-1A Home verified" },
         { at: "20:32", label: "UX-1B Board pushed" },
@@ -350,8 +355,10 @@ describe("renderDemaRealmCheckpoint (no color)", () => {
         now: FIXED_NOW,
       });
       const out = renderDemaRealmCheckpoint(s, { useColor: false });
-      assert.match(out, /20:08 · UX-1A Home verified/);
-      assert.match(out, /20:32 · UX-1B Board pushed/);
+      assert.match(out, /2 events recorded/);
+      assert.match(out, /├─ ○ 20:08 · UX-1A Home verified/);
+      assert.match(out, /└─ ● 20:32 · UX-1B Board pushed/);
+      assert.match(out, /Resume from latest:/);
     } finally {
       rmSync(home, { recursive: true, force: true });
     }
@@ -383,7 +390,7 @@ describe("dema realm checkpoint CLI", () => {
       });
       assert.equal(r.exitCode, 0);
       assert.match(r.stdout, /DEMA REALM · CHECKPOINT JOURNAL/);
-      assert.match(r.stdout, /Timeline:/);
+      assert.match(r.stdout, /Journey timeline:/);
     } finally {
       rmSync(home, { recursive: true, force: true });
     }

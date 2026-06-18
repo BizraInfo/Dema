@@ -112,3 +112,27 @@ test("bare dema --json with profile language_code 'es' + preferred_name → gree
     await rm(home, { recursive: true, force: true });
   }
 });
+
+test("dema homebase --json with profile language_code 'es' keeps homebase greeting", async () => {
+  const home = await makeHome();
+  try {
+    await writeFile(
+      join(home, "profile.json"),
+      JSON.stringify({ preferred_name: "Samy", language_code: "es" }),
+    );
+    const { stdout } = await execFileAsync(
+      "node",
+      [cliPath, "homebase", "--json"],
+      { env: cliEnv(home) },
+    );
+    const parsed = JSON.parse(stdout);
+    const greetingText = parsed?.greeting?.text ?? "";
+    assert.ok(
+      greetingText.toLowerCase().includes("bienvenido") ||
+        greetingText.includes("Samy"),
+      `expected Spanish greeting in homebase, got: ${greetingText}`,
+    );
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});

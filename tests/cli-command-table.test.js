@@ -35,6 +35,7 @@ const COMMAND_SURFACE = [
   "verify-grounded",
   "urp",
   "realm",
+  "homebase",
   "node0",
   "adk",
   "status",

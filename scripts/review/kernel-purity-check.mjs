@@ -48,10 +48,14 @@ export const IO_TIER_ALLOWLIST = Object.freeze({
     "gather() reads ~/.dema profile/memory/receipts to compose the homebase preview",
   "dema-realm-home.js":
     "reads ~/.dema realm state to render the read-only home view",
+  "dema-first-look-home.js":
+    "reads ~/.dema profile/keys to render the human-first companion home",
   "dema-realm-status.js":
     "reads ~/.dema receipts/checkpoint/timeline for the read-only live status view",
   "dema-realm-council.js":
     "reads ~/.dema state to render the read-only council view",
+  "dema-realm-wallet.js":
+    "reads optional ~/.dema/realm/wallet-intents.json for read-only intent ledger",
   "local-model-inventory-scan.js":
     "read-only filesystem inventory of local model dirs (Ollama/LM Studio/gguf)",
   "safety-report.js":
