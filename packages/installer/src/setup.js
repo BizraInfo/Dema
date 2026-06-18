@@ -6,7 +6,9 @@ import {
   access,
   lstat,
   realpath,
+  open,
 } from "node:fs/promises";
+import { constants } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { isAbsolute, parse, relative, resolve, join } from "node:path";
 import { arch, homedir, platform } from "node:os";
@@ -226,11 +228,18 @@ async function isDirectoryEntry(path) {
 }
 
 async function readRegularJson(path) {
+  let handle;
   try {
-    if (!(await lstat(path)).isFile()) return null;
-    return JSON.parse(await readFile(path, "utf8"));
+    handle = await open(
+      path,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
+    );
+    if (!(await handle.stat()).isFile()) return null;
+    return JSON.parse(await handle.readFile("utf8"));
   } catch {
     return null;
+  } finally {
+    await handle?.close().catch(() => {});
   }
 }
 
