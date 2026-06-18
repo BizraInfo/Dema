@@ -1,6 +1,16 @@
-import { mkdir, writeFile, readFile, rm, access } from "node:fs/promises";
-import { createHash } from "node:crypto";
-import { join } from "node:path";
+import {
+  mkdir,
+  writeFile,
+  readFile,
+  rm,
+  access,
+  lstat,
+  realpath,
+  open,
+} from "node:fs/promises";
+import { constants } from "node:fs";
+import { createHash, randomUUID } from "node:crypto";
+import { isAbsolute, parse, relative, resolve, join } from "node:path";
 import { arch, homedir, platform } from "node:os";
 
 async function exists(path) {
@@ -17,6 +27,10 @@ async function ensureDir(path) {
   await mkdir(path, { recursive: true });
   return { path, status: alreadyExists ? "existing" : "created" };
 }
+
+const PROFILE_SCHEMA = "bizra.dema.profile.v0.1";
+const CONFIG_SCHEMA = "bizra.dema.local_config.v0.1";
+const ROOT_MARKER_SCHEMA = "bizra.dema.root_marker.v0.1";
 
 async function writeJsonIfMissing(path, value) {
   // Atomic exclusive create: flag "wx" (O_CREAT|O_EXCL) fails closed if the
@@ -67,7 +81,7 @@ export async function runSetup(
   const profilePath = join(root, "profile.json");
   entries.push(
     await writeJsonIfMissing(profilePath, {
-      schema: "bizra.dema.profile.v0.1",
+      schema: PROFILE_SCHEMA,
       preferred_name: null,
       memory_consent: "local",
       hidden_autonomy: false,
@@ -78,11 +92,25 @@ export async function runSetup(
   const configPath = join(root, "config.local.json");
   entries.push(
     await writeJsonIfMissing(configPath, {
-      schema: "bizra.dema.local_config.v0.1",
+      schema: CONFIG_SCHEMA,
       mode: "local",
       noHiddenDaemon: true,
       requireExplicitConsent: true,
       nextArtifact: "ARTIFACT-011",
+    }),
+  );
+
+  const rootMarkerPath = join(root, ".dema-root.json");
+  const markerOwnedPaths = entries
+    .filter((entry) => entry.status === "created" && entry.path !== root)
+    .map((entry) => resolve(entry.path));
+  entries.push(
+    await writeJsonIfMissing(rootMarkerPath, {
+      schema: ROOT_MARKER_SCHEMA,
+      root_id: randomUUID(),
+      root: resolve(root),
+      owned_paths: [...markerOwnedPaths, resolve(rootMarkerPath)],
+      created_at: new Date().toISOString(),
     }),
   );
 
@@ -102,6 +130,7 @@ export async function runSetup(
       home: root,
       profile: profilePath,
       config: configPath,
+      root_marker: rootMarkerPath,
       receipts: join(root, "receipts"),
       memory: join(root, "memory"),
       logs: join(root, "logs"),
@@ -131,7 +160,27 @@ export async function runSetup(
 }
 
 const EXPECTED_DIRS = ["receipts", "memory", "logs", "skills"];
-const EXPECTED_FILES = ["profile.json", "config.local.json"];
+const EXPECTED_FILES = ["profile.json", "config.local.json", ".dema-root.json"];
+
+function demaOwnedPaths(root) {
+  return [
+    ...EXPECTED_FILES.map((file) => join(root, file)),
+    ...EXPECTED_DIRS.map((dir) => join(root, dir)),
+  ];
+}
+
+function removableMarkerPaths(root, marker) {
+  if (!Array.isArray(marker.owned_paths)) return null;
+  const allowed = new Set(demaOwnedPaths(root).map((path) => resolve(path)));
+  const removable = [];
+  for (const path of marker.owned_paths) {
+    if (typeof path !== "string" || !isAbsolute(path)) return null;
+    const resolved = resolve(path);
+    if (!allowed.has(resolved)) return null;
+    removable.push(resolved);
+  }
+  return removable.length > 0 ? removable : null;
+}
 
 export async function checkSetup(
   root = process.env.DEMA_HOME || join(homedir(), ".dema"),
@@ -165,6 +214,111 @@ export async function checkSetup(
 
 const REMOVE_CONSENT_PHRASE = "REMOVE DEMA LOCAL DATA";
 
+function isSameOrInside(child, parent) {
+  const rel = relative(parent, child);
+  return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
+}
+
+async function isDirectoryEntry(path) {
+  try {
+    return (await lstat(path)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+async function readRegularJson(path) {
+  let handle;
+  try {
+    handle = await open(
+      path,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
+    );
+    if (!(await handle.stat()).isFile()) return null;
+    return JSON.parse(await handle.readFile("utf8"));
+  } catch {
+    return null;
+  } finally {
+    await handle?.close().catch(() => {});
+  }
+}
+
+async function hasDemaSetupLayout(root) {
+  const allDirsPresent = (
+    await Promise.all(
+      EXPECTED_DIRS.map((dir) => isDirectoryEntry(join(root, dir))),
+    )
+  ).every(Boolean);
+  if (!allDirsPresent) return false;
+
+  const profile = await readRegularJson(join(root, "profile.json"));
+  const config = await readRegularJson(join(root, "config.local.json"));
+  const marker = await readRegularJson(join(root, ".dema-root.json"));
+  const markerIsValid =
+    profile?.schema === PROFILE_SCHEMA &&
+    config?.schema === CONFIG_SCHEMA &&
+    marker?.schema === ROOT_MARKER_SCHEMA &&
+    typeof marker.root_id === "string" &&
+    marker.root_id.length > 0 &&
+    typeof marker.root === "string" &&
+    resolve(marker.root) === root;
+  if (!markerIsValid) return null;
+
+  const removablePaths = removableMarkerPaths(root, marker);
+  return removablePaths ? { removablePaths } : null;
+}
+
+async function validateRemoveRoot(root) {
+  if (typeof root !== "string" || root.trim() === "") {
+    return { ok: false };
+  }
+
+  const lexicalRoot = resolve(root);
+  if (
+    lexicalRoot === parse(lexicalRoot).root ||
+    lexicalRoot === resolve(homedir()) ||
+    isSameOrInside(resolve(process.cwd()), lexicalRoot)
+  ) {
+    return { ok: false };
+  }
+
+  let entry;
+  try {
+    entry = await lstat(root);
+  } catch (err) {
+    if (err.code === "ENOENT") {
+      return { ok: true, root: lexicalRoot, present: false };
+    }
+    throw err;
+  }
+
+  if (entry.isSymbolicLink()) {
+    return { ok: false };
+  }
+
+  const physicalRoot = await realpath(root);
+  if (
+    physicalRoot !== lexicalRoot ||
+    physicalRoot === parse(physicalRoot).root ||
+    physicalRoot === resolve(homedir()) ||
+    isSameOrInside(resolve(process.cwd()), physicalRoot)
+  ) {
+    return { ok: false };
+  }
+
+  const layout = await hasDemaSetupLayout(physicalRoot);
+  if (!layout) {
+    return { ok: false };
+  }
+
+  return {
+    ok: true,
+    root: lexicalRoot,
+    present: true,
+    removablePaths: layout.removablePaths,
+  };
+}
+
 export async function removeSetup(
   root = process.env.DEMA_HOME || join(homedir(), ".dema"),
   { consent = "", dryRun = false } = {},
@@ -180,8 +334,18 @@ export async function removeSetup(
     };
   }
 
-  const present = await exists(root);
-  if (!present) {
+  const validation = await validateRemoveRoot(root);
+  if (!validation.ok) {
+    return {
+      schema: "bizra.dema.setup_remove.v0.1",
+      root,
+      removed: false,
+      reason: "unsafe_remove_root",
+      dry_run: dryRun,
+    };
+  }
+
+  if (!validation.present) {
     return {
       schema: "bizra.dema.setup_remove.v0.1",
       root,
@@ -197,18 +361,21 @@ export async function removeSetup(
       root,
       removed: false,
       reason: "dry_run",
-      would_remove: root,
+      would_remove: validation.removablePaths,
       dry_run: true,
     };
   }
 
-  await rm(root, { recursive: true, force: true });
+  for (const path of validation.removablePaths) {
+    await rm(path, { recursive: true, force: true });
+  }
 
   return {
     schema: "bizra.dema.setup_remove.v0.1",
     root,
     removed: true,
     reason: "consent_verified",
+    removed_paths: validation.removablePaths,
     dry_run: false,
   };
 }
