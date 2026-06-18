@@ -1,6 +1,12 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -117,6 +123,28 @@ describe("removeSetup", () => {
     assert.equal(result.dry_run, true);
     const check = await checkSetup(home);
     assert.equal(check.verdict, "INTACT");
+  });
+
+  it("uninstalls a relative setup root after the process cwd changes", async () => {
+    const sandbox = await freshHome();
+    const originalCwd = process.cwd();
+    try {
+      process.chdir(sandbox);
+      await runSetup("relative-home");
+      process.chdir(tmpdir());
+
+      const home = join(sandbox, "relative-home");
+      const result = await removeSetup(home, {
+        consent: REMOVE_CONSENT_PHRASE,
+        dryRun: true,
+      });
+
+      assert.equal(result.removed, false);
+      assert.equal(result.reason, "dry_run");
+      assert.ok(result.would_remove.includes(join(home, ".dema-root.json")));
+    } finally {
+      process.chdir(originalCwd);
+    }
   });
 
   it("removes with correct consent", async () => {

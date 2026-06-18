@@ -103,13 +103,13 @@ export async function runSetup(
   const rootMarkerPath = join(root, ".dema-root.json");
   const markerOwnedPaths = entries
     .filter((entry) => entry.status === "created" && entry.path !== root)
-    .map((entry) => entry.path);
+    .map((entry) => resolve(entry.path));
   entries.push(
     await writeJsonIfMissing(rootMarkerPath, {
       schema: ROOT_MARKER_SCHEMA,
       root_id: randomUUID(),
       root: resolve(root),
-      owned_paths: [...markerOwnedPaths, rootMarkerPath],
+      owned_paths: [...markerOwnedPaths, resolve(rootMarkerPath)],
       created_at: new Date().toISOString(),
     }),
   );
@@ -174,7 +174,7 @@ function removableMarkerPaths(root, marker) {
   const allowed = new Set(demaOwnedPaths(root).map((path) => resolve(path)));
   const removable = [];
   for (const path of marker.owned_paths) {
-    if (typeof path !== "string") return null;
+    if (typeof path !== "string" || !isAbsolute(path)) return null;
     const resolved = resolve(path);
     if (!allowed.has(resolved)) return null;
     removable.push(resolved);
