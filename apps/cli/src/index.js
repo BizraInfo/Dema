@@ -267,6 +267,11 @@ Dema Realm (UX-1A, UX-1B):
                     DEMA_HOME/realm/local-assets/inventory-v0.1.json and
                     renders category clusters, denied/truncated counters, and
                     next safe action. Read-only · no scan · no mutation.
+  dema realm asset-graph [--json] [--no-color]
+                    HOMEBASE-ASSET-GRAPH-1A metadata graph. Composes homebase
+                    affordances with the read-only world-map inventory clusters
+                    (category → affordance hints). No scan · no content · no
+                    network · no mutation.
   dema realm council [--json] [--no-color]
                     UX-1D Council Chamber: 5 declared council profiles —
                     Guardian (boundary/consent/risk), Reasoner (SAPE/graph
