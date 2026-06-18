@@ -306,6 +306,9 @@ export async function buildThinkDryRun(
     wrapper_path: memoryRaw.wrapper_path,
     reason: memoryRaw.reason ?? null,
   };
+  const localhostReadinessProbePerformed =
+    modelReadiness.broker_reachable === "LOCALHOST_API_OBSERVED";
+  const runtimeWrapperProbePerformed = memoryResult.available;
 
   const payload = {
     schema: SCHEMA,
@@ -334,10 +337,15 @@ export async function buildThinkDryRun(
         : modelReadiness.consent_phrase_pattern,
       model_invocation_performed: false,
     },
+    probe_profile: {
+      static_dry_run_performed: true,
+      localhost_readiness_probe_performed: localhostReadinessProbePerformed,
+      runtime_wrapper_probe_performed: runtimeWrapperProbePerformed,
+    },
     boundary: {
       filesystem_write_performed: false,
-      network_used: false,
-      runtime_execution_performed: memoryResult.available,
+      network_used: localhostReadinessProbePerformed,
+      runtime_execution_performed: runtimeWrapperProbePerformed,
       model_loaded: false,
       model_invocation_performed: false,
       prompt_executed: false,

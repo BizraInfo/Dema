@@ -227,6 +227,40 @@ test("gateway-http adapter network failure is reported, never thrown", async () 
   assert.ok(status.findings.length >= 4);
 });
 
+test("gateway-http adapter refuses public HTTPS endpoints before fetch", async () => {
+  const adapter = createGatewayHttpAdapter({
+    baseUrl: "https://example.com",
+    timeoutMs: 500,
+  });
+  const status = await adapter.status();
+
+  assert.equal(status.gateway.reachable, false);
+  assert.equal(status.gateway.base_url, "https://example.com");
+  assert.equal(status.truth_label, "DEGRADED");
+  assert.ok(
+    status.findings.every((finding) =>
+      finding.includes("non-localhost_gateway_url_refused"),
+    ),
+  );
+});
+
+test("gateway-http adapter refuses LAN IP endpoints before fetch", async () => {
+  const adapter = createGatewayHttpAdapter({
+    baseUrl: "http://192.168.1.25:7421",
+    timeoutMs: 500,
+  });
+  const status = await adapter.status();
+
+  assert.equal(status.gateway.reachable, false);
+  assert.equal(status.gateway.base_url, "http://192.168.1.25:7421");
+  assert.equal(status.truth_label, "DEGRADED");
+  assert.ok(
+    status.findings.every((finding) =>
+      finding.includes("non-localhost_gateway_url_refused"),
+    ),
+  );
+});
+
 test("gateway-http adapter exposes UNKNOWN for fields not in the gateway surface", async () => {
   const gw = await startFakeGateway(HEALTHY_ROUTES);
   try {

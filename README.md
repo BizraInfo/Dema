@@ -138,7 +138,7 @@ dema ambient --manifest
 dema ambient --manifest --json
 ```
 
-This emits a hash-committed machine-readable manifest for the current Dema
+This emits a **MEASURED** hash-committed machine-readable manifest for the current Dema
 boundary: readable symbolic paths, no writable paths, no executable commands,
 no network access, and no foreign personal data. Signing is explicitly deferred
 to governed Node0 because Dema does not issue identity-bound artifacts.
@@ -451,7 +451,7 @@ each capability below:
 - Federation (multi-node communication)
 - Token / Proof-of-Impact economy
 - Node1 / URP networking
-- Ed25519 persistent key custody (demo + verify are live; key persistence is not)
+- **DESIGNED_NOT_LIVE** Ed25519 persistent key custody (demo + verify are live; key persistence is not)
 - Full multi-model routing
 - Public installer endpoint (install.bizra.ai)
 

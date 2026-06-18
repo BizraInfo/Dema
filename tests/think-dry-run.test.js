@@ -1,5 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   buildThinkDryRun,
   formatThinkDryRun,
@@ -98,6 +101,37 @@ describe("think-dry-run", () => {
         ),
       );
       assert.equal(e.boundary_evidence.receipt_minted, "NOT_PERFORMED_DRY_RUN");
+    });
+
+    it("marks localhost and wrapper probes as real boundary effects when observed", async () => {
+      const oldFetch = globalThis.fetch;
+      const oldWrapper = process.env.DEMA_AGENT_DB_QUERY_PATH;
+      const dir = mkdtempSync(join(tmpdir(), "dema-think-probes-"));
+      const wrapper = join(dir, "agent-db-query.py");
+      writeFileSync(wrapper, 'import json\nprint(json.dumps({"hits": []}))\n');
+      process.env.DEMA_AGENT_DB_QUERY_PATH = wrapper;
+      globalThis.fetch = async () => ({
+        ok: true,
+        json: async () => ({ models: [{ name: "llama3.2:latest", size: 1 }] }),
+      });
+      try {
+        const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
+        assert.equal(e.boundary.network_used, true);
+        assert.equal(e.boundary.runtime_execution_performed, true);
+        assert.equal(e.boundary.public_network_used, false);
+        assert.equal(
+          e.probe_profile.localhost_readiness_probe_performed,
+          true,
+        );
+        assert.equal(e.probe_profile.runtime_wrapper_probe_performed, true);
+        assert.equal(e.boundary_evidence.network_used, "LOCALHOST_API_OBSERVED");
+        assert.equal(e.boundary_evidence.memory_query, "WRAPPER_SPAWNED_LOCAL");
+      } finally {
+        globalThis.fetch = oldFetch;
+        if (oldWrapper) process.env.DEMA_AGENT_DB_QUERY_PATH = oldWrapper;
+        else delete process.env.DEMA_AGENT_DB_QUERY_PATH;
+        rmSync(dir, { recursive: true, force: true });
+      }
     });
 
     it("memory query handles wrapper missing gracefully", async () => {
