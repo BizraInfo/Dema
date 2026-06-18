@@ -36,6 +36,7 @@ const COMMAND_SURFACE = [
   "urp",
   "realm",
   "node0",
+  "adk",
   "status",
   "status:json",
   "state",

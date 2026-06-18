@@ -9,6 +9,7 @@ export const commands = [
   ["node", ["scripts/review/homebase-asset-graph.mjs"]],
   ["node", ["scripts/review/datalake-dual-loop-preview.mjs"]],
   ["node", ["scripts/review/node0-mumu-journey.mjs"]],
+  ["node", ["scripts/review/adk-agent-contract.mjs"]],
   ["node", ["scripts/claims/claim-register-check.mjs"]],
   ["node", ["scripts/claims/generate-public-claims.mjs", "--check"]],
   ["node", ["scripts/claims/claim-corpus-gate.mjs"]],

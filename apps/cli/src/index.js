@@ -66,6 +66,7 @@ import { cmd_design } from "./commands/design.js";
 import { cmd_task } from "./commands/task.js";
 import { cmd_sovereign } from "./commands/sovereign.js";
 import { cmd_node0 } from "./commands/node0.js";
+import { cmd_adk } from "./commands/adk.js";
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
 import { readOperatorPreferredName } from "../../../packages/core/src/operator-profile.js";
 import {
@@ -242,6 +243,16 @@ Node0 Mumu closed loop (N0-MUMU-CLI-1/2, read-only face):
                     Closed-loop operator journey for Mumu: stage INACTIVE /
                     AWAITING_CONSENT / ACTIVE / TAMPERED with next command.
                     Governed runtime stays npm run node0; Dema is the face.
+
+BIZRA ADK (BIZRA-ADK-AGENT-CONTRACT-1A, define/validate/preview only):
+  dema adk agent validate <contract.json> [--json]
+                    Refuse agent contracts missing scope, consent/proof/receipt
+                    policies, what_this_does_not_prove, or stop_by_default.
+                    No execution, network, keys, signing, or federation.
+  dema adk agent template <pat-engineer|sat-verifier|...> [--json]
+                    Emit a PAT or SAT agent contract template (local-only).
+  dema adk agent receipt-preview <contract.json> [--json]
+                    Preview receipt shape for a validated agent contract.
 
 Local asset awareness:
   dema assets scan --root <path> [--json]
@@ -911,6 +922,7 @@ const COMMAND_TABLE = {
   datalake: cmd_datalake,
   realm: cmd_realm,
   node0: cmd_node0,
+  adk: cmd_adk,
   status: cmd_status,
   "status:json": cmd_status_json,
   state: cmd_state,
