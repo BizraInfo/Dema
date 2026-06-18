@@ -147,9 +147,19 @@ export async function cmd_realm(ctx) {
 
   const state = await gatherDemaRealmState();
   if (wantJsonR) {
-    console.log(JSON.stringify(state, null, 2));
+    const { buildMumuJourney } =
+      await import("../../../../scripts/node0-mumu-cli.mjs");
+    const mumu = buildMumuJourney({ operator: state.operator });
+    console.log(JSON.stringify({ ...state, node0_mumu: mumu }, null, 2));
     process.exit(process.exitCode ?? 0);
   }
   console.log(renderDemaRealmHome(state, { useColor: !noColor }));
+  const { buildMumuJourney } =
+    await import("../../../../scripts/node0-mumu-cli.mjs");
+  const { renderNode0MumuCockpit } =
+    await import("../../../../packages/core/src/node0-mumu-cockpit.js");
+  const mumu = buildMumuJourney({ operator: state.operator });
+  console.log("");
+  console.log(renderNode0MumuCockpit(mumu, { useColor: !noColor }));
   process.exit(process.exitCode ?? 0);
 }

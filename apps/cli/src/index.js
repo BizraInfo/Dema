@@ -223,18 +223,25 @@ URP:
                     MARK_LOCAL_ONLY requires "MARK URP ENTRY LOCAL-ONLY".
                     LOCAL ONLY — no network, no federation, no mint.
 
-Node0 Mumu closed loop (N0-MUMU-CLI-1, read-only face):
-  dema node0 mumu status [--json]
+Node0 Mumu closed loop (N0-MUMU-CLI-1/2, read-only face):
+  dema node0 mumu status [--json] [--out <dir>]
                     Report the Mumu closed-loop state: whether a receipt chain
                     exists under artifacts/node0/mumu, its receipt count, and the
                     GENESIS single-node network-mode invariants. Read-only; never
                     runs the loop (that stays npm run node0). No mutation, no
                     network, no mint.
-  dema node0 mumu verify [--json]
+  dema node0 mumu verify [--json] [--out <dir>]
                     Replay-verify the existing Mumu receipt chain (recompute
                     hashes, check the prev-link chain, inventory integrity,
                     required artifacts, boundary flags). Verdict VERIFIED /
                     TAMPERED / ABSENT. Read-only. Exit 1 on TAMPERED or ABSENT.
+  dema node0 mumu consent [--json] [--out <dir>]
+                    Read the pending consent-request artifact (if any) and show
+                    the exact phrase for the governed loop re-run. Read-only.
+  dema node0 mumu journey [--json] [--out <dir>] [--operator <name>]
+                    Closed-loop operator journey for Mumu: stage INACTIVE /
+                    AWAITING_CONSENT / ACTIVE / TAMPERED with next command.
+                    Governed runtime stays npm run node0; Dema is the face.
 
 Local asset awareness:
   dema assets scan --root <path> [--json]

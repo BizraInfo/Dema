@@ -6,23 +6,36 @@ export async function cmd_node0(ctx) {
   const outIdx = argv.indexOf("--out");
   const outDir =
     outIdx !== -1 && argv[outIdx + 1] ? argv[outIdx + 1] : undefined;
+  const operatorIdx = argv.indexOf("--operator");
+  const operator =
+    operatorIdx !== -1 && argv[operatorIdx + 1]
+      ? argv[operatorIdx + 1]
+      : "Mumu";
 
-  if (sub !== "mumu" || (action !== "status" && action !== "verify")) {
+  const actions = new Set(["status", "verify", "consent", "journey"]);
+  if (sub !== "mumu" || !actions.has(action)) {
     console.error(
-      "dema node0: read-only Mumu closed-loop face. Subcommands:\n" +
-        "  dema node0 mumu status [--json]\n" +
-        "  dema node0 mumu verify [--json]",
+      "dema node0: Mumu closed-loop face (read-only; loop stays npm run node0). Subcommands:\n" +
+        "  dema node0 mumu status [--json] [--out <dir>]\n" +
+        "  dema node0 mumu verify [--json] [--out <dir>]\n" +
+        "  dema node0 mumu consent [--json] [--out <dir>]\n" +
+        "  dema node0 mumu journey [--json] [--out <dir>] [--operator <name>]",
     );
     process.exitCode = 1;
     return;
   }
 
-  const { buildMumuStatus, buildMumuVerify } =
-    // commands/ is one level deeper — need 4 levels to reach repo root
-    await import("../../../../scripts/node0-mumu-cli.mjs");
+  const {
+    buildMumuStatus,
+    buildMumuVerify,
+    buildMumuConsent,
+    buildMumuJourney,
+  } = await import("../../../../scripts/node0-mumu-cli.mjs");
+
+  const opts = outDir ? { outDir } : {};
 
   if (action === "status") {
-    const report = buildMumuStatus(outDir ? { outDir } : {});
+    const report = buildMumuStatus(opts);
     if (wantJson) {
       console.log(JSON.stringify(report, null, 2));
     } else {
@@ -41,7 +54,38 @@ export async function cmd_node0(ctx) {
     return;
   }
 
-  const report = buildMumuVerify(outDir ? { outDir } : {});
+  if (action === "consent") {
+    const report = buildMumuConsent(opts);
+    if (wantJson) {
+      console.log(JSON.stringify(report, null, 2));
+    } else if (report.consent_pending) {
+      console.log("Node0 Mumu consent — AWAITING");
+      console.log(`  decision_id: ${report.decision_id}`);
+      console.log(`  phrase:      ${report.expected_consent_phrase}`);
+      console.log(`  next:        ${report.next_step}`);
+    } else if (report.loop_complete) {
+      console.log("Node0 Mumu consent — LOOP COMPLETE");
+      console.log(`  next: ${report.next_step}`);
+    } else {
+      console.log("Node0 Mumu consent — NO PENDING REQUEST");
+      console.log(`  next: ${report.next_step}`);
+    }
+    return;
+  }
+
+  if (action === "journey") {
+    const report = buildMumuJourney({ ...opts, operator });
+    if (wantJson) {
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      const { renderNode0MumuCockpit } =
+        await import("../../../../packages/core/src/node0-mumu-cockpit.js");
+      console.log(renderNode0MumuCockpit(report));
+    }
+    return;
+  }
+
+  const report = buildMumuVerify(opts);
   if (wantJson) {
     console.log(JSON.stringify(report, null, 2));
   } else {
