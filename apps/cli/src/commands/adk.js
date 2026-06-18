@@ -6,6 +6,10 @@ import { validateAgentContract } from "../../../../packages/adk/src/agent-valida
 import { buildAdkReceiptPreview } from "../../../../packages/adk/src/receipt-preview.js";
 import { buildPatAgentTemplate } from "../../../../packages/adk/src/pat-template.js";
 import { buildSatAgentTemplate } from "../../../../packages/adk/src/sat-template.js";
+import {
+  runAdkAdversarialSuite,
+  runAdkContractHarness,
+} from "../../../../packages/adk/src/test-harness.js";
 
 function loadJsonFile(path) {
   const raw = readFileSync(path, "utf8");
@@ -106,9 +110,44 @@ export async function cmd_adk(ctx) {
     }
   }
 
+  if (sub === "harness" && action === "run") {
+    const file = argv[3];
+    if (!file || file.startsWith("--")) {
+      const report = runAdkAdversarialSuite();
+      if (wantJson) printJson(report);
+      else {
+        console.log(`ADK harness suite: ${report.verdict}`);
+        console.log(
+          `  cases: ${report.case_count}  failed: ${report.failed_count}`,
+        );
+      }
+      process.exit(report.verdict === "CLEAN" ? 0 : 1);
+    }
+    try {
+      const doc = loadJsonFile(file);
+      const report = runAdkContractHarness(doc);
+      if (wantJson) printJson(report);
+      else {
+        console.log(`ADK harness: ${report.verdict}`);
+        for (const check of report.checks) {
+          if (!check.ok) {
+            console.log(
+              `  - ${check.name}: expected ${check.expected}, got ${check.actual}`,
+            );
+          }
+        }
+      }
+      process.exit(report.verdict === "PASS" ? 0 : 1);
+    } catch (e) {
+      console.error(`adk harness error: ${e.message}`);
+      process.exit(1);
+    }
+  }
+
   console.error(`usage:
   dema adk agent validate <contract.json> [--json]
   dema adk agent template <pat-engineer|sat-verifier|...> [--json]
-  dema adk agent receipt-preview <contract.json> [--json]`);
+  dema adk agent receipt-preview <contract.json> [--json]
+  dema adk harness run [<contract.json>] [--json]`);
   process.exit(1);
 }

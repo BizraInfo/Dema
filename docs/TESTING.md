@@ -328,6 +328,7 @@ node scripts/review/homebase-asset-graph.mjs
 node scripts/review/datalake-dual-loop-preview.mjs
 node scripts/review/node0-mumu-journey.mjs
 node scripts/review/adk-agent-contract.mjs
+node scripts/review/adk-test-harness.mjs
 node scripts/claims/claim-register-check.mjs
 node scripts/claims/generate-public-claims.mjs --check
 node scripts/claims/claim-corpus-gate.mjs
@@ -348,6 +349,7 @@ node scripts/perf-bench.mjs
 | `tests/adk-agent-contract.test.js` | BIZRA-ADK-AGENT-CONTRACT-1A: missing scope refused; `stop_by_default` mandatory; always-forbidden effects (`SIGN`, `FEDERATE`, `MINT_TOKEN`) cannot appear in `allowed_effects`; receipt preview requires `what_this_does_not_prove`; PAT/SAT templates pass validation. |
 | `tests/adk-agent-scope.test.js` | ADK scope enum (`PRIVATE_PAT`, `SYSTEM_SAT_SUMMARY`) and privacy-class alignment (`PAT_RAW_LOCAL`, `SAT_SUMMARY_ONLY`). |
 | `tests/adk-pat-sat-firewall.test.js` | PAT/SAT firewall: PAT cannot `SEND_RAW_MEMORY_TO_SAT`; SAT cannot `RECEIVE_PAT_RAW_MEMORY`; canonical templates enforce firewall. |
+| `tests/adk-test-harness.test.js` | BIZRA-ADK-TEST-HARNESS-1A: adversarial suite CLEAN; negative cases refused; single-contract harness PASS/FAIL; read-only boundary. |
 | `tests/a2a-message-envelope-preview.test.js` | A2A message envelope preview v0.1: schema/mode, from/to non-empty + distinct, mission*id required, message_type enum (4 types), effect_level subset of {read} only (rejects write/execute/call), claims array, authority_transfer + dispatched false invariants, boundary all 7 flags false, deterministic + frozen, fresh-object-per-call, pure-module imports. |
 | `tests/claim-ledger-check.test.js` | Claim Ledger checker tooling tests: scans repo for unbinder claims, asserts every reachable claim binds to a verifiable artifact (sha · file path · receipt). |
 | `tests/claim-corpus-gate.test.js` | NODE0-CLAIM-CORPUS-GATE-V0.1 baseline-ratchet gate (`scripts/claims/claim-corpus-gate.mjs`): runs the claim-ledger scanner across README + top-level `docs/*.md`, freezes the reviewed finding set in `docs/claims/claim-corpus-baseline.json`, and fails closed on any NEW unlabeled-claim finding (count may only ratchet down). Tests the pure `evaluateCorpusGate`(pass on match, fail-closed on new finding, allow ratchet-down resolved), line-independent`findingKey`identity, and`corpusFiles`/`scanCorpus`scope+shape. |

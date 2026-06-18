@@ -253,6 +253,9 @@ BIZRA ADK (BIZRA-ADK-AGENT-CONTRACT-1A, define/validate/preview only):
                     Emit a PAT or SAT agent contract template (local-only).
   dema adk agent receipt-preview <contract.json> [--json]
                     Preview receipt shape for a validated agent contract.
+  dema adk harness run [<contract.json>] [--json]
+                    Run adversarial negative tests (built-in suite) or deep
+                    harness on one contract. Read-only; no agent execution.
 
 Local asset awareness:
   dema assets scan --root <path> [--json]

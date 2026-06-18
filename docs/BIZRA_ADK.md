@@ -1,8 +1,8 @@
 # BIZRA ADK v0.1 — Agent Development Kit
 
-**Slice:** `BIZRA-ADK-AGENT-CONTRACT-1A`  
-**Truth label:** `ADK_AGENT_CONTRACT_DEFINE_ONLY`  
-**Status:** SHIPPED (define · validate · receipt-preview only)
+**Slice:** `BIZRA-ADK-AGENT-CONTRACT-1A` + `BIZRA-ADK-TEST-HARNESS-1A`
+**Truth label:** `ADK_AGENT_CONTRACT_DEFINE_ONLY` / `ADK_AGENT_HARNESS_READ_ONLY`
+**Status:** SHIPPED (define · validate · receipt-preview · adversarial harness)
 
 ## Definition
 
@@ -21,7 +21,7 @@ BIZRA ADK:    agent → scope → consent → proof → effect gate → action �
 | Validate contracts     | Network I/O          |
 | Preview receipts       | Key generation       |
 | PAT / SAT templates    | Signing              |
-|                        | Federation           |
+| Adversarial harness    | Federation           |
 |                        | Token / PoI runtime  |
 |                        | Raw PAT memory → SAT |
 
@@ -34,6 +34,7 @@ BIZRA ADK:    agent → scope → consent → proof → effect gate → action �
 | `effect-policy.js`   | Allowed/forbidden effects + always-forbidden defaults |
 | `agent-validator.js` | Fail-closed validator                                 |
 | `receipt-preview.js` | Receipt preview builder                               |
+| `test-harness.js`    | Adversarial negative test harness (read-only)         |
 | `pat-template.js`    | PAT role templates (Mirror … Scribe)                  |
 | `sat-template.js`    | SAT role templates (Proof Verifier … Impact Scorer)   |
 
@@ -63,6 +64,16 @@ dema adk agent validate ./agents/pat-engineer.json
 dema adk agent template pat-engineer --json
 dema adk agent template sat-verifier --json
 dema adk agent receipt-preview ./agents/pat-engineer.json --json
+dema adk harness run --json
+dema adk harness run ./agents/pat-engineer.json --json
+```
+
+## Adversarial harness (1A)
+
+The harness runs **negative tests that must fail** (missing scope, `SIGN` in allowed effects, PAT→SAT raw memory, etc.) and **positive golden templates that must pass**. It proves the validator refuses unsafe contracts before any runtime exists.
+
+```bash
+node scripts/review/adk-test-harness.mjs
 ```
 
 ## Agent lifecycle (declared, not executed in v0.1)
@@ -83,14 +94,15 @@ DECLARE → BIND_SCOPE → LOAD_CONTEXT → INFER_LOOP_STATE → PLAN
 ## Verification
 
 ```bash
-node --test tests/adk-agent-contract.test.js tests/adk-agent-scope.test.js tests/adk-pat-sat-firewall.test.js
+node --test tests/adk-agent-contract.test.js tests/adk-agent-scope.test.js tests/adk-pat-sat-firewall.test.js tests/adk-test-harness.test.js
 node scripts/review/adk-agent-contract.mjs
+node scripts/review/adk-test-harness.mjs
 npm test
 npm run check
 ```
 
 ## Future slices (not in v0.1)
 
-- `dema adk init`, harness run, publish-template, package-node
+- `dema adk init`, publish-template, package-node
 - `@bizra/adk-hhmm`, `@bizra/adk-snr` as separate bounded modules after ADR + proof gate
 - Agent execution only after EffectCap + consent + receipt spine integration
