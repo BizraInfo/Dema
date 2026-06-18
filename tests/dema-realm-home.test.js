@@ -226,7 +226,7 @@ describe("renderBootSequence + renderHomeFrame + renderMenu (no color)", () => {
 
   it("realmMenuItemByKey resolves menu dispatch targets", () => {
     assert.equal(realmMenuItemByKey("2")?.realm_sub, "board");
-    assert.equal(realmMenuItemByKey("5")?.top_level_command, "receipts");
+    assert.equal(realmMenuItemByKey("5")?.realm_sub, "proof-studio");
     assert.equal(realmMenuItemByKey("9"), null);
     assert.equal(REALM_MENU_ITEMS.length, 5);
   });

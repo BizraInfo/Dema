@@ -38,6 +38,7 @@ import { cmd_consent_card } from "./commands/consent-card.js";
 import { cmd_mission_loop } from "./commands/mission-loop.js";
 import { cmd_evidence_event } from "./commands/evidence-event.js";
 import { cmd_craftsmanship_witness } from "./commands/craftsmanship-witness.js";
+import { cmd_peak_self_loop } from "./commands/peak-self-loop.js";
 import { cmd_master_craftsmanship } from "./commands/master-craftsmanship.js";
 import { cmd_llm_router } from "./commands/llm-router.js";
 import { cmd_process_mining } from "./commands/process-mining.js";
@@ -508,6 +509,11 @@ const REGISTERED_COMMANDS_LIST = [
     description: "master-craftsmanship creation preview",
   },
   {
+    command: "peak-self-loop",
+    description:
+      "peak ultra-micro self-loop preview (SNR · convergence · HHMM · proactive self)",
+  },
+  {
     command: "master-craftsmanship",
     description:
       "audit an artifact against the 10 master-craftsmanship invariants",
@@ -940,6 +946,7 @@ const COMMAND_TABLE = {
   "skill-growth-governor": cmd_skill_growth_governor,
   "project-status": cmd_project_status,
   "craftsmanship-witness": cmd_craftsmanship_witness,
+  "peak-self-loop": cmd_peak_self_loop,
   "master-craftsmanship": cmd_master_craftsmanship,
   codebase: cmd_codebase,
   orchestrator: cmd_orchestrator,

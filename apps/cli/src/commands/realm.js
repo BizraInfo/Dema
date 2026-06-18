@@ -34,7 +34,7 @@ import {
 } from "../../../../packages/core/src/dema-realm-wallet.js";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
 import { shouldUseColor } from "../../../../packages/core/src/status.js";
-import { cmd_receipts } from "./receipts.js";
+import { cmd_peak_self_loop } from "./peak-self-loop.js";
 
 function argValue(argv, name) {
   const index = argv.indexOf(name);
@@ -61,12 +61,6 @@ export async function cmd_realm(ctx) {
       return cmd_realm({
         ...ctx,
         argv: ["realm", item.realm_sub, ...argv.slice(3)],
-      });
-    }
-    if (item.top_level_command === "receipts") {
-      return cmd_receipts({
-        ...ctx,
-        argv: ["receipts", ...argv.slice(3)],
       });
     }
     console.error(`Menu item ${item.key} has no dispatch target.`);
@@ -132,6 +126,13 @@ export async function cmd_realm(ctx) {
     }
     console.log(renderDemaRealmWallet(wallet, { useColor: !noColor }));
     process.exit(process.exitCode ?? 0);
+  }
+
+  if (realmSub === "proof-studio") {
+    return cmd_peak_self_loop({
+      ...ctx,
+      argv: ["peak-self-loop", ...argv.slice(2)],
+    });
   }
 
   if (realmSub === "checkpoint") {

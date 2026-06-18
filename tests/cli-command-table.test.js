@@ -50,6 +50,7 @@ const COMMAND_SURFACE = [
   "skill-growth-governor",
   "project-status",
   "craftsmanship-witness",
+  "peak-self-loop",
   "master-craftsmanship",
   "codebase",
   "orchestrator",

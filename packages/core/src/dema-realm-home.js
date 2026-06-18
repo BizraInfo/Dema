@@ -64,8 +64,8 @@ export const REALM_MENU_ITEMS = Object.freeze([
   Object.freeze({
     key: "5",
     label: "Proof Studio",
-    command: "dema receipts",
-    top_level_command: "receipts",
+    command: "dema realm proof-studio",
+    realm_sub: "proof-studio",
   }),
 ]);
 
