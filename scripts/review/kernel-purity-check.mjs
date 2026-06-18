@@ -73,6 +73,8 @@ export const IO_TIER_ALLOWLIST = Object.freeze({
     "spawns gate subprocesses to assemble the proof-room bundle; 1C relocate candidate — tooling, not a kernel",
   "roadmap-dev.js":
     "spawns git + reads repo files for the dev roadmap; 1C relocate candidate — tooling, not a kernel",
+  "datalake-dual-loop-preview.js":
+    "existsSync probes for ADR-030 boundary refs on disk; read-only dual-loop reference preview only",
 });
 
 const MODULE_GROUP = "(fs|net|http|https|child_process)";

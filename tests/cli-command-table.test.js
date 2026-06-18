@@ -64,6 +64,7 @@ const COMMAND_SURFACE = [
   "today",
   "doctor",
   "dashboard",
+  "datalake",
   "ambient",
   "ambient:json",
   "journey",

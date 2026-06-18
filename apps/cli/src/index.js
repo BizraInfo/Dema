@@ -56,6 +56,7 @@ import { cmd_report } from "./commands/report.js";
 import { cmd_network } from "./commands/network.js";
 import { cmd_amana } from "./commands/amana.js";
 import { cmd_mcp } from "./commands/mcp.js";
+import { cmd_datalake } from "./commands/datalake.js";
 import { cmd_roadmap } from "./commands/roadmap.js";
 import { cmd_eval } from "./commands/eval.js";
 import { cmd_evidence } from "./commands/evidence.js";
@@ -272,6 +273,11 @@ Dema Realm (UX-1A, UX-1B):
                     affordances with the read-only world-map inventory clusters
                     (category → affordance hints). No scan · no content · no
                     network · no mutation.
+  dema datalake dual-loop-preview [--json] [--no-color]
+                    DATALAKE-DUAL-LOOP-PREVIEW-1A reference preview. Composes
+                    the Dema face proof spine with Data Lake body expectation
+                    stages (ADR-030 alignment spine). Reference-only · no sync
+                    · no mutation · no network · no cross-repo write.
   dema realm council [--json] [--no-color]
                     UX-1D Council Chamber: 5 declared council profiles —
                     Guardian (boundary/consent/risk), Reasoner (SAPE/graph
@@ -895,6 +901,7 @@ const COMMAND_TABLE = {
   attest: cmd_attest,
   "verify-grounded": cmd_verify_grounded,
   urp: cmd_urp,
+  datalake: cmd_datalake,
   realm: cmd_realm,
   node0: cmd_node0,
   status: cmd_status,
