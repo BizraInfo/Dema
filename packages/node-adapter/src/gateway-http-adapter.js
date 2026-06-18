@@ -20,6 +20,34 @@
 const DEFAULT_GATEWAY_URL = "http://127.0.0.1:7421";
 const DEFAULT_TIMEOUT_MS = 5000;
 const GATEWAY_DOMAIN = "bizra-cognition-gateway-v1";
+const GATEWAY_ENDPOINTS = Object.freeze([
+  ["health", "/health"],
+  ["chain", "/chain"],
+  ["poi", "/poi/summary"],
+  ["resources", "/resources/list"],
+]);
+
+function isLocalGatewayUrl(baseUrl) {
+  try {
+    const url = new URL(baseUrl);
+    const host = url.hostname.replace(/^\[|\]$/g, "");
+    return (
+      url.protocol === "http:" &&
+      ["localhost", "127.0.0.1", "::1"].includes(host)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function refusedEndpoint(baseUrl, label, path) {
+  return {
+    ok: false,
+    label,
+    url: `${baseUrl}${path}`,
+    error: "non-localhost_gateway_url_refused",
+  };
+}
 
 async function fetchEndpoint(url, label, signal) {
   try {
@@ -46,6 +74,18 @@ export async function fetchGatewayState(
   baseUrl = DEFAULT_GATEWAY_URL,
   { timeoutMs = DEFAULT_TIMEOUT_MS } = {},
 ) {
+  if (!isLocalGatewayUrl(baseUrl)) {
+    return {
+      baseUrl,
+      ...Object.fromEntries(
+        GATEWAY_ENDPOINTS.map(([label, path]) => [
+          label,
+          refusedEndpoint(baseUrl, label, path),
+        ]),
+      ),
+    };
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -53,11 +93,7 @@ export async function fetchGatewayState(
       fetchEndpoint(`${baseUrl}/health`, "health", controller.signal),
       fetchEndpoint(`${baseUrl}/chain`, "chain", controller.signal),
       fetchEndpoint(`${baseUrl}/poi/summary`, "poi", controller.signal),
-      fetchEndpoint(
-        `${baseUrl}/resources/list`,
-        "resources",
-        controller.signal,
-      ),
+      fetchEndpoint(`${baseUrl}/resources/list`, "resources", controller.signal),
     ]);
     return { baseUrl, health, chain, poi, resources };
   } finally {
