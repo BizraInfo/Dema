@@ -21,6 +21,10 @@ import {
   formatCouncilSeatPatRoutingResponse,
 } from "../../../../packages/core/src/council-seat-pat-routing.js";
 import {
+  buildCouncilSeatPatDispatchPreview,
+  formatCouncilSeatPatDispatchResponse,
+} from "../../../../packages/adk/src/council-seat-pat-dispatch.js";
+import {
   gatherDemaRealmStatus,
   renderDemaRealmStatus,
 } from "../../../../packages/core/src/dema-realm-status.js";
@@ -120,6 +124,21 @@ export async function cmd_realm(ctx) {
       process.exit(process.exitCode ?? 0);
     }
     console.log(formatCouncilSeatPatRoutingResponse(preview));
+    process.exit(process.exitCode ?? 0);
+  }
+
+  if (realmSub === "council-dispatch") {
+    const seat = argValue(argv, "--seat");
+    const consent = argValue(argv, "--consent") ?? "";
+    const preview = buildCouncilSeatPatDispatchPreview({
+      seat,
+      consent_phrase: consent,
+    });
+    if (wantJsonR) {
+      console.log(JSON.stringify(preview, null, 2));
+      process.exit(process.exitCode ?? 0);
+    }
+    console.log(formatCouncilSeatPatDispatchResponse(preview));
     process.exit(process.exitCode ?? 0);
   }
 

@@ -89,6 +89,52 @@ export const COUNCIL_SEAT_CHAT_TRIGGERS = Object.freeze([
   "seat:",
 ]);
 
+export const COUNCIL_PAT_DISPATCH_CONSENT_PREFIX =
+  "GO: dispatch PAT from council seat ";
+
+/**
+ * @param {string} seat
+ * @returns {string|null}
+ */
+export function councilPatDispatchConsentPhrase(seat) {
+  const resolved = normalizeCouncilSeatToken(seat);
+  if (!resolved) return null;
+  return `${COUNCIL_PAT_DISPATCH_CONSENT_PREFIX}${resolved}`;
+}
+
+/**
+ * @param {string} line
+ * @returns {{ seat: string, consent_phrase: string }|null}
+ */
+export function parseCouncilPatDispatchConsentLine(line) {
+  const trimmed = typeof line === "string" ? line.trim() : "";
+  if (!trimmed.startsWith(COUNCIL_PAT_DISPATCH_CONSENT_PREFIX)) return null;
+  const seatRaw = trimmed.slice(COUNCIL_PAT_DISPATCH_CONSENT_PREFIX.length).trim();
+  const resolved = normalizeCouncilSeatToken(seatRaw);
+  if (!resolved) return null;
+  const required = councilPatDispatchConsentPhrase(resolved);
+  if (trimmed !== required) return null;
+  return { seat: resolved, consent_phrase: trimmed };
+}
+
+/**
+ * @param {string} normalized
+ * @returns {{ seat: string, consent_phrase: string }|null}
+ */
+export function detectCouncilPatDispatchInInput(normalized) {
+  const consentParsed = parseCouncilPatDispatchConsentLine(normalized);
+  if (consentParsed) return consentParsed;
+
+  const raw = typeof normalized === "string" ? normalized.trim() : "";
+  if (!raw) return null;
+  const lower = raw.toLowerCase();
+  if (!lower.includes("dispatch")) return null;
+  if (!lower.includes("pat") && !lower.includes("council")) return null;
+  const seat = detectCouncilSeatInInput(raw);
+  if (!seat) return null;
+  return { seat, consent_phrase: "" };
+}
+
 /**
  * @param {string} token
  * @returns {string|null}
@@ -194,6 +240,8 @@ export function formatCouncilSeatPatRoutingResponse(preview) {
       "",
       "  This does not invoke a PAT runtime.",
       "  Inspect full table:  dema realm council-route --json",
+      "  Dispatch preview:  dema realm council-dispatch --seat " +
+        preview.selected_seat,
       "  Council profiles:  dema realm council",
     ].join("\n");
   }

@@ -85,6 +85,7 @@ export async function runShell({
   installSigintHandler,
   noBanner = false,
   statusProvider = null,
+  councilPatDispatchFormatter = null,
 } = {}) {
   if (typeof dispatchCommand !== "function") {
     throw new Error("runShell requires a dispatchCommand(argv) function.");
@@ -214,6 +215,21 @@ export async function runShell({
         chatResult.intent === "council-seat-pat-routing"
       ) {
         output.write(chatResult.response + "\n");
+        promptIfOpen();
+        return;
+      }
+
+      if (chatResult.intent === "council-seat-pat-dispatch") {
+        const text =
+          typeof councilPatDispatchFormatter === "function"
+            ? councilPatDispatchFormatter(chatResult)
+            : [
+                "> Council seat → PAT dispatch (CLI required)",
+                "",
+                `  Seat: ${chatResult.council_seat ?? "?"}`,
+                "  Run:  dema realm council-dispatch --seat <Seat> [--consent \"GO: ...\"]",
+              ].join("\n");
+        output.write(text + "\n");
         promptIfOpen();
         return;
       }

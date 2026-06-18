@@ -89,6 +89,10 @@ import {
   formatOnboardingGuide,
 } from "../../../packages/core/src/onboarding.js";
 import { runShell } from "../../../packages/core/src/shell.js";
+import {
+  buildCouncilSeatPatDispatchPreview,
+  formatCouncilSeatPatDispatchResponse,
+} from "../../../packages/adk/src/council-seat-pat-dispatch.js";
 import { suggestCommands } from "../../../packages/core/src/command-suggester.js";
 // buildExplainPreview/formatExplainPreview/getPerspective moved to commands/explain.js
 import {
@@ -1093,6 +1097,13 @@ async function runActiveKernel({ interactive = false, force = false } = {}) {
       greeting: banner,
       dispatchCommand: dispatch,
       statusProvider: () => statusWithLocalIdentity(),
+      councilPatDispatchFormatter: (chatResult) => {
+        const preview = buildCouncilSeatPatDispatchPreview({
+          seat: chatResult.council_seat,
+          consent_phrase: chatResult.consent_phrase ?? "",
+        });
+        return formatCouncilSeatPatDispatchResponse(preview);
+      },
     });
     process.exit(process.exitCode ?? 0);
   }

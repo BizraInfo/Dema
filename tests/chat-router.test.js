@@ -370,3 +370,19 @@ test("'council routing' → table response without selected seat", () => {
   assert.equal(r.intent, "council-seat-pat-routing");
   assert.match(r.response, /Guardian/);
 });
+
+test("'dispatch pat from council seat builder' → council-seat-pat-dispatch without consent", () => {
+  const r = routeChatInput("dispatch pat from council seat builder", DI);
+  assert.equal(r.intent, "council-seat-pat-dispatch");
+  assert.equal(r.council_seat, "Builder");
+  assert.equal(r.consent_phrase, "");
+  assert.ok(r.suggestedCommands.some((c) => c.includes("council-dispatch")));
+});
+
+test("exact GO consent line → council-seat-pat-dispatch with consent_phrase", () => {
+  const line = "GO: dispatch PAT from council seat Guardian";
+  const r = routeChatInput(line, DI);
+  assert.equal(r.intent, "council-seat-pat-dispatch");
+  assert.equal(r.council_seat, "Guardian");
+  assert.equal(r.consent_phrase, line);
+});

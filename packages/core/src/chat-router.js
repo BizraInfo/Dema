@@ -6,6 +6,8 @@ import { CANON_GLOSSARY } from "./canon-glossary.js";
 import { suggestCommands } from "./command-suggester.js";
 import {
   buildCouncilSeatPatRoutingPreview,
+  councilPatDispatchConsentPhrase,
+  detectCouncilPatDispatchInInput,
   detectCouncilSeatInInput,
   formatCouncilSeatPatRoutingResponse,
 } from "./council-seat-pat-routing.js";
@@ -209,6 +211,27 @@ function routeChatInput(input, options = {}) {
     };
   }
 
+  const lowerNorm = normalized.toLowerCase();
+
+  // (c-pre0) Council seat → PAT dispatch intent (UX-3B); shell formats via ADK.
+  const dispatchIntent = detectCouncilPatDispatchInInput(normalized);
+  if (dispatchIntent) {
+    const { seat, consent_phrase: consentPhrase } = dispatchIntent;
+    const required = councilPatDispatchConsentPhrase(seat);
+    return {
+      intent: "council-seat-pat-dispatch",
+      council_seat: seat,
+      consent_phrase: consentPhrase,
+      response: "",
+      suggestedCommands: [
+        `dema realm council-dispatch --seat ${seat}`,
+        required
+          ? `dema realm council-dispatch --seat ${seat} --consent "${required}"`
+          : `dema realm council-route --seat ${seat}`,
+      ].filter(Boolean),
+    };
+  }
+
   // (c-pre) Council seat → PAT role routing (UX-3 preview).
   const councilSeat = detectCouncilSeatInInput(normalized);
   if (councilSeat) {
@@ -252,7 +275,6 @@ function routeChatInput(input, options = {}) {
   }
 
   // (d-pre) Next-action intent: check normalized input against known phrases.
-  const lowerNorm = normalized.toLowerCase();
   for (const phrase of NEXT_ACTION_PHRASES) {
     if (lowerNorm.includes(phrase)) {
       return {

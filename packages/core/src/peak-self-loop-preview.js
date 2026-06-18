@@ -295,10 +295,10 @@ export function buildPeakSelfLoopPreview({
     slice_history,
     next_slice_signals: [
       {
-        id: "pat-council-route-runtime-dispatch",
-        text: "Add consent-gated PAT dispatch boundary from council-route preview (no silent runtime)",
+        id: "pat-council-dispatch-governed-runtime",
+        text: "Wire consent-gated council-dispatch preview to governed Node0 PAT runtime (still no silent execution)",
         evidence:
-          "UX-3 preview maps seats to pat-* ids; ADK templates exist; corpus baseline ratcheted 123→117",
+          "UX-3B ships ADK contract+receipt preview on exact-string consent; boundary.runtime remains false",
       },
     ],
   });
