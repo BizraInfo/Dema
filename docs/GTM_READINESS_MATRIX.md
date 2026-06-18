@@ -39,7 +39,7 @@
 |   9 | `ROADMAP.md`                          | COMPLETE      | All                                       |        YES        | Mumu            | 2026-05-24 (recent)                                   | `docs/ROADMAP.md` (22.4 KB)                                                                                                                                                                                                                                                                         | No public visibility into trajectory · investor sees no forward shape                    | Parked-vs-active items · each with status, why-parked, unblock-GO                                                                   |
 |  10 | `ADR_INDEX.md`                        | COMPLETE      | Engineer                                  |        YES        | Mumu            | 2026-05-24 (authored this session)                    | `docs/06-adr/INDEX.md` (18 active ADRs · 17 Accepted · 1 Parking lot · audits/ subfolder linked)                                                                                                                                                                                                    | —                                                                                        | Index file at `docs/06-adr/INDEX.md` listing every ADR with title, status, accepted date, one-line decision summary                 |
 |  11 | `SECURITY.md`                         | DRAFT         | Engineer / security reviewer              |        YES        | Mumu            | —                                                     | `SECURITY.md` (548 B · stub)                                                                                                                                                                                                                                                                        | Vulnerability reports have no clear path · failed responsible-disclosure posture         | Reporting address · response SLA · GPG key or equivalent · scope · safe-harbor language                                             |
-|  12 | `THREAT_MODEL.md`                     | MISSING       | Security reviewer                         |        YES        | Mumu            | —                                                     | —                                                                                                                                                                                                                                                                                                   | No STRIDE / no asset map · auditor's first question goes unanswered                      | STRIDE or equivalent · per-surface · mitigations linked to code                                                                     |
+|  12 | `THREAT_MODEL.md`                     | COMPLETE      | Security reviewer                         |        YES        | Mumu            | 2026-06-18 (`THREAT-MODEL-REFRESH-1A` @ `8b71682`)    | `docs/08-quality/THREAT_MODEL.md` (STRIDE · asset map · proof-spine 1A guard matrix · uninstall containment · open hardening §6)                                                                                                                                                                    | —                                                                                        | Refreshed per major boundary change · mitigations linked to code paths                                                              |
 |  13 | `SECURE_SDLC_MAPPING.md`              | MISSING       | Security reviewer / enterprise buyer      |        YES        | Mumu            | —                                                     | —                                                                                                                                                                                                                                                                                                   | NIST SSDF compliance posture unverifiable                                                | Per-SSDF-practice mapping to BIZRA artifact (PR template, CI step, ADR)                                                             |
 |  14 | `TESTING.md`                          | COMPLETE      | Engineer                                  |        YES        | Mumu            | 2026-05-24 (today's edit added memory-query test row) | `docs/TESTING.md` (136 KB)                                                                                                                                                                                                                                                                          | —                                                                                        | Per-test-file row · invariants · how to run · coverage report referenced                                                            |
 |  15 | `CI_CD_PIPELINE.md`                   | COMPLETE      | Engineer / security reviewer              |        YES        | Mumu            | 2026-05-24 (authored this session)                    | `docs/CI_CD_PIPELINE.md` (9 sections · 4-workflow inventory + per-workflow detail + SHA pinning policy + Node version policy + workflow-changes-authorized gate + operator runbook)                                                                                                                 | —                                                                                        | Documents: BIZRA Review Gate, check, CodeQL, gitleaks · pinning policy · workflow-changes-authorized gate · release-readiness score |
@@ -60,10 +60,10 @@
 
 | Status        |  Count |        % |
 | ------------- | -----: | -------: |
-| COMPLETE      |     12 |      48% |
+| COMPLETE      |     13 |      52% |
 | PARTIAL       |      0 |       0% |
 | DRAFT         |      1 |       4% |
-| MISSING       |     11 |      44% |
+| MISSING       |     10 |      40% |
 | OPERATOR-SIDE |      1 |       4% |
 | **TOTAL**     | **25** | **100%** |
 
@@ -74,9 +74,9 @@ The "PARTIAL" entries (#4, #24) all mean: _related content exists somewhere, but
 - (a) Renaming + consolidating the existing content into the canonical file, OR
 - (b) Authoring a fresh focused doc that supersedes the partial coverage.
 
-The 14 MISSING entries require fresh authorship. None of them have evidence in repo today.
+The 10 MISSING entries require fresh authorship. None of them have evidence in repo today.
 
-Coverage today is **48% strictly complete · 50% if PARTIAL/2 counts as half** — at the halfway mark of the gold-standard 25/25 GTM bar. Eight matrix slices closed in one session (Tier-1 #1 START_HERE + Tier-1 #20 QUICKSTART + Tier-2 #7 DEMA_ARCHITECTURE + Tier-2 #10 ADR Index + Tier-2 #15 CI_CD_PIPELINE + Tier-2 #16 RELEASE_PROCESS + Tier-4 #21 NODE0_OPERATOR_GUIDE + Tier-4 #22 DEMO_SCRIPT · plus the out-of-matrix Third Fact Delta Register · coverage 3× starting state of 16% · CLI walkthrough family complete · architecture coverage now full).
+Coverage today is **52% strictly complete · 54% if PARTIAL/2 counts as half** — past the halfway mark of the gold-standard 25/25 GTM bar. Eight matrix slices closed in one session (Tier-1 #1 START_HERE + Tier-1 #20 QUICKSTART + Tier-2 #7 DEMA_ARCHITECTURE + Tier-2 #10 ADR Index + Tier-2 #15 CI_CD_PIPELINE + Tier-2 #16 RELEASE_PROCESS + Tier-4 #21 NODE0_OPERATOR_GUIDE + Tier-4 #22 DEMO_SCRIPT · plus the out-of-matrix Third Fact Delta Register · coverage 3× starting state of 16% · CLI walkthrough family complete · architecture coverage now full).
 
 ## Priority order (suggested for fill-in sequence)
 
@@ -98,7 +98,7 @@ Coverage today is **48% strictly complete · 50% if PARTIAL/2 counts as half** �
 
 **Tier 3 — Security + AI governance:**
 
-- #12 THREAT_MODEL.md
+- ~~#12 THREAT_MODEL.md~~ — closed 2026-06-18 (`docs/08-quality/THREAT_MODEL.md` · `THREAT-MODEL-REFRESH-1A`)
 - #13 SECURE_SDLC_MAPPING.md
 - #17 AI_GOVERNANCE.md
 - #18 CONSENT_AND_MICRO_CONSENT_POLICY.md
