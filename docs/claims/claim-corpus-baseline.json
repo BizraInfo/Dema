@@ -1,7 +1,7 @@
 {
   "schema": "bizra.dema.claim_corpus_baseline.v0.1",
   "note": "Frozen reviewed claim-corpus state. Regenerate only via --update-baseline; every entry is an accepted, unresolved unlabeled-claim finding.",
-  "count": 123,
+  "count": 117,
   "findings": [
     {
       "file": "docs/A_PLUS_BLUEPRINT_v0_1.md",
@@ -234,21 +234,6 @@
       "text": "- Add real Ed25519 receipt signing (using existing authorship key machinery)."
     },
     {
-      "file": "docs/CURRENT_LIMITS.md",
-      "kind": "cryptographic",
-      "text": "| Ed25519 authorship signing (demo + verify)       | `packages/receipts/src/authorship-signature.js`, `docs/security/H18_3_AUTHORSHIP_PERSISTENCE_PREFLIGHT.md` | MEASURED: Ed25519 keypair generation, signing, and verification work end-to-end (`dema authorship demo`, `dema authorship verify`). Keys are ephemeral only — persistent key custody is DESIGNED_NOT_LIVE (H18.3 preflight cleared, awaiting implementation) |"
-    },
-    {
-      "file": "docs/CURRENT_LIMITS.md",
-      "kind": "economic",
-      "text": "- Public token economy is active → status today: DESIGNED_NOT_LIVE (no token economy is live)"
-    },
-    {
-      "file": "docs/CURRENT_LIMITS.md",
-      "kind": "economic",
-      "text": "| Proof-of-Impact / token economy                  | `docs/02-architecture/dema-urp-resource-offer-v0.1.md`                                                     | No PoI runtime, no token issuance, no economic settlement                                                                                                                                                                                                    |"
-    },
-    {
       "file": "docs/DECISION_two_dema_split.md",
       "kind": "first_or_only",
       "text": "- **A is the only thing that runs.** It has working code, tests, a public GitHub remote, and four commits of iterative polish. You can `npm test` today."
@@ -451,11 +436,6 @@
     {
       "file": "docs/TESTING.md",
       "kind": "benchmark",
-      "text": "| `tests/homebase-cli-dispatch.test.js`                   | Homebase TUI v0.1 phase-5 CLI dispatch (`apps/cli/src/index.js` bare-invocation routing) — the 14th canonical spine surface per [phase_05_cli_dispatch_pseudocode.md](02-architecture/homebase-tui-v0.1-pseudocode/phase_05_cli_dispatch_pseudocode.md). Routes bare `dema` to either the homebase preview JSON or (TTY · phase-4 pending) the existing active-kernel interactive shell. JSON emitted when any of: `argv.includes(\"--json\")` · `!process.stdout.isTTY` · `DEMA_NO_TUI` set · `NODE_ENV=test`. 7 tests bound to phase_06 §6.5 + 1 ADV + 1 backwards-compat: TDD-25 `dema --json` emits parseable HomebasePreview (`bizra.dema.homebase_v0_1.v0.1` · NODE0_LOCAL_SEED · preview_only · 6 affordances) · TDD-26 bare `dema` with stdout redirected emits same JSON shape · TDD-27 NODE_ENV=test triggers JSON · TDD-28 DEMA_NO_TUI=1 triggers JSON · TDD-30 `dema --json` does not hang on EPIPE (downstream pipe destroy · 5s ceiling) · ADV missing `~/.dema/` does not crash · greeting.has_name=false · memory3.entries=[] · backwards-compat `dema task` still emits task_list JSON (no regression for the 13 prior spine subcommands). TDD-29 (cold-start ≤50ms) deferred to phase-4 wallclock-budget tests after Ink load.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |"
-    },
-    {
-      "file": "docs/TESTING.md",
-      "kind": "benchmark",
       "text": "| `tests/homebase-gather.test.js`                         | Homebase TUI v0.1 phase-2 data gather (`packages/core/src/homebase-gather.js`) — impure read-only adapter feeding phase-3 builder per [phase_02_data_gather_pseudocode.md](02-architecture/homebase-tui-v0.1-pseudocode/phase_02_data_gather_pseudocode.md). `gather(opts={home})` emits `GatherResult` shape (`schema_version: bizra.dema.homebase_gather.v0.1`) with safe-degraded defaults so phase-3 never sees `undefined`: profile (name · node · source_present) read from `<DEMA_HOME>/profile.json` with ENOENT→source_present=false / SyntaxError→warning+partial; memory_recent capped at 3 entries sorted by mtime desc from `<DEMA_HOME>/memory/*.json` with per-file JSON-parse failure filtered + warning + partial=true; state/process_mining/models from existing builders via try-wrapper that defaults null on throw; receipts adapted from `listReceipts(home)` to `{count, last_id, gateway_issued}` shape; memory_size from depth-capped (≤6) directory walk; env_flags from process.env (NO_COLOR · TERM=dumb · stdout.isTTY); timing-budget warning at >200ms (no failure). 5 tests bound to TDD-15..TDD-19 from phase_06: empty `~/.dema/` returns valid GatherResult (TDD-15), DEMA_HOME override reads profile.name (TDD-16), 50 memory entries surface exactly 3 most-recent by mtime (TDD-17), malformed JSON in memory yields partial=true + non-empty warnings + valid-only in memory_recent (TDD-18), gather() never throws when memory is a regular file instead of directory (TDD-19). Plus 4 reviewer-fix tests (Issues 1+2+5 from 2026-05-18 SPARC reviewer pass) and 2 CANONICAL-PROFILE tests verifying `preferred_name` is read per the `bizra.dema.profile.v0.1` schema. Plus WALK-01..WALK-04 (walkDirSize edge cases · SPARC Reviewer finding 2026-05-19): WALK-01 files at depth-within-cap counted as positive control · WALK-02 depth-cap (DIR_WALK_MAX_DEPTH=6) skips files beyond cap (asserts count<actual-on-disk) · WALK-03 broken symlinks tolerated (silent skip · no crash) · WALK-04 in-flight vanish (unlink before stat) handled by defensive try/catch.                                                                                                                                                                                                                                                                                                                                                   |"
     },
     {
@@ -607,16 +587,6 @@
       "file": "docs/UX_BLUEPRINT.md",
       "kind": "economic",
       "text": "execution, Node0 handoff, model inference, receipt minting, token claims,"
-    },
-    {
-      "file": "README.md",
-      "kind": "cryptographic",
-      "text": "- Ed25519 persistent key custody (demo + verify are live; key persistence is not)"
-    },
-    {
-      "file": "README.md",
-      "kind": "cryptographic",
-      "text": "This emits a hash-committed machine-readable manifest for the current Dema"
     }
   ]
 }

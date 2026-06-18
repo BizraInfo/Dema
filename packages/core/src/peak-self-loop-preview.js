@@ -295,10 +295,10 @@ export function buildPeakSelfLoopPreview({
     slice_history,
     next_slice_signals: [
       {
-        id: "claim-corpus-gate-baseline-ratchet",
-        text: "Ratchet claim-corpus-gate baseline after UX-3 council PAT routing slice",
+        id: "pat-council-route-runtime-dispatch",
+        text: "Add consent-gated PAT dispatch boundary from council-route preview (no silent runtime)",
         evidence:
-          "claim-corpus-gate reported resolved findings; optional --update-baseline pending",
+          "UX-3 preview maps seats to pat-* ids; ADK templates exist; corpus baseline ratcheted 123→117",
       },
     ],
   });
