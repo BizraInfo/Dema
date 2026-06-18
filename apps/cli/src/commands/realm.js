@@ -23,6 +23,10 @@ import {
   gatherDemaRealmWorldMap,
   renderDemaRealmWorldMap,
 } from "../../../../packages/core/src/dema-realm-world-map.js";
+import {
+  gatherHomebaseAssetGraph,
+  renderHomebaseAssetGraph,
+} from "../../../../packages/core/src/homebase-asset-graph.js";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
 import { shouldUseColor } from "../../../../packages/core/src/status.js";
 
@@ -64,6 +68,16 @@ export async function cmd_realm(ctx) {
       process.exit(process.exitCode ?? 0);
     }
     console.log(renderDemaRealmWorldMap(worldMap, { useColor: !noColor }));
+    process.exit(process.exitCode ?? 0);
+  }
+
+  if (realmSub === "asset-graph") {
+    const graph = await gatherHomebaseAssetGraph();
+    if (wantJsonR) {
+      console.log(JSON.stringify(graph, null, 2));
+      process.exit(process.exitCode ?? 0);
+    }
+    console.log(renderHomebaseAssetGraph(graph, { useColor: !noColor }));
     process.exit(process.exitCode ?? 0);
   }
 
