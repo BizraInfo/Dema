@@ -267,6 +267,7 @@ test("real tree is fully allowlisted (ok:true) — IO_TIER_ALLOWLIST finalized (
   const r = checkKernelPurity();
   assert.equal(r.ok, true);
   assert.equal(r.violation_count, 0);
+  assert.deepEqual(r.stale_allowlist, []);
 });
 
 test("CLI: --json on a violating fixture exits non-zero and reports ok:false", () => {

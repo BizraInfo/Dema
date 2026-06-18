@@ -54,8 +54,6 @@ export const IO_TIER_ALLOWLIST = Object.freeze({
     "reads ~/.dema receipts/checkpoint/timeline for the read-only live status view",
   "dema-realm-council.js":
     "reads ~/.dema state to render the read-only council view",
-  "dema-realm-wallet.js":
-    "reads optional ~/.dema/realm/wallet-intents.json for read-only intent ledger",
   "local-model-inventory-scan.js":
     "read-only filesystem inventory of local model dirs (Ollama/LM Studio/gguf)",
   "safety-report.js":
