@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
@@ -103,7 +103,7 @@ test("buildReleaseReadinessReport scores dependency and installer posture", asyn
   );
   assert.equal(
     report.dependency_management.audit_policy.npm_audit_command,
-    "skipped_no_lockfile_required",
+    "skipped_no_dependencies",
   );
   assert.equal(report.dependency_management.audit_policy.lockfile_required, false);
   assert.equal(report.installer_artifacts.required.length, 5);
@@ -115,6 +115,41 @@ test("buildReleaseReadinessReport scores dependency and installer posture", asyn
   assert.ok(
     report.installer_artifacts.capabilities.includes("uninstall-exact-consent"),
   );
+});
+
+test("buildReleaseReadinessReport keeps zero-dependency audit posture when npm install creates a transient lockfile", async () => {
+  const lockfilePath = join(repoRoot, "package-lock.json");
+  let previousLockfile = null;
+  try {
+    previousLockfile = await readFile(lockfilePath, "utf8");
+  } catch (err) {
+    if (err.code !== "ENOENT") throw err;
+  }
+
+  await writeFile(
+    lockfilePath,
+    JSON.stringify({ name: "@bizra/dema-root", lockfileVersion: 3 }) + "\n",
+  );
+
+  try {
+    const report = await buildCleanReleaseReadinessReport({ now: fixedNow });
+
+    assert.equal(
+      report.dependency_management.audit_policy.status,
+      "not_applicable_zero_dependencies",
+    );
+    assert.equal(
+      report.dependency_management.audit_policy.npm_audit_command,
+      "skipped_no_dependencies",
+    );
+    assert.equal(report.dependency_management.audit_policy.lockfile_required, false);
+  } finally {
+    if (previousLockfile === null) {
+      await rm(lockfilePath, { force: true });
+    } else {
+      await writeFile(lockfilePath, previousLockfile);
+    }
+  }
 });
 
 test("buildReleaseReadinessReport detects workflow action refs that are not SHA-pinned", async () => {

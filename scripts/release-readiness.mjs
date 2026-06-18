@@ -229,13 +229,16 @@ function buildDependencyAuditPolicy({ root, runtimeDeps, devDeps }) {
   const presentLockfiles = lockfiles.filter((lockfile) => lockfile.exists);
   const dependencyCount = runtimeDeps + devDeps;
 
-  if (dependencyCount === 0 && presentLockfiles.length === 0) {
+  if (dependencyCount === 0) {
     return {
       status: "not_applicable_zero_dependencies",
-      npm_audit_command: "skipped_no_lockfile_required",
+      npm_audit_command: "skipped_no_dependencies",
       lockfile_required: false,
       lockfiles,
-      evidence: "0 runtime dependencies, 0 dev dependencies, no lockfile present",
+      evidence:
+        presentLockfiles.length > 0
+          ? `0 runtime dependencies, 0 dev dependencies, ${presentLockfiles.length} lockfile(s) present but not required`
+          : "0 runtime dependencies, 0 dev dependencies, no lockfile required",
     };
   }
 
