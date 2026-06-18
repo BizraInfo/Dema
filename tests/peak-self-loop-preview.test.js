@@ -45,9 +45,9 @@ test("PSL-04: composes SNR, convergence, HHMM, craftsmanship, proactive_self", (
   assert.equal(out.autonomous_rsi.not_autonomous_runtime, true);
 });
 
-test("PSL-05: default SNR favors signal (3 signal vs 1 noise)", () => {
+test("PSL-05: default SNR favors signal (4 signal vs 1 noise)", () => {
   const out = buildPeakSelfLoopPreview();
-  assert.equal(out.snr_framework.signal_count, 3);
+  assert.equal(out.snr_framework.signal_count, 4);
   assert.equal(out.snr_framework.noise_count, 1);
   assert.ok(out.snr_framework.score >= 0.7);
   assert.equal(out.autonomous_rsi.merged_verdict, "CONTINUE_MICRO_SLICE");
@@ -93,4 +93,13 @@ test("PSL-10: high noise input triggers HOLD merged verdict", () => {
     ],
   });
   assert.equal(out.autonomous_rsi.merged_verdict, "HOLD_AND_REDUCE_NOISE");
+});
+
+test("PSL-11: next slice observable is post-integration with text and evidence", () => {
+  const out = buildPeakSelfLoopPreview();
+  const next = out.craftsmanship_witness.next_slice_observables[0];
+  assert.equal(next.id, "eval-pack-test-count-refresh");
+  assert.notEqual(next.id, "peak-self-loop-integration");
+  assert.ok(next.text.length > 0);
+  assert.ok(next.evidence.length > 0);
 });

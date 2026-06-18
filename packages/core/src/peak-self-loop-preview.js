@@ -49,6 +49,12 @@ const DEFAULT_SIGNAL_EVENTS = Object.freeze([
     weight: 1,
     label: "Realm UX-2 menu + wallet + timeline",
   }),
+  Object.freeze({
+    id: "peak-self-loop-wired",
+    type: "clean_commit",
+    weight: 1,
+    label: "Peak self-loop + Proof Studio dispatch shipped",
+  }),
 ]);
 
 const DEFAULT_NOISE_EVENTS = Object.freeze([
@@ -289,10 +295,10 @@ export function buildPeakSelfLoopPreview({
     slice_history,
     next_slice_signals: [
       {
-        id: "peak-self-loop-integration",
-        label: "Wire proof studio to peak self-loop preview",
-        claim_state: "V",
-        consent_phrase_required_to_act: consent_phrase,
+        id: "eval-pack-test-count-refresh",
+        text: "Refresh third-party eval pack test count to match current npm test",
+        evidence:
+          "BIZRA_THIRD_PARTY_EVALUATION_PACK_v0_1.md cites 2232 tests; local gate runs 4860+",
       },
     ],
   });
