@@ -17,6 +17,10 @@ import {
   renderDemaRealmCouncil,
 } from "../../../../packages/core/src/dema-realm-council.js";
 import {
+  buildCouncilSeatPatRoutingPreview,
+  formatCouncilSeatPatRoutingResponse,
+} from "../../../../packages/core/src/council-seat-pat-routing.js";
+import {
   gatherDemaRealmStatus,
   renderDemaRealmStatus,
 } from "../../../../packages/core/src/dema-realm-status.js";
@@ -105,6 +109,17 @@ export async function cmd_realm(ctx) {
       process.exit(process.exitCode ?? 0);
     }
     console.log(renderHomebaseAssetGraph(graph, { useColor: !noColor }));
+    process.exit(process.exitCode ?? 0);
+  }
+
+  if (realmSub === "council-route") {
+    const seat = argValue(argv, "--seat");
+    const preview = buildCouncilSeatPatRoutingPreview({ seat });
+    if (wantJsonR) {
+      console.log(JSON.stringify(preview, null, 2));
+      process.exit(process.exitCode ?? 0);
+    }
+    console.log(formatCouncilSeatPatRoutingResponse(preview));
     process.exit(process.exitCode ?? 0);
   }
 

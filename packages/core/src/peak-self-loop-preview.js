@@ -295,10 +295,10 @@ export function buildPeakSelfLoopPreview({
     slice_history,
     next_slice_signals: [
       {
-        id: "ux-3-council-seat-pat-routing",
-        text: "Wire council seat selection to PAT role routing in dema chat preview",
+        id: "claim-corpus-gate-baseline-ratchet",
+        text: "Ratchet claim-corpus-gate baseline after UX-3 council PAT routing slice",
         evidence:
-          "Delivery spine UX-3 deferred; realm menu and peak-self-loop shipped on PR #185",
+          "claim-corpus-gate reported resolved findings; optional --update-baseline pending",
       },
     ],
   });

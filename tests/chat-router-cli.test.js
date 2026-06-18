@@ -93,3 +93,10 @@ test("'help me draft a mission\\nexit' → stdout contains mission draft preview
   // The test verifies routing fired (routing line present OR error about intent).
   assert.match(stdout, /Routing your request to|dema mission draft|intent/i);
 });
+
+test("'talk to the builder\\nexit' → stdout contains council PAT routing preview", async () => {
+  const demaHome = await makeDemaHome();
+  const { stdout } = await runChat(["talk to the builder", "exit"], demaHome);
+  assert.match(stdout, /Council seat → PAT routing/i);
+  assert.match(stdout, /pat-engineer/);
+});

@@ -4,6 +4,11 @@
 
 import { CANON_GLOSSARY } from "./canon-glossary.js";
 import { suggestCommands } from "./command-suggester.js";
+import {
+  buildCouncilSeatPatRoutingPreview,
+  detectCouncilSeatInInput,
+  formatCouncilSeatPatRoutingResponse,
+} from "./council-seat-pat-routing.js";
 
 // Tokens stripped before concept/command matching.
 const STOPWORDS = new Set([
@@ -204,6 +209,35 @@ function routeChatInput(input, options = {}) {
     };
   }
 
+  // (c-pre) Council seat → PAT role routing (UX-3 preview).
+  const councilSeat = detectCouncilSeatInInput(normalized);
+  if (councilSeat) {
+    const preview = buildCouncilSeatPatRoutingPreview({ seat: councilSeat });
+    return {
+      intent: "council-seat-pat-routing",
+      council_seat: councilSeat,
+      response: formatCouncilSeatPatRoutingResponse(preview),
+      suggestedCommands: [
+        "dema realm council",
+        `dema realm council-route --seat ${councilSeat}`,
+      ],
+    };
+  }
+
+  const lowerCouncil = normalized.toLowerCase();
+  if (
+    lowerCouncil.includes("council route") ||
+    lowerCouncil.includes("council routing") ||
+    lowerCouncil.includes("pat routing")
+  ) {
+    const preview = buildCouncilSeatPatRoutingPreview();
+    return {
+      intent: "council-seat-pat-routing",
+      response: formatCouncilSeatPatRoutingResponse(preview),
+      suggestedCommands: ["dema realm council-route --json"],
+    };
+  }
+
   // (c) Exact registered-command match on first non-stopword token.
   const firstContent = contentTokens[0] ?? firstToken;
   if (firstContent) {
@@ -367,4 +401,5 @@ export {
   SHELL_REGISTERED_COMMANDS,
   NEXT_ACTION_PHRASES,
   DISPATCH_INTENT_MAP,
+  detectCouncilSeatInInput,
 };

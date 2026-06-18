@@ -351,3 +351,22 @@ test("NEXT_ACTION_PHRASES and DISPATCH_INTENT_MAP are exported arrays", () => {
   assert.ok(Array.isArray(DISPATCH_INTENT_MAP));
   assert.ok(DISPATCH_INTENT_MAP.length >= 5);
 });
+
+test("'talk to the guardian' → intent: council-seat-pat-routing", () => {
+  const r = routeChatInput("talk to the guardian", DI);
+  assert.equal(r.intent, "council-seat-pat-routing");
+  assert.equal(r.council_seat, "Guardian");
+  assert.match(r.response, /pat-auditor/);
+});
+
+test("'builder' alone → council-seat-pat-routing for Builder seat", () => {
+  const r = routeChatInput("builder", DI);
+  assert.equal(r.intent, "council-seat-pat-routing");
+  assert.equal(r.council_seat, "Builder");
+});
+
+test("'council routing' → table response without selected seat", () => {
+  const r = routeChatInput("show council routing", DI);
+  assert.equal(r.intent, "council-seat-pat-routing");
+  assert.match(r.response, /Guardian/);
+});

@@ -209,7 +209,10 @@ export async function runShell({
       const chatResult = routeChatInput(line, { status: currentStatus });
       const PASS_THROUGH_INTENTS = new Set(["empty", "registered-command"]);
 
-      if (chatResult.intent === "next-action") {
+      if (
+        chatResult.intent === "next-action" ||
+        chatResult.intent === "council-seat-pat-routing"
+      ) {
         output.write(chatResult.response + "\n");
         promptIfOpen();
         return;
