@@ -1,8 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, cpSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { runMumuLoop } from "../scripts/node0-mumu-loop.mjs";
 import {
   buildMumuStatus,
@@ -11,6 +11,7 @@ import {
   buildMumuJourney,
   JOURNEY_STAGES,
   NETWORK_MODE,
+  defaultOutDir,
 } from "../scripts/node0-mumu-cli.mjs";
 
 // N0-MUMU-CLI-1/2: read-only CLI surface over the sealed Mumu closed loop.
@@ -163,6 +164,29 @@ describe("node0 mumu CLI — verify (read-only replay)", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
       rmSync(out, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("node0 mumu CLI — default out dir", () => {
+  it("prefers DEMA_HOME chain when present", () => {
+    const { root, out } = generateChain();
+    const demaHome = mkdtempSync(join(tmpdir(), "n0-cli-home-"));
+    const homeOut = join(demaHome, "node0", "mumu");
+    try {
+      const prevHome = process.env.DEMA_HOME;
+      const prevOut = process.env.DEMA_MUMU_OUT;
+      process.env.DEMA_HOME = demaHome;
+      delete process.env.DEMA_MUMU_OUT;
+      cpSync(out, homeOut, { recursive: true });
+      assert.equal(defaultOutDir(), resolve(homeOut));
+      process.env.DEMA_HOME = prevHome;
+      if (prevOut === undefined) delete process.env.DEMA_MUMU_OUT;
+      else process.env.DEMA_MUMU_OUT = prevOut;
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(out, { recursive: true, force: true });
+      rmSync(demaHome, { recursive: true, force: true });
     }
   });
 });

@@ -6,6 +6,7 @@
 // `journey`. Stdlib only; no network/shell imports. See ADR-037.
 
 import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve, join } from "node:path";
 import { readReceiptChain, verifyReplay } from "./node0-mumu-replay.mjs";
 
@@ -37,6 +38,15 @@ function readOnlyBoundary() {
 }
 
 export function defaultOutDir() {
+  if (process.env.DEMA_MUMU_OUT) {
+    return resolve(process.env.DEMA_MUMU_OUT);
+  }
+  const demaHome = process.env.DEMA_HOME || join(homedir(), ".dema");
+  const homeOut = join(demaHome, "node0", "mumu");
+  const chainPath = join(homeOut, "receipts", "receipt-chain.v0.1.jsonl");
+  if (existsSync(chainPath)) {
+    return resolve(homeOut);
+  }
   return resolve(join("artifacts", "node0", "mumu"));
 }
 
