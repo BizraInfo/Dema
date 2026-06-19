@@ -179,6 +179,12 @@ Genesis:
                     performance model, and QA thresholds. Read-only. No
                     libostree, no daemon, no federation, no deploy surface,
                     no receipt mint, no CI workflow mutation.
+  dema genesis seal preview [--json]
+                    Dry-run preview of the Block0 signing ceremony from
+                    read-only readiness + provenance preflight. Plans the 12
+                    prerequisite slots (11 operator-signed, poi_rule verifiable)
+                    without reading the private key, producing a signature, or
+                    sealing Block0. Preview only.
 
 URP:
   dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]
@@ -585,7 +591,7 @@ const REGISTERED_COMMANDS_LIST = [
   {
     command: "genesis",
     description:
-      "preview Genesis/OSTree composition blueprint (subcommand: composition blueprint)",
+      "preview Genesis/OSTree composition blueprint + Block0 seal ceremony dry-run (subcommands: composition blueprint, seal preview)",
   },
   {
     command: "memory",
