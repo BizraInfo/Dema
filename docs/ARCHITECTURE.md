@@ -165,6 +165,7 @@ Dema includes professional management, DevOps, and QA blueprint surfaces for pla
 | Command                              | Primary surface                                              | Effect boundary                                                                                                                                            |
 | ------------------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `dema genesis composition blueprint` | `packages/core/src/genesis-composition-blueprint-preview.js` | Read-only schema-tagged preview. No libostree, daemon, deploy/rollback surface, federation, network, receipt mint, chain advance, or CI workflow mutation. |
+| `dema genesis seal preview` | `packages/genesis/src/block0-seal-ceremony-dry-run.js` | Dry-run preview of the Block0 signing ceremony from read-only readiness + provenance preflight. No private key read, no signature produced, no Block0 seal, no identity binding, federation, receipt mint, or chain advance. |
 
 ## Behavioral modulation preview
 
