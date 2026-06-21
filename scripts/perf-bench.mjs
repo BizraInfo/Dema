@@ -18,6 +18,7 @@ import { execFileSync } from "node:child_process";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { resolveAPlusCeilings } from "../packages/perf/src/perf-ceilings.js";
 import {
   measurePerf,
   PERF_MEASUREMENT_SCHEMA,
@@ -43,13 +44,8 @@ function buildBootProbeEnv(env = process.env) {
   return sanitized;
 }
 
-// A+ performance ceilings (ms) for world-class local-first delivery.
-// These are tight but achievable for the current implementation.
-// Breach = not A+ performance. Aligned with DELIVERY_BLUEPRINT Level 5.
-const A_PLUS_CEILINGS = Object.freeze({
-  verification_latency_ms: 1, // sub-ms for canonical sha256
-  dema_boot_latency_ms: 150, // fast CLI cold start for A+ UX
-});
+// A+ performance ceilings are environment-aware (strict local / CI boot
+// headroom) — see resolveAPlusCeilings in packages/perf/src/perf-ceilings.js.
 
 // Fallback generous for sanity (used if not --a-plus).
 const SANITY_CEILINGS = Object.freeze({
@@ -99,7 +95,7 @@ async function main() {
   };
 
   const isAPlus = process.argv.includes("--a-plus");
-  const ceilings = isAPlus ? A_PLUS_CEILINGS : SANITY_CEILINGS;
+  const ceilings = isAPlus ? resolveAPlusCeilings() : SANITY_CEILINGS;
   const gateKind = isAPlus ? "a_plus_performance" : "regression_sanity_not_slo";
 
   const report = {
