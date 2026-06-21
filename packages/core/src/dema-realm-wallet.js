@@ -32,24 +32,28 @@ const BUILT_IN_INTENTS = Object.freeze([
     label: "Reward eligibility surfaces",
     status: "BLOCKED",
     truth_label: "NOT_LIVE",
+    blocked_by: Object.freeze(["no reward-settlement runtime in tree"]),
   }),
   Object.freeze({
     id: "token-mint",
     label: "Token / mint surfaces",
     status: "BLOCKED",
     truth_label: "NOT_LIVE",
+    blocked_by: Object.freeze(["no token/mint runtime in tree"]),
   }),
   Object.freeze({
     id: "marketplace-proof",
     label: "Marketplace proof objects",
     status: "BLOCKED",
     truth_label: "NOT_LIVE",
+    blocked_by: Object.freeze(["no marketplace runtime in tree"]),
   }),
   Object.freeze({
     id: "public-urp-bridge",
     label: "Public URP bridge",
     status: "BLOCKED",
     truth_label: "NOT_LIVE",
+    blocked_by: Object.freeze(["no public URP bridge runtime in tree"]),
   }),
 ]);
 

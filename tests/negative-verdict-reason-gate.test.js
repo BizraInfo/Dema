@@ -24,6 +24,7 @@ import {
   checkNegativeVerdictReasons,
   SCHEMA,
   REASON_KEYS,
+  STATUS_REASON_KEYS,
 } from "../scripts/review/negative-verdict-reason-gate.mjs";
 
 const SCRIPT = fileURLToPath(
@@ -401,13 +402,13 @@ test("scope boundary: `sat_verdict_required: \"REJECT\"` (config, not emitted ve
   );
 });
 
-test("scope boundary: status-family `status: \"BLOCKED\"` (lifecycle enum) is NOT flagged (1C deferral)", () => {
+test("1C now flags bare status-family `status: \"BLOCKED\"` (was the 1B deferral)", () => {
   withFixture(
     { "v.js": 'export const r = { status: "BLOCKED" };\n' },
     (dir) => {
       const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
-      assert.equal(r.ok, true);
-      assert.equal(r.verdict_count, 0);
+      assert.equal(r.ok, false, "1C: a bare negative status is now a violation");
+      assert.equal(r.violation_count, 1);
     },
   );
 });
@@ -513,4 +514,167 @@ test("CLI: --json on a clean fixture exits zero with ok:true", () => {
     });
     assert.equal(JSON.parse(out).ok, true);
   });
+});
+
+// --- NEGATIVE-VERDICT-REASON-GATE-1C — status-family negative states ---
+// Extends the gate to the status-family key (`status` / `*_status`, e.g.
+// current_status / preview_lifecycle_status) carrying a negative value
+// (FAILED|BLOCKED|HOLD|REJECT|CANNOT_PROVE). STRICT: a negative status must name
+// a SPECIFIC blocker/cause via STATUS_REASON_KEYS — `truth_label` alone (an
+// epistemic class label, not a failed precondition) is NOT sufficient. Verdict-
+// family (1A/1B) behavior is unchanged; `*_verdict_required` config fields and a
+// typed REASON_CLASS enum stay deferred.
+
+test("1C contract: STATUS_REASON_KEYS requires a specific blocker and excludes truth_label", () => {
+  for (const k of [
+    "reason",
+    "error",
+    "reason_code",
+    "reason_codes",
+    "blocked_by",
+    "blocked_reason",
+    "hold_reason",
+    "failed_precondition",
+    "checks",
+  ]) {
+    assert.ok(STATUS_REASON_KEYS.includes(k), `missing status reason key ${k}`);
+  }
+  assert.ok(
+    !STATUS_REASON_KEYS.includes("truth_label"),
+    "truth_label is an epistemic label, not a blocker — must NOT satisfy the gate",
+  );
+  assert.ok(Object.isFrozen(STATUS_REASON_KEYS));
+});
+
+test('status:"BLOCKED" with truth_label ONLY → violation (truth_label not sufficient)', () => {
+  withFixture(
+    {
+      "s.js":
+        'export const r = { status: "BLOCKED", truth_label: "NOT_LIVE" };\n',
+    },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, false);
+      assert.equal(r.violation_count, 1);
+      assert.equal(r.violations[0].file, "s.js");
+    },
+  );
+});
+
+test('status:"BLOCKED" with blocked_by → ok', () => {
+  withFixture(
+    {
+      "s.js":
+        'export const r = { status: "BLOCKED", truth_label: "NOT_LIVE", blocked_by: ["no runtime in tree"] };\n',
+    },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, true);
+    },
+  );
+});
+
+test('current_status:"BLOCKED" with blocked_by → ok', () => {
+  withFixture(
+    {
+      "s.js":
+        'export const r = { current_status: "BLOCKED", blocked_by: ["pilot not reached"] };\n',
+    },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, true);
+    },
+  );
+});
+
+test('preview_lifecycle_status:"HOLD" with hold_reason → ok', () => {
+  withFixture(
+    {
+      "s.js":
+        'export const r = { preview_lifecycle_status: "HOLD", hold_reason: "preview_only seed" };\n',
+    },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, true);
+    },
+  );
+});
+
+test('`*_status` (health_status) "FAILED" with reason_code → ok', () => {
+  withFixture(
+    {
+      "s.js":
+        'export const r = { health_status: "FAILED", reason_code: "probe_timeout" };\n',
+    },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, true);
+    },
+  );
+});
+
+test('`preview_lifecycle_status:"HOLD"` bare (no cause) → violation', () => {
+  withFixture(
+    { "s.js": 'export const r = { preview_lifecycle_status: "HOLD" };\n' },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, false);
+      assert.equal(r.violation_count, 1);
+    },
+  );
+});
+
+test("positive status value `status:\"LIVE\"` is ignored", () => {
+  withFixture({ "s.js": 'export const r = { status: "LIVE" };\n' }, (dir) => {
+    const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+    assert.equal(r.ok, true);
+    assert.equal(r.verdict_count, 0);
+  });
+});
+
+test('scope: `status_required:"BLOCKED"` (not a status-family verdict) is ignored', () => {
+  withFixture(
+    { "s.js": 'export const r = { status_required: "BLOCKED" };\n' },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, true, "key must END in `status`");
+    },
+  );
+});
+
+test("commented-out `// status: \"BLOCKED\"` is not flagged (liveness)", () => {
+  withFixture(
+    { "s.js": '// status: "BLOCKED"\nexport const z = 1;\n' },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, true);
+      assert.equal(r.verdict_count, 0);
+    },
+  );
+});
+
+test("string-smuggled status verdict is not flagged (liveness)", () => {
+  withFixture(
+    { "s.js": "export const note = 'see status: \"BLOCKED\" here';\n" },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, true);
+      assert.equal(r.verdict_count, 0);
+    },
+  );
+});
+
+test("truth_label inside the SAME status object does not count as the blocker", () => {
+  // belt-and-suspenders: even with other innocuous keys, only a real cause key
+  // satisfies — truth_label + label + id is still bare.
+  withFixture(
+    {
+      "s.js":
+        'export const r = { id: "x", label: "y", status: "BLOCKED", truth_label: "NOT_LIVE" };\n',
+    },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, false, "truth_label/label/id are not blockers");
+    },
+  );
 });
