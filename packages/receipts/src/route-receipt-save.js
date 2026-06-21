@@ -29,19 +29,15 @@
 //   - mismatch / missing returns { saved: false, reason: "consent_*" }
 //   - the helper never raises on consent failure; caller decides exit
 
-import { createHash } from "node:crypto";
 import { mkdir, writeFile, rename, unlink, realpath } from "node:fs/promises";
 import { join, isAbsolute, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
+import { sha256Hex } from "./hash-util.js";
 
 export const ROUTE_RECEIPT_SAVE_CONSENT = "GO: save local model route receipt";
 
 export const ROUTE_RECEIPT_SAVE_SCHEMA =
   "bizra.dema.local_model_route_receipt_save.v0.1";
-
-function sha256Hex(content) {
-  return createHash("sha256").update(content).digest("hex");
-}
 
 // Single source of truth for how the route receipt is serialized for both
 // stdout and disk. Callers pass the SAME options to this function and to

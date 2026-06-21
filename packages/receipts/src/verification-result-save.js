@@ -31,20 +31,16 @@
 //   4. rename temp file to the final content-addressed filename
 //   5. on any error: best-effort unlink of temp file
 
-import { createHash } from "node:crypto";
 import { mkdir, writeFile, rename, unlink, realpath } from "node:fs/promises";
 import { join, isAbsolute, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
+import { sha256Hex } from "./hash-util.js";
 
 export const VERIFICATION_RESULT_SAVE_CONSENT =
   "GO: save local model invocation verification";
 
 export const VERIFICATION_RESULT_SAVE_SCHEMA =
   "bizra.dema.local_model_invocation_verification_save.v0.1";
-
-function sha256Hex(content) {
-  return createHash("sha256").update(content).digest("hex");
-}
 
 // Single source of truth for how the verification envelope is serialized for
 // BOTH stdout and disk. Callers pass the SAME options to this function and
