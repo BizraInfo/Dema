@@ -64,6 +64,7 @@ import { cmd_evidence } from "./commands/evidence.js";
 import { cmd_ihsan } from "./commands/ihsan.js";
 import { cmd_behavior } from "./commands/behavior.js";
 import { cmd_design } from "./commands/design.js";
+import { cmd_agent_loop } from "./commands/agent-loop.js";
 import { cmd_task } from "./commands/task.js";
 import { cmd_sovereign } from "./commands/sovereign.js";
 import { cmd_node0 } from "./commands/node0.js";
@@ -442,6 +443,8 @@ Local evidence:
                       Preview visible guidance modulation; does not apply behavior changes
   dema design emulate-loop [--json]
                       Preview PAT/SAT loop design assumptions; does not run agents
+  dema agent-loop dual-preview [--json]
+                      Preview/eval-only PAT-7 and SAT-5 dual-loop coordinator; no agent runtime, model, reward, token, PoI, or federation
 
 Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
   dema state               Node0 state preview; mission_centered + runtime/federation/mint=false
@@ -522,6 +525,11 @@ const REGISTERED_COMMANDS_LIST = [
     command: "peak-self-loop",
     description:
       "peak ultra-micro self-loop preview (SNR · convergence · HHMM · proactive self)",
+  },
+  {
+    command: "agent-loop",
+    description:
+      "PAT/SAT dual-loop preview coordinator (preview/eval only)",
   },
   {
     command: "master-craftsmanship",
@@ -993,6 +1001,7 @@ const COMMAND_TABLE = {
   ihsan: cmd_ihsan,
   behavior: cmd_behavior,
   design: cmd_design,
+  "agent-loop": cmd_agent_loop,
   task: cmd_task,
   sovereign: cmd_sovereign,
   help: cmd_help,

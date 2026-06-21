@@ -18,10 +18,10 @@ different authors at different times. A naming audit on 2026-05-19 (branch
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
 | **single-word**      | `status`, `doctor`, `today`, `welcome`, `setup`, `onboard`, `explain`, `ambient`, `state`, `profiles`, `receipts`, `memory`, `models`, `task`, `sovereign`, `monetize`, `help`                                                                                                                                                                                           | 17                                     |
 | **space-subcommand** | `mission draft`, `mission propose`, `consent plan`, `diagnostics plan`, `models scan`, `memory show`, `report safety`, `network blueprint`, `network fixture preview`, `network refusal preview`, `amana contracts preview`, `mcp blueprint`, `roadmap preview`, `evidence receipt preview`, `ihsan floor preview`, `behavior modulation preview`, `design emulate-loop` | 17 (grouped under 13 top-level tokens) |
-| **kebab**            | `consent-card`, `mission-loop`, `evidence-event`, `node-registry`, `onboarding-lifecycle`, `skill-growth-governor`, `project-status`, `craftsmanship-witness`, `llm-router`, `process-mining`, `key-maker-check`, `llm-invoke`, `master-craftsmanship` _(amendment 2026-05-19)_                                                                                          | 13                                     |
+| **kebab**            | `consent-card`, `mission-loop`, `evidence-event`, `node-registry`, `onboarding-lifecycle`, `skill-growth-governor`, `project-status`, `craftsmanship-witness`, `llm-router`, `process-mining`, `key-maker-check`, `llm-invoke`, `master-craftsmanship`, `setup-check`, `peak-self-loop`, `agent-loop` _(amendments through 2026-06-20)_ | 16                                     |
 | **colon-format**     | `status:json`, `ambient:json`                                                                                                                                                                                                                                                                                                                                            | 2                                      |
 
-Total tokens in `REGISTERED_COMMANDS_LIST`: 42 (including top-level dispatch tokens for
+Total tokens in `REGISTERED_COMMANDS_LIST`: 65 (including top-level dispatch tokens for
 space-subcommand groups).
 
 ---
@@ -109,7 +109,7 @@ one-line migration hint for ≥1 release cycle, (c) update to `REGISTERED_COMMAN
 `tests/cli-naming-convention.test.js` asserts:
 
 1. No new colon-format commands beyond the allowlist (`status:json`, `ambient:json`).
-2. No new kebab commands beyond the 13-entry legacy allowlist (extended by 1 on 2026-05-19; see §Amendments).
+2. No new kebab commands beyond the 16-entry legacy allowlist (latest extension on 2026-06-20; see §Amendments).
 3. Every command in `REGISTERED_COMMANDS_LIST` is classifiable into one of the four known
    patterns (catch-all guard against future unclassifiable patterns).
 
@@ -151,3 +151,11 @@ source of truth — so it does not drift from the actual command surface.
 **Decision.** Extend the kebab allowlist to 15 entries with `peak-self-loop`. Semantic linkage to the existing craftsmanship witness family; no new naming convention introduced.
 
 **Consequence.** `tests/cli-naming-convention.test.js` kebab count guard expects 15.
+
+### 2026-06-20 · +1 kebab allowlist entry: `agent-loop`
+
+**Context.** PAT-SAT-DUAL-LOOP-PREVIEW-1A ships `dema agent-loop dual-preview [--json]` as a preview/eval-only coordinator for PAT-7 and SAT-5. The command is deliberately paired with the existing `dema design emulate-loop` surface but names the agent-loop preview directly because the approved operator verification command is `dema agent-loop dual-preview --json`.
+
+**Decision.** Extend the kebab allowlist to 16 entries with `agent-loop`. The surface remains preview-only: it invokes no agents or models, emits no reward, mints no receipt or token, starts no federation, and performs no RL policy update.
+
+**Consequence.** `tests/cli-naming-convention.test.js` kebab count guard expects 16.

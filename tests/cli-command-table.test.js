@@ -51,6 +51,7 @@ const COMMAND_SURFACE = [
   "project-status",
   "craftsmanship-witness",
   "peak-self-loop",
+  "agent-loop",
   "master-craftsmanship",
   "codebase",
   "orchestrator",
