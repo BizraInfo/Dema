@@ -119,6 +119,10 @@ export const commands = [
     ["apps/cli/src/index.js", "amana", "contracts", "preview", "--json"],
   ],
   ["node", ["apps/cli/src/index.js", "design", "emulate-loop"]],
+  [
+    "node",
+    ["apps/cli/src/index.js", "agent-loop", "dual-preview", "--json"],
+  ],
   ["node", ["apps/cli/src/index.js", "status"]],
   ["node", ["apps/cli/src/index.js", "bootstrap"]],
   ["node", ["apps/cli/src/index.js", "bootstrap", "--json"]],
