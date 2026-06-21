@@ -23,7 +23,7 @@
 // ONLY THEN wire it into scripts/check.mjs. Discovery (from repo root):
 //   node scripts/review/negative-verdict-reason-gate.mjs
 import { readdirSync, readFileSync } from "node:fs";
-import { join, isAbsolute, dirname, relative } from "node:path";
+import { join, isAbsolute, dirname, relative, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -32,15 +32,19 @@ const REPO_ROOT = join(__dirname, "..", "..");
 export const SCHEMA = "bizra.dema.review.negative_verdict_reason.v0.1";
 export const DEFAULT_SCAN_DIR = "packages";
 
-// A negative-verdict marker: `verified: false` or `sealable: false` as a real
-// object key. The leading \b is load-bearing — it excludes boundary-attestation
-// fields (signature_verified / consent_verified / model_verified : false), which
-// are canonical all-false attestations, not rejection verdicts.
-export const VERDICT_RE = /\b(?:verified|sealable)\s*:\s*false\b/;
+// A negative-verdict marker: `verified: false` / `sealable: false`, with an
+// optional quoted key (`"verified": false`, `'sealable': false`). The
+// (?<![\w$]) boundary is load-bearing — it excludes boundary-attestation fields
+// (signature_verified / consent_verified / model_verified : false), which are
+// canonical all-false attestations, not rejection verdicts. Global so matchAll
+// evaluates EVERY marker on a line, not just the first.
+export const VERDICT_RE =
+  /(?<![\w$])(['"]?)(?:verified|sealable)\1\s*:\s*false\b/g;
 
 // Machine-readable reason-family keys observed across the proof producers
-// (recon 2026-06-21). A negative verdict satisfies the gate if any appears in a
-// small window around the marker.
+// (recon 2026-06-21). A verdict satisfies the gate when one appears as a real
+// object key in the verdict's own object literal (see REASON_KEY_RE) — never
+// merely as a word in a comment or string.
 export const REASON_KEYS = Object.freeze([
   "reason",
   "reasons",
@@ -60,7 +64,13 @@ export const REASON_KEYS = Object.freeze([
   "next_unblocked_condition",
   "next_safe_step",
 ]);
-const REASON_RE = new RegExp(`\\b(?:${REASON_KEYS.join("|")})\\b`);
+const REASON_ALT = REASON_KEYS.join("|");
+// A reason must appear as a real object key — `reason:` / `"reason":` (explicit)
+// or shorthand `, reason }` / `, reason,` — never merely as a word inside a
+// comment or string value (those are blanked by sanitizeForScan before this runs).
+const REASON_KEY_RE = new RegExp(
+  `[{,]\\s*(?:["']?(?:${REASON_ALT})["']?\\s*:|(?:${REASON_ALT})\\s*[,}])`,
+);
 
 // A verdict satisfies the gate when a reason key appears in the SAME object
 // literal as the marker. The enclosing `{ ... }` is found by brace-matching (back
@@ -145,8 +155,57 @@ function collectJsFiles(rootAbs) {
   return out.sort();
 }
 
+// Length-preserving sanitizer: blanks comments and string VALUES (keeping quotes,
+// newlines, and total length) so a `verified:false` marker, a reason word, or a
+// brace cannot be smuggled inside a comment or string. A quoted KEY (a string
+// immediately followed by `:`) is preserved so `"verified":`/`"reason":` still
+// parse. Char indices and line numbers stay 1:1 with the raw source.
+function sanitizeForScan(code) {
+  const out = code.split("");
+  const n = code.length;
+  const blank = (a, b) => {
+    for (let k = a; k < b; k++) if (out[k] !== "\n") out[k] = " ";
+  };
+  let i = 0;
+  while (i < n) {
+    const c = code[i];
+    const c2 = code[i + 1];
+    if (c === "/" && c2 === "/") {
+      let j = i;
+      while (j < n && code[j] !== "\n") j++;
+      blank(i, j);
+      i = j;
+      continue;
+    }
+    if (c === "/" && c2 === "*") {
+      let j = i + 2;
+      while (j < n && !(code[j] === "*" && code[j + 1] === "/")) j++;
+      j = Math.min(n, j + 2);
+      blank(i, j);
+      i = j;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") {
+      let j = i + 1;
+      while (j < n && code[j] !== c) {
+        if (code[j] === "\\") j += 2;
+        else j++;
+      }
+      const close = Math.min(j, n);
+      let k = close + 1;
+      while (k < n && /\s/.test(code[k])) k++;
+      if (code[k] !== ":") blank(i + 1, close); // value → blank; key → keep
+      i = close + 1;
+      continue;
+    }
+    i++;
+  }
+  return out.join("");
+}
+
 function scanFileContent(content) {
-  const lines = content.split("\n");
+  const code = sanitizeForScan(content);
+  const lines = code.split("\n");
   const markers = [];
   let offset = 0;
   for (let i = 0; i < lines.length; i++) {
@@ -154,13 +213,12 @@ function scanFileContent(content) {
     const lineStart = offset;
     offset += raw.length + 1; // + newline
     if (raw.length > 2000) continue; // bounded: ReDoS + minified-line guard
-    const trimmed = raw.trimStart();
-    if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
-    const m = raw.match(VERDICT_RE);
-    if (!m) continue;
-    // Bind the reason search to the verdict's own object literal.
-    const span = enclosingObjectSpan(content, lineStart + m.index) ?? raw;
-    markers.push({ line: i + 1, hasReason: REASON_RE.test(span) });
+    // matchAll so EVERY verdict on the line is evaluated, each against its own
+    // enclosing object literal.
+    for (const m of raw.matchAll(VERDICT_RE)) {
+      const span = enclosingObjectSpan(code, lineStart + m.index) ?? raw;
+      markers.push({ line: i + 1, hasReason: REASON_KEY_RE.test(span) });
+    }
   }
   return markers;
 }
@@ -184,7 +242,7 @@ export function checkNegativeVerdictReasons({
     const bare = markers.filter((m) => !m.hasReason);
     if (bare.length === 0) continue;
     const rel = relative(rootAbs, fileAbs).replace(/\\/g, "/");
-    const base = fileAbs.slice(fileAbs.lastIndexOf("/") + 1);
+    const base = basename(fileAbs);
     if (Object.hasOwn(allowlist, base)) {
       matchedAllowlistKeys.add(base);
       allowlisted.push(

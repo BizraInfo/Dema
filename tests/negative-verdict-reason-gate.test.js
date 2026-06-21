@@ -217,6 +217,95 @@ test("stale allowlist entry (no matching bare verdict) is surfaced, not fatal", 
   });
 });
 
+test("quoted JSON-style key `\"verified\": false` with no reason → violation", () => {
+  withFixture({ "q.js": 'export const r = { "verified": false };\n' }, (dir) => {
+    const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+    assert.equal(r.ok, false);
+    assert.equal(r.violations[0].file, "q.js");
+  });
+});
+
+test("quoted verified key WITH a quoted reason key → ok", () => {
+  withFixture(
+    {
+      "q.js":
+        'export const r = { "verified": false, "reason": "missing envelope" };\n',
+    },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, true);
+    },
+  );
+});
+
+test("single-quoted key `'sealable': false` is detected as a verdict", () => {
+  withFixture({ "s.js": "export const r = { 'sealable': false };\n" }, (dir) => {
+    const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+    assert.equal(r.ok, false);
+  });
+});
+
+test("reason word in a COMMENT does not satisfy the gate", () => {
+  withFixture(
+    {
+      "c.js":
+        "export const r = {\n  verified: false,\n  // reason: TODO add one\n};\n",
+    },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, false, "comment reason must not count");
+    },
+  );
+});
+
+test("reason word inside a STRING value does not satisfy the gate", () => {
+  withFixture(
+    { "s.js": 'export const r = { verified: false, note: "reason exists" };\n' },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, false, "string reason must not count");
+    },
+  );
+});
+
+test("a `, reason:` embedded inside a STRING value is not a real key", () => {
+  withFixture(
+    { "s.js": 'export const r = { verified: false, note: "x, reason: y" };\n' },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, false, "string-embedded reason: must not count");
+    },
+  );
+});
+
+test("multiple verdicts on ONE line are all evaluated (2nd is bare)", () => {
+  withFixture(
+    {
+      "m.js":
+        'export const a = { verified: false, reason: "x" }; export const b = { sealable: false };\n',
+    },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, false);
+      assert.equal(r.violation_count, 1, "only the 2nd (bare) verdict violates");
+    },
+  );
+});
+
+test("allowlist matches by basename for a nested file (path-separator safe)", () => {
+  withFixture(
+    { "deep/src/closeout.js": "export const r = { verified: false };\n" },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({
+        scanDir: dir,
+        allowlist: { "closeout.js": "documented empty-set closeout" },
+      });
+      assert.equal(r.ok, true);
+      assert.equal(r.allowlisted[0].file, "closeout.js");
+    },
+  );
+});
+
 test("real tree (packages/) is clean — REASON_EXEMPT_ALLOWLIST finalized (acceptance)", () => {
   const r = checkNegativeVerdictReasons(); // defaults: real packages/ + seed allowlist
   assert.equal(r.schema, SCHEMA);
