@@ -12,6 +12,7 @@ import {
   toBaselineMetrics,
 } from "../packages/perf/src/perf-benchmark.js";
 import { REQUIRED_METRICS } from "../packages/perf/src/perf-baseline.js";
+import { resolveAPlusCeilings } from "../packages/perf/src/perf-ceilings.js";
 
 // PERF-MEASURE-1A · measurement collector tests.
 //
@@ -28,6 +29,28 @@ const PERF_BENCH_SOURCE = readFileSync(PERF_BENCH_SCRIPT, "utf8");
 
 test("PERF_MEASUREMENT_SCHEMA is the versioned schema id", () => {
   assert.equal(PERF_MEASUREMENT_SCHEMA, "bizra.dema.perf_measurement.v0.1");
+});
+
+test("resolveAPlusCeilings: local stays strict 150ms boot, verification 1ms, frozen", () => {
+  const c = resolveAPlusCeilings({});
+  assert.equal(c.dema_boot_latency_ms, 150);
+  assert.equal(c.verification_latency_ms, 1);
+  assert.ok(Object.isFrozen(c));
+});
+
+test("resolveAPlusCeilings: CI gets boot headroom (250ms), verification unchanged", () => {
+  assert.equal(resolveAPlusCeilings({ CI: "true" }).dema_boot_latency_ms, 250);
+  assert.equal(
+    resolveAPlusCeilings({ GITHUB_ACTIONS: "true" }).dema_boot_latency_ms,
+    250,
+  );
+  assert.equal(resolveAPlusCeilings({ CI: "true" }).verification_latency_ms, 1);
+});
+
+test("resolveAPlusCeilings: CI headroom stays far below a gross 2x+ regression (no masking)", () => {
+  const ci = resolveAPlusCeilings({ CI: "true" }).dema_boot_latency_ms;
+  assert.ok(ci < 600, "CI ceiling must still flag a genuine 2x+ boot regression");
+  assert.ok(ci <= 250, "CI headroom must not balloon");
 });
 
 test("perf-bench CLI boot probe is bounded and isolated from live gateway/model env", () => {
