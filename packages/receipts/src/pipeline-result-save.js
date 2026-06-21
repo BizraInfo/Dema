@@ -35,20 +35,16 @@
 // (each ~1 KiB) plus the source artifact's schema string — bounded by
 // design to a few KiB. No need for a hatch.
 
-import { createHash } from "node:crypto";
 import { mkdir, writeFile, rename, unlink, realpath } from "node:fs/promises";
 import { join, isAbsolute, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
+import { sha256Hex } from "./hash-util.js";
 
 export const PIPELINE_RESULT_SAVE_CONSENT =
   "GO: save local orchestrator pipeline result";
 
 export const PIPELINE_RESULT_SAVE_SCHEMA =
   "bizra.dema.orchestrator_pipeline_result_save.v0.1";
-
-function sha256Hex(content) {
-  return createHash("sha256").update(content).digest("hex");
-}
 
 // Single source of truth for how the pipeline envelope is serialized for
 // BOTH stdout and disk. Callers pass the SAME options to this function and

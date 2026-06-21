@@ -35,10 +35,10 @@
 //   envelopes (which are all <100 KiB). Cap at 256 MiB serialized; fail-closed
 //   if exceeded. Caller exits non-zero before any stdout write.
 
-import { createHash } from "node:crypto";
 import { mkdir, writeFile, rename, unlink, realpath } from "node:fs/promises";
 import { join, isAbsolute, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
+import { sha256Hex } from "./hash-util.js";
 
 export const CODEBASE_MAP_SAVE_CONSENT =
   "GO: save local codebase architecture map";
@@ -51,10 +51,6 @@ export const CODEBASE_MAP_SAVE_SCHEMA =
 // in the Dema self-scan is ~5 MiB; the cap leaves 50× headroom for larger
 // target repos while still hard-capping disk + memory pressure).
 export const MAX_SAVED_BYTES = 268_435_456;
-
-function sha256Hex(content) {
-  return createHash("sha256").update(content).digest("hex");
-}
 
 // Single source of truth for how the codebase-map envelope is serialized for
 // BOTH stdout and disk. Callers pass the SAME options to this function and
