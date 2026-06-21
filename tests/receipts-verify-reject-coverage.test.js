@@ -8,6 +8,11 @@
 // integration tests existing. These tests assert the exact frozen reject shapes
 // in-process. Permissionless verification: bad args + absent file paths only —
 // no signing, no Block0 seal, no token/PoI, no consent collection.
+//
+// Every reject case asserts the FULL frozen envelope via assertRejectEnvelope
+// (verified:false + rejected:true + reason + Object.isFrozen), not just the
+// reason string — so an envelope-contract regression (e.g. a dropped
+// rejected:true or a non-frozen result) is caught on every path.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
@@ -28,20 +33,26 @@ async function withDir(fn) {
   }
 }
 
+// The universal reject-envelope contract: every reject path MUST return a frozen
+// object carrying verified:false, rejected:true, and the expected reason.
+function assertRejectEnvelope(r, expectedReason) {
+  assert.equal(r.verified, false, "reject envelope must carry verified:false");
+  assert.equal(r.rejected, true, "reject envelope must carry rejected:true");
+  assert.equal(r.reason, expectedReason);
+  assert.ok(Object.isFrozen(r), "reject envelope must be frozen");
+}
+
 // --- consent verify (runConsentVerifyCli) reject branches ---
 
 test("consent verify: missing proofPath → frozen missing_proof_path", async () => {
   const r = await runConsentVerifyCli({});
-  assert.equal(r.verified, false);
-  assert.equal(r.rejected, true);
-  assert.equal(r.reason, "missing_proof_path");
+  assertRejectEnvelope(r, "missing_proof_path");
   assert.equal(r.required, "<proof.json>");
-  assert.ok(Object.isFrozen(r));
 });
 
 test("consent verify: missing pubkeyPath → missing_pubkey_path", async () => {
   const r = await runConsentVerifyCli({ proofPath: "proof.json" });
-  assert.equal(r.reason, "missing_pubkey_path");
+  assertRejectEnvelope(r, "missing_pubkey_path");
   assert.equal(r.required, "--pubkey <external-pem-path>");
 });
 
@@ -51,7 +62,7 @@ test("consent verify: unreadable proof file → proof_read_failed with details",
       proofPath: join(dir, "absent-proof.json"),
       pubkeyPath: join(dir, "k.pem"),
     });
-    assert.equal(r.reason, "proof_read_failed");
+    assertRejectEnvelope(r, "proof_read_failed");
     assert.ok(typeof r.details === "string" && r.details.length > 0);
   });
 });
@@ -67,9 +78,8 @@ test("consent verify: valid proof but unreadable pubkey → pubkey_read_failed",
       proofPath: proof,
       pubkeyPath: join(dir, "absent.pem"),
     });
-    assert.equal(r.reason, "pubkey_read_failed");
+    assertRejectEnvelope(r, "pubkey_read_failed");
     assert.ok(r.details.length > 0);
-    assert.ok(Object.isFrozen(r));
   });
 });
 
@@ -77,16 +87,13 @@ test("consent verify: valid proof but unreadable pubkey → pubkey_read_failed",
 
 test("verify-grounded: missing bundlePath → frozen missing_bundle_path", async () => {
   const r = await runVerifyGroundedCli({});
-  assert.equal(r.verified, false);
-  assert.equal(r.rejected, true);
-  assert.equal(r.reason, "missing_bundle_path");
+  assertRejectEnvelope(r, "missing_bundle_path");
   assert.equal(r.required, "<bundle.json>");
-  assert.ok(Object.isFrozen(r));
 });
 
 test("verify-grounded: missing pubkeyPath → missing_pubkey_path", async () => {
   const r = await runVerifyGroundedCli({ bundlePath: "bundle.json" });
-  assert.equal(r.reason, "missing_pubkey_path");
+  assertRejectEnvelope(r, "missing_pubkey_path");
   assert.equal(r.required, "--pubkey <external-pem-path>");
 });
 
@@ -95,7 +102,7 @@ test("verify-grounded: missing ruleId → missing_rule_id", async () => {
     bundlePath: "bundle.json",
     pubkeyPath: "k.pem",
   });
-  assert.equal(r.reason, "missing_rule_id");
+  assertRejectEnvelope(r, "missing_rule_id");
   assert.equal(r.required, "--rule <rule_id>");
 });
 
@@ -106,7 +113,7 @@ test("verify-grounded: unreadable bundle → bundle_read_failed with details", a
       pubkeyPath: join(dir, "k.pem"),
       ruleId: "rule.v0.1",
     });
-    assert.equal(r.reason, "bundle_read_failed");
+    assertRejectEnvelope(r, "bundle_read_failed");
     assert.ok(typeof r.details === "string" && r.details.length > 0);
   });
 });
@@ -120,7 +127,7 @@ test("verify-grounded: valid bundle but unreadable pubkey → pubkey_read_failed
       pubkeyPath: join(dir, "absent.pem"),
       ruleId: "rule.v0.1",
     });
-    assert.equal(r.reason, "pubkey_read_failed");
+    assertRejectEnvelope(r, "pubkey_read_failed");
     assert.ok(r.details.length > 0);
   });
 });
