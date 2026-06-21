@@ -5,6 +5,7 @@ export const commands = [
   ["node", ["scripts/review/env-hygiene-check.mjs"]],
   ["node", ["scripts/review/kernel-purity-check.mjs"]],
   ["node", ["scripts/review/agent-dna-root-coherence.mjs"]],
+  ["node", ["scripts/review/negative-verdict-reason-gate.mjs"]],
   ["node", ["scripts/review/proof-spine-guard.mjs"]],
   ["node", ["scripts/review/fuzz-lite-parser.mjs"]],
   ["node", ["scripts/review/homebase-asset-graph.mjs"]],
