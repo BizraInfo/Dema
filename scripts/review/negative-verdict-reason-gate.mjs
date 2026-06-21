@@ -1,22 +1,27 @@
 #!/usr/bin/env node
-// NEGATIVE-VERDICT-REASON-GATE-1A — read-only review check.
+// NEGATIVE-VERDICT-REASON-GATE-1A/1B — read-only review check.
 //
-// Fails if a module emits a `verified: false` or `sealable: false` verdict
-// without a machine-readable reason key nearby (reason / error / reason_code(s)
-// / refusal_reason / blocked_reason / poi_rule_reason / ...), unless the file is
-// in REASON_EXEMPT_ALLOWLIST with a documented reason.
+// Fails if a module emits a negative verdict without a machine-readable reason
+// key nearby (reason / error / checks / reason_code(s) / refusal_reason /
+// blocked_reason / poi_rule_reason / ...), unless the file is in
+// REASON_EXEMPT_ALLOWLIST with a documented reason. Two verdict shapes:
+//   1A — `verified: false` / `sealable: false`
+//   1B — string verdicts on the verdict-family key (`verdict` / `*_verdict`):
+//        verdict: "FAILED" | "BLOCKED" | "HOLD" | "REJECT" | "CANNOT_PROVE"
 //
 // Why (Minsky-Papert, giants-absorption 2026-06-21): a negative result must
 // carry its scope/cause. Across the proof verifiers, reason-emission was
 // convention, not mechanically enforced — a new producer could ship a bare
-// `verified:false` and nothing would stop it. This gate makes the dominant
-// proof-verifier convention mechanical (verified/sealable:false MUST name why).
+// negative verdict and nothing would stop it. This gate makes the dominant
+// proof-verifier convention mechanical (a negative verdict MUST name why).
 //
-// Scope v0.1 (a bound carries its scope): the `verified:false` / `sealable:false`
-// convention only. The heterogeneous FAILED/BLOCKED/HOLD/allowed:false verdict
-// shapes, and a typed REASON_CLASS {STRUCTURALLY_PERMANENT, NOT_YET_DERIVABLE}
-// enum, are deferred follow-up slices (no such typed enum exists on disk yet).
-// `\bverified` excludes boundary-attestation fields like `signature_verified`.
+// Scope (a bound carries its scope): the verdict-family key only. Status-family
+// lifecycle enums (status / *_status : "BLOCKED"|"HOLD"), the `*_verdict_required`
+// config field, and a typed REASON_CLASS {STRUCTURALLY_PERMANENT,
+// NOT_YET_DERIVABLE} enum are a deferred 1C follow-up (no such typed enum exists
+// on disk yet). The `(?<![\w$])` boundary excludes boundary-attestation fields
+// like `signature_verified: false`. 1B string VALUES are blanked by
+// sanitizeForScan, so they are matched on raw source + liveness-masked.
 //
 // Finalize (acceptance): run this gate, add each real violation to
 // REASON_EXEMPT_ALLOWLIST below with a one-line reason until `ok` is true, and
@@ -41,6 +46,28 @@ export const DEFAULT_SCAN_DIR = "packages";
 export const VERDICT_RE =
   /(?<![\w$])(['"]?)(?:verified|sealable)\1\s*:\s*false\b/g;
 
+// 1B — heterogeneous string verdicts. A verdict-family key (`verdict` or
+// `*_verdict`, e.g. verification_verdict / mission_verdict) whose quoted value
+// is one of the negative tokens below. Anchored to the verdict-family key so
+// status-family lifecycle enums (status / *_status : "BLOCKED"|"HOLD") and the
+// `*_verdict_required` CONFIG field are NOT swept in — those are a documented
+// 1C follow-up, not rejection verdicts. The `\1` backreference pairs the key
+// quotes; `\2` pairs the value quotes; global so matchAll sees every marker.
+// NOTE: the string VALUE is blanked by sanitizeForScan, so this regex is run on
+// the RAW source and each match is liveness-checked against the sanitized buffer
+// (see scanFileContent) — a verdict inside a comment or string never flags.
+export const NEGATIVE_VERDICT_VALUES = Object.freeze([
+  "FAILED",
+  "BLOCKED",
+  "HOLD",
+  "REJECT",
+  "CANNOT_PROVE",
+]);
+export const NEGATIVE_STRING_VERDICT_RE = new RegExp(
+  `(?<![\\w$])(['"]?)(?:[a-z][a-z0-9]*_)*verdict\\1\\s*:\\s*(['"])(?:${NEGATIVE_VERDICT_VALUES.join("|")})\\2`,
+  "g",
+);
+
 // Machine-readable reason-family keys observed across the proof producers
 // (recon 2026-06-21). A verdict satisfies the gate when one appears as a real
 // object key in the verdict's own object literal (see REASON_KEY_RE) — never
@@ -58,6 +85,10 @@ export const REASON_KEYS = Object.freeze([
   "error_reason",
   "error",
   "errors",
+  // structured pass/fail evidence list — the cause of a verdict:"FAILED" lives
+  // in its checks (per-check pass:false + detail), the dominant verify-producer
+  // shape (witness-verify / health-snapshot / sat-placeholder). 1B.
+  "checks",
   "denial",
   "why",
   "proof_gaps",
@@ -116,6 +147,8 @@ function enclosingObjectSpan(content, markerCharIndex) {
 export const REASON_EXEMPT_ALLOWLIST = Object.freeze({
   "authorship-closeout.js":
     "empty-set closeout: with no authorship receipts on disk, verified:false reports an absence, not a rejection — truth_label NO_AUTHORSHIP_RECEIPTS names the no-data condition (optional follow-up: add reason:'no_authorship_receipts')",
+  "homebase-gather.js":
+    "1B: aggregator re-emits a downstream health-snapshot {verification,mission}_verdict:'FAILED'; the per-check cause lives in the receipt it already verified via verifyHealthSnapshotReceipt(latest), and this summary layer carries checks_passing/checks_total counts (optional follow-up: thread a reason/checks field through the aggregation)",
 });
 
 function shouldSkipDir(name) {
@@ -204,19 +237,31 @@ function sanitizeForScan(code) {
 }
 
 function scanFileContent(content) {
-  const code = sanitizeForScan(content);
-  const lines = code.split("\n");
+  const code = sanitizeForScan(content); // length-preserving → 1:1 char indices
+  const sLines = code.split("\n");
+  const rLines = content.split("\n");
   const markers = [];
   let offset = 0;
-  for (let i = 0; i < lines.length; i++) {
-    const raw = lines[i];
+  for (let i = 0; i < sLines.length; i++) {
+    const sLine = sLines[i];
     const lineStart = offset;
-    offset += raw.length + 1; // + newline
-    if (raw.length > 2000) continue; // bounded: ReDoS + minified-line guard
-    // matchAll so EVERY verdict on the line is evaluated, each against its own
-    // enclosing object literal.
-    for (const m of raw.matchAll(VERDICT_RE)) {
-      const span = enclosingObjectSpan(code, lineStart + m.index) ?? raw;
+    offset += sLine.length + 1; // + newline
+    if (sLine.length > 2000) continue; // bounded: ReDoS + minified-line guard
+    // 1A — `verified|sealable: false` survives sanitize (false is a keyword, not
+    // a string value). matchAll so EVERY verdict on the line is evaluated, each
+    // against its own enclosing object literal.
+    for (const m of sLine.matchAll(VERDICT_RE)) {
+      const span = enclosingObjectSpan(code, lineStart + m.index) ?? sLine;
+      markers.push({ line: i + 1, hasReason: REASON_KEY_RE.test(span) });
+    }
+    // 1B — string verdicts (verdict:"FAILED"). The VALUE is blanked by sanitize,
+    // so match on the RAW line, then confirm the marker is live code (not a
+    // comment/string) by checking the sanitized buffer still holds the same char
+    // at the marker's start — a blanked position means it was smuggled.
+    for (const m of rLines[i].matchAll(NEGATIVE_STRING_VERDICT_RE)) {
+      const at = lineStart + m.index;
+      if (code[at] !== content[at]) continue; // blanked → comment/string value
+      const span = enclosingObjectSpan(code, at) ?? sLine;
       markers.push({ line: i + 1, hasReason: REASON_KEY_RE.test(span) });
     }
   }

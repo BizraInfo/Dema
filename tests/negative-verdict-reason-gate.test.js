@@ -306,6 +306,179 @@ test("allowlist matches by basename for a nested file (path-separator safe)", ()
   );
 });
 
+// --- NEGATIVE-VERDICT-REASON-GATE-1B — string verdicts ---
+// Extends the gate from verified/sealable:false to the heterogeneous string
+// verdict shape `verdict: "FAILED" | "BLOCKED" | "HOLD" | "REJECT" |
+// "CANNOT_PROVE"` on the verdict-family key (`verdict` / `*_verdict`). The
+// string VALUE is blanked by sanitizeForScan, so the gate matches the value on
+// the raw line and uses the sanitized buffer as a liveness mask (comment/string
+// occurrences must not flag). Status-family keys (status/*_status) and
+// `*_verdict_required` config fields are OUT of scope (documented 1C deferral).
+
+test("1B contract: REASON_KEYS recognizes the structured `checks` cause", () => {
+  assert.ok(
+    REASON_KEYS.includes("checks"),
+    "a verdict that ships a structured pass/fail `checks` list names its cause",
+  );
+});
+
+test("bare `verdict: \"FAILED\"` (no reason) → violation", () => {
+  withFixture({ "v.js": 'export const r = { verdict: "FAILED" };\n' }, (dir) => {
+    const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+    assert.equal(r.ok, false);
+    assert.equal(r.violation_count, 1);
+    assert.equal(r.violations[0].file, "v.js");
+    assert.equal(r.violations[0].line, 1);
+  });
+});
+
+test("`verdict: \"FAILED\"` with a structured `checks` list → ok (verify-producer shape)", () => {
+  withFixture(
+    {
+      "v.js":
+        'export const r = { schema: S, verdict: "FAILED", path: p, checks, receipt: null };\n',
+    },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, true, "checks list is the machine-readable cause");
+    },
+  );
+});
+
+test("`verdict: \"FAILED\"` with an `error` key → ok", () => {
+  withFixture(
+    { "v.js": 'export const r = { verdict: "FAILED", error: "boom" };\n' },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, true);
+    },
+  );
+});
+
+test("`*_verdict` family key (mission_verdict) is detected when bare", () => {
+  withFixture(
+    { "v.js": 'export const r = { mission_verdict: "FAILED" };\n' },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, false);
+      assert.equal(r.violation_count, 1);
+    },
+  );
+});
+
+for (const token of ["BLOCKED", "HOLD", "REJECT", "CANNOT_PROVE"]) {
+  test(`negative string verdict "${token}" is detected when bare`, () => {
+    withFixture(
+      { "v.js": `export const r = { verdict: "${token}" };\n` },
+      (dir) => {
+        const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+        assert.equal(r.ok, false, `${token} must be a negative verdict`);
+        assert.equal(r.violation_count, 1);
+      },
+    );
+  });
+}
+
+test("positive verdict `verdict: \"VERIFIED\"` is NOT flagged", () => {
+  withFixture(
+    { "v.js": 'export const r = { verdict: "VERIFIED" };\n' },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, true);
+      assert.equal(r.verdict_count, 0, "VERIFIED is not a negative verdict");
+    },
+  );
+});
+
+test("scope boundary: `sat_verdict_required: \"REJECT\"` (config, not emitted verdict) is NOT flagged", () => {
+  withFixture(
+    { "v.js": 'export const r = { sat_verdict_required: "REJECT" };\n' },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, true, "*_verdict_required is not the verdict-family key");
+      assert.equal(r.verdict_count, 0);
+    },
+  );
+});
+
+test("scope boundary: status-family `status: \"BLOCKED\"` (lifecycle enum) is NOT flagged (1C deferral)", () => {
+  withFixture(
+    { "v.js": 'export const r = { status: "BLOCKED" };\n' },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, true);
+      assert.equal(r.verdict_count, 0);
+    },
+  );
+});
+
+test("commented-out `// verdict: \"FAILED\"` is not flagged (liveness)", () => {
+  withFixture(
+    { "v.js": '// verdict: "FAILED"\nexport const z = 1;\n' },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, true);
+      assert.equal(r.verdict_count, 0);
+    },
+  );
+});
+
+test("string-smuggled `'...verdict: \"FAILED\"...'` is not flagged (liveness)", () => {
+  withFixture(
+    { "v.js": "export const note = 'see verdict: \"FAILED\" here';\n" },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, true, "verdict inside a string value must not flag");
+      assert.equal(r.verdict_count, 0);
+    },
+  );
+});
+
+test("quoted key `\"verdict\": \"FAILED\"` is detected when bare", () => {
+  withFixture(
+    { "v.js": 'export const r = { "verdict": "FAILED" };\n' },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, false);
+    },
+  );
+});
+
+test("single-quoted value `verdict: 'FAILED'` is detected when bare", () => {
+  withFixture(
+    { "v.js": "export const r = { verdict: 'FAILED' };\n" },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, false);
+    },
+  );
+});
+
+test("co-located `verified:false` + `verdict:\"FAILED\"` sharing one reason → ok, both counted", () => {
+  withFixture(
+    {
+      "v.js":
+        'export const r = { verified: false, verdict: "FAILED", error: "x" };\n',
+    },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, true);
+      assert.equal(r.verdict_count, 2, "verified:false AND verdict:FAILED markers");
+    },
+  );
+});
+
+test("co-located bare `verified:false` + `verdict:\"FAILED\"` (no reason) → 2 violations", () => {
+  withFixture(
+    { "v.js": 'export const r = { verified: false, verdict: "FAILED" };\n' },
+    (dir) => {
+      const r = checkNegativeVerdictReasons({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, false);
+      assert.equal(r.violation_count, 2, "each bare marker violates independently");
+    },
+  );
+});
+
 test("real tree (packages/) is clean — REASON_EXEMPT_ALLOWLIST finalized (acceptance)", () => {
   const r = checkNegativeVerdictReasons(); // defaults: real packages/ + seed allowlist
   assert.equal(r.schema, SCHEMA);
