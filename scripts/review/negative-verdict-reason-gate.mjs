@@ -1,13 +1,18 @@
 #!/usr/bin/env node
-// NEGATIVE-VERDICT-REASON-GATE-1A/1B — read-only review check.
+// NEGATIVE-VERDICT-REASON-GATE-1A/1B/1C — read-only review check.
 //
 // Fails if a module emits a negative verdict without a machine-readable reason
-// key nearby (reason / error / checks / reason_code(s) / refusal_reason /
-// blocked_reason / poi_rule_reason / ...), unless the file is in
-// REASON_EXEMPT_ALLOWLIST with a documented reason. Two verdict shapes:
+// key nearby (reason / error / checks / reason_code(s) / blocked_by /
+// blocked_reason / ...), unless the file is in REASON_EXEMPT_ALLOWLIST with a
+// documented reason. Three negative shapes:
 //   1A — `verified: false` / `sealable: false`
 //   1B — string verdicts on the verdict-family key (`verdict` / `*_verdict`):
 //        verdict: "FAILED" | "BLOCKED" | "HOLD" | "REJECT" | "CANNOT_PROVE"
+//   1C — string verdicts on the status-family key (`status` / `*_status`, e.g.
+//        current_status / preview_lifecycle_status), same negative tokens.
+//        STRICT: 1C requires a SPECIFIC blocker via STATUS_REASON_KEYS — a
+//        `truth_label` alone (epistemic class, not a failed precondition) does
+//        NOT satisfy. 1A/1B keep the broader REASON_KEYS unchanged.
 //
 // Why (Minsky-Papert, giants-absorption 2026-06-21): a negative result must
 // carry its scope/cause. Across the proof verifiers, reason-emission was
@@ -15,13 +20,14 @@
 // negative verdict and nothing would stop it. This gate makes the dominant
 // proof-verifier convention mechanical (a negative verdict MUST name why).
 //
-// Scope (a bound carries its scope): the verdict-family key only. Status-family
-// lifecycle enums (status / *_status : "BLOCKED"|"HOLD"), the `*_verdict_required`
-// config field, and a typed REASON_CLASS {STRUCTURALLY_PERMANENT,
-// NOT_YET_DERIVABLE} enum are a deferred 1C follow-up (no such typed enum exists
-// on disk yet). The `(?<![\w$])` boundary excludes boundary-attestation fields
-// like `signature_verified: false`. 1B string VALUES are blanked by
-// sanitizeForScan, so they are matched on raw source + liveness-masked.
+// Scope (a bound carries its scope): verdict-family + status-family keys. Still
+// deferred: the `*_verdict_required` / `*_status_required` CONFIG fields (a
+// required verdict is not an emitted one — the key must END in verdict/status),
+// `allowed: false`, and a typed REASON_CLASS {STRUCTURALLY_PERMANENT,
+// NOT_YET_DERIVABLE} enum (no such enum exists on disk yet). The `(?<![\w$])`
+// boundary excludes boundary-attestation fields like `signature_verified: false`.
+// 1B/1C string VALUES are blanked by sanitizeForScan, so they are matched on raw
+// source + liveness-masked (a verdict inside a comment or string never flags).
 //
 // Finalize (acceptance): run this gate, add each real violation to
 // REASON_EXEMPT_ALLOWLIST below with a one-line reason until `ok` is true, and
@@ -68,6 +74,19 @@ export const NEGATIVE_STRING_VERDICT_RE = new RegExp(
   "g",
 );
 
+// 1C — status-family negative states. A status-family key (`status` or
+// `*_status`, e.g. current_status / preview_lifecycle_status / health_status)
+// whose quoted value is one of the negative tokens. Key must END in `status`, so
+// `status_required` and unrelated config fields are NOT matched (mirrors the
+// `*_verdict_required` exclusion). STRICT: these require a SPECIFIC blocker via
+// STATUS_REASON_KEYS (below) — `truth_label` alone (an epistemic class label,
+// not a failed precondition) does NOT satisfy the gate. Matched on RAW source +
+// liveness-masked, exactly like 1B.
+export const STATUS_NEGATIVE_RE = new RegExp(
+  `(?<![\\w$])(['"]?)(?:[a-z][a-z0-9]*_)*status\\1\\s*:\\s*(['"])(?:${NEGATIVE_VERDICT_VALUES.join("|")})\\2`,
+  "g",
+);
+
 // Machine-readable reason-family keys observed across the proof producers
 // (recon 2026-06-21). A verdict satisfies the gate when one appears as a real
 // object key in the verdict's own object literal (see REASON_KEY_RE) — never
@@ -101,6 +120,27 @@ const REASON_ALT = REASON_KEYS.join("|");
 // comment or string value (those are blanked by sanitizeForScan before this runs).
 const REASON_KEY_RE = new RegExp(
   `[{,]\\s*(?:["']?(?:${REASON_ALT})["']?\\s*:|(?:${REASON_ALT})\\s*[,}])`,
+);
+
+// 1C — STRICT cause keys for a negative STATUS-family state. Narrower and
+// purpose-built: a blocked/held status must name a SPECIFIC failed precondition,
+// not merely an epistemic class. `truth_label` is DELIBERATELY ABSENT — it names
+// what kind of object this is (NOT_LIVE / NODE0_LOCAL_SEED), not why the status
+// is blocked. Kept separate from REASON_KEYS so 1A/1B behavior is unchanged.
+export const STATUS_REASON_KEYS = Object.freeze([
+  "reason",
+  "error",
+  "reason_code",
+  "reason_codes",
+  "blocked_by",
+  "blocked_reason",
+  "hold_reason",
+  "failed_precondition",
+  "checks",
+]);
+const STATUS_REASON_ALT = STATUS_REASON_KEYS.join("|");
+const STATUS_REASON_KEY_RE = new RegExp(
+  `[{,]\\s*(?:["']?(?:${STATUS_REASON_ALT})["']?\\s*:|(?:${STATUS_REASON_ALT})\\s*[,}])`,
 );
 
 // A verdict satisfies the gate when a reason key appears in the SAME object
@@ -264,6 +304,20 @@ function scanFileContent(content) {
       const span = enclosingObjectSpan(code, at) ?? sLine;
       markers.push({ line: i + 1, hasReason: REASON_KEY_RE.test(span) });
     }
+    // 1C — status-family negative states (status/*_status:"BLOCKED"). Same
+    // raw-match + liveness-mask as 1B, but the STRICT STATUS_REASON_KEY_RE: a
+    // truth_label is NOT a blocker, so a status carrying only truth_label is bare.
+    for (const m of rLines[i].matchAll(STATUS_NEGATIVE_RE)) {
+      const at = lineStart + m.index;
+      if (code[at] !== content[at]) continue; // blanked → comment/string value
+      const span = enclosingObjectSpan(code, at) ?? sLine;
+      markers.push({
+        line: i + 1,
+        hasReason: STATUS_REASON_KEY_RE.test(span),
+        reason:
+          "negative status-family state (status/*_status: BLOCKED|HOLD|FAILED|REJECT|CANNOT_PROVE) with no specific blocker key (blocked_by/blocked_reason/hold_reason/failed_precondition/reason/…) in its object — truth_label alone is NOT a blocker; add a cause key, or add to REASON_EXEMPT_ALLOWLIST",
+      });
+    }
   }
   return markers;
 }
@@ -304,7 +358,8 @@ export function checkNegativeVerdictReasons({
             file: rel,
             line: m.line,
             reason:
-              "negative verdict (verified/sealable:false) with no machine-readable reason key nearby — add a reason field, or add to REASON_EXEMPT_ALLOWLIST with a documented reason",
+              m.reason ??
+              "negative verdict (verified/sealable:false/verdict:\"FAILED\") with no machine-readable reason key nearby — add a reason field, or add to REASON_EXEMPT_ALLOWLIST with a documented reason",
           }),
         );
       }

@@ -157,6 +157,7 @@ export function buildMissionLoopPreview({
     truth_label: "NODE0_LOCAL_SEED",
     mode: "preview_only",
     preview_lifecycle_status: "HOLD",
+    hold_reason: "preview_only node0 local seed — no live mission runtime to advance the loop",
     lifecycle_phase: phase,
     state_load: stateLoad,
     profile_foundation: profileFoundation,
