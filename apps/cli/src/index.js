@@ -12,6 +12,7 @@ import { cmd_state } from "./commands/state.js";
 import { cmd_start } from "./commands/start.js";
 import { cmd_scan } from "./commands/scan.js";
 import { cmd_mirror } from "./commands/mirror.js";
+import { cmd_talk } from "./commands/talk.js";
 import { cmd_setup } from "./commands/setup.js";
 import { cmd_onboarding_lifecycle } from "./commands/onboarding-lifecycle.js";
 import { cmd_explain } from "./commands/explain.js";
@@ -517,6 +518,10 @@ const REGISTERED_COMMANDS_LIST = [
     command: "mirror",
     description: "honest homebase mirror: what you have + what Dema can do today (read-only)",
   },
+  {
+    command: "talk",
+    description: "preview a local-model talk request: model route + exact consent phrase (no call)",
+  },
   { command: "node0", description: "Node0 Mumu closed-loop read-only face" },
   { command: "profiles", description: "profile foundation preview" },
   { command: "consent-card", description: "consent card preview" },
@@ -973,6 +978,7 @@ const COMMAND_TABLE = {
   start: cmd_start,
   scan: cmd_scan,
   mirror: cmd_mirror,
+  talk: cmd_talk,
   profiles: cmd_profiles,
   "consent-card": cmd_consent_card,
   "mission-loop": cmd_mission_loop,
