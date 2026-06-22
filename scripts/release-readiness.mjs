@@ -786,7 +786,7 @@ export async function buildReleaseReadinessReport({
     next_actions: [
       "Add receipt schema documentation and verifier transparency.",
       "Add doc-link gates once dependency policy allows tooling.",
-      "Promote installer dry-run/check verification into release candidate checklist.",
+      "Promote installer dry-run/check verification into CI when policy allows tooling.",
     ],
   };
 }

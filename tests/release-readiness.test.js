@@ -117,6 +117,28 @@ test("buildReleaseReadinessReport scores dependency and installer posture", asyn
   );
 });
 
+test("release process promotes installer dry-run/check verification into the release candidate checklist", async () => {
+  const doc = await readFile(join(repoRoot, "docs/RELEASE_PROCESS.md"), "utf8");
+
+  assert.match(doc, /Installer candidate verification/);
+  assert.ok(doc.includes("scripts/install/install.sh --dry-run"));
+  assert.ok(doc.includes("scripts/install/install.sh --check"));
+  assert.match(doc, /do not publish|does not publish|no deployment|no publish/);
+
+  const report = await buildCleanReleaseReadinessReport({ now: fixedNow });
+  assert.equal(
+    report.next_actions.some((action) =>
+      action.includes("release candidate checklist"),
+    ),
+    false,
+  );
+  assert.ok(
+    report.next_actions.some((action) =>
+      action.includes("installer dry-run/check verification into CI"),
+    ),
+  );
+});
+
 test("buildReleaseReadinessReport keeps zero-dependency audit posture when npm install creates a transient lockfile", async () => {
   const lockfilePath = join(repoRoot, "package-lock.json");
   let previousLockfile = null;
