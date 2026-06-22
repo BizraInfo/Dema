@@ -62,6 +62,37 @@ export const LOCAL_LLM_PROVIDER_REGISTRY = Object.freeze({
 
 const KNOWN_PROVIDERS = Object.freeze(Object.keys(LOCAL_LLM_PROVIDER_REGISTRY));
 
+// LM-STUDIO-EXACT-ID-ALLOWLIST-1A (Design 3). Per-provider frozen EXACT model-id
+// allow-list, consulted BEFORE the (Ollama-derived) family check. Matching is
+// exact on the full trimmed id — NO family normalization — so a crafted name
+// cannot masquerade into an allowed family (the design rejected the normalizer
+// path for that reason). It is a frozen literal, NOT a runtime fs/endpoint scan
+// (a scan is injectable — the design deferred it). LM Studio ids verified against
+// /v1/models on 2026-06-23; chat-capable only (the embedding model
+// text-embedding-nomic-embed-text-v1.5 is intentionally excluded).
+export const PROVIDER_EXACT_ID_ALLOWLIST = Object.freeze({
+  lmstudio: Object.freeze({
+    "google/gemma-4-12b": true,
+    "google/gemma-4-e4b": true,
+    "zai-org/glm-4.6v-flash": true,
+    "qwen/qwen3.5-9b": true,
+    "qwen3.6-35b-a3b-uncensored-hauhaucs-aggressive": true,
+  }),
+  llamacpp: Object.freeze({}),
+  ollama: Object.freeze({}),
+});
+
+// Exact, prototype-safe membership: own-property + strict-true only, so keys like
+// `__proto__` / `hasOwnProperty` / `toString` never resolve to an allow.
+function providerExactIdAllowed(provider, model) {
+  const allow = PROVIDER_EXACT_ID_ALLOWLIST[provider];
+  return (
+    Boolean(allow) &&
+    Object.prototype.hasOwnProperty.call(allow, model) &&
+    allow[model] === true
+  );
+}
+
 const WHAT_THIS_PROVES = Object.freeze([
   "A local-LLM request can be routed to a NAMED provider (LM Studio default · llama.cpp fallback · Ollama legacy) and previewed as an honest consent ceremony — base URL, exact provider+model phrase, localhost + whitelist verdicts — with no call made.",
 ]);
@@ -132,6 +163,7 @@ export function buildLocalLlmProviderRoute({
       endpoint_family: null,
       model: modelSafe,
       model_allowed: false,
+      model_allow_reason: null,
       consent_phrase: null,
       consent_phrase_status: null,
       target_is_localhost: false,
@@ -148,8 +180,20 @@ export function buildLocalLlmProviderRoute({
     });
   }
 
-  const modelAllowed =
-    modelSafe.length > 0 && llmAdapterIsAllowedModelName(whitelistTokenFor(modelSafe));
+  // Design 3: the per-provider exact-id allow-list is consulted FIRST (exact,
+  // no normalization), then the legacy family check. `modelSafe` is the same
+  // trimmed value that is judged here and dispatched below (route.model) — no
+  // judge/dispatch drift.
+  const exactIdAllowed = providerExactIdAllowed(key, modelSafe);
+  const familyAllowed =
+    modelSafe.length > 0 &&
+    llmAdapterIsAllowedModelName(whitelistTokenFor(modelSafe));
+  const modelAllowed = exactIdAllowed || familyAllowed;
+  const modelAllowReason = exactIdAllowed
+    ? "exact_id"
+    : familyAllowed
+      ? "family"
+      : null;
   const consentModel = modelSafe.length > 0 ? modelSafe : "<model>";
 
   return deepFreeze({
@@ -167,6 +211,7 @@ export function buildLocalLlmProviderRoute({
     endpoint_family: entry.endpoint_family,
     model: modelSafe,
     model_allowed: modelAllowed,
+    model_allow_reason: modelAllowReason,
     // Single source of truth: the SAME consentPhraseFor the 1B live gate
     // (invokeDemaTalkLive) enforces — so the previewed phrase == the gate phrase.
     consent_phrase: llmAdapterConsentPhraseFor(consentModel, key),
