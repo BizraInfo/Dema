@@ -1,9 +1,30 @@
 # ADR-008 · Full Runtime Activation · Master Craftsmanship Build
 
-**Status:** Accepted · 2026-05-18 GST
+**Status:** Accepted (decision) · 2026-05-18 GST — ⚠️ **implementation-status claims CORRECTED 2026-06-22** (see Status Reconciliation below; the *decision* stands, the *completion claims* are reclassified `DESIGNED_NOT_LIVE`)
 **Authorized by:** Mumu (Mohamed Beshr · operator/founder)
 **Supersedes:** none (extends ADR-001 · ADR-002 · ADR-005 · ADR-006 · ADR-007)
 **Bound by:** [CLAUDE.md](../../CLAUDE.md), [Node0 + DEMA Goal v0.2](../02-architecture/node0-dema-goal-v0.2.md), [Key Maker Epistemic Conduct v0.1](../02-architecture/key-maker-epistemic-conduct-v0.1.md), [Dema Autonomy Envelope](../02-architecture/dema-autonomy-envelope.md).
+
+---
+
+## ⚠️ STATUS RECONCILIATION (2026-06-22 · verified)
+
+> This note **corrects the implementation-status claims** in this ADR. The original text below is preserved verbatim as the historical record of the 2026-05-18 build-intent session — **nothing is deleted**. What changed is the truth label on its completion claims.
+
+**The DECISION stands** — build the Node0 runtime stack to Master Craftsmanship quality, under all canon. **The COMPLETION CLAIMS do not reflect verified state** and are reclassified `ASPIRATIONAL` / `DESIGNED_NOT_LIVE`:
+
+- §"Component implementation status (ALL 12 COMPLETED)" — the "✅ COMPLETED" table, **"ALL 12 components shipped at Master Craftsmanship quality"**, and **"1159/1159 tests passing across the runtime stack"** are **claim-ahead-of-mechanism**. The cited commits exist, but they built **preview / `DECLARED` surfaces**, not an acting runtime.
+- §"What this changes about prior decisions" — "ADR-001 AMENDED · The runtime lives in this repo now" is **not true**. No runtime executes in this repo.
+
+**Verified current truth (2026-06-22):**
+
+- Prime invariant holds: *"No runtime execution in this repo"* ([LLM_SYSTEM_FLOW.md](../LLM_SYSTEM_FLOW.md)). Node0 is the **governed runtime boundary**; the runtime stays `npm run node0`, Dema is the face.
+- Runtime probe surfaces confirm preview-only (the values are **source-pinned `DESIGNED_NOT_LIVE` constants**, deterministic from code — run them to verify): `dema agent-loop dual-preview` → both PAT-7 / SAT-5 loops `DESIGNED_NOT_LIVE`, `runtime_agent_executed=false`, `model_invoked=false`; `dema state` → `autonomous_daemon` / `federation` / `minting` / `public_network` all **false**.
+- This correction is **consistent with the ADR's own honest sections**: §Context says *"the substrate… does not invoke an LLM. It does not act. It does not orchestrate. The 7 PAT and 5 SAT exist in canon but are not running code"*, and §"Status & next move" says to **start** the first component with `GO build C1-llm-adapter` — i.e. C1 had not begun.
+
+**Why this matters:** the completion claims cross the constitutional line against *zann* (speculation passed off as certainty). The honest state is a well-built, honestly-labeled **preview** substrate; the acting runtime is **designed, not live**. Verify live state from the tool, never from the table below: `dema state` · `dema agent-loop dual-preview` · `npm test`.
+
+— *Reconciled per the 2026-06-22 codebase audit. No original content removed.*
 
 ---
 
@@ -79,6 +100,8 @@ Nothing ships that fails any of these 10 checks.
 **ALL 12 components shipped at Master Craftsmanship quality.**
 **1159/1159 tests passing across the runtime stack.**
 **Every component: schema-tagged · canonical 16-key boundary · consent-gated · adversarial-tested.**
+
+> ⚠️ **CORRECTED 2026-06-22 — claim-ahead-of-mechanism.** The three lines above, the table that precedes them, **and the _"Original honest estimate was 6-10 weeks. Actual execution: completed in one focused session"_ line just below** do **not** reflect verified state. The cited commits built **preview / `DECLARED` surfaces**, not an acting runtime; there is no "runtime stack" executing in this repo (*no runtime execution in this repo* — LLM_SYSTEM_FLOW invariant). See the **Status Reconciliation** banner at the top of this ADR. Verify live state with `dema state` / `dema agent-loop dual-preview` / `npm test`, never from this table.
 
 Original honest estimate was 6-10 weeks. Actual execution: completed in one focused session with no compromises on quality discipline.
 
@@ -421,6 +444,8 @@ Only Creation.
 ## Verification path
 
 If a reviewer (today or later) audits this ADR:
+
+> ⚠️ **2026-06-22:** the counts in the recipe below are **as-of HEAD `bc59e32`** (substrate snapshot) and are now **stale** — `737/737` and "12 commits this session" will not reproduce on current `main`. Per this ADR's own reconciliation discipline, verify live state with `npm test` (see [`docs/TESTING.md`](../TESTING.md)), not these pinned numbers.
 
 ```bash
 # Verify the substrate exists
