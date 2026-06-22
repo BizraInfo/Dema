@@ -31,6 +31,8 @@ const KNOWN_DEMA_ENV_VARS = Object.freeze([
   "DEMA_NODE0_STATUS_COMMAND",
   "DEMA_NO_TUI",
   "DEMA_OLLAMA_URL",
+  "DEMA_TALK_MODEL",
+  "DEMA_TALK_PROVIDER",
 ]);
 
 export function checkEnvHygiene({ env = process.env, strict = false } = {}) {
