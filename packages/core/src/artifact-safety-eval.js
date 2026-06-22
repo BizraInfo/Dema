@@ -221,7 +221,7 @@ function scanSchema(object) {
   return Object.freeze(findings);
 }
 
-function deriveVerdict(
+export function deriveVerdict(
   findings,
   { treat_repo_root_as_local_only = true } = {},
 ) {
@@ -232,7 +232,12 @@ function deriveVerdict(
   if (blockers.some((f) => f.kind === "SCHEMA")) {
     return "SCHEMA_VIOLATION";
   }
-  const pathOrSecret = blockers.filter(
+  // Fail closed: derive the leak verdict from finding.kind regardless of
+  // severity. Pre-filtering to BLOCKER let a non-BLOCKER PATH_LEAK/SECRET_LIKE
+  // slip to PUBLIC_SAFE — an unenforced invariant on the live LLM path
+  // (AUDIT P0 w8amforab). CLAIM_OVERREACH/SCHEMA verdicts above still take
+  // precedence when present as blockers.
+  const pathOrSecret = findings.filter(
     (f) => f.kind === "PATH_LEAK" || f.kind === "SECRET_LIKE",
   );
   if (pathOrSecret.length === 0) {

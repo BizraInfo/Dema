@@ -14,6 +14,7 @@ import {
   scanSecretLikeStrings,
   scanClaimBoundary,
   formatArtifactSafetyReport,
+  deriveVerdict,
 } from "../packages/core/src/artifact-safety-eval.js";
 
 const execFileAsync = promisify(execFile);
@@ -166,4 +167,46 @@ test("scan helpers export independently", () => {
   assert.ok(scanPathLeakage("bizra.dema.schema.v0.1").length === 0);
   assert.ok(scanSecretLikeStrings("no network").length === 0);
   assert.ok(scanClaimBoundary("preview only").length === 0);
+});
+
+// AUDIT P0 (w8amforab): deriveVerdict must fail CLOSED on a PATH_LEAK/SECRET_LIKE
+// finding regardless of severity. Previously it pre-filtered to severity==="BLOCKER",
+// so a non-BLOCKER leak finding slipped to PUBLIC_SAFE — an unenforced invariant on
+// the live LLM-invocation path. Latent only because scanners currently hardcode BLOCKER.
+test("deriveVerdict blocks a non-BLOCKER PATH_LEAK finding (fail-closed)", () => {
+  const leak = {
+    kind: "PATH_LEAK",
+    pattern_id: "unix_home",
+    severity: "LOW",
+    field: null,
+    message: "synthetic non-BLOCKER path leak",
+  };
+  assert.equal(deriveVerdict([leak]), "LEAKAGE_DETECTED");
+});
+
+test("deriveVerdict blocks a non-BLOCKER SECRET_LIKE finding (fail-closed)", () => {
+  const secret = {
+    kind: "SECRET_LIKE",
+    pattern_id: "api_key",
+    severity: "MEDIUM",
+    field: null,
+    message: "synthetic non-BLOCKER secret",
+  };
+  assert.equal(deriveVerdict([secret]), "LEAKAGE_DETECTED");
+});
+
+test("deriveVerdict preserves clean, BLOCKER-leak, and repo-root behavior (regression)", () => {
+  assert.equal(deriveVerdict([]), "PUBLIC_SAFE");
+  assert.equal(
+    deriveVerdict([
+      { kind: "PATH_LEAK", pattern_id: "unix_home", severity: "BLOCKER", field: null, message: "x" },
+    ]),
+    "LEAKAGE_DETECTED",
+  );
+  assert.equal(
+    deriveVerdict([
+      { kind: "PATH_LEAK", pattern_id: "repo_root_absolute", severity: "BLOCKER", field: null, message: "x" },
+    ]),
+    "LOCAL_ONLY",
+  );
 });
