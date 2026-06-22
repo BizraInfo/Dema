@@ -5,6 +5,8 @@ export const commands = [
   ["node", ["scripts/review/env-hygiene-check.mjs", "--strict"]],
   ["node", ["scripts/review/zero-dep-gate.mjs"]],
   ["node", ["scripts/review/kernel-purity-check.mjs"]],
+  ["node", ["scripts/review/no-overclaim.mjs"]],
+  ["node", ["scripts/review/proof-scope.mjs"]],
   ["node", ["scripts/review/agent-dna-root-coherence.mjs"]],
   ["node", ["scripts/review/negative-verdict-reason-gate.mjs"]],
   ["node", ["scripts/review/doc-freshness-gate.mjs"]],

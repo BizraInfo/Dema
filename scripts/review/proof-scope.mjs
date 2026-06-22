@@ -2,6 +2,8 @@
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
+import { resolveClassForBranch, currentBranch } from "./pr-class.mjs";
+
 const U1_FILES = new Set([
   "artifacts/proofs/node0-local-urp/critic_report_001.json",
   "artifacts/proofs/node0-local-urp/node0_local_urp_status.json",
@@ -222,9 +224,38 @@ if (
   process.argv[1] &&
   pathToFileURL(process.argv[1]).href === import.meta.url
 ) {
+  // CI passes --class explicitly; local `npm run check` has none, so fall back
+  // to resolving the class from the current branch (AUDIT P1a part 2).
+  const reviewClass =
+    argValue("--class") ||
+    process.env.BIZRA_REVIEW_CLASS ||
+    resolveClassForBranch(currentBranch());
+  // The base-ref diff is unavailable in a shallow checkout (no origin/main or
+  // no merge base) — e.g. the check.yml CI job. Skip gracefully there; this
+  // gate stays enforced in the full-history BIZRA review job and runs fully in
+  // any full clone (local `npm run check`).
+  let files;
+  try {
+    files = changedFiles();
+  } catch {
+    console.log(
+      JSON.stringify(
+        {
+          schema: "bizra.dema.review.proof_scope.v0.1",
+          ok: true,
+          skipped: true,
+          class: reviewClass,
+          reason: `base ref ${baseRef()} unavailable (shallow checkout / no merge base); enforced in the full-history BIZRA review job`,
+        },
+        null,
+        2,
+      ),
+    );
+    process.exit(0);
+  }
   const report = validateProofScope({
-    reviewClass: argValue("--class"),
-    files: changedFiles(),
+    reviewClass,
+    files,
   });
   console.log(JSON.stringify(report, null, 2));
 }

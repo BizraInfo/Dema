@@ -67,6 +67,25 @@ export function currentBranch() {
   );
 }
 
+// Resolve a review class from a branch name. Exact `branches` win over
+// `branchPrefixes`; unknown branches default to the most permissive
+// `policy/broad-scope` (safe — it only applies advisory reviewer discipline).
+// Lets proof-scope self-resolve a class for local `npm run check` while CI
+// still passes --class explicitly. Mirrors the bizra-review.yml branch resolver.
+export function resolveClassForBranch(branch) {
+  if (branch) {
+    for (const [reviewClass, policy] of Object.entries(REVIEW_CLASSES)) {
+      if (policy.branches?.includes(branch)) return reviewClass;
+    }
+    for (const [reviewClass, policy] of Object.entries(REVIEW_CLASSES)) {
+      if (policy.branchPrefixes?.some((prefix) => branch.startsWith(prefix))) {
+        return reviewClass;
+      }
+    }
+  }
+  return "policy/broad-scope";
+}
+
 export function validatePrClass({ reviewClass, branch }) {
   const policy = REVIEW_CLASSES[reviewClass];
   if (!policy) {
