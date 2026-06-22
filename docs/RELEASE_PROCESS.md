@@ -61,6 +61,17 @@ npm run urp:discovery     # URP shared-discovery posture
 npm run env-hygiene       # env var leak check
 ```
 
+#### Installer candidate verification
+
+Before tagging a release or promoting installer artifacts, verify the installer candidate in read-only modes:
+
+```bash
+scripts/install/install.sh --dry-run
+scripts/install/install.sh --check
+```
+
+These commands are release-candidate evidence only. They do not publish, deploy, start a daemon, mutate CI, or authorize an installer endpoint. Any future artifact upload, tag, or endpoint promotion remains a separate typed-GO release action.
+
 ### Layer B · Local pre-push (μ-layer orchestrator)
 
 The pre-push hook at `.git/hooks/pre-push` (operator-installed; **not** in repo) runs the μ-layer orchestrator `~/.dema/bin/mu-test-all`, which executes 7 doctrine harnesses:
