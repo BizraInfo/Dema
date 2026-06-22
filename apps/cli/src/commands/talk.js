@@ -13,7 +13,7 @@ import {
 
 // Flags that consume the following token as their value; everything else after
 // the command name (argv[0]) is treated as the positional prompt.
-const VALUE_FLAGS = new Set(["--model", "--prompt"]);
+const VALUE_FLAGS = new Set(["--model", "--prompt", "--provider"]);
 
 function argValue(argv, name) {
   const i = argv.indexOf(name);
@@ -35,22 +35,38 @@ function firstPositional(argv) {
 export async function cmd_talk(ctx) {
   const { argv } = ctx;
   const model = argValue(argv, "--model");
+  const provider = argValue(argv, "--provider");
   const prompt = argValue(argv, "--prompt") ?? firstPositional(argv);
-  const preview = buildDemaTalkPreview({ prompt, model });
+  const preview = buildDemaTalkPreview({ prompt, model, provider });
 
   if (wantsJson(argv)) {
     console.log(JSON.stringify(preview, null, 2));
     process.exit(process.exitCode ?? 0);
   }
 
+  // Unknown provider → fail closed, no silent fallback.
+  if (!preview.provider) {
+    const lines = [
+      "DEMA · TALK PREVIEW (no model called)",
+      `  Unknown provider: ${preview.requested_provider}`,
+      ...preview.explanation_lines.map((l) => `  ${l}`),
+      `  Known providers: ${preview.known_providers.join(", ")} (default: lmstudio)`,
+      humanHintLine("talk"),
+    ];
+    console.log(lines.join("\n"));
+    process.exit(process.exitCode ?? 0);
+  }
+
   const lines = [
     "DEMA · TALK PREVIEW (no model called)",
+    `  Provider: ${preview.provider}${preview.provider_is_default ? " (default)" : ""}${preview.provider_is_legacy ? " (legacy)" : ""} · ${preview.endpoint_family}`,
     `  Model route: ${preview.model} @ ${preview.target_endpoint} · localhost-only: ${preview.target_is_localhost}`,
     `  On the allow-list: ${preview.model_allowed_in_whitelist} · prompt length: ${preview.prompt_length_chars}${preview.prompt_too_long ? " (TOO LONG — would be refused)" : ""}`,
     "",
     ...preview.explanation_lines.map((l) => `  ${l}`),
     "",
-    "  When the live call ships (DEMA-TALK-LOOP-1B), the exact phrase to allow it will be:",
+    "  When the live call ships (DEMA-TALK-LOOP-1B), it will require a provider-qualified consent phrase like this",
+    "  — the live gate is NOT built yet, so this exact string is a proposed contract, not final:",
     `    ${preview.consent_required}`,
     humanHintLine("talk"),
   ];

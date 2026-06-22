@@ -1,8 +1,9 @@
-// DEMA-TALK-LOOP-1A — pure talk-consent-preview kernel tests.
-// Wraps the existing (hardened) llm-adapter PREVIEW path into a friendly talk
-// consent ceremony. It makes NO model call (preview only): it shows the model,
-// the exact consent phrase, and the boundary, so the operator can decide. The
-// live invocation is DEMA-TALK-LOOP-1B under its own GO.
+// DEMA-TALK-LOOP-1A — pure talk-consent-preview kernel tests (provider-routed).
+// Routes through LOCAL-LLM-PROVIDER-ROUTER-1A (LM Studio default, llama.cpp
+// fallback, Ollama legacy) into a friendly talk consent ceremony. It makes NO
+// model call (preview only): it shows the provider, model, the exact provider+
+// model consent phrase, and the boundary, so the operator can decide. The live
+// invocation is DEMA-TALK-LOOP-1B under its own GO.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -38,11 +39,36 @@ function assertDeepFrozen(value, label = "value") {
   }
 }
 
-test("a whitelisted model → allowed, with the exact per-model consent phrase", () => {
+test("default provider is LM Studio (not Ollama), with the provider+model phrase", () => {
   const p = buildDemaTalkPreview({ prompt: "hello", model: "qwen2.5" });
   assert.equal(p.model, "qwen2.5");
+  assert.equal(p.provider, "lmstudio");
+  assert.equal(p.provider_is_default, true);
+  assert.equal(p.target_endpoint, "http://localhost:1234/v1");
   assert.equal(p.model_allowed_in_whitelist, true);
-  assert.equal(p.consent_required, "GO: invoke local LLM at qwen2.5");
+  assert.equal(p.consent_required, "GO: invoke local LLM via lmstudio at qwen2.5");
+});
+
+test("explicit provider routes (llamacpp fallback, ollama legacy) + consent phrase", () => {
+  const lc = buildDemaTalkPreview({ prompt: "hi", model: "qwen2.5", provider: "llamacpp" });
+  assert.equal(lc.provider, "llamacpp");
+  assert.equal(lc.target_endpoint, "http://localhost:8080/v1");
+  assert.equal(lc.consent_required, "GO: invoke local LLM via llamacpp at qwen2.5");
+
+  const ol = buildDemaTalkPreview({ prompt: "hi", model: "qwen2.5", provider: "ollama" });
+  assert.equal(ol.provider, "ollama");
+  assert.equal(ol.provider_is_legacy, true);
+  assert.equal(ol.provider_is_default, false);
+});
+
+test("unknown provider → fail closed, NO silent fallback to lmstudio", () => {
+  const p = buildDemaTalkPreview({ prompt: "hi", model: "qwen2.5", provider: "openai" });
+  assert.equal(p.provider, null);
+  assert.equal(p.requested_provider, "openai");
+  assert.equal(p.consent_required, null);
+  assert.equal(p.model_invoked, false);
+  const text = p.explanation_lines.join(" ");
+  assert.match(text, /not recognize|unknown|silently/i);
 });
 
 test("a non-whitelisted model → not allowed (Dema would refuse)", () => {

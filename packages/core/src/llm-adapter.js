@@ -612,3 +612,7 @@ export const LLM_ADAPTER_MAX_PROMPT_LENGTH = MAX_PROMPT_LENGTH;
 export const LLM_ADAPTER_REQUIRED_BLOCKED_EFFECTS_PREVIEW =
   REQUIRED_BLOCKED_EFFECTS_PREVIEW;
 export { consentPhraseFor as llmAdapterConsentPhraseFor };
+// Reuse-over-reinvention: the provider router applies the SAME whitelist and
+// localhost checks rather than duplicating (and risking drift from) them.
+export { isAllowedModelName as llmAdapterIsAllowedModelName };
+export { isLocalhostBaseUrl as llmAdapterIsLocalhostBaseUrl };
