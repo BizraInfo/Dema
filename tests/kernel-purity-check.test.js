@@ -167,6 +167,37 @@ test("1B: multi-line import of node:fs is detected (not just single-line)", () =
   );
 });
 
+test("1C: subpath specifiers (node:fs/promises, fs/promises) are detected — no bypass", () => {
+  // Regression: the original regexes anchored the closing quote immediately
+  // after the base module name, so `from "node:fs/promises"` (the most common
+  // async-fs specifier) silently escaped the scan even when it performed real
+  // disk writes. The token reported stays the base surface (node:fs).
+  withFixture(
+    {
+      "p.js": 'import { writeFile } from "node:fs/promises";\n',
+      "q.js": 'import { readFile } from "fs/promises";\n',
+      "r.js": 'const { mkdir } = require("node:fs/promises");\n',
+      "clean.js": 'import x from "fs-extra";\nexport const y = 1;\n',
+    },
+    (dir) => {
+      const r = checkKernelPurity({ scanDir: dir, allowlist: {} });
+      assert.equal(r.ok, false);
+      const flagged = new Set(r.violations.map((v) => v.file));
+      assert.ok(flagged.has("p.js"), "node:fs/promises must be flagged");
+      assert.ok(flagged.has("q.js"), "fs/promises must be flagged");
+      assert.ok(flagged.has("r.js"), "require(node:fs/promises) must be flagged");
+      assert.ok(
+        !flagged.has("clean.js"),
+        "fs-extra (a distinct package, not an fs subpath) must NOT be flagged",
+      );
+      assert.ok(
+        r.violations.every((v) => v.token === "node:fs"),
+        "subpath of node:fs reports the base surface token",
+      );
+    },
+  );
+});
+
 test("1B: namespaced globalThis.fetch( / window.fetch( are detected", () => {
   withFixture(
     {
