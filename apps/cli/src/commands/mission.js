@@ -24,6 +24,7 @@ import {
 } from "../../../../packages/mission/src/mission-closeout.js";
 import { previewBoundedDiagnostic } from "../../../../packages/core/src/mission.js";
 import { buildPainGoalInterview } from "../../../../packages/core/src/pain-goal-interview.js";
+import { buildClosedDualLoopDryRun } from "../../../../packages/core/src/closed-dual-loop-dry-run.js";
 import {
   wantsJson,
   humanHintLine,
@@ -84,6 +85,52 @@ export async function cmd_mission(ctx) {
       );
     }
     lines.push(humanHintLine("mission interview"));
+    console.log(lines.join("\n"));
+    process.exit(process.exitCode ?? 0);
+  }
+  if (subcommand === "plan") {
+    // CLOSED-DUAL-LOOP-DRY-RUN-1A — local only, no model, no execution. Takes
+    // the captured pain/goal, runs a DRY-RUN PAT-propose -> SAT-verify loop, and
+    // presents a consent-ready plan. The loops are DESIGNED_NOT_LIVE scaffolds.
+    const dryRun = buildClosedDualLoopDryRun({
+      pain: argValue(argv, "--pain"),
+      goal: argValue(argv, "--goal"),
+      urgency: argValue(argv, "--urgency"),
+      help_style: argValue(argv, "--style"),
+    });
+    if (wantsJson(argv)) {
+      console.log(JSON.stringify(dryRun, null, 2));
+      process.exit(process.exitCode ?? 0);
+    }
+    const lines = [
+      "DEMA · CLOSED DUAL-LOOP DRY-RUN (local only · no model · nothing runs)",
+    ];
+    if (dryRun.dry_run_status !== "consent_ready") {
+      lines.push(`  Not ready — still needed: ${dryRun.missing_fields.join(", ")}`);
+      lines.push('  Run `dema mission interview` first to capture your pain + goal.');
+    } else {
+      const plan = dryRun.consent_ready_plan;
+      lines.push(`  Mission: ${plan.mission}`);
+      lines.push("");
+      lines.push("  PAT proposed (a deterministic scaffold — NOT model reasoning):");
+      for (const step of dryRun.pat_proposal.proposed_steps) lines.push(`    • ${step}`);
+      lines.push("");
+      lines.push(`  SAT verdict: ${dryRun.sat_verdict.gate_verdict}`);
+      for (const c of dryRun.sat_verdict.checks) {
+        lines.push(`    ${c.passed ? "✓" : "✗"} ${c.check}`);
+      }
+      lines.push("");
+      lines.push("  Consent-ready plan — NOTHING has run.");
+      lines.push(
+        `  To ever execute it you would type the exact phrase: "${plan.execution_consent_required}"`,
+      );
+      lines.push("  (Execution is a separate, later, consented step — not built yet.)");
+    }
+    lines.push("");
+    lines.push(
+      "  Both loops are DESIGNED_NOT_LIVE — no model reasoned, no agent ran, nothing executed.",
+    );
+    lines.push(humanHintLine("mission plan"));
     console.log(lines.join("\n"));
     process.exit(process.exitCode ?? 0);
   }
