@@ -203,10 +203,34 @@ test("language_status is set when language_code present, unset when null", () =>
   assert.equal(set.language_status.language_code, "ar");
   assert.equal(set.language_status.secondary_language_code, "en");
   assert.equal(set.language_status.status, "set");
+  // LANGUAGE-PACK-1A enrichment: script direction + display label resolved.
+  assert.equal(set.language_status.script_direction, "rtl");
+  assert.equal(set.language_status.label, "العربية (Arabic)");
 
   const unset = buildDemaBirthLoop({ profile: null });
   assert.equal(unset.language_status.language_code, null);
   assert.equal(unset.language_status.status, "unset");
+  assert.equal(unset.language_status.script_direction, "ltr");
+  assert.equal(unset.language_status.label, null);
+});
+
+test("language_status surfaces the SECONDARY language's own direction (en primary, ar secondary)", () => {
+  // Diaspora profile: primary ltr, secondary rtl. The secondary line must be
+  // renderable rtl — the bare code alone cannot express that.
+  const env = buildDemaBirthLoop({
+    profile: {
+      schema: "bizra.dema.profile.v0.1",
+      preferred_name: "Beshr",
+      language_code: "en",
+      secondary_language_code: "ar",
+    },
+  });
+
+  assert.equal(env.language_status.script_direction, "ltr"); // primary
+  assert.equal(env.language_status.secondary.length, 1);
+  assert.equal(env.language_status.secondary[0].code, "ar");
+  assert.equal(env.language_status.secondary[0].script_direction, "rtl");
+  assert.equal(env.language_status.secondary[0].label, "العربية (Arabic)");
 });
 
 test("boundary flags are all false including the 10 domain keys", () => {
