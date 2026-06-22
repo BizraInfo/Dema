@@ -16,6 +16,7 @@
 // fail-closed CORRUPT path (no greeting-by-name, no scan suggestion).
 
 import { buildPreviewBoundary } from "./preview-boundary.js";
+import { buildLanguagePack } from "./language-pack.js";
 
 export const DEMA_BIRTH_LOOP_SCHEMA = "bizra.dema.birth_loop.v0.1";
 
@@ -155,10 +156,22 @@ function buildLanguageStatus({ nodeState, profile }) {
   const secondaryLanguageCode = trustable
     ? pickIso639_1(profile, "secondary_language_code")
     : null;
+  // Enrich with the resolved language pack (display label + script direction)
+  // so the greeting surface knows HOW to address the operator — rtl for Arabic.
+  const pack = buildLanguagePack({
+    language_code: languageCode,
+    secondary_language_code: secondaryLanguageCode,
+  });
   return {
     language_code: languageCode,
     secondary_language_code: secondaryLanguageCode,
-    status: languageCode === null ? "unset" : "set",
+    status: pack.status,
+    script_direction: pack.script_direction,
+    label: pack.primary ? pack.primary.label : null,
+    // Pass through the resolved secondary languages WITH their own direction +
+    // label — a diaspora operator (e.g. en primary, ar secondary) needs the
+    // secondary line rendered rtl, which the bare code alone cannot express.
+    secondary: pack.secondary,
   };
 }
 
