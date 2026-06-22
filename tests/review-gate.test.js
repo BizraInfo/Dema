@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { validatePrClass } from "../scripts/review/pr-class.mjs";
+import {
+  validatePrClass,
+  resolveClassForBranch,
+} from "../scripts/review/pr-class.mjs";
 import { validateProofScope } from "../scripts/review/proof-scope.mjs";
 
 const u1Files = [
@@ -683,4 +686,35 @@ test("policy/broad-scope proof scope accepts empty file list", () => {
   });
   assert.equal(report.ok, true);
   assert.equal(report.enforcement, "advisory_reviewer_discipline");
+});
+
+// AUDIT P1a part 2 (w8amforab): a branch->class resolver so proof-scope can
+// self-resolve a class when --class is absent (local `npm run check`), keeping
+// the explicit --class override for CI. Closes the local<->CI convergence gap.
+test("resolveClassForBranch maps main to the merged-to-main class", () => {
+  assert.equal(resolveClassForBranch("main"), "policy/merged-to-main");
+});
+
+test("resolveClassForBranch maps known prefixes to broad-scope", () => {
+  assert.equal(resolveClassForBranch("feat/x"), "policy/broad-scope");
+  assert.equal(resolveClassForBranch("fix/y"), "policy/broad-scope");
+  assert.equal(resolveClassForBranch("docs/z"), "policy/broad-scope");
+});
+
+test("resolveClassForBranch maps a specific-prefix branch to its exact class", () => {
+  assert.equal(resolveClassForBranch("proof/u1-foo"), "proof/u1");
+});
+
+test("resolveClassForBranch defaults unknown branches to broad-scope (safe, permissive)", () => {
+  assert.equal(resolveClassForBranch("wip/experiment"), "policy/broad-scope");
+  assert.equal(resolveClassForBranch(""), "policy/broad-scope");
+  assert.equal(resolveClassForBranch(undefined), "policy/broad-scope");
+});
+
+test("every class resolveClassForBranch returns is a real proof-scope class", () => {
+  for (const b of ["main", "feat/a", "proof/u1-x", "wip/z"]) {
+    const cls = resolveClassForBranch(b);
+    // validatePrClass throws on an unknown class; a clean call proves the class exists.
+    assert.doesNotThrow(() => validatePrClass({ reviewClass: cls, branch: undefined }));
+  }
 });

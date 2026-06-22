@@ -2,6 +2,8 @@
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
+import { resolveClassForBranch, currentBranch } from "./pr-class.mjs";
+
 const U1_FILES = new Set([
   "artifacts/proofs/node0-local-urp/critic_report_001.json",
   "artifacts/proofs/node0-local-urp/node0_local_urp_status.json",
@@ -222,8 +224,14 @@ if (
   process.argv[1] &&
   pathToFileURL(process.argv[1]).href === import.meta.url
 ) {
+  // CI passes --class explicitly; local `npm run check` has none, so fall back
+  // to resolving the class from the current branch (AUDIT P1a part 2).
+  const reviewClass =
+    argValue("--class") ||
+    process.env.BIZRA_REVIEW_CLASS ||
+    resolveClassForBranch(currentBranch());
   const report = validateProofScope({
-    reviewClass: argValue("--class"),
+    reviewClass,
     files: changedFiles(),
   });
   console.log(JSON.stringify(report, null, 2));
