@@ -42,6 +42,7 @@ const COMMAND_SURFACE = [
   "status:json",
   "state",
   "start",
+  "scan",
   "profiles",
   "consent-card",
   "mission-loop",
