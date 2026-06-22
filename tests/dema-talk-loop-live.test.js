@@ -143,10 +143,10 @@ test("empty / oversized prompt → refused before any fetch", async () => {
   assert.equal(fetchImpl.calls.length, 0);
 });
 
-test("CONSERVATIVE inbound gate: a prompt with a literal local path is BLOCKED before any fetch", async () => {
-  // Pins the (intentional, conservative) behavior the operator will hit first:
-  // naming a local file refuses pre-fetch. Honest tradeoff — loosening path-
-  // blocking for the localhost talk path is a deliberate follow-up decision.
+test("path-blocking LOOSENED: a prompt naming a LOCAL file now proceeds to the model", async () => {
+  // Operator decision: a user naming their OWN local file on a localhost-only,
+  // no-receipt, suggestion-only call is intentional, not a leak. It must reach
+  // the local model rather than being refused.
   const fetchImpl = mockFetch(OPENAI_BODY);
   const r = await invokeDemaTalkLive({
     model: "qwen2.5",
@@ -154,12 +154,49 @@ test("CONSERVATIVE inbound gate: a prompt with a literal local path is BLOCKED b
     consentPhrase: "GO: invoke local LLM via lmstudio at qwen2.5",
     fetchImpl,
   });
+  assert.equal(r.invocation_status, "completed");
+  assert.equal(fetchImpl.calls.length, 1);
+  // The user's own local path was sent to the LOCAL model — intentional.
+  assert.match(fetchImpl.calls[0].parsed.messages[0].content, /notes\.txt/);
+});
+
+test("secret-blocking KEPT: a prompt with a secret-shaped string is still blocked, no fetch", async () => {
+  const fetchImpl = mockFetch(OPENAI_BODY);
+  const r = await invokeDemaTalkLive({
+    model: "qwen2.5",
+    prompt: "my api_key is sk-abcd12345678 please use it",
+    consentPhrase: "GO: invoke local LLM via lmstudio at qwen2.5",
+    fetchImpl,
+  });
   assert.equal(r.invocation_status, "blocked");
-  assert.equal(fetchImpl.calls.length, 0, "no fetch on a blocked prompt");
-  assert.equal(r.boundary.model_invocation_performed, false);
-  assert.equal(r.boundary.network_used, false);
-  // The refusal must be honest + actionable, not opaque.
-  assert.match(r.error_reason, /path or secret|rephrase/i);
+  assert.equal(fetchImpl.calls.length, 0, "no fetch on a secret-shaped prompt");
+  assert.match(r.error_reason, /secret/i);
+});
+
+test("outbound: a model response with a secret is REDACTED, but a local path is shown", async () => {
+  const secret = mockFetch({
+    choices: [{ message: { content: "your api_key is sk-deadbeef0001" } }],
+  });
+  const r1 = await invokeDemaTalkLive({
+    model: "qwen2.5",
+    prompt: "hello",
+    consentPhrase: "GO: invoke local LLM via lmstudio at qwen2.5",
+    fetchImpl: secret,
+  });
+  assert.equal(r1.invocation_status, "completed");
+  assert.match(r1.response_text_preview, /REDACTED/);
+
+  const withPath = mockFetch({
+    choices: [{ message: { content: "see /home/me/Downloads/notes.txt for that" } }],
+  });
+  const r2 = await invokeDemaTalkLive({
+    model: "qwen2.5",
+    prompt: "hello",
+    consentPhrase: "GO: invoke local LLM via lmstudio at qwen2.5",
+    fetchImpl: withPath,
+  });
+  assert.equal(r2.invocation_status, "completed");
+  assert.match(r2.response_text_preview, /notes\.txt/, "a local path is shown, not redacted");
 });
 
 test("runtime-emission boundary: the 10 strictly-false keys stay false even on success", async () => {

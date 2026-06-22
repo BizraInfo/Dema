@@ -164,26 +164,28 @@ export async function invokeDemaTalkLive({
       `consent_phrase_mismatch · required exact string: '${route.consent_phrase}' · invocation refused`,
     );
 
-  // Gate 5: inbound prompt safety (reuse the hardened Layer-1 scan).
-  //
-  // CONSERVATIVE BY DESIGN for this first live crossing: a prompt that contains
-  // a literal local PATH (/home/…, .ssh, .env) or a secret-shaped string is
-  // refused BEFORE any call. Honest tradeoff to surface to the operator: this
-  // also blocks the natural "summarize /home/me/notes.txt" prompt even though
-  // the model is local + suggestion-only. Loosening path-blocking (while keeping
-  // secret-blocking) for the localhost talk path is a deliberate follow-up
-  // decision, NOT something to relax on the way into the first live invocation.
-  const promptVerdict = evaluateArtifactSafety(promptSafe).verdict;
-  if (promptVerdict !== "PUBLIC_SAFE") {
+  // Gate 5: inbound prompt safety (Layer-1 scan), LOOSENED for the local talk
+  // path per operator decision. A user naming their OWN local file (a PATH_LEAK
+  // finding) on a localhost-only, no-receipt, suggestion-only call is
+  // INTENTIONAL, not a leak — so PATH_LEAK findings do NOT block here. Every
+  // other blocker still refuses: SECRET_LIKE (don't feed a live secret to a
+  // model, even a local one), CLAIM_OVERREACH, and SCHEMA.
+  const promptBlockers = evaluateArtifactSafety(promptSafe).findings.filter(
+    (f) => f.severity === "BLOCKER" && f.kind !== "PATH_LEAK",
+  );
+  if (promptBlockers.length > 0) {
+    const kinds = [...new Set(promptBlockers.map((f) => f.kind))].join("+");
     return buildResult({
       ...base,
       status: "blocked",
       truthLabel: "INVOCATION_BLOCKED",
       consentVerified: true,
-      promptSafetyVerdict: promptVerdict,
-      errorReason: `inbound_prompt_safety · ${promptVerdict} · your prompt contains a literal path or secret-shaped string Dema will not send to a model (even a local one) · rephrase without the literal path/secret · blocked before any call`,
+      promptSafetyVerdict: kinds,
+      errorReason: `inbound_prompt_safety · ${kinds} · your prompt contains a secret-shaped string or a forbidden live-claim Dema will not send to a model · rephrase without it · blocked before any call`,
     });
   }
+  // A local path in the prompt was allowed through — record that honestly.
+  const promptVerdict = "LOCAL_TALK_OK";
 
   // NOTE (1C deferral): the sibling invokeLocalLLM carries an in-process
   // consent-replay guard (ADR-018 §S6). This CLI path is one process per run, so
@@ -270,10 +272,18 @@ export async function invokeDemaTalkLive({
       });
     }
 
-    // Outbound Layer-1 scan — redact a non-public response rather than surface it.
-    const responseVerdict = evaluateArtifactSafety(responseText).verdict;
+    // Outbound Layer-1 scan, same loosening as inbound: a local PATH the model
+    // echoes back is shown (local, no receipt); a SECRET_LIKE / CLAIM_OVERREACH /
+    // SCHEMA blocker is redacted rather than surfaced.
+    const responseBlockers = evaluateArtifactSafety(responseText).findings.filter(
+      (f) => f.severity === "BLOCKER" && f.kind !== "PATH_LEAK",
+    );
+    const responseVerdict =
+      responseBlockers.length === 0
+        ? "LOCAL_TALK_OK"
+        : [...new Set(responseBlockers.map((f) => f.kind))].join("+");
     const override =
-      responseVerdict !== "PUBLIC_SAFE" && responseText
+      responseBlockers.length > 0 && responseText
         ? `[REDACTED: ${responseVerdict}]`
         : undefined;
     return buildResult({
