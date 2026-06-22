@@ -23,6 +23,7 @@ import {
   renderCloseoutText,
 } from "../../../../packages/mission/src/mission-closeout.js";
 import { previewBoundedDiagnostic } from "../../../../packages/core/src/mission.js";
+import { buildPainGoalInterview } from "../../../../packages/core/src/pain-goal-interview.js";
 import {
   wantsJson,
   humanHintLine,
@@ -38,6 +39,54 @@ function argValue(argv, name) {
 
 export async function cmd_mission(ctx) {
   const { argv, subcommand } = ctx;
+  if (subcommand === "interview") {
+    // PAIN-GOAL-INTERVIEW-1A — local only, no model. Capture stated pain/goal,
+    // propose (only propose) a first mission. Writes nothing.
+    const interview = buildPainGoalInterview({
+      pain: argValue(argv, "--pain"),
+      goal: argValue(argv, "--goal"),
+      urgency: argValue(argv, "--urgency"),
+      help_style: argValue(argv, "--style"),
+    });
+    if (wantsJson(argv)) {
+      console.log(JSON.stringify(interview, null, 2));
+      process.exit(process.exitCode ?? 0);
+    }
+    const lines = ["DEMA · PAIN / GOAL INTERVIEW (local only · no model called)"];
+    if (interview.interview_status !== "ready_for_first_mission_preview") {
+      if (interview.interview_status === "partial") {
+        lines.push(
+          `  So far — pain: ${interview.pain_point ?? "(none)"} · goal: ${interview.desired_goal ?? "(none)"}`,
+        );
+        lines.push(`  Still needed: ${interview.missing_fields.join(", ")}`);
+        lines.push("");
+      }
+      lines.push("  Tell me (use --pain, --goal, --urgency, --style):");
+      for (const q of interview.interview_questions) lines.push(`    • ${q}`);
+    } else {
+      lines.push(`  Pain: ${interview.pain_point}`);
+      lines.push(`  Goal: ${interview.desired_goal}`);
+      lines.push(
+        `  Urgency: ${interview.urgency_level} · help style: ${interview.preferred_help_style ?? "(unspecified)"}`,
+      );
+      lines.push("");
+      lines.push("  First mission — PROPOSAL ONLY (not started):");
+      lines.push(`    ${interview.first_mission_candidate.statement}`);
+    }
+    // Honesty guard — the captured-not-understood disclaimer fires whenever
+    // anything was STATED (partial OR ready), not only when a mission is
+    // proposed. The partial branch echoes the user's pain back, so it is the
+    // surface most exposed to reading capture as comprehension.
+    if (interview.pain_point || interview.desired_goal) {
+      lines.push("");
+      lines.push(
+        "  I captured what you STATED — I have not understood you fully, run any model, or saved anything.",
+      );
+    }
+    lines.push(humanHintLine("mission interview"));
+    console.log(lines.join("\n"));
+    process.exit(process.exitCode ?? 0);
+  }
   if (subcommand === "run" && argv[2] === "health") {
     const consent = argValue(argv, "--consent") ?? "";
     const dryRun = argv.includes("--dry-run");
