@@ -77,23 +77,57 @@ export const IO_TIER_ALLOWLIST = Object.freeze({
     "spawns git + reads repo files for the dev roadmap; 1C relocate candidate — tooling, not a kernel",
   "datalake-dual-loop-preview.js":
     "existsSync probes for ADR-030 boundary refs on disk; read-only dual-loop reference preview only",
+  // --- Surfaced by the node:fs/promises subpath-bypass fix (1C) ---
+  // These imported the most common async-fs specifier, which the original
+  // regex anchored past; now detected, declared, and accounted for here.
+  // Read-only state readers:
+  "codebase-architecture-map.js":
+    "read-only bounded repo scan (readdir/stat/realpath/readlink) to render the architecture map",
+  "dema-realm-board.js":
+    "reads ~/.dema realm state to render the read-only mission board view",
+  "dema-realm-checkpoint.js":
+    "reads ~/.dema checkpoint journal entries for the read-only checkpoint view",
+  "dema-realm-wallet.js":
+    "reads ~/.dema resource-intent ledger for the read-only wallet view",
+  "dema-realm-world-map.js":
+    "reads ~/.dema realm state to render the read-only world map view",
+  "homebase-gather.js":
+    "reads ~/.dema profile/memory/receipts to compose the homebase gather snapshot",
+  "routed-invocation-verifier.js":
+    "reads saved invocation receipts (open/stat/readdir) to verify routing invariants; read-only",
+  // Persistence I/O by design (all writes are under DEMA_HOME/~/.dema):
+  "dema-realm-checkpoint-writer.js":
+    "atomic write+rename of realm checkpoints under ~/.dema (persistence I/O by design)",
+  "intro-line.js":
+    "persists first-run intro/counter state under ~/.dema (mkdir+write; persistence I/O by design)",
+  "local-asset-awareness.js":
+    "writes the local asset inventory under ~/.dema via atomic write+rename (persistence I/O by design)",
+  "master-craftsmanship-audit.js":
+    "external-witness audit log; injected fs with a node:fs/promises fallback (persistence I/O by design; DI-pure when fs is injected)",
+  "operator-profile.js":
+    "reads + atomically writes (write+rename) the operator profile card under ~/.dema (persistence I/O by design)",
+  "setup-wizard.js":
+    "writes initial ~/.dema setup artifacts during the first-run wizard (persistence I/O by design)",
+  "today.js":
+    "persists daily state under ~/.dema (mkdir+write; persistence I/O by design)",
 });
 
 const MODULE_GROUP = "(fs|net|http|https|child_process)";
+// A module specifier for a forbidden surface: the base module, optionally with
+// a subpath export (`node:fs/promises`, `fs/promises`). The capture group stays
+// the BASE module so the reported token is stable (`node:fs/promises` → node:fs).
+// `(?:/[^"']*)?` matches a `/subpath` but NOT `fs-extra` (the `-` is neither `/`
+// nor a closing quote, so a distinct package fails the match). Without this, the
+// most common async-fs specifier (`node:fs/promises`) silently escaped the scan.
+const MODULE_SPEC = `(?:node:)?${MODULE_GROUP}(?:/[^"']*)?`;
 // `from "<module>"` clause — matches single-line AND multi-line imports (the
 // `} from "node:fs"` clause is always on one physical line) and re-exports
 // (`export … from "node:fs"`). Object keys like `{ from: "node:fs" }` do not
 // match (the colon breaks `\sfrom\s*["']`).
-const FROM_RE = new RegExp(`\\bfrom\\s*["'](?:node:)?${MODULE_GROUP}["']`);
-const BARE_IMPORT_RE = new RegExp(
-  `\\bimport\\s*["'](?:node:)?${MODULE_GROUP}["']`,
-);
-const REQUIRE_RE = new RegExp(
-  `\\brequire\\(\\s*["'](?:node:)?${MODULE_GROUP}["']\\s*\\)`,
-);
-const DYN_IMPORT_RE = new RegExp(
-  `\\bimport\\(\\s*["'](?:node:)?${MODULE_GROUP}["']\\s*\\)`,
-);
+const FROM_RE = new RegExp(`\\bfrom\\s*["']${MODULE_SPEC}["']`);
+const BARE_IMPORT_RE = new RegExp(`\\bimport\\s*["']${MODULE_SPEC}["']`);
+const REQUIRE_RE = new RegExp(`\\brequire\\(\\s*["']${MODULE_SPEC}["']\\s*\\)`);
+const DYN_IMPORT_RE = new RegExp(`\\bimport\\(\\s*["']${MODULE_SPEC}["']\\s*\\)`);
 // Global fetch call: bare `fetch(` (no space — Prettier/ESLint forbid a space
 // before the call paren, so `fetch (` only appears in prose) not preceded by
 // `.`, a word char, or `$` (so `.fetch(`, `prefetch(`, `myFetch(` do not match);
