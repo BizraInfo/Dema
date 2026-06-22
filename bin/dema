@@ -1,4 +1,8 @@
 #!/usr/bin/env node
 // Global `dema` entry point. Installed via `npm install -g .` (per package.json `bin` field).
 // Delegates to apps/cli/src/index.js, which handles bare invocation (active kernel) + subcommands.
-import("../apps/cli/src/index.js");
+// AUDIT P2: surface a load-time failure instead of an unhandled promise rejection.
+import("../apps/cli/src/index.js").catch((err) => {
+  console.error(err && err.stack ? err.stack : err);
+  process.exitCode = 1;
+});

@@ -56,17 +56,30 @@ export const PREVIEW_BOUNDARY = {
   receipt_minted: false,
 };
 
+// Bounded against adversarial / cyclic input (AUDIT P2): a body deeper than
+// MAX_DEPTH fails closed rather than exhausting the stack while canonicalizing
+// for a hash. Real consent/receipt bodies are shallow; 100 is generous headroom.
+export const STABLE_STRINGIFY_MAX_DEPTH = 100;
+
 export function stableStringify(value) {
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(",")}]`;
-  }
-  if (value && typeof value === "object") {
-    const entries = Object.keys(value)
-      .sort()
-      .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`);
-    return `{${entries.join(",")}}`;
-  }
-  return JSON.stringify(value);
+  const recur = (v, depth) => {
+    if (depth > STABLE_STRINGIFY_MAX_DEPTH) {
+      throw new RangeError(
+        `stableStringify: max nesting depth ${STABLE_STRINGIFY_MAX_DEPTH} exceeded (possible cyclic or adversarial input)`,
+      );
+    }
+    if (Array.isArray(v)) {
+      return `[${v.map((item) => recur(item, depth + 1)).join(",")}]`;
+    }
+    if (v && typeof v === "object") {
+      const entries = Object.keys(v)
+        .sort()
+        .map((key) => `${JSON.stringify(key)}:${recur(v[key], depth + 1)}`);
+      return `{${entries.join(",")}}`;
+    }
+    return JSON.stringify(v);
+  };
+  return recur(value, 0);
 }
 
 export function sha256(value) {

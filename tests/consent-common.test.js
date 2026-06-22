@@ -101,3 +101,26 @@ describe("sha256", () => {
     assert.notEqual(sha256("hello"), sha256("world"));
   });
 });
+
+// AUDIT P2: stableStringify recursed without a depth cap — adversarial or cyclic
+// input could exhaust the stack while canonicalizing a body for hashing. The cap
+// fails closed (throws) rather than producing a hash for pathological input.
+describe("stableStringify depth cap", () => {
+  it("throws on input nested deeper than the cap", () => {
+    const root = {};
+    let cur = root;
+    for (let i = 0; i < 200; i++) {
+      cur.child = {};
+      cur = cur.child;
+    }
+    assert.throws(() => stableStringify(root), /depth/i);
+  });
+
+  it("stringifies normally-nested input unchanged (regression)", () => {
+    assert.equal(stableStringify({ a: [1, { b: 2 }] }), '{"a":[1,{"b":2}]}');
+    assert.equal(
+      stableStringify({ b: 2, a: 1 }),
+      stableStringify({ a: 1, b: 2 }),
+    );
+  });
+});
