@@ -24,6 +24,7 @@ import {
   LLM_ADAPTER_MAX_PROMPT_LENGTH,
   llmAdapterIsAllowedModelName,
   llmAdapterIsLocalhostBaseUrl,
+  llmAdapterConsentPhraseFor,
 } from "./llm-adapter.js";
 
 export const LOCAL_LLM_PROVIDER_ROUTER_SCHEMA =
@@ -68,12 +69,10 @@ const WHAT_THIS_PROVES = Object.freeze([
 const WHAT_THIS_DOES_NOT_PROVE = Object.freeze([
   "No model was called and no network request was made (this is preview only).",
   "The selected provider is running or reachable — this kernel does NOT auto-detect or probe any port.",
-  // The load-bearing honesty line (critic catch): the previewed consent phrase
-  // and the provider-aware allow-list describe the PROPOSED 1B contract, not a
-  // gate that exists today. The live adapter (Ollama-only) uses a different,
-  // provider-LESS phrase and applies the family allow-list to the raw name. Do
-  // NOT present this phrase as the settled live phrase until 1B lands.
-  "That the live consent gate enforces this exact phrase, or that this model is allowed by the live gate, YET. The provider-qualified phrase and the provider-aware allow-list (which normalizes LM Studio publisher/model names) are the PROPOSED contract for the live call, DEMA-TALK-LOOP-1B. Today's adapter is Ollama-only and uses a different, provider-less phrase — nothing here is enforced until 1B lands.",
+  // The previewed consent phrase and provider-aware allow-list are now the SAME
+  // ones the 1B live gate (invokeDemaTalkLive) enforces — drift closed. What a
+  // preview still cannot prove is reachability and installation.
+  "That the selected provider is installed/running or that a live call would succeed — the live gate (DEMA-TALK-LOOP-1B) checks reachability at call time; this preview does not.",
   "The model name is installed in the selected provider.",
   "Any file was written, receipt minted, runtime activated, token computed, or federation invoked.",
 ]);
@@ -168,10 +167,10 @@ export function buildLocalLlmProviderRoute({
     endpoint_family: entry.endpoint_family,
     model: modelSafe,
     model_allowed: modelAllowed,
-    consent_phrase: `GO: invoke local LLM via ${key} at ${consentModel}`,
-    // The previewed phrase is the PROPOSED 1B contract — the live gate (which
-    // today is Ollama-only and provider-less) does not enforce it yet.
-    consent_phrase_status: "proposed_for_1b_not_yet_enforced",
+    // Single source of truth: the SAME consentPhraseFor the 1B live gate
+    // (invokeDemaTalkLive) enforces — so the previewed phrase == the gate phrase.
+    consent_phrase: llmAdapterConsentPhraseFor(consentModel, key),
+    consent_phrase_status: "enforced_by_live_gate",
     target_is_localhost: llmAdapterIsLocalhostBaseUrl(entry.base_url),
     prompt_too_long: promptTooLong,
     known_providers: KNOWN_PROVIDERS,

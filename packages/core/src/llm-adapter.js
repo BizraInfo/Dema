@@ -100,10 +100,22 @@ function safeString(v, fallback = "") {
   return v.length > MAX_PROMPT_LENGTH ? v.slice(0, MAX_PROMPT_LENGTH) : v;
 }
 
-function consentPhraseFor(modelName) {
+function consentPhraseFor(modelName, provider = null) {
   // The exact-string consent phrase pattern. Caller MUST type this verbatim.
   // No fuzzy match. No prefix match. No case-insensitive match.
-  return `GO: invoke local LLM at ${modelName}`;
+  //
+  // Back-compat: called with one arg (no provider) it returns the legacy
+  // provider-LESS phrase used by the Ollama-only invokeLocalLLM and every
+  // existing call site (model-broker, think-live, index.js). Called WITH a
+  // provider it returns the provider-qualified phrase the provider router
+  // previews and DEMA-TALK-LOOP-1B's live gate enforces — so preview == gate.
+  const p =
+    typeof provider === "string" && provider.trim().length > 0
+      ? provider.trim().toLowerCase()
+      : null;
+  return p
+    ? `GO: invoke local LLM via ${p} at ${modelName}`
+    : `GO: invoke local LLM at ${modelName}`;
 }
 
 function isLocalhostBaseUrl(baseUrl) {
