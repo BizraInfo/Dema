@@ -142,15 +142,16 @@ test("HONESTY — does not claim the provider is reachable or that anything ran"
   assert.match(text, /no model|preview/i);
 });
 
-test("HONESTY — the consent phrase is flagged as the proposed 1B contract, not yet enforced", () => {
-  // Critic catch: the live adapter (Ollama-only) requires a DIFFERENT, provider-
-  // less phrase. The preview must not assert this provider-qualified phrase is
-  // enforced today, or an operator would copy a string the live gate rejects.
-  const r = buildLocalLlmProviderRoute({ model: "qwen2.5" });
-  assert.equal(r.consent_phrase_status, "proposed_for_1b_not_yet_enforced");
+test("the previewed consent phrase is the SAME one the 1B live gate enforces (drift closed)", () => {
+  // After DEMA-TALK-LOOP-1B, the router's phrase is produced by the same
+  // consentPhraseFor the live gate (invokeDemaTalkLive) checks — so an operator
+  // can copy the previewed phrase and it will be accepted.
+  const r = buildLocalLlmProviderRoute({ provider: "lmstudio", model: "qwen2.5" });
+  assert.equal(r.consent_phrase_status, "enforced_by_live_gate");
+  assert.equal(r.consent_phrase, "GO: invoke local LLM via lmstudio at qwen2.5");
+  // The preview still cannot prove reachability/installation — that stays honest.
   const text = r.what_this_does_not_prove.join(" ");
-  assert.match(text, /not.*enforced|proposed|1B/i);
-  assert.match(text, /provider-less|Ollama-only|different/i);
+  assert.match(text, /reachab|installed|running|succeed/i);
 });
 
 test("schema + truth_label exact; deep-frozen", () => {

@@ -6,6 +6,7 @@
 // (invokeLocalLLM) ships as DEMA-TALK-LOOP-1B under its own GO. No fs write, no
 // memory, no runtime.
 import { buildDemaTalkPreview } from "../../../../packages/core/src/dema-talk-loop-preview.js";
+import { invokeDemaTalkLive } from "../../../../packages/core/src/dema-talk-loop-live.js";
 import {
   wantsJson,
   humanHintLine,
@@ -13,7 +14,7 @@ import {
 
 // Flags that consume the following token as their value; everything else after
 // the command name (argv[0]) is treated as the positional prompt.
-const VALUE_FLAGS = new Set(["--model", "--prompt", "--provider"]);
+const VALUE_FLAGS = new Set(["--model", "--prompt", "--provider", "--consent"]);
 
 function argValue(argv, name) {
   const i = argv.indexOf(name);
@@ -37,6 +38,37 @@ export async function cmd_talk(ctx) {
   const model = argValue(argv, "--model");
   const provider = argValue(argv, "--provider");
   const prompt = argValue(argv, "--prompt") ?? firstPositional(argv);
+  const consent = argValue(argv, "--consent");
+
+  // LIVE PATH (DEMA-TALK-LOOP-1B) — only when --consent is supplied. The call is
+  // localhost-bound, whitelisted, exact-consent-gated, and SUGGESTION-only. No
+  // --consent → preview ceremony (no call), unchanged below. The model default
+  // matches the preview path so the required consent phrase lines up.
+  if (typeof consent === "string") {
+    const liveModel = model && model.length > 0 ? model : "qwen2.5";
+    const result = await invokeDemaTalkLive({ provider, model: liveModel, prompt, consentPhrase: consent });
+    if (wantsJson(argv)) {
+      console.log(JSON.stringify(result, null, 2));
+      process.exit(result.invocation_status === "completed" ? 0 : 1);
+    }
+    const lines = [`DEMA · TALK LIVE — ${result.invocation_status.toUpperCase()} (suggestion only)`];
+    if (result.invocation_status === "completed") {
+      lines.push(`  Provider: ${result.provider} · model: ${result.model} @ ${result.target_endpoint}`);
+      lines.push("");
+      lines.push("  Dema (a SUGGESTION — not an authority, nothing was executed):");
+      lines.push(`    ${result.response_text_preview}`);
+    } else {
+      lines.push(`  ${result.error_reason}`);
+      if (result.required_consent) {
+        lines.push(`  Exact consent required: "${result.required_consent}"`);
+      }
+    }
+    lines.push("  No task ran. No file written. No runtime activated. No token, PoI, or federation.");
+    lines.push(humanHintLine("talk"));
+    console.log(lines.join("\n"));
+    process.exit(result.invocation_status === "completed" ? 0 : 1);
+  }
+
   const preview = buildDemaTalkPreview({ prompt, model, provider });
 
   if (wantsJson(argv)) {
@@ -65,9 +97,8 @@ export async function cmd_talk(ctx) {
     "",
     ...preview.explanation_lines.map((l) => `  ${l}`),
     "",
-    "  When the live call ships (DEMA-TALK-LOOP-1B), it will require a provider-qualified consent phrase like this",
-    "  — the live gate is NOT built yet, so this exact string is a proposed contract, not final:",
-    `    ${preview.consent_required}`,
+    "  To run this live (suggestion only), re-run with the exact consent phrase:",
+    `    dema talk … --consent "${preview.consent_required}"`,
     humanHintLine("talk"),
   ];
   console.log(lines.join("\n"));

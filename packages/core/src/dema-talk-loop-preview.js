@@ -28,8 +28,7 @@ const WHAT_THIS_PROVES = Object.freeze([
 
 const WHAT_THIS_DOES_NOT_PROVE = Object.freeze([
   "No model was called and no response was generated (this is preview only).",
-  "The selected provider is running or reachable — nothing is auto-detected or probed (that is checked at live-invocation time, 1B).",
-  "That the live gate enforces this exact consent phrase yet — the provider-qualified phrase is the PROPOSED 1B contract; today's adapter is Ollama-only and provider-less.",
+  "The selected provider is running or reachable — nothing is auto-detected or probed (that is checked at live-invocation time, via `dema talk --consent`).",
   "Any file was written or any receipt minted.",
 ]);
 

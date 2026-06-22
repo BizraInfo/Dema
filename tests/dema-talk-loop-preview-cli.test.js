@@ -66,12 +66,54 @@ test("human ceremony discloses localhost-only / no-internet / suggestion-only / 
   assert.match(out, /suggestion/i);
 });
 
-test("human ceremony does NOT over-promise the live phrase — flags it not-final / 1B", () => {
-  // The previewed provider-qualified phrase is the proposed 1B contract; the
-  // live gate is not built. The render must not assert it as the exact phrase.
+test("preview points to the exact --consent phrase to run it live (1B shipped)", () => {
   const out = talk(["help me"]);
-  assert.match(out, /not built yet|not final|proposed/i);
-  assert.match(out, /1B|DEMA-TALK-LOOP-1B/);
+  assert.match(out, /--consent/);
+  assert.match(out, /GO: invoke local LLM via lmstudio at qwen2\.5/);
+});
+
+// --- DEMA-TALK-LOOP-1B live path · CI-safe (refusing paths only, NO real fetch) ---
+
+function talkAllowFail(args) {
+  try {
+    return { out: execFileSync("node", [BIN, "talk", ...args], { encoding: "utf8" }), code: 0 };
+  } catch (e) {
+    return { out: (e.stdout || "") + (e.stderr || ""), code: e.status ?? 1 };
+  }
+}
+
+test("--consent with the WRONG phrase → refused, no invocation, exit 1 (no fetch fired)", () => {
+  const { out, code } = talkAllowFail([
+    "hi", "--consent", "not the right phrase", "--json",
+  ]);
+  const d = JSON.parse(out);
+  assert.equal(d.invocation_status, "refused");
+  assert.match(d.error_reason, /consent/i);
+  assert.equal(d.boundary.model_invocation_performed, false);
+  assert.equal(d.boundary.network_used, false);
+  assert.equal(code, 1);
+});
+
+test("--consent on an unknown provider → refused, no silent fallback, no fetch", () => {
+  const { out } = talkAllowFail([
+    "hi", "--provider", "openai", "--consent",
+    "GO: invoke local LLM via openai at qwen2.5", "--json",
+  ]);
+  const d = JSON.parse(out);
+  assert.equal(d.invocation_status, "refused");
+  assert.match(d.error_reason, /unknown_provider/);
+  assert.equal(d.boundary.network_used, false);
+});
+
+test("--consent on a non-whitelisted model → refused before any fetch", () => {
+  const { out } = talkAllowFail([
+    "hi", "--model", "gpt-4", "--consent",
+    "GO: invoke local LLM via lmstudio at gpt-4", "--json",
+  ]);
+  const d = JSON.parse(out);
+  assert.equal(d.invocation_status, "refused");
+  assert.match(d.error_reason, /whitelist|not.*allow/i);
+  assert.equal(d.boundary.network_used, false);
 });
 
 test("the previewed boundary reports no model / network / tool / runtime (canonical keys)", () => {
