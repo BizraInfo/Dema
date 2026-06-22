@@ -63,8 +63,11 @@ function firstPositional(argv) {
 
 export async function cmd_talk(ctx) {
   const { argv } = ctx;
-  const model = argValue(argv, "--model");
-  const provider = argValue(argv, "--provider");
+  // Flags win; then the operator's env defaults (so a fleet that has gemma4 but
+  // not qwen2.5 can be the default without hardcoding); then the kernel default.
+  // Env is read HERE in the CLI, never in the pure kernels.
+  const model = argValue(argv, "--model") ?? process.env.DEMA_TALK_MODEL;
+  const provider = argValue(argv, "--provider") ?? process.env.DEMA_TALK_PROVIDER;
   const prompt = argValue(argv, "--prompt") ?? firstPositional(argv);
   const consent = argValue(argv, "--consent");
 

@@ -9,8 +9,23 @@ import { fileURLToPath } from "node:url";
 
 const BIN = fileURLToPath(new URL("../bin/dema", import.meta.url));
 
+// Strip the env defaults so the ambient shell can't pollute the default-path
+// assertions; tests that want env defaults set them explicitly.
+const {
+  DEMA_TALK_MODEL: _m,
+  DEMA_TALK_PROVIDER: _p,
+  ...CLEAN_ENV
+} = process.env;
+
 function talk(args) {
-  return execFileSync("node", [BIN, "talk", ...args], { encoding: "utf8" });
+  return execFileSync("node", [BIN, "talk", ...args], { encoding: "utf8", env: CLEAN_ENV });
+}
+
+function talkEnv(args, env) {
+  return execFileSync("node", [BIN, "talk", ...args], {
+    encoding: "utf8",
+    env: { ...CLEAN_ENV, ...env },
+  });
 }
 
 test("default → LM Studio provider + allowed + provider+model consent phrase, NO invocation", () => {
@@ -70,6 +85,36 @@ test("preview points to the exact --consent phrase to run it live (1B shipped)",
   const out = talk(["help me"]);
   assert.match(out, /--consent/);
   assert.match(out, /GO: invoke local LLM via lmstudio at qwen2\.5/);
+});
+
+test("env defaults: DEMA_TALK_PROVIDER/MODEL set the default fleet (no flags)", () => {
+  const d = JSON.parse(
+    talkEnv(["hi", "--json"], {
+      DEMA_TALK_PROVIDER: "ollama",
+      DEMA_TALK_MODEL: "gemma4:26b",
+    }),
+  );
+  assert.equal(d.provider, "ollama");
+  assert.equal(d.model, "gemma4:26b");
+  assert.equal(d.model_allowed_in_whitelist, true);
+  assert.equal(d.consent_required, "GO: invoke local LLM via ollama at gemma4:26b");
+});
+
+test("flags WIN over env defaults", () => {
+  const d = JSON.parse(
+    talkEnv(["hi", "--provider", "llamacpp", "--json"], {
+      DEMA_TALK_PROVIDER: "ollama",
+      DEMA_TALK_MODEL: "gemma4:26b",
+    }),
+  );
+  assert.equal(d.provider, "llamacpp"); // flag beats env
+  assert.equal(d.model, "gemma4:26b"); // env model still applies (no --model flag)
+});
+
+test("no env, no flags → kernel default (lmstudio / qwen2.5) preserved", () => {
+  const d = JSON.parse(talk(["hi", "--json"]));
+  assert.equal(d.provider, "lmstudio");
+  assert.equal(d.model, "qwen2.5");
 });
 
 // --- DEMA-TALK-LOOP-1B live path · CI-safe (refusing paths only, NO real fetch) ---
