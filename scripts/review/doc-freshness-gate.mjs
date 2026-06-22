@@ -34,14 +34,20 @@ export const SCHEMA = "bizra.dema.review.doc_freshness.v0.1";
 export const CURATED_LIVING_DOCS = Object.freeze([
   "docs/THIRD_FACT_CURRENT_STATE_DELTA.md",
   "docs/00_START_HERE.md",
+  "docs/QUICKSTART.md",
+  "docs/DEMA_ARCHITECTURE.md",
 ]);
 
-// A hardcoded test-count assertion: a slash form `N/N tests|passing` or a bare
-// `N tests|passing` (3-6 digit count). Pointers like `npm test` /
-// `docs/TESTING.md` carry no digit-before-tests and never match. Global so every
-// assertion on a line is reported.
+// A hardcoded total-suite count assertion: a slash form `N/N tests|passing|PASS`
+// or a bare `N tests|passing|PASS`. Both forms require 3-6 digits: total-suite
+// counts (the drift target) are in the thousands here, while 2-digit `N/N` forms
+// are specific, stable component references (e.g. the μ-C1 enforcer's "14/14
+// PASS") that must stay allowed. `PASS`/`pass` is included (case-insensitive via
+// /i) so "2618/2618 PASS" — a count with no "tests" word — no longer escapes.
+// Pointers like `npm test` / `docs/TESTING.md` carry no digit-before-tests and
+// never match. Global so every assertion on a line is reported.
 export const TEST_COUNT_RE =
-  /\b\d{2,6}\s*\/\s*\d{2,6}\s*(?:tests?|passing)\b|\b\d{3,6}\s+(?:tests?|passing)\b/gi;
+  /\b\d{3,6}\s*\/\s*\d{3,6}\s*(?:tests?|passing|pass)\b|\b\d{3,6}\s+(?:tests?|passing|pass)\b/gi;
 
 export const VIOLATION_CODE = "hardcoded_test_count_in_living_doc";
 

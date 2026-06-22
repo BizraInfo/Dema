@@ -37,7 +37,7 @@ The honest state of this repository as of `main @ ccde52a` (2026-05-24):
 | Surface                   | Truth label                                                   | Source of truth                                                                    |
 | ------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | Doctrine                  | Third Fact v0.1 (public draft)                                | [`public/third-fact-v0.1.md`](public/third-fact-v0.1.md)                           |
-| Test surface              | **MEASURED** · 2618 / 2618 PASS                               | `npm test`                                                                         |
+| Test surface              | **MEASURED** · all green (count via `npm test`)              | `npm test`                                                                         |
 | Coverage                  | **MEASURED** · 97.57 lines · 88.38 branches · 97.56 functions | `npm run coverage`                                                                 |
 | Dependencies              | **MEASURED** · 0 production · 0 dev · stdlib-only             | `package.json`                                                                     |
 | CI gates                  | **MEASURED** · 4 SHA-pinned workflows · all green             | [`CI_CD_PIPELINE.md`](CI_CD_PIPELINE.md)                                           |

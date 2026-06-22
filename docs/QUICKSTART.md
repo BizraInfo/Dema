@@ -160,7 +160,7 @@ All commands at this stage are **preview-only**. Nothing mints a receipt. Nothin
 
 - Setting up a local model broker (Ollama) — see [`docs/06-adr/ADR-018-model-broker-promotion-path.md`](06-adr/ADR-018-model-broker-promotion-path.md)
 - The full subcommand surface (~60 commands) — see `node bin/dema --help` and [`README.md`](../README.md) for the inventory
-- Running the test suite — see `npm test` (2618/2618 PASS expected) and [`docs/TESTING.md`](TESTING.md)
+- Running the test suite — see `npm test` (all green expected) and [`docs/TESTING.md`](TESTING.md)
 - The full release / CI surface — see [`docs/RELEASE_PROCESS.md`](RELEASE_PROCESS.md) and [`docs/CI_CD_PIPELINE.md`](CI_CD_PIPELINE.md)
 - The architecture model — see [`docs/ARCHITECTURE.md`](ARCHITECTURE.md)
 

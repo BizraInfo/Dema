@@ -238,7 +238,7 @@ Per [`THIRD_FACT_CURRENT_STATE_DELTA.md`](THIRD_FACT_CURRENT_STATE_DELTA.md) TF-
 | Zero dev dependencies     | `package.json` (no `devDependencies`)          |
 | No build step             | `node bin/dema` runs from source               |
 | No npm workspaces         | Package imports use relative paths             |
-| Tests use `node:test`     | `node --test tests/*.test.js` · 2618/2618 PASS |
+| Tests use `node:test`     | `node --test tests/*.test.js` · all green      |
 | Stdlib-only posture       | No `node_modules` directory at all             |
 
 These are **invariants**, not preferences. The smoke matrix and the test surface verify them on every CI run.
@@ -248,7 +248,7 @@ These are **invariants**, not preferences. The smoke matrix and the test surface
 ## Verification commands
 
 ```bash
-npm test                 # 2618/2618 PASS · ~7.7s · no deps · stdlib only
+npm test                 # all green · no deps · stdlib only (count via npm test)
 npm run check            # aggregator (env-hygiene + coverage + ~40 CLI subcalls)
 npm run llm:guidance     # 7/7 router/canon checks
 npm run release:readiness # 0 risks · score 100/100

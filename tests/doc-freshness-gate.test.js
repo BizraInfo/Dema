@@ -98,6 +98,40 @@ test('bare-form "4959 tests pass" → violation', () => {
   });
 });
 
+test('1A: slash-form PASS without "tests" ("2618/2618 PASS") → violation', () => {
+  // The original regex required `tests`/`passing` after the count, so a bare
+  // "N/N PASS" (the common cockpit/quickstart form) silently escaped.
+  withRepo(
+    { "docs/live.md": "Test surface · 2618 / 2618 PASS · run `npm test`.\n" },
+    (root) => {
+      const r = checkDocFreshness({
+        repoRoot: root,
+        curatedDocs: ["docs/live.md"],
+      });
+      assert.equal(r.ok, false);
+      assert.equal(r.violation_count, 1);
+      assert.match(r.violations[0].match, /2618 \/ 2618 PASS/i);
+    },
+  );
+});
+
+test('1A: 2-digit component count ("14/14 PASS") is NOT flagged — stable specific ref, not total-suite drift', () => {
+  // Total-suite counts (the drift target) are 3-6 digits; small N/N forms like
+  // the μ-C1 enforcer's "14/14 PASS" are specific, stable references and must
+  // stay allowed so the gate does not force deleting precise documentation.
+  withRepo(
+    { "docs/live.md": "μ-C1 enforcer · 14/14 PASS in pre-push · 16 tests.\n" },
+    (root) => {
+      const r = checkDocFreshness({
+        repoRoot: root,
+        curatedDocs: ["docs/live.md"],
+      });
+      assert.equal(r.ok, true);
+      assert.equal(r.violation_count, 0);
+    },
+  );
+});
+
 test("pointer to live commands (npm test / npm run check / docs/TESTING.md) → ok", () => {
   withRepo(
     {
