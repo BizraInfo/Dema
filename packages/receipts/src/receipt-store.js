@@ -158,15 +158,36 @@ async function receiptSummary(path, { maxJsonBytes }) {
   }
 }
 
-export async function listReceipts(
+// AUDIT P2: a paged view that surfaces completeness — `total_scanned`,
+// `capped` (the bounded scan hit maxFiles, so more may exist on disk), and
+// `truncated` (this page omits scanned receipts OR the scan was capped). The
+// items array is identical to listReceipts; this just adds the metadata a
+// caller needs to avoid silently dropping receipts beyond the first page.
+export async function listReceiptsPage(
   root = process.env.DEMA_HOME || join(homedir(), ".dema"),
   options = {},
 ) {
+  const limits = normalizeListOptions(options);
+  const base = Object.freeze({
+    schema: "bizra.dema.receipts.page.v0.1",
+    offset: limits.offset,
+    limit: limits.limit,
+    max_files: limits.maxFiles,
+  });
+  const empty = (extra) =>
+    Object.freeze({
+      ...base,
+      items: [],
+      total_scanned: 0,
+      capped: false,
+      truncated: false,
+      ...extra,
+    });
+
+  if (limits.maxFiles === 0 || limits.limit === 0) return empty();
+
   const normalizedRoot = safeReceiptsRoot(root);
   const receiptsRoot = join(normalizedRoot, "receipts");
-  const limits = normalizeListOptions(options);
-  if (limits.maxFiles === 0 || limits.limit === 0) return [];
-
   try {
     const files = [];
     // v0.1.2: pass containment root for per-entry symlink/traversal detection
@@ -174,16 +195,33 @@ export async function listReceipts(
       ...limits,
       containmentRoot: receiptsRoot,
     });
-    const page = files.slice(limits.offset, limits.offset + limits.limit);
-    return Promise.all(
-      page.map((file) => receiptSummary(join(receiptsRoot, file), limits)),
+    const total_scanned = files.length;
+    const capped = total_scanned >= limits.maxFiles;
+    const pageFiles = files.slice(limits.offset, limits.offset + limits.limit);
+    const items = await Promise.all(
+      pageFiles.map((file) => receiptSummary(join(receiptsRoot, file), limits)),
     );
+    const hasMoreInScan = limits.offset + pageFiles.length < total_scanned;
+    return Object.freeze({
+      ...base,
+      items,
+      total_scanned,
+      capped,
+      truncated: hasMoreInScan || capped,
+    });
   } catch {
     // Fail-soft: any IO error (path doesn't exist, permission denied, etc.)
-    // returns []. Boundary violations are caught BEFORE this by the
+    // returns an empty page. Boundary violations are caught BEFORE this by the
     // containment guard inside collectReceiptFiles.
-    return [];
+    return empty();
   }
+}
+
+export async function listReceipts(
+  root = process.env.DEMA_HOME || join(homedir(), ".dema"),
+  options = {},
+) {
+  return (await listReceiptsPage(root, options)).items;
 }
 
 export async function readReceipt(
