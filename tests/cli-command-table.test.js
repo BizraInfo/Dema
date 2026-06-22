@@ -29,6 +29,7 @@ const COMMAND_SURFACE = [
   "witness",
   "authorship",
   "proof",
+  "delivery",
   "foundation",
   "genesis",
   "attest",

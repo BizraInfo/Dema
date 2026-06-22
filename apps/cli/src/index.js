@@ -21,6 +21,7 @@ import { cmd_model_broker } from "./commands/model-broker.js";
 import { cmd_think } from "./commands/think.js";
 import { cmd_authorship } from "./commands/authorship.js";
 import { cmd_proof } from "./commands/proof.js";
+import { cmd_delivery } from "./commands/delivery.js";
 import { cmd_foundation } from "./commands/foundation.js";
 import { cmd_realm } from "./commands/realm.js";
 import { cmd_mission } from "./commands/mission.js";
@@ -190,6 +191,12 @@ Genesis:
                     prerequisite slots (11 operator-signed, poi_rule verifiable)
                     without reading the private key, producing a signature, or
                     sealing Block0. Preview only.
+
+Delivery:
+  dema delivery policy [--json]
+                    Machine-readable delivery/DevOps/QA gate manifest (policy_only).
+  dema delivery status [--json]
+                    Annotate the policy with which gate commands are wired in package.json.
 
 URP:
   dema urp index --passport <passport.json> [--receipts-dir <dir>] [--json]
@@ -615,6 +622,10 @@ const REGISTERED_COMMANDS_LIST = [
     description: "verify or demo Ed25519 authorship receipts",
   },
   { command: "proof", description: "generate portable proof passport" },
+  {
+    command: "delivery",
+    description: "delivery/DevOps/QA control plane (policy, status)",
+  },
   { command: "foundation", description: "consent-gated local node foundation" },
   {
     command: "genesis",
@@ -962,6 +973,7 @@ const COMMAND_TABLE = {
   witness: cmd_witness,
   authorship: cmd_authorship,
   proof: cmd_proof,
+  delivery: cmd_delivery,
   foundation: cmd_foundation,
   genesis: cmd_genesis,
   attest: cmd_attest,
