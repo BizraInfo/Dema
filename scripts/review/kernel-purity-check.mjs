@@ -16,9 +16,11 @@
 // IO_TIER_ALLOWLIST below with a one-line reason, until `ok` is true. Only then
 // wire it into scripts/check.mjs. Discovery command (from repo root):
 //   node scripts/review/kernel-purity-check.mjs
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join, isAbsolute, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+
+import { NONCORE_IO_TIER_ALLOWLIST } from "./kernel-purity-allowlist.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..", "..");
@@ -224,6 +226,94 @@ export function checkKernelPurity({
   });
 }
 
+// Path-keyed master allowlist for the all-packages scan (AUDIT P1b). The core
+// allowlist (IO_TIER_ALLOWLIST, basename-keyed for the single-dir scan) is
+// re-expressed as repo-relative paths and merged with the non-core entries.
+// Path keys are fail-closed: each authorizes exactly one file, so a LEGIT entry
+// in one package can never mask a same-named violation added to another package.
+const CORE_PATH_ALLOWLIST = Object.fromEntries(
+  Object.entries(IO_TIER_ALLOWLIST).map(([base, reason]) => [
+    `${DEFAULT_KERNEL_SCAN_DIR}/${base}`,
+    reason,
+  ]),
+);
+
+export const IO_TIER_ALLOWLIST_ALL_PACKAGES = Object.freeze({
+  ...CORE_PATH_ALLOWLIST,
+  ...NONCORE_IO_TIER_ALLOWLIST,
+});
+
+// Discover every packages/<pkg>/src directory on disk (sorted, repo-relative).
+export function listPackageScanDirs(repoRoot = REPO_ROOT) {
+  const packagesAbs = join(repoRoot, "packages");
+  let entries;
+  try {
+    entries = readdirSync(packagesAbs, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  return entries
+    .filter((e) => e.isDirectory())
+    .map((e) => `packages/${e.name}/src`)
+    .filter((rel) => existsSync(join(repoRoot, rel)))
+    .sort();
+}
+
+// Scan ALL package src dirs against the path-keyed master allowlist. Reuses the
+// single-dir scanner per package (basenames are unique within one dir), then
+// aggregates with repo-relative `file` paths. Closes the AUDIT P1b HIGH:
+// previously only packages/core/src was guarded; now every package is.
+export function checkKernelPurityAllPackages({
+  repoRoot = REPO_ROOT,
+  allowlist = IO_TIER_ALLOWLIST_ALL_PACKAGES,
+} = {}) {
+  const scanDirs = listPackageScanDirs(repoRoot);
+  const violations = [];
+  const allowlisted = [];
+  const matchedKeys = new Set();
+  let scanned_count = 0;
+
+  for (const rel of scanDirs) {
+    const prefix = `${rel}/`;
+    const subset = {};
+    const keyByBasename = {};
+    for (const [key, reason] of Object.entries(allowlist)) {
+      if (!key.startsWith(prefix)) continue;
+      const base = key.slice(prefix.length);
+      if (base.includes("/")) continue; // single level only
+      subset[base] = reason;
+      keyByBasename[base] = key;
+    }
+    const r = checkKernelPurity({ repoRoot, scanDir: rel, allowlist: subset });
+    scanned_count += r.scanned_count;
+    for (const v of r.violations) {
+      violations.push(Object.freeze({ ...v, file: `${rel}/${v.file}` }));
+    }
+    for (const a of r.allowlisted) {
+      allowlisted.push(Object.freeze({ ...a, file: `${rel}/${a.file}` }));
+      matchedKeys.add(keyByBasename[a.file]);
+    }
+  }
+
+  // A master key never matched (file gone, now pure, or under an absent dir).
+  const stale_allowlist = Object.keys(allowlist)
+    .filter((key) => !matchedKeys.has(key))
+    .sort();
+
+  return Object.freeze({
+    schema: SCHEMA,
+    ok: violations.length === 0,
+    read_only: true,
+    scan_dirs: Object.freeze(scanDirs),
+    scanned_count,
+    forbidden_tokens: FORBIDDEN_TOKENS,
+    violations: Object.freeze(violations),
+    violation_count: violations.length,
+    allowlisted: Object.freeze(allowlisted),
+    stale_allowlist: Object.freeze(stale_allowlist),
+  });
+}
+
 function argValue(flag) {
   const i = process.argv.indexOf(flag);
   return i !== -1 && i + 1 < process.argv.length ? process.argv[i + 1] : null;
@@ -233,8 +323,12 @@ if (
   process.argv[1] &&
   pathToFileURL(process.argv[1]).href === import.meta.url
 ) {
-  const scanDir = argValue("--scan-dir") || DEFAULT_KERNEL_SCAN_DIR;
-  const report = checkKernelPurity({ scanDir });
+  // Default: scan ALL packages (AUDIT P1b). `--scan-dir <dir>` keeps the
+  // single-dir mode (used by fixtures + ad-hoc checks).
+  const scanDirArg = argValue("--scan-dir");
+  const report = scanDirArg
+    ? checkKernelPurity({ scanDir: scanDirArg })
+    : checkKernelPurityAllPackages();
   if (process.argv.includes("--json")) {
     console.log(JSON.stringify(report, null, 2));
   } else {

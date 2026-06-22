@@ -8,13 +8,21 @@
 // absence-guaranteed, not mechanically scanned. This gate scans them.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, rmSync, readdirSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  rmSync,
+  readdirSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
   checkKernelPurity,
+  checkKernelPurityAllPackages,
+  listPackageScanDirs,
   SCHEMA,
   FORBIDDEN_TOKENS,
 } from "../scripts/review/kernel-purity-check.mjs";
@@ -359,4 +367,54 @@ test("CLI: human output surfaces a stale allowlist entry on a clean fixture", ()
     assert.match(out, /stale allowlist/);
     assert.match(out, /system-snapshot\.js/);
   });
+});
+
+// --- AUDIT P1b: all-packages expansion (path-keyed) ---
+
+test("listPackageScanDirs discovers every packages/*/src on the real tree", () => {
+  const dirs = listPackageScanDirs();
+  assert.ok(dirs.includes("packages/core/src"));
+  assert.ok(dirs.includes("packages/receipts/src"));
+  assert.ok(dirs.includes("packages/node-adapter/src"));
+  assert.ok(dirs.length >= 20, `expected >=20 package src dirs, got ${dirs.length}`);
+});
+
+test("all-packages scan: real tree is fully allowlisted (ok:true, no stale)", () => {
+  const r = checkKernelPurityAllPackages();
+  assert.equal(r.schema, SCHEMA);
+  assert.equal(r.ok, true);
+  assert.equal(r.violation_count, 0);
+  assert.deepEqual([...r.stale_allowlist], []);
+  // core alone is ~150 files; all packages must scan more than the core-only gate.
+  assert.ok(r.scanned_count > 150, `scanned_count ${r.scanned_count} too low`);
+});
+
+test("path-keyed allowlist does NOT mask a same-basename violation in another package", () => {
+  // The exact failure class basename-keying would allow: an allowlist entry for
+  // package b's x.js must not exempt package a's x.js.
+  const root = mkdtempSync(join(tmpdir(), "kpc-multi-"));
+  mkdirSync(join(root, "packages", "a", "src"), { recursive: true });
+  mkdirSync(join(root, "packages", "b", "src"), { recursive: true });
+  writeFileSync(join(root, "packages", "a", "src", "x.js"), 'import "node:fs";\n');
+  writeFileSync(join(root, "packages", "b", "src", "x.js"), 'import "node:fs";\n');
+  try {
+    const r = checkKernelPurityAllPackages({
+      repoRoot: root,
+      allowlist: { "packages/b/src/x.js": "intentional I/O in b only" },
+    });
+    assert.equal(r.ok, false, "a/src/x.js must remain a violation");
+    assert.ok(r.violations.some((v) => v.file === "packages/a/src/x.js"));
+    assert.ok(r.allowlisted.some((a) => a.file === "packages/b/src/x.js"));
+    assert.ok(!r.violations.some((v) => v.file === "packages/b/src/x.js"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("all-packages report is frozen and read-only", () => {
+  const r = checkKernelPurityAllPackages();
+  assert.equal(r.read_only, true);
+  assert.ok(Object.isFrozen(r));
+  assert.ok(Object.isFrozen(r.violations));
+  assert.ok(Object.isFrozen(r.allowlisted));
 });
