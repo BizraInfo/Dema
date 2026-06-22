@@ -5,12 +5,40 @@
 // bound, and the safety posture. It makes NO model call — the live invocation
 // (invokeLocalLLM) ships as DEMA-TALK-LOOP-1B under its own GO. No fs write, no
 // memory, no runtime.
+import { mkdir, writeFile, rename, realpath } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { buildDemaTalkPreview } from "../../../../packages/core/src/dema-talk-loop-preview.js";
 import { invokeDemaTalkLive } from "../../../../packages/core/src/dema-talk-loop-live.js";
+import { buildTalkRuntimeReceipt } from "../../../../packages/core/src/talk-runtime-receipt.js";
 import {
   wantsJson,
   humanHintLine,
 } from "../../../../packages/core/src/output-mode.js";
+
+// Opt-in (`--receipt`) atomic write of a runtime-evidence receipt under
+// $DEMA_HOME/receipts. Metadata only — the kernel never receives the raw
+// prompt/response, and the consent phrase is hashed. Returns the written path.
+async function writeTalkRuntimeReceipt(result, consentPhrase) {
+  const receipt = buildTalkRuntimeReceipt({
+    result,
+    consentPhrase,
+    recordedAtIso: new Date().toISOString(),
+  });
+  const home = process.env.DEMA_HOME || join(homedir(), ".dema");
+  const receiptsDir = join(home, "receipts");
+  await mkdir(receiptsDir, { recursive: true });
+  const realDir = await realpath(receiptsDir);
+  const finalPath = join(realDir, `talk-runtime-${receipt.receipt_id}.json`);
+  const tmpPath = `${finalPath}.tmp`;
+  await writeFile(tmpPath, JSON.stringify(receipt, null, 2), {
+    encoding: "utf8",
+    mode: 0o600,
+    flag: "w",
+  });
+  await rename(tmpPath, finalPath);
+  return finalPath;
+}
 
 // Flags that consume the following token as their value; everything else after
 // the command name (argv[0]) is treated as the positional prompt.
@@ -47,8 +75,12 @@ export async function cmd_talk(ctx) {
   if (typeof consent === "string") {
     const liveModel = model && model.length > 0 ? model : "qwen2.5";
     const result = await invokeDemaTalkLive({ provider, model: liveModel, prompt, consentPhrase: consent });
+    let receiptPath = null;
+    if (argv.includes("--receipt")) {
+      receiptPath = await writeTalkRuntimeReceipt(result, consent);
+    }
     if (wantsJson(argv)) {
-      console.log(JSON.stringify(result, null, 2));
+      console.log(JSON.stringify(receiptPath ? { ...result, receipt_path: receiptPath } : result, null, 2));
       process.exit(result.invocation_status === "completed" ? 0 : 1);
     }
     const lines = [`DEMA · TALK LIVE — ${result.invocation_status.toUpperCase()} (suggestion only)`];
@@ -63,7 +95,10 @@ export async function cmd_talk(ctx) {
         lines.push(`  Exact consent required: "${result.required_consent}"`);
       }
     }
-    lines.push("  No task ran. No file written. No runtime activated. No token, PoI, or federation.");
+    lines.push("  No task ran. No runtime activated. No token, PoI, or federation.");
+    if (receiptPath) {
+      lines.push(`  Runtime-evidence receipt written (metadata only): ${receiptPath}`);
+    }
     lines.push(humanHintLine("talk"));
     console.log(lines.join("\n"));
     process.exit(result.invocation_status === "completed" ? 0 : 1);

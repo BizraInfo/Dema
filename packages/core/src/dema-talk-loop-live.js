@@ -52,6 +52,7 @@ function buildResult({
   promptSafetyVerdict = null,
   responseSafetyVerdict = null,
   responseTextPreviewOverride = undefined,
+  promptLengthChars = null,
 }) {
   // Per ADR-018 §C3: a runtime emission uses the sibling boundary vocabulary —
   // 6 keys MAY be true (network/model_loaded/model_invocation/prompt_executed/
@@ -91,6 +92,8 @@ function buildResult({
     consent_phrase_verified: consentVerified === true,
     error_reason: errorReason,
     response_text_preview: responseTextPreview,
+    prompt_length_chars:
+      typeof promptLengthChars === "number" ? promptLengthChars : null,
     response_length_chars:
       typeof responseText === "string" ? responseText.length : 0,
     duration_ms: typeof durationMs === "number" ? durationMs : null,
@@ -135,6 +138,7 @@ export async function invokeDemaTalkLive({
       truthLabel: "INVOCATION_REFUSED",
       provider: null,
       model: modelSafe,
+      promptLengthChars: promptSafe.length,
       errorReason: `unknown_provider · '${route.requested_provider}' · invocation refused (no silent fallback)`,
     });
   }
@@ -145,6 +149,7 @@ export async function invokeDemaTalkLive({
     endpoint: route.provider_base_url,
     endpointFamily: route.endpoint_family,
     requiredConsent: route.consent_phrase,
+    promptLengthChars: promptSafe.length,
   };
   const refuse = (errorReason, consentVerified = false) =>
     buildResult({ ...base, status: "refused", truthLabel: "INVOCATION_REFUSED", consentVerified, errorReason });
