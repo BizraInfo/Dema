@@ -9,6 +9,7 @@ import { cmd_harness } from "./commands/harness.js";
 import { cmd_bootstrap } from "./commands/bootstrap.js";
 import { cmd_seed } from "./commands/seed.js";
 import { cmd_state } from "./commands/state.js";
+import { cmd_start } from "./commands/start.js";
 import { cmd_setup } from "./commands/setup.js";
 import { cmd_onboarding_lifecycle } from "./commands/onboarding-lifecycle.js";
 import { cmd_explain } from "./commands/explain.js";
@@ -502,6 +503,10 @@ const REGISTERED_COMMANDS_LIST = [
   { command: "status", description: "show Node0 readiness" },
   { command: "status:json", description: "machine-readable status" },
   { command: "state", description: "Node0 state preview" },
+  {
+    command: "start",
+    description: "birth loop: detect node state + greet (local · preview-only)",
+  },
   { command: "node0", description: "Node0 Mumu closed-loop read-only face" },
   { command: "profiles", description: "profile foundation preview" },
   { command: "consent-card", description: "consent card preview" },
@@ -955,6 +960,7 @@ const COMMAND_TABLE = {
   status: cmd_status,
   "status:json": cmd_status_json,
   state: cmd_state,
+  start: cmd_start,
   profiles: cmd_profiles,
   "consent-card": cmd_consent_card,
   "mission-loop": cmd_mission_loop,
