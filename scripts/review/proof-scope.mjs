@@ -230,9 +230,32 @@ if (
     argValue("--class") ||
     process.env.BIZRA_REVIEW_CLASS ||
     resolveClassForBranch(currentBranch());
+  // The base-ref diff is unavailable in a shallow checkout (no origin/main or
+  // no merge base) — e.g. the check.yml CI job. Skip gracefully there; this
+  // gate stays enforced in the full-history BIZRA review job and runs fully in
+  // any full clone (local `npm run check`).
+  let files;
+  try {
+    files = changedFiles();
+  } catch {
+    console.log(
+      JSON.stringify(
+        {
+          schema: "bizra.dema.review.proof_scope.v0.1",
+          ok: true,
+          skipped: true,
+          class: reviewClass,
+          reason: `base ref ${baseRef()} unavailable (shallow checkout / no merge base); enforced in the full-history BIZRA review job`,
+        },
+        null,
+        2,
+      ),
+    );
+    process.exit(0);
+  }
   const report = validateProofScope({
     reviewClass,
-    files: changedFiles(),
+    files,
   });
   console.log(JSON.stringify(report, null, 2));
 }

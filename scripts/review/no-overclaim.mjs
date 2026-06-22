@@ -38,9 +38,33 @@ function changedFiles() {
     .filter(Boolean);
 }
 
+function safeChangedFiles() {
+  // The base-ref diff is unavailable in a shallow checkout (no origin/main or
+  // no merge base) — e.g. the check.yml CI job. Skip gracefully there; this
+  // gate stays enforced in the full-history BIZRA review job and runs fully
+  // in any full clone (local `npm run check`).
+  try {
+    return changedFiles();
+  } catch {
+    console.log(
+      JSON.stringify(
+        {
+          schema: "bizra.dema.review.no_overclaim.v0.1",
+          ok: true,
+          skipped: true,
+          reason: `base ref ${baseRef()} unavailable (shallow checkout / no merge base); enforced in the full-history BIZRA review job`,
+        },
+        null,
+        2,
+      ),
+    );
+    process.exit(0);
+  }
+}
+
 const scanned = [];
 const findings = [];
-for (const file of changedFiles()) {
+for (const file of safeChangedFiles()) {
   if (REVIEW_INFRA_PREFIXES.some((prefix) => file.startsWith(prefix))) continue;
   if (REVIEW_TEST_PREFIXES.some((prefix) => file.startsWith(prefix))) continue;
   if (!/\.(json|mjs|js|md|yml|yaml)$/.test(file)) continue;
