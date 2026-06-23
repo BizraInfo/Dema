@@ -336,7 +336,46 @@ function reject(reason) {
   });
 }
 
-export function verifyImprovement({ improvement, baseline, pubkeyPem, now }) {
+export const SAT_REVIEW_RECEIPT_SCHEMA =
+  "bizra.dema.perf_sat_review_receipt.v0.1";
+
+// Build a SAT-review receipt (SAT-STEP7-1A). Preview SAT model: the review attests
+// to the MEASURED INPUTS (baseline_proof_hash + new_metrics) — fixed before the
+// review exists — which avoids the circular dependency that attesting to
+// improvement_proof_hash would create (improvement_proof_hash is computed OVER
+// sat_review_receipt_hash). The body is signed with the SAT reviewer's key; the
+// receipt hash is content-addressed over the unsigned body, matching
+// PERF_0_PREFLIGHT §97 ("sha256 of the SAT review receipt body").
+export function buildSatReviewReceipt({
+  baselineProofHash,
+  newMetrics,
+  verdict,
+  satPrivateKeyPem,
+}) {
+  // Normalize through the SAME freezeMetrics the improvement builder applies, so
+  // the attested hash matches the verifier's sha256(improvement.new_metrics) even
+  // if the caller passes extra keys (else the receipt would silently never verify).
+  const body = {
+    schema: SAT_REVIEW_RECEIPT_SCHEMA,
+    verdict,
+    attested_baseline_proof_hash: baselineProofHash,
+    attested_new_metrics_hash: sha256(stableStringify(freezeMetrics(newMetrics))),
+  };
+  const sat_review_signature_b64 = signPayload(body, satPrivateKeyPem);
+  return Object.freeze({
+    receipt: Object.freeze({ ...body, sat_review_signature_b64 }),
+    sat_review_receipt_hash: sha256(stableStringify(body)),
+  });
+}
+
+export function verifyImprovement({
+  improvement,
+  baseline,
+  pubkeyPem,
+  now,
+  satReview,
+  satPubkeyPem,
+}) {
   // ── Structural validation ────────────────────────────────────────
   if (!isPlainObject(improvement)) {
     return reject("improvement_missing_or_malformed");
@@ -439,6 +478,52 @@ export function verifyImprovement({ improvement, baseline, pubkeyPem, now }) {
     return reject("consent_scope_mismatch");
   }
 
+  // ── (7) SAT-review signature verification (PERF_0_PREFLIGHT §5 step 7) ──
+  // Opt-in + honest: when a SAT review is supplied it is cryptographically
+  // verified (this closes the prior "shape-checked but never verified" gap);
+  // when it is not, the result reports sat_review_verified:false rather than
+  // silently implying approval. The review's signature is checked with ONLY the
+  // externally-supplied SAT pubkey (same trust invariant as the improvement
+  // signature). Operator==reviewer (self-review) is an acknowledged out-of-scope
+  // social attack per the preflight threat table.
+  let sat_review_verified = false;
+  let sat_review_status = "NOT_SUPPLIED";
+  if (satReview !== undefined || satPubkeyPem !== undefined) {
+    if (!isPlainObject(satReview)) return reject("sat_review_invalid");
+    if (
+      typeof satPubkeyPem !== "string" ||
+      !satPubkeyPem.includes("BEGIN PUBLIC KEY")
+    ) {
+      return reject("sat_pubkey_required");
+    }
+    const { sat_review_signature_b64, ...satBody } = satReview;
+    if (satBody.schema !== SAT_REVIEW_RECEIPT_SCHEMA) {
+      return reject("sat_review_invalid");
+    }
+    // hash binding: the supplied review must be the one the improvement commits to
+    if (sha256(stableStringify(satBody)) !== improvement.sat_review_receipt_hash) {
+      return reject("sat_review_invalid");
+    }
+    let satSigValid;
+    try {
+      satSigValid = verifyPayload(satBody, sat_review_signature_b64, satPubkeyPem);
+    } catch {
+      satSigValid = false;
+    }
+    if (!satSigValid) return reject("sat_review_invalid");
+    if (satBody.verdict !== "pass") return reject("sat_review_verdict_not_pass");
+    // attests to THIS improvement's measured inputs (non-circular target)
+    if (
+      satBody.attested_baseline_proof_hash !== improvement.baseline_proof_hash ||
+      satBody.attested_new_metrics_hash !==
+        sha256(stableStringify(improvement.new_metrics))
+    ) {
+      return reject("sat_review_does_not_attest_this_improvement");
+    }
+    sat_review_verified = true;
+    sat_review_status = "VERIFIED";
+  }
+
   return Object.freeze({
     verified: true,
     improvement_proof_hash,
@@ -447,5 +532,7 @@ export function verifyImprovement({ improvement, baseline, pubkeyPem, now }) {
     interpretation_rule_id: improvement.interpretation_rule_id,
     operator_public_key_fingerprint:
       improvement.operator_public_key_fingerprint,
+    sat_review_verified,
+    sat_review_status,
   });
 }
