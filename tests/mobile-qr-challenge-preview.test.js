@@ -98,7 +98,8 @@ test("T-08 verify ok=true when typed phrase matches", () => {
   });
   assert.equal(result.ok, true);
   assert.equal(result.reason, "verified");
-  assert.equal(result.not_an_authorization, false);
+  // A successful preview verify is still NOT an authorization (preview-only).
+  assert.equal(result.not_an_authorization, true);
 });
 
 test("T-09 verify ok=false reason=phrase_mismatch on wrong phrase", () => {

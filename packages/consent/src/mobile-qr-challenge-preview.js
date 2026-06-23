@@ -153,7 +153,12 @@ function verificationResult({
       detail,
       challenge_id,
       recorded_at,
-      not_an_authorization: !ok,
+      // Unconditionally true: a preview verify is NEVER an authorization,
+      // regardless of phrase match. (Adversarial review w/wpcr4u787: `!ok`
+      // inverted the field so a successful verify read `false`, contradicting
+      // the PREVIEW_ONLY/DECLARED envelope + all-false boundary. Sibling
+      // consent-hash-preview.js hardcodes `true` for the same reason.)
+      not_an_authorization: true,
       boundary: BOUNDARY,
     }),
   );
