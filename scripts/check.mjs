@@ -10,6 +10,7 @@ export const commands = [
   ["node", ["scripts/review/agent-dna-root-coherence.mjs"]],
   ["node", ["scripts/review/negative-verdict-reason-gate.mjs"]],
   ["node", ["scripts/review/doc-freshness-gate.mjs"]],
+  ["node", ["scripts/review/doc-staleness-gate.mjs"]],
   ["node", ["scripts/review/proof-spine-guard.mjs"]],
   ["node", ["scripts/review/fuzz-lite-parser.mjs"]],
   ["node", ["scripts/review/homebase-asset-graph.mjs"]],
