@@ -30,10 +30,13 @@ import { join } from "node:path";
 import {
   buildImprovement,
   verifyImprovement,
+  buildSatReviewReceipt,
+  SAT_REVIEW_RECEIPT_SCHEMA,
   PERF_IMPROVEMENT_SCHEMA,
   PERF_IMPROVEMENT_ACTION_TYPE,
   INTERPRETATION_RULE_V01,
 } from "../packages/perf/src/perf-improvement.js";
+import { generateEd25519Keypair } from "../packages/receipts/src/authorship-signature.js";
 import {
   buildBaseline,
   REQUIRED_METRICS,
@@ -751,5 +754,162 @@ describe("perf-improvement · verifyImprovement (DOD verify path)", () => {
 
   it("REQUIRED_METRICS is the same 14-metric set PERF-1A uses (no drift)", () => {
     assert.equal(REQUIRED_METRICS.length, 14);
+  });
+});
+
+// PERF_0_PREFLIGHT §5 step 7 — SAT-review signature verification (SAT-STEP7-1A).
+// Preview SAT model: the SAT review attests to the MEASURED INPUTS
+// (baseline_proof_hash + new_metrics), fixed before review — avoiding the circular
+// dependency that attesting to improvement_proof_hash would create with
+// sat_review_receipt_hash. Operator==reviewer (self-review) is an acknowledged
+// out-of-scope social attack per the preflight threat table.
+describe("perf-improvement · PERF_0 step 7 SAT-review signature verification", () => {
+  async function buildWithSat({ verdict = "pass", reviewNewMetrics = NEW_METRICS } = {}) {
+    const home = await freshHome();
+    await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home });
+    const baseline = await mintBaseline(home);
+    const sat = generateEd25519Keypair();
+    const review = buildSatReviewReceipt({
+      baselineProofHash: baseline.baseline_proof_hash,
+      newMetrics: reviewNewMetrics,
+      verdict,
+      satPrivateKeyPem: sat.private_key_pem,
+    });
+    const consentProof = await mintImprovementConsent({
+      home,
+      baselineProofHash: baseline.baseline_proof_hash,
+      satReviewReceiptHash: review.sat_review_receipt_hash,
+    });
+    const built = await buildImprovement({
+      baselineProofHash: baseline.baseline_proof_hash,
+      baselineMetrics: BASELINE_METRICS,
+      newMetrics: NEW_METRICS,
+      interpretationRuleId: INTERPRETATION_RULE_V01,
+      satReviewReceiptHash: review.sat_review_receipt_hash,
+      consentProof,
+      demaHome: home,
+      createdAtIso: FIXED_IMPROVEMENT_CREATED,
+    });
+    assert.equal(built.built, true, `improvement build failed: ${built.error || ""}`);
+    const pubkeyPem = await loadPublicKey(home);
+    return { home, improvement: built.improvement, baseline, pubkeyPem, sat, review };
+  }
+
+  it("buildSatReviewReceipt: schema-tagged, signed, content-addressed body hash", () => {
+    const sat = generateEd25519Keypair();
+    const r = buildSatReviewReceipt({
+      baselineProofHash: "a".repeat(64),
+      newMetrics: NEW_METRICS,
+      verdict: "pass",
+      satPrivateKeyPem: sat.private_key_pem,
+    });
+    assert.equal(r.receipt.schema, SAT_REVIEW_RECEIPT_SCHEMA);
+    assert.match(r.sat_review_receipt_hash, /^[a-f0-9]{64}$/);
+    assert.equal(typeof r.receipt.sat_review_signature_b64, "string");
+    assert.equal(Object.isFrozen(r.receipt), true);
+    // no private key material leaks into the receipt
+    assert.equal(JSON.stringify(r.receipt).includes("PRIVATE KEY"), false);
+  });
+
+  it("backward-compatible: no SAT supplied → verified true, sat_review_verified false (no claim)", async () => {
+    const { home, improvement, baseline, pubkeyPem } = await buildWithSat();
+    try {
+      const v = verifyImprovement({ improvement, baseline, pubkeyPem });
+      assert.equal(v.verified, true);
+      assert.equal(v.sat_review_verified, false);
+      assert.equal(v.sat_review_status, "NOT_SUPPLIED");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("valid SAT review signed by the reviewer key → sat_review_verified true", async () => {
+    const { home, improvement, baseline, pubkeyPem, sat, review } = await buildWithSat();
+    try {
+      const v = verifyImprovement({
+        improvement,
+        baseline,
+        pubkeyPem,
+        satReview: review.receipt,
+        satPubkeyPem: sat.public_key_pem,
+      });
+      assert.equal(v.verified, true);
+      assert.equal(v.sat_review_verified, true);
+      assert.equal(v.sat_review_status, "VERIFIED");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("forged SAT review (wrong reviewer key) → reject sat_review_invalid", async () => {
+    const { home, improvement, baseline, pubkeyPem, review } = await buildWithSat();
+    const attacker = generateEd25519Keypair();
+    try {
+      const v = verifyImprovement({
+        improvement,
+        baseline,
+        pubkeyPem,
+        satReview: review.receipt,
+        satPubkeyPem: attacker.public_key_pem,
+      });
+      assert.equal(v.verified, false);
+      assert.equal(v.reason, "sat_review_invalid");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("REVIEW MISATTRIBUTION: a validly-signed SAT review of OTHER metrics, bound by hash, still rejects (sat_review_does_not_attest_this_improvement)", async () => {
+    // Threat: a real, reviewer-signed SAT review that attests to metrics A is
+    // attached to an improvement claiming metrics B. The improvement honestly
+    // commits to this review's hash, so hash-binding passes AND the signature is
+    // valid — only the attests-inputs guard catches the metric mismatch. (This is
+    // NOT the out-of-scope operator-self-review; it is reusing a legitimate review
+    // for the wrong measured inputs.)
+    const tweaked = Object.freeze({ ...NEW_METRICS, memory_rss_mb: 999.0 });
+    const { home, improvement, baseline, pubkeyPem, sat, review } = await buildWithSat({
+      reviewNewMetrics: tweaked,
+    });
+    try {
+      const v = verifyImprovement({
+        improvement,
+        baseline,
+        pubkeyPem,
+        satReview: review.receipt,
+        satPubkeyPem: sat.public_key_pem,
+      });
+      assert.equal(v.verified, false);
+      assert.equal(v.reason, "sat_review_does_not_attest_this_improvement");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("SAT review supplied without a SAT pubkey → reject sat_pubkey_required", async () => {
+    const { home, improvement, baseline, pubkeyPem, review } = await buildWithSat();
+    try {
+      const v = verifyImprovement({ improvement, baseline, pubkeyPem, satReview: review.receipt });
+      assert.equal(v.verified, false);
+      assert.equal(v.reason, "sat_pubkey_required");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("non-pass SAT verdict → reject sat_review_verdict_not_pass (not silently approved)", async () => {
+    const { home, improvement, baseline, pubkeyPem, sat, review } = await buildWithSat({ verdict: "fail" });
+    try {
+      const v = verifyImprovement({
+        improvement,
+        baseline,
+        pubkeyPem,
+        satReview: review.receipt,
+        satPubkeyPem: sat.public_key_pem,
+      });
+      assert.equal(v.verified, false);
+      assert.equal(v.reason, "sat_review_verdict_not_pass");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
   });
 });
