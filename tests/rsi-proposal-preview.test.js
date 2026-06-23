@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 import {
   buildRsiProposalPreview,
   RSI_PROPOSAL_PREVIEW_SCHEMA,
+  RSI_SNR_NOT_SUPPLIED_VERDICT,
 } from "../packages/core/src/rsi-proposal-preview.js";
 
 function safeCandidate() {
@@ -32,12 +34,14 @@ function safeEvents() {
   ];
 }
 
-test("builds a deterministic frozen RSI proposal preview", () => {
+test("builds a deterministic frozen RSI proposal preview with supplied SNR telemetry", () => {
   const input = {
     evidenceAnchors: safeEvidence(),
     candidate: safeCandidate(),
     targetFrameworks: ["RSI", "SNR", "Ihsan", "Giants"],
     processEvents: safeEvents(),
+    signalEvents: ["audit", "receipt", "gate"],
+    noiseEvents: [],
     currentScores: { v2_framework: 2.48, operational: 85 },
   };
   const a = buildRsiProposalPreview(input);
@@ -47,11 +51,26 @@ test("builds a deterministic frozen RSI proposal preview", () => {
   assert.equal(a.mode, "PREVIEW_ONLY");
   assert.equal(a.certifies, false);
   assert.equal(a.recommendation, "PROPOSE");
+  assert.equal(a.snr.telemetry_supplied, true);
   assert.equal(a.executed_action, null);
   assert.equal(a.action_executed_by_preview, false);
   assert.match(a.proposal_hash, /^[a-f0-9]{64}$/);
   assert.equal(a.proposal_hash, b.proposal_hash);
   assert.equal(Object.isFrozen(a), true);
+});
+
+test("does not fabricate SNR from evidence anchors when telemetry is absent", () => {
+  const out = buildRsiProposalPreview({
+    evidenceAnchors: safeEvidence(),
+    candidate: safeCandidate(),
+    targetFrameworks: ["RSI", "SNR", "Ihsan", "Giants"],
+    processEvents: safeEvents(),
+  });
+  assert.equal(out.recommendation, "PROPOSE");
+  assert.equal(out.snr.verdict, RSI_SNR_NOT_SUPPLIED_VERDICT);
+  assert.equal(out.snr.score, null);
+  assert.equal(out.snr.telemetry_supplied, false);
+  assert.equal(out.checks.find((item) => item.check === "snr_not_fabricated").pass, true);
 });
 
 test("rejects missing evidence rather than inventing proof", () => {
@@ -84,7 +103,7 @@ test("rejects live-loop and forbidden authority claims", () => {
   assert.ok(out.forbidden_claims.includes("economic_activation"));
 });
 
-test("holds when signal is too weak", () => {
+test("holds when supplied signal telemetry is too weak", () => {
   const out = buildRsiProposalPreview({
     evidenceAnchors: safeEvidence(),
     candidate: safeCandidate(),
@@ -94,7 +113,7 @@ test("holds when signal is too weak", () => {
     processEvents: safeEvents(),
   });
   assert.equal(out.recommendation, "HOLD");
-  assert.equal(out.recommendation_reason, "proposal_needs_more_signal_or_proof");
+  assert.equal(out.recommendation_reason, "proposal_needs_more_signal");
 });
 
 test("fails closed on malformed candidate", () => {
@@ -131,4 +150,29 @@ test("normalizes object evidence anchors and target frameworks", () => {
   });
   assert.equal(out.evidence_anchors[0].anchor, "docs/x.md");
   assert.deepEqual(out.target_frameworks, ["rsi", "snr"]);
+});
+
+test("proposal_hash changes when the unsigned body changes", () => {
+  const base = {
+    evidenceAnchors: safeEvidence(),
+    candidate: safeCandidate(),
+    targetFrameworks: ["RSI"],
+    processEvents: safeEvents(),
+  };
+  const a = buildRsiProposalPreview(base);
+  const b = buildRsiProposalPreview({
+    ...base,
+    candidate: {
+      ...safeCandidate(),
+      rationale: "Different bounded rationale changes the proposal body.",
+    },
+  });
+  assert.notEqual(a.proposal_hash, b.proposal_hash);
+});
+
+test("kernel stays pure: no fs/network/process/clock/random imports or calls", async () => {
+  const src = await readFile(new URL("../packages/core/src/rsi-proposal-preview.js", import.meta.url), "utf8");
+  assert.doesNotMatch(src, /node:fs|node:net|node:http|node:https|child_process/);
+  assert.doesNotMatch(src, /\bfetch\s*\(/);
+  assert.doesNotMatch(src, /Date\.now|new Date\s*\(|Math\.random/);
 });
