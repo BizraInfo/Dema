@@ -37,11 +37,13 @@ test("ollama family:tag → ollama_family_tag shape, parsed family+tag, compatib
 });
 
 test("lmstudio publisher/model → publisher parsed; shape typical for lmstudio", () => {
-  const e = buildModelCatalogEntry({ provider: "lmstudio", model: "qwen/qwen2.5" });
+  // Use a REAL allow-listed id: publisher-prefixed names no longer family-
+  // masquerade for lmstudio (w5mc6928b), so compatibility comes via exact_id.
+  const e = buildModelCatalogEntry({ provider: "lmstudio", model: "qwen/qwen3.5-9b" });
   assert.equal(e.name_shape, "lmstudio_publisher_model");
   assert.equal(e.parsed.publisher, "qwen");
   assert.equal(e.shape_typical_for_provider, true);
-  assert.equal(e.compatibility, "compatible"); // qwen2.5 family is allow-listed
+  assert.equal(e.compatibility, "compatible"); // exact-id allow-listed
 });
 
 test("the KNOWN impedance is surfaced HONESTLY, not hidden", () => {
