@@ -62,14 +62,19 @@ export const LOCAL_LLM_PROVIDER_REGISTRY = Object.freeze({
 
 const KNOWN_PROVIDERS = Object.freeze(Object.keys(LOCAL_LLM_PROVIDER_REGISTRY));
 
-// LM-STUDIO-EXACT-ID-ALLOWLIST-1A (Design 3). Per-provider frozen EXACT model-id
-// allow-list, consulted BEFORE the (Ollama-derived) family check. Matching is
-// exact on the full trimmed id — NO family normalization — so a crafted name
-// cannot masquerade into an allowed family (the design rejected the normalizer
-// path for that reason). It is a frozen literal, NOT a runtime fs/endpoint scan
-// (a scan is injectable — the design deferred it). LM Studio ids verified against
-// /v1/models on 2026-06-23; chat-capable only (the embedding model
-// text-embedding-nomic-embed-text-v1.5 is intentionally excluded).
+// LM-STUDIO-EXACT-ID-ALLOWLIST-1A (Design 3) + masquerade fix (w5mc6928b).
+// Per-provider frozen EXACT model-id allow-list, consulted BEFORE the
+// (Ollama-derived) family check. Matching is exact on the full trimmed id (no
+// normalization, prototype-safe). A provider that declares a non-empty exact-id
+// list (LM Studio) is treated as its OWN id world: for it the legacy family
+// fallback does NOT publisher-strip, so `evil/<family>` / `publisher/<family>`
+// cannot masquerade into an allowed family — only an exact id or a bare allowed
+// family token passes. (The original masquerade-prevention claim was FALSE while
+// the strip still ran; this is what makes it true. Providers with no exact-id
+// list — Ollama/llama.cpp — keep the publisher-stripping fallback.) Frozen
+// literal, NOT a runtime fs/endpoint scan (injectable — deferred). LM Studio ids
+// verified against /v1/models on 2026-06-23; chat-capable only (embedding
+// text-embedding-nomic-embed-text-v1.5 excluded).
 export const PROVIDER_EXACT_ID_ALLOWLIST = Object.freeze({
   lmstudio: Object.freeze({
     "google/gemma-4-12b": true,
@@ -91,6 +96,13 @@ function providerExactIdAllowed(provider, model) {
     Object.prototype.hasOwnProperty.call(allow, model) &&
     allow[model] === true
   );
+}
+
+// True when a provider declares its own exact-id world (a non-empty allow-list).
+// Such a provider is exact-id-or-bare-family only — no publisher-strip fallback.
+function providerHasExactIdList(provider) {
+  const allow = PROVIDER_EXACT_ID_ALLOWLIST[provider];
+  return Boolean(allow) && Object.keys(allow).length > 0;
 }
 
 const WHAT_THIS_PROVES = Object.freeze([
@@ -185,9 +197,17 @@ export function buildLocalLlmProviderRoute({
   // trimmed value that is judged here and dispatched below (route.model) — no
   // judge/dispatch drift.
   const exactIdAllowed = providerExactIdAllowed(key, modelSafe);
+  // Masquerade fix (w5mc6928b): a provider with its OWN exact-id world (LM
+  // Studio) must NOT publisher-strip in the legacy family fallback — that strip
+  // is exactly what let `evil/llama` -> `llama` masquerade into an allowed
+  // family. Bare family tokens (no publisher) still match the full id; a
+  // publisher-prefixed id must be an exact-id match. Providers with no exact-id
+  // list (Ollama/llama.cpp) keep the publisher-stripping normalization.
+  const familyToken = providerHasExactIdList(key)
+    ? modelSafe
+    : whitelistTokenFor(modelSafe);
   const familyAllowed =
-    modelSafe.length > 0 &&
-    llmAdapterIsAllowedModelName(whitelistTokenFor(modelSafe));
+    modelSafe.length > 0 && llmAdapterIsAllowedModelName(familyToken);
   const modelAllowed = exactIdAllowed || familyAllowed;
   const modelAllowReason = exactIdAllowed
     ? "exact_id"

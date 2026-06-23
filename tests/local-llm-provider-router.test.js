@@ -111,8 +111,14 @@ test("consent phrase includes BOTH provider and model", () => {
 test("model whitelist still applies (and tolerates publisher/model names)", () => {
   assert.equal(buildLocalLlmProviderRoute({ model: "qwen2.5" }).model_allowed, true);
   assert.equal(buildLocalLlmProviderRoute({ model: "llama3.1:8b" }).model_allowed, true);
-  // publisher/model (LM Studio shape) is normalized before the family check.
-  assert.equal(buildLocalLlmProviderRoute({ model: "publisher/qwen2.5" }).model_allowed, true);
+  // publisher/model normalization now applies ONLY to providers WITHOUT an
+  // exact-id world (masquerade fix, w5mc6928b): the default (lmstudio) refuses a
+  // publisher-prefixed non-exact id, so the strip path is exercised on ollama.
+  assert.equal(
+    buildLocalLlmProviderRoute({ provider: "ollama", model: "publisher/qwen2.5" })
+      .model_allowed,
+    true,
+  );
   // a non-whitelisted family is refused.
   assert.equal(buildLocalLlmProviderRoute({ model: "gpt-4" }).model_allowed, false);
   assert.equal(buildLocalLlmProviderRoute({ model: "" }).model_allowed, false);
@@ -246,4 +252,31 @@ test("PROVIDER_EXACT_ID_ALLOWLIST is exported and deeply frozen", () => {
   assert.ok(Object.isFrozen(PROVIDER_EXACT_ID_ALLOWLIST));
   assert.ok(Object.isFrozen(PROVIDER_EXACT_ID_ALLOWLIST.lmstudio));
   assert.equal(PROVIDER_EXACT_ID_ALLOWLIST.lmstudio["google/gemma-4-12b"], true);
+});
+
+// Verify-and-regrade (w5mc6928b) CONFIRMED finding: a provider WITH an exact-id
+// world (lmstudio) must NOT publisher-strip in the legacy family fallback, or
+// `evil/<family>` masquerades into an allowed family.
+test("publisher-prefixed masquerade is REFUSED for a provider with an exact-id list", () => {
+  for (const model of [
+    "evil/llama",
+    "attacker/gemma4",
+    "../gemma4",
+    "publisher/qwen2.5",
+  ]) {
+    const r = buildLocalLlmProviderRoute({ provider: "lmstudio", model });
+    assert.equal(r.model_allowed, false, `${model} must be refused (masquerade)`);
+  }
+});
+
+test("bare family tokens still resolve via family for an exact-id provider (no publisher to strip)", () => {
+  const r = buildLocalLlmProviderRoute({ provider: "lmstudio", model: "qwen2.5" });
+  assert.equal(r.model_allowed, true);
+  assert.equal(r.model_allow_reason, "family");
+});
+
+test("a provider WITHOUT an exact-id list (ollama) keeps the publisher-stripping family fallback", () => {
+  const r = buildLocalLlmProviderRoute({ provider: "ollama", model: "publisher/qwen2.5" });
+  assert.equal(r.model_allowed, true);
+  assert.equal(r.model_allow_reason, "family");
 });
