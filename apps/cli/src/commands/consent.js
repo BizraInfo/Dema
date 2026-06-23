@@ -1,10 +1,38 @@
+import { readFile } from "node:fs/promises";
+
 import {
   buildConsentPlanPreview,
   formatConsentPlanPreview,
 } from "../../../../packages/consent/src/consent-planner.js";
+import {
+  buildMobileQrChallengePreview,
+  verifyMobileQrChallengePreview,
+} from "../../../../packages/consent/src/mobile-qr-challenge-preview.js";
 import { runConsentProveCli } from "../../../../packages/receipts/src/consent-prove-command.js";
 import { runConsentVerifyCli } from "../../../../packages/receipts/src/consent-verify-command.js";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
+
+function formatMobileChallenge(c) {
+  if (!c.valid) {
+    return `Mobile challenge FAILED: ${c.denial?.code} · ${c.denial?.detail}`;
+  }
+  return [
+    "Mobile QR consent challenge (PREVIEW_ONLY)",
+    "  The phone displays this; the operator types the phrase back on the laptop.",
+    `  challenge_id: ${c.challenge_id}`,
+    `  phrase:       ${c.phrase}   ← type this on the laptop to confirm`,
+    `  expires_at:   ${c.expires_at}`,
+    `  ${c.note}`,
+    "  Boundary: the phone holds/sends/executes nothing authoritative.",
+    "  NOTE: replay protection is in-memory per-process — it is NOT enforced across separate CLI invocations (preview only).",
+  ].join("\n");
+}
+
+function formatMobileVerify(r) {
+  return r.ok
+    ? `VERIFIED · ${r.reason} · challenge_id=${r.challenge_id} · NOT an authorization (preview only)`
+    : `REJECTED:${r.reason}${r.detail ? " · " + r.detail : ""}`;
+}
 
 function argValue(argv, name) {
   const index = argv.indexOf(name);
@@ -93,7 +121,55 @@ export async function cmd_consent(ctx) {
     if (!result.verified) process.exitCode = 1;
     process.exit(process.exitCode ?? 0);
   }
+  if (subcommand === "mobile-challenge") {
+    const op = argv[2];
+    const wantJsonM = wantsJson(argv);
+    if (op === "issue") {
+      const challenge = buildMobileQrChallengePreview({
+        mission_id: argValue(argv, "--mission-id") ?? "",
+        action: argValue(argv, "--action") ?? "",
+        purpose: argValue(argv, "--purpose") ?? "",
+      });
+      console.log(
+        wantJsonM
+          ? JSON.stringify(challenge, null, 2)
+          : formatMobileChallenge(challenge),
+      );
+      if (!challenge.valid) process.exitCode = 1;
+      process.exit(process.exitCode ?? 0);
+    }
+    if (op === "verify") {
+      const challengePath = argValue(argv, "--challenge");
+      const phrase = argValue(argv, "--phrase") ?? "";
+      let challenge;
+      try {
+        challenge = JSON.parse(await readFile(challengePath, "utf8"));
+      } catch {
+        const err = {
+          ok: false,
+          reason: "challenge_unreadable",
+          detail: `cannot read --challenge ${challengePath ?? "<missing>"}`,
+        };
+        console.log(
+          wantJsonM
+            ? JSON.stringify(err, null, 2)
+            : `REJECTED:${err.reason} · ${err.detail}`,
+        );
+        process.exitCode = 1;
+        process.exit(1);
+      }
+      const result = verifyMobileQrChallengePreview(challenge, phrase);
+      console.log(
+        wantJsonM ? JSON.stringify(result, null, 2) : formatMobileVerify(result),
+      );
+      if (!result.ok) process.exitCode = 1;
+      process.exit(process.exitCode ?? 0);
+    }
+    throw new Error(
+      "Usage: dema consent mobile-challenge issue --mission-id <id> --action <a> --purpose <p> [--json] | dema consent mobile-challenge verify --challenge <path> --phrase <typed> [--json]",
+    );
+  }
   throw new Error(
-    'Unknown consent command. Use `dema consent plan "<intent>"`, `dema consent prove --phrase ... --action-type ... --target-hash ... [--rule-id ...] [--out <path>] [--json]`, or `dema consent verify <proof.json> --pubkey <pem-path> [--expected-action-type ...] [--expected-target-hash ...] [--json]`.',
+    'Unknown consent command. Use `dema consent plan "<intent>"`, `dema consent prove --phrase ... --action-type ... --target-hash ... [--rule-id ...] [--out <path>] [--json]`, `dema consent verify <proof.json> --pubkey <pem-path> [--expected-action-type ...] [--expected-target-hash ...] [--json]`, or `dema consent mobile-challenge issue|verify` (mobile second-factor preview).',
   );
 }

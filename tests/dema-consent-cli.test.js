@@ -569,3 +569,76 @@ describe("dema consent verify · CLI surface (KEYCONSENT-1C requirements 2,3,4,5
     }
   });
 });
+
+// MOBILE second-factor CLI — wires the mobile-qr-challenge-preview kernel.
+// Canon: the phone shows a phrase, the operator types it back, the laptop
+// verifies; the phone holds/sends/executes nothing authoritative. Preview-only.
+describe("dema consent mobile-challenge · CLI surface", () => {
+  it("issue --json emits a valid challenge with a challenge_id and a 6-digit phrase", async () => {
+    const r = await runCli([
+      "consent",
+      "mobile-challenge",
+      "issue",
+      "--mission-id",
+      "m-1",
+      "--action",
+      "preview_status",
+      "--purpose",
+      "confirm on phone",
+      "--json",
+    ]);
+    assert.equal(r.exitCode, 0, r.stderr);
+    const c = JSON.parse(r.stdout);
+    assert.equal(c.valid, true);
+    assert.match(c.challenge_id, /^chal-/);
+    assert.match(c.phrase, /^\d{6}$/);
+    assert.equal(c.boundary.phone_authority_granted, false);
+  });
+
+  it("verify accepts the correct typed phrase and refuses a wrong one", async () => {
+    const home = await mkdtemp(join(tmpdir(), "dema-mqr-"));
+    try {
+      const issued = await runCli([
+        "consent", "mobile-challenge", "issue",
+        "--mission-id", "m-2", "--action", "preview_status", "--purpose", "p", "--json",
+      ]);
+      const challenge = JSON.parse(issued.stdout);
+      const path = join(home, "challenge.json");
+      await writeFile(path, JSON.stringify(challenge));
+
+      const ok = await runCli([
+        "consent", "mobile-challenge", "verify",
+        "--challenge", path, "--phrase", challenge.phrase, "--json",
+      ]);
+      assert.equal(ok.exitCode, 0, ok.stderr);
+      assert.equal(JSON.parse(ok.stdout).ok, true);
+
+      const bad = await runCli([
+        "consent", "mobile-challenge", "verify",
+        "--challenge", path, "--phrase", "000000", "--json",
+      ]);
+      assert.equal(bad.exitCode, 1);
+      assert.equal(JSON.parse(bad.stdout).reason, "phrase_mismatch");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("issue with a missing required field fails closed (exit 1, valid:false)", async () => {
+    const r = await runCli([
+      "consent", "mobile-challenge", "issue", "--mission-id", "m-3", "--json",
+    ]);
+    assert.equal(r.exitCode, 1);
+    assert.equal(JSON.parse(r.stdout).valid, false);
+  });
+
+  it("human issue output shows the phrase and the preview-only boundary note", async () => {
+    const r = await runCli([
+      "consent", "mobile-challenge", "issue",
+      "--mission-id", "m-4", "--action", "preview_status", "--purpose", "p",
+    ]);
+    assert.equal(r.exitCode, 0, r.stderr);
+    assert.match(r.stdout, /phrase/i);
+    assert.match(r.stdout, /preview/i);
+  });
+});
