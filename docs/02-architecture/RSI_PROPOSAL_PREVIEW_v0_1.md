@@ -11,9 +11,10 @@ The design follows the Node0 discipline established by the Rosetta Constitution:
 
 ## What it does
 
-- Accepts evidence anchors, a candidate improvement, target frameworks, current score snapshots, process events, and SNR inputs.
+- Accepts evidence anchors, a candidate improvement, target frameworks, current score snapshots, process events, and optional SNR telemetry.
 - Computes process RSI by reusing `computeProcessRsi`.
-- Computes signal-to-noise by reusing `computeSNRValue`.
+- Computes signal-to-noise only when explicit caller-supplied signal/noise telemetry is present.
+- Emits `snr.verdict = NOT_SUPPLIED` and `snr.score = null` when SNR telemetry is absent, so evidence anchors never masquerade as signal quality.
 - Computes a proof-hardening score from evidence coverage, target-framework coverage, and candidate structure.
 - Emits a recommendation: `PROPOSE`, `HOLD`, or `REJECT`.
 - Emits a deterministic `proposal_hash` over the unsigned preview body.
@@ -31,6 +32,7 @@ The design follows the Node0 discipline established by the Rosetta Constitution:
 - It does not mint, reward, settle, or activate PoI.
 - It does not activate MCP, A2A, federation, or an autonomous loop.
 - It does not certify production readiness or economic value.
+- Its forbidden-claim scan is a conservative tripwire, not an exhaustive policy engine.
 
 ## Boundary
 
@@ -57,9 +59,11 @@ a2a_runtime_started: false
 
 `REJECT` means the candidate is malformed, lacks evidence, or contains a forbidden live-runtime/economic/authority claim.
 
-`HOLD` means the candidate is structurally safe but lacks enough signal, proof-hardening, or positive process RSI to recommend review.
+`HOLD` means the candidate is structurally safe but lacks enough supplied signal telemetry, proof-hardening, or positive process RSI to recommend review.
 
 `PROPOSE` means the candidate is safe to review. It still does not execute.
+
+When SNR telemetry is absent, the kernel does not fabricate a score from evidence anchors. The SNR component is excluded from the readiness weighting rather than treated as zero or one.
 
 ## Proof-of-Truth posture
 
@@ -77,7 +81,8 @@ a2a_runtime_started: false
 - Proof-before-reward: economic rails remain closed.
 - Boundaries-before-autonomy: every effect boundary is false.
 - Awareness-before-assertion: missing evidence rejects rather than invents proof.
+- Signal-before-score: SNR is only scored from explicit signal/noise telemetry.
 
 ## Test surface
 
-`tests/rsi-proposal-preview.test.js` covers deterministic hashing, frozen output, missing-evidence rejection, forbidden-claim rejection, weak-SNR hold behavior, malformed-candidate rejection, boundary all-false, object evidence normalization, and target-framework de-duplication.
+`tests/rsi-proposal-preview.test.js` covers deterministic hashing, frozen output, honest missing-SNR behavior, missing-evidence rejection, forbidden-claim rejection, weak supplied-SNR hold behavior, malformed-candidate rejection, boundary all-false, object evidence normalization, target-framework de-duplication, proposal-hash body binding, and purity (no fs/network/process/clock/random surfaces in the kernel).
