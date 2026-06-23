@@ -282,26 +282,28 @@ test("verifyGatewayHandoffReceipt never returns PERMIT", () => {
   assert.equal(verdict.verdict, "PARTIAL_PLACEHOLDER");
 });
 
-test("regression: apps/cli/src/commands/task.js routes verification through verifyReceipt dispatcher", async () => {
-  const taskSrcPath = new URL(
-    "../apps/cli/src/commands/task.js",
+test("regression: the bounded-task-runner kernel routes verification through the verifyReceipt dispatcher", async () => {
+  // BOUNDED-TASK-RUNNER-1A relocated the gate→run→verify lifecycle out of
+  // cmd_task into packages/tasks/src/bounded-task-runner.js. The invariant is
+  // unchanged: verification must use the verifyReceipt DISPATCHER (which
+  // fail-closes on unknown schema), never verifyReceiptPlaceholder directly.
+  const runnerSrcPath = new URL(
+    "../packages/tasks/src/bounded-task-runner.js",
     import.meta.url,
   );
-  const taskSrc = await readFile(taskSrcPath, "utf8");
+  const runnerSrc = await readFile(runnerSrcPath, "utf8");
 
   assert.match(
-    taskSrc,
-    /import\s*\{[^}]*\bverifyReceipt\b(?!Placeholder)[^}]*\}\s*from\s*["']\.\.\/\.\.\/\.\.\/\.\.\/packages\/verifier\/src\/sat-placeholder\.js["']/s,
-    "apps/cli/src/commands/task.js must import verifyReceipt from packages/verifier/src/sat-placeholder.js",
+    runnerSrc,
+    /import\s*\{[^}]*\bverifyReceipt\b(?!Placeholder)[^}]*\}\s*from\s*["']\.\.\/\.\.\/verifier\/src\/sat-placeholder\.js["']/s,
+    "bounded-task-runner.js must import verifyReceipt from packages/verifier/src/sat-placeholder.js",
   );
   assert.doesNotMatch(
-    taskSrc,
-    /import\s*\{[^}]*\bverifyReceiptPlaceholder\b[^}]*\}\s*from\s*["']\.\.\/\.\.\/\.\.\/\.\.\/packages\/verifier\/src\/sat-placeholder\.js["']/s,
-    "apps/cli/src/commands/task.js must NOT import verifyReceiptPlaceholder directly",
+    runnerSrc,
+    /\bverifyReceiptPlaceholder\b/,
+    "bounded-task-runner.js must NOT reference verifyReceiptPlaceholder directly",
   );
-  assert.match(taskSrc, /\bverifyReceipt\s*\(\s*receipt\s*\)/);
-  assert.doesNotMatch(
-    taskSrc,
-    /\bverifyReceiptPlaceholder\s*\(\s*receipt\s*\)/,
-  );
+  // The dispatcher is the default verifier, and the call goes through it.
+  assert.match(runnerSrc, /verify\s*=\s*verifyReceipt\b/);
+  assert.match(runnerSrc, /\bverify\s*\(\s*receipt\s*\)/);
 });
