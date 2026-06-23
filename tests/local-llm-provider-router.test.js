@@ -12,6 +12,7 @@ import {
   LOCAL_LLM_PROVIDER_ROUTER_SCHEMA,
   DEFAULT_LOCAL_LLM_PROVIDER,
   LOCAL_LLM_PROVIDER_REGISTRY,
+  PROVIDER_EXACT_ID_ALLOWLIST,
 } from "../packages/core/src/local-llm-provider-router.js";
 import { LLM_ADAPTER_MAX_PROMPT_LENGTH } from "../packages/core/src/llm-adapter.js";
 
@@ -169,4 +170,80 @@ test("module imports no node fs/net/http/child_process/os directly", () => {
     source,
     /from\s+["']node:(fs|fs\/promises|net|http|https|child_process|os)["']/,
   );
+});
+
+// --- LM-STUDIO-EXACT-ID-ALLOWLIST-1A (Design 3) ---
+// A per-provider frozen EXACT-id allow-list, consulted before the (Ollama-derived)
+// family check, so real LM Studio ids (publisher/model with dashes) are permitted
+// without family normalization (which the design rejected as masquerade-prone).
+
+test("lmstudio exact ids are allowed via the exact-id path (default provider)", () => {
+  for (const id of [
+    "google/gemma-4-12b",
+    "google/gemma-4-e4b",
+    "zai-org/glm-4.6v-flash",
+    "qwen/qwen3.5-9b",
+    "qwen3.6-35b-a3b-uncensored-hauhaucs-aggressive",
+  ]) {
+    const r = buildLocalLlmProviderRoute({ provider: "lmstudio", model: id });
+    assert.equal(r.model_allowed, true, `${id} should be allowed`);
+    assert.equal(r.model_allow_reason, "exact_id");
+  }
+});
+
+test("an lmstudio id with NO provider defaults to lmstudio and is allowed", () => {
+  const r = buildLocalLlmProviderRoute({ model: "google/gemma-4-12b" });
+  assert.equal(r.model_allowed, true);
+  assert.equal(r.model_allow_reason, "exact_id");
+});
+
+test("exact-id match is exact — a near-miss id is NOT allowed (no masquerade)", () => {
+  // wrong case / wrong publisher / partial — none normalize into an allow
+  for (const id of [
+    "google/gemma-4-12B",
+    "evil/gemma-4-12b",
+    "gemma-4-12b",
+    "google/gemma-4-12b-extra",
+  ]) {
+    const r = buildLocalLlmProviderRoute({ provider: "lmstudio", model: id });
+    assert.equal(r.model_allowed, false, `${id} must not be allowed`);
+  }
+});
+
+test("the LM Studio embedding model is intentionally excluded from the chat allow-list", () => {
+  const r = buildLocalLlmProviderRoute({
+    provider: "lmstudio",
+    model: "text-embedding-nomic-embed-text-v1.5",
+  });
+  assert.equal(r.model_allowed, false);
+});
+
+test("prototype keys cannot masquerade as allow-list entries", () => {
+  for (const id of ["__proto__", "hasOwnProperty", "constructor", "toString"]) {
+    const r = buildLocalLlmProviderRoute({ provider: "lmstudio", model: id });
+    assert.equal(r.model_allowed, false, `${id} must not be allowed`);
+  }
+});
+
+test("the judged id equals the dispatched id (trim consistency — no judge/dispatch drift)", () => {
+  const r = buildLocalLlmProviderRoute({
+    provider: "lmstudio",
+    model: "  google/gemma-4-12b  ",
+  });
+  assert.equal(r.model_allowed, true);
+  assert.equal(r.model, "google/gemma-4-12b"); // dispatched value == judged value
+});
+
+test("the family path still allows Ollama-family models (regression)", () => {
+  assert.equal(
+    buildLocalLlmProviderRoute({ model: "qwen2.5" }).model_allow_reason,
+    "family",
+  );
+  assert.equal(buildLocalLlmProviderRoute({ model: "gpt-4" }).model_allowed, false);
+});
+
+test("PROVIDER_EXACT_ID_ALLOWLIST is exported and deeply frozen", () => {
+  assert.ok(Object.isFrozen(PROVIDER_EXACT_ID_ALLOWLIST));
+  assert.ok(Object.isFrozen(PROVIDER_EXACT_ID_ALLOWLIST.lmstudio));
+  assert.equal(PROVIDER_EXACT_ID_ALLOWLIST.lmstudio["google/gemma-4-12b"], true);
 });

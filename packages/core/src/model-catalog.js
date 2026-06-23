@@ -125,7 +125,7 @@ export function buildModelCatalogEntry({ provider = null, model = "" } = {}) {
   } else if (!router_model_allowed) {
     compatibility = "family_not_in_allowlist";
     annotations.push(
-      `The router refuses '${modelSafe}': family '${parsed.family}' is not in the (Ollama-derived) allow-list. A provider-aware allow-list is future work; the router stays authoritative.`,
+      `The router refuses '${modelSafe}': it is in neither the ${route.selected_provider} exact-id allow-list nor the (Ollama-derived) family allow-list (family '${parsed.family}'). The router stays authoritative.`,
     );
   } else if (!shape_typical) {
     compatibility = "allowed_atypical_shape";
@@ -135,7 +135,9 @@ export function buildModelCatalogEntry({ provider = null, model = "" } = {}) {
   } else {
     compatibility = "compatible";
     annotations.push(
-      `'${modelSafe}' parses as a typical ${route.selected_provider} identifier and its family is allow-listed.`,
+      route.model_allow_reason === "exact_id"
+        ? `'${modelSafe}' parses as a typical ${route.selected_provider} identifier and matches the ${route.selected_provider} exact-id allow-list.`
+        : `'${modelSafe}' parses as a typical ${route.selected_provider} identifier and its family is allow-listed.`,
     );
   }
   if (parsed.is_gguf) {
