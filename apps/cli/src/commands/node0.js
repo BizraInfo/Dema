@@ -12,10 +12,45 @@ export async function cmd_node0(ctx) {
       ? argv[operatorIdx + 1]
       : "Mumu";
 
+  if (sub === "map") {
+    const { buildNode0RosettaConstitutionPreview } = await import(
+      "../../../../packages/core/src/node0-rosetta-constitution-preview.js"
+    );
+    const map = buildNode0RosettaConstitutionPreview();
+    if (wantJson) {
+      console.log(JSON.stringify(map, null, 2));
+      return;
+    }
+    console.log(
+      `Node0 Rosetta Constitution (preview-only) — ${map.truth_label}`,
+    );
+    console.log(
+      "  Telescript         Dema primitive                          status",
+    );
+    for (const row of map.rosetta) {
+      console.log(
+        `  ${row.telescript.padEnd(18)} ${row.dema_primitive.padEnd(39)} ${row.status}`,
+      );
+    }
+    const s = map.status_summary;
+    console.log(
+      `  Capabilities: IMPLEMENTED ${s.IMPLEMENTED} · DECLARED ${s.DECLARED} · DESIGNED_NOT_LIVE ${s.DESIGNED_NOT_LIVE}`,
+    );
+    const rp = map.rest_protection;
+    console.log(
+      `  Rest-protection ${rp.metric}: ${rp.autonomous_count}/${rp.total_count} = ${rp.autonomy_coverage} (definition ${rp.definition_status}; live ${rp.live_measurement_status})`,
+    );
+    console.log(
+      `  Cross-ref: ${map.cross_ref.external_pattern_registry.anchor_path}`,
+    );
+    return;
+  }
+
   const actions = new Set(["status", "verify", "consent", "journey"]);
   if (sub !== "mumu" || !actions.has(action)) {
     console.error(
       "dema node0: Mumu closed-loop face (read-only; loop stays npm run node0). Subcommands:\n" +
+        "  dema node0 map [--json]\n" +
         "  dema node0 mumu status [--json] [--out <dir>]\n" +
         "  dema node0 mumu verify [--json] [--out <dir>]\n" +
         "  dema node0 mumu consent [--json] [--out <dir>]\n" +
