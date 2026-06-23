@@ -8,12 +8,21 @@ const CLI_PATH = "apps/cli/src/index.js";
 const CHECK_PATH = "scripts/check.mjs";
 const ARCHITECTURE_PATH = "docs/ARCHITECTURE.md";
 const TESTING_PATH = "docs/TESTING.md";
+const TESTING_AUXILIARY_DOC_PATHS = Object.freeze([
+  "docs/02-architecture/RSI_PROPOSAL_PREVIEW_v0_1.md",
+]);
 
 const ARCHITECTURE_EXCLUSIONS = new Set(["dema", "dema chat", "dema help"]);
 
 function readIfPresent(root, path) {
   const fullPath = join(root, path);
   return existsSync(fullPath) ? readFileSync(fullPath, "utf8") : null;
+}
+
+function readTestingSources(root) {
+  return [TESTING_PATH, ...TESTING_AUXILIARY_DOC_PATHS]
+    .map((path) => readIfPresent(root, path) ?? "")
+    .join("\n");
 }
 
 function stopAtPlaceholder(token) {
@@ -72,9 +81,9 @@ function architectureRows(source) {
 
 export function parseSmokeCommands(source) {
   const commands = [];
-  // Linear regex (no nested quantifiers → no catastrophic backtracking): the
+  // Linear regex (no nested quantifiers -> no catastrophic backtracking): the
   // inner args list is captured flat as [^\]]* and re-parsed below by the
-  // per-string matchAll, so the previous (?:\s*"…"\s*,?\s*)* nesting is unneeded.
+  // per-string matchAll, so the previous (?:\s*"..."\s*,?\s*)* nesting is unneeded.
   const re = /\[\s*"([^"]+)"\s*,\s*\[([^\]]*)\]\s*\]/g;
   for (const match of source.matchAll(re)) {
     commands.push([
@@ -176,6 +185,7 @@ export async function buildIntegrationCheckReport({
     );
   }
 
+  const testingSource = readTestingSources(root);
   const smokeCommands = await loadSmokeCommands(root);
   if (smokeCommands) {
     const cliSmokeCommands = smokeCommands
@@ -193,7 +203,6 @@ export async function buildIntegrationCheckReport({
       }),
     );
 
-    const testingSource = readIfPresent(root, TESTING_PATH) ?? "";
     const missingSmokeDocs = smokeCommands
       .map(([bin, args]) => shellishCommandLine(bin, args))
       .filter((command) => !testingSource.includes(command));
@@ -210,7 +219,6 @@ export async function buildIntegrationCheckReport({
     );
   }
 
-  const testingSource = readIfPresent(root, TESTING_PATH) ?? "";
   const missingTestRows = listTestFiles(root).filter(
     (file) => !testingSource.includes(`\`${file}\``),
   );
