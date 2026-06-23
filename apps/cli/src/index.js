@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
 import { cmd_language } from "./commands/language.js";
 import { cmd_journey } from "./commands/journey.js";
 import { cmd_node_registry } from "./commands/node-registry.js";
@@ -889,6 +890,36 @@ async function cmd_help(ctx) {
   process.exit(process.exitCode ?? 0);
 }
 
+// Classify a covenant CLI failure into a precise, machine-readable reason.
+// Returns null for true PROGRAMMING errors (ReferenceError/TypeError — the class of
+// the prior `require()`-in-ESM bug) so the caller RETHROWS them: a code defect must
+// never masquerade as a covenant input/decision outcome. Input-read and JSON errors,
+// and legitimate covenant rejections (plain Error from signReceipt), get a reason.
+function classifyCovenantError(e) {
+  if (e instanceof ReferenceError || e instanceof TypeError) return null;
+  if (e && (e.code === "ENOENT" || e.code === "EISDIR" || e.code === "EACCES")) {
+    return { code: e.code, message: `cannot read file (${e.code})` };
+  }
+  if (e instanceof SyntaxError) {
+    return { code: "invalid_json", message: `invalid JSON: ${e.message}` };
+  }
+  return { code: "rejected", message: e?.message ?? String(e) };
+}
+
+function reportCovenantError(surface, reason, wantJson) {
+  if (wantJson) {
+    console.error(
+      JSON.stringify({
+        error: `covenant_${surface}_failed`,
+        reason: reason.code,
+        message: reason.message,
+      }),
+    );
+  } else {
+    console.error(`covenant ${surface} error [${reason.code}]: ${reason.message}`);
+  }
+}
+
 // Covenant Gate v0.1 (PROTOTYPE) — terminal surface for the audit-derived screening gate.
 // [PROTOTYPE] only. Requires exact "GO" micro-consent. Demo receipt. Local face only.
 async function cmdCovenant(ctx) {
@@ -903,9 +934,7 @@ async function cmdCovenant(ctx) {
       process.exit(1);
     }
     try {
-      const proposal = JSON.parse(
-        require("node:fs").readFileSync(file, "utf8"),
-      );
+      const proposal = JSON.parse(readFileSync(file, "utf8"));
       const decision = screenProposal(proposal);
       if (wantJson) {
         console.log(JSON.stringify(decision, null, 2));
@@ -913,7 +942,9 @@ async function cmdCovenant(ctx) {
         console.log(JSON.stringify(decision, null, 2));
       }
     } catch (e) {
-      console.error("covenant screen error:", e.message);
+      const reason = classifyCovenantError(e);
+      if (!reason) throw e;
+      reportCovenantError("screen", reason, wantJson);
       process.exit(1);
     }
     process.exit(process.exitCode ?? 0);
@@ -930,9 +961,7 @@ async function cmdCovenant(ctx) {
       process.exit(1);
     }
     try {
-      const decision = JSON.parse(
-        require("node:fs").readFileSync(file, "utf8"),
-      );
+      const decision = JSON.parse(readFileSync(file, "utf8"));
       const receipt = signReceipt(decision, typedGo);
       if (wantJson) {
         console.log(JSON.stringify(receipt, null, 2));
@@ -940,7 +969,9 @@ async function cmdCovenant(ctx) {
         console.log(JSON.stringify(receipt, null, 2));
       }
     } catch (e) {
-      console.error("covenant consent error:", e.message);
+      const reason = classifyCovenantError(e);
+      if (!reason) throw e;
+      reportCovenantError("consent", reason, wantJson);
       process.exit(1);
     }
     process.exit(process.exitCode ?? 0);
@@ -1188,6 +1219,7 @@ if (isDirectInvocation) {
 }
 
 export { dispatch, runActiveKernel };
+export { classifyCovenantError };
 export { probeGateway };
 export { REGISTERED_COMMANDS_LIST };
 export { COMMAND_TABLE };
