@@ -457,6 +457,8 @@ Local evidence:
                       MODEL-EVAL-BASELINE-1A · run the frozen local suite against the model pool; content-addressed; LOCAL ONLY; not a leaderboard
   dema eval compare <--baseline a.json --candidate b.json> [--json]
                       Deterministic before/after delta of two baseline reports; refuses a tampered input
+  dema eval route <--baseline a.json> [--json]
+                      MODEL-ROUTING-PREVIEW-1A · deterministic role→model PREVIEW from a verified baseline; refuses a tampered input; PREVIEW ONLY · routes no live traffic · no MoE/council/federation/runtime
   dema evidence receipt preview [--json]
                       Preview receipt-shaped evidence; does not mint, sign, or write
   dema ihsan floor preview [--score N] [--json]
