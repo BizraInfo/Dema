@@ -22,7 +22,9 @@ export async function cmd_eval(ctx) {
     const suiteIdx = argv.indexOf("--suite");
     const suiteId = suiteIdx !== -1 && argv[suiteIdx + 1] ? argv[suiteIdx + 1] : "bizra-local-small";
     const includeExternalProviders = argv.includes("--include-external");
-    const input = await gatherModelEvalBaseline({ suiteId, includeExternalProviders });
+    const maxIdx = argv.indexOf("--max-models");
+    const maxModels = maxIdx !== -1 && Number.isInteger(Number(argv[maxIdx + 1])) && Number(argv[maxIdx + 1]) > 0 ? Number(argv[maxIdx + 1]) : undefined;
+    const input = await gatherModelEvalBaseline({ suiteId, includeExternalProviders, ...(maxModels ? { maxModels } : {}) });
     const report = buildModelEvalBaseline(input);
     if (asJson) {
       console.log(JSON.stringify(report, null, 2));
