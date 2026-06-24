@@ -105,6 +105,24 @@ function classifyKnowledgeCorpus(knowledgeBase) {
   return "large";
 }
 
+function classifyMemory(gb) {
+  if (typeof gb !== "number" || !Number.isFinite(gb)) return "unknown";
+  if (gb <= 0) return "none";
+  if (gb <= 16) return "small";
+  if (gb <= 32) return "medium";
+  if (gb <= 64) return "large";
+  return "ultra";
+}
+
+function classifyGpuMemory(gb) {
+  if (typeof gb !== "number" || !Number.isFinite(gb)) return "unknown";
+  if (gb <= 0) return "none";
+  if (gb <= 8) return "small";
+  if (gb <= 16) return "laptop_16gb";
+  if (gb <= 24) return "desktop_24gb";
+  return "datacenter";
+}
+
 function buildCapacityClasses(urpLocalPreview, modelSummary) {
   const hardware = isObject(urpLocalPreview.hardware)
     ? urpLocalPreview.hardware
@@ -115,6 +133,8 @@ function buildCapacityClasses(urpLocalPreview, modelSummary) {
 
   return deepFreeze({
     compute: classifyCompute(hardware.cpu_cores),
+    memory: classifyMemory(hardware.memory_gb),
+    gpu: classifyGpuMemory(hardware.gpu_memory_gb),
     storage: classifyStorage(hardware.disk_free_gb),
     models: classifyModelCount(modelCount),
     knowledge_corpus: classifyKnowledgeCorpus(urpLocalPreview.knowledge_base),

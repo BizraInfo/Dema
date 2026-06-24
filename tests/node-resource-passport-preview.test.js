@@ -29,6 +29,8 @@ const nodeRegistryPreview = Object.freeze({
 const urpLocalPreview = Object.freeze({
   hardware: Object.freeze({
     cpu_cores: 8,
+    memory_gb: 64,
+    gpu_memory_gb: 16,
     disk_free_gb: 512,
     data_present: true,
   }),
@@ -138,6 +140,8 @@ test("capacity classes are coarse bands only and do not leak exact hardware metr
 
   assert.deepEqual(passport.capacity_classes, {
     compute: "medium",
+    memory: "large",
+    gpu: "laptop_16gb",
     storage: "medium",
     models: "unknown",
     knowledge_corpus: "small",
