@@ -472,6 +472,8 @@ Local evidence:
                       Preview PAT/SAT loop design assumptions; does not run agents
   dema agent-loop dual-preview [--json]
                       Preview/eval-only PAT-7 and SAT-5 dual-loop coordinator; no agent runtime, model, reward, token, PoI, or federation
+  dema agent-loop blackboard [--pain ...] [--goal ...] [--json]
+                      Preview-only PAT/SAT shared-state blackboard dry-run; deterministic seed function, no agent runtime, model, or reward
 
 Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
   dema state               Node0 state preview; mission_centered + runtime/federation/mint=false
