@@ -507,6 +507,9 @@ export async function invokeLocalLLM({
   try {
     const response = await fetcher(`${baseUrl}/api/generate`, {
       method: "POST",
+      // Fail closed on any 3xx: a compromised localhost LLM server must not be
+      // able to bounce this call off-localhost via a redirect.
+      redirect: "error",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         model: modelSafe,
