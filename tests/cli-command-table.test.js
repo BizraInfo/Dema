@@ -91,6 +91,7 @@ const COMMAND_SURFACE = [
   "mcp",
   "roadmap",
   "eval",
+  "hardware",
   "evidence",
   "ihsan",
   "behavior",

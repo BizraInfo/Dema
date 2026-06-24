@@ -75,6 +75,7 @@ import { cmd_agent_loop } from "./commands/agent-loop.js";
 import { cmd_task } from "./commands/task.js";
 import { cmd_sovereign } from "./commands/sovereign.js";
 import { cmd_node0 } from "./commands/node0.js";
+import { cmd_hardware } from "./commands/hardware.js";
 import { cmd_adk } from "./commands/adk.js";
 import { cmd_homebase, runHomebaseInvocation } from "./commands/homebase.js";
 import { createNode0Adapter } from "../../../packages/node-adapter/src/node0-adapter.js";
@@ -459,6 +460,8 @@ Local evidence:
                       Deterministic before/after delta of two baseline reports; refuses a tampered input
   dema eval route <--baseline a.json> [--json]
                       MODEL-ROUTING-PREVIEW-1A · deterministic role→model PREVIEW from a verified baseline; refuses a tampered input; PREVIEW ONLY · routes no live traffic · no MoE/council/federation/runtime
+  dema hardware profile [--json]
+                      NODE0-HARDWARE-PROFILE-1A · read-only architecture profile (capacity bands + preview policies); PREVIEW ONLY · enforces nothing
   dema evidence receipt preview [--json]
                       Preview receipt-shaped evidence; does not mint, sign, or write
   dema ihsan floor preview [--score N] [--json]
@@ -1078,6 +1081,7 @@ const COMMAND_TABLE = {
   mcp: cmd_mcp,
   roadmap: cmd_roadmap,
   eval: cmd_eval,
+  hardware: cmd_hardware,
   evidence: cmd_evidence,
   ihsan: cmd_ihsan,
   behavior: cmd_behavior,
