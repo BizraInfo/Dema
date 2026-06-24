@@ -299,7 +299,7 @@ small (CLI commands, JSON serialization). If/when added, scope =
 | Privacy: no telemetry, no analytics | SHIPPED — enforced by 0-dep + zero-network posture |
 | Compliance (GDPR / CCPA)            | N/A — Dema never leaves the operator's machine     |
 
-### 5.5 World-class practices already adopted
+### 5.5 Engineering practices already adopted
 
 - **Truth labels on every surface** (`MEASURED`, `DESIGNED_NOT_LIVE`, `PLANNED`, `LOCAL_ONLY`) — outpaces typical enterprise discipline.
 - **Exact-string consent gates** — stronger than typical RBAC for irreversible actions.

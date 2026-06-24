@@ -193,7 +193,7 @@ if (closeout_text && lesson_candidate_hash) {
 
 **G001 Update:** Dema-face 1A complete; SP6 spec started (progress toward full loop wiring).
 
-This is the peak professional next ultra micro step: the design that wires the gems into the autopoietic feedback using the proof spine we sealed. Exemplifies elite practice: minimal, correct, documented, ethical, state-of-the-art synthesis.
+This is the next bounded step: the design that wires the gems into the autopoietic feedback using the proof spine we sealed. It aims to stay minimal, correct, documented, and ethical.
 
 ---
 
