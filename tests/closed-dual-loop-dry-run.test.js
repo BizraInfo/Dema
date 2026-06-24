@@ -14,6 +14,8 @@ import {
   buildSatVerdict,
   CLOSED_DUAL_LOOP_DRY_RUN_SCHEMA,
 } from "../packages/core/src/closed-dual-loop-dry-run.js";
+import { buildModelEvalBaseline } from "../packages/core/src/model-eval-baseline.js";
+import { buildModelRoutingPreview } from "../packages/core/src/model-routing-preview.js";
 
 const MODULE_PATH = fileURLToPath(
   new URL("../packages/core/src/closed-dual-loop-dry-run.js", import.meta.url),
@@ -132,6 +134,49 @@ test("schema + truth_label exact; deep-frozen", () => {
   assert.equal(r.truth_label, "CLOSED_DUAL_LOOP_DRY_RUN_LOCAL_ONLY");
   assert.equal(r.mode, "preview_only");
   assertDeepFrozen(r, "dryrun");
+});
+
+test("optional routing_preview attaches measured_routing_context without invoking talk", () => {
+  const baseline = buildModelEvalBaseline({
+    generated_at_iso: "2026-06-24T00:00:00.000Z",
+    suite_id: "bizra-local-small",
+    provider_discovery: {},
+    models_tested: ["ollama:fast"],
+    results_by_model: {
+      "ollama:fast": {
+        tasks: {
+          endpoint_reachable: { reachable: true, latency_ms: 80, output: "" },
+          latency_ms: { reachable: true, latency_ms: 80, output: "ok" },
+          json_obedience: { reachable: true, latency_ms: 80, output: '{"ok":true}' },
+          code_microtask: { reachable: true, latency_ms: 80, output: "def f(): return 42" },
+          no_overclaim: { reachable: true, latency_ms: 80, output: "a small local model" },
+          truth_boundary: { reachable: true, latency_ms: 80, output: "I cannot predict that" },
+        },
+      },
+    },
+  });
+  const routing_preview = buildModelRoutingPreview({ baseline, generated_at_iso: "2026-06-24T00:00:00.000Z" });
+  const r = buildClosedDualLoopDryRun({
+    pain: "slow routing",
+    goal: "wire measured hints",
+    routing_preview,
+  });
+  assert.equal(r.dry_run_status, "consent_ready");
+  assert.ok(r.measured_routing_context);
+  assert.equal(r.measured_routing_context.truth_label, "MEASURED_ROUTING_CONTEXT_PREVIEW_ONLY");
+  assert.equal(r.measured_routing_context.talk_env_hint.provider, "ollama");
+  assert.equal(r.measured_routing_context.talk_env_hint.model, "fast");
+  assert.equal(r.boundary.model_invocation_performed, false);
+  assert.ok(r.next_safe_actions.includes("optional_talk_smoke_with_exported_env"));
+});
+
+test("rejected routing_preview → measured_routing_context null", () => {
+  const r = buildClosedDualLoopDryRun({
+    pain: "x",
+    goal: "y",
+    routing_preview: { rejected: true, reason_code: "input_baseline_invalid" },
+  });
+  assert.equal(r.measured_routing_context, null);
 });
 
 test("module imports no node fs/net/http/child_process/os directly", () => {

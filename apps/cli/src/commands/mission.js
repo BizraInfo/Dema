@@ -92,11 +92,38 @@ export async function cmd_mission(ctx) {
     // CLOSED-DUAL-LOOP-DRY-RUN-1A — local only, no model, no execution. Takes
     // the captured pain/goal, runs a DRY-RUN PAT-propose -> SAT-verify loop, and
     // presents a consent-ready plan. The loops are DESIGNED_NOT_LIVE scaffolds.
+    // Optional --baseline attaches a measured eval-route preview (talk_env_hint)
+    // for operator reference — PREVIEW only, no talk invocation.
+    let routing_preview = null;
+    const baselinePath = argValue(argv, "--baseline");
+    if (baselinePath) {
+      const { isAbsolute, resolve } = await import("node:path");
+      const { readFile } = await import("node:fs/promises");
+      if (!isAbsolute(baselinePath)) {
+        throw new Error("`dema mission plan --baseline` requires an absolute path to the baseline JSON file.");
+      }
+      const { buildModelRoutingPreview } = await import(
+        "../../../../packages/core/src/model-routing-preview.js"
+      );
+      let baseline;
+      try {
+        baseline = JSON.parse(await readFile(resolve(baselinePath), "utf8"));
+      } catch (readErr) {
+        throw new Error(
+          `Failed to read or parse baseline file: ${readErr && readErr.message ? readErr.message : readErr}`,
+        );
+      }
+      routing_preview = buildModelRoutingPreview({
+        baseline,
+        generated_at_iso: new Date().toISOString(),
+      });
+    }
     const dryRun = buildClosedDualLoopDryRun({
       pain: argValue(argv, "--pain"),
       goal: argValue(argv, "--goal"),
       urgency: argValue(argv, "--urgency"),
       help_style: argValue(argv, "--style"),
+      routing_preview,
     });
     if (wantsJson(argv)) {
       console.log(JSON.stringify(dryRun, null, 2));
@@ -125,6 +152,14 @@ export async function cmd_mission(ctx) {
         `  To ever execute it you would type the exact phrase: "${plan.execution_consent_required}"`,
       );
       lines.push("  (Execution is a separate, later, consented step — not built yet.)");
+      const ctx = dryRun.measured_routing_context;
+      if (ctx?.talk_env_hint?.env) {
+        lines.push("");
+        lines.push("  Measured routing context (PREVIEW — does not invoke talk):");
+        lines.push(`    export DEMA_TALK_PROVIDER=${ctx.talk_env_hint.env.DEMA_TALK_PROVIDER}`);
+        lines.push(`    export DEMA_TALK_MODEL=${ctx.talk_env_hint.env.DEMA_TALK_MODEL}`);
+        lines.push(`    dema talk … --consent "${ctx.talk_env_hint.consent_phrase}"`);
+      }
     }
     lines.push("");
     lines.push(
