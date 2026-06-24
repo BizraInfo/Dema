@@ -97,7 +97,7 @@ No unmeasured claims. "State-of-the-art" means measurable, thresholded, artifact
 - Local gates: consistently green on required checks.
 - Persistent classified noise: B-bucket (artifact_011), untracked receipts (pre-push GAP), historical CLI export scope (addressed in prior E micros).
 
-This blueprint is the "state-of-the-art performance" guide: it turns the project into an elite implementation by making MBOK/DevOps/CI/CD/perf-QA the architecture, not the output.
+This blueprint is the performance-QA guide: it makes MBOK/DevOps/CI/CD/perf-QA the architecture, not the output.
 
 ## Next Micro (after G6R for ADR-020)
 

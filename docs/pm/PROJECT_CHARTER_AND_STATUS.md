@@ -163,7 +163,7 @@ Definition of done (DoD) per session:
 
 ## §9 · Today's session summary (2026-05-18)
 
-A single day arc that shipped 3 structural canon laws, the first external human (Samy as Node1), and the world-class TUI feel.
+A single day arc that shipped 3 structural canon laws, the first external human (Samy as Node1), and the new ANSI TUI.
 
 | Time GST  | Slice                                               | Receipt            | Outcome                                     |
 | --------- | --------------------------------------------------- | ------------------ | ------------------------------------------- |
@@ -174,7 +174,7 @@ A single day arc that shipped 3 structural canon laws, the first external human 
 | 12:05     | v0.1e+f node-registry-preview + URP inventory       | #20                | 10th + 11th spine surface                   |
 | **12:25** | **Samy accepted Node1 (in-person ceremony)**        | **#21**            | **first external human in canon**           |
 | 12:37     | Phase C handoff package (samy-specific)             | #22                | superseded by #23                           |
-| 12:59     | Unified installer + onboarding lifecycle + ANSI TUI | #23                | world-class CLI feel · zero new deps        |
+| 12:59     | Unified installer + onboarding lifecycle + ANSI TUI | #23                | unified CLI feel · zero new deps        |
 | 13:09     | DevOps post-deployment sweep + vercel fix           | (commit `62b2331`) | publishing path corrected                   |
 | 13:25     | Skill Growth Governor v0.1 (12th spine)             | #24                | 4-line law in code                          |
 | 13:30     | Skill Growth Law canonized                          | #25                | third structural law in canon               |

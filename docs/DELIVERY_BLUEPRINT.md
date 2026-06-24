@@ -98,9 +98,9 @@ The flag does not edit workflows or imply publication approval. It only prevents
 the current workflow worktree changes from being classified as an unresolved
 hard-stop gate in that local report.
 
-## Elite Delivery Automation: delivery-check.mjs (A+ Implementation)
+## Delivery Automation: delivery-check.mjs
 
-As the pinnacle of the blueprint, `scripts/delivery-check.mjs` is the state-of-the-art automation script (the "delivery-check.mjs" referenced in the spine as deferred, now delivered).
+`scripts/delivery-check.mjs` is the blueprint's delivery-automation script (the "delivery-check.mjs" referenced in the spine as deferred, now delivered).
 
 It orchestrates the full gate stack with A+ performance-quality assurance:
 
@@ -160,7 +160,7 @@ Future CD must be explicit, modular, and reversible:
 
 ## Performance-quality assurance
 
-Dema's performance QA is now A+ enforced (world-class for local-first face).
+Dema's performance QA is enforced by the local-first gate set (perf budgets, coverage thresholds, claim:check).
 
 | Mechanism                 | Status (A+)                                                                                                                                                                  |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
