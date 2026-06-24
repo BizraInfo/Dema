@@ -6,6 +6,11 @@ import {
   verifyDiffusionRefinement,
 } from "../../../../packages/core/src/diffusion-reasoner.js";
 
+function normalizeArgv(argv = []) {
+  if (argv[0] === "diffusion" || argv[0] === "dema-diffusion") return argv.slice(1);
+  return argv;
+}
+
 function flagValue(argv, name) {
   const index = argv.indexOf(name);
   return index >= 0 ? argv[index + 1] : undefined;
@@ -80,8 +85,9 @@ function renderHuman(report) {
   return lines.join("\n");
 }
 
-export async function runDiffusionCommand(argv = []) {
-  const subcommand = argv[1] ?? "refine";
+export async function runDiffusionCommand(rawArgv = []) {
+  const argv = normalizeArgv(rawArgv);
+  const subcommand = argv[0] ?? "refine";
   if (!["refine", "verify"].includes(subcommand)) {
     throw new Error("Unknown diffusion command. Use `dema-diffusion refine --drafts <lines> [--evidence a,b] [--json]` or `dema-diffusion verify <report.json> [--json]`.");
   }
@@ -89,7 +95,7 @@ export async function runDiffusionCommand(argv = []) {
   const wantJson = hasFlag(argv, "--json");
 
   if (subcommand === "verify") {
-    const file = argv[2];
+    const file = argv[1];
     if (!file || !isAbsolute(file)) throw new Error("`dema-diffusion verify` requires an absolute path to a saved report JSON file.");
     const report = JSON.parse(await readFile(resolve(file), "utf8"));
     const result = verifyDiffusionRefinement(report);
