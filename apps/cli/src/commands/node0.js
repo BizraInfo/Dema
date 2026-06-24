@@ -99,6 +99,94 @@ export async function cmd_node0(ctx) {
     return;
   }
 
+  if (sub === "chain") {
+    const painIdx = argv.indexOf("--pain");
+    const goalIdx = argv.indexOf("--goal");
+    const pain = painIdx !== -1 ? argv[painIdx + 1] : undefined;
+    const goal = goalIdx !== -1 ? argv[goalIdx + 1] : undefined;
+    const baseIdx = argv.indexOf("--baseline");
+    const basePath = baseIdx !== -1 ? argv[baseIdx + 1] : undefined;
+
+    const { gatherNode0LadderEvidence } = await import("./node0-ladder-gatherer.js");
+    const { buildNode0ActivationLadder } = await import(
+      "../../../../packages/core/src/node0-activation-ladder.js"
+    );
+    const { buildModelRoutingPreview } = await import(
+      "../../../../packages/core/src/model-routing-preview.js"
+    );
+    const { buildClosedDualLoopDryRun } = await import(
+      "../../../../packages/core/src/closed-dual-loop-dry-run.js"
+    );
+    const { buildPatSatBlackboardDryRun } = await import(
+      "../../../../packages/core/src/pat-sat-blackboard-dry-run.js"
+    );
+    const { buildNode0ActivationChainPreview } = await import(
+      "../../../../packages/core/src/node0-activation-chain-preview.js"
+    );
+
+    const ladder = buildNode0ActivationLadder({
+      evidence: gatherNode0LadderEvidence({}),
+    });
+
+    let routing_preview = null;
+    if (basePath) {
+      const { isAbsolute, resolve } = await import("node:path");
+      const { readFile } = await import("node:fs/promises");
+      if (!isAbsolute(basePath)) {
+        throw new Error("`dema node0 chain --baseline` requires an absolute path.");
+      }
+      let baseline;
+      try {
+        baseline = JSON.parse(await readFile(resolve(basePath), "utf8"));
+      } catch (readErr) {
+        throw new Error(
+          `Failed to read baseline: ${readErr && readErr.message ? readErr.message : readErr}`,
+        );
+      }
+      routing_preview = buildModelRoutingPreview({
+        baseline,
+        generated_at_iso: new Date().toISOString(),
+      });
+    }
+
+    const mission_plan = buildClosedDualLoopDryRun({
+      pain: pain ?? null,
+      goal: goal ?? null,
+      routing_preview,
+    });
+    const blackboard = buildPatSatBlackboardDryRun({
+      pain: pain ?? null,
+      goal: goal ?? null,
+    });
+    const chain = buildNode0ActivationChainPreview({
+      ladder,
+      routing_preview,
+      mission_plan,
+      blackboard,
+    });
+
+    if (wantJson) {
+      console.log(JSON.stringify(chain, null, 2));
+      return;
+    }
+
+    console.log(`Node0 activation chain (preview-only) — ${chain.truth_label}`);
+    console.log(`  chain_status: ${chain.chain_status}`);
+    console.log(
+      `  ladder: ${chain.ladder_summary?.shipped ?? 0} shipped · next gated: ${chain.next_gated_rung ?? "—"}`,
+    );
+    if (chain.talk_env_hint?.env) {
+      console.log("  talk env hint (PREVIEW — separate exact consent to invoke):");
+      console.log(`    export DEMA_TALK_PROVIDER=${chain.talk_env_hint.env.DEMA_TALK_PROVIDER}`);
+      console.log(`    export DEMA_TALK_MODEL=${chain.talk_env_hint.env.DEMA_TALK_MODEL}`);
+    }
+    console.log(`  mission_plan: ${mission_plan.dry_run_status}`);
+    console.log(`  blackboard: ${blackboard.final_state}`);
+    console.log(`  chain_hash: ${chain.chain_hash?.slice(0, 16) ?? "—"}…`);
+    console.log("  Nothing executed; activate rung remains operator-only.");
+    return;
+  }
+
   const actions = new Set(["status", "verify", "consent", "journey"]);
   if (sub !== "mumu" || !actions.has(action)) {
     console.error(
@@ -106,6 +194,7 @@ export async function cmd_node0(ctx) {
         "  dema node0 map [--json]\n" +
         "  dema node0 activation observe [--json]\n" +
         "  dema node0 ladder [--json]\n" +
+        "  dema node0 chain [--pain ...] [--goal ...] [--baseline <abs.json>] [--json]\n" +
         "  dema node0 mumu status [--json] [--out <dir>]\n" +
         "  dema node0 mumu verify [--json] [--out <dir>]\n" +
         "  dema node0 mumu consent [--json] [--out <dir>]\n" +
