@@ -7,6 +7,7 @@ import { buildModelEvalBaseline } from "../packages/core/src/model-eval-baseline
 import { buildModelRoutingPreview } from "../packages/core/src/model-routing-preview.js";
 import { buildClosedDualLoopDryRun } from "../packages/core/src/closed-dual-loop-dry-run.js";
 import { buildPatSatBlackboardDryRun } from "../packages/core/src/pat-sat-blackboard-dry-run.js";
+import { buildPeakSelfLoopPreview } from "../packages/core/src/peak-self-loop-preview.js";
 import {
   buildNode0ActivationChainPreview,
   verifyNode0ActivationChainPreview,
@@ -25,6 +26,7 @@ function shippedLadder() {
     "talk_hint",
     "mission_routing",
     "blackboard",
+    "activation_chain",
   ]) {
     evidence[id] = { kernel_present: true, marker_present: true };
   }
@@ -72,6 +74,19 @@ test("compose chain → PREVIEW_COMPOSED, verify ok, boundary all-false", () => 
   assert.equal(chain.chain_status, "PREVIEW_COMPOSED");
   assert.equal(chain.talk_env_hint?.provider, "ollama");
   assert.ok(Object.values(chain.boundary).every((v) => v === false));
+  assert.equal(verifyNode0ActivationChainPreview(chain).ok, true);
+});
+
+test("compose chain with self_loop → autopoietic_posture PREVIEW_ONLY", () => {
+  const ladder = shippedLadder();
+  const self_loop = buildPeakSelfLoopPreview();
+  const chain = buildNode0ActivationChainPreview({
+    ladder,
+    self_loop,
+  });
+  assert.equal(chain.chain_status, "PREVIEW_COMPOSED");
+  assert.equal(chain.autopoietic_posture?.truth_label, "AUTOPOIETIC_POSTURE_PREVIEW_ONLY");
+  assert.equal(chain.autopoietic_posture?.not_autonomous_runtime, true);
   assert.equal(verifyNode0ActivationChainPreview(chain).ok, true);
 });
 

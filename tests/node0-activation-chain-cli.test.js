@@ -67,3 +67,34 @@ test("dema node0 chain --json composes ladder + route + plan + blackboard", asyn
   assert.equal(verifyNode0ActivationChainPreview(report).ok, true);
   assert.equal(report.talk_env_hint?.provider, "ollama");
 });
+
+test("dema node0 chain --self-loop embeds autopoietic posture preview", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "node0-chain-sl-"));
+  const file = join(dir, "baseline.json");
+  await writeFile(file, JSON.stringify(makeBaseline()));
+  const out = execFileSync(
+    "node",
+    [
+      BIN,
+      "node0",
+      "chain",
+      "--pain",
+      "VRAM",
+      "--goal",
+      "fair routing",
+      "--baseline",
+      file,
+      "--self-loop",
+      "--json",
+    ],
+    { env: { ...process.env, NO_COLOR: "1", DEMA_NO_TUI: "1" }, timeout: 30000 },
+  ).toString();
+  const report = JSON.parse(out);
+  assert.equal(report.chain_status, "PREVIEW_COMPOSED");
+  assert.equal(report.autopoietic_posture?.not_autonomous_runtime, true);
+  assert.equal(
+    report.components.self_loop?.schema,
+    "bizra.dema.peak_self_loop_preview.v0.1",
+  );
+  assert.equal(verifyNode0ActivationChainPreview(report).ok, true);
+});
