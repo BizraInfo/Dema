@@ -90,6 +90,35 @@ function sortEntry(a, b) {
   return a.axis.localeCompare(b.axis) || a.key.localeCompare(b.key) || a.id.localeCompare(b.id);
 }
 
+// Assemble axis buckets from already-normalized entries. Shared by build AND verify
+// so bucket_hash is load-bearing: verify re-derives buckets from the verified entries
+// and rejects any index whose buckets do not match (buckets_mismatch).
+function assembleBuckets(entries) {
+  const buckets = emptyBuckets();
+  for (const entry of entries) {
+    const id = bucketId(entry.axis, entry.key);
+    const bucket = buckets[entry.axis][id] ?? {
+      bucket_id: id,
+      axis: entry.axis,
+      key: entry.key,
+      entries: [],
+    };
+    bucket.entries.push(entry);
+    buckets[entry.axis][id] = bucket;
+  }
+  for (const axis of HASH_TABLE_AXES) {
+    for (const [id, bucket] of Object.entries(buckets[axis])) {
+      bucket.entries.sort((a, b) => a.id.localeCompare(b.id));
+      buckets[axis][id] = {
+        ...bucket,
+        entry_count: bucket.entries.length,
+        bucket_hash: sha256(stableStringify({ axis: bucket.axis, key: bucket.key, entries: bucket.entries.map((e) => e.entry_hash) })),
+      };
+    }
+  }
+  return buckets;
+}
+
 export function buildHashTableKnowledgeIndex({ entries = [], namespace = "node0" } = {}) {
   if (!Array.isArray(entries)) return reject("entries_must_be_array");
   const normalized = [];
@@ -103,29 +132,7 @@ export function buildHashTableKnowledgeIndex({ entries = [], namespace = "node0"
   }
   normalized.sort(sortEntry);
 
-  const buckets = emptyBuckets();
-  for (const entry of normalized) {
-    const id = bucketId(entry.axis, entry.key);
-    const bucket = buckets[entry.axis][id] ?? {
-      bucket_id: id,
-      axis: entry.axis,
-      key: entry.key,
-      entries: [],
-    };
-    bucket.entries.push(entry);
-    buckets[entry.axis][id] = bucket;
-  }
-
-  for (const axis of HASH_TABLE_AXES) {
-    for (const [id, bucket] of Object.entries(buckets[axis])) {
-      bucket.entries.sort((a, b) => a.id.localeCompare(b.id));
-      buckets[axis][id] = {
-        ...bucket,
-        entry_count: bucket.entries.length,
-        bucket_hash: sha256(stableStringify({ axis: bucket.axis, key: bucket.key, entries: bucket.entries.map((entry) => entry.entry_hash) })),
-      };
-    }
-  }
+  const buckets = assembleBuckets(normalized);
 
   const body = {
     schema: HASH_TABLE_KNOWLEDGE_INDEX_SCHEMA,
@@ -203,6 +210,13 @@ export function verifyHashTableKnowledgeIndex(index) {
       if (!Array.isArray(entry.evidence) || entry.evidence.length === 0) blocked_by.push(`evidence_required:${entry.id ?? "unknown"}`);
     }
   }
+  // buckets must be exactly re-derivable from the verified entries — makes bucket_hash
+  // load-bearing and stops a query from serving a bucket inconsistent with entries.
+  if (Array.isArray(index.entries)) {
+    const rederived = assembleBuckets(index.entries);
+    if (stableStringify(rederived) !== stableStringify(index.buckets)) blocked_by.push("buckets_mismatch");
+  }
+
   const { index_hash, ...body } = index;
   if (!index_hash || sha256(stableStringify(body)) !== index_hash) blocked_by.push("index_hash_mismatch");
   if (blocked_by.length > 0) return deepFreeze({ valid: false, rejected: true, reason_code: "hash_table_index_invalid", blocked_by });
