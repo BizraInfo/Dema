@@ -78,6 +78,14 @@ export const NODE0_ACTIVATION_LADDER = Object.freeze([
     tier: "preview",
   }),
   Object.freeze({
+    id: "activation_chain",
+    label: "Activation chain composition preview",
+    command: "dema node0 chain",
+    evidence_file: "packages/core/src/node0-activation-chain-preview.js",
+    marker: "verifyNode0ActivationChainPreview",
+    tier: "preview",
+  }),
+  Object.freeze({
     id: "activate",
     label: "Live activation (governed runtime + identity)",
     command: null,

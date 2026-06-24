@@ -106,6 +106,7 @@ export async function cmd_node0(ctx) {
     const goal = goalIdx !== -1 ? argv[goalIdx + 1] : undefined;
     const baseIdx = argv.indexOf("--baseline");
     const basePath = baseIdx !== -1 ? argv[baseIdx + 1] : undefined;
+    const includeSelfLoop = argv.includes("--self-loop");
 
     const { gatherNode0LadderEvidence } = await import("./node0-ladder-gatherer.js");
     const { buildNode0ActivationLadder } = await import(
@@ -123,6 +124,9 @@ export async function cmd_node0(ctx) {
     const { buildNode0ActivationChainPreview } = await import(
       "../../../../packages/core/src/node0-activation-chain-preview.js"
     );
+    const { buildPeakSelfLoopPreview } = includeSelfLoop
+      ? await import("../../../../packages/core/src/peak-self-loop-preview.js")
+      : { buildPeakSelfLoopPreview: null };
 
     const ladder = buildNode0ActivationLadder({
       evidence: gatherNode0LadderEvidence({}),
@@ -158,11 +162,17 @@ export async function cmd_node0(ctx) {
       pain: pain ?? null,
       goal: goal ?? null,
     });
+    const self_loop = includeSelfLoop
+      ? buildPeakSelfLoopPreview({
+          consent_phrase: "GO: act on peak-self-loop suggestion",
+        })
+      : null;
     const chain = buildNode0ActivationChainPreview({
       ladder,
       routing_preview,
       mission_plan,
       blackboard,
+      self_loop,
     });
 
     if (wantJson) {
@@ -182,6 +192,13 @@ export async function cmd_node0(ctx) {
     }
     console.log(`  mission_plan: ${mission_plan.dry_run_status}`);
     console.log(`  blackboard: ${blackboard.final_state}`);
+    if (chain.autopoietic_posture) {
+      const p = chain.autopoietic_posture;
+      console.log(
+        `  autopoietic posture (PREVIEW_ONLY): SNR=${p.snr_score ?? "—"} · RSI=${p.rsi_merged_verdict ?? "—"} · HHMM=${p.hhmm_peak_phase ?? "—"}`,
+      );
+      console.log(`    not_autonomous_runtime: ${p.not_autonomous_runtime}`);
+    }
     console.log(`  chain_hash: ${chain.chain_hash?.slice(0, 16) ?? "—"}…`);
     console.log("  Nothing executed; activate rung remains operator-only.");
     return;
@@ -194,7 +211,7 @@ export async function cmd_node0(ctx) {
         "  dema node0 map [--json]\n" +
         "  dema node0 activation observe [--json]\n" +
         "  dema node0 ladder [--json]\n" +
-        "  dema node0 chain [--pain ...] [--goal ...] [--baseline <abs.json>] [--json]\n" +
+        "  dema node0 chain [--pain ...] [--goal ...] [--baseline <abs.json>] [--self-loop] [--json]\n" +
         "  dema node0 mumu status [--json] [--out <dir>]\n" +
         "  dema node0 mumu verify [--json] [--out <dir>]\n" +
         "  dema node0 mumu consent [--json] [--out <dir>]\n" +

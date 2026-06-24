@@ -30,7 +30,7 @@ test("constants and ladder shape are stable", () => {
     NODE0_ACTIVATION_LADDER_TRUTH_LABEL,
     "NODE0_ACTIVATION_LADDER_LOCAL_ONLY",
   );
-  assert.equal(PREVIEW_IDS.length, 7);
+  assert.equal(PREVIEW_IDS.length, 8);
   const gated = NODE0_ACTIVATION_LADDER.filter((r) => r.tier === "gated");
   assert.deepEqual(
     gated.map((r) => r.id),
@@ -45,7 +45,7 @@ test("all evidence present -> every preview rung SHIPPED, activate GATED", () =>
     else assert.equal(r.status, "GATED_OPERATOR_ONLY");
   }
   assert.deepEqual(report.summary, {
-    shipped: 7,
+    shipped: 8,
     partial: 0,
     missing: 0,
     gated: 1,

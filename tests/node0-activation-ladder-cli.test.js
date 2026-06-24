@@ -18,7 +18,7 @@ test("dema node0 ladder --json mirrors real on-disk rung presence", () => {
   assert.equal(report.truth_label, "NODE0_ACTIVATION_LADDER_LOCAL_ONLY");
 
   const byId = Object.fromEntries(report.rungs.map((r) => [r.id, r.status]));
-  // All seven preview rungs ship on the current tree.
+  // All eight preview rungs ship on the current tree.
   for (const id of [
     "observe",
     "benchmark",
@@ -27,6 +27,7 @@ test("dema node0 ladder --json mirrors real on-disk rung presence", () => {
     "talk_hint",
     "mission_routing",
     "blackboard",
+    "activation_chain",
   ]) {
     assert.equal(byId[id], "SHIPPED", `${id} should be SHIPPED on disk`);
   }

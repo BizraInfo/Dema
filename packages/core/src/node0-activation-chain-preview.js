@@ -9,6 +9,7 @@ import { buildPreviewBoundary } from "./preview-boundary.js";
 import { verifyNode0ActivationLadder } from "./node0-activation-ladder.js";
 import { verifyModelRoutingPreview } from "./model-routing-preview.js";
 import { verifyPatSatBlackboardDryRun } from "./pat-sat-blackboard-dry-run.js";
+import { PEAK_SELF_LOOP_PREVIEW_SCHEMA } from "./peak-self-loop-preview.js";
 
 export const NODE0_ACTIVATION_CHAIN_SCHEMA =
   "bizra.dema.node0_activation_chain_preview.v0.1";
@@ -24,7 +25,16 @@ const WHAT_THIS_DOES_NOT_PROVE = Object.freeze([
   "Child previews were run correctly at runtime — only that their embedded envelopes verify internally.",
   "Talk was invoked — talk remains a separate exact-consent step.",
   "The gated activate rung was crossed.",
+  "Peak self-loop posture implies autonomous self-modification — it is preview math only.",
 ]);
+
+function selfLoopOk(report) {
+  if (!report || typeof report !== "object") return false;
+  if (report.schema !== PEAK_SELF_LOOP_PREVIEW_SCHEMA) return false;
+  if (report.autonomous_rsi?.not_autonomous_runtime !== true) return false;
+  const boundary = report.boundary;
+  return boundary && Object.values(boundary).every((v) => v === false);
+}
 
 function deepFreeze(value) {
   if (value && typeof value === "object" && !Object.isFrozen(value)) {
@@ -45,6 +55,7 @@ export function buildNode0ActivationChainPreview({
   routing_preview = null,
   mission_plan = null,
   blackboard = null,
+  self_loop = null,
 } = {}) {
   if (!ladder || typeof ladder !== "object") {
     return deepFreeze({
@@ -71,6 +82,7 @@ export function buildNode0ActivationChainPreview({
     routing_preview: routing_preview ?? null,
     mission_plan: mission_plan ?? null,
     blackboard: blackboard ?? null,
+    self_loop: self_loop ?? null,
   });
 
   const talk_hint =
@@ -78,11 +90,24 @@ export function buildNode0ActivationChainPreview({
     mission_plan?.measured_routing_context?.talk_env_hint ??
     null;
 
+  const autopoietic_posture = self_loop
+    ? Object.freeze({
+        truth_label: "AUTOPOIETIC_POSTURE_PREVIEW_ONLY",
+        not_autonomous_runtime: self_loop.autonomous_rsi?.not_autonomous_runtime === true,
+        snr_score: self_loop.snr_framework?.score ?? null,
+        snr_verdict: self_loop.snr_framework?.verdict ?? null,
+        rsi_merged_verdict: self_loop.autonomous_rsi?.merged_verdict ?? null,
+        hhmm_peak_phase: self_loop.hhmm?.peak_phase ?? null,
+        consent_phrase: self_loop.proactive_self?.consent?.required_phrase ?? null,
+      })
+    : null;
+
   let chain_status = "PREVIEW_COMPOSED";
   const blocked_by = [];
   if (!ladder_verify.ok) blocked_by.push("ladder_invalid");
   if (routing_preview && !routing_verify.valid) blocked_by.push("routing_preview_invalid");
   if (blackboard && !blackboard_verify.ok) blocked_by.push("blackboard_invalid");
+  if (self_loop && !selfLoopOk(self_loop)) blocked_by.push("self_loop_invalid");
   if (mission_plan && mission_plan.dry_run_status !== "consent_ready") {
     blocked_by.push("mission_plan_not_consent_ready");
   }
@@ -100,6 +125,7 @@ export function buildNode0ActivationChainPreview({
     ladder_summary: Object.freeze({ ...ladder.summary }),
     next_gated_rung: ladder.next_gated_rung ?? null,
     talk_env_hint: talk_hint,
+    autopoietic_posture,
     components,
     what_this_proves: WHAT_THIS_PROVES,
     what_this_does_not_prove: WHAT_THIS_DOES_NOT_PROVE,
@@ -125,6 +151,7 @@ export function verifyNode0ActivationChainPreview(report) {
     routing_preview: c.routing_preview ?? null,
     mission_plan: c.mission_plan ?? null,
     blackboard: c.blackboard ?? null,
+    self_loop: c.self_loop ?? null,
   });
 
   const boundary = report.boundary;
@@ -150,6 +177,9 @@ export function verifyNode0ActivationChainPreview(report) {
   if (c.blackboard) {
     const bv = verifyPatSatBlackboardDryRun(c.blackboard);
     if (!bv.ok) blocked_by.push("blackboard_child_invalid");
+  }
+  if (c.self_loop && !selfLoopOk(c.self_loop)) {
+    blocked_by.push("self_loop_child_invalid");
   }
 
   return { ok: blocked_by.length === 0, blocked_by };
