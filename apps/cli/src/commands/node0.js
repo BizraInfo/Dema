@@ -75,12 +75,37 @@ export async function cmd_node0(ctx) {
     return;
   }
 
+  if (sub === "ladder") {
+    const { gatherNode0LadderEvidence } = await import("./node0-ladder-gatherer.js");
+    const { buildNode0ActivationLadder } = await import(
+      "../../../../packages/core/src/node0-activation-ladder.js"
+    );
+    const evidence = gatherNode0LadderEvidence({});
+    const report = buildNode0ActivationLadder({ evidence });
+    if (wantJson) {
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+    const s = report.summary;
+    console.log(`Node0 activation ladder (read-only) — ${report.truth_label}`);
+    for (const r of report.rungs) {
+      console.log(`  ${r.status.padEnd(20)} ${r.id.padEnd(16)} ${r.command ?? "(operator-only)"}`);
+    }
+    console.log(
+      `  summary: ${s.shipped} shipped · ${s.partial} partial · ${s.missing} missing · ${s.gated} gated`,
+    );
+    console.log(`  next gated rung: ${report.next_gated_rung ?? "—"} (operator-only · §1)`);
+    console.log("  SHIPPED = surface present on disk, NOT proof of runtime correctness; nothing executed.");
+    return;
+  }
+
   const actions = new Set(["status", "verify", "consent", "journey"]);
   if (sub !== "mumu" || !actions.has(action)) {
     console.error(
       "dema node0: Mumu closed-loop face (read-only; loop stays npm run node0). Subcommands:\n" +
         "  dema node0 map [--json]\n" +
         "  dema node0 activation observe [--json]\n" +
+        "  dema node0 ladder [--json]\n" +
         "  dema node0 mumu status [--json] [--out <dir>]\n" +
         "  dema node0 mumu verify [--json] [--out <dir>]\n" +
         "  dema node0 mumu consent [--json] [--out <dir>]\n" +
