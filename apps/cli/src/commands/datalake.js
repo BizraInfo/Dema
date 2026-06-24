@@ -1,4 +1,8 @@
 import {
+  auditDatalakeArchiveFile,
+  renderDatalakeArchiveAudit,
+} from "../../../../packages/core/src/datalake-archive-audit.js";
+import {
   gatherDatalakeDualLoopPreview,
   renderDatalakeDualLoopPreview,
 } from "../../../../packages/core/src/datalake-dual-loop-preview.js";
@@ -20,7 +24,23 @@ export async function cmd_datalake(ctx) {
     process.exit(process.exitCode ?? 0);
   }
 
+  if (subcommand === "audit-zip") {
+    const archivePath = argv.find((arg) => !arg.startsWith("--"));
+    if (!archivePath) {
+      throw new Error(
+        "Missing archive path. Use `dema datalake audit-zip <archive.zip> [--json] [--no-color]`.",
+      );
+    }
+    const audit = auditDatalakeArchiveFile(archivePath);
+    if (wantJson) {
+      console.log(JSON.stringify(audit, null, 2));
+      process.exit(process.exitCode ?? 0);
+    }
+    console.log(renderDatalakeArchiveAudit(audit));
+    process.exit(process.exitCode ?? 0);
+  }
+
   throw new Error(
-    "Unknown datalake command. Use `dema datalake dual-loop-preview [--json] [--no-color]`.",
+    "Unknown datalake command. Use `dema datalake dual-loop-preview [--json] [--no-color]` or `dema datalake audit-zip <archive.zip> [--json] [--no-color]`.",
   );
 }
