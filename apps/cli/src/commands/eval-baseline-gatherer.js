@@ -80,6 +80,7 @@ function providers(env) {
       ids: (j) => (Array.isArray(j?.models) ? j.models.map((m) => m?.name).filter(Boolean) : []),
       gen: (b) => `${b}/api/generate`,
       body: (model, prompt) => ({ model, prompt, stream: false, options: { num_predict: 64 } }),
+      warm: (model) => ({ model, prompt: "ready", stream: false, options: { num_predict: 1 } }),
       out: (j) => (typeof j?.response === "string" ? j.response : ""),
     },
     lm_studio: {
@@ -88,6 +89,7 @@ function providers(env) {
       ids: (j) => (Array.isArray(j?.data) ? j.data.map((m) => m?.id).filter(Boolean) : []),
       gen: (b) => `${b}/v1/chat/completions`,
       body: (model, prompt) => ({ model, messages: [{ role: "user", content: prompt }], max_tokens: 64 }),
+      warm: (model) => ({ model, messages: [{ role: "user", content: "ready" }], max_tokens: 1 }),
       out: (j) => j?.choices?.[0]?.message?.content ?? j?.choices?.[0]?.message?.reasoning_content ?? "",
     },
     llamacpp: {
@@ -96,6 +98,7 @@ function providers(env) {
       ids: (j) => (Array.isArray(j?.data) ? j.data.map((m) => m?.id).filter(Boolean) : []),
       gen: (b) => `${b}/v1/chat/completions`,
       body: (model, prompt) => ({ model, messages: [{ role: "user", content: prompt }], max_tokens: 64 }),
+      warm: (model) => ({ model, messages: [{ role: "user", content: "ready" }], max_tokens: 1 }),
       out: (j) => j?.choices?.[0]?.message?.content || j?.choices?.[0]?.message?.reasoning_content || "",
     },
   };
@@ -120,23 +123,63 @@ export async function discoverLocalModels({ fetchImpl, env = process.env, includ
   return { provider_discovery, models };
 }
 
+// A chat-suite model only — embedding endpoints cannot answer a chat prompt, so
+// scoring them against bizra-local-small would just record false unreachables.
+function isChatCandidate(id) {
+  return typeof id === "string" && !/embed/i.test(id);
+}
+
+// Round-robin across providers so a fleet-heavy provider (e.g. many Ollama tags)
+// cannot starve another (e.g. LM Studio) out of the bounded slice.
+function interleaveByProvider(models) {
+  const queues = new Map();
+  for (const m of models) {
+    if (!queues.has(m.provider)) queues.set(m.provider, []);
+    queues.get(m.provider).push(m);
+  }
+  const lanes = [...queues.values()];
+  const out = [];
+  let drained = false;
+  while (!drained) {
+    drained = true;
+    for (const lane of lanes) {
+      const next = lane.shift();
+      if (next) { out.push(next); drained = false; }
+    }
+  }
+  return out;
+}
+
 export async function gatherModelEvalBaseline({
   fetchImpl,
   env = process.env,
   time = () => new Date(),
   suiteId = "bizra-local-small",
   includeExternalProviders = false, // DEFAULT FALSE — local only
-  timeoutMs = 6000,
-  maxModels = 3, // bounded by default — each model runs the full suite via real inference
+  timeoutMs = 60000, // cold-load-aware: a big model offloaded to CPU can be slow per token
+  warmupTimeoutMs = 180000, // generous one-shot load: a 26B model into a 16GB GPU takes time
+  maxModels = 6, // bounded by default — each reachable model runs the full suite via real inference
 } = {}) {
   const fetcher = fetchImpl || globalThis.fetch;
   const provs = providers(env);
   const { provider_discovery, models } = await discoverLocalModels({ fetchImpl, env, includeExternalProviders, timeoutMs });
-  const chosen = models.slice(0, maxModels);
+  const eligible = interleaveByProvider(models.filter((m) => isChatCandidate(m.model)));
+  const chosen = eligible.slice(0, maxModels);
   const results_by_model = {};
   for (const { key, provider, model } of chosen) {
     const p = provs[provider];
     const tasks = {};
+    // Warm-up pass FIRST, with a generous timeout, so the cold-load cost is paid
+    // before the suite is timed. A model that never loads is recorded unreachable
+    // across the suite without spending the full 6-task budget on it.
+    const warm = await postJson(fetcher, p.gen(p.base), p.warm(model), warmupTimeoutMs);
+    if (!warm.reachable) {
+      for (const task of BIZRA_LOCAL_SMALL_SUITE) {
+        tasks[task.id] = { reachable: false, latency_ms: null, output: "", usage: null };
+      }
+      results_by_model[key] = { tasks };
+      continue;
+    }
     for (const task of BIZRA_LOCAL_SMALL_SUITE) {
       const t0 = time().getTime();
       const probe = await postJson(fetcher, p.gen(p.base), p.body(model, task.prompt), timeoutMs);
