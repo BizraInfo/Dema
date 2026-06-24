@@ -33,6 +33,35 @@ function formatBlackboard(report) {
   return lines.join("\n");
 }
 
+function formatLiveBlackboard(env) {
+  const lp = env.live_propose;
+  const lines = [
+    `Dema · PAT/SAT blackboard LIVE (suggestion-only) — ${env.truth_label}`,
+    "",
+    `  seed.pain: ${env.seed.pain ?? "(missing)"}`,
+    `  seed.goal: ${env.seed.goal ?? "(missing)"}`,
+    "",
+    `  live propose: status=${lp.invocation_status} · ${lp.provider ?? "—"}/${lp.model ?? "—"} · role=${lp.verdict_role}`,
+  ];
+  if (lp.invocation_status === "completed") {
+    lines.push(`    suggestion: ${lp.suggestion_preview ?? "(none)"}`);
+  } else {
+    lines.push(`    ${lp.error_reason ?? "no call made"}`);
+    if (lp.required_consent) {
+      lines.push(`    exact consent required: "${lp.required_consent}"`);
+    }
+  }
+  lines.push("");
+  lines.push(
+    `  boundary: model_invocation=${env.boundary.model_invocation_performed === true} · the 10 forbidden keys all false`,
+  );
+  lines.push(
+    "  autonomy: NONE — one suggestion, no self-driving loop, no identity, no mint, no daemon",
+  );
+  lines.push(`  live_hash: ${env.live_hash.slice(0, 16)}…`);
+  return lines.join("\n");
+}
+
 export async function cmd_agent_loop(ctx) {
   const { argv, subcommand } = ctx;
 
@@ -47,14 +76,43 @@ export async function cmd_agent_loop(ctx) {
   }
 
   if (subcommand === "blackboard") {
-    const report = buildPatSatBlackboardDryRun({
-      pain: argValue(argv, "--pain") ?? null,
-      goal: argValue(argv, "--goal") ?? null,
-    });
+    const pain = argValue(argv, "--pain") ?? null;
+    const goal = argValue(argv, "--goal") ?? null;
+    const dryRun = buildPatSatBlackboardDryRun({ pain, goal });
+
+    // LIVE PATH — one consent-gated, suggestion-only local-model call for the PAT
+    // `propose` seat (reuses the sanctioned invokeDemaTalkLive gate). Without
+    // --consent the gate refuses before any call. NOT autonomous coordination.
+    if (argv.includes("--live")) {
+      const { invokeDemaTalkLive } = await import(
+        "../../../../packages/core/src/dema-talk-loop-live.js"
+      );
+      const { buildLiveBlackboardProposePrompt, composeLiveBlackboard } =
+        await import("../../../../packages/core/src/pat-sat-blackboard-live.js");
+      const provider = argValue(argv, "--provider") ?? "ollama";
+      const model = argValue(argv, "--model") ?? "whiterabbitneo-v3:7b-q4_K_M";
+      const consent = argValue(argv, "--consent") ?? "";
+      const prompt = buildLiveBlackboardProposePrompt({ pain, goal });
+      const liveResult = await invokeDemaTalkLive({
+        provider,
+        model,
+        prompt,
+        consentPhrase: consent,
+        fetchImpl: ctx.fetchImpl,
+      });
+      const envelope = composeLiveBlackboard({ dryRun, liveResult });
+      if (wantsJson(argv)) {
+        console.log(JSON.stringify(envelope, null, 2));
+      } else {
+        console.log(formatLiveBlackboard(envelope));
+      }
+      process.exit(process.exitCode ?? 0);
+    }
+
     if (wantsJson(argv)) {
-      console.log(JSON.stringify(report, null, 2));
+      console.log(JSON.stringify(dryRun, null, 2));
     } else {
-      console.log(formatBlackboard(report));
+      console.log(formatBlackboard(dryRun));
     }
     process.exit(process.exitCode ?? 0);
   }
