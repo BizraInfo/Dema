@@ -46,11 +46,41 @@ export async function cmd_node0(ctx) {
     return;
   }
 
+  if (sub === "activation" && action === "observe") {
+    const { gatherNode0ActivationObservations } = await import("./observe-gatherer.js");
+    const { buildNode0ActivationObserve } = await import(
+      "../../../../packages/core/src/node0-activation-observe.js"
+    );
+    const observations = await gatherNode0ActivationObservations({});
+    const report = buildNode0ActivationObserve(observations);
+    if (wantJson) {
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+    const s = report.sovereign_runtime_status;
+    const lm = report.local_model_status.lm_studio;
+    const ol = report.local_model_status.ollama;
+    console.log(`Node0 activation observe (read-only) — ${report.truth_label}`);
+    console.log(`  sovereign: live=${s.live} ready=${s.ready} (${s.base_url})`);
+    console.log(
+      `  models:    lm_studio ${lm.reachable ? lm.model_ids.length : "—"} · ollama ${ol.reachable ? ol.model_ids.length : "—"}`,
+    );
+    console.log(`  identity:  ${report.identity_status}`);
+    console.log(`  roots:     ${report.canonical_roots.filter((r) => r.exists).length}/${report.canonical_roots.length} present`);
+    console.log(`  gaps:      ${report.activation_gap_map.length}`);
+    for (const g of report.activation_gap_map) {
+      console.log(`    - ${g.gap}: ${g.suggestion}`);
+    }
+    console.log(`  next:      ${report.next_safe_action}`);
+    return;
+  }
+
   const actions = new Set(["status", "verify", "consent", "journey"]);
   if (sub !== "mumu" || !actions.has(action)) {
     console.error(
       "dema node0: Mumu closed-loop face (read-only; loop stays npm run node0). Subcommands:\n" +
         "  dema node0 map [--json]\n" +
+        "  dema node0 activation observe [--json]\n" +
         "  dema node0 mumu status [--json] [--out <dir>]\n" +
         "  dema node0 mumu verify [--json] [--out <dir>]\n" +
         "  dema node0 mumu consent [--json] [--out <dir>]\n" +
