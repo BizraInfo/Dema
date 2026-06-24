@@ -428,6 +428,8 @@ Local evidence:
   dema models scan [--summary]
                     C1.5 · schema-tagged local model inventory scan (Ollama API · LM Studio API · GGUF files · HF cache · /data/bizra)
                     Read-only · no model load · no prompt execution · no public network · canonical 16-key boundary
+  dema models discover [--json]
+                    MODEL-EVAL-BASELINE-1A · read-only local model-pool discovery (Ollama · LM Studio · llama.cpp); no inference, local providers only
   dema report safety [--json]
                     Preview the safety report; does not certify, execute, or mint
   dema network blueprint [--json]
@@ -451,6 +453,10 @@ Local evidence:
                       Emit Layer 2 rubric pack (truthfulness · actionability · boundary_compliance); data-only, no LLM invocation
   dema eval layer2 verify <abs-path> [--json]
                       Validate an operator-pasted Layer 2 judge verdict file; structural + semantic checks; read-only; exit 1 on validation failure
+  dema eval baseline [--suite bizra-local-small] [--json]
+                      MODEL-EVAL-BASELINE-1A · run the frozen local suite against the model pool; content-addressed; LOCAL ONLY; not a leaderboard
+  dema eval compare <--baseline a.json --candidate b.json> [--json]
+                      Deterministic before/after delta of two baseline reports; refuses a tampered input
   dema evidence receipt preview [--json]
                       Preview receipt-shaped evidence; does not mint, sign, or write
   dema ihsan floor preview [--score N] [--json]

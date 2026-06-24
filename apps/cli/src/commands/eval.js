@@ -13,9 +13,79 @@ export async function cmd_eval(ctx) {
   const evalSubcommand = argv[2];
   const asJson = argv.includes("--json");
 
+  if (evalCommand === "baseline") {
+    // MODEL-EVAL-BASELINE-1A — local-only model evaluation baseline.
+    const { gatherModelEvalBaseline } = await import("./eval-baseline-gatherer.js");
+    const { buildModelEvalBaseline } = await import(
+      "../../../../packages/core/src/model-eval-baseline.js"
+    );
+    const suiteIdx = argv.indexOf("--suite");
+    const suiteId = suiteIdx !== -1 && argv[suiteIdx + 1] ? argv[suiteIdx + 1] : "bizra-local-small";
+    const includeExternalProviders = argv.includes("--include-external");
+    const input = await gatherModelEvalBaseline({ suiteId, includeExternalProviders });
+    const report = buildModelEvalBaseline(input);
+    if (asJson) {
+      console.log(JSON.stringify(report, null, 2));
+      process.exit(process.exitCode ?? 0);
+    }
+    console.log(`Model eval baseline (${report.truth_label}) — suite ${report.suite_id}`);
+    console.log(`  models: ${report.models_tested.length} tested · ${report.metrics.models_reachable_count} reachable`);
+    for (const m of Object.keys(report.results_by_model)) {
+      const e = report.results_by_model[m];
+      console.log(`  ${m.slice(0, 44).padEnd(44)} pass ${e.pass_count}/6 · ${e.latency_ms_avg ?? "—"}ms`);
+    }
+    const h = report.routing_hints;
+    console.log(`  fastest: ${h.fastest_reachable ?? "—"} · best-json: ${h.best_json_obedience ?? "—"}`);
+    console.log(`  baseline_hash: ${report.baseline_hash.slice(0, 16)}…  (LOCAL ONLY · not a leaderboard · does not prove correctness)`);
+    process.exit(process.exitCode ?? 0);
+  }
+
+  if (evalCommand === "compare") {
+    const baseIdx = argv.indexOf("--baseline");
+    const candIdx = argv.indexOf("--candidate");
+    const basePath = baseIdx !== -1 ? argv[baseIdx + 1] : undefined;
+    const candPath = candIdx !== -1 ? argv[candIdx + 1] : undefined;
+    if (!basePath || !candPath) {
+      throw new Error(
+        "Missing paths. Use `dema eval compare --baseline <abs.json> --candidate <abs.json> [--json]`.",
+      );
+    }
+    const { isAbsolute, resolve } = await import("node:path");
+    if (!isAbsolute(basePath) || !isAbsolute(candPath)) {
+      throw new Error(
+        "`dema eval compare` requires absolute paths to both the baseline and candidate JSON files.",
+      );
+    }
+    const { readFile } = await import("node:fs/promises");
+    const { compareModelEvalBaselines } = await import(
+      "../../../../packages/core/src/model-eval-baseline.js"
+    );
+    let oldReport, newReport;
+    try {
+      oldReport = JSON.parse(await readFile(resolve(basePath), "utf8"));
+      newReport = JSON.parse(await readFile(resolve(candPath), "utf8"));
+    } catch (readErr) {
+      throw new Error(`Failed to read or parse a baseline file: ${readErr && readErr.message ? readErr.message : readErr}`);
+    }
+    const delta = compareModelEvalBaselines(oldReport, newReport);
+    if (asJson) {
+      console.log(JSON.stringify(delta, null, 2));
+    } else if (delta.rejected) {
+      console.log(`eval compare → REJECTED (${delta.reason_code})`);
+    } else {
+      console.log(`eval compare → suite_match=${delta.suite_match} · models +${delta.models_added.length}/-${delta.models_removed.length}`);
+      for (const m of Object.keys(delta.per_model_delta)) {
+        const d = delta.per_model_delta[m].pass_rate;
+        console.log(`  ${m.slice(0, 44).padEnd(44)} pass_rate ${d.before}→${d.after} (${d.delta >= 0 ? "+" : ""}${d.delta})`);
+      }
+    }
+    if (delta.rejected) process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
   if (evalCommand !== "layer2") {
     throw new Error(
-      "Unknown eval command. Use `dema eval layer2 prompts [--json]` or `dema eval layer2 verify <abs-path> [--json]`.",
+      "Unknown eval command. Use `dema eval baseline [--suite bizra-local-small] [--json]`, `dema eval compare --baseline <abs.json> --candidate <abs.json> [--json]`, or `dema eval layer2 prompts|verify ...`.",
     );
   }
 
