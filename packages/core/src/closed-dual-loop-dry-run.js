@@ -36,7 +36,23 @@ const WHAT_THIS_DOES_NOT_PROVE = Object.freeze([
   "The plan was executed, or any task ran — execution needs a SEPARATE exact consent (a later slice).",
   "PAT/SAT runtime is active.",
   "Any reward, PoI, token, or federation.",
+  "Optional measured_routing_context activates talk or routing — it only surfaces a prior eval-route preview for operator reference.",
 ]);
+
+const MEASURED_ROUTING_CONTEXT_TRUTH_LABEL = "MEASURED_ROUTING_CONTEXT_PREVIEW_ONLY";
+
+function buildMeasuredRoutingContext(routing_preview) {
+  if (!routing_preview || routing_preview.rejected === true) return null;
+  const hint = routing_preview.talk_env_hint;
+  if (!hint || typeof hint !== "object") return null;
+  return Object.freeze({
+    truth_label: MEASURED_ROUTING_CONTEXT_TRUTH_LABEL,
+    baseline_hash: routing_preview.baseline_hash ?? null,
+    preview_hash: routing_preview.preview_hash ?? null,
+    fast_responder_model: routing_preview.assignments?.fast_responder?.model ?? null,
+    talk_env_hint: hint,
+  });
+}
 
 function deepFreeze(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value))
@@ -105,7 +121,9 @@ export function buildClosedDualLoopDryRun({
   goal = null,
   urgency = null,
   help_style = null,
+  routing_preview = null,
 } = {}) {
+  const measured_routing_context = buildMeasuredRoutingContext(routing_preview);
   const interview = buildPainGoalInterview({ pain, goal, urgency, help_style });
 
   if (interview.interview_status !== "ready_for_first_mission_preview") {
@@ -118,6 +136,7 @@ export function buildClosedDualLoopDryRun({
       pat_proposal: null,
       sat_verdict: null,
       consent_ready_plan: null,
+      measured_routing_context,
       next_safe_actions: Object.freeze(["complete_the_interview"]),
       boundary: buildPreviewBoundary(),
       what_this_proves: WHAT_THIS_PROVES,
@@ -151,9 +170,13 @@ export function buildClosedDualLoopDryRun({
     pat_proposal,
     sat_verdict,
     consent_ready_plan,
+    measured_routing_context,
     next_safe_actions: Object.freeze([
       "confirm_plan_no_execution_yet",
       "refine_via_interview",
+      ...(measured_routing_context?.talk_env_hint?.env
+        ? ["optional_talk_smoke_with_exported_env"]
+        : []),
       "skip",
     ]),
     boundary,
