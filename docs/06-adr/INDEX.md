@@ -5,6 +5,15 @@
 > **Format:** Lightweight ADR records (`# ADR-NNN: Title` · `**Status:**` · `**Date:**` · `## Context` / `## Decision` / `## Consequences` sections, with the older records lighter on the consequences section). Status values: `Accepted` · `Proposed` · `Parking lot` · `Superseded`.
 >
 > **Last refreshed:** 2026-06-07 GST against `main @ eac8627`.
+>
+> **2026-06-24 addendum (not a full re-review):** the five framework kernels
+> shipped in #233–#238 (HHMM, hash-table-knowledge-index, self-awareness,
+> self-loop-OODA, diffusion-reasoner) do **not** yet have dedicated ADRs. Their
+> decision records currently live in each kernel's source-header boundary block,
+> in `docs/TESTING.md`, and in `docs/CURRENT_LIMITS.md` (Framework-kernels
+> section). A full index re-review against `main @ 4e4b086` — and ADR-039+ for
+> these kernels if warranted — remains a separate pass. This note exists so a
+> cold reviewer is not misled into thinking the index already covers them.
 
 ---
 
