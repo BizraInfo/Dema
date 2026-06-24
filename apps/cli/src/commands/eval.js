@@ -83,9 +83,53 @@ export async function cmd_eval(ctx) {
     process.exit(process.exitCode ?? 0);
   }
 
+  if (evalCommand === "route") {
+    // MODEL-ROUTING-PREVIEW-1A — deterministic role->model PREVIEW from a baseline.
+    const baseIdx = argv.indexOf("--baseline");
+    const basePath = baseIdx !== -1 ? argv[baseIdx + 1] : undefined;
+    if (!basePath) {
+      throw new Error("Missing path. Use `dema eval route --baseline <abs.json> [--json]`.");
+    }
+    const { isAbsolute, resolve } = await import("node:path");
+    if (!isAbsolute(basePath)) {
+      throw new Error("`dema eval route` requires an absolute path to the baseline JSON file.");
+    }
+    const { readFile } = await import("node:fs/promises");
+    const { buildModelRoutingPreview } = await import(
+      "../../../../packages/core/src/model-routing-preview.js"
+    );
+    let baseline;
+    try {
+      baseline = JSON.parse(await readFile(resolve(basePath), "utf8"));
+    } catch (readErr) {
+      throw new Error(`Failed to read or parse the baseline file: ${readErr && readErr.message ? readErr.message : readErr}`);
+    }
+    const generated_at_iso = new Date().toISOString(); // clock lives in the CLI, never the kernel
+    const preview = buildModelRoutingPreview({ baseline, generated_at_iso });
+    if (asJson) {
+      console.log(JSON.stringify(preview, null, 2));
+      process.exit(preview.rejected ? 1 : process.exitCode ?? 0);
+    }
+    if (preview.rejected) {
+      console.log(`eval route → REJECTED (${preview.reason_code})`);
+      process.exitCode = 1;
+    } else {
+      console.log(`Model routing PREVIEW (${preview.truth_label}) — baseline ${preview.baseline_hash.slice(0, 16)}…`);
+      for (const role of preview.roles) {
+        const a = preview.assignments[role];
+        console.log(`  ${role.padEnd(16)} → ${a.model ?? "—"}   ${a.reason}`);
+      }
+      if (preview.unassigned_roles.length) {
+        console.log(`  unassigned: ${preview.unassigned_roles.join(", ")} (no qualifying model)`);
+      }
+      console.log(`  preview_hash: ${preview.preview_hash.slice(0, 16)}…  (PREVIEW · LOCAL ONLY · routes no live traffic · no MoE/council/federation/runtime)`);
+    }
+    process.exit(process.exitCode ?? 0);
+  }
+
   if (evalCommand !== "layer2") {
     throw new Error(
-      "Unknown eval command. Use `dema eval baseline [--suite bizra-local-small] [--json]`, `dema eval compare --baseline <abs.json> --candidate <abs.json> [--json]`, or `dema eval layer2 prompts|verify ...`.",
+      "Unknown eval command. Use `dema eval baseline [--suite bizra-local-small] [--json]`, `dema eval compare --baseline <abs.json> --candidate <abs.json> [--json]`, `dema eval route --baseline <abs.json> [--json]`, or `dema eval layer2 prompts|verify ...`.",
     );
   }
 
