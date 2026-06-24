@@ -40,6 +40,22 @@ const CANONICAL_BOUNDARY = Object.freeze({
   a2a_runtime_started: false,
 });
 
+// Kernel-authored attestation — lifted to module consts so verify can re-derive them
+// (the anti-overclaim self-description is load-bearing; the cycle_hash backstop alone
+// would let a forger invert it with a recomputed hash).
+const WHAT_THIS_PROVES = Object.freeze([
+  "A supplied OODA cycle can be normalized into an ordered, deterministic review structure.",
+  "Each phase is evidence-bound and content-addressed.",
+  "The kernel can recommend a next bounded review cycle without executing any action.",
+]);
+
+const WHAT_THIS_DOES_NOT_PROVE = Object.freeze([
+  "This is not an autonomous loop, daemon, scheduler, planner, or runtime executor.",
+  "It does not execute the ACT phase; it only records a proposed action if supplied.",
+  "It does not read files, write files, call a model, call a network, sign, mint, reward, activate PoI, or federate.",
+  "It does not prove the supplied evidence is true; it binds the cycle to caller-supplied anchors.",
+]);
+
 function deepFreeze(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
   for (const child of Object.values(value)) deepFreeze(child);
@@ -113,6 +129,7 @@ function deriveRecommendation({ valid, overclaims, missingPhases, coverage }) {
 
 export function buildSelfLoopOodaCycle({ steps = [], cycle_id = "self-loop-ooda-1a", previous_cycle_hash = null } = {}) {
   if (!Array.isArray(steps)) return reject("steps_must_be_array");
+  if (steps.length === 0) return reject("steps_empty");
   const normalized = [];
   const seen = new Set();
   for (let i = 0; i < steps.length; i += 1) {
@@ -148,17 +165,8 @@ export function buildSelfLoopOodaCycle({ steps = [], cycle_id = "self-loop-ooda-
     action_executed_by_kernel: false,
     autonomous_loop_started: false,
     boundary: { ...CANONICAL_BOUNDARY },
-    what_this_proves: Object.freeze([
-      "A supplied OODA cycle can be normalized into an ordered, deterministic review structure.",
-      "Each phase is evidence-bound and content-addressed.",
-      "The kernel can recommend a next bounded review cycle without executing any action.",
-    ]),
-    what_this_does_not_prove: Object.freeze([
-      "This is not an autonomous loop, daemon, scheduler, planner, or runtime executor.",
-      "It does not execute the ACT phase; it only records a proposed action if supplied.",
-      "It does not read files, write files, call a model, call a network, sign, mint, reward, activate PoI, or federate.",
-      "It does not prove the supplied evidence is true; it binds the cycle to caller-supplied anchors.",
-    ]),
+    what_this_proves: WHAT_THIS_PROVES,
+    what_this_does_not_prove: WHAT_THIS_DOES_NOT_PROVE,
   };
 
   return deepFreeze({ ...body, cycle_hash: sha256(stableStringify(body)) });
@@ -179,6 +187,10 @@ export function verifySelfLoopOodaCycle(cycle) {
   }
   if (cycle.autonomous_loop_started !== false) blocked_by.push("autonomous_loop_started");
   if (cycle.action_executed_by_kernel !== false) blocked_by.push("action_execution_overclaim");
+  // re-derive the kernel-authored attestation — verify must not trust stored prose.
+  if (cycle.required_phase_count !== SELF_LOOP_PHASES.length) blocked_by.push("required_phase_count_mismatch");
+  if (stableStringify(cycle.what_this_proves) !== stableStringify(WHAT_THIS_PROVES)) blocked_by.push("what_this_proves_mismatch");
+  if (stableStringify(cycle.what_this_does_not_prove) !== stableStringify(WHAT_THIS_DOES_NOT_PROVE)) blocked_by.push("what_this_does_not_prove_mismatch");
 
   if (!Array.isArray(cycle.steps)) blocked_by.push("steps_missing");
   else {
@@ -206,6 +218,16 @@ export function verifySelfLoopOodaCycle(cycle) {
     if (cycle.phase_count !== cycle.steps.length) blocked_by.push("phase_count_mismatch");
     const expectedByPhase = summarizeSteps(cycle.steps);
     if (stableStringify(expectedByPhase) !== stableStringify(cycle.steps_by_phase)) blocked_by.push("steps_by_phase_mismatch");
+    // Re-derive recommendation — verify must not trust a stored recommendation. A built
+    // cycle is always valid + overclaim-free (overclaims reject at normalize time), so a
+    // genuine recommendation is HOLD (incomplete) or PROPOSE_NEXT (all phases). This stops
+    // a HOLD->PROPOSE_NEXT laundering with a recomputed cycle_hash (cf. #235 status re-derive).
+    const expectedRecommendation =
+      expectedMissing.length > 0 || expectedCoverage < 1 ? "HOLD" : "PROPOSE_NEXT_BOUNDED_CYCLE";
+    if (cycle.recommendation !== expectedRecommendation) blocked_by.push("recommendation_mismatch");
+    if (cycle.proposed_next_cycle !== (expectedRecommendation === "PROPOSE_NEXT_BOUNDED_CYCLE")) {
+      blocked_by.push("proposed_next_cycle_mismatch");
+    }
   }
 
   const { cycle_hash, ...body } = cycle;

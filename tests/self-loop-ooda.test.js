@@ -143,3 +143,37 @@ test("11 · every negative result carries a reason_code", () => {
     assert.ok(n.reason_code.length > 0);
   }
 });
+
+test("12 · empty steps fail closed (consistent with the kernel family)", () => {
+  const r = buildSelfLoopOodaCycle({ steps: [] });
+  assert.equal(r.valid, false);
+  assert.equal(r.reason_code, "steps_empty");
+});
+
+test("13 · recommendation is non-gameable: HOLD laundered to PROPOSE_NEXT (cycle_hash recomputed) is rejected", () => {
+  const c = buildSelfLoopOodaCycle({ steps: steps().filter((s) => s.phase !== "review") }); // incomplete → HOLD
+  assert.equal(c.recommendation, "HOLD");
+  const forged = JSON.parse(JSON.stringify(c));
+  forged.recommendation = "PROPOSE_NEXT_BOUNDED_CYCLE";
+  forged.proposed_next_cycle = true;
+  const { cycle_hash: _drop, ...body } = forged;
+  forged.cycle_hash = sha256(stableStringify(body)); // recompute so the hash backstop passes
+  const v = verifySelfLoopOodaCycle(forged);
+  assert.equal(v.valid, false);
+  assert.ok(v.blocked_by.includes("recommendation_mismatch"), JSON.stringify(v.blocked_by));
+  assert.ok(!v.blocked_by.includes("cycle_hash_mismatch"), "hash backstop bypassed; re-derivation must catch it");
+});
+
+test("14 · the anti-overclaim attestation is non-gameable: inverting what_this_does_not_prove (cycle_hash recomputed) is rejected", () => {
+  const c = buildSelfLoopOodaCycle({ steps: steps() });
+  const forged = JSON.parse(JSON.stringify(c));
+  forged.what_this_does_not_prove = [
+    "This IS an autonomous loop that executes the ACT phase and mints rewards.",
+  ];
+  const { cycle_hash: _drop, ...body } = forged;
+  forged.cycle_hash = sha256(stableStringify(body)); // recompute so the hash backstop passes
+  const v = verifySelfLoopOodaCycle(forged);
+  assert.equal(v.valid, false);
+  assert.ok(v.blocked_by.includes("what_this_does_not_prove_mismatch"), JSON.stringify(v.blocked_by));
+  assert.ok(!v.blocked_by.includes("cycle_hash_mismatch"), "hash backstop bypassed; re-derivation must catch it");
+});
