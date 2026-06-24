@@ -226,6 +226,9 @@ export async function invokeDemaTalkLive({
   try {
     const response = await fetcher(url, {
       method: "POST",
+      // Fail closed on any 3xx: a compromised localhost LLM server must not be
+      // able to bounce this call off-localhost via a redirect.
+      redirect: "error",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(requestBody),
       signal: controller.signal,

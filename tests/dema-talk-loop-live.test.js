@@ -68,6 +68,19 @@ test("ollama legacy + matching consent → completed, native /api/generate shape
   assert.equal(fetchImpl.calls[0].parsed.prompt, "hello");
 });
 
+test("live fetch pins redirect:'error' — a 3xx cannot bounce the call off-localhost", async () => {
+  const fetchImpl = mockFetch(OLLAMA_BODY);
+  await invokeDemaTalkLive({
+    provider: "ollama",
+    model: "qwen2.5",
+    prompt: "hello",
+    consentPhrase: "GO: invoke local LLM via ollama at qwen2.5",
+    fetchImpl,
+  });
+  assert.equal(fetchImpl.calls.length, 1);
+  assert.equal(fetchImpl.calls[0].opts.redirect, "error");
+});
+
 test("the live gate requires the PROVIDER-QUALIFIED phrase (binds to the router)", async () => {
   const fetchImpl = mockFetch(OPENAI_BODY);
   // The provider-LESS legacy phrase must NOT unlock the provider-routed call.

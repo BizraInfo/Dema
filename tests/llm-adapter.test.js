@@ -252,6 +252,22 @@ function mockFetch(response, delayMs = 0) {
   };
 }
 
+test("invokeLocalLLM pins redirect:'error' on the fetch (no off-localhost bounce)", async () => {
+  let capturedOpts = null;
+  const capturing = async (_url, opts) => {
+    capturedOpts = opts;
+    return { ok: true, status: 200, json: async () => ({ response: "ok", done: true }) };
+  };
+  const r = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    fetchImpl: capturing,
+  });
+  assert.equal(r.invocation_status, "completed");
+  assert.equal(capturedOpts.redirect, "error");
+});
+
 test("Invoke succeeds with valid consent + valid model + mocked Ollama response", async () => {
   const mock = mockFetch({
     ok: true,
