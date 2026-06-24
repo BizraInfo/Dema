@@ -45,7 +45,65 @@ const WHAT_THIS_DOES_NOT_PROVE = Object.freeze([
   "It derives only from a verified MODEL_EVAL_BASELINE_LOCAL_ONLY report and inherits that report's LOCAL-ONLY scope; a tampered baseline is refused (input_baseline_invalid).",
   "This is the MEASURED counterpart to the DECLARED naming-heuristic model-role-router-preview; the two use different role vocabularies and must not be conflated.",
   "verify(report) alone proves INTERNAL consistency of the embedded selection_table, not its fidelity to the source baseline; pass the trusted baseline to verify for the binding check (the table is not cryptographically bound to baseline_hash).",
+  "talk_env_hint is an OPTIONAL operator hint for DEMA_TALK_PROVIDER/DEMA_TALK_MODEL — it does NOT change dema talk defaults, activate routing, or invoke any model.",
 ]);
+
+/** Maps baseline model ids (`ollama:name`, `lm_studio:path`) to dema talk provider tokens. */
+export function parseBaselineModelId(modelId) {
+  const id = text(modelId);
+  if (!id) return null;
+  const ollama = id.match(/^ollama:(.+)$/);
+  if (ollama) return Object.freeze({ provider: "ollama", model: ollama[1] });
+  const lm = id.match(/^lm_studio:(.+)$/);
+  if (lm) return Object.freeze({ provider: "lmstudio", model: lm[1] });
+  const llama = id.match(/^llamacpp:(.+)$/);
+  if (llama) return Object.freeze({ provider: "llamacpp", model: llama[1] });
+  return null;
+}
+
+/** Derives optional talk env hint from the fast_responder role (lowest-latency reachable). */
+export function deriveTalkEnvHint(assignments) {
+  const a = assignments?.fast_responder;
+  const modelId = a && typeof a.model === "string" ? a.model : null;
+  if (!modelId) {
+    return deepFreeze({
+      truth_label: "TALK_ENV_HINT_PREVIEW_ONLY",
+      source_role: "fast_responder",
+      provider: null,
+      model: null,
+      env: null,
+      consent_phrase: null,
+      reason: a?.reason ?? "no_qualifying_model",
+    });
+  }
+  const parsed = parseBaselineModelId(modelId);
+  if (!parsed) {
+    return deepFreeze({
+      truth_label: "TALK_ENV_HINT_PREVIEW_ONLY",
+      source_role: "fast_responder",
+      source_model_id: modelId,
+      provider: null,
+      model: null,
+      env: null,
+      consent_phrase: null,
+      reason: "unrecognized_model_id_prefix",
+    });
+  }
+  const consent_phrase = `GO: invoke local LLM via ${parsed.provider} at ${parsed.model}`;
+  return deepFreeze({
+    truth_label: "TALK_ENV_HINT_PREVIEW_ONLY",
+    source_role: "fast_responder",
+    source_model_id: modelId,
+    provider: parsed.provider,
+    model: parsed.model,
+    env: Object.freeze({
+      DEMA_TALK_PROVIDER: parsed.provider,
+      DEMA_TALK_MODEL: parsed.model,
+    }),
+    consent_phrase,
+    reason: a.reason ?? "fast_responder_assignment",
+  });
+}
 
 function deepFreeze(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
@@ -139,6 +197,7 @@ export function buildModelRoutingPreview({ baseline, generated_at_iso } = {}) {
   }
   const selection_table = buildSelectionTable(baseline);
   const { assignments, unassigned_roles } = deriveAssignments(selection_table);
+  const talk_env_hint = deriveTalkEnvHint(assignments);
   const body = {
     schema: MODEL_ROUTING_PREVIEW_SCHEMA,
     truth_label: MODEL_ROUTING_PREVIEW_TRUTH_LABEL,
@@ -148,6 +207,7 @@ export function buildModelRoutingPreview({ baseline, generated_at_iso } = {}) {
     assignments,
     unassigned_roles,
     selection_table,
+    talk_env_hint,
     what_this_does_not_prove: WHAT_THIS_DOES_NOT_PROVE,
     boundary: { ...CANONICAL_BOUNDARY },
   };
@@ -191,6 +251,8 @@ export function verifyModelRoutingPreview(report, { baseline } = {}) {
       if (!got || got.model !== exp.model) blocked_by.push(`assignment_relaundered:${role.id}`);
     }
     if (stableStringify(report.unassigned_roles ?? []) !== stableStringify(unassigned_roles)) blocked_by.push("unassigned_roles_mismatch");
+    const expHint = deriveTalkEnvHint(assignments);
+    if (stableStringify(report.talk_env_hint ?? null) !== stableStringify(expHint)) blocked_by.push("talk_env_hint_relaundered");
   }
 
   const { preview_hash, ...body } = report;

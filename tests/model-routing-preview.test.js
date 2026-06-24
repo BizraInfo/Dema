@@ -13,6 +13,8 @@ import { buildModelEvalBaseline } from "../packages/core/src/model-eval-baseline
 import {
   buildModelRoutingPreview,
   verifyModelRoutingPreview,
+  deriveTalkEnvHint,
+  parseBaselineModelId,
   MODEL_ROUTING_PREVIEW_SCHEMA,
   MODEL_ROUTING_PREVIEW_TRUTH_LABEL,
   MODEL_ROUTING_PREVIEW_ROLES,
@@ -123,7 +125,7 @@ test("7 · roles frozen + complete", () => {
   for (const role of r.roles) assert.ok(role in r.assignments);
 });
 
-test("9 · selection_table binding — verify(report) alone is internal-consistency; verify(report,{baseline}) is full fidelity", () => {
+test("10 · selection_table binding — verify(report) alone is internal-consistency; verify(report,{baseline}) is full fidelity", () => {
   const r = buildModelRoutingPreview({ baseline: BASELINE, generated_at_iso: AT });
   // tamper a score that changes NO assignment (dead is unreachable) → internal consistency still holds
   const forged = relaunder(r, (b) => { b.selection_table["lm_studio:dead"].latency_ms_avg = 999; return b; });
@@ -135,7 +137,33 @@ test("9 · selection_table binding — verify(report) alone is internal-consiste
   assert.ok(v.blocked_by.includes("selection_table_unbound"));
 });
 
-test("8 · purity — kernel imports no I/O, no clock/random", () => {
+test("8 · talk_env_hint from fast_responder → ollama env + consent phrase", () => {
+  const r = buildModelRoutingPreview({ baseline: BASELINE, generated_at_iso: AT });
+  const hint = r.talk_env_hint;
+  assert.equal(hint.truth_label, "TALK_ENV_HINT_PREVIEW_ONLY");
+  assert.equal(hint.source_role, "fast_responder");
+  assert.equal(hint.provider, "ollama");
+  assert.equal(hint.model, "fast");
+  assert.deepEqual(hint.env, { DEMA_TALK_PROVIDER: "ollama", DEMA_TALK_MODEL: "fast" });
+  assert.equal(hint.consent_phrase, "GO: invoke local LLM via ollama at fast");
+  assert.deepEqual(deriveTalkEnvHint(r.assignments), hint);
+  assert.deepEqual(parseBaselineModelId("lm_studio:google/gemma-4-e4b"), {
+    provider: "lmstudio",
+    model: "google/gemma-4-e4b",
+  });
+});
+
+test("8b · laundered talk_env_hint caught", () => {
+  const r = buildModelRoutingPreview({ baseline: BASELINE, generated_at_iso: AT });
+  const forged = relaunder(r, (b) => {
+    b.talk_env_hint = { ...b.talk_env_hint, model: "evil" };
+    return b;
+  });
+  assert.equal(verifyModelRoutingPreview(forged).valid, false);
+  assert.ok(verifyModelRoutingPreview(forged).blocked_by.includes("talk_env_hint_relaundered"));
+});
+
+test("9 · purity — kernel imports no I/O, no clock/random", () => {
   const src = readFileSync(new URL("../packages/core/src/model-routing-preview.js", import.meta.url), "utf8");
   assert.doesNotMatch(src, /node:(fs|net|http|https|child_process)\b/);
   assert.doesNotMatch(src, /[^A-Za-z]fetch\s*\(/);
