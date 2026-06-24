@@ -23,6 +23,31 @@ export async function cmd_models(ctx) {
   // dema models scan [--json]      → C1.5 · schema-tagged local inventory scan
   // dema models catalog ...        → provider-aware name annotate/validate
   // dema models                    → existing human-readable inventory
+  if (subcommand === "discover") {
+    // MODEL-EVAL-BASELINE-1A — read-only discovery of the local model pool.
+    // No inference, no mutation, local providers only by default.
+    const { discoverLocalModels } = await import("./eval-baseline-gatherer.js");
+    const includeExternalProviders = argv.includes("--include-external");
+    const { provider_discovery, models } = await discoverLocalModels({ includeExternalProviders });
+    const report = {
+      schema: "bizra.dema.model_discover.v0.1",
+      truth_label: "MODEL_DISCOVER_LOCAL_ONLY",
+      provider_discovery,
+      models: models.map((m) => m.key),
+      boundary: { external_provider_called: includeExternalProviders, mutation_performed: false, raw_model_output_stored: false },
+    };
+    if (wantsJson(argv)) {
+      console.log(JSON.stringify(report, null, 2));
+      process.exit(process.exitCode ?? 0);
+    }
+    console.log("Dema models discover (LOCAL ONLY · read-only · no inference)");
+    for (const [name, p] of Object.entries(provider_discovery)) {
+      console.log(`  ${name.padEnd(10)} reachable=${p.reachable} · ${p.model_count} models`);
+    }
+    for (const m of report.models) console.log(`  - ${m}`);
+    process.exit(process.exitCode ?? 0);
+  }
+
   if (subcommand === "catalog") {
     // PROVIDER-AWARE-MODEL-CATALOG-1A — annotate/validate a (provider, model)
     // pairing. No subprocess, no network, no model call. Router stays authoritative.
