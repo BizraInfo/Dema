@@ -124,6 +124,13 @@ export async function cmd_eval(ctx) {
       if (preview.unassigned_roles.length) {
         console.log(`  unassigned: ${preview.unassigned_roles.join(", ")} (no qualifying model)`);
       }
+      const hint = preview.talk_env_hint;
+      if (hint?.env) {
+        console.log(`  talk env hint (PREVIEW — does not change defaults):`);
+        console.log(`    export DEMA_TALK_PROVIDER=${hint.env.DEMA_TALK_PROVIDER}`);
+        console.log(`    export DEMA_TALK_MODEL=${hint.env.DEMA_TALK_MODEL}`);
+        console.log(`    dema talk … --consent "${hint.consent_phrase}"`);
+      }
       console.log(`  preview_hash: ${preview.preview_hash.slice(0, 16)}…  (PREVIEW · LOCAL ONLY · routes no live traffic · no MoE/council/federation/runtime)`);
     }
     process.exit(process.exitCode ?? 0);
