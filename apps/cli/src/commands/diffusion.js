@@ -89,17 +89,22 @@ export async function runDiffusionCommand(rawArgv = []) {
   const argv = normalizeArgv(rawArgv);
   const subcommand = argv[0] ?? "refine";
   if (!["refine", "verify"].includes(subcommand)) {
-    throw new Error("Unknown diffusion command. Use `dema-diffusion refine --drafts <lines> [--evidence a,b] [--json]` or `dema-diffusion verify <report.json> [--json]`.");
+    throw new Error("Unknown diffusion command. Use `dema diffusion refine --drafts <lines> [--evidence a,b] [--json]` or `dema diffusion verify <report.json> [--json]`.");
   }
 
   const wantJson = hasFlag(argv, "--json");
 
   if (subcommand === "verify") {
     const file = argv[1];
-    if (!file || !isAbsolute(file)) throw new Error("`dema-diffusion verify` requires an absolute path to a saved report JSON file.");
-    const report = JSON.parse(await readFile(resolve(file), "utf8"));
+    if (!file || !isAbsolute(file)) throw new Error("`dema diffusion verify` requires an absolute path to a saved report JSON file.");
+    let report;
+    try {
+      report = JSON.parse(await readFile(resolve(file), "utf8"));
+    } catch (e) {
+      throw new Error(`dema diffusion verify: cannot read or parse report at ${file}: ${e.message}`);
+    }
     const result = verifyDiffusionRefinement(report);
-    return wantJson ? JSON.stringify(result, null, 2) : JSON.stringify(result, null, 2);
+    return JSON.stringify(result, null, 2);
   }
 
   const drafts = await readDrafts(argv);
@@ -110,7 +115,19 @@ export async function runDiffusionCommand(rawArgv = []) {
 }
 
 export async function cmd_diffusion(ctx) {
+  const argv = normalizeArgv(ctx.argv);
   const output = await runDiffusionCommand(ctx.argv);
   console.log(output);
+  // fail-closed: `dema diffusion verify` must exit non-zero when the report is invalid
+  // (the verifier returns {valid:false} as data; the CLI must not exit 0 on it).
+  if (argv[0] === "verify") {
+    let ok = false;
+    try {
+      ok = JSON.parse(output).valid === true;
+    } catch {
+      ok = false;
+    }
+    if (!ok) process.exitCode = 1;
+  }
   process.exit(process.exitCode ?? 0);
 }

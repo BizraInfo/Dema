@@ -3,6 +3,13 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
+
+const execFileAsync = promisify(execFile);
+const demaCli = fileURLToPath(new URL("../bin/dema", import.meta.url));
+const cliEnv = { ...process.env, NODE_ENV: "test" };
 
 import { runDiffusionCommand } from "../apps/cli/src/commands/diffusion.js";
 
@@ -72,15 +79,47 @@ test("4 · malformed inputs fail closed instead of pretending to converge", asyn
   assert.equal(parsed.reason_code, "drafts_empty");
 });
 
-test("5 · package.json exposes dema-diffusion as an installable CLI surface", async () => {
+test("5 · dema diffusion is a space-subcommand on the single dema binary (no second binary) and runs end-to-end", async () => {
   const pkg = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
   assert.equal(pkg.bin.dema, "bin/dema");
-  assert.equal(pkg.bin["dema-diffusion"], "bin/dema-diffusion");
+  assert.equal(pkg.bin["dema-diffusion"], undefined, "ADR-012: no second binary — diffusion is a `dema diffusion` subcommand");
+  // end-to-end through the real dispatcher
+  const { stdout } = await execFileAsync(
+    "node",
+    [demaCli, "diffusion", "refine", "--drafts", "Maybe the ultimate fix\nThe fix is an ESM readFileSync import", "--evidence", "docs/ARCHITECTURE.md", "--json"],
+    { env: cliEnv },
+  );
+  const report = JSON.parse(stdout);
+  assert.equal(report.schema, "bizra.dema.diffusion_reasoner.v0.1");
+  assert.equal(report.convergence_status, "CONVERGED");
 });
 
-test("6 · executable entrypoint stays a thin wrapper around the bounded command", async () => {
-  const src = await readFile(new URL("../bin/dema-diffusion", import.meta.url), "utf8");
-  assert.match(src, /runDiffusionCommand/);
-  assert.doesNotMatch(src, /fetch\s*\(/);
-  assert.doesNotMatch(src, /node:(fs|net|http|https|child_process|worker_threads)\b/);
+test("6 · dema diffusion verify fails closed on a non-absolute path (via the dispatcher)", async () => {
+  let code = 0;
+  let combined = "";
+  try {
+    await execFileAsync("node", [demaCli, "diffusion", "verify", "relative/report.json"], { env: cliEnv });
+  } catch (e) {
+    code = e.code ?? 1;
+    combined = `${e.stderr ?? ""}${e.stdout ?? ""}`;
+  }
+  assert.notEqual(code, 0);
+  assert.match(combined, /absolute path|Dema error/i);
+});
+
+test("7 · dema diffusion verify EXITS NON-ZERO on an invalid report (fail-closed, not just prints valid:false)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "diffusion-cli-"));
+  const file = join(dir, "invalid-report.json");
+  await writeFile(file, JSON.stringify({ schema: "not-a-diffusion-report", boundary: {} }));
+  let code = 0;
+  let stdout = "";
+  try {
+    const r = await execFileAsync("node", [demaCli, "diffusion", "verify", file], { env: cliEnv });
+    stdout = r.stdout;
+  } catch (e) {
+    code = e.code ?? 1;
+    stdout = `${e.stdout ?? ""}`;
+  }
+  assert.notEqual(code, 0, "invalid report must exit non-zero");
+  assert.match(stdout, /"valid": false/);
 });

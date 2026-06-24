@@ -1,28 +1,28 @@
 # Diffusion CLI Surface v0.1
 
-- **Command:** `dema-diffusion`
+- **Command:** `dema diffusion`
 - **Kernel:** `packages/core/src/diffusion-reasoner.js`
 - **Command module:** `apps/cli/src/commands/diffusion.js`
 - **Status:** bounded CLI surface over `DIFFUSION-REASONER-KERNEL-1A`.
 
 ## What this adds
 
-`dema-diffusion` exposes the live diffusion reasoner kernel as a replayable local command:
+`dema diffusion` exposes the live diffusion reasoner kernel as a replayable local command:
 
 ```bash
-dema-diffusion refine --drafts "Maybe this is the ultimate claim\nThis claim is supported by evidence" --evidence docs/02-architecture/DIFFUSION_REASONER_v0_1.md
+dema diffusion refine --drafts "Maybe this is the ultimate claim\nThis claim is supported by evidence" --evidence docs/02-architecture/DIFFUSION_REASONER_v0_1.md
 ```
 
 JSON mode:
 
 ```bash
-dema-diffusion refine --json --drafts "Maybe...\nEvidence-bound final claim" --evidence evidence-a,evidence-b
+dema diffusion refine --json --drafts "Maybe...\nEvidence-bound final claim" --evidence evidence-a,evidence-b
 ```
 
 Verification mode:
 
 ```bash
-dema-diffusion verify /absolute/path/to/report.json --json
+dema diffusion verify /absolute/path/to/report.json --json
 ```
 
 ## Honest boundary
@@ -46,6 +46,6 @@ Evidence anchors are supplied with:
 
 The CLI never verifies that the evidence anchors are true. The kernel binds the report to caller-supplied anchors and re-derives every load-bearing field during verification.
 
-## Why this is separate from the main dispatcher in this slice
+## How it is wired (ADR-012 space-subcommand, single binary)
 
-This slice exposes an installable binary (`dema-diffusion`) rather than editing the large `dema` dispatcher. That keeps the risk small and avoids weakening or route-around editing of existing command infrastructure. A future follow-up may add `dema diffusion ...` directly to `apps/cli/src/index.js` after local full-gate validation.
+`dema diffusion refine|verify` is wired into the **single** `dema` dispatcher (`apps/cli/src/index.js`) as a space-subcommand — `cmd_diffusion` is imported, registered in `COMMAND_TABLE` and the dispatch map, and documented in `docs/ARCHITECTURE.md`. There is **no** second binary: the draft's initial `bin/dema-diffusion` + `package.json` bin entry were dropped in favour of the conventional `dema <token>` surface, validated by the full local gate (`npm test` + `npm run check`).
