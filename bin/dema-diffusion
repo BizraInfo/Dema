@@ -1,0 +1,11 @@
+#!/usr/bin/env node
+import { runDiffusionCommand } from "../apps/cli/src/commands/diffusion.js";
+
+runDiffusionCommand(process.argv.slice(2))
+  .then((output) => {
+    process.stdout.write(`${output}\n`);
+  })
+  .catch((error) => {
+    process.stderr.write(`Dema diffusion error: ${error?.message ?? error}\n`);
+    process.exitCode = 1;
+  });
