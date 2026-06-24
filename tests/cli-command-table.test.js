@@ -87,6 +87,7 @@ const COMMAND_SURFACE = [
   "report",
   "network",
   "amana",
+  "diffusion",
   "mcp",
   "roadmap",
   "eval",

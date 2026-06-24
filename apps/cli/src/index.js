@@ -62,6 +62,7 @@ import { cmd_models } from "./commands/models.js";
 import { cmd_report } from "./commands/report.js";
 import { cmd_network } from "./commands/network.js";
 import { cmd_amana } from "./commands/amana.js";
+import { cmd_diffusion } from "./commands/diffusion.js";
 import { cmd_mcp } from "./commands/mcp.js";
 import { cmd_datalake } from "./commands/datalake.js";
 import { cmd_roadmap } from "./commands/roadmap.js";
@@ -437,6 +438,9 @@ Local evidence:
                        Preview partition/rejoin refusal matrix; no sockets or mint
   dema amana contracts preview [--json]
                         Preview Amana contract primitives; imports no external code
+  dema diffusion refine <--drafts lines | --drafts-file path> [--evidence a,b] [--json]
+  dema diffusion verify <abs-report.json> [--json]
+                        Deterministic diffusion-reasoner denoising-convergence; no model/network/generation
   dema mcp blueprint [--json]
                        Preview MCP integration contract; does not call MCP tools
   dema roadmap preview [--json]
@@ -645,6 +649,7 @@ const REGISTERED_COMMANDS_LIST = [
     description: "preview network blueprint or refusal matrix",
   },
   { command: "amana", description: "preview Amana contract primitives" },
+  { command: "diffusion", description: "deterministic diffusion-reasoner denoising-convergence (refine|verify)" },
   { command: "mcp", description: "preview MCP integration contract" },
   { command: "roadmap", description: "preview optimization roadmap" },
   {
@@ -1061,6 +1066,7 @@ const COMMAND_TABLE = {
   report: cmd_report,
   network: cmd_network,
   amana: cmd_amana,
+  diffusion: cmd_diffusion,
   mcp: cmd_mcp,
   roadmap: cmd_roadmap,
   eval: cmd_eval,
