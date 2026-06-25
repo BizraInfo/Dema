@@ -130,12 +130,41 @@ function deriveActivationGapMap({ sovereign, localModels, identityStatus }) {
   return Object.freeze(gaps.map((g) => Object.freeze(g)));
 }
 
-function deriveNextSafeAction({ sovereign, gapCount }) {
-  if (sovereign.live === true && sovereign.ready === true && gapCount === 0) {
-    return "Sovereign live and ready; observation only — no action needed.";
-  }
+// Cognition liveness — distinguishes "sovereign up" from "Node0 is actually
+// thinking" (a model loaded in VRAM and/or the seed engine active). Pure: derives
+// only from caller-gathered observations. This is the signal whose absence let
+// cognition sit dormant unnoticed for days behind a healthy-looking API.
+function deriveCognitionStatus(cognition = {}) {
+  const c = cognition && typeof cognition === "object" ? cognition : {};
+  const loaded =
+    typeof c.models_loaded_in_vram === "number" ? c.models_loaded_in_vram : null;
+  const seed =
+    typeof c.seed_engine_active === "boolean" ? c.seed_engine_active : null;
+  const loaded_model_ids = Array.isArray(c.loaded_model_ids)
+    ? c.loaded_model_ids.filter((x) => typeof x === "string")
+    : [];
+  let verdict;
+  if (loaded === null && seed === null) verdict = "UNKNOWN";
+  else if ((loaded ?? 0) >= 1 || seed === true) verdict = "LIVE_THINKING";
+  else verdict = "DORMANT_LISTENING";
+  return Object.freeze({
+    probed: c.probed === true,
+    verdict,
+    models_loaded_in_vram: loaded,
+    seed_engine_active: seed,
+    loaded_model_ids: Object.freeze(loaded_model_ids),
+  });
+}
+
+function deriveNextSafeAction({ sovereign, cognition, gapCount }) {
   if (sovereign.live !== true) {
     return `Sovereign not confirmed live at ${sovereign.base_url || "the configured URL"}; start it via its governed entrypoint. Dema will not start it.`;
+  }
+  if (cognition && cognition.verdict === "DORMANT_LISTENING") {
+    return "Sovereign live but cognition DORMANT (no model in VRAM, seed engine inactive) — wake it with a consent-gated local model call, e.g. `dema talk --consent`. Observation only.";
+  }
+  if (sovereign.ready === true && gapCount === 0) {
+    return "Sovereign live and ready; observation only — no action needed.";
   }
   return "Observation surfaced gaps above; each carries a read-only suggestion. No action is taken by this command.";
 }
@@ -146,12 +175,17 @@ export function buildNode0ActivationObserve(observations = {}) {
   const local_model_status = normalizeLocalModels(observations.local_models);
   const canonical_roots = normalizeRoots(observations.canonical_roots);
   const identity_status = deriveIdentityStatus(observations.identity);
+  const cognition_status = deriveCognitionStatus(observations.cognition);
   const activation_gap_map = deriveActivationGapMap({
     sovereign: sovereign_runtime_status,
     localModels: local_model_status,
     identityStatus: identity_status,
   });
-  const next_safe_action = deriveNextSafeAction({ sovereign: sovereign_runtime_status, gapCount: activation_gap_map.length });
+  const next_safe_action = deriveNextSafeAction({
+    sovereign: sovereign_runtime_status,
+    cognition: cognition_status,
+    gapCount: activation_gap_map.length,
+  });
 
   const body = {
     schema: NODE0_ACTIVATION_OBSERVE_SCHEMA,
@@ -160,6 +194,7 @@ export function buildNode0ActivationObserve(observations = {}) {
     dema_repo_status,
     sovereign_runtime_status,
     local_model_status,
+    cognition_status,
     canonical_roots,
     identity_status,
     activation_gap_map,

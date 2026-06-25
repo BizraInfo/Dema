@@ -51,6 +51,28 @@ test("gatherer: sovereign up + models reachable → live true, ids listed, GET-o
   assert.equal(verifyNode0ActivationObserve(report).valid, true);
 });
 
+test("gatherer: cognition probe — seed_engine.active from ready + models in VRAM via /api/ps", async () => {
+  const routes = {
+    "http://127.0.0.1:8000/v1/health/live": { status: "alive" },
+    "http://127.0.0.1:8000/v1/health/ready": { status: "ready", seed_engine: { active: false } },
+    "http://127.0.0.1:1234/v1/models": { data: [] },
+    "http://127.0.0.1:11434/api/tags": { models: [{ name: "whiterabbitneo-v3:7b-q4_K_M" }] },
+    "http://127.0.0.1:11434/api/ps": { models: [{ name: "whiterabbitneo-v3:7b-q4_K_M" }] },
+  };
+  const obs = await gatherNode0ActivationObservations({
+    fetchImpl: fakeFetch(routes),
+    fsImpl: { existsSync: () => false },
+    env,
+    homedir: "/tmp/observe-x",
+  });
+  assert.equal(obs.cognition.probed, true);
+  assert.equal(obs.cognition.seed_engine_active, false);
+  assert.equal(obs.cognition.models_loaded_in_vram, 1);
+  assert.deepEqual(obs.cognition.loaded_model_ids, ["whiterabbitneo-v3:7b-q4_K_M"]);
+  // kernel verdict reflects model-loaded even with seed inactive
+  assert.equal(buildNode0ActivationObserve(obs).cognition_status.verdict, "LIVE_THINKING");
+});
+
 test("gatherer: sovereign unreachable → live null, error_class provider_unreachable", async () => {
   const routes = {
     "http://127.0.0.1:8000/v1/health/live": "throw",
