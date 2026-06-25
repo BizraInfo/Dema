@@ -13,6 +13,22 @@ import {
   buildBlock0SealCeremonyDryRun,
   formatBlock0SealCeremonyDryRun,
 } from "../../../../packages/genesis/src/block0-seal-ceremony-dry-run.js";
+import { buildLocalAssetInventory } from "../../../../packages/core/src/local-asset-awareness.js";
+import { buildHomebaseAssetAwareness } from "../../../../packages/core/src/homebase-asset-awareness.js";
+import {
+  buildNode0HistoricalContributionVerification,
+  formatNode0HistoricalContributionVerification,
+} from "../../../../packages/core/src/node0-historical-contribution-verification.js";
+import {
+  gatherCanonWitnessMarkers,
+  gatherGitTimeSpanEvidence,
+} from "./node0-historical-gatherer.js";
+import { gatherNode0HardwareObservations } from "./hardware-profile-gatherer.js";
+
+function argValue(argv, name) {
+  const index = argv.indexOf(name);
+  return index >= 0 ? argv[index + 1] : undefined;
+}
 
 function resolveDemaHome() {
   return process.env.DEMA_HOME || join(homedir(), ".dema");
@@ -65,9 +81,36 @@ export async function cmd_genesis(ctx) {
     );
     process.exit(process.exitCode ?? 0);
   }
+  if (genesisSub === "verify-node0") {
+    const root = argValue(argv, "--root") || process.cwd();
+    const lookbackYears = Number(argValue(argv, "--years") ?? "3");
+    const inventory = await buildLocalAssetInventory({ root });
+    const awareness = buildHomebaseAssetAwareness({ inventory });
+    const git_evidence = await gatherGitTimeSpanEvidence({
+      root,
+      lookback_years: Number.isFinite(lookbackYears) ? lookbackYears : 3,
+    });
+    const canon_witnesses = gatherCanonWitnessMarkers({ root });
+    const hardware_observation = await gatherNode0HardwareObservations();
+    const report = buildNode0HistoricalContributionVerification({
+      awareness,
+      git_evidence,
+      canon_witnesses,
+      hardware_observation,
+      lookback_years: Number.isFinite(lookbackYears) ? lookbackYears : 3,
+    });
+    console.log(
+      wantJsonG
+        ? JSON.stringify(report, null, 2)
+        : formatNode0HistoricalContributionVerification(report),
+    );
+    process.exitCode = report.valid ? 0 : 1;
+    process.exit(process.exitCode ?? 0);
+  }
   console.error(
     "Usage: dema genesis composition blueprint [--json]\n" +
-      "       dema genesis seal preview [--json]",
+      "       dema genesis seal preview [--json]\n" +
+      "       dema genesis verify-node0 --root <path> [--years 3] [--json]",
   );
   process.exitCode = 1;
   process.exit(process.exitCode ?? 0);
