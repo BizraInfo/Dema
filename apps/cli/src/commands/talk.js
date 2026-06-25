@@ -16,6 +16,8 @@ import {
   composeTalkPromptWithFirstLesson,
 } from "../../../../packages/core/src/dema-first-lesson-canon.js";
 import { readFirstLessonMarkdown } from "./first-lesson-gatherer.js";
+import { collectLocalLlmFleetReadiness } from "./fleet-readiness-gatherer.js";
+import { buildDemaTalkProfilePreview } from "../../../../packages/core/src/dema-talk-profile.js";
 import {
   wantsJson,
   humanHintLine,
@@ -47,7 +49,13 @@ async function writeTalkRuntimeReceipt(result, consentPhrase) {
 
 // Flags that consume the following token as their value; everything else after
 // the command name (argv[0]) is treated as the positional prompt.
-const VALUE_FLAGS = new Set(["--model", "--prompt", "--provider", "--consent"]);
+const VALUE_FLAGS = new Set([
+  "--model",
+  "--prompt",
+  "--provider",
+  "--consent",
+  "--profile",
+]);
 
 function resolveTalkPrompt({ argv, prompt }) {
   if (!argv.includes("--with-first-lesson")) {
@@ -94,11 +102,9 @@ function firstPositional(argv) {
 
 export async function cmd_talk(ctx) {
   const { argv } = ctx;
-  // Flags win; then the operator's env defaults (so a fleet that has gemma4 but
-  // not qwen2.5 can be the default without hardcoding); then the kernel default.
-  // Env is read HERE in the CLI, never in the pure kernels.
-  const model = argValue(argv, "--model") ?? process.env.DEMA_TALK_MODEL;
-  const provider = argValue(argv, "--provider") ?? process.env.DEMA_TALK_PROVIDER;
+  const profileName = argValue(argv, "--profile");
+  const explicitModel = argValue(argv, "--model");
+  const explicitProvider = argValue(argv, "--provider");
   const prompt = argValue(argv, "--prompt") ?? firstPositional(argv);
   const consent = argValue(argv, "--consent");
 
@@ -113,6 +119,40 @@ export async function cmd_talk(ctx) {
     return;
   }
   const effectivePrompt = resolved.prompt;
+
+  let profilePreview = null;
+  if (typeof profileName === "string" && profileName.length > 0) {
+    const readiness = await collectLocalLlmFleetReadiness({ env: process.env });
+    profilePreview = buildDemaTalkProfilePreview({
+      profile: profileName,
+      readiness,
+      prompt: effectivePrompt,
+      model: explicitModel,
+      provider: explicitProvider,
+    });
+    if (!profilePreview.ok) {
+      if (wantsJson(argv)) {
+        console.log(JSON.stringify(profilePreview, null, 2));
+      } else if (profilePreview.error?.startsWith("unknown_talk_profile:")) {
+        console.error(
+          `Unknown talk profile: ${profileName}. Known profiles: canon, fast`,
+        );
+      } else {
+        console.error(profilePreview.error);
+      }
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const model =
+    explicitModel ??
+    profilePreview?.resolved_model ??
+    process.env.DEMA_TALK_MODEL;
+  const provider =
+    explicitProvider ??
+    profilePreview?.resolved_provider ??
+    process.env.DEMA_TALK_PROVIDER;
 
   // LIVE PATH (DEMA-TALK-LOOP-1B) — only when --consent is supplied. The call is
   // localhost-bound, whitelisted, exact-consent-gated, and SUGGESTION-only. No
@@ -153,10 +193,33 @@ export async function cmd_talk(ctx) {
     process.exit(result.invocation_status === "completed" ? 0 : 1);
   }
 
-  const preview = buildDemaTalkPreview({ prompt: effectivePrompt, model, provider });
+  const preview = profilePreview ?? buildDemaTalkPreview({ prompt: effectivePrompt, model, provider });
 
   if (wantsJson(argv)) {
     console.log(JSON.stringify(preview, null, 2));
+    process.exit(process.exitCode ?? 0);
+  }
+
+  if (profilePreview) {
+    const statusLine =
+      profilePreview.live_talk_status === "ready"
+        ? "ready"
+        : `blocked · ${profilePreview.blocking_reason ?? "unknown"}`;
+    const lines = [
+      `DEMA · TALK PREVIEW (profile: ${profilePreview.profile} · no model called)`,
+      `  Profile: ${profilePreview.profile} · selection: ${profilePreview.selection_reason}`,
+      `  Route status: ${statusLine}`,
+      `  Provider: ${preview.provider} · Model: ${preview.model} @ ${preview.target_endpoint}`,
+      `  On the allow-list: ${preview.model_allowed_in_whitelist} · prompt length: ${preview.prompt_length_chars}${preview.prompt_too_long ? " (TOO LONG — would be refused)" : ""}`,
+      ...(profilePreview.operator_note ? [`  Note: ${profilePreview.operator_note}`] : []),
+      "",
+      ...preview.explanation_lines.map((l) => `  ${l}`),
+      "",
+      "  To run this live (suggestion only), re-run with the exact consent phrase:",
+      `    dema talk … --profile ${profilePreview.profile} --consent "${preview.consent_required}"`,
+      humanHintLine("talk"),
+    ];
+    console.log(lines.join("\n"));
     process.exit(process.exitCode ?? 0);
   }
 
