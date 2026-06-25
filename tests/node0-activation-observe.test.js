@@ -74,6 +74,30 @@ test("4 · identity missing or null → UNKNOWN, never throws", () => {
   assert.equal(buildNode0ActivationObserve({ ...UP_OBS, identity: { key_file_present: null } }).identity_status, "UNKNOWN");
 });
 
+test("cognition: model loaded in VRAM → LIVE_THINKING + verify valid", () => {
+  const r = buildNode0ActivationObserve({ ...UP_OBS, cognition: { probed: true, seed_engine_active: false, models_loaded_in_vram: 1, loaded_model_ids: ["whiterabbitneo-v3:7b-q4_K_M"] } });
+  assert.equal(r.cognition_status.verdict, "LIVE_THINKING");
+  assert.deepEqual(r.cognition_status.loaded_model_ids, ["whiterabbitneo-v3:7b-q4_K_M"]);
+  assert.equal(verifyNode0ActivationObserve(r).valid, true);
+});
+
+test("cognition: sovereign up but 0 in VRAM + seed inactive → DORMANT_LISTENING + next_safe_action says wake it", () => {
+  const r = buildNode0ActivationObserve({ ...UP_OBS, cognition: { probed: true, seed_engine_active: false, models_loaded_in_vram: 0, loaded_model_ids: [] } });
+  assert.equal(r.cognition_status.verdict, "DORMANT_LISTENING");
+  assert.match(r.next_safe_action, /cognition DORMANT|wake it/i);
+});
+
+test("cognition: seed_engine active → LIVE_THINKING even with 0 in VRAM", () => {
+  const r = buildNode0ActivationObserve({ ...UP_OBS, cognition: { probed: true, seed_engine_active: true, models_loaded_in_vram: 0, loaded_model_ids: [] } });
+  assert.equal(r.cognition_status.verdict, "LIVE_THINKING");
+});
+
+test("cognition: nothing observed → UNKNOWN, never throws, boundary still all-false", () => {
+  const r = buildNode0ActivationObserve({ ...UP_OBS, cognition: undefined });
+  assert.equal(r.cognition_status.verdict, "UNKNOWN");
+  assert.ok(Object.values(r.boundary).every((v) => v === false));
+});
+
 test("5 · kernel NEVER emits VERIFIED even with key present (presence != content-validation)", () => {
   assert.notEqual(buildNode0ActivationObserve(UP_OBS).identity_status, "VERIFIED");
 });

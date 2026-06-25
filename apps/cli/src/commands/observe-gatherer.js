@@ -97,6 +97,26 @@ export async function gatherNode0ActivationObservations({
     model_ids: ol.ok && Array.isArray(ol.json?.models) ? ol.json.models.map((m) => m?.name).filter(Boolean) : [],
   };
 
+  // Cognition liveness — is Node0 actually THINKING, or just listening? This is
+  // the signal that distinguishes "sovereign up" from "a model is loaded and the
+  // seed engine is active". seed_engine.active comes from the already-fetched
+  // /v1/health/ready body; models-in-VRAM from ollama /api/ps (distinct from
+  // /api/tags, which lists models on DISK, not loaded).
+  const olPs = await getJson(fetcher, `${olBase}/api/ps`, timeoutMs);
+  const loaded_model_ids =
+    olPs.ok && Array.isArray(olPs.json?.models)
+      ? olPs.json.models.map((m) => m?.name).filter(Boolean)
+      : [];
+  const cognition = {
+    probed: true,
+    seed_engine_active:
+      typeof ready.json?.seed_engine?.active === "boolean"
+        ? ready.json.seed_engine.active
+        : null,
+    models_loaded_in_vram: olPs.ok ? loaded_model_ids.length : ol.ok ? 0 : null,
+    loaded_model_ids,
+  };
+
   // Canonical roots — existence only, no recursion (recursion would be a home scan).
   const dataLake = env.BIZRA_DATA_LAKE || "/data/bizra/repos/bizra-data-lake";
   const canonical_roots = [
@@ -113,6 +133,7 @@ export async function gatherNode0ActivationObservations({
     dema_repo: { git_present: exists(join(process.cwd(), ".git")), package_name: "dema", command_surface_count: null },
     sovereign,
     local_models: { lm_studio, ollama },
+    cognition,
     canonical_roots,
     identity,
   };

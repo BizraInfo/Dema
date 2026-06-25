@@ -65,6 +65,13 @@ export async function cmd_node0(ctx) {
     console.log(
       `  models:    lm_studio ${lm.reachable ? lm.model_ids.length : "—"} · ollama ${ol.reachable ? ol.model_ids.length : "—"}`,
     );
+    const cog = report.cognition_status;
+    if (cog) {
+      const loaded = cog.loaded_model_ids?.length ? ` (${cog.loaded_model_ids.join(", ")})` : "";
+      console.log(
+        `  cognition: ${cog.verdict}${loaded} · seed_engine=${cog.seed_engine_active} · in_vram=${cog.models_loaded_in_vram}`,
+      );
+    }
     console.log(`  identity:  ${report.identity_status}`);
     console.log(`  roots:     ${report.canonical_roots.filter((r) => r.exists).length}/${report.canonical_roots.length} present`);
     console.log(`  gaps:      ${report.activation_gap_map.length}`);
