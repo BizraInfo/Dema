@@ -387,7 +387,7 @@ export function buildHomebaseShareability({ awareness } = {}) {
     shareability_levels_reference: SHAREABILITY_LEVELS,
     consent_levels_reference: CONSENT_LEVELS,
     next_recommended_step:
-      "Proceed to URP-CONTRIBUTION-BENEFIT-PREVIEW-1A only after consent boundaries are accepted",
+      "Run dema contribute preview after shareability boundaries are accepted",
     what_this_does_not_prove: WHAT_THIS_DOES_NOT_PROVE,
     boundary: buildBoundary(awareness.boundary),
   });
