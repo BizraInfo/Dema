@@ -306,6 +306,11 @@ Local asset awareness:
                     and shareability into eligibility bands and benefit classes.
                     No token mint, no wallet, no URP submission, no upload, no
                     valuation guarantee.
+  dema contribute receipt-plan [--json] [--root <path>] [--years 3]
+                    POI-RECEIPT-ELIGIBILITY-1A pre-token proof-plan preview.
+                    Composes benefit preview into receipt/evidence/witness/SAT
+                    requirements. No PoI mint, no URP submission, no upload, no
+                    wallet, no SAT settlement.
 
 Dema Realm (UX-1A, UX-1B):
   dema realm [--json] [--no-color] [--debug]
@@ -650,7 +655,7 @@ const REGISTERED_COMMANDS_LIST = [
   {
     command: "contribute",
     description:
-      "pre-token URP contribution benefit preview (metadata-first, no submission)",
+      "pre-token URP contribution benefit preview and PoI receipt eligibility plan (metadata-first, no submission)",
   },
   { command: "dashboard", description: "open homebase dashboard in browser" },
   {
