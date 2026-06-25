@@ -75,6 +75,7 @@ import { cmd_agent_loop } from "./commands/agent-loop.js";
 import { cmd_task } from "./commands/task.js";
 import { cmd_sovereign } from "./commands/sovereign.js";
 import { cmd_node0 } from "./commands/node0.js";
+import { cmd_canon } from "./commands/canon.js";
 import { cmd_hardware } from "./commands/hardware.js";
 import { cmd_adk } from "./commands/adk.js";
 import { cmd_homebase, runHomebaseInvocation } from "./commands/homebase.js";
@@ -546,6 +547,10 @@ const REGISTERED_COMMANDS_LIST = [
   {
     command: "talk",
     description: "preview a local-model talk request: model route + exact consent phrase (no call)",
+  },
+  {
+    command: "canon",
+    description: "local canon retrieval surfaces (subcommand: first-lesson)",
   },
   { command: "node0", description: "Node0 Mumu closed-loop read-only face" },
   { command: "profiles", description: "profile foundation preview" },
@@ -1040,6 +1045,7 @@ const COMMAND_TABLE = {
   scan: cmd_scan,
   mirror: cmd_mirror,
   talk: cmd_talk,
+  canon: cmd_canon,
   profiles: cmd_profiles,
   "consent-card": cmd_consent_card,
   "mission-loop": cmd_mission_loop,

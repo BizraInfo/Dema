@@ -46,6 +46,7 @@ const COMMAND_SURFACE = [
   "scan",
   "mirror",
   "talk",
+  "canon",
   "profiles",
   "consent-card",
   "mission-loop",

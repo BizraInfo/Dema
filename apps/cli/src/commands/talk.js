@@ -12,6 +12,11 @@ import { buildDemaTalkPreview } from "../../../../packages/core/src/dema-talk-lo
 import { invokeDemaTalkLive } from "../../../../packages/core/src/dema-talk-loop-live.js";
 import { buildTalkRuntimeReceipt } from "../../../../packages/core/src/talk-runtime-receipt.js";
 import {
+  buildDemaFirstLessonCanon,
+  composeTalkPromptWithFirstLesson,
+} from "../../../../packages/core/src/dema-first-lesson-canon.js";
+import { readFirstLessonMarkdown } from "./first-lesson-gatherer.js";
+import {
   wantsJson,
   humanHintLine,
 } from "../../../../packages/core/src/output-mode.js";
@@ -44,6 +49,32 @@ async function writeTalkRuntimeReceipt(result, consentPhrase) {
 // the command name (argv[0]) is treated as the positional prompt.
 const VALUE_FLAGS = new Set(["--model", "--prompt", "--provider", "--consent"]);
 
+function resolveTalkPrompt({ argv, prompt }) {
+  if (!argv.includes("--with-first-lesson")) {
+    return { ok: true, prompt };
+  }
+  const read = readFirstLessonMarkdown({});
+  if (!read.ok) {
+    return {
+      ok: false,
+      error: `first_lesson_unreadable · ${read.source_path} · ${read.error}`,
+    };
+  }
+  const canon = buildDemaFirstLessonCanon({
+    lesson_markdown: read.lesson_markdown,
+    source_path: read.source_path,
+    read_at_iso: new Date().toISOString(),
+  });
+  if (canon.rejected) {
+    return { ok: false, error: `first_lesson_rejected · ${canon.reason_code}` };
+  }
+  return {
+    ok: true,
+    prompt: composeTalkPromptWithFirstLesson(prompt, canon.retrieval_prompt),
+    first_lesson_hash: canon.content_hash,
+  };
+}
+
 function argValue(argv, name) {
   const i = argv.indexOf(name);
   return i >= 0 ? argv[i + 1] : undefined;
@@ -71,13 +102,25 @@ export async function cmd_talk(ctx) {
   const prompt = argValue(argv, "--prompt") ?? firstPositional(argv);
   const consent = argValue(argv, "--consent");
 
+  const resolved = resolveTalkPrompt({ argv, prompt });
+  if (!resolved.ok) {
+    if (wantsJson(argv)) {
+      console.log(JSON.stringify({ error: resolved.error }, null, 2));
+    } else {
+      console.error(resolved.error);
+    }
+    process.exitCode = 1;
+    return;
+  }
+  const effectivePrompt = resolved.prompt;
+
   // LIVE PATH (DEMA-TALK-LOOP-1B) — only when --consent is supplied. The call is
   // localhost-bound, whitelisted, exact-consent-gated, and SUGGESTION-only. No
   // --consent → preview ceremony (no call), unchanged below. The model default
   // matches the preview path so the required consent phrase lines up.
   if (typeof consent === "string") {
     const liveModel = model && model.length > 0 ? model : "qwen2.5";
-    const result = await invokeDemaTalkLive({ provider, model: liveModel, prompt, consentPhrase: consent });
+    const result = await invokeDemaTalkLive({ provider, model: liveModel, prompt: effectivePrompt, consentPhrase: consent });
     let receiptPath = null;
     if (argv.includes("--receipt")) {
       receiptPath = await writeTalkRuntimeReceipt(result, consent);
@@ -89,6 +132,9 @@ export async function cmd_talk(ctx) {
     const lines = [`DEMA · TALK LIVE — ${result.invocation_status.toUpperCase()} (suggestion only)`];
     if (result.invocation_status === "completed") {
       lines.push(`  Provider: ${result.provider} · model: ${result.model} @ ${result.target_endpoint}`);
+      if (resolved.first_lesson_hash) {
+        lines.push(`  First-lesson canon injected (retrieval only): ${resolved.first_lesson_hash.slice(0, 16)}…`);
+      }
       lines.push("");
       lines.push("  Dema (a SUGGESTION — not an authority, nothing was executed):");
       lines.push(`    ${result.response_text_preview}`);
@@ -107,7 +153,7 @@ export async function cmd_talk(ctx) {
     process.exit(result.invocation_status === "completed" ? 0 : 1);
   }
 
-  const preview = buildDemaTalkPreview({ prompt, model, provider });
+  const preview = buildDemaTalkPreview({ prompt: effectivePrompt, model, provider });
 
   if (wantsJson(argv)) {
     console.log(JSON.stringify(preview, null, 2));
