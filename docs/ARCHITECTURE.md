@@ -185,6 +185,7 @@ Dema includes professional management, DevOps, and QA blueprint surfaces for pla
 | ------------------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `dema genesis composition blueprint` | `packages/core/src/genesis-composition-blueprint-preview.js` | Read-only schema-tagged preview. No libostree, daemon, deploy/rollback surface, federation, network, receipt mint, chain advance, or CI workflow mutation. |
 | `dema genesis seal preview` | `packages/genesis/src/block0-seal-ceremony-dry-run.js` | Dry-run preview of the Block0 signing ceremony from read-only readiness + provenance preflight. No private key read, no signature produced, no Block0 seal, no identity binding, federation, receipt mint, or chain advance. |
+| `dema genesis verify-node0` | `packages/core/src/node0-historical-contribution-verification.js` + `node0-historical-gatherer.js` + `homebase-asset-awareness.js` | NODE0-HISTORICAL-CONTRIBUTION-VERIFICATION-1A pre-token historical work verification (`bizra.dema.node0_historical_contribution_verification.v0.1`, `NODE0_HISTORICAL_CONTRIBUTION_VERIFICATION_PRE_TOKEN`); metadata-first asset classes, git time-span, canon witnesses, shareability/benefit/risk scores, URP benefit + 50% commons covenant previews; no content read, no token mint, no URP submission. |
 
 ## Behavioral modulation preview
 

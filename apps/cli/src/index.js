@@ -195,6 +195,11 @@ Genesis:
                     prerequisite slots (11 operator-signed, poi_rule verifiable)
                     without reading the private key, producing a signature, or
                     sealing Block0. Preview only.
+  dema genesis verify-node0 [--years 3] [--json] [--root <path>]
+                    Pre-token Node0 historical contribution verification:
+                    metadata-only asset awareness + git time-span + canon witness
+                    markers + benefit/risk/eligibility previews. No content read,
+                    no token mint, no URP submission.
 
 Delivery:
   dema delivery policy [--json]
@@ -656,7 +661,7 @@ const REGISTERED_COMMANDS_LIST = [
   {
     command: "genesis",
     description:
-      "preview Genesis/OSTree composition blueprint + Block0 seal ceremony dry-run (subcommands: composition blueprint, seal preview)",
+      "preview Genesis/OSTree composition blueprint + Block0 seal ceremony dry-run + Node0 historical contribution verification (subcommands: composition blueprint, seal preview, verify-node0)",
   },
   {
     command: "memory",
