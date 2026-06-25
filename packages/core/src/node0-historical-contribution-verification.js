@@ -402,7 +402,7 @@ export function buildNode0HistoricalContributionVerification({
     urp_commons_commitment_preview,
     shareability_hints,
     next_recommended_consent_step:
-      "Review shareability hints, then proceed to DEMA-HOMEBASE-SHAREABILITY-1A before any URP preview",
+      "Proceed to URP-CONTRIBUTION-BENEFIT-PREVIEW-1A only after shareability boundaries are accepted",
     what_this_proves: WHAT_THIS_PROVES,
     what_this_does_not_prove: WHAT_THIS_DOES_NOT_PROVE,
     boundary: buildBoundary(awareness.boundary),
