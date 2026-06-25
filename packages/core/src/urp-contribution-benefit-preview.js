@@ -447,7 +447,7 @@ export function buildUrpContributionBenefitPreview({
       "content_level_originality_review",
     ]),
     next_recommended_consent_step:
-      "No URP submission — review previews locally; future consent must be explicit typed GO",
+      "Run dema contribute receipt-plan after benefit preview boundaries are accepted",
     boundary: buildBoundary(awareness.boundary),
   });
 }
