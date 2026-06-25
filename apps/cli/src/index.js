@@ -38,6 +38,7 @@ import { cmd_witness } from "./commands/witness.js";
 import { cmd_attest } from "./commands/attest.js";
 import { cmd_verify_grounded } from "./commands/verify-grounded.js";
 import { cmd_assets } from "./commands/assets.js";
+import { cmd_contribute } from "./commands/contribute.js";
 import { cmd_status, cmd_status_json } from "./commands/status.js";
 import { cmd_profiles } from "./commands/profiles.js";
 import { cmd_consent_card } from "./commands/consent-card.js";
@@ -299,6 +300,12 @@ Local asset awareness:
                     analysis. Classifies clusters into shareable, content-consent,
                     blocked, and URP-later-preview buckets. No content reads, no
                     network, no upload, no URP submission, no token action.
+  dema contribute preview [--json] [--root <path>] [--years 3]
+                    URP-CONTRIBUTION-BENEFIT-PREVIEW-1A pre-token benefit
+                    preview. Composes asset awareness, historical verification,
+                    and shareability into eligibility bands and benefit classes.
+                    No token mint, no wallet, no URP submission, no upload, no
+                    valuation guarantee.
 
 Dema Realm (UX-1A, UX-1B):
   dema realm [--json] [--no-color] [--debug]
@@ -639,6 +646,11 @@ const REGISTERED_COMMANDS_LIST = [
     command: "assets",
     description:
       "metadata-only homebase asset awareness scan and shareability analysis",
+  },
+  {
+    command: "contribute",
+    description:
+      "pre-token URP contribution benefit preview (metadata-first, no submission)",
   },
   { command: "dashboard", description: "open homebase dashboard in browser" },
   {
@@ -1075,6 +1087,7 @@ const COMMAND_TABLE = {
   orchestrator: cmd_orchestrator,
   covenant: cmdCovenant,
   assets: cmd_assets,
+  contribute: cmd_contribute,
   "llm-router": cmd_llm_router,
   "model-broker": cmd_model_broker,
   harness: cmd_harness,
