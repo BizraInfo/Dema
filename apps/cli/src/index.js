@@ -281,7 +281,7 @@ BIZRA ADK (BIZRA-ADK-AGENT-CONTRACT-1A, define/validate/preview only):
                     harness on one contract. Read-only; no agent execution.
 
 Local asset awareness:
-  dema assets scan --root <path> [--json]
+  dema assets scan [--json] [--root <path>]
                     DEMA-HOMEBASE-ASSET-AWARENESS-1A metadata-only homebase
                     asset awareness. Scans declared root (default ~/Downloads or
                     DEMA_LOCAL_ASSET_ROOT) for metadata only — clusters, hidden-
