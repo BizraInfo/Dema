@@ -282,12 +282,13 @@ BIZRA ADK (BIZRA-ADK-AGENT-CONTRACT-1A, define/validate/preview only):
 
 Local asset awareness:
   dema assets scan --root <path> [--json]
-                    B1A metadata-only local inventory scanner. Default root is
-                    ~/Downloads unless DEMA_LOCAL_ASSET_ROOT or --root is set.
-                    Writes exactly one artifact under
-                    DEMA_HOME/realm/local-assets/inventory-v0.1.json (mode
-                    0600). No content reads, no symlink following, no network,
-                    no mutation inside scanned root.
+                    DEMA-HOMEBASE-ASSET-AWARENESS-1A metadata-only homebase
+                    asset awareness. Scans declared root (default ~/Downloads or
+                    DEMA_LOCAL_ASSET_ROOT) for metadata only — clusters, hidden-
+                    gem candidates, monetization candidates, risk flags. Also writes
+                    inventory artifact under DEMA_HOME/realm/local-assets/
+                    inventory-v0.1.json (mode 0600). No content reads, no symlink
+                    following, no network, no upload, no mutation inside scanned root.
 
 Dema Realm (UX-1A, UX-1B):
   dema realm [--json] [--no-color] [--debug]
@@ -626,7 +627,7 @@ const REGISTERED_COMMANDS_LIST = [
   },
   {
     command: "assets",
-    description: "metadata-only local asset inventory scanner",
+    description: "metadata-only homebase asset awareness scan (clusters, gems, risks)",
   },
   { command: "dashboard", description: "open homebase dashboard in browser" },
   {
