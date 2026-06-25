@@ -33,6 +33,8 @@ export const commands = [
   ["node", ["apps/cli/src/index.js", "roadmap", "preview"]],
   ["node", ["apps/cli/src/index.js", "roadmap", "preview", "--json"]],
   ["node", ["apps/cli/src/index.js", "models"]],
+  ["node", ["apps/cli/src/index.js", "models", "readiness"]],
+  ["node", ["apps/cli/src/index.js", "models", "readiness", "--json"]],
   ["node", ["apps/cli/src/index.js", "evidence", "receipt", "preview"]],
   [
     "node",

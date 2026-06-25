@@ -23,6 +23,41 @@ export async function cmd_models(ctx) {
   // dema models scan [--json]      → C1.5 · schema-tagged local inventory scan
   // dema models catalog ...        → provider-aware name annotate/validate
   // dema models                    → existing human-readable inventory
+  if (subcommand === "readiness") {
+    const { collectLocalLlmFleetReadiness } = await import(
+      "./fleet-readiness-gatherer.js"
+    );
+    const report = await collectLocalLlmFleetReadiness();
+    if (wantsJson(argv)) {
+      console.log(JSON.stringify(report, null, 2));
+      process.exit(process.exitCode ?? 0);
+    }
+    const canon = report.preferred_canon_qa?.route;
+    const fast = report.preferred_fast_reply?.route;
+    console.log(
+      [
+        "Dema models readiness (READ ONLY · localhost probe · no model invocation)",
+        `  Truth label: ${report.truth_label}`,
+        ...report.providers.map(
+          (p) =>
+            `  ${p.provider}: reachable=${p.reachable} · installed=${p.installed_model_ids.length} · loaded=${p.loaded_model_ids.length}`,
+        ),
+        `  Canon QA: ${canon?.provider ?? "-"} / ${canon?.model ?? "-"} · status=${canon?.live_talk_status ?? "-"}${canon?.blocking_reason ? ` · block=${canon.blocking_reason}` : ""}`,
+        canon?.consent_phrase ? `    consent: "${canon.consent_phrase}"` : null,
+        `  Fast reply: ${fast?.provider ?? "-"} / ${fast?.model ?? "-"} · status=${fast?.live_talk_status ?? "-"}${fast?.blocking_reason ? ` · block=${fast.blocking_reason}` : ""}`,
+        fast?.consent_phrase ? `    consent: "${fast.consent_phrase}"` : null,
+        report.blocking_for_live_talk.length
+          ? `  Blocking live talk: ${report.blocking_for_live_talk.join(" · ")}`
+          : "  Blocking live talk: (none detected for preferred routes)",
+        "  Boundary: read-only probe; no model load; no config write; no talk behavior change",
+        humanHintLine("models readiness"),
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    );
+    process.exit(process.exitCode ?? 0);
+  }
+
   if (subcommand === "discover") {
     // MODEL-EVAL-BASELINE-1A — read-only discovery of the local model pool.
     // No inference, no mutation, local providers only by default.

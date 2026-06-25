@@ -432,6 +432,8 @@ Local evidence:
                     Read-only · no model load · no prompt execution · no public network · canonical 16-key boundary
   dema models discover [--json]
                     MODEL-EVAL-BASELINE-1A · read-only local model-pool discovery (Ollama · LM Studio · llama.cpp); no inference, local providers only
+  dema models readiness [--json]
+                    LOCAL-LLM-FLEET-READINESS-1A · read-only fleet readiness (provider reachability · installed/loaded models · preferred routes · consent phrases); no model invocation
   dema report safety [--json]
                     Preview the safety report; does not certify, execute, or mint
   dema network blueprint [--json]
