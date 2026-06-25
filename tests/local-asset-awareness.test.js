@@ -317,13 +317,11 @@ describe("dema assets scan CLI", () => {
       });
       assert.equal(r.exitCode, 0, r.stderr);
       const out = JSON.parse(r.stdout);
+      assert.equal(out.schema, "bizra.dema.homebase_asset_awareness.v0.1");
+      assert.equal(out.truth_label, "DEMA_HOMEBASE_ASSET_AWARENESS_METADATA_ONLY");
+      assert.equal(out.inventory_write?.written, true);
       assert.equal(
-        out.schema,
-        "bizra.dema.local_asset_awareness_write_result.v0.1",
-      );
-      assert.equal(out.written, true);
-      assert.equal(
-        out.artifact_path,
+        out.inventory_write?.artifact_path,
         join(home, "realm", "local-assets", "inventory-v0.1.json"),
       );
     } finally {

@@ -437,7 +437,9 @@ export async function writeLocalAssetInventory(options = {}) {
     });
   }
 
-  const built = await buildLocalAssetInventory({ ...options, fs });
+  const built = options.inventoryOverride
+    ? withWriteBoundary(options.inventoryOverride)
+    : await buildLocalAssetInventory({ ...options, fs });
   if (!built.valid && options.writeFailureArtifact !== true) {
     return freezeDeep({
       schema: LOCAL_ASSET_INVENTORY_WRITE_RESULT_SCHEMA,
