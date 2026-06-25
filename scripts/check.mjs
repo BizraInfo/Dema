@@ -35,6 +35,17 @@ export const commands = [
   ["node", ["apps/cli/src/index.js", "models"]],
   ["node", ["apps/cli/src/index.js", "models", "readiness"]],
   ["node", ["apps/cli/src/index.js", "models", "readiness", "--json"]],
+  [
+    "node",
+    [
+      "apps/cli/src/index.js",
+      "talk",
+      "what is SAT?",
+      "--profile",
+      "canon",
+      "--json",
+    ],
+  ],
   ["node", ["apps/cli/src/index.js", "evidence", "receipt", "preview"]],
   [
     "node",
