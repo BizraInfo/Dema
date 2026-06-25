@@ -294,6 +294,11 @@ Local asset awareness:
                     inventory artifact under DEMA_HOME/realm/local-assets/
                     inventory-v0.1.json (mode 0600). No content reads, no symlink
                     following, no network, no upload, no mutation inside scanned root.
+  dema assets shareability [--json] [--root <path>]
+                    DEMA-HOMEBASE-SHAREABILITY-1A metadata-only shareability
+                    analysis. Classifies clusters into shareable, content-consent,
+                    blocked, and URP-later-preview buckets. No content reads, no
+                    network, no upload, no URP submission, no token action.
 
 Dema Realm (UX-1A, UX-1B):
   dema realm [--json] [--no-color] [--debug]
@@ -632,7 +637,8 @@ const REGISTERED_COMMANDS_LIST = [
   },
   {
     command: "assets",
-    description: "metadata-only homebase asset awareness scan (clusters, gems, risks)",
+    description:
+      "metadata-only homebase asset awareness scan and shareability analysis",
   },
   { command: "dashboard", description: "open homebase dashboard in browser" },
   {
