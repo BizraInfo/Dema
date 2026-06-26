@@ -315,6 +315,10 @@ Local asset awareness:
                     POI-RECEIPT-DRAFT-1A unsigned receipt draft preview.
                     Structures receipt-plan into local evidence slots. No sign,
                     no seal, no PoI mint, no URP submission, no wallet.
+  dema contribute receipt-seal-preview [--json] [--root <path>] [--years 3]
+                    POI-RECEIPT-SEAL-PREVIEW-1A seal readiness preview.
+                    Lists blockers, gates, and consent phrase for unsigned
+                    draft. No seal, no sign, no PoI mint, no URP submission.
 
 Dema Realm (UX-1A, UX-1B):
   dema realm [--json] [--no-color] [--debug]
@@ -659,7 +663,7 @@ const REGISTERED_COMMANDS_LIST = [
   {
     command: "contribute",
     description:
-      "pre-token URP contribution benefit preview, receipt plan, and unsigned receipt draft (metadata-first, no submission)",
+      "pre-token URP contribution preview, receipt plan, draft, and seal readiness (metadata-first, no submission)",
   },
   { command: "dashboard", description: "open homebase dashboard in browser" },
   {

@@ -250,7 +250,7 @@ export function buildPoiReceiptDraft({
       "urp_submission_acceptance",
     ]),
     next_recommended_consent_step:
-      "No seal — review unsigned draft locally; signing requires explicit typed GO under §1",
+      "Run dema contribute receipt-seal-preview after unsigned draft review",
     boundary: buildBoundary(receipt_plan.boundary),
   });
 }

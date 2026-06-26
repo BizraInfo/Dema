@@ -16,6 +16,10 @@ import {
   buildPoiReceiptDraft,
   renderPoiReceiptDraft,
 } from "../../../../packages/core/src/poi-receipt-draft.js";
+import {
+  buildPoiReceiptSealPreview,
+  renderPoiReceiptSealPreview,
+} from "../../../../packages/core/src/poi-receipt-seal-preview.js";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
 import {
   gatherCanonWitnessMarkers,
@@ -113,10 +117,37 @@ export async function cmd_contribute(ctx) {
     process.exit(process.exitCode ?? 0);
   }
 
+  if (sub === "receipt-seal-preview") {
+    const { shareability, historical, benefit_preview } =
+      await buildContributionStack(root, years);
+    const receipt_plan = buildPoiReceiptEligibilityPlan({
+      benefit_preview,
+      shareability,
+      historical,
+      lookback_years: years,
+    });
+    const receipt_draft = buildPoiReceiptDraft({
+      receipt_plan,
+      lookback_years: years,
+    });
+    const report = buildPoiReceiptSealPreview({
+      receipt_draft,
+      lookback_years: years,
+    });
+    console.log(
+      wantJson
+        ? JSON.stringify(report, null, 2)
+        : renderPoiReceiptSealPreview(report),
+    );
+    process.exitCode = report.valid ? 0 : 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
   console.error(
     "Usage: dema contribute preview [--json] [--root <path>] [--years 3]\n" +
       "       dema contribute receipt-plan [--json] [--root <path>] [--years 3]\n" +
-      "       dema contribute receipt-draft [--json] [--root <path>] [--years 3]",
+      "       dema contribute receipt-draft [--json] [--root <path>] [--years 3]\n" +
+      "       dema contribute receipt-seal-preview [--json] [--root <path>] [--years 3]",
   );
   process.exitCode = 1;
   process.exit(process.exitCode ?? 0);

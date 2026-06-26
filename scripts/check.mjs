@@ -51,6 +51,7 @@ export const commands = [
   ["node", ["apps/cli/src/index.js", "contribute", "preview", "--json"]],
   ["node", ["apps/cli/src/index.js", "contribute", "receipt-plan", "--json"]],
   ["node", ["apps/cli/src/index.js", "contribute", "receipt-draft", "--json"]],
+  ["node", ["apps/cli/src/index.js", "contribute", "receipt-seal-preview", "--json"]],
   ["node", ["apps/cli/src/index.js", "evidence", "receipt", "preview"]],
   [
     "node",
