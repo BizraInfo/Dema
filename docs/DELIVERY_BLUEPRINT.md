@@ -108,15 +108,15 @@ It orchestrates the full gate stack with A+ performance-quality assurance:
 - Validates coverage thresholds (95/85/95) via `npm run coverage` on Node 22+ in CI.
 - Aggregate rollup below configured targets is reported as **advisory** by `npm run release:readiness` (`qa.coverage_threshold_missing`); per-test coverage flags remain the enforced gate in `npm run check`.
 - Integrates release:readiness with A+ perf gate and PMBOK domains.
-- Runs mu pre-push seal as the DevOps forcing function (104/104 target).
+- Runs mu pre-push seal as the local DevOps forcing function (104/104 target); skipped in CI (`CI`/`GITHUB_ACTIONS`) because the matrix already runs test + coverage + check.
 - Checks local gates (llm:guidance, diff hygiene) for world-class hygiene.
 - Outputs a unified A+ report aligned with Level 5 Optimizing (performance budgets enforced, post-"release" (local) learning via the report, rollback via gate failures).
 
 This embodies the MBOK integration (PMBOK domains in the report), DevOps (pre-push seal as CI gate), pipeline automation (orchestrates the CI/CD quality gates), and rigorous perf-QA.
 
-Run with `npm run delivery:check`. Fails closed on any A+ breach. Ties to living-tree: this is the "trunk" check ensuring A+ sustainable growth rings. Root canon preserved (no mutation of immutable DNA).
+Run with `npm run delivery:check`. Fails closed on any A+ breach locally (including MU pre-push). In CI, MU pre-push is advisory-skipped; perf, coverage rollup, release-readiness, local gates, and covenant QA remain hard-gated. Ties to living-tree: this is the "trunk" check ensuring A+ sustainable growth rings. Root canon preserved (no mutation of immutable DNA).
 
-In CI (check.yml on Node 22+): runs as part of the matrix for A+ verification before any push.
+In CI (check.yml on Node 22+): runs as part of the matrix for A+ verification (MU seal excluded; run `npm run pre-push:seal` locally before push).
 
 This advances the blueprint to the "ultimate implementation" for the Dema face: local A+ delivery loop complete, ready for remote CI proof once the push (with workflow scope) lands the Copilot classifier and other rings.
 
