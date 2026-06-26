@@ -25,6 +25,11 @@ import {
   NODE0_PROOF_OF_TRUTH_CONTROL_PLANE_SCHEMA,
   NODE0_PROOF_OF_TRUTH_CONTROL_PLANE_TRUTH_LABEL,
 } from "./node0-proof-of-truth-control-plane.js";
+import {
+  buildNode0ProofSnapshotAttachment,
+  verifyNode0ProofSnapshotAttachment,
+  NODE0_PROOF_SNAPSHOT_ATTACHMENT_SCHEMA,
+} from "./node0-proof-snapshot-attachment.js";
 
 export const NODE0_KILLER_DEMO_VALUE_LOOP_PROOF_CONVERGENCE_SCHEMA =
   "bizra.dema.node0_killer_demo_value_loop_proof_convergence.v0.1";
@@ -126,6 +131,7 @@ function buildProactiveUltraMicroSelfLoop({ snr, convergence }) {
         "node0-killer-demo-value-loop-compose-gate.mjs",
         "node0-killer-demo-value-loop-cli-check.mjs",
         "node0-proof-of-truth-control-plane-check.mjs",
+        "node0-proof-snapshot-attachment-check.mjs",
       ]),
       posture: "preview_only",
     }),
@@ -143,7 +149,7 @@ function buildProactiveUltraMicroSelfLoop({ snr, convergence }) {
     awareness: Object.freeze({
       what_this_proves: Object.freeze([
         "Killer-demo stack composes with four-rail proof convergence grading.",
-        "Hermetic control plane reference remains READY_LOCAL capped.",
+        "Gathered proof:truth snapshot attaches with honest READY_LOCAL / BLOCKED discipline.",
       ]),
       what_this_does_not_prove: Object.freeze([
         "Not autonomous RSI, agent RL, or live HHMM inference.",
@@ -154,10 +160,27 @@ function buildProactiveUltraMicroSelfLoop({ snr, convergence }) {
       hhmm_phase_hint: "VERIFY",
       next_safe_transition:
         converged === total && total > 0
-          ? "Attach gathered proof:truth snapshot after next bounded slice"
+          ? "Strengthen weakest convergence claim or supply DEMA_PROOF_* advisory evidence"
           : "Strengthen weakest convergence claim before advancing",
       diffusion_reasoning: "preview_only_not_engine",
     }),
+  });
+}
+
+function buildControlPlaneReferenceFromAttachment(proof_snapshot_attachment) {
+  const ledger = proof_snapshot_attachment?.ledger;
+  const summary = proof_snapshot_attachment?.ledger_summary ?? {};
+  return freezeDeep({
+    schema: NODE0_PROOF_OF_TRUTH_CONTROL_PLANE_SCHEMA,
+    truth_label: NODE0_PROOF_OF_TRUTH_CONTROL_PLANE_TRUTH_LABEL,
+    ok: proof_snapshot_attachment?.control_plane_verified?.ok === true,
+    release_verdict: summary.release_verdict ?? ledger?.release_verdict ?? "BLOCKED",
+    receipt_hash: summary.receipt_hash ?? ledger?.receipt_hash ?? null,
+    commit: summary.commit ?? ledger?.commit ?? null,
+    hermetic: proof_snapshot_attachment?.snapshot_source === "hermetic",
+    gathered: proof_snapshot_attachment?.snapshot_source === "gathered",
+    ready_local_eligible: proof_snapshot_attachment?.ready_local_eligible === true,
+    preview_only: true,
   });
 }
 
@@ -176,11 +199,17 @@ function buildControlPlaneReference() {
 
 export function buildNode0KillerDemoValueLoopProofConvergence({
   claims = KILLER_DEMO_PROOF_CONVERGENCE_CLAIMS,
+  proof_snapshot_audit = null,
 } = {}) {
+  const proof_snapshot_attachment = proof_snapshot_audit
+    ? buildNode0ProofSnapshotAttachment({ auditResult: proof_snapshot_audit })
+    : null;
   const killer_demo_cli = buildNode0KillerDemoValueLoopCli();
   const killer_demo_verified = verifyNode0KillerDemoValueLoopCli(killer_demo_cli);
   const proof_convergence = buildProofConvergencePreview({ claims });
-  const control_plane = buildControlPlaneReference();
+  const control_plane = proof_snapshot_attachment
+    ? buildControlPlaneReferenceFromAttachment(proof_snapshot_attachment)
+    : buildControlPlaneReference();
   const snrRaw = computeSNRValue({
     signalEvents: SNR_SIGNAL_EVENTS.map((e) => ({ type: "gate_passed", weight: e.weight })),
     noiseEvents: SNR_NOISE_EVENTS.map((e) => ({ type: "runtime_ambiguity", weight: e.weight })),
@@ -208,14 +237,24 @@ export function buildNode0KillerDemoValueLoopProofConvergence({
   const converged = proof_convergence.summary?.converged ?? 0;
   const total = proof_convergence.summary?.total ?? 0;
   let compose_status = "PREVIEW_COMPOSED";
-  if (!killer_demo_verified.ok || !control_plane.ok) compose_status = "BLOCKED";
-  else if (converged < total) compose_status = "PARTIAL_CONVERGENCE";
+  if (!killer_demo_verified.ok) compose_status = "BLOCKED";
+  else if (!proof_snapshot_attachment) compose_status = "BLOCKED";
+  else if (verifyNode0ProofSnapshotAttachment(proof_snapshot_attachment).ok !== true) {
+    compose_status = "BLOCKED";
+  } else if (proof_snapshot_attachment.ready_local_eligible) {
+    compose_status = converged < total ? "PROOF_ATTACHED_PARTIAL_CONVERGENCE" : "PROOF_ATTACHED";
+  } else if (converged < total) {
+    compose_status = "PROOF_ATTACHED_ADVISORY_BLOCKED";
+  } else {
+    compose_status = "PROOF_ATTACHED_ADVISORY_BLOCKED";
+  }
 
   return freezeDeep({
     schema: NODE0_KILLER_DEMO_VALUE_LOOP_PROOF_CONVERGENCE_SCHEMA,
     truth_label: NODE0_KILLER_DEMO_VALUE_LOOP_PROOF_CONVERGENCE_TRUTH_LABEL,
     command: NODE0_KILLER_DEMO_VALUE_LOOP_PROOF_CONVERGENCE_COMMAND,
     compose_status,
+    proof_snapshot_attachment,
     killer_demo_cli: Object.freeze({
       schema: NODE0_KILLER_DEMO_VALUE_LOOP_CLI_SCHEMA,
       truth_label: NODE0_KILLER_DEMO_VALUE_LOOP_CLI_TRUTH_LABEL,
@@ -252,7 +291,7 @@ export function buildNode0KillerDemoValueLoopProofConvergence({
     }),
     what_this_proves: Object.freeze([
       "Killer-demo value loop integrates with four-rail Proof-of-Truth Convergence preview.",
-      "Hermetic control plane and killer-demo CLI gates compose into one operator envelope.",
+      "Gathered proof:truth snapshot attaches with honest release verdict and advisory rails.",
       "SNR framing favors actionable gate evidence over speculative runtime claims.",
     ]),
     what_this_does_not_prove: Object.freeze([
@@ -281,11 +320,24 @@ export function verifyNode0KillerDemoValueLoopProofConvergence(composed) {
   if (composed.killer_demo_cli?.verified_ok !== true) {
     blocked_by.push("killer_demo_cli_not_verified");
   }
-  if (composed.control_plane_reference?.ok !== true) {
-    blocked_by.push("control_plane_reference_failed");
+  if (composed.proof_snapshot_attachment?.schema !== NODE0_PROOF_SNAPSHOT_ATTACHMENT_SCHEMA) {
+    blocked_by.push("proof_snapshot_attachment_missing");
+  } else {
+    const attachmentVerified = verifyNode0ProofSnapshotAttachment(
+      composed.proof_snapshot_attachment,
+    );
+    if (!attachmentVerified.ok) {
+      blocked_by.push("proof_snapshot_attachment_invalid");
+      for (const code of attachmentVerified.blocked_by) {
+        blocked_by.push(`proof_snapshot_${code}`);
+      }
+    }
   }
-  if (composed.control_plane_reference?.release_verdict !== "READY_LOCAL") {
-    blocked_by.push("control_plane_not_ready_local");
+  if (!composed.control_plane_reference?.release_verdict) {
+    blocked_by.push("control_plane_release_verdict_missing");
+  }
+  if (composed.control_plane_reference?.gathered !== true) {
+    blocked_by.push("control_plane_not_gathered");
   }
   if (composed.proof_convergence?.schema !== PROOF_CONVERGENCE_PREVIEW_SCHEMA) {
     blocked_by.push("invalid_proof_convergence_schema");
@@ -328,6 +380,9 @@ export function runNode0KillerDemoValueLoopProofConvergence(params = {}) {
     verified,
     compose_status: composed.compose_status,
     convergence_summary: composed.proof_convergence?.summary ?? {},
+    proof_snapshot_attached: composed.proof_snapshot_attachment != null,
+    ready_local_eligible: composed.proof_snapshot_attachment?.ready_local_eligible ?? false,
+    release_verdict: composed.control_plane_reference?.release_verdict ?? "BLOCKED",
     composed,
   });
 }
@@ -341,6 +396,8 @@ export function formatNode0KillerDemoValueLoopProofConvergence(composed) {
     `  compose_status: ${composed.compose_status}`,
     `  convergence: ${summary.converged ?? 0}/${summary.total ?? 0} CONVERGED`,
     `  control_plane: ${composed.control_plane_reference?.release_verdict ?? "UNKNOWN"}`,
+    `  proof_attached: ${composed.proof_snapshot_attachment != null}`,
+    `  ready_local_eligible: ${composed.proof_snapshot_attachment?.ready_local_eligible ?? false}`,
     `  snr: ${composed.snr_framework?.dominant ?? "UNKNOWN"}`,
   ].join("\n");
 }

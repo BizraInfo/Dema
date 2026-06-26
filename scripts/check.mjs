@@ -16,6 +16,7 @@ export const commands = [
   ["node", ["scripts/review/node0-killer-demo-value-loop-compose-gate.mjs"]],
   ["node", ["scripts/review/node0-killer-demo-value-loop-cli-check.mjs"]],
   ["node", ["scripts/review/node0-killer-demo-value-loop-proof-convergence-check.mjs"]],
+  ["node", ["scripts/review/node0-proof-snapshot-attachment-check.mjs"]],
   ["node", ["scripts/review/node0-proof-of-truth-control-plane-check.mjs"]],
   ["node", ["scripts/review/zero-dep-gate.mjs"]],
   ["node", ["scripts/review/kernel-purity-check.mjs"]],
