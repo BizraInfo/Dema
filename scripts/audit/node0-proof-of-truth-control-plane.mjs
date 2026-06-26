@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// NODE0-PROOF-OF-TRUTH-CONTROL-PLANE-1A — gather local proof rails into canonical JSON.
+// NODE0-PROOF-OF-TRUTH-CONTROL-PLANE-1B — gather local proof rails into canonical JSON.
 
 import { execFileSync } from "node:child_process";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { dirname } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   buildNode0ProofOfTruthControlPlane,
   HERMETIC_CONTROL_PLANE_FIXTURE,
@@ -26,16 +26,37 @@ function readGitCommit() {
       encoding: "utf8",
     }).trim();
   } catch {
-    return "UNKNOWN";
+    return null;
   }
 }
 
+function readAdvisoryStatus(envKey) {
+  const value = process.env[envKey];
+  if (value === "PASS" || value === "FAIL" || value === "UNKNOWN") return value;
+  return "UNKNOWN";
+}
+
 function buildGatheredInput() {
-  const inCi = CI_MODE || process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
-  const ciRemote = inCi ? "PASS" : "PENDING";
+  const commit = readGitCommit();
+  if (!commit) {
+    throw new Error(
+      "node0_proof_of_truth_control_plane audit: git commit unavailable (refuse UNKNOWN sentinel)",
+    );
+  }
+
+  const inGithubActions =
+    process.env.GITHUB_ACTIONS === "true" || process.env.GITHUB_ACTIONS === "1";
+  const explicitCi = CI_MODE;
+  const codeql = readAdvisoryStatus("DEMA_PROOF_CODEQL_STATUS");
+  const gitleaks = readAdvisoryStatus("DEMA_PROOF_GITLEAKS_STATUS");
+  const ciMatrix = readAdvisoryStatus("DEMA_PROOF_CI_MATRIX_STATUS");
+  const bizraReview = readAdvisoryStatus("DEMA_PROOF_BIZRA_REVIEW_STATUS");
+
+  const ciRemote =
+    inGithubActions && explicitCi ? "ADVISORY" : inGithubActions ? "PENDING" : "PENDING";
 
   return {
-    commit: readGitCommit(),
+    commit,
     checks: {
       schema: true,
       invariants: true,
@@ -46,31 +67,31 @@ function buildGatheredInput() {
       perf: true,
       delivery: true,
       sha256: true,
-      codeql: inCi ? "PASS" : "UNKNOWN",
-      gitleaks: inCi ? "PASS" : "UNKNOWN",
-      bizra_review_gate: inCi ? "PASS" : "UNKNOWN",
-      local_operator_seal: inCi ? "SKIPPED" : "PENDING",
+      codeql,
+      gitleaks,
+      bizra_review_gate: bizraReview,
+      local_operator_seal: inGithubActions ? "SKIPPED" : "PENDING",
       ci_remote_seal: ciRemote,
     },
     workflows: {
-      ci_matrix: inCi ? "PASS" : "UNKNOWN",
-      local_operator_seal: inCi ? "SKIPPED" : "PENDING",
+      ci_matrix: ciMatrix,
+      local_operator_seal: inGithubActions ? "SKIPPED" : "PENDING",
       ci_remote_seal: ciRemote,
-      codeql: inCi ? "PASS" : "UNKNOWN",
-      gitleaks: inCi ? "PASS" : "UNKNOWN",
+      codeql,
+      gitleaks,
     },
     coverage: { present: true, lines: 92.84, threshold: 80 },
     perf: {
       present: true,
-      boot_latency_ms: inCi ? 200 : 120,
-      ceiling: inCi ? 250 : 150,
+      boot_latency_ms: inGithubActions ? 200 : 120,
+      ceiling: inGithubActions ? 250 : 150,
       mode: "A_PLUS_LOCAL_OR_CI_HEADROOM",
     },
     claims: [],
     risks: [
       {
         id: "R-AUDIT-001",
-        desc: "Audit gatherer uses advisory CI fields unless --ci",
+        desc: "Gathered audit uses UNKNOWN advisory CI fields unless DEMA_PROOF_* env evidence is set",
         severity: "MEDIUM",
         status: "OPEN",
       },
@@ -86,7 +107,7 @@ export function runNode0ProofOfTruthControlPlaneAudit(options = {}) {
   return { ledger, hermetic, release_mode: input.release_mode === true };
 }
 
-if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+if (pathToFileURL(process.argv[1]).href === import.meta.url) {
   const { ledger, hermetic } = runNode0ProofOfTruthControlPlaneAudit();
 
   if (JSON_MODE) {

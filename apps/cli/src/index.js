@@ -39,6 +39,7 @@ import { cmd_attest } from "./commands/attest.js";
 import { cmd_verify_grounded } from "./commands/verify-grounded.js";
 import { cmd_assets } from "./commands/assets.js";
 import { cmd_contribute } from "./commands/contribute.js";
+import { cmd_demo } from "./commands/demo.js";
 import { cmd_status, cmd_status_json } from "./commands/status.js";
 import { cmd_profiles } from "./commands/profiles.js";
 import { cmd_consent_card } from "./commands/consent-card.js";
@@ -319,6 +320,14 @@ Local asset awareness:
                     POI-RECEIPT-SEAL-PREVIEW-1A seal readiness preview.
                     Lists blockers, gates, and consent phrase for unsigned
                     draft. No seal, no sign, no PoI mint, no URP submission.
+
+Demo:
+  dema demo node0-value-loop [--json]
+                    NODE0-KILLER-DEMO-VALUE-LOOP-CLI-1A preview envelope:
+                    scan modes → unstructured awareness → multi-device → Node
+                    Space ontology. Metadata-first; plan-only organization and
+                    receipts. No content read, OCR, network, upload, wallet,
+                    token mint, URP, or Node0 activation.
 
 Dema Realm (UX-1A, UX-1B):
   dema realm [--json] [--no-color] [--debug]
@@ -1101,6 +1110,7 @@ const COMMAND_TABLE = {
   covenant: cmdCovenant,
   assets: cmd_assets,
   contribute: cmd_contribute,
+  demo: cmd_demo,
   "llm-router": cmd_llm_router,
   "model-broker": cmd_model_broker,
   harness: cmd_harness,
