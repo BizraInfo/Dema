@@ -383,6 +383,7 @@ export function runNode0KillerDemoValueLoopProofConvergence(params = {}) {
     compose_status: composed.compose_status,
     convergence_summary: composed.proof_convergence?.summary ?? {},
     proof_snapshot_attached: composed.proof_snapshot_attachment != null,
+    attestation_merged: composed.proof_snapshot_attachment?.attestation_merged === true,
     ready_local_eligible: composed.proof_snapshot_attachment?.ready_local_eligible ?? false,
     release_verdict: composed.control_plane_reference?.release_verdict ?? "BLOCKED",
     composed,

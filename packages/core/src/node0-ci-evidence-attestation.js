@@ -26,6 +26,10 @@ export const CI_EVIDENCE_ATTESTATION_OVERCLAIM_VERDICTS = Object.freeze([
   "PUBLIC_SAFE",
 ]);
 
+const ADVISORY_UNKNOWN_CI_RISK_IDS = Object.freeze(
+  new Set(["R-GATHERED-001", "R-AUDIT-001"]),
+);
+
 /** Attestation fixture with all required rails PASS (commit must match caller). */
 export const CI_EVIDENCE_ATTESTATION_PASS_FIXTURE = Object.freeze({
   rails: Object.freeze({
@@ -186,12 +190,17 @@ export function mergeCiEvidenceAttestationIntoGatheredInput(baseInput, attestati
       gitleaks: rails.gitleaks,
     },
     risks: [
-      ...(Array.isArray(baseInput.risks) ? baseInput.risks : []),
+      ...(Array.isArray(baseInput.risks)
+        ? baseInput.risks.filter((risk) => !ADVISORY_UNKNOWN_CI_RISK_IDS.has(risk?.id))
+        : []),
       Object.freeze({
         id: "R-ATTEST-001",
         desc: `CI evidence attestation applied (${attestation.evidence_source})`,
         severity: allPass ? "LOW" : "MEDIUM",
         status: "OPEN",
+        source: "ci_evidence_attestation",
+        commit: attestation.commit,
+        ...(attestation.generated_at ? { at: attestation.generated_at } : {}),
       }),
     ],
   };
@@ -206,7 +215,7 @@ export function buildGatheredAuditResultWithCiEvidenceAttestation(baseInput, att
   return freezeDeep({
     ledger,
     hermetic: false,
-    release_mode: false,
+    release_mode: input.release_mode === true,
     ci_evidence_attestation: attestation,
     attestation_merged: merge.merged === true,
   });
