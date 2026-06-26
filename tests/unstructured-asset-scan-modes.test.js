@@ -91,7 +91,11 @@ test("proof receipt requires scope, consent, timestamp, boundaries, reproducible
   }
   assert.match(
     policy.proof_receipt_requirements.reproducible_command_template,
-    /dema assets scan/,
+    /dema assets scan --root/,
+  );
+  assert.match(
+    policy.proof_receipt_requirements.reproducible_command_template,
+    /scan_mode=/,
   );
 });
 

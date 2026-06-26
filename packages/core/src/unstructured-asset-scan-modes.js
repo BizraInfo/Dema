@@ -23,6 +23,9 @@ export const SCAN_MODE_IDS = Object.freeze([
   "share_export_separate_consent",
 ]);
 
+export const UNSTRUCTURED_ASSET_SCAN_MODES_GENERATED_AT =
+  "2026-06-26T16:00:00.000Z";
+
 const FORBIDDEN_WITHOUT_CONSENT = Object.freeze([
   "silent_content_read",
   "silent_byte_fingerprint",
@@ -43,19 +46,19 @@ const FORBIDDEN_WITHOUT_CONSENT = Object.freeze([
 const SENSITIVITY_RULES = Object.freeze([
   Object.freeze({
     rule_id: "personal_private_paths",
-    pattern: "/private/",
+    pattern: "private/",
     minimum_mode: "deep_understanding_strong_consent",
     note: "Personal/private folders require strong consent before any content understanding.",
   }),
   Object.freeze({
     rule_id: "legal_finance_paths",
-    pattern: "/legal/|/finance/",
+    pattern: "legal/|finance/",
     minimum_mode: "content_classification_consent",
     note: "Legal and finance paths require at least scoped content classification consent.",
   }),
   Object.freeze({
     rule_id: "media_binary_paths",
-    pattern: "/voice/|/videos/|/screenshots/",
+    pattern: "voice/|videos/|screenshots/",
     minimum_mode: "deep_understanding_strong_consent",
     note: "Audio, video, and screenshots require strong consent for OCR/transcription.",
   }),
@@ -318,24 +321,29 @@ function buildProofReceiptRequirements() {
       "source_trace",
     ]),
     reproducible_command_template:
-      "dema assets scan --mode <mode_id> --root <path> --scope <scope> --consent-receipt <id>",
+      "dema assets scan --root <path> [--json]  # receipt: scan_mode=<mode_id> scope=<scope> consent=<id>",
     preview_only: true,
     must_emit_before_non_default_run: true,
   });
 }
 
 export function buildUnstructuredAssetScanModesPolicy({
-  generated_at_iso = "2026-06-26T16:00:00.000Z",
+  generated_at_iso = UNSTRUCTURED_ASSET_SCAN_MODES_GENERATED_AT,
 } = {}) {
   const scan_modes = buildScanModes();
+  const metadataMode = scan_modes.find((m) => m.mode_id === DEFAULT_SCAN_MODE);
   const policy_id = `sha256:${createHash("sha256")
     .update(
       JSON.stringify({
         schema: UNSTRUCTURED_ASSET_SCAN_MODES_SCHEMA,
-        modes: SCAN_MODE_IDS,
+        scan_modes: scan_modes.map((m) => m.mode_id),
+        forbidden_without_consent: FORBIDDEN_WITHOUT_CONSENT,
+        sensitivity_rules: SENSITIVITY_RULES.map((r) => r.rule_id),
       }),
     )
     .digest("hex")}`;
+
+  const boundary = scanBoundary();
 
   return freezeDeep({
     schema: UNSTRUCTURED_ASSET_SCAN_MODES_SCHEMA,
@@ -353,7 +361,7 @@ export function buildUnstructuredAssetScanModesPolicy({
     scan_modes,
     consent_requirements: buildConsentRequirements(),
     allowed_operations: Object.freeze({
-      metadata_only_default: scan_modes[0].allowed_operations,
+      metadata_only_default: metadataMode?.allowed_operations ?? Object.freeze([]),
       with_consent_only: Object.freeze(
         scan_modes
           .filter((m) => m.consent_required)
@@ -369,8 +377,8 @@ export function buildUnstructuredAssetScanModesPolicy({
       "Selecting a mode in preview does not read file content or perform fingerprints.",
       "Share/export and economic rails remain preview-only until separately authorized.",
     ]),
-    boundary: scanBoundary(),
-    boundaries: scanBoundary(),
+    boundary,
+    boundaries: boundary,
   });
 }
 
@@ -395,10 +403,20 @@ export function verifyUnstructuredAssetScanModesPolicy(policy) {
   if (!boundaryAllFalse(policy.boundary)) {
     blocked_by.push("boundary_not_all_false");
   }
+  if (!boundaryAllFalse(policy.boundaries)) {
+    blocked_by.push("boundaries_not_all_false");
+  }
 
   const modes = policy.scan_modes ?? [];
   if (modes.length !== SCAN_MODE_IDS.length) {
     blocked_by.push("scan_mode_count_mismatch");
+  }
+  const modeIds = modes.map((m) => m.mode_id);
+  for (let i = 0; i < SCAN_MODE_IDS.length; i += 1) {
+    if (modeIds[i] !== SCAN_MODE_IDS[i]) {
+      blocked_by.push(`scan_mode_id_mismatch:${modeIds[i] ?? "missing"}`);
+      break;
+    }
   }
 
   const metadataMode = modes.find((m) => m.mode_id === DEFAULT_SCAN_MODE);
@@ -432,6 +450,9 @@ export function verifyUnstructuredAssetScanModesPolicy(policy) {
   if (!shareMode || shareMode.separate_consent_required !== true) {
     blocked_by.push("share_export_missing_separate_consent");
   }
+  if (!shareMode || shareMode.strong_consent_required !== true) {
+    blocked_by.push("share_export_missing_strong_consent");
+  }
 
   const forbidden = policy.forbidden_without_consent ?? [];
   for (const action of [
@@ -452,7 +473,7 @@ export function verifyUnstructuredAssetScanModesPolicy(policy) {
   if (!receipt?.required_fields?.includes("user_consent_phrase_or_approval_id")) {
     blocked_by.push("proof_receipt_missing_consent");
   }
-  if (!receipt?.reproducible_command_template?.includes("dema assets scan")) {
+  if (!receipt?.reproducible_command_template?.includes("dema assets scan --root")) {
     blocked_by.push("proof_receipt_missing_command");
   }
 
