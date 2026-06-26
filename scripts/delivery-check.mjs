@@ -83,14 +83,25 @@ function checkReleaseReadiness() {
   return hasAplus && noBlocker;
 }
 
+function isCiEnvironment(env = process.env) {
+  return env.CI === 'true' || env.GITHUB_ACTIONS === 'true';
+}
+
 function checkMuPrePush() {
   console.log('\n[MU PRE-PUSH A+ Gate]');
+  // pre-push:seal (mu-test-all) is a local operator forcing function (104/104).
+  // CI already runs npm test + coverage + check; skip MU from the overall verdict.
+  if (isCiEnvironment()) {
+    console.log(
+      '  verdict: SKIPPED in CI (local operator seal via pre-push:seal; 104/104 target)',
+    );
+    return { ok: true, skipped: true };
+  }
   const result = runCommand(NPM, ['run', 'pre-push:seal'], { silent: true });
   const output = result.output || '';
-  // The pre-push:seal (mu-test-all) is the A+ DevOps forcing function.
   const passed = /PUSH_READY|104\/104/i.test(output);
   console.log(`  verdict: ${passed ? 'PUSH_READY' : 'GAP'} (A+ gate; 104/104 target)`);
-  return passed;
+  return { ok: passed, skipped: false };
 }
 
 function checkGates() {
@@ -143,7 +154,8 @@ async function main() {
   const perfOk = checkPerf();
   const covOk = checkCoverage();
   const releaseOk = checkReleaseReadiness();
-  const muOk = checkMuPrePush();
+  const muResult = checkMuPrePush();
+  const muOk = muResult.ok;
   const gatesOk = checkGates();
   const covenantOk = await checkCovenantGate();
 
@@ -1078,7 +1090,9 @@ async function main() {
   console.log(`PERF A+: ${perfOk ? 'PASS' : 'FAIL'}`);
   console.log(`COVERAGE A+: ${covOk ? 'PASS' : 'FAIL'}`);
   console.log(`RELEASE + PERF QA: ${releaseOk ? 'PASS' : 'FAIL'}`);
-  console.log(`MU PRE-PUSH A+: ${muOk ? 'PASS' : 'FAIL'}`);
+  console.log(
+    `MU PRE-PUSH A+: ${muResult.skipped ? 'SKIPPED (CI — local seal only)' : muOk ? 'PASS' : 'FAIL'}`,
+  );
   console.log(`LOCAL GATES: ${gatesOk ? 'PASS' : 'FAIL'}`);
   console.log(`COVENANT GATE QA: ${covenantOk ? 'PASS' : 'FAIL'}`);
   console.log(`OVERALL A+: ${overallOk ? 'PASS — Blueprint delivered locally' : 'FAIL — resolve before push'}`);
