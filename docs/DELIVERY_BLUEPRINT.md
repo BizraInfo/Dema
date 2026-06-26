@@ -118,6 +118,24 @@ Run with `npm run delivery:check`. Fails closed on any A+ breach locally (includ
 
 In CI (check.yml on Node 22+): runs as part of the matrix for A+ verification (MU seal excluded; run `npm run pre-push:seal` locally before push).
 
+## Proof-of-truth control plane (NODE0-PROOF-OF-TRUTH-CONTROL-PLANE-1A)
+
+[MEASURED] Local-only release proof ledger that joins scattered quality rails into one canonical JSON object:
+
+```text
+tests + coverage + perf + delivery:check + CodeQL + gitleaks + claim discipline
+→ proof ledger (bizra.dema.node0_proof_of_truth_control_plane.v0.1)
+→ release_verdict (BLOCKED | READY_LOCAL in 1A)
+→ receipt_hash + next_action
+```
+
+Commands:
+
+- `npm run proof:truth` — audit gatherer (`--hermetic` for fixture-only snapshot)
+- `npm run proof:truth:check` — hermetic fail-closed gate (also wired in `npm run check` after killer-demo compose gate)
+
+1A cap: verifier rejects `READY_REMOTE` and `PUBLIC_SAFE`; economic rail stays `BLOCKED_UNLESS_MEASURED`; no token mint, wallet, URP publication, Node1 activation, or autonomous runtime claim.
+
 This advances the blueprint to the "ultimate implementation" for the Dema face: local A+ delivery loop complete, ready for remote CI proof once the push (with workflow scope) lands the Copilot classifier and other rings.
 
 ## CI pipeline blueprint
