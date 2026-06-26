@@ -107,6 +107,18 @@ test("T-12 env-hygiene strict_mode field reflects input", () => {
   );
 });
 
+test("T-14 env-hygiene strict mode exempts intentional CI attestation supply vars", () => {
+  const env = {
+    DEMA_CI_EVIDENCE_ATTESTATION_JSON: '{"schema":"x"}',
+    DEMA_CI_EVIDENCE_ATTESTATION_PATH: "/tmp/attestation.json",
+    DEMA_NODE0_ADAPTER: "gateway-http",
+  };
+  const report = checkEnvHygiene({ env, strict: true });
+  assert.equal(report.ok, false);
+  assert.equal(report.polluter_count, 1);
+  assert.equal(report.polluters[0].name, "DEMA_NODE0_ADAPTER");
+});
+
 test("T-13 env-hygiene KNOWN_DEMA_ENV_VARS is complete vs source-tree references", () => {
   // Forward-compat drift trap: any DEMA_* env var referenced in source code
   // but missing from KNOWN_DEMA_ENV_VARS will fail this test, forcing the

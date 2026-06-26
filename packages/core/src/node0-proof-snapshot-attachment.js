@@ -12,6 +12,7 @@ import {
   NODE0_PROOF_OF_TRUTH_CONTROL_PLANE_TRUTH_LABEL,
 } from "./node0-proof-of-truth-control-plane.js";
 import { buildPreviewBoundary } from "./preview-boundary.js";
+import { verifyNode0CiEvidenceAttestation } from "./node0-ci-evidence-attestation.js";
 
 export const NODE0_PROOF_SNAPSHOT_ATTACHMENT_SCHEMA =
   "bizra.dema.node0_proof_snapshot_attachment.v0.1";
@@ -56,7 +57,7 @@ export const GATHERED_ADVISORY_SNAPSHOT_INPUT = Object.freeze({
   risks: Object.freeze([
     Object.freeze({
       id: "R-GATHERED-001",
-      desc: "Gathered fixture — advisory CI rails default UNKNOWN without DEMA_PROOF_*",
+      desc: "Gathered fixture — advisory CI rails default UNKNOWN without verified CI evidence attestation",
       severity: "MEDIUM",
       status: "OPEN",
     }),
@@ -138,16 +139,19 @@ export function buildNode0ProofSnapshotAttachment({ auditResult } = {}) {
     : Object.freeze({ eligible: false, blockers: Object.freeze(["ledger_missing"]) });
 
   const ci = ledger?.ci_cd ?? {};
+  const attestation = auditResult?.ci_evidence_attestation ?? null;
   return freezeDeep({
     schema: NODE0_PROOF_SNAPSHOT_ATTACHMENT_SCHEMA,
     truth_label: NODE0_PROOF_SNAPSHOT_ATTACHMENT_TRUTH_LABEL,
     snapshot_source,
+    ci_evidence_attestation: attestation,
+    attestation_merged: auditResult?.attestation_merged === true,
     advisory_rails: Object.freeze({
       codeql: ci.codeql ?? "UNKNOWN",
       gitleaks: ci.gitleaks ?? "UNKNOWN",
       ci_matrix: ci.ci_matrix ?? "UNKNOWN",
       ci_cd_status: ci.status ?? "ADVISORY",
-      note: "Advisory rails remain UNKNOWN unless DEMA_PROOF_* evidence is set",
+      note: "Advisory rails remain UNKNOWN unless a verified CI evidence attestation is merged",
     }),
     ledger,
     ledger_summary: ledger
@@ -169,7 +173,7 @@ export function buildNode0ProofSnapshotAttachment({ auditResult } = {}) {
     ]),
     what_this_does_not_prove: Object.freeze([
       "Not remote CI seal, public-safe publication, or economic activation.",
-      "UNKNOWN advisory rails are not upgraded to PASS without DEMA_PROOF_* evidence.",
+      "UNKNOWN advisory rails are not upgraded to PASS without verified CI evidence attestation.",
     ]),
     boundary: buildPreviewBoundary(),
     boundaries: buildPreviewBoundary(),
@@ -229,6 +233,23 @@ export function verifyNode0ProofSnapshotAttachment(attachment) {
   const previewBoundary = attachment.boundary ?? attachment.boundaries;
   if (!previewBoundary || !Object.values(previewBoundary).every((v) => v === false)) {
     blocked_by.push("attachment_boundary_not_all_false");
+  }
+
+  if (attachment.attestation_merged === true) {
+    const attestation = attachment.ci_evidence_attestation;
+    if (!attestation) {
+      blocked_by.push("attestation_missing_when_merged");
+    } else {
+      const attestationVerified = verifyNode0CiEvidenceAttestation(attestation);
+      if (!attestationVerified.ok) {
+        blocked_by.push("attestation_verify_failed");
+      }
+      if (ledger && String(attestation.commit) !== String(ledger.commit)) {
+        blocked_by.push("attestation_commit_mismatch");
+      }
+    }
+  } else if (attachment.ci_evidence_attestation) {
+    blocked_by.push("attestation_present_without_merge_flag");
   }
 
   return freezeDeep({ ok: blocked_by.length === 0, blocked_by });

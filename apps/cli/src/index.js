@@ -335,7 +335,7 @@ Demo:
                     gathered proof:truth snapshot + SNR/RSI framing + proactive
                     ultra-micro self-loop declarations. Honest READY_LOCAL or
                     BLOCKED verdict; advisory CI rails UNKNOWN unless
-                    DEMA_PROOF_* evidence. Preview-only; not autonomous runtime,
+                    verified CI evidence attestation. Preview-only; not autonomous runtime,
                     agent RL, or live HHMM engine.
 
 Dema Realm (UX-1A, UX-1B):

@@ -132,6 +132,7 @@ function buildProactiveUltraMicroSelfLoop({ snr, convergence }) {
         "node0-killer-demo-value-loop-cli-check.mjs",
         "node0-proof-of-truth-control-plane-check.mjs",
         "node0-proof-snapshot-attachment-check.mjs",
+        "node0-ci-evidence-attestation-check.mjs",
       ]),
       posture: "preview_only",
     }),
@@ -160,7 +161,7 @@ function buildProactiveUltraMicroSelfLoop({ snr, convergence }) {
       hhmm_phase_hint: "VERIFY",
       next_safe_transition:
         converged === total && total > 0
-          ? "Strengthen weakest convergence claim or supply DEMA_PROOF_* advisory evidence"
+          ? "Strengthen weakest convergence claim or supply verified CI evidence attestation"
           : "Strengthen weakest convergence claim before advancing",
       diffusion_reasoning: "preview_only_not_engine",
     }),
@@ -242,7 +243,8 @@ export function buildNode0KillerDemoValueLoopProofConvergence({
   else if (verifyNode0ProofSnapshotAttachment(proof_snapshot_attachment).ok !== true) {
     compose_status = "BLOCKED";
   } else if (proof_snapshot_attachment.ready_local_eligible) {
-    compose_status = converged < total ? "PROOF_ATTACHED_PARTIAL_CONVERGENCE" : "PROOF_ATTACHED";
+    compose_status =
+      converged < total ? "PROOF_ATTACHED_PARTIAL_CONVERGENCE" : "PROOF_ATTACHED_READY_LOCAL";
   } else if (converged < total) {
     compose_status = "PROOF_ATTACHED_ADVISORY_BLOCKED";
   } else {
@@ -381,6 +383,7 @@ export function runNode0KillerDemoValueLoopProofConvergence(params = {}) {
     compose_status: composed.compose_status,
     convergence_summary: composed.proof_convergence?.summary ?? {},
     proof_snapshot_attached: composed.proof_snapshot_attachment != null,
+    attestation_merged: composed.proof_snapshot_attachment?.attestation_merged === true,
     ready_local_eligible: composed.proof_snapshot_attachment?.ready_local_eligible ?? false,
     release_verdict: composed.control_plane_reference?.release_verdict ?? "BLOCKED",
     composed,

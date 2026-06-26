@@ -17,6 +17,8 @@ import { pathToFileURL } from "node:url";
 const KNOWN_DEMA_ENV_VARS = Object.freeze([
   "DEMA_AGENT_DB_QUERY_PATH",
   "DEMA_BANNER_INTERACTIVE",
+  "DEMA_CI_EVIDENCE_ATTESTATION_JSON",
+  "DEMA_CI_EVIDENCE_ATTESTATION_PATH",
   "DEMA_DOWNLOADS_ROOT",
   "DEMA_GATEWAY_URL",
   "DEMA_GGUF_DIRS",
@@ -36,10 +38,18 @@ const KNOWN_DEMA_ENV_VARS = Object.freeze([
   "DEMA_TALK_PROVIDER",
 ]);
 
+/** Intentional operator/CI supply vars — tracked in KNOWN list but not strict polluters. */
+const STRICT_EXEMPT_DEMA_ENV_VARS = Object.freeze(
+  new Set(["DEMA_CI_EVIDENCE_ATTESTATION_JSON", "DEMA_CI_EVIDENCE_ATTESTATION_PATH"]),
+);
+
 export function checkEnvHygiene({ env = process.env, strict = false } = {}) {
   const polluters = KNOWN_DEMA_ENV_VARS.filter(
     (name) =>
-      Object.hasOwn(env, name) && env[name] !== undefined && env[name] !== "",
+      !STRICT_EXEMPT_DEMA_ENV_VARS.has(name) &&
+      Object.hasOwn(env, name) &&
+      env[name] !== undefined &&
+      env[name] !== "",
   ).map((name) =>
     Object.freeze({ name, value_length: String(env[name]).length }),
   );
