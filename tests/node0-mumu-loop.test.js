@@ -7,6 +7,7 @@ import {
   readFileSync,
   existsSync,
   symlinkSync,
+  unlinkSync,
   rmSync,
   readdirSync,
 } from "node:fs";
@@ -155,9 +156,8 @@ describe("runMumuLoop — symlink containment", () => {
       assert.equal(r.ok, false);
       assert.equal(r.error, "output_inside_scanned_root");
     } finally {
-      rmSync(linkRoot, { force: true });
+      unlinkSync(linkRoot);
       rmSync(realRoot, { recursive: true, force: true });
-      rmSync(out, { recursive: true, force: true });
     }
   });
 });
