@@ -10,6 +10,7 @@ export const commands = [
   ["node", ["scripts/review/bizra-genesis-blueprint-check.mjs"]],
   ["node", ["scripts/review/contribution-ladder-compose-gate.mjs"]],
   ["node", ["scripts/review/unstructured-asset-scan-modes-check.mjs"]],
+  ["node", ["scripts/review/unstructured-asset-awareness-check.mjs"]],
   ["node", ["scripts/review/zero-dep-gate.mjs"]],
   ["node", ["scripts/review/kernel-purity-check.mjs"]],
   ["node", ["scripts/review/no-overclaim.mjs"]],
