@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// NODE0-PROOF-OF-TRUTH-CONTROL-PLANE-1A — hermetic fail-closed review gate.
+// NODE0-PROOF-OF-TRUTH-CONTROL-PLANE-1B — hermetic fail-closed review gate.
 
+import { pathToFileURL } from "node:url";
 import {
   runNode0ProofOfTruthControlPlane,
   HERMETIC_CONTROL_PLANE_FIXTURE,
@@ -14,7 +15,7 @@ export function runNode0ProofOfTruthControlPlaneCheck() {
   return runNode0ProofOfTruthControlPlane({ ...HERMETIC_CONTROL_PLANE_FIXTURE });
 }
 
-if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+if (pathToFileURL(process.argv[1]).href === import.meta.url) {
   const result = runNode0ProofOfTruthControlPlaneCheck();
 
   if (JSON_MODE) {

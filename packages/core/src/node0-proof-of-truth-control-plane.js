@@ -1,4 +1,4 @@
-// NODE0-PROOF-OF-TRUTH-CONTROL-PLANE-1A — LOCAL_ONLY release proof ledger.
+// NODE0-PROOF-OF-TRUTH-CONTROL-PLANE-1B — LOCAL_ONLY release proof ledger.
 //
 // Joins formal, cryptographic, empirical, and economic rails into one frozen
 // verdict object. Max auto-verdict in 1A: READY_LOCAL. READY_REMOTE and
@@ -72,18 +72,25 @@ export function buildControlPlaneBoundary(overrides = {}) {
   });
 }
 
+function claimIsTruthLabeled(claim) {
+  return (
+    /\bMEASURED\b/i.test(claim) ||
+    /_MEASURED$/i.test(claim) ||
+    /\bDESIGNED_NOT_LIVE\b/i.test(claim) ||
+    /_DESIGNED_NOT_LIVE$/i.test(claim) ||
+    /\bLOCAL_ONLY\b/i.test(claim) ||
+    /_LOCAL_ONLY$/i.test(claim) ||
+    /\bPREVIEW_ONLY\b/i.test(claim) ||
+    /_PREVIEW_ONLY$/i.test(claim) ||
+    /\bDOCS_ONLY\b/i.test(claim) ||
+    /_DOCS_ONLY$/i.test(claim)
+  );
+}
+
 export function summarizeFormalRail(checks = {}, claims = []) {
   const normalized = normalizeClaims(claims);
   const claimsTruthLabeled =
-    normalized.length === 0 ||
-    normalized.every(
-      (c) =>
-        /\bMEASURED\b/i.test(c) ||
-        /\bDESIGNED_NOT_LIVE\b/i.test(c) ||
-        /\bLOCAL_ONLY\b/i.test(c) ||
-        /\bPREVIEW_ONLY\b/i.test(c) ||
-        /\bDOCS_ONLY\b/i.test(c),
-    );
+    normalized.length === 0 || normalized.every((c) => claimIsTruthLabeled(c));
   return Object.freeze({
     status: railStatus(
       checks.schema !== false &&
@@ -165,9 +172,7 @@ export function summarizeEconomicRail(claims = [], boundaries = {}) {
     boundaries.no_urp_publication !== false &&
     boundaries.no_autonomous_runtime !== false;
 
-  let status = "BLOCKED_UNLESS_MEASURED";
-  if (overclaimed) status = "OVERCLAIMED";
-  else if (boundaryIntact) status = "BLOCKED_UNLESS_MEASURED";
+  const status = overclaimed ? "OVERCLAIMED" : "BLOCKED_UNLESS_MEASURED";
 
   return Object.freeze({
     status,
@@ -240,16 +245,20 @@ export function computeReleaseVerdict({
   coverage = {},
   perf = {},
   claims = [],
+  boundaries = {},
   release_mode = false,
 } = {}) {
   if (CONTROL_PLANE_OVERCLAIM_VERDICTS.some((v) => checks.release_verdict === v)) {
     return "BLOCKED";
   }
 
+  const resolvedBoundaries = buildControlPlaneBoundary(boundaries);
+  const formal = summarizeFormalRail(checks, claims);
   const empirical = summarizeEmpiricalRail(checks, coverage, perf, workflows);
-  const economic = summarizeEconomicRail(claims, buildControlPlaneBoundary());
+  const economic = summarizeEconomicRail(claims, resolvedBoundaries);
   const ci = summarizeCiCd(workflows, release_mode);
 
+  if (formal.status === "FAIL") return "BLOCKED";
   if (economic.status === "OVERCLAIMED") return "BLOCKED";
   if (empirical.status === "FAIL") return "BLOCKED";
   if (checks.delivery === false) return "BLOCKED";
@@ -359,6 +368,7 @@ export function buildNode0ProofOfTruthControlPlane(input = {}) {
     coverage,
     perf,
     claims,
+    boundaries,
     release_mode,
   });
 
@@ -408,6 +418,9 @@ export function verifyNode0ProofOfTruthControlPlane(ledger) {
   if (!ledger.commit || String(ledger.commit).trim() === "") {
     blocked_by.push("missing_commit");
   }
+  if (String(ledger.commit).trim() === "UNKNOWN") {
+    blocked_by.push("commit_unknown_sentinel");
+  }
   if (!ledger.receipt_hash || !String(ledger.receipt_hash).startsWith("sha256:")) {
     blocked_by.push("missing_receipt_hash");
   }
@@ -424,6 +437,8 @@ export function verifyNode0ProofOfTruthControlPlane(ledger) {
   }
 
   const boundary = ledger.boundary ?? {};
+  if (boundary.local_only !== true) blocked_by.push("boundary_local_only");
+  if (boundary.no_network_required !== true) blocked_by.push("boundary_no_network_required");
   if (boundary.no_token_mint !== true) blocked_by.push("boundary_no_token_mint");
   if (boundary.no_wallet_action !== true) blocked_by.push("boundary_no_wallet_action");
   if (boundary.no_node1_activation !== true) blocked_by.push("boundary_no_node1_activation");

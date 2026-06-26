@@ -180,3 +180,52 @@ test("MEASURED economic claim does not overclaim", () => {
   assert.equal(ledger.economic.status, "BLOCKED_UNLESS_MEASURED");
   assert.equal(ledger.release_verdict, "READY_LOCAL");
 });
+
+test("BLOCKED when formal schema check fails", () => {
+  const ledger = buildNode0ProofOfTruthControlPlane({
+    ...baseInput,
+    checks: { ...baseInput.checks, schema: false },
+  });
+  assert.equal(ledger.formal.status, "FAIL");
+  assert.equal(ledger.release_verdict, "BLOCKED");
+});
+
+test("verifier rejects UNKNOWN commit sentinel", () => {
+  const ledger = buildNode0ProofOfTruthControlPlane({
+    ...baseInput,
+    commit: "UNKNOWN",
+  });
+  const verified = verifyNode0ProofOfTruthControlPlane(ledger);
+  assert.equal(verified.ok, false);
+  assert.ok(verified.blocked_by.includes("commit_unknown_sentinel"));
+});
+
+test("boundary tamper local_only fails verify", () => {
+  const ledger = buildNode0ProofOfTruthControlPlane(baseInput);
+  const tampered = {
+    ...ledger,
+    boundary: { ...ledger.boundary, local_only: false },
+  };
+  const verified = verifyNode0ProofOfTruthControlPlane(tampered);
+  assert.equal(verified.ok, false);
+  assert.ok(verified.blocked_by.includes("boundary_local_only"));
+});
+
+test("boundary tamper no_network_required fails verify", () => {
+  const ledger = buildNode0ProofOfTruthControlPlane(baseInput);
+  const tampered = {
+    ...ledger,
+    boundary: { ...ledger.boundary, no_network_required: false },
+  };
+  const verified = verifyNode0ProofOfTruthControlPlane(tampered);
+  assert.equal(verified.ok, false);
+  assert.ok(verified.blocked_by.includes("boundary_no_network_required"));
+});
+
+test("computeReleaseVerdict uses caller boundaries in economic rail", () => {
+  const ledger = buildNode0ProofOfTruthControlPlane({
+    ...baseInput,
+    boundaries: { no_token_mint: false },
+  });
+  assert.equal(ledger.economic.boundary_blocked, false);
+});

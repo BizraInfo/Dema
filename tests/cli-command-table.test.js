@@ -64,6 +64,7 @@ const COMMAND_SURFACE = [
   "covenant",
   "assets",
   "contribute",
+  "demo",
   "llm-router",
   "model-broker",
   "harness",

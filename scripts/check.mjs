@@ -14,6 +14,7 @@ export const commands = [
   ["node", ["scripts/review/multi-device-asset-awareness-check.mjs"]],
   ["node", ["scripts/review/dema-home-node-space-ontology-check.mjs"]],
   ["node", ["scripts/review/node0-killer-demo-value-loop-compose-gate.mjs"]],
+  ["node", ["scripts/review/node0-killer-demo-value-loop-cli-check.mjs"]],
   ["node", ["scripts/review/node0-proof-of-truth-control-plane-check.mjs"]],
   ["node", ["scripts/review/zero-dep-gate.mjs"]],
   ["node", ["scripts/review/kernel-purity-check.mjs"]],
@@ -67,6 +68,7 @@ export const commands = [
   ["node", ["apps/cli/src/index.js", "contribute", "receipt-plan", "--json"]],
   ["node", ["apps/cli/src/index.js", "contribute", "receipt-draft", "--json"]],
   ["node", ["apps/cli/src/index.js", "contribute", "receipt-seal-preview", "--json"]],
+  ["node", ["apps/cli/src/index.js", "demo", "node0-value-loop", "--json"]],
   ["node", ["apps/cli/src/index.js", "evidence", "receipt", "preview"]],
   [
     "node",
