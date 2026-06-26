@@ -1,0 +1,271 @@
+// CONSENT-MATRIX-COVERAGE-1A — declarative CLI risk + consent registry.
+// One row per COMMAND_TABLE token. Review gate enforces parity with dispatcher.
+
+/** @typedef {"read_only"|"preview_only"|"local_write"|"network"|"external_runtime"|"key_wallet"|"activation"} CliRiskLevel */
+/** @typedef {"none"|"fail_closed_preview"|"exact_phrase"|"approval_gate"|"subcommand_gated"} ConsentMechanism */
+
+/**
+ * @param {string} command
+ * @param {CliRiskLevel[]} risk_levels
+ * @param {ConsentMechanism} mechanism
+ * @param {string} detail
+ * @param {string[]} [test_refs]
+ */
+function row(command, risk_levels, mechanism, detail, test_refs = []) {
+  return Object.freeze({
+    command,
+    risk_levels: Object.freeze([...risk_levels]),
+    consent: Object.freeze({ mechanism, detail }),
+    test_refs: Object.freeze([...test_refs]),
+  });
+}
+
+function preview(cmd, testRef, extraRisks = []) {
+  return row(
+    cmd,
+    ["read_only", "preview_only", ...extraRisks],
+    "fail_closed_preview",
+    "Preview kernel or read-only CLI surface; canonical 16-key boundary all-false when emitting previews",
+    [testRef],
+  );
+}
+
+function readOnly(cmd, testRef, detail = "Read-only CLI surface; no DEMA_HOME mutation") {
+  return row(cmd, ["read_only"], "none", detail, [testRef]);
+}
+
+/** @type {ReadonlyArray<ReturnType<typeof row>>} */
+export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
+  readOnly("active", "tests/dema-first-look-home.test.js", "Bare dema routes to first-look companion home"),
+  readOnly("", "tests/dema-first-look-home.test.js", "Alias for bare dema invocation"),
+  readOnly("chat", "tests/chat-router-cli.test.js"),
+  readOnly("welcome", "tests/dema-birth-loop-cli.test.js"),
+  preview("monetize", "tests/smoke-boundary.test.js"),
+  readOnly("help", "tests/cli-command-table.test.js"),
+  readOnly("-h", "tests/cli-command-table.test.js"),
+  readOnly("--help", "tests/cli-command-table.test.js"),
+  preview("first-run", "tests/dema-birth-loop.test.js"),
+  row(
+    "onboard",
+    ["read_only", "preview_only", "local_write"],
+    "subcommand_gated",
+    "Guided onboarding may write profile/setup artifacts only on explicit operator path",
+    ["tests/dema-birth-loop-cli.test.js"],
+  ),
+  preview("preview-card", "tests/consent-card-preview.test.js"),
+  row(
+    "language",
+    ["read_only", "local_write"],
+    "subcommand_gated",
+    "set subcommand writes preferred language to DEMA_HOME/memory/profile.json",
+    ["tests/homebase-language-picker-cli.test.js"],
+  ),
+  readOnly("explain", "tests/chat-router.test.js"),
+  row(
+    "setup",
+    ["local_write"],
+    "exact_phrase",
+    "Creates DEMA_HOME skeleton; idempotent re-run",
+    ["tests/setup-lifecycle.test.js", "tests/flow-setup-integrity.test.js"],
+  ),
+  readOnly("setup-check", "tests/setup-lifecycle.test.js"),
+  row(
+    "uninstall",
+    ["local_write", "key_wallet"],
+    "exact_phrase",
+    "REMOVE DEMA DATA exact-string consent before destructive removal",
+    ["tests/setup-uninstall-cli.test.js"],
+  ),
+  row(
+    "witness",
+    ["local_write"],
+    "exact_phrase",
+    "Node0 self-witness receipt save requires operator exact consent",
+    ["tests/witness-receipt.test.js"],
+  ),
+  row(
+    "authorship",
+    ["local_write", "key_wallet"],
+    "subcommand_gated",
+    "key init/sign/verify subcommands each gate on ADR-005 exact phrases",
+    ["tests/authorship-key-store.test.js", "tests/flow-setup-integrity.test.js"],
+  ),
+  preview("proof", "tests/proof-passport.test.js"),
+  preview("delivery", "tests/delivery-operating-system-cli.test.js"),
+  row(
+    "foundation",
+    ["preview_only", "local_write"],
+    "subcommand_gated",
+    "Foundation apply paths are consent-gated; preview subcommands remain read-only",
+    ["tests/foundation-cli.test.js"],
+  ),
+  row(
+    "genesis",
+    ["read_only", "preview_only"],
+    "subcommand_gated",
+    "composition blueprint / seal preview / verify-node0 are preview-only; no live seal in CLI",
+    ["tests/genesis-composition-blueprint-preview.test.js", "tests/block0-seal-ceremony-dry-run.test.js"],
+  ),
+  preview("attest", "tests/verdict-cli.test.js"),
+  preview("verify-grounded", "tests/verdict-cli.test.js"),
+  preview("urp", "tests/urp-contribution-benefit-preview.test.js"),
+  preview("datalake", "tests/datalake-dual-loop-preview.test.js"),
+  row(
+    "realm",
+    ["read_only", "preview_only", "local_write"],
+    "subcommand_gated",
+    "checkpoint and wallet intents may write realm artifacts under consent",
+    ["tests/dema-realm-home.test.js", "tests/dema-realm-checkpoint.test.js"],
+  ),
+  preview("homebase", "tests/homebase-cli-dispatch.test.js"),
+  row(
+    "node0",
+    ["read_only", "preview_only", "activation", "external_runtime"],
+    "subcommand_gated",
+    "Preview subcommands only; activate rung is operator-only and not CLI-autonomous",
+    ["tests/node0-activation-chain-preview.test.js", "tests/node0-mumu-cli.test.js"],
+  ),
+  preview("adk", "tests/adk-agent-contract.test.js"),
+  row(
+    "status",
+    ["read_only", "external_runtime"],
+    "subcommand_gated",
+    "Read-only status; optional DEMA_NODE0_STATUS_COMMAND operator bridge only",
+    ["tests/node0-self-check.test.js"],
+  ),
+  row(
+    "status:json",
+    ["read_only", "external_runtime"],
+    "subcommand_gated",
+    "Machine-readable status; same adapter bridge rules as status",
+    ["tests/node0-self-check.test.js"],
+  ),
+  preview("state", "tests/node0-state-preview.test.js"),
+  preview("start", "tests/dema-birth-loop-cli.test.js"),
+  row(
+    "scan",
+    ["local_write"],
+    "exact_phrase",
+    "Homebase metadata scan writes inventory under DEMA_HOME after exact consent",
+    ["tests/homebase-scan-consent-cli.test.js"],
+  ),
+  readOnly("mirror", "tests/node0-wow-report-cli.test.js"),
+  row(
+    "talk",
+    ["read_only", "preview_only", "network", "external_runtime"],
+    "subcommand_gated",
+    "Default preview route; live invoke requires exact consent + localhost-only adapter",
+    ["tests/dema-talk-loop-preview-cli.test.js", "tests/dema-talk-loop-live.test.js"],
+  ),
+  preview("canon", "tests/dema-first-lesson-canon-cli.test.js"),
+  preview("profiles", "tests/profile-foundation-preview.test.js"),
+  preview("consent-card", "tests/consent-card-preview.test.js"),
+  preview("mission-loop", "tests/mission-loop-preview.test.js"),
+  preview("evidence-event", "tests/evidence-chain-event-preview.test.js"),
+  preview("node-registry", "tests/node-registry-preview.test.js"),
+  preview("onboarding-lifecycle", "tests/onboarding-lifecycle.test.js"),
+  preview("skill-growth-governor", "tests/skill-growth-governor.test.js"),
+  preview("project-status", "tests/project-status-preview.test.js"),
+  preview("craftsmanship-witness", "tests/craftsmanship-witness-preview.test.js"),
+  preview("peak-self-loop", "tests/peak-self-loop-cli.test.js"),
+  preview("master-craftsmanship", "tests/master-craftsmanship-audit-cli.test.js"),
+  readOnly("codebase", "tests/codebase-map-cli.test.js"),
+  readOnly("orchestrator", "tests/orchestrator-verify-cli.test.js"),
+  row(
+    "covenant",
+    ["preview_only", "local_write"],
+    "approval_gate",
+    "Covenant Gate prototype uses L0–L5 approval envelope (ADR-005 family)",
+    ["tests/covenant-cli-failopen.test.js", "tests/approval-gate.test.js"],
+  ),
+  row(
+    "assets",
+    ["read_only", "preview_only", "local_write"],
+    "subcommand_gated",
+    "scan writes metadata inventory after consent; shareability remains read-only",
+    ["tests/homebase-asset-awareness-cli.test.js", "tests/homebase-shareability-cli.test.js"],
+  ),
+  row(
+    "contribute",
+    ["read_only", "preview_only", "local_write"],
+    "subcommand_gated",
+    "preview/plan/draft/seal-preview surfaces; writes only on explicit consent paths",
+    [
+      "tests/poi-receipt-eligibility-plan-cli.test.js",
+      "tests/poi-receipt-draft-cli.test.js",
+      "tests/poi-receipt-seal-preview-cli.test.js",
+    ],
+  ),
+  preview("llm-router", "tests/local-llm-router-preview.test.js"),
+  preview("model-broker", "tests/model-broker-preview.test.js"),
+  readOnly("harness", "tests/harness-integration.test.js"),
+  preview("bootstrap", "tests/bootstrap-cli.test.js"),
+  preview("seed", "tests/seed-loop-preview.test.js"),
+  readOnly("process-mining", "tests/process-mining-preview.test.js"),
+  readOnly("key-maker-check", "tests/key-maker-compliance.test.js"),
+  row(
+    "llm-invoke",
+    ["preview_only", "network", "external_runtime"],
+    "subcommand_gated",
+    "Preview by default; live path requires exact consent and localhost-only fetch",
+    ["tests/llm-adapter.test.js"],
+  ),
+  row(
+    "today",
+    ["local_write"],
+    "subcommand_gated",
+    "Continuity tick may append local continuity artifact under DEMA_HOME",
+    ["tests/output-mode-cli.test.js"],
+  ),
+  readOnly("doctor", "tests/doctor-dashboard-cli.test.js"),
+  row(
+    "dashboard",
+    ["read_only", "network"],
+    "subcommand_gated",
+    "Opens local browser via xdg-open; operator-initiated only",
+    ["tests/doctor-dashboard-cli.test.js"],
+  ),
+  readOnly("ambient", "tests/ambient.test.js"),
+  readOnly("ambient:json", "tests/ambient.test.js"),
+  preview("journey", "tests/journey.test.js"),
+  preview("diagnostics", "tests/diagnostics-plan.test.js"),
+  preview("consent", "tests/dema-consent-cli.test.js"),
+  row(
+    "mission",
+    ["read_only", "preview_only", "local_write"],
+    "subcommand_gated",
+    "plan/verify preview; run/save require exact consent gates",
+    ["tests/health-snapshot.test.js", "tests/mission-closeout.test.js"],
+  ),
+  readOnly("receipts", "tests/receipt-store-format.test.js"),
+  row(
+    "memory",
+    ["read_only", "local_write"],
+    "subcommand_gated",
+    "list/show read-only; mutation subcommands consent-gated",
+    ["tests/memory.test.js"],
+  ),
+  preview("think", "tests/think-dry-run.test.js"),
+  readOnly("models", "tests/model-catalog-cli.test.js"),
+  preview("report", "tests/safety-report.test.js"),
+  preview("network", "tests/network-blueprint.test.js"),
+  preview("amana", "tests/amana-contracts-preview.test.js"),
+  preview("diffusion", "tests/diffusion-cli.test.js"),
+  preview("mcp", "tests/mcp-blueprint.test.js"),
+  preview("roadmap", "tests/optimization-roadmap.test.js"),
+  preview("eval", "tests/model-eval-baseline-cli.test.js"),
+  preview("hardware", "tests/node0-hardware-profile-cli.test.js"),
+  preview("evidence", "tests/evidence-receipt-preview.test.js"),
+  preview("ihsan", "tests/ihsan-floor-preview.test.js"),
+  preview("behavior", "tests/behavioral-modulation.test.js"),
+  preview("design", "tests/assumption-state-preview.test.js"),
+  preview("agent-loop", "tests/agent-dual-loop-preview.test.js"),
+  row(
+    "task",
+    ["read_only", "preview_only", "external_runtime"],
+    "subcommand_gated",
+    "list preview; run dispatches bounded registered tasks only with consent",
+    ["tests/bounded-task-runner.test.js"],
+  ),
+  preview("sovereign", "tests/active-kernel-cli.test.js"),
+]);
