@@ -7,6 +7,7 @@ export const commands = [
   ["node", ["scripts/review/operator-bridge-threat-model-check.mjs"]],
   ["node", ["scripts/review/node0-activation-chain-smoke.mjs"]],
   ["node", ["scripts/review/bizra-genesis-blueprint-check.mjs"]],
+  ["node", ["scripts/review/contribution-ladder-compose-gate.mjs"]],
   ["node", ["scripts/review/zero-dep-gate.mjs"]],
   ["node", ["scripts/review/kernel-purity-check.mjs"]],
   ["node", ["scripts/review/no-overclaim.mjs"]],
