@@ -107,7 +107,7 @@ export function runNode0ProofOfTruthControlPlaneAudit(options = {}) {
   return { ledger, hermetic, release_mode: input.release_mode === true };
 }
 
-if (pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
   const { ledger, hermetic } = runNode0ProofOfTruthControlPlaneAudit();
 
   if (JSON_MODE) {

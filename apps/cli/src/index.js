@@ -329,12 +329,14 @@ Demo:
                     receipts. No content read, OCR, network, upload, wallet,
                     token mint, URP, or Node0 activation.
   dema demo node0-value-loop convergence [--json]
-                    NODE0-KILLER-DEMO-VALUE-LOOP-PROOF-CONVERGENCE-1A compose
-                    preview: killer-demo CLI + four-rail Proof-of-Truth
-                    Convergence + hermetic control-plane reference + SNR/RSI
-                    framing + proactive ultra-micro self-loop declarations.
-                    Preview-only; not autonomous runtime, agent RL, or live
-                    HHMM engine.
+                    NODE0-KILLER-DEMO-VALUE-LOOP-PROOF-CONVERGENCE-1A +
+                    NODE0-PROOF-SNAPSHOT-ATTACHMENT-1A compose preview:
+                    killer-demo CLI + four-rail Proof-of-Truth Convergence +
+                    gathered proof:truth snapshot + SNR/RSI framing + proactive
+                    ultra-micro self-loop declarations. Honest READY_LOCAL or
+                    BLOCKED verdict; advisory CI rails UNKNOWN unless
+                    DEMA_PROOF_* evidence. Preview-only; not autonomous runtime,
+                    agent RL, or live HHMM engine.
 
 Dema Realm (UX-1A, UX-1B):
   dema realm [--json] [--no-color] [--debug]

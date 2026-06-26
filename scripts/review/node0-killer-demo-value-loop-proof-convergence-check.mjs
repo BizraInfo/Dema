@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// NODE0-KILLER-DEMO-VALUE-LOOP-PROOF-CONVERGENCE-1A — hermetic fail-closed review gate.
+// NODE0-KILLER-DEMO-VALUE-LOOP-PROOF-CONVERGENCE-1A — gathered proof-attached review gate.
 
 import { pathToFileURL } from "node:url";
+import { runNode0ProofOfTruthControlPlaneAudit } from "../audit/node0-proof-of-truth-control-plane.mjs";
 import {
   runNode0KillerDemoValueLoopProofConvergence,
   NODE0_KILLER_DEMO_VALUE_LOOP_PROOF_CONVERGENCE_SCHEMA,
@@ -11,10 +12,11 @@ import {
 const JSON_MODE = process.argv.includes("--json");
 
 export function runNode0KillerDemoValueLoopProofConvergenceCheck() {
-  return runNode0KillerDemoValueLoopProofConvergence();
+  const proof_snapshot_audit = runNode0ProofOfTruthControlPlaneAudit({ hermetic: false });
+  return runNode0KillerDemoValueLoopProofConvergence({ proof_snapshot_audit });
 }
 
-if (pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
   const result = runNode0KillerDemoValueLoopProofConvergenceCheck();
 
   if (JSON_MODE) {
@@ -25,6 +27,7 @@ if (pathToFileURL(process.argv[1]).href === import.meta.url) {
     console.log(`  schema: ${NODE0_KILLER_DEMO_VALUE_LOOP_PROOF_CONVERGENCE_SCHEMA}`);
     console.log(`  truth: ${NODE0_KILLER_DEMO_VALUE_LOOP_PROOF_CONVERGENCE_TRUTH_LABEL}`);
     console.log(`  compose_status: ${result.compose_status}`);
+    console.log(`  release_verdict: ${result.release_verdict}`);
     console.log(
       `  convergence: ${result.convergence_summary?.converged ?? 0}/${result.convergence_summary?.total ?? 0}`,
     );

@@ -8,6 +8,7 @@ import {
   runNode0KillerDemoValueLoopProofConvergence,
   formatNode0KillerDemoValueLoopProofConvergence,
 } from "../../../../packages/core/src/node0-killer-demo-value-loop-proof-convergence.js";
+import { gatherProofSnapshotAudit } from "../proof-snapshot-audit-gatherer.js";
 
 export async function cmd_demo(ctx) {
   const { argv } = ctx;
@@ -17,7 +18,8 @@ export async function cmd_demo(ctx) {
 
   if (sub === "node0-value-loop") {
     if (action === "convergence") {
-      const result = runNode0KillerDemoValueLoopProofConvergence();
+      const proof_snapshot_audit = gatherProofSnapshotAudit({ hermetic: false });
+      const result = runNode0KillerDemoValueLoopProofConvergence({ proof_snapshot_audit });
       const composed = result.composed;
       console.log(
         wantJson
