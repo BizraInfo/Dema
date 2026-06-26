@@ -328,7 +328,7 @@ export function buildPoiReceiptEligibilityPlan({
       "guaranteed_reward_or_token_price",
     ]),
     next_recommended_consent_step:
-      "No PoI mint — review proof plan locally; any future receipt action requires explicit typed GO",
+      "Run dema contribute receipt-draft after proof-plan boundaries are accepted",
     boundary: buildBoundary(benefit_preview.boundary),
   });
 }
