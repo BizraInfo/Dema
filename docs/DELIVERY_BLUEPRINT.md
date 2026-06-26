@@ -138,6 +138,21 @@ Commands:
 
 Killer-demo stack (compose → CLI → proof convergence) provides the operator-facing demo ladder under `dema demo node0-value-loop` and `dema demo node0-value-loop convergence`.
 
+## CI evidence attestation bridge (NODE0-CI-EVIDENCE-ATTESTATION-BRIDGE-1A)
+
+[MEASURED] Structured, hashable attestation replaces raw `DEMA_PROOF_*` env vars as advisory CI truth:
+
+```text
+CI export / operator attestation JSON
+→ verify (commit + receipt_hash + boundary + rails)
+→ merge into gathered proof ledger
+→ proof snapshot attachment → READY_LOCAL eligibility (local-only)
+```
+
+Supply attestation to the audit gatherer via `DEMA_CI_EVIDENCE_ATTESTATION_JSON` or `DEMA_CI_EVIDENCE_ATTESTATION_PATH`. Review gate: `node scripts/review/node0-ci-evidence-attestation-check.mjs` (wired in `npm run check`).
+
+Still blocked: `READY_REMOTE`, `PUBLIC_SAFE`, token mint, wallet, URP, Node0 activation.
+
 This advances the blueprint to the "ultimate implementation" for the Dema face: local A+ delivery loop complete, ready for remote CI proof once the push (with workflow scope) lands the Copilot classifier and other rings.
 
 ## CI pipeline blueprint

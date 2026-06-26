@@ -18,7 +18,7 @@ node --test tests/node0-proof-snapshot-attachment.test.js
 ## What this proves
 
 - Structural attachment of a proof:truth ledger (commit, receipt_hash, boundary flags)
-- Honest reporting of advisory CI rails (`UNKNOWN` unless `DEMA_PROOF_*` evidence)
+- Honest reporting of advisory CI rails (`UNKNOWN` unless verified CI evidence attestation)
 - `ready_local_eligible` only when full control-plane verify passes at `READY_LOCAL`
 
 ## What this does not prove

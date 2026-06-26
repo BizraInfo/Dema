@@ -23,8 +23,14 @@ import {
 } from "../packages/core/src/node0-proof-of-truth-control-plane.js";
 import {
   buildGatheredAdvisoryAuditResult,
+  GATHERED_ADVISORY_SNAPSHOT_INPUT,
   NODE0_PROOF_SNAPSHOT_ATTACHMENT_SCHEMA,
 } from "../packages/core/src/node0-proof-snapshot-attachment.js";
+import {
+  buildGatheredAuditResultWithCiEvidenceAttestation,
+  buildNode0CiEvidenceAttestation,
+  CI_EVIDENCE_ATTESTATION_PASS_FIXTURE,
+} from "../packages/core/src/node0-ci-evidence-attestation.js";
 
 function withGatheredAudit(extra = {}) {
   return {
@@ -176,5 +182,28 @@ test("PC-11: ready_local_eligible when gathered snapshot verifies READY_LOCAL", 
   assert.equal(result.ok, true);
   assert.equal(result.ready_local_eligible, true);
   assert.equal(result.release_verdict, "READY_LOCAL");
-  assert.match(result.compose_status, /^PROOF_ATTACHED/);
+  assert.equal(result.compose_status, "PROOF_ATTACHED_PARTIAL_CONVERGENCE");
+});
+
+test("PC-12: verified CI evidence attestation promotes ready_local in convergence", () => {
+  const commit = "attestation-convergence-commit-001";
+  const attestation = buildNode0CiEvidenceAttestation({
+    commit,
+    ...CI_EVIDENCE_ATTESTATION_PASS_FIXTURE,
+  });
+  const audit = buildGatheredAuditResultWithCiEvidenceAttestation(
+    {
+      ...GATHERED_ADVISORY_SNAPSHOT_INPUT,
+      commit,
+      checks: { ...GATHERED_ADVISORY_SNAPSHOT_INPUT.checks },
+      workflows: { ...GATHERED_ADVISORY_SNAPSHOT_INPUT.workflows },
+      risks: [],
+    },
+    attestation,
+  );
+  const result = runNode0KillerDemoValueLoopProofConvergence({ proof_snapshot_audit: audit });
+  assert.equal(result.ok, true);
+  assert.equal(result.ready_local_eligible, true);
+  assert.equal(result.release_verdict, "READY_LOCAL");
+  assert.equal(result.attestation_merged ?? audit.attestation_merged, true);
 });

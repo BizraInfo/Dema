@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // NODE0-PROOF-OF-TRUTH-CONTROL-PLANE-1B — gather local proof rails into canonical JSON.
+// NODE0-CI-EVIDENCE-ATTESTATION-BRIDGE-1A — advisory CI rails from verified attestation only.
 
 import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
@@ -10,6 +12,10 @@ import {
   NODE0_PROOF_OF_TRUTH_CONTROL_PLANE_SCHEMA,
   NODE0_PROOF_OF_TRUTH_CONTROL_PLANE_TRUTH_LABEL,
 } from "../../packages/core/src/node0-proof-of-truth-control-plane.js";
+import {
+  mergeCiEvidenceAttestationIntoGatheredInput,
+  verifyNode0CiEvidenceAttestation,
+} from "../../packages/core/src/node0-ci-evidence-attestation.js";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = dirname(dirname(SCRIPT_DIR));
@@ -30,10 +36,21 @@ function readGitCommit() {
   }
 }
 
-function readAdvisoryStatus(envKey) {
-  const value = process.env[envKey];
-  if (value === "PASS" || value === "FAIL" || value === "UNKNOWN") return value;
-  return "UNKNOWN";
+function loadCiEvidenceAttestation() {
+  const inline = process.env.DEMA_CI_EVIDENCE_ATTESTATION_JSON;
+  const path = process.env.DEMA_CI_EVIDENCE_ATTESTATION_PATH;
+  let raw = inline;
+  if (!raw && path && existsSync(path)) {
+    raw = readFileSync(path, "utf8");
+  }
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    throw new Error(
+      `node0_proof_of_truth_control_plane audit: invalid CI evidence attestation JSON (${error.message})`,
+    );
+  }
 }
 
 function buildGatheredInput() {
@@ -47,15 +64,11 @@ function buildGatheredInput() {
   const inGithubActions =
     process.env.GITHUB_ACTIONS === "true" || process.env.GITHUB_ACTIONS === "1";
   const explicitCi = CI_MODE;
-  const codeql = readAdvisoryStatus("DEMA_PROOF_CODEQL_STATUS");
-  const gitleaks = readAdvisoryStatus("DEMA_PROOF_GITLEAKS_STATUS");
-  const ciMatrix = readAdvisoryStatus("DEMA_PROOF_CI_MATRIX_STATUS");
-  const bizraReview = readAdvisoryStatus("DEMA_PROOF_BIZRA_REVIEW_STATUS");
 
   const ciRemote =
     inGithubActions && explicitCi ? "ADVISORY" : inGithubActions ? "PENDING" : "PENDING";
 
-  return {
+  const baseInput = {
     commit,
     checks: {
       schema: true,
@@ -67,18 +80,18 @@ function buildGatheredInput() {
       perf: true,
       delivery: true,
       sha256: true,
-      codeql,
-      gitleaks,
-      bizra_review_gate: bizraReview,
+      codeql: "UNKNOWN",
+      gitleaks: "UNKNOWN",
+      bizra_review_gate: "UNKNOWN",
       local_operator_seal: inGithubActions ? "SKIPPED" : "PENDING",
       ci_remote_seal: ciRemote,
     },
     workflows: {
-      ci_matrix: ciMatrix,
+      ci_matrix: "UNKNOWN",
       local_operator_seal: inGithubActions ? "SKIPPED" : "PENDING",
       ci_remote_seal: ciRemote,
-      codeql,
-      gitleaks,
+      codeql: "UNKNOWN",
+      gitleaks: "UNKNOWN",
     },
     coverage: { present: true, lines: 92.84, threshold: 80 },
     perf: {
@@ -91,20 +104,63 @@ function buildGatheredInput() {
     risks: [
       {
         id: "R-AUDIT-001",
-        desc: "Gathered audit uses UNKNOWN advisory CI fields unless DEMA_PROOF_* env evidence is set",
+        desc: "Gathered audit uses UNKNOWN advisory CI fields unless verified CI evidence attestation is merged",
         severity: "MEDIUM",
         status: "OPEN",
       },
     ],
     release_mode: RELEASE_MODE,
   };
+
+  const attestation = loadCiEvidenceAttestation();
+  if (!attestation) {
+    return { input: baseInput, attestation: null, attestation_merged: false };
+  }
+
+  const verified = verifyNode0CiEvidenceAttestation(attestation);
+  if (!verified.ok) {
+    throw new Error(
+      `node0_proof_of_truth_control_plane audit: CI evidence attestation verify failed (${verified.blocked_by.join(", ")})`,
+    );
+  }
+
+  const merge = mergeCiEvidenceAttestationIntoGatheredInput(baseInput, attestation);
+  if (!merge.merged) {
+    const blockers = merge.blocked_by ?? merge.verified?.blocked_by ?? ["attestation_merge_failed"];
+    throw new Error(
+      `node0_proof_of_truth_control_plane audit: CI evidence attestation merge failed (${blockers.join(", ")})`,
+    );
+  }
+
+  return {
+    input: merge.input,
+    attestation,
+    attestation_merged: true,
+  };
 }
 
 export function runNode0ProofOfTruthControlPlaneAudit(options = {}) {
   const hermetic = options.hermetic ?? HERMETIC;
-  const input = hermetic ? { ...HERMETIC_CONTROL_PLANE_FIXTURE } : buildGatheredInput();
+  if (hermetic) {
+    const ledger = buildNode0ProofOfTruthControlPlane({ ...HERMETIC_CONTROL_PLANE_FIXTURE });
+    return {
+      ledger,
+      hermetic,
+      release_mode: HERMETIC_CONTROL_PLANE_FIXTURE.release_mode === true,
+      ci_evidence_attestation: null,
+      attestation_merged: false,
+    };
+  }
+
+  const { input, attestation, attestation_merged } = buildGatheredInput();
   const ledger = buildNode0ProofOfTruthControlPlane(input);
-  return { ledger, hermetic, release_mode: input.release_mode === true };
+  return {
+    ledger,
+    hermetic: false,
+    release_mode: input.release_mode === true,
+    ci_evidence_attestation: attestation,
+    attestation_merged,
+  };
 }
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
