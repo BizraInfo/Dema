@@ -125,16 +125,18 @@ In CI (check.yml on Node 22+): runs as part of the matrix for A+ verification (M
 ```text
 tests + coverage + perf + delivery:check + CodeQL + gitleaks + claim discipline
 → proof ledger (bizra.dema.node0_proof_of_truth_control_plane.v0.1)
-→ release_verdict (BLOCKED | READY_LOCAL in 1A)
+→ release_verdict (BLOCKED | READY_LOCAL in 1B)
 → receipt_hash + next_action
 ```
 
 Commands:
 
 - `npm run proof:truth` — audit gatherer (`--hermetic` for fixture-only snapshot)
-- `npm run proof:truth:check` — hermetic fail-closed gate (also wired in `npm run check` after killer-demo compose gate)
+- `npm run proof:truth:check` — hermetic fail-closed gate (also wired in `npm run check` after killer-demo compose + CLI + proof-convergence gates)
 
-1A cap: verifier rejects `READY_REMOTE` and `PUBLIC_SAFE`; economic rail stays `BLOCKED_UNLESS_MEASURED`; no token mint, wallet, URP publication, Node1 activation, or autonomous runtime claim.
+1B cap: verifier rejects `READY_REMOTE` and `PUBLIC_SAFE`; economic rail stays `BLOCKED_UNLESS_MEASURED`; no token mint, wallet, URP publication, Node1 activation, or autonomous runtime claim.
+
+Killer-demo stack (compose → CLI → proof convergence) provides the operator-facing demo ladder under `dema demo node0-value-loop` and `dema demo node0-value-loop convergence`.
 
 This advances the blueprint to the "ultimate implementation" for the Dema face: local A+ delivery loop complete, ready for remote CI proof once the push (with workflow scope) lands the Copilot classifier and other rings.
 
