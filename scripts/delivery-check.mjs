@@ -19,6 +19,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { resolveAPlusCeilings } from '../packages/perf/src/perf-ceilings.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
@@ -45,6 +46,7 @@ function runCommand(binary, args, options = {}) {
 
 function checkPerf() {
   console.log('\n[PERF A+ Gate]');
+  const ceilings = resolveAPlusCeilings();
   const result = runCommand(NPM, ['run', 'perf'], { silent: true });
   const output = result.output || '';
   const hasOK = output.includes('OK (within A+ ceilings)');
@@ -52,9 +54,18 @@ function checkPerf() {
   const verifyMatch = output.match(/verification_latency_ms\s+([\d.]+)/);
   const boot = bootMatch ? parseFloat(bootMatch[1]) : Infinity;
   const verify = verifyMatch ? parseFloat(verifyMatch[1]) : Infinity;
-  const ok = hasOK && boot < A_PLUS_THRESHOLDS.perf_boot_ms && verify < A_PLUS_THRESHOLDS.perf_verify_ms;
-  console.log(`  boot: ${boot.toFixed(2)}ms (target <${A_PLUS_THRESHOLDS.perf_boot_ms}) ${boot < A_PLUS_THRESHOLDS.perf_boot_ms ? 'OK' : 'BREACH'}`);
-  console.log(`  verify: ${verify.toFixed(3)}ms (target <${A_PLUS_THRESHOLDS.perf_verify_ms}) ${verify < A_PLUS_THRESHOLDS.perf_verify_ms ? 'OK' : 'BREACH'}`);
+  const bootCeiling = ceilings.dema_boot_latency_ms;
+  const verifyCeiling = ceilings.verification_latency_ms;
+  const ok =
+    hasOK &&
+    boot < bootCeiling &&
+    verify < verifyCeiling;
+  console.log(
+    `  boot: ${boot.toFixed(2)}ms (target <${bootCeiling}) ${boot < bootCeiling ? 'OK' : 'BREACH'}`,
+  );
+  console.log(
+    `  verify: ${verify.toFixed(3)}ms (target <${verifyCeiling}) ${verify < verifyCeiling ? 'OK' : 'BREACH'}`,
+  );
   console.log(`  gate: ${hasOK ? 'PASS (A+)' : 'FAIL'}`);
   return ok;
 }
