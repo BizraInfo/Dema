@@ -311,6 +311,10 @@ Local asset awareness:
                     Composes benefit preview into receipt/evidence/witness/SAT
                     requirements. No PoI mint, no URP submission, no upload, no
                     wallet, no SAT settlement.
+  dema contribute receipt-draft [--json] [--root <path>] [--years 3]
+                    POI-RECEIPT-DRAFT-1A unsigned receipt draft preview.
+                    Structures receipt-plan into local evidence slots. No sign,
+                    no seal, no PoI mint, no URP submission, no wallet.
 
 Dema Realm (UX-1A, UX-1B):
   dema realm [--json] [--no-color] [--debug]
@@ -655,7 +659,7 @@ const REGISTERED_COMMANDS_LIST = [
   {
     command: "contribute",
     description:
-      "pre-token URP contribution benefit preview and PoI receipt eligibility plan (metadata-first, no submission)",
+      "pre-token URP contribution benefit preview, receipt plan, and unsigned receipt draft (metadata-first, no submission)",
   },
   { command: "dashboard", description: "open homebase dashboard in browser" },
   {
