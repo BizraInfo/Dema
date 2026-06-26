@@ -477,7 +477,7 @@ Local evidence:
                         Preview Amana contract primitives; imports no external code
   dema diffusion refine <--drafts lines | --drafts-file path> [--evidence a,b] [--json]
   dema diffusion verify <abs-report.json> [--json]
-                        Deterministic diffusion-reasoner denoising-convergence; no model/network/generation
+                        diffusion-preview-kernel: deterministic denoising-convergence; not neural ML
   dema mcp blueprint [--json]
                        Preview MCP integration contract; does not call MCP tools
   dema roadmap preview [--json]
@@ -607,7 +607,7 @@ const REGISTERED_COMMANDS_LIST = [
   {
     command: "peak-self-loop",
     description:
-      "peak ultra-micro self-loop preview (SNR · convergence · HHMM · proactive self)",
+      "peak ultra-micro self-loop preview-kernel (SNR · convergence · HHMM-preview · proactive self)",
   },
   {
     command: "agent-loop",
@@ -706,7 +706,7 @@ const REGISTERED_COMMANDS_LIST = [
     description: "preview network blueprint or refusal matrix",
   },
   { command: "amana", description: "preview Amana contract primitives" },
-  { command: "diffusion", description: "deterministic diffusion-reasoner denoising-convergence (refine|verify)" },
+  { command: "diffusion", description: "diffusion-preview-kernel: deterministic denoising-convergence (refine|verify); not neural ML" },
   { command: "mcp", description: "preview MCP integration contract" },
   { command: "roadmap", description: "preview optimization roadmap" },
   {

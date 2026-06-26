@@ -2,6 +2,13 @@
 
 Dema is the local-first product face for BIZRA Node0. It is intentionally small: a Node.js CLI, pure modules, local state, adapter boundaries, and receipt viewing.
 
+## Quick navigation
+
+This file is the full command-to-surface map (large by design). Start here:
+
+- [Core shape](#core-shape) · [Runtime boundary](#runtime-boundary) · [Command-to-surface map](#command-to-surface-map)
+- Agent contract: [LLM_SYSTEM_FLOW.md](LLM_SYSTEM_FLOW.md) · Docs map: [INDEX.md](INDEX.md)
+
 ## Core shape
 
 ```mermaid

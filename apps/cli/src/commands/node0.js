@@ -202,7 +202,7 @@ export async function cmd_node0(ctx) {
     if (chain.autopoietic_posture) {
       const p = chain.autopoietic_posture;
       console.log(
-        `  autopoietic posture (PREVIEW_ONLY): SNR=${p.snr_score ?? "—"} · RSI=${p.rsi_merged_verdict ?? "—"} · HHMM=${p.hhmm_peak_phase ?? "—"}`,
+        `  autopoietic posture (PREVIEW_ONLY): SNR=${p.snr_score ?? "—"} · RSI=${p.rsi_merged_verdict ?? "—"} · HHMM-preview=${p.hhmm_peak_phase ?? "—"}`,
       );
       console.log(`    not_autonomous_runtime: ${p.not_autonomous_runtime}`);
     }
