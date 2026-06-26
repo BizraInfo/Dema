@@ -38,12 +38,24 @@ function readGitCommit() {
 
 function loadCiEvidenceAttestation() {
   const inline = process.env.DEMA_CI_EVIDENCE_ATTESTATION_JSON;
-  const path = process.env.DEMA_CI_EVIDENCE_ATTESTATION_PATH;
-  let raw = inline;
-  if (!raw && path && existsSync(path)) {
-    raw = readFileSync(path, "utf8");
+  const attestationPath = process.env.DEMA_CI_EVIDENCE_ATTESTATION_PATH;
+  if (attestationPath && !existsSync(attestationPath)) {
+    throw new Error(
+      `node0_proof_of_truth_control_plane audit: DEMA_CI_EVIDENCE_ATTESTATION_PATH file not found (${attestationPath})`,
+    );
   }
-  if (!raw) return null;
+  let raw =
+    inline != null && String(inline).trim() !== "" ? inline : null;
+  if (!raw && attestationPath) {
+    try {
+      raw = readFileSync(attestationPath, "utf8");
+    } catch (error) {
+      throw new Error(
+        `node0_proof_of_truth_control_plane audit: cannot read DEMA_CI_EVIDENCE_ATTESTATION_PATH (${error.message})`,
+      );
+    }
+  }
+  if (!raw || String(raw).trim() === "") return null;
   try {
     return JSON.parse(raw);
   } catch (error) {

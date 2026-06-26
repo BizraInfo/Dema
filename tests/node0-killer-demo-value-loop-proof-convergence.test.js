@@ -205,5 +205,6 @@ test("PC-12: verified CI evidence attestation promotes ready_local in convergenc
   assert.equal(result.ok, true);
   assert.equal(result.ready_local_eligible, true);
   assert.equal(result.release_verdict, "READY_LOCAL");
-  assert.equal(result.attestation_merged ?? audit.attestation_merged, true);
+  assert.equal(result.composed.proof_snapshot_attachment?.attestation_merged, true);
+  assert.equal(result.composed.proof_snapshot_attachment?.ci_evidence_attestation?.commit, commit);
 });

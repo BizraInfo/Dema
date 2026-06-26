@@ -1,5 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import {
   buildNode0ProofOfTruthControlPlane,
   verifyNode0ProofOfTruthControlPlane,
@@ -228,4 +231,35 @@ test("computeReleaseVerdict uses caller boundaries in economic rail", () => {
     boundaries: { no_token_mint: false },
   });
   assert.equal(ledger.economic.boundary_blocked, false);
+});
+
+const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
+
+test("audit fails closed when DEMA_CI_EVIDENCE_ATTESTATION_PATH file missing", () => {
+  const { DEMA_CI_EVIDENCE_ATTESTATION_JSON, ...baseEnv } = process.env;
+  assert.throws(
+    () => {
+      execFileSync(
+        "node",
+        [join(REPO_ROOT, "scripts/audit/node0-proof-of-truth-control-plane.mjs"), "--json"],
+        {
+          cwd: REPO_ROOT,
+          env: {
+            ...baseEnv,
+            DEMA_CI_EVIDENCE_ATTESTATION_PATH: join(
+              REPO_ROOT,
+              "nonexistent-ci-attestation-missing.json",
+            ),
+          },
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
+    },
+    (error) => {
+      assert.notEqual(error.status, 0);
+      assert.match(String(error.stderr), /file not found/i);
+      return true;
+    },
+  );
 });

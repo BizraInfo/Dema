@@ -72,18 +72,30 @@ test("CEA-06: fail-closed on overclaim READY_REMOTE", () => {
 });
 
 test("CEA-07: fail-closed on boundary flag false", () => {
-  const attestation = passAttestation();
-  const tampered = {
-    ...attestation,
-    boundary: { ...attestation.boundary, local_only: false },
-    receipt_hash: attestation.receipt_hash,
-  };
-  const verified = verifyNode0CiEvidenceAttestation(tampered);
+  const attestation = buildNode0CiEvidenceAttestation({
+    commit: FIXTURE_COMMIT,
+    ...CI_EVIDENCE_ATTESTATION_PASS_FIXTURE,
+    boundary: {
+      local_only: false,
+      no_network_required: true,
+      not_remote_seal: true,
+      not_public_safe_claim: true,
+    },
+  });
+  const verified = verifyNode0CiEvidenceAttestation(attestation);
   assert.equal(verified.ok, false);
-  assert.ok(
-    verified.blocked_by.includes("boundary_local_only") ||
-      verified.blocked_by.includes("receipt_hash_mismatch"),
-  );
+  assert.ok(verified.blocked_by.includes("boundary_local_only"));
+});
+
+test("CEA-07b: fail-closed on whitespace-padded overclaim verdict", () => {
+  const attestation = buildNode0CiEvidenceAttestation({
+    commit: FIXTURE_COMMIT,
+    ...CI_EVIDENCE_ATTESTATION_PASS_FIXTURE,
+    claimed_release_verdict: " READY_REMOTE ",
+  });
+  const verified = verifyNode0CiEvidenceAttestation(attestation);
+  assert.equal(verified.ok, false);
+  assert.ok(verified.blocked_by.includes("overclaim_release_verdict"));
 });
 
 test("CEA-08: ready_local rails require all PASS (not UNKNOWN)", () => {

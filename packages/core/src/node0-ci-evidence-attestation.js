@@ -74,9 +74,10 @@ export function buildNode0CiEvidenceAttestation({
   rails = {},
   evidence_source = "operator_supplied_or_ci_exported",
   claimed_release_verdict = null,
+  boundary: boundaryOverride = null,
 } = {}) {
   const normalizedRails = normalizeRails(rails);
-  const boundary = buildCiEvidenceAttestationBoundary();
+  const boundary = boundaryOverride ?? buildCiEvidenceAttestationBoundary();
   const body = {
     schema: NODE0_CI_EVIDENCE_ATTESTATION_SCHEMA,
     truth_label: NODE0_CI_EVIDENCE_ATTESTATION_TRUTH_LABEL,
@@ -125,9 +126,12 @@ export function verifyNode0CiEvidenceAttestation(attestation, { require_pass_rai
   if (boundary.not_remote_seal !== true) blocked_by.push("boundary_not_remote_seal");
   if (boundary.not_public_safe_claim !== true) blocked_by.push("boundary_not_public_safe_claim");
 
+  const claimedVerdict = attestation.claimed_release_verdict
+    ? String(attestation.claimed_release_verdict).trim()
+    : "";
   if (
-    attestation.claimed_release_verdict &&
-    CI_EVIDENCE_ATTESTATION_OVERCLAIM_VERDICTS.includes(attestation.claimed_release_verdict)
+    claimedVerdict &&
+    CI_EVIDENCE_ATTESTATION_OVERCLAIM_VERDICTS.includes(claimedVerdict)
   ) {
     blocked_by.push("overclaim_release_verdict");
   }
@@ -138,15 +142,9 @@ export function verifyNode0CiEvidenceAttestation(attestation, { require_pass_rai
       blocked_by.push(`invalid_rail_${rail}`);
     }
     if (require_pass_rails && status !== "PASS") {
-      blocked_by.push(`rail_${rail}_not_pass`);
-    }
-  }
-
-  if (require_pass_rails) {
-    for (const rail of CI_EVIDENCE_REQUIRED_RAILS) {
-      if (attestation.rails?.[rail] === "UNKNOWN") {
-        blocked_by.push(`rail_${rail}_unknown_when_pass_required`);
-      }
+      blocked_by.push(
+        status === "UNKNOWN" ? `rail_${rail}_unknown_when_pass_required` : `rail_${rail}_not_pass`,
+      );
     }
   }
 

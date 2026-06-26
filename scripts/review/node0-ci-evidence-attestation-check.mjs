@@ -48,7 +48,11 @@ export function runNode0CiEvidenceAttestationCheck() {
     risks: [],
   };
   const merge = mergeCiEvidenceAttestationIntoGatheredInput(baseInput, attestation);
-  if (!merge.merged) blocked.push("attestation_merge_failed");
+  if (!merge.merged) {
+    blocked.push("attestation_merge_failed");
+    if (merge.blocked_by) blocked.push(...merge.blocked_by);
+    else if (merge.verified?.blocked_by) blocked.push(...merge.verified.blocked_by);
+  }
 
   const audit = buildGatheredAuditResultWithCiEvidenceAttestation(baseInput, attestation);
   if (audit.ledger.release_verdict !== "READY_LOCAL") {
