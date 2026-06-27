@@ -34,6 +34,7 @@
     "proof:attest:ci:aggregate": "node scripts/ci/aggregate-node0-ci-evidence-attestation.mjs",
     "proof:export": "node scripts/proof/export-node0-proof-artifact-bundle.mjs --json",
     "proof:export:check": "node scripts/review/node0-proof-artifact-export-check.mjs",
+    "pat-sat:blackboard:check": "node scripts/review/pat-sat-blackboard-dry-run-check.mjs",
     "eval:layer1": "node scripts/artifact-safety-check.mjs",
     "smoke-boundary": "node scripts/smoke-boundary.mjs",
     "baseline:l1": "node scripts/baseline-l1.mjs",
