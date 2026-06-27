@@ -20,6 +20,7 @@ export const commands = [
   ["node", ["scripts/review/node0-ci-evidence-attestation-check.mjs"]],
   ["node", ["scripts/review/node0-ci-rail-aggregation-check.mjs"]],
   ["node", ["scripts/review/node0-release-verdict-check.mjs"]],
+  ["node", ["scripts/review/node0-proof-artifact-export-check.mjs"]],
   ["node", ["scripts/review/node0-proof-of-truth-control-plane-check.mjs"]],
   ["node", ["scripts/review/zero-dep-gate.mjs"]],
   ["node", ["scripts/review/kernel-purity-check.mjs"]],
