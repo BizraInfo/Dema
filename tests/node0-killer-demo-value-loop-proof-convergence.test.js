@@ -182,7 +182,8 @@ test("PC-11: ready_local_eligible when gathered snapshot verifies READY_LOCAL", 
   assert.equal(result.ok, true);
   assert.equal(result.ready_local_eligible, true);
   assert.equal(result.release_verdict, "READY_LOCAL");
-  assert.equal(result.compose_status, "PROOF_ATTACHED_PARTIAL_CONVERGENCE");
+  assert.equal(result.compose_status, "PROOF_ATTACHED_READY_LOCAL");
+  assert.equal(result.convergence_summary.converged, KILLER_DEMO_PROOF_CONVERGENCE_CLAIMS.length);
 });
 
 test("PC-12: verified CI evidence attestation promotes ready_local in convergence", () => {
@@ -206,6 +207,18 @@ test("PC-12: verified CI evidence attestation promotes ready_local in convergenc
   assert.equal(result.ready_local_eligible, true);
   assert.equal(result.release_verdict, "READY_LOCAL");
   assert.equal(result.attestation_merged, true);
+  assert.equal(result.compose_status, "PROOF_ATTACHED_READY_LOCAL");
   assert.equal(result.composed.proof_snapshot_attachment?.attestation_merged, true);
   assert.equal(result.composed.proof_snapshot_attachment?.ci_evidence_attestation?.commit, commit);
+});
+
+test("PC-13: all curated convergence claims reach CONVERGED floor with honest evidence", () => {
+  const out = buildNode0KillerDemoValueLoopProofConvergence(withGatheredAudit());
+  assert.equal(out.proof_convergence.summary.total, KILLER_DEMO_PROOF_CONVERGENCE_CLAIMS.length);
+  assert.equal(out.proof_convergence.summary.converged, KILLER_DEMO_PROOF_CONVERGENCE_CLAIMS.length);
+  assert.equal(out.proof_convergence.summary.partial, 0);
+  for (const claim of out.proof_convergence.claims) {
+    assert.equal(claim.convergence, "CONVERGED", `claim ${claim.id} should CONVERGE`);
+    assert.ok(claim.floor_level >= 4);
+  }
 });

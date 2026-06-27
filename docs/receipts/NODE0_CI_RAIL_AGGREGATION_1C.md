@@ -55,4 +55,4 @@ Wired in `npm run check`.
 ## What this does not prove
 
 - Remote seal, public-safe publication, or live Node0 activation
-- `PROOF_ATTACHED_READY_LOCAL` compose unless convergence claims also CONVERGED
+- `PROOF_ATTACHED_READY_LOCAL` compose when convergence claims CONVERGED and attestation merged
