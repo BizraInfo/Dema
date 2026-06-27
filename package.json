@@ -29,6 +29,7 @@
     "proof:truth": "node scripts/audit/node0-proof-of-truth-control-plane.mjs --json",
     "proof:truth:check": "node scripts/review/node0-proof-of-truth-control-plane-check.mjs",
     "proof:attest:ci": "node scripts/ci/export-node0-ci-evidence-attestation.mjs",
+    "proof:attest:ci:aggregate": "node scripts/ci/aggregate-node0-ci-evidence-attestation.mjs",
     "eval:layer1": "node scripts/artifact-safety-check.mjs",
     "smoke-boundary": "node scripts/smoke-boundary.mjs",
     "baseline:l1": "node scripts/baseline-l1.mjs",
