@@ -21,11 +21,16 @@ export function runPatSatBlackboardDryRunCheck() {
 
   const report = buildPatSatBlackboardDryRun(HERMETIC_BLACKBOARD_SEED);
   const verified = verifyPatSatBlackboardDryRun(report);
+  const frozenVerified = Object.freeze({
+    ...verified,
+    blocked_by: Object.freeze([...verified.blocked_by]),
+  });
 
-  if (!verified.ok) blocked.push(...verified.blocked_by);
+  if (!frozenVerified.ok) blocked.push(...frozenVerified.blocked_by);
   if (report.final_state !== "QUIESCENT_CONSENT_READY") {
     blocked.push("hermetic_final_state_not_quiescent");
   }
+  // 8 mirrors the fixed PAT/SAT source list in pat-sat-blackboard-dry-run.js.
   if (report.board.length !== 8) {
     blocked.push("hermetic_board_length_not_8");
   }
@@ -48,12 +53,12 @@ export function runPatSatBlackboardDryRunCheck() {
     truth_label: PAT_SAT_BLACKBOARD_DRY_RUN_TRUTH_LABEL,
     final_state: report.final_state,
     board_length: report.board.length,
-    verified,
+    verified: frozenVerified,
     blocked_by: Object.freeze(blocked),
   });
 }
 
-if (pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
   const result = runPatSatBlackboardDryRunCheck();
 
   if (JSON_MODE) {
