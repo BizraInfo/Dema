@@ -46,9 +46,9 @@ export const KILLER_DEMO_PROOF_CONVERGENCE_CLAIMS = Object.freeze([
     statement: "Scan modes through Node Space ontology compose gate verifies",
     rails: Object.freeze({
       formal: "spec_plus_test",
-      cryptographic: "hash_bound",
+      cryptographic: "local_signed",
       empirical: "passing_tests",
-      economic: "designed_not_live",
+      economic: "not_applicable",
     }),
   }),
   Object.freeze({
@@ -56,19 +56,19 @@ export const KILLER_DEMO_PROOF_CONVERGENCE_CLAIMS = Object.freeze([
     statement: "dema demo node0-value-loop exposes preview envelope",
     rails: Object.freeze({
       formal: "spec_plus_test",
-      cryptographic: "schema_only",
+      cryptographic: "local_signed",
       empirical: "passing_tests",
-      economic: "designed_not_live",
+      economic: "not_applicable",
     }),
   }),
   Object.freeze({
     id: "metadata-first-default",
     statement: "Default scan mode is metadata-only across device constellation",
     rails: Object.freeze({
-      formal: "declared_spec",
-      cryptographic: "schema_only",
+      formal: "spec_plus_test",
+      cryptographic: "local_signed",
       empirical: "passing_tests",
-      economic: "designed_not_live",
+      economic: "not_applicable",
     }),
   }),
   Object.freeze({
@@ -76,9 +76,9 @@ export const KILLER_DEMO_PROOF_CONVERGENCE_CLAIMS = Object.freeze([
     statement: "Local proof ledger caps release at READY_LOCAL",
     rails: Object.freeze({
       formal: "machine_checked",
-      cryptographic: "hash_bound",
+      cryptographic: "grounded_rederivable",
       empirical: "passing_tests",
-      economic: "local_only",
+      economic: "settled_local",
     }),
   }),
   Object.freeze({
@@ -88,7 +88,17 @@ export const KILLER_DEMO_PROOF_CONVERGENCE_CLAIMS = Object.freeze([
       formal: "spec_plus_test",
       cryptographic: "not_applicable",
       empirical: "passing_tests",
-      economic: "designed_not_live",
+      economic: "settled_local",
+    }),
+  }),
+  Object.freeze({
+    id: "ci-evidence-attestation-bridge",
+    statement: "Verified CI evidence attestation merges PASS rails into local proof ledger",
+    rails: Object.freeze({
+      formal: "machine_checked",
+      cryptographic: "grounded_rederivable",
+      empirical: "measured_remote_ci",
+      economic: "settled_local",
     }),
   }),
 ]);

@@ -55,7 +55,7 @@ tests/node0-killer-demo-value-loop-proof-convergence.test.js
 | TDD-PC-06 | PC-06 | Default gathered → PROOF_ATTACHED_ADVISORY_BLOCKED |
 | TDD-PC-11 | PC-11 | Manual READY_LOCAL ledger → ready_local + PARTIAL compose |
 | TDD-PC-12 | PC-12 | Attested audit → ready_local + READY_LOCAL verdict |
-| TDD-PC-13 | PC-13 | (future) full CONVERGED claims → PROOF_ATTACHED_READY_LOCAL |
+| TDD-PC-13 | PC-13 | full CONVERGED claims + attestation → PROOF_ATTACHED_READY_LOCAL |
 | TDD-PC-10 | PC-10 | CLI smoke without attestation env |
 
 ## Hermetic proof truth (must not regress)
