@@ -7,6 +7,7 @@ export const commands = [
   ["node", ["scripts/review/operator-bridge-threat-model-check.mjs"]],
   ["node", ["scripts/review/consent-bridge-parity-check.mjs"]],
   ["node", ["scripts/review/node0-activation-chain-smoke.mjs"]],
+  ["node", ["scripts/review/pat-sat-blackboard-dry-run-check.mjs"]],
   ["node", ["scripts/review/bizra-genesis-blueprint-check.mjs"]],
   ["node", ["scripts/review/contribution-ladder-compose-gate.mjs"]],
   ["node", ["scripts/review/unstructured-asset-scan-modes-check.mjs"]],

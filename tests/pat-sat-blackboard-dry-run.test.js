@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 
 import {
   buildPatSatBlackboardDryRun,
@@ -8,6 +9,7 @@ import {
   PAT_SAT_BLACKBOARD_DRY_RUN_TRUTH_LABEL,
   PAT_SAT_BLACKBOARD_MAX_STEPS,
 } from "../packages/core/src/pat-sat-blackboard-dry-run.js";
+import { runPatSatBlackboardDryRunCheck } from "../scripts/review/pat-sat-blackboard-dry-run-check.mjs";
 
 const FULL_SEED = { pain: "slow local triage", goal: "ship a preview slice" };
 
@@ -83,6 +85,31 @@ test("verify on an honest report is ok", () => {
   const v = verifyPatSatBlackboardDryRun(report);
   assert.equal(v.ok, true);
   assert.deepEqual(v.blocked_by, []);
+});
+
+test("review gate freezes nested verifier result", () => {
+  const result = runPatSatBlackboardDryRunCheck();
+  assert.ok(Object.isFrozen(result));
+  assert.ok(Object.isFrozen(result.verified));
+  assert.ok(Object.isFrozen(result.verified.blocked_by));
+  assert.ok(Object.isFrozen(result.blocked_by));
+});
+
+test("review gate import tolerates missing process.argv[1]", () => {
+  const scriptUrl = new URL(
+    "../scripts/review/pat-sat-blackboard-dry-run-check.mjs",
+    import.meta.url,
+  ).href;
+  const stdout = execFileSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      `process.argv[1] = undefined; await import(${JSON.stringify(scriptUrl)}); console.log("ok");`,
+    ],
+    { encoding: "utf8" },
+  );
+  assert.equal(stdout.trim(), "ok");
 });
 
 test("forgery: mutated entry summary is blocked", () => {
