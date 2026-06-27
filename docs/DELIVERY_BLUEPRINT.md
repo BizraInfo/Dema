@@ -161,6 +161,16 @@ npm run proof:attest:ci
 
 Artifact: `node0-ci-evidence-attestation.json` (uploaded from `.github/workflows/check.yml`). Default rails: `ci_matrix=PASS`, `codeql`/`gitleaks=UNKNOWN` unless `NODE0_CI_EVIDENCE_RAIL_*` overrides. Receipt: `docs/receipts/NODE0_CI_EVIDENCE_ATTESTATION_EXPORT_1B.md`.
 
+## CI rail aggregation (NODE0-CI-RAIL-AGGREGATION-1C)
+
+[MEASURED] After `check` completes, `.github/workflows/node0-ci-rail-aggregation.yml` maps check + CodeQL + gitleaks conclusions into one verified attestation:
+
+```bash
+npm run proof:attest:ci:aggregate
+```
+
+Artifact: `node0-ci-evidence-attestation-aggregated.json`. All rails `PASS` only when all three workflows succeeded for the same commit. Receipt: `docs/receipts/NODE0_CI_RAIL_AGGREGATION_1C.md`.
+
 Still blocked: `READY_REMOTE`, `PUBLIC_SAFE`, token mint, wallet, URP, Node0 activation.
 
 This advances the blueprint to the "ultimate implementation" for the Dema face: local A+ delivery loop complete, ready for remote CI proof once the push (with workflow scope) lands the Copilot classifier and other rings.

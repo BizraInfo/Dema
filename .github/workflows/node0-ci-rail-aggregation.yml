@@ -1,0 +1,71 @@
+name: node0-ci-rail-aggregation
+
+# NODE0-CI-RAIL-AGGREGATION-1C — after check completes, map check + CodeQL + gitleaks
+# conclusions for the same head SHA into a verified attestation artifact.
+
+on:
+  workflow_run:
+    workflows: [check]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      head_sha:
+        description: Git commit SHA to aggregate (defaults to HEAD on manual runs)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion != 'cancelled'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && (inputs.head_sha || github.sha) || github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 22.x
+      - run: npm install --no-audit --no-fund --prefer-offline
+      - name: Resolve peer workflow conclusions
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event_name == 'workflow_dispatch' && (inputs.head_sha || github.sha) || github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          fetch_one() {
+            local file="$1"
+            gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${file}/runs" \
+              -f head_sha="${HEAD_SHA}" -f per_page=1 \
+              --jq '.workflow_runs[0].conclusion // empty' 2>/dev/null || true
+          }
+          CHECK=""
+          CODEQL=""
+          GITLEAKS=""
+          for attempt in $(seq 1 12); do
+            CHECK="$(fetch_one check.yml)"
+            CODEQL="$(fetch_one codeql.yml)"
+            GITLEAKS="$(fetch_one gitleaks.yml)"
+            if [[ -n "${CHECK}" && -n "${CODEQL}" && -n "${GITLEAKS}" ]]; then
+              break
+            fi
+            sleep 15
+          done
+          {
+            echo "NODE0_CI_WORKFLOW_CONCLUSION_CHECK=${CHECK:-}"
+            echo "NODE0_CI_WORKFLOW_CONCLUSION_CODEQL=${CODEQL:-}"
+            echo "NODE0_CI_WORKFLOW_CONCLUSION_GITLEAKS=${GITLEAKS:-}"
+            echo "GITHUB_SHA=${HEAD_SHA}"
+          } >> "$GITHUB_ENV"
+      - name: Export aggregated attestation
+        run: npm run proof:attest:ci:aggregate -- --out ./node0-ci-evidence-attestation-aggregated.json
+      - name: Gather smoke (attestation loads through audit gatherer)
+        run: DEMA_CI_EVIDENCE_ATTESTATION_PATH=./node0-ci-evidence-attestation-aggregated.json node scripts/audit/node0-proof-of-truth-control-plane.mjs --json > /dev/null
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: node0-ci-evidence-attestation-aggregated
+          path: node0-ci-evidence-attestation-aggregated.json
+          if-no-files-found: error

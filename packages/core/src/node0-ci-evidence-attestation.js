@@ -40,6 +40,46 @@ export const CI_EVIDENCE_ATTESTATION_PASS_FIXTURE = Object.freeze({
   evidence_source: "ci_export_fixture",
 });
 
+/** GitHub workflow file → attestation rail (I/O boundary only). */
+export const CI_EVIDENCE_WORKFLOW_RAIL_BINDINGS = Object.freeze([
+  Object.freeze({ workflow_file: "check.yml", rail: "ci_matrix" }),
+  Object.freeze({ workflow_file: "codeql.yml", rail: "codeql" }),
+  Object.freeze({ workflow_file: "gitleaks.yml", rail: "gitleaks" }),
+]);
+
+const GITHUB_IN_PROGRESS_CONCLUSIONS = Object.freeze(
+  new Set(["in_progress", "queued", "pending", "waiting", "requested", "stale"]),
+);
+
+export function mapGithubWorkflowConclusionToRailStatus(conclusion) {
+  if (conclusion == null || String(conclusion).trim() === "") return "UNKNOWN";
+  const normalized = String(conclusion).trim().toLowerCase();
+  if (normalized === "success") return "PASS";
+  if (GITHUB_IN_PROGRESS_CONCLUSIONS.has(normalized)) return "UNKNOWN";
+  return "FAIL";
+}
+
+export function mapWorkflowConclusionsToCiEvidenceRails(conclusions = {}) {
+  const rails = {};
+  for (const rail of CI_EVIDENCE_REQUIRED_RAILS) {
+    rails[rail] = "UNKNOWN";
+  }
+  rails.ci_matrix = mapGithubWorkflowConclusionToRailStatus(
+    conclusions.check ?? conclusions.ci_matrix ?? conclusions["check.yml"],
+  );
+  rails.codeql = mapGithubWorkflowConclusionToRailStatus(
+    conclusions.codeql ?? conclusions.CodeQL ?? conclusions["codeql.yml"],
+  );
+  rails.gitleaks = mapGithubWorkflowConclusionToRailStatus(
+    conclusions.gitleaks ?? conclusions["gitleaks.yml"],
+  );
+  return Object.freeze(rails);
+}
+
+export function allCiEvidenceRailsPass(rails) {
+  return CI_EVIDENCE_REQUIRED_RAILS.every((rail) => rails?.[rail] === "PASS");
+}
+
 function freezeDeep(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
   Object.freeze(value);
