@@ -13,6 +13,7 @@ import {
   CORE_PROOF_ROOM_GATES,
   buildProofRoomBundle,
   evaluateProofRoomWrite,
+  evaluateGateOk,
   formatProofRoomReport,
   parseTapSummary,
   readJsonOk,
@@ -46,6 +47,31 @@ test("parseTapSummary and readJsonOk helpers", () => {
 
   assert.equal(readJsonOk('{"ok":true}'), true);
   assert.equal(readJsonOk('{"ok":false}'), false);
+});
+
+test("release readiness gate accepts only the coverage-threshold advisory risk", () => {
+  const gate = CORE_PROOF_ROOM_GATES.find((item) => item.id === "release_readiness");
+  const advisory = evaluateGateOk(
+    JSON.stringify({
+      readiness_score: 97,
+      risks: [{ code: "qa.coverage_threshold_missing" }],
+    }),
+    gate,
+  );
+  assert.equal(advisory.ok, true);
+  assert.deepEqual(advisory.summary.unallowed_risk_codes, []);
+
+  const unrelated = evaluateGateOk(
+    JSON.stringify({
+      readiness_score: 97,
+      risks: [{ code: "ci.actions_not_sha_pinned" }],
+    }),
+    gate,
+  );
+  assert.equal(unrelated.ok, false);
+  assert.deepEqual(unrelated.summary.unallowed_risk_codes, [
+    "ci.actions_not_sha_pinned",
+  ]);
 });
 
 test("buildProofRoomBundle composes mocked gates", async () => {

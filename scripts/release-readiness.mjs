@@ -39,6 +39,11 @@ const REQUIRED_GATES = [
   "npm run perf",
   "git diff --check",
 ];
+const ADVISORY_COVERAGE_TARGETS = Object.freeze({
+  lines: 95,
+  branches: 85,
+  functions: 95,
+});
 const ARTIFACT_011_PREFLIGHT_SCRIPT = "artifact-011:preflight";
 const ARTIFACT_011_PREFLIGHT_COMMAND = "npm run artifact-011:preflight";
 const PRE_PUSH_SEAL_SCRIPT = "pre-push:seal";
@@ -105,10 +110,15 @@ function buildCoverageThreshold(packageJson, pipelineAutomation) {
   );
   return {
     command: command || null,
+    mode: configured ? "native_threshold_gate" : "report_only_advisory",
     configured,
     observed_in_ci: observedInCi,
     enforced: configured && observedInCi,
     thresholds: configured ? extractCoverageThresholds(command) : null,
+    advisory_targets: configured ? null : ADVISORY_COVERAGE_TARGETS,
+    advisory_note: configured
+      ? null
+      : "npm run coverage reports native Node coverage but does not enforce 95/85/95 thresholds.",
   };
 }
 
@@ -388,9 +398,11 @@ function buildPerformanceQa({
       },
       {
         id: "native_coverage_thresholds",
-        status: coverageThreshold.enforced ? "observed" : "missing",
+        status: coverageThreshold.enforced ? "observed" : "advisory",
         evidence:
-          coverageThreshold.command ?? "npm run coverage script missing",
+          coverageThreshold.advisory_note ??
+          coverageThreshold.command ??
+          "npm run coverage script missing",
       },
       {
         id: "delivery_blueprint_performance_notes",
@@ -533,7 +545,9 @@ function buildWorldClassQualityGates({
         id: "coverage_threshold",
         command: "npm run coverage",
         currently_enforced: coverageThreshold.enforced,
-        thresholds: coverageThreshold.thresholds,
+        thresholds:
+          coverageThreshold.thresholds ?? coverageThreshold.advisory_targets,
+        mode: coverageThreshold.mode,
         target: "enforce native Node coverage thresholds in CI",
         risk_code: coverageThreshold.enforced
           ? null

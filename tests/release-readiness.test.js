@@ -369,16 +369,29 @@ test("buildReleaseReadinessReport models automation and quality gates without ov
   assert.equal(gates.get("safety_static_checks").currently_enforced, true);
   assert.equal(gates.get("diff_hygiene").currently_enforced, false);
   assert.equal(
-    gates.get("coverage_threshold").currently_enforced,
-    report.quality_assurance.coverage_threshold.enforced,
+    report.quality_assurance.coverage_threshold.mode,
+    "report_only_advisory",
   );
-  if (report.quality_assurance.coverage_threshold.configured) {
-    assert.deepEqual(gates.get("coverage_threshold").thresholds, {
+  assert.equal(report.quality_assurance.coverage_threshold.configured, false);
+  assert.equal(report.quality_assurance.coverage_threshold.enforced, false);
+  assert.deepEqual(
+    report.quality_assurance.coverage_threshold.advisory_targets,
+    {
       lines: 95,
       branches: 85,
       functions: 95,
-    });
-  }
+    },
+  );
+  assert.equal(
+    gates.get("coverage_threshold").currently_enforced,
+    report.quality_assurance.coverage_threshold.enforced,
+  );
+  assert.equal(gates.get("coverage_threshold").mode, "report_only_advisory");
+  assert.deepEqual(gates.get("coverage_threshold").thresholds, {
+    lines: 95,
+    branches: 85,
+    functions: 95,
+  });
   assert.equal(
     gates.get("coverage_threshold").risk_code,
     report.quality_assurance.coverage_threshold.enforced
@@ -414,7 +427,7 @@ test("buildReleaseReadinessReport inventories performance QA and rollback contro
     mechanisms.get("native_coverage_thresholds").status,
     report.quality_assurance.coverage_threshold.enforced
       ? "observed"
-      : "missing",
+      : "advisory",
   );
   // A+ perf now enforced
   assert.equal(mechanisms.get("a_plus_perf_gate").status, "enforced");
