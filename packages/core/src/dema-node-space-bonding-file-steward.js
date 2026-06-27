@@ -275,21 +275,38 @@ function buildDuplicateCandidatePlan(files) {
 }
 
 function buildBatchRenamePlanPreview(files, rootLabel) {
+  const planned = files.map((file) => {
+    const category = classifyFile(file);
+    const proposed_name = plannedName(file, category, rootLabel);
+    return {
+      action_id: `rename:${sha256(file.file_id).slice(0, 16)}`,
+      action_type: "rename_preview",
+      source_file_id: file.file_id,
+      from_relative_path: file.relative_path,
+      proposed_name,
+      proposed_name_base: proposed_name,
+      consent_required: "GO: preview rename only; separate GO required to execute",
+      mutation_performed: false,
+    };
+  });
+  const counts = countBy(planned, (plan) => plan.proposed_name);
   return freezeDeep(
-    files
-      .filter((file) => file.kind === "file")
-      .map((file) => {
-        const category = classifyFile(file);
-        return {
-          action_id: `rename:${sha256(file.file_id).slice(0, 16)}`,
-          action_type: "rename_preview",
-          source_file_id: file.file_id,
-          from_relative_path: file.relative_path,
-          proposed_name: plannedName(file, category, rootLabel),
-          consent_required: "GO: preview rename only; separate GO required to execute",
-          mutation_performed: false,
-        };
-      }),
+    planned.map((plan) => {
+      const name_collision = counts[plan.proposed_name] > 1;
+      const extension = plan.proposed_name.match(/\.[^.]+$/)?.[0] ?? "";
+      const stem = extension
+        ? plan.proposed_name.slice(0, -extension.length)
+        : plan.proposed_name;
+      return {
+        ...plan,
+        proposed_name: name_collision
+          ? `${stem}-${sha256(plan.source_file_id).slice(0, 8)}${extension}`
+          : plan.proposed_name,
+        name_collision,
+        collision_resolution:
+          name_collision ? "short_file_id_hash_suffix" : "not_required",
+      };
+    }),
   );
 }
 
@@ -345,9 +362,10 @@ function buildReceiptRequirements() {
     every_action_preview_requires: Object.freeze([
       "claim",
       "evidence",
-      "consent_phrase_required",
+      "consent_required",
       "boundary",
       "verification_result",
+      "receipt_preview_id",
       "receipt_hash",
     ]),
     execution_requires_separate_exact_consent: true,
@@ -366,13 +384,16 @@ function buildActionReceiptPreview(action, boundary) {
     verification_result: "PREVIEW_VERIFIED_NO_FILE_CHANGED",
     boundary,
   };
+  const receipt_hash = receiptHash(receipt_body);
   return freezeDeep({
-    receipt_preview_id: receiptHash(receipt_body),
+    receipt_preview_id: receipt_hash,
+    receipt_hash,
     action_id: receipt_body.action_id,
     action_type: action.action_type,
     claim: receipt_body.claim,
     evidence: receipt_body.evidence,
     consent_required: receipt_body.consent_required,
+    boundary,
     verification_result: receipt_body.verification_result,
     no_file_changed: true,
   });
@@ -420,14 +441,15 @@ export function buildDemaNodeSpaceBondingFileSteward({
   boundary = fileStewardBoundary(),
 } = {}) {
   const files = freezeDeep(file_inventory.map(normalizeFile));
+  const fileEntries = freezeDeep(files.filter((file) => file.kind === "file"));
   const boundaries = freezeDeep({ ...boundary, ...fileStewardBoundary() });
-  const duplicate_candidate_plan = buildDuplicateCandidatePlan(files);
+  const duplicate_candidate_plan = buildDuplicateCandidatePlan(fileEntries);
   const batch_rename_plan_preview = buildBatchRenamePlanPreview(
-    files,
+    fileEntries,
     root_label,
   );
   const folder_organization_plan_preview =
-    buildFolderOrganizationPlanPreview(files);
+    buildFolderOrganizationPlanPreview(fileEntries);
   const merge_candidate_plan_preview =
     buildMergeCandidatePlanPreview(duplicate_candidate_plan);
   const file_action_receipt_previews = buildReceiptPreviews(
@@ -456,25 +478,24 @@ export function buildDemaNodeSpaceBondingFileSteward({
       file_count: files.filter((file) => file.kind === "file").length,
       directory_count: files.filter((file) => file.kind === "directory").length,
       total_size_bytes: files.reduce((sum, file) => sum + file.size_bytes, 0),
-      category_counts: countBy(files, classifyFile),
+      category_counts: countBy(fileEntries, classifyFile),
       metadata_only: true,
     }),
-    file_type_clusters: buildFileTypeClusters(files),
+    file_type_clusters: buildFileTypeClusters(fileEntries),
     project_context_candidates: buildProjectContextCandidates(
-      files,
+      fileEntries,
       user_context,
     ),
-    unstructured_data_map: buildUnstructuredDataMap(files),
+    unstructured_data_map: buildUnstructuredDataMap(fileEntries),
     duplicate_candidate_plan,
     batch_rename_plan_preview,
     folder_organization_plan_preview,
     merge_candidate_plan_preview,
     file_action_receipt_previews,
     content_awareness_consent_requests:
-      buildContentAwarenessConsentRequests(files),
+      buildContentAwarenessConsentRequests(fileEntries),
     receipt_requirements: buildReceiptRequirements(),
-    risk_register: buildRiskRegister(files, duplicate_candidate_plan),
-    boundary: boundaries,
+    risk_register: buildRiskRegister(fileEntries, duplicate_candidate_plan),
     boundaries,
     what_this_proves: Object.freeze([
       "Dema can turn a metadata-only file inventory into deterministic preview plans.",
@@ -561,8 +582,8 @@ export function verifyDemaNodeSpaceBondingFileSteward(report) {
       blocked_by.push(`content_consent_default_allowed:${request.file_id}`);
     }
   }
-  if (!report.duplicate_candidate_plan?.length) {
-    blocked_by.push("duplicate_candidate_plan_missing");
+  if (!Array.isArray(report.duplicate_candidate_plan)) {
+    blocked_by.push("duplicate_candidate_plan_invalid");
   }
   const overclaim = containsForbiddenOverclaim(report);
   if (overclaim) {

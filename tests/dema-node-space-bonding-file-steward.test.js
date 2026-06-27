@@ -58,10 +58,17 @@ test("proposes deterministic rename previews", () => {
   const first = buildDemaNodeSpaceBondingFileSteward();
   const second = buildDemaNodeSpaceBondingFileSteward();
   assert.deepEqual(first.batch_rename_plan_preview, second.batch_rename_plan_preview);
-  assert.ok(
-    first.batch_rename_plan_preview.some(
-      (plan) => plan.proposed_name === "dema-node-space-notes-bizra-notes-final.md",
-    ),
+  const notesRename = first.batch_rename_plan_preview.find(
+    (plan) => plan.source_file_id === "fs:work/BIZRA notes final FINAL.md",
+  );
+  assert.equal(
+    notesRename.proposed_name_base,
+    "dema-node-space-notes-bizra-notes-final.md",
+  );
+  assert.equal(notesRename.name_collision, true);
+  assert.match(
+    notesRename.proposed_name,
+    /^dema-node-space-notes-bizra-notes-final-[0-9a-f]{8}\.md$/,
   );
   assert.ok(
     first.batch_rename_plan_preview.every(
@@ -75,6 +82,8 @@ test("emits receipt hash previews for proposed actions", () => {
   assert.ok(report.file_action_receipt_previews.length > 0);
   for (const receipt of report.file_action_receipt_previews) {
     assert.match(receipt.receipt_preview_id, /^sha256:[0-9a-f]{64}$/);
+    assert.equal(receipt.receipt_hash, receipt.receipt_preview_id);
+    assert.equal(receipt.boundary.file_content_read, false);
     assert.equal(receipt.verification_result, "PREVIEW_VERIFIED_NO_FILE_CHANGED");
     assert.equal(receipt.no_file_changed, true);
     assert.equal(receipt.claim, "file_action_preview_only");
@@ -91,6 +100,67 @@ test("requires consent for content-aware classification", () => {
     assert.equal(request.default_allowed, false);
     assert.match(request.consent_phrase_required, /^GO: read content/);
   }
+});
+
+test("duplicate-free inventories verify successfully", () => {
+  const report = buildDemaNodeSpaceBondingFileSteward({
+    file_inventory: [
+      {
+        file_id: "fs:a/report.pdf",
+        name: "report.pdf",
+        relative_path: "a/report.pdf",
+        extension: ".pdf",
+        kind: "file",
+        size_bytes: 100,
+        mtime_iso: "2026-06-28T00:00:00.000Z",
+      },
+      {
+        file_id: "fs:b/notes.md",
+        name: "notes.md",
+        relative_path: "b/notes.md",
+        extension: ".md",
+        kind: "file",
+        size_bytes: 200,
+        mtime_iso: "2026-06-28T00:00:00.000Z",
+      },
+    ],
+  });
+  assert.deepEqual(report.duplicate_candidate_plan, []);
+  const verified = verifyDemaNodeSpaceBondingFileSteward(report);
+  assert.equal(verified.ok, true, verified.blocked_by.join(", "));
+});
+
+test("directory entries do not leak into file action previews", () => {
+  const report = buildDemaNodeSpaceBondingFileSteward({
+    file_inventory: [
+      {
+        file_id: "fs:folder",
+        name: "folder",
+        relative_path: "folder",
+        extension: "",
+        kind: "directory",
+        size_bytes: 0,
+        mtime_iso: "2026-06-28T00:00:00.000Z",
+      },
+      {
+        file_id: "fs:folder/report.pdf",
+        name: "report.pdf",
+        relative_path: "folder/report.pdf",
+        extension: ".pdf",
+        kind: "file",
+        size_bytes: 100,
+        mtime_iso: "2026-06-28T00:00:00.000Z",
+      },
+    ],
+  });
+  assert.equal(report.node_space_inventory_summary.directory_count, 1);
+  assert.equal(report.node_space_inventory_summary.file_count, 1);
+  assert.equal(report.batch_rename_plan_preview.length, 1);
+  assert.equal(report.content_awareness_consent_requests.length, 1);
+  assert.equal(
+    report.batch_rename_plan_preview[0].source_file_id,
+    "fs:folder/report.pdf",
+  );
 });
 
 test("blocks delete and merge execution actions", () => {

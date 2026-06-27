@@ -6,6 +6,7 @@ import {
   DEMA_NODE_SPACE_BONDING_FILE_STEWARD_SCHEMA,
   DEMA_NODE_SPACE_BONDING_FILE_STEWARD_TRUTH_LABEL,
 } from "../../packages/core/src/dema-node-space-bonding-file-steward.js";
+import { pathToFileURL } from "node:url";
 
 const JSON_MODE = process.argv.includes("--json");
 
@@ -13,7 +14,7 @@ export function runDemaNodeSpaceBondingFileStewardGateCheck() {
   return runDemaNodeSpaceBondingFileStewardGate();
 }
 
-if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const result = runDemaNodeSpaceBondingFileStewardGateCheck();
 
   if (JSON_MODE) {
