@@ -34,3 +34,16 @@ jobs:
       # Level 5 (Optimizing) CI/CD: sealed local forcing function on Node 22 matrix.
       - if: matrix.node-version == '22.x'
         run: npm run delivery:check
+      # NODE0-CI-EVIDENCE-ATTESTATION-EXPORT-1B: verified JSON artifact for local gather.
+      - if: matrix.node-version == '22.x'
+        run: npm run proof:attest:ci
+        env:
+          NODE0_CI_EVIDENCE_EXPORT_CONTEXT: post_check
+      - if: matrix.node-version == '22.x'
+        run: DEMA_CI_EVIDENCE_ATTESTATION_PATH=./node0-ci-evidence-attestation.json node scripts/audit/node0-proof-of-truth-control-plane.mjs --json > /dev/null
+      - if: matrix.node-version == '22.x'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: node0-ci-evidence-attestation-${{ matrix.node-version }}
+          path: node0-ci-evidence-attestation.json
+          if-no-files-found: error
