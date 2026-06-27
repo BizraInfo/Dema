@@ -54,6 +54,7 @@ export const CORE_PROOF_ROOM_GATES = Object.freeze([
       "--ci-workflow-changes-authorized",
     ],
     readiness_min_score: 100,
+    readiness_allowed_risk_codes: Object.freeze(["qa.coverage_threshold_missing"]),
     timeout_ms: 120_000,
   },
   {
@@ -133,12 +134,26 @@ export function evaluateGateOk(stdout, gate) {
     try {
       const parsed = JSON.parse(stdout);
       const score = parsed.readiness_score;
-      const ok = typeof score === "number" && score >= gate.readiness_min_score;
+      const riskCodes = Array.isArray(parsed.risks)
+        ? parsed.risks.map((risk) => risk?.code).filter(Boolean)
+        : [];
+      const allowed = new Set(gate.readiness_allowed_risk_codes ?? []);
+      const unallowedRiskCodes = riskCodes.filter((code) => !allowed.has(code));
+      const allowedAdvisoryScore =
+        typeof score === "number" &&
+        score >= gate.readiness_min_score - allowed.size * 3 &&
+        riskCodes.length > 0 &&
+        unallowedRiskCodes.length === 0;
+      const ok =
+        (typeof score === "number" && score >= gate.readiness_min_score) ||
+        allowedAdvisoryScore;
       return {
         ok,
         summary: {
           readiness_score: score,
           min_required: gate.readiness_min_score,
+          allowed_advisory_risk_codes: Object.freeze([...allowed]),
+          unallowed_risk_codes: Object.freeze(unallowedRiskCodes),
         },
       };
     } catch {

@@ -20,6 +20,10 @@ npm run layer-a5:prep
 git diff --check
 ```
 
+`npm run coverage` is a native Node coverage report and harness-failure check.
+It is advisory for the 95/85/95 coverage target until a dedicated hard gate is
+merged; do not call threshold coverage passing from this command alone.
+
 Run one test file:
 
 ```bash
