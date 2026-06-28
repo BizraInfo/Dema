@@ -14,6 +14,8 @@ import {
   findWorkflowEvents,
   parseWorkflowWorktreeChanges,
   formatReleaseReadinessReport,
+  evaluateReleaseReadiness,
+  extractReportJson,
 } from "../scripts/release-readiness.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -517,4 +519,57 @@ test("release-readiness script supports explicit workflow authorization flag", a
     hasRisk(report, "ci.workflow_worktree_modified_requires_authorization"),
     false,
   );
+});
+
+// PROOF-GATE-TEETH-HARDENING-1A · defect 1
+// The old delivery-check release gate (scripts/delivery-check.mjs:96) was
+// tautological: it substring-matched the --json output for 'launch_blocker'
+// and 'authorized'. Because the report ALWAYS contains the static key
+// `worktree_changes_authorized` (substring 'authorized') and risk objects can
+// carry the literal severity 'launch_blocker', the check could never fail.
+// evaluateReleaseReadiness parses the report structurally and fails closed.
+test("evaluateReleaseReadiness FAILS when a launch_blocker risk is present", () => {
+  const report = {
+    readiness_score: 100,
+    risks: [{ code: "x.broken", severity: "launch_blocker" }],
+    ci: { workflow: { worktree_changes_authorized: true } },
+  };
+  const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+  assert.equal(verdict.hasLaunchBlocker, true);
+  assert.equal(verdict.ok, false);
+});
+
+test("evaluateReleaseReadiness PASSES a clean report with no blocker and score >= threshold", () => {
+  const report = {
+    readiness_score: 97,
+    risks: [{ code: "x.minor", severity: "improvement" }],
+    ci: { workflow: { worktree_changes_authorized: true } },
+  };
+  const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+  assert.equal(verdict.hasLaunchBlocker, false);
+  assert.equal(verdict.ok, true);
+});
+
+test("evaluateReleaseReadiness FAILS closed on a malformed report (no risks array)", () => {
+  const verdict = evaluateReleaseReadiness({ readiness_score: 100 }, { minScore: 80 });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reasons.join(" "), /risks/);
+});
+
+test("evaluateReleaseReadiness FAILS when readiness_score is below the configured threshold", () => {
+  const report = {
+    readiness_score: 50,
+    risks: [{ code: "x.minor", severity: "review" }],
+  };
+  const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+  assert.equal(verdict.hasLaunchBlocker, false);
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reasons.join(" "), /readiness_score/);
+});
+
+test("extractReportJson recovers the report object even with leading log noise", () => {
+  const noisy = "> dema@ release:readiness\n" + JSON.stringify({ readiness_score: 97, risks: [] }) + "\n";
+  const parsed = extractReportJson(noisy);
+  assert.equal(parsed.readiness_score, 97);
+  assert.equal(extractReportJson("no json here"), null);
 });

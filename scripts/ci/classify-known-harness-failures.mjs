@@ -28,13 +28,25 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
 // Explicit allowlist of failures that may be masked as environmental noise.
-// Each is matched against the `not ok N - <name>` line by test name.
+//
+// PROOF-GATE-TEETH-HARDENING-1A · defect 2 (cause-bound masking).
+// Masking now requires BOTH:
+//   (a) `pattern` matches the `not ok N - <name>` test NAME, AND
+//   (b) `cause` matches the environmental signature inside that failure's own
+//       TAP diagnostic block.
+// Matching the name alone was the hole: `/baseline-l1-diff/i` matched every
+// baseline-l1-diff test — including correctness tests (input-validation, the
+// 16-key constitutional boundary) — so a genuine regression in one of them was
+// silently masked. Requiring the cause in the same block means a real assertion
+// failure (no env signature) is NEVER masked; only the true environmental flake
+// (which prints EROFS/ENOENT/etc. in its block) is. Fails closed by default.
 export const KNOWN_MASKABLE = [
   {
     id: "artifact_011_eros_sandbox",
     reason:
       "EROFS mkdtemp under $HOME — sandbox-only; passes in CI / operator terminal",
     pattern: /isolated preflight CLI clears preview ceremony on fresh home/,
+    cause: /EROFS|read-only file system|EPERM|operation not permitted/i,
   },
   // NOTE: integration-check failures are NOT allowlisted. They fail for REAL
   // reasons (command/docs/test-matrix drift), never environmental ones — masking
@@ -44,6 +56,7 @@ export const KNOWN_MASKABLE = [
     id: "baseline_l1_env",
     reason: "baseline-l1-diff /tmp artifact schema mismatch (CI env)",
     pattern: /baseline-l1-diff|not a baseline_l1/i,
+    cause: /EROFS|read-only file system|EPERM|ENOENT|operation not permitted|\/tmp\/|schema mismatch/i,
   },
 ];
 
@@ -51,37 +64,73 @@ export const KNOWN_MASKABLE = [
  * Pure classification. Returns the verdict plus the enumerated masked and
  * unrecognized failures, so callers (and tests) can reason without process.exit.
  */
+// A TAP marker line ends a failure's diagnostic block: the next ok/not ok, any
+// `#` comment (summary or subtest), a plan line, or the version header.
+function isTapMarkerLine(line) {
+  return (
+    /^\s*ok \d+/.test(line) ||
+    /^\s*not ok \d+/.test(line) ||
+    /^\s*#/.test(line) ||
+    /^\s*1\.\.\d+/.test(line) ||
+    /^\s*TAP version/i.test(line)
+  );
+}
+
 export function classifyFailures(content) {
   const failMatch = content.match(/# fail\s+(\d+)/);
   const reportedFailCount = failMatch ? parseInt(failMatch[1], 10) : 0;
 
-  // Linear regex: greedy `(.+)$` (the `.` excludes newline, `$` anchors line-end
-  // under /m) has no quantifier ambiguity, so no polynomial backtracking. The
-  // prior `(.+?)\s*$` was O(n^2) on a long space run before a non-space at line
-  // end (CodeQL js/polynomial-redos). Trailing/leading whitespace is removed by
-  // `.trim()` in JS, preserving the old `\s*$` behavior.
-  const notOk = [...content.matchAll(/^\s*not ok (\d+) - (.+)$/gm)].map(
-    (m) => ({
+  // Parse line-by-line so each `not ok` carries its diagnostic block (the lines
+  // until the next TAP marker). Per-line `(.+)$` is linear (the `.` excludes
+  // newline, `$` anchors line end) — no polynomial backtracking (CodeQL
+  // js/polynomial-redos). `.trim()` preserves the old trailing-whitespace strip.
+  const lines = content.split(/\r?\n/);
+  const notOk = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^\s*not ok (\d+) - (.+)$/);
+    if (!m) continue;
+    const blockLines = [];
+    for (let j = i + 1; j < lines.length && !isTapMarkerLine(lines[j]); j++) {
+      blockLines.push(lines[j]);
+    }
+    notOk.push({
       num: Number(m[1]),
       name: m[2].trim(),
-    }),
-  );
+      block: blockLines.join("\n"),
+    });
+  }
 
   const recognized = [];
   const unrecognized = [];
   for (const f of notOk) {
-    const hit = KNOWN_MASKABLE.find((k) => k.pattern.test(f.name));
+    // Mask only when the test NAME is allowlisted AND the environmental CAUSE
+    // signature appears in this failure's own diagnostic block. A real assertion
+    // failure (no env signature) is never masked, even if its name matches.
+    const hit = KNOWN_MASKABLE.find(
+      (k) => k.pattern.test(f.name) && k.cause.test(f.block),
+    );
     if (hit) recognized.push({ ...f, id: hit.id, reason: hit.reason });
     else unrecognized.push(f);
   }
 
-  const cleanRun = reportedFailCount === 0 && notOk.length === 0;
+  // Completeness: a run is "complete" only if it emitted an end-of-run marker —
+  // a TAP plan line (1..N, N>0) or a node --test summary (`# tests/# pass/# fail`).
+  // A truncated/crashed run has neither; treating its 0-not-ok output as a clean
+  // pass is a false green. (PROOF-GATE-TEETH-HARDENING-1A · defect 3.)
+  const planMatch = content.match(/^\s*1\.\.(\d+)\s*$/m);
+  const planN = planMatch ? parseInt(planMatch[1], 10) : null;
+  const hasSummary = /^#\s*(tests|pass|fail)\s+\d+/m.test(content);
+  const complete = (planN !== null && planN > 0) || hasSummary;
+
+  const cleanRun = complete && reportedFailCount === 0 && notOk.length === 0;
   // Fail closed when the summary reports more failures than we captured as named
   // `not ok` lines (a runner error or an unparseable failure). An uncaptured
   // failure is real — it must never pass as clean just because it had no name.
   const uncapturedFailures = Math.max(0, reportedFailCount - notOk.length);
   const verdict =
-    unrecognized.length === 0 && uncapturedFailures === 0 ? "PASS" : "FAIL";
+    complete && unrecognized.length === 0 && uncapturedFailures === 0
+      ? "PASS"
+      : "FAIL";
 
   return {
     reportedFailCount,
@@ -89,6 +138,7 @@ export function classifyFailures(content) {
     recognized,
     unrecognized,
     cleanRun,
+    complete,
     uncapturedFailures,
     verdict,
   };
@@ -188,6 +238,16 @@ function main() {
   console.log("[G8 GATE] classify-known-harness-failures (hardened v2)");
   console.log(`[G8 GATE] reported # fail: ${r.reportedFailCount}`);
   console.log(`[G8 GATE] raw not-ok lines: ${r.notOk.length}`);
+
+  // Completeness gate (defect 3): a run that emitted no TAP plan and no summary
+  // was truncated or crashed mid-flight. Its 0-not-ok output must never be read
+  // as a clean pass — fail closed so the false-green-on-crash cannot happen.
+  if (!r.complete) {
+    console.error(
+      "[G8 GATE] log has no TAP plan (1..N) or test summary (# tests/# pass/# fail) — the run was truncated or crashed. A partial run must never pass as clean. Exit 1.",
+    );
+    process.exit(1);
+  }
 
   if (r.cleanRun) {
     console.log("[G8 GATE] Clean run: 0 failures, 0 not-ok lines. Exit 0.");
