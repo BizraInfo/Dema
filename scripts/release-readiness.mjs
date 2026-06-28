@@ -812,6 +812,57 @@ export function parseReleaseReadinessArgs(argv = []) {
   };
 }
 
+/**
+ * PROOF-GATE-TEETH-HARDENING-1A · defect 1.
+ *
+ * Structural, fail-closed evaluation of a release-readiness report.
+ *
+ * The prior consumer (scripts/delivery-check.mjs) decided readiness by
+ * substring-matching the --json text for 'launch_blocker' and 'authorized'.
+ * That was tautological: the report ALWAYS contains the static key
+ * `worktree_changes_authorized` (substring 'authorized') and may carry the
+ * literal severity 'launch_blocker', so the gate could never turn red.
+ *
+ * This evaluates the parsed object: a release is ready only when there is NO
+ * launch_blocker risk AND readiness_score >= minScore. Anything malformed
+ * (not an object, missing risks array, non-numeric score) fails closed — an
+ * unparseable report can never prove readiness.
+ */
+export function evaluateReleaseReadiness(report, { minScore = 80 } = {}) {
+  const reasons = [];
+  if (!report || typeof report !== "object") {
+    return { ok: false, hasLaunchBlocker: null, score: null, minScore, reasons: ["malformed_report_not_object"] };
+  }
+  if (!Array.isArray(report.risks)) {
+    return { ok: false, hasLaunchBlocker: null, score: null, minScore, reasons: ["malformed_report_missing_risks_array"] };
+  }
+  const hasLaunchBlocker = report.risks.some(
+    (risk) => risk && risk.severity === "launch_blocker",
+  );
+  if (hasLaunchBlocker) reasons.push("launch_blocker_present");
+  const score = report.readiness_score;
+  const scoreOk = typeof score === "number" && Number.isFinite(score) && score >= minScore;
+  if (!scoreOk) reasons.push(`readiness_score_below_threshold:${score}<${minScore}`);
+  return { ok: !hasLaunchBlocker && scoreOk, hasLaunchBlocker, score, minScore, reasons };
+}
+
+/**
+ * Recover the JSON report object from `release:readiness --json` output, which
+ * may carry leading npm/script log noise. Returns null (fail closed) when no
+ * parseable object is present.
+ */
+export function extractReportJson(output) {
+  if (typeof output !== "string") return null;
+  const start = output.indexOf("{");
+  const end = output.lastIndexOf("}");
+  if (start === -1 || end === -1 || end < start) return null;
+  try {
+    return JSON.parse(output.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+}
+
 if (
   process.argv[1] &&
   pathToFileURL(process.argv[1]).href === import.meta.url

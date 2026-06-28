@@ -39,9 +39,12 @@ describe("G8 classifier — hardened (per-failure allowlist)", () => {
     assert.equal(r.unrecognized.length, 0);
   });
 
-  it("only the artifact-011 sandbox failure → masked (recognized), PASS", () => {
+  it("only the artifact-011 sandbox failure (with EROFS cause) → masked (recognized), PASS", () => {
     const log = [
       "not ok 137 - isolated preflight CLI clears preview ceremony on fresh home",
+      "  ---",
+      "  error: 'EROFS: read-only file system, mkdtemp'",
+      "  ...",
       "# tests 4496",
       "# pass 4495",
       "# fail 1",
@@ -71,10 +74,16 @@ describe("G8 classifier — hardened (per-failure allowlist)", () => {
     assert.equal(r.verdict, "FAIL");
   });
 
-  it("genuinely environmental failures (by name) → masked, PASS", () => {
+  it("genuinely environmental failures (allowlisted name + env cause in block) → masked, PASS", () => {
     const log = [
       "not ok 137 - isolated preflight CLI clears preview ceremony on fresh home",
-      "not ok 200 - baseline-l1-diff rejects non-baseline_l1.v0.1 inputs",
+      "  ---",
+      "  error: 'EROFS: read-only file system'",
+      "  ...",
+      "not ok 200 - baseline-l1-diff emits canonical schema + truth label + snapshot_diff mode",
+      "  ---",
+      "  error: 'ENOENT: no such file or directory, open /tmp/baseline-diff-x/artifact.json'",
+      "  ...",
       "# fail 2",
     ].join("\n");
     const r = classifyFailures(log);
@@ -96,7 +105,13 @@ describe("G8 classifier — hardened (per-failure allowlist)", () => {
   it("mixed recognized + unrecognized → FAIL", () => {
     const log = [
       "not ok 137 - isolated preflight CLI clears preview ceremony on fresh home",
+      "  ---",
+      "  error: 'EROFS: read-only file system'",
+      "  ...",
       "not ok 9 - a different real failure",
+      "  ---",
+      "  error: 'AssertionError: values are not equal'",
+      "  ...",
       "# fail 2",
     ].join("\n");
     const r = classifyFailures(log);
@@ -105,10 +120,10 @@ describe("G8 classifier — hardened (per-failure allowlist)", () => {
     assert.equal(r.verdict, "FAIL");
   });
 
-  it("allowlist entries each carry an id and a reason", () => {
+  it("allowlist entries each carry an id, a reason, a name pattern, and a cause signature", () => {
     assert.ok(KNOWN_MASKABLE.length >= 1);
     for (const k of KNOWN_MASKABLE) {
-      assert.ok(k.id && k.reason && k.pattern instanceof RegExp);
+      assert.ok(k.id && k.reason && k.pattern instanceof RegExp && k.cause instanceof RegExp);
     }
   });
 
@@ -117,6 +132,65 @@ describe("G8 classifier — hardened (per-failure allowlist)", () => {
     // line must NOT pass as clean — the failure is real, just uncaptured.
     const r = classifyFailures("# tests 10\n# pass 9\n# fail 1\n");
     assert.equal(r.verdict, "FAIL");
+  });
+
+  // PROOF-GATE-TEETH-HARDENING-1A · defect 2 (cause-bound masking)
+  // The old classifier masked by test NAME alone: pattern /baseline-l1-diff/i
+  // matched ALL baseline-l1-diff tests — including correctness tests like
+  // input-validation and the 16-key constitutional boundary. A genuine
+  // regression in one of those would be silently masked. Masking must now
+  // require the environmental CAUSE signature in the failure's own TAP block.
+  it("DEFECT-2: a baseline-l1-diff CORRECTNESS regression (no env cause in block) is NOT masked", () => {
+    const log = [
+      "not ok 299 - baseline-l1-diff rejects non-baseline_l1.v0.1 inputs",
+      "  ---",
+      "  error: 'Expected the function to throw but it returned normally'",
+      "  code: 'ERR_ASSERTION'",
+      "  ...",
+      "# tests 300",
+      "# pass 299",
+      "# fail 1",
+    ].join("\n");
+    const r = classifyFailures(log);
+    assert.equal(r.recognized.length, 0, "correctness regression must not be masked");
+    assert.equal(r.unrecognized.length, 1);
+    assert.equal(r.verdict, "FAIL");
+  });
+
+  it("DEFECT-2: a failure WITH the environmental cause in its block IS masked", () => {
+    const log = [
+      "not ok 137 - isolated preflight CLI clears preview ceremony on fresh home",
+      "  ---",
+      "  error: 'EROFS: read-only file system, mkdtemp'",
+      "  ...",
+      "# tests 4496",
+      "# pass 4495",
+      "# fail 1",
+    ].join("\n");
+    const r = classifyFailures(log);
+    assert.equal(r.recognized.length, 1, "true environmental failure should still be masked");
+    assert.equal(r.recognized[0].id, "artifact_011_eros_sandbox");
+    assert.equal(r.verdict, "PASS");
+  });
+
+  // PROOF-GATE-TEETH-HARDENING-1A · defect 3 (completeness / false-green-on-crash)
+  // A run that crashed mid-way emits some `ok` lines but no TAP plan (1..N) and
+  // no `# tests/# fail` summary. The old classifier saw 0 fail + 0 not-ok and
+  // reported a CLEAN run (exit 0) — a false green. A run is only clean if it
+  // also COMPLETED.
+  it("DEFECT-3: a truncated/crashed run (ok lines, no plan or summary) FAILS, not false-green clean", () => {
+    const log = ["ok 1 - a", "ok 2 - b", "ok 3 - c"].join("\n");
+    const r = classifyFailures(log);
+    assert.equal(r.complete, false);
+    assert.equal(r.cleanRun, false, "an incomplete run is not a clean run");
+    assert.equal(r.verdict, "FAIL");
+  });
+
+  it("DEFECT-3: a complete run with a TAP plan line (1..N, N>0) is recognized as complete", () => {
+    const r = classifyFailures(["TAP version 13", "ok 1 - a", "ok 2 - b", "1..2"].join("\n"));
+    assert.equal(r.complete, true);
+    assert.equal(r.cleanRun, true);
+    assert.equal(r.verdict, "PASS");
   });
 
   it("parses not-ok lines in linear time (regression guard: no polynomial ReDoS)", () => {
@@ -197,6 +271,9 @@ describe("G8 classifier — log freshness binding", () => {
         logPath,
         [
           "not ok 137 - isolated preflight CLI clears preview ceremony on fresh home",
+          "  ---",
+          "  error: 'EROFS: read-only file system, mkdtemp'",
+          "  ...",
           "# tests 4503",
           "# pass 4502",
           "# fail 1",

@@ -20,6 +20,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { resolveAPlusCeilings } from '../packages/perf/src/perf-ceilings.js';
+import { evaluateReleaseReadiness, extractReportJson } from './release-readiness.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
@@ -33,6 +34,7 @@ const A_PLUS_THRESHOLDS = {
   coverage_branches: 85,
   coverage_functions: 95,
   mu_pass_rate: 100, // 104/104
+  release_min_score: 80, // structural release-readiness floor (PROOF-GATE-TEETH-HARDENING-1A)
 };
 
 function runCommand(binary, args, options = {}) {
@@ -92,11 +94,23 @@ function checkReleaseReadiness() {
   console.log('\n[RELEASE-READINESS Gate]');
   const result = runCommand(NPM, ['run', 'release:readiness', '--', '--json'], { silent: true });
   const output = result.output || '';
-  const hasAplus = output.includes('enforced_a_plus') || output.includes('A+ perf');
-  const noBlocker = !output.includes('launch_blocker') || output.includes('authorized');
-  console.log(`  A+ perf enforced: ${hasAplus ? 'YES' : 'NO'}`);
-  console.log(`  launch_blockers: ${noBlocker ? 'NONE or authorized' : 'PRESENT'}`);
-  return hasAplus && noBlocker;
+  // Parse the report structurally instead of substring-matching the text.
+  // The old check (output.includes('launch_blocker') / 'authorized') was
+  // tautological — the report ALWAYS carries the static key
+  // `worktree_changes_authorized`, so it could never fail. Fail closed if the
+  // report cannot be parsed. (PROOF-GATE-TEETH-HARDENING-1A · defect 1.)
+  const report = extractReportJson(output);
+  if (!report) {
+    console.log('  verdict: FAIL (could not parse release-readiness --json report)');
+    return false;
+  }
+  const verdict = evaluateReleaseReadiness(report, { minScore: A_PLUS_THRESHOLDS.release_min_score });
+  console.log(`  readiness_score: ${verdict.score} (min ${verdict.minScore})`);
+  console.log(`  launch_blockers: ${verdict.hasLaunchBlocker ? 'PRESENT' : 'none'}`);
+  console.log(
+    `  verdict: ${verdict.ok ? 'PASS' : 'FAIL'}${verdict.reasons.length ? ' — ' + verdict.reasons.join(', ') : ''}`,
+  );
+  return verdict.ok;
 }
 
 function isCiEnvironment(env = process.env) {
