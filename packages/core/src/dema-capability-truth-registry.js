@@ -28,6 +28,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "AASR_NODE0_STATE_ROUTER_PREVIEW_1A",
   "APR_NODE0_ROUTE_REFINERY_PREVIEW_1A",
   "NODE0_GOVERNED_REVERSIBLE_ACTION_PREVIEW_1A",
+  "DEMA_FDE_DUAL_DIAGNOSTIC_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -344,6 +345,31 @@ function defaultCapabilityRows() {
       },
       forbidden_claims: ["actual rename", "live execution", "post-action receipt written"],
     }),
+    capability({
+      capability_id: "DEMA_FDE_DUAL_DIAGNOSTIC_1A",
+      truth_label: "DEMA_FDE_DUAL_DIAGNOSTIC_PREVIEW_ONLY",
+      summary:
+        "Deterministic inward code/proof and outward environment failure diagnosis without patching or execution.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-fde-dual-diagnostic.js"],
+        test_paths: ["tests/dema-fde-dual-diagnostic.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-fde-dual-diagnostic-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_FDE_DUAL_DIAGNOSTIC_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_FDE_DUAL_DIAGNOSTIC_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim autopatch, live remediation, autonomous repair, or field execution without separate consent and proof gates.",
+      what_this_proves:
+        "Dema can classify failed commands into inward vs outward hypotheses with explicit confidence and missing evidence.",
+      what_this_does_not_prove:
+        "It does not patch files, commit, push, merge, start daemons, use networks, mint tokens, or prove root cause ground truth.",
+      forbidden_claims: ["autopatch applied", "failure auto-fixed", "live remediation"],
+    }),
   ]);
 }
 
@@ -405,7 +431,7 @@ export function buildDemaCapabilityTruthRegistry({
       previous_state_hash,
     }),
     what_this_proves: [
-      "Dema can enumerate the six shipped pre-action spine capabilities with source, test, gate, and receipt/doc evidence.",
+      "Dema can enumerate the seven shipped pre-action spine capabilities with source, test, gate, and receipt/doc evidence.",
       "Preview-only capabilities remain blocked from execution claims.",
       "Token, wallet, live URP federation, live RSI, and live PoI stay DESIGNED_NOT_LIVE.",
     ],
