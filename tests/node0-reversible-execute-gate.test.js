@@ -311,13 +311,12 @@ test("ADVERSARIAL: a re-hashed fully-fabricated receipt is rejected by fs-aware 
     // honest receipt passes fs-aware verify (it IS in the sealed log)
     assert.equal(verifyExecuteReceipt(real, { fs: nodeFs }).ok, true);
 
-    // forge: change from/to, then RECOMPUTE the content hash so integrity passes
+    // forge: tamper a non-state field, recompute hash — integrity passes but log bind fails
     const forged = JSON.parse(JSON.stringify(real));
     delete forged.receipt_log_path;
-    forged.from = "id_ed25519";
-    forged.to = "exfiltrated.txt";
+    forged.executed_at = "2099-01-01T00:00:00.000Z";
     forged.content_hash = recomputeReceiptContentHash(forged);
-    // integrity-only verify can't catch this; fs-aware verify must (hash not in log)
+    assert.equal(verifyExecuteReceipt(forged, { fs: nodeFs }).reason, "not_in_sealed_log");
     assert.equal(verifyExecuteReceipt(forged, { fs: nodeFs }).ok, false);
   } finally {
     rmSync(root, { recursive: true, force: true });

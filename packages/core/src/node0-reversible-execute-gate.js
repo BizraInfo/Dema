@@ -63,6 +63,7 @@ export const NODE0_REVERSIBLE_EXECUTE_BLOCK_REASONS = Object.freeze([
 const SAFE_NAME = /^[A-Za-z0-9._-]+$/;
 const BACKUP_DIR = ".node0-backups";
 const RECEIPT_LOG = ".node0-receipts.ndjson";
+const RESERVED_NAMES = new Set([BACKUP_DIR, RECEIPT_LOG]);
 
 // ── deterministic content addressing ────────────────────────────────────────
 function stableStringify(value) {
@@ -101,9 +102,7 @@ export function measureSandboxState(fs, realRoot, activeName) {
   const filePath = joinInside(realRoot, activeName);
   if (!filePath) return null;
   try {
-    const lst = fs.lstatSync(filePath);
-    if (lst.isSymbolicLink() || !lst.isFile()) return null;
-    const bytes = fs.readFileSync(filePath);
+    const bytes = readRegularFile(fs, filePath);
     return Object.freeze({
       sandbox_root: realRoot,
       active_name: activeName,
@@ -127,6 +126,8 @@ function isSafeName(name) {
     name !== ".." &&
     !name.includes("/") &&
     !name.includes("\\") &&
+    !RESERVED_NAMES.has(name) &&
+    !name.startsWith(".node0-") &&
     SAFE_NAME.test(name)
   );
 }
@@ -207,12 +208,49 @@ function blockedReceipt(plan, extraBlocks = []) {
   });
 }
 
-// A basename joined onto the canonical sandbox root cannot escape; this is the
-// explicit string guard. Inode-level guards (lstat/realpath) are applied per path
-// in the runner below.
+// A basename joined onto the canonical sandbox root cannot escape when the name
+// passes isSafeName (blocks `..`, slashes, and reserved control paths).
 function joinInside(realRoot, name) {
+  if (!isSafeName(name)) return null;
   const candidate = `${realRoot}/${name}`;
   return candidate.startsWith(`${realRoot}/`) ? candidate : null;
+}
+
+function readRegularFile(fs, path) {
+  const lst = fs.lstatSync(path);
+  if (lst.isSymbolicLink() || !lst.isFile()) {
+    throw new Error("unsafe_path");
+  }
+  return fs.readFileSync(path);
+}
+
+function pathInsideRoot(fs, realRoot, absPath) {
+  if (typeof absPath !== "string" || !absPath.startsWith(`${realRoot}/`)) {
+    return false;
+  }
+  try {
+    const resolved = fs.realpathSync(absPath);
+    return resolved.startsWith(`${realRoot}/`) || resolved === realRoot;
+  } catch {
+    // Path may not exist yet (exclusive backup create) — string prefix under
+    // canonical realRoot is sufficient once realRoot itself is resolved.
+    return absPath.startsWith(`${realRoot}/`);
+  }
+}
+
+function resolveReceiptLogPath(realRoot) {
+  const candidate = `${realRoot}/${RECEIPT_LOG}`;
+  return candidate.startsWith(`${realRoot}/`) ? candidate : null;
+}
+
+function ensureRegularReceiptLog(fs, logPath) {
+  try {
+    const lst = fs.lstatSync(logPath);
+    if (lst.isSymbolicLink()) return false;
+  } catch {
+    /* absent → append will create a regular file */
+  }
+  return true;
 }
 
 // ── effectful runner (injected fs) ──────────────────────────────────────────
@@ -283,64 +321,92 @@ export function executeReversibleRename({ plan, fs, now = null } = {}) {
   }
 
   // Read the verified non-symlink source; measure the real before-hash.
-  const beforeBytes = fs.readFileSync(fromPath);
+  let beforeBytes;
+  try {
+    beforeBytes = readRegularFile(fs, fromPath);
+  } catch {
+    return blockedReceipt(plan, ["source_not_a_file"]);
+  }
   const before_hash = `sha256:${sha256Hex(beforeBytes)}`;
 
   // Backup BEFORE the action — exclusive create, never clobber.
   const backupPath = `${backupDir}/${plan.from}.${sha256Hex(beforeBytes).slice(0, 12)}.bak`;
+  if (!pathInsideRoot(fs, realRoot, backupPath)) {
+    return blockedReceipt(plan, ["backup_dir_unsafe"]);
+  }
   try {
     fs.writeFileSync(backupPath, beforeBytes, { flag: "wx" });
   } catch {
     return blockedReceipt(plan, ["backup_write_failed"]);
   }
-  const backup_hash = `sha256:${sha256Hex(fs.readFileSync(backupPath))}`;
-
-  // The action.
-  fs.renameSync(fromPath, toPath);
-  const after_hash = `sha256:${sha256Hex(fs.readFileSync(toPath))}`;
-
-  const measured_state = measureSandboxState(fs, realRoot, plan.to);
-  if (!measured_state) {
-    return blockedReceipt(plan, ["state_measurement_failed"]);
+  let backup_hash;
+  try {
+    backup_hash = `sha256:${sha256Hex(readRegularFile(fs, backupPath))}`;
+  } catch {
+    return blockedReceipt(plan, ["backup_write_failed"]);
   }
-  const state_hash = contentHash(measured_state);
 
-  const undo_manifest = Object.freeze({
-    steps: Object.freeze([
-      Object.freeze({ op: "rename", from: plan.to, to: plan.from }),
-    ]),
-    expected_restored_hash: before_hash,
-  });
+  const logPath = resolveReceiptLogPath(realRoot);
+  if (!logPath || !ensureRegularReceiptLog(fs, logPath)) {
+    return blockedReceipt(plan, ["receipt_log_unsafe"]);
+  }
 
-  const body = {
-    schema: NODE0_REVERSIBLE_EXECUTE_RECEIPT_SCHEMA,
-    truth_label: NODE0_REVERSIBLE_EXECUTE_TRUTH_LABEL,
-    executed: true,
-    action_type: plan.action_type,
-    sandbox_root: plan.sandbox_root,
-    from: plan.from,
-    to: plan.to,
-    before_hash,
-    after_hash,
-    measured_state,
-    backup: Object.freeze({ path: backupPath, hash: backup_hash }),
-    undo: undo_manifest,
-    consent: Object.freeze({ go_phrase_hash: EXPECTED_CONSENT_HASH, mode: "exact_execute" }),
-    executed_at: now,
-    blocked_by: Object.freeze([]),
-    boundary: buildBoundary({ fileRenamed: true, backupWritten: true }),
-  };
-  const receipt = {
-    ...body,
-    state_hash,
-    content_hash: contentHash(body),
-  };
+  // The action — rollback rename if sealing fails after mutation.
+  let renamed = false;
+  try {
+    fs.renameSync(fromPath, toPath);
+    renamed = true;
+    const after_hash = `sha256:${sha256Hex(readRegularFile(fs, toPath))}`;
 
-  // Seal: append to the on-disk append-only receipt log.
-  const receiptLogPath = `${realRoot}/${RECEIPT_LOG}`;
-  fs.appendFileSync(receiptLogPath, `${JSON.stringify(receipt)}\n`);
+    const measured_state = measureSandboxState(fs, realRoot, plan.to);
+    if (!measured_state) {
+      throw new Error("state_measurement_failed");
+    }
+    const state_hash = contentHash(measured_state);
 
-  return Object.freeze({ ...receipt, receipt_log_path: receiptLogPath });
+    const undo_manifest = Object.freeze({
+      steps: Object.freeze([
+        Object.freeze({ op: "rename", from: plan.to, to: plan.from }),
+      ]),
+      expected_restored_hash: before_hash,
+    });
+
+    const body = {
+      schema: NODE0_REVERSIBLE_EXECUTE_RECEIPT_SCHEMA,
+      truth_label: NODE0_REVERSIBLE_EXECUTE_TRUTH_LABEL,
+      executed: true,
+      action_type: plan.action_type,
+      sandbox_root: plan.sandbox_root,
+      from: plan.from,
+      to: plan.to,
+      before_hash,
+      after_hash,
+      measured_state,
+      backup: Object.freeze({ path: backupPath, hash: backup_hash }),
+      undo: undo_manifest,
+      consent: Object.freeze({ go_phrase_hash: EXPECTED_CONSENT_HASH, mode: "exact_execute" }),
+      executed_at: now,
+      blocked_by: Object.freeze([]),
+      boundary: buildBoundary({ fileRenamed: true, backupWritten: true }),
+    };
+    const receipt = {
+      ...body,
+      state_hash,
+      content_hash: contentHash(body),
+    };
+
+    fs.appendFileSync(logPath, `${JSON.stringify(receipt)}\n`);
+    return Object.freeze({ ...receipt, receipt_log_path: logPath });
+  } catch {
+    if (renamed) {
+      try {
+        fs.renameSync(toPath, fromPath);
+      } catch {
+        /* best-effort rollback */
+      }
+    }
+    return blockedReceipt(plan, ["execute_failed"]);
+  }
 }
 
 /**
@@ -360,9 +426,8 @@ export function undoReversibleRename({ receipt, fs } = {}) {
   ) {
     return { undone: false, proven: false, reason: "fs_adapter_missing" };
   }
-  // Bind to receipt integrity/invariants first (rejects stale/forged content_hash,
-  // bad consent, boundary lies) before touching disk.
-  const v = verifyExecuteReceipt(receipt);
+  // Bind to receipt integrity/invariants and sealed-log presence before touching disk.
+  const v = verifyExecuteReceipt(receipt, { fs });
   if (!v.ok) return { undone: false, proven: false, reason: `receipt_invalid:${v.reason}` };
 
   let realRoot;
@@ -375,6 +440,13 @@ export function undoReversibleRename({ receipt, fs } = {}) {
   const toPath = joinInside(realRoot, receipt.from); // original name
   if (!fromPath || !toPath) {
     return { undone: false, proven: false, reason: "sandbox_escape_blocked" };
+  }
+  if (
+    !receipt.backup ||
+    typeof receipt.backup.path !== "string" ||
+    !pathInsideRoot(fs, realRoot, receipt.backup.path)
+  ) {
+    return { undone: false, proven: false, reason: "unsafe_backup_path" };
   }
   // Current must be a non-symlink regular file; original must be absent.
   let lst;
@@ -396,7 +468,7 @@ export function undoReversibleRename({ receipt, fs } = {}) {
   // INDEPENDENT ground truth: the backup bytes written at execute time.
   let backupBytes;
   try {
-    backupBytes = fs.readFileSync(receipt.backup.path);
+    backupBytes = readRegularFile(fs, receipt.backup.path);
   } catch {
     return { undone: false, proven: false, reason: "backup_unreadable" };
   }
@@ -404,9 +476,19 @@ export function undoReversibleRename({ receipt, fs } = {}) {
     return { undone: false, proven: false, reason: "backup_hash_mismatch" };
   }
 
+  let currentBytes;
+  try {
+    currentBytes = readRegularFile(fs, fromPath);
+  } catch {
+    return { undone: false, proven: false, reason: "unsafe_current_file" };
+  }
+  if (!Buffer.isBuffer(currentBytes) || !currentBytes.equals(backupBytes)) {
+    return { undone: false, proven: false, reason: "current_bytes_diverged" };
+  }
+
   // Reverse the rename, then PROVE by comparing the restored bytes to the backup.
   fs.renameSync(fromPath, toPath);
-  const restoredBytes = fs.readFileSync(toPath);
+  const restoredBytes = readRegularFile(fs, toPath);
   const restored_hash = `sha256:${sha256Hex(restoredBytes)}`;
   const proven =
     Buffer.isBuffer(restoredBytes) &&
@@ -473,7 +555,11 @@ export function verifyExecuteReceipt(receipt, { fs } = {}) {
       if (!remeasured || contentHash(remeasured) !== receipt.state_hash) {
         return { ok: false, reason: "state_not_anchored_to_disk" };
       }
-      const log = fs.readFileSync(`${realRoot}/${RECEIPT_LOG}`, "utf8");
+      const logPath = resolveReceiptLogPath(realRoot);
+      if (!logPath || !ensureRegularReceiptLog(fs, logPath)) {
+        return { ok: false, reason: "receipt_log_unsafe" };
+      }
+      const log = fs.readFileSync(logPath, "utf8");
       if (!log.includes(content_hash)) return { ok: false, reason: "not_in_sealed_log" };
     } catch {
       return { ok: false, reason: "sealed_log_unverifiable" };
