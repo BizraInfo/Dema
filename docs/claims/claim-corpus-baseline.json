@@ -1,7 +1,7 @@
 {
   "schema": "bizra.dema.claim_corpus_baseline.v0.1",
   "note": "Frozen reviewed claim-corpus state. Regenerate only via --update-baseline; every entry is an accepted, unresolved unlabeled-claim finding.",
-  "count": 118,
+  "count": 117,
   "findings": [
     {
       "file": "docs/A_PLUS_BLUEPRINT_v0_1.md",
@@ -242,11 +242,6 @@
       "file": "docs/DECISION_two_dema_split.md",
       "kind": "first_or_only",
       "text": "1. **Cost of moving canonical to B:** lose GitHub commit history, lose the only working code, lose the public Dema URL. Unacceptable."
-    },
-    {
-      "file": "docs/DELIVERY_BLUEPRINT.md",
-      "kind": "benchmark",
-      "text": "- Enforces A+ perf ceilings (boot <150ms, verify <1ms) via `npm run perf`."
     },
     {
       "file": "docs/DELIVERY_BLUEPRINT.md",
