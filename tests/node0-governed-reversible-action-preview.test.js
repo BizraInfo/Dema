@@ -22,6 +22,10 @@ function refinedRoute() {
   });
 }
 
+const TEST_RESOURCE_HASH = `sha256:${"a".repeat(64)}`;
+const TEST_PARENT_HASH = `sha256:${"b".repeat(64)}`;
+const OTHER_RESOURCE_HASH = `sha256:${"c".repeat(64)}`;
+
 test("builds frozen governed reversible action preview envelope", () => {
   const report = buildNode0GovernedReversibleActionPreview();
   assert.equal(report.schema, NODE0_GOVERNED_REVERSIBLE_ACTION_PREVIEW_SCHEMA);
@@ -36,6 +40,7 @@ test("builds frozen governed reversible action preview envelope", () => {
   assert.ok(Object.isFrozen(report.action_eligibility));
   assert.ok(Object.isFrozen(report.backup_manifest_preview));
   assert.ok(Object.isFrozen(report.undo_manifest_preview));
+  assert.ok(Object.isFrozen(report.undo_manifest_preview.undo_steps[0]));
 });
 
 test("accepts APR route-refinery preview as the refined route input", () => {
@@ -70,8 +75,8 @@ test("accepts one low-risk rename-preview action candidate", () => {
     proposed_action: {
       action_type: NODE0_GOVERNED_REVERSIBLE_ACTION_TYPE,
       target_resource: {
-        resource_id_hash: "sha256:test-resource",
-        parent_path_hash: "sha256:test-parent",
+        resource_id_hash: TEST_RESOURCE_HASH,
+        parent_path_hash: TEST_PARENT_HASH,
         current_name: "before.txt",
         proposed_name: "after.txt",
         content_read_required: false,
@@ -89,8 +94,8 @@ test("requires exact preview consent phrase before action eligibility", () => {
   const report = buildNode0GovernedReversibleActionPreview({
     consent_proof: {
       collected: true,
-      mode: "checkbox",
-      phrase: NODE0_GOVERNED_REVERSIBLE_ACTION_HUMAN_GO_PHRASE,
+      mode: "exact_preview",
+      phrase: "not the required preview phrase",
     },
   });
   assert.equal(report.consent_state.exact_preview_consent, false);
@@ -154,8 +159,8 @@ test("blocks delete, move, merge, content-read, network, token, and wallet claim
     proposed_action: {
       action_type: NODE0_GOVERNED_REVERSIBLE_ACTION_TYPE,
       target_resource: {
-        resource_id_hash: "sha256:test-resource",
-        parent_path_hash: "sha256:test-parent",
+        resource_id_hash: TEST_RESOURCE_HASH,
+        parent_path_hash: TEST_PARENT_HASH,
         current_name: "before.txt",
         proposed_name: "after.txt",
         content_read_required: false,
@@ -287,8 +292,8 @@ test("blocks extra action and target-resource keys", () => {
     proposed_action: {
       action_type: NODE0_GOVERNED_REVERSIBLE_ACTION_TYPE,
       target_resource: {
-        resource_id_hash: "sha256:test-resource",
-        parent_path_hash: "sha256:test-parent",
+        resource_id_hash: TEST_RESOURCE_HASH,
+        parent_path_hash: TEST_PARENT_HASH,
         current_name: "before.txt",
         proposed_name: "after.txt",
         content_read_required: false,
@@ -336,6 +341,29 @@ test("verifier rejects stale pre-execution receipt hash and incomplete post requ
   );
 });
 
+test("blocks invalid target hashes and missing operator intent", () => {
+  const report = buildNode0GovernedReversibleActionPreview({
+    proposed_action: {
+      action_type: NODE0_GOVERNED_REVERSIBLE_ACTION_TYPE,
+      target_resource: {
+        resource_id_hash: "sha256:raw-resource-id",
+        parent_path_hash: "sha256:raw-parent-path",
+        current_name: "before.txt",
+        proposed_name: "after.txt",
+        content_read_required: false,
+      },
+      operator_intent: null,
+      execution_requested: false,
+    },
+  });
+
+  assert.equal(report.risk_review.ok, false);
+  assert.ok(report.risk_review.blocked_by.includes("operator_intent_missing_or_invalid"));
+  assert.ok(
+    report.risk_review.blocked_by.includes("unsupported_or_unsafe_action_candidate"),
+  );
+});
+
 test("verifier rejects non-preview boundaries", () => {
   const report = buildNode0GovernedReversibleActionPreview();
   const crossed = verifyNode0GovernedReversibleActionPreview({
@@ -351,6 +379,95 @@ test("verifier rejects non-preview boundaries", () => {
   });
   assert.equal(empty.ok, false);
   assert.ok(empty.blocked_by.includes("boundary_not_all_false"));
+});
+
+test("binds backup and undo previews to the proposed action", () => {
+  const report = buildNode0GovernedReversibleActionPreview();
+  const mismatchedBackup = buildNode0GovernedReversibleActionPreview({
+    backup_manifest_preview: {
+      source_resource_id_hash: OTHER_RESOURCE_HASH,
+    },
+  });
+  assert.equal(mismatchedBackup.action_eligibility.eligible_for_human_go_review, false);
+  assert.ok(
+    mismatchedBackup.blocked_by.includes("backup_manifest_resource_mismatch"),
+  );
+
+  const mismatchedUndo = buildNode0GovernedReversibleActionPreview({
+    undo_manifest_preview: {
+      undo_steps: [
+        {
+          ...report.undo_manifest_preview.undo_steps[0],
+          from_name: "other-after.txt",
+        },
+      ],
+    },
+  });
+  assert.equal(mismatchedUndo.action_eligibility.eligible_for_human_go_review, false);
+  assert.ok(
+    mismatchedUndo.blocked_by.includes("undo_steps_do_not_restore_candidate"),
+  );
+});
+
+test("verifier recomputes consent, risk, and policy invariants", () => {
+  const report = buildNode0GovernedReversibleActionPreview();
+  const badConsent = verifyNode0GovernedReversibleActionPreview({
+    ...report,
+    consent_state: {
+      ...report.consent_state,
+      phrase_hash:
+        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    },
+  });
+  assert.equal(badConsent.ok, false);
+  assert.ok(
+    badConsent.blocked_by.includes("exact_preview_consent_phrase_hash_mismatch"),
+  );
+
+  const unsafeAction = verifyNode0GovernedReversibleActionPreview({
+    ...report,
+    proposed_action: {
+      ...report.proposed_action,
+      operator_intent: "Preview a delete over the network.",
+    },
+  });
+  assert.equal(unsafeAction.ok, false);
+  assert.ok(unsafeAction.blocked_by.includes("risk_review_mismatch"));
+
+  const unsafePolicy = verifyNode0GovernedReversibleActionPreview({
+    ...report,
+    policies: {
+      ...report.policies,
+      execution_policy: {
+        ...report.policies.execution_policy,
+        execution_allowed_now: true,
+      },
+    },
+  });
+  assert.equal(unsafePolicy.ok, false);
+  assert.ok(unsafePolicy.blocked_by.includes("execution_policy_allowed_now_true"));
+});
+
+test("verifier rejects malformed post-execution receipt requirements", () => {
+  const report = buildNode0GovernedReversibleActionPreview();
+  const malformed = verifyNode0GovernedReversibleActionPreview({
+    ...report,
+    post_execution_receipt_requirements: {
+      ...report.post_execution_receipt_requirements,
+      required_fields: { pre_execution_receipt_hash: true },
+      receipt_required_after_any_future_execution: false,
+    },
+  });
+
+  assert.equal(malformed.ok, false);
+  assert.ok(
+    malformed.blocked_by.includes("post_execution_receipt_required_fields_invalid"),
+  );
+  assert.ok(
+    malformed.blocked_by.includes(
+      "post_execution_receipt_future_requirement_disabled",
+    ),
+  );
 });
 
 test("review verifier and gate pass canonical preview structure", () => {

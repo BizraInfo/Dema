@@ -92,20 +92,29 @@ const POST_EXECUTION_RECEIPT_FIELDS = Object.freeze([
   "boundary_after_action",
 ]);
 
+const SHA256_HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
+
 function freezeDeep(value) {
-  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
-  Object.freeze(value);
+  if (!value || typeof value !== "object") return value;
   for (const child of Object.values(value)) freezeDeep(child);
+  if (!Object.isFrozen(value)) Object.freeze(value);
   return value;
 }
 
 function stableStringify(value) {
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item) ?? "null").join(",")}]`;
+  }
   if (value && typeof value === "object") {
-    return `{${Object.keys(value)
+    const entries = Object.keys(value)
       .sort()
-      .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
-      .join(",")}}`;
+      .flatMap((key) => {
+        const serializedValue = stableStringify(value[key]);
+        return serializedValue === undefined
+          ? []
+          : [`${JSON.stringify(key)}:${serializedValue}`];
+      });
+    return `{${entries.join(",")}}`;
   }
   return JSON.stringify(value);
 }
@@ -130,8 +139,12 @@ function defaultProposedAction() {
   return freezeDeep({
     action_type: NODE0_GOVERNED_REVERSIBLE_ACTION_TYPE,
     target_resource: {
-      resource_id_hash: "sha256:node0-governed-action-candidate-resource",
-      parent_path_hash: "sha256:node0-governed-action-candidate-parent",
+      resource_id_hash: previewHash({
+        resource_id: "node0-governed-action-candidate-resource",
+      }),
+      parent_path_hash: previewHash({
+        parent_path: "node0-governed-action-candidate-parent",
+      }),
       current_name: "draft-node0-note.txt",
       proposed_name: "governed-draft-node0-note.txt",
       content_read_required: false,
@@ -249,14 +262,30 @@ function consentState(consentProof) {
   });
 }
 
-function backupReview(backupManifestPreview) {
+function manifestBlockedBy(manifest, prefix) {
+  const blocked = Array.isArray(manifest?.blocked_by) ? manifest.blocked_by : [];
+  return blocked.map((reason) => `${prefix}:${reason}`);
+}
+
+function backupReview(backupManifestPreview, proposedAction) {
+  const expectedResourceHash =
+    proposedAction?.target_resource?.resource_id_hash ?? null;
   const blocked_by = Object.freeze([
+    ...manifestBlockedBy(backupManifestPreview, "backup_manifest_blocked"),
     ...(backupManifestPreview?.schema === NODE0_BACKUP_MANIFEST_PREVIEW_SCHEMA
       ? []
       : ["backup_manifest_schema_invalid"]),
     ...(backupManifestPreview?.truth_label === "BACKUP_MANIFEST_PREVIEW_ONLY"
       ? []
       : ["backup_manifest_truth_label_invalid"]),
+    ...(SHA256_HASH_PATTERN.test(
+      backupManifestPreview?.source_resource_id_hash ?? "",
+    )
+      ? []
+      : ["backup_manifest_resource_hash_invalid"]),
+    ...(backupManifestPreview?.source_resource_id_hash === expectedResourceHash
+      ? []
+      : ["backup_manifest_resource_mismatch"]),
     ...(backupManifestPreview?.backup_preview_available === true
       ? []
       : ["backup_manifest_preview_missing"]),
@@ -276,17 +305,30 @@ function backupReview(backupManifestPreview) {
   });
 }
 
-function undoReview(undoManifestPreview) {
+function undoReview(undoManifestPreview, proposedAction) {
   const undoSteps = Array.isArray(undoManifestPreview?.undo_steps)
     ? undoManifestPreview.undo_steps
     : [];
+  const expectedActionType = proposedAction?.action_type ?? null;
+  const expectedFromName = proposedAction?.target_resource?.proposed_name ?? null;
+  const expectedToName = proposedAction?.target_resource?.current_name ?? null;
+  const hasMatchingUndoStep = undoSteps.some(
+    (step) =>
+      step?.from_name === expectedFromName &&
+      step?.to_name === expectedToName &&
+      step?.execution_performed === false,
+  );
   const blocked_by = Object.freeze([
+    ...manifestBlockedBy(undoManifestPreview, "undo_manifest_blocked"),
     ...(undoManifestPreview?.schema === NODE0_UNDO_MANIFEST_PREVIEW_SCHEMA
       ? []
       : ["undo_manifest_schema_invalid"]),
     ...(undoManifestPreview?.truth_label === "UNDO_MANIFEST_PREVIEW_ONLY"
       ? []
       : ["undo_manifest_truth_label_invalid"]),
+    ...(undoManifestPreview?.action_type === expectedActionType
+      ? []
+      : ["undo_manifest_action_type_mismatch"]),
     ...(undoManifestPreview?.undo_preview_available === true
       ? []
       : ["undo_manifest_preview_missing"]),
@@ -294,6 +336,7 @@ function undoReview(undoManifestPreview) {
       ? []
       : ["undo_executed_or_unknown"]),
     ...(undoSteps.length > 0 ? [] : ["undo_steps_missing"]),
+    ...(hasMatchingUndoStep ? [] : ["undo_steps_do_not_restore_candidate"]),
   ]);
   return freezeDeep({
     ok: blocked_by.length === 0,
@@ -352,6 +395,9 @@ function riskReview({ proposedAction, boundaries }) {
   const actionUnknownKeys = unknownKeys(proposedAction, ALLOWED_PROPOSED_ACTION_KEYS);
   const targetUnknownKeys = unknownKeys(targetResource, ALLOWED_TARGET_RESOURCE_KEYS);
   const serialized = stableStringify(proposedAction ?? {}).toLowerCase();
+  const operatorIntent = proposedAction?.operator_intent;
+  const operatorIntentOk =
+    typeof operatorIntent === "string" && operatorIntent.trim().length > 0;
   const forbiddenFragments = FORBIDDEN_ACTION_FRAGMENTS.filter((fragment) =>
     serialized.includes(fragment),
   );
@@ -359,17 +405,19 @@ function riskReview({ proposedAction, boundaries }) {
   const renameCandidateOk =
     actionType === NODE0_GOVERNED_REVERSIBLE_ACTION_TYPE &&
     targetResource &&
-    typeof targetResource.resource_id_hash === "string" &&
-    typeof targetResource.parent_path_hash === "string" &&
+    SHA256_HASH_PATTERN.test(targetResource.resource_id_hash) &&
+    SHA256_HASH_PATTERN.test(targetResource.parent_path_hash) &&
     typeof targetResource.current_name === "string" &&
     typeof targetResource.proposed_name === "string" &&
     proposedAction?.target_resource?.content_read_required === false &&
+    operatorIntentOk &&
     proposedAction?.execution_requested === false &&
     actionUnknownKeys.length === 0 &&
     targetUnknownKeys.length === 0;
   const boundaryOk = actionBoundaryAllFalse(boundaries);
   const blocked_by = Object.freeze([
     ...(renameCandidateOk ? [] : ["unsupported_or_unsafe_action_candidate"]),
+    ...(operatorIntentOk ? [] : ["operator_intent_missing_or_invalid"]),
     ...(forbiddenType ? [`forbidden_action_type:${actionType}`] : []),
     ...forbiddenFragments.map((fragment) => `forbidden_action_fragment:${fragment}`),
     ...actionUnknownKeys.map((key) => `unknown_action_key:${key}`),
@@ -466,6 +514,7 @@ function actionBlockPayload({
   risk,
   preExecutionReceipt,
   postExecutionRequirements,
+  policies,
   boundaries,
 }) {
   return {
@@ -481,6 +530,7 @@ function actionBlockPayload({
     pre_execution_receipt_preview: preExecutionReceipt,
     post_execution_receipt_requirements: postExecutionRequirements,
     human_go_phrase_required: NODE0_GOVERNED_REVERSIBLE_ACTION_HUMAN_GO_PHRASE,
+    policies,
     boundaries,
   };
 }
@@ -517,6 +567,7 @@ function expectedActionBlockHash(report) {
       risk: report.risk_review,
       preExecutionReceipt: report.pre_execution_receipt_preview,
       postExecutionRequirements: report.post_execution_receipt_requirements,
+      policies: report.policies,
       boundaries: report.boundaries,
     }),
   );
@@ -558,8 +609,8 @@ export function buildNode0GovernedReversibleActionPreview({
     route_review,
   );
   const consent_state = consentState(consent_proof);
-  const backup_review = backupReview(backupManifestPreview);
-  const undo_review = undoReview(undoManifestPreview);
+  const backup_review = backupReview(backupManifestPreview, proposedAction);
+  const undo_review = undoReview(undoManifestPreview, proposedAction);
   const risk_review = riskReview({ proposedAction, boundaries });
   const action_eligibility = actionEligibility({
     route: route_review,
@@ -580,6 +631,14 @@ export function buildNode0GovernedReversibleActionPreview({
     }),
   );
   const post_execution_receipt_requirements = postExecutionReceiptRequirements();
+  const policies = freezeDeep({
+    backup_policy,
+    undo_policy,
+    execution_policy: {
+      ...execution_policy,
+      execution_allowed_now: false,
+    },
+  });
   const blockPayload = actionBlockPayload({
     previousStateHash: previous_state_hash,
     inputRefinedRouteId: input_refined_route_id,
@@ -592,6 +651,7 @@ export function buildNode0GovernedReversibleActionPreview({
     risk: risk_review,
     preExecutionReceipt: pre_execution_receipt_preview,
     postExecutionRequirements: post_execution_receipt_requirements,
+    policies,
     boundaries,
   });
   const chained_action_block_preview = chainedActionBlockPreview(
@@ -618,14 +678,7 @@ export function buildNode0GovernedReversibleActionPreview({
     human_go_phrase_required: NODE0_GOVERNED_REVERSIBLE_ACTION_HUMAN_GO_PHRASE,
     blocked_by,
     chained_action_block_preview,
-    policies: freezeDeep({
-      backup_policy,
-      undo_policy,
-      execution_policy: {
-        ...execution_policy,
-        execution_allowed_now: false,
-      },
-    }),
+    policies,
     boundaries,
     what_this_proves: Object.freeze([
       "Node0 can preview whether one APR-refined route has enough consent, backup, undo, and risk evidence to become a governed reversible action candidate.",
@@ -676,16 +729,41 @@ export function verifyNode0GovernedReversibleActionPreview(report) {
   if (report.action_eligibility?.eligible_for_execution !== false) {
     blocked_by.push("eligible_for_execution_true");
   }
+  if (report.action_eligibility?.execution_blocked_by_design !== true) {
+    blocked_by.push("execution_blocked_by_design_missing");
+  }
+  if (!Array.isArray(report.action_eligibility?.blocked_by)) {
+    blocked_by.push("action_eligibility_blocked_by_invalid");
+  }
   if (report.consent_state?.exact_preview_consent !== true) {
     blocked_by.push("exact_preview_consent_missing");
+  }
+  const expectedConsentPhraseHash = previewHash({
+    phrase: NODE0_GOVERNED_REVERSIBLE_ACTION_HUMAN_GO_PHRASE,
+  });
+  if (report.consent_state?.phrase_hash !== expectedConsentPhraseHash) {
+    blocked_by.push("exact_preview_consent_phrase_hash_mismatch");
   }
   if (report.consent_state?.execution_allowed !== false) {
     blocked_by.push("execution_allowed_true");
   }
-  blocked_by.push(...backupReview(report.backup_manifest_preview).blocked_by);
-  blocked_by.push(...undoReview(report.undo_manifest_preview).blocked_by);
-  if (report.risk_review?.ok !== true) {
-    blocked_by.push("risk_review_not_ok");
+  blocked_by.push(
+    ...backupReview(report.backup_manifest_preview, report.proposed_action)
+      .blocked_by,
+  );
+  blocked_by.push(
+    ...undoReview(report.undo_manifest_preview, report.proposed_action)
+      .blocked_by,
+  );
+  const expectedRiskReview = riskReview({
+    proposedAction: report.proposed_action,
+    boundaries: report.boundaries,
+  });
+  if (
+    expectedRiskReview.ok !== true ||
+    stableStringify(report.risk_review) !== stableStringify(expectedRiskReview)
+  ) {
+    blocked_by.push("risk_review_mismatch");
   }
   if (report.pre_execution_receipt_preview?.schema !== NODE0_PRE_EXECUTION_RECEIPT_PREVIEW_SCHEMA) {
     blocked_by.push("pre_execution_receipt_schema_invalid");
@@ -720,11 +798,21 @@ export function verifyNode0GovernedReversibleActionPreview(report) {
     blocked_by.push("post_execution_receipt_requirements_schema_invalid");
   }
   const requiredPostFields =
-    report.post_execution_receipt_requirements?.required_fields ?? [];
-  for (const field of POST_EXECUTION_RECEIPT_FIELDS) {
-    if (!requiredPostFields.includes(field)) {
-      blocked_by.push(`post_execution_receipt_requirement_missing:${field}`);
+    report.post_execution_receipt_requirements?.required_fields;
+  if (!Array.isArray(requiredPostFields)) {
+    blocked_by.push("post_execution_receipt_required_fields_invalid");
+  } else {
+    for (const field of POST_EXECUTION_RECEIPT_FIELDS) {
+      if (!requiredPostFields.includes(field)) {
+        blocked_by.push(`post_execution_receipt_requirement_missing:${field}`);
+      }
     }
+  }
+  if (
+    report.post_execution_receipt_requirements
+      ?.receipt_required_after_any_future_execution !== true
+  ) {
+    blocked_by.push("post_execution_receipt_future_requirement_disabled");
   }
   if (report.post_execution_receipt_requirements?.receipt_written_now !== false) {
     blocked_by.push("post_execution_receipt_written_now");
@@ -737,6 +825,9 @@ export function verifyNode0GovernedReversibleActionPreview(report) {
   }
   if (!actionBoundaryAllFalse(report.boundaries)) {
     blocked_by.push("boundary_not_all_false");
+  }
+  if (report.policies?.execution_policy?.execution_allowed_now !== false) {
+    blocked_by.push("execution_policy_allowed_now_true");
   }
   const blockHash = report.chained_action_block_preview?.block_preview_hash ?? "";
   if (!/^sha256:[0-9a-f]{64}$/.test(blockHash)) {
