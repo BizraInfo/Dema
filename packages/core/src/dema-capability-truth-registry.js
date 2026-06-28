@@ -29,6 +29,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "APR_NODE0_ROUTE_REFINERY_PREVIEW_1A",
   "NODE0_GOVERNED_REVERSIBLE_ACTION_PREVIEW_1A",
   "DEMA_FDE_DUAL_DIAGNOSTIC_1A",
+  "NODE0_REVERSIBLE_EXECUTE_GATE_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -370,6 +371,35 @@ function defaultCapabilityRows() {
         "It does not patch files, commit, push, merge, start daemons, use networks, mint tokens, or prove root cause ground truth.",
       forbidden_claims: ["autopatch applied", "failure auto-fixed", "live remediation"],
     }),
+    capability({
+      capability_id: "NODE0_REVERSIBLE_EXECUTE_GATE_1A",
+      truth_label: "NODE0_REVERSIBLE_EXECUTE_SANDBOX_MEASURED",
+      summary:
+        "Sandbox-contained governed rename with exact execute consent, backup-before-action, sealed receipt, and proven undo.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-reversible-execute-gate.js"],
+        test_paths: ["tests/node0-reversible-execute-gate.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-reversible-execute-gate-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_REVERSIBLE_EXECUTE_GATE_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_REVERSIBLE_EXECUTE_GATE_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim operator-wide execution, live governed runtime outside the sandbox, autonomous action, or production mutation without separate consent and proof gates.",
+      what_this_proves:
+        "Dema can perform one low-risk reversible rename inside a caller-supplied sandbox with measured before/after/state hashes, sealed receipt, and backup-anchored undo.",
+      what_this_does_not_prove:
+        "It does not prove operator data mutation, daemon runtime, network use, token mint, wallet access, or production readiness outside the sandbox.",
+      forbidden_claims: [
+        "operator data mutated",
+        "live governed runtime",
+        "production execution",
+      ],
+    }),
   ]);
 }
 
@@ -431,7 +461,7 @@ export function buildDemaCapabilityTruthRegistry({
       previous_state_hash,
     }),
     what_this_proves: [
-      "Dema can enumerate the seven shipped pre-action spine capabilities with source, test, gate, and receipt/doc evidence.",
+      "Dema can enumerate the eight shipped pre-action spine capabilities with source, test, gate, and receipt/doc evidence.",
       "Preview-only capabilities remain blocked from execution claims.",
       "Token, wallet, live URP federation, live RSI, and live PoI stay DESIGNED_NOT_LIVE.",
     ],
