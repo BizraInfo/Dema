@@ -31,6 +31,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_FDE_DUAL_DIAGNOSTIC_1A",
   "NODE0_REVERSIBLE_EXECUTE_GATE_1A",
   "NODE0_RECEIPT_SIGNING_ED25519_1A",
+  "NODE0_PROOF_CHAIN_LINK_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -430,6 +431,35 @@ function defaultCapabilityRows() {
         "unattended signing",
       ],
     }),
+    capability({
+      capability_id: "NODE0_PROOF_CHAIN_LINK_1A",
+      truth_label: "NODE0_APPEND_ONLY_SIGNED_RECEIPT_CHAIN",
+      summary:
+        "Hash-chain signed receipts into a verifiable append-only proof log.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-proof-chain-link.js"],
+        test_paths: ["tests/node0-proof-chain-link.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-proof-chain-link-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_PROOF_CHAIN_LINK_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_PROOF_CHAIN_LINK_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Dema can bind an ordered set of #307 signed-receipt content_hash anchors into a content-addressed append-only hash chain whose verifier rejects in-place receipt tampering, link-hash forgery, and reordering/forking.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
   ]);
 }
 
@@ -491,7 +521,7 @@ export function buildDemaCapabilityTruthRegistry({
       previous_state_hash,
     }),
     what_this_proves: [
-      "Dema can enumerate the nine shipped pre-action spine capabilities with source, test, gate, and receipt/doc evidence.",
+      "Dema can enumerate the ten shipped pre-action spine capabilities with source, test, gate, and receipt/doc evidence.",
       "Preview-only capabilities remain blocked from execution claims.",
       "Token, wallet, live URP federation, live RSI, and live PoI stay DESIGNED_NOT_LIVE.",
     ],
