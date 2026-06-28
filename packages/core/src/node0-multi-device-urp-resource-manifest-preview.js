@@ -288,6 +288,7 @@ function buildVersionChainCandidates(resources) {
     [...groupBy(resources, versionFamily).entries()]
       .filter(([, rows]) => rows.length > 1)
       .filter(([, rows]) => rows.some((r) => r.version_hint))
+      .filter(([, rows]) => new Set(rows.map((r) => r.device_id)).size > 1)
       .map(([family, rows]) => ({
         chain_id: `version-chain:${sha256(family).slice(0, 16)}`,
         family,
@@ -372,19 +373,28 @@ function buildSelfImprovementInputs(resources) {
 export function buildNode0MultiDeviceUrpResourceManifestPreview({
   node_id = "node0:mohamed",
   human_owner = "Mohamed",
-  devices = Object.freeze([
-    { device_id: "dev:laptop-primary", device_type: "laptop_node" },
-    { device_id: "dev:mobile-primary", device_type: "mobile_node" },
-  ]),
+  devices = null,
   device_resource_manifests = NODE0_DEVICE_RESOURCE_MANIFEST_FIXTURE,
   urp_policy = "candidate_only_no_write",
   consent_proof = Object.freeze({ collected: false, mode: "preview_only" }),
   previous_state_hash = "sha256:genesis-preview",
   boundary = manifestBoundary(),
 } = {}) {
-  const boundaries = freezeDeep({ ...boundary, ...manifestBoundary() });
+  const boundaries = freezeDeep({ ...manifestBoundary(), ...boundary });
   const resources = allResources(device_resource_manifests);
   const device_manifests = buildDeviceManifests(device_resource_manifests);
+  const derived_devices = freezeDeep(
+    device_manifests.map((device) => ({
+      device_id: device.device_id,
+      device_type: device.device_type,
+    })),
+  );
+  const declaredDeviceIds = new Set((devices ?? []).map((device) => device.device_id));
+  const manifestDeviceIds = new Set(derived_devices.map((device) => device.device_id));
+  const device_mismatch =
+    declaredDeviceIds.size > 0 &&
+    (declaredDeviceIds.size !== manifestDeviceIds.size ||
+      [...manifestDeviceIds].some((id) => !declaredDeviceIds.has(id)));
   const duplicate_cross_device_candidates = buildDuplicateCandidates(resources);
   const version_chain_cross_device_candidates =
     buildVersionChainCandidates(resources);
@@ -395,7 +405,12 @@ export function buildNode0MultiDeviceUrpResourceManifestPreview({
     node_id,
     human_owner,
     device_count: device_manifests.length,
-    devices: freezeDeep(devices),
+    devices: derived_devices,
+    input_device_manifest_consistency: Object.freeze({
+      declared_devices_match_manifests: !device_mismatch,
+      declared_device_count: declaredDeviceIds.size,
+      manifest_device_count: manifestDeviceIds.size,
+    }),
     device_manifests,
     consent_proof,
     unified_node_space_summary: Object.freeze({
@@ -419,7 +434,9 @@ export function buildNode0MultiDeviceUrpResourceManifestPreview({
       boundaries,
     }),
     self_improvement_inputs: buildSelfImprovementInputs(resources),
-    blocked_by: Object.freeze([]),
+    blocked_by: Object.freeze(
+      device_mismatch ? ["declared_devices_do_not_match_manifests"] : [],
+    ),
     boundaries,
     what_this_proves: Object.freeze([
       "Provided laptop and mobile resource manifests can be composed into one metadata-only Node0 resource body preview.",
@@ -455,6 +472,9 @@ export function verifyNode0MultiDeviceUrpResourceManifestPreview(report) {
   if (!boundaryAllFalse(report.boundaries)) {
     blocked_by.push("boundary_not_all_false");
   }
+  for (const code of report.blocked_by ?? []) {
+    blocked_by.push(code);
+  }
   const deviceTypes = new Set(report.device_manifests?.map((d) => d.device_type));
   for (const required of ["laptop_node", "mobile_node"]) {
     if (!deviceTypes.has(required)) blocked_by.push(`missing_device_type:${required}`);
@@ -467,14 +487,14 @@ export function verifyNode0MultiDeviceUrpResourceManifestPreview(report) {
       blocked_by.push(`device_content_read:${device.device_id}`);
     }
   }
-  if (!report.duplicate_cross_device_candidates?.length) {
-    blocked_by.push("cross_device_duplicate_candidates_missing");
+  if (!Array.isArray(report.duplicate_cross_device_candidates)) {
+    blocked_by.push("cross_device_duplicate_candidates_invalid");
   }
-  if (!report.version_chain_cross_device_candidates?.length) {
-    blocked_by.push("cross_device_version_chain_candidates_missing");
+  if (!Array.isArray(report.version_chain_cross_device_candidates)) {
+    blocked_by.push("cross_device_version_chain_candidates_invalid");
   }
-  if (!report.sensitive_resource_hints?.length) {
-    blocked_by.push("sensitive_resource_hints_missing");
+  if (!Array.isArray(report.sensitive_resource_hints)) {
+    blocked_by.push("sensitive_resource_hints_invalid");
   }
   if (report.mint_eligibility_preview?.token_minted !== false) {
     blocked_by.push("mint_preview_mutated_token_state");

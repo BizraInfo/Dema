@@ -17,6 +17,7 @@
 The preview chains from `previous_state_hash` into:
 
 ```text
+node_id
 previous_state_hash
 resource_ids
 truth_label
@@ -25,8 +26,10 @@ boundaries
 block_preview_hash
 ```
 
-The block hash is a deterministic SHA-256 over the preview body. It is not a
-runtime receipt and does not imply any device scan or URP action occurred.
+The block hash is a deterministic SHA-256 over `stableStringify(block)`, where
+`block` is the subset object containing `node_id`, `previous_state_hash`,
+`resource_ids`, `truth_label`, `verification_result`, and `boundaries`. It is
+not a runtime receipt and does not imply any device scan or URP action occurred.
 
 ## Commands
 

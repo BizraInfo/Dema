@@ -148,3 +148,76 @@ test("review verifier and gate pass canonical preview", () => {
   assert.equal(gate.device_count, 2);
   assert.equal(gate.resource_count, 6);
 });
+
+test("review verifier rejects previews that cross preview boundaries", () => {
+  const report = buildNode0MultiDeviceUrpResourceManifestPreview();
+  const verified = verifyNode0MultiDeviceUrpResourceManifestPreview({
+    ...report,
+    boundaries: { ...report.boundaries, network_used: true },
+  });
+  assert.equal(verified.ok, false);
+  assert.ok(verified.blocked_by.includes("boundary_not_all_false"));
+});
+
+test("duplicate-free and sensitivity-free manifests can verify", () => {
+  const report = buildNode0MultiDeviceUrpResourceManifestPreview({
+    device_resource_manifests: [
+      {
+        device_id: "dev:laptop-clean",
+        device_type: "laptop_node",
+        label: "Clean laptop",
+        trust_level: "paired_trusted",
+        resources: [
+          {
+            resource_id: "res:laptop-clean:report.pdf",
+            name: "report.pdf",
+            category: "documents",
+            relative_path: "docs/report.pdf",
+            extension: ".pdf",
+            size_bytes: 100,
+            mtime_iso: "2026-06-28T01:00:00.000Z",
+            sensitivity: "business",
+          },
+        ],
+      },
+      {
+        device_id: "dev:mobile-clean",
+        device_type: "mobile_node",
+        label: "Clean mobile",
+        trust_level: "paired_high_trust",
+        resources: [
+          {
+            resource_id: "res:mobile-clean:photo.jpg",
+            name: "photo.jpg",
+            category: "media",
+            relative_path: "camera/photo.jpg",
+            extension: ".jpg",
+            size_bytes: 200,
+            mtime_iso: "2026-06-28T01:00:00.000Z",
+            sensitivity: "business",
+          },
+        ],
+      },
+    ],
+  });
+  assert.deepEqual(report.duplicate_cross_device_candidates, []);
+  assert.deepEqual(report.version_chain_cross_device_candidates, []);
+  assert.deepEqual(report.sensitive_resource_hints, []);
+  const verified = verifyNode0MultiDeviceUrpResourceManifestPreview(report);
+  assert.equal(verified.ok, true, verified.blocked_by.join(", "));
+});
+
+test("declared device mismatch is rejected without trusting caller drift", () => {
+  const report = buildNode0MultiDeviceUrpResourceManifestPreview({
+    devices: [{ device_id: "dev:unrelated", device_type: "laptop_node" }],
+  });
+  assert.equal(
+    report.input_device_manifest_consistency.declared_devices_match_manifests,
+    false,
+  );
+  const verified = verifyNode0MultiDeviceUrpResourceManifestPreview(report);
+  assert.equal(verified.ok, false);
+  assert.ok(
+    verified.blocked_by.includes("declared_devices_do_not_match_manifests"),
+  );
+});

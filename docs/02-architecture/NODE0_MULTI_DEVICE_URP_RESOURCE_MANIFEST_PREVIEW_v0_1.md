@@ -62,7 +62,7 @@ The 1A preview does not:
 - extract mobile data
 - mutate files
 - read content
-- perform OCR, embeddings, summaries, uploads, sync, or network calls
+- perform OCR, embeddings, uploads, sync, or network calls
 - write URP state
 - mint tokens
 - access wallets
