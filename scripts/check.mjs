@@ -13,6 +13,7 @@ export const commands = [
   ["node", ["scripts/review/unstructured-asset-scan-modes-check.mjs"]],
   ["node", ["scripts/review/unstructured-asset-awareness-check.mjs"]],
   ["node", ["scripts/review/multi-device-asset-awareness-check.mjs"]],
+  ["node", ["scripts/review/node0-multi-device-urp-resource-manifest-preview-check.mjs"]],
   ["node", ["scripts/review/dema-home-node-space-ontology-check.mjs"]],
   ["node", ["scripts/review/dema-node-space-bonding-file-steward-check.mjs"]],
   ["node", ["scripts/review/node0-killer-demo-value-loop-compose-gate.mjs"]],
