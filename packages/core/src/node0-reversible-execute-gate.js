@@ -216,12 +216,37 @@ function joinInside(realRoot, name) {
   return candidate.startsWith(`${realRoot}/`) ? candidate : null;
 }
 
+function fsHasSafeRead(fs) {
+  return (
+    fs &&
+    typeof fs.openSync === "function" &&
+    typeof fs.fstatSync === "function" &&
+    typeof fs.readSync === "function" &&
+    typeof fs.closeSync === "function"
+  );
+}
+
 function readRegularFile(fs, path) {
-  const lst = fs.lstatSync(path);
-  if (lst.isSymbolicLink() || !lst.isFile()) {
-    throw new Error("unsafe_path");
+  if (!fsHasSafeRead(fs)) {
+    throw new Error("fs_adapter_missing_safe_read");
   }
-  return fs.readFileSync(path);
+  const O_RDONLY = fs.constants?.O_RDONLY ?? 0;
+  const O_NOFOLLOW = fs.constants?.O_NOFOLLOW ?? 0;
+  const fd = fs.openSync(path, O_RDONLY | O_NOFOLLOW);
+  try {
+    const st = fs.fstatSync(fd);
+    if (!st.isFile()) throw new Error("unsafe_path");
+    const buf = Buffer.alloc(st.size);
+    let offset = 0;
+    while (offset < st.size) {
+      const n = fs.readSync(fd, buf, offset, st.size - offset, null);
+      if (n <= 0) break;
+      offset += n;
+    }
+    return buf;
+  } finally {
+    fs.closeSync(fd);
+  }
 }
 
 function pathInsideRoot(fs, realRoot, absPath) {
@@ -246,11 +271,24 @@ function resolveReceiptLogPath(realRoot) {
 function ensureRegularReceiptLog(fs, logPath) {
   try {
     const lst = fs.lstatSync(logPath);
-    if (lst.isSymbolicLink()) return false;
+    if (lst.isSymbolicLink() || !lst.isFile()) return false;
   } catch {
     /* absent → append will create a regular file */
   }
   return true;
+}
+
+function receiptContentHashInSealedLog(logText, contentHashValue) {
+  for (const line of String(logText).split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      const entry = JSON.parse(line);
+      if (entry?.content_hash === contentHashValue) return true;
+    } catch {
+      /* malformed line — ignore */
+    }
+  }
+  return false;
 }
 
 // ── effectful runner (injected fs) ──────────────────────────────────────────
@@ -265,6 +303,7 @@ export function executeReversibleRename({ plan, fs, now = null } = {}) {
   }
   if (
     !fs ||
+    !fsHasSafeRead(fs) ||
     typeof fs.renameSync !== "function" ||
     typeof fs.lstatSync !== "function" ||
     typeof fs.realpathSync !== "function"
@@ -357,6 +396,9 @@ export function executeReversibleRename({ plan, fs, now = null } = {}) {
     fs.renameSync(fromPath, toPath);
     renamed = true;
     const after_hash = `sha256:${sha256Hex(readRegularFile(fs, toPath))}`;
+    if (backup_hash !== before_hash || after_hash !== before_hash) {
+      throw new Error("reversible_invariant_failed");
+    }
 
     const measured_state = measureSandboxState(fs, realRoot, plan.to);
     if (!measured_state) {
@@ -420,6 +462,7 @@ export function undoReversibleRename({ receipt, fs } = {}) {
   }
   if (
     !fs ||
+    !fsHasSafeRead(fs) ||
     typeof fs.renameSync !== "function" ||
     typeof fs.lstatSync !== "function" ||
     typeof fs.realpathSync !== "function"
@@ -487,15 +530,19 @@ export function undoReversibleRename({ receipt, fs } = {}) {
   }
 
   // Reverse the rename, then PROVE by comparing the restored bytes to the backup.
-  fs.renameSync(fromPath, toPath);
-  const restoredBytes = readRegularFile(fs, toPath);
-  const restored_hash = `sha256:${sha256Hex(restoredBytes)}`;
-  const proven =
-    Buffer.isBuffer(restoredBytes) &&
-    Buffer.isBuffer(backupBytes) &&
-    restoredBytes.equals(backupBytes) &&
-    restored_hash === receipt.backup.hash;
-  return { undone: true, proven, restored_hash };
+  try {
+    fs.renameSync(fromPath, toPath);
+    const restoredBytes = readRegularFile(fs, toPath);
+    const restored_hash = `sha256:${sha256Hex(restoredBytes)}`;
+    const proven =
+      Buffer.isBuffer(restoredBytes) &&
+      Buffer.isBuffer(backupBytes) &&
+      restoredBytes.equals(backupBytes) &&
+      restored_hash === receipt.backup.hash;
+    return { undone: true, proven, restored_hash };
+  } catch {
+    return { undone: false, proven: false, reason: "undo_execution_failed" };
+  }
 }
 
 /**
@@ -559,8 +606,10 @@ export function verifyExecuteReceipt(receipt, { fs } = {}) {
       if (!logPath || !ensureRegularReceiptLog(fs, logPath)) {
         return { ok: false, reason: "receipt_log_unsafe" };
       }
-      const log = fs.readFileSync(logPath, "utf8");
-      if (!log.includes(content_hash)) return { ok: false, reason: "not_in_sealed_log" };
+      const log = readRegularFile(fs, logPath).toString("utf8");
+      if (!receiptContentHashInSealedLog(log, content_hash)) {
+        return { ok: false, reason: "not_in_sealed_log" };
+      }
     } catch {
       return { ok: false, reason: "sealed_log_unverifiable" };
     }
@@ -590,6 +639,7 @@ export function runNode0ReversibleExecuteGate({
   const blocked_by = [];
   if (
     !fs ||
+    !fsHasSafeRead(fs) ||
     typeof fs.renameSync !== "function" ||
     typeof fs.lstatSync !== "function" ||
     typeof fs.realpathSync !== "function"
