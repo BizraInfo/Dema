@@ -30,6 +30,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_GOVERNED_REVERSIBLE_ACTION_PREVIEW_1A",
   "DEMA_FDE_DUAL_DIAGNOSTIC_1A",
   "NODE0_REVERSIBLE_EXECUTE_GATE_1A",
+  "NODE0_RECEIPT_SIGNING_ED25519_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -400,6 +401,35 @@ function defaultCapabilityRows() {
         "production execution",
       ],
     }),
+    capability({
+      capability_id: "NODE0_RECEIPT_SIGNING_ED25519_1A",
+      truth_label: "NODE0_SIGNED_SANDBOX_RECEIPT_ATTESTATION",
+      summary:
+        "Ed25519 attestation bridge for sandbox execute receipts — identity binding without execution authority.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-receipt-signing-ed25519.js"],
+        test_paths: ["tests/node0-receipt-signing-ed25519.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-receipt-signing-ed25519-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_RECEIPT_SIGNING_ED25519_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_RECEIPT_SIGNING_ED25519_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim signing grants execution authority, operator mutation, live identity runtime, unattended signing, or production attestation outside consented key-store use.",
+      what_this_proves:
+        "Dema can Ed25519-sign a #306 sandbox execute receipt into a public-key-verifiable attestation envelope with tamper rejection on content_hash and state_hash binds.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, legal identity, or that signing authority equals execution authority.",
+      forbidden_claims: [
+        "signing grants execution",
+        "live identity runtime",
+        "unattended signing",
+      ],
+    }),
   ]);
 }
 
@@ -461,7 +491,7 @@ export function buildDemaCapabilityTruthRegistry({
       previous_state_hash,
     }),
     what_this_proves: [
-      "Dema can enumerate the eight shipped pre-action spine capabilities with source, test, gate, and receipt/doc evidence.",
+      "Dema can enumerate the nine shipped pre-action spine capabilities with source, test, gate, and receipt/doc evidence.",
       "Preview-only capabilities remain blocked from execution claims.",
       "Token, wallet, live URP federation, live RSI, and live PoI stay DESIGNED_NOT_LIVE.",
     ],
