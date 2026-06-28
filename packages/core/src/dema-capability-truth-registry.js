@@ -472,12 +472,18 @@ function verifyFalseBoundary({
 
 export function verifyDemaCapabilityTruthRegistry(
   registry,
-  { pathExists = () => true } = {},
+  { pathExists = () => false } = {},
 ) {
   const blocked_by = [];
   if (!registry || registry.schema !== DEMA_CAPABILITY_TRUTH_REGISTRY_SCHEMA) {
     return freezeDeep({ ok: false, blocked_by: ["invalid_schema"] });
   }
+  const capabilityRows = Array.isArray(registry.capabilities)
+    ? registry.capabilities
+    : [];
+  const blockedSurfaces = Array.isArray(registry.blocked_surfaces)
+    ? registry.blocked_surfaces
+    : [];
   if (registry.truth_label !== DEMA_CAPABILITY_TRUTH_REGISTRY_TRUTH_LABEL) {
     blocked_by.push("invalid_truth_label");
   }
@@ -490,12 +496,12 @@ export function verifyDemaCapabilityTruthRegistry(
   ) {
     blocked_by.push("supported_statuses_mismatch");
   }
-  if (!Array.isArray(registry.capabilities) || registry.capabilities.length === 0) {
+  if (capabilityRows.length === 0) {
     blocked_by.push("capabilities_missing");
   }
 
   const seen = new Set();
-  for (const row of registry.capabilities ?? []) {
+  for (const row of capabilityRows) {
     if (!row || typeof row !== "object") {
       blocked_by.push("capability_row_invalid");
       continue;
@@ -571,9 +577,14 @@ export function verifyDemaCapabilityTruthRegistry(
     }
   }
 
-  const row301 = (registry.capabilities ?? []).find(
+  const row301 = capabilityRows.find(
     (row) => row.capability_id === "NODE0_GOVERNED_REVERSIBLE_ACTION_PREVIEW_1A",
   );
+  const row301PromotionRequirements = Array.isArray(
+    row301?.promotion_dependency?.requires,
+  )
+    ? row301.promotion_dependency.requires
+    : [];
   if (row301?.status !== "MEASURED_REPO") {
     blocked_by.push("node0_governed_action_preview_not_measured_repo");
   }
@@ -584,15 +595,15 @@ export function verifyDemaCapabilityTruthRegistry(
     blocked_by.push("node0_governed_action_promotion_dependency_invalid");
   }
   for (const requirement of ACTION_ELIGIBLE_PREVIEW_REQUIREMENTS) {
-    if (!row301?.promotion_dependency?.requires?.includes(requirement)) {
+    if (!row301PromotionRequirements.includes(requirement)) {
       blocked_by.push(`node0_governed_action_promotion_requirement_missing:${requirement}`);
     }
   }
 
   const blockedSurfaceStatuses = new Map(
-    (registry.blocked_surfaces ?? []).map((surface) => [
-      surface.surface_id,
-      surface.status,
+    blockedSurfaces.map((surface) => [
+      surface?.surface_id,
+      surface?.status,
     ]),
   );
   for (const surfaceId of REQUIRED_BLOCKED_LIVE_SURFACES) {

@@ -61,7 +61,7 @@ test("contains exactly the required pre-action spine capability rows", () => {
   }
 });
 
-test("#301 is MEASURED_REPO only with merged source, test, gate, receipt, and docs on disk", () => {
+test("#301 is MEASURED_REPO only with checked-out source, test, gate, receipt, and docs on disk", () => {
   const registry = buildDemaCapabilityTruthRegistry();
   const row = capability(
     registry,
@@ -129,6 +129,31 @@ test("MEASURED_REPO rows require source, test, review gate, and receipt or doc e
   const verified = verifyDemaCapabilityTruthRegistry(missingSource, {
     pathExists,
   });
+
+  assert.equal(verified.ok, false);
+  assert.ok(
+    verified.blocked_by.includes(
+      "missing_source:APR_NODE0_ROUTE_REFINERY_PREVIEW_1A",
+    ),
+  );
+});
+
+test("default verifier fails closed without a pathExists hook", () => {
+  const registry = buildDemaCapabilityTruthRegistry();
+  const missingSource = buildDemaCapabilityTruthRegistry({
+    capabilities: registry.capabilities.map((candidate) =>
+      candidate.capability_id === "APR_NODE0_ROUTE_REFINERY_PREVIEW_1A"
+        ? {
+            ...candidate,
+            evidence: {
+              ...candidate.evidence,
+              source_paths: ["missing/apr-source.js"],
+            },
+          }
+        : candidate,
+    ),
+  });
+  const verified = verifyDemaCapabilityTruthRegistry(missingSource);
 
   assert.equal(verified.ok, false);
   assert.ok(
@@ -459,6 +484,32 @@ test("missing and extra boundary keys fail closed", () => {
   assert.ok(
     extraRowVerified.blocked_by.includes(
       "row:APR_NODE0_ROUTE_REFINERY_PREVIEW_1A:boundary_key_extra:invented_live_flag",
+    ),
+  );
+});
+
+test("malformed capability and blocked-surface collections fail closed without throwing", () => {
+  const registry = buildDemaCapabilityTruthRegistry();
+  const malformed = {
+    ...registry,
+    capabilities: "not an array",
+    blocked_surfaces: "not an array",
+  };
+
+  assert.doesNotThrow(() =>
+    verifyDemaCapabilityTruthRegistry(malformed, { pathExists }),
+  );
+  const verified = verifyDemaCapabilityTruthRegistry(malformed, { pathExists });
+  assert.equal(verified.ok, false);
+  assert.ok(verified.blocked_by.includes("capabilities_missing"));
+  assert.ok(
+    verified.blocked_by.includes(
+      "required_capability_missing:COVERAGE_TRUTH_GATE_1A",
+    ),
+  );
+  assert.ok(
+    verified.blocked_by.includes(
+      "live_surface_not_designed_not_live:TOKEN_ECONOMY",
     ),
   );
 });
