@@ -61,6 +61,21 @@ test("raises route quality when AASR has exact preview consent", () => {
   );
 });
 
+test("rejects collected consent when mode is not exact preview", () => {
+  const route = buildAasrNode0StateRouterPreview({
+    consent_proof: { collected: true, mode: "checkbox" },
+  });
+  const report = buildAprNode0RouteRefineryPreview({ aasr_route_preview: route });
+  assert.equal(report.consent_gap_analysis.ok, false);
+  assert.equal(report.consent_gap_analysis.collected, true);
+  assert.equal(report.consent_gap_analysis.exact_consent_collected, false);
+  assert.ok(
+    report.consent_gap_analysis.blocked_by.includes(
+      "exact_consent_missing_before_action",
+    ),
+  );
+});
+
 test("surfaces proof gaps for incomplete route previews", () => {
   const route = buildAasrNode0StateRouterPreview({
     consent_proof: { collected: true, mode: "exact_preview" },
@@ -89,6 +104,21 @@ test("surfaces risk gaps for crossed AASR route boundaries", () => {
   assert.equal(
     report.safe_next_action_recommendation,
     "reject_route_until_boundaries_are_false",
+  );
+});
+
+test("deduplicates repeated boundary blockers in top-level blocked_by", () => {
+  const route = buildAasrNode0StateRouterPreview({
+    boundary: { network_used: true },
+    consent_proof: { collected: true, mode: "exact_preview" },
+  });
+  const report = buildAprNode0RouteRefineryPreview({
+    aasr_route_preview: route,
+    boundary: { network_used: true },
+  });
+  assert.equal(
+    report.blocked_by.filter((code) => code === "boundary_not_all_false").length,
+    1,
   );
 });
 
@@ -173,6 +203,13 @@ test("verifier rejects invalid schema and crossed refinery boundaries", () => {
   });
   assert.equal(crossed.ok, false);
   assert.ok(crossed.blocked_by.includes("boundary_not_all_false"));
+
+  const emptyBoundary = verifyAprNode0RouteRefineryPreview({
+    ...report,
+    boundaries: {},
+  });
+  assert.equal(emptyBoundary.ok, false);
+  assert.ok(emptyBoundary.blocked_by.includes("boundary_not_all_false"));
 });
 
 test("verifier rejects tampered refinement execution", () => {
@@ -186,6 +223,16 @@ test("verifier rejects tampered refinement execution", () => {
   });
   assert.equal(tampered.ok, false);
   assert.ok(tampered.blocked_by.includes("route_execution_performed"));
+});
+
+test("verifier rejects stale refinement block hashes", () => {
+  const report = buildAprNode0RouteRefineryPreview();
+  const stale = verifyAprNode0RouteRefineryPreview({
+    ...report,
+    route_quality_score: report.route_quality_score + 0.1,
+  });
+  assert.equal(stale.ok, false);
+  assert.ok(stale.blocked_by.includes("refinement_block_hash_mismatch"));
 });
 
 test("review verifier and gate pass canonical preview structure", () => {

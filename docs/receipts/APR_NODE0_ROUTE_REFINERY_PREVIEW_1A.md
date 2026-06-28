@@ -12,26 +12,29 @@
 | `tests/apr-node0-route-refinery-preview.test.js` | Acceptance proof |
 | `docs/02-architecture/APR_NODE0_ROUTE_REFINERY_PREVIEW_v0_1.md` | Architecture contract |
 
-## Refinement Block Atom
+## Refinement Block Hash Input
 
-The chained refinement block preview contains:
+The chained refinement block preview exposes `previous_state_hash`,
+`block_preview_hash`, `verification_result`, `refinement_written`, and
+`route_execution_performed`. The `block_preview_hash` is computed from this
+hash-input object:
 
 ```text
 previous_state_hash
 input_route_id
 route_quality_score
-proof_ok
-consent_ok
-risk_ok
-overclaim_ok
+proof_gap_analysis
+consent_gap_analysis
+risk_gap_analysis
+overclaim_analysis
+recommended_route_adjustments
 safe_next_action_recommendation
 boundaries
-block_preview_hash
 ```
 
-The block hash is deterministic SHA-256 over the preview subset object. It is
-not a runtime receipt and does not imply that refinement or route state was
-written.
+The hash input is serialized with the module's stable key ordering
+(`stableStringify`) and emitted as `sha256:${hex}`. It is not a runtime receipt
+and does not imply that refinement or route state was written.
 
 ## Commands
 

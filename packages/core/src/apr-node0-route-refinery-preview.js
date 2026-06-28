@@ -49,6 +49,7 @@ const DEFAULT_RISK_POLICY = Object.freeze({
 
 const DEFAULT_CONSENT_POLICY = Object.freeze({
   require_exact_consent_before_action: true,
+  exact_consent_modes: Object.freeze(["exact_preview"]),
   execution_allowed_must_remain_false: true,
 });
 
@@ -119,9 +120,20 @@ function aprBoundary() {
   });
 }
 
-function boundaryAllFalse(boundary) {
+function aprBoundaryKeys() {
+  return Object.keys(aprBoundary());
+}
+
+function boundaryAllFalse(boundary, requiredKeys = null) {
   if (!boundary || typeof boundary !== "object") return false;
-  return Object.values(boundary).every((value) => value === false);
+  const values = Object.values(boundary);
+  if (values.length === 0) return false;
+  if (requiredKeys?.some((key) => boundary[key] !== false)) return false;
+  return values.every((value) => value === false);
+}
+
+function aprBoundaryAllFalse(boundary) {
+  return boundaryAllFalse(boundary, aprBoundaryKeys());
 }
 
 function routeId(route) {
@@ -178,9 +190,14 @@ function buildProofGapAnalysis(route, proofRequirements) {
 function buildConsentGapAnalysis(route, consentPolicy) {
   const policy = { ...DEFAULT_CONSENT_POLICY, ...(consentPolicy ?? {}) };
   const collected = route?.consent_state?.collected === true;
+  const mode = route?.consent_state?.mode ?? null;
+  const exactConsentModes =
+    policy.exact_consent_modes ?? DEFAULT_CONSENT_POLICY.exact_consent_modes;
+  const exactConsentCollected =
+    collected && exactConsentModes.includes(mode);
   const executionAllowed = route?.consent_state?.execution_allowed === true;
   const gaps = Object.freeze([
-    ...(policy.require_exact_consent_before_action && !collected
+    ...(policy.require_exact_consent_before_action && !exactConsentCollected
       ? ["exact_consent_missing_before_action"]
       : []),
     ...(policy.execution_allowed_must_remain_false && executionAllowed
@@ -191,6 +208,9 @@ function buildConsentGapAnalysis(route, consentPolicy) {
   return freezeDeep({
     ok: gaps.length === 0,
     collected,
+    mode,
+    exact_consent_collected: exactConsentCollected,
+    exact_consent_modes: Object.freeze([...exactConsentModes]),
     exact_consent_required_before_action:
       policy.require_exact_consent_before_action === true,
     execution_allowed: executionAllowed,
@@ -209,7 +229,7 @@ function buildRiskGapAnalysis(route, boundaries, riskPolicy) {
   const actionBlockers = routeBlockers.filter((code) =>
     policy.action_blockers?.includes(code),
   );
-  const boundaryOk = boundaryAllFalse(boundaries) && boundaryAllFalse(route?.boundaries);
+  const boundaryOk = aprBoundaryAllFalse(boundaries) && boundaryAllFalse(route?.boundaries);
   const riskLevel = !boundaryOk || highRiskBlockers.length > 0
     ? "high"
     : actionBlockers.length > 0
@@ -263,7 +283,7 @@ function scoreRoute({
     (consentGapAnalysis.ok ? 0.25 : 0) +
     (riskGapAnalysis.ok ? 0.25 : 0) +
     (overclaimAnalysis.ok ? 0.15 : 0) +
-    (boundaryAllFalse(boundaries) ? 0.1 : 0);
+    (aprBoundaryAllFalse(boundaries) ? 0.1 : 0);
   return Number(score.toFixed(4));
 }
 
@@ -325,6 +345,32 @@ function safeNextAction({
     : "improve_route_quality_before_action_eligibility";
 }
 
+function refinementBlockPayload({
+  previousStateHash,
+  inputRouteId,
+  routeQualityScore,
+  proofGapAnalysis,
+  consentGapAnalysis,
+  riskGapAnalysis,
+  overclaimAnalysis,
+  recommendedRouteAdjustments,
+  safeNextActionRecommendation,
+  boundaries,
+}) {
+  return {
+    previous_state_hash: previousStateHash,
+    input_route_id: inputRouteId,
+    route_quality_score: routeQualityScore,
+    proof_gap_analysis: proofGapAnalysis,
+    consent_gap_analysis: consentGapAnalysis,
+    risk_gap_analysis: riskGapAnalysis,
+    overclaim_analysis: overclaimAnalysis,
+    recommended_route_adjustments: recommendedRouteAdjustments,
+    safe_next_action_recommendation: safeNextActionRecommendation,
+    boundaries,
+  };
+}
+
 function buildRefinementBlock({
   previousStateHash,
   inputRouteId,
@@ -333,20 +379,22 @@ function buildRefinementBlock({
   consentGapAnalysis,
   riskGapAnalysis,
   overclaimAnalysis,
+  recommendedRouteAdjustments,
   safeNextActionRecommendation,
   boundaries,
 }) {
-  const block = {
-    previous_state_hash: previousStateHash,
-    input_route_id: inputRouteId,
-    route_quality_score: routeQualityScore,
-    proof_ok: proofGapAnalysis.ok,
-    consent_ok: consentGapAnalysis.ok,
-    risk_ok: riskGapAnalysis.ok,
-    overclaim_ok: overclaimAnalysis.ok,
-    safe_next_action_recommendation: safeNextActionRecommendation,
+  const block = refinementBlockPayload({
+    previousStateHash,
+    inputRouteId,
+    routeQualityScore,
+    proofGapAnalysis,
+    consentGapAnalysis,
+    riskGapAnalysis,
+    overclaimAnalysis,
+    recommendedRouteAdjustments,
+    safeNextActionRecommendation,
     boundaries,
-  };
+  });
   return freezeDeep({
     previous_state_hash: previousStateHash,
     block_preview_hash: previewHash(block),
@@ -361,6 +409,24 @@ function verificationResult(blockedBy) {
     ok: blockedBy.length === 0,
     blocked_by: Object.freeze([...blockedBy]),
   });
+}
+
+function expectedRefinementBlockHash(report) {
+  return previewHash(
+    refinementBlockPayload({
+      previousStateHash:
+        report.chained_refinement_block_preview?.previous_state_hash,
+      inputRouteId: report.input_route_id,
+      routeQualityScore: report.route_quality_score,
+      proofGapAnalysis: report.proof_gap_analysis,
+      consentGapAnalysis: report.consent_gap_analysis,
+      riskGapAnalysis: report.risk_gap_analysis,
+      overclaimAnalysis: report.overclaim_analysis,
+      recommendedRouteAdjustments: report.recommended_route_adjustments,
+      safeNextActionRecommendation: report.safe_next_action_recommendation,
+      boundaries: report.boundaries,
+    }),
+  );
 }
 
 export function buildAprNode0RouteRefineryPreview({
@@ -413,11 +479,13 @@ export function buildAprNode0RouteRefineryPreview({
     improvementPolicy: improvement_policy,
   });
   const blocked_by = Object.freeze([
-    ...proof_gap_analysis.blocked_by,
-    ...consent_gap_analysis.blocked_by,
-    ...risk_gap_analysis.blocked_by,
-    ...overclaim_analysis.blocked_by,
-    ...(boundaryAllFalse(boundaries) ? [] : ["boundary_not_all_false"]),
+    ...new Set([
+      ...proof_gap_analysis.blocked_by,
+      ...consent_gap_analysis.blocked_by,
+      ...risk_gap_analysis.blocked_by,
+      ...overclaim_analysis.blocked_by,
+      ...(aprBoundaryAllFalse(boundaries) ? [] : ["boundary_not_all_false"]),
+    ]),
   ]);
   const chained_refinement_block_preview = buildRefinementBlock({
     previousStateHash: previous_state_hash,
@@ -427,6 +495,7 @@ export function buildAprNode0RouteRefineryPreview({
     consentGapAnalysis: consent_gap_analysis,
     riskGapAnalysis: risk_gap_analysis,
     overclaimAnalysis: overclaim_analysis,
+    recommendedRouteAdjustments: recommended_route_adjustments,
     safeNextActionRecommendation: safe_next_action_recommendation,
     boundaries,
   });
@@ -489,13 +558,14 @@ export function verifyAprNode0RouteRefineryPreview(report) {
   if (!report.safe_next_action_recommendation) {
     blocked_by.push("missing_safe_next_action_recommendation");
   }
-  if (!boundaryAllFalse(report.boundaries)) {
+  if (!aprBoundaryAllFalse(report.boundaries)) {
     blocked_by.push("boundary_not_all_false");
   }
-  if (!/^sha256:/.test(
-    report.chained_refinement_block_preview?.block_preview_hash ?? "",
-  )) {
+  const blockHash = report.chained_refinement_block_preview?.block_preview_hash ?? "";
+  if (!/^sha256:[0-9a-f]{64}$/.test(blockHash)) {
     blocked_by.push("missing_refinement_block_hash");
+  } else if (blockHash !== expectedRefinementBlockHash(report)) {
+    blocked_by.push("refinement_block_hash_mismatch");
   }
   if (report.chained_refinement_block_preview?.refinement_written !== false) {
     blocked_by.push("refinement_written");

@@ -37,7 +37,7 @@ The preview emits:
 - overclaim analysis
 - recommended route adjustments
 - safe next action recommendation
-- blocked reasons
+- `blocked_by` array of reason codes
 - chained refinement block preview
 - all-false boundaries
 - what this proves / does not prove
