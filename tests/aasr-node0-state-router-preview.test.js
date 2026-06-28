@@ -161,11 +161,27 @@ test("verifier rejects crossed-boundary and invalid-schema reports", () => {
     boundaries: { ...report.boundaries, network_used: true },
   });
   assert.equal(crossed.ok, false);
+  assert.ok(Object.isFrozen(crossed.blocked_by));
   assert.ok(crossed.blocked_by.includes("boundary_not_all_false"));
 
   const invalid = verifyAasrNode0StateRouterPreview({ ...report, schema: "bad" });
   assert.equal(invalid.ok, false);
+  assert.ok(Object.isFrozen(invalid.blocked_by));
   assert.ok(invalid.blocked_by.includes("invalid_schema"));
+});
+
+test("verifier rejects tampered APR execution previews", () => {
+  const report = buildAasrNode0StateRouterPreview();
+  const tampered = verifyAasrNode0StateRouterPreview({
+    ...report,
+    apr_refinement_recommendation: {
+      ...report.apr_refinement_recommendation,
+      apr_executed: true,
+    },
+  });
+  assert.equal(tampered.ok, false);
+  assert.ok(tampered.blocked_by.includes("apr_executed"));
+  assert.ok(Object.isFrozen(tampered.blocked_by));
 });
 
 test("review verifier and gate pass canonical preview", () => {

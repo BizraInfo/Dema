@@ -265,6 +265,13 @@ function finalVerdict(blockedBy, snrDecision) {
     : "AASR_PREVIEW_ROUTE_NOT_READY";
 }
 
+function verificationResult(blockedBy) {
+  return Object.freeze({
+    ok: blockedBy.length === 0,
+    blocked_by: Object.freeze([...blockedBy]),
+  });
+}
+
 export function buildAasrNode0StateRouterPreview({
   incoming_claim = "Route Node0 file and resource preview state.",
   file_action_receipt_preview = defaultFileActionReceiptPreview(),
@@ -356,7 +363,7 @@ export function verifyAasrNode0StateRouterPreview(report) {
 
   if (!report || report.schema !== AASR_NODE0_STATE_ROUTER_SCHEMA) {
     blocked_by.push("invalid_schema");
-    return Object.freeze({ ok: false, blocked_by });
+    return verificationResult(blocked_by);
   }
   if (report.truth_label !== AASR_NODE0_STATE_ROUTER_TRUTH_LABEL) {
     blocked_by.push("invalid_truth_label");
@@ -397,8 +404,11 @@ export function verifyAasrNode0StateRouterPreview(report) {
   if (report.apr_refinement_recommendation?.model_invoked !== false) {
     blocked_by.push("apr_model_invoked");
   }
+  if (report.apr_refinement_recommendation?.apr_executed !== false) {
+    blocked_by.push("apr_executed");
+  }
 
-  return Object.freeze({ ok: blocked_by.length === 0, blocked_by });
+  return verificationResult(blocked_by);
 }
 
 export function runAasrNode0StateRouterPreviewGate() {
