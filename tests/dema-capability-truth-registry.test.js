@@ -138,6 +138,38 @@ test("MEASURED_REPO rows require source, test, review gate, and receipt or doc e
   );
 });
 
+test("all required capability rows must stay MEASURED_REPO", () => {
+  const registry = buildDemaCapabilityTruthRegistry();
+  const downgraded = buildDemaCapabilityTruthRegistry({
+    capabilities: registry.capabilities.map((candidate) =>
+      candidate.capability_id === "DEMA_NODE_SPACE_FILE_STEWARD_1A"
+        ? {
+            ...candidate,
+            status: "PLANNED",
+            evidence: {
+              ...candidate.evidence,
+              source_paths: [],
+              test_paths: [],
+              review_gate_paths: [],
+              receipt_paths: [],
+              documentation_paths: [],
+            },
+          }
+        : candidate,
+    ),
+  });
+  const verified = verifyDemaCapabilityTruthRegistry(downgraded, {
+    pathExists,
+  });
+
+  assert.equal(verified.ok, false);
+  assert.ok(
+    verified.blocked_by.includes(
+      "required_capability_not_measured_repo:DEMA_NODE_SPACE_FILE_STEWARD_1A",
+    ),
+  );
+});
+
 test("review gate fails on missing test and missing review gate evidence", () => {
   const registry = buildDemaCapabilityTruthRegistry();
   const row = capability(registry, "AASR_NODE0_STATE_ROUTER_PREVIEW_1A");
@@ -238,6 +270,35 @@ test("unsupported status or runtime promotion fails closed", () => {
   );
 });
 
+test("execution and live claims are rejected even when runtime status is tampered", () => {
+  const registry = buildDemaCapabilityTruthRegistry();
+  const tampered = buildDemaCapabilityTruthRegistry({
+    capabilities: registry.capabilities.map((row) =>
+      row.capability_id === "APR_NODE0_ROUTE_REFINERY_PREVIEW_1A"
+        ? {
+            ...row,
+            runtime_status: "MEASURED_REPO",
+            execution_allowed: true,
+            claims_live_execution: true,
+          }
+        : row,
+    ),
+  });
+  const verified = verifyDemaCapabilityTruthRegistry(tampered, { pathExists });
+
+  assert.equal(verified.ok, false);
+  assert.ok(
+    verified.blocked_by.includes(
+      "execution_allowed_not_false:APR_NODE0_ROUTE_REFINERY_PREVIEW_1A",
+    ),
+  );
+  assert.ok(
+    verified.blocked_by.includes(
+      "claims_live_execution_not_false:APR_NODE0_ROUTE_REFINERY_PREVIEW_1A",
+    ),
+  );
+});
+
 test("token, wallet, live URP federation, live RSI, and live PoI stay DESIGNED_NOT_LIVE", () => {
   const registry = buildDemaCapabilityTruthRegistry();
   const statusBySurface = new Map(
@@ -312,7 +373,7 @@ test("all registry boundaries remain false", () => {
   };
   const verified = verifyDemaCapabilityTruthRegistry(tampered, { pathExists });
   assert.equal(verified.ok, false);
-  assert.ok(verified.blocked_by.includes("boundary_not_false:network_used"));
+  assert.ok(verified.blocked_by.includes("registry:boundary_not_false:network_used"));
 });
 
 test("row boundary flips fail closed", () => {
@@ -332,7 +393,49 @@ test("row boundary flips fail closed", () => {
   assert.equal(verified.ok, false);
   assert.ok(
     verified.blocked_by.includes(
-      "row_boundary_not_false:APR_NODE0_ROUTE_REFINERY_PREVIEW_1A:live_execution_performed",
+      "row:APR_NODE0_ROUTE_REFINERY_PREVIEW_1A:boundary_not_false:live_execution_performed",
+    ),
+  );
+});
+
+test("missing and extra boundary keys fail closed", () => {
+  const registry = buildDemaCapabilityTruthRegistry();
+  const missingRegistryBoundary = {
+    ...registry,
+    boundaries: Object.fromEntries(
+      Object.entries(registry.boundaries).filter(([key]) => key !== "network_used"),
+    ),
+  };
+  const missingRegistryVerified = verifyDemaCapabilityTruthRegistry(
+    missingRegistryBoundary,
+    { pathExists },
+  );
+
+  assert.equal(missingRegistryVerified.ok, false);
+  assert.ok(
+    missingRegistryVerified.blocked_by.includes(
+      "registry:boundary_key_missing:network_used",
+    ),
+  );
+
+  const extraRowBoundary = buildDemaCapabilityTruthRegistry({
+    capabilities: registry.capabilities.map((row) =>
+      row.capability_id === "APR_NODE0_ROUTE_REFINERY_PREVIEW_1A"
+        ? {
+            ...row,
+            boundary: { ...row.boundary, invented_live_flag: false },
+          }
+        : row,
+    ),
+  });
+  const extraRowVerified = verifyDemaCapabilityTruthRegistry(extraRowBoundary, {
+    pathExists,
+  });
+
+  assert.equal(extraRowVerified.ok, false);
+  assert.ok(
+    extraRowVerified.blocked_by.includes(
+      "row:APR_NODE0_ROUTE_REFINERY_PREVIEW_1A:boundary_key_extra:invented_live_flag",
     ),
   );
 });

@@ -38,6 +38,28 @@ const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
   "LIVE_POI",
 ]);
 
+const REGISTRY_BOUNDARY_KEYS = Object.freeze([
+  "daemon_started",
+  "network_used",
+  "token_minted",
+  "wallet_accessed",
+  "live_execution_performed",
+  "file_mutation_performed",
+  "urp_federation_started",
+  "poi_runtime_started",
+  "rsi_runtime_started",
+  "model_invocation_performed",
+]);
+
+const ROW_BOUNDARY_KEYS = Object.freeze([
+  "execution_allowed",
+  "daemon_started",
+  "network_used",
+  "token_minted",
+  "wallet_accessed",
+  "live_execution_performed",
+]);
+
 const ACTION_ELIGIBLE_PREVIEW_REQUIREMENTS = Object.freeze([
   "exact_go_phrase",
   "reversible_plan",
@@ -79,29 +101,13 @@ function registryHash(payload) {
 }
 
 function registryBoundary() {
-  return freezeDeep({
-    daemon_started: false,
-    network_used: false,
-    token_minted: false,
-    wallet_accessed: false,
-    live_execution_performed: false,
-    file_mutation_performed: false,
-    urp_federation_started: false,
-    poi_runtime_started: false,
-    rsi_runtime_started: false,
-    model_invocation_performed: false,
-  });
+  return freezeDeep(
+    Object.fromEntries(REGISTRY_BOUNDARY_KEYS.map((key) => [key, false])),
+  );
 }
 
 function rowBoundary() {
-  return freezeDeep({
-    execution_allowed: false,
-    daemon_started: false,
-    network_used: false,
-    token_minted: false,
-    wallet_accessed: false,
-    live_execution_performed: false,
-  });
+  return freezeDeep(Object.fromEntries(ROW_BOUNDARY_KEYS.map((key) => [key, false])));
 }
 
 function evidence({
@@ -433,6 +439,35 @@ function verifyMeasuredRepoEvidence(row, pathExists) {
   return blocked;
 }
 
+function verifyFalseBoundary({
+  boundary,
+  expectedKeys,
+  prefix,
+  rowId = null,
+}) {
+  const blocked = [];
+  const scope = rowId ? `${prefix}:${rowId}` : prefix;
+  if (!boundary || typeof boundary !== "object" || Array.isArray(boundary)) {
+    return [`${scope}:boundary_missing`];
+  }
+
+  const actualKeys = Object.keys(boundary).sort();
+  const expectedSortedKeys = [...expectedKeys].sort();
+  for (const key of expectedSortedKeys) {
+    if (!actualKeys.includes(key)) {
+      blocked.push(`${scope}:boundary_key_missing:${key}`);
+    } else if (boundary[key] !== false) {
+      blocked.push(`${scope}:boundary_not_false:${key}`);
+    }
+  }
+  for (const key of actualKeys) {
+    if (!expectedKeys.includes(key)) {
+      blocked.push(`${scope}:boundary_key_extra:${key}`);
+    }
+  }
+  return blocked;
+}
+
 export function verifyDemaCapabilityTruthRegistry(
   registry,
   { pathExists = () => true } = {},
@@ -478,17 +513,27 @@ export function verifyDemaCapabilityTruthRegistry(
     if (row.status === "MEASURED_REPO") {
       blocked_by.push(...verifyMeasuredRepoEvidence(row, pathExists));
     }
+    if (
+      REQUIRED_CAPABILITY_IDS.includes(row.capability_id) &&
+      row.status !== "MEASURED_REPO"
+    ) {
+      blocked_by.push(`required_capability_not_measured_repo:${row.capability_id}`);
+    }
     if (row.action_capable === true || row.status === "ACTION_CAPABLE") {
       blocked_by.push(`action_capable_assignment_unsupported:${row.capability_id}`);
     }
     if (row.eligible_for_execution !== false) {
       blocked_by.push(`eligible_for_execution_not_false:${row.capability_id}`);
     }
-    if (row.runtime_status === "PREVIEW_ONLY") {
-      if (row.execution_allowed !== false) {
+    if (row.execution_allowed !== false) {
+      blocked_by.push(`execution_allowed_not_false:${row.capability_id}`);
+      if (row.runtime_status === "PREVIEW_ONLY") {
         blocked_by.push(`preview_implies_execution:${row.capability_id}`);
       }
-      if (row.claims_live_execution !== false) {
+    }
+    if (row.claims_live_execution !== false) {
+      blocked_by.push(`claims_live_execution_not_false:${row.capability_id}`);
+      if (row.runtime_status === "PREVIEW_ONLY") {
         blocked_by.push(`preview_claims_live_execution:${row.capability_id}`);
       }
     }
@@ -504,11 +549,14 @@ export function verifyDemaCapabilityTruthRegistry(
     if (!row.what_this_proves || !row.what_this_does_not_prove) {
       blocked_by.push(`missing_proof_boundary_text:${row.capability_id}`);
     }
-    for (const [key, value] of Object.entries(row.boundary ?? {})) {
-      if (value !== false) {
-        blocked_by.push(`row_boundary_not_false:${row.capability_id}:${key}`);
-      }
-    }
+    blocked_by.push(
+      ...verifyFalseBoundary({
+        boundary: row.boundary,
+        expectedKeys: ROW_BOUNDARY_KEYS,
+        prefix: "row",
+        rowId: row.capability_id,
+      }),
+    );
   }
 
   for (const capabilityId of REQUIRED_CAPABILITY_IDS) {
@@ -547,9 +595,13 @@ export function verifyDemaCapabilityTruthRegistry(
     }
   }
 
-  for (const [key, value] of Object.entries(registry.boundaries ?? {})) {
-    if (value !== false) blocked_by.push(`boundary_not_false:${key}`);
-  }
+  blocked_by.push(
+    ...verifyFalseBoundary({
+      boundary: registry.boundaries,
+      expectedKeys: REGISTRY_BOUNDARY_KEYS,
+      prefix: "registry",
+    }),
+  );
 
   const expectedHash = registryHash({
     ...registryPayload({
