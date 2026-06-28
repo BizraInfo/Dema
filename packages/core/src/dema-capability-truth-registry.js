@@ -133,6 +133,7 @@ function capability({
   truth_label,
   summary,
   evidence: rowEvidence,
+  promotion_rule,
   blocked_promotion_rule,
   forbidden_claims,
   what_this_proves,
@@ -140,6 +141,7 @@ function capability({
   promotion_dependency = null,
   blocked_by = [],
 }) {
+  const canonicalPromotionRule = promotion_rule ?? blocked_promotion_rule;
   return freezeDeep({
     capability_id,
     status,
@@ -157,7 +159,7 @@ function capability({
     boundary: rowBoundary(),
     what_this_proves,
     what_this_does_not_prove,
-    promotion_rule: blocked_promotion_rule,
+    promotion_rule: canonicalPromotionRule,
     promotion_dependency,
     blocked_by,
     execution_allowed: false,
@@ -165,7 +167,7 @@ function capability({
     action_capable: false,
     claims_live_execution: false,
     claims_token_or_wallet: false,
-    blocked_promotion_rule,
+    blocked_promotion_rule: blocked_promotion_rule ?? canonicalPromotionRule,
     forbidden_claims,
   });
 }
@@ -540,11 +542,15 @@ export function verifyDemaCapabilityTruthRegistry(
     if (row.claims_token_or_wallet !== false) {
       blocked_by.push(`token_or_wallet_claim:${row.capability_id}`);
     }
-    if (!row.blocked_promotion_rule) {
-      blocked_by.push(`missing_blocked_promotion_rule:${row.capability_id}`);
-    }
     if (!row.promotion_rule) {
       blocked_by.push(`missing_promotion_rule:${row.capability_id}`);
+    }
+    if (
+      row.blocked_promotion_rule &&
+      row.promotion_rule &&
+      row.blocked_promotion_rule !== row.promotion_rule
+    ) {
+      blocked_by.push(`promotion_rule_alias_mismatch:${row.capability_id}`);
     }
     if (!row.what_this_proves || !row.what_this_does_not_prove) {
       blocked_by.push(`missing_proof_boundary_text:${row.capability_id}`);

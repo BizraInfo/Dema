@@ -299,6 +299,29 @@ test("execution and live claims are rejected even when runtime status is tampere
   );
 });
 
+test("promotion rule alias mismatch fails clearly", () => {
+  const registry = buildDemaCapabilityTruthRegistry();
+  const tampered = buildDemaCapabilityTruthRegistry({
+    capabilities: registry.capabilities.map((row) =>
+      row.capability_id === "AASR_NODE0_STATE_ROUTER_PREVIEW_1A"
+        ? {
+            ...row,
+            promotion_rule: "canonical rule",
+            blocked_promotion_rule: "different legacy alias",
+          }
+        : row,
+    ),
+  });
+  const verified = verifyDemaCapabilityTruthRegistry(tampered, { pathExists });
+
+  assert.equal(verified.ok, false);
+  assert.ok(
+    verified.blocked_by.includes(
+      "promotion_rule_alias_mismatch:AASR_NODE0_STATE_ROUTER_PREVIEW_1A",
+    ),
+  );
+});
+
 test("token, wallet, live URP federation, live RSI, and live PoI stay DESIGNED_NOT_LIVE", () => {
   const registry = buildDemaCapabilityTruthRegistry();
   const statusBySurface = new Map(
