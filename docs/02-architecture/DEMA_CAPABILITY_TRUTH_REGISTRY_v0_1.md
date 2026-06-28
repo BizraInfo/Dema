@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`DEMA-CAPABILITY-TRUTH-REGISTRY-1A` is a deterministic registry for the first six shipped Dema proof-control surfaces:
+`DEMA-CAPABILITY-TRUTH-REGISTRY-1A` is a deterministic registry for the first seven shipped Dema proof-control surfaces:
 
 ```text
 COVERAGE_TRUTH_GATE_1A
@@ -11,6 +11,7 @@ NODE0_MULTI_DEVICE_URP_MANIFEST_1A
 AASR_NODE0_STATE_ROUTER_PREVIEW_1A
 APR_NODE0_ROUTE_REFINERY_PREVIEW_1A
 NODE0_GOVERNED_REVERSIBLE_ACTION_PREVIEW_1A
+DEMA_FDE_DUAL_DIAGNOSTIC_1A
 ```
 
 It prevents capability drift by binding each row to source, test, review-gate, and receipt/documentation evidence. The registry is a truth map, not an execution router.

@@ -18,6 +18,7 @@ export const commands = [
   ["node", ["scripts/review/apr-node0-route-refinery-preview-check.mjs"]],
   ["node", ["scripts/review/node0-governed-reversible-action-preview-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
+  ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],
   ["node", ["scripts/review/dema-home-node-space-ontology-check.mjs"]],
   ["node", ["scripts/review/dema-node-space-bonding-file-steward-check.mjs"]],
   ["node", ["scripts/review/node0-killer-demo-value-loop-compose-gate.mjs"]],
