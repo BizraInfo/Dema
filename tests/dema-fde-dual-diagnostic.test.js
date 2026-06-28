@@ -117,6 +117,18 @@ test("references capability registry row from input", () => {
   assert.equal(report.input.capability_registry_row, "DEMA_FDE_DUAL_DIAGNOSTIC_1A");
 });
 
+test("defaults capability registry reference to DEMA_FDE_DUAL_DIAGNOSTIC_1A", () => {
+  const report = buildDemaFdeDualDiagnostic({
+    failed_command: "npm test",
+    exit_code: 1,
+    stdout_excerpt: "AssertionError",
+    stderr_excerpt: "",
+    environment: { node_version: "22.x", os: "linux", branch: "main" },
+  });
+
+  assert.equal(report.capability_registry_reference, "DEMA_FDE_DUAL_DIAGNOSTIC_1A");
+});
+
 test("verify rejects autopatch eligibility", () => {
   const report = buildDemaFdeDualDiagnostic(defaultDemaFdeDualDiagnosticFixture());
   const tampered = { ...report, eligible_for_autopatch: true };
@@ -223,6 +235,40 @@ test("classifies boundary violation from blocked live-surface markers", () => {
 
   assert.equal(report.failure_class, "boundary_violation");
   assert.equal(report.eligible_for_autopatch, false);
+});
+
+test("does not treat eligible_for_autopatch false field text as boundary violation", () => {
+  const report = buildDemaFdeDualDiagnostic({
+    failed_command: "node scripts/review/dema-fde-dual-diagnostic-check.mjs",
+    exit_code: 1,
+    stdout_excerpt:
+      "eligible_for_autopatch: false\nconsent_required: true\ndiagnostic_hash_mismatch blocked_by",
+    stderr_excerpt: "invalid_schema blocked_by",
+    environment: { node_version: "22.x", os: "linux", branch: "main" },
+  });
+
+  assert.notEqual(report.failure_class, "boundary_violation");
+});
+
+test("classifies verifier boundary blockers from gate excerpts", () => {
+  const report = buildDemaFdeDualDiagnostic({
+    failed_command: "node scripts/review/dema-fde-dual-diagnostic-check.mjs --json",
+    exit_code: 1,
+    stderr_excerpt: "fde:boundary_not_false:push_performed",
+    stdout_excerpt: "",
+    environment: { node_version: "22.x", os: "linux", branch: "main" },
+  });
+
+  assert.equal(report.failure_class, "boundary_violation");
+});
+
+test("runDemaFdeDualDiagnosticGate fails closed on malformed explicit report", () => {
+  assert.doesNotThrow(() => runDemaFdeDualDiagnosticGate({ report: {} }));
+  const gate = runDemaFdeDualDiagnosticGate({ report: {} });
+  assert.equal(gate.ok, false);
+  assert.equal(gate.failure_class, "unknown");
+  assert.equal(gate.inward_confidence, "low");
+  assert.ok(gate.verified.blocked_by.includes("invalid_schema"));
 });
 
 test("malformed input does not throw and returns unknown diagnosis", () => {

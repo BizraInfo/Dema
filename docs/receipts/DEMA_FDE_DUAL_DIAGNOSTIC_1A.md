@@ -30,14 +30,15 @@ docs/CURRENT_LIMITS.md
 
 ## Proof Contract
 
-The default gate must pass only while:
+The default FDE gate must pass only while:
 
 - the canonical fixture classifies a proof failure with `eligible_for_autopatch: false`,
 - inward and outward diagnoses include hypothesis, evidence, and confidence,
 - `consent_required` remains true,
 - all FDE boundaries remain false,
-- the diagnostic hash recomputes exactly,
-- the capability truth registry includes `DEMA_FDE_DUAL_DIAGNOSTIC_1A` as `MEASURED_REPO`.
+- the diagnostic hash recomputes exactly.
+
+`npm run check` also runs `dema-capability-truth-registry-check.mjs`, which must keep `DEMA_FDE_DUAL_DIAGNOSTIC_1A` at `MEASURED_REPO` alongside the other spine rows.
 
 ## Commands
 

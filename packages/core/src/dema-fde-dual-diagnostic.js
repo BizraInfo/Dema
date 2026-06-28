@@ -61,8 +61,11 @@ const BOUNDARY_VIOLATION_MARKERS = Object.freeze([
   "live rsi",
   "live poi",
   "federation started",
-  "autopatch",
+  "autopatch_performed",
+  "autopatch: true",
   "eligible_for_autopatch: true",
+  "fde:boundary_not_false:",
+  "boundary_not_false:",
 ]);
 
 const PROOF_GAP_MARKERS = Object.freeze([
@@ -259,17 +262,15 @@ function classifyLens(input, lens) {
     const registryCheckFailure =
       failedCommand.includes("dema-capability-truth-registry-check") &&
       proofGapHits.length > 0;
-    if (registryCheckFailure || (proofGapHits.length > 0 && lens === "inward")) {
+    if (proofGapHits.length > 0) {
       const commandHintMatch = INWARD_COMMAND_HINTS.some((hint) =>
         failedCommand.includes(hint),
       );
       return {
         failure_class: "proof_gap",
-        hits: freezeDeep(
-          proofGapHits.length > 0 ? proofGapHits : ["missing_evidence"],
-        ),
+        hits: freezeDeep(proofGapHits),
         confidence: confidenceFromHits(
-          proofGapHits.length > 0 ? proofGapHits : ["missing_evidence"],
+          proofGapHits,
           commandHintMatch || registryCheckFailure,
         ),
       };
@@ -280,7 +281,6 @@ function classifyLens(input, lens) {
         "invalid_schema",
         "blocked_by",
       ]).filter(Boolean);
-      const failedCommand = text(input.failed_command).toLowerCase();
       const commandHintMatch = INWARD_COMMAND_HINTS.some((hint) =>
         failedCommand.includes(hint),
       );
@@ -391,12 +391,6 @@ function outwardHypothesis(input, outward) {
   }
   if (outward.failure_class === "boundary_violation") {
     return `${prefix} Outward evidence suggests the environment or operator context attempted a blocked live boundary.`;
-  }
-  if (outward.failure_class === "proof_gap") {
-    return `${prefix} Outward evidence may indicate the checkout lacks files required for MEASURED_REPO proof rows.`;
-  }
-  if (outward.failure_class === "implementation_defect") {
-    return `${prefix} Outward view does not yet isolate an environment-only cause; inspect inward proof failure first.`;
   }
   return `${prefix} Outward root cause remains unclassified from the supplied environment summary.`;
 }
@@ -511,7 +505,7 @@ function normalizeInput(input) {
       : Object.freeze([]),
     environment,
     capability_registry_row:
-      text(safeInput.capability_registry_row) || "DEMA_CAPABILITY_TRUTH_REGISTRY_1A",
+      text(safeInput.capability_registry_row) || "DEMA_FDE_DUAL_DIAGNOSTIC_1A",
   });
 }
 
@@ -704,7 +698,7 @@ export function defaultDemaFdeDualDiagnosticFixture() {
       os: "linux",
       branch: "main",
     },
-    capability_registry_row: "DEMA_CAPABILITY_TRUTH_REGISTRY_1A",
+    capability_registry_row: "DEMA_FDE_DUAL_DIAGNOSTIC_1A",
   });
 }
 
@@ -714,18 +708,20 @@ export function runDemaFdeDualDiagnosticGate({
 } = {}) {
   const built = report ?? buildDemaFdeDualDiagnostic(input);
   const verified = verifyDemaFdeDualDiagnostic(built);
+  const inward = built?.inward_diagnosis;
+  const outward = built?.outward_diagnosis;
   return freezeDeep({
     ok: verified.ok,
     schema: DEMA_FDE_DUAL_DIAGNOSTIC_SCHEMA,
     truth_label: DEMA_FDE_DUAL_DIAGNOSTIC_TRUTH_LABEL,
-    failure_class: built.failure_class,
-    measured_status: built.measured_status,
-    inward_confidence: built.inward_diagnosis.confidence,
-    outward_confidence: built.outward_diagnosis.confidence,
-    regression_test_required: built.regression_test_required,
-    field_validation_required: built.field_validation_required,
-    eligible_for_autopatch: built.eligible_for_autopatch,
-    diagnostic_hash: built.diagnostic_hash,
+    failure_class: built?.failure_class ?? "unknown",
+    measured_status: built?.measured_status ?? "UNKNOWN",
+    inward_confidence: inward?.confidence ?? "low",
+    outward_confidence: outward?.confidence ?? "low",
+    regression_test_required: built?.regression_test_required ?? false,
+    field_validation_required: built?.field_validation_required ?? false,
+    eligible_for_autopatch: built?.eligible_for_autopatch ?? false,
+    diagnostic_hash: built?.diagnostic_hash ?? "",
     verified,
     report: built,
   });

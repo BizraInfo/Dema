@@ -48,6 +48,8 @@ field_validation_required
 consent_required
 eligible_for_autopatch
 capability_registry_reference
+lifecycle_phases
+terminal_state
 boundaries
 what_this_proves
 what_this_does_not_prove
@@ -77,7 +79,7 @@ unknown
 5. FDE must separate code/proof failure from environment failure.
 6. FDE must require regression tests when inward confidence is medium/high for code/test failures.
 7. FDE must output `eligible_for_autopatch: false`.
-8. FDE must reference capability registry boundaries.
+8. FDE must emit `capability_registry_reference` as a capability row ID (default: `DEMA_FDE_DUAL_DIAGNOSTIC_1A`).
 
 ## Boundary
 
