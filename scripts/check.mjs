@@ -20,6 +20,7 @@ export const commands = [
   ["node", ["scripts/review/node0-reversible-execute-gate-check.mjs"]],
   ["node", ["scripts/review/node0-receipt-signing-ed25519-check.mjs"]],
   ["node", ["scripts/review/node0-proof-chain-link-check.mjs"]],
+  ["node", ["scripts/review/node0-signed-chain-head-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
   ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],
   ["node", ["scripts/review/dema-home-node-space-ontology-check.mjs"]],
