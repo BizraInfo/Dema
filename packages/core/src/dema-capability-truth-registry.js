@@ -33,6 +33,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_RECEIPT_SIGNING_ED25519_1A",
   "NODE0_PROOF_CHAIN_LINK_1A",
   "NODE0_SIGNED_CHAIN_HEAD_1A",
+  "NODE0_SPINE_RUNNER_CLI_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -484,6 +485,36 @@ function defaultCapabilityRows() {
         "Dema can Ed25519-sign the head_hash of a verified #308 proof chain into a public-key-verifiable attestation that binds the whole chain; verification is public-key-only and a tampered/reordered chain (different head) fails the bind, with no private-key material in the envelope.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_SPINE_RUNNER_CLI_1A",
+      truth_label: "NODE0_MEASURED_PROOF_SPINE_SANDBOX_RUN",
+      summary:
+        "One consent-gated CLI path through execute → receipt attestation → proof chain → signed chain head in sandbox only.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-spine-runner.js"],
+        test_paths: [
+          "tests/node0-spine-runner.test.js",
+          "tests/node0-spine-runner-cli.test.js",
+        ],
+        review_gate_paths: ["scripts/review/node0-spine-runner-check.mjs"],
+        receipt_paths: ["docs/receipts/NODE0_SPINE_RUNNER_CLI_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_SPINE_RUNNER_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation outside sandbox, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Dema exposes `dema node0 spine run` as one measured operator command that runs the #306–#309 spine in a sandbox with exact-string consent, returning a JSON envelope with execute hash, chain head, and attestation status without daemon or network.",
+      what_this_does_not_prove:
+        "It does not prove BIZRA-DATA-LAKE Node0 activation, real-time arbitrary tasks, federation, or live operator mutation outside the sandbox root.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
