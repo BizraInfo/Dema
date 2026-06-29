@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { NODE0_SPINE_RUNNER_GO_PHRASE } from "../packages/core/src/node0-spine-runner.js";
@@ -41,6 +42,29 @@ test("dema node0 spine run fails closed without --consent", () => {
       }),
     (err) => err.status !== 0 && /Usage/.test(String(err.stderr)),
   );
+});
+
+test("dema node0 spine run removes auto-created temp sandbox after exit", () => {
+  const out = execFileSync(
+    "node",
+    [
+      BIN,
+      "node0",
+      "spine",
+      "run",
+      "--consent",
+      NODE0_SPINE_RUNNER_GO_PHRASE,
+      "--json",
+    ],
+    {
+      env: { ...process.env, NO_COLOR: "1", DEMA_NO_TUI: "1" },
+      timeout: 30000,
+    },
+  ).toString();
+  const report = JSON.parse(out);
+  assert.equal(report.ok, true);
+  assert.ok(report.sandbox_root);
+  assert.equal(existsSync(report.sandbox_root), false);
 });
 
 test("dema node0 spine run fails closed with wrong --consent", () => {

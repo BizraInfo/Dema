@@ -1,5 +1,5 @@
 import * as nodeFs from "node:fs";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -36,13 +36,20 @@ export async function cmdNode0SpineRun(ctx) {
   }
 
   const now = new Date().toISOString();
-  const result = runNode0SpineRunner({
-    fs: nodeFs,
-    sandboxRoot,
-    consent,
-    now,
-    generateKeypair: generateEd25519Keypair,
-  });
+  let result;
+  try {
+    result = runNode0SpineRunner({
+      fs: nodeFs,
+      sandboxRoot,
+      consent,
+      now,
+      generateKeypair: generateEd25519Keypair,
+    });
+  } finally {
+    if (tempSandbox) {
+      rmSync(sandboxRoot, { recursive: true, force: true });
+    }
+  }
 
   if (wantJson) {
     const {
