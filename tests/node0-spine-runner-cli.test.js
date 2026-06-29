@@ -42,3 +42,23 @@ test("dema node0 spine run fails closed without --consent", () => {
     (err) => err.status !== 0 && /Usage/.test(String(err.stderr)),
   );
 });
+
+test("dema node0 spine run fails closed with wrong --consent", () => {
+  assert.throws(
+    () =>
+      execFileSync(
+        "node",
+        [BIN, "node0", "spine", "run", "--consent", "wrong", "--json"],
+        {
+          env: { ...process.env, NO_COLOR: "1", DEMA_NO_TUI: "1" },
+          timeout: 10000,
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      ),
+    (err) => {
+      if (err.status === 0) return false;
+      const report = JSON.parse(String(err.stdout));
+      return report.ok === false && report.blocked_by.includes("consent_phrase_mismatch");
+    },
+  );
+});

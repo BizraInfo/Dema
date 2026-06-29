@@ -1,5 +1,5 @@
 import * as nodeFs from "node:fs";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -10,9 +10,6 @@ import {
   NODE0_SPINE_RUNNER_SCHEMA,
   NODE0_SPINE_RUNNER_TRUTH_LABEL,
 } from "../../../../packages/core/src/node0-spine-runner.js";
-import {
-  NODE0_REVERSIBLE_EXECUTE_GATE_PROBE,
-} from "../../../../packages/core/src/node0-reversible-execute-gate.js";
 
 export async function cmdNode0SpineRun(ctx) {
   const { argv } = ctx;
@@ -36,11 +33,6 @@ export async function cmdNode0SpineRun(ctx) {
   if (!sandboxRoot) {
     sandboxRoot = mkdtempSync(join(tmpdir(), "node0-spine-run-"));
     tempSandbox = true;
-  }
-
-  const probePath = join(sandboxRoot, NODE0_REVERSIBLE_EXECUTE_GATE_PROBE);
-  if (!nodeFs.existsSync(probePath)) {
-    writeFileSync(probePath, "loop probe payload\n");
   }
 
   const now = new Date().toISOString();

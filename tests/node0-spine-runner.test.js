@@ -83,7 +83,7 @@ test("run blocks without fs adapter", () => {
 });
 
 test("wrong wrapper consent fails closed before sandbox mutation", () => {
-  const root = freshSandbox();
+  const root = mkdtempSync(join(tmpdir(), "node0-spine-runner-empty-"));
   try {
     const result = runNode0SpineRunner({
       fs: nodeFs,
@@ -94,7 +94,7 @@ test("wrong wrapper consent fails closed before sandbox mutation", () => {
     });
     assert.equal(result.ok, false);
     assert.ok(result.blocked_by.includes("consent_phrase_mismatch"));
-    assert.equal(nodeFs.existsSync(join(root, NODE0_REVERSIBLE_EXECUTE_GATE_PROBE)), true);
+    assert.equal(nodeFs.existsSync(join(root, NODE0_REVERSIBLE_EXECUTE_GATE_PROBE)), false);
     assert.equal(result.execute_content_hash, null);
     assert.equal(result.receipt_attestation_signed, false);
   } finally {
@@ -103,7 +103,7 @@ test("wrong wrapper consent fails closed before sandbox mutation", () => {
 });
 
 test("inner execute consent alone cannot run the spine", () => {
-  const root = freshSandbox();
+  const root = mkdtempSync(join(tmpdir(), "node0-spine-runner-empty-"));
   try {
     const result = runNode0SpineRunner({
       fs: nodeFs,
@@ -114,7 +114,29 @@ test("inner execute consent alone cannot run the spine", () => {
     });
     assert.equal(result.ok, false);
     assert.ok(result.blocked_by.includes("consent_phrase_mismatch"));
-    assert.equal(nodeFs.existsSync(join(root, NODE0_REVERSIBLE_EXECUTE_GATE_PROBE)), true);
+    assert.equal(nodeFs.existsSync(join(root, NODE0_REVERSIBLE_EXECUTE_GATE_PROBE)), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("missing signing keypair fails closed before sandbox rename", () => {
+  const root = freshSandbox();
+  try {
+    const result = runNode0SpineRunner({
+      fs: nodeFs,
+      sandboxRoot: root,
+      consent: NODE0_SPINE_RUNNER_GO_PHRASE,
+      now: NOW,
+      generateKeypair: () => null,
+    });
+    assert.equal(result.ok, false);
+    assert.ok(result.blocked_by.includes("signing_keypair_missing"));
+    assert.equal(result.execute_content_hash, null);
+    assert.equal(
+      nodeFs.readFileSync(join(root, NODE0_REVERSIBLE_EXECUTE_GATE_PROBE), "utf8"),
+      "loop probe payload\n",
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

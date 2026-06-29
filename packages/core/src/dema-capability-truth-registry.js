@@ -497,7 +497,11 @@ function defaultCapabilityRows() {
       summary:
         "One consent-gated CLI path through execute → receipt attestation → proof chain → signed chain head in sandbox only.",
       evidence: evidence({
-        source_paths: ["packages/core/src/node0-spine-runner.js"],
+        source_paths: [
+          "packages/core/src/node0-spine-runner.js",
+          "apps/cli/src/commands/node0-spine-run.js",
+          "apps/cli/src/commands/node0.js",
+        ],
         test_paths: [
           "tests/node0-spine-runner.test.js",
           "tests/node0-spine-runner-cli.test.js",
@@ -510,12 +514,15 @@ function defaultCapabilityRows() {
         ],
       }),
       blocked_promotion_rule:
-        "May not claim live execution, operator mutation outside sandbox, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+        "May not claim general task execution, DEMA activation, autonomous action, live execution, operator mutation outside sandbox, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
       what_this_proves:
         "Dema exposes `dema node0 spine run` as one measured operator command that runs the #306–#309 spine in a sandbox with exact-string consent, returning a JSON envelope with execute hash, chain head, and attestation status without daemon or network.",
       what_this_does_not_prove:
         "It does not prove BIZRA-DATA-LAKE Node0 activation, real-time arbitrary tasks, federation, or live operator mutation outside the sandbox root.",
       forbidden_claims: [
+        "general task execution",
+        "DEMA activation",
+        "autonomous action",
         "live execution",
         "operator mutation",
         "unattended runtime",

@@ -8,12 +8,15 @@
 // Missing or wrong wrapper consent fails closed before any mutation, signing, or chain step.
 
 import { sha256 } from "../../consent/src/consent-common.js";
+import { join } from "node:path";
+
 import {
   planReversibleRename,
   executeReversibleRename,
   verifyExecuteReceipt,
   undoReversibleRename,
   defaultNode0ReversibleExecuteGateFixture,
+  NODE0_REVERSIBLE_EXECUTE_GATE_PROBE,
   NODE0_REVERSIBLE_EXECUTE_GO_PHRASE,
 } from "./node0-reversible-execute-gate.js";
 import {
@@ -148,6 +151,22 @@ export function runNode0SpineRunner({
   let proofChain = null;
   let chainHeadAttestation = null;
 
+  let signingKeys = null;
+  if (blocked_by.length === 0) {
+    signingKeys =
+      typeof generateKeypair === "function" ? generateKeypair() : null;
+    if (!signingKeys?.private_key_pem || !signingKeys?.public_key_pem) {
+      blocked_by.push("signing_keypair_missing");
+    }
+  }
+
+  if (blocked_by.length === 0) {
+    const probePath = join(sandboxRoot, NODE0_REVERSIBLE_EXECUTE_GATE_PROBE);
+    if (!fs.existsSync(probePath)) {
+      fs.writeFileSync(probePath, "loop probe payload\n");
+    }
+  }
+
   if (blocked_by.length === 0) {
     const execPlan = planReversibleRename({
       sandboxRoot,
@@ -176,13 +195,9 @@ export function runNode0SpineRunner({
     }
   }
 
-  if (blocked_by.length === 0 && executeReceipt) {
-    const keys =
-      typeof generateKeypair === "function" ? generateKeypair() : null;
-    if (!keys?.private_key_pem || !keys?.public_key_pem) {
-      blocked_by.push("signing_keypair_missing");
-    } else {
-      receiptAttestation = signExecuteReceiptAttestation({
+  if (blocked_by.length === 0 && executeReceipt && signingKeys) {
+    const keys = signingKeys;
+    receiptAttestation = signExecuteReceiptAttestation({
         receipt: executeReceipt,
         consent: NODE0_RECEIPT_SIGNING_GO_PHRASE,
         privateKeyPem: keys.private_key_pem,
@@ -257,7 +272,6 @@ export function runNode0SpineRunner({
           }
         }
       }
-    }
   }
 
   return Object.freeze({
