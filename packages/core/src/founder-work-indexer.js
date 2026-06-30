@@ -203,10 +203,29 @@ export function computeFounderWorkIndexHash(payload) {
 function summarizeTruthLabels(facts) {
   const counts = Object.create(null);
   for (const fact of facts) {
-    const label = fact.truth_label ?? "UNKNOWN";
+    if (fact.kind !== "labeled_claim") continue;
+    const label = fact.truth_label ?? fact.label ?? "UNKNOWN";
     counts[label] = (counts[label] ?? 0) + 1;
   }
   return Object.freeze(counts);
+}
+
+function summarizeFactKinds(facts) {
+  const by_kind = Object.create(null);
+  const structural_by_kind = Object.create(null);
+
+  for (const fact of facts) {
+    by_kind[fact.kind] = (by_kind[fact.kind] ?? 0) + 1;
+    if (fact.kind === "structural") {
+      const sk = fact.structural_kind ?? "unknown";
+      structural_by_kind[sk] = (structural_by_kind[sk] ?? 0) + 1;
+    }
+  }
+
+  return Object.freeze({
+    by_kind: Object.freeze(by_kind),
+    structural_by_kind: Object.freeze(structural_by_kind),
+  });
 }
 
 export function buildFounderWorkIndexReport({
@@ -260,6 +279,7 @@ export function buildFounderWorkIndexReport({
   });
   const index_hash = computeFounderWorkIndexHash(payload);
   const truth_label_summary = summarizeTruthLabels(payload.facts);
+  const fact_kind_summary = summarizeFactKinds(payload.facts);
 
   return deepFreeze({
     schema: FOUNDER_WORK_INDEXER_SCHEMA,
@@ -276,6 +296,7 @@ export function buildFounderWorkIndexReport({
     fact_count: payload.facts.length,
     rejected_unprovenanced,
     truth_label_summary,
+    fact_kind_summary,
     no_mint: true,
     boundary: buildRuntimeEmissionBoundary({
       content_read: true,
@@ -301,6 +322,7 @@ export function buildFounderWorkIndexReceiptEnvelope(report, { generatedAt }) {
     fact_count: report.fact_count,
     rejected_unprovenanced: report.rejected_unprovenanced,
     truth_label_summary: report.truth_label_summary,
+    fact_kind_summary: report.fact_kind_summary,
     no_mint: true,
     boundary: report.boundary,
   });

@@ -595,7 +595,7 @@ const REGISTERED_COMMANDS_LIST = [
   {
     command: "corpus",
     description:
-      "governed single-file corpus indexing with provenance-bound facts (subcommand: index)",
+      "governed founder corpus index + receipt review (subcommands: index, review)",
   },
   {
     command: "mirror",

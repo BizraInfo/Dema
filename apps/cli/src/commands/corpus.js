@@ -8,6 +8,10 @@ import {
   expectedContentReadConsent,
 } from "../../../../packages/core/src/founder-work-indexer.js";
 import {
+  buildFounderWorkEvidenceCard,
+  formatFounderWorkEvidenceCard,
+} from "../../../../packages/core/src/founder-work-evidence-card.js";
+import {
   saveFounderWorkIndex,
   serializeFounderWorkIndexForSave,
 } from "../../../../packages/receipts/src/founder-work-index-save.js";
@@ -22,20 +26,9 @@ function sha256Hex(content) {
   return createHash("sha256").update(content).digest("hex");
 }
 
-export async function cmd_corpus(ctx) {
-  const { argv } = ctx;
-  const sub = argv[1];
-  if (sub !== "index") {
-    process.stderr.write(
-      'Usage: dema corpus index --file <abs_path> --consent "GO: content_read <abs_path>" [--json]\n',
-    );
-    process.exitCode = 1;
-    process.exit(process.exitCode ?? 0);
-  }
-
+async function cmd_corpus_index(argv, json) {
   const filePath = argValue(argv, "--file");
   const offeredConsent = argValue(argv, "--consent") ?? null;
-  const json = wantsJson(argv);
 
   if (!filePath) {
     process.stderr.write("dema corpus index: --file <abs_path> is required\n");
@@ -173,5 +166,112 @@ export async function cmd_corpus(ctx) {
       process.stdout.write(body);
     }
   }
+  process.exit(process.exitCode ?? 0);
+}
+
+async function cmd_corpus_review(argv, json) {
+  const receiptPath = argValue(argv, "--receipt");
+
+  if (!receiptPath) {
+    process.stderr.write(
+      "dema corpus review: --receipt <abs_path_to_founder_work_index.json> is required\n",
+    );
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+  if (!isAbsolute(receiptPath)) {
+    process.stderr.write(
+      `dema corpus review: --receipt must be an absolute path (got: ${receiptPath})\n`,
+    );
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
+  const absPath = resolve(receiptPath);
+  let raw;
+  try {
+    raw = await readFile(absPath, "utf8");
+  } catch (err) {
+    const message = err?.code === "ENOENT" ? "receipt_not_found" : "read_failed";
+    if (json) {
+      console.log(
+        JSON.stringify({ refused: true, reason_code: message, receipt: absPath }, null, 2),
+      );
+    } else {
+      process.stderr.write(`dema corpus review: ${message}: ${absPath}\n`);
+    }
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
+  let envelope;
+  try {
+    envelope = JSON.parse(raw);
+  } catch {
+    if (json) {
+      console.log(
+        JSON.stringify({ refused: true, reason_code: "invalid_json", receipt: absPath }, null, 2),
+      );
+    } else {
+      process.stderr.write(`dema corpus review: invalid_json: ${absPath}\n`);
+    }
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
+  let card;
+  try {
+    card = buildFounderWorkEvidenceCard(envelope);
+  } catch (err) {
+    const reason = err?.message ?? "review_failed";
+    if (json) {
+      console.log(
+        JSON.stringify({ refused: true, reason_code: reason, receipt: absPath }, null, 2),
+      );
+    } else {
+      process.stderr.write(`dema corpus review: ${reason}\n`);
+    }
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
+  const output = {
+    ...card,
+    receipt_path: absPath,
+  };
+
+  if (json) {
+    console.log(JSON.stringify(output, null, 2));
+  } else {
+    console.log(formatFounderWorkEvidenceCard(card));
+    console.log(`\nreceipt_path: ${absPath}`);
+    console.log(`card_hash: ${card.card_hash}`);
+  }
+  process.exit(process.exitCode ?? 0);
+}
+
+export async function cmd_corpus(ctx) {
+  const { argv } = ctx;
+  const sub = argv[1];
+  const json = wantsJson(argv);
+
+  if (sub === "index") {
+    await cmd_corpus_index(argv, json);
+    return;
+  }
+  if (sub === "review") {
+    await cmd_corpus_review(argv, json);
+    return;
+  }
+
+  process.stderr.write(
+    [
+      "Usage:",
+      '  dema corpus index --file <abs_path> --consent "GO: content_read <abs_path>" [--json]',
+      "  dema corpus review --receipt <abs_path_to_founder_work_index.json> [--json]",
+      "",
+    ].join("\n"),
+  );
+  process.exitCode = 1;
   process.exit(process.exitCode ?? 0);
 }
