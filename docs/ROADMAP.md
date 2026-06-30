@@ -133,6 +133,26 @@ phase does not advance. No "almost there" promotions.
 Pick from the top. Each carries the exact next file/command so the
 dev does not lose time re-orienting.
 
+### Proof spine backlog (June 2026 — self-loop ranked)
+
+Ordered by **receipt before expansion**. Do not skip sealing for expansion.
+
+| Priority | Slice | Status | Truth label | Notes |
+| -------- | ----- | ------ | ----------- | ----- |
+| 1 | **NQEC-1B** — Node0 quality evidence card commit | **COMMITTED** (`f248f60`) | LOCAL_ONLY | Sealed; `production_certification: false` · not remote-verified |
+| 2 | **PUSH-LOCAL-PROOF-STATE-1A** | BLOCKED on operator GO | NOT_REMOTE_VERIFIED | Bind `f248f60`+ to origin (3 commits ahead) |
+| 3 | **UNDO-PROVEN-1A** | NOT_STARTED | PLANNED | After sealed worktree; measured inverse correction |
+| 4 | **PROOF-OF-SPEND-1A** | NOT_STARTED | PLANNED | External spend facts; not self-graded quality |
+| 5 | **STYLE-PILLAR-MICRO-1A** | PLANNED | PLANNED | Agent-compat Style pillar **8/100**; **cannot naively add ESLint/Prettier to `package.json`** — zero-dep gate fails closed (`scripts/review/zero-dep-gate.mjs`). Unblock path: stdlib `style-pillar-check.mjs` wired into `npm run check` **or** ADR waiver + advisory `npx` path outside check |
+| 6 | **BRAND-TOKEN-THEME-1A** | DESIGN_APPROVED | DESIGNED_NOT_LIVE | `docs/superpowers/specs/2026-06-14-brand-token-theme-design.md` — vendor `BIZRA_VISUAL_TOKENS.json` + `packages/core/src/theme.js`; separates **BIZRA** canon colors from **Dema** TUI product surface |
+| 7 | **BRAND-DIGITAL-SIGNAL-1A** | NOT_STARTED | PLANNED | Public footprint / GTM flywheel — requires CLAIM_REGISTER + operator GO; not a code-only slice |
+
+**Unblock GO (STYLE-PILLAR):** `GO STYLE-PILLAR-MICRO-1A stdlib-only check in npm run check`
+
+**Unblock GO (brand theme):** `GO BRAND-TOKEN-THEME-1A vendor canon tokens and migrate first TUI file`
+
+---
+
 1. **Delete the merged feat branch** `feat/dema-a-plus-local-first-closeout-v0-1` (sandbox-blocked earlier; run with `!`-prefix). Local + remote.
 2. **CODEQL_UNUSED_LOCAL_VARIABLE_CLEANUP_v0.1** — separate small PR to clear the 74 inherited `js/unused-local-variable` alerts on the pre-PR-95 base. Flips the CodeQL parent aggregate to green for future PRs. Stdlib-only edits.
 3. **Refresh memory index size** — `MEMORY.md` is 26.4 KB vs 24.4 KB soft limit. Compress pre-2026-05-12 entries into a rollup line; move detail into their topic files.
