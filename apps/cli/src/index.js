@@ -486,6 +486,8 @@ Local evidence:
                     LOCAL-LLM-FLEET-READINESS-1A · read-only fleet readiness (provider reachability · installed/loaded models · preferred routes · consent phrases); no model invocation
   dema report safety [--json]
                     Preview the safety report; does not certify, execute, or mint
+  dema report quality-evidence-card --commit <sha> --tests-total N --tests-pass N --tests-fail N [--check-pass] [--llm-guidance-pass] [--diff-check-clean] [--coverage-lines P] [--coverage-branches P] [--coverage-functions P] [--json]
+                    Internal quality evidence card (NOT production certification). Seals under $DEMA_HOME. no_mint: true.
   dema network blueprint [--json]
                        Preview Node1/Node2 and phase-gated readiness; no federation
   dema network fixture preview [--json]
