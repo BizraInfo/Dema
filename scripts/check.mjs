@@ -23,6 +23,7 @@ export const commands = [
   ["node", ["scripts/review/node0-signed-chain-head-check.mjs"]],
   ["node", ["scripts/review/node0-spine-runner-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
+  ["node", ["scripts/review/boundary-vocab-unification-check.mjs"]],
   ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],
   ["node", ["scripts/review/dema-home-node-space-ontology-check.mjs"]],
   ["node", ["scripts/review/dema-node-space-bonding-file-steward-check.mjs"]],

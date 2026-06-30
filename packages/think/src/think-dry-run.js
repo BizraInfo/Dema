@@ -359,6 +359,7 @@ export async function buildThinkDryRun(
       node_connection_performed: false,
       public_network_used: false,
       consent_collected: false,
+      content_read: false,
     },
     boundary_evidence: {
       model_invocation: "NOT_PERFORMED_DRY_RUN",

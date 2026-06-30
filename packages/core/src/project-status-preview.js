@@ -18,7 +18,7 @@
 //
 // Pure builder · deep-frozen · deterministic · no I/O · no clock reads inside.
 
-import { buildPreviewBoundary } from "./preview-boundary.js";
+import { buildPreviewBoundary, PREVIEW_BOUNDARY_CANONICAL_KEYS } from "./preview-boundary.js";
 
 const SCHEMA = "bizra.dema.project_status.v0.1";
 const TRUTH_LABEL = "NODE0_LOCAL_SEED";
@@ -289,7 +289,7 @@ export function buildProjectStatusPreview({
       typeof qp.adversarial_floor_per_component === "number"
         ? qp.adversarial_floor_per_component
         : 15,
-    canonical_boundary_keys: 16,
+    canonical_boundary_keys: PREVIEW_BOUNDARY_CANONICAL_KEYS.length,
     audit_method:
       "smoke-boundary script + canon-check + integration-check + llm-guidance + forge-verify",
   });

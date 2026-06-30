@@ -89,7 +89,10 @@ test("Genesis composition blueprint declares performance and quality thresholds"
   assert.equal(preview.quality_thresholds.coverage.lines, 95);
   assert.equal(preview.quality_thresholds.coverage.branches, 85);
   assert.equal(preview.quality_thresholds.coverage.functions, 95);
-  assert.equal(preview.quality_thresholds.boundary_keys_required, 16);
+  assert.equal(
+    preview.quality_thresholds.boundary_keys_required,
+    PREVIEW_BOUNDARY_CANONICAL_KEYS.length,
+  );
 });
 
 test("Genesis composition blueprint boundary is canonical all false and output is frozen", () => {

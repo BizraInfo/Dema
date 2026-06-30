@@ -9,6 +9,7 @@ import {
   formatThinkLive,
   THINK_CONSENT_PHRASE,
 } from "../packages/think/src/think-live.js";
+import { PREVIEW_BOUNDARY_CANONICAL_KEYS } from "../packages/core/src/preview-boundary.js";
 import {
   sha256,
   stableStringify,
@@ -80,13 +81,16 @@ describe("think-live", () => {
       assert.equal(e.mode, "LIVE_INVOCATION");
     });
 
-    it("has 16-key boundary", async () => {
+    it("has canonical-key boundary", async () => {
       const e = await buildThinkLive("test query", {
         thinkConsent: THINK_CONSENT_PHRASE,
         modelConsent: "GO: invoke local LLM at gemma4",
         now: FIXED_NOW,
       });
-      assert.equal(Object.keys(e.boundary).length, 16);
+      assert.equal(
+        Object.keys(e.boundary).length,
+        PREVIEW_BOUNDARY_CANONICAL_KEYS.length,
+      );
     });
 
     it("proof_hash excludes itself", async () => {

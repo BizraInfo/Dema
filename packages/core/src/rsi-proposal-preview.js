@@ -1,5 +1,6 @@
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 import { computeProcessRsi, computeSNRValue } from "./process-value-preview.js";
+import { buildAllFalseBoundaryFromKeys } from "./boundary-schema.js";
 
 export const RSI_PROPOSAL_PREVIEW_SCHEMA = "bizra.dema.rsi_proposal_preview.v0.1";
 export const RSI_SNR_NOT_SUPPLIED_VERDICT = "NOT_SUPPLIED";
@@ -14,22 +15,24 @@ const FORBIDDEN_ACTIONS = Object.freeze([
   { key: "authority_material", terms: ["key generation", "generate key", "sign receipt", "sign transaction"] },
 ]);
 
-const CANONICAL_BOUNDARY = Object.freeze({
-  runtime_execution_performed: false,
-  file_write_performed: false,
-  model_invocation_performed: false,
-  network_call_performed: false,
-  self_change_performed: false,
-  autonomous_loop_started: false,
-  signing_performed: false,
-  key_generation_performed: false,
-  mint_performed: false,
-  token_or_reward_activated: false,
-  poi_activation_performed: false,
-  federation_started: false,
-  mcp_runtime_started: false,
-  a2a_runtime_started: false,
-});
+export const RSI_PROPOSAL_BOUNDARY_KEYS = Object.freeze([
+  "runtime_execution_performed",
+  "file_write_performed",
+  "model_invocation_performed",
+  "network_call_performed",
+  "self_change_performed",
+  "autonomous_loop_started",
+  "signing_performed",
+  "key_generation_performed",
+  "mint_performed",
+  "token_or_reward_activated",
+  "poi_activation_performed",
+  "federation_started",
+  "mcp_runtime_started",
+  "a2a_runtime_started",
+]);
+
+const CANONICAL_BOUNDARY = buildAllFalseBoundaryFromKeys(RSI_PROPOSAL_BOUNDARY_KEYS);
 
 function deepFreeze(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;

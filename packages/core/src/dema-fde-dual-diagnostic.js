@@ -33,7 +33,7 @@ export const FDE_MEASURED_STATUSES = Object.freeze([
   "MEASURED",
 ]);
 
-const FDE_BOUNDARY_KEYS = Object.freeze([
+export const FDE_BOUNDARY_KEYS = Object.freeze([
   "patch_applied",
   "file_write_performed",
   "network_used",

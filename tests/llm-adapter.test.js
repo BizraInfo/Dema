@@ -533,7 +533,7 @@ test("ADR-018 · result envelope boundary is runtime-emission shape · not canon
   assert.equal(isCanonicalBoundary_2(r.boundary), false);
   // Legitimate true keys on a completed runtime emission
   for (const key of RUNTIME_EMISSION_PERMISSIVE_KEY_SET) {
-    if (key === "consent_collected") continue;
+    if (key === "consent_collected" || key === "content_read") continue;
     assert.equal(
       r.boundary[key],
       true,

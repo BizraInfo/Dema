@@ -17,24 +17,29 @@
 
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 import { verifyModelEvalBaseline } from "./model-eval-baseline.js";
+import { buildAllFalseBoundaryFromKeys } from "./boundary-schema.js";
 
 export const MODEL_ROUTING_PREVIEW_SCHEMA = "bizra.dema.model_routing_preview.v0.1";
 export const MODEL_ROUTING_PREVIEW_TRUTH_LABEL = "MODEL_ROUTING_PREVIEW_LOCAL_ONLY";
 
-const CANONICAL_BOUNDARY = Object.freeze({
-  key_generated: false,
-  signature_created: false,
-  token_minted: false,
-  federation_used: false,
-  daemon_started_or_stopped: false,
-  private_content_read: false,
-  runtime_claim_promoted: false,
-  raw_model_output_stored: false,
-  external_provider_called: false,
-  mutation_performed: false,
-  live_routing_performed: false,
-  model_invoked: false,
-});
+export const MODEL_ROUTING_PREVIEW_BOUNDARY_KEYS = Object.freeze([
+  "key_generated",
+  "signature_created",
+  "token_minted",
+  "federation_used",
+  "daemon_started_or_stopped",
+  "private_content_read",
+  "runtime_claim_promoted",
+  "raw_model_output_stored",
+  "external_provider_called",
+  "mutation_performed",
+  "live_routing_performed",
+  "model_invoked",
+]);
+
+const CANONICAL_BOUNDARY = buildAllFalseBoundaryFromKeys(
+  MODEL_ROUTING_PREVIEW_BOUNDARY_KEYS,
+);
 
 const WHAT_THIS_DOES_NOT_PROVE = Object.freeze([
   "This is a PREVIEW. It routes no live traffic, dispatches no request, and starts no runtime; it only states which model it WOULD assign to which role and why.",

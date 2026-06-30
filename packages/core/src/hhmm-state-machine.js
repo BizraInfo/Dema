@@ -12,6 +12,7 @@
 // performs no execution. It reads evidence and returns frozen verdicts.
 
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
+import { buildAllFalseBoundaryFromKeys } from "./boundary-schema.js";
 
 export const HHMM_STATE_MACHINE_SCHEMA = "bizra.dema.hhmm_state_machine.v0.1";
 
@@ -80,21 +81,23 @@ const PER_STATE = Object.freeze({
   gate_blocked: { ci_green: { to: "merge_ready", reason_code: "gate_recovered" } },
 });
 
-const CANONICAL_BOUNDARY = Object.freeze({
-  runtime_execution_performed: false,
-  autonomous_loop_started: false,
-  self_modification_performed: false,
-  file_write_performed: false,
-  model_invocation_performed: false,
-  network_call_performed: false,
-  signing_performed: false,
-  key_generation_performed: false,
-  mint_performed: false,
-  poi_activation_performed: false,
-  federation_started: false,
-  mcp_runtime_started: false,
-  a2a_runtime_started: false,
-});
+export const HHMM_BOUNDARY_KEYS = Object.freeze([
+  "runtime_execution_performed",
+  "autonomous_loop_started",
+  "self_modification_performed",
+  "file_write_performed",
+  "model_invocation_performed",
+  "network_call_performed",
+  "signing_performed",
+  "key_generation_performed",
+  "mint_performed",
+  "poi_activation_performed",
+  "federation_started",
+  "mcp_runtime_started",
+  "a2a_runtime_started",
+]);
+
+const CANONICAL_BOUNDARY = buildAllFalseBoundaryFromKeys(HHMM_BOUNDARY_KEYS);
 
 const WHAT_THIS_PROVES = Object.freeze([
   "Node0/Dema lifecycle state can be deterministically inferred from observable evidence via an explicit transition table.",

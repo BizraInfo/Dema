@@ -1,7 +1,7 @@
 // CONSENT-MATRIX-COVERAGE-1A — declarative CLI risk + consent registry.
 // One row per COMMAND_TABLE token. Review gate enforces parity with dispatcher.
 
-/** @typedef {"read_only"|"preview_only"|"local_write"|"network"|"external_runtime"|"key_wallet"|"activation"} CliRiskLevel */
+/** @typedef {"read_only"|"preview_only"|"local_write"|"content_read"|"network"|"external_runtime"|"key_wallet"|"activation"} CliRiskLevel */
 /** @typedef {"none"|"fail_closed_preview"|"exact_phrase"|"approval_gate"|"subcommand_gated"} ConsentMechanism */
 
 /**
@@ -25,7 +25,7 @@ function preview(cmd, testRef, extraRisks = []) {
     cmd,
     ["read_only", "preview_only", ...extraRisks],
     "fail_closed_preview",
-    "Preview kernel or read-only CLI surface; canonical 16-key boundary all-false when emitting previews",
+    "Preview kernel or read-only CLI surface; canonical 17-key boundary all-false when emitting previews",
     [testRef],
   );
 }
@@ -148,6 +148,13 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     "exact_phrase",
     "Homebase metadata scan writes inventory under DEMA_HOME after exact consent",
     ["tests/homebase-scan-consent-cli.test.js"],
+  ),
+  row(
+    "corpus",
+    ["content_read", "local_write"],
+    "exact_phrase",
+    "Single-file corpus index reads file content and seals receipt under DEMA_HOME after exact GO: content_read consent",
+    ["tests/founder-work-indexer.test.js"],
   ),
   readOnly("mirror", "tests/node0-wow-report-cli.test.js"),
   row(

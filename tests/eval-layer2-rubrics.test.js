@@ -23,6 +23,7 @@ import {
 } from "../packages/core/src/eval-layer2-rubrics.js";
 
 import { validateAgainstRegistry } from "../packages/core/src/envelope-schema-validator.js";
+import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 
 import { evaluateArtifactSafety } from "../packages/core/src/artifact-safety-eval.js";
 
@@ -73,29 +74,10 @@ test("getRubricPack returns a frozen envelope tagged with the v0.1 schema", () =
   });
 });
 
-test("getRubricPack boundary is the canonical 16-key all-false preview boundary", () => {
+test("getRubricPack boundary is the canonical all-false preview boundary", () => {
   const pack = getRubricPack();
-  const keys = Object.keys(pack.boundary).sort();
-  assert.equal(keys.length, 16);
-  assert.deepEqual(keys, [
-    "chain_advance_performed",
-    "consent_collected",
-    "external_call_performed",
-    "federation_invoked",
-    "filesystem_write_performed",
-    "model_invocation_performed",
-    "model_loaded",
-    "network_used",
-    "node_connection_performed",
-    "prompt_executed",
-    "public_network_used",
-    "raw_corpus_scan_performed",
-    "raw_data_included",
-    "receipt_mint_performed",
-    "runtime_execution_performed",
-    "tool_executed",
-  ]);
-  for (const k of keys) {
+  assert.equal(isCanonicalBoundary(pack.boundary), true);
+  for (const k of Object.keys(pack.boundary)) {
     assert.equal(pack.boundary[k], false, `${k} must be false`);
   }
 });

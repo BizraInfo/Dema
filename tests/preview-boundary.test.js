@@ -25,9 +25,10 @@ const EXPECTED_KEYS = [
   "node_connection_performed",
   "public_network_used",
   "consent_collected",
+  "content_read",
 ];
 
-test("buildPreviewBoundary emits all 16 canonical keys", () => {
+test("buildPreviewBoundary emits all 17 canonical keys", () => {
   const b = buildPreviewBoundary();
   const keys = Object.keys(b).sort();
   assert.deepEqual(keys, [...EXPECTED_KEYS].sort());
@@ -54,7 +55,7 @@ test("buildPreviewBoundary returns a fresh object on each call", () => {
 });
 
 test("PREVIEW_BOUNDARY_CANONICAL_KEYS exports the canonical list (frozen)", () => {
-  assert.equal(PREVIEW_BOUNDARY_CANONICAL_KEYS.length, 16);
+  assert.equal(PREVIEW_BOUNDARY_CANONICAL_KEYS.length, 17);
   assert.equal(Object.isFrozen(PREVIEW_BOUNDARY_CANONICAL_KEYS), true);
 });
 
@@ -170,6 +171,7 @@ test("Canonical keys follow naming convention (snake_case, no caps, ends in perf
     "_advanced",
     "_collected",
     "_minted",
+    "_read",
   ];
   for (const k of EXPECTED_KEYS) {
     assert.match(k, /^[a-z_]+$/, `${k} must be snake_case`);

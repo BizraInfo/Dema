@@ -56,6 +56,7 @@ export function buildMissionManifest(missionType, { now = new Date() } = {}) {
       public_network_used: false,
       consent_required: true,
       expected_consent_collected_at_execution: true,
+      content_read: false,
     },
     proof_boundary: {
       truth_label: "LOCAL_STATIC_DECLARATION",

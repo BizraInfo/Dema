@@ -1,4 +1,5 @@
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
+import { buildAllFalseBoundaryFromKeys } from "./boundary-schema.js";
 
 export const SELF_LOOP_OODA_SCHEMA = "bizra.dema.self_loop_ooda.v0.1";
 export const SELF_LOOP_PHASES = Object.freeze(["observe", "orient", "decide", "act", "review"]);
@@ -21,24 +22,26 @@ const TERMINAL_REJECT_TERMS = Object.freeze([
   "a2a runtime",
 ]);
 
-const CANONICAL_BOUNDARY = Object.freeze({
-  runtime_execution_performed: false,
-  file_write_performed: false,
-  model_invocation_performed: false,
-  network_call_performed: false,
-  self_modification_performed: false,
-  autonomous_loop_started: false,
-  action_execution_performed: false,
-  daemon_started: false,
-  signing_performed: false,
-  key_generation_performed: false,
-  mint_performed: false,
-  token_or_reward_activated: false,
-  poi_activation_performed: false,
-  federation_started: false,
-  mcp_runtime_started: false,
-  a2a_runtime_started: false,
-});
+export const SELF_LOOP_OODA_BOUNDARY_KEYS = Object.freeze([
+  "runtime_execution_performed",
+  "file_write_performed",
+  "model_invocation_performed",
+  "network_call_performed",
+  "self_modification_performed",
+  "autonomous_loop_started",
+  "action_execution_performed",
+  "daemon_started",
+  "signing_performed",
+  "key_generation_performed",
+  "mint_performed",
+  "token_or_reward_activated",
+  "poi_activation_performed",
+  "federation_started",
+  "mcp_runtime_started",
+  "a2a_runtime_started",
+]);
+
+const CANONICAL_BOUNDARY = buildAllFalseBoundaryFromKeys(SELF_LOOP_OODA_BOUNDARY_KEYS);
 
 // Kernel-authored attestation — lifted to module consts so verify can re-derive them
 // (the anti-overclaim self-description is load-bearing; the cycle_hash backstop alone

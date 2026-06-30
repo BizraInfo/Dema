@@ -17,6 +17,7 @@
 // load-bearing invariants so a recomputed report_hash cannot launder them.
 
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
+import { buildAllFalseBoundaryFromKeys } from "./boundary-schema.js";
 
 export const NODE0_ACTIVATION_OBSERVE_SCHEMA = "bizra.dema.node0_activation_observe.v0.1";
 export const NODE0_ACTIVATION_OBSERVE_TRUTH_LABEL = "NODE0_ACTIVATION_OBSERVE_READ_ONLY";
@@ -24,17 +25,20 @@ const MODE = "READ_ONLY_OBSERVATION";
 
 export const IDENTITY_STATES = Object.freeze(["UNKNOWN", "UNINITIALIZED", "LOCAL_ONLY", "VERIFIED"]);
 
-// The 8 boundary keys from Issue #243's schema — all false, always.
-const CANONICAL_BOUNDARY = Object.freeze({
-  key_generated: false,
-  signature_created: false,
-  token_minted: false,
-  federation_used: false,
-  daemon_started_or_stopped: false,
-  private_content_read: false,
-  home_scan_performed: false,
-  runtime_claim_promoted: false,
-});
+export const NODE0_ACTIVATION_OBSERVE_BOUNDARY_KEYS = Object.freeze([
+  "key_generated",
+  "signature_created",
+  "token_minted",
+  "federation_used",
+  "daemon_started_or_stopped",
+  "private_content_read",
+  "home_scan_performed",
+  "runtime_claim_promoted",
+]);
+
+const CANONICAL_BOUNDARY = buildAllFalseBoundaryFromKeys(
+  NODE0_ACTIVATION_OBSERVE_BOUNDARY_KEYS,
+);
 
 const WHAT_THIS_PROVES = Object.freeze([
   "Caller-gathered observations of the local Node0 runtime normalize into a deterministic, content-addressed, read-only snapshot.",

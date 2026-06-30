@@ -44,7 +44,7 @@ const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
   "LIVE_POI",
 ]);
 
-const REGISTRY_BOUNDARY_KEYS = Object.freeze([
+export const REGISTRY_BOUNDARY_KEYS = Object.freeze([
   "daemon_started",
   "network_used",
   "token_minted",
@@ -57,7 +57,7 @@ const REGISTRY_BOUNDARY_KEYS = Object.freeze([
   "model_invocation_performed",
 ]);
 
-const ROW_BOUNDARY_KEYS = Object.freeze([
+export const ROW_BOUNDARY_KEYS = Object.freeze([
   "execution_allowed",
   "daemon_started",
   "network_used",

@@ -57,7 +57,7 @@ const FORBIDDEN_FIELD_NAMES = Object.freeze([
   "token_eligible",
 ]);
 
-const HOUSE_BOUNDARY_KEYS = Object.freeze([
+export const HOUSE_BOUNDARY_KEYS = Object.freeze([
   "file_read_performed",
   "file_write_performed",
   "signing_performed",

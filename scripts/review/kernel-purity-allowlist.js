@@ -59,6 +59,8 @@ export const NONCORE_IO_TIER_ALLOWLIST = Object.freeze({
     "read/append canonical-ledger.ndjson under $DEMA_HOME/receipts via atomic rename; local chain file, no network.",
   "packages/receipts/src/codebase-map-save.js":
     "write-only of a pre-built map envelope to $DEMA_HOME/receipts, consent-gated, 256MiB cap, assertContained realpath guard; no scan/recursion/network.",
+  "packages/receipts/src/founder-work-index-save.js":
+    "write-only founder-work-index-<sha256>.json to $DEMA_HOME/receipts with realpath containment, no_mint envelope gate, 16MiB cap, atomic tmp+rename; no network.",
   "packages/receipts/src/receipt-store.js":
     "readdir/readFile/stat of $DEMA_HOME/receipts to list/summarize receipts, paginated; bounded read, no network.",
   "packages/receipts/src/witness-verify.js":

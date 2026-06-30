@@ -11,6 +11,7 @@ import {
 import {
   isCanonicalBoundary,
   buildPreviewBoundary,
+  PREVIEW_BOUNDARY_CANONICAL_KEYS,
 } from "../packages/core/src/preview-boundary.js";
 import { buildNode0StatePreview } from "../packages/core/src/state.js";
 
@@ -43,11 +44,15 @@ test("SAT-1 EffectCap valid + blocks modify/waive/approve", () => {
   assert.ok(cap.blocked_effects.includes("waive_boundary_requirement"));
 });
 
-test("SAT-1 declares all 16 expected boundary keys", () => {
+test("SAT-1 declares all expected boundary keys", () => {
   const p = buildSATBoundaryVerifierPreview();
-  assert.equal(p.expected_boundary_key_count, 16);
+  assert.equal(
+    p.expected_boundary_key_count,
+    PREVIEW_BOUNDARY_CANONICAL_KEYS.length,
+  );
   assert.ok(p.expected_boundary_keys.includes("filesystem_write_performed"));
   assert.ok(p.expected_boundary_keys.includes("model_invocation_performed"));
+  assert.ok(p.expected_boundary_keys.includes("content_read"));
 });
 
 test("verifyArtifactBoundary · canonical artifact (from real builder) → verified", () => {

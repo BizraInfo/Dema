@@ -116,7 +116,7 @@ test("packet is route-eligible only when ALL atoms are validated", () => {
   assert.equal(p.route_eligible, false); // one blocked atom blocks the packet
 });
 
-test("boundary is the canonical 16-key all-false preview boundary", () => {
+test("boundary is the canonical all-false preview boundary", () => {
   const p = compileIntentPacket({ input: "verify origin/main" });
   assert.ok(isCanonicalBoundaryShape(p.boundary));
 });

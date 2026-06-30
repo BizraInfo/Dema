@@ -226,7 +226,10 @@ test("Quality posture surfaces 5-gate audit method", () => {
   });
   assert.equal(r.quality_posture.master_craftsmanship_compliance, true);
   assert.equal(r.quality_posture.five_gate_state, "all_green");
-  assert.equal(r.quality_posture.canonical_boundary_keys, 16);
+  assert.equal(
+    r.quality_posture.canonical_boundary_keys,
+    PREVIEW_BOUNDARY_CANONICAL_KEYS.length,
+  );
   assert.match(r.quality_posture.audit_method, /smoke-boundary/);
 });
 

@@ -12,6 +12,7 @@ import { cmd_seed } from "./commands/seed.js";
 import { cmd_state } from "./commands/state.js";
 import { cmd_start } from "./commands/start.js";
 import { cmd_scan } from "./commands/scan.js";
+import { cmd_corpus } from "./commands/corpus.js";
 import { cmd_mirror } from "./commands/mirror.js";
 import { cmd_talk } from "./commands/talk.js";
 import { cmd_setup } from "./commands/setup.js";
@@ -592,6 +593,11 @@ const REGISTERED_COMMANDS_LIST = [
     description: "consent-gated homebase metadata scan (exact phrase required)",
   },
   {
+    command: "corpus",
+    description:
+      "governed single-file corpus indexing with provenance-bound facts (subcommand: index)",
+  },
+  {
     command: "mirror",
     description: "honest homebase mirror: what you have + what Dema can do today (read-only)",
   },
@@ -1100,6 +1106,7 @@ const COMMAND_TABLE = {
   state: cmd_state,
   start: cmd_start,
   scan: cmd_scan,
+  corpus: cmd_corpus,
   mirror: cmd_mirror,
   talk: cmd_talk,
   canon: cmd_canon,

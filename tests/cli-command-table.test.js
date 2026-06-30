@@ -60,6 +60,7 @@ const COMMAND_SURFACE = [
   "agent-loop",
   "master-craftsmanship",
   "codebase",
+  "corpus",
   "orchestrator",
   "covenant",
   "assets",

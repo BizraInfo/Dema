@@ -41,6 +41,15 @@ export const FIRST_RUN_STEPS = Object.freeze([
   }),
 ]);
 
+export const FIRST_RUN_BOUNDARY_KEYS = Object.freeze([
+  "read_only",
+  "network",
+  "mint",
+  "external_send",
+  "urp_runtime",
+  "filesystem_write_performed_by_setup",
+]);
+
 const BOUNDARY = Object.freeze({
   read_only: false, // setup writes to DEMA_HOME on first run
   network: false,

@@ -1,6 +1,21 @@
 export const STEP7_CONSENT_REFUSAL_PREVIEW_SCHEMA =
   "bizra.dema.step7_consent_refusal_preview.v0.1";
 
+export const STEP7_CONSENT_BOUNDARY_KEYS = Object.freeze([
+  "runtime_started",
+  "federation_started",
+  "socket_opened",
+  "node_connection_attempted",
+  "receipt_minted",
+  "capability_minted",
+  "authorization_emitted",
+  "authorization_phrase_emitted",
+  "step7_authorization_observed",
+  "filesystem_write_performed",
+  "cli_wired",
+  "push_performed",
+]);
+
 const MAX_OBSERVED_TEXT_LENGTH = 4096;
 
 const NEXT_SAFE_ACTIONS = Object.freeze([
@@ -91,20 +106,9 @@ function classifyObservedText(observedText) {
 }
 
 function buildBoundary() {
-  return {
-    runtime_started: false,
-    federation_started: false,
-    socket_opened: false,
-    node_connection_attempted: false,
-    receipt_minted: false,
-    capability_minted: false,
-    authorization_emitted: false,
-    authorization_phrase_emitted: false,
-    step7_authorization_observed: false,
-    filesystem_write_performed: false,
-    cli_wired: false,
-    push_performed: false,
-  };
+  return Object.fromEntries(
+    STEP7_CONSENT_BOUNDARY_KEYS.map((key) => [key, false]),
+  );
 }
 
 export function buildSelfProactiveHarness({ malformed, nextSafeAction }) {

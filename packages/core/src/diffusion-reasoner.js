@@ -10,6 +10,7 @@
 // verifyDiffusionRefinement fails closed if either is flipped.
 
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
+import { buildAllFalseBoundaryFromKeys } from "./boundary-schema.js";
 
 export const DIFFUSION_REASONER_SCHEMA = "bizra.dema.diffusion_reasoner.v0.1";
 
@@ -22,22 +23,26 @@ export const DIFFUSION_NOISE_MARKERS = Object.freeze([
   "revolutionary", "best ever", "world-class", "cutting-edge", "perfect",
 ]);
 
-const CANONICAL_BOUNDARY = Object.freeze({
-  runtime_execution_performed: false,
-  text_generation_performed: false,
-  model_invocation_performed: false,
-  network_call_performed: false,
-  file_write_performed: false,
-  self_modification_performed: false,
-  autonomous_loop_started: false,
-  signing_performed: false,
-  key_generation_performed: false,
-  mint_performed: false,
-  poi_activation_performed: false,
-  federation_started: false,
-  mcp_runtime_started: false,
-  a2a_runtime_started: false,
-});
+export const DIFFUSION_REASONER_BOUNDARY_KEYS = Object.freeze([
+  "runtime_execution_performed",
+  "text_generation_performed",
+  "model_invocation_performed",
+  "network_call_performed",
+  "file_write_performed",
+  "self_modification_performed",
+  "autonomous_loop_started",
+  "signing_performed",
+  "key_generation_performed",
+  "mint_performed",
+  "poi_activation_performed",
+  "federation_started",
+  "mcp_runtime_started",
+  "a2a_runtime_started",
+]);
+
+const CANONICAL_BOUNDARY = buildAllFalseBoundaryFromKeys(
+  DIFFUSION_REASONER_BOUNDARY_KEYS,
+);
 
 const WHAT_THIS_PROVES = Object.freeze([
   "A caller-supplied refinement trajectory can be deterministically scored for residual noise per step.",

@@ -11,6 +11,7 @@
 // inside the audit logic · injectable fs for test isolation.
 
 import { createHash } from "node:crypto";
+import { PREVIEW_BOUNDARY_CANONICAL_KEYS } from "./boundary-schema.js";
 import { buildPreviewBoundary } from "./preview-boundary.js";
 
 export const MASTER_CRAFTSMANSHIP_AUDIT_SCHEMA =
@@ -159,28 +160,10 @@ function probeDoctrineCoherent(text) {
   };
 }
 
-// Canonical 16 boundary key names — must match preview-boundary.js
-const CANONICAL_BOUNDARY_KEY_NAMES = [
-  "filesystem_write_performed",
-  "network_used",
-  "runtime_execution_performed",
-  "model_loaded",
-  "model_invocation_performed",
-  "prompt_executed",
-  "external_call_performed",
-  "raw_corpus_scan_performed",
-  "raw_data_included",
-  "tool_executed",
-  "chain_advance_performed",
-  "receipt_mint_performed",
-  "federation_invoked",
-  "node_connection_performed",
-  "public_network_used",
-  "consent_collected",
-];
+// Canonical boundary key names — imported from boundary-schema.js (single source).
 
 function probeBoundaryDisciplined(text) {
-  const matchedKeys = CANONICAL_BOUNDARY_KEY_NAMES.filter((k) =>
+  const matchedKeys = PREVIEW_BOUNDARY_CANONICAL_KEYS.filter((k) =>
     text.includes(k),
   );
   // Also count broader boundary terms (for files that use the module without
