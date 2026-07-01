@@ -30,6 +30,8 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_GOVERNED_REVERSIBLE_ACTION_PREVIEW_1A",
   "DEMA_FDE_DUAL_DIAGNOSTIC_1A",
   "NODE0_REVERSIBLE_EXECUTE_GATE_1A",
+  "NODE0_UNDO_PROVEN_1A",
+  "NODE0_CI_VENDOR_AVAILABILITY_1A",
   "NODE0_RECEIPT_SIGNING_ED25519_1A",
   "NODE0_PROOF_CHAIN_LINK_1A",
   "NODE0_SIGNED_CHAIN_HEAD_1A",
@@ -361,7 +363,10 @@ function defaultCapabilityRows() {
         review_gate_paths: [
           "scripts/review/dema-fde-dual-diagnostic-check.mjs",
         ],
-        receipt_paths: ["docs/receipts/DEMA_FDE_DUAL_DIAGNOSTIC_1A.md"],
+        receipt_paths: [
+          "docs/receipts/DEMA_FDE_DUAL_DIAGNOSTIC_1A.md",
+          "docs/receipts/DEMA_FDE_CI_BILLING_LOCK_MARKER_1A.md",
+        ],
         documentation_paths: [
           "docs/02-architecture/DEMA_FDE_DUAL_DIAGNOSTIC_v0_1.md",
           "docs/TESTING.md",
@@ -403,6 +408,53 @@ function defaultCapabilityRows() {
         "live governed runtime",
         "production execution",
       ],
+    }),
+    capability({
+      capability_id: "NODE0_UNDO_PROVEN_1A",
+      truth_label: "NODE0_UNDO_PROVEN_PREVIEW_ONLY",
+      summary:
+        "Measured inverse-correction preview envelope composing execute gate + backup-anchored undo proof.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-undo-proven-preview.js"],
+        test_paths: ["tests/node0-undo-proven-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-undo-proven-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_UNDO_PROVEN_1A.md"],
+        documentation_paths: ["docs/TESTING.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim production rollback, autonomous repair, or inverse correction outside the measured sandbox gate.",
+      what_this_proves:
+        "Dema can seal one undo-proven preview when the reversible execute gate restores bytes from backup.",
+      what_this_does_not_prove:
+        "It does not prove live governed runtime, federation, economic rights, or arbitrary action-class undo.",
+      forbidden_claims: ["production rollback", "autonomous repair", "live undo runtime"],
+    }),
+    capability({
+      capability_id: "NODE0_CI_VENDOR_AVAILABILITY_1A",
+      truth_label: "NODE0_CI_VENDOR_AVAILABILITY_LOCAL_ONLY",
+      summary:
+        "FDE-backed GitHub Actions billing-lock lane so local proof rails do not treat vendor lock as code regression.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-ci-vendor-availability.js"],
+        test_paths: ["tests/node0-ci-vendor-availability.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-ci-vendor-availability-check.mjs",
+        ],
+        receipt_paths: [
+          "docs/receipts/DEMA_FDE_CI_BILLING_LOCK_MARKER_1A.md",
+          "docs/receipts/NODE0_CI_VENDOR_AVAILABILITY_1A.md",
+        ],
+        documentation_paths: ["docs/TESTING.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim remote CI green, trunk merge eligibility, or that billing lock is a code defect.",
+      what_this_proves:
+        "Dema can classify vendor billing lock and keep LOCAL proof lane honest while remote CI is advisory.",
+      what_this_does_not_prove:
+        "It does not unlock GitHub billing, replace remote attestation, or authorize merge while CI is vendor-blocked.",
+      forbidden_claims: ["remote CI green", "billing unlocked", "code regression from vendor lock"],
     }),
     capability({
       capability_id: "NODE0_RECEIPT_SIGNING_ED25519_1A",

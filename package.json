@@ -27,6 +27,7 @@
     "urp:discovery": "node scripts/urp-shared-discovery.mjs",
     "proof:room": "node scripts/proof-room-bundle.mjs",
     "proof:truth": "node scripts/audit/node0-proof-of-truth-control-plane.mjs --json",
+    "proof:truth:local-lane": "DEMA_LOCAL_PROOF_LANE=GITHUB_ACTIONS_BILLING_LOCK node scripts/audit/node0-proof-of-truth-control-plane.mjs --json",
     "proof:truth:check": "node scripts/review/node0-proof-of-truth-control-plane-check.mjs",
     "proof:verdict": "node scripts/review/node0-release-verdict-check.mjs",
     "proof:verdict:check": "node scripts/review/node0-release-verdict-check.mjs",

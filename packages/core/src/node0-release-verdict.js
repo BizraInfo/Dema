@@ -58,6 +58,9 @@ export function computeReleaseVerdict({
 
 export function computeNextAction(verdict, context = {}) {
   if (verdict === "READY_LOCAL") {
+    if (context.workflows?.ci_vendor_availability === "GITHUB_ACTIONS_BILLING_LOCK") {
+      return "Continue LOCAL proof lane; resolve GitHub billing lock for remote CI advisory";
+    }
     if (context.workflows?.ci_remote_seal === "PENDING") {
       return "Push to main to verify remote CI seal";
     }

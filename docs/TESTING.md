@@ -456,6 +456,7 @@ node scripts/review/aasr-node0-state-router-preview-check.mjs
 node scripts/review/apr-node0-route-refinery-preview-check.mjs
 node scripts/review/node0-governed-reversible-action-preview-check.mjs
 node scripts/review/node0-reversible-execute-gate-check.mjs
+node scripts/review/node0-undo-proven-preview-check.mjs
 node scripts/review/node0-receipt-signing-ed25519-check.mjs
 node scripts/review/node0-proof-chain-link-check.mjs
 node scripts/review/node0-signed-chain-head-check.mjs
@@ -463,6 +464,7 @@ node scripts/review/node0-spine-runner-check.mjs
 node scripts/review/dema-capability-truth-registry-check.mjs
 node scripts/review/boundary-vocab-unification-check.mjs
 node scripts/review/dema-fde-dual-diagnostic-check.mjs
+node scripts/review/node0-ci-vendor-availability-check.mjs
 node scripts/review/dema-home-node-space-ontology-check.mjs
 node scripts/review/dema-node-space-bonding-file-steward-check.mjs
 node scripts/review/node0-killer-demo-value-loop-compose-gate.mjs
