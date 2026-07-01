@@ -203,6 +203,7 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
       "tests/poi-receipt-seal-preview-cli.test.js",
     ],
   ),
+  preview("economy", "tests/dual-token-poi-economy.test.js"),
   preview("demo", "tests/node0-killer-demo-value-loop-cli.test.js"),
   preview("llm-router", "tests/local-llm-router-preview.test.js"),
   preview("model-broker", "tests/model-broker-preview.test.js"),

@@ -63,6 +63,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [02-architecture/dema-first-time-onboarding-protocol-v0.1.md](02-architecture/dema-first-time-onboarding-protocol-v0.1.md) — DECLARED_SPEC/DESIGNED_NOT_LIVE first-time onboarding protocol: the 7-stage mechanism (binds `ONBOARDING_LIFECYCLE_STAGE_IDS`), the 4-phase presentation view over it, and the four entry laws (ephemeral decline, zero-model bootstrap, model-discovery independence, preview-vs-live wording). Reconciles ADR-011; doc + enforcing test only, no runtime.
 - [02-architecture/SAT_ROLE_BOUNDARY.md](02-architecture/SAT_ROLE_BOUNDARY.md) — SAT constitutional guard contract: PAT proposes / SAT verifies-blocks-audits, the 5 role questions, verdict shape, and the registry-field contract (DECLARED, no runtime).
 - [02-architecture/sat-verifier-sibling-spec.md](02-architecture/sat-verifier-sibling-spec.md) — SAT verifier sibling spec.
+- [02-architecture/DUAL_TOKEN_POI_ECONOMY_v0_1.md](02-architecture/DUAL_TOKEN_POI_ECONOMY_v0_1.md) — `DESIGNED_NOT_LIVE` canon for BZR-C/BZR-I PoI-gated economy previews: no wallet, no sale, no live mint, deterministic local preview kernel only.
 - [02-architecture/node0-urp-ecosystem-transition.md](02-architecture/node0-urp-ecosystem-transition.md) — internal Node0 to shared URP transition note; docs-only, not public roadmap.
 - [security/URP_STAGE_4_CHOOSE_CLOSEOUT.md](security/URP_STAGE_4_CHOOSE_CLOSEOUT.md) — Current URP Stage 4 Choose closeout note: write/list/verify symmetry, closeout drift-guard probe, non-claims, and Stage 5 boundary.
 
@@ -152,6 +153,8 @@ These are working design artifacts. They are not the public onboarding path.
 - [superpowers/specs/2026-05-14-dema-broad-gtm-readiness/01_specification.md](superpowers/specs/2026-05-14-dema-broad-gtm-readiness/01_specification.md) — working artifact for broad-GTM readiness.
 - [superpowers/specs/2026-05-14-effectcap-invariant/01_specification.md](superpowers/specs/2026-05-14-effectcap-invariant/01_specification.md) — working artifact for pre-runtime EffectCap invariants.
 - [superpowers/specs/2026-05-15-bizra-steer-vector-v0.1/01_specification.md](superpowers/specs/2026-05-15-bizra-steer-vector-v0.1/01_specification.md) — working artifact for steer-vector boundaries.
+- [superpowers/specs/2026-07-02-dema-peak-ux-lifecycle-closed-loop-design.md](superpowers/specs/2026-07-02-dema-peak-ux-lifecycle-closed-loop-design.md) — working artifact for the preview-only Dema peak UX lifecycle closed loop.
+- [superpowers/specs/2026-07-02-dema-node0-space-index-1a-design.md](superpowers/specs/2026-07-02-dema-node0-space-index-1a-design.md) — working artifact for the consent-bound Node0 space indexing slice.
 
 ## Rule for future docs
 

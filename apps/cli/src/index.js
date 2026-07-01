@@ -74,6 +74,7 @@ import { cmd_evidence } from "./commands/evidence.js";
 import { cmd_ihsan } from "./commands/ihsan.js";
 import { cmd_behavior } from "./commands/behavior.js";
 import { cmd_design } from "./commands/design.js";
+import { cmd_economy } from "./commands/economy.js";
 import { cmd_agent_loop } from "./commands/agent-loop.js";
 import { cmd_task } from "./commands/task.js";
 import { cmd_sovereign } from "./commands/sovereign.js";
@@ -183,6 +184,12 @@ Proof:
                     Verify a proof passport. Default: envelope only (hash + structure
                     + boundary). With --deep: also re-verifies each referenced
                     authorship receipt file against passport metadata.
+
+Economy:
+  dema economy poi-mint-preview --impact-receipt <path> [--json]
+                    Simulate BZR-C/BZR-I mint eligibility from a verified PoI
+                    receipt-shaped JSON file. ECONOMY_SIMULATION_ONLY: no
+                    wallet, no sale, no live token mint.
 
 Genesis:
   dema genesis composition blueprint [--json]
@@ -1162,6 +1169,7 @@ const COMMAND_TABLE = {
   ihsan: cmd_ihsan,
   behavior: cmd_behavior,
   design: cmd_design,
+  economy: cmd_economy,
   "agent-loop": cmd_agent_loop,
   task: cmd_task,
   sovereign: cmd_sovereign,
