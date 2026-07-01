@@ -562,8 +562,9 @@ function buildProofSpineBacklogRank() {
     Object.freeze({
       rank: 3,
       slice: "MOBILE-COMPANION-REGISTER-1A",
-      status: "NOT_STARTED",
-      note: "Declare companion in registry; no phone actuator without ADR",
+      status: "SHIPPED_BRANCH",
+      next_command:
+        "dema node-registry companion-register --consent \"GO register companion device Z Fold 6 for Node0\" --json",
     }),
   ]);
 }
