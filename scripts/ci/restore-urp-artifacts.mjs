@@ -3,7 +3,7 @@
 // 1-line inline restore for B-bucket URP drift (pre-existing environmental side-effect
 // of the ARTIFACT-011 / node0-local-urp harness preview writer).
 // Valid short-term emergency micro.
-// 
+//
 // Replaced by this explicit script for:
 //   - better logging
 //   - clear intent

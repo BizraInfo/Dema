@@ -556,8 +556,8 @@ function buildProofSpineBacklogRank() {
     Object.freeze({
       rank: 2,
       slice: "STYLE-PILLAR-MICRO-1A",
-      status: "PLANNED",
-      unblock: "GO STYLE-PILLAR-MICRO-1A stdlib-only check in npm run check",
+      status: "SHIPPED_BRANCH",
+      next_command: "npm run check (style-pillar-check.mjs wired)",
     }),
     Object.freeze({
       rank: 3,
