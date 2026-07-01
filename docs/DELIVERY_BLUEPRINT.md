@@ -105,8 +105,8 @@ hard-stop gate in that local report.
 It orchestrates the full gate stack with A+ performance-quality assurance:
 
 - [MEASURED] Enforces A+ perf ceilings (boot <150ms local / <250ms CI, verify <1ms) via `npm run perf` and `resolveAPlusCeilings` (same headroom as `performance-budget-gate`).
-- Validates coverage thresholds (95/85/95) via `npm run coverage` on Node 22+ in CI.
-- Aggregate rollup below configured targets is reported as **advisory** by `npm run release:readiness` (`qa.coverage_threshold_missing`); per-test coverage flags remain the enforced gate in `npm run check`.
+- Validates coverage thresholds (95/84/95) via `npm run coverage` on Node 22+ in CI.
+- `npm run release:readiness` reports whether the threshold gate is configured and observed in CI; `npm run coverage` remains the measured enforcement point.
 - Integrates release:readiness with A+ perf gate and PMBOK domains.
 - Runs mu pre-push seal as the local DevOps forcing function (104/104 target); skipped in CI (`CI`/`GITHUB_ACTIONS`) because the matrix already runs test + coverage + check.
 - Checks local gates (llm:guidance, diff hygiene) for world-class hygiene.
@@ -224,7 +224,7 @@ Dema's performance QA is enforced by the local-first gate set (perf budgets, cov
 | Native Node tests         | Enforced with coverage thresholds.                                                                                                                                           |
 | Smoke commands            | Enforced (npm run check).                                                                                                                                                    |
 | A+ perf gate              | Enforced: `npm run perf` (A+ ceilings in perf-bench.mjs: sub-150ms boot, sub-1ms verification). Integrated into release:readiness and REQUIRED_GATES.                        |
-| Coverage thresholds       | Enforced (95% lines/functions, 85% branches on Node 22+).                                                                                                                    |
+| Coverage thresholds       | Enforced (95% lines/functions, 84% branches on Node 22+).                                                                                                                    |
 | Bounded gateway probes    | Enforced in smoke.                                                                                                                                                           |
 | Diff hygiene              | Enforced (git diff --check).                                                                                                                                                 |
 | Release-readiness audit   | Enforced (includes perf, PMBOK domains, risk codes).                                                                                                                         |

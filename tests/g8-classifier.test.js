@@ -193,6 +193,25 @@ describe("G8 classifier — hardened (per-failure allowlist)", () => {
     assert.equal(r.verdict, "PASS");
   });
 
+  it("coverage threshold errors FAIL even when TAP reports zero failed tests", () => {
+    const log = [
+      "TAP version 13",
+      "ok 1 - release readiness",
+      "1..1",
+      "# tests 1",
+      "# pass 1",
+      "# fail 0",
+      "# Error: 84.05% branch coverage does not meet threshold of 85%.",
+      "# start of coverage report",
+      "# all files | 95.43 | 84.05 | 97.66 |",
+      "# end of coverage report",
+    ].join("\n");
+    const r = classifyFailures(log);
+    assert.equal(r.cleanRun, false);
+    assert.equal(r.coverageThresholdFailures.length, 1);
+    assert.equal(r.verdict, "FAIL");
+  });
+
   it("parses not-ok lines in linear time (regression guard: no polynomial ReDoS)", () => {
     // The prior `(.+?)\s*$` regex backtracked O(n^2) on a long run of spaces
     // before a non-space at line end (~4s at 60k spaces — measured). The linear

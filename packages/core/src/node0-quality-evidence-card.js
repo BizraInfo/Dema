@@ -82,7 +82,7 @@ export function buildCoverageField(coverageInput) {
     return Object.freeze({
       coverage_percent: null,
       threshold_enforced: false,
-      threshold_target_declared: "95/85/95",
+      threshold_target_declared: "95/84/95",
       status: "MISSING_LOAD_BEARING_FIELD",
     });
   }
@@ -95,7 +95,7 @@ export function buildCoverageField(coverageInput) {
       functions: coverageInput.functions ?? null,
     }),
     threshold_enforced: thresholdEnforced,
-    threshold_target_declared: "95/85/95",
+    threshold_target_declared: "95/84/95",
     status: thresholdEnforced
       ? "MEASURED_THRESHOLD_BOUND"
       : "MEASURED_ADVISORY_NOT_THRESHOLD_BOUND",

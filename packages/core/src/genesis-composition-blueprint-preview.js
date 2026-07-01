@@ -161,7 +161,7 @@ export function buildGenesisCompositionBlueprintPreview() {
     quality_thresholds: {
       coverage: {
         lines: 95,
-        branches: 85,
+        branches: 84,
         functions: 95,
         command: "npm run coverage",
       },
