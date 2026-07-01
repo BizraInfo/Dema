@@ -15,6 +15,16 @@ import {
   saveFounderWorkIndex,
   serializeFounderWorkIndexForSave,
 } from "../../../../packages/receipts/src/founder-work-index-save.js";
+import {
+  buildProofOfSpendReceiptEnvelope,
+  buildProofOfSpendReport,
+  expectedContentReadConsent as expectedSpendConsent,
+  verifyProofOfSpendReport,
+  serializeProofOfSpendForSave,
+} from "../../../../packages/core/src/proof-of-spend-1a.js";
+import {
+  saveProofOfSpend,
+} from "../../../../packages/receipts/src/proof-of-spend-save.js";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
 
 function argValue(argv, name) {
@@ -250,6 +260,153 @@ async function cmd_corpus_review(argv, json) {
   process.exit(process.exitCode ?? 0);
 }
 
+async function cmd_corpus_spend(argv, json) {
+  const filePath = argValue(argv, "--file");
+  const offeredConsent = argValue(argv, "--consent") ?? null;
+
+  if (!filePath) {
+    process.stderr.write("dema corpus spend: --file <abs_path> is required\n");
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+  if (!isAbsolute(filePath)) {
+    process.stderr.write(
+      `dema corpus spend: --file must be an absolute path (got: ${filePath})\n`,
+    );
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
+  const absPath = resolve(filePath);
+  let sourceText;
+  try {
+    const st = await stat(absPath);
+    if (!st.isFile()) {
+      if (json) {
+        console.log(
+          JSON.stringify({
+            refused: true,
+            reason_code: "not_a_file",
+            file: absPath,
+          }, null, 2),
+        );
+      } else {
+        process.stderr.write(
+          `Refused — spend proof accepts exactly one CSV file, not a directory.\nExpected consent: ${expectedSpendConsent(absPath)}\n`,
+        );
+      }
+      process.exitCode = 1;
+      process.exit(process.exitCode ?? 0);
+    }
+    sourceText = await readFile(absPath, "utf8");
+  } catch (err) {
+    const message = err?.code === "ENOENT" ? "file_not_found" : "read_failed";
+    if (json) {
+      console.log(
+        JSON.stringify({ refused: true, reason_code: message, file: absPath }, null, 2),
+      );
+    } else {
+      process.stderr.write(`dema corpus spend: ${message}: ${absPath}\n`);
+    }
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
+  const sourceSha256 = sha256Hex(sourceText);
+  const report = buildProofOfSpendReport({
+    sourceFile: absPath,
+    sourceSha256,
+    sourceText,
+    offeredConsent,
+  });
+
+  if (!report.index_allowed) {
+    if (json) {
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      process.stderr.write(
+        [
+          "Refused — spend proof requires exact consent.",
+          `reason: ${report.reason_code}`,
+          `expected: ${report.expected_consent_phrase}`,
+        ].join("\n"),
+      );
+    }
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
+  const verify = verifyProofOfSpendReport(report);
+  if (!verify.valid) {
+    if (json) {
+      console.log(
+        JSON.stringify({ refused: true, reason_code: verify.reason, report }, null, 2),
+      );
+    } else {
+      process.stderr.write(`dema corpus spend: verify failed: ${verify.reason}\n`);
+    }
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
+  const envelope = buildProofOfSpendReceiptEnvelope(report, {
+    generatedAt: report.generated_at,
+  });
+  const saveResult = await saveProofOfSpend(envelope, {
+    demaHome: process.env.DEMA_HOME,
+    pretty: false,
+  });
+
+  if (!saveResult.saved) {
+    if (json) {
+      console.log(
+        JSON.stringify({ report, save: saveResult, saved: false }, null, 2),
+      );
+    } else {
+      process.stderr.write(
+        `dema corpus spend: failed to seal receipt (${saveResult.reason})\n`,
+      );
+    }
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
+  const output = {
+    ...report,
+    receipt: Object.freeze({
+      path: saveResult.path,
+      sha256: saveResult.sha256,
+      no_mint: true,
+    }),
+  };
+
+  if (json) {
+    console.log(JSON.stringify(output, null, 2));
+  } else {
+    const monthly = report.primary_claim?.value ?? null;
+    const body = serializeProofOfSpendForSave(envelope, { pretty: false });
+    console.log(
+      [
+        "DEMA · PROOF-OF-SPEND-1A — SEALED",
+        `file: ${absPath}`,
+        `truth_label: ${report.truth_label}`,
+        `facts: ${report.fact_count}`,
+        `monthly_recurring_burn_usd_cents: ${monthly}`,
+        `index_hash: ${report.index_hash}`,
+        `receipt_sha256: ${saveResult.sha256}`,
+        `receipt_path: ${saveResult.path}`,
+        "no_mint: true",
+        "",
+        "Boundary: single-file CSV read under exact consent · FWI provenance · cost measured not value · no model · no network.",
+      ].join("\n"),
+    );
+    if (process.env.DEMA_CORPUS_SPEND_STDOUT_ENVELOPE === "1") {
+      process.stdout.write(body);
+    }
+  }
+  process.exit(process.exitCode ?? 0);
+}
+
 export async function cmd_corpus(ctx) {
   const { argv } = ctx;
   const sub = argv[1];
@@ -257,6 +414,10 @@ export async function cmd_corpus(ctx) {
 
   if (sub === "index") {
     await cmd_corpus_index(argv, json);
+    return;
+  }
+  if (sub === "spend") {
+    await cmd_corpus_spend(argv, json);
     return;
   }
   if (sub === "review") {
@@ -268,6 +429,7 @@ export async function cmd_corpus(ctx) {
     [
       "Usage:",
       '  dema corpus index --file <abs_path> --consent "GO: content_read <abs_path>" [--json]',
+      '  dema corpus spend --file <abs_csv_path> --consent "GO: content_read <abs_csv_path>" [--json]',
       "  dema corpus review --receipt <abs_path_to_founder_work_index.json> [--json]",
       "",
     ].join("\n"),

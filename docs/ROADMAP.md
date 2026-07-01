@@ -144,7 +144,7 @@ Ordered by **receipt before expansion**. Do not skip sealing for expansion.
 | 2b | **PEAK-RECEIPT-SUMMARY-RESEAL-1A** | **DONE** (operator) | LOCAL_ONLY | Receipt `founder-work-index-479f293a…d66.json` · `MEASURED: 39` · same `index_hash` as stale `440f6856…` |
 | 2c | **DEMA-FDE-CI-BILLING-LOCK-MARKER-1A** + **NODE0-CI-VENDOR-AVAILABILITY-1A** | **SHIPPED** (branch) | WIRED_PARTIAL | FDE billing-lock class + `proof:truth:local-lane` → `READY_LOCAL` when local gates pass |
 | 3 | **UNDO-PROVEN-1A** | **SHIPPED** (branch) | PREVIEW_ONLY | Measured inverse correction preview + review gate |
-| 4 | **PROOF-OF-SPEND-1A** | NOT_STARTED | PLANNED | External spend facts; not self-graded quality |
+| 4 | **PROOF-OF-SPEND-1A** | **SHIPPED** (branch) | PREVIEW_ONLY | FWI-provenance CSV spend facts + `FOUNDER_COST_MEASURED_NOT_VALUE` receipt under `$DEMA_HOME` |
 | 5 | **STYLE-PILLAR-MICRO-1A** | PLANNED | PLANNED | Agent-compat Style pillar **8/100**; **cannot naively add ESLint/Prettier to `package.json`** — zero-dep gate fails closed (`scripts/review/zero-dep-gate.mjs`). Unblock path: stdlib `style-pillar-check.mjs` wired into `npm run check` **or** ADR waiver + advisory `npx` path outside check |
 | 6 | **BRAND-TOKEN-THEME-1A** | DESIGN_APPROVED | DESIGNED_NOT_LIVE | `docs/superpowers/specs/2026-06-14-brand-token-theme-design.md` — vendor `BIZRA_VISUAL_TOKENS.json` + `packages/core/src/theme.js`; separates **BIZRA** canon colors from **Dema** TUI product surface |
 | 7 | **BRAND-DIGITAL-SIGNAL-1A** | NOT_STARTED | PLANNED | Public footprint / GTM flywheel — requires CLAIM_REGISTER + operator GO; not a code-only slice |

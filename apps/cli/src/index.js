@@ -597,7 +597,7 @@ const REGISTERED_COMMANDS_LIST = [
   {
     command: "corpus",
     description:
-      "governed founder corpus index + receipt review (subcommands: index, review)",
+      "governed founder corpus index + spend proof + receipt review (subcommands: index, spend, review)",
   },
   {
     command: "mirror",

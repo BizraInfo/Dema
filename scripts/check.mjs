@@ -19,6 +19,7 @@ export const commands = [
   ["node", ["scripts/review/node0-governed-reversible-action-preview-check.mjs"]],
   ["node", ["scripts/review/node0-reversible-execute-gate-check.mjs"]],
   ["node", ["scripts/review/node0-undo-proven-preview-check.mjs"]],
+  ["node", ["scripts/review/proof-of-spend-1a-check.mjs"]],
   ["node", ["scripts/review/node0-receipt-signing-ed25519-check.mjs"]],
   ["node", ["scripts/review/node0-proof-chain-link-check.mjs"]],
   ["node", ["scripts/review/node0-signed-chain-head-check.mjs"]],
