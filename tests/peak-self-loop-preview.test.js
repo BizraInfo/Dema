@@ -45,10 +45,10 @@ test("PSL-04: composes SNR, convergence, HHMM, craftsmanship, proactive_self", (
   assert.equal(out.autonomous_rsi.not_autonomous_runtime, true);
 });
 
-test("PSL-05: default SNR favors signal (6 signal vs 2 noise)", () => {
+test("PSL-05: default SNR favors signal (9 signal vs 3 noise)", () => {
   const out = buildPeakSelfLoopPreview();
-  assert.equal(out.snr_framework.signal_count, 6);
-  assert.equal(out.snr_framework.noise_count, 2);
+  assert.equal(out.snr_framework.signal_count, 9);
+  assert.equal(out.snr_framework.noise_count, 3);
   assert.ok(out.snr_framework.score >= 0.7);
   assert.equal(out.autonomous_rsi.merged_verdict, "CONTINUE_MICRO_SLICE");
 });
@@ -95,11 +95,10 @@ test("PSL-10: high noise input triggers HOLD merged verdict", () => {
   assert.equal(out.autonomous_rsi.merged_verdict, "HOLD_AND_REDUCE_NOISE");
 });
 
-test("PSL-11: next slice observable is post-integration with text and evidence", () => {
+test("PSL-11: next slice observable is backlog-ranked with text and evidence", () => {
   const out = buildPeakSelfLoopPreview();
   const next = out.craftsmanship_witness.next_slice_observables[0];
-  assert.equal(next.id, "pat-council-dispatch-governed-runtime");
-  assert.notEqual(next.id, "claim-corpus-gate-baseline-ratchet");
+  assert.equal(next.id, "style-pillar-micro-1a");
   assert.ok(next.text.length > 0);
   assert.ok(next.evidence.length > 0);
 });
@@ -148,5 +147,29 @@ test("PSL-17: render includes agent-outside-sandbox and OODA lines", () => {
   const text = renderPeakSelfLoopPreview(buildPeakSelfLoopPreview());
   assert.ok(text.includes("Agent outside sandbox:"));
   assert.ok(text.includes("OODA review:"));
+  assert.ok(text.includes("Reasoning modes (preview):"));
   assert.ok(text.includes("RSI integration gate:"));
+});
+
+test("PSL-18: ultra_micro_compose maps all proactive reasoning subsystems", () => {
+  const out = buildPeakSelfLoopPreview();
+  assert.equal(out.ultra_micro_compose.mode, "preview_only");
+  assert.equal(
+    out.ultra_micro_compose.agent_posture,
+    "outside_sandbox_proposes_inside_sandbox_proves",
+  );
+  assert.ok(out.ultra_micro_compose.subsystems.length >= 10);
+  assert.ok(out.proof_spine_backlog.length >= 3);
+});
+
+test("PSL-19: companion disconnected surfaces in self-critique gaps", () => {
+  const out = buildPeakSelfLoopPreview({ companion_device_connected: false });
+  assert.ok(
+    out.proactive_self.critique.gaps.some((g) => g.includes("Mobile companion")),
+  );
+  const connected = buildPeakSelfLoopPreview({ companion_device_connected: true });
+  assert.equal(
+    connected.proactive_self.critique.gaps.some((g) => g.includes("Mobile companion")),
+    false,
+  );
 });

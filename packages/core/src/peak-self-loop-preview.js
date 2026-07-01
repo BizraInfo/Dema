@@ -71,6 +71,24 @@ const DEFAULT_SIGNAL_EVENTS = Object.freeze([
     weight: 1,
     label: "Measured proof spine runs inside sandbox only (#312)",
   }),
+  Object.freeze({
+    id: "billing-lock-local-proof-lane",
+    type: "gate_passed",
+    weight: 1,
+    label: "proof:truth:local-lane READY_LOCAL when vendor billing lock",
+  }),
+  Object.freeze({
+    id: "undo-proven-1a",
+    type: "clean_commit",
+    weight: 1,
+    label: "UNDO-PROVEN-1A measured inverse correction preview",
+  }),
+  Object.freeze({
+    id: "proof-of-spend-1a",
+    type: "clean_commit",
+    weight: 1,
+    label: "PROOF-OF-SPEND-1A founder cost receipt (FOUNDER_COST_MEASURED_NOT_VALUE)",
+  }),
 ]);
 
 const DEFAULT_NOISE_EVENTS = Object.freeze([
@@ -85,6 +103,12 @@ const DEFAULT_NOISE_EVENTS = Object.freeze([
     type: "scope_contamination",
     weight: 1,
     label: "Rejected: GitHub green as only proof witness",
+  }),
+  Object.freeze({
+    id: "mobile-node-actuator-without-adr",
+    type: "scope_contamination",
+    weight: 1,
+    label: "Rejected: phone runs node / LAN admin without MOBILE-NODE-ACCESS ADR",
   }),
 ]);
 
@@ -118,6 +142,17 @@ const DEFAULT_CONVERGENCE_CLAIMS = Object.freeze([
       cryptographic: "schema_only",
       empirical: "passing_tests",
       economic: "not_applicable",
+    },
+  }),
+  Object.freeze({
+    id: "proof-of-spend-founder-cost",
+    statement:
+      "External spend CSV yields verifiable monthly burn claim under FOUNDER_COST_MEASURED_NOT_VALUE",
+    rails: {
+      formal: "spec_plus_test",
+      cryptographic: "receipt_sealed_local",
+      empirical: "operator_sealed_receipt",
+      economic: "measured_not_value",
     },
   }),
 ]);
@@ -398,6 +433,7 @@ function buildProactiveSelf({
   hhmm,
   consentPhrase,
   ciAdvisoryBlocked = false,
+  companionDeviceConnected = false,
 }) {
   const localHarnessGates = Object.freeze([
     "ux-first-look-gate",
@@ -428,6 +464,9 @@ function buildProactiveSelf({
             : null,
           ciAdvisoryBlocked
             ? "Remote CI advisory blocked — continue LOCAL proof lane"
+            : null,
+          !companionDeviceConnected
+            ? "Mobile companion declared (Z Fold 6) but not connected — export-and-index bridge only"
             : null,
         ].filter(Boolean),
       ),
@@ -477,9 +516,56 @@ function buildProactiveSelf({
         "ACT→economic without consent",
         "SETTLE→federation without proof ladder",
         "ACT→operator mutation outside sandbox",
+        "ACT→mobile node control without ADR",
       ]),
     }),
   });
+}
+
+function buildUltraMicroComposeMap() {
+  return Object.freeze({
+    id: "peak-ultra-micro-compose-1a",
+    subsystems: Object.freeze([
+      "proactive_self.critique",
+      "proactive_self.harness",
+      "proactive_self.consent",
+      "proactive_self.compliance",
+      "reasoning_modes.sequential",
+      "reasoning_modes.analogical",
+      "reasoning_modes.critical",
+      "reasoning_modes.creative",
+      "micro_process_mining",
+      "agent_orchestration",
+      "self_loop_ooda",
+      "rsi_integration_gate",
+      "craftsmanship_witness",
+    ]),
+    agent_posture: "outside_sandbox_proposes_inside_sandbox_proves",
+    mode: "preview_only",
+  });
+}
+
+function buildProofSpineBacklogRank() {
+  return Object.freeze([
+    Object.freeze({
+      rank: 1,
+      slice: "PROOF-OF-SPEND-1A",
+      status: "SHIPPED_BRANCH",
+      next_command: "dema corpus spend --file <abs_csv> --consent GO: content_read <path>",
+    }),
+    Object.freeze({
+      rank: 2,
+      slice: "STYLE-PILLAR-MICRO-1A",
+      status: "PLANNED",
+      unblock: "GO STYLE-PILLAR-MICRO-1A stdlib-only check in npm run check",
+    }),
+    Object.freeze({
+      rank: 3,
+      slice: "MOBILE-COMPANION-REGISTER-1A",
+      status: "NOT_STARTED",
+      note: "Declare companion in registry; no phone actuator without ADR",
+    }),
+  ]);
 }
 
 export function buildPeakSelfLoopPreview({
@@ -490,6 +576,7 @@ export function buildPeakSelfLoopPreview({
   slice_history = null,
   consent_phrase = "GO: act on peak-self-loop suggestion",
   ci_advisory_blocked = false,
+  companion_device_connected = false,
 } = {}) {
   const signalEvents = Array.isArray(signal_events)
     ? signal_events
@@ -518,10 +605,16 @@ export function buildPeakSelfLoopPreview({
     slice_history,
     next_slice_signals: [
       {
-        id: "pat-council-dispatch-governed-runtime",
-        text: "Wire consent-gated council-dispatch preview to governed Node0 PAT runtime (still no silent execution)",
+        id: "style-pillar-micro-1a",
+        text: "Stdlib-only style-pillar-check in npm run check (zero-dep gate safe)",
         evidence:
-          "UX-3B ships ADK contract+receipt preview on exact-string consent; boundary.runtime remains false",
+          "docs/ROADMAP.md rank 5 · scripts/review/zero-dep-gate.mjs blocks naive ESLint in package.json",
+      },
+      {
+        id: "mobile-companion-export-bridge",
+        text: "Bridge mobile via export folder + dema scan; register companion only after ADR",
+        evidence:
+          "docs/02-architecture/dema-mobile-qr-consent-v0.md · companion_device_count:0 default",
       },
     ],
   });
@@ -576,6 +669,7 @@ export function buildPeakSelfLoopPreview({
     hhmm,
     consentPhrase: consent_phrase,
     ciAdvisoryBlocked: ci_advisory_blocked === true,
+    companionDeviceConnected: companion_device_connected === true,
   });
 
   const agent_orchestration = buildAgentOrchestrationPosture({
@@ -589,6 +683,8 @@ export function buildPeakSelfLoopPreview({
     noiseEvents: noiseEvents.map((e) => ({ type: e.type, weight: e.weight })),
     processEvents,
   });
+  const ultra_micro_compose = buildUltraMicroComposeMap();
+  const proof_spine_backlog = buildProofSpineBacklogRank();
 
   return deepFreeze({
     schema: PEAK_SELF_LOOP_PREVIEW_SCHEMA,
@@ -618,6 +714,8 @@ export function buildPeakSelfLoopPreview({
     micro_process_mining,
     self_loop_ooda,
     rsi_integration_gate,
+    ultra_micro_compose,
+    proof_spine_backlog,
     what_this_proves:
       "Peak ultra-micro self-loop preview composes SNR, convergence, HHMM diffusion, MC witness, agent-outside-sandbox posture, OODA review, and RSI gate without runtime",
     what_this_does_not_prove:
@@ -659,6 +757,11 @@ export function renderPeakSelfLoopPreview(preview, { useColor = false } = {}) {
     "OODA review:",
     `  recommendation: ${preview.self_loop_ooda.recommendation ?? preview.self_loop_ooda.reason_code}`,
     `  act executed:   ${preview.self_loop_ooda.action_executed_by_kernel === false}`,
+    "",
+    "Reasoning modes (preview):",
+    `  sequential: ${preview.reasoning_modes.sequential.current_step}`,
+    `  analogical: ${preview.reasoning_modes.analogical.model}`,
+    `  critical:   weakest claim → ${preview.reasoning_modes.critical.questions[2]}`,
     "",
     "RSI integration gate:",
     `  ${preview.rsi_integration_gate.recommendation} — ${preview.rsi_integration_gate.recommendation_reason}`,
