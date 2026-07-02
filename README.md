@@ -164,9 +164,11 @@ Your PAT agents help shape and later execute your local mission.
 SAT/URP validation is system-side and only applies after evidence or receipt handoff.
 ```
 
-Canonical invariant: PAT may want success. SAT must require truth. SAT-5 roles
-are SAT-Orchestrator, SAT-Policy, SAT-QualityOps, SAT-Resource, and
-SAT-GlobalVerifier.
+Canonical invariant: PAT may want success. SAT must require truth. Canonical SAT-5
+roles are **Validator, Oracle (FROZEN), Mediator, Archivist, Sentinel** (topology
+canon, `docs/canon/BIZRA_TOPOLOGY_CANON.md`). The `dema ambient audit` runtime
+vocabulary (Orchestrator/Policy/QualityOps/Resource/GlobalVerifier) is a historical
+variant pending code reconciliation — see `docs/launch-pack-v0.1/06_KNOWN_GAPS_v2.md` #3.
 
 ---
 
