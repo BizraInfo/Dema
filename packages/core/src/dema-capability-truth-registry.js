@@ -36,6 +36,8 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_PROOF_CHAIN_LINK_1A",
   "NODE0_SIGNED_CHAIN_HEAD_1A",
   "NODE0_SPINE_RUNNER_CLI_1A",
+  "NODE0_EVIDENCE_SOURCE_REGISTRY_1A",
+  "NODE0_LOCAL_CLOSURE_READINESS_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -575,6 +577,75 @@ function defaultCapabilityRows() {
         "general task execution",
         "DEMA activation",
         "autonomous action",
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_EVIDENCE_SOURCE_REGISTRY_1A",
+      truth_label: "NODE0_EVIDENCE_SOURCE_REGISTRY_MEASURED_REPO",
+      summary:
+        "Register local, GitHub, Drive, Claude export, public-domain, receipt, design, and economy-simulation evidence sources before indexing, dedup, impact review, or mint decisions.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-evidence-source-registry.js"],
+        test_paths: ["tests/node0-evidence-source-registry.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-evidence-source-registry-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_EVIDENCE_SOURCE_REGISTRY_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_EVIDENCE_SOURCE_REGISTRY_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim source ingestion, content reads, Drive downloads, GitHub writes, web scraping, impact verification, token minting, wallet access, live execution, daemon runtime, or federation.",
+      what_this_proves:
+        "Dema can deterministically register Node0 evidence source families before ingestion, dedup, impact review, or mint decisions, with exact consent, all-false execution boundary, zero mint allowance, and simulation sources barred from the impact queue.",
+      what_this_does_not_prove:
+        "It does not prove source contents, Drive download, GitHub mutation, web scraping, dedup execution, verified impact, PoI acceptance, token minting, wallet access, live execution, or federation.",
+      forbidden_claims: [
+        "source ingested",
+        "Drive downloaded",
+        "GitHub updated",
+        "impact verified",
+        "token minted",
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_LOCAL_CLOSURE_READINESS_1A",
+      truth_label: "NODE0_LOCAL_CLOSURE_READINESS_MEASURED_REPO",
+      summary:
+        "Compose the Node0 evidence source registry and space-index envelope into local closure readiness with PAT/SAT metadata-only gates and no-mint blockers.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-local-closure-readiness.js"],
+        test_paths: ["tests/node0-local-closure-readiness.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-local-closure-readiness-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_LOCAL_CLOSURE_READINESS_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_LOCAL_CLOSURE_READINESS_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim content ingestion, dedup execution, reorg execution, SAT acceptance, verified impact, live token minting, wallet access, daemon runtime, network use, or federation.",
+      what_this_proves:
+        "Dema can compose the Node0 evidence source registry and Node0 space-index envelope into a deterministic local closure readiness map: PAT-local registry/index gates, exact hash-consent next action, review-only impact candidates, SAT metadata blocked until apply completes, and zero mint allowance before verified PoI.",
+      what_this_does_not_prove:
+        "It does not prove source contents, data deduplication, file reorganization, SAT acceptance, verified impact, live token minting, wallet access, daemon runtime, network use, or federation.",
+      forbidden_claims: [
+        "content ingested",
+        "dedup executed",
+        "reorg executed",
+        "SAT accepted",
+        "impact verified",
+        "token minted",
         "live execution",
         "operator mutation",
         "unattended runtime",

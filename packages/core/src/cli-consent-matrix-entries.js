@@ -125,6 +125,13 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     "Preview subcommands only; ADR-042 bridges DEMA_NODE0_ADAPTER / DEMA_GATEWAY_URL; activate rung operator-only",
     ["tests/node0-activation-chain-preview.test.js", "tests/node0-mumu-cli.test.js"],
   ),
+  row(
+    "node0-index",
+    ["read_only", "preview_only", "content_read", "local_write"],
+    "exact_phrase",
+    "Metadata-only index is default; --hash-content requires I CONSENT: HASH NODE0 SPACE <root_hash>; checkpoints write only under DEMA_HOME/node0-index/checkpoints",
+    ["tests/node0-space-index.test.js"],
+  ),
   preview("adk", "tests/adk-agent-contract.test.js"),
   row(
     "status",

@@ -79,6 +79,7 @@ import { cmd_agent_loop } from "./commands/agent-loop.js";
 import { cmd_task } from "./commands/task.js";
 import { cmd_sovereign } from "./commands/sovereign.js";
 import { cmd_node0 } from "./commands/node0.js";
+import { cmd_node0_index } from "./commands/node0-index.js";
 import { cmd_canon } from "./commands/canon.js";
 import { cmd_hardware } from "./commands/hardware.js";
 import { cmd_adk } from "./commands/adk.js";
@@ -296,6 +297,12 @@ BIZRA ADK (BIZRA-ADK-AGENT-CONTRACT-1A, define/validate/preview only):
                     harness on one contract. Read-only; no agent execution.
 
 Local asset awareness:
+  dema node0-index --root <path> [--hash-content --consent "<phrase>"] [--json]
+                    DEMA-NODE0-SPACE-INDEX-1A metadata-only Node0 onboarding
+                    census. Prints the exact hash-consent phrase for optional
+                    content hashing. Checkpoints write only under
+                    DEMA_HOME/node0-index/checkpoints. No dedup apply, move,
+                    delete, network, model, mint, wallet, SAT, or federation.
   dema assets scan [--json] [--root <path>]
                     DEMA-HOMEBASE-ASSET-AWARENESS-1A metadata-only homebase
                     asset awareness. Scans declared root (default ~/Downloads or
@@ -1113,6 +1120,7 @@ const COMMAND_TABLE = {
   status: cmd_status,
   "status:json": cmd_status_json,
   state: cmd_state,
+  "node0-index": cmd_node0_index,
   start: cmd_start,
   scan: cmd_scan,
   corpus: cmd_corpus,

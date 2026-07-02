@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BIZRA Doxology Gate Micro-Consent Proof Cockpit</title>
+    <style>
+      :root {
+        --deep: #0a0a14;
+        --mid: #141423;
+        --panel: rgba(20, 20, 35, 0.86);
+        --ink: #eaeaea;
+        --muted: #9aa3b2;
+        --line: rgba(234, 234, 234, 0.14);
+        --gold: #d4af37;
+        --emerald: #50c878;
+        --azure: #007fff;
+        --amber: #ffbf00;
+        --danger: #dc3545;
+        --violet: #8a2be2;
+        --radius: 8px;
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(120deg, rgba(212, 175, 55, 0.05), transparent 34%),
+          linear-gradient(240deg, rgba(0, 127, 255, 0.06), transparent 38%),
+          var(--deep);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        opacity: 0.34;
+        background-image:
+          linear-gradient(30deg, transparent 42%, rgba(212, 175, 55, 0.16) 43%, transparent 45%),
+          linear-gradient(150deg, transparent 42%, rgba(0, 127, 255, 0.13) 43%, transparent 45%),
+          linear-gradient(90deg, rgba(234, 234, 234, 0.04) 1px, transparent 1px);
+        background-size: 72px 42px, 72px 42px, 24px 24px;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button {
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: rgba(234, 234, 234, 0.06);
+        color: var(--ink);
+        cursor: pointer;
+        min-height: 38px;
+      }
+
+      button:hover,
+      button:focus-visible {
+        border-color: rgba(212, 175, 55, 0.7);
+        outline: none;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.44;
+      }
+
+      .shell {
+        max-width: 1480px;
+        margin: 0 auto;
+        padding: 28px;
+      }
+
+      header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 18px;
+        align-items: end;
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(28px, 5vw, 58px);
+        font-weight: 700;
+        letter-spacing: 0;
+        max-width: 980px;
+      }
+
+      .arabic {
+        margin-top: 8px;
+        color: var(--gold);
+        font-family: "Noto Naskh Arabic", Georgia, serif;
+        font-size: 18px;
+      }
+
+      .chips,
+      .metrics,
+      .toggle-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .chip,
+      .metric,
+      .gate,
+      .card,
+      .panel {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: var(--radius);
+      }
+
+      .chip {
+        padding: 7px 10px;
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .chip.ready {
+        border-color: rgba(212, 175, 55, 0.75);
+        color: var(--gold);
+        box-shadow: 0 0 24px rgba(212, 175, 55, 0.15);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 320px minmax(0, 1fr) 360px;
+        gap: 18px;
+        margin-top: 20px;
+      }
+
+      .panel {
+        overflow: hidden;
+      }
+
+      .panel h2 {
+        padding: 15px 16px;
+        border-bottom: 1px solid var(--line);
+        color: var(--gold);
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .panel-body {
+        padding: 16px;
+      }
+
+      .doxology-list {
+        display: grid;
+        gap: 9px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .doxology-list li {
+        padding: 11px;
+        border: 1px solid rgba(234, 234, 234, 0.1);
+        border-radius: 7px;
+        color: var(--muted);
+        font-family: Georgia, "Times New Roman", serif;
+        line-height: 1.35;
+      }
+
+      .doxology-list li.fired {
+        color: var(--ink);
+        border-color: rgba(212, 175, 55, 0.62);
+        background: rgba(212, 175, 55, 0.08);
+      }
+
+      .mission-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .card {
+        padding: 13px;
+        min-height: 150px;
+      }
+
+      .card.selected {
+        border-color: rgba(0, 127, 255, 0.85);
+        box-shadow: inset 0 0 0 1px rgba(0, 127, 255, 0.32);
+      }
+
+      .card h3 {
+        color: var(--ink);
+        font-size: 14px;
+      }
+
+      .card p,
+      .small {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .card button {
+        width: 100%;
+        margin-top: 10px;
+      }
+
+      .toggle-row {
+        margin-bottom: 12px;
+      }
+
+      .toggle-row button.active {
+        color: var(--emerald);
+        border-color: rgba(80, 200, 120, 0.65);
+      }
+
+      .pipeline {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 9px;
+        margin: 14px 0;
+      }
+
+      .gate {
+        min-height: 72px;
+        padding: 11px;
+        position: relative;
+      }
+
+      .gate strong {
+        display: block;
+        font-size: 12px;
+      }
+
+      .gate span {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .gate.pass {
+        border-color: rgba(80, 200, 120, 0.75);
+      }
+
+      .gate.fail {
+        border-color: rgba(220, 53, 69, 0.78);
+      }
+
+      .gate.repair {
+        border-color: rgba(255, 191, 0, 0.76);
+      }
+
+      .consent-box {
+        display: none;
+        margin-top: 14px;
+        padding: 14px;
+        border: 1px solid rgba(212, 175, 55, 0.46);
+        border-radius: var(--radius);
+        background: rgba(212, 175, 55, 0.07);
+      }
+
+      .consent-box.visible {
+        display: block;
+      }
+
+      .phrase {
+        user-select: all;
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 6px;
+        background: rgba(10, 10, 20, 0.82);
+        color: var(--gold);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        overflow-wrap: anywhere;
+      }
+
+      input {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: rgba(10, 10, 20, 0.85);
+        color: var(--ink);
+        min-height: 42px;
+        padding: 9px 10px;
+      }
+
+      .receipt {
+        margin-bottom: 10px;
+        padding: 12px;
+        border-left: 3px solid var(--muted);
+        background: rgba(234, 234, 234, 0.04);
+      }
+
+      .receipt.sealed {
+        border-left-color: var(--emerald);
+      }
+
+      .receipt.refused {
+        border-left-color: var(--danger);
+      }
+
+      .hash {
+        color: var(--gold);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 11px;
+        overflow-wrap: anywhere;
+      }
+
+      .metric {
+        flex: 1 1 105px;
+        padding: 10px;
+      }
+
+      .metric b {
+        display: block;
+        color: var(--gold);
+        font-size: 22px;
+      }
+
+      .diagnosis {
+        padding: 12px;
+        border-radius: var(--radius);
+        background: rgba(0, 127, 255, 0.08);
+        border: 1px solid rgba(0, 127, 255, 0.28);
+      }
+
+      .diagnosis.fail {
+        background: rgba(220, 53, 69, 0.08);
+        border-color: rgba(220, 53, 69, 0.38);
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      @media (max-width: 1120px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .mission-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        .chip.ready {
+          animation: pulseGold 1.8s ease-in-out infinite;
+        }
+
+        @keyframes pulseGold {
+          50% {
+            box-shadow: 0 0 34px rgba(212, 175, 55, 0.32);
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <div>
+          <h1>BIZRA Doxology Gate Micro-Consent Proof Cockpit</h1>
+          <p class="arabic">بِسْمِ اللهِ · consent-bound local proof · no live mint</p>
+        </div>
+        <div class="chips" id="truthChips"></div>
+      </header>
+
+      <main class="grid">
+        <section class="panel">
+          <h2>Doxology Rail</h2>
+          <div class="panel-body">
+            <ol class="doxology-list" id="doxologyRail"></ol>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Mission Intake</h2>
+          <div class="panel-body">
+            <div class="toggle-row">
+              <button id="ciToggle" type="button">CI available: off</button>
+              <button id="phoneToggle" type="button">Phone registered: off</button>
+              <button id="verifyButton" type="button">Verify chain</button>
+            </div>
+            <div class="mission-grid" id="missionGrid"></div>
+            <div class="pipeline" id="pipeline"></div>
+            <div class="consent-box" id="consentBox">
+              <p class="small">Type the exact phrase to seal this local in-memory receipt.</p>
+              <div class="phrase" id="consentPhrase"></div>
+              <input id="consentInput" autocomplete="off" spellcheck="false" />
+              <div class="actions">
+                <button id="sealButton" type="button">Seal receipt</button>
+                <button id="cancelButton" type="button">Refuse consent</button>
+              </div>
+              <p class="small" id="consentMessage"></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Receipt Chain</h2>
+          <div class="panel-body">
+            <div class="metrics" id="metrics"></div>
+            <div class="diagnosis" id="diagnosis">No mission has run yet.</div>
+            <div class="actions">
+              <button id="exportButton" type="button" disabled>Export JSON</button>
+              <button id="resetButton" type="button">Reset cockpit</button>
+            </div>
+            <div id="receiptChain" style="margin-top: 14px"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      (() => {
+        const DOXOLOGY_GATES = [
+          { id: "code", stage: "SCHEMA", lens: "inward", line: "If the code failed, patch the code." },
+          { id: "proof", stage: "PROOF", lens: "inward", line: "If the proof failed, repair the proof." },
+          { id: "world", stage: "WORLD", lens: "outward", line: "If the world failed, repair the environment." },
+          { id: "consent", stage: "CONSENT", lens: "authority", line: "If consent is missing, stop." },
+          { id: "mint", stage: "MINT", lens: "economic", line: "If impact is simulated, do not mint." },
+          { id: "value", stage: "VALUE", lens: "economic", line: "If cost is measured, do not call it value." },
+          { id: "ci", stage: "CI", lens: "outward", line: "If CI is unavailable, do not call it code failure." },
+          { id: "phone", stage: "DEVICE", lens: "outward", line: "If the phone is not registered, do not pretend it is connected." },
+        ];
+
+        const state = {
+          boundary: {
+            file_read_performed: false,
+            file_write_performed: false,
+            public_network_used: false,
+            model_invoked: false,
+            storage_persisted: false,
+            live_mint_performed: false,
+            content_hash_performed: false,
+          },
+          chainVerified: false,
+          env: { ciAvailable: false, phoneRegistered: false },
+          fired: new Set(),
+          genesisHash: "",
+          lastHash: "",
+          lastTrace: [],
+          pending: null,
+          receipts: [],
+          selectedId: "M1",
+        };
+
+        const evidenceBodies = {
+          index: { root: "node0://local", mode: "metadata_only", files_seen: 12 },
+          ci: { rail: "local_test", command: "npm test", exit_code: 0 },
+          phone: { device: "companion", mode: "read_only", registered: true },
+          proof: { artifact: "mission-envelope", schema: "bizra.demo.proof.v0.1" },
+        };
+
+        const MISSIONS = [
+          mission("M1", "Node0 metadata index", "Scan local state as metadata-only and seal the first receipt.", "node0_index", { evidence: "index" }),
+          mission("M2", "Tampered evidence", "Evidence body and hash disagree; proof lane should refuse it.", "proof_check", { evidence: "tampered" }),
+          mission("M3", "Malformed envelope", "The schema is missing, so the code/state lane should catch it.", null, { schema: null, evidence: "proof" }),
+          mission("M4", "CI-gated merge review", "Requires CI availability; if CI is off, route outward.", "ci_review", { requires: { ci: true }, evidence: "ci" }),
+          mission("M5", "Companion device handoff", "Requires a registered phone before the receipt can claim connection.", "device_handoff", { requires: { phone: true }, evidence: "phone" }),
+          mission("M6", "Simulated impact mint", "Attempts to mint from a simulated result; the mint gate must block.", "impact_preview", { mint: true, impact: "SIMULATED", evidence: "proof" }),
+          mission("M7", "Cost claimed as value", "Records a cost receipt but tries to call it value; the value gate relabels it.", "cost_record", { value: "COST_AS_VALUE", evidence: "proof" }),
+          mission("M8", "Receipt replay proof", "A second clean proof mission for reaching READY_LOCAL through real chain replay.", "receipt_replay", { evidence: "proof" }),
+        ];
+
+        function mission(id, title, summary, taskClass, opts = {}) {
+          return {
+            id,
+            title,
+            summary,
+            schema: opts.schema === null ? null : "bizra.cockpit.mission.v0.1",
+            task_class: taskClass,
+            risk_class: opts.mint ? "high" : "low",
+            requires: opts.requires || {},
+            impact: { status: opts.impact || "NOT_REQUESTED" },
+            mint_requested: Boolean(opts.mint),
+            value_claim: opts.value || "none",
+            evidence_key: opts.evidence || "proof",
+          };
+        }
+
+        function q(id) {
+          return document.getElementById(id);
+        }
+
+        function canonicalJson(value) {
+          if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+          if (value && typeof value === "object") {
+            return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
+          }
+          return JSON.stringify(value);
+        }
+
+        async function sha256Hex(input) {
+          if (!crypto || !crypto.subtle) throw new Error("Web Crypto is unavailable; secure context is required.");
+          state.boundary.content_hash_performed = true;
+          const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+          return `sha256:${Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("")}`;
+        }
+
+        async function evidenceFor(mission) {
+          if (mission.evidence_key === "tampered") {
+            return [{ kind: "proof", body: { artifact: "mission-envelope", altered_score: 97 }, hash: "sha256:tampered" }];
+          }
+          const body = evidenceBodies[mission.evidence_key] || evidenceBodies.proof;
+          return [{ kind: mission.evidence_key, body, hash: await sha256Hex(canonicalJson(body)) }];
+        }
+
+        function scoreSnr(text) {
+          const signal = ["verify", "hash", "receipt", "evidence", "consent", "proof", "seal", "local", "schema"];
+          const noise = ["maybe", "ultimate", "singularity", "infinite", "guaranteed", "magical", "unstoppable"];
+          const words = text.toLowerCase().split(/[^a-z0-9]+/);
+          const s = words.filter((w) => signal.includes(w)).length;
+          const n = words.filter((w) => noise.includes(w)).length;
+          return Math.round(((s + 1) / (s + n + 2)) * 100);
+        }
+
+        function consentPhraseFor(hash) {
+          return `I CONSENT: SEAL MISSION ${hash.slice(7, 19)}`;
+        }
+
+        function broadConsent(input) {
+          return ["go", "yes", "y", "ok", "okay", "approved", "do it"].includes(input.trim().toLowerCase());
+        }
+
+        async function runGateChain(mission, consentInput = null) {
+          const missionEnvelope = { ...mission, evidence: await evidenceFor(mission) };
+          const missionHash = await sha256Hex(canonicalJson(missionEnvelope));
+          const trace = [];
+          const add = (gateId, status, note) => {
+            const gate = DOXOLOGY_GATES.find((g) => g.id === gateId);
+            state.fired.add(gateId);
+            trace.push({ gate_id: gateId, stage: gate.stage, status, lens: gate.lens, doxology_line: gate.line, note });
+          };
+
+          if (mission.schema !== "bizra.cockpit.mission.v0.1" || !mission.task_class) {
+            add("code", "FAIL", "Mission schema or task_class is missing.");
+            return finalizeReceipt(mission, missionHash, trace, "REFUSED", "schema_failure");
+          }
+          add("code", "PASS", "Mission envelope shape is complete.");
+
+          for (const ev of missionEnvelope.evidence) {
+            const actual = await sha256Hex(canonicalJson(ev.body));
+            if (actual !== ev.hash) {
+              add("proof", "FAIL", "Evidence hash mismatch.");
+              return finalizeReceipt(mission, missionHash, trace, "REFUSED", "proof_hash_mismatch");
+            }
+          }
+          add("proof", "PASS", "Evidence hashes replay.");
+
+          if (mission.requires.ci && !state.env.ciAvailable) {
+            add("world", "FAIL", "Required CI rail is not available.");
+            add("ci", "FAIL", "CI unavailable is an environment failure, not code failure.");
+            return finalizeReceipt(mission, missionHash, trace, "REFUSED", "ci_unavailable");
+          }
+          if (mission.requires.ci) add("ci", "PASS", "CI rail is available.");
+
+          if (mission.requires.phone && !state.env.phoneRegistered) {
+            add("world", "FAIL", "Required phone is not registered.");
+            add("phone", "FAIL", "Device connection claim is blocked.");
+            return finalizeReceipt(mission, missionHash, trace, "REFUSED", "phone_not_registered");
+          }
+          if (mission.requires.phone) add("phone", "PASS", "Phone registration is present.");
+          add("world", "PASS", "Environment gates are satisfied.");
+
+          if (consentInput === null) {
+            state.pending = { mission, missionHash, trace, phrase: consentPhraseFor(missionHash) };
+            render();
+            return null;
+          }
+
+          if (broadConsent(consentInput)) {
+            add("consent", "FAIL", "Broad phrases are never consent.");
+            return finalizeReceipt(mission, missionHash, trace, "REFUSED", "broad_consent_rejected");
+          }
+          if (consentInput.trim() !== consentPhraseFor(missionHash)) {
+            add("consent", "FAIL", "Exact consent phrase did not match mission hash.");
+            return finalizeReceipt(mission, missionHash, trace, "REFUSED", "missing_exact_consent");
+          }
+          add("consent", "PASS", "Consent phrase matches the mission hash.");
+
+          if (mission.mint_requested && mission.impact.status !== "VERIFIED") {
+            add("mint", "FAIL", "Impact is simulated or unverified; mint preview is zero.");
+            return finalizeReceipt(mission, missionHash, trace, "REFUSED", "simulated_impact_no_mint");
+          }
+
+          if (mission.value_claim === "COST_AS_VALUE") {
+            add("value", "REPAIR", "Cost receipt is relabeled as cost, not value.");
+            return finalizeReceipt(mission, missionHash, trace, "SEALED_WITH_REPAIR", "cost_relabelled");
+          }
+
+          return finalizeReceipt(mission, missionHash, trace, "SEALED", null);
+        }
+
+        function buildFdeDiagnosis(receipt) {
+          const failed = receipt.gate_trace.find((t) => t.status === "FAIL");
+          if (!failed) {
+            return { class: "none", lens: "none", lane: "ready_local", fix: "No repair required for this local receipt." };
+          }
+          const lane = failed.lens === "outward" ? "repair_environment" : failed.lens === "economic" ? "repair_claim_boundary" : "repair_logic_or_proof";
+          return { class: receipt.blocked_reason, lens: failed.lens, lane, fix: failed.note };
+        }
+
+        async function finalizeReceipt(mission, missionHash, trace, verdict, blockedReason) {
+          const previous = state.lastHash || state.genesisHash;
+          const receipt = {
+            schema: "bizra.cockpit.receipt.v0.1",
+            truth_label: "COCKPIT_LOCAL_DEMO",
+            receipt_id: `receipt_${String(state.receipts.length + 1).padStart(3, "0")}`,
+            mission_id: mission.id,
+            mission_title: mission.title,
+            sequence: state.receipts.length + 1,
+            verdict,
+            ready_local_counted: verdict === "SEALED",
+            mission_hash: missionHash,
+            snr_score: scoreSnr(`${mission.title} ${mission.summary}`),
+            gate_trace: trace,
+            fde: null,
+            consent: { required: true, exact_phrase_verified: trace.some((t) => t.gate_id === "consent" && t.status === "PASS") },
+            mint_preview: { live_mint: false, bzr_c: 0, bzr_i: 0, blocked_reason: blockedReason || "no_live_mint_in_demo" },
+            boundary: { ...state.boundary },
+            previous_hash: previous,
+          };
+          receipt.fde = buildFdeDiagnosis(receipt);
+          receipt.current_hash = await sha256Hex(canonicalJson(receipt));
+          state.receipts.push(receipt);
+          state.lastHash = receipt.current_hash;
+          state.lastTrace = trace;
+          state.pending = null;
+          state.chainVerified = false;
+          render();
+          return receipt;
+        }
+
+        async function verifyChainIntegrity() {
+          let previous = state.genesisHash;
+          for (const receipt of state.receipts) {
+            const { current_hash, ...body } = receipt;
+            if (body.previous_hash !== previous) {
+              state.chainVerified = false;
+              return renderDiagnosis("Chain break: previous hash mismatch.", true);
+            }
+            const replay = await sha256Hex(canonicalJson(body));
+            if (replay !== current_hash) {
+              state.chainVerified = false;
+              return renderDiagnosis("Chain break: receipt hash mismatch.", true);
+            }
+            previous = current_hash;
+          }
+          state.chainVerified = true;
+          render();
+        }
+
+        function boundaryClean() {
+          const forbidden = ["file_read_performed", "file_write_performed", "public_network_used", "model_invoked", "storage_persisted", "live_mint_performed"];
+          return state.receipts.every((receipt) => forbidden.every((key) => receipt.boundary[key] === false));
+        }
+
+        function readyLocal() {
+          return state.receipts.filter((r) => r.ready_local_counted).length >= 3 && state.chainVerified && boundaryClean();
+        }
+
+        function render() {
+          renderTruthChips();
+          renderDoxology();
+          renderMissions();
+          renderPipeline();
+          renderConsent();
+          renderMetrics();
+          renderReceipts();
+          renderDiagnosis();
+        }
+
+        function renderTruthChips() {
+          q("truthChips").replaceChildren(
+            chip("COCKPIT_LOCAL_DEMO"),
+            chip("REAL_SHA-256"),
+            chip("IN_MEMORY_ONLY"),
+            chip(readyLocal() ? "READY_LOCAL" : "READY_REMOTE_LOCKED", readyLocal()),
+          );
+        }
+
+        function chip(text, ready = false) {
+          const el = document.createElement("span");
+          el.className = `chip${ready ? " ready" : ""}`;
+          el.textContent = text;
+          return el;
+        }
+
+        function renderDoxology() {
+          const list = q("doxologyRail");
+          list.replaceChildren();
+          for (const gate of DOXOLOGY_GATES) {
+            const li = document.createElement("li");
+            li.className = state.fired.has(gate.id) ? "fired" : "";
+            li.textContent = gate.line;
+            list.append(li);
+          }
+        }
+
+        function renderMissions() {
+          const grid = q("missionGrid");
+          grid.replaceChildren();
+          for (const mission of MISSIONS) {
+            const card = document.createElement("article");
+            card.className = `card${mission.id === state.selectedId ? " selected" : ""}`;
+            const title = document.createElement("h3");
+            title.textContent = `${mission.id} · ${mission.title}`;
+            const body = document.createElement("p");
+            body.textContent = mission.summary;
+            const meta = document.createElement("p");
+            meta.className = "small";
+            meta.textContent = `SNR ${scoreSnr(`${mission.title} ${mission.summary}`)} · risk ${mission.risk_class}`;
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = "Run gate chain";
+            button.addEventListener("click", async () => {
+              state.selectedId = mission.id;
+              await runGateChain(mission);
+            });
+            card.append(title, body, meta, button);
+            grid.append(card);
+          }
+        }
+
+        function renderPipeline() {
+          const pipe = q("pipeline");
+          pipe.replaceChildren();
+          for (const gate of DOXOLOGY_GATES) {
+            const trace = [...(state.pending?.trace || []), ...state.lastTrace].find((t) => t.gate_id === gate.id);
+            const node = document.createElement("div");
+            node.className = `gate ${trace ? trace.status.toLowerCase() : ""}`;
+            const strong = document.createElement("strong");
+            strong.textContent = gate.stage;
+            const span = document.createElement("span");
+            span.textContent = trace ? trace.status : "PENDING";
+            node.append(strong, span);
+            pipe.append(node);
+          }
+        }
+
+        function renderConsent() {
+          const box = q("consentBox");
+          box.className = `consent-box${state.pending ? " visible" : ""}`;
+          q("consentPhrase").textContent = state.pending?.phrase || "";
+          q("consentInput").value = state.pending ? q("consentInput").value : "";
+        }
+
+        function renderMetrics() {
+          const sealed = state.receipts.filter((r) => r.ready_local_counted).length;
+          const fired = state.fired.size;
+          q("metrics").replaceChildren(metric("sealed", sealed, "of 3"), metric("laws", fired, "of 8"), metric("chain", state.chainVerified ? "PASS" : "OPEN", ""));
+          q("exportButton").disabled = !readyLocal();
+          q("ciToggle").textContent = `CI available: ${state.env.ciAvailable ? "on" : "off"}`;
+          q("phoneToggle").textContent = `Phone registered: ${state.env.phoneRegistered ? "on" : "off"}`;
+          q("ciToggle").className = state.env.ciAvailable ? "active" : "";
+          q("phoneToggle").className = state.env.phoneRegistered ? "active" : "";
+        }
+
+        function metric(label, value, suffix) {
+          const el = document.createElement("div");
+          el.className = "metric";
+          const b = document.createElement("b");
+          b.textContent = value;
+          const s = document.createElement("span");
+          s.className = "small";
+          s.textContent = `${label} ${suffix}`;
+          el.append(b, s);
+          return el;
+        }
+
+        function renderReceipts() {
+          const chain = q("receiptChain");
+          chain.replaceChildren();
+          for (const receipt of [...state.receipts].reverse()) {
+            const item = document.createElement("article");
+            item.className = `receipt ${receipt.verdict === "REFUSED" ? "refused" : "sealed"}`;
+            const title = document.createElement("strong");
+            title.textContent = `${receipt.receipt_id} · ${receipt.verdict}`;
+            const mission = document.createElement("p");
+            mission.className = "small";
+            mission.textContent = receipt.mission_title;
+            const hash = document.createElement("p");
+            hash.className = "hash";
+            hash.textContent = receipt.current_hash;
+            item.append(title, mission, hash);
+            chain.append(item);
+          }
+        }
+
+        function renderDiagnosis(message = null, fail = false) {
+          const box = q("diagnosis");
+          const latest = state.receipts.at(-1);
+          box.className = `diagnosis${fail || latest?.verdict === "REFUSED" ? " fail" : ""}`;
+          if (message) {
+            box.textContent = message;
+            return;
+          }
+          if (!latest) {
+            box.textContent = "No mission has run yet.";
+            return;
+          }
+          box.textContent = `FDE ${latest.fde.lens}: ${latest.fde.lane}. ${latest.fde.fix}`;
+        }
+
+        function exportJson() {
+          const payload = { schema: "bizra.cockpit.export.v0.1", truth_label: "COCKPIT_LOCAL_DEMO", genesis_hash: state.genesisHash, ready_local: readyLocal(), receipts: state.receipts };
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "bizra-doxology-proof-cockpit-chain.json";
+          a.click();
+          URL.revokeObjectURL(a.href);
+        }
+
+        async function reset() {
+          state.receipts = [];
+          state.lastHash = state.genesisHash;
+          state.lastTrace = [];
+          state.pending = null;
+          state.fired = new Set();
+          state.chainVerified = false;
+          render();
+        }
+
+        async function init() {
+          state.genesisHash = await sha256Hex(canonicalJson({ schema: "bizra.cockpit.genesis.v0.1", truth_label: "COCKPIT_LOCAL_DEMO" }));
+          state.lastHash = state.genesisHash;
+          q("ciToggle").addEventListener("click", () => {
+            state.env.ciAvailable = !state.env.ciAvailable;
+            render();
+          });
+          q("phoneToggle").addEventListener("click", () => {
+            state.env.phoneRegistered = !state.env.phoneRegistered;
+            render();
+          });
+          q("verifyButton").addEventListener("click", verifyChainIntegrity);
+          q("exportButton").addEventListener("click", exportJson);
+          q("resetButton").addEventListener("click", reset);
+          q("sealButton").addEventListener("click", async () => {
+            if (!state.pending) return;
+            const { mission } = state.pending;
+            await runGateChain(mission, q("consentInput").value);
+            q("consentMessage").textContent = "";
+          });
+          q("cancelButton").addEventListener("click", async () => {
+            if (!state.pending) return;
+            await runGateChain(state.pending.mission, "");
+          });
+          render();
+        }
+
+        init().catch((error) => {
+          document.body.textContent = `COCKPIT REFUSED: ${error.message}`;
+        });
+      })();
+    </script>
+  </body>
+</html>

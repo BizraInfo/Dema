@@ -42,6 +42,7 @@ const COMMAND_SURFACE = [
   "status",
   "status:json",
   "state",
+  "node0-index",
   "start",
   "scan",
   "mirror",

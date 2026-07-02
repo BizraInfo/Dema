@@ -104,6 +104,8 @@ export const IO_TIER_ALLOWLIST = Object.freeze({
     "persists first-run intro/counter state under ~/.dema (mkdir+write; persistence I/O by design)",
   "local-asset-awareness.js":
     "writes the local asset inventory under ~/.dema via atomic write+rename (persistence I/O by design)",
+  "node0-space-index.js":
+    "metadata-only Node0 filesystem census with optional exact-consent content hashing and DEMA_HOME checkpoint persistence (I/O tier by design)",
   "master-craftsmanship-audit.js":
     "external-witness audit log; injected fs with a node:fs/promises fallback (persistence I/O by design; DI-pure when fs is injected)",
   "operator-profile.js":
