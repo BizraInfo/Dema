@@ -35,10 +35,11 @@ Pre-action preview surfaces (#301–#305) route toward this spine but remain
 
 Provenance receipt: [`docs/receipts/NODE0_SPINE_PROVENANCE_RECEIPT_1A.md`](../receipts/NODE0_SPINE_PROVENANCE_RECEIPT_1A.md).
 
-## Capability truth registry (twelve spine rows)
+## Capability truth registry (spine rows)
 
-At trunk HEAD after #312, `dema-capability-truth-registry.js` binds twelve
-pre-action / execute spine capabilities. Execute-adjacent measured rows:
+At trunk HEAD, `dema-capability-truth-registry.js` binds the current set of
+pre-action / execute spine capabilities (count = `registry.capability_count`,
+derived — do not pin). Execute-adjacent measured rows:
 
 | capability_id | truth_label |
 | ------------- | ----------- |
@@ -68,7 +69,7 @@ Preview rows (#301–#305, FDE, coverage gate, file steward) remain
 ## Verify on disk
 
 ```bash
-npm test                                    # expect # tests 6033 · # pass 6033
+npm test                                    # expect # fail 0 (count grows — do not pin)
 npm run check                               # includes spine review gates
 node bin/dema node0 ladder --json           # activate rung gated
 node --test tests/node0-reversible-execute-gate.test.js

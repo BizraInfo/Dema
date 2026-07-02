@@ -178,7 +178,7 @@ Read this table top-to-bottom whenever a proposal touches any of these component
 
 - **Status**: `ACTIVE`
 - **Purpose**: The gates that keep doctrine load-bearing. If a gate is bypassed, the doctrine is no longer protected by mechanism.
-- **Proof boundary**: `npm test`, `npm run check`, `npm run llm:guidance`, `git diff --check`, and release-readiness checks. Receipts are minted only when gates green.
+- **Proof boundary**: `npm test`, `npm run check`, `npm run llm:guidance`, `git diff --check`, and release-readiness checks. Receipts are issued only when gates green.
 - **Forbidden overclaim**: Skipping gates with `--no-verify`; declaring complete when a guidance check still fails.
 
 ## 20. Public Face / GTM Layer
