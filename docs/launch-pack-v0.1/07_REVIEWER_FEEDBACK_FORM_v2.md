@@ -168,11 +168,11 @@ If you found a critical security issue, send it ENCRYPTED. Mumu's public Ed25519
 1. Mumu reads your feedback
 2. Coordinator parses your findings · identifies amendments needed
 3. Each significant finding gets an amendment ADR (or supersedes an existing ADR)
-4. A content-addressed receipt for your feedback is recorded locally · truth label includes your pseudonym (chain-anchoring is DESIGNED_NOT_LIVE / preview)
+4. Receipt #N+1 is minted to anchor the feedback to the chain · truth label includes your pseudonym
 5. Phase 1 of 90-Day GTM v0.1.1 closes
 6. You may be invited to Ring-2 (after Phase 1 close) if you indicated willingness in §6
 
-Your feedback is recorded in BIZRA's local proof history (a live, permanent chain is DESIGNED_NOT_LIVE / preview).
+The chain witnesses your participation forever. Your feedback becomes part of BIZRA's constitutional history.
 
 ---
 
