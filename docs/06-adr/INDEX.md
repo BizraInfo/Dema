@@ -4,7 +4,7 @@
 >
 > **Format:** Lightweight ADR records (`# ADR-NNN: Title` · `**Status:**` · `**Date:**` · `## Context` / `## Decision` / `## Consequences` sections, with the older records lighter on the consequences section). Status values: `Accepted` · `Proposed` · `Parking lot` · `Superseded`.
 >
-> **Last refreshed:** 2026-06-26 GST against `main @ 325510b` (added ADR-042 operator bridge threat model).
+> **Last refreshed:** 2026-07-03 GST against `feat/node0-spine-runner-cli-1a @ 6dc3062` (added ADR-043 pattern-first Node-Space / Away Contract / Quest kernel).
 >
 > **2026-06-24 addendum (not a full re-review):** the five framework kernels
 > shipped in #233–#238 (HHMM, hash-table-knowledge-index, self-awareness,
@@ -62,6 +62,7 @@
 | [040](ADR-040-pat-sat-blackboard-dry-run-1a.md) | PAT/SAT Blackboard Dry-Run (PAT-SAT-BLACKBOARD-DRY-RUN-1A) | Accepted | 2026-06-24 | Deterministic precondition-driven shared-state board sequencing PAT (discover/draft/propose/self_critique) and SAT (verify/gate/refuse_or_permit_preview/critique) entries from a `{pain,goal}` seed; PREVIEW_ONLY, boundary all-false, body-bound verify; the activate rung stays operator-only. |
 | [041](ADR-041-pat-sat-blackboard-live-1a.md) | PAT-SAT-BLACKBOARD-LIVE-1A — single-step live suggestion | Accepted | 2026-06-24 | One exact-consent-gated, localhost-only, suggestion-only local-model call for the PAT `propose` seat via `invokeDemaTalkLive`; `model_invocation_performed` may be true (honest), the 10 forbidden runtime-emission keys + autonomy stay false; not autonomous coordination. |
 | [042](ADR-042-operator-bridge-threat-model.md) | Operator Bridge Threat Model | Accepted | 2026-06-26 | Documents high-trust operator bridge env vars (Node0 shell-out, gateway HTTP, localhost LLM probes, memory query wrapper); read-only review gate; no runtime/activation/token change. |
+| [043](ADR-043-pattern-first-nodespace-away-contract-quest-kernel.md) | Pattern-First Node-Space, Away Contracts, Quest Kernel | Accepted | 2026-07-03 | Kernel stays authoritative/zero-dep; LLM at the edge; Away Contract grammar, quest state machine, capability envelopes, Cedar/EIP-712/VC/Temporal/Wasm/A2A adopted as reference patterns only — live dependencies explicitly refused pending their own ADR + tests + threat model. |
 
 > **ADR-039 is intentionally absent:** it was a draft for the CLAUDE-OPERATING-LAYER work that was discarded as NOT_MERGED orphan (never committed), so the on-disk sequence skips 039. (Noted 2026-06-25.)
 
