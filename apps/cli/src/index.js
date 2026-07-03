@@ -1095,7 +1095,7 @@ async function cmdCovenant(ctx) {
     }
     try {
       const decision = JSON.parse(readFileSync(file, "utf8"));
-      const receipt = signReceipt(decision, typedGo);
+      const receipt = signReceipt(decision, typedGo, process.env.DEMA_COVENANT_KEY);
       if (wantJson) {
         console.log(JSON.stringify(receipt, null, 2));
       } else {

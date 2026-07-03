@@ -130,13 +130,23 @@ test("signReceipt requires decision-bound exact micro-consent and produces a dem
   assert.throws(() => signReceipt(decision, "GO"), /Micro-consent failed/);
   assert.throws(() => signReceipt(decision, `${phrase} `), /Micro-consent failed/);
 
-  const receipt = signReceipt(decision, phrase);
+  const receipt = signReceipt(decision, phrase, "test-only-covenant-key");
   assert.equal(receipt.payload.schema, "bizra.dema.consent_receipt.v0.1");
   assert.equal(receipt.payload.micro_consent.decision_id, decision.decision_id);
   assert.equal(receipt.payload.micro_consent.expected_phrase, phrase);
   assert.ok(receipt.receipt_id.startsWith("sha256:"));
   assert.ok(receipt.signature);
   assert.ok(/DEMO signature only/.test(receipt.warning));
+});
+
+test("S1: signReceipt fails closed when no signing key is provided (demo fallback removed)", () => {
+  const decision = screenAt(EXAMPLE_PROPOSAL);
+  const phrase = expectedConsentPhrase(decision);
+
+  assert.throws(() => signReceipt(decision, phrase), /signing key missing/i);
+  assert.throws(() => signReceipt(decision, phrase, ""), /signing key missing/i);
+  assert.throws(() => signReceipt(decision, phrase, "   "), /signing key missing/i);
+  assert.throws(() => signReceipt(decision, phrase, Buffer.alloc(0)), /signing key missing/i);
 });
 
 test("C2: malformed decision ID cannot produce consent phrase or receipt", () => {
