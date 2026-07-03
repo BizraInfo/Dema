@@ -201,6 +201,12 @@ Orientation:
                     (--dema-home > DEMA_HOME > ~/.dema; printed as
                     resolved_dema_home on every path, no overwrite).
                     Recording is not starting — no Away Mode.
+  dema away preview [--contract-file <contract.json>] [--validation-file <validation.json>] [--receipt-file <receipt.json>] [--now <iso>] [--json]
+                    ABSENCE-STEWARD readiness report: derives
+                    NOT_CONFIGURED / CONTRACT_VERIFIED / PREVIEW_READY /
+                    EXPIRED / REFUSED from the trio. Report only — exits
+                    after reporting; PREVIEW_READY grants nothing; the
+                    start surface does not exist and stays refused.
   dema witness [--dry-run] [--json]
                     Node0 self-witness receipt; requires --consent to save
   dema witness verify [--file <path>] [--json]
