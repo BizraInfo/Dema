@@ -243,6 +243,100 @@ test("duplicate receipt rejects on second run", async () => {
   });
 });
 
+test("JSON output disclosed resolved_dema_home matching the env home", async () => {
+  await withDir(async (dir) => {
+    const home = join(dir, "dema-home");
+    const { contractFile, validationFile, phrase } = writeFixture(dir, validContract());
+    const r = await runCli(
+      [
+        "away", "receipt",
+        "--contract-file", contractFile,
+        "--validation-file", validationFile,
+        "--now", NOW_ISO,
+        "--consent", phrase,
+        "--json",
+      ],
+      { DEMA_HOME: home },
+    );
+    assert.equal(r.code, 0, r.stderr);
+    const out = JSON.parse(r.stdout);
+    assert.equal(out.resolved_dema_home, home);
+    assert.ok(out.receipt_path.startsWith(home));
+  });
+});
+
+test("--dema-home flag overrides DEMA_HOME env and the write lands under it", async () => {
+  await withDir(async (dir) => {
+    const flagHome = join(dir, "flag-home");
+    const envHome = join(dir, "env-home");
+    const { contractFile, validationFile, phrase } = writeFixture(dir, validContract());
+    const r = await runCli(
+      [
+        "away", "receipt",
+        "--contract-file", contractFile,
+        "--validation-file", validationFile,
+        "--now", NOW_ISO,
+        "--consent", phrase,
+        "--dema-home", flagHome,
+        "--json",
+      ],
+      { DEMA_HOME: envHome },
+    );
+    assert.equal(r.code, 0, r.stderr);
+    const out = JSON.parse(r.stdout);
+    assert.equal(out.resolved_dema_home, flagHome);
+    assert.ok(out.receipt_path.startsWith(flagHome));
+    assert.ok(existsSync(out.receipt_path));
+    assert.equal(existsSync(join(envHome, "away-contracts")), false);
+  });
+});
+
+test("with neither flag nor env, the ~/.dema fallback is DISCLOSED on a consent-missing reject — nothing written", async () => {
+  await withDir(async (dir) => {
+    const { contractFile, validationFile } = writeFixture(dir, validContract());
+    // No --dema-home, DEMA_HOME blanked: CLI discloses the real-home fallback.
+    // Consent deliberately missing so the run rejects BEFORE any mkdir — the
+    // test must never write into the operator's real ~/.dema.
+    const r = await runCli(
+      [
+        "away", "receipt",
+        "--contract-file", contractFile,
+        "--validation-file", validationFile,
+        "--now", NOW_ISO,
+        "--json",
+      ],
+      { DEMA_HOME: "" },
+    );
+    assert.equal(r.code, 1);
+    const out = JSON.parse(r.stdout);
+    assert.equal(out.written, false);
+    assert.ok(out.blocked_by.includes("consent_missing"));
+    assert.ok(out.resolved_dema_home.endsWith(".dema"));
+    assert.ok(out.expected_consent.startsWith("GO: write away-contract receipt "));
+  });
+});
+
+test("consent mismatch still disclosed expected_consent AND resolved home in human output", async () => {
+  await withDir(async (dir) => {
+    const home = join(dir, "dema-home");
+    const { contractFile, validationFile, phrase } = writeFixture(dir, validContract());
+    const r = await runCli(
+      [
+        "away", "receipt",
+        "--contract-file", contractFile,
+        "--validation-file", validationFile,
+        "--now", NOW_ISO,
+        "--consent", `${phrase}x`,
+      ],
+      { DEMA_HOME: home },
+    );
+    assert.equal(r.code, 1);
+    assert.match(r.stdout, /expected_consent: GO: write away-contract receipt /);
+    assert.match(r.stdout, /resolved_dema_home: /);
+    assert.equal(existsSync(join(home, "away-contracts")), false);
+  });
+});
+
 test("result boundary stays all-false even on the write path", async () => {
   await withDir(async (dir) => {
     const home = join(dir, "dema-home");

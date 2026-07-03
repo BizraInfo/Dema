@@ -201,6 +201,7 @@ function renderReceiptHuman(result) {
     `verdict: ${result.written ? "WRITTEN" : "REJECTED"}`,
     `contract_id: ${result.contract_id ?? "-"}`,
     `contract_hash: ${result.contract_hash ?? "-"}`,
+    `resolved_dema_home: ${result.resolved_dema_home}`,
     `receipt_path: ${result.receipt_path ?? "-"}`,
     `receipt_hash: ${result.receipt_hash ?? "-"}`,
   ];
@@ -225,7 +226,7 @@ async function cmd_away_receipt(argv) {
   const contractFile = argValue(argv, "--contract-file");
   if (!contractFile) {
     console.error(
-      'usage: dema away receipt --contract-file <contract.json> --validation-file <validation.json> --now <iso> --consent "<exact phrase>" [--json]',
+      'usage: dema away receipt --contract-file <contract.json> --validation-file <validation.json> --now <iso> --consent "<exact phrase>" [--dema-home <path>] [--json]',
     );
     process.exitCode = 1;
     return;
@@ -261,7 +262,9 @@ async function cmd_away_receipt(argv) {
   // Verify-before-write: the CLI derives the verify verdict itself (read-only)
   // and hands the whole trio to the fail-closed writer.
   const verify_result = verifyAwayContract({ contract, validation_result }, { now_iso: nowIso });
-  const home = process.env.DEMA_HOME || join(homedir(), ".dema");
+  // Destination is disclosed, never silent: --dema-home > DEMA_HOME > ~/.dema.
+  const home =
+    argValue(argv, "--dema-home") || process.env.DEMA_HOME || join(homedir(), ".dema");
 
   const result = await writeAwayContractReceipt(
     {
@@ -272,11 +275,12 @@ async function cmd_away_receipt(argv) {
     },
     { dema_home: home, now_iso: nowIso },
   );
+  const disclosed = { ...result, resolved_dema_home: home };
 
   if (wantJson) {
-    console.log(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify(disclosed, null, 2));
   } else {
-    console.log(renderReceiptHuman(result));
+    console.log(renderReceiptHuman(disclosed));
   }
   if (!result.written) process.exitCode = 1;
 }

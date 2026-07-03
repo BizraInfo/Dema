@@ -193,12 +193,14 @@ Orientation:
                     normalized body + hash, launder catches). Read-only;
                     verify never infers a validation_result, writes nothing,
                     starts nothing. Act-time is the declared --now value.
-  dema away receipt [--contract-file <contract.json>] [--validation-file <validation.json>] [--now <iso>] [--consent "<phrase>"] [--json]
+  dema away receipt [--contract-file <contract.json>] [--validation-file <validation.json>] [--now <iso>] [--consent "<phrase>"] [--dema-home <path>] [--json]
                     AWAY-CONTRACT-CLI-RECEIPT-1A: record a verified Away
                     Contract as a receipt. Verify-before-write; exact phrase
                     "GO: write away-contract receipt <id> <hash12>" required;
-                    single atomic write under DEMA_HOME/away-contracts/receipts
-                    (no overwrite). Recording is not starting — no Away Mode.
+                    single atomic write under the DISCLOSED resolved home
+                    (--dema-home > DEMA_HOME > ~/.dema; printed as
+                    resolved_dema_home on every path, no overwrite).
+                    Recording is not starting — no Away Mode.
   dema witness [--dry-run] [--json]
                     Node0 self-witness receipt; requires --consent to save
   dema witness verify [--file <path>] [--json]
