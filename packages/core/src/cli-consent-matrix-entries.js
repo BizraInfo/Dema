@@ -84,6 +84,13 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     ["tests/dema-stand.test.js", "tests/dema-stand-cli.test.js"],
   ),
   row(
+    "poi",
+    ["read_only", "preview_only", "local_write"],
+    "exact_phrase",
+    "PoI time-compression candidate card is read-only compose; receipt write under DEMA_HOME/poi/compression requires the exact consent phrase",
+    ["tests/poi-time-compression.test.js", "tests/poi-time-compression-cli.test.js"],
+  ),
+  row(
     "witness",
     ["local_write"],
     "exact_phrase",

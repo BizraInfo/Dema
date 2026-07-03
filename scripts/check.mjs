@@ -30,6 +30,7 @@ export const commands = [
   ["node", ["scripts/review/node0-local-closure-readiness-check.mjs"]],
   ["node", ["scripts/review/dema-stand-check.mjs"]],
   ["node", ["scripts/review/dema-steward-chain-check.mjs"]],
+  ["node", ["scripts/review/poi-time-compression-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
   ["node", ["scripts/review/boundary-vocab-unification-check.mjs"]],
   ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],

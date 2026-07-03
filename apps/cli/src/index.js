@@ -40,6 +40,7 @@ import { cmd_attest } from "./commands/attest.js";
 import { cmd_verify_grounded } from "./commands/verify-grounded.js";
 import { cmd_assets } from "./commands/assets.js";
 import { cmd_stand } from "./commands/stand.js";
+import { cmd_poi } from "./commands/poi.js";
 import { cmd_contribute } from "./commands/contribute.js";
 import { cmd_demo } from "./commands/demo.js";
 import { cmd_status, cmd_status_json } from "./commands/status.js";
@@ -167,6 +168,18 @@ Orientation:
                     every standing receipt on disk, checks consecutive UTC
                     days, and reports day-N-of-7 / broken / complete honestly.
                     Days cannot be fabricated; read-only.
+  dema poi compression record [--json] [--receipt --consent "<phrase>"]
+                    POI-TIME-COMPRESSION-1A candidate receipt: operator-declared
+                    baseline estimate vs actual proof-loop duration under
+                    required quality gates. A failed gate refuses the receipt;
+                    baseline stays a declared assumption; observation-time is a
+                    separate clock. Candidate only — no verified impact, no mint.
+                    Receipt writes only under DEMA_HOME/poi/compression/receipts
+                    with the exact consent phrase.
+  dema poi compression show [--json]
+                    List recorded time-compression candidate receipts (read-only)
+  dema poi compression verify [--json]
+                    Re-verify every recorded candidate receipt; fails closed
   dema witness [--dry-run] [--json]
                     Node0 self-witness receipt; requires --consent to save
   dema witness verify [--file <path>] [--json]
@@ -797,6 +810,11 @@ const REGISTERED_COMMANDS_LIST = [
     command: "witness",
     description: "Node0 self-witness receipt (consent-gated)",
   },
+  {
+    command: "poi",
+    description:
+      "PoI time-compression candidate receipts (subcommands: compression record|show|verify)",
+  },
   { command: "help", description: "show full command list" },
 ];
 
@@ -1117,6 +1135,7 @@ const COMMAND_TABLE = {
   "setup-check": cmd_setup_check,
   uninstall: cmd_uninstall,
   stand: cmd_stand,
+  poi: cmd_poi,
   witness: cmd_witness,
   authorship: cmd_authorship,
   proof: cmd_proof,

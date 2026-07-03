@@ -40,6 +40,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_LOCAL_CLOSURE_READINESS_1A",
   "DEMA_STAND_1A",
   "DEMA_STEWARD_CHAIN_1A",
+  "POI_TIME_COMPRESSION_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -703,6 +704,35 @@ function defaultCapabilityRows() {
         "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
       what_this_proves:
         "The FIRST_USER standing-receipt chain state (consecutive UTC days, per-receipt hash validity, drain series) is derived deterministically and a COMPLETE verdict can only arise from N distinct consecutive verified receipts already on disk — days cannot be fabricated.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "POI_TIME_COMPRESSION_1A",
+      truth_label: "POI_TIME_COMPRESSION_CANDIDATE_LOCAL_ONLY",
+      summary:
+        "Local-only PoI time-compression candidate receipt: declared baseline estimate vs declared actual duration under required quality gates; fail-closed, observation-aware, no mint.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/poi-time-compression.js"],
+        test_paths: ["tests/poi-time-compression.test.js"],
+        review_gate_paths: [
+          "scripts/review/poi-time-compression-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/POI_TIME_COMPRESSION_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/POI_TIME_COMPRESSION_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A declared baseline estimate (reference-class assumption) and a declared actual proof-loop duration can be bound into a fail-closed, content-addressed candidate compression receipt that refuses to exist when any required quality gate failed, keeps proof-time and observation-time as separate clocks, and rejects forged-and-recomputed ratios, gate survival, review flags, or mint flags on re-verification.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
