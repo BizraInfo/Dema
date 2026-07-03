@@ -94,8 +94,12 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     "away",
     ["read_only", "preview_only"],
     "fail_closed_preview",
-    "AWAY-CONTRACT-CLI-DRAFT-1A: `dema away draft` compiles explicit JSON intent into a draft contract body (compilation only, all-false boundary); no DEMA_HOME write, no verify, no receipt, no Away Mode start — receipt writing stays kernel-only behind its own exact phrase",
-    ["tests/away-contract-cli-draft.test.js", "tests/away-contract-compiler.test.js"],
+    "AWAY-CONTRACT CLI (draft + verify rungs): `dema away draft` compiles explicit JSON intent into a draft contract body; `dema away verify` runs the body-bound launder check on contract + validation_result files. Both read-only with all-false boundaries; no DEMA_HOME write, no receipt, no Away Mode start — receipt writing stays kernel-only behind its own exact phrase",
+    [
+      "tests/away-contract-cli-draft.test.js",
+      "tests/away-contract-cli-verify.test.js",
+      "tests/away-contract-compiler.test.js",
+    ],
   ),
   row(
     "witness",

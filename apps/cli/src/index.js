@@ -184,9 +184,15 @@ Orientation:
   dema away draft [--intent-file <intent.json>] [--now <iso>] [--contract-id-prefix <prefix>] [--json]
                     AWAY-CONTRACT-CLI-DRAFT-1A: compile an explicit JSON intent
                     into a draft Away Contract body (ADR-043 ladder). Draft
-                    only — validates shape via the pure compiler; no verify,
-                    no receipt, no DEMA_HOME write, no model call, no network,
-                    no Away Mode start. Act-time is the declared --now value.
+                    only — validates shape via the pure compiler; no receipt,
+                    no DEMA_HOME write, no model call, no network, no Away
+                    Mode start. Act-time is the declared --now value.
+  dema away verify [--contract-file <contract.json>] [--validation-file <validation.json>] [--now <iso>] [--json]
+                    AWAY-CONTRACT-CLI-VERIFY-1A: body-bound check that the
+                    contract still matches its validation_result (whole
+                    normalized body + hash, launder catches). Read-only;
+                    verify never infers a validation_result, writes nothing,
+                    starts nothing. Act-time is the declared --now value.
   dema witness [--dry-run] [--json]
                     Node0 self-witness receipt; requires --consent to save
   dema witness verify [--file <path>] [--json]
