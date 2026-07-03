@@ -3,7 +3,7 @@
  * CLAUDE-OPERATING-LAYER-1B · Stop hook closeout checker (REPORT-ONLY).
  * Nudges when the assistant turn lacks Dema closeout fields. Does not block by default.
  */
-import { appendJsonl, readHookInput, reportOnlyOutput } from "./hook-lib.mjs";
+import { appendJsonl, readHookInput } from "./hook-lib.mjs";
 
 const MODE = process.env.DEMA_HOOK_CLOSEOUT_MODE ?? "report-only";
 
@@ -61,12 +61,9 @@ async function main() {
   }
 
   if (missing.length) {
-    reportOnlyOutput({
-      hookEventName: "Stop",
-      systemMessage: `[Dema closeout · report-only] missing: ${missing.join(", ")}`,
-      message:
-        "Closeout incomplete. Include: What changed · What proof ran · What did not happen · What remains blocked · Next safe action. Skill: proof-closeout.",
-    });
+    // Stop hooks must not emit the context-injection shape used by other hook
+    // events. In report-only mode, keep the diagnostic in the local log.
+    process.stdout.write("{}\n");
   }
 
   process.exit(0);
