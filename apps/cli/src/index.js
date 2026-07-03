@@ -41,6 +41,7 @@ import { cmd_verify_grounded } from "./commands/verify-grounded.js";
 import { cmd_assets } from "./commands/assets.js";
 import { cmd_stand } from "./commands/stand.js";
 import { cmd_poi } from "./commands/poi.js";
+import { cmd_away } from "./commands/away.js";
 import { cmd_contribute } from "./commands/contribute.js";
 import { cmd_demo } from "./commands/demo.js";
 import { cmd_status, cmd_status_json } from "./commands/status.js";
@@ -180,6 +181,12 @@ Orientation:
                     List recorded time-compression candidate receipts (read-only)
   dema poi compression verify [--json]
                     Re-verify every recorded candidate receipt; fails closed
+  dema away draft [--intent-file <intent.json>] [--now <iso>] [--contract-id-prefix <prefix>] [--json]
+                    AWAY-CONTRACT-CLI-DRAFT-1A: compile an explicit JSON intent
+                    into a draft Away Contract body (ADR-043 ladder). Draft
+                    only — validates shape via the pure compiler; no verify,
+                    no receipt, no DEMA_HOME write, no model call, no network,
+                    no Away Mode start. Act-time is the declared --now value.
   dema witness [--dry-run] [--json]
                     Node0 self-witness receipt; requires --consent to save
   dema witness verify [--file <path>] [--json]
@@ -1136,6 +1143,7 @@ const COMMAND_TABLE = {
   uninstall: cmd_uninstall,
   stand: cmd_stand,
   poi: cmd_poi,
+  away: cmd_away,
   witness: cmd_witness,
   authorship: cmd_authorship,
   proof: cmd_proof,

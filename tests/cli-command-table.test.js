@@ -28,6 +28,7 @@ const COMMAND_SURFACE = [
   "uninstall",
   "stand",
   "poi",
+  "away",
   "witness",
   "authorship",
   "proof",

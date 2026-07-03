@@ -91,6 +91,13 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     ["tests/poi-time-compression.test.js", "tests/poi-time-compression-cli.test.js"],
   ),
   row(
+    "away",
+    ["read_only", "preview_only"],
+    "fail_closed_preview",
+    "AWAY-CONTRACT-CLI-DRAFT-1A: `dema away draft` compiles explicit JSON intent into a draft contract body (compilation only, all-false boundary); no DEMA_HOME write, no verify, no receipt, no Away Mode start — receipt writing stays kernel-only behind its own exact phrase",
+    ["tests/away-contract-cli-draft.test.js", "tests/away-contract-compiler.test.js"],
+  ),
+  row(
     "witness",
     ["local_write"],
     "exact_phrase",
