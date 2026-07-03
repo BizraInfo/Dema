@@ -41,6 +41,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_STAND_1A",
   "DEMA_STEWARD_CHAIN_1A",
   "POI_TIME_COMPRESSION_1A",
+  "AWAY_CONTRACT_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -735,6 +736,48 @@ function defaultCapabilityRows() {
         "A declared baseline estimate (reference-class assumption) and a declared actual proof-loop duration can be bound into a fail-closed, content-addressed candidate compression receipt that refuses to exist when any required quality gate failed, keeps proof-time and observation-time as separate clocks, and rejects forged-and-recomputed ratios, gate survival, review flags, or mint flags on re-verification.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "AWAY_CONTRACT_1A",
+      truth_label: "AWAY_CONTRACT_DESIGNED_NOT_LIVE",
+      summary:
+        "Away Contract ladder (ADR-043): schema validator, body-bound verifier, consent-gated receipt writer, draft compiler, and the dema away draft|verify|receipt CLI. Contracts are drafted, validated, verified, and receipted — never started; absence stewardship stays DESIGNED_NOT_LIVE.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/away-contract-schema.js",
+          "packages/core/src/away-contract-verify.js",
+          "packages/core/src/away-contract-receipt.js",
+          "packages/core/src/away-contract-compiler.js",
+          "apps/cli/src/commands/away.js",
+        ],
+        test_paths: [
+          "tests/away-contract-schema.test.js",
+          "tests/away-contract-verify.test.js",
+          "tests/away-contract-receipt.test.js",
+          "tests/away-contract-compiler.test.js",
+          "tests/away-contract-cli-draft.test.js",
+          "tests/away-contract-cli-verify.test.js",
+          "tests/away-contract-cli-receipt.test.js",
+        ],
+        review_gate_paths: ["scripts/review/away-contract-check.mjs"],
+        receipt_paths: ["docs/receipts/AWAY_CONTRACT_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/AWAY_CONTRACT_SPEC_v0_1.md",
+          "docs/06-adr/ADR-043-pattern-first-nodespace-away-contract-quest-kernel.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live absence stewardship, contract start, action execution, daemon runtime, model invocation, network use, token, wallet, or federation. dema away start does not exist and requires its own proof gates plus exact operator consent.",
+      what_this_proves:
+        "An Away Contract body can be drafted from explicit intent, shape-validated fail-closed (never-grantable actions reject even when requested), verified body-bound against its whole normalized body and hash (laundering detected), and recorded as an exact-consent receipt under DEMA_HOME — deterministically, with injected act-time and all-false boundaries at every rung.",
+      what_this_does_not_prove:
+        "It does not prove absence-mode execution, unattended work, operator consent beyond the recorded phrase, model invocation, network use, or live stewardship of any kind.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
