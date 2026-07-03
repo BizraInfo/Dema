@@ -8,8 +8,8 @@ export const RSI_SNR_NOT_SUPPLIED_VERDICT = "NOT_SUPPLIED";
 const RECOMMENDATIONS = Object.freeze(["PROPOSE", "HOLD", "REJECT"]);
 
 const FORBIDDEN_ACTIONS = Object.freeze([
-  { key: "self_change", terms: ["change own code", "modify own code", "autonomous rsi", "recursive improvement live"] },
-  { key: "live_loop", terms: ["start runtime loop", "activate runtime loop", "live autopoietic", "background agent"] },
+  { key: "self_change", terms: ["change own code", "modify own code", "autonomous rsi", "recursive improvement live", "self-improvement loop", "recursive self-improvement", "evolves itself", "self-improving"] },
+  { key: "live_loop", terms: ["start runtime loop", "activate runtime loop", "live autopoietic", "background agent", "autonomous loop", "autonomous self-improvement", "without review", "without oversight"] },
   { key: "external_runtime", terms: ["network call", "connect node", "connect nodes", "federation", "mcp runtime", "a2a runtime"] },
   { key: "economic_activation", terms: ["mint", "token", "reward", "poi activation", "economic settlement"] },
   { key: "authority_material", terms: ["key generation", "generate key", "sign receipt", "sign transaction"] },

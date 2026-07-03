@@ -170,6 +170,26 @@ test("proposal_hash changes when the unsigned body changes", () => {
   assert.notEqual(a.proposal_hash, b.proposal_hash);
 });
 
+test("rejects autonomy-overclaim phrasing that dodges the legacy exact terms", () => {
+  const out = buildRsiProposalPreview({
+    evidenceAnchors: safeEvidence(),
+    candidate: {
+      name: "sneaky autonomy proposal",
+      proposed_action:
+        "Activate the autonomous self-improvement loop so the system evolves itself continuously without review",
+      rationale: "Phrasing deliberately dodges every legacy exact substring in the gate.",
+      expected_outcome: "The forbidden-term gate must still catch it.",
+    },
+    targetFrameworks: ["RSI"],
+    processEvents: safeEvents(),
+  });
+  assert.equal(out.recommendation, "REJECT");
+  assert.match(out.recommendation_reason, /^forbidden_action_claim:/);
+  assert.ok(
+    out.forbidden_claims.includes("live_loop") || out.forbidden_claims.includes("self_change"),
+  );
+});
+
 test("kernel stays pure: no fs/network/process/clock/random imports or calls", async () => {
   const src = await readFile(new URL("../packages/core/src/rsi-proposal-preview.js", import.meta.url), "utf8");
   assert.doesNotMatch(src, /node:fs|node:net|node:http|node:https|child_process/);

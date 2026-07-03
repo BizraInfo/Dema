@@ -21,6 +21,11 @@ export const DIFFUSION_NOISE_MARKERS = Object.freeze([
   "guaranteed", "obviously", "definitely", "clearly", "of course", "trust me",
   "should work", "i guess", "sort of", "kind of", "peak", "ultimate",
   "revolutionary", "best ever", "world-class", "cutting-edge", "perfect",
+  // Autonomy-overclaim phrasing is noise, not signal: a draft asserting a live
+  // self-directed loop is speculation in this PREVIEW_ONLY repo by definition.
+  "autonomous loop", "autonomous self-improvement", "self-improvement loop",
+  "self-improving", "evolves itself", "recursive self-improvement",
+  "without review", "without oversight",
 ]);
 
 export const DIFFUSION_REASONER_BOUNDARY_KEYS = Object.freeze([
