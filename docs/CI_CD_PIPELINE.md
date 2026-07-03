@@ -2,24 +2,27 @@
 
 > **Purpose:** Detailed reference for every GitHub Actions workflow in this repository — what triggers each one, what it executes, what it gates, what it pins, and how the operator updates it safely. The companion to [`docs/RELEASE_PROCESS.md`](RELEASE_PROCESS.md), which covers the broader release lifecycle; this document goes deep on the workflow internals themselves.
 >
-> **Scope:** `.github/workflows/*.yml` in this repo. The Dema repository runs **4 workflows totaling 198 LOC**. There is no separate CD surface — there is no auto-deploy and no auto-publish; "deployment" in this repo means a merged commit on `main` plus optionally a git tag.
+> **Scope:** `.github/workflows/*.yml` in this repo. The Dema repository runs **5 workflows totaling 293 LOC**. There is no separate CD surface — there is no auto-deploy and no auto-publish; "deployment" in this repo means a merged commit on `main` plus optionally a git tag. The fifth workflow aggregates CI rail evidence; it is proof telemetry, not deployment.
 >
-> **Last refreshed:** 2026-05-24 GST against `main @ 66dd426`.
+> **Last refreshed:** 2026-07-03 GST against current checkout `e8dae96`.
 
 ---
 
 ## 1. Workflow inventory
 
-| Workflow            | File                                 | LOC | Triggers                                                           | Jobs                             | Typical green duration |
-| ------------------- | ------------------------------------ | --: | ------------------------------------------------------------------ | -------------------------------- | ---------------------- |
-| `check`             | `.github/workflows/check.yml`        |  30 | `pull_request` · `push: main` · `workflow_dispatch`                | `test` (Node 20.x + 22.x matrix) | ~2m23s                 |
-| `BIZRA Review Gate` | `.github/workflows/bizra-review.yml` |  78 | `pull_request` · `push: main` · `workflow_dispatch`                | `proof-quality` (Node 22.x)      | ~2m15s                 |
-| `CodeQL`            | `.github/workflows/codeql.yml`       |  42 | `push: main` · `pull_request: main` · `schedule: cron '0 6 * * 1'` | `analyze` (JavaScript)           | ~1m37s                 |
-| `gitleaks`          | `.github/workflows/gitleaks.yml`     |  48 | `pull_request` · `push: main` · `workflow_dispatch`                | `scan` (full history)            | ~10s                   |
+| Workflow                    | File                                             | LOC | Triggers                                                           | Jobs                             | Typical green duration  |
+| --------------------------- | ------------------------------------------------ | --: | ------------------------------------------------------------------ | -------------------------------- | ----------------------- |
+| `check`                     | `.github/workflows/check.yml`                    |  49 | `pull_request` · `push: main` · `workflow_dispatch`                | `test` (Node 20.x + 22.x matrix) | ~2m23s + evidence export |
+| `BIZRA Review Gate`         | `.github/workflows/bizra-review.yml`             |  83 | `pull_request` · `push: main` · `workflow_dispatch`                | `proof-quality` (Node 22.x)      | ~2m15s                  |
+| `CodeQL`                    | `.github/workflows/codeql.yml`                   |  42 | `push: main` · `pull_request: main` · `schedule: cron '0 6 * * 1'` | `analyze` (JavaScript)           | ~1m37s                  |
+| `gitleaks`                  | `.github/workflows/gitleaks.yml`                 |  48 | `pull_request` · `push: main` · `workflow_dispatch`                | `scan` (full history)            | ~10s                    |
+| `node0-ci-rail-aggregation` | `.github/workflows/node0-ci-rail-aggregation.yml` |  71 | `workflow_run: check completed` · `workflow_dispatch`              | `aggregate` (Node 22.x)          | workflow-dependent      |
 
-All four must report `success` before a slice on `main` is considered shipped. A `success` on three of four with one `failure` is **not** shipped — diagnose the failing gate before continuing.
+The four primary rails (`check`, `BIZRA Review Gate`, `CodeQL`, `gitleaks`) must report `success` before a slice on `main` is considered shipped. A `success` on three of four with one `failure` is **not** shipped — diagnose the failing gate before continuing.
 
-> **CodeRabbit is advisory, not a gate.** The CodeRabbit check that appears on PRs is a third-party app, not one of these four workflows. It is frequently silent (credits / "review skipped" / rate-limit); its absence does not block merge and does not satisfy the review obligation. When the advisory layer gives no signal — or the diff is novel logic — a documented self-review is **required** before merge per the Review gate in [docs/ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md).
+`node0-ci-rail-aggregation` is a fifth evidence workflow. It does not replace any primary rail and does not make a failing or missing primary rail green. It packages peer rail conclusions for proof-of-truth audit consumption; if it is absent or red, release receipts must treat aggregated CI evidence as unavailable until repaired.
+
+> **CodeRabbit is advisory, not a gate.** The CodeRabbit check that appears on PRs is a third-party app, not one of these repository-owned workflows. It is frequently silent (credits / "review skipped" / rate-limit); its absence does not block merge and does not satisfy the review obligation. When the advisory layer gives no signal — or the diff is novel logic — a documented self-review is **required** before merge per the Review gate in [docs/ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md).
 
 ---
 
@@ -35,12 +38,17 @@ All four must report `success` before a slice on `main` is considered shipped. A
 | --------------- | ------------------------------------------------ | ------------------ |
 | Checkout        | `actions/checkout@de0fac2e` (v6.0.2 · Node 24)   | both 20.x and 22.x |
 | Set up Node     | `actions/setup-node@48b55a01` (v6.4.0 · Node 24) | both 20.x and 22.x |
-| Install         | `npm install --no-audit --no-fund`               | both 20.x and 22.x |
-| Test            | `npm test`                                       | both 20.x and 22.x |
-| Coverage        | `npm run coverage`                               | **22.x only**      |
-| Aggregate check | `npm run check`                                  | **22.x only**      |
+| Install           | `npm install --no-audit --no-fund`               | both 20.x and 22.x |
+| Test              | `npm test`                                       | both 20.x and 22.x |
+| Coverage          | `npm run coverage`                               | **22.x only**      |
+| Aggregate check   | `npm run check`                                  | **22.x only**      |
+| Perf gate         | `npm run perf`                                   | **22.x only**      |
+| Delivery check    | `npm run delivery:check`                         | **22.x only**      |
+| CI attestation    | `npm run proof:attest:ci`                        | **22.x only**      |
+| Attestation smoke | `DEMA_CI_EVIDENCE_ATTESTATION_PATH=./node0-ci-evidence-attestation.json node scripts/audit/node0-proof-of-truth-control-plane.mjs --json > /dev/null` | **22.x only** |
+| Upload artifact   | `node0-ci-evidence-attestation-${{ matrix.node-version }}` | **22.x only** |
 
-**Why coverage + check are 22.x-only:** Node 22 introduced the `--test-coverage-{lines,branches,functions}` threshold flags used by `npm run coverage`. `npm run check` (via `scripts/check.mjs`) internally calls coverage, so it inherits the same constraint. Tests themselves run on both versions to keep the engine floor honest.
+**Why coverage + check are 22.x-only:** Node 22 introduced the `--test-coverage-{lines,branches,functions}` threshold flags used by `npm run coverage`. `npm run check` (via `scripts/check.mjs`) internally calls coverage, so it inherits the same constraint. Tests themselves run on both versions to keep the engine floor honest. The performance, delivery, and CI-attestation steps also run on 22.x only so the head matrix produces the evidence consumed by the proof-of-truth lane.
 
 **Engine pin:** `package.json` `engines.node` is `">=20"`. The CI matrix represents the floor (20.x) and the head (22.x). Bumping the floor requires updating both `package.json` engines AND the workflow matrix; bumping the head is workflow-local.
 
@@ -48,7 +56,31 @@ All four must report `success` before a slice on `main` is considered shipped. A
 
 ---
 
-## 3. `BIZRA Review Gate` — repo-specific review chain
+## 3. `node0-ci-rail-aggregation` — CI rail evidence aggregation
+
+**File:** `.github/workflows/node0-ci-rail-aggregation.yml`
+
+**What it does:** After `check` completes, it resolves peer workflow conclusions for the same head SHA, exports an aggregated CI evidence attestation, smoke-loads that attestation through the proof-of-truth audit, and uploads the JSON artifact.
+
+**Job: `aggregate`** · Node 22.x
+
+| Step                          | Detail                                                                                                      |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Checkout                      | Checks out the workflow-run head SHA, or the supplied `workflow_dispatch` `head_sha`                        |
+| Set up Node                   | `actions/setup-node@48b55a01` with Node 22.x                                                                |
+| Install                       | `npm install --no-audit --no-fund --prefer-offline`                                                         |
+| Resolve peer conclusions      | Uses `gh api` to read `check.yml`, `codeql.yml`, and `gitleaks.yml` conclusions for the same `HEAD_SHA`     |
+| Export aggregated attestation | `npm run proof:attest:ci:aggregate -- --out ./node0-ci-evidence-attestation-aggregated.json`                |
+| Gather smoke                  | Runs `node0-proof-of-truth-control-plane.mjs` with `DEMA_CI_EVIDENCE_ATTESTATION_PATH` set to the artifact |
+| Upload artifact               | Uploads `node0-ci-evidence-attestation-aggregated.json`                                                     |
+
+**Permissions:** `contents: read` · `actions: read`. It reads workflow metadata and uploads an artifact through the workflow runtime; it does not write to the repository, deploy, publish, mint, or change the primary rail verdicts.
+
+**Failure interpretation:** an aggregation failure is a proof-evidence failure first, not automatic evidence that application code is wrong. Use the primary rail outputs (`check`, `CodeQL`, `gitleaks`, and `BIZRA Review Gate`) to classify the underlying cause, then rerun or repair aggregation only after peer rail state is known.
+
+---
+
+## 4. `BIZRA Review Gate` — repo-specific review chain
 
 **File:** `.github/workflows/bizra-review.yml`
 
@@ -90,7 +122,7 @@ All four must report `success` before a slice on `main` is considered shipped. A
 
 ---
 
-## 4. `CodeQL` — static-analysis security scan
+## 5. `CodeQL` — static-analysis security scan
 
 **File:** `.github/workflows/codeql.yml`
 
@@ -118,7 +150,7 @@ All four must report `success` before a slice on `main` is considered shipped. A
 
 ---
 
-## 5. `gitleaks` — secret scanning
+## 6. `gitleaks` — secret scanning
 
 **File:** `.github/workflows/gitleaks.yml`
 
@@ -142,7 +174,7 @@ All four must report `success` before a slice on `main` is considered shipped. A
 
 ---
 
-## 6. SHA pinning policy
+## 7. SHA pinning policy
 
 Every `uses:` reference in every workflow is **SHA-pinned**, not tag-pinned. Tags are mutable; SHAs are not. SHA pinning is the supply-chain hardening baseline for this repo.
 
@@ -163,31 +195,33 @@ Every `uses:` reference in every workflow is **SHA-pinned**, not tag-pinned. Tag
 4. **Re-inventory every other workflow's run log** for deprecation warnings — warnings are workflow-local, not repo-wide, so a clean canary doesn't prove the rest are clean.
 5. Fan out the bump to the remaining workflows in a follow-up commit on the same branch.
 
-**Why canary-then-fan-out:** the alternative (bump all 4 at once) loses signal — if something breaks, you cannot tell which workflow's bump caused it. The canary gives a small, isolated test before committing to the broad change.
+**Why canary-then-fan-out:** the alternative (bump all workflows at once) loses signal — if something breaks, you cannot tell which workflow's bump caused it. The canary gives a small, isolated test before committing to the broad change.
 
 ---
 
-## 7. Node version policy
+## 8. Node version policy
 
 | Surface                             | Version                   | Source                               |
 | ----------------------------------- | ------------------------- | ------------------------------------ |
 | `package.json` engines              | `>=20`                    | `package.json`                       |
-| `check` workflow matrix             | 20.x + 22.x               | `.github/workflows/check.yml`        |
-| `BIZRA Review Gate` workflow        | 22.x                      | `.github/workflows/bizra-review.yml` |
-| CodeQL / gitleaks workflow runtimes | Node 24 (action-internal) | post-PR #108 SHA bump                |
-| Local development                   | operator's choice ≥ 20    | per-machine                          |
+| `check` workflow matrix              | 20.x + 22.x               | `.github/workflows/check.yml`                   |
+| `BIZRA Review Gate` workflow         | 22.x                      | `.github/workflows/bizra-review.yml`            |
+| `node0-ci-rail-aggregation` workflow | 22.x                      | `.github/workflows/node0-ci-rail-aggregation.yml` |
+| CodeQL / gitleaks workflow runtimes  | Node 24 (action-internal) | post-PR #108 SHA bump                           |
+| Local development                    | operator's choice ≥ 20    | per-machine                                     |
 
 **Node 24 migration timeline:**
 
 - 2026-06-02 — GitHub deprecation: Node 20 → Node 24 forced default in actions
 - 2026-09-16 — Node 20 fully removed from runners
-- 2026-05-24 — this repo migrated proactively (PR #108) · all 4 workflows now Node 24 native via action SHA bumps · zero deprecation warnings across all workflow logs
+- 2026-05-24 — this repo migrated proactively (PR #108) · the then-current 4 workflows became Node 24 native via action SHA bumps · zero deprecation warnings across those workflow logs
+- 2026-07-03 — this document now includes the later `node0-ci-rail-aggregation` evidence workflow in the inventory
 
 **Coverage thresholds (Node 22+ only):** 95 lines · 85 branches · 95 functions. Tightening any of these requires updating `package.json scripts.coverage` AND verifying every test file still hits the new bar.
 
 ---
 
-## 8. Workflow-changes-authorized gate
+## 9. Workflow-changes-authorized gate
 
 Per CLAUDE.md user-scope operator discipline, **modifying CI workflows requires explicit operator authorization** — this is a halt-gate identical to `git push` to a shared branch.
 
@@ -195,7 +229,7 @@ Specifically:
 
 - Editing any `.github/workflows/*.yml` requires typed-GO.
 - Adding a new workflow requires typed-GO + an ADR for non-trivial workflows.
-- Bumping a pinned action SHA requires typed-GO; the canary-then-fan-out protocol (§6) must be followed.
+- Bumping a pinned action SHA requires typed-GO; the canary-then-fan-out protocol (§7) must be followed.
 - Removing a workflow requires typed-GO + a documented rationale (PR description or commit body).
 
 **Detection:** the `BIZRA Review Gate` workflow's branch-class case statement is the runtime enforcement; the `policy/broad-scope` class includes `ci/*` as a recognized branch family.
@@ -204,7 +238,7 @@ Specifically:
 
 ---
 
-## 9. Operator runbook — CI debugging
+## 10. Operator runbook — CI debugging
 
 **When a workflow fails:**
 
@@ -216,7 +250,8 @@ Specifically:
 | `BIZRA Review Gate` red at `no-overclaim`  | Commit message or doc has a SHIPPED claim that should be WIRED_PARTIAL / TESTED / etc.                                                                                      |
 | `CodeQL` red                               | Read the Security tab; distinguish new findings (block) from inherited findings on the merge base (not blocking on the diff)                                                |
 | `gitleaks` red                             | Read the redacted finding; either it's a real leak (rotate + remove from history) or add a `commits + paths` allowlist entry in `.gitleaks.toml`                            |
-| Workflow times out                         | Default 15 min on `BIZRA Review Gate` and `CodeQL` (other two have no explicit timeout); if exceeded, profile the slowest step — `npm run check` is the most likely culprit |
+| `node0-ci-rail-aggregation` red            | Read peer rail conclusions for the same head SHA first; if peer rails are green, inspect attestation export or artifact upload                                               |
+| Workflow times out                         | Default 15 min on `BIZRA Review Gate` and `CodeQL`; `check`, `gitleaks`, and aggregation have no explicit timeout. If exceeded, profile the slowest step — `npm run check` is the most likely culprit |
 
 **Re-running a workflow:** `gh run rerun <run-id>` or `gh run rerun <run-id> --failed` (only failed jobs). No need to push an empty commit just to re-trigger.
 
@@ -234,7 +269,8 @@ Specifically:
 - [`.gitleaks.toml`](../.gitleaks.toml) — secret-scan allowlist
 - [`package.json`](../package.json) — engine pin + script definitions
 - [`docs/CURRENT_LIMITS.md`](CURRENT_LIMITS.md) — labeled-truth boundaries
-- [`scripts/review/`](../scripts/review/) — repo-specific review scripts referenced by §3
+- [`scripts/review/`](../scripts/review/) — repo-specific review scripts referenced by §4
+- [`scripts/ci/aggregate-node0-ci-evidence-attestation.mjs`](../scripts/ci/aggregate-node0-ci-evidence-attestation.mjs) — aggregation producer used by §3
 
 ---
 
@@ -244,9 +280,9 @@ Re-refresh this document when:
 
 - A workflow is added, removed, or renamed.
 - A workflow's triggers change (e.g., new branch added to the `branches:` list).
-- A pinned action SHA is bumped (update §6 baseline table).
-- A new review script is added under `scripts/review/` (update §3).
-- The Node engine floor or matrix changes (update §7).
-- A new branch-class pattern is added to `bizra-review.yml`'s case statement (update §3).
+- A pinned action SHA is bumped (update §7 baseline table).
+- A new review script is added under `scripts/review/` (update §4).
+- The Node engine floor or matrix changes (update §8).
+- A new branch-class pattern is added to `bizra-review.yml`'s case statement (update §4).
 
-Update the **Last refreshed** line and the `main @ <sha>` reference on every refresh.
+Update the **Last refreshed** line and checkout/`main` SHA reference on every refresh.
