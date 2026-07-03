@@ -106,3 +106,37 @@ test("missing gate logs are reported as stale proof, never as pass", async () =>
   assert.equal(payload.standing.stale_proof, true);
   assert.ok(payload.standing.stale_reasons.includes("test_gate_log_missing"));
 });
+
+test("dema stand chain reports NOT_STARTED on an empty receipts dir", async () => {
+  const env = await makeFixtureEnv();
+  const { stdout } = await runStand(["chain", "--json"], env);
+  const payload = JSON.parse(stdout);
+  assert.equal(payload.schema, "bizra.dema.dema_steward_chain.v0.1");
+  assert.equal(payload.verdict, "NOT_STARTED");
+  assert.equal(typeof payload.next_required_day, "string");
+});
+
+test("dema stand chain verifies a real written receipt as day 1 of 7", async () => {
+  const env = await makeFixtureEnv();
+  await runStand(["--receipt", "--consent", CONSENT, "--drain", "less"], env);
+  const { stdout } = await runStand(["chain", "--json"], env);
+  const payload = JSON.parse(stdout);
+  assert.equal(payload.verdict, "IN_PROGRESS");
+  assert.equal(payload.progress, "1/7");
+  assert.equal(payload.chain.drain_series[0].drain, "less");
+  assert.equal(payload.day_report, null);
+});
+
+test("dema stand chain fails closed when a stored receipt is tampered", async () => {
+  const env = await makeFixtureEnv();
+  await runStand(["--receipt", "--consent", CONSENT], env);
+  const dir = join(env.home, "stand", "receipts");
+  const [name] = await readdir(dir);
+  const receipt = JSON.parse(await readFile(join(dir, name), "utf8"));
+  receipt.next_action = { id: "forged", label: "forged" };
+  await writeFile(join(dir, name), JSON.stringify(receipt), "utf8");
+  const { stdout } = await runStand(["chain", "--json"], env);
+  const payload = JSON.parse(stdout);
+  assert.equal(payload.verdict, "RECEIPTS_INVALID");
+  assert.equal(payload.invalid_receipts.length, 1);
+});

@@ -39,6 +39,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_EVIDENCE_SOURCE_REGISTRY_1A",
   "NODE0_LOCAL_CLOSURE_READINESS_1A",
   "DEMA_STAND_1A",
+  "DEMA_STEWARD_CHAIN_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -673,6 +674,35 @@ function defaultCapabilityRows() {
         "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
       what_this_proves:
         "A deterministic daily standing card (FDE lens buckets, exactly one ladder-selected next action, declared drain, stale-proof and orbit flags) can be composed from injected local evidence and re-derived by any verifier from the embedded raw input.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_STEWARD_CHAIN_1A",
+      truth_label: "FIRST_USER_STEWARD_CHAIN_LOCAL_ONLY",
+      summary:
+        "Steward-chain verifier: verifies the FIRST_USER standing-receipt chain (consecutive UTC days, per-receipt re-derivation, drain series) and emits honest day-N-of-7 / broken / complete verdicts with the Day-7 report payload.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-steward-chain.js"],
+        test_paths: ["tests/dema-steward-chain.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-steward-chain-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_STEWARD_CHAIN_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_STEWARD_CHAIN_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "The FIRST_USER standing-receipt chain state (consecutive UTC days, per-receipt hash validity, drain series) is derived deterministically and a COMPLETE verdict can only arise from N distinct consecutive verified receipts already on disk — days cannot be fabricated.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [

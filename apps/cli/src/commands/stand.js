@@ -17,6 +17,11 @@ import {
   DEMA_STAND_GO_PHRASE,
   DEMA_STAND_TRUTH_LABEL,
 } from "../../../../packages/core/src/dema-stand.js";
+import {
+  runDemaStewardChain,
+  DEMA_STEWARD_CHAIN_GO_PHRASE,
+  DEMA_STEWARD_CHAIN_TRUTH_LABEL,
+} from "../../../../packages/core/src/dema-steward-chain.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -189,8 +194,97 @@ function renderCard(payload, receiptPath) {
   return lines.join("\n");
 }
 
+function receiptsDir() {
+  const home = process.env.DEMA_HOME || join(homedir(), ".dema");
+  return join(home, "stand", "receipts");
+}
+
+async function readStandingReceipts() {
+  const dir = receiptsDir();
+  let names = [];
+  try {
+    names = (await readdir(dir)).filter(
+      (n) => n.startsWith("stand-") && n.endsWith(".json"),
+    );
+  } catch {
+    return [];
+  }
+  const receipts = [];
+  for (const name of names.sort()) {
+    try {
+      receipts.push(JSON.parse(await readFile(join(dir, name), "utf8")));
+    } catch {
+      // Unreadable file: push a sentinel so the kernel fails the chain closed
+      // instead of silently skipping a corrupt link.
+      receipts.push({ unreadable: name });
+    }
+  }
+  return receipts;
+}
+
+function renderChain(payload) {
+  const lines = [
+    `DEMA · STEWARD CHAIN — ${DEMA_STEWARD_CHAIN_TRUTH_LABEL}`,
+    `  verdict   ${payload.verdict}${payload.progress ? ` · ${payload.progress}` : ""}`,
+  ];
+  if (payload.chain) {
+    lines.push(
+      `  days      ${payload.chain.days.join(", ") || "(none)"}`,
+      `  drain     ${payload.chain.drain_series.map((d) => d.drain ?? "?").join(" → ") || "(none)"}`,
+    );
+    if (payload.chain.missing_days.length) {
+      lines.push(`  missing   ${payload.chain.missing_days.join(", ")}`);
+    }
+    if (payload.chain.duplicate_days.length) {
+      lines.push(`  duplicates ${payload.chain.duplicate_days.join(", ")} (one counts per day)`);
+    }
+  }
+  if (payload.invalid_receipts.length) {
+    lines.push(`  invalid   ${payload.invalid_receipts.length} receipt(s) failed re-verification — chain fails closed`);
+  }
+  if (payload.next_required_day) {
+    lines.push(`  next      receipt required on ${payload.next_required_day}`);
+  }
+  if (payload.day_report) {
+    lines.push(`  report    ${payload.day_report.title}`);
+  }
+  lines.push("  boundary  read-only verify · no mint · no URP · no network · days cannot be fabricated");
+  return lines.join("\n");
+}
+
+async function cmd_stand_chain(argv) {
+  const wantJson = argv.includes("--json");
+  const receipts = await readStandingReceipts();
+  const input = {
+    today_utc_date: new Date().toISOString().slice(0, 10),
+    required_days: 7,
+    receipts,
+  };
+  const result = runDemaStewardChain({
+    consent: DEMA_STEWARD_CHAIN_GO_PHRASE,
+    input,
+  });
+  if (!result.ok) {
+    if (wantJson) {
+      console.log(JSON.stringify({ ok: false, blocked_by: result.blocked_by }, null, 2));
+    } else {
+      console.error(`Dema error: steward chain blocked: ${result.blocked_by.join(", ")}`);
+    }
+    process.exitCode = 1;
+    return;
+  }
+  if (wantJson) {
+    console.log(JSON.stringify(result.payload, null, 2));
+    return;
+  }
+  console.log(renderChain(result.payload));
+}
+
 export async function cmd_stand(ctx) {
   const { argv } = ctx;
+  if (argv[1] === "chain") {
+    return cmd_stand_chain(argv);
+  }
   const wantJson = argv.includes("--json");
   const wantReceipt = argv.includes("--receipt");
 

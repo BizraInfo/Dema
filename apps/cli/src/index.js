@@ -162,6 +162,11 @@ Orientation:
                     Read-only compose; receipt writes only under
                     DEMA_HOME/stand/receipts with the exact consent phrase.
                     No network, no model call, no mint, no live autonomy.
+  dema stand chain [--json]
+                    DEMA-STEWARD-CHAIN-1A steward-chain verifier: re-verifies
+                    every standing receipt on disk, checks consecutive UTC
+                    days, and reports day-N-of-7 / broken / complete honestly.
+                    Days cannot be fabricated; read-only.
   dema witness [--dry-run] [--json]
                     Node0 self-witness receipt; requires --consent to save
   dema witness verify [--file <path>] [--json]
