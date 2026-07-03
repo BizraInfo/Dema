@@ -43,6 +43,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "POI_TIME_COMPRESSION_1A",
   "AWAY_CONTRACT_1A",
   "ABSENCE_STEWARD_READINESS_1A",
+  "ABSENCE_STEWARD_RETURN_REVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -813,6 +814,42 @@ function defaultCapabilityRows() {
         "A receipted Away Contract trio can be deterministically classified into readiness states with body-binding judged as of the receipt's hash-protected created_at and expiry judged at injected act-time; forged or recomputed receipts, cross-contract receipts, and hot boundary keys are refused; every report carries steward_started:false in an all-false boundary.",
       what_this_does_not_prove:
         "It does not prove absence-mode execution, steward runtime, unattended work, scheduling, model invocation, network use, or that any stewardship ever occurred — readiness reporting is not stewardship.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "ABSENCE_STEWARD_RETURN_REVIEW_1A",
+      truth_label: "ABSENCE_STEWARD_RETURN_REVIEW_MEASURED_NOT_LIVE",
+      summary:
+        "Return-review report only: consumes the Away Contract contract/validation/receipt trio plus a declared absence window and derives NO_ABSENCE_RECORDED / REVIEW_BLOCKED / READY_BUT_NOT_STARTED / EXPIRED_BEFORE_START via dema away review. Every claim is receipt-backed or NO_RECEIPT; executed_summary is 'Nothing executed. I can only report readiness and receipts.'; WORK_COMPLETE is not in vocabulary; dema away start does not exist.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/absence-steward-return-review.js",
+          "apps/cli/src/commands/away.js",
+        ],
+        test_paths: [
+          "tests/absence-steward-return-review.test.js",
+          "tests/away-contract-cli-review.test.js",
+        ],
+        review_gate_paths: [
+          "scripts/review/absence-steward-return-review-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/ABSENCE_STEWARD_RETURN_REVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/ABSENCE_STEWARD_RETURN_REVIEW_v0_1.md",
+          "docs/ARCHITECTURE.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live absence stewardship, work completion, queue, contract start, steward runtime, daemon, scheduler, unattended execution, model invocation, network use, token, wallet, or federation. The review reports; it never proves work occurred; dema away start does not exist and requires its own spec, proof gates, and exact operator consent.",
+      what_this_proves:
+        "A post-absence review report can be deterministically derived from the receipted trio plus a declared window, with readiness re-derived at both window edges, verdicts capped at READY_BUT_NOT_STARTED / EXPIRED_BEFORE_START (COMPLETE verdicts unreachable), every event field refusing unreceipted claims, and a ten-key all-false boundary on every path.",
+      what_this_does_not_prove:
+        "It does not prove any work occurred, absence-mode execution, steward runtime, queuing, scheduling, model invocation, network use, or stewardship of any kind — the review exists to prove what was NOT done.",
       forbidden_claims: [
         "live execution",
         "operator mutation",

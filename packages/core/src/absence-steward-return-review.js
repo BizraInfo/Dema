@@ -10,7 +10,7 @@
 // v0.1 can only emit: NO_ABSENCE_RECORDED · REVIEW_BLOCKED ·
 // READY_BUT_NOT_STARTED · EXPIRED_BEFORE_START. The COMPLETE verdicts and
 // RETURN_REVIEW_REQUIRED belong to future runtime slices and are unreachable
-// here — WORK_COMPLETE is not even in the vocabulary. Every claim cites a
+// here — no work-completion verdict exists in this vocabulary. Every claim cites a
 // receipt or says NO_RECEIPT; no runtime exists, and the report says so.
 //
 // Pure kernel: no fs / network / process / clock / random.
