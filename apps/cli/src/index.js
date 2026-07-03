@@ -39,6 +39,7 @@ import { cmd_witness } from "./commands/witness.js";
 import { cmd_attest } from "./commands/attest.js";
 import { cmd_verify_grounded } from "./commands/verify-grounded.js";
 import { cmd_assets } from "./commands/assets.js";
+import { cmd_stand } from "./commands/stand.js";
 import { cmd_contribute } from "./commands/contribute.js";
 import { cmd_demo } from "./commands/demo.js";
 import { cmd_status, cmd_status_json } from "./commands/status.js";
@@ -154,6 +155,13 @@ Orientation:
   dema setup-check  Verify install integrity (paths + sha256 hashes)
   dema uninstall [--dry-run]
                     Remove local Dema data; requires --consent with exact phrase
+  dema stand [--json] [--drain less|same|more] [--blockers <abs.json>] [--receipt --consent "<phrase>"]
+                    DEMA-STAND-1A Morning Standing card: git + gate-log
+                    metadata composed into FDE lens buckets, exactly ONE next
+                    action, declared drain, stale-proof + orbit warnings.
+                    Read-only compose; receipt writes only under
+                    DEMA_HOME/stand/receipts with the exact consent phrase.
+                    No network, no model call, no mint, no live autonomy.
   dema witness [--dry-run] [--json]
                     Node0 self-witness receipt; requires --consent to save
   dema witness verify [--file <path>] [--json]
@@ -1103,6 +1111,7 @@ const COMMAND_TABLE = {
   setup: cmd_setup,
   "setup-check": cmd_setup_check,
   uninstall: cmd_uninstall,
+  stand: cmd_stand,
   witness: cmd_witness,
   authorship: cmd_authorship,
   proof: cmd_proof,

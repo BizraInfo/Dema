@@ -38,6 +38,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_SPINE_RUNNER_CLI_1A",
   "NODE0_EVIDENCE_SOURCE_REGISTRY_1A",
   "NODE0_LOCAL_CLOSURE_READINESS_1A",
+  "DEMA_STAND_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -646,6 +647,35 @@ function defaultCapabilityRows() {
         "SAT accepted",
         "impact verified",
         "token minted",
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_STAND_1A",
+      truth_label: "FIRST_USER_STANDING_LOCAL_ONLY",
+      summary:
+        "Morning Standing Receipt: composes injected local evidence (git state, gate-log metadata, declared blockers) into a daily first-user standing card with FDE lens, exactly one next action, drain metric, stale-proof detection, and orbit warning.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-stand.js"],
+        test_paths: ["tests/dema-stand.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-stand-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_STAND_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_STAND_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A deterministic daily standing card (FDE lens buckets, exactly one ladder-selected next action, declared drain, stale-proof and orbit flags) can be composed from injected local evidence and re-derived by any verifier from the embedded raw input.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
         "live execution",
         "operator mutation",
         "unattended runtime",

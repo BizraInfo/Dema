@@ -77,6 +77,13 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     ["tests/setup-uninstall-cli.test.js"],
   ),
   row(
+    "stand",
+    ["read_only", "preview_only", "local_write"],
+    "exact_phrase",
+    "Morning Standing card is read-only compose; receipt write under DEMA_HOME/stand requires the exact consent phrase",
+    ["tests/dema-stand.test.js", "tests/dema-stand-cli.test.js"],
+  ),
+  row(
     "witness",
     ["local_write"],
     "exact_phrase",
