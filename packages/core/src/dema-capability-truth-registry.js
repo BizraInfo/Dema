@@ -42,6 +42,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_STEWARD_CHAIN_1A",
   "POI_TIME_COMPRESSION_1A",
   "AWAY_CONTRACT_1A",
+  "ABSENCE_STEWARD_READINESS_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -778,6 +779,40 @@ function defaultCapabilityRows() {
         "An Away Contract body can be drafted from explicit intent, shape-validated fail-closed (never-grantable actions reject even when requested), verified body-bound against its whole normalized body and hash (laundering detected), and recorded as an exact-consent receipt under DEMA_HOME — deterministically, with injected act-time and all-false boundaries at every rung.",
       what_this_does_not_prove:
         "It does not prove absence-mode execution, unattended work, operator consent beyond the recorded phrase, model invocation, network use, or live stewardship of any kind.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "ABSENCE_STEWARD_READINESS_1A",
+      truth_label: "ABSENCE_STEWARD_READINESS_MEASURED_NOT_LIVE",
+      summary:
+        "Absence Steward readiness report only: consumes an Away Contract contract/validation/receipt trio and derives NOT_CONFIGURED / CONTRACT_VERIFIED / PREVIEW_READY / EXPIRED / REFUSED via dema away preview. Binding judged at the receipt's hash-protected created_at, expiry at injected now. PREVIEW_READY grants nothing; dema away start does not exist.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/absence-steward-readiness.js",
+          "apps/cli/src/commands/away.js",
+        ],
+        test_paths: [
+          "tests/absence-steward-readiness.test.js",
+          "tests/away-contract-cli-preview.test.js",
+        ],
+        review_gate_paths: ["scripts/review/absence-steward-readiness-check.mjs"],
+        receipt_paths: ["docs/receipts/ABSENCE_STEWARD_READINESS_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/ABSENCE_STEWARD_PREVIEW_v0_1.md",
+          "docs/ARCHITECTURE.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live absence stewardship, contract start, steward runtime, daemon, scheduler, unattended execution, model invocation, network use, token, wallet, or federation. Readiness is a report; PREVIEW_READY authorizes nothing; dema away start does not exist and requires its own spec, proof gates, and exact operator consent.",
+      what_this_proves:
+        "A receipted Away Contract trio can be deterministically classified into readiness states with body-binding judged as of the receipt's hash-protected created_at and expiry judged at injected act-time; forged or recomputed receipts, cross-contract receipts, and hot boundary keys are refused; every report carries steward_started:false in an all-false boundary.",
+      what_this_does_not_prove:
+        "It does not prove absence-mode execution, steward runtime, unattended work, scheduling, model invocation, network use, or that any stewardship ever occurred — readiness reporting is not stewardship.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
