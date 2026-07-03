@@ -1,18 +1,24 @@
-// AWAY-CONTRACT-CLI-DRAFT-1A + AWAY-CONTRACT-CLI-VERIFY-1A — `dema away` CLI.
+// AWAY-CONTRACT CLI — `dema away draft | verify | receipt` (ADR-043 ladder).
 //
-// Two read-only rungs of the ADR-043 ladder:
-//   draft  — pure compiler (packages/core/src/away-contract-compiler.js):
-//            explicit JSON intent → draft contract body.
-//   verify — body-bound verifier (packages/core/src/away-contract-verify.js):
-//            contract + validation_result files → binding verdict.
-// Both: act-time from the explicit --now flag (no wall-clock read); the ONLY
-// filesystem touch is READING the given files. No receipt, no DEMA_HOME
-// requirement, no model call, no network, no Away Mode start.
+//   draft   — pure compiler (away-contract-compiler.js): explicit JSON intent
+//             → draft contract body. Read-only.
+//   verify  — body-bound verifier (away-contract-verify.js): contract +
+//             validation_result files → binding verdict. Read-only.
+//   receipt — consent-gated writer (away-contract-receipt.js): exact phrase
+//             `GO: write away-contract receipt <id> <hash12>` required; the
+//             ONLY write is one receipt under $DEMA_HOME/away-contracts/
+//             receipts (atomic, no overwrite).
+// All rungs: act-time from the explicit --now flag (no wall-clock read); no
+// model call, no network, no Away Mode start. Recording a receipt is not
+// starting work.
 
 import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 import { compileAwayContractIntent } from "../../../../packages/core/src/away-contract-compiler.js";
 import { verifyAwayContract } from "../../../../packages/core/src/away-contract-verify.js";
+import { writeAwayContractReceipt } from "../../../../packages/core/src/away-contract-receipt.js";
 
 function argValue(argv, name) {
   const index = argv.indexOf(name);
@@ -188,12 +194,100 @@ function cmd_away_verify(argv) {
   if (!result.valid) process.exitCode = 1;
 }
 
+function renderReceiptHuman(result) {
+  const lines = [
+    "DEMA · AWAY CONTRACT RECEIPT — CONSENTED RECORD ONLY",
+    `truth_label: ${result.truth_label}`,
+    `verdict: ${result.written ? "WRITTEN" : "REJECTED"}`,
+    `contract_id: ${result.contract_id ?? "-"}`,
+    `contract_hash: ${result.contract_hash ?? "-"}`,
+    `receipt_path: ${result.receipt_path ?? "-"}`,
+    `receipt_hash: ${result.receipt_hash ?? "-"}`,
+  ];
+  if (result.blocked_by.length > 0) {
+    lines.push(`blocked_by: ${result.blocked_by.join(", ")}`);
+  }
+  if (!result.written && result.expected_consent) {
+    lines.push(`expected_consent: ${result.expected_consent}`);
+  }
+  lines.push(
+    `boundary: ${Object.entries(result.boundary)
+      .map(([key, value]) => `${key}=${value}`)
+      .join(" ")}`,
+  );
+  lines.push("Receipt only. No Away Mode started.");
+  return lines.join("\n");
+}
+
+async function cmd_away_receipt(argv) {
+  const wantJson = argv.includes("--json");
+
+  const contractFile = argValue(argv, "--contract-file");
+  if (!contractFile) {
+    console.error(
+      'usage: dema away receipt --contract-file <contract.json> --validation-file <validation.json> --now <iso> --consent "<exact phrase>" [--json]',
+    );
+    process.exitCode = 1;
+    return;
+  }
+  const validationFile = argValue(argv, "--validation-file");
+  if (!validationFile) {
+    console.error(
+      "Dema error: --validation-file <validation.json> is required — the receipt binds to a verified pair.",
+    );
+    process.exitCode = 1;
+    return;
+  }
+  const nowIso = argValue(argv, "--now");
+  if (!nowIso) {
+    console.error(
+      "Dema error: --now <iso> is required — act-time is declared, never read from the clock.",
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  const contract = readJsonFile(contractFile, "contract");
+  if (contract === null) {
+    process.exitCode = 1;
+    return;
+  }
+  const validation_result = readJsonFile(validationFile, "validation");
+  if (validation_result === null) {
+    process.exitCode = 1;
+    return;
+  }
+
+  // Verify-before-write: the CLI derives the verify verdict itself (read-only)
+  // and hands the whole trio to the fail-closed writer.
+  const verify_result = verifyAwayContract({ contract, validation_result }, { now_iso: nowIso });
+  const home = process.env.DEMA_HOME || join(homedir(), ".dema");
+
+  const result = await writeAwayContractReceipt(
+    {
+      contract,
+      validation_result,
+      verify_result,
+      typed_go: argValue(argv, "--consent"),
+    },
+    { dema_home: home, now_iso: nowIso },
+  );
+
+  if (wantJson) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(renderReceiptHuman(result));
+  }
+  if (!result.written) process.exitCode = 1;
+}
+
 export async function cmd_away(ctx) {
   const { argv } = ctx;
   if (argv[1] === "draft") return cmd_away_draft(argv);
   if (argv[1] === "verify") return cmd_away_verify(argv);
+  if (argv[1] === "receipt") return cmd_away_receipt(argv);
   console.error(
-    'Dema error: unknown away subcommand. Use `dema away draft --intent-file <intent.json> --now <iso>` or `dema away verify --contract-file <contract.json> --validation-file <validation.json> --now <iso>` — draft and verify only; nothing starts.',
+    'Dema error: unknown away subcommand. Use `dema away draft --intent-file <intent.json> --now <iso>`, `dema away verify --contract-file <contract.json> --validation-file <validation.json> --now <iso>`, or `dema away receipt … --consent "<exact phrase>"` — draft, verify, and receipt only; nothing starts.',
   );
   process.exitCode = 1;
 }
