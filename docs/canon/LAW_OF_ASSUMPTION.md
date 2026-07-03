@@ -5,6 +5,7 @@
 **Amended:** 2026-07-03 · Weaponization Chain + Hypothesis Boundary (founder thread · diffusion-gated)
 **Authored by:** Mumu (Mohamed Beshr · Node0 operator · First Architect of BIZRA)
 **Operator-local sibling:** `~/.dema/memory/foundational-mindset.{json,md}` (2026-05-09 origin · 2026-05-11 last edit)
+**Root source:** [`BIZRA_Third_Fact_v0_1_FINAL.pdf`](../root-canon/source/BIZRA_Third_Fact_v0_1_FINAL.pdf) — the النصّ below was first drafted inside the Third Fact (2023, alongside الرسالة and البذرة) · IMMUTABLE per [`root-canon.manifest.json`](../root-canon/root-canon.manifest.json) · sha256 `1deacd63f42315d7ae5ac426eb33149fae5d37e99c67b3949421b2c5c80cd02d`
 **Companion canon:**
 
 - [`BIZRA_TOPOLOGY_CANON.md`](BIZRA_TOPOLOGY_CANON.md) — the three structural laws (Node ordinal · Seed-pattern invariant · Skill Growth)
