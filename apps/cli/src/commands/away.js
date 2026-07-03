@@ -20,6 +20,7 @@ import { compileAwayContractIntent } from "../../../../packages/core/src/away-co
 import { verifyAwayContract } from "../../../../packages/core/src/away-contract-verify.js";
 import { writeAwayContractReceipt } from "../../../../packages/core/src/away-contract-receipt.js";
 import { deriveAbsenceStewardReadiness } from "../../../../packages/core/src/absence-steward-readiness.js";
+import { deriveAbsenceStewardReturnReview } from "../../../../packages/core/src/absence-steward-return-review.js";
 
 function argValue(argv, name) {
   const index = argv.indexOf(name);
@@ -372,14 +373,120 @@ function cmd_away_preview(argv) {
   if (report.state === "REFUSED") process.exitCode = 1;
 }
 
+function renderReviewHuman(review) {
+  const lines = [
+    "DEMA · ABSENCE STEWARD RETURN REVIEW — REPORT ONLY",
+    review.first_line,
+    `truth_label: ${review.truth_label}`,
+    `final_verdict: ${review.final_verdict}`,
+    `contract_id: ${review.contract_id ?? "-"}`,
+    `contract_hash: ${review.contract_hash ?? "-"}`,
+    `absence_window: ${review.absence_window.left_at_iso ?? "-"} → ${review.absence_window.returned_at_iso ?? "-"}`,
+    `readiness before → after: ${review.readiness_state_before_absence ?? "-"} → ${review.readiness_state_after_absence ?? "-"}`,
+    `receipts_seen: ${review.receipts_seen.length > 0 ? review.receipts_seen.join(", ") : "(none)"}`,
+    `receipts_missing: ${review.receipts_missing.length > 0 ? review.receipts_missing.join(", ") : "(none)"}`,
+    `model_invocations: ${review.model_invocations}`,
+    `network_events: ${review.network_events}`,
+    `executed: ${review.executed_summary}`,
+    `runtime: ${review.runtime_statement}`,
+  ];
+  if (review.refused_events.length > 0) {
+    lines.push(`refused_events: ${review.refused_events.join(", ")}`);
+  }
+  if (review.expired_items.length > 0) {
+    lines.push(`expired_items: ${review.expired_items.join(", ")}`);
+  }
+  lines.push(
+    `boundary: ${Object.entries(review.boundary)
+      .map(([key, value]) => `${key}=${value}`)
+      .join(" ")}`,
+  );
+  lines.push("Review only. No Away Mode started.");
+  return lines.join("\n");
+}
+
+function cmd_away_review(argv) {
+  const wantJson = argv.includes("--json");
+
+  const contractFile = argValue(argv, "--contract-file");
+  if (!contractFile) {
+    console.error(
+      'usage: dema away review --contract-file <contract.json> --validation-file <validation.json> [--receipt-file <receipt.json>] --left <iso> --returned <iso> [--json]',
+    );
+    process.exitCode = 1;
+    return;
+  }
+  const validationFile = argValue(argv, "--validation-file");
+  if (!validationFile) {
+    console.error(
+      "Dema error: --validation-file <validation.json> is required — review never infers a validation_result.",
+    );
+    process.exitCode = 1;
+    return;
+  }
+  const leftIso = argValue(argv, "--left");
+  if (!leftIso) {
+    console.error(
+      "Dema error: --left <iso> is required — the absence window is declared, never read from the clock.",
+    );
+    process.exitCode = 1;
+    return;
+  }
+  const returnedIso = argValue(argv, "--returned");
+  if (!returnedIso) {
+    console.error(
+      "Dema error: --returned <iso> is required — the absence window is declared, never read from the clock.",
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  const contract = readJsonFile(contractFile, "contract");
+  if (contract === null) {
+    process.exitCode = 1;
+    return;
+  }
+  const validation_result = readJsonFile(validationFile, "validation");
+  if (validation_result === null) {
+    process.exitCode = 1;
+    return;
+  }
+  const receiptFile = argValue(argv, "--receipt-file");
+  let receipt;
+  if (receiptFile) {
+    receipt = readJsonFile(receiptFile, "receipt");
+    if (receipt === null) {
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const review = deriveAbsenceStewardReturnReview({
+    contract,
+    validation_result,
+    receipt,
+    left_at_iso: leftIso,
+    returned_at_iso: returnedIso,
+  });
+
+  if (wantJson) {
+    console.log(JSON.stringify(review, null, 2));
+  } else {
+    console.log(renderReviewHuman(review));
+  }
+  // Honest reports exit 0; a blocked review is the only error state.
+  if (review.final_verdict === "REVIEW_BLOCKED") process.exitCode = 1;
+}
+
 export async function cmd_away(ctx) {
   const { argv } = ctx;
   if (argv[1] === "draft") return cmd_away_draft(argv);
   if (argv[1] === "verify") return cmd_away_verify(argv);
   if (argv[1] === "receipt") return cmd_away_receipt(argv);
   if (argv[1] === "preview") return cmd_away_preview(argv);
+  if (argv[1] === "review") return cmd_away_review(argv);
   console.error(
-    'Dema error: unknown away subcommand. Use `dema away draft --intent-file <intent.json> --now <iso>`, `dema away verify --contract-file <contract.json> --validation-file <validation.json> --now <iso>`, `dema away receipt … --consent "<exact phrase>"`, or `dema away preview … [--receipt-file <receipt.json>]` — draft, verify, receipt, and preview only; nothing starts.',
+    'Dema error: unknown away subcommand. Use `dema away draft --intent-file <intent.json> --now <iso>`, `dema away verify --contract-file <contract.json> --validation-file <validation.json> --now <iso>`, `dema away receipt … --consent "<exact phrase>"`, `dema away preview … [--receipt-file <receipt.json>]`, or `dema away review … --left <iso> --returned <iso>` — draft, verify, receipt, preview, and review only; nothing starts.',
   );
   process.exitCode = 1;
 }

@@ -207,6 +207,13 @@ Orientation:
                     EXPIRED / REFUSED from the trio. Report only — exits
                     after reporting; PREVIEW_READY grants nothing; the
                     start surface does not exist and stays refused.
+  dema away review [--contract-file <contract.json>] [--validation-file <validation.json>] [--receipt-file <receipt.json>] [--left <iso>] [--returned <iso>] [--json]
+                    ABSENCE-STEWARD return review: post-absence report over
+                    a declared window. Opens "Nothing is hidden."; every
+                    claim is receipt-backed or NO_RECEIPT; verdicts limited
+                    to NO_ABSENCE_RECORDED / REVIEW_BLOCKED /
+                    READY_BUT_NOT_STARTED / EXPIRED_BEFORE_START. Report
+                    only — nothing executed, nothing starts.
   dema witness [--dry-run] [--json]
                     Node0 self-witness receipt; requires --consent to save
   dema witness verify [--file <path>] [--json]

@@ -94,12 +94,13 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     "away",
     ["read_only", "preview_only", "local_write"],
     "exact_phrase",
-    "AWAY-CONTRACT CLI (draft + verify + receipt + preview rungs): draft compiles explicit JSON intent, verify runs the body-bound launder check, preview reports absence-steward readiness (report only, PREVIEW_READY grants nothing) — all read-only; receipt is the ONLY write (one atomic file under the disclosed resolved home) and requires the exact phrase `GO: write away-contract receipt <id> <hash12>`. Nothing starts Away Mode; dema away start does not exist",
+    "AWAY-CONTRACT CLI (draft + verify + receipt + preview + review rungs): draft compiles explicit JSON intent, verify runs the body-bound launder check, preview reports absence-steward readiness, review renders the post-absence report (every claim receipt-backed or NO_RECEIPT) — all read-only; receipt is the ONLY write (one atomic file under the disclosed resolved home) and requires the exact phrase `GO: write away-contract receipt <id> <hash12>`. Nothing starts Away Mode; dema away start does not exist",
     [
       "tests/away-contract-cli-draft.test.js",
       "tests/away-contract-cli-verify.test.js",
       "tests/away-contract-cli-receipt.test.js",
       "tests/away-contract-cli-preview.test.js",
+      "tests/away-contract-cli-review.test.js",
     ],
   ),
   row(

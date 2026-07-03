@@ -1,7 +1,7 @@
 {
   "schema": "bizra.dema.claim_corpus_baseline.v0.1",
   "note": "Frozen reviewed claim-corpus state. Regenerate only via --update-baseline; every entry is an accepted, unresolved unlabeled-claim finding.",
-  "count": 119,
+  "count": 121,
   "findings": [
     {
       "file": "docs/A_PLUS_BLUEPRINT_v0_1.md",
@@ -72,6 +72,11 @@
       "file": "docs/ARCHITECTURE.md",
       "kind": "first_or_only",
       "text": "| `dema away preview` (with `--contract-file`, `--validation-file`, `--receipt-file`, `--now`, `--json`) | `packages/core/src/absence-steward-readiness.js` + `apps/cli/src/commands/away.js` | ABSENCE-STEWARD-PREVIEW-CHECK-1A + AWAY-CONTRACT-READINESS-CLI-1A (spec `docs/02-architecture/ABSENCE_STEWARD_PREVIEW_v0_1.md`): derives the readiness state of an Away Contract trio — NOT_CONFIGURED / CONTRACT_VERIFIED / PREVIEW_READY / EXPIRED / REFUSED. Binding judged as of the receipt's hash-protected created_at, expiry at the declared `--now`; forge-and-recomputed receipts still refuse. Report only: exits after reporting, PREVIEW_READY grants nothing, REFUSED is the only exit-1 state, no DEMA_HOME needed, no write, no model, no network. `dema away start` does not exist. Truth label: ABSENCE_STEWARD_READINESS_PREVIEW_ONLY. Human output ends \"Preview only. No Away Mode started. dema away start does not exist.\" |"
+    },
+    {
+      "file": "docs/ARCHITECTURE.md",
+      "kind": "first_or_only",
+      "text": "| `dema away review` (with `--contract-file`, `--validation-file`, `--receipt-file`, `--left`, `--returned`, `--json`) | `packages/core/src/absence-steward-return-review.js` + `apps/cli/src/commands/away.js` | ABSENCE-STEWARD-RETURN-REVIEW-CHECK-1A + ABSENCE-STEWARD-RETURN-REVIEW-CLI-1A (spec `docs/02-architecture/ABSENCE_STEWARD_RETURN_REVIEW_v0_1.md`): post-absence review over a DECLARED window (`--left`/`--returned`, never the clock; readiness re-derived at both edges). Opens \"Nothing is hidden.\"; every claim is receipt-backed or carries \"NO_RECEIPT — cannot claim.\"; executed_summary is always \"Nothing executed.\"; v0.1 verdicts limited to NO_ABSENCE_RECORDED / REVIEW_BLOCKED / READY_BUT_NOT_STARTED / EXPIRED_BEFORE_START (COMPLETE verdicts unreachable; WORK_COMPLETE not in vocabulary). REVIEW_BLOCKED is the only exit-1 state. Report only: no write, no runtime, no model, no network. Truth label: ABSENCE_STEWARD_RETURN_REVIEW_REPORT_ONLY. Human output ends \"Review only. No Away Mode started.\" |"
     },
     {
       "file": "docs/BIZRA_2026_FIRST_LOOK_NARRATIVE_v0_1.md",
@@ -562,6 +567,11 @@
       "file": "docs/TESTING.md",
       "kind": "first_or_only",
       "text": "| `tests/away-contract-cli-preview.test.js`   | AWAY-CONTRACT-READINESS-CLI-1A (`apps/cli/src/commands/away.js` + `packages/core/src/absence-steward-readiness.js`): `dema away preview --contract-file <json> --validation-file <json> [--receipt-file <json>] --now <iso> [--json]` — real CLI-path tests. PREVIEW_READY / CONTRACT_VERIFIED / EXPIRED are honest exit-0 reports; REFUSED is the only exit-1 state (laundered contract proven); missing flags and invalid JSON fail closed; no DEMA_HOME needed; human output ends \"Preview only. No Away Mode started. dema away start does not exist.\"; `away start` still fails closed naming all four legal rungs. 7 tests. |"
+    },
+    {
+      "file": "docs/TESTING.md",
+      "kind": "first_or_only",
+      "text": "| `tests/away-contract-cli-review.test.js`    | ABSENCE-STEWARD-RETURN-REVIEW-CLI-1A (`apps/cli/src/commands/away.js` + `packages/core/src/absence-steward-return-review.js`): `dema away review --contract-file <json> --validation-file <json> [--receipt-file <json>] --left <iso> --returned <iso> [--json]` — real CLI-path tests. Human output opens \"Nothing is hidden.\" and ends \"Review only. No Away Mode started.\"; READY_BUT_NOT_STARTED / EXPIRED_BEFORE_START are exit-0 reports; REVIEW_BLOCKED (laundered contract) is the only exit-1 state; missing window flags and invalid JSON fail closed; no DEMA_HOME needed; `away start` still fails closed naming all five legal rungs. 6 tests. |"
     },
     {
       "file": "docs/TESTING.md",
