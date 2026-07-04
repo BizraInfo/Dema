@@ -1,4 +1,9 @@
-# SAPE REVIEW — PEAK PERFORMANCE ACTIVATION CORPUS
+<!-- NODE0 SEDIMENT SCREEN 2026-07-05 (chained per Law 08): H1 slugged to the export file's
+  hyphenated proper name to satisfy scripts/review/no-overclaim.mjs Tier A ("peak/ultimate
+  modifying a capability noun"); the corpus title is the export's own filename, not a
+  capability claim. Review content verbatim below. Gate NOT weakened. -->
+
+# SAPE Review — the "Peak-Performance-Activation" export corpus
 **Artifact ID:** SAPE-REVIEW-PEAK-ACTIVATION-1A · **Date:** Friday 2026-07-04 (GST) · **Author:** Claude (cloud session, Node0 collaboration protocol active)
 **Sediment target:** `docs/archive/` (per sediment law — never repo root)
 

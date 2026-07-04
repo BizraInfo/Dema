@@ -24,7 +24,7 @@ the NODE0 code lane against disk before commit. Corrections are **chained, never
 | OWNED-KNOWLEDGE-LADDER-v0.1.md | canon draft | clean at screen |
 | BIZRA-ROADMAP-v0.1-2026-07-04.md | roadmap (superseded by v0.2) | historical |
 | BIZRA-MASTER-STATE-ROADMAP-v0.2.md | roadmap + state snapshot | facts as of drafting; several rows superseded same day (#316 merged, census MEASURED) |
-| SAPE-REVIEW-PEAK-ACTIVATION-2026-07-04.md | meta-review | relayed analysis |
+| SAPE-REVIEW-PEAK-ACTIVATION-2026-07-04.md | meta-review | relayed analysis; H1 slugged post-CI (no-overclaim Tier A) — correction chained in-file |
 | EXCAV-2026-07-04-PINNACLE-BLUEPRINT.md | excavation blueprint | relayed analysis |
 | MITHAQ-DESIGN-CANON-v0.1.html | design canon draft | staged as received |
 | GIANTS-BENCHMARK-BIZRA-BOUNDARY-1A.md | benchmark inversion draft | 2 corrections chained + cloud-lane acceptance recorded in-file |
