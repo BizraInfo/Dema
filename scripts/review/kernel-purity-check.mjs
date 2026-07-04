@@ -98,6 +98,8 @@ export const IO_TIER_ALLOWLIST = Object.freeze({
   "routed-invocation-verifier.js":
     "reads saved invocation receipts (open/stat/readdir) to verify routing invariants; read-only",
   // Persistence I/O by design (all writes are under DEMA_HOME/~/.dema):
+  "absence-steward-queue-receipt.js":
+    "consent-gated atomic write+rename of one queue-proposal receipt under the disclosed resolved home (persistence I/O by design; records proposals, never approves or executes)",
   "away-contract-receipt.js":
     "consent-gated atomic write+rename of one away-contract receipt under injected dema_home (persistence I/O by design; no env/clock fallback)",
   "dema-realm-checkpoint-writer.js":
