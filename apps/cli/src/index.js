@@ -12,6 +12,7 @@ import { cmd_seed } from "./commands/seed.js";
 import { cmd_state } from "./commands/state.js";
 import { cmd_start } from "./commands/start.js";
 import { cmd_scan } from "./commands/scan.js";
+import { cmd_corpus } from "./commands/corpus.js";
 import { cmd_mirror } from "./commands/mirror.js";
 import { cmd_talk } from "./commands/talk.js";
 import { cmd_setup } from "./commands/setup.js";
@@ -38,6 +39,9 @@ import { cmd_witness } from "./commands/witness.js";
 import { cmd_attest } from "./commands/attest.js";
 import { cmd_verify_grounded } from "./commands/verify-grounded.js";
 import { cmd_assets } from "./commands/assets.js";
+import { cmd_stand } from "./commands/stand.js";
+import { cmd_poi } from "./commands/poi.js";
+import { cmd_away } from "./commands/away.js";
 import { cmd_contribute } from "./commands/contribute.js";
 import { cmd_demo } from "./commands/demo.js";
 import { cmd_status, cmd_status_json } from "./commands/status.js";
@@ -73,10 +77,12 @@ import { cmd_evidence } from "./commands/evidence.js";
 import { cmd_ihsan } from "./commands/ihsan.js";
 import { cmd_behavior } from "./commands/behavior.js";
 import { cmd_design } from "./commands/design.js";
+import { cmd_economy } from "./commands/economy.js";
 import { cmd_agent_loop } from "./commands/agent-loop.js";
 import { cmd_task } from "./commands/task.js";
 import { cmd_sovereign } from "./commands/sovereign.js";
 import { cmd_node0 } from "./commands/node0.js";
+import { cmd_node0_index } from "./commands/node0-index.js";
 import { cmd_canon } from "./commands/canon.js";
 import { cmd_hardware } from "./commands/hardware.js";
 import { cmd_adk } from "./commands/adk.js";
@@ -151,6 +157,69 @@ Orientation:
   dema setup-check  Verify install integrity (paths + sha256 hashes)
   dema uninstall [--dry-run]
                     Remove local Dema data; requires --consent with exact phrase
+  dema stand [--json] [--drain less|same|more] [--blockers <abs.json>] [--receipt --consent "<phrase>"]
+                    DEMA-STAND-1A Morning Standing card: git + gate-log
+                    metadata composed into FDE lens buckets, exactly ONE next
+                    action, declared drain, stale-proof + orbit warnings.
+                    Read-only compose; receipt writes only under
+                    DEMA_HOME/stand/receipts with the exact consent phrase.
+                    No network, no model call, no mint, no live autonomy.
+  dema stand chain [--json]
+                    DEMA-STEWARD-CHAIN-1A steward-chain verifier: re-verifies
+                    every standing receipt on disk, checks consecutive UTC
+                    days, and reports day-N-of-7 / broken / complete honestly.
+                    Days cannot be fabricated; read-only.
+  dema poi compression record [--json] [--receipt --consent "<phrase>"]
+                    POI-TIME-COMPRESSION-1A candidate receipt: operator-declared
+                    baseline estimate vs actual proof-loop duration under
+                    required quality gates. A failed gate refuses the receipt;
+                    baseline stays a declared assumption; observation-time is a
+                    separate clock. Candidate only — no verified impact, no mint.
+                    Receipt writes only under DEMA_HOME/poi/compression/receipts
+                    with the exact consent phrase.
+  dema poi compression show [--json]
+                    List recorded time-compression candidate receipts (read-only)
+  dema poi compression verify [--json]
+                    Re-verify every recorded candidate receipt; fails closed
+  dema away draft [--intent-file <intent.json>] [--now <iso>] [--contract-id-prefix <prefix>] [--json]
+                    AWAY-CONTRACT-CLI-DRAFT-1A: compile an explicit JSON intent
+                    into a draft Away Contract body (ADR-043 ladder). Draft
+                    only — validates shape via the pure compiler; no receipt,
+                    no DEMA_HOME write, no model call, no network, no Away
+                    Mode start. Act-time is the declared --now value.
+  dema away verify [--contract-file <contract.json>] [--validation-file <validation.json>] [--now <iso>] [--json]
+                    AWAY-CONTRACT-CLI-VERIFY-1A: body-bound check that the
+                    contract still matches its validation_result (whole
+                    normalized body + hash, launder catches). Read-only;
+                    verify never infers a validation_result, writes nothing,
+                    starts nothing. Act-time is the declared --now value.
+  dema away receipt [--contract-file <contract.json>] [--validation-file <validation.json>] [--now <iso>] [--consent "<phrase>"] [--dema-home <path>] [--json]
+                    AWAY-CONTRACT-CLI-RECEIPT-1A: record a verified Away
+                    Contract as a receipt. Verify-before-write; exact phrase
+                    "GO: write away-contract receipt <id> <hash12>" required;
+                    single atomic write under the DISCLOSED resolved home
+                    (--dema-home > DEMA_HOME > ~/.dema; printed as
+                    resolved_dema_home on every path, no overwrite).
+                    Recording is not starting — no Away Mode.
+  dema away preview [--contract-file <contract.json>] [--validation-file <validation.json>] [--receipt-file <receipt.json>] [--now <iso>] [--json]
+                    ABSENCE-STEWARD readiness report: derives
+                    NOT_CONFIGURED / CONTRACT_VERIFIED / PREVIEW_READY /
+                    EXPIRED / REFUSED from the trio. Report only — exits
+                    after reporting; PREVIEW_READY grants nothing; the
+                    start surface does not exist and stays refused.
+  dema away review [--contract-file <contract.json>] [--validation-file <validation.json>] [--receipt-file <receipt.json>] [--left <iso>] [--returned <iso>] [--json]
+                    ABSENCE-STEWARD return review: post-absence report over
+                    a declared window. Opens "Nothing is hidden."; every
+                    claim is receipt-backed or NO_RECEIPT; verdicts limited
+                    to NO_ABSENCE_RECORDED / REVIEW_BLOCKED /
+                    READY_BUT_NOT_STARTED / EXPIRED_BEFORE_START. Report
+                    only — nothing executed, nothing starts.
+  dema away queue draft [--item-file <queue-item.json>] [--now <iso>] [--json]
+                    ABSENCE-STEWARD queue proposal draft: validates ONE
+                    proposal item shape (statuses capped at the design
+                    five; consent-ish fields and never-executable classes
+                    reject). Validation only — no queue stored, no
+                    approval, no execution, no receipt, nothing starts.
   dema witness [--dry-run] [--json]
                     Node0 self-witness receipt; requires --consent to save
   dema witness verify [--file <path>] [--json]
@@ -182,6 +251,12 @@ Proof:
                     Verify a proof passport. Default: envelope only (hash + structure
                     + boundary). With --deep: also re-verifies each referenced
                     authorship receipt file against passport metadata.
+
+Economy:
+  dema economy poi-mint-preview --impact-receipt <path> [--json]
+                    Simulate BZR-C/BZR-I mint eligibility from a verified PoI
+                    receipt-shaped JSON file. ECONOMY_SIMULATION_ONLY: no
+                    wallet, no sale, no live token mint.
 
 Genesis:
   dema genesis composition blueprint [--json]
@@ -288,6 +363,12 @@ BIZRA ADK (BIZRA-ADK-AGENT-CONTRACT-1A, define/validate/preview only):
                     harness on one contract. Read-only; no agent execution.
 
 Local asset awareness:
+  dema node0-index --root <path> [--hash-content --consent "<phrase>"] [--json]
+                    DEMA-NODE0-SPACE-INDEX-1A metadata-only Node0 onboarding
+                    census. Prints the exact hash-consent phrase for optional
+                    content hashing. Checkpoints write only under
+                    DEMA_HOME/node0-index/checkpoints. No dedup apply, move,
+                    delete, network, model, mint, wallet, SAT, or federation.
   dema assets scan [--json] [--root <path>]
                     DEMA-HOMEBASE-ASSET-AWARENESS-1A metadata-only homebase
                     asset awareness. Scans declared root (default ~/Downloads or
@@ -485,6 +566,8 @@ Local evidence:
                     LOCAL-LLM-FLEET-READINESS-1A · read-only fleet readiness (provider reachability · installed/loaded models · preferred routes · consent phrases); no model invocation
   dema report safety [--json]
                     Preview the safety report; does not certify, execute, or mint
+  dema report quality-evidence-card --commit <sha> --tests-total N --tests-pass N --tests-fail N [--check-pass] [--llm-guidance-pass] [--diff-check-clean] [--coverage-lines P] [--coverage-branches P] [--coverage-functions P] [--json]
+                    Internal quality evidence card (NOT production certification). Seals under $DEMA_HOME. no_mint: true.
   dema network blueprint [--json]
                        Preview Node1/Node2 and phase-gated readiness; no federation
   dema network fixture preview [--json]
@@ -590,6 +673,11 @@ const REGISTERED_COMMANDS_LIST = [
   {
     command: "scan",
     description: "consent-gated homebase metadata scan (exact phrase required)",
+  },
+  {
+    command: "corpus",
+    description:
+      "governed founder corpus index + spend proof + receipt review (subcommands: index, spend, review)",
   },
   {
     command: "mirror",
@@ -761,6 +849,11 @@ const REGISTERED_COMMANDS_LIST = [
   {
     command: "witness",
     description: "Node0 self-witness receipt (consent-gated)",
+  },
+  {
+    command: "poi",
+    description:
+      "PoI time-compression candidate receipts (subcommands: compression record|show|verify)",
   },
   { command: "help", description: "show full command list" },
 ];
@@ -1042,7 +1135,7 @@ async function cmdCovenant(ctx) {
     }
     try {
       const decision = JSON.parse(readFileSync(file, "utf8"));
-      const receipt = signReceipt(decision, typedGo);
+      const receipt = signReceipt(decision, typedGo, process.env.DEMA_COVENANT_KEY);
       if (wantJson) {
         console.log(JSON.stringify(receipt, null, 2));
       } else {
@@ -1081,6 +1174,9 @@ const COMMAND_TABLE = {
   setup: cmd_setup,
   "setup-check": cmd_setup_check,
   uninstall: cmd_uninstall,
+  stand: cmd_stand,
+  poi: cmd_poi,
+  away: cmd_away,
   witness: cmd_witness,
   authorship: cmd_authorship,
   proof: cmd_proof,
@@ -1098,8 +1194,10 @@ const COMMAND_TABLE = {
   status: cmd_status,
   "status:json": cmd_status_json,
   state: cmd_state,
+  "node0-index": cmd_node0_index,
   start: cmd_start,
   scan: cmd_scan,
+  corpus: cmd_corpus,
   mirror: cmd_mirror,
   talk: cmd_talk,
   canon: cmd_canon,
@@ -1153,6 +1251,7 @@ const COMMAND_TABLE = {
   ihsan: cmd_ihsan,
   behavior: cmd_behavior,
   design: cmd_design,
+  economy: cmd_economy,
   "agent-loop": cmd_agent_loop,
   task: cmd_task,
   sovereign: cmd_sovereign,

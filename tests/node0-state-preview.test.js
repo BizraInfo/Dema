@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { buildNode0StatePreview } from "../packages/core/src/state.js";
+import { PREVIEW_BOUNDARY_CANONICAL_KEYS } from "../packages/core/src/preview-boundary.js";
 
 test("buildNode0StatePreview emits canonical schema + truth label", () => {
   const state = buildNode0StatePreview();
@@ -83,7 +84,11 @@ test("buildNode0StatePreview ADVERSARIAL: caller cannot inject boundary override
   // boundary keys. Confirm the boundary key set is exactly canonical 16.
   const state = buildNode0StatePreview();
   const keys = Object.keys(state.boundary).sort();
-  assert.equal(keys.length, 16, "boundary must have exactly 16 canonical keys");
+  assert.equal(
+    keys.length,
+    PREVIEW_BOUNDARY_CANONICAL_KEYS.length,
+    "boundary must have exactly canonical key count",
+  );
   for (const v of Object.values(state.boundary)) {
     assert.equal(v, false, "every boundary value must be false");
   }

@@ -162,8 +162,9 @@ function createDecisionHash(decisionFields) {
 /**
  * Micro-consent + signed receipt (DEMO ONLY).
  * Requires exact-string decision-bound consent.
+ * No fallback signing key: an unset key source fails closed.
  */
-export function signReceipt(decision, typedGo, secretKey = Buffer.from('local-demo-key-replace-me')) {
+export function signReceipt(decision, typedGo, secretKey) {
   if (decision?.status === 'blocked') {
     throw new Error('Cannot sign blocked Covenant decision.');
   }
@@ -171,6 +172,17 @@ export function signReceipt(decision, typedGo, secretKey = Buffer.from('local-de
   const expectedPhrase = expectedConsentPhrase(decision);
   if (typedGo !== expectedPhrase) {
     throw new Error(`Micro-consent failed: typed_go must equal "${expectedPhrase}".`);
+  }
+
+  const keyEmpty =
+    secretKey == null ||
+    (Buffer.isBuffer(secretKey)
+      ? secretKey.length === 0
+      : String(secretKey).trim().length === 0);
+  if (keyEmpty) {
+    throw new Error(
+      'Covenant signing key missing: pass an explicit secretKey or set DEMA_COVENANT_KEY; the demo fallback key has been removed (fail closed).',
+    );
   }
 
   const nonce = randomBytes(16).toString('hex');

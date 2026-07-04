@@ -30,9 +30,21 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_GOVERNED_REVERSIBLE_ACTION_PREVIEW_1A",
   "DEMA_FDE_DUAL_DIAGNOSTIC_1A",
   "NODE0_REVERSIBLE_EXECUTE_GATE_1A",
+  "NODE0_UNDO_PROVEN_1A",
+  "NODE0_CI_VENDOR_AVAILABILITY_1A",
   "NODE0_RECEIPT_SIGNING_ED25519_1A",
   "NODE0_PROOF_CHAIN_LINK_1A",
   "NODE0_SIGNED_CHAIN_HEAD_1A",
+  "NODE0_SPINE_RUNNER_CLI_1A",
+  "NODE0_EVIDENCE_SOURCE_REGISTRY_1A",
+  "NODE0_LOCAL_CLOSURE_READINESS_1A",
+  "DEMA_STAND_1A",
+  "DEMA_STEWARD_CHAIN_1A",
+  "POI_TIME_COMPRESSION_1A",
+  "AWAY_CONTRACT_1A",
+  "ABSENCE_STEWARD_READINESS_1A",
+  "ABSENCE_STEWARD_RETURN_REVIEW_1A",
+  "ABSENCE_STEWARD_QUEUE_PROPOSAL_SPINE_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -43,7 +55,7 @@ const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
   "LIVE_POI",
 ]);
 
-const REGISTRY_BOUNDARY_KEYS = Object.freeze([
+export const REGISTRY_BOUNDARY_KEYS = Object.freeze([
   "daemon_started",
   "network_used",
   "token_minted",
@@ -56,7 +68,7 @@ const REGISTRY_BOUNDARY_KEYS = Object.freeze([
   "model_invocation_performed",
 ]);
 
-const ROW_BOUNDARY_KEYS = Object.freeze([
+export const ROW_BOUNDARY_KEYS = Object.freeze([
   "execution_allowed",
   "daemon_started",
   "network_used",
@@ -360,7 +372,10 @@ function defaultCapabilityRows() {
         review_gate_paths: [
           "scripts/review/dema-fde-dual-diagnostic-check.mjs",
         ],
-        receipt_paths: ["docs/receipts/DEMA_FDE_DUAL_DIAGNOSTIC_1A.md"],
+        receipt_paths: [
+          "docs/receipts/DEMA_FDE_DUAL_DIAGNOSTIC_1A.md",
+          "docs/receipts/DEMA_FDE_CI_BILLING_LOCK_MARKER_1A.md",
+        ],
         documentation_paths: [
           "docs/02-architecture/DEMA_FDE_DUAL_DIAGNOSTIC_v0_1.md",
           "docs/TESTING.md",
@@ -402,6 +417,53 @@ function defaultCapabilityRows() {
         "live governed runtime",
         "production execution",
       ],
+    }),
+    capability({
+      capability_id: "NODE0_UNDO_PROVEN_1A",
+      truth_label: "NODE0_UNDO_PROVEN_PREVIEW_ONLY",
+      summary:
+        "Measured inverse-correction preview envelope composing execute gate + backup-anchored undo proof.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-undo-proven-preview.js"],
+        test_paths: ["tests/node0-undo-proven-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-undo-proven-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_UNDO_PROVEN_1A.md"],
+        documentation_paths: ["docs/TESTING.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim production rollback, autonomous repair, or inverse correction outside the measured sandbox gate.",
+      what_this_proves:
+        "Dema can seal one undo-proven preview when the reversible execute gate restores bytes from backup.",
+      what_this_does_not_prove:
+        "It does not prove live governed runtime, federation, economic rights, or arbitrary action-class undo.",
+      forbidden_claims: ["production rollback", "autonomous repair", "live undo runtime"],
+    }),
+    capability({
+      capability_id: "NODE0_CI_VENDOR_AVAILABILITY_1A",
+      truth_label: "NODE0_CI_VENDOR_AVAILABILITY_LOCAL_ONLY",
+      summary:
+        "FDE-backed GitHub Actions billing-lock lane so local proof rails do not treat vendor lock as code regression.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-ci-vendor-availability.js"],
+        test_paths: ["tests/node0-ci-vendor-availability.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-ci-vendor-availability-check.mjs",
+        ],
+        receipt_paths: [
+          "docs/receipts/DEMA_FDE_CI_BILLING_LOCK_MARKER_1A.md",
+          "docs/receipts/NODE0_CI_VENDOR_AVAILABILITY_1A.md",
+        ],
+        documentation_paths: ["docs/TESTING.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim remote CI green, trunk merge eligibility, or that billing lock is a code defect.",
+      what_this_proves:
+        "Dema can classify vendor billing lock and keep LOCAL proof lane honest while remote CI is advisory.",
+      what_this_does_not_prove:
+        "It does not unlock GitHub billing, replace remote attestation, or authorize merge while CI is vendor-blocked.",
+      forbidden_claims: ["remote CI green", "billing unlocked", "code regression from vendor lock"],
     }),
     capability({
       capability_id: "NODE0_RECEIPT_SIGNING_ED25519_1A",
@@ -490,6 +552,351 @@ function defaultCapabilityRows() {
         "unattended runtime",
       ],
     }),
+    capability({
+      capability_id: "NODE0_SPINE_RUNNER_CLI_1A",
+      truth_label: "NODE0_MEASURED_PROOF_SPINE_SANDBOX_RUN",
+      summary:
+        "One consent-gated CLI path through execute → receipt attestation → proof chain → signed chain head in sandbox only.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/node0-spine-runner.js",
+          "apps/cli/src/commands/node0-spine-run.js",
+          "apps/cli/src/commands/node0.js",
+        ],
+        test_paths: [
+          "tests/node0-spine-runner.test.js",
+          "tests/node0-spine-runner-cli.test.js",
+        ],
+        review_gate_paths: ["scripts/review/node0-spine-runner-check.mjs"],
+        receipt_paths: ["docs/receipts/NODE0_SPINE_RUNNER_CLI_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_SPINE_RUNNER_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim general task execution, DEMA activation, autonomous action, live execution, operator mutation outside sandbox, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Dema exposes `dema node0 spine run` as one measured operator command that runs the #306–#309 spine in a sandbox with exact-string consent, returning a JSON envelope with execute hash, chain head, and attestation status without daemon or network.",
+      what_this_does_not_prove:
+        "It does not prove BIZRA-DATA-LAKE Node0 activation, real-time arbitrary tasks, federation, or live operator mutation outside the sandbox root.",
+      forbidden_claims: [
+        "general task execution",
+        "DEMA activation",
+        "autonomous action",
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_EVIDENCE_SOURCE_REGISTRY_1A",
+      truth_label: "NODE0_EVIDENCE_SOURCE_REGISTRY_MEASURED_REPO",
+      summary:
+        "Register local, GitHub, Drive, Claude export, public-domain, receipt, design, and economy-simulation evidence sources before indexing, dedup, impact review, or mint decisions.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-evidence-source-registry.js"],
+        test_paths: ["tests/node0-evidence-source-registry.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-evidence-source-registry-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_EVIDENCE_SOURCE_REGISTRY_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_EVIDENCE_SOURCE_REGISTRY_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim source ingestion, content reads, Drive downloads, GitHub writes, web scraping, impact verification, token minting, wallet access, live execution, daemon runtime, or federation.",
+      what_this_proves:
+        "Dema can deterministically register Node0 evidence source families before ingestion, dedup, impact review, or mint decisions, with exact consent, all-false execution boundary, zero mint allowance, and simulation sources barred from the impact queue.",
+      what_this_does_not_prove:
+        "It does not prove source contents, Drive download, GitHub mutation, web scraping, dedup execution, verified impact, PoI acceptance, token minting, wallet access, live execution, or federation.",
+      forbidden_claims: [
+        "source ingested",
+        "Drive downloaded",
+        "GitHub updated",
+        "impact verified",
+        "token minted",
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_LOCAL_CLOSURE_READINESS_1A",
+      truth_label: "NODE0_LOCAL_CLOSURE_READINESS_MEASURED_REPO",
+      summary:
+        "Compose the Node0 evidence source registry and space-index envelope into local closure readiness with PAT/SAT metadata-only gates and no-mint blockers.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-local-closure-readiness.js"],
+        test_paths: ["tests/node0-local-closure-readiness.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-local-closure-readiness-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_LOCAL_CLOSURE_READINESS_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_LOCAL_CLOSURE_READINESS_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim content ingestion, dedup execution, reorg execution, SAT acceptance, verified impact, live token minting, wallet access, daemon runtime, network use, or federation.",
+      what_this_proves:
+        "Dema can compose the Node0 evidence source registry and Node0 space-index envelope into a deterministic local closure readiness map: PAT-local registry/index gates, exact hash-consent next action, review-only impact candidates, SAT metadata blocked until apply completes, and zero mint allowance before verified PoI.",
+      what_this_does_not_prove:
+        "It does not prove source contents, data deduplication, file reorganization, SAT acceptance, verified impact, live token minting, wallet access, daemon runtime, network use, or federation.",
+      forbidden_claims: [
+        "content ingested",
+        "dedup executed",
+        "reorg executed",
+        "SAT accepted",
+        "impact verified",
+        "token minted",
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_STAND_1A",
+      truth_label: "FIRST_USER_STANDING_LOCAL_ONLY",
+      summary:
+        "Morning Standing Receipt: composes injected local evidence (git state, gate-log metadata, declared blockers) into a daily first-user standing card with FDE lens, exactly one next action, drain metric, stale-proof detection, and orbit warning.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-stand.js"],
+        test_paths: ["tests/dema-stand.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-stand-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_STAND_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_STAND_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A deterministic daily standing card (FDE lens buckets, exactly one ladder-selected next action, declared drain, stale-proof and orbit flags) can be composed from injected local evidence and re-derived by any verifier from the embedded raw input.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_STEWARD_CHAIN_1A",
+      truth_label: "FIRST_USER_STEWARD_CHAIN_LOCAL_ONLY",
+      summary:
+        "Steward-chain verifier: verifies the FIRST_USER standing-receipt chain (consecutive UTC days, per-receipt re-derivation, drain series) and emits honest day-N-of-7 / broken / complete verdicts with the Day-7 report payload.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-steward-chain.js"],
+        test_paths: ["tests/dema-steward-chain.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-steward-chain-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_STEWARD_CHAIN_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_STEWARD_CHAIN_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "The FIRST_USER standing-receipt chain state (consecutive UTC days, per-receipt hash validity, drain series) is derived deterministically and a COMPLETE verdict can only arise from N distinct consecutive verified receipts already on disk — days cannot be fabricated.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "POI_TIME_COMPRESSION_1A",
+      truth_label: "POI_TIME_COMPRESSION_CANDIDATE_LOCAL_ONLY",
+      summary:
+        "Local-only PoI time-compression candidate receipt: declared baseline estimate vs declared actual duration under required quality gates; fail-closed, observation-aware, no mint.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/poi-time-compression.js"],
+        test_paths: ["tests/poi-time-compression.test.js"],
+        review_gate_paths: [
+          "scripts/review/poi-time-compression-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/POI_TIME_COMPRESSION_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/POI_TIME_COMPRESSION_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A declared baseline estimate (reference-class assumption) and a declared actual proof-loop duration can be bound into a fail-closed, content-addressed candidate compression receipt that refuses to exist when any required quality gate failed, keeps proof-time and observation-time as separate clocks, and rejects forged-and-recomputed ratios, gate survival, review flags, or mint flags on re-verification.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "AWAY_CONTRACT_1A",
+      truth_label: "AWAY_CONTRACT_DESIGNED_NOT_LIVE",
+      summary:
+        "Away Contract ladder (ADR-043): schema validator, body-bound verifier, consent-gated receipt writer, draft compiler, and the dema away draft|verify|receipt CLI. Contracts are drafted, validated, verified, and receipted — never started; absence stewardship stays DESIGNED_NOT_LIVE.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/away-contract-schema.js",
+          "packages/core/src/away-contract-verify.js",
+          "packages/core/src/away-contract-receipt.js",
+          "packages/core/src/away-contract-compiler.js",
+          "apps/cli/src/commands/away.js",
+        ],
+        test_paths: [
+          "tests/away-contract-schema.test.js",
+          "tests/away-contract-verify.test.js",
+          "tests/away-contract-receipt.test.js",
+          "tests/away-contract-compiler.test.js",
+          "tests/away-contract-cli-draft.test.js",
+          "tests/away-contract-cli-verify.test.js",
+          "tests/away-contract-cli-receipt.test.js",
+        ],
+        review_gate_paths: ["scripts/review/away-contract-check.mjs"],
+        receipt_paths: ["docs/receipts/AWAY_CONTRACT_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/AWAY_CONTRACT_SPEC_v0_1.md",
+          "docs/06-adr/ADR-043-pattern-first-nodespace-away-contract-quest-kernel.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live absence stewardship, contract start, action execution, daemon runtime, model invocation, network use, token, wallet, or federation. dema away start does not exist and requires its own proof gates plus exact operator consent.",
+      what_this_proves:
+        "An Away Contract body can be drafted from explicit intent, shape-validated fail-closed (never-grantable actions reject even when requested), verified body-bound against its whole normalized body and hash (laundering detected), and recorded as an exact-consent receipt under DEMA_HOME — deterministically, with injected act-time and all-false boundaries at every rung.",
+      what_this_does_not_prove:
+        "It does not prove absence-mode execution, unattended work, operator consent beyond the recorded phrase, model invocation, network use, or live stewardship of any kind.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "ABSENCE_STEWARD_READINESS_1A",
+      truth_label: "ABSENCE_STEWARD_READINESS_MEASURED_NOT_LIVE",
+      summary:
+        "Absence Steward readiness report only: consumes an Away Contract contract/validation/receipt trio and derives NOT_CONFIGURED / CONTRACT_VERIFIED / PREVIEW_READY / EXPIRED / REFUSED via dema away preview. Binding judged at the receipt's hash-protected created_at, expiry at injected now. PREVIEW_READY grants nothing; dema away start does not exist.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/absence-steward-readiness.js",
+          "apps/cli/src/commands/away.js",
+        ],
+        test_paths: [
+          "tests/absence-steward-readiness.test.js",
+          "tests/away-contract-cli-preview.test.js",
+        ],
+        review_gate_paths: ["scripts/review/absence-steward-readiness-check.mjs"],
+        receipt_paths: ["docs/receipts/ABSENCE_STEWARD_READINESS_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/ABSENCE_STEWARD_PREVIEW_v0_1.md",
+          "docs/ARCHITECTURE.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live absence stewardship, contract start, steward runtime, daemon, scheduler, unattended execution, model invocation, network use, token, wallet, or federation. Readiness is a report; PREVIEW_READY authorizes nothing; dema away start does not exist and requires its own spec, proof gates, and exact operator consent.",
+      what_this_proves:
+        "A receipted Away Contract trio can be deterministically classified into readiness states with body-binding judged as of the receipt's hash-protected created_at and expiry judged at injected act-time; forged or recomputed receipts, cross-contract receipts, and hot boundary keys are refused; every report carries steward_started:false in an all-false boundary.",
+      what_this_does_not_prove:
+        "It does not prove absence-mode execution, steward runtime, unattended work, scheduling, model invocation, network use, or that any stewardship ever occurred — readiness reporting is not stewardship.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "ABSENCE_STEWARD_RETURN_REVIEW_1A",
+      truth_label: "ABSENCE_STEWARD_RETURN_REVIEW_MEASURED_NOT_LIVE",
+      summary:
+        "Return-review report only: consumes the Away Contract contract/validation/receipt trio plus a declared absence window and derives NO_ABSENCE_RECORDED / REVIEW_BLOCKED / READY_BUT_NOT_STARTED / EXPIRED_BEFORE_START via dema away review. Every claim is receipt-backed or NO_RECEIPT; executed_summary is 'Nothing executed. I can only report readiness and receipts.'; WORK_COMPLETE is not in vocabulary; dema away start does not exist.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/absence-steward-return-review.js",
+          "apps/cli/src/commands/away.js",
+        ],
+        test_paths: [
+          "tests/absence-steward-return-review.test.js",
+          "tests/away-contract-cli-review.test.js",
+        ],
+        review_gate_paths: [
+          "scripts/review/absence-steward-return-review-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/ABSENCE_STEWARD_RETURN_REVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/ABSENCE_STEWARD_RETURN_REVIEW_v0_1.md",
+          "docs/ARCHITECTURE.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live absence stewardship, work completion, queue, contract start, steward runtime, daemon, scheduler, unattended execution, model invocation, network use, token, wallet, or federation. The review reports; it never proves work occurred; dema away start does not exist and requires its own spec, proof gates, and exact operator consent.",
+      what_this_proves:
+        "A post-absence review report can be deterministically derived from the receipted trio plus a declared window, with readiness re-derived at both window edges, verdicts capped at READY_BUT_NOT_STARTED / EXPIRED_BEFORE_START (COMPLETE verdicts unreachable), every event field refusing unreceipted claims, and a ten-key all-false boundary on every path.",
+      what_this_does_not_prove:
+        "It does not prove any work occurred, absence-mode execution, steward runtime, queuing, scheduling, model invocation, network use, or stewardship of any kind — the review exists to prove what was NOT done.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "ABSENCE_STEWARD_QUEUE_PROPOSAL_SPINE_1A",
+      truth_label: "ABSENCE_STEWARD_QUEUE_PROPOSAL_SPINE_MEASURED_NOT_LIVE",
+      summary:
+        "Absence Steward queue PROPOSAL spine only: fail-closed item-shape validator, body-bound launder-detecting verifier, consent-gated atomic receipt writer, and the validate-only dema away queue draft CLI. Item states capped at PROPOSED / HUMAN_APPROVED / HUMAN_REJECTED / WITHDRAWN / EXPIRED_WITH_CONTRACT; queue membership is never consent; recording a proposal never moves it. The queue itself — runner, approval flow, execution — remains DESIGNED_NOT_LIVE.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/absence-steward-queue-schema.js",
+          "packages/core/src/absence-steward-queue-verify.js",
+          "packages/core/src/absence-steward-queue-receipt.js",
+          "apps/cli/src/commands/away.js",
+        ],
+        test_paths: [
+          "tests/absence-steward-queue-schema.test.js",
+          "tests/absence-steward-queue-verify.test.js",
+          "tests/absence-steward-queue-receipt.test.js",
+          "tests/away-queue-cli-draft.test.js",
+        ],
+        review_gate_paths: ["scripts/review/absence-steward-queue-check.mjs"],
+        receipt_paths: [
+          "docs/receipts/ABSENCE_STEWARD_QUEUE_PROPOSAL_SPINE_1A.md",
+        ],
+        documentation_paths: [
+          "docs/02-architecture/ABSENCE_STEWARD_LOCAL_QUEUE_v0_1.md",
+          "docs/ARCHITECTURE.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim a live queue, queue runner, scheduler, daemon, auto-dequeue, self-approval, execution from queue, steward runtime, unattended execution, model invocation, network use, token, wallet, or federation. A recorded proposal is a remembered request — approval stays a separate human decision, execution is not in this track at all, and dema away start does not exist.",
+      what_this_proves:
+        "A queue proposal item can be validated fail-closed (execution-flavored states, never-executable action classes, and consent-ish fields all reject), re-verified body-bound against laundering (whole-body diff — forged hashes, drifted items, and hot boundaries refused), and, only under byte-exact derived consent, recorded as an atomic no-overwrite receipt that stays approved:false and executed:false with an all-false runtime boundary on every path.",
+      what_this_does_not_prove:
+        "It does not prove a queue runtime, storage beyond receipts, approval flow, dequeue, scheduling, execution, model invocation, or network use — the queue itself remains designed, not live.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
   ]);
 }
 
@@ -551,7 +958,7 @@ export function buildDemaCapabilityTruthRegistry({
       previous_state_hash,
     }),
     what_this_proves: [
-      "Dema can enumerate the eleven shipped pre-action spine capabilities with source, test, gate, and receipt/doc evidence.",
+      `Dema can enumerate all ${sortedCapabilities.length} shipped pre-action spine capabilities with source, test, gate, and receipt/doc evidence.`,
       "Preview-only capabilities remain blocked from execution claims.",
       "Token, wallet, live URP federation, live RSI, and live PoI stay DESIGNED_NOT_LIVE.",
     ],

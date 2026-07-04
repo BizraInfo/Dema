@@ -1,7 +1,7 @@
 // CONSENT-MATRIX-COVERAGE-1A — declarative CLI risk + consent registry.
 // One row per COMMAND_TABLE token. Review gate enforces parity with dispatcher.
 
-/** @typedef {"read_only"|"preview_only"|"local_write"|"network"|"external_runtime"|"key_wallet"|"activation"} CliRiskLevel */
+/** @typedef {"read_only"|"preview_only"|"local_write"|"content_read"|"network"|"external_runtime"|"key_wallet"|"activation"} CliRiskLevel */
 /** @typedef {"none"|"fail_closed_preview"|"exact_phrase"|"approval_gate"|"subcommand_gated"} ConsentMechanism */
 
 /**
@@ -25,7 +25,7 @@ function preview(cmd, testRef, extraRisks = []) {
     cmd,
     ["read_only", "preview_only", ...extraRisks],
     "fail_closed_preview",
-    "Preview kernel or read-only CLI surface; canonical 16-key boundary all-false when emitting previews",
+    "Preview kernel or read-only CLI surface; canonical 17-key boundary all-false when emitting previews",
     [testRef],
   );
 }
@@ -77,6 +77,34 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     ["tests/setup-uninstall-cli.test.js"],
   ),
   row(
+    "stand",
+    ["read_only", "preview_only", "local_write"],
+    "exact_phrase",
+    "Morning Standing card is read-only compose; receipt write under DEMA_HOME/stand requires the exact consent phrase",
+    ["tests/dema-stand.test.js", "tests/dema-stand-cli.test.js"],
+  ),
+  row(
+    "poi",
+    ["read_only", "preview_only", "local_write"],
+    "exact_phrase",
+    "PoI time-compression candidate card is read-only compose; receipt write under DEMA_HOME/poi/compression requires the exact consent phrase",
+    ["tests/poi-time-compression.test.js", "tests/poi-time-compression-cli.test.js"],
+  ),
+  row(
+    "away",
+    ["read_only", "preview_only", "local_write"],
+    "exact_phrase",
+    "AWAY-CONTRACT CLI (draft + verify + receipt + preview + review + queue-draft rungs): draft compiles explicit JSON intent, verify runs the body-bound launder check, preview reports absence-steward readiness, review renders the post-absence report (every claim receipt-backed or NO_RECEIPT), queue draft validates ONE proposal item shape — all read-only; receipt is the ONLY write (one atomic file under the disclosed resolved home) and requires the exact phrase `GO: write away-contract receipt <id> <hash12>`. Nothing starts Away Mode; dema away start does not exist",
+    [
+      "tests/away-contract-cli-draft.test.js",
+      "tests/away-contract-cli-verify.test.js",
+      "tests/away-contract-cli-receipt.test.js",
+      "tests/away-contract-cli-preview.test.js",
+      "tests/away-contract-cli-review.test.js",
+      "tests/away-queue-cli-draft.test.js",
+    ],
+  ),
+  row(
     "witness",
     ["local_write"],
     "exact_phrase",
@@ -125,6 +153,13 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     "Preview subcommands only; ADR-042 bridges DEMA_NODE0_ADAPTER / DEMA_GATEWAY_URL; activate rung operator-only",
     ["tests/node0-activation-chain-preview.test.js", "tests/node0-mumu-cli.test.js"],
   ),
+  row(
+    "node0-index",
+    ["read_only", "preview_only", "content_read", "local_write"],
+    "exact_phrase",
+    "Metadata-only index is default; --hash-content requires I CONSENT: HASH NODE0 SPACE <root_hash>; checkpoints write only under DEMA_HOME/node0-index/checkpoints",
+    ["tests/node0-space-index.test.js"],
+  ),
   preview("adk", "tests/adk-agent-contract.test.js"),
   row(
     "status",
@@ -148,6 +183,13 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     "exact_phrase",
     "Homebase metadata scan writes inventory under DEMA_HOME after exact consent",
     ["tests/homebase-scan-consent-cli.test.js"],
+  ),
+  row(
+    "corpus",
+    ["content_read", "local_write"],
+    "exact_phrase",
+    "Single-file corpus index reads file content and seals receipt under DEMA_HOME after exact GO: content_read consent",
+    ["tests/founder-work-indexer.test.js"],
   ),
   readOnly("mirror", "tests/node0-wow-report-cli.test.js"),
   row(
@@ -196,6 +238,7 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
       "tests/poi-receipt-seal-preview-cli.test.js",
     ],
   ),
+  preview("economy", "tests/dual-token-poi-economy.test.js"),
   preview("demo", "tests/node0-killer-demo-value-loop-cli.test.js"),
   preview("llm-router", "tests/local-llm-router-preview.test.js"),
   preview("model-broker", "tests/model-broker-preview.test.js"),
@@ -248,7 +291,13 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
   ),
   preview("think", "tests/think-dry-run.test.js"),
   readOnly("models", "tests/model-catalog-cli.test.js"),
-  preview("report", "tests/safety-report.test.js"),
+  row(
+    "report",
+    ["read_only", "preview_only", "local_write"],
+    "subcommand_gated",
+    "safety is preview-only; quality-evidence-card seals internal audit artifact under DEMA_HOME (not production certification)",
+    ["tests/node0-quality-evidence-card.test.js", "tests/safety-report.test.js"],
+  ),
   preview("network", "tests/network-blueprint.test.js"),
   preview("amana", "tests/amana-contracts-preview.test.js"),
   preview("diffusion", "tests/diffusion-cli.test.js"),

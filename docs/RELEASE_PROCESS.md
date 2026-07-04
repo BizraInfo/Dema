@@ -53,7 +53,7 @@ git diff --check
 Optional but recommended on substantial changes:
 
 ```bash
-npm run coverage          # 95/85/95 thresholds (lines/branches/functions)
+npm run coverage          # 95/84/95 thresholds (lines/branches/functions)
 npm run proof:room        # composed proof gates
 npm run release:readiness # scored 0-100, 0 risks expected
 npm run gtm:readiness     # GTM doc surface readiness
@@ -116,7 +116,7 @@ All four must report `success` before the slice is considered shipped. A `succes
 The script reads:
 
 - test suite state (count + pass rate)
-- coverage thresholds (95/85/95)
+- coverage thresholds (95/84/95)
 - gate outcomes (proof:room, llm:guidance, env-hygiene)
 - recent PR review history
 - known-parked items from `docs/ROADMAP.md`

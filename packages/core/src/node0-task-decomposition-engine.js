@@ -18,6 +18,7 @@
 // route_eligible means "may proceed to the consent/proof stage", never "executed".
 
 import { createHash } from "node:crypto";
+import { buildPreviewBoundary } from "./preview-boundary.js";
 
 export const NODE0_TADE_SCHEMA =
   "bizra.dema.node0_task_decomposition_engine.v0.1";
@@ -245,32 +246,10 @@ export function compileIntentPacket({ input, registry = DEFAULT_INTENT_REGISTRY 
     blocked_count,
     route_eligible,
     blocked_by: aggregateBlocks,
-    boundary: buildBoundary(),
+    boundary: buildPreviewBoundary(),
   };
 
   return Object.freeze({ ...body, content_hash: contentHash(body) });
-}
-
-// Canonical 16-key all-false preview boundary — this kernel performs no effect.
-function buildBoundary() {
-  return Object.freeze({
-    filesystem_write_performed: false,
-    network_used: false,
-    runtime_execution_performed: false,
-    model_loaded: false,
-    model_invocation_performed: false,
-    prompt_executed: false,
-    external_call_performed: false,
-    raw_corpus_scan_performed: false,
-    raw_data_included: false,
-    tool_executed: false,
-    chain_advance_performed: false,
-    receipt_mint_performed: false,
-    federation_invoked: false,
-    node_connection_performed: false,
-    public_network_used: false,
-    consent_collected: false,
-  });
 }
 
 /**

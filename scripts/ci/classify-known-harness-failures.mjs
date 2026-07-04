@@ -60,6 +60,9 @@ export const KNOWN_MASKABLE = [
   },
 ];
 
+const COVERAGE_THRESHOLD_ERROR =
+  /^#\s*Error:\s+.+?\bcoverage does not meet threshold of \d+(?:\.\d+)?%?\./;
+
 /**
  * Pure classification. Returns the verdict plus the enumerated masked and
  * unrecognized failures, so callers (and tests) can reason without process.exit.
@@ -99,6 +102,9 @@ export function classifyFailures(content) {
       block: blockLines.join("\n"),
     });
   }
+  const coverageThresholdFailures = lines
+    .filter((line) => COVERAGE_THRESHOLD_ERROR.test(line))
+    .map((line) => line.replace(/^#\s*/, "").trim());
 
   const recognized = [];
   const unrecognized = [];
@@ -122,13 +128,20 @@ export function classifyFailures(content) {
   const hasSummary = /^#\s*(tests|pass|fail)\s+\d+/m.test(content);
   const complete = (planN !== null && planN > 0) || hasSummary;
 
-  const cleanRun = complete && reportedFailCount === 0 && notOk.length === 0;
+  const cleanRun =
+    complete &&
+    reportedFailCount === 0 &&
+    notOk.length === 0 &&
+    coverageThresholdFailures.length === 0;
   // Fail closed when the summary reports more failures than we captured as named
   // `not ok` lines (a runner error or an unparseable failure). An uncaptured
   // failure is real — it must never pass as clean just because it had no name.
   const uncapturedFailures = Math.max(0, reportedFailCount - notOk.length);
   const verdict =
-    complete && unrecognized.length === 0 && uncapturedFailures === 0
+    complete &&
+    unrecognized.length === 0 &&
+    uncapturedFailures === 0 &&
+    coverageThresholdFailures.length === 0
       ? "PASS"
       : "FAIL";
 
@@ -137,6 +150,7 @@ export function classifyFailures(content) {
     notOk,
     recognized,
     unrecognized,
+    coverageThresholdFailures,
     cleanRun,
     complete,
     uncapturedFailures,
@@ -252,6 +266,19 @@ function main() {
   if (r.cleanRun) {
     console.log("[G8 GATE] Clean run: 0 failures, 0 not-ok lines. Exit 0.");
     process.exit(0);
+  }
+
+  if (r.coverageThresholdFailures.length) {
+    console.error(
+      `\n[G8 COVERAGE] ${r.coverageThresholdFailures.length} native coverage threshold failure(s) detected — failing closed:`,
+    );
+    for (const failure of r.coverageThresholdFailures) {
+      console.error(`  - ${failure}`);
+    }
+    console.error(
+      "\n[G8 GATE] Native coverage threshold errors are gate failures even when TAP reports zero failed tests. Exit 1.",
+    );
+    process.exit(1);
   }
 
   if (r.recognized.length) {

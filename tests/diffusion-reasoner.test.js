@@ -141,3 +141,20 @@ test("12 · boundary is entirely false and hash changes when a draft changes", (
   const r2 = buildDiffusionRefinement({ drafts: [NOISY, MID], evidence: ["a.js"] });
   assert.notEqual(r.convergence_hash, r2.convergence_hash);
 });
+
+test("15 · autonomy-overclaim phrasing scores as noise, not clean signal", () => {
+  const OVERCLAIM =
+    "Activate the autonomous self-improvement loop so the system evolves itself continuously without review";
+  assert.ok(
+    scoreDraftNoise(OVERCLAIM) >= 2,
+    "autonomy-overclaim draft must register lexicon noise",
+  );
+  const r = buildDiffusionRefinement({ drafts: [NOISY, OVERCLAIM], evidence: ["a.js"] });
+  const last = r.steps[r.steps.length - 1];
+  assert.ok(last.noise_score >= 2);
+  assert.ok(
+    last.noise_markers_found.some(
+      (m) => m.includes("self-improvement") || m.includes("autonomous") || m.includes("without review"),
+    ),
+  );
+});

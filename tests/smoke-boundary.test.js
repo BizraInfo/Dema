@@ -89,7 +89,6 @@ test("runSmokeBoundary returns the canonical report schema (subprocess path)", a
     report.canonical_keys_expected,
     PREVIEW_BOUNDARY_CANONICAL_KEYS.length,
   );
-  assert.equal(report.canonical_keys_expected, 16);
 });
 
 test("runSmokeBoundary all_canonical=true on the current spine", async () => {

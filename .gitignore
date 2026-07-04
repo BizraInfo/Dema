@@ -47,3 +47,12 @@ what is bash , why its the most important and most (1).md
 # not repo-tracked content. Filed as artifact-type policy: skill bundles live
 # outside the source tree.
 *.skill
+
+# Local agent run outputs. Source hooks/skills may be tracked; generated logs
+# and evaluation workspaces stay off-tree.
+.codex/hooks/logs/
+.agents/skills/*-workspace/
+
+# Root-level scratch screenshot from operator review; bind explicitly in docs
+# before tracking as evidence.
+/bizra-ai-screenshot.png

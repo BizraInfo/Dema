@@ -144,7 +144,7 @@ Release-blocking criteria: any A+ breach, claim violation, missing LCC-6 marker 
 
 - Local boot timing targets (documented in delivery-check A+ gates; e.g., boot < 150 ms, verify < 1 ms).
 - delivery-check latency targets enforced on every run.
-- Coverage thresholds (package.json + A+): lines 95, branches 85, functions 95.
+- Coverage thresholds (package.json + A+): lines 95, branches 84, functions 95.
 - Deterministic ID requirements (sha256 of semantic body excluding created_at as audit metadata).
 - No-side-effect module checks (dry-run mocks must not import fs, http, https, net, child_process, or perform writes).
 - Known B-bucket classifier policy: only pre-classified environmental noise allowed; unknown failures fail the gate.

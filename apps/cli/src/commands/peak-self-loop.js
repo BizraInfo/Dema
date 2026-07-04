@@ -7,7 +7,13 @@ import { shouldUseColor } from "../../../../packages/core/src/status.js";
 
 export async function cmd_peak_self_loop(ctx) {
   const { argv } = ctx;
-  const preview = buildPeakSelfLoopPreview();
+  const ciBlocked =
+    argv.includes("--ci-advisory-blocked") ||
+    process.env.DEMA_LOCAL_PROOF_LANE === "GITHUB_ACTIONS_BILLING_LOCK";
+  const preview = buildPeakSelfLoopPreview({
+    ci_advisory_blocked: ciBlocked,
+    companion_device_connected: argv.includes("--companion-connected"),
+  });
   if (
     wantsJson(argv) ||
     !process.stdout.isTTY ||

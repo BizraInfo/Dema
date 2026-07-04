@@ -133,6 +133,28 @@ phase does not advance. No "almost there" promotions.
 Pick from the top. Each carries the exact next file/command so the
 dev does not lose time re-orienting.
 
+### Proof spine backlog (June 2026 — self-loop ranked)
+
+Ordered by **receipt before expansion**. Do not skip sealing for expansion.
+
+| Priority | Slice | Status | Truth label | Notes |
+| -------- | ----- | ------ | ----------- | ----- |
+| 1 | **NQEC-1B** — Node0 quality evidence card commit | **COMMITTED** (`f248f60`) | REMOTE_PUSHED | On `origin/feat/node0-spine-runner-cli-1a`; CI **blocked** (Actions billing · `runner_id: 0`) |
+| 2 | **PUSH-LOCAL-PROOF-STATE-1A** | **DONE** (`5cb5038` on origin) | REMOTE_PUSHED | PR **#312** · 7 commits · mergeable · checks red (billing, not code) |
+| 2b | **PEAK-RECEIPT-SUMMARY-RESEAL-1A** | **DONE** (operator) | LOCAL_ONLY | Receipt `founder-work-index-479f293a…d66.json` · `MEASURED: 39` · same `index_hash` as stale `440f6856…` |
+| 2c | **DEMA-FDE-CI-BILLING-LOCK-MARKER-1A** + **NODE0-CI-VENDOR-AVAILABILITY-1A** | **SHIPPED** (branch) | WIRED_PARTIAL | FDE billing-lock class + `proof:truth:local-lane` → `READY_LOCAL` when local gates pass |
+| 3 | **UNDO-PROVEN-1A** | **SHIPPED** (branch) | PREVIEW_ONLY | Measured inverse correction preview + review gate |
+| 4 | **PROOF-OF-SPEND-1A** | **SHIPPED** (branch) | PREVIEW_ONLY | FWI-provenance CSV spend facts + `FOUNDER_COST_MEASURED_NOT_VALUE` receipt under `$DEMA_HOME` |
+| 5 | **STYLE-PILLAR-MICRO-1A** | **SHIPPED** (branch) | WIRED_PARTIAL | Stdlib `style-pillar-check.mjs` in `npm run check`; pillar_score_estimate 32/100 micro-gate (no ESLint dep) |
+| 6 | **BRAND-TOKEN-THEME-1A** | DESIGN_APPROVED | DESIGNED_NOT_LIVE | `docs/superpowers/specs/2026-06-14-brand-token-theme-design.md` — vendor `BIZRA_VISUAL_TOKENS.json` + `packages/core/src/theme.js`; separates **BIZRA** canon colors from **Dema** TUI product surface |
+| 7 | **BRAND-DIGITAL-SIGNAL-1A** | NOT_STARTED | PLANNED | Public footprint / GTM flywheel — requires CLAIM_REGISTER + operator GO; not a code-only slice |
+
+**Unblock GO (STYLE-PILLAR):** `GO STYLE-PILLAR-MICRO-1A stdlib-only check in npm run check`
+
+**Unblock GO (brand theme):** `GO BRAND-TOKEN-THEME-1A vendor canon tokens and migrate first TUI file`
+
+---
+
 1. **Delete the merged feat branch** `feat/dema-a-plus-local-first-closeout-v0-1` (sandbox-blocked earlier; run with `!`-prefix). Local + remote.
 2. **CODEQL_UNUSED_LOCAL_VARIABLE_CLEANUP_v0.1** — separate small PR to clear the 74 inherited `js/unused-local-variable` alerts on the pre-PR-95 base. Flips the CodeQL parent aggregate to green for future PRs. Stdlib-only edits.
 3. **Refresh memory index size** — `MEMORY.md` is 26.4 KB vs 24.4 KB soft limit. Compress pre-2026-05-12 entries into a rollup line; move detail into their topic files.

@@ -90,6 +90,60 @@ test("separates inward and outward hypotheses honestly", () => {
   assert.equal(report.separates_symptom_from_root_cause, true);
 });
 
+test("classifies GitHub Actions billing lock from annotation excerpt", () => {
+  const report = diagnoseDemaFailure({
+    failed_command: "gh pr checks 312",
+    exit_code: 1,
+    stdout_excerpt: "jobs: steps=[], runner_id=0, duration 1-2s, log not found",
+    stderr_excerpt:
+      "The job was not started because your account is locked due to a billing issue.",
+    changed_files: [],
+    environment: {
+      node_version: "22.x",
+      os: "linux",
+      branch: "feat/node0-spine-runner-cli-1a",
+      ci_provider: "github_actions",
+      runner_assigned: false,
+      runner_id: 0,
+    },
+    capability_registry_row: "NODE0_SPINE_RUNNER_CLI_1A",
+  });
+
+  assert.equal(report.failure_class, "github_actions_billing_lock");
+  assert.equal(report.outward_diagnosis.failure_class, "github_actions_billing_lock");
+  assert.equal(report.outward_diagnosis.confidence, "high");
+  assert.equal(report.code_implicated, false);
+  assert.equal(report.operator_action_required, "billing_unlock");
+  assert.equal(report.regression_test_required, false);
+  assert.equal(report.measured_status, "MEASURED");
+  assert.ok(report.minimal_fix_plan.some((step) => step.includes("billing")));
+});
+
+test("inner execute consent alone does not classify as billing lock", () => {
+  const report = diagnoseDemaFailure({
+    failed_command: "dema node0 spine run",
+    exit_code: 1,
+    stderr_excerpt: "consent_phrase_mismatch",
+    stdout_excerpt: "",
+    environment: { node_version: "22.x", os: "linux", branch: "local" },
+  });
+
+  assert.notEqual(report.failure_class, "github_actions_billing_lock");
+});
+
+test("missing wrapper consent on spine run stays inward/unknown not billing lock", () => {
+  const report = diagnoseDemaFailure({
+    failed_command: "dema node0 spine run",
+    exit_code: 1,
+    stderr_excerpt: "consent_phrase_mismatch blocked_by",
+    stdout_excerpt: "",
+    environment: { node_version: "22.x", os: "linux", branch: "local" },
+  });
+
+  assert.notEqual(report.failure_class, "github_actions_billing_lock");
+  assert.equal(report.code_implicated, null);
+});
+
 test("returns unknown with low confidence when excerpts are empty", () => {
   const report = buildDemaFdeDualDiagnostic({
     failed_command: "",

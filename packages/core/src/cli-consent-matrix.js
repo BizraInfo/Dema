@@ -10,6 +10,7 @@ export const CLI_RISK_LEVELS = Object.freeze([
   "read_only",
   "preview_only",
   "local_write",
+  "content_read",
   "network",
   "external_runtime",
   "key_wallet",
@@ -50,6 +51,10 @@ function isMutatingRisk(riskLevels) {
 
 function isHighSensitivity(riskLevels) {
   return riskLevels.some((r) => r === "key_wallet" || r === "activation");
+}
+
+function isContentReadRisk(riskLevels) {
+  return riskLevels.includes("content_read");
 }
 
 /**
@@ -133,6 +138,14 @@ export function buildCliConsentMatrixReport({
       findings.push({
         command,
         code: "high_sensitivity_requires_strong_consent",
+        detail: consent.mechanism,
+      });
+    }
+
+    if (isContentReadRisk(risk_levels) && !STRONG_CONSENT.has(consent.mechanism)) {
+      findings.push({
+        command,
+        code: "content_read_requires_strong_consent",
         detail: consent.mechanism,
       });
     }

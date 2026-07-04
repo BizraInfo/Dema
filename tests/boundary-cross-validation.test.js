@@ -34,8 +34,8 @@ const MANIFEST_DOCUMENTED_EXTENSIONS = new Set([
 
 describe("boundary-cross-validation", () => {
   describe("canonical source of truth", () => {
-    it("PREVIEW_BOUNDARY_CANONICAL_KEYS has exactly 16 keys", () => {
-      assert.equal(PREVIEW_BOUNDARY_CANONICAL_KEYS.length, 16);
+    it("PREVIEW_BOUNDARY_CANONICAL_KEYS has exactly 17 keys", () => {
+      assert.equal(PREVIEW_BOUNDARY_CANONICAL_KEYS.length, 17);
     });
 
     it("canonical keys are frozen", () => {
@@ -53,6 +53,7 @@ describe("boundary-cross-validation", () => {
         "_invoked",
         "_included",
         "_collected",
+        "_read",
       ];
       for (const key of PREVIEW_BOUNDARY_CANONICAL_KEYS) {
         const hasValidSuffix = validSuffixes.some((s) => key.endsWith(s));

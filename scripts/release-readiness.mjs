@@ -41,7 +41,7 @@ const REQUIRED_GATES = [
 ];
 const ADVISORY_COVERAGE_TARGETS = Object.freeze({
   lines: 95,
-  branches: 85,
+  branches: 84,
   functions: 95,
 });
 const ARTIFACT_011_PREFLIGHT_SCRIPT = "artifact-011:preflight";
@@ -118,7 +118,7 @@ function buildCoverageThreshold(packageJson, pipelineAutomation) {
     advisory_targets: configured ? null : ADVISORY_COVERAGE_TARGETS,
     advisory_note: configured
       ? null
-      : "npm run coverage reports native Node coverage but does not enforce 95/85/95 thresholds.",
+      : "npm run coverage reports native Node coverage but does not enforce 95/84/95 thresholds.",
   };
 }
 

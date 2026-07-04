@@ -106,6 +106,11 @@ export async function cmd_node0(ctx) {
     return;
   }
 
+  if (sub === "spine" && action === "run") {
+    const { cmdNode0SpineRun } = await import("./node0-spine-run.js");
+    return cmdNode0SpineRun(ctx);
+  }
+
   if (sub === "chain") {
     const painIdx = argv.indexOf("--pain");
     const goalIdx = argv.indexOf("--goal");

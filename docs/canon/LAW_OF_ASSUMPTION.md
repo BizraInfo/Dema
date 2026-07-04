@@ -2,8 +2,10 @@
 
 **Status:** Canon · binding
 **Date authored as repo canon:** 2026-05-18
+**Amended:** 2026-07-03 · Weaponization Chain + Hypothesis Boundary (founder thread · diffusion-gated)
 **Authored by:** Mumu (Mohamed Beshr · Node0 operator · First Architect of BIZRA)
 **Operator-local sibling:** `~/.dema/memory/foundational-mindset.{json,md}` (2026-05-09 origin · 2026-05-11 last edit)
+**Root source:** [`BIZRA_Third_Fact_v0_1_FINAL.pdf`](../root-canon/source/BIZRA_Third_Fact_v0_1_FINAL.pdf) — the النصّ below was first drafted inside the Third Fact (2023, alongside الرسالة and البذرة) · IMMUTABLE per [`root-canon.manifest.json`](../root-canon/root-canon.manifest.json) · sha256 `1deacd63f42315d7ae5ac426eb33149fae5d37e99c67b3949421b2c5c80cd02d`
 **Companion canon:**
 
 - [`BIZRA_TOPOLOGY_CANON.md`](BIZRA_TOPOLOGY_CANON.md) — the three structural laws (Node ordinal · Seed-pattern invariant · Skill Growth)
@@ -61,6 +63,40 @@ The deeper gate is:
 > **Can Dema honestly declare the boundary between evidence and uncertainty?**
 
 That is BIZRA's unique autonomy DNA · the structural counterpart of ZANN_ZERO (the prohibition on overclaim).
+
+---
+
+## The weaponization chain (سلسلة تسليح الكلمة)
+
+Before a person attacks with action, he often attacks with meaning. The word arrives pure; the assumption attached to it decides whether it becomes mercy or harm:
+
+```text
+word
+→ assumed meaning
+→ assumed intention
+→ judgment
+→ emotional reaction
+→ action
+→ harm
+```
+
+A word becomes dangerous when assumption attaches false meaning to it. The same word — _"I want justice"_ — can produce repair or revenge depending on the assumption chosen. This chain is why the Law of Assumption is a safety mechanism and not philosophical decoration: it breaks the chain at its first link, before meaning hardens into judgment.
+
+## The hypothesis boundary
+
+> Assumption is allowed as a temporary hypothesis.
+> Assumption is forbidden as a final truth without proof.
+
+Therefore:
+
+- No assumption may become authority without proof.
+- No suspicion may become judgment without evidence.
+- No interpretation may become action without consent.
+- When assumption is unavoidable, assume with Iḥsān.
+
+A professional diagnostic system says _"this may be the cause."_ A corrupted system says _"this is the cause, because I feel it."_ BIZRA must never allow the second. The V/D/A/U labels below are the operational form of this boundary: **A** is the temporary hypothesis with declared ground · promotion to **V** requires proof.
+
+**Provenance:** distilled from the founder thread of 2026-07-03 · gated through the bounded diffusion reasoner (`dema diffusion refine`, lexicon-based · not neural) · convergence hash `f2a05ccc468e93329a8d32eb491048e29570f130d3514723c6d1a69795074301` · zero noise terms across the refinement trajectory.
 
 ---
 

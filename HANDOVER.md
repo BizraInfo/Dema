@@ -19,7 +19,9 @@ Run these in order from the repo root. Total time: ~10 seconds.
 ```bash
 # 1. Confirm the test suite passes
 npm test
-#   → expected: 1159 tests · 0 failures · ~2.0s
+#   → expected: 0 failures. The test count grows with every slice — it was
+#     1159 at this document's 2026-05-18 snapshot and 6273 as observed locally
+#     on 2026-07-03. Trust the live run, not any number written in prose.
 
 # 2. Confirm lint + integration check
 npm run check
@@ -127,7 +129,7 @@ Per [ADR-008](docs/06-adr/ADR-008-runtime-activation.md), every component in thi
  10. Cross-referenced        links to ADR + Key Maker canon + relevant memory anchors
 ```
 
-**Verify these hold:** `npm test` runs 1159 tests · every component has its own test file enforcing the 10 invariants for its surface.
+**Verify these hold:** `npm test` passes with 0 failures (1159 tests at the 2026-05-18 handover snapshot — the count grows with each slice; `docs/CURRENT_LIMITS.md` is the live maturity ledger) · every component has its own test file enforcing the 10 invariants for its surface.
 
 ---
 
@@ -272,7 +274,7 @@ L7 Unearned                           Ring 1 (external reviewer feedback) · sti
 2. PROOF_SUMMARY.md.ots Bitcoin attestation pending (submitted 2026-05-18 ~09:49).
    Confirms within 1-12h. Run `ots upgrade PROOF_SUMMARY.md.ots` after confirmation.
 
-3. Ring 1 reviewer not yet engaged. The system is technically ready (1896 tests pass
+3. Ring 1 reviewer not yet engaged. The system is technically ready (1896 tests passed
    at HEAD `e6412ab` · 12 ADR-008 components + ADR-011 full 4-phase implementation
    arc + master-craftsmanship audit module all ship · IRONCLAD receipt #55). The
    operator-act of inviting one trusted-friend reviewer remains the only unmoved

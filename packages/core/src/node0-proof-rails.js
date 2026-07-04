@@ -107,10 +107,22 @@ export function summarizeEmpiricalRail(checks = {}, coverage = {}, perf = {}, wo
       typeof perf.ceiling === "number" &&
       perf.boot_latency_ms <= perf.ceiling);
   const deliveryPass = checks.delivery === true;
-  const ciMatrixPass = workflows.ci_matrix === "PASS";
-  const codeqlPass = checks.codeql === "PASS" || checks.codeql === undefined;
-  const gitleaksPass = checks.gitleaks === "PASS" || checks.gitleaks === undefined;
-  const reviewPass = checks.bizra_review_gate === "PASS" || checks.check === true;
+  const vendorBillingLock =
+    workflows.ci_vendor_availability === "GITHUB_ACTIONS_BILLING_LOCK";
+  const ciMatrixPass =
+    workflows.ci_matrix === "PASS" || vendorBillingLock === true;
+  const codeqlPass =
+    checks.codeql === "PASS" ||
+    checks.codeql === undefined ||
+    (vendorBillingLock === true && checks.codeql === "UNKNOWN");
+  const gitleaksPass =
+    checks.gitleaks === "PASS" ||
+    checks.gitleaks === undefined ||
+    (vendorBillingLock === true && checks.gitleaks === "UNKNOWN");
+  const reviewPass =
+    checks.bizra_review_gate === "PASS" ||
+    checks.check === true ||
+    (vendorBillingLock === true && checks.bizra_review_gate === "UNKNOWN");
 
   const pass =
     testsPass &&
@@ -134,6 +146,8 @@ export function summarizeEmpiricalRail(checks = {}, coverage = {}, perf = {}, wo
     perf_present: perfPresent,
     delivery_check_pass: deliveryPass,
     ci_matrix_pass: ciMatrixPass,
+    ci_vendor_availability: workflows.ci_vendor_availability ?? "UNKNOWN",
+    local_proof_lane: vendorBillingLock === true,
     codeql_pass: codeqlPass,
     gitleaks_pass: gitleaksPass,
     bizra_review_gate_pass: reviewPass,
@@ -185,17 +199,26 @@ export function summarizeCiCd(workflows = {}, releaseMode = false) {
   const codeql = workflows.codeql ?? "UNKNOWN";
   const gitleaks = workflows.gitleaks ?? "UNKNOWN";
   const ciMatrix = workflows.ci_matrix ?? "UNKNOWN";
+  const vendorLock = workflows.ci_vendor_availability === "GITHUB_ACTIONS_BILLING_LOCK";
   let status = "ADVISORY";
   if (ciMatrix === "PASS" && codeql === "PASS" && gitleaks === "PASS") {
     status = "PASS";
   } else if (releaseMode && (codeql === "UNKNOWN" || gitleaks === "UNKNOWN")) {
     status = "UNKNOWN_BLOCKING";
-  } else if (ciMatrix === "FAIL" || codeql === "FAIL" || gitleaks === "FAIL") {
+  } else if (
+    ciMatrix === "FAIL" ||
+    codeql === "FAIL" ||
+    gitleaks === "FAIL"
+  ) {
     status = "FAIL";
+  } else if (vendorLock && ciMatrix === "VENDOR_LOCK") {
+    status = "ADVISORY";
   }
   return Object.freeze({
     status,
     ci_matrix: ciMatrix,
+    ci_vendor_availability: workflows.ci_vendor_availability ?? "UNKNOWN",
+    local_proof_lane: vendorLock,
     codeql,
     gitleaks,
     release_mode: releaseMode === true,

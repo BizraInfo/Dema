@@ -1,0 +1,5 @@
+Category,Item,Estimated Cost,Type,Priority,Notes
+Development,Tool A,"$1,000",One-time,Critical,
+Hosting,Service B,$120,Recurring,Important,6-month line item
+Ops,Service C,$60,Recurring,Optional,
+SUMMARY,Total (6-Month Plan),"$1,180",,,

@@ -7,6 +7,8 @@
 //   · HHMM lifecycle preview + diffusion amplifier (belief spread across phases)
 //   · Event hash table (O(1) lookup of declared signal/noise events)
 //   · Shoulders protocol (giants → Dema surfaces · DECLARED mapping only)
+//   · Agent-outside-sandbox orchestration posture (PAT/SAT propose · sandbox proves)
+//   · Bounded OODA review + RSI proposal gate + micro process-mining ref
 //
 // NOT autonomous runtime. NOT HHMM engine. NOT economic activation.
 // Caller may override declared inputs; defaults describe the delivery-spine slice.
@@ -18,6 +20,8 @@ import {
   computeSNRValue,
 } from "./process-value-preview.js";
 import { buildPreviewBoundary } from "./preview-boundary.js";
+import { buildSelfLoopOodaCycle } from "./self-loop-ooda.js";
+import { buildRsiProposalPreview } from "./rsi-proposal-preview.js";
 
 export const PEAK_SELF_LOOP_PREVIEW_SCHEMA =
   "bizra.dema.peak_self_loop_preview.v0.1";
@@ -55,6 +59,36 @@ const DEFAULT_SIGNAL_EVENTS = Object.freeze([
     weight: 1,
     label: "Peak self-loop + Proof Studio dispatch shipped",
   }),
+  Object.freeze({
+    id: "proof-spine-local-gates",
+    type: "gate_passed",
+    weight: 1,
+    label: "npm test + npm run check + dema harness CLEAN on NODE0",
+  }),
+  Object.freeze({
+    id: "node0-spine-runner-sandbox",
+    type: "clean_commit",
+    weight: 1,
+    label: "Measured proof spine runs inside sandbox only (#312)",
+  }),
+  Object.freeze({
+    id: "billing-lock-local-proof-lane",
+    type: "gate_passed",
+    weight: 1,
+    label: "proof:truth:local-lane READY_LOCAL when vendor billing lock",
+  }),
+  Object.freeze({
+    id: "undo-proven-1a",
+    type: "clean_commit",
+    weight: 1,
+    label: "UNDO-PROVEN-1A measured inverse correction preview",
+  }),
+  Object.freeze({
+    id: "proof-of-spend-1a",
+    type: "clean_commit",
+    weight: 1,
+    label: "PROOF-OF-SPEND-1A founder cost receipt (FOUNDER_COST_MEASURED_NOT_VALUE)",
+  }),
 ]);
 
 const DEFAULT_NOISE_EVENTS = Object.freeze([
@@ -63,6 +97,18 @@ const DEFAULT_NOISE_EVENTS = Object.freeze([
     type: "runtime_ambiguity",
     weight: 1,
     label: "Rejected: autonomous runtime on greet",
+  }),
+  Object.freeze({
+    id: "vendor-ci-as-sole-truth",
+    type: "scope_contamination",
+    weight: 1,
+    label: "Rejected: GitHub green as only proof witness",
+  }),
+  Object.freeze({
+    id: "mobile-node-actuator-without-adr",
+    type: "scope_contamination",
+    weight: 1,
+    label: "Rejected: phone runs node / LAN admin without MOBILE-NODE-ACCESS ADR",
   }),
 ]);
 
@@ -85,6 +131,28 @@ const DEFAULT_CONVERGENCE_CLAIMS = Object.freeze([
       cryptographic: "schema_only",
       empirical: "passing_tests",
       economic: "designed_not_live",
+    },
+  }),
+  Object.freeze({
+    id: "agent-outside-sandbox-orchestration",
+    statement:
+      "Agent/orchestrator proposes outside sandbox; governed spine proves inside sandbox",
+    rails: {
+      formal: "spec_plus_test",
+      cryptographic: "schema_only",
+      empirical: "passing_tests",
+      economic: "not_applicable",
+    },
+  }),
+  Object.freeze({
+    id: "proof-of-spend-founder-cost",
+    statement:
+      "External spend CSV yields verifiable monthly burn claim under FOUNDER_COST_MEASURED_NOT_VALUE",
+    rails: {
+      formal: "spec_plus_test",
+      cryptographic: "receipt_sealed_local",
+      empirical: "operator_sealed_receipt",
+      economic: "measured_not_value",
     },
   }),
 ]);
@@ -200,13 +268,185 @@ function selectHighestSnrEngine(snr, rsi, convergence) {
   });
 }
 
+function buildAgentOrchestrationPosture({ ciAdvisoryBlocked = false } = {}) {
+  return Object.freeze({
+    doctrine: "agent_outside_sandbox_not_inside",
+    analogy: Object.freeze({
+      model: "air_traffic_control",
+      mapping:
+        "Controller (agent/orchestrator/PAT-SAT) plans and routes outside the runway; aircraft (governed sandbox execute) moves only under clearance and leaves receipts on the strip.",
+      useful_because:
+        "Separates proposal authority from mutation authority so supply-chain or billing shocks cannot be mistaken for code failure.",
+      not_analogous_to: Object.freeze([
+        "autonomous agent with shell inside the sandbox",
+        "LLM executing operator files without consent",
+      ]),
+      boundary: "preview_mapping_only_not_runtime_posture",
+    }),
+    roles: Object.freeze({
+      outside_sandbox: Object.freeze([
+        "PAT propose · plan · decompose",
+        "SAT verify · boundary · doctrine",
+        "dema orchestrator verify (read-only pipeline)",
+        "peak-self-loop · harness · process-mining mirror",
+      ]),
+      inside_sandbox: Object.freeze([
+        "node0 spine runner measured execute",
+        "reversible rename + backup + undo proof",
+        "receipt signing attestation (keys outside repo)",
+      ]),
+    }),
+    signing_authority_ne_execution_authority: true,
+    operator_mutation_outside_sandbox: false,
+    local_proof_lane_when_ci_advisory_blocked: ciAdvisoryBlocked,
+    what_this_proves:
+      "Orchestration posture is declared: propose outside, prove inside, consent between",
+    what_this_does_not_prove:
+      "Live PAT/SAT runtime, autonomous loops, or operator-wide mutation",
+  });
+}
+
+function buildReasoningModesPreview({ snr, convergence }) {
+  const weakest = convergence?.summary?.weakest_claim ?? "unknown";
+  return Object.freeze({
+    sequential: Object.freeze({
+      mode: "SEQUENTIAL_REASONING_PREVIEW",
+      chain: Object.freeze([
+        "Observe disk + gates (no zann)",
+        "Orient to proof-spine backlog rank",
+        "Decide micro-slice with exact consent",
+        "Verify npm test / check / harness",
+        "Settle receipt or HOLD expansion",
+      ]),
+      current_step: snr?.score != null && snr.score >= 0.5 ? "Decide micro-slice" : "Reduce noise",
+    }),
+    analogical: Object.freeze({
+      model: "game_master_outside_world",
+      mapping:
+        "Dema is rulebook + map legend; sandbox is the arena; agent never becomes the arena.",
+      boundary: "analogy_not_evidence",
+    }),
+    critical: Object.freeze({
+      mode: "CRITICAL_THINKING_PREVIEW",
+      questions: Object.freeze([
+        "What proves this claim on disk?",
+        "Is CI failure code or environment (billing lock)?",
+        `Weakest convergence claim: ${weakest}`,
+      ]),
+    }),
+    creative: Object.freeze({
+      mode: "ULTRA_CREATIVE_PREVIEW_BOUNDED",
+      constraint: "Creativity must name a verifiable next slice, not mythology",
+      allowed_outputs: Object.freeze([
+        "micro-slice id + consent phrase + gate command",
+      ]),
+      forbidden_outputs: Object.freeze([
+        "autonomous runtime",
+        "live AGI",
+        "skip consent",
+      ]),
+    }),
+  });
+}
+
+function buildMicroProcessMiningRef() {
+  return Object.freeze({
+    spine_command: "dema process-mining",
+    harness_command: "dema harness --summary --json",
+    mode: "preview_only",
+    acts_on_data: false,
+    offers_mirror: true,
+    blocked_effects: Object.freeze(["operator_judgment"]),
+    integration_note:
+      "Mirror operator patterns; pair with harness self-proactive block for gate posture",
+  });
+}
+
+function buildPeakOodaReviewCycle() {
+  return buildSelfLoopOodaCycle({
+    cycle_id: "peak-self-loop-ultra-micro-1a",
+    steps: [
+      {
+        phase: "observe",
+        claim: "Local gates and remote CI advisory state are distinguishable",
+        evidence: [
+          "packages/core/src/dema-fde-dual-diagnostic.js",
+          "npm test",
+          "runner_id=0 billing lock pattern",
+        ],
+      },
+      {
+        phase: "orient",
+        claim: "Agent-outside-sandbox posture ranks LOCAL proof before vendor merge",
+        evidence: [
+          "packages/core/src/node0-spine-runner.js",
+          "docs/CURRENT_LIMITS.md READY_LOCAL cap",
+        ],
+      },
+      {
+        phase: "decide",
+        claim: "Next bounded slice uses micro-consent and sandbox execute only",
+        evidence: ["packages/fate/src/fate.js", "PEAK-SELF-LOOP-1A"],
+      },
+      {
+        phase: "act",
+        claim: "Kernel records proposed sandbox slice only; does not execute",
+        evidence: ["packages/core/src/self-loop-ooda.js action_executed_by_kernel:false"],
+        proposed_action: "GO: run measured proof spine in sandbox",
+      },
+      {
+        phase: "review",
+        claim: "Self-critique + harness must pass before expansion",
+        evidence: [
+          "packages/core/src/harness-integration.js",
+          "dema peak-self-loop --json",
+        ],
+      },
+    ],
+  });
+}
+
+function buildIntegrationRsiGate({ signalEvents, noiseEvents, processEvents }) {
+  return buildRsiProposalPreview({
+    evidenceAnchors: [
+      "packages/core/src/peak-self-loop-preview.js",
+      "tests/peak-self-loop-preview.test.js",
+      "packages/core/src/harness-integration.js",
+    ],
+    candidate: {
+      title: "Peak ultra-micro integration: agent outside sandbox compose",
+      summary:
+        "Compose proactive harness, micro-consent, OODA review, and process-mining ref without runtime",
+      proposed_action: "Extend peak-self-loop preview surface only",
+    },
+    targetFrameworks: ["self-loop-engineering", "proof-closeout"],
+    processEvents,
+    signalEvents,
+    noiseEvents,
+  });
+}
+
 function buildProactiveSelf({
   snr,
   craftsmanship,
   convergence,
   hhmm,
   consentPhrase,
+  ciAdvisoryBlocked = false,
+  companionDeviceConnected = false,
 }) {
+  const localHarnessGates = Object.freeze([
+    "ux-first-look-gate",
+    "delivery-readiness-gate",
+    "performance-budget-gate",
+    "kernel-purity-check",
+    "dema-harness-integration",
+    "node0-proof-of-truth-control-plane-check",
+  ]);
+  const nextGate = ciAdvisoryBlocked
+    ? "DONE_LOCAL slices + operator seal; remote CI advisory when billing clears"
+    : "reviewer PR merge + CI remote green";
+
   return Object.freeze({
     critique: Object.freeze({
       verdict:
@@ -214,32 +454,50 @@ function buildProactiveSelf({
         (snr.score != null && snr.score < 0.5)
           ? "HOLD — noise dominates signal"
           : "CONTINUE — micro-slice discipline holds",
-      gaps: Object.freeze([
-        convergence.summary.declared > 0
-          ? `${convergence.summary.declared} claim(s) still DECLARED convergence`
-          : null,
-        snr.score != null && snr.score < 0.7
-          ? "Raise SNR before next expansion slice"
-          : null,
-      ].filter(Boolean)),
+      gaps: Object.freeze(
+        [
+          convergence.summary.declared > 0
+            ? `${convergence.summary.declared} claim(s) still DECLARED convergence`
+            : null,
+          snr.score != null && snr.score < 0.7
+            ? "Raise SNR before next expansion slice"
+            : null,
+          ciAdvisoryBlocked
+            ? "Remote CI advisory blocked — continue LOCAL proof lane"
+            : null,
+          !companionDeviceConnected
+            ? "Mobile companion declared (Z Fold 6) but not connected — export-and-index bridge only"
+            : null,
+        ].filter(Boolean),
+      ),
+      limitation:
+        "Self-critique is deterministic compose over declared gates — not live agent reflection",
     }),
     harness: Object.freeze({
-      active_gates: Object.freeze([
-        "ux-first-look-gate",
-        "delivery-readiness-gate",
-        "performance-budget-gate",
-        "kernel-purity-check",
+      active_gates: localHarnessGates,
+      next_gate: nextGate,
+      self_proactive_posture: "preview_only",
+      commands: Object.freeze([
+        "dema harness --summary --json",
+        "npm test",
+        "npm run check",
       ]),
-      next_gate: "reviewer PR merge + CI remote green",
     }),
     consent: Object.freeze({
       required_phrase: consentPhrase,
       auto_applied: false,
+      exact_string_required_for_gated_actions: true,
+      broad_consent_allowed: false,
+      consent_observed_in_preview: false,
     }),
     compliance: Object.freeze({
       master_craftsmanship_compliant:
         craftsmanship.master_craftsmanship_compliance.overall_compliant,
       boundary_canonical: true,
+      preview_only: true,
+      no_autonomous_runtime: true,
+      no_network: true,
+      no_token_mint: true,
     }),
     awareness: Object.freeze({
       truth_label: "NODE0_LOCAL_SEED",
@@ -251,13 +509,64 @@ function buildProactiveSelf({
     loop_engineering: Object.freeze({
       hhmm_current: hhmm.peak_phase,
       hhmm_belief: hhmm.diffusion,
-      next_safe_transition: "VERIFY → SETTLE after CI green",
+      next_safe_transition: ciAdvisoryBlocked
+        ? "VERIFY locally → SETTLE receipt → await remote advisory"
+        : "VERIFY → SETTLE after CI green",
       blocked_transitions: Object.freeze([
         "ACT→economic without consent",
         "SETTLE→federation without proof ladder",
+        "ACT→operator mutation outside sandbox",
+        "ACT→mobile node control without ADR",
       ]),
     }),
   });
+}
+
+function buildUltraMicroComposeMap() {
+  return Object.freeze({
+    id: "peak-ultra-micro-compose-1a",
+    subsystems: Object.freeze([
+      "proactive_self.critique",
+      "proactive_self.harness",
+      "proactive_self.consent",
+      "proactive_self.compliance",
+      "reasoning_modes.sequential",
+      "reasoning_modes.analogical",
+      "reasoning_modes.critical",
+      "reasoning_modes.creative",
+      "micro_process_mining",
+      "agent_orchestration",
+      "self_loop_ooda",
+      "rsi_integration_gate",
+      "craftsmanship_witness",
+    ]),
+    agent_posture: "outside_sandbox_proposes_inside_sandbox_proves",
+    mode: "preview_only",
+  });
+}
+
+function buildProofSpineBacklogRank() {
+  return Object.freeze([
+    Object.freeze({
+      rank: 1,
+      slice: "PROOF-OF-SPEND-1A",
+      status: "SHIPPED_BRANCH",
+      next_command: "dema corpus spend --file <abs_csv> --consent GO: content_read <path>",
+    }),
+    Object.freeze({
+      rank: 2,
+      slice: "STYLE-PILLAR-MICRO-1A",
+      status: "SHIPPED_BRANCH",
+      next_command: "npm run check (style-pillar-check.mjs wired)",
+    }),
+    Object.freeze({
+      rank: 3,
+      slice: "MOBILE-COMPANION-REGISTER-1A",
+      status: "SHIPPED_BRANCH",
+      next_command:
+        "dema node-registry companion-register --consent \"GO register companion device Z Fold 6 for Node0\" --json",
+    }),
+  ]);
 }
 
 export function buildPeakSelfLoopPreview({
@@ -267,6 +576,8 @@ export function buildPeakSelfLoopPreview({
   rsi_signal_inputs = [],
   slice_history = null,
   consent_phrase = "GO: act on peak-self-loop suggestion",
+  ci_advisory_blocked = false,
+  companion_device_connected = false,
 } = {}) {
   const signalEvents = Array.isArray(signal_events)
     ? signal_events
@@ -295,10 +606,16 @@ export function buildPeakSelfLoopPreview({
     slice_history,
     next_slice_signals: [
       {
-        id: "pat-council-dispatch-governed-runtime",
-        text: "Wire consent-gated council-dispatch preview to governed Node0 PAT runtime (still no silent execution)",
+        id: "style-pillar-micro-1a",
+        text: "Stdlib-only style-pillar-check in npm run check (zero-dep gate safe)",
         evidence:
-          "UX-3B ships ADK contract+receipt preview on exact-string consent; boundary.runtime remains false",
+          "docs/ROADMAP.md rank 5 · scripts/review/zero-dep-gate.mjs blocks naive ESLint in package.json",
+      },
+      {
+        id: "mobile-companion-export-bridge",
+        text: "Bridge mobile via export folder + dema scan; register companion only after ADR",
+        evidence:
+          "docs/02-architecture/dema-mobile-qr-consent-v0.md · companion_device_count:0 default",
       },
     ],
   });
@@ -352,7 +669,23 @@ export function buildPeakSelfLoopPreview({
     convergence,
     hhmm,
     consentPhrase: consent_phrase,
+    ciAdvisoryBlocked: ci_advisory_blocked === true,
+    companionDeviceConnected: companion_device_connected === true,
   });
+
+  const agent_orchestration = buildAgentOrchestrationPosture({
+    ciAdvisoryBlocked: ci_advisory_blocked === true,
+  });
+  const reasoning_modes = buildReasoningModesPreview({ snr, convergence });
+  const micro_process_mining = buildMicroProcessMiningRef();
+  const self_loop_ooda = buildPeakOodaReviewCycle();
+  const rsi_integration_gate = buildIntegrationRsiGate({
+    signalEvents: signalEvents.map((e) => ({ type: e.type, weight: e.weight })),
+    noiseEvents: noiseEvents.map((e) => ({ type: e.type, weight: e.weight })),
+    processEvents,
+  });
+  const ultra_micro_compose = buildUltraMicroComposeMap();
+  const proof_spine_backlog = buildProofSpineBacklogRank();
 
   return deepFreeze({
     schema: PEAK_SELF_LOOP_PREVIEW_SCHEMA,
@@ -377,8 +710,15 @@ export function buildPeakSelfLoopPreview({
     }),
     snr_autonomous_engine: engine,
     proactive_self,
+    agent_orchestration,
+    reasoning_modes,
+    micro_process_mining,
+    self_loop_ooda,
+    rsi_integration_gate,
+    ultra_micro_compose,
+    proof_spine_backlog,
     what_this_proves:
-      "Peak ultra-micro self-loop preview composes SNR, convergence, HHMM diffusion, and MC witness without runtime",
+      "Peak ultra-micro self-loop preview composes SNR, convergence, HHMM diffusion, MC witness, agent-outside-sandbox posture, OODA review, and RSI gate without runtime",
     what_this_does_not_prove:
       "Live autonomy, HHMM engine execution, economic activation, or cryptographic seal",
     boundary: buildPreviewBoundary(),
@@ -409,6 +749,23 @@ export function renderPeakSelfLoopPreview(preview, { useColor = false } = {}) {
     `  compliance:  MC ${preview.proactive_self.compliance.master_craftsmanship_compliant ? "OK" : "GAP"}`,
     `  awareness:   ${preview.proactive_self.awareness.what_this_proves}`,
     `  loop:        ${preview.proactive_self.loop_engineering.hhmm_current} → ${preview.proactive_self.loop_engineering.next_safe_transition}`,
+    "",
+    "Agent outside sandbox:",
+    `  doctrine: ${preview.agent_orchestration.doctrine}`,
+    `  analogy:  ${preview.agent_orchestration.analogy.model}`,
+    `  local_lane_when_ci_blocked: ${preview.agent_orchestration.local_proof_lane_when_ci_advisory_blocked}`,
+    "",
+    "OODA review:",
+    `  recommendation: ${preview.self_loop_ooda.recommendation ?? preview.self_loop_ooda.reason_code}`,
+    `  act executed:   ${preview.self_loop_ooda.action_executed_by_kernel === false}`,
+    "",
+    "Reasoning modes (preview):",
+    `  sequential: ${preview.reasoning_modes.sequential.current_step}`,
+    `  analogical: ${preview.reasoning_modes.analogical.model}`,
+    `  critical:   weakest claim → ${preview.reasoning_modes.critical.questions[2]}`,
+    "",
+    "RSI integration gate:",
+    `  ${preview.rsi_integration_gate.recommendation} — ${preview.rsi_integration_gate.recommendation_reason}`,
     "",
     `Engine: ${preview.snr_autonomous_engine.selected} (preview ranking, not live agent)`,
     `RSI: ${preview.autonomous_rsi.merged_verdict}`,

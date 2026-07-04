@@ -7,6 +7,7 @@ import {
   buildThinkDryRun,
   formatThinkDryRun,
 } from "../packages/think/src/think-dry-run.js";
+import { PREVIEW_BOUNDARY_CANONICAL_KEYS } from "../packages/core/src/preview-boundary.js";
 import {
   sha256,
   stableStringify,
@@ -61,10 +62,10 @@ describe("think-dry-run", () => {
       assert.equal(e.proof_hash, expected);
     });
 
-    it("boundary has all 16 keys", async () => {
+    it("boundary has all canonical keys", async () => {
       const e = await buildThinkDryRun("test query", { now: FIXED_NOW });
       const keys = Object.keys(e.boundary);
-      assert.equal(keys.length, 16);
+      assert.equal(keys.length, PREVIEW_BOUNDARY_CANONICAL_KEYS.length);
     });
 
     it("model_invocation_performed is false", async () => {

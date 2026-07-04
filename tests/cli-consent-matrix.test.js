@@ -66,3 +66,12 @@ test("review gate helper passes on the live dispatcher surface", async () => {
   const result = runCliConsentMatrixCheck();
   assert.equal(result.ok, true, JSON.stringify(result.report.findings, null, 2));
 });
+
+test("corpus command declares content_read risk (not generic read_only)", () => {
+  const corpus = CLI_CONSENT_MATRIX_ENTRIES.find((e) => e.command === "corpus");
+  assert.ok(corpus);
+  assert.ok(corpus.risk_levels.includes("content_read"));
+  assert.ok(CLI_RISK_LEVELS.includes("content_read"));
+  assert.equal(corpus.risk_levels.includes("read_only"), false);
+  assert.equal(corpus.consent.mechanism, "exact_phrase");
+});

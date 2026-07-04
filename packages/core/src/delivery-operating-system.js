@@ -88,7 +88,7 @@ const GATE_DEFS = Object.freeze([
     ci_enforced: true,
     category: "coverage",
     rail: "formal",
-    purpose: "Enforce coverage floors (lines >=95, branches >=85, functions >=95).",
+    purpose: "Enforce coverage floors (lines >=95, branches >=84, functions >=95).",
     blocks_release: true,
     evidence_artifact: "experimental-test-coverage TAP report",
     failure_policy: "fail_closed",

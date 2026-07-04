@@ -21,6 +21,7 @@ export const FDE_FAILURE_CLASSES = Object.freeze([
   "permission_gap",
   "proof_gap",
   "boundary_violation",
+  "github_actions_billing_lock",
   "unknown",
 ]);
 
@@ -33,7 +34,7 @@ export const FDE_MEASURED_STATUSES = Object.freeze([
   "MEASURED",
 ]);
 
-const FDE_BOUNDARY_KEYS = Object.freeze([
+export const FDE_BOUNDARY_KEYS = Object.freeze([
   "patch_applied",
   "file_write_performed",
   "network_used",
@@ -169,6 +170,25 @@ const OUTWARD_COMMAND_HINTS = Object.freeze([
   "dema status",
   "npm install",
   "node apps/cli",
+  "github actions",
+  "gh pr checks",
+  "gh run",
+]);
+
+const GITHUB_ACTIONS_BILLING_LOCK_MARKERS = Object.freeze([
+  "account is locked",
+  "billing issue",
+  "due to a billing",
+  "billing lock",
+]);
+
+const GITHUB_ACTIONS_STARTUP_FAIL_MARKERS = Object.freeze([
+  "job was not started",
+  "runner_id=0",
+  "runner_id: 0",
+  "log not found",
+  "steps=[]",
+  "runner_assigned: false",
 ]);
 
 function freezeDeep(value) {
@@ -242,7 +262,58 @@ function confidenceFromHits(hits, commandHintMatch) {
   return "low";
 }
 
+function isGithubActionsContext(input) {
+  const failedCommand = text(input.failed_command).toLowerCase();
+  const env = input.environment && typeof input.environment === "object" ? input.environment : {};
+  return (
+    text(env.ci_provider).toLowerCase().includes("github") ||
+    failedCommand.includes("github actions") ||
+    failedCommand.includes("gh pr checks") ||
+    failedCommand.includes("gh run")
+  );
+}
+
+function classifyGithubActionsBillingLock(input, lens) {
+  if (lens !== "outward" && lens !== "inward") return null;
+  const haystack = combinedFailureText(input);
+  const billingHits = countMarkerHits(haystack, GITHUB_ACTIONS_BILLING_LOCK_MARKERS);
+  const startupHits = countMarkerHits(haystack, GITHUB_ACTIONS_STARTUP_FAIL_MARKERS);
+  const env = input.environment && typeof input.environment === "object" ? input.environment : {};
+  const runnerNotAssigned =
+    env.runner_assigned === false ||
+    env.runner_id === 0 ||
+    haystack.includes("runner_id=0") ||
+    haystack.includes("runner_id: 0");
+  const githubContext = isGithubActionsContext(input);
+
+  if (billingHits.length > 0 && githubContext) {
+    return {
+      failure_class: "github_actions_billing_lock",
+      hits: freezeDeep([...new Set([...billingHits, ...startupHits])]),
+      confidence: "high",
+    };
+  }
+  if (billingHits.length > 0) {
+    return {
+      failure_class: "github_actions_billing_lock",
+      hits: freezeDeep(billingHits),
+      confidence: "high",
+    };
+  }
+  if (githubContext && runnerNotAssigned && startupHits.length >= 2) {
+    return {
+      failure_class: "github_actions_billing_lock",
+      hits: freezeDeep(startupHits),
+      confidence: "medium",
+    };
+  }
+  return null;
+}
+
 function classifyLens(input, lens) {
+  const billingLock = classifyGithubActionsBillingLock(input, lens);
+  if (billingLock) return billingLock;
+
   const haystack = combinedFailureText(input);
   const boundaryHits = countMarkerHits(haystack, BOUNDARY_VIOLATION_MARKERS);
   if (boundaryHits.length > 0) {
@@ -308,6 +379,12 @@ function classifyLens(input, lens) {
 }
 
 function classifyPrimary(inward, outward) {
+  if (
+    outward.failure_class === "github_actions_billing_lock" &&
+    outward.confidence !== "low"
+  ) {
+    return "github_actions_billing_lock";
+  }
   if (
     inward.failure_class === "boundary_violation" ||
     outward.failure_class === "boundary_violation"
@@ -376,6 +453,9 @@ function outwardHypothesis(input, outward) {
   const prefix = `On ${osName} with Node ${nodeVersion} on branch ${branch}.`;
   if (outward.failure_class === "environment_gap") {
     return `${prefix} Outward evidence suggests a local environment mismatch, timeout, flaky harness, or unavailable local service.`;
+  }
+  if (outward.failure_class === "github_actions_billing_lock") {
+    return `${prefix} Outward evidence indicates GitHub Actions jobs never started because the account is billing-locked; application code is not implicated until startup jobs run.`;
   }
   if (outward.failure_class === "permission_gap") {
     return `${prefix} Outward evidence suggests filesystem or operator permission limits in this environment.`;
@@ -449,6 +529,14 @@ function buildMinimalFixPlan(failure_class, inward, outward) {
   if (failure_class === "permission_gap" || outward.failure_class === "permission_gap") {
     plan.push("Check filesystem permissions for DEMA_HOME, /tmp logs, and the workspace checkout.");
   }
+  if (
+    failure_class === "github_actions_billing_lock" ||
+    outward.failure_class === "github_actions_billing_lock"
+  ) {
+    plan.push("Resolve GitHub account billing lock at https://github.com/settings/billing.");
+    plan.push("Rerun failed Actions workflows after billing unlock; do not patch application code for startup-only CI failures.");
+    plan.push("Confirm check-run annotations no longer report account locked due to a billing issue.");
+  }
   if (plan.length === 0) {
     plan.push("Collect full stderr/stdout and environment summary, then rerun FDE classification.");
   }
@@ -486,11 +574,23 @@ function normalizeInput(input) {
           node_version: text(safeInput.environment.node_version),
           os: text(safeInput.environment.os),
           branch: text(safeInput.environment.branch) || text(safeInput.branch),
+          ci_provider: text(safeInput.environment.ci_provider),
+          runner_assigned:
+            typeof safeInput.environment.runner_assigned === "boolean"
+              ? safeInput.environment.runner_assigned
+              : null,
+          runner_id:
+            typeof safeInput.environment.runner_id === "number"
+              ? safeInput.environment.runner_id
+              : null,
         }
       : {
           node_version: "",
           os: "",
           branch: text(safeInput.branch),
+          ci_provider: "",
+          runner_assigned: null,
+          runner_id: null,
         };
 
   return freezeDeep({
@@ -544,7 +644,8 @@ function buildDemaFdeDualDiagnosticInternal(input = {}) {
     outward.confidence === "medium" ||
     failure_class === "environment_gap" ||
     failure_class === "permission_gap" ||
-    failure_class === "dependency_gap";
+    failure_class === "dependency_gap" ||
+    failure_class === "github_actions_billing_lock";
 
   const body = {
     schema: DEMA_FDE_DUAL_DIAGNOSTIC_SCHEMA,
@@ -576,6 +677,9 @@ function buildDemaFdeDualDiagnosticInternal(input = {}) {
     field_validation_required,
     consent_required: true,
     eligible_for_autopatch: false,
+    code_implicated: failure_class === "github_actions_billing_lock" ? false : null,
+    operator_action_required:
+      failure_class === "github_actions_billing_lock" ? "billing_unlock" : null,
     capability_registry_reference: normalized.capability_registry_row,
     lifecycle_phases: buildLifecyclePhases(),
     terminal_state:

@@ -372,34 +372,34 @@ test("buildReleaseReadinessReport models automation and quality gates without ov
   assert.equal(gates.get("diff_hygiene").currently_enforced, false);
   assert.equal(
     report.quality_assurance.coverage_threshold.mode,
-    "report_only_advisory",
+    "native_threshold_gate",
   );
-  assert.equal(report.quality_assurance.coverage_threshold.configured, false);
-  assert.equal(report.quality_assurance.coverage_threshold.enforced, false);
+  assert.equal(report.quality_assurance.coverage_threshold.configured, true);
+  assert.equal(report.quality_assurance.coverage_threshold.enforced, true);
   assert.deepEqual(
-    report.quality_assurance.coverage_threshold.advisory_targets,
+    report.quality_assurance.coverage_threshold.thresholds,
     {
       lines: 95,
-      branches: 85,
+      branches: 84,
       functions: 95,
     },
+  );
+  assert.equal(
+    report.quality_assurance.coverage_threshold.advisory_targets,
+    null,
   );
   assert.equal(
     gates.get("coverage_threshold").currently_enforced,
     report.quality_assurance.coverage_threshold.enforced,
   );
-  assert.equal(gates.get("coverage_threshold").mode, "report_only_advisory");
+  assert.equal(gates.get("coverage_threshold").mode, "native_threshold_gate");
   assert.deepEqual(gates.get("coverage_threshold").thresholds, {
     lines: 95,
-    branches: 85,
+    branches: 84,
     functions: 95,
   });
-  assert.equal(
-    gates.get("coverage_threshold").risk_code,
-    report.quality_assurance.coverage_threshold.enforced
-      ? null
-      : "qa.coverage_threshold_missing",
-  );
+  assert.equal(gates.get("coverage_threshold").risk_code, null);
+  assert.equal(hasRisk(report, "qa.coverage_threshold_missing"), false);
   assert.equal(
     dimensions.get("continuous_delivery").status,
     "not_configured_advisory",
@@ -427,9 +427,7 @@ test("buildReleaseReadinessReport inventories performance QA and rollback contro
   assert.equal(mechanisms.get("bounded_cli_smoke_checks").status, "observed");
   assert.equal(
     mechanisms.get("native_coverage_thresholds").status,
-    report.quality_assurance.coverage_threshold.enforced
-      ? "observed"
-      : "advisory",
+    "observed",
   );
   // A+ perf now enforced
   assert.equal(mechanisms.get("a_plus_perf_gate").status, "enforced");

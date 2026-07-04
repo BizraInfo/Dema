@@ -12,6 +12,7 @@ import {
   sha256,
   stableStringify,
 } from "../packages/consent/src/consent-common.js";
+import { PREVIEW_BOUNDARY_CANONICAL_KEYS } from "../packages/core/src/preview-boundary.js";
 
 function makeReceipt(overrides = {}) {
   const baseAttests = {
@@ -42,6 +43,7 @@ function makeReceipt(overrides = {}) {
       node_connection_performed: false,
       public_network_used: false,
       consent_collected: true,
+      content_read: false,
     },
     consent_verified: true,
   };
@@ -151,8 +153,14 @@ describe("mission-closeout", () => {
       assert.equal(report.verification.content_hash_match, true);
       assert.equal(report.summary.verdict, "CLEAN");
       assert.equal(report.summary.boundary.true_count, 2);
-      assert.equal(report.summary.boundary.false_count, 14);
-      assert.equal(report.summary.boundary.total_keys, 16);
+      assert.equal(
+        report.summary.boundary.false_count,
+        PREVIEW_BOUNDARY_CANONICAL_KEYS.length - 2,
+      );
+      assert.equal(
+        report.summary.boundary.total_keys,
+        PREVIEW_BOUNDARY_CANONICAL_KEYS.length,
+      );
     });
 
     it("detects tampered hash", () => {
@@ -248,7 +256,10 @@ describe("mission-closeout", () => {
       const receipt = makeReceipt();
       const report = buildCloseoutReport(receipt, "/tmp/r.json", "r.json");
       const text = renderCloseoutText(report);
-      assert.match(text, /Boundary.*16 keys/);
+      assert.match(
+        text,
+        new RegExp(`Boundary.*${PREVIEW_BOUNDARY_CANONICAL_KEYS.length} keys`),
+      );
       assert.match(text, /YES/);
       assert.match(text, /All others: NO/);
     });

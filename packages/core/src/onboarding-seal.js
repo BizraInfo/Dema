@@ -34,6 +34,15 @@ export const SEAL_INVARIANT_KEYS = Object.freeze([
   "receipt_store_read_only",
 ]);
 
+export const ONBOARDING_SEAL_BOUNDARY_KEYS = Object.freeze([
+  "read_only",
+  "network",
+  "mint",
+  "external_send",
+  "urp_runtime",
+  "filesystem_write_performed",
+]);
+
 const BOUNDARY = Object.freeze({
   read_only: true,
   network: false,

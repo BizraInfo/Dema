@@ -31,13 +31,15 @@ Pre-action preview surfaces (#301–#305) route toward this spine but remain
 | #308 | NODE0-PROOF-CHAIN-LINK-1A        | `ac619ae`      | Append-only hash chain binding ordered signed-receipt `content_hash` anchors |
 | #309 | NODE0-SIGNED-CHAIN-HEAD-1A         | `049069b`      | Ed25519-sign verified chain `head_hash`; public-key-only verify |
 | #310 | POST-309 spine count sync          | `35a2680`      | Docs-only: 6,015 tests · eleven registry spine rows |
+| #312 | NODE0-SPINE-RUNNER-CLI-1A          | (this slice)   | `dema node0 spine run` — one consent-gated sandbox path through #306–#309 |
 
 Provenance receipt: [`docs/receipts/NODE0_SPINE_PROVENANCE_RECEIPT_1A.md`](../receipts/NODE0_SPINE_PROVENANCE_RECEIPT_1A.md).
 
-## Capability truth registry (eleven spine rows)
+## Capability truth registry (spine rows)
 
-At trunk HEAD after #310, `dema-capability-truth-registry.js` binds eleven
-pre-action / execute spine capabilities. Execute-adjacent measured rows:
+At trunk HEAD, `dema-capability-truth-registry.js` binds the current set of
+pre-action / execute spine capabilities (count = `registry.capability_count`,
+derived — do not pin). Execute-adjacent measured rows:
 
 | capability_id | truth_label |
 | ------------- | ----------- |
@@ -45,6 +47,7 @@ pre-action / execute spine capabilities. Execute-adjacent measured rows:
 | `NODE0_RECEIPT_SIGNING_ED25519_1A` | `NODE0_SIGNED_SANDBOX_RECEIPT_ATTESTATION` |
 | `NODE0_PROOF_CHAIN_LINK_1A` | `NODE0_APPEND_ONLY_SIGNED_RECEIPT_CHAIN` |
 | `NODE0_SIGNED_CHAIN_HEAD_1A` | `NODE0_SIGNED_PROOF_CHAIN_HEAD` |
+| `NODE0_SPINE_RUNNER_CLI_1A` | `NODE0_MEASURED_PROOF_SPINE_SANDBOX_RUN` |
 
 Preview rows (#301–#305, FDE, coverage gate, file steward) remain
 `eligible_for_execution: false`.
@@ -59,7 +62,6 @@ Preview rows (#301–#305, FDE, coverage gate, file steward) remain
 ## What this does not prove
 
 - Node0 **activation** (`dema node0 ladder` → `activate` = `GATED_OPERATOR_ONLY`).
-- Operator CLI wiring for the full spine in one command (planned: #312).
 - Arbitrary real-time tasks, autonomous loops, federation, Node1, token/PoI runtime.
 - Persistent operator identity or receipt mint from governed runtime outside this repo.
 - Runtime correctness of preview ladder rungs (`SHIPPED` = on disk, not validated live).
@@ -67,13 +69,15 @@ Preview rows (#301–#305, FDE, coverage gate, file steward) remain
 ## Verify on disk
 
 ```bash
-npm test                                    # expect # tests 6015 · # pass 6015
+npm test                                    # expect # fail 0 (count grows — do not pin)
 npm run check                               # includes spine review gates
 node bin/dema node0 ladder --json           # activate rung gated
 node --test tests/node0-reversible-execute-gate.test.js
 node --test tests/node0-receipt-signing-ed25519.test.js
 node --test tests/node0-proof-chain-link.test.js
 node --test tests/node0-signed-chain-head.test.js
+node bin/dema node0 spine run --consent "GO: run measured proof spine in sandbox" --json
+node --test tests/node0-spine-runner.test.js
 ```
 
 ## Boundaries

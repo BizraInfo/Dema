@@ -16,6 +16,12 @@ import {
   mergeCiEvidenceAttestationIntoGatheredInput,
   verifyNode0CiEvidenceAttestation,
 } from "../../packages/core/src/node0-ci-evidence-attestation.js";
+import {
+  buildCiVendorAvailabilityMarker,
+  buildDefaultCiVendorAvailabilityMarker,
+  mergeCiVendorAvailabilityIntoWorkflows,
+} from "../../packages/core/src/node0-ci-vendor-availability.js";
+import { diagnoseDemaFailure } from "../../packages/core/src/dema-fde-dual-diagnostic.js";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = dirname(dirname(SCRIPT_DIR));
@@ -63,6 +69,81 @@ function loadCiEvidenceAttestation() {
       `node0_proof_of_truth_control_plane audit: invalid CI evidence attestation JSON (${error.message})`,
     );
   }
+}
+
+function loadCiVendorAvailabilityMarker() {
+  const markerPath = process.env.DEMA_CI_VENDOR_AVAILABILITY_MARKER_PATH;
+  if (markerPath) {
+    if (!existsSync(markerPath)) {
+      throw new Error(
+        `node0_proof_of_truth_control_plane audit: DEMA_CI_VENDOR_AVAILABILITY_MARKER_PATH not found (${markerPath})`,
+      );
+    }
+    try {
+      return JSON.parse(readFileSync(markerPath, "utf8"));
+    } catch (error) {
+      throw new Error(
+        `node0_proof_of_truth_control_plane audit: invalid CI vendor availability marker JSON (${error.message})`,
+      );
+    }
+  }
+
+  const localLane = process.env.DEMA_LOCAL_PROOF_LANE;
+  if (localLane === "GITHUB_ACTIONS_BILLING_LOCK") {
+    return buildDefaultCiVendorAvailabilityMarker();
+  }
+
+  const fdeInline = process.env.DEMA_FDE_CI_FAILURE_JSON;
+  if (fdeInline && String(fdeInline).trim() !== "") {
+    try {
+      const input = JSON.parse(fdeInline);
+      const fde_report = diagnoseDemaFailure(input);
+      return buildCiVendorAvailabilityMarker({
+        fde_report,
+        operator_declared: true,
+      });
+    } catch (error) {
+      throw new Error(
+        `node0_proof_of_truth_control_plane audit: invalid DEMA_FDE_CI_FAILURE_JSON (${error.message})`,
+      );
+    }
+  }
+
+  return null;
+}
+
+function mergeVendorAvailabilityIntoInput(baseInput) {
+  const marker = loadCiVendorAvailabilityMarker();
+  if (!marker) {
+    return {
+      input: baseInput,
+      marker: null,
+      vendor_availability_merged: false,
+    };
+  }
+  const merge = mergeCiVendorAvailabilityIntoWorkflows(baseInput.workflows, marker);
+  if (!merge.merged) {
+    throw new Error(
+      `node0_proof_of_truth_control_plane audit: CI vendor availability merge failed (${(merge.blocked_by ?? []).join(", ")})`,
+    );
+  }
+  return {
+    input: {
+      ...baseInput,
+      workflows: merge.workflows,
+      risks: [
+        ...(Array.isArray(baseInput.risks) ? baseInput.risks : []),
+        {
+          id: "R-VENDOR-001",
+          desc: "GitHub Actions billing lock — local proof lane active; remote CI advisory only",
+          severity: "MEDIUM",
+          status: "OPEN",
+        },
+      ],
+    },
+    marker,
+    vendor_availability_merged: true,
+  };
 }
 
 function buildGatheredInput() {
@@ -126,7 +207,14 @@ function buildGatheredInput() {
 
   const attestation = loadCiEvidenceAttestation();
   if (!attestation) {
-    return { input: baseInput, attestation: null, attestation_merged: false };
+    const vendor = mergeVendorAvailabilityIntoInput(baseInput);
+    return {
+      input: vendor.input,
+      attestation: null,
+      attestation_merged: false,
+      ci_vendor_availability_marker: vendor.marker,
+      vendor_availability_merged: vendor.vendor_availability_merged,
+    };
   }
 
   const verified = verifyNode0CiEvidenceAttestation(attestation);
@@ -144,10 +232,13 @@ function buildGatheredInput() {
     );
   }
 
+  const vendor = mergeVendorAvailabilityIntoInput(merge.input);
   return {
-    input: merge.input,
+    input: vendor.input,
     attestation,
     attestation_merged: true,
+    ci_vendor_availability_marker: vendor.marker,
+    vendor_availability_merged: vendor.vendor_availability_merged,
   };
 }
 
@@ -164,7 +255,8 @@ export function runNode0ProofOfTruthControlPlaneAudit(options = {}) {
     };
   }
 
-  const { input, attestation, attestation_merged } = buildGatheredInput();
+  const { input, attestation, attestation_merged, vendor_availability_merged } =
+    buildGatheredInput();
   const ledger = buildNode0ProofOfTruthControlPlane(input);
   return {
     ledger,
@@ -172,6 +264,7 @@ export function runNode0ProofOfTruthControlPlaneAudit(options = {}) {
     release_mode: input.release_mode === true,
     ci_evidence_attestation: attestation,
     attestation_merged,
+    vendor_availability_merged: vendor_availability_merged === true,
   };
 }
 

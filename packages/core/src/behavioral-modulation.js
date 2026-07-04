@@ -9,6 +9,19 @@ export const BEHAVIORAL_MODULATION_PREVIEW_SCHEMA =
 export const BEHAVIORAL_MODULATION_CONSENT_PHRASE =
   "GO: preview behavioral modulation only";
 
+export const BEHAVIORAL_MODULATION_BOUNDARY_KEYS = Object.freeze([
+  "approval_recorded",
+  "capability_minted",
+  "receipt_minted",
+  "runtime_gate_executed",
+  "behavior_changed",
+  "external_effect",
+  "hidden_modulation_allowed",
+  "identity_bound",
+  "network_connection_attempted",
+  "external_posting_performed",
+]);
+
 const FORBIDDEN_TECHNIQUES = [
   {
     code: "covert_persuasion",
@@ -169,18 +182,9 @@ export function buildBehavioralModulationPreview({
     ihsan_floor_preview: ihsan,
     evidence_receipt_preview: receiptPreview,
     evidence_receipt_preview_verdict: receiptPreviewVerdict,
-    boundary: {
-      approval_recorded: false,
-      capability_minted: false,
-      receipt_minted: false,
-      runtime_gate_executed: false,
-      behavior_changed: false,
-      external_effect: false,
-      hidden_modulation_allowed: false,
-      identity_bound: false,
-      network_connection_attempted: false,
-      external_posting_performed: false,
-    },
+    boundary: Object.fromEntries(
+      BEHAVIORAL_MODULATION_BOUNDARY_KEYS.map((key) => [key, false]),
+    ),
   };
 }
 

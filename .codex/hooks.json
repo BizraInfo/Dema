@@ -1,0 +1,36 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node '/home/bizra-operating-system/Downloads/Dema/.codex/hooks/pretool-boundary.mjs'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node '/home/bizra-operating-system/Downloads/Dema/.codex/hooks/posttool-proof-log.mjs'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node '/home/bizra-operating-system/Downloads/Dema/.codex/hooks/stop-closeout-check.mjs'"
+          }
+        ]
+      }
+    ]
+  }
+}

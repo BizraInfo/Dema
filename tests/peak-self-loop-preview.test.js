@@ -45,10 +45,10 @@ test("PSL-04: composes SNR, convergence, HHMM, craftsmanship, proactive_self", (
   assert.equal(out.autonomous_rsi.not_autonomous_runtime, true);
 });
 
-test("PSL-05: default SNR favors signal (4 signal vs 1 noise)", () => {
+test("PSL-05: default SNR favors signal (9 signal vs 3 noise)", () => {
   const out = buildPeakSelfLoopPreview();
-  assert.equal(out.snr_framework.signal_count, 4);
-  assert.equal(out.snr_framework.noise_count, 1);
+  assert.equal(out.snr_framework.signal_count, 9);
+  assert.equal(out.snr_framework.noise_count, 3);
   assert.ok(out.snr_framework.score >= 0.7);
   assert.equal(out.autonomous_rsi.merged_verdict, "CONTINUE_MICRO_SLICE");
 });
@@ -95,11 +95,81 @@ test("PSL-10: high noise input triggers HOLD merged verdict", () => {
   assert.equal(out.autonomous_rsi.merged_verdict, "HOLD_AND_REDUCE_NOISE");
 });
 
-test("PSL-11: next slice observable is post-integration with text and evidence", () => {
+test("PSL-11: next slice observable is backlog-ranked with text and evidence", () => {
   const out = buildPeakSelfLoopPreview();
   const next = out.craftsmanship_witness.next_slice_observables[0];
-  assert.equal(next.id, "pat-council-dispatch-governed-runtime");
-  assert.notEqual(next.id, "claim-corpus-gate-baseline-ratchet");
+  assert.equal(next.id, "style-pillar-micro-1a");
   assert.ok(next.text.length > 0);
   assert.ok(next.evidence.length > 0);
+});
+
+test("PSL-12: composes agent-outside-sandbox orchestration posture", () => {
+  const out = buildPeakSelfLoopPreview();
+  assert.equal(out.agent_orchestration.doctrine, "agent_outside_sandbox_not_inside");
+  assert.equal(out.agent_orchestration.signing_authority_ne_execution_authority, true);
+  assert.equal(out.agent_orchestration.operator_mutation_outside_sandbox, false);
+  assert.ok(out.agent_orchestration.roles.outside_sandbox.length >= 2);
+  assert.ok(out.agent_orchestration.roles.inside_sandbox.length >= 2);
+});
+
+test("PSL-13: reasoning modes + micro process mining ref are preview-only", () => {
+  const out = buildPeakSelfLoopPreview();
+  assert.equal(out.reasoning_modes.sequential.mode, "SEQUENTIAL_REASONING_PREVIEW");
+  assert.equal(out.reasoning_modes.creative.forbidden_outputs.includes("autonomous runtime"), true);
+  assert.equal(out.micro_process_mining.spine_command, "dema process-mining");
+  assert.equal(out.micro_process_mining.acts_on_data, false);
+  assert.equal(out.micro_process_mining.offers_mirror, true);
+});
+
+test("PSL-14: OODA cycle is bounded — act not executed by kernel", () => {
+  const out = buildPeakSelfLoopPreview();
+  assert.equal(out.self_loop_ooda.schema, "bizra.dema.self_loop_ooda.v0.1");
+  assert.equal(out.self_loop_ooda.action_executed_by_kernel, false);
+  assert.equal(out.self_loop_ooda.recommendation, "PROPOSE_NEXT_BOUNDED_CYCLE");
+  assert.equal(out.self_loop_ooda.steps.length, 5);
+});
+
+test("PSL-15: RSI integration gate screens proposal without forbidden live-loop terms", () => {
+  const out = buildPeakSelfLoopPreview();
+  assert.equal(out.rsi_integration_gate.schema, "bizra.dema.rsi_proposal_preview.v0.1");
+  assert.notEqual(out.rsi_integration_gate.recommendation, "REJECT");
+  assert.equal(out.rsi_integration_gate.certifies, false);
+});
+
+test("PSL-16: ci_advisory_blocked shifts harness next_gate to local proof lane", () => {
+  const blocked = buildPeakSelfLoopPreview({ ci_advisory_blocked: true });
+  assert.equal(blocked.agent_orchestration.local_proof_lane_when_ci_advisory_blocked, true);
+  assert.match(blocked.proactive_self.harness.next_gate, /DONE_LOCAL/);
+  assert.ok(blocked.proactive_self.critique.gaps.some((g) => g.includes("LOCAL proof")));
+});
+
+test("PSL-17: render includes agent-outside-sandbox and OODA lines", () => {
+  const text = renderPeakSelfLoopPreview(buildPeakSelfLoopPreview());
+  assert.ok(text.includes("Agent outside sandbox:"));
+  assert.ok(text.includes("OODA review:"));
+  assert.ok(text.includes("Reasoning modes (preview):"));
+  assert.ok(text.includes("RSI integration gate:"));
+});
+
+test("PSL-18: ultra_micro_compose maps all proactive reasoning subsystems", () => {
+  const out = buildPeakSelfLoopPreview();
+  assert.equal(out.ultra_micro_compose.mode, "preview_only");
+  assert.equal(
+    out.ultra_micro_compose.agent_posture,
+    "outside_sandbox_proposes_inside_sandbox_proves",
+  );
+  assert.ok(out.ultra_micro_compose.subsystems.length >= 10);
+  assert.ok(out.proof_spine_backlog.length >= 3);
+});
+
+test("PSL-19: companion disconnected surfaces in self-critique gaps", () => {
+  const out = buildPeakSelfLoopPreview({ companion_device_connected: false });
+  assert.ok(
+    out.proactive_self.critique.gaps.some((g) => g.includes("Mobile companion")),
+  );
+  const connected = buildPeakSelfLoopPreview({ companion_device_connected: true });
+  assert.equal(
+    connected.proactive_self.critique.gaps.some((g) => g.includes("Mobile companion")),
+    false,
+  );
 });

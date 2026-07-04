@@ -100,4 +100,59 @@ describe("checkModelReadiness — disk manifest detection", () => {
       );
     }
   });
+
+  it("uses localhost API models when the broker tags endpoint is observed", async () => {
+    const savedFetch = globalThis.fetch;
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        models: [
+          { name: "larger-text:latest", size: 20 },
+          { name: "nomic-embed-text:latest", size: 1 },
+          { name: "smaller-text:latest", size: 10 },
+        ],
+      }),
+    });
+    try {
+      const result = await checkModelReadiness();
+      assert.equal(result.broker_reachable, "LOCALHOST_API_OBSERVED");
+      assert.equal(result.models_source, "api");
+      assert.deepEqual(result.available_models, [
+        "smaller-text:latest",
+        "larger-text:latest",
+      ]);
+      assert.equal(result.recommended_model, "smaller-text:latest");
+      assert.equal(result.model_readiness_evidence, "LOCALHOST_API_OBSERVED");
+    } finally {
+      globalThis.fetch = savedFetch;
+    }
+  });
+
+  it("reports NOT_DETECTED when neither API nor disk manifests are available", async () => {
+    const savedFetch = globalThis.fetch;
+    const savedModels = process.env.OLLAMA_MODELS;
+    globalThis.fetch = async () => ({ ok: false, json: async () => ({}) });
+    process.env.OLLAMA_MODELS = join(
+      tmpdir(),
+      "dema-ollama-models-missing",
+      `${Date.now()}`,
+    );
+    try {
+      const result = await checkModelReadiness();
+      assert.equal(result.ollama_installed, false);
+      assert.equal(result.ollama_models_dir, null);
+      assert.equal(result.broker_reachable, "NOT_REACHABLE");
+      assert.deepEqual(result.available_models, []);
+      assert.equal(result.recommended_model, null);
+      assert.equal(result.models_source, "none");
+      assert.equal(result.model_readiness_evidence, "NOT_DETECTED");
+    } finally {
+      globalThis.fetch = savedFetch;
+      if (savedModels === undefined) {
+        delete process.env.OLLAMA_MODELS;
+      } else {
+        process.env.OLLAMA_MODELS = savedModels;
+      }
+    }
+  });
 });

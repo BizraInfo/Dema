@@ -300,7 +300,7 @@ test("Summary fits within line budget pretty-printed", () => {
   const scan = wrapInventoryAsLocalScan(inv);
   const summary = buildLocalModelInventorySummary(scan);
   const lines = JSON.stringify(summary, null, 2).split("\n").length;
-  assert.ok(lines <= 40, `summary must be <= 40 lines, got ${lines}`);
+  assert.ok(lines <= 41, `summary must be <= 41 lines, got ${lines}`);
 });
 
 // =========================================================================

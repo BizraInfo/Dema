@@ -194,6 +194,7 @@ export async function buildThinkLive(
       node_connection_performed: false,
       public_network_used: false,
       consent_collected: true,
+      content_read: false,
     },
     boundary_evidence: {
       model_invocation: modelResponded ? "OBSERVED" : "ATTEMPTED_FAILED",

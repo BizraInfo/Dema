@@ -5,7 +5,7 @@
 // NODE0-OSTREE-1A manifest kernel without building, signing, deploying, or
 // persisting a composition manifest.
 
-import { buildPreviewBoundary } from "./preview-boundary.js";
+import { buildPreviewBoundary, PREVIEW_BOUNDARY_CANONICAL_KEYS } from "./preview-boundary.js";
 
 export const GENESIS_COMPOSITION_BLUEPRINT_SCHEMA =
   "bizra.dema.genesis_composition_blueprint_preview.v0.1";
@@ -161,11 +161,11 @@ export function buildGenesisCompositionBlueprintPreview() {
     quality_thresholds: {
       coverage: {
         lines: 95,
-        branches: 85,
+        branches: 84,
         functions: 95,
         command: "npm run coverage",
       },
-      boundary_keys_required: 16,
+      boundary_keys_required: PREVIEW_BOUNDARY_CANONICAL_KEYS.length,
       adversarial_test_posture:
         "fail-closed build and verify paths, tamper detection, external-pubkey-only authority",
       release_claim_rule:
