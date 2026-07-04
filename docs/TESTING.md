@@ -503,6 +503,7 @@ node scripts/review/away-contract-check.mjs
 node scripts/review/absence-steward-readiness-check.mjs
 node scripts/review/absence-steward-return-review-check.mjs
 node scripts/review/absence-steward-queue-check.mjs
+node scripts/review/repo-claude-config-check.mjs
 node scripts/review/dema-capability-truth-registry-check.mjs
 node scripts/review/boundary-vocab-unification-check.mjs
 node scripts/review/dema-fde-dual-diagnostic-check.mjs
