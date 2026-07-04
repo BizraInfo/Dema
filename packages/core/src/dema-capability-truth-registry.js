@@ -45,6 +45,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "ABSENCE_STEWARD_READINESS_1A",
   "ABSENCE_STEWARD_RETURN_REVIEW_1A",
   "ABSENCE_STEWARD_QUEUE_PROPOSAL_SPINE_1A",
+  "DEMA_FDE_FORWARDER_DIAGNOSTIC_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -891,6 +892,35 @@ function defaultCapabilityRows() {
         "A queue proposal item can be validated fail-closed (execution-flavored states, never-executable action classes, and consent-ish fields all reject), re-verified body-bound against laundering (whole-body diff — forged hashes, drifted items, and hot boundaries refused), and, only under byte-exact derived consent, recorded as an atomic no-overwrite receipt that stays approved:false and executed:false with an all-false runtime boundary on every path.",
       what_this_does_not_prove:
         "It does not prove a queue runtime, storage beyond receipts, approval flow, dequeue, scheduling, execution, model invocation, or network use — the queue itself remains designed, not live.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_FDE_FORWARDER_DIAGNOSTIC_1A",
+      truth_label: "DEMA_FDE_FORWARDER_DIAGNOSTIC_MEASURED_REPO",
+      summary:
+        "Route a completed FDE dual-diagnostic report to a single fail-closed forwarding destination under the Diagnostic Doxology; routing proposes, never executes.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-fde-forwarder-diagnostic.js"],
+        test_paths: ["tests/dema-fde-forwarder-diagnostic.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-fde-forwarder-diagnostic-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_FDE_FORWARDER_DIAGNOSTIC_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_FDE_FORWARDER_DIAGNOSTIC_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A completed FDE dual-diagnostic report deterministically routes to exactly one proposal destination under the eight Diagnostic Doxology rules; mint/execute/autopatch destinations are absent from the vocabulary, CI unavailability never forwards as code failure, unregistered channels never claim connectivity, and the whole-body re-derivation verifier rejects forged-and-recomputed routings.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
