@@ -44,6 +44,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "AWAY_CONTRACT_1A",
   "ABSENCE_STEWARD_READINESS_1A",
   "ABSENCE_STEWARD_RETURN_REVIEW_1A",
+  "ABSENCE_STEWARD_QUEUE_PROPOSAL_SPINE_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -850,6 +851,46 @@ function defaultCapabilityRows() {
         "A post-absence review report can be deterministically derived from the receipted trio plus a declared window, with readiness re-derived at both window edges, verdicts capped at READY_BUT_NOT_STARTED / EXPIRED_BEFORE_START (COMPLETE verdicts unreachable), every event field refusing unreceipted claims, and a ten-key all-false boundary on every path.",
       what_this_does_not_prove:
         "It does not prove any work occurred, absence-mode execution, steward runtime, queuing, scheduling, model invocation, network use, or stewardship of any kind — the review exists to prove what was NOT done.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "ABSENCE_STEWARD_QUEUE_PROPOSAL_SPINE_1A",
+      truth_label: "ABSENCE_STEWARD_QUEUE_PROPOSAL_SPINE_MEASURED_NOT_LIVE",
+      summary:
+        "Absence Steward queue PROPOSAL spine only: fail-closed item-shape validator, body-bound launder-detecting verifier, consent-gated atomic receipt writer, and the validate-only dema away queue draft CLI. Item states capped at PROPOSED / HUMAN_APPROVED / HUMAN_REJECTED / WITHDRAWN / EXPIRED_WITH_CONTRACT; queue membership is never consent; recording a proposal never moves it. The queue itself — runner, approval flow, execution — remains DESIGNED_NOT_LIVE.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/absence-steward-queue-schema.js",
+          "packages/core/src/absence-steward-queue-verify.js",
+          "packages/core/src/absence-steward-queue-receipt.js",
+          "apps/cli/src/commands/away.js",
+        ],
+        test_paths: [
+          "tests/absence-steward-queue-schema.test.js",
+          "tests/absence-steward-queue-verify.test.js",
+          "tests/absence-steward-queue-receipt.test.js",
+          "tests/away-queue-cli-draft.test.js",
+        ],
+        review_gate_paths: ["scripts/review/absence-steward-queue-check.mjs"],
+        receipt_paths: [
+          "docs/receipts/ABSENCE_STEWARD_QUEUE_PROPOSAL_SPINE_1A.md",
+        ],
+        documentation_paths: [
+          "docs/02-architecture/ABSENCE_STEWARD_LOCAL_QUEUE_v0_1.md",
+          "docs/ARCHITECTURE.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim a live queue, queue runner, scheduler, daemon, auto-dequeue, self-approval, execution from queue, steward runtime, unattended execution, model invocation, network use, token, wallet, or federation. A recorded proposal is a remembered request — approval stays a separate human decision, execution is not in this track at all, and dema away start does not exist.",
+      what_this_proves:
+        "A queue proposal item can be validated fail-closed (execution-flavored states, never-executable action classes, and consent-ish fields all reject), re-verified body-bound against laundering (whole-body diff — forged hashes, drifted items, and hot boundaries refused), and, only under byte-exact derived consent, recorded as an atomic no-overwrite receipt that stays approved:false and executed:false with an all-false runtime boundary on every path.",
+      what_this_does_not_prove:
+        "It does not prove a queue runtime, storage beyond receipts, approval flow, dequeue, scheduling, execution, model invocation, or network use — the queue itself remains designed, not live.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
