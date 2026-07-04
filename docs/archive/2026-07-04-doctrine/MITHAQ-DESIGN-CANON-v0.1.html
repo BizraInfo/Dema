@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MITHAQ · Dema Morning Standing — Design Canon v0.1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   MITHAQ — الميثاق · Design Canon v0.1
+   "The interface is the covenant, rendered."
+   Law of color: color is evidence. Only the MEASURED may glow.
+   ============================================================ */
+:root{
+  --ink:        #070B10;   /* the night the seed was planted */
+  --ink-2:      #0B1119;   /* panel ink */
+  --ink-3:      #101825;   /* raised ink */
+  --paper:      #EFE7D4;   /* ivory of the founding pages */
+  --paper-dim:  rgba(239,231,212,.62);
+  --ghost:      rgba(239,231,212,.26);  /* DESIGNED_NOT_LIVE */
+  --gold:       #D2A93C;   /* MEASURED — earned light */
+  --gold-soft:  rgba(210,169,60,.36);
+  --gold-faint: rgba(210,169,60,.13);
+  --moon:       #A6BCCB;   /* LOCAL_ONLY — witnessed by one machine */
+  --ember:      #C64F31;   /* BLOCKED — honest red */
+  --steel:      #7C8B99;   /* BY-DESIGN restraint */
+  --hairline:   rgba(210,169,60,.22);
+  --ar: 'Amiri', 'Noto Naskh Arabic', serif;
+  --display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--ink);
+  color:var(--paper);
+  font-family:var(--display);
+  font-size:17px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+/* atmosphere: vignette + faint grain, no gradient candy */
+body::before{
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(1200px 700px at 50% -10%, rgba(210,169,60,.05), transparent 60%),
+    radial-gradient(900px 600px at 50% 115%, rgba(166,188,203,.04), transparent 60%);
+}
+body::after{
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+}
+.page{position:relative; z-index:1; max-width:760px; margin:0 auto; padding:0 28px 120px}
+
+/* ---------- shared primitives ---------- */
+.eyebrow{
+  font-family:var(--mono); font-size:10.5px; font-weight:500;
+  letter-spacing:.42em; text-transform:uppercase; color:var(--gold);
+}
+.eyebrow.dim{color:var(--paper-dim)}
+.ar{font-family:var(--ar); direction:rtl; unicode-bidi:isolate}
+.rule{height:1px; background:linear-gradient(90deg, transparent, var(--hairline), transparent); border:0; margin:0}
+section{padding:64px 0 8px}
+.sec-head{display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:6px}
+.sec-title{font-size:30px; font-weight:600; letter-spacing:.01em}
+.sec-title .ar{font-size:26px; color:var(--paper-dim); margin-inline-start:.4em}
+.sec-note{font-family:var(--mono); font-size:11px; color:var(--paper-dim); letter-spacing:.14em}
+.caption{font-size:14.5px; color:var(--paper-dim); font-style:italic; margin-top:14px}
+.caption .ar{font-style:normal; font-size:15px}
+
+/* ---------- masthead ---------- */
+header{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:22px 0; border-bottom:1px solid var(--hairline);
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.34em; text-transform:uppercase;
+}
+header .left{color:var(--paper-dim)}
+header .left b{color:var(--gold); font-weight:500}
+header .clock{color:var(--paper); letter-spacing:.2em}
+header .clock span{color:var(--paper-dim)}
+
+/* ---------- hero ---------- */
+.hero{padding:88px 0 46px; text-align:center}
+.seed{width:72px; height:72px; margin:0 auto 34px; position:relative}
+.seed .core{
+  position:absolute; inset:26px; border-radius:50%;
+  background:radial-gradient(circle at 38% 32%, #E8C86A, var(--gold) 62%, #8A6E1F);
+  box-shadow:0 0 24px rgba(210,169,60,.45), 0 0 64px rgba(210,169,60,.18);
+  animation:breathe 5.2s ease-in-out infinite;
+}
+.seed .ring{position:absolute; inset:0; border-radius:50%; border:1px solid var(--gold-soft); animation:breathe-ring 5.2s ease-in-out infinite}
+.seed .ring.r2{inset:8px; border-color:var(--gold-faint); animation-delay:.35s}
+@keyframes breathe{0%,100%{transform:scale(.92); opacity:.85}50%{transform:scale(1.04); opacity:1}}
+@keyframes breathe-ring{0%,100%{transform:scale(.97); opacity:.5}50%{transform:scale(1.03); opacity:1}}
+.hero .ar-title{font-family:var(--ar); font-size:58px; font-weight:700; line-height:1.15; color:var(--paper)}
+.hero .en-title{
+  font-size:15px; font-family:var(--mono); letter-spacing:.58em; text-transform:uppercase;
+  color:var(--gold); margin-top:14px; text-indent:.58em;
+}
+.hero .tagline{margin-top:30px; font-size:19px; color:var(--paper-dim)}
+.hero .tagline .ar{font-size:21px; color:var(--paper)}
+.hero .statusline{
+  margin-top:36px; font-family:var(--mono); font-size:11.5px; letter-spacing:.12em;
+  color:var(--paper-dim); display:flex; gap:22px; justify-content:center; flex-wrap:wrap;
+}
+.hero .statusline .ok{color:var(--gold)}
+
+/* staggered load */
+.reveal{opacity:0; transform:translateY(14px); animation:rise .9s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes rise{to{opacity:1; transform:none}}
+
+/* ---------- anti-splash / current limits ---------- */
+.limits{
+  border:1px solid var(--hairline); background:var(--ink-2);
+  padding:30px 34px; margin-top:20px; position:relative;
+}
+.limits::before{
+  content:'CURRENT_LIMITS'; position:absolute; top:-9px; left:26px;
+  background:var(--ink); padding:0 12px;
+  font-family:var(--mono); font-size:10px; letter-spacing:.4em; color:var(--gold);
+}
+.limits p.lede{font-size:18px; font-style:italic; color:var(--paper); margin-bottom:20px}
+.limits p.lede .ar{font-style:normal}
+.limit-line{
+  font-family:var(--mono); font-size:13.5px; color:var(--ghost);
+  padding:9px 0; border-top:1px dashed rgba(239,231,212,.12);
+  display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;
+}
+.limit-line:first-of-type{border-top:0}
+.limit-line .what{color:var(--paper-dim)}
+.limit-line .verdict{color:var(--ghost); letter-spacing:.08em}
+.limit-line .verdict.ar{font-size:14px}
+
+/* ---------- steward chain ---------- */
+.chain{display:flex; gap:14px; justify-content:space-between; margin-top:34px; flex-wrap:wrap}
+.day{flex:1; min-width:76px; text-align:center; position:relative}
+.day .disc{
+  width:58px; height:58px; margin:0 auto; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--mono); font-size:13px; position:relative;
+}
+.day.sealed .disc{
+  border:1.5px solid var(--gold); color:var(--ink); font-weight:600;
+  background:radial-gradient(circle at 36% 30%, #E4C462, var(--gold) 66%, #97781F);
+  box-shadow:0 0 18px rgba(210,169,60,.35), inset 0 0 8px rgba(0,0,0,.25);
+}
+.day.today .disc{
+  border:1.5px solid var(--gold-soft); color:var(--gold);
+  animation:await 3.4s ease-in-out infinite;
+}
+@keyframes await{0%,100%{box-shadow:0 0 0 0 rgba(210,169,60,.0); border-color:var(--gold-soft)}50%{box-shadow:0 0 20px 2px rgba(210,169,60,.22); border-color:var(--gold)}}
+.day.ghost .disc{border:1px dashed rgba(239,231,212,.2); color:var(--ghost)}
+.day .lab{font-family:var(--mono); font-size:10px; letter-spacing:.18em; margin-top:12px; color:var(--paper-dim); text-transform:uppercase}
+.day.sealed .lab{color:var(--gold)}
+.day.ghost .lab{color:var(--ghost)}
+.day .meta{font-family:var(--mono); font-size:10px; color:var(--paper-dim); margin-top:5px}
+.day.sealed .meta b{color:var(--paper); font-weight:500}
+.chain-law{
+  margin-top:30px; padding:16px 22px; border-left:2px solid var(--gold-soft);
+  font-size:15.5px; color:var(--paper-dim); font-style:italic; background:var(--ink-2);
+}
+
+/* ---------- drain dial ---------- */
+.drain{display:flex; gap:14px; margin-top:30px}
+.drain button{
+  flex:1; background:var(--ink-2); border:1px solid rgba(239,231,212,.14);
+  color:var(--paper-dim); padding:22px 10px 18px; cursor:pointer;
+  font-family:var(--display); transition:border-color .25s, color .25s, background .25s;
+}
+.drain button .g{font-family:var(--ar); font-size:24px; display:block; color:inherit}
+.drain button .e{font-family:var(--mono); font-size:10.5px; letter-spacing:.3em; text-transform:uppercase; display:block; margin-top:8px}
+.drain button:hover{border-color:var(--gold-soft); color:var(--paper)}
+.drain button[aria-pressed="true"]{
+  border-color:var(--gold); color:var(--paper); background:var(--ink-3);
+  box-shadow:inset 0 0 0 1px var(--gold-faint), 0 0 22px rgba(210,169,60,.10);
+}
+.drain button:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+
+/* ---------- lenses ---------- */
+.lenses{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; margin-top:30px}
+.lens{background:var(--ink-2); border:1px solid rgba(239,231,212,.1); padding:20px 20px 18px}
+.lens .tag{font-family:var(--mono); font-size:10px; letter-spacing:.34em; text-transform:uppercase}
+.lens.ember .tag{color:var(--ember)}
+.lens.steel .tag{color:var(--steel)}
+.lens h4{font-size:18px; font-weight:600; margin:10px 0 6px}
+.lens p{font-size:13.5px; color:var(--paper-dim); line-height:1.5}
+.lens .state{font-family:var(--mono); font-size:10.5px; margin-top:12px; letter-spacing:.14em}
+.lens.ember .state{color:var(--ember)}
+.lens.steel .state{color:var(--steel)}
+
+/* ---------- consent gate ---------- */
+.gate{border:1px solid var(--hairline); background:var(--ink-2); padding:36px; margin-top:32px; position:relative}
+.gate::before{
+  content:'FATE · EXACT-CONSENT · strict ==='; position:absolute; top:-9px; left:26px;
+  background:var(--ink); padding:0 12px;
+  font-family:var(--mono); font-size:10px; letter-spacing:.34em; color:var(--gold);
+}
+.phrase{
+  font-family:var(--mono); font-size:14px; color:var(--paper-dim);
+  padding:12px 16px; background:var(--ink); border:1px dashed rgba(239,231,212,.16);
+  letter-spacing:.02em; user-select:all;
+}
+.phrase b{color:var(--gold); font-weight:500}
+.gate label{display:block; font-family:var(--mono); font-size:10.5px; letter-spacing:.3em; text-transform:uppercase; color:var(--paper-dim); margin:26px 0 10px}
+.gate input{
+  width:100%; background:var(--ink); border:1px solid rgba(239,231,212,.18);
+  color:var(--paper); font-family:var(--mono); font-size:15px; padding:15px 16px;
+  letter-spacing:.02em; caret-color:var(--gold);
+}
+.gate input:focus{outline:none; border-color:var(--gold-soft)}
+.meter{display:flex; justify-content:space-between; align-items:center; margin-top:12px; font-family:var(--mono); font-size:11px; letter-spacing:.12em}
+.meter .track{flex:1; height:2px; background:rgba(239,231,212,.1); margin:0 16px; position:relative}
+.meter .fill{position:absolute; inset:0 auto 0 0; width:0%; background:var(--gold); transition:width .15s, background .2s}
+.meter .fill.err{background:var(--ember)}
+.meter #byteCount{color:var(--paper-dim)}
+.meter #byteCount.match{color:var(--gold)}
+.meter #byteCount.err{color:var(--ember)}
+.gate .law{font-size:14px; color:var(--paper-dim); font-style:italic; margin-top:16px}
+.gate .law .ar{font-style:normal}
+.sealbtn{
+  margin-top:26px; width:100%; padding:18px; cursor:not-allowed;
+  background:transparent; border:1px solid rgba(239,231,212,.14); color:var(--ghost);
+  font-family:var(--mono); font-size:12px; letter-spacing:.44em; text-transform:uppercase; text-indent:.44em;
+  transition:all .3s;
+}
+.sealbtn.armed{
+  cursor:pointer; color:var(--ink); border-color:var(--gold);
+  background:linear-gradient(180deg,#E2C25C,var(--gold));
+  box-shadow:0 0 28px rgba(210,169,60,.28);
+}
+.sealbtn:focus-visible{outline:2px solid var(--gold); outline-offset:3px}
+
+/* ---------- receipt specimen ---------- */
+.receipt-wrap{margin-top:34px; display:none}
+.receipt-wrap.shown{display:block; animation:rise .8s cubic-bezier(.2,.7,.2,1)}
+.receipt{
+  border:1px solid var(--gold); outline:1px solid var(--gold-faint); outline-offset:5px;
+  background:var(--ink-3); padding:34px 36px 30px; position:relative; overflow:hidden;
+}
+.receipt .stamp{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-14deg);
+  border:2px solid var(--ember); color:var(--ember); padding:8px 22px;
+  font-family:var(--mono); font-size:13px; letter-spacing:.34em; text-transform:uppercase;
+  opacity:.85; pointer-events:none; white-space:nowrap;
+}
+.receipt h5{font-family:var(--mono); font-size:10px; letter-spacing:.4em; color:var(--gold); text-transform:uppercase; margin-bottom:22px}
+.rrow{display:flex; justify-content:space-between; gap:18px; font-family:var(--mono); font-size:12.5px; padding:8px 0; border-top:1px dashed rgba(239,231,212,.1); flex-wrap:wrap}
+.rrow .k{color:var(--paper-dim)}
+.rrow .v{color:var(--paper); text-align:right}
+.rrow .v.gold{color:var(--gold)}
+.rrow .v.ghosted{color:var(--ghost); font-style:italic}
+.receipt .foot{margin-top:22px; font-size:13.5px; color:var(--paper-dim); font-style:italic}
+
+/* ---------- ladder ---------- */
+.ladder{display:flex; align-items:stretch; gap:0; margin-top:34px; flex-wrap:wrap}
+.rung{flex:1; min-width:118px; text-align:center; padding:20px 8px 16px; border:1px solid rgba(239,231,212,.1); border-left:0; background:var(--ink-2); position:relative}
+.rung:first-child{border-left:1px solid rgba(239,231,212,.1)}
+.rung .num{font-family:var(--mono); font-size:10px; letter-spacing:.3em; color:var(--paper-dim)}
+.rung h5{font-size:15.5px; font-weight:600; margin:8px 0 4px}
+.rung .st{font-family:var(--mono); font-size:9.5px; letter-spacing:.2em; text-transform:uppercase}
+.rung.lit{border-bottom:2px solid var(--gold)}
+.rung.lit .st{color:var(--gold)}
+.rung.lit h5{color:var(--paper)}
+.rung.moon .st{color:var(--moon)}
+.rung.moon h5{color:var(--moon)}
+.rung.ghost h5{color:var(--ghost)}
+.rung.ghost .st{color:var(--ghost)}
+.neq{display:flex; align-items:center; font-family:var(--mono); color:var(--gold-soft); padding:0 2px; font-size:15px}
+.ladder-law{margin-top:18px; text-align:center; font-family:var(--mono); font-size:11.5px; letter-spacing:.16em; color:var(--paper-dim)}
+
+/* ---------- TUI mirror ---------- */
+.tui{
+  margin-top:32px; background:#05080C; border:1px solid rgba(166,188,203,.18);
+  padding:26px 26px 22px; overflow-x:auto;
+}
+.tui pre{font-family:var(--mono); font-size:12.5px; line-height:1.75; color:var(--paper-dim); white-space:pre}
+.tui .g{color:var(--gold)}
+.tui .m{color:var(--moon)}
+.tui .e{color:var(--ember)}
+.tui .gh{color:var(--ghost)}
+
+/* ---------- canon ---------- */
+.canon{margin-top:34px; display:grid; gap:0; border:1px solid var(--hairline)}
+.law-row{display:grid; grid-template-columns:56px 200px 1fr; gap:18px; padding:20px 24px; border-top:1px solid rgba(239,231,212,.08); align-items:baseline}
+.law-row:first-child{border-top:0}
+.law-row .n{font-family:var(--mono); font-size:11px; color:var(--gold); letter-spacing:.2em}
+.law-row .pillar{font-size:16px}
+.law-row .pillar .ar{font-size:18px; display:block; color:var(--paper)}
+.law-row .pillar .en{font-family:var(--mono); font-size:9.5px; letter-spacing:.3em; text-transform:uppercase; color:var(--paper-dim)}
+.law-row .text{font-size:15.5px; color:var(--paper-dim)}
+.law-row .text b{color:var(--paper); font-weight:600}
+
+/* ---------- tokens ---------- */
+.tokens{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-top:30px}
+.token{border:1px solid rgba(239,231,212,.1); background:var(--ink-2); padding:18px}
+.sw{width:100%; height:8px; margin-bottom:14px}
+.token .tname{font-family:var(--mono); font-size:10.5px; letter-spacing:.24em; text-transform:uppercase}
+.token .trule{font-size:13px; color:var(--paper-dim); margin-top:8px; line-height:1.5}
+.token.t-measured .sw{background:var(--gold); box-shadow:0 0 14px rgba(210,169,60,.4)}
+.token.t-measured .tname{color:var(--gold)}
+.token.t-local .sw{background:var(--moon)}
+.token.t-local .tname{color:var(--moon)}
+.token.t-designed .sw{background:transparent; border:1px dashed var(--ghost)}
+.token.t-designed .tname{color:var(--ghost)}
+.token.t-blocked .sw{background:var(--ember)}
+.token.t-blocked .tname{color:var(--ember)}
+
+/* ---------- footer ---------- */
+footer{margin-top:100px; padding-top:30px; border-top:1px solid var(--hairline); text-align:center}
+footer .ar-line{font-family:var(--ar); font-size:24px; color:var(--paper)}
+footer .en-line{font-family:var(--mono); font-size:10.5px; letter-spacing:.34em; text-transform:uppercase; color:var(--paper-dim); margin-top:14px}
+footer .spec{font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--ghost); margin-top:26px}
+
+@media (max-width:620px){
+  .hero .ar-title{font-size:42px}
+  .sec-title{font-size:24px}
+  .law-row{grid-template-columns:40px 1fr; }
+  .law-row .text{grid-column:1 / -1; padding-left:58px}
+  .gate,.limits{padding:26px 20px}
+  .receipt{padding:26px 20px}
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important; transition:none !important}
+  .reveal{opacity:1; transform:none}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ======================= MASTHEAD ======================= -->
+  <header class="reveal" style="animation-delay:.05s">
+    <div class="left"><b>DEMA</b> · NODE0 · FIRST_USER</div>
+    <div class="clock"><span id="dayline">SAT 04 JUL 2026</span> · <span id="clock">--:--:--</span> <span>GST</span></div>
+  </header>
+
+  <!-- ======================= HERO ======================= -->
+  <div class="hero">
+    <div class="seed reveal" style="animation-delay:.15s" aria-hidden="true">
+      <div class="ring"></div><div class="ring r2"></div><div class="core"></div>
+    </div>
+    <h1 class="ar-title ar reveal" style="animation-delay:.3s">وَقْفَة الصَّبَاح</h1>
+    <div class="en-title reveal" style="animation-delay:.45s">Morning Standing</div>
+    <p class="tagline reveal" style="animation-delay:.6s">
+      <span class="ar">النماذج تقترح. البرهان يقرّر.</span><br>
+      Models propose. Proof decides.
+    </p>
+    <div class="statusline reveal" style="animation-delay:.75s">
+      <span>main @ <b class="ok">ffa9b0c</b></span>
+      <span>tests <b class="ok">6437/6437</b></span>
+      <span>known red <b class="ok">zero</b></span>
+      <span>chain <b class="ok">day 2 / 7</b></span>
+    </div>
+  </div>
+
+  <!-- ======================= ANTI-SPLASH ======================= -->
+  <section class="reveal" style="animation-delay:.9s">
+    <div class="limits">
+      <p class="lede">Every product opens with a promise. <span class="ar">هذا النظام يفتتح بحدوده.</span> This system opens with its limits.</p>
+      <div class="limit-line"><span class="what">dema away start</span><span class="verdict">does not exist · <span class="ar">لا وجود له</span></span></div>
+      <div class="limit-line"><span class="what">wallet · mint · token · federation</span><span class="verdict">none · <span class="ar">لا شيء منها</span></span></div>
+      <div class="limit-line"><span class="what">queue runtime · scheduler · daemon</span><span class="verdict">DESIGNED_NOT_LIVE · <span class="ar">مُصمَّم، غير حيّ</span></span></div>
+      <div class="limit-line"><span class="what">anything, while you are away</span><span class="verdict">nothing runs · <span class="ar">لا شيء يعمل</span></span></div>
+    </div>
+    <p class="caption">The truth firewall is the splash screen. What it cannot do is stated before what it can — <span class="ar">الخشوع قبل الإبهار.</span></p>
+  </section>
+
+  <!-- ======================= STEWARD CHAIN ======================= -->
+  <section>
+    <div class="sec-head">
+      <h2 class="sec-title">The Steward Chain <span class="ar">سلسلة السبعة</span></h2>
+      <span class="sec-note">actor_role: FIRST_USER</span>
+    </div>
+    <hr class="rule">
+    <div class="chain" role="list" aria-label="Seven day steward chain">
+      <div class="day sealed" role="listitem">
+        <div class="disc">١</div>
+        <div class="lab">Sealed</div>
+        <div class="meta">Jul 03 · drain <b>less</b><br>sha256:9f2341…</div>
+      </div>
+      <div class="day today" role="listitem">
+        <div class="disc">٢</div>
+        <div class="lab">Today</div>
+        <div class="meta">awaiting your hand</div>
+      </div>
+      <div class="day ghost" role="listitem"><div class="disc">٣</div><div class="lab">—</div><div class="meta">not yet real</div></div>
+      <div class="day ghost" role="listitem"><div class="disc">٤</div><div class="lab">—</div><div class="meta">not yet real</div></div>
+      <div class="day ghost" role="listitem"><div class="disc">٥</div><div class="lab">—</div><div class="meta">not yet real</div></div>
+      <div class="day ghost" role="listitem"><div class="disc">٦</div><div class="lab">—</div><div class="meta">not yet real</div></div>
+      <div class="day ghost" role="listitem"><div class="disc">٧</div><div class="lab">Report</div><div class="meta">unwritable until 6 more mornings</div></div>
+    </div>
+    <div class="chain-law">
+      A day cannot be fabricated. The Day-7 report becomes writable only when six more mornings exist on disk.
+      Yesterday's seal is permanent. Today breathes. Tomorrow stays a ghost until it is earned.
+    </div>
+  </section>
+
+  <!-- ======================= DRAIN ======================= -->
+  <section>
+    <div class="sec-head">
+      <h2 class="sec-title">Drain <span class="ar">العبء</span></h2>
+      <span class="sec-note">declared, never inferred</span>
+    </div>
+    <hr class="rule">
+    <div class="drain" role="radiogroup" aria-label="Declare today's drain">
+      <button type="button" aria-pressed="false" data-drain="less"><span class="g">أقل</span><span class="e">less</span></button>
+      <button type="button" aria-pressed="false" data-drain="same"><span class="g">كما هو</span><span class="e">same</span></button>
+      <button type="button" aria-pressed="false" data-drain="more"><span class="g">أكثر</span><span class="e">more</span></button>
+    </div>
+    <p class="caption">Drain is the metric of the whole system, and only the human may say it. <span class="ar">العبء يُصرَّح به ولا يُستنتَج.</span> No sensor, no sentiment model, no guess.</p>
+  </section>
+
+  <!-- ======================= LENSES ======================= -->
+  <section>
+    <div class="sec-head">
+      <h2 class="sec-title">Standing Lenses <span class="ar">العدسات</span></h2>
+      <span class="sec-note">declared blockers · honest red</span>
+    </div>
+    <hr class="rule">
+    <div class="lenses">
+      <div class="lens ember">
+        <div class="tag">Protect</div>
+        <h4>Downloads unmirrored</h4>
+        <p>~75 GB, three years of assets, one disk. Includes untracked working files.</p>
+        <div class="state">▲ BLOCKED — operator action</div>
+      </div>
+      <div class="lens ember">
+        <div class="tag">Operator</div>
+        <h4>Credential rotation</h4>
+        <p>No rotation receipt exists anywhere. User-only checklist; no agent touches keys.</p>
+        <div class="state">▲ BLOCKED — P0, yours alone</div>
+      </div>
+      <div class="lens steel">
+        <div class="tag">Economic</div>
+        <h4>Mint withheld</h4>
+        <p>No token before verified impact. Not a failure — a promise being kept.</p>
+        <div class="state">■ BY DESIGN — constitutional</div>
+      </div>
+    </div>
+    <p class="caption">Red is never hidden and never decorated. A blocker wears ember until the receipt that retires it exists — <span class="ar">الأحمر صادق.</span></p>
+  </section>
+
+  <!-- ======================= CONSENT GATE ======================= -->
+  <section>
+    <div class="sec-head">
+      <h2 class="sec-title">The Gate <span class="ar">الميثاق</span></h2>
+      <span class="sec-note">byte-exact or nothing</span>
+    </div>
+    <hr class="rule">
+    <div class="gate">
+      <div class="phrase">required phrase · <b>GO: write first-user standing receipt</b></div>
+      <label for="consent">Type the covenant — <span style="letter-spacing:.1em">approximate consent is refusal</span></label>
+      <input id="consent" type="text" autocomplete="off" spellcheck="false" aria-describedby="byteCount" placeholder="">
+      <div class="meter">
+        <span>strict ===</span>
+        <span class="track"><span class="fill" id="fill"></span></span>
+        <span id="byteCount">byte match 0/37</span>
+      </div>
+      <p class="law"><span class="ar">قبولٌ تقريبيّ = رفض.</span> One wrong byte and the gate stays shut. No fuzzy match, no autocorrect, no "did you mean". The system may want to help you consent — and is forbidden to.</p>
+      <button class="sealbtn" id="seal" disabled>Seal the standing receipt</button>
+    </div>
+
+    <!-- receipt specimen -->
+    <div class="receipt-wrap" id="receiptWrap" aria-live="polite">
+      <div class="receipt">
+        <div class="stamp">Design specimen · not a receipt</div>
+        <h5>Standing Receipt</h5>
+        <div class="rrow"><span class="k">schema</span><span class="v">bizra.dema.dema_stand.v0.1</span></div>
+        <div class="rrow"><span class="k">truth_label</span><span class="v gold">FIRST_USER_STANDING_LOCAL_ONLY</span></div>
+        <div class="rrow"><span class="k">observed</span><span class="v" id="rts">—</span></div>
+        <div class="rrow"><span class="k">actor_role</span><span class="v">FIRST_USER</span></div>
+        <div class="rrow"><span class="k">drain</span><span class="v gold" id="rdrain">undeclared</span></div>
+        <div class="rrow"><span class="k">boundary</span><span class="v">all-false · exact key-set</span></div>
+        <div class="rrow"><span class="k">mode</span><span class="v">0600</span></div>
+        <div class="rrow"><span class="k">content_hash</span><span class="v ghosted">withheld — no hash is minted by a mockup</span></div>
+        <div class="foot">This design refuses to fabricate what only Node0 can seal. The real command is one line in your own terminal. <span class="ar">الصدق تحت الضغط.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= LADDER ======================= -->
+  <section>
+    <div class="sec-head">
+      <h2 class="sec-title">The Five Rungs <span class="ar">السُلَّم</span></h2>
+      <span class="sec-note">nothing collapses into the next</span>
+    </div>
+    <hr class="rule">
+    <div class="ladder">
+      <div class="rung lit"><div class="num">I</div><h5>Shape-valid</h5><div class="st">measured</div></div>
+      <div class="neq">≠</div>
+      <div class="rung lit"><div class="num">II</div><h5>Not laundered</h5><div class="st">measured</div></div>
+      <div class="neq">≠</div>
+      <div class="rung lit"><div class="num">III</div><h5>Recorded</h5><div class="st">measured</div></div>
+      <div class="neq">≠</div>
+      <div class="rung moon"><div class="num">IV</div><h5>Approved</h5><div class="st">human only</div></div>
+      <div class="neq">≠</div>
+      <div class="rung ghost"><div class="num">V</div><h5>Executed</h5><div class="st">no path exists</div></div>
+    </div>
+    <div class="ladder-law">A recorded proposal is a remembered request — never a permission.</div>
+  </section>
+
+  <!-- ======================= TUI MIRROR ======================= -->
+  <section>
+    <div class="sec-head">
+      <h2 class="sec-title">One Covenant, Two Substrates <span class="ar">ميثاق واحد</span></h2>
+      <span class="sec-note">TUI ≡ GUI · same semantics</span>
+    </div>
+    <hr class="rule">
+    <div class="tui"><pre>
+┌─ DEMA · MORNING STANDING ─────────────────── sat 04 jul 2026 · gst ─┐
+│                                                                     │
+│  chain    <span class="g">●01</span> <span class="g">◐02</span> <span class="gh">○03 ○04 ○05 ○06 ○07</span>              day <span class="g">2/7</span>       │
+│  drain    [ less ] [ same ] [ more ]          <span class="m">declared-by-human</span>   │
+│  lenses   <span class="e">▲ PROTECT</span> backup · <span class="e">▲ OPERATOR</span> keys · <span class="m">■ ECON</span> by-design   │
+│                                                                     │
+│  consent  GO: write first-user standing receipt                     │
+│           ▍byte-match 00/37 · strict ===                            │
+│  seal     [ <span class="gh">blocked until exact</span> ]                                  │
+│                                                                     │
+│  limits   away-start <span class="gh">∅</span> · wallet <span class="gh">∅</span> · queue-runtime <span class="gh">∅</span>              │
+│                                                                     │
+└─ <span class="g">measured glows</span> · <span class="gh">ghosts stay ghosts</span> · nothing unearned ───────────┘</pre>
+    </div>
+    <p class="caption">The terminal and the screen render the same covenant. The engineer's view and the world's view differ only in pixels, never in truth — so the TUI-or-GUI question dissolves: <b style="color:var(--paper)">build the language once, render it twice.</b></p>
+  </section>
+
+  <!-- ======================= DESIGN CANON ======================= -->
+  <section>
+    <div class="sec-head">
+      <h2 class="sec-title">MITHAQ — Seven Laws <span class="ar">القوانين السبعة</span></h2>
+      <span class="sec-note">one per pillar · v0.1</span>
+    </div>
+    <hr class="rule">
+    <div class="canon">
+      <div class="law-row"><div class="n">01</div><div class="pillar"><span class="ar">المعنى</span><span class="en">Meaning</span></div><div class="text"><b>Every pixel states a fact or asks a consent.</b> Nothing decorative survives review. No stock metaphor, no filler copy, no chart without a receipt behind it.</div></div>
+      <div class="law-row"><div class="n">02</div><div class="pillar"><span class="ar">الخشوع</span><span class="en">Humility</span></div><div class="text"><b>The system opens with its limits.</b> CURRENT_LIMITS is the splash screen. Confidence appears only where proof exists; everywhere else, restraint.</div></div>
+      <div class="law-row"><div class="n">03</div><div class="pillar"><span class="ar">البرهان</span><span class="en">Proof</span></div><div class="text"><b>Color is evidence.</b> Only MEASURED may wear gold and glow. LOCAL_ONLY is moonlight. DESIGNED_NOT_LIVE is an outline. BLOCKED is honest ember. Nothing unearned shines.</div></div>
+      <div class="law-row"><div class="n">04</div><div class="pillar"><span class="ar">الإحسان</span><span class="en">Ihsān</span></div><div class="text"><b>Restraint is the spectacle.</b> One motion per truth-event: the seed breathes because the node is alive; a ring closes because a receipt sealed. Nothing else moves.</div></div>
+      <div class="law-row"><div class="n">05</div><div class="pillar"><span class="ar">السيادة</span><span class="en">Sovereignty</span></div><div class="text"><b>The largest element on any screen is the human's next decision</b> — never the system's output, never its self-praise. The interface serves the hand that consents.</div></div>
+      <div class="law-row"><div class="n">06</div><div class="pillar"><span class="ar">النماء</span><span class="en">Growth</span></div><div class="text"><b>The chain grows; it is never drawn ahead of time.</b> Sealed days are permanent, today breathes, future days are ghosts. Progress is shown as receipts, not projections.</div></div>
+      <div class="law-row"><div class="n">07</div><div class="pillar"><span class="ar">الرحمة</span><span class="en">Mercy</span></div><div class="text"><b>A refusal is gentle and complete:</b> what it won't do, why, and what remains yours. Errors never apologize and never blur. Fail-closed, kindly.</div></div>
+    </div>
+  </section>
+
+  <!-- ======================= TOKENS ======================= -->
+  <section>
+    <div class="sec-head">
+      <h2 class="sec-title">Tokens of Truth <span class="ar">الألوان بيّنة</span></h2>
+      <span class="sec-note">the palette is the epistemology</span>
+    </div>
+    <hr class="rule">
+    <div class="tokens">
+      <div class="token t-measured"><div class="sw"></div><div class="tname">MEASURED · #D2A93C</div><div class="trule">Gold. May glow. Requires a receipt, a test count, or a SHA on disk. The only earned light.</div></div>
+      <div class="token t-local"><div class="sw"></div><div class="tname">LOCAL_ONLY · #A6BCCB</div><div class="trule">Moonlight. True on one machine, unwitnessed by the world. Calm, never triumphant.</div></div>
+      <div class="token t-designed"><div class="sw"></div><div class="tname">DESIGNED_NOT_LIVE</div><div class="trule">Outline only. A shape that exists on paper. It may not be filled, colored, or animated.</div></div>
+      <div class="token t-blocked"><div class="sw"></div><div class="tname">BLOCKED · #C64F31</div><div class="trule">Ember. Worn openly until the retiring receipt exists. Never hidden behind a toast.</div></div>
+    </div>
+  </section>
+
+  <!-- ======================= FOOTER ======================= -->
+  <footer>
+    <div class="ar-line">لا يتوهَّج ما لم يُكسَب</div>
+    <div class="en-line">Nothing unearned glows</div>
+    <div class="spec">MITHAQ · Design Canon v0.1 · specimen only · zero receipts minted · zero repo files touched · Node0 · Ramadan 2023 → 2026</div>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  // Dubai clock — real, because a fake clock would break Law 01.
+  var clock=document.getElementById('clock'), dayline=document.getElementById('dayline');
+  try{
+    var tf=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Dubai',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+    var df=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Dubai',weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+    function tick(){ clock.textContent=tf.format(new Date()); dayline.textContent=df.format(new Date()).replace(/,/g,'').toUpperCase(); }
+    tick(); setInterval(tick,1000);
+  }catch(e){ clock.textContent='—'; }
+
+  // Drain dial — a declaration, one at a time.
+  var drainVal='undeclared';
+  var dbtns=document.querySelectorAll('.drain button');
+  dbtns.forEach(function(b){
+    b.addEventListener('click',function(){
+      dbtns.forEach(function(x){x.setAttribute('aria-pressed','false')});
+      b.setAttribute('aria-pressed','true');
+      drainVal=b.getAttribute('data-drain');
+      var rd=document.getElementById('rdrain'); if(rd) rd.textContent=drainVal;
+    });
+  });
+
+  // FATE gate — strict ===. The demo is honest: nothing fuzzy.
+  var PHRASE='GO: write first-user standing receipt';
+  var input=document.getElementById('consent');
+  var fill=document.getElementById('fill');
+  var count=document.getElementById('byteCount');
+  var seal=document.getElementById('seal');
+
+  function evaluate(){
+    var v=input.value;
+    var matched=0;
+    var max=Math.min(v.length,PHRASE.length);
+    for(var i=0;i<max;i++){ if(v.charCodeAt(i)===PHRASE.charCodeAt(i)) matched++; else break; }
+    var diverged = v.length>0 && (matched<v.length || v.length>PHRASE.length);
+    var exact = (v===PHRASE);
+    fill.style.width=(matched/PHRASE.length*100)+'%';
+    fill.classList.toggle('err',diverged);
+    count.textContent='byte match '+String(matched).padStart(2,'0')+'/'+PHRASE.length;
+    count.classList.toggle('err',diverged);
+    count.classList.toggle('match',exact);
+    if(exact){ seal.classList.add('armed'); seal.disabled=false; }
+    else{ seal.classList.remove('armed'); seal.disabled=true; }
+  }
+  input.addEventListener('input',evaluate);
+  evaluate();
+
+  seal.addEventListener('click',function(){
+    if(input.value!==PHRASE) return; // fail closed, even here
+    var wrap=document.getElementById('receiptWrap');
+    var ts=document.getElementById('rts');
+    try{ ts.textContent=new Date().toISOString(); }catch(e){}
+    wrap.classList.add('shown');
+    seal.textContent='Sealed as specimen — the real seal lives on Node0';
+    seal.disabled=true; seal.classList.remove('armed');
+    input.disabled=true;
+    wrap.scrollIntoView({behavior:'smooth',block:'center'});
+  });
+})();
+</script>
+</body>
+</html>
