@@ -18,6 +18,7 @@ import { verifyAwayContract } from "./away-contract-verify.js";
 import {
   AWAY_CONTRACT_RECEIPT_SCHEMA,
   AWAY_CONTRACT_RECEIPT_TRUTH_LABEL,
+  AWAY_CONTRACT_RECEIPT_BOUNDARY_KEYS,
   expectedAwayContractReceiptConsent,
 } from "./away-contract-receipt.js";
 
@@ -149,9 +150,13 @@ export function deriveAbsenceStewardReadiness(input = {}) {
   if (receipt.consent_phrase !== expectedAwayContractReceiptConsent(verify)) {
     blocked_by.push("receipt_consent_phrase_mismatch");
   }
+  // Exact canonical all-false: a forged receipt with boundary:{} (and a
+  // self-consistent hash) must NOT reach PREVIEW_READY. Require the exact
+  // away-contract receipt boundary key set, every value false.
   const boundaryClean =
     isPlainObject(receipt.boundary) &&
-    Object.values(receipt.boundary).every((flag) => flag === false);
+    Object.keys(receipt.boundary).length === AWAY_CONTRACT_RECEIPT_BOUNDARY_KEYS.length &&
+    AWAY_CONTRACT_RECEIPT_BOUNDARY_KEYS.every((k) => receipt.boundary[k] === false);
   if (!boundaryClean) blocked_by.push("receipt_boundary_not_all_false");
 
   if (blocked_by.length > 0) {

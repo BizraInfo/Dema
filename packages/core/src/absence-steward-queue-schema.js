@@ -216,9 +216,14 @@ export function validateAbsenceStewardQueueItem(item, options = {}) {
     }
   }
 
+  // Exact canonical all-false: an empty or key-omitting boundary is NOT
+  // all-false (it merely omits the honest keys). Reject anything whose key set
+  // differs from the canonical generator or carries a truthy value.
+  const boundaryKeys = Object.keys(absenceStewardQueueBoundary());
   const boundaryClean =
     isPlainObject(item.boundary) &&
-    Object.values(item.boundary).every((flag) => flag === false);
+    Object.keys(item.boundary).length === boundaryKeys.length &&
+    boundaryKeys.every((k) => item.boundary[k] === false);
   if (!boundaryClean) blocked_by.push("boundary_not_all_false");
 
   // Self-excluding hash over the normalized body.

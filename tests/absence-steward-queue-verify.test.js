@@ -216,6 +216,19 @@ test("hot boundary inside validation_result rejects", () => {
   assert.ok(report.blocked_by.includes("validation_boundary_not_all_false"));
 });
 
+test("F5 regression: empty / junk validation_result boundary rejects (not vacuously all-false)", () => {
+  const { queue_item, validation_result } = validatedPair();
+  for (const bad of [{}, { junk_key: false }]) {
+    const forged = { ...thaw(validation_result), boundary: bad };
+    const report = verifyAbsenceStewardQueueItem(
+      { queue_item, validation_result: forged },
+      { now_iso: NOW_ISO },
+    );
+    assert.equal(report.valid, false, JSON.stringify(bad));
+    assert.ok(report.blocked_by.includes("validation_boundary_not_all_false"), JSON.stringify(bad));
+  }
+});
+
 test("verify boundary is all false on every path", () => {
   const paths = [
     verifyAbsenceStewardQueueItem(validatedPair(), { now_iso: NOW_ISO }),

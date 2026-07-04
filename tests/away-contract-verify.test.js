@@ -232,6 +232,19 @@ test("any true boundary key in validation_result rejects", () => {
   assert.ok(report.blocked_by.includes("validation_result_boundary_not_all_false"));
 });
 
+test("F5 regression: empty / junk validation_result boundary rejects (not vacuously all-false)", () => {
+  const { contract, validation_result } = validatedPair();
+  for (const bad of [{}, { junk_key: false }]) {
+    const forged = { ...thaw(validation_result), boundary: bad };
+    const report = verifyAwayContract({ contract, validation_result: forged }, { now_iso: NOW_ISO });
+    assert.equal(report.valid, false, JSON.stringify(bad));
+    assert.ok(
+      report.blocked_by.includes("validation_result_boundary_not_all_false"),
+      JSON.stringify(bad),
+    );
+  }
+});
+
 test("deterministic: raw array reordering verifies against the original validation_result", () => {
   const { validation_result } = validatedPair();
   const reordered = validContract({

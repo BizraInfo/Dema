@@ -917,7 +917,7 @@ export function buildDemaCapabilityTruthRegistry({
       previous_state_hash,
     }),
     what_this_proves: [
-      "Dema can enumerate the eleven shipped pre-action spine capabilities with source, test, gate, and receipt/doc evidence.",
+      `Dema can enumerate all ${sortedCapabilities.length} shipped pre-action spine capabilities with source, test, gate, and receipt/doc evidence.`,
       "Preview-only capabilities remain blocked from execution claims.",
       "Token, wallet, live URP federation, live RSI, and live PoI stay DESIGNED_NOT_LIVE.",
     ],

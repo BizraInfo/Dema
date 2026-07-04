@@ -25,6 +25,7 @@ import { createHash } from "node:crypto";
 import {
   AWAY_CONTRACT_VALIDATION_RESULT_SCHEMA,
   AWAY_CONTRACT_TRUTH_LABEL,
+  awayContractBoundary,
   validateAwayContract,
 } from "./away-contract-schema.js";
 
@@ -113,9 +114,14 @@ export function verifyAwayContract(input, options = {}) {
     blocked_by.push("normalized_contract_missing");
   }
   const boundary = validation_result.boundary;
+  // Exact canonical all-false — rejects an empty or key-omitting boundary, not
+  // just a truthy one (a body-forged validation_result cannot pass this AND the
+  // whole-body hash check below).
+  const boundaryKeys = Object.keys(awayContractBoundary());
   const boundaryClean =
     isPlainObject(boundary) &&
-    Object.values(boundary).every((flag) => flag === false);
+    Object.keys(boundary).length === boundaryKeys.length &&
+    boundaryKeys.every((k) => boundary[k] === false);
   if (!boundaryClean) blocked_by.push("validation_result_boundary_not_all_false");
 
   // Re-derive the whole validation from the raw contract — the disk truth.

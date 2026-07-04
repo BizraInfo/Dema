@@ -543,7 +543,7 @@ export async function cmd_away(ctx) {
   if (argv[1] === "review") return cmd_away_review(argv);
   if (argv[1] === "queue") return cmd_away_queue(argv);
   console.error(
-    'Dema error: unknown away subcommand. Use `dema away draft --intent-file <intent.json> --now <iso>`, `dema away verify --contract-file <contract.json> --validation-file <validation.json> --now <iso>`, `dema away receipt … --consent "<exact phrase>"`, `dema away preview … [--receipt-file <receipt.json>]`, or `dema away review … --left <iso> --returned <iso>` — draft, verify, receipt, preview, and review only; nothing starts.',
+    'Dema error: unknown away subcommand. Use `dema away draft --intent-file <intent.json> --now <iso>`, `dema away verify --contract-file <contract.json> --validation-file <validation.json> --now <iso>`, `dema away receipt … --consent "<exact phrase>"`, `dema away preview … [--receipt-file <receipt.json>]`, `dema away review … --left <iso> --returned <iso>`, or `dema away queue draft --item-file <queue-item.json> --now <iso>` — draft, verify, receipt, preview, review, and queue only; nothing starts.',
   );
   process.exitCode = 1;
 }

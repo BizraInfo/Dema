@@ -66,6 +66,14 @@ function receiptBoundary() {
   });
 }
 
+// The exact canonical key set of an away-contract receipt boundary. Consumers
+// (e.g. absence-steward-readiness) deep-equal a supplied receipt's boundary
+// against this — an all-false check that also rejects an empty or key-omitting
+// boundary object, closing the vacuous `every(false)` gap.
+export const AWAY_CONTRACT_RECEIPT_BOUNDARY_KEYS = Object.freeze(
+  Object.keys(receiptBoundary()),
+);
+
 // Consent phrase is bound to contract_id + the first 12 hex chars of the
 // contract hash. The hash transitively binds operator_id and mission_scope —
 // they are inside the hashed normalized body, so retyping the phrase over a

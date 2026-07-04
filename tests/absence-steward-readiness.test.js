@@ -172,6 +172,18 @@ test("tampered receipt (forged hash, wrong consent, hot boundary) derives REFUSE
   const r3 = deriveAbsenceStewardReadiness({ ...trio, receipt: hotBoundary, now_iso: NOW_ISO });
   assert.equal(r3.state, "REFUSED");
   assert.ok(r3.blocked_by.includes("receipt_boundary_not_all_false"));
+
+  // F5 regression: a forged receipt with boundary:{} + a self-consistent hash
+  // used to reach PREVIEW_READY via the vacuous every(false) check.
+  const emptyBoundary = recompute({ ...thaw(trio.receipt), boundary: {} });
+  const r4 = deriveAbsenceStewardReadiness({ ...trio, receipt: emptyBoundary, now_iso: NOW_ISO });
+  assert.equal(r4.state, "REFUSED");
+  assert.ok(r4.blocked_by.includes("receipt_boundary_not_all_false"));
+
+  const junkBoundary = recompute({ ...thaw(trio.receipt), boundary: { junk_key: false } });
+  const r5 = deriveAbsenceStewardReadiness({ ...trio, receipt: junkBoundary, now_iso: NOW_ISO });
+  assert.equal(r5.state, "REFUSED");
+  assert.ok(r5.blocked_by.includes("receipt_boundary_not_all_false"));
 });
 
 test("receipt bound to a DIFFERENT contract derives REFUSED", async () => {

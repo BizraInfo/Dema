@@ -210,6 +210,26 @@ test("invalid item / forged verify / laundered pair reject before any mkdir", as
   });
 });
 
+test("F4 regression: a validation_result whose item_hash disagrees with the raw item is rejected, nothing written", async () => {
+  await withHome(async (home) => {
+    const good = fullInput();
+    // Tamper the validation_result.item_hash so it no longer equals the raw
+    // item's genuine re-derived hash. The receipt writer must reject (via the
+    // re-derivation guard) and write nothing — the old tautological check
+    // (validation_result.item_hash !== internal.validation_item_hash, an echo)
+    // could never have caught this.
+    const tampered = thaw(good.validation_result);
+    tampered.item_hash = "sha256:" + "0".repeat(64);
+    const result = await writeAbsenceStewardQueueReceipt(
+      { ...good, validation_result: tampered },
+      { dem_home: home, now_iso: NOW_ISO },
+    );
+    assert.equal(result.written, false);
+    assert.ok(result.blocked_by.length > 0);
+    assert.equal(existsSync(join(home, "absence-steward")), false);
+  });
+});
+
 test("duplicate receipt rejects — no overwrite", async () => {
   await withHome(async (home) => {
     const first = await writeAbsenceStewardQueueReceipt(fullInput(), {

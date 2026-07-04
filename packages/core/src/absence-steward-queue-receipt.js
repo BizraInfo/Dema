@@ -137,7 +137,11 @@ export async function writeAbsenceStewardQueueReceipt(input, options = {}) {
   if (verify_result.queue_item_hash !== internal.queue_item_hash) {
     blocked_by.push("verify_result_hash_mismatch");
   }
-  if (validation_result.item_hash !== internal.validation_item_hash) {
+  // Compare the passed validation_result.item_hash against the GENUINELY
+  // re-derived hash (internal.rederived_item_hash = hash of the raw item),
+  // not the echo (internal.validation_item_hash is a verbatim copy of the
+  // input, so the old comparison was x !== x and could never fire).
+  if (validation_result.item_hash !== internal.rederived_item_hash) {
     blocked_by.push("validation_item_hash_mismatch");
   }
   if (blocked_by.length > 0) {

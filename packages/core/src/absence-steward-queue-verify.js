@@ -17,6 +17,7 @@
 import {
   ABSENCE_STEWARD_QUEUE_VALIDATION_RESULT_SCHEMA,
   ABSENCE_STEWARD_QUEUE_SCHEMA_TRUTH_LABEL,
+  absenceStewardQueueBoundary,
   validateAbsenceStewardQueueItem,
 } from "./absence-steward-queue-schema.js";
 
@@ -91,9 +92,11 @@ export function verifyAbsenceStewardQueueItem(input, options = {}) {
   if (!isNonEmptyString(validation_result.item_hash)) {
     blocked_by.push("validation_item_hash_missing");
   }
+  const vBoundaryKeys = Object.keys(absenceStewardQueueBoundary());
   const validationBoundaryClean =
     isPlainObject(validation_result.boundary) &&
-    Object.values(validation_result.boundary).every((flag) => flag === false);
+    Object.keys(validation_result.boundary).length === vBoundaryKeys.length &&
+    vBoundaryKeys.every((k) => validation_result.boundary[k] === false);
   if (!validationBoundaryClean) blocked_by.push("validation_boundary_not_all_false");
 
   // Re-derive the whole validation from the raw item — disk truth first.

@@ -249,6 +249,44 @@ test("any true boundary flag on the item rejects; result boundary always all fal
   }
 });
 
+test("F5 regression: empty / key-omitting / partial boundary rejects (not vacuously all-false)", () => {
+  const canonical = absenceStewardQueueBoundary();
+  // canonical all-false passes
+  assert.equal(validateAbsenceStewardQueueItem(validItem(), { now_iso: NOW_ISO }).valid, true);
+
+  // boundary:{} — the old Object.values().every() passed this vacuously
+  const empty = withHash({ ...validItem(), boundary: {} });
+  const rEmpty = validateAbsenceStewardQueueItem(empty, { now_iso: NOW_ISO });
+  assert.equal(rEmpty.valid, false);
+  assert.ok(rEmpty.blocked_by.includes("boundary_not_all_false"));
+
+  // boundary with a junk key (right count would still be wrong keys)
+  const junk = withHash({ ...validItem(), boundary: { junk_key: false } });
+  assert.ok(
+    validateAbsenceStewardQueueItem(junk, { now_iso: NOW_ISO }).blocked_by.includes(
+      "boundary_not_all_false",
+    ),
+  );
+
+  // boundary missing exactly one canonical key
+  const missingOne = { ...canonical };
+  delete missingOne.self_approved;
+  const partial = withHash({ ...validItem(), boundary: missingOne });
+  assert.ok(
+    validateAbsenceStewardQueueItem(partial, { now_iso: NOW_ISO }).blocked_by.includes(
+      "boundary_not_all_false",
+    ),
+  );
+
+  // boundary with an EXTRA key beyond canonical
+  const extra = withHash({ ...validItem(), boundary: { ...canonical, extra_key: false } });
+  assert.ok(
+    validateAbsenceStewardQueueItem(extra, { now_iso: NOW_ISO }).blocked_by.includes(
+      "boundary_not_all_false",
+    ),
+  );
+});
+
 test("kernel source stays pure: no fs / process / network / clock / random", () => {
   const source = readFileSync(
     new URL("../packages/core/src/absence-steward-queue-schema.js", import.meta.url),
