@@ -8,7 +8,14 @@ __pycache__/
 !.env.example
 .dema/
 coverage/
-.claude/
+# CONFIG-SLICE-A: the stable repo Claude harness (rules/, agents/, skills/,
+# hooks/*.mjs, settings.json) is tracked and reviewable. Only volatile or
+# machine-local state stays off-tree.
+.claude/hooks/logs/
+.claude/bus/
+.claude/.cc-writes/
+.claude/settings.local.json
+.claude/skills/dema-slice-scaffold-workspace/
 .vscode/
 .artifacts/
 .qodo/
