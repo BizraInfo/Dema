@@ -214,6 +214,12 @@ Orientation:
                     to NO_ABSENCE_RECORDED / REVIEW_BLOCKED /
                     READY_BUT_NOT_STARTED / EXPIRED_BEFORE_START. Report
                     only — nothing executed, nothing starts.
+  dema away queue draft [--item-file <queue-item.json>] [--now <iso>] [--json]
+                    ABSENCE-STEWARD queue proposal draft: validates ONE
+                    proposal item shape (statuses capped at the design
+                    five; consent-ish fields and never-executable classes
+                    reject). Validation only — no queue stored, no
+                    approval, no execution, no receipt, nothing starts.
   dema witness [--dry-run] [--json]
                     Node0 self-witness receipt; requires --consent to save
   dema witness verify [--file <path>] [--json]

@@ -21,6 +21,7 @@ import { verifyAwayContract } from "../../../../packages/core/src/away-contract-
 import { writeAwayContractReceipt } from "../../../../packages/core/src/away-contract-receipt.js";
 import { deriveAbsenceStewardReadiness } from "../../../../packages/core/src/absence-steward-readiness.js";
 import { deriveAbsenceStewardReturnReview } from "../../../../packages/core/src/absence-steward-return-review.js";
+import { validateAbsenceStewardQueueItem } from "../../../../packages/core/src/absence-steward-queue-schema.js";
 
 function argValue(argv, name) {
   const index = argv.indexOf(name);
@@ -478,6 +479,61 @@ function cmd_away_review(argv) {
   if (review.final_verdict === "REVIEW_BLOCKED") process.exitCode = 1;
 }
 
+function cmd_away_queue_draft(argv) {
+  const wantJson = argv.includes("--json");
+
+  const itemFile = argValue(argv, "--item-file");
+  if (!itemFile) {
+    console.error(
+      'usage: dema away queue draft --item-file <queue-item.json> --now <iso> [--json]',
+    );
+    process.exitCode = 1;
+    return;
+  }
+  const nowIso = argValue(argv, "--now");
+  if (!nowIso) {
+    console.error(
+      "Dema error: --now <iso> is required — act-time is declared, never read from the clock.",
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  const item = readJsonFile(itemFile, "queue item");
+  if (item === null) {
+    process.exitCode = 1;
+    return;
+  }
+
+  const result = validateAbsenceStewardQueueItem(item, { now_iso: nowIso });
+
+  if (wantJson) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    const lines = [
+      "DEMA · ABSENCE STEWARD QUEUE DRAFT — VALIDATION ONLY",
+      "truth_label: ABSENCE_STEWARD_QUEUE_CLI_DRAFT_ONLY",
+      `queue_item_id: ${item?.queue_item_id ?? "-"}`,
+      `status: ${item?.status ?? "-"}`,
+      `valid: ${result.valid}`,
+    ];
+    if (result.blocked_by.length > 0) {
+      lines.push(`blocked_by: ${result.blocked_by.join(", ")}`);
+    }
+    lines.push("Draft only. No queue stored. No approval. No execution.");
+    console.log(lines.join("\n"));
+  }
+  if (!result.valid) process.exitCode = 1;
+}
+
+function cmd_away_queue(argv) {
+  if (argv[2] === "draft") return cmd_away_queue_draft(argv);
+  console.error(
+    'Dema error: unknown away queue subcommand. Use `dema away queue draft --item-file <queue-item.json> --now <iso>` — validation only; no queue is stored, nothing runs.',
+  );
+  process.exitCode = 1;
+}
+
 export async function cmd_away(ctx) {
   const { argv } = ctx;
   if (argv[1] === "draft") return cmd_away_draft(argv);
@@ -485,6 +541,7 @@ export async function cmd_away(ctx) {
   if (argv[1] === "receipt") return cmd_away_receipt(argv);
   if (argv[1] === "preview") return cmd_away_preview(argv);
   if (argv[1] === "review") return cmd_away_review(argv);
+  if (argv[1] === "queue") return cmd_away_queue(argv);
   console.error(
     'Dema error: unknown away subcommand. Use `dema away draft --intent-file <intent.json> --now <iso>`, `dema away verify --contract-file <contract.json> --validation-file <validation.json> --now <iso>`, `dema away receipt … --consent "<exact phrase>"`, `dema away preview … [--receipt-file <receipt.json>]`, or `dema away review … --left <iso> --returned <iso>` — draft, verify, receipt, preview, and review only; nothing starts.',
   );
