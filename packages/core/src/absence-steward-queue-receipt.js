@@ -19,7 +19,6 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 
-import { validateAbsenceStewardQueueItem } from "./absence-steward-queue-schema.js";
 import { verifyAbsenceStewardQueueItem } from "./absence-steward-queue-verify.js";
 
 export const ABSENCE_STEWARD_QUEUE_RECEIPT_SCHEMA =

@@ -1,4 +1,4 @@
-import { readFile, stat } from "node:fs/promises";
+import { open, readFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import { createHash } from "node:crypto";
 
@@ -55,8 +55,10 @@ async function cmd_corpus_index(argv, json) {
 
   const absPath = resolve(filePath);
   let fileStat;
+  let sourceHandle;
   try {
-    fileStat = await stat(absPath);
+    sourceHandle = await open(absPath, "r");
+    fileStat = await sourceHandle.stat();
   } catch (err) {
     const message = err?.code === "ENOENT" ? "file_not_found" : "stat_failed";
     if (json) {
@@ -97,7 +99,8 @@ async function cmd_corpus_index(argv, json) {
     process.exit(process.exitCode ?? 0);
   }
 
-  const sourceText = await readFile(absPath, "utf8");
+  const sourceText = await sourceHandle.readFile({ encoding: "utf8" });
+  await sourceHandle.close();
   const sourceSha256 = sha256Hex(sourceText);
   const report = buildFounderWorkIndexReport({
     sourceFile: absPath,
@@ -280,7 +283,8 @@ async function cmd_corpus_spend(argv, json) {
   const absPath = resolve(filePath);
   let sourceText;
   try {
-    const st = await stat(absPath);
+    const spendHandle = await open(absPath, "r");
+    const st = await spendHandle.stat();
     if (!st.isFile()) {
       if (json) {
         console.log(
@@ -298,7 +302,8 @@ async function cmd_corpus_spend(argv, json) {
       process.exitCode = 1;
       process.exit(process.exitCode ?? 0);
     }
-    sourceText = await readFile(absPath, "utf8");
+    sourceText = await spendHandle.readFile({ encoding: "utf8" });
+    await spendHandle.close();
   } catch (err) {
     const message = err?.code === "ENOENT" ? "file_not_found" : "read_failed";
     if (json) {

@@ -162,8 +162,10 @@ export function runNode0SpineRunner({
 
   if (blocked_by.length === 0) {
     const probePath = join(sandboxRoot, NODE0_REVERSIBLE_EXECUTE_GATE_PROBE);
-    if (!fs.existsSync(probePath)) {
-      fs.writeFileSync(probePath, "loop probe payload\n");
+    try {
+      fs.writeFileSync(probePath, "loop probe payload\n", { flag: "wx" });
+    } catch (err) {
+      if (err?.code !== "EEXIST") throw err;
     }
   }
 
