@@ -7,8 +7,10 @@ individual documents out of draft; until then they are historical record with pr
 
 ## What this is
 
-The 2026-07-02 → 2026-07-04 cloud-lane doctrine output (canons, reviews, roadmaps, design
-concepts), sedimented to disk in one deposit so no doctrine lives only in chat artifacts.
+The 2026-07-02 → 2026-07-05 cloud-lane doctrine output (canons, reviews, roadmaps, design
+concepts; the GIANTS benchmark was drafted ~00:20 GST 2026-07-05, inside the same working
+night — the deposit is named for the day the doctrine wave began), sedimented to disk in one
+deposit so no doctrine lives only in chat artifacts.
 Provenance: cloud planning sessions (proposer lane), delivered as
 `~/Downloads/{last fabulas.zip, fabulas files bizrazip}` + one in-chat document, screened by
 the NODE0 code lane against disk before commit. Corrections are **chained, never overwritten**
@@ -25,7 +27,7 @@ the NODE0 code lane against disk before commit. Corrections are **chained, never
 | BIZRA-ROADMAP-v0.1-2026-07-04.md | roadmap (superseded by v0.2) | historical |
 | BIZRA-MASTER-STATE-ROADMAP-v0.2.md | roadmap + state snapshot | facts as of drafting; several rows superseded same day (#316 merged, census MEASURED) |
 | SAPE-REVIEW-PEAK-ACTIVATION-2026-07-04.md | meta-review | relayed analysis; H1 slugged post-CI (no-overclaim Tier A) — correction chained in-file |
-| EXCAV-2026-07-04-PINNACLE-BLUEPRINT.md | excavation blueprint | relayed analysis |
+| EXCAV-2026-07-04-PINNACLE-BLUEPRINT.md | excavation blueprint | relayed analysis; its prose declares target `docs/archive/excavations/` — deposited here instead per this deposit's one-directory law (matn unmodified) |
 | MITHAQ-DESIGN-CANON-v0.1.html | design canon draft | staged as received |
 | GIANTS-BENCHMARK-BIZRA-BOUNDARY-1A.md | benchmark inversion draft | 2 corrections chained + cloud-lane acceptance recorded in-file |
 | DEMA_UX_DESIGN_CONCEPT_v0.2_REFACTOR.md | design concept (2026-07-02) | clean; build target lives outside this repo |
@@ -33,8 +35,13 @@ the NODE0 code lane against disk before commit. Corrections are **chained, never
 | BIZRA_MASTER_BUSINESS_DOSSIER_v1.md | business dossier draft | relayed; GTM claims remain subject to no-overclaim gates before any outward use |
 | BIZRA_PEAK_BLUEPRINT_v1.md | blueprint draft | relayed |
 
-`MANIFEST.sha256` in this directory binds the exact committed bytes of every file above —
-this is the NODE0 hash stamp the documents' hallmark blocks reference.
+`MANIFEST.sha256` binds the exact committed bytes of every file in this directory except
+itself (a manifest cannot contain its own hash; this README is included). It is the NODE0
+hash stamp the documents' hallmark blocks reference. Verify locally:
+
+```bash
+cd docs/archive/2026-07-04-doctrine && sha256sum -c MANIFEST.sha256
+```
 
 ## Ratification inbox (founder-only, one sitting)
 
