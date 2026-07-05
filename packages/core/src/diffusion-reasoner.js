@@ -26,6 +26,12 @@ export const DIFFUSION_NOISE_MARKERS = Object.freeze([
   "autonomous loop", "autonomous self-improvement", "self-improvement loop",
   "self-improving", "evolves itself", "recursive self-improvement",
   "without review", "without oversight",
+  // Past-tense live-claim + currency-overclaim families (2026-07-04 probe gap:
+  // these scored 0 through the lexicon above). A draft asserting something RAN
+  // live, IS already running, or IS the currency needs receipts, not prose —
+  // in a draft these phrases are unproven-assertion noise by definition.
+  "autopoietic loop", "ran live", "tested live", "already running",
+  "is the currency", "measured — live",
 ]);
 
 export const DIFFUSION_REASONER_BOUNDARY_KEYS = Object.freeze([
