@@ -21,11 +21,25 @@ permissions:
 jobs:
   aggregate:
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion != 'cancelled'
+    # Event scope (NODE0-CI-RAIL-EVENT-SCOPE-1E): the rail attests MAIN waves only.
+    # `check` also completes on PR branches; waking there aggregated mixed-identity
+    # peers and failed the audit merge (commit_mismatch). Same-repo guard closes the
+    # fork-branch-named-main spoof. Failure conclusions still aggregate — the rail
+    # attests red honestly; only non-main waves are out of scope.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion != 'cancelled' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    env:
+      # Single head-SHA source of truth. The builtin GITHUB_SHA is the default-branch
+      # head AT TRIGGER TIME, which lags the wave's SHA when main advances mid-wave —
+      # never use it for attestation identity.
+      NODE0_CI_HEAD_SHA: ${{ github.event_name == 'workflow_dispatch' && (inputs.head_sha || github.sha) || github.event.workflow_run.head_sha }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && (inputs.head_sha || github.sha) || github.event.workflow_run.head_sha }}
+          ref: ${{ env.NODE0_CI_HEAD_SHA }}
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
           node-version: 22.x
@@ -33,7 +47,7 @@ jobs:
       - name: Resolve peer workflow conclusions
         env:
           GH_TOKEN: ${{ github.token }}
-          HEAD_SHA: ${{ github.event_name == 'workflow_dispatch' && (inputs.head_sha || github.sha) || github.event.workflow_run.head_sha }}
+          HEAD_SHA: ${{ env.NODE0_CI_HEAD_SHA }}
         run: |
           set -euo pipefail
           fetch_one() {
@@ -58,10 +72,11 @@ jobs:
             echo "NODE0_CI_WORKFLOW_CONCLUSION_CHECK=${CHECK:-}"
             echo "NODE0_CI_WORKFLOW_CONCLUSION_CODEQL=${CODEQL:-}"
             echo "NODE0_CI_WORKFLOW_CONCLUSION_GITLEAKS=${GITLEAKS:-}"
-            echo "GITHUB_SHA=${HEAD_SHA}"
           } >> "$GITHUB_ENV"
       - name: Export aggregated attestation
-        run: npm run proof:attest:ci:aggregate -- --out ./node0-ci-evidence-attestation-aggregated.json
+        # --commit binds attestation identity explicitly; shadowing the builtin
+        # GITHUB_SHA via GITHUB_ENV (the old approach) is forbidden here.
+        run: npm run proof:attest:ci:aggregate -- --out ./node0-ci-evidence-attestation-aggregated.json --commit "$NODE0_CI_HEAD_SHA"
       - name: Gather smoke (attestation loads through audit gatherer)
         run: DEMA_CI_EVIDENCE_ATTESTATION_PATH=./node0-ci-evidence-attestation-aggregated.json node scripts/audit/node0-proof-of-truth-control-plane.mjs --json > /dev/null
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
