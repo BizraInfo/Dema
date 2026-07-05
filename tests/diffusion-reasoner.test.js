@@ -142,6 +142,29 @@ test("12 · boundary is entirely false and hash changes when a draft changes", (
   assert.notEqual(r.convergence_hash, r2.convergence_hash);
 });
 
+test("16 · past-tense live-loop and currency overclaims score as noise (2026-07-04 probe gap)", () => {
+  // Live probe 2026-07-04 (log: roadmap-v02-diffusion-2026-07-04.json): these
+  // families scored noise 0 through the b805166 lexicon. Red-first closure.
+  const PROBES = [
+    ["The autopoietic loop with verified reward ran live in May 2026.", ["autopoietic loop", "ran live"]],
+    ["In BIZRA, the receipt is the currency — MEASURED — live at the membrane.", ["is the currency", "measured — live"]],
+    ["The evaluation system is already running tonight.", ["already running"]],
+    ["The grading kernel was tested live on Node0 yesterday.", ["tested live"]],
+  ];
+  for (const [draft, expected] of PROBES) {
+    for (const marker of expected) {
+      assert.ok(
+        DIFFUSION_NOISE_MARKERS.includes(marker),
+        `lexicon must carry marker: ${marker}`,
+      );
+    }
+    assert.ok(
+      scoreDraftNoise(draft) >= expected.length,
+      `must score >= ${expected.length}: ${draft}`,
+    );
+  }
+});
+
 test("15 · autonomy-overclaim phrasing scores as noise, not clean signal", () => {
   const OVERCLAIM =
     "Activate the autonomous self-improvement loop so the system evolves itself continuously without review";
