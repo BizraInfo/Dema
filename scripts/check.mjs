@@ -46,6 +46,7 @@ export const commands = [
   ["node", ["scripts/review/sat5-constitutional-verifier-set-preview-check.mjs"]],
   ["node", ["scripts/review/node0-nodespace-boundary-preview-check.mjs"]],
   ["node", ["scripts/review/dema-active-workloop-composer-preview-check.mjs"]],
+  ["node", ["scripts/review/node0-consented-inventory-gatherer-preview-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
   ["node", ["scripts/review/boundary-vocab-unification-check.mjs"]],
   ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],
