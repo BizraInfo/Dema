@@ -47,6 +47,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "ABSENCE_STEWARD_QUEUE_PROPOSAL_SPINE_1A",
   "DEMA_FDE_FORWARDER_DIAGNOSTIC_1A",
   "PREVIEW_RECEIPT_SIGNING_1A",
+  "LOCAL_MODEL_ADAPTER_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -951,6 +952,35 @@ function defaultCapabilityRows() {
         "A preview-stack report (mode preview_only) binds into a canonical content-addressed envelope that stays explicitly marked unsigned (signed:false, signature:null) until the existing Ed25519 authorship rail signs it under the exact GO phrase; the consent hash is inside the signed subject so a signature over the bare envelope fails, the displayed public-key fingerprint must re-derive from the embedded PEM, the canonical hash is stable across rebuilds, whole-body re-derivation rejects tampered hashes, the signature anchor rejects forged-and-recomputed bodies, signed envelopes carry complete signature metadata without private-key material, and the boundary stays all-false including public_safe_claim.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "LOCAL_MODEL_ADAPTER_PREVIEW_1A",
+      truth_label: "LOCAL_MODEL_ADAPTER_PREVIEW_MEASURED_REPO",
+      summary:
+        "Preview-only local model adapter contract: binds an injected discovery report into a content-addressed adapter envelope (model always null, boundary all-false) that refuses live-invocation, wallet, mint, and URP fields — no model invocation, no network.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/local-model-adapter-preview.js"],
+        test_paths: ["tests/local-model-adapter-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/local-model-adapter-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/LOCAL_MODEL_ADAPTER_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/LOCAL_MODEL_ADAPTER_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Exact-consent adapter CONTRACT compiles a models-discover-shaped report into a deterministic content-addressed preview envelope: model pinned null, runtime derived from first reachable provider (else unknown), canonical all-false boundary enforced by deep key-set equality, whole-body hash re-derivation rejects tampered and laundered bodies, and exact-name forbidden fields (wallet, mint, private_key, urp_live) are refused at plan and verify time.",
+      what_this_does_not_prove:
+        "It does not prove model correctness, live model invocation, inference quality, operator execution, daemon runtime, network use, wallet access, or live federation — the adapter never selects or calls a model.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
