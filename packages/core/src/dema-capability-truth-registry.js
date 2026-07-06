@@ -57,6 +57,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_ACTIVE_WORKLOOP_COMPOSER_PREVIEW_1A",
   "NODE0_CONSENTED_INVENTORY_GATHERER_PREVIEW_1A",
   "DEMA_SELF_EVAL_BASELINE_PREVIEW_1A",
+  "DEMA_VERIFIED_ANSWER_RECEIPT_CACHE_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1251,6 +1252,35 @@ function defaultCapabilityRows() {
         "Captures Dema's measured system-quality signals (tests pass/total, coverage %, monitor criticals/warnings, gates-all-green, perf, registry) as a deterministic content-addressed baseline, and compares a candidate baseline per dimension into improved / regressed / unchanged with named reasons; a regression on any hard dimension (fewer passing tests, dropped coverage, more monitor criticals, gates falling green->red) forces 'regressed'; signals are injected (kernel runs no tests/coverage/monitor), a forged 'healthy' is rejected by re-derivation; boundary all-false, authority_delta 0. It measures change; it does not itself improve Dema.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_VERIFIED_ANSWER_RECEIPT_CACHE_PREVIEW_1A",
+      truth_label: "DEMA_VERIFIED_ANSWER_RECEIPT_CACHE_PREVIEW_MEASURED_REPO",
+      summary:
+        "Preview-only verified-answer receipt cache: stores previously verified answers as content-addressed records and reuses them only when fresh, in-scope, source-hash-matched, and truth_label verified; a cache hit reuses proof, never grants action, never mints, never turns saved cost into value.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-verified-answer-receipt-cache-preview.js"],
+        test_paths: ["tests/dema-verified-answer-receipt-cache-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-verified-answer-receipt-cache-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_VERIFIED_ANSWER_RECEIPT_CACHE_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_VERIFIED_ANSWER_RECEIPT_CACHE_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A verified answer is stored as a content-addressed record (cache_id over question+answer_digest+source_hashes+scope; content_hash over the whole body) and reused only when a lookup passes every gate: status verified, fresh against an injected now, exact consent-scope match (a private scope requires a matching operator-consent token), and source-hash set match — any miss returns no hit. compareFreshness and supersede are pure and clock-injected; a superseded or rejected record never hits; a tampered content_hash, a non-zero authority_delta, a vacuous-or-flipped boundary, and an unknown status are each rejected by re-derivation. A hit reuses proof only: grants_action false, authority_delta 0, boundary all-false.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation, and it does not itself mint or turn saved model cost into value. Its integrity check is body-bound content-addressing only — not cryptographic tamper-resistance: a forge-and-recompute launder is not defended here (that needs an independent signature/anchor).",
       forbidden_claims: [
         "live execution",
         "operator mutation",
