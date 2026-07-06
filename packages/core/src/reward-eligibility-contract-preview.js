@@ -45,6 +45,18 @@ export const REWARD_FORBIDDEN_CLAIM_CODES = Object.freeze({
   simulated_impact_as_real: "simulated_impact_as_real",
 });
 
+// Node0 is the genesis constitutional seed of the BIZRA ecosystem — it must
+// carry the DNA that future nodes connect to. This eligibility law is therefore
+// URP-FACING: it names the future constitutional consumers it is designed for,
+// while keeping every live-runtime coupling switched OFF. DNA is not live-organism
+// authority: encode URP + SAT-5 now, activate only when proof, consent, identity,
+// anti-fraud, and impact verification are ready. No consumer is enabled here.
+export const REWARD_ELIGIBILITY_DESIGNED_FOR_FUTURE_CONSUMERS = Object.freeze([
+  "BIZRA_URP_GENESIS_PREVIEW",
+  "SAT5_CONSTITUTIONAL_VERIFIER_SET",
+  "FUTURE_NODE_ADMISSION_FLOW",
+]);
+
 // Outcome kinds that assert a specific monitor state; the asserted state must
 // match the supplied monitor_state or the outcome is incoherent (not eligible).
 const OUTCOME_REQUIRES_ALL_CLEAR = "monitor_all_clear_after_repair";
@@ -113,6 +125,13 @@ export function deriveRewardEligibility(outcome) {
     mint_allowed: false,
     cost_is_not_value: true,
     simulated_is_not_real: true,
+    // URP-facing but runtime-inert: the designed constitutional consumers are
+    // named, yet no live consumer, URP, or federation is switched on here.
+    designed_for_future_consumers: REWARD_ELIGIBILITY_DESIGNED_FOR_FUTURE_CONSUMERS,
+    live_runtime_consumer_enabled: false,
+    actuator_readable_permission: false,
+    urp_live: false,
+    federation_live: false,
   });
 }
 
@@ -254,6 +273,11 @@ export function verifyRewardEligibilityContractPreview(payload) {
   if (e.confers_permission !== false) blocked_by.push("verdict_confers_permission");
   if (e.authority_delta !== 0) blocked_by.push("verdict_authority_delta_nonzero");
   if (e.mint_allowed !== false) blocked_by.push("verdict_mint_allowed");
+  // URP-facing but runtime-inert: no live consumer coupling may ever be true.
+  if (e.live_runtime_consumer_enabled !== false) blocked_by.push("verdict_live_consumer_enabled");
+  if (e.actuator_readable_permission !== false) blocked_by.push("verdict_actuator_readable");
+  if (e.urp_live !== false) blocked_by.push("verdict_urp_live");
+  if (e.federation_live !== false) blocked_by.push("verdict_federation_live");
   return Object.freeze({
     ok: blocked_by.length === 0,
     blocked_by: Object.freeze(blocked_by),

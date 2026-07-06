@@ -218,6 +218,39 @@ test("determinism: same outcome, same content hash", () => {
   assert.equal(a.content_hash, b.content_hash);
 });
 
+test("URP-facing: names its designed future consumers but no live consumer is enabled", () => {
+  const r = runOf(FIXTURE_INPUT);
+  assert.deepEqual(r.eligibility.designed_for_future_consumers, [
+    "BIZRA_URP_GENESIS_PREVIEW",
+    "SAT5_CONSTITUTIONAL_VERIFIER_SET",
+    "FUTURE_NODE_ADMISSION_FLOW",
+  ]);
+  assert.equal(r.eligibility.live_runtime_consumer_enabled, false);
+  assert.equal(r.eligibility.actuator_readable_permission, false);
+  assert.equal(r.eligibility.urp_live, false);
+  assert.equal(r.eligibility.federation_live, false);
+});
+
+test("verify rejects a runtime-coupling breach: live_runtime_consumer_enabled flipped with recomputed hash", () => {
+  const payload = buildRewardEligibilityContractPreviewPayload(FIXTURE_INPUT);
+  const breached = { ...payload.eligibility, live_runtime_consumer_enabled: true };
+  const { content_hash: _drop, ...body } = { ...payload, eligibility: breached };
+  const laundered = verifyRewardEligibilityContractPreview({ ...body, content_hash: rehash(body) });
+  assert.equal(laundered.ok, false);
+  assert.ok(
+    laundered.blocked_by.includes("eligibility_not_rederivable") ||
+      laundered.blocked_by.includes("verdict_live_consumer_enabled"),
+  );
+});
+
+test("verify rejects a urp_live breach even when self-consistent", () => {
+  const payload = buildRewardEligibilityContractPreviewPayload(FIXTURE_INPUT);
+  const breached = { ...payload.eligibility, urp_live: true };
+  const { content_hash: _drop, ...body } = { ...payload, eligibility: breached };
+  const laundered = verifyRewardEligibilityContractPreview({ ...body, content_hash: rehash(body) });
+  assert.equal(laundered.ok, false);
+});
+
 // Recompute a content hash the same way the kernel does, for launder fixtures.
 function rehash(body) {
   const stable = (v) => {
