@@ -487,7 +487,7 @@ function defaultCapabilityRows() {
       blocked_promotion_rule:
         "May not claim signing grants execution authority, operator mutation, live identity runtime, unattended signing, or production attestation outside consented key-store use.",
       what_this_proves:
-        "Dema can Ed25519-sign a #306 sandbox execute receipt into a public-key-verifiable attestation envelope with tamper rejection on content_hash and state_hash binds.",
+        "Dema can Ed25519-sign a #306 sandbox execute receipt into a public-key-verifiable attestation envelope with tamper rejection on content_hash and state_hash binds; the consent assertion is inside the signed payload (a signature over a consent-free payload fails), and the displayed public-key fingerprint must re-derive from the verifying key (payload schema v0.2, parity with PREVIEW-RECEIPT-SIGNING-1A).",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, legal identity, or that signing authority equals execution authority.",
       forbidden_claims: [
