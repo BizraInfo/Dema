@@ -16,6 +16,8 @@ coverage/
 .claude/.cc-writes/
 .claude/settings.local.json
 .claude/skills/dema-slice-scaffold-workspace/
+.claude/workflows/
+.claude/worktrees/
 .vscode/
 .artifacts/
 .qodo/
