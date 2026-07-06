@@ -55,6 +55,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "SAT5_CONSTITUTIONAL_VERIFIER_SET_PREVIEW_1A",
   "NODE0_NODESPACE_BOUNDARY_PREVIEW_1A",
   "DEMA_ACTIVE_WORKLOOP_COMPOSER_PREVIEW_1A",
+  "NODE0_CONSENTED_INVENTORY_GATHERER_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1189,6 +1190,35 @@ function defaultCapabilityRows() {
         "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
       what_this_proves:
         "Composes the shipped Dema organs (pain-goal, mission, homebase, NodeSpace boundary, file steward, receipt preview, monitor, absence queue, return review) by reference into one deterministic, content-addressed operator work-envelope: fail-closed on missing boundary/consent/receipt-preview, a monitor critical, or an irreversible file action; L3+ tasks require explicit approval; an absent operator with unfinished work yields an absence-queue candidate and a returning operator a return-review candidate; allowed_next_action/blocked_by/requires_approval are re-derived from the declared state so a forged envelope is rejected; boundary all-false, authority_delta 0, runs no organ and executes no task.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_CONSENTED_INVENTORY_GATHERER_PREVIEW_1A",
+      truth_label: "NODE0_CONSENTED_INVENTORY_GATHERER_PREVIEW_MEASURED_REPO",
+      summary:
+        "Consent-scoped, metadata-only inventory summary kernel: derives a triage (categories, total bytes, stale/duplicate-name/sensitive-name candidates, largest) from injected file-metadata rows under a user-selected scan mode; metadata_only implemented, all five scan modes as future user options; no content read.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-consented-inventory-gatherer-preview.js"],
+        test_paths: ["tests/node0-consented-inventory-gatherer-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-consented-inventory-gatherer-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_CONSENTED_INVENTORY_GATHERER_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_CONSENTED_INVENTORY_GATHERER_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Derives a useful workspace triage (category/extension counts, total bytes, largest files, stale / duplicate-name / sensitive-name candidates, and safe recommended next actions) from injected file METADATA rows alone — no content is read; scan depth is the node owner's choice (metadata_only implemented, the other four modes declared as future user options and refused here); a row claiming content was read is refused; category/extension counts must be internally consistent so a forged summary is rejected; boundary all-false, authority_delta 0.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
