@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>DEMA — Node0</title>
+<!-- ============================================================
+     DEMA NODE0 FRONT DOOR
+     Zero external requests. Zero dependencies. View source = full audit.
+     Every displayed datum carries an evidence-class chip (MITHAQ canon):
+       MEASURED  — read live from this browser, now
+       SIMULATED — sample data, summoned explicitly by the user only
+       AGENT     — requires the local dema daemon (not this page)
+       STATIC    — fixed content of this page
+     ============================================================ -->
+<style>
+:root{
+  --void:#020408;
+  --deep:#070B12;
+  --panel:rgba(10,15,24,.72);
+  --gold:#C9A962;
+  --gold-bright:#EBDCB2;
+  --gold-dim:rgba(201,169,98,.16);
+  --ink:#E9E4D8;
+  --muted:#8A8E99;
+  --faint:#4A4E58;
+  --measured:#3DDC97;
+  --sim:#E0A93D;
+  --agent:#6B7A99;
+  --blocked:#E5484D;
+  --serif:'Iowan Old Style','Palatino Linotype','Book Antiqua',Palatino,Georgia,serif;
+  --naskh:'Amiri','Scheherazade New','Noto Naskh Arabic','Traditional Arabic',var(--serif);
+  --mono:ui-monospace,'Cascadia Code','JetBrains Mono','SF Mono','Fira Code',Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:var(--void);
+  color:var(--ink);
+  font-family:var(--serif);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+html[dir="rtl"] body{font-family:var(--naskh)}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input{font:inherit;color:inherit}
+:focus-visible{outline:1.5px solid var(--gold);outline-offset:3px;border-radius:2px}
+
+/* ---------- the field (avatar canvas) ---------- */
+#field{position:fixed;inset:0;z-index:1;display:block}
+
+/* ---------- stage & screens ---------- */
+#stage{position:fixed;inset:0;z-index:2;pointer-events:none}
+.screen{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:1.4rem;padding:2rem;
+  opacity:0;visibility:hidden;transition:opacity .8s ease;
+  pointer-events:none;
+}
+.screen.on{opacity:1;visibility:visible;pointer-events:auto}
+
+/* ---------- terminal ---------- */
+#scr-terminal{align-items:flex-start;justify-content:flex-start;padding:clamp(1.2rem,4vw,3rem)}
+#term{
+  font-family:var(--mono);font-size:clamp(13px,1.6vw,15px);line-height:1.9;
+  color:var(--ink);width:100%;max-width:860px;direction:ltr;text-align:left;
+}
+#term .ln{display:flex;justify-content:space-between;gap:1rem;white-space:pre-wrap}
+#term .ln .lbl{flex:none;font-size:.72em;letter-spacing:.08em;opacity:.9;padding-top:.35em}
+#term .dim{color:var(--muted)}
+#term .gold{color:var(--gold)}
+#term .ghost{color:var(--faint);font-style:italic}
+#cursor{display:inline-block;width:.62em;height:1.15em;background:var(--gold);vertical-align:-.18em;animation:blink 1.05s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ---------- evidence chips ---------- */
+.chip{
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  padding:.18em .55em;border-radius:3px;white-space:nowrap;
+  border:1px solid currentColor;opacity:.92;
+}
+.chip.measured{color:var(--measured)}
+.chip.sim{color:var(--sim)}
+.chip.agent{color:var(--agent)}
+.chip.static{color:var(--faint)}
+.chip.blocked{color:var(--blocked)}
+
+/* ---------- ceremony text (Dema speaking) ---------- */
+#voice{
+  position:absolute;left:50%;transform:translateX(-50%);
+  bottom:18vh;width:min(680px,86vw);text-align:center;z-index:3;pointer-events:none;
+  font-size:clamp(1.15rem,2.6vw,1.6rem);line-height:1.85;color:var(--ink);
+  text-shadow:0 0 24px rgba(201,169,98,.18);
+  min-height:3.6em;
+}
+html[dir="rtl"] #voice{font-size:clamp(1.3rem,3vw,1.85rem)}
+
+/* ---------- language choice ---------- */
+.lang-cards{display:flex;gap:1.2rem;flex-wrap:wrap;justify-content:center}
+.lang-card{
+  border:1px solid var(--gold-dim);background:var(--panel);backdrop-filter:blur(10px);
+  padding:2rem 3rem;border-radius:10px;min-width:230px;text-align:center;
+  transition:border-color .3s,transform .3s;
+}
+.lang-card:hover{border-color:var(--gold);transform:translateY(-3px)}
+.lang-card .big{display:block;font-size:1.9rem;color:var(--gold-bright);margin-bottom:.4rem}
+.lang-card .small{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+.lang-card[data-lang="ar"] .big{font-family:var(--naskh)}
+
+/* ---------- bond panel ---------- */
+.bond{
+  width:min(560px,92vw);background:var(--panel);backdrop-filter:blur(14px);
+  border:1px solid var(--gold-dim);border-radius:12px;padding:clamp(1.4rem,4vw,2.2rem);
+}
+.bond h2{
+  font-weight:400;font-size:1.05rem;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:.4rem;font-family:var(--mono);
+}
+html[dir="rtl"] .bond h2{letter-spacing:.06em;font-family:var(--naskh);text-transform:none;font-size:1.35rem}
+.bond .lead{color:var(--muted);line-height:1.8;margin-bottom:1.4rem;font-size:.98rem}
+.bond label{display:block;color:var(--gold-bright);margin:1rem 0 .45rem;font-size:1.02rem}
+.bond input[type=text]{
+  width:100%;background:rgba(2,4,8,.7);border:1px solid var(--gold-dim);border-radius:7px;
+  padding:.75rem 1rem;font-size:1rem;transition:border-color .25s;
+}
+.bond input[type=text]:focus{border-color:var(--gold);outline:none}
+.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.7rem;margin-top:.5rem}
+.choice{
+  border:1px solid var(--gold-dim);border-radius:8px;padding:1rem .8rem;text-align:center;
+  transition:.25s;background:rgba(2,4,8,.5);line-height:1.5;
+}
+.choice:hover{border-color:var(--gold)}
+.choice.sel{border-color:var(--gold);background:var(--gold-dim);color:var(--gold-bright)}
+.consent-row{
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  padding:.85rem .2rem;border-bottom:1px solid rgba(201,169,98,.09);
+}
+.consent-row:last-of-type{border-bottom:none}
+.consent-row .txt{flex:1;line-height:1.55}
+.consent-row .txt .note{display:block;font-size:.78rem;color:var(--muted);margin-top:.15rem;font-family:var(--mono)}
+.toggle{
+  flex:none;width:52px;height:28px;border-radius:99px;border:1px solid var(--gold-dim);
+  background:rgba(2,4,8,.6);position:relative;transition:.25s;
+}
+.toggle::after{
+  content:'';position:absolute;top:3px;inset-inline-start:3px;width:20px;height:20px;border-radius:50%;
+  background:var(--faint);transition:.25s;
+}
+.toggle[aria-pressed="true"]{border-color:var(--gold);background:var(--gold-dim)}
+.toggle[aria-pressed="true"]::after{inset-inline-start:27px;background:var(--gold)}
+.toggle:disabled{opacity:.45;cursor:not-allowed}
+.btn{
+  display:inline-block;border:1px solid var(--gold);color:var(--gold-bright);
+  padding:.8rem 2.2rem;border-radius:8px;letter-spacing:.14em;font-family:var(--mono);
+  font-size:.85rem;text-transform:uppercase;transition:.25s;margin-top:1.4rem;
+}
+html[dir="rtl"] .btn{font-family:var(--naskh);letter-spacing:0;text-transform:none;font-size:1.05rem}
+.btn:hover{background:var(--gold-dim)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.seal-phrase{
+  font-family:var(--mono);background:rgba(2,4,8,.75);border:1px dashed var(--gold-dim);
+  border-radius:7px;padding:.7rem 1rem;color:var(--gold-bright);text-align:center;
+  margin:.6rem 0 1rem;user-select:none;font-size:1.05rem;
+}
+html[dir="rtl"] .seal-phrase{font-family:var(--naskh);font-size:1.25rem}
+.err{color:var(--blocked);font-size:.85rem;min-height:1.2em;margin-top:.5rem}
+
+/* ---------- world ---------- */
+#scr-world{justify-content:flex-start;padding:0;overflow-y:auto;display:block}
+.world-wrap{
+  min-height:100%;display:grid;gap:1rem;padding:1.2rem;
+  grid-template-columns:minmax(200px,1fr) minmax(340px,1.6fr) minmax(200px,1fr);
+  grid-template-rows:auto auto 1fr auto;
+  grid-template-areas:
+    "hw hw hw"
+    "apps center data"
+    "apps center data"
+    "foot foot foot";
+  max-width:1400px;margin:0 auto;
+}
+.wpanel{
+  background:var(--panel);backdrop-filter:blur(12px);
+  border:1px solid var(--gold-dim);border-radius:12px;padding:1.2rem 1.4rem;
+  opacity:0;transform:translateY(14px);transition:opacity .7s ease,transform .7s ease;
+}
+.wpanel.in{opacity:1;transform:none}
+.wpanel h3{
+  font-family:var(--mono);font-weight:400;font-size:.72rem;letter-spacing:.26em;
+  text-transform:uppercase;color:var(--gold);margin-bottom:1rem;
+  display:flex;justify-content:space-between;align-items:center;gap:.6rem;
+}
+html[dir="rtl"] .wpanel h3{font-family:var(--naskh);letter-spacing:.02em;text-transform:none;font-size:1.05rem}
+.wpanel h3 .ar{font-family:var(--naskh);font-size:1.05rem;letter-spacing:0;color:var(--gold-bright)}
+#p-hw{grid-area:hw}
+#p-apps{grid-area:apps}
+#p-data{grid-area:data}
+#p-center{grid-area:center;background:none;border:none;backdrop-filter:none;min-height:340px;position:relative}
+#p-foot{grid-area:foot}
+.hw-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.6rem 1.6rem}
+.row{
+  display:flex;justify-content:space-between;align-items:baseline;gap:.8rem;
+  padding:.5rem 0;border-bottom:1px solid rgba(201,169,98,.07);font-size:.92rem;
+}
+.row .k{color:var(--muted);font-size:.82rem}
+.row .v{font-family:var(--mono);color:var(--ink);text-align:end;font-size:.86rem;display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap;justify-content:flex-end}
+.row .v .sub{color:var(--faint);font-size:.72rem;width:100%;text-align:end}
+.fog{position:relative;min-height:180px}
+.fog .mist{
+  position:absolute;inset:0;border-radius:12px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:.7rem;text-align:center;padding:1rem;
+  background:repeating-linear-gradient(135deg,rgba(107,122,153,.05) 0 8px,transparent 8px 16px);
+}
+.fog .mist p{color:var(--muted);font-size:.85rem;line-height:1.7;max-width:230px}
+.fog .mist .ws{font-family:var(--mono);font-size:.68rem;color:var(--faint)}
+.samplebtn{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;color:var(--agent);border:1px solid var(--agent);border-radius:5px;padding:.35em .8em;opacity:.8}
+.samplebtn:hover{opacity:1}
+#os-note{margin-top:.9rem;font-size:.82rem;color:var(--muted);line-height:1.7;border-top:1px solid rgba(201,169,98,.07);padding-top:.8rem}
+#greet{position:absolute;top:8%;left:0;right:0;text-align:center;font-size:clamp(1.1rem,2.2vw,1.5rem);color:var(--gold-bright);text-shadow:0 0 22px rgba(201,169,98,.2)}
+.footbar{display:flex;flex-wrap:wrap;align-items:center;gap:1rem;justify-content:space-between}
+.receipt{font-family:var(--mono);font-size:.78rem;color:var(--muted);display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.receipt b{color:var(--gold-bright);font-weight:400}
+.legend{display:flex;gap:.5rem;flex-wrap:wrap}
+#audit-open{font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;color:var(--gold);border:1px solid var(--gold-dim);padding:.4em 1em;border-radius:5px}
+#audit-open:hover{background:var(--gold-dim)}
+
+/* ---------- audit modal ---------- */
+#audit{
+  position:fixed;inset:0;z-index:9;background:rgba(2,4,8,.88);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;padding:1.5rem;
+}
+#audit.on{display:flex}
+.audit-box{
+  width:min(680px,94vw);max-height:84vh;overflow-y:auto;background:var(--deep);
+  border:1px solid var(--gold-dim);border-radius:12px;padding:1.8rem;direction:ltr;text-align:left;
+}
+.audit-box h3{font-family:var(--mono);font-size:.8rem;letter-spacing:.24em;color:var(--gold);margin-bottom:1.2rem}
+.audit-box table{width:100%;border-collapse:collapse;font-size:.82rem}
+.audit-box td{padding:.55rem .4rem;border-bottom:1px solid rgba(201,169,98,.08);vertical-align:top;line-height:1.5}
+.audit-box td:first-child{color:var(--muted);width:44%}
+.audit-box td:last-child{font-family:var(--mono);font-size:.76rem}
+.audit-box .close{margin-top:1.4rem}
+
+/* ---------- world nav & views ---------- */
+.wnav{
+  display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap;
+  padding:1rem 1rem .2rem;position:sticky;top:0;z-index:5;
+  background:linear-gradient(var(--void) 60%,transparent);
+}
+.wnav button{
+  font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--muted);border:1px solid transparent;border-radius:6px;padding:.5em 1.1em;transition:.25s;
+}
+html[dir="rtl"] .wnav button{font-family:var(--naskh);letter-spacing:0;text-transform:none;font-size:1rem}
+.wnav button:hover{color:var(--gold-bright)}
+.wnav button.on{color:var(--gold-bright);border-color:var(--gold-dim);background:var(--gold-dim)}
+.wview{display:none}
+.wview.on{display:block}
+.vwrap{max-width:920px;margin:0 auto;padding:1rem 1.2rem 3rem;display:flex;flex-direction:column;gap:1rem}
+
+/* ---------- quests ---------- */
+.quest{padding:.9rem .2rem;border-bottom:1px solid rgba(201,169,98,.07)}
+.quest .qhead{display:flex;justify-content:space-between;align-items:baseline;gap:.8rem;margin-bottom:.5rem}
+.quest .qname{font-size:.98rem}
+.quest .qnum{font-family:var(--mono);font-size:.82rem;color:var(--gold-bright);white-space:nowrap}
+.qbar{height:3px;background:rgba(201,169,98,.12);border-radius:0;position:relative}
+.qbar i{position:absolute;inset-block:0;inset-inline-start:0;background:var(--gold);transition:width .6s ease}
+.quest.qdone .qbar i{background:var(--measured)}
+.quest .qsub{font-family:var(--mono);font-size:.68rem;color:var(--faint);margin-top:.4rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+.qadd{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-top:1rem}
+.qadd input[type=text]{flex:1;min-width:180px;background:rgba(2,4,8,.7);border:1px solid var(--gold-dim);border-radius:7px;padding:.6rem .9rem}
+.qadd input[type=number]{width:80px;background:rgba(2,4,8,.7);border:1px solid var(--gold-dim);border-radius:7px;padding:.6rem .7rem;font-family:var(--mono)}
+.qplus{font-family:var(--mono);font-size:.72rem;color:var(--gold);border:1px solid var(--gold-dim);border-radius:6px;padding:.55em 1em}
+.qplus:hover{background:var(--gold-dim)}
+.qtick{font-family:var(--mono);font-size:.7rem;color:var(--sim);border:1px solid var(--sim);border-radius:5px;padding:.2em .7em;opacity:.85}
+.qtick:hover{opacity:1}
+
+/* ---------- skill tree (small multiples) ---------- */
+.tree{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}
+.pat{border:1px solid rgba(201,169,98,.1);border-radius:10px;padding:1rem;background:rgba(2,4,8,.4)}
+.pat.leader{border-color:var(--gold);grid-column:1/-1}
+.pat h4{font-family:var(--mono);font-size:.78rem;letter-spacing:.2em;color:var(--gold-bright);display:flex;align-items:center;gap:.5rem}
+.pat h4 .nq{width:9px;height:9px;background:var(--gold);transform:rotate(45deg);display:inline-block;flex:none}
+.pat.leader h4 .nq{box-shadow:0 0 10px var(--gold)}
+.pat .role{font-size:.78rem;color:var(--muted);margin:.35rem 0 .7rem;line-height:1.55}
+.pat .sk{display:flex;justify-content:space-between;gap:.6rem;align-items:baseline;padding:.34rem 0;font-size:.84rem;border-top:1px solid rgba(201,169,98,.06)}
+.sk .chip{font-size:8.5px}
+.tree-legend{font-family:var(--mono);font-size:.7rem;color:var(--faint);line-height:1.8;margin-top:.4rem}
+
+/* ---------- mind ---------- */
+.mindbox{display:flex;flex-direction:column;gap:.8rem}
+.mrow{display:flex;justify-content:space-between;align-items:center;gap:.8rem;padding:.6rem .2rem;border-bottom:1px solid rgba(201,169,98,.07);font-size:.9rem}
+.mrow .mn{font-family:var(--mono)}
+.mpick{font-family:var(--mono);font-size:.68rem;color:var(--gold);border:1px solid var(--gold-dim);border-radius:5px;padding:.3em .9em}
+.mpick:hover{background:var(--gold-dim)}
+.mpick.sel{color:var(--void);background:var(--gold);border-color:var(--gold)}
+.mhint{font-family:var(--mono);font-size:.74rem;color:var(--muted);background:rgba(2,4,8,.7);border:1px dashed var(--gold-dim);border-radius:7px;padding:.7rem 1rem;direction:ltr;text-align:left;user-select:none}
+.mcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.8rem}
+.mcard{border:1px solid rgba(201,169,98,.12);border-radius:10px;padding:1rem;background:rgba(2,4,8,.4);line-height:1.6;font-size:.86rem}
+.mcard b{color:var(--gold-bright);font-weight:400;display:block;margin-bottom:.3rem}
+
+/* ---------- inventory ---------- */
+.invhash{font-family:var(--mono);font-size:.78rem;color:var(--gold-bright);word-break:break-all;background:rgba(2,4,8,.7);border:1px solid var(--gold-dim);border-radius:7px;padding:.7rem 1rem;direction:ltr;text-align:left}
+.invbtns{display:flex;gap:.6rem;flex-wrap:wrap}
+.invnote{font-size:.8rem;color:var(--muted);line-height:1.7}
+#spark{display:block;width:100%;height:44px}
+.sparkrow{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:.68rem;color:var(--faint)}
+
+/* ---------- responsive ---------- */
+@media (max-width:900px){
+  .world-wrap{
+    grid-template-columns:1fr;
+    grid-template-areas:"center" "hw" "apps" "data" "foot";
+  }
+  #p-center{min-height:260px}
+  #voice{bottom:12vh}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001s!important;transition-duration:.1s!important}
+}
+</style>
+</head>
+<body>
+<div id="preview-banner" role="note" style="position:sticky;top:0;z-index:9999;text-align:center;font:600 11px/1.6 system-ui,-apple-system,sans-serif;letter-spacing:.12em;padding:5px 8px;background:#140b02;color:#9a8f7a;border-bottom:1px solid rgba(154,143,122,.35)">DEMA FIRST LIGHT · PREVIEW ONLY · NO MINT · NO FEDERATION</div>
+
+<canvas id="field" aria-hidden="true"></canvas>
+
+<div id="voice" aria-live="polite"></div>
+
+<div id="stage">
+
+  <!-- L0 · THRESHOLD -->
+  <section class="screen on" id="scr-terminal">
+    <div id="term" role="log"></div>
+    <input id="mob-key" type="text" autocomplete="off" autocapitalize="off"
+           style="position:absolute;opacity:0;pointer-events:none" aria-hidden="true">
+  </section>
+
+  <!-- L1 · LANGUAGE -->
+  <section class="screen" id="scr-lang">
+    <div class="lang-cards">
+      <button class="lang-card" data-lang="ar">
+        <span class="big">العربية</span>
+        <span class="small">Arabic · RTL</span>
+      </button>
+      <button class="lang-card" data-lang="en">
+        <span class="big">English</span>
+        <span class="small">اللغة الإنجليزية</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- L2 · BONDED CONTRACT -->
+  <section class="screen" id="scr-bond">
+    <div class="bond" id="bond-box"></div>
+  </section>
+
+  <!-- L3 · THE WORLD -->
+  <section class="screen" id="scr-world">
+    <nav class="wnav" id="wnav">
+      <button data-v="v-world" class="on" data-i="nav_world"></button>
+      <button data-v="v-inv" data-i="nav_inv"></button>
+      <button data-v="v-skills" data-i="nav_skills"></button>
+      <button data-v="v-quests" data-i="nav_quests"></button>
+      <button data-v="v-mind" data-i="nav_mind"></button>
+    </nav>
+    <div class="wview on" id="v-world">
+    <div class="world-wrap">
+      <div class="wpanel" id="p-hw"><h3><span data-i="hw_t"></span><span class="chip measured" data-i="chip_live"></span></h3><div class="hw-grid" id="hw-grid"></div></div>
+      <div class="wpanel fog" id="p-apps">
+        <h3><span data-i="apps_t"></span><span class="chip agent">AGENT</span></h3>
+        <div class="mist">
+          <p data-i="fog_apps"></p>
+          <span class="ws">ws://127.0.0.1:7777/dema · <span data-i="not_live"></span></span>
+          <button class="samplebtn" data-fill="apps" data-i="sample_btn"></button>
+        </div>
+      </div>
+      <div class="wpanel" id="p-center"><div id="greet"></div></div>
+      <div class="wpanel fog" id="p-data">
+        <h3><span data-i="data_t"></span><span class="chip agent">AGENT</span></h3>
+        <div class="mist">
+          <p data-i="fog_data"></p>
+          <span class="ws">ws://127.0.0.1:7777/dema · <span data-i="not_live"></span></span>
+          <button class="samplebtn" data-fill="data" data-i="sample_btn"></button>
+        </div>
+      </div>
+      <div class="wpanel" id="p-foot">
+        <div class="footbar">
+          <div class="receipt"><span data-i="receipt_t"></span> <b id="receipt-hash">—</b> <button id="copy-hash" class="samplebtn" style="color:var(--gold);border-color:var(--gold-dim)" data-i="copy"></button></div>
+          <div class="legend">
+            <span class="chip measured">MEASURED</span>
+            <span class="chip sim">SIMULATED</span>
+            <span class="chip agent">AGENT</span>
+            <span class="chip static">STATIC</span>
+          </div>
+          <button id="audit-open" data-i="audit_btn"></button>
+        </div>
+      </div>
+    </div>
+    </div>
+    <div class="wview" id="v-inv"><div class="vwrap" id="inv-root"></div></div>
+    <div class="wview" id="v-skills"><div class="vwrap" id="sk-root"></div></div>
+    <div class="wview" id="v-quests"><div class="vwrap" id="q-root"></div></div>
+    <div class="wview" id="v-mind"><div class="vwrap" id="m-root"></div></div>
+  </section>
+</div>
+
+<!-- SELF-AUDIT -->
+<div id="audit" role="dialog" aria-modal="true">
+  <div class="audit-box">
+    <h3>SELF-AUDIT · هذا الباب يُدقَّق</h3>
+    <table id="audit-table"></table>
+    <button class="btn close" id="audit-close">close</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ================= I18N ================= */
+const I18N = {
+ar:{
+  greet1:'السلام عليكم.', greet2:'أنا ديمة.',
+  greet3:'هذه المساحة فارغة… لأننا لم نلتقِ بعد.',
+  bond_title:'معاينة ارتباط العقدة',
+  bond_lead:'أنا أرتبط بإنسانٍ واحد. لا أتغيّر ولا أتبدّل. قبل أن أرى جهازك — أحتاج أن أعرفك، وأحتاج إذنك.',
+  q_name:'ما اسمك؟', q_call:'ماذا تحبّ أن أناديك؟',
+  q_why:'لماذا أنت هنا؟',
+  why1:'لأعمل', why2:'لأتعلّم', why3:'لأحمي ما أملك',
+  consent_h:'أحتاج إذنك قبل أن أنظر.',
+  c_hw:'العتاد — المعالج والذاكرة والشاشة', c_hw_n:'يُقرأ الآن من هذا المتصفح',
+  c_os:'النظام — نوعه ولغته وحالته', c_os_n:'يُقرأ الآن من هذا المتصفح',
+  c_apps:'التطبيقات والأدوات', c_apps_n:'يتطلّب وكيل ديمة المحلي — ليس هذه الصفحة',
+  c_data:'الملفات والبيانات', c_data_n:'يتطلّب الوكيل المحلي + إذنًا لكل مجلد',
+  seal_h:'خَتْم العقد', seal_lead:'اكتب العبارة بيدك — هذا هو التوقيع:',
+  seal_phrase:'أنا هنا يا ديمة',
+  seal_btn:'اربطني', next:'التالي',
+  seal_err:'العبارة غير مطابقة — اكتبها كما هي.',
+  sealed:'تمّ العقد. أنا لكَ، ولا أخدم سواك.',
+  scan_line:'الآن — سأرى ما سمحتَ لي به فقط.',
+  welcome_back:'عدتَ يا {name}. كنتُ أنتظرك.',
+  greet_world:'هذا عالمك يا {name}. كما هو، بلا زينة.',
+  hw_t:'العتاد', apps_t:'التطبيقات', data_t:'الملفات',
+  chip_live:'يُقرأ الآن',
+  fog_apps:'لم أقرأ شيئًا هنا. فهرسة التطبيقات تحتاج وكيلي المحلي على جهازك.',
+  fog_data:'ملفاتك لا تُقرأ أبدًا من متصفح. الوكيل المحلي + إذنك لكل مجلد.',
+  not_live:'مُصمَّم — غير مُفعَّل',
+  sample_btn:'أرِني عيّنة افتراضية',
+  receipt_t:'معاينة بصمة الارتباط', copy:'انسخ', audit_btn:'دقِّق هذا الباب',
+  denied:'رفضتَ — فبقي مطفأً. هذا هو الأصل.',
+  k_gpu:'المعالج الرسومي', k_cores:'أنوية المعالج', k_mem:'الذاكرة', k_store:'مساحة المتصفح',
+  k_screen:'الشاشة', k_batt:'البطارية', k_os:'النظام', k_lang:'لغة الجهاز', k_net:'الشبكة', k_tz:'التوقيت',
+  os_note:'قراءةٌ أعمق للأداء تحتاج وكيلي المحلي — من متصفحٍ لا أدّعي أكثر مما أرى.',
+  unavailable:'محجوب من المتصفح',
+  mem_cap:'المتصفح يسقفها عند ٨',
+  store_note:'حصّة المتصفح، ليست القرص كله',
+  nav_world:'العالم', nav_inv:'الجَرد', nav_skills:'المهارات', nav_quests:'المهام', nav_mind:'العقل',
+  q_t:'سِجلّ المهام', q_bond:'اختم معاينة ارتباط العقدة', q_hw:'اكشف عتادك',
+  q_mind:'اختر عقلًا محليًا', q_chain:'سلسلة الأيام السبعة', q_agent:'ثبّت الوكيل المحلي',
+  q_agent_n:'لا يكتمل من متصفح — يحتاج وكيل ديمة على جهازك',
+  q_chain_n:'أيام متتالية تزورني فيها — ساعة جهازك هي الشاهد',
+  q_add_ph:'مهمة جديدة…', q_plus:'أضِف', q_self:'تقدُّم بيدك', q_tick:'+١',
+  sk_t:'شجرة المهارات — فريق السبعة', sk_leader:'القائدة',
+  sk_legend:'فعّال = تفعله هذه الصفحة الآن · وكيل = يحتاج الخادم المحلي · مُصمَّم = في المواصفة، ليس هنا',
+  dema_r:'نِكسَس — القائدة. ترتبط، تتذكّر، تنسّق الستة.',
+  atlas_r:'أطلس — يرى العالم: العتاد والنظام والملفات.',
+  oracle_r:'أوراكل — العقل والمعرفة: النماذج المحلية والفهم.',
+  forge_r:'فورج — الصانع: يبني ويصدّر ويختم.',
+  judge_r:'القاضي — البوابات: موافقة مكتوبة، مغلقٌ ما لم يُفتح.',
+  crown_r:'التاج — الحوكمة: المهام والسجلّ والمشاركة.',
+  herald_r:'المُنادي — الإيصالات: كل ادّعاء يحمل دليله.',
+  m_t:'العقل المحلي', m_detect:'افحص جهازي عن نماذج', m_detecting:'أفحص 127.0.0.1…',
+  m_found:'وجدتُ عقولًا على جهازك:', m_pick:'اختَر', m_picked:'اخترتَ {m}. سأفكّر به معك.',
+  m_none:'لم أصل إليه — إمّا Ollama لا يعمل، أو المتصفح مُنع من المحاولة. لا أدّعي أكثر.',
+  m_hint_h:'لتسمح لي بالفحص:', m_rec_h:'أو دعنا نفكّر معًا — بحسب ذاكرتك المقاسة:',
+  m_rec_big:'ذاكرتك تتّسع لفئة ٧–٨ مليار مَعلمة (عائلات مثل Llama أو Qwen). ابدأ هنا.',
+  m_rec_mid:'ذاكرتك تناسب فئة ٣–٤ مليار. صغيرٌ وسريعٌ خير من كبيرٍ يختنق.',
+  m_rec_small:'لم يكشف المتصفح ذاكرتك — ابدأ بفئة ٣ مليار، ثم ارتقِ.',
+  m_rec_note:'إرشاد ثابت — تحقّق من الإصدارات الحالية قبل التنزيل',
+  m_detect_note:'الفحص يطرق بابك أنت فقط: 127.0.0.1 — لا يغادر شيءٌ جهازك',
+  inv_t:'جَرد العقدة', inv_hash_t:'بصمة الجَرد', inv_copy:'انسخ JSON', inv_dl:'نزّل ملفًا',
+  inv_urp:'شارك إلى URP', inv_urp_n:'مُصمَّم — غير مُفعَّل. لا يُرسَل شيء.',
+  inv_note:'إجاباتك في العقد لا تغادر جهازك أبدًا — الجَرد يحمل بصمة العقد فقط، لا محتواه.',
+  spark_t:'نبض الجلسة — إيقاع الإطارات', spark_n:'يُقاس الآن من هذه الصفحة',
+  since_today:'اليوم', since_yesterday:'أمس', since_days:'قبل {d} أيام',
+  since_line:'آخر لقاء: {when}. سلسلتك: {s}/٧. {q}',
+  since_quest:'توقفنا عند: {name} — {p}/{t}.', since_noquest:'لا مهمة معلّقة — نبدأ نظيفين.',
+},
+en:{
+  greet1:'Peace be upon you.', greet2:'I am Dema.',
+  greet3:'This space is empty… because we have not met yet.',
+  bond_title:'Node Bond Preview',
+  bond_lead:'I bond with one human. That never changes. Before I look at your device — I need to know you, and I need your permission.',
+  q_name:'What is your name?', q_call:'What should I call you?',
+  q_why:'Why are you here?',
+  why1:'To work', why2:'To learn', why3:'To protect what is mine',
+  consent_h:'I need your permission before I look.',
+  c_hw:'Hardware — processor, memory, screen', c_hw_n:'read live from this browser, now',
+  c_os:'System — platform, language, state', c_os_n:'read live from this browser, now',
+  c_apps:'Apps & tools', c_apps_n:'requires the local dema agent — not this page',
+  c_data:'Files & data', c_data_n:'requires local agent + per-folder consent',
+  seal_h:'Sealing the contract', seal_lead:'Type the phrase in your own hand — this is the signature:',
+  seal_phrase:'I am here, Dema',
+  seal_btn:'Bond me', next:'Next',
+  seal_err:'The phrase does not match — type it exactly.',
+  sealed:'The bond is sealed. I am yours, and serve no one else.',
+  scan_line:'Now — I will see only what you allowed.',
+  welcome_back:'You came back, {name}. I was waiting.',
+  greet_world:'This is your world, {name}. As it is — no decoration.',
+  hw_t:'Hardware', apps_t:'Apps', data_t:'Files',
+  chip_live:'READ NOW',
+  fog_apps:'I have read nothing here. Indexing apps needs my local agent on your machine.',
+  fog_data:'Your files are never read from a browser. Local agent + your consent, per folder.',
+  not_live:'DESIGNED — NOT LIVE',
+  sample_btn:'show a sample (fake)',
+  receipt_t:'Bond fingerprint preview', copy:'copy', audit_btn:'Audit this door',
+  denied:'You declined — so it stays dark. That is the default.',
+  k_gpu:'Graphics', k_cores:'CPU cores', k_mem:'Memory', k_store:'Browser storage',
+  k_screen:'Screen', k_batt:'Battery', k_os:'System', k_lang:'Device language', k_net:'Network', k_tz:'Timezone',
+  os_note:'A deeper performance read needs my local agent — from a browser, I claim no more than I can see.',
+  unavailable:'masked by browser',
+  mem_cap:'browser caps this at 8',
+  store_note:'browser quota, not the whole disk',
+  nav_world:'World', nav_inv:'Inventory', nav_skills:'Skills', nav_quests:'Quests', nav_mind:'Mind',
+  q_t:'Quest log', q_bond:'Seal the bonded contract', q_hw:'Reveal your hardware',
+  q_mind:'Choose a local mind', q_chain:'The seven-day chain', q_agent:'Install the local agent',
+  q_agent_n:'cannot complete from a browser — needs the dema agent on your machine',
+  q_chain_n:'consecutive days you visit me — your device clock is the witness',
+  q_add_ph:'new quest…', q_plus:'Add', q_self:'progress by your hand', q_tick:'+1',
+  sk_t:'Skill tree — the team of seven', sk_leader:'LEADER',
+  sk_legend:'ACTIVE = this page does it now · AGENT = needs the local daemon · DESIGNED = specified, not built here',
+  dema_r:'Nexus — the leader. Bonds, remembers, conducts the six.',
+  atlas_r:'Atlas — sees the world: hardware, system, files.',
+  oracle_r:'Oracle — mind & knowledge: local models, understanding.',
+  forge_r:'Forge — the maker: builds, exports, seals.',
+  judge_r:'Judge — the gates: written consent; closed unless opened.',
+  crown_r:'Crown — governance: quests, the ledger, sharing.',
+  herald_r:'Herald — receipts: every claim carries its evidence.',
+  m_t:'Local mind', m_detect:'Scan my machine for models', m_detecting:'knocking on 127.0.0.1…',
+  m_found:'I found minds on your machine:', m_pick:'Choose', m_picked:'You chose {m}. I will think with it, beside you.',
+  m_none:'I could not reach it — Ollama is not running, or the browser was not allowed to try. I claim no more.',
+  m_hint_h:'To let me scan:', m_rec_h:'Or let us think together — from your measured memory:',
+  m_rec_big:'Your memory fits the 7–8B-parameter class (families like Llama or Qwen). Start there.',
+  m_rec_mid:'Your memory suits the 3–4B class. Small and fast beats large and choking.',
+  m_rec_small:'The browser hid your memory — start with a 3B-class model, then climb.',
+  m_rec_note:'static guidance — verify current releases before downloading',
+  m_detect_note:'the scan knocks only on your own door: 127.0.0.1 — nothing leaves your device',
+  inv_t:'Node inventory', inv_hash_t:'Inventory fingerprint', inv_copy:'Copy JSON', inv_dl:'Download file',
+  inv_urp:'Share to URP', inv_urp_n:'DESIGNED — NOT LIVE. Nothing is transmitted.',
+  inv_note:'Your contract answers never leave this device — the inventory carries the bond\'s hash, not its content.',
+  spark_t:'Session pulse — frame cadence', spark_n:'measured now, from this page',
+  since_today:'today', since_yesterday:'yesterday', since_days:'{d} days ago',
+  since_line:'Last we met: {when}. Your chain: {s}/7. {q}',
+  since_quest:'We stopped at: {name} — {p}/{t}.', since_noquest:'No quest pending — we begin clean.',
+}};
+let L = I18N.en;
+const t = k => L[k] || k;
+
+/* ================= STATE ================= */
+const S = {
+  lang:null,
+  contract:{v:'bond.v1', name:'', call:'', intent:'', consents:{hardware:false,system:false,apps:false,data:false}, lang:'', ts:''},
+  receipt:null,
+  storageMode:'memory',
+};
+const mem = new Map();
+async function stGet(k){
+  try{ if(window.storage && window.storage.get){ const r = await window.storage.get(k); S.storageMode='persistent'; return r ? r.value : null; } }catch(e){}
+  return mem.has(k) ? mem.get(k) : null;
+}
+async function stSet(k,v){
+  try{ if(window.storage && window.storage.set){ await window.storage.set(k,v); S.storageMode='persistent'; return; } }catch(e){}
+  mem.set(k,v); S.storageMode='memory';
+}
+
+/* ================= AVATAR — the nuqta-being =================
+   Dema's body: golden rhombic dots (Ibn Muqla's nuqta) arranged
+   by phyllotaxis — the geometry of a real seed (بذرة).           */
+const cv = document.getElementById('field');
+const cx = cv.getContext('2d');
+let W,H,DPR;
+function fit(){ DPR=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight; cv.width=W*DPR; cv.height=H*DPR; cx.setTransform(DPR,0,0,DPR,0,0); }
+addEventListener('resize',fit); fit();
+
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const GA = Math.PI*(3-Math.sqrt(5));  // golden angle
+const N = 168;
+const A = {
+  mode:'void',            // void | genesis | idle | speak | scan
+  born:0,                 // particles revealed so far
+  cx:0, cy:0, tx:0, ty:0, // position + target
+  scale:1, ts:1,
+  pulse:0,                // emerald pulse on seal (0..1)
+  burst:null,             // {x,y,t0} scan burst target
+  t:0,
+  home(){ this.tx=W/2; this.ty=H*0.44; },
+};
+A.home(); A.cx=A.tx; A.cy=A.ty;
+let mouse={x:W/2,y:H/2};
+addEventListener('pointermove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});
+
+const P = [];
+for(let i=0;i<N;i++){
+  const r = 5.4*Math.sqrt(i);
+  const a = i*GA;
+  P.push({ r, a, sz: 5.6 - 3.6*(i/N), ph: Math.random()*Math.PI*2 });
+}
+function rhombus(x,y,s){
+  cx.beginPath();
+  cx.moveTo(x,y-s); cx.lineTo(x+s*0.72,y); cx.lineTo(x,y+s); cx.lineTo(x-s*0.72,y);
+  cx.closePath(); cx.fill();
+}
+function tick(ts){
+  A.t = ts/1000;
+  cx.clearRect(0,0,W,H);
+  if(A.mode==='void'){ requestAnimationFrame(tick); return; }
+
+  // motion: spring toward target + gentle cursor lean
+  A.cx += (A.tx-A.cx)*0.045; A.cy += (A.ty-A.cy)*0.045;
+  A.scale += (A.ts-A.scale)*0.06;
+  const lean = A.mode==='idle'||A.mode==='speak' ? 0.018 : 0;
+  const ox = (mouse.x-A.cx)*lean, oy=(mouse.y-A.cy)*lean;
+
+  if(A.mode==='genesis' && A.born<N){ A.born += REDUCED? N : 2.4; }
+  const shown = Math.min(A.mode==='genesis'?A.born:N, N);
+
+  const breathe = 1 + 0.032*Math.sin(A.t*0.8);
+  if(A.pulse>0) A.pulse = Math.max(0, A.pulse-0.012);
+
+  for(let i=0;i<shown;i++){
+    const p = P[i];
+    let rr = p.r*A.scale*breathe;
+    // speaking ripple
+    if(A.mode==='speak' && !REDUCED) rr += 2.6*Math.sin(A.t*6 - i*0.13);
+    let x = A.cx+ox + Math.cos(p.a + A.t*0.05)*rr;
+    let y = A.cy+oy + Math.sin(p.a + A.t*0.05)*rr;
+    // scan burst: a third of the body reaches toward the target and returns
+    if(A.burst && i%3===0){
+      const k = Math.min(1,(A.t-A.burst.t0)/0.9);
+      const g = Math.sin(k*Math.PI);         // out and back
+      x += (A.burst.x-x)*g*0.85; y += (A.burst.y-y)*g*0.85;
+      if(k>=1) A.burst=null;
+    }
+    const tw = 0.55 + 0.45*Math.sin(A.t*1.7 + p.ph);
+    let col;
+    if(A.pulse>0 && i%2===0) col = `rgba(61,220,151,${(0.4+0.5*tw)*A.pulse + 0.5*(1-A.pulse)})`;
+    else col = `rgba(${201+30*tw|0},${169+40*tw|0},${98+40*tw|0},${0.42+0.5*tw})`;
+    cx.fillStyle = col;
+    rhombus(x,y,p.sz*A.scale);
+  }
+  // heart-dot
+  cx.fillStyle = 'rgba(235,220,178,0.95)';
+  rhombus(A.cx+ox, A.cy+oy, 3.2*A.scale*breathe);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+/* ================= VOICE ================= */
+const voiceEl = document.getElementById('voice');
+function speak(text){
+  return new Promise(res=>{
+    A.mode='speak'; voiceEl.textContent='';
+    if(REDUCED){ voiceEl.textContent=text; A.mode='idle'; return setTimeout(res,600); }
+    if(S.lang==='ar'){
+      const words = text.split(' '); let i=0;
+      const iv = setInterval(()=>{
+        voiceEl.textContent += (i?' ':'')+words[i++];
+        if(i>=words.length){ clearInterval(iv); A.mode='idle'; setTimeout(res,700); }
+      },110);
+    } else {
+      let i=0;
+      const iv = setInterval(()=>{
+        voiceEl.textContent += text[i++];
+        if(i>=text.length){ clearInterval(iv); A.mode='idle'; setTimeout(res,700); }
+      },26);
+    }
+  });
+}
+const wait = ms => new Promise(r=>setTimeout(r,ms));
+
+/* ================= SCREENS ================= */
+const scr = id => document.getElementById(id);
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  scr(id).classList.add('on');
+}
+function applyI18n(root=document){
+  root.querySelectorAll('[data-i]').forEach(el=>{ el.textContent = t(el.dataset.i); });
+}
+
+/* ================= L0 · TERMINAL ================= */
+const term = document.getElementById('term');
+let buf='';
+function tline(text,{lbl='',cls='',speed=14}={}){
+  return new Promise(res=>{
+    const row = document.createElement('div'); row.className='ln';
+    const span = document.createElement('span'); if(cls) span.className=cls;
+    row.appendChild(span);
+    if(lbl){ const c=document.createElement('span'); c.className='lbl chip '+(lbl.toLowerCase()); c.textContent=lbl; row.appendChild(c); }
+    term.appendChild(row);
+    if(REDUCED){ span.textContent=text; return res(); }
+    let i=0; const iv=setInterval(()=>{ span.textContent+=text[i++]; if(i>=text.length){clearInterval(iv);res();} },speed);
+  });
+}
+function promptLine(){
+  const row = document.createElement('div'); row.className='ln';
+  row.innerHTML = '<span><span class="gold">node0</span><span class="dim"> $ </span><span id="typed"></span><span id="cursor"></span> <span class="ghost" id="hint"></span></span>';
+  term.appendChild(row);
+}
+async function bootExisting(bond){
+  await tline('DEMA v0.2.0-alpha — sovereign runtime', {lbl:'STATIC', cls:'dim'});
+  await tline('checking this device for a bond…', {cls:'dim'});
+  await tline(`bond found · ${bond.call} · ${bond.receipt.slice(0,16)}…`, {lbl:'MEASURED', cls:'gold'});
+  await wait(500);
+  S.lang = bond.lang; L = I18N[S.lang];
+  setDir(); Object.assign(S.contract,bond); S.receipt=bond.receipt;
+  enterWorld(true);
+}
+async function bootNew(){
+  await tline('DEMA v0.2.0-alpha — sovereign runtime', {lbl:'STATIC', cls:'dim'});
+  await tline('checking this device for a bond…', {cls:'dim'});
+  await tline(`no bond on this device (${S.storageMode==='persistent'?'persistent store':'session memory'})`, {lbl:'MEASURED', cls:'dim'});
+  await tline('NEW NODE package → bonded contract', {cls:'gold'});
+  await wait(650);
+  show('scr-lang');
+}
+async function startTerminal(){
+  const prior = await stGet('dema-bond');
+  promptLine();
+  const typed = document.getElementById('typed');
+  const hint = document.getElementById('hint');
+  setTimeout(()=>{ if(!buf) hint.textContent = 'type: dema ↵'; },3800);
+  const go = async ()=>{
+    removeEventListener('keydown',onKey);
+    hint.textContent=''; typed.textContent='dema';
+    document.getElementById('cursor').remove();
+    await wait(300);
+    if(prior){ try{ await bootExisting(JSON.parse(prior)); return; }catch(e){} }
+    await bootNew();
+  };
+  const onKey = e=>{
+    if(e.key==='Enter'){ go(); return; }
+    if(e.key==='Backspace'){ buf=buf.slice(0,-1); }
+    else if(e.key.length===1){ buf+=e.key; hint.textContent=''; }
+    typed.textContent=buf;
+    if(buf.trim().toLowerCase()==='dema') go();
+  };
+  addEventListener('keydown',onKey);
+  // mobile: any tap summons the word
+  scr('scr-terminal').addEventListener('pointerdown',()=>{ if(buf!=='dema'){ buf='dema'; typed.textContent=buf; go(); } },{once:true});
+}
+
+/* ================= L1 · LANGUAGE ================= */
+function setDir(){
+  document.documentElement.lang = S.lang;
+  document.documentElement.dir = S.lang==='ar' ? 'rtl' : 'ltr';
+}
+document.querySelectorAll('.lang-card').forEach(b=>{
+  b.addEventListener('click',async ()=>{
+    S.lang = b.dataset.lang; S.contract.lang = S.lang; L = I18N[S.lang]; setDir();
+    show('scr-terminal'); scr('scr-terminal').classList.remove('on'); // clear stage → void
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+    await wait(700);
+    // GENESIS — one dot becomes the seed
+    A.mode='genesis'; A.home();
+    await wait(REDUCED?200:2600);
+    await speak(t('greet1')); await wait(350);
+    await speak(t('greet2')); await wait(450);
+    await speak(t('greet3')); await wait(650);
+    voiceEl.textContent='';
+    buildBond(); show('scr-bond');
+    A.ts = 0.62; A.ty = H*0.30; // she steps back, smaller, above the contract
+  });
+});
+
+/* ================= L2 · BONDED CONTRACT ================= */
+const bondBox = document.getElementById('bond-box');
+function buildBond(){
+  bondBox.innerHTML = `
+    <h2>${t('bond_title')}</h2>
+    <p class="lead">${t('bond_lead')}</p>
+    <div data-step="0">
+      <label for="f-name">${t('q_name')}</label>
+      <input type="text" id="f-name" autocomplete="off">
+      <label for="f-call">${t('q_call')}</label>
+      <input type="text" id="f-call" autocomplete="off">
+      <label>${t('q_why')}</label>
+      <div class="choices">
+        <button class="choice" data-v="work">${t('why1')}</button>
+        <button class="choice" data-v="learn">${t('why2')}</button>
+        <button class="choice" data-v="protect">${t('why3')}</button>
+      </div>
+      <button class="btn" id="to-consent" disabled>${t('next')}</button>
+    </div>
+    <div data-step="1" hidden>
+      <label style="margin-top:0">${t('consent_h')}</label>
+      ${consentRow('hardware', t('c_hw'), t('c_hw_n'))}
+      ${consentRow('system',   t('c_os'), t('c_os_n'))}
+      ${consentRow('apps',     t('c_apps'), t('c_apps_n'), true)}
+      ${consentRow('data',     t('c_data'), t('c_data_n'), true)}
+      <button class="btn" id="to-seal">${t('next')}</button>
+    </div>
+    <div data-step="2" hidden>
+      <label style="margin-top:0">${t('seal_h')}</label>
+      <p class="lead" style="margin-bottom:.4rem">${t('seal_lead')}</p>
+      <div class="seal-phrase">${t('seal_phrase')}</div>
+      <input type="text" id="f-seal" autocomplete="off" dir="auto">
+      <div class="err" id="seal-err"></div>
+      <button class="btn" id="do-seal">${t('seal_btn')}</button>
+    </div>`;
+  const name = bondBox.querySelector('#f-name');
+  const call = bondBox.querySelector('#f-call');
+  const nextBtn = bondBox.querySelector('#to-consent');
+  let intent='';
+  const check = ()=>{ nextBtn.disabled = !(name.value.trim() && intent); };
+  name.addEventListener('input',()=>{ if(!call.dataset.touched) call.value=name.value; check(); });
+  call.addEventListener('input',()=>{ call.dataset.touched=1; });
+  bondBox.querySelectorAll('.choice').forEach(c=>c.addEventListener('click',()=>{
+    bondBox.querySelectorAll('.choice').forEach(x=>x.classList.remove('sel'));
+    c.classList.add('sel'); intent=c.dataset.v; check();
+  }));
+  nextBtn.addEventListener('click',()=>{
+    S.contract.name=name.value.trim();
+    S.contract.call=(call.value.trim()||S.contract.name);
+    S.contract.intent=intent;
+    step(1);
+  });
+  bondBox.querySelectorAll('.toggle').forEach(tg=>tg.addEventListener('click',()=>{
+    const on = tg.getAttribute('aria-pressed')==='true';
+    tg.setAttribute('aria-pressed',String(!on));
+  }));
+  bondBox.querySelector('#to-seal').addEventListener('click',()=>{
+    ['hardware','system','apps','data'].forEach(k=>{
+      S.contract.consents[k] = bondBox.querySelector(`.toggle[data-k="${k}"]`).getAttribute('aria-pressed')==='true';
+    });
+    step(2); bondBox.querySelector('#f-seal').focus();
+  });
+  bondBox.querySelector('#do-seal').addEventListener('click',seal);
+  bondBox.querySelector('#f-seal').addEventListener('keydown',e=>{ if(e.key==='Enter') seal(); });
+  applyI18n(bondBox);
+}
+function consentRow(k,txt,note,agent){
+  return `<div class="consent-row">
+    <div class="txt">${txt}<span class="note">${note} <span class="chip ${agent?'agent':'measured'}" style="font-size:9px">${agent?'AGENT':'MEASURED'}</span></span></div>
+    <button class="toggle" data-k="${k}" aria-pressed="false" ${agent?'disabled title="requires local dema agent — not this page"':''} aria-label="${txt}"></button>
+  </div>`;
+}
+function step(n){
+  bondBox.querySelectorAll('[data-step]').forEach(d=>d.hidden = d.dataset.step!=String(n));
+}
+const norm = s => s.normalize('NFC').replace(/[\u064B-\u0652\u0670]/g,'')
+  .replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').replace(/\s+/g,' ').trim().toLowerCase();
+async function seal(){
+  const inp = bondBox.querySelector('#f-seal').value;
+  if(norm(inp)!==norm(t('seal_phrase'))){
+    bondBox.querySelector('#seal-err').textContent = t('seal_err'); return;
+  }
+  S.contract.ts = new Date().toISOString();
+  S.receipt = await sha256(canonical(S.contract));
+  await stSet('dema-bond', JSON.stringify({...S.contract, receipt:S.receipt}));
+  show('scr-bond'); scr('scr-bond').classList.remove('on');
+  A.pulse = 1; A.ts = 1; A.home();
+  await wait(700);
+  await speak(t('sealed'));
+  await wait(500);
+  await speak(t('scan_line'));
+  voiceEl.textContent='';
+  enterWorld(false);
+}
+/* canonical JSON (sorted keys) + real SHA-256 via WebCrypto */
+function canonical(o){
+  if(Array.isArray(o)) return '['+o.map(canonical).join(',')+']';
+  if(o && typeof o==='object') return '{'+Object.keys(o).sort().map(k=>JSON.stringify(k)+':'+canonical(o[k])).join(',')+'}';
+  return JSON.stringify(o);
+}
+async function sha256(str){
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+/* ================= PROBES — real, or honestly absent ================= */
+function probeGPU(){
+  try{
+    const c=document.createElement('canvas');
+    const gl=c.getContext('webgl')||c.getContext('experimental-webgl');
+    const ext=gl.getExtension('WEBGL_debug_renderer_info');
+    const r=gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+    return {v:String(r).replace(/ANGLE \(|\)$/g,''), c:'measured'};
+  }catch(e){ return {v:t('unavailable'), c:'static'}; }
+}
+const fmtGB = b => (b/1073741824).toFixed(1)+' GB';
+async function probes(){
+  const rows=[];
+  rows.push({k:t('k_gpu'), ...probeGPU()});
+  rows.push({k:t('k_cores'), v:String(navigator.hardwareConcurrency||'—'), c: navigator.hardwareConcurrency?'measured':'static'});
+  rows.push(navigator.deviceMemory
+    ? {k:t('k_mem'), v:'~'+navigator.deviceMemory+' GB', c:'measured', sub:t('mem_cap')}
+    : {k:t('k_mem'), v:t('unavailable'), c:'static'});
+  try{
+    const e=await navigator.storage.estimate();
+    rows.push({k:t('k_store'), v:fmtGB(e.usage||0)+' / '+fmtGB(e.quota||0), c:'measured', sub:t('store_note')});
+  }catch(err){ rows.push({k:t('k_store'), v:t('unavailable'), c:'static'}); }
+  rows.push({k:t('k_screen'), v:`${screen.width}×${screen.height} @${devicePixelRatio||1}x`, c:'measured'});
+  try{
+    if(navigator.getBattery){ const b=await navigator.getBattery();
+      rows.push({k:t('k_batt'), v:Math.round(b.level*100)+'%'+(b.charging?' ⚡':''), c:'measured'}); }
+  }catch(e){}
+  return rows;
+}
+function probesOS(){
+  const plat = (navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||'—';
+  const rows=[
+    {k:t('k_os'), v:plat, c:'measured'},
+    {k:t('k_lang'), v:navigator.language, c:'measured'},
+    {k:t('k_tz'), v:Intl.DateTimeFormat().resolvedOptions().timeZone, c:'measured'},
+  ];
+  if(navigator.connection&&navigator.connection.effectiveType)
+    rows.push({k:t('k_net'), v:navigator.connection.effectiveType, c:'measured'});
+  return rows;
+}
+
+/* ================= L3 · THE WORLD ================= */
+function rowHTML(r){
+  return `<div class="row"><span class="k">${r.k}</span>
+    <span class="v"><span>${r.v}</span> <span class="chip ${r.c}" style="font-size:9px">${r.c==='measured'?t('chip_live'):r.c.toUpperCase()}</span>
+    ${r.sub?`<span class="sub">${r.sub}</span>`:''}</span></div>`;
+}
+async function enterWorld(returning){
+  applyI18n();
+  show('scr-world');
+  A.ts=0.5; A.tx=W/2; A.ty=Math.min(H*0.42, 380*0.5+H*0.18);
+  const greet = document.getElementById('greet');
+  greet.textContent = (returning?t('welcome_back'):t('greet_world')).replace('{name}',S.contract.call);
+  document.getElementById('receipt-hash').textContent = S.receipt ? S.receipt.slice(0,16)+'…' : '—';
+
+  const hwGrid = document.getElementById('hw-grid');
+  const pHW = document.getElementById('p-hw');
+  // HARDWARE — only if consented; fail-closed otherwise
+  await wait(400);
+  pHW.classList.add('in');
+  if(S.contract.consents.hardware){
+    burstAt(pHW);
+    const rows = await probes();
+    for(const r of rows){ hwGrid.insertAdjacentHTML('beforeend', rowHTML(r)); await wait(REDUCED?0:160); }
+  } else {
+    hwGrid.innerHTML = `<div class="row"><span class="k">${t('denied')}</span><span class="v"><span class="chip blocked" style="font-size:9px">FAIL-CLOSED</span></span></div>`;
+  }
+  // SYSTEM rows join the hardware band (top of the world, as specified)
+  if(S.contract.consents.system){
+    for(const r of probesOS()){ hwGrid.insertAdjacentHTML('beforeend', rowHTML(r)); await wait(REDUCED?0:140); }
+    hwGrid.insertAdjacentHTML('beforeend', `<div id="os-note" style="grid-column:1/-1">${t('os_note')} <span class="chip agent" style="font-size:9px">AGENT</span></div>`);
+  }
+  await wait(300);
+  ['p-apps','p-data','p-foot','p-center'].forEach((id,i)=>setTimeout(()=>scr(id).classList.add('in'), i*180));
+  await wait(400);
+  initViews(returning);
+}
+function burstAt(el){
+  const b = el.getBoundingClientRect();
+  A.burst = {x:b.left+b.width/2, y:b.top+40, t0:A.t};
+}
+
+/* sample data — SIMULATED, only on explicit request, undoable */
+const SAMPLES = {
+  apps:[{k:'ollama',v:'0.9.2'},{k:'code',v:'1.101'},{k:'cargo',v:'1.83'}],
+  data:[{k:'~/projects',v:'—'},{k:'~/photos',v:'—'},{k:'~/docs',v:'—'}],
+};
+function fillSample(mist,kind){
+  const box=document.createElement('div'); box.style.cssText='width:100%';
+  box.innerHTML = SAMPLES[kind].map(r=>`<div class="row"><span class="k">${r.k}</span><span class="v"><span>${r.v}</span> <span class="chip sim" style="font-size:9px">SIMULATED</span></span></div>`).join('')
+    + `<button class="samplebtn" style="margin-top:.8rem" aria-label="clear sample">×</button>`;
+  mist.replaceChildren(box);
+  box.querySelector('button').onclick = ()=>restoreFog(mist,kind);
+}
+function restoreFog(mist,kind){
+  mist.innerHTML = `<p>${t(kind==='apps'?'fog_apps':'fog_data')}</p>
+    <span class="ws">ws://127.0.0.1:7777/dema · ${t('not_live')}</span>
+    <button class="samplebtn" data-fill="${kind}">${t('sample_btn')}</button>`;
+  mist.querySelector('[data-fill]').onclick = ()=>fillSample(mist,kind);
+}
+document.querySelectorAll('.samplebtn[data-fill]').forEach(b=>{
+  b.onclick = ()=>fillSample(b.closest('.mist'), b.dataset.fill);
+});
+
+/* copy receipt */
+document.getElementById('copy-hash').addEventListener('click',async ()=>{
+  if(S.receipt){ try{ await navigator.clipboard.writeText(S.receipt); }catch(e){} }
+});
+
+/* ================= SELF-AUDIT ================= */
+document.getElementById('audit-open').addEventListener('click',()=>{
+  const tb=document.getElementById('audit-table');
+  tb.innerHTML = [
+    ['External network requests by this page','0 — no fonts, no CDN, no analytics. Verify: DevTools → Network.'],
+    ['Local-machine requests','one, opt-in: the Mind scan knocks on 127.0.0.1:11434 (Ollama) only when you press the button. It never leaves your device.'],
+    ['Data leaving this device','none — the only fetch() in source targets 127.0.0.1. No external XHR, no beacon. Verify: view-source.'],
+    ['Quest progress','onboarding quests are measured by this page; quests you add are self-reported and chipped as such. The 7-day chain trusts your device clock and says so.'],
+    ['Hardware / system values','read live via browser APIs (WebGL, hardwareConcurrency, storage.estimate). Each row is chipped.'],
+    ['Apps / files panels','never read by this page. Marked AGENT — they require the local dema daemon. The ws:// line is DESIGNED, NOT LIVE.'],
+    ['Sample data','appears only when you press the sample button; every fake row is chipped SIMULATED and removable.'],
+    ['Bond fingerprint preview','SHA-256 of the canonical JSON of your actual answers, computed in-memory via WebCrypto. It binds to content, not to a timestamp trick.'],
+    ['Bond persistence',`${S.storageMode==='persistent'?'persistent key-value store (this environment)':'session memory only — the real product persists via the local agent'}.`],
+    ['Consent model','fail-closed: any category you decline stays dark, and the page tells you so.'],
+  ].map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+  document.getElementById('audit').classList.add('on');
+});
+document.getElementById('audit-close').addEventListener('click',()=>document.getElementById('audit').classList.remove('on'));
+
+/* ================= VIEWS ================= */
+document.querySelectorAll('#wnav button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#wnav button').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.wview').forEach(v=>v.classList.remove('on'));
+  b.classList.add('on'); document.getElementById(b.dataset.v).classList.add('on');
+}));
+
+/* ================= SESSION PULSE — independent frame sampler ================= */
+const PULSE = {s:[], last:performance.now()};
+(function sample(now){
+  const dt = now - PULSE.last; PULSE.last = now;
+  if(dt>0 && dt<200){ PULSE.s.push(1000/dt); if(PULSE.s.length>140) PULSE.s.shift(); }
+  requestAnimationFrame(sample);
+})(performance.now());
+function drawSpark(){
+  const c = document.getElementById('spark'); if(!c || !PULSE.s.length) return;
+  const g = c.getContext('2d'); const w = c.width = c.clientWidth*2, h = c.height = 88;
+  g.clearRect(0,0,w,h);
+  const lo = Math.min(...PULSE.s), hi = Math.max(...PULSE.s, lo+1);
+  g.strokeStyle = '#C9A962'; g.lineWidth = 2; g.beginPath();
+  PULSE.s.forEach((v,i)=>{
+    const x = i/(140-1)*w, y = h-6 - (v-lo)/(hi-lo)*(h-12);
+    i ? g.lineTo(x,y) : g.moveTo(x,y);
+  });
+  g.stroke();
+  const sr = document.getElementById('sparkrange');
+  if(sr) sr.textContent = `${lo.toFixed(0)} — ${hi.toFixed(0)} fps · now ${PULSE.s[PULSE.s.length-1].toFixed(0)}`;
+}
+
+/* ================= PERSISTED STATE (quests · days · mind) ================= */
+const D = { visitDays:[], quests:[], mind:null, lastSeen:null };
+const dayStr = () => new Date().toLocaleDateString('en-CA');
+async function loadD(){
+  try{ const raw = await stGet('dema-state'); if(raw) Object.assign(D, JSON.parse(raw)); }catch(e){}
+}
+async function saveD(){ await stSet('dema-state', JSON.stringify(D)); }
+function streak(){
+  const set = new Set(D.visitDays); let n=0; const d = new Date();
+  while(set.has(d.toLocaleDateString('en-CA'))){ n++; d.setDate(d.getDate()-1); }
+  return n;
+}
+
+/* ================= QUESTS ================= */
+function questRow(q){
+  const pct = Math.min(100, q.t ? q.p/q.t*100 : 0);
+  const chip = q.kind==='measured' ? `<span class="chip measured">${t('chip_live')}</span>`
+             : q.kind==='agent'    ? `<span class="chip agent">AGENT</span>`
+             : `<span class="chip sim">${t('q_self')}</span>`;
+  const tick = q.kind==='self' && q.p<q.t ? `<button class="qtick" data-q="${q.id}">${t('q_tick')}</button>` : '';
+  return `<div class="quest ${q.p>=q.t?'qdone':''}">
+    <div class="qhead"><span class="qname">${q.name}</span><span class="qnum">${q.p} / ${q.t}</span></div>
+    <div class="qbar"><i style="width:${pct}%"></i></div>
+    <div class="qsub">${chip}${q.sub?`<span>${q.sub}</span>`:''}${tick}</div>
+  </div>`;
+}
+function measuredQuests(){
+  return [
+    {id:'bond', name:t('q_bond'), p:S.receipt?1:0, t:1, kind:'measured'},
+    {id:'hw', name:t('q_hw'), p:S.contract.consents.hardware?1:0, t:1, kind:'measured'},
+    {id:'mind', name:t('q_mind'), p:D.mind?1:0, t:1, kind:'measured'},
+    {id:'chain', name:t('q_chain'), p:Math.min(streak(),7), t:7, kind:'measured', sub:t('q_chain_n')},
+    {id:'agent', name:t('q_agent'), p:0, t:1, kind:'agent', sub:t('q_agent_n')},
+  ];
+}
+function renderQuests(){
+  const root = document.getElementById('q-root');
+  root.innerHTML = `<div class="wpanel in"><h3><span>${t('q_t')}</span></h3>
+    <div id="qlist">${measuredQuests().map(questRow).join('')}${D.quests.map(questRow).join('')}</div>
+    <div class="qadd">
+      <input type="text" id="q-name" placeholder="${t('q_add_ph')}" maxlength="80">
+      <input type="number" id="q-target" min="1" max="999" value="7">
+      <button class="qplus" id="q-add">${t('q_plus')}</button>
+    </div></div>`;
+  root.querySelector('#q-add').onclick = async ()=>{
+    const name = root.querySelector('#q-name').value.trim();
+    const tgt = Math.max(1, parseInt(root.querySelector('#q-target').value)||1);
+    if(!name) return;
+    D.quests.push({id:'c'+Date.now(), name, p:0, t:tgt, kind:'self'});
+    await saveD(); renderQuests();
+  };
+  root.querySelectorAll('.qtick').forEach(b=>b.onclick = async ()=>{
+    const q = D.quests.find(x=>x.id===b.dataset.q); if(!q) return;
+    q.p = Math.min(q.t, q.p+1); await saveD(); renderQuests();
+  });
+}
+
+/* ================= SKILLS — PAT-7, one leader ================= */
+const PAT = [
+  {n:'DEMA', r:'dema_r', lead:true, sk:[['Bonded contract','ACTIVE'],['Voice & presence','ACTIVE'],['Persistent bond memory','ACTIVE'],['Agent bridge','DESIGNED']]},
+  {n:'ATLAS', r:'atlas_r', sk:[['Hardware read','ACTIVE'],['System read','ACTIVE'],['App index','AGENT'],['File index','AGENT']]},
+  {n:'ORACLE', r:'oracle_r', sk:[['Local model detect','ACTIVE'],['Model guidance','ACTIVE'],['Knowledge retrieval','DESIGNED']]},
+  {n:'FORGE', r:'forge_r', sk:[['Inventory export','ACTIVE'],['Receipt hashing','ACTIVE'],['Local actions','AGENT']]},
+  {n:'JUDGE', r:'judge_r', sk:[['Fail-closed gate','ACTIVE'],['Typed consent','ACTIVE'],['Ihsan scoring','DESIGNED']]},
+  {n:'CROWN', r:'crown_r', sk:[['Quest ledger','ACTIVE'],['URP share','DESIGNED'],['Soulbound governance','DESIGNED']]},
+  {n:'HERALD', r:'herald_r', sk:[['Bond fingerprint preview','ACTIVE'],['Truth chips','ACTIVE'],['URP envelope draft','DESIGNED']]},
+];
+const stChip = s => s==='ACTIVE' ? '<span class="chip measured">ACTIVE</span>'
+              : s==='AGENT' ? '<span class="chip agent">AGENT</span>'
+              : '<span class="chip static">DESIGNED</span>';
+function renderSkills(){
+  document.getElementById('sk-root').innerHTML = `<div class="wpanel in"><h3><span>${t('sk_t')}</span></h3>
+    <div class="tree">${PAT.map(p=>`
+      <div class="pat ${p.lead?'leader':''}">
+        <h4><span class="nq"></span>${p.n}${p.lead?` · <span style="color:var(--gold)">${t('sk_leader')}</span>`:''}</h4>
+        <div class="role">${t(p.r)}</div>
+        ${p.sk.map(s=>`<div class="sk"><span>${s[0]}</span>${stChip(s[1])}</div>`).join('')}
+      </div>`).join('')}</div>
+    <div class="tree-legend">${t('sk_legend')}</div></div>`;
+}
+
+/* ================= MIND — real detection, honest fallback ================= */
+function memTier(){
+  const m = navigator.deviceMemory;
+  if(!m) return 'm_rec_small';
+  return m>=8 ? 'm_rec_big' : 'm_rec_mid';
+}
+function renderMind(){
+  const root = document.getElementById('m-root');
+  root.innerHTML = `<div class="wpanel in"><h3><span>${t('m_t')}</span><span class="chip measured" style="opacity:.7">127.0.0.1</span></h3>
+    <div class="mindbox">
+      <p class="invnote">${t('m_detect_note')}</p>
+      <div><button class="btn" id="m-go" style="margin-top:0">${t('m_detect')}</button></div>
+      <div id="m-out"></div>
+    </div></div>`;
+  root.querySelector('#m-go').onclick = detectMind;
+  if(D.mind) mindPicked(D.mind, root.querySelector('#m-out'), true);
+}
+async function detectMind(){
+  const out = document.getElementById('m-out');
+  out.innerHTML = `<p class="invnote">${t('m_detecting')}</p>`;
+  const ctl = new AbortController();
+  const to = setTimeout(()=>ctl.abort(), 1800);
+  try{
+    const r = await fetch('http://127.0.0.1:11434/api/tags', {signal:ctl.signal});
+    clearTimeout(to);
+    const j = await r.json();
+    const models = (j.models||[]).map(m=>({name:m.name, gb:(m.size/1073741824).toFixed(1)}));
+    if(!models.length) throw new Error('empty');
+    out.innerHTML = `<p class="invnote" style="color:var(--gold-bright)">${t('m_found')}</p>` +
+      models.map(m=>`<div class="mrow"><span class="mn">${m.name} <span style="color:var(--faint)">· ${m.gb} GB</span> <span class="chip measured" style="font-size:9px">${t('chip_live')}</span></span>
+        <button class="mpick ${D.mind===m.name?'sel':''}" data-m="${m.name}">${t('m_pick')}</button></div>`).join('');
+    out.querySelectorAll('.mpick').forEach(b=>b.onclick = async ()=>{
+      D.mind = b.dataset.m; await saveD(); mindPicked(D.mind, out, false); renderQuests();
+    });
+  }catch(e){
+    clearTimeout(to);
+    out.innerHTML = `
+      <p class="invnote" style="color:var(--sim)">${t('m_none')}</p>
+      <p class="invnote" style="margin-top:.4rem">${t('m_hint_h')}</p>
+      <div class="mhint">OLLAMA_ORIGINS="*" ollama serve <span class="chip static" style="font-size:9px">STATIC</span></div>
+      <p class="invnote" style="margin-top:.6rem">${t('m_rec_h')}</p>
+      <div class="mcards">
+        <div class="mcard"><b>${t(memTier())}</b><span class="chip static" style="font-size:9px">${t('m_rec_note')}</span></div>
+      </div>`;
+  }
+}
+async function mindPicked(name, out, silent){
+  out.innerHTML = `<div class="mrow"><span class="mn">${name} <span class="chip measured" style="font-size:9px">${t('chip_live')}</span></span>
+    <button class="mpick sel">${t('m_pick')}</button></div>`;
+  if(!silent) speak(t('m_picked').replace('{m}', name));
+}
+
+/* ================= INVENTORY — export toward URP ================= */
+async function buildInventory(){
+  const node = {};
+  for(const r of await probes()) node[r.k] = {value:r.v, evidence:r.c.toUpperCase()};
+  for(const r of probesOS()) node[r.k] = {value:r.v, evidence:r.c.toUpperCase()};
+  return {
+    v:'inventory.v1',
+    bond_receipt: S.receipt || null,
+    consents: S.contract.consents,
+    node,
+    quests: measuredQuests().map(q=>({id:q.id, p:q.p, t:q.t, kind:q.kind}))
+            .concat(D.quests.map(q=>({id:q.id, name:q.name, p:q.p, t:q.t, kind:q.kind}))),
+    mind: D.mind ? {choice:D.mind, evidence:'MEASURED'} : null,
+    chain_days: streak(),
+    ts: new Date().toISOString(),
+  };
+}
+async function renderInventory(){
+  const inv = await buildInventory();
+  const json = canonical(inv);
+  const hash = await sha256(json);
+  const root = document.getElementById('inv-root');
+  root.innerHTML = `<div class="wpanel in"><h3><span>${t('inv_t')}</span><span class="chip measured">${t('chip_live')}</span></h3>
+    <p class="invnote">${t('inv_note')}</p>
+    <div class="row"><span class="k">${t('inv_hash_t')}</span><span class="v"><span class="chip measured" style="font-size:9px">SHA-256</span></span></div>
+    <div class="invhash">${hash}</div>
+    <div class="invbtns" style="margin-top:.8rem">
+      <button class="qplus" id="inv-copy">${t('inv_copy')}</button>
+      <button class="qplus" id="inv-dl">${t('inv_dl')}</button>
+      <button class="qplus" disabled style="opacity:.4">${t('inv_urp')} · ${t('inv_urp_n')}</button>
+    </div></div>
+    <div class="wpanel in"><h3><span>${t('spark_t')}</span><span class="chip measured">${t('spark_n')}</span></h3>
+      <canvas id="spark"></canvas><div class="sparkrow"><span id="sparkrange">—</span><span>140 f</span></div></div>`;
+  root.querySelector('#inv-copy').onclick = async ()=>{ try{ await navigator.clipboard.writeText(json); }catch(e){} };
+  root.querySelector('#inv-dl').onclick = ()=>{
+    const b = new Blob([json], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+    a.download = 'node0-inventory.json'; a.click(); URL.revokeObjectURL(a.href);
+  };
+  drawSpark();
+  if(!window.__sparkIv) window.__sparkIv = setInterval(()=>{ if(document.getElementById('spark')) drawSpark(); }, 1000);
+}
+
+/* ================= CONTINUITY — she remembers where you left her ================= */
+async function initViews(returning){
+  await loadD();
+  const prevSeen = D.lastSeen;
+  const today = dayStr();
+  if(!D.visitDays.includes(today)) D.visitDays.push(today);
+  D.lastSeen = today;
+  await saveD();
+  renderQuests(); renderSkills(); renderMind(); renderInventory();
+  if(returning && prevSeen){
+    const d = Math.round((new Date(today) - new Date(prevSeen)) / 86400000);
+    const when = d<=0 ? t('since_today') : d===1 ? t('since_yesterday') : t('since_days').replace('{d}', d);
+    const open = D.quests.find(q=>q.p<q.t);
+    const qline = open ? t('since_quest').replace('{name}',open.name).replace('{p}',open.p).replace('{t}',open.t) : t('since_noquest');
+    await wait(1200);
+    speak(t('since_line').replace('{when}',when).replace('{s}',Math.min(streak(),7)).replace('{q}',qline));
+  }
+}
+
+/* ================= BOOT ================= */
+startTerminal();
+</script>
+</body>
+</html>
