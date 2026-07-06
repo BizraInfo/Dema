@@ -14,7 +14,10 @@ import {
   PREVIEW_RECEIPT_SIGNING_TRUTH_LABEL,
   PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
 } from "../packages/core/src/preview-receipt-signing.js";
-import { generateEd25519Keypair } from "../packages/receipts/src/authorship-signature.js";
+import {
+  generateEd25519Keypair,
+  signPayload,
+} from "../packages/receipts/src/authorship-signature.js";
 import { buildPeakSelfLoopPreview } from "../packages/core/src/peak-self-loop-preview.js";
 import { runPreviewReceiptSigningCheck } from "../scripts/review/preview-receipt-signing-check.mjs";
 
@@ -178,6 +181,101 @@ test("signature anchor rejects a forged field even with a recomputed content_has
   assert.equal(verdict.reason, "signature_invalid");
 });
 
+test("verify rejects a swapped public-key fingerprint (identity must re-derive from PEM)", () => {
+  const signed = signPreviewReceipt({
+    preview: FIXTURE_PREVIEW,
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    privateKeyPem: KEYS.private_key_pem,
+    publicKeyPem: KEYS.public_key_pem,
+  });
+  const otherFingerprint = generateEd25519Keypair().public_key_fingerprint;
+  const swapped = {
+    ...signed,
+    signature: { ...signed.signature, public_key_fingerprint: otherFingerprint },
+  };
+  const verdict = verifyPreviewReceiptSigning(swapped);
+  assert.equal(verdict.ok, false);
+  assert.equal(verdict.reason, "public_key_fingerprint_mismatch");
+});
+
+test("signing with a mismatched caller-supplied fingerprint blocks fail-closed", () => {
+  const blocked = signPreviewReceipt({
+    preview: FIXTURE_PREVIEW,
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    privateKeyPem: KEYS.private_key_pem,
+    publicKeyPem: KEYS.public_key_pem,
+    publicKeyFingerprint: generateEd25519Keypair().public_key_fingerprint,
+  });
+  assert.equal(blocked.signed, false);
+  assert.ok(blocked.blocked_by.includes("public_key_fingerprint_mismatch"));
+});
+
+test("verify rejects an altered consent go_phrase_hash on a signed envelope", () => {
+  const signed = signPreviewReceipt({
+    preview: FIXTURE_PREVIEW,
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    privateKeyPem: KEYS.private_key_pem,
+    publicKeyPem: KEYS.public_key_pem,
+  });
+  const altered = {
+    ...signed,
+    consent: { ...signed.consent, go_phrase_hash: `sha256:${"a".repeat(64)}` },
+  };
+  const verdict = verifyPreviewReceiptSigning(altered);
+  assert.equal(verdict.ok, false);
+  assert.equal(verdict.reason, "consent_hash_invalid");
+});
+
+test("verify rejects a signed envelope with the consent block removed", () => {
+  const signed = signPreviewReceipt({
+    preview: FIXTURE_PREVIEW,
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    privateKeyPem: KEYS.private_key_pem,
+    publicKeyPem: KEYS.public_key_pem,
+  });
+  const { consent: _consent, ...withoutConsent } = signed;
+  const verdict = verifyPreviewReceiptSigning(withoutConsent);
+  assert.equal(verdict.ok, false);
+  assert.equal(verdict.reason, "consent_hash_invalid");
+});
+
+test("consent is inside the signed subject — a signature over the bare envelope fails", () => {
+  // Simulate a signer that signed only the unsigned envelope (no consent block
+  // in the signed bytes) but still attaches the correct consent metadata.
+  // Verification must reject: the displayed consent assertion was never signed.
+  const unsigned = buildPreviewReceiptSigningPayload(FIXTURE_PREVIEW);
+  const bareSignature = signPayload(unsigned, KEYS.private_key_pem);
+  const validSigned = signPreviewReceipt({
+    preview: FIXTURE_PREVIEW,
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    privateKeyPem: KEYS.private_key_pem,
+    publicKeyPem: KEYS.public_key_pem,
+  });
+  const forged = {
+    ...unsigned,
+    signed: true,
+    signed_at: validSigned.signed_at,
+    signature: { ...validSigned.signature, value: bareSignature },
+    consent: { ...validSigned.consent },
+  };
+  const verdict = verifyPreviewReceiptSigning(forged, {
+    publicKeyPem: KEYS.public_key_pem,
+  });
+  assert.equal(verdict.ok, false);
+  assert.equal(verdict.reason, "signature_invalid");
+});
+
+test("unsigned envelope carrying stray signing metadata is rejected", () => {
+  const payload = buildPreviewReceiptSigningPayload(FIXTURE_PREVIEW);
+  const withStrayConsent = {
+    ...payload,
+    consent: { go_phrase_hash: `sha256:${"b".repeat(64)}`, mode: "exact_sign" },
+  };
+  const verdict = verifyPreviewReceiptSigning(withStrayConsent);
+  assert.equal(verdict.ok, false);
+  assert.equal(verdict.reason, "unsigned_envelope_carries_signing_metadata");
+});
+
 test("signed envelope leaks no private key material", () => {
   const signed = signPreviewReceipt({
     preview: FIXTURE_PREVIEW,
@@ -202,6 +300,8 @@ test("real peak-self-loop preview signs end-to-end through the rail", () => {
   assert.equal(result.hash_stable, true);
   assert.equal(result.tamper_hash_rejected, true);
   assert.equal(result.launder_rejected, true);
+  assert.equal(result.fingerprint_tamper_rejected, true);
+  assert.equal(result.consent_tamper_rejected, true);
 });
 
 test("review gate closes the loop: build -> sign -> verify -> tamper-reject", () => {
@@ -210,6 +310,8 @@ test("review gate closes the loop: build -> sign -> verify -> tamper-reject", ()
   assert.equal(result.schema, PREVIEW_RECEIPT_SIGNING_SCHEMA);
   assert.equal(result.truth_label, PREVIEW_RECEIPT_SIGNING_TRUTH_LABEL);
   assert.equal(result.launder_rejected, true);
+  assert.equal(result.fingerprint_tamper_rejected, true);
+  assert.equal(result.consent_tamper_rejected, true);
 });
 
 test("orchestrator boundary stays all-false (no execution authority)", () => {

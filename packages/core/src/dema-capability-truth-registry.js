@@ -948,7 +948,7 @@ function defaultCapabilityRows() {
       blocked_promotion_rule:
         "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
       what_this_proves:
-        "A preview-stack report (mode preview_only) binds into a canonical content-addressed envelope that stays explicitly marked unsigned (signed:false, signature:null) until the existing Ed25519 authorship rail signs it under the exact GO phrase; the canonical hash is stable across rebuilds, whole-body re-derivation rejects tampered hashes, the signature anchor rejects forged-and-recomputed bodies, signed envelopes carry complete signature metadata without private-key material, and the boundary stays all-false including public_safe_claim.",
+        "A preview-stack report (mode preview_only) binds into a canonical content-addressed envelope that stays explicitly marked unsigned (signed:false, signature:null) until the existing Ed25519 authorship rail signs it under the exact GO phrase; the consent hash is inside the signed subject so a signature over the bare envelope fails, the displayed public-key fingerprint must re-derive from the embedded PEM, the canonical hash is stable across rebuilds, whole-body re-derivation rejects tampered hashes, the signature anchor rejects forged-and-recomputed bodies, signed envelopes carry complete signature metadata without private-key material, and the boundary stays all-false including public_safe_claim.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [

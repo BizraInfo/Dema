@@ -50,10 +50,15 @@ verifyPreviewReceiptSigning(envelope, { publicKeyPem })
 ```
 
 Body-bound re-derivation: the whole-body hash is recomputed from the
-reconstructed unsigned body, and for signed envelopes the Ed25519 signature over
-the canonical unsigned envelope (hash included) is the independent anchor — a
-forged field with a recomputed self-consistent `content_hash` still fails with
-`signature_invalid`.
+reconstructed unsigned body. For signed envelopes the Ed25519 signature is
+verified over the SIGNING SUBJECT — the canonical unsigned envelope (hash
+included) plus the consent block — so the verifier proves "these preview bytes
+were signed under this exact consent assertion", not merely "some bytes were
+signed". A forged field with a recomputed self-consistent `content_hash` still
+fails with `signature_invalid`; a signature computed without the consent block
+in the subject also fails; a displayed fingerprint that does not re-derive from
+the embedded PEM fails with `public_key_fingerprint_mismatch`. `content_hash`
+itself remains the consent-free unsigned-body hash and is unchanged by signing.
 
 ## Boundaries
 

@@ -162,9 +162,12 @@ function signatureMetadataComplete(signature) {
 }
 
 // Body-bound re-derivation verifier. Recomputes the whole-body hash and, for
-// signed envelopes, verifies the Ed25519 signature over the canonical unsigned
-// envelope (hash included) — the INDEPENDENT anchor that rejects a forged field
-// even when the forger recomputed a self-consistent content_hash.
+// signed envelopes, verifies the Ed25519 signature over the SIGNING SUBJECT —
+// the canonical unsigned envelope (hash included) PLUS the consent block — the
+// INDEPENDENT anchor that rejects a forged field even when the forger recomputed
+// a self-consistent content_hash. The displayed public-key fingerprint must
+// re-derive from the embedded PEM: a signature proves a key signed a subject;
+// the fingerprint match proves the displayed identity is that key.
 export function verifyPreviewReceiptSigning(envelope, { publicKeyPem } = {}) {
   if (!envelope || typeof envelope !== "object") {
     return { ok: false, reason: "envelope_not_object" };
@@ -187,6 +190,9 @@ export function verifyPreviewReceiptSigning(envelope, { publicKeyPem } = {}) {
     if (envelope.signature !== null) {
       return { ok: false, reason: "unsigned_envelope_carries_signature" };
     }
+    if ("signed_at" in envelope || "consent" in envelope) {
+      return { ok: false, reason: "unsigned_envelope_carries_signing_metadata" };
+    }
     return { ok: true, signed: false };
   }
   if (envelope.signed !== true) {
@@ -195,11 +201,30 @@ export function verifyPreviewReceiptSigning(envelope, { publicKeyPem } = {}) {
   if (!signatureMetadataComplete(envelope.signature)) {
     return { ok: false, reason: "signature_metadata_incomplete" };
   }
+  let derivedFingerprint;
+  try {
+    derivedFingerprint = publicKeyFingerprintFromPem(envelope.signature.public_key_pem);
+  } catch {
+    return { ok: false, reason: "public_key_invalid" };
+  }
+  if (derivedFingerprint !== envelope.signature.public_key_fingerprint) {
+    return { ok: false, reason: "public_key_fingerprint_mismatch" };
+  }
   if (envelope.consent?.go_phrase_hash !== EXPECTED_SIGN_CONSENT_HASH) {
     return { ok: false, reason: "consent_hash_invalid" };
   }
+  if (envelope.consent?.mode !== "exact_sign") {
+    return { ok: false, reason: "consent_mode_invalid" };
+  }
   const keyPem = publicKeyPem || envelope.signature.public_key_pem;
-  const signedOver = { ...body, content_hash: envelope.content_hash };
+  // Reconstruct the signing subject exactly as signed: unsigned envelope +
+  // content_hash + the stored consent block. A signature made over a subject
+  // WITHOUT the consent block (or with a different one) must fail here.
+  const signedOver = {
+    ...body,
+    content_hash: envelope.content_hash,
+    consent: envelope.consent,
+  };
   const valid = verifyPayload(signedOver, envelope.signature.value, keyPem);
   if (!valid) {
     return { ok: false, reason: "signature_invalid" };
@@ -219,8 +244,13 @@ function blockedSigning(plan, extraBlocks = []) {
 }
 
 // Sign a preview receipt through the existing rail. The signature is computed by
-// authorship-signature.js signPayload over the canonical unsigned envelope
-// (content_hash included). Blocked results are fail-closed and clearly unsigned.
+// authorship-signature.js signPayload over the SIGNING SUBJECT: the canonical
+// unsigned envelope (content_hash included) plus the consent block — so the
+// exact-consent assertion is inside the signed bytes, not attached beside them.
+// content_hash itself stays the consent-free unsigned-body hash. The displayed
+// fingerprint is always re-derived from the PEM; a mismatched caller-supplied
+// fingerprint blocks instead of shipping a false identity. Blocked results are
+// fail-closed and clearly unsigned.
 export function signPreviewReceipt({
   preview,
   consent,
@@ -236,9 +266,24 @@ export function signPreviewReceipt({
   if (!privateKeyPem || !publicKeyPem) {
     return blockedSigning(plan, ["signing_key_material_missing"]);
   }
+  let derivedFingerprint;
+  try {
+    derivedFingerprint = publicKeyFingerprintFromPem(publicKeyPem);
+  } catch {
+    return blockedSigning(plan, ["public_key_invalid"]);
+  }
+  if (publicKeyFingerprint && publicKeyFingerprint !== derivedFingerprint) {
+    return blockedSigning(plan, ["public_key_fingerprint_mismatch"]);
+  }
   const unsigned = buildPreviewReceiptSigningPayload(preview);
-  const fingerprint = publicKeyFingerprint || publicKeyFingerprintFromPem(publicKeyPem);
-  const signatureValue = signPayload(unsigned, privateKeyPem);
+  const consentBlock = {
+    go_phrase_hash: EXPECTED_SIGN_CONSENT_HASH,
+    mode: "exact_sign",
+  };
+  const signatureValue = signPayload(
+    { ...unsigned, consent: consentBlock },
+    privateKeyPem,
+  );
   return deepFreeze({
     ...unsigned,
     signed: true,
@@ -246,13 +291,10 @@ export function signPreviewReceipt({
     signature: {
       algorithm: "ed25519",
       value: signatureValue,
-      public_key_fingerprint: fingerprint,
+      public_key_fingerprint: derivedFingerprint,
       public_key_pem: publicKeyPem,
     },
-    consent: {
-      go_phrase_hash: EXPECTED_SIGN_CONSENT_HASH,
-      mode: "exact_sign",
-    },
+    consent: consentBlock,
   });
 }
 
@@ -289,7 +331,8 @@ export function previewReceiptExposesPrivateKeyMaterial(value) {
 
 // Orchestrator the review gate consumes. Runs the whole proof loop:
 // plan -> unsigned envelope (marked unsigned) -> sign -> verify -> hash-stability
-// -> tamper-reject -> forge-and-recompute launder-reject -> key-leak scan.
+// -> tamper-reject -> forge-and-recompute launder-reject -> fingerprint-swap
+// reject -> consent-swap reject -> key-leak scan.
 export function runPreviewReceiptSigning({ consent, input, generateKeypair, signedAt } = {}) {
   const blocked_by = [];
   const plan = planPreviewReceiptSigning({ consent, input });
@@ -305,6 +348,8 @@ export function runPreviewReceiptSigning({ consent, input, generateKeypair, sign
   let hash_stable = false;
   let tamper_hash_rejected = false;
   let launder_rejected = false;
+  let fingerprint_tamper_rejected = false;
+  let consent_tamper_rejected = false;
 
   if (blocked_by.length === 0) {
     unsigned = buildPreviewReceiptSigningPayload(input);
@@ -373,6 +418,36 @@ export function runPreviewReceiptSigning({ consent, input, generateKeypair, sign
         launder_rejected = verifyPreviewReceiptSigning(forged).ok === false;
         if (!launder_rejected) blocked_by.push("forged_and_recomputed_not_rejected");
 
+        // Fingerprint swap: same signature and PEM, different displayed
+        // fingerprint — the displayed identity must re-derive from the PEM.
+        const fingerprintTamper = {
+          ...signed,
+          signature: {
+            ...signed.signature,
+            public_key_fingerprint: sha256("some-other-key"),
+          },
+        };
+        fingerprint_tamper_rejected =
+          verifyPreviewReceiptSigning(fingerprintTamper).ok === false;
+        if (!fingerprint_tamper_rejected) {
+          blocked_by.push("fingerprint_tamper_not_rejected");
+        }
+
+        // Consent swap: a different go_phrase_hash must fail even though the
+        // signature bytes are untouched — consent is part of the signed subject.
+        const consentTamper = {
+          ...signed,
+          consent: {
+            ...signed.consent,
+            go_phrase_hash: `sha256:${sha256("some other phrase")}`,
+          },
+        };
+        consent_tamper_rejected =
+          verifyPreviewReceiptSigning(consentTamper).ok === false;
+        if (!consent_tamper_rejected) {
+          blocked_by.push("consent_tamper_not_rejected");
+        }
+
         if (previewReceiptExposesPrivateKeyMaterial(signed)) {
           blocked_by.push("private_key_leaked_in_envelope");
         }
@@ -392,6 +467,8 @@ export function runPreviewReceiptSigning({ consent, input, generateKeypair, sign
     hash_stable,
     tamper_hash_rejected,
     launder_rejected,
+    fingerprint_tamper_rejected,
+    consent_tamper_rejected,
     blocked_by: Object.freeze(blocked_by),
     boundary: previewReceiptSigningBoundary(),
     unsigned_envelope: unsigned,

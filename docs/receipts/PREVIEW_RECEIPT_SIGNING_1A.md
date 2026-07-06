@@ -28,6 +28,10 @@ only while:
 - the canonical content hash is stable across rebuilds and unchanged by signing,
 - the signed envelope carries complete signature metadata (algorithm, value,
   public-key fingerprint, public-key PEM) and no private-key material,
+- the exact-consent hash is inside the signed subject: a signature computed over
+  the bare envelope (consent merely attached, not signed) fails verification,
+- the displayed public-key fingerprint re-derives from the embedded PEM; a
+  swapped fingerprint fails with `public_key_fingerprint_mismatch`,
 - whole-body re-derivation rejects a tampered `content_hash`,
 - the Ed25519 signature anchor rejects a forged field even when the forger
   recomputed a self-consistent `content_hash`,
