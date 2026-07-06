@@ -54,6 +54,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "REWARD_ELIGIBILITY_CONTRACT_PREVIEW_1A",
   "SAT5_CONSTITUTIONAL_VERIFIER_SET_PREVIEW_1A",
   "NODE0_NODESPACE_BOUNDARY_PREVIEW_1A",
+  "DEMA_ACTIVE_WORKLOOP_COMPOSER_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1159,6 +1160,35 @@ function defaultCapabilityRows() {
         "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
       what_this_proves:
         "Composes injected hardware-spec and OS-tree metadata into a deterministic, content-addressed Node0 homebase-boundary snapshot: every OS binds to a known device, every guest VM or container binds to a parent OS, every filesystem root binds to a known owner OS; inside/outside/unknown homebase counts are re-derived from the primary arrays so a forged summary carrying a recomputed hash is rejected; raw serial numbers are refused and only serial_hash is admitted; encodes the user-selected scan-depth envelope (metadata_only default up to full_local_content_index) per root and as a tamper-proof kernel constant where the node owner is the sole authority for scan depth, content_read_allowed_now is false, and only receipts cross nodes by default; boundary all-false and authority_delta 0.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_ACTIVE_WORKLOOP_COMPOSER_PREVIEW_1A",
+      truth_label: "DEMA_ACTIVE_WORKLOOP_COMPOSER_PREVIEW_MEASURED_REPO",
+      summary:
+        "Preview-only composer that binds existing Dema organs (pain-goal, mission, NodeSpace boundary, homebase, proposed task, receipt preview, monitor, absence queue, return review) into one fail-closed operator work-envelope; references organs, does not run them or execute tasks.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-active-workloop-composer-preview.js"],
+        test_paths: ["tests/dema-active-workloop-composer-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-active-workloop-composer-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_ACTIVE_WORKLOOP_COMPOSER_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_ACTIVE_WORKLOOP_COMPOSER_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Composes the shipped Dema organs (pain-goal, mission, homebase, NodeSpace boundary, file steward, receipt preview, monitor, absence queue, return review) by reference into one deterministic, content-addressed operator work-envelope: fail-closed on missing boundary/consent/receipt-preview, a monitor critical, or an irreversible file action; L3+ tasks require explicit approval; an absent operator with unfinished work yields an absence-queue candidate and a returning operator a return-review candidate; allowed_next_action/blocked_by/requires_approval are re-derived from the declared state so a forged envelope is rejected; boundary all-false, authority_delta 0, runs no organ and executes no task.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
