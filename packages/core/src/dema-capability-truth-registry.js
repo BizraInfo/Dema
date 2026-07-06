@@ -49,6 +49,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "PREVIEW_RECEIPT_SIGNING_1A",
   "LOCAL_MODEL_ADAPTER_PREVIEW_1A",
   "CAPABILITY_BLAST_RADIUS_1A",
+  "RECEIPT_MONITOR_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1011,6 +1012,35 @@ function defaultCapabilityRows() {
         "Exact-consent deterministic decision matrix classifies declared action descriptors (seven canonical mutation flags + closed recovery vocabulary) into low/medium/high blast radius with named auditable reasons and reversibility derived strictly from recovery; classifications are whole-body content-addressed AND re-derivable, so a laundered downgrade (high edited to low with a recomputed hash) is rejected; descriptors with missing or non-canonical flag keys are refused at plan time.",
       what_this_does_not_prove:
         "It does not prove any action was actually performed, blocked, or safe — classification is a naming act over DECLARED flags, not runtime observation; it grants no authority, and it does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "RECEIPT_MONITOR_PREVIEW_1A",
+      truth_label: "RECEIPT_MONITOR_PREVIEW_MEASURED_REPO",
+      summary:
+        "Operator-invoked proof-health monitor: classifies injected proof-surface facts (stale proof, registry/docs drift, missing review gates, evidence-free verified claims, forbidden-claim markers) into severity findings with evidence refs — deterministic, no daemon, no autofix, no authority increase.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/receipt-monitor-preview.js"],
+        test_paths: ["tests/receipt-monitor-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/receipt-monitor-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/RECEIPT_MONITOR_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/RECEIPT_MONITOR_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Exact-consent deterministic monitor compiles injected proof-surface facts (repo state, registry counts, capability rows, receipts, symbolic claim markers) into a content-addressed findings report: ten failure classes detected with severity, surface, evidence ref, and a closed allowed-action vocabulary (inspect/repair_proof/stop_and_ask_operator); critical findings fail closed via proceed_allowed=false; findings AND summary are fully re-derivable, so a forged clean verdict or a self-consistent authority_delta increase is rejected; CI-unavailable is classified outward, never as code failure.",
+      what_this_does_not_prove:
+        "It does not prove the injected facts are true of the live repo — gathering real surfaces is a separate read-only step; it observes no runtime, fixes nothing, writes no receipts, grants no authority, and does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
