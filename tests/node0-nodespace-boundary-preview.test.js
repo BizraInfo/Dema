@@ -328,3 +328,80 @@ test("cov: run() returns a fail-closed envelope on ineligible plan", () => {
   assert.equal(r.boundary.token_minted, false);
   assert.equal(r.boundary.daemon_started, false);
 });
+
+// ---------------------------------------------------------------------------
+// Scan-policy amendment — metadata-only is the DEFAULT, not the final law.
+// The node owner is the sole authority for scan depth; only receipts cross nodes.
+// ---------------------------------------------------------------------------
+
+const POLICY = () =>
+  buildNode0NodespaceBoundaryPreviewPayload(NODE0_NODESPACE_BOUNDARY_CANONICAL_FIXTURE).content_scan_policy_preview;
+
+test("sp1 default scan mode is metadata_only", () => {
+  assert.equal(POLICY().default_mode, "metadata_only");
+});
+
+test("sp2 full_local_content_index is an available future user-selectable mode", () => {
+  assert.ok(POLICY().user_selectable_modes.includes("full_local_content_index"));
+  assert.ok(POLICY().user_selectable_modes.includes("blocked_never_scan"));
+});
+
+test("sp3 current_slice_performed_content_scan is false", () => {
+  assert.equal(POLICY().current_slice_performed_content_scan, false);
+});
+
+test("sp4 user_is_sole_authority_for_scan_depth is true", () => {
+  assert.equal(POLICY().user_is_sole_authority_for_scan_depth, true);
+  assert.equal(POLICY().requires_exact_consent_for_content_scan, true);
+});
+
+test("sp5 content_read_allowed_now is false on every preview root", () => {
+  const p = buildNode0NodespaceBoundaryPreviewPayload(NODE0_NODESPACE_BOUNDARY_CANONICAL_FIXTURE);
+  for (const o of p.os_tree) {
+    for (const r of o.filesystem_roots || []) {
+      assert.equal(r.scan_policy.content_read_allowed_now, false);
+      assert.equal(r.content_read_allowed, false);
+    }
+  }
+});
+
+test("sp6 raw_content_cross_node_default is false", () => {
+  assert.equal(POLICY().raw_content_cross_node_default, false);
+});
+
+test("sp7 receipt_cross_node_default is true", () => {
+  assert.equal(POLICY().receipt_cross_node_default, true);
+});
+
+test("sp8 rejects a selected scan mode not in the root allowed-mode list", () => {
+  const blocks = planBlocks((i) => {
+    i.os_tree[0].filesystem_roots[0].scan_policy.selected_mode = "full_local_content_index";
+    i.os_tree[0].filesystem_roots[0].scan_policy.allowed_modes = ["metadata_only"];
+  });
+  assert.ok(blocks.some((b) => b.startsWith("root_scan_policy_selected_not_allowed:")));
+});
+
+test("sp9 rejects content scan performed now without exact consent", () => {
+  const blocks = planBlocks((i) => {
+    i.os_tree[0].filesystem_roots[0].scan_policy.content_read_allowed_now = true;
+  });
+  assert.ok(blocks.some((b) => b.startsWith("root_scan_policy_content_read_now:")));
+});
+
+test("sp10 rejects any output implying Dema chose scan depth for the user", () => {
+  const p = buildNode0NodespaceBoundaryPreviewPayload(NODE0_NODESPACE_BOUNDARY_CANONICAL_FIXTURE);
+  const forged = {
+    ...p,
+    content_scan_policy_preview: { ...p.content_scan_policy_preview, user_is_sole_authority_for_scan_depth: false },
+  };
+  const v = verifyNode0NodespaceBoundaryPreview(forged);
+  assert.equal(v.ok, false);
+  assert.ok(v.blocked_by.includes("content_scan_policy_not_canonical"));
+});
+
+test("sp cov: missing / malformed root scan_policy is fail-closed", () => {
+  assert.ok(planBlocks((i) => { delete i.os_tree[0].filesystem_roots[0].scan_policy; }).some((b) => b.startsWith("root_scan_policy_missing:")));
+  assert.ok(planBlocks((i) => { i.os_tree[0].filesystem_roots[0].scan_policy.selected_mode = "wipe_disk"; }).some((b) => b.startsWith("root_scan_policy_selected_mode_invalid:")));
+  assert.ok(planBlocks((i) => { i.os_tree[0].filesystem_roots[0].scan_policy.allowed_modes = ["nope"]; }).some((b) => b.startsWith("root_scan_policy_allowed_modes_invalid:")));
+  assert.ok(planBlocks((i) => { i.os_tree[0].filesystem_roots[0].scan_policy.future_user_consent_required = false; }).some((b) => b.startsWith("root_scan_policy_future_consent_required:")));
+});

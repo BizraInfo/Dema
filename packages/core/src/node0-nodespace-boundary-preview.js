@@ -50,6 +50,33 @@ export const NODESPACE_SCAN_SCOPES = Object.freeze([
   "future_consent_required",
 ]);
 
+// User-selected scan-depth envelope. Metadata-only is the safe DEFAULT and this
+// preview's execution boundary — it is NOT the final BIZRA law. The node owner
+// may later choose any depth up to a full local content index; no model, SAT,
+// Dema, URP, or other node may choose scan depth for the user. Content scan is
+// local-first, consent-scoped, receipt-bound, and revocable. Only receipts cross
+// nodes by default; raw content crosses only under separate explicit consent.
+export const NODESPACE_SCAN_POLICY_MODES = Object.freeze([
+  "metadata_only",
+  "content_hash_only",
+  "selective_content_index",
+  "full_local_content_index",
+  "blocked_never_scan",
+]);
+
+// Canonical, tamper-proof declaration of the scan-policy envelope. Built as a
+// kernel constant (not from input) so a forged "Dema chose the depth" claim is
+// rejected by verify. The user is the sole authority for scan depth.
+export const NODESPACE_CONTENT_SCAN_POLICY_PREVIEW = Object.freeze({
+  default_mode: "metadata_only",
+  user_selectable_modes: NODESPACE_SCAN_POLICY_MODES,
+  current_slice_performed_content_scan: false,
+  user_is_sole_authority_for_scan_depth: true,
+  requires_exact_consent_for_content_scan: true,
+  raw_content_cross_node_default: false,
+  receipt_cross_node_default: true,
+});
+
 // Raw serials must never enter the body. Only serial_hash is admitted. Any of
 // these keys present on a hardware row is a hard, named block.
 export const RAW_SERIAL_FORBIDDEN_KEYS = Object.freeze([
@@ -76,6 +103,7 @@ export const CORE_BODY_KEYS = Object.freeze([
   "filesystem_root_count",
   "authority_delta",
   "boundary",
+  "content_scan_policy_preview",
   "previous_state_hash",
   "what_this_proves",
   "what_this_does_not_prove",
@@ -86,10 +114,12 @@ const WHAT_THIS_PROVES = Object.freeze([
   "Every OS binds to a known hardware device_id; every guest VM / container binds to a parent OS; every filesystem root binds to a known owner OS.",
   "Inside / outside / unknown homebase counts are re-derived from the primary arrays, so a forged summary carrying a recomputed hash is still rejected.",
   "Raw serial numbers are refused at plan and verify; only serial_hash is admitted.",
+  "The user-selected scan-depth envelope (metadata_only default, up to full_local_content_index) is encoded per root and as a tamper-proof kernel constant; the user is the sole authority for scan depth, content_read_allowed_now is false in this preview, and a forged 'Dema chose the depth' claim is rejected.",
 ]);
 
 const WHAT_THIS_DOES_NOT_PROVE = Object.freeze([
   "It does not scan any real device, read any file content, or list any real directory.",
+  "Metadata-only is this preview's default and execution boundary, not the final BIZRA law; the node owner may later choose deeper scan modes, but any content scan requires separate exact consent and is not performed here.",
   "It does not prove the injected metadata is truthful; a fully self-consistent fabricated inventory is out of scope without external device attestation.",
   "It does not activate URP, mint, touch a wallet, federate, invoke a model, or start any live runtime; the boundary is all-false and authority_delta is 0.",
 ]);
@@ -275,6 +305,32 @@ export function nodespaceBoundaryValidationBlocks(input) {
           if (!NODESPACE_SCAN_SCOPES.includes(r.scan_scope)) {
             blocked.push(`root_scan_scope_invalid:${rid}`);
           }
+          const sp = r.scan_policy;
+          if (!sp || typeof sp !== "object") {
+            blocked.push(`root_scan_policy_missing:${rid}`);
+          } else {
+            if (!NODESPACE_SCAN_POLICY_MODES.includes(sp.selected_mode)) {
+              blocked.push(`root_scan_policy_selected_mode_invalid:${rid}`);
+            }
+            if (
+              !Array.isArray(sp.allowed_modes) ||
+              sp.allowed_modes.length === 0 ||
+              !sp.allowed_modes.every((m) => NODESPACE_SCAN_POLICY_MODES.includes(m))
+            ) {
+              blocked.push(`root_scan_policy_allowed_modes_invalid:${rid}`);
+            } else if (!sp.allowed_modes.includes(sp.selected_mode)) {
+              // The chosen depth must sit inside the root's own allowed list.
+              blocked.push(`root_scan_policy_selected_not_allowed:${rid}`);
+            }
+            if (sp.content_read_allowed_now !== false) {
+              // Preview never reads content; a content scan "performed now"
+              // without the exact consent gate is refused.
+              blocked.push(`root_scan_policy_content_read_now:${rid}`);
+            }
+            if (sp.future_user_consent_required !== true) {
+              blocked.push(`root_scan_policy_future_consent_required:${rid}`);
+            }
+          }
         }
       }
     }
@@ -355,6 +411,7 @@ export function buildNode0NodespaceBoundaryPreviewPayload(input) {
     filesystem_root_count: summary.filesystem_root_count,
     authority_delta: 0,
     boundary: node0NodespaceBoundaryPreviewBoundary(),
+    content_scan_policy_preview: NODESPACE_CONTENT_SCAN_POLICY_PREVIEW,
     previous_state_hash,
     what_this_proves: WHAT_THIS_PROVES,
     what_this_does_not_prove: WHAT_THIS_DOES_NOT_PROVE,
@@ -417,6 +474,16 @@ export function verifyNode0NodespaceBoundaryPreview(payload) {
   if (!boundaryAllFalse(payload.boundary)) blocked_by.push("boundary_not_all_false");
   if (payload.authority_delta !== 0) blocked_by.push("authority_delta_nonzero");
   if (payload.mode !== NODE0_NODESPACE_BOUNDARY_PREVIEW_MODE) blocked_by.push("mode_invalid");
+
+  // The scan-policy envelope is a kernel constant. Any deviation — including a
+  // forged "user_is_sole_authority_for_scan_depth: false" — is rejected here, so
+  // no output can imply Dema chose the scan depth for the user.
+  if (
+    stableStringify(payload.content_scan_policy_preview) !==
+    stableStringify(NODESPACE_CONTENT_SCAN_POLICY_PREVIEW)
+  ) {
+    blocked_by.push("content_scan_policy_not_canonical");
+  }
 
   if (payload.inventory_snapshot_hash !== content_hash) {
     blocked_by.push("inventory_snapshot_hash_mismatch");
@@ -504,6 +571,7 @@ export function runNode0NodespaceBoundaryPreview({ consent, input } = {}) {
     os_count: payload.os_count,
     filesystem_root_count: payload.filesystem_root_count,
     authority_delta: payload.authority_delta,
+    content_scan_policy_preview: payload.content_scan_policy_preview,
     receipt_chain_preview: payload.receipt_chain_preview,
     what_this_proves: payload.what_this_proves,
     what_this_does_not_prove: payload.what_this_does_not_prove,
@@ -572,6 +640,18 @@ export const NODE0_NODESPACE_BOUNDARY_CANONICAL_FIXTURE = freezeDeep({
           boundary_status: "inside_homebase",
           scan_scope: "metadata_only",
           content_read_allowed: false,
+          scan_policy: {
+            selected_mode: "metadata_only",
+            allowed_modes: [
+              "metadata_only",
+              "content_hash_only",
+              "selective_content_index",
+              "full_local_content_index",
+              "blocked_never_scan",
+            ],
+            content_read_allowed_now: false,
+            future_user_consent_required: true,
+          },
         },
       ],
     },
@@ -592,6 +672,15 @@ export const NODE0_NODESPACE_BOUNDARY_CANONICAL_FIXTURE = freezeDeep({
           boundary_status: "inside_homebase",
           scan_scope: "blocked",
           content_read_allowed: false,
+          scan_policy: {
+            selected_mode: "blocked_never_scan",
+            allowed_modes: [
+              "metadata_only",
+              "blocked_never_scan",
+            ],
+            content_read_allowed_now: false,
+            future_user_consent_required: true,
+          },
         },
       ],
     },

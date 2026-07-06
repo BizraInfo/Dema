@@ -44,7 +44,10 @@ input.os_tree[]          { os_id, device_id, os_family, os_version,
                            kernel_version, virtualization_role, parent_os_id,
                            scan_scope, filesystem_roots[] }
   filesystem_roots[]     { root_id, path_label, owner_os_id, boundary_status,
-                           scan_scope, content_read_allowed:false }
+                           scan_scope, content_read_allowed:false,
+                           scan_policy{ selected_mode, allowed_modes[],
+                             content_read_allowed_now:false,
+                             future_user_consent_required:true } }
 input.previous_state_hash            (optional; bound into the snapshot)
 ```
 
@@ -70,6 +73,28 @@ boundary (all false: content_read_performed, file_mutation_performed,
 what_this_proves[] · what_this_does_not_prove[]
 blocked_by[]
 ```
+
+## Scan-policy law (metadata-only is the default, not the final law)
+
+Metadata-only is the **safe default** and this preview's execution boundary — it
+is not the final BIZRA law. The final node inventory must let the node owner
+choose scan depth per root:
+
+```text
+metadata_only · content_hash_only · selective_content_index
+full_local_content_index · blocked_never_scan
+```
+
+Hard law (encoded as a tamper-proof kernel constant `content_scan_policy_preview`):
+
+- The node owner may choose to scan all local content.
+- No model, SAT, Dema process, URP process, or other node may choose that for the user.
+- Content scan is local-first, consent-scoped, receipt-bound, and revocable.
+- Only **receipts** cross nodes by default; **raw content** crosses only under separate explicit consent.
+
+This preview performs no content scan: every root carries `content_read_allowed_now: false`
+and `future_user_consent_required: true`, and `current_slice_performed_content_scan` is false.
+A forged `user_is_sole_authority_for_scan_depth: false` is rejected by `verify`.
 
 ## Verification
 

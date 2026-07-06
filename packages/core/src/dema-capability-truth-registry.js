@@ -1158,7 +1158,7 @@ function defaultCapabilityRows() {
       blocked_promotion_rule:
         "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
       what_this_proves:
-        "Composes injected hardware-spec and OS-tree metadata into a deterministic, content-addressed Node0 homebase-boundary snapshot: every OS binds to a known device, every guest VM or container binds to a parent OS, every filesystem root binds to a known owner OS; inside/outside/unknown homebase counts are re-derived from the primary arrays so a forged summary carrying a recomputed hash is rejected; raw serial numbers are refused and only serial_hash is admitted; boundary all-false and authority_delta 0.",
+        "Composes injected hardware-spec and OS-tree metadata into a deterministic, content-addressed Node0 homebase-boundary snapshot: every OS binds to a known device, every guest VM or container binds to a parent OS, every filesystem root binds to a known owner OS; inside/outside/unknown homebase counts are re-derived from the primary arrays so a forged summary carrying a recomputed hash is rejected; raw serial numbers are refused and only serial_hash is admitted; encodes the user-selected scan-depth envelope (metadata_only default up to full_local_content_index) per root and as a tamper-proof kernel constant where the node owner is the sole authority for scan depth, content_read_allowed_now is false, and only receipts cross nodes by default; boundary all-false and authority_delta 0.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
