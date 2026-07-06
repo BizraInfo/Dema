@@ -65,6 +65,7 @@ import { cmd_diagnostics } from "./commands/diagnostics.js";
 import { cmd_consent } from "./commands/consent.js";
 import { cmd_receipts } from "./commands/receipts.js";
 import { cmd_models } from "./commands/models.js";
+import { cmd_monitors } from "./commands/monitors.js";
 import { cmd_report } from "./commands/report.js";
 import { cmd_network } from "./commands/network.js";
 import { cmd_amana } from "./commands/amana.js";
@@ -564,6 +565,8 @@ Local evidence:
                     MODEL-EVAL-BASELINE-1A · read-only local model-pool discovery (Ollama · LM Studio · llama.cpp); no inference, local providers only
   dema models readiness [--json]
                     LOCAL-LLM-FLEET-READINESS-1A · read-only fleet readiness (provider reachability · installed/loaded models · preferred routes · consent phrases); no model invocation
+  dema monitors run [--json] [--ci-unavailable]
+                    MONITOR-GATHERER-1A + RECEIPT-MONITOR-PREVIEW-1A · operator-invoked proof-health scan (stale proof · registry/docs drift · missing gates · evidence gaps); read-only, fail-closed on criticals, no daemon, no autofix
   dema report safety [--json]
                     Preview the safety report; does not certify, execute, or mint
   dema report quality-evidence-card --commit <sha> --tests-total N --tests-pass N --tests-fail N [--check-pass] [--llm-guidance-pass] [--diff-check-clean] [--coverage-lines P] [--coverage-branches P] [--coverage-functions P] [--json]
@@ -1175,6 +1178,7 @@ const COMMAND_TABLE = {
   "setup-check": cmd_setup_check,
   uninstall: cmd_uninstall,
   stand: cmd_stand,
+  monitors: cmd_monitors,
   poi: cmd_poi,
   away: cmd_away,
   witness: cmd_witness,
