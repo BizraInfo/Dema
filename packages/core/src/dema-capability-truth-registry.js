@@ -56,6 +56,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_NODESPACE_BOUNDARY_PREVIEW_1A",
   "DEMA_ACTIVE_WORKLOOP_COMPOSER_PREVIEW_1A",
   "NODE0_CONSENTED_INVENTORY_GATHERER_PREVIEW_1A",
+  "DEMA_SELF_EVAL_BASELINE_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1219,6 +1220,35 @@ function defaultCapabilityRows() {
         "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
       what_this_proves:
         "Derives a useful workspace triage (category/extension counts, total bytes, largest files, stale / duplicate-name / sensitive-name candidates, and safe recommended next actions) from injected file METADATA rows alone — no content is read; scan depth is the node owner's choice (metadata_only implemented, the other four modes declared as future user options and refused here); a row claiming content was read is refused; category/extension counts must be internally consistent so a forged summary is rejected; boundary all-false, authority_delta 0.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_SELF_EVAL_BASELINE_PREVIEW_1A",
+      truth_label: "DEMA_SELF_EVAL_BASELINE_PREVIEW_MEASURED_REPO",
+      summary:
+        "Self-eval quality baseline + compare: captures measured system-quality signals (tests, coverage, registry, monitor, gates, perf) as a content-addressed baseline and compares a candidate against it per dimension to say improved / regressed / mixed / unchanged, so system change is measured not blind; signals are injected, no tests are run here.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-self-eval-baseline-preview.js"],
+        test_paths: ["tests/dema-self-eval-baseline-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-self-eval-baseline-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_SELF_EVAL_BASELINE_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_SELF_EVAL_BASELINE_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Captures Dema's measured system-quality signals (tests pass/total, coverage %, monitor criticals/warnings, gates-all-green, perf, registry) as a deterministic content-addressed baseline, and compares a candidate baseline per dimension into improved / regressed / unchanged with named reasons; a regression on any hard dimension (fewer passing tests, dropped coverage, more monitor criticals, gates falling green->red) forces 'regressed'; signals are injected (kernel runs no tests/coverage/monitor), a forged 'healthy' is rejected by re-derivation; boundary all-false, authority_delta 0. It measures change; it does not itself improve Dema.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
