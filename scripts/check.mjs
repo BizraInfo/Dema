@@ -42,6 +42,7 @@ export const commands = [
   ["node", ["scripts/review/capability-blast-radius-check.mjs"]],
   ["node", ["scripts/review/receipt-monitor-preview-check.mjs"]],
   ["node", ["scripts/review/monitor-gatherer-check.mjs"]],
+  ["node", ["scripts/review/reward-eligibility-contract-preview-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
   ["node", ["scripts/review/boundary-vocab-unification-check.mjs"]],
   ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],

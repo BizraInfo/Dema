@@ -51,6 +51,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "CAPABILITY_BLAST_RADIUS_1A",
   "RECEIPT_MONITOR_PREVIEW_1A",
   "MONITOR_GATHERER_1A",
+  "REWARD_ELIGIBILITY_CONTRACT_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1071,6 +1072,35 @@ function defaultCapabilityRows() {
         "Exact-consent deterministic derivation compiles injected raw repo artifacts (git metadata, gate-log ages vs threshold, registry rows with evidence paths, check.mjs source, CURRENT_LIMITS/TESTING texts, receipt metadata) into the receipt-monitor input facts; the derived facts are content-addressed AND fully re-derivable from the embedded raw artifacts, so a laundered clean repo_state (tree_clean/stale_proof flipped with a recomputed hash) is rejected; derived facts pipe eligibly into RECEIPT-MONITOR-PREVIEW-1A.",
       what_this_does_not_prove:
         "It does not prove the raw artifacts were honestly collected — collection is the CLI gatherer's read-only job; membership checks are exact-substring presence of the capability's hyphenated ID or a specific (directory-qualified) source path, with `scripts/check.mjs`-as-gate recognized as inherently in-check (a generic root file like package.json is deliberately NOT accepted as documentation evidence); receipts carry verified_claim=false and claim_markers stay empty in v0.1; no operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "REWARD_ELIGIBILITY_CONTRACT_PREVIEW_1A",
+      truth_label: "REWARD_ELIGIBILITY_CONTRACT_PREVIEW_MEASURED_REPO",
+      summary:
+        "Preview-only reward-eligibility contract: classifies a DEMA lifecycle outcome as reward-eligible or reward-ineligible from evidence refs, monitor state, and claim flags — inert output with no score, no authority signal, no action-permission field; forbidden claims and monitor-hiding are dominant refusals; evidence refs mandatory.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/reward-eligibility-contract-preview.js"],
+        test_paths: ["tests/reward-eligibility-contract-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/reward-eligibility-contract-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/REWARD_ELIGIBILITY_CONTRACT_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/REWARD_ELIGIBILITY_CONTRACT_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Exact-consent deterministic contract classifies a DEMA lifecycle outcome as reward-eligible or reward-ineligible from a closed outcome-kind vocabulary, mandatory evidence refs, injected monitor state, and eight forbidden-claim flags: monitor criticals block, a monitor weakened to hide drift is the dominant refusal, mint/wallet/urp-live/federation/public-safe/authority/cost-as-value/simulated-as-real each refuse, an all-clear-asserting outcome must match the monitor state, and the verdict is content-addressed and fully re-derivable so a forged-eligible or inertness-breaching verdict (is_actuation_signal/confers_permission/authority_delta flipped) is rejected. It is URP-FACING: the verdict names its designed future constitutional consumers (BIZRA_URP_GENESIS_PREVIEW, SAT5_CONSTITUTIONAL_VERIFIER_SET, FUTURE_NODE_ADMISSION_FLOW) while keeping live_runtime_consumer_enabled/actuator_readable_permission/urp_live/federation_live all false — Node0 encodes the genesis DNA; it does not activate the live organism.",
+      what_this_does_not_prove:
+        "It is a preview-only classification, NOT a reward: the verdict is inert (is_score:false, is_actuation_signal:false, confers_permission:false, authority_delta:0) and no consumer acts on it. It does not score magnitude, distribute anything, mint, price, or move value; it does not prove the injected evidence refs or monitor state are themselves true; and it does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
