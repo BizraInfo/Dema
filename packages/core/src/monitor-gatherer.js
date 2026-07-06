@@ -42,6 +42,14 @@ function pathBasename(p) {
   return p.split("/").pop();
 }
 
+// scripts/check.mjs is the gate RUNNER itself. A capability whose review gate
+// IS the runner (e.g. COVERAGE_TRUTH_GATE_1A) is inherently in-check — the
+// runner does not reference its own path, so `check_source.includes(...)` can
+// never see it. Recognizing the runner path is a PRECISION fix (fewer false
+// positives), not a weakening: any OTHER gate path still must appear in the
+// runner source to count.
+const CHECK_RUNNER_PATH = "scripts/check.mjs";
+
 // Deterministic derivation from raw artifacts to the receipt-monitor input
 // shape. Text membership is exact substring — no fuzzy matching, no guessing.
 // v0.1 constants: receipts carry verified_claim=false (no receipt semantics
@@ -54,22 +62,34 @@ export function deriveMonitorInputFacts(input) {
     gate_logs.test_age_hours > gate_logs.stale_threshold_hours ||
     gate_logs.check_age_hours > gate_logs.stale_threshold_hours;
 
-  const capability_rows = registry.rows.map((row) => ({
-    capability_id: row.capability_id,
-    measured: true,
-    has_tests:
-      row.test_paths.length > 0 &&
-      row.test_paths.every((p) => artifacts.test_paths_present[p] === true),
-    review_gate_in_check:
-      row.review_gate_paths.length > 0 &&
-      row.review_gate_paths.every((p) => artifacts.check_source.includes(p)),
-    in_current_limits: artifacts.current_limits_text.includes(
-      row.capability_id.replaceAll("_", "-"),
-    ),
-    in_testing: row.test_paths.every((p) =>
-      artifacts.testing_text.includes(pathBasename(p)),
-    ),
-  }));
+  const capability_rows = registry.rows.map((row) => {
+    // Only SPECIFIC source paths (with a directory component) count as
+    // documentation evidence — a bare root file like `package.json` is too
+    // generic to prove a capability is documented, so it is excluded to avoid
+    // a false negative that would hide real drift.
+    const specificSourcePaths = (row.source_paths || []).filter((p) => p.includes("/"));
+    return {
+      capability_id: row.capability_id,
+      measured: true,
+      has_tests:
+        row.test_paths.length > 0 &&
+        row.test_paths.every((p) => artifacts.test_paths_present[p] === true),
+      review_gate_in_check:
+        row.review_gate_paths.length > 0 &&
+        row.review_gate_paths.every(
+          (p) => p === CHECK_RUNNER_PATH || artifacts.check_source.includes(p),
+        ),
+      // Documented if the hyphenated ID appears OR a specific source path is
+      // referenced in CURRENT_LIMITS. Broadening the evidence keys (not
+      // lowering the bar) — a capability cited by its source file IS documented.
+      in_current_limits:
+        artifacts.current_limits_text.includes(row.capability_id.replaceAll("_", "-")) ||
+        specificSourcePaths.some((p) => artifacts.current_limits_text.includes(p)),
+      in_testing: row.test_paths.every((p) =>
+        artifacts.testing_text.includes(pathBasename(p)),
+      ),
+    };
+  });
 
   return Object.freeze({
     repo_state: Object.freeze({
@@ -151,9 +171,11 @@ export function planMonitorGatherer({ consent, input } = {}) {
       blocked_by.push("registry_invalid");
     } else {
       reg.rows.forEach((row, i) => {
+        const sourcePathsOk =
+          row?.source_paths === undefined || (Array.isArray(row.source_paths) && row.source_paths.every(isNonEmptyString));
         if (
           !row || typeof row !== "object" || !isNonEmptyString(row.capability_id) ||
-          !isStringArray(row.test_paths) || !isStringArray(row.review_gate_paths)
+          !isStringArray(row.test_paths) || !isStringArray(row.review_gate_paths) || !sourcePathsOk
         ) {
           blocked_by.push(`registry_row_invalid:${i}`);
         }

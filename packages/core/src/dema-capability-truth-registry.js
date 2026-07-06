@@ -1070,7 +1070,7 @@ function defaultCapabilityRows() {
       what_this_proves:
         "Exact-consent deterministic derivation compiles injected raw repo artifacts (git metadata, gate-log ages vs threshold, registry rows with evidence paths, check.mjs source, CURRENT_LIMITS/TESTING texts, receipt metadata) into the receipt-monitor input facts; the derived facts are content-addressed AND fully re-derivable from the embedded raw artifacts, so a laundered clean repo_state (tree_clean/stale_proof flipped with a recomputed hash) is rejected; derived facts pipe eligibly into RECEIPT-MONITOR-PREVIEW-1A.",
       what_this_does_not_prove:
-        "It does not prove the raw artifacts were honestly collected — collection is the CLI gatherer's read-only job; membership checks are exact-substring naming presence (npm-script indirection or renamed rows flag as drift by design); receipts carry verified_claim=false and claim_markers stay empty in v0.1; no operator execution, daemon runtime, network use, wallet access, or live federation.",
+        "It does not prove the raw artifacts were honestly collected — collection is the CLI gatherer's read-only job; membership checks are exact-substring presence of the capability's hyphenated ID or a specific (directory-qualified) source path, with `scripts/check.mjs`-as-gate recognized as inherently in-check (a generic root file like package.json is deliberately NOT accepted as documentation evidence); receipts carry verified_claim=false and claim_markers stay empty in v0.1; no operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",

@@ -87,6 +87,7 @@ export async function collectMonitorRawFacts({ ciAvailableDeclared = true } = {}
 
   const registryRows = buildDemaCapabilityTruthRegistry({}).capabilities.map((row) => ({
     capability_id: row.capability_id,
+    source_paths: [...(row.evidence?.source_paths ?? [])],
     test_paths: [...(row.evidence?.test_paths ?? [])],
     review_gate_paths: [...(row.evidence?.review_gate_paths ?? [])],
   }));

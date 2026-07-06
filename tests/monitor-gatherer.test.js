@@ -221,6 +221,80 @@ test("derivation is deterministic: same artifacts, same content hash", () => {
   assert.equal(a.content_hash, b.content_hash);
 });
 
+// MONITOR-DRIFT-REPAIR-1A refinement B: two precision fixes that reduce false
+// positives without lowering the evidence bar or hiding real drift.
+
+function factsFor(row, { check_source = "", current_limits_text = "", test_paths_present = {} } = {}) {
+  const facts = deriveMonitorInputFacts({
+    ...FIXTURE_INPUT,
+    registry: { required_ids: [row.capability_id], rows: [row] },
+    artifacts: { check_source, current_limits_text, testing_text: "", test_paths_present },
+  });
+  return facts.capability_rows[0];
+}
+
+test("B1: a review gate that IS scripts/check.mjs counts as in-check (gate runner is inherent)", () => {
+  const row = {
+    capability_id: "META_GATE_1A",
+    source_paths: [],
+    test_paths: [],
+    review_gate_paths: ["scripts/check.mjs"],
+  };
+  // check.mjs source does NOT reference its own path — the old heuristic failed here.
+  const r = factsFor(row, { check_source: "node scripts/review/other-check.mjs" });
+  assert.equal(r.review_gate_in_check, true);
+});
+
+test("B1 does not weaken: a real missing review gate still fires", () => {
+  const row = {
+    capability_id: "REAL_1A",
+    source_paths: [],
+    test_paths: [],
+    review_gate_paths: ["scripts/review/real-check.mjs"],
+  };
+  const r = factsFor(row, { check_source: "node scripts/review/other-check.mjs" });
+  assert.equal(r.review_gate_in_check, false);
+});
+
+test("B2: a specific source path referenced in CURRENT_LIMITS satisfies in_current_limits", () => {
+  const row = {
+    capability_id: "DOCD_BY_SOURCE_1A",
+    source_paths: ["packages/core/src/docd-by-source.js"],
+    test_paths: [],
+    review_gate_paths: [],
+  };
+  // ID absent, but the specific source path is cited.
+  const r = factsFor(row, { current_limits_text: "| ... packages/core/src/docd-by-source.js ... |" });
+  assert.equal(r.in_current_limits, true);
+});
+
+test("B2 does not hide drift: a generic root source path (package.json) does NOT satisfy in_current_limits", () => {
+  const row = {
+    capability_id: "GENERIC_SOURCE_1A",
+    source_paths: ["package.json"],
+    test_paths: [],
+    review_gate_paths: [],
+  };
+  // package.json appears all over CURRENT_LIMITS, so it must not count as proof
+  // this specific capability is documented — its drift must stay visible.
+  const r = factsFor(row, { current_limits_text: "row cites package.json here" });
+  assert.equal(r.in_current_limits, false);
+});
+
+test("source_paths is optional: rows without it still validate and derive", () => {
+  const noSource = {
+    ...FIXTURE_INPUT,
+    registry: {
+      required_ids: ["NOSRC_1A"],
+      rows: [{ capability_id: "NOSRC_1A", test_paths: [], review_gate_paths: [] }],
+    },
+  };
+  const plan = planMonitorGatherer({ consent: MONITOR_GATHERER_GO_PHRASE, input: noSource });
+  assert.equal(plan.eligible, true, plan.blocked_by.join(", "));
+  const facts = deriveMonitorInputFacts(noSource);
+  assert.equal(facts.capability_rows[0].in_current_limits, false);
+});
+
 // Recompute a content hash the same way the kernel does, for launder fixtures.
 function rehash(body) {
   const stable = (v) => {
