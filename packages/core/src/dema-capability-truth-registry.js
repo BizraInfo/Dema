@@ -53,6 +53,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "MONITOR_GATHERER_1A",
   "REWARD_ELIGIBILITY_CONTRACT_PREVIEW_1A",
   "SAT5_CONSTITUTIONAL_VERIFIER_SET_PREVIEW_1A",
+  "NODE0_NODESPACE_BOUNDARY_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1131,6 +1132,35 @@ function defaultCapabilityRows() {
         "Exact-consent deterministic set of five constitutional verifier passes over a Node0 outcome: SAT-1 receipt/hash integrity (claimed hash must re-derive), SAT-2 consent/FATE (exact-string consent), SAT-3 impact/no-riba (mint/cost-as-value/simulated-as-real/unverified-impact each fail), SAT-4 security/blast-radius (low passes; medium/high require reversible+backup), SAT-5 governance/doctrine (truth label present, boundary all-false, no forbidden claims). Fail-closed admissibility — any FAIL or ABSTAIN rejects the set; the judgment is content-addressed and fully re-derivable so a forged ADMISSIBLE (a FAIL flipped to PASS with recomputed hash) is rejected; the constitutional stance judges_node0:true / serves_node0:false cannot be flipped.",
       what_this_does_not_prove:
         "It is the PREVIEW DESIGN of the constitutional judge, NOT live SAT autonomy (which stays DESIGNED_NOT_LIVE): live_sat_agent:false, authority_delta:0, mint_allowed:false, urp_live:false. It judges DECLARED facts, does not itself gather or attest them, animates no agent, grants no authority, and does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_NODESPACE_BOUNDARY_PREVIEW_1A",
+      truth_label: "NODE0_NODESPACE_BOUNDARY_PREVIEW_MEASURED_REPO",
+      summary:
+        "Metadata-only Node0 homebase boundary kernel: hardware specs + OS-tree (host to VM/container to filesystem-root ownership) with inside/outside/unknown homebase classification; references existing device/data manifests instead of re-scanning or reading content.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-nodespace-boundary-preview.js"],
+        test_paths: ["tests/node0-nodespace-boundary-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-nodespace-boundary-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_NODESPACE_BOUNDARY_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_NODESPACE_BOUNDARY_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Composes injected hardware-spec and OS-tree metadata into a deterministic, content-addressed Node0 homebase-boundary snapshot: every OS binds to a known device, every guest VM or container binds to a parent OS, every filesystem root binds to a known owner OS; inside/outside/unknown homebase counts are re-derived from the primary arrays so a forged summary carrying a recomputed hash is rejected; raw serial numbers are refused and only serial_hash is admitted; boundary all-false and authority_delta 0.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
