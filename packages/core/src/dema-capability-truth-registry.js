@@ -52,6 +52,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "RECEIPT_MONITOR_PREVIEW_1A",
   "MONITOR_GATHERER_1A",
   "REWARD_ELIGIBILITY_CONTRACT_PREVIEW_1A",
+  "SAT5_CONSTITUTIONAL_VERIFIER_SET_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1101,6 +1102,35 @@ function defaultCapabilityRows() {
         "Exact-consent deterministic contract classifies a DEMA lifecycle outcome as reward-eligible or reward-ineligible from a closed outcome-kind vocabulary, mandatory evidence refs, injected monitor state, and eight forbidden-claim flags: monitor criticals block, a monitor weakened to hide drift is the dominant refusal, mint/wallet/urp-live/federation/public-safe/authority/cost-as-value/simulated-as-real each refuse, an all-clear-asserting outcome must match the monitor state, and the verdict is content-addressed and fully re-derivable so a forged-eligible or inertness-breaching verdict (is_actuation_signal/confers_permission/authority_delta flipped) is rejected. It is URP-FACING: the verdict names its designed future constitutional consumers (BIZRA_URP_GENESIS_PREVIEW, SAT5_CONSTITUTIONAL_VERIFIER_SET, FUTURE_NODE_ADMISSION_FLOW) while keeping live_runtime_consumer_enabled/actuator_readable_permission/urp_live/federation_live all false — Node0 encodes the genesis DNA; it does not activate the live organism.",
       what_this_does_not_prove:
         "It is a preview-only classification, NOT a reward: the verdict is inert (is_score:false, is_actuation_signal:false, confers_permission:false, authority_delta:0) and no consumer acts on it. It does not score magnitude, distribute anything, mint, price, or move value; it does not prove the injected evidence refs or monitor state are themselves true; and it does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "SAT5_CONSTITUTIONAL_VERIFIER_SET_PREVIEW_1A",
+      truth_label: "SAT5_CONSTITUTIONAL_VERIFIER_SET_PREVIEW_MEASURED_REPO",
+      summary:
+        "Preview-only SAT-5 constitutional verifier set: five deterministic verifier passes (receipt/hash integrity, consent/FATE, impact/no-riba, security/blast-radius, governance/doctrine) that JUDGE a Node0 outcome — fail-closed admissibility, SAT judges Node0 and does not serve it, inert output with no authority, no mint, no live SAT agent.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/sat5-constitutional-verifier-set-preview.js"],
+        test_paths: ["tests/sat5-constitutional-verifier-set-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/sat5-constitutional-verifier-set-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/SAT5_CONSTITUTIONAL_VERIFIER_SET_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/SAT5_CONSTITUTIONAL_VERIFIER_SET_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Exact-consent deterministic set of five constitutional verifier passes over a Node0 outcome: SAT-1 receipt/hash integrity (claimed hash must re-derive), SAT-2 consent/FATE (exact-string consent), SAT-3 impact/no-riba (mint/cost-as-value/simulated-as-real/unverified-impact each fail), SAT-4 security/blast-radius (low passes; medium/high require reversible+backup), SAT-5 governance/doctrine (truth label present, boundary all-false, no forbidden claims). Fail-closed admissibility — any FAIL or ABSTAIN rejects the set; the judgment is content-addressed and fully re-derivable so a forged ADMISSIBLE (a FAIL flipped to PASS with recomputed hash) is rejected; the constitutional stance judges_node0:true / serves_node0:false cannot be flipped.",
+      what_this_does_not_prove:
+        "It is the PREVIEW DESIGN of the constitutional judge, NOT live SAT autonomy (which stays DESIGNED_NOT_LIVE): live_sat_agent:false, authority_delta:0, mint_allowed:false, urp_live:false. It judges DECLARED facts, does not itself gather or attest them, animates no agent, grants no authority, and does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
