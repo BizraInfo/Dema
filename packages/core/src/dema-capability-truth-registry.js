@@ -46,6 +46,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "ABSENCE_STEWARD_RETURN_REVIEW_1A",
   "ABSENCE_STEWARD_QUEUE_PROPOSAL_SPINE_1A",
   "DEMA_FDE_FORWARDER_DIAGNOSTIC_1A",
+  "PREVIEW_RECEIPT_SIGNING_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -919,6 +920,35 @@ function defaultCapabilityRows() {
         "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
       what_this_proves:
         "A completed FDE dual-diagnostic report deterministically routes to exactly one proposal destination under the eight Diagnostic Doxology rules; mint/execute/autopatch destinations are absent from the vocabulary, CI unavailability never forwards as code failure, unregistered channels never claim connectivity, and the whole-body re-derivation verifier rejects forged-and-recomputed routings.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "PREVIEW_RECEIPT_SIGNING_1A",
+      truth_label: "PREVIEW_RECEIPT_SIGNING_MEASURED_REPO",
+      summary:
+        "Bind preview-stack receipts to the existing Ed25519 signing rail via a canonical envelope adapter (no new signing system).",
+      evidence: evidence({
+        source_paths: ["packages/core/src/preview-receipt-signing.js"],
+        test_paths: ["tests/preview-receipt-signing.test.js"],
+        review_gate_paths: [
+          "scripts/review/preview-receipt-signing-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/PREVIEW_RECEIPT_SIGNING_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/PREVIEW_RECEIPT_SIGNING_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A preview-stack report (mode preview_only) binds into a canonical content-addressed envelope that stays explicitly marked unsigned (signed:false, signature:null) until the existing Ed25519 authorship rail signs it under the exact GO phrase; the consent hash is inside the signed subject so a signature over the bare envelope fails, the displayed public-key fingerprint must re-derive from the embedded PEM, the canonical hash is stable across rebuilds, whole-body re-derivation rejects tampered hashes, the signature anchor rejects forged-and-recomputed bodies, signed envelopes carry complete signature metadata without private-key material, and the boundary stays all-false including public_safe_claim.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
