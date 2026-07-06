@@ -1,0 +1,234 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  planPreviewReceiptSigning,
+  buildPreviewReceiptSigningPayload,
+  verifyPreviewReceiptSigning,
+  signPreviewReceipt,
+  signPreviewReceiptWithKeyStore,
+  runPreviewReceiptSigning,
+  previewReceiptSigningBoundary,
+  previewReceiptExposesPrivateKeyMaterial,
+  PREVIEW_RECEIPT_SIGNING_SCHEMA,
+  PREVIEW_RECEIPT_SIGNING_TRUTH_LABEL,
+  PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+} from "../packages/core/src/preview-receipt-signing.js";
+import { generateEd25519Keypair } from "../packages/receipts/src/authorship-signature.js";
+import { buildPeakSelfLoopPreview } from "../packages/core/src/peak-self-loop-preview.js";
+import { runPreviewReceiptSigningCheck } from "../scripts/review/preview-receipt-signing-check.mjs";
+
+// PREVIEW-RECEIPT-SIGNING-1A proof contract:
+//   1. unsigned preview receipt stays clearly marked unsigned
+//   2. signed preview receipt carries complete signature metadata
+//   3. canonical payload hash is stable across rebuilds
+//   4. tampered payloads fail verification (incl. forge-and-recompute launder)
+//   5. boundary stays all-false — no autonomy, mint, network, or public-safe claim
+
+const FIXTURE_PREVIEW = Object.freeze({
+  schema: "bizra.dema.example_preview.v0.1",
+  mode: "preview_only",
+  truth_label: "NODE0_LOCAL_SEED",
+  body: Object.freeze({ finding: "preview-stack receipt fixture", rank: 1 }),
+});
+
+const KEYS = generateEd25519Keypair();
+
+test("plan is fail-closed without the exact consent phrase", () => {
+  const plan = planPreviewReceiptSigning({ consent: "wrong", input: FIXTURE_PREVIEW });
+  assert.equal(plan.eligible, false);
+  assert.ok(plan.blocked_by.includes("consent_phrase_mismatch"));
+});
+
+test("plan is eligible with exact consent and well-formed input", () => {
+  const plan = planPreviewReceiptSigning({
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    input: FIXTURE_PREVIEW,
+  });
+  assert.equal(plan.eligible, true, plan.blocked_by.join(", "));
+});
+
+test("plan rejects non-preview input — execute receipts do not pass this adapter", () => {
+  const executeShaped = {
+    schema: "bizra.dema.node0_reversible_execute_receipt.v0.1",
+    executed: true,
+  };
+  const plan = planPreviewReceiptSigning({
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    input: executeShaped,
+  });
+  assert.equal(plan.eligible, false);
+  assert.ok(plan.blocked_by.includes("preview_mode_required"));
+});
+
+test("plan rejects a preview carrying private key material", () => {
+  const leaky = { ...FIXTURE_PREVIEW, private_key: "oops" };
+  const plan = planPreviewReceiptSigning({
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    input: leaky,
+  });
+  assert.equal(plan.eligible, false);
+  assert.ok(plan.blocked_by.includes("private_key_material_in_preview"));
+});
+
+test("payload is content-addressed and carries an all-false boundary", () => {
+  const payload = buildPreviewReceiptSigningPayload(FIXTURE_PREVIEW);
+  assert.equal(payload.schema, PREVIEW_RECEIPT_SIGNING_SCHEMA);
+  assert.equal(payload.truth_label, PREVIEW_RECEIPT_SIGNING_TRUTH_LABEL);
+  assert.match(payload.content_hash, /^sha256:[0-9a-f]{64}$/);
+  assert.deepEqual(payload.boundary, previewReceiptSigningBoundary());
+  for (const [key, value] of Object.entries(payload.boundary)) {
+    assert.equal(value, false, `boundary.${key} must be false`);
+  }
+  assert.equal(payload.boundary.public_safe_claim, false);
+});
+
+test("unsigned preview receipt is clearly marked unsigned", () => {
+  const payload = buildPreviewReceiptSigningPayload(FIXTURE_PREVIEW);
+  assert.equal(payload.signed, false);
+  assert.equal(payload.signature, null);
+  const verdict = verifyPreviewReceiptSigning(payload);
+  assert.equal(verdict.ok, true, verdict.reason);
+  assert.equal(verdict.signed, false);
+});
+
+test("canonical payload hash is stable across rebuilds", () => {
+  const a = buildPreviewReceiptSigningPayload(FIXTURE_PREVIEW);
+  const b = buildPreviewReceiptSigningPayload(FIXTURE_PREVIEW);
+  assert.equal(a.content_hash, b.content_hash);
+});
+
+test("signed preview receipt includes complete signature metadata and verifies", () => {
+  const signed = signPreviewReceipt({
+    preview: FIXTURE_PREVIEW,
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    privateKeyPem: KEYS.private_key_pem,
+    publicKeyPem: KEYS.public_key_pem,
+    publicKeyFingerprint: KEYS.public_key_fingerprint,
+  });
+  assert.equal(signed.signed, true);
+  assert.equal(signed.signature.algorithm, "ed25519");
+  assert.ok(signed.signature.value.length > 0);
+  assert.match(signed.signature.public_key_fingerprint, /^[a-f0-9]{64}$/);
+  assert.ok(signed.signature.public_key_pem.includes("BEGIN PUBLIC KEY"));
+  const verdict = verifyPreviewReceiptSigning(signed, { publicKeyPem: KEYS.public_key_pem });
+  assert.equal(verdict.ok, true, verdict.reason);
+  assert.equal(verdict.signed, true);
+  // Signing does not change the canonical content hash.
+  const unsigned = buildPreviewReceiptSigningPayload(FIXTURE_PREVIEW);
+  assert.equal(signed.content_hash, unsigned.content_hash);
+});
+
+test("signing without exact consent stays unsigned and fail-closed", () => {
+  const blocked = signPreviewReceipt({
+    preview: FIXTURE_PREVIEW,
+    consent: "GO sign preview-stack receipt",
+    privateKeyPem: KEYS.private_key_pem,
+    publicKeyPem: KEYS.public_key_pem,
+  });
+  assert.equal(blocked.signed, false);
+  assert.ok(blocked.blocked_by.includes("consent_phrase_mismatch"));
+});
+
+test("key-store signing path blocks when the store is unavailable", async () => {
+  const blocked = await signPreviewReceiptWithKeyStore({
+    preview: FIXTURE_PREVIEW,
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    loadPrivateKeyFn: async () => null,
+    loadPublicKeyFn: async () => null,
+  });
+  assert.equal(blocked.signed, false);
+  assert.ok(blocked.blocked_by.includes("key_store_unavailable"));
+});
+
+test("verify rejects a tampered content_hash", () => {
+  const payload = buildPreviewReceiptSigningPayload(FIXTURE_PREVIEW);
+  const tampered = { ...payload, content_hash: `sha256:${"0".repeat(64)}` };
+  assert.equal(verifyPreviewReceiptSigning(tampered).ok, false);
+});
+
+test("verify rejects a field change that did not update the content_hash", () => {
+  const payload = buildPreviewReceiptSigningPayload(FIXTURE_PREVIEW);
+  const forged = { ...payload, source_truth_label: "FORGED" };
+  assert.equal(verifyPreviewReceiptSigning(forged).ok, false);
+});
+
+test("signature anchor rejects a forged field even with a recomputed content_hash", () => {
+  const signed = signPreviewReceipt({
+    preview: FIXTURE_PREVIEW,
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    privateKeyPem: KEYS.private_key_pem,
+    publicKeyPem: KEYS.public_key_pem,
+  });
+  // Launder attempt: forge the field AND make the body self-consistent by
+  // recomputing its hash through the builder on a laundered preview.
+  const launderedPreview = {
+    ...FIXTURE_PREVIEW,
+    body: { ...FIXTURE_PREVIEW.body, finding: "FORGED" },
+  };
+  const laundered = {
+    ...signed,
+    preview: launderedPreview,
+    content_hash: buildPreviewReceiptSigningPayload(launderedPreview).content_hash,
+  };
+  const verdict = verifyPreviewReceiptSigning(laundered, {
+    publicKeyPem: KEYS.public_key_pem,
+  });
+  assert.equal(verdict.ok, false);
+  assert.equal(verdict.reason, "signature_invalid");
+});
+
+test("signed envelope leaks no private key material", () => {
+  const signed = signPreviewReceipt({
+    preview: FIXTURE_PREVIEW,
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    privateKeyPem: KEYS.private_key_pem,
+    publicKeyPem: KEYS.public_key_pem,
+  });
+  assert.equal(previewReceiptExposesPrivateKeyMaterial(signed), false);
+});
+
+test("real peak-self-loop preview signs end-to-end through the rail", () => {
+  const preview = buildPeakSelfLoopPreview();
+  const result = runPreviewReceiptSigning({
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    input: preview,
+    generateKeypair: generateEd25519Keypair,
+  });
+  assert.equal(result.ok, true, result.blocked_by.join(", "));
+  assert.equal(result.source_schema, "bizra.dema.peak_self_loop_preview.v0.1");
+  assert.equal(result.unsigned_marked_unsigned, true);
+  assert.equal(result.signed_has_signature_metadata, true);
+  assert.equal(result.hash_stable, true);
+  assert.equal(result.tamper_hash_rejected, true);
+  assert.equal(result.launder_rejected, true);
+});
+
+test("review gate closes the loop: build -> sign -> verify -> tamper-reject", () => {
+  const result = runPreviewReceiptSigningCheck();
+  assert.equal(result.ok, true, result.blocked_by?.join(", "));
+  assert.equal(result.schema, PREVIEW_RECEIPT_SIGNING_SCHEMA);
+  assert.equal(result.truth_label, PREVIEW_RECEIPT_SIGNING_TRUTH_LABEL);
+  assert.equal(result.launder_rejected, true);
+});
+
+test("orchestrator boundary stays all-false (no execution authority)", () => {
+  const result = runPreviewReceiptSigning({
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    input: FIXTURE_PREVIEW,
+    generateKeypair: generateEd25519Keypair,
+  });
+  assert.equal(result.ok, true, result.blocked_by?.join(", "));
+  for (const [key, value] of Object.entries(result.boundary)) {
+    assert.equal(value, false, `boundary.${key} must be false`);
+  }
+});
+
+test("orchestrator without an injected keypair stays fail-closed", () => {
+  const result = runPreviewReceiptSigning({
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    input: FIXTURE_PREVIEW,
+  });
+  assert.equal(result.ok, false);
+  assert.ok(result.blocked_by.includes("signing_keypair_missing"));
+});
