@@ -50,6 +50,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "LOCAL_MODEL_ADAPTER_PREVIEW_1A",
   "CAPABILITY_BLAST_RADIUS_1A",
   "RECEIPT_MONITOR_PREVIEW_1A",
+  "MONITOR_GATHERER_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1041,6 +1042,35 @@ function defaultCapabilityRows() {
         "Exact-consent deterministic monitor compiles injected proof-surface facts (repo state, registry counts, capability rows, receipts, symbolic claim markers) into a content-addressed findings report: ten failure classes detected with severity, surface, evidence ref, and a closed allowed-action vocabulary (inspect/repair_proof/stop_and_ask_operator); critical findings fail closed via proceed_allowed=false; findings AND summary are fully re-derivable, so a forged clean verdict or a self-consistent authority_delta increase is rejected; CI-unavailable is classified outward, never as code failure.",
       what_this_does_not_prove:
         "It does not prove the injected facts are true of the live repo — gathering real surfaces is a separate read-only step; it observes no runtime, fixes nothing, writes no receipts, grants no authority, and does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "MONITOR_GATHERER_1A",
+      truth_label: "MONITOR_GATHERER_MEASURED_REPO",
+      summary:
+        "Read-only monitor-facts derivation: compiles injected raw repo artifacts (git metadata, gate-log ages, registry rows, check.mjs source, docs texts, receipt metadata) into the receipt-monitor input facts, content-addressed and fully re-derivable — no fs in kernel, no network, no mutation.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/monitor-gatherer.js"],
+        test_paths: ["tests/monitor-gatherer.test.js"],
+        review_gate_paths: [
+          "scripts/review/monitor-gatherer-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/MONITOR_GATHERER_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/MONITOR_GATHERER_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Exact-consent deterministic derivation compiles injected raw repo artifacts (git metadata, gate-log ages vs threshold, registry rows with evidence paths, check.mjs source, CURRENT_LIMITS/TESTING texts, receipt metadata) into the receipt-monitor input facts; the derived facts are content-addressed AND fully re-derivable from the embedded raw artifacts, so a laundered clean repo_state (tree_clean/stale_proof flipped with a recomputed hash) is rejected; derived facts pipe eligibly into RECEIPT-MONITOR-PREVIEW-1A.",
+      what_this_does_not_prove:
+        "It does not prove the raw artifacts were honestly collected — collection is the CLI gatherer's read-only job; membership checks are exact-substring naming presence (npm-script indirection or renamed rows flag as drift by design); receipts carry verified_claim=false and claim_markers stay empty in v0.1; no operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",

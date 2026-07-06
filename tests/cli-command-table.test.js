@@ -93,6 +93,7 @@ const COMMAND_SURFACE = [
   "memory",
   "think",
   "models",
+  "monitors",
   "report",
   "network",
   "amana",
