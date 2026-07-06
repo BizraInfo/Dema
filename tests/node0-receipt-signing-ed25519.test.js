@@ -12,6 +12,8 @@ import { createHash } from "node:crypto";
 
 import {
   generateEd25519Keypair,
+  signPayload,
+  sha256,
 } from "../packages/receipts/src/authorship-signature.js";
 import {
   initAuthorshipKey,
@@ -201,7 +203,9 @@ test("verify fails with wrong public key", () => {
       publicKeyPem: wrong.public_key_pem,
     });
     assert.equal(verified.ok, false);
-    assert.equal(verified.reason, "signature_invalid");
+    // Parity round: the wrong key is caught at the fingerprint re-derivation
+    // step — the displayed fingerprint does not re-derive from the wrong key.
+    assert.equal(verified.reason, "public_key_fingerprint_mismatch");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -313,6 +317,9 @@ test("review gate passes sign verify and tamper rejection", () => {
   assert.equal(result.tamper_content_hash_rejected, true);
   assert.equal(result.tamper_state_hash_rejected, true);
   assert.equal(result.unsigned_integrity_ok, true);
+  assert.equal(result.fingerprint_tamper_rejected, true);
+  assert.equal(result.consent_tamper_rejected, true);
+  assert.equal(result.bare_payload_signature_rejected, true);
 });
 
 // 12. orchestrator runNode0ReceiptSigningEd25519 matches review gate contract
@@ -328,6 +335,167 @@ test("runNode0ReceiptSigningEd25519 closes the attestation loop", () => {
     assert.equal(result.ok, true, result.blocked_by?.join(", "));
     assert.equal(result.boundary?.execution_authority_granted, undefined);
     assert.equal(result.attestation?.boundary?.execution_authority_granted, false);
+    assert.equal(result.fingerprint_tamper_rejected, true);
+    assert.equal(result.consent_tamper_rejected, true);
+    assert.equal(result.bare_payload_signature_rejected, true);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// --- NODE0-RECEIPT-SIGNING-PARITY-1A ---
+// Parity with PREVIEW-RECEIPT-SIGNING-1A semantics: the consent assertion lives
+// inside the signed payload, and the displayed fingerprint must re-derive from
+// the key that actually verifies the signature.
+
+function signedAttestation(receipt, keys) {
+  return signExecuteReceiptAttestation({
+    receipt,
+    consent: NODE0_RECEIPT_SIGNING_GO_PHRASE,
+    privateKeyPem: keys.private_key_pem,
+    publicKeyPem: keys.public_key_pem,
+    publicKeyFingerprint: keys.public_key_fingerprint,
+    signedAt: NOW,
+  });
+}
+
+const EXPECTED_GO_HASH = `sha256:${sha256(NODE0_RECEIPT_SIGNING_GO_PHRASE)}`;
+
+// 13. consent assertion is inside the signed payload
+test("consent go_phrase_hash lives inside the signed payload", () => {
+  const root = freshSandbox();
+  try {
+    const attestation = signedAttestation(executeReceipt(root), freshKeypair());
+    assert.equal(attestation.signed, true);
+    assert.equal(attestation.payload.consent.go_phrase_hash, EXPECTED_GO_HASH);
+    assert.equal(attestation.payload.consent.mode, "exact_sign");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// 14. swapped displayed fingerprint fails
+test("verify rejects a swapped public-key fingerprint", () => {
+  const root = freshSandbox();
+  try {
+    const keys = freshKeypair();
+    const attestation = signedAttestation(executeReceipt(root), keys);
+    const swapped = {
+      ...attestation,
+      signature: {
+        ...attestation.signature,
+        public_key_fingerprint: generateEd25519Keypair().public_key_fingerprint,
+      },
+    };
+    const verified = verifyExecuteReceiptAttestation(swapped, {
+      publicKeyPem: keys.public_key_pem,
+    });
+    assert.equal(verified.ok, false);
+    assert.equal(verified.reason, "public_key_fingerprint_mismatch");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// 15. signing with a mismatched caller-supplied fingerprint blocks fail-closed
+test("signing blocks when the supplied fingerprint does not match the PEM", () => {
+  const root = freshSandbox();
+  try {
+    const keys = freshKeypair();
+    const blocked = signExecuteReceiptAttestation({
+      receipt: executeReceipt(root),
+      consent: NODE0_RECEIPT_SIGNING_GO_PHRASE,
+      privateKeyPem: keys.private_key_pem,
+      publicKeyPem: keys.public_key_pem,
+      publicKeyFingerprint: generateEd25519Keypair().public_key_fingerprint,
+    });
+    assert.equal(blocked.signed, false);
+    assert.ok(blocked.blocked_by.includes("public_key_fingerprint_mismatch"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// 16. malformed embedded PEM fails closed, not with a throw
+test("verify rejects a malformed embedded public key PEM", () => {
+  const root = freshSandbox();
+  try {
+    const attestation = signedAttestation(executeReceipt(root), freshKeypair());
+    const malformed = {
+      ...attestation,
+      signature: { ...attestation.signature, public_key_pem: "not-a-pem" },
+    };
+    const verified = verifyExecuteReceiptAttestation(malformed);
+    assert.equal(verified.ok, false);
+    assert.equal(verified.reason, "public_key_invalid");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// 17. altered outer consent hash fails
+test("verify rejects an altered displayed consent hash", () => {
+  const root = freshSandbox();
+  try {
+    const attestation = signedAttestation(executeReceipt(root), freshKeypair());
+    const altered = {
+      ...attestation,
+      consent: { ...attestation.consent, go_phrase_hash: `sha256:${"a".repeat(64)}` },
+    };
+    const verified = verifyExecuteReceiptAttestation(altered);
+    assert.equal(verified.ok, false);
+    assert.equal(verified.reason, "consent_hash_invalid");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// 18. removed outer consent fails
+test("verify rejects an attestation with the consent block removed", () => {
+  const root = freshSandbox();
+  try {
+    const attestation = signedAttestation(executeReceipt(root), freshKeypair());
+    const { consent: _consent, ...withoutConsent } = attestation;
+    const verified = verifyExecuteReceiptAttestation(withoutConsent);
+    assert.equal(verified.ok, false);
+    assert.equal(verified.reason, "consent_hash_invalid");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// 19. a signature over the bare payload (consent attached afterward) fails
+test("consent is inside the signed subject — bare-payload signature fails", () => {
+  const root = freshSandbox();
+  try {
+    const keys = freshKeypair();
+    const attestation = signedAttestation(executeReceipt(root), keys);
+    const { consent: _payloadConsent, ...barePayload } = attestation.payload;
+    const bareSignature = signPayload(barePayload, keys.private_key_pem);
+    const forged = {
+      ...attestation,
+      payload: barePayload,
+      signature: { ...attestation.signature, value: bareSignature },
+    };
+    const verified = verifyExecuteReceiptAttestation(forged, {
+      publicKeyPem: keys.public_key_pem,
+    });
+    assert.equal(verified.ok, false);
+    assert.equal(verified.reason, "consent_not_in_signed_subject");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// 20. content-hash semantics unchanged: payload still binds the receipt hashes
+test("payload content/state hashes still equal the source receipt hashes", () => {
+  const root = freshSandbox();
+  try {
+    const receipt = executeReceipt(root);
+    const attestation = signedAttestation(receipt, freshKeypair());
+    assert.equal(attestation.payload.content_hash, receipt.content_hash);
+    assert.equal(attestation.payload.state_hash, receipt.state_hash);
+    assert.equal(attestationBindsExecuteReceipt(receipt, attestation).ok, true);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

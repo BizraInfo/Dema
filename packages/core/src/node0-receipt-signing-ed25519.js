@@ -25,8 +25,11 @@ import {
 
 export const NODE0_RECEIPT_SIGNING_ED25519_SCHEMA =
   "bizra.dema.node0_receipt_signing_ed25519.v0.1";
+// v0.2 (NODE0-RECEIPT-SIGNING-PARITY-1A): the consent assertion moved INSIDE the
+// signed payload, matching PREVIEW-RECEIPT-SIGNING-1A semantics — the signature
+// attests "signed under this exact consent", not merely "these bytes were signed".
 export const NODE0_RECEIPT_ATTESTATION_PAYLOAD_SCHEMA =
-  "bizra.dema.node0_receipt_attestation_payload.v0.1";
+  "bizra.dema.node0_receipt_attestation_payload.v0.2";
 export const NODE0_RECEIPT_SIGNING_TRUTH_LABEL =
   "NODE0_SIGNED_SANDBOX_RECEIPT_ATTESTATION";
 export const NODE0_RECEIPT_SIGNING_GO_PHRASE =
@@ -128,6 +131,12 @@ export function buildExecuteReceiptAttestationPayload(receipt) {
     content_hash: receipt.content_hash,
     state_hash: receipt.state_hash,
     truth_label: NODE0_RECEIPT_SIGNING_TRUTH_LABEL,
+    // Consent is part of the signed subject: a signature over a payload without
+    // this block is not an attestation under the GO phrase and must not verify.
+    consent: Object.freeze({
+      go_phrase_hash: EXPECTED_SIGN_CONSENT_HASH,
+      mode: "exact_sign",
+    }),
     boundary: attestationBoundary(),
   });
 }
@@ -147,8 +156,17 @@ export function signExecuteReceiptAttestation({
   if (!privateKeyPem || !publicKeyPem) {
     return blockedAttestation(plan, ["signing_key_material_missing"]);
   }
-  const fingerprint =
-    publicKeyFingerprint || publicKeyFingerprintFromPem(publicKeyPem);
+  // The displayed fingerprint is always re-derived from the PEM; a mismatched
+  // caller-supplied fingerprint blocks instead of shipping a false identity.
+  let fingerprint;
+  try {
+    fingerprint = publicKeyFingerprintFromPem(publicKeyPem);
+  } catch {
+    return blockedAttestation(plan, ["public_key_invalid"]);
+  }
+  if (publicKeyFingerprint && publicKeyFingerprint !== fingerprint) {
+    return blockedAttestation(plan, ["public_key_fingerprint_mismatch"]);
+  }
   const payload = buildExecuteReceiptAttestationPayload(receipt);
   const signatureValue = signPayload(payload, privateKeyPem);
   return Object.freeze({
@@ -200,9 +218,30 @@ export function verifyExecuteReceiptAttestation(attestation, { publicKeyPem } = 
   ) {
     return { ok: false, reason: "consent_hash_invalid" };
   }
+  // Consent must be INSIDE the signed subject (payload), not merely attached to
+  // the attestation: a valid signature over a consent-free payload is not an
+  // attestation under the GO phrase.
+  if (
+    payload.consent?.go_phrase_hash !== EXPECTED_SIGN_CONSENT_HASH ||
+    payload.consent?.mode !== "exact_sign"
+  ) {
+    return { ok: false, reason: "consent_not_in_signed_subject" };
+  }
   const keyPem = publicKeyPem || attestation.signature?.public_key_pem;
   if (!keyPem || !attestation.signature?.value) {
     return { ok: false, reason: "public_key_or_signature_missing" };
+  }
+  // The displayed fingerprint must re-derive from the key that actually
+  // verifies the signature — a signature proves a key signed a subject; the
+  // fingerprint match proves the displayed identity is that key.
+  let derivedFingerprint;
+  try {
+    derivedFingerprint = publicKeyFingerprintFromPem(keyPem);
+  } catch {
+    return { ok: false, reason: "public_key_invalid" };
+  }
+  if (derivedFingerprint !== attestation.signature?.public_key_fingerprint) {
+    return { ok: false, reason: "public_key_fingerprint_mismatch" };
   }
   const valid = verifyPayload(payload, attestation.signature.value, keyPem);
   if (!valid) {
@@ -308,6 +347,9 @@ export function runNode0ReceiptSigningEd25519({
   let bind = null;
   let tamper_content_hash = null;
   let tamper_state_hash = null;
+  let fingerprint_tamper_rejected = false;
+  let consent_tamper_rejected = false;
+  let bare_payload_signature_rejected = false;
   let unsigned_integrity_ok = receipt
     ? verifyExecuteReceipt(receipt, { fs }).ok
     : false;
@@ -366,6 +408,58 @@ export function runNode0ReceiptSigningEd25519({
         if (tamper_state_hash.ok) {
           blocked_by.push("tamper_state_hash_not_rejected");
         }
+
+        // Parity scenarios (NODE0-RECEIPT-SIGNING-PARITY-1A):
+        // swapped displayed fingerprint must fail against the verifying key.
+        const fingerprintTamper = {
+          ...attestation,
+          signature: {
+            ...attestation.signature,
+            public_key_fingerprint: sha256("some-other-key"),
+          },
+        };
+        fingerprint_tamper_rejected =
+          verifyExecuteReceiptAttestation(fingerprintTamper, {
+            publicKeyPem: keys.public_key_pem,
+          }).ok === false;
+        if (!fingerprint_tamper_rejected) {
+          blocked_by.push("fingerprint_tamper_not_rejected");
+        }
+
+        // altered displayed consent must fail even with untouched signature.
+        const consentTamper = {
+          ...attestation,
+          consent: {
+            ...attestation.consent,
+            go_phrase_hash: `sha256:${sha256Hex("some other phrase")}`,
+          },
+        };
+        consent_tamper_rejected =
+          verifyExecuteReceiptAttestation(consentTamper, {
+            publicKeyPem: keys.public_key_pem,
+          }).ok === false;
+        if (!consent_tamper_rejected) {
+          blocked_by.push("consent_tamper_not_rejected");
+        }
+
+        // a valid signature over a consent-free payload must not verify:
+        // consent is inside the signed subject, not attached beside it.
+        const { consent: _payloadConsent, ...barePayload } = attestation.payload;
+        const bareForged = {
+          ...attestation,
+          payload: barePayload,
+          signature: {
+            ...attestation.signature,
+            value: signPayload(barePayload, keys.private_key_pem),
+          },
+        };
+        bare_payload_signature_rejected =
+          verifyExecuteReceiptAttestation(bareForged, {
+            publicKeyPem: keys.public_key_pem,
+          }).ok === false;
+        if (!bare_payload_signature_rejected) {
+          blocked_by.push("bare_payload_signature_not_rejected");
+        }
       }
     }
   }
@@ -382,6 +476,9 @@ export function runNode0ReceiptSigningEd25519({
     bind_ok: bind?.ok === true,
     tamper_content_hash_rejected: tamper_content_hash?.ok === false,
     tamper_state_hash_rejected: tamper_state_hash?.ok === false,
+    fingerprint_tamper_rejected,
+    consent_tamper_rejected,
+    bare_payload_signature_rejected,
     unsigned_integrity_ok,
     blocked_by: Object.freeze(blocked_by),
     receipt,
