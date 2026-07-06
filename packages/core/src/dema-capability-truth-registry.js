@@ -48,6 +48,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_FDE_FORWARDER_DIAGNOSTIC_1A",
   "PREVIEW_RECEIPT_SIGNING_1A",
   "LOCAL_MODEL_ADAPTER_PREVIEW_1A",
+  "CAPABILITY_BLAST_RADIUS_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -981,6 +982,35 @@ function defaultCapabilityRows() {
         "Exact-consent adapter CONTRACT compiles a models-discover-shaped report into a deterministic content-addressed preview envelope: model pinned null, runtime derived from first reachable provider (else unknown), canonical all-false boundary enforced by deep key-set equality, whole-body hash re-derivation rejects tampered and laundered bodies, and exact-name forbidden fields (wallet, mint, private_key, urp_live) are refused at plan and verify time.",
       what_this_does_not_prove:
         "It does not prove model correctness, live model invocation, inference quality, operator execution, daemon runtime, network use, wallet access, or live federation — the adapter never selects or calls a model.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "CAPABILITY_BLAST_RADIUS_1A",
+      truth_label: "CAPABILITY_BLAST_RADIUS_MEASURED_REPO",
+      summary:
+        "Deterministic blast-radius classifier: derives blast_radius (low|medium|high) and reversibility from declared action mutation flags — never from prose — so graduated consent can name what an action touches before it runs. No execution, no network, no mutation.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/capability-blast-radius.js"],
+        test_paths: ["tests/capability-blast-radius.test.js"],
+        review_gate_paths: [
+          "scripts/review/capability-blast-radius-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/CAPABILITY_BLAST_RADIUS_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/CAPABILITY_BLAST_RADIUS_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Exact-consent deterministic decision matrix classifies declared action descriptors (seven canonical mutation flags + closed recovery vocabulary) into low/medium/high blast radius with named auditable reasons and reversibility derived strictly from recovery; classifications are whole-body content-addressed AND re-derivable, so a laundered downgrade (high edited to low with a recomputed hash) is rejected; descriptors with missing or non-canonical flag keys are refused at plan time.",
+      what_this_does_not_prove:
+        "It does not prove any action was actually performed, blocked, or safe — classification is a naming act over DECLARED flags, not runtime observation; it grants no authority, and it does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
