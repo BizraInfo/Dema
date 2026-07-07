@@ -58,6 +58,7 @@ export const commands = [
   ["node", ["scripts/review/node0-urp-genesis-root-activation-preview-check.mjs"]],
   ["node", ["scripts/review/node0-urp-genesis-root-composition-gate-preview-check.mjs"]],
   ["node", ["scripts/review/node0-first-real-local-mission-pulse-preview-check.mjs"]],
+  ["node", ["scripts/review/node0-local-mission-harness-preview-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
   ["node", ["scripts/review/boundary-vocab-unification-check.mjs"]],
   ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],

@@ -229,6 +229,9 @@ Orientation:
                     Node0 health snapshot mission; requires --consent to save
   dema mission verify <path> [--json]
                     Verify a mission receipt
+  dema mission pulse <file> --claim ... --task ... --boundary ... [--json]
+                    PREVIEW_ONLY local mission pulse over one named file (read-only);
+                    --receipt --consent writes a preview receipt; no model/daemon/network
   dema authorship key init [--json]
                     Generate and persist Ed25519 keypair (requires --consent)
   dema authorship sign <artifact-path> [--json]

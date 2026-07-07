@@ -31,6 +31,30 @@ import {
 } from "../../../../packages/core/src/output-mode.js";
 import { statusWithLocalIdentity } from "../lib/status-identity.js";
 
+// NODE0-LOCAL-MISSION-HARNESS-PREVIEW-1A — `dema mission pulse <file>` effect layer.
+import { mkdir, readFile as readFileFs, realpath, rename, stat, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { basename, join } from "node:path";
+import { createHash } from "node:crypto";
+import { generateEd25519Keypair } from "../../../../packages/receipts/src/authorship-signature.js";
+import { buildNode0ProofChainLinkPayload } from "../../../../packages/core/src/node0-proof-chain-link.js";
+import { signChainHead, NODE0_SIGNED_CHAIN_HEAD_GO_PHRASE } from "../../../../packages/core/src/node0-signed-chain-head.js";
+import {
+  buildNode0UrpGenesisRootActivationPreviewPayload,
+  exampleGenesisRootInput,
+} from "../../../../packages/core/src/node0-urp-genesis-root-activation-preview.js";
+import {
+  buildNode0UrpGenesisRootCompositionGatePreviewPayload,
+  exampleCompositionInput,
+} from "../../../../packages/core/src/node0-urp-genesis-root-composition-gate-preview.js";
+import {
+  runNode0LocalMissionHarnessPreview,
+  NODE0_LOCAL_MISSION_HARNESS_PREVIEW_GO_PHRASE,
+} from "../../../../packages/core/src/node0-local-mission-harness-preview.js";
+
+export const MISSION_EXCERPT_GO_PHRASE = "GO: include local excerpt in mission packet";
+const EXCERPT_MAX_CHARS = 280;
+
 const adapter = createNode0Adapter();
 
 function argValue(argv, name) {
@@ -38,8 +62,163 @@ function argValue(argv, name) {
   return index >= 0 ? argv[index + 1] : undefined;
 }
 
+// Build an ephemeral composition reference (preview): a fresh signed genesis anchor composed with the
+// example URP resource-family surfaces. Keys are ephemeral — no live Node0 identity is bound.
+function buildEphemeralCompositionRef() {
+  const keys = generateEd25519Keypair();
+  const chain = buildNode0ProofChainLinkPayload([`sha256:${"1".repeat(64)}`, `sha256:${"2".repeat(64)}`]);
+  const signedChainHead = signChainHead({
+    chain,
+    consent: NODE0_SIGNED_CHAIN_HEAD_GO_PHRASE,
+    privateKeyPem: keys.private_key_pem,
+    publicKeyPem: keys.public_key_pem,
+    publicKeyFingerprint: keys.public_key_fingerprint,
+  });
+  const genesis = buildNode0UrpGenesisRootActivationPreviewPayload(exampleGenesisRootInput(signedChainHead));
+  return buildNode0UrpGenesisRootCompositionGatePreviewPayload(exampleCompositionInput(genesis));
+}
+
+async function writeMissionReceipt(artifact, demaHome) {
+  const home = demaHome || process.env.DEMA_HOME || join(homedir(), ".dema");
+  const dir = join(home, "mission", "receipts");
+  await mkdir(dir, { recursive: true });
+  const realDir = await realpath(dir);
+  const finalPath = join(realDir, `${artifact.mission_id}.json`);
+  const tmpPath = `${finalPath}.tmp`;
+  await writeFile(tmpPath, JSON.stringify(artifact, null, 2), { encoding: "utf8", mode: 0o600, flag: "w" });
+  await rename(tmpPath, finalPath);
+  return finalPath;
+}
+
+// Testable I/O core for `dema mission pulse`. Reads one file (read-only), runs the PURE harness kernel,
+// optionally writes the receipt. Never touches process/console. demaHome + nowIso are injectable.
+export async function runMissionPulseHarness({
+  file,
+  consent,
+  wantReceipt = false,
+  excerptConsent,
+  claim,
+  task,
+  boundary,
+  demaHome,
+  nowIso,
+}) {
+  if (!file || typeof file !== "string" || file.startsWith("--")) {
+    return { ok: false, error: "missing_file_argument" };
+  }
+  let st;
+  try {
+    st = await stat(file);
+  } catch {
+    return { ok: false, error: "file_not_found_or_unreadable" };
+  }
+  if (st.isDirectory()) return { ok: false, error: "path_is_directory" };
+
+  const real = await realpath(file);
+  const bytes = await readFileFs(real); // read-only, to compute the hash
+  const content_hash = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+  const contentReadPerformed = excerptConsent === MISSION_EXCERPT_GO_PHRASE;
+  const excerpt = contentReadPerformed ? bytes.toString("utf8").slice(0, EXCERPT_MAX_CHARS) : undefined;
+
+  const file_ref = {
+    path: real,
+    size_bytes: st.size,
+    mtime_iso: st.mtime.toISOString(),
+    content_hash,
+    content_read_performed: contentReadPerformed,
+    raw_content_leaves_node0: false,
+    ...(excerpt !== undefined ? { excerpt } : {}),
+  };
+
+  const result = runNode0LocalMissionHarnessPreview({
+    consent: consent ?? "",
+    input: {
+      file_ref,
+      composition_ref: buildEphemeralCompositionRef(),
+      candidate_extraction: { claim, task, boundary },
+      now_iso: nowIso ?? null,
+    },
+  });
+
+  let receiptPath = null;
+  if (wantReceipt) {
+    if (consent !== NODE0_LOCAL_MISSION_HARNESS_PREVIEW_GO_PHRASE) {
+      return { ok: false, error: "receipt_requires_consent", result };
+    }
+    if (result.ok) receiptPath = await writeMissionReceipt(result.receipt_artifact_preview, demaHome);
+  }
+
+  return { ok: result.ok, result, receiptPath, source_basename: basename(real) };
+}
+
 export async function cmd_mission(ctx) {
   const { argv, subcommand } = ctx;
+  if (subcommand === "pulse") {
+    // NODE0-LOCAL-MISSION-HARNESS-PREVIEW-1A — read one named file, run the pure mission pulse,
+    // shape a preview receipt. PREVIEW_ONLY. No daemon, no network, no model, no source mutation.
+    const wantJsonMP = wantsJson(argv);
+    const out = await runMissionPulseHarness({
+      file: argv[2],
+      consent: argValue(argv, "--consent"),
+      wantReceipt: argv.includes("--receipt"),
+      excerptConsent: argValue(argv, "--excerpt-consent"),
+      claim: argValue(argv, "--claim"),
+      task: argValue(argv, "--task"),
+      boundary: argValue(argv, "--boundary"),
+      nowIso: new Date().toISOString(),
+    });
+    if (out.error && !out.result) {
+      const usage = `dema mission pulse <file> --consent "${NODE0_LOCAL_MISSION_HARNESS_PREVIEW_GO_PHRASE}" --claim "…" --task "…" --boundary "…" [--receipt] [--excerpt-consent "${MISSION_EXCERPT_GO_PHRASE}"]`;
+      if (wantJsonMP) {
+        console.log(JSON.stringify({ preview_only: true, ok: false, error: out.error, usage }, null, 2));
+      } else {
+        console.error(`Dema error: ${out.error}. Usage: ${usage}`);
+      }
+      process.exitCode = 1;
+      process.exit(process.exitCode ?? 0);
+    }
+    const r = out.result;
+    if (wantJsonMP) {
+      console.log(
+        JSON.stringify(
+          {
+            preview_only: true,
+            schema: r.schema,
+            status: r.status,
+            ok: out.ok,
+            harness_ready: r.harness_ready,
+            content_hash: r.content_hash,
+            receipt_target_relpath: r.receipt_target_relpath,
+            receipt_written: out.receiptPath,
+            receipt_committed_live: r.receipt_artifact_preview?.committed_live,
+            boundary: r.boundary,
+            mint_allowed: r.mint_allowed,
+            authority_delta: r.authority_delta,
+            dema_report: r.dema_report,
+            blocked_by: r.blocked_by,
+            error: out.error ?? null,
+          },
+          null,
+          2,
+        ),
+      );
+    } else {
+      const lines = [
+        "DEMA · LOCAL MISSION PULSE — PREVIEW_ONLY (no model · no daemon · read-only source)",
+        `  status: ${r.status}`,
+        `  content_hash: ${r.content_hash}`,
+        `  receipt: ${out.receiptPath ?? `not written (add --receipt --consent "${NODE0_LOCAL_MISSION_HARNESS_PREVIEW_GO_PHRASE}")`}`,
+        `  boundary: all-false · mint_allowed:${r.mint_allowed} · authority_delta:${r.authority_delta}`,
+      ];
+      if (r.dema_report) lines.push(`  dema: ${r.dema_report.status} — ${r.dema_report.next_safe_action}`);
+      if (out.error) lines.push(`  ${out.error}`);
+      if (!out.ok) for (const c of r.blocked_by || []) lines.push(`    ${c}`);
+      lines.push(humanHintLine("mission pulse"));
+      console.log(lines.join("\n"));
+    }
+    if (!out.ok) process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
   if (subcommand === "interview") {
     // PAIN-GOAL-INTERVIEW-1A — local only, no model. Capture stated pain/goal,
     // propose (only propose) a first mission. Writes nothing.
