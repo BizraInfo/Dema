@@ -63,6 +63,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_ZERO_OVERCLAIM_RESPONSE_POLICY_1A",
   "URP_SUPPLY_SIDE_RESOURCE_REWARD_CONTRACT_PREVIEW_1A",
   "DEMA_RECEIPT_SIGNATURE_ANCHOR_PREVIEW_1A",
+  "NODE0_URP_GENESIS_ROOT_ACTIVATION_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1435,6 +1436,37 @@ function defaultCapabilityRows() {
         "live execution",
         "operator mutation",
         "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_URP_GENESIS_ROOT_ACTIVATION_PREVIEW_1A",
+      truth_label: "NODE0_URP_GENESIS_ROOT_ACTIVATION_PREVIEW_MEASURED_REPO",
+      summary:
+        "Preview-only Node0 URP Genesis Root: composes and validates a local resource-registry descriptor (identity, machine/compute/data resource policies, consent scopes, signed receipt-chain-head anchor, boundary flags) declaring what Node0 owns/permits/shares. Validates a caller-provided descriptor, activates nothing, tops at local_preview_active below the gated activate rung. Mints nothing, binds no live identity.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-urp-genesis-root-activation-preview.js"],
+        test_paths: ["tests/node0-urp-genesis-root-activation-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-urp-genesis-root-activation-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_URP_GENESIS_ROOT_ACTIVATION_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_URP_GENESIS_ROOT_ACTIVATION_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A Node0 URP Genesis Root DESCRIPTOR can be composed and validated deterministically as a local preview: it aggregates identity, machine/compute/data resource policies, and consent scopes; attaches a signature-backed receipt-chain-head anchor (via node0-signed-chain-head, injected key); resolves a fail-closed activation status; and produces a stable content hash. It reaches local_preview_active ONLY when all required fields are present AND every domain flag is false; otherwise it returns the specific blocked_pending_health/consent/resource_policy/data_policy or rejected_overclaim status. Rejects: any live_urp/public_identity_genesis/mint/wallet/settlement/payment/federation/remote_execution/public_market/model_invocation/daemon flag set true, public-market/simulated-impact-as-verified/resource-cost-as-value wording, authority_delta>0, grants_action:true, unknown activation status, naive field tamper (content-hash), and anchor tamper (signature). 32 focused tests + review gate green. First implementation of the reserved BIZRA_URP_GENESIS_PREVIEW slot.",
+      what_this_does_not_prove:
+        "It ACTIVATES NOTHING: no live URP, no public identity genesis, no mint, no wallet/settlement/payment, no federation, no remote execution, no daemon, no model invocation, no network. local_preview_active is a descriptor state, not a live runtime — it sits below the gated activate rung. It binds no live Node0 identity (keys injected/ephemeral). The receipt-chain-head anchor is signature-backed; other descriptor fields are content-addressed only. Measured resource is not value; the signature proves who signed, not that the descriptor's content is true.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+        "live urp activation",
+        "sovereign node activated",
       ],
     }),
   ]);
