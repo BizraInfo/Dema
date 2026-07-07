@@ -440,6 +440,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/node0-local-urp-shelf-index-cli.test.js`        | NODE0-LOCAL-URP-SHELF-INDEX-PREVIEW-1A CLI/adapter (`apps/cli/src/commands/mission.js` `shelf` subcommand): reads $DEMA_HOME/mission/receipts read-only and indexes them; absent dir = empty shelf (not error); corrupt file skipped; committed_live surfaced as live_leak. 4 tests. |
 | `tests/node0-receipt-shelf-compaction-state-preview.test.js`        | NODE0-RECEIPT-SHELF-COMPACTION-STATE-PREVIEW-1A pure kernel (`packages/core/src/node0-receipt-shelf-compaction-state-preview.js` + `scripts/review/node0-receipt-shelf-compaction-state-preview-check.mjs`): re-verifies a local URP shelf and compacts it into a hash-bound state retaining only verified signals, declaring dropped/no-longer-claimable + one next action; Ihsān gate enforced (verify rejects a dropped dropped-list); counts re-derived from the embedded shelf (forged count rejected); live_leak → quarantine action; purity asserted. 18 tests. Wired into `npm run check`. |
 | `tests/node0-receipt-shelf-compaction-cli.test.js`        | NODE0-RECEIPT-SHELF-COMPACTION-STATE-PREVIEW-1A CLI/adapter (`apps/cli/src/commands/mission.js` `compact` subcommand): reads $DEMA_HOME/mission/receipts → shelf → compacted state; empty home → run-a-mission recommendation; committed_live → quarantine action. 3 tests. |
+| `tests/public-metric-claim-gate-preview.test.js`        | PUBLIC-METRIC-CLAIM-GATE-PREVIEW-1A (`packages/core/src/public-metric-claim-gate-preview.js` + `scripts/review/public-metric-claim-gate-preview-check.mjs`): Materialization Pulse Step 5 claim-binding gate — binds structured public claims to an injected evidence store by hierarchy + EXACT value check → VERIFIED/DERIVED/DECLARED/PREVIEW/UNKNOWN/REJECTED/REMOVED. Encodes the operator's acceptance set verbatim (12,680→REJECTED, 6,993→VERIFIED, 15,000hrs→DECLARED, Live URP/SEED→REJECTED, URP Preview→PREVIEW, wrong-value→REJECTED, no-evidence→UNKNOWN); ai_text never authority; verify re-derives every binding so a laundered label is rejected; only VERIFIED/DERIVED/DECLARED/PREVIEW public-displayable; purity asserted. 20 tests. Wired into `npm run check`. |
 
 ## Smoke checks
 
@@ -561,6 +562,7 @@ node scripts/review/node0-local-mission-harness-preview-check.mjs
 node scripts/review/node0-mission-harness-return-review-preview-check.mjs
 node scripts/review/node0-local-urp-shelf-index-preview-check.mjs
 node scripts/review/node0-receipt-shelf-compaction-state-preview-check.mjs
+node scripts/review/public-metric-claim-gate-preview-check.mjs
 node scripts/review/dema-capability-truth-registry-check.mjs
 node scripts/review/boundary-vocab-unification-check.mjs
 node scripts/review/dema-fde-dual-diagnostic-check.mjs

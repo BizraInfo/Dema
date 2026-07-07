@@ -70,6 +70,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_MISSION_HARNESS_RETURN_REVIEW_PREVIEW_1A",
   "NODE0_LOCAL_URP_SHELF_INDEX_PREVIEW_1A",
   "NODE0_RECEIPT_SHELF_COMPACTION_STATE_PREVIEW_1A",
+  "PUBLIC_METRIC_CLAIM_GATE_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1667,6 +1668,35 @@ function defaultCapabilityRows() {
         "The Dema-native answer to 'compact the memory': compact VERIFIED RECEIPT STATE, not raw prose. A pure kernel takes a local URP shelf (#347), RE-VERIFIES it (launder chain compaction→shelf→receipt hashes; a forged shelf or compacted count is rejected because verify re-derives every count from the embedded shelf), and compacts it into a hash-bound mission state that RETAINS only verified signals (mission ids, file/pulse hashes, review status, counts, boundary) and EXPLICITLY declares what was DROPPED (raw file content, unverified semantic claims, model-generated meaning, natural-language summaries), what can no longer be claimed, and exactly ONE next safe action derived from state (live_leak>0 → quarantine, not act; empty → run a mission; else → the compacted preview memory is ready, no live commit). The Ihsān micro-compliance gate — keep / drop / no-longer-claim / next-action — is answered in full and verify rejects a compaction that dropped its own dropped-list. The `dema mission compact` CLI reads $DEMA_HOME/mission/receipts read-only (reusing the shelf reader). 18 kernel tests + 3 CLI/adapter tests + review gate green; boundary all-false, authority_delta 0, committed_live false.",
       what_this_does_not_prove:
         "It runs no RL, invokes no model, reads no file in the kernel (the CLI adapter does, read-only), and commits nothing live. It compacts PROOF, not meaning — it can never recover the dropped raw content or semantics (by design). Its launder-resistance is content-addressing only: it re-verifies the shelf's internal consistency but cannot re-derive the original genesis signature chain from hash summaries. It publishes nothing to any shared/federated URP; live URP remains DESIGNED_NOT_LIVE; it does not prove operator execution, daemon runtime, network use, wallet access, mint, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "PUBLIC_METRIC_CLAIM_GATE_PREVIEW_1A",
+      truth_label: "PUBLIC_METRIC_CLAIM_GATE_PREVIEW_MEASURED_REPO",
+      summary:
+        "Pure preview-only public-metric claim-binding gate (Materialization Pulse Step 5): given a structured claim and an evidence store, it classifies the claim's shape, resolves evidence by hierarchy (signed receipt > CI attestation > CURRENT_LIMITS row > public claim ledger > repo state > operator declaration), checks the asserted value against evidence, and assigns a truth label (VERIFIED / DERIVED / DECLARED / PREVIEW / UNKNOWN / REJECTED / REMOVED) with an evidence pointer; a wrong value or a live-capability claim without live proof is REJECTED, an unmeasured metric is UNKNOWN, and only VERIFIED/DERIVED/DECLARED/PREVIEW claims are public-displayable; isomorphism/shape-matching is used ONLY for recognition, never as truth; no model, no network, no deploy, kernel stays pure.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/public-metric-claim-gate-preview.js"],
+        test_paths: ["tests/public-metric-claim-gate-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/public-metric-claim-gate-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/PUBLIC_METRIC_CLAIM_GATE_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/PUBLIC_METRIC_CLAIM_GATE_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Materialization Pulse Step 5 (Claim Binding), done correctly: shape-matching RECOGNIZES a claim; only evidence binding PROVES its value. A pure kernel binds each structured public claim { metric, asserted_value, kind } to an injected evidence store by hierarchy (signed_receipt > ci_attestation > current_limits > claim_ledger > repo_state > operator_declaration; ai_text is NEVER authority) and an EXACT value check, assigning one of VERIFIED / DERIVED / DECLARED / PREVIEW / UNKNOWN / REJECTED / REMOVED. Reproduces the containment acceptance set exactly: '12,680 tests' → REJECTED (evidence says 6,993); '6,993 Dema-core' → VERIFIED (pointer required); '~15,000 hours' → DECLARED (founder testimony); 'Live URP' / 'SEED minted' → REJECTED (no live proof); 'URP Preview' → PREVIEW; a wrong value → REJECTED; an unmeasured metric → UNKNOWN and NOT public-displayable. Only VERIFIED/DERIVED/DECLARED/PREVIEW (with a pointer where required) are public_displayable; every claim is reported, none hidden. verify re-derives every binding from (claim, evidence), so a REJECTED laundered to VERIFIED is rejected. 20 tests + review gate green; boundary all-false, authority_delta 0. This is the OUTPUT-side guard that pairs with the input-side corpus sanitizer.",
+      what_this_does_not_prove:
+        "It does not EXTRACT claims from raw copy (claims are supplied structured) and does not fetch/measure evidence itself (the evidence store is injected) — it cannot certify that an injected evidence value is itself true, only that a public claim matches its cited evidence exactly and is labeled. Isomorphism/shape-matching is used ONLY for recognition, never as truth. No model, network, deploy, mutation, or mint; it does not prove operator execution, daemon runtime, wallet access, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
