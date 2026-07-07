@@ -64,6 +64,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "URP_SUPPLY_SIDE_RESOURCE_REWARD_CONTRACT_PREVIEW_1A",
   "DEMA_RECEIPT_SIGNATURE_ANCHOR_PREVIEW_1A",
   "NODE0_URP_GENESIS_ROOT_ACTIVATION_PREVIEW_1A",
+  "NODE0_URP_GENESIS_ROOT_COMPOSITION_GATE_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1467,6 +1468,35 @@ function defaultCapabilityRows() {
         "unattended runtime",
         "live urp activation",
         "sovereign node activated",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_URP_GENESIS_ROOT_COMPOSITION_GATE_PREVIEW_1A",
+      truth_label: "NODE0_URP_GENESIS_ROOT_COMPOSITION_GATE_PREVIEW_MEASURED_REPO",
+      summary:
+        "Pure preview-only gate binding a Node0 URP genesis-root descriptor to existing URP resource-family preview surfaces under all-false boundary rules; activates nothing, mints nothing.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-urp-genesis-root-composition-gate-preview.js"],
+        test_paths: ["tests/node0-urp-genesis-root-composition-gate-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-urp-genesis-root-composition-gate-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_URP_GENESIS_ROOT_COMPOSITION_GATE_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_URP_GENESIS_ROOT_COMPOSITION_GATE_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure gate deterministically answers whether a Node0 URP genesis-root descriptor may COMPOSE (local preview) with a declared set of existing URP resource-family surfaces: the genesis descriptor re-verifies through verifyNode0UrpGenesisRootActivationPreview (signature-backed anchor) and must be local_preview_active; each composed surface must carry a KNOWN URP preview schema (drift-guarded against the eight real kernel schema constants), an all-false boundary, and stay unpublished, preview-only settlement, non-minting, non-cost-as-impact, no-raw-data, non-federation; a composed-level overclaim (live/federation/mint/wallet/settlement/daemon/network) or authority_delta>0 fails closed; the verdict is content-addressed and the embedded genesis anchor makes a forge-and-recompute of the composition body still fail (signature, not private key). 27 focused tests + review gate green; boundary all-false, mint_allowed false, authority_delta 0.",
+      what_this_does_not_prove:
+        "It runs NO resource kernel and activates NO live URP — it validates caller-normalized surface attestations, so only the embedded genesis-root anchor is signature-backed (launder-resistant); the resource surfaces are content-addressed attestations whose fidelity is the caller's responsibility. It does not prove operator execution, daemon runtime, network use, wallet access, settlement, mint, or live federation. composition_ready is a preview readiness verdict, not a live composition.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
       ],
     }),
   ]);
