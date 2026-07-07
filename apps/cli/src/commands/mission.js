@@ -51,9 +51,38 @@ import {
   runNode0LocalMissionHarnessPreview,
   NODE0_LOCAL_MISSION_HARNESS_PREVIEW_GO_PHRASE,
 } from "../../../../packages/core/src/node0-local-mission-harness-preview.js";
+import {
+  runNode0MissionHarnessReturnReviewPreview,
+  NODE0_MISSION_HARNESS_RETURN_REVIEW_PREVIEW_GO_PHRASE,
+} from "../../../../packages/core/src/node0-mission-harness-return-review-preview.js";
 
 export const MISSION_EXCERPT_GO_PHRASE = "GO: include local excerpt in mission packet";
 const EXCERPT_MAX_CHARS = 280;
+
+// Testable I/O core for `dema mission review`. Reads one receipt JSON file (read-only) and runs the
+// pure return-review kernel. Never touches process/console.
+export async function runMissionReturnReview({ receiptPath }) {
+  if (!receiptPath || typeof receiptPath !== "string" || receiptPath.startsWith("--")) {
+    return { ok: false, error: "missing_receipt_path" };
+  }
+  let raw;
+  try {
+    raw = await readFileFs(await realpath(receiptPath), "utf8");
+  } catch {
+    return { ok: false, error: "receipt_file_not_found_or_unreadable" };
+  }
+  let receipt;
+  try {
+    receipt = JSON.parse(raw);
+  } catch {
+    return { ok: false, error: "receipt_not_valid_json" };
+  }
+  const result = runNode0MissionHarnessReturnReviewPreview({
+    consent: NODE0_MISSION_HARNESS_RETURN_REVIEW_PREVIEW_GO_PHRASE,
+    input: { receipt },
+  });
+  return { ok: result.ok, result };
+}
 
 const adapter = createNode0Adapter();
 
@@ -153,6 +182,63 @@ export async function runMissionPulseHarness({
 
 export async function cmd_mission(ctx) {
   const { argv, subcommand } = ctx;
+  if (subcommand === "review") {
+    // NODE0-MISSION-HARNESS-RETURN-REVIEW-PREVIEW-1A — read one `dema mission pulse` receipt file,
+    // review it (structure/invariants), state proven / not-proven + one next safe action.
+    // PREVIEW_ONLY. No model, no network, no daemon, no mutation. Receipt read-only.
+    const wantJsonMR = wantsJson(argv);
+    const out = await runMissionReturnReview({ receiptPath: argv[2] });
+    if (out.error) {
+      const usage = "dema mission review <receipt-path> [--json]";
+      if (wantJsonMR) {
+        console.log(JSON.stringify({ preview_only: true, ok: false, error: out.error, usage }, null, 2));
+      } else {
+        console.error(`Dema error: ${out.error}. Usage: ${usage}`);
+      }
+      process.exitCode = 1;
+      process.exit(process.exitCode ?? 0);
+    }
+    const r = out.result;
+    if (wantJsonMR) {
+      console.log(
+        JSON.stringify(
+          {
+            preview_only: true,
+            schema: r.schema,
+            status: r.status,
+            ok: out.ok,
+            receipt_ok: r.receipt_ok,
+            content_hash: r.content_hash,
+            what_was_proven: r.what_was_proven,
+            what_was_not_proven: r.what_was_not_proven,
+            one_next_safe_action: r.one_next_safe_action,
+            boundary: r.boundary,
+            mint_allowed: r.mint_allowed,
+            authority_delta: r.authority_delta,
+            blocked_by: r.blocked_by,
+          },
+          null,
+          2,
+        ),
+      );
+    } else {
+      const lines = [
+        "DEMA · MISSION RETURN REVIEW — PREVIEW_ONLY (read-only receipt · no model · no execution)",
+        `  receipt_ok: ${r.receipt_ok} · status: ${r.status}`,
+        "  what was PROVEN:",
+        ...(r.what_was_proven.length ? r.what_was_proven.map((s) => `    ✓ ${s}`) : ["    (nothing — receipt did not pass review)"]),
+        "  what was NOT proven:",
+        ...r.what_was_not_proven.map((s) => `    · ${s}`),
+        `  ONE next safe action: ${r.one_next_safe_action}`,
+        `  boundary: all-false · mint_allowed:${r.mint_allowed} · authority_delta:${r.authority_delta}`,
+      ];
+      if (!out.ok) for (const c of r.blocked_by || []) lines.push(`    ${c}`);
+      lines.push(humanHintLine("mission review"));
+      console.log(lines.join("\n"));
+    }
+    if (!out.ok) process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
   if (subcommand === "pulse") {
     // NODE0-LOCAL-MISSION-HARNESS-PREVIEW-1A — read one named file, run the pure mission pulse,
     // shape a preview receipt. PREVIEW_ONLY. No daemon, no network, no model, no source mutation.
