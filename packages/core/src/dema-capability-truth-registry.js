@@ -61,6 +61,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_FIRST_LIGHT_FRONT_DOOR_PREVIEW_1A",
   "DEMA_SOCRATIC_CRITIC_PROCESS_SUPERVISION_PREVIEW_1A",
   "DEMA_ZERO_OVERCLAIM_RESPONSE_POLICY_1A",
+  "URP_SUPPLY_SIDE_RESOURCE_REWARD_CONTRACT_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1371,6 +1372,35 @@ function defaultCapabilityRows() {
         "Each claim in a response packet is classified (verified_fact / grounded_inference / speculation / unverifiable / current_requires_verification / high_stakes_requires_verification) and gets exactly one enforced label; the packet hands off with one status — cleared_to_respond / blocked_pending_evidence / rejected_overclaim. An unsupported fact is downgraded to UNVERIFIED; a current or high-stakes claim without evidence is BLOCKED_PENDING_EVIDENCE; an invented source, an inference or speculation presented as VERIFIED, a grants_action/authority_delta inflation, or a claims_truth without a verified claim all force rejected_overclaim. Content-addressed and stable; grants_action false, claims_truth false, authority_delta 0, boundary all-false — verify rejects a grants_action and a boundary tamper. 14 focused tests + review gate green.",
       what_this_does_not_prove:
         "It does not verify a claim's truth, fetch evidence, invoke a model, or touch the network. It enforces honest labeling and blocks overclaim; it cannot confirm a fact — only refuse to let an unproven one leave as if proven.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "URP_SUPPLY_SIDE_RESOURCE_REWARD_CONTRACT_PREVIEW_1A",
+      truth_label: "URP_SUPPLY_REWARD_CONTRACT_PREVIEW_ONLY",
+      summary:
+        "URP supply-side resource reward contract (PREVIEW): encodes the public-market law that a provider earns base value from VERIFIED supply, availability, and service — not from proving impact. Computes reward-type ELIGIBILITY previews; mints nothing, settles nothing, activates no live URP. Cost measured is not impact; supply reward is not an impact claim; the impact dividend is extra and requires a verified outcome.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/urp-supply-side-resource-reward-contract-preview.js"],
+        test_paths: ["tests/urp-supply-side-resource-reward-contract-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/urp-supply-side-resource-reward-contract-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/URP_SUPPLY_SIDE_RESOURCE_REWARD_CONTRACT_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/URP_SUPPLY_SIDE_RESOURCE_REWARD_CONTRACT_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live URP, token mint, wallet access, settlement, federation, live execution, or operator mutation outside registered sandbox preview.",
+      what_this_proves:
+        "A resource offer is evaluated into reward-type eligibility (verified_supply_reward, verified_availability_reward, verified_usage_reward, optional_impact_dividend) and handed off with one status: reward_preview_allowed / blocked_pending_consent / blocked_pending_measurement / blocked_pending_sat_audit / rejected_overclaim / rejected_policy_violation. Missing consent/measurement blocks; a high-value offer needs a SAT audit ref; a claimed impact without verified-outcome evidence blocks pending SAT audit; a policy violation, a self-mint / live-URP / wallet / federation / authority-increase claim, cost-labeled-as-impact, or supply-reward-mislabeled-as-impact all reject. Content-addressed and stable; boundary all-false, authority_delta 0, grants_action false, mint_allowed false — verify rejects a mint_allowed and a boundary tamper. 17 focused tests + review gate green.",
+      what_this_does_not_prove:
+        "It does not activate live URP, mint any token, access a wallet, settle or pay anyone, federate, invoke a model, touch the network, run a daemon, scan files, or execute jobs. It previews reward ELIGIBILITY under the contract; it does not confirm real resource settlement or real impact — those require live URP + SAT audit, which remain DESIGNED_NOT_LIVE.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
