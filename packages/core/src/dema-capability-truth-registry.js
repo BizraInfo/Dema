@@ -65,6 +65,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_RECEIPT_SIGNATURE_ANCHOR_PREVIEW_1A",
   "NODE0_URP_GENESIS_ROOT_ACTIVATION_PREVIEW_1A",
   "NODE0_URP_GENESIS_ROOT_COMPOSITION_GATE_PREVIEW_1A",
+  "NODE0_FIRST_REAL_LOCAL_MISSION_PULSE_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1493,6 +1494,35 @@ function defaultCapabilityRows() {
         "A pure gate deterministically answers whether a Node0 URP genesis-root descriptor may COMPOSE (local preview) with a declared set of existing URP resource-family surfaces: the genesis descriptor re-verifies through verifyNode0UrpGenesisRootActivationPreview (signature-backed anchor) and must be local_preview_active; each composed surface must carry a KNOWN URP preview schema (drift-guarded against the eight real kernel schema constants), an all-false boundary, and stay unpublished, preview-only settlement, non-minting, non-cost-as-impact, no-raw-data, non-federation; a composed-level overclaim (live/federation/mint/wallet/settlement/daemon/network) or authority_delta>0 fails closed; the verdict is content-addressed and the embedded genesis anchor makes a forge-and-recompute of the composition body still fail (signature, not private key). 27 focused tests + review gate green; boundary all-false, mint_allowed false, authority_delta 0.",
       what_this_does_not_prove:
         "It runs NO resource kernel and activates NO live URP — it validates caller-normalized surface attestations, so only the embedded genesis-root anchor is signature-backed (launder-resistant); the resource surfaces are content-addressed attestations whose fidelity is the caller's responsibility. It does not prove operator execution, daemon runtime, network use, wallet access, settlement, mint, or live federation. composition_ready is a preview readiness verdict, not a live composition.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_FIRST_REAL_LOCAL_MISSION_PULSE_PREVIEW_1A",
+      truth_label: "NODE0_FIRST_REAL_LOCAL_MISSION_PULSE_PREVIEW_MEASURED_REPO",
+      summary:
+        "Pure preview-only Node0 mission pulse: connects one caller-supplied mission packet through consent, resource-composition reference, action preview, verification, receipt preview, world-state delta preview, and a DEMA truth report — all boundary-false, activates nothing.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-first-real-local-mission-pulse-preview.js"],
+        test_paths: ["tests/node0-first-real-local-mission-pulse-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-first-real-local-mission-pulse-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_FIRST_REAL_LOCAL_MISSION_PULSE_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_FIRST_REAL_LOCAL_MISSION_PULSE_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure kernel deterministically connects one caller-supplied mission packet through the eight-stage pulse (PERCEIVE consent-scoped mission present; CONSENT operator-sole-authority with live mutation refused; RESOURCE_SELECT a re-verified, composition-ready NODE0-URP-GENESIS-ROOT-COMPOSITION-GATE verdict; ACTION_PREVIEW a caller-supplied candidate whose claim/task/boundary shape is validated and affirmative fields scanned for overclaim wording; VERIFY; RECEIPT preview; WORLD_STATE_UPDATE_PREVIEW with committed_live false; DEMA_REPORT). It fails closed on a missing/malformed mission, live-mutation consent, missing input content-hash, raw-content-leaves-node0, an invalid/unready composition reference, a malformed or overclaiming candidate, any declared live/mint/network/model/file-mutation flag, authority_delta>0, or a live-commit request. The verdict is content-addressed and re-verifies the embedded composition reference — which transitively re-verifies the genesis signature anchor — so a forge-and-recompute of the pulse body that tampers the composition/genesis chain is still rejected. 32 focused tests + review gate green; boundary all-false, authority_delta 0, mint_allowed false.",
+      what_this_does_not_prove:
+        "It proves NO live runtime, NO model intelligence, NO real founder-data ingestion, NO mint, NO federation, NO daemon, NO network, NO public readiness. The ACTION_PREVIEW is a caller-supplied candidate whose SHAPE is validated — this kernel performs no semantic extraction and reads no file. RECEIPT and WORLD_STATE_UPDATE are previews only (committed_live false); nothing is committed to a live world-state. It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
