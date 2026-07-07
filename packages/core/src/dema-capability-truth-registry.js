@@ -69,6 +69,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_LOCAL_MISSION_HARNESS_PREVIEW_1A",
   "NODE0_MISSION_HARNESS_RETURN_REVIEW_PREVIEW_1A",
   "NODE0_LOCAL_URP_SHELF_INDEX_PREVIEW_1A",
+  "NODE0_RECEIPT_SHELF_COMPACTION_STATE_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1631,6 +1632,41 @@ function defaultCapabilityRows() {
         "Makes the write-only mission receipts READABLE — the first local URP shelf (URP_LOCAL_ACTIVE becomes a thing you can ASK, not just write). A pure kernel composes an injected set of `dema mission pulse` receipts into a deterministic, content-addressed shelf catalog: each entry carries the mission id, file + pulse content hashes, and its receipt-review status (reusing the return-review's evaluateReceipt validator); the shelf reports entry/valid/invalid/live-leak counts and an all_preview flag. Entries are order-independent (the content hash is stable regardless of input order). A bad receipt is still catalogued (the shelf shows what is held) but counted invalid; a committed_live receipt is surfaced as a live_leak. verify re-derives every count from the entries, so a forged entry_count/valid_count/live_leak_count is rejected. The `dema mission shelf` CLI adapter reads $DEMA_HOME/mission/receipts/*.json read-only (an absent dir is an empty shelf, a corrupt file is skipped). 19 kernel tests + 4 CLI/adapter tests + review gate green; boundary all-false, authority_delta 0.",
       what_this_does_not_prove:
         "It reads no file in the kernel (the CLI adapter does, read-only), verifies no semantic content, commits NOTHING to a live world-state, and PUBLISHES nothing to any shared or federated URP. A live URP (shared across nodes) remains DESIGNED_NOT_LIVE. The shelf is a local reading view, not a network; it does not prove operator execution, daemon runtime, network use, wallet access, mint, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_RECEIPT_SHELF_COMPACTION_STATE_PREVIEW_1A",
+      truth_label: "NODE0_RECEIPT_SHELF_COMPACTION_STATE_PREVIEW_MEASURED_REPO",
+      summary:
+        "Pure preview-only receipt-shelf compaction: turns a verified local URP receipt shelf into a compacted, hash-bound mission state that RETAINS only verified signals (mission ids, file/pulse hashes, review status, counts, boundary) and explicitly lists what was DROPPED (raw content, unverified semantic claims, model-generated meaning), what can no longer be claimed, and exactly one next safe action; no RL, no model, no network, no live URP write, kernel stays pure.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/node0-receipt-shelf-compaction-state-preview.js",
+          "apps/cli/src/commands/mission.js",
+        ],
+        test_paths: [
+          "tests/node0-receipt-shelf-compaction-state-preview.test.js",
+          "tests/node0-receipt-shelf-compaction-cli.test.js",
+        ],
+        review_gate_paths: [
+          "scripts/review/node0-receipt-shelf-compaction-state-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_RECEIPT_SHELF_COMPACTION_STATE_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_RECEIPT_SHELF_COMPACTION_STATE_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "The Dema-native answer to 'compact the memory': compact VERIFIED RECEIPT STATE, not raw prose. A pure kernel takes a local URP shelf (#347), RE-VERIFIES it (launder chain compaction→shelf→receipt hashes; a forged shelf or compacted count is rejected because verify re-derives every count from the embedded shelf), and compacts it into a hash-bound mission state that RETAINS only verified signals (mission ids, file/pulse hashes, review status, counts, boundary) and EXPLICITLY declares what was DROPPED (raw file content, unverified semantic claims, model-generated meaning, natural-language summaries), what can no longer be claimed, and exactly ONE next safe action derived from state (live_leak>0 → quarantine, not act; empty → run a mission; else → the compacted preview memory is ready, no live commit). The Ihsān micro-compliance gate — keep / drop / no-longer-claim / next-action — is answered in full and verify rejects a compaction that dropped its own dropped-list. The `dema mission compact` CLI reads $DEMA_HOME/mission/receipts read-only (reusing the shelf reader). 18 kernel tests + 3 CLI/adapter tests + review gate green; boundary all-false, authority_delta 0, committed_live false.",
+      what_this_does_not_prove:
+        "It runs no RL, invokes no model, reads no file in the kernel (the CLI adapter does, read-only), and commits nothing live. It compacts PROOF, not meaning — it can never recover the dropped raw content or semantics (by design). Its launder-resistance is content-addressing only: it re-verifies the shelf's internal consistency but cannot re-derive the original genesis signature chain from hash summaries. It publishes nothing to any shared/federated URP; live URP remains DESIGNED_NOT_LIVE; it does not prove operator execution, daemon runtime, network use, wallet access, mint, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",

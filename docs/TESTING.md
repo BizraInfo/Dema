@@ -438,6 +438,8 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/node0-mission-harness-return-review-cli.test.js`        | NODE0-MISSION-HARNESS-RETURN-REVIEW-PREVIEW-1A CLI/adapter (`apps/cli/src/commands/mission.js` `review` subcommand): reads a real receipt JSON file read-only, reviews it ok; a committed_live receipt reviews NOT ok; refuses missing path / nonexistent file / non-JSON. 5 tests. |
 | `tests/node0-local-urp-shelf-index-preview.test.js`        | NODE0-LOCAL-URP-SHELF-INDEX-PREVIEW-1A pure kernel (`packages/core/src/node0-local-urp-shelf-index-preview.js` + `scripts/review/node0-local-urp-shelf-index-preview-check.mjs`): composes injected `dema mission pulse` receipts into a deterministic content-addressed shelf catalog (mission ids, file/pulse hashes, review status, valid/invalid/live-leak counts); order-independent hash; bad receipt catalogued but invalid; committed_live surfaced as live_leak; verify re-derives counts (forged count rejected); reuses the return-review validator; purity asserted. 19 tests. Wired into `npm run check`. |
 | `tests/node0-local-urp-shelf-index-cli.test.js`        | NODE0-LOCAL-URP-SHELF-INDEX-PREVIEW-1A CLI/adapter (`apps/cli/src/commands/mission.js` `shelf` subcommand): reads $DEMA_HOME/mission/receipts read-only and indexes them; absent dir = empty shelf (not error); corrupt file skipped; committed_live surfaced as live_leak. 4 tests. |
+| `tests/node0-receipt-shelf-compaction-state-preview.test.js`        | NODE0-RECEIPT-SHELF-COMPACTION-STATE-PREVIEW-1A pure kernel (`packages/core/src/node0-receipt-shelf-compaction-state-preview.js` + `scripts/review/node0-receipt-shelf-compaction-state-preview-check.mjs`): re-verifies a local URP shelf and compacts it into a hash-bound state retaining only verified signals, declaring dropped/no-longer-claimable + one next action; Ihsān gate enforced (verify rejects a dropped dropped-list); counts re-derived from the embedded shelf (forged count rejected); live_leak → quarantine action; purity asserted. 18 tests. Wired into `npm run check`. |
+| `tests/node0-receipt-shelf-compaction-cli.test.js`        | NODE0-RECEIPT-SHELF-COMPACTION-STATE-PREVIEW-1A CLI/adapter (`apps/cli/src/commands/mission.js` `compact` subcommand): reads $DEMA_HOME/mission/receipts → shelf → compacted state; empty home → run-a-mission recommendation; committed_live → quarantine action. 3 tests. |
 
 ## Smoke checks
 
@@ -558,6 +560,7 @@ node scripts/review/node0-first-real-local-mission-pulse-preview-check.mjs
 node scripts/review/node0-local-mission-harness-preview-check.mjs
 node scripts/review/node0-mission-harness-return-review-preview-check.mjs
 node scripts/review/node0-local-urp-shelf-index-preview-check.mjs
+node scripts/review/node0-receipt-shelf-compaction-state-preview-check.mjs
 node scripts/review/dema-capability-truth-registry-check.mjs
 node scripts/review/boundary-vocab-unification-check.mjs
 node scripts/review/dema-fde-dual-diagnostic-check.mjs

@@ -238,6 +238,9 @@ Orientation:
   dema mission shelf [--json]
                     PREVIEW_ONLY local URP shelf: index all mission-pulse receipts under
                     $DEMA_HOME into a queryable catalog (read-only); nothing published/federated
+  dema mission compact [--json]
+                    PREVIEW_ONLY receipt-shelf compaction (read-only): compact PROOF not prose into a
+                    hash-bound state — keep/drop/no-longer-claim/one-next-action; nothing live
   dema authorship key init [--json]
                     Generate and persist Ed25519 keypair (requires --consent)
   dema authorship sign <artifact-path> [--json]
