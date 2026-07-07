@@ -66,6 +66,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_URP_GENESIS_ROOT_ACTIVATION_PREVIEW_1A",
   "NODE0_URP_GENESIS_ROOT_COMPOSITION_GATE_PREVIEW_1A",
   "NODE0_FIRST_REAL_LOCAL_MISSION_PULSE_PREVIEW_1A",
+  "NODE0_LOCAL_MISSION_HARNESS_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1523,6 +1524,41 @@ function defaultCapabilityRows() {
         "A pure kernel deterministically connects one caller-supplied mission packet through the eight-stage pulse (PERCEIVE consent-scoped mission present; CONSENT operator-sole-authority with live mutation refused; RESOURCE_SELECT a re-verified, composition-ready NODE0-URP-GENESIS-ROOT-COMPOSITION-GATE verdict; ACTION_PREVIEW a caller-supplied candidate whose claim/task/boundary shape is validated and affirmative fields scanned for overclaim wording; VERIFY; RECEIPT preview; WORLD_STATE_UPDATE_PREVIEW with committed_live false; DEMA_REPORT). It fails closed on a missing/malformed mission, live-mutation consent, missing input content-hash, raw-content-leaves-node0, an invalid/unready composition reference, a malformed or overclaiming candidate, any declared live/mint/network/model/file-mutation flag, authority_delta>0, or a live-commit request. The verdict is content-addressed and re-verifies the embedded composition reference — which transitively re-verifies the genesis signature anchor — so a forge-and-recompute of the pulse body that tampers the composition/genesis chain is still rejected. 32 focused tests + review gate green; boundary all-false, authority_delta 0, mint_allowed false.",
       what_this_does_not_prove:
         "It proves NO live runtime, NO model intelligence, NO real founder-data ingestion, NO mint, NO federation, NO daemon, NO network, NO public readiness. The ACTION_PREVIEW is a caller-supplied candidate whose SHAPE is validated — this kernel performs no semantic extraction and reads no file. RECEIPT and WORLD_STATE_UPDATE are previews only (committed_live false); nothing is committed to a live world-state. It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_LOCAL_MISSION_HARNESS_PREVIEW_1A",
+      truth_label: "NODE0_LOCAL_MISSION_HARNESS_PREVIEW_MEASURED_REPO",
+      summary:
+        "Operator-invoked local mission harness: reads one explicitly-named local file (metadata + hash, content only on separate consent), builds a mission packet, runs the pure mission-pulse kernel over a composition reference, and shapes a preview receipt artifact — fs confined to the CLI/adapter, kernel stays pure, no daemon, no network, no model, no mutation except the consented receipt.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/node0-local-mission-harness-preview.js",
+          "apps/cli/src/commands/mission.js",
+        ],
+        test_paths: [
+          "tests/node0-local-mission-harness-preview.test.js",
+          "tests/node0-local-mission-harness-cli.test.js",
+        ],
+        review_gate_paths: [
+          "scripts/review/node0-local-mission-harness-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_LOCAL_MISSION_HARNESS_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_LOCAL_MISSION_HARNESS_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "The first I/O boundary crossing. A PURE kernel composes an INJECTED file reference (path/size/mtime/content-hash — the read-only CLI adapter computes it) plus an OPERATOR-SUPPLIED candidate extraction into a mission packet, runs the pure mission-pulse kernel over a composition reference, and shapes a preview receipt artifact (committed_live false); the embedded pulse verdict re-verifies (→ composition → genesis signature anchor), so a forge-and-recompute of the chain is rejected. The `dema mission pulse <file>` CLI adapter reads exactly one named file read-only to hash it, admits a bounded excerpt into the packet ONLY under a separate exact excerpt-consent phrase (default is metadata+hash only, content_read_performed false), and writes the receipt ONLY with --receipt + the exact consent phrase — atomically (tmp+rename, mode 0600) under $DEMA_HOME/mission/receipts; the source file is never mutated. Kernel-purity (no fs/clock/random in core) is asserted by a test; the fs lives in the CLI. 21 kernel tests + 11 CLI/adapter tests + review gate green.",
+      what_this_does_not_prove:
+        "The harness performs NO semantic extraction — the claim/task/boundary are the operator's (CLI flags), not the machine's; it invokes no model. It does not prove live execution, daemon runtime, background watching, directory crawl, network use, wallet access, mint, settlement, or live federation. The receipt is a preview (committed_live false); nothing is committed to a live world-state. The composition reference is an ephemeral-key preview, not a live Node0 identity.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
