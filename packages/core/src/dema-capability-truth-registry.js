@@ -59,6 +59,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_SELF_EVAL_BASELINE_PREVIEW_1A",
   "DEMA_VERIFIED_ANSWER_RECEIPT_CACHE_PREVIEW_1A",
   "DEMA_FIRST_LIGHT_FRONT_DOOR_PREVIEW_1A",
+  "DEMA_SOCRATIC_CRITIC_PROCESS_SUPERVISION_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1311,6 +1312,35 @@ function defaultCapabilityRows() {
         "The pure contract kernel is the source of truth and the shipped HTML is verified against it: the front door carries the PREVIEW ONLY / NO MINT / NO FEDERATION disclaimers, makes zero external requests (the only fetch targets 127.0.0.1, opt-in and button-triggered), labels URP / apps-scan / data-scan / daemon / receipt-mint as DESIGNED — NOT LIVE, gates the apps/data consent toggles behind a local agent, ships bilingual (Arabic first-class) with evidence chips and a self-audit, and exports the bond fingerprint (a hash) not raw identity. 13 focused tests + the review gate reject an external request, a non-localhost fetch, a URP-labeled-ACTIVE, a live mint/federation claim, a missing disclaimer, and missing Arabic. Boundary all-false, authority_delta 0.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, live federation, or live URP. It renders a preview; it runs no scan, mints no receipt, and activates nothing. The opt-in 127.0.0.1 probe does not prove a running model.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_SOCRATIC_CRITIC_PROCESS_SUPERVISION_PREVIEW_1A",
+      truth_label: "DEMA_SOCRATIC_CRITIC_PREVIEW_MEASURED_REPO",
+      summary:
+        "Socratic critic (process supervision): a constraint-enforcing critic that interrogates a proposed hypothesis BEFORE SAT — PAT proposes, critic interrogates, SAT verifies, receipt records. It asks 'what would make this false?', raises question pressure only, and never grants authority or claims truth.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-socratic-critic-process-supervision-preview.js"],
+        test_paths: ["tests/dema-socratic-critic-process-supervision-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-socratic-critic-process-supervision-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_SOCRATIC_CRITIC_PROCESS_SUPERVISION_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_SOCRATIC_CRITIC_PROCESS_SUPERVISION_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A proposed hypothesis packet (claim, causal_path, constraints, evidence, certainty, falsifier) is run through the four Socratic gates as seven deterministic checks (clarification, constraint, causal-path, counterexample, falsification, uncertainty, verified-vs-inferred split) and handed off with exactly one status: ready_for_sat / needs_revision / blocked_by_missing_evidence / rejected_overclaim. A violated constraint or certainty outrunning evidence forces rejected_overclaim; a missing causal path or falsifier or no evidence forces blocked_by_missing_evidence; a vacuous claim forces needs_revision. The critic output is content-addressed and carries grants_action false, claims_truth false, authority_delta 0, boundary all-false — verify rejects a grants_action tamper, an unknown status, and a vacuous boundary. 13 focused tests + review gate green.",
+      what_this_does_not_prove:
+        "It does not verify the claim (that is SAT's role), does not grant authority, does not execute any action, invokes no model, and touches no network. 'ready_for_sat' means the hypothesis survived interrogation pressure — not that it is true. It raises the question; it does not answer it.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
