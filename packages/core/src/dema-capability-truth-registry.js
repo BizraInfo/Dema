@@ -58,6 +58,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_CONSENTED_INVENTORY_GATHERER_PREVIEW_1A",
   "DEMA_SELF_EVAL_BASELINE_PREVIEW_1A",
   "DEMA_VERIFIED_ANSWER_RECEIPT_CACHE_PREVIEW_1A",
+  "DEMA_FIRST_LIGHT_FRONT_DOOR_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1281,6 +1282,35 @@ function defaultCapabilityRows() {
         "A verified answer is stored as a content-addressed record (cache_id over question+answer_digest+source_hashes+scope; content_hash over the whole body) and reused only when a lookup passes every gate: status verified, fresh against an injected now, exact consent-scope match (a private scope requires a matching operator-consent token), and source-hash set match — any miss returns no hit. compareFreshness and supersede are pure and clock-injected; a superseded or rejected record never hits; a tampered content_hash, a non-zero authority_delta, a vacuous-or-flipped boundary, and an unknown status are each rejected by re-derivation. A hit reuses proof only: grants_action false, authority_delta 0, boundary all-false.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation, and it does not itself mint or turn saved model cost into value. Its integrity check is body-bound content-addressing only — not cryptographic tamper-resistance: a forge-and-recompute launder is not defended here (that needs an independent signature/anchor).",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_FIRST_LIGHT_FRONT_DOOR_PREVIEW_1A",
+      truth_label: "DEMA_FIRST_LIGHT_FRONT_DOOR_PREVIEW_MEASURED_REPO",
+      summary:
+        "First Light front door: a self-contained, zero-external-request static GUI preview (apps/front-door/index.html) rendered from a pure contract kernel; bilingual, consent-first, evidence-chipped, PREVIEW_ONLY. Renders the contract; mints nothing, federates nothing, activates no URP, runs no daemon.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-first-light-front-door-preview.js"],
+        test_paths: ["tests/dema-first-light-front-door-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-first-light-front-door-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_FIRST_LIGHT_GUI_FRONT_DOOR_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_FIRST_LIGHT_GUI_FRONT_DOOR_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "The pure contract kernel is the source of truth and the shipped HTML is verified against it: the front door carries the PREVIEW ONLY / NO MINT / NO FEDERATION disclaimers, makes zero external requests (the only fetch targets 127.0.0.1, opt-in and button-triggered), labels URP / apps-scan / data-scan / daemon / receipt-mint as DESIGNED — NOT LIVE, gates the apps/data consent toggles behind a local agent, ships bilingual (Arabic first-class) with evidence chips and a self-audit, and exports the bond fingerprint (a hash) not raw identity. 13 focused tests + the review gate reject an external request, a non-localhost fetch, a URP-labeled-ACTIVE, a live mint/federation claim, a missing disclaimer, and missing Arabic. Boundary all-false, authority_delta 0.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, live federation, or live URP. It renders a preview; it runs no scan, mints no receipt, and activates nothing. The opt-in 127.0.0.1 probe does not prove a running model.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
