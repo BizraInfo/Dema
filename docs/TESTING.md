@@ -440,6 +440,8 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/node0-local-urp-shelf-index-cli.test.js`        | NODE0-LOCAL-URP-SHELF-INDEX-PREVIEW-1A CLI/adapter (`apps/cli/src/commands/mission.js` `shelf` subcommand): reads $DEMA_HOME/mission/receipts read-only and indexes them; absent dir = empty shelf (not error); corrupt file skipped; committed_live surfaced as live_leak. 4 tests. |
 | `tests/node0-receipt-shelf-compaction-state-preview.test.js`        | NODE0-RECEIPT-SHELF-COMPACTION-STATE-PREVIEW-1A pure kernel (`packages/core/src/node0-receipt-shelf-compaction-state-preview.js` + `scripts/review/node0-receipt-shelf-compaction-state-preview-check.mjs`): re-verifies a local URP shelf and compacts it into a hash-bound state retaining only verified signals, declaring dropped/no-longer-claimable + one next action; Ihsān gate enforced (verify rejects a dropped dropped-list); counts re-derived from the embedded shelf (forged count rejected); live_leak → quarantine action; purity asserted. 18 tests. Wired into `npm run check`. |
 | `tests/node0-receipt-shelf-compaction-cli.test.js`        | NODE0-RECEIPT-SHELF-COMPACTION-STATE-PREVIEW-1A CLI/adapter (`apps/cli/src/commands/mission.js` `compact` subcommand): reads $DEMA_HOME/mission/receipts → shelf → compacted state; empty home → run-a-mission recommendation; committed_live → quarantine action. 3 tests. |
+| `tests/untrusted-corpus-sanitizer-preview.test.js`        | UNTRUSTED-CORPUS-SANITIZER-PREVIEW-1A pure kernel (`packages/core/src/untrusted-corpus-sanitizer-preview.js` + `scripts/review/untrusted-corpus-sanitizer-preview-check.mjs`): Layer -1 corpus safety gate — scans untrusted text for secrets/prompt-injection/authority-escalation → ALLOWED/QUARANTINED/BLOCKED; verdict is a pure function of counts (forged verdict rejected); secrets redacted and never echoed in full (leak rejected); ingest_performed always false; the review fixture IS the real pasted-transcript attack → BLOCKED. 16 tests. Wired into `npm run check`. |
+| `tests/untrusted-corpus-sanitizer-cli.test.js`        | UNTRUSTED-CORPUS-SANITIZER-PREVIEW-1A CLI (`apps/cli/src/commands/corpus.js` `sanitize` subcommand, subprocess-tested): clean→ALLOWED exit 0; attack→BLOCKED exit 1 with no secret leaked to stdout; secret-only→QUARANTINED exit 1; missing file→refused exit 1. 4 tests. |
 
 ## Smoke checks
 
@@ -561,6 +563,7 @@ node scripts/review/node0-local-mission-harness-preview-check.mjs
 node scripts/review/node0-mission-harness-return-review-preview-check.mjs
 node scripts/review/node0-local-urp-shelf-index-preview-check.mjs
 node scripts/review/node0-receipt-shelf-compaction-state-preview-check.mjs
+node scripts/review/untrusted-corpus-sanitizer-preview-check.mjs
 node scripts/review/dema-capability-truth-registry-check.mjs
 node scripts/review/boundary-vocab-unification-check.mjs
 node scripts/review/dema-fde-dual-diagnostic-check.mjs
