@@ -63,6 +63,7 @@ export const commands = [
   ["node", ["scripts/review/node0-local-urp-shelf-index-preview-check.mjs"]],
   ["node", ["scripts/review/node0-receipt-shelf-compaction-state-preview-check.mjs"]],
   ["node", ["scripts/review/untrusted-corpus-sanitizer-preview-check.mjs"]],
+  ["node", ["scripts/review/public-metric-claim-gate-preview-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
   ["node", ["scripts/review/boundary-vocab-unification-check.mjs"]],
   ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],
