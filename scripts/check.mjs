@@ -56,6 +56,7 @@ export const commands = [
   ["node", ["scripts/review/urp-supply-side-resource-reward-contract-preview-check.mjs"]],
   ["node", ["scripts/review/dema-receipt-signature-anchor-preview-check.mjs"]],
   ["node", ["scripts/review/node0-urp-genesis-root-activation-preview-check.mjs"]],
+  ["node", ["scripts/review/node0-urp-genesis-root-composition-gate-preview-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
   ["node", ["scripts/review/boundary-vocab-unification-check.mjs"]],
   ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],
