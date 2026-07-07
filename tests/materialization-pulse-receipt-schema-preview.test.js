@@ -136,6 +136,64 @@ test("a malformed pulse still RUNS (run.ok true) but receipt_ok is false", () =>
   assert.ok(r.receipt_blocked_by.includes("missing_niyyah_hash"));
 });
 
+// --- branch coverage: default/error sides -------------------------------------------------------
+
+test("verify rejects a non-object payload (packet_not_object)", () => {
+  assert.equal(verifyMaterializationPulseReceiptSchemaPreview(null).ok, false);
+  assert.equal(verifyMaterializationPulseReceiptSchemaPreview("x").ok, false);
+  assert.ok(verifyMaterializationPulseReceiptSchemaPreview(null).blocked_by.includes("packet_not_object"));
+});
+
+test("run returns blocked_pending_consent on a wrong consent phrase", () => {
+  const r = runMaterializationPulseReceiptSchemaPreview({ consent: "nope", input: { pulse: exampleValidPulse() } });
+  assert.equal(r.ok, false);
+  assert.equal(r.status, "blocked_pending_consent");
+  assert.equal(r.boundary.execution_allowed, false);
+  assert.ok(r.blocked_by.includes("consent_phrase_mismatch"));
+});
+
+test("an empty pulse takes every default and reports every missing-part reason", () => {
+  const p = buildMaterializationPulseReceiptSchemaPreviewPayload({ pulse: {} });
+  // defaults applied
+  assert.equal(p.receipt.prev_pulse, null);
+  assert.equal(p.receipt.pulse_status, "sealed");
+  assert.equal(p.receipt.execution.mode, "preview");
+  assert.equal(p.receipt.plan.rejected_branch_count, 0);
+  assert.equal(p.receipt.claims_public_safe, false);
+  assert.equal(p.receipt.fate.authority_delta, 0);
+  // and the evaluation catches the missing required parts
+  assert.equal(p.receipt_ok, false);
+  for (const code of ["missing_pulse_id", "missing_mission_id", "missing_niyyah_hash", "missing_sanitizer_reference", "missing_plan_root", "fate_verdict_invalid", "missing_claim_gate_reference"]) {
+    assert.ok(p.receipt_blocked_by.includes(code), `expected ${code}`);
+  }
+});
+
+test("evaluatePulseReceipt fails closed on null/empty and on each malformed field", () => {
+  assert.equal(evaluatePulseReceipt(null).ok, false);
+  assert.equal(evaluatePulseReceipt({}).ok, false);
+  const base = () => ({ ...exampleValidPulse(), schema: "bizra.materialization_pulse_receipt.v0.1", boundary: { execution_allowed: false, network_used: false, model_invocation_performed: false, wallet_used: false, mint_allowed: false, federation_live: false }, does_not_prove: ["live_urp", "federation", "mint", "wallet", "economic_settlement"] });
+  const bad = (patch) => evaluatePulseReceipt({ ...base(), ...patch }).blocked_by;
+  assert.ok(bad({ prev_pulse: "not-a-hash" }).includes("prev_pulse_malformed"));
+  assert.ok(bad({ plan: { plan_root: `sha256:${"c".repeat(64)}`, rejected_branch_count: -1 } }).includes("rejected_branch_count_invalid"));
+  assert.ok(bad({ fate: { verdict: "NOPE", authority_delta: 0, grants_action: false, mint_allowed: false } }).includes("fate_verdict_invalid"));
+  assert.ok(bad({ fate: { verdict: "PERMIT", authority_delta: 0, grants_action: true, mint_allowed: false } }).includes("grants_action_true"));
+  assert.ok(bad({ execution: { mode: "warp", exec_merkle: null } }).includes("execution_mode_invalid"));
+  assert.ok(bad({ execution: { mode: "preview", exec_merkle: "bad" } }).includes("exec_merkle_malformed"));
+  assert.ok(bad({ claim_binding: { claim_gate_receipt: `sha256:${"e".repeat(64)}`, rejected_count: -1, unknown_count: 0 } }).includes("rejected_count_invalid"));
+  assert.ok(bad({ claim_binding: { claim_gate_receipt: `sha256:${"e".repeat(64)}`, rejected_count: 0, unknown_count: -1 } }).includes("unknown_count_invalid"));
+  assert.ok(bad({ pulse_status: "weird" }).includes("pulse_status_invalid"));
+  assert.ok(bad({ does_not_prove: ["mint"] }).includes("does_not_prove_missing:live_urp"));
+  assert.ok(bad({ does_not_prove: "nope" }).includes("does_not_prove_missing"));
+  assert.ok(bad({ input_safety: { sanitizer_receipt: `sha256:${"b".repeat(64)}`, verdict: "NOPE" } }).includes("sanitizer_verdict_invalid"));
+  assert.ok(bad({ schema: "wrong" }).includes("pulse_schema_mismatch"));
+});
+
+test("an explicit aborted status with an ALLOWED verdict is still well-formed", () => {
+  const r = runMaterializationPulseReceiptSchemaPreview({ consent: GO, input: { pulse: { ...exampleValidPulse(), pulse_status: "aborted", claims_public_safe: false } } });
+  assert.equal(r.receipt_ok, true, r.receipt_blocked_by?.join(","));
+  assert.equal(r.pulse_status, "aborted");
+});
+
 test("kernel remains pure: no fs / network / process / clock / random", () => {
   const src = readFileSync(
     fileURLToPath(new URL("../packages/core/src/materialization-pulse-receipt-schema-preview.js", import.meta.url)),
