@@ -436,6 +436,8 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/node0-local-mission-harness-cli.test.js`        | NODE0-LOCAL-MISSION-HARNESS-PREVIEW-1A CLI/adapter (`apps/cli/src/commands/mission.js` `pulse` subcommand): reads exactly one named file read-only (hash matches), source byte-identical after run, metadata-only default, excerpt only under exact excerpt-consent, receipt written only with --receipt + consent atomically under a temp DEMA_HOME, refuses directory/missing-file, surfaces pulse blocks. 11 tests. |
 | `tests/node0-mission-harness-return-review-preview.test.js`        | NODE0-MISSION-HARNESS-RETURN-REVIEW-PREVIEW-1A pure kernel (`packages/core/src/node0-mission-harness-return-review-preview.js` + `scripts/review/node0-mission-harness-return-review-preview-check.mjs`): reviews an injected `dema mission pulse` receipt — verifies structure/invariants, states proven / not-proven, recommends one next safe action; reviewing a bad receipt completes with receipt_ok false; verify rejects ok-without-proof / not-ok-with-proof forgeries; kernel purity asserted. 18 tests. Wired into `npm run check`. |
 | `tests/node0-mission-harness-return-review-cli.test.js`        | NODE0-MISSION-HARNESS-RETURN-REVIEW-PREVIEW-1A CLI/adapter (`apps/cli/src/commands/mission.js` `review` subcommand): reads a real receipt JSON file read-only, reviews it ok; a committed_live receipt reviews NOT ok; refuses missing path / nonexistent file / non-JSON. 5 tests. |
+| `tests/node0-local-urp-shelf-index-preview.test.js`        | NODE0-LOCAL-URP-SHELF-INDEX-PREVIEW-1A pure kernel (`packages/core/src/node0-local-urp-shelf-index-preview.js` + `scripts/review/node0-local-urp-shelf-index-preview-check.mjs`): composes injected `dema mission pulse` receipts into a deterministic content-addressed shelf catalog (mission ids, file/pulse hashes, review status, valid/invalid/live-leak counts); order-independent hash; bad receipt catalogued but invalid; committed_live surfaced as live_leak; verify re-derives counts (forged count rejected); reuses the return-review validator; purity asserted. 19 tests. Wired into `npm run check`. |
+| `tests/node0-local-urp-shelf-index-cli.test.js`        | NODE0-LOCAL-URP-SHELF-INDEX-PREVIEW-1A CLI/adapter (`apps/cli/src/commands/mission.js` `shelf` subcommand): reads $DEMA_HOME/mission/receipts read-only and indexes them; absent dir = empty shelf (not error); corrupt file skipped; committed_live surfaced as live_leak. 4 tests. |
 
 ## Smoke checks
 
@@ -555,6 +557,7 @@ node scripts/review/node0-urp-genesis-root-composition-gate-preview-check.mjs
 node scripts/review/node0-first-real-local-mission-pulse-preview-check.mjs
 node scripts/review/node0-local-mission-harness-preview-check.mjs
 node scripts/review/node0-mission-harness-return-review-preview-check.mjs
+node scripts/review/node0-local-urp-shelf-index-preview-check.mjs
 node scripts/review/dema-capability-truth-registry-check.mjs
 node scripts/review/boundary-vocab-unification-check.mjs
 node scripts/review/dema-fde-dual-diagnostic-check.mjs

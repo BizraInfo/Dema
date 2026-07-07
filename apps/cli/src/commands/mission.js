@@ -32,7 +32,7 @@ import {
 import { statusWithLocalIdentity } from "../lib/status-identity.js";
 
 // NODE0-LOCAL-MISSION-HARNESS-PREVIEW-1A — `dema mission pulse <file>` effect layer.
-import { mkdir, readFile as readFileFs, realpath, rename, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile as readFileFs, readdir, realpath, rename, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { createHash } from "node:crypto";
@@ -55,8 +55,39 @@ import {
   runNode0MissionHarnessReturnReviewPreview,
   NODE0_MISSION_HARNESS_RETURN_REVIEW_PREVIEW_GO_PHRASE,
 } from "../../../../packages/core/src/node0-mission-harness-return-review-preview.js";
+import {
+  runNode0LocalUrpShelfIndexPreview,
+  NODE0_LOCAL_URP_SHELF_INDEX_PREVIEW_GO_PHRASE,
+} from "../../../../packages/core/src/node0-local-urp-shelf-index-preview.js";
 
 export const MISSION_EXCERPT_GO_PHRASE = "GO: include local excerpt in mission packet";
+
+// Testable I/O core for `dema mission shelf`. Reads every receipt JSON under
+// $DEMA_HOME/mission/receipts (read-only) and composes the local URP shelf index. No console/process.
+export async function runMissionShelf({ demaHome } = {}) {
+  const home = demaHome || process.env.DEMA_HOME || join(homedir(), ".dema");
+  const dir = join(home, "mission", "receipts");
+  let names;
+  try {
+    names = (await readdir(dir)).filter((n) => n.endsWith(".json"));
+  } catch {
+    // No shelf yet = an empty shelf, not an error.
+    names = [];
+  }
+  const receipts = [];
+  for (const name of names.sort()) {
+    try {
+      receipts.push(JSON.parse(await readFileFs(join(dir, name), "utf8")));
+    } catch {
+      // A corrupt file is skipped from the shelf (it is not a valid receipt).
+    }
+  }
+  const result = runNode0LocalUrpShelfIndexPreview({
+    consent: NODE0_LOCAL_URP_SHELF_INDEX_PREVIEW_GO_PHRASE,
+    input: { receipts },
+  });
+  return { ok: result.ok, result, receipts_dir: dir, files_seen: names.length };
+}
 const EXCERPT_MAX_CHARS = 280;
 
 // Testable I/O core for `dema mission review`. Reads one receipt JSON file (read-only) and runs the
@@ -182,6 +213,56 @@ export async function runMissionPulseHarness({
 
 export async function cmd_mission(ctx) {
   const { argv, subcommand } = ctx;
+  if (subcommand === "shelf") {
+    // NODE0-LOCAL-URP-SHELF-INDEX-PREVIEW-1A — read every receipt under $DEMA_HOME/mission/receipts
+    // and compose the local URP shelf index (queryable catalog). PREVIEW_ONLY. Reads only; commits
+    // no live world-state; publishes nothing to any shared/federated URP.
+    const wantJsonMS = wantsJson(argv);
+    const out = await runMissionShelf({});
+    const r = out.result;
+    if (wantJsonMS) {
+      console.log(
+        JSON.stringify(
+          {
+            preview_only: true,
+            schema: r.schema,
+            status: r.status,
+            ok: out.ok,
+            content_hash: r.content_hash,
+            receipts_dir: out.receipts_dir,
+            files_seen: out.files_seen,
+            entry_count: r.entry_count,
+            valid_count: r.valid_count,
+            invalid_count: r.invalid_count,
+            live_leak_count: r.live_leak_count,
+            all_preview: r.all_preview,
+            entries: r.entries,
+            boundary: r.boundary,
+            mint_allowed: r.mint_allowed,
+            authority_delta: r.authority_delta,
+            blocked_by: r.blocked_by,
+          },
+          null,
+          2,
+        ),
+      );
+    } else {
+      const lines = [
+        "DEMA · LOCAL URP SHELF — PREVIEW_ONLY (read-only · local · not published/federated)",
+        `  ${out.receipts_dir}`,
+        `  ${r.entry_count} mission receipt(s) on the shelf · ${r.valid_count} valid · ${r.invalid_count} invalid · ${r.live_leak_count} live-leak · all_preview:${r.all_preview}`,
+      ];
+      for (const e of r.entries || []) {
+        lines.push(`    ${e.receipt_ok ? "✓" : "✗"} ${e.mission_id ?? "(no id)"} · file ${String(e.file_content_hash).slice(0, 22)}… · pulse ${String(e.pulse_content_hash).slice(0, 22)}…`);
+      }
+      lines.push(`  boundary: all-false · mint_allowed:${r.mint_allowed} · authority_delta:${r.authority_delta}`);
+      if (!out.ok) for (const c of r.blocked_by || []) lines.push(`    ${c}`);
+      lines.push(humanHintLine("mission shelf"));
+      console.log(lines.join("\n"));
+    }
+    if (!out.ok) process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
   if (subcommand === "review") {
     // NODE0-MISSION-HARNESS-RETURN-REVIEW-PREVIEW-1A — read one `dema mission pulse` receipt file,
     // review it (structure/invariants), state proven / not-proven + one next safe action.
