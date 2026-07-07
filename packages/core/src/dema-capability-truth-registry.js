@@ -72,6 +72,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_RECEIPT_SHELF_COMPACTION_STATE_PREVIEW_1A",
   "UNTRUSTED_CORPUS_SANITIZER_PREVIEW_1A",
   "PUBLIC_METRIC_CLAIM_GATE_PREVIEW_1A",
+  "MATERIALIZATION_PULSE_RECEIPT_SCHEMA_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1733,6 +1734,35 @@ function defaultCapabilityRows() {
         "Materialization Pulse Step 5 (Claim Binding), done correctly: shape-matching RECOGNIZES a claim; only evidence binding PROVES its value. A pure kernel binds each structured public claim { metric, asserted_value, kind } to an injected evidence store by hierarchy (signed_receipt > ci_attestation > current_limits > claim_ledger > repo_state > operator_declaration; ai_text is NEVER authority) and an EXACT value check, assigning one of VERIFIED / DERIVED / DECLARED / PREVIEW / UNKNOWN / REJECTED / REMOVED. Reproduces the containment acceptance set exactly: '12,680 tests' → REJECTED (evidence says 6,993); '6,993 Dema-core' → VERIFIED (pointer required); '~15,000 hours' → DECLARED (founder testimony); 'Live URP' / 'SEED minted' → REJECTED (no live proof); 'URP Preview' → PREVIEW; a wrong value → REJECTED; an unmeasured metric → UNKNOWN and NOT public-displayable. Only VERIFIED/DERIVED/DECLARED/PREVIEW (with a pointer where required) are public_displayable; every claim is reported, none hidden. verify re-derives every binding from (claim, evidence), so a REJECTED laundered to VERIFIED is rejected. 20 tests + review gate green; boundary all-false, authority_delta 0. This is the OUTPUT-side guard that pairs with the input-side corpus sanitizer.",
       what_this_does_not_prove:
         "It does not EXTRACT claims from raw copy (claims are supplied structured) and does not fetch/measure evidence itself (the evidence store is injected) — it cannot certify that an injected evidence value is itself true, only that a public claim matches its cited evidence exactly and is labeled. Isomorphism/shape-matching is used ONLY for recognition, never as truth. No model, network, deploy, mutation, or mint; it does not prove operator execution, daemon runtime, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "MATERIALIZATION_PULSE_RECEIPT_SCHEMA_PREVIEW_1A",
+      truth_label: "MATERIALIZATION_PULSE_RECEIPT_SCHEMA_PREVIEW_MEASURED_REPO",
+      summary:
+        "Pure preview-only canonical Materialization Pulse receipt envelope: assembles and content-addresses the atomic transaction receipt that binds one pulse's niyyah, input_safety (corpus-sanitizer verdict), plan, FATE verdict, execution preview, and claim_binding (public-metric claim-gate verdict) under an all-false boundary and an explicit does_not_prove list; rejects a receipt missing the sanitizer or claim-gate reference, a sealed pulse whose sanitizer verdict was BLOCKED, a public-safe claim while the claim gate REJECTED public claims, and any mint/federation/authority_delta violation; no execution, no live URP, no mint, no wallet, no federation, kernel stays pure.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/materialization-pulse-receipt-schema-preview.js"],
+        test_paths: ["tests/materialization-pulse-receipt-schema-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/materialization-pulse-receipt-schema-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/MATERIALIZATION_PULSE_RECEIPT_SCHEMA_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/MATERIALIZATION_PULSE_RECEIPT_SCHEMA_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "The 'missing middle' — the canonical Materialization Pulse receipt envelope that binds the two truth membranes into one atomic, content-addressed transaction. A pure kernel assembles a receipt (schema bizra.materialization_pulse_receipt.v0.1) linking niyyah, input_safety (the corpus-sanitizer verdict), plan (plan_root + rejected_branch_count), FATE verdict, execution mode, and claim_binding (the claim-gate verdict), under the operator's 6-key all-false Pulse boundary and an explicit does_not_prove list. It enforces the atomicity/consistency rules verbatim: a sealed pulse MUST reference BOTH the sanitizer and the claim gate (missing_sanitizer_reference / missing_claim_gate_reference); a SEALED pulse over a BLOCKED sanitizer verdict is illegal (sealed_pulse_over_blocked_input — a BLOCKED input is only valid on an aborted pulse); claims_public_safe:true is rejected while the claim gate REJECTED public claims (public_safe_with_rejected_claims); fate.mint_allowed:true, authority_delta≠0, and any Pulse-boundary flip (federation_live etc.) are rejected; does_not_prove must include live_urp/mint/federation. verify re-derives the receipt evaluation, so a forged receipt_ok is rejected. A malformed pulse still RUNS (run.ok true) with receipt_ok false — reporting the flaw is the job. 18 tests (incl. all 10 acceptance criteria) + review gate green; boundary all-false, authority_delta 0.",
+      what_this_does_not_prove:
+        "It RUNS no pulse and re-runs NO sub-gate — sanitizer_receipt / claim_gate_receipt / plan_root / exec_merkle are injected HASHES it binds, not payloads it re-verifies; it cannot prove the referenced sub-receipts are themselves valid, only that the envelope is well-formed and internally consistent. No execution, live URP, mint, wallet, federation, network, or model; it does not prove operator execution, daemon runtime, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
