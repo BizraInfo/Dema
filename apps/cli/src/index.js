@@ -235,6 +235,9 @@ Orientation:
   dema mission review <receipt-path> [--json]
                     PREVIEW_ONLY return-review of a mission-pulse receipt (read-only):
                     proven / not-proven / one next safe action; no model/daemon/network
+  dema mission shelf [--json]
+                    PREVIEW_ONLY local URP shelf: index all mission-pulse receipts under
+                    $DEMA_HOME into a queryable catalog (read-only); nothing published/federated
   dema authorship key init [--json]
                     Generate and persist Ed25519 keypair (requires --consent)
   dema authorship sign <artifact-path> [--json]

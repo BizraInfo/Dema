@@ -68,6 +68,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_FIRST_REAL_LOCAL_MISSION_PULSE_PREVIEW_1A",
   "NODE0_LOCAL_MISSION_HARNESS_PREVIEW_1A",
   "NODE0_MISSION_HARNESS_RETURN_REVIEW_PREVIEW_1A",
+  "NODE0_LOCAL_URP_SHELF_INDEX_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1595,6 +1596,41 @@ function defaultCapabilityRows() {
         "Closes the mission loop's READ side. A pure kernel takes an injected `dema mission pulse` receipt (the receipt_artifact_preview) and independently REVIEWS it: schema matches the harness schema, mission_id present, file-ref + pulse content-hashes well-formed (`sha256:…`), committed_live false, dema_report present. It then emits a content-addressed verdict with what_was_proven (file contacted under consent + content-addressed; a pulse ran and produced a PREVIEW receipt; the receipt is structurally valid + boundary-consistent), an honest what_was_not_proven (semantic correctness NOT judged; no live world-state; the full pulse→composition→genesis chain cannot be re-derived from the summary alone), and exactly ONE next safe action derived from state (ok+pulse_ok → index into the local URP shelf, no live commit; else repair/re-run). Reviewing a BAD receipt is the kernel's JOB, so the review completes (run.ok true) while reporting receipt_ok false; verify rejects an ok-without-proof or not-ok-but-claims-proof forgery. The `dema mission review <receipt>` CLI adapter reads the receipt JSON read-only. 18 kernel tests + 5 CLI/adapter tests + review gate green; boundary all-false, authority_delta 0.",
       what_this_does_not_prove:
         "It reads no file in the kernel (the CLI adapter does, read-only), judges NO semantic correctness, re-runs no pulse, invokes no model, and cannot re-derive the signature chain from the receipt summary. The single recommended next action is a preview recommendation, not an execution. It does not prove operator execution, daemon runtime, network use, wallet access, mint, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_LOCAL_URP_SHELF_INDEX_PREVIEW_1A",
+      truth_label: "NODE0_LOCAL_URP_SHELF_INDEX_PREVIEW_MEASURED_REPO",
+      summary:
+        "Pure preview-only local URP shelf index: composes an injected set of dema mission pulse receipts into a queryable, content-addressed local shelf catalog (mission ids, file/pulse hashes, per-receipt review status, counts) so the write-only receipts become readable; commits no live world-state, reads no model/network/daemon, receipts read-only via the CLI adapter, kernel stays pure.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/node0-local-urp-shelf-index-preview.js",
+          "apps/cli/src/commands/mission.js",
+        ],
+        test_paths: [
+          "tests/node0-local-urp-shelf-index-preview.test.js",
+          "tests/node0-local-urp-shelf-index-cli.test.js",
+        ],
+        review_gate_paths: [
+          "scripts/review/node0-local-urp-shelf-index-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_LOCAL_URP_SHELF_INDEX_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_LOCAL_URP_SHELF_INDEX_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Makes the write-only mission receipts READABLE — the first local URP shelf (URP_LOCAL_ACTIVE becomes a thing you can ASK, not just write). A pure kernel composes an injected set of `dema mission pulse` receipts into a deterministic, content-addressed shelf catalog: each entry carries the mission id, file + pulse content hashes, and its receipt-review status (reusing the return-review's evaluateReceipt validator); the shelf reports entry/valid/invalid/live-leak counts and an all_preview flag. Entries are order-independent (the content hash is stable regardless of input order). A bad receipt is still catalogued (the shelf shows what is held) but counted invalid; a committed_live receipt is surfaced as a live_leak. verify re-derives every count from the entries, so a forged entry_count/valid_count/live_leak_count is rejected. The `dema mission shelf` CLI adapter reads $DEMA_HOME/mission/receipts/*.json read-only (an absent dir is an empty shelf, a corrupt file is skipped). 19 kernel tests + 4 CLI/adapter tests + review gate green; boundary all-false, authority_delta 0.",
+      what_this_does_not_prove:
+        "It reads no file in the kernel (the CLI adapter does, read-only), verifies no semantic content, commits NOTHING to a live world-state, and PUBLISHES nothing to any shared or federated URP. A live URP (shared across nodes) remains DESIGNED_NOT_LIVE. The shelf is a local reading view, not a network; it does not prove operator execution, daemon runtime, network use, wallet access, mint, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
