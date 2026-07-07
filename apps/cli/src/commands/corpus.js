@@ -26,6 +26,78 @@ import {
   saveProofOfSpend,
 } from "../../../../packages/receipts/src/proof-of-spend-save.js";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
+import {
+  runUntrustedCorpusSanitizerPreview,
+  UNTRUSTED_CORPUS_SANITIZER_PREVIEW_GO_PHRASE,
+} from "../../../../packages/core/src/untrusted-corpus-sanitizer-preview.js";
+
+// UNTRUSTED-CORPUS-SANITIZER-PREVIEW-1A — Layer -1 safety gate. Reads a file read-only and scans it
+// for secrets / prompt-injection / authority-escalation BEFORE any ingestion. Never ingests, never
+// echoes a full secret. Exit 1 when the verdict is not ALLOWED so it can gate a pipeline.
+async function cmd_corpus_sanitize(argv, json) {
+  const filePath = argValue(argv, "--file");
+  if (!filePath || !isAbsolute(filePath)) {
+    process.stderr.write("dema corpus sanitize: --file <abs_path> is required (absolute path)\n");
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+  const absPath = resolve(filePath);
+  let text;
+  try {
+    text = await readFile(absPath, "utf8");
+  } catch (err) {
+    const reason = err?.code === "ENOENT" ? "file_not_found" : "read_failed";
+    if (json) console.log(JSON.stringify({ refused: true, reason_code: reason, file: absPath }, null, 2));
+    else process.stderr.write(`dema corpus sanitize: ${reason}: ${absPath}\n`);
+    process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
+  const r = runUntrustedCorpusSanitizerPreview({
+    consent: UNTRUSTED_CORPUS_SANITIZER_PREVIEW_GO_PHRASE,
+    input: { text, source: absPath },
+  });
+
+  if (json) {
+    console.log(
+      JSON.stringify(
+        {
+          preview_only: true,
+          schema: r.schema,
+          file: absPath,
+          verdict: r.verdict,
+          ingest_allowed: r.ingest_allowed,
+          ingest_performed: r.ingest_performed,
+          secret_count: r.secret_count,
+          injection_count: r.injection_count,
+          authority_count: r.authority_count,
+          findings: r.findings,
+          boundary: r.boundary,
+          mint_allowed: r.mint_allowed,
+          authority_delta: r.authority_delta,
+          blocked_by: r.blocked_by,
+        },
+        null,
+        2,
+      ),
+    );
+  } else {
+    const lines = [
+      "DEMA · CORPUS SANITIZE — PREVIEW_ONLY (Layer -1 safety gate · scans only · never ingests)",
+      `  ${absPath}`,
+      `  VERDICT: ${r.verdict} · ingest_allowed:${r.ingest_allowed}`,
+      `  caught: ${r.secret_count} secret(s) · ${r.injection_count} injection(s) · ${r.authority_count} authority-escalation(s)`,
+    ];
+    for (const f of r.findings || []) lines.push(`    ⚠ ${f.class}/${f.pattern_id}: ${f.match_preview}`);
+    lines.push(`  boundary: all-false · ingest_performed:${r.ingest_performed} · mint_allowed:${r.mint_allowed}`);
+    if (r.verdict === "QUARANTINED") lines.push("  → secrets redacted; hold for human/SAT review before any ingestion.");
+    if (r.verdict === "BLOCKED") lines.push("  → active attack (injection/authority) — do NOT ingest this source.");
+    console.log(lines.join("\n"));
+  }
+  // Exit non-zero unless the source is clean-and-ingestable, so this can gate a pipeline.
+  if (!r.ok || r.verdict !== "ALLOWED") process.exitCode = 1;
+  process.exit(process.exitCode ?? 0);
+}
 
 function argValue(argv, name) {
   const index = argv.indexOf(name);
@@ -429,6 +501,10 @@ export async function cmd_corpus(ctx) {
     await cmd_corpus_review(argv, json);
     return;
   }
+  if (sub === "sanitize") {
+    await cmd_corpus_sanitize(argv, json);
+    return;
+  }
 
   process.stderr.write(
     [
@@ -436,6 +512,7 @@ export async function cmd_corpus(ctx) {
       '  dema corpus index --file <abs_path> --consent "GO: content_read <abs_path>" [--json]',
       '  dema corpus spend --file <abs_csv_path> --consent "GO: content_read <abs_csv_path>" [--json]',
       "  dema corpus review --receipt <abs_path_to_founder_work_index.json> [--json]",
+      "  dema corpus sanitize --file <abs_path> [--json]   (Layer -1 safety gate: secrets/injection/authority)",
       "",
     ].join("\n"),
   );
