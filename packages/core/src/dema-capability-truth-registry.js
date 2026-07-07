@@ -60,6 +60,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_VERIFIED_ANSWER_RECEIPT_CACHE_PREVIEW_1A",
   "DEMA_FIRST_LIGHT_FRONT_DOOR_PREVIEW_1A",
   "DEMA_SOCRATIC_CRITIC_PROCESS_SUPERVISION_PREVIEW_1A",
+  "DEMA_ZERO_OVERCLAIM_RESPONSE_POLICY_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1341,6 +1342,35 @@ function defaultCapabilityRows() {
         "A proposed hypothesis packet (claim, causal_path, constraints, evidence, certainty, falsifier) is run through the four Socratic gates as seven deterministic checks (clarification, constraint, causal-path, counterexample, falsification, uncertainty, verified-vs-inferred split) and handed off with exactly one status: ready_for_sat / needs_revision / blocked_by_missing_evidence / rejected_overclaim. A violated constraint or certainty outrunning evidence forces rejected_overclaim; a missing causal path or falsifier or no evidence forces blocked_by_missing_evidence; a vacuous claim forces needs_revision. The critic output is content-addressed and carries grants_action false, claims_truth false, authority_delta 0, boundary all-false — verify rejects a grants_action tamper, an unknown status, and a vacuous boundary. 13 focused tests + review gate green.",
       what_this_does_not_prove:
         "It does not verify the claim (that is SAT's role), does not grant authority, does not execute any action, invokes no model, and touches no network. 'ready_for_sat' means the hypothesis survived interrogation pressure — not that it is true. It raises the question; it does not answer it.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_ZERO_OVERCLAIM_RESPONSE_POLICY_1A",
+      truth_label: "DEMA_ZERO_OVERCLAIM_POLICY_MEASURED_REPO",
+      summary:
+        "Zero-overclaim response policy: a deterministic answer discipline that classifies each claim, enforces an honest label (VERIFIED / INFERRED / SPECULATIVE / UNVERIFIED / BLOCKED_PENDING_EVIDENCE), blocks unsupported current/high-stakes answers, and refuses invented sources and authority inflation. It seals the mouth after the critic; it downgrades and blocks, never upgrades authority.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-zero-overclaim-response-policy.js"],
+        test_paths: ["tests/dema-zero-overclaim-response-policy.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-zero-overclaim-response-policy-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_ZERO_OVERCLAIM_RESPONSE_POLICY_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_ZERO_OVERCLAIM_RESPONSE_POLICY_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Each claim in a response packet is classified (verified_fact / grounded_inference / speculation / unverifiable / current_requires_verification / high_stakes_requires_verification) and gets exactly one enforced label; the packet hands off with one status — cleared_to_respond / blocked_pending_evidence / rejected_overclaim. An unsupported fact is downgraded to UNVERIFIED; a current or high-stakes claim without evidence is BLOCKED_PENDING_EVIDENCE; an invented source, an inference or speculation presented as VERIFIED, a grants_action/authority_delta inflation, or a claims_truth without a verified claim all force rejected_overclaim. Content-addressed and stable; grants_action false, claims_truth false, authority_delta 0, boundary all-false — verify rejects a grants_action and a boundary tamper. 14 focused tests + review gate green.",
+      what_this_does_not_prove:
+        "It does not verify a claim's truth, fetch evidence, invoke a model, or touch the network. It enforces honest labeling and blocks overclaim; it cannot confirm a fact — only refuse to let an unproven one leave as if proven.",
       forbidden_claims: [
         "live execution",
         "operator mutation",

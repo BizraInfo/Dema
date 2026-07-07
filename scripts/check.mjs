@@ -52,6 +52,7 @@ export const commands = [
   ["node", ["scripts/review/dema-isnad-modern-design-canon-check.mjs"]],
   ["node", ["scripts/review/dema-first-light-front-door-preview-check.mjs"]],
   ["node", ["scripts/review/dema-socratic-critic-process-supervision-preview-check.mjs"]],
+  ["node", ["scripts/review/dema-zero-overclaim-response-policy-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
   ["node", ["scripts/review/boundary-vocab-unification-check.mjs"]],
   ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],
