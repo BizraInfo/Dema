@@ -57,36 +57,56 @@ import {
 } from "../../../../packages/core/src/node0-mission-harness-return-review-preview.js";
 import {
   runNode0LocalUrpShelfIndexPreview,
+  buildNode0LocalUrpShelfIndexPreviewPayload,
   NODE0_LOCAL_URP_SHELF_INDEX_PREVIEW_GO_PHRASE,
 } from "../../../../packages/core/src/node0-local-urp-shelf-index-preview.js";
+import {
+  runNode0ReceiptShelfCompactionStatePreview,
+  NODE0_RECEIPT_SHELF_COMPACTION_STATE_PREVIEW_GO_PHRASE,
+} from "../../../../packages/core/src/node0-receipt-shelf-compaction-state-preview.js";
 
 export const MISSION_EXCERPT_GO_PHRASE = "GO: include local excerpt in mission packet";
 
-// Testable I/O core for `dema mission shelf`. Reads every receipt JSON under
-// $DEMA_HOME/mission/receipts (read-only) and composes the local URP shelf index. No console/process.
-export async function runMissionShelf({ demaHome } = {}) {
+// Shared read-only receipt reader — used by `dema mission shelf` and `dema mission compact`.
+async function readMissionReceipts(demaHome) {
   const home = demaHome || process.env.DEMA_HOME || join(homedir(), ".dema");
   const dir = join(home, "mission", "receipts");
   let names;
   try {
     names = (await readdir(dir)).filter((n) => n.endsWith(".json"));
   } catch {
-    // No shelf yet = an empty shelf, not an error.
-    names = [];
+    names = []; // no dir yet = empty shelf, not an error
   }
   const receipts = [];
   for (const name of names.sort()) {
     try {
       receipts.push(JSON.parse(await readFileFs(join(dir, name), "utf8")));
     } catch {
-      // A corrupt file is skipped from the shelf (it is not a valid receipt).
+      // a corrupt file is skipped (it is not a valid receipt)
     }
   }
+  return { receipts, dir, files_seen: names.length };
+}
+
+// Testable I/O core for `dema mission shelf`. Reads the receipts dir and composes the shelf index.
+export async function runMissionShelf({ demaHome } = {}) {
+  const { receipts, dir, files_seen } = await readMissionReceipts(demaHome);
   const result = runNode0LocalUrpShelfIndexPreview({
     consent: NODE0_LOCAL_URP_SHELF_INDEX_PREVIEW_GO_PHRASE,
     input: { receipts },
   });
-  return { ok: result.ok, result, receipts_dir: dir, files_seen: names.length };
+  return { ok: result.ok, result, receipts_dir: dir, files_seen };
+}
+
+// Testable I/O core for `dema mission compact`. Reads receipts → shelf payload → compacted state.
+export async function runMissionCompact({ demaHome } = {}) {
+  const { receipts, dir, files_seen } = await readMissionReceipts(demaHome);
+  const shelf = buildNode0LocalUrpShelfIndexPreviewPayload({ receipts });
+  const result = runNode0ReceiptShelfCompactionStatePreview({
+    consent: NODE0_RECEIPT_SHELF_COMPACTION_STATE_PREVIEW_GO_PHRASE,
+    input: { shelf },
+  });
+  return { ok: result.ok, result, receipts_dir: dir, files_seen };
 }
 const EXCERPT_MAX_CHARS = 280;
 
@@ -213,6 +233,60 @@ export async function runMissionPulseHarness({
 
 export async function cmd_mission(ctx) {
   const { argv, subcommand } = ctx;
+  if (subcommand === "compact") {
+    // NODE0-RECEIPT-SHELF-COMPACTION-STATE-PREVIEW-1A — read receipts → shelf → compacted, hash-bound
+    // mission state (keep/drop/no-longer-claim/one-next-action). PREVIEW_ONLY. No RL, model, network,
+    // daemon; commits nothing live; publishes nothing to a shared/federated URP.
+    const wantJsonMC = wantsJson(argv);
+    const out = await runMissionCompact({});
+    const r = out.result;
+    if (wantJsonMC) {
+      console.log(
+        JSON.stringify(
+          {
+            preview_only: true,
+            schema: r.schema,
+            status: r.status,
+            ok: out.ok,
+            content_hash: r.content_hash,
+            shelf_ok: r.shelf_ok,
+            source_receipt_count: r.source_receipt_count,
+            valid_receipt_count: r.valid_receipt_count,
+            invalid_receipt_count: r.invalid_receipt_count,
+            live_leak_count: r.live_leak_count,
+            retained_signals: r.retained_signals,
+            dropped_content: r.dropped_content,
+            what_can_no_longer_be_claimed: r.what_can_no_longer_be_claimed,
+            one_next_safe_action: r.one_next_safe_action,
+            boundary: r.boundary,
+            mint_allowed: r.mint_allowed,
+            authority_delta: r.authority_delta,
+            committed_live: r.committed_live,
+            blocked_by: r.blocked_by,
+          },
+          null,
+          2,
+        ),
+      );
+    } else {
+      const lines = [
+        "DEMA · RECEIPT-SHELF COMPACTION — PREVIEW_ONLY (compacts PROOF, not meaning · nothing live)",
+        `  ${r.source_receipt_count} receipt(s) → ${r.valid_receipt_count} valid · ${r.invalid_receipt_count} invalid · ${r.live_leak_count} live-leak (shelf_ok:${r.shelf_ok})`,
+        `  RETAINED (${r.retained_signals.length}): ${r.retained_signals.join(", ")}`,
+        "  DROPPED:",
+        ...r.dropped_content.map((s) => `    − ${s}`),
+        "  CAN NO LONGER CLAIM:",
+        ...r.what_can_no_longer_be_claimed.map((s) => `    ✗ ${s}`),
+        `  ONE next safe action: ${r.one_next_safe_action}`,
+        `  boundary: all-false · mint_allowed:${r.mint_allowed} · committed_live:${r.committed_live}`,
+      ];
+      if (!out.ok) for (const c of r.blocked_by || []) lines.push(`    ${c}`);
+      lines.push(humanHintLine("mission compact"));
+      console.log(lines.join("\n"));
+    }
+    if (!out.ok) process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
   if (subcommand === "shelf") {
     // NODE0-LOCAL-URP-SHELF-INDEX-PREVIEW-1A — read every receipt under $DEMA_HOME/mission/receipts
     // and compose the local URP shelf index (queryable catalog). PREVIEW_ONLY. Reads only; commits
