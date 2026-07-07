@@ -232,6 +232,9 @@ Orientation:
   dema mission pulse <file> --claim ... --task ... --boundary ... [--json]
                     PREVIEW_ONLY local mission pulse over one named file (read-only);
                     --receipt --consent writes a preview receipt; no model/daemon/network
+  dema mission review <receipt-path> [--json]
+                    PREVIEW_ONLY return-review of a mission-pulse receipt (read-only):
+                    proven / not-proven / one next safe action; no model/daemon/network
   dema authorship key init [--json]
                     Generate and persist Ed25519 keypair (requires --consent)
   dema authorship sign <artifact-path> [--json]

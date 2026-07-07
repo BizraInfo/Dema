@@ -67,6 +67,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_URP_GENESIS_ROOT_COMPOSITION_GATE_PREVIEW_1A",
   "NODE0_FIRST_REAL_LOCAL_MISSION_PULSE_PREVIEW_1A",
   "NODE0_LOCAL_MISSION_HARNESS_PREVIEW_1A",
+  "NODE0_MISSION_HARNESS_RETURN_REVIEW_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1559,6 +1560,41 @@ function defaultCapabilityRows() {
         "The first I/O boundary crossing. A PURE kernel composes an INJECTED file reference (path/size/mtime/content-hash — the read-only CLI adapter computes it) plus an OPERATOR-SUPPLIED candidate extraction into a mission packet, runs the pure mission-pulse kernel over a composition reference, and shapes a preview receipt artifact (committed_live false); the embedded pulse verdict re-verifies (→ composition → genesis signature anchor), so a forge-and-recompute of the chain is rejected. The `dema mission pulse <file>` CLI adapter reads exactly one named file read-only to hash it, admits a bounded excerpt into the packet ONLY under a separate exact excerpt-consent phrase (default is metadata+hash only, content_read_performed false), and writes the receipt ONLY with --receipt + the exact consent phrase — atomically (tmp+rename, mode 0600) under $DEMA_HOME/mission/receipts; the source file is never mutated. Kernel-purity (no fs/clock/random in core) is asserted by a test; the fs lives in the CLI. 21 kernel tests + 11 CLI/adapter tests + review gate green.",
       what_this_does_not_prove:
         "The harness performs NO semantic extraction — the claim/task/boundary are the operator's (CLI flags), not the machine's; it invokes no model. It does not prove live execution, daemon runtime, background watching, directory crawl, network use, wallet access, mint, settlement, or live federation. The receipt is a preview (committed_live false); nothing is committed to a live world-state. The composition reference is an ephemeral-key preview, not a live Node0 identity.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_MISSION_HARNESS_RETURN_REVIEW_PREVIEW_1A",
+      truth_label: "NODE0_MISSION_HARNESS_RETURN_REVIEW_PREVIEW_MEASURED_REPO",
+      summary:
+        "Pure preview-only return-review over a dema mission pulse receipt: verifies the receipt's structure + invariants, states what was proven and what was not, and recommends exactly one next safe action; reads no model/network/daemon, receipt read-only via the CLI adapter, kernel stays pure.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/node0-mission-harness-return-review-preview.js",
+          "apps/cli/src/commands/mission.js",
+        ],
+        test_paths: [
+          "tests/node0-mission-harness-return-review-preview.test.js",
+          "tests/node0-mission-harness-return-review-cli.test.js",
+        ],
+        review_gate_paths: [
+          "scripts/review/node0-mission-harness-return-review-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_MISSION_HARNESS_RETURN_REVIEW_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_MISSION_HARNESS_RETURN_REVIEW_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Closes the mission loop's READ side. A pure kernel takes an injected `dema mission pulse` receipt (the receipt_artifact_preview) and independently REVIEWS it: schema matches the harness schema, mission_id present, file-ref + pulse content-hashes well-formed (`sha256:…`), committed_live false, dema_report present. It then emits a content-addressed verdict with what_was_proven (file contacted under consent + content-addressed; a pulse ran and produced a PREVIEW receipt; the receipt is structurally valid + boundary-consistent), an honest what_was_not_proven (semantic correctness NOT judged; no live world-state; the full pulse→composition→genesis chain cannot be re-derived from the summary alone), and exactly ONE next safe action derived from state (ok+pulse_ok → index into the local URP shelf, no live commit; else repair/re-run). Reviewing a BAD receipt is the kernel's JOB, so the review completes (run.ok true) while reporting receipt_ok false; verify rejects an ok-without-proof or not-ok-but-claims-proof forgery. The `dema mission review <receipt>` CLI adapter reads the receipt JSON read-only. 18 kernel tests + 5 CLI/adapter tests + review gate green; boundary all-false, authority_delta 0.",
+      what_this_does_not_prove:
+        "It reads no file in the kernel (the CLI adapter does, read-only), judges NO semantic correctness, re-runs no pulse, invokes no model, and cannot re-derive the signature chain from the receipt summary. The single recommended next action is a preview recommendation, not an execution. It does not prove operator execution, daemon runtime, network use, wallet access, mint, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
