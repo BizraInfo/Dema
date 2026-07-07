@@ -62,6 +62,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_SOCRATIC_CRITIC_PROCESS_SUPERVISION_PREVIEW_1A",
   "DEMA_ZERO_OVERCLAIM_RESPONSE_POLICY_1A",
   "URP_SUPPLY_SIDE_RESOURCE_REWARD_CONTRACT_PREVIEW_1A",
+  "DEMA_RECEIPT_SIGNATURE_ANCHOR_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1401,6 +1402,35 @@ function defaultCapabilityRows() {
         "A resource offer is evaluated into reward-type eligibility (verified_supply_reward, verified_availability_reward, verified_usage_reward, optional_impact_dividend) and handed off with one status: reward_preview_allowed / blocked_pending_consent / blocked_pending_measurement / blocked_pending_sat_audit / rejected_overclaim / rejected_policy_violation. Missing consent/measurement blocks; a high-value offer needs a SAT audit ref; a claimed impact without verified-outcome evidence blocks pending SAT audit; a policy violation, a self-mint / live-URP / wallet / federation / authority-increase claim, cost-labeled-as-impact, or supply-reward-mislabeled-as-impact all reject. Content-addressed and stable; boundary all-false, authority_delta 0, grants_action false, mint_allowed false — verify rejects a mint_allowed and a boundary tamper. 17 focused tests + review gate green.",
       what_this_does_not_prove:
         "It does not activate live URP, mint any token, access a wallet, settle or pay anyone, federate, invoke a model, touch the network, run a daemon, scan files, or execute jobs. It previews reward ELIGIBILITY under the contract; it does not confirm real resource settlement or real impact — those require live URP + SAT audit, which remain DESIGNED_NOT_LIVE.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_RECEIPT_SIGNATURE_ANCHOR_PREVIEW_1A",
+      truth_label: "DEMA_RECEIPT_SIGNATURE_ANCHOR_PREVIEW_MEASURED_REPO",
+      summary:
+        "Preview-only signed receipt anchor: Ed25519 signature over a canonical-JSON receipt payload with injected keys; verifies signer identity and rejects payload/signature/canonicalization tamper and forge-and-recompute laundering. Mints nothing, binds no live identity.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-receipt-signature-anchor-preview.js"],
+        test_paths: ["tests/dema-receipt-signature-anchor-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-receipt-signature-anchor-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_RECEIPT_SIGNATURE_ANCHOR_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_RECEIPT_SIGNATURE_ANCHOR_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A receipt payload is signed with an INJECTED Ed25519 key over the whole canonical-JSON envelope body (not just the payload), and verification requires a TRUSTED public key. verify rejects payload tamper, signature tamper, signer mismatch (wrong trusted key), canonicalization drift (signature over a non-canonical serialization), a non-zero authority_delta, grants_action/mint_allowed set true, a flipped boundary, and an unsigned envelope presented as signed. Critically, it rejects forge-and-recompute laundering — changing a field AND recomputing payload_hash so content-addressing would be self-consistent still fails, because re-signing requires the private key. This is the independent anchor the #334 content-addressed cache lacked. 13 focused tests + review gate green. Boundary all-false, authority_delta 0, grants_action false, mint_allowed false.",
+      what_this_does_not_prove:
+        "It does not bind a live Node0 genesis identity (keys are ephemeral/injected; the real signing-key ceremony is separate and operator-consented), does not persist or manage keys, and does not prove operator execution, daemon runtime, network use, wallet access, mint, or live federation. The signature proves who signed a payload — not that the payload's content is true.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
