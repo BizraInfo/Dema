@@ -77,6 +77,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "PLAN_BRANCH_PREVIEW_1A",
   "NODE0_MATERIALIZATION_PULSE_E2E_PREVIEW_1A",
   "NODE0_LOCAL_MISSION_ARTIFACT_EMISSION_PREVIEW_1A",
+  "NODE0_LOCAL_MISSION_EMIT_CLI_ADAPTER_1A",
   "NODE0_MISSION_PILOT_COCKPIT_PREVIEW_1A",
 ]);
 
@@ -1890,6 +1891,39 @@ function defaultCapabilityRows() {
         "A pure emitter re-verifies an already-produced NODE0-LOCAL-MISSION-HARNESS-PREVIEW result (transitively re-verifying pulse -> composition -> signature-backed genesis anchor) and serializes it into THREE separate content-addressed preview artifacts: a receipt, a not-applied world-state delta preview (applied:false), and a DEMA report. Each artifact carries a stable sha256 content hash, committed_live:false, and an all-false boundary; the run id and target relpaths are derived deterministically from the input content hash, so the same input yields identical run id and artifact hashes. verify re-derives the emission hash AND each artifact hash and fail-closed rejects tamper, a committed_live/authority/mint/laundering flag, raw-source-content leakage, and a forge-and-recompute where the embedded harness anchor no longer verifies. 39 kernel tests + review gate green; boundary all-false, authority_delta 0. It composes the shipped harness kernel and re-implements none of its logic.",
       what_this_does_not_prove:
         "The kernel writes no file -- a CLI/adapter performs any write, consent-gated and atomic, under DEMA_HOME. Serializing a preview is not executing a mission: no world-state is applied, nothing is recorded live, and no model, network, daemon, wallet, mint, or federation is invoked. The world-state delta is declared, not applied.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_LOCAL_MISSION_EMIT_CLI_ADAPTER_1A",
+      truth_label: "NODE0_LOCAL_MISSION_ARTIFACT_EMISSION_PREVIEW_MEASURED_REPO",
+      summary:
+        "One consent-gated operator CLI (`dema mission emit <file>`) that reads one explicit local file read-only, composes the shipped local-mission harness -> artifact-emission preview path, and atomically writes the three preview artifacts under DEMA_HOME; re-implements no kernel logic, writes no live state.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/node0-local-mission-artifact-emission-preview.js",
+          "packages/core/src/node0-local-mission-harness-preview.js",
+          "apps/cli/src/commands/mission.js",
+        ],
+        test_paths: ["tests/node0-local-mission-emit-cli-adapter.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-local-mission-emit-cli-adapter-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_LOCAL_MISSION_EMIT_CLI_ADAPTER_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_LOCAL_MISSION_EMIT_CLI_ADAPTER_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, model invocation, token, wallet, mint, live URP, or federation outside registered preview.",
+      what_this_proves:
+        "Dema exposes `dema mission emit <file>` as one measured operator command that reads one explicit ABSOLUTE local file read-only (metadata + content hash; a bounded excerpt only under a separate exact consent), composes the already-shipped NODE0-LOCAL-MISSION-HARNESS-PREVIEW -> NODE0-LOCAL-MISSION-ARTIFACT-EMISSION-PREVIEW path over an ephemeral (no-live-identity) composition reference, and -- ONLY under the exact operator phrase `GO: node0 local mission emit` AND a verified emission -- atomically writes exactly the three preview artifacts (receipt, world_state_delta_preview, dema_report) under `$DEMA_HOME/artifacts/proofs/node0-local-mission/<run_id>/` via tmp+rename at mode 0600, committed_live false. Each written artifact's content hash matches the kernel's; the source file is byte-identical after the run; fail-closed without the exact phrase (nothing is written); the run id is deterministic for a fixed composition reference; nothing is written outside the run_id directory. Boundary all-false, authority_delta 0, mint_allowed false. 13 CLI tests + review gate green.",
+      what_this_does_not_prove:
+        "It runs no live model, executes no real-world action, starts no daemon, opens no network, mints nothing, binds no live Node0 identity or DID, and publishes nothing to any shared/federated URP. Writing three preview artifacts is not executing a mission or applying any world-state: the world-state delta is declared (applied:false), not applied, and the composition signature is an ephemeral in-memory preview, not a persisted key ceremony. It re-implements no kernel logic.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
