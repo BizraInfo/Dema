@@ -10,12 +10,14 @@ import {
   verifyLocalModelPulseBindingPreview,
   runLocalModelPulseBindingPreview,
   evaluateLocalModelInvocationForPulse,
-  exampleCompletedInvocationResult,
-  exampleBlockedInvocationResult,
   LOCAL_MODEL_PULSE_BINDING_PREVIEW_SCHEMA,
   LOCAL_MODEL_PULSE_BINDING_PREVIEW_TRUTH_LABEL,
   LOCAL_MODEL_PULSE_BINDING_PREVIEW_GO_PHRASE,
 } from "../packages/core/src/local-model-pulse-binding-preview.js";
+import {
+  exampleCompletedInvocationResult,
+  exampleBlockedInvocationResult,
+} from "../scripts/review/local-model-pulse-binding-fixtures.mjs";
 import { runLocalModelPulseBindingPreviewCheck } from "../scripts/review/local-model-pulse-binding-preview-check.mjs";
 
 const GO = LOCAL_MODEL_PULSE_BINDING_PREVIEW_GO_PHRASE;

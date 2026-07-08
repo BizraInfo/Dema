@@ -8,11 +8,11 @@ import { pathToFileURL } from "node:url";
 import {
   runLocalModelPulseBindingPreview,
   buildLocalModelPulseBindingPreviewPayload,
-  exampleCompletedInvocationResult,
   LOCAL_MODEL_PULSE_BINDING_PREVIEW_SCHEMA,
   LOCAL_MODEL_PULSE_BINDING_PREVIEW_TRUTH_LABEL,
   LOCAL_MODEL_PULSE_BINDING_PREVIEW_GO_PHRASE,
 } from "../../packages/core/src/local-model-pulse-binding-preview.js";
+import { exampleCompletedInvocationResult } from "./local-model-pulse-binding-fixtures.mjs";
 
 const JSON_MODE = process.argv.includes("--json");
 const H = (c) => `sha256:${c.repeat(64)}`;

@@ -25,7 +25,8 @@ export const LOCAL_MODEL_PULSE_BINDING_PREVIEW_TRUTH_LABEL =
 export const LOCAL_MODEL_PULSE_BINDING_PREVIEW_GO_PHRASE =
   "GO: bind local model suggestion into Pulse preview";
 
-const INVOCATION_SCHEMA = "bizra.dema.llm_invocation_result.v0.1";
+export const INVOCATION_SOURCE_SCHEMA = "bizra.dema.llm_invocation_result.v0.1";
+const INVOCATION_SCHEMA = INVOCATION_SOURCE_SCHEMA;
 const HASH_RE = /^sha256:[0-9a-f]{64}$/;
 const SAFE_RESPONSE_VERDICT = "PUBLIC_SAFE";
 
@@ -275,49 +276,5 @@ export function runLocalModelPulseBindingPreview({ consent, input } = {}) {
     federation_live: false,
     boundary: payload.boundary,
     blocked_by: Object.freeze([]),
-  });
-}
-
-export function exampleCompletedInvocationResult() {
-  const boundary = {
-    runtime_execution_performed: true,
-    model_loaded: true,
-    model_invocation_performed: true,
-    prompt_executed: true,
-    network_used: true,
-    consent_collected: true,
-    content_read: false,
-    public_network_used: false,
-    external_call_performed: false,
-    chain_advance_performed: false,
-    receipt_mint_performed: false,
-    federation_invoked: false,
-    node_connection_performed: false,
-    raw_corpus_scan_performed: false,
-    raw_data_included: false,
-    tool_executed: false,
-    filesystem_write_performed: false,
-  };
-  return Object.freeze({
-    schema: INVOCATION_SCHEMA,
-    truth_label: "MEASURED",
-    invocation_status: "completed",
-    model_invoked: "llama3.2:3b",
-    response_text_preview: "Candidate answer only; verifier remains authority.",
-    prompt_safety_verdict: "PUBLIC_SAFE",
-    response_safety_verdict: "PUBLIC_SAFE",
-    verdict_role: "suggestion",
-    boundary: Object.freeze(boundary),
-  });
-}
-
-export function exampleBlockedInvocationResult() {
-  return Object.freeze({
-    ...exampleCompletedInvocationResult(),
-    truth_label: "INVOCATION_BLOCKED",
-    invocation_status: "blocked",
-    response_text_preview: null,
-    prompt_safety_verdict: "FORBIDDEN_LIVE_CLAIM",
-    response_safety_verdict: null,
   });
 }
