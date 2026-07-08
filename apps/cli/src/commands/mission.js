@@ -49,8 +49,14 @@ import {
 } from "../../../../packages/core/src/node0-urp-genesis-root-composition-gate-preview.js";
 import {
   runNode0LocalMissionHarnessPreview,
+  buildNode0LocalMissionHarnessPreviewPayload,
   NODE0_LOCAL_MISSION_HARNESS_PREVIEW_GO_PHRASE,
 } from "../../../../packages/core/src/node0-local-mission-harness-preview.js";
+import {
+  runNode0LocalMissionArtifactEmissionPreview,
+  ARTIFACT_NAMES,
+  NODE0_LOCAL_MISSION_ARTIFACT_EMISSION_PREVIEW_GO_PHRASE,
+} from "../../../../packages/core/src/node0-local-mission-artifact-emission-preview.js";
 import {
   runNode0MissionHarnessReturnReviewPreview,
   NODE0_MISSION_HARNESS_RETURN_REVIEW_PREVIEW_GO_PHRASE,
@@ -188,7 +194,8 @@ function argValue(argv, name) {
 
 // Build an ephemeral composition reference (preview): a fresh signed genesis anchor composed with the
 // example URP resource-family surfaces. Keys are ephemeral — no live Node0 identity is bound.
-function buildEphemeralCompositionRef() {
+// Exported so a caller (or test) can build ONE ref and inject it for a deterministic run id.
+export function buildEphemeralCompositionRef() {
   const keys = generateEd25519Keypair();
   const chain = buildNode0ProofChainLinkPayload([`sha256:${"1".repeat(64)}`, `sha256:${"2".repeat(64)}`]);
   const signedChainHead = signChainHead({
@@ -273,6 +280,129 @@ export async function runMissionPulseHarness({
   }
 
   return { ok: result.ok, result, receiptPath, source_basename: basename(real) };
+}
+
+// NODE0-LOCAL-MISSION-EMIT-CLI-ADAPTER-1A — `dema mission emit <file>` effect layer.
+// The OPERATOR's exact write-consent phrase. Distinct from the emission kernel's internal build phrase:
+// building the in-memory preview is a pure step; THIS phrase gates the actual disk write.
+export const NODE0_LOCAL_MISSION_EMIT_GO_PHRASE = "GO: node0 local mission emit";
+
+// A clearly-labeled generic preview candidate used when the operator supplies no --claim/--task/--boundary.
+// The harness performs NO semantic extraction; these are declared placeholders, not Dema's understanding.
+const DEFAULT_EMIT_CANDIDATE = Object.freeze({
+  claim:
+    "PREVIEW (operator did not supply --claim): the operator declares this local file as one preview-mission source; Dema extracted nothing from its content.",
+  task: "PREVIEW (operator did not supply --task): record the operator-supplied claim, task, and boundary against this file's content hash.",
+  boundary: "No live URP, no mint, no daemon, no model, no network, no source-file mutation.",
+});
+
+// Atomic write of the three emission artifacts under $DEMA_HOME/artifacts/proofs/node0-local-mission/<run_id>/.
+// Per file: writeFile(tmp, …, {mode:0o600}) then rename(tmp, final). Writes NOTHING outside the run_id dir.
+async function writeEmissionArtifacts(emissionResult, demaHome) {
+  const home = demaHome || process.env.DEMA_HOME || join(homedir(), ".dema");
+  const dir = join(home, "artifacts", "proofs", "node0-local-mission", emissionResult.run_id);
+  await mkdir(dir, { recursive: true });
+  const realDir = await realpath(dir);
+  const written = [];
+  for (const name of ARTIFACT_NAMES) {
+    const artifact = emissionResult.artifacts[name];
+    const finalPath = join(realDir, `${name}.json`);
+    const tmpPath = `${finalPath}.tmp`;
+    await writeFile(tmpPath, JSON.stringify(artifact, null, 2), { encoding: "utf8", mode: 0o600, flag: "w" });
+    await rename(tmpPath, finalPath);
+    written.push(finalPath);
+  }
+  return { dir: realDir, written };
+}
+
+// Testable I/O core for `dema mission emit <file>`. Reads one explicit, absolute local file (read-only),
+// computes a REAL file_ref, composes the shipped harness → emission preview path, and — ONLY under the
+// exact operator write-consent phrase AND a verified emission — atomically writes the three artifacts.
+// Never touches process/console. demaHome, nowIso, and compositionRef are injectable (the ref defaults to
+// a fresh ephemeral one; injecting a fixed ref makes the run id deterministic for the same input).
+export async function runMissionEmit({
+  file,
+  consent,
+  claim,
+  task,
+  boundary,
+  excerptConsent,
+  demaHome,
+  nowIso,
+  compositionRef,
+} = {}) {
+  if (!file || typeof file !== "string" || file.startsWith("--")) {
+    return { ok: false, error: "missing_file_argument" };
+  }
+  if (!isAbsolute(file)) {
+    return { ok: false, error: "path_must_be_absolute" };
+  }
+  let st;
+  try {
+    st = await stat(file);
+  } catch {
+    return { ok: false, error: "file_not_found_or_unreadable" };
+  }
+  if (st.isDirectory()) return { ok: false, error: "path_is_directory" };
+
+  const real = await realpath(file);
+  const bytes = await readFileFs(real); // read-only, to compute the hash
+  const content_hash = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+  const contentReadPerformed = excerptConsent === MISSION_EXCERPT_GO_PHRASE;
+  const excerpt = contentReadPerformed ? bytes.toString("utf8").slice(0, EXCERPT_MAX_CHARS) : undefined;
+
+  const file_ref = {
+    path: real,
+    size_bytes: st.size,
+    mtime_iso: st.mtime.toISOString(),
+    content_hash,
+    content_read_performed: contentReadPerformed,
+    raw_content_leaves_node0: false,
+    ...(excerpt !== undefined ? { excerpt } : {}),
+  };
+
+  const candidate_extraction = {
+    claim: claim ?? DEFAULT_EMIT_CANDIDATE.claim,
+    task: task ?? DEFAULT_EMIT_CANDIDATE.task,
+    boundary: boundary ?? DEFAULT_EMIT_CANDIDATE.boundary,
+  };
+
+  // Compose the shipped harness → emission path. The emission kernel's own GO phrase gates only the
+  // in-memory PREVIEW build (no side effect); the operator's write-consent gates the disk write below.
+  const harness_result = buildNode0LocalMissionHarnessPreviewPayload({
+    file_ref,
+    composition_ref: compositionRef ?? buildEphemeralCompositionRef(),
+    candidate_extraction,
+    now_iso: nowIso ?? null,
+  });
+  const emission = runNode0LocalMissionArtifactEmissionPreview({
+    consent: NODE0_LOCAL_MISSION_ARTIFACT_EMISSION_PREVIEW_GO_PHRASE,
+    input: { harness_result, now_iso: nowIso ?? null },
+  });
+
+  // Fail-closed write gate: the exact operator phrase AND a verified emission are both required to write.
+  const writeConsentOk = consent === NODE0_LOCAL_MISSION_EMIT_GO_PHRASE;
+  let wrote = false;
+  let run_dir = null;
+  let artifact_paths_written = [];
+  if (writeConsentOk && emission.ok) {
+    const w = await writeEmissionArtifacts(emission, demaHome);
+    wrote = true;
+    run_dir = w.dir;
+    artifact_paths_written = w.written;
+  }
+
+  return {
+    ok: emission.ok,
+    wrote,
+    write_refused_reason: writeConsentOk ? null : "write_consent_required",
+    run_id: emission.run_id,
+    content_hash: emission.content_hash,
+    emission,
+    run_dir,
+    artifact_paths_written,
+    source_basename: basename(real),
+  };
 }
 
 export async function cmd_mission(ctx) {
@@ -558,6 +688,83 @@ export async function cmd_mission(ctx) {
       if (out.error) lines.push(`  ${out.error}`);
       if (!out.ok) for (const c of r.blocked_by || []) lines.push(`    ${c}`);
       lines.push(humanHintLine("mission pulse"));
+      console.log(lines.join("\n"));
+    }
+    if (!out.ok) process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+  if (subcommand === "emit") {
+    // NODE0-LOCAL-MISSION-EMIT-CLI-ADAPTER-1A — read one explicit absolute file (read-only), run the
+    // SHIPPED harness → emission preview path, and (only under the exact operator write-consent phrase)
+    // ATOMICALLY WRITE the three preview artifacts under
+    // $DEMA_HOME/artifacts/proofs/node0-local-mission/<run_id>/. PREVIEW_ONLY. No model, network, daemon,
+    // mint, federation, live URP, or source mutation. committed_live:false, authority_delta:0.
+    const wantJsonME = wantsJson(argv);
+    const out = await runMissionEmit({
+      file: argv[2],
+      consent: argValue(argv, "--consent"),
+      claim: argValue(argv, "--claim"),
+      task: argValue(argv, "--task"),
+      boundary: argValue(argv, "--boundary"),
+      excerptConsent: argValue(argv, "--excerpt-consent"),
+      nowIso: new Date().toISOString(),
+    });
+    if (out.error) {
+      const usage = `dema mission emit <abs-file> --consent "${NODE0_LOCAL_MISSION_EMIT_GO_PHRASE}" [--claim "…" --task "…" --boundary "…"] [--excerpt-consent "${MISSION_EXCERPT_GO_PHRASE}"] [--json]`;
+      if (wantJsonME) {
+        console.log(JSON.stringify({ preview_only: true, ok: false, error: out.error, usage }, null, 2));
+      } else {
+        console.error(`Dema error: ${out.error}. Usage: ${usage}`);
+      }
+      process.exitCode = 1;
+      process.exit(process.exitCode ?? 0);
+    }
+    const r = out.emission;
+    if (wantJsonME) {
+      console.log(
+        JSON.stringify(
+          {
+            preview_only: true,
+            schema: r.schema,
+            status: r.status,
+            ok: out.ok,
+            wrote: out.wrote,
+            write_refused_reason: out.write_refused_reason,
+            run_id: r.run_id,
+            content_hash: r.content_hash,
+            run_dir: out.run_dir,
+            artifact_paths_written: out.artifact_paths_written,
+            artifact_target_relpaths: r.artifact_paths,
+            artifact_hashes: ARTIFACT_NAMES.map((n) => `${n}=${r.artifacts?.[n]?.content_hash ?? "-"}`),
+            boundary: r.boundary,
+            mint_allowed: r.mint_allowed,
+            authority_delta: r.authority_delta,
+            blocked_by: r.blocked_by,
+          },
+          null,
+          2,
+        ),
+      );
+    } else {
+      const lines = [
+        "DEMA · LOCAL MISSION EMIT — PREVIEW_ONLY (read-only source · atomic write under DEMA_HOME · no model/daemon/network/mint)",
+        `  source: ${out.source_basename}`,
+        `  status: ${r.status}`,
+        `  run_id: ${r.run_id}`,
+        `  content_hash: ${r.content_hash}`,
+      ];
+      if (out.wrote) {
+        lines.push("  artifacts written:");
+        for (const p of out.artifact_paths_written) lines.push(`    ${p}`);
+      } else {
+        lines.push(
+          `  artifacts: NOT written (${out.write_refused_reason ?? "emission not ok"}) — add --consent "${NODE0_LOCAL_MISSION_EMIT_GO_PHRASE}"`,
+        );
+        for (const rel of r.artifact_paths || []) lines.push(`    would write: ${rel}`);
+      }
+      lines.push(`  boundary: all-false · mint_allowed:${r.mint_allowed} · authority_delta:${r.authority_delta}`);
+      if (!out.ok) for (const c of r.blocked_by || []) lines.push(`    ${c}`);
+      lines.push(humanHintLine("mission emit"));
       console.log(lines.join("\n"));
     }
     if (!out.ok) process.exitCode = 1;
