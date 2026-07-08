@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 import { gather } from "../packages/core/src/homebase-gather.js";
+import { HOMEBASE_GATHER_OPTS } from "../apps/cli/src/commands/homebase.js";
 
 async function makeHome(seed = {}) {
   const home = await mkdtemp(join(tmpdir(), "dema-homebase-gather-"));
@@ -31,6 +32,31 @@ async function makeHome(seed = {}) {
 async function tearDown(home) {
   await rm(home, { recursive: true, force: true });
 }
+
+test("PERF: homebase gather opts skip the model-inventory scan (dominant ~200ms cost, never rendered)", async () => {
+  assert.equal(
+    HOMEBASE_GATHER_OPTS.include_models,
+    false,
+    "homebase must opt out of the local-model inventory scan",
+  );
+  const home = await makeHome({ profile: { name: "Mumu", node: "Node0" } });
+  try {
+    const skipped = await gather({ ...HOMEBASE_GATHER_OPTS, home });
+    assert.equal(
+      skipped.models,
+      null,
+      "homebase gather opts must skip the model scan (models stays null)",
+    );
+    const scanned = await gather({ home });
+    assert.notEqual(
+      scanned.models,
+      null,
+      "default gather still scans models (proves the opt-out is what changes behavior)",
+    );
+  } finally {
+    await tearDown(home);
+  }
+});
 
 test("TDD-15: gather() resolves with valid GatherResult when ~/.dema/ does not exist", async () => {
   const home = join(

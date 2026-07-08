@@ -9,6 +9,11 @@ import {
   recordIntroSeen,
 } from "../../../../packages/core/src/intro-line.js";
 
+// The homebase preview never renders gather.models (buildHomebasePreview ignores
+// it), yet the default gather runs a synchronous local-model inventory scan that
+// measured at ~200ms — the dominant cost blowing the 200ms gather budget. Opt out.
+export const HOMEBASE_GATHER_OPTS = Object.freeze({ include_models: false });
+
 export function homebaseWantsJson(argv) {
   return (
     argv.includes("--json") ||
@@ -36,7 +41,7 @@ export async function runHomebaseInvocation({
     import("../../../../packages/core/src/homebase-gather.js"),
     import("../../../../packages/core/src/homebase-preview.js"),
   ]);
-  const gathered = await gather();
+  const gathered = await gather(HOMEBASE_GATHER_OPTS);
   const preview = buildHomebasePreview({ gather: gathered });
   if (wantJson) {
     process.stdout.write(JSON.stringify(preview, null, 2) + "\n");
@@ -59,7 +64,7 @@ export async function runHomebaseInvocation({
     const liveMode = process.env.DEMA_HOMEBASE_LIVE !== "0";
     if (liveMode) {
       await runLiveHomebase({
-        gatherFn: gather,
+        gatherFn: () => gather(HOMEBASE_GATHER_OPTS),
         buildPreviewFn: buildHomebasePreview,
         dispatchFn,
         stdin: process.stdin,
