@@ -79,6 +79,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_LOCAL_MISSION_ARTIFACT_EMISSION_PREVIEW_1A",
   "NODE0_LOCAL_MISSION_EMIT_CLI_ADAPTER_1A",
   "NODE0_MISSION_PILOT_COCKPIT_PREVIEW_1A",
+  "NODE0_MISSION_PILOT_COCKPIT_CLI_ADAPTER_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1953,6 +1954,38 @@ function defaultCapabilityRows() {
         "Renders one read-only operator truth view over the three already-verified, content-addressed mission artifacts (receipt, not-applied world-state delta, DEMA report): it re-verifies the emission (transitively harness -> pulse -> composition -> signature-backed genesis anchor), independently re-derives each artifact hash, refuses any tampered artifact, and passes through mission status, the accepted/rejected pulse gates, the applied:false delta summary, the DEMA report, and the what-happened / what-did-not-happen / next-safe-action lines. No new intelligence; content-addressed and deterministic for the same input.",
       what_this_does_not_prove:
         "It adds no intelligence and re-derives no artifact from the harness; it does not prove operator execution, daemon runtime, network use, wallet access, live URP, mint, or federation. A rendered view means the artifacts are content-addressed and consistent and the upstream anchor verifies, not that the mission ran or its claims are true.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_MISSION_PILOT_COCKPIT_CLI_ADAPTER_1A",
+      truth_label: "NODE0_MISSION_PILOT_COCKPIT_CLI_ADAPTER_MEASURED_REPO",
+      summary:
+        "One read-only operator CLI (`dema mission cockpit <run-id>`) that loads the on-disk emission.json envelope a prior `dema mission emit` wrote, re-verifies the full chain via the shipped cockpit kernel, INDEPENDENTLY re-derives each on-disk artifact file's content hash to refuse a tampered/missing file, and renders one operator truth view; writes nothing, re-implements no kernel logic.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/node0-mission-pilot-cockpit-preview.js",
+          "apps/cli/src/commands/mission.js",
+        ],
+        test_paths: ["tests/node0-mission-pilot-cockpit-cli-adapter.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-mission-pilot-cockpit-cli-adapter-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_MISSION_PILOT_COCKPIT_CLI_ADAPTER_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_MISSION_PILOT_COCKPIT_CLI_ADAPTER_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, model invocation, token, wallet, mint, live URP, or federation outside registered preview.",
+      what_this_proves:
+        "Dema exposes `dema mission cockpit <run-id>` as one measured READ-ONLY operator command that strict-validates the run id against `^[0-9a-f]{16}$` BEFORE building any path (rejecting `..`, `../x`, and non-hex ids as a path-traversal guard), reads ONLY the four files a prior `dema mission emit` wrote under `$DEMA_HOME/artifacts/proofs/node0-local-mission/<run_id>/` (the emission.json verification envelope plus the receipt, world_state_delta_preview, and dema_report artifacts) with no directory crawl and no source-file read, feeds the envelope's nested content-addressed emission to the shipped NODE0-MISSION-PILOT-COCKPIT-PREVIEW kernel (which transitively re-verifies emission -> harness -> pulse -> composition -> signature-backed genesis anchor and renders the gates ladder), and INDEPENDENTLY re-derives each on-disk artifact file's sha256 to refuse a tampered file (`artifact_hash_mismatch:<name>`, which the kernel over the untouched embedded emission alone misses) or a missing file. It renders one operator cockpit view (mission status, run id, receipt hash, gates ladder + furthest reached station, the applied:false world-state delta summary, the DEMA report, and the what-happened / what-did-not-happen / next-safe-action lines) and writes ZERO files (the run dir file set is byte-identical before and after the read). A tampered emission.json, a missing envelope, and an envelope with no nested emission are all refused. Boundary all-false, committed_live false, authority_delta 0, mint_allowed false. 17 CLI tests + review gate green.",
+      what_this_does_not_prove:
+        "It runs no live model, executes no real-world action, starts no daemon, opens no network, mints nothing, binds no live Node0 identity or DID, and publishes nothing to any shared/federated URP. Reading and rendering the emitted artifacts is not executing a mission and applies no world-state: the world-state delta is declared (applied:false), not applied. A rendered view means the on-disk artifacts are content-addressed and internally consistent and the upstream anchor verifies -- NOT that the mission ran or that its claims are true. It adds no new intelligence and re-implements no kernel logic; it composes the shipped cockpit kernel over one file loaded from disk.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
