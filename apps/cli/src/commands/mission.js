@@ -54,6 +54,7 @@ import {
 } from "../../../../packages/core/src/node0-local-mission-harness-preview.js";
 import {
   runNode0LocalMissionArtifactEmissionPreview,
+  buildNode0LocalMissionArtifactEmissionPreviewPayload,
   ARTIFACT_NAMES,
   NODE0_LOCAL_MISSION_ARTIFACT_EMISSION_PREVIEW_GO_PHRASE,
 } from "../../../../packages/core/src/node0-local-mission-artifact-emission-preview.js";
@@ -296,23 +297,89 @@ const DEFAULT_EMIT_CANDIDATE = Object.freeze({
   boundary: "No live URP, no mint, no daemon, no model, no network, no source-file mutation.",
 });
 
-// Atomic write of the three emission artifacts under $DEMA_HOME/artifacts/proofs/node0-local-mission/<run_id>/.
-// Per file: writeFile(tmp, …, {mode:0o600}) then rename(tmp, final). Writes NOTHING outside the run_id dir.
-async function writeEmissionArtifacts(emissionResult, demaHome) {
+// The verification ENVELOPE schema + filename. emission.json is the 4th file — a verification envelope,
+// NOT a 4th artifact. The operator framing is "three preview artifacts plus one verification envelope".
+export const NODE0_LOCAL_MISSION_EMIT_ENVELOPE_SCHEMA = "bizra.dema.node0_local_mission_emit_envelope.v0.1";
+export const EMISSION_ENVELOPE_FILENAME = "emission";
+
+// Derive the pulse ladder + reached stations the SAME way the cockpit kernel does (from the harness's
+// embedded pulse_verdict.stage_results) — these are a read-only projection of the content-addressed
+// emission, not new intelligence.
+function deriveEnvelopePulseLadder(emissionPayload) {
+  const stages = emissionPayload?.harness_result?.pulse_verdict?.stage_results;
+  const ladder = Array.isArray(stages)
+    ? stages.map((s) => ({ stage: s?.stage ?? null, ok: s?.ok === true }))
+    : [];
+  let reached_station = null;
+  for (const rung of ladder) {
+    if (rung.ok) reached_station = rung.stage;
+    else break;
+  }
+  const reached_stations = ladder.filter((r) => r.ok).map((r) => r.stage);
+  return { ladder, reached_station, reached_stations };
+}
+
+// Build the verification envelope (emission.json). It WRAPS the untouched, content-addressed emission
+// payload under `emission` — the EXACT object the mission-pilot cockpit kernel re-verifies as its
+// `input.emission` (harness_result intact) — and mirrors the run id, source-file/emission/harness content
+// hashes, per-artifact hashes, artifact relpaths, and the pulse ladder as convenience fields OUTSIDE that
+// content-addressed body, so they never alter the emission's own content hash. This is the single file the
+// future cockpit reader loads to re-verify the full chain and render the gates panel from disk alone.
+export function buildEmissionEnvelope({ emissionPayload, writeConsentAccepted }) {
+  const { ladder, reached_station, reached_stations } = deriveEnvelopePulseLadder(emissionPayload);
+  const artifacts = emissionPayload?.artifacts ?? {};
+  const fileRef = emissionPayload?.harness_result?.receipt_artifact_preview?.file_ref ?? null;
+  return {
+    schema: NODE0_LOCAL_MISSION_EMIT_ENVELOPE_SCHEMA,
+    truth_label: emissionPayload?.truth_label ?? null,
+    run_id: emissionPayload?.run_id ?? null,
+    source_file_content_hash: fileRef?.content_hash ?? null,
+    emission_content_hash: emissionPayload?.content_hash ?? null,
+    harness_content_hash: emissionPayload?.harness_result?.content_hash ?? null,
+    artifact_hashes: Object.fromEntries(
+      ARTIFACT_NAMES.map((n) => [n, artifacts?.[n]?.content_hash ?? null]),
+    ),
+    artifact_relative_paths: emissionPayload?.artifact_paths ?? [],
+    pulse_ladder: ladder,
+    reached_station,
+    reached_stations,
+    consent_status: writeConsentAccepted
+      ? "operator write-consent phrase accepted"
+      : "operator write-consent phrase NOT accepted",
+    boundary: emissionPayload?.boundary ?? null,
+    committed_live: false,
+    authority_delta: 0,
+    mint_allowed: false,
+    what_this_proves:
+      "A verification envelope for one `dema mission emit` run: it wraps the untouched, content-addressed emission payload (with harness_result intact — the exact object the mission-pilot cockpit kernel re-verifies as its input.emission) under `emission`, and mirrors the run id, source-file / emission / harness content hashes, per-artifact hashes, artifact relative paths, and the pulse ladder as convenience fields OUTSIDE that content-addressed body. It lets the cockpit reader re-verify the full chain (emission -> harness -> pulse -> composition -> signature-backed genesis anchor) and render the gates panel from disk alone.",
+    what_this_does_not_prove:
+      "The envelope adds no new intelligence and records nothing live: its convenience fields are a read-only projection of the nested content-addressed emission (the source of truth). It carries only metadata, content hashes, a PUBLIC key, and all-false boundary attestations — no raw source content, no private key, no DID secret, no wallet. Writing an envelope is not executing a mission; committed_live false, authority_delta 0, mint_allowed false.",
+    emission: emissionPayload ?? null,
+  };
+}
+
+// Atomic write of the three emission artifacts + the verification envelope under
+// $DEMA_HOME/artifacts/proofs/node0-local-mission/<run_id>/. Per file: writeFile(tmp, …, {mode:0o600})
+// then rename(tmp, final). Writes NOTHING outside the run_id dir. The three artifacts come from the SAME
+// content-addressed emission payload embedded in the envelope, so on-disk artifacts and envelope agree.
+async function writeEmissionArtifacts(emissionPayload, envelope, demaHome) {
   const home = demaHome || process.env.DEMA_HOME || join(homedir(), ".dema");
-  const dir = join(home, "artifacts", "proofs", "node0-local-mission", emissionResult.run_id);
+  const dir = join(home, "artifacts", "proofs", "node0-local-mission", emissionPayload.run_id);
   await mkdir(dir, { recursive: true });
   const realDir = await realpath(dir);
-  const written = [];
-  for (const name of ARTIFACT_NAMES) {
-    const artifact = emissionResult.artifacts[name];
+  const writeOne = async (name, obj) => {
     const finalPath = join(realDir, `${name}.json`);
     const tmpPath = `${finalPath}.tmp`;
-    await writeFile(tmpPath, JSON.stringify(artifact, null, 2), { encoding: "utf8", mode: 0o600, flag: "w" });
+    await writeFile(tmpPath, JSON.stringify(obj, null, 2), { encoding: "utf8", mode: 0o600, flag: "w" });
     await rename(tmpPath, finalPath);
-    written.push(finalPath);
+    return finalPath;
+  };
+  const written = [];
+  for (const name of ARTIFACT_NAMES) {
+    written.push(await writeOne(name, emissionPayload.artifacts[name]));
   }
-  return { dir: realDir, written };
+  const envelopePath = await writeOne(EMISSION_ENVELOPE_FILENAME, envelope);
+  return { dir: realDir, written, envelopePath };
 }
 
 // Testable I/O core for `dema mission emit <file>`. Reads one explicit, absolute local file (read-only),
@@ -375,21 +442,28 @@ export async function runMissionEmit({
     candidate_extraction,
     now_iso: nowIso ?? null,
   });
+  const emissionInput = { harness_result, now_iso: nowIso ?? null };
   const emission = runNode0LocalMissionArtifactEmissionPreview({
     consent: NODE0_LOCAL_MISSION_ARTIFACT_EMISSION_PREVIEW_GO_PHRASE,
-    input: { harness_result, now_iso: nowIso ?? null },
+    input: emissionInput,
   });
+  // The content-addressed emission PAYLOAD (deterministic for the same input; content_hash equals the
+  // run result's). This is the exact object the cockpit kernel re-verifies; the envelope embeds it.
+  const emissionPayload = buildNode0LocalMissionArtifactEmissionPreviewPayload(emissionInput);
 
   // Fail-closed write gate: the exact operator phrase AND a verified emission are both required to write.
   const writeConsentOk = consent === NODE0_LOCAL_MISSION_EMIT_GO_PHRASE;
+  const envelope = buildEmissionEnvelope({ emissionPayload, writeConsentAccepted: writeConsentOk });
   let wrote = false;
   let run_dir = null;
   let artifact_paths_written = [];
+  let envelope_path_written = null;
   if (writeConsentOk && emission.ok) {
-    const w = await writeEmissionArtifacts(emission, demaHome);
+    const w = await writeEmissionArtifacts(emissionPayload, envelope, demaHome);
     wrote = true;
     run_dir = w.dir;
-    artifact_paths_written = w.written;
+    artifact_paths_written = w.written; // the THREE artifacts
+    envelope_path_written = w.envelopePath; // the verification envelope (emission.json)
   }
 
   return {
@@ -399,8 +473,10 @@ export async function runMissionEmit({
     run_id: emission.run_id,
     content_hash: emission.content_hash,
     emission,
+    envelope,
     run_dir,
     artifact_paths_written,
+    envelope_path_written,
     source_basename: basename(real),
   };
 }
@@ -696,9 +772,11 @@ export async function cmd_mission(ctx) {
   if (subcommand === "emit") {
     // NODE0-LOCAL-MISSION-EMIT-CLI-ADAPTER-1A — read one explicit absolute file (read-only), run the
     // SHIPPED harness → emission preview path, and (only under the exact operator write-consent phrase)
-    // ATOMICALLY WRITE the three preview artifacts under
-    // $DEMA_HOME/artifacts/proofs/node0-local-mission/<run_id>/. PREVIEW_ONLY. No model, network, daemon,
-    // mint, federation, live URP, or source mutation. committed_live:false, authority_delta:0.
+    // ATOMICALLY WRITE three preview artifacts plus one verification envelope (emission.json) under
+    // $DEMA_HOME/artifacts/proofs/node0-local-mission/<run_id>/. The envelope wraps the content-addressed
+    // emission so the cockpit reader can re-verify the full chain + render gates from disk. PREVIEW_ONLY.
+    // No model, network, daemon, mint, federation, live URP, or source mutation. committed_live:false,
+    // authority_delta:0.
     const wantJsonME = wantsJson(argv);
     const out = await runMissionEmit({
       file: argv[2],
@@ -734,8 +812,12 @@ export async function cmd_mission(ctx) {
             content_hash: r.content_hash,
             run_dir: out.run_dir,
             artifact_paths_written: out.artifact_paths_written,
+            envelope_path_written: out.envelope_path_written,
             artifact_target_relpaths: r.artifact_paths,
+            envelope_target_relpath: `artifacts/proofs/node0-local-mission/${r.run_id}/${EMISSION_ENVELOPE_FILENAME}.json`,
             artifact_hashes: ARTIFACT_NAMES.map((n) => `${n}=${r.artifacts?.[n]?.content_hash ?? "-"}`),
+            emission_content_hash: out.envelope?.emission_content_hash ?? null,
+            source_file_content_hash: out.envelope?.source_file_content_hash ?? null,
             boundary: r.boundary,
             mint_allowed: r.mint_allowed,
             authority_delta: r.authority_delta,
@@ -754,13 +836,15 @@ export async function cmd_mission(ctx) {
         `  content_hash: ${r.content_hash}`,
       ];
       if (out.wrote) {
-        lines.push("  artifacts written:");
+        lines.push("  three preview artifacts + one verification envelope written:");
         for (const p of out.artifact_paths_written) lines.push(`    ${p}`);
+        lines.push(`    ${out.envelope_path_written}  (verification envelope — cockpit re-verifies the full chain from disk)`);
       } else {
         lines.push(
           `  artifacts: NOT written (${out.write_refused_reason ?? "emission not ok"}) — add --consent "${NODE0_LOCAL_MISSION_EMIT_GO_PHRASE}"`,
         );
         for (const rel of r.artifact_paths || []) lines.push(`    would write: ${rel}`);
+        lines.push(`    would write: artifacts/proofs/node0-local-mission/${r.run_id}/${EMISSION_ENVELOPE_FILENAME}.json  (verification envelope)`);
       }
       lines.push(`  boundary: all-false · mint_allowed:${r.mint_allowed} · authority_delta:${r.authority_delta}`);
       if (!out.ok) for (const c of r.blocked_by || []) lines.push(`    ${c}`);
