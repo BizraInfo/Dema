@@ -1,75 +1,64 @@
-# BIZRA Legend Paper — Reference Audit v0.1
+# BIZRA Legend Paper — Reference Audit v0.1 (corrected 2026-07-09)
 
 Truth label: `PAPER_EVIDENCE_META_DOCS_ONLY`. Meta-analysis of the paper's References section
 (paper sha256 `2d0953d0…469b01`). Extracted from the real PDF.
 
-## Headline finding
+## Correction note (this supersedes the original v0.1 verdict)
 
-**References [1]–[14] are placeholders** — all authored "A. Author" with fabricated / not-yet-real
-future arXiv identifiers (`2606.*`, `2603.*`, `2605.*`, `2510.*`, `2504.*`, `2410.*`). These MUST be
-replaced with real citations or removed before any public release. **References [15]–[45] are, on
-inspection, real published works** (Telescript, Merkle, Bitcoin, Constitutional AI, PLONK, Islamic
-finance texts, OECD/UNESCO, etc.).
+The original v0.1 headline stated references **[1]–[14] are "fabricated / not-yet-real future arXiv
+identifiers."** That verdict was reached **by assumption** — from the `A. Author` byline + future-dated
+IDs — **without fetching the arXiv IDs.** A live web verification (2026-07-09) fetched every ID and found
+the opposite: **all 16 resolve to real, existing papers** whose titles/abstracts match the claims. The
+only fabricated field is uniformly the **author name** (`A. Author`) — a systematic placeholder/citation-tool
+artifact, not invented scholarship. The original table's arXiv-ID column was also **row-shifted** (e.g. it
+printed [3]=`2603.04257`; the PDF + live fetch show [3]=`2603.19328`).
 
-`status`: `verified` (real, well-known work) · `placeholder` (fabricated "A. Author"/future arXiv) ·
-`needs_verification` (plausible but unconfirmed here).
+Recording the correction, per claim discipline: a "fabricated" verdict is itself a claim, and it must bind
+to a live fetch — not to a pattern-match. Fix = **replace author metadata**, not cut. (Verification predates
+this model's Jan-2026 knowledge cutoff for most IDs — the authority is the live fetch, not memory. A human
+should skim each PDF before finalizing, especially [2] and [6].)
 
-| ref | citation (as printed) | status | note / replacement action |
+## Headline finding (corrected)
+
+**References [1]–[14], [16], [17] are REAL papers carrying a placeholder author field** — replace the
+byline (and fix the flagged IDs/venues), do not cut. **References [15], [18]–[45] are real published works.**
+No reference in the paper corresponds to a non-existent study.
+
+`status`: `real_placeholder_author` (real paper; `A. Author` byline to replace) · `verified` (real,
+complete) · `needs_verification` (plausible; confirm).
+
+## Ledger — verified replacements (live-fetched)
+
+| ref | real paper (author → title, venue/year) | arXiv | special handling |
 |---|---|---|---|
-| [1] | A. Author, "The verification horizon…", arXiv:2606.26300, 2026 | **placeholder** | replace — this is the load-bearing "verification is easier than generation" cite; find the real source |
-| [2] | A. Author et al., "Reward hacking benchmark for tool-using RL agents", arXiv:2605.02964, 2026 | **placeholder** | replace |
-| [3] | A. Author, "The verifier tax…", arXiv:2603.04257, 2026 | **placeholder** | replace |
-| [4] | A. Author, "Position: Modular memory…", NeurIPS Position Papers 2026, arXiv:2603.19328 | **placeholder** | replace |
-| [5] | A. Author, "Scaling long-horizon LLM agents via context-folding", arXiv:2503.23278, 2025 | **placeholder** | replace |
-| [6] | A. Author, "MemRL…", arXiv:2510.11967, 2025 | **placeholder** | replace |
-| [7] | A. Author, "Agent-Omit…", arXiv:2603.04284, 2026 | **placeholder** | replace |
-| [8] | A. Author, "Bridging the agent-world gap…", arXiv:2606.09032, 2026 | **placeholder** | replace |
-| [9] | A. Author, "ceLLMate: Sandboxing browser-using agents", arXiv:2512.12594, 2025 | **placeholder** | replace |
-| [10] | A. Author, "AgentVisor…", arXiv:2605.03378, 2026 | **placeholder** | replace |
-| [11] | A. Author, "ARGUS…", arXiv:2504.03149, 2026 | **placeholder** | replace |
-| [12] | A. Author, "AgentSentry…", arXiv:2602.22724, 2026 | **placeholder** | replace |
-| [13] | A. Author, "Threat modeling for AI-agent protocols: MCP, A2A, Agora, ANP", arXiv:2602.11327, 2026 | **placeholder** | replace |
-| [14] | A. Author, "Agent security bench…", arXiv:2410.02644, 2024 | **placeholder** | replace |
-| [15] | J. White, *Mobile Agents and the Programming Language Telescript*, General Magic, 1995 | verified | real (Telescript) |
-| [16] | A. Author, "The model context protocol…", arXiv:2503.16902, 2025 | needs_verification | MCP exists (Anthropic); confirm citation |
-| [17] | A. Author, "Agent2Agent (A2A) protocol", arXiv:2504.16902, 2025 | needs_verification | A2A exists; confirm citation |
-| [18] | UNCTAD, "Global public debt hits record $102 trillion in 2024", 2024 | verified | real |
-| [19] | Institute of International Finance, "Global debt monitor" | verified | real |
-| [20] | IEA, "Energy and AI", 2025 | verified | real |
-| [21] | IEA, "Data centre electricity use surged in 2025" | verified | real |
-| [22] | OECD, "Global debt report 2025" | verified | real |
-| [23] | S. Zuboff, *The Age of Surveillance Capitalism*, 2019 | verified | real |
-| [24] | K. Crawford, *Atlas of AI*, Yale, 2021 | verified | real |
-| [25] | Bender, Gebru, McMillan-Major, Shmitchell, "On the dangers of stochastic parrots", FAccT 2021 | verified | real |
-| [26] | "Constitutional AI: Harmlessness from AI feedback", Anthropic, arXiv:2212.08073 | verified | real |
-| [27] | R. C. Merkle, "A digital signature based on a conventional encryption function", CRYPTO 1988 | verified | real |
-| [28] | Crosby & Wallach, "Efficient data structures for tamper-evident logging", USENIX Security 2009 | verified | real |
-| [29] | R. Tamassia, "Authenticated data structures", ESA 2003 | verified | real |
-| [30] | Goldwasser, Micali, Rackoff, "The knowledge complexity of interactive proof systems", SIAM J. Comput. 1989 | verified | real |
-| [31] | Gabizon, Williamson, Ciobotaru, "PLONK", ePrint 2019/953 | verified | real |
-| [32] | S. Nakamoto, "Bitcoin", 2008 | verified | real |
-| [33] | King & Nadal, "PPCoin", 2012 | verified | real |
-| [34] | De Filippi, Mannan, Reijers, "Blockchain as a confidence machine", Philos. Technol. 2012 | verified | real |
-| [35] | Haeberlen, Kouznetsov, Druschel, "PeerReview", SOSP 2007 | verified | real |
-| [36] | Gennaro, Gentry, Parno, "Non-interactive verifiable computing", CRYPTO 2010 | verified | real |
-| [37] | Parno et al., "Pinocchio", IEEE S&P 2013 | verified | real |
-| [38] | M. El-Gamal, *Islamic Finance: Law, Economics, and Practice*, Cambridge 2006 | verified | real |
-| [39] | M. Ayub, *Understanding Islamic Finance*, Wiley 2007 | verified | real |
-| [40] | Rahman et al., "Blockchain and Islamic finance: a systematic literature review", J. Islamic Finance 2020 | needs_verification | plausible; confirm |
-| [41] | S. S. Ali, "Smart contracts and gharar…", J. Islam. Bus. Manag. 2018 | needs_verification | plausible; confirm |
-| [42] | UNESCO, "Recommendation on the ethics of AI", 2023 | verified | real |
-| [43] | OECD, "Recommendation of the Council on AI", OECD/LEGAL/0449, 2024 | verified | real |
-| [44] | Barocas & Selbst, "Big data's disparate impact", California Law Review 2016 | verified | real |
-| [45] | Mitchell et al., "Model cards for model reporting", FAccT 2019 | verified | real |
+| [1] | Qwen Team (Alibaba), "The Verification Horizon: No Silver Bullet for Coding Agent Rewards", 2026 | 2606.26300 | optional co-cite Stechly et al., ICLR 2025 (2402.08115) |
+| [2] | K. Thaman, "Reward Hacking Benchmark: Measuring Exploits in LLM Agents with Tool Use", 2026 | 2605.02964 | ⚠ solo, unreviewed — co-cite Skalse et al., NeurIPS 2022 (2209.13085) |
+| [3] | Sah, Srivastava, Sah, Jordan, "The Verifier Tax…", ACM CAIS 2026 | 2603.19328 | paper §8.3 title lifted from here |
+| [4] | Dorovatas et al. (24), "Position: Modular Memory is the Key to Continual Learning Agents", **ICML 2026 (spotlight)** | 2603.01761 | ⚠ venue fix: ICML, NOT NeurIPS |
+| [5] | Sun et al., "Scaling Long-Horizon LLM Agent via Context-Folding", 2025 | 2510.11967 | — |
+| [6] | Zhang et al., "MemRL: Self-Evolving Agents via Runtime RL on Episodic Memory", 2026 | **2601.03192** | ⚠ ID COLLISION: printed 2603.04257 belongs to a different paper ("Memex(RL)"); correct to 2601.03192 |
+| [7] | Ning, Fang, Tan, Liu, "Agent-Omit: Adaptive Context Omission for Efficient LLM Agents", 2026 | 2602.04284 | — |
+| [8] | Li et al. (16), "Bridging the Agent-World Gap: Text World Models for LLM-based Agents", 2026 | 2606.09032 | ⚠ ORPHAN — never cited with `[8]` in body; wire in or cut |
+| [9] | Meng, Feng, Shumailov, Fernandes, "ceLLMate: Sandboxing Browser AI Agents", 2025 | 2512.12594 | — |
+| [10] | Ying et al., "AgentVisor: Defending LLM Agents Against Prompt Injection via Semantic Virtualization", 2026 | 2604.24118 | — |
+| [11] | Weng et al., "ARGUS: Defending LLM Agents Against Context-Aware Prompt Injection", 2026 | 2605.03378 | — |
+| [12] | Zhang et al. (11), "AgentSentry: Mitigating Indirect Prompt Injection… Temporal Causal Diagnostics and Context Purification", 2026 | 2602.22724 | — |
+| [13] | Anbiaee et al. (CIC-UNB + Mastercard), "Security Threat Modeling for Emerging AI-Agent Protocols: MCP, A2A, Agora, ANP", 2026 | 2602.11327 | — |
+| [14] | Zhang et al. (8), "Agent Security Bench (ASB)…", **ICLR 2025** | 2410.02644 | strongest-standing (peer-reviewed) |
+| [16] | Hou, Zhao, Wang, Wang, "Model Context Protocol (MCP): Landscape, Security Threats, and Future Research Directions", 2025 | 2503.23278 | ⚠ ORPHAN — cite Anthropic MCP announcement (Nov 2024) as primary + this as co-cite |
+| [17] | Habler, Huang, Narajala, Kulkarni, "Building A Secure Agentic AI Application Leveraging A2A Protocol", 2025 | 2504.16902 | ⚠ ORPHAN — cite Google A2A announcement (Apr 2025) + Linux Foundation spec as primary |
 
-## Tally
+Real, untouched: [15] Telescript (J. White, 1995) · [18]–[24] debt/energy/surveillance stats · [25] Bender et al. (FAccT 2021) · [26] Constitutional AI (2212.08073) · [27] Merkle · [28] Crosby–Wallach · [29] Tamassia · [30] GMR (SIAM 1989) · [31] PLONK (ePrint 2019/953) · [32] Bitcoin · [33] PPCoin · [34]–[37] verifiable-computing/accountability · [38]–[41] Islamic finance ([40],[41] confirm) · [42]–[45] UNESCO/OECD/Barocas–Selbst/Model Cards.
 
-- **placeholder: 14** ([1]–[14]) — all "A. Author", fabricated future arXiv IDs. **Blocking for public release.**
-- **needs_verification: 4** ([16], [17], [40], [41]).
-- **verified: 27** ([15], [18]–[39 real subset], [42]–[45]).
+## Tally (corrected)
+
+- **REAL, replace author metadata: 16** ([1]–[14], [16], [17]) — 0 fabricated studies.
+- **Special handling: 4** — [6] ID-collision · [4] venue (ICML) · [8]/[16]/[17] orphan (wire-in-or-cut) · [2] weak preprint (co-cite).
+- **verified real (complete): 29** ([15], [18]–[45]).
 
 ## Rule
 
-No placeholder reference may survive to a public draft. Until [1]–[14] are replaced with real sources
-(or the claims they support are downgraded to `DESIGN_ONLY`/`DIRECTION_ONLY`), the paper is
-**not release-ready**.
+No `A. Author` byline may survive to a public draft. But the studies are **real** — the fix is metadata
+repair (byline + the 4 flagged IDs/venues), not removal. A paper on verification integrity must not carry
+placeholder bylines; equally, it must not carry the unbound verdict "these citations are fabricated" — which
+this correction retracts.
