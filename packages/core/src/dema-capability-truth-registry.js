@@ -74,6 +74,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "PUBLIC_METRIC_CLAIM_GATE_PREVIEW_1A",
   "MATERIALIZATION_PULSE_RECEIPT_SCHEMA_PREVIEW_1A",
   "LOCAL_MODEL_PULSE_BINDING_PREVIEW_1A",
+  "PLAN_BRANCH_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1793,6 +1794,35 @@ function defaultCapabilityRows() {
         "A pure preview-only kernel binds an already-produced local-model invocation result envelope (bizra.dema.llm_invocation_result.v0.1) into the Materialization Pulse evidence lane as SUGGESTION-ONLY data. The model may suggest; the verifier remains authority. A completed invocation is admissible as suggestion evidence ONLY when prompt AND response safety verdicts are PUBLIC_SAFE and the verdict role is suggestion; blocked or failed invocations are recordable as failure evidence only (never suggestion, never public-safe). verify rejects: unsafe prompt/response verdicts, non-suggestion verdict roles, runtime strict-false boundary violations, wrong source schema, admissible/failure contradiction, admissible-with-blocks, and — even with a recomputed content_hash — public_claim_safe/action_allowed/authority_delta/grants_action/mint/wallet/federation laundering. run() self-probes tamper + authority + claim forgeries and refuses if any survives. Reuses the canonical buildPreviewBoundary(); example fixtures live in scripts/review (they carry real input authority-flags) so the boundary-invariant static check stays clean. 14 tests + review gate green; boundary all-false, authority_delta 0.",
       what_this_does_not_prove:
         "It does NOT invoke a model, call Ollama, use the network, verify semantic truth, authorize an action, publish a public claim, write a receipt, mint, use a wallet, federate, or prove live URP. Admissible means 'carried as a suggestion', never 'true' or 'permitted'.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "PLAN_BRANCH_PREVIEW_1A",
+      truth_label: "PLAN_BRANCH_PREVIEW_MEASURED_REPO",
+      summary:
+        "Pure preview-only Materialization Pulse planning kernel: preserves candidate, chosen, and rejected plan branches as content-addressed evidence before FATE or execution. Rejected branches are evidence. It executes nothing and invokes no model.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/plan-branch-preview.js"],
+        test_paths: ["tests/plan-branch-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/plan-branch-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/PLAN_BRANCH_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/PLAN_BRANCH_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "The planning layer between niyyah and FATE, made lawful: it binds candidate plan branches, exactly one chosen branch, and the rejected branches (each with a valid rejection_reason from a fixed set + a non-empty rejection_basis) into a content-addressed preview receipt. 'Rejected branches are evidence' — every non-chosen candidate MUST be accounted for as rejected. evaluatePlanBranches rejects: no candidates, missing/duplicate/empty branch ids, chosen-not-in-candidates, chosen-also-rejected, unaccounted branches, duplicate/ghost rejected branches, invalid rejection reasons, missing rejection basis, non-zero authority_delta on any branch, and out-of-range risk/ihsan scores. verify re-derives the content hash and rejects — even with a recomputed hash — action_allowed/authority_delta/grants_action/mint/wallet/federation/model_invocation laundering and boundary flips; run() self-probes tamper + authority + action forgeries. Fixtures live in scripts/review (they name unsafe rejected routes) so the boundary-invariant static check stays clean. 21 tests + review gate green; boundary all-false, authority_delta 0.",
+      what_this_does_not_prove:
+        "It does NOT execute the chosen plan, invoke a model, authorize an action, verify external truth, mint, use a wallet, federate, or prove live URP. It records a planning decision as evidence; it grants nothing.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
