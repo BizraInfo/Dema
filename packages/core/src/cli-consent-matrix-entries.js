@@ -290,6 +290,7 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     ["tests/memory.test.js"],
   ),
   preview("think", "tests/think-dry-run.test.js"),
+  preview("voice", "tests/sovereign-voice-turn-preview-cli.test.js"),
   readOnly("models", "tests/model-catalog-cli.test.js"),
   readOnly("monitors", "tests/dema-monitors-cli.test.js", "Operator-invoked proof-health scan; read-only, no daemon, no autofix, no receipt write"),
   row(
