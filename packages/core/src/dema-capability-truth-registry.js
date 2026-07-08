@@ -75,6 +75,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "MATERIALIZATION_PULSE_RECEIPT_SCHEMA_PREVIEW_1A",
   "LOCAL_MODEL_PULSE_BINDING_PREVIEW_1A",
   "PLAN_BRANCH_PREVIEW_1A",
+  "NODE0_MATERIALIZATION_PULSE_E2E_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1823,6 +1824,41 @@ function defaultCapabilityRows() {
         "The planning layer between niyyah and FATE, made lawful: it binds candidate plan branches, exactly one chosen branch, and the rejected branches (each with a valid rejection_reason from a fixed set + a non-empty rejection_basis) into a content-addressed preview receipt. 'Rejected branches are evidence' — every non-chosen candidate MUST be accounted for as rejected. evaluatePlanBranches rejects: no candidates, missing/duplicate/empty branch ids, chosen-not-in-candidates, chosen-also-rejected, unaccounted branches, duplicate/ghost rejected branches, invalid rejection reasons, missing rejection basis, non-zero authority_delta on any branch, and out-of-range risk/ihsan scores. verify re-derives the content hash and rejects — even with a recomputed hash — action_allowed/authority_delta/grants_action/mint/wallet/federation/model_invocation laundering and boundary flips; run() self-probes tamper + authority + action forgeries. Fixtures live in scripts/review (they name unsafe rejected routes) so the boundary-invariant static check stays clean. 21 tests + review gate green; boundary all-false, authority_delta 0.",
       what_this_does_not_prove:
         "It does NOT execute the chosen plan, invoke a model, authorize an action, verify external truth, mint, use a wallet, federate, or prove live URP. It records a planning decision as evidence; it grants nothing.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_MATERIALIZATION_PULSE_E2E_PREVIEW_1A",
+      truth_label: "NODE0_MATERIALIZATION_PULSE_E2E_PREVIEW_MEASURED_REPO",
+      summary:
+        "Pure preview-only Materialization Pulse orchestrator: runs ONE mission end-to-end through the five assembled station kernels (sanitize -> plan-branch -> FATE -> claim-gate -> pulse-receipt envelope), emitting a per-station ladder + one chained receipt. Composes existing pure kernels; runs no live model.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/node0-materialization-pulse-e2e-preview.js",
+          "apps/cli/src/commands/mission.js",
+        ],
+        test_paths: [
+          "tests/node0-materialization-pulse-e2e-preview.test.js",
+          "tests/node0-materialization-pulse-e2e-cli.test.js",
+        ],
+        review_gate_paths: [
+          "scripts/review/node0-materialization-pulse-e2e-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_MATERIALIZATION_PULSE_E2E_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_MATERIALIZATION_PULSE_E2E_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "The capstone: the assembled Materialization Pulse RUNS. A pure orchestrator composes the five already-tested station kernels over one mission -- sanitize(file_text) -> plan-branch -> FATE(caller verdict) -> claim-gate -> assemble the #351 pulse-receipt envelope -- producing a per-station pass/block LADDER and one chained content-addressed receipt. Atomicity is inherited from the envelope, not re-invented: only an ALLOWED sanitizer verdict proceeds (BLOCKED/QUARANTINED abort at rung 1); a failed plan or a FATE REJECT aborts at its rung; a claim-gate rejection of a public claim does NOT abort but sets claims_public_safe:false; all-pass seals. An aborted pulse still emits a receipt recording where + why. verify re-derives the content hash, re-verifies the embedded envelope, and cross-checks that each ladder station hash matches the sealed envelope's bound reference -- so a forged rung or laundered authority (even with a recomputed hash) is rejected. `dema mission run <file>` reads one real file read-only and runs it through the whole chain, exiting non-zero unless sealed. 27 kernel tests + 4 CLI tests + review gate green; boundary all-false, authority_delta 0.",
+      what_this_does_not_prove:
+        "It runs no live model, executes no real-world action, publishes nothing, mints nothing. A sealed pulse means the assembled PREVIEW stations passed on this input -- NOT that the mission was executed, the plan carried out, or the claims are true. The orchestrator adds composition, not authority; it re-implements no station logic; the CLI uses a benign built-in demo mission plus the real file text.",
       forbidden_claims: [
         "live execution",
         "operator mutation",

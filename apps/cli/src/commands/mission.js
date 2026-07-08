@@ -34,7 +34,7 @@ import { statusWithLocalIdentity } from "../lib/status-identity.js";
 // NODE0-LOCAL-MISSION-HARNESS-PREVIEW-1A — `dema mission pulse <file>` effect layer.
 import { mkdir, readFile as readFileFs, readdir, realpath, rename, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, join, isAbsolute, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { generateEd25519Keypair } from "../../../../packages/receipts/src/authorship-signature.js";
 import { buildNode0ProofChainLinkPayload } from "../../../../packages/core/src/node0-proof-chain-link.js";
@@ -64,6 +64,50 @@ import {
   runNode0ReceiptShelfCompactionStatePreview,
   NODE0_RECEIPT_SHELF_COMPACTION_STATE_PREVIEW_GO_PHRASE,
 } from "../../../../packages/core/src/node0-receipt-shelf-compaction-state-preview.js";
+import { createHash as createHashE2e } from "node:crypto";
+import {
+  runNode0MaterializationPulseE2ePreview,
+  NODE0_MATERIALIZATION_PULSE_E2E_PREVIEW_GO_PHRASE,
+} from "../../../../packages/core/src/node0-materialization-pulse-e2e-preview.js";
+
+// A benign built-in demo mission for `dema mission run <file>`: the file's real text is the sanitize
+// input; the structured parts (one plan branch, a testimony claim, a PERMIT verdict) are a fixed demo.
+function buildDemoMission(fileText, fileSource) {
+  const niyyahHash = `sha256:${createHashE2e("sha256").update(`niyyah:${fileSource}`, "utf8").digest("hex")}`;
+  return {
+    mission_id: "dema-mission-run-demo",
+    pulse_id: "dema-pulse-run-demo",
+    niyyah_hash: niyyahHash,
+    file_text: fileText,
+    file_source: fileSource,
+    plan: {
+      mission_id: "dema-mission-run-demo",
+      niyyah_hash: niyyahHash,
+      chosen_branch_id: "read-only-preview",
+      branches: [{ id: "read-only-preview", title: "Preview-only", summary: "Bind evidence, no execution.", risk_score: 0.1, ihsan_score: 0.95, estimated_cost: 1, consent_required: false, authority_delta: 0, evidence_refs: [] }],
+      rejected_branches: [],
+    },
+    fate: { verdict: "PERMIT", authority_delta: 0, grants_action: false, mint_allowed: false },
+    claims: { claims: [{ id: "testimony", text: "founder work", metric: "founder_hours", asserted_value: 3, kind: "testimony" }], evidence: {} },
+  };
+}
+
+// Testable I/O core for `dema mission run <file>`: reads one file read-only, runs it end-to-end through
+// the assembled Materialization Pulse stations. No model, no network, no write.
+export async function runMissionRun({ filePath } = {}) {
+  const abs = filePath && isAbsolute(filePath) ? resolve(filePath) : filePath;
+  let text;
+  try {
+    text = await readFileFs(abs, "utf8");
+  } catch (err) {
+    return { ok: false, reason_code: err?.code === "ENOENT" ? "file_not_found" : "read_failed", file: abs, result: null };
+  }
+  const result = runNode0MaterializationPulseE2ePreview({
+    consent: NODE0_MATERIALIZATION_PULSE_E2E_PREVIEW_GO_PHRASE,
+    input: { mission: buildDemoMission(text, abs) },
+  });
+  return { ok: result.ok, result, file: abs };
+}
 
 export const MISSION_EXCERPT_GO_PHRASE = "GO: include local excerpt in mission packet";
 
@@ -233,6 +277,65 @@ export async function runMissionPulseHarness({
 
 export async function cmd_mission(ctx) {
   const { argv, subcommand } = ctx;
+  if (subcommand === "run") {
+    // NODE0-MATERIALIZATION-PULSE-E2E-PREVIEW-1A — run one real local file END-TO-END through the
+    // assembled Pulse stations (sanitize → plan-branch → FATE → claim-gate → pulse-receipt). The train
+    // runs. PREVIEW_ONLY: no model, no network, no write, no mint. Composes existing pure kernels.
+    const wantJsonMR = wantsJson(argv);
+    const filePath = argv[2];
+    if (!filePath) {
+      process.stderr.write('dema mission run <abs_or_rel_file> [--json] — a file argument is required\n');
+      process.exitCode = 1;
+      process.exit(process.exitCode ?? 0);
+    }
+    const out = await runMissionRun({ filePath });
+    if (!out.result) {
+      if (wantJsonMR) console.log(JSON.stringify({ refused: true, reason_code: out.reason_code, file: out.file }, null, 2));
+      else process.stderr.write(`dema mission run: ${out.reason_code}: ${out.file}\n`);
+      process.exitCode = 1;
+      process.exit(process.exitCode ?? 0);
+    }
+    const r = out.result;
+    if (wantJsonMR) {
+      console.log(
+        JSON.stringify(
+          {
+            preview_only: true,
+            schema: r.schema,
+            status: r.status,
+            file: out.file,
+            pulse_status: r.pulse_status,
+            reached_station: r.reached_station,
+            station_count: r.station_count,
+            claims_public_safe: r.claims_public_safe,
+            ladder: r.ladder,
+            content_hash: r.content_hash,
+            boundary: r.boundary,
+            mint_allowed: r.mint_allowed,
+            authority_delta: r.authority_delta,
+            blocked_by: r.blocked_by,
+          },
+          null,
+          2,
+        ),
+      );
+    } else {
+      const lines = [
+        "DEMA · MISSION RUN — PREVIEW_ONLY (the assembled Pulse, end to end · no model/network/mint)",
+        `  ${out.file}`,
+        `  PULSE: ${r.pulse_status} · reached ${r.reached_station}/${r.station_count} · claims_public_safe:${r.claims_public_safe}`,
+      ];
+      for (const rung of r.ladder || []) {
+        lines.push(`    ${rung.ok ? "✓" : "✗"} ${String(rung.station).padEnd(13)} ${rung.verdict}${rung.blocked_by.length ? " · " + rung.blocked_by.join(",") : ""}`);
+      }
+      lines.push(`  content_hash: ${r.content_hash}`);
+      lines.push(`  boundary: all-false · authority_delta:${r.authority_delta} · mint_allowed:${r.mint_allowed}`);
+      lines.push(humanHintLine("mission run"));
+      console.log(lines.join("\n"));
+    }
+    if (!r.ok || r.pulse_status !== "sealed") process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
   if (subcommand === "compact") {
     // NODE0-RECEIPT-SHELF-COMPACTION-STATE-PREVIEW-1A — read receipts → shelf → compacted, hash-bound
     // mission state (keep/drop/no-longer-claim/one-next-action). PREVIEW_ONLY. No RL, model, network,
