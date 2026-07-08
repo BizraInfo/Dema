@@ -27,8 +27,8 @@ test("builds deterministic frozen 33-capability truth registry", () => {
   assert.equal(first.schema, DEMA_CAPABILITY_TRUTH_REGISTRY_SCHEMA);
   assert.equal(first.truth_label, DEMA_CAPABILITY_TRUTH_REGISTRY_TRUTH_LABEL);
   assert.deepEqual(first.supported_statuses, CAPABILITY_TRUTH_STATUSES);
-  assert.equal(first.capability_count, 55);
-  assert.equal(first.measured_repo_count, 55);
+  assert.equal(first.capability_count, 56);
+  assert.equal(first.measured_repo_count, 56);
   assert.match(first.registry_hash, /^sha256:[0-9a-f]{64}$/);
   assert.equal(first.registry_hash, second.registry_hash);
   assert.ok(Object.isFrozen(first));
@@ -402,8 +402,8 @@ test("gate passes against the real merged repository files", () => {
   const gate = runDemaCapabilityTruthRegistryGate({ pathExists });
 
   assert.equal(gate.ok, true);
-  assert.equal(gate.capability_count, 55);
-  assert.equal(gate.measured_repo_count, 55);
+  assert.equal(gate.capability_count, 56);
+  assert.equal(gate.measured_repo_count, 56);
   assert.equal(gate.blocked_live_surface_count, 5);
   assert.match(gate.registry_hash, /^sha256:[0-9a-f]{64}$/);
   assert.deepEqual(gate.verified.blocked_by, []);

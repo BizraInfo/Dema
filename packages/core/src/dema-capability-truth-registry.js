@@ -77,6 +77,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "PLAN_BRANCH_PREVIEW_1A",
   "NODE0_MATERIALIZATION_PULSE_E2E_PREVIEW_1A",
   "NODE0_LOCAL_MISSION_ARTIFACT_EMISSION_PREVIEW_1A",
+  "NODE0_MISSION_PILOT_COCKPIT_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1889,6 +1890,35 @@ function defaultCapabilityRows() {
         "A pure emitter re-verifies an already-produced NODE0-LOCAL-MISSION-HARNESS-PREVIEW result (transitively re-verifying pulse -> composition -> signature-backed genesis anchor) and serializes it into THREE separate content-addressed preview artifacts: a receipt, a not-applied world-state delta preview (applied:false), and a DEMA report. Each artifact carries a stable sha256 content hash, committed_live:false, and an all-false boundary; the run id and target relpaths are derived deterministically from the input content hash, so the same input yields identical run id and artifact hashes. verify re-derives the emission hash AND each artifact hash and fail-closed rejects tamper, a committed_live/authority/mint/laundering flag, raw-source-content leakage, and a forge-and-recompute where the embedded harness anchor no longer verifies. 39 kernel tests + review gate green; boundary all-false, authority_delta 0. It composes the shipped harness kernel and re-implements none of its logic.",
       what_this_does_not_prove:
         "The kernel writes no file -- a CLI/adapter performs any write, consent-gated and atomic, under DEMA_HOME. Serializing a preview is not executing a mission: no world-state is applied, nothing is recorded live, and no model, network, daemon, wallet, mint, or federation is invoked. The world-state delta is declared, not applied.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_MISSION_PILOT_COCKPIT_PREVIEW_1A",
+      truth_label: "NODE0_MISSION_PILOT_COCKPIT_PREVIEW_MEASURED_REPO",
+      summary:
+        "Read-only truth cockpit: verifies the three emitted mission artifacts (receipt, world-state delta, DEMA report) by content hash and renders one operator view — mission status, accepted/rejected gates, delta preview, DEMA report, and next safe action; refuses tampered artifacts.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-mission-pilot-cockpit-preview.js"],
+        test_paths: ["tests/node0-mission-pilot-cockpit-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-mission-pilot-cockpit-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_MISSION_PILOT_COCKPIT_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_MISSION_PILOT_COCKPIT_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Renders one read-only operator truth view over the three already-verified, content-addressed mission artifacts (receipt, not-applied world-state delta, DEMA report): it re-verifies the emission (transitively harness -> pulse -> composition -> signature-backed genesis anchor), independently re-derives each artifact hash, refuses any tampered artifact, and passes through mission status, the accepted/rejected pulse gates, the applied:false delta summary, the DEMA report, and the what-happened / what-did-not-happen / next-safe-action lines. No new intelligence; content-addressed and deterministic for the same input.",
+      what_this_does_not_prove:
+        "It adds no intelligence and re-derives no artifact from the harness; it does not prove operator execution, daemon runtime, network use, wallet access, live URP, mint, or federation. A rendered view means the artifacts are content-addressed and consistent and the upstream anchor verifies, not that the mission ran or its claims are true.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
