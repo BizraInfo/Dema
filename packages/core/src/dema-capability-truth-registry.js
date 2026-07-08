@@ -76,6 +76,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "LOCAL_MODEL_PULSE_BINDING_PREVIEW_1A",
   "PLAN_BRANCH_PREVIEW_1A",
   "NODE0_MATERIALIZATION_PULSE_E2E_PREVIEW_1A",
+  "NODE0_LOCAL_MISSION_ARTIFACT_EMISSION_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1859,6 +1860,35 @@ function defaultCapabilityRows() {
         "The capstone: the assembled Materialization Pulse RUNS. A pure orchestrator composes the five already-tested station kernels over one mission -- sanitize(file_text) -> plan-branch -> FATE(caller verdict) -> claim-gate -> assemble the #351 pulse-receipt envelope -- producing a per-station pass/block LADDER and one chained content-addressed receipt. Atomicity is inherited from the envelope, not re-invented: only an ALLOWED sanitizer verdict proceeds (BLOCKED/QUARANTINED abort at rung 1); a failed plan or a FATE REJECT aborts at its rung; a claim-gate rejection of a public claim does NOT abort but sets claims_public_safe:false; all-pass seals. An aborted pulse still emits a receipt recording where + why. verify re-derives the content hash, re-verifies the embedded envelope, and cross-checks that each ladder station hash matches the sealed envelope's bound reference -- so a forged rung or laundered authority (even with a recomputed hash) is rejected. `dema mission run <file>` reads one real file read-only and runs it through the whole chain, exiting non-zero unless sealed. 27 kernel tests + 4 CLI tests + review gate green; boundary all-false, authority_delta 0.",
       what_this_does_not_prove:
         "It runs no live model, executes no real-world action, publishes nothing, mints nothing. A sealed pulse means the assembled PREVIEW stations passed on this input -- NOT that the mission was executed, the plan carried out, or the claims are true. The orchestrator adds composition, not authority; it re-implements no station logic; the CLI uses a benign built-in demo mission plus the real file text.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_LOCAL_MISSION_ARTIFACT_EMISSION_PREVIEW_1A",
+      truth_label: "NODE0_LOCAL_MISSION_ARTIFACT_EMISSION_PREVIEW_MEASURED_REPO",
+      summary:
+        "Serialize an already-produced local mission/pulse result into three separate content-addressed preview artifacts (receipt, world-state delta, DEMA report); composes shipped kernels, writes no live state.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-local-mission-artifact-emission-preview.js"],
+        test_paths: ["tests/node0-local-mission-artifact-emission-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-local-mission-artifact-emission-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_LOCAL_MISSION_ARTIFACT_EMISSION_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_LOCAL_MISSION_ARTIFACT_EMISSION_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure emitter re-verifies an already-produced NODE0-LOCAL-MISSION-HARNESS-PREVIEW result (transitively re-verifying pulse -> composition -> signature-backed genesis anchor) and serializes it into THREE separate content-addressed preview artifacts: a receipt, a not-applied world-state delta preview (applied:false), and a DEMA report. Each artifact carries a stable sha256 content hash, committed_live:false, and an all-false boundary; the run id and target relpaths are derived deterministically from the input content hash, so the same input yields identical run id and artifact hashes. verify re-derives the emission hash AND each artifact hash and fail-closed rejects tamper, a committed_live/authority/mint/laundering flag, raw-source-content leakage, and a forge-and-recompute where the embedded harness anchor no longer verifies. 39 kernel tests + review gate green; boundary all-false, authority_delta 0. It composes the shipped harness kernel and re-implements none of its logic.",
+      what_this_does_not_prove:
+        "The kernel writes no file -- a CLI/adapter performs any write, consent-gated and atomic, under DEMA_HOME. Serializing a preview is not executing a mission: no world-state is applied, nothing is recorded live, and no model, network, daemon, wallet, mint, or federation is invoked. The world-state delta is declared, not applied.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
