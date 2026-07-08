@@ -54,19 +54,34 @@ export function runNode0LocalMissionEmitCliAdapterCheck() {
     const runDir = join(demaHome, "artifacts", "proofs", "node0-local-mission", emitted.run_id || "unknown");
     for (const name of ARTIFACT_NAMES) {
       const p = join(runDir, `${name}.json`);
-      if (!existsSync(p)) blocked_by.push(`artifact_missing:${name}`);
-      else if ((statSync(p).mode & 0o777) !== 0o600) blocked_by.push(`artifact_mode_not_0600:${name}`);
+      // stat directly (no existsSync pre-check) to avoid a time-of-check/time-of-use race.
+      try {
+        if ((statSync(p).mode & 0o777) !== 0o600) blocked_by.push(`artifact_mode_not_0600:${name}`);
+      } catch {
+        blocked_by.push(`artifact_missing:${name}`);
+      }
     }
     if ((emitted.artifact_paths_written || []).length !== ARTIFACT_NAMES.length) blocked_by.push("written_count_mismatch");
 
     // Verification envelope (emission.json): 4th file — a verification envelope, NOT a 4th artifact.
     const envPath = join(runDir, `${EMISSION_ENVELOPE_FILENAME}.json`);
-    if (!existsSync(envPath)) blocked_by.push("envelope_missing");
-    else {
-      if ((statSync(envPath).mode & 0o777) !== 0o600) blocked_by.push("envelope_mode_not_0600");
+    // Read once, directly (no existsSync pre-check) to avoid a time-of-check/time-of-use race; the
+    // single rawEnv is reused for JSON parsing and the private-key/DID exclusion scan.
+    let rawEnv = null;
+    try {
+      rawEnv = readFileSync(envPath, "utf8");
+    } catch {
+      blocked_by.push("envelope_missing");
+    }
+    if (rawEnv !== null) {
+      try {
+        if ((statSync(envPath).mode & 0o777) !== 0o600) blocked_by.push("envelope_mode_not_0600");
+      } catch {
+        /* mode unavailable — the read already succeeded, so this is non-fatal */
+      }
       let env = null;
       try {
-        env = JSON.parse(readFileSync(envPath, "utf8"));
+        env = JSON.parse(rawEnv);
       } catch {
         blocked_by.push("envelope_not_valid_json");
       }
@@ -82,11 +97,10 @@ export function runNode0LocalMissionEmitCliAdapterCheck() {
         if (env.committed_live !== false) blocked_by.push("envelope_committed_live_true");
         if (env.mint_allowed !== false) blocked_by.push("envelope_mint_allowed_true");
         if (env.authority_delta !== 0) blocked_by.push("envelope_authority_delta_nonzero");
-        // exclusion: no private-key material, no DID secret in the written envelope.
-        const rawEnv = readFileSync(envPath, "utf8");
-        if (/-----BEGIN [A-Z ]*PRIVATE KEY-----/.test(rawEnv)) blocked_by.push("envelope_private_key_material");
-        if (rawEnv.includes("did:")) blocked_by.push("envelope_did_secret");
       }
+      // exclusion: no private-key material, no DID secret in the written envelope (single read reused).
+      if (/-----BEGIN [A-Z ]*PRIVATE KEY-----/.test(rawEnv)) blocked_by.push("envelope_private_key_material");
+      if (rawEnv.includes("did:")) blocked_by.push("envelope_did_secret");
     }
     if (!emitted.envelope_path_written) blocked_by.push("envelope_path_not_returned");
 
