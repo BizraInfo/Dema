@@ -59,6 +59,10 @@ import {
   NODE0_LOCAL_MISSION_ARTIFACT_EMISSION_PREVIEW_GO_PHRASE,
 } from "../../../../packages/core/src/node0-local-mission-artifact-emission-preview.js";
 import {
+  runNode0MissionPilotCockpitPreview,
+  NODE0_MISSION_PILOT_COCKPIT_PREVIEW_GO_PHRASE,
+} from "../../../../packages/core/src/node0-mission-pilot-cockpit-preview.js";
+import {
   runNode0MissionHarnessReturnReviewPreview,
   NODE0_MISSION_HARNESS_RETURN_REVIEW_PREVIEW_GO_PHRASE,
 } from "../../../../packages/core/src/node0-mission-harness-return-review-preview.js";
@@ -481,8 +485,218 @@ export async function runMissionEmit({
   };
 }
 
+// NODE0-MISSION-PILOT-COCKPIT-CLI-ADAPTER-1A — `dema mission cockpit <run-id>` READ-ONLY reader.
+// The exact run-id shape the emit kernel derives (first 16 hex of the harness content hash). Anything
+// else — `..`, `../x`, a non-hex string — is rejected BEFORE any path is built (path-traversal guard).
+export const NODE0_MISSION_PILOT_COCKPIT_RUN_ID_RE = /^[0-9a-f]{16}$/;
+
+// Independent canonical digest — a byte-for-byte copy of the emission/cockpit kernels' stableStringify +
+// sha256, kept LOCAL so the cockpit reader re-derives each on-disk artifact's content hash itself rather
+// than trusting the envelope's self-report. Re-implementing the tiny canonical form here IS the point:
+// it is an independent second witness against a tampered artifact file.
+function cockpitStableStringify(value) {
+  if (Array.isArray(value)) {
+    return `[${value.map(cockpitStableStringify).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    const entries = Object.keys(value)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${cockpitStableStringify(value[k])}`);
+    return `{${entries.join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function cockpitSha256(value) {
+  return createHash("sha256").update(value, "utf8").digest("hex");
+}
+
+// Testable I/O core for `dema mission cockpit <run-id>`. READ-ONLY: it reads exactly the four files the
+// emit writer produced in the run_id dir (emission.json + the three artifact files) and NOTHING else — no
+// directory crawl, no source-file read, no write, no mutation. It (1) strict-validates the run id BEFORE
+// building any path, (2) loads emission.json and feeds its nested content-addressed emission to the shipped
+// cockpit kernel (which re-verifies emission → harness → pulse → composition → signature-backed genesis
+// anchor and renders the cockpit_view), and (3) INDEPENDENTLY re-derives each on-disk artifact FILE's
+// content hash and refuses any mismatch (artifact_hash_mismatch:<name>) or missing file. Fails closed.
+export async function runMissionCockpit({ runId, demaHome } = {}) {
+  // 1) Strict run-id validation BEFORE any path is built (path-traversal guard: `..`, `../x`, non-hex).
+  if (!runId || typeof runId !== "string" || runId.startsWith("--")) {
+    return { ok: false, error: "missing_run_id", run_id: null, run_dir: null, cockpit: null };
+  }
+  if (!NODE0_MISSION_PILOT_COCKPIT_RUN_ID_RE.test(runId)) {
+    return { ok: false, error: "invalid_run_id", run_id: runId, run_dir: null, cockpit: null };
+  }
+
+  const home = demaHome || process.env.DEMA_HOME || join(homedir(), ".dema");
+  const dir = join(home, "artifacts", "proofs", "node0-local-mission", runId);
+
+  // 2) Load emission.json (the verification envelope). Read-only.
+  let rawEnv;
+  try {
+    rawEnv = await readFileFs(join(dir, `${EMISSION_ENVELOPE_FILENAME}.json`), "utf8");
+  } catch {
+    return { ok: false, error: "emission_envelope_not_found", run_id: runId, run_dir: dir, cockpit: null };
+  }
+  let envelope;
+  try {
+    envelope = JSON.parse(rawEnv);
+  } catch {
+    return { ok: false, error: "emission_envelope_not_valid_json", run_id: runId, run_dir: dir, cockpit: null };
+  }
+  const emission = envelope?.emission;
+  if (!emission || typeof emission !== "object") {
+    return { ok: false, error: "emission_envelope_missing_nested_emission", run_id: runId, run_dir: dir, cockpit: null };
+  }
+
+  // 3) Compose the shipped cockpit kernel over the nested emission. It transitively re-verifies the whole
+  //    chain and renders the cockpit_view (with the gates ladder). Tampering the nested emission fails here.
+  const cockpit = runNode0MissionPilotCockpitPreview({
+    consent: NODE0_MISSION_PILOT_COCKPIT_PREVIEW_GO_PHRASE,
+    input: { emission },
+  });
+
+  // 4) INDEPENDENT per-artifact FILE re-check. Read each artifact file on disk, re-derive its content hash,
+  //    and compare to the file's own embedded hash AND the envelope's recorded artifact_hashes. A tampered
+  //    artifact file (bytes changed) or a missing file is refused here — even though the copy embedded in
+  //    emission.json (which the kernel checks) is untouched.
+  const recordedHashes = envelope?.artifact_hashes ?? {};
+  const artifact_file_checks = [];
+  const blocked_by = [];
+  for (const name of ARTIFACT_NAMES) {
+    const p = join(dir, `${name}.json`);
+    let raw;
+    try {
+      raw = await readFileFs(p, "utf8");
+    } catch {
+      blocked_by.push(`missing_artifact_file:${name}`);
+      artifact_file_checks.push({ name, path: p, ok: false, reason: "missing", recorded_hash: recordedHashes[name] ?? null, embedded_hash: null, rederived_hash: null });
+      continue;
+    }
+    let artObj;
+    try {
+      artObj = JSON.parse(raw);
+    } catch {
+      blocked_by.push(`artifact_not_valid_json:${name}`);
+      artifact_file_checks.push({ name, path: p, ok: false, reason: "invalid_json", recorded_hash: recordedHashes[name] ?? null, embedded_hash: null, rederived_hash: null });
+      continue;
+    }
+    const { content_hash: embedded, ...artBody } = artObj;
+    const rederived = `sha256:${cockpitSha256(cockpitStableStringify(artBody))}`;
+    const recorded = recordedHashes[name] ?? null;
+    const matchesEmbedded = embedded === rederived;
+    const matchesRecorded = recorded === null ? true : recorded === rederived;
+    const ok = matchesEmbedded && matchesRecorded;
+    if (!ok) blocked_by.push(`artifact_hash_mismatch:${name}`);
+    artifact_file_checks.push({ name, path: p, ok, recorded_hash: recorded, embedded_hash: embedded ?? null, rederived_hash: rederived });
+  }
+
+  // 5) Combined verdict — the kernel anchor AND every independent artifact-file re-check must pass.
+  if (!cockpit.ok) for (const c of cockpit.blocked_by || []) blocked_by.push(`cockpit:${c}`);
+  const ok = cockpit.ok && artifact_file_checks.every((c) => c.ok);
+
+  return {
+    ok,
+    error: null,
+    run_id: runId,
+    run_dir: dir,
+    cockpit,
+    cockpit_view: cockpit.cockpit_view ?? null,
+    // committed_live surfaced from the (verified) source emission, not asserted by the reader.
+    committed_live: emission.committed_live === false ? false : emission.committed_live ?? null,
+    envelope_meta: {
+      schema: envelope?.schema ?? null,
+      emission_content_hash: envelope?.emission_content_hash ?? null,
+      source_file_content_hash: envelope?.source_file_content_hash ?? null,
+    },
+    artifact_file_checks,
+    blocked_by: [...new Set(blocked_by)],
+  };
+}
+
 export async function cmd_mission(ctx) {
   const { argv, subcommand } = ctx;
+  if (subcommand === "cockpit") {
+    // NODE0-MISSION-PILOT-COCKPIT-CLI-ADAPTER-1A — read-only operator truth cockpit. Loads the on-disk
+    // emission.json verification envelope for <run-id>, re-verifies the full chain via the shipped cockpit
+    // kernel (emission → harness → pulse → composition → signature-backed genesis anchor), INDEPENDENTLY
+    // re-derives each on-disk artifact file's content hash, refuses any mismatch, and renders one operator
+    // cockpit view. READ-ONLY: writes nothing, mutates nothing; no model, network, daemon, mint, or
+    // federation. committed_live:false, authority_delta:0, mint_allowed:false, boundary all-false.
+    const wantJsonCK = wantsJson(argv);
+    const out = await runMissionCockpit({
+      runId: argv[2],
+      demaHome: argValue(argv, "--dema-home"),
+    });
+    if (out.error) {
+      const usage = "dema mission cockpit <run-id> [--dema-home <path>] [--json]";
+      if (wantJsonCK) {
+        console.log(JSON.stringify({ preview_only: true, ok: false, error: out.error, run_id: out.run_id, usage }, null, 2));
+      } else {
+        console.error(`Dema error: ${out.error}. Usage: ${usage}`);
+      }
+      process.exitCode = 1;
+      process.exit(process.exitCode ?? 0);
+    }
+    const view = out.cockpit_view ?? {};
+    const gates = view.gates ?? {};
+    const wsd = view.world_state_delta_preview ?? {};
+    const boundary = out.cockpit?.boundary ?? {};
+    if (wantJsonCK) {
+      console.log(
+        JSON.stringify(
+          {
+            preview_only: true,
+            schema: view.schema ?? out.cockpit?.schema ?? null,
+            status: out.cockpit?.status ?? null,
+            ok: out.ok,
+            run_id: out.run_id,
+            run_dir: out.run_dir,
+            mission_status: view.mission_status ?? null,
+            receipt_hash: view.receipt_hash ?? null,
+            gates,
+            world_state_delta_preview: wsd,
+            dema_report: view.dema_report ?? null,
+            what_happened: view.what_happened ?? null,
+            what_did_not_happen: view.what_did_not_happen ?? null,
+            next_safe_action: view.next_safe_action ?? null,
+            artifact_file_checks: out.artifact_file_checks,
+            content_hash: out.cockpit?.content_hash ?? null,
+            committed_live: out.committed_live,
+            boundary,
+            mint_allowed: out.cockpit?.mint_allowed ?? null,
+            authority_delta: out.cockpit?.authority_delta ?? null,
+            blocked_by: out.blocked_by,
+          },
+          null,
+          2,
+        ),
+      );
+    } else {
+      const lines = [
+        "DEMA · MISSION COCKPIT — PREVIEW_ONLY (read-only operator truth cockpit · writes nothing · no model/network/daemon/mint)",
+        `  run_id: ${out.run_id}`,
+        `  mission_status: ${view.mission_status ?? "-"}`,
+        `  receipt_hash: ${view.receipt_hash ?? "-"}`,
+        `  gates (furthest reached: ${gates.reached_station ?? "-"}):`,
+      ];
+      for (const rung of gates.ladder || []) lines.push(`    ${rung.ok ? "✓" : "✗"} ${rung.stage}`);
+      lines.push(`  world_state_delta: ${wsd.operation ?? "-"} → ${wsd.target ?? "-"} · applied:${wsd.applied}`);
+      lines.push(`  dema: ${view.dema_report?.status ?? "-"} — ${view.dema_report?.next_safe_action ?? "-"}`);
+      lines.push(`  what happened:       ${view.what_happened ?? "-"}`);
+      lines.push(`  what did NOT happen: ${view.what_did_not_happen ?? "-"}`);
+      lines.push(`  next safe action:    ${view.next_safe_action ?? "-"}`);
+      lines.push("  artifact file re-check (independent of the envelope):");
+      for (const c of out.artifact_file_checks) {
+        lines.push(`    ${c.ok ? "✓" : "✗"} ${c.name}${c.ok ? "" : " · " + (c.reason || "hash_mismatch")}`);
+      }
+      lines.push(`  boundary: all-false · committed_live:${out.committed_live} · mint_allowed:${out.cockpit?.mint_allowed} · authority_delta:${out.cockpit?.authority_delta}`);
+      if (!out.ok) for (const c of out.blocked_by || []) lines.push(`    ${c}`);
+      lines.push(humanHintLine("mission cockpit"));
+      console.log(lines.join("\n"));
+    }
+    if (!out.ok) process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
   if (subcommand === "run") {
     // NODE0-MATERIALIZATION-PULSE-E2E-PREVIEW-1A — run one real local file END-TO-END through the
     // assembled Pulse stations (sanitize → plan-branch → FATE → claim-gate → pulse-receipt). The train

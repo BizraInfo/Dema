@@ -71,6 +71,7 @@ export const commands = [
   ["node", ["scripts/review/node0-local-mission-artifact-emission-preview-check.mjs"]],
   ["node", ["scripts/review/node0-local-mission-emit-cli-adapter-check.mjs"]],
   ["node", ["scripts/review/node0-mission-pilot-cockpit-preview-check.mjs"]],
+  ["node", ["scripts/review/node0-mission-pilot-cockpit-cli-adapter-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
   ["node", ["scripts/review/boundary-vocab-unification-check.mjs"]],
   ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],
