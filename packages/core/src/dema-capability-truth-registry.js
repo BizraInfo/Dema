@@ -73,6 +73,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "UNTRUSTED_CORPUS_SANITIZER_PREVIEW_1A",
   "PUBLIC_METRIC_CLAIM_GATE_PREVIEW_1A",
   "MATERIALIZATION_PULSE_RECEIPT_SCHEMA_PREVIEW_1A",
+  "LOCAL_MODEL_PULSE_BINDING_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1763,6 +1764,35 @@ function defaultCapabilityRows() {
         "The 'missing middle' — the canonical Materialization Pulse receipt envelope that binds the two truth membranes into one atomic, content-addressed transaction. A pure kernel assembles a receipt (schema bizra.materialization_pulse_receipt.v0.1) linking niyyah, input_safety (the corpus-sanitizer verdict), plan (plan_root + rejected_branch_count), FATE verdict, execution mode, and claim_binding (the claim-gate verdict), under the operator's 6-key all-false Pulse boundary and an explicit does_not_prove list. It enforces the atomicity/consistency rules verbatim: a sealed pulse MUST reference BOTH the sanitizer and the claim gate (missing_sanitizer_reference / missing_claim_gate_reference); a SEALED pulse over a BLOCKED sanitizer verdict is illegal (sealed_pulse_over_blocked_input — a BLOCKED input is only valid on an aborted pulse); claims_public_safe:true is rejected while the claim gate REJECTED public claims (public_safe_with_rejected_claims); fate.mint_allowed:true, authority_delta≠0, and any Pulse-boundary flip (federation_live etc.) are rejected; does_not_prove must include live_urp/mint/federation. verify re-derives the receipt evaluation, so a forged receipt_ok is rejected. A malformed pulse still RUNS (run.ok true) with receipt_ok false — reporting the flaw is the job. 18 tests (incl. all 10 acceptance criteria) + review gate green; boundary all-false, authority_delta 0.",
       what_this_does_not_prove:
         "It RUNS no pulse and re-runs NO sub-gate — sanitizer_receipt / claim_gate_receipt / plan_root / exec_merkle are injected HASHES it binds, not payloads it re-verifies; it cannot prove the referenced sub-receipts are themselves valid, only that the envelope is well-formed and internally consistent. No execution, live URP, mint, wallet, federation, network, or model; it does not prove operator execution, daemon runtime, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "LOCAL_MODEL_PULSE_BINDING_PREVIEW_1A",
+      truth_label: "LOCAL_MODEL_PULSE_BINDING_PREVIEW_MEASURED_REPO",
+      summary:
+        "Pure preview-only bridge that binds an already-produced local-model invocation result (bizra.dema.llm_invocation_result.v0.1) into the Materialization Pulse evidence lane as suggestion-only evidence. The model may suggest; the verifier remains authority. It invokes no model.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/local-model-pulse-binding-preview.js"],
+        test_paths: ["tests/local-model-pulse-binding-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/local-model-pulse-binding-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/LOCAL_MODEL_PULSE_BINDING_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/LOCAL_MODEL_PULSE_BINDING_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure preview-only kernel binds an already-produced local-model invocation result envelope (bizra.dema.llm_invocation_result.v0.1) into the Materialization Pulse evidence lane as SUGGESTION-ONLY data. The model may suggest; the verifier remains authority. A completed invocation is admissible as suggestion evidence ONLY when prompt AND response safety verdicts are PUBLIC_SAFE and the verdict role is suggestion; blocked or failed invocations are recordable as failure evidence only (never suggestion, never public-safe). verify rejects: unsafe prompt/response verdicts, non-suggestion verdict roles, runtime strict-false boundary violations, wrong source schema, admissible/failure contradiction, admissible-with-blocks, and — even with a recomputed content_hash — public_claim_safe/action_allowed/authority_delta/grants_action/mint/wallet/federation laundering. run() self-probes tamper + authority + claim forgeries and refuses if any survives. Reuses the canonical buildPreviewBoundary(); example fixtures live in scripts/review (they carry real input authority-flags) so the boundary-invariant static check stays clean. 14 tests + review gate green; boundary all-false, authority_delta 0.",
+      what_this_does_not_prove:
+        "It does NOT invoke a model, call Ollama, use the network, verify semantic truth, authorize an action, publish a public claim, write a receipt, mint, use a wallet, federate, or prove live URP. Admissible means 'carried as a suggestion', never 'true' or 'permitted'.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
