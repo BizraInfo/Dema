@@ -27,6 +27,7 @@ import { cmd_delivery } from "./commands/delivery.js";
 import { cmd_foundation } from "./commands/foundation.js";
 import { cmd_realm } from "./commands/realm.js";
 import { cmd_mission } from "./commands/mission.js";
+import { cmd_voice } from "./commands/voice.js";
 import { cmd_memory } from "./commands/memory.js";
 import { cmd_codebase } from "./commands/codebase.js";
 import { cmd_orchestrator } from "./commands/orchestrator.js";
@@ -612,6 +613,8 @@ Local evidence:
                       MODEL-ROUTING-PREVIEW-1A · deterministic role→model PREVIEW from a verified baseline; refuses a tampered input; PREVIEW ONLY · routes no live traffic · no MoE/council/federation/runtime
   dema hardware profile [--json]
                       NODE0-HARDWARE-PROFILE-1A · read-only architecture profile (capacity bands + preview policies); PREVIEW ONLY · enforces nothing
+  dema voice turn <file> [--json]
+                      SOVEREIGN-VOICE-TURN-PREVIEW-1A · read transcript text, run Pulse E2E, plan bounded speech; PREVIEW ONLY · no mic/STT/TTS/audio/model/network/action/mint
   dema evidence receipt preview [--json]
                       Preview receipt-shaped evidence; does not mint, sign, or write
   dema ihsan floor preview [--score N] [--json]
@@ -799,6 +802,7 @@ const REGISTERED_COMMANDS_LIST = [
   { command: "diagnostics", description: "preview self-diagnostics harness" },
   { command: "consent", description: "preview a micro-consent scope" },
   { command: "mission", description: "preview mission draft or propose" },
+  { command: "voice", description: "preview voice-turn receipt (text transcript only)" },
   { command: "receipts", description: "list or show local receipts" },
   {
     command: "authorship",
@@ -1251,6 +1255,7 @@ const COMMAND_TABLE = {
   diagnostics: cmd_diagnostics,
   consent: cmd_consent,
   mission: cmd_mission,
+  voice: cmd_voice,
   receipts: cmd_receipts,
   memory: cmd_memory,
   think: cmd_think,

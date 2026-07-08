@@ -80,6 +80,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_LOCAL_MISSION_EMIT_CLI_ADAPTER_1A",
   "NODE0_MISSION_PILOT_COCKPIT_PREVIEW_1A",
   "NODE0_MISSION_PILOT_COCKPIT_CLI_ADAPTER_1A",
+  "SOVEREIGN_VOICE_TURN_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -1987,6 +1988,44 @@ function defaultCapabilityRows() {
       what_this_does_not_prove:
         "It runs no live model, executes no real-world action, starts no daemon, opens no network, mints nothing, binds no live Node0 identity or DID, and publishes nothing to any shared/federated URP. Reading and rendering the emitted artifacts is not executing a mission and applies no world-state: the world-state delta is declared (applied:false), not applied. A rendered view means the on-disk artifacts are content-addressed and internally consistent and the upstream anchor verifies -- NOT that the mission ran or that its claims are true. It adds no new intelligence and re-implements no kernel logic; it composes the shipped cockpit kernel over one file loaded from disk.",
       forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "SOVEREIGN_VOICE_TURN_PREVIEW_1A",
+      truth_label: "SOVEREIGN_VOICE_TURN_PREVIEW_MEASURED_REPO",
+      summary:
+        "Pure preview-only first mouth layer: binds caller-supplied transcript text to a Materialization Pulse E2E result and a deterministic spoken-response plan. Voice is expression, not authority; it invokes no microphone, STT, TTS, audio, model, network, action, mint, wallet, or federation.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/sovereign-voice-turn-preview.js",
+          "apps/cli/src/commands/voice.js",
+        ],
+        test_paths: [
+          "tests/sovereign-voice-turn-preview.test.js",
+          "tests/sovereign-voice-turn-preview-cli.test.js",
+        ],
+        review_gate_paths: [
+          "scripts/review/sovereign-voice-turn-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/SOVEREIGN_VOICE_TURN_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/SOVEREIGN_VOICE_TURN_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live voice, microphone use, STT, TTS, audio generation/playback, live model invocation, network use, live execution, token, wallet, mint, or federation outside a separately approved proof gate.",
+      what_this_proves:
+        "The first lawful mouth layer: a pure kernel binds caller-supplied transcript text -> Materialization Pulse E2E result -> deterministic spoken-response plan -> voice-turn receipt. A sealed Pulse can produce a bounded status response; an aborted Pulse can produce a refusal/status response. verify rejects content-hash tamper, audio/STT/TTS/microphone/model/network laundering, action/authority/mint/wallet/federation laundering, boundary flips, sealed-pulse refusal-only speech, and aborted-pulse completion/execution language. `dema voice turn <file>` reads one transcript text file read-only, runs the merged Pulse E2E preview over that text, and prints a response plan only. 26 kernel tests + 4 CLI tests + review gate green; boundary all-false, authority_delta 0.",
+      what_this_does_not_prove:
+        "It is not live voice. It does not use a microphone, invoke STT, invoke TTS, generate or play audio, invoke a model, use the network, execute action, mint, use a wallet, federate, or prove live URP. A voice-turn receipt is expression bounded by the Pulse, not authority.",
+      forbidden_claims: [
+        "live voice",
+        "speech synthesis",
+        "audio playback",
         "live execution",
         "operator mutation",
         "unattended runtime",
