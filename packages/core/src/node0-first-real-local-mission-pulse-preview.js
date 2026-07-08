@@ -267,7 +267,7 @@ export function buildNode0FirstRealLocalMissionPulsePreviewPayload(input) {
     what_this_does_not_prove:
       "No live runtime, no model intelligence, no real founder-data ingestion, no mint, no federation, no daemon, no network, no public readiness. The 'action preview' is a caller-supplied candidate whose shape is validated — not a semantic extraction by this kernel.",
     next_safe_action: ready
-      ? "Build NODE0-LOCAL-MISSION-HARNESS-PREVIEW-1A (I/O harness) only after this pure kernel is merged."
+      ? "This preview pulse is verified but applies no live world-state; any real mutation requires a separate governed runtime with explicit operator consent — nothing is executed here."
       : "Repair the mission packet per blocked_by, then re-run the pulse.",
   });
 
