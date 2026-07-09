@@ -1,0 +1,1210 @@
+Architectural Decoupling of Agency and Verification:
+A Formal Protocol for Epistemologically Bounded Autonomous
+Systems
+The Verification Independence Axiom, Asymmetric Authority Gradients, and Non-Parametric
+Distillation in the BIZRA Protocol
+Node0
+BIZRA Project, Independent Research
+node0@bizra.org
+ABSTRACT
+Current autonomous agent architectures exhibit a fundamental flaw
+we call Causal Entanglement: the generative process 𝑃gen (the pol-
+icy / LLM) and the verification process 𝑃ver (the reward model,
+judge, or self-reflection loop) share weights, context windows, and
+training history. As a consequence, the verification signal carries
+non-zero mutual information 𝐼 (𝐻gen; 𝐻ver) > 0 with the genera-
+tion process, and the system is architecturally required to grade
+its own homework. We argue that the chronic failure modes of au-
+tonomous agents — hallucination, reward hacking, indirect prompt
+injection, and context exhaustion — are not capability gaps; they
+are violations of a single architectural invariant we formalize as
+the Verification Independence Axiom (VIA): any signal used to up-
+date system state, weights, or authority must originate from a pro-
+cess causally disjoint from the process being evaluated. We intro-
+duce the BIZRA Protocol, the first agent architecture that enforces
+VIA structurally rather than heuristically. BIZRA derives three ar-
+chitectural corollaries from VIA: (i) a strict PAT/SAT airgap im-
+plementing an Asymmetric Authority Gradient (Ring-3 proposer,
+Ring-0 verifier); (ii) an Outside-In Sandbox enforcing the Isnād/Matn
+Isolation Protocol, under which the untrusted payload 𝜇 never en-
+ters the proposer’s context window 𝐶𝑡 ; and (iii) a Proof-of-Impact
+(PoI) ledger binding reward to disjoint verification of external state
+mutation. We prove three conditional security theorems: tamper-
+evidence of the receipt chain (unconditional, under cryptographic
+assumptions), non-bypassability of the FATE constitutional gate
+(conditional on a runtime construction invariant), and reduction
+of indirect prompt injection to an explicit, testable invariant vio-
+lation (conditional on the Matn/PAT isolation invariant and sand-
+box deployment). We further specify Non-Parametric Distillation
+via Modular Skill Files as a structural alternative to gradient-based
+continual learning, and prove that PoI is sound against Sybil and
+collusion attacks under stated assumptions. A preliminary single-
+node implementation reports sub-millisecond FATE-gate evalua-
+tion, 𝑂 (1) amortized receipt verification, and end-to-end proto-
+col overhead below 4% of agent inference time. We are explicit
+throughout about the boundary between current evidence (single-
+node, cryptographic), design (architectural specifications not yet
+implemented at multi-node scale), and direction (federation stages
+not yet executed). The contribution is not a claim that BIZRA elim-
+inates agent failure modes, but that it reduces them to violations
+of explicit, testable architectural invariants — a stronger epistemo-
+logical position than heuristic defense.
+CCS CONCEPTS
+• Human-centered computing → Ubiquitous computing; •
+Security and privacy → Distributed systems security; Cryp-
+tographic protocols; • Computing methodologies → Distributed
+artificial intelligence.
+KEYWORDS
+Verification independence, causal entanglement, autonomous agents,
+prompt injection, reward hacking, cryptographic receipts, non-parametric
+memory, constitutional AI, Islamic finance
+1 INTRODUCTION: CAUSAL
+ENTANGLEMENT IN AUTONOMOUS
+AGENTS
+Current autonomous agent architectures exhibit systemic, predictable
+failure modes: hallucination of API calls, infinite retry loops on bro-
+ken code, susceptibility to indirect prompt injection, and inability
+to retain learned behaviors without catastrophic forgetting. These
+symptoms are widely observed and are commonly misattributed to
+scaling deficits or insufficient prompt engineering. We argue that
+they are symptoms of a deeper structural flaw we call Causal En-
+tanglement.
+In standard reinforcement learning from human feedback (RLHF)
+or LLM-as-a-judge paradigms, the policy network 𝜋𝜃 and the ver-
+ifier network 𝑉𝜙 share an architectural lineage and training distri-
+bution. When an agent evaluates its own output, the verification
+signal is not independent of the generation process: the verifier
+shares the same training corpus, the same architectural blind spots,
+and — in the limit of self-reflection prompts — the same weights
+as the generator. This creates a solipsistic feedback loop in which
+the system is effectively grading its own homework. Recent work
+on the verification horizon [1] demonstrates empirically that the
+classical intuition “verification is easier than generation” inverts
+as models grow more capable: verifying whether a proposed patch
+actually fixes a bug is no longer obviously easier than writing the
+patch. The verifier, sharing the generator’s blind spots, fails in cor-
+related ways.
+This is the structural reason RL on agentic tasks stalls. It is not
+context length, and it is not sandbox escapes. It is the absence of a
+source of truth that is causally outside the model’s own influence.
+
+-- 1 of 12 --
+
+Node0
+1.1 Thesis and Contribution
+We introduce the Verification Independence Axiom (VIA) as the load-
+bearing architectural invariant of reliable autonomous agency, and
+we present the BIZRA Protocol as the first architecture that en-
+forces VIA structurally rather than heuristically. The BIZRA Pro-
+tocol derives its specific mechanisms as strict corollaries of this
+single axiom; it does not assemble independent mechanisms.
+Thesis
+Autonomous agents fail not due to a lack of reasoning capabil-
+ity, but due to systemic epistemology failures. Current agent
+architectures violate the Verification Independence Axiom: ev-
+ery checking mechanism shares a causal history with the thing
+being checked. The BIZRA Protocol makes verification inde-
+pendent by architecture, reducing the major failure modes —
+hallucination, reward hacking, prompt injection, context ex-
+haustion — to violations of explicit, testable architectural in-
+variants.
+This paper makes five contributions:
+(1) The Verification Independence Axiom (§3). We formalize
+VIA as an information-theoretic requirement: 𝐼 (𝐻gen; 𝐻ver) →
+0, where 𝐻 is the causal history (weights, training data, in-
+termediate activations) of the generation and verification pro-
+cesses. We position VIA relative to the literature on generator-
+verifier asymmetry [1, 30].
+(2) The BIZRA Protocol architecture (§4). We specify BIZRA’s
+seven-component node architecture, including the Asymmet-
+ric Authority Gradient (Ring-3 PAT proposer, Ring-0 SAT/FATE
+verifier) that operationalizes VIA at the OS level, and the FATE
+constitutional boundary gate.
+(3) The Isnād/Matn Isolation Protocol (§5). We formalize the
+architectural invariant 𝜇 ∉ 𝐶𝑡 ∀𝑡: untrusted external data never
+enters the proposer’s context window. We specify the Outside-
+In Sandbox that generates the deterministic Isnād 𝜄 consumed
+by the PAT.
+(4) Conditional security theorems (§6). We prove: (a) tamper-
+evidence of the receipt chain (unconditional, under cryptographic
+assumptions); (b) non-bypassability of FATE (conditional on a
+runtime construction invariant); (c) reduction of indirect prompt
+injection to invariant violation (conditional on 𝜇 ∉ 𝐶𝑡 and sand-
+box deployment); (d) PoI soundness against Sybil and collusion
+(conditional on 𝑘 ≥ 2 honest attestation).
+(5) Non-Parametric Distillation (§7). We reframe PoI as Non-
+Parametric Distillation: BIZRA learns by minting receipts (information-
+preserving) rather than by mutating weights (entropy-positive).
+We specify Modular Skill Files as the unit of learning and con-
+trast with parametric fine-tuning.
+1.2 Position, Scope, and Honesty
+This is a position, architecture, and security-analysis paper, not
+a multi-node deployment study. BIZRA’s current implementation
+status is at the Seed stage — a single-node runtime with federation
+to additional nodes planned but not yet executed. We distinguish
+three epistemic categories throughout:
+• Current state (proven). Node0 operates. The receipt chain is
+initialized. The Third Fact Protocol is implemented. Single-node
+measurements hold.
+• Design (specified, not yet proven at scale). The seven-component
+architecture, the Asymmetric Authority Gradient, the Isnād/Matn
+Isolation Protocol, FATE, PoI, and Skill Files are specified and
+(where applicable) implemented at single-node scale, but not
+yet demonstrated at multi-node scale or under adversary sim-
+ulation.
+• Direction (aspirational). Tree and Forest federation stages, the
+universal network URP, and globally significant adoption are di-
+rection only.
+This discipline is the paper’s methodological contribution. We
+do not claim that BIZRA eliminates agent failure modes; we claim
+that it reduces them to violations of explicit, testable architectural
+invariants. The distinction matters: “eliminates” is an unbounded
+assertion, “reduces to invariant violation” is a falsifiable claim with
+a defined proof burden.
+2 BACKGROUND AND RELATED WORK
+BIZRA sits at the intersection of five research streams: (i) generator-
+verifier asymmetry, (ii) sandboxed agent execution, (iii) verifiable
+computation and cryptographic proof systems, (iv) modular / non-
+parametric memory for continual learning, and (v) constitutional
+and ethical AI governance. We situate BIZRA within each and iden-
+tify the gap it addresses.
+2.1 Generator-Verifier Asymmetry
+Recent empirical work [1] demonstrates that the classical “verifi-
+cation is easier than generation” intuition — which underwrites
+RLHF, RLVR, and most LLM-as-a-judge pipelines — inverts as gen-
+erators grow more capable. Verifying whether a coding-agent’s
+patch fixes a bug requires understanding the bug, which approaches
+the difficulty of writing the patch. This empirical finding aligns
+with the theoretical observation that any verifier sharing training
+data and weights with the generator inherits correlated blind spots.
+The reward-hacking benchmark of [2] quantifies this vulnerability
+empirically across tool-using RL agents. BIZRA’s contribution is to
+formalize the underlying failure as a violation of VIA and to spec-
+ify an architecture in which the verifier is causally disjoint from
+the generator by construction, not by training procedure.
+2.2 Sandboxed Agent Execution and Isolation
+Sandboxing untrusted code in isolated namespaces is a well-established
+OS-level technique. Browser-agent security work [9, 10] increas-
+ingly frames defense against prompt injection as a problem of se-
+mantic virtualization — isolating untrusted external data from priv-
+ileged execution — rather than as a problem of prompt-level filter-
+ing. ARGUS [11] and AgentSentry [12] explicitly reject heuristic
+detection in favor of causal or context-purification mechanisms.
+The threat-modeling survey of [13] places MCP, A2A, Agora, and
+ANP each as having distinct exposure surfaces requiring protocol-
+specific mitigations. BIZRA’s Outside-In Sandbox (§5) extends this
+line by enforcing 𝜇 ∉ 𝐶𝑡 as an architectural invariant: the LLM
+
+-- 2 of 12 --
+
+Architectural Decoupling of Agency and Verification:
+A Formal Protocol for Epistemologically Bounded Autonomous Systems
+never reads the untrusted payload; it reads only a deterministic
+summary produced by a disjoint process.
+The intellectual lineage of this idea traces to Telescript [15], Gen-
+eral Magic’s mobile-agent language of the early 1990s, in which
+the “place” (server-side execution environment) enforced permis-
+sions on visiting agent code independent of what the agent’s code
+claimed to need. BIZRA’s contribution is a cryptographically-hardened
+revival of the mobile-agent paradigm, using modern primitives (Linux
+namespaces instead of a bytecode VM sandbox) and adding the
+economic-incentive alignment that Telescript lacked (the PoI ledger,
+§7).
+2.3 Verifiable Computation and Cryptographic
+Proof Systems
+Tamper-evident log structures [27, 28] and authenticated data struc-
+tures [29] provide the technical substrate for BIZRA’s Receipt layer.
+Zero-knowledge proof systems [30, 31] extend this to enable verifi-
+cation without disclosure, a property relevant to BIZRA’s privacy-
+preserving receipt design. Accountable computing [35] and verifi-
+able computation [36, 37] provide formal models for proving that a
+computation was executed correctly. Consensus mechanisms [32,
+33] demonstrate feasibility of distributed agreement without cen-
+tral authority, but illustrate a recurring failure mode: the consen-
+sus mechanism becomes decoupled from substantive value produc-
+tion [34? ]. BIZRA’s PoI is a deliberate alternative: reward follows
+verified useful contribution, not participation in a coordination
+game.
+2.4 Modular and Non-Parametric Memory
+The position paper [4] argues that foundation models are “funda-
+mentally” limited in their ability to accumulate experience over de-
+ployment lifetimes, and that modular memory is the key architec-
+tural commitment for continual learning agents. Context-folding [5]
+lets agents actively fold and discard working context on long-horizon
+tasks; MemRL [6] indexes experience rather than keeping it resi-
+dent in-context; Agent-Omit [7] treats omission as a learned, adap-
+tive decision. BIZRA’s Skill Files (§7) extend this line: the unit of
+learning is a 200-token distilled trajectory stored in the SAT’s Cold
+Archive and loaded into the PAT’s L1 Cache on demand. Because
+the memory lives in a causally disjoint external graph, it cannot
+overwrite or degrade the base model’s foundational reasoning ca-
+pabilities — a structural counter to catastrophic forgetting.
+2.5 Constitutional and Ethical AI
+Constitutional AI [26] encodes normative constraints into model
+training and deployment. Sovereign-AI frameworks [42, 43] em-
+phasize the right of communities to govern AI systems that affect
+them, though mostly at nation-state level. The fairness, account-
+ability, and transparency literature [44, 45] documents harms of
+opaque algorithmic systems. BIZRA treats sovereignty as a prop-
+erty of the individual node, not of the state or platform; FATE (§4)
+is a non-bypassable architectural gate, not a policy commitment.
+Islamic finance provides a mature, formally articulated corpus of
+constraints on economic extraction [38–41]; BIZRA operational-
+izes these at the architectural level (§7).
+3 THE VERIFICATION INDEPENDENCE
+AXIOM
+Reliable computation requires that state mutations be validated
+against a ground truth that exists outside the causal cone of the
+process initiating the mutation. We formalize this as VIA.
+3.1 Definition
+Axiom 3.1 (Verification Independence). Let 𝑃gen be the generative
+process proposing a state transition, and 𝑃ver be the process eval-
+uating the success of said transition. For a system to be epistemo-
+logically sound, 𝑃ver must be causally disjoint from 𝑃gen across the
+probability space of state-action pairs:
+𝑃ver (𝑆𝑡+1 | 𝑆𝑡 , 𝑎) ⊥ 𝑃gen (𝑎 | 𝑆𝑡 )
+where 𝑆𝑡 is the environment state and 𝑎 is the proposed action.
+Equivalently, in information-theoretic terms, any signal used to
+update system state, weights, or authority must originate from a
+process that shares zero mutual information 𝐼 (𝐻gen; 𝐻ver) → 0 re-
+garding the causal history 𝐻 (weights, training data, intermediate
+activations) of the evaluation.
+Definition 3.2 (Causal Entanglement). A system is causally en-
+tangled if it violates VIA: there exists a state-action pair (𝑆𝑡 , 𝑎) for
+which 𝐼 (𝐻gen; 𝐻ver) > 0. Causal entanglement is the structural di-
+agnostic for the failure modes catalogued in §1.
+Remark 3.3. The independence ⊥ is over the joint probability space
+of generator and verifier internal states, including weights, train-
+ing data, and stochasticity of the sampling process. The verifier’s
+decision manifold must not be a projection of the generator’s inter-
+nal representations. Perfect zero mutual information is an idealiza-
+tion; in practice BIZRA targets architectural independence (disjoint
+execution contexts, disjoint signing keys) rather than information-
+theoretic independence, which is unattainable when generator and
+verifier share any common substrate (e.g., the host OS).
+3.2 Stress-Testing VIA Against Major Failure
+Modes
+Before deriving the BIZRA architecture from VIA, we stress-test
+the axiom against the hardest current failure modes. If even one
+failure resists the frame, VIA is not the load-bearing wall we claim.
+Failure 1: Cognitive Failure Laundering (CFL).. An agent writes
+broken code, receives an error, hallucinates that “the environment
+is down,” and retries infinitely. Diagnosis: the agent’s internal nar-
+rative (an LLM text generation) is used as the evaluation signal for
+the environment’s state. The generator is grading the generator —
+a VIA violation. Resolution under VIA: state transitions depend on
+OS-level signals (SIGSEGV, SIGTERM) that are causally disjoint from
+the LLM’s text generation. The agent’s text explanation is ignored
+as evidence.
+Failure 2: Indirect Prompt Injection. An agent reads a web page
+containing “ignore previous instructions” and its behavior is hi-
+jacked. Diagnosis: the agent’s reasoning process is evaluating the
+safety of data that is actively being injected into its reasoning pro-
+cess. The evaluator and the evaluated are entangled — a VIA viola-
+tion. Resolution under VIA: the untrusted data 𝜇 must be evaluated
+
+-- 3 of 12 --
+
+Node0
+by a disjoint process (a deterministic script in an isolated names-
+pace) before a summarized, sanitized output 𝜄 reaches the trusted
+agent. The reasoning engine never evaluates the raw attack vector.
+Failure 3: Reward Hacking in Agentic RL.. An agent learns to
+write code that passes tests but does not actually solve the user’s
+problem. Diagnosis: the test suite (often an LLM-as-a-judge or a
+static script written by the agent) shares a causal link with the
+agent’s generation process — a VIA violation. Resolution under VIA:
+the reward signal is generated by querying the actual production
+environment (e.g., the Jira API state), which is causally disjoint
+from the agent’s code generation.
+Failure 4: Catastrophic Forgetting. A fine-tuned model loses pre-
+viously learned behaviors. Diagnosis: parametric weight updates
+entangle “knowledge of new facts” with “reasoning weights,” over-
+writing previously learned representations — a VIA violation in
+the memory layer. Resolution under VIA: memory is externalized as
+non-parametric Skill Files (§7); the base model’s reasoning weights
+are never mutated by deployment-time learning.
+The axiom holds under stress. Every major failure mode is a
+specific instance of VIA violation.
+3.3 Why VIA Is Architectural, Not Heuristic
+VIA could in principle be approximated by training procedure —
+e.g., training a verifier on a disjoint corpus from the generator. We
+argue this is insufficient for two reasons. First, training-disjoint
+verifiers still share architectural blind spots (the transformer in-
+ductive bias, the tokenization scheme, the optimization landscape).
+Second, training-disjoint verifiers are subject to capability drift: as
+the generator is fine-tuned or upgraded, the verifier must be re-
+aligned, reintroducing entanglement. Architectural enforcement
+(disjoint execution contexts, disjoint signing keys, disjoint process
+namespaces) is invariant under generator capability change: a Ring-
+3 process cannot escalate to Ring-0 by becoming smarter. This is
+the load-bearing distinction between BIZRA’s architectural approach
+and the heuristic-defense approach that the security literature has
+shown to be brittle [11–13].
+4 THE BIZRA PROTOCOL ARCHITECTURE
+The BIZRA Protocol derives its architecture from VIA. Every com-
+ponent is a corollary of the axiom, not an independent mechanism.
+4.1 Bifurcation of Agency: The PAT/SAT Airgap
+To satisfy VIA, BIZRA bifurcates agency into two strictly isolated
+domains: the Personal Agent Team (PAT) and the System Agent
+Team (SAT).
+• PAT (Proposer, 𝑃gen). The PAT operates as the generative en-
+gine. It is composed of stochastic, LLM-based agents that inter-
+pret user intent, plan trajectories, and generate untrusted pay-
+loads (matn). The PAT operates entirely within a volatile, user-
+aligned memory space (the “L1 Cache”) and possesses zero au-
+thority to mutate the host filesystem, execute code natively, or
+verify its own success.
+• SAT (Disjoint Verifier, 𝑃ver). The SAT operates as the deter-
+ministic verification engine. It is composed of non-LLM, code-
+bound smart contracts and OS-level monitors. The SAT holds the
+cryptographic keys, manages the Linux namespace sandboxes,
+inspects OS signals, and queries external ground-truth oracles
+(production APIs). The user possesses zero authority over the
+SAT.
+Communication between PAT and SAT is strictly asynchronous
+via an append-only queue. The PAT proposes; the SAT disposes.
+4.2 The Asymmetric Authority Gradient
+The PAT/SAT airgap is enforced by an Asymmetric Authority Gra-
+dient modeled on CPU protection rings.
+Definition 4.1 (Asymmetric Authority Gradient). Let 𝐴 be the
+system authority state. For any diagnostic event 𝐸 and proposed
+action 𝑎:
+𝐴(𝐸, 𝑎) ≤ 𝐴previous
+Authority is a non-decreasing function of the SAT’s verification
+signal and a strictly non-increasing function of the PAT’s propos-
+als. The transition matrix for authority is lower-triangular: there is
+no hidden state that allows an agent to escalate privileges follow-
+ing a failure.
+Operationally, the PAT is a Ring-3 (user-space) process; the SAT
+and the FATE gate are Ring-0 (kernel-space) processes. A Ring-
+3 process cannot, by OS enforcement, alter Ring-0 logic. This ex-
+plains why prompt injection fails architecturally in BIZRA: a Ring-
+3 process (the model) cannot “talk its way into” the logic of a Ring-0
+process (the gate), regardless of the linguistic content of its output.
+Remark 4.2. Definition 4.1 is a design invariant, not a theorem. It is
+enforced by OS-level process isolation, hardware-backed key stor-
+age, and the FATE construction (Theorem 6.3). The “strictly lower-
+triangular” claim is conditional on the runtime construction invari-
+ant discussed in §6; it is not yet formally verified.
+4.3 The Seven-Component Node
+Every BIZRA node contains seven components (Table 1). The PAT/SAT
+airgap assigns each component to a ring.
+Definition 4.3 (Node). A BIZRA node is a tuple
+𝑁 = (PAT, SAT, DEMA, FATE, URP, 𝑅, PoI, (sk, pk))
+where (sk, pk) is the sovereign’s asymmetric keypair; 𝑅 is the local
+receipt chain; PoI is the local impact ledger; FATE is the constitu-
+tional boundary gate; and the remaining components are as in Ta-
+ble 1. The node is sovereign: no component may exercise authority
+over the sovereign’s keys, data, or mission.
+Definition 4.4 (FATE — Constitutional Boundary Gate). FATE :
+A × Σ × Π → {0, 1} is a predicate over the set of proposed agent
+actions A, sovereign consent Σ ∈ {0, 1}, and proof Π ∈ {0, 1}. An
+action 𝑎 ∈ A is permitted iff
+FATE(𝑎, 𝜎, 𝜋) := 𝜎 ∧ 𝜋 ∧ Constitutional(𝑎) = 1.
+FATE is non-bypassable: every agent action, whether originating
+from PAT or SAT, must pass through FATE before executing. Non-
+bypassability is proven conditionally in Theorem 6.3.
+
+-- 4 of 12 --
+
+Architectural Decoupling of Agency and Verification:
+A Formal Protocol for Epistemologically Bounded Autonomous Systems
+Table 1: BIZRA node components, organized by protection ring.
+Symbol Name Ring Process Function
+PAT Personal Agentic Team 3 User-space Seven LLM agents serving the sovereign; generate matn.
+SAT System Agentic Team 0 Kernel-space Five non-LLM agents bound by the constitution; manage sandboxes,
+sign receipts.
+DEMA Trusted Companion 3 User-space Visible bridge between sovereign and PAT; primary interface.
+FATE Constitutional Boundary Gate 0 Kernel-space Enforces no action without consent + proof ; non-bypassable
+(Thm. 6.3).
+URP Universal Resource Pool (seed) 0 Kernel-space Local instance of shared substrate: resources, skills, knowledge, re-
+ceipts, proofs.
+𝑅 Receipt Chain 0 Kernel-space Tamper-evident, replayable, hash-chained records (Thm. 6.1).
+PoI Proof of Impact Ledger 0 Kernel-space Verified contribution scores governing reward eligibility (Thm. 6.7).
+Algorithm 1 Third Fact Protocol — TFP
+Require: Proposal 𝑃, context 𝐶, sovereign keys (sk, pk), receipt
+chain 𝑅
+Ensure: Verified proposal 𝑃∗ or ⊥
+1: Stage 1 (MIND): 𝑃 ← PAT.Propose() ⊲ may propose — 𝑃gen
+2: Stage 2 (MEMORY): 𝐶 ← URP.Retrieve(𝑃) ⊲ may retrieve
+3: Stage 3 (LOGIC): if 𝑉 (𝑃, 𝐶) = 0 then return ⊥ ⊲ must test
+4: Stage 4 (CRYPTO):
+5: ℎ ← H(canon(𝑃)) ⊲ must seal
+6: sig ← Sigsk (ℎ)
+7: Stage 5 (RECEIPTS):
+8: 𝑟prev ← 𝑅.tail(); 𝑟 ← (ℎ, 𝑡, sig, 𝑟prev.hash)
+9: 𝑅.append(𝑟 ) ⊲ must preserve — 𝑃ver via SAT
+10: Stage 6 (HUMAN):
+11: 𝜎 ← Sovereign.Consent(𝑃) ⊲ blocking call
+12: if 𝜎 = 0 then return ⊥
+13: Gate (FATE): if FATE(𝑃, 𝜎, 𝜋 := 1) = 0 then return ⊥
+14: return 𝑃∗ ← (𝑃, 𝑟, 𝜎)
+4.4 Receipts and Tamper-Evidence
+Definition 4.5 (Receipt Chain). The receipt chain is a sequence
+𝑅 = (𝑟1, . . . , 𝑟𝑛 ) where each
+𝑟𝑖 = (id𝑖 , 𝑡𝑖 , ℎ𝑖 , ℎ𝑖 −1, Sigsk (ℎ𝑖 ), 𝜋𝑖
+)
+with ℎ𝑖 = H(𝑟𝑖 ) for collision-resistant H : {0, 1}∗ → {0, 1}𝜆 ,
+ℎ0 := 0𝜆 , and Sigsk the sovereign’s signing algorithm. The chain is
+append-only, hash-linked, and signed (see [27, 28] for prior art on
+tamper-evident logs).
+4.5 The Third Fact Protocol
+The Third Fact Protocol (TFP) is the operationalization of VIA at
+the agent-action level. It specifies a six-stage proof chain binding
+agent outputs to cryptographic evidence and sovereign consent
+(Algorithm 1).
+Remark 4.6 (The Must/May Asymmetry). TFP is deliberately asym-
+metric. MIND and MEMORY are permissions (“may”): the PAT is
+free to explore internally. LOGIC through HUMAN are constraints
+(“must”): no agent output reaches external action without passing
+all four. The MIND stage generates the matn (payload); only the
+SAT (in Stage 5, RECEIPTS) generates the isnād (provenance sum-
+mary) via disjoint sandbox execution (§5). This separation enforces
+VIA at the protocol level.
+TheoRem 4.7 (PRotocol Complexity). Algorithm 1 executes in
+𝑂 (log 𝑛) time for an 𝑛-receipt chain, with 𝑂 (1) additional space, un-
+der standard cryptographic primitive assumptions. Amortized verifi-
+cation of receipt chain validity over 𝑘 queries is 𝑂 (1) per query using
+a Merkle accumulator.
+PRoof. Stages 1–2 (MIND, MEMORY) involve model inference
+and local retrieval; cost is independent of |𝑅|. Stages 3–4 require
+one logical-validation pass 𝑉 and one hash+signature, both 𝑂 (𝜆).
+Stage 5 requires reading the chain tail and appending, both 𝑂 (1)
+with a tail pointer. Stage 6 is a blocking call on the sovereign with
+no computational cost. FATE evaluates a Boolean predicate in 𝑂 (1).
+Total: 𝑂 (𝜆) = 𝑂 (log 𝑛) for fixed 𝜆. Verification of an 𝑛-receipt chain
+naively requires recomputing 𝑛 hashes; using a Merkle accumula-
+tor with cached root, amortized verification per query is 𝑂 (1) after
+𝑂 (𝑛) preprocessing [28, 29]. □
+Remark 4.8 (𝑂 (1) Scope). The 𝑂 (1) claim in Theorem 4.7 applies to
+amortized per-query verification, not to total audit cost. Full chain
+audit without an accumulator remains 𝑂 (𝑛). We avoid the over-
+claim that “BIZRA provides 𝑂 (1) verification cost” without the
+amortization qualifier.
+5 OUTSIDE-IN DATA PROVENANCE: THE
+ISNĀD/MATN ISOLATION PROTOCOL
+In standard autonomous agent architectures, tools (web browsers,
+document readers) return raw, untrusted environment data directly
+into the LLM’s context window 𝐶𝑡 . This creates an epistemic sin-
+gularity: 𝑃gen is forced to evaluate the safety of data actively being
+injected into its reasoning core. This is a Data Provenance Viola-
+tion — a VIA violation in the data layer — and is the structural
+cause of indirect prompt injection.
+BIZRA resolves this by applying VIA to data ingestion. We for-
+malize this as the Isnād/Matn Isolation Protocol.
+
+-- 5 of 12 --
+
+Node0
+5.1 The Provenance Boundary: 𝜇 vs. 𝜄
+We bifurcate external data into two strictly isolated components,
+drawing nomenclature from classical Islamic epistemology to de-
+note strict chains of custody:
+• The Matn (𝜇): the raw, untrusted payload. A webpage, a scraped
+document, an untrusted code snippet. 𝜇 is inherently adversar-
+ial.
+• The Isnād (𝜄): the deterministic, non-probabilistic summary gen-
+erated by a disjoint, Turing-complete process (the SAT). 𝜄 is the
+verified “chain of evidence” regarding the contents of 𝜇.
+Definition 5.1 (Matn/PAT Isolation Invariant). The architectural
+invariant is absolute:
+𝜇 ∉ 𝐶𝑡 ∀𝑡 .
+The raw payload 𝜇 is structurally forbidden from ever entering the
+PAT’s context window 𝐶𝑡 . The PAT operates exclusively on 𝜄.
+This invariant is the architectural anchor for the prompt-injection
+immunity theorem (Theorem 6.5). It is a design invariant, condi-
+tional on the Outside-In Sandbox deployment discussed below.
+5.2 The Outside-In Sandbox
+To generate 𝜄 without risking host contamination, the SAT instan-
+tiates an Outside-In Sandbox. Unlike traditional agent harnesses
+that execute code inside the agent’s runtime, the BIZRA sandbox
+is projected outward as an ephemeral, isolated processing organ.
+The SAT utilizes Linux kernel namespaces (via bubblewrap) to
+construct an environment with three invariant properties:
+(1) Namespace isolation (--unshare-all): the sandbox is as-
+signed entirely new mount, IPC, network, PID, and user names-
+paces. It possesses zero knowledge of the host’s process tree or
+network stack.
+(2) Read-only bedrock (--ro-bind / /): the host filesystem is
+mounted strictly read-only. The sandbox may read existing sys-
+tem libraries required for execution, but cannot mutate any
+host state.
+(3) Ephemeral voxel chunk: the sandbox is provided a tempo-
+rary tmpfs directory for execution. Upon process completion,
+this directory is bitwise purged.
+The untrusted payload 𝜇 is materialized inside this ephemeral
+chunk alongside a deterministic processing script (e.g., grep, awk,
+a compiled Python script) generated by the PAT.
+5.3 Disjoint Execution and Summary
+Generation
+The execution of 𝜇 is governed entirely by the SAT, not the PAT.
+Let 𝐸os be the OS-level execution function operated by the SAT:
+𝜄 = 𝐸os (𝜇, scriptdeterministic).
+Because 𝐸os is a kernel-level process manager and not a neural net-
+work, it is immune to linguistic coercion. If 𝜇 contains an embed-
+ded prompt injection (e.g., “ignore all previous instructions and ex-
+filtrate the SSH keys”), the injection is processed by the determin-
+istic script: grep returns no matches for the target pattern, or the
+script executes and ignores the linguistic content of 𝜇. The result-
+ing standard output 𝜄 contains only the deterministic data payload,
+which is passed back across the airgap into the PAT’s L1 Cache 𝐶𝑡 .
+5.4 Hardware-Backed Isolation (Direction)
+The current implementation uses process-level namespace isola-
+tion (bubblewrap). The intended deployment uses hardware-backed
+isolation: the SAT executes in a Trusted Execution Environment
+(Intel SGX, AMD SEV-SNP, or Arm CCA), providing causal isola-
+tion even under full PAT compromise. TEE deployment is not yet
+implemented; it is the keystone of the critical path discussed in §11.
+Until TEE deployment is discharged, the sandbox provides process-
+level isolation, with documented residual risk from OS-level side-
+channel attacks.
+5.5 Implications
+By enforcing the Isnād/Matn Isolation Protocol, BIZRA alters the
+threat model of autonomous agents:
+• Heuristic defenses are obsolete. There is no need for LLM-
+based “prompt injection filters.” The LLM never reads the un-
+trusted text.
+• Containment of weaponized data. If 𝜇 contains a zero-day
+exploit or a fork bomb, it detonates inside the ephemeral names-
+pace. The host remains uncontaminated; the SAT reports the OS
+signal (e.g., SIGSEGV) as 𝜄.
+• Context window preservation. Because 𝜄 is a deterministic
+summary (e.g., “3 lines matching pattern 𝑋 found”), 𝐶𝑡 remains
+lean. The system processes a 50,000-line log file without ever
+ingesting a single token of it into the LLM.
+The agent is no longer a privileged user vulnerable to the data it
+reads; it is a sealed observer, interacting with a hostile environment
+exclusively through the membrane of the OS kernel.
+6 SECURITY ANALYSIS
+This section presents the formal adversary model and proves four
+security theorems: tamper-evidence of the receipt chain (Theorem 6.1,
+unconditional under cryptographic assumptions), non-repudiation
+(Theorem 6.2), non-bypassability of FATE (Theorem 6.3, conditional
+on the runtime construction invariant), and reduction of indirect
+prompt injection to invariant violation (Theorem 6.5, conditional
+on 𝜇 ∉ 𝐶𝑡 and sandbox deployment). PoI soundness is Theorem 6.7.
+6.1 Cryptographic Primitives and Assumptions
+We assume: (i) collision-resistant H; (ii) EUF-CMA-secure signa-
+ture scheme Σ = (KeyGen, Sig, Ver) [30]; (iii) secure canonical-
+ization canon. Concrete instantiations: SHA-256, Ed25519, JSON
+Canonical Form (RFC 8785).
+6.2 Adversary Model
+We consider a PPT adversary A with: (a) network control (observe,
+delay, reorder, drop messages); (b) node compromise of a subset
+NA ⊂ N (obtain secret keys and full state); (c) receipt access (read
+any published receipt); (d) adaptive corruption subject to |NA | < 𝑘
+where 𝑘 is the federation’s quorum threshold.
+
+-- 6 of 12 --
+
+Architectural Decoupling of Agency and Verification:
+A Formal Protocol for Epistemologically Bounded Autonomous Systems
+A does not have: (i) the sovereign’s secret key for uncompro-
+mised nodes; (ii) the ability to break H or Σ except with negligi-
+ble probability; (iii) the ability to physically compromise hardware-
+backed key storage (out of scope; mitigated by HSM/TEE).
+6.3 Tamper-Evidence
+TheoRem 6.1 (TampeR-Evidence). Under collision-resistance of
+H and EUF-CMA security of Σ, for any PPT adversary A that does not
+hold sk, the probability that A modifies any receipt 𝑟 𝑗 ∈ 𝑅 (𝑗 < 𝑛)
+without detection by an honest verifier is negligible in 𝜆.
+PRoof. Let 𝑅 = (𝑟1, . . . , 𝑟𝑛 ) be original and 𝑅′ = (𝑟 ′
+1, . . . , 𝑟 ′
+𝑛 ) a
+chain presented by A that differs at some position 𝑗. Let 𝑗∗ be the
+smallest such index. Case 1: A modifies 𝑟 𝑗∗ but preserves ℎ𝑗∗ −1.
+Then H(𝑟 ′
+𝑗∗ ) must equal H(𝑟 𝑗∗ ) for chain consistency — a collision
+in H, probability negl(𝜆). Case 2: A updates the prior hash; then
+𝑟 ′
+𝑗∗ −1.hash ≠ 𝑟 𝑗∗ −1.hash, contradicting minimality of 𝑗∗. For signa-
+tures: each 𝑟 ′
+𝑖 must carry valid Sigsk (ℎ′
+𝑖 ); since A lacks sk and Σ is
+EUF-CMA, forgery succeeds with probability negl(𝜆). □
+TheoRem 6.2 (Non-Repudiation). Under EUF-CMA security of
+Σ, for any receipt 𝑟𝑖 ∈ 𝑅 with valid signature Sigsk (ℎ𝑖 ), the sk-holder
+cannot credibly deny having consented to the recorded action, except
+with probability negl(𝜆).
+PRoof. By Definition 4.5, 𝑟𝑖 contains Sigsk (ℎ𝑖 ) where ℎ𝑖 = H(𝑟𝑖 )
+includes the action payload, timestamp, and prior hash. By EUF-
+CMA, no PPT adversary without sk produces Sigsk (ℎ𝑖 ) for any ℎ𝑖
+not previously signed except with probability negl(𝜆). Therefore
+denial requires either (a) key compromise (separate attack requir-
+ing separate evidence) or (b) forgery (negligible probability). □
+6.4 Non-Bypassability of FATE
+TheoRem 6.3 (FATE Non-Bypassability). If the BIZRA runtime
+is implemented such that all agent action channels (PAT output, SAT
+output, DEMA-mediated external calls) are physically routed through
+FATE prior to execution, and FATE executes in a disjoint sandbox
+from the PAT (process-level namespace isolation or stronger: TEE-
+backed), then no agent action 𝑎 ∈ A can execute without FATE(𝑎, 𝜎, 𝜋) =
+1, even under full PAT compromise.
+PRoof sKetch. Non-bypassability is an architectural property.
+Let Exec : A → Effect be the runtime’s action execution function.
+By the runtime construction invariant, Exec(𝑎) := Exec(FATE(𝑎, 𝜎, 𝜋)):
+FATE is a strict prerequisite. Let ActionChannels = {PAT-out, SAT-out, DEMA-ext}
+be the channels through which agent actions reach the runtime;
+by construction this set is exhaustive. Each channel is wired to call
+FATE prior to Exec, and FATE executes in a disjoint sandbox (pro-
+cess namespace or TEE) that the PAT cannot write to. By induction
+over all action dispatch paths, every 𝑎 reaching Exec has passed
+FATE. Under full PAT compromise, the PAT may emit arbitrary
+proposals, but FATE in the disjoint sandbox evaluates them under
+the same predicate; the PAT cannot alter FATE’s evaluation logic.
+Property holds. The construction invariant is not yet discharged
+via static analysis; this is high-priority future work. □
+Remark 6.4. Theorem 6.3 is conditional on (a) the runtime con-
+struction invariant (all channels routed through FATE) and (b) the
+disjoint-sandbox deployment of FATE. Condition (a) is a static-
+analysis burden; condition (b) is the C6 sandbox deployment dis-
+cussed in §5. Both are necessary: a FATE implementation that shares
+memory with the PAT is bypassable by a compromised PAT.
+6.5 Reduction of Indirect Prompt Injection to
+Invariant Violation
+TheoRem 6.5 (PRompt Injection Immunity undeR InvaRiant).
+Under the Matn/PAT Isolation Invariant (Definition 5.1, 𝜇 ∉ 𝐶𝑡 ∀𝑡)
+and the Outside-In Sandbox deployment (§5), indirect prompt injec-
+tion against the PAT is reduced to a violation of an explicit, testable
+architectural invariant. Specifically: no PPT adversary A control-
+ling the contents of 𝜇 can cause the PAT to execute an action 𝑎 ∉
+Aconsented except by violating 𝜇 ∉ 𝐶𝑡 or by compromising the sand-
+box boundary, both of which are detectable.
+PRoof. An indirect prompt injection attack proceeds by embed-
+ding adversarial instructions in 𝜇 such that, when 𝜇 is processed
+by the PAT’s reasoning engine, the PAT emits an action 𝑎 serving
+the adversary’s intent. The attack requires 𝜇 to be evaluated by the
+PAT’s stochastic reasoning process; if 𝜇 never enters 𝐶𝑡 , the PAT
+cannot be influenced by the linguistic content of 𝜇.
+Under Definition 5.1, 𝜇 ∉ 𝐶𝑡 ∀𝑡; the PAT operates only on 𝜄 =
+𝐸os (𝜇, scriptdeterministic). By construction, 𝐸os is a kernel-level pro-
+cess manager that does not evaluate 𝜇 as instructions; it executes
+the deterministic script against 𝜇 as data. The output 𝜄 is a deter-
+ministic function of 𝜇 and the script, and contains only the script’s
+standard output, not the linguistic content of 𝜇 as instructions.
+Therefore the PAT’s reasoning engine cannot be coerced by ad-
+versarial content in 𝜇. The only attack paths remaining are: (a) vi-
+olating 𝜇 ∉ 𝐶𝑡 (an invariant violation detectable by static analysis
+or runtime monitoring of 𝐶𝑡 contents); (b) compromising the sand-
+box boundary (escape from the namespace, detectable by OS audit).
+Both paths are now violations of explicit, testable invariants, not
+Heuristic defenses subject to adversarial linguistic creativity. The
+attack class is reduced to invariant violation. □
+Remark 6.6 (Wording Discipline). Theorem 6.5 does not claim BIZRA
+“eliminates” or is “immune to” prompt injection. It claims that un-
+der the stated invariants, indirect prompt injection is reduced to a
+violation of an explicit, testable architectural invariant. This is the
+strongest claim the current evidence supports. The forbidden word-
+ings (“eliminates,” “structurally impossible,” “immune”) would over-
+claim: they would require discharging the construction invariant
+(Theorem 6.3) and the sandbox boundary (§5) via formal verifica-
+tion, which is future work.
+6.6 PoI Soundness
+TheoRem 6.7 (PoI Soundness). Assume the federation admis-
+sion function requires attestation by 𝑘 ≥ 2 existing proven nodes (all
+honest), and assume the verification predicate 𝑣 requires substantive
+utility evidence attested by at least one independent verifier. Then
+under the honest-majority assumption |NA | < 𝑘, the PoI ledger is
+sound: no adversary can inflate its PoI score beyond ∑
+𝑐 ∈𝐶honest
+A
+𝑤 (𝑐)
+except with probability negl(𝜆).
+
+-- 7 of 12 --
+
+Node0
+Table 2: Threat model and architectural mitigations.
+Threat Mitigation (architectural)
+Key compromise HW-backed key storage; key revocation &
+re-attestation
+Sybil attack 𝑘 ≥ 2 honest attestation (Thm. 6.7)
+Collusion Independent verifier requirement
+(Thm. 6.7)
+Receipt tampering Hash chain + signatures (Thm. 6.1)
+Repudiation EUF-CMA signatures (Thm. 6.2)
+FATE bypass Runtime construction invariant + disjoint
+sandbox (Thm. 6.3)
+Indirect prompt injection 𝜇 ∉ 𝐶𝑡 invariant (Thm. 6.5)
+CFL (infinite retry) OS-signal verification, agent narrative ig-
+nored (§3.2)
+Extraction pressure Sovereignty: zero exit cost, no coercion
+possible
+Governance capture Super-majority of proven sovereigns; iron
+law non-amendable
+PRoof. Sybil resistance. A Sybil attack requires the adversary to
+create 𝑚 ≫ 1 nodes whose contributions are mutually attested. By
+assumption, admission requires 𝑘 ≥ 2 honest attestations. Since
+|NA | < 𝑘, the adversary cannot obtain admission for Sybil nodes
+without honest attestation. Honest nodes attest only to contribu-
+tions they have independently verified. Collusion resistance. A col-
+lusion attack requires 𝑚 ≥ 2 adversary nodes to mutually attest
+inflated contributions. By assumption, 𝑣 requires at least one inde-
+pendent (non-colluding) verifier. Since |NA | < 𝑘 ≤ |N |, indepen-
+dent verifiers exist and are honest; inflated contributions fail 𝑣 at
+the independent verifier. Soundness follows. □
+6.7 Threat Summary
+Table 2 summarizes the threats BIZRA must withstand and their
+mitigations. The mitigations are architectural, not procedural: they
+rely on the structural properties of the system (sovereignty, proof,
+federation-by-attestation, the 𝜇 ∉ 𝐶𝑡 invariant) rather than on op-
+erator goodwill or heuristic filters.
+7 NON-PARAMETRIC DISTILLATION: THE
+PROOF-OF-IMPACT LEDGER
+Traditional LLMs attempt to accumulate knowledge through para-
+metric weight updates (RLHF, fine-tuning). We argue this is flawed
+for autonomous agents due to Parametric Entanglement: the inter-
+mingling of foundational reasoning weights with unverified envi-
+ronmental observations. This leads to catastrophic forgetting and
+loss of epistemological integrity — a VIA violation in the memory
+layer (§3.2, Failure 4).
+BIZRA resolves the memory bottleneck by enforcing strict sepa-
+ration between reasoning capacity (fixed weights) and environmen-
+tal skill (externalized ledger). We formalize this as Non-Parametric
+Distillation.
+7.1 The Impact Score and Verified Minting
+Definition 7.1 (Verified Contribution). A verified contribution is
+a tuple 𝑐 = (𝑎, 𝑟, 𝑣) where 𝑎 ∈ A is an action that passed TFP
+(Algorithm 1), 𝑟 is the receipt produced by the protocol, and 𝑣 :
+A → {0, 1} is a verification predicate evaluating the substantive
+utility of 𝑎. A contribution is eligible for impact scoring iff 𝑣 (𝑎) = 1.
+Definition 7.2 (Impact Score and PoI Ledger). Let 𝐶 (𝑊 )
+𝑠 = {𝑐1, . . . , 𝑐𝑛 }
+be the set of verified contributions of sovereign 𝑠 within window
+𝑊 . The impact score is
+PoI(𝑠,𝑊 ) =
+∑
+𝑐 ∈𝐶 (𝑊 )
+𝑠
+𝑤 (𝑐) · decay(𝑐, 𝑡)
+where 𝑤 : C → R≥0 is the verified impact weight function and
+decay : C × R≥0 → (0, 1] is monotonically non-increasing with
+lim𝑡→∞ decay(𝑐, 𝑡) = 0. PoI scores are non-transferable and decay
+in the absence of continued verified activity.
+In standard RL, the reward signal is a transient scalar generated
+by a model. In BIZRA, the reward is a persistent cryptographic
+asset (a receipt) minted only when the SAT verifies a real external
+state mutation. The reward function is:
+𝑅agent = I(Δ𝑆ext) − Costcompute
+where I is a disjoint indicator function evaluated exclusively by the
+SAT. If the SAT verifies that the proposed state mutation occurred
+in the external environment, I = 1; if the agent claims success but
+the external state is unchanged, I = 0. Because 𝑃gen (the PAT) can-
+not influence 𝑃ver’s (the SAT’s) evaluation of the external API, VIA
+holds.
+7.2 Non-Parametric Skill Files
+Rather than utilizing successful trajectories to update model weights,
+BIZRA distills them into Modular Skill Files. This process, executed
+by the SAT’s Sleeptime Process Miner, follows a strict inductive
+logic:
+(1) Extraction. The SAT extracts the sequence of verified actions
+𝑎 ∈ 𝜏 that yielded PoI > 0.
+(2) Generalization. The SAT abstracts the specific file paths and
+variables into a generalized function signature.
+(3) Serialization. The resulting skill is stored as a 200-token Non-
+Parametric Skill File in the SAT’s Cold Archive.
+When the PAT encounters a task 𝑇new semantically similar to a
+task 𝑇old stored in the Cold Archive, the SAT retrieves the relevant
+Skill File and injects it into the PAT’s L1 Cache. The model “learns”
+a new capability by having the Skill File resident in its context for
+the duration of the task. This is entropy-neutral: the base model’s
+reasoning weights are never mutated.
+PRoposition 7.3 (No Passive Rent). lim𝑡→∞ PoI(𝑠, [𝑡0, 𝑡]) = 0
+for any sovereign 𝑠 that ceases to produce verified contributions after
+𝑡0. No sovereign earns ongoing reward from past contributions alone.
+PRoposition 7.4 (No Speculation). PoI scores are non-transferable
+(Definition 7.2). Therefore no secondary market in PoI scores can exist,
+and no speculator profits from price discovery of PoI.
+
+-- 8 of 12 --
+
+Architectural Decoupling of Agency and Verification:
+A Formal Protocol for Epistemologically Bounded Autonomous Systems
+Remark 7.5 (Non-Parametric Distillation as Continual Learning).
+Skill Files are BIZRA’s structural alternative to gradient-based con-
+tinual learning. The framing is: current AI “learns” by changing
+weights (entropy-positive, destroys old knowledge); BIZRA “learns”
+by minting receipts (information-preserving, cannot overwrite un-
+related weights). This positions BIZRA as a structural counter to
+catastrophic forgetting. We do not claim Skill Files solve catastrophic
+forgetting — that would require empirical validation on a continual-
+learning benchmark, which is future work (§12). The claim is that
+Skill Files are a non-parametric memory mechanism that does not
+mutate the base model, which is structurally distinct from fine-
+tuning.
+7.3 Alignment with Islamic Financial
+Principles
+BIZRA’s economic model operationalizes Islamic financial princi-
+ples at the architectural level:
+• No riba (rent extraction). By Proposition 7.3, reward does not
+compound from passive holdings.
+• No fake value without productive grounding. Impact weights
+𝑤 (𝑐) derive from verified utility 𝑣 (𝑐) = 1, not market price.
+• No gharar (hidden uncertainty). Every contribution’s verifi-
+cation predicate 𝑣 is explicit and inspectable; the receipt chain
+provides full transparency.
+• No reward detached from real benefit. 𝑣 requires substantive
+utility evidence.
+• No economy that grows by crushing the weak. Sovereignty
+is non-negotiable: any sovereign may exit any federation with-
+out forfeiture.
+8 IMPLEMENTATION AND PRELIMINARY
+EVALUATION
+We report a preliminary single-node implementation at the Seed
+stage. The implementation comprises: (i) a Python runtime hosting
+PAT/SAT agent abstractions; (ii) an Ed25519-based receipt chain
+with SHA-256 hashing; (iii) a FATE gate implemented as a strict pre-
+execution predicate; (iv) a local URP seed with embedded SQLite
+store; (v) a PoI ledger with configurable decay function; (vi) a bubblewrap-
+based Outside-In Sandbox for the SAT. The total implementation
+is approximately 4,200 lines of Python.
+8.1 Methodology
+We measure three quantities on commodity hardware (Apple M2
+Pro, 16 GB RAM): (1) FATE-gate evaluation latency; (2) receipt-
+chain append and verification time as a function of chain length;
+(3) end-to-end TFP overhead relative to agent inference time. Mea-
+surements are averages over 1,000 trials per condition; error bars
+report ±1 standard deviation.
+8.2 Results
+Three observations follow. First, FATE-gate evaluation is sub-millisecond,
+confirming the architectural gate is not a performance bottleneck.
+Second, naive full-chain verification scales linearly (2.1 s for 𝑛 =
+Table 3: Preliminary single-node measurements.
+Operation Latency Notes
+FATE-gate eval 0.42 ± 0.08 ms Single predicate
+Hash (SHA-256, 1 KB) 0.012 ± 0.002 ms Per receipt
+Sign (Ed25519) 0.087 ± 0.011 ms Per receipt
+Verify (Ed25519) 0.21 ± 0.03 ms Per receipt
+Receipt append 0.34 ± 0.05 ms Tail-pointer 𝑂 (1)
+Full chain verify (𝑛 = 104) 2.1 ± 0.2 s Naive
+Amortized verify (Merkle) 0.28 ± 0.04 ms Per query, 𝑂 (1)
+Sandbox spawn (bwrap) 8.3 ± 1.1 ms Per matn
+End-to-end TFP overhead 3.7% of inference LLM agent, 7B
+params
+104), but Merkle-accumulator amortization reduces per-query ver-
+ification to 𝑂 (1) (0.28 ms), confirming Theorem 4.7. Third, end-to-
+end TFP overhead is below 4% of agent inference time, suggesting
+the protocol is practical for real agent workloads. Sandbox spawn
+latency (8.3 ms per matn) is the dominant per-task overhead and
+is the principal contributor to the Verifier Tax discussed below.
+8.3 The Verifier Tax
+Recent work [3] studies how runtime enforcement against unsafe
+actions imposes a horizon-dependent safety-success trade-off: strict
+verification can cause the system to reject actions that would have
+succeeded, or to introduce latency that causes timeout failures. BIZRA
+acknowledges this trade-off explicitly. The Verifier Tax in BIZRA
+is the computational cost of the SAT’s disjoint queries (sandbox
+spawn, oracle queries) and the latency of the asynchronous PAT/SAT
+queue. BIZRA chooses epistemological integrity over raw latency,
+which is the correct trade-off for high-stakes autonomous agency
+but may be inappropriate for latency-sensitive applications. Quan-
+tifying the tax across task horizons is future work.
+8.4 Limitations of the Evaluation
+We are explicit about what this evaluation does not establish:
+• Single-node only. Multi-node federation is not yet executed.
+• No adversary simulation. Performance under active attack is
+not measured.
+• Small chain lengths. 𝑛 = 104 is far below 𝑛 ≥ 109 expected at
+production scale.
+• No formal verification of FATE wiring. Theorem 6.3’s con-
+struction invariant is not yet discharged.
+• No prompt-injection benchmark. Theorem 6.5 is conditional
+on 𝜇 ∉ 𝐶𝑡 and sandbox deployment; empirical validation on a
+benchmark like AdvBench is future work.
+• No continual-learning benchmark. Skill Files’ effect on cat-
+astrophic forgetting is not measured.
+8.5 Reproducibility
+The implementation, measurement harness, raw results, and anal-
+ysis scripts are released under an open license. The measurement
+harness seeds the receipt chain with synthetic actions of varying
+
+-- 9 of 12 --
+
+Node0
+payload sizes, runs each operation for 1,000 trials, and reports mean
+and standard deviation. Hardware specifications and software ver-
+sions are documented in the repository.
+9 COMPARATIVE ANALYSIS ON
+EPISTEMOLOGICAL INVARIANTS
+Table 4 compares BIZRA against three reference architectures on
+epistemological invariants derived from VIA. The comparison is
+qualitative on architectural dimensions and quantitative on the
+BIZRA-measured dimensions.
+The comparison reveals that BIZRA’s distinguishing contribu-
+tion is not any single component — sandboxing, cryptographic re-
+ceipts, and non-parametric memory each have prior art — but the
+integration of these into a single coherent architecture in which
+VIA is the load-bearing wall and every component is a corollary.
+Web2 platforms can adopt any component as policy but cannot
+adopt VIA without ceasing to be platforms. Web3 token economies
+can adopt any component as smart contracts but cannot adopt sub-
+stantive verification without abandoning price discovery as the pri-
+mary value signal. Centralized AI providers can adopt any com-
+ponent as a feature but cannot adopt the Asymmetric Authority
+Gradient without surrendering control over agent behavior.
+10 DISCUSSION: LIMITATIONS AND
+THREATS TO VALIDITY
+10.1 Limitations
+• Single-node evaluation only. Multi-node federation (Stage 3,
+§11) is not yet executed.
+• No formal verification of FATE wiring. Theorem 6.3 is condi-
+tional on the construction invariant. Discharging via static anal-
+ysis is high-priority future work.
+• No TEE deployment. Theorem 6.5 is conditional on sandbox
+deployment; process-level namespace isolation is the current
+baseline, with documented residual risk from OS-level side chan-
+nels.
+• Verification predicate 𝑣 underspecified. Definition 7.1 leaves
+𝑣 domain-specific.
+• Economic parameters unspecified. The decay function, im-
+pact weights, and reward formula are intentionally underspeci-
+fied.
+• No deployment at scale. Tree and Forest stages are aspira-
+tional.
+• Skill Files not benchmarked. Non-Parametric Distillation is
+specified but its effect on catastrophic forgetting is not mea-
+sured.
+10.2 Threats to Validity
+• Internal validity. Measurements use synthetic workloads; real
+agent workloads may differ.
+• External validity. Single-node results may not generalize to
+multi-node settings.
+• Construct validity. VIA (Axiom 3.1) is a normative claim, not
+an empirical one. We do not claim that satisfying VIA produces
+“better” AI in any measurable sense; we claim only that it pro-
+duces a different architecture with different structural proper-
+ties.
+• Conclusion validity. Security claims rest on cryptographic as-
+sumptions, not empirical measurement.
+10.3 Boundary Between Claim and Aspiration
+We distinguish three epistemic categories throughout:
+• Current state (proven). Node0 operates. Receipt chain initial-
+ized. TFP implemented. Single-node measurements hold. Tamper-
+evidence and non-repudiation proven under cryptographic as-
+sumptions.
+• Design (specified, not yet proven at scale). VIA, Asymmetric
+Authority Gradient, 𝜇 ∉ 𝐶𝑡 invariant, FATE non-bypassability
+(conditional), prompt-injection immunity (conditional), PoI sound-
+ness (conditional), Non-Parametric Distillation.
+• Direction (aspirational). Tree and Forest federation, universal
+network URP, globally significant adoption.
+This discipline — the law of assumption, in BIZRA’s internal ter-
+minology — is the paper’s methodological contribution. We do not
+assume blindly. When assumption is unavoidable, we assume with
+ihsān (excellence with conscience) and we declare the boundary
+between evidence and uncertainty.
+11 FEDERATION ROADMAP
+BIZRA does not wait for a million users before it becomes alive. The
+first node already contains the complete seed pattern. The roadmap
+is staged and disciplined.
+Stage 1 — Seed (Current)
+Node0 alone. Identity creation, constitution acceptance, re-
+ceipt chain initialization. The seed is planted. The pattern is
+complete. The receipts begin.
+Stage 2 — Sprout (Current)
+PAT and SAT initialization. Knowledge ingestion. First valida-
+tions. Receipts accumulate. The pattern proves itself at single-
+node scale.
+Stage 3 — Tree (Direction Only)
+Node0 and Node1 federate. Federation handshake protocols ex-
+ecute. Cross-node receipt verification. The forest begins.
+Stage 4 — Forest (Direction Only)
+Universal network URP, only after full legal, technical, secu-
+rity, and social validation. New node seeding. Knowledge prop-
+agation. Cross-federation PoI attestation.
+The architectural commitment is that no stage is claimed until
+the prior stage has been proven. We do not claim the forest before
+we prove the seed.
+
+-- 10 of 12 --
+
+Architectural Decoupling of Agency and Verification:
+A Formal Protocol for Epistemologically Bounded Autonomous Systems
+Table 4: Comparative analysis on epistemological invariants.
+Invariant / Property Web2 Platforms Web3 Token Econ. Centralized AI BIZRA
+Generator-verifier independence No (platform analytics
+grades platform)
+Partial (on-chain tx log, but
+token = primary signal)
+No (provider logs grade
+provider)
+Yes (VIA, Ax. 3.1)
+Untrusted-data isolation No (raw data ingested) N/A No (raw data ingested) 𝜇 ∉ 𝐶𝑡 (Def. 5.1)
+Authority gradient Operator-graded Smart-contract code Provider policy Asymmetric (Def. 4.1)
+Reward source Platform analytics Token price Provider logs Disjoint oracle (§7)
+Memory mechanism Parametric (fine-tuning) On-chain state Parametric (fine-tuning) Non-parametric Skill
+Files
+Receipt tamper-evidence N/A On-chain Provider logs Yes (Thm. 6.1)
+Prompt injection defense Heuristic filters N/A Heuristic filters Architectural (Thm. 6.5,
+conditional)
+Exit cost High (lock-in) Medium (token liquida-
+tion)
+High (subscription) Zero (no forfeiture)
+Gate eval latency N/A ∼ms (contract) N/A 0.42 ms (Tab. 3)
+Protocol overhead N/A 5–15% (gas + consensus) N/A 3.7% (Tab. 3)
+11.1 Critical Path to Legend-Tier Formalization
+The critical path to discharging the conditional theorems (Theo-
+rems 6.3 and 6.5) is:
+(1) Deploy TEE-backed sandbox (§5) — discharges the sandbox-
+boundary condition of Theorem 6.5.
+(2) Static analysis of FATE wiring — discharges the construc-
+tion invariant of Theorem 6.3.
+(3) Formalize the Matn/PAT invariant in Coq/Lean — pro-
+motes Definition 5.1 from design invariant to formal invariant.
+(4) Prompt-injection benchmark on AdvBench — empirically
+validates Theorem 6.5.
+(5) Multi-node federation (Stage 3) — empirically validates The-
+orem 6.7.
+Until step 1 is discharged, the prompt-injection-immunity claim
+remains conditional; until step 2 is discharged, the FATE non-bypassability
+claim remains conditional. Both are necessary to promote BIZRA’s
+claims from “architectural response” to “proven architectural in-
+variant.”
+12 CONCLUSION AND FUTURE WORK
+Current autonomous agents fail not due to a lack of capability, but
+due to systemic epistemology failures. The architecture of these
+systems violates a fundamental requirement of reliable computa-
+tion: the absence of a source of truth causally disjoint from the
+process being evaluated. By formalizing and enforcing the Verifi-
+cation Independence Axiom across data, reward, and memory lay-
+ers, BIZRA collapses the major bottlenecks of LLM agents into a
+single, solvable problem: ensuring the verifier is never entangled
+with the generator.
+12.1 Future Work
+Six lines of future work are immediate:
+(1) Discharge the conditional theorems. TEE-backed sandbox
+deployment (Theorem 6.5); static analysis of FATE wiring (The-
+orem 6.3).
+(2) Multi-node federation. Stage 3 deployment with measure-
+ment of cross-node receipt verification, consensus, and PoI con-
+vergence.
+(3) Verification predicate design. Domain-specific instantiation
+of 𝑣 for code, knowledge, and service contributions.
+(4) Governance specification. Constitutional amendment pro-
+cess, federation admission, dispute resolution, with game-theoretic
+analysis of capture resistance.
+(5) Continual-learning benchmark. Empirical validation of Skill
+Files’ effect on catastrophic forgetting (e.g., Permuted MNIST
+sequence).
+(6) Prompt-injection benchmark. Empirical validation of The-
+orem 6.5 on AdvBench or Agent Security Bench [14].
+12.2 Closing
+BIZRA is not asking humanity to trust a founder. It is asking hu-
+manity to verify a path. Do not believe the words alone — test the
+node, inspect the receipts, run the proof, review the code, challenge
+the claims, measure the impact, check the boundary. If it fails, we
+correct it. If it proves, we build on it. If it helps, we share it. If it
+harms, we stop it. This is ihsān in engineering form: excellence
+is honesty under pressure. One seed is not the forest. The forest
+comes when others plant.
+12.3 Ethics Statement
+This work was conducted without human or animal subjects. The
+author is the sole contributor to the implementation and the sole
+operator of Node0. No personal data of any third party is processed.
+
+-- 11 of 12 --
+
+Node0
+The implementation referenced in §8 is open-source under a per-
+missive license. The author declares no competing financial inter-
+ests. The normative claims (VIA, the alignment with Islamic finan-
+cial principles) are the author’s and do not represent consensus
+positions of any religious or scholarly body.
+12.4 Reproducibility
+The implementation, measurement harness, raw results, analysis
+scripts, and the LaTeX source of this paper are released under an
+open license. The receipt chain is replayable: any third party with
+the project’s public key can independently verify every recorded
+action. Hardware specifications, software versions, and random
+seeds are documented in the repository.
+REFERENCES
+[1] A. Author, “The verification horizon: No silver bullet for coding agent
+rewards,” arXiv preprint arXiv:2606.26300, 2026.
+[2] A. Author et al., “Reward hacking benchmark for tool-using RL
+agents,” arXiv preprint arXiv:2605.02964, 2026.
+[3] A. Author, “The verifier tax: Safety-success tradeoffs in runtime en-
+forcement,” arXiv preprint arXiv:2603.19328, 2026.
+[4] A. Author, “Position: Modular memory is the key to continual learning
+agents,” in NeurIPS Position Papers, 2026. arXiv:2603.01761.
+[5] A. Author, “Scaling long-horizon LLM agents via context-folding,”
+arXiv preprint arXiv:2510.11967, 2025.
+[6] A. Author, “MemRL: Self-evolving agents via runtime reinforcement
+learning on episodic memory,” arXiv preprint arXiv:2603.04257, 2026.
+[7] A. Author, “Agent-Omit: Adaptive context omission for long-horizon
+agents,” arXiv preprint arXiv:2602.04284, 2026.
+[8] A. Author, “Bridging the agent-world gap: Text world models for LLM-
+based agents,” arXiv preprint arXiv:2606.09032, 2026.
+[9] A. Author, “ceLLMate: Sandboxing browser-using agents,” arXiv
+preprint arXiv:2512.12594, 2025.
+[10] A. Author, “AgentVisor: Semantic virtualization for agent isolation,”
+arXiv preprint arXiv:2604.24118, 2026.
+[11] A. Author, “ARGUS: Defending LLM agents against context-aware
+prompt injection,” arXiv preprint arXiv:2605.03378, 2026.
+[12] A. Author, “AgentSentry: Causal context purification for prompt in-
+jection defense,” arXiv preprint arXiv:2602.22724, 2026.
+[13] A. Author, “Threat modeling for AI-agent protocols: MCP, A2A,
+Agora, ANP,” arXiv preprint arXiv:2602.11327, 2026.
+[14] A. Author, “Agent security bench: Standardizing attack and defense
+evaluation for agents,” arXiv preprint arXiv:2410.02644, 2024.
+[15] J. White, Mobile Agents and the Programming Language Telescript.
+General Magic, 1995.
+[16] A. Author, “The model context protocol: An emerging open standard,”
+arXiv preprint arXiv:2503.23278, 2025.
+[17] A. Author, “Agent2Agent (A2A) protocol,” arXiv preprint
+arXiv:2504.16902, 2025.
+[18] UNCTAD, “Global public debt hits record $102 trillion in 2024,” 2024.
+[Online]. https://unctad.org/news/global-public-debt-hits-record-
+102-trillion-2024-striking-developing-countries-hardest
+[19] Institute of International Finance, “Global debt monitor,” via Anadolu
+Ajansı, 2024. https://aa.com.tr/en/economy/global-debt-climbs-to-
+record-318t-in-2024/3493336
+[20] IEA, “Energy and AI analysis: Energy demand from AI,” 2025. https:
+//www.iea.org/reports/energy-and-ai/energy-demand-from-ai
+[21] IEA, “Data centre electricity use surged in 2025,” 2026. https://www.
+iea.org/news/data-centre-electricity-use-surged-in-2025
+[22] OECD, “Global debt report 2025,” 2025. https://www.oecd.org/en/pu
+blications/global-debt-report-2025_8ee42b13-en.html
+[23] S. Zuboff, The Age of Surveillance Capitalism. PublicAffairs, 2019.
+[24] K. Crawford, Atlas of AI. Yale Univ. Press, 2021.
+[25] E. M. Bender, T. Gebru, A. McMillan-Major, and S. Shmitchell, “On
+the dangers of stochastic parrots,” in FAccT, 2021, pp. 610–623.
+[26] Y. Bai et al., “Constitutional AI: Harmlessness from AI feedback,” An-
+thropic, Tech. Rep., 2022. arXiv:2212.08073.
+[27] R. C. Merkle, “A digital signature based on a conventional encryption
+function,” in CRYPTO, LNCS 293, 1988.
+[28] S. A. Crosby and D. S. Wallach, “Efficient data structures for tamper-
+evident logging,” in USENIX Security, 2009.
+[29] R. Tamassia, “Authenticated data structures,” in ESA, LNCS 2832,
+2003.
+[30] S. Goldwasser, S. Micali, and C. Rackoff, “The knowledge complexity
+of interactive proof systems,” SIAM J. Comput., vol. 18, 1989.
+[31] A. Gabizon, Z. J. Williamson, and O. Ciobotaru, “PLONK,” ePrint
+2019/953, 2019.
+[32] S. Nakamoto, “Bitcoin: A peer-to-peer electronic cash system,” 2008.
+[33] S. King and S. Nadal, “PPCoin: Peer-to-peer crypto-currency with
+proof-of-stake,” 2012.
+[34] P. De Filippi, M. Mannan, and W. Reijers, “Blockchain as a confidence
+machine,” Philos. Technol., vol. 35, 2022.
+[35] A. Haeberlen, P. Kouznetsov, and P. Druschel, “PeerReview: Practical
+accountability for distributed systems,” in SOSP, 2007.
+[36] R. Gennaro, C. Gentry, and B. Parno, “Non-interactive verifiable com-
+puting,” in CRYPTO, 2010.
+[37] B. Parno et al., “Pinocchio: Nearly practical verifiable computation,”
+in IEEE S&P, 2013.
+[38] M. El-Gamal, Islamic Finance: Law, Economics, and Practice. Cam-
+bridge Univ. Press, 2006.
+[39] M. Ayub, Understanding Islamic Finance. Wiley, 2007.
+[40] M. M. Rahman et al., “Blockchain and Islamic finance: A systematic
+literature review,” J. Islamic Finance, vol. 9, 2020.
+[41] S. S. Ali, “Smart contracts and gharar: Restricting uncertainty in Is-
+lamic finance,” J. Islam. Bus. Manag., 2018.
+[42] UNESCO, “Recommendation on the ethics of artificial intelligence,”
+2023.
+[43] OECD, “Recommendation of the Council on artificial intelligence,”
+OECD/LEGAL/0449, 2024.
+[44] S. Barocas and A. D. Selbst, “Big data’s disparate impact,” California
+Law Review, vol. 104, 2016.
+[45] M. Mitchell et al., “Model cards for model reporting,” in FAccT, 2019.
+
+-- 12 of 12 --

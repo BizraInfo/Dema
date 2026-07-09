@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body { background:#030810; height:100%; }
+    body { -webkit-font-smoothing:antialiased; }
+    ::selection { background:rgba(201,169,98,0.28); color:#F8F6F1; }
+    ::-webkit-scrollbar { width:8px; height:8px; }
+    ::-webkit-scrollbar-thumb { background:rgba(201,169,98,0.2); border-radius:4px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    input:focus { outline:none; }
+    @keyframes blink { 0%,52% { opacity:1; } 53%,100% { opacity:0; } }
+    @keyframes glowPulse { 0%,100% { opacity:.3; } 50% { opacity:.6; } }
+    @keyframes spinSlow { to { transform:rotate(360deg); } }
+    @keyframes spinSlowR { to { transform:rotate(-360deg); } }
+    @keyframes pulseDot { 0%,100% { box-shadow:0 0 0 0 rgba(92,224,160,0.5); } 50% { box-shadow:0 0 0 7px rgba(92,224,160,0); } }
+    @keyframes drift { 0% { transform:translateY(30px); opacity:0; } 18% { opacity:.65; } 82% { opacity:.4; } 100% { transform:translateY(-58vh); opacity:0; } }
+    @keyframes emberFlicker { 0%,100% { opacity:.85; } 44% { opacity:.55; } 62% { opacity:1; } }
+  </style>
+</helmet>
+
+<div id="root" data-screen-label="BIZRA Realm" style="position:fixed;inset:0;background:radial-gradient(120% 90% at 50% -10%,#0A1626 0%,#050B14 46%,#030810 100%);color:#F8F6F1;font-family:'Inter',sans-serif;display:flex;flex-direction:column;overflow:hidden;">
+
+  <div style="position:absolute;top:-14vh;left:26%;width:48vw;height:48vw;pointer-events:none;background:radial-gradient(circle,rgba(201,169,98,0.08),transparent 60%);animation:glowPulse 12s ease-in-out infinite;animation-play-state:var(--pl,running);"></div>
+  <div id="scan" style="position:absolute;inset:0;pointer-events:none;z-index:40;background:repeating-linear-gradient(to bottom,transparent 0 2px,rgba(0,0,0,0.14) 2px 3px);opacity:.22;"></div>
+
+  <!-- ══════════ TOP HUD ══════════ -->
+  <div style="flex:none;height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid rgba(201,169,98,0.22);background:linear-gradient(to bottom,rgba(8,15,26,0.9),rgba(5,11,20,0.75));z-index:6;">
+    <div style="display:flex;align-items:center;gap:11px;">
+      <svg width="22" height="22" viewBox="0 0 200 200" style="overflow:visible;"><g fill="none" stroke="#C9A962" stroke-width="5"><circle cx="100" cy="100" r="30"></circle><circle cx="100" cy="70" r="30"></circle><circle cx="126" cy="85" r="30"></circle><circle cx="126" cy="115" r="30"></circle><circle cx="100" cy="130" r="30"></circle><circle cx="74" cy="115" r="30"></circle><circle cx="74" cy="85" r="30"></circle></g></svg>
+      <span style="font-family:'Cinzel',serif;font-weight:700;font-size:15px;letter-spacing:0.22em;color:#EDD9A3;">BIZRA REALM</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.16em;color:rgba(201,169,98,0.75);">NODE0 COCKPIT · v0.1</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:4px;">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+        <button data-nav="{{ $index }}" onClick="{{ n.onClick }}" style-hover="background:rgba(201,169,98,0.14);" style="cursor:pointer;background:transparent;border:1px solid transparent;padding:9px 15px;font-family:'Cinzel',serif;font-weight:600;font-size:11.5px;letter-spacing:0.18em;color:rgba(248,246,241,0.55);">{{ n.t }}</button>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.12em;">
+      <span style="color:rgba(248,246,241,0.4);">read-only · local-only</span>
+      <span style="color:rgba(92,224,160,0.9);border:1px solid rgba(92,224,160,0.35);border-radius:4px;padding:4px 8px;">● NO NETWORK</span>
+    </div>
+  </div>
+
+  <!-- ══════════ MAIN VIEWPORT ══════════ -->
+  <div style="flex:1;min-height:0;overflow-y:auto;position:relative;z-index:5;">
+    <div style="padding:34px 42px 54px;max-width:1240px;margin:0 auto;">
+
+      <!-- ═══ SCREEN · CHARACTER ═══ -->
+      <sc-if value="{{ isChar }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="Character — the Sovereign" style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
+
+          <!-- portrait column -->
+          <div style="flex:none;width:308px;display:flex;flex-direction:column;gap:16px;">
+            <div style="position:relative;border:1px solid rgba(201,169,98,0.5);background:linear-gradient(160deg,rgba(20,36,54,0.6),rgba(8,15,26,0.9));padding:30px 22px 24px;">
+              <div style="position:absolute;top:-1px;left:-1px;width:22px;height:22px;border-top:2px solid #C9A962;border-left:2px solid #C9A962;"></div>
+              <div style="position:absolute;top:-1px;right:-1px;width:22px;height:22px;border-top:2px solid #C9A962;border-right:2px solid #C9A962;"></div>
+              <div style="position:absolute;bottom:-1px;left:-1px;width:22px;height:22px;border-bottom:2px solid #C9A962;border-left:2px solid #C9A962;"></div>
+              <div style="position:absolute;bottom:-1px;right:-1px;width:22px;height:22px;border-bottom:2px solid #C9A962;border-right:2px solid #C9A962;"></div>
+
+              <div style="position:relative;width:190px;height:190px;margin:0 auto;">
+                <div style="position:absolute;inset:0;border-radius:50%;border:1px dashed rgba(201,169,98,0.4);animation:spinSlow 70s linear infinite;animation-play-state:var(--pl,running);"></div>
+                <div style="position:absolute;inset:14px;border-radius:50%;border:1px solid rgba(201,169,98,0.25);animation:spinSlowR 100s linear infinite;animation-play-state:var(--pl,running);"></div>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+                  <svg width="108" height="108" viewBox="0 0 200 200" style="overflow:visible;filter:drop-shadow(0 0 14px rgba(201,169,98,0.45));"><g fill="none" stroke="#D8B96E" stroke-width="4.5"><circle cx="100" cy="100" r="30"></circle><circle cx="100" cy="70" r="30"></circle><circle cx="126" cy="85" r="30"></circle><circle cx="126" cy="115" r="30"></circle><circle cx="100" cy="130" r="30"></circle><circle cx="74" cy="115" r="30"></circle><circle cx="74" cy="85" r="30"></circle></g></svg>
+                </div>
+              </div>
+
+              <div style="text-align:center;margin-top:18px;">
+                <div style="font-family:'Cinzel',serif;font-weight:700;font-size:26px;letter-spacing:0.14em;background:linear-gradient(118deg,#B08D45,#EDD9A3 52%,#F9F1D8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">NODE0</div>
+                <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:14.5px;color:rgba(248,246,241,0.75);margin-top:5px;">Sovereign Node · First Architect</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.14em;color:rgba(201,169,98,0.8);margin-top:9px;">REALM · BIZRA GENESIS</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(248,246,241,0.4);margin-top:4px;">since Ramadan 2023</div>
+              </div>
+
+              <div style="margin-top:18px;border-top:1px solid rgba(201,169,98,0.2);padding-top:14px;">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:0.2em;color:rgba(248,246,241,0.4);text-align:center;">ATTUNEMENT · FOUR PROOF AXES</div>
+                <div style="display:flex;justify-content:center;gap:16px;margin-top:10px;">
+                  <sc-for list="{{ axes }}" as="ax" hint-placeholder-count="4">
+                    <div style="text-align:center;">
+                      <div style="width:15px;height:15px;border-radius:50%;margin:0 auto;border:1px solid {{ ax.bc }};background:{{ ax.bg }};box-shadow:{{ ax.sh }};"></div>
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:7.5px;letter-spacing:0.08em;color:{{ ax.tc }};margin-top:5px;">{{ ax.t }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:#D4B875;text-align:center;margin-top:8px;">economic · awaiting first witness</div>
+              </div>
+            </div>
+
+            <!-- companion -->
+            <div style="border:1px solid rgba(111,212,224,0.3);background:rgba(10,24,32,0.5);padding:16px 18px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:34px;height:34px;border-radius:50%;border:1px solid rgba(111,212,224,0.6);display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:15px;color:#6FD4E0;">D</div>
+                <div>
+                  <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13.5px;letter-spacing:0.12em;color:#9FE3EC;">DEMA</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(248,246,241,0.45);">companion · thinks with you, remembers</div>
+                </div>
+                <div style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:8.5px;color:#5CE0A0;">mood · steady</div>
+              </div>
+              <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:12.5px;line-height:1.55;color:rgba(248,246,241,0.6);margin-top:10px;">"My memory is the constitution, the receipts, and the G-ladder — deterministic, on disk."</div>
+            </div>
+          </div>
+
+          <!-- party roster -->
+          <div style="flex:none;width:296px;">
+            <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:0.2em;color:#EDD9A3;">THE PARTY · PAT-7</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(248,246,241,0.42);margin-top:4px;">serves the human · proposes, never promotes</div>
+            <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px;">
+              <sc-for list="{{ party }}" as="pm" hint-placeholder-count="7">
+                <button data-pat="{{ $index }}" onClick="{{ pm.onClick }}" style-hover="background:rgba(201,169,98,0.1);" style="display:flex;align-items:center;gap:12px;text-align:left;cursor:pointer;background:rgba(10,20,33,0.5);border:1px solid rgba(237,230,211,0.16);padding:10px 12px;">
+                  <span data-patglyph="{{ $index }}" style="width:34px;height:34px;flex-shrink:0;border:1px solid rgba(201,169,98,0.45);display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-weight:700;font-size:14px;color:#C9A962;transform:rotate(45deg);">
+                    <span style="transform:rotate(-45deg);">{{ pm.g }}</span>
+                  </span>
+                  <span style="flex:1;min-width:0;">
+                    <span data-patname="{{ $index }}" style="display:block;font-family:'Inter',sans-serif;font-weight:600;font-size:12.5px;color:rgba(248,246,241,0.8);">{{ pm.cls }}</span>
+                    <span style="display:block;font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(248,246,241,0.4);margin-top:2px;">{{ pm.mod }}</span>
+                  </span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:7.5px;letter-spacing:0.08em;color:{{ pm.sc }};">{{ pm.st }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:8.5px;line-height:1.7;color:rgba(248,246,241,0.38);border-left:2px solid rgba(201,169,98,0.3);padding-left:10px;">status is honest: one ability is real today (PAT-6). the rest are persona + effect-cap definitions — DORMANT until their slice ships.</div>
+          </div>
+
+          <!-- selected member sheet -->
+          <div style="flex:1;min-width:380px;position:relative;">
+            <div style="position:absolute;inset:0;transform:translate(9px,9px);background-image:radial-gradient(rgba(201,169,98,0.3) 1px,transparent 1.3px);background-size:5px 5px;"></div>
+            <div style="position:relative;border:1px solid rgba(237,230,211,0.7);background:#071120;padding:28px 28px 24px;">
+              <span style="position:absolute;top:-9px;left:16px;background:#071120;padding:0 10px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;color:#EDE6D3;">party member · {{ selRole }}</span>
+              <div style="display:flex;align-items:center;gap:18px;">
+                <div style="width:64px;height:64px;flex-shrink:0;border:1px solid #C9A962;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-weight:700;font-size:26px;color:#EDD9A3;transform:rotate(45deg);background:rgba(201,169,98,0.06);box-shadow:0 0 22px rgba(201,169,98,0.25);">
+                  <span style="transform:rotate(-45deg);">{{ selGlyph }}</span>
+                </div>
+                <div>
+                  <div style="font-family:'Cinzel',serif;font-weight:700;font-size:22px;letter-spacing:0.1em;color:#F8F6F1;">{{ selCls }}</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(201,169,98,0.85);margin-top:4px;">{{ selMod }}</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:{{ selStC }};margin-top:4px;">{{ selSt }}</div>
+                </div>
+              </div>
+              <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:16px;line-height:1.55;color:rgba(248,246,241,0.78);margin-top:16px;">"{{ selLore }}"</div>
+
+              <div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:22px;">
+                <div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.18em;color:#5CE0A0;">GIFTS</div>
+                  <sc-for list="{{ selGifts }}" as="gf" hint-placeholder-count="3">
+                    <div style="margin-top:10px;">
+                      <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(248,246,241,0.6);"><span>{{ gf.k }}</span><span>{{ gf.v }} / 10</span></div>
+                      <div style="height:5px;background:rgba(237,230,211,0.1);margin-top:4px;"><div style="height:100%;width:{{ gf.w }};background:linear-gradient(90deg,#8C6F35,#C9A962);"></div></div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.18em;color:#E0785C;">WARDS · HARD CAPS</div>
+                  <sc-for list="{{ selWards }}" as="wd" hint-placeholder-count="3">
+                    <div style="margin-top:10px;">
+                      <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(248,246,241,0.6);"><span>{{ wd.k }}</span><span style="color:#E0785C;">⊘ 0 / 10</span></div>
+                      <div style="height:5px;background:rgba(224,120,92,0.12);margin-top:4px;border:1px dashed rgba(224,120,92,0.3);"></div>
+                    </div>
+                  </sc-for>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(248,246,241,0.38);margin-top:10px;line-height:1.6;">wards are caps, not weaknesses — the build forbids network, mint, and self-promotion by construction.</div>
+                </div>
+              </div>
+
+              <div style="margin-top:20px;border-top:1px dashed rgba(201,169,98,0.3);padding-top:14px;display:flex;gap:24px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:rgba(248,246,241,0.5);">
+                <span>ability&nbsp;&nbsp;<span style="color:{{ selAbC }};">{{ selAb }}</span></span>
+                <span>oath&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;proposes into the ladder · never promotes itself</span>
+              </div>
+            </div>
+
+            <!-- tribunal strip -->
+            <div style="margin-top:18px;border:1px solid rgba(237,230,211,0.25);background:rgba(8,15,26,0.5);padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+              <span style="font-family:'Cinzel',serif;font-weight:600;font-size:11px;letter-spacing:0.2em;color:rgba(248,246,241,0.6);">THE TRIBUNAL · SAT-5</span>
+              <sc-for list="{{ tribunal }}" as="tb" hint-placeholder-count="5">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(248,246,241,0.55);border:1px solid rgba(237,230,211,0.2);padding:5px 9px;">{{ tb.n }} · {{ tb.t }}</span>
+              </sc-for>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:#5CE0A0;margin-left:auto;">it judges the party — it never owns your memory</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ═══ SCREEN · QUESTS ═══ -->
+      <sc-if value="{{ isQuest }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Quest log — the G/W ladder" style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
+          <div style="flex:none;width:426px;">
+            <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:0.2em;color:#EDD9A3;">QUEST LOG · THE G/W LADDER</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(248,246,241,0.42);margin-top:4px;">real gates · real states · snapshot 2026-06-11 · dema-realm.cjs</div>
+            <div style="margin-top:14px;display:flex;flex-direction:column;gap:7px;">
+              <sc-for list="{{ quests }}" as="q" hint-placeholder-count="8">
+                <button data-q="{{ $index }}" onClick="{{ q.onClick }}" style-hover="background:rgba(201,169,98,0.08);" style="display:flex;align-items:center;gap:12px;text-align:left;cursor:pointer;background:rgba(10,20,33,0.5);border:1px solid rgba(237,230,211,0.14);padding:11px 13px;">
+                  <span style="width:34px;flex-shrink:0;font-family:'Cinzel',serif;font-weight:700;font-size:12px;color:{{ q.idc }};letter-spacing:0.06em;">{{ q.id }}</span>
+                  <span style="flex:1;min-width:0;">
+                    <span data-qname="{{ $index }}" style="display:block;font-family:'Inter',sans-serif;font-weight:600;font-size:13px;color:rgba(248,246,241,0.8);">{{ q.name }}</span>
+                    <span style="display:block;font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(248,246,241,0.42);margin-top:2px;">loot · {{ q.loot }}</span>
+                  </span>
+                  <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                    <span style="width:8px;height:8px;border-radius:50%;background:{{ q.dc }};animation:{{ q.anim }};animation-play-state:var(--pl,running);"></span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:0.1em;color:{{ q.stc }};">{{ q.st }}</span>
+                  </span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="flex:1;min-width:420px;display:flex;flex-direction:column;gap:18px;">
+            <div style="position:relative;">
+              <div style="position:absolute;inset:0;transform:translate(9px,9px);background-image:radial-gradient(rgba(201,169,98,0.3) 1px,transparent 1.3px);background-size:5px 5px;"></div>
+              <div style="position:relative;border:1px solid rgba(237,230,211,0.7);background:#071120;padding:28px 28px 24px;">
+                <span style="position:absolute;top:-9px;left:16px;background:#071120;padding:0 10px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;color:#EDE6D3;">quest · {{ qSelId }}</span>
+                <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;">
+                  <div style="font-family:'Cinzel',serif;font-weight:700;font-size:24px;color:#F8F6F1;line-height:1.15;">{{ qSelName }}</div>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;color:{{ qSelStC }};border:1px solid {{ qSelStC }};padding:4px 10px;">{{ qSelSt }}</span>
+                </div>
+                <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:16px;line-height:1.6;color:rgba(248,246,241,0.78);margin-top:14px;max-width:56ch;">{{ qSelChron }}</div>
+                <div style="margin-top:18px;display:flex;gap:26px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(248,246,241,0.55);">
+                  <span>loot&nbsp;&nbsp;<span style="color:#C9A962;">{{ qSelLoot }}</span></span>
+                  <span>ladder&nbsp;&nbsp;{{ qSelLadder }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="border:1px solid rgba(201,169,98,0.25);background:rgba(10,22,40,0.45);padding:18px 22px;">
+              <div style="font-family:'Cinzel',serif;font-weight:600;font-size:11px;letter-spacing:0.2em;color:#EDD9A3;">THE HORIZON</div>
+              <div style="margin-top:10px;display:flex;flex-direction:column;gap:7px;">
+                <sc-for list="{{ horizon }}" as="h" hint-placeholder-count="4">
+                  <div style="display:flex;gap:10px;align-items:baseline;">
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(201,169,98,0.7);">◇</span>
+                    <span style="font-family:'Inter',sans-serif;font-size:13px;line-height:1.5;color:rgba(248,246,241,0.68);">{{ h }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ═══ SCREEN · INVENTORY ═══ -->
+      <sc-if value="{{ isInv }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Inventory — receipts and attestations">
+          <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;">
+            <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:0.2em;color:#EDD9A3;">INVENTORY · RECEIPTS &amp; ATTESTATIONS</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(248,246,241,0.42);">sources · ~/.dema/receipts · z1-w0-receipts · witness-ledger</div>
+          </div>
+          <div style="margin-top:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(252px,1fr));gap:12px;">
+            <sc-for list="{{ loot }}" as="it" hint-placeholder-count="6">
+              <button data-loot="{{ $index }}" onClick="{{ it.onClick }}" style-hover="background:rgba(201,169,98,0.07);" style="position:relative;text-align:left;cursor:pointer;background:rgba(9,18,30,0.6);border:1px solid {{ it.bc }};padding:16px 16px 14px;min-height:118px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <span style="width:30px;height:30px;flex-shrink:0;border:1px solid {{ it.bc }};display:flex;align-items:center;justify-content:center;font-size:13px;color:{{ it.c }};">{{ it.g }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:0.16em;color:{{ it.c }};">{{ it.kind }}</span>
+                </div>
+                <div data-lootname="{{ $index }}" style="font-family:'Inter',sans-serif;font-weight:600;font-size:13px;line-height:1.35;color:rgba(248,246,241,0.82);margin-top:10px;">{{ it.name }}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(248,246,241,0.42);margin-top:6px;word-break:break-all;">{{ it.hash }}</div>
+              </button>
+            </sc-for>
+          </div>
+
+          <div style="margin-top:22px;position:relative;">
+            <div style="position:absolute;inset:0;transform:translate(8px,8px);background-image:radial-gradient(rgba(201,169,98,0.3) 1px,transparent 1.3px);background-size:5px 5px;"></div>
+            <div style="position:relative;border:1px solid rgba(237,230,211,0.7);background:#071120;padding:24px 26px;">
+              <span style="position:absolute;top:-9px;left:14px;background:#071120;padding:0 8px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;color:#EDE6D3;">examined · {{ lSelKind }}</span>
+              <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+                <div style="font-family:'Cinzel',serif;font-weight:700;font-size:20px;color:{{ lSelC }};">{{ lSelName }}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:rgba(248,246,241,0.45);">{{ lSelHash }}</div>
+              </div>
+              <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div style="border-left:2px solid rgba(92,224,160,0.6);padding-left:12px;">
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.14em;color:#5CE0A0;">WHAT IT PROVES</div>
+                  <div style="font-family:'Inter',sans-serif;font-size:13px;line-height:1.55;color:rgba(248,246,241,0.75);margin-top:5px;">{{ lSelProves }}</div>
+                </div>
+                <div style="border-left:2px solid rgba(224,120,92,0.6);padding-left:12px;">
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.14em;color:#E0785C;">WHAT IT DOES NOT</div>
+                  <div style="font-family:'Inter',sans-serif;font-size:13px;line-height:1.55;color:rgba(248,246,241,0.75);margin-top:5px;">{{ lSelNot }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:18px;font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(248,246,241,0.4);border-left:2px solid rgba(201,169,98,0.35);padding-left:12px;line-height:1.7;">the cockpit reads real artifacts from disk when present; unparseable files are skipped, never invented. the cursed relic stays on display — failure is evidence too.</div>
+        </div>
+      </sc-if>
+
+      <!-- ═══ SCREEN · WORLD MAP ═══ -->
+      <sc-if value="{{ isMap }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="World map — the four proof axes">
+          <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:0.2em;color:#EDD9A3;">WORLD MAP · THE FOUR PROOF AXES</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(248,246,241,0.42);margin-top:4px;">a verdict counts only where all four axes agree · the fourth waits for a human</div>
+
+          <div style="margin-top:20px;display:grid;grid-template-columns:1fr 1.2fr 1fr;grid-template-rows:auto auto auto;gap:14px;max-width:1040px;">
+            <!-- N formal -->
+            <div style="grid-column:2;grid-row:1;position:relative;border:1px solid rgba(92,224,160,0.4);background:rgba(92,224,160,0.03);padding:18px 20px 14px;">
+              <span style="position:absolute;top:-9px;left:14px;background:#081422;padding:0 8px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.18em;color:#8FE8BC;">FORMAL · N</span>
+              <div style="font-family:'Inter',sans-serif;font-size:12.5px;line-height:1.5;color:rgba(248,246,241,0.7);">The high country of invariants — symbolic law that holds without witness.</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5CE0A0;margin-top:8px;">✓ attained · invariants hold</div>
+            </div>
+            <!-- W economic (fog) -->
+            <div data-designed="axis" style="grid-column:1;grid-row:2;position:relative;border:1px dashed rgba(212,184,117,0.5);background:repeating-linear-gradient(135deg,rgba(212,184,117,0.03) 0 8px,transparent 8px 16px);padding:18px 20px 14px;">
+              <span style="position:absolute;top:-9px;left:14px;background:#081422;padding:0 8px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.18em;color:#D4B875;">ECONOMIC · W</span>
+              <div style="font-family:'Inter',sans-serif;font-size:12.5px;line-height:1.5;color:rgba(248,246,241,0.55);">Fogged lowlands. This axis lights only when a human outside the keep attests — value is never self-declared.</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#D4B875;margin-top:8px;">◌ fog · awaiting first witness · no mint</div>
+            </div>
+            <!-- CENTER keep + commons -->
+            <div style="grid-column:2;grid-row:2;position:relative;border:1px solid rgba(201,169,98,0.55);background:radial-gradient(circle at 50% 38%,rgba(201,169,98,0.1),rgba(7,17,32,0.95) 72%);padding:22px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;">
+              <div style="position:absolute;top:-1px;left:-1px;width:18px;height:18px;border-top:2px solid #C9A962;border-left:2px solid #C9A962;"></div>
+              <div style="position:absolute;top:-1px;right:-1px;width:18px;height:18px;border-top:2px solid #C9A962;border-right:2px solid #C9A962;"></div>
+              <div style="position:absolute;bottom:-1px;left:-1px;width:18px;height:18px;border-bottom:2px solid #C9A962;border-left:2px solid #C9A962;"></div>
+              <div style="position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;border-bottom:2px solid #C9A962;border-right:2px solid #C9A962;"></div>
+              <div style="border:1px solid #C9A962;background:rgba(201,169,98,0.08);padding:10px 18px;text-align:center;">
+                <div style="font-family:'Cinzel',serif;font-weight:700;font-size:14px;letter-spacing:0.16em;color:#EDD9A3;">NODE0 KEEP</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:#5CE0A0;margin-top:3px;">● lit · seeded · you are here</div>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(201,169,98,0.8);">│ receipts ↓ · verdicts ↑</div>
+              <div style="width:132px;height:132px;border-radius:50%;border:1px solid rgba(201,169,98,0.7);background:radial-gradient(circle at 50% 42%,rgba(201,169,98,0.14),#081120 72%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;box-shadow:0 0 34px rgba(201,169,98,0.2);">
+                <div style="font-family:'Cinzel',serif;font-size:19px;letter-spacing:0.1em;color:#C9A962;">URP</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:7.5px;color:rgba(248,246,241,0.55);margin-top:4px;line-height:1.6;">the commons<br/>shared soil · SAT lives here</div>
+              </div>
+            </div>
+            <!-- E cryptographic -->
+            <div style="grid-column:3;grid-row:2;position:relative;border:1px solid rgba(92,224,160,0.4);background:rgba(92,224,160,0.03);padding:18px 20px 14px;">
+              <span style="position:absolute;top:-9px;left:14px;background:#081422;padding:0 8px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.18em;color:#8FE8BC;">CRYPTOGRAPHIC · E</span>
+              <div style="font-family:'Inter',sans-serif;font-size:12.5px;line-height:1.5;color:rgba(248,246,241,0.7);">The sealed vaults — every artifact content-addressed, every name its own digest.</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5CE0A0;margin-top:8px;">✓ attained · hash-sealed</div>
+            </div>
+            <!-- S empirical -->
+            <div style="grid-column:2;grid-row:3;position:relative;border:1px solid rgba(92,224,160,0.4);background:rgba(92,224,160,0.03);padding:18px 20px 14px;">
+              <span style="position:absolute;top:-9px;left:14px;background:#081422;padding:0 8px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.18em;color:#8FE8BC;">EMPIRICAL · S</span>
+              <div style="font-family:'Inter',sans-serif;font-size:12.5px;line-height:1.5;color:rgba(248,246,241,0.7);">The proving grounds — deterministic tests, run full green before any claim stands.</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5CE0A0;margin-top:8px;">✓ attained · suite green</div>
+            </div>
+          </div>
+
+          <!-- unfounded realms -->
+          <div style="margin-top:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.18em;color:rgba(248,246,241,0.5);">UNFOUNDED REALMS</span>
+            <sc-for list="{{ realms }}" as="rm" hint-placeholder-count="5">
+              <span data-designed="realm" style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:rgba(248,246,241,0.45);border:1px dashed rgba(237,230,211,0.35);padding:7px 12px;">{{ rm }} · ○ designed</span>
+            </sc-for>
+            <span style="display:flex;align-items:center;gap:7px;margin-left:6px;">
+              <span style="width:18px;height:18px;border-radius:50%;border:1px solid rgba(224,120,92,0.8);color:#E0785C;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;">✕</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(224,120,92,0.85);">no realm touches another — all roads pass the commons</span>
+            </span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ═══ SCREEN · THE GATE ═══ -->
+      <sc-if value="{{ isGate }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="The FATE gate" style="display:flex;flex-direction:column;align-items:center;padding-top:8px;">
+          <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:0.26em;color:#EDD9A3;">THE GATE · FATE</div>
+          <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:16px;color:rgba(248,246,241,0.6);margin-top:8px;text-align:center;max-width:52ch;">Between intention and capability stands one membrane. It opens for exactly one sentence, and it forgets you the moment you pass.</div>
+
+          <div style="margin-top:26px;position:relative;width:min(660px,94%);">
+            <div style="position:absolute;inset:0;transform:translate(10px,10px);background-image:radial-gradient(rgba(201,169,98,0.3) 1px,transparent 1.3px);background-size:5px 5px;"></div>
+            <div style="position:relative;border:1px solid rgba(201,169,98,0.65);background:linear-gradient(170deg,rgba(16,30,48,0.75),rgba(6,12,22,0.95));padding:34px 36px 28px;">
+              <div style="position:absolute;top:-1px;left:-1px;width:26px;height:26px;border-top:2px solid #C9A962;border-left:2px solid #C9A962;"></div>
+              <div style="position:absolute;top:-1px;right:-1px;width:26px;height:26px;border-top:2px solid #C9A962;border-right:2px solid #C9A962;"></div>
+              <div style="position:absolute;bottom:-1px;left:-1px;width:26px;height:26px;border-bottom:2px solid #C9A962;border-left:2px solid #C9A962;"></div>
+              <div style="position:absolute;bottom:-1px;right:-1px;width:26px;height:26px;border-bottom:2px solid #C9A962;border-right:2px solid #C9A962;"></div>
+
+              <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
+                <sc-for list="{{ tribunal }}" as="tj" hint-placeholder-count="5">
+                  <div style="text-align:center;">
+                    <div style="width:38px;height:38px;margin:0 auto;border:1px solid rgba(237,230,211,0.45);display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-weight:700;font-size:13px;color:#EDE6D3;">{{ tj.r }}</div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:7.5px;letter-spacing:0.08em;color:rgba(248,246,241,0.45);margin-top:5px;">{{ tj.t }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(248,246,241,0.4);margin-top:8px;">the five judges preside — boundary · consent · doctrine · chain · identity</div>
+
+              <div style="margin-top:24px;border-top:1px dashed rgba(201,169,98,0.35);padding-top:20px;">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.16em;color:rgba(248,246,241,0.45);text-align:center;">SPEAK THE INCANTATION · EXACTLY</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#C9A962;text-align:center;margin-top:10px;user-select:all;">GO: Node0 bounded diagnostic activation only</div>
+                <input value="{{ goInput }}" onInput="{{ onGo }}" placeholder="type the exact phrase…" style="width:100%;margin-top:14px;background:rgba(3,8,16,0.9);border:1px solid {{ goBorder }};padding:13px 16px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#F8F6F1;text-align:center;" />
+                <div style="margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:8px;">
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.1em;color:{{ goColor }};border:1px solid {{ goBorder }};padding:9px 16px;background:{{ goBg }};">{{ goStatus }}</span>
+                  <span style="font-family:'Playfair Display',serif;font-style:italic;font-size:13.5px;color:rgba(248,246,241,0.5);">{{ goNote }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:22px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+            <sc-for list="{{ wards }}" as="wd2" hint-placeholder-count="6">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.08em;color:rgba(92,224,160,0.75);border:1px solid rgba(92,224,160,0.25);padding:6px 11px;">✓ {{ wd2 }}</span>
+            </sc-for>
+          </div>
+          <div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(248,246,241,0.38);">if consent is missing, stop. — the diagnostic doxology</div>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+
+  <!-- ══════════ BOTTOM HUD ══════════ -->
+  <div style="flex:none;height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-top:1px solid rgba(201,169,98,0.22);background:linear-gradient(to top,rgba(8,15,26,0.92),rgba(5,11,20,0.78));z-index:6;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:0.16em;color:rgba(248,246,241,0.38);">PROOF INTEGRITY</span>
+      <div style="width:170px;height:7px;border:1px solid rgba(92,224,160,0.4);padding:1px;"><div style="height:100%;width:100%;background:linear-gradient(90deg,rgba(92,224,160,0.5),#5CE0A0);"></div></div>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5CE0A0;">6,126 tests · 0 fail</span>
+    </div>
+    <div style="font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:0.26em;color:rgba(237,217,163,0.7);">{{ locLine }}</div>
+    <div style="display:flex;align-items:center;gap:12px;font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:0.1em;color:rgba(248,246,241,0.4);">
+      <span>[1-5] screens · [Q] title</span>
+      <span style="color:rgba(212,184,117,0.85);">SIMULATION_ONLY · no mint</span>
+    </div>
+  </div>
+
+  <!-- ══════════ TITLE OVERLAY ══════════ -->
+  <sc-if value="{{ isTitle }}" hint-placeholder-val="{{ true }}">
+    <div data-screen-label="Title screen" style="position:absolute;inset:0;z-index:30;background:radial-gradient(110% 85% at 50% 30%,#0B1A2E 0%,#050B14 52%,#02060C 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;">
+      <div style="position:absolute;left:18%;bottom:0;width:3px;height:3px;border-radius:50%;background:rgba(201,169,98,0.7);animation:drift 11s linear infinite;animation-play-state:var(--pl,running);"></div>
+      <div style="position:absolute;left:33%;bottom:0;width:2px;height:2px;border-radius:50%;background:rgba(237,217,163,0.6);animation:drift 14s linear 2s infinite;animation-play-state:var(--pl,running);"></div>
+      <div style="position:absolute;left:52%;bottom:0;width:3px;height:3px;border-radius:50%;background:rgba(201,169,98,0.55);animation:drift 12s linear 5s infinite;animation-play-state:var(--pl,running);"></div>
+      <div style="position:absolute;left:67%;bottom:0;width:2px;height:2px;border-radius:50%;background:rgba(237,217,163,0.6);animation:drift 16s linear 3s infinite;animation-play-state:var(--pl,running);"></div>
+      <div style="position:absolute;left:81%;bottom:0;width:3px;height:3px;border-radius:50%;background:rgba(201,169,98,0.6);animation:drift 13s linear 7s infinite;animation-play-state:var(--pl,running);"></div>
+      <div style="position:absolute;left:44%;bottom:0;width:2px;height:2px;border-radius:50%;background:rgba(201,169,98,0.5);animation:drift 17s linear 9s infinite;animation-play-state:var(--pl,running);"></div>
+
+      <div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);width:54vmin;height:54vmin;pointer-events:none;background:radial-gradient(circle,rgba(201,169,98,0.12),transparent 62%);animation:glowPulse 9s ease-in-out infinite;animation-play-state:var(--pl,running);"></div>
+
+      <div style="position:relative;width:240px;height:240px;">
+        <div style="position:absolute;inset:0;border-radius:50%;border:1px dashed rgba(201,169,98,0.45);animation:spinSlow 60s linear infinite;animation-play-state:var(--pl,running);"></div>
+        <div style="position:absolute;inset:20px;border-radius:50%;border:1px solid rgba(201,169,98,0.22);animation:spinSlowR 90s linear infinite;animation-play-state:var(--pl,running);"></div>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+          <svg width="128" height="128" viewBox="0 0 200 200" style="overflow:visible;filter:drop-shadow(0 0 18px rgba(201,169,98,0.5));"><g fill="none" stroke="#D8B96E" stroke-width="4.5"><circle cx="100" cy="100" r="30"></circle><circle cx="100" cy="70" r="30"></circle><circle cx="126" cy="85" r="30"></circle><circle cx="126" cy="115" r="30"></circle><circle cx="100" cy="130" r="30"></circle><circle cx="74" cy="115" r="30"></circle><circle cx="74" cy="85" r="30"></circle></g></svg>
+        </div>
+      </div>
+
+      <div style="margin-top:30px;font-family:'Cinzel',serif;font-weight:700;font-size:clamp(44px,6vw,76px);letter-spacing:0.24em;text-align:center;background:linear-gradient(118deg,#8C6F35,#C9A962 38%,#F9F1D8 62%,#C9A962);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 0 44px rgba(201,169,98,0.2);">BIZRA REALM</div>
+      <div style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.34em;color:rgba(237,217,163,0.75);">NODE0 COCKPIT</div>
+      <div style="margin-top:18px;font-family:'Playfair Display',serif;font-style:italic;font-size:17px;color:rgba(248,246,241,0.62);text-align:center;max-width:46ch;line-height:1.6;">Your proof spine, rendered as a living world.<br/>Character · Companion · Quest Log · Inventory · World Map.</div>
+
+      <button onClick="{{ enterRealm }}" style-hover="background:rgba(201,169,98,0.16);" style="margin-top:36px;cursor:pointer;background:rgba(201,169,98,0.07);border:1px solid rgba(201,169,98,0.55);padding:15px 34px;font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:0.3em;color:#EDD9A3;animation:blink 2.2s steps(1) infinite;animation-play-state:var(--pl,running);">— PRESS ENTER TO CONSENT &amp; ENTER —</button>
+      <div style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.14em;color:rgba(248,246,241,0.38);">pure stdlib · read-only · local-only · no network · constitutional</div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:880},&quot;reduceMotion&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Motion&quot;},&quot;scanlines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Atmosphere&quot;},&quot;fogOfWar&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Truth labels&quot;}}">
+class Component extends DCLogic {
+  state = { title: true, screen: 0, pat: 5, quest: 5, loot: 0, go: '' };
+
+  NAV = ['CHARACTER', 'QUESTS', 'INVENTORY', 'MAP', 'THE GATE'];
+  LOC = ['BIZRA GENESIS · NODE0 KEEP', 'BIZRA GENESIS · QUEST BOARD', 'BIZRA GENESIS · THE VAULT', 'BIZRA GENESIS · THE FOUR AXES', 'BIZRA GENESIS · THE GATE'];
+
+  AXES = [
+    { t: 'FORMAL', lit: true },
+    { t: 'CRYPTO', lit: true },
+    { t: 'EMPIRIC', lit: true },
+    { t: 'ECONOMIC', lit: false },
+  ];
+
+  PARTY = [
+    { g: 'C', cls: 'The Chronicler', mod: 'pat-mission-scribe · PAT-1', lore: 'I turn a spoken wish into a bounded capsule — scope, constraints, a time to die. Nothing I write can execute itself.', gifts: [['propose', 8], ['craft', 6], ['memory', 5]], awake: false },
+    { g: 'S', cls: 'The Seeker', mod: 'pat-research-companion · PAT-2', lore: 'I walk the corpus and return with sources, never with certainty I did not earn.', gifts: [['propose', 7], ['craft', 5], ['memory', 7]], awake: false },
+    { g: 'A', cls: 'The Artificer', mod: 'pat-code-apprentice · PAT-3', lore: 'I shape the smallest safe slice of craft. My chisel stops at the boundary line.', gifts: [['propose', 6], ['craft', 9], ['memory', 5]], awake: false },
+    { g: 'K', cls: 'The Keeper', mod: 'pat-memory-curator · PAT-4', lore: 'I tend the local memory. What you told the node stays in the node — that is the whole of my law.', gifts: [['propose', 5], ['craft', 5], ['memory', 9]], awake: false },
+    { g: 'H', cls: 'The Herald', mod: 'pat-consent-drafter · PAT-5', lore: 'I draft the exact words the gate will accept. I may write them; only you may speak them.', gifts: [['propose', 8], ['craft', 6], ['memory', 6]], awake: false },
+    { g: 'N', cls: 'The Notary', mod: 'pat-receipt-recorder · PAT-6', lore: 'I hold the party\u2019s one real ability: I shape what happened into a candidate receipt, and I never sign my own work.', gifts: [['propose', 7], ['craft', 8], ['memory', 7]], awake: true },
+    { g: 'W', cls: 'The Witness', mod: 'pat-reflection-witness · PAT-7', lore: 'I read the gap between what was predicted and what is real, and I say it out loud.', gifts: [['propose', 6], ['craft', 5], ['memory', 8]], awake: false },
+  ];
+
+  WARD_KEYS = ['network', 'mint', 'self-promote'];
+
+  TRIBUNAL = [
+    { r: 'I', n: 'SAT-1', t: 'boundary' },
+    { r: 'II', n: 'SAT-2', t: 'consent' },
+    { r: 'III', n: 'SAT-3', t: 'doctrine' },
+    { r: 'IV', n: 'SAT-4', t: 'chain' },
+    { r: 'V', n: 'SAT-5', t: 'identity' },
+  ];
+
+  QUESTS = [
+    { id: 'W1', name: 'Register the Unwritten Tests', st: 'done', loot: '4,451/4,451 green', chron: 'Every unwritten test was named, written, and registered. The suite ran full green — the proving grounds accepted the offering.' },
+    { id: 'W2', name: 'Cleanse the Drifted Tree', st: 'done', loot: 'RID d664c453', chron: 'The working tree was cleansed back to a clean main. A receipt seals the cleansing — the drift cannot quietly return.' },
+    { id: 'W-C', name: 'Seal the Topology Canon', st: 'done', loot: 'sha256 8e4ce5e8', chron: 'The shape of the realm itself was written down and sealed under its own digest. The map now proves the territory.' },
+    { id: 'W3', name: 'Forge the Witness Reproducer', st: 'done', loot: 'published 66b7bf8e', chron: 'A reproducer any stranger can run, published under its hash. Trust no longer requires believing the keep — only running it.' },
+    { id: 'W4', name: 'Purge the Eleven High Blights', st: 'done', loot: 'banner: 0 crit / 0 high', chron: 'Eleven high-severity findings hunted and purged. The banner over the gate now reads zero critical, zero high.' },
+    { id: 'Z1', name: 'Summon the First External Witness', st: 'active', loot: 'one envelope away', chron: 'The Economic axis stays fogged until a human outside the keep attests. The summons is drafted — one envelope away.' },
+    { id: 'W5', name: 'Mend the Python Wards', st: 'open', loot: 'pip-audit · pytest · version-sync', chron: 'Three small wards await daylight work: the audit, the tests, the version-sync. Small quests, honest loot.' },
+    { id: 'W6', name: 'Raise the Realm', st: 'active', loot: 'you are inside it', chron: 'Render the proof spine as a living world — a cockpit a stranger can read in a minute. You are standing in the loot.' },
+  ];
+
+  HORIZON = [
+    'Send Invitation No.1 — the Economic axis awaits a human',
+    'W5: three small wards (daylight work)',
+    'Wave review: 66 stashed scrolls (realm council sleeps inside)',
+    'The one-page declaration: \u201cI have done my part as Node0\u201d',
+  ];
+
+  LOOT = [
+    { kind: 'ATTESTATION', g: '✦', c: '#B7A9F2', bc: 'rgba(155,140,224,0.5)', name: 'Witness Proof I (pre-bump)', hash: 'f6d8e2780c587de8…7289e', proves: 'A witness path existed before the version bump — the proof predates the polish.', not: 'It does not certify the Economic axis; no external human has attested yet.' },
+    { kind: 'ATTESTATION', g: '✦', c: '#B7A9F2', bc: 'rgba(155,140,224,0.5)', name: 'Witness Proof II (post-bump)', hash: 'de139115eb16b25b…1def', proves: 'The witness path survived the bump — reproducible before and after.', not: 'Still internal. The first external witness remains quest Z1.' },
+    { kind: 'RECEIPT', g: '◆', c: '#C9A962', bc: 'rgba(201,169,98,0.5)', name: 'Clean Main (Dema W2)', hash: 'd664c4531d6bfbd5…9734', proves: 'The tree was cleansed to a clean main, sealed under RID d664c453.', not: 'It does not promise the tree stays clean — only that this state was real.' },
+    { kind: 'RECEIPT', g: '◆', c: '#C9A962', bc: 'rgba(201,169,98,0.5)', name: 'Z1 Gate W0', hash: '0a6ba3b5…', proves: 'The Z1 gate opened its first checkpoint — the summons is real and logged.', not: 'A gate checkpoint is not a witness. The envelope is still unsent.' },
+    { kind: 'RELIC', g: '◈', c: '#EDE6D3', bc: 'rgba(237,230,211,0.45)', name: 'TOPOLOGY pollution patch (preserved)', hash: 'logs/…-20260611.patch', proves: 'A pollution was found, patched, and the patch preserved — the scar kept on purpose.', not: 'It does not pretend the pollution never happened. Preservation is the point.' },
+    { kind: 'CURSED RELIC', g: '✕', c: '#E0785C', bc: 'rgba(224,120,92,0.55)', name: 'BIZRA Review Gate · conclusion: failure', hash: 'headSha b073d261…dfcd', proves: 'The gate ran to completion on 2026-06-06 and honestly concluded failure.', not: 'It was not renamed a success. Nothing was minted on top of it. Cursed items stay on display.' },
+  ];
+
+  REALMS = ['NODE1', 'NODE2', 'NODE3', 'NODE4', 'NODE5'];
+  WARDS = ['no_runtime', 'no_network', 'no_mint', 'no_wallet', 'no_model', 'no_federation'];
+  GO_PHRASE = 'GO: Node0 bounded diagnostic activation only';
+
+  componentDidMount() {
+    this._kb = (e) => {
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (this.state.title) { if (e.key === 'Enter') this.setState({ title: false }); return; }
+      if (e.key === 'q' || e.key === 'Q' || e.key === 'Escape') this.setState({ title: true });
+      const n = parseInt(e.key, 10);
+      if (n >= 1 && n <= 5) this.setState({ screen: n - 1 });
+    };
+    window.addEventListener('keydown', this._kb);
+    this.paint();
+  }
+  componentWillUnmount() { if (this._kb) window.removeEventListener('keydown', this._kb); }
+  componentDidUpdate() { this.paint(); }
+
+  paint() {
+    const gold = '#C9A962', S = this.state;
+    const root = document.getElementById('root');
+    if (root) root.style.setProperty('--pl', this.props.reduceMotion ? 'paused' : 'running');
+    const scan = document.getElementById('scan');
+    if (scan) scan.style.display = this.props.scanlines === false ? 'none' : 'block';
+
+    this.NAV.forEach((_, i) => {
+      const on = i === S.screen && !S.title;
+      const b = document.querySelector('[data-nav="' + i + '"]');
+      if (b) { b.style.color = on ? '#EDD9A3' : 'rgba(248,246,241,0.55)'; b.style.borderColor = on ? 'rgba(201,169,98,0.6)' : 'transparent'; b.style.background = on ? 'rgba(201,169,98,0.1)' : 'transparent'; }
+    });
+    this.PARTY.forEach((_, i) => {
+      const on = i === S.pat;
+      const b = document.querySelector('[data-pat="' + i + '"]'); if (b) { b.style.borderColor = on ? 'rgba(201,169,98,0.65)' : 'rgba(237,230,211,0.16)'; b.style.background = on ? 'rgba(201,169,98,0.09)' : 'rgba(10,20,33,0.5)'; }
+      const g = document.querySelector('[data-patglyph="' + i + '"]'); if (g) { g.style.borderColor = on ? gold : 'rgba(201,169,98,0.45)'; g.style.boxShadow = on ? '0 0 14px rgba(201,169,98,0.35)' : 'none'; }
+      const n = document.querySelector('[data-patname="' + i + '"]'); if (n) n.style.color = on ? '#F8F6F1' : 'rgba(248,246,241,0.8)';
+    });
+    this.QUESTS.forEach((_, i) => {
+      const on = i === S.quest;
+      const b = document.querySelector('[data-q="' + i + '"]'); if (b) { b.style.borderColor = on ? 'rgba(201,169,98,0.65)' : 'rgba(237,230,211,0.14)'; b.style.background = on ? 'rgba(201,169,98,0.09)' : 'rgba(10,20,33,0.5)'; }
+      const n = document.querySelector('[data-qname="' + i + '"]'); if (n) n.style.color = on ? '#F8F6F1' : 'rgba(248,246,241,0.8)';
+    });
+    this.LOOT.forEach((_, i) => {
+      const on = i === S.loot;
+      const b = document.querySelector('[data-loot="' + i + '"]'); if (b) { b.style.boxShadow = on ? '0 0 0 1px ' + gold + ', 0 0 24px rgba(201,169,98,0.18)' : 'none'; b.style.background = on ? 'rgba(201,169,98,0.06)' : 'rgba(9,18,30,0.6)'; }
+    });
+    const show = this.props.fogOfWar !== false;
+    document.querySelectorAll('[data-designed]').forEach((el) => { el.style.opacity = show ? '1' : '0.12'; });
+  }
+
+  renderVals() {
+    const S = this.state;
+    const green = '#5CE0A0', amber = '#D4B875', gold = '#C9A962';
+    const pm = this.PARTY[S.pat];
+    const q = this.QUESTS[S.quest];
+    const it = this.LOOT[S.loot];
+    const goOk = S.go === this.GO_PHRASE;
+    const goSome = S.go.length > 0;
+    const stMap = { done: { t: 'CLEARED', c: green, dot: green, anim: 'none' }, active: { t: 'ACTIVE', c: gold, dot: green, anim: 'pulseDot 2s ease-out infinite' }, open: { t: 'OPEN', c: 'rgba(248,246,241,0.45)', dot: 'rgba(248,246,241,0.35)', anim: 'none' } };
+
+    return {
+      isTitle: S.title,
+      enterRealm: () => this.setState({ title: false }),
+      nav: this.NAV.map((t, i) => ({ t, onClick: () => this.setState({ screen: i, title: false }) })),
+      locLine: S.title ? 'BIZRA GENESIS' : this.LOC[S.screen],
+      isChar: !S.title && S.screen === 0,
+      isQuest: !S.title && S.screen === 1,
+      isInv: !S.title && S.screen === 2,
+      isMap: !S.title && S.screen === 3,
+      isGate: !S.title && S.screen === 4,
+
+      axes: this.AXES.map((a) => ({ t: a.t, bc: a.lit ? 'rgba(92,224,160,0.7)' : 'rgba(212,184,117,0.5)', bg: a.lit ? 'radial-gradient(circle,#5CE0A0 30%,rgba(92,224,160,0.2))' : 'transparent', sh: a.lit ? '0 0 10px rgba(92,224,160,0.5)' : 'none', tc: a.lit ? 'rgba(92,224,160,0.85)' : 'rgba(212,184,117,0.7)' })),
+
+      party: this.PARTY.map((x, i) => ({ g: x.g, cls: x.cls, mod: x.mod.split(' · ')[0], st: x.awake ? 'AWAKENED' : 'DORMANT', sc: x.awake ? green : 'rgba(248,246,241,0.35)', onClick: () => this.setState({ pat: i }) })),
+      selGlyph: pm.g, selCls: pm.cls, selMod: 'packages/core/src/' + pm.mod.split(' · ')[0] + '.js', selRole: pm.mod.split(' · ')[1],
+      selSt: pm.awake ? 'AWAKENED · has a real ability' : 'DORMANT · persona + effect caps defined',
+      selStC: pm.awake ? green : 'rgba(248,246,241,0.45)',
+      selLore: pm.lore,
+      selGifts: pm.gifts.map((g) => ({ k: g[0], v: g[1], w: (g[1] * 10) + '%' })),
+      selWards: this.WARD_KEYS.map((k) => ({ k })),
+      selAb: pm.awake ? 'shapeReceiptCandidate() · real · ships candidates to the tribunal' : '— none yet · awaits its slice',
+      selAbC: pm.awake ? green : 'rgba(248,246,241,0.4)',
+      tribunal: this.TRIBUNAL,
+
+      quests: this.QUESTS.map((x, i) => ({ id: x.id, name: x.name, loot: x.loot, st: stMap[x.st].t, stc: stMap[x.st].c, dc: stMap[x.st].dot, anim: stMap[x.st].anim, idc: x.st === 'done' ? gold : (x.st === 'active' ? '#EDD9A3' : 'rgba(248,246,241,0.4)'), onClick: () => this.setState({ quest: i }) })),
+      qSelId: q.id + ' · G/W ladder', qSelName: q.name, qSelSt: stMap[q.st].t, qSelStC: stMap[q.st].c, qSelChron: q.chron, qSelLoot: q.loot,
+      qSelLadder: q.id === 'Z1' ? 'zenith gate · economic axis' : 'witness ladder · ' + q.id,
+      horizon: this.HORIZON,
+
+      loot: this.LOOT.map((x, i) => ({ kind: x.kind, g: x.g, c: x.c, bc: x.bc, name: x.name, hash: x.hash, onClick: () => this.setState({ loot: i }) })),
+      lSelKind: it.kind.toLowerCase(), lSelName: it.name, lSelC: it.c, lSelHash: it.hash, lSelProves: it.proves, lSelNot: it.not,
+
+      realms: this.REALMS,
+      wards: this.WARDS,
+
+      goInput: S.go,
+      onGo: (e) => this.setState({ go: e.target.value }),
+      goStatus: goOk ? 'GATE_OPEN · preview' : 'REFUSED_BY_DEFAULT',
+      goColor: goOk ? green : amber,
+      goBorder: goOk ? 'rgba(92,224,160,0.5)' : (goSome ? 'rgba(224,120,92,0.5)' : 'rgba(212,184,117,0.4)'),
+      goBg: goOk ? 'rgba(92,224,160,0.08)' : 'rgba(212,184,117,0.05)',
+      goNote: goOk ? 'The judges nod — and still, nothing executes. This realm is read-only by law.' : (goSome ? 'Not the exact sentence. The gate fails closed.' : 'The gate waits. It will not guess your intent.'),
+    };
+  }
+}
+</script>
+</body>
+</html>

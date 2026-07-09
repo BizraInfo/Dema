@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Playfair+Display:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-snap-type: y proximity; }
+    html, body { background:#050B14; }
+    body { -webkit-font-smoothing:antialiased; scrollbar-width:none; }
+    body::-webkit-scrollbar { width:0; height:0; }
+    ::selection { background:rgba(201,169,98,0.28); color:#F8F6F1; }
+    @keyframes blink { 0%,48% { opacity:1; } 49%,100% { opacity:0; } }
+    @keyframes glowPulse { 0%,100% { opacity:.35; transform:scale(1); } 50% { opacity:.6; transform:scale(1.08); } }
+    @keyframes spinSlow { to { transform:rotate(360deg); } }
+    @keyframes drift { 0%,100% { transform:translate(0,0); } 50% { transform:translate(-12px,9px); } }
+    @keyframes floaty { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
+    @keyframes orbit { to { transform:rotate(360deg); } }
+    @keyframes seedGlow { 0%,100% { opacity:.5; } 50% { opacity:1; } }
+  </style>
+</helmet>
+
+<div id="root" style="position:relative;width:100%;background:#050B14;color:#F8F6F1;font-family:'Inter',sans-serif;">
+
+  <!-- fixed decor -->
+  <div style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;">
+    <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(201,169,98,0.045) 1px,transparent 1px),linear-gradient(90deg,rgba(201,169,98,0.045) 1px,transparent 1px);background-size:54px 54px;-webkit-mask-image:radial-gradient(circle at 50% 34%,#000 0%,transparent 74%);mask-image:radial-gradient(circle at 50% 34%,#000 0%,transparent 74%);animation:drift 40s ease-in-out infinite;animation-play-state:var(--pl,running);"></div>
+    <div style="position:absolute;top:-18vh;left:50%;width:64vw;height:64vw;transform:translateX(-50%);background:radial-gradient(circle,rgba(201,169,98,0.1),transparent 60%);animation:glowPulse 10s ease-in-out infinite;animation-play-state:var(--pl,running);"></div>
+    <div style="position:absolute;bottom:-24vh;right:0;width:52vw;height:52vw;background:radial-gradient(circle,rgba(44,83,100,0.26),transparent 62%);animation:glowPulse 13s ease-in-out infinite;animation-play-state:var(--pl,running);"></div>
+  </div>
+
+  <!-- fixed top bar -->
+  <div style="position:fixed;top:0;left:0;right:0;height:56px;z-index:70;display:flex;align-items:center;justify-content:space-between;padding:0 5vw;background:linear-gradient(180deg,rgba(5,11,20,0.9),rgba(5,11,20,0));backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <svg width="20" height="20" viewBox="0 0 200 200" style="overflow:visible;"><g fill="none" stroke="#C9A962" stroke-width="5"><circle cx="100" cy="100" r="30"/><circle cx="100" cy="70" r="30"/><circle cx="126" cy="85" r="30"/><circle cx="126" cy="115" r="30"/><circle cx="100" cy="130" r="30"/><circle cx="74" cy="115" r="30"/><circle cx="74" cy="85" r="30"/></g></svg>
+      <span style="font-family:'Playfair Display',serif;font-weight:700;font-size:16px;letter-spacing:0.12em;color:#F8F6F1;">BIZRA</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.2em;color:#C9A962;">/ node0</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.14em;color:rgba(92,224,160,0.85);border:1px solid rgba(92,224,160,0.35);border-radius:5px;padding:4px 8px;">● SIMULATION_ONLY</span>
+      <a href="BIZRA Manifestation.dc.html" style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(248,246,241,0.55);text-decoration:none;">The Manifestation →</a>
+    </div>
+  </div>
+
+  <div style="position:relative;z-index:1;">
+
+    <!-- HERO -->
+    <section data-screen-label="Hero — Node0 boot" style="min-height:100vh;box-sizing:border-box;scroll-snap-align:start;display:grid;grid-template-columns:1.05fr 0.95fr;gap:5vw;align-items:center;padding:96px 5vw 8vh;position:relative;">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.32em;text-transform:uppercase;color:#C9A962;">Local-first proof runtime</div>
+        <div style="font-family:'Playfair Display',serif;font-weight:800;font-size:clamp(60px,8vw,132px);line-height:0.9;letter-spacing:0.01em;margin-top:14px;background:linear-gradient(118deg,#8A6B2E,#C9A962 44%,#F9F1D8 84%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">Node<span style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.84em;letter-spacing:-0.01em;">0</span></div>
+        <div style="margin-top:14px;display:flex;align-items:center;gap:13px;">
+          <span style="font-family:'Amiri',serif;font-size:26px;color:#C9A962;">إحسان</span>
+          <span style="width:1px;height:18px;background:rgba(201,169,98,0.4);"></span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(248,246,241,0.44);">consent · receipt · replay · correction</span>
+        </div>
+        <div style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(24px,2.9vw,40px);line-height:1.14;color:#F8F6F1;margin-top:5vh;max-width:18ch;">Your AI, under <span style="font-style:italic;color:#C9A962;">constitution</span>.</div>
+        <div style="font-family:'Inter',sans-serif;font-weight:300;font-size:16px;line-height:1.6;color:rgba(248,246,241,0.6);margin-top:16px;max-width:46ch;">A local runtime where every agent action must pass consent, seal a receipt, survive replay, and accept correction — before it counts.</div>
+
+        <!-- seed geometry -->
+        <div style="margin-top:5vh;display:flex;align-items:center;gap:22px;">
+          <svg width="118" height="118" viewBox="0 0 200 200" style="overflow:visible;flex-shrink:0;">
+            <circle cx="100" cy="100" r="62" fill="none" stroke="rgba(201,169,98,0.22)" stroke-width="0.7"/>
+            <sc-for list="{{ seed }}" as="p" hint-placeholder-count="7">
+              <circle data-seed="{{ $index }}" cx="{{ p.cx }}" cy="{{ p.cy }}" r="30" fill="none" stroke="rgba(201,169,98,0.4)" stroke-width="1"></circle>
+            </sc-for>
+            <circle cx="100" cy="100" r="2.6" fill="#C9A962"/>
+          </svg>
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(248,246,241,0.4);">invariants online</div>
+            <div style="font-family:'Playfair Display',serif;font-size:34px;color:{{ invCountColor }};margin-top:2px;transition:color .5s ease;">{{ invLit }}<span style="color:rgba(248,246,241,0.3);font-size:22px;"> / 5</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- boot terminal -->
+      <div style="border:1px solid rgba(201,169,98,0.22);border-radius:13px;overflow:hidden;box-shadow:0 34px 90px rgba(0,0,0,0.55);background:linear-gradient(180deg,rgba(10,22,40,0.96),rgba(6,13,26,0.96));">
+        <div style="height:40px;display:flex;align-items:center;gap:8px;padding:0 15px;border-bottom:1px solid rgba(201,169,98,0.14);background:rgba(5,11,20,0.7);">
+          <span style="width:10px;height:10px;border-radius:50%;background:rgba(201,169,98,0.5);"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:rgba(201,169,98,0.28);"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:rgba(201,169,98,0.28);"></span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.08em;color:rgba(248,246,241,0.5);margin-left:8px;">node0 — boot</span>
+          <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.12em;color:rgba(92,224,160,0.8);">AASR · online</span>
+        </div>
+        <div style="padding:20px 22px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.75;min-height:340px;">
+          <sc-for list="{{ boot }}" as="b" hint-placeholder-count="6">
+            <div style="color:{{ b.color }};white-space:pre-wrap;">{{ b.txt }}</div>
+          </sc-for>
+          <div style="color:#C9A962;display:inline-block;">{{ bootCursor }}<span style="animation:blink 1.1s step-end infinite;animation-play-state:var(--pl,running);">▍</span></div>
+          <sc-if value="{{ bootDone }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ replayBoot }}" style="margin-top:16px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:#C9A962;background:rgba(201,169,98,0.08);border:1px solid rgba(201,169,98,0.3);border-radius:7px;padding:8px 14px;">↻ replay boot</button>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="position:absolute;bottom:3.5vh;left:5vw;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(248,246,241,0.38);display:flex;align-items:center;gap:8px;animation:floaty 3s ease-in-out infinite;animation-play-state:var(--pl,running);">onboard ↓</div>
+    </section>
+
+    <!-- ONBOARDING LIFECYCLE -->
+    <section data-screen-label="Onboarding lifecycle" style="min-height:100vh;box-sizing:border-box;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;padding:12vh 5vw 8vh;position:relative;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.32em;text-transform:uppercase;color:#C9A962;">The onboarding lifecycle</div>
+          <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(28px,3.4vw,46px);line-height:1.05;color:#F8F6F1;margin-top:10px;">From cold start to governed — <span style="font-style:italic;color:#C9A962;">every step leaves a receipt.</span></div>
+        </div>
+        <div style="display:flex;gap:9px;">
+          <button onClick="{{ resetOnb }}" style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(248,246,241,0.6);background:none;border:1px solid rgba(201,169,98,0.25);border-radius:8px;padding:11px 16px;">reset</button>
+          <button onClick="{{ runStep }}" style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:#050B14;background:{{ runBtnBg }};border:none;border-radius:8px;padding:11px 20px;transition:background .3s;">{{ runBtnLabel }}</button>
+        </div>
+      </div>
+
+      <div style="margin-top:3.2vh;display:grid;grid-template-columns:1.55fr 1fr;gap:20px;align-items:stretch;">
+        <!-- terminal -->
+        <div style="border:1px solid rgba(201,169,98,0.22);border-radius:13px;overflow:hidden;background:linear-gradient(180deg,rgba(10,22,40,0.96),rgba(6,13,26,0.96));display:flex;flex-direction:column;">
+          <div style="height:38px;display:flex;align-items:center;gap:8px;padding:0 15px;border-bottom:1px solid rgba(201,169,98,0.14);background:rgba(5,11,20,0.7);flex-shrink:0;">
+            <span style="width:9px;height:9px;border-radius:50%;background:rgba(201,169,98,0.5);"></span>
+            <span style="width:9px;height:9px;border-radius:50%;background:rgba(201,169,98,0.28);"></span>
+            <span style="width:9px;height:9px;border-radius:50%;background:rgba(201,169,98,0.28);"></span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(248,246,241,0.5);margin-left:8px;">node0 — onboard</span>
+            <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.1em;color:#C9A962;">step {{ stepShown }} / {{ stepTotal }}</span>
+          </div>
+          <div style="padding:18px 22px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.7;min-height:360px;flex:1;">
+            <sc-for list="{{ log }}" as="l" hint-placeholder-count="4">
+              <div style="color:{{ l.color }};white-space:pre-wrap;">{{ l.txt }}</div>
+            </sc-for>
+            <div style="color:#C9A962;">{{ onbPrompt }}<span style="animation:blink 1.1s step-end infinite;animation-play-state:var(--pl,running);">▍</span></div>
+          </div>
+        </div>
+
+        <!-- live state panel -->
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div style="border:1px solid rgba(201,169,98,0.2);border-radius:13px;background:rgba(20,40,55,0.28);padding:18px 20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(248,246,241,0.42);">AASR state</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;color:{{ aasrColor }};">{{ aasr }}</span>
+            </div>
+            <div style="height:3px;border-radius:2px;background:rgba(201,169,98,0.12);margin-top:12px;overflow:hidden;"><div style="height:100%;width:{{ progressPct }};background:linear-gradient(90deg,#8A6B2E,#5CE0A0);border-radius:2px;transition:width .5s ease;"></div></div>
+          </div>
+
+          <div style="border:1px solid rgba(201,169,98,0.2);border-radius:13px;background:rgba(20,40,55,0.28);padding:18px 20px;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(248,246,241,0.42);">invariants</span>
+            <div style="margin-top:12px;display:flex;flex-direction:column;gap:9px;">
+              <sc-for list="{{ invPanel }}" as="v" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <span data-inv="{{ $index }}" style="width:9px;height:9px;border-radius:50%;flex-shrink:0;"></span>
+                  <span data-invn="{{ $index }}" style="font-family:'JetBrains Mono',monospace;font-size:11px;">{{ v.name }}</span>
+                  <span style="font-family:'Inter',sans-serif;font-size:10.5px;color:rgba(248,246,241,0.34);margin-left:auto;">{{ v.gloss }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="border:1px solid rgba(201,169,98,0.2);border-radius:13px;background:rgba(20,40,55,0.28);padding:18px 20px;flex:1;min-height:120px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(248,246,241,0.42);">receipt ledger</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5CE0A0;">{{ receiptCount }} sealed</span>
+            </div>
+            <div style="margin-top:12px;display:flex;flex-direction:column;gap:7px;">
+              <sc-for list="{{ receipts }}" as="r" hint-placeholder-count="0">
+                <div style="display:flex;align-items:baseline;gap:9px;font-family:'JetBrains Mono',monospace;">
+                  <span style="font-size:9.5px;color:#C9A962;">{{ r.id }}</span>
+                  <span style="font-size:10.5px;color:rgba(248,246,241,0.7);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.action }}</span>
+                  <span style="font-size:9px;color:rgba(92,224,160,0.7);">{{ r.hash8 }}</span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ noReceipts }}" hint-placeholder-val="{{ true }}"><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(248,246,241,0.3);">— no receipts yet · run a step —</span></sc-if>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLOSED LOOP + INVARIANTS -->
+    <section data-screen-label="The closed proof loop" style="min-height:100vh;box-sizing:border-box;scroll-snap-align:start;display:grid;grid-template-columns:0.9fr 1.1fr;gap:5vw;align-items:center;padding:12vh 5vw 8vh;position:relative;">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.32em;text-transform:uppercase;color:#C9A962;">The closed loop</div>
+        <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(28px,3.4vw,46px);line-height:1.06;color:#F8F6F1;margin-top:10px;max-width:16ch;">Nothing escapes the loop.</div>
+        <div style="font-family:'Inter',sans-serif;font-weight:300;font-size:15.5px;line-height:1.6;color:rgba(248,246,241,0.6);margin-top:16px;max-width:42ch;">Every action re-enters where it began. Corrections don't patch the output — they loop back to consent, and the receipt trail carries the whole history forward.</div>
+        <div style="margin-top:26px;display:flex;flex-direction:column;gap:11px;">
+          <sc-for list="{{ invariants }}" as="v" hint-placeholder-count="5">
+            <div style="display:flex;align-items:flex-start;gap:12px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5CE0A0;border:1px solid rgba(92,224,160,0.35);border-radius:5px;padding:3px 7px;white-space:nowrap;margin-top:1px;">{{ v.name }}</span>
+              <span style="font-family:'Inter',sans-serif;font-size:13.5px;color:rgba(248,246,241,0.68);line-height:1.45;">{{ v.desc }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- ring -->
+      <div style="position:relative;width:100%;aspect-ratio:1;max-width:460px;margin:0 auto;">
+        <div style="position:absolute;inset:12%;border:1px dashed rgba(201,169,98,0.26);border-radius:50%;"></div>
+        <div style="position:absolute;inset:12%;animation:orbit 14s linear infinite;animation-play-state:var(--pl,running);">
+          <span style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:12px;height:12px;border-radius:50%;background:#5CE0A0;box-shadow:0 0 16px #5CE0A0;"></span>
+        </div>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;">
+          <span style="font-family:'Amiri',serif;font-size:26px;color:rgba(201,169,98,0.6);">↻</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(248,246,241,0.4);margin-top:6px;">proof loop</span>
+        </div>
+        <sc-for list="{{ loop }}" as="n" hint-placeholder-count="5">
+          <div style="position:absolute;left:{{ n.left }};top:{{ n.top }};transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:7px;width:118px;">
+            <span style="width:52px;height:52px;border-radius:50%;border:1px solid rgba(201,169,98,0.45);background:rgba(10,22,40,0.92);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:14px;color:#C9A962;">{{ n.i }}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(248,246,241,0.72);text-align:center;">{{ n.t }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- FOOTER / HONESTY -->
+    <section data-screen-label="Honesty footer" style="min-height:78vh;box-sizing:border-box;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;padding:10vh 5vw;position:relative;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.32em;text-transform:uppercase;color:#C9A962;">The honest floor</div>
+      <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(30px,4.6vw,68px);line-height:1.04;color:#F8F6F1;margin-top:14px;max-width:20ch;">We ship the proof. <span style="font-style:italic;color:#C9A962;">Not the promise.</span></div>
+
+      <div style="margin-top:5vh;display:flex;gap:12px;flex-wrap:wrap;">
+        <sc-for list="{{ honesty }}" as="h" hint-placeholder-count="4">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.06em;color:{{ h.color }};border:1px solid {{ h.border }};border-radius:8px;padding:11px 16px;background:{{ h.bg }};">{{ h.txt }}</span>
+        </sc-for>
+      </div>
+
+      <div style="margin-top:6vh;padding-top:24px;border-top:1px solid rgba(201,169,98,0.16);display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:18px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <svg width="26" height="26" viewBox="0 0 200 200" style="overflow:visible;"><g fill="none" stroke="#C9A962" stroke-width="4"><circle cx="100" cy="100" r="30"/><circle cx="100" cy="70" r="30"/><circle cx="126" cy="85" r="30"/><circle cx="126" cy="115" r="30"/><circle cx="100" cy="130" r="30"/><circle cx="74" cy="115" r="30"/><circle cx="74" cy="85" r="30"/></g></svg>
+          <div>
+            <div style="font-family:'Playfair Display',serif;font-weight:700;font-size:17px;letter-spacing:0.1em;color:#F8F6F1;">BIZRA <span style="font-family:'JetBrains Mono',monospace;font-size:0.8em;color:#C9A962;">/ node0</span></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.14em;color:rgba(248,246,241,0.4);margin-top:2px;">local-first proof runtime · إحسان</div>
+          </div>
+        </div>
+        <a href="BIZRA Manifestation.dc.html" style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#050B14;background:#C9A962;border-radius:8px;padding:12px 20px;text-decoration:none;">See the full manifestation →</a>
+      </div>
+    </section>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:&quot;100%&quot;},&quot;autoBoot&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Motion&quot;},&quot;reduceMotion&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Motion&quot;},&quot;autoOnboard&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Motion&quot;}}">
+class Component extends DCLogic {
+  state = {
+    boot: [], bootDone: false, invLit: 0, genesisHash: '',
+    log: [], step: 0, running: false, receipts: [],
+    onbInv: { IHSAN_FLOOR: 0, ZANN_ZERO: 0, CLAIM_MUST_BIND: 0, RIBA_ZERO: 0, NO_SHADOW_STATE: 0 },
+    aasr: 'IDLE',
+  };
+
+  SEED = [
+    { cx: 100, cy: 70 }, { cx: 126, cy: 85 }, { cx: 126, cy: 115 },
+    { cx: 100, cy: 130 }, { cx: 74, cy: 115 }, { cx: 74, cy: 85 }, { cx: 100, cy: 100 },
+  ];
+
+  BOOT = [
+    { txt: '$ node0 boot --local', cls: 'prompt', d: 380 },
+    { txt: '▸ AASR · node0 state router ···· online', cls: 'ok', d: 240 },
+    { txt: '▸ consent grammar ············· loaded', cls: 'dim' },
+    { txt: '▸ receipt schema ·············· verified', cls: 'dim' },
+    { txt: '▸ replay engine ··············· ready', cls: 'dim' },
+    { txt: 'invariants —', cls: 'label', d: 180 },
+    { inv: 'IHSAN_FLOOR', txt: '  IHSAN_FLOOR ········· ✓' },
+    { inv: 'ZANN_ZERO', txt: '  ZANN_ZERO ··········· ✓' },
+    { inv: 'CLAIM_MUST_BIND', txt: '  CLAIM_MUST_BIND ····· ✓' },
+    { inv: 'RIBA_ZERO', txt: '  RIBA_ZERO ··········· ✓' },
+    { inv: 'NO_SHADOW_STATE', txt: '  NO_SHADOW_STATE ····· ✓' },
+    { hash: true },
+    { txt: 'node0 ready.  [SIMULATION_ONLY]', cls: 'ready', d: 240 },
+  ];
+
+  STEPS = [
+    { cmd: 'node0 init', out: ['local node created · no daemon · no network', 'state → READY'], aasr: 'READY', lights: 'NO_SHADOW_STATE', emits: ['node.genesis'] },
+    { cmd: 'node0 consent grant content_read ./docs', out: ['consent grammar updated', 'grant: content_read → ./docs  (revocable)'], lights: 'CLAIM_MUST_BIND', emits: ['consent.grant content_read'] },
+    { cmd: 'node0 index ./docs', out: ['reading (consented) …', '3 sources · emitting one receipt each'], aasr: 'GOVERNED', lights: 'ZANN_ZERO', emits: ['read ./docs/vision.md', 'read ./docs/spec.md', 'read ./docs/notes.md'] },
+    { cmd: 'node0 receipts', out: ['ledger → every read is hashed & source-bound'], emits: [] },
+    { cmd: 'node0 replay r5', out: ['re-running receipt r5 …', 'deterministic ✓ · outcome matches'], lights: 'IHSAN_FLOOR', emits: ['replay.verify r5 ✓'] },
+    { cmd: 'node0 evidence', out: ['Quality Evidence Card', 'coverage: reported · security: local-only', 'production_certification: false'], emits: ['evidence.card'] },
+    { cmd: 'node0 label', out: ['truth-label attached', 'SIMULATION_ONLY · no wallet · no mint · no token'], lights: 'RIBA_ZERO', emits: ['truth.label SIMULATION_ONLY'] },
+    { cmd: 'node0 status', out: ['AASR: GOVERNED · invariants 5/5 green', 'next safe action: expand consent, or replay all'], emits: [] },
+  ];
+
+  INV_GLOSS = {
+    IHSAN_FLOOR: 'quality floor', ZANN_ZERO: 'no assumption', CLAIM_MUST_BIND: 'claims bind to source',
+    RIBA_ZERO: 'no token economics', NO_SHADOW_STATE: 'no hidden state',
+  };
+
+  INVARIANTS = [
+    { name: 'IHSAN_FLOOR', desc: 'Nothing ships below the excellence floor — Ihsān as a gate, not a slogan.' },
+    { name: 'ZANN_ZERO', desc: 'Zero conjecture. If it is not receipted, it is not asserted.' },
+    { name: 'CLAIM_MUST_BIND', desc: 'Every claim binds to a source line and a hash. No free-floating output.' },
+    { name: 'RIBA_ZERO', desc: 'No interest, no token economics. Reward only follows verified impact.' },
+    { name: 'NO_SHADOW_STATE', desc: 'No hidden daemon, no unseen state. What runs is what you consented to.' },
+  ];
+
+  LOOP = ['Consent', 'Act', 'Receipt', 'Replay', 'Correction'];
+
+  HONESTY = [
+    { txt: 'proof runtime: emerging', kind: 'gold' },
+    { txt: 'economy: SIMULATION_ONLY', kind: 'green' },
+    { txt: 'no wallet · no mint · no token', kind: 'green' },
+    { txt: 'production_certification: false', kind: 'gold' },
+  ];
+
+  componentDidMount() {
+    if (this.props.autoBoot !== false) this.runBoot();
+    else this.setState({ bootDone: true });
+    this.applyMotion();
+    this.applyAuto();
+    this.paint();
+  }
+  componentDidUpdate() { this.applyMotion(); this.applyAuto(); this.paint(); }
+
+  paint() {
+    const green = '#5CE0A0';
+    const inv = this.state.onbInv;
+    this.INVARIANTS.forEach((v, i) => {
+      const lit = inv[v.name] === 1;
+      const dot = document.querySelector('[data-inv="' + i + '"]');
+      if (dot) { dot.style.background = lit ? green : 'rgba(201,169,98,0.28)'; dot.style.boxShadow = lit ? '0 0 10px rgba(92,224,160,0.7)' : 'none'; }
+      const nm = document.querySelector('[data-invn="' + i + '"]');
+      if (nm) nm.style.color = lit ? '#F8F6F1' : 'rgba(248,246,241,0.5)';
+    });
+    document.querySelectorAll('[data-seed]').forEach((c) => {
+      const j = +c.getAttribute('data-seed');
+      const lit = j < 6 ? j < this.state.invLit : this.state.bootDone;
+      c.style.fill = lit ? 'rgba(92,224,160,0.16)' : 'none';
+      c.style.stroke = lit ? green : 'rgba(201,169,98,0.4)';
+    });
+  }
+  componentWillUnmount() {
+    clearTimeout(this._bt); clearTimeout(this._auto);
+  }
+
+  applyMotion() {
+    const r = document.getElementById('root');
+    if (r) r.style.setProperty('--pl', this.props.reduceMotion ? 'paused' : 'running');
+  }
+  applyAuto() {
+    if (this.props.autoOnboard && !this._autoOn) {
+      this._autoOn = true;
+      const tick = () => {
+        if (!this.props.autoOnboard) { this._autoOn = false; return; }
+        if (this.state.step < this.STEPS.length && !this.state.running) this.runStep();
+        this._auto = setTimeout(tick, 1900);
+      };
+      this._auto = setTimeout(tick, 1400);
+    } else if (!this.props.autoOnboard) { this._autoOn = false; clearTimeout(this._auto); }
+  }
+
+  async sha256(str) {
+    try {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+      return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) {
+      let h = 0x811c9dc5;
+      for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+      return (h >>> 0).toString(16).padStart(8, '0') + 'sim';
+    }
+  }
+
+  runBoot() {
+    clearTimeout(this._bt);
+    this.setState({ boot: [], bootDone: false, invLit: 0, genesisHash: '' });
+    let i = 0;
+    const seq = this.BOOT;
+    const step = () => {
+      if (i >= seq.length) { this.setState({ bootDone: true }); return; }
+      const item = seq[i]; i++;
+      if (item.inv) {
+        this.setState((st) => ({ boot: [...st.boot, { txt: item.txt, cls: 'inv' }], invLit: st.invLit + 1 }));
+        this._bt = setTimeout(step, 250);
+      } else if (item.hash) {
+        this.setState((st) => ({ boot: [...st.boot, { txt: '✔ genesis receipt sealed', cls: 'green' }] }));
+        this.sha256('node0|genesis|' + Date.now()).then((h) => {
+          this.setState((st) => ({ boot: [...st.boot, { txt: '  sha256 · ' + h.slice(0, 40), cls: 'hash' }], genesisHash: h }));
+          this._bt = setTimeout(step, 320);
+        });
+      } else {
+        this.setState((st) => ({ boot: [...st.boot, { txt: item.txt, cls: item.cls }] }));
+        this._bt = setTimeout(step, item.d || 210);
+      }
+    };
+    step();
+  }
+
+  runStep() {
+    if (this.state.running || this.state.step >= this.STEPS.length) return;
+    const s = this.STEPS[this.state.step];
+    this.setState({ running: true });
+    const lines = [{ txt: '$ ' + s.cmd, cls: 'prompt' }];
+    s.out.forEach((o) => {
+      let cls = 'dim';
+      if (o.indexOf('✓') >= 0) cls = 'green';
+      else if (o.indexOf('false') >= 0 || o.indexOf('SIMULATION') >= 0) cls = 'warn';
+      else if (o.indexOf('→') >= 0 || o.indexOf('grant') >= 0 || o.indexOf('Card') >= 0) cls = 'ok';
+      lines.push({ txt: '  ' + o, cls });
+    });
+    let i = 0;
+    const tick = () => {
+      if (i < lines.length) {
+        this.setState((st) => ({ log: [...st.log, lines[i]] }));
+        i++;
+        this._bt = setTimeout(tick, 150);
+      } else {
+        this.finishStep(s);
+      }
+    };
+    tick();
+  }
+
+  async finishStep(s) {
+    const fresh = [];
+    for (const action of (s.emits || [])) {
+      this._rc = (this._rc || 0) + 1;
+      const id = 'r' + this._rc;
+      const hash = await this.sha256(id + '|' + action + '|node0');
+      fresh.push({ id, action, hash8: hash.slice(0, 10) });
+    }
+    this.setState((st) => {
+      const inv = { ...st.onbInv };
+      if (s.lights) inv[s.lights] = 1;
+      return {
+        step: st.step + 1, running: false,
+        receipts: [...st.receipts, ...fresh],
+        onbInv: inv,
+        aasr: s.aasr || st.aasr,
+      };
+    });
+  }
+
+  resetOnb() {
+    clearTimeout(this._bt);
+    this._rc = 0;
+    this.setState({ log: [], step: 0, running: false, receipts: [], aasr: 'IDLE', onbInv: { IHSAN_FLOOR: 0, ZANN_ZERO: 0, CLAIM_MUST_BIND: 0, RIBA_ZERO: 0, NO_SHADOW_STATE: 0 } });
+  }
+
+  ringPos(n, i, r) {
+    const a = (-90 + i * 360 / n) * Math.PI / 180;
+    return { left: (50 + r * Math.cos(a)) + '%', top: (50 + r * Math.sin(a)) + '%' };
+  }
+
+  renderVals() {
+    const S = this.state;
+    const gold = '#C9A962';
+    const green = '#5CE0A0';
+    const colorFor = (cls) => ({
+      prompt: gold, dim: 'rgba(248,246,241,0.6)', ok: '#B9D9C9', label: 'rgba(201,169,98,0.7)',
+      inv: green, green: green, hash: 'rgba(248,246,241,0.5)', ready: '#F9F1D8', warn: '#D4B875',
+    })[cls] || 'rgba(248,246,241,0.7)';
+
+    const boot = S.boot.map((b) => ({ txt: b.txt, color: colorFor(b.cls) }));
+    const log = S.log.map((l) => ({ txt: l.txt, color: colorFor(l.cls) }));
+
+    const seed = this.SEED.map((p) => ({ cx: p.cx, cy: p.cy }));
+
+    const invPanel = this.INVARIANTS.map((v) => ({ name: v.name, gloss: this.INV_GLOSS[v.name] }));
+
+    const loop = this.LOOP.map((t, i) => {
+      const pos = this.ringPos(this.LOOP.length, i, 40);
+      return { t, i: i + 1, left: pos.left, top: pos.top };
+    });
+
+    const honesty = this.HONESTY.map((h) => ({ txt: h.txt,
+      color: h.kind === 'green' ? green : gold,
+      border: h.kind === 'green' ? 'rgba(92,224,160,0.35)' : 'rgba(201,169,98,0.3)',
+      bg: h.kind === 'green' ? 'rgba(92,224,160,0.05)' : 'rgba(201,169,98,0.05)' }));
+
+    const done = S.step >= this.STEPS.length;
+    const aasrColor = S.aasr === 'GOVERNED' ? green : (S.aasr === 'READY' ? gold : 'rgba(248,246,241,0.5)');
+
+    return {
+      boot, bootDone: S.bootDone,
+      bootCursor: S.bootDone ? '$ ' : '',
+      replayBoot: () => this.runBoot(),
+      seed, invLit: S.invLit, invCountColor: S.invLit >= 5 ? green : gold,
+      log, onbPrompt: S.running ? '' : (done ? '$ node0 — governed ' : '$ '),
+      runStep: () => this.runStep(), resetOnb: () => this.resetOnb(),
+      runBtnLabel: S.running ? 'running…' : (done ? 'complete ✓' : (S.step === 0 ? 'begin ▸' : 'run next ▸')),
+      runBtnBg: done ? green : gold,
+      stepShown: Math.min(S.step, this.STEPS.length), stepTotal: this.STEPS.length,
+      invPanel, aasr: S.aasr, aasrColor,
+      progressPct: Math.round((S.step / this.STEPS.length) * 100) + '%',
+      receipts: S.receipts, receiptCount: S.receipts.length, noReceipts: S.receipts.length === 0,
+      invariants: this.INVARIANTS, loop, honesty,
+    };
+  }
+}
+</script>
+</body>
+</html>

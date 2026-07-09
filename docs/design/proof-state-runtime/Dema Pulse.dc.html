@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body { background:#02060C; height:100%; }
+    body { -webkit-font-smoothing:antialiased; }
+    ::selection { background:rgba(201,169,98,0.28); color:#F8F6F1; }
+  </style>
+</helmet>
+
+<div data-screen-label="One Pulse — 00:00" style="position:fixed;inset:0;background:#02060C;display:flex;align-items:center;justify-content:center;">
+  <x-import component-from-global-scope="OnePulse" from="./animations.jsx ./one-pulse.jsx" hint-size="100%,100%"></x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:720}}"></script>
+</body>
+</html>

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Playfair+Display:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body { background:#050B14; height:100%; }
+    body { -webkit-font-smoothing:antialiased; }
+    ::selection { background:rgba(201,169,98,0.28); color:#F8F6F1; }
+    html { scroll-snap-type: y proximity; }
+    body { scrollbar-width: none; }
+    body::-webkit-scrollbar { width:0; height:0; }
+    @keyframes spinSlow { to { transform:rotate(360deg); } }
+    @keyframes glowPulse { 0%,100% { opacity:.4; transform:scale(1); } 50% { opacity:.66; transform:scale(1.09); } }
+    @keyframes drift { 0%,100% { transform:translate(0,0); } 50% { transform:translate(-14px,10px); } }
+    @keyframes floaty { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
+    @keyframes blink { 0%,48% { opacity:1; } 49%,100% { opacity:0; } }
+    @keyframes rv { from { opacity:0; transform:translateY(26px); } to { opacity:1; transform:none; } }
+  </style>
+</helmet>
+
+<div id="root" style="position:relative;width:100%;background:#050B14;color:#F8F6F1;font-family:'Inter',sans-serif;">
+
+  <!-- ambient decor -->
+  <div style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><div style="position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(201,169,98,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(201,169,98,0.05) 1px,transparent 1px);background-size:56px 56px;-webkit-mask-image:radial-gradient(circle at 50% 40%,#000 0%,transparent 76%);mask-image:radial-gradient(circle at 50% 40%,#000 0%,transparent 76%);animation:drift 44s ease-in-out infinite;animation-play-state:var(--pl,running);"></div>
+  <div style="position:absolute;top:-16vh;left:50%;width:70vw;height:70vw;transform:translateX(-50%);pointer-events:none;background:radial-gradient(circle,rgba(201,169,98,0.11),transparent 60%);animation:glowPulse 9s ease-in-out infinite;animation-play-state:var(--pl,running);"></div>
+  <div style="position:absolute;bottom:-24vh;right:-10vw;width:60vw;height:60vw;pointer-events:none;background:radial-gradient(circle,rgba(44,83,100,0.28),transparent 62%);animation:glowPulse 12s ease-in-out infinite;animation-play-state:var(--pl,running);"></div>
+  <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 42%,transparent 44%,rgba(3,7,14,0.72) 100%);"></div></div>
+
+  <!-- wordmark -->
+  <div style="position:fixed;top:26px;left:6vw;z-index:60;display:flex;align-items:center;gap:11px;">
+    <svg width="24" height="24" viewBox="0 0 200 200" style="overflow:visible;"><g fill="none" stroke="#C9A962" stroke-width="4"><circle cx="100" cy="100" r="30"/><circle cx="100" cy="70" r="30"/><circle cx="126" cy="85" r="30"/><circle cx="126" cy="115" r="30"/><circle cx="100" cy="130" r="30"/><circle cx="74" cy="115" r="30"/><circle cx="74" cy="85" r="30"/></g></svg>
+    <span style="font-family:'Playfair Display',serif;font-weight:700;font-size:19px;letter-spacing:0.14em;color:#F8F6F1;">BIZRA</span>
+  </div>
+
+  <!-- chapter rail -->
+  <div style="position:fixed;top:50%;right:22px;transform:translateY(-50%);z-index:60;display:flex;flex-direction:column;gap:13px;align-items:flex-end;">
+    <sc-for list="{{ chapters }}" as="c" hint-placeholder-count="10">
+      <button onClick="{{ c.onClick }}" style="display:flex;align-items:center;gap:9px;background:none;border:none;cursor:pointer;padding:1px 0;">
+        <sc-if value="{{ c.on }}" hint-placeholder-val="{{ false }}"><span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.22em;text-transform:uppercase;color:#C9A962;white-space:nowrap;">{{ c.name }}</span></sc-if>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.1em;color:{{ c.numColor }};">{{ c.label }}</span>
+        <span style="height:1px;width:{{ c.tickW }};background:{{ c.tickColor }};transition:all .45s cubic-bezier(.2,.7,.2,1);"></span>
+      </button>
+    </sc-for>
+  </div>
+
+  <!-- truth strip -->
+  <div style="position:fixed;bottom:20px;left:6vw;right:6vw;z-index:60;display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:0.13em;color:rgba(248,246,241,0.4);text-transform:uppercase;pointer-events:none;">
+    <span style="display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:#C9A962;box-shadow:0 0 9px #C9A962;"></span>{{ truthLeft }}</span>
+    <span>{{ truthRight }}</span>
+  </div>
+
+  <!-- SCROLLER -->
+  <div id="scroller" style="position:relative;z-index:1;">
+
+    <!-- 00 OVERTURE -->
+    <section id="ch0" data-screen-label="00 Overture" style="min-height:100vh;box-sizing:border-box;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:12vh 8vw;position:relative;">
+      <div data-rv="" style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.34em;text-transform:uppercase;color:#C9A962;">Proof-State Runtime&nbsp;&nbsp;·&nbsp;&nbsp;Dubai&nbsp;&nbsp;·&nbsp;&nbsp;01 Jul 2026</div>
+
+      <div data-rv="" style="margin:4.5vh 0 3.2vh;">
+        <svg width="128" height="128" viewBox="0 0 200 200" style="overflow:visible;animation:spinSlow 120s linear infinite;animation-play-state:var(--pl,running);">
+          <g fill="none" stroke="#C9A962" stroke-width="1" opacity="0.62">
+            <circle cx="100" cy="100" r="30"/><circle cx="100" cy="70" r="30"/><circle cx="126" cy="85" r="30"/><circle cx="126" cy="115" r="30"/><circle cx="100" cy="130" r="30"/><circle cx="74" cy="115" r="30"/><circle cx="74" cy="85" r="30"/>
+          </g>
+          <circle cx="100" cy="100" r="62" fill="none" stroke="#C9A962" stroke-width="0.6" opacity="0.3"/>
+          <circle cx="100" cy="100" r="2.4" fill="#C9A962"/>
+        </svg>
+      </div>
+
+      <div data-rv="" style="font-family:'Playfair Display',serif;font-weight:800;font-size:clamp(66px,12vw,176px);line-height:0.9;letter-spacing:0.03em;background:linear-gradient(118deg,#8A6B2E,#C9A962 42%,#F9F1D8 82%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;">BIZRA</div>
+
+      <div data-rv="" style="margin-top:14px;display:flex;align-items:center;gap:14px;justify-content:center;">
+        <span style="font-family:'Amiri',serif;font-size:30px;color:#C9A962;">إحسان</span>
+        <span style="width:1px;height:20px;background:rgba(201,169,98,0.4);"></span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.26em;text-transform:uppercase;color:rgba(248,246,241,0.44);">Ihsān · excellence as verification</span>
+      </div>
+
+      <div data-rv="" style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(26px,3.5vw,48px);line-height:1.12;color:#F8F6F1;margin-top:6vh;max-width:22ch;">The proof layer for <span style="font-style:italic;color:#C9A962;">agentic work</span>.</div>
+
+      <div data-rv="" style="font-family:'Inter',sans-serif;font-weight:300;font-size:clamp(15px,1.5vw,19px);line-height:1.6;color:rgba(248,246,241,0.6);margin-top:18px;max-width:54ch;">AI agents can act. BIZRA proves what they did — through <span style="color:#E6D5A6;">consent, receipts, replay, and correction</span>.</div>
+
+      <div style="position:absolute;bottom:7.5vh;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(248,246,241,0.4);display:flex;flex-direction:column;align-items:center;gap:7px;animation:floaty 3s ease-in-out infinite;animation-play-state:var(--pl,running);">Scroll<span style="font-size:14px;">↓</span></div>
+    </section>
+
+    <!-- 01 CORE LAW -->
+    <section id="ch1" data-screen-label="01 The Core Law" style="min-height:100vh;box-sizing:border-box;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;padding:12vh 10vw;position:relative;">
+      <div data-rv="" style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.32em;text-transform:uppercase;color:#C9A962;">The law it runs on</div>
+      <div data-rv="" style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(30px,4vw,54px);line-height:1.05;color:#F8F6F1;margin-top:16px;max-width:20ch;">One constitution. Five gates. No exceptions.</div>
+
+      <div style="margin-top:5vh;display:flex;flex-direction:column;gap:0;max-width:1000px;">
+        <sc-for list="{{ laws }}" as="L" hint-placeholder-count="5">
+          <div data-rv="" style="display:flex;align-items:flex-start;gap:26px;">
+            <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
+              <div style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(201,169,98,0.55);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:#C9A962;background:rgba(201,169,98,0.06);">{{ L.no }}</div>
+              <sc-if value="{{ L.line }}" hint-placeholder-val="{{ true }}"><div style="width:1px;height:28px;background:linear-gradient(#C9A962,rgba(201,169,98,0.12));"></div></sc-if>
+            </div>
+            <div style="font-family:'Playfair Display',serif;font-weight:400;font-size:clamp(20px,2.6vw,34px);line-height:1.3;color:rgba(248,246,241,0.9);padding-top:0;">{{ L.pre }}<span style="font-style:italic;font-weight:600;background:linear-gradient(118deg,#C9A962,#F9F1D8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">{{ L.key }}</span>{{ L.post }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- 02 THE LOGIC -->
+    <section id="ch2" data-screen-label="02 The Logic" style="min-height:100vh;box-sizing:border-box;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;padding:12vh 8vw;position:relative;">
+      <div data-rv="" style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.32em;text-transform:uppercase;color:#C9A962;">The business logic</div>
+      <div data-rv="" style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(28px,3.6vw,50px);line-height:1.08;color:#F8F6F1;margin-top:16px;max-width:26ch;">Enterprises don't ask <span style="color:rgba(248,246,241,0.4);font-style:italic;">can the AI do it.</span><br/>They ask <span style="font-style:italic;color:#C9A962;">can we trust it.</span></div>
+
+      <div data-rv="" style="margin-top:4.5vh;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+        <sc-for list="{{ questions }}" as="q" hint-placeholder-count="7">
+          <div style="border:1px solid rgba(201,169,98,0.16);border-radius:12px;background:rgba(20,40,55,0.22);padding:20px 18px;min-height:96px;display:flex;flex-direction:column;justify-content:space-between;transition:all .35s ease;" style-hover="border:1px solid rgba(201,169,98,0.55);background:rgba(201,169,98,0.07);transform:translateY(-3px);">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#C9A962;letter-spacing:0.12em;">{{ q.k }}</span>
+            <span style="font-family:'Playfair Display',serif;font-size:19px;line-height:1.25;color:rgba(248,246,241,0.92);">{{ q.t }}</span>
+          </div>
+        </sc-for>
+        <div style="border:1px solid rgba(201,169,98,0.5);border-radius:12px;background:linear-gradient(150deg,rgba(201,169,98,0.16),rgba(201,169,98,0.04));padding:20px 18px;min-height:96px;display:flex;flex-direction:column;justify-content:center;">
+          <span style="font-family:'Playfair Display',serif;font-style:italic;font-size:20px;line-height:1.2;color:#F9F1D8;">That is BIZRA's market.</span>
+        </div>
+      </div>
+
+      <div data-rv="" style="margin-top:5vh;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.24em;text-transform:uppercase;color:rgba(248,246,241,0.4);margin-bottom:16px;">Where BIZRA sits</div>
+        <div style="display:flex;align-items:stretch;gap:0;flex-wrap:wrap;">
+          <sc-for list="{{ spine }}" as="n" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;">
+              <div style="border:1px solid {{ n.border }};background:{{ n.bg }};border-radius:11px;padding:16px 20px;min-width:150px;">
+                <div style="font-family:'Inter',sans-serif;font-weight:600;font-size:15px;color:{{ n.title }};">{{ n.t }}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.08em;color:rgba(248,246,241,0.42);margin-top:5px;text-transform:uppercase;">{{ n.s }}</div>
+              </div>
+              <sc-if value="{{ n.arrow }}" hint-placeholder-val="{{ true }}"><span style="color:#C9A962;font-size:20px;padding:0 12px;">→</span></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 CATEGORY + MARKET -->
+    <section id="ch3" data-screen-label="03 Category" style="min-height:100vh;box-sizing:border-box;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;padding:12vh 8vw;position:relative;">
+      <div data-rv="" style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.32em;text-transform:uppercase;color:#C9A962;">The category</div>
+      <div data-rv="" style="font-family:'Playfair Display',serif;font-weight:700;font-size:clamp(34px,5.5vw,80px);line-height:1.02;margin-top:14px;max-width:16ch;background:linear-gradient(118deg,#B08D45,#C9A962 45%,#F9F1D8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">Proof-State Runtime for Agentic Work</div>
+
+      <div data-rv="" style="display:flex;gap:14px;margin-top:26px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:260px;border-left:2px solid rgba(201,169,98,0.5);padding:6px 0 6px 16px;"><span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:#C9A962;">For investors</span><div style="font-family:'Inter',sans-serif;font-size:16px;color:rgba(248,246,241,0.78);margin-top:6px;line-height:1.5;">Trust infrastructure for autonomous AI work.</div></div>
+        <div style="flex:1;min-width:260px;border-left:2px solid rgba(201,169,98,0.5);padding:6px 0 6px 16px;"><span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:#C9A962;">For builders</span><div style="font-family:'Inter',sans-serif;font-size:16px;color:rgba(248,246,241,0.78);margin-top:6px;line-height:1.5;">A local-first layer that turns agent actions into consent-bound, receipt-backed, replayable work.</div></div>
+      </div>
+
+      <div data-rv="" style="margin-top:5vh;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.24em;text-transform:uppercase;color:rgba(248,246,241,0.4);margin-bottom:16px;">The market shift — three forces emerging, one missing</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+          <sc-for list="{{ forces }}" as="f" hint-placeholder-count="4">
+            <div style="border:1px solid {{ f.border }};background:{{ f.bg }};border-radius:12px;padding:20px 18px;display:flex;flex-direction:column;gap:10px;min-height:170px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.14em;text-transform:uppercase;color:{{ f.tag }};">{{ f.state }}</span>
+              <span style="font-family:'Playfair Display',serif;font-size:22px;color:{{ f.title }};line-height:1.1;">{{ f.k }}</span>
+              <span style="font-family:'Inter',sans-serif;font-size:13px;color:rgba(248,246,241,0.6);line-height:1.5;flex:1;">{{ f.d }}</span>
+              <sc-if value="{{ showCitesAnd }}" hint-placeholder-val="{{ false }}"><span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:0.06em;color:rgba(201,169,98,0.6);">{{ f.src }}</span></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 BUSINESS MODEL -->
+    <section id="ch4" data-screen-label="04 Business Model" style="min-height:100vh;box-sizing:border-box;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;padding:11vh 7vw;position:relative;">
+      <div data-rv="" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.32em;text-transform:uppercase;color:#C9A962;">The business model</div>
+          <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(28px,3.6vw,48px);line-height:1.06;color:#F8F6F1;margin-top:12px;">Open core → governed labor → verified results</div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(248,246,241,0.42);display:flex;align-items:center;gap:8px;"><span style="color:#C9A962;">↑</span> value ladder · tap a layer</div>
+      </div>
+
+      <div data-rv="" style="margin-top:3.5vh;display:flex;flex-direction:column;gap:8px;">
+        <sc-for list="{{ layers }}" as="L" hint-placeholder-count="7">
+          <button onClick="{{ L.onClick }}" style="text-align:left;cursor:pointer;border:1px solid {{ L.borderColor }};background:{{ L.bg }};border-radius:12px;padding:0;overflow:hidden;transition:border-color .4s ease,background .4s ease;">
+            <div style="display:grid;grid-template-columns:64px 1.6fr 1.3fr 1.2fr;align-items:center;gap:16px;padding:15px 20px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:{{ L.nColor }};">{{ L.n }}</span>
+              <span style="font-family:'Playfair Display',serif;font-size:19px;color:{{ L.tColor }};">{{ L.title }}</span>
+              <span style="font-family:'Inter',sans-serif;font-size:12.5px;color:rgba(248,246,241,0.52);">{{ L.buyer }}</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#C9A962;text-align:right;">{{ L.price }}</span>
+            </div>
+            <div style="max-height:{{ L.mh }};opacity:{{ L.op }};overflow:hidden;transition:max-height .5s cubic-bezier(.2,.7,.2,1),opacity .4s ease;">
+              <div style="padding:2px 20px 20px 80px;display:flex;flex-wrap:wrap;gap:8px;">
+                <sc-for list="{{ L.features }}" as="ft" hint-placeholder-count="6">
+                  <span style="font-family:'Inter',sans-serif;font-size:12px;color:rgba(248,246,241,0.72);border:1px solid rgba(201,169,98,0.24);border-radius:20px;padding:5px 13px;background:rgba(5,11,20,0.5);">{{ ft }}</span>
+                </sc-for>
+              </div>
+            </div>
+          </button>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- 05 PRODUCTS -->
+    <section id="ch5" data-screen-label="05 Products" style="min-height:100vh;box-sizing:border-box;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;padding:11vh 7vw;position:relative;">
+      <div data-rv="" style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.32em;text-transform:uppercase;color:#C9A962;">Product architecture</div>
+      <div data-rv="" style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(28px,3.6vw,48px);line-height:1.06;color:#F8F6F1;margin-top:12px;">Ten products. One proof spine.</div>
+
+      <div data-rv="" style="margin-top:3.5vh;display:grid;grid-template-columns:1.15fr 0.85fr;gap:22px;align-items:start;">
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:9px;">
+          <sc-for list="{{ products }}" as="p" hint-placeholder-count="10">
+            <button onClick="{{ p.onClick }}" style="text-align:left;cursor:pointer;border:1px solid {{ p.borderColor }};background:{{ p.bg }};border-radius:11px;padding:14px 16px;display:flex;align-items:center;gap:13px;transition:border-color .3s ease,background .3s ease;opacity:{{ p.opacity }};">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#C9A962;flex-shrink:0;">{{ p.num }}</span>
+              <span style="font-family:'Inter',sans-serif;font-weight:500;font-size:14px;color:#F8F6F1;flex:1;line-height:1.2;">{{ p.name }}</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:0.08em;color:{{ p.stColor }};background:{{ p.stBg }};border:1px solid {{ p.stBorder }};border-radius:5px;padding:3px 6px;white-space:nowrap;">{{ p.status }}</span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="border:1px solid rgba(201,169,98,0.3);border-radius:16px;background:linear-gradient(160deg,rgba(20,40,55,0.45),rgba(10,22,40,0.3));padding:30px 28px;position:sticky;top:16vh;min-height:340px;display:flex;flex-direction:column;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;color:#C9A962;">{{ activeProd.num }} · {{ activeProd.status }}</span>
+          <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:30px;line-height:1.1;color:#F8F6F1;margin-top:14px;">{{ activeProd.name }}</div>
+          <div style="width:44px;height:1px;background:#C9A962;margin:20px 0;"></div>
+          <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:21px;line-height:1.42;color:rgba(248,246,241,0.82);flex:1;">"{{ activeProd.value }}"</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(248,246,241,0.4);margin-top:20px;">Serves → {{ activeProd.serves }}</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 06 MASTER ARCHITECTURE -->
+    <section id="ch6" data-screen-label="06 Master Architecture" style="min-height:100vh;box-sizing:border-box;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;padding:12vh 8vw;position:relative;">
+      <div data-rv="" style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.32em;text-transform:uppercase;color:#C9A962;">The master architecture</div>
+      <div data-rv="" style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(28px,3.6vw,50px);line-height:1.06;color:#F8F6F1;margin-top:12px;max-width:24ch;">Proof first. Marketplace second. <span style="color:#C9A962;font-style:italic;">Token last.</span></div>
+
+      <div data-rv="" style="margin-top:4.5vh;display:flex;align-items:center;gap:0;flex-wrap:wrap;">
+        <sc-for list="{{ arch }}" as="a" hint-placeholder-count="7">
+          <div style="display:flex;align-items:center;">
+            <div style="display:flex;flex-direction:column;gap:9px;align-items:flex-start;max-width:150px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:{{ a.numColor }};border:1px solid {{ a.numBorder }};width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;">{{ a.i }}</span>
+              <span style="font-family:'Inter',sans-serif;font-weight:500;font-size:14px;color:{{ a.color }};line-height:1.25;">{{ a.t }}</span>
+            </div>
+            <sc-if value="{{ a.arrow }}" hint-placeholder-val="{{ true }}"><span style="color:rgba(201,169,98,0.55);font-size:18px;padding:0 14px;align-self:flex-start;margin-top:2px;">→</span></sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+      <div data-rv="" style="margin-top:5vh;display:flex;gap:14px;flex-wrap:wrap;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.14em;color:rgba(248,246,241,0.55);border:1px solid rgba(201,169,98,0.2);border-radius:8px;padding:12px 18px;">01 &nbsp; Open-source builds trust</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.14em;color:rgba(248,246,241,0.55);border:1px solid rgba(201,169,98,0.2);border-radius:8px;padding:12px 18px;">02 &nbsp; Paid proof becomes product</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.14em;color:rgba(248,246,241,0.55);border:1px solid rgba(201,169,98,0.2);border-radius:8px;padding:12px 18px;">03 &nbsp; Verified impact earns reward</div>
+      </div>
+    </section>
+
+    <!-- 07 ROADMAP -->
+    <section id="ch7" data-screen-label="07 Roadmap" style="min-height:100vh;box-sizing:border-box;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;padding:12vh 8vw;position:relative;">
+      <div data-rv="" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.32em;text-transform:uppercase;color:#C9A962;">The 6-month roadmap</div>
+          <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(28px,3.6vw,48px);line-height:1.06;color:#F8F6F1;margin-top:12px;">Prove people pay for proof. Then scale.</div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button onClick="{{ prevPhase }}" style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:16px;color:#C9A962;background:rgba(201,169,98,0.08);border:1px solid rgba(201,169,98,0.3);border-radius:9px;width:44px;height:44px;">←</button>
+          <button onClick="{{ nextPhase }}" style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:16px;color:#C9A962;background:rgba(201,169,98,0.08);border:1px solid rgba(201,169,98,0.3);border-radius:9px;width:44px;height:44px;">→</button>
+        </div>
+      </div>
+
+      <!-- timeline -->
+      <div data-rv="" style="margin-top:4.5vh;position:relative;">
+        <div style="position:absolute;top:18px;left:0;right:0;height:1px;background:rgba(201,169,98,0.2);"></div>
+        <div style="position:absolute;top:18px;left:0;height:2px;background:linear-gradient(90deg,#8A6B2E,#C9A962,#F9F1D8);width:{{ phaseWidth }};transition:width .6s cubic-bezier(.2,.7,.2,1);box-shadow:0 0 10px rgba(201,169,98,0.5);"></div>
+        <div style="display:flex;justify-content:space-between;position:relative;">
+          <sc-for list="{{ plan }}" as="p" hint-placeholder-count="5">
+            <button onClick="{{ p.onClick }}" style="cursor:pointer;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:12px;flex:1;">
+              <span style="width:16px;height:16px;border-radius:50%;background:{{ p.dotBg }};border:3px solid #050B14;box-shadow:0 0 0 1px {{ p.dotRing }};margin-top:11px;transition:all .4s ease;"></span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;color:{{ p.labColor }};">{{ p.tag }}</span>
+              <span style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(248,246,241,0.4);">{{ p.when }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- detail -->
+      <div data-rv="" style="margin-top:4vh;display:grid;grid-template-columns:1fr 1.4fr;gap:20px;align-items:stretch;">
+        <div style="border:1px solid rgba(201,169,98,0.3);border-radius:16px;background:linear-gradient(160deg,rgba(20,40,55,0.4),rgba(10,22,40,0.28));padding:28px;display:flex;flex-direction:column;justify-content:space-between;">
+          <div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;color:#C9A962;">{{ phase.when }}</span>
+            <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:28px;line-height:1.12;color:#F8F6F1;margin-top:12px;">{{ phase.goal }}</div>
+          </div>
+          <div style="margin-top:22px;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(248,246,241,0.4);">Revenue target</span>
+            <div style="font-family:'Playfair Display',serif;font-size:34px;color:#C9A962;margin-top:4px;">{{ phase.rev }}</div>
+          </div>
+        </div>
+        <div style="border:1px solid rgba(201,169,98,0.16);border-radius:16px;background:rgba(20,40,55,0.2);padding:26px 28px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(248,246,241,0.4);">Deliverables</span>
+          <div style="margin-top:16px;display:flex;flex-direction:column;gap:11px;">
+            <sc-for list="{{ phaseActions }}" as="act" hint-placeholder-count="6">
+              <div style="display:flex;align-items:flex-start;gap:12px;"><span style="color:#C9A962;font-size:13px;margin-top:1px;">◆</span><span style="font-family:'Inter',sans-serif;font-size:14.5px;color:rgba(248,246,241,0.8);line-height:1.4;">{{ act }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 08 LIFECYCLES -->
+    <section id="ch8" data-screen-label="08 Lifecycles" style="min-height:100vh;box-sizing:border-box;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;padding:11vh 8vw;position:relative;">
+      <div data-rv="" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.32em;text-transform:uppercase;color:#C9A962;">The lifecycles</div>
+          <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(26px,3.4vw,46px);line-height:1.06;color:#F8F6F1;margin-top:12px;">Nothing ships without a receipt.</div>
+        </div>
+        <div style="display:flex;gap:8px;background:rgba(5,11,20,0.6);border:1px solid rgba(201,169,98,0.2);border-radius:11px;padding:5px;">
+          <button onClick="{{ lcDev }}" style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;padding:10px 16px;border-radius:8px;border:none;color:{{ devColor }};background:{{ devBg }};transition:all .3s;">Development</button>
+          <button onClick="{{ lcMgmt }}" style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;padding:10px 16px;border-radius:8px;border:none;color:{{ mgmtColor }};background:{{ mgmtBg }};transition:all .3s;">Management</button>
+        </div>
+      </div>
+
+      <div data-rv="" style="margin-top:3vh;display:grid;grid-template-columns:1fr 0.95fr;gap:30px;align-items:center;">
+        <!-- ring -->
+        <div style="position:relative;width:100%;aspect-ratio:1;max-width:440px;margin:0 auto;">
+          <div style="position:absolute;inset:14%;border:1px dashed rgba(201,169,98,0.28);border-radius:50%;"></div>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;">
+            <span style="font-family:'Amiri',serif;font-size:22px;color:rgba(201,169,98,0.6);">↻</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(248,246,241,0.4);margin-top:6px;max-width:14ch;line-height:1.5;">{{ lcTitle }}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#C9A962;margin-top:8px;">{{ curStageNo }}</span>
+          </div>
+          <sc-for list="{{ stages }}" as="s" hint-placeholder-count="8">
+            <button onClick="{{ s.onClick }}" style="position:absolute;left:{{ s.left }};top:{{ s.top }};transform:translate(-50%,-50%);cursor:pointer;width:60px;height:60px;border-radius:50%;border:1px solid {{ s.ring }};background:{{ s.fill }};color:{{ s.dot }};display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;transition:all .35s cubic-bezier(.2,.7,.2,1);box-shadow:{{ s.shadow }};">{{ s.idx }}</button>
+          </sc-for>
+        </div>
+        <!-- detail -->
+        <div style="border-left:2px solid rgba(201,169,98,0.5);padding:10px 0 10px 26px;min-height:200px;display:flex;flex-direction:column;justify-content:center;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#C9A962;">Stage {{ curStageNo }}</span>
+          <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:38px;line-height:1.05;color:#F8F6F1;margin-top:12px;">{{ curStage.t }}</div>
+          <div style="font-family:'Inter',sans-serif;font-weight:300;font-size:18px;line-height:1.55;color:rgba(248,246,241,0.72);margin-top:16px;max-width:34ch;">{{ curStage.d }}</div>
+          <div style="display:flex;gap:10px;margin-top:26px;">
+            <button onClick="{{ lcPrev }}" style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:15px;color:#C9A962;background:rgba(201,169,98,0.08);border:1px solid rgba(201,169,98,0.3);border-radius:9px;width:42px;height:42px;">←</button>
+            <button onClick="{{ lcNext }}" style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#050B14;background:#C9A962;border:none;border-radius:9px;padding:0 22px;height:42px;">Next stage →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 09 VERDICT -->
+    <section id="ch9" data-screen-label="09 The Verdict" style="min-height:100vh;box-sizing:border-box;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;padding:12vh 8vw;position:relative;">
+      <div data-rv="" style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.32em;text-transform:uppercase;color:#C9A962;">The verdict</div>
+
+      <div style="margin-top:3.5vh;display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:start;">
+        <!-- honest status -->
+        <div data-rv="">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(248,246,241,0.4);margin-bottom:16px;">Honest status — the selling point</div>
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <sc-for list="{{ status }}" as="st" hint-placeholder-count="4">
+              <div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-family:'Inter',sans-serif;font-size:15px;color:rgba(248,246,241,0.85);">{{ st.k }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.06em;color:#C9A962;">{{ st.v }}</span></div>
+                <div style="height:4px;border-radius:3px;background:rgba(201,169,98,0.12);overflow:hidden;"><div style="height:100%;width:{{ st.w }};background:linear-gradient(90deg,#8A6B2E,#C9A962);border-radius:3px;transition:width 1s ease;"></div></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.06em;color:rgba(248,246,241,0.42);margin-top:18px;line-height:1.7;border:1px solid rgba(201,169,98,0.16);border-radius:10px;padding:14px 16px;background:rgba(5,11,20,0.4);">SIMULATION_ONLY · 30/30 tests · 9 scenarios (8 stable, 1 warning)<br/>autopoietic sim · 200 receipts · chain verified · Ihsān 0.9761 · Gini 0.475 (&gt; threshold)<br/><span style="color:#C9A962;">no wallet · no mint · no public token promise</span></div>
+        </div>
+
+        <!-- compressed logic + ask -->
+        <div data-rv="">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(248,246,241,0.4);margin-bottom:14px;">The business logic, compressed</div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <sc-for list="{{ chain }}" as="ch" hint-placeholder-count="9">
+              <div style="display:flex;align-items:center;gap:11px;"><span style="color:{{ ch.color }};font-size:11px;width:12px;">{{ ch.mark }}</span><span style="font-family:'Playfair Display',serif;font-size:{{ ch.size }};font-style:{{ ch.style }};color:{{ ch.text }};line-height:1.5;">{{ ch.t }}</span></div>
+            </sc-for>
+          </div>
+          <div style="margin-top:26px;border-top:1px solid rgba(201,169,98,0.2);padding-top:22px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;">
+            <div><span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(248,246,241,0.4);">The ask</span><div style="font-family:'Playfair Display',serif;font-weight:600;font-size:32px;color:#C9A962;margin-top:4px;">$250k – $750k</div><span style="font-family:'Inter',sans-serif;font-size:13px;color:rgba(248,246,241,0.55);">pre-seed · or paid design partners</span></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.8;color:rgba(248,246,241,0.5);text-align:right;">eng 40% · gtm 25% · security 15%<br/>infra 10% · legal 10%</div>
+          </div>
+        </div>
+      </div>
+
+      <div data-rv="" style="margin-top:4vh;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.04em;color:#C9A962;border:1px solid rgba(201,169,98,0.35);border-radius:10px;padding:16px 20px;background:rgba(201,169,98,0.05);"><span style="color:rgba(248,246,241,0.5);">NEXT →</span> commit + push PROOF-OF-SPEND-1A · sync PR #312 truth surface <span style="color:rgba(248,246,241,0.5);">— before mobile, OKF, or marketplace.</span><span style="animation:blink 1.1s step-end infinite;animation-play-state:var(--pl,running);">▍</span></div>
+    </section>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:&quot;100%&quot;},&quot;showCitations&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Content&quot;},&quot;reduceMotion&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Motion&quot;},&quot;autoCycle&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Motion&quot;}}">
+class Component extends DCLogic {
+  state = { active:0, expandedLayer:0, activeProduct:0, planPhase:0, lcTab:'dev', lcStep:0 };
+
+  LAWS = [
+    { pre:'No action without ', key:'consent', post:'.' },
+    { pre:'No result without ', key:'receipt', post:'.' },
+    { pre:'No receipt without ', key:'replay', post:'.' },
+    { pre:'No reward without ', key:'verified impact', post:'.' },
+    { pre:'No token before the ', key:'economy proves itself', post:'.' },
+  ];
+
+  QUESTIONS = [
+    { k:'AUTH', t:'Who authorized it?' },
+    { k:'CONTEXT', t:'What context did it use?' },
+    { k:'DELTA', t:'What did it change?' },
+    { k:'REPLAY', t:'Can I replay it?' },
+    { k:'CORRECT', t:'Can I correct it?' },
+    { k:'AUDIT', t:'Can I audit it?' },
+    { k:'TRUST', t:'Can I trust it enough to pay?' },
+  ];
+
+  SPINE = [
+    { t:'AI agent', s:'acts' },
+    { t:'Governed work', s:'consented' },
+    { t:'Verified result', s:'receipted · replayable' },
+    { t:'Impact candidate', s:'value proven' },
+    { t:'Reward eligibility', s:'only if verified' },
+  ];
+
+  FORCES = [
+    { k:'Model routing', state:'Emerging', d:'Users ask; the system picks the model.', src:'Hugging Face · Omni', wedge:false },
+    { k:'Portable context', state:'Emerging', d:'Fragmented org knowledge, made vendor-neutral.', src:'Google Cloud · OKF', wedge:false },
+    { k:'Agent loops', state:'Emerging', d:'Teams need repeatable, governable agent runs.', src:'industry practice', wedge:false },
+    { k:'Verification', state:'Missing → our wedge', d:'Agents get demoed, not deployed. This is the gap.', src:'arXiv · 2605.14675', wedge:true },
+  ];
+
+  LAYERS = [
+    { n:'L0', title:'Open-source trust engine', buyer:'Contributors · community', price:'Free / OSS', features:['Dema local runtime','Consent grammar','Receipt schema','Proof verifier','Local CLI','Truth-label registry'] },
+    { n:'L1', title:'Node0 Personal Pro', buyer:'Founders · builders · creators', price:'$19–49 / mo', features:['Local knowledge map','Receipt dashboard','Personal proof ledger','OKF export / import','Proof-of-spend receipts','Mobile read-only preview'] },
+    { n:'L2', title:'Proof Workspace Pro', buyer:'Teams · agencies · auditors', price:'$99–299 / seat', features:['Project evidence rooms','Client proof packs','Agent task receipts','Review gates','Quality evidence cards','Team consent workflows'] },
+    { n:'L3', title:'AaaS — Governed Agent Stacks', buyer:'Companies wary of black-box autonomy', price:'$1k–10k / mo', features:['Document Review','Founder Work Indexer','Compliance Receipt','Research Verification','Support Evidence','Finance Cost-Control'] },
+    { n:'L4', title:'RaaS — Result as a Service', buyer:'Buyers of outcomes, not seats', price:'$500–10k+ / result', features:['Index KB → OKF w/ receipts','Repo audit → quality card','Extract 12-mo cost receipts','Support governance pack'] },
+    { n:'L5', title:'Enterprise Sovereign Agent Server', buyer:'Regulated · government · enterprise', price:'$50k–250k / yr', features:['Private deployment','SSO / role boundaries','Receipt retention policy','Audit logs · approvals','Self-hosted proof witness','SLA / support'] },
+    { n:'L6', title:'Proof-of-Impact economy', buyer:'Future — verified-impact marketplace', price:'Later only', features:['Impact marketplace','Resource pool','Impact validators','Reward eligibility','Token rails — only after impact proof'], future:true },
+  ];
+
+  PRODUCTS = [
+    { name:'Dema Node0 Home Base', status:'FLAGSHIP', value:'See what your AI did, did not do, and what proof exists.', serves:'L0 – L1' },
+    { name:'Founder Work Indexer', status:'PROVEN', value:'Turn years of messy work into evidence — without pretending it is impact yet.', serves:'L1 – L2' },
+    { name:'Proof-of-Spend', status:'PREVIEW', value:'Know what a mission actually cost — with source lines and hashes.', serves:'L1 – L2' },
+    { name:'Quality Evidence Card', status:'CORE', value:'Stop giving me a vibe. Give me a quality receipt.', serves:'L2 – L4' },
+    { name:'OKF Bridge', status:'FUTURE', value:'OKF makes knowledge portable; BIZRA makes it authorized, receipted, replayable.', serves:'L2 – L5' },
+    { name:'Synthesis Orchestrator', status:'CORE', value:'Not just model routing — contract-bound, proof-sealed consensus.', serves:'L2 – L3' },
+    { name:'Mobile Companion', status:'PREVIEW', value:'A phone as consent + display companion — not a remote actuator.', serves:'L1' },
+    { name:'FDE Forwarder Diagnostic', status:'CORE', value:'Route each failure to the right lane: code / state vs environment / permissions.', serves:'L0 – L5' },
+    { name:'Economy Simulator', status:'SIM ONLY', value:'A private laboratory for token & resource economics. Not a launchpad.', serves:'L6 (sim)' },
+    { name:'Impact Launchpad', status:'FUTURE', value:'Launch impact projects only after receipts, value proof, validators, review.', serves:'L6' },
+  ];
+
+  ARCH = ['Open-source Dema','Trust & contributor adoption','Paid proof packs / audits','Proof Workspace subscription','Managed sovereign agent server','Verified result marketplace','Proof-of-Impact economy'];
+
+  PLAN = [
+    { tag:'M1', when:'Month 1', goal:'Make proof sellable', rev:'$5k – 15k', revpct:11, actions:['Push PROOF-OF-SPEND-1A','Sync PR #312 truth surface','Self-hosted runner ADR','FDE Forwarder 1A','Mobile Companion (read-only)','Investor memo · deck · 3 demos'] },
+    { tag:'M2', when:'Month 2', goal:'Turn services into product', rev:'$15k – 40k cum.', revpct:32, actions:['Proof Workspace v0','OKF Bridge prototype','Receipt browser','Proof-State Manifesto + 2 case studies','Private beta','Agent Proof Audit — $1.5k–5k'] },
+    { tag:'M3', when:'Month 3', goal:'Investor-grade traction', rev:'proof density', revpct:50, actions:['5–10 design partners','20–50 alpha users','3 paid case studies','OKF export demo','Public demo day','Investor + partner outreach'] },
+    { tag:'M4–5', when:'Months 4–5', goal:'Productize & harden', rev:'$50k – 150k cum.', revpct:76, actions:['Node0 + Workspace beta','OKF Bridge 1A · Synthesis kernel','Mobile 1A · self-hosted proof lane','STRIDE / LINDDUN threat model','Key custody · redaction policy','10–20 paid · 3 case studies'] },
+    { tag:'M6', when:'Month 6', goal:'Fundraise or bootstrap scale', rev:'$5k – 25k MRR', revpct:100, actions:['Working demos + paid customers','Proof / evidence metrics','No-token honesty preserved','Narrative: agents → labor → proof','Pre-seed $250k – 750k','or design-partner revenue'] },
+  ];
+
+  LC_DEV = [
+    { t:'Intent', d:'Scope the smallest safe slice as an ADR — truth first, no hidden scope.' },
+    { t:'Consent', d:'Declare the consent grammar: what may be read, and what may act.' },
+    { t:'Build', d:'Implement only that slice. Nothing outside the consented boundary.' },
+    { t:'Receipt', d:'Every action emits a signed, hashed receipt as it happens.' },
+    { t:'Replay', d:'Re-run the receipts and verify the outcome is deterministic.' },
+    { t:'Evidence', d:'Emit a Quality Evidence Card: coverage, security, production_certification:false.' },
+    { t:'Truth-label', d:'Attach the honest label — e.g. SIMULATION_ONLY, no-mint.' },
+    { t:'Ship → Correct', d:'Ship the slice; every correction loops straight back to Intent.' },
+  ];
+
+  LC_MGMT = [
+    { t:'Plan', d:'Choose the next safe slice and set the engineering gates.' },
+    { t:'Execute', d:'Run the gates — commit, push, and sync the PR body to the truth.' },
+    { t:'Verify', d:'Read proof-density metrics: receipts, replay rate, refusals.' },
+    { t:'Diagnose', d:'FDE Forwarder routes each failure: inward (state) vs outward (vendor / env).' },
+    { t:'Correct', d:'Refuse overclaims, fix the cause, and re-receipt the result.' },
+    { t:'Report', d:'Publish the truth surface to partners and to the record.' },
+  ];
+
+  STATUS = [
+    { k:'Proof runtime', v:'Emerging', pct:56 },
+    { k:'Economy', v:'Simulated', pct:32 },
+    { k:'Impact rewards', v:'Future', pct:13 },
+    { k:'Token', v:'Not yet', pct:2 },
+  ];
+
+  CHAIN = ['Agents are becoming workers.','Workers need supervision.','Supervision needs receipts.','Receipts need replay.','Replay needs correction.','Correction creates trust.','Trust enables verified results.','Verified results enable impact.','Only verified impact can justify reward.'];
+
+  CHAP = ['Overture','The Core Law','The Logic','Category','Business Model','Products','Master Architecture','Roadmap','Lifecycles','The Verdict'];
+  TRUTH = [
+    'status · proof runtime: emerging',
+    'law · consent → receipt → replay → correction',
+    'logic · trust is the product',
+    'category · proof-state runtime',
+    'model · open core → governed labor → verified results',
+    'products · proof first, magic never',
+    'architecture · proof first · marketplace second · token last',
+    'roadmap · 3 months to paid proof, 6 to scale',
+    'lifecycle · nothing ships without a receipt',
+    'verdict · only verified impact can justify reward',
+  ];
+
+  componentDidMount() {
+    this.secs = this.CHAP.map((_, i) => document.getElementById('ch' + i));
+    this.ticking = false;
+    this.onScroll = () => {
+      if (this.ticking) return;
+      this.ticking = true;
+      requestAnimationFrame(() => {
+        this.ticking = false;
+        this.syncScroll();
+      });
+    };
+    window.addEventListener('scroll', this.onScroll, { passive: true });
+    this.onKey = (ev) => {
+      if (['ArrowDown', 'PageDown', ' ', 'ArrowRight'].includes(ev.key)) { ev.preventDefault(); this.go(this.state.active + 1); }
+      else if (['ArrowUp', 'PageUp', 'ArrowLeft'].includes(ev.key)) { ev.preventDefault(); this.go(this.state.active - 1); }
+    };
+    window.addEventListener('keydown', this.onKey);
+    this.applyMotion();
+    this.applyAuto();
+  }
+
+  componentDidUpdate() { this.applyMotion(); this.applyAuto(); }
+
+  componentWillUnmount() {
+    window.removeEventListener('scroll', this.onScroll);
+    window.removeEventListener('keydown', this.onKey);
+    if (this.timer) clearInterval(this.timer);
+  }
+
+  syncScroll() {
+    if (!this.secs) return;
+    const top = window.scrollY || document.documentElement.scrollTop || 0;
+    const vh = window.innerHeight;
+    let idx = 0;
+    this.secs.forEach((s, i) => {
+      if (!s) return;
+      const y = s.getBoundingClientRect().top + top;
+      if (y <= top + vh * 0.5) idx = i;
+    });
+    if (idx !== this.state.active) this.setState({ active: idx });
+  }
+
+  applyMotion() {
+    const root = document.getElementById('root');
+    if (root) root.style.setProperty('--pl', this.props.reduceMotion ? 'paused' : 'running');
+  }
+
+  applyAuto() {
+    const want = !!this.props.autoCycle;
+    if (want && !this.timer) {
+      this.timer = setInterval(() => {
+        const n = (this.state.lcTab === 'dev' ? this.LC_DEV : this.LC_MGMT).length;
+        this.setState((st) => ({ lcStep: (st.lcStep + 1) % n }));
+      }, 2600);
+    } else if (!want && this.timer) { clearInterval(this.timer); this.timer = null; }
+  }
+
+  go(i) {
+    i = Math.max(0, Math.min(this.CHAP.length - 1, i));
+    const el = this.secs && this.secs[i];
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + (window.scrollY || 0), behavior: 'smooth' });
+  }
+
+  ringPos(n, i, r) {
+    const a = (-90 + i * 360 / n) * Math.PI / 180;
+    return { left: (50 + r * Math.cos(a)) + '%', top: (50 + r * Math.sin(a)) + '%' };
+  }
+
+  statusColor(status) {
+    if (status === 'FLAGSHIP') return { c: '#050B14', b: '#C9A962', bg: '#C9A962' };
+    if (status === 'CORE' || status === 'PROVEN') return { c: '#C9A962', b: 'rgba(201,169,98,0.55)', bg: 'transparent' };
+    if (status === 'PREVIEW' || status === 'SIM ONLY') return { c: '#D4B875', b: 'rgba(212,184,117,0.45)', bg: 'transparent' };
+    return { c: 'rgba(248,246,241,0.4)', b: 'rgba(248,246,241,0.18)', bg: 'transparent' };
+  }
+
+  renderVals() {
+    const S = this.state;
+    const gold = '#C9A962';
+    const dim = 'rgba(248,246,241,0.3)';
+
+    const chapters = this.CHAP.map((c, i) => ({
+      label: (i < 10 ? '0' + i : '' + i), name: c, on: i === S.active,
+      onClick: () => this.go(i),
+      numColor: i === S.active ? gold : dim,
+      tickW: i === S.active ? '26px' : '12px',
+      tickColor: i === S.active ? gold : 'rgba(201,169,98,0.3)',
+    }));
+
+    const laws = this.LAWS.map((l, i) => ({ ...l, no: '0' + (i + 1), line: i !== this.LAWS.length - 1 }));
+
+    const spine = this.SPINE.map((n, i) => {
+      const mid = i >= 1 && i <= 3;
+      return { ...n, arrow: i !== this.SPINE.length - 1,
+        border: mid ? 'rgba(201,169,98,0.55)' : 'rgba(201,169,98,0.18)',
+        bg: mid ? 'rgba(201,169,98,0.07)' : 'rgba(20,40,55,0.22)',
+        title: mid ? '#F9F1D8' : 'rgba(248,246,241,0.72)' };
+    });
+
+    const showCites = this.props.showCitations !== false;
+    const forces = this.FORCES.map((f) => ({ ...f,
+      border: f.wedge ? 'rgba(201,169,98,0.6)' : 'rgba(201,169,98,0.16)',
+      bg: f.wedge ? 'linear-gradient(155deg,rgba(201,169,98,0.16),rgba(201,169,98,0.03))' : 'rgba(20,40,55,0.22)',
+      tag: f.wedge ? '#F9F1D8' : gold,
+      title: f.wedge ? '#F9F1D8' : 'rgba(248,246,241,0.92)',
+      src: showCites ? f.src : '' }));
+
+    const layers = this.LAYERS.map((l, i) => ({ ...l,
+      onClick: () => this.setState({ expandedLayer: i }),
+      borderColor: i === S.expandedLayer ? 'rgba(201,169,98,0.6)' : 'rgba(201,169,98,0.15)',
+      bg: i === S.expandedLayer ? 'rgba(201,169,98,0.08)' : 'rgba(20,40,55,0.2)',
+      nColor: l.future ? 'rgba(201,169,98,0.5)' : gold,
+      tColor: l.future ? 'rgba(248,246,241,0.6)' : '#F8F6F1',
+      mh: i === S.expandedLayer ? '160px' : '0px',
+      op: i === S.expandedLayer ? '1' : '0' }));
+
+    const products = this.PRODUCTS.map((p, i) => {
+      const sc = this.statusColor(p.status);
+      return { ...p, onClick: () => this.setState({ activeProduct: i }),
+        num: (i + 1 < 10 ? '0' + (i + 1) : '' + (i + 1)),
+        opacity: (p.status === 'FUTURE') ? '0.6' : '1',
+        borderColor: i === S.activeProduct ? 'rgba(201,169,98,0.65)' : 'rgba(201,169,98,0.14)',
+        bg: i === S.activeProduct ? 'rgba(201,169,98,0.09)' : 'rgba(20,40,55,0.2)',
+        stColor: sc.c, stBorder: sc.b, stBg: sc.bg };
+    });
+    const activeProd = products[S.activeProduct];
+
+    const arch = this.ARCH.map((a, i) => ({ t: a, i: i + 1, arrow: i !== this.ARCH.length - 1,
+      color: i >= 5 ? 'rgba(248,246,241,0.6)' : '#F8F6F1',
+      numColor: i >= 5 ? 'rgba(201,169,98,0.6)' : gold,
+      numBorder: i >= 5 ? 'rgba(201,169,98,0.3)' : 'rgba(201,169,98,0.55)' }));
+
+    const plan = this.PLAN.map((p, i) => ({ ...p,
+      onClick: () => this.setState({ planPhase: i }),
+      dotBg: i <= S.planPhase ? gold : 'rgba(201,169,98,0.2)',
+      dotRing: i === S.planPhase ? gold : 'rgba(201,169,98,0.3)',
+      labColor: i === S.planPhase ? gold : 'rgba(248,246,241,0.55)' }));
+    const phase = this.PLAN[S.planPhase];
+
+    const lcStages = S.lcTab === 'dev' ? this.LC_DEV : this.LC_MGMT;
+    const n = lcStages.length;
+    const step = Math.min(S.lcStep, n - 1);
+    const stages = lcStages.map((s, i) => {
+      const pos = this.ringPos(n, i, 42);
+      const on = i === step;
+      return { ...s, idx: i + 1, left: pos.left, top: pos.top,
+        onClick: () => this.setState({ lcStep: i }),
+        dot: on ? '#050B14' : gold,
+        ring: on ? gold : 'rgba(201,169,98,0.35)',
+        fill: on ? gold : 'rgba(10,22,40,0.92)',
+        shadow: on ? '0 0 22px rgba(201,169,98,0.55)' : 'none' };
+    });
+    const curStage = lcStages[step];
+
+    const status = this.STATUS.map((s) => ({ ...s, w: s.pct + '%' }));
+
+    const chain = this.CHAIN.map((t, i) => {
+      const last = i === this.CHAIN.length - 1;
+      return { t, mark: last ? '✦' : '↓', color: last ? '#F9F1D8' : 'rgba(201,169,98,0.6)',
+        size: last ? '20px' : '16px', style: last ? 'italic' : 'normal',
+        text: last ? '#F9F1D8' : 'rgba(248,246,241,0.78)' };
+    });
+
+    return {
+      chapters, laws, questions: this.QUESTIONS, spine, forces,
+      showCitesAnd: showCites,
+      layers, products, activeProd,
+      arch,
+      plan, phase, phaseActions: phase.actions, phaseWidth: phase.revpct + '%',
+      nextPhase: () => this.setState((st) => ({ planPhase: Math.min(4, st.planPhase + 1) })),
+      prevPhase: () => this.setState((st) => ({ planPhase: Math.max(0, st.planPhase - 1) })),
+      stages, curStage, curStageNo: (step + 1) + ' / ' + n, lcTitle: S.lcTab === 'dev' ? 'Project Development Life Cycle' : 'Management Life Cycle',
+      lcDev: () => this.setState({ lcTab: 'dev', lcStep: 0 }),
+      lcMgmt: () => this.setState({ lcTab: 'mgmt', lcStep: 0 }),
+      devColor: S.lcTab === 'dev' ? '#050B14' : 'rgba(248,246,241,0.6)',
+      devBg: S.lcTab === 'dev' ? gold : 'transparent',
+      mgmtColor: S.lcTab === 'mgmt' ? '#050B14' : 'rgba(248,246,241,0.6)',
+      mgmtBg: S.lcTab === 'mgmt' ? gold : 'transparent',
+      lcNext: () => this.setState((st) => ({ lcStep: (st.lcStep + 1) % n })),
+      lcPrev: () => this.setState((st) => ({ lcStep: (st.lcStep - 1 + n) % n })),
+      status, chain,
+      truthLeft: this.TRUTH[S.active],
+      truthRight: (S.active < 10 ? '0' + S.active : '' + S.active) + ' / 09 · ' + this.CHAP[S.active],
+    };
+  }
+}
+</script>
+</body>
+</html>

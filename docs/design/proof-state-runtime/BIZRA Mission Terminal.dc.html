@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body { background:#030810; height:100%; }
+    body { -webkit-font-smoothing:antialiased; }
+    ::selection { background:rgba(201,169,98,0.28); color:#F8F6F1; }
+    ::-webkit-scrollbar { width:8px; height:8px; }
+    ::-webkit-scrollbar-thumb { background:rgba(201,169,98,0.2); border-radius:4px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    input:focus, textarea:focus { outline:none; }
+    @keyframes blink { 0%,52% { opacity:1; } 53%,100% { opacity:0; } }
+    @keyframes glowPulse { 0%,100% { opacity:.25; } 50% { opacity:.5; } }
+    @keyframes pulseDot { 0%,100% { box-shadow:0 0 0 0 rgba(201,169,98,0.5); } 50% { box-shadow:0 0 0 6px rgba(201,169,98,0); } }
+  </style>
+</helmet>
+
+<div id="root" data-screen-label="Mission Terminal" style="position:fixed;inset:0;background:radial-gradient(120% 90% at 50% -10%,#0A1626 0%,#050B14 46%,#030810 100%);color:#F8F6F1;font-family:'Inter',sans-serif;display:flex;flex-direction:column;overflow:hidden;">
+  <div style="position:absolute;top:-12vh;left:30%;width:42vw;height:42vw;pointer-events:none;background:radial-gradient(circle,rgba(201,169,98,0.07),transparent 60%);animation:glowPulse 12s ease-in-out infinite;animation-play-state:var(--pl,running);"></div>
+  <div id="scan" style="position:absolute;inset:0;pointer-events:none;z-index:40;background:repeating-linear-gradient(to bottom,transparent 0 2px,rgba(0,0,0,0.13) 2px 3px);opacity:.2;"></div>
+
+  <!-- ══ TOP BAR ══ -->
+  <div style="flex:none;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid rgba(201,169,98,0.22);background:linear-gradient(to bottom,rgba(8,15,26,0.92),rgba(5,11,20,0.78));z-index:6;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <svg width="20" height="20" viewBox="0 0 200 200" style="overflow:visible;"><g fill="none" stroke="#C9A962" stroke-width="5"><circle cx="100" cy="100" r="30"></circle><circle cx="100" cy="70" r="30"></circle><circle cx="126" cy="85" r="30"></circle><circle cx="126" cy="115" r="30"></circle><circle cx="100" cy="130" r="30"></circle><circle cx="74" cy="115" r="30"></circle><circle cx="74" cy="85" r="30"></circle></g></svg>
+      <span style="font-family:'Cinzel',serif;font-weight:700;font-size:14px;letter-spacing:0.2em;color:#EDD9A3;">BIZRA</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;color:rgba(201,169,98,0.8);">/ mission · terminal</span>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.2em;color:rgba(237,230,211,0.55);">THE AGENT GOVERNS · THE SANDBOX EXECUTES · THE PROOF DECIDES</div>
+    <div style="display:flex;align-items:center;gap:12px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.12em;">
+      <span style="color:rgba(248,246,241,0.42);">operator · mumo · Node0</span>
+      <span style="color:rgba(212,184,117,0.95);border:1px solid rgba(212,184,117,0.4);border-radius:4px;padding:4px 8px;">● PREVIEW_ONLY</span>
+    </div>
+  </div>
+
+  <!-- ══ BODY ══ -->
+  <div style="flex:1;display:flex;min-height:0;z-index:5;">
+
+    <!-- ── HOME BASE ── -->
+    <div style="flex:none;width:268px;border-right:1px solid rgba(201,169,98,0.16);background:rgba(8,15,26,0.55);overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <div style="font-family:'Cinzel',serif;font-weight:600;font-size:11px;letter-spacing:0.22em;color:#EDD9A3;">HOME BASE</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(248,246,241,0.4);margin-top:3px;">one screen · one truth state</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;font-family:'JetBrains Mono',monospace;font-size:9.5px;line-height:1.5;">
+        <div style="display:flex;justify-content:space-between;gap:8px;"><span style="color:rgba(248,246,241,0.45);">truth state</span><span style="color:#D4B875;">PREVIEW_ONLY</span></div>
+        <div style="display:flex;justify-content:space-between;gap:8px;"><span style="color:rgba(248,246,241,0.45);">ci witness</span><span style="color:#5CE0A0;">main 1fce209 · green</span></div>
+        <div style="display:flex;justify-content:space-between;gap:8px;"><span style="color:rgba(248,246,241,0.45);">proof wave</span><span style="color:#5CE0A0;">6,456 / 6,456</span></div>
+        <div style="display:flex;justify-content:space-between;gap:8px;"><span style="color:rgba(248,246,241,0.45);">latest receipt</span><span style="color:#C9A962;">sediment 7bf05c8</span></div>
+        <div style="display:flex;justify-content:space-between;gap:8px;"><span style="color:rgba(248,246,241,0.45);">consent</span><span style="color:{{ hbConsentC }};">{{ hbConsent }}</span></div>
+        <div style="display:flex;justify-content:space-between;gap:8px;"><span style="color:rgba(248,246,241,0.45);">fde verdict</span><span style="color:{{ hbFdeC }};">{{ hbFde }}</span></div>
+        <div style="display:flex;justify-content:space-between;gap:8px;"><span style="color:rgba(248,246,241,0.45);">companion</span><span style="color:#E0785C;">phone NOT_REGISTERED</span></div>
+        <div style="display:flex;justify-content:space-between;gap:8px;"><span style="color:rgba(248,246,241,0.45);">economy</span><span style="color:#D4B875;">SIMULATION_ONLY</span></div>
+      </div>
+
+      <div style="border:1px solid rgba(92,224,160,0.3);background:rgba(92,224,160,0.04);padding:12px 13px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:0.16em;color:#5CE0A0;">ONE NEXT SAFE ACTION</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#F8F6F1;margin-top:6px;">$ dema stand</div>
+        <div style="font-family:'Inter',sans-serif;font-size:10.5px;color:rgba(248,246,241,0.5);margin-top:5px;line-height:1.5;">the one receipt no lane can type for you</div>
+      </div>
+
+      <div>
+        <div style="font-family:'Cinzel',serif;font-weight:600;font-size:10.5px;letter-spacing:0.2em;color:rgba(237,217,163,0.85);">LIFECYCLE</div>
+        <div style="margin-top:8px;display:flex;flex-direction:column;">
+          <sc-for list="{{ steps }}" as="st" hint-placeholder-count="13">
+            <div data-step="{{ $index }}" style="display:flex;align-items:center;gap:9px;padding:4px 6px;border-left:1px solid rgba(237,230,211,0.2);">
+              <span data-stepdot="{{ $index }}" style="width:6px;height:6px;border-radius:50%;background:rgba(248,246,241,0.25);flex-shrink:0;"></span>
+              <span data-steplabel="{{ $index }}" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.06em;color:rgba(248,246,241,0.45);">{{ st }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STAGE ── -->
+    <div style="flex:1;min-width:0;overflow-y:auto;position:relative;">
+      <div style="padding:30px 36px 50px;max-width:820px;margin:0 auto;">
+
+        <!-- BOOT · MORNING BRIEFING -->
+        <sc-if value="{{ isBoot }}" hint-placeholder-val="{{ true }}">
+          <div data-screen-label="Morning briefing">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#C9A962;">living memory · boot</div>
+            <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(26px,3vw,38px);line-height:1.08;margin-top:10px;">The terminal never opens blank.</div>
+            <div style="margin-top:22px;position:relative;">
+              <div style="position:absolute;inset:0;transform:translate(8px,8px);background-image:radial-gradient(rgba(201,169,98,0.3) 1px,transparent 1.3px);background-size:5px 5px;"></div>
+              <div style="position:relative;border:1px solid rgba(237,230,211,0.7);background:#071120;padding:24px 26px;">
+                <span style="position:absolute;top:-9px;left:14px;background:#071120;padding:0 8px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;color:#EDE6D3;">morning briefing · read from disk</span>
+                <div style="display:flex;flex-direction:column;gap:11px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;">
+                  <div style="display:flex;gap:12px;"><span style="color:rgba(201,169,98,0.85);width:64px;flex-shrink:0;">who</span><span style="color:rgba(248,246,241,0.8);">mumo · sovereign operator of Node0 · BIZRA Genesis</span></div>
+                  <div style="display:flex;gap:12px;"><span style="color:rgba(201,169,98,0.85);width:64px;flex-shrink:0;">last</span><span style="color:rgba(248,246,241,0.8);">doctrine sediment committed → corrected → 7bf05c8 · PR #317 opened · membrane refused relayed consent twice</span></div>
+                  <div style="display:flex;gap:12px;"><span style="color:rgba(201,169,98,0.85);width:64px;flex-shrink:0;">open</span><span style="color:rgba(248,246,241,0.8);">ratification sitting (README checklist) · P1 rsync · Day-2 stand chain 1/7</span></div>
+                  <div style="display:flex;gap:12px;"><span style="color:rgba(201,169,98,0.85);width:64px;flex-shrink:0;">ready</span><span style="color:#5CE0A0;">main green at 1fce209 · full wave 6,456/6,456 · mission intake open</span></div>
+                  <div style="display:flex;gap:12px;"><span style="color:rgba(201,169,98,0.85);width:64px;flex-shrink:0;">blocked</span><span style="color:#E0785C;">push + merge of #317 (fresh GO) · CodeRabbit quota (vendor, not code)</span></div>
+                  <div style="display:flex;gap:12px;"><span style="color:rgba(201,169,98,0.85);width:64px;flex-shrink:0;">next</span><span style="color:#F8F6F1;">dema stand — then, if you choose, a new bounded mission</span></div>
+                </div>
+              </div>
+            </div>
+            <button onClick="{{ toIntake }}" style-hover="background:rgba(201,169,98,0.18);" style="margin-top:24px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#050B14;background:#C9A962;border:none;padding:13px 22px;">open mission intake →</button>
+          </div>
+        </sc-if>
+
+        <!-- INTAKE -->
+        <sc-if value="{{ isIntake }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Mission intake">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#C9A962;">mission intake · 1 interaction at start</div>
+            <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(26px,3vw,38px);line-height:1.08;margin-top:10px;">One bounded mission.</div>
+            <div style="font-family:'Inter',sans-serif;font-size:14px;color:rgba(248,246,241,0.6);margin-top:10px;max-width:56ch;">State the goal in plain language. The terminal will bound it into an envelope — no envelope, no authority; no authority, no action.</div>
+            <textarea value="{{ goal }}" onInput="{{ onGoal }}" placeholder="e.g. sediment the 14 doctrine documents into docs/archive with a verified manifest…" style="width:100%;height:110px;resize:none;margin-top:20px;background:rgba(3,8,16,0.9);border:1px solid rgba(201,169,98,0.3);padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.6;color:#F8F6F1;"></textarea>
+            <div style="margin-top:14px;display:flex;align-items:center;gap:14px;">
+              <button onClick="{{ compose }}" style-hover="background:rgba(201,169,98,0.18);" style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#050B14;background:#C9A962;border:none;padding:12px 20px;">compose envelope</button>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:rgba(248,246,241,0.4);">{{ intakeHint }}</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ENVELOPE -->
+        <sc-if value="{{ isEnvelope }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Mission envelope">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#C9A962;">mission envelope · the contract</div>
+            <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(26px,3vw,38px);line-height:1.08;margin-top:10px;">No work begins without it.</div>
+            <div style="margin-top:20px;border:1px solid rgba(237,230,211,0.35);background:rgba(3,8,16,0.85);padding:20px 24px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.85;">
+              <div style="color:rgba(248,246,241,0.75);">mission_id: <span style="color:#C9A962;">{{ missionId }}</span> <span style="color:rgba(248,246,241,0.35);">· content-addressed</span></div>
+              <div style="color:rgba(248,246,241,0.75);">goal: <span style="color:#F8F6F1;">"{{ goalEcho }}"</span></div>
+              <div style="color:rgba(248,246,241,0.75);">operator: <span style="color:#C9A962;">mumo</span> · truth_label: <span style="color:#D4B875;">PREVIEW_ONLY</span></div>
+              <div style="color:rgba(248,246,241,0.45);margin-top:6px;">scope:</div>
+              <div style="padding-left:16px;color:rgba(248,246,241,0.75);">files: <span style="color:#5CE0A0;">[docs/archive/2026-07-04-doctrine/**]</span> · tools: <span style="color:#5CE0A0;">[git, npm]</span> · networks: <span style="color:#E0785C;">none</span></div>
+              <div style="color:rgba(248,246,241,0.45);margin-top:6px;">authority:</div>
+              <div style="padding-left:16px;color:rgba(248,246,241,0.75);">consent_mode: <span style="color:#C9A962;">exact_phrase</span> · destructive: <span style="color:#5CE0A0;">false</span> · economic_effect: <span style="color:#5CE0A0;">false</span></div>
+              <div style="color:rgba(248,246,241,0.45);margin-top:6px;">proof:</div>
+              <div style="padding-left:16px;color:rgba(248,246,241,0.75);">required_receipts: <span style="color:#5CE0A0;">[action, verification, completion]</span> · replay_required: <span style="color:#5CE0A0;">true</span></div>
+              <div style="color:rgba(248,246,241,0.45);margin-top:6px;">interruption:</div>
+              <div style="padding-left:16px;color:rgba(248,246,241,0.75);">mode: <span style="color:#C9A962;">bounded_autonomy</span> · 1 start · 0 during · 1 finish</div>
+            </div>
+            <div style="margin-top:14px;display:flex;align-items:center;gap:14px;">
+              <button onClick="{{ toConsent }}" style-hover="background:rgba(201,169,98,0.18);" style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#050B14;background:#C9A962;border:none;padding:12px 20px;">request consent</button>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:rgba(248,246,241,0.4);">plan_hash {{ planHash }} · emitted to eventbus</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- CONSENT -->
+        <sc-if value="{{ isConsent }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Consent membrane">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#C9A962;">consent membrane · exact-string</div>
+            <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(26px,3vw,38px);line-height:1.08;margin-top:10px;">Consent crosses only as your typed word.</div>
+            <div style="font-family:'Inter',sans-serif;font-size:14px;color:rgba(248,246,241,0.6);margin-top:10px;max-width:56ch;">A narrative asserting your consent is relayed consent — the membrane refuses it. Only the exact phrase, typed here, opens the run.</div>
+            <div style="margin-top:22px;border:1px solid rgba(201,169,98,0.4);background:rgba(10,22,40,0.6);padding:22px 24px;max-width:560px;">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.16em;color:rgba(248,246,241,0.45);">SPEAK EXACTLY</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#C9A962;margin-top:8px;user-select:all;">GO sediment</div>
+              <input value="{{ goInput }}" onInput="{{ onGo }}" placeholder="type the exact phrase…" style="width:100%;margin-top:12px;background:rgba(3,8,16,0.9);border:1px solid {{ goBorder }};padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#F8F6F1;" />
+              <div style="margin-top:12px;display:flex;align-items:center;gap:12px;">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:{{ goColor }};border:1px solid {{ goBorder }};padding:7px 12px;background:{{ goBg }};">{{ goStatus }}</span>
+                <span style="font-family:'Inter',sans-serif;font-size:12px;color:rgba(248,246,241,0.45);">scope as offered · push stays a fresh word</span>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- EXECUTION TRACE -->
+        <sc-if value="{{ isExec }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Execution trace — ActionBus">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#C9A962;">actionbus · the only legal path from plan to effect</div>
+            <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(26px,3vw,38px);line-height:1.08;margin-top:10px;">Every action passes four gates.</div>
+            <div style="margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:rgba(248,246,241,0.45);">SCOPE · PERMIT · CONSTITUTION · PROOF — any failure emits blocked, not executed</div>
+            <div style="margin-top:20px;display:flex;flex-direction:column;gap:9px;">
+              <sc-for list="{{ actions }}" as="a" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:14px;border:1px solid {{ a.bc }};background:rgba(9,18,30,0.6);padding:12px 15px;">
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#C9A962;width:118px;flex-shrink:0;">{{ a.type }}</span>
+                  <span style="flex:1;min-width:0;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(248,246,241,0.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.target }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:0.08em;color:{{ a.revC }};border:1px solid {{ a.revC }};padding:3px 7px;flex-shrink:0;">{{ a.rev }}</span>
+                  <span style="display:flex;gap:5px;flex-shrink:0;">
+                    <span style="width:9px;height:9px;border-radius:50%;background:{{ a.g0 }};"></span>
+                    <span style="width:9px;height:9px;border-radius:50%;background:{{ a.g1 }};"></span>
+                    <span style="width:9px;height:9px;border-radius:50%;background:{{ a.g2 }};"></span>
+                    <span style="width:9px;height:9px;border-radius:50%;background:{{ a.g3 }};"></span>
+                  </span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.1em;color:{{ a.stC }};width:76px;text-align:right;flex-shrink:0;">{{ a.st }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:rgba(248,246,241,0.4);">{{ execNote }}</div>
+          </div>
+        </sc-if>
+
+        <!-- RECEIPT / EVIDENCE CARD -->
+        <sc-if value="{{ isReceipt }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Receipt and evidence card">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#C9A962;">completion receipt · evidence card</div>
+            <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(26px,3vw,38px);line-height:1.08;margin-top:10px;">The receipt proves. The mint refuses.</div>
+            <div style="margin-top:20px;position:relative;">
+              <div style="position:absolute;inset:0;transform:translate(8px,8px);background-image:radial-gradient(rgba(201,169,98,0.3) 1px,transparent 1.3px);background-size:5px 5px;"></div>
+              <div style="position:relative;border:1px solid rgba(237,230,211,0.7);background:#071120;padding:24px 26px;">
+                <span style="position:absolute;top:-9px;left:14px;background:#071120;padding:0 8px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;color:#EDE6D3;">completion · sha256 {{ receiptHash }}</span>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                  <div style="border-left:2px solid rgba(92,224,160,0.6);padding-left:12px;">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.14em;color:#5CE0A0;">WHAT HAPPENED</div>
+                    <div style="font-family:'Inter',sans-serif;font-size:12.5px;line-height:1.55;color:rgba(248,246,241,0.78);margin-top:5px;">14 docs written to the archive · manifest sealed · full wave 6,456/6,456 · committed ffa3714 on the sediment branch.</div>
+                  </div>
+                  <div style="border-left:2px solid rgba(224,120,92,0.6);padding-left:12px;">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.14em;color:#E0785C;">WHAT DID NOT</div>
+                    <div style="font-family:'Inter',sans-serif;font-size:12.5px;line-height:1.55;color:rgba(248,246,241,0.78);margin-top:5px;">No push — blocked at the scope gate. No canon promotion. No CURRENT_LIMITS row touched. Nothing minted.</div>
+                  </div>
+                  <div style="border-left:2px solid rgba(201,169,98,0.6);padding-left:12px;">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.14em;color:#C9A962;">EVIDENCE</div>
+                    <div style="font-family:'Inter',sans-serif;font-size:12.5px;line-height:1.55;color:rgba(248,246,241,0.78);margin-top:5px;">MANIFEST.sha256 over exact committed bytes · test + check logs on disk · every event in the bus at left.</div>
+                  </div>
+                  <div style="border-left:2px solid rgba(237,230,211,0.5);padding-left:12px;">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.14em;color:#EDE6D3;">NEXT SAFE ACTION</div>
+                    <div style="font-family:'Inter',sans-serif;font-size:12.5px;line-height:1.55;color:rgba(248,246,241,0.78);margin-top:5px;">dema stand — then decide push/merge with a fresh word. The chain doesn't survive sleep; everything else does.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:18px;border:1px solid rgba(224,120,92,0.4);background:rgba(224,120,92,0.05);padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+              <span style="font-family:'Cinzel',serif;font-weight:700;font-size:13px;letter-spacing:0.16em;color:#E0785C;">REWARD_DENIED</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(248,246,241,0.65);line-height:1.6;">truth_label = PREVIEW_ONLY → STOP_SIMULATION_NO_MINT · value follows asset → receipt → verification → impact, never earlier</span>
+            </div>
+            <button onClick="{{ toCloseout }}" style-hover="background:rgba(201,169,98,0.18);" style="margin-top:18px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#050B14;background:#C9A962;border:none;padding:12px 20px;">close mission</button>
+          </div>
+        </sc-if>
+
+        <!-- CLOSEOUT -->
+        <sc-if value="{{ isCloseout }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Closeout">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#C9A962;">closeout · 1 interaction at finish</div>
+            <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(26px,3vw,38px);line-height:1.08;margin-top:10px;">The loop closes where it began.</div>
+            <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px;max-width:600px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;">
+              <div style="display:flex;gap:12px;"><span style="color:#B7A9F2;">memory.updated</span><span style="color:rgba(248,246,241,0.7);">sediment mission absorbed · reflex candidate logged (probation)</span></div>
+              <div style="display:flex;gap:12px;"><span style="color:#C9A962;">roadmap</span><span style="color:rgba(248,246,241,0.7);">ratification sitting → merge decision (#317) → Day-2 stand</span></div>
+              <div style="display:flex;gap:12px;"><span style="color:#5CE0A0;">sovereignty</span><span style="color:rgba(248,246,241,0.7);">the model proposed · the state server disposed · the receipt proved · you consented</span></div>
+            </div>
+            <div style="margin-top:22px;border:1px solid rgba(92,224,160,0.35);background:rgba(92,224,160,0.05);padding:16px 20px;max-width:600px;">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.16em;color:#5CE0A0;">ONE NEXT SAFE ACTION</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#F8F6F1;margin-top:6px;">$ dema stand<span style="display:inline-block;width:8px;height:15px;background:#5CE0A0;margin-left:7px;vertical-align:-2px;animation:blink 1.1s steps(1) infinite;animation-play-state:var(--pl,running);"></span></div>
+            </div>
+            <button onClick="{{ resetAll }}" style-hover="background:rgba(201,169,98,0.14);" style="margin-top:22px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:#C9A962;background:rgba(201,169,98,0.08);border:1px solid rgba(201,169,98,0.35);padding:11px 18px;">new mission ↻</button>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+
+    <!-- ── EVENTBUS + FDE ── -->
+    <div style="flex:none;width:322px;border-left:1px solid rgba(201,169,98,0.16);background:rgba(8,15,26,0.55);display:flex;flex-direction:column;min-height:0;">
+      <div style="flex:1.4;display:flex;flex-direction:column;min-height:0;border-bottom:1px solid rgba(201,169,98,0.16);">
+        <div style="flex:none;padding:14px 16px 10px;">
+          <div style="font-family:'Cinzel',serif;font-weight:600;font-size:11px;letter-spacing:0.22em;color:#EDD9A3;">EVENTBUS</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(248,246,241,0.4);margin-top:3px;">if it is not an event, it is not system truth</div>
+        </div>
+        <div id="eventfeed" style="flex:1;overflow-y:auto;padding:2px 16px 14px;display:flex;flex-direction:column;gap:7px;">
+          <sc-for list="{{ events }}" as="ev" hint-placeholder-count="3">
+            <div style="border-left:2px solid {{ ev.c }};padding-left:10px;">
+              <div style="display:flex;justify-content:space-between;gap:8px;">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:{{ ev.c }};">{{ ev.type }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(248,246,241,0.35);">{{ ev.ts }}</span>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;line-height:1.5;color:rgba(248,246,241,0.55);margin-top:2px;">{{ ev.d }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="flex:1;overflow-y:auto;padding:14px 16px;">
+        <div style="font-family:'Cinzel',serif;font-weight:600;font-size:11px;letter-spacing:0.22em;color:#EDD9A3;">DIAGNOSTIC MEMBRANE</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(248,246,241,0.4);margin-top:3px;">DEMA-FDE-DUAL-DIAGNOSTIC-1A · pick a failure</div>
+        <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;">
+          <sc-for list="{{ fdes }}" as="f" hint-placeholder-count="7">
+            <button data-fde="{{ $index }}" onClick="{{ f.onClick }}" style-hover="background:rgba(201,169,98,0.12);" style="cursor:pointer;background:rgba(201,169,98,0.04);border:1px solid rgba(201,169,98,0.28);padding:6px 9px;font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(248,246,241,0.7);text-align:left;">{{ f.t }}</button>
+          </sc-for>
+        </div>
+        <div style="margin-top:12px;border-top:1px dashed rgba(201,169,98,0.3);padding-top:12px;">
+          <div style="display:flex;gap:10px;align-items:baseline;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:0.14em;color:rgba(248,246,241,0.4);">LENS</span>
+            <span style="font-family:'Playfair Display',serif;font-style:italic;font-size:15px;color:{{ fdeLensC }};">{{ fdeLens }}</span>
+          </div>
+          <div style="margin-top:8px;display:flex;gap:10px;align-items:baseline;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:0.14em;color:rgba(248,246,241,0.4);">VERDICT</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:{{ fdeVerdC }};">{{ fdeVerd }}</span>
+          </div>
+          <div style="font-family:'Inter',sans-serif;font-size:11.5px;line-height:1.55;color:rgba(248,246,241,0.6);margin-top:8px;">{{ fdeNote }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ BOTTOM BAR ══ -->
+  <div style="flex:none;height:42px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-top:1px solid rgba(201,169,98,0.22);background:linear-gradient(to top,rgba(8,15,26,0.92),rgba(5,11,20,0.78));z-index:6;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:0.14em;color:rgba(248,246,241,0.35);">gates</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(92,224,160,0.75);">✓ mission scope</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(92,224,160,0.75);">✓ permit</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(92,224,160,0.75);">✓ constitution</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(92,224,160,0.75);">✓ proof feasibility</span>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.18em;color:rgba(237,217,163,0.6);">THE MODEL PROPOSES · THE STATE SERVER DISPOSES · THE RECEIPT PROVES · THE HUMAN CONSENTS</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.12em;color:rgba(248,246,241,0.42);">phase · {{ phaseLabel }}</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1512,&quot;height&quot;:900},&quot;reduceMotion&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Motion&quot;},&quot;scanlines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Atmosphere&quot;}}">
+class Component extends DCLogic {
+  state = { phase: 'boot', goal: '', tried: false, missionId: '—', planHash: '—', goInput: '', receiptHash: '—', fde: null, lastVerdict: '—', actions: [], events: [] };
+
+  STEPS = ['welcome', 'setup', 'status', 'doctor', 'mission intake', 'consent plan', 'execution trace', 'first receipt', 'evidence card', 'proof export', 'undo / correction', 'companion', 'marketplace'];
+  PHASE_STEP = { boot: 3, intake: 4, envelope: 5, consent: 5, exec: 6, receipt: 8, closeout: 9 };
+  PHASE_LABEL = { boot: 'BOOT · BRIEFING', intake: 'MISSION INTAKE', envelope: 'ENVELOPE', consent: 'CONSENT', exec: 'EXECUTION TRACE', receipt: 'RECEIPT', closeout: 'CLOSEOUT' };
+
+  ACTIONS = [
+    { type: 'file.write', target: 'docs/archive/2026-07-04-doctrine/ · 14 docs + README + MANIFEST', rev: 'REVERSIBLE', revC: '#5CE0A0' },
+    { type: 'proof.export', target: 'MANIFEST.sha256 over exact committed bytes', rev: 'PREVIEW', revC: '#D4B875' },
+    { type: 'process.spawn', target: 'npm test → full wave · npm run check', rev: 'PREVIEW', revC: '#D4B875' },
+    { type: 'process.spawn', target: 'git commit → ffa3714 on docs/doctrine-sediment-2026-07-04-1a', rev: 'REVERSIBLE', revC: '#5CE0A0' },
+    { type: 'process.spawn', target: 'git push origin — outside envelope', rev: 'IRREVERSIBLE', revC: '#E0785C' },
+  ];
+
+  FDES = [
+    { t: 'CodeRabbit quota fails PR #317', lens: 'Outward · vendor', lc: '#5CE0A0', v: 'DEFER_CI_UNAVAILABLE', vc: '#D4B875', note: 'If CI is unavailable, do not call it code failure. Billing is not a defect in your reducer.' },
+    { t: 'Cloud lane speaks GO on your behalf', lens: 'Outward · authority', lc: '#5CE0A0', v: 'REQUEST_CONSENT', vc: '#E0785C', note: 'Relayed consent is authorization laundering. Consent crosses only as your typed word, in-lane.' },
+    { t: 'Reducer emits wrong event order', lens: 'Inward · logic/state', lc: '#C9A962', v: 'PATCH_CODE', vc: '#C9A962', note: 'If the code failed, patch the code. The event order is a contract, not a suggestion.' },
+    { t: 'Receipt summary drifts from disk', lens: 'Inward · proof/state', lc: '#C9A962', v: 'REPAIR_PROOF', vc: '#C9A962', note: 'If the proof failed, repair the proof. Rehash, re-derive, re-seal — never re-narrate.' },
+    { t: 'Runner filesystem full', lens: 'Outward · environment', lc: '#5CE0A0', v: 'REPAIR_ENVIRONMENT', vc: '#5CE0A0', note: 'If the world failed, repair the environment. Clear the disk before blaming the diff.' },
+    { t: 'PoI scored on a simulated run', lens: 'Economic · no-mint', lc: '#D4B875', v: 'STOP_SIMULATION_NO_MINT', vc: '#E0785C', note: 'If impact is simulated, do not mint. Cost is not value; effort is not impact.' },
+    { t: 'Unknown phone requests companion link', lens: 'Outward · device', lc: '#5CE0A0', v: 'REJECT_UNREGISTERED_DEVICE', vc: '#E0785C', note: 'If the phone is not registered, do not pretend it is connected. Companion first, actuation never.' },
+  ];
+
+  EVC = { 'mission.started': '#C9A962', 'mission.planned': '#C9A962', 'consent.requested': '#D4B875', 'consent.granted': '#5CE0A0', 'consent.denied': '#E0785C', 'action.requested': 'rgba(237,230,211,0.8)', 'action.executed': '#5CE0A0', 'action.blocked': '#E0785C', 'proof.emitted': '#EDE6D3', 'reward.denied': '#E0785C', 'memory.updated': '#B7A9F2', 'fde.verdict': '#D4B875' };
+
+  componentDidMount() { this._alive = true; this._timers = []; this.paint(); }
+  componentWillUnmount() { this._alive = false; (this._timers || []).forEach(clearTimeout); }
+  componentDidUpdate() { this.paint(); }
+
+  later(fn, ms) { const t = setTimeout(() => { if (this._alive) fn(); }, this.props.reduceMotion ? 0 : ms); this._timers.push(t); }
+
+  ts() { const d = new Date(); const p = (n) => (n < 10 ? '0' : '') + n; return p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ':' + p(d.getUTCSeconds()) + 'Z'; }
+
+  emit(type, d) { this.setState((s) => ({ events: [...s.events, { type, d, ts: this.ts() }] })); }
+
+  async sha(str) {
+    try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)); return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join(''); }
+    catch (e) { let h = 0x811c9dc5; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(16).repeat(4); }
+  }
+
+  paint() {
+    const S = this.state, gold = '#C9A962';
+    const root = document.getElementById('root');
+    if (root) root.style.setProperty('--pl', this.props.reduceMotion ? 'paused' : 'running');
+    const scan = document.getElementById('scan');
+    if (scan) scan.style.display = this.props.scanlines === false ? 'none' : 'block';
+    const cur = this.PHASE_STEP[S.phase];
+    this.STEPS.forEach((_, i) => {
+      const dot = document.querySelector('[data-stepdot="' + i + '"]');
+      const lab = document.querySelector('[data-steplabel="' + i + '"]');
+      const row = document.querySelector('[data-step="' + i + '"]');
+      const done = i < cur, on = i === cur, locked = i > 9;
+      if (dot) { dot.style.background = on ? gold : (done ? '#5CE0A0' : 'rgba(248,246,241,0.2)'); dot.style.animation = on ? 'pulseDot 2s ease-out infinite' : 'none'; }
+      if (lab) lab.style.color = on ? '#F8F6F1' : (done ? 'rgba(92,224,160,0.75)' : (locked ? 'rgba(248,246,241,0.28)' : 'rgba(248,246,241,0.45)'));
+      if (row) row.style.borderLeft = on ? '2px solid ' + gold : '1px solid rgba(237,230,211,0.2)';
+    });
+    this.FDES.forEach((_, i) => {
+      const b = document.querySelector('[data-fde="' + i + '"]');
+      if (b) { const on = i === S.fde; b.style.background = on ? 'rgba(201,169,98,0.16)' : 'rgba(201,169,98,0.04)'; b.style.borderColor = on ? gold : 'rgba(201,169,98,0.28)'; b.style.color = on ? '#F8F6F1' : 'rgba(248,246,241,0.7)'; }
+    });
+    const feed = document.getElementById('eventfeed');
+    if (feed) feed.scrollTop = feed.scrollHeight;
+  }
+
+  compose() {
+    const g = this.state.goal.trim();
+    if (!g) { this.setState({ tried: true }); return; }
+    this.sha('mission|' + g).then((h) => {
+      if (!this._alive) return;
+      this.setState({ phase: 'envelope', missionId: 'm-' + h.slice(0, 12), planHash: h.slice(12, 24) });
+      this.emit('mission.started', 'mission_id m-' + h.slice(0, 12) + ' · operator mumo');
+      this.emit('mission.planned', 'plan_hash ' + h.slice(12, 24) + ' · 5 typed actions · networks: none');
+    });
+  }
+
+  toConsent() { this.setState({ phase: 'consent' }); this.emit('consent.requested', 'exact_phrase · sha(phrase) 4e1c…a9 · scope: branch+commit+gates'); }
+
+  onGoInput(v) {
+    const was = this.state.goInput;
+    this.setState({ goInput: v });
+    if (v === 'GO sediment' && was !== 'GO sediment') {
+      this.emit('consent.granted', 'typed in-lane by the operator · relayed consent refused by design');
+      this.later(() => this.startExec(), 500);
+    }
+  }
+
+  startExec() {
+    const acts = this.ACTIONS.map((a, i) => ({ ...a, gates: [0, 0, 0, 0], st: 'PENDING', blockedAt: i === 4 ? 0 : -1 }));
+    this.setState({ phase: 'exec', actions: acts });
+    let t = 300;
+    acts.forEach((a, i) => {
+      this.later(() => { this.mutAction(i, (x) => { x.st = 'RUNNING'; }); this.emit('action.requested', a.type + ' · ' + a.target.slice(0, 44)); }, t);
+      for (let g = 0; g < 4; g++) {
+        t += 170;
+        const gi = g;
+        this.later(() => {
+          this.mutAction(i, (x) => {
+            if (x.blockedAt === gi) { x.gates[gi] = 2; x.st = 'BLOCKED'; }
+            else if (x.blockedAt === -1 || gi < x.blockedAt) x.gates[gi] = 1;
+          });
+          if (a.blockedAt === gi) this.emit('action.blocked', a.type + ' · reason: scope gate — networks: none · push is a fresh word');
+        }, t);
+        if (a.blockedAt === gi) { t += 240; break; }
+      }
+      t += 190;
+      if (a.blockedAt === -1) {
+        this.later(() => { this.mutAction(i, (x) => { x.st = 'EXECUTED'; }); this.emit('action.executed', a.type + ' · worker sandbox-1 · receipt attached'); }, t);
+      }
+    });
+    this.later(() => this.emitReceipt(), t + 700);
+  }
+
+  mutAction(i, fn) { this.setState((s) => { const a = s.actions.map((x) => ({ ...x, gates: [...x.gates] })); fn(a[i]); return { actions: a }; }); }
+
+  emitReceipt() {
+    this.sha('completion|' + this.state.missionId + '|6456/6456|ffa3714').then((h) => {
+      if (!this._alive) return;
+      this.setState({ phase: 'receipt', receiptHash: h.slice(0, 16) + '…' });
+      this.emit('proof.emitted', 'completion receipt · sha256 ' + h.slice(0, 12) + '… · replay: passes');
+      this.emit('reward.denied', 'reason: simulation_only · truth_label PREVIEW_ONLY · no mint');
+    });
+  }
+
+  toCloseout() { this.setState({ phase: 'closeout' }); this.emit('memory.updated', 'subject: sediment mission · delta_hash ' + this.state.planHash + ' · reflex candidate → probation'); }
+
+  resetAll() { this.setState({ phase: 'boot', goal: '', tried: false, missionId: '—', planHash: '—', goInput: '', receiptHash: '—', actions: [] }); }
+
+  renderVals() {
+    const S = this.state;
+    const green = '#5CE0A0', amber = '#D4B875', ember = '#E0785C', gold = '#C9A962', dim = 'rgba(248,246,241,0.25)';
+    const goOk = S.goInput === 'GO sediment', goSome = S.goInput.length > 0;
+    const f = S.fde != null ? this.FDES[S.fde] : null;
+    const gateC = (v) => (v === 1 ? green : v === 2 ? ember : dim);
+    const stC = { PENDING: 'rgba(248,246,241,0.35)', RUNNING: gold, EXECUTED: green, BLOCKED: ember };
+    const consentState = S.phase === 'consent' ? (goOk ? 'GRANTED' : 'REQUESTED') : (S.phase === 'exec' || S.phase === 'receipt' || S.phase === 'closeout' ? 'GRANTED · scoped' : 'NONE_PENDING');
+
+    return {
+      steps: this.STEPS,
+      phaseLabel: this.PHASE_LABEL[S.phase],
+      isBoot: S.phase === 'boot', isIntake: S.phase === 'intake', isEnvelope: S.phase === 'envelope',
+      isConsent: S.phase === 'consent', isExec: S.phase === 'exec', isReceipt: S.phase === 'receipt', isCloseout: S.phase === 'closeout',
+
+      hbConsent: consentState,
+      hbConsentC: consentState.indexOf('GRANTED') === 0 ? green : (consentState === 'REQUESTED' ? amber : 'rgba(248,246,241,0.6)'),
+      hbFde: f ? f.v : '—',
+      hbFdeC: f ? f.vc : 'rgba(248,246,241,0.4)',
+
+      toIntake: () => this.setState({ phase: 'intake' }),
+      goal: S.goal,
+      onGoal: (e) => this.setState({ goal: e.target.value, tried: false }),
+      compose: () => this.compose(),
+      intakeHint: S.tried && !S.goal.trim() ? 'state the goal first — an empty mission is not a mission' : 'plain language in · typed contract out',
+
+      missionId: S.missionId, planHash: S.planHash,
+      goalEcho: S.goal.trim() ? (S.goal.trim().length > 64 ? S.goal.trim().slice(0, 64) + '…' : S.goal.trim()) : '—',
+      toConsent: () => this.toConsent(),
+
+      goInput: S.goInput,
+      onGo: (e) => this.onGoInput(e.target.value),
+      goStatus: goOk ? 'CONSENT_GRANTED · run opens' : 'REFUSED_BY_DEFAULT',
+      goColor: goOk ? green : amber,
+      goBorder: goOk ? 'rgba(92,224,160,0.5)' : (goSome ? 'rgba(224,120,92,0.5)' : 'rgba(212,184,117,0.4)'),
+      goBg: goOk ? 'rgba(92,224,160,0.08)' : 'rgba(212,184,117,0.05)',
+
+      actions: S.actions.map((a) => ({
+        type: a.type, target: a.target, rev: a.rev, revC: a.revC,
+        st: a.st, stC: stC[a.st],
+        bc: a.st === 'BLOCKED' ? 'rgba(224,120,92,0.5)' : (a.st === 'EXECUTED' ? 'rgba(92,224,160,0.35)' : (a.st === 'RUNNING' ? 'rgba(201,169,98,0.5)' : 'rgba(237,230,211,0.15)')),
+        g0: gateC(a.gates[0]), g1: gateC(a.gates[1]), g2: gateC(a.gates[2]), g3: gateC(a.gates[3]),
+      })),
+      execNote: S.actions.length && S.actions[4] && S.actions[4].st === 'BLOCKED' ? 'blocked ≠ failed — the fifth action asked to leave the envelope, and the bus said no. that refusal is the architecture working.' : 'gates light left to right · SCOPE → PERMIT → CONSTITUTION → PROOF',
+
+      receiptHash: S.receiptHash,
+      toCloseout: () => this.toCloseout(),
+      resetAll: () => this.resetAll(),
+
+      events: S.events.map((e) => ({ type: e.type, d: e.d, ts: e.ts, c: this.EVC[e.type] || 'rgba(237,230,211,0.8)' })),
+
+      fdes: this.FDES.map((x, i) => ({ t: x.t, onClick: () => { this.setState({ fde: i }); this.emit('fde.verdict', x.v + ' · ' + x.lens.toLowerCase()); } })),
+      fdeLens: f ? f.lens : '— pick a failure —',
+      fdeLensC: f ? f.lc : 'rgba(248,246,241,0.4)',
+      fdeVerd: f ? f.v : '—',
+      fdeVerdC: f ? f.vc : 'rgba(248,246,241,0.3)',
+      fdeNote: f ? f.note : 'Every serious failure ends in exactly one of seven verdicts. Route it before you act.',
+    };
+  }
+}
+</script>
+</body>
+</html>

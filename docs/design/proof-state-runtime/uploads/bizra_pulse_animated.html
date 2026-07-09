@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BIZRA Node0 — The Living Pulse</title>
+<style>
+/* ── THE PULSE · animated architecture · zero dependency · offline ──
+   Motion is the subject here, so it is permitted — but it still obeys
+   the law: each moving token is a truth-event (intent · proposal ·
+   receipt), green only seals, ember only blocks, DESIGNED_NOT_LIVE labelled. */
+:root{
+  --void:#050B14; --navy:#0A1628; --deep:#081222; --panel:#0c1a2e;
+  --ink:#EDE8DC; --mut:#7C8698; --line:#1E3050;
+  --gold:#D4AF37; --teal:#2CB7A7; --sealed:#2F8A57; --ember:#B4552D;
+  --human:#C9A962;
+  --mono:'IBM Plex Mono',ui-monospace,'Cascadia Mono',monospace;
+}
+*{box-sizing:border-box} html,body{margin:0}
+body{background:radial-gradient(1100px 560px at 60% -12%,#0d1f3c40,transparent 60%),var(--void);
+  color:var(--ink);font:13px/1.5 var(--mono);min-height:100vh;padding:22px}
+.head{max-width:1080px;margin:0 auto 6px}
+.kick{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold)}
+h1{font-size:19px;font-weight:600;letter-spacing:.06em;margin:6px 0 2px}
+.sub{color:var(--mut);font-size:11.5px}
+.stage{max-width:1080px;margin:0 auto;position:relative}
+svg{width:100%;height:auto;display:block}
+.legend{max-width:1080px;margin:10px auto 0;display:flex;gap:16px;flex-wrap:wrap;font-size:10.5px;color:var(--mut)}
+.legend b{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:1px;margin-right:5px}
+.ctl{max-width:1080px;margin:12px auto 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+button{font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink);
+  background:transparent;border:1px solid var(--line);border-radius:6px;padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--gold);color:var(--gold)}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.readout{font-size:11px;color:var(--mut)}
+.readout b{color:var(--teal)}
+/* node styling */
+.nodebox{fill:var(--panel);stroke:var(--line);stroke-width:1.2;rx:8}
+.nodebox.human{stroke:var(--human)}
+.nodebox.gate{stroke:var(--gold)}
+.nodebox.dnl{stroke-dasharray:5 4;stroke:var(--mut)}
+.nlabel{fill:var(--ink);font:600 12px var(--mono)}
+.nsub{fill:var(--mut);font:10px var(--mono)}
+.tag{fill:var(--mut);font:8.5px var(--mono);letter-spacing:.1em}
+.wire{fill:none;stroke:var(--line);stroke-width:1.4}
+.wire.back{stroke:#16283f;stroke-dasharray:3 5}
+.forbidden{stroke:var(--ember);stroke-width:1.2;stroke-dasharray:2 4;opacity:.5}
+@media (prefers-reduced-motion:no-preference){
+  .seedpulse{animation:seed 3s ease-in-out infinite}
+  @keyframes seed{0%,100%{r:5;opacity:.9}50%{r:8;opacity:.5}}
+}
+.token{opacity:0}
+.tk-label{fill:var(--void);font:700 9px var(--mono)}
+</style>
+</head>
+<body>
+<div class="head">
+  <div class="kick">bizra node0 · the living pulse</div>
+  <h1>How the components come together</h1>
+  <div class="sub">One intent enters. It is proposed locally, filtered at the fail-closed membrane, sealed as a signed receipt — and only the receipt crosses. Watch one full turn of the loop.</div>
+</div>
+
+<div class="stage">
+<svg viewBox="0 0 1080 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Animated BIZRA Node0 architecture: intent flows from human through DEMA to the personal agentic team, is filtered by the FATE membrane into a signed receipt, which crosses to the system resource pool">
+  <defs>
+    <marker id="arw" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0 0L7 3L0 6" fill="#3a5578" stroke="#3a5578" stroke-width="1"/>
+    </marker>
+    <marker id="arwg" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0 0L7 3L0 6" fill="none" stroke="#2CB7A7" stroke-width="1.4"/>
+    </marker>
+  </defs>
+
+  <!-- ===== zone labels ===== -->
+  <text x="150" y="26" class="tag" fill="#C9A962">LOCAL HUMAN NODE · user-loyal · never touches network</text>
+  <text x="760" y="26" class="tag" fill="#D4AF37">SHARED RESOURCE POOL · designed_not_live</text>
+
+  <!-- ===== wires (drawn first, behind nodes) ===== -->
+  <path class="wire" d="M150 90 H235" marker-end="url(#arw)"/>            <!-- human->dema -->
+  <path class="wire" d="M370 90 H455" marker-end="url(#arw)"/>            <!-- dema->pat -->
+  <path class="wire" d="M540 128 V210" marker-end="url(#arw)"/>          <!-- pat->fate -->
+  <path class="wire" d="M540 290 V352" marker-end="url(#arw)"/>          <!-- fate->receipt -->
+  <path class="wire" d="M620 388 H720" marker-end="url(#arwg)"/>         <!-- receipt->pool (only receipt crosses) -->
+  <path class="wire back" d="M760 352 C 680 300, 470 300, 435 250"/>    <!-- pool ack back to pat (dashed) -->
+  <path class="wire back" d="M300 128 C 300 300, 250 420, 150 250" marker-end="url(#arw)"/> <!-- dema returns to human -->
+
+  <!-- forbidden edge: no PAT-to-PAT -->
+  <path class="forbidden" d="M455 108 C 380 160, 380 160, 300 108"/>
+  <text x="330" y="150" class="tag" fill="#B4552D" opacity=".7">✕ no PAT↔PAT</text>
+
+  <!-- ===== NODES ===== -->
+  <!-- Human -->
+  <g>
+    <rect class="nodebox human" x="40" y="62" width="110" height="56"/>
+    <text x="95" y="86" class="nlabel" text-anchor="middle">Human</text>
+    <text x="95" y="102" class="nsub" text-anchor="middle">sovereign intent</text>
+    <circle class="seedpulse" cx="95" cy="118" r="5" fill="#C9A962" opacity="0"/>
+  </g>
+
+  <!-- DEMA / P7 -->
+  <g>
+    <rect class="nodebox" x="235" y="58" width="135" height="64"/>
+    <text x="302" y="82" class="nlabel" text-anchor="middle">DEMA · P7</text>
+    <text x="302" y="98" class="nsub" text-anchor="middle">only human face</text>
+    <text x="302" y="112" class="tag" text-anchor="middle">MEASURED</text>
+  </g>
+
+  <!-- PAT-7 -->
+  <g>
+    <rect class="nodebox" x="455" y="58" width="170" height="70"/>
+    <text x="540" y="80" class="nlabel" text-anchor="middle">PAT-7</text>
+    <text x="540" y="96" class="nsub" text-anchor="middle">personal agentic team · local</text>
+    <text x="540" y="110" class="nsub" text-anchor="middle">P1 plan · P2 research · P3 code…</text>
+    <text x="540" y="122" class="tag" text-anchor="middle">P5 ethicist FROZEN</text>
+  </g>
+
+  <!-- FATE membrane -->
+  <g>
+    <rect class="nodebox gate" x="410" y="210" width="260" height="80"/>
+    <text x="540" y="236" class="nlabel" text-anchor="middle" fill="#D4AF37">FATE — the membrane</text>
+    <text x="540" y="252" class="nsub" text-anchor="middle">fail-closed · axiomatic filter</text>
+    <text x="540" y="266" class="nsub" text-anchor="middle">consent check · μ ∈ Cₜ ?</text>
+    <text x="540" y="281" class="tag" text-anchor="middle" fill="#B4552D">mismatch → HOLD, never ADVANCE</text>
+  </g>
+
+  <!-- Receipt -->
+  <g>
+    <rect class="nodebox" x="460" y="352" width="160" height="72" stroke="#2F8A57"/>
+    <text x="540" y="376" class="nlabel" text-anchor="middle" fill="#2F8A57">Receipt</text>
+    <text x="540" y="392" class="nsub" text-anchor="middle">Ed25519 · BLAKE3-chained</text>
+    <text x="540" y="406" class="nsub" text-anchor="middle">proves / does-not-prove</text>
+    <text x="540" y="419" class="tag" text-anchor="middle">the only thing that crosses</text>
+  </g>
+
+  <!-- System pool -->
+  <g>
+    <rect class="nodebox dnl" x="720" y="330" width="300" height="150"/>
+    <text x="870" y="356" class="nlabel" text-anchor="middle" fill="#D4AF37">SAT-5 · URP</text>
+    <text x="870" y="372" class="nsub" text-anchor="middle">system agentic team · resource pool</text>
+    <text x="740" y="398" class="nsub">S1 validator</text>
+    <text x="740" y="414" class="nsub">S2 oracle FROZEN</text>
+    <text x="740" y="430" class="nsub">seed treasury</text>
+    <text x="880" y="398" class="nsub">compute pool</text>
+    <text x="880" y="414" class="nsub">house of wisdom</text>
+    <text x="880" y="430" class="nsub">receipt log</text>
+    <text x="870" y="460" class="tag" text-anchor="middle" fill="#7C8698">DESIGNED_NOT_LIVE · built before its need</text>
+  </g>
+
+  <!-- ===== ANIMATED TOKENS (JS-driven) ===== -->
+  <g id="tokenLayer">
+    <g class="token" id="tIntent">
+      <circle r="9" fill="#C9A962"/><text class="tk-label" text-anchor="middle" y="3">نية</text>
+    </g>
+    <g class="token" id="tProposal">
+      <circle r="9" fill="#2a78d6"/><text class="tk-label" text-anchor="middle" y="3">P</text>
+    </g>
+    <g class="token" id="tReceipt">
+      <circle r="9" fill="#2F8A57"/><text class="tk-label" text-anchor="middle" y="3">✓</text>
+    </g>
+  </g>
+
+  <!-- stage caption -->
+  <text id="cap" x="540" y="524" class="nsub" text-anchor="middle" fill="#7C8698" font-size="12"></text>
+</svg>
+</div>
+
+<div class="legend">
+  <span><b style="background:#C9A962"></b>intent (human)</span>
+  <span><b style="background:#2a78d6"></b>proposal (local)</span>
+  <span><b style="background:#D4AF37"></b>gate (consent)</span>
+  <span><b style="background:#2F8A57"></b>receipt (sealed)</span>
+  <span><b style="background:#B4552D"></b>blocked / forbidden</span>
+  <span><b style="background:#7C8698"></b>designed, not live</span>
+</div>
+
+<div class="ctl">
+  <button id="run">▶ run one pulse</button>
+  <button id="loop">↻ loop</button>
+  <span class="readout" id="stateout">stage: <b>idle</b></span>
+</div>
+
+<script>
+"use strict";
+const S = (id)=>document.getElementById(id);
+const cap = S("cap"), stateout = S("stateout");
+const T = { intent:S("tIntent"), proposal:S("tProposal"), receipt:S("tReceipt") };
+
+// path waypoints (x,y) matching the wires above
+const LEG = [
+  { tok:"intent",   from:[95,118], to:[302,90],  cap:"1 · intent enters — the human speaks a n(iyyah)", state:"intake" },
+  { tok:"intent",   from:[302,90], to:[540,93],  cap:"2 · DEMA hands it to the local team — nothing leaves the machine", state:"local-plan" },
+  { tok:"proposal", from:[540,128],to:[540,210], cap:"3 · PAT proposes — a bounded action, not yet permitted", state:"proposed" },
+  { tok:"proposal", from:[540,250],to:[540,250], cap:"4 · FATE checks consent — μ ∈ Cₜ ? — byte-exact or it HOLDS", state:"gate", gate:true },
+  { tok:"receipt",  from:[540,290],to:[540,352], cap:"5 · sealed — Ed25519 signed, BLAKE3-chained receipt minted", state:"sealed" },
+  { tok:"receipt",  from:[620,388],to:[760,388], cap:"6 · only the receipt crosses the membrane to the pool", state:"crossed" },
+  { tok:"intent",   from:[302,122],to:[150,240], cap:"7 · DEMA returns the outcome to the human — the loop closes", state:"return", back:true }
+];
+
+let running=false, looping=false;
+function ease(t){return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
+
+function move(el, from, to, ms){
+  return new Promise(res=>{
+    el.style.opacity=1;
+    const t0=performance.now();
+    (function step(now){
+      const p=Math.min(1,(now-t0)/ms), e=ease(p);
+      const x=from[0]+(to[0]-from[0])*e, y=from[1]+(to[1]-from[1])*e;
+      el.setAttribute("transform",`translate(${x},${y})`);
+      if(p<1) requestAnimationFrame(step); else res();
+    })(t0);
+  });
+}
+function pulseGate(){
+  return new Promise(res=>{
+    const g=document.querySelector('.nodebox.gate'); let n=0;
+    const iv=setInterval(()=>{ g.style.stroke = (n%2? '#D4AF37':'#2F8A57'); if(++n>4){clearInterval(iv);g.style.stroke='#D4AF37';res();} },140);
+  });
+}
+async function runPulse(){
+  if(running) return; running=true;
+  for(const k in T){ T[k].style.opacity=0; }
+  for(const leg of LEG){
+    stateout.innerHTML = 'stage: <b>'+leg.state+'</b>';
+    cap.textContent = leg.cap;
+    if(leg.gate){ await pulseGate(); await new Promise(r=>setTimeout(r,250)); continue; }
+    // hide other tokens, show this one
+    for(const k in T){ if(k!==leg.tok) T[k].style.opacity=0; }
+    await move(T[leg.tok], leg.from, leg.to, leg.back?1100:950);
+    await new Promise(r=>setTimeout(r,180));
+  }
+  cap.textContent = "loop complete — every turn leaves a receipt; nothing ran that wasn't sealed.";
+  stateout.innerHTML = 'stage: <b>sealed ✓</b>';
+  for(const k in T){ T[k].style.opacity=0; }
+  running=false;
+  if(looping) setTimeout(runPulse, 900);
+}
+S("run").addEventListener("click",()=>{looping=false;runPulse();});
+S("loop").addEventListener("click",()=>{looping=!looping; S("loop").style.color=looping?'#2CB7A7':''; if(looping&&!running)runPulse();});
+// gentle auto-start once
+setTimeout(()=>{ if(!running) runPulse(); }, 600);
+</script>
+</body>
+</html>

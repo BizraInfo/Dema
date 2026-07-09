@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body { background:#030810; height:100%; }
+    body { -webkit-font-smoothing:antialiased; }
+    ::selection { background:rgba(201,169,98,0.28); color:#F8F6F1; }
+    ::-webkit-scrollbar { width:8px; height:8px; }
+    ::-webkit-scrollbar-thumb { background:rgba(201,169,98,0.2); border-radius:4px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    @keyframes glowPulse { 0%,100% { opacity:.25; } 50% { opacity:.5; } }
+    @keyframes pulseDot { 0%,100% { box-shadow:0 0 0 0 rgba(201,169,98,0.5); } 50% { box-shadow:0 0 0 6px rgba(201,169,98,0); } }
+  </style>
+</helmet>
+
+<div id="root" data-screen-label="Delivery Forge" style="position:fixed;inset:0;background:radial-gradient(120% 90% at 50% -10%,#0A1626 0%,#050B14 46%,#030810 100%);color:#F8F6F1;font-family:'Inter',sans-serif;display:flex;flex-direction:column;overflow:hidden;">
+  <div style="position:absolute;top:-12vh;left:30%;width:42vw;height:42vw;pointer-events:none;background:radial-gradient(circle,rgba(201,169,98,0.07),transparent 60%);animation:glowPulse 12s ease-in-out infinite;animation-play-state:var(--pl,running);"></div>
+  <div id="scan" style="position:absolute;inset:0;pointer-events:none;z-index:40;background:repeating-linear-gradient(to bottom,transparent 0 2px,rgba(0,0,0,0.12) 2px 3px);opacity:.18;"></div>
+
+  <!-- ══ TOP BAR ══ -->
+  <div style="flex:none;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid rgba(201,169,98,0.22);background:linear-gradient(to bottom,rgba(8,15,26,0.92),rgba(5,11,20,0.78));z-index:6;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <svg width="20" height="20" viewBox="0 0 200 200" style="overflow:visible;"><g fill="none" stroke="#C9A962" stroke-width="5"><circle cx="100" cy="100" r="30"></circle><circle cx="100" cy="70" r="30"></circle><circle cx="126" cy="85" r="30"></circle><circle cx="126" cy="115" r="30"></circle><circle cx="100" cy="130" r="30"></circle><circle cx="74" cy="115" r="30"></circle><circle cx="74" cy="85" r="30"></circle></g></svg>
+      <span style="font-family:'Cinzel',serif;font-weight:700;font-size:14px;letter-spacing:0.2em;color:#EDD9A3;">BIZRA</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;color:rgba(201,169,98,0.8);">/ delivery · forge</span>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.2em;color:rgba(237,230,211,0.55);">THE PIPELINE PROPOSES · THE GATE DISPOSES · THE RECEIPT RELEASES</div>
+    <div style="display:flex;align-items:center;gap:12px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.12em;">
+      <span style="color:rgba(248,246,241,0.42);">snapshot 2026-07-04 · main 1fce209</span>
+      <span style="color:rgba(212,184,117,0.95);border:1px solid rgba(212,184,117,0.4);border-radius:4px;padding:4px 8px;">● PREVIEW_ONLY</span>
+    </div>
+  </div>
+
+  <!-- ══ BODY ══ -->
+  <div style="flex:1;display:flex;min-height:0;z-index:5;">
+
+    <!-- ── LEFT · BODY OF KNOWLEDGE ── -->
+    <div style="flex:none;width:264px;border-right:1px solid rgba(201,169,98,0.16);background:rgba(8,15,26,0.55);overflow-y:auto;padding:16px 14px;">
+      <div style="font-family:'Cinzel',serif;font-weight:600;font-size:11px;letter-spacing:0.22em;color:#EDD9A3;">BODY OF KNOWLEDGE</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(248,246,241,0.4);margin-top:3px;">ten areas · each bound to a mechanism</div>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:7px;">
+        <sc-for list="{{ kas }}" as="ka" hint-placeholder-count="10">
+          <div style="border:1px solid rgba(237,230,211,0.15);background:rgba(10,20,33,0.5);padding:9px 11px;">
+            <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">
+              <span style="font-family:'Inter',sans-serif;font-weight:600;font-size:11.5px;color:rgba(248,246,241,0.82);">{{ ka.k }}</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:7.5px;letter-spacing:0.1em;color:{{ ka.sc }};">{{ ka.s }}</span>
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;line-height:1.5;color:rgba(248,246,241,0.45);margin-top:3px;">{{ ka.m }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- ── CENTER · PIPELINE ── -->
+    <div style="flex:1;min-width:0;overflow-y:auto;padding:26px 30px 44px;">
+      <div style="max-width:660px;margin:0 auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#C9A962;">delivery pipeline · seven stages</div>
+            <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(24px,2.6vw,34px);line-height:1.08;margin-top:8px;">Continuous delivery, constitutional release.</div>
+          </div>
+          <button onClick="{{ runWave }}" style-hover="background:rgba(201,169,98,0.18);" style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#050B14;background:#C9A962;border:none;padding:12px 20px;flex-shrink:0;">{{ runLabel }}</button>
+        </div>
+
+        <div style="margin-top:22px;position:relative;">
+          <div style="position:absolute;inset:0;transform:translate(9px,9px);background-image:radial-gradient(rgba(201,169,98,0.3) 1px,transparent 1.3px);background-size:5px 5px;"></div>
+          <div style="position:relative;border:1px solid rgba(237,230,211,0.7);background:#071120;padding:24px 22px 18px;">
+            <span style="position:absolute;top:-9px;left:14px;background:#071120;padding:0 8px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;color:#EDE6D3;">intent → canon · every arrow is a gate</span>
+            <div style="display:flex;flex-direction:column;gap:7px;">
+              <sc-for list="{{ stages }}" as="sg" hint-placeholder-count="7">
+                <button data-sg="{{ $index }}" onClick="{{ sg.onClick }}" style-hover="background:rgba(201,169,98,0.07);" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;background:transparent;border:1px solid rgba(237,230,211,0.14);padding:10px 13px;">
+                  <span style="font-family:'Cinzel',serif;font-weight:700;font-size:11px;color:rgba(201,169,98,0.85);width:22px;flex-shrink:0;">{{ sg.n }}</span>
+                  <span data-sgname="{{ $index }}" style="flex:1;min-width:0;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.04em;line-height:1.4;color:rgba(248,246,241,0.8);white-space:normal;">{{ sg.t }}</span>
+                  <span data-sgdot="{{ $index }}" style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:rgba(248,246,241,0.25);"></span>
+                  <span data-sgst="{{ $index }}" style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:0.1em;width:auto;max-width:110px;text-align:right;flex-shrink:0;color:rgba(248,246,241,0.45);">{{ sg.chip }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="margin-top:14px;border-top:1px dashed rgba(201,169,98,0.3);padding-top:13px;">
+              <div style="display:flex;gap:22px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:rgba(248,246,241,0.5);">
+                <span>owner&nbsp;&nbsp;<span style="color:#C9A962;">{{ selOwner }}</span></span>
+                <span>gate&nbsp;&nbsp;<span style="color:rgba(248,246,241,0.8);">{{ selGate }}</span></span>
+              </div>
+              <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:14.5px;line-height:1.6;color:rgba(248,246,241,0.75);margin-top:8px;">{{ selNote }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#5CE0A0;margin-top:8px;">artifact · {{ selArt }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.06em;color:{{ lineC }};min-height:16px;">{{ statusLine }}</div>
+
+        <!-- environments ladder -->
+        <div style="margin-top:20px;display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;">
+          <div style="flex:1;min-width:150px;border:1px solid rgba(92,224,160,0.4);background:rgba(92,224,160,0.03);padding:12px 14px;">
+            <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.16em;color:#8FE8BC;">LOCAL</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(248,246,241,0.5);margin-top:4px;">the node · sovereign soil</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:#5CE0A0;margin-top:5px;">● live</div>
+          </div>
+          <div style="align-self:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(201,169,98,0.7);">──▶</div>
+          <div style="flex:1;min-width:150px;border:1px solid rgba(201,169,98,0.5);background:rgba(201,169,98,0.05);padding:12px 14px;">
+            <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.16em;color:#EDD9A3;">PREVIEW</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(248,246,241,0.5);margin-top:4px;">truth-labeled · you are here</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:#C9A962;margin-top:5px;">● live</div>
+          </div>
+          <div style="align-self:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(224,120,92,0.7);">──✕──▶</div>
+          <div data-designed="canon" style="flex:1;min-width:150px;border:1px dashed rgba(212,184,117,0.5);padding:12px 14px;">
+            <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.16em;color:#D4B875;">CANON</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(248,246,241,0.5);margin-top:4px;">promotion by typed word only</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:#D4B875;margin-top:5px;">○ gated · fresh GO</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT · QA + DORA ── -->
+    <div style="flex:none;width:308px;border-left:1px solid rgba(201,169,98,0.16);background:rgba(8,15,26,0.55);overflow-y:auto;padding:16px 16px 20px;">
+      <div style="font-family:'Cinzel',serif;font-weight:600;font-size:11px;letter-spacing:0.22em;color:#EDD9A3;">QUALITY GATES</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(248,246,241,0.4);margin-top:3px;">fail-closed · a missing check is a failed check</div>
+      <div style="margin-top:11px;display:flex;flex-direction:column;gap:7px;">
+        <sc-for list="{{ qa }}" as="q" hint-placeholder-count="5">
+          <div style="border:1px solid rgba(237,230,211,0.15);background:rgba(10,20,33,0.5);padding:9px 12px;">
+            <div style="display:flex;justify-content:space-between;gap:8px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(248,246,241,0.55);">{{ q.k }}</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:7.5px;letter-spacing:0.08em;color:{{ q.c }};">{{ q.s }}</span>
+            </div>
+            <div style="font-family:'Playfair Display',serif;font-size:15px;color:{{ q.c }};margin-top:4px;">{{ q.v }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="margin-top:20px;font-family:'Cinzel',serif;font-weight:600;font-size:11px;letter-spacing:0.22em;color:#EDD9A3;">DORA INSTRUMENTS</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(248,246,241,0.4);margin-top:3px;">measured ≠ remembered — unlit until instrumented</div>
+      <div style="margin-top:11px;display:flex;flex-direction:column;gap:7px;">
+        <sc-for list="{{ dora }}" as="d" hint-placeholder-count="4">
+          <div data-designed="dora" style="border:1px dashed rgba(237,230,211,0.3);padding:9px 12px;">
+            <div style="display:flex;justify-content:space-between;gap:8px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(248,246,241,0.55);">{{ d.k }}</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:7.5px;letter-spacing:0.08em;color:{{ d.c }};">{{ d.s }}</span>
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(248,246,241,0.6);margin-top:4px;">{{ d.v }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="margin-top:20px;border:1px solid rgba(224,120,92,0.35);background:rgba(224,120,92,0.04);padding:12px 14px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:0.16em;color:#E0785C;">KEPT ON DISPLAY</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;line-height:1.7;color:rgba(248,246,241,0.65);margin-top:5px;">BIZRA Review Gate · run 27062821406<br/>conclusion: <span style="color:#E0785C;">failure</span> · 2026-06-06<br/>headSha b073d261…dfcd</div>
+        <div style="font-family:'Inter',sans-serif;font-size:10.5px;color:rgba(248,246,241,0.45);margin-top:6px;line-height:1.5;">A failed gate is evidence, not shame. It was never renamed a success.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ BOTTOM BAR ══ -->
+  <div style="flex:none;height:42px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-top:1px solid rgba(201,169,98,0.22);background:linear-gradient(to top,rgba(8,15,26,0.92),rgba(5,11,20,0.78));z-index:6;">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:0.1em;color:rgba(248,246,241,0.35);">blueprint · GIANTS-BENCHMARK-BIZRA-BOUNDARY-1A</span>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.18em;color:rgba(237,217,163,0.6);">NO STAGE SKIPS A GATE · NO GATE SPEAKS FOR A HUMAN</span>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(92,224,160,0.6);">✓ fail-closed · ✓ replay-required · ✓ no_mint</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1512,&quot;height&quot;:900},&quot;reduceMotion&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Motion&quot;},&quot;scanlines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Atmosphere&quot;}}">
+class Component extends DCLogic {
+  state = { sel: 6, run: [], running: false, statusLine: '', done: false };
+
+  STAGES = [
+    { n: '01', t: 'INTENT · mission envelope', owner: 'the human + Dema', gate: 'scope typed · TTL set · no envelope, no authority', art: 'mission_id · content-addressed', note: 'Plain language becomes a bounded contract before anything moves.', base: 'MEASURED', baseC: '#5CE0A0' },
+    { n: '02', t: 'PLAN · typed actions', owner: 'PAT-7', gate: 'plan_hash sealed to eventbus', art: 'plan_hash · emitted before work', note: 'The plan is hashed before a finger moves. Drift from plan is a blocked action, not a surprise.', base: 'MEASURED', baseC: '#5CE0A0' },
+    { n: '03', t: 'BUILD · bounded slice', owner: 'kernel · sandbox', gate: 'SCOPE · PERMIT · CONSTITUTION · PROOF', art: 'diff strictly inside the envelope', note: 'The smallest safe slice, inside the declared boundary. The sandbox executes; it never decides.', base: 'MEASURED', baseC: '#5CE0A0' },
+    { n: '04', t: 'TEST WAVE · deterministic', owner: 'SAT instruments', gate: 'fail-closed · missing check = failed check', art: '6,456 / 6,456 green · full wave', note: 'The whole wave runs before any claim stands. A skipped test is a failed test.', base: 'MEASURED', baseC: '#5CE0A0' },
+    { n: '05', t: 'REVIEW GATE · CI witness', owner: 'BIZRA Review Gate', gate: 'vendor outage → DEFER, never fake-pass', art: 'main green at 1fce209 · witness attached', note: 'The gate may pass, fail, or defer — three honest verdicts. It has already failed once, in public, on 2026-06-06.', base: 'MEASURED', baseC: '#5CE0A0' },
+    { n: '06', t: 'SEAL · receipt + manifest', owner: 'EvidenceChain', gate: 'sha256 over exact bytes · replay required', art: 'MANIFEST.sha256 · spine layers 1–5 live', note: 'What happened and what did not, sealed under its own digest. The filename proves the content.', base: 'MEASURED', baseC: '#5CE0A0' },
+    { n: '07', t: 'RELEASE · promotion ladder', owner: 'the human alone', gate: 'fresh typed GO · fails closed', art: 'PR #317 waits at this door', note: 'Local → preview is the pipeline\u2019s work. Preview → canon is a human word, and no pipeline may speak it.', base: 'HOLD', baseC: '#D4B875' },
+  ];
+
+  KAS = [
+    { k: 'Integration', m: 'EventBus · one spine of system truth', s: 'SHIPPED', sc: '#5CE0A0' },
+    { k: 'Scope', m: 'Mission envelope · boundaries + TTL', s: 'SHIPPED', sc: '#5CE0A0' },
+    { k: 'Schedule', m: 'G/W quest ladder · one slice at a time', s: 'SHIPPED', sc: '#5CE0A0' },
+    { k: 'Cost', m: 'No-mint law · value only after impact', s: 'SHIPPED', sc: '#5CE0A0' },
+    { k: 'Quality', m: 'SAT-5 gates + full deterministic wave', s: 'SHIPPED', sc: '#5CE0A0' },
+    { k: 'Resources', m: 'PAT-7 party · effect-capped by build', s: 'SHIPPED', sc: '#5CE0A0' },
+    { k: 'Communications', m: 'Receipts · four questions, every time', s: 'SHIPPED', sc: '#5CE0A0' },
+    { k: 'Risk', m: 'FDE dual diagnostic · seven verdicts', s: 'SHIPPED', sc: '#5CE0A0' },
+    { k: 'Stakeholders', m: 'One human · the bonded contract', s: 'SHIPPED', sc: '#5CE0A0' },
+    { k: 'Procurement', m: 'Vendor CI treated as weather · DEFER', s: 'PARTIAL', sc: '#D4B875' },
+  ];
+
+  QA = [
+    { k: 'unit + integration wave', v: '6,456 / 6,456', s: 'MEASURED', c: '#5CE0A0' },
+    { k: 'security audit · W4', v: '0 critical · 0 high', s: 'MEASURED', c: '#5CE0A0' },
+    { k: 'static check', v: 'npm run check · green', s: 'MEASURED', c: '#5CE0A0' },
+    { k: 'replay determinism', v: 'required on every seal', s: 'LAW', c: '#C9A962' },
+    { k: 'vendor review bot', v: 'quota exhausted', s: 'DEFER_CI_UNAVAILABLE', c: '#D4B875' },
+  ];
+
+  DORA = [
+    { k: 'deploy frequency', v: '— unlit', s: 'INSTRUMENT DESIGNED', c: '#D4B875' },
+    { k: 'lead time for change', v: '— unlit', s: 'INSTRUMENT DESIGNED', c: '#D4B875' },
+    { k: 'change-fail rate', v: 'one honest failure · 2026-06-06', s: 'PARTIAL · 1 witness', c: '#C9A962' },
+    { k: 'time to restore', v: '— unlit', s: 'INSTRUMENT DESIGNED', c: '#D4B875' },
+  ];
+
+  componentDidMount() { this._alive = true; this._timers = []; this.paint(); }
+  componentWillUnmount() { this._alive = false; (this._timers || []).forEach(clearTimeout); }
+  componentDidUpdate() { this.paint(); }
+  later(fn, ms) { const t = setTimeout(() => { if (this._alive) fn(); }, this.props.reduceMotion ? 30 : ms); this._timers.push(t); }
+
+  runWave() {
+    if (this.state.running) return;
+    this.setState({ running: true, done: false, run: this.STAGES.map(() => 'wait'), statusLine: 'wave opened · stages advance only through their gates' });
+    let t = 400;
+    this.STAGES.forEach((sg, i) => {
+      this.later(() => this.mut(i, 'running'), t);
+      t += i === 3 ? 1100 : 650;
+      const isLast = i === this.STAGES.length - 1;
+      this.later(() => {
+        this.mut(i, isLast ? 'refused' : 'pass');
+        if (isLast) this.setState({ running: false, done: true, statusLine: 'halted honestly at stage 07 — canon promotion refused without a fresh typed GO. this refusal is the release process working.' });
+      }, t);
+      t += 160;
+    });
+  }
+
+  mut(i, v) { this.setState((s) => { const r = s.run.slice(); r[i] = v; return { run: r }; }); }
+
+  paint() {
+    const S = this.state, gold = '#C9A962', green = '#5CE0A0', ember = '#E0785C', dim = 'rgba(248,246,241,0.25)';
+    const root = document.getElementById('root');
+    if (root) root.style.setProperty('--pl', this.props.reduceMotion ? 'paused' : 'running');
+    const scan = document.getElementById('scan');
+    if (scan) scan.style.display = this.props.scanlines === false ? 'none' : 'block';
+    this.STAGES.forEach((sg, i) => {
+      const st = S.run[i] || 'idle';
+      const b = document.querySelector('[data-sg="' + i + '"]');
+      const dot = document.querySelector('[data-sgdot="' + i + '"]');
+      const chip = document.querySelector('[data-sgst="' + i + '"]');
+      const name = document.querySelector('[data-sgname="' + i + '"]');
+      const on = i === S.sel;
+      if (b) { b.style.background = on ? 'rgba(201,169,98,0.08)' : 'transparent'; b.style.borderColor = st === 'refused' ? 'rgba(224,120,92,0.5)' : (st === 'running' ? 'rgba(201,169,98,0.55)' : (on ? 'rgba(201,169,98,0.5)' : 'rgba(237,230,211,0.14)')); }
+      if (name) name.style.color = on ? '#F8F6F1' : 'rgba(248,246,241,0.8)';
+      if (dot) {
+        dot.style.background = st === 'pass' ? green : st === 'running' ? gold : st === 'refused' ? ember : (st === 'wait' ? dim : sg.baseC);
+        dot.style.animation = st === 'running' ? 'pulseDot 1.4s ease-out infinite' : 'none';
+        dot.style.animationPlayState = this.props.reduceMotion ? 'paused' : 'running';
+      }
+      if (chip) {
+        const map = { idle: [sg.base, sg.baseC], wait: ['QUEUED', 'rgba(248,246,241,0.35)'], running: ['AT THE GATE…', gold], pass: ['PASSED', green], refused: ['REFUSED · fresh GO', ember] };
+        chip.textContent = map[st][0]; chip.style.color = map[st][1];
+      }
+    });
+  }
+
+  renderVals() {
+    const S = this.state, sg = this.STAGES[S.sel];
+    return {
+      kas: this.KAS,
+      stages: this.STAGES.map((x, i) => ({ n: x.n, t: x.t, chip: x.base, onClick: () => this.setState({ sel: i }) })),
+      selOwner: sg.owner, selGate: sg.gate, selNote: sg.note, selArt: sg.art,
+      runWave: () => this.runWave(),
+      runLabel: S.running ? 'wave running…' : (S.done ? 'run the wave again ▷' : 'run the wave ▷'),
+      statusLine: S.statusLine,
+      lineC: S.done ? '#E0785C' : (S.running ? '#C9A962' : 'rgba(248,246,241,0.4)'),
+      qa: this.QA, dora: this.DORA,
+    };
+  }
+}
+</script>
+</body>
+</html>
