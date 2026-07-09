@@ -65,3 +65,9 @@ what is bash , why its the most important and most (1).md
 # Root-level scratch screenshot from operator review; bind explicitly in docs
 # before tracking as evidence.
 /bizra-ai-screenshot.png
+
+# Design-export bundle (2026-07-08). Selective text/design source integrated
+# under docs/design/proof-state-runtime/. Heavy binaries (PNG/PDF) + zip stay
+# out of history — see that dir's README for the excluded-asset manifest.
+/BIZRA proof-state runtime/
+/BIZRA proof-state runtime.zip

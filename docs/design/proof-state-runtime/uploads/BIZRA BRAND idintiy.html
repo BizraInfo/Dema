@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIZRA | Brand Identity & Digital Signature</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@200;300;400;500;600&family=Playfair+Display:wght@400;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gold: {
+                            100: '#F9F1D8',
+                            300: '#E6D5A6',
+                            400: '#D4B875',
+                            500: '#C9A962',
+                            600: '#B08D45',
+                            900: '#8A6B2E',
+                        },
+                        navy: {
+                            800: '#0A1628',
+                            900: '#050B14',
+                        },
+                        charcoal: '#121212',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                        arabic: ['Amiri', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #050B14;
+            color: #F8F6F1;
+            overflow-x: hidden;
+        }
+
+        .grid-bg {
+            background-image:
+                linear-gradient(rgba(201, 169, 98, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(201, 169, 98, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+        }
+
+        .logo-circle {
+            fill: none;
+            stroke: #C9A962;
+            stroke-width: 1;
+            opacity: 0;
+            /* Hidden initially for animation */
+        }
+
+        .logo-petal {
+            fill: none;
+            stroke: url(#goldGrad);
+            stroke-width: 1.5;
+            stroke-linecap: round;
+            opacity: 0;
+        }
+
+        .construction-line {
+            stroke: rgba(201, 169, 98, 0.1);
+            stroke-width: 0.5;
+            fill: none;
+            stroke-dasharray: 4 4;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Typography utilities */
+        .text-balance {
+            text-wrap: balance;
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+
+    <!-- Background Grid -->
+    <div class="fixed inset-0 grid-bg pointer-events-none z-0"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 px-8 py-6 flex justify-between items-center mix-blend-difference">
+        <div class="text-xs uppercase tracking-[0.3em] text-gold-500">Identity System v2.0 Elite</div>
+        <div class="text-xs uppercase tracking-[0.3em] text-white/50">December 2025</div>
+    </nav>
+
+    <!-- Section 1: The Reveal -->
+    <section class="h-screen w-full flex flex-col items-center justify-center relative z-10">
+
+        <!-- Logo Container -->
+        <div class="relative w-64 h-64 md:w-96 md:h-96 mb-12">
+            <svg viewBox="0 0 200 200" class="w-full h-full overflow-visible">
+                <!-- Defs for gradients -->
+                <defs>
+                    <linearGradient id="goldGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#8A6B2E;stop-opacity:1" />
+                        <stop offset="50%" style="stop-color:#C9A962;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#F9F1D8;stop-opacity:1" />
+                    </linearGradient>
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                        <feMerge>
+                            <feMergeNode in="coloredBlur" />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                    </filter>
+                </defs>
+
+                <!-- Construction Circles (The Seed of Life Grid) -->
+                <g id="construction-grid" transform="translate(100, 100)">
+                    <!-- Center -->
+                    <circle cx="0" cy="0" r="40" class="logo-circle seed-circle" />
+                    <!-- 6 Surrounding Circles (Radius 40) -->
+                    <circle cx="0" cy="-40" r="40" class="logo-circle seed-circle" />
+                    <circle cx="34.6" cy="-20" r="40" class="logo-circle seed-circle" />
+                    <circle cx="34.6" cy="20" r="40" class="logo-circle seed-circle" />
+                    <circle cx="0" cy="40" r="40" class="logo-circle seed-circle" />
+                    <circle cx="-34.6" cy="20" r="40" class="logo-circle seed-circle" />
+                    <circle cx="-34.6" cy="-20" r="40" class="logo-circle seed-circle" />
+
+                    <!-- Outer Ring -->
+                    <circle cx="0" cy="0" r="80" class="construction-line" />
+                </g>
+
+                <!-- The Manifested Flower (High-Definition Overlay) -->
+                <g id="main-logo" transform="translate(100 100)">
+                    <!-- The Central Star/Flower petals formed by intersection -->
+                    <path d="M0 -40 Q20 -20 0 0 Q-20 -20 0 -40" class="logo-petal" />
+                    <path d="M34.6 -20 Q17.3 10 0 0 Q17.3 -10 34.6 -20" class="logo-petal" />
+                    <path d="M34.6 20 Q17.3 10 0 0 Q17.3 30 34.6 20" class="logo-petal" />
+                    <path d="M0 40 Q-20 20 0 0 Q20 20 0 40" class="logo-petal" />
+                    <path d="M-34.6 20 Q-17.3 10 0 0 Q-17.3 30 -34.6 20" class="logo-petal" />
+                    <path d="M-34.6 -20 Q-17.3 10 0 0 Q-17.3 -10 -34.6 -20" class="logo-petal" />
+
+                    <!-- Central Nuqta (Diamond) -->
+                    <rect x="-3" y="-3" width="6" height="6" transform="rotate(45)" fill="url(#goldGrad)"
+                        class="opacity-0 logo-dot" />
+                </g>
+            </svg>
+        </div>
+
+        <!-- Wordmark -->
+        <div class="text-center overflow-hidden">
+            <h1 class="text-6xl md:text-8xl font-serif tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-gold-300 to-gold-600 opacity-0 translate-y-10"
+                id="wordmark">
+                BIZRA
+            </h1>
+        </div>
+
+        <div class="mt-6 font-arabic text-gold-500/60 text-2xl opacity-0" id="arabic-tag">
+            البذرة
+        </div>
+
+    </section>
+
+    <!-- Section 2: The Semiotics (Meaning) -->
+    <section class="py-32 px-6 md:px-24 w-full bg-navy-900 border-t border-white/5 relative">
+        <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+
+            <!-- Graphic -->
+            <div class="relative aspect-square glass-card rounded-2xl p-12 flex items-center justify-center group">
+                <div
+                    class="absolute inset-0 bg-gradient-to-br from-gold-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+                </div>
+
+                <!-- SVG Breakdown -->
+                <svg viewBox="0 0 200 200" class="w-full h-full">
+                    <!-- The Center -->
+                    <g class="semiotic-group" data-id="1">
+                        <circle cx="100" cy="100" r="30" fill="rgba(201, 169, 98, 0.2)" stroke="#C9A962"
+                            stroke-width="1" />
+                        <circle cx="100" cy="100" r="1" fill="#C9A962" />
+                        <line x1="100" y1="100" x2="150" y2="100" stroke="#C9A962" stroke-width="0.5" />
+                        <text x="155" y="103" fill="#C9A962" font-size="8" font-family="Inter"
+                            class="uppercase tracking-widest">The Seed (1)</text>
+                    </g>
+
+                    <!-- The 6 Circles -->
+                    <g class="semiotic-group" data-id="2">
+                        <circle cx="100" cy="70" r="30" fill="none" stroke="#C9A962" stroke-width="0.5"
+                            stroke-dasharray="2 2" />
+                        <circle cx="126" cy="85" r="30" fill="none" stroke="#C9A962" stroke-width="0.5"
+                            stroke-dasharray="2 2" />
+                        <circle cx="126" cy="115" r="30" fill="none" stroke="#C9A962" stroke-width="0.5"
+                            stroke-dasharray="2 2" />
+                        <circle cx="100" cy="130" r="30" fill="none" stroke="#C9A962" stroke-width="0.5"
+                            stroke-dasharray="2 2" />
+                        <circle cx="74" cy="115" r="30" fill="none" stroke="#C9A962" stroke-width="0.5"
+                            stroke-dasharray="2 2" />
+                        <circle cx="74" cy="85" r="30" fill="none" stroke="#C9A962" stroke-width="0.5"
+                            stroke-dasharray="2 2" />
+                        <line x1="100" y1="70" x2="150" y2="40" stroke="#C9A962" stroke-width="0.5" />
+                        <text x="155" y="43" fill="#C9A962" font-size="8" font-family="Inter"
+                            class="uppercase tracking-widest">The Creation (6)</text>
+                    </g>
+
+                    <!-- The Flower Result -->
+                    <g class="semiotic-group" data-id="3">
+                        <path d="M100 70 Q115 85 100 100 Q85 85 100 70" fill="#C9A962" opacity="0.8" />
+                        <path d="M126 85 Q115 100 100 100 Q115 100 126 85" fill="#C9A962" opacity="0.5" />
+                        <!-- Simplified petals for diagram -->
+                        <line x1="100" y1="100" x2="150" y2="160" stroke="#C9A962" stroke-width="0.5" />
+                        <text x="155" y="163" fill="#C9A962" font-size="8" font-family="Inter"
+                            class="uppercase tracking-widest">The Flower (Unity)</text>
+                    </g>
+                </svg>
+            </div>
+
+            <!-- Text Content -->
+            <div>
+                <h2 class="text-gold-500 text-sm tracking-[0.4em] uppercase mb-6">Semiotics</h2>
+                <h3 class="text-4xl md:text-5xl font-serif text-white mb-8">Sacred Geometry</h3>
+
+                <div class="space-y-8">
+                    <div class="flex gap-6 group cursor-pointer" onmouseenter="highlightPart(1)">
+                        <div
+                            class="w-12 h-12 rounded-full border border-gold-500/30 flex items-center justify-center text-gold-500 group-hover:bg-gold-500 group-hover:text-navy-900 transition-all">
+                            01</div>
+                        <div>
+                            <h4 class="text-xl text-white mb-2 group-hover:text-gold-500 transition-colors">The Seed
+                                (Nuqta)</h4>
+                            <p class="text-white/50 text-sm leading-relaxed">The single central circle represents the
+                                Divine Origin (Tawhid). It is the dot under the Bā’ (ب), the beginning of all knowledge.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-6 group cursor-pointer" onmouseenter="highlightPart(2)">
+                        <div
+                            class="w-12 h-12 rounded-full border border-gold-500/30 flex items-center justify-center text-gold-500 group-hover:bg-gold-500 group-hover:text-navy-900 transition-all">
+                            02</div>
+                        <div>
+                            <h4 class="text-xl text-white mb-2 group-hover:text-gold-500 transition-colors">The Seed of
+                                Life</h4>
+                            <p class="text-white/50 text-sm leading-relaxed">The six circles surrounding the one
+                                represent the 6 days of creation. It is the perfect balance found in nature, from cells
+                                to galaxies.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-6 group cursor-pointer" onmouseenter="highlightPart(3)">
+                        <div
+                            class="w-12 h-12 rounded-full border border-gold-500/30 flex items-center justify-center text-gold-500 group-hover:bg-gold-500 group-hover:text-navy-900 transition-all">
+                            03</div>
+                        <div>
+                            <h4 class="text-xl text-white mb-2 group-hover:text-gold-500 transition-colors">The Bloom
+                                (Ihsan)</h4>
+                            <p class="text-white/50 text-sm leading-relaxed">Where the circles overlap, they form the
+                                flower. This represents the community (Ummah) and the result of the system: Beauty and
+                                Excellence.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: Typography & Palette -->
+    <section class="py-32 px-6 bg-black relative overflow-hidden">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-gold-500 text-sm tracking-[0.4em] uppercase mb-16 text-center">Visual System</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Font 1 -->
+                <div class="glass-card p-8 rounded-xl">
+                    <div class="text-white/40 text-xs uppercase tracking-widest mb-4">Primary Typeface</div>
+                    <div class="text-5xl font-serif text-white mb-2">Playfair</div>
+                    <div class="text-gold-500 text-xl">Display</div>
+                    <div class="mt-8 text-white/60 text-sm">Used for headlines and spiritual messaging. Elegant,
+                        timeless, authoritative.</div>
+                    <div class="mt-6 text-4xl text-white/20">Aa Bb Cc</div>
+                </div>
+
+                <!-- Font 2 -->
+                <div class="glass-card p-8 rounded-xl">
+                    <div class="text-white/40 text-xs uppercase tracking-widest mb-4">Secondary Typeface</div>
+                    <div class="text-5xl font-sans text-white mb-2 font-light">Inter</div>
+                    <div class="text-gold-500 text-xl">Interface</div>
+                    <div class="mt-8 text-white/60 text-sm">Used for UI elements, data visualization, and body text.
+                        Clean, precise, invisible.</div>
+                    <div class="mt-6 text-4xl text-white/20 font-sans">Aa Bb Cc</div>
+                </div>
+
+                <!-- Color Palette -->
+                <div class="glass-card p-8 rounded-xl flex flex-col justify-between">
+                    <div class="text-white/40 text-xs uppercase tracking-widest mb-4">Color Codes</div>
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-gold-500 rounded-lg shadow-[0_0_15px_rgba(201,169,98,0.4)]"></div>
+                            <div>
+                                <div class="text-white text-sm">Genesis Gold (v2.0)</div>
+                                <div class="text-white/40 text-xs font-mono">#C9A962</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-navy-800 rounded-lg border border-white/10"></div>
+                            <div>
+                                <div class="text-white text-sm">Celestial Navy (v2.0)</div>
+                                <div class="text-white/40 text-xs font-mono">#0A1628</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="w-12 h-12 bg-white/5 rounded-lg border border-white/10 flex items-center justify-center">
+                                <span class="text-[10px] text-white/40 uppercase">Pure</span>
+                            </div>
+                            <div>
+                                <div class="text-white text-sm">Pure White</div>
+                                <div class="text-white/40 text-xs font-mono">#FFFFFF</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- NEW Section: Sovereignty & Security -->
+    <section class="py-32 px-6 bg-navy-900 border-y border-white/5 relative">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-gold-500 text-sm tracking-[0.4em] uppercase mb-4">Infrastructure</h2>
+                <h3 class="text-4xl font-serif text-white">The Aegis Architecture</h3>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <!-- Aegis CSRF -->
+                <div class="glass-card p-8 rounded-2xl border-l-4 border-gold-500">
+                    <h4 class="text-2xl font-serif text-white mb-4">Aegis CSRF Hardening</h4>
+                    <p class="text-white/60 text-sm leading-relaxed mb-6">
+                        Stateless security enforced via the Double Submit Cookie pattern. Protected by `__Host-`
+                        prefixed tokens with `SameSite=Strict` and constant-time validation. This is the shield that
+                        ensures only sovereign intent manifests in the ledger.
+                    </p>
+                    <div
+                        class="flex items-center gap-4 text-[10px] font-mono text-gold-500/50 uppercase tracking-widest">
+                        <span>● Double Submit</span>
+                        <span>● Strict Entropy</span>
+                        <span>● Secure-First</span>
+                    </div>
+                </div>
+
+                <!-- SNR Autonomous Engine -->
+                <div class="glass-card p-8 rounded-2xl border-l-4 border-teal-600">
+                    <h4 class="text-2xl font-serif text-white mb-4">SNR Autonomous Engine</h4>
+                    <p class="text-white/60 text-sm leading-relaxed mb-6">
+                        Real-time monitoring of Signal-to-Noise Ratio. The system autonomously modulates performance and
+                        ethics (Ihsan Metric). If SNR falls below the elite threshold, the system triggers a
+                        self-correction ritual.
+                    </p>
+                    <div
+                        class="flex items-center gap-4 text-[10px] font-mono text-teal-600/50 uppercase tracking-widest">
+                        <span>● Latency <0.5ms< /span>
+                                <span>● Ihsan >0.99</span>
+                                <span>● Self-Correcting</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 4: Digital Application (Mockup) -->
+    <section class="py-32 px-6 flex flex-col items-center justify-center relative">
+        <div class="text-center mb-16">
+            <h2 class="text-gold-500 text-sm tracking-[0.4em] uppercase mb-4">Application</h2>
+            <h3 class="text-4xl font-serif text-white">The Key to the System</h3>
+        </div>
+
+        <!-- The Card Mockup -->
+        <div class="perspective-1000">
+            <div
+                class="w-[340px] h-[200px] md:w-[450px] md:h-[260px] rounded-2xl bg-gradient-to-br from-[#1a1a1a] to-[#050505] border border-gold-500/30 relative shadow-[0_20px_50px_rgba(0,0,0,0.5)] transform transition-transform duration-500 hover:rotate-x-10 hover:scale-105 group overflow-hidden">
+
+                <!-- Card Noise -->
+                <div
+                    class="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiPgo8cmVjdCB3aWR0aD0iNSIgaGVpZ2h0PSI1IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMSIvPgo8L3N2Zz4=')]">
+                </div>
+
+                <!-- Card Content - Updated Logo -->
+                <div class="absolute top-8 right-8">
+                    <svg width="50" height="50" viewBox="0 0 100 100">
+                        <g stroke="#C9A962" stroke-width="1" fill="none">
+                            <circle cx="50" cy="50" r="20" />
+                            <circle cx="50" cy="30" r="20" />
+                            <circle cx="67.3" cy="40" r="20" />
+                            <circle cx="67.3" cy="60" r="20" />
+                            <circle cx="50" cy="70" r="20" />
+                            <circle cx="32.7" cy="60" r="20" />
+                            <circle cx="32.7" cy="40" r="20" />
+                        </g>
+                    </svg>
+                </div>
+
+                <div class="absolute top-8 left-8">
+                    <div
+                        class="w-12 h-8 bg-gold-300/20 rounded flex items-center justify-center border border-gold-500/20">
+                        <div class="w-8 h-[1px] bg-gold-500/40"></div>
+                    </div>
+                </div>
+
+                <div class="absolute bottom-8 left-8">
+                    <div class="text-gold-500 font-serif tracking-widest text-lg">BIZRA</div>
+                    <div class="text-white/30 text-[10px] tracking-[0.2em] uppercase">Genesis Access</div>
+                </div>
+
+                <div class="absolute bottom-8 right-8 text-right">
+                    <div class="text-white/40 text-[10px] font-mono">ID: 0000-0001</div>
+                    <div class="text-white/60 text-xs font-arabic mt-1">البذرة</div>
+                </div>
+
+                <!-- Shiny Sheen -->
+                <div
+                    class="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // === ANIMATION SEQUENCE ===
+        window.addEventListener('load', () => {
+            const tl = gsap.timeline();
+
+            // 1. Draw the Seed Circles (Geometry)
+            tl.to('.seed-circle', {
+                opacity: 1,
+                stagger: 0.1,
+                duration: 1,
+                ease: "power2.out"
+            })
+                .from('.seed-circle', {
+                    drawSVG: "0%", // Note: Requires DrawSVG plugin or stroke-dashoffset hack below
+                    strokeDashoffset: 300, // Approx circumference
+                    strokeDasharray: 300,
+                    duration: 2,
+                    stagger: 0.1,
+                    ease: "power2.inOut"
+                }, "<") // Run at start of previous
+
+                // 2. Reveal the Petals (The Flower)
+                .to('.logo-petal', {
+                    opacity: 1,
+                    duration: 1,
+                    stagger: 0.1
+                })
+                .from('.logo-petal', {
+                    strokeDashoffset: 100,
+                    strokeDasharray: 100,
+                    duration: 1.5,
+                    stagger: 0.1,
+                    ease: "power2.out"
+                }, "-=0.5")
+
+                // 3. Fade out construction lines slightly
+                .to('.seed-circle', {
+                    opacity: 0.3,
+                    strokeWidth: 0.5,
+                    duration: 1
+                }, "-=1")
+
+                // 4. Pulse the center dot
+                .to('.logo-dot', {
+                    opacity: 1,
+                    scale: 1,
+                    duration: 0.5,
+                    transformOrigin: "center"
+                })
+
+                // 5. Reveal Typography
+                .to('#wordmark', {
+                    y: 0,
+                    opacity: 1,
+                    duration: 1,
+                    ease: "power3.out"
+                })
+                .to('#arabic-tag', {
+                    opacity: 1,
+                    duration: 1
+                }, "-=0.5");
+
+            // === INTERACTIVITY FOR SEMIOTICS ===
+            // Function to highlight parts
+            window.highlightPart = (id) => {
+                // Reset all
+                gsap.to('.semiotic-group', { opacity: 0.2, duration: 0.3 });
+                // Highlight specific
+                gsap.to(`.semiotic-group[data-id="${id}"]`, { opacity: 1, duration: 0.3 });
+            };
+
+            // Reset on leave
+            document.querySelector('.glass-card').addEventListener('mouseleave', () => {
+                gsap.to('.semiotic-group', { opacity: 1, duration: 0.3 });
+            });
+        });
+    </script>
+</body>
+
+</html>
