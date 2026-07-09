@@ -25,6 +25,7 @@ import {
 import { previewBoundedDiagnostic } from "../../../../packages/core/src/mission.js";
 import { buildPainGoalInterview } from "../../../../packages/core/src/pain-goal-interview.js";
 import { buildClosedDualLoopDryRun } from "../../../../packages/core/src/closed-dual-loop-dry-run.js";
+import { buildMissionReplayReport } from "../../../../packages/core/src/node0-mission-replay-preview.js";
 import {
   wantsJson,
   humanHintLine,
@@ -613,8 +614,39 @@ export async function runMissionCockpit({ runId, demaHome } = {}) {
   };
 }
 
+const DEFAULT_REPLAY_MISSION = Object.freeze({
+  mission_id: "node0-replay-demo",
+  goal: "preserve a human mission across a model/context reset",
+  steps: Object.freeze([
+    { id: "sanitize", description: "sanitize corpus (Layer -1 gate)" },
+    { id: "plan", description: "niyyah -> FATE plan" },
+    { id: "run", description: "run mission loop through stations" },
+    { id: "seal", description: "seal content-addressed receipt" },
+  ]),
+});
+
 export async function cmd_mission(ctx) {
   const { argv, subcommand } = ctx;
+  if (subcommand === "replay") {
+    // NODE0-MISSION-STATE-REPLAY-HARNESS-0A — "the mission survives the model", measured.
+    // Runs a deterministic agent loop (Think->Act->Observe) over a built-in fixture mission,
+    // persists a content-addressed receipt chain, reconstructs the final state from receipts
+    // ALONE (no model, no original state), and MEASURES reconstruction_accuracy. Pure and
+    // deterministic: no fs, network, model, daemon, mint, or federation; boundary all-false.
+    const report = buildMissionReplayReport({ mission: DEFAULT_REPLAY_MISSION });
+    if (wantsJson(argv)) {
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      const m = report.measurement;
+      console.log("DEMA · mission-state replay (the mission survives the model)");
+      console.log(`  mission: ${report.mission_id} · turns: ${report.turns_run} · receipts: ${report.receipt_count}`);
+      console.log(`  reconstruction_accuracy: ${m.reconstruction_accuracy} · critical_state_loss: ${m.critical_state_loss}`);
+      console.log(`  mission_survives_model: ${report.mission_survives_model} (no model, no original state used)`);
+      console.log(`  measurement_class: ${m.measurement_class}`);
+      console.log("  does NOT prove: real-session/semantic continuity, model correctness, live PoI/mint.");
+    }
+    return;
+  }
   if (subcommand === "cockpit") {
     // NODE0-MISSION-PILOT-COCKPIT-CLI-ADAPTER-1A — read-only operator truth cockpit. Loads the on-disk
     // emission.json verification envelope for <run-id>, re-verifies the full chain via the shipped cockpit
