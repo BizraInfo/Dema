@@ -81,6 +81,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_MISSION_PILOT_COCKPIT_PREVIEW_1A",
   "NODE0_MISSION_PILOT_COCKPIT_CLI_ADAPTER_1A",
   "SOVEREIGN_VOICE_TURN_PREVIEW_1A",
+  "NODE0_FOUNDER_IMPACT_LOOP_0A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2026,6 +2027,43 @@ function defaultCapabilityRows() {
         "live voice",
         "speech synthesis",
         "audio playback",
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_FOUNDER_IMPACT_LOOP_0A",
+      truth_label: "NODE0_FOUNDER_IMPACT_CANDIDATE_LOCAL_ONLY",
+      summary:
+        "LOCAL_ONLY candidate founder-impact loop: composes the shipped untrusted-corpus sanitizer, OKF founder-impact digest, public-metric claim-gate, and FDE dual diagnostic into one content-addressed candidate receipt that serves the founder. Binds source hashes not raw bytes; a BLOCKED source aborts before the digest; a REJECTED claim refuses the receipt; the FDE classification is advisory and cannot increase authority.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/node0-founder-impact-loop-preview.js",
+          "packages/core/src/node0-founder-impact-digest.js",
+          "packages/core/src/node0-founder-impact-gather.js",
+          "apps/cli/src/commands/founder.js",
+        ],
+        test_paths: [
+          "tests/node0-founder-impact-loop.test.js",
+          "tests/node0-founder-impact-digest.test.js",
+        ],
+        review_gate_paths: [
+          "scripts/review/node0-founder-impact-loop-check.mjs",
+        ],
+        receipt_paths: [],
+        documentation_paths: ["docs/TESTING.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live PoI, verified impact, token mint, federation, autonomous PAT/SAT, RSI, live model invocation, network use, live execution, or Ed25519-signed authority outside a separately approved proof gate.",
+      what_this_proves:
+        "A local candidate founder-impact loop: the exact consent phrase gates the run; each declared source passes the shipped untrusted-corpus sanitizer (a BLOCKED source aborts before any digest); an OKF-conformant content-addressed digest binds source hashes (never raw bytes); the shipped public-metric claim-gate accepts every claim (a REJECTED claim refuses the receipt); the shipped FDE dual diagnostic classifies a missing local model as an OUTWARD environment gap ADVISORY-ONLY. impact_class is candidate, served_to is founder, mint_allowed is false; verify re-derives the whole body and every embedded rail, and the review gate asserts that no FDE classification can flip mint_allowed / continue_allowed / scope_expansion_allowed from false to true.",
+      what_this_does_not_prove:
+        "It does not prove live PoI, verified impact, token mint, federation, autonomous PAT/SAT, or RSI. It runs no model, opens no network, starts no daemon, and includes no raw source bytes. The receipt is content-addressed, not Ed25519-signed.",
+      forbidden_claims: [
+        "verified impact",
+        "live PoI",
+        "token minted",
         "live execution",
         "operator mutation",
         "unattended runtime",

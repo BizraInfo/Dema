@@ -89,6 +89,7 @@ const COMMAND_SURFACE = [
   "diagnostics",
   "consent",
   "mission",
+  "founder",
   "voice",
   "receipts",
   "memory",
