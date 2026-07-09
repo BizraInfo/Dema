@@ -16,7 +16,7 @@
 | Local asset inventory (`inventory-v0.1.json`, **1,314** records, `LOCAL_METADATA_MEASURED`) | Token mint |
 | FDE dual-diagnostic (tested, registered) | Federation / URP web connection |
 | `#366` design PR + `#367` impl PR (CI green, **unmerged**) | Autonomous PAT/SAT runtime |
-| Shipped rails: sanitizer, claim-gate, boundary-vocab, receipts, no-overclaim gate, operator-lexicon guard (`#364` merged) | Measured performance evals (reconstruction, replay, block-rate) |
+| Shipped rails: sanitizer, claim-gate, boundary-vocab, receipts, no-overclaim gate, operator-lexicon guard (`#364` merged) | Measured performance evals: replay/reconstruction now **fixture-measured** (#369); block-rate, latency still unmeasured |
 | 9 `dema mission …` commands (pulse/review/shelf/compact) | Verified impact of any kind |
 
 ---
@@ -27,7 +27,7 @@ Status legend: **PROVEN** (shipped + verified) · **CANDIDATE** (mechanism exist
 
 | # | Claim | Root anchor | Pain solved | Current evidence (real) | Missing live-code proof | Metric | Test method | Receipt | FDE class on failure | **Status** |
 |--|--|--|--|--|--|--|--|--|--|--|
-| 1 | Human/mission is the center, not the LLM | Third Fact | LLM-centric fragility | 9 `dema mission` cmds; receipts persist outside chat | Session-reload eval: kill chat, rebuild mission from receipts, continue | `mission_reconstruction_accuracy ≥ 0.95`; `critical_state_loss = 0` | replay harness (unbuilt) | mission-state receipt | inward (state) | **DESIGNED_NOT_LIVE** |
+| 1 | Human/mission is the center, not the LLM | Third Fact | LLM-centric fragility | 9 `dema mission` cmds; receipts persist outside chat; **`dema mission replay` rebuilds final mission state from receipts ALONE on a fixture — accuracy 1.0, critical_state_loss 0, tamper→fail-closed (#369)** | **Real-session** reload (live model in the Act step) — the fixture harness proves the mechanism only | `mission_reconstruction_accuracy ≥ 0.95`; `critical_state_loss = 0` **(met on fixtures: 1.0 / 0)** | `tests/node0-mission-replay-preview.test.js` — fixture harness **built**; real-session harness DESIGNED_NOT_LIVE | mission-state receipt | inward (state) | **CANDIDATE** (LOCAL_FIXTURE_MEASURED, #369); real-session **DESIGNED_NOT_LIVE** |
 | 2 | Human is the node; machine is substrate | Third Fact | cloud dependency | local inventory + local receipts + local dema state (1 device) | 2-device Node0 space; cross-device state | device-parity checks | multi-device harness (unbuilt) | node-space receipt | outward (env) | **CANDIDATE** (1-device); 2-device DESIGNED_NOT_LIVE |
 | 3 | Every verified contribution → light | Third Fact | unrecognized labor | asset→consent→receipt proven (founder receipt) | classification + **verification** (SAT) steps | `public_candidate_count`, `top_3_next_receipt_candidates` | `dema assets shareability` (next slice) + SAT (later) | impact-candidate receipt | economy | **CANDIDATE** (path partial; verification not live) |
 | 4 | Don't believe words; inspect receipts | Third Fact | hallucinated progress | founder loop + FDE emit receipts; refusal-receipt schema exists | universal "every action → receipt/refusal" | `receipt_coverage = 100%` | coverage audit (unbuilt) | per-action receipt | inward (proof) | **CANDIDATE** |
