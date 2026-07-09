@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 // ponytail: one check — the spec must not drift below its required coverage.
 // If a category, status label, or non-claim is dropped, this fails.
 const spec = readFileSync(
-  join(dirname(fileURLToPath(import.meta.url)), "../../docs/specs/NODE0_THIRD_FACT_LIVE_PROOF_MATRIX_0A.md"),
+  join(dirname(fileURLToPath(import.meta.url)), "../docs/specs/NODE0_THIRD_FACT_LIVE_PROOF_MATRIX_0A.md"),
   "utf8",
 );
 
