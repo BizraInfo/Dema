@@ -54,7 +54,15 @@ export async function runFounderImpactScope({ manifestPath } = {}) {
   if (!gathered.ok) return { ok: false, error: "gather_failed", blocked_by: gathered.blocked_by };
   // Build in memory only (no consent phrase needed to PREVIEW the shape — nothing is written).
   const built = buildFounderImpactReceipt({ consent: NODE0_FOUNDER_IMPACT_LOOP_GO_PHRASE, input: gathered.input });
-  return { ok: built.ok, built, wrote: false };
+  // ponytail: static — these report what SCOPE actually did (a dry-run: nothing), distinct from the
+  // receipt's `boundary`, which declares the loop's effects when RUN. Keeps preview effects exact.
+  return {
+    ok: built.ok,
+    built,
+    wrote: false,
+    execution_mode: "scope_preview",
+    execution_effects: { filesystem_write_performed: false, run_consent_collected: false },
+  };
 }
 
 async function writeFounderImpactReceipt(receipt, demaHome) {
@@ -149,6 +157,8 @@ export async function cmd_founder(ctx) {
     if (wantJson) {
       console.log(JSON.stringify({
         preview_only: true,
+        execution_mode: out.execution_mode,
+        execution_effects: out.execution_effects,
         ok: b.ok,
         status: b.status,
         wrote: false,
@@ -160,7 +170,7 @@ export async function cmd_founder(ctx) {
         continue_allowed: b.continue_allowed,
         mint_allowed: r?.mint_allowed ?? false,
         fde_summary: r?.fde_summary ?? null,
-        boundary: r?.boundary ?? null,
+        receipt_declared_boundary: r?.boundary ?? null,
         blocked_by: b.blocked_by,
       }, null, 2));
     } else {

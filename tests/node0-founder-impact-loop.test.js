@@ -14,6 +14,10 @@ import {
   NODE0_FOUNDER_IMPACT_LOOP_TRUTH_LABEL,
   NODE0_FOUNDER_IMPACT_LOOP_GO_PHRASE,
 } from "../packages/core/src/node0-founder-impact-loop-preview.js";
+import { runFounderImpactScope } from "../apps/cli/src/commands/founder.js";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const GO = NODE0_FOUNDER_IMPACT_LOOP_GO_PHRASE;
 const sha = (s) => createHash("sha256").update(s, "utf8").digest("hex");
@@ -35,6 +39,29 @@ function cleanInput(overrides = {}) {
 
 test("GO phrase is the exact documented string", () => {
   assert.equal(GO, "GO: dema founder impact loop 0a");
+});
+
+// scope dry-run must report its OWN effects (nothing) — distinct from the receipt's declared loop
+// boundary. No executed filesystem write, no run consent collected.
+test("scope preview reports exact dry-run effects (no executed write, no run consent)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "dema-founder-scope-"));
+  try {
+    await writeFile(join(dir, "a.md"), "# a\nsynthetic\n");
+    await writeFile(join(dir, "b.md"), "# b\nsynthetic\n");
+    const manifest = join(dir, "manifest.json");
+    await writeFile(manifest, JSON.stringify({
+      root: dir,
+      sources: [{ path: "a.md", type: "note" }, { path: "b.md", type: "note" }],
+      claims: { claims: [], evidence: {} },
+    }));
+    const out = await runFounderImpactScope({ manifestPath: manifest });
+    assert.equal(out.wrote, false);
+    assert.equal(out.execution_mode, "scope_preview");
+    assert.equal(out.execution_effects.filesystem_write_performed, false);
+    assert.equal(out.execution_effects.run_consent_collected, false);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 // 1 — run without the exact consent phrase → refuses.
