@@ -191,6 +191,13 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     "Single-file corpus index reads file content and seals receipt under DEMA_HOME after exact GO: content_read consent",
     ["tests/founder-work-indexer.test.js"],
   ),
+  row(
+    "founder",
+    ["content_read", "local_write"],
+    "exact_phrase",
+    "founder impact scope previews read-only; run reads the declared bounded source set and writes a candidate founder-impact receipt under DEMA_HOME/founder-impact only after the exact `GO: dema founder impact loop 0a` consent phrase; verify re-derives a receipt read-only",
+    ["tests/node0-founder-impact-loop.test.js"],
+  ),
   readOnly("mirror", "tests/node0-wow-report-cli.test.js"),
   row(
     "talk",

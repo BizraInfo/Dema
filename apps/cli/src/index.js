@@ -27,6 +27,7 @@ import { cmd_delivery } from "./commands/delivery.js";
 import { cmd_foundation } from "./commands/foundation.js";
 import { cmd_realm } from "./commands/realm.js";
 import { cmd_mission } from "./commands/mission.js";
+import { cmd_founder } from "./commands/founder.js";
 import { cmd_voice } from "./commands/voice.js";
 import { cmd_memory } from "./commands/memory.js";
 import { cmd_codebase } from "./commands/codebase.js";
@@ -242,6 +243,14 @@ Orientation:
   dema mission compact [--json]
                     PREVIEW_ONLY receipt-shelf compaction (read-only): compact PROOF not prose into a
                     hash-bound state — keep/drop/no-longer-claim/one-next-action; nothing live
+  dema founder impact scope <manifest> [--json]
+                    LOCAL_ONLY dry-run: gather the declared bounded source set (read-only) and
+                    preview the candidate founder-impact receipt; writes nothing; no model/network/mint
+  dema founder impact run <manifest> --consent "GO: dema founder impact loop 0a" [--json]
+                    LOCAL_ONLY: build + verify a candidate founder-impact receipt and, only under the
+                    exact consent phrase, atomically write it under $DEMA_HOME/founder-impact; mint_allowed false
+  dema founder impact verify <receipt> [--json]
+                    LOCAL_ONLY read-only re-derivation of a founder-impact receipt; no model/network/mint
   dema authorship key init [--json]
                     Generate and persist Ed25519 keypair (requires --consent)
   dema authorship sign <artifact-path> [--json]
@@ -696,6 +705,11 @@ const REGISTERED_COMMANDS_LIST = [
     command: "corpus",
     description:
       "governed founder corpus index + spend proof + receipt review (subcommands: index, spend, review)",
+  },
+  {
+    command: "founder",
+    description:
+      "LOCAL_ONLY candidate founder-impact loop over a declared source manifest (subcommands: impact scope | run | verify)",
   },
   {
     command: "mirror",
@@ -1255,6 +1269,7 @@ const COMMAND_TABLE = {
   diagnostics: cmd_diagnostics,
   consent: cmd_consent,
   mission: cmd_mission,
+  founder: cmd_founder,
   voice: cmd_voice,
   receipts: cmd_receipts,
   memory: cmd_memory,
