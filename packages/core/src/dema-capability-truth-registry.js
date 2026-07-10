@@ -82,6 +82,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_MISSION_PILOT_COCKPIT_CLI_ADAPTER_1A",
   "SOVEREIGN_VOICE_TURN_PREVIEW_1A",
   "NODE0_FOUNDER_IMPACT_LOOP_0A",
+  "DEMA_SKILLOPT_EDIT_LEDGER_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2067,6 +2068,37 @@ function defaultCapabilityRows() {
         "live execution",
         "operator mutation",
         "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_SKILLOPT_EDIT_LEDGER_PREVIEW_1A",
+      truth_label: "DEMA_SKILLOPT_EDIT_LEDGER_PREVIEW_ONLY",
+      summary:
+        "PREVIEW_ONLY ledger recording SkillOpt-style skill-document edit-optimization attempts; fail-closed on authority expansion.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-skillopt-edit-ledger-preview.js"],
+        test_paths: ["tests/dema-skillopt-edit-ledger-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-skillopt-edit-ledger-preview-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_SKILLOPT_EDIT_LEDGER_PREVIEW_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_SKILLOPT_EDIT_LEDGER_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A SkillOpt-style skill-document edit attempt can be recorded as a content-addressed receipt whose validator fails closed: it rejects any entry claiming authority_delta != 0, a changed boundary/consent/CURRENT_LIMITS surface, an accepted edit with no cited held-out validation refs, or a rejected edit with no stated reason; and body-bound re-derivation rejects any field/hash mismatch. Verified by local fixture tests plus the review gate.",
+      what_this_does_not_prove:
+        "It does not run the SkillOpt optimizer, invoke any model, generate or apply a skill edit, promote any skill, or enforce strict held-out score improvement; nor does it prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+        "self-evolving skills",
+        "autonomous skill promotion",
       ],
     }),
   ]);
