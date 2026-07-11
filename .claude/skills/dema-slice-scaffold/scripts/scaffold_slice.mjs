@@ -99,28 +99,18 @@ const KERNEL_TEMPLATE = `// %%ID%% — %%INTENT%%
 // Pure kernel: no fs / network / process / clock / random unless injected and
 // documented in this header. Every claim here is a preview; the boundary is all-false.
 
-import { createHash } from "node:crypto";
+// M5.1B: hash-bearing slices use the ONE canonical byte contract — no local
+// serializer copy. Unsupported values (undefined, NaN, sparse arrays,
+// accessors, ...) fail closed inside packages/canon with registered error
+// codes. The scaffold auto-registers this kernel's path in
+// CANONICAL_JSON_V1_REGISTERED_CONSUMERS (scripts/review/canonical-json-v1-check.mjs);
+// review that one-line diff in this slice's PR.
+import { CANONICAL_JSON_V1_ALGORITHM } from "../../canon/src/canonical-json-v1.js";
+import { sha256CanonicalJsonV1 } from "../../canon/src/sha256-canonical-json-v1.js";
 
 export const %%PREFIX%%_SCHEMA = "%%SCHEMA%%";
 export const %%PREFIX%%_TRUTH_LABEL = "%%TRUTH%%";
 export const %%PREFIX%%_GO_PHRASE = "%%GO%%";
-
-function sha256(value) {
-  return createHash("sha256").update(value, "utf8").digest("hex");
-}
-
-function stableStringify(value) {
-  if (Array.isArray(value)) {
-    return \`[\${value.map(stableStringify).join(",")}]\`;
-  }
-  if (value && typeof value === "object") {
-    const entries = Object.keys(value)
-      .sort()
-      .map((k) => \`\${JSON.stringify(k)}:\${stableStringify(value[k])}\`);
-    return \`{\${entries.join(",")}}\`;
-  }
-  return JSON.stringify(value);
-}
 
 // All-false boundary invariant. These keys mirror the capability-truth-registry
 // row boundary — keep them all false; flipping any one is an execution claim.
@@ -165,10 +155,13 @@ export function build%%CAMEL%%Payload(input) {
   const body = {
     schema: %%PREFIX%%_SCHEMA,
     truth_label: %%PREFIX%%_TRUTH_LABEL,
+    canonicalization_algorithm: CANONICAL_JSON_V1_ALGORITHM,
+    hash_algorithm: "sha256",
+    text_encoding: "utf-8",
     input,
     boundary: %%CAMELLOWER%%Boundary(),
   };
-  const content_hash = \`sha256:\${sha256(stableStringify(body))}\`;
+  const content_hash = sha256CanonicalJsonV1(body);
   return Object.freeze({ ...body, content_hash });
 }
 
@@ -745,6 +738,23 @@ function main() {
     if (r.changed && !opts.dryRun) writeFileSync(abs, r.content);
   }
 
+  // 6. canonical-json-v1 gate — register the generated kernel as an authorized
+  //    canon consumer (M5.1B). The kernel imports packages/canon; without this
+  //    anchored one-line insert the adoption-freeze scan fails closed.
+  {
+    const p = "scripts/review/canonical-json-v1-check.mjs";
+    const abs = join(repo, p);
+    const content = readFileSync(abs, "utf8");
+    const r = insertLineBefore(
+      content,
+      "// scaffold:register-consumer",
+      `  "packages/core/src/${n.kebab}.js",`,
+      `"packages/core/src/${n.kebab}.js"`,
+    );
+    edits.push({ path: p, ...r });
+    if (r.changed && !opts.dryRun) writeFileSync(abs, r.content);
+  }
+
   // --- write new files ---------------------------------------------------
   if (!opts.dryRun) {
     for (const f of files) {
@@ -768,6 +778,7 @@ function main() {
       `node --test tests/${n.kebab}.test.js   # expect RED (not_implemented)`,
       `# build packages/core/src/${n.kebab}.js until the test goes green`,
       `node scripts/review/${n.kebab}-check.mjs --json`,
+      `# review the one-line canon consumer registration in scripts/review/canonical-json-v1-check.mjs`,
       `npm test && npm run check`,
     ],
   };

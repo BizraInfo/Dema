@@ -60,7 +60,7 @@ random unless injected and documented in the header. Exports, in order:
   in line with the registry-resolution discipline (`SERVER_VALIDATED` means a positive
   resolution, not the absence of a flag).
 - `build<Camel>Payload(input)` — returns a frozen, **content-addressed** payload
-  (`content_hash = sha256(stableStringify(body))`). Reshape `body` to carry the real
+  (`content_hash = sha256CanonicalJsonV1(body)` — the bizra.canonical-json.v1 contract from `packages/canon`; no local serializer). Reshape `body` to carry the real
   fields this slice attests.
 - `verify<Camel>(payload)` — the **re-derivation** path required by the core-kernels
   rule. Recompute the hash over the body minus its hash field and reject any mismatch,

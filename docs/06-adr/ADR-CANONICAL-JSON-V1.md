@@ -126,6 +126,18 @@ from the M5.0 inventory — exact adapter behavior is M5.2 scope:
 - `bizra.legacy.omit-undefined-null-array.v0` — the 7-file omit/null variant
 - `bizra.legacy.raw-json-stringify.v0` — insertion-order `JSON.stringify` sites
 
+## M5.1B addendum — propagation stopped (2026-07-11)
+
+The dema-slice-scaffold (measured by the M5.0 inventory as the source of the
+76 group-A serializer copies) no longer embeds a local `stableStringify`:
+generated kernels import this contract and declare the canonicalization
+identity triplet. Production adoption stays frozen — each generated kernel is
+auto-registered as an explicit one-line entry in
+`CANONICAL_JSON_V1_REGISTERED_CONSUMERS`
+(`scripts/review/canonical-json-v1-check.mjs`), reviewed in that slice's own
+PR; the list is empty until the first such slice lands. Existing consumers,
+receipts, and hashes are untouched (M5.2 scope).
+
 ## Forbidden in this slice
 
 No consumer migration, no receipt-ID change, no historical rehash, no schema
