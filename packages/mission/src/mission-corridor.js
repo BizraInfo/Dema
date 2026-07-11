@@ -217,7 +217,9 @@ export function appendCorridorEvent({ contract_hash, journal, event } = {}) {
     head_sha: head_sha ?? null,
     failing_gate: failing_gate ?? null,
     next_command: next_command ?? null,
-    requires_human: requires_human === true,
+    // STOPPED always requires a human: the kill switch ends the corridor and
+    // only the operator can open the next one (SAT observation on 4407189).
+    requires_human: requires_human === true || state === "STOPPED",
     repair_rounds_used: rounds,
     note: note ?? null,
   };

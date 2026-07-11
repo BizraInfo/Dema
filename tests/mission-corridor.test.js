@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, readFileSync, existsSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -223,12 +223,15 @@ test("resume point reconstructs branch/sha/failing-gate/next-command from the jo
 test("terminal states accept no further events; requires_human surfaces as a block", () => {
   const c = buildMissionContract(goodContractInput());
   let journal = seedJournal(c.contract, c.contract_hash);
+  // STOPPED implies requires_human even when the caller omits it (kill switch
+  // always hands control back to the human).
   let r = appendCorridorEvent({
     contract_hash: c.contract_hash,
     journal,
-    event: { state: "STOPPED", at_iso: "2026-07-11T12:30:00.000Z", requires_human: true, note: "operator stop" },
+    event: { state: "STOPPED", at_iso: "2026-07-11T12:30:00.000Z", note: "operator stop" },
   });
   assert.equal(r.ok, true);
+  assert.equal(r.event.requires_human, true, "STOPPED forces requires_human");
   journal = r.journal;
 
   const after = appendCorridorEvent({
@@ -284,9 +287,14 @@ test("CLI: start → status → resume survives process loss → stop; exact con
   assert.throws(() => run([...startArgs, "--consent", "yes please"]), (e) => e.status === 1);
   assert.ok(!existsSync(join(home, "missions/demo-corridor/contract.json")));
 
-  // exact consent starts the corridor
+  // exact consent starts the corridor — and the CLI reports an HONEST boundary:
+  // it really wrote under consent (kernel stays all-false; the IO layer must not
+  // print false statements about its own effects).
   const started = JSON.parse(run([...startArgs, "--consent", "GO: start mission corridor demo-corridor"]));
   assert.equal(started.ok, true);
+  assert.equal(started.boundary.filesystem_write_performed, true);
+  assert.equal(started.boundary.consent_collected, true);
+  assert.equal(started.boundary.runtime_execution_performed, false);
   assert.ok(existsSync(join(home, "missions/demo-corridor/contract.json")));
   assert.ok(existsSync(join(home, "missions/demo-corridor/journal.jsonl")));
 
@@ -298,11 +306,26 @@ test("CLI: start → status → resume survives process loss → stop; exact con
   assert.equal(resumed.ok, true);
   assert.equal(resumed.state, "CREATED");
   assert.ok(resumed.resume_point.next_command.length > 0);
+  assert.equal(resumed.boundary.content_read, true, "resume honestly reports its reads");
+  assert.equal(resumed.boundary.filesystem_write_performed, false);
 
   // stop requires its own exact phrase
   assert.throws(() => run(["mission", "corridor", "stop", "demo-corridor", "--json", "--consent", "stop it"]), (e) => e.status === 1);
+
+  // stop refuses to extend a tampered chain (verify-before-append)
+  const journalPath = join(home, "missions/demo-corridor/journal.jsonl");
+  const honest = readFileSync(journalPath, "utf8");
+  writeFileSync(journalPath, honest.replace('"corridor created"', '"forged note"'));
+  assert.throws(
+    () => run(["mission", "corridor", "stop", "demo-corridor", "--json", "--consent", "GO: stop mission corridor demo-corridor"]),
+    (e) => e.status === 1 && String(e.stderr).includes("tampered"),
+  );
+  writeFileSync(journalPath, honest); // restore the honest chain
+
   const stopped = JSON.parse(run(["mission", "corridor", "stop", "demo-corridor", "--json", "--consent", "GO: stop mission corridor demo-corridor"]));
   assert.equal(stopped.ok, true);
+  assert.equal(stopped.boundary.filesystem_write_performed, true);
+  assert.equal(stopped.boundary.consent_collected, true);
 
   const status = JSON.parse(run(["mission", "corridor", "status", "demo-corridor", "--json"]));
   assert.equal(status.state, "STOPPED");

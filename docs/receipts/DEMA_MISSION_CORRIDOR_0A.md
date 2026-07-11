@@ -29,8 +29,13 @@ The gate and tests pass only while:
   and always converge to `requires_human` — failure never widens authority;
 - the resume point (branch / head SHA / failing gate / next command)
   reconstructs from contract+journal alone, in a fresh process;
-- every CLI write demands its exact consent phrase and never clobbers;
-- the boundary is the canonical 17-key all-false set (deep-equal).
+- every CLI write demands its exact consent phrase, never clobbers, and refuses
+  to extend a tampered journal (verify-before-append);
+- the KERNEL/gate boundary is the canonical 17-key all-false set (deep-equal);
+  CLI IO paths report an HONEST boundary — `filesystem_write_performed` /
+  `consent_collected` true on consent-gated writes, `content_read` true on
+  reads (founder-impact precedent; SAT finding on 4407189);
+- STOPPED always implies `requires_human` — the kill switch hands control back.
 
 ## Commands
 

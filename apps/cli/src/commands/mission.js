@@ -30,7 +30,9 @@ import {
   buildMissionContract,
   appendCorridorEvent,
   deriveCorridorStatus,
+  verifyCorridorJournal,
 } from "../../../../packages/mission/src/mission-corridor.js";
+import { buildPreviewBoundary } from "../../../../packages/core/src/boundary-schema.js";
 import {
   wantsJson,
   humanHintLine,
@@ -1469,6 +1471,18 @@ function corridorHome(argv) {
   return argValue(argv, "--dema-home") || process.env.DEMA_HOME || join(homedir(), ".dema");
 }
 
+// HONEST boundary for CLI IO paths (founder-impact precedent): the kernel is
+// pure and all-false, but this layer really does read/write under consent —
+// say so instead of printing false statements (SAT finding on 4407189).
+function corridorIoBoundary({ read = false, wrote = false, consented = false } = {}) {
+  return Object.freeze({
+    ...buildPreviewBoundary(),
+    content_read: read,
+    filesystem_write_performed: wrote,
+    consent_collected: consented,
+  });
+}
+
 async function readCorridor(dir) {
   const contractDoc = JSON.parse(await readFileFs(join(dir, "contract.json"), "utf8"));
   const raw = await readFileFs(join(dir, "journal.jsonl"), "utf8");
@@ -1555,7 +1569,7 @@ async function cmdMissionCorridor(argv) {
       mission_id: id,
       contract_hash: built.contract_hash,
       truth_label: built.truth_label,
-      boundary: built.boundary,
+      boundary: corridorIoBoundary({ wrote: true, consented: true }),
       dir,
     };
     if (wantJson) console.log(JSON.stringify(out, null, 2));
@@ -1585,7 +1599,11 @@ async function cmdMissionCorridor(argv) {
       now_iso: argValue(argv, "--now") || new Date().toISOString(),
     });
     if (!status.ok) corridorFail(`corridor state invalid (tamper or corruption): ${status.blocked_by.join(", ")}`);
-    printCorridorStatus(status, wantJson, verb === "resume");
+    printCorridorStatus(
+      Object.freeze({ ...status, boundary: corridorIoBoundary({ read: true }) }),
+      wantJson,
+      verb === "resume",
+    );
     return;
   }
 
@@ -1603,6 +1621,14 @@ async function cmdMissionCorridor(argv) {
     } catch {
       corridorFail(`no corridor found for "${id}" under ${dir}`);
     }
+    const chain = verifyCorridorJournal({
+      contract: loaded.contractDoc.contract,
+      contract_hash: loaded.contractDoc.contract_hash,
+      journal: loaded.journal,
+    });
+    if (!chain.ok) {
+      corridorFail(`refusing to extend a tampered/corrupt journal: ${chain.blocked_by.join(", ")}`);
+    }
     const nowIso = argValue(argv, "--now") || new Date().toISOString();
     const r = appendCorridorEvent({
       contract_hash: loaded.contractDoc.contract_hash,
@@ -1616,7 +1642,7 @@ async function cmdMissionCorridor(argv) {
     });
     if (!r.ok) corridorFail(`corridor stop blocked: ${r.blocked_by.join(", ")}`);
     await writeFile(join(dir, "journal.jsonl"), `${JSON.stringify(r.event)}\n`, { flag: "a" });
-    const out = { ok: true, mission_id: id, state: "STOPPED", event_hash: r.event.event_hash };
+    const out = { ok: true, mission_id: id, state: "STOPPED", event_hash: r.event.event_hash, boundary: corridorIoBoundary({ read: true, wrote: true, consented: true }) };
     if (wantJson) console.log(JSON.stringify(out, null, 2));
     else console.log(`DEMA · mission corridor stopped: ${id} (kill switch honored; journal sealed)`);
     return;
