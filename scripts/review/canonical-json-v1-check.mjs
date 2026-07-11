@@ -28,6 +28,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..", "..");
 const JSON_MODE = process.argv.includes("--json");
 
+// M5.1B: production adoption of canonical JSON v1 requires explicit
+// registration here — one repo-relative path per consumer, reviewed in that
+// consumer's own slice PR. The dema-slice-scaffold auto-inserts newly
+// generated kernels at the anchor below. Any canon importer NOT in this list
+// (outside tests and this gate) still fails the scan.
+export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
+  // scaffold:register-consumer (anchored insertion point — do not remove)
+]);
+
 const EXPECTED_LIMITS = Object.freeze({
   MAX_CANONICAL_DEPTH: 64,
   MAX_CANONICAL_BYTES: 1048576,
@@ -186,6 +195,7 @@ function scanForForbiddenImporters() {
   const scanDirs = ["packages", "apps", "bin", "scripts"];
   const allowed = new Set([
     "scripts/review/canonical-json-v1-check.mjs",
+    ...CANONICAL_JSON_V1_REGISTERED_CONSUMERS,
   ]);
   for (const dir of scanDirs) {
     let entries;
