@@ -27,6 +27,11 @@ import { buildPainGoalInterview } from "../../../../packages/core/src/pain-goal-
 import { buildClosedDualLoopDryRun } from "../../../../packages/core/src/closed-dual-loop-dry-run.js";
 import { buildMissionReplayReport } from "../../../../packages/core/src/node0-mission-replay-preview.js";
 import {
+  buildMissionContract,
+  appendCorridorEvent,
+  deriveCorridorStatus,
+} from "../../../../packages/mission/src/mission-corridor.js";
+import {
   wantsJson,
   humanHintLine,
 } from "../../../../packages/core/src/output-mode.js";
@@ -627,6 +632,13 @@ const DEFAULT_REPLAY_MISSION = Object.freeze({
 
 export async function cmd_mission(ctx) {
   const { argv, subcommand } = ctx;
+  if (subcommand === "corridor") {
+    // DEMA-MISSION-CORRIDOR-0A — persistent mission control plane (PREVIEW_ONLY).
+    // Contract + append-only hash-chained journal under $DEMA_HOME/missions/<id>/;
+    // status/resume are pure derivations from disk alone ("the mission remembers
+    // itself"). Control plane ONLY: no worker, no daemon, no execution, no model.
+    return cmdMissionCorridor(argv);
+  }
   if (subcommand === "replay") {
     // NODE0-MISSION-STATE-REPLAY-HARNESS-0A — "the mission survives the model", measured.
     // Runs a deterministic agent loop (Think->Act->Observe) over a built-in fixture mission,
@@ -1437,4 +1449,180 @@ export async function cmd_mission(ctx) {
     ].join("\n"),
   );
   process.exit(process.exitCode ?? 0);
+}
+
+// --- DEMA-MISSION-CORRIDOR-0A — persistent mission control plane (CLI IO layer) ---
+// Kernel is pure; this layer does disclosed disk IO only:
+//   $DEMA_HOME/missions/<id>/contract.json   (written once, no clobber)
+//   $DEMA_HOME/missions/<id>/journal.jsonl   (append-only)
+// Writes require an exact consent phrase. status/resume are read-only.
+
+const CORRIDOR_ID_RE = /^[a-z0-9][a-z0-9-]{2,63}$/;
+
+function corridorFail(message) {
+  console.error(`Dema error: ${message}`);
+  process.exit(1);
+}
+
+function corridorHome(argv) {
+  // Destination is disclosed, never silent: --dema-home > DEMA_HOME > ~/.dema.
+  return argValue(argv, "--dema-home") || process.env.DEMA_HOME || join(homedir(), ".dema");
+}
+
+async function readCorridor(dir) {
+  const contractDoc = JSON.parse(await readFileFs(join(dir, "contract.json"), "utf8"));
+  const raw = await readFileFs(join(dir, "journal.jsonl"), "utf8");
+  const journal = raw
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .map((line) => JSON.parse(line));
+  return { contractDoc, journal };
+}
+
+function printCorridorStatus(status, wantJson, emphasizeResume) {
+  if (wantJson) {
+    console.log(JSON.stringify(status, null, 2));
+    return;
+  }
+  console.log("DEMA · mission corridor (control plane · PREVIEW_ONLY)");
+  console.log(`  mission: ${status.mission_id} · state: ${status.state}${status.terminal ? " (terminal)" : ""}`);
+  console.log(`  lease_expired: ${status.lease_expired} · repair_budget_remaining: ${status.repair_budget_remaining}`);
+  console.log(`  requires_human: ${status.requires_human}${status.blocked_by.length ? ` · blocked_by: ${status.blocked_by.join(", ")}` : ""}`);
+  const r = status.resume_point;
+  if (emphasizeResume) {
+    console.log("  resume point (derived from disk alone — no chat, no model):");
+    console.log(`    branch:       ${r.branch ?? "-"}`);
+    console.log(`    head_sha:     ${r.head_sha ?? "-"}`);
+    console.log(`    failing_gate: ${r.failing_gate ?? "-"}`);
+    console.log(`    next_command: ${r.next_command ?? "-"}`);
+  } else {
+    console.log(`  next_command: ${r.next_command ?? "-"}`);
+  }
+  console.log("  control plane only — no worker, no daemon, nothing runs.");
+}
+
+async function cmdMissionCorridor(argv) {
+  const verb = argv[2];
+  const wantJson = wantsJson(argv);
+
+  if (verb === "start") {
+    const id = argValue(argv, "--id") ?? "";
+    const nowIso = argValue(argv, "--now") || new Date().toISOString();
+    const built = buildMissionContract({
+      mission_id: id,
+      objective: argValue(argv, "--objective") ?? "",
+      base_sha: argValue(argv, "--base-sha") ?? "",
+      permitted_actions: (argValue(argv, "--permitted") || "analyze,branch,edit,test,commit,push,open_draft_pr")
+        .split(",").map((s) => s.trim()).filter(Boolean),
+      merge_policy: "checkpoint_required",
+      time_budget_hours: Number(argValue(argv, "--time-budget-hours") ?? 8),
+      repair_budget_per_slice: Number(argValue(argv, "--repair-budget") ?? 2),
+      stop_conditions: (argValue(argv, "--stop-conditions") || "historical_hash_change,gate_weakened,base_moved")
+        .split(",").map((s) => s.trim()).filter(Boolean),
+      created_at_iso: nowIso,
+    });
+    if (!built.ok) corridorFail(`corridor contract blocked: ${built.blocked_by.join(", ")} — nothing was written.`);
+    const consent = argValue(argv, "--consent");
+    if (consent !== `GO: start mission corridor ${id}`) {
+      corridorFail(`exact consent required: "GO: start mission corridor ${id}" — nothing was written.`);
+    }
+    const first = appendCorridorEvent({
+      contract_hash: built.contract_hash,
+      journal: [],
+      event: {
+        state: "CREATED",
+        at_iso: nowIso,
+        note: "corridor created",
+        next_command: `dema mission corridor status ${id}`,
+      },
+    });
+    if (!first.ok) corridorFail(`corridor journal blocked: ${first.blocked_by.join(", ")}`);
+    const dir = join(corridorHome(argv), "missions", id);
+    await mkdir(dir, { recursive: true });
+    try {
+      await writeFile(
+        join(dir, "contract.json"),
+        `${JSON.stringify({ schema: built.schema, truth_label: built.truth_label, contract: built.contract, contract_hash: built.contract_hash }, null, 2)}\n`,
+        { flag: "wx" },
+      );
+      await writeFile(join(dir, "journal.jsonl"), `${JSON.stringify(first.event)}\n`, { flag: "wx" });
+    } catch (err) {
+      if (err.code === "EEXIST") corridorFail(`corridor "${id}" already exists at ${dir} — refusing to clobber.`);
+      throw err;
+    }
+    const out = {
+      ok: true,
+      mission_id: id,
+      contract_hash: built.contract_hash,
+      truth_label: built.truth_label,
+      boundary: built.boundary,
+      dir,
+    };
+    if (wantJson) console.log(JSON.stringify(out, null, 2));
+    else {
+      console.log(`DEMA · mission corridor started: ${id}`);
+      console.log(`  contract_hash: ${built.contract_hash}`);
+      console.log(`  state dir: ${dir}`);
+      console.log("  control plane only — no worker, no daemon, nothing runs.");
+    }
+    return;
+  }
+
+  if (verb === "status" || verb === "resume") {
+    const id = argv[3];
+    if (!id || !CORRIDOR_ID_RE.test(id)) corridorFail("mission corridor id required (lowercase kebab).");
+    const dir = join(corridorHome(argv), "missions", id);
+    let loaded;
+    try {
+      loaded = await readCorridor(dir);
+    } catch {
+      corridorFail(`no corridor found for "${id}" under ${dir}`);
+    }
+    const status = deriveCorridorStatus({
+      contract: loaded.contractDoc.contract,
+      contract_hash: loaded.contractDoc.contract_hash,
+      journal: loaded.journal,
+      now_iso: argValue(argv, "--now") || new Date().toISOString(),
+    });
+    if (!status.ok) corridorFail(`corridor state invalid (tamper or corruption): ${status.blocked_by.join(", ")}`);
+    printCorridorStatus(status, wantJson, verb === "resume");
+    return;
+  }
+
+  if (verb === "stop") {
+    const id = argv[3];
+    if (!id || !CORRIDOR_ID_RE.test(id)) corridorFail("mission corridor id required (lowercase kebab).");
+    const consent = argValue(argv, "--consent");
+    if (consent !== `GO: stop mission corridor ${id}`) {
+      corridorFail(`exact consent required: "GO: stop mission corridor ${id}" — nothing was written.`);
+    }
+    const dir = join(corridorHome(argv), "missions", id);
+    let loaded;
+    try {
+      loaded = await readCorridor(dir);
+    } catch {
+      corridorFail(`no corridor found for "${id}" under ${dir}`);
+    }
+    const nowIso = argValue(argv, "--now") || new Date().toISOString();
+    const r = appendCorridorEvent({
+      contract_hash: loaded.contractDoc.contract_hash,
+      journal: loaded.journal,
+      event: {
+        state: "STOPPED",
+        at_iso: nowIso,
+        requires_human: true,
+        note: argValue(argv, "--note") || "operator stop",
+      },
+    });
+    if (!r.ok) corridorFail(`corridor stop blocked: ${r.blocked_by.join(", ")}`);
+    await writeFile(join(dir, "journal.jsonl"), `${JSON.stringify(r.event)}\n`, { flag: "a" });
+    const out = { ok: true, mission_id: id, state: "STOPPED", event_hash: r.event.event_hash };
+    if (wantJson) console.log(JSON.stringify(out, null, 2));
+    else console.log(`DEMA · mission corridor stopped: ${id} (kill switch honored; journal sealed)`);
+    return;
+  }
+
+  corridorFail(
+    "unknown mission corridor verb. Use `dema mission corridor start --id <id> … --consent \"GO: start mission corridor <id>\"`, `dema mission corridor status <id>`, `dema mission corridor resume <id>`, or `dema mission corridor stop <id> --consent \"GO: stop mission corridor <id>\"` — control plane only; nothing runs.",
+  );
 }
