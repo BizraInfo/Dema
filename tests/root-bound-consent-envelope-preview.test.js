@@ -222,6 +222,45 @@ test("11: an envelope with an empty required_phrase BLOCKS (no vacuous consent)"
   assert.ok(verdict.blocked_by.includes("required_phrase_missing"));
 });
 
+test("12: an envelope with an empty nonce BLOCKS (no unbindable consent)", () => {
+  const envelope = buildConsentContext({ ...ENVELOPE_INPUT, nonce: "" });
+  const verdict = evaluateContextBoundConsent({
+    envelope,
+    presented: presentedFrom(envelope),
+    now: NOW_BEFORE,
+    usedNonces: [],
+  });
+  assert.equal(verdict.accepted, false);
+  assert.ok(verdict.blocked_by.includes("nonce_missing"));
+});
+
+test("13: an envelope with an empty consent_context_hash BLOCKS (nothing to verify against)", () => {
+  const envelope = buildConsentContext(ENVELOPE_INPUT);
+  const stripped = { ...envelope, consent_context_hash: "" };
+  const verdict = evaluateContextBoundConsent({
+    envelope: stripped,
+    presented: presentedFrom(stripped),
+    now: NOW_BEFORE,
+    usedNonces: [],
+  });
+  assert.equal(verdict.accepted, false);
+  assert.ok(verdict.blocked_by.includes("consent_context_hash_missing"));
+});
+
+test("14: an unparseable `now` BLOCKS (fail closed on a bad clock, never open)", () => {
+  const envelope = buildConsentContext(ENVELOPE_INPUT);
+  const verdict = evalWith(envelope, {}, { now: "not-a-timestamp" });
+  assert.equal(verdict.accepted, false);
+  assert.ok(verdict.blocked_by.includes("now_invalid"));
+});
+
+test("15: an unparseable expires_at BLOCKS (fail closed, never treated as non-expiring)", () => {
+  const envelope = buildConsentContext({ ...ENVELOPE_INPUT, expires_at: "whenever" });
+  const verdict = evalWith(envelope);
+  assert.equal(verdict.accepted, false);
+  assert.ok(verdict.blocked_by.includes("expires_at_invalid"));
+});
+
 // --- determinism + content addressing ---
 
 test("buildConsentContext is deterministic (identical input → deep-equal envelope + hash)", () => {
