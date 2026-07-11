@@ -75,6 +75,7 @@ export const commands = [
   ["node", ["scripts/review/sovereign-voice-turn-preview-check.mjs"]],
   ["node", ["scripts/review/node0-founder-impact-loop-check.mjs"]],
   ["node", ["scripts/review/dema-skillopt-edit-ledger-preview-check.mjs"]],
+  ["node", ["scripts/review/root-bound-consent-envelope-preview-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
   ["node", ["scripts/review/boundary-vocab-unification-check.mjs"]],
   ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],
