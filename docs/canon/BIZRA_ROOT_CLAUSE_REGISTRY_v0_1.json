@@ -1,0 +1,82 @@
+{
+  "schema": "bizra.canon.root_clause_registry.v0.1",
+  "version": "0.1",
+  "truth_label": "PREVIEW_ONLY",
+  "note": "PREVIEW mapping of clause_id -> hand-reviewed one-sentence summary -> content hash (sha256) of that summary text. These summaries are human-reviewed paraphrases used to make a consent root_set_hash traceable to named clauses. They are NOT the authoritative encoding of the roots and NOT the hash of the root PDFs. The authoritative, sealed root documents (The Message / الرسالة, The Seed / البذرة, The Third Fact) live under docs/root-canon/source/ and are pinned by docs/root-canon/root-canon.manifest.json. This registry claims no live root-clause enforcement and no live governance.",
+  "authoritative_roots_manifest": "docs/root-canon/root-canon.manifest.json",
+  "required_roots": ["MESSAGE", "SEED", "THIRD_FACT"],
+  "clauses": [
+    {
+      "clause_id": "MSG-DIGNITY-01",
+      "root": "MESSAGE",
+      "summary": "Every human being carries inherent dignity that no system, model, or authority may violate.",
+      "clause_hash": "sha256:32f50936a131db06fbc92cb296f8dbd9e1c20bef20ca726c9d76196d5ee730c4"
+    },
+    {
+      "clause_id": "MSG-MERCY-PEACE-01",
+      "root": "MESSAGE",
+      "summary": "Mercy and peace are the default posture toward others, not exceptions granted only under pressure.",
+      "clause_hash": "sha256:61f7de4e1e15994ed72b15d73ea72469c701968104a3da6c769ccae175948028"
+    },
+    {
+      "clause_id": "MSG-EQUALITY-01",
+      "root": "MESSAGE",
+      "summary": "All people stand equal in worth; no lineage, wealth, or role confers superiority over another.",
+      "clause_hash": "sha256:088153c7728c89323b769d0ad2d8f7ea8c45b07ab9533aa2b62ee59ab75ec572"
+    },
+    {
+      "clause_id": "MSG-ACCOUNTABILITY-01",
+      "root": "MESSAGE",
+      "summary": "Each person is accountable for their actions beyond the reach of ego, status, or self-justification.",
+      "clause_hash": "sha256:53afa803cbfb88913869157128168cf6ea95e3419f18cb8867e27729edd8d34b"
+    },
+    {
+      "clause_id": "MSG-IHSAN-01",
+      "root": "MESSAGE",
+      "summary": "Ihsan means acting with excellence and conscience as if constantly seen, treating excellence as the minimum.",
+      "clause_hash": "sha256:d52a579a033c482027d7388e15137eb7d86053a43bc28fa537d0709c8b031ab9"
+    },
+    {
+      "clause_id": "SEED-CONSENT-01",
+      "root": "SEED",
+      "summary": "Participation is voluntary and every participant keeps the right to stop, withdraw, or refuse at any time.",
+      "clause_hash": "sha256:104c99d7d16071333d88484dd3254699be115bc536cf320cc2b8298308ebfb11"
+    },
+    {
+      "clause_id": "SEED-HEART-MIND-01",
+      "root": "SEED",
+      "summary": "The heart balances the mind; reason alone, unchecked by conscience, is not a sufficient guide.",
+      "clause_hash": "sha256:819aafe500037850a17a9d1cf140125a249ba26fee53516b23ffd7b5fe8379af"
+    },
+    {
+      "clause_id": "SEED-MODERATION-01",
+      "root": "SEED",
+      "summary": "Moderation and simplicity are preferred over excess, hoarding, and needless complexity.",
+      "clause_hash": "sha256:0cd7ed8ee7f7b0efd83328e36ff42dc909634543f2ad33d43e35fdd8d17a0d2a"
+    },
+    {
+      "clause_id": "SEED-NON-EXTRACTION-01",
+      "root": "SEED",
+      "summary": "Value must come from real contribution, never from riba or extraction that takes without earning.",
+      "clause_hash": "sha256:d05c8ac2f0d5f9aa7d1def5eee18fad22aaab87b121abf5709af199352ce7fb2"
+    },
+    {
+      "clause_id": "SEED-SOLIDARITY-01",
+      "root": "SEED",
+      "summary": "Solidarity and social spending bind the community so that surplus flows toward those in need.",
+      "clause_hash": "sha256:9b31c90980f1cbdd40bb06644def5f26d76dcbf96dffc0554318c9a62c326425"
+    },
+    {
+      "clause_id": "TF-HUMAN-MISSION-01",
+      "root": "THIRD_FACT",
+      "summary": "The human mission is central and the model is only a tool serving that mission, never its master.",
+      "clause_hash": "sha256:b656bb6640a4da9ea0c908ef992b2641966d6a0f7c80d5d55f9262ba50e74ad9"
+    },
+    {
+      "clause_id": "TF-PROOF-CONSENT-01",
+      "root": "THIRD_FACT",
+      "summary": "Proof and explicit consent must precede any binding action; nothing binds on assumption alone.",
+      "clause_hash": "sha256:17182a9d35c2a2d44e475dc6c85dfe6f6083deac9c7b60137b23111202c8a607"
+    }
+  ]
+}
