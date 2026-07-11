@@ -259,7 +259,12 @@ export function runCanonicalJsonV1Check() {
     try {
       const input = v.generator ? buildGeneratorValue(v.generator) : v.value;
       text = canonicalizeJsonV1(input);
-      if (canonicalizeJsonV1(input) !== text || canonicalizeJsonV1(input) !== text) {
+      // Determinism: three independent canonicalization passes over the same
+      // input must be byte-identical (named passes keep the executions
+      // syntactically distinct — CodeQL identical-operands finding on 4b814ad).
+      const secondPass = canonicalizeJsonV1(input);
+      const thirdPass = canonicalizeJsonV1(input);
+      if (secondPass !== text || thirdPass !== text) {
         blocked_by.push(`nondeterministic:${v.id}`);
         continue;
       }
