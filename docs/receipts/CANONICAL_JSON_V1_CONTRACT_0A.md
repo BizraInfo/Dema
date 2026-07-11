@@ -15,7 +15,7 @@
 | Closed error-code registry | `packages/canon/src/canonical-json-errors.js` |
 | sha256 binding + verify | `packages/canon/src/sha256-canonical-json-v1.js` |
 | Valid vectors (24, exact bytes + hashes) | `packages/canon/vectors/canonical-json-v1-valid.json` |
-| Invalid vectors (31, exact error codes) | `packages/canon/vectors/canonical-json-v1-invalid.json` |
+| Invalid vectors (34, exact error codes) | `packages/canon/vectors/canonical-json-v1-invalid.json` |
 | Tests (14) | `tests/canonical-json-v1.test.js` |
 | Review gate (wired into `npm run check`) | `scripts/review/canonical-json-v1-check.mjs` |
 | Independent Python verifier (stdlib only) | `scripts/review/canonical-json-v1-verify.py` |
@@ -40,10 +40,11 @@ npm run llm:guidance
   **two independent implementations** (JavaScript and Python stdlib), including
   ECMAScript shortest-round-trip number layout, code-point key ordering, `-0`
   normalization, and all five measured resource-limit boundaries.
-- 31 invalid vectors fail closed with exact registered error codes; accessor
+- 34 invalid vectors fail closed with exact registered error codes (incl. the
+  SAT-found non-canonical array-index names `"00"`/`"-0"`/`"1e0"`); accessor
   properties are rejected **without executing**; input is never mutated.
 - Resource limits are evidence-based: measured maxima over all 47 tracked JSON
-  artifacts sit at ≤ 18% of every limit (25% rule honored).
+  artifacts sit at ≤ 18.4% of every limit (25% rule honored).
 - The M5.0 divergence inputs (`{a: undefined, b: 1}`, `[undefined]`) are pinned
   as regression vectors: v1 rejects what legacy serializers silently disagreed
   on.

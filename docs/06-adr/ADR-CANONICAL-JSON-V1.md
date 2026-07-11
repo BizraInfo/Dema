@@ -70,6 +70,11 @@ guessing; refusal is reproducible cross-language, coercion is not.
   `\u00XX` for remaining control characters); all other code points pass
   through as raw UTF-8. Inputs must be well-formed (no lone surrogates).
 - No getter/setter executes during canonicalization; input is never mutated.
+  Caveat: a `Proxy` wrapping a plain object is indistinguishable from that
+  object in pure JavaScript — its traps run and control the serialized value.
+  The contract guards against accessor *properties*, not engine-level proxies;
+  callers hashing untrusted objects should structured-clone or JSON-round-trip
+  first.
 
 ### Resource limits (measured, not invented)
 
@@ -80,7 +85,7 @@ held at ≤ 25% of each limit:
 |---|---|---|---|
 | `MAX_CANONICAL_DEPTH` | 64 | 9 | 14% |
 | `MAX_CANONICAL_BYTES` | 1,048,576 | 124,088 | 12% |
-| `MAX_OBJECT_KEYS` | 256 | 47 | 18% |
+| `MAX_OBJECT_KEYS` | 256 | 47 | 18.4% |
 | `MAX_ARRAY_LENGTH` | 1,024 | 121 | 12% |
 | `MAX_STRING_BYTES` | 65,536 | 5,474 | 8% |
 
@@ -91,7 +96,7 @@ Raising a limit is a contract version change.
 `packages/canon/vectors/canonical-json-v1-valid.json` (24 vectors: exact
 canonical bytes + sha256, including key-order independence, `-0`, integral
 floats, exponent layout, Unicode, and all five limit boundaries) and
-`canonical-json-v1-invalid.json` (31 vectors: exact error codes; `js_only`
+`canonical-json-v1-invalid.json` (34 vectors: exact error codes; `js_only`
 marks values other languages cannot construct — verifiers must skip and
 report them, never silently).
 

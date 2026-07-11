@@ -153,6 +153,21 @@ export function buildInvalidValue(construct) {
       a.extra = 3;
       return a;
     }
+    case "array_prop_leading_zeros": {
+      const a = [1, 2];
+      Object.defineProperty(a, "00", { enumerable: true, configurable: true, writable: true, value: 9 });
+      return a;
+    }
+    case "array_prop_negative_zero": {
+      const a = [1, 2];
+      Object.defineProperty(a, "-0", { enumerable: true, configurable: true, writable: true, value: 9 });
+      return a;
+    }
+    case "array_prop_exponent": {
+      const a = [1, 2];
+      Object.defineProperty(a, "1e0", { enumerable: true, configurable: true, writable: true, value: 9 });
+      return a;
+    }
     default:
       throw new Error(`unknown construct ${construct}`);
   }
@@ -181,7 +196,7 @@ function scanForForbiddenImporters() {
     }
     for (const e of entries) {
       if (!e.isFile()) continue;
-      if (!/\.(js|mjs)$/.test(e.name)) continue;
+      if (!/\.(js|mjs|cjs)$/.test(e.name)) continue;
       const abs = join(e.parentPath ?? e.path, e.name);
       const rel = relative(REPO_ROOT, abs).replaceAll("\\", "/");
       if (rel.startsWith("packages/canon/")) continue;

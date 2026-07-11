@@ -33,6 +33,9 @@
     { "id": "i28-typed-array", "construct": "typed_array", "expected_error_code": "object_not_plain", "js_only": true },
     { "id": "i29-symbol-keyed", "construct": "symbol_keyed_property", "expected_error_code": "object_symbol_keys", "js_only": true },
     { "id": "i30-non-enumerable", "construct": "non_enumerable_property", "expected_error_code": "object_non_enumerable_property", "js_only": true },
-    { "id": "i31-array-extra-property", "construct": "array_with_extra_property", "expected_error_code": "object_not_plain", "js_only": true }
+    { "id": "i31-array-extra-property", "construct": "array_with_extra_property", "expected_error_code": "object_not_plain", "js_only": true },
+    { "id": "i32-array-prop-leading-zeros", "construct": "array_prop_leading_zeros", "expected_error_code": "object_not_plain", "js_only": true },
+    { "id": "i33-array-prop-negative-zero", "construct": "array_prop_negative_zero", "expected_error_code": "object_not_plain", "js_only": true },
+    { "id": "i34-array-prop-exponent", "construct": "array_prop_exponent", "expected_error_code": "object_not_plain", "js_only": true }
   ]
 }

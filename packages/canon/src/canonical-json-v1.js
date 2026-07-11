@@ -98,7 +98,10 @@ function assertPlainArray(v, path) {
   for (const name of Object.getOwnPropertyNames(v)) {
     if (name === "length") continue;
     const idx = Number(name);
-    if (!Number.isInteger(idx) || idx < 0 || idx >= v.length) {
+    // String(idx) === name rejects non-canonical numeric names ("00", "-0",
+    // "1e0", " 1", "0x1") — Number() coercion alone would silently drop them,
+    // letting two distinct values share one hash (SAT finding on 74f22da).
+    if (!Number.isInteger(idx) || idx < 0 || idx >= v.length || String(idx) !== name) {
       fail("object_not_plain", `array carries non-index property "${name}"`, path);
     }
     const desc = Object.getOwnPropertyDescriptor(v, name);
