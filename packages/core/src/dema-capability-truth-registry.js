@@ -85,6 +85,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_SKILLOPT_EDIT_LEDGER_PREVIEW_1A",
   "DEMA_ROOT_BOUND_CONSENT_ENVELOPE_PREVIEW_1A",
   "DEMA_ROOT_CLAUSE_TRACE_REGISTRY_PREVIEW_1A",
+  "DEMA_FDE_ISNAD_REPLAY_CAPSULE_PREVIEW_0A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2171,6 +2172,41 @@ function defaultCapabilityRows() {
         "live governance runtime",
         "authoritative root encoding",
         "live execution",
+        "operator mutation",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_FDE_ISNAD_REPLAY_CAPSULE_PREVIEW_0A",
+      truth_label: "DEMA_FDE_ISNAD_REPLAY_CAPSULE_PREVIEW_ONLY",
+      summary:
+        "PREVIEW_ONLY content-addressed capsule that preserves WHY a mission stopped and WHERE each claim came from — evidence references + an Isnād lineage per claim + an FDE failure diagnosis + a routing decision derived from that diagnosis — and replays the route + verdict from the capsule ALONE, without the model, under authority-monotonicity.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/fde-isnad-replay-capsule-preview.js",
+        ],
+        test_paths: ["tests/fde-isnad-replay-capsule-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/fde-isnad-replay-capsule-preview-check.mjs",
+        ],
+        receipt_paths: [
+          "docs/receipts/DEMA_FDE_ISNAD_REPLAY_CAPSULE_PREVIEW_0A.md",
+        ],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_FDE_ISNAD_REPLAY_CAPSULE_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim a live FDE runtime, live governance, a live mission, autopatch, live remediation, live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Dema can preserve why-a-mission-stopped plus each claim's lineage in a model-free, tamper-evident, authority-monotone capsule: the routing is a pure function of the FDE diagnosis + evidence (boundary_violation → stop with highest precedence; an outward environment/dependency/permission gap → operator_or_environment_repair, never a code patch; no evidence → insufficient_evidence_stop); replayCapsule re-derives the route + verdict from the capsule body alone (no model); and verifyCapsule BLOCKs a changed source ref_hash, missing evidence, a forged route, any body field mutated after the capsule_hash was sealed, a positive authority_delta, and any attempt to set execution_allowed/mint_allowed true — carrying only hashes + enum labels, never raw evidence text or a private key.",
+      what_this_does_not_prove:
+        "It does not prove a live FDE runtime, a live mission, live governance, verified impact, autopatch, or live remediation — the capsule is a preview record, not an executor; it runs no optimizer, invokes no model, opens no network, mints nothing, and binds no identity; the capsule is content-addressed, not Ed25519-signed; boundary all-false, authority_delta 0, execution_allowed and mint_allowed false.",
+      forbidden_claims: [
+        "live FDE runtime",
+        "live mission execution",
+        "autopatch applied",
+        "live remediation",
         "operator mutation",
       ],
     }),
