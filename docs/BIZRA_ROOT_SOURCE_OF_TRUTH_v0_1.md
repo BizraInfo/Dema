@@ -180,6 +180,29 @@ Receipts must prove.
 
 Public-facing language for any of these four must **not** claim runtime status until receipts exist that prove it.
 
+## 13a. FATE is two functions, not one
+
+"FATE" names two distinct constitutional functions that must not be collapsed into a single "FATE is live" claim:
+
+| Function | Role | Status | Evidence / allowed wording |
+| --- | --- | --- | --- |
+| **FATE-Consent (FATE-C)** | Binds an exact consent phrase to an exact action before it may proceed. | `MEASURED` (as a bounded primitive) | `packages/fate/src/fate.js` (`evaluateConsent` — exact-string), `packages/consent/src/root-bound-consent-envelope-preview.js` (context-bound: phrase bound to proposal/payload/scope/root-set/action-class/nonce/expiry). "FATE-Consent is a measured consent-binding primitive; it does not itself execute anything." |
+| **FATE-EffectCap (FATE-E)** | Enforces capability/side-effect limits at the moment of a real effect (fs/net/exec/mint). | `DESIGNED_NOT_LIVE` | Spec only (`docs/superpowers/specs/`). No live runtime enforces effect capabilities in this repo. "FATE-EffectCap is the designed capability-enforcement layer; it is not live." |
+
+Rule: a measured FATE-Consent binding is **not** a live FATE-EffectCap boundary. Consent may be proven; effect enforcement is still designed. Do not say "FATE is live" without naming which function and its status.
+
+## 13b. Three receipt tiers, three labels
+
+Receipts are not one thing. Each tier carries a distinct label and a distinct trust meaning; a lower tier must never be presented as a higher one:
+
+| Tier | Meaning | Label | Trust |
+| --- | --- | --- | --- |
+| **Preview receipt** | Deterministic, content-addressed record of a *preview* — no live mutation occurred. | `PREVIEW_ONLY` | Content-addressed (re-derivable); proves the computation, not an effect. |
+| **Local-artifact receipt** | Records a *consented local write* under `DEMA_HOME` (e.g. `dema mission emit`). | `LOCAL_ONLY` | Content-addressed + exact-consent-gated; proves a bounded local write. |
+| **Governed-runtime receipt** | Issued by the authoritative governed substrate when a real governed effect occurs. | `DESIGNED_NOT_LIVE` | Would be signed + chain-anchored by the runtime — **not issued in this repo**. |
+
+Rule (already law in the receipt-trust tiers): content-addressed ≠ signed ≠ governed. A `PREVIEW_ONLY` receipt must never be shown as a governed-runtime, Proof-of-Impact, or network receipt.
+
 ## 14. One Human, One Node, One Seed
 
 The shape of the proof at v0.1:
