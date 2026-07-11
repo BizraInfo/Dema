@@ -83,6 +83,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "SOVEREIGN_VOICE_TURN_PREVIEW_1A",
   "NODE0_FOUNDER_IMPACT_LOOP_0A",
   "DEMA_SKILLOPT_EDIT_LEDGER_PREVIEW_1A",
+  "DEMA_ROOT_BOUND_CONSENT_ENVELOPE_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2099,6 +2100,41 @@ function defaultCapabilityRows() {
         "unattended runtime",
         "self-evolving skills",
         "autonomous skill promotion",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_ROOT_BOUND_CONSENT_ENVELOPE_PREVIEW_1A",
+      truth_label: "DEMA_ROOT_BOUND_CONSENT_ENVELOPE_PREVIEW_ONLY",
+      summary:
+        "PREVIEW_ONLY content-addressed consent-context envelope + fail-closed validator binding an exact consent phrase to the exact action context (proposal, payload, capability scope, root set, action class, nonce, expiry).",
+      evidence: evidence({
+        source_paths: [
+          "packages/consent/src/root-bound-consent-envelope-preview.js",
+        ],
+        test_paths: ["tests/root-bound-consent-envelope-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/root-bound-consent-envelope-preview-check.mjs",
+        ],
+        receipt_paths: [
+          "docs/receipts/DEMA_ROOT_BOUND_CONSENT_ENVELOPE_PREVIEW_1A.md",
+        ],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_ROOT_BOUND_CONSENT_ENVELOPE_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, a live root-clause trace registry, live governance/EffectCap runtime, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Consent can be cryptographically bound to an exact action context: a content-addressed envelope binds an exact required phrase to a proposal, payload, capability scope, root set, action class, nonce, and expiry, and the fail-closed validator rejects a phrase replayed against a different proposal/payload/scope/root-set, an action-class escalation (a read consent never authorizes a write), an expired consent, a reused nonce, a missing/empty root set or required phrase, and any field mutated after the context hash was sealed; verified by local fixture tests plus the review gate.",
+      what_this_does_not_prove:
+        "It does not prove a live root-clause trace registry (deferred), live governance/FATE-EffectCap runtime, or any live mutation; it does not run an optimizer, invoke a model, open a network, mint a token, or bind identity.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+        "live root-clause trace registry",
+        "live governance runtime",
       ],
     }),
   ]);
