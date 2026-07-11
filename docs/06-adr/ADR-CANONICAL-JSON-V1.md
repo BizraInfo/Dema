@@ -108,9 +108,9 @@ the gate in this slice.
 
 ## Cross-language status
 
-- JavaScript (authoritative) — all 55 vectors. **VERIFIED**
+- JavaScript (authoritative) — all 58 vectors. **VERIFIED**
 - Python 3 (independent, stdlib) — all 24 valid byte-for-byte + 14
-  constructible negatives; 17 `js_only` skipped explicitly. **VERIFIED**
+  constructible negatives; 20 `js_only` skipped explicitly. **VERIFIED**
 - Rust — **deferred to M5.1C** (or the BIZRA Rust workspace) against the same
   committed vectors. The contract is not fully cross-language verified until
   JS, Python, and Rust all converge. No RFC 8785 compliance is claimed.
