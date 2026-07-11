@@ -84,6 +84,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_FOUNDER_IMPACT_LOOP_0A",
   "DEMA_SKILLOPT_EDIT_LEDGER_PREVIEW_1A",
   "DEMA_ROOT_BOUND_CONSENT_ENVELOPE_PREVIEW_1A",
+  "DEMA_ROOT_CLAUSE_TRACE_REGISTRY_PREVIEW_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2135,6 +2136,42 @@ function defaultCapabilityRows() {
         "unattended runtime",
         "live root-clause trace registry",
         "live governance runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_ROOT_CLAUSE_TRACE_REGISTRY_PREVIEW_1A",
+      truth_label: "DEMA_ROOT_CLAUSE_TRACE_REGISTRY_PREVIEW_ONLY",
+      summary:
+        "PREVIEW_ONLY registry of hand-reviewed Three-Root Canon clauses (The Message, The Seed, The Third Fact) + a pure kernel that derives a content-addressed root_set_hash from a selected clause set, requiring all three roots to be represented, so a consent envelope can bind its root_set_hash to named clauses.",
+      evidence: evidence({
+        source_paths: [
+          "packages/consent/src/root-clause-trace-preview.js",
+          "docs/canon/BIZRA_ROOT_CLAUSE_REGISTRY_v0_1.json",
+        ],
+        test_paths: ["tests/root-clause-trace-preview.test.js"],
+        review_gate_paths: [
+          "scripts/review/root-clause-trace-preview-check.mjs",
+        ],
+        receipt_paths: [
+          "docs/receipts/DEMA_ROOT_CLAUSE_TRACE_REGISTRY_PREVIEW_1A.md",
+        ],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_ROOT_CLAUSE_TRACE_REGISTRY_PREVIEW_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live root-clause enforcement, live governance, that these summaries authoritatively encode the roots, live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A consent root_set_hash can be bound to a hand-reviewed clause set that requires all three roots: the pure kernel derives a deterministic content-addressed root_set_hash from selected clause ids against an injected registry, and the fail-closed verifier BLOCKs an unknown clause, a selection missing any of the three roots, a clause_hash that does not match the registry's hash of that summary, an empty clause set, and a recomputed root_set_hash that differs from the carried one; the trace carries only clause ids, roots, and hashes (no raw root-document text); verified by local fixture tests plus the review gate.",
+      what_this_does_not_prove:
+        "It does not prove that the clause summaries authoritatively encode the roots (the sealed root PDFs under docs/root-canon/ with their own manifest remain canonical), nor any live root-clause enforcement, live governance, or live mutation; it does not run an optimizer, invoke a model, open a network, mint a token, or bind identity.",
+      forbidden_claims: [
+        "live root-clause enforcement",
+        "live governance runtime",
+        "authoritative root encoding",
+        "live execution",
+        "operator mutation",
       ],
     }),
   ]);
