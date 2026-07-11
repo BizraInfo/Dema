@@ -127,7 +127,7 @@ approval, relayed approval, or a broad goal statement is not enough.
 All steering must preserve the Topology Canon:
 
 ```text
-Human -> DEMA (P7) -> PAT local work
+Human -> DEMA (the face; surfaced by P7 Integrator/Nexus) -> PAT local work
 PAT -> Membrane -> SAT in shared URP, when validation is needed
 SAT -> Membrane -> PAT -> DEMA -> Human
 ```

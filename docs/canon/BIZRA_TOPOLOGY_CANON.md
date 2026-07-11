@@ -2,7 +2,7 @@
 
 **Frozen:** 25 March 2026
 **Author:** Mohamed Beshr, BIZRA Foundation
-**Rule:** No AI session, no document, no diagram may contradict this file. If a conflict exists, this file wins.
+**Rule:** No AI session, and no *derivative topology artifact* (diagram, ADR, doc), may contradict this file. Among derivative topology documents, if a conflict exists, this file wins. **The Three-Root Canon — الرسالة (The Message) · البذرة (The Seed) · The Third Fact — is the superior authority; this file is subordinate to the roots and may not override them.**
 
 ## Dema-local mirror note
 
@@ -24,7 +24,7 @@ Seven agents minted on the human's own device at first activation:
 - P4 Evaluator
 - P5 Ethicist, FROZEN: ethics from axioms, not data
 - P6 Publisher
-- P7 DEMA / Nexus, the face: human talks to DEMA only
+- P7 Integrator / Nexus — the integrator agent behind the DEMA face (DEMA is the product face / control plane; the human talks to DEMA only, never to P7 directly)
 
 PAT-7 is user-loyal. Its only purpose is to serve and empower its human. PAT lives on the human's hardware, is always on, works local-first, and is the only surface the human touches. The human never interacts with the network directly.
 
@@ -97,7 +97,7 @@ What never crosses:
 
 ```text
 Human
--> DEMA (P7)
+-> DEMA (the face; surfaced by P7 Integrator / Nexus)
 -> PAT handles locally if possible
 -> if help is needed: PAT -> Membrane -> SAT in URP
 -> SAT manages network interaction if needed
@@ -266,4 +266,4 @@ Promotion gates from CANDIDATE to CANONICAL:
 4. `git push` to `origin/main` with all artifacts.
 5. External review / human attestation.
 
-This file is the canonical source of truth for BIZRA's topology. If any document contradicts it, this file wins.
+This file is the canonical source of truth for BIZRA's *topology*. If any *derivative topology* document contradicts it, this file wins — but the Three-Root Canon (الرسالة · البذرة · The Third Fact) remains superior to this file.

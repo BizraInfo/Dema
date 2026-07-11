@@ -57,7 +57,7 @@ const RAW_ENTRIES = [
     title: "PAT · Personal Agentic Team",
     short:
       "The user-side 7-agent team that lives on your own device and serves only you.",
-    long: "PAT-7 is minted locally on the human's device at first activation. Its seven agents are: P1 Planner, P2 Researcher, P3 Coder, P4 Evaluator, P5 Ethicist (frozen: ethics from axioms, not data), P6 Publisher, P7 DEMA/Nexus (the face — the human only ever talks to DEMA). PAT is user-loyal. It never connects to the network directly: all network interaction flows PAT → Membrane → SAT.",
+    long: "PAT-7 is minted locally on the human's device at first activation. Its seven agents are: P1 Planner, P2 Researcher, P3 Coder, P4 Evaluator, P5 Ethicist (frozen: ethics from axioms, not data), P6 Publisher, P7 Integrator/Nexus (the integrator agent behind the DEMA face — the human only ever talks to DEMA, never to P7 directly). PAT is user-loyal. It never connects to the network directly: all network interaction flows PAT → Membrane → SAT.",
     truth_label: "DECLARED",
     see_also: ["sat", "dema", "bizra"],
     doc_anchor: "docs/canon/BIZRA_TOPOLOGY_CANON.md",
@@ -65,7 +65,7 @@ const RAW_ENTRIES = [
       simple:
         "The user-side 7-agent team that lives on your own device and serves only you.",
       technical:
-        "PAT-7 is a locally-minted team of seven agents with fixed role assignments: P1 Planner, P2 Researcher, P3 Coder, P4 Evaluator, P5 Ethicist (axiom-frozen — behavior is not learned from data), P6 Publisher, P7 DEMA/Nexus. PAT is user-loyal: its sole constitutional obligation is to the human who activated it. All PAT↔network traffic routes through the constitutional membrane; PAT never connects to the URP directly. No two humans share a PAT instance. Source: BIZRA_TOPOLOGY_CANON.md §'What is local per human'.",
+        "PAT-7 is a locally-minted team of seven agents with fixed role assignments: P1 Planner, P2 Researcher, P3 Coder, P4 Evaluator, P5 Ethicist (axiom-frozen — behavior is not learned from data), P6 Publisher, P7 Integrator/Nexus (DEMA is the face it surfaces). PAT is user-loyal: its sole constitutional obligation is to the human who activated it. All PAT↔network traffic routes through the constitutional membrane; PAT never connects to the URP directly. No two humans share a PAT instance. Source: BIZRA_TOPOLOGY_CANON.md §'What is local per human'.",
       arabic:
         "فريق الوكلاء الشخصي (PAT) هو فريق مكوّن من سبعة وكلاء يُنشأ محلياً على جهاز المستخدم عند التفعيل الأول. الوكلاء السبعة هم: المخطط (P1)، والباحث (P2)، والمبرمج (P3)، والمقيّم (P4)، وخبير الأخلاق (P5 · مجمَّد: الأخلاق من المبادئ لا من البيانات)، والناشر (P6)، ودِمَا/النواة (P7 · الواجهة البشرية الوحيدة). الفريق مخلص للمستخدم حصراً، ولا يتصل بالشبكة مباشرةً.",
       game: "Think of PAT-7 as your personal guild — seven specialist heroes who live on your hardware and answer only to you. Your Planner sets the quest, your Researcher scouts intel, your Coder crafts the artifact, your Ethicist can veto any move that breaks guild law, and DEMA is the face you always speak to. The whole party never leaves your castle without going through the kingdom's constitutional gate first.",
