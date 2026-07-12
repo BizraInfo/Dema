@@ -325,6 +325,7 @@ Slice:               SLICE-1-GENESIS-TWIN (origin 2023 + present 2026 halves)
 Exact boundaries (every value REQUIRED, filled by the human BEFORE consent):
 Read roots:          <exact enumerated source paths — REQUIRED>
 Write root:          <one exact path under $DEMA_HOME/genome/ — REQUIRED>
+Repo write roots:    <exact repository paths the draft-PR build may touch — REQUIRED>
 Time budget:         <max wall-clock hours — REQUIRED>
 Resource ceilings:   <vram_gib / ram_gib / cpu_pct / thermal_c / output_bytes — REQUIRED>
 Checkpoint cadence:  <interval — REQUIRED>
@@ -337,7 +338,8 @@ or kill path after consent — boundaries are consented, not inferred.
 
 Authorized:
 - build URP-Local Governor + the 12-role runner + the 7 PAT roles + Genome pipeline
-  behind draft PRs (reversible; merges separately gated)
+  behind draft PRs, touching only the repo write roots enumerated above
+  (reversible; merges separately gated)
 - run ONE operator-started bounded absence batch over the read roots enumerated
   above only, writing only under the consented write root, network OFF,
   checkpointed at the consented cadence, kill-switch armed at the consented path
