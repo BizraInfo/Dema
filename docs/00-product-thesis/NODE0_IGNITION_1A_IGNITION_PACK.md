@@ -174,7 +174,10 @@ mission:
   kill_signal:           # stop-file path
   stop_conditions:       []
   permitted_roles:       [PAT-1..7, SAT-1..5]
-  consent_hash:          # exact GO phrase hash
+  consent_hash:          # sha256 over the CANONICAL FILLED mission card — the GO phrase PLUS every
+                         # boundary field above (read/write/repo roots, budgets, cadence, kill path,
+                         # registry hash) — never the phrase alone, so consent cannot be replayed with
+                         # swapped boundaries (root-bound-consent-envelope-preview.js is the merged law)
 authority_delta:         0    # invariant; failure never widens it
 ```
 
