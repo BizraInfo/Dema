@@ -115,6 +115,32 @@ test("9 · trace hash changes when an observation changes", () => {
   assert.notEqual(a.trace_hash, b.trace_hash);
 });
 
+test("9b · trace hash binds confidence — a mutated rule table cannot share a hash", () => {
+  // A content hash must vouch for the confidence it carries. Two machines that
+  // differ ONLY in confidence_by_emission, over the same observation path,
+  // surface different inferred_state_confidence and MUST NOT share a trace_hash.
+  const m = buildHhmmStateMachine();
+  const observations = ["code_anchor_present", "tests_passed", "check_passed"];
+  const honest = runHhmmTrace({ machine: m, observations });
+
+  const mutated = JSON.parse(JSON.stringify(m));
+  for (const k of Object.keys(mutated.confidence_by_emission)) {
+    mutated.confidence_by_emission[k] = 0.01;
+  }
+  const forged = runHhmmTrace({ machine: mutated, observations });
+
+  assert.notEqual(
+    honest.inferred_state_confidence,
+    forged.inferred_state_confidence,
+    "precondition: confidence actually changed",
+  );
+  assert.notEqual(
+    honest.trace_hash,
+    forged.trace_hash,
+    "trace_hash must bind confidence, not just structural path",
+  );
+});
+
 test("10 · module source has no forbidden side effects", async () => {
   const src = await readFile(
     new URL("../packages/core/src/hhmm-state-machine.js", import.meta.url),

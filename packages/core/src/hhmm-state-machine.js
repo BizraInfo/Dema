@@ -229,7 +229,11 @@ export function runHhmmTrace({ machine, observations } = {}) {
     transitions: machine.transitions,
     initial_state: machine.initial_state,
     observations,
-    path: path.map((s) => ({ from: s.from, to: s.to, observation: s.observation, reason_code: s.reason_code, valid: s.valid })),
+    // Bind confidence: the hash must vouch for the confidence it carries, not
+    // only the structural path. Without `confidence`, two machines differing
+    // only in confidence_by_emission share a trace_hash while surfacing a
+    // different inferred_state_confidence (integrity gap closed here).
+    path: path.map((s) => ({ from: s.from, to: s.to, observation: s.observation, reason_code: s.reason_code, valid: s.valid, confidence: s.confidence ?? null })),
   };
 
   return deepFreeze({
