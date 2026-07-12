@@ -319,14 +319,28 @@ Generating/approving this pack authorizes **documentation + planning only.** It 
 GO: execute NODE0-IGNITION-1A · SLICE-1 GENESIS TWIN (bounded absence batch)
 
 Repository / space:  BizraInfo/Dema + Node0 local space
-Base:                main @ <verified SHA>
+Base:                main @ <verified SHA — REQUIRED>
 Slice:               SLICE-1-GENESIS-TWIN (origin 2023 + present 2026 halves)
+
+Exact boundaries (every value REQUIRED, filled by the human BEFORE consent):
+Read roots:          <exact enumerated source paths — REQUIRED>
+Write root:          <one exact path under $DEMA_HOME/genome/ — REQUIRED>
+Time budget:         <max wall-clock hours — REQUIRED>
+Resource ceilings:   <vram_gib / ram_gib / cpu_pct / thermal_c / output_bytes — REQUIRED>
+Checkpoint cadence:  <interval — REQUIRED>
+Kill signal:         <stop-file path — REQUIRED>
+Resource registry:   <content hash of the §6 resource-registry receipt — REQUIRED>
+
+Template rule: a GO issued with any <REQUIRED> placeholder unfilled is VOID.
+The runner may never derive a read root, write root, budget, ceiling, cadence,
+or kill path after consent — boundaries are consented, not inferred.
 
 Authorized:
 - build URP-Local Governor + the 12-role runner + the 7 PAT roles + Genome pipeline
   behind draft PRs (reversible; merges separately gated)
-- run ONE operator-started bounded absence batch over the SLICE-1 read_roots only,
-  writing only under $DEMA_HOME/genome/, network OFF, checkpointed, kill-switch armed
+- run ONE operator-started bounded absence batch over the read roots enumerated
+  above only, writing only under the consented write root, network OFF,
+  checkpointed at the consented cadence, kill-switch armed at the consented path
 - emit R1–R4 receipts; return the Founder Standing View
 - run the independent SAT challenge on a distinct model family
 
