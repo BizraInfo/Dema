@@ -496,3 +496,74 @@ test("genuine GitHub Actions billing-lock still classifies and verifies (regress
   assert.equal(marker.availability, "GITHUB_ACTIONS_BILLING_LOCK");
   assert.equal(marker.local_proof_lane, true);
 });
+
+// Card §6 — per-field adversarial matrix. The single full-body re-derivation
+// guard must catch a change to ANY authority-relevant derived field (each
+// mutated to an in-domain but wrong value + a recomputed hash, so ONLY
+// semantic re-derivation can catch it — not a schema/domain check).
+test("re-derivation rejects a change-and-rehash of any authority field", () => {
+  const honest = diagnoseDemaFailure({
+    failed_command: "npm test",
+    exit_code: 1,
+    stdout_excerpt: "not ok 1 - AssertionError: expected true to equal false",
+    stderr_excerpt: "assertion failed",
+    changed_files: ["packages/core/src/x.js"],
+    environment: { os: "linux" },
+  });
+  assert.equal(verifyDemaFdeDualDiagnostic(honest).ok, true, "precondition: honest verifies");
+
+  const flip = (v, ...opts) => opts.find((o) => JSON.stringify(o) !== JSON.stringify(v)) ?? v;
+  const mutations = {
+    "confidence (inward)": (b) => {
+      b.inward_diagnosis = { ...b.inward_diagnosis, confidence: flip(b.inward_diagnosis.confidence, "low", "high") };
+    },
+    "evidence (inward)": (b) => {
+      b.inward_diagnosis = { ...b.inward_diagnosis, evidence: [...b.inward_diagnosis.evidence, "injected_marker"] };
+    },
+    measured_status: (b) => {
+      b.measured_status = flip(b.measured_status, "MEASURED", "UNKNOWN", "PARTIALLY_MEASURED");
+    },
+    minimal_fix_plan: (b) => {
+      b.minimal_fix_plan = Array.isArray(b.minimal_fix_plan) ? [...b.minimal_fix_plan, "injected step"] : "forged plan";
+    },
+    terminal_state: (b) => {
+      b.terminal_state = flip(b.terminal_state, "MEASURED_DIAGNOSIS", "ESCALATE_TO_HUMAN", "INSUFFICIENT_EVIDENCE");
+    },
+    missing_evidence: (b) => {
+      b.missing_evidence = Array.isArray(b.missing_evidence) ? [...b.missing_evidence, "forced_gap"] : ["forced_gap"];
+    },
+    regression_test_required: (b) => {
+      b.regression_test_required = !b.regression_test_required;
+    },
+    operator_action_required: (b) => {
+      b.operator_action_required = "forged_action";
+    },
+  };
+
+  for (const [field, mutate] of Object.entries(mutations)) {
+    const { diagnostic_hash: _drop, ...body } = honest;
+    const forgedBody = JSON.parse(JSON.stringify(body));
+    mutate(forgedBody);
+    // recompute the hash so the body is internally self-consistent — the old
+    // internal-hash check would pass; only re-derivation can reject it.
+    const forged = { ...forgedBody, diagnostic_hash: kernelDiagnosticHash(forgedBody) };
+    const verified = verifyDemaFdeDualDiagnostic(forged);
+    assert.equal(verified.ok, false, `${field}: forged+rehashed must be rejected`);
+    assert.ok(
+      verified.blocked_by.includes("semantic_rederivation_mismatch"),
+      `${field}: expected semantic_rederivation_mismatch, got ${verified.blocked_by.join(", ")}`,
+    );
+  }
+});
+
+test("re-derivation still accepts untouched builder output across failure classes", () => {
+  const inputs = [
+    { failed_command: "npm test", exit_code: 1, stdout_excerpt: "not ok AssertionError", stderr_excerpt: "x", changed_files: ["a.js"], environment: { os: "linux" } },
+    { failed_command: "npm install", exit_code: 1, stdout_excerpt: "npm err! enoent", stderr_excerpt: "cannot find module", changed_files: [], environment: { os: "linux" } },
+    { failed_command: "gh pr checks 1", exit_code: 1, stdout_excerpt: "runner_id=0 log not found", stderr_excerpt: "account is locked due to a billing issue", changed_files: [], environment: { ci_provider: "github_actions", runner_assigned: false } },
+  ];
+  for (const input of inputs) {
+    const report = diagnoseDemaFailure(input);
+    assert.equal(verifyDemaFdeDualDiagnostic(report).ok, true, `honest ${report.failure_class} must verify`);
+  }
+});

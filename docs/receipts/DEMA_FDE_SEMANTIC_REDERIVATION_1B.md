@@ -37,7 +37,7 @@ Two changes, both reusing existing code (no new logic):
 ## Proof
 
 ```bash
-node --test tests/dema-fde-dual-diagnostic.test.js        # 32 tests (5 new: forge, no-input, e2e lane, over-trigger, regression)
+node --test tests/dema-fde-dual-diagnostic.test.js        # 34 tests (7 new: forge, no-input, e2e lane, over-trigger, regression, per-field adversarial matrix, cross-class acceptance)
 node scripts/review/dema-fde-dual-diagnostic-check.mjs --json
 node --test tests/node0-ci-vendor-availability.test.js    # consumer unbroken
 npm test && npm run check
