@@ -286,17 +286,15 @@ function classifyGithubActionsBillingLock(input, lens) {
     haystack.includes("runner_id: 0");
   const githubContext = isGithubActionsContext(input);
 
+  // The github_actions_billing_lock class is provider-specific: it opens the
+  // LOCAL proof lane on the premise that REMOTE GitHub CI is billing-locked.
+  // Billing prose alone (Stripe, AWS, npm, ...) must NOT manufacture it —
+  // genuine GitHub context is required, or the lane could be opened by generic
+  // input (DEMA-FDE-SEMANTIC-REDERIVATION-1B).
   if (billingHits.length > 0 && githubContext) {
     return {
       failure_class: "github_actions_billing_lock",
       hits: freezeDeep([...new Set([...billingHits, ...startupHits])]),
-      confidence: "high",
-    };
-  }
-  if (billingHits.length > 0) {
-    return {
-      failure_class: "github_actions_billing_lock",
-      hits: freezeDeep(billingHits),
       confidence: "high",
     };
   }
@@ -770,6 +768,21 @@ export function verifyDemaFdeDualDiagnostic(report) {
   if (report.diagnostic_hash !== diagnosticHash(hashBody)) {
     blocked_by.push("diagnostic_hash_mismatch");
   }
+
+  // Semantic re-derivation: the whole diagnosis is a pure function of its
+  // carried input, so re-derive it and require the result to match. Internal
+  // consistency (a body that agrees with its own recomputed hash) is NOT
+  // enough — a forger can flip a derived field and recompute the hash. The
+  // claim must match what its own input actually produces. This is
+  // "verify must be input-bound", one layer above body-bound.
+  // (Trusting the input's PROVENANCE — attacker-supplied but self-consistent
+  // input — is the consumer's signing/consent concern, out of this scope.)
+  if (!report.input || typeof report.input !== "object") {
+    blocked_by.push("input_missing_for_rederivation");
+  } else if (buildDemaFdeDualDiagnosticInternal(report.input).diagnostic_hash !== report.diagnostic_hash) {
+    blocked_by.push("semantic_rederivation_mismatch");
+  }
+
   return freezeDeep({ ok: blocked_by.length === 0, blocked_by });
 }
 
