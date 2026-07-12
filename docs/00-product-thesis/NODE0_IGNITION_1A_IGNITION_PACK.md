@@ -165,6 +165,7 @@ mission:
   merge_policy:          checkpoint_required   # only legal value
   read_roots:            []   # exact source paths (e.g. /data2/bizra-unified/... , Downloads/Dema/...)
   write_roots:           []   # exact output paths under $DEMA_HOME/genome/ only
+  repo_write_roots:      []   # exact repository paths a draft-PR build may touch (empty = no repo mutation)
   network:               false
   outward_actions:       forbidden
   time_budget_hours:

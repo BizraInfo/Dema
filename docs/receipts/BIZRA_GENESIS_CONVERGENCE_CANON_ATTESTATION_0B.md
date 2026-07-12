@@ -20,7 +20,7 @@
 | `docs/00-product-thesis/NODE0_IGNITION_1A_IGNITION_PACK.md` | `5454d593226af632562326f53a34f58d5778736ad21bad2a2423e520a345b28c` (unchanged since 3741711) |
 | `docs/receipts/BIZRA_GENESIS_CONVERGENCE_CANON_0A.md` | `179312c1386f505ae4c2f91877779a9d16275dbf04a9bc0d49594ed046b15996` |
 
-*(Historical record: these hashes are correct for the files as they stood at correction commit `e1a1ea6` and remain verifiable via git. The 0F repair commit amends three of these files; post-repair hashes are recorded in `BIZRA_GENESIS_CONVERGENCE_CANON_REPAIR_0F.md`.)*
+*(Historical record: these hashes are correct for the files as they stood at correction commit `e1a1ea6`. All lineage commits above are **source-branch event commits** — after a squash merge they are not mainline ancestors, so they are verifiable via git only while the source branch ref exists. Later repair events amended three of these files; the merged artifact's hashes are recorded only by the separate merge receipt.)*
 
 ## Gate results (correction commit)
 
