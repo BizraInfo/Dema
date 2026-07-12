@@ -12,9 +12,9 @@
 This pack is governed by the constitutional posture. Per the posture's own law — *one doctrine body, many references, never several editable copies* — this section **references** the canonical source instead of reproducing it:
 
 - **Canonical source:** `docs/canon/BIZRA_CONSTITUTIONAL_POSTURE_ON_TRUTH_SERVICE_AND_CHOICE.md`
-- **Content hash (SHA-256):** `bafe198956720cbe98e6554d225dd8744fdb79683e3e2a903295128a6e216121`
+- **Content hash (SHA-256):** `b09833cb7006ab451553572907eaf5491a0a51b27f8f24a4c4f4438e42ad5906`
 - **Truth label:** `DECLARED_CONSTITUTIONAL_CANDIDATE` · truth class `CONSTITUTIONAL_DECLARATION`
-- **Hash binding:** derived at the 0F repair commit. If the posture is amended later, this reference must be re-derived in the same change; a mismatch means this pack must not be used for execution until rebound.
+- **Hash binding:** re-derived at the 0G repair (0G amended the posture, so 0F's binding was re-derived in the same change, per this rule). If the posture is amended later, this reference must be re-derived in the same change; a mismatch means this pack must not be used for execution until rebound.
 
 The binding duties this pack inherits by reference (never by copy): principled fallibilism, the ten invariants, the law of separation (PAT operates · SAT judges · FATE protects the human's choice · URP protects fairness of access · the human remains sovereign), evidence-independence, exit materiality, and the conflict-of-interest & reward law.
 
