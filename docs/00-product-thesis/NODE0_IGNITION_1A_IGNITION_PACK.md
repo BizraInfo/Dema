@@ -112,13 +112,13 @@ role_card:
 
 ## 4 · Dema + URP service cards (NOT SAT, NOT PAT)
 
-| Service | Duty | Reuses on disk |
+| Service | Duty | Current repository anchor / planned reuse |
 |---|---|---|
-| **Dema Mission Router** | Mission decomposition + role dispatch; carries the founder's voice; runs the daily stand | `mission-corridor.js` (contract + journal), `apps/cli` |
+| **Dema Mission Router** | Mission decomposition + role dispatch; carries the founder's voice; runs the daily stand | Current main anchor: existing CLI + mission primitives only (`apps/cli`). Planned reuse: `packages/mission/src/mission-corridor.js` (contract + journal) from draft PR #382 — `UNMERGED_DRAFT_CANDIDATE`, absent from current main and from this branch; reuse conditional on S2 reconciliation and merge |
 | **FATE** | Exact-string consent + authority gate (not an agent; the human is the only consent behind it) | `packages/fate/src/fate.js` (MEASURED) |
 | **Proof Service** | Canonical hashing, signing, receipt-chain writing | `canonical-receipt.js`, `node0-receipt-signing-ed25519.js`, `event-log.js` — needs the live-ledger write (roadmap T1) |
 | **URP-Local Governor** | CPU/GPU/RAM/NVMe/thermal budgets; job cancellation; resource receipts | **new (build)** — §6 |
-| **Checkpoint Service** | Restart, continuation, recovery | `mission-corridor.js` resume derivation (PREVIEW_ONLY) |
+| **Checkpoint Service** | Restart, continuation, recovery | Planned reuse: Mission Corridor restart/resume derivation from draft PR #382 — `UNMERGED_DRAFT_CANDIDATE`, not present in current main; Checkpoint Service remains `DESIGNED_NOT_LIVE` until the reconciled corridor slice is merged and independently verified |
 | **Model Router** | Select local/cloud runtime from measured policy; enforce verifier-on-different-family | `llm-adapter.js` `invokeLocalLLM()` (the one live path), `model-routing-preview.js` |
 
 ---
@@ -187,7 +187,7 @@ Permits are **least-privilege**: a role's write_root is a subdirectory it owns; 
 
 **Origin half (early 2023):** earliest conversations around al-Bizrah / البذرة / Third Fact / proof / impact / sovereign agents (candidate anchor: the genesis chat export, memory `reference_genesis_chat_export_2023_lineage`, 406 conv · sha256 aa420789) + original notes/docs connected to them + ≥3 model-family perspectives where present.
 
-**Present half (2026):** recent conversations around Mission Corridor / FATE / receipts / Node0 / Vanishing-Agent / the inference fabric + **one current implementation module** (candidate: `mission-corridor.js` or `dema-fde-dual-diagnostic.js`) + its tests + its receipt + one external paper/repo + one bounded reproduction benchmark.
+**Present half (2026):** recent conversations around Mission Corridor / FATE / receipts / Node0 / Vanishing-Agent / the inference fabric + **one current implementation module** (current-tree candidate: `packages/core/src/dema-fde-dual-diagnostic.js` — verified present in this tree; future candidate: `packages/mission/src/mission-corridor.js` **only after** S2 reconciliation merges — `UNMERGED_DRAFT_CANDIDATE` on draft PR #382, not available for the first slice today) + its tests + its receipt + one external paper/repo + one bounded reproduction benchmark.
 
 **Primary lineage to trace:** an early BIZRA concept from origin, through renaming and debate, into current architecture or an explicit proof gap. First expected machine-traced lineage: **البذرة → Third Fact → (current) FATE/receipt architecture**, with receipts.
 
@@ -295,7 +295,9 @@ Immutable source manifest · ≥95% turns normalized/parseable · privacy-risk r
 
 ## 15 · Reuse vs build (honest maturity binding)
 
-**Reuse (exists on disk, measured/preview):** FATE consent (`fate.js`, MEASURED) · continuity/checkpoint (`mission-corridor.js`, PREVIEW_ONLY) + replay (`node0-mission-replay-preview.js`) · SAT five-pass judge (`sat5-constitutional-verifier-set-preview.js`, PREVIEW) · reversible action + undo (`node0-reversible-execute-gate.js`, sandbox-MEASURED) · one live local model call (`invokeLocalLLM()`, MEASURED, suggestion-only) · append-only journal (`event-log.js`) · signing crypto (`authorship-signature.js`, ephemeral keys).
+**Reuse (exists on disk in the current tree, measured/preview — each path verified):** FATE consent (`fate.js`, MEASURED) · mission replay (`node0-mission-replay-preview.js`) · SAT five-pass judge (`sat5-constitutional-verifier-set-preview.js`, PREVIEW) · reversible action + undo (`node0-reversible-execute-gate.js`, sandbox-MEASURED) · one live local model call (`invokeLocalLLM()`, MEASURED, suggestion-only) · append-only journal (`event-log.js`) · signing crypto (`authorship-signature.js`, ephemeral keys).
+
+**Conditional reuse (`UNMERGED_DRAFT_CANDIDATE` — exists only on draft PR #382, absent from current main; usable only after S2 reconciliation and merge):** continuity/checkpoint (`packages/mission/src/mission-corridor.js`, PREVIEW_ONLY on that branch). No execution plan may depend on this candidate before its merge is separately consented and verified.
 
 **Build (absent / preview / must-harden):** URP-Local Governor (new) · the 12-role runner loop (new) · the 7 PAT builder roles (new) · the Genome pipeline stages (new) · the four campaign receipts (new) · live signed **operator** receipt ledger + persistent key custody (roadmap **T1**) · SAT moving from *injected* facts to *gathering real evidence* + acceptance tests (roadmap **T3**) · reversible action **beyond the sandbox** onto Genome outputs under `$DEMA_HOME` (roadmap **T4**). The cloud→local continuation (roadmap **T2**) is exercised by the Vanishing-Agent kill-test run *during* a batch.
 
