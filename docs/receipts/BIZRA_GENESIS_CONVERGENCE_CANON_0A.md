@@ -27,6 +27,13 @@
 6. Four campaign receipts: activation, genome, functional-health, founder-value.
 7. Planning authority only.
 
+## Constitutional amendments ratified 2026-07-12 (in the posture doc)
+
+1. **Canonical reference, not duplication** — the posture is the sole authoritative text; subordinate docs reference it by path + content hash + truth label, never copy it (one doctrine body, many references).
+2. **Exit materiality** — the right to leave includes leaving with what is yours (keys, private data, portable mission history, verifiable receipts), exportable without BIZRA's continued permission or presence; exit is not punished. State: `CONSTITUTIONAL_DECLARATION / DESIGNED_NOT_LIVE` (needs an export-verification fixture to promote).
+3. **Conflict-of-interest & reward law** — four separated authorities (PAT produces · SAT confirms eligibility · economic rules calculate a range · a separate governed mechanism distributes); no party is contributor + verifier + treasurer + distributor at once; SAT does not mint/hold/distribute; founder no-mint oath reclassified `DECLARED_OATH`.
+4. **Per-clause enforcement labels** — every clause now carries an honest state (`CONSTITUTIONAL_DECLARATION` / `ENFORCED_IN_PREVIEW_CODE` / `ENFORCED_AND_MEASURED` / `DESIGNED_NOT_LIVE`); model-family independence, material exit, live SAT separation, reward distribution, and living Dema memory are NOT labeled enforced (tests do not yet prove them).
+
 ## What this proves
 
 The Genesis Convergence program and Constitutional Posture are now tracked, versioned, receipted repo canon — durable independent of any agent's session memory, and reviewable against exact commits.
