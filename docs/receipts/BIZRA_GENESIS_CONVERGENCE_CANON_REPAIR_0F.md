@@ -20,7 +20,7 @@ The S0 merge card (`BIZRA-CANON-MERGE-0E`) halted at its final merge bind on 202
 | Source-tree SHA at the 0F attestation head | `a60198ebd2fdff022244dc350b0062d2f48d567e` |
 | SHA-256 of the 0F patch (`git diff ed8ac4c..71b46f1`) | `8c7f1b971bb0e9b9a0a5fa678b6473cc0f329e6144ae4d8a1f84dd7049cc5b7c` |
 
-**Squash-lineage durability:** `4667cac` and `71b46f1` are **source-branch event commits**. After a squash merge they may not become ancestors of `main`; their SHAs record historical source events, not mainline ancestry. If the branch ref is pruned, verification falls back to the durable anchors above (PR number, tree SHA, patch hash) and to the SHA-256 file-content table below, which reproduces against the files as merged. The future squash commit and resulting `main` SHA must be captured by a **separate merge receipt** — they are deliberately not claimed here.
+**Squash-lineage durability:** `4667cac` and `71b46f1` are **source-branch event commits**. After a squash merge they may not become ancestors of `main`; their SHAs record historical source events, not mainline ancestry. If the branch ref is pruned, verification falls back to the durable anchors above (PR number, tree SHA, patch hash) and to the SHA-256 file-content table below — a **historical record as of commit `4667cac`, not the merged artifact**: later repair events on this branch (0G, 0H, 0I) amended three of these files again, so the hashes of the artifact actually merged are recorded only by the separate merge receipt. The future squash commit and resulting `main` SHA must be captured by a **separate merge receipt** — they are deliberately not claimed here.
 
 ## Repairs applied (repair-content commit, 4 files, +24/−21)
 
