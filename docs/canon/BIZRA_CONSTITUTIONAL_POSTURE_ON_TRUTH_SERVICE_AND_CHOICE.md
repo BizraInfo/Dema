@@ -2,10 +2,10 @@
 
 - **Document status:** `DECLARED_CONSTITUTIONAL_CANDIDATE` — declared by the founder as constitutional doctrine.
 - **Truth class:** `CONSTITUTIONAL_DECLARATION` — chosen by the human sovereign; not presented as an empirical measurement; binding on the system once validly adopted; open to challenge and correction; amendable **only** through explicit constitutional consent; never silently altered by a model, agent, or implementation detail. It does not claim that any runtime, economy, federation, or autonomy is live.
-- **Repository promotion state:** determined by repository facts, not by this line — this document is merged repository canon only when it exists on `main`. As of the 0F repair commit on remote draft PR #385 the state is `REMOTE_REPAIRED_CANON_CANDIDATE` — **not** `MERGED_REPOSITORY_CANON`, `DEMA_RUNTIME_AWARE`, or `GOVERNED_LIVING_MEMORY`. Human declaration and repository promotion are distinct concepts: the doctrine is *declared*; its repository status is *not yet merged canon*. Rung-by-rung history lives in the receipts (`0A`, `0B`, `REPAIR_0F`), not in this line.
+- **Repository lifecycle: EXTERNALIZED.** This normative document does not self-assert a current branch, pull-request, review, or merge state. Current repository status must be derived from Git history, GitHub metadata, and the latest applicable event receipt. Human declaration and repository promotion remain distinct concepts: the doctrine is *declared* here; its promotion rung is an external, derivable fact — never a claim inside this text.
 - **Canonical source, not a copy.** This document is the authoritative constitutional text. Subordinate documents (the master roadmap, ignition packs, product docs) **reference** it by path + content hash + truth label — they must not reproduce it as an independently editable copy. *One doctrine body, many references — never several editable copies.*
 - **Companion:** `docs/00-product-thesis/NODE0_IGNITION_1A_IGNITION_PACK.md` (the Genesis Convergence program that operationalizes this posture); receipt `docs/receipts/BIZRA_GENESIS_CONVERGENCE_CANON_0A.md`. The master roadmap companion (`docs/00-product-thesis/BIZRA_MASTER_ROADMAP_v0_1.md`) is `PLANNED_COMPANION_NOT_YET_PRESENT`.
-- **Amendments:** 2026-07-12 — ratified three additions: **Exit Materiality**, the **Conflict-of-Interest & Reward Law**, and per-clause **Enforcement Status** labels (declaration is distinguished from enforcement). 2026-07-12 (0F) — truth-state repair: promotion-state line rebound to as-of phrasing; two scope-qualified enforcement labels registered in the legend; no doctrinal clause changed (receipt `docs/receipts/BIZRA_GENESIS_CONVERGENCE_CANON_REPAIR_0F.md`).
+- **Amendments:** 2026-07-12 — ratified three additions: **Exit Materiality**, the **Conflict-of-Interest & Reward Law**, and per-clause **Enforcement Status** labels (declaration is distinguished from enforcement). 0F — repaired lifecycle-state handling and canonical-source binding (receipt `docs/receipts/BIZRA_GENESIS_CONVERGENCE_CANON_REPAIR_0F.md`). 0G — externalized the repository lifecycle from this text and normalized the enforcement-record schema (base state + scope + evidence + known gap); no doctrinal clause changed (receipt `docs/receipts/BIZRA_GENESIS_CONVERGENCE_CANON_REPAIR_0G.md`).
 
 ---
 
@@ -33,7 +33,7 @@ Every human retains the right to enter, decline, inspect, challenge, contribute,
 
 > **The right to leave includes leaving with what is yours.** A participant's keys, private data, portable mission history, and independently verifiable receipts remain under that participant's control and must be exportable **without requiring BIZRA's continued permission or presence.** Exit must not be punished through loss of identity, evidence, earned history, or access to one's own records.
 
-*(Enforcement status: `CONSTITUTIONAL_DECLARATION / DESIGNED_NOT_LIVE`. Promotion to enforced requires an independently tested export-and-verification fixture — a third party must be able to verify the exported records without BIZRA present.)*
+*(Enforcement record — base state: `CONSTITUTIONAL_DECLARATION`; scope: declaration only; known gap: implementation is `DESIGNED_NOT_LIVE`. Promotion to enforced requires an independently tested export-and-verification fixture — a third party must be able to verify the exported records without BIZRA present.)*
 
 ## The ten invariants
 
@@ -91,28 +91,26 @@ A declared commitment is not a working control. Every clause carries one of thes
 - `DECLARED_AND_PARTIALLY_ENFORCED` — declaration with partial architectural support.
 - `ENFORCED_IN_PREVIEW_CODE` — a preview kernel enforces it (not yet a live-runtime measure).
 - `ENFORCED_AND_MEASURED` — enforced and measured on disk.
-- `ENFORCED_AND_MEASURED_VIA_CONSUMER_TESTS` — scope-qualified `ENFORCED_AND_MEASURED`: the measurement exists on disk but is exercised through consumer tests rather than a dedicated test file for the enforcing module. A strictly narrower claim, never a broader one.
-- `ENFORCED_AND_MEASURED_WITHIN_SANDBOX_BOUNDARY` — scope-qualified `ENFORCED_AND_MEASURED`: proven only inside a declared sandbox boundary; nothing is claimed beyond that boundary.
 - `DESIGNED_NOT_LIVE` — designed, not implemented/live.
 
-A slash-separated pair `A / B` records the declaration state alongside the implementation state (e.g. `CONSTITUTIONAL_DECLARATION / DESIGNED_NOT_LIVE` = declared as binding doctrine, not implemented or live).
+**An enforcement record consists of: base state · scope · evidence · known gaps.** Scope or test location *narrows* the base state; it does not create a new truth-state enum. No value outside the five base states above may appear as an enforcement state.
 
 `ENFORCED_IN_CODE(path)` may be cited **only** where the named implementation enforces the *complete* clause.
 
-| Clause | Honest current state |
-|---|---|
-| Exact-string consent (FATE), no fuzzy consent | `ENFORCED_AND_MEASURED_VIA_CONSUMER_TESTS` — `packages/fate/src/fate.js`, exercised via `tests/node0-mumu-loop.test.js` + `tests/status.test.js`; **remaining test gap:** no dedicated `tests/fate.test.js` |
-| Fail-closed SAT verdict; SAT judgments inert | `ENFORCED_IN_PREVIEW_CODE` — `packages/core/src/sat5-constitutional-verifier-set-preview.js` |
-| Mint / unverified-impact / cost-as-value tripwires | `ENFORCED_IN_PREVIEW_CODE` — sat5 preview |
-| SAT grants no authority (`authority_delta: 0`) | `ENFORCED_IN_PREVIEW_CODE` — sat5 preview |
-| Reversible action + proven undo (backup-anchored) | `ENFORCED_AND_MEASURED_WITHIN_SANDBOX_BOUNDARY` — `node0-reversible-execute-gate.js` (15 tests: real execute + proven byte-restore + measured before/after/state hashes, inode containment). **Limitation:** proven only inside a caller-supplied sandbox; valuable operator data and general filesystem authority are **NOT** proven. |
-| "No agent may self-verify" | `CONSTITUTIONAL_DECLARATION` (partial architectural support; no live runner enforces it) |
-| "A different model family must verify PAT" | `DESIGNED_NOT_LIVE` (no runner enforces routing yet) |
-| Live SAT agent separation (gather-and-test real results) | `DESIGNED_NOT_LIVE` (sat5 judges *declared* facts today) |
-| Exit materiality (export keys/data/history/receipts) | `CONSTITUTIONAL_DECLARATION / DESIGNED_NOT_LIVE` (no export-verification fixture yet) |
-| Conflict-of-interest reward-chain separation | `CONSTITUTIONAL_DECLARATION` (economy dormant; nothing distributes) |
-| Founder no-mint oath | `DECLARED_OATH` (until independently evidenced + technically enforced) |
-| Living Dema runtime memory (user-bonded companion) | `DESIGNED_NOT_LIVE` (built by the Genesis Convergence campaign, gated) |
+| Clause | Base state | Scope | Evidence | Known gap |
+|---|---|---|---|---|
+| Exact-string consent (FATE), no fuzzy consent | `ENFORCED_AND_MEASURED` | consumer-tested | `packages/fate/src/fate.js` · `tests/node0-mumu-loop.test.js` · `tests/status.test.js` | no dedicated `tests/fate.test.js` |
+| Fail-closed SAT verdict; SAT judgments inert | `ENFORCED_IN_PREVIEW_CODE` | preview kernel | `packages/core/src/sat5-constitutional-verifier-set-preview.js` | not a live-runtime measure |
+| Mint / unverified-impact / cost-as-value tripwires | `ENFORCED_IN_PREVIEW_CODE` | preview kernel | sat5 preview | not a live-runtime measure |
+| SAT grants no authority (`authority_delta: 0`) | `ENFORCED_IN_PREVIEW_CODE` | preview kernel | sat5 preview | not a live-runtime measure |
+| Reversible action + proven undo (backup-anchored) | `ENFORCED_AND_MEASURED` | caller-supplied sandbox only | `node0-reversible-execute-gate.js` — 15 tests covering real execution, byte restoration, measured before/after/state hashes, inode containment | valuable operator data and general filesystem authority are **not** proven |
+| "No agent may self-verify" | `CONSTITUTIONAL_DECLARATION` | declaration | partial architectural support | no live runner enforces it |
+| "A different model family must verify PAT" | `DESIGNED_NOT_LIVE` | design | — | no runner enforces routing yet |
+| Live SAT agent separation (gather-and-test real results) | `DESIGNED_NOT_LIVE` | design | sat5 judges *declared* facts today | no gather-and-test runtime |
+| Exit materiality (export keys/data/history/receipts) | `CONSTITUTIONAL_DECLARATION` | declaration | this document | implementation `DESIGNED_NOT_LIVE`; no export-verification fixture yet |
+| Conflict-of-interest reward-chain separation | `CONSTITUTIONAL_DECLARATION` | declaration | this document | economy dormant; nothing distributes |
+| Founder no-mint oath | `CONSTITUTIONAL_DECLARATION` | founder oath (`DECLARED_OATH` classification) | this document + attestation receipts | duration and technical enforcement not yet independently evidenced |
+| Living Dema runtime memory (user-bonded companion) | `DESIGNED_NOT_LIVE` | design | — | built only by the gated Genesis Convergence campaign |
 
 Do not label model-family independence, material exit, live SAT separation, reward distribution, or living Dema memory as enforced until tests prove them.
 

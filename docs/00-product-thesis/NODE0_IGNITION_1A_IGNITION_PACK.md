@@ -147,7 +147,7 @@ Three concentric loops: **A · Activate** (Dema → roles → FATE → URP-Local
 
 ## 6 · URP-Local v0.1 (Node0 Resource Plane) — build spec
 
-**Not** live federation / token settlement / public pooling / PoI. Manages only physically-present Node0 resources (verified 2026-07-12): RTX 4090 **Laptop 16 GB VRAM**, ~128 GB RAM (registry to confirm), i9-14900HX, ~3.75 TB NVMe, local models, the corpus, Dema state, and the Fold6 as an *optional* consent/witness/kill-switch edge device (adb reachability **unverified** — treat as optional, not required).
+**Not** live federation / token settlement / public pooling / PoI. Manages only the **operator-attested Node0 resource profile** (`OPERATOR_ATTESTED_UNVERIFIED` — declared 2026-07-12; not yet content-addressed, no reproducible hardware-registry receipt exists): RTX 4090 **Laptop 16 GB VRAM**, ~128 GB RAM (registry to confirm), i9-14900HX, ~3.75 TB NVMe, local models, the corpus, Dema state, and the Fold6 as an *optional* consent/witness/kill-switch edge device (adb reachability **unverified** — treat as optional, not required). Binding a reproducible resource-registry receipt is a precondition for any execution GO that sets ceilings from these values.
 
 Provides: hardware + runtime registry · model capability registry · task queue · resource budgets · GPU/RAM/CPU allocation · thermal + memory ceilings · job cancellation · mission checkpoints · role scheduling · **resource-use receipts** · restart/recovery. Does **not** provide (v0.1): blockchain settlement · remote pooling · public node discovery · token rewards · live PoI · economic federation.
 
@@ -191,7 +191,7 @@ Permits are **least-privilege**: a role's write_root is a subdirectory it owns; 
 
 **Primary lineage to trace:** an early BIZRA concept from origin, through renaming and debate, into current architecture or an explicit proof gap. First expected machine-traced lineage: **البذرة → Third Fact → (current) FATE/receipt architecture**, with receipts.
 
-Source anchor on disk (verified): deduped census at `/data2/bizra-unified` (613,744 files / 573.7 GB, 2026-04-14). SLICE-1 draws a **bounded cut** (≈100 conversations + 1 repo + ~10 papers + 1 concept lineage), never the whole census.
+Source anchor on disk — `OPERATOR_ATTESTED_UNVERIFIED`: deduped census at `/data2/bizra-unified` (declared 613,744 files / 573.7 GB, 2026-04-14). The nearest found artifact (`/data2/bizra-unified/dedup-manifest.jsonl`, SHA-256 `046d521bac4bd665d8d7cdebcd54b0194d37c23d401a83fd93a447d11b456223`, 301,871 lines, same date) is operator-local, not repository-portable, and does **not** by itself reproduce those totals. SLICE-1 draws a **bounded cut** (≈100 conversations + 1 repo + ~10 papers + 1 concept lineage), never the whole census.
 
 ---
 
@@ -228,7 +228,7 @@ This may *later* mature into a persistent steward — but only after process lea
 
 ## 11 · Model routing policy (bound to the real 16 GB card)
 
-Verified fits/doesn't-fit on the RTX 4090 Laptop (16 GB VRAM):
+Operator-attested fits/doesn't-fit on the RTX 4090 Laptop (16 GB VRAM) — `OPERATOR_ATTESTED_UNVERIFIED`, from local model-inventory audits, not yet content-addressed; re-measure before scheduling against these values:
 
 | Model | On-disk | Role fit | GPU? |
 |---|---|---|---|

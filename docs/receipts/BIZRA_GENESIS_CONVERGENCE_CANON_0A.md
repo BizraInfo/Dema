@@ -14,7 +14,7 @@
 
 ## Evidence sources — `UNVERIFIED_CONTEXTUAL_INPUT`, not content-addressed
 
-These inputs informed the canon but carry no URL, artifact path, commit, receipt ID, or content hash, so a later reviewer cannot independently reproduce them. They are recorded as unverified contextual inputs, **not** as preserved evidence:
+These inputs informed the canon but carry no URL, artifact path, commit, receipt ID, or content hash, so a later reviewer cannot independently reproduce them. They are recorded as unverified contextual inputs, **not** as preserved evidence (`UNVERIFIED_CONTEXTUAL_INPUT · NOT_A_PROOF_SOURCE`). 0G evidence-source salvage (2026-07-13, read-only) found no reproducible artifact for either item; the nearest related artifact — `/data2/bizra-unified/dedup-manifest.jsonl`, SHA-256 `046d521bac4bd665d8d7cdebcd54b0194d37c23d401a83fd93a447d11b456223` — is `OPERATOR_LOCAL_EVIDENCE_NOT_REPOSITORY_PORTABLE` and does not reproduce the census totals. Full search record: `BIZRA_GENESIS_CONVERGENCE_CANON_REPAIR_0G.md`.
 
 - Independent market investigation ("Trust & Continuity Operating System for Autonomous Work") — conditional GO ~65%, Vanishing-Agent wedge, EU AI Act Article 12 clock. The research explicitly did not audit the codebase.
 - Two read-only local-space audits (2026-07-12): the physical asset ledger (RTX 4090 Laptop 16 GB VRAM; local models whiterabbitneo-v3:7b / gemma4:e4b / deepseek / nomic-embed fit, qwen3-coder 48 GiB CPU-only, gemma4:26b OOM; deduped corpus 613,744 files / 573.7 GB at `/data2/bizra-unified`) and the wedge-capability maturity map (FATE MEASURED; mission-corridor PREVIEW_ONLY; sat5 PREVIEW; reversible-execute-gate sandbox-MEASURED; `invokeLocalLLM()` MEASURED suggestion-only; signing ephemeral-keyed).
