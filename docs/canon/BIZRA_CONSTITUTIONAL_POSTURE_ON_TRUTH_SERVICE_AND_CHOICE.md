@@ -2,10 +2,10 @@
 
 - **Document status:** `DECLARED_CONSTITUTIONAL_CANDIDATE` — declared by the founder as constitutional doctrine.
 - **Truth class:** `CONSTITUTIONAL_DECLARATION` — chosen by the human sovereign; not presented as an empirical measurement; binding on the system once validly adopted; open to challenge and correction; amendable **only** through explicit constitutional consent; never silently altered by a model, agent, or implementation detail. It does not claim that any runtime, economy, federation, or autonomy is live.
-- **Repository promotion state:** `LOCAL_COMMITTED_CANON_CANDIDATE` — committed on an unpushed local branch. It is **not** `REMOTE_DRAFT_CANON_CANDIDATE`, `MERGED_REPOSITORY_CANON`, `DEMA_RUNTIME_AWARE`, or `GOVERNED_LIVING_MEMORY`. Human declaration and repository promotion are distinct concepts: the doctrine is *declared*; its repository status is *not yet merged canon*.
+- **Repository promotion state:** determined by repository facts, not by this line — this document is merged repository canon only when it exists on `main`. As of the 0F repair commit on remote draft PR #385 the state is `REMOTE_REPAIRED_CANON_CANDIDATE` — **not** `MERGED_REPOSITORY_CANON`, `DEMA_RUNTIME_AWARE`, or `GOVERNED_LIVING_MEMORY`. Human declaration and repository promotion are distinct concepts: the doctrine is *declared*; its repository status is *not yet merged canon*. Rung-by-rung history lives in the receipts (`0A`, `0B`, `REPAIR_0F`), not in this line.
 - **Canonical source, not a copy.** This document is the authoritative constitutional text. Subordinate documents (the master roadmap, ignition packs, product docs) **reference** it by path + content hash + truth label — they must not reproduce it as an independently editable copy. *One doctrine body, many references — never several editable copies.*
 - **Companion:** `docs/00-product-thesis/NODE0_IGNITION_1A_IGNITION_PACK.md` (the Genesis Convergence program that operationalizes this posture); receipt `docs/receipts/BIZRA_GENESIS_CONVERGENCE_CANON_0A.md`. The master roadmap companion (`docs/00-product-thesis/BIZRA_MASTER_ROADMAP_v0_1.md`) is `PLANNED_COMPANION_NOT_YET_PRESENT`.
-- **Amendments:** 2026-07-12 — ratified three additions: **Exit Materiality**, the **Conflict-of-Interest & Reward Law**, and per-clause **Enforcement Status** labels (declaration is distinguished from enforcement).
+- **Amendments:** 2026-07-12 — ratified three additions: **Exit Materiality**, the **Conflict-of-Interest & Reward Law**, and per-clause **Enforcement Status** labels (declaration is distinguished from enforcement). 2026-07-12 (0F) — truth-state repair: promotion-state line rebound to as-of phrasing; two scope-qualified enforcement labels registered in the legend; no doctrinal clause changed (receipt `docs/receipts/BIZRA_GENESIS_CONVERGENCE_CANON_REPAIR_0F.md`).
 
 ---
 
@@ -91,7 +91,11 @@ A declared commitment is not a working control. Every clause carries one of thes
 - `DECLARED_AND_PARTIALLY_ENFORCED` — declaration with partial architectural support.
 - `ENFORCED_IN_PREVIEW_CODE` — a preview kernel enforces it (not yet a live-runtime measure).
 - `ENFORCED_AND_MEASURED` — enforced and measured on disk.
+- `ENFORCED_AND_MEASURED_VIA_CONSUMER_TESTS` — scope-qualified `ENFORCED_AND_MEASURED`: the measurement exists on disk but is exercised through consumer tests rather than a dedicated test file for the enforcing module. A strictly narrower claim, never a broader one.
+- `ENFORCED_AND_MEASURED_WITHIN_SANDBOX_BOUNDARY` — scope-qualified `ENFORCED_AND_MEASURED`: proven only inside a declared sandbox boundary; nothing is claimed beyond that boundary.
 - `DESIGNED_NOT_LIVE` — designed, not implemented/live.
+
+A slash-separated pair `A / B` records the declaration state alongside the implementation state (e.g. `CONSTITUTIONAL_DECLARATION / DESIGNED_NOT_LIVE` = declared as binding doctrine, not implemented or live).
 
 `ENFORCED_IN_CODE(path)` may be cited **only** where the named implementation enforces the *complete* clause.
 

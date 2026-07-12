@@ -2,7 +2,7 @@
 
 - **Truth label:** `DESIGNED_NOT_LIVE / PLANNING_ONLY` — this receipt records the commit of planning + constitutional canon into the repo. It does not claim any runtime, economy, federation, autonomy, or the campaign itself is live or built.
 - **Date:** 2026-07-12 · **Base:** `main` @ `5c9d3111`.
-- **Consent:** committed under the operator's request to make the Genesis Convergence ignition pack and the Constitutional Posture durable and tracked. **Promotion state:** preserved as a `LOCAL_COMMITTED_CANON_CANDIDATE`, pending remote draft review and explicit merge authorization — not yet default repository canon, not yet runtime-loaded by Dema.
+- **Consent:** committed under the operator's request to make the Genesis Convergence ignition pack and the Constitutional Posture durable and tracked. **Promotion state at authoring (2026-07-12, pre-push — historical):** `LOCAL_COMMITTED_CANON_CANDIDATE`. The branch has since been pushed as remote draft PR #385 and repaired under 0F; the current rung is recorded in `BIZRA_GENESIS_CONVERGENCE_CANON_REPAIR_0F.md`. Not yet default repository canon, not yet runtime-loaded by Dema.
 
 ## What this commit adds
 
@@ -12,7 +12,9 @@
 | `docs/00-product-thesis/NODE0_IGNITION_1A_IGNITION_PACK.md` | The G0 Genesis Convergence ignition pack (`DESIGNED_NOT_LIVE`): 12 role cards, service cards, mission/permit schema, Genesis Twin Slice, runner-loop, bounded-absence-batch contract, four receipt schemas, DoD, and the exact later execution consent card. |
 | `docs/receipts/BIZRA_GENESIS_CONVERGENCE_CANON_0A.md` | This receipt. |
 
-## Evidence sources
+## Evidence sources — `UNVERIFIED_CONTEXTUAL_INPUT`, not content-addressed
+
+These inputs informed the canon but carry no URL, artifact path, commit, receipt ID, or content hash, so a later reviewer cannot independently reproduce them. They are recorded as unverified contextual inputs, **not** as preserved evidence:
 
 - Independent market investigation ("Trust & Continuity Operating System for Autonomous Work") — conditional GO ~65%, Vanishing-Agent wedge, EU AI Act Article 12 clock. The research explicitly did not audit the codebase.
 - Two read-only local-space audits (2026-07-12): the physical asset ledger (RTX 4090 Laptop 16 GB VRAM; local models whiterabbitneo-v3:7b / gemma4:e4b / deepseek / nomic-embed fit, qwen3-coder 48 GiB CPU-only, gemma4:26b OOM; deduped corpus 613,744 files / 573.7 GB at `/data2/bizra-unified`) and the wedge-capability maturity map (FATE MEASURED; mission-corridor PREVIEW_ONLY; sat5 PREVIEW; reversible-execute-gate sandbox-MEASURED; `invokeLocalLLM()` MEASURED suggestion-only; signing ephemeral-keyed).
@@ -36,7 +38,7 @@
 
 ## What this proves
 
-The Genesis Convergence program and Constitutional Posture are now preserved as a local committed canon candidate — tracked, versioned, and receipted on an unpushed local branch, durable independent of any agent's session memory, and reviewable against exact commits. They are pending remote draft review and explicit merge authorization; they are not yet default repository canon and are not runtime-loaded by Dema.
+The Genesis Convergence program and Constitutional Posture were preserved (at authoring time) as a local committed canon candidate — tracked, versioned, and receipted on what was then an unpushed local branch, durable independent of any agent's session memory, and reviewable against exact commits. That branch has since been pushed as remote draft PR #385 (see `BIZRA_GENESIS_CONVERGENCE_CANON_REPAIR_0F.md` for the current rung). They remain pending explicit merge authorization; they are not yet default repository canon and are not runtime-loaded by Dema.
 
 ## What this does not prove
 

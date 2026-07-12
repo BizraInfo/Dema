@@ -1,6 +1,6 @@
 # Receipt: BIZRA-GENESIS-CONVERGENCE-CANON-ATTESTATION-0B
 
-- **Promotion state:** `REVIEWED_LOCAL_CANON_CANDIDATE` — corrected and gated on an unpushed local branch; pending remote draft review and explicit merge authorization.
+- **Promotion state at authoring (pre-push — historical):** `REVIEWED_LOCAL_CANON_CANDIDATE` — this attestation was authored before the branch was pushed; that state is a historical record, not the current rung. The branch has since been pushed as remote draft PR #385 and repaired under 0F; the current rung is recorded in `BIZRA_GENESIS_CONVERGENCE_CANON_REPAIR_0F.md`. Explicit merge authorization is still required.
 - **Authority scope:** documentation only. This attestation authorizes nothing further; it does not claim its own containing commit SHA (that is unknowable at authoring time).
 
 ## Commit lineage
@@ -20,6 +20,8 @@
 | `docs/00-product-thesis/NODE0_IGNITION_1A_IGNITION_PACK.md` | `5454d593226af632562326f53a34f58d5778736ad21bad2a2423e520a345b28c` (unchanged since 3741711) |
 | `docs/receipts/BIZRA_GENESIS_CONVERGENCE_CANON_0A.md` | `179312c1386f505ae4c2f91877779a9d16275dbf04a9bc0d49594ed046b15996` |
 
+*(Historical record: these hashes are correct for the files as they stood at correction commit `e1a1ea6` and remain verifiable via git. The 0F repair commit amends three of these files; post-repair hashes are recorded in `BIZRA_GENESIS_CONVERGENCE_CANON_REPAIR_0F.md`.)*
+
 ## Gate results (correction commit)
 
 `canon-check` ✓ · `no-overclaim` ✓ · `npm run llm:guidance` ✓ · `npm run check` ✓ (G8 clean, 0 failures) · `git diff --check` ✓.
@@ -30,9 +32,9 @@
 - `d4d3904` — amendments committed under an **inferred** GO (review read as approval). Weaker than exact consent; preservation ratified forward; **no retroactive exact-authorization claim.**
 - `e1a1ea6` — corrections committed under the **exact** scoped GO `BIZRA-CANON-CORRECTION-0C`.
 
-## Current state
+## State at authoring (historical — superseded by 0F)
 
-- **Repository promotion state:** `LOCAL_COMMITTED_CANON_CANDIDATE` → after this attestation commit, `REVIEWED_LOCAL_CANON_CANDIDATE`.
+- **Repository promotion state (then):** `LOCAL_COMMITTED_CANON_CANDIDATE` → after this attestation commit, `REVIEWED_LOCAL_CANON_CANDIDATE`. Current rung: see `BIZRA_GENESIS_CONVERGENCE_CANON_REPAIR_0F.md`.
 - **`DEMA_RUNTIME_AWARE = NO`** — no runtime module loads `docs/canon`; no kernel (PAT/SAT/FATE/URP) consumes the posture; no precedence/supersession machinery; Dema cannot cite the posture's commit or hash at runtime.
 - **Master roadmap companion:** `docs/00-product-thesis/BIZRA_MASTER_ROADMAP_v0_1.md` — `PLANNED_COMPANION_NOT_YET_PRESENT`.
 - **`authority_delta: 0`** throughout; changes additive only (no existing canon modified beyond these tracked artifacts).

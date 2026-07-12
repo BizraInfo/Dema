@@ -1,7 +1,7 @@
 # NODE0-IGNITION-1A — Ignition Pack (for review)
 
-- **Truth label:** `DESIGNED_NOT_LIVE / PLANNING_ONLY` — this is a design document. Nothing here is built, run, or committed. It exists to be reviewed before any execution consent.
-- **Program:** G0 · BIZRA Genesis Convergence (governing program above the technical targets T1–T4 in `BIZRA_MASTER_ROADMAP_v0_1`).
+- **Truth label:** `DESIGNED_NOT_LIVE / PLANNING_ONLY` — this is a design document, preserved as a committed repository artifact for review. The *implementation* it describes is unbuilt, unrun, and not execution-authorized. It exists to be reviewed before any execution consent.
+- **Program:** G0 · BIZRA Genesis Convergence (governing program above the technical targets T1–T4). The master roadmap companion `BIZRA_MASTER_ROADMAP_v0_1` is `PLANNED_COMPANION_NOT_YET_PRESENT` — a provisional dependency; the T1–T4 references here stand on this pack's own definitions until that roadmap exists.
 - **Baseline:** `main` @ `5c9d3111` · authored on the operator's local space, 2026-07-12.
 - **Authority scope:** planning only. Generating this pack authorizes **nothing else** — see §16.
 
@@ -9,19 +9,14 @@
 
 ## 0 · Constitutional Posture on Truth, Service and Choice
 
-*(Canonical — belongs in both the master roadmap and this pack.)*
+This pack is governed by the constitutional posture. Per the posture's own law — *one doctrine body, many references, never several editable copies* — this section **references** the canonical source instead of reproducing it:
 
-BIZRA exists to **expand humanity's field of dignified choices — not to decide one compulsory truth for all humanity.** Node0 does not claim infallibility. It makes an explicit, sincere choice and accepts the possibility of being wrong, with peace in the heart and mind while the evidence continues to unfold.
+- **Canonical source:** `docs/canon/BIZRA_CONSTITUTIONAL_POSTURE_ON_TRUTH_SERVICE_AND_CHOICE.md`
+- **Content hash (SHA-256):** `bafe198956720cbe98e6554d225dd8744fdb79683e3e2a903295128a6e216121`
+- **Truth label:** `DECLARED_CONSTITUTIONAL_CANDIDATE` · truth class `CONSTITUTIONAL_DECLARATION`
+- **Hash binding:** derived at the 0F repair commit. If the posture is amended later, this reference must be re-derived in the same change; a mismatch means this pack must not be used for execution until rebound.
 
-Node0's constitutional choice favors: consent over coercion · evidence over unsupported assumption · verified contribution over manufactured value · fairness over extraction · shared opportunity over concentrated control · non-riba alternatives over interest-bearing-debt dependency · peaceful correction over defensive certainty.
-
-Therefore: (1) every strong claim stays challengeable; (2) every important action preserves evidence; (3) every verifier is independent from the work it judges; (4) uncertainty is declared, not hidden; (5) disagreement is not disloyalty; (6) no model majority is truth; (7) no node, founder, agent or institution is above verification; (8) failure never widens authority; (9) participation is voluntary; (10) every human keeps the right to choose another path — a sovereign ecosystem even protects the freedom **not** to choose BIZRA.
-
-**The refined law of separation:**
-
-> **PAT works for the human. SAT protects the truth of the work. FATE protects the human's choice. URP protects fairness of access. BIZRA serves humanity by offering a voluntary, evidence-bearing alternative — while remaining humble enough to be corrected.**
-
-SAT does not operate the mission, control the object it judges, reward itself, or manufacture truth. SAT serves BIZRA's *integrity*, and through that integrity BIZRA serves humanity.
+The binding duties this pack inherits by reference (never by copy): principled fallibilism, the ten invariants, the law of separation (PAT operates · SAT judges · FATE protects the human's choice · URP protects fairness of access · the human remains sovereign), evidence-independence, exit materiality, and the conflict-of-interest & reward law.
 
 ---
 
