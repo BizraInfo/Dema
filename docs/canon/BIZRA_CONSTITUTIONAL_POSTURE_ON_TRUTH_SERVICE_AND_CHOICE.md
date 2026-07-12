@@ -1,8 +1,10 @@
 # BIZRA Constitutional Posture on Truth, Service and Choice
 
+- **Document status:** `DECLARED_CONSTITUTIONAL_CANDIDATE` — declared by the founder as constitutional doctrine.
 - **Truth class:** `CONSTITUTIONAL_DECLARATION` — chosen by the human sovereign; not presented as an empirical measurement; binding on the system once validly adopted; open to challenge and correction; amendable **only** through explicit constitutional consent; never silently altered by a model, agent, or implementation detail. It does not claim that any runtime, economy, federation, or autonomy is live.
+- **Repository promotion state:** `LOCAL_COMMITTED_CANON_CANDIDATE` — committed on an unpushed local branch. It is **not** `REMOTE_DRAFT_CANON_CANDIDATE`, `MERGED_REPOSITORY_CANON`, `DEMA_RUNTIME_AWARE`, or `GOVERNED_LIVING_MEMORY`. Human declaration and repository promotion are distinct concepts: the doctrine is *declared*; its repository status is *not yet merged canon*.
 - **Canonical source, not a copy.** This document is the authoritative constitutional text. Subordinate documents (the master roadmap, ignition packs, product docs) **reference** it by path + content hash + truth label — they must not reproduce it as an independently editable copy. *One doctrine body, many references — never several editable copies.*
-- **Companion:** `docs/00-product-thesis/NODE0_IGNITION_1A_IGNITION_PACK.md` (the Genesis Convergence program that operationalizes this posture); receipt `docs/receipts/BIZRA_GENESIS_CONVERGENCE_CANON_0A.md`.
+- **Companion:** `docs/00-product-thesis/NODE0_IGNITION_1A_IGNITION_PACK.md` (the Genesis Convergence program that operationalizes this posture); receipt `docs/receipts/BIZRA_GENESIS_CONVERGENCE_CANON_0A.md`. The master roadmap companion (`docs/00-product-thesis/BIZRA_MASTER_ROADMAP_v0_1.md`) is `PLANNED_COMPANION_NOT_YET_PRESENT`.
 - **Amendments:** 2026-07-12 — ratified three additions: **Exit Materiality**, the **Conflict-of-Interest & Reward Law**, and per-clause **Enforcement Status** labels (declaration is distinguished from enforcement).
 
 ---
@@ -95,11 +97,11 @@ A declared commitment is not a working control. Every clause carries one of thes
 
 | Clause | Honest current state |
 |---|---|
-| Exact-string consent (FATE), no fuzzy consent | `ENFORCED_AND_MEASURED` — `packages/fate/src/fate.js` |
+| Exact-string consent (FATE), no fuzzy consent | `ENFORCED_AND_MEASURED_VIA_CONSUMER_TESTS` — `packages/fate/src/fate.js`, exercised via `tests/node0-mumu-loop.test.js` + `tests/status.test.js`; **remaining test gap:** no dedicated `tests/fate.test.js` |
 | Fail-closed SAT verdict; SAT judgments inert | `ENFORCED_IN_PREVIEW_CODE` — `packages/core/src/sat5-constitutional-verifier-set-preview.js` |
 | Mint / unverified-impact / cost-as-value tripwires | `ENFORCED_IN_PREVIEW_CODE` — sat5 preview |
 | SAT grants no authority (`authority_delta: 0`) | `ENFORCED_IN_PREVIEW_CODE` — sat5 preview |
-| Reversible action + proven undo (backup-anchored) | `ENFORCED_IN_PREVIEW_CODE` (sandbox only) — `node0-reversible-execute-gate.js` |
+| Reversible action + proven undo (backup-anchored) | `ENFORCED_AND_MEASURED_WITHIN_SANDBOX_BOUNDARY` — `node0-reversible-execute-gate.js` (15 tests: real execute + proven byte-restore + measured before/after/state hashes, inode containment). **Limitation:** proven only inside a caller-supplied sandbox; valuable operator data and general filesystem authority are **NOT** proven. |
 | "No agent may self-verify" | `CONSTITUTIONAL_DECLARATION` (partial architectural support; no live runner enforces it) |
 | "A different model family must verify PAT" | `DESIGNED_NOT_LIVE` (no runner enforces routing yet) |
 | Live SAT agent separation (gather-and-test real results) | `DESIGNED_NOT_LIVE` (sat5 judges *declared* facts today) |

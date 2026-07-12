@@ -2,7 +2,7 @@
 
 - **Truth label:** `DESIGNED_NOT_LIVE / PLANNING_ONLY` — this receipt records the commit of planning + constitutional canon into the repo. It does not claim any runtime, economy, federation, autonomy, or the campaign itself is live or built.
 - **Date:** 2026-07-12 · **Base:** `main` @ `5c9d3111`.
-- **Consent:** committed under the operator's explicit request to make the Genesis Convergence ignition pack and the Constitutional Posture durable, tracked Dema repo canon (so Dema carries the context independent of any single agent session).
+- **Consent:** committed under the operator's request to make the Genesis Convergence ignition pack and the Constitutional Posture durable and tracked. **Promotion state:** preserved as a `LOCAL_COMMITTED_CANON_CANDIDATE`, pending remote draft review and explicit merge authorization — not yet default repository canon, not yet runtime-loaded by Dema.
 
 ## What this commit adds
 
@@ -36,7 +36,7 @@
 
 ## What this proves
 
-The Genesis Convergence program and Constitutional Posture are now tracked, versioned, receipted repo canon — durable independent of any agent's session memory, and reviewable against exact commits.
+The Genesis Convergence program and Constitutional Posture are now preserved as a local committed canon candidate — tracked, versioned, and receipted on an unpushed local branch, durable independent of any agent's session memory, and reviewable against exact commits. They are pending remote draft review and explicit merge authorization; they are not yet default repository canon and are not runtime-loaded by Dema.
 
 ## What this does not prove
 
