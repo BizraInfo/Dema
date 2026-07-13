@@ -45,6 +45,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [00-product-thesis/mission-centric-thesis.md](00-product-thesis/mission-centric-thesis.md) — mission-centric thesis.
 - [00-product-thesis/no-shadow-state-law.md](00-product-thesis/no-shadow-state-law.md) — no hidden state doctrine.
 - [00-product-thesis/market-positioning.md](00-product-thesis/market-positioning.md) — market positioning.
+- [00-product-thesis/BIZRA_MASTER_ROADMAP_v0_1.md](00-product-thesis/BIZRA_MASTER_ROADMAP_v0_1.md) — Binding planning canon (`PLANNING_ONLY`) — the one hash-bound, truth-labeled implementation map: constitutional binding, measured current state, Genesis Convergence, Vanishing-Agent ladder, T0–T4 + S4–S6 sequence, 70/20/10 priority law, stop conditions. Authorizes nothing; no runtime loads it.
 
 ## Architecture docs
 
@@ -118,6 +119,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [receipts/BIZRA_GENESIS_CONVERGENCE_CANON_ATTESTATION_0B.md](receipts/BIZRA_GENESIS_CONVERGENCE_CANON_ATTESTATION_0B.md) — Historical (event receipt, pre-push attestation) — commit lineage, artifact hashes at `e1a1ea6`, honest authority history. Superseded lifecycle statements marked as-of.
 - [receipts/BIZRA_GENESIS_CONVERGENCE_CANON_REPAIR_0F.md](receipts/BIZRA_GENESIS_CONVERGENCE_CANON_REPAIR_0F.md) — Historical (canon repair event) — 0F truth-state repair: finding→repair→commit binding, post-repair hashes, durable squash-independent lineage anchors.
 - [receipts/BIZRA_GENESIS_CONVERGENCE_CANON_REPAIR_0G.md](receipts/BIZRA_GENESIS_CONVERGENCE_CANON_REPAIR_0G.md) — Historical (canon repair event) — 0G repair: repository-lifecycle externalization, enforcement-record schema normalization, evidence reclassification, docs-index registration.
+- [receipts/BIZRA_MASTER_ROADMAP_0A.md](receipts/BIZRA_MASTER_ROADMAP_0A.md) — Historical (event receipt) — authoring of Master Roadmap v0.1 from a fresh disk bind, including the corpus-census contradiction record. Records an event, not runtime capability.
 - [../themassage.pdf](../themassage.pdf), [../bizra.pdf](../bizra.pdf), [../BIZRA_Third_Fact_v0_1_FINAL.pdf](../BIZRA_Third_Fact_v0_1_FINAL.pdf) — three founding files bound by the priority anchor.
 
 - [ELITE_FULL_STACK_BLUEPRINT.md](ELITE_FULL_STACK_BLUEPRINT.md) — elite full-stack software project blueprint integrating MBOK/PMBOK 10 domains, DevOps value stream, CI/CD pipeline automation (4 remote rails + local gates), rigorous performance-quality assurance (artifacts, thresholds, measured gates). Performance-QA-as-architecture for BIZRA/Dema.

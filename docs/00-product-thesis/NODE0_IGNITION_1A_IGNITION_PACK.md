@@ -1,7 +1,7 @@
 # NODE0-IGNITION-1A — Ignition Pack (for review)
 
 - **Truth label:** `DESIGNED_NOT_LIVE / PLANNING_ONLY` — this is a design document, preserved as a committed repository artifact for review. The *implementation* it describes is unbuilt, unrun, and not execution-authorized. It exists to be reviewed before any execution consent.
-- **Program:** G0 · BIZRA Genesis Convergence (governing program above the technical targets T1–T4). The master roadmap companion `BIZRA_MASTER_ROADMAP_v0_1` is `PLANNED_COMPANION_NOT_YET_PRESENT` — a provisional dependency; the T1–T4 references here stand on this pack's own definitions until that roadmap exists.
+- **Program:** G0 · BIZRA Genesis Convergence (governing program above the technical targets T1–T4). The master roadmap companion is `docs/00-product-thesis/BIZRA_MASTER_ROADMAP_v0_1.md` (`PLANNING_ONLY`; lifecycle externalized — derive its promotion state from Git and its receipt `docs/receipts/BIZRA_MASTER_ROADMAP_0A.md`); the T1–T4 definitions here remain this pack's own.
 - **Baseline:** `main` @ `5c9d3111` · authored on the operator's local space, 2026-07-12.
 - **Authority scope:** planning only. Generating this pack authorizes **nothing else** — see §16.
 

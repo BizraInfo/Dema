@@ -1,7 +1,7 @@
 # Receipt: BIZRA-MASTER-ROADMAP-0A
 
 - **Truth label:** `PLANNING_ONLY` — records the authoring of Master Roadmap v0.1 from fresh disk and repository truth. It authorizes nothing and promotes no capability. This receipt does not claim its own containing commit SHA.
-- **Authority:** exact operator card `GO — BIZRA-MASTER-ROADMAP-0B · PLANNING_ONLY`, executed under the operator's standing continue directive after its timing precondition (S0+S1 merged; corridor reconciliation merged) was satisfied.
+- **Authority:** exact operator card `GO — BIZRA-MASTER-ROADMAP-0B · PLANNING_ONLY`, executed after its timing precondition (S0+S1 merged; corridor reconciliation merged) was satisfied.
 - **Fresh-state bind:** 2026-07-13T10:57Z at `origin/main @ f80e3b6b01ffc4cc9173426ff8b1c6f10f4319cb`; full measurement log (operator-local, `OPERATOR_LOCAL_CONTEXT_NOT_REPOSITORY_PORTABLE`): `/data/bizra/logs/s3-fresh-state-bind.txt`.
 
 ## What was measured (disk wins)

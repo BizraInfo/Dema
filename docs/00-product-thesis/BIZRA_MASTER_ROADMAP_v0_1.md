@@ -4,6 +4,7 @@
 - **Authority:** exact operator card `GO — BIZRA-MASTER-ROADMAP-0B · PLANNING_ONLY` (from the ratified sprint roadmap), executed after S0/S1/S2 merged as the card's timing clause required.
 - **Fresh-state bind:** 2026-07-13T10:57Z, `origin/main @ f80e3b6b01ffc4cc9173426ff8b1c6f10f4319cb`. Disk wins over remembered values; one remembered value was contradicted and is recorded as such (Part 1).
 - **Repository lifecycle: EXTERNALIZED** — this document does not self-assert its branch/PR/merge state; derive it from Git, GitHub, and the receipt `docs/receipts/BIZRA_MASTER_ROADMAP_0A.md`.
+- **Authority delta:** `authority_delta: 0` — planning changes no permission surface; failure never widens authority.
 
 ## Part 0 · Constitutional binding (by path + hash + truth label — never duplicated)
 
