@@ -1470,7 +1470,10 @@ function corridorFail(message) {
 
 function corridorHome(argv) {
   // Destination is disclosed, never silent: --dema-home > DEMA_HOME > ~/.dema.
-  return argValue(argv, "--dema-home") || process.env.DEMA_HOME || join(homedir(), ".dema");
+  // Resolved to an absolute, lexically normalized path BEFORE consent
+  // derivation, so the consented root and the filesystem root can never
+  // lexically diverge (no symlink resolution — lexical normalization only).
+  return resolve(argValue(argv, "--dema-home") || process.env.DEMA_HOME || join(homedir(), ".dema"));
 }
 
 // HONEST boundary for CLI IO paths (founder-impact precedent): the kernel is
@@ -1495,26 +1498,46 @@ async function readCorridor(dir) {
   return { contractDoc, journal };
 }
 
-// Root-bound consent (S2): nonce ledger — append-only, disclosed, under the
-// missions root. A consumed nonce can never authorize a second write.
-function nonceLedgerPath(argv) {
-  return join(corridorHome(argv), "missions", "consent-nonces.jsonl");
+// Root-bound consent (S2/1B): ATOMIC_CREATE_ONLY_NONCE_RESERVATION — a
+// LOCAL_ATOMIC_REPLAY_GUARD, PREVIEW_ONLY. One marker file per nonce, created
+// with the exclusive "wx" flag AFTER consent validates and BEFORE any
+// protected corridor mutation. Marker EXISTENCE is authoritative (never its
+// parsed content); every unexpected reservation error fails closed; a
+// reserved nonce stays consumed even if the later operation fails (burning a
+// nonce is safer than replaying authority). Not tamper-proof, not distributed
+// — a disclosed local guard only.
+function nonceMarkerPath(argv, nonce) {
+  // The marker name is a SHA-256 digest — a raw nonce never becomes a path.
+  const digest = createHash("sha256").update(String(nonce), "utf8").digest("hex");
+  return join(corridorHome(argv), "missions", "consent-nonces", `${digest}.json`);
 }
 
-async function readUsedNonces(argv) {
+async function reserveNonce(argv, { nonce, consent_context_hash, mission_id, kind, contract_hash, reserved_at_iso }) {
+  const marker = nonceMarkerPath(argv, nonce);
+  // Two distinct failure domains, never conflated: a guard-directory problem
+  // (e.g. consent-nonces exists as a FILE → mkdir throws EEXIST too) is an
+  // infrastructure fault and fails closed; only the marker's own exclusive
+  // create colliding means the nonce was already consumed.
   try {
-    const raw = await readFileFs(nonceLedgerPath(argv), "utf8");
-    return new Set(
-      raw.split("\n").filter((l) => l.trim().length > 0).map((l) => JSON.parse(l).nonce),
-    );
-  } catch {
-    return new Set();
+    await mkdir(join(corridorHome(argv), "missions", "consent-nonces"), { recursive: true });
+  } catch (err) {
+    corridorFail(`nonce reservation failed closed (${err?.code ?? "unknown_error"}) — nothing was written.`);
   }
-}
-
-async function consumeNonce(argv, { nonce, mission_id, kind, at_iso }) {
-  await mkdir(join(corridorHome(argv), "missions"), { recursive: true });
-  await writeFile(nonceLedgerPath(argv), `${JSON.stringify({ nonce, mission_id, kind, at_iso })}\n`, { flag: "a" });
+  try {
+    await writeFile(
+      marker,
+      `${JSON.stringify({ nonce, consent_context_hash, mission_id, kind, contract_hash, reserved_at_iso }, null, 2)}\n`,
+      { flag: "wx" },
+    );
+  } catch (err) {
+    if (err && err.code === "EEXIST") {
+      corridorFail("root-bound consent BLOCKED: nonce_replayed — nothing was written.");
+    }
+    // Permission failure, ENOTDIR, truncation, unknown — all fail closed.
+    // An unreadable guard is never interpreted as an unused nonce.
+    corridorFail(`nonce reservation failed closed (${err?.code ?? "unknown_error"}) — nothing was written.`);
+  }
+  return marker;
 }
 
 // Two-step root-bound consent for a corridor write
@@ -1523,7 +1546,7 @@ async function consumeNonce(argv, { nonce, mission_id, kind, at_iso }) {
 // consent card (required phrase + consent_context_hash) and write NOTHING.
 // Step 2: validate phrase + nonce + expiry + context commitment fail-closed,
 // then the caller performs the disclosed write. A phrase alone is never enough.
-async function corridorConsentGate(argv, { kind, mission_id, contract_hash, permitted_actions, mission_root, now_iso, wantJson }) {
+async function corridorConsentGate(argv, { kind, mission_id, contract_hash, permitted_actions, mission_root, now_iso, wantJson, cardExtra = {}, rerunHint = "" }) {
   const nonce = argValue(argv, "--nonce") ?? "";
   const expires_at = argValue(argv, "--expires") ?? "";
   const phrase = argValue(argv, "--consent");
@@ -1536,18 +1559,21 @@ async function corridorConsentGate(argv, { kind, mission_id, contract_hash, perm
   const ctx = buildCorridorConsentContext({ kind, mission_id, contract_hash, permitted_actions, mission_root, nonce, expires_at });
   if (!ctx.ok) corridorFail(`consent context blocked: ${ctx.blocked_by.join(", ")} — nothing was written.`);
   if (!phrase) {
+    const rerun = `${rerunHint}--nonce ${nonce} --expires ${expires_at} --consent "${ctx.envelope.required_phrase}" --consent-context ${ctx.envelope.consent_context_hash}`;
     const card = {
       ok: true,
       step: "CONSENT_CARD",
       kind,
       mission_id,
       contract_hash,
+      ...cardExtra,
       required_phrase: ctx.envelope.required_phrase,
       consent_context_hash: ctx.envelope.consent_context_hash,
       action_class: ctx.envelope.action_class,
       mission_root,
       nonce,
       expires_at,
+      rerun_with: rerun,
       boundary: corridorIoBoundary({}),
     };
     if (wantJson) console.log(JSON.stringify(card, null, 2));
@@ -1557,15 +1583,17 @@ async function corridorConsentGate(argv, { kind, mission_id, contract_hash, perm
       console.log(`  consent_context_hash: ${ctx.envelope.consent_context_hash}`);
       console.log(`  binds: contract ${contract_hash}`);
       console.log(`         root ${mission_root} · class ${ctx.envelope.action_class} · nonce ${nonce} · expires ${expires_at}`);
-      console.log('  re-run with --consent "<phrase>" --consent-context <hash> to authorize exactly this context.');
+      console.log(`  authorize exactly this context by re-running with: ${rerun}`);
     }
     return null; // consent card printed; no write happens
   }
-  const used = await readUsedNonces(argv);
+  // Persistent replay protection is the atomic create-only reservation the
+  // caller performs AFTER this verdict and BEFORE any mutation — never a
+  // read-back of prior state, which would fail open.
   const verdict = evaluateCorridorWriteConsent({
     kind, mission_id, contract_hash, permitted_actions, mission_root,
     phrase, nonce, expires_at, consent_context_hash,
-    now: now_iso, used_nonces: used,
+    now: now_iso,
   });
   if (!verdict.ok) {
     corridorFail(`root-bound consent BLOCKED: ${verdict.blocked_by.join(", ")} — nothing was written.`);
@@ -1598,6 +1626,17 @@ async function cmdMissionCorridor(argv) {
   if (verb === "start") {
     const id = argValue(argv, "--id") ?? "";
     const nowIso = argValue(argv, "--now") || new Date().toISOString();
+    // The contract's creation timestamp is CONSENTED, never re-derived: the
+    // consent-card phase fixes it once (from --created-at or this run's now),
+    // and the authorizing phase must carry it back explicitly — otherwise a
+    // later clock would silently change the contract hash the human approved.
+    const createdAtArg = argValue(argv, "--created-at");
+    if (argValue(argv, "--consent") && !createdAtArg) {
+      corridorFail(
+        "root-bound consent authorization requires --created-at <iso> exactly as printed on the consent card (the contract timestamp is part of the approved context; a phrase alone is not authority) — nothing was written.",
+      );
+    }
+    const createdAt = createdAtArg || nowIso;
     const built = buildMissionContract({
       mission_id: id,
       objective: argValue(argv, "--objective") ?? "",
@@ -1609,7 +1648,7 @@ async function cmdMissionCorridor(argv) {
       repair_budget_per_slice: Number(argValue(argv, "--repair-budget") ?? 2),
       stop_conditions: (argValue(argv, "--stop-conditions") || "historical_hash_change,gate_weakened,base_moved")
         .split(",").map((s) => s.trim()).filter(Boolean),
-      created_at_iso: nowIso,
+      created_at_iso: createdAt,
     });
     if (!built.ok) corridorFail(`corridor contract blocked: ${built.blocked_by.join(", ")} — nothing was written.`);
     const dir = join(corridorHome(argv), "missions", id);
@@ -1621,8 +1660,19 @@ async function cmdMissionCorridor(argv) {
       mission_root: dir,
       now_iso: nowIso,
       wantJson,
+      cardExtra: { created_at_iso: createdAt },
+      rerunHint: `--created-at ${createdAt} `,
     });
     if (!verdict) return; // consent card printed; nothing written
+    // Atomic replay guard: reserve the nonce BEFORE any protected mutation.
+    await reserveNonce(argv, {
+      nonce: verdict.nonce,
+      consent_context_hash: verdict.consent_context_hash,
+      mission_id: id,
+      kind: "START",
+      contract_hash: built.contract_hash,
+      reserved_at_iso: nowIso,
+    });
     const first = appendCorridorEvent({
       contract_hash: built.contract_hash,
       journal: [],
@@ -1643,10 +1693,11 @@ async function cmdMissionCorridor(argv) {
       );
       await writeFile(join(dir, "journal.jsonl"), `${JSON.stringify(first.event)}\n`, { flag: "wx" });
     } catch (err) {
+      // The nonce reservation above stays consumed on this failure path —
+      // burning a nonce is safer than ever replaying authority.
       if (err.code === "EEXIST") corridorFail(`corridor "${id}" already exists at ${dir} — refusing to clobber.`);
       throw err;
     }
-    await consumeNonce(argv, { nonce: verdict.nonce, mission_id: id, kind: "START", at_iso: nowIso });
     const out = {
       ok: true,
       mission_id: id,
@@ -1716,6 +1767,15 @@ async function cmdMissionCorridor(argv) {
       wantJson,
     });
     if (!verdict) return; // consent card printed; nothing written
+    // Atomic replay guard: reserve the nonce BEFORE the protected append.
+    await reserveNonce(argv, {
+      nonce: verdict.nonce,
+      consent_context_hash: verdict.consent_context_hash,
+      mission_id: id,
+      kind: "STOP",
+      contract_hash: loaded.contractDoc.contract_hash,
+      reserved_at_iso: nowIso,
+    });
     const r = appendCorridorEvent({
       contract_hash: loaded.contractDoc.contract_hash,
       journal: loaded.journal,
@@ -1728,7 +1788,6 @@ async function cmdMissionCorridor(argv) {
     });
     if (!r.ok) corridorFail(`corridor stop blocked: ${r.blocked_by.join(", ")}`);
     await writeFile(join(dir, "journal.jsonl"), `${JSON.stringify(r.event)}\n`, { flag: "a" });
-    await consumeNonce(argv, { nonce: verdict.nonce, mission_id: id, kind: "STOP", at_iso: nowIso });
     const out = { ok: true, mission_id: id, state: "STOPPED", event_hash: r.event.event_hash, consent_context_hash: verdict.consent_context_hash, boundary: corridorIoBoundary({ read: true, wrote: true, consented: true }) };
     if (wantJson) console.log(JSON.stringify(out, null, 2));
     else console.log(`DEMA · mission corridor stopped: ${id} (kill switch honored; journal sealed)`);
@@ -1736,6 +1795,6 @@ async function cmdMissionCorridor(argv) {
   }
 
   corridorFail(
-    "unknown mission corridor verb. Use `dema mission corridor start --id <id> … --nonce <n> --expires <iso>` (prints the consent card), then re-run with `--consent \"GO: start mission corridor <id>\" --consent-context <hash>`; `dema mission corridor status <id>`; `dema mission corridor resume <id>`; or `dema mission corridor stop <id> --nonce <n> --expires <iso>` then `--consent \"GO: stop mission corridor <id>\" --consent-context <hash>` — root-bound consent; control plane only; nothing runs.",
+    "unknown mission corridor verb. Use `dema mission corridor start --id <id> … --nonce <n> --expires <iso>` (prints the consent card incl. created_at_iso and the exact rerun line), then re-run with `--created-at <iso> --consent \"GO: start mission corridor <id>\" --consent-context <hash>`; `dema mission corridor status <id>`; `dema mission corridor resume <id>`; or `dema mission corridor stop <id> --nonce <n> --expires <iso>` then `--consent \"GO: stop mission corridor <id>\" --consent-context <hash>` — root-bound consent; control plane only; nothing runs.",
   );
 }

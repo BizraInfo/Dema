@@ -90,8 +90,17 @@ two-step: first run derives and prints the **consent card**
 (`consent_context_hash` + required phrase, nothing written); the operator then
 re-runs with the phrase **and** the context commitment. A captured phrase
 replayed against a changed contract, root, kind, nonce, or expiry fails
-closed; consumed nonces live in an append-only disclosed ledger
-(`$DEMA_HOME/missions/consent-nonces.jsonl`). This is a local preview
+closed. The contract's `created_at_iso` is fixed on the consent card and must
+be carried back explicitly (`--created-at`) at authorization — a later clock
+can never silently move the approved contract hash. The consented mission
+root is absolute and lexically normalized before consent derivation. Replay
+protection is an **ATOMIC_CREATE_ONLY_NONCE_RESERVATION**
+(`$DEMA_HOME/missions/consent-nonces/<sha256-of-nonce>.json`, exclusive `wx`
+create after consent validates and before any protected mutation): marker
+existence is authoritative, unexpected reservation errors fail closed, and a
+reserved nonce stays consumed even if the later operation fails — burning a
+nonce is safer than replaying authority (`LOCAL_ATOMIC_REPLAY_GUARD`,
+PREVIEW_ONLY; not tamper-proof, not distributed). This is a local preview
 primitive, **not** a live global FATE runtime.
 
 ## Out of scope (each needs its own slice + GO)

@@ -1,9 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { execFile, execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdtempSync, mkdirSync, rmSync, readFileSync, readdirSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, dirname } from "node:path";
+import { join, dirname, resolve, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -448,28 +449,53 @@ test("CLI: start → status → resume survives process loss → stop; root-boun
     "--id", "demo-corridor",
     "--objective", "demo",
     "--base-sha", SHA40,
-    "--now", T0,
     "--json",
   ];
   // phrase alone (old style) is not authority: no nonce/expiry → refused, nothing written
   assert.throws(
-    () => run([...startArgs, "--consent", "GO: start mission corridor demo-corridor"]),
+    () => run([...startArgs, "--now", T0, "--consent", "GO: start mission corridor demo-corridor"]),
     (e) => e.status === 1 && String(e.stderr).includes("root-bound consent"),
   );
   assert.ok(!existsSync(join(home, "missions/demo-corridor/contract.json")));
 
-  // step 1: consent card — derived context hash + required phrase; still nothing written
-  const card = JSON.parse(run([...startArgs, "--nonce", "n-start-1", "--expires", EXP]));
+  // step 1: consent card WITHOUT --created-at — the card fixes created_at_iso
+  // once, prints the exact rerun line, and reserves NOTHING.
+  const card = JSON.parse(run([...startArgs, "--now", T0, "--nonce", "n-start-1", "--expires", EXP]));
   assert.equal(card.step, "CONSENT_CARD");
   assert.equal(card.required_phrase, "GO: start mission corridor demo-corridor");
+  assert.equal(card.created_at_iso, T0, "the card fixes the contract timestamp once");
+  assert.ok(card.rerun_with.includes(`--created-at ${T0}`), "rerun line carries the exact created-at");
+  assert.ok(card.rerun_with.includes(card.consent_context_hash));
   assert.match(card.consent_context_hash, /^sha256:[0-9a-f]{64}$/);
   assert.equal(card.boundary.filesystem_write_performed, false);
   assert.ok(!existsSync(join(home, "missions/demo-corridor/contract.json")));
+  assert.ok(!existsSync(join(home, "missions/consent-nonces")), "a consent card reserves no nonce");
+
+  // authorization without --created-at is refused: the clock never re-derives
+  // the approved contract timestamp.
+  assert.throws(
+    () => run([
+      ...startArgs, "--now", T1, "--nonce", "n-start-1", "--expires", EXP,
+      "--consent", "GO: start mission corridor demo-corridor",
+      "--consent-context", card.consent_context_hash,
+    ]),
+    (e) => e.status === 1 && String(e.stderr).includes("--created-at"),
+  );
+
+  // a tampered created-at is a DIFFERENT contract → consent_context_mismatch
+  assert.throws(
+    () => run([
+      ...startArgs, "--now", T1, "--created-at", T1, "--nonce", "n-start-1", "--expires", EXP,
+      "--consent", "GO: start mission corridor demo-corridor",
+      "--consent-context", card.consent_context_hash,
+    ]),
+    (e) => e.status === 1 && String(e.stderr).includes("consent_context_mismatch"),
+  );
 
   // wrong context commitment refused, nothing written
   assert.throws(
     () => run([
-      ...startArgs, "--nonce", "n-start-1", "--expires", EXP,
+      ...startArgs, "--now", T1, "--created-at", T0, "--nonce", "n-start-1", "--expires", EXP,
       "--consent", "GO: start mission corridor demo-corridor",
       "--consent-context", `sha256:${"e".repeat(64)}`,
     ]),
@@ -477,25 +503,41 @@ test("CLI: start → status → resume survives process loss → stop; root-boun
   );
   assert.ok(!existsSync(join(home, "missions/demo-corridor/contract.json")));
 
-  // step 2: exact phrase + exact context commitment starts the corridor — and the
-  // CLI reports an HONEST boundary: it really wrote under consent (kernel stays
-  // all-false; the IO layer must not print false statements about its own effects).
+  // step 2: a LATER now with the card's created-at reproduces the approved
+  // hashes exactly — deterministic two-step consent. The CLI reports an HONEST
+  // boundary: it really wrote under consent (kernel stays all-false; the IO
+  // layer must not print false statements about its own effects).
   const fullStart = [
-    ...startArgs, "--nonce", "n-start-1", "--expires", EXP,
+    ...startArgs, "--now", T1, "--created-at", T0, "--nonce", "n-start-1", "--expires", EXP,
     "--consent", "GO: start mission corridor demo-corridor",
     "--consent-context", card.consent_context_hash,
   ];
   const started = JSON.parse(run(fullStart));
   assert.equal(started.ok, true);
+  assert.equal(started.contract_hash, card.contract_hash, "later now must not move the approved contract hash");
   assert.equal(started.consent_context_hash, card.consent_context_hash);
   assert.equal(started.boundary.filesystem_write_performed, true);
   assert.equal(started.boundary.consent_collected, true);
   assert.equal(started.boundary.runtime_execution_performed, false);
   assert.ok(existsSync(join(home, "missions/demo-corridor/contract.json")));
   assert.ok(existsSync(join(home, "missions/demo-corridor/journal.jsonl")));
+  assert.equal(readdirSync(join(home, "missions/consent-nonces")).length, 1, "exactly one nonce marker after start");
 
-  // double start refused (no clobber) — even before the replayed nonce matters
-  assert.throws(() => run(fullStart), (e) => e.status === 1);
+  // double start: the consumed nonce is refused atomically, BEFORE any clobber path
+  assert.throws(() => run(fullStart), (e) => e.status === 1 && String(e.stderr).includes("nonce_replayed"));
+
+  // fresh nonce against the existing corridor → no clobber; the reserved nonce
+  // stays burned by design (burning beats replaying authority)
+  const clobberCard = JSON.parse(run([...startArgs, "--now", T1, "--created-at", T0, "--nonce", "n-clobber", "--expires", EXP]));
+  assert.throws(
+    () => run([
+      ...startArgs, "--now", T1, "--created-at", T0, "--nonce", "n-clobber", "--expires", EXP,
+      "--consent", "GO: start mission corridor demo-corridor",
+      "--consent-context", clobberCard.consent_context_hash,
+    ]),
+    (e) => e.status === 1 && String(e.stderr).includes("refusing to clobber"),
+  );
+  assert.equal(readdirSync(join(home, "missions/consent-nonces")).length, 2, "burned nonce marker persists after the failed operation");
 
   // resume in a FRESH process (the terminal-loss acceptance): disk alone reconstructs
   const resumed = JSON.parse(run(["mission", "corridor", "resume", "demo-corridor", "--json"]));
@@ -558,9 +600,125 @@ test("CLI: start → status → resume survives process loss → stop; root-boun
   assert.equal(status.state, "STOPPED");
   assert.equal(status.terminal, true);
 
-  // journal on disk is the chain the kernel verifies; the consumed nonces are ledgered
+  // journal on disk is the chain the kernel verifies; every consumed nonce is
+  // an atomic create-only marker (sha256-named — raw nonces never become paths)
   const lines = readFileSync(join(home, "missions/demo-corridor/journal.jsonl"), "utf8").trim().split("\n");
   assert.equal(lines.length, 2);
-  const ledger = readFileSync(join(home, "missions/consent-nonces.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l).nonce);
-  assert.deepEqual(ledger, ["n-start-1", "n-stop-1"]);
+  const markers = readdirSync(join(home, "missions/consent-nonces")).sort();
+  assert.equal(markers.length, 3, "n-start-1 + burned n-clobber + n-stop-1");
+  for (const m of markers) assert.match(m, /^[0-9a-f]{64}\.json$/);
+  const startMarker = `${createHash("sha256").update("n-start-1", "utf8").digest("hex")}.json`;
+  assert.ok(markers.includes(startMarker), "marker filename is the sha256 of the nonce");
+});
+
+test("CLI: consented mission root is absolute and lexically normalized", (t) => {
+  const base = mkdtempSync(join(tmpdir(), "corridor-norm-"));
+  t.after(() => rmSync(base, { recursive: true, force: true }));
+  // a messy home path: redundant `.` and `..` segments (raw concatenation —
+  // join() would pre-normalize them and defeat the test)
+  const messy = `${base}/x/../dema-home/.`;
+  const clean = resolve(messy);
+  assert.notEqual(messy, clean, "precondition: the raw home is not normalized");
+  const dema = join(REPO, "bin/dema");
+  const run = (args) =>
+    execFileSync("node", [dema, ...args], { encoding: "utf8", env: { ...process.env, DEMA_HOME: messy } });
+  const T0 = "2026-07-13T00:00:00.000Z";
+  const EXP = "2026-07-13T08:00:00.000Z";
+  const startCmd = [
+    "mission", "corridor", "start", "--id", "norm-corridor", "--objective", "demo",
+    "--base-sha", SHA40, "--now", T0, "--nonce", "n-norm-1", "--expires", EXP, "--json",
+  ];
+  const card = JSON.parse(run(startCmd));
+  assert.ok(isAbsolute(card.mission_root), "consented root is absolute");
+  assert.equal(card.mission_root, join(clean, "missions", "norm-corridor"), "consented root is the normalized path");
+  const started = JSON.parse(run([
+    ...startCmd, "--created-at", T0,
+    "--consent", "GO: start mission corridor norm-corridor",
+    "--consent-context", card.consent_context_hash,
+  ]));
+  assert.equal(started.ok, true);
+  assert.equal(started.dir, card.mission_root, "the write landed exactly on the consented root");
+  assert.ok(existsSync(join(clean, "missions", "norm-corridor", "contract.json")));
+});
+
+test("CLI: atomic nonce reservation — cross-mission replay, malformed marker, fail-closed error, concurrency", async (t) => {
+  const home = mkdtempSync(join(tmpdir(), "corridor-nonce-"));
+  t.after(() => rmSync(home, { recursive: true, force: true }));
+  const dema = join(REPO, "bin/dema");
+  const env = { ...process.env, DEMA_HOME: home };
+  const run = (args) => execFileSync("node", [dema, ...args], { encoding: "utf8", env });
+  const T0 = "2026-07-13T00:00:00.000Z";
+  const EXP = "2026-07-13T08:00:00.000Z";
+  const startCmd = (id, nonce) => [
+    "mission", "corridor", "start", "--id", id, "--objective", "demo",
+    "--base-sha", SHA40, "--now", T0, "--created-at", T0,
+    "--nonce", nonce, "--expires", EXP, "--json",
+  ];
+  const authorized = (id, nonce) => {
+    const card = JSON.parse(run(startCmd(id, nonce)));
+    return [
+      ...startCmd(id, nonce),
+      "--consent", `GO: start mission corridor ${id}`,
+      "--consent-context", card.consent_context_hash,
+    ];
+  };
+
+  // the same nonce can never authorize a SECOND mission either — the marker is
+  // global under the missions root, not per-mission
+  run(authorized("na-one", "shared-nonce"));
+  assert.throws(
+    () => run(authorized("na-two", "shared-nonce")),
+    (e) => e.status === 1 && String(e.stderr).includes("nonce_replayed"),
+  );
+  assert.ok(!existsSync(join(home, "missions/na-two/contract.json")), "no mutation after reservation failure");
+
+  // a pre-existing MALFORMED marker still blocks: existence is authoritative,
+  // parsed content never is
+  const digest = createHash("sha256").update("poisoned-nonce", "utf8").digest("hex");
+  writeFileSync(join(home, "missions/consent-nonces", `${digest}.json`), "NOT JSON {{{");
+  assert.throws(
+    () => run(authorized("na-three", "poisoned-nonce")),
+    (e) => e.status === 1 && String(e.stderr).includes("nonce_replayed"),
+  );
+  assert.ok(!existsSync(join(home, "missions/na-three/contract.json")));
+
+  // an unexpected reservation-path error (consent-nonces is a FILE) fails
+  // CLOSED and performs no corridor mutation — never treated as "no nonces used"
+  const home2 = mkdtempSync(join(tmpdir(), "corridor-noncedir-"));
+  t.after(() => rmSync(home2, { recursive: true, force: true }));
+  mkdirSync(join(home2, "missions"), { recursive: true });
+  writeFileSync(join(home2, "missions/consent-nonces"), "i am a file, not a directory");
+  const run2 = (args) => execFileSync("node", [dema, ...args], { encoding: "utf8", env: { ...process.env, DEMA_HOME: home2 } });
+  const card2 = JSON.parse(run2(startCmd("na-four", "n4")));
+  assert.throws(
+    () => run2([
+      ...startCmd("na-four", "n4"),
+      "--consent", "GO: start mission corridor na-four",
+      "--consent-context", card2.consent_context_hash,
+    ]),
+    (e) => e.status === 1 && String(e.stderr).includes("failed closed"),
+  );
+  assert.ok(!existsSync(join(home2, "missions/na-four/contract.json")));
+
+  // concurrency: two authorized operations racing the SAME nonce — exactly one
+  // reservation succeeds, exactly one is rejected as a replay (wx is atomic)
+  const argsA = authorized("nc-one", "race-nonce");
+  const cardB = JSON.parse(run(startCmd("nc-two", "race-nonce")));
+  const argsB = [
+    ...startCmd("nc-two", "race-nonce"),
+    "--consent", "GO: start mission corridor nc-two",
+    "--consent-context", cardB.consent_context_hash,
+  ];
+  const runAsync = (args) =>
+    new Promise((done) =>
+      execFile("node", [dema, ...args], { encoding: "utf8", env }, (err, _stdout, stderr) =>
+        done({ code: err ? err.code : 0, stderr: String(stderr) }),
+      ),
+    );
+  const [ra, rb] = await Promise.all([runAsync(argsA), runAsync(argsB)]);
+  const wins = [ra, rb].filter((r) => r.code === 0);
+  const losses = [ra, rb].filter((r) => r.code !== 0);
+  assert.equal(wins.length, 1, `exactly one winner expected: ${JSON.stringify([ra.code, rb.code])}`);
+  assert.equal(losses.length, 1);
+  assert.ok(losses[0].stderr.includes("nonce_replayed"), losses[0].stderr);
 });
