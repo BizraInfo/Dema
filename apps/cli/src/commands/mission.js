@@ -33,7 +33,6 @@ import {
   verifyCorridorJournal,
   buildCorridorConsentContext,
   evaluateCorridorWriteConsent,
-  corridorRequiredPhrase,
   MISSION_ID_RE,
 } from "../../../../packages/mission/src/mission-corridor.js";
 import { buildPreviewBoundary } from "../../../../packages/core/src/boundary-schema.js";
@@ -1489,13 +1488,26 @@ function corridorIoBoundary({ read = false, wrote = false, consented = false } =
 }
 
 async function readCorridor(dir) {
-  const contractDoc = JSON.parse(await readFileFs(join(dir, "contract.json"), "utf8"));
-  const raw = await readFileFs(join(dir, "journal.jsonl"), "utf8");
-  const journal = raw
-    .split("\n")
-    .filter((line) => line.trim().length > 0)
-    .map((line) => JSON.parse(line));
-  return { contractDoc, journal };
+  // Missing and corrupt are DIFFERENT truths: an absent corridor is a lookup
+  // miss; unparseable state is damage and must never be reported as "not found".
+  let rawContract;
+  let rawJournal;
+  try {
+    rawContract = await readFileFs(join(dir, "contract.json"), "utf8");
+    rawJournal = await readFileFs(join(dir, "journal.jsonl"), "utf8");
+  } catch (err) {
+    corridorFail(`no corridor found under ${dir} (${err?.code ?? "read_error"})`);
+  }
+  try {
+    const contractDoc = JSON.parse(rawContract);
+    const journal = rawJournal
+      .split("\n")
+      .filter((line) => line.trim().length > 0)
+      .map((line) => JSON.parse(line));
+    return { contractDoc, journal };
+  } catch {
+    corridorFail(`corridor state under ${dir} is corrupt (unparseable JSON) — refusing to guess; nothing was written.`);
+  }
 }
 
 // Root-bound consent (S2/1B): ATOMIC_CREATE_ONLY_NONCE_RESERVATION — a
@@ -1519,7 +1531,7 @@ async function reserveNonce(argv, { nonce, consent_context_hash, mission_id, kin
   // infrastructure fault and fails closed; only the marker's own exclusive
   // create colliding means the nonce was already consumed.
   try {
-    await mkdir(join(corridorHome(argv), "missions", "consent-nonces"), { recursive: true });
+    await mkdir(join(corridorHome(argv), "missions", "consent-nonces"), { recursive: true, mode: 0o700 });
   } catch (err) {
     corridorFail(`nonce reservation failed closed (${err?.code ?? "unknown_error"}) — nothing was written.`);
   }
@@ -1527,7 +1539,7 @@ async function reserveNonce(argv, { nonce, consent_context_hash, mission_id, kin
     await writeFile(
       marker,
       `${JSON.stringify({ nonce, consent_context_hash, mission_id, kind, contract_hash, reserved_at_iso }, null, 2)}\n`,
-      { flag: "wx" },
+      { flag: "wx", mode: 0o600 },
     );
   } catch (err) {
     if (err && err.code === "EEXIST") {
@@ -1684,14 +1696,14 @@ async function cmdMissionCorridor(argv) {
       },
     });
     if (!first.ok) corridorFail(`corridor journal blocked: ${first.blocked_by.join(", ")}`);
-    await mkdir(dir, { recursive: true });
+    await mkdir(dir, { recursive: true, mode: 0o700 });
     try {
       await writeFile(
         join(dir, "contract.json"),
         `${JSON.stringify({ schema: built.schema, truth_label: built.truth_label, contract: built.contract, contract_hash: built.contract_hash }, null, 2)}\n`,
-        { flag: "wx" },
+        { flag: "wx", mode: 0o600 },
       );
-      await writeFile(join(dir, "journal.jsonl"), `${JSON.stringify(first.event)}\n`, { flag: "wx" });
+      await writeFile(join(dir, "journal.jsonl"), `${JSON.stringify(first.event)}\n`, { flag: "wx", mode: 0o600 });
     } catch (err) {
       // The nonce reservation above stays consumed on this failure path —
       // burning a nonce is safer than ever replaying authority.
@@ -1721,12 +1733,7 @@ async function cmdMissionCorridor(argv) {
     const id = argv[3];
     if (!id || !MISSION_ID_RE.test(id)) corridorFail("mission corridor id required (lowercase kebab).");
     const dir = join(corridorHome(argv), "missions", id);
-    let loaded;
-    try {
-      loaded = await readCorridor(dir);
-    } catch {
-      corridorFail(`no corridor found for "${id}" under ${dir}`);
-    }
+    const loaded = await readCorridor(dir);
     const status = deriveCorridorStatus({
       contract: loaded.contractDoc.contract,
       contract_hash: loaded.contractDoc.contract_hash,
@@ -1742,12 +1749,7 @@ async function cmdMissionCorridor(argv) {
     const id = argv[3];
     if (!id || !MISSION_ID_RE.test(id)) corridorFail("mission corridor id required (lowercase kebab).");
     const dir = join(corridorHome(argv), "missions", id);
-    let loaded;
-    try {
-      loaded = await readCorridor(dir);
-    } catch {
-      corridorFail(`no corridor found for "${id}" under ${dir}`);
-    }
+    const loaded = await readCorridor(dir);
     const chain = verifyCorridorJournal({
       contract: loaded.contractDoc.contract,
       contract_hash: loaded.contractDoc.contract_hash,
@@ -1787,7 +1789,7 @@ async function cmdMissionCorridor(argv) {
       },
     });
     if (!r.ok) corridorFail(`corridor stop blocked: ${r.blocked_by.join(", ")}`);
-    await writeFile(join(dir, "journal.jsonl"), `${JSON.stringify(r.event)}\n`, { flag: "a" });
+    await writeFile(join(dir, "journal.jsonl"), `${JSON.stringify(r.event)}\n`, { flag: "a", mode: 0o600 });
     const out = { ok: true, mission_id: id, state: "STOPPED", event_hash: r.event.event_hash, consent_context_hash: verdict.consent_context_hash, boundary: corridorIoBoundary({ read: true, wrote: true, consented: true }) };
     if (wantJson) console.log(JSON.stringify(out, null, 2));
     else console.log(`DEMA · mission corridor stopped: ${id} (kill switch honored; journal sealed)`);

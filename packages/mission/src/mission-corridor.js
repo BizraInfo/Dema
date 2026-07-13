@@ -241,6 +241,18 @@ export function verifyCorridorJournal({ contract, contract_hash, journal } = {})
   let prevState = null;
   let prevRounds = 0;
   journal.forEach((e, i) => {
+    // Fail CLOSED on a malformed entry — a corrupt journal must block, never
+    // throw (a crash is not a verdict) and never be skipped.
+    if (!e || typeof e !== "object" || Array.isArray(e)) {
+      blocked_by.push(`journal_entry_invalid:${i}`);
+      prevHash = null;
+      prevAt = null;
+      prevState = null;
+      return;
+    }
+    // A timestamp that cannot parse would make the monotonicity comparison
+    // vacuous (NaN < x is always false) — block it explicitly instead.
+    if (!isValidIso(e.at_iso)) blocked_by.push(`at_iso_invalid:${i}`);
     // hash covers everything EXCEPT event_hash itself
     const { event_hash: _stored, ...bodyOnly } = e;
     if (sha256CanonicalJsonV1(bodyOnly) !== e.event_hash) blocked_by.push(`event_hash_mismatch:${i}`);
@@ -252,7 +264,9 @@ export function verifyCorridorJournal({ contract, contract_hash, journal } = {})
     } else {
       if (TERMINAL_STATES.includes(prevState)) blocked_by.push(`event_after_terminal:${i}`);
       else if (!CORRIDOR_TRANSITIONS[prevState]?.includes(e.state)) blocked_by.push(`transition_not_allowed:${i}`);
-      if (Date.parse(e.at_iso) < Date.parse(prevAt)) blocked_by.push(`at_iso_not_monotonic:${i}`);
+      if (isValidIso(e.at_iso) && isValidIso(prevAt) && Date.parse(e.at_iso) < Date.parse(prevAt)) {
+        blocked_by.push(`at_iso_not_monotonic:${i}`);
+      }
       if (e.repair_rounds_used < prevRounds) blocked_by.push(`repair_rounds_decreased:${i}`);
     }
     prevHash = e.event_hash;

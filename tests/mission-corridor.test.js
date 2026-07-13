@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync, mkdirSync, rmSync, readFileSync, readdirSync, writeFileSync, existsSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, readFileSync, readdirSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname, resolve, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -263,7 +263,7 @@ test("terminal states accept no further events; requires_human surfaces as a blo
   assert.ok(s.blocked_by.includes("human_decision_required"));
 });
 
-test("boundary is the canonical 17-key all-false set (deep-equal, no vacuous check)", () => {
+test("boundary is the canonical all-false key set (deep-equal against PREVIEW_BOUNDARY_CANONICAL_KEYS, no vacuous check)", () => {
   const c = buildMissionContract(goodContractInput());
   assert.deepEqual(c.boundary, buildPreviewBoundary());
   assert.deepEqual(Object.keys(c.boundary).sort(), [...PREVIEW_BOUNDARY_CANONICAL_KEYS].sort());
@@ -721,4 +721,62 @@ test("CLI: atomic nonce reservation — cross-mission replay, malformed marker, 
   assert.equal(wins.length, 1, `exactly one winner expected: ${JSON.stringify([ra.code, rb.code])}`);
   assert.equal(losses.length, 1);
   assert.ok(losses[0].stderr.includes("nonce_replayed"), losses[0].stderr);
+});
+
+test("kernel: corrupt journal entries and malformed timestamps fail CLOSED, never throw", () => {
+  const c = buildMissionContract(goodContractInput());
+  const journal = seedJournal(c.contract, c.contract_hash);
+
+  // a null / non-object entry is a verdict, not a crash
+  for (const junk of [null, "garbage", 42, []]) {
+    const v = verifyCorridorJournal({
+      contract: c.contract,
+      contract_hash: c.contract_hash,
+      journal: [...journal, junk],
+    });
+    assert.equal(v.ok, false, `junk=${JSON.stringify(junk)}`);
+    assert.ok(v.blocked_by.includes("journal_entry_invalid:1"), v.blocked_by.join(","));
+  }
+
+  // an unparseable timestamp must block explicitly — NaN comparisons would
+  // otherwise make the monotonicity check silently vacuous
+  const tampered = [{ ...journal[0], at_iso: "not-a-timestamp" }];
+  const v = verifyCorridorJournal({ contract: c.contract, contract_hash: c.contract_hash, journal: tampered });
+  assert.equal(v.ok, false);
+  assert.ok(v.blocked_by.includes("at_iso_invalid:0"), v.blocked_by.join(","));
+});
+
+test("CLI: corrupt state is reported as corrupt (never as missing); modes are 0o700/0o600", (t) => {
+  const home = mkdtempSync(join(tmpdir(), "corridor-corrupt-"));
+  t.after(() => rmSync(home, { recursive: true, force: true }));
+  const dema = join(REPO, "bin/dema");
+  const run = (args) => execFileSync("node", [dema, ...args], { encoding: "utf8", env: { ...process.env, DEMA_HOME: home } });
+  const T0 = "2026-07-13T00:00:00.000Z";
+  const EXP = "2026-07-13T08:00:00.000Z";
+  const startCmd = [
+    "mission", "corridor", "start", "--id", "hurt-corridor", "--objective", "demo",
+    "--base-sha", SHA40, "--now", T0, "--created-at", T0, "--nonce", "n-c1", "--expires", EXP, "--json",
+  ];
+  const card = JSON.parse(run(startCmd));
+  run([...startCmd, "--consent", "GO: start mission corridor hurt-corridor", "--consent-context", card.consent_context_hash]);
+
+  // repo permission convention: dirs 0o700, files 0o600
+  const dir = join(home, "missions", "hurt-corridor");
+  assert.equal(statSync(dir).mode & 0o777, 0o700, "mission dir mode");
+  assert.equal(statSync(join(dir, "contract.json")).mode & 0o777, 0o600, "contract mode");
+  assert.equal(statSync(join(dir, "journal.jsonl")).mode & 0o777, 0o600, "journal mode");
+  const marker = readdirSync(join(home, "missions", "consent-nonces"))[0];
+  assert.equal(statSync(join(home, "missions", "consent-nonces", marker)).mode & 0o777, 0o600, "nonce marker mode");
+
+  // a genuinely missing corridor is a lookup miss...
+  assert.throws(
+    () => run(["mission", "corridor", "status", "never-existed", "--json"]),
+    (e) => e.status === 1 && String(e.stderr).includes("no corridor found"),
+  );
+  // ...but damaged state must say CORRUPT, not "not found"
+  writeFileSync(join(dir, "journal.jsonl"), "{this is not JSON\n");
+  assert.throws(
+    () => run(["mission", "corridor", "status", "hurt-corridor", "--json"]),
+    (e) => e.status === 1 && String(e.stderr).includes("corrupt") && !String(e.stderr).includes("no corridor found"),
+  );
 });
