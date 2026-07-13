@@ -780,3 +780,98 @@ test("CLI: corrupt state is reported as corrupt (never as missing); modes are 0o
     (e) => e.status === 1 && String(e.stderr).includes("corrupt") && !String(e.stderr).includes("no corridor found"),
   );
 });
+
+test("kernel input gates: every malformed top-level input fails closed with a named block", () => {
+  const c = buildMissionContract(goodContractInput());
+  const journal = seedJournal(c.contract, c.contract_hash);
+
+  // appendCorridorEvent malformed inputs
+  const badAppend = [
+    [{ contract_hash: "nope", journal, event: { state: "PREFLIGHT", at_iso: c.contract.created_at_iso } }, "contract_hash_invalid"],
+    [{ contract_hash: c.contract_hash, journal: "not-an-array", event: {} }, "journal_not_array"],
+    [{ contract_hash: c.contract_hash, journal, event: null }, "event_not_object"],
+    [{}, "contract_hash_invalid"],
+  ];
+  for (const [input, code] of badAppend) {
+    const r = appendCorridorEvent(input);
+    assert.equal(r.ok, false, code);
+    assert.ok(r.blocked_by.includes(code), `${code}: got ${r.blocked_by}`);
+    assert.equal(r.journal, null);
+  }
+  // no-args call fails closed too
+  assert.equal(appendCorridorEvent().ok, false);
+
+  // deriveCorridorStatus: invalid injected now + verify-blocked early return
+  const badNow = deriveCorridorStatus({ contract: c.contract, contract_hash: c.contract_hash, journal, now_iso: "yesterday-ish" });
+  assert.equal(badNow.ok, false);
+  assert.ok(badNow.blocked_by.includes("now_iso_invalid"));
+  const noJournal = deriveCorridorStatus({ contract: c.contract, contract_hash: c.contract_hash, journal: [], now_iso: c.contract.created_at_iso });
+  assert.equal(noJournal.ok, false);
+  assert.ok(noJournal.blocked_by.includes("journal_empty"));
+
+  // optional event fields: an append carrying every optional field survives
+  // round-trip verification (covers the nullish-default branches both ways)
+  const rich = appendCorridorEvent({
+    contract_hash: c.contract_hash,
+    journal,
+    event: {
+      state: "PREFLIGHT",
+      at_iso: "2026-07-11T12:10:00.000Z",
+      note: "manual checkpoint",
+      branch: "feat/x",
+      head_sha: SHA40,
+      failing_gate: "npm run check",
+      next_command: "npm test",
+      requires_human: true,
+      repair_rounds_used: 1,
+    },
+  });
+  assert.equal(rich.ok, true, rich.blocked_by.join(","));
+  assert.equal(rich.event.requires_human, true);
+  assert.equal(verifyCorridorJournal({ contract: c.contract, contract_hash: c.contract_hash, journal: rich.journal }).ok, true);
+});
+
+test("consent context gates: every malformed consent input fails closed with a named block", () => {
+  const c = buildMissionContract(goodContractInput());
+  const good = {
+    kind: "START",
+    mission_id: "m5-wave-2",
+    contract_hash: c.contract_hash,
+    permitted_actions: [...c.contract.permitted_actions],
+    mission_root: "/tmp/dema-home/missions/m5-wave-2",
+    nonce: "n-x",
+    expires_at: "2026-07-11T14:00:00.000Z",
+  };
+  const badBuild = [
+    [{ ...good, kind: "RESTART" }, "consent_kind_invalid"],
+    [{ ...good, mission_id: "../evil" }, "mission_id_invalid"],
+    [{ ...good, contract_hash: "sha256:short" }, "contract_hash_invalid"],
+    [{ ...good, permitted_actions: [] }, "permitted_actions_invalid"],
+    [{ ...good, mission_root: "   " }, "mission_root_invalid"],
+  ];
+  for (const [input, code] of badBuild) {
+    const r = buildCorridorConsentContext(input);
+    assert.equal(r.ok, false, code);
+    assert.ok(r.blocked_by.includes(code), `${code}: got ${r.blocked_by}`);
+    assert.equal(r.envelope, null);
+  }
+  // STOP does not require permitted_actions (scope is fixed to stop_corridor)
+  const stopCtx = buildCorridorConsentContext({ ...good, kind: "STOP", permitted_actions: undefined });
+  assert.equal(stopCtx.ok, true, stopCtx.blocked_by.join(","));
+
+  // evaluateCorridorWriteConsent propagates a blocked build fail-closed
+  const blockedEval = evaluateCorridorWriteConsent({
+    ...good,
+    kind: "RESTART",
+    phrase: "GO: start mission corridor m5-wave-2",
+    consent_context_hash: "sha256:whatever",
+    now: "2026-07-11T12:30:00.000Z",
+  });
+  assert.equal(blockedEval.ok, false);
+  assert.equal(blockedEval.verdict, "BLOCK");
+  assert.equal(blockedEval.consent_context_hash, null);
+  assert.ok(blockedEval.blocked_by.includes("consent_kind_invalid"));
+  assert.equal(blockedEval.authority_delta, 0);
+  // and a no-args call fails closed
+  assert.equal(evaluateCorridorWriteConsent().ok, false);
+});
