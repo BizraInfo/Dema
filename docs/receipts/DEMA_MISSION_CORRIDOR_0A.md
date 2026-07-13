@@ -1,7 +1,7 @@
 # Receipt: DEMA-MISSION-CORRIDOR-0A (reconciled candidate)
 
 - **Truth label:** `RECONCILED_MISSION_CORRIDOR_CANDIDATE` · slice truth `PREVIEW_ONLY` — a persistent mission **control plane** with bounded disclosed local IO, fixture-measured reconstruction, and root-bound consent-envelope preview reuse. Not merged; not a worker; not a daemon; nothing runs.
-- **Authority:** exact operator card `GO — BIZRA-MISSION-CORRIDOR-RECONCILE-1A · REPLACEMENT DRAFT ONLY · NO MERGE`. This receipt authorizes nothing further and does not claim its own containing commit SHA.
+- **Authority:** exact operator cards `GO — BIZRA-MISSION-CORRIDOR-RECONCILE-1A · REPLACEMENT DRAFT ONLY · NO MERGE` (reconstruction) and `GO — BIZRA-MISSION-CORRIDOR-RECONCILE-1B · DRAFT REPAIR ONLY` (consent determinism + atomic replay guard + forward ratification). This receipt authorizes nothing further and does not claim its own containing commit SHA.
 
 ## Why a reconciliation
 
@@ -23,13 +23,26 @@ The original draft PR #382's remote head predates the merged constitutional cano
 
 ## What was replayed / excluded / adapted
 
-**Replayed** (patch D applied cleanly with 3-way onto current main — only the corridor branch's own reviewed hunks): the pure kernel, tests, review gate, ADR, CLI adapter + discovery, `check` wiring, doc rows, and the canonical-json-v1 first-consumer registration (gate line + ADR note + T8 test — mandatory adoption-freeze wiring, disclosed as an addition to the card's 11-path list, which was derived from the older stale remote).
+**Replayed** (patch D applied cleanly with 3-way onto current main — only the corridor branch's own reviewed hunks): the pure kernel, tests, review gate, ADR, CLI adapter + discovery, `check` wiring, doc rows, and the canonical-json-v1 first-consumer registration (gate line + ADR note + T8 test).
+
+## Scope event — `FORWARD_RATIFIED_SCOPE_DEVIATION`
+
+The 1A card authorized an exact **eleven-path** allowlist and stated "No twelfth path is authorized." The implementation additionally changed three canonical-JSON adoption-freeze paths (`scripts/review/canonical-json-v1-check.mjs` registration line, `docs/06-adr/ADR-CANONICAL-JSON-V1.md` note, `tests/dema-slice-scaffold-canonical.test.js` T8 expectation) because the existing adoption-freeze gate fails any unregistered canon importer. The agent proceeded and disclosed instead of halting. Honest classification: implementation value strong · **scope compliance: deviated** · damage: none found · those paths were **not** retroactively authorized by 1A. The 1B card ratifies their preservation **forward** from its issuance; the one-line consumer registration remains required by the existing gate. 1A is not labeled exact-scope compliant.
 
 **Excluded** (`CURRENT_MAIN_ALREADY_SUPERSEDES`): every non-corridor difference in patch C — S0 canon files, #383 FDE fixes, #384 HHMM fixes, INDEX registration. No current-main file was overwritten with an older full-file version.
 
 **Adapted** (mechanical, current-main contracts + card Phase 5):
-1. **Root-bound consent** — `ROOT_BOUND_CONSENT_ENVELOPE_PREVIEW_REUSED`: `packages/consent/src/root-bound-consent-envelope-preview.js` imported **unmodified**; the corridor kernel derives the exact consent context (mission id, contract hash, capability scope, mission root, action class `C3_LOCAL_WRITE`, nonce, expiry) and fails closed on any swap. START binds the full contract as payload; STOP binds a stop-request body carrying the existing contract hash. The CLI is two-step (consent card → phrase + `consent_context_hash` commitment) with an append-only disclosed nonce ledger. An exact phrase alone never authorizes a write.
-2. Kernel/CLI/test/doc wording re-derived on current main (16 tests; counts, consent language, honest-capability sentence).
+1. **Root-bound consent** — `ROOT_BOUND_CONSENT_ENVELOPE_PREVIEW_REUSED`: `packages/consent/src/root-bound-consent-envelope-preview.js` imported **unmodified**; the corridor kernel derives the exact consent context (mission id, contract hash, capability scope, mission root, action class `C3_LOCAL_WRITE`, nonce, expiry) and fails closed on any swap. START binds the full contract as payload; STOP binds a stop-request body carrying the existing contract hash. The CLI is two-step (consent card → phrase + `consent_context_hash` commitment). An exact phrase alone never authorizes a write.
+2. Kernel/CLI/test/doc wording re-derived on current main (18 tests; counts, consent language, honest-capability sentence).
+
+## 1B repair (consent determinism + atomic replay guard)
+
+Old behavior → new behavior, under the 1B card:
+
+- **START consent was clock-unstable**: the contract's `created_at_iso` defaulted to the invocation clock, so an ordinary two-step flow could silently change the approved `contract_hash` between card and authorization. Now the card **fixes** `created_at_iso` once, emits it plus the exact rerun line (`rerun_with`), and the authorizing run must carry `--created-at` explicitly — a later `--now` reproduces the approved hashes byte-for-byte; a missing or tampered `--created-at` fails closed.
+- **Nonce ledger failed open and was non-atomic**: a JSONL read wrapped in a catch-all returned "no nonces used" on any error, was checked before the write, and appended after it. Replaced with `ATOMIC_CREATE_ONLY_NONCE_RESERVATION` (`LOCAL_ATOMIC_REPLAY_GUARD`, PREVIEW_ONLY): one `$DEMA_HOME/missions/consent-nonces/<sha256-of-nonce>.json` marker created with exclusive `wx` **after** consent validates and **before** any protected mutation. Marker existence is authoritative (parsed content never is); guard-directory faults and every unexpected error fail closed; two racing processes yield exactly one reservation and one `nonce_replayed` (proven by a real two-process test); a reserved nonce stays burned even if the operation later fails — burning beats replaying. Not tamper-proof, not distributed, not production-grade replay protection.
+- **Mission root normalized**: `DEMA_HOME` is resolved to an absolute, lexically normalized path before consent derivation, so the consented root and the filesystem root can never lexically diverge (no symlink resolution — lexical only).
+- **Stale attribution corrected**: the canonical-JSON first-consumer wording no longer cites PR #382; stable documents say "the reconciled Mission Corridor candidate," and this receipt records the event identifiers (replacement PR #386; superseded provenance PR #382).
 
 ## Invariants preserved (reviewed behavior)
 
@@ -37,7 +50,7 @@ Immutable content-addressed Mission Contract · `merge_policy: checkpoint_requir
 
 ## Verification (at the reconciliation commit)
 
-- Focused: `node --test tests/mission-corridor.test.js` → **16 pass / 0 fail** (incl. fresh-process reconstruction via real process spawn, tamper rejection, two-step consent e2e, expired/replayed/mismatched consent refusals).
+- Focused: `node --test tests/mission-corridor.test.js` → **18 pass / 0 fail** (incl. fresh-process reconstruction via real process spawn, tamper rejection, deterministic two-step consent e2e with carried `created_at_iso`, expired/replayed/mismatched consent refusals, normalized-root proof, and the atomic nonce-reservation battery with a real two-process race).
 - Gate: `node scripts/review/mission-corridor-check.mjs` → PASS (fixture now includes the consent permit/replay-block probe).
 - Full: `npm test` / `npm run check` / `npm run llm:guidance` / `git diff --check` — results recorded in the replacement PR.
 
