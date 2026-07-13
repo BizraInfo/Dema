@@ -875,3 +875,37 @@ test("consent context gates: every malformed consent input fails closed with a n
   // and a no-args call fails closed
   assert.equal(evaluateCorridorWriteConsent().ok, false);
 });
+
+test("review gate itself fails closed: injected bad fixture and tampered boundary both block", () => {
+  // The gate guards the corridor; it must be proven to fail closed too. The
+  // real fixture is hardcoded-good, so these fail paths are only reachable via
+  // an injected fixture (test-only seam; production callers inject nothing).
+  const okBoundary = buildPreviewBoundary();
+
+  // a fixture that reports failure → the gate surfaces every code as fixture:*
+  const failed = runMissionCorridorCheck({
+    fixture: Object.freeze({ ok: false, blocked_by: ["fixture_tamper_not_rejected"], events: 9, boundary: okBoundary }),
+  });
+  assert.equal(failed.ok, false);
+  assert.ok(failed.blocked_by.includes("fixture:fixture_tamper_not_rejected"), failed.blocked_by.join(","));
+
+  // a fixture whose boundary is NOT the canonical all-false set → blocked
+  const hotBoundary = { ...okBoundary, filesystem_write_performed: true };
+  const tampered = runMissionCorridorCheck({
+    fixture: Object.freeze({ ok: true, blocked_by: [], events: 9, boundary: hotBoundary }),
+  });
+  assert.equal(tampered.ok, false);
+  assert.ok(tampered.blocked_by.includes("boundary_not_canonical_all_false"), tampered.blocked_by.join(","));
+
+  // a boundary with the wrong key count is also rejected (length branch)
+  const shortBoundary = { ...okBoundary };
+  delete shortBoundary[Object.keys(shortBoundary)[0]];
+  const wrongLen = runMissionCorridorCheck({
+    fixture: Object.freeze({ ok: true, blocked_by: [], events: 9, boundary: shortBoundary }),
+  });
+  assert.equal(wrongLen.ok, false);
+  assert.ok(wrongLen.blocked_by.includes("boundary_not_canonical_all_false"));
+
+  // default (no injection) still runs the real fixture and passes — no regression
+  assert.equal(runMissionCorridorCheck().ok, true);
+});
