@@ -36,7 +36,7 @@
 
 - **Repository promotion state (then):** `LOCAL_COMMITTED_CANON_CANDIDATE` → after this attestation commit, `REVIEWED_LOCAL_CANON_CANDIDATE`. Current rung: see `BIZRA_GENESIS_CONVERGENCE_CANON_REPAIR_0F.md`.
 - **`DEMA_RUNTIME_AWARE = NO`** — no runtime module loads `docs/canon`; no kernel (PAT/SAT/FATE/URP) consumes the posture; no precedence/supersession machinery; Dema cannot cite the posture's commit or hash at runtime.
-- **Master roadmap companion:** `docs/00-product-thesis/BIZRA_MASTER_ROADMAP_v0_1.md` — `PLANNED_COMPANION_NOT_YET_PRESENT`.
+- **Master roadmap companion:** `docs/00-product-thesis/BIZRA_MASTER_ROADMAP_v0_1.md` — `PLANNED_COMPANION_NOT_YET_PRESENT` at authoring. *(Superseded: the roadmap has since been authored — `PLANNING_ONLY`, receipt `BIZRA_MASTER_ROADMAP_0A.md`.)*
 - **`authority_delta: 0`** throughout; changes additive only (no existing canon modified beyond these tracked artifacts).
 
 ## Clauses still `DESIGNED_NOT_LIVE` (unresolved proof gaps)

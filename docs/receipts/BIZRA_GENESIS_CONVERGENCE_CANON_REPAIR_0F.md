@@ -29,7 +29,7 @@ The S0 merge card (`BIZRA-CANON-MERGE-0E`) halted at its final merge bind on 202
 3. **Enforcement labels registered** — `ENFORCED_AND_MEASURED_VIA_CONSUMER_TESTS` and `ENFORCED_AND_MEASURED_WITHIN_SANDBOX_BOUNDARY` are defined in the legend as scope-qualified (strictly narrower) states; the slash-pair `A / B` convention is defined. (Copilot ×2 · CodeRabbit Major) *(Historical record of the 0F event — superseded by 0G, which removed both variants and normalized every enforcement record to base state + scope + evidence + known gap; no value outside the five base states remains registered.)*
 4. **Committed-artifact truth** — "Nothing here is built, run, or committed" corrected: the pack is a committed planning artifact; the *implementation* is unbuilt and not execution-authorized. (Copilot · CodeRabbit Minor)
 5. **Evidence honesty** — 0A evidence sources relabeled `UNVERIFIED_CONTEXTUAL_INPUT` (no content addresses preserved); 0B's hash table marked as a historical record of commit `e1a1ea6`. (CodeRabbit Major)
-6. **Provisional dependency** — the master roadmap companion is marked `PLANNED_COMPANION_NOT_YET_PRESENT`; T1–T4 references stand on the pack's own definitions until it exists. (CodeRabbit Minor)
+6. **Provisional dependency** — the master roadmap companion is marked `PLANNED_COMPANION_NOT_YET_PRESENT`; T1–T4 references stand on the pack's own definitions until it exists. (CodeRabbit Minor) *(Historical record of the 0F event; the roadmap has since been authored — receipt `BIZRA_MASTER_ROADMAP_0A.md`.)*
 
 No doctrinal clause was added, removed, or weakened. `authority_delta: 0`.
 
