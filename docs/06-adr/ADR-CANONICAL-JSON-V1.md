@@ -135,7 +135,9 @@ identity triplet. Production adoption stays frozen — each generated kernel is
 auto-registered as an explicit one-line entry in
 `CANONICAL_JSON_V1_REGISTERED_CONSUMERS`
 (`scripts/review/canonical-json-v1-check.mjs`), reviewed in that slice's own
-PR; the list is empty until the first such slice lands. Existing consumers,
+PR. First registered consumer: `packages/mission/src/mission-corridor.js`,
+introduced by the reconciled Mission Corridor candidate (a new surface with no
+legacy artifacts). Promotion-event identifiers are recorded in its receipt. Existing consumers,
 receipts, and hashes are untouched (M5.2 scope).
 
 ## Forbidden in this slice

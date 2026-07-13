@@ -34,6 +34,7 @@ const JSON_MODE = process.argv.includes("--json");
 // generated kernels at the anchor below. Any canon importer NOT in this list
 // (outside tests and this gate) still fails the scan.
 export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
+  "packages/mission/src/mission-corridor.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
