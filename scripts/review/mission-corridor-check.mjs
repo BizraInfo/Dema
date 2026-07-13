@@ -13,9 +13,12 @@ import {
 
 const JSON_MODE = process.argv.includes("--json");
 
-export function runMissionCorridorCheck() {
+export function runMissionCorridorCheck({ fixture: injectedFixture } = {}) {
   const blocked_by = [];
-  const fixture = runMissionCorridorFixture();
+  // Production callers inject nothing → the real deterministic fixture runs.
+  // A test-only injected fixture exercises the gate's own fail-closed paths
+  // (the real fixture is hardcoded-good, so they are otherwise unreachable).
+  const fixture = injectedFixture ?? runMissionCorridorFixture();
   if (!fixture.ok) {
     for (const code of fixture.blocked_by) blocked_by.push(`fixture:${code}`);
   }
