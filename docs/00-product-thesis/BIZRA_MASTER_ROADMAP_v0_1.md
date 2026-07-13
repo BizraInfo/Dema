@@ -60,7 +60,7 @@ The DEMA Cognitive Foundry (11 layers: authority contract → immutable vault �
 
 | Step | Objective | State |
 |---|---|---|
-| T0 hygiene | branch-coverage de-edge slice · open-PR triage (9 stale) · corpus-location confirmation | `PLANNING_ONLY`, next |
+| T0 hygiene | branch-coverage de-edge slice · open-PR triage (9 stale) · corpus-location confirmation **(satisfied 2026-07-13 — measured census in the Part 1 corpus row)** | `PLANNING_ONLY`, next |
 | S4 | Dema runtime canon-awareness: manifest + loader + mission-scoped context packet; fail-closed on hash mismatch; acceptance test per its card | `PLANNING_ONLY` |
 | T1 | live signed operator receipt ledger + key custody | `PLANNING_ONLY` |
 | S5 | NODE0-IGNITION-KERNEL-1B: one runner + 12 role cards + URP-Local v0.1 + 4 receipt schemas (no corpus execution) | `PLANNING_ONLY` |
@@ -81,7 +81,7 @@ Each step = its own exact card; merges separately gated; draft PRs only.
 
 **Human gates:** every merge · every execution GO (§17-class, boundaries filled before consent) · every canon amendment · every promotion to `MEASURED`.
 
-**Stop/pivot conditions:** stop or pivot if provider-neutral continuity cannot be demonstrated within the defined window · stop or reduce scope if the first bounded Genesis slice cannot produce useful founder value · no full-corpus processing before the proof shard succeeds · no economy or federation before trust and continuity are measured · no runtime migration during the first kill-test unless the current runtime blocks the proof · **halt Genesis planning that depends on corpus paths until the operator confirms the real corpus location (Part 1 contradiction).**
+**Stop/pivot conditions:** stop or pivot if provider-neutral continuity cannot be demonstrated within the defined window · stop or reduce scope if the first bounded Genesis slice cannot produce useful founder value · no full-corpus processing before the proof shard succeeds · no economy or federation before trust and continuity are measured · no runtime migration during the first kill-test unless the current runtime blocks the proof · **halt Genesis planning that depends on corpus paths until the operator confirms the real corpus location (Part 1 contradiction) — discharged 2026-07-13: operator confirmed `/data/bizra`, GENESIS-INVENTORY-0A measured it under corridor consent (Part 1 corpus row).**
 
 ---
 
