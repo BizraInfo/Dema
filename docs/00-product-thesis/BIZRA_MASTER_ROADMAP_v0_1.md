@@ -29,7 +29,7 @@ This roadmap is subordinate to the posture: PAT operates · SAT judges · FATE p
 | FATE exact-string consent | `packages/fate/src/fate.js`, consumer-tested | `VERIFIED_REPO` |
 | Local model fleet | RTX 4090 Laptop 16 GiB VRAM · i9-14900HX 32 threads · 125 GiB RAM; ollama: whiterabbitneo-v3:7b (4.7 GB), gemma4:e4b (9.6 GB), deepseek-r1:7b (4.7 GB), nomic-embed (274 MB), qwen3-coder-next (51 GB, CPU/offload), gemma4:26b + 26b-bizra-16k (17 GB, GPU-OOM class) | `MEASURED_LOCAL` |
 | Disk | /data 1.9 T (809 G used) · /data2 938 G (68 G used) · / 937 G (426 G used) | `MEASURED_LOCAL` |
-| **Research corpus** | Remembered census said 613,744 files / 573.7 GB at `/data2/bizra-unified`; **current disk measures that path at 439 MB and all of /data2 at 68 GB** — the declared census is `CONTRADICTED_BY_CURRENT_DISK`. Actual corpus location/size: **UNKNOWN — requires operator confirmation before any Genesis slice enumerates read roots** | `UNKNOWN` (was `USER_DECLARED`) |
+| **Research corpus** | **Measured 2026-07-13 under corridor consent (GENESIS-INVENTORY-0A, metadata-only, zero content reads):** operator-declared root `/data/bizra` holds 1,755,384 entries — 1,569,100 files / 170,826 dirs / 15,458 symlinks, ~783.0 GB file bytes, max depth 21, 0 read errors; ~69% of bytes under `cloud-archive/`. Raw estate including repos and build artifacts — deduplication not performed; hardlinked bytes may double-count. Prior remembered census (613,744 files / 573.7 GB at `/data2/bizra-unified`) remains `CONTRADICTED_BY_CURRENT_DISK`. Evidence: `/data/bizra/logs/genesis-inventory-0a/` (`inventory.jsonl` · `summary.json` · `GENESIS_INVENTORY_0A_RECEIPT.json`; operator-local, not repository-portable) | `MEASURED_LOCAL` (was `UNKNOWN`) |
 | Dema runtime canon awareness | no runtime module loads `docs/canon`; `DEMA_RUNTIME_AWARE = NO` | `VERIFIED_REPO` (absence verified) |
 | 12-role runner / URP-Local / Proof+Checkpoint services | not built | `DESIGNED_NOT_LIVE` |
 | Economy / tokens / PoI / federation / Node1+ | dormant; preview simulations only (`live_mint:false`) | `DESIGNED_NOT_LIVE` |
@@ -42,7 +42,7 @@ BIZRA's first product truth is Node0: one real human (the founder) whose three y
 
 ## Part 3 · Genesis Convergence — one mission, four results
 
-G0: Node0's first real mission is organizing its own research estate. One bounded campaign yields (1) Node0 operational closure v0.1, (2) evidence-graded intelligence from the estate, (3) functional-health proof via the receipt chain, (4) the first product demonstration. Detail: ignition pack §1–§17 (`VERIFIED_REPO`, `DESIGNED_NOT_LIVE`). **Precondition discovered at bind:** the corpus location must be re-confirmed by the operator (Part 1) before SLICE-1 read roots can be enumerated.
+G0: Node0's first real mission is organizing its own research estate. One bounded campaign yields (1) Node0 operational closure v0.1, (2) evidence-graded intelligence from the estate, (3) functional-health proof via the receipt chain, (4) the first product demonstration. Detail: ignition pack §1–§17 (`VERIFIED_REPO`, `DESIGNED_NOT_LIVE`). **Precondition (discovered at bind, satisfied 2026-07-13):** the operator confirmed the corpus root (`/data/bizra`) and GENESIS-INVENTORY-0A enumerated it metadata-only under two-step corridor consent (corridor `genesis-inventory-0a`, STOPPED terminal after completion) — measured census in the Part 1 corpus row.
 
 ## Part 4 · Architecture (current anchor per component)
 
