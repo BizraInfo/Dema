@@ -268,6 +268,7 @@ export const commands = [
   ["node", ["scripts/gtm-readiness-check.mjs"]],
   ["node", ["scripts/urp-shared-discovery.mjs"]],
   ["node", ["scripts/review/canonical-json-v1-check.mjs"]],
+  ["node", ["scripts/review/mission-corridor-check.mjs"]],
   ["node", ["scripts/review/transition-assurance-check.mjs"]],
   ["node", ["scripts/review/artifact-011-preflight-gate.mjs"]],
   ["node", ["scripts/proof-room-bundle.mjs", "--json"]],

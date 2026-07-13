@@ -27,6 +27,17 @@ import { buildPainGoalInterview } from "../../../../packages/core/src/pain-goal-
 import { buildClosedDualLoopDryRun } from "../../../../packages/core/src/closed-dual-loop-dry-run.js";
 import { buildMissionReplayReport } from "../../../../packages/core/src/node0-mission-replay-preview.js";
 import {
+  buildMissionContract,
+  appendCorridorEvent,
+  deriveCorridorStatus,
+  verifyCorridorJournal,
+  buildCorridorConsentContext,
+  evaluateCorridorWriteConsent,
+  corridorRequiredPhrase,
+  MISSION_ID_RE,
+} from "../../../../packages/mission/src/mission-corridor.js";
+import { buildPreviewBoundary } from "../../../../packages/core/src/boundary-schema.js";
+import {
   wantsJson,
   humanHintLine,
 } from "../../../../packages/core/src/output-mode.js";
@@ -627,6 +638,13 @@ const DEFAULT_REPLAY_MISSION = Object.freeze({
 
 export async function cmd_mission(ctx) {
   const { argv, subcommand } = ctx;
+  if (subcommand === "corridor") {
+    // DEMA-MISSION-CORRIDOR-0A — persistent mission control plane (PREVIEW_ONLY).
+    // Contract + append-only hash-chained journal under $DEMA_HOME/missions/<id>/;
+    // status/resume are pure derivations from disk alone ("the mission remembers
+    // itself"). Control plane ONLY: no worker, no daemon, no execution, no model.
+    return cmdMissionCorridor(argv);
+  }
   if (subcommand === "replay") {
     // NODE0-MISSION-STATE-REPLAY-HARNESS-0A — "the mission survives the model", measured.
     // Runs a deterministic agent loop (Think->Act->Observe) over a built-in fixture mission,
@@ -1437,4 +1455,287 @@ export async function cmd_mission(ctx) {
     ].join("\n"),
   );
   process.exit(process.exitCode ?? 0);
+}
+
+// --- DEMA-MISSION-CORRIDOR-0A — persistent mission control plane (CLI IO layer) ---
+// Kernel is pure; this layer does disclosed disk IO only:
+//   $DEMA_HOME/missions/<id>/contract.json   (written once, no clobber)
+//   $DEMA_HOME/missions/<id>/journal.jsonl   (append-only)
+// Writes require an exact consent phrase. status/resume are read-only.
+
+function corridorFail(message) {
+  console.error(`Dema error: ${message}`);
+  process.exit(1);
+}
+
+function corridorHome(argv) {
+  // Destination is disclosed, never silent: --dema-home > DEMA_HOME > ~/.dema.
+  return argValue(argv, "--dema-home") || process.env.DEMA_HOME || join(homedir(), ".dema");
+}
+
+// HONEST boundary for CLI IO paths (founder-impact precedent): the kernel is
+// pure and all-false, but this layer really does read/write under consent —
+// say so instead of printing false statements (SAT finding on 4407189).
+function corridorIoBoundary({ read = false, wrote = false, consented = false } = {}) {
+  return Object.freeze({
+    ...buildPreviewBoundary(),
+    content_read: read,
+    filesystem_write_performed: wrote,
+    consent_collected: consented,
+  });
+}
+
+async function readCorridor(dir) {
+  const contractDoc = JSON.parse(await readFileFs(join(dir, "contract.json"), "utf8"));
+  const raw = await readFileFs(join(dir, "journal.jsonl"), "utf8");
+  const journal = raw
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .map((line) => JSON.parse(line));
+  return { contractDoc, journal };
+}
+
+// Root-bound consent (S2): nonce ledger — append-only, disclosed, under the
+// missions root. A consumed nonce can never authorize a second write.
+function nonceLedgerPath(argv) {
+  return join(corridorHome(argv), "missions", "consent-nonces.jsonl");
+}
+
+async function readUsedNonces(argv) {
+  try {
+    const raw = await readFileFs(nonceLedgerPath(argv), "utf8");
+    return new Set(
+      raw.split("\n").filter((l) => l.trim().length > 0).map((l) => JSON.parse(l).nonce),
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+async function consumeNonce(argv, { nonce, mission_id, kind, at_iso }) {
+  await mkdir(join(corridorHome(argv), "missions"), { recursive: true });
+  await writeFile(nonceLedgerPath(argv), `${JSON.stringify({ nonce, mission_id, kind, at_iso })}\n`, { flag: "a" });
+}
+
+// Two-step root-bound consent for a corridor write
+// (ROOT_BOUND_CONSENT_ENVELOPE_PREVIEW_REUSED — the envelope kernel is imported
+// unmodified via the corridor kernel). Step 1 (no --consent): print the derived
+// consent card (required phrase + consent_context_hash) and write NOTHING.
+// Step 2: validate phrase + nonce + expiry + context commitment fail-closed,
+// then the caller performs the disclosed write. A phrase alone is never enough.
+async function corridorConsentGate(argv, { kind, mission_id, contract_hash, permitted_actions, mission_root, now_iso, wantJson }) {
+  const nonce = argValue(argv, "--nonce") ?? "";
+  const expires_at = argValue(argv, "--expires") ?? "";
+  const phrase = argValue(argv, "--consent");
+  const consent_context_hash = argValue(argv, "--consent-context") ?? "";
+  if (nonce.length === 0 || expires_at.length === 0) {
+    corridorFail(
+      "root-bound consent requires --nonce <unique> and --expires <iso> (a phrase alone is not authority) — nothing was written.",
+    );
+  }
+  const ctx = buildCorridorConsentContext({ kind, mission_id, contract_hash, permitted_actions, mission_root, nonce, expires_at });
+  if (!ctx.ok) corridorFail(`consent context blocked: ${ctx.blocked_by.join(", ")} — nothing was written.`);
+  if (!phrase) {
+    const card = {
+      ok: true,
+      step: "CONSENT_CARD",
+      kind,
+      mission_id,
+      contract_hash,
+      required_phrase: ctx.envelope.required_phrase,
+      consent_context_hash: ctx.envelope.consent_context_hash,
+      action_class: ctx.envelope.action_class,
+      mission_root,
+      nonce,
+      expires_at,
+      boundary: corridorIoBoundary({}),
+    };
+    if (wantJson) console.log(JSON.stringify(card, null, 2));
+    else {
+      console.log("DEMA · mission corridor consent card (nothing written):");
+      console.log(`  required phrase:      "${ctx.envelope.required_phrase}"`);
+      console.log(`  consent_context_hash: ${ctx.envelope.consent_context_hash}`);
+      console.log(`  binds: contract ${contract_hash}`);
+      console.log(`         root ${mission_root} · class ${ctx.envelope.action_class} · nonce ${nonce} · expires ${expires_at}`);
+      console.log('  re-run with --consent "<phrase>" --consent-context <hash> to authorize exactly this context.');
+    }
+    return null; // consent card printed; no write happens
+  }
+  const used = await readUsedNonces(argv);
+  const verdict = evaluateCorridorWriteConsent({
+    kind, mission_id, contract_hash, permitted_actions, mission_root,
+    phrase, nonce, expires_at, consent_context_hash,
+    now: now_iso, used_nonces: used,
+  });
+  if (!verdict.ok) {
+    corridorFail(`root-bound consent BLOCKED: ${verdict.blocked_by.join(", ")} — nothing was written.`);
+  }
+  return Object.freeze({ ...verdict, nonce, expires_at });
+}
+
+function printCorridorStatus(status, wantJson) {
+  if (wantJson) {
+    console.log(JSON.stringify(status, null, 2));
+    return;
+  }
+  console.log("DEMA · mission corridor (control plane · PREVIEW_ONLY)");
+  console.log(`  mission: ${status.mission_id} · state: ${status.state}${status.terminal ? " (terminal)" : ""}`);
+  console.log(`  lease_expired: ${status.lease_expired} · repair_budget_remaining: ${status.repair_budget_remaining}`);
+  console.log(`  requires_human: ${status.requires_human}${status.blocked_by.length ? ` · blocked_by: ${status.blocked_by.join(", ")}` : ""}`);
+  const r = status.resume_point;
+  console.log("  resume point (derived from disk alone — no chat, no model):");
+  console.log(`    branch:       ${r.branch ?? "-"}`);
+  console.log(`    head_sha:     ${r.head_sha ?? "-"}`);
+  console.log(`    failing_gate: ${r.failing_gate ?? "-"}`);
+  console.log(`    next_command: ${r.next_command ?? "-"}`);
+  console.log("  control plane only — no worker, no daemon, nothing runs.");
+}
+
+async function cmdMissionCorridor(argv) {
+  const verb = argv[2];
+  const wantJson = wantsJson(argv);
+
+  if (verb === "start") {
+    const id = argValue(argv, "--id") ?? "";
+    const nowIso = argValue(argv, "--now") || new Date().toISOString();
+    const built = buildMissionContract({
+      mission_id: id,
+      objective: argValue(argv, "--objective") ?? "",
+      base_sha: argValue(argv, "--base-sha") ?? "",
+      permitted_actions: (argValue(argv, "--permitted") || "analyze,branch,edit,test,commit,push,open_draft_pr")
+        .split(",").map((s) => s.trim()).filter(Boolean),
+      merge_policy: "checkpoint_required",
+      time_budget_hours: Number(argValue(argv, "--time-budget-hours") ?? 8),
+      repair_budget_per_slice: Number(argValue(argv, "--repair-budget") ?? 2),
+      stop_conditions: (argValue(argv, "--stop-conditions") || "historical_hash_change,gate_weakened,base_moved")
+        .split(",").map((s) => s.trim()).filter(Boolean),
+      created_at_iso: nowIso,
+    });
+    if (!built.ok) corridorFail(`corridor contract blocked: ${built.blocked_by.join(", ")} — nothing was written.`);
+    const dir = join(corridorHome(argv), "missions", id);
+    const verdict = await corridorConsentGate(argv, {
+      kind: "START",
+      mission_id: id,
+      contract_hash: built.contract_hash,
+      permitted_actions: [...built.contract.permitted_actions],
+      mission_root: dir,
+      now_iso: nowIso,
+      wantJson,
+    });
+    if (!verdict) return; // consent card printed; nothing written
+    const first = appendCorridorEvent({
+      contract_hash: built.contract_hash,
+      journal: [],
+      event: {
+        state: "CREATED",
+        at_iso: nowIso,
+        note: `corridor created · consent_context: ${verdict.consent_context_hash}`,
+        next_command: `dema mission corridor status ${id}`,
+      },
+    });
+    if (!first.ok) corridorFail(`corridor journal blocked: ${first.blocked_by.join(", ")}`);
+    await mkdir(dir, { recursive: true });
+    try {
+      await writeFile(
+        join(dir, "contract.json"),
+        `${JSON.stringify({ schema: built.schema, truth_label: built.truth_label, contract: built.contract, contract_hash: built.contract_hash }, null, 2)}\n`,
+        { flag: "wx" },
+      );
+      await writeFile(join(dir, "journal.jsonl"), `${JSON.stringify(first.event)}\n`, { flag: "wx" });
+    } catch (err) {
+      if (err.code === "EEXIST") corridorFail(`corridor "${id}" already exists at ${dir} — refusing to clobber.`);
+      throw err;
+    }
+    await consumeNonce(argv, { nonce: verdict.nonce, mission_id: id, kind: "START", at_iso: nowIso });
+    const out = {
+      ok: true,
+      mission_id: id,
+      contract_hash: built.contract_hash,
+      consent_context_hash: verdict.consent_context_hash,
+      truth_label: built.truth_label,
+      boundary: corridorIoBoundary({ wrote: true, consented: true }),
+      dir,
+    };
+    if (wantJson) console.log(JSON.stringify(out, null, 2));
+    else {
+      console.log(`DEMA · mission corridor started: ${id}`);
+      console.log(`  contract_hash: ${built.contract_hash}`);
+      console.log(`  state dir: ${dir}`);
+      console.log("  control plane only — no worker, no daemon, nothing runs.");
+    }
+    return;
+  }
+
+  if (verb === "status" || verb === "resume") {
+    const id = argv[3];
+    if (!id || !MISSION_ID_RE.test(id)) corridorFail("mission corridor id required (lowercase kebab).");
+    const dir = join(corridorHome(argv), "missions", id);
+    let loaded;
+    try {
+      loaded = await readCorridor(dir);
+    } catch {
+      corridorFail(`no corridor found for "${id}" under ${dir}`);
+    }
+    const status = deriveCorridorStatus({
+      contract: loaded.contractDoc.contract,
+      contract_hash: loaded.contractDoc.contract_hash,
+      journal: loaded.journal,
+      now_iso: argValue(argv, "--now") || new Date().toISOString(),
+    });
+    if (!status.ok) corridorFail(`corridor state invalid (tamper or corruption): ${status.blocked_by.join(", ")}`);
+    printCorridorStatus(Object.freeze({ ...status, boundary: corridorIoBoundary({ read: true }) }), wantJson);
+    return;
+  }
+
+  if (verb === "stop") {
+    const id = argv[3];
+    if (!id || !MISSION_ID_RE.test(id)) corridorFail("mission corridor id required (lowercase kebab).");
+    const dir = join(corridorHome(argv), "missions", id);
+    let loaded;
+    try {
+      loaded = await readCorridor(dir);
+    } catch {
+      corridorFail(`no corridor found for "${id}" under ${dir}`);
+    }
+    const chain = verifyCorridorJournal({
+      contract: loaded.contractDoc.contract,
+      contract_hash: loaded.contractDoc.contract_hash,
+      journal: loaded.journal,
+    });
+    if (!chain.ok) {
+      corridorFail(`refusing to extend a tampered/corrupt journal: ${chain.blocked_by.join(", ")}`);
+    }
+    const nowIso = argValue(argv, "--now") || new Date().toISOString();
+    const verdict = await corridorConsentGate(argv, {
+      kind: "STOP",
+      mission_id: id,
+      contract_hash: loaded.contractDoc.contract_hash,
+      permitted_actions: [...loaded.contractDoc.contract.permitted_actions],
+      mission_root: dir,
+      now_iso: nowIso,
+      wantJson,
+    });
+    if (!verdict) return; // consent card printed; nothing written
+    const r = appendCorridorEvent({
+      contract_hash: loaded.contractDoc.contract_hash,
+      journal: loaded.journal,
+      event: {
+        state: "STOPPED",
+        at_iso: nowIso,
+        requires_human: true,
+        note: `${argValue(argv, "--note") || "operator stop"} · consent_context: ${verdict.consent_context_hash}`,
+      },
+    });
+    if (!r.ok) corridorFail(`corridor stop blocked: ${r.blocked_by.join(", ")}`);
+    await writeFile(join(dir, "journal.jsonl"), `${JSON.stringify(r.event)}\n`, { flag: "a" });
+    await consumeNonce(argv, { nonce: verdict.nonce, mission_id: id, kind: "STOP", at_iso: nowIso });
+    const out = { ok: true, mission_id: id, state: "STOPPED", event_hash: r.event.event_hash, consent_context_hash: verdict.consent_context_hash, boundary: corridorIoBoundary({ read: true, wrote: true, consented: true }) };
+    if (wantJson) console.log(JSON.stringify(out, null, 2));
+    else console.log(`DEMA · mission corridor stopped: ${id} (kill switch honored; journal sealed)`);
+    return;
+  }
+
+  corridorFail(
+    "unknown mission corridor verb. Use `dema mission corridor start --id <id> … --nonce <n> --expires <iso>` (prints the consent card), then re-run with `--consent \"GO: start mission corridor <id>\" --consent-context <hash>`; `dema mission corridor status <id>`; `dema mission corridor resume <id>`; or `dema mission corridor stop <id> --nonce <n> --expires <iso>` then `--consent \"GO: stop mission corridor <id>\" --consent-context <hash>` — root-bound consent; control plane only; nothing runs.",
+  );
 }
