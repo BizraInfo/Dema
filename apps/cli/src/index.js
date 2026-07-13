@@ -243,20 +243,23 @@ Orientation:
   dema mission compact [--json]
                     PREVIEW_ONLY receipt-shelf compaction (read-only): compact PROOF not prose into a
                     hash-bound state — keep/drop/no-longer-claim/one-next-action; nothing live
-  dema mission corridor start [--id <id>] [--objective "<text>"] [--base-sha <sha40>] [--time-budget-hours <h>] [--repair-budget <n>] [--permitted <csv>] [--stop-conditions <csv>] [--now <iso>] [--dema-home <path>] [--consent "<phrase>"] [--json]
+  dema mission corridor start [--id <id>] [--objective "<text>"] [--base-sha <sha40>] [--time-budget-hours <h>] [--repair-budget <n>] [--permitted <csv>] [--stop-conditions <csv>] [--now <iso>] [--dema-home <path>] --nonce <n> --expires <iso> [--created-at <iso>] [--consent "<phrase>" --consent-context <hash>] [--json]
                     PREVIEW_ONLY persistent mission control plane: seal a corridor contract and open a
-                    hash-chained journal under $DEMA_HOME/missions/<id>. Exact consent
-                    "GO: start mission corridor <id>" required; control plane only — no worker,
-                    no daemon, nothing runs
+                    hash-chained journal under $DEMA_HOME/missions/<id>. Root-bound two-step consent:
+                    first run (with --nonce/--expires) prints the consent card + created_at_iso;
+                    re-run with --created-at, --consent "GO: start mission corridor <id>" and
+                    --consent-context <hash> — a phrase alone is never authority; control plane
+                    only — no worker, no daemon, nothing runs
   dema mission corridor status <id> [--now <iso>] [--dema-home <path>] [--json]
                     Derive corridor state, lease, repair budget and resume point purely from
                     contract+journal on disk (read-only); tampered journals fail closed
   dema mission corridor resume <id> [--now <iso>] [--dema-home <path>] [--json]
                     Reconstruct the exact resume point (branch / head SHA / failing gate / next
                     command) from disk alone after any session loss (read-only)
-  dema mission corridor stop <id> [--note "<why>"] [--now <iso>] [--dema-home <path>] [--consent "<phrase>"] [--json]
-                    Append the terminal STOPPED event (kill switch). Exact consent
-                    "GO: stop mission corridor <id>" required; journal stays append-only
+  dema mission corridor stop <id> [--note "<why>"] [--now <iso>] [--dema-home <path>] --nonce <n> --expires <iso> [--consent "<phrase>" --consent-context <hash>] [--json]
+                    Append the terminal STOPPED event (kill switch). Root-bound two-step consent
+                    (consent card, then --consent "GO: stop mission corridor <id>" +
+                    --consent-context <hash>); journal stays append-only
   dema founder impact scope <manifest> [--json]
                     LOCAL_ONLY dry-run: gather the declared bounded source set (read-only) and
                     preview the candidate founder-impact receipt; writes nothing; no model/network/mint
