@@ -86,6 +86,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_ROOT_BOUND_CONSENT_ENVELOPE_PREVIEW_1A",
   "DEMA_ROOT_CLAUSE_TRACE_REGISTRY_PREVIEW_1A",
   "DEMA_FDE_ISNAD_REPLAY_CAPSULE_PREVIEW_0A",
+  "NODE0_AGENT_FLEET_ROLES_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2208,6 +2209,40 @@ function defaultCapabilityRows() {
         "autopatch applied",
         "live remediation",
         "operator mutation",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_AGENT_FLEET_ROLES_1A",
+      truth_label: "NODE0_AGENT_FLEET_ROLES_DESIGNED_NOT_LIVE",
+      summary:
+        "Fail-closed role-contract kernel validating the 12 canonical Node0 agent-fleet role contracts (7 PAT gemma-family, 5 SAT deepseek-family) plus the dema-alpha descriptor outside the fleet. The contracts are DESIGNED_NOT_LIVE accounting objects, not running agents.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/agent-role-contract.js",
+          "packages/core/src/node0-agent-fleet-roles.js",
+        ],
+        test_paths: [
+          "tests/agent-role-contract.test.js",
+          "tests/node0-agent-fleet-roles.test.js",
+        ],
+        review_gate_paths: ["scripts/review/kernel-purity-check.mjs"],
+        documentation_paths: [
+          "docs/superpowers/specs/2026-07-13-node0-agent-fleet-model-architecture-design.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live agent serving, live training, live deliberation, model invocation, or spawn execution — every contract carries an all-false authority block and truth_label DESIGNED_NOT_LIVE.",
+      what_this_proves:
+        "The kernel fail-closed validates role-contract schema, team/serves match, base_class shape, spawn_limit ceilings, and the canonical 4-key all-false authority block, and the fleet validates as exactly 7 PAT + 5 SAT with no duplicate role_id and no base_class family shared across teams.",
+      what_this_does_not_prove:
+        "It does not prove any agent is running, served, trained, or deliberating — these are DESIGNED_NOT_LIVE accounting objects only; no model invocation, spawn, adapter load, daemon, network, token, wallet, or federation.",
+      forbidden_claims: [
+        "live agent fleet",
+        "agent serving",
+        "agent training",
+        "agent deliberation",
+        "spawned agent",
       ],
     }),
   ]);
