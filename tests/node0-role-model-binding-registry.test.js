@@ -316,3 +316,73 @@ test("empty record set is rejected, not abstained (missing evidence is a rejecti
   assert.equal(d.status, "REJECTED");
   assert.ok(d.reasons.includes("no_eligible_capability_record"));
 });
+
+// --- Phase 6 review repairs: findings-driven tests ---
+
+test("FLAGSHIP: gemma measured-best for SAT while PAT-bound AND design-contradicting → REQUIRES_HUMAN, not buried rejection", () => {
+  // The real fleet fork: C0 designs SAT=deepseek and PAT=gemma, yet gemma is
+  // the only measured family catching overclaim (e4b 79.73%). Reassigning
+  // families is the operator's Path-B spec-reopen decision — the registry
+  // must surface it, bind nothing, and widen nothing.
+  const gemma = record({
+    record_id: "fixture-gemma-judge",
+    model_id: "gemma4:e4b",
+    family: "gemma",
+    evidence: {
+      source_path: "/data/bizra/agents/judge-c1/eval-report.gemma4_e4b.json",
+      sha256: "3e3cd947167b0cde31f6e99b46381a15c7bee3edda07d60b2b99b9541f124748",
+      measured_at_iso: "2026-07-14T08:08:00Z",
+      metric: "heldout_agreement_pct",
+      value: 79.73,
+    },
+    resource_envelope: { vram_gb_est: 9.6, ram_gb_est: 4 },
+  });
+  const d = resolveRoleModelBinding(input({ records: [gemma], pat_bound_families: ["gemma"] }));
+  assert.equal(d.status, "REQUIRES_HUMAN");
+  assert.ok(d.reasons.includes("family_contradicts_design_contract"));
+  assert.ok(d.reasons.includes("sat_family_shared_with_pat"));
+  assert.ok(d.reasons.includes("spec_reopen_required"));
+  assert.equal(d.chosen_record_id, null);
+});
+
+test("duplicate record_id fails closed even when only one duplicate is eligible", () => {
+  const dirty = record({ verification_state: "DESIGN_ONLY" });
+  const d = resolveRoleModelBinding(input({ records: [record(), dirty] }));
+  assert.equal(d.status, "REJECTED");
+  assert.ok(d.reasons.includes("record_id_duplicate"));
+});
+
+test("CANDIDATE mode round-trips build → verify → run", () => {
+  const i = input({ mode: "CANDIDATE" });
+  const payload = buildNode0RoleModelBindingRegistryPayload(i);
+  assert.equal(payload.decision.status, "BOUND_CANDIDATE");
+  assert.equal(verifyNode0RoleModelBindingRegistry(payload).ok, true);
+  const result = runNode0RoleModelBindingRegistry({ consent: NODE0_ROLE_MODEL_BINDING_REGISTRY_GO_PHRASE, input: i });
+  assert.equal(result.ok, true, result.blocked_by?.join(", "));
+  assert.equal(result.decision_status, "BOUND_CANDIDATE");
+});
+
+test("multi-record decision is order-independent (evaluated[] sorted by record_id)", () => {
+  const qwen = record({
+    record_id: "fixture-qwen-judge",
+    model_id: "qwen3:4b",
+    family: "qwen",
+    evidence: { ...record().evidence, source_path: "/data/bizra/agents/judge-c1/eval-report.qwen3_4b.json", sha256: "3f134418d8804f20aa2bf5a613b845899864b9a8e9a5a582d748dddb6a49d2e3", value: 58.11 },
+  });
+  const a = resolveRoleModelBinding(input({ records: [record(), qwen] }));
+  const b = resolveRoleModelBinding(input({ records: [qwen, record()] }));
+  assert.equal(sha256CanonicalJsonV1(a), sha256CanonicalJsonV1(b));
+  assert.equal(a.status, "BOUND_SHADOW");
+});
+
+test("rolled-over calendar dates are rejected as forged evidence dates", () => {
+  const d = resolveRoleModelBinding(input({ records: [record({ evidence: { ...record().evidence, measured_at_iso: "2026-02-30T00:00:00Z" } })] }));
+  assert.equal(d.status, "REJECTED");
+  assert.ok(d.evaluated[0].reasons.includes("evidence_measured_at_invalid"));
+});
+
+test("non-UTC timestamps are rejected (UTC-only fail-closed tightening)", () => {
+  const d = resolveRoleModelBinding(input({ as_of_iso: "2026-07-15T00:00:00+02:00" }));
+  assert.equal(d.status, "REJECTED");
+  assert.ok(d.reasons.includes("as_of_iso_invalid"));
+});

@@ -28,10 +28,10 @@
 
 ## Decision — the spearpoint
 
-Implement a **pure, SHADOW-only, fail-closed role↔model binding registry kernel**: `packages/core/src/node0-role-model-binding-registry-preview.js`.
+Implement a **pure, SHADOW-only, fail-closed role↔model binding registry kernel**: `packages/core/src/node0-role-model-binding-registry.js` (scaffold naming — the repo's slice generator drops the `-preview` suffix; the GO phrase retains the word "preview").
 
 - Logical role contracts (existing `validateAgentRoleContract`) stay decoupled from model families; a binding exists **only** through an evidence-bearing **capability record** `{role, lane, model, backend, family, evidence{sha256, measured_at_iso, metric, value}, limitations, resource_envelope, privacy_class, consent_ref, verification_state, superseded_by, contradicted_by}`.
-- `resolveRoleModelBinding` decides `BOUND_SHADOW | BOUND_CANDIDATE | REJECTED | ABSTAIN | REQUIRES_HUMAN`, deterministically, with reasons, and a content-addressed decision receipt (reuses `sha256`/`stableStringify`; boundary via `buildPreviewBoundary` — all-false).
+- `resolveRoleModelBinding` decides `BOUND_SHADOW | BOUND_CANDIDATE | REJECTED | ABSTAIN | REQUIRES_HUMAN`, deterministically, with reasons, and a content-addressed decision receipt (canonical-json-v1 `sha256CanonicalJsonV1` per M5.1B — the kernel is an explicitly adopted canon consumer; kernel-local 8-key all-false boundary mirroring the capability-truth-registry row).
 - Fail-closed rules: unknown mode/lane/shape → reject; missing/stale/non-hex evidence → reject; superseded/contradicted → reject; budget exceeded → reject; missing privacy class or consent ref → reject; PAT binding to the SAT-judgment lane (SAT authority) → reject; SAT binding to any mission-operating lane → reject; SAT family shared with PAT families → reject; independence unverifiable → **ABSTAIN**; record family contradicting the C0 design family → **REQUIRES_HUMAN** (`spec_reopen_required`) — the measured gemma/deepseek contradiction becomes representable instead of silent.
 - Multiple eligible records → reject `ambiguous_multiple_eligible_records` (ranking is a later measured slice).
 - The kernel cannot activate roles, invoke models, write files, mint, or widen authority; modes other than SHADOW/CANDIDATE are rejected (activation attempt fails closed).

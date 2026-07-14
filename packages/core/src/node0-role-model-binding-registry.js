@@ -9,8 +9,11 @@
 // Design: docs/06-adr/ADR-045-role-model-binding-registry-1a.md. The registry
 // decouples logical role contracts (agent-role-contract.js — preserved as
 // historical design evidence, never rewritten here) from model families: a
-// binding exists only through a capability record whose evidence hash, freshness,
-// verification state, budget, privacy class, and consent ref all check out.
+// binding exists only through a capability record whose evidence hash
+// (format-checked, NOT content-verified against the source bytes), freshness,
+// verification state, budget, privacy class, and consent ref pass fail-closed
+// checks. The measured value itself is carried in the receipt, never
+// thresholded or graded — the registry carries evidence; it does not grade it.
 // A record whose family contradicts the role contract's designed family is never
 // silently bound OR silently dropped — it surfaces as REQUIRES_HUMAN
 // (spec_reopen_required), which is exactly the measured gemma/deepseek
@@ -105,7 +108,9 @@ const RECORD_KEYS = Object.freeze([
 ]);
 
 const SHA256_HEX = /^[a-f0-9]{64}$/;
-const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+// UTC-only by design (fail-closed tightening): offsets multiply the forgery
+// surface for no local-first benefit.
+const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
 const MS_PER_DAY = 86_400_000;
 
 function isNonEmptyString(v) {
@@ -115,7 +120,12 @@ function isFiniteNonNegative(v) {
   return typeof v === "number" && Number.isFinite(v) && v >= 0;
 }
 function isIso(v) {
-  return typeof v === "string" && ISO_RE.test(v) && Number.isFinite(Date.parse(v));
+  if (typeof v !== "string" || !ISO_RE.test(v)) return false;
+  const ms = Date.parse(v);
+  if (!Number.isFinite(ms)) return false;
+  // Round-trip guard: Date.parse silently rolls invalid calendar dates
+  // (2026-02-30 → 2026-03-02); a rolled date is a forged date.
+  return new Date(ms).toISOString().slice(0, 19) === v.slice(0, 19);
 }
 function isStringArray(v) {
   return Array.isArray(v) && v.every((s) => typeof s === "string");
@@ -191,6 +201,15 @@ function collectInputBlocks(input) {
   if (!validateAgentRoleContract(input.role_contract).ok) blocked_by.push("role_contract_invalid");
   if (!WORKLOAD_LANES.includes(input.lane)) blocked_by.push("lane_unknown");
   if (!Array.isArray(input.records)) blocked_by.push("records_not_array");
+  else {
+    // A receipt must identify exactly which evidence record was bound; a
+    // duplicate id would make chosen_record_id ambiguous (agent-role-contract
+    // enforces the same guard on role_id).
+    const ids = input.records
+      .filter((r) => r && typeof r === "object" && typeof r.record_id === "string")
+      .map((r) => r.record_id);
+    if (new Set(ids).size !== ids.length) blocked_by.push("record_id_duplicate");
+  }
   const b = input.budget;
   if (!b || typeof b !== "object" || Array.isArray(b) || !isFiniteNonNegative(b.vram_gb_max) || !isFiniteNonNegative(b.ram_gb_max)) {
     blocked_by.push("budget_invalid");
@@ -245,30 +264,41 @@ export function resolveRoleModelBinding(input) {
   const eligible = [];
   const familyContradicting = [];
   for (const r of sorted) {
-    const reasons = [];
+    // Hard reasons kill a record outright. Family reasons on an otherwise
+    // clean record are the operator's spec-reopen fork — they must surface
+    // as REQUIRES_HUMAN, never be buried inside a generic rejection. This is
+    // exactly the measured gemma-vs-deepseek SAT-judge case: gemma is both
+    // PAT-bound AND the design-contradicting measured-best family, and only
+    // the human may reassign families (C1 contract, Path B).
+    const hard = [];
+    const familyReasons = [];
     const shape = validateCapabilityRecord(r);
-    if (!shape.ok) reasons.push(...shape.blocked_by);
+    if (!shape.ok) hard.push(...shape.blocked_by);
     else {
-      if (r.role_id !== contract.role_id || r.lane !== input.lane) reasons.push("record_role_lane_mismatch");
+      if (r.role_id !== contract.role_id || r.lane !== input.lane) hard.push("record_role_lane_mismatch");
       const measuredMs = Date.parse(r.evidence.measured_at_iso);
-      if (measuredMs > asOfMs) reasons.push("evidence_from_future");
-      else if ((asOfMs - measuredMs) / MS_PER_DAY > input.max_age_days) reasons.push("evidence_stale");
-      if (!ELIGIBLE_VERIFICATION_STATES.includes(r.verification_state)) reasons.push("verification_state_ineligible");
-      if (r.superseded_by !== null) reasons.push("record_superseded");
-      if (r.contradicted_by.length > 0) reasons.push("record_contradicted");
+      if (measuredMs > asOfMs) hard.push("evidence_from_future");
+      else if ((asOfMs - measuredMs) / MS_PER_DAY > input.max_age_days) hard.push("evidence_stale");
+      if (!ELIGIBLE_VERIFICATION_STATES.includes(r.verification_state)) hard.push("verification_state_ineligible");
+      if (r.superseded_by !== null) hard.push("record_superseded");
+      if (r.contradicted_by.length > 0) hard.push("record_contradicted");
       if (r.resource_envelope.vram_gb_est > input.budget.vram_gb_max || r.resource_envelope.ram_gb_est > input.budget.ram_gb_max) {
-        reasons.push("budget_exceeded");
+        hard.push("budget_exceeded");
       }
-      if (team === "SAT" && input.pat_bound_families.includes(r.family)) {
-        reasons.push("sat_family_shared_with_pat");
+      const matchesDesign = r.family === contract.base_class.family;
+      const sharedWithPat = team === "SAT" && input.pat_bound_families.includes(r.family);
+      if (!matchesDesign) {
+        familyReasons.push("family_contradicts_design_contract");
+        if (sharedWithPat) familyReasons.push("sat_family_shared_with_pat");
+      } else if (sharedWithPat) {
+        // Design-consistent independence violation: the fleet itself is
+        // misconfigured (base_family_shared_across_teams) — hard reject.
+        hard.push("sat_family_shared_with_pat");
       }
     }
-    const clean = reasons.length === 0;
-    if (clean && r.family === contract.base_class.family) eligible.push(r);
-    else if (clean) {
-      reasons.push("family_contradicts_design_contract");
-      familyContradicting.push(r);
-    }
+    const reasons = [...hard, ...familyReasons];
+    if (hard.length === 0 && familyReasons.length === 0) eligible.push(r);
+    else if (hard.length === 0) familyContradicting.push(familyReasons);
     evaluated.push({ record_id: r && typeof r === "object" && typeof r.record_id === "string" ? r.record_id : "unknown", reasons });
   }
 
@@ -280,9 +310,11 @@ export function resolveRoleModelBinding(input) {
     return decision(input, "REJECTED", ["ambiguous_multiple_eligible_records"], null, evaluated);
   }
   if (familyContradicting.length > 0) {
-    // The measured-family-vs-designed-family fork (e.g. gemma vs deepseek for
-    // SAT) is the operator's spec-reopen decision — never resolved in code.
-    return decision(input, "REQUIRES_HUMAN", ["family_contradicts_design_contract", "spec_reopen_required"], null, evaluated);
+    // The measured-family-vs-designed-family fork is the operator's
+    // spec-reopen decision — never resolved in code, never silently dropped.
+    const reasonSet = new Set(familyContradicting.flat());
+    reasonSet.add("spec_reopen_required");
+    return decision(input, "REQUIRES_HUMAN", [...reasonSet].sort(), null, evaluated);
   }
   return decision(input, "REJECTED", ["no_eligible_capability_record"], null, evaluated);
 }
