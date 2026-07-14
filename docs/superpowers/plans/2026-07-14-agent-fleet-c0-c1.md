@@ -45,7 +45,7 @@ import {
 
 const good = Object.freeze({
   schema: "bizra.node0.agent_role_contract.v0.1",
-  role_id: "sat-boundary-judge",
+  role_id: "sat-4-security-boundary",
   team: "SAT",
   serves: "system",
   base_class: { family: "deepseek", size_class: "3-4B" },
@@ -130,7 +130,7 @@ const TEAMS = Object.freeze({ PAT: { serves: "user", spawn_ceiling: 7 }, SAT: { 
 const AUTHORITY_KEYS = Object.freeze([
   "mint_allowed", "egress_allowed", "corpus_write_allowed", "spawn_widens_authority",
 ]);
-const ROLE_ID_RE = /^(pat|sat)-[a-z][a-z0-9-]*$/;
+const ROLE_ID_RE = /^(pat|sat)-[a-z0-9][a-z0-9-]*$/;
 
 export function validateAgentRoleContract(c) {
   const blocked_by = [];
@@ -217,8 +217,8 @@ test("fleet ships exactly 12 valid contracts (7 PAT + 5 SAT)", () => {
   assert.deepEqual(r.counts, { pat: 7, sat: 5 });
 });
 
-test("sat-boundary-judge is present (first-light role)", () => {
-  assert.ok(AGENT_FLEET_ROLES.some((c) => c.role_id === "sat-boundary-judge"));
+test("sat-4-security-boundary is present (first-light role)", () => {
+  assert.ok(AGENT_FLEET_ROLES.some((c) => c.role_id === "sat-4-security-boundary"));
 });
 
 test("dema alpha is outside the fleet and 7-8B class", () => {
@@ -263,10 +263,11 @@ const pat = role("PAT", "user", "gemma", 7);
 const sat = role("SAT", "system", "deepseek", 5);
 
 export const AGENT_FLEET_ROLES = Object.freeze([
-  pat("pat-librarian"), pat("pat-researcher"), pat("pat-planner"),
-  pat("pat-builder"), pat("pat-scribe"), pat("pat-navigator"), pat("pat-steward"),
-  sat("sat-boundary-judge"), sat("sat-consent-judge"), sat("sat-overclaim-judge"),
-  sat("sat-provenance-judge"), sat("sat-economy-judge"),
+  pat("pat-1-archivist"), pat("pat-2-extractor"), pat("pat-3-cartographer"),
+  pat("pat-4-scout"), pat("pat-5-applicability-engineer"),
+  pat("pat-6-reproduction-engineer"), pat("pat-7-scribe"),
+  sat("sat-1-provenance"), sat("sat-2-consent-authority"), sat("sat-3-impact"),
+  sat("sat-4-security-boundary"), sat("sat-5-governance-admissibility"),
 ]);
 
 export const DEMA_ALPHA = Object.freeze({
