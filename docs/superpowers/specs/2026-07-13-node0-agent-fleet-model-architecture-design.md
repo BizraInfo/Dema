@@ -17,7 +17,7 @@
 |---|---|---|---|
 | **Dema alpha** | 7–8B (today: whiterabbitneo-v3:7b, `MEASURED_LOCAL` best 6/6; swappable) | ~4.5 GB | routing, mission command, operator dialogue |
 | **PAT base** | 3–4B (gemma-class) | ~2.7 GB | all 7 PAT roles via 7 LoRA adapters |
-| **SAT base** | 3–4B, **different model family** (llama/phi/qwen-class) | ~2.3 GB | all 5 SAT roles via 5 LoRA adapters |
+| **SAT base** | 3–4B, **different model family** (deepseek/llama/phi/qwen-class) | ~2.3 GB | all 5 SAT roles via 5 LoRA adapters |
 
 ≈9.5 GB weights + ~4 GB KV headroom → twelve agents genuinely co-resident; "parallel thinking" = batched concurrent inference on the two bases, not twelve GPUs. Adapters are 30–80 MB files, hot-swappable, content-hashed in an **adapter registry** (name → sha256 → training-receipt pointer). Estimates carry ±20%; the serving slice must measure before claiming fit.
 

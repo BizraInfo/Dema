@@ -16,6 +16,7 @@ test("sat-4-security-boundary is present (first-light role)", () => {
 test("dema alpha is outside the fleet and 7-8B class", () => {
   assert.equal(DEMA_ALPHA.role_id, "dema-alpha");
   assert.equal(DEMA_ALPHA.base_class.size_class, "7-8B");
+  assert.equal(DEMA_ALPHA.base_class.family, "whiterabbitneo");
   assert.ok(!AGENT_FLEET_ROLES.some((c) => c.role_id === "dema-alpha"));
 });
 
@@ -23,5 +24,6 @@ test("every contract is deeply frozen", () => {
   for (const c of AGENT_FLEET_ROLES) {
     assert.ok(Object.isFrozen(c));
     assert.ok(Object.isFrozen(c.authority));
+    assert.ok(Object.isFrozen(c.base_class));
   }
 });
