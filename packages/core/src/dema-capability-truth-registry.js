@@ -2213,7 +2213,7 @@ function defaultCapabilityRows() {
     }),
     capability({
       capability_id: "NODE0_AGENT_FLEET_ROLES_1A",
-      truth_label: "NODE0_AGENT_FLEET_ROLES_PREVIEW_ONLY",
+      truth_label: "NODE0_AGENT_FLEET_ROLES_DESIGNED_NOT_LIVE",
       summary:
         "Fail-closed role-contract kernel validating the 12 canonical Node0 agent-fleet role contracts (7 PAT gemma-family, 5 SAT deepseek-family) plus the dema-alpha descriptor outside the fleet. The contracts are DESIGNED_NOT_LIVE accounting objects, not running agents.",
       evidence: evidence({
