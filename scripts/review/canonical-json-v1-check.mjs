@@ -35,6 +35,7 @@ const JSON_MODE = process.argv.includes("--json");
 // (outside tests and this gate) still fails the scan.
 export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   "packages/mission/src/mission-corridor.js",
+  "packages/core/src/node0-role-model-binding-registry.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 

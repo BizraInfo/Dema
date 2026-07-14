@@ -87,6 +87,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_ROOT_CLAUSE_TRACE_REGISTRY_PREVIEW_1A",
   "DEMA_FDE_ISNAD_REPLAY_CAPSULE_PREVIEW_0A",
   "NODE0_AGENT_FLEET_ROLES_1A",
+  "NODE0_ROLE_MODEL_BINDING_REGISTRY_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2243,6 +2244,35 @@ function defaultCapabilityRows() {
         "agent training",
         "agent deliberation",
         "spawned agent",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_ROLE_MODEL_BINDING_REGISTRY_1A",
+      truth_label: "NODE0_ROLE_MODEL_BINDING_REGISTRY_MEASURED_REPO",
+      summary:
+        "SHADOW-only fail-closed role-model binding registry: roles bind to models only through evidence-bearing capability records; stale, contradicted, superseded, over-budget, or independence-violating bindings are rejected or abstained; design-family contradictions surface as REQUIRES_HUMAN.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-role-model-binding-registry.js"],
+        test_paths: ["tests/node0-role-model-binding-registry.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-role-model-binding-registry-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_ROLE_MODEL_BINDING_REGISTRY_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_ROLE_MODEL_BINDING_REGISTRY_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Proves a pure deterministic kernel that binds a PAT/SAT role contract to a model route ONLY through an evidence-bearing capability record (hash, freshness, verification state, budget, privacy class, consent ref all checked fail-closed); that SAT/PAT lane authority separation and classifier-independence are enforced or ABSTAINed; that a measured family contradicting the designed family yields REQUIRES_HUMAN (spec_reopen_required), never a silent bind; and that the decision receipt is content-addressed and re-derivable from its input so a forged decision with a recomputed hash is still rejected. Proves nothing about model quality, serving, adapters, or any live binding.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
       ],
     }),
   ]);
