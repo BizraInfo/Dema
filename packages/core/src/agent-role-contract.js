@@ -17,7 +17,7 @@ export function validateAgentRoleContract(c) {
   if (!team) blocked_by.push("team_invalid");
   if (team && c.serves !== team.serves) blocked_by.push("serves_team_mismatch");
   if (team && typeof c.role_id === "string" && !c.role_id.startsWith(`${c.team.toLowerCase()}-`)) blocked_by.push("role_id_team_prefix_mismatch");
-  if (!c.base_class || typeof c.base_class.family !== "string" || c.base_class.family.length === 0 || typeof c.base_class.size_class !== "string") blocked_by.push("base_class_invalid");
+  if (!c.base_class || typeof c.base_class.family !== "string" || c.base_class.family.length === 0 || typeof c.base_class.size_class !== "string" || c.base_class.size_class.length === 0) blocked_by.push("base_class_invalid");
   if (c.adapter_ref !== null && typeof c.adapter_ref !== "string") blocked_by.push("adapter_ref_invalid");
   if (!Number.isInteger(c.spawn_limit) || c.spawn_limit < 0) blocked_by.push("spawn_limit_invalid");
   else if (team && c.spawn_limit > team.spawn_ceiling) blocked_by.push("spawn_limit_exceeds_team_ceiling");

@@ -95,6 +95,9 @@ test("fail-closed: base_class_invalid for malformed base_class", () => {
   const r3 = validateAgentRoleContract({ ...good, base_class: { family: "deepseek", size_class: 123 } });
   assert.equal(r3.ok, false);
   assert.ok(r3.blocked_by.includes("base_class_invalid"));
+  const r4 = validateAgentRoleContract({ ...good, base_class: { family: "deepseek", size_class: "" } });
+  assert.equal(r4.ok, false);
+  assert.ok(r4.blocked_by.includes("base_class_invalid"));
 });
 
 test("fail-closed: adapter_ref_invalid for non-null non-string adapter_ref", () => {

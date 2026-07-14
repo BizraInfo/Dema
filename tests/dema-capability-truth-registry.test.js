@@ -20,7 +20,7 @@ function capability(registry, capabilityId) {
   return registry.capabilities.find((row) => row.capability_id === capabilityId);
 }
 
-test("builds deterministic frozen 33-capability truth registry", () => {
+test("builds deterministic frozen capability truth registry", () => {
   const first = buildDemaCapabilityTruthRegistry();
   const second = buildDemaCapabilityTruthRegistry();
 
