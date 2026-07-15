@@ -516,6 +516,60 @@ test("ADEQUACY: evidence without an evaluation identity fails record validation"
   assert.ok(v.blocked_by.includes("evidence_evaluation_id_invalid"));
 });
 
+test("INDEPENDENCE P1: SAT with an EMPTY pat_bound_families ABSTAINs — an empty evidence set is not evidence of independence", () => {
+  // Regression for the PR #393 P1: [] previously slid past the undefined-only
+  // guard and allowed a SAT binding with zero positive evidence of the PAT
+  // family boundary. Missing and empty must be indistinguishable: ABSTAIN.
+  const d = resolveRoleModelBinding(input({ pat_bound_families: [] }));
+  assert.equal(d.status, "ABSTAIN");
+  assert.deepEqual([...d.reasons], ["independence_unverifiable"]);
+  assert.equal(d.chosen_record_id, null);
+});
+
+test("INDEPENDENCE P1: empty set ABSTAINs even with a fully valid acceptance policy — policy adequacy cannot substitute for independence", () => {
+  const d = resolveRoleModelBinding(input({ pat_bound_families: [], acceptance_policy: policy() }));
+  assert.equal(d.status, "ABSTAIN");
+  assert.ok(d.reasons.includes("independence_unverifiable"));
+  assert.notEqual(d.status, "BOUND_SHADOW");
+  assert.notEqual(d.status, "BOUND_CANDIDATE");
+  const candidate = resolveRoleModelBinding(input({ mode: "CANDIDATE", pat_bound_families: [] }));
+  assert.equal(candidate.status, "ABSTAIN");
+});
+
+test("INDEPENDENCE P1: PAT roles are unaffected by an empty pat_bound_families (independence is a SAT-only proof burden)", () => {
+  const d = resolveRoleModelBinding(input({
+    role_contract: PAT_CONTRACT,
+    lane: "code_and_reproduction",
+    records: [record({ role_id: "pat-code-apprentice", lane: "code_and_reproduction", family: "gemma" })],
+    acceptance_policy: policy({ role_id: "pat-code-apprentice", lane: "code_and_reproduction" }),
+    pat_bound_families: [],
+  }));
+  assert.equal(d.status, "BOUND_SHADOW");
+  assert.equal(d.chosen_record_id, "fixture-synthetic-passing-judge");
+});
+
+test("INDEPENDENCE P1: a non-empty independent set still takes the normal policy-gated path; a non-empty overlapping set still fails closed", () => {
+  const independent = resolveRoleModelBinding(input({ pat_bound_families: ["gemma"] }));
+  assert.equal(independent.status, "BOUND_SHADOW");
+  const overlapping = resolveRoleModelBinding(input({ pat_bound_families: ["deepseek"] }));
+  assert.equal(overlapping.status, "REJECTED");
+  assert.ok(overlapping.evaluated[0].reasons.includes("sat_family_shared_with_pat"));
+});
+
+test("INDEPENDENCE P1: the empty-set ABSTAIN is deterministic and re-derivable through receipt build → verify", () => {
+  const i = input({ pat_bound_families: [] });
+  const a = buildNode0RoleModelBindingRegistryPayload(i);
+  const b = buildNode0RoleModelBindingRegistryPayload(i);
+  assert.equal(a.decision.status, "ABSTAIN");
+  assert.equal(a.content_hash, b.content_hash);
+  assert.equal(verifyNode0RoleModelBindingRegistry(a).ok, true);
+  const forgedBody = { ...(({ content_hash, ...body }) => body)(a), decision: { ...a.decision, status: "BOUND_SHADOW", reasons: [], chosen_record_id: "fixture-synthetic-passing-judge" } };
+  const forged = { ...forgedBody, content_hash: sha256CanonicalJsonV1(forgedBody) };
+  const v = verifyNode0RoleModelBindingRegistry(forged);
+  assert.equal(v.ok, false);
+  assert.ok(v.blocked_by.includes("decision_not_rederivable"));
+});
+
 test("ADEQUACY: independence ABSTAIN takes precedence over the missing-policy check (both absent → ABSTAIN)", () => {
   const i = input();
   delete i.pat_bound_families;

@@ -303,9 +303,11 @@ export function resolveRoleModelBinding(input) {
   if (team === "PAT" && SAT_ALLOWED_LANES.includes(input.lane)) {
     return decision(input, "REJECTED", ["pat_lane_forbidden_sat_authority"], null, []);
   }
-  // Verifier independence is only checkable against the PAT-bound family set;
-  // without it a SAT binding cannot prove independence → ABSTAIN, never a pass.
-  if (team === "SAT" && input.pat_bound_families === undefined) {
+  // Verifier independence is only checkable against a NON-EMPTY PAT-bound
+  // family set: an empty set is absence of evidence, not evidence of
+  // independence — SAT ABSTAINs on missing OR empty, never a pass.
+  // (Malformed non-array values are already rejected structurally above.)
+  if (team === "SAT" && (!Array.isArray(input.pat_bound_families) || input.pat_bound_families.length === 0)) {
     return decision(input, "ABSTAIN", ["independence_unverifiable"], null, []);
   }
   // Adequacy invariant: without an applicable acceptance policy there is no
