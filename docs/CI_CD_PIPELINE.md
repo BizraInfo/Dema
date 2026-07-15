@@ -78,6 +78,8 @@ The four primary rails (`check`, `BIZRA Review Gate`, `CodeQL`, `gitleaks`) must
 
 **Failure interpretation:** an aggregation failure is a proof-evidence failure first, not automatic evidence that application code is wrong. Use the primary rail outputs (`check`, `CodeQL`, `gitleaks`, and `BIZRA Review Gate`) to classify the underlying cause, then rerun or repair aggregation only after peer rail state is known.
 
+**Review-gate evidence boundary (CI-ATTEST-NO-SYNTHETIC-REVIEW-1A):** the three-rail attestation (`ci_matrix`, `codeql`, `gitleaks`) carries **no evidence** about BIZRA Review Gate execution and has **zero authority** over the `bizra_review_gate` field. Merging an attestation preserves the prior review-gate state byte-for-byte — `PASS`, `FAIL`, `UNKNOWN`, or absent — for every combination of rail states. Three green rails never imply a passed review gate; a failed or unknown review gate plus three green rails cannot produce `READY_LOCAL` on its own. Review-gate evidence comes only from the review gate itself (or from a local `check: true` run that executed it).
+
 ---
 
 ## 4. `BIZRA Review Gate` — repo-specific review chain
