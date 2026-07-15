@@ -4,7 +4,7 @@ Truth label: `NODE0_ROLE_MODEL_BINDING_REGISTRY_MEASURED_REPO`
 
 ## Purpose
 
-SHADOW-only fail-closed role-model binding registry: roles bind to models only through evidence-bearing capability records; stale, contradicted, superseded, over-budget, or independence-violating bindings are rejected or abstained; design-family contradictions surface as REQUIRES_HUMAN.
+SHADOW-only fail-closed role-model binding registry: roles bind to models only through evidence-bearing capability records that satisfy an independently versioned role-and-lane acceptance policy (metric, direction, threshold, evaluation identity); stale, contradicted, superseded, over-budget, under-threshold, or independence-violating bindings are rejected or abstained; missing/inapplicable policy and design-family contradictions surface as REQUIRES_HUMAN.
 
 ## Input Contract
 
@@ -75,6 +75,16 @@ npm run check
   the operator resolves it, code never does.
 - Two eligible records are `ambiguous_multiple_eligible_records` — ranking policy
   is a later, measured slice.
+- Adequacy invariant: no route binds unless an independently versioned
+  role-and-lane acceptance policy (`bizra.node0.role_lane_acceptance_policy.v0.1`)
+  is supplied and the evidence satisfies its metric, direction, threshold, and
+  evaluation identity. Missing/inapplicable policy → `REQUIRES_HUMAN`
+  (`acceptance_policy_missing` / `acceptance_policy_not_applicable`);
+  under-threshold evidence → `capability_threshold_not_met`. No
+  operator-ratified policy exists yet, so the canonical gate decision is
+  honestly `REQUIRES_HUMAN`.
+- Evidence `sha256` is format-checked only — syntactic validity of a SHA-256
+  field does not verify source-evidence authenticity.
 
 Design record: `docs/06-adr/ADR-045-role-model-binding-registry-1a.md`.
 

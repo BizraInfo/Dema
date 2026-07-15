@@ -1,6 +1,6 @@
 # ADR-045 — Role↔Model Binding Registry (NODE0-ROLE-MODEL-BINDING-REGISTRY-1A)
 
-- **Status:** ACCEPTED as SHADOW-only slice (mission NODE0-HCF-A-PLUS-MISSION-CORRIDOR-1A). Not runtime canon. Fleet architecture itself remains **undecided** — this ADR selects an implementation spearpoint, not a fleet.
+- **Status:** PROPOSED — SHADOW CANDIDATE (mission NODE0-HCF-A-PLUS-MISSION-CORRIDOR-1A). No external acceptance receipt exists; the authoring mission cannot accept its own ADR. Not runtime canon. Fleet architecture itself remains **undecided** — this ADR selects an implementation spearpoint, not a fleet.
 - **Truth labels:** design here is `DESIGN_ONLY` until the paired kernel + tests land in the same slice; measured inputs cited below carry their own labels.
 - **Evidence base:** `artifacts/mission-corridor/NODE0-HCF-A-PLUS-1A/evidence-manifest.json` (sha256-bound artifacts; sandboxed collection).
 
@@ -33,6 +33,8 @@ Implement a **pure, SHADOW-only, fail-closed role↔model binding registry kerne
 - Logical role contracts (existing `validateAgentRoleContract`) stay decoupled from model families; a binding exists **only** through an evidence-bearing **capability record** `{role, lane, model, backend, family, evidence{sha256, measured_at_iso, metric, value}, limitations, resource_envelope, privacy_class, consent_ref, verification_state, superseded_by, contradicted_by}`.
 - `resolveRoleModelBinding` decides `BOUND_SHADOW | BOUND_CANDIDATE | REJECTED | ABSTAIN | REQUIRES_HUMAN`, deterministically, with reasons, and a content-addressed decision receipt (canonical-json-v1 `sha256CanonicalJsonV1` per M5.1B — the kernel is an explicitly adopted canon consumer; kernel-local 8-key all-false boundary mirroring the capability-truth-registry row).
 - Fail-closed rules: unknown mode/lane/shape → reject; missing/stale/non-hex evidence → reject; superseded/contradicted → reject; budget exceeded → reject; missing privacy class or consent ref → reject; PAT binding to the SAT-judgment lane (SAT authority) → reject; SAT binding to any mission-operating lane → reject; SAT family shared with PAT families → reject; independence unverifiable → **ABSTAIN**; record family contradicting the C0 design family → **REQUIRES_HUMAN** (`spec_reopen_required`) — the measured gemma/deepseek contradiction becomes representable instead of silent.
+- Adequacy invariant (1B hardening): a route binds **only** when an independently versioned role-and-lane acceptance policy (`bizra.node0.role_lane_acceptance_policy.v0.1`: metric, direction, threshold, evaluation identity) is supplied and the evidence satisfies it. Missing or inapplicable policy → **REQUIRES_HUMAN** (`acceptance_policy_missing` / `acceptance_policy_not_applicable`), never BOUND; evidence failing its bar → reject `capability_threshold_not_met`. Structural validity + freshness + a "measured" label are never adequacy. No operator-ratified acceptance policy exists yet, so today's honest canonical decision is REQUIRES_HUMAN.
+- The evidence `sha256` field is format-checked only: a syntactically valid SHA-256 does **not** verify the authenticity of the source evidence. Content verification against source bytes is a future gatherer-side slice.
 - Multiple eligible records → reject `ambiguous_multiple_eligible_records` (ranking is a later measured slice).
 - The kernel cannot activate roles, invoke models, write files, mint, or widen authority; modes other than SHADOW/CANDIDATE are rejected (activation attempt fails closed).
 
@@ -45,7 +47,7 @@ Implement a **pure, SHADOW-only, fail-closed role↔model binding registry kerne
 
 ## SNR receipt
 
-`registry = evidence(measured contradiction on disk) + actionability(pure kernel, no blocked lane) + leverage(unblocks C1 base pick; represents A/B/C uniformly) + risk_reduction(fail-closed everywhere) + BIZRA_alignment(consent/independence/abstain) − speculation(none beyond v0.1 vocab) − ambiguity(single-eligible rule) − drag(≤3 files)`. Every rejected alternative loses on actionability (OUT-2) or evidence.
+`registry = evidence(measured contradiction on disk) + actionability(pure kernel, no blocked lane) + leverage(represents and escalates the C1 base-pick decision without silently binding it; represents A/B/C uniformly) + risk_reduction(fail-closed everywhere) + BIZRA_alignment(consent/independence/abstain) − speculation(none beyond v0.1 vocab) − ambiguity(single-eligible rule) − drag(≤3 files)`. Every rejected alternative loses on actionability (OUT-2) or evidence.
 
 ## Rollback / supersession
 

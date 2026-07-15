@@ -15,6 +15,10 @@ const JSON_MODE = process.argv.includes("--json");
 export function runNode0RoleModelBindingRegistryCheck() {
   // Canonical fixture: a SAT judge binding whose evidence hash is the REAL
   // measured judge-C0 artifact (deepseek eval report). Deterministic; SHADOW.
+  // No acceptance_policy is supplied ON PURPOSE: no operator-ratified
+  // role-and-lane acceptance policy exists yet, so the honest canonical
+  // decision is REQUIRES_HUMAN (acceptance_policy_missing) — the loop still
+  // proves plan → build → verify → tamper-reject end to end.
   const input = {
     mode: "SHADOW",
     as_of_iso: "2026-07-15T00:00:00Z",
@@ -51,6 +55,7 @@ export function runNode0RoleModelBindingRegistryCheck() {
           measured_at_iso: "2026-07-14T08:07:00Z",
           metric: "heldout_agreement_pct",
           value: 29.73,
+          evaluation_id: "judge-c0-74-heldout-v1",
         },
         limitations: ["lane_1_only", "74_item_heldout"],
         resource_envelope: { vram_gb_est: 4.7, ram_gb_est: 2 },

@@ -1,4 +1,4 @@
-// NODE0-ROLE-MODEL-BINDING-REGISTRY-1A — SHADOW-only fail-closed role-model binding registry: roles bind to models only through evidence-bearing capability records; stale, contradicted, superseded, over-budget, or independence-violating bindings are rejected or abstained; design-family contradictions surface as REQUIRES_HUMAN.
+// NODE0-ROLE-MODEL-BINDING-REGISTRY-1A — SHADOW-only fail-closed role-model binding registry: roles bind to models only through evidence-bearing capability records that satisfy an independently versioned role-and-lane acceptance policy (metric, direction, threshold, evaluation identity); stale, contradicted, superseded, over-budget, under-threshold, or independence-violating bindings are rejected or abstained; missing/inapplicable policy and design-family contradictions surface as REQUIRES_HUMAN.
 //
 // Pure kernel: no fs / network / process / clock / random. Time is injected via
 // `as_of_iso`; every decision is deterministically re-derivable from its input,
@@ -10,10 +10,15 @@
 // decouples logical role contracts (agent-role-contract.js — preserved as
 // historical design evidence, never rewritten here) from model families: a
 // binding exists only through a capability record whose evidence hash
-// (format-checked, NOT content-verified against the source bytes), freshness,
-// verification state, budget, privacy class, and consent ref pass fail-closed
-// checks. The measured value itself is carried in the receipt, never
-// thresholded or graded — the registry carries evidence; it does not grade it.
+// (format-checked, NOT content-verified against the source bytes — syntactic
+// validity of a SHA-256 field proves NOTHING about the authenticity of the
+// source evidence), freshness, verification state, budget, privacy class, and
+// consent ref pass fail-closed checks. Adequacy invariant: a route can bind
+// ONLY when an independently versioned role-and-lane acceptance policy
+// (metric, direction, threshold, evaluation identity) is supplied and the
+// evidence satisfies it; without an applicable policy the kernel returns
+// REQUIRES_HUMAN, never BOUND — structural validity, freshness, and a
+// "measured" label alone are never sufficient to bind.
 // A record whose family contradicts the role contract's designed family is never
 // silently bound OR silently dropped — it surfaces as REQUIRES_HUMAN
 // (spec_reopen_required), which is exactly the measured gemma/deepseek
@@ -35,6 +40,10 @@ export const NODE0_ROLE_MODEL_BINDING_REGISTRY_GO_PHRASE = "GO: node0 role model
 
 export const CAPABILITY_RECORD_SCHEMA = "bizra.node0.role_capability_record.v0.1";
 export const BINDING_DECISION_SCHEMA = "bizra.node0.role_model_binding_decision.v0.1";
+// Independently versioned: the policy carries its own schema/id/version and is
+// supplied separately from the records it judges — a record can never smuggle
+// in the bar it is measured against.
+export const ACCEPTANCE_POLICY_SCHEMA = "bizra.node0.role_lane_acceptance_policy.v0.1";
 
 export const REGISTRY_MODES = Object.freeze(["SHADOW", "CANDIDATE"]);
 
@@ -87,7 +96,22 @@ const INPUT_KEYS = Object.freeze([
   "records",
   "budget",
   "pat_bound_families",
+  "acceptance_policy",
 ]);
+
+const POLICY_KEYS = Object.freeze([
+  "schema",
+  "policy_id",
+  "policy_version",
+  "role_id",
+  "lane",
+  "metric",
+  "direction",
+  "threshold",
+  "evaluation_id",
+]);
+
+export const METRIC_DIRECTIONS = Object.freeze(["higher_is_better", "lower_is_better"]);
 
 const RECORD_KEYS = Object.freeze([
   "schema",
@@ -171,6 +195,10 @@ export function validateCapabilityRecord(r) {
     if (!isIso(e.measured_at_iso)) blocked_by.push("evidence_measured_at_invalid");
     if (!isNonEmptyString(e.metric)) blocked_by.push("evidence_metric_invalid");
     if (typeof e.value !== "number" || !Number.isFinite(e.value)) blocked_by.push("evidence_value_invalid");
+    // The evaluation identity names WHICH evaluation produced the value; the
+    // acceptance policy pins it so a value from a different dataset can never
+    // satisfy the policy's threshold.
+    if (!isNonEmptyString(e.evaluation_id)) blocked_by.push("evidence_evaluation_id_invalid");
   }
   if (!isStringArray(r.limitations)) blocked_by.push("limitations_invalid");
   const env = r.resource_envelope;
@@ -183,6 +211,29 @@ export function validateCapabilityRecord(r) {
   if (!VERIFICATION_STATES.includes(r.verification_state)) blocked_by.push("verification_state_unknown");
   if (r.superseded_by !== null && !isNonEmptyString(r.superseded_by)) blocked_by.push("superseded_by_invalid");
   if (!isStringArray(r.contradicted_by)) blocked_by.push("contradicted_by_invalid");
+  return Object.freeze({ ok: blocked_by.length === 0, blocked_by: Object.freeze(blocked_by) });
+}
+
+// Fail-closed acceptance-policy validator. The policy is the ONLY thing that
+// can make evidence adequate: it defines the metric, direction, threshold, and
+// evaluation identity a binding must satisfy for one role+lane.
+export function validateAcceptancePolicy(p) {
+  const blocked_by = [];
+  if (!p || typeof p !== "object" || Array.isArray(p)) {
+    return Object.freeze({ ok: false, blocked_by: Object.freeze(["policy_not_object"]) });
+  }
+  for (const k of Object.keys(p)) {
+    if (!POLICY_KEYS.includes(k)) blocked_by.push(`policy_unknown_key:${k}`);
+  }
+  if (p.schema !== ACCEPTANCE_POLICY_SCHEMA) blocked_by.push("policy_schema_invalid");
+  if (!isNonEmptyString(p.policy_id)) blocked_by.push("policy_id_invalid");
+  if (!isNonEmptyString(p.policy_version)) blocked_by.push("policy_version_invalid");
+  if (!isNonEmptyString(p.role_id)) blocked_by.push("policy_role_id_invalid");
+  if (!WORKLOAD_LANES.includes(p.lane)) blocked_by.push("policy_lane_unknown");
+  if (!isNonEmptyString(p.metric)) blocked_by.push("policy_metric_invalid");
+  if (!METRIC_DIRECTIONS.includes(p.direction)) blocked_by.push("policy_direction_invalid");
+  if (typeof p.threshold !== "number" || !Number.isFinite(p.threshold)) blocked_by.push("policy_threshold_invalid");
+  if (!isNonEmptyString(p.evaluation_id)) blocked_by.push("policy_evaluation_id_invalid");
   return Object.freeze({ ok: blocked_by.length === 0, blocked_by: Object.freeze(blocked_by) });
 }
 
@@ -216,6 +267,11 @@ function collectInputBlocks(input) {
   }
   if (input.pat_bound_families !== undefined && !isStringArray(input.pat_bound_families)) {
     blocked_by.push("pat_bound_families_invalid");
+  }
+  // A MISSING policy is not a structural defect — resolve() routes it to
+  // REQUIRES_HUMAN. A malformed policy is a structural defect and rejects.
+  if (input.acceptance_policy !== undefined && !validateAcceptancePolicy(input.acceptance_policy).ok) {
+    blocked_by.push("acceptance_policy_invalid");
   }
   return blocked_by;
 }
@@ -252,6 +308,17 @@ export function resolveRoleModelBinding(input) {
   if (team === "SAT" && input.pat_bound_families === undefined) {
     return decision(input, "ABSTAIN", ["independence_unverifiable"], null, []);
   }
+  // Adequacy invariant: without an applicable acceptance policy there is no
+  // bar for the evidence to clear, so nothing may bind — the decision is the
+  // operator's, represented and escalated, never silently taken. Structural
+  // validity + freshness + a "measured" label are NOT adequacy.
+  const policy = input.acceptance_policy;
+  if (policy === undefined) {
+    return decision(input, "REQUIRES_HUMAN", ["acceptance_policy_missing"], null, []);
+  }
+  if (policy.role_id !== contract.role_id || policy.lane !== input.lane) {
+    return decision(input, "REQUIRES_HUMAN", ["acceptance_policy_not_applicable"], null, []);
+  }
 
   const asOfMs = Date.parse(input.as_of_iso);
   const sorted = [...input.records].sort((a, b) => {
@@ -285,6 +352,19 @@ export function resolveRoleModelBinding(input) {
       if (r.resource_envelope.vram_gb_est > input.budget.vram_gb_max || r.resource_envelope.ram_gb_est > input.budget.ram_gb_max) {
         hard.push("budget_exceeded");
       }
+      // Evidence must be judged by the policy's own metric and evaluation
+      // identity; a value from a different metric or dataset is meaningless
+      // against the threshold, so it never even reaches the threshold check.
+      const metricOk = r.evidence.metric === policy.metric;
+      const evalOk = r.evidence.evaluation_id === policy.evaluation_id;
+      if (!metricOk) hard.push("evidence_metric_mismatch_policy");
+      if (!evalOk) hard.push("evidence_evaluation_id_mismatch_policy");
+      if (metricOk && evalOk) {
+        const meets = policy.direction === "higher_is_better"
+          ? r.evidence.value >= policy.threshold
+          : r.evidence.value <= policy.threshold;
+        if (!meets) hard.push("capability_threshold_not_met");
+      }
       const matchesDesign = r.family === contract.base_class.family;
       const sharedWithPat = team === "SAT" && input.pat_bound_families.includes(r.family);
       if (!matchesDesign) {
@@ -316,7 +396,17 @@ export function resolveRoleModelBinding(input) {
     reasonSet.add("spec_reopen_required");
     return decision(input, "REQUIRES_HUMAN", [...reasonSet].sort(), null, evaluated);
   }
-  return decision(input, "REJECTED", ["no_eligible_capability_record"], null, evaluated);
+  // Threshold failure is surfaced at the top level by mandate: a record that
+  // fails its policy bar is REJECTED as capability_threshold_not_met, not
+  // buried inside a generic no-eligible rejection.
+  const thresholdFailed = evaluated.some((x) => x.reasons.includes("capability_threshold_not_met"));
+  return decision(
+    input,
+    "REJECTED",
+    thresholdFailed ? ["capability_threshold_not_met", "no_eligible_capability_record"] : ["no_eligible_capability_record"],
+    null,
+    evaluated,
+  );
 }
 
 // Fail-closed plan. Collect every reason the action is blocked; eligible only
@@ -354,10 +444,12 @@ export function buildNode0RoleModelBindingRegistryPayload(input) {
 
 // Body-bound re-derivation verifier. Recomputes the hash over the body MINUS
 // its hash field AND re-derives the decision from the embedded input. The
-// deterministic resolver is the independent anchor: forging any decision field
-// and recomputing content_hash still fails, because the forged decision no
-// longer equals resolve(input). (The input itself remains caller-supplied — a
-// different input is a different, honestly-labeled receipt, not a launder.)
+// proved properties are exactly two: deterministic decision re-derivation and
+// receipt tamper detection — forging any decision field and recomputing
+// content_hash still fails, because the forged decision no longer equals
+// resolve(input). NOT proved: input authenticity. The input is caller-supplied;
+// a different input yields a different receipt, and nothing here verifies that
+// the input's evidence claims are true.
 export function verifyNode0RoleModelBindingRegistry(payload) {
   const blocked_by = [];
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
