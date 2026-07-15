@@ -29,7 +29,7 @@ import {
 } from "./public-metric-claim-gate-preview.js";
 import {
   buildDemaFdeDualDiagnostic,
-  verifyDemaFdeDualDiagnostic,
+  verifyDemaFdeDualDiagnosticForHistoricalReceipt,
 } from "./dema-fde-dual-diagnostic.js";
 import {
   buildFounderImpactDigest,
@@ -116,11 +116,24 @@ function scanRawContentLeak(node) {
 
 // The lens (outward/inward) that the FDE primary failure class came from. Advisory display only.
 function fdeLens(report) {
+  if (!report || typeof report !== "object") return "outward";
   if (report.failure_class === report.outward_diagnosis?.failure_class && report.failure_class !== report.inward_diagnosis?.failure_class) {
     return "outward";
   }
   if (report.failure_class === report.inward_diagnosis?.failure_class) return "inward";
   return "outward";
+}
+
+function summarizeFde(report) {
+  const value = report && typeof report === "object" ? report : {};
+  return Object.freeze({
+    failure_class: value.failure_class,
+    lens: fdeLens(value),
+    inward_confidence: value.inward_diagnosis?.confidence ?? "low",
+    outward_confidence: value.outward_diagnosis?.confidence ?? "low",
+    diagnostic_hash: value.diagnostic_hash,
+    eligible_for_autopatch: value.eligible_for_autopatch,
+  });
 }
 
 export function planFounderImpactLoop({ consent, input } = {}) {
@@ -204,14 +217,7 @@ export function buildFounderImpactReceipt({ consent, input } = {}) {
 
   // Stage 4 — FDE dual diagnostic (ADVISORY ONLY). Its classification never grants authority.
   const fde = buildDemaFdeDualDiagnostic(input.fde_input && typeof input.fde_input === "object" ? input.fde_input : {});
-  const fde_summary = Object.freeze({
-    failure_class: fde.failure_class,
-    lens: fdeLens(fde),
-    inward_confidence: fde.inward_diagnosis?.confidence ?? "low",
-    outward_confidence: fde.outward_diagnosis?.confidence ?? "low",
-    diagnostic_hash: fde.diagnostic_hash,
-    eligible_for_autopatch: fde.eligible_for_autopatch,
-  });
+  const fde_summary = summarizeFde(fde);
 
   // GATES summary — the ONLY inputs to authority. FDE is deliberately absent here.
   const gates = Object.freeze({
@@ -298,8 +304,11 @@ export function verifyFounderImpactReceipt(receipt) {
   const cv = verifyPublicMetricClaimGatePreview(receipt.claim_gate);
   if (!cv.ok) blocked_by.push("claim_gate_invalid");
   if (receipt.claim_gate?.rejected_count !== 0) blocked_by.push("claim_gate_has_rejections");
-  const fv = verifyDemaFdeDualDiagnostic(receipt.fde);
+  const fv = verifyDemaFdeDualDiagnosticForHistoricalReceipt(receipt.fde);
   if (!fv.ok) blocked_by.push("fde_report_invalid");
+  if (stableStringify(receipt.fde_summary) !== stableStringify(summarizeFde(receipt.fde))) {
+    blocked_by.push("fde_summary_mismatch");
+  }
 
   // AUTHORITY MONOTONICITY: continue_allowed must equal the gate-only derivation; FDE cannot lift it.
   const gates = receipt.gates ?? {};

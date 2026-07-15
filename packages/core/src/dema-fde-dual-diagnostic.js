@@ -6,6 +6,8 @@
 import { createHash } from "node:crypto";
 
 export const DEMA_FDE_DUAL_DIAGNOSTIC_SCHEMA =
+  "bizra.dema.fde_dual_diagnostic.v0.2";
+export const DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA =
   "bizra.dema.fde_dual_diagnostic.v0.1";
 export const DEMA_FDE_DUAL_DIAGNOSTIC_TRUTH_LABEL =
   "DEMA_FDE_DUAL_DIAGNOSTIC_PREVIEW_ONLY";
@@ -50,23 +52,32 @@ export const FDE_BOUNDARY_KEYS = Object.freeze([
   "model_invocation_performed",
 ]);
 
-const BOUNDARY_VIOLATION_MARKERS = Object.freeze([
-  "token mint",
-  "mint token",
-  "wallet access",
-  "wallet_accessed",
-  "start daemon",
-  "daemon_started",
-  "network_used",
-  "live urp",
-  "live rsi",
-  "live poi",
-  "federation started",
-  "autopatch_performed",
-  "autopatch: true",
-  "eligible_for_autopatch: true",
-  "fde:boundary_not_false:",
-  "boundary_not_false:",
+const BOUNDARY_ACTION_PATTERNS = Object.freeze([
+  Object.freeze({
+    evidence: "token_mint_action",
+    pattern:
+      /\b(?:mint|minted|minting)\s+(?:a\s+)?token\b|\btoken\s+mint(?:ed|ing)?\s+(?:requested|attempted|started|performed|enabled)\b/g,
+  }),
+  Object.freeze({
+    evidence: "wallet_access_action",
+    pattern:
+      /\b(?:access|accessed|accessing)\s+(?:a\s+)?wallet\b|\bwallet\s+access\s+(?:requested|attempted|performed|enabled)\b/g,
+  }),
+  Object.freeze({
+    evidence: "daemon_start_action",
+    pattern:
+      /\b(?:start|started|starting|launch|launched|enable|enabled)\s+(?:a\s+)?daemon\b|\bdaemon\s+(?:start|started|starting|launch|launched|enabled)\b/g,
+  }),
+  Object.freeze({
+    evidence: "live_surface_action",
+    pattern:
+      /\blive\s+(?:urp|rsi|poi)\b(?:(?!\blive\s+(?:urp|rsi|poi)\b)[^.;,\n]){0,48}?\b(?:start|started|launch|launched|enable|enabled|invoke|invoked|requested)\b/g,
+  }),
+  Object.freeze({
+    evidence: "federation_start_action",
+    pattern:
+      /\bfederation\s+(?:start|started|launch|launched|enable|enabled|invoke|invoked|requested)\b/g,
+  }),
 ]);
 
 const PROOF_GAP_MARKERS = Object.freeze([
@@ -242,6 +253,80 @@ function countMarkerHits(haystack, markers) {
   return hits;
 }
 
+function regexEscape(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const CLAUSE_BOUNDARY_PATTERN =
+  /[.;,\n]|\b(?:although|but|however|later|then|yet)\b/g;
+const PRE_ACTION_NEGATION_PATTERN =
+  /(?:\b(?:blocked|denied|failed|forbidden|never|no|prevented|refused|without)\b|\b(?:are|can|could|did|do|does|had|has|have|is|should|was|were|will|would)\s+not\b|\bnot\b)(?:\W+(?:action|actually|allowed|any|attempt|attempted|attempting|authorization|authority|been|being|effort|evidence|ever|for|from|intent|intention|made|move|of|operation|permission|perform|performed|plan|planned|request|requested|sign|step|to|tried|try|trying))*\W*$/;
+const POST_ACTION_NEGATION_PATTERN =
+  /^\W*(?:(?:are|became|got|had|has|have|is|remained|remains|was|were)\W+)?(?:blocked|denied|disabled|disallowed|forbidden|never|not|prevented|refused|rejected)\b/;
+const COMPLETED_ACTION_PATTERN =
+  /\b(?:accessed|enabled|invoked|launched|minted|performed|started)\b/;
+
+function clauseBefore(haystack, index) {
+  const prefix = haystack.slice(0, index);
+  let start = 0;
+  for (const boundary of prefix.matchAll(CLAUSE_BOUNDARY_PATTERN)) {
+    start = boundary.index + boundary[0].length;
+  }
+  return prefix.slice(start);
+}
+
+function clauseAfter(haystack, index) {
+  const suffix = haystack.slice(index);
+  const boundaryIndex = suffix.search(CLAUSE_BOUNDARY_PATTERN);
+  return boundaryIndex === -1 ? suffix : suffix.slice(0, boundaryIndex);
+}
+
+function evidenceIsNegated(haystack, match, { postposed = true } = {}) {
+  if (PRE_ACTION_NEGATION_PATTERN.test(clauseBefore(haystack, match.index))) {
+    return true;
+  }
+  if (/\b(?:never|no|not|without)\b/.test(match[0])) return true;
+  if (postposed && !COMPLETED_ACTION_PATTERN.test(match[0])) {
+    return POST_ACTION_NEGATION_PATTERN.test(
+      clauseAfter(haystack, match.index + match[0].length),
+    );
+  }
+  return false;
+}
+
+function boundaryViolationHits(haystack) {
+  const hits = [];
+  for (const match of haystack.matchAll(/\b(?:fde:)?boundary_not_false:[a-z0-9_:-]*/g)) {
+    if (!evidenceIsNegated(haystack, match)) {
+      hits.push(match[0]);
+    }
+  }
+  for (const key of [
+    ...FDE_BOUNDARY_KEYS,
+    "eligible_for_autopatch",
+    "autopatch",
+  ]) {
+    const pattern = new RegExp(
+      `["']?${regexEscape(key)}["']?\\s*[:=]\\s*true\\b`,
+      "g",
+    );
+    for (const match of haystack.matchAll(pattern)) {
+      if (!evidenceIsNegated(haystack, match, { postposed: false })) {
+        hits.push(`${key}=true`);
+      }
+    }
+  }
+  for (const rule of BOUNDARY_ACTION_PATTERNS) {
+    for (const match of haystack.matchAll(rule.pattern)) {
+      if (!evidenceIsNegated(haystack, match)) {
+        hits.push(rule.evidence);
+        break;
+      }
+    }
+  }
+  return [...new Set(hits)];
+}
+
 function scoreRules(haystack, lens) {
   const scored = [];
   for (const rule of CLASSIFICATION_RULES) {
@@ -274,7 +359,7 @@ function isGithubActionsContext(input) {
 }
 
 function classifyGithubActionsBillingLock(input, lens) {
-  if (lens !== "outward" && lens !== "inward") return null;
+  if (lens !== "outward") return null;
   const haystack = combinedFailureText(input);
   const billingHits = countMarkerHits(haystack, GITHUB_ACTIONS_BILLING_LOCK_MARKERS);
   const startupHits = countMarkerHits(haystack, GITHUB_ACTIONS_STARTUP_FAIL_MARKERS);
@@ -309,11 +394,10 @@ function classifyGithubActionsBillingLock(input, lens) {
 }
 
 function classifyLens(input, lens) {
-  const billingLock = classifyGithubActionsBillingLock(input, lens);
-  if (billingLock) return billingLock;
-
   const haystack = combinedFailureText(input);
-  const boundaryHits = countMarkerHits(haystack, BOUNDARY_VIOLATION_MARKERS);
+  // A forbidden boundary is a hard stop and must dominate any lower-authority
+  // environment diagnosis carried by the same evidence.
+  const boundaryHits = boundaryViolationHits(haystack);
   if (boundaryHits.length > 0) {
     const failedCommand = text(input.failed_command).toLowerCase();
     const commandHintMatch = INWARD_COMMAND_HINTS.some((hint) =>
@@ -325,6 +409,9 @@ function classifyLens(input, lens) {
       confidence: confidenceFromHits(boundaryHits, commandHintMatch),
     };
   }
+  const billingLock = classifyGithubActionsBillingLock(input, lens);
+  if (billingLock) return billingLock;
+
   if (lens === "inward") {
     const proofGapHits = countMarkerHits(haystack, PROOF_GAP_MARKERS);
     const failedCommand = text(input.failed_command).toLowerCase();
@@ -377,17 +464,19 @@ function classifyLens(input, lens) {
 }
 
 function classifyPrimary(inward, outward) {
-  if (
-    outward.failure_class === "github_actions_billing_lock" &&
-    outward.confidence !== "low"
-  ) {
-    return "github_actions_billing_lock";
-  }
+  // Failure classification is authority-monotonic: a boundary stop cannot be
+  // downgraded to an environment repair such as billing unlock.
   if (
     inward.failure_class === "boundary_violation" ||
     outward.failure_class === "boundary_violation"
   ) {
     return "boundary_violation";
+  }
+  if (
+    outward.failure_class === "github_actions_billing_lock" &&
+    outward.confidence !== "low"
+  ) {
+    return "github_actions_billing_lock";
   }
   if (inward.failure_class === "proof_gap" && inward.confidence !== "low") {
     return "proof_gap";
@@ -483,7 +572,14 @@ function rootCauseHypothesis(failure_class, inward, outward) {
   return `Dominant failure_class=${failure_class} with inward confidence ${inward.confidence} and outward confidence ${outward.confidence}.`;
 }
 
-function deriveMeasuredStatus(inward, outward) {
+function deriveMeasuredStatus(failureClass, inward, outward) {
+  if (
+    failureClass === "github_actions_billing_lock" &&
+    outward.failure_class === "github_actions_billing_lock" &&
+    outward.confidence === "high"
+  ) {
+    return "MEASURED";
+  }
   if (inward.confidence === "high" && outward.confidence === "high") return "MEASURED";
   if (inward.confidence === "high" || outward.confidence === "high") {
     return "PARTIALLY_MEASURED";
@@ -630,7 +726,7 @@ function buildDemaFdeDualDiagnosticInternal(input = {}) {
   const inward = classifyLens(normalized, "inward");
   const outward = classifyLens(normalized, "outward");
   const failure_class = classifyPrimary(inward, outward);
-  const measured_status = deriveMeasuredStatus(inward, outward);
+  const measured_status = deriveMeasuredStatus(failure_class, inward, outward);
   const regression_test_required =
     (inward.confidence === "high" || inward.confidence === "medium") &&
     (failure_class === "implementation_defect" ||
@@ -705,10 +801,10 @@ function buildDemaFdeDualDiagnosticInternal(input = {}) {
   });
 }
 
-export function verifyDemaFdeDualDiagnostic(report) {
+function verifyDemaFdeDualDiagnosticStructure(report, expectedSchema) {
   const blocked_by = [];
-  if (!report || report.schema !== DEMA_FDE_DUAL_DIAGNOSTIC_SCHEMA) {
-    return freezeDeep({ ok: false, blocked_by: ["invalid_schema"] });
+  if (!report || report.schema !== expectedSchema) {
+    return ["invalid_schema"];
   }
   if (report.truth_label !== DEMA_FDE_DUAL_DIAGNOSTIC_TRUTH_LABEL) {
     blocked_by.push("invalid_truth_label");
@@ -768,6 +864,22 @@ export function verifyDemaFdeDualDiagnostic(report) {
   if (report.diagnostic_hash !== diagnosticHash(hashBody)) {
     blocked_by.push("diagnostic_hash_mismatch");
   }
+  return blocked_by;
+}
+
+export function verifyDemaFdeDualDiagnostic(report) {
+  const blocked_by = verifyDemaFdeDualDiagnosticStructure(
+    report,
+    DEMA_FDE_DUAL_DIAGNOSTIC_SCHEMA,
+  );
+  if (blocked_by.includes("invalid_schema")) {
+    return freezeDeep({
+      ok: false,
+      blocked_by,
+      verification_mode: "semantic_rederivation_v0_2",
+      authority_eligible: false,
+    });
+  }
 
   // Semantic re-derivation: the whole diagnosis is a pure function of its
   // carried input, so re-derive it and require the result to match. Internal
@@ -783,7 +895,43 @@ export function verifyDemaFdeDualDiagnostic(report) {
     blocked_by.push("semantic_rederivation_mismatch");
   }
 
-  return freezeDeep({ ok: blocked_by.length === 0, blocked_by });
+  return freezeDeep({
+    ok: blocked_by.length === 0,
+    blocked_by,
+    verification_mode: "semantic_rederivation_v0_2",
+    authority_eligible: blocked_by.length === 0,
+  });
+}
+
+// Historical v0.1 reports remain replayable as integrity evidence only.
+// They predate the 1C precedence policy, so they must never open an authority
+// lane or drive a current forwarding decision.
+export function verifyLegacyDemaFdeDualDiagnosticIntegrity(report) {
+  const blocked_by = verifyDemaFdeDualDiagnosticStructure(
+    report,
+    DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA,
+  );
+  return freezeDeep({
+    ok: blocked_by.length === 0,
+    blocked_by,
+    verification_mode: "legacy_v0_1_integrity_only",
+    authority_eligible: false,
+  });
+}
+
+export function verifyDemaFdeDualDiagnosticForHistoricalReceipt(report) {
+  if (report?.schema === DEMA_FDE_DUAL_DIAGNOSTIC_SCHEMA) {
+    return verifyDemaFdeDualDiagnostic(report);
+  }
+  if (report?.schema === DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA) {
+    return verifyLegacyDemaFdeDualDiagnosticIntegrity(report);
+  }
+  return freezeDeep({
+    ok: false,
+    blocked_by: ["invalid_schema"],
+    verification_mode: "unsupported",
+    authority_eligible: false,
+  });
 }
 
 function verifyFalseBoundary({ boundary, expectedKeys, prefix }) {

@@ -11,6 +11,13 @@ FDE-O = outward diagnosis (Node version, OS, paths, permissions, deployment real
 
 FDE classifies failures. It does not patch, commit, push, merge, or execute.
 
+## Schema Compatibility
+
+New reports use `bizra.dema.fde_dual_diagnostic.v0.2`, which binds the 1C
+authority-monotonic precedence policy. Historical v0.1 reports may be checked
+only through the explicit `legacy_v0_1_integrity_only` verifier. They are not
+authority-eligible and cannot open the CI vendor local-proof lane.
+
 ## Input Contract
 
 ```js
@@ -20,7 +27,14 @@ buildDemaFdeDualDiagnostic({
   stdout_excerpt,
   stderr_excerpt,
   changed_files,
-  environment: { node_version, os, branch },
+  environment: {
+    node_version,
+    os,
+    branch,
+    ci_provider,
+    runner_assigned,
+    runner_id,
+  },
   capability_registry_row,
 })
 ```
@@ -47,6 +61,8 @@ regression_test_required
 field_validation_required
 consent_required
 eligible_for_autopatch
+code_implicated
+operator_action_required
 capability_registry_reference
 lifecycle_phases
 terminal_state
@@ -67,8 +83,41 @@ dependency_gap
 permission_gap
 proof_gap
 boundary_violation
+github_actions_billing_lock
 unknown
 ```
+
+## Precedence and Authority Monotonicity
+
+Classification follows this safety order:
+
+```text
+boundary_violation
+-> github_actions_billing_lock (outward lens only)
+-> proof_gap
+-> confidence and tie rules
+-> unknown
+```
+
+| Condition | Lens | Primary action posture |
+| --- | --- | --- |
+| Forbidden live boundary marker | Inward and outward | Stop; boundary violation dominates every environment diagnosis |
+| GitHub Actions billing evidence with GitHub context | Outward only | Request billing repair; do not implicate code |
+| Missing source/test/gate/receipt evidence | Inward | Repair proof; do not hide the gap |
+| Code/test/schema markers | Inward | Reproduce with a focused test before proposing repair |
+| Environment/permission/dependency markers | Outward | Validate the field environment before changing code |
+| Insufficient evidence | Neither | Keep root cause unknown and request more evidence |
+
+`DEMA-FDE-BOUNDARY-PRECEDENCE-1C` enforces the monotonic rule: mixed
+boundary and billing evidence remains `boundary_violation`; it cannot be
+downgraded to `billing_unlock`.
+
+Boundary evidence is positive-only: explicit canonical `true` fields, positive
+autopatch-authority fields, non-negated verifier `boundary_not_false` blockers,
+or affirmative action phrases. Every action occurrence is inspected in bounded
+clause context, so a negated first occurrence cannot consume or hide a later
+positive action. Canonical all-false JSON, negated sentinels, and recognized
+preposed, embedded, or postposed negations are not boundary violations.
 
 ## Review Gate Rules
 
@@ -80,6 +129,7 @@ unknown
 6. FDE must require regression tests when inward confidence is medium/high for code/test failures.
 7. FDE must output `eligible_for_autopatch: false`.
 8. FDE must emit `capability_registry_reference` as a capability row ID (default: `DEMA_FDE_DUAL_DIAGNOSTIC_1A`).
+9. Boundary violations must dominate simultaneous environment failures, and GitHub billing lock must remain an outward-only diagnosis.
 
 ## Boundary
 
@@ -120,8 +170,8 @@ npm run check
 
 ## What This Proves
 
-Dema can emit a deterministic inward/outward diagnosis for a failed command with explicit confidence, missing evidence, and a minimal fix plan preview.
+Dema can emit a deterministic inward/outward diagnosis for a failed command with explicit confidence, missing evidence, and a minimal fix plan preview. Boundary stops dominate lower-authority environment repair paths.
 
 ## What This Does Not Prove
 
-FDE does not establish ground-truth root cause, auto-remediate failures, or replace operator consent for any mutation or runtime action.
+FDE does not establish ground-truth root cause, verify input provenance, auto-remediate failures, or replace operator consent for any mutation or runtime action.

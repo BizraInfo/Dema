@@ -8,9 +8,11 @@ import {
   runDemaFdeDualDiagnosticGate,
   defaultDemaFdeDualDiagnosticFixture,
   DEMA_FDE_DUAL_DIAGNOSTIC_SCHEMA,
+  DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA,
   DEMA_FDE_DUAL_DIAGNOSTIC_TRUTH_LABEL,
   FDE_FAILURE_CLASSES,
   FDE_HHMM_PHASES,
+  verifyLegacyDemaFdeDualDiagnosticIntegrity,
 } from "../packages/core/src/dema-fde-dual-diagnostic.js";
 
 test("builds deterministic frozen dual diagnostic envelope", () => {
@@ -111,12 +113,188 @@ test("classifies GitHub Actions billing lock from annotation excerpt", () => {
 
   assert.equal(report.failure_class, "github_actions_billing_lock");
   assert.equal(report.outward_diagnosis.failure_class, "github_actions_billing_lock");
+  assert.equal(report.inward_diagnosis.failure_class, "unknown");
+  assert.equal(report.inward_diagnosis.confidence, "low");
   assert.equal(report.outward_diagnosis.confidence, "high");
   assert.equal(report.code_implicated, false);
   assert.equal(report.operator_action_required, "billing_unlock");
   assert.equal(report.regression_test_required, false);
   assert.equal(report.measured_status, "MEASURED");
   assert.ok(report.minimal_fix_plan.some((step) => step.includes("billing")));
+});
+
+test("boundary violation dominates simultaneous GitHub billing-lock evidence", () => {
+  const report = diagnoseDemaFailure({
+    failed_command: "gh pr checks 312",
+    exit_code: 1,
+    stdout_excerpt:
+      "jobs: steps=[], runner_id=0, wallet_accessed token mint requested",
+    stderr_excerpt:
+      "The job was not started because your account is locked due to a billing issue.",
+    changed_files: [],
+    environment: {
+      node_version: "22.x",
+      os: "linux",
+      branch: "feat/node0-spine-runner-cli-1a",
+      ci_provider: "github_actions",
+      runner_assigned: false,
+      runner_id: 0,
+    },
+  });
+
+  assert.equal(report.failure_class, "boundary_violation");
+  assert.equal(report.inward_diagnosis.failure_class, "boundary_violation");
+  assert.equal(report.outward_diagnosis.failure_class, "boundary_violation");
+  assert.equal(report.code_implicated, null);
+  assert.equal(report.operator_action_required, null);
+  assert.ok(report.minimal_fix_plan.some((step) => step.startsWith("Stop any live")));
+  assert.equal(
+    report.minimal_fix_plan.some((step) => step.includes("billing")),
+    false,
+    "lower-authority environment repair must not mask a boundary stop",
+  );
+});
+
+test("canonical all-false boundary text does not mask a genuine billing lock", () => {
+  const report = diagnoseDemaFailure({
+    failed_command: "gh pr checks 312",
+    exit_code: 1,
+    stdout_excerpt: JSON.stringify({
+      wallet_accessed: false,
+      network_used: false,
+      daemon_started: false,
+      autopatch_performed: false,
+      token_minted: false,
+    }),
+    stderr_excerpt:
+      "The job was not started because your account is locked due to a billing issue.",
+    changed_files: [],
+    environment: {
+      node_version: "22.x",
+      os: "linux",
+      branch: "main",
+      ci_provider: "github_actions",
+      runner_assigned: false,
+      runner_id: 0,
+    },
+  });
+
+  assert.equal(report.failure_class, "github_actions_billing_lock");
+  assert.equal(report.inward_diagnosis.failure_class, "unknown");
+  assert.equal(report.outward_diagnosis.failure_class, "github_actions_billing_lock");
+  assert.equal(report.operator_action_required, "billing_unlock");
+});
+
+test("negated boundary doctrine does not manufacture a violation", () => {
+  const report = diagnoseDemaFailure({
+    failed_command: "node scripts/review/safety-report.mjs",
+    exit_code: 1,
+    stdout_excerpt:
+      "no token mint requested; do not access wallet; live URP not requested; federation not started",
+    stderr_excerpt: "documentation assertion failed",
+    changed_files: [],
+    environment: { node_version: "22.x", os: "linux", branch: "main" },
+  });
+
+  assert.notEqual(report.failure_class, "boundary_violation");
+  assert.notEqual(report.inward_diagnosis.failure_class, "boundary_violation");
+  assert.notEqual(report.outward_diagnosis.failure_class, "boundary_violation");
+});
+
+test("clause-level negation does not manufacture boundary violations", () => {
+  const phrases = [
+    "did not attempt to mint a token",
+    "no request to access wallet",
+    "never tried to start a daemon",
+    "without ever minting a token",
+    "did not attempt to access wallet",
+    "starting a daemon is forbidden",
+    "federation start was blocked",
+  ];
+  for (const phrase of phrases) {
+    const report = diagnoseDemaFailure({
+      failed_command: "node scripts/review/safety-report.mjs",
+      exit_code: 1,
+      stdout_excerpt: phrase,
+      stderr_excerpt: "documentation assertion failed",
+      changed_files: [],
+      environment: { node_version: "22.x", os: "linux", branch: "main" },
+    });
+
+    assert.notEqual(report.failure_class, "boundary_violation", phrase);
+  }
+});
+
+test("a negated first action cannot hide a later positive boundary action", () => {
+  const report = diagnoseDemaFailure({
+    failed_command: "gh run view 42",
+    exit_code: 1,
+    stdout_excerpt:
+      "no token mint requested; GitHub Actions billing issue; later minted token",
+    stderr_excerpt: "The job was not started because your account is locked.",
+    changed_files: [],
+    environment: { node_version: "22.x", os: "linux", branch: "main" },
+  });
+
+  assert.equal(report.failure_class, "boundary_violation");
+  assert.equal(report.inward_diagnosis.failure_class, "boundary_violation");
+  assert.equal(report.outward_diagnosis.failure_class, "boundary_violation");
+});
+
+test("a negated live surface cannot consume a later positive live action", () => {
+  const report = diagnoseDemaFailure({
+    failed_command: "gh run view 42",
+    exit_code: 1,
+    stdout_excerpt:
+      "no live URP requested; later live URP started; GitHub Actions billing issue",
+    stderr_excerpt: "The job was not started because your account is locked.",
+    changed_files: [],
+    environment: { node_version: "22.x", os: "linux", branch: "main" },
+  });
+
+  assert.equal(report.failure_class, "boundary_violation");
+  assert.equal(report.operator_action_required, null);
+  const marker = buildCiVendorAvailabilityMarker({
+    fde_report: report,
+    operator_declared: true,
+  });
+  assert.equal(marker.local_proof_lane, false);
+});
+
+test("negated boundary sentinel does not manufacture a violation", () => {
+  const report = diagnoseDemaFailure({
+    failed_command: "node scripts/review/safety-report.mjs",
+    exit_code: 1,
+    stdout_excerpt: "no evidence of fde:boundary_not_false:push_performed",
+    stderr_excerpt: "documentation assertion failed",
+    changed_files: [],
+    environment: { node_version: "22.x", os: "linux", branch: "main" },
+  });
+
+  assert.notEqual(report.failure_class, "boundary_violation");
+});
+
+test("positive autopatch authority markers remain boundary violations", () => {
+  for (const marker of ["eligible_for_autopatch: true", "autopatch=true"]) {
+    const report = diagnoseDemaFailure({
+      failed_command: "gh run view 42",
+      exit_code: 1,
+      stdout_excerpt: `${marker}; GitHub Actions billing issue`,
+      stderr_excerpt: "The job was not started because your account is locked.",
+      changed_files: [],
+      environment: { node_version: "22.x", os: "linux", branch: "main" },
+    });
+
+    assert.equal(report.failure_class, "boundary_violation", marker);
+    assert.equal(
+      buildCiVendorAvailabilityMarker({
+        fde_report: report,
+        operator_declared: true,
+      }).local_proof_lane,
+      false,
+      marker,
+    );
+  }
 });
 
 test("inner execute consent alone does not classify as billing lock", () => {
@@ -437,6 +615,35 @@ test("verify rejects a report that carries no input to re-derive from", () => {
   const verified = verifyDemaFdeDualDiagnostic(noInput);
   assert.equal(verified.ok, false);
   assert.ok(verified.blocked_by.includes("input_missing_for_rederivation"));
+});
+
+test("legacy v0.1 reports remain integrity-verifiable but cannot carry authority", () => {
+  const current = diagnoseDemaFailure(defaultGithubActionsBillingLockFdeFixture());
+  const { diagnostic_hash: _drop, ...currentBody } = current;
+  const legacyBody = {
+    ...currentBody,
+    schema: DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA,
+  };
+  const legacy = {
+    ...legacyBody,
+    diagnostic_hash: kernelDiagnosticHash(legacyBody),
+  };
+
+  const historical = verifyLegacyDemaFdeDualDiagnosticIntegrity(legacy);
+  assert.equal(historical.ok, true);
+  assert.equal(historical.verification_mode, "legacy_v0_1_integrity_only");
+  assert.equal(historical.authority_eligible, false);
+
+  const currentAuthority = verifyDemaFdeDualDiagnostic(legacy);
+  assert.equal(currentAuthority.ok, false);
+  assert.ok(currentAuthority.blocked_by.includes("invalid_schema"));
+
+  const marker = buildCiVendorAvailabilityMarker({
+    fde_report: legacy,
+    operator_declared: true,
+  });
+  assert.equal(marker.availability, "UNKNOWN");
+  assert.equal(marker.local_proof_lane, false);
 });
 
 test("forged billing-lock report cannot open the local proof lane end-to-end", () => {

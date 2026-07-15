@@ -1,0 +1,77 @@
+# Receipt: DEMA-FDE-BOUNDARY-PRECEDENCE-1C
+
+Truth label: `PREVIEW_ONLY` (authority-monotonicity hardening of DEMA-FDE-DUAL-DIAGNOSTIC-1A)
+
+## Defect
+
+The billing-lock classifier ran before boundary-marker classification in both
+diagnostic lenses, and primary selection also preferred billing lock before a
+boundary violation. Mixed evidence such as a genuine GitHub Actions billing
+lock plus `wallet_accessed` or `token mint` therefore produced:
+
+```text
+failure_class=github_actions_billing_lock
+operator_action_required=billing_unlock
+```
+
+That downgraded a hard boundary stop to an environment-repair path. Billing
+evidence also appeared in the inward code/proof lens even though it is an
+outward environment condition.
+
+## Fix
+
+1. Boundary markers are evaluated before billing markers in each lens.
+2. Primary selection resolves `boundary_violation` before
+   `github_actions_billing_lock`.
+3. Billing-lock classification is outward-only.
+4. High-confidence, GitHub-context-bound billing evidence remains `MEASURED`
+   without manufacturing a matching inward diagnosis.
+5. Boundary matching requires positive evidence. Canonical all-false boundary
+   JSON, negated sentinels, and recognized clause-level negated action phrases
+   do not trigger a violation; every action occurrence is inspected without
+   consuming a later positive action, and positive autopatch authority fields
+   remain hard stops.
+6. New reports use schema v0.2. Historical v0.1 reports have an explicit
+   integrity-only verifier with `authority_eligible:false`; current authority
+   consumers reject them, while historical founder-impact receipts may replay
+   their embedded FDE evidence without letting FDE affect authority. Historical
+   replay also binds `fde_summary` exactly to the embedded report.
+
+The authority law is monotonic:
+
+```text
+boundary stop > environment repair > unknown
+```
+
+A failure classification may reduce authority or request repair; it cannot
+lower a hard stop into a more permissive path.
+
+## Proof
+
+```bash
+node --test tests/dema-fde-dual-diagnostic.test.js
+node scripts/review/dema-fde-dual-diagnostic-check.mjs --json
+```
+
+Focused result: 43 FDE tests pass, including mixed boundary-plus-billing,
+clause-bounded all-occurrence matching, canonical all-false and negated evidence,
+positive-autopatch hard stops, outward-only billing, and legacy
+integrity-without-authority regressions. The founder-impact compatibility test
+replays a frozen v0.1 fixture, rejects a mismatched summary, and preserves its
+all-false authority fields.
+
+## What This Proves
+
+Simultaneous vendor billing and forbidden live-boundary evidence remains a
+`boundary_violation`; the report emits no `billing_unlock` action, and genuine
+billing lock remains an outward environment diagnosis. All-false boundary text
+does not manufacture a violation, and old reports remain historical evidence
+without current authority.
+
+## What This Does Not Prove
+
+- It does not verify input provenance or ground-truth root cause.
+- It does not repair billing, patch code, weaken tests, execute commands, start
+  a daemon, use a network, mint a token, access a wallet, or authorize runtime.
+- It does not expand boundary-marker coverage beyond the existing deterministic
+  lexicon.

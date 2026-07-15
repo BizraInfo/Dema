@@ -46,7 +46,7 @@ RED-05 claim-gate reject → receipt NOT emitted (composes #350)
 RED-06 boundary: model_invocation_performed / external_call_performed / receipt_mint_performed / federation_invoked all false
 RED-07 boundary: content_read true + filesystem_write_performed true (honest, consented)
 RED-08 FDE classifies missing-Ollama as OUTWARD (environment prerequisite), NOT code failure (uses shipped FDE)
-RED-09 verify re-derives receipt from artifact + source hashes (whole-body, not subset)
+RED-09 verify re-derives receipt from artifact + source hashes and binds `fde_summary` to the embedded report (whole-body, not subset)
 RED-10 tampered artifact hash → verify fails closed
 RED-11 digest is OKF-conformant: every concept has non-empty `type` + parseable frontmatter
 RED-12 served_to === "founder"; no second recipient in 0A
