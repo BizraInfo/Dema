@@ -173,3 +173,86 @@ test("CEA-14: kernel run reports verified attestation", () => {
   assert.equal(result.ok, true);
   assert.equal(result.ready_local_rails_eligible, true);
 });
+
+// --- CI-ATTEST-NO-SYNTHETIC-REVIEW-1A: the three-rail attestation carries
+// ZERO evidence about the BIZRA Review Gate and must have ZERO authority over
+// it. Invariant: mergedInput.checks.bizra_review_gate ===
+// baseInput.checks.bizra_review_gate, for every rail combination. ---
+
+const RAIL_STATES = ["PASS", "FAIL", "UNKNOWN"];
+
+function baseWithReviewGate(reviewGate) {
+  const base = {
+    ...GATHERED_ADVISORY_SNAPSHOT_INPUT,
+    commit: FIXTURE_COMMIT,
+    checks: { ...GATHERED_ADVISORY_SNAPSHOT_INPUT.checks },
+    workflows: { ...GATHERED_ADVISORY_SNAPSHOT_INPUT.workflows },
+    risks: [],
+  };
+  if (reviewGate === undefined) delete base.checks.bizra_review_gate;
+  else base.checks.bizra_review_gate = reviewGate;
+  return base;
+}
+
+test("CEA-15: attestation has zero authority over the review gate — prior PASS/FAIL/UNKNOWN/missing all survive an all-PASS merge byte-for-byte", () => {
+  for (const prior of ["PASS", "FAIL", "UNKNOWN", undefined]) {
+    const merge = mergeCiEvidenceAttestationIntoGatheredInput(baseWithReviewGate(prior), passAttestation());
+    assert.equal(merge.merged, true);
+    assert.equal(
+      merge.input.checks.bizra_review_gate,
+      prior,
+      `prior=${String(prior)} must be preserved, got ${String(merge.input.checks.bizra_review_gate)}`,
+    );
+    if (prior === undefined) {
+      assert.equal("bizra_review_gate" in merge.input.checks, false, "missing prior must remain missing");
+    }
+  }
+});
+
+test("CEA-16: all 27 rail-state combinations preserve the prior review state (none may synthesize or destroy it)", () => {
+  for (const ci of RAIL_STATES) for (const cq of RAIL_STATES) for (const gl of RAIL_STATES) {
+    const attestation = buildNode0CiEvidenceAttestation({
+      commit: FIXTURE_COMMIT,
+      rails: { ci_matrix: ci, codeql: cq, gitleaks: gl },
+    });
+    for (const prior of ["PASS", "FAIL", "UNKNOWN"]) {
+      const merge = mergeCiEvidenceAttestationIntoGatheredInput(baseWithReviewGate(prior), attestation);
+      assert.equal(merge.merged, true);
+      assert.equal(
+        merge.input.checks.bizra_review_gate,
+        prior,
+        `rails=${ci}/${cq}/${gl} prior=${prior} → got ${merge.input.checks.bizra_review_gate}`,
+      );
+    }
+  }
+});
+
+test("CEA-17: a FAILED review gate plus three successful rails cannot produce READY_LOCAL", () => {
+  const base = baseWithReviewGate("FAIL");
+  // Remove the independent check:true evidence path so the review gate alone decides.
+  delete base.checks.check;
+  const audit = buildGatheredAuditResultWithCiEvidenceAttestation(base, passAttestation());
+  assert.equal(audit.attestation_merged, true);
+  assert.notEqual(audit.ledger.release_verdict, "READY_LOCAL");
+  assert.equal(audit.ledger.release_verdict, "BLOCKED");
+});
+
+test("CEA-18: an UNKNOWN review gate plus three successful rails cannot produce READY_LOCAL", () => {
+  const base = baseWithReviewGate("UNKNOWN");
+  delete base.checks.check;
+  const audit = buildGatheredAuditResultWithCiEvidenceAttestation(base, passAttestation());
+  assert.equal(audit.attestation_merged, true);
+  assert.equal(audit.ledger.release_verdict, "BLOCKED");
+});
+
+test("CEA-19: merge receipt verification stays deterministic and commit mismatch stays fail-closed after the invariant", () => {
+  const attestation = passAttestation();
+  const again = passAttestation();
+  assert.equal(attestation.receipt_hash, again.receipt_hash);
+  const mismatch = mergeCiEvidenceAttestationIntoGatheredInput(
+    { ...baseWithReviewGate("PASS"), commit: "some-other-commit" },
+    attestation,
+  );
+  assert.equal(mismatch.merged, false);
+  assert.ok(mismatch.blocked_by.includes("commit_mismatch"));
+});

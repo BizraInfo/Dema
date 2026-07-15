@@ -221,7 +221,12 @@ export function mergeCiEvidenceAttestationIntoGatheredInput(baseInput, attestati
       ...baseInput.checks,
       codeql: rails.codeql,
       gitleaks: rails.gitleaks,
-      bizra_review_gate: allPass ? "PASS" : "UNKNOWN",
+      // INVARIANT (CI-ATTEST-NO-SYNTHETIC-REVIEW-1A): the three attested rails
+      // (ci_matrix, codeql, gitleaks) carry ZERO evidence about the BIZRA
+      // Review Gate, so this merge has ZERO authority over it — the base
+      // input's bizra_review_gate (PASS, FAIL, UNKNOWN, or absent) passes
+      // through unchanged via the spread above. Missing evidence must never
+      // increase readiness.
     },
     workflows: {
       ...baseInput.workflows,
