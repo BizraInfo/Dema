@@ -9,11 +9,25 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   classifyLine,
   HARD_FAIL_BOMBAST,
   REPORT_BOMBAST,
 } from "../scripts/review/no-overclaim.mjs";
+
+const gatePath = fileURLToPath(
+  new URL("../scripts/review/no-overclaim.mjs", import.meta.url),
+);
+
+function git(cwd, args) {
+  const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+}
 
 // Each row is an added line (leading '+' already stripped, as the gate does).
 // expect "fail" => classifyLine(line).hardFail is non-empty (gate would exit 1).
@@ -102,4 +116,31 @@ test("a deliberate structured truth-act DOES exempt Tier-A bombast", () => {
 test("bombast pattern tiers are non-empty (stale-list guard)", () => {
   assert.ok(HARD_FAIL_BOMBAST.length >= 3, "HARD_FAIL_BOMBAST must keep its curated superlatives");
   assert.ok(REPORT_BOMBAST.length >= 1, "REPORT_BOMBAST must keep its capability words");
+});
+
+test("CLI ignores deleted changed files because no current body remains to scan", (t) => {
+  const repo = mkdtempSync(join(tmpdir(), "dema-no-overclaim-deletion-"));
+  t.after(() => rmSync(repo, { recursive: true, force: true }));
+
+  git(repo, ["init", "-q"]);
+  git(repo, ["config", "user.email", "dema-test@example.invalid"]);
+  git(repo, ["config", "user.name", "Dema Test"]);
+  mkdirSync(join(repo, "docs"));
+  writeFileSync(join(repo, "docs", "deleted.md"), "DESIGNED_NOT_LIVE\n");
+  git(repo, ["add", "docs/deleted.md"]);
+  git(repo, ["commit", "-q", "-m", "add candidate doc"]);
+  rmSync(join(repo, "docs", "deleted.md"));
+  git(repo, ["add", "-u"]);
+  git(repo, ["commit", "-q", "-m", "delete candidate doc"]);
+
+  const result = spawnSync(process.execPath, [gatePath], {
+    cwd: repo,
+    encoding: "utf8",
+    env: { ...process.env, BIZRA_REVIEW_BASE: "HEAD~1" },
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.ok, true);
+  assert.deepEqual(report.scanned_files, []);
 });

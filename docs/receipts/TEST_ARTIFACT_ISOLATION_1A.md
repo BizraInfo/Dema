@@ -1,46 +1,60 @@
 # Receipt: TEST-ARTIFACT-ISOLATION-1A
 
-Truth label: `MEASURED` — harness-hygiene repair with red-first evidence. `authority_delta: 0`.
+Truth label: `MEASURED` — in-repository harness-hygiene repair and regression
+tests. The historical `/data/bizra/logs` captures below are `LOCAL_ONLY` operator
+observations, not portable release proof. `authority_delta: 0`.
 
 ## Slice
 
-Repository verification must not delete, overwrite, restore, consume, or depend on
-operator-created or operator-modified worktree artifacts. This slice retires the
-`[PROTOTYPE CI ISOLATION]` preflight (`scripts/ci/restore-urp-artifacts.mjs`, lineage
-`448711b`, 2026-06-06) that ran `git restore artifacts/proofs/node0-local-urp/` before
-every `npm test` / `npm run coverage` / `npm run check`.
+The `test`, `coverage`, and `check` entrypoints must not erase a pre-existing
+operator edit as setup. This slice retires the `[PROTOTYPE CI ISOLATION]`
+preflight (`scripts/ci/restore-urp-artifacts.mjs`, lineage `448711b`,
+2026-06-06) that ran `git restore artifacts/proofs/node0-local-urp/` before
+`npm test`, `npm run coverage`, and `npm run check`.
 
-The script's own header declared the exit: *"Future: replace with true artifact fixtures
-under the test harness so restore is unnecessary."* That future arrived earlier than the
-header knew — every write-mode caller of the URP artifact builders already injects an
-`mkdtemp` root (`tests/node0-local-urp-proof.test.js`, `tests/node0-self-check.test.js`),
-so the drift the restore guarded against no longer occurs.
+Both test write-mode call sites inject an `mkdtemp` root
+(`tests/node0-local-urp-proof.test.js`, `tests/node0-self-check.test.js`). The
+same tests and `scripts/check.mjs` use read-only verification mode for the
+committed goldens. Direct operator invocation of either builder without
+`--verify` remains write-capable and is outside this repair.
 
-## Red-first proof (before repair, at `403c674` lineage)
+## Historical local observation (before repair, at `403c674` lineage)
 
-Log: `/data/bizra/logs/tai-1a-red-receipt.log`
+These absolute-path logs are mutable and unavailable in a clean checkout. Their
+hashes bind only the bytes reviewed on 2026-07-15; they do not establish
+provenance or remote/CI execution.
 
-1. **Drift is gone** — full raw suite (`node --test tests/*.test.js`, 7,488 tests / 358
-   suites) with NO restore preflight: `git status --porcelain` empty before and after.
-   The only failures were the 4 known sandbox-environmental ones (EROFS/ENOENT), identical
-   to the with-restore baseline. Log: `/data/bizra/logs/tai-1a-raw-suite-no-restore.log`.
-2. **Harm is real** — a tracked operator edit to
+1. `/data/bizra/logs/tai-1a-red-receipt.log` — SHA-256
+   `3f8b6eeeecce220e5ca8d5cfd90d284bd12f14c595cdac06459420e2041752d77`.
+   It records that a tracked operator edit to
    `artifacts/proofs/node0-local-urp/critic_report_001.json`
    (golden `bad8633735f0…86ce84` → edited `dc2add3a21a2…e877c2`) was silently reverted to
-   the golden hash by the preflight with exit 0 and a clean porcelain — the edit erased
-   without a trace. An untracked sentinel in the same directory survived byte-for-byte
-   (`9946725823…e485732`), confirming the harm is scoped to tracked files via `git restore`.
-3. **Guard test red** — `tests/test-artifact-isolation.test.js` failed 2/2 against the
-   pre-repair tree (scripts contained the restore prefix; the script file existed).
+   the golden hash by the preflight with exit 0. An untracked sentinel survived
+   byte-for-byte (`9946725823…e485732`). This is a local observation of the
+   tracked-file effect of `git restore`, not a durable release artifact.
+2. `/data/bizra/logs/tai-1a-raw-suite-no-restore.log` — SHA-256
+   `453e91b5a2fda790006cce5fa716db3568d4bc6a8f27ae60e8a47703dd57c13a`.
+   The raw diagnostic reports 7,488 tests / 358 suites / 7,484 pass / 4 fail.
+   Re-running the repository classifier over this log recognizes one failure and
+   rejects three as unrecognized, exit 1. The log has no before/after porcelain
+   markers and no with-restore baseline, so it is not evidence of a green or
+   drift-free suite.
+3. The pre-repair source contains the forbidden package-script prefix and the
+   retired file, so the current two regression assertions are source-derivable
+   failures on that tree. No separate red-test execution log is claimed.
 
 ## Repair (minimum)
 
 - `package.json`: removed the `node scripts/ci/restore-urp-artifacts.mjs && ` prefix from
-  `test`, `coverage`, and `check`. No other script changed.
+  `test`, `coverage`, and `check`. No other package script changed.
 - Deleted `scripts/ci/restore-urp-artifacts.mjs`.
-- Added `tests/test-artifact-isolation.test.js` (2 tests): no npm script may invoke
-  `git restore|checkout|clean|stash` or the retired preflight; the preflight file stays
-  deleted. Fails closed if either returns.
+- Added `tests/test-artifact-isolation.test.js` (2 tests): the three in-scope
+  package entrypoints may not directly contain `git restore|checkout|clean|stash`
+  or the retired preflight name, and the retired file must remain absent.
+- Hardened `scripts/review/no-overclaim.mjs` to exclude deleted paths from its
+  current-body scan. `tests/no-overclaim.test.js` reproduces a deletion in a
+  disposable Git repository, preventing the aggregate gate from reopening the
+  deleted file with `readFileSync`.
 
 ## Boundary
 
@@ -56,7 +70,10 @@ No consent-surface change · no receipt-issuance change · authority_delta: 0
   `artifacts/proofs/node0-local-urp/` (read-only verify paths); an operator edit there
   now makes those tests fail HONESTLY instead of being silently reverted. That is the
   intended fail-closed behavior, not a defect.
-- Operator-terminal / CI greenness of the 4 known sandbox-environmental failures
-  (EROFS mkdtemp under `$HOME`, ENOENT `uv_os_get_passwd`) — environment-bound, unchanged
-  by this slice.
+- That the static package-script guard detects indirect helpers, `git` global-option
+  variants, arbitrary filesystem writes, or a caller-selected `TMPDIR` inside the
+  checkout. Merge-readiness therefore also requires a fresh before/after worktree
+  comparison around the real verification commands.
+- Greenness of the historical raw log; it is explicitly non-green and classifier-rejected.
+- Remote CI or Node-version-matrix proof on the final branch SHA.
 - Anything about federation, URP liveness, tokens, or the artifacts' semantic truth.

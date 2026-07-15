@@ -130,9 +130,17 @@ function baseRef() {
 }
 
 function changedFiles() {
-  return execFileSync("git", ["diff", "--name-only", `${baseRef()}...HEAD`], {
-    encoding: "utf8",
-  })
+  // Deleted paths have no current body to scan and would make readFileSync fail.
+  return execFileSync(
+    "git",
+    [
+      "diff",
+      "--name-only",
+      "--diff-filter=ACMRTUXB",
+      `${baseRef()}...HEAD`,
+    ],
+    { encoding: "utf8" },
+  )
     .split("\n")
     .filter(Boolean);
 }
