@@ -25,7 +25,15 @@ const gatePath = fileURLToPath(
 );
 
 function git(cwd, args) {
-  const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+  // Scrub repo-redirecting variables (git exports GIT_DIR inside hooks, and
+  // this suite runs under pre-push:seal): mutating commands here must never
+  // resolve to the real repository. Null config files also keep operator
+  // globals (commit.gpgsign, core.hooksPath) out of the disposable fixture.
+  const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
+  delete env.GIT_DIR;
+  delete env.GIT_WORK_TREE;
+  delete env.GIT_INDEX_FILE;
+  const result = spawnSync("git", args, { cwd, encoding: "utf8", env });
   assert.equal(result.status, 0, result.stderr);
 }
 

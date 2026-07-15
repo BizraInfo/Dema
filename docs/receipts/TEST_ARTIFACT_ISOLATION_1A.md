@@ -25,7 +25,7 @@ hashes bind only the bytes reviewed on 2026-07-15; they do not establish
 provenance or remote/CI execution.
 
 1. `/data/bizra/logs/tai-1a-red-receipt.log` — SHA-256
-   `3f8b6eeeecce220e5ca8d5cfd90d284bd12f14c595cdac06459420e2041752d77`.
+   `3f8b6eeecce220e5ca8d5cfd90d284bd12f14c595cdac06459420e2041752d77`.
    It records that a tracked operator edit to
    `artifacts/proofs/node0-local-urp/critic_report_001.json`
    (golden `bad8633735f0…86ce84` → edited `dc2add3a21a2…e877c2`) was silently reverted to
@@ -49,7 +49,8 @@ provenance or remote/CI execution.
   `test`, `coverage`, and `check`. No other package script changed.
 - Deleted `scripts/ci/restore-urp-artifacts.mjs`.
 - Added `tests/test-artifact-isolation.test.js` (2 tests): the three in-scope
-  package entrypoints may not directly contain `git restore|checkout|clean|stash`
+  package entrypoints — and their npm `pre`/`post` lifecycle siblings, which npm
+  runs automatically — may not directly contain `git restore|checkout|clean|stash`
   or the retired preflight name, and the retired file must remain absent.
 - Hardened `scripts/review/no-overclaim.mjs` to exclude deleted paths from its
   current-body scan. `tests/no-overclaim.test.js` reproduces a deletion in a

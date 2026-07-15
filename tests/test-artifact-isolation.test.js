@@ -18,13 +18,20 @@ const verificationEntrypoints = ["test", "coverage", "check"];
 test("verification entrypoints contain no direct restore preflight or mutating git command", () => {
   const pkg = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"));
   const forbidden = /git\s+(restore|checkout|clean|stash)\b|restore-urp-artifacts/;
-  for (const name of verificationEntrypoints) {
-    const cmd = pkg.scripts?.[name];
-    assert.equal(typeof cmd, "string", `package.json script "${name}" is required`);
-    assert.ok(
-      !forbidden.test(cmd),
-      `verification script "${name}" contains a forbidden direct command: ${cmd}`,
-    );
+  for (const base of verificationEntrypoints) {
+    // npm auto-runs pre/post lifecycle siblings, so a mutating command in
+    // "pretest" would execute on every `npm test` — guard them too.
+    for (const name of [base, `pre${base}`, `post${base}`]) {
+      const cmd = pkg.scripts?.[name];
+      if (name === base) {
+        assert.equal(typeof cmd, "string", `package.json script "${name}" is required`);
+      }
+      if (typeof cmd !== "string") continue;
+      assert.ok(
+        !forbidden.test(cmd),
+        `verification script "${name}" contains a forbidden direct command: ${cmd}`,
+      );
+    }
   }
 });
 
