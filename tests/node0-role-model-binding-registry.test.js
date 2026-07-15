@@ -8,6 +8,7 @@ import {
   runNode0RoleModelBindingRegistry,
   resolveRoleModelBinding,
   validateCapabilityRecord,
+  validateAcceptancePolicy,
   NODE0_ROLE_MODEL_BINDING_REGISTRY_SCHEMA,
   NODE0_ROLE_MODEL_BINDING_REGISTRY_TRUTH_LABEL,
   NODE0_ROLE_MODEL_BINDING_REGISTRY_GO_PHRASE,
@@ -546,4 +547,265 @@ test("ADEQUACY: policy-gated decisions stay deterministic and order-independent"
   assert.equal(sha256CanonicalJsonV1(a), sha256CanonicalJsonV1(b));
   assert.equal(a.status, "BOUND_SHADOW");
   assert.equal(a.chosen_record_id, "fixture-synthetic-passing-judge");
+});
+
+// --- CI repair (PR393-NODE22-COVERAGE-REPAIR-1A): non-object and garbage
+// inputs must fail closed at every public entry point ---
+
+test("FAIL-CLOSED: a non-object capability record is rejected outright (null, array, primitive)", () => {
+  for (const garbage of [null, undefined, [record()], "record", 42]) {
+    const v = validateCapabilityRecord(garbage);
+    assert.equal(v.ok, false);
+    assert.deepEqual([...v.blocked_by], ["record_not_object"]);
+  }
+});
+
+test("FAIL-CLOSED: a non-object acceptance policy is rejected outright (null, array, primitive)", () => {
+  for (const garbage of [null, [policy()], "policy", 7]) {
+    const v = validateAcceptancePolicy(garbage);
+    assert.equal(v.ok, false);
+    assert.deepEqual([...v.blocked_by], ["policy_not_object"]);
+  }
+});
+
+test("FAIL-CLOSED: a non-object input resolves to REJECTED input_not_object (never a throw, never a bind)", () => {
+  for (const garbage of [null, [input()], "input"]) {
+    const d = resolveRoleModelBinding(garbage);
+    assert.equal(d.status, "REJECTED");
+    assert.deepEqual([...d.reasons], ["input_not_object"]);
+    assert.equal(d.chosen_record_id, null);
+  }
+  const plan = planNode0RoleModelBindingRegistry({ consent: NODE0_ROLE_MODEL_BINDING_REGISTRY_GO_PHRASE, input: null });
+  assert.equal(plan.eligible, false);
+  assert.ok(plan.blocked_by.includes("input_not_object"));
+});
+
+test("FAIL-CLOSED: a missing or negative budget rejects — no binding without a resource ceiling", () => {
+  const missing = resolveRoleModelBinding(input({ budget: undefined }));
+  assert.equal(missing.status, "REJECTED");
+  assert.ok(missing.reasons.includes("budget_invalid"));
+  const negative = resolveRoleModelBinding(input({ budget: { vram_gb_max: -1, ram_gb_max: 96 } }));
+  assert.equal(negative.status, "REJECTED");
+  assert.ok(negative.reasons.includes("budget_invalid"));
+});
+
+test("FAIL-CLOSED: a malformed pat_bound_families (non-string-array) rejects — the independence set must be well-formed", () => {
+  const d = resolveRoleModelBinding(input({ pat_bound_families: "gemma" }));
+  assert.equal(d.status, "REJECTED");
+  assert.ok(d.reasons.includes("pat_bound_families_invalid"));
+  const mixed = resolveRoleModelBinding(input({ pat_bound_families: ["gemma", 3] }));
+  assert.equal(mixed.status, "REJECTED");
+  assert.ok(mixed.reasons.includes("pat_bound_families_invalid"));
+});
+
+test("FAIL-CLOSED: a malformed resource envelope rejects at the record level", () => {
+  const d = resolveRoleModelBinding(input({ records: [record({ resource_envelope: null })] }));
+  assert.equal(d.status, "REJECTED");
+  assert.ok(d.evaluated[0].reasons.includes("resource_envelope_invalid"));
+  const negative = resolveRoleModelBinding(input({ records: [record({ resource_envelope: { vram_gb_est: -0.1, ram_gb_est: 2 } })] }));
+  assert.ok(negative.evaluated[0].reasons.includes("resource_envelope_invalid"));
+});
+
+test("FAIL-CLOSED: verify rejects a non-object payload outright", () => {
+  for (const garbage of [null, [1], "payload"]) {
+    const v = verifyNode0RoleModelBindingRegistry(garbage);
+    assert.equal(v.ok, false);
+    assert.deepEqual([...v.blocked_by], ["payload_not_object"]);
+  }
+});
+
+test("FAIL-CLOSED: verify rejects a content_hash that is not sha256-format (receipt must be content-addressed)", () => {
+  const payload = buildNode0RoleModelBindingRegistryPayload(input());
+  for (const bad of ["not-a-hash", "md5:abc", `sha256:${"0".repeat(63)}`, 42, undefined]) {
+    const v = verifyNode0RoleModelBindingRegistry({ ...payload, content_hash: bad });
+    assert.equal(v.ok, false);
+    assert.ok(v.blocked_by.includes("content_hash_format_invalid"));
+  }
+});
+
+test("FAIL-CLOSED: an unhashable payload body never verifies (canonicalization_failed, not a throw)", () => {
+  // NaN passes no structural gate here but fails canonical-json-v1 —
+  // the verifier must fail closed instead of crashing or skipping the check.
+  const payload = buildNode0RoleModelBindingRegistryPayload(input());
+  const poisoned = {
+    ...payload,
+    input: { ...payload.input, records: [record({ evidence: { ...record().evidence, value: NaN } })] },
+  };
+  const v = verifyNode0RoleModelBindingRegistry(poisoned);
+  assert.equal(v.ok, false);
+  assert.ok(v.blocked_by.includes("canonicalization_failed"));
+});
+
+test("FAIL-CLOSED: the orchestrator refuses without exact consent and still reports an all-false boundary", () => {
+  const result = runNode0RoleModelBindingRegistry({ consent: "GO: wrong phrase", input: input() });
+  assert.equal(result.ok, false);
+  assert.ok(result.blocked_by.includes("consent_phrase_mismatch"));
+  for (const v of Object.values(result.boundary)) assert.equal(v, false);
+});
+
+test("FAIL-CLOSED: garbage entries inside the records array are reported as 'unknown', never dropped or bound", () => {
+  const badId = record({ record_id: 42 });
+  const d = resolveRoleModelBinding(input({ records: [null, badId] }));
+  assert.equal(d.status, "REJECTED");
+  assert.equal(d.evaluated.length, 2);
+  assert.equal(d.evaluated[0].record_id, "unknown");
+  assert.equal(d.evaluated[1].record_id, "unknown");
+  assert.ok(d.evaluated.some((x) => x.reasons.includes("record_not_object")));
+  assert.ok(d.evaluated.some((x) => x.reasons.includes("record_id_invalid")));
+});
+
+test("FAIL-CLOSED: absent mode and lane keys reject and surface as null in the decision, not as fabricated values", () => {
+  const i = input();
+  delete i.mode;
+  delete i.lane;
+  const d = resolveRoleModelBinding(i);
+  assert.equal(d.status, "REJECTED");
+  assert.ok(d.reasons.includes("mode_not_shadow_or_candidate"));
+  assert.ok(d.reasons.includes("lane_unknown"));
+  assert.equal(d.mode, null);
+  assert.equal(d.lane, null);
+});
+
+test("FAIL-CLOSED: zero or non-integer max_age_days rejects — an unbounded freshness window is not a window", () => {
+  const zero = resolveRoleModelBinding(input({ max_age_days: 0 }));
+  assert.equal(zero.status, "REJECTED");
+  assert.ok(zero.reasons.includes("max_age_days_invalid"));
+  const frac = resolveRoleModelBinding(input({ max_age_days: 1.5 }));
+  assert.ok(frac.reasons.includes("max_age_days_invalid"));
+});
+
+test("FAIL-CLOSED: a non-null non-string superseded_by is invalid, not treated as 'not superseded'", () => {
+  const v = validateCapabilityRecord(record({ superseded_by: 42 }));
+  assert.equal(v.ok, false);
+  assert.ok(v.blocked_by.includes("superseded_by_invalid"));
+});
+
+test("FAIL-CLOSED: verify rejects any boundary drift — missing key, extra key, flipped flag, or non-object", () => {
+  const payload = buildNode0RoleModelBindingRegistryPayload(input());
+  const { execution_allowed, ...missingKey } = payload.boundary;
+  const variants = [
+    { ...payload, boundary: null },
+    { ...payload, boundary: [] },
+    { ...payload, boundary: missingKey },
+    { ...payload, boundary: { ...payload.boundary, smuggled_extra: false } },
+    { ...payload, boundary: { ...payload.boundary, execution_allowed: true } },
+  ];
+  for (const forged of variants) {
+    const v = verifyNode0RoleModelBindingRegistry(forged);
+    assert.equal(v.ok, false);
+    assert.ok(v.blocked_by.includes("boundary_invalid"));
+  }
+});
+
+test("FAIL-CLOSED: verify pins every envelope constant — schema, canonicalization, hash algorithm, text encoding", () => {
+  const payload = buildNode0RoleModelBindingRegistryPayload(input());
+  const forgeries = [
+    [{ ...payload, schema: "bizra.dema.other.v9" }, "schema_invalid"],
+    [{ ...payload, canonicalization_algorithm: "json-stringify" }, "canonicalization_algorithm_invalid"],
+    [{ ...payload, hash_algorithm: "md5" }, "hash_algorithm_invalid"],
+    [{ ...payload, text_encoding: "latin1" }, "text_encoding_invalid"],
+  ];
+  for (const [forged, reason] of forgeries) {
+    const v = verifyNode0RoleModelBindingRegistry(forged);
+    assert.equal(v.ok, false);
+    assert.ok(v.blocked_by.includes(reason), `${reason} expected`);
+  }
+});
+
+test("FAIL-CLOSED: a null role contract rejects and yields role_id null in the decision, never a fabricated identity", () => {
+  const d = resolveRoleModelBinding(input({ role_contract: null }));
+  assert.equal(d.status, "REJECTED");
+  assert.ok(d.reasons.includes("role_contract_invalid"));
+  assert.equal(d.role_id, null);
+});
+
+test("FAIL-CLOSED: a non-string as_of timestamp rejects (time must be injected as a UTC ISO string)", () => {
+  const d = resolveRoleModelBinding(input({ as_of_iso: 1752537600000 }));
+  assert.equal(d.status, "REJECTED");
+  assert.ok(d.reasons.includes("as_of_iso_invalid"));
+});
+
+test("FAIL-CLOSED: verify rejects a missing decision block or an out-of-vocabulary decision status", () => {
+  const payload = buildNode0RoleModelBindingRegistryPayload(input());
+  const { decision, ...noDecision } = payload;
+  const missing = verifyNode0RoleModelBindingRegistry(noDecision);
+  assert.equal(missing.ok, false);
+  assert.ok(missing.blocked_by.includes("decision_status_invalid"));
+  const bogus = verifyNode0RoleModelBindingRegistry({ ...payload, decision: { ...decision, status: "BOUND_LIVE" } });
+  assert.equal(bogus.ok, false);
+  assert.ok(bogus.blocked_by.includes("decision_status_invalid"));
+});
+
+test("FAIL-CLOSED: zero-argument plan and run calls fail closed (no defaults can conjure consent or input)", () => {
+  const plan = planNode0RoleModelBindingRegistry();
+  assert.equal(plan.eligible, false);
+  assert.ok(plan.blocked_by.includes("consent_phrase_mismatch"));
+  assert.ok(plan.blocked_by.includes("input_not_object"));
+  const result = runNode0RoleModelBindingRegistry();
+  assert.equal(result.ok, false);
+  for (const v of Object.values(result.boundary)) assert.equal(v, false);
+});
+
+test("FAIL-CLOSED: every required capability-record field yields its exact named reason (mirrored field battery)", () => {
+  const cases = [
+    [{ schema: "bizra.node0.wrong.v9" }, "record_schema_invalid"],
+    [{ record_id: "" }, "record_id_invalid"],
+    [{ role_id: "  " }, "record_role_id_invalid"],
+    [{ lane: "not_a_lane" }, "record_lane_unknown"],
+    [{ model_id: "" }, "record_model_id_invalid"],
+    [{ backend_id: "" }, "record_backend_id_invalid"],
+    [{ family: "" }, "record_family_invalid"],
+    [{ evidence: null }, "evidence_missing"],
+    [{ evidence: [1] }, "evidence_missing"],
+    [{ evidence: { ...record().evidence, source_path: "" } }, "evidence_source_path_invalid"],
+    [{ evidence: { ...record().evidence, metric: "" } }, "evidence_metric_invalid"],
+    [{ evidence: { ...record().evidence, value: "90" } }, "evidence_value_invalid"],
+    [{ evidence: { ...record().evidence, value: Infinity } }, "evidence_value_invalid"],
+    [{ limitations: "none" }, "limitations_invalid"],
+    [{ resource_envelope: { vram_gb_est: NaN, ram_gb_est: 2 } }, "resource_envelope_invalid"],
+    [{ verification_state: "TRUST_ME" }, "verification_state_unknown"],
+    [{ contradicted_by: "nothing" }, "contradicted_by_invalid"],
+  ];
+  for (const [over, reason] of cases) {
+    const v = validateCapabilityRecord(record(over));
+    assert.equal(v.ok, false, reason);
+    assert.ok(v.blocked_by.includes(reason), `${reason} expected, got ${v.blocked_by.join(",")}`);
+  }
+});
+
+test("FAIL-CLOSED: every required acceptance-policy field yields its exact named reason (mirrored field battery)", () => {
+  const cases = [
+    [{ schema: "bizra.node0.wrong_policy.v9" }, "policy_schema_invalid"],
+    [{ policy_id: "" }, "policy_id_invalid"],
+    [{ policy_version: " " }, "policy_version_invalid"],
+    [{ role_id: "" }, "policy_role_id_invalid"],
+    [{ lane: "not_a_lane" }, "policy_lane_unknown"],
+    [{ metric: "" }, "policy_metric_invalid"],
+    [{ threshold: NaN }, "policy_threshold_invalid"],
+    [{ evaluation_id: "" }, "policy_evaluation_id_invalid"],
+  ];
+  for (const [over, reason] of cases) {
+    const v = validateAcceptancePolicy(policy(over));
+    assert.equal(v.ok, false, reason);
+    assert.ok(v.blocked_by.includes(reason), `${reason} expected, got ${v.blocked_by.join(",")}`);
+  }
+});
+
+test("TIME: millisecond-precision UTC timestamps are accepted; regex-shaped but non-calendar dates are not", () => {
+  const ms = resolveRoleModelBinding(input({ as_of_iso: "2026-07-15T00:00:00.123Z" }));
+  assert.equal(ms.status, "BOUND_SHADOW");
+  const impossible = resolveRoleModelBinding(input({ as_of_iso: "0000-00-00T00:00:00Z" }));
+  assert.equal(impossible.status, "REJECTED");
+  assert.ok(impossible.reasons.includes("as_of_iso_invalid"));
+});
+
+test("FAIL-CLOSED: the orchestrator converts an unhashable input into canonicalization_failed, never a crash", () => {
+  // Structurally plan-eligible (records array is shape-checked per record only
+  // inside resolve), but the NaN evidence value cannot be canonicalized: the
+  // build step must fail closed through the run() catch path.
+  const i = input({ records: [record({ evidence: { ...record().evidence, value: NaN } })] });
+  const result = runNode0RoleModelBindingRegistry({ consent: NODE0_ROLE_MODEL_BINDING_REGISTRY_GO_PHRASE, input: i });
+  assert.equal(result.ok, false);
+  assert.deepEqual([...result.blocked_by], ["canonicalization_failed"]);
+  for (const v of Object.values(result.boundary)) assert.equal(v, false);
 });

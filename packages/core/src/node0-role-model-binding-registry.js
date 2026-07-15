@@ -476,22 +476,18 @@ export function verifyNode0RoleModelBindingRegistry(payload) {
     const { content_hash, ...body } = payload;
     let recomputed;
     let rederived;
+    let embedded;
     try {
       recomputed = sha256CanonicalJsonV1(body);
       rederived = sha256CanonicalJsonV1(resolveRoleModelBinding(payload.input));
+      // decision is a subset of the body: if the body hashed, this cannot
+      // throw — one shared catch keeps the whole comparison fail-closed.
+      embedded = sha256CanonicalJsonV1(payload.decision);
     } catch {
       blocked_by.push("canonicalization_failed");
     }
     if (recomputed !== undefined && recomputed !== content_hash) blocked_by.push("content_hash_mismatch");
-    if (rederived !== undefined) {
-      let embedded;
-      try {
-        embedded = sha256CanonicalJsonV1(payload.decision);
-      } catch {
-        blocked_by.push("canonicalization_failed");
-      }
-      if (embedded !== undefined && embedded !== rederived) blocked_by.push("decision_not_rederivable");
-    }
+    if (embedded !== undefined && rederived !== undefined && embedded !== rederived) blocked_by.push("decision_not_rederivable");
   }
   return Object.freeze({ ok: blocked_by.length === 0, blocked_by: Object.freeze(blocked_by) });
 }
