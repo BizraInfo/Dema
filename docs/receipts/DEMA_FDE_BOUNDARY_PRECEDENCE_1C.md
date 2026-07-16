@@ -83,7 +83,7 @@ node --test tests/dema-fde-dual-diagnostic.test.js
 node scripts/review/dema-fde-dual-diagnostic-check.mjs --json
 ```
 
-Focused result: 47 FDE tests pass, including mixed boundary-plus-billing,
+Focused result: 48 FDE tests pass, including mixed boundary-plus-billing,
 bare standalone sentinels (alone and mixed with billing lock), clause-bounded
 all-occurrence matching, canonical all-false and negated evidence,
 positive-autopatch hard stops, outward-only billing, legacy
