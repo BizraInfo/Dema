@@ -13,6 +13,7 @@ import {
   FDE_FAILURE_CLASSES,
   FDE_HHMM_PHASES,
   verifyLegacyDemaFdeDualDiagnosticIntegrity,
+  verifyDemaFdeDualDiagnosticForHistoricalReceipt,
 } from "../packages/core/src/dema-fde-dual-diagnostic.js";
 
 test("builds deterministic frozen dual diagnostic envelope", () => {
@@ -719,6 +720,61 @@ test("relabeling a v0.2 report as v0.1 and rehashing is rejected (PR #396 P1)", 
   });
   assert.equal(marker.availability, "UNKNOWN");
   assert.equal(marker.local_proof_lane, false);
+});
+
+test("legacy verifier fails closed on wrong schema and missing input", () => {
+  // A v0.2 report handed to the legacy verifier is a schema mismatch.
+  const current = diagnoseDemaFailure(defaultDemaFdeDualDiagnosticFixture());
+  const wrongSchema = verifyLegacyDemaFdeDualDiagnosticIntegrity(current);
+  assert.equal(wrongSchema.ok, false);
+  assert.ok(wrongSchema.blocked_by.includes("invalid_schema"));
+  assert.equal(wrongSchema.verification_mode, "legacy_v0_1_semantic_rederivation");
+  assert.equal(wrongSchema.authority_eligible, false);
+
+  // A legacy-schema report that carries no input cannot be re-derived.
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL("./fixtures/dema-fde-dual-diagnostic-v0.1.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const { input: _stripped, ...noInput } = fixture;
+  const missing = verifyLegacyDemaFdeDualDiagnosticIntegrity(noInput);
+  assert.equal(missing.ok, false);
+  assert.ok(missing.blocked_by.includes("input_missing_for_rederivation"));
+  assert.equal(missing.authority_eligible, false);
+});
+
+test("historical-receipt router dispatches by schema and fails closed on unknown", () => {
+  const v02 = diagnoseDemaFailure(defaultDemaFdeDualDiagnosticFixture());
+  const v02Verdict = verifyDemaFdeDualDiagnosticForHistoricalReceipt(v02);
+  assert.equal(v02Verdict.ok, true);
+  assert.equal(v02Verdict.verification_mode, "semantic_rederivation_v0_2");
+  assert.equal(v02Verdict.authority_eligible, true);
+
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL("./fixtures/dema-fde-dual-diagnostic-v0.1.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const v01Verdict = verifyDemaFdeDualDiagnosticForHistoricalReceipt(fixture);
+  assert.equal(v01Verdict.ok, true);
+  assert.equal(v01Verdict.verification_mode, "legacy_v0_1_semantic_rederivation");
+  assert.equal(v01Verdict.authority_eligible, false);
+
+  const unknown = verifyDemaFdeDualDiagnosticForHistoricalReceipt({
+    ...fixture,
+    schema: "bizra.dema.fde_dual_diagnostic.v9.9",
+  });
+  assert.equal(unknown.ok, false);
+  assert.ok(unknown.blocked_by.includes("invalid_schema"));
+  assert.equal(unknown.verification_mode, "unsupported");
+  assert.equal(unknown.authority_eligible, false);
+
+  const nullish = verifyDemaFdeDualDiagnosticForHistoricalReceipt(null);
+  assert.equal(nullish.ok, false);
+  assert.equal(nullish.authority_eligible, false);
 });
 
 test("bare standalone boundary sentinels remain hard stops (PR #396 P1)", () => {

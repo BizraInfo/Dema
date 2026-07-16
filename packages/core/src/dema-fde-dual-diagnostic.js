@@ -517,6 +517,11 @@ function classifyLensSharedTail(input, lens, haystack) {
 function classifyPrimary(inward, outward) {
   // Failure classification is authority-monotonic: a boundary stop cannot be
   // downgraded to an environment repair such as billing unlock.
+  // NOTE: boundary precedence is primarily decided one layer down in
+  // classifyLens (boundary is returned before billing there, and
+  // combinedFailureText is lens-independent so both lenses agree on boundary
+  // evidence). This guard is therefore defense-in-depth for the monotonicity
+  // invariant — it holds even if a future change makes the lenses diverge.
   if (
     inward.failure_class === "boundary_violation" ||
     outward.failure_class === "boundary_violation"
@@ -820,6 +825,12 @@ function classifyLensLegacyV01(input, lens) {
 }
 
 function classifyPrimaryLegacyV01(inward, outward) {
+  // Frozen v0.1 primary ordering: billing before boundary, as the parent
+  // commit (403c674) shipped it. As in v0.2, both lens results already agree
+  // on boundary/billing (classifyLensLegacyV01 decides one layer down over
+  // lens-independent text), so this primary ordering is not independently
+  // exercisable through the public API; it is preserved for byte-faithful
+  // legacy rederivation, not as a live decision point.
   if (
     outward.failure_class === "github_actions_billing_lock" &&
     outward.confidence !== "low"
