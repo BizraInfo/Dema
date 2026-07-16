@@ -539,6 +539,7 @@ test("verify rejects unsupported failure_class", () => {
 // ---------------------------------------------------------------------------
 
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import {
   buildCiVendorAvailabilityMarker,
   defaultGithubActionsBillingLockFdeFixture,
@@ -617,33 +618,148 @@ test("verify rejects a report that carries no input to re-derive from", () => {
   assert.ok(verified.blocked_by.includes("input_missing_for_rederivation"));
 });
 
-test("legacy v0.1 reports remain integrity-verifiable but cannot carry authority", () => {
-  const current = diagnoseDemaFailure(defaultGithubActionsBillingLockFdeFixture());
-  const { diagnostic_hash: _drop, ...currentBody } = current;
-  const legacyBody = {
-    ...currentBody,
-    schema: DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA,
-  };
-  const legacy = {
-    ...legacyBody,
-    diagnostic_hash: kernelDiagnosticHash(legacyBody),
-  };
+test("authentic frozen v0.1 fixture re-derives under the frozen legacy algorithm", () => {
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL("./fixtures/dema-fde-dual-diagnostic-v0.1.json", import.meta.url),
+      "utf8",
+    ),
+  );
 
-  const historical = verifyLegacyDemaFdeDualDiagnosticIntegrity(legacy);
+  const historical = verifyLegacyDemaFdeDualDiagnosticIntegrity(fixture);
   assert.equal(historical.ok, true);
-  assert.equal(historical.verification_mode, "legacy_v0_1_integrity_only");
+  assert.equal(historical.verification_mode, "legacy_v0_1_semantic_rederivation");
   assert.equal(historical.authority_eligible, false);
 
-  const currentAuthority = verifyDemaFdeDualDiagnostic(legacy);
+  const currentAuthority = verifyDemaFdeDualDiagnostic(fixture);
   assert.equal(currentAuthority.ok, false);
   assert.ok(currentAuthority.blocked_by.includes("invalid_schema"));
 
   const marker = buildCiVendorAvailabilityMarker({
-    fde_report: legacy,
+    fde_report: fixture,
     operator_declared: true,
   });
   assert.equal(marker.availability, "UNKNOWN");
   assert.equal(marker.local_proof_lane, false);
+});
+
+test("relabeling a v0.2 report as v0.1 and rehashing is rejected (PR #396 P1)", () => {
+  const current = diagnoseDemaFailure(defaultGithubActionsBillingLockFdeFixture());
+  const { diagnostic_hash: _drop, ...currentBody } = current;
+
+  // The exact reviewer exploit: fabricate a derived field, relabel the schema
+  // as legacy, recompute a self-consistent hash. Schema relabeling alone must
+  // not mint historical provenance.
+  const fabricatedBody = {
+    ...currentBody,
+    schema: DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA,
+    failure_class: "implementation_defect",
+  };
+  const fabricated = {
+    ...fabricatedBody,
+    diagnostic_hash: kernelDiagnosticHash(fabricatedBody),
+  };
+  const fabricatedVerdict = verifyLegacyDemaFdeDualDiagnosticIntegrity(fabricated);
+  assert.equal(fabricatedVerdict.ok, false);
+  assert.ok(
+    fabricatedVerdict.blocked_by.includes("legacy_semantic_rederivation_mismatch"),
+  );
+  assert.equal(fabricatedVerdict.authority_eligible, false);
+
+  // Even an unfabricated straight relabel fails: this input derives
+  // differently under the frozen v0.1 algorithm than under v0.2.
+  const relabeledBody = {
+    ...currentBody,
+    schema: DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA,
+  };
+  const relabeled = {
+    ...relabeledBody,
+    diagnostic_hash: kernelDiagnosticHash(relabeledBody),
+  };
+  assert.equal(verifyLegacyDemaFdeDualDiagnosticIntegrity(relabeled).ok, false);
+
+  const marker = buildCiVendorAvailabilityMarker({
+    fde_report: fabricated,
+    operator_declared: true,
+  });
+  assert.equal(marker.availability, "UNKNOWN");
+  assert.equal(marker.local_proof_lane, false);
+});
+
+test("bare standalone boundary sentinels remain hard stops (PR #396 P1)", () => {
+  const markers = [
+    "wallet_accessed",
+    "network_used",
+    "daemon_started",
+    "autopatch_performed",
+    "token mint",
+  ];
+  for (const marker of markers) {
+    const report = diagnoseDemaFailure({
+      failed_command: "npm test",
+      exit_code: 1,
+      stdout_excerpt: `steps=[] runner_id=7 ${marker}`,
+      stderr_excerpt: "",
+      changed_files: [],
+      environment: { node_version: "22.x", os: "linux", branch: "main" },
+    });
+    assert.equal(report.failure_class, "boundary_violation", marker);
+    assert.equal(report.inward_diagnosis.failure_class, "boundary_violation", marker);
+  }
+});
+
+test("bare sentinel mixed with GitHub billing lock still hard-stops (PR #396 P1)", () => {
+  for (const marker of ["wallet_accessed", "token mint"]) {
+    const report = diagnoseDemaFailure({
+      failed_command: "gh pr checks 396",
+      exit_code: 1,
+      stdout_excerpt: `jobs: steps=[], runner_id=0, ${marker}`,
+      stderr_excerpt:
+        "The job was not started because your account is locked due to a billing issue.",
+      changed_files: [],
+      environment: {
+        node_version: "22.x",
+        os: "linux",
+        branch: "main",
+        ci_provider: "github_actions",
+        runner_assigned: false,
+        runner_id: 0,
+      },
+    });
+    assert.equal(report.failure_class, "boundary_violation", marker);
+    assert.equal(report.operator_action_required, null, marker);
+    assert.equal(
+      report.minimal_fix_plan.some((step) => step.includes("billing")),
+      false,
+      `${marker}: billing repair must not mask a boundary stop`,
+    );
+  }
+});
+
+test("bare sentinels valued false or negated stay silent (PR #396 P1)", () => {
+  const safePhrases = [
+    "wallet_accessed: false",
+    '"wallet_accessed": false',
+    "network_used=false",
+    "daemon_started: false",
+    "autopatch_performed: false",
+    "no wallet was accessed",
+    "token minting is forbidden",
+    "no live urp requested",
+  ];
+  for (const phrase of safePhrases) {
+    const report = diagnoseDemaFailure({
+      failed_command: "node scripts/review/safety-report.mjs",
+      exit_code: 1,
+      stdout_excerpt: phrase,
+      stderr_excerpt: "documentation assertion failed",
+      changed_files: [],
+      environment: { node_version: "22.x", os: "linux", branch: "main" },
+    });
+    assert.notEqual(report.failure_class, "boundary_violation", phrase);
+    assert.notEqual(report.inward_diagnosis.failure_class, "boundary_violation", phrase);
+    assert.notEqual(report.outward_diagnosis.failure_class, "boundary_violation", phrase);
+  }
 });
 
 test("forged billing-lock report cannot open the local proof lane end-to-end", () => {

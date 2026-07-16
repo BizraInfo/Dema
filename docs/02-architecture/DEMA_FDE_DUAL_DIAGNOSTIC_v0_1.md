@@ -15,8 +15,14 @@ FDE classifies failures. It does not patch, commit, push, merge, or execute.
 
 New reports use `bizra.dema.fde_dual_diagnostic.v0.2`, which binds the 1C
 authority-monotonic precedence policy. Historical v0.1 reports may be checked
-only through the explicit `legacy_v0_1_integrity_only` verifier. They are not
-authority-eligible and cannot open the CI vendor local-proof lane.
+only through the explicit `legacy_v0_1_semantic_rederivation` verifier, which
+re-derives the whole diagnosis under a frozen reconstruction of the v0.1
+algorithm — relabeling a current report as v0.1 and rehashing it is rejected
+(`legacy_semantic_rederivation_mismatch`), because a schema label alone does
+not mint historical provenance. Legacy reports are never authority-eligible
+and cannot open the CI vendor local-proof lane. The frozen fixture
+`tests/fixtures/dema-fde-dual-diagnostic-v0.1.json` pins the frozen algorithm
+(and the classifier tails it shares with v0.2) against drift.
 
 ## Input Contract
 

@@ -32,10 +32,33 @@ outward environment condition.
    consuming a later positive action, and positive autopatch authority fields
    remain hard stops.
 6. New reports use schema v0.2. Historical v0.1 reports have an explicit
-   integrity-only verifier with `authority_eligible:false`; current authority
+   legacy verifier with `authority_eligible:false`; current authority
    consumers reject them, while historical founder-impact receipts may replay
    their embedded FDE evidence without letting FDE affect authority. Historical
    replay also binds `fde_summary` exactly to the embedded report.
+
+## PR #396 review repair (P1)
+
+Independent review of this slice reproduced two fail-open defects after the
+first green run; both are repaired in-slice with the reviewer exploits frozen
+as regressions:
+
+1. **Bare sentinels restored.** The clause-aware rewrite dropped the parent
+   classifier's standalone machine sentinels (`wallet_accessed`,
+   `network_used`, `daemon_started`, `autopatch_performed`, bare
+   `token mint`), letting mixed billing-plus-sentinel evidence downgrade to
+   `billing_unlock` or fall through to `unknown`. Bare sentinels are positive
+   boundary evidence again, while `key: false`, canonical all-false boundary
+   JSON, and clause-negated forms stay silent.
+2. **Legacy relabeling closed.** The v0.1 path verified structure and hash
+   only, so a fabricated v0.2 report relabeled as v0.1 and rehashed was
+   accepted as historical evidence. The legacy verifier now re-derives the
+   whole diagnosis under a frozen reconstruction of the v0.1 algorithm
+   (`legacy_v0_1_semantic_rederivation`); a schema label alone cannot mint
+   historical provenance. The frozen fixture
+   `tests/fixtures/dema-fde-dual-diagnostic-v0.1.json` was proven authentic by
+   rebuilding its input under the actual parent-commit module
+   (hash-identical) and now pins the frozen algorithm against drift.
 
 The authority law is monotonic:
 
@@ -53,10 +76,12 @@ node --test tests/dema-fde-dual-diagnostic.test.js
 node scripts/review/dema-fde-dual-diagnostic-check.mjs --json
 ```
 
-Focused result: 43 FDE tests pass, including mixed boundary-plus-billing,
-clause-bounded all-occurrence matching, canonical all-false and negated evidence,
-positive-autopatch hard stops, outward-only billing, and legacy
-integrity-without-authority regressions. The founder-impact compatibility test
+Focused result: 47 FDE tests pass, including mixed boundary-plus-billing,
+bare standalone sentinels (alone and mixed with billing lock), clause-bounded
+all-occurrence matching, canonical all-false and negated evidence,
+positive-autopatch hard stops, outward-only billing, legacy
+rederivation-without-authority regressions, and rejection of the
+relabel-and-rehash exploit. The founder-impact compatibility test
 replays a frozen v0.1 fixture, rejects a mismatched summary, and preserves its
 all-false authority fields.
 
