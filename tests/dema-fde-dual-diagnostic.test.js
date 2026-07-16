@@ -796,6 +796,9 @@ test("bare standalone boundary sentinels remain hard stops (PR #396 P1)", () => 
     });
     assert.equal(report.failure_class, "boundary_violation", marker);
     assert.equal(report.inward_diagnosis.failure_class, "boundary_violation", marker);
+    // Assert both lenses: the primary can be boundary_violation while an
+    // outward-lens regression silently returns github_actions_billing_lock.
+    assert.equal(report.outward_diagnosis.failure_class, "boundary_violation", marker);
   }
 });
 
@@ -818,6 +821,8 @@ test("bare sentinel mixed with GitHub billing lock still hard-stops (PR #396 P1)
       },
     });
     assert.equal(report.failure_class, "boundary_violation", marker);
+    assert.equal(report.inward_diagnosis.failure_class, "boundary_violation", marker);
+    assert.equal(report.outward_diagnosis.failure_class, "boundary_violation", marker);
     assert.equal(report.operator_action_required, null, marker);
     assert.equal(
       report.minimal_fix_plan.some((step) => step.includes("billing")),
