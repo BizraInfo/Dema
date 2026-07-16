@@ -643,6 +643,41 @@ test("authentic frozen v0.1 fixture re-derives under the frozen legacy algorithm
   assert.equal(marker.local_proof_lane, false);
 });
 
+test("frozen v0.1 corpus pins every shared derivation branch (PR #396 review)", () => {
+  // Authentic parent-commit reports spanning every failure class, measured
+  // status, and confidence tier. The frozen v0.1 path shares helper tails
+  // with v0.2; this corpus is the comprehensive branch pin — mutating any
+  // shared derivation code breaks a vector here, failing closed.
+  const corpus = JSON.parse(
+    readFileSync(
+      new URL("./fixtures/dema-fde-dual-diagnostic-v0.1-corpus.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  assert.ok(corpus.entries.length >= 17);
+
+  const classes = new Set();
+  for (const { note, report } of corpus.entries) {
+    const verdict = verifyLegacyDemaFdeDualDiagnosticIntegrity(report);
+    assert.equal(verdict.ok, true, `${note}: ${verdict.blocked_by?.join(",")}`);
+    assert.equal(verdict.authority_eligible, false, note);
+    classes.add(report.failure_class);
+  }
+  for (const cls of FDE_FAILURE_CLASSES) {
+    assert.ok(classes.has(cls), `corpus missing failure class ${cls}`);
+  }
+
+  // Canary: flipping any derived field in a corpus entry and rehashing must
+  // fail rederivation, exactly like the relabel exploit.
+  const victim = corpus.entries[0].report;
+  const { diagnostic_hash: _d, ...body } = victim;
+  const flippedBody = { ...body, measured_status: "UNKNOWN", terminal_state: "INSUFFICIENT_EVIDENCE" };
+  const flipped = { ...flippedBody, diagnostic_hash: kernelDiagnosticHash(flippedBody) };
+  const flippedVerdict = verifyLegacyDemaFdeDualDiagnosticIntegrity(flipped);
+  assert.equal(flippedVerdict.ok, false);
+  assert.ok(flippedVerdict.blocked_by.includes("legacy_semantic_rederivation_mismatch"));
+});
+
 test("relabeling a v0.2 report as v0.1 and rehashing is rejected (PR #396 P1)", () => {
   const current = diagnoseDemaFailure(defaultGithubActionsBillingLockFdeFixture());
   const { diagnostic_hash: _drop, ...currentBody } = current;
