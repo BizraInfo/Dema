@@ -43,6 +43,34 @@ provenance or remote/CI execution.
    retired file, so the current two regression assertions are source-derivable
    failures on that tree. No separate red-test execution log is claimed.
 
+## Rebind observation (1B, 2026-07-17, `LOCAL_ONLY`)
+
+Reconciliation of this repair with current `main`, recorded as local operator
+observations under the same caveats as the section above.
+
+- Parents of the reconciliation lineage: `32b0670` (review-fix head) merged
+  with `816cd31` (main, PR #396) as `dd5d05d`, then merged with `a8db3f7`
+  (main, PR #397). Both merges auto-resolved; the second touched only
+  `docs/02-architecture/key-maker-epistemic-conduct-v0.1.md` and
+  `docs/06-adr/ADR-045-diagnostic-schema-versioning-and-fail-closed-negation.md`.
+- `git diff 816cd31..a8db3f7 -- package.json scripts/ci/ scripts/review/ tests/`
+  is empty, so the 2026-07-17 disposable-worktree red observation at `816cd31`
+  (preflight reverted a tracked edit to
+  `artifacts/proofs/node0-local-urp/critic_report_001.json`, exit 0) remains
+  the effective pre-repair baseline for `a8db3f7`.
+- Preservation observation at `dd5d05d`
+  (`/data/bizra/logs/tai-1b-preservation-npm-test.log`): a tracked sentinel
+  edit (`165cdfac…0a8cd5`) and an untracked sentinel (`b5f7e7d2…25cd51`)
+  hashed byte-identical before and after a full `npm test` run.
+- Suite at `dd5d05d` in the sandboxed session
+  (`/data/bizra/logs/tai-1b-clean-npm-test.log`): 7,510 tests, 7,506 pass,
+  4 fail — all with sandbox-environment signatures (`EROFS` under `$HOME`,
+  `uv_os_get_passwd` `ENOENT`); the three G8-unrecognized failing test files
+  are byte-identical to both merge parents. No mask or allowlist was widened.
+  Coverage thresholds measured 95.28 line / 84.24 branch / 97.76 funcs
+  (`/data/bizra/logs/tai-1b-coverage.log`). These are `LOCAL_ONLY`
+  observations; remote CI on the pushed head remains the required authority.
+
 ## Repair (minimum)
 
 - `package.json`: removed the `node scripts/ci/restore-urp-artifacts.mjs && ` prefix from
