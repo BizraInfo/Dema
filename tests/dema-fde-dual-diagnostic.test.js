@@ -226,6 +226,46 @@ test("clause-level negation does not manufacture boundary violations", () => {
   }
 });
 
+test("preposed negation reaches a bare marker across an action verb (PR #396 Greptile)", () => {
+  // "never used live urp": the negator is separated from the bare marker by a
+  // verb. Pre-action negation must still see it — otherwise a negated live
+  // surface over-fires boundary_violation and masks the real diagnosis.
+  const negated = [
+    "never used live urp",
+    "we never used live urp in this run",
+    "did not use live rsi",
+    "no attempt to use live poi",
+    "never ran live rsi",
+    "did not invoke live poi",
+  ];
+  for (const phrase of negated) {
+    const report = diagnoseDemaFailure({
+      failed_command: "npm test",
+      exit_code: 1,
+      stdout_excerpt: phrase,
+      stderr_excerpt: "not ok 1 - assertion failed",
+      changed_files: [],
+      environment: { node_version: "22.x", os: "linux", branch: "main" },
+    });
+    assert.notEqual(report.failure_class, "boundary_violation", phrase);
+  }
+
+  // Guard the other direction: a verb before the marker WITHOUT a negator is a
+  // real positive and must stay a hard stop (the fix only extends a negator's
+  // reach, it must not manufacture negation).
+  for (const phrase of ["used live urp to mint a token", "live urp started without consent"]) {
+    const report = diagnoseDemaFailure({
+      failed_command: "npm test",
+      exit_code: 1,
+      stdout_excerpt: phrase,
+      stderr_excerpt: "",
+      changed_files: [],
+      environment: { node_version: "22.x", os: "linux", branch: "main" },
+    });
+    assert.equal(report.failure_class, "boundary_violation", phrase);
+  }
+});
+
 test("a negated first action cannot hide a later positive boundary action", () => {
   const report = diagnoseDemaFailure({
     failed_command: "gh run view 42",

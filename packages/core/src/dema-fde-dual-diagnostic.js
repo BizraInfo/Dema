@@ -292,7 +292,7 @@ function regexEscape(value) {
 const CLAUSE_BOUNDARY_PATTERN =
   /[.;,\n]|\b(?:although|but|however|later|then|yet)\b/g;
 const PRE_ACTION_NEGATION_PATTERN =
-  /(?:\b(?:blocked|denied|failed|forbidden|never|no|prevented|refused|without)\b|\b(?:are|can|could|did|do|does|had|has|have|is|should|was|were|will|would)\s+not\b|\bnot\b)(?:\W+(?:action|actually|allowed|any|attempt|attempted|attempting|authorization|authority|been|being|effort|evidence|ever|for|from|intent|intention|made|move|of|operation|permission|perform|performed|plan|planned|request|requested|sign|step|to|tried|try|trying))*\W*$/;
+  /(?:\b(?:blocked|denied|failed|forbidden|never|no|prevented|refused|without)\b|\b(?:are|can|could|did|do|does|had|has|have|is|should|was|were|will|would)\s+not\b|\bnot\b)(?:\W+(?:access|accessed|accessing|action|actually|allowed|any|attempt|attempted|attempting|authorization|authority|been|being|connect|connected|connecting|effort|enable|enabled|enabling|evidence|ever|for|from|intent|intention|invoke|invoked|invoking|launch|launched|launching|made|mint|minted|minting|move|of|operation|permission|perform|performed|plan|planned|ran|request|requested|run|running|sign|start|started|starting|step|to|tried|try|trying|use|used|using))*\W*$/;
 const POST_ACTION_NEGATION_PATTERN =
   /^\W*(?:(?:are|became|got|had|has|have|is|remained|remains|was|were)\W+)?(?:blocked|denied|disabled|disallowed|forbidden|never|not|prevented|refused|rejected)\b/;
 const COMPLETED_ACTION_PATTERN =

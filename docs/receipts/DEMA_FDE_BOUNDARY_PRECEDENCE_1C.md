@@ -66,6 +66,14 @@ as regressions:
    the parent-commit module and spanning every failure class, measured
    status, and confidence tier — makes any mutation of shared derivation code
    fail closed, with a flip-and-rehash canary.
+4. **Preposed negation reaches across a verb.** Fresh review found that a
+   negator separated from a bare marker by an action verb (`never used live
+   urp`) was missed, over-firing `boundary_violation` and masking the real
+   diagnosis. The pre-action negation filler set now includes the action-verb
+   forms, so a negator's reach spans the intervening verb; a verb before a
+   marker with no negator (`used live urp to mint a token`) still hard-stops.
+   Regression-locked. This affects the v0.2 matcher only — the frozen v0.1 path
+   uses raw substring matching and is untouched.
 
 The authority law is monotonic:
 
@@ -83,7 +91,7 @@ node --test tests/dema-fde-dual-diagnostic.test.js
 node scripts/review/dema-fde-dual-diagnostic-check.mjs --json
 ```
 
-Focused result: 50 FDE tests pass, including mixed boundary-plus-billing,
+Focused result: 51 FDE tests pass, including mixed boundary-plus-billing,
 bare standalone sentinels (alone and mixed with billing lock), clause-bounded
 all-occurrence matching, canonical all-false and negated evidence,
 positive-autopatch hard stops, outward-only billing, legacy
