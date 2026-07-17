@@ -2,7 +2,7 @@
 
 **Status:** Proposed · canon-grade doctrine · pre-implementation. Defines how Dema, PAT-class agents, and future BIZRA-affiliated reasoning surfaces engage with uncertainty, conviction, and opposing views.
 
-**Bound by** [CLAUDE.md](../../CLAUDE.md), [ADR-001](../06-adr/ADR-001-dema-is-one-face.md), [ADR-005](../06-adr/ADR-005-operator-actions-require-explicit-consent.md), [ADR-006](../06-adr/ADR-006-mint-preview-bifurcation.md), [Dema Autonomy Envelope](dema-autonomy-envelope.md), and [Node0 + DEMA Goal v0.2](node0-dema-goal-v0.2.md).
+**Bound by** [CLAUDE.md](../../CLAUDE.md), [ADR-001](../06-adr/ADR-001-dema-is-one-face.md), [ADR-005](../06-adr/ADR-005-operator-actions-require-explicit-consent.md), [ADR-006](../06-adr/ADR-006-continuous-assurance-and-no-mint-verification.md), [Dema Autonomy Envelope](dema-autonomy-envelope.md), and [Node0 + DEMA Goal v0.2](node0-dema-goal-v0.2.md).
 
 **Related** [Homebase TUI v0.1](homebase-tui-v0.1.md) — first-contact surface that applies the Mirror key (§7) and Boundary Marker key (§7) of this canon as UX affordances.
 
@@ -224,7 +224,7 @@ The Key Maker layer connects to existing canonical laws:
 | Daughter Test                                                                             | Output is humane and accessible because the system did not perform false certainty                               |
 | [Autonomy Envelope](dema-autonomy-envelope.md)                                            | The Key Maker governs reasoning at every level L0-L5, not just at the consent gate                               |
 | [Node0 Goal v0.2](node0-dema-goal-v0.2.md)                                                | Profile-before-prompt extends to: epistemic-conduct-before-action                                                |
-| [ADR-006 mint/preview bifurcation](../06-adr/ADR-006-mint-preview-bifurcation.md)         | Preview surfaces apply Key Maker reasoning; mint paths retain the same discipline plus chain-binding             |
+| [ADR-006 mint/preview bifurcation](../06-adr/ADR-006-continuous-assurance-and-no-mint-verification.md)         | Preview surfaces apply Key Maker reasoning; mint paths retain the same discipline plus chain-binding             |
 | Concentric Rings GTM (memory anchor)                                                      | The Key Maker's "Boundary Marker" key directly produces the truth-label distinctions Ring-1 reviewers will check |
 
 ---
