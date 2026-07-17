@@ -297,6 +297,12 @@ const POST_ACTION_NEGATION_PATTERN =
   /^\W*(?:(?:are|became|got|had|has|have|is|remained|remains|was|were)\W+)?(?:blocked|denied|disabled|disallowed|forbidden|never|not|prevented|refused|rejected)\b/;
 const COMPLETED_ACTION_PATTERN =
   /\b(?:accessed|enabled|invoked|launched|minted|performed|started)\b/;
+// An explicit postposed STATE negation ("is forbidden", "was blocked") denies
+// the action even when the marker itself names a completed verb. A bare
+// negator without an auxiliary (e.g. "accessed not authorized") does NOT
+// suppress it — that reads as the action having happened, still a violation.
+const POSTPOSED_STATE_NEGATION_PATTERN =
+  /^\W*(?:are|is|was|were)\W+(?:blocked|denied|disabled|disallowed|forbidden|prevented|prohibited|refused|rejected)\b/;
 
 function clauseBefore(haystack, index) {
   const prefix = haystack.slice(0, index);
@@ -318,12 +324,15 @@ function evidenceIsNegated(haystack, match, { postposed = true } = {}) {
     return true;
   }
   if (/\b(?:never|no|not|without)\b/.test(match[0])) return true;
-  if (postposed && !COMPLETED_ACTION_PATTERN.test(match[0])) {
-    return POST_ACTION_NEGATION_PATTERN.test(
-      clauseAfter(haystack, match.index + match[0].length),
-    );
+  if (!postposed) return false;
+  const after = clauseAfter(haystack, match.index + match[0].length);
+  // A completed-verb marker ("wallet accessed", "daemon started") still yields
+  // to an explicit state negation, but not to a bare qualifier — otherwise
+  // "wallet accessed is forbidden" over-fires as a hard stop (PR #396 Greptile).
+  if (COMPLETED_ACTION_PATTERN.test(match[0])) {
+    return POSTPOSED_STATE_NEGATION_PATTERN.test(after);
   }
-  return false;
+  return POST_ACTION_NEGATION_PATTERN.test(after);
 }
 
 function boundaryViolationHits(haystack) {

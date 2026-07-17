@@ -74,6 +74,13 @@ as regressions:
    marker with no negator (`used live urp to mint a token`) still hard-stops.
    Regression-locked. This affects the v0.2 matcher only — the frozen v0.1 path
    uses raw substring matching and is untouched.
+5. **Explicit state negation cancels a completed-verb marker.** Fresh review
+   found that a marker naming a completed verb (`wallet accessed`,
+   `daemon started`) had its postposed-negation check disabled, so `wallet
+   accessed is forbidden` over-fired. An explicit state negation
+   (`is/was forbidden|blocked|disallowed|...`) now cancels it, while a bare
+   qualifier without an auxiliary (`accessed not authorized`) does not — that
+   reads as the action having happened and stays a hard stop. v0.2-only.
 
 The authority law is monotonic:
 
@@ -91,7 +98,7 @@ node --test tests/dema-fde-dual-diagnostic.test.js
 node scripts/review/dema-fde-dual-diagnostic-check.mjs --json
 ```
 
-Focused result: 51 FDE tests pass, including mixed boundary-plus-billing,
+Focused result: 52 FDE tests pass, including mixed boundary-plus-billing,
 bare standalone sentinels (alone and mixed with billing lock), clause-bounded
 all-occurrence matching, canonical all-false and negated evidence,
 positive-autopatch hard stops, outward-only billing, legacy

@@ -266,6 +266,44 @@ test("preposed negation reaches a bare marker across an action verb (PR #396 Gre
   }
 });
 
+test("explicit state negation cancels a completed-verb marker; a bare qualifier does not (PR #396 Greptile)", () => {
+  // "wallet accessed is forbidden": the marker names a completed verb, but an
+  // explicit postposed state negation still denies the action.
+  for (const phrase of [
+    "wallet accessed is forbidden",
+    "daemon started was blocked",
+    "wallet accessed is disallowed",
+  ]) {
+    const report = diagnoseDemaFailure({
+      failed_command: "npm test",
+      exit_code: 1,
+      stdout_excerpt: phrase,
+      stderr_excerpt: "not ok 1 - assertion failed",
+      changed_files: [],
+      environment: { node_version: "22.x", os: "linux", branch: "main" },
+    });
+    assert.notEqual(report.failure_class, "boundary_violation", phrase);
+  }
+
+  // A bare qualifier after a completed action is NOT a state negation — the
+  // action happened, so it stays a hard stop.
+  for (const phrase of [
+    "wallet accessed by the agent",
+    "daemon started at boot",
+    "wallet accessed not authorized",
+  ]) {
+    const report = diagnoseDemaFailure({
+      failed_command: "npm test",
+      exit_code: 1,
+      stdout_excerpt: phrase,
+      stderr_excerpt: "",
+      changed_files: [],
+      environment: { node_version: "22.x", os: "linux", branch: "main" },
+    });
+    assert.equal(report.failure_class, "boundary_violation", phrase);
+  }
+});
+
 test("a negated first action cannot hide a later positive boundary action", () => {
   const report = diagnoseDemaFailure({
     failed_command: "gh run view 42",
