@@ -42,6 +42,20 @@ describe("htmlSafeJson", () => {
     const value = { a: 1, b: "plain", c: [true, null] };
     assert.equal(htmlSafeJson(value), JSON.stringify(value));
   });
+
+  it("fails closed on top-level values JSON.stringify cannot serialize", () => {
+    // JSON.stringify returns undefined for a top-level undefined/function/
+    // symbol. Rather than crash on .replace or silently emit non-JSON
+    // `undefined`, the helper throws an explicit, stable error.
+    for (const bad of [undefined, () => {}, Symbol("x")]) {
+      assert.throws(
+        () => htmlSafeJson(bad),
+        (err) =>
+          err instanceof TypeError &&
+          err.message === "htmlSafeJson: top-level value is not JSON-serializable",
+      );
+    }
+  });
 });
 
 // --- dashboard integration: the current-main-specific $-channel repair -------

@@ -23,7 +23,15 @@ const SEP_RE = new RegExp("[" + LINE_SEP + PARA_SEP + "]", "g");
 const SEP_ESCAPES = { [LINE_SEP]: "\\u2028", [PARA_SEP]: "\\u2029" };
 
 export function htmlSafeJson(value) {
-  return JSON.stringify(value)
+  // JSON.stringify returns undefined for a top-level undefined/function/symbol.
+  // Fail closed with a stable error rather than crash on .replace or silently
+  // emit non-JSON `undefined` into the script context. (Native JSON.stringify
+  // failures — BigInt, cyclic structures — still throw their own errors.)
+  const json = JSON.stringify(value);
+  if (json === undefined) {
+    throw new TypeError("htmlSafeJson: top-level value is not JSON-serializable");
+  }
+  return json
     .replace(/[<>&]/g, (ch) => ASCII_ESCAPES[ch])
     .replace(SEP_RE, (ch) => SEP_ESCAPES[ch]);
 }
