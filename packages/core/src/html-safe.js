@@ -1,15 +1,20 @@
 // Serialize a value to JSON that is safe to embed inside an HTML <script> tag.
 //
-// JSON.stringify does NOT escape `<`, so a string field containing `</script>`
-// would close the surrounding script element and let arbitrary markup/script
-// run in the page. It also leaves the line/paragraph separators U+2028/U+2029
-// raw (verified on V8/Node 22), which are illegal as raw chars in a JS string
-// literal. Escaping all five yields output that is still valid JSON
-// (JSON.parse round-trips it) yet cannot break out of the script context.
+// SECURITY: JSON.stringify does NOT escape `<`, so a string field containing
+// `</script>` would close the surrounding script element and let arbitrary
+// markup/script run in the page. Escaping `<` (and `>`/`&` for tidiness) is the
+// script-element breakout prevention — the only way to terminate a raw-text
+// <script> element is a literal `<` + `/script`.
 //
+// COMPATIBILITY: JSON.stringify also leaves the line/paragraph separators
+// U+2028/U+2029 raw. Since ES2019 (the JSON-superset revision) these are legal
+// unescaped inside JS string literals, so this is NOT a modern-syntax fix;
+// escaping them normalizes the generated script text for portability and older
+// parsers/tools and avoids raw Unicode separators in the emitted document.
+//
+// Escaping all five keeps the output valid JSON (JSON.parse round-trips it).
 // The separators are referenced via String.fromCharCode so this source file
-// stays pure ASCII — as raw characters they are ECMAScript line terminators
-// and would corrupt a regex literal / string here.
+// stays pure ASCII (raw separators would corrupt a regex literal / string here).
 const ASCII_ESCAPES = { "<": "\\u003c", ">": "\\u003e", "&": "\\u0026" };
 
 const LINE_SEP = String.fromCharCode(0x2028);
