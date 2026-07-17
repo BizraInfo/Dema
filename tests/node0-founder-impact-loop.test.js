@@ -15,12 +15,22 @@ import {
   NODE0_FOUNDER_IMPACT_LOOP_GO_PHRASE,
 } from "../packages/core/src/node0-founder-impact-loop-preview.js";
 import { runFounderImpactScope } from "../apps/cli/src/commands/founder.js";
+import { DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA } from "../packages/core/src/dema-fde-dual-diagnostic.js";
+import { readFileSync } from "node:fs";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const GO = NODE0_FOUNDER_IMPACT_LOOP_GO_PHRASE;
 const sha = (s) => createHash("sha256").update(s, "utf8").digest("hex");
+const HISTORICAL_FDE_V0_1 = Object.freeze(
+  JSON.parse(
+    readFileSync(
+      new URL("./fixtures/dema-fde-dual-diagnostic-v0.1.json", import.meta.url),
+      "utf8",
+    ),
+  ),
+);
 
 function stableStringify(value) {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
@@ -165,6 +175,46 @@ test("verify re-derives whole-body; a mutated field without re-hash fails", () =
   assert.equal(verifyFounderImpactReceipt(r).ok, true);
   const mutated = { ...r, served_to: "someone_else" };
   assert.equal(verifyFounderImpactReceipt(mutated).ok, false);
+});
+
+test("historical v0.1 FDE evidence remains integrity-verifiable without authority", () => {
+  const receipt = buildFounderImpactReceipt({
+    consent: GO,
+    input: cleanInput(),
+  }).receipt;
+  assert.equal(HISTORICAL_FDE_V0_1.schema, DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA);
+  const legacySummary = {
+    failure_class: HISTORICAL_FDE_V0_1.failure_class,
+    lens: "outward",
+    inward_confidence: HISTORICAL_FDE_V0_1.inward_diagnosis.confidence,
+    outward_confidence: HISTORICAL_FDE_V0_1.outward_diagnosis.confidence,
+    diagnostic_hash: HISTORICAL_FDE_V0_1.diagnostic_hash,
+    eligible_for_autopatch: HISTORICAL_FDE_V0_1.eligible_for_autopatch,
+  };
+  const { content_hash: _receiptHash, ...receiptBody } = receipt;
+  const unboundReceiptBody = { ...receiptBody, fde: HISTORICAL_FDE_V0_1 };
+  const unboundReceipt = {
+    ...unboundReceiptBody,
+    content_hash: `sha256:${sha(stableStringify(unboundReceiptBody))}`,
+  };
+  assert.deepEqual(verifyFounderImpactReceipt(unboundReceipt).blocked_by, [
+    "fde_summary_mismatch",
+  ]);
+
+  const legacyReceiptBody = {
+    ...receiptBody,
+    fde: HISTORICAL_FDE_V0_1,
+    fde_summary: legacySummary,
+  };
+  const legacyReceipt = {
+    ...legacyReceiptBody,
+    content_hash: `sha256:${sha(stableStringify(legacyReceiptBody))}`,
+  };
+
+  assert.equal(verifyFounderImpactReceipt(legacyReceipt).ok, true);
+  assert.equal(founderImpactAuthorityInvariantHolds(legacyReceipt), true);
+  assert.equal(legacyReceipt.mint_allowed, false);
+  assert.equal(legacyReceipt.scope_expansion_allowed, false);
 });
 
 // 10 — tampered embedded artifact hash → verify fails closed.

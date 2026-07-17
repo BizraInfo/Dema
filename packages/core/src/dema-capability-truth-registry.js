@@ -417,6 +417,8 @@ function defaultCapabilityRows() {
         receipt_paths: [
           "docs/receipts/DEMA_FDE_DUAL_DIAGNOSTIC_1A.md",
           "docs/receipts/DEMA_FDE_CI_BILLING_LOCK_MARKER_1A.md",
+          "docs/receipts/DEMA_FDE_SEMANTIC_REDERIVATION_1B.md",
+          "docs/receipts/DEMA_FDE_BOUNDARY_PRECEDENCE_1C.md",
         ],
         documentation_paths: [
           "docs/02-architecture/DEMA_FDE_DUAL_DIAGNOSTIC_v0_1.md",
@@ -426,7 +428,7 @@ function defaultCapabilityRows() {
       blocked_promotion_rule:
         "May not claim autopatch, live remediation, autonomous repair, or field execution without separate consent and proof gates.",
       what_this_proves:
-        "Dema can classify failed commands into inward vs outward hypotheses with explicit confidence and missing evidence.",
+        "Dema can classify failed commands into inward vs outward hypotheses with explicit confidence and missing evidence; boundary violations dominate vendor billing evidence, and billing lock remains outward-only.",
       what_this_does_not_prove:
         "It does not patch files, commit, push, merge, start daemons, use networks, mint tokens, or prove root cause ground truth.",
       forbidden_claims: ["autopatch applied", "failure auto-fixed", "live remediation"],

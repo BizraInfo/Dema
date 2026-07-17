@@ -6,6 +6,8 @@
 import { createHash } from "node:crypto";
 
 export const DEMA_FDE_DUAL_DIAGNOSTIC_SCHEMA =
+  "bizra.dema.fde_dual_diagnostic.v0.2";
+export const DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA =
   "bizra.dema.fde_dual_diagnostic.v0.1";
 export const DEMA_FDE_DUAL_DIAGNOSTIC_TRUTH_LABEL =
   "DEMA_FDE_DUAL_DIAGNOSTIC_PREVIEW_ONLY";
@@ -50,23 +52,64 @@ export const FDE_BOUNDARY_KEYS = Object.freeze([
   "model_invocation_performed",
 ]);
 
-const BOUNDARY_VIOLATION_MARKERS = Object.freeze([
-  "token mint",
-  "mint token",
-  "wallet access",
-  "wallet_accessed",
-  "start daemon",
-  "daemon_started",
-  "network_used",
-  "live urp",
-  "live rsi",
-  "live poi",
-  "federation started",
-  "autopatch_performed",
-  "autopatch: true",
-  "eligible_for_autopatch: true",
-  "fde:boundary_not_false:",
-  "boundary_not_false:",
+const BOUNDARY_ACTION_PATTERNS = Object.freeze([
+  Object.freeze({
+    evidence: "token_mint_action",
+    pattern:
+      /\b(?:mint|minted|minting)\s+(?:a\s+)?token\b|\btoken\s+mint(?:ed|ing)?\s+(?:requested|attempted|started|performed|enabled)\b/g,
+  }),
+  Object.freeze({
+    evidence: "wallet_access_action",
+    pattern:
+      /\b(?:access|accessed|accessing)\s+(?:a\s+)?wallet\b|\bwallet\s+access\s+(?:requested|attempted|performed|enabled)\b/g,
+  }),
+  Object.freeze({
+    evidence: "daemon_start_action",
+    pattern:
+      /\b(?:start|started|starting|launch|launched|enable|enabled)\s+(?:a\s+)?daemon\b|\bdaemon\s+(?:start|started|starting|launch|launched|enabled)\b/g,
+  }),
+  Object.freeze({
+    evidence: "live_surface_action",
+    pattern:
+      /\blive\s+(?:urp|rsi|poi)\b(?:(?!\blive\s+(?:urp|rsi|poi)\b)[^.;,\n]){0,48}?\b(?:start|started|launch|launched|enable|enabled|invoke|invoked|requested)\b/g,
+  }),
+  Object.freeze({
+    evidence: "federation_start_action",
+    pattern:
+      /\bfederation\s+(?:start|started|launch|launched|enable|enabled|invoke|invoked|requested)\b/g,
+  }),
+]);
+
+// PR #396 P1 repair: the parent 1A classifier accepted bare machine sentinels
+// (producers emit them without prose or `key: true` syntax). Dropping them let
+// mixed evidence downgrade a hard stop to billing repair. A bare sentinel is
+// positive evidence unless clause-negated or explicitly valued false — so the
+// canonical all-false boundary JSON stays silent. Verb-suffixed forms are
+// excluded here because BOUNDARY_ACTION_PATTERNS already owns them.
+const BARE_BOUNDARY_SENTINEL_PATTERNS = Object.freeze([
+  Object.freeze({
+    evidence: "token mint",
+    pattern:
+      /\btoken\s+mint(?:ed|ing)?\b(?!\s+(?:requested|attempted|started|performed|enabled)\b)/g,
+  }),
+  Object.freeze({
+    evidence: "wallet access",
+    pattern:
+      /\bwallet\s+access(?:ed)?\b(?!\s+(?:requested|attempted|performed|enabled)\b)/g,
+  }),
+  Object.freeze({ evidence: "live urp", pattern: /\blive\s+urp\b/g }),
+  Object.freeze({ evidence: "live rsi", pattern: /\blive\s+rsi\b/g }),
+  Object.freeze({ evidence: "live poi", pattern: /\blive\s+poi\b/g }),
+  ...["wallet_accessed", "daemon_started", "network_used", "autopatch_performed"].map(
+    (key) =>
+      Object.freeze({
+        evidence: key,
+        pattern: new RegExp(
+          `\\b${key}\\b(?!["']?\\s*[:=]\\s*(?:true|false)\\b)`,
+          "g",
+        ),
+      }),
+  ),
 ]);
 
 const PROOF_GAP_MARKERS = Object.freeze([
@@ -242,6 +285,97 @@ function countMarkerHits(haystack, markers) {
   return hits;
 }
 
+function regexEscape(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const CLAUSE_BOUNDARY_PATTERN =
+  /[.;,\n]|\b(?:although|but|however|later|then|yet)\b/g;
+const PRE_ACTION_NEGATION_PATTERN =
+  /(?:\b(?:blocked|denied|failed|forbidden|never|no|prevented|refused|without)\b|\b(?:are|can|could|did|do|does|had|has|have|is|should|was|were|will|would)\s+not\b|\bnot\b)(?:\W+(?:access|accessed|accessing|action|actually|allowed|any|attempt|attempted|attempting|authorization|authority|been|being|connect|connected|connecting|effort|enable|enabled|enabling|evidence|ever|for|from|intent|intention|invoke|invoked|invoking|launch|launched|launching|made|mint|minted|minting|move|of|operation|permission|perform|performed|plan|planned|ran|request|requested|run|running|sign|start|started|starting|step|to|tried|try|trying|use|used|using))*\W*$/;
+const POST_ACTION_NEGATION_PATTERN =
+  /^\W*(?:(?:are|became|got|had|has|have|is|remained|remains|was|were)\W+)?(?:blocked|denied|disabled|disallowed|forbidden|never|not|prevented|refused|rejected)\b/;
+const COMPLETED_ACTION_PATTERN =
+  /\b(?:accessed|enabled|invoked|launched|minted|performed|started)\b/;
+// An explicit postposed STATE negation ("is forbidden", "was blocked") denies
+// the action even when the marker itself names a completed verb. A bare
+// negator without an auxiliary (e.g. "accessed not authorized") does NOT
+// suppress it — that reads as the action having happened, still a violation.
+const POSTPOSED_STATE_NEGATION_PATTERN =
+  /^\W*(?:are|is|was|were)\W+(?:blocked|denied|disabled|disallowed|forbidden|prevented|prohibited|refused|rejected)\b/;
+
+function clauseBefore(haystack, index) {
+  const prefix = haystack.slice(0, index);
+  let start = 0;
+  for (const boundary of prefix.matchAll(CLAUSE_BOUNDARY_PATTERN)) {
+    start = boundary.index + boundary[0].length;
+  }
+  return prefix.slice(start);
+}
+
+function clauseAfter(haystack, index) {
+  const suffix = haystack.slice(index);
+  const boundaryIndex = suffix.search(CLAUSE_BOUNDARY_PATTERN);
+  return boundaryIndex === -1 ? suffix : suffix.slice(0, boundaryIndex);
+}
+
+function evidenceIsNegated(haystack, match, { postposed = true } = {}) {
+  if (PRE_ACTION_NEGATION_PATTERN.test(clauseBefore(haystack, match.index))) {
+    return true;
+  }
+  if (/\b(?:never|no|not|without)\b/.test(match[0])) return true;
+  if (!postposed) return false;
+  const after = clauseAfter(haystack, match.index + match[0].length);
+  // A completed-verb marker ("wallet accessed", "daemon started") still yields
+  // to an explicit state negation, but not to a bare qualifier — otherwise
+  // "wallet accessed is forbidden" over-fires as a hard stop (PR #396 Greptile).
+  if (COMPLETED_ACTION_PATTERN.test(match[0])) {
+    return POSTPOSED_STATE_NEGATION_PATTERN.test(after);
+  }
+  return POST_ACTION_NEGATION_PATTERN.test(after);
+}
+
+function boundaryViolationHits(haystack) {
+  const hits = [];
+  for (const match of haystack.matchAll(/\b(?:fde:)?boundary_not_false:[a-z0-9_:-]*/g)) {
+    if (!evidenceIsNegated(haystack, match)) {
+      hits.push(match[0]);
+    }
+  }
+  for (const key of [
+    ...FDE_BOUNDARY_KEYS,
+    "eligible_for_autopatch",
+    "autopatch",
+  ]) {
+    const pattern = new RegExp(
+      `["']?${regexEscape(key)}["']?\\s*[:=]\\s*true\\b`,
+      "g",
+    );
+    for (const match of haystack.matchAll(pattern)) {
+      if (!evidenceIsNegated(haystack, match, { postposed: false })) {
+        hits.push(`${key}=true`);
+      }
+    }
+  }
+  for (const rule of BOUNDARY_ACTION_PATTERNS) {
+    for (const match of haystack.matchAll(rule.pattern)) {
+      if (!evidenceIsNegated(haystack, match)) {
+        hits.push(rule.evidence);
+        break;
+      }
+    }
+  }
+  for (const rule of BARE_BOUNDARY_SENTINEL_PATTERNS) {
+    for (const match of haystack.matchAll(rule.pattern)) {
+      if (!evidenceIsNegated(haystack, match)) {
+        hits.push(rule.evidence);
+        break;
+      }
+    }
+  }
+  return [...new Set(hits)];
+}
+
 function scoreRules(haystack, lens) {
   const scored = [];
   for (const rule of CLASSIFICATION_RULES) {
@@ -273,8 +407,10 @@ function isGithubActionsContext(input) {
   );
 }
 
-function classifyGithubActionsBillingLock(input, lens) {
-  if (lens !== "outward" && lens !== "inward") return null;
+function classifyGithubActionsBillingLock(input, lens, { v01AnyLens = false } = {}) {
+  // v0.2 keeps billing outward-only; the frozen v0.1 algorithm ran it on both
+  // lenses and legacy rederivation must reproduce that behavior exactly.
+  if (!v01AnyLens && lens !== "outward") return null;
   const haystack = combinedFailureText(input);
   const billingHits = countMarkerHits(haystack, GITHUB_ACTIONS_BILLING_LOCK_MARKERS);
   const startupHits = countMarkerHits(haystack, GITHUB_ACTIONS_STARTUP_FAIL_MARKERS);
@@ -308,23 +444,34 @@ function classifyGithubActionsBillingLock(input, lens) {
   return null;
 }
 
+function boundaryLensResult(input, boundaryHits) {
+  const failedCommand = text(input.failed_command).toLowerCase();
+  const commandHintMatch = INWARD_COMMAND_HINTS.some((hint) =>
+    failedCommand.includes(hint),
+  );
+  return {
+    failure_class: "boundary_violation",
+    hits: freezeDeep(boundaryHits),
+    confidence: confidenceFromHits(boundaryHits, commandHintMatch),
+  };
+}
+
 function classifyLens(input, lens) {
+  const haystack = combinedFailureText(input);
+  // A forbidden boundary is a hard stop and must dominate any lower-authority
+  // environment diagnosis carried by the same evidence.
+  const boundaryHits = boundaryViolationHits(haystack);
+  if (boundaryHits.length > 0) {
+    return boundaryLensResult(input, boundaryHits);
+  }
   const billingLock = classifyGithubActionsBillingLock(input, lens);
   if (billingLock) return billingLock;
+  return classifyLensSharedTail(input, lens, haystack);
+}
 
-  const haystack = combinedFailureText(input);
-  const boundaryHits = countMarkerHits(haystack, BOUNDARY_VIOLATION_MARKERS);
-  if (boundaryHits.length > 0) {
-    const failedCommand = text(input.failed_command).toLowerCase();
-    const commandHintMatch = INWARD_COMMAND_HINTS.some((hint) =>
-      failedCommand.includes(hint),
-    );
-    return {
-      failure_class: "boundary_violation",
-      hits: freezeDeep(boundaryHits),
-      confidence: confidenceFromHits(boundaryHits, commandHintMatch),
-    };
-  }
+// Shared below the boundary/billing precedence head: identical in v0.1 and
+// v0.2. The frozen v0.1 fixture regression pins this against silent drift.
+function classifyLensSharedTail(input, lens, haystack) {
   if (lens === "inward") {
     const proofGapHits = countMarkerHits(haystack, PROOF_GAP_MARKERS);
     const failedCommand = text(input.failed_command).toLowerCase();
@@ -377,18 +524,29 @@ function classifyLens(input, lens) {
 }
 
 function classifyPrimary(inward, outward) {
-  if (
-    outward.failure_class === "github_actions_billing_lock" &&
-    outward.confidence !== "low"
-  ) {
-    return "github_actions_billing_lock";
-  }
+  // Failure classification is authority-monotonic: a boundary stop cannot be
+  // downgraded to an environment repair such as billing unlock.
+  // NOTE: boundary precedence is primarily decided one layer down in
+  // classifyLens (boundary is returned before billing there, and
+  // combinedFailureText is lens-independent so both lenses agree on boundary
+  // evidence). This guard is therefore defense-in-depth for the monotonicity
+  // invariant — it holds even if a future change makes the lenses diverge.
   if (
     inward.failure_class === "boundary_violation" ||
     outward.failure_class === "boundary_violation"
   ) {
     return "boundary_violation";
   }
+  if (
+    outward.failure_class === "github_actions_billing_lock" &&
+    outward.confidence !== "low"
+  ) {
+    return "github_actions_billing_lock";
+  }
+  return classifyPrimarySharedTail(inward, outward);
+}
+
+function classifyPrimarySharedTail(inward, outward) {
   if (inward.failure_class === "proof_gap" && inward.confidence !== "low") {
     return "proof_gap";
   }
@@ -483,7 +641,18 @@ function rootCauseHypothesis(failure_class, inward, outward) {
   return `Dominant failure_class=${failure_class} with inward confidence ${inward.confidence} and outward confidence ${outward.confidence}.`;
 }
 
-function deriveMeasuredStatus(inward, outward) {
+function deriveMeasuredStatus(failureClass, inward, outward) {
+  if (
+    failureClass === "github_actions_billing_lock" &&
+    outward.failure_class === "github_actions_billing_lock" &&
+    outward.confidence === "high"
+  ) {
+    return "MEASURED";
+  }
+  return deriveMeasuredStatusBase(inward, outward);
+}
+
+function deriveMeasuredStatusBase(inward, outward) {
   if (inward.confidence === "high" && outward.confidence === "high") return "MEASURED";
   if (inward.confidence === "high" || outward.confidence === "high") {
     return "PARTIALLY_MEASURED";
@@ -625,12 +794,88 @@ export function diagnoseDemaFailure(input = {}) {
   return buildDemaFdeDualDiagnosticInternal(input);
 }
 
-function buildDemaFdeDualDiagnosticInternal(input = {}) {
+// ---- Frozen v0.1 rederivation algorithm (parent DEMA-FDE-DUAL-DIAGNOSTIC-1A)
+// Historical v0.1 reports predate the 1C precedence policy, so verifying one
+// means re-deriving it under the algorithm that produced it — a schema label
+// alone must never mint historical provenance (PR #396 P1). The frozen fixture
+// tests/fixtures/dema-fde-dual-diagnostic-v0.1.json pins this section (and the
+// shared tails above) against drift: editing any shared derivation input
+// breaks that regression.
+const V0_1_BOUNDARY_VIOLATION_MARKERS = Object.freeze([
+  "token mint",
+  "mint token",
+  "wallet access",
+  "wallet_accessed",
+  "start daemon",
+  "daemon_started",
+  "network_used",
+  "live urp",
+  "live rsi",
+  "live poi",
+  "federation started",
+  "autopatch_performed",
+  "autopatch: true",
+  "eligible_for_autopatch: true",
+  "fde:boundary_not_false:",
+  "boundary_not_false:",
+]);
+
+function classifyLensLegacyV01(input, lens) {
+  const billingLock = classifyGithubActionsBillingLock(input, lens, {
+    v01AnyLens: true,
+  });
+  if (billingLock) return billingLock;
+  const haystack = combinedFailureText(input);
+  const boundaryHits = countMarkerHits(haystack, V0_1_BOUNDARY_VIOLATION_MARKERS);
+  if (boundaryHits.length > 0) {
+    return boundaryLensResult(input, boundaryHits);
+  }
+  return classifyLensSharedTail(input, lens, haystack);
+}
+
+function classifyPrimaryLegacyV01(inward, outward) {
+  // Frozen v0.1 primary ordering: billing before boundary, as the parent
+  // commit (403c674) shipped it. As in v0.2, both lens results already agree
+  // on boundary/billing (classifyLensLegacyV01 decides one layer down over
+  // lens-independent text), so this primary ordering is not independently
+  // exercisable through the public API; it is preserved for byte-faithful
+  // legacy rederivation, not as a live decision point.
+  if (
+    outward.failure_class === "github_actions_billing_lock" &&
+    outward.confidence !== "low"
+  ) {
+    return "github_actions_billing_lock";
+  }
+  if (
+    inward.failure_class === "boundary_violation" ||
+    outward.failure_class === "boundary_violation"
+  ) {
+    return "boundary_violation";
+  }
+  return classifyPrimarySharedTail(inward, outward);
+}
+
+const FDE_ALGORITHM_V0_2 = Object.freeze({
+  schema: DEMA_FDE_DUAL_DIAGNOSTIC_SCHEMA,
+  classifyLens,
+  classifyPrimary,
+  deriveMeasuredStatus,
+});
+
+const FDE_ALGORITHM_V0_1 = Object.freeze({
+  schema: DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA,
+  classifyLens: classifyLensLegacyV01,
+  classifyPrimary: classifyPrimaryLegacyV01,
+  deriveMeasuredStatus: (_failureClass, inward, outward) =>
+    deriveMeasuredStatusBase(inward, outward),
+});
+
+function buildDemaFdeDualDiagnosticInternal(input = {}, algo = FDE_ALGORITHM_V0_2) {
   const normalized = normalizeInput(input);
-  const inward = classifyLens(normalized, "inward");
-  const outward = classifyLens(normalized, "outward");
-  const failure_class = classifyPrimary(inward, outward);
-  const measured_status = deriveMeasuredStatus(inward, outward);
+  const inward = algo.classifyLens(normalized, "inward");
+  const outward = algo.classifyLens(normalized, "outward");
+  const failure_class = algo.classifyPrimary(inward, outward);
+  const measured_status = algo.deriveMeasuredStatus(failure_class, inward, outward);
   const regression_test_required =
     (inward.confidence === "high" || inward.confidence === "medium") &&
     (failure_class === "implementation_defect" ||
@@ -646,7 +891,7 @@ function buildDemaFdeDualDiagnosticInternal(input = {}) {
     failure_class === "github_actions_billing_lock";
 
   const body = {
-    schema: DEMA_FDE_DUAL_DIAGNOSTIC_SCHEMA,
+    schema: algo.schema,
     truth_label: DEMA_FDE_DUAL_DIAGNOSTIC_TRUTH_LABEL,
     stage: DEMA_FDE_DUAL_DIAGNOSTIC_STAGE,
     input: normalized,
@@ -705,10 +950,10 @@ function buildDemaFdeDualDiagnosticInternal(input = {}) {
   });
 }
 
-export function verifyDemaFdeDualDiagnostic(report) {
+function verifyDemaFdeDualDiagnosticStructure(report, expectedSchema) {
   const blocked_by = [];
-  if (!report || report.schema !== DEMA_FDE_DUAL_DIAGNOSTIC_SCHEMA) {
-    return freezeDeep({ ok: false, blocked_by: ["invalid_schema"] });
+  if (!report || report.schema !== expectedSchema) {
+    return ["invalid_schema"];
   }
   if (report.truth_label !== DEMA_FDE_DUAL_DIAGNOSTIC_TRUTH_LABEL) {
     blocked_by.push("invalid_truth_label");
@@ -768,6 +1013,22 @@ export function verifyDemaFdeDualDiagnostic(report) {
   if (report.diagnostic_hash !== diagnosticHash(hashBody)) {
     blocked_by.push("diagnostic_hash_mismatch");
   }
+  return blocked_by;
+}
+
+export function verifyDemaFdeDualDiagnostic(report) {
+  const blocked_by = verifyDemaFdeDualDiagnosticStructure(
+    report,
+    DEMA_FDE_DUAL_DIAGNOSTIC_SCHEMA,
+  );
+  if (blocked_by.includes("invalid_schema")) {
+    return freezeDeep({
+      ok: false,
+      blocked_by,
+      verification_mode: "semantic_rederivation_v0_2",
+      authority_eligible: false,
+    });
+  }
 
   // Semantic re-derivation: the whole diagnosis is a pure function of its
   // carried input, so re-derive it and require the result to match. Internal
@@ -783,7 +1044,62 @@ export function verifyDemaFdeDualDiagnostic(report) {
     blocked_by.push("semantic_rederivation_mismatch");
   }
 
-  return freezeDeep({ ok: blocked_by.length === 0, blocked_by });
+  return freezeDeep({
+    ok: blocked_by.length === 0,
+    blocked_by,
+    verification_mode: "semantic_rederivation_v0_2",
+    authority_eligible: blocked_by.length === 0,
+  });
+}
+
+// Historical v0.1 reports remain replayable as evidence only. They predate
+// the 1C precedence policy, so they must never open an authority lane or
+// drive a current forwarding decision. Verification re-derives the whole
+// diagnosis under the frozen v0.1 algorithm: relabeling a rejected v0.2
+// report as v0.1 and rehashing it does not survive, because the fabricated
+// classification is not what v0.1 derives from the carried input (PR #396 P1).
+export function verifyLegacyDemaFdeDualDiagnosticIntegrity(report) {
+  const blocked_by = verifyDemaFdeDualDiagnosticStructure(
+    report,
+    DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA,
+  );
+  if (blocked_by.includes("invalid_schema")) {
+    return freezeDeep({
+      ok: false,
+      blocked_by,
+      verification_mode: "legacy_v0_1_semantic_rederivation",
+      authority_eligible: false,
+    });
+  }
+  if (!report.input || typeof report.input !== "object") {
+    blocked_by.push("input_missing_for_rederivation");
+  } else if (
+    buildDemaFdeDualDiagnosticInternal(report.input, FDE_ALGORITHM_V0_1)
+      .diagnostic_hash !== report.diagnostic_hash
+  ) {
+    blocked_by.push("legacy_semantic_rederivation_mismatch");
+  }
+  return freezeDeep({
+    ok: blocked_by.length === 0,
+    blocked_by,
+    verification_mode: "legacy_v0_1_semantic_rederivation",
+    authority_eligible: false,
+  });
+}
+
+export function verifyDemaFdeDualDiagnosticForHistoricalReceipt(report) {
+  if (report?.schema === DEMA_FDE_DUAL_DIAGNOSTIC_SCHEMA) {
+    return verifyDemaFdeDualDiagnostic(report);
+  }
+  if (report?.schema === DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA) {
+    return verifyLegacyDemaFdeDualDiagnosticIntegrity(report);
+  }
+  return freezeDeep({
+    ok: false,
+    blocked_by: ["invalid_schema"],
+    verification_mode: "unsupported",
+    authority_eligible: false,
+  });
 }
 
 function verifyFalseBoundary({ boundary, expectedKeys, prefix }) {
