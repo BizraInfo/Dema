@@ -45,6 +45,29 @@ buildDemaFdeDualDiagnostic({
 })
 ```
 
+`stdout_excerpt` / `stderr_excerpt` are **machine-emitted command output** — the
+failing tool's own text, not human prose. Boundary detection matches structured
+machine markers (JSON boolean fields like `wallet_accessed: true`, canonical
+`boundary_not_false:*` tokens, and the bounded live-surface / action lexicon).
+
+## Boundary evidence and fail-closed negation
+
+Negation handling over that text is a **bounded best-effort heuristic**, not a
+natural-language parser. It recognizes the common negated forms (preposed,
+postposed, clause-level, explicit `false`, explicit state negation) so ordinary
+machine output does not manufacture a false stop. It does **not** attempt to
+resolve every English construction.
+
+The residual behavior is fail-closed **by design**: when boundary evidence is
+genuinely ambiguous, the classifier resolves to `boundary_violation`, which is a
+hard stop that escalates to a human and **carries `authority_delta 0`** — it
+mints nothing, bypasses no gate, and grants no permission. An over-classification
+therefore costs a human review; it can never launder authority. This is the
+authority-monotonicity law applied to uncertainty: an unclear signal may only
+preserve or reduce authority, never increase it. Improving prose-negation
+precision is a quality refinement, not a safety fix, and is out of scope for a
+machine-output classifier's contract.
+
 ## Output Contract
 
 The envelope emits:

@@ -122,3 +122,9 @@ without current authority.
   a daemon, use a network, mint a token, access a wallet, or authorize runtime.
 - It does not expand boundary-marker coverage beyond the existing deterministic
   lexicon.
+- It does not make natural-language negation exhaustive. FDE input is
+  machine-emitted command output; negation handling is a bounded best-effort
+  heuristic. Ambiguous boundary evidence resolves to `boundary_violation`, which
+  is fail-closed by design — it escalates to a human at `authority_delta 0` and
+  can never increase authority. Prose-negation precision is a quality refinement,
+  not a safety property.
