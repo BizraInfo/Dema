@@ -131,10 +131,14 @@ test("T7 scaffold rejects a path-escaping slice id", () => {
 test("T8 adoption-freeze gate stays strict: every registered consumer is explicit and the gate passes", () => {
   assert.ok(Object.isFrozen(CANONICAL_JSON_V1_REGISTERED_CONSUMERS));
   // Registration is an allowlist of exact reviewed paths — never a wildcard.
-  // First (and so far only) registered consumer: the reconciled Mission Corridor surface.
+  // Consumers registered so far, each reviewed in its own slice PR:
+  // mission-corridor (first, M5.1B) and dema-program-graph (PROGRAM-GRAPH-NICHE-CELL-0A).
   assert.deepEqual(
     [...CANONICAL_JSON_V1_REGISTERED_CONSUMERS],
-    ["packages/mission/src/mission-corridor.js"],
+    [
+      "packages/mission/src/mission-corridor.js",
+      "packages/mission/src/dema-program-graph.js",
+    ],
   );
   const result = runCanonicalJsonV1Check();
   assert.equal(result.ok, true, JSON.stringify(result.blocked_by ?? []));
