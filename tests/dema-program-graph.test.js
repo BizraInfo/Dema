@@ -25,7 +25,6 @@ import {
   TRANSITION_DOES_NOT_PROVE,
   validateProgramDefinition,
   compileProgramDefinition,
-  deriveProgramProjection,
   verifyCompiledProgram,
   evaluateProgramTransitionCandidate,
   buildFounderRecoveryProgramDefinition,
@@ -664,6 +663,65 @@ test("defensive: gate fallback code fires when injected fixture lacks blocked_by
   const r = runDemaProgramGraphCheck({ fixture: { ok: false } });
   assert.equal(r.ok, false);
   assert.deepEqual(r.blocked_by, ["fixture:fixture_not_ok"]);
+});
+
+// P1 repairs (Greptile on PR #398 head 18cba22)
+test("P1: lone-surrogate strings are structured validation failures, not compile crashes", () => {
+  const d = tinyDef();
+  d.task_definitions[0].permitted_actions = ["\ud800"];
+  const v = validateProgramDefinition(d);
+  assert.equal(v.ok, false);
+  assert.ok(
+    v.blocked_by.some((c) => c.startsWith("canonicalization_rejected:")),
+    JSON.stringify(v.blocked_by),
+  );
+  assert.throws(
+    () => compileProgramDefinition(d),
+    (err) => Array.isArray(err.blocked_by),
+  );
+});
+
+test("P1: accessor-backed input is rejected WITHOUT executing the getter", () => {
+  let executed = false;
+  const d = tinyDef();
+  Object.defineProperty(d, "title", {
+    get() { executed = true; return "evil"; },
+    enumerable: true, configurable: true,
+  });
+  const v = validateProgramDefinition(d);
+  assert.equal(v.ok, false);
+  assert.ok(
+    v.blocked_by.some((c) => c.startsWith("accessor_property:definition.title")),
+    JSON.stringify(v.blocked_by),
+  );
+  assert.equal(executed, false, "getter must never run");
+
+  const d2 = tinyDef();
+  Object.defineProperty(d2.niche_cell.human, "role", {
+    get() { executed = true; return "x"; },
+    enumerable: true, configurable: true,
+  });
+  const v2 = validateProgramDefinition(d2);
+  assert.equal(v2.ok, false);
+  assert.ok(v2.blocked_by.some((c) => c.startsWith("accessor_property:")));
+  assert.equal(executed, false);
+
+  const c = compiled();
+  const forged = { canonicalization: c.canonicalization, body: c.body, projection: c.projection };
+  Object.defineProperty(forged, "body_hash", {
+    get() { executed = true; return c.body_hash; },
+    enumerable: true, configurable: true,
+  });
+  const vv = verifyCompiledProgram(forged);
+  assert.equal(vv.ok, false);
+  assert.equal(executed, false, "verify must never run envelope getters");
+});
+
+test("P1: cyclic input fails closed without hanging the accessor scan", () => {
+  const d = tinyDef();
+  d.niche_cell.situation.loop = d;
+  const v = validateProgramDefinition(d);
+  assert.equal(v.ok, false);
 });
 
 test("kernel fixture runner is deterministic and self-verifying", () => {

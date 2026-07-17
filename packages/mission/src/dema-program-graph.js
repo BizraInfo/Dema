@@ -20,10 +20,7 @@
 
 import { CANONICAL_JSON_V1_ALGORITHM } from "../../canon/src/canonical-json-v1.js";
 import { sha256CanonicalJsonV1 } from "../../canon/src/sha256-canonical-json-v1.js";
-import {
-  PREVIEW_BOUNDARY_CANONICAL_KEYS,
-  buildPreviewBoundary,
-} from "../../core/src/boundary-schema.js";
+import { buildPreviewBoundary } from "../../core/src/boundary-schema.js";
 
 export const PROGRAM_DEFINITION_SCHEMA = "bizra.dema.program-definition.v0.1";
 export const PROGRAM_GRAPH_TRUTH_LABEL = "PREVIEW_ONLY";
@@ -166,6 +163,22 @@ function dedupSort(arr) {
 }
 function sameCanonical(a, b) {
   return sha256CanonicalJsonV1(a) === sha256CanonicalJsonV1(b);
+}
+
+// Accessor scan — descriptor walk only, NEVER invokes getters. Canonical JSON
+// v1 rejects accessors without executing them; validation must uphold the
+// same purity BEFORE any field read, or a caller getter runs inside us.
+function findAccessorProperty(value, path, seen = new WeakSet()) {
+  if (typeof value !== "object" || value === null) return null;
+  if (seen.has(value)) return null;
+  seen.add(value);
+  for (const key of Object.getOwnPropertyNames(value)) {
+    const d = Object.getOwnPropertyDescriptor(value, key);
+    if (d.get || d.set) return `${path}.${key}`;
+    const found = findAccessorProperty(d.value, `${path}.${key}`, seen);
+    if (found) return found;
+  }
+  return null;
 }
 
 function checkStringArray(blocked, value, label) {
@@ -369,6 +382,10 @@ export function validateProgramDefinition(input) {
   if (!isPlainObject(input)) {
     return deepFreeze({ ok: false, blocked_by: ["input_not_object"] });
   }
+  const accessor = findAccessorProperty(input, "definition");
+  if (accessor) {
+    return deepFreeze({ ok: false, blocked_by: [`accessor_property:${accessor}`] });
+  }
   for (const k of Object.keys(input)) {
     if (FORBIDDEN_TOP_KEYS.includes(k)) blocked.push(`derived_field_supplied:${k}`);
     else if (!TOP_KEYS.includes(k)) blocked.push(`unknown_key:${k}`);
@@ -395,6 +412,16 @@ export function validateProgramDefinition(input) {
     }
     validateAuthorityCeiling(blocked, input.authority_ceiling);
     validateBoundary(blocked, input.boundary);
+  }
+  if (blocked.length === 0) {
+    // Canonicalization is part of the validity contract: strings with lone
+    // surrogates (and any other canon-rejected shape) must surface as a
+    // structured block here, never as an unstructured compile crash.
+    try {
+      sha256CanonicalJsonV1(normalizeDefinition(input));
+    } catch (err) {
+      blocked.push(`canonicalization_rejected:${err?.code ?? err?.name ?? "invalid"}`);
+    }
   }
   return deepFreeze({ ok: blocked.length === 0, blocked_by: dedupSort(blocked) });
 }
@@ -517,6 +544,10 @@ export function verifyCompiledProgram(compiled) {
   const blocked = [];
   if (!isPlainObject(compiled)) {
     return deepFreeze({ ok: false, blocked_by: ["compiled_not_object"] });
+  }
+  const accessor = findAccessorProperty(compiled, "compiled");
+  if (accessor) {
+    return deepFreeze({ ok: false, blocked_by: [`accessor_property:${accessor}`] });
   }
   for (const k of Object.keys(compiled)) {
     if (!COMPILED_KEYS.includes(k)) blocked.push(`unknown_key:compiled.${k}`);

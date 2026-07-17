@@ -121,7 +121,7 @@ evidence authenticity, consent authenticity, real verifier independence.
 
 ## Measured vs designed
 
-Measured (38 tests + gate in `npm run check`): everything above under
+Measured (41 tests + gate in `npm run check`): everything above under
 "Defended", determinism, order-invariant hashing, fixture representability
 (DEMA-CONTINUUM-FOUNDER-RECOVERY-001, 8 tasks, nothing ACCEPTED).
 Designed-not-live: Foundry, opportunity detection, journal-bound current

@@ -38,7 +38,7 @@ nothing.
 ## Commands
 
 ```bash
-node --test tests/dema-program-graph.test.js       # 38 tests
+node --test tests/dema-program-graph.test.js       # 41 tests
 node scripts/review/dema-program-graph-check.mjs   # gate (also in npm run check)
 ```
 
