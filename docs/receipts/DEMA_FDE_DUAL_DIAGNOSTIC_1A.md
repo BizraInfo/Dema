@@ -13,6 +13,9 @@ FDE-O = environment/permission/dependency failure classification
 
 The kernel binds failed command excerpts and environment summaries to explicit hypotheses without patching or executing fixes.
 
+Current reports use `bizra.dema.fde_dual_diagnostic.v0.2`. Historical v0.1
+reports are integrity-verifiable only and are never authority-eligible.
+
 ## Files
 
 ```text
@@ -24,6 +27,8 @@ packages/core/src/dema-capability-truth-registry.js
 tests/dema-capability-truth-registry.test.js
 docs/02-architecture/DEMA_FDE_DUAL_DIAGNOSTIC_v0_1.md
 docs/receipts/DEMA_FDE_DUAL_DIAGNOSTIC_1A.md
+docs/receipts/DEMA_FDE_SEMANTIC_REDERIVATION_1B.md
+docs/receipts/DEMA_FDE_BOUNDARY_PRECEDENCE_1C.md
 docs/TESTING.md
 docs/CURRENT_LIMITS.md
 ```
@@ -36,6 +41,9 @@ The default FDE gate must pass only while:
 - inward and outward diagnoses include hypothesis, evidence, and confidence,
 - `consent_required` remains true,
 - all FDE boundaries remain false,
+- boundary violations dominate simultaneous environment-repair evidence,
+- GitHub billing lock remains an outward-only diagnosis,
+- all-false boundary JSON does not count as positive violation evidence,
 - the diagnostic hash recomputes exactly.
 
 `npm run check` also runs `dema-capability-truth-registry-check.mjs`, which must keep `DEMA_FDE_DUAL_DIAGNOSTIC_1A` at `MEASURED_REPO` alongside the other spine rows.

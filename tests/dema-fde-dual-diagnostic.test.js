@@ -8,9 +8,12 @@ import {
   runDemaFdeDualDiagnosticGate,
   defaultDemaFdeDualDiagnosticFixture,
   DEMA_FDE_DUAL_DIAGNOSTIC_SCHEMA,
+  DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA,
   DEMA_FDE_DUAL_DIAGNOSTIC_TRUTH_LABEL,
   FDE_FAILURE_CLASSES,
   FDE_HHMM_PHASES,
+  verifyLegacyDemaFdeDualDiagnosticIntegrity,
+  verifyDemaFdeDualDiagnosticForHistoricalReceipt,
 } from "../packages/core/src/dema-fde-dual-diagnostic.js";
 
 test("builds deterministic frozen dual diagnostic envelope", () => {
@@ -111,12 +114,266 @@ test("classifies GitHub Actions billing lock from annotation excerpt", () => {
 
   assert.equal(report.failure_class, "github_actions_billing_lock");
   assert.equal(report.outward_diagnosis.failure_class, "github_actions_billing_lock");
+  assert.equal(report.inward_diagnosis.failure_class, "unknown");
+  assert.equal(report.inward_diagnosis.confidence, "low");
   assert.equal(report.outward_diagnosis.confidence, "high");
   assert.equal(report.code_implicated, false);
   assert.equal(report.operator_action_required, "billing_unlock");
   assert.equal(report.regression_test_required, false);
   assert.equal(report.measured_status, "MEASURED");
   assert.ok(report.minimal_fix_plan.some((step) => step.includes("billing")));
+});
+
+test("boundary violation dominates simultaneous GitHub billing-lock evidence", () => {
+  const report = diagnoseDemaFailure({
+    failed_command: "gh pr checks 312",
+    exit_code: 1,
+    stdout_excerpt:
+      "jobs: steps=[], runner_id=0, wallet_accessed token mint requested",
+    stderr_excerpt:
+      "The job was not started because your account is locked due to a billing issue.",
+    changed_files: [],
+    environment: {
+      node_version: "22.x",
+      os: "linux",
+      branch: "feat/node0-spine-runner-cli-1a",
+      ci_provider: "github_actions",
+      runner_assigned: false,
+      runner_id: 0,
+    },
+  });
+
+  assert.equal(report.failure_class, "boundary_violation");
+  assert.equal(report.inward_diagnosis.failure_class, "boundary_violation");
+  assert.equal(report.outward_diagnosis.failure_class, "boundary_violation");
+  assert.equal(report.code_implicated, null);
+  assert.equal(report.operator_action_required, null);
+  assert.ok(report.minimal_fix_plan.some((step) => step.startsWith("Stop any live")));
+  assert.equal(
+    report.minimal_fix_plan.some((step) => step.includes("billing")),
+    false,
+    "lower-authority environment repair must not mask a boundary stop",
+  );
+});
+
+test("canonical all-false boundary text does not mask a genuine billing lock", () => {
+  const report = diagnoseDemaFailure({
+    failed_command: "gh pr checks 312",
+    exit_code: 1,
+    stdout_excerpt: JSON.stringify({
+      wallet_accessed: false,
+      network_used: false,
+      daemon_started: false,
+      autopatch_performed: false,
+      token_minted: false,
+    }),
+    stderr_excerpt:
+      "The job was not started because your account is locked due to a billing issue.",
+    changed_files: [],
+    environment: {
+      node_version: "22.x",
+      os: "linux",
+      branch: "main",
+      ci_provider: "github_actions",
+      runner_assigned: false,
+      runner_id: 0,
+    },
+  });
+
+  assert.equal(report.failure_class, "github_actions_billing_lock");
+  assert.equal(report.inward_diagnosis.failure_class, "unknown");
+  assert.equal(report.outward_diagnosis.failure_class, "github_actions_billing_lock");
+  assert.equal(report.operator_action_required, "billing_unlock");
+});
+
+test("negated boundary doctrine does not manufacture a violation", () => {
+  const report = diagnoseDemaFailure({
+    failed_command: "node scripts/review/safety-report.mjs",
+    exit_code: 1,
+    stdout_excerpt:
+      "no token mint requested; do not access wallet; live URP not requested; federation not started",
+    stderr_excerpt: "documentation assertion failed",
+    changed_files: [],
+    environment: { node_version: "22.x", os: "linux", branch: "main" },
+  });
+
+  assert.notEqual(report.failure_class, "boundary_violation");
+  assert.notEqual(report.inward_diagnosis.failure_class, "boundary_violation");
+  assert.notEqual(report.outward_diagnosis.failure_class, "boundary_violation");
+});
+
+test("clause-level negation does not manufacture boundary violations", () => {
+  const phrases = [
+    "did not attempt to mint a token",
+    "no request to access wallet",
+    "never tried to start a daemon",
+    "without ever minting a token",
+    "did not attempt to access wallet",
+    "starting a daemon is forbidden",
+    "federation start was blocked",
+  ];
+  for (const phrase of phrases) {
+    const report = diagnoseDemaFailure({
+      failed_command: "node scripts/review/safety-report.mjs",
+      exit_code: 1,
+      stdout_excerpt: phrase,
+      stderr_excerpt: "documentation assertion failed",
+      changed_files: [],
+      environment: { node_version: "22.x", os: "linux", branch: "main" },
+    });
+
+    assert.notEqual(report.failure_class, "boundary_violation", phrase);
+  }
+});
+
+test("preposed negation reaches a bare marker across an action verb (PR #396 Greptile)", () => {
+  // "never used live urp": the negator is separated from the bare marker by a
+  // verb. Pre-action negation must still see it — otherwise a negated live
+  // surface over-fires boundary_violation and masks the real diagnosis.
+  const negated = [
+    "never used live urp",
+    "we never used live urp in this run",
+    "did not use live rsi",
+    "no attempt to use live poi",
+    "never ran live rsi",
+    "did not invoke live poi",
+  ];
+  for (const phrase of negated) {
+    const report = diagnoseDemaFailure({
+      failed_command: "npm test",
+      exit_code: 1,
+      stdout_excerpt: phrase,
+      stderr_excerpt: "not ok 1 - assertion failed",
+      changed_files: [],
+      environment: { node_version: "22.x", os: "linux", branch: "main" },
+    });
+    assert.notEqual(report.failure_class, "boundary_violation", phrase);
+  }
+
+  // Guard the other direction: a verb before the marker WITHOUT a negator is a
+  // real positive and must stay a hard stop (the fix only extends a negator's
+  // reach, it must not manufacture negation).
+  for (const phrase of ["used live urp to mint a token", "live urp started without consent"]) {
+    const report = diagnoseDemaFailure({
+      failed_command: "npm test",
+      exit_code: 1,
+      stdout_excerpt: phrase,
+      stderr_excerpt: "",
+      changed_files: [],
+      environment: { node_version: "22.x", os: "linux", branch: "main" },
+    });
+    assert.equal(report.failure_class, "boundary_violation", phrase);
+  }
+});
+
+test("explicit state negation cancels a completed-verb marker; a bare qualifier does not (PR #396 Greptile)", () => {
+  // "wallet accessed is forbidden": the marker names a completed verb, but an
+  // explicit postposed state negation still denies the action.
+  for (const phrase of [
+    "wallet accessed is forbidden",
+    "daemon started was blocked",
+    "wallet accessed is disallowed",
+  ]) {
+    const report = diagnoseDemaFailure({
+      failed_command: "npm test",
+      exit_code: 1,
+      stdout_excerpt: phrase,
+      stderr_excerpt: "not ok 1 - assertion failed",
+      changed_files: [],
+      environment: { node_version: "22.x", os: "linux", branch: "main" },
+    });
+    assert.notEqual(report.failure_class, "boundary_violation", phrase);
+  }
+
+  // A bare qualifier after a completed action is NOT a state negation — the
+  // action happened, so it stays a hard stop.
+  for (const phrase of [
+    "wallet accessed by the agent",
+    "daemon started at boot",
+    "wallet accessed not authorized",
+  ]) {
+    const report = diagnoseDemaFailure({
+      failed_command: "npm test",
+      exit_code: 1,
+      stdout_excerpt: phrase,
+      stderr_excerpt: "",
+      changed_files: [],
+      environment: { node_version: "22.x", os: "linux", branch: "main" },
+    });
+    assert.equal(report.failure_class, "boundary_violation", phrase);
+  }
+});
+
+test("a negated first action cannot hide a later positive boundary action", () => {
+  const report = diagnoseDemaFailure({
+    failed_command: "gh run view 42",
+    exit_code: 1,
+    stdout_excerpt:
+      "no token mint requested; GitHub Actions billing issue; later minted token",
+    stderr_excerpt: "The job was not started because your account is locked.",
+    changed_files: [],
+    environment: { node_version: "22.x", os: "linux", branch: "main" },
+  });
+
+  assert.equal(report.failure_class, "boundary_violation");
+  assert.equal(report.inward_diagnosis.failure_class, "boundary_violation");
+  assert.equal(report.outward_diagnosis.failure_class, "boundary_violation");
+});
+
+test("a negated live surface cannot consume a later positive live action", () => {
+  const report = diagnoseDemaFailure({
+    failed_command: "gh run view 42",
+    exit_code: 1,
+    stdout_excerpt:
+      "no live URP requested; later live URP started; GitHub Actions billing issue",
+    stderr_excerpt: "The job was not started because your account is locked.",
+    changed_files: [],
+    environment: { node_version: "22.x", os: "linux", branch: "main" },
+  });
+
+  assert.equal(report.failure_class, "boundary_violation");
+  assert.equal(report.operator_action_required, null);
+  const marker = buildCiVendorAvailabilityMarker({
+    fde_report: report,
+    operator_declared: true,
+  });
+  assert.equal(marker.local_proof_lane, false);
+});
+
+test("negated boundary sentinel does not manufacture a violation", () => {
+  const report = diagnoseDemaFailure({
+    failed_command: "node scripts/review/safety-report.mjs",
+    exit_code: 1,
+    stdout_excerpt: "no evidence of fde:boundary_not_false:push_performed",
+    stderr_excerpt: "documentation assertion failed",
+    changed_files: [],
+    environment: { node_version: "22.x", os: "linux", branch: "main" },
+  });
+
+  assert.notEqual(report.failure_class, "boundary_violation");
+});
+
+test("positive autopatch authority markers remain boundary violations", () => {
+  for (const marker of ["eligible_for_autopatch: true", "autopatch=true"]) {
+    const report = diagnoseDemaFailure({
+      failed_command: "gh run view 42",
+      exit_code: 1,
+      stdout_excerpt: `${marker}; GitHub Actions billing issue`,
+      stderr_excerpt: "The job was not started because your account is locked.",
+      changed_files: [],
+      environment: { node_version: "22.x", os: "linux", branch: "main" },
+    });
+
+    assert.equal(report.failure_class, "boundary_violation", marker);
+    assert.equal(
+      buildCiVendorAvailabilityMarker({
+        fde_report: report,
+        operator_declared: true,
+      }).local_proof_lane,
+      false,
+      marker,
+    );
+  }
 });
 
 test("inner execute consent alone does not classify as billing lock", () => {
@@ -361,6 +618,7 @@ test("verify rejects unsupported failure_class", () => {
 // ---------------------------------------------------------------------------
 
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import {
   buildCiVendorAvailabilityMarker,
   defaultGithubActionsBillingLockFdeFixture,
@@ -437,6 +695,245 @@ test("verify rejects a report that carries no input to re-derive from", () => {
   const verified = verifyDemaFdeDualDiagnostic(noInput);
   assert.equal(verified.ok, false);
   assert.ok(verified.blocked_by.includes("input_missing_for_rederivation"));
+});
+
+test("authentic frozen v0.1 fixture re-derives under the frozen legacy algorithm", () => {
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL("./fixtures/dema-fde-dual-diagnostic-v0.1.json", import.meta.url),
+      "utf8",
+    ),
+  );
+
+  const historical = verifyLegacyDemaFdeDualDiagnosticIntegrity(fixture);
+  assert.equal(historical.ok, true);
+  assert.equal(historical.verification_mode, "legacy_v0_1_semantic_rederivation");
+  assert.equal(historical.authority_eligible, false);
+
+  const currentAuthority = verifyDemaFdeDualDiagnostic(fixture);
+  assert.equal(currentAuthority.ok, false);
+  assert.ok(currentAuthority.blocked_by.includes("invalid_schema"));
+
+  const marker = buildCiVendorAvailabilityMarker({
+    fde_report: fixture,
+    operator_declared: true,
+  });
+  assert.equal(marker.availability, "UNKNOWN");
+  assert.equal(marker.local_proof_lane, false);
+});
+
+test("frozen v0.1 corpus pins every shared derivation branch (PR #396 review)", () => {
+  // Authentic parent-commit reports spanning every failure class, measured
+  // status, and confidence tier. The frozen v0.1 path shares helper tails
+  // with v0.2; this corpus is the comprehensive branch pin — mutating any
+  // shared derivation code breaks a vector here, failing closed.
+  const corpus = JSON.parse(
+    readFileSync(
+      new URL("./fixtures/dema-fde-dual-diagnostic-v0.1-corpus.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  assert.ok(corpus.entries.length >= 17);
+
+  const classes = new Set();
+  for (const { note, report } of corpus.entries) {
+    const verdict = verifyLegacyDemaFdeDualDiagnosticIntegrity(report);
+    assert.equal(verdict.ok, true, `${note}: ${verdict.blocked_by?.join(",")}`);
+    assert.equal(verdict.authority_eligible, false, note);
+    classes.add(report.failure_class);
+  }
+  for (const cls of FDE_FAILURE_CLASSES) {
+    assert.ok(classes.has(cls), `corpus missing failure class ${cls}`);
+  }
+
+  // Canary: flipping any derived field in a corpus entry and rehashing must
+  // fail rederivation, exactly like the relabel exploit.
+  const victim = corpus.entries[0].report;
+  const { diagnostic_hash: _d, ...body } = victim;
+  const flippedBody = { ...body, measured_status: "UNKNOWN", terminal_state: "INSUFFICIENT_EVIDENCE" };
+  const flipped = { ...flippedBody, diagnostic_hash: kernelDiagnosticHash(flippedBody) };
+  const flippedVerdict = verifyLegacyDemaFdeDualDiagnosticIntegrity(flipped);
+  assert.equal(flippedVerdict.ok, false);
+  assert.ok(flippedVerdict.blocked_by.includes("legacy_semantic_rederivation_mismatch"));
+});
+
+test("relabeling a v0.2 report as v0.1 and rehashing is rejected (PR #396 P1)", () => {
+  const current = diagnoseDemaFailure(defaultGithubActionsBillingLockFdeFixture());
+  const { diagnostic_hash: _drop, ...currentBody } = current;
+
+  // The exact reviewer exploit: fabricate a derived field, relabel the schema
+  // as legacy, recompute a self-consistent hash. Schema relabeling alone must
+  // not mint historical provenance.
+  const fabricatedBody = {
+    ...currentBody,
+    schema: DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA,
+    failure_class: "implementation_defect",
+  };
+  const fabricated = {
+    ...fabricatedBody,
+    diagnostic_hash: kernelDiagnosticHash(fabricatedBody),
+  };
+  const fabricatedVerdict = verifyLegacyDemaFdeDualDiagnosticIntegrity(fabricated);
+  assert.equal(fabricatedVerdict.ok, false);
+  assert.ok(
+    fabricatedVerdict.blocked_by.includes("legacy_semantic_rederivation_mismatch"),
+  );
+  assert.equal(fabricatedVerdict.authority_eligible, false);
+
+  // Even an unfabricated straight relabel fails: this input derives
+  // differently under the frozen v0.1 algorithm than under v0.2.
+  const relabeledBody = {
+    ...currentBody,
+    schema: DEMA_FDE_DUAL_DIAGNOSTIC_LEGACY_SCHEMA,
+  };
+  const relabeled = {
+    ...relabeledBody,
+    diagnostic_hash: kernelDiagnosticHash(relabeledBody),
+  };
+  assert.equal(verifyLegacyDemaFdeDualDiagnosticIntegrity(relabeled).ok, false);
+
+  const marker = buildCiVendorAvailabilityMarker({
+    fde_report: fabricated,
+    operator_declared: true,
+  });
+  assert.equal(marker.availability, "UNKNOWN");
+  assert.equal(marker.local_proof_lane, false);
+});
+
+test("legacy verifier fails closed on wrong schema and missing input", () => {
+  // A v0.2 report handed to the legacy verifier is a schema mismatch.
+  const current = diagnoseDemaFailure(defaultDemaFdeDualDiagnosticFixture());
+  const wrongSchema = verifyLegacyDemaFdeDualDiagnosticIntegrity(current);
+  assert.equal(wrongSchema.ok, false);
+  assert.ok(wrongSchema.blocked_by.includes("invalid_schema"));
+  assert.equal(wrongSchema.verification_mode, "legacy_v0_1_semantic_rederivation");
+  assert.equal(wrongSchema.authority_eligible, false);
+
+  // A legacy-schema report that carries no input cannot be re-derived.
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL("./fixtures/dema-fde-dual-diagnostic-v0.1.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const { input: _stripped, ...noInput } = fixture;
+  const missing = verifyLegacyDemaFdeDualDiagnosticIntegrity(noInput);
+  assert.equal(missing.ok, false);
+  assert.ok(missing.blocked_by.includes("input_missing_for_rederivation"));
+  assert.equal(missing.authority_eligible, false);
+});
+
+test("historical-receipt router dispatches by schema and fails closed on unknown", () => {
+  const v02 = diagnoseDemaFailure(defaultDemaFdeDualDiagnosticFixture());
+  const v02Verdict = verifyDemaFdeDualDiagnosticForHistoricalReceipt(v02);
+  assert.equal(v02Verdict.ok, true);
+  assert.equal(v02Verdict.verification_mode, "semantic_rederivation_v0_2");
+  assert.equal(v02Verdict.authority_eligible, true);
+
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL("./fixtures/dema-fde-dual-diagnostic-v0.1.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const v01Verdict = verifyDemaFdeDualDiagnosticForHistoricalReceipt(fixture);
+  assert.equal(v01Verdict.ok, true);
+  assert.equal(v01Verdict.verification_mode, "legacy_v0_1_semantic_rederivation");
+  assert.equal(v01Verdict.authority_eligible, false);
+
+  const unknown = verifyDemaFdeDualDiagnosticForHistoricalReceipt({
+    ...fixture,
+    schema: "bizra.dema.fde_dual_diagnostic.v9.9",
+  });
+  assert.equal(unknown.ok, false);
+  assert.ok(unknown.blocked_by.includes("invalid_schema"));
+  assert.equal(unknown.verification_mode, "unsupported");
+  assert.equal(unknown.authority_eligible, false);
+
+  const nullish = verifyDemaFdeDualDiagnosticForHistoricalReceipt(null);
+  assert.equal(nullish.ok, false);
+  assert.equal(nullish.authority_eligible, false);
+});
+
+test("bare standalone boundary sentinels remain hard stops (PR #396 P1)", () => {
+  const markers = [
+    "wallet_accessed",
+    "network_used",
+    "daemon_started",
+    "autopatch_performed",
+    "token mint",
+  ];
+  for (const marker of markers) {
+    const report = diagnoseDemaFailure({
+      failed_command: "npm test",
+      exit_code: 1,
+      stdout_excerpt: `steps=[] runner_id=7 ${marker}`,
+      stderr_excerpt: "",
+      changed_files: [],
+      environment: { node_version: "22.x", os: "linux", branch: "main" },
+    });
+    assert.equal(report.failure_class, "boundary_violation", marker);
+    assert.equal(report.inward_diagnosis.failure_class, "boundary_violation", marker);
+    // Assert both lenses: the primary can be boundary_violation while an
+    // outward-lens regression silently returns github_actions_billing_lock.
+    assert.equal(report.outward_diagnosis.failure_class, "boundary_violation", marker);
+  }
+});
+
+test("bare sentinel mixed with GitHub billing lock still hard-stops (PR #396 P1)", () => {
+  for (const marker of ["wallet_accessed", "token mint"]) {
+    const report = diagnoseDemaFailure({
+      failed_command: "gh pr checks 396",
+      exit_code: 1,
+      stdout_excerpt: `jobs: steps=[], runner_id=0, ${marker}`,
+      stderr_excerpt:
+        "The job was not started because your account is locked due to a billing issue.",
+      changed_files: [],
+      environment: {
+        node_version: "22.x",
+        os: "linux",
+        branch: "main",
+        ci_provider: "github_actions",
+        runner_assigned: false,
+        runner_id: 0,
+      },
+    });
+    assert.equal(report.failure_class, "boundary_violation", marker);
+    assert.equal(report.inward_diagnosis.failure_class, "boundary_violation", marker);
+    assert.equal(report.outward_diagnosis.failure_class, "boundary_violation", marker);
+    assert.equal(report.operator_action_required, null, marker);
+    assert.equal(
+      report.minimal_fix_plan.some((step) => step.includes("billing")),
+      false,
+      `${marker}: billing repair must not mask a boundary stop`,
+    );
+  }
+});
+
+test("bare sentinels valued false or negated stay silent (PR #396 P1)", () => {
+  const safePhrases = [
+    "wallet_accessed: false",
+    '"wallet_accessed": false',
+    "network_used=false",
+    "daemon_started: false",
+    "autopatch_performed: false",
+    "no wallet was accessed",
+    "token minting is forbidden",
+    "no live urp requested",
+  ];
+  for (const phrase of safePhrases) {
+    const report = diagnoseDemaFailure({
+      failed_command: "node scripts/review/safety-report.mjs",
+      exit_code: 1,
+      stdout_excerpt: phrase,
+      stderr_excerpt: "documentation assertion failed",
+      changed_files: [],
+      environment: { node_version: "22.x", os: "linux", branch: "main" },
+    });
+    assert.notEqual(report.failure_class, "boundary_violation", phrase);
+    assert.notEqual(report.inward_diagnosis.failure_class, "boundary_violation", phrase);
+    assert.notEqual(report.outward_diagnosis.failure_class, "boundary_violation", phrase);
+  }
 });
 
 test("forged billing-lock report cannot open the local proof lane end-to-end", () => {

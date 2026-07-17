@@ -1,0 +1,128 @@
+{
+  "schema": "bizra.dema.fde_dual_diagnostic.v0.1",
+  "truth_label": "DEMA_FDE_DUAL_DIAGNOSTIC_PREVIEW_ONLY",
+  "stage": "FDE_DUAL_DIAGNOSTIC_CLASSIFICATION_PREVIEW",
+  "input": {
+    "failed_command": "ollama run whiterabbitneo-v3:7b",
+    "exit_code": 1,
+    "stdout_excerpt": "",
+    "stderr_excerpt": "Error: could not connect to ollama app, connect ECONNREFUSED 127.0.0.1:11434",
+    "changed_files": [],
+    "environment": {
+      "node_version": "22.x",
+      "os": "linux",
+      "branch": "feat/node0-founder-impact-loop-0a",
+      "ci_provider": "",
+      "runner_assigned": null,
+      "runner_id": null
+    },
+    "capability_registry_row": "DEMA_FDE_DUAL_DIAGNOSTIC_1A"
+  },
+  "failure_class": "environment_gap",
+  "symptom_summary": "Command \"ollama run whiterabbitneo-v3:7b\" exited with code 1.",
+  "root_cause_hypothesis": "Dominant failure_class=environment_gap with inward confidence low and outward confidence medium.",
+  "separates_symptom_from_root_cause": true,
+  "inward_diagnosis": {
+    "question": "Why did it break in code/proof?",
+    "hypothesis": "Command \"ollama run whiterabbitneo-v3:7b\" exited with code 1. Inward root cause remains unclassified from the supplied excerpts.",
+    "evidence": [],
+    "confidence": "low",
+    "failure_class": "unknown"
+  },
+  "outward_diagnosis": {
+    "question": "Why did it break here?",
+    "hypothesis": "On linux with Node 22.x on branch feat/node0-founder-impact-loop-0a. Outward evidence suggests a local environment mismatch, timeout, flaky harness, or unavailable local service.",
+    "evidence": [
+      "econnrefused"
+    ],
+    "confidence": "medium",
+    "failure_class": "environment_gap"
+  },
+  "measured_status": "HYPOTHESIS",
+  "missing_evidence": [
+    "inward_marker_evidence"
+  ],
+  "minimal_fix_plan": [
+    "Record node -v, npm -v, branch, and DEMA_HOME before retrying.",
+    "Retry on Node 22.x if the failure only appears on the advisory coverage/check path."
+  ],
+  "regression_test_required": false,
+  "field_validation_required": true,
+  "consent_required": true,
+  "eligible_for_autopatch": false,
+  "code_implicated": null,
+  "operator_action_required": null,
+  "capability_registry_reference": "DEMA_FDE_DUAL_DIAGNOSTIC_1A",
+  "lifecycle_phases": [
+    {
+      "phase": "S0_OBSERVE_FAILURE",
+      "completed": true,
+      "terminal": false
+    },
+    {
+      "phase": "S1_PARSE_EVIDENCE",
+      "completed": true,
+      "terminal": false
+    },
+    {
+      "phase": "S2_CLASSIFY_INWARD",
+      "completed": true,
+      "terminal": false
+    },
+    {
+      "phase": "S3_CLASSIFY_OUTWARD",
+      "completed": true,
+      "terminal": false
+    },
+    {
+      "phase": "S4_COMPARE_DIFFERENTIAL",
+      "completed": true,
+      "terminal": false
+    },
+    {
+      "phase": "S5_DECLARE_MEASURED_STATUS",
+      "completed": true,
+      "terminal": false
+    },
+    {
+      "phase": "S6_PROPOSE_MINIMAL_FIX_PLAN",
+      "completed": true,
+      "terminal": false
+    },
+    {
+      "phase": "S7_REQUIRE_CONSENT",
+      "completed": true,
+      "terminal": false
+    },
+    {
+      "phase": "S8_BLOCK_AUTOPATCH",
+      "completed": true,
+      "terminal": true
+    }
+  ],
+  "terminal_state": "ESCALATE_TO_HUMAN",
+  "boundaries": {
+    "patch_applied": false,
+    "file_write_performed": false,
+    "network_used": false,
+    "daemon_started": false,
+    "autopatch_performed": false,
+    "commit_performed": false,
+    "push_performed": false,
+    "merge_performed": false,
+    "live_execution_performed": false,
+    "token_minted": false,
+    "wallet_accessed": false,
+    "live_urp_started": false,
+    "model_invocation_performed": false
+  },
+  "what_this_proves": [
+    "Dema can classify a failed command into inward code/proof vs outward environment hypotheses without executing fixes.",
+    "Failure classes, confidence, and missing evidence remain explicit and fail-closed."
+  ],
+  "what_this_does_not_prove": [
+    "FDE does not patch files, commit, push, merge, start daemons, use networks, mint tokens, access wallets, or prove production readiness.",
+    "A hypothesis is not ground truth until a focused test or field validation confirms it."
+  ],
+  "diagnostic_hash": "sha256:6c5c31da2e7e98d44564bf183c740237873d3adff40cfb97a81caa077ee4e3ae"
+}
