@@ -73,8 +73,9 @@ observations under the same caveats as the section above.
 
 ## Repair (minimum)
 
-- `package.json`: removed the `node scripts/ci/restore-urp-artifacts.mjs && ` prefix from
-  `test`, `coverage`, and `check`. No other package script changed.
+- `package.json`: removed the `node scripts/ci/restore-urp-artifacts.mjs &&`
+  prefix, including its following separator space, from `test`, `coverage`,
+  and `check`. No other package script changed.
 - Deleted `scripts/ci/restore-urp-artifacts.mjs`.
 - Added `tests/test-artifact-isolation.test.js` (2 tests): the three in-scope
   package entrypoints — and their npm `pre`/`post` lifecycle siblings, which npm
