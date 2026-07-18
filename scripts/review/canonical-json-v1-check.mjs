@@ -36,6 +36,7 @@ const JSON_MODE = process.argv.includes("--json");
 export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   "packages/mission/src/mission-corridor.js",
   "packages/mission/src/dema-program-graph.js",
+  "packages/core/src/node0-realm-state-kernel.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
