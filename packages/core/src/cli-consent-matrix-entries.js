@@ -185,6 +185,13 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     ["tests/homebase-scan-consent-cli.test.js"],
   ),
   row(
+    "steward",
+    ["local_write"],
+    "exact_phrase",
+    "Reversible file steward: plan is a pure preview; run/verify perform sandbox-scoped reversible renames with backups and proven undo only after the exact execute phrase",
+    ["tests/steward-cli.test.js"],
+  ),
+  row(
     "corpus",
     ["content_read", "local_write"],
     "exact_phrase",
