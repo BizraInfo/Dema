@@ -116,6 +116,30 @@ test("an event with missing or non-integer seq halts fail-closed with a canonica
   assert.ok(result.blocked_by.includes("seq_not_integer"));
 });
 
+test("an event with missing or non-integer seq halts fail-closed with a canonicalizable halt marker", () => {
+  // PR #401 P2 (chatgpt-codex-connector): a missing seq must not flow an
+  // undefined/untrusted value into halted_at_seq — the payload must stay
+  // canonicalizable and the orchestrator must return an envelope, not throw.
+  const missing = reduceNode0RealmEvents([{}]);
+  assert.equal(missing.ok, false);
+  assert.ok(missing.blocked_by.includes("seq_not_integer"));
+  assert.equal(missing.halted_at_seq, null);
+
+  const garbage = reduceNode0RealmEvents([
+    { seq: "x", kind: "MISSION_DECLARED", payload: {}, prev_event: NODE0_REALM_GENESIS_EVENT_ID, event_id: "z" },
+  ]);
+  assert.equal(garbage.ok, false);
+  assert.ok(garbage.blocked_by.includes("seq_not_integer"));
+  assert.equal(garbage.halted_at_seq, null);
+
+  const result = runNode0RealmStateKernel({
+    consent: NODE0_REALM_STATE_KERNEL_GO_PHRASE,
+    input: { events: [{}] },
+  });
+  assert.equal(result.ok, false);
+  assert.ok(result.blocked_by.includes("seq_not_integer"));
+});
+
 test("a broken hash chain halts the replay fail-closed", () => {
   const events = fixtureEvents();
   const broken = [...events];
