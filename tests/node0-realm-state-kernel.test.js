@@ -14,6 +14,7 @@ import {
   NODE0_REALM_STATE_KERNEL_GO_PHRASE,
 } from "../packages/core/src/node0-realm-state-kernel.js";
 import { runNode0RealmStateKernelCheck } from "../scripts/review/node0-realm-state-kernel-check.mjs";
+import { sha256CanonicalJsonV1 } from "../packages/canon/src/sha256-canonical-json-v1.js";
 
 // Each test encodes part of the NODE0-REALM-STATE-KERNEL-1A proof contract:
 // deterministic replay of an injected event history into realm state, chain
@@ -88,7 +89,7 @@ test("replay derives missions, assets and head from the event history", () => {
   assert.equal(result.state.head.seq, 5);
   assert.equal(result.state.missions["m1"].verdict, "PASS");
   assert.equal(result.state.assets["a1"].mission_id, "m1");
-  assert.deepEqual(result.state.authority_scopes, ["read_events", "derive_state"]);
+  assert.deepEqual(result.state.authority_scopes, ["derive_state", "read_events"]); // sorted normalization
 });
 
 test("an event with missing or non-integer seq halts fail-closed with a canonicalizable halt marker", () => {
@@ -225,6 +226,131 @@ test("orchestrator boundary stays all-false (no execution authority)", () => {
   assert.equal(result.ok, true, result.blocked_by?.join(", "));
   assert.equal(result.boundary.execution_allowed, false);
   assert.equal(result.boundary.live_execution_performed, false);
+});
+
+// ── PR-401-COMPLETE-FAIL-CLOSED-QUALIFICATION-1B batteries ──────────────────
+
+function rehash(payload) {
+  const { content_hash, ...body } = payload;
+  return Object.freeze({ ...body, content_hash: sha256CanonicalJsonV1(body) });
+}
+
+test("non-canonical event content halts fail-closed as event_not_canonicalizable — never a throw", () => {
+  const cyclic = {}; cyclic.self = cyclic;
+  const accessor = {}; Object.defineProperty(accessor, "x", { get() { return 1; }, enumerable: true });
+  const sparse = [1, 2, 3]; delete sparse[1];
+  const cases = [
+    ["undefined", { a: undefined }],
+    ["NaN", { n: NaN }],
+    ["Infinity", { n: Infinity }],
+    ["sparse array", { arr: sparse }],
+    ["accessor", accessor],
+    ["cycle", cyclic],
+    ["non-plain object", { d: new Date(0) }],
+    ["nested malformed", { deep: { deeper: { bad: undefined } } }],
+  ];
+  for (const [name, badPayload] of cases) {
+    const event = { seq: 1, kind: "MISSION_DECLARED", payload: badPayload, prev_event: NODE0_REALM_GENESIS_EVENT_ID, event_id: "sha256:" + "0".repeat(64) };
+    const reduced = reduceNode0RealmEvents([event]);
+    assert.equal(reduced.ok, false, name);
+    assert.ok(reduced.blocked_by.includes("event_not_canonicalizable"), `${name}: ${reduced.blocked_by}`);
+    assert.equal(reduced.state, undefined, name);
+    const payload = buildNode0RealmStateKernelPayload({ events: [event] });
+    assert.equal(payload.replay.ok, false, name);
+    assert.equal(payload.realm_state, null, name);
+    assert.match(payload.content_hash, /^sha256:[0-9a-f]{64}$/, name);
+    const result = runNode0RealmStateKernel({ consent: NODE0_REALM_STATE_KERNEL_GO_PHRASE, input: { events: [event] } });
+    assert.equal(result.ok, false, name);
+    assert.ok(result.blocked_by.includes("event_not_canonicalizable"), name);
+    assert.equal(result.boundary.execution_allowed, false, name);
+  }
+});
+
+test("prototype-key identifiers behave as ordinary own keys — no impersonation", () => {
+  for (const id of ["constructor", "toString", "__proto__"]) {
+    const declared = chain([
+      ["MISSION_DECLARED", { mission_id: id, objective: "proto-key mission" }],
+      ["MISSION_VERDICT", { mission_id: id, verdict: "PASS" }],
+      ["ASSET_PROMOTED", { mission_id: id, asset_id: id }],
+    ]);
+    const ok = reduceNode0RealmEvents(declared);
+    assert.equal(ok.ok, true, `${id}: ${ok.blocked_by}`);
+    assert.ok(Object.hasOwn(ok.state.missions, id), id);
+    assert.ok(Object.hasOwn(ok.state.assets, id), id);
+
+    const undeclared = chain([["MISSION_CHECKPOINT", { mission_id: id }]]);
+    const rejected = reduceNode0RealmEvents(undeclared);
+    assert.equal(rejected.ok, false, id);
+    assert.ok(rejected.blocked_by.includes("mission_not_declared"), id);
+  }
+});
+
+test("deep immutability: events, state, and payload resist mutation without altering hashes", () => {
+  const events = fixtureEvents();
+  const event = events[0];
+  assert.throws(() => { event.payload.objective = "hacked"; }, TypeError);
+  const idBefore = event.event_id;
+  assert.equal(events[0].payload.objective, "close one bounded mission");
+  assert.equal(event.event_id, idBefore);
+
+  const reduced = reduceNode0RealmEvents(events);
+  assert.throws(() => { reduced.state.missions.m1.verdict = "FAIL"; }, TypeError);
+  assert.throws(() => { reduced.state.missions.injected = {}; }, TypeError);
+  assert.throws(() => { reduced.state.assets.a1.mission_id = "mX"; }, TypeError);
+  assert.throws(() => { reduced.state.authority_scopes.push("write_everything"); }, TypeError);
+  assert.throws(() => { reduced.state.head.seq = 99; }, TypeError);
+
+  const payload = buildNode0RealmStateKernelPayload({ events });
+  assert.throws(() => { payload.replay.ok = false; }, TypeError);
+  assert.throws(() => { payload.realm_state.missions.m1.status = "HACKED"; }, TypeError);
+  assert.equal(verifyNode0RealmStateKernel(payload).ok, true);
+
+  const result = runNode0RealmStateKernel({ consent: NODE0_REALM_STATE_KERNEL_GO_PHRASE, input: { events } });
+  assert.throws(() => { result.replay.events_applied = 0; }, TypeError);
+});
+
+test("verifier rejects forged-and-rehashed payloads on every declared invariant", () => {
+  const payload = buildNode0RealmStateKernelPayload({ events: fixtureEvents() });
+  const failedPayload = buildNode0RealmStateKernelPayload({
+    events: chain([
+      ["MISSION_DECLARED", { mission_id: "m1", objective: "x" }],
+      ["ASSET_PROMOTED", { mission_id: "m1", asset_id: "a1" }],
+    ]),
+  });
+  const casesToCode = [
+    [rehash({ ...payload, canonicalization_algorithm: "wrong.canon.v9" }), "canonicalization_algorithm_mismatch"],
+    [rehash({ ...payload, hash_algorithm: "md5" }), "hash_algorithm_mismatch"],
+    [rehash({ ...payload, text_encoding: "utf-16" }), "text_encoding_mismatch"],
+    [rehash({ ...payload, schema: "bizra.dema.other.v9" }), "schema_mismatch"],
+    [rehash({ ...payload, truth_label: "FORGED" }), "truth_label_mismatch"],
+    [rehash({ ...payload, boundary: { ...payload.boundary, execution_allowed: true } }), "boundary_shape_invalid"],
+    [rehash({ ...payload, realm_state: null }), "replay_state_inconsistent"],
+    [rehash({ ...failedPayload, realm_state: payload.realm_state }), "realm_state_present_for_failed_replay"],
+  ];
+  for (const [forged, code] of casesToCode) {
+    const verdict = verifyNode0RealmStateKernel(forged);
+    assert.equal(verdict.ok, false, code);
+    assert.ok(verdict.blocked_by.includes(code), `${code}: got ${verdict.blocked_by}`);
+  }
+});
+
+test("scope events: reorder normalizes deterministically, duplicates are rejected, boundary never moves", () => {
+  const reordered = chain([
+    ["AUTHORITY_NARROWED", { scopes: ["b_scope", "a_scope"] }],
+    ["AUTHORITY_NARROWED", { scopes: ["a_scope", "b_scope"] }],
+  ]);
+  const ok = reduceNode0RealmEvents(reordered);
+  assert.equal(ok.ok, true, ok.blocked_by);
+  assert.deepEqual([...ok.state.authority_scopes], ["a_scope", "b_scope"]);
+
+  const dup = chain([["AUTHORITY_NARROWED", { scopes: ["a_scope", "a_scope"] }]]);
+  const rejected = reduceNode0RealmEvents(dup);
+  assert.equal(rejected.ok, false);
+  assert.ok(rejected.blocked_by.includes("authority_scopes_duplicate"));
+
+  const result = runNode0RealmStateKernel({ consent: NODE0_REALM_STATE_KERNEL_GO_PHRASE, input: { events: reordered } });
+  assert.equal(result.ok, true);
+  for (const value of Object.values(result.boundary)) assert.equal(value, false);
 });
 
 test("orchestrator surfaces replay defects as named blocks", () => {

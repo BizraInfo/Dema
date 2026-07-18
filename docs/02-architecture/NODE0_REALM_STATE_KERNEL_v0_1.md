@@ -4,7 +4,7 @@ Truth label: `NODE0_REALM_STATE_KERNEL_MEASURED_REPO`
 
 ## Purpose
 
-Reconstruct Node0 realm state deterministically from durable event history while preserving an all-false execution boundary.
+Reconstruct Node0 realm state deterministically from an injected hash-chained event history while preserving an all-false execution boundary.
 
 ## Input Contract
 
@@ -35,7 +35,16 @@ blocked_by[]
 verifyNode0RealmStateKernel(payload)
 ```
 
-Body-bound re-derivation. Tampering any field breaks the bind.
+Body-bound re-derivation plus semantic invariants with stable block codes:
+schema, truth label, canonicalization algorithm, hash algorithm, text encoding,
+boundary shape, and replay/realm_state consistency (both directions) are each
+rejected even when the forger recomputes the hash.
+
+Limits (declared, tested): independent authenticity is NOT proved — an attacker
+controlling every semantically permitted field and recomputing the hash still
+requires an external signature or anchor to detect (later slice). Durable
+storage is not implemented; events are injected arrays. Restart recovery is not
+proved by this slice.
 
 ## Boundaries
 
