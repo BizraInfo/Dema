@@ -88,6 +88,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_FDE_ISNAD_REPLAY_CAPSULE_PREVIEW_0A",
   "NODE0_AGENT_FLEET_ROLES_1A",
   "NODE0_REALM_STATE_KERNEL_1A",
+  "NODE0_METRICS_BASELINE_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2269,6 +2270,35 @@ function defaultCapabilityRows() {
         "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
       what_this_proves:
         "A pure kernel deterministically reduces an injected hash-chained event history into a derived realm state (missions, assets, authority head), halting fail-closed with a named block on any chain break, forged event id, unknown kind, authority widening, or verdict-less asset promotion; the payload is content-addressed and body-bound verified.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_METRICS_BASELINE_1A",
+      truth_label: "NODE0_METRICS_BASELINE_MEASURED_REPO",
+      summary:
+        "Derive event-bound baseline metrics from realm event history; UNKNOWN is never zero; every metric carries its derivation evidence.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-metrics-baseline.js"],
+        test_paths: ["tests/node0-metrics-baseline.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-metrics-baseline-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_METRICS_BASELINE_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_METRICS_BASELINE_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure kernel derives baseline metrics from a replayed realm event history: every MEASURED metric binds the exact event seqs it derives from, absent evidence yields UNKNOWN with a named reason (never zero), corrupt history yields no metrics at all, and the utilization rate counts attempts in its denominator; the payload is content-addressed and body-bound verified.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [

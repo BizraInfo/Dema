@@ -79,6 +79,7 @@ export const commands = [
   ["node", ["scripts/review/root-clause-trace-preview-check.mjs"]],
   ["node", ["scripts/review/fde-isnad-replay-capsule-preview-check.mjs"]],
   ["node", ["scripts/review/node0-realm-state-kernel-check.mjs"]],
+  ["node", ["scripts/review/node0-metrics-baseline-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
   ["node", ["scripts/review/boundary-vocab-unification-check.mjs"]],
   ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],
