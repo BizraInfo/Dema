@@ -142,6 +142,8 @@ test("T8 adoption-freeze gate stays strict: every registered consumer is explici
       "packages/core/src/node0-realm-state-kernel.js",
       // node0-metrics-baseline (NODE0-METRICS-BASELINE-1A, PR #402).
       "packages/core/src/node0-metrics-baseline.js",
+      // dema-recovery-mission-engine (DEMA-RECOVERY-MISSION-ENGINE-1A).
+      "packages/core/src/dema-recovery-mission-engine.js",
     ],
   );
   const result = runCanonicalJsonV1Check();
