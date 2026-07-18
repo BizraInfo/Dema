@@ -89,6 +89,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_AGENT_FLEET_ROLES_1A",
   "NODE0_REALM_STATE_KERNEL_1A",
   "NODE0_METRICS_BASELINE_1A",
+  "DEMA_RECOVERY_MISSION_ENGINE_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2301,6 +2302,35 @@ function defaultCapabilityRows() {
         "A pure kernel derives baseline metrics from a replayed realm event history: every MEASURED metric binds the exact event seqs it derives from, absent evidence yields UNKNOWN with a named reason (never zero), corrupt history yields no metrics at all, and the utilization rate counts attempts in its denominator; the payload is content-addressed and body-bound verified.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_RECOVERY_MISSION_ENGINE_1A",
+      truth_label: "DEMA_RECOVERY_MISSION_ENGINE_MEASURED_REPO",
+      summary:
+        "Deterministic human-gated Recovery Mission state machine: declare -> reconstruct -> candidates -> human revival -> use -> verify -> seal; every transition guarded, no auto-selection, worker output is evidence not authority.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-recovery-mission-engine.js"],
+        test_paths: ["tests/dema-recovery-mission-engine.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-recovery-mission-engine-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_RECOVERY_MISSION_ENGINE_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_RECOVERY_MISSION_ENGINE_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A deterministic, fail-closed state-machine reduction over an INJECTED event history (34/34 tests): MISSION_DECLARED is first-event-only; RECONSTRUCTED requires a non-empty consent_id and rejects orphan candidates and more than 7; AWAITING_HUMAN can only be exited by HUMAN_REVIVAL naming a surfaced candidate (no auto-selection path exists in code); WORKER_RESULT is evidence only and can only reach VERIFYING, never SEALED, by itself; VERIFIER_VERDICT seals only on PASS from a verifier independent of the worker (verifier_is_generator rejected) attesting the human-chosen asset (asset_not_used_in_mission rejected), FAIL stops the mission; STOP moves any non-terminal mission to STOPPED narrating one of four declared causes; SEALED/STOPPED are terminal. The reduction is chain-integrity-checked (contiguous seq, prev_event binding, event_id re-derivation, event_not_canonicalizable catch, unknown-kind rejection) and content-addressed; verify() re-derives the whole body and rejects forged-and-rehashed payloads on every declared invariant. The standalone reconstructRecoveryCandidates helper never emits an item outside the declared source_boundary, buckets unknown-time evidence under a literal UNKNOWN sentinel instead of interpolating, carries declared contradictions through verbatim, and ranks candidates by a labeled integer rank (never a decimal score) capped at 7.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, live federation, durable event-log persistence, or restart recovery — events are an injected array, not a persisted log. verify() proves internal body consistency only; it does NOT prove independent authenticity (a forger controlling every semantically permitted field and recomputing the hash is not detected without an external signature or anchor — a later slice). It does not prove that a surfaced candidate is actually the correct recovered asset, only that the state machine's guards were satisfied.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
