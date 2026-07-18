@@ -146,6 +146,8 @@ test("T8 adoption-freeze gate stays strict: every registered consumer is explici
       "packages/core/src/dema-recovery-mission-engine.js",
       // dema-reversible-file-steward (DEMA-REVERSIBLE-FILE-STEWARD-1A).
       "packages/core/src/dema-reversible-file-steward.js",
+      // dema-reversible-file-steward-execution (DEMA-REVERSIBLE-FILE-STEWARD-1B).
+      "packages/core/src/dema-reversible-file-steward-execution.js",
     ],
   );
   const result = runCanonicalJsonV1Check();
