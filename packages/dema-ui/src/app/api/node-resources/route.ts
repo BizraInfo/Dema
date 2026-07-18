@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import os from "node:os";
+import nodePath from "node:path";
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import {
@@ -77,9 +78,12 @@ const realFs: FsAdapter = {
   readdirSync: (p) => readdirSync(p),
 };
 
-// Path stays server-side only — never included in the response (source is a
-// stable label, not this raw path, which would otherwise leak a HOME dir).
-const RECEIPTS_PATH = "/home/bizra-operating-system/Downloads/Dema/docs/receipts";
+// Receipts path is resolved at runtime, never a source literal (a hardcoded
+// absolute path would leak a HOME dir + username into the tree). Configure via
+// DEMA_RECEIPTS_PATH; otherwise resolve relative to the process cwd. If it does
+// not exist, the receipts observation returns UNAVAILABLE — never fabricated.
+const RECEIPTS_PATH =
+  process.env.DEMA_RECEIPTS_PATH ?? nodePath.resolve(process.cwd(), "docs/receipts");
 
 function clientIp(req: NextRequest): string | null {
   const xff = req.headers.get("x-forwarded-for");
