@@ -81,6 +81,7 @@ export const commands = [
   ["node", ["scripts/review/node0-realm-state-kernel-check.mjs"]],
   ["node", ["scripts/review/node0-metrics-baseline-check.mjs"]],
   ["node", ["scripts/review/dema-recovery-mission-engine-check.mjs"]],
+  ["node", ["scripts/review/dema-reversible-file-steward-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
   ["node", ["scripts/review/boundary-vocab-unification-check.mjs"]],
   ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],

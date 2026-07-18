@@ -468,6 +468,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/node0-realm-state-kernel.test.js`        | NODE0-REALM-STATE-KERNEL-1A (`packages/core/src/node0-realm-state-kernel.js` + `scripts/review/node0-realm-state-kernel-check.mjs`): Reconstruct Node0 realm state deterministically from an injected hash-chained event history while preserving an all-false execution boundary. 25 tests (chain integrity, non-canonical content, prototype-key identity, deep immutability, verifier invariants, scope normalization). Wired into `npm run check`. |
 | `tests/node0-metrics-baseline.test.js`        | NODE0-METRICS-BASELINE-1A (`packages/core/src/node0-metrics-baseline.js` + `scripts/review/node0-metrics-baseline-check.mjs`): Derive event-bound baseline metrics from an injected hash-chained realm event history; UNKNOWN is never zero; every metric carries its derivation evidence. 16 tests (derivation binding, UNKNOWN-never-zero, attempts denominator, fail-closed corrupt history). Wired into `npm run check`. |
 | `tests/dema-recovery-mission-engine.test.js`        | DEMA-RECOVERY-MISSION-ENGINE-1A (`packages/core/src/dema-recovery-mission-engine.js` + `scripts/review/dema-recovery-mission-engine-check.mjs`): Deterministic human-gated Recovery Mission state machine over an injected event history: declare -> reconstruct -> candidates -> human revival -> use -> verify -> seal; every transition guarded, no auto-selection, worker output is evidence not authority. 34 tests (chain integrity, `reconstructRecoveryCandidates` boundary/UNKNOWN-bucket/verbatim-contradiction/rank-cap coverage, every guarded transition including verifier independence and asset-used gates, terminal states, forged-and-rehash rejection). Wired into `npm run check`. |
+| `tests/dema-reversible-file-steward.test.js`        | DEMA-REVERSIBLE-FILE-STEWARD-1A (`packages/core/src/dema-reversible-file-steward.js` + `scripts/review/dema-reversible-file-steward-check.mjs`): Compose the proven reversible-rename, sanitizer, consent and receipt primitives into one bounded, consented, fully-reversible multi-file steward job (RENAME-only, metadata-only, no model/network). Red-first scaffold — fill the kernel bodies and turn the proof contract green. N tests. Wired into `npm run check`. |
 
 ## Smoke checks
 
@@ -611,6 +612,7 @@ node scripts/review/canonical-json-v1-check.mjs
 node scripts/review/node0-realm-state-kernel-check.mjs
 node scripts/review/node0-metrics-baseline-check.mjs
 node scripts/review/dema-recovery-mission-engine-check.mjs
+node scripts/review/dema-reversible-file-steward-check.mjs
 node scripts/review/dema-capability-truth-registry-check.mjs
 node scripts/review/boundary-vocab-unification-check.mjs
 node scripts/review/dema-fde-dual-diagnostic-check.mjs
