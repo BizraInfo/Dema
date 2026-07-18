@@ -91,6 +91,11 @@ export function reduceNode0RealmEvents(events) {
     const expectedSeq = state.head.seq + 1;
     if (!event || typeof event !== "object") return halt(["event_not_object"], expectedSeq, applied);
     const { seq, kind, payload, prev_event, event_id } = event;
+    // Untrusted seq never reaches the halt marker: a missing or non-integer
+    // seq halts with a null position so the payload stays canonicalizable
+    // (canonical-json-v1 fails closed on undefined) and run() returns an
+    // envelope instead of throwing. (PR #401 P2 repair.)
+    if (!Number.isInteger(seq)) return halt(["seq_not_integer"], null, applied);
     if (seq !== expectedSeq) return halt(["seq_not_contiguous"], seq, applied);
     if (!NODE0_REALM_EVENT_KINDS.includes(kind)) return halt(["kind_unknown"], seq, applied);
     if (!payload || typeof payload !== "object") return halt(["payload_not_object"], seq, applied);
