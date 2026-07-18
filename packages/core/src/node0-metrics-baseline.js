@@ -118,12 +118,12 @@ export function buildNode0MetricsBaselinePayload(input) {
     canonicalization_algorithm: CANONICAL_JSON_V1_ALGORITHM,
     hash_algorithm: "sha256",
     text_encoding: "utf-8",
-    replay: {
+    replay: Object.freeze({
       ok: replayResult.ok,
       blocked_by: replayResult.blocked_by,
       halted_at_seq: replayResult.halted_at_seq,
       events_applied: replayResult.events_applied,
-    },
+    }),
     metrics: replayResult.ok ? deriveNode0BaselineMetrics(events, replayResult.state) : null,
     boundary: node0MetricsBaselineBoundary(),
   };
@@ -142,6 +142,11 @@ export function verifyNode0MetricsBaseline(payload) {
   const { content_hash, ...body } = payload;
   if (payload.schema !== NODE0_METRICS_BASELINE_SCHEMA) blocked_by.push("schema_mismatch");
   if (payload.truth_label !== NODE0_METRICS_BASELINE_TRUTH_LABEL) blocked_by.push("truth_label_mismatch");
+  if (payload.canonicalization_algorithm !== CANONICAL_JSON_V1_ALGORITHM) {
+    blocked_by.push("canonicalization_algorithm_mismatch");
+  }
+  if (payload.hash_algorithm !== "sha256") blocked_by.push("hash_algorithm_mismatch");
+  if (payload.text_encoding !== "utf-8") blocked_by.push("text_encoding_mismatch");
   const expectedBoundary = node0MetricsBaselineBoundary();
   const boundary = payload.boundary;
   const boundaryValid =

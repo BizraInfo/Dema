@@ -17,6 +17,7 @@ import {
   NODE0_REALM_GENESIS_EVENT_ID,
 } from "../packages/core/src/node0-realm-state-kernel.js";
 import { runNode0MetricsBaselineCheck } from "../scripts/review/node0-metrics-baseline-check.mjs";
+import { sha256CanonicalJsonV1 } from "../packages/canon/src/sha256-canonical-json-v1.js";
 
 // Each test encodes part of the NODE0-METRICS-BASELINE-1A proof contract:
 // metrics derive purely from replayed events, bind their derivation seqs,
@@ -157,6 +158,52 @@ test("verify rejects a field change that did not update the content_hash", () =>
   const payload = buildNode0MetricsBaselinePayload({ events: fixtureEvents() });
   const forged = { ...payload, truth_label: "FORGED" };
   assert.equal(verifyNode0MetricsBaseline(forged).ok, false);
+});
+
+function rehash(payload) {
+  const { content_hash, ...body } = payload;
+  return Object.freeze({ ...body, content_hash: sha256CanonicalJsonV1(body) });
+}
+
+test("verifier rejects forged-and-rehashed payloads on every declared invariant", () => {
+  const payload = buildNode0MetricsBaselinePayload({ events: fixtureEvents() });
+  const failedPayload = buildNode0MetricsBaselinePayload({
+    events: chain([
+      ["MISSION_DECLARED", { mission_id: "m1", objective: "x" }],
+      ["ASSET_PROMOTED", { mission_id: "m1", asset_id: "a1" }],
+    ]),
+  });
+  const casesToCode = [
+    [rehash({ ...payload, canonicalization_algorithm: "wrong.canon.v9" }), "canonicalization_algorithm_mismatch"],
+    [rehash({ ...payload, hash_algorithm: "md5" }), "hash_algorithm_mismatch"],
+    [rehash({ ...payload, text_encoding: "utf-16" }), "text_encoding_mismatch"],
+    [rehash({ ...payload, schema: "bizra.dema.other.v9" }), "schema_mismatch"],
+    [rehash({ ...payload, truth_label: "FORGED" }), "truth_label_mismatch"],
+    [rehash({ ...payload, boundary: { ...payload.boundary, execution_allowed: true } }), "boundary_shape_invalid"],
+    [rehash({ ...payload, metrics: null }), "metrics_missing_for_ok_replay"],
+    [rehash({ ...failedPayload, metrics: payload.metrics }), "metrics_present_for_failed_replay"],
+  ];
+  for (const [forged, code] of casesToCode) {
+    const verdict = verifyNode0MetricsBaseline(forged);
+    assert.equal(verdict.ok, false, code);
+    assert.ok(verdict.blocked_by.includes(code), `${code}: got ${verdict.blocked_by}`);
+  }
+});
+
+test("payload replay receipt is frozen — mutation throws and verify is unaffected", () => {
+  const payload = buildNode0MetricsBaselinePayload({ events: fixtureEvents() });
+  assert.throws(() => { payload.replay.ok = false; }, TypeError);
+  assert.throws(() => { payload.metrics.missions_declared.value = 99; }, TypeError);
+  assert.equal(verifyNode0MetricsBaseline(payload).ok, true);
+});
+
+test("malformed event content fails closed through the shared reducer — no throw", () => {
+  const result = runNode0MetricsBaseline({
+    consent: NODE0_METRICS_BASELINE_GO_PHRASE,
+    input: { events: [{ seq: 1, kind: "MISSION_DECLARED", payload: { bad: undefined }, prev_event: "GENESIS", event_id: "sha256:" + "0".repeat(64) }] },
+  });
+  assert.equal(result.ok, false);
+  assert.ok(result.blocked_by.includes("event_not_canonicalizable"));
 });
 
 test("review gate closes the loop: build -> verify -> tamper-reject", () => {
