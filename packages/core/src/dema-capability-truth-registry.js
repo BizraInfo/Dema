@@ -87,6 +87,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_ROOT_CLAUSE_TRACE_REGISTRY_PREVIEW_1A",
   "DEMA_FDE_ISNAD_REPLAY_CAPSULE_PREVIEW_0A",
   "NODE0_AGENT_FLEET_ROLES_1A",
+  "NODE0_REALM_STATE_KERNEL_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2245,6 +2246,35 @@ function defaultCapabilityRows() {
         "agent training",
         "agent deliberation",
         "spawned agent",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_REALM_STATE_KERNEL_1A",
+      truth_label: "NODE0_REALM_STATE_KERNEL_MEASURED_REPO",
+      summary:
+        "Reconstruct Node0 realm state deterministically from an injected hash-chained event history while preserving an all-false execution boundary.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-realm-state-kernel.js"],
+        test_paths: ["tests/node0-realm-state-kernel.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-realm-state-kernel-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_REALM_STATE_KERNEL_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_REALM_STATE_KERNEL_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure kernel deterministically reduces an injected hash-chained event history into a derived realm state (missions, assets, authority head), halting fail-closed with a named block on any chain break, forged event id, unknown kind, authority widening, or verdict-less asset promotion; the payload is content-addressed and body-bound verified.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
       ],
     }),
   ]);
