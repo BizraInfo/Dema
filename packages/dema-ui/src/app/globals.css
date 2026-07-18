@@ -1,0 +1,261 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jb);
+  --font-serif: var(--font-pd);
+  --font-arabic: var(--font-amiri);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  /* BIZRA semantic game colors */
+  --color-proof: var(--proof);
+  --color-consent: var(--consent);
+  --color-verified: var(--verified);
+  --color-knowledge: var(--knowledge);
+  --color-fail: var(--fail);
+  --color-unknown: var(--unknown);
+  --color-snr: var(--snr);
+
+  /* BIZRA brand canon aliases */
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-teal: var(--teal);
+  --color-navy: var(--navy);
+  --color-pending: var(--pending);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.625rem;
+
+  /* BIZRA brand canon — Origin Black · Celestial Navy · Genesis Gold · Living Teal */
+  --background: oklch(0.125 0.022 252);          /* origin black #050B14 */
+  --foreground: oklch(0.955 0.006 90);
+  --card: oklch(0.185 0.028 248 / 72%);          /* surface card #0D1B2A */
+  --card-foreground: oklch(0.955 0.006 90);
+  --popover: oklch(0.165 0.026 250);             /* celestial navy #0A1628 */
+  --popover-foreground: oklch(0.955 0.006 90);
+  --primary: oklch(0.745 0.083 85);              /* genesis gold #C9A962 */
+  --primary-foreground: oklch(0.13 0.03 250);
+  --secondary: oklch(0.235 0.028 250);
+  --secondary-foreground: oklch(0.92 0.01 90);
+  --muted: oklch(0.215 0.025 250);
+  --muted-foreground: oklch(0.67 0.018 85);
+  --accent: oklch(0.27 0.03 250);
+  --accent-foreground: oklch(0.95 0.008 90);
+  --destructive: oklch(0.62 0.19 25);
+  --border: oklch(0.72 0.06 85 / 16%);           /* gold-tinted hairline */
+  --input: oklch(0.25 0.026 250);
+  --ring: oklch(0.745 0.083 85 / 55%);
+  --chart-1: oklch(0.795 0.125 183);
+  --chart-2: oklch(0.745 0.083 85);
+  --chart-3: oklch(0.77 0.14 163);
+  --chart-4: oklch(0.65 0.20 300);
+  --chart-5: oklch(0.70 0.16 22);
+  --sidebar: oklch(0.15 0.024 250);
+  --sidebar-foreground: oklch(0.955 0.006 90);
+  --sidebar-primary: oklch(0.745 0.083 85);
+  --sidebar-primary-foreground: oklch(0.13 0.03 250);
+  --sidebar-accent: oklch(0.235 0.028 250);
+  --sidebar-accent-foreground: oklch(0.95 0.008 90);
+  --sidebar-border: oklch(0.72 0.06 85 / 16%);
+  --sidebar-ring: oklch(0.745 0.083 85 / 55%);
+
+  /* Semantic proof palette (canon) */
+  --proof: oklch(0.795 0.125 183);     /* living teal #2DD4BF */
+  --consent: oklch(0.745 0.083 85);    /* genesis gold #C9A962 */
+  --verified: oklch(0.77 0.14 163);    /* proof-verified #34D399 */
+  --knowledge: oklch(0.66 0.19 300);   /* purple */
+  --fail: oklch(0.70 0.16 22);         /* proof-failed #F87171 */
+  --unknown: oklch(0.62 0.012 250);    /* gray */
+  --snr: oklch(0.75 0.12 140);         /* signal green */
+
+  /* Brand aliases */
+  --gold: oklch(0.745 0.083 85);
+  --gold-light: oklch(0.866 0.055 90);
+  --teal: oklch(0.795 0.125 183);
+  --navy: oklch(0.165 0.03 250);
+  --pending: oklch(0.828 0.16 83);     /* proof-pending #FBBF24 */
+}
+
+.dark {
+  /* mirrors :root for any dark-variant utilities */
+  --background: oklch(0.125 0.022 252);
+  --foreground: oklch(0.955 0.006 90);
+  --card: oklch(0.185 0.028 248 / 72%);
+  --card-foreground: oklch(0.955 0.006 90);
+  --popover: oklch(0.165 0.026 250);
+  --popover-foreground: oklch(0.955 0.006 90);
+  --primary: oklch(0.745 0.083 85);
+  --primary-foreground: oklch(0.13 0.03 250);
+  --secondary: oklch(0.235 0.028 250);
+  --secondary-foreground: oklch(0.92 0.01 90);
+  --muted: oklch(0.215 0.025 250);
+  --muted-foreground: oklch(0.67 0.018 85);
+  --accent: oklch(0.27 0.03 250);
+  --accent-foreground: oklch(0.95 0.008 90);
+  --destructive: oklch(0.62 0.19 25);
+  --border: oklch(0.72 0.06 85 / 16%);
+  --input: oklch(0.25 0.026 250);
+  --ring: oklch(0.745 0.083 85 / 55%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html, body {
+    @apply bg-background text-foreground;
+    min-height: 100%;
+  }
+  body {
+    background-image:
+      radial-gradient(900px circle at 12% -10%, oklch(0.35 0.06 85 / 0.16), transparent 55%),
+      radial-gradient(800px circle at 95% 0%, oklch(0.32 0.07 195 / 0.14), transparent 50%),
+      radial-gradient(700px circle at 50% 120%, oklch(0.24 0.05 250 / 0.18), transparent 55%);
+    background-attachment: fixed;
+  }
+}
+
+/* ---------- BIZRA game utilities ---------- */
+@layer utilities {
+  .glass {
+    background: linear-gradient(180deg, oklch(0.20 0.025 255 / 0.72), oklch(0.15 0.02 255 / 0.72));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .glass-strong {
+    background: linear-gradient(180deg, oklch(0.22 0.03 255 / 0.92), oklch(0.16 0.02 255 / 0.92));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  .hash-grid {
+    background-image:
+      linear-gradient(oklch(0.795 0.125 183 / 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.795 0.125 183 / 0.06) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .scanlines::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      oklch(0.795 0.125 183 / 0.035) 0px,
+      oklch(0.795 0.125 183 / 0.035) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    mix-blend-mode: screen;
+  }
+  .glow-proof { box-shadow: 0 0 0 1px oklch(0.795 0.125 183 / 0.35), 0 0 22px -4px oklch(0.795 0.125 183 / 0.55); }
+  .glow-consent { box-shadow: 0 0 0 1px oklch(0.745 0.083 85 / 0.35), 0 0 22px -4px oklch(0.745 0.083 85 / 0.55); }
+  .glow-verified { box-shadow: 0 0 0 1px oklch(0.74 0.16 155 / 0.35), 0 0 22px -4px oklch(0.74 0.16 155 / 0.5); }
+  .glow-fail { box-shadow: 0 0 0 1px oklch(0.62 0.23 25 / 0.45), 0 0 26px -2px oklch(0.62 0.23 25 / 0.6); }
+  .text-glow-proof { text-shadow: 0 0 12px oklch(0.795 0.125 183 / 0.65); }
+
+  /* custom scrollbar */
+  .scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+  .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background: oklch(0.45 0.06 220 / 0.5);
+    border-radius: 9999px;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb:hover { background: oklch(0.55 0.10 200 / 0.7); }
+}
+
+/* ---------- keyframes ---------- */
+@keyframes bizra-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+@keyframes bizra-ring {
+  0% { box-shadow: 0 0 0 0 oklch(0.795 0.125 183 / 0.5); }
+  100% { box-shadow: 0 0 0 16px oklch(0.795 0.125 183 / 0); }
+}
+@keyframes bizra-float-up {
+  0% { opacity: 0; transform: translateY(8px) scale(0.9); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-46px) scale(1.1); }
+}
+@keyframes bizra-zann {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); }
+  40% { transform: translateX(7px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+@keyframes bizra-slam {
+  0% { transform: translateY(-60%) scale(1.1); opacity: 0; }
+  60% { transform: translateY(4%) scale(0.98); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes bizra-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes bizra-spin-slow {
+  to { transform: rotate(360deg); }
+}
+@keyframes bizra-drift {
+  0%, 100% { transform: translate(0,0); }
+  50% { transform: translate(6px, -6px); }
+}
+@keyframes bizra-spark {
+  0% { opacity: 0; transform: translateY(0) scale(0.6); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-40px) scale(1.2); }
+}
+
+.anim-pulse { animation: bizra-pulse 2.4s ease-in-out infinite; }
+.anim-ring { animation: bizra-ring 1.6s ease-out infinite; }
+.anim-float { animation: bizra-float-up 1.3s ease-out forwards; }
+.anim-zann { animation: bizra-zann 0.45s ease-in-out; }
+.anim-slam { animation: bizra-slam 0.4s cubic-bezier(0.2,1.2,0.3,1) forwards; }
+.anim-spin-slow { animation: bizra-spin-slow 14s linear infinite; }
+.anim-drift { animation: bizra-drift 7s ease-in-out infinite; }
+.anim-spark { animation: bizra-spark 1.1s ease-out forwards; }
+
+.shimmer {
+  background: linear-gradient(90deg, transparent, oklch(0.795 0.125 183 / 0.18), transparent);
+  background-size: 200% 100%;
+  animation: bizra-shimmer 2.2s linear infinite;
+}

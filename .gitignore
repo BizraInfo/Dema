@@ -71,3 +71,8 @@ what is bash , why its the most important and most (1).md
 # out of history — see that dir's README for the excluded-asset manifest.
 /BIZRA proof-state runtime/
 /BIZRA proof-state runtime.zip
+
+# dema-ui Next.js app: generated/deps stay off-tree
+packages/dema-ui/node_modules/
+packages/dema-ui/.next/
+packages/dema-ui/dev.log
