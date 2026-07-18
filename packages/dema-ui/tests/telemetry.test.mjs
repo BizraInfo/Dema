@@ -128,10 +128,10 @@ test("storage never echoes raw mount paths — only stable labels", () => {
     [
       "Filesystem 1B-blocks Used Available Use% Mounted",
       "/dev/sda1 1000000000 500000000 500000000 50% /data/bizra",
-      "/dev/sda2 2000000000 1000000000 1000000000 50% /home/some-real-username",
+      "/dev/sda2 2000000000 1000000000 1000000000 50% /MOUNT/redaction-probe",
     ].join("\n")
   );
-  const storage = observeStorage(exec, ["/data/bizra", "/home/some-real-username"]);
+  const storage = observeStorage(exec, ["/data/bizra", "/MOUNT/redaction-probe"]);
   assert.equal(storage.status, "MEASURED");
   const labels = storage.value.map((m) => m.label);
   assert.deepEqual(labels, ["Corpus estate", "Mount 2"]);
@@ -144,7 +144,7 @@ test("receipts observation source is a stable label, never the raw absolute path
     existsSync: () => true,
     readdirSync: () => ["r1.json", "r2.json"],
   };
-  const obs = observeReceiptsCount(fs, "/home/some-real-username/Downloads/Dema/docs/receipts");
+  const obs = observeReceiptsCount(fs, "/MOUNT/redaction-probe/Downloads/Dema/docs/receipts");
   assert.equal(obs.status, "MEASURED");
   assert.equal(obs.value, 2);
   assert.equal(obs.source.includes("some-real-username"), false);
@@ -154,11 +154,11 @@ test("receipts observation source is a stable label, never the raw absolute path
 test("receipts path failure never leaks the raw path in reason", () => {
   const fs = {
     existsSync: () => {
-      throw new Error("ENOENT: no such file or directory, /home/some-real-username/secret/path");
+      throw new Error("ENOENT: no such file or directory, /MOUNT/redaction-probe/secret/path");
     },
     readdirSync: () => [],
   };
-  const obs = observeReceiptsCount(fs, "/home/some-real-username/secret/path");
+  const obs = observeReceiptsCount(fs, "/MOUNT/redaction-probe/secret/path");
   assert.equal(obs.status, "UNAVAILABLE");
   assert.equal(JSON.stringify(obs).includes("some-real-username"), false);
   assert.equal(JSON.stringify(obs).includes("ENOENT"), false);
@@ -224,7 +224,7 @@ test("full response never contains HOME, USER, token-like, or env-var strings", 
     if (cmd === "dema") return JSON.stringify({ runtime: {} });
     throw new TelemetryExecError("command_not_found");
   });
-  const resp = buildNodeResourcesResponse({ os: okOs, exec, fs, receiptsPath: "/home/real-user/Downloads/Dema/docs/receipts" });
+  const resp = buildNodeResourcesResponse({ os: okOs, exec, fs, receiptsPath: "/MOUNT/probe/docs/receipts" });
   const raw = JSON.stringify(resp);
   assert.equal(resp.schema, NODE_RESOURCES_SCHEMA);
   for (const forbidden of ["HOME=", "USER=", "real-user", "/home/", "hostname", "process.env", "Bearer ", "sk-"]) {
