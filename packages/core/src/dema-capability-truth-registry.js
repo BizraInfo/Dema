@@ -2253,7 +2253,7 @@ function defaultCapabilityRows() {
       capability_id: "NODE0_REALM_STATE_KERNEL_1A",
       truth_label: "NODE0_REALM_STATE_KERNEL_MEASURED_REPO",
       summary:
-        "Reconstruct Node0 realm state deterministically from durable event history while preserving an all-false execution boundary.",
+        "Reconstruct Node0 realm state deterministically from an injected hash-chained event history while preserving an all-false execution boundary.",
       evidence: evidence({
         source_paths: ["packages/core/src/node0-realm-state-kernel.js"],
         test_paths: ["tests/node0-realm-state-kernel.test.js"],

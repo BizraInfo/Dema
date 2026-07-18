@@ -138,6 +138,8 @@ test("T8 adoption-freeze gate stays strict: every registered consumer is explici
     [
       "packages/mission/src/mission-corridor.js",
       "packages/mission/src/dema-program-graph.js",
+      // node0-realm-state-kernel (NODE0-REALM-STATE-KERNEL-1A, PR #401).
+      "packages/core/src/node0-realm-state-kernel.js",
     ],
   );
   const result = runCanonicalJsonV1Check();
