@@ -12,7 +12,7 @@
     "node0": "node scripts/node0-mumu-loop.mjs",
     "node0:replay": "node scripts/node0-mumu-replay.mjs",
     "node0:test": "node --test tests/node0-mumu-loop.test.js tests/node0-mumu-replay.test.js",
-    "check": "node scripts/ci/run-with-classifier.mjs --log \"${TMPDIR:-/tmp}/bizra-check-output.$$.log\" -- node scripts/check.mjs",
+    "check": "node scripts/ci/run-with-classifier.mjs --require-check-gate-evidence --log \"${TMPDIR:-/tmp}/bizra-check-output.$$.log\" -- node scripts/check.mjs",
     "claim:check": "node scripts/claim-ledger-check.mjs",
     "claim:check:corpus": "node scripts/claims/claim-corpus-gate.mjs",
     "claim:check:corpus:update": "node scripts/claims/claim-corpus-gate.mjs --update-baseline",

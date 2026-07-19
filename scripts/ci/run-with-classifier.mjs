@@ -7,10 +7,14 @@
 // the output itself, captures the command's true exit, and forwards it via
 // --check-exit so an unexplained nonzero can never pass as green.
 //
-// Usage: node scripts/ci/run-with-classifier.mjs --log <file> -- <cmd ...>
+// Check-owner mode also opens a bounded fd-3 side channel so structured child
+// exits cannot be lost or forged by ordinary stdout/stderr framing:
+//   node scripts/ci/run-with-classifier.mjs --require-check-gate-evidence \
+//     --log <file> -- node scripts/check.mjs
 import { spawn } from "node:child_process";
 import { createWriteStream } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { CHECK_GATE_EVIDENCE_FD_ENV } from "./check-gate-evidence.mjs";
 
 const CLASSIFIER = fileURLToPath(
   new URL("./classify-known-harness-failures.mjs", import.meta.url),
@@ -19,25 +23,59 @@ const CLASSIFIER = fileURLToPath(
 function parseArgs(argv) {
   const sep = argv.indexOf("--");
   let log = null;
+  let requireCheckGateEvidence = false;
   const head = sep === -1 ? argv : argv.slice(0, sep);
   for (let i = 0; i < head.length; i++) {
     if (head[i] === "--log" && head[i + 1]) log = head[++i];
+    else if (head[i] === "--require-check-gate-evidence") {
+      requireCheckGateEvidence = true;
+    }
   }
-  return { log, cmd: sep === -1 ? [] : argv.slice(sep + 1) };
+  return {
+    log,
+    requireCheckGateEvidence,
+    cmd: sep === -1 ? [] : argv.slice(sep + 1),
+  };
 }
 
-const { log, cmd } = parseArgs(process.argv.slice(2));
+const { log, requireCheckGateEvidence, cmd } = parseArgs(
+  process.argv.slice(2),
+);
 if (!log || cmd.length === 0) {
   console.error(
-    "Usage: node scripts/ci/run-with-classifier.mjs --log <file> -- <cmd ...>",
+    "Usage: node scripts/ci/run-with-classifier.mjs [--require-check-gate-evidence] --log <file> -- <cmd ...>",
   );
   process.exit(2);
 }
 
 const out = createWriteStream(log);
+const childEnv = { ...process.env };
+delete childEnv[CHECK_GATE_EVIDENCE_FD_ENV];
+if (requireCheckGateEvidence) childEnv[CHECK_GATE_EVIDENCE_FD_ENV] = "3";
 const child = spawn(cmd[0], cmd.slice(1), {
-  stdio: ["inherit", "pipe", "pipe"],
+  stdio: requireCheckGateEvidence
+    ? ["inherit", "pipe", "pipe", "pipe"]
+    : ["inherit", "pipe", "pipe"],
+  env: childEnv,
 });
+const MAX_GATE_EVIDENCE_BYTES = 64 * 1024;
+const gateEvidenceChunks = [];
+let gateEvidenceBytes = 0;
+let gateEvidenceOverflow = false;
+let gateEvidenceError = null;
+if (requireCheckGateEvidence) {
+  child.stdio[3].on("data", (chunk) => {
+    gateEvidenceBytes += chunk.length;
+    if (gateEvidenceBytes <= MAX_GATE_EVIDENCE_BYTES) {
+      gateEvidenceChunks.push(chunk);
+    } else {
+      gateEvidenceOverflow = true;
+    }
+  });
+  child.stdio[3].on("error", (error) => {
+    gateEvidenceError = error;
+  });
+}
 child.stdout.on("data", (chunk) => {
   process.stdout.write(chunk);
   out.write(chunk);
@@ -50,11 +88,41 @@ child.on("error", (err) => {
   console.error(`run-with-classifier: failed to spawn command: ${err.message}`);
   process.exit(1);
 });
-child.on("close", (code) => {
+child.on("close", (code, signal) => {
   out.end(() => {
+    if (signal) {
+      console.error(
+        `[G8 EXIT] gated command terminated by ${signal}; failing closed.`,
+      );
+      process.exit(1);
+      return;
+    }
+    if (gateEvidenceOverflow || gateEvidenceError) {
+      console.error(
+        `[G8 GATE EXIT EVIDENCE] side channel ${
+          gateEvidenceOverflow ? "exceeded 64 KiB" : "failed"
+        }; failing closed.`,
+      );
+      process.exit(1);
+      return;
+    }
+    const classifierArgs = [
+      CLASSIFIER,
+      "--log",
+      log,
+      "--check-exit",
+      String(code ?? 1),
+    ];
+    if (requireCheckGateEvidence) {
+      classifierArgs.push(
+        "--require-check-gate-evidence",
+        "--check-gate-evidence",
+        Buffer.concat(gateEvidenceChunks).toString("utf8"),
+      );
+    }
     const classifier = spawn(
       process.execPath,
-      [CLASSIFIER, "--log", log, "--check-exit", String(code ?? 1)],
+      classifierArgs,
       { stdio: "inherit" },
     );
     classifier.on("error", (err) => {

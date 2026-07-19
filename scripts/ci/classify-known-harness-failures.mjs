@@ -26,6 +26,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
+import { evaluateCheckGateEvidence } from "./check-gate-evidence.mjs";
 
 // Explicit allowlist of failures that may be masked as environmental noise.
 //
@@ -197,25 +198,38 @@ export function evaluateLogFreshness(content) {
 }
 
 const USAGE = `Usage:
-  node scripts/ci/classify-known-harness-failures.mjs --log <file> [--check-exit <n>]
+  node scripts/ci/classify-known-harness-failures.mjs --log <file> [--check-exit <n>] [--require-check-gate-evidence --check-gate-evidence <jsonl>]
   node scripts/ci/classify-known-harness-failures.mjs --stdin   # or pipe to stdin
 
 --check-exit <n>: the REAL exit status of the command that produced the log
 (forwarded by scripts/ci/run-with-classifier.mjs). A nonzero n with a clean TAP
 log means a NON-TAP gate failed after the tests — that must fail closed, never
 be read as a pass (CHECK-EXIT-INTEGRITY-1B).
+
+--require-check-gate-evidence: require a bounded out-of-band start + terminal
+record whose terminal event agrees with --check-exit. This mode is for
+scripts/check.mjs only; standalone test/coverage masking remains compatible.
 `;
 
 function parseArgs(argv) {
   let logPath = null;
   let useStdin = false;
   let checkExit = null;
+  let requireCheckGateEvidence = false;
+  let checkGateEvidence = null;
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--log" && argv[i + 1]) {
       logPath = argv[++i];
     } else if (argv[i] === "--check-exit" && argv[i + 1] !== undefined) {
-      const n = Number.parseInt(argv[++i], 10);
-      checkExit = Number.isInteger(n) ? n : null;
+      const raw = argv[++i];
+      checkExit = /^\d+$/.test(raw) ? Number(raw) : null;
+    } else if (argv[i] === "--require-check-gate-evidence") {
+      requireCheckGateEvidence = true;
+    } else if (
+      argv[i] === "--check-gate-evidence" &&
+      argv[i + 1] !== undefined
+    ) {
+      checkGateEvidence = argv[++i];
     } else if (argv[i] === "--stdin" || argv[i] === "-") {
       useStdin = true;
     } else if (argv[i] === "--help" || argv[i] === "-h") {
@@ -227,11 +241,22 @@ function parseArgs(argv) {
     console.error(USAGE);
     process.exit(2);
   }
-  return { logPath, useStdin, checkExit };
+  return {
+    logPath,
+    useStdin,
+    checkExit,
+    requireCheckGateEvidence,
+    checkGateEvidence,
+  };
 }
 
 function main() {
-  const { logPath, checkExit } = parseArgs(process.argv.slice(2));
+  const {
+    logPath,
+    checkExit,
+    requireCheckGateEvidence,
+    checkGateEvidence,
+  } = parseArgs(process.argv.slice(2));
 
   let content;
   try {
@@ -243,6 +268,27 @@ function main() {
       }: ${err.code || err.message}. The run's evidence is missing — failing closed. Exit 1.`,
     );
     process.exit(1);
+  }
+
+  let checkGateFailure = null;
+  if (requireCheckGateEvidence) {
+    const assessment = evaluateCheckGateEvidence({
+      content: checkGateEvidence,
+      checkExit,
+    });
+    if (!assessment.ok) {
+      console.error(
+        `[G8 GATE EXIT EVIDENCE] ${assessment.reason}; failing closed.`,
+      );
+      process.exit(1);
+    }
+    checkGateFailure = assessment.failure;
+    if (checkGateFailure?.mask_policy === "authoritative") {
+      console.error(
+        `\n[G8 NON-TAP EXIT] gate ${checkGateFailure.index}: ${checkGateFailure.command.join(" ")} exited ${checkGateFailure.exit_code}; failing closed.`,
+      );
+      process.exit(1);
+    }
   }
 
   const freshness = evaluateLogFreshness(content);
@@ -329,10 +375,10 @@ function main() {
     process.exit(1);
   }
 
-  // ponytail: when masked TAP failures exist they explain a nonzero command
-  // exit, so it is accepted here. Ceiling: a run with BOTH masked TAP noise AND
-  // a late non-TAP gate failure still passes — closing that needs per-gate
-  // structured exits from check.mjs, a later slice.
+  // Standalone test/coverage mode preserves enumerated environmental masking.
+  // Check-owner mode reaches this branch only with a complete side-channel
+  // start + canonical TAP-failure record; missing/authoritative evidence already
+  // failed above.
   console.log(
     "\n[G8 GATE] All failures are named, allowlisted environmental noise. Exit 0.",
   );
