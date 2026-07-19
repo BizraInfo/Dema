@@ -91,6 +91,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_METRICS_BASELINE_1A",
   "DEMA_RECOVERY_MISSION_ENGINE_1A",
   "DEMA_RECOVERY_MISSION_GATHERER_1B",
+  "NODE0_MODEL_SWAP_INVARIANCE_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2371,6 +2372,34 @@ function defaultCapabilityRows() {
         "operator mutation",
         "unattended runtime",
         "content read",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_MODEL_SWAP_INVARIANCE_1A",
+      truth_label: "NODE0_MODEL_SWAP_INVARIANCE_MEASURED_REPO",
+      summary:
+        "Pure kernel proving a mission-task verdict is invariant to which model produced the output: the system contract decides ACCEPT/REJECT, model identity never launders a failing output nor changes a passing one.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-model-swap-invariance.js"],
+        test_paths: ["tests/node0-model-swap-invariance.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-model-swap-invariance-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_MODEL_SWAP_INVARIANCE_1A.md"],
+        documentation_paths: [
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure kernel proves the system's ACCEPT/REJECT verdict on a mission-task is a function of (output, acceptance_contract) ONLY — model identity is never a parameter of the verdict. Constructively attests three invariants over injected candidate outputs: identical outputs from different models get identical verdicts (verdict_is_model_blind); a rejected output stays rejected under every model identity present, so a 'trusted' model cannot launder a contract-violating output into acceptance (no_identity_laundering); and permuting model-id labels leaves the accepted-output-hash set unchanged (relabel_invariant). Content-addressed + body-bound-verified; verify fails closed on a forged-false invariant flag or an extra boundary key even when rehashed. Proves the DECISION LOGIC is model-agnostic — the measured form of 'the LLM is a replaceable component; the system state is authoritative.'",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
       ],
     }),
   ]);
