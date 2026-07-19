@@ -315,9 +315,10 @@ export async function buildProofRoomBundle({
 }
 
 // redactProofRoomBundle returns a new (non-frozen-input-safe) bundle with the
-// absolute repo_root replaced by a placeholder. Adds repo_root_basename for
-// human context and repo_root_sha256 so an operator who knows their checkout
-// can still verify the original path. Idempotent · non-mutating · sets
+// absolute repo_root replaced by a placeholder. Adds a stable product label
+// (never the raw checkout/worktree basename) and repo_root_sha256 so an operator
+// who knows their checkout can still verify the original path. Idempotent ·
+// non-mutating · sets
 // `redacted: true` and `truth_label: "PUBLIC_SAFE"` when input was MEASURED.
 export function redactProofRoomBundle(bundle) {
   if (!bundle || typeof bundle !== "object") {
@@ -325,18 +326,11 @@ export function redactProofRoomBundle(bundle) {
   }
   if (bundle.redacted === true) return bundle;
   const original = bundle.repo_root;
-  const basename =
-    typeof original === "string" && original.length > 0
-      ? original
-          .replace(/[\\/]+$/, "")
-          .split(/[\\/]/)
-          .pop() || REDACTED_REPO_ROOT_PLACEHOLDER
-      : REDACTED_REPO_ROOT_PLACEHOLDER;
   const sha = digestStdout(typeof original === "string" ? original : "");
   const next = {
     ...clone(bundle),
     repo_root: REDACTED_REPO_ROOT_PLACEHOLDER,
-    repo_root_basename: basename,
+    repo_root_basename: "Dema",
     repo_root_sha256: sha,
     redacted: true,
     truth_label:

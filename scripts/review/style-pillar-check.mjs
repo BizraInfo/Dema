@@ -5,7 +5,7 @@
 // gate fails closed). This gate enforces a minimal mechanical style baseline on
 // tracked JS/MJS sources without adding dependencies.
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -22,6 +22,7 @@ export const DEFAULT_SCAN_ROOTS = Object.freeze([
 
 const BANNED_STYLE_TOOL_PATTERN =
   /\b(eslint|prettier|@biomejs\/biome|stylelint)\b/i;
+const EXCLUDED_DIRECTORY_NAMES = new Set([".git", ".next", "node_modules"]);
 
 export function listJsSourceFiles(root, scanRoots = DEFAULT_SCAN_ROOTS) {
   const files = [];
@@ -35,9 +36,10 @@ export function listJsSourceFiles(root, scanRoots = DEFAULT_SCAN_ROOTS) {
 
 function walkJs(dir, root, files) {
   for (const entry of readdirSync(dir)) {
-    if (entry === "node_modules" || entry === ".git") continue;
+    if (EXCLUDED_DIRECTORY_NAMES.has(entry)) continue;
     const path = join(dir, entry);
-    const stat = statSync(path);
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) continue;
     if (stat.isDirectory()) {
       walkJs(path, root, files);
     } else if (/\.(js|mjs)$/.test(entry)) {

@@ -1,11 +1,20 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const DEFAULT_SCAN_ROOTS = ["apps", "packages", "scripts"];
-const SOURCE_EXTENSIONS = new Set([".js", ".mjs"]);
+const SOURCE_EXTENSIONS = new Set([
+  ".cjs",
+  ".cts",
+  ".js",
+  ".mjs",
+  ".mts",
+  ".ts",
+  ".tsx",
+]);
 const EXCLUDED_PATHS = new Set(["scripts/review/actuator-check.mjs"]);
+const EXCLUDED_DIRECTORY_NAMES = new Set([".git", ".next", "node_modules"]);
 
 function extension(path) {
   const dot = path.lastIndexOf(".");
@@ -24,9 +33,10 @@ function listSourceFiles(root, scanRoots = DEFAULT_SCAN_ROOTS) {
 
 function walk(dir, root, files) {
   for (const entry of readdirSync(dir)) {
-    if (entry === "node_modules" || entry === ".git") continue;
+    if (EXCLUDED_DIRECTORY_NAMES.has(entry)) continue;
     const path = join(dir, entry);
-    const stat = statSync(path);
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) continue;
     if (stat.isDirectory()) {
       walk(path, root, files);
     } else if (SOURCE_EXTENSIONS.has(extension(entry))) {

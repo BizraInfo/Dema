@@ -1,6 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
@@ -65,6 +74,57 @@ test("actuator source analyzer allows argv-based process execution", () => {
   );
 
   assert.deepEqual(findings, []);
+});
+
+test("actuator check excludes generated Next.js output", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "dema-actuator-next-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  mkdirSync(join(root, "packages", "ui", ".next"), { recursive: true });
+  writeFileSync(
+    join(root, "packages", "ui", ".next", "bundle.js"),
+    'exec("generated framework code");\n',
+  );
+  writeFileSync(
+    join(root, "packages", "ui", "source.js"),
+    'export const safe = true;\n',
+  );
+
+  const report = buildActuatorCheckReport({ root, scanRoots: ["packages"] });
+
+  assert.equal(report.ok, true);
+  assert.deepEqual(report.scanned_files, ["packages/ui/source.js"]);
+});
+
+test("actuator check still rejects raw shell execution in TypeScript source", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "dema-actuator-ts-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  mkdirSync(join(root, "packages", "ui"), { recursive: true });
+  writeFileSync(
+    join(root, "packages", "ui", "unsafe.tsx"),
+    'export const run = () => exec("unsafe shell");\n',
+  );
+
+  const report = buildActuatorCheckReport({ root, scanRoots: ["packages"] });
+
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.scanned_files, ["packages/ui/unsafe.tsx"]);
+  assert.equal(report.findings[0]?.label, "child_process.exec_raw_shell");
+});
+
+test("actuator check never follows external or cyclic source-tree symlinks", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "dema-actuator-link-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const outside = mkdtempSync(join(tmpdir(), "dema-actuator-private-"));
+  t.after(() => rmSync(outside, { recursive: true, force: true }));
+  mkdirSync(join(root, "packages", "ui"), { recursive: true });
+  writeFileSync(join(outside, "private.js"), 'exec("private shell");\n');
+  symlinkSync(outside, join(root, "packages", "ui", "linked-private"));
+  symlinkSync(".", join(root, "packages", "ui", "cycle"));
+
+  const report = buildActuatorCheckReport({ root, scanRoots: ["packages"] });
+
+  assert.equal(report.ok, true);
+  assert.deepEqual(report.scanned_files, []);
 });
 
 test("effectcap invariant analyzer rejects caller-provided execution closures", () => {

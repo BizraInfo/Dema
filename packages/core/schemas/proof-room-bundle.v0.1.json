@@ -1,7 +1,7 @@
 {
   "$id": "bizra.dema.proof_room_bundle.v0.1",
   "title": "Proof Room Bundle v0.1",
-  "description": "Verdict envelope from packages/core/src/proof-room-bundle.js buildProofRoomBundle() and redactProofRoomBundle(). Layer 1 aggregate gate composition. Redacted variant uses truth_label=PUBLIC_SAFE and adds repo_root_basename + repo_root_sha256 + redacted=true.",
+  "description": "Verdict envelope from packages/core/src/proof-room-bundle.js buildProofRoomBundle() and redactProofRoomBundle(). Layer 1 aggregate gate composition. Redacted variant uses truth_label=PUBLIC_SAFE, emits the stable Dema product label instead of a raw worktree basename, and adds repo_root_sha256 + redacted=true.",
   "type": "object",
   "required": [
     "schema",

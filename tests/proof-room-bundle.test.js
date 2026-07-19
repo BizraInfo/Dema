@@ -25,7 +25,6 @@ const execFileAsync = promisify(execFile);
 const scriptPath = fileURLToPath(
   new URL("../scripts/proof-room-bundle.mjs", import.meta.url),
 );
-
 test("evaluateProofRoomWrite requires exact micro-consent phrase", () => {
   const deny = evaluateProofRoomWrite({
     consent_phrase: "GO: write something else",
@@ -194,6 +193,35 @@ test("redactProofRoomBundle scrubs repo_root + emits basename + sha256", () => {
     "/home/operator/Downloads/Dema",
     "input must not be mutated",
   );
+});
+
+test("redactProofRoomBundle never publishes an operator worktree basename", () => {
+  const original = {
+    schema: PROOF_ROOM_BUNDLE_SCHEMA,
+    mode: "PROOF_ROOM_CORE",
+    truth_label: "MEASURED",
+    ok: true,
+    generated_at: "2026-07-19T00:00:00.000Z",
+    repo_root: "/MOUNT/private-client-worktree-7a",
+    gates: [],
+    self_harness: {
+      gates_run: 0,
+      gates_passed: 0,
+      gates_failed: 0,
+      failed_gate_ids: [],
+      replay_command: "x",
+      full_replay_command: "y",
+      micro_consent_write: "z",
+      self_critique: [],
+    },
+    boundary: {},
+    next_safe_action: "x",
+  };
+
+  const redacted = redactProofRoomBundle(original);
+
+  assert.equal(redacted.repo_root_basename, "Dema");
+  assert.doesNotMatch(JSON.stringify(redacted), /private-client-worktree-7a/);
 });
 
 test("redactProofRoomBundle is idempotent", () => {
