@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { fetchNodeResources } from "@/lib/browser/node-resources";
 import { Panel, StatBar, TruthLabelBadge } from "./primitives";
 import { RefreshCw } from "lucide-react";
 
@@ -70,24 +71,30 @@ function BoundaryChip({ label, obs }: { label: string; obs: Observation<boolean>
 export function RealResources() {
   const [data, setData] = useState<NodeResources | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/node-resources", { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setData(await res.json());
+      setData(await fetchNodeResources(fetch, signal));
     } catch (err) {
+      if (signal?.aborted) return;
       setError(err instanceof Error ? err.message : "fetch failed");
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    load();
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => {
+      void load(controller.signal);
+    }, 0);
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
   }, [load]);
 
   return (
@@ -99,7 +106,7 @@ export function RealResources() {
         <div className="flex items-center gap-2">
           {data && <TruthLabelBadge label="LOCAL_ONLY" size="xs" />}
           <button
-            onClick={load}
+            onClick={() => void load()}
             disabled={loading}
             className="grid size-6 place-items-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:bg-card/60 disabled:opacity-50"
             aria-label="Refresh telemetry"

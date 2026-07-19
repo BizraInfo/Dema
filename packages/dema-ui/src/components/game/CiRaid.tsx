@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGame } from "@/lib/game/store";
 import { CI_GATES, COLOR_CLASS } from "@/lib/game/data";
+import { createRaidRun } from "@/lib/game/raid-run";
 import type { GateState } from "@/lib/game/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,62 +25,85 @@ export function CiRaid() {
 
   const [states, setStates] = useState<GateState[]>(CI_GATES.map(() => "idle"));
   const [running, setRunning] = useState<number | null>(null);
-  const [raidDone, setRaidDone] = useState(false);
+  const raidDone = useRef(false);
+  const activeRun = useRef<ReturnType<typeof createRaidRun> | null>(null);
 
   const allPassed = states.every((s) => s === "passed");
   const anyFailed = states.some((s) => s === "failed");
   const canRun = (i: number) => i === 0 || states[i - 1] === "passed";
 
   const runGate = (i: number) => {
-    if (running !== null || states[i] !== "idle" || !canRun(i)) return;
+    if (activeRun.current || running !== null || states[i] !== "idle" || !canRun(i)) return;
     const cur = useGame.getState();
     if (cur.resources.compute < GATE_COST) {
       setStates((s) => s.map((v, idx) => (idx === i ? "failed" : v)));
       toast.error("Red gate storm", { description: "Out of compute. Budget exhausted." });
       return;
     }
+    const raid = createRaidRun();
+    activeRun.current = raid;
     setRunning(i);
     setStates((s) => s.map((v, idx) => (idx === i ? "running" : v)));
     cur.spendResources({ compute: GATE_COST });
-    setTimeout(() => {
+    void raid.wait(CI_GATES[i].weight).then((completed) => {
+      if (!completed || activeRun.current !== raid) return;
+      activeRun.current = null;
       setStates((s) => s.map((v, idx) => (idx === i ? "passed" : v)));
       setRunning(null);
       toast.success(`${CI_GATES[i].name} ✓`, { description: CI_GATES[i].desc });
-    }, CI_GATES[i].weight);
+    });
   };
 
   const runAll = async () => {
-    if (running !== null) return;
+    if (activeRun.current || running !== null) return;
+    const raid = createRaidRun();
+    activeRun.current = raid;
     const working = [...states];
     for (let i = 0; i < CI_GATES.length; i++) {
+      if (raid.cancelled || activeRun.current !== raid) return;
       if (working[i] === "passed") continue;
       const cur = useGame.getState();
       if (cur.resources.compute < GATE_COST) {
         setStates((s) => s.map((v, idx) => (idx === i ? "failed" : v)));
         working[i] = "failed";
         toast.error("Red gate storm", { description: "Out of compute. Budget exhausted." });
+        raid.cancel();
+        activeRun.current = null;
+        setRunning(null);
         break;
       }
       setRunning(i);
       setStates((s) => s.map((v, idx) => (idx === i ? "running" : v)));
       cur.spendResources({ compute: GATE_COST });
-      await new Promise((res) => setTimeout(res, CI_GATES[i].weight));
+      const completed = await raid.wait(CI_GATES[i].weight);
+      if (!completed || activeRun.current !== raid) return;
       working[i] = "passed";
       setStates((s) => s.map((v, idx) => (idx === i ? "passed" : v)));
       setRunning(null);
       toast.success(`${CI_GATES[i].name} ✓`, { description: CI_GATES[i].desc });
     }
+    if (activeRun.current === raid) activeRun.current = null;
   };
 
   const reset = () => {
+    activeRun.current?.cancel();
+    activeRun.current = null;
     setStates(CI_GATES.map(() => "idle"));
-    setRaidDone(false);
+    raidDone.current = false;
     setRunning(null);
   };
 
+  useEffect(
+    () => () => {
+      activeRun.current?.cancel();
+      activeRun.current = null;
+    },
+    [],
+  );
+
   useEffect(() => {
-    if (allPassed && !raidDone) {
-      setRaidDone(true);
+    if (allPassed && !raidDone.current) {
+      raidDone.current = true;
       const rec = forgeReceipt({
         label: "CI Release Verdict · all gates green",
         mission: "ciRaid",
@@ -92,8 +116,8 @@ export function CiRaid() {
       completeMission("ciRaid", 5);
       toast.success("Release Verdict ✓", { description: `receipt ${rec.hash.slice(0, 10)}…` });
     }
-     
-  }, [allPassed, raidDone]);
+
+  }, [allPassed, addResource, awardXp, completeMission, forgeReceipt, setRail]);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
