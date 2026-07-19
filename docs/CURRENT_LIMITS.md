@@ -164,7 +164,6 @@ who only sees the README.
 | Terminal installer URL `install.bizra.ai/dema/install.sh` (+ `.ps1`) | Endpoint does not resolve yet; planned for packaged alpha release                                         |
 | Installer SHA-256 hash publication per release tag                   | Will live in `docs/INSTALLER_ARCHITECTURE.md` when terminal installer goes live                           |
 | macOS notarization + Windows code-signing of installer binaries      | Roadmap; see `docs/INSTALLER_ARCHITECTURE.md`                                                             |
-| `dema first-run` single-command entry                                | Composes welcome → setup → status → doctor; spec exists, command pending (see `docs/FIRST_RUN_WIZARD.md`) |
 | SBOM emission at release                                             | Stdlib-only surface; SBOM script not yet present                                                          |
 | Dependabot for GitHub Actions SHA-pinned bumps                       | `.github/dependabot.yml` not yet present                                                                  |
 | Release workflow                                                     | Manual today; `release.yml` workflow not yet present                                                      |
