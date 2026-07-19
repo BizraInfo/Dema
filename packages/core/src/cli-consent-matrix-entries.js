@@ -288,6 +288,7 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     "plan/verify preview; run/save require exact consent gates",
     ["tests/health-snapshot.test.js", "tests/mission-closeout.test.js"],
   ),
+  preview("recovery", "tests/dema-recovery-mission-gatherer.test.js"),
   readOnly("receipts", "tests/receipt-store-format.test.js"),
   row(
     "memory",

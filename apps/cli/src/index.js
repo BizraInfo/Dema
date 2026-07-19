@@ -27,6 +27,7 @@ import { cmd_delivery } from "./commands/delivery.js";
 import { cmd_foundation } from "./commands/foundation.js";
 import { cmd_realm } from "./commands/realm.js";
 import { cmd_mission } from "./commands/mission.js";
+import { cmd_recovery } from "./commands/recovery.js";
 import { cmd_founder } from "./commands/founder.js";
 import { cmd_voice } from "./commands/voice.js";
 import { cmd_memory } from "./commands/memory.js";
@@ -514,6 +515,17 @@ Dema Realm (UX-1A, UX-1B):
                     Boundary honestly declares file_write_performed:true and
                     mutation_performed:true.
 
+Dema Recovery Mission (DEMA-RECOVERY-MISSION-GATHERER-1B):
+  dema recovery preview <--root abs --mission "objective" --consent "phrase">
+                    [--exclude <abs>]... [--max-files <n>] [--json]
+                    Read-only Recovery Mission candidate PREVIEW: walks --root
+                    for file METADATA ONLY (no content read), then
+                    reconstructs up to 7 ranked candidates + chronology +
+                    not_accessed_report via the gatherer kernel over the
+                    reused DEMA-RECOVERY-MISSION-ENGINE-1A helper. No
+                    mutation, no auto-selection — human revival is a separate
+                    governed step, not in this slice.
+
 Covenant Gate (v0.1 PROTOTYPE — per Omnidirectional Audit):
   dema covenant screen <proposal.json> [--json]
                     Run the deterministic screening engine on a project proposal.
@@ -833,6 +845,10 @@ const REGISTERED_COMMANDS_LIST = [
   { command: "diagnostics", description: "preview self-diagnostics harness" },
   { command: "consent", description: "preview a micro-consent scope" },
   { command: "mission", description: "preview mission draft or propose" },
+  {
+    command: "recovery",
+    description: "read-only Recovery Mission candidate preview (subcommand: preview)",
+  },
   { command: "voice", description: "preview voice-turn receipt (text transcript only)" },
   { command: "receipts", description: "list or show local receipts" },
   {
@@ -1286,6 +1302,7 @@ const COMMAND_TABLE = {
   diagnostics: cmd_diagnostics,
   consent: cmd_consent,
   mission: cmd_mission,
+  recovery: cmd_recovery,
   founder: cmd_founder,
   voice: cmd_voice,
   receipts: cmd_receipts,

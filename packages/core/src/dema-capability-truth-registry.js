@@ -90,6 +90,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_REALM_STATE_KERNEL_1A",
   "NODE0_METRICS_BASELINE_1A",
   "DEMA_RECOVERY_MISSION_ENGINE_1A",
+  "DEMA_RECOVERY_MISSION_GATHERER_1B",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2335,6 +2336,41 @@ function defaultCapabilityRows() {
         "live execution",
         "operator mutation",
         "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_RECOVERY_MISSION_GATHERER_1B",
+      truth_label: "DEMA_RECOVERY_MISSION_GATHERER_MEASURED_REPO",
+      summary:
+        "Read-only gatherer that feeds real file METADATA into the reused DEMA-RECOVERY-MISSION-ENGINE-1A candidate reconstruction: boundary-enforced, metadata-only, up to 7 ranked candidates + chronology + not_accessed_report; `dema recovery preview` CLI space-subcommand.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/dema-recovery-mission-gatherer.js",
+          "packages/core/src/dema-recovery-mission-cli-adapter.js",
+          "apps/cli/src/commands/dema-recovery-mission-fs-gatherer.js",
+          "apps/cli/src/commands/recovery.js",
+        ],
+        test_paths: ["tests/dema-recovery-mission-gatherer.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-recovery-mission-gatherer-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_RECOVERY_MISSION_GATHERER_1B.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_RECOVERY_MISSION_GATHERER_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure kernel maps INJECTED file-metadata rows (relative_path, extension, size_bytes, mtime_iso, root) into the evidence shape the reused reconstructRecoveryCandidates helper expects, and returns its {candidates<=7, chronology, contradiction_map, not_accessed_report} unmodified: a row whose declared root is undeclared, whose resolved root+relative_path escapes that root (path-traversal guard), or whose resolved path falls under a declared exclusion is EXCLUDED into not_accessed_report and never constructed into an evidence item; unknown-time rows bucket under the literal UNKNOWN chronology sentinel; a row claiming content_read:true fails closed at plan time (the whole request is refused, not silently dropped) — this slice reads no file content. The payload is content-addressed (bizra.canonical-json.v1) and body-bound verified; forged-and-rehashed payloads are rejected on every declared invariant (schema, truth label, canonicalization identity triplet, all-false boundary, content_read_allowed:false, candidate cap). The ONLY fs surface is a separate read-only effect adapter (apps/cli/src/commands/dema-recovery-mission-fs-gatherer.js) that walks one bounded root collecting metadata only, never follows a symlink escaping the root, and fails closed on a max-files cap overrun; the CLI adapter (packages/core/src) has no direct fs import — the gatherer is always caller-injected.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, live federation, or that a surfaced candidate is the correct recovered asset — only that the boundary/metadata-only guards were satisfied. It does not read file content and derives no relevance signal from metadata (candidates tie-break alphabetically by asset_id, never a fabricated score). verify() proves internal body consistency only; it does NOT prove independent authenticity (same declared limit as DEMA-RECOVERY-MISSION-ENGINE-1A and NODE0-REALM-STATE-KERNEL-1A). It does not select or revive a candidate — human revival remains a separate governed step (the engine's HUMAN_REVIVAL event), out of scope for this slice.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+        "content read",
       ],
     }),
   ]);
