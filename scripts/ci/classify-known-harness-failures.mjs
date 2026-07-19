@@ -197,16 +197,25 @@ export function evaluateLogFreshness(content) {
 }
 
 const USAGE = `Usage:
-  node scripts/ci/classify-known-harness-failures.mjs --log <file>
+  node scripts/ci/classify-known-harness-failures.mjs --log <file> [--check-exit <n>]
   node scripts/ci/classify-known-harness-failures.mjs --stdin   # or pipe to stdin
+
+--check-exit <n>: the REAL exit status of the command that produced the log
+(forwarded by scripts/ci/run-with-classifier.mjs). A nonzero n with a clean TAP
+log means a NON-TAP gate failed after the tests — that must fail closed, never
+be read as a pass (CHECK-EXIT-INTEGRITY-1B).
 `;
 
 function parseArgs(argv) {
   let logPath = null;
   let useStdin = false;
+  let checkExit = null;
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--log" && argv[i + 1]) {
       logPath = argv[++i];
+    } else if (argv[i] === "--check-exit" && argv[i + 1] !== undefined) {
+      const n = Number.parseInt(argv[++i], 10);
+      checkExit = Number.isInteger(n) ? n : null;
     } else if (argv[i] === "--stdin" || argv[i] === "-") {
       useStdin = true;
     } else if (argv[i] === "--help" || argv[i] === "-h") {
@@ -218,11 +227,11 @@ function parseArgs(argv) {
     console.error(USAGE);
     process.exit(2);
   }
-  return { logPath, useStdin };
+  return { logPath, useStdin, checkExit };
 }
 
 function main() {
-  const { logPath } = parseArgs(process.argv.slice(2));
+  const { logPath, checkExit } = parseArgs(process.argv.slice(2));
 
   let content;
   try {
@@ -264,6 +273,16 @@ function main() {
   }
 
   if (r.cleanRun) {
+    // CHECK-EXIT-INTEGRITY-1B: a clean TAP log cannot excuse a nonzero command
+    // exit — the failure was a NON-TAP gate (review/performance/etc.) running
+    // after the tests. The old `cmd | tee; classifier` wiring laundered exactly
+    // this case into exit 0. Failure must never be laundered into progress.
+    if (checkExit !== null && checkExit !== 0) {
+      console.error(
+        `\n[G8 EXIT] the gated command exited ${checkExit} but the log shows a clean TAP run — a non-TAP gate failed after green tests. Failing closed. Exit 1.`,
+      );
+      process.exit(1);
+    }
     console.log("[G8 GATE] Clean run: 0 failures, 0 not-ok lines. Exit 0.");
     process.exit(0);
   }
@@ -310,6 +329,10 @@ function main() {
     process.exit(1);
   }
 
+  // ponytail: when masked TAP failures exist they explain a nonzero command
+  // exit, so it is accepted here. Ceiling: a run with BOTH masked TAP noise AND
+  // a late non-TAP gate failure still passes — closing that needs per-gate
+  // structured exits from check.mjs, a later slice.
   console.log(
     "\n[G8 GATE] All failures are named, allowlisted environmental noise. Exit 0.",
   );
