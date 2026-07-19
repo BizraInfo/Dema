@@ -4,7 +4,7 @@ title: 'CHECK-EXIT-INTEGRITY-1B: preserve real gate exit status'
 status: In Progress
 assignee: []
 created_date: '2026-07-18 23:51'
-updated_date: '2026-07-19 10:00'
+updated_date: '2026-07-19 17:04'
 labels:
   - next
   - product-proof
@@ -37,6 +37,10 @@ Audit 2026-07-19 finding 2 (SNR rank 2), spot-verified: package.json 'check' scr
 Verified 2026-07-19: tests/check-exit-integrity.test.js 9/9 (T1 green-TAP+exit1 fails closed via [G8 EXIT]; T6 runner end-to-end nonzero; T3/T8 masking preserved; T9 script wiring). Existing g8-classifier contract 22/22 unchanged. no-overclaim 0, integration-check 0, doc-freshness OK. Commit afd6c77 on fix/check-exit-integrity-1b (off origin/main c047b4e). Residual documented in-code: masked TAP noise + simultaneous late non-TAP failure still passes — needs per-gate structured exits from check.mjs (later slice).
 
 REOPENED BY RECONCILIATION 2026-07-19: afd6c77 closes clean-TAP plus late-failure laundering but its own code documents a residual false-green when enumerated TAP noise and a late non-TAP failure happen together. Recreate on current main, add the combined-case red test, and preserve structured per-gate exits before requesting push/PR authority.
+
+AC3 CLOSED by parallel Codex session 2026-07-19 @ e5886a1 (fix/check-exit-integrity-1b, rebased onto efc2b43, merges CLEAN). The edge case I'd documented as open (allowlisted TAP noise + simultaneous non-TAP failure) is now fully closed via a dedicated fd-3 side-channel evidence contract (start + terminal record, signal/spawn-abnormal authoritative, fd-selector stripped from child env, oversized/start-only/malformed all fail closed). 23 AC3 tests + independent review clean. This SUPERSEDES my afd6c77 — use e5886a1.
+
+2026-07-19 solo corridor: e5886a1 requalified vs main efc2b43 — merge-tree CLEAN, 23/23 focused tests green (worktree check-exit-integrity-ac3), whitespace clean. Conflicts with consent-nonce branch (shared tests/check-exit-integrity.test.js): land check-exit first, nonce rebases+requalifies after. Push blocked: gh token invalid.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
