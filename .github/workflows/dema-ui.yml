@@ -1,0 +1,48 @@
+name: Dema UI
+
+# DEMA-UI-CI-TRUTH-GATE-1A — a dedicated required rail for packages/dema-ui.
+# The root `check` workflow does NOT install, type-check, lint, build, or audit
+# the UI package, so real UI defects (ignored TS errors, lint failures, a build
+# that assumed public/, vulnerable deps) slipped past a green root gate. This
+# rail closes that: a green root repo gate is not proof the UI package is healthy.
+#
+# Actions are immutable-SHA pinned (repo convention). Runs on every PR + push to
+# main so it always reports a conclusion (a path-filtered required check can hang
+# a PR as perpetually "pending"); the job is small.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dema-ui:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/dema-ui
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 22.x
+          cache: npm
+          cache-dependency-path: packages/dema-ui/package-lock.json
+      # `npm ci` installs the exact locked tree — the UI package HAS a lockfile
+      # (unlike the zero-dep root), so it is the correct, reproducible install.
+      - name: Install (locked)
+        run: npm ci
+      - name: Package tests
+        run: npm run test
+      - name: Typecheck (tsc --noEmit)
+        run: npm run typecheck
+      - name: Lint (eslint)
+        run: npm run lint
+      - name: Production build (next build)
+        run: npm run build
+      - name: Dependency audit (moderate+)
+        run: npm run audit
