@@ -1,11 +1,21 @@
 # Software Bill of Materials & Dependency Posture — Dema
 
-- **Date:** 2026-06-02 (GST) · **Package:** `@bizra/dema-root@0.1.0-alpha.0`
-- **Truth label:** `[M]` measured this session via `package.json`, `ls node_modules`, and `grep` of `node:` imports.
+- **Date:** 2026-06-02 (GST), **boundary split 2026-07-19** · **Package:** `@bizra/dema-root@0.1.0-alpha.0`
+- **Truth label:** `[M]` measured via `package.json`, `ls node_modules`, `grep` of `node:` imports; UI boundary measured 2026-07-19 via `packages/dema-ui/package.json` + `package-lock.json`.
 
-## 1. Headline posture
+## 0. Trust boundaries (read this first)
 
-Dema ships with a **zero-dependency** supply chain:
+Since #404 merged `packages/dema-ui`, the repository holds **two distinct supply-chain boundaries**. A single repo-wide "zero dependencies" claim is no longer true and is not made:
+
+| Boundary | Scope | Posture |
+| --- | --- | --- |
+| **Kernel TCB** | root `@bizra/dema-root` (CLI, kernels, gates, receipts) | **zero-dependency** — §1 below, unchanged |
+| **Dema UI** | `packages/dema-ui` (Next.js web shell) | **66 production + 9 dev dependencies**, `package-lock.json` with **927 package entries** — §1b below |
+| **Repository aggregate** | everything tracked | kernel TCB stays zero-dep; the UI package carries the full graph above; nothing in the kernel imports from `packages/dema-ui` |
+
+## 1. Kernel TCB posture (root package)
+
+The root package ships with a **zero-dependency** supply chain:
 
 | Surface                          | Count         | Source                           |
 | -------------------------------- | ------------- | -------------------------------- |
@@ -15,7 +25,19 @@ Dema ships with a **zero-dependency** supply chain:
 | Lockfile (`package-lock.json`)   | **none**      | absent by design                 |
 | Third-party transitive packages  | **0**         | follows from the above           |
 
-**Consequence:** the transitive-CVE attack surface is effectively nil. There is no lockfile to poison, no postinstall script to hijack, and no registry-resolution step in CI or install. Supply-chain integrity is achieved by **subtraction**, not tooling.
+**Consequence (kernel TCB only):** the transitive-CVE attack surface of the kernel is effectively nil. There is no lockfile to poison, no postinstall script to hijack, and no registry-resolution step in the kernel's CI or install. Supply-chain integrity is achieved by **subtraction**, not tooling. The zero-dependency gate (`scripts`) reads the **root** `package.json` only — it does not, and does not claim to, govern `packages/dema-ui`.
+
+## 1b. Dema UI boundary (`packages/dema-ui`) — measured 2026-07-19
+
+| Surface | Count | Source |
+| --- | --- | --- |
+| Production dependencies | **66** | `packages/dema-ui/package.json` `dependencies` (Next.js, React, Prisma, next-auth, Zod, Zustand, Radix, Z.ai SDK, …) |
+| Dev dependencies | **9** | `packages/dema-ui/package.json` `devDependencies` |
+| Lockfile package entries | **927** | `packages/dema-ui/package-lock.json` |
+| Version ranges | caret (`^`) in manifest; exact in lockfile | manifest + lockfile |
+| CI verification of this boundary | **not yet** — see `DEMA-UI-CI-TRUTH-GATE-1A` (TASK-019): `npm ci` + `tsc --noEmit` + tests + build + `npm audit` are planned, not running | honesty row |
+
+The UI is a render shell: no kernel, gate, receipt, or consent path imports from it. Its dependency graph is therefore outside the kernel TCB — but it **is** part of the repository's aggregate attack surface and must be audited on its own rail.
 
 ## 2. Runtime surface (the "bill" of what is actually consumed)
 

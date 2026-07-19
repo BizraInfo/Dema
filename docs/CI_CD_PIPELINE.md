@@ -219,7 +219,7 @@ Every `uses:` reference in every workflow is **SHA-pinned**, not tag-pinned. Tag
 - 2026-05-24 — this repo migrated proactively (PR #108) · the then-current 4 workflows became Node 24 native via action SHA bumps · zero deprecation warnings across those workflow logs
 - 2026-07-03 — this document now includes the later `node0-ci-rail-aggregation` evidence workflow in the inventory
 
-**Coverage thresholds (Node 22+ only):** 95 lines · 85 branches · 95 functions. Tightening any of these requires updating `package.json scripts.coverage` AND verifying every test file still hits the new bar.
+**Coverage thresholds (Node 22+ only):** 95 lines · 84 branches · 95 functions (the enforced values in `package.json scripts.coverage` are authoritative). Tightening any of these requires updating `package.json scripts.coverage` AND verifying every test file still hits the new bar.
 
 ---
 
