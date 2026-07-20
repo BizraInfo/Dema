@@ -91,6 +91,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_METRICS_BASELINE_1A",
   "DEMA_RECOVERY_MISSION_ENGINE_1A",
   "DEMA_RECOVERY_MISSION_GATHERER_1B",
+  "DEMA_MISSION_CONTRACT_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2371,6 +2372,35 @@ function defaultCapabilityRows() {
         "operator mutation",
         "unattended runtime",
         "content read",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_MISSION_CONTRACT_1A",
+      truth_label: "DEMA_MISSION_CONTRACT_MEASURED_REPO",
+      summary:
+        "Content-addressed immutable mission contract: canonical-json-v1 hash identity, fail-closed field validation, worker-channel amendment rejection.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-mission-contract.js"],
+        test_paths: ["tests/dema-mission-contract.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-mission-contract-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_MISSION_CONTRACT_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_MISSION_CONTRACT_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A mission contract is a content-addressed immutable value: identical fields re-derive the identical canonical-json-v1 sha256 regardless of key order; unjudgeable (no acceptance criteria) or unterminable (no positive iteration budget) contracts fail closed at creation; a worker-channel amendment is rejected without mutating the prior contract, and an operator-consented amendment yields a NEW hash while the superseded contract remains verifiable.",
+      what_this_does_not_prove:
+        "It does not prove any mission was conducted, any worker ran, launder-resistance beyond internal hash consistency (no independent signature anchor yet), operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
       ],
     }),
   ]);
