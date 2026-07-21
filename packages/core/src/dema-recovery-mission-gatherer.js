@@ -285,16 +285,23 @@ export function verifyDemaRecoveryMissionGatherer(payload) {
 }
 
 // Orchestrator the review gate + CLI adapter consume. plan -> build -> verify
-// -> tamper-reject, returning the proof envelope. Any failure returns a named
-// block so the gate fails closed.
-export function runDemaRecoveryMissionGatherer({ consent, input } = {}) {
+// -> tamper-reject, ONCE, then expose two presentations of the same verified
+// payload: `proof_payload` (the exact canonical builder payload the verifier
+// accepted — independently re-verifiable after serialization) and `preview`
+// (the existing reduced human/CLI envelope). ONE BUILD · ONE HASH · ONE
+// PAYLOAD · ONE VERIFIER · TWO PRESENTATIONS (VERIFIABLE-ENVELOPE-1C). Any
+// failure returns proof_payload null + a named block so the gate fails closed.
+export function executeDemaRecoveryMissionGatherer({ consent, input } = {}) {
   const fail = (blocked_by) =>
     Object.freeze({
-      ok: false,
-      schema: DEMA_RECOVERY_MISSION_GATHERER_SCHEMA,
-      truth_label: DEMA_RECOVERY_MISSION_GATHERER_TRUTH_LABEL,
-      blocked_by: Object.freeze(blocked_by),
-      boundary: demaRecoveryMissionGathererBoundary(),
+      proof_payload: null,
+      preview: Object.freeze({
+        ok: false,
+        schema: DEMA_RECOVERY_MISSION_GATHERER_SCHEMA,
+        truth_label: DEMA_RECOVERY_MISSION_GATHERER_TRUTH_LABEL,
+        blocked_by: Object.freeze(blocked_by),
+        boundary: demaRecoveryMissionGathererBoundary(),
+      }),
     });
 
   const plan = planDemaRecoveryMissionGatherer({ consent, input });
@@ -308,21 +315,29 @@ export function runDemaRecoveryMissionGatherer({ consent, input } = {}) {
   if (tampered.ok !== false) return fail(["tamper_check_failed"]);
 
   return Object.freeze({
-    ok: true,
-    schema: DEMA_RECOVERY_MISSION_GATHERER_SCHEMA,
-    truth_label: DEMA_RECOVERY_MISSION_GATHERER_TRUTH_LABEL,
-    content_hash: payload.content_hash,
-    boundary: demaRecoveryMissionGathererBoundary(),
-    blocked_by: Object.freeze([]),
-    objective_text: payload.objective_text,
-    total_rows_in: payload.total_rows_in,
-    accepted_count: payload.accepted_count,
-    excluded_count: payload.excluded_count,
-    candidates: payload.candidates,
-    chronology: payload.chronology,
-    contradiction_map: payload.contradiction_map,
-    not_accessed_report: payload.not_accessed_report,
+    proof_payload: payload,
+    preview: Object.freeze({
+      ok: true,
+      schema: DEMA_RECOVERY_MISSION_GATHERER_SCHEMA,
+      truth_label: DEMA_RECOVERY_MISSION_GATHERER_TRUTH_LABEL,
+      content_hash: payload.content_hash,
+      boundary: demaRecoveryMissionGathererBoundary(),
+      blocked_by: Object.freeze([]),
+      objective_text: payload.objective_text,
+      total_rows_in: payload.total_rows_in,
+      accepted_count: payload.accepted_count,
+      excluded_count: payload.excluded_count,
+      candidates: payload.candidates,
+      chronology: payload.chronology,
+      contradiction_map: payload.contradiction_map,
+      not_accessed_report: payload.not_accessed_report,
+    }),
   });
+}
+
+// Backward-compatible envelope surface: identical output to pre-1C behavior.
+export function runDemaRecoveryMissionGatherer({ consent, input } = {}) {
+  return executeDemaRecoveryMissionGatherer({ consent, input }).preview;
 }
 
 // Fixtures shared by the review gate and the test file.
