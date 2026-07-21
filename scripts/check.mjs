@@ -138,11 +138,19 @@ export const commands = [
   ["node", ["scripts/claims/claim-register-check.mjs"]],
   ["node", ["scripts/claims/generate-public-claims.mjs", "--check"]],
   ["node", ["scripts/claims/claim-corpus-gate.mjs"]],
+  // Classify the exact auto-discovery command against its own fresh log before
+  // returning to the aggregate owner. A proved environmental exit 1 normalizes
+  // to zero here, so every later gate still runs; all other exits stay fatal.
   [
     "node",
-    ["--test", "--test-reporter=tap"],
-    undefined,
-    { mask_policy: "tap_allowlist" },
+    [
+      "scripts/ci/run-with-classifier.mjs",
+      "--temp-log",
+      "--",
+      "node",
+      "--test",
+      "--test-reporter=tap",
+    ],
   ],
   ["npm", ["run", "coverage"]],
   ["node", ["apps/cli/src/index.js", "welcome"]],
@@ -331,7 +339,7 @@ export function runChecks(
 ) {
   evidence(checkGateStart(checks.length));
   for (const [index, entry] of checks.entries()) {
-    const [bin, args, extraEnv, metadata] = entry;
+    const [bin, args, extraEnv] = entry;
     log(`> ${bin} ${args.join(" ")}`);
     const childEnv = { ...process.env };
     if (extraEnv && typeof extraEnv === "object") {
@@ -353,10 +361,7 @@ export function runChecks(
             index,
             command: [bin, ...args],
             exitCode,
-            maskPolicy:
-              normalNonzeroExit && metadata?.mask_policy === "tap_allowlist"
-                ? "tap_allowlist"
-                : "authoritative",
+            maskPolicy: "authoritative",
           }),
         );
       } catch {

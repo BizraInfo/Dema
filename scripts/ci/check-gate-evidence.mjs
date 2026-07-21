@@ -72,12 +72,13 @@ function validateRecord(record) {
   }
   if (
     record.mask_policy === "tap_allowlist" &&
-    (record.command.length !== TAP_ALLOWLIST_COMMAND.length ||
+    (record.exit_code !== 1 ||
+      record.command.length !== TAP_ALLOWLIST_COMMAND.length ||
       !TAP_ALLOWLIST_COMMAND.every(
         (part, index) => record.command[index] === part,
       ))
   ) {
-    return "tap_allowlist is reserved for the canonical direct TAP test command";
+    return "tap_allowlist is reserved for exit 1 from the canonical direct TAP test command";
   }
   return null;
 }
@@ -186,6 +187,13 @@ export function evaluateCheckGateEvidence({ content, checkExit }) {
   }
   if (terminal.index >= start.command_count) {
     return { ok: false, reason: "failure index exceeds declared command_count" };
+  }
+  if (terminal.mask_policy === "tap_allowlist") {
+    return {
+      ok: false,
+      reason:
+        "tap_allowlist failure cannot terminate aggregate check evidence; isolate the TAP gate and require aggregate completion",
+    };
   }
   return { ok: true, failure: terminal };
 }

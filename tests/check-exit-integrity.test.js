@@ -54,6 +54,7 @@ const UNRECOGNIZED_TAP = [
   "  Error: boom",
   "1..1",
   "# tests 1",
+  "# pass 0",
   "# fail 1",
 ].join("\n");
 
@@ -82,6 +83,20 @@ function runRunner(fakeScriptBody, runnerArgs = []) {
     [RUNNER, ...runnerArgs, "--log", log, "--", process.execPath, script],
     { encoding: "utf8" },
   );
+}
+
+function findIsolatedTapCommand() {
+  return commands.find((entry) => {
+    const args = entry[1] ?? [];
+    const separator = args.indexOf("--");
+    return (
+      entry[0] === "node" &&
+      args[0] === "scripts/ci/run-with-classifier.mjs" &&
+      separator >= 0 &&
+      args.slice(separator + 1).join(" ") ===
+        "node --test --test-reporter=tap"
+    );
+  });
 }
 
 // ── classifier: --check-exit contract ──
@@ -176,10 +191,12 @@ process.exit(0);`,
 
 test("T8 runner: masked-only environmental failure still exits 0 end-to-end", () => {
   const r = runRunner(
-    `console.log("not ok 1 - isolated preflight CLI clears preview ceremony on fresh home");
+    `console.log("TAP version 13");
+console.log("not ok 1 - isolated preflight CLI clears preview ceremony on fresh home");
 console.log("  EROFS: read-only file system, mkdtemp '/home/x'");
 console.log("1..1");
 console.log("# tests 1");
+console.log("# pass 0");
 console.log("# fail 1");
 process.exit(1);`,
   );
@@ -245,7 +262,7 @@ runChecks([["node", ["-e", "console.log('ok 1 - green'); console.log('1..1'); co
     ["--require-check-gate-evidence"],
   );
   assert.equal(r.status, 0, `stdout:\n${r.stdout}\nstderr:\n${r.stderr}`);
-  assert.match(r.stdout, /Clean run/);
+  assert.match(r.stdout, /aggregate check emitted start \+ complete/);
 });
 
 test("T8f runner: signal termination cannot be masked as TAP noise", () => {
@@ -354,23 +371,20 @@ test("T10 runChecks emits start + authoritative failure evidence before rethrowi
   assert.equal(lines.length, 1, "side-channel evidence must not use stdout");
 });
 
-test("T11 exactly the canonical direct TAP command is marked allowlist-maskable", () => {
-  const marked = commands.filter(
-    (entry) => entry[3]?.mask_policy === "tap_allowlist",
+test("T11 exactly the canonical direct TAP command is isolated", () => {
+  assert.ok(findIsolatedTapCommand());
+  assert.equal(
+    commands.some((entry) => entry[3]?.mask_policy === "tap_allowlist"),
+    false,
   );
-  assert.equal(marked.length, 1);
-  assert.deepEqual(marked[0].slice(0, 2), [
-    "node",
-    ["--test", "--test-reporter=tap"],
-  ]);
 });
 
-test("T12 runChecks emits canonical tap_allowlist failure evidence", () => {
+test("T12 an isolated TAP runner failure is authoritative to the aggregate owner", () => {
   const evidence = [];
   const failure = Object.assign(new Error("test gate failed"), { status: 1 });
   assert.throws(
     () =>
-      runChecks([commands.find((entry) => entry[3]?.mask_policy)], {
+      runChecks([findIsolatedTapCommand()], {
         execute() {
           throw failure;
         },
@@ -383,7 +397,37 @@ test("T12 runChecks emits canonical tap_allowlist failure evidence", () => {
   );
   assert.equal(evidence.length, 2);
   assert.equal(evidence[1].event, "failure");
-  assert.equal(evidence[1].mask_policy, "tap_allowlist");
+  assert.equal(evidence[1].mask_policy, "authoritative");
+});
+
+test("T12b legacy metadata cannot downgrade an outer failure to tap_allowlist", () => {
+  const evidence = [];
+  const failure = Object.assign(new Error("legacy metadata probe"), { status: 1 });
+  assert.throws(
+    () =>
+      runChecks(
+        [
+          [
+            "node",
+            ["--test", "--test-reporter=tap"],
+            undefined,
+            { mask_policy: "tap_allowlist" },
+          ],
+        ],
+        {
+          execute() {
+            throw failure;
+          },
+          log() {},
+          evidence(record) {
+            evidence.push(record);
+          },
+        },
+      ),
+    (error) => error === failure,
+  );
+  assert.equal(evidence[1].event, "failure");
+  assert.equal(evidence[1].mask_policy, "authoritative");
 });
 
 test("T13 a signaled direct TAP child is authoritative, never maskable", () => {
@@ -394,7 +438,7 @@ test("T13 a signaled direct TAP child is authoritative, never maskable", () => {
   });
   assert.throws(
     () =>
-      runChecks([commands.find((entry) => entry[3]?.mask_policy)], {
+      runChecks([findIsolatedTapCommand()], {
         execute() {
           throw failure;
         },

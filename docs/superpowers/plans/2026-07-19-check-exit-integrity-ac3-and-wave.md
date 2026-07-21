@@ -4,7 +4,7 @@
 
 **Goal:** Close TASK-018 AC3 so allowlisted TAP noise can never hide a simultaneous non-TAP gate failure, then publish only the five prepared branches that remain inside Dema's canonical boundary after exact-head checks are present and successful.
 
-**Architecture:** `scripts/check.mjs` remains the sequential gate owner. In check-owner mode it writes start plus terminal evidence over a dedicated inherited file descriptor, never multiplexed stdout/stderr. `run-with-classifier.mjs` carries that bounded side channel to the classifier, which requires exactly `start + complete` for exit 0 or `start + failure` for a nonzero exit. Missing, malformed, inconsistent, or authoritative failure evidence fails closed; only the canonical direct TAP command may carry `tap_allowlist`.
+**Architecture:** `scripts/check.mjs` remains the sequential gate owner. The exact raw TAP auto-discovery command is first normalized through `run-with-classifier.mjs` against its own fresh log, so a proved environmental exit `1` can return zero and every later gate still executes. In check-owner mode, start plus terminal evidence travels over a dedicated inherited file descriptor, never stdout/stderr. Aggregate success requires exactly `start + complete`; every terminal failure is authoritative. Missing, malformed, inconsistent, truncated, or early-terminal evidence fails closed.
 
 **Tech Stack:** Node.js ESM, `node:test`, stdlib child processes, Git worktrees, GitHub CLI.
 
@@ -29,14 +29,17 @@
 - Add: `scripts/ci/check-gate-evidence.mjs`
 - Modify: `scripts/ci/run-with-classifier.mjs`
 - Modify: `scripts/ci/classify-known-harness-failures.mjs`
+- Add: `scripts/ci/tap-run-evidence.mjs`
 - Modify: `package.json`
 - Modify: `tests/check-exit-integrity.test.js`
+- Add: `tests/check-exit-integrity-adversarial.test.js`
+- Add: `tests/g8-classifier-freshness.test.js`
 - Modify: `docs/TESTING.md` CHECK-EXIT-INTEGRITY-1B row
 
 **Interfaces:**
 - Produces: JSONL side-channel evidence with schema `bizra.dema.check_gate_evidence.v0.1`: one `start` record followed by exactly one `complete` or `failure` record.
 - Consumes: aggregate `--check-exit <n>` plus `--require-check-gate-evidence` and the bounded side-channel content from `run-with-classifier.mjs`.
-- Preserves: standalone `npm test` / coverage environmental masking and `runChecks(checks = commands)` behavior; optional injected execution/log/evidence functions are test-only dependency injection.
+- Preserves: standalone `npm test` / coverage environmental masking, the exact raw `node --test --test-reporter=tap` discovery scope, and `runChecks(checks = commands)` behavior; optional injected execution/log/evidence functions are test-only dependency injection.
 
 - [x] **Step 1: Add combined-failure and missing-evidence red tests**
 
@@ -47,28 +50,28 @@ Prove both original false-greens: masked EROFS TAP plus an authoritative failure
 Run:
 
 ```bash
-node --test --test-reporter=spec tests/check-exit-integrity.test.js
+node --test --test-reporter=spec tests/check-exit-integrity.test.js tests/check-exit-integrity-adversarial.test.js
 ```
 
 Expected: each new regression test fails because the current classifier exits `0`.
 
 - [x] **Step 3: Emit structured evidence over a dedicated side channel**
 
-In `scripts/check.mjs`, mark only `node --test --test-reporter=tap` as `tap_allowlist`; all other commands default to `authoritative`. Write one small JSON record per line to inherited fd 3. Strip the fd selector from every child gate after applying environment overrides. Emit `start` before execution, `failure` before rethrowing, and `complete` only after every child succeeds.
+In `scripts/check.mjs`, wrap the exact `node --test --test-reporter=tap` command with the existing classifier runner and a runner-owned private temporary log. Remove aggregate `tap_allowlist` metadata: all outer failures are authoritative. Write one small JSON record per line to inherited fd 3. Strip the fd selector from every child gate after applying environment overrides. Emit `start` before execution, `failure` before rethrowing, and `complete` only after every child succeeds.
 
 - [x] **Step 4: Enforce positive evidence completeness**
 
-Require exact schema/key sets and exactly two ordered records. Bind the terminal event to the aggregate exit, bind failure index to declared command count, reserve `tap_allowlist` for a normally exited canonical TAP command, and reject missing/truncated/oversized/malformed evidence. A signaled or spawn-abnormal child is authoritative at the gate owner, and a signaled outer command fails directly in the runner. TAP-marked normal failures remain subject to existing completeness and allowlist rules.
+Require exact schema/key sets and exactly two ordered records. Bind the terminal event to the aggregate exit, bind failure index to declared command count, and reject missing/truncated/oversized/malformed evidence. A terminal `tap_allowlist` record cannot replace aggregate completion. A signaled, spawn-abnormal, or noncanonical-exit child is authoritative. Isolated TAP masking requires exact exit `1`, a coherent full trailer, consistent top-level failure counts, and per-failure name-plus-cause matching.
 
 - [x] **Step 5: Run focused green verification**
 
 Run:
 
 ```bash
-node --test --test-reporter=spec tests/check-exit-integrity.test.js tests/g8-classifier.test.js
+node --test --test-reporter=spec tests/check-exit-integrity.test.js tests/check-exit-integrity-adversarial.test.js tests/g8-classifier.test.js tests/g8-classifier-freshness.test.js
 ```
 
-Expected: all tests pass; combined masked TAP plus non-TAP exit fails closed; masked-only environmental TAP still exits `0`.
+Expected: all tests pass; isolated masked TAP returns to the owner, later gates execute, and any later non-TAP exit fails closed; masked-only environmental TAP still exits `0` only with exact exit `1`.
 
 - [ ] **Step 6: Update proof documentation, re-review, and amend**
 

@@ -12,7 +12,9 @@
 //   node scripts/ci/run-with-classifier.mjs --require-check-gate-evidence \
 //     --log <file> -- node scripts/check.mjs
 import { spawn } from "node:child_process";
-import { createWriteStream } from "node:fs";
+import { createWriteStream, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CHECK_GATE_EVIDENCE_FD_ENV } from "./check-gate-evidence.mjs";
 
@@ -23,29 +25,41 @@ const CLASSIFIER = fileURLToPath(
 function parseArgs(argv) {
   const sep = argv.indexOf("--");
   let log = null;
+  let useTempLog = false;
   let requireCheckGateEvidence = false;
   const head = sep === -1 ? argv : argv.slice(0, sep);
   for (let i = 0; i < head.length; i++) {
     if (head[i] === "--log" && head[i + 1]) log = head[++i];
+    else if (head[i] === "--temp-log") useTempLog = true;
     else if (head[i] === "--require-check-gate-evidence") {
       requireCheckGateEvidence = true;
     }
   }
   return {
     log,
+    useTempLog,
     requireCheckGateEvidence,
     cmd: sep === -1 ? [] : argv.slice(sep + 1),
   };
 }
 
-const { log, requireCheckGateEvidence, cmd } = parseArgs(
-  process.argv.slice(2),
-);
-if (!log || cmd.length === 0) {
+const parsed = parseArgs(process.argv.slice(2));
+let { log } = parsed;
+const { useTempLog, requireCheckGateEvidence, cmd } = parsed;
+if ((log && useTempLog) || (!log && !useTempLog) || cmd.length === 0) {
   console.error(
-    "Usage: node scripts/ci/run-with-classifier.mjs [--require-check-gate-evidence] --log <file> -- <cmd ...>",
+    "Usage: node scripts/ci/run-with-classifier.mjs [--require-check-gate-evidence] (--log <file> | --temp-log) -- <cmd ...>",
   );
   process.exit(2);
+}
+
+let tempLogDir = null;
+if (useTempLog) {
+  tempLogDir = mkdtempSync(join(tmpdir(), "bizra-classifier-log-"));
+  log = join(tempLogDir, "run.log");
+}
+function cleanupTempLog() {
+  if (tempLogDir) rmSync(tempLogDir, { recursive: true, force: true });
 }
 
 const out = createWriteStream(log);
@@ -86,6 +100,7 @@ child.stderr.on("data", (chunk) => {
 });
 child.on("error", (err) => {
   console.error(`run-with-classifier: failed to spawn command: ${err.message}`);
+  cleanupTempLog();
   process.exit(1);
 });
 child.on("close", (code, signal) => {
@@ -94,6 +109,7 @@ child.on("close", (code, signal) => {
       console.error(
         `[G8 EXIT] gated command terminated by ${signal}; failing closed.`,
       );
+      cleanupTempLog();
       process.exit(1);
       return;
     }
@@ -103,6 +119,7 @@ child.on("close", (code, signal) => {
           gateEvidenceOverflow ? "exceeded 64 KiB" : "failed"
         }; failing closed.`,
       );
+      cleanupTempLog();
       process.exit(1);
       return;
     }
@@ -127,9 +144,11 @@ child.on("close", (code, signal) => {
     );
     classifier.on("error", (err) => {
       console.error(`run-with-classifier: classifier spawn failed: ${err.message}`);
+      cleanupTempLog();
       process.exit(1);
     });
     classifier.on("close", (classifierCode) => {
+      cleanupTempLog();
       process.exit(classifierCode ?? 1);
     });
   });
