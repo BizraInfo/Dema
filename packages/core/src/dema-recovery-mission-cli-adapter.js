@@ -14,13 +14,16 @@
 // HUMAN_REVIVAL event), out of scope for 1B.
 
 import {
-  runDemaRecoveryMissionGatherer,
+  executeDemaRecoveryMissionGatherer,
   DEMA_RECOVERY_MISSION_GATHERER_GO_PHRASE,
   DEMA_RECOVERY_MISSION_GATHERER_SCHEMA,
   DEMA_RECOVERY_MISSION_GATHERER_TRUTH_LABEL,
 } from "./dema-recovery-mission-gatherer.js";
 
-export function runDemaRecoveryMissionPreview({
+// VERIFIABLE-ENVELOPE-1C: one gather + one kernel execution, exposing both the
+// canonical verified `proof_payload` and the reduced `preview` envelope. The
+// adapter never rebuilds, re-hashes, or mutates the proof object.
+export function runDemaRecoveryMissionPreviewProof({
   consent,
   root,
   mission,
@@ -29,24 +32,24 @@ export function runDemaRecoveryMissionPreview({
   nowIso,
   gatherFiles,
 } = {}) {
-  if (typeof gatherFiles !== "function") {
-    return Object.freeze({
-      ok: false,
-      schema: DEMA_RECOVERY_MISSION_GATHERER_SCHEMA,
-      truth_label: DEMA_RECOVERY_MISSION_GATHERER_TRUTH_LABEL,
-      blocked_by: Object.freeze(["gather_files_not_injected"]),
+  const fail = (blocked_by) =>
+    Object.freeze({
+      proof_payload: null,
+      preview: Object.freeze({
+        ok: false,
+        schema: DEMA_RECOVERY_MISSION_GATHERER_SCHEMA,
+        truth_label: DEMA_RECOVERY_MISSION_GATHERER_TRUTH_LABEL,
+        blocked_by: Object.freeze(blocked_by),
+      }),
     });
+  if (typeof gatherFiles !== "function") {
+    return fail(["gather_files_not_injected"]);
   }
   let files;
   try {
     files = gatherFiles({ root, exclude, maxFiles });
   } catch (err) {
-    return Object.freeze({
-      ok: false,
-      schema: DEMA_RECOVERY_MISSION_GATHERER_SCHEMA,
-      truth_label: DEMA_RECOVERY_MISSION_GATHERER_TRUTH_LABEL,
-      blocked_by: Object.freeze([err && err.code === "max_files_exceeded" ? "max_files_exceeded" : "gather_failed"]),
-    });
+    return fail([err && err.code === "max_files_exceeded" ? "max_files_exceeded" : "gather_failed"]);
   }
   const input = {
     objective_text: mission,
@@ -55,7 +58,12 @@ export function runDemaRecoveryMissionPreview({
     files,
     max_files: maxFiles,
   };
-  return runDemaRecoveryMissionGatherer({ consent, input });
+  return executeDemaRecoveryMissionGatherer({ consent, input });
+}
+
+// Backward-compatible surface: identical envelope output to pre-1C behavior.
+export function runDemaRecoveryMissionPreview(options = {}) {
+  return runDemaRecoveryMissionPreviewProof(options).preview;
 }
 
 export function formatDemaRecoveryMissionPreviewText(result) {

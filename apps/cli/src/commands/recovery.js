@@ -6,7 +6,7 @@
 // label. READ-ONLY, no mutation, NO auto-selection.
 
 import {
-  runDemaRecoveryMissionPreview,
+  runDemaRecoveryMissionPreviewProof,
   formatDemaRecoveryMissionPreviewText,
 } from "../../../../packages/core/src/dema-recovery-mission-cli-adapter.js";
 import { gatherRecoveryMissionFiles } from "./dema-recovery-mission-fs-gatherer.js";
@@ -14,12 +14,22 @@ import { gatherRecoveryMissionFiles } from "./dema-recovery-mission-fs-gatherer.
 const USAGE =
   'dema recovery: read-only Recovery Mission candidate PREVIEW. Subcommands:\n' +
   '  dema recovery preview --root <abs> --mission "<objective>" --consent "<phrase>"\n' +
-  "                    [--exclude <abs>]... [--max-files <n>] [--json]";
+  "                    [--exclude <abs>]... [--max-files <n>] [--json | --proof-json]\n" +
+  "  --json emits the human/CLI preview envelope; --proof-json emits the exact\n" +
+  "  internally verified canonical payload (independently re-verifiable). The two\n" +
+  "  flags are mutually exclusive and fail closed when combined.";
 
 export async function cmd_recovery(ctx) {
   const { argv } = ctx;
   const sub = argv[1];
   const wantJson = argv.includes("--json");
+  const wantProofJson = argv.includes("--proof-json");
+
+  if (wantJson && wantProofJson) {
+    console.error("dema recovery preview: --json and --proof-json are mutually exclusive.");
+    process.exitCode = 1;
+    return;
+  }
 
   if (sub !== "preview") {
     console.error(USAGE);
@@ -46,7 +56,9 @@ export async function cmd_recovery(ctx) {
     throw new Error('`dema recovery preview` requires an absolute --root path.');
   }
 
-  const result = runDemaRecoveryMissionPreview({
+  // ONE BUILD: a single kernel execution backs every output mode; --json and
+  // --proof-json are projections of the same verified result, never rebuilds.
+  const { proof_payload, preview } = runDemaRecoveryMissionPreviewProof({
     consent,
     root,
     mission,
@@ -56,10 +68,14 @@ export async function cmd_recovery(ctx) {
     gatherFiles: gatherRecoveryMissionFiles,
   });
 
-  if (wantJson) {
-    console.log(JSON.stringify(result, null, 2));
+  if (wantProofJson) {
+    // Emit the exact internally verified payload, or the fail-closed envelope
+    // (never a success-shaped proof object) when verification did not pass.
+    console.log(JSON.stringify(proof_payload ?? preview, null, 2));
+  } else if (wantJson) {
+    console.log(JSON.stringify(preview, null, 2));
   } else {
-    console.log(formatDemaRecoveryMissionPreviewText(result));
+    console.log(formatDemaRecoveryMissionPreviewText(preview));
   }
-  if (!result.ok) process.exitCode = 1;
+  if (!preview.ok) process.exitCode = 1;
 }
