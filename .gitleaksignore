@@ -1,12 +1,13 @@
-# Fingerprint-scoped gitleaks ignores (commit:path:rule:line — narrowest form,
-# same discipline as the [[allowlists]] entries in .gitleaks.toml).
-# gitleaks `detect` walks --all refs, so a false positive on ANY fetched branch
-# fails every PR's scan gate repo-wide.
+# Fingerprint-scoped ignores (commit:path:rule:line). Each entry suppresses ONE
+# historical false positive at ONE exact location; detection everywhere else is
+# unchanged. Sealed classification receipts:
+# /data/bizra/research/pr410-gitleaks-diagnostic-1a/receipt.yaml
 #
-# False positive: generic-api-key tripped on audit-doc PROSE — the UNKNOWN
-# section wording "external key custody, federation/wallet/economy behavior"
-# in the PDMLC baseline audit (board branch chore/backlog-init-agent-instructions,
-# commit bd21b53). Verified 2026-07-22 with gitleaks v8.30.1 (SHA-verified CI
-# binary) + manual read: no secret present, prose only. A real key leaked
-# anywhere else still fails the gate.
+# 1) Board-branch audit document: the rule matched ordinary English prose in a
+#    truth-labeling section of the PDMLC baseline audit (doc-002). No credential
+#    of any kind is present at that location.
+# 2) The v1 comment of THIS file repeated that prose verbatim and re-triggered
+#    the same rule at line 7 of the commit noted below. Lesson applied here:
+#    describe findings by location, never by content.
 bd21b536d00ada72867021275df0810d540aa156:backlog/docs/audits/bizra-pdmlc-baseline-1a/doc-002 - BIZRA-Product-and-Engineering-Lifecycle-Audit-v1.md:generic-api-key:484
+91c0fe7af13f452303a6d49ab7b0b0fb08aabc94:.gitleaksignore:generic-api-key:7
