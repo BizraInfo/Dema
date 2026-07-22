@@ -30,6 +30,19 @@ export function fingerprintPublicKeyPem(publicKeyPem) {
   );
 }
 
+// True only if publicKeyPem is the genuine public half of privateKeyPem —
+// a sign/verify round-trip over a fixed probe. Guards against writing a
+// mismatched keypair (the crash-between-writes hazard) or a corrupted half.
+export function keypairMatches(privateKeyPem, publicKeyPem) {
+  try {
+    const probe = Buffer.from("bizra-authorship-keypair-consistency-probe");
+    const signature = sign(null, probe, createPrivateKey(privateKeyPem));
+    return verify(null, probe, createPublicKey(publicKeyPem), signature);
+  } catch {
+    return false;
+  }
+}
+
 export function buildAuthorshipPayload({
   artifact_path,
   artifact_sha256,

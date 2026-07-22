@@ -72,13 +72,14 @@ export async function cmd_authorship(ctx) {
     } else if (result.rotated) {
       console.log("Authorship Key Rotated");
       console.log("=".repeat(40));
-      console.log(`  Old fingerprint: ${result.old_fingerprint}`);
+      console.log(`  Old fingerprint: ${result.old_fingerprint} (retired, denylisted)`);
       console.log(`  New fingerprint: ${result.new_fingerprint}`);
-      console.log(`  Old key backed up: ${result.backup_dir}`);
+      console.log(`  Old key quarantined: ${result.quarantine_dir}`);
+      console.log(`  Rotation receipt: ${result.receipt_path}`);
       console.log(
-        "  Next: record the old fingerprint as retired, classify receipts",
+        "  Next: classify receipts signed during the exposure interval and",
       );
-      console.log("  signed during the exposure interval, seal a rotation receipt.");
+      console.log("  confirm runtime loads the new fingerprint before re-arming.");
     } else if (result.error === "consent_required") {
       console.error(
         `Consent required. Use: --consent "${KEY_ROTATE_CONSENT_PHRASE}"`,
