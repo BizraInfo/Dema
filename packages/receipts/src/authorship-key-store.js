@@ -702,17 +702,54 @@ async function removeIfExists(path) {
 
 export async function loadPrivateKey(demaHome) {
   const paths = keyPaths(demaHome);
-  return readKeyFile(paths, paths.privateKey);
+  const priv = await readKeyFile(paths, paths.privateKey);
+  if (!priv) return null;
+  const pub = await readKeyFile(paths, paths.publicKey);
+  if (await activeFingerprintRetired(paths, pub)) return null;
+  return priv;
 }
 
 export async function loadPublicKey(demaHome) {
   const paths = keyPaths(demaHome);
-  return readKeyFile(paths, paths.publicKey);
+  const pub = await readKeyFile(paths, paths.publicKey);
+  if (!pub) return null;
+  if (await activeFingerprintRetired(paths, pub)) return null;
+  return pub;
 }
 
-// Rotation-aware loader for the IDENTITY path — opt-in, never on the hot path
-// that 25 loadPrivateKey/loadPublicKey consumers use. Returns { blocked, reason,
-// private_key_pem, public_key_pem }. Never throws.
+// Minimal, NEVER-throwing security gate for the hot path: does the active key's
+// fingerprint appear on the retired denylist? Absence of a registry (the normal
+// case) is safe — no retirements, not blocked. A corrupt registry fails CLOSED
+// (we cannot prove the active key is not retired). The heavier mid-rotation /
+// journal checks stay OFF the hot path (in loadGuardedActiveKey) so a leftover
+// journal never DoS-blocks the 25 signing consumers.
+async function activeFingerprintRetired(paths, activePublicPem) {
+  if (!activePublicPem) return false;
+  let raw;
+  try {
+    raw = await readExactIfPresent(join(paths.dir, "retired-registry.json"));
+  } catch {
+    return false; // unreadable optional file → absence-safe, do not block
+  }
+  if (!raw) return false;
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return true; // corrupt denylist → fail closed (cannot verify not-retired)
+  }
+  let fp;
+  try {
+    fp = fingerprintPublicKeyPem(activePublicPem);
+  } catch {
+    return false; // unfingerprintable active key isn't a retired-match signal
+  }
+  return (parsed.retired ?? []).some((e) => e.fingerprint === fp);
+}
+
+// Rotation-aware loader for the IDENTITY path — opt-in, never on the hot path.
+// Adds the mid-rotation / journal checks on top of the retired-fp gate.
+// Returns { blocked, reason, private_key_pem, public_key_pem }. Never throws.
 export async function loadGuardedActiveKey(demaHome) {
   const paths = keyPaths(demaHome);
   const priv = await readKeyFile(paths, paths.privateKey);

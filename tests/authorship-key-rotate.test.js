@@ -207,17 +207,25 @@ describe("rotateAuthorshipKey — failure injection (each ends in ONE explicit s
     assert.notEqual(await loadPublicKey(home), null);
   });
 
-  it("runtime loading a retired active fingerprint → GUARDED loader fails closed", async () => {
+  it("retired active fingerprint → HOT-PATH loader fails closed (never serves a retired key)", async () => {
     const home = freshHome();
     const fp = await seedKey(home);
+    // sanity: before denylisting, the hot path serves the key
+    assert.notEqual(await loadPublicKey(home), null);
     // put the ACTIVE fingerprint on the denylist (inconsistent/bad state)
     writeFileSync(
       join(keyPaths(home).dir, "retired-registry.json"),
       JSON.stringify({ schema: "bizra.dema.retired_key_registry.v0.1", retired: [{ fingerprint: fp }] }),
     );
-    const guarded = await loadGuardedActiveKey(home);
-    assert.equal(guarded.blocked, true);
-    assert.equal(guarded.reason, "active_key_retired");
+    assert.equal(await loadPublicKey(home), null); // hot path now fails closed
+    assert.equal(await loadPrivateKey(home), null);
+  });
+
+  it("corrupt retired-registry → hot-path loader fails closed (cannot verify not-retired)", async () => {
+    const home = freshHome();
+    await seedKey(home);
+    writeFileSync(join(keyPaths(home).dir, "retired-registry.json"), "{ corrupt");
+    assert.equal(await loadPublicKey(home), null);
   });
 
   it("wrong DEMA_HOME (no key) → no_key_to_rotate", async () => {
