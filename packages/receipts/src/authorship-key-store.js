@@ -15,6 +15,9 @@ export const KEY_ROTATE_CONSENT_PHRASE = "ROTATE AUTHORSHIP KEY";
 export const KEY_ROTATE_SCHEMA = "bizra.dema.authorship_key_rotate.v0.1";
 export const KEY_ROTATE_RECEIPT_SCHEMA =
   "bizra.dema.authorship_key_rotate_receipt.v0.1";
+export const KEY_ROTATE_JOURNAL_SCHEMA =
+  "bizra.dema.authorship_rotation_journal.v0.1";
+export const RETIRED_REGISTRY_SCHEMA = "bizra.dema.retired_key_registry.v0.1";
 
 const PRIVATE_KEY_FILENAME = "node0-ed25519.pem";
 const PUBLIC_KEY_FILENAME = "node0-ed25519.pub.pem";
@@ -214,25 +217,26 @@ function rotateFailClosed(error, detail) {
   });
 }
 
-// Replace the compromised authorship key with a fresh one. Safety contract:
-//  - exact consent, fail-closed
-//  - refuses when no key exists (never silently inits)
-//  - QUARANTINES the old key outside the active load path (keys/retired/<fp>/)
-//    with BOTH files byte-verified, a marker, and a denylist registry entry
-//  - verifies the NEW pair is internally consistent BEFORE touching the active key
-//  - atomic-ish activation: temp files + fsync + ordered rename + dir fsync,
-//    a rotation-in-progress marker, post-rename read-back verify, and rollback
-//    from quarantine on any failure
-//  - emits a bound rotation receipt (no private material)
-// ponytail: two-file rename has a single-rename crash window (new-priv/old-pub);
-// the .rotation-in-progress marker + quarantined old pair make it detectable and
-// recoverable on re-run — a journaled single-file format is the upgrade path if
-// that window ever matters.
+// Replace the compromised authorship key with a fresh one. TRANSACTIONAL:
+//   FREEZE -> STAGE_QUARANTINE -> CREATE+VERIFY_NEW -> ARCHIVE_GENERATION
+//   -> journal PREPARED -> ACTIVATING (temp+fsync+ordered rename+dir fsync)
+//   -> post-rename verify -> journal ACTIVE
+//   -> COMMIT_RETIREMENT (registry denylist, fail-closed) -> RETIREMENT_COMMITTED
+//   -> SEAL_RECEIPT -> COMPLETE
+// Retirement is NEVER committed to the denylist before the new key is active and
+// verified. Any failure before ACTIVE rolls the old key back and leaves it
+// unchanged; a failure after ACTIVE but before RETIREMENT leaves the new key
+// active with retirement pending (recoverable, never an ambiguous mixed pair).
+// ponytail: this keeps the legacy two-file active layout (25 loader consumers +
+// init test depend on keys/node0-ed25519.pem); full generation-only loader
+// migration is a documented follow-up (see PR body). The generation archive +
+// journal + retired-fp loader rejection give crash-detectability today.
 export async function rotateAuthorshipKey({
   consent,
   demaHome,
   retiredAt,
   reason = "compromised_key_rotation",
+  envelope,
 } = {}) {
   if (consent !== KEY_ROTATE_CONSENT_PHRASE) {
     return Object.freeze({
@@ -267,21 +271,39 @@ export async function rotateAuthorshipKey({
     typeof retiredAt === "string" && retiredAt
       ? retiredAt
       : new Date().toISOString();
+  const journalPath = join(paths.dir, "rotation-journal.json");
 
-  // 1) Quarantine the old key OUTSIDE the active load path, both files verified.
-  const quarantine = await quarantineOldKey(
+  // Fail closed UPFRONT if the retirement registry is already corrupt — never
+  // proceed to activate against a registry we cannot trust (old key unchanged).
+  try {
+    await assertRegistryReadable(join(paths.dir, "retired-registry.json"));
+  } catch (error) {
+    return rotateFailClosed("retired_registry_corrupt", error?.message);
+  }
+
+  // Consent nonce replay guard (fail-closed on corrupt nonce ledger).
+  if (envelope?.nonce) {
+    let used;
+    try {
+      used = await nonceAlreadyUsed(paths, envelope.nonce);
+    } catch (error) {
+      return rotateFailClosed("nonce_ledger_unreadable", error?.message);
+    }
+    if (used) return rotateFailClosed("consent_nonce_replayed");
+  }
+
+  // PHASE A — stage quarantine of the old key (preserves it; commits NOTHING).
+  const stage = await stageQuarantine(
     paths,
     oldFingerprint,
     oldPrivatePem,
     oldPublicPem,
-    stamp,
-    reason,
   );
-  if (quarantine.error) {
-    return rotateFailClosed("quarantine_failed", quarantine.detail);
+  if (stage.error) {
+    return rotateFailClosed("quarantine_stage_failed", stage.detail);
   }
 
-  // 2) Generate NEW pair; verify self-consistency before touching active key.
+  // Generate + self-verify the new pair before touching the active key.
   const keys = generateEd25519Keypair();
   if (!keypairMatches(keys.private_key_pem, keys.public_key_pem)) {
     return rotateFailClosed(
@@ -289,77 +311,117 @@ export async function rotateAuthorshipKey({
       "generated keypair failed self-verify",
     );
   }
+  const newFp = keys.public_key_fingerprint;
 
-  // 3) Atomic-ish activation.
-  const tmpPriv = join(paths.dir, `.${PRIVATE_KEY_FILENAME}.tmp`);
-  const tmpPub = join(paths.dir, `.${PUBLIC_KEY_FILENAME}.tmp`);
-  const progressMarker = join(paths.dir, ".rotation-in-progress");
+  // Archive the complete new generation (durable record) + journal PREPARED.
+  const generationDir = join(paths.dir, "generations", newFp);
   try {
-    await removeIfExists(tmpPriv);
-    await removeIfExists(tmpPub);
+    await mkdir(generationDir, { recursive: true });
+    await writeFileSynced(join(generationDir, "private.pem"), keys.private_key_pem, 0o600);
+    await writeFileSynced(join(generationDir, "public.pem"), keys.public_key_pem, 0o644);
     await writeFileSynced(
-      progressMarker,
-      JSON.stringify({
-        old_fingerprint: oldFingerprint,
-        new_fingerprint: keys.public_key_fingerprint,
-        at: stamp,
-      }),
+      join(generationDir, "metadata.json"),
+      JSON.stringify({ fingerprint: newFp, created_at: stamp, supersedes: oldFingerprint }),
       0o600,
     );
+    if ((await readExact(join(generationDir, "private.pem"))) !== keys.private_key_pem) {
+      throw new Error("generation private byte-mismatch");
+    }
+  } catch (error) {
+    return rotateFailClosed("generation_archive_failed", error?.message ?? String(error));
+  }
+  await writeJournal(journalPath, "PREPARED", oldFingerprint, newFp, stamp);
+
+  // PHASE B — activate: temp + fsync + ordered rename + dir fsync.
+  const tmpPriv = join(paths.dir, `.${PRIVATE_KEY_FILENAME}.tmp`);
+  const tmpPub = join(paths.dir, `.${PUBLIC_KEY_FILENAME}.tmp`);
+  try {
+    await writeJournal(journalPath, "ACTIVATING", oldFingerprint, newFp, stamp);
+    await removeIfExists(tmpPriv);
+    await removeIfExists(tmpPub);
     await writeFileSynced(tmpPriv, keys.private_key_pem, 0o600);
     await writeFileSynced(tmpPub, keys.public_key_pem, 0o644);
     await rename(tmpPriv, paths.privateKey);
     await rename(tmpPub, paths.publicKey);
     await fsyncDir(paths.dir);
   } catch (error) {
-    await restoreFromQuarantine(paths, quarantine.dir).catch(() => {});
+    await restoreFromQuarantine(paths, stage.dir).catch(() => {});
     await removeIfExists(tmpPriv);
     await removeIfExists(tmpPub);
+    await writeJournal(journalPath, "ROLLED_BACK", oldFingerprint, newFp, stamp);
     return rotateFailClosed("replacement_failed", error?.message ?? String(error));
   }
 
-  // 4) Post-rename read-back: active pair must BE the new pair.
+  // Post-activation read-back: active pair MUST be the new pair.
   const activePriv = await readKeyFile(paths, paths.privateKey);
   const activePub = await readKeyFile(paths, paths.publicKey);
   if (
     !activePriv ||
     !activePub ||
-    fingerprintPublicKeyPem(activePub) !== keys.public_key_fingerprint ||
+    fingerprintPublicKeyPem(activePub) !== newFp ||
     !keypairMatches(activePriv, activePub)
   ) {
-    await restoreFromQuarantine(paths, quarantine.dir).catch(() => {});
+    await restoreFromQuarantine(paths, stage.dir).catch(() => {});
+    await writeJournal(journalPath, "ROLLED_BACK", oldFingerprint, newFp, stamp);
     return rotateFailClosed(
       "post_activation_verify_failed",
       "active key does not match the new pair after rename",
     );
   }
-  await removeIfExists(progressMarker);
+  await writeJournal(journalPath, "ACTIVE", oldFingerprint, newFp, stamp);
 
-  // 5) Bound rotation receipt (no private material).
+  // PHASE C — commit retirement ONLY now (new key is active + verified).
+  let retirementCommitted = true;
+  try {
+    await commitRetirement(stage.dir, paths, oldFingerprint, stamp, reason);
+    await writeJournal(journalPath, "RETIREMENT_COMMITTED", oldFingerprint, newFp, stamp);
+  } catch (error) {
+    // Activation stands; retirement is pending — recoverable, not a mixed pair.
+    retirementCommitted = false;
+    await writeJournal(journalPath, "ACTIVE_RETIREMENT_PENDING", oldFingerprint, newFp, stamp);
+    return Object.freeze({
+      schema: KEY_ROTATE_SCHEMA,
+      rotated: true,
+      old_fingerprint: oldFingerprint,
+      new_fingerprint: newFp,
+      retirement_committed: false,
+      transaction_state: "ACTIVE_RETIREMENT_PENDING",
+      requires: "retirement_completion_rerun",
+      detail: error?.message ?? String(error),
+      boundary: buildBoundary(true),
+    });
+  }
+
+  if (envelope?.nonce) {
+    await recordUsedNonce(paths, envelope.nonce, stamp).catch(() => {});
+  }
+
+  // SEAL receipt with full consent binding (envelope + nonce, not phrase alone).
   const receipt = {
     schema: KEY_ROTATE_RECEIPT_SCHEMA,
     old_fingerprint: oldFingerprint,
-    new_fingerprint: keys.public_key_fingerprint,
+    new_fingerprint: newFp,
+    generation_dir: generationDir,
     retired_at: stamp,
     reason,
-    quarantine_dir: quarantine.dir,
-    retired_registry_path: quarantine.registryPath,
+    quarantine_dir: stage.dir,
+    retired_registry_path: join(paths.dir, "retired-registry.json"),
+    journal_path: journalPath,
     runtime_activation: "not_verified_no_runtime",
     revocation_state: "retired_local_denylisted",
     affected_receipt_assessment:
       "see R0B2_EXPOSURE_INTERVAL_ASSESSMENT (local signed-receipt exposure empty)",
-    consent_sha256: sha256(consent),
+    consent_binding: bindConsent(consent, envelope, oldFingerprint, newFp, stamp, reason, demaHome),
     private_key_material_included: false,
   };
-  const receiptPath = await writeRotationReceipt(
-    paths,
-    keys.public_key_fingerprint,
-    receipt,
-  );
+  const receiptPath = await writeRotationReceipt(paths, newFp, receipt);
+  await writeJournal(journalPath, "COMPLETE", oldFingerprint, newFp, stamp);
 
   return Object.freeze({
     schema: KEY_ROTATE_SCHEMA,
     rotated: true,
+    retirement_committed: retirementCommitted,
+    transaction_state: "COMPLETE",
     ...receipt,
     receipt_path: receiptPath,
     private_key_path: paths.privateKey,
@@ -368,63 +430,184 @@ export async function rotateAuthorshipKey({
   });
 }
 
-async function quarantineOldKey(paths, fp, privPem, pubPem, stamp, reason) {
+// Binds the FULL consent envelope (+ nonce), not just the reusable phrase.
+function bindConsent(consent, envelope, oldFp, newFp, stamp, reason, demaHome) {
+  if (!envelope || !envelope.nonce) {
+    return Object.freeze({
+      strength: "phrase_only_INSUFFICIENT",
+      consent_phrase_sha256: sha256(consent),
+      note: "no nonce-bearing consent envelope supplied; a real ceremony MUST bind one",
+    });
+  }
+  const canonical = JSON.stringify({
+    ceremony_id: envelope.ceremony_id ?? null,
+    nonce: envelope.nonce,
+    old_fingerprint: oldFp,
+    new_fingerprint: newFp,
+    dema_home_hash: sha256(String(demaHome ?? "")),
+    runtime_root: envelope.runtime_root ?? null,
+    operator_id_hash: envelope.operator_id_hash ?? null,
+    reason,
+    issued_at: envelope.issued_at ?? null,
+    expiry: envelope.expiry ?? null,
+    operation: "authorship_key_rotation",
+    authority_delta: 0,
+  });
+  return Object.freeze({
+    strength: "envelope_bound",
+    nonce: envelope.nonce,
+    envelope_sha256: sha256(canonical),
+  });
+}
+
+async function writeJournal(journalPath, state, oldFp, newFp, stamp) {
+  await writeFileSynced(
+    journalPath,
+    JSON.stringify({
+      schema: KEY_ROTATE_JOURNAL_SCHEMA,
+      state,
+      old_fingerprint: oldFp,
+      new_fingerprint: newFp,
+      at: stamp,
+    }),
+    0o600,
+  );
+}
+
+// Copies the old key into keys/retired/<fp>/ and byte-verifies BOTH files.
+// Commits NO retirement record — that is commitRetirement's job, run only after
+// the new key is active and verified.
+async function stageQuarantine(paths, fp, privPem, pubPem) {
   const dir = join(paths.dir, "retired", fp);
-  const qPriv = join(dir, PRIVATE_KEY_FILENAME);
-  const qPub = join(dir, PUBLIC_KEY_FILENAME);
-  const marker = join(dir, "retired.json");
-  const registryPath = join(paths.dir, "retired-registry.json");
   try {
     await mkdir(dir, { recursive: true });
-    await writeBackupIfAbsent(qPriv, privPem, 0o600);
-    await writeBackupIfAbsent(qPub, pubPem, 0o644);
-    // Verify BOTH files hold the original bytes (symlink-safe read).
-    if ((await readExact(qPriv)) !== privPem) {
+    await writeBackupIfAbsent(join(dir, PRIVATE_KEY_FILENAME), privPem, 0o600);
+    await writeBackupIfAbsent(join(dir, PUBLIC_KEY_FILENAME), pubPem, 0o644);
+    if ((await readExact(join(dir, PRIVATE_KEY_FILENAME))) !== privPem) {
       throw new Error("private quarantine byte-mismatch");
     }
-    if ((await readExact(qPub)) !== pubPem) {
+    if ((await readExact(join(dir, PUBLIC_KEY_FILENAME))) !== pubPem) {
       throw new Error("public quarantine byte-mismatch");
     }
-    await writeFileSynced(
-      marker,
-      JSON.stringify({
-        retired_fingerprint: fp,
-        retired_at: stamp,
-        reason,
-        runtime_loadable: false,
-      }),
-      0o600,
-    );
-    await appendRetiredRegistry(registryPath, fp, stamp, reason);
-    return { dir, registryPath };
+    return { dir };
   } catch (error) {
     return { error: true, detail: error?.message ?? String(error) };
   }
 }
 
+// Writes the retirement marker + denylist entry. Called ONLY after activation.
+async function commitRetirement(quarantineDir, paths, fp, stamp, reason) {
+  await writeFileSynced(
+    join(quarantineDir, "retired.json"),
+    JSON.stringify({
+      retired_fingerprint: fp,
+      retired_at: stamp,
+      reason,
+      runtime_loadable: false,
+    }),
+    0o600,
+  );
+  await appendRetiredRegistry(
+    join(paths.dir, "retired-registry.json"),
+    fp,
+    stamp,
+    reason,
+  );
+}
+
+// FAIL-CLOSED on corrupt registry: never silently rewrite an empty list (that
+// could resurrect previously-retired fingerprints as admissible).
 async function appendRetiredRegistry(registryPath, fp, stamp, reason) {
   let entries = [];
   const existing = await readExactIfPresent(registryPath);
   if (existing) {
+    let parsed;
     try {
-      const parsed = JSON.parse(existing);
-      if (Array.isArray(parsed.retired)) entries = parsed.retired;
+      parsed = JSON.parse(existing);
     } catch {
-      /* corrupt registry → rewrite fresh below */
+      throw new Error("retired registry corrupt — refusing to overwrite");
     }
+    if (!Array.isArray(parsed.retired)) {
+      throw new Error("retired registry malformed — refusing to overwrite");
+    }
+    entries = parsed.retired;
   }
   if (!entries.some((e) => e.fingerprint === fp)) {
     entries.push({ fingerprint: fp, retired_at: stamp, reason });
   }
   await writeFileSynced(
     registryPath,
-    JSON.stringify(
-      { schema: "bizra.dema.retired_key_registry.v0.1", retired: entries },
-      null,
-      2,
-    ),
+    JSON.stringify({ schema: RETIRED_REGISTRY_SCHEMA, retired: entries }, null, 2),
     0o600,
   );
+}
+
+async function assertRegistryReadable(registryPath) {
+  const existing = await readExactIfPresent(registryPath);
+  if (!existing) return;
+  let parsed;
+  try {
+    parsed = JSON.parse(existing);
+  } catch {
+    throw new Error("retired registry is not valid JSON");
+  }
+  if (!Array.isArray(parsed.retired)) {
+    throw new Error("retired registry missing 'retired' array");
+  }
+}
+
+async function nonceAlreadyUsed(paths, nonce) {
+  const existing = await readExactIfPresent(join(paths.dir, "used-consent-nonces.json"));
+  if (!existing) return false;
+  const parsed = JSON.parse(existing); // throws on corrupt → caller fails closed
+  const used = Array.isArray(parsed.nonces) ? parsed.nonces : [];
+  return used.some((n) => n.nonce === nonce);
+}
+
+async function recordUsedNonce(paths, nonce, stamp) {
+  const registryPath = join(paths.dir, "used-consent-nonces.json");
+  let nonces = [];
+  const existing = await readExactIfPresent(registryPath);
+  if (existing) {
+    const parsed = JSON.parse(existing);
+    if (Array.isArray(parsed.nonces)) nonces = parsed.nonces;
+  }
+  if (!nonces.some((n) => n.nonce === nonce)) nonces.push({ nonce, at: stamp });
+  await writeFileSynced(
+    registryPath,
+    JSON.stringify({ schema: "bizra.dema.used_consent_nonces.v0.1", nonces }, null, 2),
+    0o600,
+  );
+}
+
+// True (with reason) if the active key must NOT be served: its fingerprint is
+// on the retired denylist, or a rotation journal is mid-flight (ACTIVATING).
+async function activeKeyBlocked(paths, activePublicPem) {
+  const journal = await readExactIfPresent(join(paths.dir, "rotation-journal.json"));
+  if (journal) {
+    try {
+      const j = JSON.parse(journal);
+      if (j.state === "ACTIVATING" || j.state === "PREPARED") {
+        return "rotation_in_progress";
+      }
+    } catch {
+      return "rotation_journal_corrupt";
+    }
+  }
+  const registry = await readExactIfPresent(join(paths.dir, "retired-registry.json"));
+  if (registry && activePublicPem) {
+    let parsed;
+    try {
+      parsed = JSON.parse(registry);
+    } catch {
+      return "retired_registry_corrupt";
+    }
+    const fp = fingerprintPublicKeyPem(activePublicPem);
+    if ((parsed.retired ?? []).some((e) => e.fingerprint === fp)) {
+      return "active_key_retired";
+    }
+  }
+  return null;
 }
 
 async function restoreFromQuarantine(paths, quarantineDir) {
@@ -512,12 +695,20 @@ async function removeIfExists(path) {
 
 export async function loadPrivateKey(demaHome) {
   const paths = keyPaths(demaHome);
-  return readKeyFile(paths, paths.privateKey);
+  const priv = await readKeyFile(paths, paths.privateKey);
+  if (!priv) return null;
+  // Fail closed if the active key is retired or a rotation is mid-flight.
+  const pub = await readKeyFile(paths, paths.publicKey);
+  if (await activeKeyBlocked(paths, pub)) return null;
+  return priv;
 }
 
 export async function loadPublicKey(demaHome) {
   const paths = keyPaths(demaHome);
-  return readKeyFile(paths, paths.publicKey);
+  const pub = await readKeyFile(paths, paths.publicKey);
+  if (!pub) return null;
+  if (await activeKeyBlocked(paths, pub)) return null;
+  return pub;
 }
 
 export async function hasAuthorshipKey(demaHome) {
