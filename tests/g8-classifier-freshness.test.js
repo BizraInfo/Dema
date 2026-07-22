@@ -10,13 +10,19 @@ import { evaluateLogFreshness } from "../scripts/ci/classify-known-harness-failu
 const CLASSIFIER = fileURLToPath(
   new URL("../scripts/ci/classify-known-harness-failures.mjs", import.meta.url),
 );
+const TEST_TIMEOUT_MS = 30_000;
 
 function runClassifier(logPath, extraArgs = []) {
   try {
-    const stdout = execFileSync("node", [CLASSIFIER, "--log", logPath, ...extraArgs], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+    const stdout = execFileSync(
+      process.execPath,
+      [CLASSIFIER, "--log", logPath, ...extraArgs],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: TEST_TIMEOUT_MS,
+      },
+    );
     return { code: 0, output: stdout };
   } catch (e) {
     return {
