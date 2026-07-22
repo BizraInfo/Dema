@@ -126,8 +126,14 @@ export async function gatherNode0ActivationObservations({
   ];
 
   // Identity — key-file PRESENCE only. Never read the key's content.
+  // Generation store (active-key.json) is authority; legacy flat file counts
+  // for pre-migration homes.
   const keyPath = join(demaHome, "keys", "node0-ed25519.pub.pem");
-  const identity = { key_file_path: keyPath, key_file_present: exists(keyPath) };
+  const pointerPath = join(demaHome, "keys", "active-key.json");
+  const identity = {
+    key_file_path: keyPath,
+    key_file_present: exists(pointerPath) || exists(keyPath),
+  };
 
   return {
     dema_repo: { git_present: exists(join(process.cwd(), ".git")), package_name: "dema", command_surface_count: null },

@@ -11,8 +11,7 @@
 // signature is verified with ONLY the externally-supplied pubkey; the receipt's
 // embedded operator_public_key_fingerprint is a CLAIM, never trusted.
 //
-// Reuses (no new crypto): signPayload/verifyPayload, loadPrivateKey/
-// loadPublicKey, sha256/stableStringify.
+// Reuses (no new crypto): signPayload/verifyPayload, loadActiveKeyPair, sha256/stableStringify.
 //
 // SCOPE (1A): pure kernel — builder returns the receipt, verifier walks a chain.
 // NO write into the live ~/.dema/receipts ledger (RECEIPT-CHAIN-1B). No
@@ -20,7 +19,7 @@
 
 import { createPublicKey } from "node:crypto";
 import { signPayload, verifyPayload } from "./authorship-signature.js";
-import { loadPrivateKey, loadPublicKey } from "./authorship-key-store.js";
+import { loadActiveKeyPair } from "./authorship-key-store.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 
 export const CANONICAL_RECEIPT_SCHEMA = "bizra.dema.canonical_receipt.v0.1";
@@ -138,8 +137,9 @@ export async function buildCanonicalReceipt({
     return fail("refuse_on_quarantined_pulse");
   }
 
-  const privateKeyPem = await loadPrivateKey(demaHome);
-  const publicKeyPem = await loadPublicKey(demaHome);
+  const activePair = await loadActiveKeyPair(demaHome);
+  const privateKeyPem = activePair.ok ? activePair.private_key_pem : null;
+  const publicKeyPem = activePair.ok ? activePair.public_key_pem : null;
   if (!privateKeyPem || !publicKeyPem) {
     return fail("no_authorship_key");
   }

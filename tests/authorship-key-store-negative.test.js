@@ -211,13 +211,12 @@ describe("initAuthorshipKey — no-clobber adversarial", () => {
 describe("loadPrivateKey — adversarial", () => {
   it("returns null for a zero-permission (unreadable) private key file", async () => {
     const home = freshHome();
-    await initAuthorshipKey({
+    const inited = await initAuthorshipKey({
       consent: KEY_INIT_CONSENT_PHRASE,
       demaHome: home,
     });
-    const paths = keyPaths(home);
     // make unreadable by owner — open(O_RDONLY) will fail
-    chmodSync(paths.privateKey, 0o000);
+    chmodSync(inited.private_key_path, 0o000);
     const result = await loadPrivateKey(home);
     assert.equal(result, null);
   });
@@ -261,12 +260,11 @@ describe("loadPublicKey — adversarial", () => {
 
   it("returns null for an unreadable public key file", async () => {
     const home = freshHome();
-    await initAuthorshipKey({
+    const inited = await initAuthorshipKey({
       consent: KEY_INIT_CONSENT_PHRASE,
       demaHome: home,
     });
-    const paths = keyPaths(home);
-    chmodSync(paths.publicKey, 0o000);
+    chmodSync(inited.public_key_path, 0o000);
     assert.equal(await loadPublicKey(home), null);
   });
 });

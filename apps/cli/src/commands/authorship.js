@@ -6,7 +6,9 @@ import {
 } from "../../../../packages/receipts/src/authorship-signature.js";
 import {
   initAuthorshipKey,
+  migrateLegacyAuthorshipKey,
   KEY_INIT_CONSENT_PHRASE,
+  KEY_MIGRATE_CONSENT_PHRASE,
 } from "../../../../packages/receipts/src/authorship-key-store.js";
 import {
   signArtifact,
@@ -59,6 +61,28 @@ export async function cmd_authorship(ctx) {
       console.error(`Unsafe authorship key path refused: ${result.key_path}`);
     }
     if (!result.initialized) process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
+  if (subCmdA === "key" && argv[2] === "migrate") {
+    const consent = argValue(argv, "--consent") ?? "";
+    const result = await migrateLegacyAuthorshipKey({ consent });
+    if (wantJsonA) {
+      console.log(JSON.stringify(result, null, 2));
+    } else if (result.migrated) {
+      console.log("Authorship Key Migrated to Generation Store");
+      console.log("=".repeat(40));
+      console.log(`  Fingerprint: ${result.fingerprint}`);
+      console.log(`  Generation:  ${result.generation_path}`);
+      console.log(`  Legacy files: ${result.legacy_policy}`);
+    } else if (result.error === "consent_required") {
+      console.error(
+        `Consent required. Use: --consent "${KEY_MIGRATE_CONSENT_PHRASE}"`,
+      );
+    } else {
+      console.error(`Migration refused: ${result.error}`);
+    }
+    if (!result.migrated) process.exitCode = 1;
     process.exit(process.exitCode ?? 0);
   }
 
@@ -197,7 +221,7 @@ export async function cmd_authorship(ctx) {
   }
 
   console.error(
-    "Usage: dema authorship key init | sign <path> | latest | closeout | verify <receipt> | demo",
+    "Usage: dema authorship key init | key migrate | sign <path> | latest | closeout | verify <receipt> | demo",
   );
   process.exitCode = 1;
   process.exit(process.exitCode ?? 0);

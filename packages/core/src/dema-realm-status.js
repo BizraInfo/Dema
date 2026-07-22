@@ -21,6 +21,7 @@ import { constants as fsConstants } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { ANSI } from "./theme.js";
+import { hasAuthorshipKey } from "../../receipts/src/authorship-key-store.js";
 
 export const DEMA_REALM_LIVE_STATUS_SCHEMA =
   "bizra.dema.realm_live_status.v0.1";
@@ -85,13 +86,12 @@ export async function gatherDemaRealmStatus({
 } = {}) {
   const home = demaHome || process.env.DEMA_HOME || join(homedir(), ".dema");
 
-  const keyPath = join(home, "keys", "node0-ed25519.pub.pem");
   const receiptsDir = join(home, "receipts");
   const urpIndexesDir = join(home, "urp", "indexes");
   const checkpointPath = join(home, "realm", "last-checkpoint.json");
   const timelinePath = join(home, "realm", "timeline.json");
 
-  const identityPresent = await fileExists(keyPath);
+  const identityPresent = await hasAuthorshipKey(home);
   const identityStatus = identityPresent ? "VERIFIED" : "UNINITIALIZED";
 
   const authorshipReceiptsCount = await countMatching(

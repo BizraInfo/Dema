@@ -18,6 +18,7 @@ import { readFile, access } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { hasAuthorshipKey } from "../../receipts/src/authorship-key-store.js";
 
 export const DEMA_REALM_HOME_SCHEMA = "bizra.dema.realm_home.v0.1";
 
@@ -113,11 +114,10 @@ export async function gatherDemaRealmState({
   const home = demaHome || process.env.DEMA_HOME || join(homedir(), ".dema");
 
   const profilePath = join(home, "memory", "profile.json");
-  const keyPath = join(home, "keys", "node0-ed25519.pub.pem");
   const checkpointPath = join(home, "realm", "last-checkpoint.json");
 
   const profile = await readJsonOrNull(profilePath);
-  const keyPresent = await fileExists(keyPath);
+  const keyPresent = await hasAuthorshipKey(home);
   const checkpoint = await readJsonOrNull(checkpointPath);
 
   const operator =
@@ -173,7 +173,7 @@ export async function gatherDemaRealmState({
     identity: Object.freeze({
       status: identityStatus,
       label: identityLabel,
-      key_path: keyPath,
+      key_path: join(home, "keys", "active-key.json"),
     }),
     last_checkpoint: Object.freeze({
       present: Boolean(checkpoint),

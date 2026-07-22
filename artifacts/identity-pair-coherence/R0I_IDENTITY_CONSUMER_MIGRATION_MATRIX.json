@@ -1,0 +1,248 @@
+{
+  "schema": "bizra.dema.identity_consumer_migration_matrix.v0.1",
+  "slice": "IDENTITY-PAIR-COHERENCE-1A",
+  "base_main": "719ec026a02af3e74fc71c71845f1916a0cd181a",
+  "measured_pair_consumers_packages": 25,
+  "note_on_ferried_25": "independently re-measured: 25 = 24 true pair consumers + 1 comment-only census hit (block0-live-readiness.js); 8 additional pair-composing files are test fixtures, out of production scope",
+  "pair_required_migrated": 24,
+  "static_gate": {
+    "ok": true,
+    "scanned": 543,
+    "violations": []
+  },
+  "proof_test": "tests/identity-pair-coherence.test.js",
+  "rows": [
+    {
+      "consumer": "packages/learn/src/how-lesson-writer.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/perf/src/perf-baseline.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/perf/src/perf-improvement.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/core/src/preview-receipt-signing.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPairFn() single snapshot (injectable)",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/core/src/node0-receipt-signing-ed25519.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPairFn() single snapshot (injectable)",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/agents/src/agent-skill-ledger.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/agents/src/agent-profile-registry.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/agents/src/agent-wallet.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/genesis/src/node0-identity-proof.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/genesis/src/keyconsent-integration-proof.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/genesis/src/block0-manifest.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/genesis/src/core-flywheel-run-proof.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/genesis/src/urp-resource-status-proof.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/genesis/src/dema-realm-state-proof.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/genesis/src/node0-composition-manifest.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/econ/src/dual-token-ledger.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/receipts/src/consent-proof.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/receipts/src/authorship-sign-command.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/receipts/src/canonical-receipt.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/receipts/src/verdict-attest.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/flywheel/src/flywheel-sat-validation.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/flywheel/src/flywheel-convergence-attestation.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/flywheel/src/flywheel-attestation-ledger.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/mission/src/mission-lifecycle.js",
+      "classification": "PAIR_REQUIRED",
+      "old_access_pattern": "loadPrivateKey() + loadPublicKey() (separate reads)",
+      "new_access_pattern": "loadActiveKeyPair() single snapshot",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/genesis/src/block0-live-readiness.js",
+      "classification": "PUBLIC_ONLY",
+      "old_access_pattern": "loadPublicKey() (verification only; prior census hit was comment text)",
+      "new_access_pattern": "loadPublicKey() pointer-aware wrapper",
+      "migrated": true,
+      "status": "PUBLIC_ONLY_WRAPPER"
+    },
+    {
+      "consumer": "packages/core/src/dema-realm-home.js",
+      "classification": "PRESENCE_ONLY",
+      "old_access_pattern": "direct legacy path existence check",
+      "new_access_pattern": "hasAuthorshipKey()",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/core/src/dema-realm-status.js",
+      "classification": "PRESENCE_ONLY",
+      "old_access_pattern": "direct legacy path existence check",
+      "new_access_pattern": "hasAuthorshipKey()",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "packages/core/src/dema-first-look-home.js",
+      "classification": "PRESENCE_ONLY",
+      "old_access_pattern": "direct legacy path readability check",
+      "new_access_pattern": "hasAuthorshipKey()",
+      "migrated": true,
+      "status": "MIGRATED"
+    },
+    {
+      "consumer": "apps/cli/src/commands/observe-gatherer.js",
+      "classification": "PRESENCE_ONLY",
+      "old_access_pattern": "direct legacy path existence check (sync)",
+      "new_access_pattern": "active-key.json pointer OR legacy presence (sync)",
+      "migrated": true,
+      "status": "MIGRATED"
+    }
+  ]
+}
