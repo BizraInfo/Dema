@@ -17,6 +17,7 @@ import {
   rotateAuthorshipKey,
   loadPrivateKey,
   loadPublicKey,
+  loadGuardedActiveKey,
   keyPaths,
   KEY_INIT_CONSENT_PHRASE,
   KEY_ROTATE_CONSENT_PHRASE,
@@ -191,7 +192,7 @@ describe("rotateAuthorshipKey — failure injection (each ends in ONE explicit s
     assert.equal(await loadPrivateKey(home), oldPriv); // old key unchanged
   });
 
-  it("mid-rotation journal (crash before completion) → loader fails closed", async () => {
+  it("mid-rotation journal (crash before completion) → GUARDED loader fails closed; hot path unchanged", async () => {
     const home = freshHome();
     await seedKey(home);
     // simulate a crash: journal stuck ACTIVATING
@@ -199,11 +200,14 @@ describe("rotateAuthorshipKey — failure injection (each ends in ONE explicit s
       join(keyPaths(home).dir, "rotation-journal.json"),
       JSON.stringify({ state: "ACTIVATING", old_fingerprint: "x", new_fingerprint: "y" }),
     );
-    assert.equal(await loadPublicKey(home), null); // blocked
-    assert.equal(await loadPrivateKey(home), null);
+    const guarded = await loadGuardedActiveKey(home);
+    assert.equal(guarded.blocked, true);
+    assert.equal(guarded.reason, "rotation_in_progress");
+    // the 25-consumer hot path is intentionally NOT changed by rotation state
+    assert.notEqual(await loadPublicKey(home), null);
   });
 
-  it("runtime loading a retired active fingerprint → loader fails closed", async () => {
+  it("runtime loading a retired active fingerprint → GUARDED loader fails closed", async () => {
     const home = freshHome();
     const fp = await seedKey(home);
     // put the ACTIVE fingerprint on the denylist (inconsistent/bad state)
@@ -211,8 +215,9 @@ describe("rotateAuthorshipKey — failure injection (each ends in ONE explicit s
       join(keyPaths(home).dir, "retired-registry.json"),
       JSON.stringify({ schema: "bizra.dema.retired_key_registry.v0.1", retired: [{ fingerprint: fp }] }),
     );
-    assert.equal(await loadPublicKey(home), null);
-    assert.equal(await loadPrivateKey(home), null);
+    const guarded = await loadGuardedActiveKey(home);
+    assert.equal(guarded.blocked, true);
+    assert.equal(guarded.reason, "active_key_retired");
   });
 
   it("wrong DEMA_HOME (no key) → no_key_to_rotate", async () => {

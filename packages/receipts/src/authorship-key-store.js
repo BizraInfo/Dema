@@ -664,7 +664,14 @@ async function writeFileSynced(path, content, mode) {
   );
   try {
     await handle.writeFile(content, "utf8");
-    await handle.sync();
+    // Durability hardening — best effort. The write itself has already
+    // succeeded; a filesystem that rejects fsync (some CI/tmpfs) must not fail
+    // the operation, only forgo the crash-durability guarantee.
+    try {
+      await handle.sync();
+    } catch {
+      /* fsync unsupported here — data written, durability not guaranteed */
+    }
   } catch (error) {
     if (error?.code === "ELOOP") throw new UnsafeKeyPathError(path);
     throw error;
@@ -695,20 +702,30 @@ async function removeIfExists(path) {
 
 export async function loadPrivateKey(demaHome) {
   const paths = keyPaths(demaHome);
-  const priv = await readKeyFile(paths, paths.privateKey);
-  if (!priv) return null;
-  // Fail closed if the active key is retired or a rotation is mid-flight.
-  const pub = await readKeyFile(paths, paths.publicKey);
-  if (await activeKeyBlocked(paths, pub)) return null;
-  return priv;
+  return readKeyFile(paths, paths.privateKey);
 }
 
 export async function loadPublicKey(demaHome) {
   const paths = keyPaths(demaHome);
+  return readKeyFile(paths, paths.publicKey);
+}
+
+// Rotation-aware loader for the IDENTITY path — opt-in, never on the hot path
+// that 25 loadPrivateKey/loadPublicKey consumers use. Returns { blocked, reason,
+// private_key_pem, public_key_pem }. Never throws.
+export async function loadGuardedActiveKey(demaHome) {
+  const paths = keyPaths(demaHome);
+  const priv = await readKeyFile(paths, paths.privateKey);
   const pub = await readKeyFile(paths, paths.publicKey);
-  if (!pub) return null;
-  if (await activeKeyBlocked(paths, pub)) return null;
-  return pub;
+  if (!priv || !pub) return { blocked: true, reason: "no_active_key" };
+  let reason = null;
+  try {
+    reason = await activeKeyBlocked(paths, pub);
+  } catch {
+    reason = "guard_indeterminate";
+  }
+  if (reason) return { blocked: true, reason };
+  return { blocked: false, private_key_pem: priv, public_key_pem: pub };
 }
 
 export async function hasAuthorshipKey(demaHome) {
