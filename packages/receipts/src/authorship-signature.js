@@ -22,6 +22,14 @@ export function generateEd25519Keypair() {
   };
 }
 
+export function fingerprintPublicKeyPem(publicKeyPem) {
+  return sha256(
+    createPublicKey(publicKeyPem)
+      .export({ type: "spki", format: "der" })
+      .toString("hex"),
+  );
+}
+
 export function buildAuthorshipPayload({
   artifact_path,
   artifact_sha256,

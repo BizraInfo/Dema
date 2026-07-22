@@ -2,10 +2,15 @@ import { constants } from "node:fs";
 import { mkdir, lstat, realpath, open } from "node:fs/promises";
 import { join, dirname, relative, isAbsolute, sep } from "node:path";
 import { homedir } from "node:os";
-import { generateEd25519Keypair } from "./authorship-signature.js";
+import {
+  generateEd25519Keypair,
+  fingerprintPublicKeyPem,
+} from "./authorship-signature.js";
 
 export const KEY_INIT_CONSENT_PHRASE = "GENERATE AUTHORSHIP KEY";
 export const KEY_INIT_SCHEMA = "bizra.dema.authorship_key_init.v0.1";
+export const KEY_ROTATE_CONSENT_PHRASE = "ROTATE AUTHORSHIP KEY";
+export const KEY_ROTATE_SCHEMA = "bizra.dema.authorship_key_rotate.v0.1";
 
 const PRIVATE_KEY_FILENAME = "node0-ed25519.pem";
 const PUBLIC_KEY_FILENAME = "node0-ed25519.pub.pem";
@@ -193,6 +198,104 @@ export async function initAuthorshipKey({
     public_key_path: paths.publicKey,
     boundary: buildBoundary(true),
   });
+}
+
+export async function rotateAuthorshipKey({ consent, demaHome } = {}) {
+  if (consent !== KEY_ROTATE_CONSENT_PHRASE) {
+    return Object.freeze({
+      schema: KEY_ROTATE_SCHEMA,
+      rotated: false,
+      error: "consent_required",
+      required_phrase: KEY_ROTATE_CONSENT_PHRASE,
+      boundary: buildBoundary(false),
+    });
+  }
+
+  const paths = keyPaths(demaHome);
+  const unsafePath = await prepareKeyDirectory(paths);
+  if (unsafePath) {
+    return Object.freeze({
+      schema: KEY_ROTATE_SCHEMA,
+      rotated: false,
+      error: "unsafe_key_path",
+      key_path: unsafePath,
+      boundary: buildBoundary(false),
+    });
+  }
+
+  // Rotation replaces an EXISTING key. Refuse (not silently init) if none.
+  const oldPrivatePem = await readKeyFile(paths, paths.privateKey);
+  const oldPublicPem = await readKeyFile(paths, paths.publicKey);
+  if (!oldPrivatePem || !oldPublicPem) {
+    return Object.freeze({
+      schema: KEY_ROTATE_SCHEMA,
+      rotated: false,
+      error: "no_key_to_rotate",
+      boundary: buildBoundary(false),
+    });
+  }
+
+  const oldFingerprint = fingerprintPublicKeyPem(oldPublicPem);
+
+  // Back up the ORIGINAL key BEFORE any overwrite. If the backup cannot be
+  // secured, fail closed — never destroy the only copy of the old key.
+  const backupDir = join(paths.dir, "rotated", oldFingerprint);
+  const backupPrivate = join(backupDir, PRIVATE_KEY_FILENAME);
+  const backupPublic = join(backupDir, PUBLIC_KEY_FILENAME);
+  try {
+    await mkdir(backupDir, { recursive: true });
+    await writeBackupIfAbsent(backupPrivate, oldPrivatePem, 0o600);
+    await writeBackupIfAbsent(backupPublic, oldPublicPem, 0o644);
+    // Verify the backup holds the original bytes before we overwrite.
+    const check = await open(backupPrivate, constants.O_RDONLY | NO_FOLLOW);
+    try {
+      if ((await check.readFile("utf8")) !== oldPrivatePem) {
+        throw new Error("backup verification mismatch");
+      }
+    } finally {
+      await check.close();
+    }
+  } catch (error) {
+    return Object.freeze({
+      schema: KEY_ROTATE_SCHEMA,
+      rotated: false,
+      error: "backup_failed",
+      detail: error?.message ?? String(error),
+      boundary: buildBoundary(false),
+    });
+  }
+
+  // Backup secured — now generate and force-write the new key.
+  const keys = generateEd25519Keypair();
+  await writeKeyFile(paths.privateKey, keys.private_key_pem, {
+    mode: 0o600,
+    force: true,
+  });
+  await writeKeyFile(paths.publicKey, keys.public_key_pem, {
+    mode: 0o644,
+    force: true,
+  });
+
+  return Object.freeze({
+    schema: KEY_ROTATE_SCHEMA,
+    rotated: true,
+    old_fingerprint: oldFingerprint,
+    new_fingerprint: keys.public_key_fingerprint,
+    backup_dir: backupDir,
+    private_key_path: paths.privateKey,
+    public_key_path: paths.publicKey,
+    boundary: buildBoundary(true),
+  });
+}
+
+async function writeBackupIfAbsent(path, content, mode) {
+  try {
+    await writeKeyFile(path, content, { mode, force: false });
+  } catch (error) {
+    // Already backed up (same old key) — the original is safe; keep it.
+    if (error instanceof KeyAlreadyExistsError) return;
+    throw error;
+  }
 }
 
 export async function loadPrivateKey(demaHome) {

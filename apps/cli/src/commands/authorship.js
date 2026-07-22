@@ -6,7 +6,9 @@ import {
 } from "../../../../packages/receipts/src/authorship-signature.js";
 import {
   initAuthorshipKey,
+  rotateAuthorshipKey,
   KEY_INIT_CONSENT_PHRASE,
+  KEY_ROTATE_CONSENT_PHRASE,
 } from "../../../../packages/receipts/src/authorship-key-store.js";
 import {
   signArtifact,
@@ -53,12 +55,46 @@ export async function cmd_authorship(ctx) {
       );
     } else if (result.error === "key_already_exists") {
       console.error(
-        `Key already exists at ${result.private_key_path}. Use dema authorship key rotate (future) to replace.`,
+        `Key already exists at ${result.private_key_path}. Use dema authorship key rotate to replace.`,
       );
     } else if (result.error === "unsafe_key_path") {
       console.error(`Unsafe authorship key path refused: ${result.key_path}`);
     }
     if (!result.initialized) process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
+  if (subCmdA === "key" && argv[2] === "rotate") {
+    const consent = argValue(argv, "--consent") ?? "";
+    const result = await rotateAuthorshipKey({ consent });
+    if (wantJsonA) {
+      console.log(JSON.stringify(result, null, 2));
+    } else if (result.rotated) {
+      console.log("Authorship Key Rotated");
+      console.log("=".repeat(40));
+      console.log(`  Old fingerprint: ${result.old_fingerprint}`);
+      console.log(`  New fingerprint: ${result.new_fingerprint}`);
+      console.log(`  Old key backed up: ${result.backup_dir}`);
+      console.log(
+        "  Next: record the old fingerprint as retired, classify receipts",
+      );
+      console.log("  signed during the exposure interval, seal a rotation receipt.");
+    } else if (result.error === "consent_required") {
+      console.error(
+        `Consent required. Use: --consent "${KEY_ROTATE_CONSENT_PHRASE}"`,
+      );
+    } else if (result.error === "no_key_to_rotate") {
+      console.error(
+        `No authorship key to rotate. Use dema authorship key init first.`,
+      );
+    } else if (result.error === "backup_failed") {
+      console.error(
+        `Rotation aborted: could not secure a backup of the old key (${result.detail}). Old key untouched.`,
+      );
+    } else if (result.error === "unsafe_key_path") {
+      console.error(`Unsafe authorship key path refused: ${result.key_path}`);
+    }
+    if (!result.rotated) process.exitCode = 1;
     process.exit(process.exitCode ?? 0);
   }
 
@@ -197,7 +233,7 @@ export async function cmd_authorship(ctx) {
   }
 
   console.error(
-    "Usage: dema authorship key init | sign <path> | latest | closeout | verify <receipt> | demo",
+    "Usage: dema authorship key init | key rotate | sign <path> | latest | closeout | verify <receipt> | demo",
   );
   process.exitCode = 1;
   process.exit(process.exitCode ?? 0);
