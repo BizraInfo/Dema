@@ -62,11 +62,44 @@ function cleanupTempLog() {
   if (tempLogDir) rmSync(tempLogDir, { recursive: true, force: true });
 }
 
+let child = null;
+let classifier = null;
+let finished = false;
 const out = createWriteStream(log);
+
+function stopProcess(processHandle) {
+  if (
+    processHandle &&
+    processHandle.exitCode === null &&
+    processHandle.signalCode === null &&
+    !processHandle.killed
+  ) {
+    processHandle.kill("SIGTERM");
+  }
+}
+
+function finish(exitCode, message = null) {
+  if (finished) return;
+  finished = true;
+  if (message) console.error(message);
+  stopProcess(classifier);
+  stopProcess(child);
+  if (!out.destroyed) out.destroy();
+  cleanupTempLog();
+  process.exit(exitCode);
+}
+
+out.on("error", (error) => {
+  finish(
+    1,
+    `[G8 LOG] output stream failed for ${log}: ${error.message}; failing closed.`,
+  );
+});
+
 const childEnv = { ...process.env };
 delete childEnv[CHECK_GATE_EVIDENCE_FD_ENV];
 if (requireCheckGateEvidence) childEnv[CHECK_GATE_EVIDENCE_FD_ENV] = "3";
-const child = spawn(cmd[0], cmd.slice(1), {
+child = spawn(cmd[0], cmd.slice(1), {
   stdio: requireCheckGateEvidence
     ? ["inherit", "pipe", "pipe", "pipe"]
     : ["inherit", "pipe", "pipe"],
@@ -98,29 +131,30 @@ child.stderr.on("data", (chunk) => {
   process.stderr.write(chunk);
   out.write(chunk);
 });
-child.on("error", (err) => {
-  console.error(`run-with-classifier: failed to spawn command: ${err.message}`);
-  cleanupTempLog();
-  process.exit(1);
+child.on("error", (error) => {
+  finish(
+    1,
+    `run-with-classifier: failed to spawn command: ${error.message}`,
+  );
 });
 child.on("close", (code, signal) => {
+  if (finished) return;
   out.end(() => {
+    if (finished) return;
     if (signal) {
-      console.error(
+      finish(
+        1,
         `[G8 EXIT] gated command terminated by ${signal}; failing closed.`,
       );
-      cleanupTempLog();
-      process.exit(1);
       return;
     }
     if (gateEvidenceOverflow || gateEvidenceError) {
-      console.error(
+      finish(
+        1,
         `[G8 GATE EXIT EVIDENCE] side channel ${
           gateEvidenceOverflow ? "exceeded 64 KiB" : "failed"
         }; failing closed.`,
       );
-      cleanupTempLog();
-      process.exit(1);
       return;
     }
     const classifierArgs = [
@@ -137,19 +171,15 @@ child.on("close", (code, signal) => {
         Buffer.concat(gateEvidenceChunks).toString("utf8"),
       );
     }
-    const classifier = spawn(
-      process.execPath,
-      classifierArgs,
-      { stdio: "inherit" },
-    );
-    classifier.on("error", (err) => {
-      console.error(`run-with-classifier: classifier spawn failed: ${err.message}`);
-      cleanupTempLog();
-      process.exit(1);
+    classifier = spawn(process.execPath, classifierArgs, { stdio: "inherit" });
+    classifier.on("error", (error) => {
+      finish(
+        1,
+        `run-with-classifier: classifier spawn failed: ${error.message}`,
+      );
     });
     classifier.on("close", (classifierCode) => {
-      cleanupTempLog();
-      process.exit(classifierCode ?? 1);
+      finish(classifierCode ?? 1);
     });
   });
 });
