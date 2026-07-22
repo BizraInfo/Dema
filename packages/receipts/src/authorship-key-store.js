@@ -518,9 +518,18 @@ export async function initAuthorshipKey({
   const unsafePath = await prepareKeyDirectory(paths);
   if (unsafePath) return unsafeKeyPathResult(unsafePath);
 
-  const pointer = await readActivePointer(ap);
-  const hasPointer = !pointer.error;
-  if (!force && (hasPointer || (await existingKeyPath(paths)))) {
+  // Finding #2 (ADR-047): initialization may ESTABLISH the first active
+  // generation; it must never REPLACE an existing one. `force` bypasses only
+  // the legacy flat-file existence check — an active pointer is the root of
+  // trust and can be changed ONLY by a governed rotation transaction
+  // (AUTHORSHIP-ROTATION-TRANSACTION-1B), never by re-init.
+  const pointerInfo = await lstatIfExists(ap.activePointer);
+  const hasPointer =
+    Boolean(pointerInfo) && !pointerInfo.isSymbolicLink() && pointerInfo.isFile();
+  if (hasPointer) {
+    return keyAlreadyExistsResult(paths);
+  }
+  if (!force && (await existingKeyPath(paths))) {
     return keyAlreadyExistsResult(paths);
   }
 
@@ -535,7 +544,7 @@ export async function initAuthorshipKey({
     await activateGeneration(ap, {
       fingerprint: keys.public_key_fingerprint,
       now,
-      previous: hasPointer ? pointer.doc.generation_fingerprint : null,
+      previous: null,
     });
 
     return Object.freeze({
@@ -581,9 +590,66 @@ export async function loadPublicKey(demaHome) {
   return readKeyFile(paths, paths.publicKey);
 }
 
+// Finding #3 (ADR-047): presence is NOT verification. inspectActiveIdentity
+// maps a home to exactly one explicit state; VERIFIED requires a successful
+// loadActiveKeyPair(). Realm/status surfaces must derive "VERIFIED" from
+// state === "VERIFIED", never from mere key-file presence.
+export const IDENTITY_STATES = Object.freeze([
+  "ABSENT",
+  "PRESENT_UNVERIFIED",
+  "VERIFIED",
+  "BLOCKED_CORRUPT",
+  "BLOCKED_RETIRED",
+  "BLOCKED_POINTER_INVALID",
+]);
+
+const LOAD_ERROR_TO_STATE = Object.freeze({
+  no_active_pointer: "PRESENT_UNVERIFIED", // legacy flat files may still exist
+  malformed_pointer: "BLOCKED_POINTER_INVALID",
+  pointer_escape: "BLOCKED_POINTER_INVALID",
+  generation_missing: "BLOCKED_POINTER_INVALID",
+  generation_unsafe: "BLOCKED_CORRUPT",
+  metadata_corrupt: "BLOCKED_CORRUPT",
+  content_hash_mismatch: "BLOCKED_CORRUPT",
+  pair_mismatch: "BLOCKED_CORRUPT",
+  retired_generation: "BLOCKED_RETIRED",
+  retired_registry_unreadable: "BLOCKED_RETIRED",
+  load_failed: "BLOCKED_CORRUPT",
+});
+
+export async function inspectActiveIdentity(demaHome) {
+  const pair = await loadActiveKeyPair(demaHome);
+  if (pair.ok) {
+    return Object.freeze({
+      state: "VERIFIED",
+      fingerprint: pair.fingerprint,
+      verified: true,
+    });
+  }
+  if (pair.error === "no_active_pointer") {
+    // No generation store. Distinguish a pre-migration legacy home (present
+    // but unverified) from a truly empty one.
+    const paths = keyPaths(demaHome);
+    const legacyPresent = await isSafeExistingKeyPath(paths, paths.privateKey);
+    return Object.freeze({
+      state: legacyPresent ? "PRESENT_UNVERIFIED" : "ABSENT",
+      fingerprint: null,
+      verified: false,
+      reason: legacyPresent ? "legacy_flat_files_unverified" : "no_active_identity",
+    });
+  }
+  return Object.freeze({
+    state: LOAD_ERROR_TO_STATE[pair.error] ?? "BLOCKED_CORRUPT",
+    fingerprint: null,
+    verified: false,
+    error: pair.error,
+  });
+}
+
 // Presence, not servability: a corrupt or retired generation still counts as
 // "a key exists" (callers then surface the precise load error), matching the
-// legacy semantics where a present-but-corrupt PEM answered true.
+// legacy semantics where a present-but-corrupt PEM answered true. For a
+// truthful VERIFIED/UNINITIALIZED display, use inspectActiveIdentity instead.
 export async function hasAuthorshipKey(demaHome) {
   const ap = activeKeyPaths(demaHome);
   const pointerInfo = await lstatIfExists(ap.activePointer);

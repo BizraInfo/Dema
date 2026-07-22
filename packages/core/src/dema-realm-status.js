@@ -21,7 +21,7 @@ import { constants as fsConstants } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { ANSI } from "./theme.js";
-import { hasAuthorshipKey } from "../../receipts/src/authorship-key-store.js";
+import { inspectActiveIdentity } from "../../receipts/src/authorship-key-store.js";
 
 export const DEMA_REALM_LIVE_STATUS_SCHEMA =
   "bizra.dema.realm_live_status.v0.1";
@@ -91,8 +91,15 @@ export async function gatherDemaRealmStatus({
   const checkpointPath = join(home, "realm", "last-checkpoint.json");
   const timelinePath = join(home, "realm", "timeline.json");
 
-  const identityPresent = await hasAuthorshipKey(home);
-  const identityStatus = identityPresent ? "VERIFIED" : "UNINITIALIZED";
+  // Finding #3: VERIFIED requires loadActiveKeyPair() success, not presence.
+  const identity = await inspectActiveIdentity(home);
+  const identityPresent = identity.state === "VERIFIED";
+  const identityStatus =
+    identity.state === "VERIFIED"
+      ? "VERIFIED"
+      : identity.state === "ABSENT" || identity.state === "PRESENT_UNVERIFIED"
+        ? "UNINITIALIZED"
+        : identity.state;
 
   const authorshipReceiptsCount = await countMatching(
     receiptsDir,

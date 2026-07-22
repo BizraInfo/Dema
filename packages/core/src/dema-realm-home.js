@@ -18,7 +18,7 @@ import { readFile, access } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { hasAuthorshipKey } from "../../receipts/src/authorship-key-store.js";
+import { inspectActiveIdentity } from "../../receipts/src/authorship-key-store.js";
 
 export const DEMA_REALM_HOME_SCHEMA = "bizra.dema.realm_home.v0.1";
 
@@ -117,7 +117,11 @@ export async function gatherDemaRealmState({
   const checkpointPath = join(home, "realm", "last-checkpoint.json");
 
   const profile = await readJsonOrNull(profilePath);
-  const keyPresent = await hasAuthorshipKey(home);
+  // Finding #3: VERIFIED requires a real loadActiveKeyPair() success — never
+  // mere presence. A blocked (corrupt/retired/invalid-pointer) identity must
+  // NOT read as VERIFIED.
+  const identity = await inspectActiveIdentity(home);
+  const keyVerified = identity.state === "VERIFIED";
   const checkpoint = await readJsonOrNull(checkpointPath);
 
   const operator =
@@ -126,8 +130,16 @@ export async function gatherDemaRealmState({
     (profile && (profile.role || profile.title)) ||
     (operator === "Operator" ? "Sovereign Builder" : "First Architect");
 
-  const identityStatus = keyPresent ? "VERIFIED" : "UNINITIALIZED";
-  const identityLabel = keyPresent ? "Ed25519 verified" : "not yet initialized";
+  const identityStatus = keyVerified
+    ? "VERIFIED"
+    : identity.state === "ABSENT" || identity.state === "PRESENT_UNVERIFIED"
+      ? "UNINITIALIZED"
+      : identity.state; // BLOCKED_CORRUPT / BLOCKED_RETIRED / BLOCKED_POINTER_INVALID
+  const identityLabel = keyVerified
+    ? "Ed25519 verified"
+    : identityStatus === "UNINITIALIZED"
+      ? "not yet initialized"
+      : `identity blocked (${identity.error ?? identity.state})`;
 
   const lastCheckpointText = checkpoint
     ? checkpoint.label || checkpoint.next_quest || "checkpoint present"
@@ -137,7 +149,7 @@ export async function gatherDemaRealmState({
     { label: BOOT_STEP_LABELS[0], status: identityStatus, ok: true },
     {
       label: BOOT_STEP_LABELS[1],
-      status: keyPresent ? "PRESENT" : "ABSENT",
+      status: keyVerified ? "PRESENT" : "ABSENT",
       ok: true,
     },
     {
@@ -155,7 +167,7 @@ export async function gatherDemaRealmState({
     { label: BOOT_STEP_LABELS[6], status: "LIVE", ok: true },
   ];
 
-  const seedAwake = keyPresent;
+  const seedAwake = keyVerified;
   const awakenedLine = seedAwake
     ? "The sovereign seed is awake."
     : "The sovereign seed awaits initialization.";

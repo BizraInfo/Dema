@@ -8,7 +8,8 @@
   "static_gate": {
     "ok": true,
     "scanned": 543,
-    "violations": []
+    "violations": [],
+    "legacy_path_allowlisted": 4
   },
   "proof_test": "tests/identity-pair-coherence.test.js",
   "rows": [
@@ -244,5 +245,11 @@
       "migrated": true,
       "status": "MIGRATED"
     }
-  ]
+  ],
+  "phase4_truth_closure": {
+    "finding2_force_bypass": "CLOSED — init refuses when active pointer exists (force cannot replace)",
+    "finding3_presence_not_verified": "CLOSED — inspectActiveIdentity 6-state; VERIFIED only on loadActiveKeyPair success",
+    "gate_widened": "direct node0-ed25519(.pub).pem refs rejected outside legacy-path allowlist",
+    "enforcer": "μ-C1 consent-enforcer.sh v0.2 fail-closed (exit 2); selftest OK"
+  }
 }

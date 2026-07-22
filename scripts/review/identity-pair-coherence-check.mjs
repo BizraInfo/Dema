@@ -24,8 +24,23 @@ const ALLOWLIST = new Set([
   "packages/receipts/src/authorship-key-store.js",
 ]);
 
+// Modules explicitly permitted to name the legacy flat key filenames: the
+// store (owns the constants), the migration path, and presence-only
+// gatherers that fall back to the legacy file pre-migration. Everything else
+// must reach identity through loadActiveKeyPair() / the pointer.
+const LEGACY_PATH_ALLOWLIST = new Set([
+  "packages/receipts/src/authorship-key-store.js",
+  "packages/core/src/dema-realm-status.js",
+  "packages/core/src/dema-first-look-home.js",
+  "apps/cli/src/commands/observe-gatherer.js",
+]);
+
 const PRIVATE_REF = /\bloadPrivateKey\b/;
 const PUBLIC_REF = /\bloadPublicKey\b/;
+// Finding (gate narrower than invariant): direct references to the legacy
+// authority filenames are a split-loader path the name-based check above
+// misses. Reject them outside the allowlist.
+const LEGACY_FILENAME_REF = /node0-ed25519(?:\.pub)?\.pem/;
 
 function extension(path) {
   const dot = path.lastIndexOf(".");
@@ -55,16 +70,20 @@ export async function runIdentityPairCoherenceCheck({ extraFiles = [] } = {}) {
 
   const violations = [];
   const scan = (file, body) => {
-    if (PRIVATE_REF.test(body) && PUBLIC_REF.test(body)) {
-      violations.push({ file });
+    if (!ALLOWLIST.has(file) && PRIVATE_REF.test(body) && PUBLIC_REF.test(body)) {
+      violations.push({ file, kind: "separate_pair_loaders" });
+    }
+    if (!LEGACY_PATH_ALLOWLIST.has(file) && LEGACY_FILENAME_REF.test(body)) {
+      violations.push({ file, kind: "direct_legacy_key_path" });
     }
   };
 
   for (const file of files) {
-    if (ALLOWLIST.has(file)) continue;
     scan(file, readFileSync(join(REPO_ROOT, file), "utf8"));
   }
   for (const file of extraFiles) {
+    // extraFiles (test synthetics) are keyed by basename so allowlist entries
+    // never accidentally match them.
     scan(file, readFileSync(isAbsolute(file) ? file : join(REPO_ROOT, file), "utf8"));
   }
 
@@ -73,6 +92,7 @@ export async function runIdentityPairCoherenceCheck({ extraFiles = [] } = {}) {
     ok: violations.length === 0,
     scanned: files.length,
     allowlisted: ALLOWLIST.size,
+    legacy_path_allowlisted: LEGACY_PATH_ALLOWLIST.size,
     violations,
     boundary: Object.freeze({
       runtime_execution: false,

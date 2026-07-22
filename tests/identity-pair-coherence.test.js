@@ -27,6 +27,7 @@ import {
   initAuthorshipKey,
   loadActiveKeyPair,
   migrateLegacyAuthorshipKey,
+  inspectActiveIdentity,
   activeKeyPaths,
   keyPaths,
   loadPublicKey,
@@ -39,12 +40,51 @@ import {
   generateEd25519Keypair,
   signPayload,
   verifyPayload,
+  sha256,
 } from "../packages/receipts/src/authorship-signature.js";
 
 const NOW = "2026-07-22T20:00:00.000Z";
 
 function freshHome() {
   return mkdtempSync(join(tmpdir(), "dema-ipc1a-"));
+}
+
+// Build a second immutable generation and atomically swap the active pointer —
+// the exact primitive a governed rotation will use. init can no longer replace
+// an active generation (finding #2), so transition tests drive the pointer
+// directly rather than through a forbidden force-reinit.
+function plantGenerationAndActivate(home, now = NOW) {
+  const ap = activeKeyPaths(home);
+  const keys = generateEd25519Keypair();
+  const fp = keys.public_key_fingerprint;
+  const genDir = join(ap.generationsDir, fp);
+  mkdirSync(genDir, { recursive: true });
+  writeFileSync(join(genDir, "private.pem"), keys.private_key_pem, { mode: 0o600 });
+  writeFileSync(join(genDir, "public.pem"), keys.public_key_pem);
+  writeFileSync(
+    join(genDir, "metadata.json"),
+    JSON.stringify({
+      schema: GENERATION_METADATA_SCHEMA,
+      fingerprint: fp,
+      generation_id: fp,
+      private_content_hash: sha256(keys.private_key_pem),
+      public_content_hash: sha256(keys.public_key_pem),
+      created_at: now,
+      source: "test_transition",
+    }, null, 2) + "\n",
+  );
+  const staged = `${ap.activePointer}.next`;
+  const pointerBytes = JSON.stringify({
+    schema: ACTIVE_POINTER_SCHEMA,
+    generation_fingerprint: fp,
+    generation_path: join("generations", fp),
+    activated_at: now,
+    previous_generation: null,
+    transition_id: sha256(`test->${fp}@${now}`),
+  }, null, 2) + "\n";
+  writeFileSync(staged, pointerBytes);
+  renameSync(staged, ap.activePointer);
+  return fp;
 }
 
 async function initedHome() {
@@ -237,15 +277,9 @@ describe("T9 readers observe old pair or new pair, never a mixed pair", () => {
   it("each snapshot is self-consistent across a pointer transition", async () => {
     const home = await initedHome();
     const before = await loadActiveKeyPair(home);
-    // Second generation arrives via explicit re-init (force) — rotation does
-    // not exist in this slice; the transition primitive is the pointer swap.
-    const r2 = await initAuthorshipKey({
-      consent: KEY_INIT_CONSENT_PHRASE,
-      demaHome: home,
-      force: true,
-      now: NOW,
-    });
-    assert.equal(r2.initialized, true);
+    // Drive the pointer-swap primitive directly (rotation does not exist in
+    // this slice; init can no longer replace an active generation).
+    plantGenerationAndActivate(home);
     const after = await loadActiveKeyPair(home);
     assert.equal(before.ok, true);
     assert.equal(after.ok, true);
@@ -272,16 +306,12 @@ describe("T10 crash before pointer rename preserves the old pair", () => {
 describe("T11 crash after pointer rename exposes the new complete pair", () => {
   it("serves the generation the pointer names once renamed", async () => {
     const home = await initedHome();
-    await initAuthorshipKey({
-      consent: KEY_INIT_CONSENT_PHRASE,
-      demaHome: home,
-      force: true,
-      now: NOW,
-    });
+    const newFp = plantGenerationAndActivate(home);
     const pointer = readPointer(home);
     const pair = await loadActiveKeyPair(home);
     assert.equal(pair.ok, true);
     assert.equal(pair.fingerprint, pointer.generation_fingerprint);
+    assert.equal(pair.fingerprint, newFp);
   });
 });
 
@@ -339,6 +369,19 @@ describe("T14+T15 static pair-coherence gate", () => {
     const dirty = await runIdentityPairCoherenceCheck({ extraFiles: [bad] });
     assert.equal(dirty.ok, false);
     assert.equal(dirty.violations.length, 1);
+    assert.equal(dirty.violations[0].kind, "separate_pair_loaders");
+
+    // 4C: the gate must ALSO reject a direct legacy-filename reader, which the
+    // loader-name check alone would miss.
+    const legacyReader = join(dir, "sneaky-reader.js");
+    writeFileSync(
+      legacyReader,
+      'import { readFileSync } from "node:fs";\n' +
+        'export function peek(h){ return readFileSync(h + "/keys/node0-ed25519.pem"); }\n',
+    );
+    const dirty2 = await runIdentityPairCoherenceCheck({ extraFiles: [legacyReader] });
+    assert.equal(dirty2.ok, false);
+    assert.equal(dirty2.violations[0].kind, "direct_legacy_key_path");
   });
 });
 
@@ -400,6 +443,82 @@ describe("CLI: dema authorship key migrate", () => {
     assert.equal(doc.fingerprint, legacy.public_key_fingerprint);
     const pair = await loadActiveKeyPair(home);
     assert.equal(pair.ok, true);
+  });
+});
+
+describe("F2 init cannot replace an active generation (finding #2)", () => {
+  it("force:true with an existing pointer refuses and leaves the pointer unchanged", async () => {
+    const home = await initedHome();
+    const before = readPointer(home);
+    const beforePair = await loadActiveKeyPair(home);
+
+    const r = await initAuthorshipKey({
+      consent: KEY_INIT_CONSENT_PHRASE,
+      demaHome: home,
+      force: true,
+      now: NOW,
+    });
+    assert.equal(r.initialized, false);
+    assert.equal(r.error, "key_already_exists");
+
+    const after = readPointer(home);
+    assert.deepEqual(after, before);
+    const afterPair = await loadActiveKeyPair(home);
+    assert.equal(afterPair.fingerprint, beforePair.fingerprint);
+    // No stray second generation was authoritatively activated.
+    assert.equal(after.generation_fingerprint, beforePair.fingerprint);
+  });
+});
+
+describe("F3 presence is not verification (finding #3)", () => {
+  it("ABSENT on a fresh home", async () => {
+    const r = await inspectActiveIdentity(freshHome());
+    assert.equal(r.state, "ABSENT");
+    assert.equal(r.verified, false);
+  });
+  it("VERIFIED only on a real loadActiveKeyPair success", async () => {
+    const home = await initedHome();
+    const r = await inspectActiveIdentity(home);
+    assert.equal(r.state, "VERIFIED");
+    assert.equal(r.verified, true);
+    assert.match(r.fingerprint, /^[0-9a-f]{64}$/);
+  });
+  it("BLOCKED_CORRUPT (never VERIFIED) when the generation is corrupt", async () => {
+    const home = await initedHome();
+    const pair = await loadActiveKeyPair(home);
+    writeFileSync(join(pair.generation_path, "metadata.json"), "{corrupt");
+    const r = await inspectActiveIdentity(home);
+    assert.equal(r.state, "BLOCKED_CORRUPT");
+    assert.equal(r.verified, false);
+  });
+  it("BLOCKED_RETIRED (never VERIFIED) when the active generation is retired", async () => {
+    const home = await initedHome();
+    const pair = await loadActiveKeyPair(home);
+    writeFileSync(
+      activeKeyPaths(home).retiredRegistry,
+      JSON.stringify({ retired: [{ fingerprint: pair.fingerprint }] }),
+    );
+    const r = await inspectActiveIdentity(home);
+    assert.equal(r.state, "BLOCKED_RETIRED");
+    assert.equal(r.verified, false);
+  });
+  it("BLOCKED_POINTER_INVALID (never VERIFIED) on a malformed pointer", async () => {
+    const home = await initedHome();
+    writeFileSync(activeKeyPaths(home).activePointer, "{not json");
+    const r = await inspectActiveIdentity(home);
+    assert.equal(r.state, "BLOCKED_POINTER_INVALID");
+    assert.equal(r.verified, false);
+  });
+  it("PRESENT_UNVERIFIED on a legacy-only home (pointer absent, flat files present)", async () => {
+    const home = freshHome();
+    const legacy = generateEd25519Keypair();
+    const lp = keyPaths(home);
+    mkdirSync(lp.dir, { recursive: true });
+    writeFileSync(lp.privateKey, legacy.private_key_pem, { mode: 0o600 });
+    writeFileSync(lp.publicKey, legacy.public_key_pem);
+    const r = await inspectActiveIdentity(home);
+    assert.equal(r.state, "PRESENT_UNVERIFIED");
+    assert.equal(r.verified, false);
   });
 });
 
