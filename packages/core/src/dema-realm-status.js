@@ -8,7 +8,7 @@
 // Read-only. NO mutation, NO network, NO model call, NO key load.
 //
 // Sources scanned:
-//   $DEMA_HOME/keys/node0-ed25519.pub.pem      → identity status
+//   $DEMA_HOME/keys/active-key.json (via loader) → identity status
 //   $DEMA_HOME/receipts/authorship-*.json      → authorship_receipts_count
 //   $DEMA_HOME/urp/indexes/urp-index-*.json    → urp_indexes_count
 //   $DEMA_HOME/realm/last-checkpoint.json      → checkpoint state
@@ -92,14 +92,17 @@ export async function gatherDemaRealmStatus({
   const timelinePath = join(home, "realm", "timeline.json");
 
   // Finding #3: VERIFIED requires loadActiveKeyPair() success, not presence.
+  // Finding #4: PRESENT_UNVERIFIED (legacy home) stays distinct from
+  // UNINITIALIZED and carries a migrate recommendation, not an init one.
   const identity = await inspectActiveIdentity(home);
   const identityPresent = identity.state === "VERIFIED";
   const identityStatus =
     identity.state === "VERIFIED"
       ? "VERIFIED"
-      : identity.state === "ABSENT" || identity.state === "PRESENT_UNVERIFIED"
+      : identity.state === "ABSENT"
         ? "UNINITIALIZED"
-        : identity.state;
+        : identity.state; // PRESENT_UNVERIFIED / BLOCKED_*
+  const identityRecommendedAction = identity.recommended_action ?? "NONE";
 
   const authorshipReceiptsCount = await countMatching(
     receiptsDir,
@@ -136,6 +139,7 @@ export async function gatherDemaRealmStatus({
     rendered_at_iso: now.toISOString(),
     dema_home: home,
     identity_status: identityStatus,
+    identity_recommended_action: identityRecommendedAction,
     awakened_line: awakenedLine,
     authorship_receipts_count: authorshipReceiptsCount,
     urp_indexes_count: urpIndexesCount,

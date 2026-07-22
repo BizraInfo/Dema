@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { mkdir, lstat, realpath, open, rename } from "node:fs/promises";
+import { mkdir, lstat, realpath, open, rename, unlink } from "node:fs/promises";
 import { join, dirname, basename, relative, isAbsolute, sep } from "node:path";
 import { homedir } from "node:os";
 import { createPublicKey, createPrivateKey } from "node:crypto";
@@ -18,6 +18,9 @@ const PUBLIC_KEY_FILENAME = "node0-ed25519.pub.pem";
 const ACTIVE_POINTER_FILENAME = "active-key.json";
 const GENERATIONS_DIRNAME = "generations";
 const RETIRED_REGISTRY_FILENAME = "retired-registry.json";
+const TRANSACTIONS_DIRNAME = "transactions";
+const IDENTITY_LEASE_FILENAME = "identity-transition.lock";
+const REQUIRED_KEY_ALGORITHM = "ed25519";
 const NO_FOLLOW = constants.O_NOFOLLOW ?? 0;
 
 class UnsafeKeyPathError extends Error {
@@ -60,6 +63,8 @@ export function activeKeyPaths(demaHome) {
     activePointer: join(dir, ACTIVE_POINTER_FILENAME),
     generationsDir: join(dir, GENERATIONS_DIRNAME),
     retiredRegistry: join(dir, RETIRED_REGISTRY_FILENAME),
+    transactionsDir: join(dir, TRANSACTIONS_DIRNAME),
+    identityLease: join(dir, TRANSACTIONS_DIRNAME, IDENTITY_LEASE_FILENAME),
   };
 }
 
@@ -186,24 +191,33 @@ async function readFileNoFollow(path) {
 }
 
 function derivePublicFromPrivate(privateKeyPem) {
-  const pub = createPublicKey(createPrivateKey(privateKeyPem));
+  const priv = createPrivateKey(privateKeyPem);
+  const pub = createPublicKey(priv);
   const der = pub.export({ type: "spki", format: "der" });
   return {
     pem: pub.export({ type: "spki", format: "pem" }),
     der,
     fingerprint: sha256(der.toString("hex")),
+    algorithm: priv.asymmetricKeyType,
   };
 }
 
-// { ok, fingerprint } — the pair is one identity iff the public key derived
-// from the private key is byte-identical (DER) to the stored public key.
+// Finding #2 (review P1): pair consistency alone is not identity — an RSA or
+// P-256 pair is internally consistent yet unusable on the Ed25519 signing
+// path. Require BOTH keys to be Ed25519 before any authority write. Returns
+// { ok, fingerprint } | { ok:false, error:"unsupported_key_algorithm" } |
+// { ok:false } (mismatched pair).
 function pairConsistency(privateKeyPem, publicKeyPem) {
   try {
     const derived = derivePublicFromPrivate(privateKeyPem);
-    const storedDer = createPublicKey(publicKeyPem).export({
-      type: "spki",
-      format: "der",
-    });
+    const storedPub = createPublicKey(publicKeyPem);
+    if (
+      derived.algorithm !== REQUIRED_KEY_ALGORITHM ||
+      storedPub.asymmetricKeyType !== REQUIRED_KEY_ALGORITHM
+    ) {
+      return { ok: false, error: "unsupported_key_algorithm" };
+    }
+    const storedDer = storedPub.export({ type: "spki", format: "der" });
     if (!derived.der.equals(storedDer)) return { ok: false };
     return { ok: true, fingerprint: derived.fingerprint };
   } catch {
@@ -211,8 +225,69 @@ function pairConsistency(privateKeyPem, publicKeyPem) {
   }
 }
 
-async function writeActivePointer(ap, pointerDoc) {
-  const staged = `${ap.activePointer}.next`;
+// ── Transition lease (Finding #1, review P1) ───────────────────────────────
+// Atomic visibility (one rename) is NOT transactional exclusivity: two
+// initializers sharing one staged pointer path can interleave and return a
+// success whose fingerprint is not the one actually activated. An exclusive
+// O_EXCL lease admits exactly ONE transition owner; a concurrent caller does
+// zero mutation. A lease whose holder PID is dead is stale → RECOVERY_REQUIRED
+// (never auto-deleted by wall-clock — staleness is proven by process liveness,
+// not elapsed time).
+function pidAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    // EPERM = exists but not ours (alive); ESRCH = no such process (dead).
+    return e?.code === "EPERM";
+  }
+}
+
+// { acquired:true, release } | { acquired:false, reason } — reason is
+// "identity_transition_in_progress" (live holder) or "recovery_required"
+// (dead holder; lease preserved for operator adjudication).
+async function acquireIdentityLease(ap, { pid = process.pid } = {}) {
+  await mkdir(ap.transactionsDir, { recursive: true });
+  let handle;
+  try {
+    handle = await open(
+      ap.identityLease,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | NO_FOLLOW,
+      0o600,
+    );
+    await handle.writeFile(JSON.stringify({ pid, acquired_at_epoch_ns: null }), "utf8");
+    await handle.sync().catch(() => {});
+    await handle.close();
+    return {
+      acquired: true,
+      async release() {
+        await unlink(ap.identityLease).catch(() => {});
+      },
+    };
+  } catch (error) {
+    if (error?.code !== "EEXIST") throw error;
+    // Someone holds it. Alive → in-progress; dead → recovery_required.
+    const raw = await readFileNoFollow(ap.identityLease);
+    let holderPid = null;
+    try {
+      holderPid = JSON.parse(raw ?? "{}").pid ?? null;
+    } catch {
+      holderPid = null;
+    }
+    const alive = pidAlive(holderPid);
+    return {
+      acquired: false,
+      reason: alive ? "identity_transition_in_progress" : "recovery_required",
+    };
+  }
+}
+
+async function writeActivePointer(ap, pointerDoc, transitionId) {
+  // Finding #1: unique per-transition staged path — never a shared
+  // active-key.json.next that two transitions could clobber.
+  const suffix = transitionId ? `.${transitionId}` : "";
+  const staged = `${ap.activePointer}${suffix}.next`;
   const bytes = `${JSON.stringify(pointerDoc, null, 2)}\n`;
   let handle;
   try {
@@ -240,6 +315,16 @@ async function writeActivePointer(ap, pointerDoc) {
   return bytes;
 }
 
+// Write-if-absent so a resumed transition (Finding #3) fills only the missing
+// files and never overwrites an existing valid byte. classifyGeneration has
+// already proven any present file matches the expected pair, so a lingering
+// EEXIST here means a concurrent writer we should not fight — surface it.
+async function writeIfAbsent(path, content, mode) {
+  const info = await lstatIfExists(path);
+  if (info && !info.isSymbolicLink() && info.isFile()) return;
+  await writeKeyFile(path, content, { mode, force: false });
+}
+
 async function writeGeneration(ap, keys, { now, source }) {
   const generationPath = join(ap.generationsDir, keys.public_key_fingerprint);
   await mkdir(generationPath, { recursive: true });
@@ -247,38 +332,61 @@ async function writeGeneration(ap, keys, { now, source }) {
     schema: GENERATION_METADATA_SCHEMA,
     fingerprint: keys.public_key_fingerprint,
     generation_id: keys.public_key_fingerprint,
+    algorithm: REQUIRED_KEY_ALGORITHM,
     private_content_hash: sha256(keys.private_key_pem),
     public_content_hash: sha256(keys.public_key_pem),
     created_at: now,
     source,
   };
-  await writeKeyFile(join(generationPath, "private.pem"), keys.private_key_pem, {
-    mode: 0o600,
-    force: false,
-  });
-  await writeKeyFile(join(generationPath, "public.pem"), keys.public_key_pem, {
-    mode: 0o644,
-    force: false,
-  });
-  await writeKeyFile(
+  await writeIfAbsent(join(generationPath, "private.pem"), keys.private_key_pem, 0o600);
+  await writeIfAbsent(join(generationPath, "public.pem"), keys.public_key_pem, 0o644);
+  await writeIfAbsent(
     join(generationPath, "metadata.json"),
     `${JSON.stringify(metadata, null, 2)}\n`,
-    { mode: 0o644, force: false },
+    0o644,
   );
   return { generationPath, metadata };
 }
 
 async function activateGeneration(ap, { fingerprint, now, previous }) {
+  const transitionId = sha256(`${previous ?? "genesis"}->${fingerprint}@${now}`);
   const pointerDoc = {
     schema: ACTIVE_POINTER_SCHEMA,
     generation_fingerprint: fingerprint,
     generation_path: join(GENERATIONS_DIRNAME, fingerprint),
     activated_at: now,
     previous_generation: previous ?? null,
-    transition_id: sha256(`${previous ?? "genesis"}->${fingerprint}@${now}`),
+    transition_id: transitionId,
   };
-  const bytes = await writeActivePointer(ap, pointerDoc);
+  const bytes = await writeActivePointer(ap, pointerDoc, transitionId);
   return { pointerDoc, pointerHash: sha256(bytes) };
+}
+
+// Finding #3 (review P1): a generation dir may already exist from an
+// interrupted transition. Classify it so a retry resumes instead of dead-
+// locking on O_EXCL. Returns "absent" | "complete" | "incomplete" | "conflict".
+async function classifyGeneration(ap, fingerprint, expected) {
+  const generationPath = join(ap.generationsDir, fingerprint);
+  const info = await lstatIfExists(generationPath);
+  if (!info) return { state: "absent", generationPath };
+  if (info.isSymbolicLink() || !info.isDirectory()) {
+    return { state: "conflict", generationPath };
+  }
+  const priv = await readFileNoFollow(join(generationPath, "private.pem"));
+  const pub = await readFileNoFollow(join(generationPath, "public.pem"));
+  const metaRaw = await readFileNoFollow(join(generationPath, "metadata.json"));
+  const present = [priv, pub, metaRaw].filter((x) => x !== null).length;
+  if (present === 0) return { state: "incomplete", generationPath };
+  // Any existing byte must match the expected legacy pair — never overwrite
+  // differing content (that is a conflict requiring adjudication).
+  if (priv !== null && priv !== expected.private_key_pem) {
+    return { state: "conflict", generationPath };
+  }
+  if (pub !== null && pub !== expected.public_key_pem) {
+    return { state: "conflict", generationPath };
+  }
+  if (present < 3) return { state: "incomplete", generationPath };
+  return { state: "complete", generationPath };
 }
 
 async function readActivePointer(ap) {
@@ -376,6 +484,7 @@ export async function loadActiveKeyPair(demaHome) {
       !metadata ||
       metadata.schema !== GENERATION_METADATA_SCHEMA ||
       metadata.fingerprint !== doc.generation_fingerprint ||
+      metadata.algorithm !== REQUIRED_KEY_ALGORITHM ||
       basename(generationReal) !== doc.generation_fingerprint
     ) {
       return pairFailure("metadata_corrupt");
@@ -388,7 +497,12 @@ export async function loadActiveKeyPair(demaHome) {
       return pairFailure("content_hash_mismatch");
     }
 
+    // Finding #2: pairConsistency also proves both keys are Ed25519 and that
+    // the actual key algorithm agrees with the metadata's declared algorithm.
     const pair = pairConsistency(privateKeyPem, publicKeyPem);
+    if (pair.error === "unsupported_key_algorithm") {
+      return pairFailure("unsupported_key_algorithm");
+    }
     if (!pair.ok || pair.fingerprint !== doc.generation_fingerprint) {
       return pairFailure("pair_mismatch");
     }
@@ -449,6 +563,15 @@ export async function migrateLegacyAuthorshipKey({
   }
 
   const pair = pairConsistency(privateKeyPem, publicKeyPem);
+  if (pair.error === "unsupported_key_algorithm") {
+    // Finding #2: refuse a non-Ed25519 legacy pair BEFORE any mutation.
+    return Object.freeze({
+      schema: KEY_MIGRATE_SCHEMA,
+      migrated: false,
+      error: "unsupported_key_algorithm",
+      boundary: buildBoundary(false),
+    });
+  }
   if (!pair.ok) {
     return Object.freeze({
       schema: KEY_MIGRATE_SCHEMA,
@@ -458,29 +581,52 @@ export async function migrateLegacyAuthorshipKey({
     });
   }
 
+  // Finding #1: one exclusive transition owner. Finding #3: a generation from
+  // an interrupted prior migration is resumed, not fought.
+  const lease = await acquireIdentityLease(ap);
+  if (!lease.acquired) {
+    return Object.freeze({
+      schema: KEY_MIGRATE_SCHEMA,
+      migrated: false,
+      error: lease.reason, // identity_transition_in_progress | recovery_required
+      boundary: buildBoundary(false),
+    });
+  }
+
   try {
     await mkdir(ap.generationsDir, { recursive: true });
-    const { generationPath } = await writeGeneration(
-      ap,
-      {
-        public_key_fingerprint: pair.fingerprint,
-        private_key_pem: privateKeyPem,
-        public_key_pem: publicKeyPem,
-      },
-      { now, source: "legacy_migration" },
-    );
+    const expected = {
+      public_key_fingerprint: pair.fingerprint,
+      private_key_pem: privateKeyPem,
+      public_key_pem: publicKeyPem,
+    };
+    const cls = await classifyGeneration(ap, pair.fingerprint, expected);
+    if (cls.state === "conflict") {
+      return Object.freeze({
+        schema: KEY_MIGRATE_SCHEMA,
+        migrated: false,
+        error: "recovery_required",
+        generation_path: cls.generationPath,
+        boundary: buildBoundary(false),
+      });
+    }
+    // absent | incomplete | complete → write-if-absent fills the gap only,
+    // never overwriting a verified byte, then (re)activate the pointer.
+    const { generationPath } = await writeGeneration(ap, expected, {
+      now,
+      source: "legacy_migration",
+    });
     await activateGeneration(ap, {
       fingerprint: pair.fingerprint,
       now,
       previous: null,
     });
-    // Migration policy: legacy files are preserved in place, untouched. The
-    // pointer, not file presence, is authority from this moment on.
     return Object.freeze({
       schema: KEY_MIGRATE_SCHEMA,
       migrated: true,
       fingerprint: pair.fingerprint,
       generation_path: generationPath,
+      resumed: cls.state !== "absent",
       legacy_policy: "preserved_in_place",
       boundary: buildBoundary(true),
     });
@@ -494,6 +640,8 @@ export async function migrateLegacyAuthorshipKey({
       });
     }
     throw error;
+  } finally {
+    await lease.release();
   }
 }
 
@@ -522,20 +670,38 @@ export async function initAuthorshipKey({
   // generation; it must never REPLACE an existing one. `force` bypasses only
   // the legacy flat-file existence check — an active pointer is the root of
   // trust and can be changed ONLY by a governed rotation transaction
-  // (AUTHORSHIP-ROTATION-TRANSACTION-1B), never by re-init.
-  const pointerInfo = await lstatIfExists(ap.activePointer);
-  const hasPointer =
-    Boolean(pointerInfo) && !pointerInfo.isSymbolicLink() && pointerInfo.isFile();
-  if (hasPointer) {
+  // (AUTHORSHIP-ROTATION-TRANSACTION-1B), never by re-init. This first check
+  // is an early-out; the authoritative one runs UNDER the lease below.
+  const hasPointerNow = async () => {
+    const info = await lstatIfExists(ap.activePointer);
+    return Boolean(info) && !info.isSymbolicLink() && info.isFile();
+  };
+  if (await hasPointerNow()) {
     return keyAlreadyExistsResult(paths);
   }
   if (!force && (await existingKeyPath(paths))) {
     return keyAlreadyExistsResult(paths);
   }
 
-  const keys = generateEd25519Keypair();
+  // Finding #1: acquire the exclusive transition lease, then RE-CHECK the
+  // pointer under it — this closes the check-then-act race between two
+  // concurrent initializers. The loser mutates nothing.
+  const lease = await acquireIdentityLease(ap);
+  if (!lease.acquired) {
+    return Object.freeze({
+      schema: KEY_INIT_SCHEMA,
+      initialized: false,
+      error: lease.reason, // identity_transition_in_progress | recovery_required
+      boundary: buildBoundary(false),
+    });
+  }
 
   try {
+    if (await hasPointerNow()) {
+      return keyAlreadyExistsResult(paths);
+    }
+
+    const keys = generateEd25519Keypair();
     await mkdir(ap.generationsDir, { recursive: true });
     const { generationPath } = await writeGeneration(ap, keys, {
       now,
@@ -565,6 +731,8 @@ export async function initAuthorshipKey({
       return keyAlreadyExistsResult(paths);
     }
     throw error;
+  } finally {
+    await lease.release();
   }
 }
 
@@ -612,9 +780,21 @@ const LOAD_ERROR_TO_STATE = Object.freeze({
   metadata_corrupt: "BLOCKED_CORRUPT",
   content_hash_mismatch: "BLOCKED_CORRUPT",
   pair_mismatch: "BLOCKED_CORRUPT",
+  unsupported_key_algorithm: "BLOCKED_CORRUPT",
   retired_generation: "BLOCKED_RETIRED",
   retired_registry_unreadable: "BLOCKED_RETIRED",
   load_failed: "BLOCKED_CORRUPT",
+});
+
+// The one operator instruction each identity state implies. PRESENT_UNVERIFIED
+// (Finding #4) must route to migration, never to a re-init that will refuse.
+const STATE_RECOMMENDED_ACTION = Object.freeze({
+  ABSENT: "INITIALIZE_AUTHORSHIP_KEY",
+  PRESENT_UNVERIFIED: "MIGRATE_AUTHORSHIP_KEY",
+  VERIFIED: "NONE",
+  BLOCKED_CORRUPT: "RECOVER_IDENTITY",
+  BLOCKED_RETIRED: "ROTATE_OR_RECOVER_IDENTITY",
+  BLOCKED_POINTER_INVALID: "RECOVER_IDENTITY",
 });
 
 export async function inspectActiveIdentity(demaHome) {
@@ -624,6 +804,7 @@ export async function inspectActiveIdentity(demaHome) {
       state: "VERIFIED",
       fingerprint: pair.fingerprint,
       verified: true,
+      recommended_action: STATE_RECOMMENDED_ACTION.VERIFIED,
     });
   }
   if (pair.error === "no_active_pointer") {
@@ -631,18 +812,22 @@ export async function inspectActiveIdentity(demaHome) {
     // but unverified) from a truly empty one.
     const paths = keyPaths(demaHome);
     const legacyPresent = await isSafeExistingKeyPath(paths, paths.privateKey);
+    const state = legacyPresent ? "PRESENT_UNVERIFIED" : "ABSENT";
     return Object.freeze({
-      state: legacyPresent ? "PRESENT_UNVERIFIED" : "ABSENT",
+      state,
       fingerprint: null,
       verified: false,
       reason: legacyPresent ? "legacy_flat_files_unverified" : "no_active_identity",
+      recommended_action: STATE_RECOMMENDED_ACTION[state],
     });
   }
+  const state = LOAD_ERROR_TO_STATE[pair.error] ?? "BLOCKED_CORRUPT";
   return Object.freeze({
-    state: LOAD_ERROR_TO_STATE[pair.error] ?? "BLOCKED_CORRUPT",
+    state,
     fingerprint: null,
     verified: false,
     error: pair.error,
+    recommended_action: STATE_RECOMMENDED_ACTION[state],
   });
 }
 

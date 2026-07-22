@@ -11,10 +11,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
-  chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   renameSync,
   rmSync,
   symlinkSync,
@@ -23,6 +24,7 @@ import {
 import { join } from "node:path";
 import { tmpdir, homedir } from "node:os";
 import childProcess from "node:child_process";
+import { generateKeyPairSync } from "node:crypto";
 import {
   initAuthorshipKey,
   loadActiveKeyPair,
@@ -67,6 +69,7 @@ function plantGenerationAndActivate(home, now = NOW) {
       schema: GENERATION_METADATA_SCHEMA,
       fingerprint: fp,
       generation_id: fp,
+      algorithm: "ed25519",
       private_content_hash: sha256(keys.private_key_pem),
       public_content_hash: sha256(keys.public_key_pem),
       created_at: now,
@@ -531,5 +534,269 @@ describe("T17 the real ~/.dema/keys is never touched", () => {
       assert.equal(p.startsWith(home), true, p);
       assert.equal(p.startsWith(join(homedir(), ".dema")), false, p);
     }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IDENTITY-TRANSITION-ISOLATION-1B — the five PR#412 review findings.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function legacyHome(pem) {
+  const home = freshHome();
+  const lp = keyPaths(home);
+  mkdirSync(lp.dir, { recursive: true });
+  writeFileSync(lp.privateKey, pem.private_key_pem, { mode: 0o600 });
+  writeFileSync(lp.publicKey, pem.public_key_pem);
+  return home;
+}
+
+function pemPair(type, opts) {
+  const { publicKey, privateKey } = generateKeyPairSync(type, opts);
+  return {
+    private_key_pem: privateKey.export({ type: "pkcs8", format: "pem" }),
+    public_key_pem: publicKey.export({ type: "spki", format: "pem" }),
+  };
+}
+
+describe("R1 exclusive transition ownership (finding P1 concurrency)", () => {
+  it("T1 two simultaneous initializers produce exactly one identity", async () => {
+    const home = freshHome();
+    const [a, b] = await Promise.all([
+      initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW }),
+      initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW }),
+    ]);
+    const wins = [a, b].filter((r) => r.initialized === true);
+    assert.equal(wins.length, 1, "exactly one initializer may win");
+    // T3: the reported success fingerprint IS the one actually active.
+    const active = await loadActiveKeyPair(home);
+    assert.equal(active.ok, true);
+    assert.equal(active.fingerprint, wins[0].public_key_fingerprint);
+    // The loser mutated no authority: exactly one generation dir exists.
+    const gens = readdirSync(activeKeyPaths(home).generationsDir);
+    assert.equal(gens.length, 1);
+  });
+
+  it("T2 a caller that cannot acquire the lease performs ZERO mutation", async () => {
+    const home = freshHome();
+    const ap = activeKeyPaths(home);
+    // Pre-hold the lease with THIS (alive) pid — a concurrent init must refuse.
+    mkdirSync(ap.transactionsDir, { recursive: true });
+    writeFileSync(ap.identityLease, JSON.stringify({ pid: process.pid }));
+    const r = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(r.initialized, false);
+    assert.equal(r.error, "identity_transition_in_progress");
+    assert.equal(existsSync(ap.activePointer), false, "no pointer written");
+    assert.equal(existsSync(ap.generationsDir), false, "no generation written");
+  });
+
+  it("T2b a stale lease (dead holder pid) reports recovery_required, not auto-deleted", async () => {
+    const home = freshHome();
+    const ap = activeKeyPaths(home);
+    mkdirSync(ap.transactionsDir, { recursive: true });
+    // pid 2147483646 — astronomically unlikely to be alive; process.kill→ESRCH.
+    writeFileSync(ap.identityLease, JSON.stringify({ pid: 2147483646 }));
+    const r = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(r.initialized, false);
+    assert.equal(r.error, "recovery_required");
+    assert.equal(existsSync(ap.identityLease), true, "stale lease preserved for adjudication");
+  });
+
+  it("T4 no shared active-key.json.next path is left behind by a normal init", async () => {
+    const home = await initedHome();
+    assert.equal(existsSync(`${activeKeyPaths(home).activePointer}.next`), false);
+  });
+});
+
+describe("R2 Ed25519 algorithm enforcement (finding P1 algorithm)", () => {
+  for (const [name, mk] of [
+    ["T5 RSA", () => pemPair("rsa", { modulusLength: 2048 })],
+    ["T6 P-256", () => pemPair("ec", { namedCurve: "prime256v1" })],
+    ["T7 X25519", () => pemPair("x25519")],
+  ]) {
+    it(`${name} legacy pair is rejected before any mutation`, async () => {
+      const home = legacyHome(mk());
+      const r = await migrateLegacyAuthorshipKey({
+        consent: KEY_MIGRATE_CONSENT_PHRASE,
+        demaHome: home,
+        now: NOW,
+      });
+      assert.equal(r.migrated, false);
+      assert.equal(r.error, "unsupported_key_algorithm");
+      assert.equal(existsSync(activeKeyPaths(home).activePointer), false);
+      assert.equal(existsSync(activeKeyPaths(home).generationsDir), false);
+    });
+  }
+
+  it("T8 a valid Ed25519 legacy pair migrates", async () => {
+    const home = legacyHome(generateEd25519Keypair());
+    const r = await migrateLegacyAuthorshipKey({
+      consent: KEY_MIGRATE_CONSENT_PHRASE,
+      demaHome: home,
+      now: NOW,
+    });
+    assert.equal(r.migrated, true);
+    assert.equal((await loadActiveKeyPair(home)).ok, true);
+  });
+});
+
+describe("R3 resumable legacy migration (finding P1 interrupted)", () => {
+  it("T9 retry after generation created but before pointer activation resumes", async () => {
+    const legacy = generateEd25519Keypair();
+    const home = legacyHome(legacy);
+    const ap = activeKeyPaths(home);
+    const fp = legacy.public_key_fingerprint;
+    // Simulate a crash AFTER writeGeneration but BEFORE pointer activation:
+    // the generation dir exists and is valid, but no active-key.json.
+    const genDir = join(ap.generationsDir, fp);
+    mkdirSync(genDir, { recursive: true });
+    writeFileSync(join(genDir, "private.pem"), legacy.private_key_pem, { mode: 0o600 });
+    writeFileSync(join(genDir, "public.pem"), legacy.public_key_pem);
+    writeFileSync(join(genDir, "metadata.json"), JSON.stringify({
+      schema: GENERATION_METADATA_SCHEMA, fingerprint: fp, generation_id: fp,
+      algorithm: "ed25519", private_content_hash: sha256(legacy.private_key_pem),
+      public_content_hash: sha256(legacy.public_key_pem), created_at: NOW, source: "legacy_migration",
+    }, null, 2) + "\n");
+    assert.equal(existsSync(ap.activePointer), false);
+
+    const r = await migrateLegacyAuthorshipKey({
+      consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW,
+    });
+    assert.equal(r.migrated, true);
+    assert.equal(r.resumed, true);
+    assert.equal((await loadActiveKeyPair(home)).fingerprint, fp);
+    // T10: no second generation was created.
+    assert.equal(readdirSync(ap.generationsDir).length, 1);
+  });
+
+  it("T11 an existing generation with CONFLICTING bytes returns recovery_required", async () => {
+    const legacy = generateEd25519Keypair();
+    const home = legacyHome(legacy);
+    const ap = activeKeyPaths(home);
+    const fp = legacy.public_key_fingerprint;
+    const genDir = join(ap.generationsDir, fp);
+    mkdirSync(genDir, { recursive: true });
+    // Different private.pem bytes than the legacy pair — a conflict.
+    writeFileSync(join(genDir, "private.pem"), generateEd25519Keypair().private_key_pem, { mode: 0o600 });
+    const r = await migrateLegacyAuthorshipKey({
+      consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW,
+    });
+    assert.equal(r.migrated, false);
+    assert.equal(r.error, "recovery_required");
+    assert.equal(existsSync(ap.activePointer), false);
+  });
+});
+
+describe("R4 PRESENT_UNVERIFIED is preserved (finding P2 status)", () => {
+  it("T12+T13 a legacy-only home reports PRESENT_UNVERIFIED and recommends migration", async () => {
+    const home = legacyHome(generateEd25519Keypair());
+    const r = await inspectActiveIdentity(home);
+    assert.equal(r.state, "PRESENT_UNVERIFIED");
+    assert.equal(r.recommended_action, "MIGRATE_AUTHORSHIP_KEY");
+    // Realm home surfaces it distinctly — NOT collapsed to UNINITIALIZED.
+    const { gatherDemaRealmState } = await import("../packages/core/src/dema-realm-home.js");
+    const state = await gatherDemaRealmState({ demaHome: home });
+    assert.equal(state.identity.status, "PRESENT_UNVERIFIED");
+    assert.equal(state.identity.recommended_action, "MIGRATE_AUTHORSHIP_KEY");
+    assert.equal(state.seed_awake, false);
+  });
+  it("a truly empty home is UNINITIALIZED / initialize", async () => {
+    const r = await inspectActiveIdentity(freshHome());
+    assert.equal(r.state, "ABSENT");
+    assert.equal(r.recommended_action, "INITIALIZE_AUTHORSHIP_KEY");
+  });
+});
+
+describe("R5 authoritative observation (finding P2 unsafe pointer)", () => {
+  it("T14 a symlinked active pointer is BLOCKED_POINTER_INVALID, never present", async () => {
+    const home = await initedHome();
+    const ap = activeKeyPaths(home);
+    const real = readFileSync(ap.activePointer, "utf8");
+    const stash = join(home, "keys", "pointer-stash.json");
+    writeFileSync(stash, real);
+    rmSync(ap.activePointer);
+    symlinkSync(stash, ap.activePointer);
+    const r = await inspectActiveIdentity(home);
+    assert.equal(r.verified, false);
+    assert.equal(r.state, "BLOCKED_POINTER_INVALID");
+  });
+
+  it("T15 observe-gatherer presence agrees with the loader on the safety-critical case", async () => {
+    const { gatherNode0ActivationObservations } = await import(
+      "../apps/cli/src/commands/observe-gatherer.js"
+    );
+    const observe = (home) =>
+      gatherNode0ActivationObservations({
+        env: { DEMA_HOME: home },
+        fetchImpl: async () => {
+          throw new Error("no net");
+        },
+      });
+
+    // VERIFIED home → present.
+    const verified = await initedHome();
+    assert.equal((await observe(verified)).identity.key_file_present, true);
+
+    // Empty home → not present.
+    assert.equal((await observe(freshHome())).identity.key_file_present, false);
+
+    // THE BUG: a symlinked active pointer must NOT count as present — the
+    // observer (lstat, content-free) now rejects it just as the loader does.
+    const escaped = await initedHome();
+    const ap = activeKeyPaths(escaped);
+    const stash = join(escaped, "keys", "stash.json");
+    writeFileSync(stash, readFileSync(ap.activePointer, "utf8"));
+    rmSync(ap.activePointer);
+    symlinkSync(stash, ap.activePointer);
+    const loader = await inspectActiveIdentity(escaped);
+    assert.equal(loader.state, "BLOCKED_POINTER_INVALID");
+    const obs = await observe(escaped);
+    assert.equal(
+      obs.identity.key_file_present,
+      false,
+      "symlinked pointer must not count as present",
+    );
+  });
+});
+
+describe("R6 hygiene", () => {
+  it("T16 the flagged unused imports (chmodSync, rmSync) are gone from THIS file's import list", () => {
+    const src = readFileSync(new URL(import.meta.url), "utf8");
+    const importBlock = src.slice(0, src.indexOf('} from "node:fs";'));
+    assert.equal(/\bchmodSync\b/.test(importBlock), false, "chmodSync should not be imported");
+    // rmSync IS re-imported and genuinely used (T14) — assert it is actually used.
+    assert.ok(src.split("rmSync").length > 2, "rmSync must be used, not just imported");
+  });
+});
+
+describe("R3b migration transaction ownership + partial resume", () => {
+  it("migration blocked by a LIVE lease reports in_progress with zero mutation", async () => {
+    const home = legacyHome(generateEd25519Keypair());
+    const ap = activeKeyPaths(home);
+    mkdirSync(ap.transactionsDir, { recursive: true });
+    writeFileSync(ap.identityLease, JSON.stringify({ pid: process.pid }));
+    const r = await migrateLegacyAuthorshipKey({
+      consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW,
+    });
+    assert.equal(r.migrated, false);
+    assert.equal(r.error, "identity_transition_in_progress");
+    assert.equal(existsSync(ap.activePointer), false);
+  });
+
+  it("migration resumes from an INCOMPLETE generation (only private.pem written)", async () => {
+    const legacy = generateEd25519Keypair();
+    const home = legacyHome(legacy);
+    const ap = activeKeyPaths(home);
+    const genDir = join(ap.generationsDir, legacy.public_key_fingerprint);
+    mkdirSync(genDir, { recursive: true });
+    // Crash left only the private half — matching bytes, so it's repairable.
+    writeFileSync(join(genDir, "private.pem"), legacy.private_key_pem, { mode: 0o600 });
+    const r = await migrateLegacyAuthorshipKey({
+      consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW,
+    });
+    assert.equal(r.migrated, true);
+    assert.equal(r.resumed, true);
+    const pair = await loadActiveKeyPair(home);
+    assert.equal(pair.ok, true);
+    assert.equal(pair.fingerprint, legacy.public_key_fingerprint);
   });
 });

@@ -130,16 +130,23 @@ export async function gatherDemaRealmState({
     (profile && (profile.role || profile.title)) ||
     (operator === "Operator" ? "Sovereign Builder" : "First Architect");
 
+  // Finding #4: a legacy home (PRESENT_UNVERIFIED) is NOT empty — collapsing it
+  // to UNINITIALIZED sends the operator to init, which then refuses. Keep the
+  // state distinct and carry its recommended_action. Only a truly ABSENT
+  // identity reads as UNINITIALIZED.
   const identityStatus = keyVerified
     ? "VERIFIED"
-    : identity.state === "ABSENT" || identity.state === "PRESENT_UNVERIFIED"
+    : identity.state === "ABSENT"
       ? "UNINITIALIZED"
-      : identity.state; // BLOCKED_CORRUPT / BLOCKED_RETIRED / BLOCKED_POINTER_INVALID
+      : identity.state; // PRESENT_UNVERIFIED / BLOCKED_*
   const identityLabel = keyVerified
     ? "Ed25519 verified"
-    : identityStatus === "UNINITIALIZED"
+    : identity.state === "ABSENT"
       ? "not yet initialized"
-      : `identity blocked (${identity.error ?? identity.state})`;
+      : identity.state === "PRESENT_UNVERIFIED"
+        ? "legacy key present — migration required"
+        : `identity blocked (${identity.error ?? identity.state})`;
+  const recommendedAction = identity.recommended_action ?? "NONE";
 
   const lastCheckpointText = checkpoint
     ? checkpoint.label || checkpoint.next_quest || "checkpoint present"
@@ -185,6 +192,7 @@ export async function gatherDemaRealmState({
     identity: Object.freeze({
       status: identityStatus,
       label: identityLabel,
+      recommended_action: recommendedAction,
       key_path: join(home, "keys", "active-key.json"),
     }),
     last_checkpoint: Object.freeze({
@@ -219,7 +227,17 @@ function statusGlyph(status, useColor) {
   //              OFF -> ash (intentionally off).
   //              FAILED -> crimson (would be a true error -- not used in v0).
   const greenSet = new Set(["VERIFIED", "READY", "LIVE", "FOUND", "PRESENT"]);
-  const ashSet = new Set(["UNINITIALIZED", "ABSENT", "NONE", "EMPTY", "OFF"]);
+  const ashSet = new Set([
+    "UNINITIALIZED",
+    "PRESENT_UNVERIFIED",
+    "BLOCKED_CORRUPT",
+    "BLOCKED_RETIRED",
+    "BLOCKED_POINTER_INVALID",
+    "ABSENT",
+    "NONE",
+    "EMPTY",
+    "OFF",
+  ]);
   if (greenSet.has(status)) return color(status, ANSI.emerald, useColor);
   if (ashSet.has(status)) return color(status, ANSI.ash, useColor);
   if (status === "DECLARED") return color(status, ANSI.gold, useColor);

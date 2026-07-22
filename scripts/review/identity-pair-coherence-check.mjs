@@ -24,14 +24,13 @@ const ALLOWLIST = new Set([
   "packages/receipts/src/authorship-key-store.js",
 ]);
 
-// Modules explicitly permitted to name the legacy flat key filenames: the
-// store (owns the constants), the migration path, and presence-only
-// gatherers that fall back to the legacy file pre-migration. Everything else
-// must reach identity through loadActiveKeyPair() / the pointer.
+// The key store owns the constants + migration. observe-gatherer is the one
+// content-free observation surface that legitimately names the legacy flat
+// pub-key for a pre-migration PRESENCE fallback (symlink-safe existsSync/lstat,
+// never a content read — see Finding #5). Every other module reaches identity
+// through loadActiveKeyPair() / inspectActiveIdentity().
 const LEGACY_PATH_ALLOWLIST = new Set([
   "packages/receipts/src/authorship-key-store.js",
-  "packages/core/src/dema-realm-status.js",
-  "packages/core/src/dema-first-look-home.js",
   "apps/cli/src/commands/observe-gatherer.js",
 ]);
 
