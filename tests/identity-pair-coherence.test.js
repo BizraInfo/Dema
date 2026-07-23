@@ -994,3 +994,104 @@ describe("1C review admissibility — execution status is not a verdict", () => 
     );
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IDENTITY-COMMITTED-TRANSITION-RECOVERY-1D — a failed committed transition
+// must never strand Node0 behind an unusable active pointer (Greptile trace).
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Corrupt the active generation so the committed pointer becomes unusable.
+async function strandActiveIdentity(home) {
+  const pair = await loadActiveKeyPair(home);
+  writeFileSync(join(pair.generation_path, "metadata.json"), "{corrupt");
+  return pair;
+}
+
+describe("1D committed-transition recovery", () => {
+  it("T1 a strand (pointer valid→corrupt) no longer traps retries — recovers", async () => {
+    const home = await initedHome();
+    const failed = await strandActiveIdentity(home);
+    assert.equal((await loadActiveKeyPair(home)).ok, false);
+
+    // retry: recovers the genesis strand instead of key_already_exists
+    const retry = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(retry.error, "recovery_required");
+    assert.equal(retry.recovered_from, "genesis_pointer_quarantined");
+    // T5/T6 evidence: quarantine record kept, failed generation NOT deleted
+    const ap = activeKeyPaths(home);
+    assert.ok(readdirSync(ap.transactionsDir).some((f) => f.startsWith("quarantine-active-key-")));
+    assert.equal(existsSync(failed.generation_path), true);
+
+    // T2: a further retry now establishes a fresh, verified identity
+    const fresh = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(fresh.initialized, true);
+    assert.equal((await loadActiveKeyPair(home)).ok, true);
+  });
+
+  it("T3 a VALID existing pointer still returns key_already_exists (no mutation)", async () => {
+    const home = await initedHome();
+    const before = readFileSync(activeKeyPaths(home).activePointer, "utf8");
+    const r = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(r.error, "key_already_exists");
+    assert.equal(r.verified_existing_identity, true);
+    assert.equal(readFileSync(activeKeyPaths(home).activePointer, "utf8"), before);
+  });
+
+  it("T4 an untracked (malformed) invalid pointer fails closed — no quarantine, no mutation", async () => {
+    const home = await initedHome();
+    const ap = activeKeyPaths(home);
+    writeFileSync(ap.activePointer, "{not a pointer");
+    const r = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(r.error, "recovery_required");
+    assert.equal(r.reason, "untracked_invalid_active_pointer");
+    assert.equal(r.boundary.key_persisted, false, "no mutation");
+    // malformed pointer preserved for adjudication (not quarantined, not deleted)
+    assert.equal(existsSync(ap.activePointer), true);
+    assert.equal(
+      existsSync(ap.transactionsDir) && readdirSync(ap.transactionsDir).some((f) => f.startsWith("quarantine-")),
+      false,
+    );
+  });
+
+  it("T7 a PRIOR-identity invalid pointer (previous_generation set) → recovery_required, no quarantine", async () => {
+    const home = await initedHome();
+    const ap = activeKeyPaths(home);
+    const p = JSON.parse(readFileSync(ap.activePointer, "utf8"));
+    // Forge previous_generation so it looks like a rotation, then corrupt the gen.
+    writeFileSync(ap.activePointer, JSON.stringify({ ...p, previous_generation: "a".repeat(64) }, null, 2) + "\n");
+    await strandActiveIdentity(home);
+    const r = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(r.error, "recovery_required");
+    assert.equal(r.reason, "prior_identity_recovery_required");
+    assert.equal(r.boundary.key_persisted, false);
+  });
+
+  it("T8 recovery quarantine never crosses DEMA_HOME", async () => {
+    const home = await initedHome();
+    await strandActiveIdentity(home);
+    const r = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(r.quarantine_path.startsWith(home), true, r.quarantine_path);
+    assert.equal(r.quarantine_path.startsWith(join(homedir(), ".dema")), false);
+  });
+
+  it("T9 a SYMLINKED active pointer is untracked_invalid (fails closed)", async () => {
+    const home = await initedHome();
+    const ap = activeKeyPaths(home);
+    const stash = join(home, "keys", "ptr-stash.json");
+    writeFileSync(stash, readFileSync(ap.activePointer, "utf8"));
+    rmSync(ap.activePointer);
+    symlinkSync(stash, ap.activePointer);
+    const r = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(r.error, "recovery_required");
+    assert.equal(r.reason, "untracked_invalid_active_pointer");
+  });
+
+  it("T14 the real ~/.dema/keys is never resolved by recovery", async () => {
+    const home = await initedHome();
+    await strandActiveIdentity(home);
+    const r = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    for (const p of [r.quarantine_path]) {
+      assert.equal(p.startsWith(join(homedir(), ".dema")), false, p);
+    }
+  });
+});

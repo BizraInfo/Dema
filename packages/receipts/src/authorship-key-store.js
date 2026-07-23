@@ -528,6 +528,49 @@ async function readActivePointer(ap) {
   return { doc, raw };
 }
 
+// ── Committed-transition recovery (IDENTITY-COMMITTED-TRANSITION-RECOVERY-1D) ──
+// After a committed transition fails canonical verification, the pointer is
+// left on disk. Without recovery, the next init sees a pointer and returns
+// key_already_exists FOREVER over an identity the loader rejects — a root-of-
+// trust availability strand. classifyActivePointer decides how a present-but-
+// unusable pointer may be recovered; genesis strands (no prior identity) are
+// quarantinable, everything else fails closed to explicit human recovery.
+//
+// States: "valid" | "absent" | "genesis_invalid" | "prior_invalid" |
+// "untracked_invalid".
+async function classifyActivePointer(demaHome) {
+  const ap = activeKeyPaths(demaHome);
+  const info = await lstatIfExists(ap.activePointer);
+  if (!info || info.isSymbolicLink() || !info.isFile()) {
+    // A symlink/non-regular pointer is never a trustworthy record.
+    return { state: info ? "untracked_invalid" : "absent" };
+  }
+  const load = await loadActiveKeyPair(demaHome);
+  if (load.ok) return { state: "valid", fingerprint: load.fingerprint };
+
+  // Present but the canonical loader rejects it. Read the pointer's own record
+  // to decide recoverability. A genesis pointer (previous_generation === null)
+  // means no prior verified identity is at risk — safe to quarantine.
+  const pointer = await readActivePointer(ap);
+  if (pointer.error) return { state: "untracked_invalid", loader_error: load.error };
+  if (pointer.doc.previous_generation === null) {
+    return { state: "genesis_invalid", raw: pointer.raw, loader_error: load.error };
+  }
+  return { state: "prior_invalid", loader_error: load.error };
+}
+
+// Atomically move an unusable active pointer into the transactions quarantine
+// as evidence — never deleted. Returns the quarantine path. The failed
+// generation dir is left in place (also evidence).
+async function quarantineActivePointer(demaHome, raw) {
+  const ap = activeKeyPaths(demaHome);
+  await mkdir(ap.transactionsDir, { recursive: true });
+  const stamp = sha256(raw ?? "").slice(0, 16);
+  const dest = join(ap.transactionsDir, `quarantine-active-key-${stamp}.json`);
+  await rename(ap.activePointer, dest);
+  return dest;
+}
+
 async function checkRetired(ap, fingerprint) {
   const info = await lstatIfExists(ap.retiredRegistry);
   if (!info) return null; // absent registry: safe to serve
@@ -823,20 +866,21 @@ export async function initAuthorshipKey({
   // trust and can be changed ONLY by a governed rotation transaction
   // (AUTHORSHIP-ROTATION-TRANSACTION-1B), never by re-init. This first check
   // is an early-out; the authoritative one runs UNDER the lease below.
-  const hasPointerNow = async () => {
-    const info = await lstatIfExists(ap.activePointer);
-    return Boolean(info) && !info.isSymbolicLink() && info.isFile();
-  };
-  if (await hasPointerNow()) {
-    return keyAlreadyExistsResult(paths);
+  // 1D: an existing pointer is no longer a blanket key_already_exists. Classify
+  // it — a VALID pointer is an existing identity (refuse, read-only); an
+  // INVALID one must route to recovery, never strand. The early check is
+  // read-only; any mutation (quarantine) happens under the lease below.
+  const early = await classifyActivePointer(demaHome);
+  if (early.state === "valid") {
+    return keyAlreadyExistsResult(paths, { verified_existing_identity: true });
   }
-  if (!force && (await existingKeyPath(paths))) {
+  if (early.state === "absent" && !force && (await existingKeyPath(paths))) {
     return keyAlreadyExistsResult(paths);
   }
 
-  // Finding #1: acquire the exclusive transition lease, then RE-CHECK the
-  // pointer under it — this closes the check-then-act race between two
-  // concurrent initializers. The loser mutates nothing.
+  // Finding #1: acquire the exclusive transition lease, then RE-CLASSIFY the
+  // pointer under it — closes the check-then-act race, and any recovery
+  // mutation is single-owner. The loser mutates nothing.
   const lease = await acquireIdentityLease(ap);
   if (!lease.acquired) {
     return Object.freeze({
@@ -848,8 +892,41 @@ export async function initAuthorshipKey({
   }
 
   try {
-    if (await hasPointerNow()) {
-      return keyAlreadyExistsResult(paths);
+    const cls = await classifyActivePointer(demaHome);
+    if (cls.state === "valid") {
+      return keyAlreadyExistsResult(paths, { verified_existing_identity: true });
+    }
+    if (cls.state === "genesis_invalid") {
+      // Safe automatic recovery: no prior verified identity is at risk. Move
+      // the failed pointer to quarantine (failed generation preserved as
+      // evidence), restoring NO_ACTIVE_IDENTITY. Retry then establishes fresh.
+      const quarantined = await quarantineActivePointer(demaHome, cls.raw);
+      return Object.freeze({
+        schema: KEY_INIT_SCHEMA,
+        initialized: false,
+        error: "recovery_required",
+        transition_state: "recovered_to_no_active_identity",
+        recovered_from: "genesis_pointer_quarantined",
+        quarantine_path: quarantined,
+        loader_error: cls.loader_error,
+        boundary: buildBoundary(true),
+      });
+    }
+    if (cls.state === "prior_invalid" || cls.state === "untracked_invalid") {
+      // A prior identity or an unreadable pointer record — do NOT auto-quarantine
+      // (a verified prior identity may be recoverable only from its recorded
+      // pointer). Fail closed, preserve all evidence, require adjudication.
+      return Object.freeze({
+        schema: KEY_INIT_SCHEMA,
+        initialized: false,
+        error: "recovery_required",
+        reason:
+          cls.state === "prior_invalid"
+            ? "prior_identity_recovery_required"
+            : "untracked_invalid_active_pointer",
+        loader_error: cls.loader_error,
+        boundary: buildBoundary(false),
+      });
     }
 
     const keys = generateEd25519Keypair();
@@ -866,17 +943,26 @@ export async function initAuthorshipKey({
 
     // Finding B (1C): init, like migration, is complete only when the
     // canonical loader accepts the freshly established identity.
+    // 1D: if that verification fails, the just-committed genesis pointer would
+    // otherwise strand every retry — quarantine it immediately so recovery is
+    // automatic (this init was genesis, previous:null, so nothing is at risk).
     const verified = await loadActiveKeyPair(demaHome);
     if (
       !verified.ok ||
       verified.fingerprint !== keys.public_key_fingerprint ||
       verified.generation_path !== generationPath
     ) {
+      const pointerRaw = await readFileNoFollow(ap.activePointer);
+      const quarantined = pointerRaw !== null
+        ? await quarantineActivePointer(demaHome, pointerRaw)
+        : null;
       return Object.freeze({
         schema: KEY_INIT_SCHEMA,
         initialized: false,
         error: "recovery_required",
         transition_state: "pointer_committed_verification_failed",
+        recovered_from: quarantined ? "genesis_pointer_quarantined" : null,
+        quarantine_path: quarantined,
         loader_error: verified.ok ? "fingerprint_or_path_mismatch" : verified.error,
         boundary: buildBoundary(true),
       });
@@ -1014,12 +1100,13 @@ export async function hasAuthorshipKey(demaHome) {
   return isSafeExistingKeyPath(paths, paths.privateKey);
 }
 
-function keyAlreadyExistsResult(paths) {
+function keyAlreadyExistsResult(paths, extra = {}) {
   return Object.freeze({
     schema: KEY_INIT_SCHEMA,
     initialized: false,
     error: "key_already_exists",
     private_key_path: paths.privateKey,
+    ...extra,
     boundary: buildBoundary(false),
   });
 }
