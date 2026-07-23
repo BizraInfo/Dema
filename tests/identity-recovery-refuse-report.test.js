@@ -15,9 +15,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  closeSync,
+  constants as fsConstants,
+  fstatSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readdirSync,
   readFileSync,
   readlinkSync,
@@ -37,7 +41,6 @@ import {
 const {
   initAuthorshipKey,
   migrateLegacyAuthorshipKey,
-  loadActiveKeyPair,
   activeKeyPaths,
   keyPaths,
   KEY_INIT_CONSENT_PHRASE,
@@ -85,10 +88,28 @@ function snapshotTree(root) {
       } else if (info.isDirectory()) {
         entries.push([rel, "dir", ""]);
         walk(path);
-      } else if (info.isFile()) {
-        entries.push([rel, "file", sha256(readFileSync(path, "utf8"))]);
       } else {
-        entries.push([rel, "other", String(info.mode)]);
+        // Race-free content capture: open O_NOFOLLOW, classify via fstat on
+        // the OPEN descriptor (never a re-check of the path), read the fd.
+        let fd = null;
+        try {
+          fd = openSync(
+            path,
+            fsConstants.O_RDONLY |
+              (fsConstants.O_NOFOLLOW ?? 0) |
+              (fsConstants.O_NONBLOCK ?? 0),
+          );
+          const stat = fstatSync(fd);
+          entries.push(
+            stat.isFile()
+              ? [rel, "file", sha256(readFileSync(fd, "utf8"))]
+              : [rel, "other", String(stat.mode)],
+          );
+        } catch {
+          entries.push([rel, "other", "unopenable"]);
+        } finally {
+          if (fd !== null) closeSync(fd);
+        }
       }
     }
   };
@@ -581,7 +602,10 @@ describe("inspectIdentityRecovery contract (§10)", () => {
     assert.equal(typeof report.active_pointer_path, "string");
     assert.match(report.active_pointer_hash, /^[0-9a-f]{64}$/);
     assert.match(report.generation_fingerprint, /^[0-9a-f]{64}$/);
-    assert.equal(typeof report.generation_path, "string");
+    // 1E.1-A: a loader-rejected pointer's path claim is never republished.
+    assert.equal(report.generation_path, null);
+    assert.equal(report.generation_path_state, "UNTRUSTED_OR_UNCONTAINED");
+    assert.match(report.pointer_claimed_generation_path_hash, /^[0-9a-f]{64}$/);
     assert.equal(report.loader_error, "generation_missing");
     assert.equal(report.previous_generation, "b".repeat(64));
     assert.equal(typeof report.legacy_pair_presence, "boolean");
@@ -627,6 +651,187 @@ describe("inspectIdentityRecovery contract (§10)", () => {
     mkdirSync(ap.retiredRegistry);
     const report = await store.inspectIdentityRecovery(home);
     assert.equal(report.recovery_class, "RECOVERY_STATE_UNKNOWN");
+  });
+});
+
+// ── IDENTITY-RECOVERY-REPORT-INTEGRITY-1E.1 ────────────────────────────────
+// Review round on exact head 58c543f. Finding A: the inspector republished a
+// loader-rejected pointer's raw generation_path — attacker-controlled claims
+// must never be promoted into authoritative diagnostics. Finding B: the static
+// gate's extractor only saw `function` declarations — every callable form must
+// be covered or the gate must fail closed.
+
+describe("1E.1-A generation-path evidence containment", () => {
+  it("A1 absolute external path claim is never returned — hash + trust state only", async () => {
+    const home = await initedHome();
+    const p = readPointer(home);
+    writePointer(home, { ...p, generation_path: "/zz-attacker-marker/chosen/path" });
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.generation_path, null);
+    assert.equal(report.generation_path_state, "UNTRUSTED_OR_UNCONTAINED");
+    assert.equal(
+      report.pointer_claimed_generation_path_hash,
+      sha256("/zz-attacker-marker/chosen/path"),
+    );
+    assert.doesNotMatch(JSON.stringify(report), /zz-attacker-marker/);
+  });
+
+  it("A2 ../ traversal claim is never returned", async () => {
+    const home = await initedHome();
+    const p = readPointer(home);
+    writePointer(home, {
+      ...p,
+      generation_path: "../../../../zz-traversal-marker",
+    });
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.generation_path, null);
+    assert.equal(report.generation_path_state, "UNTRUSTED_OR_UNCONTAINED");
+    assert.doesNotMatch(JSON.stringify(report), /zz-traversal-marker/);
+  });
+
+  it("A3 a claim that normalizes outside generations is rejected", async () => {
+    const home = await initedHome();
+    const p = readPointer(home);
+    writePointer(home, {
+      ...p,
+      generation_path: "generations/../../zz-normalize-marker",
+    });
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.generation_path, null);
+    assert.equal(report.generation_path_state, "UNTRUSTED_OR_UNCONTAINED");
+    assert.doesNotMatch(JSON.stringify(report), /zz-normalize-marker/);
+  });
+
+  it("A4 a symlink-escape claim is rejected without republication", async () => {
+    const home = await initedHome();
+    const p = readPointer(home);
+    const outside = mkdtempSync(join(tmpdir(), "dema-irr1e1-esc-"));
+    symlinkSync(outside, join(activeKeyPaths(home).generationsDir, "zz-evil-link"), "dir");
+    writePointer(home, { ...p, generation_path: join("generations", "zz-evil-link") });
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.generation_path, null);
+    assert.equal(report.generation_path_state, "UNTRUSTED_OR_UNCONTAINED");
+    assert.doesNotMatch(JSON.stringify(report), /zz-evil-link/);
+  });
+
+  it("A5 a mismatched-fingerprint path claim is rejected", async () => {
+    const home = await initedHome();
+    const p = readPointer(home);
+    const ap = activeKeyPaths(home);
+    const realGen = join(ap.generationsDir, p.generation_fingerprint);
+    const fakeFp = "c".repeat(64);
+    const fakeGen = join(ap.generationsDir, fakeFp);
+    mkdirSync(fakeGen, { recursive: true });
+    for (const f of ["private.pem", "public.pem", "metadata.json"]) {
+      writeFileSync(join(fakeGen, f), readFileSync(join(realGen, f), "utf8"));
+    }
+    writePointer(home, { ...p, generation_path: join("generations", fakeFp) });
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.generation_path, null);
+    assert.equal(report.generation_path_state, "UNTRUSTED_OR_UNCONTAINED");
+    assert.doesNotMatch(JSON.stringify(report), new RegExp(fakeFp));
+  });
+
+  it("A6 a valid canonical generation path is returned VERIFIED_CONTAINED", async () => {
+    const home = await initedHome();
+    const p = readPointer(home);
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.recovery_class, "VALID_ACTIVE_IDENTITY");
+    assert.equal(report.generation_path_state, "VERIFIED_CONTAINED");
+    assert.equal(typeof report.generation_path, "string");
+    assert.equal(report.generation_path.endsWith(p.generation_fingerprint), true);
+    assert.equal(report.pointer_claimed_generation_path_hash, null);
+  });
+
+  it("A7 a pointer with no usable path claim reports ABSENT", async () => {
+    const home = await homeUntrackedPointer();
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.generation_path, null);
+    assert.equal(report.generation_path_state, "ABSENT");
+    assert.equal(report.pointer_claimed_generation_path_hash, null);
+  });
+
+  it("A8 the dangling-genesis claim from R20 is hash-only, not republished", async () => {
+    const home = await homeInvalidGenesisPointer();
+    const claimed = readPointer(home).generation_path;
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.recovery_class, "INVALID_GENESIS_POINTER");
+    assert.equal(report.generation_path, null);
+    assert.equal(report.generation_path_state, "UNTRUSTED_OR_UNCONTAINED");
+    assert.equal(report.pointer_claimed_generation_path_hash, sha256(claimed));
+  });
+});
+
+describe("1E.1-B gate covers every callable form or fails closed", () => {
+  async function runGate(sourceOverride) {
+    const { runIdentityRecoveryRefuseReportCheck } = await import(
+      "../scripts/review/identity-recovery-refuse-report-check.mjs"
+    );
+    return runIdentityRecoveryRefuseReportCheck({ sourceOverride });
+  }
+
+  it("B9 an arrow-function mutator helper is detected", async () => {
+    const r = await runGate(
+      "const hidden = () => rename(a, b);\n" +
+        "function classifyPointerAuthority(h) { return hidden(); }\n" +
+        "function inspectIdentityRecovery(h) { return null; }\n",
+    );
+    assert.equal(r.ok, false);
+  });
+
+  it("B10 a function-expression mutator helper is detected", async () => {
+    const r = await runGate(
+      "const hidden = function () { unlink(x); };\n" +
+        "function classifyPointerAuthority(h) { return hidden(); }\n" +
+        "function inspectIdentityRecovery(h) { return null; }\n",
+    );
+    assert.equal(r.ok, false);
+  });
+
+  it("B11 an object-method mutator helper fails the gate", async () => {
+    const r = await runGate(
+      "const obj = { helper() { rename(a, b); } };\n" +
+        "function classifyPointerAuthority(h) { return obj.helper(); }\n" +
+        "function inspectIdentityRecovery(h) { return null; }\n",
+    );
+    assert.equal(r.ok, false);
+  });
+
+  it("B12 a class-method mutator helper is detected", async () => {
+    const r = await runGate(
+      "class K { helper() { rename(a, b); } }\n" +
+        "function classifyPointerAuthority(h) { return new K().helper(); }\n" +
+        "function inspectIdentityRecovery(h) { return null; }\n",
+    );
+    assert.equal(r.ok, false);
+  });
+
+  it("B13 indirect multi-hop mutation reachability is detected", async () => {
+    const r = await runGate(
+      "function deep() { return rename(a, b); }\n" +
+        "function middle() { return deep(); }\n" +
+        "function classifyPointerAuthority(h) { return middle(); }\n" +
+        "function inspectIdentityRecovery(h) { return null; }\n",
+    );
+    assert.equal(r.ok, false);
+  });
+
+  it("B14 a clean read-only helper graph passes", async () => {
+    const r = await runGate(
+      "const readHelper = async (p) => p;\n" +
+        "function classifyPointerAuthority(h) { return readHelper(h); }\n" +
+        "function inspectIdentityRecovery(h) { return classifyPointerAuthority(h); }\n",
+    );
+    assert.equal(r.ok, true);
+  });
+
+  it("B15 unsupported callable syntax fails closed rather than disappearing", async () => {
+    const r = await runGate(
+      "const weird = (0, () => rename(a, b));\n" +
+        "function classifyPointerAuthority(h) { return weird(); }\n" +
+        "function inspectIdentityRecovery(h) { return null; }\n",
+    );
+    assert.equal(r.ok, false);
   });
 });
 

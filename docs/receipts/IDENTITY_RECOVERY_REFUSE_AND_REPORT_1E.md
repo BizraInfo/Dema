@@ -183,6 +183,68 @@ npm run check:                   gates 0–120 pass (incl. the new 1E gate at
 - The three sandbox-environmental npm-test failures are classified, not fixed;
   they fail identically on unmodified base and pass on CI.
 
+## Review round 1E.1 — Greptile exact-head `58c543f` (IDENTITY-RECOVERY-REPORT-INTEGRITY-1E.1)
+
+```text
+REVIEW ROUND:
+Greptile exact-head 58c543f (2026-07-23T17:14Z, live inline findings)
+
+FINDING A:
+untrusted generation path escaped diagnostic containment
+
+FINDING B:
+static function-reachability parser was declaration-incomplete
+
+STATUS:
+reproduced (red-first) · FIXED
+```
+
+Neither finding is authority mutation — no mutation occurred. Both are
+refuse-and-report integrity defects: the first promoted an
+attacker-controlled pointer claim into authoritative diagnostics
+(evidence laundering); the second let the zero-mutation gate claim complete
+reachability over syntax it did not parse.
+
+**Finding A fix — path-trust containment.** `inspectIdentityRecovery` never
+republishes a `generation_path` from a pointer the canonical loader rejected.
+New contract: `generation_path` is non-null ONLY with
+`generation_path_state: "VERIFIED_CONTAINED"`, sourced exclusively from the
+loader's own containment-checked result. A rejected/escaping/traversal/
+mismatched claim yields `generation_path: null`,
+`generation_path_state: "UNTRUSTED_OR_UNCONTAINED"`, and
+`pointer_claimed_generation_path_hash: sha256(<raw claim>)` — the raw
+attacker-controlled path appears nowhere in the envelope. No usable claim →
+`"ABSENT"` (unknown, absent, and rejected are never collapsed). Red-first
+tests A1–A8: absolute-external, `../` traversal, normalize-outside,
+symlink-escape, and mismatched-fingerprint claims are all withheld
+(marker-string absence asserted on the full serialized envelope); valid
+identity returns `VERIFIED_CONTAINED`.
+
+**Finding B fix — syntax-complete-or-fail-closed gate.** The repository has
+zero direct dependencies (verified in `package.json`), so no approved AST
+parser exists and adding one would expand supply-chain scope — the sanctioned
+fallback applies. The extractor now attributes: named/async function
+declarations, `const/let/var`-assigned arrow functions (block and expression
+bodies) and function expressions, and class declarations (whole class body
+reachable via the class name). Reachability edges are BARE identifier
+references over comment/string-stripped bodies (callback-passed helpers stay
+in the graph; over-connection is fail-safe). Any callable syntax left in the
+residual (object-literal methods at top level, paren-free arrows,
+comma-expression arrows, …) fails the gate as `unsupported_callable_form` —
+the gate never silently ignores a form it cannot parse. Red-first tests
+B9–B15: arrow / function-expression / object-method / class-method /
+multi-hop mutator helpers all detected; clean read-only graph passes;
+unsupported syntax fails closed.
+
+Also closed in this round: CodeQL alert 350 (`js/file-system-race`, HIGH —
+test snapshot helper now reads through an `O_NOFOLLOW` descriptor classified
+by `fstat` on the OPEN fd, no check-then-use) and alert 351 + CodeRabbit
+minor (unused `loadActiveKeyPair` binding removed).
+
+Round qualification: 1E suite 47/47 · identity/authorship/regression suites
+162/162 · corpus gate green · full npm test/coverage re-run recorded in the
+PR body at the new head.
+
 ## Non-claims
 
 ```text

@@ -598,7 +598,13 @@ async function classifyPointerAuthority(demaHome) {
   }
   const load = await loadActiveKeyPair(demaHome);
   if (load.ok) {
-    return { class: "VALID_ACTIVE_IDENTITY", fingerprint: load.fingerprint };
+    return {
+      class: "VALID_ACTIVE_IDENTITY",
+      fingerprint: load.fingerprint,
+      // The ONLY trusted generation path: the canonical loader's own
+      // containment-verified result — never a pointer field echo.
+      generationPath: load.generation_path,
+    };
   }
   // Re-read the pointer record (read-only) so genesis/prior strands are
   // distinguishable; a mid-read vanish is UNKNOWN, never re-normalized.
@@ -716,14 +722,23 @@ export async function inspectIdentityRecovery(demaHome) {
   const doc = pointerCls.doc ?? null;
   const fingerprint =
     pointerCls.fingerprint ?? doc?.generation_fingerprint ?? null;
-  const generationPath =
-    doc && typeof doc.generation_path === "string"
-      ? isAbsolute(doc.generation_path)
-        ? doc.generation_path
-        : join(ap.dir, doc.generation_path)
-      : pointerCls.class === "VALID_ACTIVE_IDENTITY" && fingerprint
-        ? join(ap.generationsDir, fingerprint)
-        : null;
+  // 1E.1 Finding A: a pointer document the canonical loader REJECTED is
+  // attacker-influencable evidence, not fact. Its raw generation_path claim is
+  // never republished — the report carries only a hash of the claim and an
+  // explicit trust state. The sole VERIFIED_CONTAINED source is the loader's
+  // own containment-checked path.
+  const claimedPath =
+    doc && typeof doc.generation_path === "string" ? doc.generation_path : null;
+  let generationPath = null;
+  let generationPathState = "ABSENT";
+  let claimedPathHash = null;
+  if (pointerCls.class === "VALID_ACTIVE_IDENTITY") {
+    generationPath = pointerCls.generationPath ?? null;
+    generationPathState = "VERIFIED_CONTAINED";
+  } else if (claimedPath !== null) {
+    generationPathState = "UNTRUSTED_OR_UNCONTAINED";
+    claimedPathHash = sha256(claimedPath);
+  }
   const recommendedAction = inProgress
     ? lease.state === "HOLDER_ALIVE"
       ? "RETRY_AFTER_TRANSITION"
@@ -737,6 +752,8 @@ export async function inspectIdentityRecovery(demaHome) {
     active_pointer_hash: raw === null ? null : sha256(raw),
     generation_fingerprint: fingerprint,
     generation_path: generationPath,
+    generation_path_state: generationPathState,
+    pointer_claimed_generation_path_hash: claimedPathHash,
     loader_error: pointerCls.loader_error ?? null,
     previous_generation: doc?.previous_generation ?? null,
     legacy_pair_presence: await isSafeExistingKeyPath(paths, paths.privateKey),
