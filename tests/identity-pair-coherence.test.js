@@ -21,7 +21,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { tmpdir, homedir } from "node:os";
 import childProcess from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
@@ -1019,7 +1019,7 @@ describe("1D committed-transition recovery", () => {
     assert.equal(retry.recovered_from, "genesis_pointer_quarantined");
     // T5/T6 evidence: quarantine record kept, failed generation NOT deleted
     const ap = activeKeyPaths(home);
-    assert.ok(readdirSync(ap.transactionsDir).some((f) => f.startsWith("quarantine-active-key-")));
+    assert.ok(readdirSync(ap.dir).some((f) => f.startsWith("quarantine-active-key-")));
     assert.equal(existsSync(failed.generation_path), true);
 
     // T2: a further retry now establishes a fresh, verified identity
@@ -1047,10 +1047,7 @@ describe("1D committed-transition recovery", () => {
     assert.equal(r.boundary.key_persisted, false, "no mutation");
     // malformed pointer preserved for adjudication (not quarantined, not deleted)
     assert.equal(existsSync(ap.activePointer), true);
-    assert.equal(
-      existsSync(ap.transactionsDir) && readdirSync(ap.transactionsDir).some((f) => f.startsWith("quarantine-")),
-      false,
-    );
+    assert.equal(readdirSync(ap.dir).some((f) => f.startsWith("quarantine-")), false);
   });
 
   it("T7 a PRIOR-identity invalid pointer (previous_generation set) → recovery_required, no quarantine", async () => {
@@ -1117,20 +1114,39 @@ describe("1D-P1 Greptile hardening", () => {
     assert.equal(existsSync(activeKeyPaths(home).activePointer), true);
   });
 
-  it("P1-2 quarantine refuses a SYMLINKED transactions dir (evidence never leaves DEMA_HOME)", async () => {
+  it("P1-2/628 quarantine is a DIRECT sibling in keys/ — no swappable subdir, stays in DEMA_HOME", async () => {
     const home = await initedHome();
     const ap = activeKeyPaths(home);
-    const outside = mkdtempSync(join(tmpdir(), "dema-ipc1d-out-"));
-    // Replace the real keys/transactions dir with a symlink to an external dir.
-    rmSync(ap.transactionsDir, { recursive: true, force: true });
-    symlinkSync(outside, ap.transactionsDir);
     await strandActiveIdentity(home);
     const r = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
-    assert.equal(r.error, "recovery_required");
-    assert.equal(r.reason, "unsafe_quarantine_dir");
-    // The pointer must NOT have been moved into the external target.
-    assert.equal(readdirSync(outside).some((f) => f.startsWith("quarantine-")), false);
-    assert.equal(existsSync(ap.activePointer), true, "pointer left in place");
+    assert.equal(r.recovered_from, "genesis_pointer_quarantined");
+    // 628: destination parent IS the keys dir — there is no intermediate
+    // `keys/transactions` dir an attacker could swap between check and rename.
+    assert.equal(dirname(r.quarantine_path), ap.dir);
+    assert.equal(r.quarantine_path.startsWith(home), true);
+    assert.equal(r.quarantine_path.startsWith(join(homedir(), ".dema")), false);
+  });
+
+  it("628 quarantine refuses when the keys dir itself is a symlink", async () => {
+    // Build a valid store, then relocate keys and symlink it — quarantine must
+    // refuse (lstat keysDir is a symlink) rather than move through it.
+    const home = await initedHome();
+    const ap = activeKeyPaths(home);
+    await strandActiveIdentity(home);
+    const realKeys = join(home, "keys-real");
+    renameSync(ap.dir, realKeys);
+    symlinkSync(realKeys, ap.dir);
+    const r = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    // Defense in depth: init refuses a symlinked keys dir fail-closed — caught
+    // early by prepareKeyDirectory (unsafe_key_path) OR by quarantine
+    // (unsafe_quarantine_dir). Either way NO quarantine escapes and it is not
+    // initialized.
+    assert.equal(r.initialized, false);
+    assert.ok(
+      r.error === "unsafe_key_path" || r.reason === "unsafe_quarantine_dir",
+      `unexpected: ${JSON.stringify({ error: r.error, reason: r.reason })}`,
+    );
+    assert.equal(readdirSync(realKeys).some((f) => f.startsWith("quarantine-")), false);
   });
 
   it("P1-3 a failed migration is recoverable via `migrate` (re-migrates from legacy pair)", async () => {
@@ -1234,6 +1250,6 @@ describe("1D-P1 re-review (New-1/New-2)", () => {
     assert.equal(r.error, "identity_transition_in_progress");
     // The pointer was NOT quarantined pre-lease (the race the fix closes).
     assert.equal(readFileSync(ap.activePointer, "utf8"), pointerBefore, "no pre-lease mutation");
-    assert.equal(readdirSync(ap.transactionsDir).some((f) => f.startsWith("quarantine-")), false);
+    assert.equal(readdirSync(ap.dir).some((f) => f.startsWith("quarantine-")), false);
   });
 });

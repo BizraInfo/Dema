@@ -138,6 +138,25 @@ Tests: 3 new (New-1 canonical-ledger + verdict artifacts detected; New-2
 lease-gated migrate recovery). Identity suite 75 green; 196 across affected
 suites; coverage 95.33 L / 84.28 B / 97.73 F ≥ 95/84/95.
 
+### Greptile re-review (628) — quarantine TOCTOU
+
+`628` "Quarantine directory substitution escapes containment": a check-then-
+rename TOCTOU — a concurrent process could swap `keys/transactions` for a
+symlink between the `realpath` containment check and the `rename`, moving the
+pointer outside `DEMA_HOME`. Fix eliminates the class rather than racing it:
+quarantine now writes to a **sibling file directly in `keys/`**
+(`keys/quarantine-active-key-<hash>.json`), so source and destination share one
+parent and a single kernel path resolution — there is no traversable
+intermediate dir to substitute. `keys/` must be a real (non-symlink) directory;
+a cross-device rename reports `quarantine_move_failed`. (The migration comment
+`1041` is a first-review carry-over GitHub re-anchored; the current re-review
+did not re-flag it and `dema authorship key migrate` recovers a stranded
+migration end-to-end.)
+
+Tests: quarantine dest is a direct child of `keys/` (no swappable subdir),
+stays in `DEMA_HOME`, and a symlinked keys dir fails closed. Identity suite 78
+green; coverage 95.34 L / 84.35 B / 97.74 F ≥ 95/84/95.
+
 ## Non-claims
 
 No signer rotation · real `~/.dema` signer untouched · PR #411/#412/#413 merged

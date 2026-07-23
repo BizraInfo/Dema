@@ -601,29 +601,24 @@ async function anyReceiptBindsFingerprint(demaHome, fingerprint) {
   return false;
 }
 
-// P1-2 (Greptile): quarantine must not follow a symlinked transactions dir
-// (which would move the pointer OUTSIDE DEMA_HOME) and must stay atomic within
-// the keys root. Returns { ok, dest } | { ok:false, reason }. The failed
-// generation dir is left in place (also evidence).
+// P1-2 + 628 (Greptile): quarantine the pointer to a SIBLING file directly in
+// the keys dir — NOT a `keys/transactions` subdir. A separate subdir is a
+// substitution vector: another process can swap it for a symlink between a
+// realpath check and the rename, moving the pointer outside DEMA_HOME (a
+// check-then-rename TOCTOU). With source (`active-key.json`) and destination
+// (`quarantine-active-key-<hash>.json`) sharing the SAME parent, a single
+// kernel path resolution moves the pointer to a fixed sibling — no traversable
+// intermediate dir to substitute, and no differential escape. keysDir must be
+// a real (non-symlink) directory. Returns { ok, dest } | { ok:false, reason }.
+// The failed generation dir is left in place (also evidence).
 async function quarantineActivePointer(demaHome, raw) {
   const ap = activeKeyPaths(demaHome);
-  const info = await lstatIfExists(ap.transactionsDir);
-  if (info && (info.isSymbolicLink() || !info.isDirectory())) {
-    return { ok: false, reason: "unsafe_quarantine_dir" };
-  }
-  await mkdir(ap.transactionsDir, { recursive: true });
-  // Containment: the resolved transactions dir must sit inside the keys root.
-  try {
-    const keysReal = await realpath(ap.dir);
-    const txReal = await realpath(ap.transactionsDir);
-    if (!isInsideOrSame(txReal, keysReal) || txReal === keysReal) {
-      return { ok: false, reason: "unsafe_quarantine_dir" };
-    }
-  } catch {
+  const info = await lstatIfExists(ap.dir);
+  if (!info || info.isSymbolicLink() || !info.isDirectory()) {
     return { ok: false, reason: "unsafe_quarantine_dir" };
   }
   const stamp = sha256(raw ?? "").slice(0, 16);
-  const dest = join(ap.transactionsDir, `quarantine-active-key-${stamp}.json`);
+  const dest = join(ap.dir, `quarantine-active-key-${stamp}.json`);
   try {
     await rename(ap.activePointer, dest);
   } catch {
