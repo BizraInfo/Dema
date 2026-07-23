@@ -38,8 +38,10 @@
 // DEVICE LAW: an entry on another device is recorded as a boundary failure and never
 // descended.
 // VISITATION LAW: every admitted root carries an explicit scan_state. A root never
-// reached because a census-wide bound was already exhausted is NOT_STARTED with a
-// reason — never a successfully-scanned empty root. Global COMPLETE requires every
+// reached because a CENSUS-WIDE bound (max_entries / max_millis) was already exhausted
+// is NOT_STARTED with a reason — never a successfully-scanned empty root. max_depth is
+// a ROOT-LOCAL condition: it marks only its own root PARTIAL and must never stop a
+// later, shallower, disjoint root from being scanned. Global COMPLETE requires every
 // root COMPLETE.
 //
 // WHAT THIS DOES NOT PROVE: content identity (no bytes are read), semantic meaning,
@@ -418,6 +420,7 @@ export function censusRoots({ roots, adapter, bounds = {}, reference_time_ms = n
   const summaries = new Map();
   const scan = new Map();
   const state = { count: 0, truncated: null, started: adapter.now() };
+  const partialRoots = [];
 
   for (const root of admitted) {
     summaries.set(root.id, emptySummary());
@@ -437,8 +440,9 @@ export function censusRoots({ roots, adapter, bounds = {}, reference_time_ms = n
     }
     const before = state.count;
     let failure = null;
+    let localTruncation = null;
     try {
-      walkRoot(root, rootByPath, adapter, limits, entries, {
+      localTruncation = walkRoot(root, rootByPath, adapter, limits, entries, {
         publicWarnings,
         privateWarningCounts,
         summary: summaries.get(root.id),
@@ -453,6 +457,10 @@ export function censusRoots({ roots, adapter, bounds = {}, reference_time_ms = n
       state.truncated = state.truncated ?? "root_failed";
     } else if (state.truncated) {
       scan.set(root.id, { scan_state: SCAN_PARTIAL, reason: state.truncated, visited_entries: visited });
+    } else if (localTruncation) {
+      // Root-local truncation (max_depth): THIS root is PARTIAL, the census continues.
+      scan.set(root.id, { scan_state: SCAN_PARTIAL, reason: localTruncation, visited_entries: visited });
+      partialRoots.push(root.id);
     } else {
       scan.set(root.id, { scan_state: SCAN_COMPLETE, reason: null, visited_entries: visited });
     }
@@ -501,7 +509,7 @@ export function censusRoots({ roots, adapter, bounds = {}, reference_time_ms = n
     ),
     scan_states: Object.freeze(perRootScan),
     completeness: allComplete && !state.truncated ? COMPLETENESS_COMPLETE : COMPLETENESS_BOUNDED_PARTIAL,
-    truncation_reason: state.truncated,
+    truncation_reason: state.truncated ?? (partialRoots.length > 0 ? "root_local_max_depth" : null),
   });
 }
 
@@ -538,12 +546,16 @@ function warningOrder(a, b) {
   return ka < kb ? -1 : ka > kb ? 1 : 0;
 }
 
+// Returns a PER-ROOT truncation reason (or null). `state.truncated` is reserved for
+// CENSUS-WIDE bounds only: max_depth is a root-local condition and must never stop a
+// later, shallower, disjoint root from being scanned.
 function walkRoot(root, rootByPath, adapter, limits, entries, sinks, state) {
   const isPrivate = root.privacy_mode === PRIVACY_PRIVATE_AGGREGATE;
   const summary = sinks.summary;
+  let localTruncation = null;
   const queue = [{ absPath: root.path, relativePath: "", depth: 0 }];
   while (queue.length > 0) {
-    if (state.truncated) return;
+    if (state.truncated) return localTruncation;
     const dir = queue.shift();
     let names;
     try {
@@ -555,9 +567,9 @@ function walkRoot(root, rootByPath, adapter, limits, entries, sinks, state) {
       continue;
     }
     for (const name of [...names].sort()) {
-      if (state.truncated) return;
-      if (state.count >= limits.max_entries) { state.truncated = "max_entries"; return; }
-      if (adapter.now() - state.started >= limits.max_millis) { state.truncated = "max_millis"; return; }
+      if (state.truncated) return localTruncation;
+      if (state.count >= limits.max_entries) { state.truncated = "max_entries"; return localTruncation; }
+      if (adapter.now() - state.started >= limits.max_millis) { state.truncated = "max_millis"; return localTruncation; }
 
       const absPath = joinPath(dir.absPath, name);
       const relativePath = dir.relativePath === "" ? name : `${dir.relativePath}/${name}`;
@@ -631,10 +643,15 @@ function walkRoot(root, rootByPath, adapter, limits, entries, sinks, state) {
         recordWarning(root, "DEVICE_BOUNDARY_NOT_CROSSED", isPrivate ? null : relativePath, null, sinks);
         continue;
       }
-      if (dir.depth + 1 >= limits.max_depth) { state.truncated = "max_depth"; return; }
+      if (dir.depth + 1 >= limits.max_depth) {
+        // PER-ROOT: this root is depth-truncated; other roots are unaffected.
+        localTruncation = "max_depth";
+        continue;
+      }
       queue.push({ absPath, relativePath, depth: dir.depth + 1 });
     }
   }
+  return localTruncation;
 }
 
 // Deterministic body. Volatile run metadata lives OUTSIDE the hashed body.

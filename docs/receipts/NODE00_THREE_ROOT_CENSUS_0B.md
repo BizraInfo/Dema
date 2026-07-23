@@ -62,9 +62,10 @@ must carry an explicit `binding.binding_source` or the plan blocks with
 ### 3. Greptile A — proof-root redirection
 
 The whole mutable ancestor chain is screened **before any write**. Group- or
-world-writable without the sticky bit is a hard refusal. Sticky is exempt (only an
-entry's owner may rename or remove it). The proof root must also be owned by the
-current uid and not itself group/world-writable.
+world-writable is a hard refusal unless the directory is sticky **and owned by us or by
+root**. The proof root must also be owned by the current uid and not itself
+group/world-writable. Tests assert **zero** `mkdirSync`/`writeFileSync` calls occur when
+an ancestor is unsafe.
 
 ### 4. Greptile B — per-root visitation truth
 
@@ -76,13 +77,26 @@ otherwise (`complete_with_non_complete_root`).
 
 ### 5. Greptile C — retry-safe proof writing
 
-No raw fs exception escapes; every failure returns a named envelope. The temp directory
-carries a run-owned marker. Cleanup is authorised only for the exact directory this
-invocation created, after revalidating containment, non-symlink, directory, device and
-marker. A pre-existing temp directory is evidence, never deleted:
-`STALE_TEMP_RUN_REQUIRES_OPERATOR_RECOVERY`. Unverifiable cleanup returns
-`RECOVERABLE_TEMP_ARTIFACT_REQUIRES_HUMAN`. Same-run-id retry after a failed write
-succeeds cleanly instead of dying on `EEXIST`.
+No raw fs exception escapes; every failure returns a named envelope. Cleanup is
+authorised only for the exact directory this invocation created, proven by the
+device+inode captured immediately **after** `mkdir`. A pre-existing temp directory is
+evidence, never deleted (`STALE_TEMP_RUN_REQUIRES_OPERATOR_RECOVERY`); one substituted
+since creation returns `RECOVERABLE_TEMP_ARTIFACT_REQUIRES_HUMAN`. Same-run-id retry
+after a failed write succeeds cleanly instead of dying on `EEXIST`.
+
+## Second review round — 4 further P1s found at `e1d0376` and fixed
+
+Greptile re-reviewed the corrected head and found four more defects. All are real; all
+were reproduced before fixing.
+
+| # | Finding | Root cause | Fix |
+| --- | --- | --- | --- |
+| G1/G4 | **`max_depth` skipped unrelated roots** — a deep root hitting the depth limit marked every later *disjoint* root `NOT_STARTED / GLOBAL_BOUND_EXHAUSTED`, even shallow ones well inside the limit | a **root-local** condition was written into **census-wide** truncation state | `walkRoot()` now returns a per-root truncation reason; only `max_entries` / `max_millis` are census-wide. A depth-limited root is `PARTIAL / max_depth` and the census continues. Reproduced: `DEEP=PARTIAL`, `SHALLOW` was wrongly `NOT_STARTED`; now `COMPLETE`. |
+| G2 | **Sticky ancestor remained replaceable** — a sticky directory owned by a *foreign* principal was exempted | in a sticky directory an entry may be renamed by the entry's owner, **the directory's owner**, or root | sticky exemption is now ownership-qualified: exempt only when owner is the current uid or root; unknown ownership fails closed |
+| G3 | **Marker-write failure poisoned retries** — if the run-marker write failed after `mkdir`, cleanup required the absent marker and stranded the directory, so every retry returned `STALE_TEMP_…` | cleanup was bound to the **marker file** | cleanup is now bound to the temp directory's **device+inode captured right after `mkdir`**. The marker remains as evidence but is not required to reclaim. |
+
+Three regression tests (`G2`, `G3`, `G4`) pin these; `M7` and `M13` were updated to the
+corrected semantics rather than left asserting the old behaviour.
 
 ### 6. CI-red repair
 
@@ -97,7 +111,7 @@ on CI.
 ## Gates
 
 ```bash
-node --test tests/node00-three-root-census.test.js     # 42 tests
+node --test tests/node00-three-root-census.test.js     # 45 tests
 node scripts/review/node00-three-root-census-check.mjs --json
 npm test
 npm run check
@@ -120,7 +134,9 @@ every durable location writable from this environment. Measured, not assumed:
 
 `planProofOutput()` run against the real paths returns
 `proof_root_itself_group_or_world_writable, proof_root_ancestor_group_writable` for
-every durable candidate. Creating a clean parent under `/data` is denied (read-only),
+every durable candidate. After the G2 fix the session `$TMPDIR` is refused as well
+(`/tmp` is sticky but owned by uid 65534, not by us or root), so **no** admissible proof
+root exists in this environment at all. Creating a clean parent under `/data` is denied (read-only),
 and changing permissions on shared directories is explicitly out of scope.
 
 Per the corrective contract, no artifacts are written before a proof-root plan is
@@ -132,7 +148,7 @@ REAL_NESTED_DELEGATION_EXERCISED      BLOCKED (fixture-proven only)
 ```
 
 Delegation, ownership, privacy mode, scan states and writer refusals are all proven by
-the 42 focused tests against synthetic trees. They are **not** proven against the real
+the 45 focused tests against synthetic trees. They are **not** proven against the real
 three-root estate.
 
 ## Declared limits

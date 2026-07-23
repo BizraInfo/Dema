@@ -19,16 +19,21 @@
 //      of that group replace a directory on the path before the temp dir was created,
 //      so artifacts landed in an attacker-controlled directory and the later identity
 //      check fired too late. Now EVERY mutable ancestor is screened before ANY write:
-//      group- or world-writable without the sticky bit is a hard refusal. Sticky is
-//      exempt because a sticky directory only lets an entry's owner rename or remove
-//      it, which is exactly the substitution being defended against.
+//      group- or world-writable is a hard refusal unless the directory is sticky AND
+//      owned by us or by root. Sticky alone is not enough: in a sticky directory an
+//      entry may be renamed or removed by the entry's owner, the DIRECTORY's owner, or
+//      root — so a foreign-owned sticky ancestor is still replaceable by its owner.
+//      Unknown ownership fails closed.
 //
 //   C. RETRY POISONING. A failed write, failed revalidation or failed rename left the
 //      deterministic temp directory behind, and re-running the same run id died with
-//      an uncontrolled EEXIST. Now every failure returns a NAMED envelope, the temp
-//      directory carries a run-owned marker, cleanup is authorised only for the exact
-//      directory this invocation created (revalidated first), and a pre-existing temp
-//      directory is never deleted — it is reported for operator recovery.
+//      an uncontrolled EEXIST. Now every failure returns a NAMED envelope and cleanup
+//      is authorised only for the exact directory this invocation created, proven by
+//      the device+inode captured immediately AFTER mkdir — deliberately NOT by the
+//      marker file, because binding cleanup to the marker meant a failed marker write
+//      stranded the directory and poisoned every retry. A directory substituted since
+//      creation, or a pre-existing one, is never deleted: it is reported for operator
+//      recovery.
 //
 // DECLARED LIMIT — PROOF_ROOT_PARENT_SUBSTITUTION_RESISTANCE:
 // NOT_PROVEN_AGAINST_HOSTILE_CONCURRENT_MUTATOR. Permission screening plus
@@ -128,9 +133,17 @@ const STICKY = 0o1000;
 const GROUP_OR_WORLD_WRITE = 0o022;
 
 // Finding A: a directory an untrusted principal can write to is one where that
-// principal can rename or replace our path component — unless sticky.
-export function replaceableByOthers(mode) {
-  return (mode & GROUP_OR_WORLD_WRITE) !== 0 && (mode & STICKY) === 0;
+// principal can rename or replace our path component.
+//
+// Sticky is an exemption ONLY when the sticky directory is owned by us or by root: in
+// a sticky directory an entry may be renamed or removed by the entry's owner, the
+// directory's owner, or root. A sticky directory owned by a FOREIGN principal
+// therefore still lets that owner replace our path component, so it is NOT exempt.
+export function replaceableByOthers(mode, ownerUid = null, currentUid = null) {
+  if ((mode & GROUP_OR_WORLD_WRITE) === 0) return false;
+  if ((mode & STICKY) === 0) return true;
+  if (ownerUid === null || currentUid === null) return true; // cannot prove ownership => fail closed
+  return !(ownerUid === currentUid || ownerUid === 0);
 }
 
 // Fail-closed validation of the output location. Every refusal is a NAMED block.
@@ -165,7 +178,9 @@ export function planProofOutput({
   if (currentUid !== null && stat.uid !== undefined && stat.uid !== currentUid) {
     blocked_by.push("output_root_not_owned_by_current_uid");
   }
-  if (replaceableByOthers(stat.mode)) blocked_by.push("proof_root_itself_group_or_world_writable");
+  if (replaceableByOthers(stat.mode, stat.uid, currentUid)) {
+    blocked_by.push("proof_root_itself_group_or_world_writable");
+  }
 
   // Finding A: screen the WHOLE mutable ancestor chain, BEFORE any write.
   for (const ancestor of ancestorsOf(resolved)) {
@@ -180,11 +195,13 @@ export function planProofOutput({
       blocked_by.push("output_root_ancestor_symlink");
       break;
     }
-    if (replaceableByOthers(aStat.mode)) {
+    if (replaceableByOthers(aStat.mode, aStat.uid, currentUid)) {
       blocked_by.push(
-        (aStat.mode & 0o002) !== 0
-          ? "proof_root_ancestor_world_writable"
-          : "proof_root_ancestor_group_writable",
+        (aStat.mode & STICKY) !== 0
+          ? "proof_root_ancestor_sticky_foreign_owned"
+          : (aStat.mode & 0o002) !== 0
+            ? "proof_root_ancestor_world_writable"
+            : "proof_root_ancestor_group_writable",
       );
       break;
     }
@@ -232,8 +249,12 @@ function fail(code, extra = {}) {
 
 // Finding C: cleanup is authorised ONLY for the exact directory this invocation
 // created, and only after revalidating every property that makes it ours.
-function reclaimOwnTempDir({ fs, tempDir, proofRootResolved, runId, proofIdentity }) {
+// Ownership is proven by the device+inode captured immediately after THIS invocation
+// created the directory — NOT by the marker file. Binding cleanup to the marker meant a
+// failed marker write left an unreclaimable directory that poisoned every retry.
+function reclaimOwnTempDir({ fs, tempDir, proofRootResolved, createdIdentity, proofIdentity }) {
   if (!isStrictlyInside(proofRootResolved, tempDir)) return "temp_dir_outside_proof_root";
+  if (!createdIdentity) return "temp_dir_identity_unknown"; // never delete what we cannot prove is ours
   let stat;
   try {
     stat = fs.lstatSync(tempDir);
@@ -243,13 +264,9 @@ function reclaimOwnTempDir({ fs, tempDir, proofRootResolved, runId, proofIdentit
   if (stat.isSymbolicLink()) return "temp_dir_is_symlink";
   if (!stat.isDirectory()) return "temp_dir_not_directory";
   if (proofIdentity && stat.dev !== proofIdentity.device) return "temp_dir_cross_device";
-  let marker;
-  try {
-    marker = JSON.parse(fs.readFileSync(join(tempDir, RUN_MARKER_FILENAME), "utf8"));
-  } catch {
-    return "temp_dir_marker_unreadable";
+  if (stat.dev !== createdIdentity.dev || stat.ino !== createdIdentity.ino) {
+    return "temp_dir_substituted_since_creation";
   }
-  if (marker.run_id !== runId || marker.marker !== RUN_MARKER_FILENAME) return "temp_dir_marker_mismatch";
   try {
     fs.rmSync(tempDir, { recursive: true, force: false });
   } catch {
@@ -304,9 +321,19 @@ export function writeCensusProof({
     return fail("temp_dir_create_failed");
   }
 
+  // Capture the identity of what we just created, BEFORE writing anything into it.
+  // This is what authorises cleanup later, so a failed marker write cannot strand it.
+  let createdIdentity = null;
+  try {
+    const st = fs.lstatSync(tempDir);
+    createdIdentity = { dev: st.dev, ino: st.ino };
+  } catch {
+    createdIdentity = null;
+  }
+
   const abort = (code) => {
     const cleanupError = reclaimOwnTempDir({
-      fs, tempDir, proofRootResolved: plan.resolved, runId, proofIdentity: plan.identity,
+      fs, tempDir, proofRootResolved: plan.resolved, createdIdentity, proofIdentity: plan.identity,
     });
     return cleanupError
       ? Object.freeze({

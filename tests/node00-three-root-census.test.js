@@ -425,6 +425,40 @@ test("M10 each non-complete root carries its own reason and coverage counters", 
   assert.ok(verifyNode00ThreeRootCensus(stripped).reasons.includes("non_complete_root_without_reason"));
 });
 
+test("G4 max_depth is PER-ROOT: a shallow disjoint root is still scanned", () => {
+  // Previously max_depth wrote into the census-wide truncation state, so one deep root
+  // marked every later disjoint root NOT_STARTED/GLOBAL_BOUND_EXHAUSTED even when they
+  // were shallow enough to scan.
+  const tree = {
+    "/": { type: "directory", device: 1, inode: 1, children: ["deep", "shallow"] },
+    "/deep": { type: "directory", device: 1, inode: 2, children: ["a"] },
+    "/deep/a": { type: "directory", device: 1, inode: 3, children: ["b"] },
+    "/deep/a/b": { type: "directory", device: 1, inode: 4, children: ["c"] },
+    "/deep/a/b/c": { type: "directory", device: 1, inode: 5, children: ["f.txt"] },
+    "/deep/a/b/c/f.txt": { type: "file", device: 1, inode: 6, size_bytes: 10 },
+    "/shallow": { type: "directory", device: 1, inode: 7, children: ["s.txt"] },
+    "/shallow/s.txt": { type: "file", device: 1, inode: 8, size_bytes: 5 },
+  };
+  const roots = [
+    { id: "DEEP", path: "/deep", visibility: "public" },
+    { id: "SHALLOW", path: "/shallow", visibility: "public" },
+  ];
+  const result = censusRoots({ roots, adapter: makeMemoryAdapter(tree), bounds: { max_depth: 2 }, reference_time_ms: 0 });
+  const byId = new Map(result.scan_states.map((s) => [s.root_id, s]));
+
+  assert.equal(byId.get("DEEP").scan_state, SCAN_PARTIAL);
+  assert.equal(byId.get("DEEP").reason, "max_depth");
+  // The shallow disjoint root must be fully scanned, NOT skipped.
+  assert.equal(byId.get("SHALLOW").scan_state, SCAN_COMPLETE, "a shallow disjoint root was skipped by another root's depth limit");
+  assert.equal(byId.get("SHALLOW").reason, null);
+  assert.ok(byId.get("SHALLOW").visited_entries > 0);
+  assert.ok(result.entries.some((e) => e.root_id === "SHALLOW" && e.relative_path === "s.txt"));
+
+  // The census as a whole is still honestly BOUNDED_PARTIAL.
+  assert.equal(result.completeness, COMPLETENESS_BOUNDED_PARTIAL);
+  assert.equal(verifyNode00ThreeRootCensus(buildNode00ThreeRootCensusPayload(result)).ok, true);
+});
+
 test("an unbounded fixture run is COMPLETE with every root COMPLETE", () => {
   const result = census();
   assert.equal(result.completeness, COMPLETENESS_COMPLETE);
@@ -693,11 +727,32 @@ test("M7 a non-sticky GROUP-writable ancestor is refused BEFORE any write", () =
     planProofOutput({ proofRoot: "/data/proofs/run", fs: fakeWriterFs(world), currentUid: 1000 }).blocked_by
       .includes("proof_root_ancestor_world_writable"),
   );
-  const sticky = { ...SAFE_TREE, "/data/proofs": { type: "directory", device: 1, inode: 3, mode: 0o41777, uid: 1000 } };
-  assert.equal(planProofOutput({ proofRoot: "/data/proofs/run", fs: fakeWriterFs(sticky), currentUid: 1000 }).ok, true);
-  assert.equal(replaceableByOthers(0o40775), true);
-  assert.equal(replaceableByOthers(0o41777), false);
-  assert.equal(replaceableByOthers(0o40755), false);
+  // Sticky owned by US is exempt; sticky owned by a FOREIGN principal is not, because
+  // in a sticky directory the DIRECTORY OWNER may still rename or remove our entry.
+  const stickyOurs = { ...SAFE_TREE, "/data/proofs": { type: "directory", device: 1, inode: 3, mode: 0o41777, uid: 1000 } };
+  assert.equal(planProofOutput({ proofRoot: "/data/proofs/run", fs: fakeWriterFs(stickyOurs), currentUid: 1000 }).ok, true);
+  assert.equal(replaceableByOthers(0o40775, 1000, 1000), true);
+  assert.equal(replaceableByOthers(0o41777, 1000, 1000), false);
+  assert.equal(replaceableByOthers(0o41777, 0, 1000), false, "root-owned sticky is trusted");
+  assert.equal(replaceableByOthers(0o40755, 1000, 1000), false);
+  // Unknown ownership must fail closed.
+  assert.equal(replaceableByOthers(0o41777), true);
+});
+
+test("G2 a sticky ancestor owned by a FOREIGN principal is refused — its owner can still replace our entry", () => {
+  const foreignSticky = { ...SAFE_TREE, "/data/proofs": { type: "directory", device: 1, inode: 3, mode: 0o41777, uid: 4242 } };
+  const fs = fakeWriterFs(foreignSticky);
+  const plan = planProofOutput({ proofRoot: "/data/proofs/run", fs, currentUid: 1000 });
+  assert.equal(plan.ok, false);
+  assert.ok(plan.blocked_by.includes("proof_root_ancestor_sticky_foreign_owned"), plan.blocked_by.join(", "));
+  assert.equal(replaceableByOthers(0o41777, 4242, 1000), true);
+
+  const written = writeCensusProof({
+    proofRoot: "/data/proofs/run", runId: "RUN-G2", result: runNode00ThreeRootCensusCheck(),
+    scannedRoots: [], fs, currentUid: 1000,
+  });
+  assert.equal(written.ok, false);
+  assert.deepEqual(fs.state.made, [], "a directory was created under a foreign-owned sticky ancestor");
 });
 
 test("the writer refuses every other unsafe output location with a NAMED block", () => {
@@ -800,19 +855,52 @@ test("M13 an unrelated or unverifiable temporary path is never removed", () => {
   assert.deepEqual(fs.state.removed, [], "a foreign temp directory was deleted");
   assert.deepEqual(fs.state.made, [], "a temp directory was created over a stale one");
 
-  // A temp dir whose marker cannot be verified is reported, never silently removed.
+  // A temp dir that was SUBSTITUTED since we created it is reported, never removed —
+  // deleting it would destroy someone else's directory.
   const fs2 = fakeWriterFs(SAFE_TREE);
+  let statCount = 0;
+  const baseLstat2 = fs2.lstatSync;
+  fs2.lstatSync = (p) => {
+    const st = baseLstat2(p);
+    if (p === "/data/proofs/run/.tmp-RUN-13B") {
+      statCount += 1;
+      if (statCount > 1) return { ...st, ino: st.ino + 5000 }; // swapped under us
+    }
+    return st;
+  };
   fs2.writeFileSync = (p, d) => {
     if (p.endsWith("manifest.json")) throw Object.assign(new Error("EIO"), { code: "EIO" });
     fs2.state.wrote.push(p);
     fs2.state.files[p] = d;
   };
-  fs2.readFileSync = () => JSON.stringify({ run_id: "SOMEONE-ELSE", marker: RUN_MARKER_FILENAME });
   const out = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-13B", result, scannedRoots: [], fs: fs2, currentUid: 1000 });
   assert.equal(out.ok, false);
   assert.ok(out.blocked_by.includes("RECOVERABLE_TEMP_ARTIFACT_REQUIRES_HUMAN"), out.blocked_by.join(", "));
-  assert.ok(out.blocked_by.includes("temp_dir_marker_mismatch"));
-  assert.deepEqual(fs2.state.removed, [], "a directory with a foreign marker was deleted");
+  assert.ok(out.blocked_by.includes("temp_dir_substituted_since_creation"));
+  assert.deepEqual(fs2.state.removed, [], "a substituted directory was deleted");
+});
+
+test("G3 a failed MARKER write does not strand the temp dir — cleanup binds to identity, not the marker", () => {
+  // Previously cleanup required reading the marker, so a marker-write failure left the
+  // directory behind and every same-run-id retry returned STALE_TEMP…
+  const result = runNode00ThreeRootCensusCheck();
+  const fs = fakeWriterFs(SAFE_TREE);
+  let failMarker = true;
+  const realWrite = fs.writeFileSync;
+  fs.writeFileSync = (p, d) => {
+    if (failMarker && p.endsWith(RUN_MARKER_FILENAME)) throw Object.assign(new Error("EIO"), { code: "EIO" });
+    realWrite(p, d);
+  };
+  const first = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-G3", result, scannedRoots: [], fs, currentUid: 1000 });
+  assert.equal(first.ok, false);
+  assert.ok(first.blocked_by.includes("proof_write_failed"), first.blocked_by.join(", "));
+  assert.ok(fs.state.removed.includes("/data/proofs/run/.tmp-RUN-G3"), "temp dir was stranded by a marker failure");
+  assert.ok(!first.blocked_by.includes("RECOVERABLE_TEMP_ARTIFACT_REQUIRES_HUMAN"));
+
+  failMarker = false;
+  const retry = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-G3", result, scannedRoots: [], fs, currentUid: 1000 });
+  assert.equal(retry.ok, true, retry.blocked_by?.join(", "));
+  assert.ok(!retry.blocked_by.includes("STALE_TEMP_RUN_REQUIRES_OPERATOR_RECOVERY"));
 });
 
 test("the writer promotes by SAME-PARENT rename and emits the full artifact set", () => {
