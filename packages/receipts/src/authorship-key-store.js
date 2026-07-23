@@ -565,10 +565,13 @@ async function classifyActivePointer(demaHome) {
 }
 
 // P1-1 (Greptile): an established identity that was actually USED (its
-// fingerprint is bound into a signed receipt) must never be silently replaced
-// by recovery — that would orphan every receipt/genesis proof under the old
-// fingerprint. Scan $DEMA_HOME/receipts for any authorship receipt bound to
-// the failed fingerprint. Any read hazard is treated as "bound" (fail closed).
+// fingerprint bound into ANY signed artifact) must never be silently replaced
+// by recovery — that would orphan those artifacts under the old fingerprint.
+// Artifacts live under $DEMA_HOME/receipts in several shapes: authorship-*.json,
+// verdict-*.json, canonical-ledger.ndjson, and future kinds. So scan EVERY
+// regular file under receipts for the fingerprint, not just authorship-*
+// (re-review finding: canonical-ledger/verdict artifacts escaped the narrow
+// filter). Any read hazard is treated as bound (fail closed).
 async function anyReceiptBindsFingerprint(demaHome, fingerprint) {
   if (!fingerprint) return true; // unknown fingerprint → cannot prove unused
   const home =
@@ -581,27 +584,19 @@ async function anyReceiptBindsFingerprint(demaHome, fingerprint) {
   if (dirInfo.isSymbolicLink() || !dirInfo.isDirectory()) return true; // hazard
   let entries;
   try {
-    entries = await readdir(receiptsDir);
+    entries = await readdir(receiptsDir, { withFileTypes: true });
   } catch {
     return true; // unreadable → fail closed
   }
-  for (const name of entries) {
-    if (!name.startsWith("authorship-") || !name.endsWith(".json")) continue;
-    const raw = await readFileNoFollow(join(receiptsDir, name));
+  for (const entry of entries) {
+    // A subdirectory of receipts could hold artifacts too — cannot prove
+    // unused without descending, so fail closed on any non-file entry.
+    if (!entry.isFile()) return true;
+    const raw = await readFileNoFollow(join(receiptsDir, entry.name));
     if (raw === null) return true; // present-but-unreadable → fail closed
-    // Cheap substring probe first, then confirm it is a real bound field.
-    if (!raw.includes(fingerprint)) continue;
-    try {
-      const doc = JSON.parse(raw);
-      const bound =
-        doc?.public_key_fingerprint === fingerprint ||
-        doc?.operator_public_key_fingerprint === fingerprint ||
-        doc?.body?.public_key_fingerprint === fingerprint ||
-        doc?.body?.operator_public_key_fingerprint === fingerprint;
-      if (bound) return true;
-    } catch {
-      return true; // malformed receipt mentioning the fp → fail closed
-    }
+    // The fingerprint appearing anywhere in a signed artifact means the
+    // identity was used — authorship/verdict/canonical-ledger alike.
+    if (raw.includes(fingerprint)) return true;
   }
   return false;
 }
@@ -778,50 +773,9 @@ export async function migrateLegacyAuthorshipKey({
   }
 
   const ap = activeKeyPaths(demaHome);
-  // P1-3 (Greptile): an existing pointer is not a blanket "already_migrated".
-  // A VALID pointer means migration is done; a genesis-invalid one (e.g. a
-  // migration whose post-verify failed) must be recoverable HERE — the legacy
-  // pair is still on disk — instead of stranding the operator (init is then
-  // blocked by the preserved legacy files). Anything else fails closed.
-  const preCls = await classifyActivePointer(demaHome);
-  if (preCls.state === "valid") {
-    return Object.freeze({
-      schema: KEY_MIGRATE_SCHEMA,
-      migrated: false,
-      error: "already_migrated",
-      verified_existing_identity: true,
-      boundary: buildBoundary(false),
-    });
-  }
-  if (preCls.state === "prior_invalid" || preCls.state === "untracked_invalid") {
-    return Object.freeze({
-      schema: KEY_MIGRATE_SCHEMA,
-      migrated: false,
-      error: "recovery_required",
-      reason:
-        preCls.state === "prior_invalid"
-          ? "prior_identity_recovery_required"
-          : "untracked_invalid_active_pointer",
-      loader_error: preCls.loader_error,
-      boundary: buildBoundary(false),
-    });
-  }
-  // genesis_invalid → quarantine (if unused + safe) then fall through and
-  // re-migrate from the still-present legacy pair; absent → migrate normally.
-  if (preCls.state === "genesis_invalid") {
-    const rec = await attemptGenesisRecovery(demaHome, preCls);
-    if (!rec.recovered) {
-      return Object.freeze({
-        schema: KEY_MIGRATE_SCHEMA,
-        migrated: false,
-        error: "recovery_required",
-        reason: rec.reason,
-        loader_error: preCls.loader_error,
-        boundary: buildBoundary(false),
-      });
-    }
-  }
 
+  // Read the legacy pair up front (read-only, no mutation) and verify it is a
+  // usable Ed25519 pair BEFORE taking the lease.
   const paths = keyPaths(demaHome);
   const privateKeyPem = await readKeyFile(paths, paths.privateKey);
   const publicKeyPem = await readKeyFile(paths, paths.publicKey);
@@ -833,10 +787,8 @@ export async function migrateLegacyAuthorshipKey({
       boundary: buildBoundary(false),
     });
   }
-
   const pair = pairConsistency(privateKeyPem, publicKeyPem);
   if (pair.error === "unsupported_key_algorithm") {
-    // Finding #2: refuse a non-Ed25519 legacy pair BEFORE any mutation.
     return Object.freeze({
       schema: KEY_MIGRATE_SCHEMA,
       migrated: false,
@@ -853,8 +805,10 @@ export async function migrateLegacyAuthorshipKey({
     });
   }
 
-  // Finding #1: one exclusive transition owner. Finding #3: a generation from
-  // an interrupted prior migration is resumed, not fought.
+  // Finding #1 + re-review New-2: acquire the exclusive lease FIRST, then
+  // classify/recover the active pointer UNDER it. Doing the pointer recovery
+  // pre-lease let a concurrent init establish an identity in the gap that
+  // migrate would then overwrite. All pointer mutation is now single-owner.
   const lease = await acquireIdentityLease(ap);
   if (!lease.acquired) {
     return Object.freeze({
@@ -866,6 +820,46 @@ export async function migrateLegacyAuthorshipKey({
   }
 
   try {
+    // P1-3: an existing pointer is not a blanket "already_migrated" — classify
+    // under the lease. valid → done; genesis-invalid → quarantine (if unused +
+    // safe) and re-migrate from the still-present legacy pair; else fail closed.
+    const preCls = await classifyActivePointer(demaHome);
+    if (preCls.state === "valid") {
+      return Object.freeze({
+        schema: KEY_MIGRATE_SCHEMA,
+        migrated: false,
+        error: "already_migrated",
+        verified_existing_identity: true,
+        boundary: buildBoundary(false),
+      });
+    }
+    if (preCls.state === "prior_invalid" || preCls.state === "untracked_invalid") {
+      return Object.freeze({
+        schema: KEY_MIGRATE_SCHEMA,
+        migrated: false,
+        error: "recovery_required",
+        reason:
+          preCls.state === "prior_invalid"
+            ? "prior_identity_recovery_required"
+            : "untracked_invalid_active_pointer",
+        loader_error: preCls.loader_error,
+        boundary: buildBoundary(false),
+      });
+    }
+    if (preCls.state === "genesis_invalid") {
+      const rec = await attemptGenesisRecovery(demaHome, preCls);
+      if (!rec.recovered) {
+        return Object.freeze({
+          schema: KEY_MIGRATE_SCHEMA,
+          migrated: false,
+          error: "recovery_required",
+          reason: rec.reason,
+          loader_error: preCls.loader_error,
+          boundary: buildBoundary(false),
+        });
+      }
+    }
+
     await mkdir(ap.generationsDir, { recursive: true });
     const expected = {
       public_key_fingerprint: pair.fingerprint,

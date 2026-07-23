@@ -115,6 +115,29 @@ status; each confirmed against the code, then fixed:
 Tests: 6 new (3 P1 + 3 fail-closed coverage). Identity suite 72 green; 212
 across affected suites; coverage 95.33 L / 84.30 B / 97.73 F ≥ 95/84/95.
 
+### Greptile re-review (New-1 / New-2) — 2 further P1s from my P1 fixes
+
+Greptile re-reviewed the P1 fixes and found two more real P1s (its first-round
+comments correctly showed OUTDATED for P1-1/P1-2; the migration one carried
+forward). Both confirmed and fixed:
+
+- **New-1 established artifacts escape detection.** `anyReceiptBindsFingerprint`
+  scanned only `authorship-*.json`, so an identity that signed a
+  `canonical-ledger.ndjson` entry or a `verdict-*.json` bundle (but no
+  authorship receipt) was misclassified as unused and replaced. Fix: scan
+  EVERY regular file under `receipts/` for the fingerprint (any subdir or
+  unreadable entry → fail closed).
+- **New-2 migration overwrites a concurrent identity.** Migrate classified and
+  quarantined the pointer BEFORE acquiring the lease, so a concurrent init
+  could establish a valid identity in the gap that migrate then overwrote. Fix:
+  acquire the lease FIRST, then classify/recover the pointer under it — all
+  pointer mutation is single-owner. A held lease blocks migrate recovery with
+  zero mutation.
+
+Tests: 3 new (New-1 canonical-ledger + verdict artifacts detected; New-2
+lease-gated migrate recovery). Identity suite 75 green; 196 across affected
+suites; coverage 95.33 L / 84.28 B / 97.73 F ≥ 95/84/95.
+
 ## Non-claims
 
 No signer rotation · real `~/.dema` signer untouched · PR #411/#412/#413 merged

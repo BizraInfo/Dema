@@ -1187,3 +1187,53 @@ describe("1D-P1 fail-closed coverage", () => {
     assert.equal(r.reason, "established_identity_recovery_required");
   });
 });
+
+describe("1D-P1 re-review (New-1/New-2)", () => {
+  it("New-1 a canonical-ledger artifact (not authorship-*.json) marks the identity USED", async () => {
+    const home = await initedHome();
+    const pair = await loadActiveKeyPair(home);
+    mkdirSync(join(home, "receipts"), { recursive: true });
+    // A non-authorship artifact binding the fingerprint (ndjson ledger shape).
+    writeFileSync(
+      join(home, "receipts", "canonical-ledger.ndjson"),
+      JSON.stringify({ entry: 1, operator_public_key_fingerprint: pair.fingerprint }) + "\n",
+    );
+    writeFileSync(join(pair.generation_path, "metadata.json"), "{corrupt");
+    const r = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(r.error, "recovery_required");
+    assert.equal(r.reason, "established_identity_recovery_required");
+    assert.equal(existsSync(activeKeyPaths(home).activePointer), true, "not quarantined");
+  });
+
+  it("New-1 a verdict-*.json artifact also marks the identity USED", async () => {
+    const home = await initedHome();
+    const pair = await loadActiveKeyPair(home);
+    mkdirSync(join(home, "receipts"), { recursive: true });
+    writeFileSync(
+      join(home, "receipts", "verdict-deadbeef.json"),
+      JSON.stringify({ body: { public_key_fingerprint: pair.fingerprint } }),
+    );
+    writeFileSync(join(pair.generation_path, "metadata.json"), "{corrupt");
+    const r = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(r.reason, "established_identity_recovery_required");
+  });
+
+  it("New-2 migrate recovery is lease-gated — a held lease blocks it with ZERO mutation", async () => {
+    const legacy = generateEd25519Keypair();
+    const home = legacyHome1c(legacy);
+    await migrateLegacyAuthorshipKey({ consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW });
+    const pair = await loadActiveKeyPair(home);
+    writeFileSync(join(pair.generation_path, "metadata.json"), "{corrupt"); // strand
+    const ap = activeKeyPaths(home);
+    const pointerBefore = readFileSync(ap.activePointer, "utf8");
+    // A concurrent owner holds the lease (live pid).
+    mkdirSync(ap.transactionsDir, { recursive: true });
+    writeFileSync(ap.identityLease, JSON.stringify({ pid: process.pid }));
+    const r = await migrateLegacyAuthorshipKey({ consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(r.migrated, false);
+    assert.equal(r.error, "identity_transition_in_progress");
+    // The pointer was NOT quarantined pre-lease (the race the fix closes).
+    assert.equal(readFileSync(ap.activePointer, "utf8"), pointerBefore, "no pre-lease mutation");
+    assert.equal(readdirSync(ap.transactionsDir).some((f) => f.startsWith("quarantine-")), false);
+  });
+});
