@@ -80,7 +80,10 @@ export async function gatherNode0ActivationObservations({
   const safePresent = (p) => {
     if (!exists(p)) return false;
     const info = lstat(p);
-    return Boolean(info) && !info.isSymbolicLink();
+    // Finding B (1C): must be a REGULAR file, not merely non-symlink. A
+    // directory / FIFO / socket / device the loader would reject must not
+    // count as present. isFile() (via lstat) is already false for symlinks.
+    return Boolean(info) && info.isFile();
   };
   const home = homedir || osHomedir();
   const demaHome = env.DEMA_HOME || join(home, ".dema");

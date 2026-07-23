@@ -362,9 +362,60 @@ async function activateGeneration(ap, { fingerprint, now, previous }) {
   return { pointerDoc, pointerHash: sha256(bytes) };
 }
 
-// Finding #3 (review P1): a generation dir may already exist from an
-// interrupted transition. Classify it so a retry resumes instead of dead-
-// locking on O_EXCL. Returns "absent" | "complete" | "incomplete" | "conflict".
+// Read a generation file only if it is a REGULAR non-symlink file. Returns
+// { kind: "absent" | "irregular" | "content", content }. A directory / FIFO /
+// socket / symlink at a generation-file path is "irregular" (never content).
+async function readRegularGenFile(path) {
+  const info = await lstatIfExists(path);
+  if (!info) return { kind: "absent" };
+  if (info.isSymbolicLink() || !info.isFile()) return { kind: "irregular" };
+  const content = await readFileNoFollow(path);
+  return content === null ? { kind: "irregular" } : { kind: "content", content };
+}
+
+// Full semantic verification of a generation dir against an expected pair —
+// the SAME contract loadActiveKeyPair enforces (Finding A, 1C). Presence of
+// three files is NOT completeness; only parse+schema+fingerprint+algorithm+
+// hashes+pair convergence is. Returns { ok:true } | { ok:false, error }.
+function verifyGenerationContent({ priv, pub, metaRaw, fingerprint }) {
+  if (priv === null || pub === null) return { ok: false, error: "generation_unsafe" };
+  if (metaRaw === null) return { ok: false, error: "metadata_corrupt" };
+  let metadata;
+  try {
+    metadata = JSON.parse(metaRaw);
+  } catch {
+    return { ok: false, error: "metadata_corrupt" };
+  }
+  if (
+    !metadata ||
+    metadata.schema !== GENERATION_METADATA_SCHEMA ||
+    metadata.fingerprint !== fingerprint ||
+    metadata.algorithm !== REQUIRED_KEY_ALGORITHM
+  ) {
+    return { ok: false, error: "metadata_corrupt" };
+  }
+  if (
+    sha256(priv) !== metadata.private_content_hash ||
+    sha256(pub) !== metadata.public_content_hash
+  ) {
+    return { ok: false, error: "content_hash_mismatch" };
+  }
+  const pair = pairConsistency(priv, pub);
+  if (pair.error === "unsupported_key_algorithm") {
+    return { ok: false, error: "unsupported_key_algorithm" };
+  }
+  if (!pair.ok || pair.fingerprint !== fingerprint) {
+    return { ok: false, error: "pair_mismatch" };
+  }
+  return { ok: true };
+}
+
+// Finding #3 (review P1) + Finding A (1C): a generation dir may already exist
+// from an interrupted transition. Classify it SEMANTICALLY so a retry resumes
+// only when the content is actually valid — never on mere file presence.
+// States: "absent" | "complete_verified" | "incomplete_repairable" |
+// "conflict" | "recovery_required". metadataMalformed flags a present-but-bad
+// metadata that repair may regenerate from the still-verified legacy pair.
 async function classifyGeneration(ap, fingerprint, expected) {
   const generationPath = join(ap.generationsDir, fingerprint);
   const info = await lstatIfExists(generationPath);
@@ -372,21 +423,85 @@ async function classifyGeneration(ap, fingerprint, expected) {
   if (info.isSymbolicLink() || !info.isDirectory()) {
     return { state: "conflict", generationPath };
   }
-  const priv = await readFileNoFollow(join(generationPath, "private.pem"));
-  const pub = await readFileNoFollow(join(generationPath, "public.pem"));
-  const metaRaw = await readFileNoFollow(join(generationPath, "metadata.json"));
-  const present = [priv, pub, metaRaw].filter((x) => x !== null).length;
-  if (present === 0) return { state: "incomplete", generationPath };
-  // Any existing byte must match the expected legacy pair — never overwrite
-  // differing content (that is a conflict requiring adjudication).
+
+  const privR = await readRegularGenFile(join(generationPath, "private.pem"));
+  const pubR = await readRegularGenFile(join(generationPath, "public.pem"));
+  const metaR = await readRegularGenFile(join(generationPath, "metadata.json"));
+
+  // Any irregular (non-regular-file) entry at a key/metadata path is a hazard,
+  // never silently repaired.
+  if ([privR, pubR, metaR].some((r) => r.kind === "irregular")) {
+    return { state: "recovery_required", generationPath };
+  }
+
+  const priv = privR.kind === "content" ? privR.content : null;
+  const pub = pubR.kind === "content" ? pubR.content : null;
+  const metaRaw = metaR.kind === "content" ? metaR.content : null;
+
+  // A present key byte that differs from the expected legacy pair is a genuine
+  // conflict — never overwrite differing key material.
   if (priv !== null && priv !== expected.private_key_pem) {
     return { state: "conflict", generationPath };
   }
   if (pub !== null && pub !== expected.public_key_pem) {
     return { state: "conflict", generationPath };
   }
-  if (present < 3) return { state: "incomplete", generationPath };
-  return { state: "complete", generationPath };
+
+  // Full verification passes → truly complete.
+  const verified = verifyGenerationContent({ priv, pub, metaRaw, fingerprint });
+  if (verified.ok) return { state: "complete_verified", generationPath };
+
+  // Not verified, but present key files match the expected pair. Repairable
+  // ONLY when the failure is a regenerable metadata problem (missing or
+  // malformed) — key material is absent or the exact expected legacy bytes.
+  const metadataMalformed = metaRaw !== null && verified.error === "metadata_corrupt";
+  const metadataRegenerable =
+    verified.error === "metadata_corrupt" || verified.error === "generation_unsafe";
+  if (metadataRegenerable) {
+    return { state: "incomplete_repairable", generationPath, metadataMalformed };
+  }
+  // content_hash_mismatch / pair_mismatch on present, expected-matching keys
+  // means the on-disk state is internally inconsistent beyond safe repair.
+  return { state: "recovery_required", generationPath };
+}
+
+// Preserve malformed metadata as recovery evidence, then atomically install
+// canonical metadata (Finding A repair rule — never delete ambiguous material).
+async function repairGenerationMetadata(generationPath, keys, { now, source }) {
+  const metaPath = join(generationPath, "metadata.json");
+  const existing = await readRegularGenFile(metaPath);
+  if (existing.kind === "content") {
+    await writeIfAbsent(
+      join(generationPath, "metadata.json.recovery"),
+      existing.content,
+      0o600,
+    );
+  }
+  const metadata = {
+    schema: GENERATION_METADATA_SCHEMA,
+    fingerprint: keys.public_key_fingerprint,
+    generation_id: keys.public_key_fingerprint,
+    algorithm: REQUIRED_KEY_ALGORITHM,
+    private_content_hash: sha256(keys.private_key_pem),
+    public_content_hash: sha256(keys.public_key_pem),
+    created_at: now,
+    source,
+  };
+  const bytes = `${JSON.stringify(metadata, null, 2)}\n`;
+  const staged = `${metaPath}.next`;
+  let handle;
+  try {
+    handle = await open(
+      staged,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | NO_FOLLOW,
+      0o644,
+    );
+    await handle.writeFile(bytes, "utf8");
+    await handle.sync().catch(() => {});
+  } finally {
+    await handle?.close();
+  }
+  await rename(staged, metaPath);
 }
 
 async function readActivePointer(ap) {
@@ -601,7 +716,10 @@ export async function migrateLegacyAuthorshipKey({
       public_key_pem: publicKeyPem,
     };
     const cls = await classifyGeneration(ap, pair.fingerprint, expected);
-    if (cls.state === "conflict") {
+    // Finding A (1C): only "absent" / "complete_verified" / "incomplete_
+    // repairable" may proceed. "conflict" / "recovery_required" halt with the
+    // evidence preserved — never a success over material we cannot verify.
+    if (cls.state === "conflict" || cls.state === "recovery_required") {
       return Object.freeze({
         schema: KEY_MIGRATE_SCHEMA,
         migrated: false,
@@ -610,17 +728,50 @@ export async function migrateLegacyAuthorshipKey({
         boundary: buildBoundary(false),
       });
     }
-    // absent | incomplete | complete → write-if-absent fills the gap only,
-    // never overwriting a verified byte, then (re)activate the pointer.
-    const { generationPath } = await writeGeneration(ap, expected, {
+
+    const keys = {
+      public_key_fingerprint: pair.fingerprint,
+      private_key_pem: privateKeyPem,
+      public_key_pem: publicKeyPem,
+    };
+    // write-if-absent fills only missing files; a present-but-malformed
+    // metadata is explicitly repaired (bad bytes preserved as recovery).
+    const { generationPath } = await writeGeneration(ap, keys, {
       now,
       source: "legacy_migration",
     });
+    if (cls.state === "incomplete_repairable" && cls.metadataMalformed) {
+      await repairGenerationMetadata(cls.generationPath, keys, {
+        now,
+        source: "legacy_migration",
+      });
+    }
     await activateGeneration(ap, {
       fingerprint: pair.fingerprint,
       now,
       previous: null,
     });
+
+    // Finding B (1C): a transition is complete only when the canonical
+    // post-transition loader ACCEPTS the result. Verify before claiming
+    // success — presence of files is not convergence.
+    const verified = await loadActiveKeyPair(demaHome);
+    if (
+      !verified.ok ||
+      verified.fingerprint !== pair.fingerprint ||
+      verified.generation_path !== generationPath
+    ) {
+      return Object.freeze({
+        schema: KEY_MIGRATE_SCHEMA,
+        migrated: false,
+        error: "recovery_required",
+        transition_state: "pointer_committed_verification_failed",
+        generation_path: generationPath,
+        loader_error: verified.ok ? "fingerprint_or_path_mismatch" : verified.error,
+        boundary: buildBoundary(true),
+      });
+    }
+
     return Object.freeze({
       schema: KEY_MIGRATE_SCHEMA,
       migrated: true,
@@ -712,6 +863,24 @@ export async function initAuthorshipKey({
       now,
       previous: null,
     });
+
+    // Finding B (1C): init, like migration, is complete only when the
+    // canonical loader accepts the freshly established identity.
+    const verified = await loadActiveKeyPair(demaHome);
+    if (
+      !verified.ok ||
+      verified.fingerprint !== keys.public_key_fingerprint ||
+      verified.generation_path !== generationPath
+    ) {
+      return Object.freeze({
+        schema: KEY_INIT_SCHEMA,
+        initialized: false,
+        error: "recovery_required",
+        transition_state: "pointer_committed_verification_failed",
+        loader_error: verified.ok ? "fingerprint_or_path_mismatch" : verified.error,
+        boundary: buildBoundary(true),
+      });
+    }
 
     return Object.freeze({
       schema: KEY_INIT_SCHEMA,
