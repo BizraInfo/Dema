@@ -280,6 +280,24 @@ finding, fixed red-first (1E.3):**
   claim's value (tests A9–A11 + updated §10 contract). CI on `613b93a`
   settled 9/9 SUCCESS including CodeQL (alerts 350/351/352 all closed).
 
+**Fourth Greptile pass (exact head `c1e0572`, 2026-07-23T17:54Z) — one live
+finding, fixed red-first (1E.4):**
+
+- **Finding F — unvalidated pointer snapshot publishes lineage (TOCTOU):**
+  the inspector re-read `active-key.json` after classification; a swap
+  between the loader's validated read and that second read could substitute
+  bytes the loader never accepted, whose lineage would then be published
+  under a VALID classification. Fixed at the root: the inspector performs
+  **no pointer read of its own**. `loadActiveKeyPair` now carries
+  `previous_generation` from its single accepted snapshot; the classifier
+  passes through the loader's fingerprint, containment-verified path,
+  lineage, and pointer hash for VALID, and its own one diagnostic read
+  (`readActivePointer` raw + doc) supplies every claim and claim-hash for
+  rejected states. Structural test A13 asserts the inspector body contains
+  no `readFileNoFollow`/`JSON.parse`; A12 proves the loader carries the
+  accepted lineage; behavioral coherence asserts the published hash equals
+  the loader's `active_pointer_hash`.
+
 ## Non-claims
 
 ```text

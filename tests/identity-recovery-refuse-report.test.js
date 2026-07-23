@@ -801,6 +801,56 @@ describe("1E.1-A generation-path evidence containment", () => {
     assert.equal(report.pointer_claimed_previous_generation_hash, null);
   });
 
+  it("A12 the loader carries the accepted snapshot's lineage itself", async () => {
+    const home = await initedHome();
+    const genesis = await store.loadActiveKeyPair(home);
+    assert.equal(genesis.ok, true);
+    assert.equal("previous_generation" in genesis, true);
+    assert.equal(genesis.previous_generation, null);
+    const p = readPointer(home);
+    writePointer(home, { ...p, previous_generation: "e".repeat(64) });
+    const rotated = await store.loadActiveKeyPair(home);
+    assert.equal(rotated.ok, true);
+    assert.equal(rotated.previous_generation, "e".repeat(64));
+  });
+
+  it("A13 the inspector never re-reads the pointer — one snapshot only", async () => {
+    // Structural single-snapshot proof: every promoted field derives from the
+    // classifier's validated read; a second read could parse replacement
+    // bytes the loader never accepted (Greptile round-4 TOCTOU).
+    const source = readFileSync(
+      new URL(
+        "../packages/receipts/src/authorship-key-store.js",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const start = source.indexOf("export async function inspectIdentityRecovery");
+    assert.notEqual(start, -1);
+    const open = source.indexOf("{", source.indexOf(")", start));
+    let depth = 0;
+    let end = -1;
+    for (let i = open; i < source.length; i += 1) {
+      if (source[i] === "{") depth += 1;
+      else if (source[i] === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          end = i;
+          break;
+        }
+      }
+    }
+    const body = source.slice(open, end + 1);
+    assert.doesNotMatch(body, /readFileNoFollow\s*\(/);
+    assert.doesNotMatch(body, /JSON\.parse\s*\(/);
+
+    // Behavioral coherence: the published hash IS the loader's accepted hash.
+    const home = await initedHome();
+    const pair = await store.loadActiveKeyPair(home);
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.active_pointer_hash, pair.active_pointer_hash);
+  });
+
   it("A8 the dangling-genesis claim from R20 is hash-only, not republished", async () => {
     const home = await homeInvalidGenesisPointer();
     const claimed = readPointer(home).generation_path;

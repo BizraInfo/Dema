@@ -524,7 +524,7 @@ async function readActivePointer(ap) {
   try {
     doc = JSON.parse(raw);
   } catch {
-    return { error: "malformed_pointer" };
+    return { error: "malformed_pointer", raw };
   }
   if (
     !doc ||
@@ -533,7 +533,7 @@ async function readActivePointer(ap) {
     !/^[0-9a-f]{64}$/.test(doc.generation_fingerprint) ||
     typeof doc.generation_path !== "string"
   ) {
-    return { error: "malformed_pointer" };
+    return { error: "malformed_pointer", raw };
   }
   return { doc, raw };
 }
@@ -601,13 +601,18 @@ async function classifyPointerAuthority(demaHome) {
     return {
       class: "VALID_ACTIVE_IDENTITY",
       fingerprint: load.fingerprint,
-      // The ONLY trusted generation path: the canonical loader's own
-      // containment-verified result — never a pointer field echo.
+      // Trusted facts come ONLY from the loader's single accepted snapshot —
+      // containment-verified path, recorded lineage, and pointer hash. Never
+      // a pointer re-read (a swap between reads could substitute bytes the
+      // loader never accepted).
       generationPath: load.generation_path,
+      previousGeneration: load.previous_generation,
+      pointerHash: load.active_pointer_hash,
     };
   }
   // Re-read the pointer record (read-only) so genesis/prior strands are
-  // distinguishable; a mid-read vanish is UNKNOWN, never re-normalized.
+  // distinguishable; a mid-read vanish is UNKNOWN, never re-normalized. This
+  // ONE snapshot supplies every claim (and claim hash) the inspector reports.
   const pointer = await readActivePointer(ap);
   const doc = pointer.error ? null : pointer.doc;
   let cls;
@@ -623,7 +628,7 @@ async function classifyPointerAuthority(demaHome) {
   } else {
     cls = LOAD_ERROR_TO_RECOVERY_CLASS[load.error] ?? "RECOVERY_STATE_UNKNOWN";
   }
-  return { class: cls, loader_error: load.error, doc };
+  return { class: cls, loader_error: load.error, doc, raw: pointer.raw ?? null };
 }
 
 function initRecoveryRefusal(cls) {
@@ -718,19 +723,13 @@ export async function inspectIdentityRecovery(demaHome) {
   const recoveryClass = inProgress
     ? "IDENTITY_TRANSITION_IN_PROGRESS"
     : pointerCls.class;
-  const raw = await readFileNoFollow(ap.activePointer);
+  // Single-snapshot rule (Greptile round-4 TOCTOU): the inspector performs NO
+  // pointer read of its own. Trusted facts come from the loader's accepted
+  // snapshot (via the classifier); claims and claim-hashes come from the
+  // classifier's one diagnostic read. A re-read here could parse replacement
+  // bytes that were never validated.
   const doc = pointerCls.doc ?? null;
-  // For a loader-ACCEPTED pointer the on-disk record (the same bytes bound by
-  // active_pointer_hash) is authoritative — its recorded lineage may be
-  // published. Rejected docs never reach this.
-  let acceptedDoc = null;
-  if (pointerCls.class === "VALID_ACTIVE_IDENTITY" && raw !== null) {
-    try {
-      acceptedDoc = JSON.parse(raw);
-    } catch {
-      acceptedDoc = null;
-    }
-  }
+  const valid = pointerCls.class === "VALID_ACTIVE_IDENTITY";
   const fingerprint =
     pointerCls.fingerprint ?? doc?.generation_fingerprint ?? null;
   // 1E.1 Finding A: a pointer document the canonical loader REJECTED is
@@ -743,7 +742,7 @@ export async function inspectIdentityRecovery(demaHome) {
   let generationPath = null;
   let generationPathState = "ABSENT";
   let claimedPathHash = null;
-  if (pointerCls.class === "VALID_ACTIVE_IDENTITY") {
+  if (valid) {
     generationPath = pointerCls.generationPath ?? null;
     generationPathState = "VERIFIED_CONTAINED";
   } else if (claimedPath !== null) {
@@ -760,7 +759,11 @@ export async function inspectIdentityRecovery(demaHome) {
     schema: "bizra.dema.identity_recovery_inspection.v0.1",
     recovery_class: recoveryClass,
     active_pointer_path: ap.activePointer,
-    active_pointer_hash: raw === null ? null : sha256(raw),
+    active_pointer_hash: valid
+      ? (pointerCls.pointerHash ?? null)
+      : pointerCls.raw != null
+        ? sha256(pointerCls.raw)
+        : null,
     generation_fingerprint: fingerprint,
     generation_path: generationPath,
     generation_path_state: generationPathState,
@@ -771,13 +774,9 @@ export async function inspectIdentityRecovery(demaHome) {
     // is not trust. It is published only from a loader-ACCEPTED pointer (the
     // authoritative active record); otherwise the report carries only a hash
     // of the claim. Genesis-vs-prior diagnosis stays in recovery_class.
-    previous_generation:
-      pointerCls.class === "VALID_ACTIVE_IDENTITY"
-        ? (acceptedDoc?.previous_generation ?? null)
-        : null,
+    previous_generation: valid ? (pointerCls.previousGeneration ?? null) : null,
     pointer_claimed_previous_generation_hash:
-      pointerCls.class !== "VALID_ACTIVE_IDENTITY" &&
-      typeof doc?.previous_generation === "string"
+      !valid && typeof doc?.previous_generation === "string"
         ? sha256(doc.previous_generation)
         : null,
     legacy_pair_presence: await isSafeExistingKeyPath(paths, paths.privateKey),
@@ -891,6 +890,9 @@ export async function loadActiveKeyPair(demaHome) {
       ok: true,
       fingerprint: pair.fingerprint,
       generation_path: generationReal,
+      // Lineage from the SAME accepted snapshot (1E.3 TOCTOU rule): consumers
+      // must never re-read the pointer to learn it.
+      previous_generation: doc.previous_generation ?? null,
       private_key_pem: privateKeyPem,
       public_key_pem: publicKeyPem,
       metadata_hash: sha256(metadataRaw),
