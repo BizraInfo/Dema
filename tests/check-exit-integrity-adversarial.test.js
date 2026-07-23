@@ -301,9 +301,9 @@ test("A7 direct TAP is isolated and a later authoritative gate executes", () => 
     "--temp-log",
   ]);
   assert.equal(isolated[1].includes("--log"), false);
-  assert.equal(commands.length, 197);
-  assert.equal(commands.indexOf(isolated), 121);
-  assert.deepEqual(commands[122].slice(0, 2), ["npm", ["run", "coverage"]]);
+  assert.equal(commands.length, 198);
+  assert.equal(commands.indexOf(isolated), 122);
+  assert.deepEqual(commands[123].slice(0, 2), ["npm", ["run", "coverage"]]);
 
   const evidence = [];
   const calls = [];

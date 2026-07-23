@@ -91,6 +91,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_METRICS_BASELINE_1A",
   "DEMA_RECOVERY_MISSION_ENGINE_1A",
   "DEMA_RECOVERY_MISSION_GATHERER_1B",
+  "NODE00_THREE_ROOT_CENSUS_0B",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2371,6 +2372,35 @@ function defaultCapabilityRows() {
         "operator mutation",
         "unattended runtime",
         "content read",
+      ],
+    }),
+    capability({
+      capability_id: "NODE00_THREE_ROOT_CENSUS_0B",
+      truth_label: "NODE00_THREE_ROOT_CENSUS_MEASURED_REPO",
+      summary:
+        "Bounded multi-root metadata census with most-specific-root ownership and privacy-preserving portable evidence.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node00-three-root-census.js"],
+        test_paths: ["tests/node00-three-root-census.test.js"],
+        review_gate_paths: [
+          "scripts/review/node00-three-root-census-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE00_THREE_ROOT_CENSUS_0B.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE00_THREE_ROOT_CENSUS_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure kernel walks explicitly declared filesystem roots through an INJECTED metadata adapter exposing only lstat/readdir/now, and enforces the ownership law: every entry belongs to the most-specific declared root containing it, so a parent traversal reaching an admitted child root records a delegated_root marker and does NOT descend (nested-root double count is zero — no device+inode is owned twice). Root admission fails closed on a missing, non-directory, symlinked, or symlink-ancestored root, and on two roots resolving to the same observed device+inode identity; root identity is revalidated after traversal, and a substitution downgrades the run to BOUNDED_PARTIAL. Symlinks are recorded as metadata and never resolved or descended; a cross-device entry is recorded as a boundary failure and never descended; unreadable and vanished entries stay explicit warning evidence, never silent omissions. Explicit max_depth / max_entries / max_millis bounds yield BOUNDED_PARTIAL, never COMPLETE. Topology (containment vs disjoint) is DERIVED from the admitted roots, never assumed. Privacy is structural: a root declared private emits no path or basename anywhere — body, entries, warnings or thrown errors — only a canonical path hash plus extension and coarse type, and a PUBLIC root nested inside a PRIVATE one also withholds its absolute path because its own would disclose the parent's as a prefix; verify() refuses a manifest that discloses either. The body is content-addressed under bizra.canonical-json.v1 and identical for the same frozen snapshot regardless of root argument order, run id, timestamp, PID or temp path; collections are digested by a chunked Merkle fold because the canonical contract caps a single array at 1024 elements. The ONLY fs surface is a separate effect adapter (apps/cli/src/commands/node00-three-root-census.js) whose external proof writer refuses a relative, missing, symlinked, symlink-ancestored, scanned-root-internal, repository-internal, DEMA_HOME-internal or attacker-writable output location, revalidates the proof-root device+inode immediately before promotion, and promotes only by same-parent atomic rename. Measured on a real 626,474-entry run across three authorized roots: 0 private filenames disclosed, 0 content bytes read, 0 symlinks followed, 0 mount boundaries crossed, 0 scanned-root mutation.",
+      what_this_does_not_prove:
+        "It does not prove content identity (no file bytes are read), semantic meaning, deduplication, a persistent asset registry, or physical file organization. It does not prove independent authenticity: verify() binds the whole body but has no external anchor, so a forger controlling every field and recomputing the hash is NOT detected. It does not prove reproducibility across a LIVE root — determinism is proven against a frozen metadata snapshot; a concurrently-written root legitimately yields a different body hash per run. Proof-root parent substitution resistance is NOT_PROVEN_AGAINST_HOSTILE_CONCURRENT_MUTATOR: the writer offers no descriptor-relative (openat2-grade) containment. It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
       ],
     }),
   ]);
