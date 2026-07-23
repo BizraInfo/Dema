@@ -104,10 +104,16 @@ export function fixtureRoots() {
   ];
 }
 
+// A fixed reference time so mtime BUCKET distributions are deterministic. Private
+// roots report buckets, never exact timestamps, so a declared reference is required.
+export const FIXTURE_REFERENCE_TIME_MS = 1_700_000_000_000;
+
 export function fixtureInput(overrides = {}) {
   return {
     roots: fixtureRoots(),
     adapter: makeMemoryAdapter(fixtureTree()),
+    reference_time_ms: FIXTURE_REFERENCE_TIME_MS,
+    implementation_worktree: "/build/implementation-worktree",
     ...overrides,
   };
 }
@@ -138,8 +144,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.log(`  result: ${result.ok ? "PASS" : "FAIL"}`);
     if (result.ok) {
       console.log(`  completeness: ${result.payload.completeness}`);
-      console.log(`  roots: ${result.payload.totals.roots}  entries: ${result.payload.totals.entries}`);
+      console.log(`  roots: ${result.payload.totals.roots}  files: ${result.payload.totals.files}`);
       console.log(`  delegated_roots: ${result.payload.totals.delegated_roots}  warnings: ${result.payload.totals.warnings}`);
+      for (const r of result.payload.per_root) {
+        console.log(`    ${r.root_id} ${r.privacy_mode} ${r.scan_state}${r.scan_reason ? ` (${r.scan_reason})` : ""}`);
+      }
       console.log(`  content_hash: ${result.content_hash}`);
     } else {
       for (const code of result.blocked_by || []) console.log(`    ${code}`);

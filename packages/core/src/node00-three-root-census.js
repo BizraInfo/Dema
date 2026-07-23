@@ -1,6 +1,6 @@
 // NODE00-THREE-ROOT-CENSUS-0B — bounded, metadata-only census across explicitly
-// declared filesystem roots, with most-specific-root ownership and a
-// privacy-preserving portable body.
+// declared filesystem roots, with most-specific-root ownership and privacy-preserving
+// portable evidence.
 //
 // PURE KERNEL. No fs / network / clock / random in this file. The census walk is
 // driven through an INJECTED metadata adapter:
@@ -9,49 +9,43 @@
 //                              type ∈ "directory" | "file" | "symlink" | "other"
 //                              throws { code } when the entry cannot be stat'ed
 //   adapter.readdir(absDir) -> string[] (bare names, no paths)
-//   adapter.now()           -> monotonic-ish millisecond number (duration bound only)
+//   adapter.now()           -> millisecond number (duration bound only)
 //
 // The adapter surface is deliberately narrow: ONLY lstat/readdir/now. This kernel
-// never reads, opens, streams, resolves, or mutates anything. It cannot: the
-// forbidden operations (readFile, open, createReadStream, stat, realpath,
-// writeFile, rename, mkdir, chmod, rm, unlink, copyFile) appear nowhere in this
-// module and are not reachable through the adapter contract. The real effect
-// adapter lives in apps/cli/src/commands/node00-three-root-census.js, which is the
-// ONLY fs surface for this slice; the external proof writer lives there too and is
-// deliberately separate from this scanner.
+// never reads, opens, streams, resolves, or mutates anything. The real effect adapter
+// lives in apps/cli/src/commands/node00-three-root-census.js, which is the ONLY fs
+// surface for this slice; the external proof writer lives there too and is separate
+// from this scanner.
 //
 // `node:path` is used only for pure string arithmetic on already-injected strings.
 //
 // OWNERSHIP LAW: every filesystem entry belongs to the most-specific explicitly
-// declared root containing it. When a parent traversal reaches a directory that is
-// itself an admitted root, the traversal records a `delegated_root` marker and does
-// NOT descend — the child root owns its own subtree. Root argument ordering cannot
-// change ownership or the deterministic body hash: roots are canonically ordered
-// before traversal and all emitted collections are sorted by a stable, privacy-safe
-// key.
+// declared root containing it. A parent traversal reaching an admitted child root
+// records a delegation marker and does NOT descend. Root argument ordering cannot
+// change ownership or the deterministic body hash.
 //
-// SYMLINK LAW: a symlink is recorded as metadata and never resolved, never
-// descended. DEVICE LAW: an entry on a different device than its owning root is
-// recorded as a boundary failure and never descended.
+// PRIVACY LAW (corrective round 0B.1 — supersedes the per-entry-hash design):
+// a root declared `private` is reported in PRIVATE_AGGREGATE mode. NO per-file record
+// of any kind leaves the kernel for that root — no path, no basename, no path hash,
+// no exact size, no exact mtime, no device, no inode, no mode, no depth, no stable
+// per-entry identifier. Only fixed-vocabulary aggregate distributions escape. An
+// unsalted per-file path hash is an offline identification oracle and is therefore NOT
+// emitted; exact size + device + inode would further strengthen correlation and are
+// not emitted either. The only per-entry row a private root may produce is a
+// delegation marker naming the child ROOT ID and nothing else.
 //
-// PRIVACY LAW: a root declared `visibility: "private"` never emits a raw path or
-// basename anywhere — not in the body, not in entries, not in warnings, not in
-// thrown error messages. Only `relative_path_hash`, `extension` and `coarse_type`
-// escape. Roots declared `visibility: "public"` (repository roots) may emit
-// normalized repository-relative paths.
-//
-// Extension/category vocabulary is REUSED AS A CONCEPT from node0-space-index.js
-// (reviewed there), deliberately re-declared here rather than imported: that module
-// carries an fs surface including mkdir/writeFile/rename/chmod/createReadStream,
-// none of which may be reachable from this slice.
+// SYMLINK LAW: recorded as metadata, never resolved, never descended.
+// DEVICE LAW: an entry on another device is recorded as a boundary failure and never
+// descended.
+// VISITATION LAW: every admitted root carries an explicit scan_state. A root never
+// reached because a census-wide bound was already exhausted is NOT_STARTED with a
+// reason — never a successfully-scanned empty root. Global COMPLETE requires every
+// root COMPLETE.
 //
 // WHAT THIS DOES NOT PROVE: content identity (no bytes are read), semantic meaning,
-// deduplication, an asset registry, or authenticity against a forger who controls
-// every field and recomputes the hash — verify() proves internal body consistency
-// only, not independent authenticity. There is no external anchor in this slice.
-//
-// M5.1B: hash-bearing slices use the ONE canonical byte contract — no local
-// serializer copy.
+// dedup, an asset registry, or independent authenticity — verify() binds the whole
+// body but has no external anchor, so a forger controlling every field and recomputing
+// the hash is not detected.
 import { isAbsolute, normalize, sep } from "node:path";
 
 import { CANONICAL_JSON_V1_ALGORITHM } from "../../canon/src/canonical-json-v1.js";
@@ -63,6 +57,14 @@ export const NODE00_THREE_ROOT_CENSUS_GO_PHRASE = "GO: node00 three root census 
 
 export const COMPLETENESS_COMPLETE = "COMPLETE";
 export const COMPLETENESS_BOUNDED_PARTIAL = "BOUNDED_PARTIAL";
+
+export const PRIVACY_PRIVATE_AGGREGATE = "PRIVATE_AGGREGATE";
+export const PRIVACY_PUBLIC_PATHS = "PUBLIC_PATHS";
+
+export const SCAN_NOT_STARTED = "NOT_STARTED";
+export const SCAN_COMPLETE = "COMPLETE";
+export const SCAN_PARTIAL = "PARTIAL";
+export const SCAN_FAILED = "FAILED";
 
 export const DEFAULT_CENSUS_BOUNDS = Object.freeze({
   max_depth: 24,
@@ -97,7 +99,45 @@ export function coarseTypeForExtension(extension) {
   return "other";
 }
 
-// Pure basename/extension arithmetic on an already-injected name string.
+// Declared bucket vocabularies. Private roots report DISTRIBUTIONS over these labels —
+// never an exact byte count or timestamp.
+export const SIZE_BUCKETS = Object.freeze([
+  "0B", "1B_1KiB", "1KiB_10KiB", "10KiB_100KiB", "100KiB_1MiB",
+  "1MiB_10MiB", "10MiB_100MiB", "100MiB_1GiB", "1GiB_PLUS",
+]);
+
+export function sizeBucket(bytes) {
+  if (!Number.isFinite(bytes) || bytes < 0) return "unknown";
+  if (bytes === 0) return "0B";
+  if (bytes < 1024) return "1B_1KiB";
+  if (bytes < 10 * 1024) return "1KiB_10KiB";
+  if (bytes < 100 * 1024) return "10KiB_100KiB";
+  if (bytes < 1024 * 1024) return "100KiB_1MiB";
+  if (bytes < 10 * 1024 * 1024) return "1MiB_10MiB";
+  if (bytes < 100 * 1024 * 1024) return "10MiB_100MiB";
+  if (bytes < 1024 * 1024 * 1024) return "100MiB_1GiB";
+  return "1GiB_PLUS";
+}
+
+export const MTIME_BUCKETS = Object.freeze([
+  "under_1d", "under_7d", "under_30d", "under_90d", "under_365d", "under_3y", "over_3y", "unknown",
+]);
+
+const DAY_MS = 86400000;
+
+export function mtimeBucket(mtimeMs, referenceMs) {
+  if (!Number.isFinite(mtimeMs) || !Number.isFinite(referenceMs)) return "unknown";
+  const age = referenceMs - mtimeMs;
+  if (age < 0) return "unknown";
+  if (age < DAY_MS) return "under_1d";
+  if (age < 7 * DAY_MS) return "under_7d";
+  if (age < 30 * DAY_MS) return "under_30d";
+  if (age < 90 * DAY_MS) return "under_90d";
+  if (age < 365 * DAY_MS) return "under_365d";
+  if (age < 3 * 365 * DAY_MS) return "under_3y";
+  return "over_3y";
+}
+
 function extensionOf(name) {
   const dot = name.lastIndexOf(".");
   if (dot <= 0 || dot === name.length - 1) return "";
@@ -109,11 +149,10 @@ export function hashText(value) {
 }
 
 // The canonical byte contract caps a single array at 1024 elements (a deliberate
-// fail-closed bound in packages/canon). A real census carries hundreds of thousands
-// of rows, so a collection is digested as a CHUNKED MERKLE FOLD: hash each row, fold
-// the row hashes in blocks, and repeat until one root hash remains. Every level uses
-// the ONE canonical contract — no local serializer, no giant intermediate string, and
-// the result is order-dependent (rows are canonically sorted before folding).
+// fail-closed bound in packages/canon). A real census carries hundreds of thousands of
+// rows, so a collection is digested as a CHUNKED MERKLE FOLD: hash each row, fold the
+// row hashes in blocks, repeat until one root hash remains. Every level uses the ONE
+// canonical contract; the fold binds row order and row count.
 export const DIGEST_FOLD_WIDTH = 512;
 
 export function foldDigest(items) {
@@ -129,7 +168,6 @@ export function foldDigest(items) {
   return level[0];
 }
 
-// All-false boundary invariant. Keys mirror the capability-truth-registry row.
 export function node00ThreeRootCensusBoundary() {
   return Object.freeze({
     execution_allowed: false,
@@ -145,6 +183,12 @@ export function node00ThreeRootCensusBoundary() {
 
 const BOUNDARY_KEYS = Object.freeze(Object.keys(node00ThreeRootCensusBoundary()).sort());
 
+// Fields that must NEVER appear on any row attributed to a PRIVATE_AGGREGATE root.
+export const PRIVATE_FORBIDDEN_ENTRY_FIELDS = Object.freeze([
+  "relative_path", "relative_path_hash", "basename", "basename_hash", "entry_id",
+  "size_bytes", "mtime_ms", "mtime_iso", "device", "inode", "mode", "depth",
+]);
+
 function normalizedRootPath(value) {
   const normalized = normalize(value);
   if (normalized.length > 1 && normalized.endsWith(sep)) return normalized.slice(0, -1);
@@ -155,13 +199,15 @@ function joinPath(dir, name) {
   return dir === sep ? `${sep}${name}` : `${dir}${sep}${name}`;
 }
 
-// True when `child` is strictly inside `parent` (both normalized absolute paths).
 function isStrictlyInside(parent, child) {
   return child !== parent && child.startsWith(parent === sep ? sep : parent + sep);
 }
 
-// Fail-closed plan. Absence of a block is never validation: every precondition is
-// POSITIVELY proven before `eligible` can be true.
+export function privacyModeFor(visibility) {
+  return visibility === "private" ? PRIVACY_PRIVATE_AGGREGATE : PRIVACY_PUBLIC_PATHS;
+}
+
+// Fail-closed plan. Absence of a block is never validation.
 export function planNode00ThreeRootCensus({ consent, input } = {}) {
   const blocked_by = [];
   if (consent !== NODE00_THREE_ROOT_CENSUS_GO_PHRASE) blocked_by.push("consent_phrase_mismatch");
@@ -169,10 +215,16 @@ export function planNode00ThreeRootCensus({ consent, input } = {}) {
     blocked_by.push("input_not_object");
     return frozenPlan(blocked_by);
   }
-  const { roots, adapter, bounds } = input;
+  const { roots, adapter, bounds, implementation_worktree, reference_time_ms } = input;
+
+  let hasPrivate = false;
   if (!Array.isArray(roots) || roots.length === 0) blocked_by.push("roots_not_declared");
   else {
     const ids = new Set();
+    const implPath =
+      typeof implementation_worktree === "string" && implementation_worktree !== ""
+        ? normalizedRootPath(implementation_worktree)
+        : null;
     for (const root of roots) {
       if (!root || typeof root !== "object") { blocked_by.push("root_not_object"); continue; }
       if (typeof root.id !== "string" || root.id === "") blocked_by.push("root_id_missing");
@@ -180,14 +232,33 @@ export function planNode00ThreeRootCensus({ consent, input } = {}) {
       else ids.add(root.id);
       if (typeof root.path !== "string" || !isAbsolute(root.path)) blocked_by.push("root_path_not_absolute");
       if (root.visibility !== "private" && root.visibility !== "public") blocked_by.push("root_visibility_undeclared");
+      if (root.visibility === "private") hasPrivate = true;
+
+      // The build environment is NEVER a census subject. Substituting it for the real
+      // subject is what invalidated the first live run.
+      if (implPath && typeof root.path === "string" && normalizedRootPath(root.path) === implPath) {
+        blocked_by.push("dema_repo_subject_equals_implementation_worktree");
+      }
+      // A root marked as requiring provenance must carry an explicit binding.
+      if (root.requires_binding === true) {
+        const b = root.binding;
+        if (!b || typeof b !== "object" || typeof b.binding_source !== "string" || b.binding_source === "") {
+          blocked_by.push("root_binding_unresolved");
+        }
+      }
     }
   }
+
   if (!adapter || typeof adapter !== "object") blocked_by.push("adapter_missing");
   else {
     for (const fn of ["lstat", "readdir", "now"]) {
       if (typeof adapter[fn] !== "function") blocked_by.push(`adapter_${fn}_missing`);
     }
   }
+
+  // A private root reports mtime DISTRIBUTIONS, which need a declared reference time.
+  if (hasPrivate && !Number.isFinite(reference_time_ms)) blocked_by.push("reference_time_ms_required_for_private_root");
+
   if (bounds !== undefined) {
     if (!bounds || typeof bounds !== "object") blocked_by.push("bounds_not_object");
     else {
@@ -220,9 +291,6 @@ export class CensusRootAdmissionError extends Error {
   }
 }
 
-// Root admission. Each root must exist, be a real directory, not be a symlink, have
-// no symlink ancestor, and be unique by OBSERVED identity (device+inode) — an alias
-// resolving to an already-admitted identity fails closed rather than double-counting.
 export function admitCensusRoots({ roots, adapter }) {
   const admitted = [];
   const byIdentity = new Map();
@@ -245,6 +313,8 @@ export function admitCensusRoots({ roots, adapter }) {
       Object.freeze({
         id,
         visibility: declared.visibility,
+        privacy_mode: privacyModeFor(declared.visibility),
+        binding: declared.binding ? Object.freeze({ ...declared.binding }) : null,
         path,
         normalized_path_hash: hashText(path),
         device: stat.device,
@@ -253,8 +323,6 @@ export function admitCensusRoots({ roots, adapter }) {
       }),
     );
   }
-  // Canonical order: by normalized path. Argument order cannot affect ownership,
-  // traversal, or the body hash.
   return Object.freeze([...admitted].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0)));
 }
 
@@ -274,7 +342,6 @@ function assertNoSymlinkAncestor(path, rootId, adapter) {
   }
 }
 
-// Observed topology — derived from the admitted roots, never assumed.
 export function deriveCensusTopology(admitted) {
   const containment = [];
   const disjoint = [];
@@ -303,30 +370,95 @@ export function deriveCensusTopology(admitted) {
   });
 }
 
-// Privacy projection: the ONLY place a raw relative path may become an emitted field.
-function projectPath(root, relativePath, name) {
-  const hash = hashText(relativePath);
-  if (root.visibility === "public") {
-    return { relative_path: relativePath, basename: name, relative_path_hash: hash };
-  }
-  return { relative_path: null, basename: null, relative_path_hash: hash };
+function emptySummary() {
+  return {
+    files_count: 0,
+    directories_count: 0,
+    symlinks_count: 0,
+    other_count: 0,
+    inaccessible_count: 0,
+    delegated_root_count: 0,
+    device_boundary_count: 0,
+    extension_distribution: {},
+    coarse_type_distribution: {},
+    size_bucket_distribution: {},
+    mtime_bucket_distribution: {},
+  };
 }
 
-// Bounded, metadata-only traversal honouring the ownership, symlink and device laws.
-export function censusRoots({ roots, adapter, bounds = {} }) {
+function bump(dist, key) {
+  dist[key] = (dist[key] ?? 0) + 1;
+}
+
+function sortedDistribution(dist) {
+  return Object.freeze(
+    Object.fromEntries(Object.entries(dist).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
+  );
+}
+
+function freezeSummary(summary) {
+  return Object.freeze({
+    ...summary,
+    extension_distribution: sortedDistribution(summary.extension_distribution),
+    coarse_type_distribution: sortedDistribution(summary.coarse_type_distribution),
+    size_bucket_distribution: sortedDistribution(summary.size_bucket_distribution),
+    mtime_bucket_distribution: sortedDistribution(summary.mtime_bucket_distribution),
+  });
+}
+
+// Bounded, metadata-only traversal honouring ownership, symlink, device, bound,
+// visitation and privacy laws.
+export function censusRoots({ roots, adapter, bounds = {}, reference_time_ms = null }) {
   const admitted = admitCensusRoots({ roots, adapter });
   const limits = { ...DEFAULT_CENSUS_BOUNDS, ...bounds };
   const rootByPath = new Map(admitted.map((root) => [root.path, root]));
   const entries = [];
-  const warnings = [];
+  const publicWarnings = [];
+  const privateWarningCounts = new Map(); // `${root_id} ${code}` -> count
+  const summaries = new Map();
+  const scan = new Map();
   const state = { count: 0, truncated: null, started: adapter.now() };
 
   for (const root of admitted) {
-    walkRoot(root, rootByPath, adapter, limits, entries, warnings, state);
+    summaries.set(root.id, emptySummary());
+    scan.set(root.id, { scan_state: SCAN_NOT_STARTED, reason: null, visited_entries: 0 });
   }
 
-  // Revalidate every root identity AFTER traversal — a substituted root invalidates
-  // the run outright; it can never be reported COMPLETE.
+  for (const root of admitted) {
+    // A census-wide bound already exhausted means this root is NEVER VISITED. It must
+    // not be reported as a successfully-scanned empty root.
+    if (state.truncated) {
+      scan.set(root.id, {
+        scan_state: SCAN_NOT_STARTED,
+        reason: "GLOBAL_BOUND_EXHAUSTED",
+        visited_entries: 0,
+      });
+      continue;
+    }
+    const before = state.count;
+    let failure = null;
+    try {
+      walkRoot(root, rootByPath, adapter, limits, entries, {
+        publicWarnings,
+        privateWarningCounts,
+        summary: summaries.get(root.id),
+        reference_time_ms,
+      }, state);
+    } catch (err) {
+      failure = err && typeof err.code === "string" ? err.code : "walk_failed";
+    }
+    const visited = state.count - before;
+    if (failure) {
+      scan.set(root.id, { scan_state: SCAN_FAILED, reason: failure, visited_entries: visited });
+      state.truncated = state.truncated ?? "root_failed";
+    } else if (state.truncated) {
+      scan.set(root.id, { scan_state: SCAN_PARTIAL, reason: state.truncated, visited_entries: visited });
+    } else {
+      scan.set(root.id, { scan_state: SCAN_COMPLETE, reason: null, visited_entries: visited });
+    }
+  }
+
+  // Revalidate every root identity AFTER traversal.
   for (const root of admitted) {
     let stat = null;
     try {
@@ -335,47 +467,80 @@ export function censusRoots({ roots, adapter, bounds = {} }) {
       stat = null;
     }
     if (!stat || stat.device !== root.device || stat.inode !== root.inode) {
-      warnings.push(
-        Object.freeze({
-          root_id: root.id,
-          code: "ROOT_SUBSTITUTED_DURING_SCAN",
-          relative_path: null,
-          basename: null,
-          relative_path_hash: root.normalized_path_hash,
-        }),
-      );
+      recordWarning(root, "ROOT_SUBSTITUTED_DURING_SCAN", null, null, { publicWarnings, privateWarningCounts });
+      const prev = scan.get(root.id);
+      scan.set(root.id, { ...prev, scan_state: SCAN_FAILED, reason: "ROOT_SUBSTITUTED_DURING_SCAN" });
       state.truncated = state.truncated ?? "root_substituted";
     }
   }
 
+  const warnings = [
+    ...publicWarnings,
+    ...[...privateWarningCounts.entries()].map(([key, count]) => {
+      const [root_id, code] = key.split(" ");
+      return Object.freeze({ root_id, code, aggregate: true, count });
+    }),
+  ];
+
   entries.sort(entryOrder);
   warnings.sort(warningOrder);
+
+  const perRootScan = admitted.map((root) =>
+    Object.freeze({ root_id: root.id, ...scan.get(root.id) }),
+  );
+  const allComplete = perRootScan.every((r) => r.scan_state === SCAN_COMPLETE);
+
   return Object.freeze({
     admitted,
     limits: Object.freeze({ ...limits }),
+    reference_time_ms,
     entries: Object.freeze(entries),
     warnings: Object.freeze(warnings),
-    completeness: state.truncated ? COMPLETENESS_BOUNDED_PARTIAL : COMPLETENESS_COMPLETE,
+    summaries: Object.freeze(
+      Object.fromEntries(admitted.map((r) => [r.id, freezeSummary(summaries.get(r.id))])),
+    ),
+    scan_states: Object.freeze(perRootScan),
+    completeness: allComplete && !state.truncated ? COMPLETENESS_COMPLETE : COMPLETENESS_BOUNDED_PARTIAL,
     truncation_reason: state.truncated,
   });
 }
 
+function recordWarning(root, code, relativePath, errorCode, sinks) {
+  if (root.privacy_mode === PRIVACY_PRIVATE_AGGREGATE) {
+    // Aggregate by stable reason code — never a path-addressable record.
+    const key = `${root.id} ${code}`;
+    sinks.privateWarningCounts.set(key, (sinks.privateWarningCounts.get(key) ?? 0) + 1);
+    return;
+  }
+  sinks.publicWarnings.push(
+    Object.freeze({
+      root_id: root.id,
+      code,
+      aggregate: false,
+      error_code: errorCode,
+      relative_path: relativePath,
+    }),
+  );
+}
+
 function entryOrder(a, b) {
   if (a.root_id !== b.root_id) return a.root_id < b.root_id ? -1 : 1;
-  const ka = a.relative_path ?? a.relative_path_hash;
-  const kb = b.relative_path ?? b.relative_path_hash;
+  const ka = a.relative_path ?? a.delegated_to ?? "";
+  const kb = b.relative_path ?? b.delegated_to ?? "";
   return ka < kb ? -1 : ka > kb ? 1 : 0;
 }
 
 function warningOrder(a, b) {
   if (a.root_id !== b.root_id) return a.root_id < b.root_id ? -1 : 1;
   if (a.code !== b.code) return a.code < b.code ? -1 : 1;
-  const ka = a.relative_path ?? a.relative_path_hash ?? "";
-  const kb = b.relative_path ?? b.relative_path_hash ?? "";
+  const ka = a.relative_path ?? "";
+  const kb = b.relative_path ?? "";
   return ka < kb ? -1 : ka > kb ? 1 : 0;
 }
 
-function walkRoot(root, rootByPath, adapter, limits, entries, warnings, state) {
+function walkRoot(root, rootByPath, adapter, limits, entries, sinks, state) {
+  const isPrivate = root.privacy_mode === PRIVACY_PRIVATE_AGGREGATE;
+  const summary = sinks.summary;
   const queue = [{ absPath: root.path, relativePath: "", depth: 0 }];
   while (queue.length > 0) {
     if (state.truncated) return;
@@ -384,14 +549,9 @@ function walkRoot(root, rootByPath, adapter, limits, entries, warnings, state) {
     try {
       names = adapter.readdir(dir.absPath);
     } catch (err) {
-      warnings.push(
-        Object.freeze({
-          root_id: root.id,
-          code: "DIRECTORY_UNREADABLE",
-          error_code: err && typeof err.code === "string" ? err.code : "unknown",
-          ...projectPath(root, dir.relativePath, null),
-        }),
-      );
+      summary.inaccessible_count += 1;
+      recordWarning(root, "DIRECTORY_UNREADABLE", isPrivate ? null : dir.relativePath,
+        err && typeof err.code === "string" ? err.code : "unknown", sinks);
       continue;
     }
     for (const name of [...names].sort()) {
@@ -405,94 +565,129 @@ function walkRoot(root, rootByPath, adapter, limits, entries, warnings, state) {
       try {
         stat = adapter.lstat(absPath);
       } catch (err) {
-        // A vanished or unreadable entry stays EXPLICIT evidence, never a silent omission.
-        warnings.push(
-          Object.freeze({
-            root_id: root.id,
-            code: "ENTRY_VANISHED_OR_UNREADABLE",
-            error_code: err && typeof err.code === "string" ? err.code : "unknown",
-            ...projectPath(root, relativePath, name),
-          }),
-        );
+        summary.inaccessible_count += 1;
+        recordWarning(root, "ENTRY_VANISHED_OR_UNREADABLE", isPrivate ? null : relativePath,
+          err && typeof err.code === "string" ? err.code : "unknown", sinks);
         continue;
       }
 
       const extension = stat.type === "file" ? extensionOf(name) : "";
+      const coarse = stat.type === "file" ? coarseTypeForExtension(extension) : "none";
       const delegated = stat.type === "directory" ? rootByPath.get(absPath) : undefined;
+      const isDelegation = Boolean(delegated) && delegated.id !== root.id;
       const crossesDevice = stat.device !== root.device;
 
       state.count += 1;
-      entries.push(
-        Object.freeze({
-          root_id: root.id,
-          ...projectPath(root, relativePath, name),
-          entry_type: stat.type,
-          extension,
-          coarse_type: stat.type === "file" ? coarseTypeForExtension(extension) : "none",
-          size_bytes: stat.type === "file" ? stat.size_bytes : null,
-          depth: dir.depth + 1,
-          device: stat.device,
-          inode: stat.inode,
-          mode: stat.mode,
-          delegated_root: delegated && delegated.id !== root.id ? delegated.id : null,
-          device_boundary: crossesDevice,
-        }),
-      );
+      if (stat.type === "file") summary.files_count += 1;
+      else if (stat.type === "directory") summary.directories_count += 1;
+      else if (stat.type === "symlink") summary.symlinks_count += 1;
+      else summary.other_count += 1;
+      if (crossesDevice) summary.device_boundary_count += 1;
+      if (isDelegation) summary.delegated_root_count += 1;
+      if (stat.type === "file") {
+        bump(summary.extension_distribution, extension === "" ? "none" : extension);
+        bump(summary.coarse_type_distribution, coarse);
+        bump(summary.size_bucket_distribution, sizeBucket(stat.size_bytes));
+        bump(summary.mtime_bucket_distribution, mtimeBucket(stat.mtime_ms, sinks.reference_time_ms));
+      }
 
-      if (stat.type !== "directory") continue; // symlink: recorded, never resolved, never descended
-      if (delegated && delegated.id !== root.id) continue; // ownership delegated to the more specific root
-      if (crossesDevice) {
-        warnings.push(
+      if (isPrivate) {
+        // PRIVATE_AGGREGATE: the ONLY per-entry row a private root may produce is a
+        // delegation marker naming the child ROOT ID — no path, no hash, no metadata.
+        if (isDelegation) {
+          entries.push(
+            Object.freeze({
+              root_id: root.id,
+              entry_type: "delegated_root",
+              delegated_to: delegated.id,
+              ownership_state: "DELEGATED_ROOT",
+            }),
+          );
+        }
+      } else {
+        entries.push(
           Object.freeze({
             root_id: root.id,
-            code: "DEVICE_BOUNDARY_NOT_CROSSED",
-            error_code: null,
-            ...projectPath(root, relativePath, name),
+            relative_path: relativePath,
+            basename: name,
+            entry_type: stat.type,
+            extension,
+            coarse_type: coarse,
+            size_bytes: stat.type === "file" ? stat.size_bytes : null,
+            depth: dir.depth + 1,
+            device: stat.device,
+            inode: stat.inode,
+            mode: stat.mode,
+            delegated_root: isDelegation ? delegated.id : null,
+            ownership_state: isDelegation ? "DELEGATED_ROOT" : "OWNED",
+            device_boundary: crossesDevice,
           }),
         );
+      }
+
+      if (stat.type !== "directory") continue; // symlink: recorded, never resolved
+      if (isDelegation) continue;              // ownership delegated to the child root
+      if (crossesDevice) {
+        recordWarning(root, "DEVICE_BOUNDARY_NOT_CROSSED", isPrivate ? null : relativePath, null, sinks);
         continue;
       }
-      if (dir.depth + 1 >= limits.max_depth) {
-        state.truncated = "max_depth";
-        return;
-      }
+      if (dir.depth + 1 >= limits.max_depth) { state.truncated = "max_depth"; return; }
       queue.push({ absPath, relativePath, depth: dir.depth + 1 });
     }
   }
 }
 
-// Deterministic body: identical for the same frozen metadata snapshot regardless of
-// root argument ordering, run id, timestamp, PID or temporary path. Volatile run
-// metadata lives OUTSIDE the hashed body, in the writer's receipt.
+// Deterministic body. Volatile run metadata lives OUTSIDE the hashed body.
 export function buildNode00ThreeRootCensusPayload(census) {
-  const privateRoots = census.admitted.filter((root) => root.visibility === "private");
+  const privateRoots = census.admitted.filter((root) => root.privacy_mode === PRIVACY_PRIVATE_AGGREGATE);
   // A PUBLIC root nested inside a PRIVATE root would disclose the private root's
-  // absolute path as its own prefix. Containment is measured, so this is refused
-  // structurally: only a public root that no private root contains may emit a path.
+  // absolute path as its own prefix.
   const disclosable = (root) =>
-    root.visibility === "public" && !privateRoots.some((p) => isStrictlyInside(p.path, root.path));
+    root.privacy_mode === PRIVACY_PUBLIC_PATHS &&
+    !privateRoots.some((p) => isStrictlyInside(p.path, root.path));
+
+  const scanById = new Map(census.scan_states.map((s) => [s.root_id, s]));
 
   const perRoot = census.admitted.map((root) => {
-    const rows = census.entries.filter((entry) => entry.root_id === root.id);
-    return Object.freeze({
+    const scan = scanById.get(root.id);
+    const summary = census.summaries[root.id];
+    const base = {
       root_id: root.id,
       visibility: root.visibility,
-      // A private root never emits its absolute path — only the hash. Nor does a
-      // public root whose path is prefixed by a private one.
+      privacy_mode: root.privacy_mode,
+      scan_state: scan.scan_state,
+      scan_reason: scan.reason,
+      visited_entries: scan.visited_entries,
+      binding_source: root.binding?.binding_source ?? null,
+      summary,
+    };
+    if (root.privacy_mode === PRIVACY_PRIVATE_AGGREGATE) {
+      // No path, no path hash, no device/inode/mode: none of it may escape.
+      return Object.freeze({ ...base, path: null, normalized_path_hash: null, device: null, inode: null, mode: null });
+    }
+    return Object.freeze({
+      ...base,
       path: disclosable(root) ? root.path : null,
       normalized_path_hash: root.normalized_path_hash,
       device: root.device,
       inode: root.inode,
       mode: root.mode,
-      entries: rows.length,
-      files: rows.filter((r) => r.entry_type === "file").length,
-      directories: rows.filter((r) => r.entry_type === "directory").length,
-      symlinks: rows.filter((r) => r.entry_type === "symlink").length,
-      other: rows.filter((r) => r.entry_type === "other").length,
-      delegated_roots: rows.filter((r) => r.delegated_root !== null).length,
-      size_bytes_total: rows.reduce((sum, r) => sum + (r.size_bytes ?? 0), 0),
     });
   });
+
+  const totals = census.admitted.reduce(
+    (acc, root) => {
+      const s = census.summaries[root.id];
+      acc.files += s.files_count;
+      acc.directories += s.directories_count;
+      acc.symlinks += s.symlinks_count;
+      acc.other += s.other_count;
+      acc.inaccessible += s.inaccessible_count;
+      acc.delegated_roots += s.delegated_root_count;
+      return acc;
+    },
+    { roots: census.admitted.length, files: 0, directories: 0, symlinks: 0, other: 0, inaccessible: 0, delegated_roots: 0 },
+  );
 
   const body = {
     schema: NODE00_THREE_ROOT_CENSUS_SCHEMA,
@@ -503,18 +698,12 @@ export function buildNode00ThreeRootCensusPayload(census) {
     completeness: census.completeness,
     truncation_reason: census.truncation_reason,
     bounds: census.limits,
+    reference_time_ms: census.reference_time_ms,
+    size_bucket_vocabulary: SIZE_BUCKETS,
+    mtime_bucket_vocabulary: MTIME_BUCKETS,
     topology: deriveCensusTopology(census.admitted),
     per_root: Object.freeze(perRoot),
-    totals: Object.freeze({
-      roots: census.admitted.length,
-      entries: census.entries.length,
-      files: census.entries.filter((r) => r.entry_type === "file").length,
-      directories: census.entries.filter((r) => r.entry_type === "directory").length,
-      symlinks: census.entries.filter((r) => r.entry_type === "symlink").length,
-      other: census.entries.filter((r) => r.entry_type === "other").length,
-      delegated_roots: census.entries.filter((r) => r.delegated_root !== null).length,
-      warnings: census.warnings.length,
-    }),
+    totals: Object.freeze({ ...totals, entries: census.entries.length, warnings: census.warnings.length }),
     entries_digest: foldDigest(census.entries),
     warnings_digest: foldDigest(census.warnings),
     digest_fold_width: DIGEST_FOLD_WIDTH,
@@ -524,11 +713,34 @@ export function buildNode00ThreeRootCensusPayload(census) {
   return Object.freeze({ ...body, content_hash });
 }
 
-// Body-bound re-derivation. Recomputes over the WHOLE body minus its hash field —
-// never a seed or subset. DECLARED LIMIT: this proves internal consistency only. A
-// forger who controls every field and recomputes the hash is NOT detected; that
-// needs an independent anchor (signature or externally measured state hash), which
-// this slice does not have and does not claim.
+// Portable-artifact privacy verifier. Fails closed if ANY private per-entry object
+// appears in a portable artifact. This is enforced at verification, not merely at
+// generation — a forged artifact set must be refused too.
+export function verifyPortableArtifacts({ payload, entries = [], warnings = [] }) {
+  const reasons = [];
+  const modeById = new Map((payload?.per_root ?? []).map((r) => [r.root_id, r.privacy_mode]));
+  for (const row of entries) {
+    if (modeById.get(row.root_id) !== PRIVACY_PRIVATE_AGGREGATE) continue;
+    if (row.entry_type !== "delegated_root") {
+      reasons.push("private_per_entry_row_emitted");
+      continue;
+    }
+    for (const field of PRIVATE_FORBIDDEN_ENTRY_FIELDS) {
+      if (row[field] !== undefined && row[field] !== null) reasons.push(`private_field_emitted:${field}`);
+    }
+    const allowed = new Set(["root_id", "entry_type", "delegated_to", "ownership_state"]);
+    if (Object.keys(row).some((k) => !allowed.has(k))) reasons.push("private_delegation_marker_has_extra_field");
+  }
+  for (const row of warnings) {
+    if (modeById.get(row.root_id) !== PRIVACY_PRIVATE_AGGREGATE) continue;
+    if (row.aggregate !== true) reasons.push("private_warning_not_aggregated");
+    if (row.relative_path != null || row.basename != null) reasons.push("private_warning_discloses_path");
+  }
+  return Object.freeze({ ok: reasons.length === 0, reasons: Object.freeze([...new Set(reasons)]) });
+}
+
+// Body-bound re-derivation. DECLARED LIMIT: internal consistency only — no external
+// anchor, so a forger controlling every field and recomputing the hash is NOT detected.
 export function verifyNode00ThreeRootCensus(payload) {
   const reasons = [];
   if (!payload || typeof payload !== "object") {
@@ -549,7 +761,6 @@ export function verifyNode00ThreeRootCensus(payload) {
   if (typeof body.entries_digest !== "string") reasons.push("entries_digest_missing");
   if (typeof body.warnings_digest !== "string") reasons.push("warnings_digest_missing");
 
-  // Non-vacuous boundary check: exact canonical key set, every value strictly false.
   const boundary = body.boundary;
   if (!boundary || typeof boundary !== "object") reasons.push("boundary_missing");
   else {
@@ -560,24 +771,33 @@ export function verifyNode00ThreeRootCensus(payload) {
     if (BOUNDARY_KEYS.some((k) => boundary[k] !== false)) reasons.push("boundary_not_all_false");
   }
 
-  // Privacy invariant is part of verification, not merely of generation. Checkable
-  // from the body alone: a private root never discloses a path, and neither does any
-  // root the measured topology places INSIDE a private one.
   const perRoot = body.per_root ?? [];
   const visibilityOf = new Map(perRoot.map((root) => [root.root_id, root.visibility]));
+  const validScanStates = new Set([SCAN_NOT_STARTED, SCAN_COMPLETE, SCAN_PARTIAL, SCAN_FAILED]);
   for (const root of perRoot) {
-    if (root.visibility === "private" && root.path !== null) reasons.push("private_root_path_disclosed");
+    if (!validScanStates.has(root.scan_state)) reasons.push("root_scan_state_undeclared");
+    if (root.scan_state !== SCAN_COMPLETE && root.scan_reason === null) reasons.push("non_complete_root_without_reason");
+    if (root.privacy_mode === PRIVACY_PRIVATE_AGGREGATE) {
+      for (const field of ["path", "normalized_path_hash", "device", "inode", "mode"]) {
+        if (root[field] !== null) reasons.push(`private_root_${field}_disclosed`);
+      }
+    } else if (root.visibility === "private") {
+      reasons.push("private_root_not_in_aggregate_mode");
+    }
+  }
+  // A global COMPLETE requires EVERY root COMPLETE — an unvisited root can never be
+  // laundered into a successful census.
+  if (body.completeness === COMPLETENESS_COMPLETE && perRoot.some((r) => r.scan_state !== SCAN_COMPLETE)) {
+    reasons.push("complete_with_non_complete_root");
   }
   for (const edge of body.topology?.containment ?? []) {
     if (visibilityOf.get(edge.parent) !== "private") continue;
     const child = perRoot.find((root) => root.root_id === edge.child);
     if (child && child.path !== null) reasons.push("nested_root_discloses_private_parent_path");
   }
-  return Object.freeze({ ok: reasons.length === 0, reasons: Object.freeze(reasons) });
+  return Object.freeze({ ok: reasons.length === 0, reasons: Object.freeze([...new Set(reasons)]) });
 }
 
-// Orchestrator the review gate consumes: plan -> admit -> walk -> build -> verify ->
-// tamper-reject. Fails closed with a named block on every failure path.
 export function runNode00ThreeRootCensus({ consent, input } = {}) {
   const plan = planNode00ThreeRootCensus({ consent, input });
   if (!plan.eligible) return envelope(false, null, plan.blocked_by);
@@ -594,7 +814,9 @@ export function runNode00ThreeRootCensus({ consent, input } = {}) {
   const verified = verifyNode00ThreeRootCensus(payload);
   if (!verified.ok) return envelope(false, payload.content_hash, verified.reasons);
 
-  // Tamper-reject: a mutated body with a stale hash must not verify.
+  const portable = verifyPortableArtifacts({ payload, entries: census.entries, warnings: census.warnings });
+  if (!portable.ok) return envelope(false, payload.content_hash, portable.reasons);
+
   const tampered = { ...payload, totals: { ...payload.totals, entries: payload.totals.entries + 1 } };
   if (verifyNode00ThreeRootCensus(tampered).ok) return envelope(false, payload.content_hash, ["tamper_not_rejected"]);
 

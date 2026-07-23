@@ -2,178 +2,138 @@
 
 Truth label: `NODE00_THREE_ROOT_CENSUS_MEASURED_REPO`
 
-## Slice
+Status: **corrective round 0B.1 — implementation corrected, real qualification BLOCKED.**
 
-Bounded three-root metadata census: most-specific-root ownership, privacy-preserving
-portable evidence, and an external proof-root writer separate from the scanner.
+## Supersede notice
 
-```text
-plan → admit roots → bounded walk → build → verify → tamper-reject → external write
-```
+Every runtime claim in the first version of this receipt is **withdrawn**. The first
+implementation satisfied a superseded contract and its live run is not admissible
+qualification evidence:
+
+| Withdrawn claim | Why |
+| --- | --- |
+| "privacy-preserving portable evidence" / `PRIVATE_FILENAMES_DISCLOSED=0` as a privacy proof | The run emitted one record per private object with an **unsalted** `relative_path_hash` plus exact size, device, inode, mode, depth. Raw names were suppressed, so the counter was narrowly true — but an unsalted hash is an offline identification oracle. Correct classification: `RAW_NAMES_SUPPRESSED / PRIVATE_METADATA_PSEUDONYMIZED / REIDENTIFICATION_RESISTANCE_NOT_PROVEN`. |
+| "626,474-entry census across three authorized roots" as qualification | It censused the **implementation worktree** as `DEMA_REPO`, not the 0A-observed subject. The build environment is not a census subject. |
+| "measured topology = all three disjoint" | An artefact of the wrong binding, not a fact about the real Node00 estate. |
+| `REAL_NESTED_DELEGATION_EXERCISED` | Never exercised live — `delegated_roots = 0` in that run. Delegation is proven by fixture only. |
+
+The superseded artifacts are retained, unmodified and unpublished, at
+`/data/bizra/proofs/node00-three-root-census-0b/` with a `SUPERSEDED.md` marker:
+`SUPERSEDED · PRIVACY_CONTRACT_INADMISSIBLE · LOCAL_SENSITIVE_METADATA ·
+NOT_A_0B_ACCEPTANCE_RECEIPT`. They are **not** to be uploaded or cited.
 
 ## Base
-
-Cut from the exact reviewed remote main, in an isolated worktree.
 
 ```text
 Dema main (verified by API before mutation):  079fee557d7c230f2e6c076cc7a776418a393235
 bizra-data-lake main (verified, read-only):   6a3c1427836ec0290e4ecb43bf23f55ee70912c2
-branch:                                        feat/node00-three-root-census-0b
-worktree:                                      /data/bizra/worktrees/node00-three-root-census-0b/Dema
+PR #417 head at round start:                  f47f4a5927aed501cdd1b4437a1ec4c22df0c64b
+branch:                                       feat/node00-three-root-census-0b
+implementation worktree (NOT a subject):      /data/bizra/worktrees/node00-three-root-census-0b/Dema
 ```
 
 The pre-existing dirty checkout on `chore/backlog-init-agent-instructions`
-(`420a20c8c2836ad93673eef3c93316a63c243574`) was recorded as
-`PRE_EXISTING_DIRTY_CHECKOUT / PRESERVED_UNMODIFIED / NOT_A_0B_INPUT` and verified
-byte-identical after the bounded fetch (HEAD, porcelain, and sha256 of all four real
-modified files unchanged). It was not merged, switched, cleaned, reset or stashed.
+(`420a20c8`) remains `PRE_EXISTING_DIRTY_CHECKOUT / PRESERVED_UNMODIFIED /
+NOT_A_0B_INPUT` — not merged, switched, cleaned, reset or stashed.
 
-## Proof contract
+## What round 0B.1 corrected
 
-The gate passes only while:
+### 1. `PRIVATE_AGGREGATE` (P0)
 
-- the exact GO phrase matches byte-for-byte;
-- root admission fails closed on missing / non-directory / symlink / symlink-ancestor
-  / duplicate `device:inode` identity, and root identity is revalidated after
-  traversal (`ROOT_SUBSTITUTED_DURING_SCAN` ⇒ never `COMPLETE`);
-- ownership is most-specific-root: a parent reaching an admitted child root records
-  `delegated_root` and does not descend; no `device:inode` is owned twice;
-- symlinks are recorded and never resolved or descended; cross-device entries are
-  recorded and never descended;
-- unreadable and vanished entries remain explicit warnings, never silent omissions;
-- any bound hit yields `BOUNDED_PARTIAL` with a named `truncation_reason`;
-- topology is derived from admitted roots, never assumed;
-- a `private` root — and any `public` root nested inside one — discloses no path or
-  basename in body, entries, warnings or thrown errors;
-- the payload is content-addressed and body-bound verified, invariant to root argument
-  order, run id, timestamp, PID and temp path;
-- the boundary stays all-false on the exact canonical key set (not vacuous).
+A private root now emits **no per-file record of any kind** — no path, basename, path
+hash, exact size, exact mtime, device, inode, mode, depth, or stable per-entry
+identifier. Only fixed-vocabulary aggregates escape: counts plus
+extension / coarse-type / size-bucket / mtime-bucket distributions. `mtime` buckets are
+ages against a **declared** `reference_time_ms` (a required input when any private root
+is present), so no exact timestamp escapes. The only private per-entry row permitted is
+a four-field delegation marker (`root_id`, `entry_type`, `delegated_to`,
+`ownership_state`). Private warnings are aggregated by reason code.
+`verifyPortableArtifacts()` enforces this where evidence becomes portable, and the
+writer refuses to emit a violating artifact set.
 
-## Measured runtime census
+### 2. Root binding (P0)
 
-One real bounded census against the three authorized roots.
+`plan()` refuses any declared root whose normalized path equals the declared
+`implementation_worktree` (`dema_repo_subject_equals_implementation_worktree`),
+including trailing-separator and `..` spellings. A root marked `requires_binding: true`
+must carry an explicit `binding.binding_source` or the plan blocks with
+`root_binding_unresolved`.
 
-```text
-run_dir:       /data/bizra/proofs/node00-three-root-census-0b/RUN-20260724-0B-1
-content_hash:  sha256:b8d828847603d47f666b0cf9903d24fc18594f415e2f63c62ac9cc9960b74013
-manifest_sha256: sha256:ade9ff78c3e2ca3df56821c8909182ef470c37d30cbe80be305078bbb834e5ea
-completeness:  COMPLETE (truncation_reason: null)
-wall clock:    7.71 s        max RSS: 1,831,400 kB
-```
+### 3. Greptile A — proof-root redirection
 
-| Root | Visibility | Entries | Files | Dirs | Symlinks | Path emitted |
-| --- | --- | ---: | ---: | ---: | ---: | --- |
-| `DOWNLOADS` (`~/Downloads`) | private | 219,419 | 199,004 | 20,057 | 296 | **no** (hash only) |
-| `DEMA_REPO` (0B worktree) | public | 2,364 | 2,169 | 195 | 0 | yes |
-| `DATA_LAKE_REPO` (`/data/bizra/repos/bizra-data-lake`) | public | 404,691 | 368,939 | 35,672 | 80 | yes |
-| **total** | | **626,474** | 570,112 | 55,924 | 376 | |
+The whole mutable ancestor chain is screened **before any write**. Group- or
+world-writable without the sticky bit is a hard refusal. Sticky is exempt (only an
+entry's owner may rename or remove it). The proof root must also be owned by the
+current uid and not itself group/world-writable.
 
-### Measured topology — not the assumed one
+### 4. Greptile B — per-root visitation truth
 
-```text
-containment: []            (none)
-disjoint:    DATA_LAKE_REPO|DEMA_REPO, DATA_LAKE_REPO|DOWNLOADS, DEMA_REPO|DOWNLOADS
-```
+Every admitted root carries `scan_state` ∈ `NOT_STARTED · COMPLETE · PARTIAL · FAILED`
+with its own reason and `visited_entries`. A root never reached because a census-wide
+bound was exhausted is `NOT_STARTED / GLOBAL_BOUND_EXHAUSTED` — never a successful
+empty root. Global `COMPLETE` requires every root `COMPLETE`; `verify()` refuses
+otherwise (`complete_with_non_complete_root`).
 
-The pre-stated expectation was `DOWNLOADS contains DEMA_REPO`. **Measured: all three
-roots are disjoint**, because `DEMA_REPO` for this run is the isolated 0B worktree
-under `/data/bizra/worktrees/`, not the legacy checkout under `~/Downloads`. Published
-as measured, not as expected. Devices: `~/Downloads` = 66310, `/data/bizra` = 66312.
+### 5. Greptile C — retry-safe proof writing
 
-Consequently `delegated_roots = 0` in this run — the delegation path is proven by the
-review-gate fixture and tests (which model a public root nested inside a private one),
-not by this particular topology.
+No raw fs exception escapes; every failure returns a named envelope. The temp directory
+carries a run-owned marker. Cleanup is authorised only for the exact directory this
+invocation created, after revalidating containment, non-symlink, directory, device and
+marker. A pre-existing temp directory is evidence, never deleted:
+`STALE_TEMP_RUN_REQUIRES_OPERATOR_RECOVERY`. Unverifiable cleanup returns
+`RECOVERABLE_TEMP_ARTIFACT_REQUIRES_HUMAN`. Same-run-id retry after a failed write
+succeeds cleanly instead of dying on `EEXIST`.
 
-### Terminal counters
+### 6. CI-red repair
 
-```text
-PRIVATE_FILENAMES_DISCLOSED = 0    (626,474 rows scanned; 0 DOWNLOADS rows carry
-                                    relative_path or basename; 0 occurrences of the
-                                    raw home path in any shipped artifact)
-ASSET_CONTENT_BYTES_READ    = 0
-SYMLINKS_FOLLOWED           = 0
-MOUNT_BOUNDARIES_CROSSED    = 0
-SCANNED_ROOT_MUTATION       = 0    (see below)
-DEMA_HOME_WRITES            = 0
-NESTED_ROOT_DOUBLE_COUNT    = 0
-```
-
-### Zero-mutation evidence
-
-Pre/post `find -xdev -printf '%i %s %T@ %y' | sort | sha256sum` around a dedicated
-census run:
-
-| Root | Pre = Post |
-| --- | --- |
-| `DEMA_REPO` | identical |
-| `DATA_LAKE_REPO` | identical |
-| `DOWNLOADS` | **drifted** |
-
-The `DOWNLOADS` drift is **external, not caused by this slice**. A concurrent browser
-process was writing PNG attachments into `~/Downloads/chatgpt-attachments/` during the
-window (timestamps interleave the run). Corroboration: a second census 5 s later
-returned `DEMA_REPO` 2,364 and `DATA_LAKE_REPO` 404,691 — byte-identical per-root
-records — while `DOWNLOADS` moved 219,419 → 219,435 (+16). The kernel reaches no
-mutating API (asserted on comment-stripped source), and every writer mutation is
-routed through the injected fs to a proof-root path (asserted on comment-stripped
-source).
-
-**Therefore: reproducibility across a LIVE root is NOT claimed.** Determinism is
-proven against a frozen metadata snapshot (tests), and holds on quiescent roots
-(measured).
-
-## Discovery: the canonical 1024-element array cap
-
-The first real run failed closed, which is the correct behaviour of the canon package
-and a genuine design finding:
-
-```text
-CanonicalJsonV1Error: array_length_exceeded: array length 626461 exceeds 1024 at $
-  at buildNode00ThreeRootCensusPayload (node00-three-root-census.js)
-```
-
-`bizra.canonical-json.v1` caps a single array at 1024 elements. Collections are now
-digested by a chunked Merkle fold (`foldDigest`, width 512) that uses the one canonical
-contract at every level and binds both row order and row count. Pinned by two tests,
-including a 2,500-entry census that builds, verifies and stays deterministic.
-
-## Privacy finding caught by the tests
-
-The first implementation emitted an absolute path for every `public` root. A public
-root nested inside a private root therefore disclosed the private root's path as its
-own prefix (`/fx/downloads/Dema` reveals `/fx/downloads`). Fixed structurally: a public
-root that any private root contains withholds its path, and `verify()` refuses a
-manifest that re-discloses it (`nested_root_discloses_private_parent_path`).
+The exact-head CI failure at `f47f4a5` was **this slice's own test**, not the
+environment: `not ok 4793 - this slice changes no TASK-029…`. CI checks out at
+fetch-depth 1, so `origin/main` does not resolve and `git diff origin/main...HEAD`
+threw. The test now resolves a base ref if one exists and otherwise asserts against the
+working tree, naming the scope it used. CI reported `# pass 7937 / # fail 1` — that one
+failure was ours; the three failures seen locally are sandbox-only and do **not** occur
+on CI.
 
 ## Gates
 
 ```bash
-node --test tests/node00-three-root-census.test.js     # 46 tests
+node --test tests/node00-three-root-census.test.js     # 42 tests
 node scripts/review/node00-three-root-census-check.mjs --json
 npm test
 npm run check
 git diff --check
 ```
 
-## 0A correction register
+## BLOCKED: `SECURE_PROOF_ROOT_UNAVAILABLE`
+
+The corrected real census is **not run**. The newly-implemented Finding-A rule refuses
+every durable location writable from this environment. Measured, not assumed:
+
+| Path | mode | verdict |
+| --- | --- | --- |
+| `/` | `drwxr-xr-x` uid 65534 | admissible ancestor |
+| `/data` | `drwxr-xr-x` uid 1000 | admissible ancestor — **but read-only to this process** |
+| `/data/bizra` | `drwxrwxr-x` uid 1000 | **group-writable, non-sticky ⇒ refused** |
+| `/data/bizra/proofs` | `drwxrwxr-x` | refused |
+| `/data/bizra/proofs/node00-three-root-census-0b` | `drwxrwxr-x` | refused |
+| session `$TMPDIR` (`/tmp` sticky → `/tmp/claude-1000` `drwx------` uid 1000) | — | permission-admissible but **ephemeral**, not a durable proof root |
+
+`planProofOutput()` run against the real paths returns
+`proof_root_itself_group_or_world_writable, proof_root_ancestor_group_writable` for
+every durable candidate. Creating a clean parent under `/data` is denied (read-only),
+and changing permissions on shared directories is explicitly out of scope.
+
+Per the corrective contract, no artifacts are written before a proof-root plan is
+accepted. Consequently these remain **unproven**:
 
 ```text
-0A authority recommendation incorrectly stated C0+C1;
-0B source implementation requires bounded C3.
-
-Existing scanners (node0-space-index, buildLocalAssetInventory, sovereign_scan.py,
-quick_scan.py) contributed VOCABULARY and lessons only. None is imported, executed or
-wrapped — node0-space-index carries an fs surface including mkdir/writeFile/rename/
-chmod/createReadStream, which must not be reachable from this slice, so its
-extension/category vocabulary is deliberately re-declared here instead.
-
-quick_scan.py symlink-following concern was supplied by founder audit, not
-independently verified during 0A. It remains unverified here: this slice neither reads
-nor executes quick_scan.py.
-
-0A census artifacts are locally hash-bound at Level 3 from the independent audit
-boundary. The original 0A package was NOT modified.
+DEMA_REPO_BOUND_TO_LEGACY_SUBJECT     BLOCKED (fixture-proven only)
+REAL_NESTED_DELEGATION_EXERCISED      BLOCKED (fixture-proven only)
 ```
+
+Delegation, ownership, privacy mode, scan states and writer refusals are all proven by
+the 42 focused tests against synthetic trees. They are **not** proven against the real
+three-root estate.
 
 ## Declared limits
 
@@ -182,16 +142,42 @@ boundary. The original 0A package was NOT modified.
 - Independent authenticity is **not** proved: `verify()` is body-bound but has no
   external anchor, so a forger controlling every field and recomputing the hash is not
   detected. No launder-resistance is claimed.
-- Test #8 of the mandated list (legacy checkout byte-for-byte untouched) is bound
-  **locally by measurement** (recorded above), and **in CI by mechanism** — the writer
-  refuses any output inside a repository worktree, and the kernel reaches no mutator.
-  The absolute legacy path does not exist on CI, so a path-dependent assertion would
-  be vacuous there; that is stated rather than faked.
+- Reproducibility across a **live** root is not claimed; determinism is proven against a
+  frozen snapshot.
+- The legacy-checkout byte-identity test is bound **locally by measurement** and **in CI
+  by mechanism** (the writer refuses any output inside a repository worktree; the kernel
+  reaches no mutator). The absolute legacy path does not exist on CI, so a
+  path-dependent assertion would be vacuous there.
+
+## Authority correction register
+
+```text
+0A authority recommendation incorrectly stated C0+C1;
+0B source implementation requires bounded C3.
+
+Round 1 used a superseded private-per-entry design.
+Round 1 substituted the implementation worktree for the required Dema subject.
+Round 1 produced a useful prototype, NOT an admissible 0B qualification.
+
+Round 1 removed one self-created scratch worktree without explicit deletion authority:
+  AUTHORITY_PROCESS_DEVIATION
+  NO_OPERATOR_DATA_AFFECTED
+  MUST_NOT_REPEAT
+
+Existing scanners (node0-space-index, buildLocalAssetInventory, sovereign_scan.py,
+quick_scan.py) contributed VOCABULARY only. None is imported, executed or wrapped.
+quick_scan.py symlink-following remains a founder-supplied, independently UNVERIFIED
+concern — this slice neither reads nor executes it.
+
+0A census artifacts are locally hash-bound at Level 3 from the independent audit
+boundary. The original 0A package was NOT modified.
+```
 
 ## Program sequencing
 
 ```yaml
 next_capability_slice: MISSION-ENVELOPE-CANON-1A
+mission_envelope_1a_eligible: false
 unrelated_capability_expansion_allowed: false
 
 maintenance_exceptions:
@@ -199,12 +185,7 @@ maintenance_exceptions:
   - build_or_ci_integrity_repair
   - dependency_vulnerability_remediation
   - documentation_truth_correction
-
-exception_requirements:
-  - explicit classification
-  - isolated worktree and branch
-  - bounded scope
-  - separate receipt
 ```
 
-TASK-029, TASK-030 and TASK-032 remain outside this slice. `NODE0_NOT_CLOSED`.
+TASK-029, TASK-030 and TASK-032 remain outside this slice. PR #417 stays **draft**.
+`NODE0_NOT_CLOSED`.

@@ -21,7 +21,7 @@ apps/cli/src/commands/node00-three-root-census.js     the ONLY fs surface
   ├── censusFsAdapter()                               read-only metadata (lstatSync)
   └── planProofOutput() / writeCensusProof()          external proof writer (separate)
 scripts/review/node00-three-root-census-check.mjs     review gate (in-memory fixture)
-tests/node00-three-root-census.test.js                46 tests
+tests/node00-three-root-census.test.js                42 tests
 ```
 
 The scanner and the writer are deliberately separate: the scanner never learns where
@@ -33,9 +33,12 @@ output goes, and the writer never learns how to walk.
 runNode00ThreeRootCensus({
   consent: NODE00_THREE_ROOT_CENSUS_GO_PHRASE,   // exact byte match
   input: {
-    roots: [{ id, path /* absolute */, visibility: "private" | "public" }],
+    roots: [{ id, path /* absolute */, visibility: "private" | "public",
+              requires_binding?, binding? }],
     adapter: { lstat, readdir, now },            // injected; nothing wider exists
     bounds: { max_depth, max_entries, max_millis },
+    reference_time_ms,                           // required when any root is private
+    implementation_worktree,                     // refused as a census subject
   },
 });
 ```
@@ -60,8 +63,8 @@ own subtree. Consequences, all tested:
 Each root must exist, be a directory, not be a symlink, have no symlink ancestor, and
 be unique by **observed identity** (`device:inode`). Two declarations resolving to the
 same identity fail closed rather than double-count. Identity is captured before and
-revalidated after traversal; a change emits `ROOT_SUBSTITUTED_DURING_SCAN` and the run
-can never be reported `COMPLETE`.
+revalidated after traversal; a change marks that root `FAILED` with reason
+`ROOT_SUBSTITUTED_DURING_SCAN`, and the census can never be reported `COMPLETE`.
 
 ## Symlink, device and bound laws
 
@@ -73,28 +76,64 @@ can never be reported `COMPLETE`.
 | vanished / unreadable entry | `ENTRY_VANISHED_OR_UNREADABLE` warning with its errno |
 | `max_depth` / `max_entries` / `max_millis` hit | `BOUNDED_PARTIAL` + named `truncation_reason`, never `COMPLETE` |
 
-## Privacy contract
+## Privacy contract — `PRIVATE_AGGREGATE`
 
-A root is declared `private` or `public`. For a **private** root:
+A root is declared `private` or `public`.
+
+A **private** root is reported in `PRIVATE_AGGREGATE` mode: **no per-file record of any
+kind leaves the kernel**. Not a path, not a basename, not a path hash, not an exact
+size, not an exact mtime, not device/inode/mode/depth, not any stable per-entry
+identifier. Only fixed-vocabulary aggregates escape:
 
 ```yaml
-relative_path: null
-basename: null
-relative_path_hash: "sha256:…"   # canonical-json-v1 over the relative path
-extension: permitted
-coarse_type: permitted
+root_id: DOWNLOADS
+privacy_mode: PRIVATE_AGGREGATE
+path: null
+normalized_path_hash: null
+device: null
+inode: null
+mode: null
+summary:
+  files_count: · directories_count: · symlinks_count: · other_count:
+  inaccessible_count: · delegated_root_count: · device_boundary_count:
+  extension_distribution: · coarse_type_distribution:
+  size_bucket_distribution:    # SIZE_BUCKETS vocabulary, never exact bytes
+  mtime_bucket_distribution:   # MTIME_BUCKETS vocabulary, never exact timestamps
 ```
 
-Raw private filenames appear in **no** manifest, entry, warning, log, receipt or
-thrown error — `CensusRootAdmissionError` carries the declared root *label*, never a
-path.
+`mtime` buckets are ages relative to a **declared** `reference_time_ms`, which is a
+required input whenever a private root is present — so the distribution is
+reproducible without an exact timestamp ever escaping.
 
-One case the first implementation got wrong and the tests caught: a **public root
-nested inside a private root** would disclose the private root's absolute path as its
-own prefix. Such a root therefore also withholds its path. `verify()` enforces both
-rules from the body alone, using the measured containment edges — a forged manifest
-that re-discloses either is refused (`private_root_path_disclosed`,
-`nested_root_discloses_private_parent_path`).
+The **only** per-entry row a private root may produce is a delegation marker, carrying
+exactly four fields and nothing identifying:
+
+```yaml
+root_id: DOWNLOADS
+entry_type: delegated_root
+delegated_to: DEMA_REPO
+ownership_state: DELEGATED_ROOT
+```
+
+Warnings for a private root are aggregated by stable reason code
+(`{root_id, code, aggregate: true, count}`) — never path-addressable.
+
+### Why the first design was rejected
+
+Round 1 emitted one record per private object with an **unsalted**
+`relative_path_hash` plus exact size, device, inode and mode. Raw names were
+suppressed, so `PRIVATE_FILENAMES_DISCLOSED = 0` was narrowly true — but an unsalted
+deterministic hash is an **offline identification oracle**: anyone with a candidate
+filename can compute the hash and confirm presence, and the exact metadata strengthens
+correlation. That is `PRIVATE_METADATA_PSEUDONYMIZED`, not privacy-preserving. The
+aggregate contract removes the oracle rather than obscuring it.
+
+A **public** root nested inside a **private** root also withholds its absolute path,
+because its own would disclose the parent's as a prefix.
+
+`verifyPortableArtifacts()` enforces all of this at the boundary where evidence becomes
+portable — the writer refuses to emit an artifact set that violates it, so
+generation-time enforcement is not the only line of defence.
 
 ## Determinism and the 1024-element cap
 
@@ -113,16 +152,49 @@ Collections are therefore digested by a **chunked Merkle fold** (`foldDigest`, w
 512): hash each row, fold row hashes in blocks, repeat until one root hash remains.
 Every level uses the one canonical contract; the fold binds row order and row count.
 
+## Visitation truth
+
+Every admitted root carries an explicit `scan_state`:
+
+```text
+NOT_STARTED · COMPLETE · PARTIAL · FAILED
+```
+
+A root never reached because a census-wide bound was already exhausted is
+`NOT_STARTED` with `reason: GLOBAL_BOUND_EXHAUSTED` and `visited_entries: 0` — it is
+**never** reported as a successfully-scanned empty root. `UNSCANNED ≠ EMPTY`. A global
+`COMPLETE` requires *every* root `COMPLETE`; `verify()` refuses a manifest claiming
+`COMPLETE` while any root is not (`complete_with_non_complete_root`), and refuses a
+non-complete root that carries no reason.
+
 ## External proof writer
 
-Approved root: `/data/bizra/proofs/node00-three-root-census-0b/<RUN_ID>`.
+The writer screens the **whole mutable ancestor chain** before any write. A directory
+that is group- or world-writable **without** the sticky bit can have its children
+renamed or replaced by another principal, so it is a hard refusal
+(`proof_root_ancestor_group_writable` / `proof_root_ancestor_world_writable`). Sticky
+directories are exempt: sticky means only an entry's owner may rename or remove it,
+which is exactly the substitution being defended against. The proof root must also be
+owned by the current uid and must not itself be group/world-writable.
 
-The writer refuses output that is relative or ambiguous, missing, not a directory, a
+It further refuses output that is relative or ambiguous, missing, not a directory, a
 symlink, under a symlink ancestor, inside any scanned root, inside any repository
-worktree, beneath `$DEMA_HOME`, or under a world-writable (non-sticky) parent. It
-captures the proof-root `device:inode` at plan time, revalidates it immediately before
-promotion, and promotes by a **same-parent atomic rename** (so promotion can never
-cross a filesystem).
+worktree, or beneath `$DEMA_HOME`. It captures the proof-root `device:inode` at plan
+time, revalidates it immediately before promotion, and promotes by a **same-parent
+atomic rename** (so promotion can never cross a filesystem).
+
+### Retry safety
+
+Every failure path returns a **named envelope** — no raw fs exception escapes. The
+temporary run directory carries a run-owned marker file. Cleanup is authorised only
+for the exact directory this invocation created, and only after revalidating that it
+is inside the proof root, is not a symlink, is a directory, is on the proof root's
+device, and carries this run's marker. A temporary directory that already existed on
+entry is **evidence, never garbage**: it is reported as
+`STALE_TEMP_RUN_REQUIRES_OPERATOR_RECOVERY` and never deleted. A cleanup that cannot
+verify ownership returns `RECOVERABLE_TEMP_ARTIFACT_REQUIRES_HUMAN`. Re-running the
+same run id after a failed write therefore either succeeds cleanly or reports —
+never an uncontrolled `EEXIST`.
 
 Declared limit, stated rather than papered over:
 
@@ -132,6 +204,15 @@ NOT_PROVEN_AGAINST_HOSTILE_CONCURRENT_MUTATOR
 ```
 
 No descriptor-relative (`openat2`-grade) containment is claimed.
+
+## Root binding
+
+The **implementation worktree** that builds this slice is never a census subject.
+`plan()` refuses any declared root whose normalized path equals the declared
+`implementation_worktree` (`dema_repo_subject_equals_implementation_worktree`), and a
+root marked `requires_binding: true` must carry an explicit `binding.binding_source`
+or the plan blocks with `root_binding_unresolved`. Substituting the build environment
+for the real subject is what invalidated the first live run.
 
 ## Output
 
