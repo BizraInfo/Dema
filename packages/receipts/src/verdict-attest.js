@@ -8,7 +8,7 @@
 //
 // Reuses (no duplication):
 // - signPayload                  packages/receipts/src/authorship-signature.js
-// - loadPrivateKey/loadPublicKey packages/receipts/src/authorship-key-store.js
+// - loadActiveKeyPair packages/receipts/src/authorship-key-store.js
 // - sha256, stableStringify      packages/consent/src/consent-common.js
 // - evaluate(canonical-shape)    packages/rules/src/rule-canonical-shape.v0.1.js
 // - exact-string consent gate    pattern from authorship-key-store.js:43
@@ -19,7 +19,7 @@ import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { signPayload } from "./authorship-signature.js";
-import { loadPrivateKey, loadPublicKey } from "./authorship-key-store.js";
+import { loadActiveKeyPair } from "./authorship-key-store.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 import {
   evaluate as canonicalShapeEvaluate,
@@ -104,11 +104,12 @@ export async function attestVerdict({
   }
 
   // (3) Load signing key (private + public)
-  const privateKeyPem = await loadPrivateKey(demaHome);
+  const activePair = await loadActiveKeyPair(demaHome);
+  const privateKeyPem = activePair.ok ? activePair.private_key_pem : null;
   if (!privateKeyPem) {
     return fail({ error: "no_authorship_key" });
   }
-  const publicKeyPem = await loadPublicKey(demaHome);
+  const publicKeyPem = activePair.ok ? activePair.public_key_pem : null;
 
   // (4) KEYCONSENT-1B: consent proof MANDATORY (per preflight §9 + Mumu's
   // bar #2). Caller must supply a key-bound consent_proof envelope built

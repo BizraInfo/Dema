@@ -8,8 +8,7 @@ import {
 } from "./authorship-signature.js";
 import {
   hasAuthorshipKey,
-  loadPrivateKey,
-  loadPublicKey,
+  loadActiveKeyPair,
 } from "./authorship-key-store.js";
 import { sha256 } from "../../consent/src/consent-common.js";
 
@@ -77,11 +76,12 @@ export async function signArtifact({
     .update(artifactBytes)
     .digest("hex");
 
-  const privateKeyPem = await loadPrivateKey(home);
+  const activePair = await loadActiveKeyPair(home);
+  const privateKeyPem = activePair.ok ? activePair.private_key_pem : null;
   if (!privateKeyPem) {
     return fail("private_key_not_readable");
   }
-  const publicKeyPem = await loadPublicKey(home);
+  const publicKeyPem = activePair.ok ? activePair.public_key_pem : null;
   if (!publicKeyPem) {
     return fail("public_key_not_readable");
   }

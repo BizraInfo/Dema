@@ -84,8 +84,12 @@ describe("dema attest + verify-grounded · CLI integration (full vertical)", () 
       const bundle = JSON.parse(await readFile(outPath, "utf8"));
       assert.equal(bundle.body.verdict, "pass");
 
-      // Pubkey path under DEMA_HOME/keys/
-      const pubkeyPath = join(home, "keys", "node0-ed25519.pub.pem");
+      // Pubkey lives inside the active generation dir, selected by the
+      // keys/active-key.json pointer (generation store).
+      const pointer = JSON.parse(
+        await readFile(join(home, "keys", "active-key.json"), "utf8"),
+      );
+      const pubkeyPath = join(home, "keys", pointer.generation_path, "public.pem");
 
       // Verify-grounded with matching external pubkey
       const verifyResult = await runCli(
