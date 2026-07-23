@@ -1,0 +1,196 @@
+# IDENTITY-RECOVERY-REFUSE-AND-REPORT-1E — refuse-and-report receipt
+
+- **Date:** 2026-07-23 (GST)
+- **Branch:** `fix/identity-recovery-refuse-report-1e` off exact `origin/main`
+  `a1b4558770031cdc8abbdb768a7c297638947467` (verified live via `ls-remote`
+  before branch creation; record BASE_MOVED if main differs at push time)
+- **Implementation commit:** `c9e1fc8` (exact head recorded in the PR body at
+  push time; this receipt lands in the sealing commit on top of it)
+- **Truth label:** LOCAL_ONLY · not remotely re-verified
+- **Supersedes:** the automatic-quarantine design of PR #414
+  (`fix/identity-committed-transition-recovery-1d`, head `faa3ad6`), closed
+  without merge.
+
+## Founder decision (final)
+
+```text
+AUTO_QUARANTINE:
+REJECTED
+
+AUTOMATIC ROOT-OF-TRUST RECOVERY:
+REMOVED
+
+AUTOMATIC RECOVERY BEHAVIOR:
+DETECT_AND_REPORT_ONLY
+
+MUTATING RECOVERY:
+NOT IMPLEMENTED
+
+FUTURE MUTATING SLICE:
+IDENTITY-EXPLICIT-RECOVERY-TRANSACTION-1F
+
+REQUIRED FUTURE AUTHORITY:
+C5
+```
+
+PR #414 proved experimentally that automatic quarantine creates unacceptable
+root-of-trust mutation complexity — its final Greptile verdict (bound to exact
+head `faa3ad6`, 2026-07-23T16:01Z) was a live P1: a concurrently substituted
+`$DEMA_HOME/keys` parent lets the quarantine `rename()` move attacker-selected
+paths. The architectural response is not another patch round: automatic
+recovery mutation is removed entirely.
+
+## Governing invariant
+
+```text
+Detection may be automatic.
+Diagnosis may be automatic.
+Evidence preservation may be passive and read-only.
+Root-of-trust recovery mutation requires a separate,
+explicitly consented C5 transaction.
+```
+
+## Removed automatic-mutation inventory (never landed on this branch)
+
+Rejected from PR #414 (not salvaged): `quarantineActivePointer`,
+`attemptGenesisRecovery`, automatic pointer rename/removal, automatic
+reinitialization after corruption, automatic remigration after pointer
+failure, post-verify-failure quarantine in init and migrate,
+`recovered_from`/`quarantine_path` result fields, and receipt-scanning used to
+decide whether automatic replacement is safe.
+
+Removed from pre-1E main behavior: `initAuthorshipKey`'s presence-only pointer
+check let a **symlinked or non-regular invalid pointer** fall through to
+`activateGeneration`, which silently REPLACED the pointer (reproduced red:
+R4 snapshot mismatch; R5 `EISDIR` after a keypair + generation had already
+been written). Both paths now refuse read-only with zero mutation.
+
+## Salvaged read-only components (re-derived, not cherry-picked)
+
+Pointer-classification concept (valid / absent / genesis-strand /
+prior-strand / untracked), typed recovery classes, `verified_existing_identity`
+on the valid-identity refusal, failure reproductions, and zero-mutation
+assertions — all reimplemented from first principles against exact main.
+
+## Recovery classification contract
+
+`classifyPointerAuthority` (internal, read-only) + `inspectIdentityRecovery`
+(exported) map a home to exactly one of:
+
+```text
+NO_ACTIVE_IDENTITY · VALID_ACTIVE_IDENTITY · INVALID_GENESIS_POINTER ·
+INVALID_PRIOR_POINTER · UNTRACKED_INVALID_POINTER · UNSAFE_POINTER_PATH ·
+CORRUPT_GENERATION · RETIRED_GENERATION · IDENTITY_TRANSITION_IN_PROGRESS ·
+RECOVERY_STATE_UNKNOWN
+```
+
+Classification uses the canonical loader, preserves its exact error, follows
+no unsafe symlink, reads no private-key content outside the approved loader,
+mutates nothing, never infers "unused identity" from missing receipts, and
+reports `RECOVERY_STATE_UNKNOWN` (e.g. unreadable retired registry, mid-read
+vanish) rather than guessing. An unreadable registry is UNKNOWN — not
+"retired", not "serviceable".
+
+Behavior contracts (all envelopes carry `authority_delta: 0`):
+
+- init + valid identity → `key_already_exists` + `verified_existing_identity:true`
+- init + invalid identity → `recovery_required` + exact `recovery_class` +
+  `recommended_action: RUN_EXPLICIT_IDENTITY_RECOVERY` +
+  `active_pointer_preserved · generation_preserved · new_identity_generated:false`
+- init post-commit verification failure → `recovery_required` +
+  `transition_state: pointer_committed_verification_failed` + preserved flags;
+  retries return a stable classification and never generate a second keypair
+- migrate + valid identity → `already_migrated` + `verified_existing_identity:true`
+- migrate + invalid identity → `recovery_required` + `recovery_class` +
+  `legacy_pair_preserved · active_pointer_preserved`; never remigrates, never
+  overwrites a concurrent identity (re-classified under the lease)
+- metadata repair remains ONLY inside explicitly consented ordinary migration
+  whose active authority state is absent — never as recovery of an invalid
+  pointer (R16: malformed metadata bytes preserved, no `.recovery` sibling)
+
+## Recovery-inspector schema
+
+`inspectIdentityRecovery(demaHome)` → `bizra.dema.identity_recovery_inspection.v0.1`:
+`recovery_class`, `active_pointer_path`, `active_pointer_hash`,
+`generation_fingerprint`, `generation_path`, `loader_error`,
+`previous_generation`, `legacy_pair_presence`, `artifact_binding_state`
+(`DETECTED` / `NOT_DETECTED_BOUNDED_SCAN` / `UNKNOWN` — bounded 512-entry
+read-only scan; any incompleteness is `UNKNOWN`, never a definitive non-use),
+`transition_lease_state` (`NONE`/`HOLDER_ALIVE`/`HOLDER_DEAD`/`UNREADABLE`),
+`automatic_recovery_allowed: false`, `required_consent_class: "C5"`,
+`recommended_action`, `authority_delta: 0`. Never returns PEM, raw key bytes,
+secret material, or receipt contents (R17 asserts serialized output).
+
+## Zero-mutation proof
+
+Runtime: every invalid-identity scenario snapshots the ENTIRE `DEMA_HOME`
+tree (kind + content hash + symlink target per entry) before the call and
+asserts byte-identical equality after (R1–R7, R11–R16).
+
+Structural: `scripts/review/identity-recovery-refuse-report-check.mjs`
+(wired into `scripts/check.mjs`) fails when (1) any forbidden quarantine
+symbol reappears in `packages/`/`apps/`, (2) any authority-mutating function
+(`rename`/`unlink`/`mkdir`/`writeFile`/`generateEd25519Keypair`/
+`activateGeneration`/`writeActivePointer`/`repairGenerationMetadata`/… or
+write-mode `open` flags) becomes REACHABLE from the read-only surface via
+function-dependency reachability (not line/text position), or (3) init/migrate
+stop routing invalid pointers through the classifier. Verified red on
+synthetic quarantine-shaped source.
+
+## Red-first reproductions
+
+Suite `tests/identity-recovery-refuse-report.test.js` was written first and
+run against unmodified main: **29 of 31 tests failed** for the mandated
+reasons — missing `inspectIdentityRecovery` (12), missing refuse-and-report
+envelopes, and the live replacement defect (R4 snapshot mismatch; R5 `EISDIR`
+mid-replacement). R14/R15 passed on main only because a coincident legacy-file
+early-return masked those two paths; they remain as guards.
+
+## Test results (local, sandbox)
+
+```text
+1E suite:                        32/32 green (R1–R21 + R4b + §10 contract + gate)
+identity + authorship suites:    164/164 green (9 suites)
+npm test:                        7855/7859 — 4 failures, ALL reproduced at
+                                 clean base a1b4558 in this sandbox and green
+                                 on CI: EROFS preflight (masked known-env),
+                                 homebase human-summary, urp-proof artifact
+                                 scan, self-check report scan → classified
+                                 SANDBOX-ENVIRONMENTAL, zero new failures
+npm run coverage:                95.36 L / 84.35 B / 97.75 F ≥ 95/84/95
+                                 (authorship-key-store.js 85.87 B)
+claim corpus gate:               current=122 baseline=122 new=0 dangling=0
+kernel purity · ipc gate · actuator · integration check · llm:guidance ·
+git diff --check:                exit 0
+npm run check:                   gates 0–120 pass (incl. the new 1E gate at
+                                 position 24); stops at gate 121 (isolated
+                                 full-TAP re-run) on the SAME 3 sandbox-
+                                 environmental failures — the known sandbox
+                                 stop point (1D receipt records identical
+                                 behavior); trusted-environment verdict is CI
+```
+
+## Unresolved limitations
+
+- R21 proves no env-fallback via HOME/DEMA_HOME canaries and explicit-path
+  containment; it does not interpose syscalls, so it cannot prove a negative
+  over the whole process — the static gate + loader containment carry the rest.
+- The static gate's function extraction is brace-matching over the module's
+  declaration-only style, not a full parser (no AST dependency exists in the
+  tree); reachability is at function granularity.
+- `artifact_binding_state` scans only flat regular files under
+  `$DEMA_HOME/receipts` (bound 512); anything else is `UNKNOWN` by design.
+- The three sandbox-environmental npm-test failures are classified, not fixed;
+  they fail identically on unmodified base and pass on CI.
+
+## Non-claims
+
+```text
+real signer untouched (~/.dema/keys never resolved, read, or written)
+no identity recovery performed
+no signer rotation
+no automatic self-healing claimed
+no DEMA active-bounded proof
+no URP-Local live proof
+Node0 not closed
+```
