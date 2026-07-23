@@ -800,3 +800,197 @@ describe("R3b migration transaction ownership + partial resume", () => {
     assert.equal(pair.fingerprint, legacy.public_key_fingerprint);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IDENTITY-POST-MERGE-CONVERGENCE-1C — the two merged edge defects + the
+// review-execution-≠-verdict governance proof.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function legacyHome1c(pem) {
+  const home = freshHome();
+  const lp = keyPaths(home);
+  mkdirSync(lp.dir, { recursive: true });
+  writeFileSync(lp.privateKey, pem.private_key_pem, { mode: 0o600 });
+  writeFileSync(lp.publicKey, pem.public_key_pem);
+  return home;
+}
+
+describe("1C-A generation classification validates content, not presence", () => {
+  it("truncated-but-present metadata is NOT classified complete → migration refuses", async () => {
+    const legacy = generateEd25519Keypair();
+    const home = legacyHome1c(legacy);
+    const ap = activeKeyPaths(home);
+    const fp = legacy.public_key_fingerprint;
+    const genDir = join(ap.generationsDir, fp);
+    mkdirSync(genDir, { recursive: true });
+    writeFileSync(join(genDir, "private.pem"), legacy.private_key_pem, { mode: 0o600 });
+    writeFileSync(join(genDir, "public.pem"), legacy.public_key_pem);
+    writeFileSync(join(genDir, "metadata.json"), '{"schema":"trunc');  // present but malformed
+
+    const r = await migrateLegacyAuthorshipKey({
+      consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW,
+    });
+    // Repairable: canonical metadata regenerated from the still-verified pair,
+    // malformed bytes preserved, and the loader ACCEPTS the result.
+    assert.equal(r.migrated, true);
+    const load = await loadActiveKeyPair(home);
+    assert.equal(load.ok, true);
+    assert.equal(existsSync(join(genDir, "metadata.json.recovery")), true, "bad bytes preserved");
+    // The regenerated metadata is valid.
+    const meta = JSON.parse(readFileSync(join(genDir, "metadata.json"), "utf8"));
+    assert.equal(meta.fingerprint, fp);
+    assert.equal(meta.algorithm, "ed25519");
+  });
+
+  it("a generation whose metadata fingerprint is WRONG never migrates to success", async () => {
+    const legacy = generateEd25519Keypair();
+    const home = legacyHome1c(legacy);
+    const ap = activeKeyPaths(home);
+    const fp = legacy.public_key_fingerprint;
+    const genDir = join(ap.generationsDir, fp);
+    mkdirSync(genDir, { recursive: true });
+    writeFileSync(join(genDir, "private.pem"), legacy.private_key_pem, { mode: 0o600 });
+    writeFileSync(join(genDir, "public.pem"), legacy.public_key_pem);
+    // Parseable JSON, valid schema, but WRONG content hashes (not regenerable-safe).
+    writeFileSync(join(genDir, "metadata.json"), JSON.stringify({
+      schema: GENERATION_METADATA_SCHEMA, fingerprint: fp, generation_id: fp,
+      algorithm: "ed25519", private_content_hash: "0".repeat(64),
+      public_content_hash: "0".repeat(64), created_at: NOW, source: "x",
+    }));
+    const r = await migrateLegacyAuthorshipKey({
+      consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW,
+    });
+    assert.equal(r.migrated, false);
+    assert.equal(r.error, "recovery_required");
+    assert.equal(existsSync(ap.activePointer), false);
+  });
+
+  it("valid pre-existing generation is complete_verified and resumes", async () => {
+    const legacy = generateEd25519Keypair();
+    const home = legacyHome1c(legacy);
+    const ap = activeKeyPaths(home);
+    const fp = legacy.public_key_fingerprint;
+    const genDir = join(ap.generationsDir, fp);
+    mkdirSync(genDir, { recursive: true });
+    writeFileSync(join(genDir, "private.pem"), legacy.private_key_pem, { mode: 0o600 });
+    writeFileSync(join(genDir, "public.pem"), legacy.public_key_pem);
+    writeFileSync(join(genDir, "metadata.json"), JSON.stringify({
+      schema: GENERATION_METADATA_SCHEMA, fingerprint: fp, generation_id: fp,
+      algorithm: "ed25519", private_content_hash: sha256(legacy.private_key_pem),
+      public_content_hash: sha256(legacy.public_key_pem), created_at: NOW, source: "legacy_migration",
+    }, null, 2) + "\n");
+    const r = await migrateLegacyAuthorshipKey({
+      consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW,
+    });
+    assert.equal(r.migrated, true);
+    assert.equal(r.resumed, true);
+    assert.equal((await loadActiveKeyPair(home)).ok, true);
+  });
+
+  it("an IRREGULAR object (directory) at a generation-file path → recovery_required", async () => {
+    const legacy = generateEd25519Keypair();
+    const home = legacyHome1c(legacy);
+    const ap = activeKeyPaths(home);
+    const fp = legacy.public_key_fingerprint;
+    const genDir = join(ap.generationsDir, fp);
+    mkdirSync(genDir, { recursive: true });
+    writeFileSync(join(genDir, "private.pem"), legacy.private_key_pem, { mode: 0o600 });
+    writeFileSync(join(genDir, "public.pem"), legacy.public_key_pem);
+    mkdirSync(join(genDir, "metadata.json"));  // a DIRECTORY where a file belongs
+    const r = await migrateLegacyAuthorshipKey({
+      consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW,
+    });
+    assert.equal(r.migrated, false);
+    assert.equal(r.error, "recovery_required");
+    assert.equal(existsSync(ap.activePointer), false);
+  });
+});
+
+describe("1C-B authoritative post-transition verification", () => {
+  it("a normal migration passes the post-activation loader check", async () => {
+    const home = legacyHome1c(generateEd25519Keypair());
+    const r = await migrateLegacyAuthorshipKey({
+      consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW,
+    });
+    assert.equal(r.migrated, true);
+    assert.equal((await loadActiveKeyPair(home)).fingerprint, r.fingerprint);
+  });
+
+  it("init passes post-activation verification and reports the active fingerprint", async () => {
+    const home = freshHome();
+    const r = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(r.initialized, true);
+    assert.equal((await loadActiveKeyPair(home)).fingerprint, r.public_key_fingerprint);
+  });
+});
+
+describe("1C-C observation requires a REGULAR file", () => {
+  const observe = async (home) => {
+    const { gatherNode0ActivationObservations } = await import(
+      "../apps/cli/src/commands/observe-gatherer.js"
+    );
+    return gatherNode0ActivationObservations({
+      env: { DEMA_HOME: home },
+      fetchImpl: async () => { throw new Error("no net"); },
+    });
+  };
+
+  it("a DIRECTORY at active-key.json reports NOT present", async () => {
+    const home = freshHome();
+    mkdirSync(join(home, "keys"), { recursive: true });
+    mkdirSync(join(home, "keys", "active-key.json"));  // directory, not file
+    assert.equal((await observe(home)).identity.key_file_present, false);
+  });
+
+  it("a DIRECTORY at the legacy pub-key path reports NOT present", async () => {
+    const home = freshHome();
+    mkdirSync(join(home, "keys"), { recursive: true });
+    mkdirSync(join(home, "keys", "node0-ed25519.pub.pem"));
+    assert.equal((await observe(home)).identity.key_file_present, false);
+  });
+
+  it("a regular safe pointer reports present", async () => {
+    const home = await initedHome();
+    assert.equal((await observe(home)).identity.key_file_present, true);
+  });
+});
+
+describe("1C review admissibility — execution status is not a verdict", () => {
+  it("green execution with blocking findings and admissible:false → MERGE_BLOCKED", async () => {
+    const { evaluateReviewAdmissibility } = await import(
+      "../packages/core/src/review-admissibility.js"
+    );
+    const d = evaluateReviewAdmissibility({
+      review_executed: true,
+      blocking_findings: 2,
+      highest_severity: "P1",
+      admissible: false,
+    });
+    assert.equal(d.decision, "MERGE_BLOCKED");
+    assert.ok(d.reasons.includes("blocking_findings_present"));
+    assert.ok(d.reasons.includes("verdict_not_admissible"));
+  });
+
+  it("clean review (executed, zero findings, admissible) → MERGE_ALLOWED", async () => {
+    const { evaluateReviewAdmissibility } = await import(
+      "../packages/core/src/review-admissibility.js"
+    );
+    const d = evaluateReviewAdmissibility({
+      review_executed: true, blocking_findings: 0, highest_severity: null, admissible: true,
+    });
+    assert.equal(d.decision, "MERGE_ALLOWED");
+  });
+
+  it("missing/ill-typed fields fail closed to MERGE_BLOCKED", async () => {
+    const { evaluateReviewAdmissibility } = await import(
+      "../packages/core/src/review-admissibility.js"
+    );
+    assert.equal(evaluateReviewAdmissibility({}).decision, "MERGE_BLOCKED");
+    assert.equal(evaluateReviewAdmissibility(null).decision, "MERGE_BLOCKED");
+    // executed + admissible but findings unknown → still blocked.
+    assert.equal(
+      evaluateReviewAdmissibility({ review_executed: true, admissible: true }).decision,
+      "MERGE_BLOCKED",
+    );
+  });
+});
