@@ -520,18 +520,13 @@ describe("R18 incomplete artifact evidence reports UNKNOWN", () => {
     assert.equal(report.artifact_binding_state, "UNKNOWN");
   });
 
-  it("a bounded clean scan reports NOT_DETECTED_BOUNDED_SCAN, and a bound receipt DETECTED", async () => {
-    const { home, fingerprint } = await homeCorruptGeneration();
+  it("a rejected pointer never gets a binding verdict — always UNKNOWN (1E.6)", async () => {
+    const { home } = await homeCorruptGeneration();
     mkdirSync(join(home, "receipts"), { recursive: true });
     writeFileSync(join(home, "receipts", "unrelated.json"), "{}\n");
-    const clean = await store.inspectIdentityRecovery(home);
-    assert.equal(clean.artifact_binding_state, "NOT_DETECTED_BOUNDED_SCAN");
-    writeFileSync(
-      join(home, "receipts", "authorship-1.json"),
-      `${JSON.stringify({ public_key_fingerprint: fingerprint })}\n`,
-    );
-    const bound = await store.inspectIdentityRecovery(home);
-    assert.equal(bound.artifact_binding_state, "DETECTED");
+    const report = await store.inspectIdentityRecovery(home);
+    // The scan runs only for a loader-VERIFIED fingerprint (see 1E.6-F F5).
+    assert.equal(report.artifact_binding_state, "UNKNOWN");
   });
 });
 
@@ -607,7 +602,9 @@ describe("inspectIdentityRecovery contract (§10)", () => {
     assert.equal(report.recovery_class, "INVALID_PRIOR_POINTER");
     assert.equal(typeof report.active_pointer_path, "string");
     assert.match(report.active_pointer_hash, /^[0-9a-f]{64}$/);
-    assert.match(report.generation_fingerprint, /^[0-9a-f]{64}$/);
+    // 1E.6-F: a rejected doc's fingerprint is a claim — hash-bound, not echoed.
+    assert.equal(report.generation_fingerprint, null);
+    assert.equal(report.generation_fingerprint_state, "UNTRUSTED_CLAIM");
     // 1E.1-A: a loader-rejected pointer's path claim is never republished.
     assert.equal(report.generation_path, null);
     assert.equal(report.generation_path_state, "UNTRUSTED_OR_UNCONTAINED");
@@ -633,24 +630,25 @@ describe("inspectIdentityRecovery contract (§10)", () => {
     assert.equal(report.automatic_recovery_allowed, false);
   });
 
-  it("maps a live transition lease to IDENTITY_TRANSITION_IN_PROGRESS", async () => {
-    const home = await initedHome();
+  it("maps a live lease WITHOUT identity to IDENTITY_TRANSITION_IN_PROGRESS", async () => {
+    const home = freshHome();
     const ap = activeKeyPaths(home);
     mkdirSync(ap.transactionsDir, { recursive: true });
     writeFileSync(ap.identityLease, JSON.stringify({ pid: process.pid }));
     const report = await store.inspectIdentityRecovery(home);
     assert.equal(report.recovery_class, "IDENTITY_TRANSITION_IN_PROGRESS");
     assert.equal(report.transition_lease_state, "HOLDER_ALIVE");
+    assert.equal(report.recommended_action, "RETRY_AFTER_TRANSITION");
   });
 
-  it("maps a dead-holder lease to IDENTITY_TRANSITION_IN_PROGRESS with HOLDER_DEAD", async () => {
-    const home = await initedHome();
+  it("a dead-holder lease never claims an active transition", async () => {
+    const home = freshHome();
     const ap = activeKeyPaths(home);
     const dead = spawn(process.execPath, ["-e", ""], { stdio: "ignore" });
     mkdirSync(ap.transactionsDir, { recursive: true });
     writeFileSync(ap.identityLease, JSON.stringify({ pid: dead.pid }));
     const report = await store.inspectIdentityRecovery(home);
-    assert.equal(report.recovery_class, "IDENTITY_TRANSITION_IN_PROGRESS");
+    assert.equal(report.recovery_class, "NO_ACTIVE_IDENTITY");
     assert.equal(report.transition_lease_state, "HOLDER_DEAD");
     assert.equal(report.recommended_action, "RUN_EXPLICIT_IDENTITY_RECOVERY");
   });
@@ -994,6 +992,159 @@ describe("1E.1-B gate covers every callable form or fails closed", () => {
         "function inspectIdentityRecovery(h) { return null; }\n",
     );
     assert.equal(r.ok, false);
+  });
+});
+
+// ── IDENTITY-RECOVERY-REPORT-INTEGRITY-1E.6 ────────────────────────────────
+// Law: a lease is liveness evidence; a verified pointer is authority
+// evidence. Liveness evidence must never override verified authority. Only a
+// confirmed LIVE holder may classify a non-valid pointer state as an active
+// transition. And a loader-rejected doc's generation_fingerprint is an
+// untrusted claim — never published as evidence, never used to scan receipts.
+
+describe("1E.6-L verified authority outranks lease liveness", () => {
+  function plantLease(home, contents) {
+    const ap = activeKeyPaths(home);
+    mkdirSync(ap.transactionsDir, { recursive: true });
+    if (contents === "DIR") {
+      mkdirSync(ap.identityLease);
+    } else {
+      writeFileSync(ap.identityLease, contents);
+    }
+  }
+
+  it("L1 valid identity + live lease reports VALID and action NONE", async () => {
+    // Deterministic replay of the completed-transition race: the lease is
+    // observed live, the transition has completed, the pointer is valid.
+    const home = await initedHome();
+    plantLease(home, JSON.stringify({ pid: process.pid }));
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.recovery_class, "VALID_ACTIVE_IDENTITY");
+    assert.equal(report.transition_lease_state, "HOLDER_ALIVE");
+    assert.equal(report.recommended_action, "NONE");
+  });
+
+  it("L2 valid identity + dead-holder lease reports VALID and action NONE", async () => {
+    const home = await initedHome();
+    const dead = spawn(process.execPath, ["-e", ""], { stdio: "ignore" });
+    plantLease(home, JSON.stringify({ pid: dead.pid }));
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.recovery_class, "VALID_ACTIVE_IDENTITY");
+    assert.equal(report.transition_lease_state, "HOLDER_DEAD");
+    assert.equal(report.recommended_action, "NONE");
+  });
+
+  it("L3 valid identity + unreadable lease reports VALID and action NONE", async () => {
+    const home = await initedHome();
+    plantLease(home, "DIR");
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.recovery_class, "VALID_ACTIVE_IDENTITY");
+    assert.equal(report.transition_lease_state, "UNREADABLE");
+    assert.equal(report.recommended_action, "NONE");
+  });
+
+  it("L4 invalid pointer + live lease reports transition without mutation", async () => {
+    const home = await homeUntrackedPointer();
+    plantLease(home, JSON.stringify({ pid: process.pid }));
+    const before = snapshotTree(home);
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.recovery_class, "IDENTITY_TRANSITION_IN_PROGRESS");
+    assert.equal(report.recommended_action, "RETRY_AFTER_TRANSITION");
+    assert.equal(snapshotTree(home), before);
+  });
+
+  it("L5 invalid pointer + dead lease keeps the exact pointer class", async () => {
+    const { home } = await homeCorruptGeneration();
+    const dead = spawn(process.execPath, ["-e", ""], { stdio: "ignore" });
+    plantLease(home, JSON.stringify({ pid: dead.pid }));
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.recovery_class, "CORRUPT_GENERATION");
+    assert.equal(report.transition_lease_state, "HOLDER_DEAD");
+    assert.equal(report.recommended_action, "RUN_EXPLICIT_IDENTITY_RECOVERY");
+  });
+
+  it("L6 an unreadable lease is never proof of an active transition", async () => {
+    const { home } = await homeCorruptGeneration();
+    plantLease(home, "DIR");
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.recovery_class, "CORRUPT_GENERATION");
+    assert.equal(report.transition_lease_state, "UNREADABLE");
+    assert.equal(report.recommended_action, "RUN_EXPLICIT_IDENTITY_RECOVERY");
+  });
+
+  it("L7 empty home with no lease still recommends initialization", async () => {
+    const report = await store.inspectIdentityRecovery(freshHome());
+    assert.equal(report.recovery_class, "NO_ACTIVE_IDENTITY");
+    assert.equal(report.transition_lease_state, "NONE");
+    assert.equal(report.recommended_action, "INITIALIZE_AUTHORSHIP_KEY");
+  });
+});
+
+describe("1E.6-F fingerprint claims are never promoted or scanned", () => {
+  it("F1 an invalid genesis pointer's claimed fingerprint is hash-only", async () => {
+    const home = await homeInvalidGenesisPointer();
+    const claimed = readPointer(home).generation_fingerprint;
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.generation_fingerprint, null);
+    assert.equal(report.generation_fingerprint_state, "UNTRUSTED_CLAIM");
+    assert.equal(
+      report.pointer_claimed_generation_fingerprint_hash,
+      sha256(claimed),
+    );
+    assert.doesNotMatch(JSON.stringify(report), new RegExp(claimed));
+  });
+
+  it("F2 an invalid prior pointer's claimed fingerprint is hash-only", async () => {
+    const home = await homeInvalidPriorPointer();
+    const claimed = readPointer(home).generation_fingerprint;
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.generation_fingerprint, null);
+    assert.equal(report.generation_fingerprint_state, "UNTRUSTED_CLAIM");
+    assert.equal(
+      report.pointer_claimed_generation_fingerprint_hash,
+      sha256(claimed),
+    );
+  });
+
+  it("F3 a malformed pointer has no usable claim — ABSENT", async () => {
+    const home = await homeUntrackedPointer();
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.generation_fingerprint, null);
+    assert.equal(report.generation_fingerprint_state, "ABSENT");
+    assert.equal(report.pointer_claimed_generation_fingerprint_hash, null);
+    assert.equal(report.artifact_binding_state, "UNKNOWN");
+  });
+
+  it("F4 a canary receipt cannot force DETECTED through a rejected claim", async () => {
+    const { home, fingerprint } = await homeCorruptGeneration();
+    // Attacker plants a receipt naming the claimed fingerprint; the claim is
+    // rejected, so the scan must not run and binding stays UNKNOWN.
+    mkdirSync(join(home, "receipts"), { recursive: true });
+    writeFileSync(
+      join(home, "receipts", "canary.json"),
+      `${JSON.stringify({ public_key_fingerprint: fingerprint })}\n`,
+    );
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.recovery_class, "CORRUPT_GENERATION");
+    assert.equal(report.artifact_binding_state, "UNKNOWN");
+  });
+
+  it("F5 a valid identity publishes the loader's fingerprint as VERIFIED and scans", async () => {
+    const home = await initedHome();
+    const pair = await store.loadActiveKeyPair(home);
+    mkdirSync(join(home, "receipts"), { recursive: true });
+    writeFileSync(join(home, "receipts", "unrelated.json"), "{}\n");
+    const clean = await store.inspectIdentityRecovery(home);
+    assert.equal(clean.generation_fingerprint, pair.fingerprint);
+    assert.equal(clean.generation_fingerprint_state, "VERIFIED");
+    assert.equal(clean.pointer_claimed_generation_fingerprint_hash, null);
+    assert.equal(clean.artifact_binding_state, "NOT_DETECTED_BOUNDED_SCAN");
+    writeFileSync(
+      join(home, "receipts", "authorship-1.json"),
+      `${JSON.stringify({ public_key_fingerprint: pair.fingerprint })}\n`,
+    );
+    const bound = await store.inspectIdentityRecovery(home);
+    assert.equal(bound.artifact_binding_state, "DETECTED");
   });
 });
 

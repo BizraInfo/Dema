@@ -713,33 +713,50 @@ async function boundedArtifactBindingScan(demaHome, fingerprint) {
   return "NOT_DETECTED_BOUNDED_SCAN";
 }
 
-const RECOVERY_RECOMMENDED_ACTION = Object.freeze({
-  NO_ACTIVE_IDENTITY: "INITIALIZE_AUTHORSHIP_KEY",
-  VALID_ACTIVE_IDENTITY: "NONE",
-});
-
 // inspectIdentityRecovery — the read-only refuse-and-report inspector. Maps a
 // home to exactly one recovery class with the evidence an explicit C5
 // recovery transaction would need. Returns paths, hashes, and classes only —
 // never key material or receipt contents.
+//
+// Authority-precedence law (1E.6): a lease is LIVENESS evidence; a verified
+// pointer is AUTHORITY evidence. Liveness evidence never overrides verified
+// authority — a canonically valid identity always reports VALID regardless of
+// lease state (the lease stays observable in transition_lease_state). Only a
+// confirmed LIVE holder may classify a non-valid pointer state as an active
+// transition; a dead or unreadable lease is not proof of one.
 export async function inspectIdentityRecovery(demaHome) {
   const ap = activeKeyPaths(demaHome);
   const paths = keyPaths(demaHome);
   const lease = await inspectTransitionLease(ap);
   const pointerCls = await classifyPointerAuthority(demaHome);
-  const inProgress = lease.state !== "NONE";
-  const recoveryClass = inProgress
-    ? "IDENTITY_TRANSITION_IN_PROGRESS"
-    : pointerCls.class;
+  const pointerValid = pointerCls.class === "VALID_ACTIVE_IDENTITY";
+  const liveTransition = !pointerValid && lease.state === "HOLDER_ALIVE";
+  const recoveryClass = pointerValid
+    ? "VALID_ACTIVE_IDENTITY"
+    : liveTransition
+      ? "IDENTITY_TRANSITION_IN_PROGRESS"
+      : pointerCls.class;
   // Single-snapshot rule (Greptile round-4 TOCTOU): the inspector performs NO
   // pointer read of its own. Trusted facts come from the loader's accepted
   // snapshot (via the classifier); claims and claim-hashes come from the
   // classifier's one diagnostic read. A re-read here could parse replacement
   // bytes that were never validated.
   const doc = pointerCls.doc ?? null;
-  const valid = pointerCls.class === "VALID_ACTIVE_IDENTITY";
-  const fingerprint =
-    pointerCls.fingerprint ?? doc?.generation_fingerprint ?? null;
+  const valid = pointerValid;
+  // 1E.6-F: a rejected doc's generation_fingerprint is an untrusted CLAIM —
+  // shape validity is not trust. It is published (and used for the artifact
+  // scan) ONLY when it is the canonical loader's verified fingerprint;
+  // otherwise the report carries a hash of the claim and the scan is not run.
+  const claimedFingerprint =
+    doc && typeof doc.generation_fingerprint === "string"
+      ? doc.generation_fingerprint
+      : null;
+  const fingerprint = valid ? (pointerCls.fingerprint ?? null) : null;
+  const fingerprintState = valid
+    ? "VERIFIED"
+    : claimedFingerprint !== null
+      ? "UNTRUSTED_CLAIM"
+      : "ABSENT";
   // 1E.1 Finding A: a pointer document the canonical loader REJECTED is
   // attacker-influencable evidence, not fact. Its raw generation_path claim is
   // never republished — the report carries only a hash of the claim and an
@@ -757,12 +774,19 @@ export async function inspectIdentityRecovery(demaHome) {
     generationPathState = "UNTRUSTED_OR_UNCONTAINED";
     claimedPathHash = sha256(claimedPath);
   }
-  const recommendedAction = inProgress
-    ? lease.state === "HOLDER_ALIVE"
-      ? "RETRY_AFTER_TRANSITION"
-      : "RUN_EXPLICIT_IDENTITY_RECOVERY"
-    : (RECOVERY_RECOMMENDED_ACTION[recoveryClass] ??
-      "RUN_EXPLICIT_IDENTITY_RECOVERY");
+  let recommendedAction;
+  if (valid) {
+    recommendedAction = "NONE";
+  } else if (liveTransition) {
+    recommendedAction = "RETRY_AFTER_TRANSITION";
+  } else if (
+    pointerCls.class === "NO_ACTIVE_IDENTITY" &&
+    lease.state === "NONE"
+  ) {
+    recommendedAction = "INITIALIZE_AUTHORSHIP_KEY";
+  } else {
+    recommendedAction = "RUN_EXPLICIT_IDENTITY_RECOVERY";
+  }
   return Object.freeze({
     schema: "bizra.dema.identity_recovery_inspection.v0.1",
     recovery_class: recoveryClass,
@@ -773,6 +797,9 @@ export async function inspectIdentityRecovery(demaHome) {
         ? sha256(pointerCls.raw)
         : null,
     generation_fingerprint: fingerprint,
+    generation_fingerprint_state: fingerprintState,
+    pointer_claimed_generation_fingerprint_hash:
+      !valid && claimedFingerprint !== null ? sha256(claimedFingerprint) : null,
     generation_path: generationPath,
     generation_path_state: generationPathState,
     pointer_claimed_generation_path_hash: claimedPathHash,
@@ -788,7 +815,12 @@ export async function inspectIdentityRecovery(demaHome) {
         ? sha256(doc.previous_generation)
         : null,
     legacy_pair_presence: await isSafeExistingKeyPath(paths, paths.privateKey),
-    artifact_binding_state: await boundedArtifactBindingScan(demaHome, fingerprint),
+    // The receipts scan runs ONLY against a loader-VERIFIED fingerprint — a
+    // rejected claim must never produce an apparently meaningful binding
+    // verdict, so every non-valid state is UNKNOWN.
+    artifact_binding_state: valid
+      ? await boundedArtifactBindingScan(demaHome, fingerprint)
+      : "UNKNOWN",
     transition_lease_state: lease.state,
     automatic_recovery_allowed: false,
     required_consent_class: "C5",

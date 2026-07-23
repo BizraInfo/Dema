@@ -313,6 +313,56 @@ finding, fixed red-first (1E.5):**
   test A14 pins the classifier body to zero `loadActiveKeyPair` references
   and exactly one `readActivePointer` call.
 
+**Round 1E.6 (founder audit on exact head `fc77903`) — two evidence-trust
+findings, both fixed red-first:**
+
+```text
+IDENTITY-RECOVERY-REPORT-INTEGRITY-1E.6
+
+FINDING H:
+lease and pointer observations could be mixed so stale lease liveness
+overrode a canonically valid active identity (any lease presence — including
+HOLDER_DEAD and UNREADABLE — forced IDENTITY_TRANSITION_IN_PROGRESS)
+
+FINDING I:
+a loader-rejected doc's generation_fingerprint (schema-valid but unverified)
+was published as evidence AND used to drive the receipts binding scan
+
+CLASS:
+diagnostic snapshot incoherence · authority-precedence violation ·
+diagnostic evidence laundering — NOT authority mutation
+
+LAW:
+verified pointer authority outranks lease liveness;
+only a live holder means transition-in-progress;
+a rejected fingerprint claim is hash-bound, never scanned
+
+STATUS:
+reproduced red-first (13 failing tests) · FIXED
+```
+
+Decision matrix now enforced: a canonically valid identity always reports
+`VALID_ACTIVE_IDENTITY` / action `NONE` regardless of lease state (the lease
+stays observable in `transition_lease_state`); only `HOLDER_ALIVE` + non-valid
+pointer yields `IDENTITY_TRANSITION_IN_PROGRESS` / `RETRY_AFTER_TRANSITION`;
+`HOLDER_DEAD`/`UNREADABLE` preserve the exact pointer class with
+`RUN_EXPLICIT_IDENTITY_RECOVERY`; empty home + no lease recommends
+initialization. Fingerprint contract: `generation_fingerprint` non-null only
+as `VERIFIED` (loader-sourced); rejected claims yield
+`pointer_claimed_generation_fingerprint_hash` + `UNTRUSTED_CLAIM`; the
+artifact scan runs ONLY against a verified fingerprint — every non-valid
+state reports `artifact_binding_state: UNKNOWN` (canary-receipt test proves a
+planted receipt cannot force `DETECTED` through a rejected claim).
+
+Tests L1–L7 (authority precedence incl. the completed-transition race replay)
++ F1–F5 (fingerprint containment) + rewritten lease/§10/R18 expectations.
+
+CodeRabbit classification (truthful): APPROVED was recorded at `5878ec2`;
+later triggers returned "incremental — does not re-review reviewed commits".
+That is NOT exact-head substantive review → classified
+`REVIEW_NOT_RE_EXECUTED_AT_EXACT_HEAD` until a fresh pass reviews the final
+head.
+
 ## Non-claims
 
 ```text
