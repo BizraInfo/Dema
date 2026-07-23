@@ -720,6 +720,17 @@ export async function inspectIdentityRecovery(demaHome) {
     : pointerCls.class;
   const raw = await readFileNoFollow(ap.activePointer);
   const doc = pointerCls.doc ?? null;
+  // For a loader-ACCEPTED pointer the on-disk record (the same bytes bound by
+  // active_pointer_hash) is authoritative — its recorded lineage may be
+  // published. Rejected docs never reach this.
+  let acceptedDoc = null;
+  if (pointerCls.class === "VALID_ACTIVE_IDENTITY" && raw !== null) {
+    try {
+      acceptedDoc = JSON.parse(raw);
+    } catch {
+      acceptedDoc = null;
+    }
+  }
   const fingerprint =
     pointerCls.fingerprint ?? doc?.generation_fingerprint ?? null;
   // 1E.1 Finding A: a pointer document the canonical loader REJECTED is
@@ -755,14 +766,19 @@ export async function inspectIdentityRecovery(demaHome) {
     generation_path_state: generationPathState,
     pointer_claimed_generation_path_hash: claimedPathHash,
     loader_error: pointerCls.loader_error ?? null,
-    // Same laundering rule as generation_path: previous_generation is a
-    // pointer-doc CLAIM. Publish it only in canonical fingerprint shape —
-    // a path-like or otherwise malformed claim is withheld (the full raw doc
-    // stays hash-bound via active_pointer_hash).
+    // Same laundering rule as generation_path: previous_generation from a
+    // loader-REJECTED doc is an attacker-influencable CLAIM — shape validity
+    // is not trust. It is published only from a loader-ACCEPTED pointer (the
+    // authoritative active record); otherwise the report carries only a hash
+    // of the claim. Genesis-vs-prior diagnosis stays in recovery_class.
     previous_generation:
-      typeof doc?.previous_generation === "string" &&
-      /^[0-9a-f]{64}$/.test(doc.previous_generation)
-        ? doc.previous_generation
+      pointerCls.class === "VALID_ACTIVE_IDENTITY"
+        ? (acceptedDoc?.previous_generation ?? null)
+        : null,
+    pointer_claimed_previous_generation_hash:
+      pointerCls.class !== "VALID_ACTIVE_IDENTITY" &&
+      typeof doc?.previous_generation === "string"
+        ? sha256(doc.previous_generation)
         : null,
     legacy_pair_presence: await isSafeExistingKeyPath(paths, paths.privateKey),
     artifact_binding_state: await boundedArtifactBindingScan(demaHome, fingerprint),

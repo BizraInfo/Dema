@@ -613,7 +613,12 @@ describe("inspectIdentityRecovery contract (§10)", () => {
     assert.equal(report.generation_path_state, "UNTRUSTED_OR_UNCONTAINED");
     assert.match(report.pointer_claimed_generation_path_hash, /^[0-9a-f]{64}$/);
     assert.equal(report.loader_error, "generation_missing");
-    assert.equal(report.previous_generation, "b".repeat(64));
+    // 1E.3: lineage from a rejected doc is a claim — hash-bound, not echoed.
+    assert.equal(report.previous_generation, null);
+    assert.equal(
+      report.pointer_claimed_previous_generation_hash,
+      sha256("b".repeat(64)),
+    );
     assert.equal(typeof report.legacy_pair_presence, "boolean");
     assert.equal(report.transition_lease_state, "NONE");
     assert.equal(report.automatic_recovery_allowed, false);
@@ -767,13 +772,33 @@ describe("1E.1-A generation-path evidence containment", () => {
     });
     const report = await store.inspectIdentityRecovery(home);
     assert.equal(report.previous_generation, null);
+    assert.equal(
+      report.pointer_claimed_previous_generation_hash,
+      sha256("/zz-prev-attacker-marker/../etc"),
+    );
     assert.doesNotMatch(JSON.stringify(report), /zz-prev-attacker-marker/);
   });
 
-  it("A10 a well-formed fingerprint previous_generation claim is retained", async () => {
+  it("A10 even a shape-valid prior claim from a rejected doc is hash-only", async () => {
     const home = await homeInvalidPriorPointer();
     const report = await store.inspectIdentityRecovery(home);
-    assert.equal(report.previous_generation, "b".repeat(64));
+    // Diagnosis (genesis vs prior) lives in recovery_class; the attacker-
+    // influencable lineage VALUE is never promoted into evidence.
+    assert.equal(report.recovery_class, "INVALID_PRIOR_POINTER");
+    assert.equal(report.previous_generation, null);
+    assert.equal(
+      report.pointer_claimed_previous_generation_hash,
+      sha256("b".repeat(64)),
+    );
+    assert.doesNotMatch(JSON.stringify(report), new RegExp("b".repeat(64)));
+  });
+
+  it("A11 a loader-accepted pointer's recorded lineage is published", async () => {
+    const home = await initedHome();
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.recovery_class, "VALID_ACTIVE_IDENTITY");
+    assert.equal(report.previous_generation, null); // genesis record
+    assert.equal(report.pointer_claimed_previous_generation_hash, null);
   });
 
   it("A8 the dangling-genesis claim from R20 is hash-only, not republished", async () => {

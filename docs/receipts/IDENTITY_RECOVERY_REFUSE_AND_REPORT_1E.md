@@ -266,6 +266,20 @@ narrower live findings, both fixed red-first in the same responsibility:**
   the symlink probe; everything else classifies via `fstat` on an
   `O_NOFOLLOW` descriptor. No path re-check after a path check anywhere.
 
+**Third Greptile pass (exact head `613b93a`, 2026-07-23T17:44Z) — one live
+finding, fixed red-first (1E.3):**
+
+- **Finding E — unverified prior generation published:** a shape-valid 64-hex
+  `previous_generation` from a loader-REJECTED doc is still an unverified,
+  attacker-influencable lineage claim — shape validity is not trust, and an
+  explicit C5 recovery could be steered by it. Now `previous_generation` is
+  published ONLY from a loader-ACCEPTED pointer (the same bytes bound by
+  `active_pointer_hash`); a rejected doc's claim is represented solely by
+  `pointer_claimed_previous_generation_hash`. Genesis-vs-prior diagnosis
+  remains in `recovery_class`, which derives from claim PRESENCE, not the
+  claim's value (tests A9–A11 + updated §10 contract). CI on `613b93a`
+  settled 9/9 SUCCESS including CodeQL (alerts 350/351/352 all closed).
+
 ## Non-claims
 
 ```text
