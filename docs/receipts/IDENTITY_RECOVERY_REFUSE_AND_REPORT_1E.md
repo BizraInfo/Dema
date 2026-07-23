@@ -298,6 +298,21 @@ finding, fixed red-first (1E.4):**
   accepted lineage; behavioral coherence asserts the published hash equals
   the loader's `active_pointer_hash`.
 
+**Fifth Greptile pass (exact head `bbabc5d`, 2026-07-23T18:05Z) — one live
+finding, fixed red-first (1E.5):**
+
+- **Finding G — mixed pointer snapshots in report:** the classifier called
+  `loadActiveKeyPair` (its own internal pointer read) and then
+  `readActivePointer` again — a concurrent swap between the two could pair
+  snapshot-1's loader error with snapshot-2's claims and hash. Fixed at the
+  root: the loader's post-read verification is extracted into a shared
+  `verifyPointerDoc(ap, doc, raw)`; `loadActiveKeyPair` and
+  `classifyPointerAuthority` each perform exactly ONE `readActivePointer`
+  and verify that same snapshot through it. Verdict, claims, claim-hashes,
+  and the trusted VALID facts all derive from a single snapshot. Structural
+  test A14 pins the classifier body to zero `loadActiveKeyPair` references
+  and exactly one `readActivePointer` call.
+
 ## Non-claims
 
 ```text

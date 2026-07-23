@@ -814,6 +814,40 @@ describe("1E.1-A generation-path evidence containment", () => {
     assert.equal(rotated.previous_generation, "e".repeat(64));
   });
 
+  it("A14 the classifier reads the pointer exactly once — no mixed snapshots", async () => {
+    // Greptile round-5: calling loadActiveKeyPair (its own internal read) and
+    // then readActivePointer again lets a concurrent swap pair snapshot-1's
+    // loader error with snapshot-2's claims and hash. The classifier must
+    // drive verdict, claims, and hashes from ONE readActivePointer snapshot
+    // via the shared verifyPointerDoc — never a second read.
+    const source = readFileSync(
+      new URL(
+        "../packages/receipts/src/authorship-key-store.js",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const start = source.indexOf("async function classifyPointerAuthority");
+    assert.notEqual(start, -1);
+    const open = source.indexOf("{", source.indexOf(")", start));
+    let depth = 0;
+    let end = -1;
+    for (let i = open; i < source.length; i += 1) {
+      if (source[i] === "{") depth += 1;
+      else if (source[i] === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          end = i;
+          break;
+        }
+      }
+    }
+    const body = source.slice(open, end + 1);
+    assert.doesNotMatch(body, /loadActiveKeyPair\s*\(/);
+    const reads = body.match(/readActivePointer\s*\(/g) ?? [];
+    assert.equal(reads.length, 1);
+  });
+
   it("A13 the inspector never re-reads the pointer — one snapshot only", async () => {
     // Structural single-snapshot proof: every promoted field derives from the
     // classifier's validated read; a second read could parse replacement

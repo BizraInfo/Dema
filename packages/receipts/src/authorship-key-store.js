@@ -596,39 +596,47 @@ async function classifyPointerAuthority(demaHome) {
   if (info.isSymbolicLink() || !info.isFile()) {
     return { class: "UNSAFE_POINTER_PATH" };
   }
-  const load = await loadActiveKeyPair(demaHome);
+  // ONE pointer snapshot drives everything below — verdict, claims, and
+  // hashes all derive from this single read, so a concurrent swap can never
+  // pair one snapshot's loader error with another snapshot's evidence.
+  const pointer = await readActivePointer(ap);
+  if (pointer.error === "no_active_pointer") {
+    // lstat saw an entry that vanished before the read — state changed
+    // underneath; UNKNOWN, never re-normalized.
+    return { class: "RECOVERY_STATE_UNKNOWN", loader_error: pointer.error };
+  }
+  if (pointer.error) {
+    return {
+      class: "UNTRACKED_INVALID_POINTER",
+      loader_error: pointer.error,
+      raw: pointer.raw ?? null,
+    };
+  }
+  const { doc, raw } = pointer;
+  let load;
+  try {
+    load = await verifyPointerDoc(ap, doc, raw);
+  } catch {
+    load = pairFailure("load_failed");
+  }
   if (load.ok) {
     return {
       class: "VALID_ACTIVE_IDENTITY",
       fingerprint: load.fingerprint,
-      // Trusted facts come ONLY from the loader's single accepted snapshot —
-      // containment-verified path, recorded lineage, and pointer hash. Never
-      // a pointer re-read (a swap between reads could substitute bytes the
-      // loader never accepted).
+      // Trusted facts come ONLY from this accepted snapshot's verification —
+      // containment-verified path, recorded lineage, and pointer hash.
       generationPath: load.generation_path,
       previousGeneration: load.previous_generation,
       pointerHash: load.active_pointer_hash,
     };
   }
-  // Re-read the pointer record (read-only) so genesis/prior strands are
-  // distinguishable; a mid-read vanish is UNKNOWN, never re-normalized. This
-  // ONE snapshot supplies every claim (and claim hash) the inspector reports.
-  const pointer = await readActivePointer(ap);
-  const doc = pointer.error ? null : pointer.doc;
-  let cls;
-  if (load.error === "no_active_pointer") {
-    cls = "RECOVERY_STATE_UNKNOWN";
-  } else if (load.error === "generation_missing") {
-    cls =
-      doc === null
-        ? "RECOVERY_STATE_UNKNOWN"
-        : doc.previous_generation == null
-          ? "INVALID_GENESIS_POINTER"
-          : "INVALID_PRIOR_POINTER";
-  } else {
-    cls = LOAD_ERROR_TO_RECOVERY_CLASS[load.error] ?? "RECOVERY_STATE_UNKNOWN";
-  }
-  return { class: cls, loader_error: load.error, doc, raw: pointer.raw ?? null };
+  const cls =
+    load.error === "generation_missing"
+      ? doc.previous_generation == null
+        ? "INVALID_GENESIS_POINTER"
+        : "INVALID_PRIOR_POINTER"
+      : (LOAD_ERROR_TO_RECOVERY_CLASS[load.error] ?? "RECOVERY_STATE_UNKNOWN");
+  return { class: cls, loader_error: load.error, doc, raw };
 }
 
 function initRecoveryRefusal(cls) {
@@ -812,14 +820,13 @@ function pairFailure(error) {
   return Object.freeze({ ok: false, error });
 }
 
-export async function loadActiveKeyPair(demaHome) {
+// Shared post-pointer verification over ONE pointer snapshot (doc + raw):
+// containment, generation content, metadata, pair convergence, retirement —
+// exactly the loader contract. Both loadActiveKeyPair and
+// classifyPointerAuthority verify through here so a verdict can never mix
+// two different pointer reads (1E.4 round-5 snapshot-coherence rule).
+async function verifyPointerDoc(ap, doc, raw) {
   try {
-    const ap = activeKeyPaths(demaHome);
-
-    const pointer = await readActivePointer(ap);
-    if (pointer.error) return pairFailure(pointer.error);
-    const { doc, raw } = pointer;
-
     // Containment: the pointer may only select inside keys/generations/.
     const generationPath = isAbsolute(doc.generation_path)
       ? doc.generation_path
@@ -898,6 +905,17 @@ export async function loadActiveKeyPair(demaHome) {
       metadata_hash: sha256(metadataRaw),
       active_pointer_hash: sha256(raw),
     });
+  } catch {
+    return pairFailure("load_failed");
+  }
+}
+
+export async function loadActiveKeyPair(demaHome) {
+  try {
+    const ap = activeKeyPaths(demaHome);
+    const pointer = await readActivePointer(ap);
+    if (pointer.error) return pairFailure(pointer.error);
+    return await verifyPointerDoc(ap, pointer.doc, pointer.raw);
   } catch {
     return pairFailure("load_failed");
   }
