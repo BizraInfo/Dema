@@ -1095,3 +1095,95 @@ describe("1D committed-transition recovery", () => {
     }
   });
 });
+
+// ── Greptile PR#414 P1 findings (1D hardening) ─────────────────────────────
+describe("1D-P1 Greptile hardening", () => {
+  it("P1-1 an ESTABLISHED (receipt-bound) genesis identity is NOT silently replaced", async () => {
+    const home = await initedHome();
+    const pair = await loadActiveKeyPair(home);
+    // Simulate prior use: a signed receipt bound to this fingerprint.
+    mkdirSync(join(home, "receipts"), { recursive: true });
+    writeFileSync(
+      join(home, "receipts", "authorship-" + "a".repeat(64) + ".json"),
+      JSON.stringify({ public_key_fingerprint: pair.fingerprint, sig: "x" }),
+    );
+    // Now the generation goes corrupt.
+    writeFileSync(join(pair.generation_path, "metadata.json"), "{corrupt");
+    const r = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(r.error, "recovery_required");
+    assert.equal(r.reason, "established_identity_recovery_required");
+    assert.equal(r.boundary.key_persisted, false, "no quarantine, no mutation");
+    // Pointer still in place (not quarantined) for adjudication.
+    assert.equal(existsSync(activeKeyPaths(home).activePointer), true);
+  });
+
+  it("P1-2 quarantine refuses a SYMLINKED transactions dir (evidence never leaves DEMA_HOME)", async () => {
+    const home = await initedHome();
+    const ap = activeKeyPaths(home);
+    const outside = mkdtempSync(join(tmpdir(), "dema-ipc1d-out-"));
+    // Replace the real keys/transactions dir with a symlink to an external dir.
+    rmSync(ap.transactionsDir, { recursive: true, force: true });
+    symlinkSync(outside, ap.transactionsDir);
+    await strandActiveIdentity(home);
+    const r = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(r.error, "recovery_required");
+    assert.equal(r.reason, "unsafe_quarantine_dir");
+    // The pointer must NOT have been moved into the external target.
+    assert.equal(readdirSync(outside).some((f) => f.startsWith("quarantine-")), false);
+    assert.equal(existsSync(ap.activePointer), true, "pointer left in place");
+  });
+
+  it("P1-3 a failed migration is recoverable via `migrate` (re-migrates from legacy pair)", async () => {
+    const legacy = generateEd25519Keypair();
+    const home = legacyHome1c(legacy);
+    // First migration succeeds.
+    const m1 = await migrateLegacyAuthorshipKey({ consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(m1.migrated, true);
+    // The active generation goes corrupt (simulating a failed committed transition).
+    const pair = await loadActiveKeyPair(home);
+    writeFileSync(join(pair.generation_path, "metadata.json"), "{corrupt");
+    assert.equal((await loadActiveKeyPair(home)).ok, false);
+    // Retry migrate — must NOT return already_migrated; must recover from the
+    // still-present legacy pair and re-establish a verified identity.
+    const m2 = await migrateLegacyAuthorshipKey({ consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(m2.migrated, true, JSON.stringify(m2));
+    assert.equal((await loadActiveKeyPair(home)).ok, true);
+    assert.equal((await loadActiveKeyPair(home)).fingerprint, legacy.public_key_fingerprint);
+  });
+});
+
+describe("1D-P1 fail-closed coverage", () => {
+  it("migrate on an untracked (malformed) pointer → recovery_required, no mutation", async () => {
+    const home = legacyHome1c(generateEd25519Keypair());
+    await migrateLegacyAuthorshipKey({ consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW });
+    writeFileSync(activeKeyPaths(home).activePointer, "{not json");
+    const r = await migrateLegacyAuthorshipKey({ consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(r.migrated, false);
+    assert.equal(r.error, "recovery_required");
+    assert.equal(r.reason, "untracked_invalid_active_pointer");
+  });
+
+  it("migrate on a prior-identity invalid pointer → recovery_required", async () => {
+    const home = legacyHome1c(generateEd25519Keypair());
+    await migrateLegacyAuthorshipKey({ consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW });
+    const ap = activeKeyPaths(home);
+    const p = JSON.parse(readFileSync(ap.activePointer, "utf8"));
+    writeFileSync(ap.activePointer, JSON.stringify({ ...p, previous_generation: "b".repeat(64) }, null, 2) + "\n");
+    const pair = await loadActiveKeyPair(home);
+    writeFileSync(join(pair.generation_path, "metadata.json"), "{corrupt");
+    const r = await migrateLegacyAuthorshipKey({ consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(r.error, "recovery_required");
+    assert.equal(r.reason, "prior_identity_recovery_required");
+  });
+
+  it("a symlinked receipts dir is treated as receipt-bound (fail closed) — no replace", async () => {
+    const home = await initedHome();
+    const pair = await loadActiveKeyPair(home);
+    const outside = mkdtempSync(join(tmpdir(), "dema-ipc1d-rcpt-"));
+    symlinkSync(outside, join(home, "receipts"));
+    writeFileSync(join(pair.generation_path, "metadata.json"), "{corrupt");
+    const r = await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home, now: NOW });
+    assert.equal(r.error, "recovery_required");
+    assert.equal(r.reason, "established_identity_recovery_required");
+  });
+});

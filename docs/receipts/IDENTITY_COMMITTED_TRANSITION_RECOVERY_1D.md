@@ -85,6 +85,36 @@ kernel-purity · ipc-gate · no-overclaim · negative-verdict · git diff --chec
   recovery establishes fresh; that is correct for genesis and is the defect's
   actual failure mode.
 
+## Greptile PR #414 review — 3 P1 findings, verified and fixed
+
+Greptile's `COMMENTED` review (a green *status*, empty summary body) carried
+three inline **P1** findings on the first 1D push. Read the verdict, not the
+status; each confirmed against the code, then fixed:
+
+- **P1-1 established identity replaced.** Genesis auto-recovery quarantined any
+  `previous_generation:null` pointer, so a corrupt-but-USED identity (receipts
+  bound to its fingerprint) was silently replaced by a fresh keypair, orphaning
+  those receipts. Fix: `anyReceiptBindsFingerprint` scans `$DEMA_HOME/receipts`
+  for the failed fingerprint; if bound → `established_identity_recovery_required`,
+  no mutation. A symlinked/unreadable/malformed receipts dir is treated as bound
+  (fail closed). Only a provably UNUSED genesis is quarantined. This is the
+  "no consumer-use receipt exists" condition the 1D GO named and I first missed.
+- **P1-2 quarantine follows a symlinked dir (security).** `quarantineActivePointer`
+  now refuses when `keys/transactions` is a symlink or non-contained
+  (`unsafe_quarantine_dir`) and reports `quarantine_move_failed` on a
+  cross-device rename — pointer evidence can no longer be moved outside
+  `DEMA_HOME`.
+- **P1-3 migration recovery stranded.** `migrate` blanket-returned
+  `already_migrated` on any pointer, so a failed migration could not recover via
+  the CLI (init was then blocked by the preserved legacy files). Fix: `migrate`
+  is recovery-aware — an invalid genesis pointer is quarantined and re-migrated
+  from the still-present legacy pair; its own post-verify failure quarantines
+  the committed pointer; valid → `already_migrated`, prior/untracked → fail
+  closed.
+
+Tests: 6 new (3 P1 + 3 fail-closed coverage). Identity suite 72 green; 212
+across affected suites; coverage 95.33 L / 84.30 B / 97.73 F ≥ 95/84/95.
+
 ## Non-claims
 
 No signer rotation · real `~/.dema` signer untouched · PR #411/#412/#413 merged

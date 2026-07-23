@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { mkdir, lstat, realpath, open, rename, unlink } from "node:fs/promises";
+import { mkdir, lstat, realpath, open, rename, unlink, readdir } from "node:fs/promises";
 import { join, dirname, basename, relative, isAbsolute, sep } from "node:path";
 import { homedir } from "node:os";
 import { createPublicKey, createPrivateKey } from "node:crypto";
@@ -554,21 +554,101 @@ async function classifyActivePointer(demaHome) {
   const pointer = await readActivePointer(ap);
   if (pointer.error) return { state: "untracked_invalid", loader_error: load.error };
   if (pointer.doc.previous_generation === null) {
-    return { state: "genesis_invalid", raw: pointer.raw, loader_error: load.error };
+    return {
+      state: "genesis_invalid",
+      raw: pointer.raw,
+      fingerprint: pointer.doc.generation_fingerprint,
+      loader_error: load.error,
+    };
   }
   return { state: "prior_invalid", loader_error: load.error };
 }
 
-// Atomically move an unusable active pointer into the transactions quarantine
-// as evidence — never deleted. Returns the quarantine path. The failed
+// P1-1 (Greptile): an established identity that was actually USED (its
+// fingerprint is bound into a signed receipt) must never be silently replaced
+// by recovery — that would orphan every receipt/genesis proof under the old
+// fingerprint. Scan $DEMA_HOME/receipts for any authorship receipt bound to
+// the failed fingerprint. Any read hazard is treated as "bound" (fail closed).
+async function anyReceiptBindsFingerprint(demaHome, fingerprint) {
+  if (!fingerprint) return true; // unknown fingerprint → cannot prove unused
+  const home =
+    typeof demaHome === "string" && demaHome.length > 0
+      ? demaHome
+      : process.env.DEMA_HOME || join(homedir(), ".dema");
+  const receiptsDir = join(home, "receipts");
+  const dirInfo = await lstatIfExists(receiptsDir);
+  if (!dirInfo) return false; // no receipts dir → nothing was ever signed
+  if (dirInfo.isSymbolicLink() || !dirInfo.isDirectory()) return true; // hazard
+  let entries;
+  try {
+    entries = await readdir(receiptsDir);
+  } catch {
+    return true; // unreadable → fail closed
+  }
+  for (const name of entries) {
+    if (!name.startsWith("authorship-") || !name.endsWith(".json")) continue;
+    const raw = await readFileNoFollow(join(receiptsDir, name));
+    if (raw === null) return true; // present-but-unreadable → fail closed
+    // Cheap substring probe first, then confirm it is a real bound field.
+    if (!raw.includes(fingerprint)) continue;
+    try {
+      const doc = JSON.parse(raw);
+      const bound =
+        doc?.public_key_fingerprint === fingerprint ||
+        doc?.operator_public_key_fingerprint === fingerprint ||
+        doc?.body?.public_key_fingerprint === fingerprint ||
+        doc?.body?.operator_public_key_fingerprint === fingerprint;
+      if (bound) return true;
+    } catch {
+      return true; // malformed receipt mentioning the fp → fail closed
+    }
+  }
+  return false;
+}
+
+// P1-2 (Greptile): quarantine must not follow a symlinked transactions dir
+// (which would move the pointer OUTSIDE DEMA_HOME) and must stay atomic within
+// the keys root. Returns { ok, dest } | { ok:false, reason }. The failed
 // generation dir is left in place (also evidence).
 async function quarantineActivePointer(demaHome, raw) {
   const ap = activeKeyPaths(demaHome);
+  const info = await lstatIfExists(ap.transactionsDir);
+  if (info && (info.isSymbolicLink() || !info.isDirectory())) {
+    return { ok: false, reason: "unsafe_quarantine_dir" };
+  }
   await mkdir(ap.transactionsDir, { recursive: true });
+  // Containment: the resolved transactions dir must sit inside the keys root.
+  try {
+    const keysReal = await realpath(ap.dir);
+    const txReal = await realpath(ap.transactionsDir);
+    if (!isInsideOrSame(txReal, keysReal) || txReal === keysReal) {
+      return { ok: false, reason: "unsafe_quarantine_dir" };
+    }
+  } catch {
+    return { ok: false, reason: "unsafe_quarantine_dir" };
+  }
   const stamp = sha256(raw ?? "").slice(0, 16);
   const dest = join(ap.transactionsDir, `quarantine-active-key-${stamp}.json`);
-  await rename(ap.activePointer, dest);
-  return dest;
+  try {
+    await rename(ap.activePointer, dest);
+  } catch {
+    // e.g. EXDEV cross-device rename — recovery incomplete; do not claim it.
+    return { ok: false, reason: "quarantine_move_failed" };
+  }
+  return { ok: true, dest };
+}
+
+// Shared genesis-strand recovery decision for init AND migrate. Only an UNUSED
+// genesis identity (no bound receipts) whose pointer can be safely quarantined
+// is auto-recovered; anything else fails closed for human adjudication.
+// Returns { recovered:true, quarantine_path } | { recovered:false, reason }.
+async function attemptGenesisRecovery(demaHome, cls) {
+  if (await anyReceiptBindsFingerprint(demaHome, cls.fingerprint)) {
+    return { recovered: false, reason: "established_identity_recovery_required" };
+  }
+  const q = await quarantineActivePointer(demaHome, cls.raw);
+  if (!q.ok) return { recovered: false, reason: q.reason };
+  return { recovered: true, quarantine_path: q.dest };
 }
 
 async function checkRetired(ap, fingerprint) {
@@ -698,14 +778,48 @@ export async function migrateLegacyAuthorshipKey({
   }
 
   const ap = activeKeyPaths(demaHome);
-  const pointerInfo = await lstatIfExists(ap.activePointer);
-  if (pointerInfo) {
+  // P1-3 (Greptile): an existing pointer is not a blanket "already_migrated".
+  // A VALID pointer means migration is done; a genesis-invalid one (e.g. a
+  // migration whose post-verify failed) must be recoverable HERE — the legacy
+  // pair is still on disk — instead of stranding the operator (init is then
+  // blocked by the preserved legacy files). Anything else fails closed.
+  const preCls = await classifyActivePointer(demaHome);
+  if (preCls.state === "valid") {
     return Object.freeze({
       schema: KEY_MIGRATE_SCHEMA,
       migrated: false,
       error: "already_migrated",
+      verified_existing_identity: true,
       boundary: buildBoundary(false),
     });
+  }
+  if (preCls.state === "prior_invalid" || preCls.state === "untracked_invalid") {
+    return Object.freeze({
+      schema: KEY_MIGRATE_SCHEMA,
+      migrated: false,
+      error: "recovery_required",
+      reason:
+        preCls.state === "prior_invalid"
+          ? "prior_identity_recovery_required"
+          : "untracked_invalid_active_pointer",
+      loader_error: preCls.loader_error,
+      boundary: buildBoundary(false),
+    });
+  }
+  // genesis_invalid → quarantine (if unused + safe) then fall through and
+  // re-migrate from the still-present legacy pair; absent → migrate normally.
+  if (preCls.state === "genesis_invalid") {
+    const rec = await attemptGenesisRecovery(demaHome, preCls);
+    if (!rec.recovered) {
+      return Object.freeze({
+        schema: KEY_MIGRATE_SCHEMA,
+        migrated: false,
+        error: "recovery_required",
+        reason: rec.reason,
+        loader_error: preCls.loader_error,
+        boundary: buildBoundary(false),
+      });
+    }
   }
 
   const paths = keyPaths(demaHome);
@@ -804,11 +918,21 @@ export async function migrateLegacyAuthorshipKey({
       verified.fingerprint !== pair.fingerprint ||
       verified.generation_path !== generationPath
     ) {
+      // P1-3: quarantine the just-committed pointer so a retry (migrate, which
+      // re-reads the still-present legacy pair) can recover instead of stranding
+      // behind a committed-but-unusable pointer. This generation is fresh (no
+      // receipt binds it yet), so quarantine is safe.
+      const pointerRaw = await readFileNoFollow(ap.activePointer);
+      const q = pointerRaw !== null
+        ? await quarantineActivePointer(demaHome, pointerRaw)
+        : { ok: false };
       return Object.freeze({
         schema: KEY_MIGRATE_SCHEMA,
         migrated: false,
         error: "recovery_required",
         transition_state: "pointer_committed_verification_failed",
+        recovered_from: q.ok ? "genesis_pointer_quarantined" : null,
+        quarantine_path: q.ok ? q.dest : null,
         generation_path: generationPath,
         loader_error: verified.ok ? "fingerprint_or_path_mismatch" : verified.error,
         boundary: buildBoundary(true),
@@ -897,17 +1021,27 @@ export async function initAuthorshipKey({
       return keyAlreadyExistsResult(paths, { verified_existing_identity: true });
     }
     if (cls.state === "genesis_invalid") {
-      // Safe automatic recovery: no prior verified identity is at risk. Move
-      // the failed pointer to quarantine (failed generation preserved as
-      // evidence), restoring NO_ACTIVE_IDENTITY. Retry then establishes fresh.
-      const quarantined = await quarantineActivePointer(demaHome, cls.raw);
+      // Safe automatic recovery ONLY for an UNUSED genesis identity (P1-1): if
+      // any receipt binds its fingerprint, it is an established identity and
+      // must NOT be silently replaced — fail closed for adjudication.
+      const rec = await attemptGenesisRecovery(demaHome, cls);
+      if (!rec.recovered) {
+        return Object.freeze({
+          schema: KEY_INIT_SCHEMA,
+          initialized: false,
+          error: "recovery_required",
+          reason: rec.reason,
+          loader_error: cls.loader_error,
+          boundary: buildBoundary(false),
+        });
+      }
       return Object.freeze({
         schema: KEY_INIT_SCHEMA,
         initialized: false,
         error: "recovery_required",
         transition_state: "recovered_to_no_active_identity",
         recovered_from: "genesis_pointer_quarantined",
-        quarantine_path: quarantined,
+        quarantine_path: rec.quarantine_path,
         loader_error: cls.loader_error,
         boundary: buildBoundary(true),
       });
@@ -952,17 +1086,19 @@ export async function initAuthorshipKey({
       verified.fingerprint !== keys.public_key_fingerprint ||
       verified.generation_path !== generationPath
     ) {
+      // The generation we just wrote is fresh (never used) so quarantining its
+      // pointer is always safe here — no receipt can bind it yet.
       const pointerRaw = await readFileNoFollow(ap.activePointer);
-      const quarantined = pointerRaw !== null
+      const q = pointerRaw !== null
         ? await quarantineActivePointer(demaHome, pointerRaw)
-        : null;
+        : { ok: false };
       return Object.freeze({
         schema: KEY_INIT_SCHEMA,
         initialized: false,
         error: "recovery_required",
         transition_state: "pointer_committed_verification_failed",
-        recovered_from: quarantined ? "genesis_pointer_quarantined" : null,
-        quarantine_path: quarantined,
+        recovered_from: q.ok ? "genesis_pointer_quarantined" : null,
+        quarantine_path: q.ok ? q.dest : null,
         loader_error: verified.ok ? "fingerprint_or_path_mismatch" : verified.error,
         boundary: buildBoundary(true),
       });
