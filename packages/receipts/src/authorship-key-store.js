@@ -755,7 +755,15 @@ export async function inspectIdentityRecovery(demaHome) {
     generation_path_state: generationPathState,
     pointer_claimed_generation_path_hash: claimedPathHash,
     loader_error: pointerCls.loader_error ?? null,
-    previous_generation: doc?.previous_generation ?? null,
+    // Same laundering rule as generation_path: previous_generation is a
+    // pointer-doc CLAIM. Publish it only in canonical fingerprint shape —
+    // a path-like or otherwise malformed claim is withheld (the full raw doc
+    // stays hash-bound via active_pointer_hash).
+    previous_generation:
+      typeof doc?.previous_generation === "string" &&
+      /^[0-9a-f]{64}$/.test(doc.previous_generation)
+        ? doc.previous_generation
+        : null,
     legacy_pair_presence: await isSafeExistingKeyPath(paths, paths.privateKey),
     artifact_binding_state: await boundedArtifactBindingScan(demaHome, fingerprint),
     transition_lease_state: lease.state,

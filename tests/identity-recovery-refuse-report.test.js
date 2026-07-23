@@ -81,35 +81,41 @@ function snapshotTree(root) {
   const walk = (dir) => {
     for (const name of readdirSync(dir).sort()) {
       const path = join(dir, name);
-      const info = lstatSync(path);
       const rel = relative(root, path);
-      if (info.isSymbolicLink()) {
-        entries.push([rel, "symlink", readlinkSync(path)]);
-      } else if (info.isDirectory()) {
-        entries.push([rel, "dir", ""]);
-        walk(path);
-      } else {
-        // Race-free content capture: open O_NOFOLLOW, classify via fstat on
-        // the OPEN descriptor (never a re-check of the path), read the fd.
-        let fd = null;
-        try {
-          fd = openSync(
-            path,
-            fsConstants.O_RDONLY |
-              (fsConstants.O_NOFOLLOW ?? 0) |
-              (fsConstants.O_NONBLOCK ?? 0),
-          );
-          const stat = fstatSync(fd);
-          entries.push(
-            stat.isFile()
-              ? [rel, "file", sha256(readFileSync(fd, "utf8"))]
-              : [rel, "other", String(stat.mode)],
-          );
-        } catch {
-          entries.push([rel, "other", "unopenable"]);
-        } finally {
-          if (fd !== null) closeSync(fd);
+      // No check-then-use anywhere: readlink IS the symlink probe, and
+      // everything else is classified via fstat on an O_NOFOLLOW-opened
+      // descriptor — never a path re-check after a path check.
+      let linkTarget = null;
+      try {
+        linkTarget = readlinkSync(path);
+      } catch {
+        linkTarget = null;
+      }
+      if (linkTarget !== null) {
+        entries.push([rel, "symlink", linkTarget]);
+        continue;
+      }
+      let fd = null;
+      try {
+        fd = openSync(
+          path,
+          fsConstants.O_RDONLY |
+            (fsConstants.O_NOFOLLOW ?? 0) |
+            (fsConstants.O_NONBLOCK ?? 0),
+        );
+        const stat = fstatSync(fd);
+        if (stat.isDirectory()) {
+          entries.push([rel, "dir", ""]);
+          walk(path);
+        } else if (stat.isFile()) {
+          entries.push([rel, "file", sha256(readFileSync(fd, "utf8"))]);
+        } else {
+          entries.push([rel, "other", String(stat.mode)]);
         }
+      } catch {
+        entries.push([rel, "other", "unopenable"]);
+      } finally {
+        if (fd !== null) closeSync(fd);
       }
     }
   };
@@ -751,6 +757,25 @@ describe("1E.1-A generation-path evidence containment", () => {
     assert.equal(report.pointer_claimed_generation_path_hash, null);
   });
 
+  it("A9 a path-like previous_generation claim is never republished", async () => {
+    const home = await initedHome();
+    const p = readPointer(home);
+    writePointer(home, {
+      ...p,
+      generation_path: "generations/" + "d".repeat(64),
+      previous_generation: "/zz-prev-attacker-marker/../etc",
+    });
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.previous_generation, null);
+    assert.doesNotMatch(JSON.stringify(report), /zz-prev-attacker-marker/);
+  });
+
+  it("A10 a well-formed fingerprint previous_generation claim is retained", async () => {
+    const home = await homeInvalidPriorPointer();
+    const report = await store.inspectIdentityRecovery(home);
+    assert.equal(report.previous_generation, "b".repeat(64));
+  });
+
   it("A8 the dangling-genesis claim from R20 is hash-only, not republished", async () => {
     const home = await homeInvalidGenesisPointer();
     const claimed = readPointer(home).generation_path;
@@ -823,6 +848,34 @@ describe("1E.1-B gate covers every callable form or fails closed", () => {
         "function inspectIdentityRecovery(h) { return classifyPointerAuthority(h); }\n",
     );
     assert.equal(r.ok, true);
+  });
+
+  it("B16 an object-literal getter mutator fails the gate", async () => {
+    const r = await runGate(
+      "const obj = { get hidden() { return rename(a, b); } };\n" +
+        "function classifyPointerAuthority(h) { return obj.hidden; }\n" +
+        "function inspectIdentityRecovery(h) { return null; }\n",
+    );
+    assert.equal(r.ok, false);
+  });
+
+  it("B17 a generator-method mutator fails the gate", async () => {
+    const r = await runGate(
+      "const obj = { *hidden() { yield rename(a, b); } };\n" +
+        "function classifyPointerAuthority(h) { return obj.hidden(); }\n" +
+        "function inspectIdentityRecovery(h) { return null; }\n",
+    );
+    assert.equal(r.ok, false);
+  });
+
+  it("B18 a computed-name method mutator fails the gate", async () => {
+    const r = await runGate(
+      'const key = "hidden";\n' +
+        "const obj = { [key]() { rename(a, b); } };\n" +
+        "function classifyPointerAuthority(h) { return obj[key](); }\n" +
+        "function inspectIdentityRecovery(h) { return null; }\n",
+    );
+    assert.equal(r.ok, false);
   });
 
   it("B15 unsupported callable syntax fails closed rather than disappearing", async () => {

@@ -245,6 +245,27 @@ Round qualification: 1E suite 47/47 · identity/authorship/regression suites
 162/162 · corpus gate green · full npm test/coverage re-run recorded in the
 PR body at the new head.
 
+**Second Greptile pass (exact head `5878ec2`, 2026-07-23T17:32Z) — two
+narrower live findings, both fixed red-first in the same responsibility:**
+
+- **Finding C — untrusted `previous_generation` exposed:** the inspector
+  copied a rejected pointer doc's `previous_generation` verbatim, re-opening
+  the same laundering channel `generation_path` had closed. Now published
+  ONLY in canonical 64-hex fingerprint shape; any path-like or malformed
+  claim is withheld (`null`), with the full raw doc still hash-bound via
+  `active_pointer_hash` (tests A9–A10).
+- **Finding D — getter/generator/computed-name methods bypassed the residual
+  scan:** the enumerated method-shorthand regex is replaced by a catch-all —
+  ANY `) {` (paren-close brace-open) in the unattributed residual fails
+  closed as `paren_brace_callable_form`, subsuming shorthand, accessors,
+  generators, computed names, and forms not yet imagined. The guarded module
+  keeps no top-level control flow, so the catch-all cannot false-positive
+  there (tests B16–B18).
+- **CodeQL 352 (HIGH js/file-system-race, second instance):** the snapshot
+  walker's remaining `lstat→readlink` check-then-use removed — readlink IS
+  the symlink probe; everything else classifies via `fstat` on an
+  `O_NOFOLLOW` descriptor. No path re-check after a path check anywhere.
+
 ## Non-claims
 
 ```text

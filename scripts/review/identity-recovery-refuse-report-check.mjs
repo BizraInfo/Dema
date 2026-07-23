@@ -212,17 +212,13 @@ function residualCallableForms(source, spans) {
   const findings = [];
   if (/=>/.test(residual)) findings.push("arrow_function");
   if (/\bfunction\b/.test(residual)) findings.push("function_keyword");
-  const methodLike = residual.match(
-    /(?:^|[{,;\s])(?:async\s+)?([A-Za-z_$][\w$]*)\s*\([^()]*\)\s*\{/,
-  );
-  if (
-    methodLike &&
-    !["if", "for", "while", "switch", "catch", "return", "typeof"].includes(
-      methodLike[1],
-    )
-  ) {
-    findings.push("method_shorthand");
-  }
+  // Catch-all for every method-shaped body — shorthand, async, getter/setter,
+  // generator, computed-name, and forms not yet imagined: ANY `) {` in the
+  // unattributed residual is callable-shaped and fails closed. The guarded
+  // module keeps no top-level control flow, so this cannot false-positive
+  // there; if that ever changes the gate fails loudly and is extended
+  // consciously, never silently.
+  if (/\)\s*\{/.test(residual)) findings.push("paren_brace_callable_form");
   return findings;
 }
 
