@@ -59,6 +59,11 @@ export async function cmd_authorship(ctx) {
       );
     } else if (result.error === "unsafe_key_path") {
       console.error(`Unsafe authorship key path refused: ${result.key_path}`);
+    } else if (result.error === "recovery_required") {
+      console.error(
+        `Identity recovery required (${result.recovery_class ?? result.transition_state}). ` +
+          "No automatic mutation was performed; recovery is an explicit consented transaction.",
+      );
     }
     if (!result.initialized) process.exitCode = 1;
     process.exit(process.exitCode ?? 0);

@@ -21,6 +21,7 @@ function writeCheckGateEvidence(record) {
 export const commands = [
   ["node", ["scripts/review/env-hygiene-check.mjs", "--strict"]],
   ["node", ["scripts/review/identity-pair-coherence-check.mjs"]],
+  ["node", ["scripts/review/identity-recovery-refuse-report-check.mjs"]],
   ["node", ["scripts/review/cli-consent-matrix-check.mjs"]],
   ["node", ["scripts/review/operator-bridge-threat-model-check.mjs"]],
   ["node", ["scripts/review/consent-bridge-parity-check.mjs"]],
