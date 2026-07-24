@@ -1,6 +1,8 @@
 {
   "schemaVersion": 2,
-  "capturedAt": "2026-07-24T16:18:28.000Z",
+  "captureStartedAt": "2026-07-24T17:11:43.617Z",
+  "capturedAt": "2026-07-24T17:11:46.037Z",
+  "captureTimestampSemantics": "captureStartedAt is recorded immediately before requests; capturedAt is recorded immediately after all requests settle",
   "declaredSourceReviewCommit": "6f7f545e6a1ac044cbb8d29a0a215e8a9f2885bf",
   "deploymentCommit": null,
   "deploymentSourceBinding": "UNVERIFIED",
@@ -573,9 +575,9 @@
       "location": null,
       "contentType": "application/json",
       "bodyByteLength": 387,
-      "bodySha256": "0d51056d63f28392e3f7f60b8b8f5f54408de931c5a04033cb3f07806dc5fd46",
+      "bodySha256": "8b4094437cf18503403b54083d9064f1d2dee50206b2126f31298152abb526c2",
       "textRetention": "redacted-public-text",
-      "publicText": "{\"access\":\"invitation_required\",\"admitted\":false,\"claim_id\":\"BIZRA-PUBLIC-005\",\"evidence_commit\":\"26bb57359186a3ab533dd51e3623e0c84d5078e9\",\"evidence_href\":\"https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md\",\"measured_at\":\"2026-07-24T16:19:52.329Z\",\"scope\":\"web_access_gate_only\",\"truth_label\":\"MEASURED\"}",
+      "publicText": "{\"access\":\"invitation_required\",\"admitted\":false,\"claim_id\":\"BIZRA-PUBLIC-005\",\"evidence_commit\":\"26bb57359186a3ab533dd51e3623e0c84d5078e9\",\"evidence_href\":\"https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md\",\"measured_at\":\"2026-07-24T17:11:45.595Z\",\"scope\":\"web_access_gate_only\",\"truth_label\":\"MEASURED\"}",
       "publicTextTruncated": false
     },
     {
@@ -621,9 +623,9 @@
       "location": null,
       "contentType": "application/json",
       "bodyByteLength": 361,
-      "bodySha256": "42efdbade177350f8784ead8d76608934a99fbe27444ff8f0984c1f7e6a5979a",
+      "bodySha256": "f224d8f4ea3e1ac824734d28c69cbf9859ba76d82d3a05e5bbd87825f7cf9fdb",
       "textRetention": "redacted-public-text",
-      "publicText": "{\"claim_id\":\"BIZRA-PUBLIC-004\",\"evidence_commit\":\"26bb57359186a3ab533dd51e3623e0c84d5078e9\",\"evidence_href\":\"https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md\",\"measured_at\":\"2026-07-24T16:19:52.445Z\",\"scope\":\"web_process_health_only\",\"status\":\"healthy\",\"truth_label\":\"MEASURED\"}",
+      "publicText": "{\"claim_id\":\"BIZRA-PUBLIC-004\",\"evidence_commit\":\"26bb57359186a3ab533dd51e3623e0c84d5078e9\",\"evidence_href\":\"https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md\",\"measured_at\":\"2026-07-24T17:11:45.570Z\",\"scope\":\"web_process_health_only\",\"status\":\"healthy\",\"truth_label\":\"MEASURED\"}",
       "publicTextTruncated": false
     },
     {

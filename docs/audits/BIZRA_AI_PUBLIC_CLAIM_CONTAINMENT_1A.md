@@ -7,7 +7,7 @@
 - Corrected site source: `VERIFIED` — `BizraInfo/award-winner-design@6f7f545e6a1ac044cbb8d29a0a215e8a9f2885bf`
 - Production deployment record: `VERIFIED` within the GitHub record's scope — deployment `5590104450`, environment label `Production – award-winner-design`, status `success`
 - Custom-domain-to-deployment relationship: `DERIVED` — a live same-origin runtime asset embeds the matching Vercel deployment identifier; the provider alias API was not readable
-- Credential-free production crawl: `MEASURED` — `62` inventoried surfaces at `2026-07-24T16:18:28.000Z`
+- Credential-free production crawl: `MEASURED` — `62` inventoried surfaces from `2026-07-24T17:11:43.617Z` through `2026-07-24T17:11:46.037Z`
 - This Dema evidence update: `LOCAL_ONLY` until its review branch is pushed and approved
 - Public signing state: `UNKNOWN` — signer rotation is pending
 - Governed receipt: not issued
@@ -361,9 +361,10 @@ commit and project. The provider alias API was not readable without additional
 Vercel account authorization, so this mechanism-backed relationship remains
 `DERIVED`, not `VERIFIED`.
 
-[MEASURED] A credential-free `GET` crawl of `https://bizra.ai` at
-`2026-07-24T16:18:28.000Z` covered all `62` inventoried, fixed, non-secret
-surfaces and recorded:
+[MEASURED] A credential-free `GET` crawl of `https://bizra.ai` started at
+`2026-07-24T17:11:43.617Z` and completed at
+`2026-07-24T17:11:46.037Z`. It covered all `62` inventoried, fixed,
+non-secret surfaces and recorded:
 
 - `5` HTTP `200`,
 - `30` HTTP `307` containment redirects,
@@ -376,22 +377,49 @@ surfaces and recorded:
 
 The root returned boundary header `reviewed` and body SHA-256
 `473052c4bbcf7bf6092bbd9c075abf70c12e6b517878fe32c5ba3521fcaf18dd`.
+The latest request-scoped API `measured_at` embedded in the retained redacted
+text is `2026-07-24T17:11:45.595Z`, before the internally recorded crawl
+completion. The earlier externally supplied timestamp ambiguity is not carried
+forward.
 The crawl, including request path, source path, status, redirect location,
 content type, byte count, body hash, and retained redacted public text, is
 stored at
 [`evidence/bizra-ai-public-claim-postdeploy-2026-07-24.json`](evidence/bizra-ai-public-claim-postdeploy-2026-07-24.json),
 SHA-256
-`cd232a76ffe27c26f0ed43276d7cc0f949a5c1ba1d0b492071b986fed82def50`.
+`3cfda09417b3c4637229e4f03c3b5e98a2637633d266946445b80afc7d0fe385`.
 
-[MEASURED] A separate raw-body scan at `2026-07-24T16:24:43.000Z` applied a
-recorded link and exact-phrase policy to the same `62` fixed routes. It
-recorded `0` request errors, `0` public receipt-link matches, `0` revoked-key
-link matches, and `0` known forbidden-phrase hits. The extracted URL inventory,
-stable response anchors, and canonical response-digest-set SHA-256 are stored
-in
+[MEASURED] A separate committed scanner started at
+`2026-07-24T17:11:52.390Z` and completed at
+`2026-07-24T17:11:53.245Z`. It scanned each raw body in memory under manual
+redirects, omitted credentials, and a five-second per-request timeout, then
+retained no raw body. For every one of the same `62` fixed routes it recorded
+status, byte length, body SHA-256, normalized extracted links, receipt-link
+matches, revoked-key matches, exact-phrase matches, and any bounded request
+error. It recorded `0` request errors, `0` public receipt-link matches, `0`
+revoked-key link matches, and `0` known forbidden-phrase hits.
+
+The scanner and its adversarial tests are committed at:
+
+- `scripts/audit/public-link-scan.mjs`
+- `scripts/audit/public-link-scan-core.mjs`
+- `tests/public-link-scan.test.js`
+
+The refresh command is:
+
+```bash
+node scripts/audit/public-link-scan.mjs \
+  --inventory docs/audits/evidence/bizra-ai-public-claim-postdeploy-2026-07-24.json
+```
+
+The evidence file contains the complete per-route results and the canonical
+projection rules needed to recompute response-digest-set SHA-256
+`d81a96675b28bd7a7ec4a7e7db37867fdc008cf31f685ca1a238f801047bca3c`
+and route-result-set SHA-256
+`14cb6af0b0ac350749de0c8275997b3f75485023582ac07aaa095294afbea6cd`.
+It is stored in
 [`evidence/bizra-ai-public-link-scan-2026-07-24.json`](evidence/bizra-ai-public-link-scan-2026-07-24.json),
 SHA-256
-`9624f7433c72c2712803bfd00d9d61d37d1338d065df679da6e4dd167ecfec36`.
+`28eadd28741ace42d4859322f07dbb3636ef7e6f99fd4183ae64424f8dc99d56`.
 
 The raw crawler deliberately leaves `deploymentCommit` null and
 `deploymentSourceBinding` `UNVERIFIED`; it does not infer deployment
@@ -401,7 +429,7 @@ response, immutable Dema evidence lookup, crawl summary, and link scan are
 bound without upgrading the missing custom-domain alias proof in
 [`evidence/bizra-ai-public-claim-deployment-binding-2026-07-24.json`](evidence/bizra-ai-public-claim-deployment-binding-2026-07-24.json),
 SHA-256
-`37b7e17ac729f04e6e628b64a9a4dcf1e225970438867a1a89607185efe79ebd`.
+`ec7b1de91888f0c1a157e6cea11114ed0ce70cf550b247a97f5f9d6a5cd36dce`.
 
 This proves the dated public containment boundary and narrow request-time API
 observations only. The custom-domain relationship to the exact GitHub
@@ -453,7 +481,7 @@ truth is:
 INITIAL LIVE CLAIM DEFECT: OBSERVED AND HISTORICALLY RECORDED
 CORRECTED SITE DEPLOYMENT: VERIFIED BY GITHUB DEPLOYMENT RECORD
 CUSTOM-DOMAIN EXACT-SOURCE RELATIONSHIP: DERIVED, DIRECT ALIAS PROOF PENDING
-POST-DEPLOY PUBLIC CLAIM CRAWL: MEASURED GREEN AT 2026-07-24T16:18:28.000Z
+POST-DEPLOY PUBLIC CLAIM CRAWL: MEASURED GREEN THROUGH 2026-07-24T17:11:46.037Z
 DEMA EVIDENCE UPDATE: LOCAL_ONLY, PENDING PUSH AND REVIEW
 PUBLIC SIGNER TRUST: UNKNOWN, TASK-029 OPEN
 NEW CRYPTOGRAPHIC RECEIPT: NOT ISSUED

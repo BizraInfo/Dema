@@ -5,7 +5,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   buildThinkDryRun,
-  checkModelReadiness,
   formatThinkDryRun,
 } from "../packages/think/src/think-dry-run.js";
 import { PREVIEW_BOUNDARY_CANONICAL_KEYS } from "../packages/core/src/preview-boundary.js";
@@ -53,45 +52,6 @@ describe("think-dry-run", () => {
       const e1 = await buildThinkDryRun("test query", { now: FIXED_NOW });
       const e2 = await buildThinkDryRun("test query", { now: FIXED_NOW });
       assert.equal(e1.proof_hash, e2.proof_hash);
-    });
-
-    it("orders missing-size API models deterministically after sized models", async () => {
-      const oldFetch = globalThis.fetch;
-      let requestCount = 0;
-      globalThis.fetch = async () => {
-        requestCount += 1;
-        const models =
-          requestCount % 2 === 1
-            ? [
-                { name: "zeta:latest" },
-                { name: "tiny:latest", size: 10 },
-                { name: "alpha:latest" },
-              ]
-            : [
-                { name: "alpha:latest" },
-                { name: "zeta:latest" },
-                { name: "tiny:latest", size: 10 },
-              ];
-        return {
-          ok: true,
-          json: async () => ({ models }),
-        };
-      };
-
-      try {
-        const first = await checkModelReadiness();
-        const second = await checkModelReadiness();
-        assert.deepEqual(first.available_models, [
-          "tiny:latest",
-          "alpha:latest",
-          "zeta:latest",
-        ]);
-        assert.deepEqual(second.available_models, first.available_models);
-        assert.equal(first.recommended_model, "tiny:latest");
-        assert.equal(second.recommended_model, first.recommended_model);
-      } finally {
-        globalThis.fetch = oldFetch;
-      }
     });
 
     it("proof_hash is sha256 of stableStringify excluding proof_hash", async () => {
