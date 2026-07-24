@@ -19,6 +19,7 @@ export const PROOF_ROOM_PUBLIC_SAFE_WRITE_CONSENT =
 export const PROOF_ROOM_PUBLIC_SAFE_ARTIFACT_RELATIVE_DIR =
   "artifacts/proofs/proof-room-v0.1-public-safe";
 export const REDACTED_REPO_ROOT_PLACEHOLDER = "<repo_root:redacted>";
+const PUBLIC_SAFE_REPO_LABEL = "Dema";
 
 export const CORE_PROOF_ROOM_GATES = Object.freeze([
   {
@@ -315,9 +316,11 @@ export async function buildProofRoomBundle({
 }
 
 // redactProofRoomBundle returns a new (non-frozen-input-safe) bundle with the
-// absolute repo_root replaced by a placeholder. Adds repo_root_basename for
-// human context and repo_root_sha256 so an operator who knows their checkout
-// can still verify the original path. Idempotent · non-mutating · sets
+// absolute repo_root replaced by a placeholder. Keeps the legacy
+// repo_root_basename field as a stable public product label rather than
+// disclosing an operator-selected checkout/worktree name. repo_root_sha256
+// lets an operator who knows their checkout verify the original path.
+// Idempotent · non-mutating · sets
 // `redacted: true` and `truth_label: "PUBLIC_SAFE"` when input was MEASURED.
 export function redactProofRoomBundle(bundle) {
   if (!bundle || typeof bundle !== "object") {
@@ -325,18 +328,11 @@ export function redactProofRoomBundle(bundle) {
   }
   if (bundle.redacted === true) return bundle;
   const original = bundle.repo_root;
-  const basename =
-    typeof original === "string" && original.length > 0
-      ? original
-          .replace(/[\\/]+$/, "")
-          .split(/[\\/]/)
-          .pop() || REDACTED_REPO_ROOT_PLACEHOLDER
-      : REDACTED_REPO_ROOT_PLACEHOLDER;
   const sha = digestStdout(typeof original === "string" ? original : "");
   const next = {
     ...clone(bundle),
     repo_root: REDACTED_REPO_ROOT_PLACEHOLDER,
-    repo_root_basename: basename,
+    repo_root_basename: PUBLIC_SAFE_REPO_LABEL,
     repo_root_sha256: sha,
     redacted: true,
     truth_label:
