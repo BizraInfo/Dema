@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { basename } from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
@@ -24,6 +25,9 @@ import { evaluateArtifactSafety } from "../packages/core/src/artifact-safety-eva
 const execFileAsync = promisify(execFile);
 const scriptPath = fileURLToPath(
   new URL("../scripts/proof-room-bundle.mjs", import.meta.url),
+);
+const repoRootBasename = basename(
+  fileURLToPath(new URL("../", import.meta.url)),
 );
 
 test("evaluateProofRoomWrite requires exact micro-consent phrase", () => {
@@ -289,7 +293,7 @@ test("proof-room-bundle CLI --public-safe --json emits redacted bundle", async (
   const report = JSON.parse(stdout);
   assert.equal(report.redacted, true);
   assert.equal(report.repo_root, REDACTED_REPO_ROOT_PLACEHOLDER);
-  assert.equal(report.repo_root_basename, "Dema");
+  assert.equal(report.repo_root_basename, repoRootBasename);
   assert.match(report.repo_root_sha256, /^[0-9a-f]{64}$/);
   // Verify the rendered JSON passes Layer 1 artifact-safety eval.
   const safety = evaluateArtifactSafety(stdout);
