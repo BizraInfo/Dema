@@ -52,6 +52,8 @@ import {
   rmSync,
   rmdirSync,
   existsSync,
+  mkdtempSync,
+  readdirSync as readdirSyncFs,
 } from "node:fs";
 import { isAbsolute, join, normalize, sep, dirname } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -68,6 +70,7 @@ export const PROOF_ROOT_SUBSTITUTION_RESISTANCE =
   "NOT_PROVEN_AGAINST_HOSTILE_CONCURRENT_MUTATOR";
 
 export const RUN_MARKER_FILENAME = ".node00-census-run-marker.json";
+export const TEMP_PREFIX = ".tmp-";
 
 // The writer's entire mutation surface, injectable so every refusal rule is
 // unit-testable without touching a real disk.
@@ -80,6 +83,8 @@ export const DEFAULT_WRITER_FS = Object.freeze({
   rmSync,
   rmdirSync,
   existsSync,
+  mkdtempSync,
+  readdirSync: readdirSyncFs,
 });
 
 function typeOf(stat) {
@@ -186,7 +191,10 @@ export function planProofOutput({
   }
   if (stat.isSymbolicLink()) blocked_by.push("output_root_is_symlink");
   else if (!stat.isDirectory()) blocked_by.push("output_root_not_directory");
-  if (currentUid !== null && stat.uid !== undefined && stat.uid !== currentUid) {
+  // Fail CLOSED on unknown ownership, exactly as the ancestor chain does. The previous
+  // form SKIPPED the check when currentUid or stat.uid was unavailable, so an unreadable
+  // or foreign-owned mode-0755 root could pass here while foreignOwned() would refuse it.
+  if (foreignOwned(stat.uid, currentUid)) {
     blocked_by.push("output_root_not_owned_by_current_uid");
   }
   if (replaceableByOthers(stat.mode, stat.uid, currentUid)) {
@@ -324,27 +332,36 @@ export function writeCensusProof({
   if (!portable.ok) return Object.freeze({ ok: false, blocked_by: portable.reasons, run_dir: null });
 
   const finalDir = join(plan.resolved, runId);
-  const tempDir = join(plan.resolved, `.tmp-${runId}`); // SAME parent => rename cannot cross devices
-  // Explicit containment, not an incidental side effect of check ordering.
-  if (!isStrictlyInside(plan.resolved, finalDir) || !isStrictlyInside(plan.resolved, tempDir)) {
-    return fail("run_dir_escapes_proof_root");
-  }
+  if (!isStrictlyInside(plan.resolved, finalDir)) return fail("run_dir_escapes_proof_root");
 
   try {
     if (fs.existsSync(finalDir)) return fail("run_dir_exists");
-    // Finding C: a pre-existing temp directory is EVIDENCE, never something to delete.
-    if (fs.existsSync(tempDir)) {
-      return fail("STALE_TEMP_RUN_REQUIRES_OPERATOR_RECOVERY", { stale_temp_dir: tempDir });
-    }
   } catch {
     return fail("proof_root_unreadable");
   }
 
+  // Leftovers from earlier crashed invocations are EVIDENCE: reported, never deleted,
+  // and never a reason to block a legitimate retry (the new temp name cannot collide).
+  let stale_temp_dirs = [];
   try {
-    fs.mkdirSync(tempDir, { recursive: false, mode: 0o700 });
+    stale_temp_dirs = fs
+      .readdirSync(plan.resolved)
+      .filter((n) => n.startsWith(`${TEMP_PREFIX}${runId}-`))
+      .map((n) => join(plan.resolved, n));
   } catch {
-    return fail("temp_dir_create_failed");
+    stale_temp_dirs = [];
   }
+
+  // INVOCATION-UNIQUE temp directory. A deterministic name forced an impossible choice:
+  // either delete a path we could not prove we owned, or poison every retry. A unique
+  // name dissolves it — cleanup is never required for correctness of the NEXT attempt.
+  let tempDir;
+  try {
+    tempDir = fs.mkdtempSync(join(plan.resolved, `${TEMP_PREFIX}${runId}-`));
+  } catch {
+    return fail("temp_dir_create_failed", { stale_temp_dirs: Object.freeze(stale_temp_dirs) });
+  }
+  if (!isStrictlyInside(plan.resolved, tempDir)) return fail("run_dir_escapes_proof_root");
 
   // Capture the identity of what we just created, BEFORE writing anything into it.
   // This is what authorises cleanup later, so a failed marker write cannot strand it.
@@ -356,33 +373,24 @@ export function writeCensusProof({
     createdIdentity = null;
   }
   if (!createdIdentity) {
-    // Without an identity we could never prove the directory is ours, so a later
-    // failure would strand it and poison every retry. Refuse BEFORE writing anything
-    // and reclaim now. A NON-recursive remove succeeds only on an empty directory, so
-    // a directory substituted underneath us is reported rather than destroyed.
-    // rmSync(dir, {recursive:false}) throws ERR_FS_EISDIR on a real filesystem — it
-    // cannot remove a directory at all, so the previous version stranded the directory
-    // in production while an injected-adapter test passed. rmdir is the correct
-    // primitive: it succeeds ONLY on an empty directory, so a substituted or populated
-    // path fails with ENOTEMPTY and the evidence is preserved for a human.
-    let cleanupError = null;
-    try {
-      fs.rmdirSync(tempDir);
-    } catch {
-      cleanupError = "temp_dir_cleanup_failed";
-    }
-    return cleanupError
-      ? Object.freeze({
-          ok: false,
-          blocked_by: Object.freeze([
-            "temp_dir_identity_uncapturable",
-            "RECOVERABLE_TEMP_ARTIFACT_REQUIRES_HUMAN",
-            cleanupError,
-          ]),
-          run_dir: null,
-          stale_temp_dir: tempDir,
-        })
-      : fail("temp_dir_identity_uncapturable");
+    // UNKNOWN IDENTITY => ZERO CLEANUP AUTHORITY. The previous version called rmdir on
+    // the pathname. An EMPTY directory is NOT proof of ownership: a concurrent actor can
+    // swap in their own empty directory between the failed lstat and the cleanup, and
+    // rmdir would destroy it. A pathname is not an identity — with no captured identity
+    // there is no authority to delete anything. Write nothing, delete nothing, preserve
+    // the path for a human. Retry is unaffected: the next invocation mints a different
+    // temp name, so preservation costs nothing.
+    return Object.freeze({
+      ok: false,
+      blocked_by: Object.freeze([
+        "temp_dir_identity_uncapturable",
+        "UNVERIFIED_TEMP_PATH_PRESERVED",
+        "RECOVERABLE_TEMP_ARTIFACT_REQUIRES_HUMAN",
+      ]),
+      run_dir: null,
+      stale_temp_dir: tempDir,
+      stale_temp_dirs: Object.freeze(stale_temp_dirs),
+    });
   }
 
   const abort = (code) => {

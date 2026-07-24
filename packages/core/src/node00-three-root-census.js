@@ -755,13 +755,19 @@ export function buildNode00ThreeRootCensusPayload(census) {
       // No path, no path hash, no device/inode/mode: none of it may escape.
       return Object.freeze({ ...base, path: null, normalized_path_hash: null, device: null, inode: null, mode: null });
     }
+    // A public root nested inside a private one must withhold EVERY field that encodes
+    // its absolute location — not just `path`. `normalized_path_hash` is an unsalted
+    // digest of the child's full absolute path, which embeds the private parent as a
+    // prefix: a candidate parent path can be confirmed by recomputation. device/inode
+    // likewise identify an object inside the private tree.
+    const locatable = disclosable(root);
     return Object.freeze({
       ...base,
-      path: disclosable(root) ? root.path : null,
-      normalized_path_hash: root.normalized_path_hash,
-      device: root.device,
-      inode: root.inode,
-      mode: root.mode,
+      path: locatable ? root.path : null,
+      normalized_path_hash: locatable ? root.normalized_path_hash : null,
+      device: locatable ? root.device : null,
+      inode: locatable ? root.inode : null,
+      mode: locatable ? root.mode : null,
     });
   });
 
@@ -894,7 +900,12 @@ export function verifyNode00ThreeRootCensus(payload) {
   for (const edge of body.topology?.containment ?? []) {
     if (visibilityOf.get(edge.parent) !== "private") continue;
     const child = perRoot.find((root) => root.root_id === edge.child);
-    if (child && child.path !== null) reasons.push("nested_root_discloses_private_parent_path");
+    if (!child) continue;
+    // EVERY location-encoding field, not just `path`. An unsalted hash of the child's
+    // absolute path discloses the private parent exactly as surely as the path itself.
+    for (const field of ["path", "normalized_path_hash", "device", "inode", "mode"]) {
+      if (child[field] !== null) reasons.push("nested_root_discloses_private_parent_path");
+    }
   }
   return Object.freeze({ ok: reasons.length === 0, reasons: Object.freeze([...new Set(reasons)]) });
 }

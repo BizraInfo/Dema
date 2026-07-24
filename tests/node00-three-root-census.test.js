@@ -683,7 +683,10 @@ function fakeWriterFs(tree, { gitDirs = [], files = {} } = {}) {
         throw err;
       }
       return {
-        dev: node.device, ino: node.inode, mode: node.mode ?? 0o40700, uid: node.uid ?? 1000,
+        dev: node.device, ino: node.inode, mode: node.mode ?? 0o40700,
+        // Honour an EXPLICIT `uid: undefined` — defaulting it would make the fake
+        // weaker than reality and hide fail-closed-on-unknown-ownership defects.
+        uid: Object.hasOwn(node, "uid") ? node.uid : 1000,
         isSymbolicLink: () => node.type === "symlink",
         isDirectory: () => node.type === "directory",
         isFile: () => node.type === "file",
@@ -699,6 +702,17 @@ function fakeWriterFs(tree, { gitDirs = [], files = {} } = {}) {
       return state.files[p];
     },
     mkdirSync: (p) => { state.made.push(p); state.tree[p] = { type: "directory", device: 1, inode: 999, uid: 1000 }; },
+    mkdtempSync: (prefix) => {
+      // Real semantics: returns a NEW unique path. Never collides, never reuses.
+      state.tempSeq = (state.tempSeq ?? 0) + 1;
+      const p = `${prefix}${"abc123".slice(0, 3)}${state.tempSeq}`;
+      state.made.push(p);
+      state.tree[p] = { type: "directory", device: 1, inode: 1000 + state.tempSeq, uid: 1000 };
+      return p;
+    },
+    readdirSync: (p) => Object.keys(state.tree)
+      .filter((k) => k.startsWith(p + "/") && !k.slice(p.length + 1).includes("/"))
+      .map((k) => k.slice(p.length + 1)),
     writeFileSync: (p, data) => { state.wrote.push(p); state.files[p] = data; },
     renameSync: (from, to) => { state.renamed.push([from, to]); },
     rmSync: (p, opts) => {
@@ -816,15 +830,13 @@ test("M8 no artifact is created beneath a substituted proof root", () => {
     }
     return stat;
   };
-  fs.state.files[join("/data/proofs/run", ".tmp-RUN-8", RUN_MARKER_FILENAME)] = JSON.stringify({
-    run_id: "RUN-8", marker: RUN_MARKER_FILENAME,
-  });
   const written = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-8", result, scannedRoots: [], fs, currentUid: 1000 });
   assert.equal(written.ok, false);
   assert.ok(written.blocked_by.includes("proof_root_identity_changed_before_promotion"), written.blocked_by.join(", "));
   assert.deepEqual(fs.state.renamed, [], "promotion happened despite a substituted root");
-  // The half-written run directory was reclaimed, not left behind.
-  assert.ok(fs.state.removed.includes("/data/proofs/run/.tmp-RUN-8"));
+  // The half-written run directory was reclaimed by IDENTITY, not left behind.
+  const created8 = fs.state.made.find((p) => p.includes(".tmp-RUN-8-"));
+  assert.ok(fs.state.removed.includes(created8));
 });
 
 test("M11 a failed write returns a NAMED envelope — no raw fs exception escapes", () => {
@@ -856,8 +868,9 @@ test("M12 current-run temporary output is safely reclaimed, and the same run id 
   const first = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-12", result, scannedRoots: [], fs, currentUid: 1000 });
   assert.equal(first.ok, false);
   // The temp dir this invocation created was revalidated and removed — no poisoning.
-  assert.ok(fs.state.removed.includes("/data/proofs/run/.tmp-RUN-12"));
-  assert.equal(fs.state.tree["/data/proofs/run/.tmp-RUN-12"], undefined);
+  const created12 = fs.state.made.find((p) => p.includes(".tmp-RUN-12-"));
+  assert.ok(fs.state.removed.includes(created12));
+  assert.equal(fs.state.tree[created12], undefined);
 
   failOnce = false;
   const retry = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-12", result, scannedRoots: [], fs, currentUid: 1000 });
@@ -867,15 +880,15 @@ test("M12 current-run temporary output is safely reclaimed, and the same run id 
 
 test("M13 an unrelated or unverifiable temporary path is never removed", () => {
   const result = runNode00ThreeRootCensusCheck();
-  // A pre-existing temp dir from ANOTHER process is evidence, not garbage.
-  const tree = { ...SAFE_TREE, "/data/proofs/run/.tmp-RUN-13": { type: "directory", device: 1, inode: 77, uid: 1000 } };
+  // A leftover from an earlier crashed invocation is EVIDENCE: reported, never deleted —
+  // and, because the new temp name is invocation-unique, never a reason to block a
+  // legitimate retry. Preservation and retryability are no longer in tension.
+  const tree = { ...SAFE_TREE, "/data/proofs/run/.tmp-RUN-13-old": { type: "directory", device: 1, inode: 77, uid: 1000 } };
   const fs = fakeWriterFs(tree);
   const written = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-13", result, scannedRoots: [], fs, currentUid: 1000 });
-  assert.equal(written.ok, false);
-  assert.ok(written.blocked_by.includes("STALE_TEMP_RUN_REQUIRES_OPERATOR_RECOVERY"), written.blocked_by.join(", "));
-  assert.equal(written.stale_temp_dir, "/data/proofs/run/.tmp-RUN-13");
-  assert.deepEqual(fs.state.removed, [], "a foreign temp directory was deleted");
-  assert.deepEqual(fs.state.made, [], "a temp directory was created over a stale one");
+  assert.equal(written.ok, true, written.blocked_by?.join(", "));
+  assert.ok(fs.state.tree["/data/proofs/run/.tmp-RUN-13-old"], "the leftover was destroyed");
+  assert.ok(!fs.state.removed.includes("/data/proofs/run/.tmp-RUN-13-old"), "a foreign temp directory was deleted");
 
   // A temp dir that was SUBSTITUTED since we created it is reported, never removed —
   // deleting it would destroy someone else's directory.
@@ -884,7 +897,7 @@ test("M13 an unrelated or unverifiable temporary path is never removed", () => {
   const baseLstat2 = fs2.lstatSync;
   fs2.lstatSync = (p) => {
     const st = baseLstat2(p);
-    if (p === "/data/proofs/run/.tmp-RUN-13B") {
+    if (p.includes(".tmp-RUN-13B-")) {
       statCount += 1;
       if (statCount > 1) return { ...st, ino: st.ino + 5000 }; // swapped under us
     }
@@ -916,7 +929,8 @@ test("G3 a failed MARKER write does not strand the temp dir — cleanup binds to
   const first = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-G3", result, scannedRoots: [], fs, currentUid: 1000 });
   assert.equal(first.ok, false);
   assert.ok(first.blocked_by.includes("proof_write_failed"), first.blocked_by.join(", "));
-  assert.ok(fs.state.removed.includes("/data/proofs/run/.tmp-RUN-G3"), "temp dir was stranded by a marker failure");
+  const createdG3 = fs.state.made.find((p) => p.includes(".tmp-RUN-G3-"));
+  assert.ok(fs.state.removed.includes(createdG3), "temp dir was stranded by a marker failure");
   assert.ok(!first.blocked_by.includes("RECOVERABLE_TEMP_ARTIFACT_REQUIRES_HUMAN"));
 
   failMarker = false;
@@ -951,67 +965,41 @@ test("the writer refuses to emit artifacts that violate the private-aggregate co
   assert.deepEqual(fs.state.wrote, [], "artifacts were written despite a privacy violation");
 });
 
-test("G7 an uncapturable temp-dir identity fails closed BEFORE writing and does not poison retries", () => {
-  // Previously, if lstat(tempDir) failed right after mkdir, createdIdentity stayed null
-  // and the writer carried on. Any later failure then could not authorise cleanup, so
-  // the directory was stranded and every same-run-id retry returned STALE_TEMP…
-  const result = runNode00ThreeRootCensusCheck();
-  const fs = fakeWriterFs(SAFE_TREE);
-  let blindOnce = true;
-  const baseLstat = fs.lstatSync;
-  fs.lstatSync = (p) => {
-    if (blindOnce && p === "/data/proofs/run/.tmp-RUN-G7") {
-      throw Object.assign(new Error("EIO"), { code: "EIO" });
-    }
-    return baseLstat(p);
-  };
-  const first = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-G7", result, scannedRoots: [], fs, currentUid: 1000 });
-  assert.equal(first.ok, false);
-  assert.ok(first.blocked_by.includes("temp_dir_identity_uncapturable"), first.blocked_by.join(", "));
-  assert.deepEqual(fs.state.wrote, [], "wrote into a directory whose identity could not be proven");
-  assert.ok(fs.state.removed.includes("/data/proofs/run/.tmp-RUN-G7"), "empty temp dir was not reclaimed");
-
-  blindOnce = false;
-  const retry = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-G7", result, scannedRoots: [], fs, currentUid: 1000 });
-  assert.equal(retry.ok, true, retry.blocked_by?.join(", "));
-});
-
-test("G8 REAL filesystem: rmdir is the only correct reclaim primitive for an empty dir", () => {
-  // The previous fix used rmSync(dir, {recursive:false}), which on a real filesystem
-  // throws ERR_FS_EISDIR and cannot remove a directory at all — so it stranded the
-  // directory in production while an injected-adapter test passed. This test runs
-  // against the REAL fs so the primitive can never silently regress again.
+test("G8 REAL filesystem: mkdtemp mints a unique path, and no pathname-deletion exists", () => {
+  // Two real defects met here. (1) rmSync(dir,{recursive:false}) throws ERR_FS_EISDIR —
+  // it cannot remove a directory, so the round-4 reclaim stranded it in production while
+  // a no-op fake passed. (2) rmdir CAN remove an empty directory — including a foreign
+  // replacement — so pathname-based cleanup was never safe either. The resolution is an
+  // invocation-unique temp name plus zero deletion without a captured identity.
   const base = realFs.mkdtempSync(join(realOs.tmpdir(), "node00-reclaim-"));
   try {
     const empty = join(base, "empty");
     realFs.mkdirSync(empty);
-    assert.throws(
-      () => realFs.rmSync(empty, { recursive: false }),
-      (e) => e.code === "ERR_FS_EISDIR",
-      "rmSync{recursive:false} must be rejected as a directory reclaim primitive",
-    );
-    assert.ok(realFs.existsSync(empty), "the directory survived, i.e. it would have been stranded");
-
+    assert.throws(() => realFs.rmSync(empty, { recursive: false }), (e) => e.code === "ERR_FS_EISDIR");
+    assert.ok(realFs.existsSync(empty), "rmSync{recursive:false} would have stranded it");
+    // rmdir succeeds on ANY empty dir — which is precisely why it is not an ownership proof.
     realFs.rmdirSync(empty);
-    assert.equal(realFs.existsSync(empty), false, "rmdir must reclaim an empty directory");
+    assert.equal(realFs.existsSync(empty), false);
 
-    // A substituted or populated directory must be PRESERVED, not destroyed.
-    const populated = join(base, "populated");
-    realFs.mkdirSync(populated);
-    realFs.writeFileSync(join(populated, "someone-elses-evidence"), "x");
-    assert.throws(() => realFs.rmdirSync(populated), (e) => e.code === "ENOTEMPTY");
-    assert.ok(realFs.existsSync(join(populated, "someone-elses-evidence")), "evidence was destroyed");
+    // mkdtemp: every invocation gets a distinct path, so retry never needs cleanup.
+    const a = realFs.mkdtempSync(join(base, ".tmp-RUN-"));
+    const b = realFs.mkdtempSync(join(base, ".tmp-RUN-"));
+    assert.notEqual(a, b, "temp names collided across invocations");
+    assert.ok(realFs.existsSync(a) && realFs.existsSync(b));
   } finally {
     realFs.rmSync(base, { recursive: true, force: true });
   }
 
-  // And the writer must actually use that primitive on the identity-uncapturable path.
-  assert.ok(/fs\.rmdirSync\(tempDir\)/.test(ADAPTER_CODE));
-  assert.ok(!/fs\.rmSync\(tempDir,\s*\{\s*recursive:\s*false/.test(ADAPTER_CODE));
-  assert.ok(Object.keys(DEFAULT_WRITER_FS).includes("rmdirSync"));
+  // The writer must mint unique temp dirs and must NOT delete by pathname anywhere.
+  assert.ok(/mkdtempSync\(/.test(ADAPTER_CODE), "writer must mint an invocation-unique temp dir");
+  assert.ok(!/rmdirSync\(tempDir\)/.test(ADAPTER_CODE), "pathname-based deletion is reachable");
+  assert.ok(!/rmSync\(tempDir,\s*\{\s*recursive:\s*false/.test(ADAPTER_CODE));
+  for (const fn of ["mkdtempSync", "readdirSync", "rmdirSync"]) {
+    assert.ok(Object.keys(DEFAULT_WRITER_FS).includes(fn), `DEFAULT_WRITER_FS missing ${fn}`);
+  }
 });
 
-test("G9 a FOREIGN-OWNED ancestor is refused even at mode 0755 — its owner can still replace our path", () => {
+test("G9 a FOREIGN-OWNED ancestor is refused even at mode 0755", () => {
   // Permission bits are not the whole threat: a directory owned by another principal is
   // replaceable through that owner's own write bit, at any mode.
   const foreign = { ...SAFE_TREE, "/data/proofs": { type: "directory", device: 1, inode: 3, mode: 0o40755, uid: 4242 } };
@@ -1028,7 +1016,6 @@ test("G9 a FOREIGN-OWNED ancestor is refused even at mode 0755 — its owner can
   assert.deepEqual(fs.state.made, [], "a directory was created beneath a foreign-owned ancestor");
   assert.deepEqual(fs.state.wrote, [], "a file was written beneath a foreign-owned ancestor");
 
-  // root-owned and self-owned ancestors remain admissible.
   assert.equal(foreignOwned(0, 1000), false);
   assert.equal(foreignOwned(1000, 1000), false);
   assert.equal(foreignOwned(4242, 1000), true);
@@ -1055,7 +1042,6 @@ test("G10 a root requiring provenance needs an EVIDENTIARY binding, not a label"
       input: fixtureInput({ roots: [root(binding), { id: "DOWNLOADS", path: "/fx/downloads", visibility: "private" }] }),
     });
 
-  // The old check accepted any non-empty label. It must not any more.
   const labelOnly = planFor({ binding_source: "anything" });
   assert.equal(labelOnly.eligible, false);
   assert.ok(labelOnly.blocked_by.includes("root_binding_schema_mismatch"), labelOnly.blocked_by.join(", "));
@@ -1073,16 +1059,109 @@ test("G10 a root requiring provenance needs an EVIDENTIARY binding, not a label"
     assert.ok(validateRootBinding({ ...good, ...mutate }).includes(code), code);
   }
 
-  // A well-formed binding whose OBSERVED identity does not match reality is refused at
-  // admission — the binding is evidence only if it survives re-measurement.
+  // Evidence only if it survives RE-MEASUREMENT at admission.
   assert.throws(
     () => admitCensusRoots({ roots: [root({ ...good, observed_root_identity: { device: 1, inode: 1 } })], adapter: makeMemoryAdapter(fixtureTree()) }),
     (err) => err instanceof CensusRootAdmissionError && err.code === "root_binding_identity_mismatch",
   );
-  // Matching identity is admitted, and the evidence reaches the portable body.
   const admitted = admitCensusRoots({ roots: [root(good)], adapter: makeMemoryAdapter(fixtureTree()) });
   assert.equal(admitted[0].binding.zero_a_receipt_hash, good.zero_a_receipt_hash);
   assert.equal(planFor(good).eligible, true, planFor(good).blocked_by.join(", "));
+});
+
+test("G7 UNKNOWN IDENTITY = ZERO CLEANUP AUTHORITY: an unverified replacement is never deleted", () => {
+  // Previously this branch called rmdirSync(tempDir) on the pathname. An EMPTY directory
+  // is not proof of ownership: a concurrent actor can swap in their own empty directory
+  // between the failed lstat and the cleanup, and it would be destroyed. A pathname is
+  // not an identity, so with no captured identity there is no authority to delete.
+  const result = runNode00ThreeRootCensusCheck();
+  const fs = fakeWriterFs(SAFE_TREE);
+  let blind = true;
+  const baseLstat = fs.lstatSync;
+  fs.lstatSync = (p) => {
+    if (blind && p.includes(".tmp-RUN-G7-")) {
+      // Identity capture fails, AND a foreign process swaps in its own empty directory.
+      fs.state.tree[p] = { type: "directory", device: 1, inode: 424242, uid: 4242 };
+      throw Object.assign(new Error("EIO"), { code: "EIO" });
+    }
+    return baseLstat(p);
+  };
+  const first = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-G7", result, scannedRoots: [], fs, currentUid: 1000 });
+  const created = fs.state.made.find((p) => p.includes(".tmp-RUN-G7-"));
+
+  assert.equal(first.ok, false);
+  assert.ok(first.blocked_by.includes("temp_dir_identity_uncapturable"), first.blocked_by.join(", "));
+  assert.ok(first.blocked_by.includes("UNVERIFIED_TEMP_PATH_PRESERVED"));
+  assert.ok(first.blocked_by.includes("RECOVERABLE_TEMP_ARTIFACT_REQUIRES_HUMAN"));
+  assert.equal(first.stale_temp_dir, created);
+
+  // The replacement SURVIVES: no deletion primitive was invoked on it at all.
+  assert.deepEqual(fs.state.removed, [], "an unverified replacement directory was deleted");
+  assert.ok(fs.state.tree[created], "the unverified path was destroyed instead of preserved");
+  assert.deepEqual(fs.state.wrote, [], "wrote into a directory whose identity was unproven");
+
+  // Retry is NOT poisoned: the next invocation mints a different temp name, so
+  // preservation costs nothing. This is what dissolves the old delete-or-poison tension.
+  blind = false;
+  const retry = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-G7", result, scannedRoots: [], fs, currentUid: 1000 });
+  assert.equal(retry.ok, true, retry.blocked_by?.join(", "));
+  const retryTemp = fs.state.made.filter((p) => p.includes(".tmp-RUN-G7-"));
+  assert.equal(new Set(retryTemp).size, retryTemp.length, "a temp name was reused across invocations");
+  assert.ok(fs.state.tree[created], "the preserved evidence was collected by the retry");
+});
+
+test("G11 a nested-under-private PUBLIC root withholds every location-encoding field", () => {
+  // `path` was nulled but `normalized_path_hash` was emitted unconditionally — an
+  // unsalted digest of the child's ABSOLUTE path, which embeds the private parent as a
+  // prefix. A candidate parent path could be confirmed by recomputation: the same
+  // offline oracle the private-root rewrite removed, surviving in a sibling field.
+  const payload = buildNode00ThreeRootCensusPayload(census());
+  const dema = payload.per_root.find((r) => r.root_id === "DEMA_REPO");
+  assert.equal(dema.visibility, "public");
+  for (const field of ["path", "normalized_path_hash", "device", "inode", "mode"]) {
+    assert.equal(dema[field], null, `nested public root disclosed ${field}`);
+  }
+  // The guessable value must not appear anywhere in the portable artifacts.
+  const run = fullRun();
+  const tokens = [...stringValues(run.payload), ...stringValues(run.entries), ...stringValues(run.warnings)];
+  assert.ok(!tokens.includes(hashText("/fx/downloads/Dema")), "the child path hash leaked");
+  assert.ok(!tokens.includes(hashText("/fx/downloads")), "the private parent path hash leaked");
+
+  // A DISJOINT public root is unaffected — it still discloses normally.
+  const lake = payload.per_root.find((r) => r.root_id === "DATA_LAKE_REPO");
+  assert.equal(lake.path, "/fx/lake");
+  assert.match(lake.normalized_path_hash, /^sha256:[0-9a-f]{64}$/);
+
+  // verify() enforces EVERY field, not just `path`.
+  for (const field of ["path", "normalized_path_hash", "device", "inode", "mode"]) {
+    const forged = {
+      ...payload,
+      per_root: payload.per_root.map((r) =>
+        r.root_id === "DEMA_REPO" ? { ...r, [field]: field === "path" ? "/fx/downloads/Dema" : 1 } : r,
+      ),
+    };
+    const verdict = verifyNode00ThreeRootCensus(forged);
+    assert.equal(verdict.ok, false, `verify accepted a re-disclosed ${field}`);
+    assert.ok(verdict.reasons.includes("nested_root_discloses_private_parent_path"));
+  }
+});
+
+test("G12 proof-root ownership fails CLOSED when it cannot be established", () => {
+  // The ownership branch previously SKIPPED when currentUid or stat.uid was unavailable,
+  // so an unreadable or foreign-owned 0755 root could pass here while the ancestor chain
+  // would have refused it. Unknown ownership is not permission.
+  const unknownOwner = { ...SAFE_TREE, "/data/proofs/run": { type: "directory", device: 1, inode: 4, mode: 0o40700, uid: undefined } };
+  const p1 = planProofOutput({ proofRoot: "/data/proofs/run", fs: fakeWriterFs(unknownOwner), currentUid: 1000 });
+  assert.equal(p1.ok, false, "a root with unknown ownership was admitted");
+  assert.ok(p1.blocked_by.includes("output_root_not_owned_by_current_uid"), p1.blocked_by.join(", "));
+
+  const p2 = planProofOutput({ proofRoot: "/data/proofs/run", fs: fakeWriterFs(SAFE_TREE), currentUid: null });
+  assert.equal(p2.ok, false, "an unknowable current uid was treated as permission");
+  assert.ok(p2.blocked_by.includes("output_root_not_owned_by_current_uid"));
+
+  // Root-owned and self-owned remain admissible.
+  const rootOwned = { ...SAFE_TREE, "/data/proofs/run": { type: "directory", device: 1, inode: 4, mode: 0o40700, uid: 0 } };
+  assert.equal(planProofOutput({ proofRoot: "/data/proofs/run", fs: fakeWriterFs(rootOwned), currentUid: 1000 }).ok, true);
 });
 
 test("G5 run_id cannot re-target or escape the proof root", () => {

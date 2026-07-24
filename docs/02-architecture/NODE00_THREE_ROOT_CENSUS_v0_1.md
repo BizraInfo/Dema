@@ -21,7 +21,7 @@ apps/cli/src/commands/node00-three-root-census.js     the ONLY fs surface
   ├── censusFsAdapter()                               read-only metadata (lstatSync)
   └── planProofOutput() / writeCensusProof()          external proof writer (separate)
 scripts/review/node00-three-root-census-check.mjs     review gate (in-memory fixture)
-tests/node00-three-root-census.test.js                51 tests
+tests/node00-three-root-census.test.js                53 tests
 ```
 
 The scanner and the writer are deliberately separate: the scanner never learns where

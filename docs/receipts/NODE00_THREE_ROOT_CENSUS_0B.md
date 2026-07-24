@@ -122,7 +122,26 @@ real. Tests `G5` and `G6` pin both.
 | G9 | **Foreign-owned ancestors were admitted at mode 0755.** Permission bits are not the whole threat: a directory owned by another principal is replaceable through that owner's own write bit at any mode. | New `foreignOwned()` rule — only the current uid and root may own a directory on the proof path; unknown ownership fails closed. Refusal `proof_root_ancestor_foreign_owned`. |
 | G10 | **Subject binding was syntactic, not evidentiary.** The check only required a non-empty `binding_source`, so any caller could pass `"anything"`. | A `bizra.node00.root-binding.v0.1` object is now required and validated: 0A receipt hash, repository identity, expected head, observed `device:inode`, implementation-worktree identity, and `subject_equals_implementation_worktree: false`. **Admission re-measures the root and refuses a binding whose observed identity does not match reality** (`root_binding_identity_mismatch`). |
 
-**Cumulative: 13 real defects found and fixed across five review rounds** (3 + 4 + 2 + 1 + 3).
+### Sixth round — 0B.3, three defects; the closure claim was premature
+
+The round-5 report asserted `LIVE_P0_P1_P2 = 0`. **That was false.** Two independent
+reviews had already landed at `6058e90` (Greptile 01:12:28Z, CodeRabbit 01:18:12Z) and
+the convergence poll used a timestamp threshold that excluded them. The lesson is
+recorded, not minimised: *a poll window chosen after the fact is not evidence of
+convergence.*
+
+| # | Finding | Root cause | Fix |
+| --- | --- | --- | --- |
+| G7′ | **Unverified replacement directory deleted.** On identity-capture failure the writer called `rmdirSync(tempDir)`. `rmdir` removes *any* empty directory — so a concurrent actor swapping in their own empty directory had it destroyed. "Empty" is not "mine". | pathname used as ownership proof | **Unknown identity ⇒ zero cleanup authority.** Nothing is deleted, the path is preserved (`UNVERIFIED_TEMP_PATH_PRESERVED`), and the temp directory is now **invocation-unique** (`mkdtempSync`), so preservation no longer poisons retry. The old delete-or-poison tension is dissolved rather than traded off. |
+| G11 | **Nested public root leaked its private parent via `normalized_path_hash`.** `path` was nulled but the unsalted digest of the child's *absolute* path was emitted — and that path embeds the private parent as a prefix, so a candidate parent is confirmable by recomputation. The covering test asserted only `path === null`. | one field fixed, sibling fields missed | Every location-encoding field (`path`, `normalized_path_hash`, `device`, `inode`, `mode`) is withheld for a root nested under a private parent, and `verify()` checks all five. |
+| G12 | **Proof-root ownership skipped instead of failing closed** when `currentUid` or `stat.uid` was unavailable — inconsistent with `foreignOwned()` on the ancestor chain. | absence treated as permission | The proof root now uses `foreignOwned()` too. Unknown ownership is refused. |
+
+A fourth defect was self-inflicted and caught in-round: a bulk test-region replacement
+silently deleted `G8`/`G9`/`G10`, and the net test count masked it. Restored, and the
+lesson generalises — **an edit whose blast radius is not asserted is an unverified edit.**
+
+**Cumulative: 16 real defects found and fixed across six review rounds**
+(3 + 4 + 2 + 1 + 3 + 3).
 
 ### 6. CI-red repair
 
@@ -137,7 +156,7 @@ on CI.
 ## Gates
 
 ```bash
-node --test tests/node00-three-root-census.test.js     # 51 tests
+node --test tests/node00-three-root-census.test.js     # 53 tests
 node scripts/review/node00-three-root-census-check.mjs --json
 npm test
 npm run check
@@ -180,7 +199,7 @@ REAL_NESTED_DELEGATION_EXERCISED      BLOCKED (fixture-proven only)
 ```
 
 Delegation, ownership, privacy mode, scan states and writer refusals are all proven by
-the 51 focused tests against synthetic trees. They are **not** proven against the real
+the 53 focused tests against synthetic trees. They are **not** proven against the real
 three-root estate.
 
 ## Declared limits
