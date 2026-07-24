@@ -1,0 +1,282 @@
+# Receipt: NODE00-THREE-ROOT-CENSUS-0B
+
+Truth label: `NODE00_THREE_ROOT_CENSUS_MEASURED_REPO`
+
+Status: **corrective round 0B.1 — implementation corrected, real qualification BLOCKED.**
+
+## Supersede notice
+
+Every runtime claim in the first version of this receipt is **withdrawn**. The first
+implementation satisfied a superseded contract and its live run is not admissible
+qualification evidence:
+
+| Withdrawn claim | Why |
+| --- | --- |
+| "privacy-preserving portable evidence" / `PRIVATE_FILENAMES_DISCLOSED=0` as a privacy proof | The run emitted one record per private object with an **unsalted** `relative_path_hash` plus exact size, device, inode, mode, depth. Raw names were suppressed, so the counter was narrowly true — but an unsalted hash is an offline identification oracle. Correct classification: `RAW_NAMES_SUPPRESSED / PRIVATE_METADATA_PSEUDONYMIZED / REIDENTIFICATION_RESISTANCE_NOT_PROVEN`. |
+| "626,474-entry census across three authorized roots" as qualification | It censused the **implementation worktree** as `DEMA_REPO`, not the 0A-observed subject. The build environment is not a census subject. |
+| "measured topology = all three disjoint" | An artefact of the wrong binding, not a fact about the real Node00 estate. |
+| `REAL_NESTED_DELEGATION_EXERCISED` | Never exercised live — `delegated_roots = 0` in that run. Delegation is proven by fixture only. |
+
+The superseded artifacts are retained, unmodified and unpublished, at
+`/data/bizra/proofs/node00-three-root-census-0b/` with a `SUPERSEDED.md` marker:
+`SUPERSEDED · PRIVACY_CONTRACT_INADMISSIBLE · LOCAL_SENSITIVE_METADATA ·
+NOT_A_0B_ACCEPTANCE_RECEIPT`. They are **not** to be uploaded or cited.
+
+## Base
+
+```text
+Dema main (verified by API before mutation):  079fee557d7c230f2e6c076cc7a776418a393235
+bizra-data-lake main (verified, read-only):   6a3c1427836ec0290e4ecb43bf23f55ee70912c2
+PR #417 head at round start:                  f47f4a5927aed501cdd1b4437a1ec4c22df0c64b
+branch:                                       feat/node00-three-root-census-0b
+implementation worktree (NOT a subject):      /data/bizra/worktrees/node00-three-root-census-0b/Dema
+```
+
+The pre-existing dirty checkout on `chore/backlog-init-agent-instructions`
+(`420a20c8`) remains `PRE_EXISTING_DIRTY_CHECKOUT / PRESERVED_UNMODIFIED /
+NOT_A_0B_INPUT` — not merged, switched, cleaned, reset or stashed.
+
+## What round 0B.1 corrected
+
+### 1. `PRIVATE_AGGREGATE` (P0)
+
+A private root now emits **no per-file record of any kind** — no path, basename, path
+hash, exact size, exact mtime, device, inode, mode, depth, or stable per-entry
+identifier. Only fixed-vocabulary aggregates escape: counts plus
+extension / coarse-type / size-bucket / mtime-bucket distributions. `mtime` buckets are
+ages against a **declared** `reference_time_ms` (a required input when any private root
+is present), so no exact timestamp escapes. The only private per-entry row permitted is
+a four-field delegation marker (`root_id`, `entry_type`, `delegated_to`,
+`ownership_state`). Private warnings are aggregated by reason code.
+`verifyPortableArtifacts()` enforces this where evidence becomes portable, and the
+writer refuses to emit a violating artifact set.
+
+### 2. Root binding (P0)
+
+`plan()` refuses any declared root whose normalized path equals the declared
+`implementation_worktree` (`dema_repo_subject_equals_implementation_worktree`),
+including trailing-separator and `..` spellings. A root marked `requires_binding: true`
+must carry an explicit `binding.binding_source` or the plan blocks with
+`root_binding_unresolved`.
+
+### 3. Greptile A — proof-root redirection
+
+The whole mutable ancestor chain is screened **before any write**. Group- or
+world-writable is a hard refusal unless the directory is sticky **and owned by us or by
+root**. The proof root must also be owned by the current uid and not itself
+group/world-writable. Tests assert **zero** `mkdirSync`/`writeFileSync` calls occur when
+an ancestor is unsafe.
+
+### 4. Greptile B — per-root visitation truth
+
+Every admitted root carries `scan_state` ∈ `NOT_STARTED · COMPLETE · PARTIAL · FAILED`
+with its own reason and `visited_entries`. A root never reached because a census-wide
+bound was exhausted is `NOT_STARTED / GLOBAL_BOUND_EXHAUSTED` — never a successful
+empty root. Global `COMPLETE` requires every root `COMPLETE`; `verify()` refuses
+otherwise (`complete_with_non_complete_root`).
+
+### 5. Greptile C — retry-safe proof writing
+
+No raw fs exception escapes; every failure returns a named envelope. Cleanup is
+authorised only for the exact directory this invocation created, proven by the
+device+inode captured immediately **after** `mkdir`. A pre-existing temp directory is
+evidence, never deleted (`STALE_TEMP_RUN_REQUIRES_OPERATOR_RECOVERY`); one substituted
+since creation returns `RECOVERABLE_TEMP_ARTIFACT_REQUIRES_HUMAN`. Same-run-id retry
+after a failed write succeeds cleanly instead of dying on `EEXIST`.
+
+## Second review round — 4 further P1s found at `e1d0376` and fixed
+
+Greptile re-reviewed the corrected head and found four more defects. All are real; all
+were reproduced before fixing.
+
+| # | Finding | Root cause | Fix |
+| --- | --- | --- | --- |
+| G1/G4 | **`max_depth` skipped unrelated roots** — a deep root hitting the depth limit marked every later *disjoint* root `NOT_STARTED / GLOBAL_BOUND_EXHAUSTED`, even shallow ones well inside the limit | a **root-local** condition was written into **census-wide** truncation state | `walkRoot()` now returns a per-root truncation reason; only `max_entries` / `max_millis` are census-wide. A depth-limited root is `PARTIAL / max_depth` and the census continues. Reproduced: `DEEP=PARTIAL`, `SHALLOW` was wrongly `NOT_STARTED`; now `COMPLETE`. |
+| G2 | **Sticky ancestor remained replaceable** — a sticky directory owned by a *foreign* principal was exempted | in a sticky directory an entry may be renamed by the entry's owner, **the directory's owner**, or root | sticky exemption is now ownership-qualified: exempt only when owner is the current uid or root; unknown ownership fails closed |
+| G3 | **Marker-write failure poisoned retries** — if the run-marker write failed after `mkdir`, cleanup required the absent marker and stranded the directory, so every retry returned `STALE_TEMP_…` | cleanup was bound to the **marker file** | cleanup is now bound to the temp directory's **device+inode captured right after `mkdir`**. The marker remains as evidence but is not required to reclaim. |
+
+Three regression tests (`G2`, `G3`, `G4`) pin these; `M7` and `M13` were updated to the
+corrected semantics rather than left asserting the old behaviour.
+
+### Third review round — 2 further Major findings at `6a2b01b`
+
+| # | Finding | Fix |
+| --- | --- | --- |
+| G5 | **`run_id` allowed `.` and `..`** — `/^[A-Za-z0-9._-]+$/` accepted them, so `join(proofRoot, runId)` resolved to the proof root itself or its **parent**. Safety rested only on the incidental `existsSync` ordering, not on validation; any reordering would reopen a real path-traversal write. | Require a leading alphanumeric, reject `.`/`..` explicitly, and assert **explicit containment** of both `finalDir` and `tempDir` inside the proof root (`run_dir_escapes_proof_root`). |
+| G6 | **Private roots leaked raw, unbounded extensions** through `extension_distribution` — a bespoke suffix (`.kdbx`, `.ovpn`, a proprietary tag) is an identifying signal that survives aggregation, contradicting the "fixed-vocabulary aggregates only" contract. Nothing verified distribution keys. | Private roots project extensions onto a **closed** `EXTENSION_VOCABULARY`; anything undeclared buckets to `other`. `verify()` now refuses a private root whose extension / size-bucket / mtime-bucket keys fall outside their declared vocabularies. Public roots still report the observed extension. |
+
+This is the re-identification risk the PR explicitly asked reviewers to probe, and it was
+real. Tests `G5` and `G6` pin both.
+
+### Fourth review round — 1 further P1 at `ac242d9`
+
+| # | Finding | Fix |
+| --- | --- | --- |
+| G7 | **Identity failure poisoned retries.** If `lstat(tempDir)` failed immediately after `mkdir`, `createdIdentity` stayed `null` and the writer carried on. Any later failure then could not authorise cleanup, so the directory was stranded and every same-run-id retry returned `STALE_TEMP_…`. | Without an identity the directory can never be proven ours, so the writer now refuses **before writing anything** and reclaims immediately. A **non-recursive** remove succeeds only on an empty directory, so a directory substituted underneath us is reported (`RECOVERABLE_TEMP_ARTIFACT_REQUIRES_HUMAN`) rather than destroyed. Test `G7`. |
+
+### Fifth round — founder review, 3 defects (2 of them defeating my own tests)
+
+| # | Finding | Fix |
+| --- | --- | --- |
+| G8 | **`rmSync(dir, {recursive:false})` cannot remove a directory** — it throws `ERR_FS_EISDIR` on a real filesystem. The round-4 "fix" therefore stranded the temp directory *in production* while the injected-adapter test passed, because the fake `rmSync` was a no-op recorder. **My own test hid the bug.** | Reclaim uses `rmdirSync`, which succeeds only on an **empty** directory — a substituted or populated path fails `ENOTEMPTY` and the evidence is preserved. The fake fs now models the real `EISDIR`/`ENOTEMPTY` semantics so this class cannot hide again, and a **real-filesystem** test pins the primitive. |
+| G9 | **Foreign-owned ancestors were admitted at mode 0755.** Permission bits are not the whole threat: a directory owned by another principal is replaceable through that owner's own write bit at any mode. | New `foreignOwned()` rule — only the current uid and root may own a directory on the proof path; unknown ownership fails closed. Refusal `proof_root_ancestor_foreign_owned`. |
+| G10 | **Subject binding was syntactic, not evidentiary.** The check only required a non-empty `binding_source`, so any caller could pass `"anything"`. | A `bizra.node00.root-binding.v0.1` object is now required and validated: 0A receipt hash, repository identity, expected head, observed `device:inode`, implementation-worktree identity, and `subject_equals_implementation_worktree: false`. **Admission re-measures the root and refuses a binding whose observed identity does not match reality** (`root_binding_identity_mismatch`). |
+
+### Sixth round — 0B.3, three defects; the closure claim was premature
+
+The round-5 report asserted `LIVE_P0_P1_P2 = 0`. **That was false.** Two independent
+reviews had already landed at `6058e90` (Greptile 01:12:28Z, CodeRabbit 01:18:12Z) and
+the convergence poll used a timestamp threshold that excluded them. The lesson is
+recorded, not minimised: *a poll window chosen after the fact is not evidence of
+convergence.*
+
+| # | Finding | Root cause | Fix |
+| --- | --- | --- | --- |
+| G7′ | **Unverified replacement directory deleted.** On identity-capture failure the writer called `rmdirSync(tempDir)`. `rmdir` removes *any* empty directory — so a concurrent actor swapping in their own empty directory had it destroyed. "Empty" is not "mine". | pathname used as ownership proof | **Unknown identity ⇒ zero cleanup authority.** Nothing is deleted, the path is preserved (`UNVERIFIED_TEMP_PATH_PRESERVED`), and the temp directory is now **invocation-unique** (`mkdtempSync`), so preservation no longer poisons retry. The old delete-or-poison tension is dissolved rather than traded off. |
+| G11 | **Nested public root leaked its private parent via `normalized_path_hash`.** `path` was nulled but the unsalted digest of the child's *absolute* path was emitted — and that path embeds the private parent as a prefix, so a candidate parent is confirmable by recomputation. The covering test asserted only `path === null`. | one field fixed, sibling fields missed | Every location-encoding field (`path`, `normalized_path_hash`, `device`, `inode`, `mode`) is withheld for a root nested under a private parent, and `verify()` checks all five. |
+| G12 | **Proof-root ownership skipped instead of failing closed** when `currentUid` or `stat.uid` was unavailable — inconsistent with `foreignOwned()` on the ancestor chain. | absence treated as permission | The proof root now uses `foreignOwned()` too. Unknown ownership is refused. |
+
+A fourth defect was self-inflicted and caught in-round: a bulk test-region replacement
+silently deleted `G8`/`G9`/`G10`, and the net test count masked it. Restored, and the
+lesson generalises — **an edit whose blast radius is not asserted is an unverified edit.**
+
+### Seventh round — 0B.4, recursive-cleanup P1
+
+Greptile's exact-head review at `c3bd4f8` found one more, and it is the same law a
+seventh time. On the abort path, `reclaimOwnTempDir` deleted the temp directory with
+`rmSync(tempDir, { recursive: true })`. Device+inode revalidation proves the directory
+NODE is the one we created — but it says nothing about the directory's CONTENTS. A
+recursive delete therefore destroys whatever is inside, including a file a concurrent
+actor may have injected, which is itself evidence of the tampering.
+
+Fixed: cleanup is **empty-directory-only** (`rmdirSync`). An empty, identity-matched
+temp dir is removed; a non-empty one is **preserved** and the run returns
+`TEMP_DIR_NOT_EMPTY_REQUIRES_HUMAN`. Because the temp name is invocation-unique
+(0B.3), preservation never blocks a retry — the two goals that were in tension are now
+independent. A **real-filesystem** test (`G13-realfs`) pins that `rmdir` refuses a
+non-empty directory and that recursive `rmSync` would have destroyed it, so no fake can
+hide this again. `G13` covers empty→removed and non-empty→preserved; `M8`/`M12` were
+corrected to assert preservation rather than the old recursive removal; `G8`'s blanket
+"no rmdir" assertion was narrowed to "no recursive removal, and rmdir only behind an
+identity guard."
+
+The recurring shape across all seven rounds: **destructive or disclosing authority must
+derive from a captured, revalidated measurement — never from a name, a permission bit,
+an empty-directory heuristic, or the mere absence of a check.**
+
+**Cumulative: 17 real defects found and fixed across seven review rounds**
+(3 + 4 + 2 + 1 + 3 + 3 + 1).
+
+### 6. CI-red repair
+
+The exact-head CI failure at `f47f4a5` was **this slice's own test**, not the
+environment: `not ok 4793 - this slice changes no TASK-029…`. CI checks out at
+fetch-depth 1, so `origin/main` does not resolve and `git diff origin/main...HEAD`
+threw. The test now resolves a base ref if one exists and otherwise asserts against the
+working tree, naming the scope it used. CI reported `# pass 7937 / # fail 1` — that one
+failure was ours; the three failures seen locally are sandbox-only and do **not** occur
+on CI.
+
+## Gates
+
+```bash
+node --test tests/node00-three-root-census.test.js     # 55 tests
+node scripts/review/node00-three-root-census-check.mjs --json
+npm test
+npm run check
+git diff --check
+```
+
+## BLOCKED: `SECURE_PROOF_ROOT_UNAVAILABLE`
+
+The corrected real census is **not run**. The newly-implemented Finding-A rule refuses
+every durable location writable from this environment. Measured, not assumed:
+
+| Path | mode | verdict |
+| --- | --- | --- |
+| `/` | `drwxr-xr-x` uid 65534 | admissible ancestor |
+| `/data` | `drwxr-xr-x` uid 1000 | admissible ancestor — **but read-only to this process** |
+| `/data/bizra` | `drwxrwxr-x` uid 1000 | **group-writable, non-sticky ⇒ refused** |
+| `/data/bizra/proofs` | `drwxrwxr-x` | refused |
+| `/data/bizra/proofs/node00-three-root-census-0b` | `drwxrwxr-x` | refused |
+| session `$TMPDIR` | `/tmp` `drwxrwxrwt` uid 65534 | `proof_root_ancestor_sticky_foreign_owned` |
+| `$HOME/.local/state/bizra-proofs/…` (the proposed location) | **not creatable** — `/home/bizra-operating-system/.local` is read-only to this process | and even if created: `/` and `/home` are uid **65534**, so `proof_root_ancestor_foreign_owned` fires |
+
+Every verdict above is a real `planProofOutput()` run against the real path, not an
+inference. After the G9 foreign-owner rule, **no admissible proof root exists in this
+environment at all** — in this sandbox `/` and `/home` are owned by uid 65534 (a
+user-namespace artifact where the host's root would normally be uid 0), so every chain
+rooted there is foreign-owned. The proposed `$HOME/.local/state/bizra-proofs/…` fails
+twice over: the path is read-only to this process, and its ancestors are foreign-owned.
+
+This is the anticipated outcome: a truthful refusal beats writing proof beneath a path
+another principal controls. The writer was **not** weakened and `/data/bizra/proofs` was
+**not** reused. Creating a clean parent under `/data` is denied (read-only),
+and changing permissions on shared directories is explicitly out of scope.
+
+Per the corrective contract, no artifacts are written before a proof-root plan is
+accepted. Consequently these remain **unproven**:
+
+```text
+DEMA_REPO_BOUND_TO_LEGACY_SUBJECT     BLOCKED (fixture-proven only)
+REAL_NESTED_DELEGATION_EXERCISED      BLOCKED (fixture-proven only)
+```
+
+Delegation, ownership, privacy mode, scan states and writer refusals are all proven by
+the 55 focused tests against synthetic trees. They are **not** proven against the real
+three-root estate.
+
+## Declared limits
+
+- `PROOF_ROOT_PARENT_SUBSTITUTION_RESISTANCE: NOT_PROVEN_AGAINST_HOSTILE_CONCURRENT_MUTATOR`
+  — no descriptor-relative (`openat2`-grade) containment.
+- Independent authenticity is **not** proved: `verify()` is body-bound but has no
+  external anchor, so a forger controlling every field and recomputing the hash is not
+  detected. No launder-resistance is claimed.
+- Reproducibility across a **live** root is not claimed; determinism is proven against a
+  frozen snapshot.
+- The legacy-checkout byte-identity test is bound **locally by measurement** and **in CI
+  by mechanism** (the writer refuses any output inside a repository worktree; the kernel
+  reaches no mutator). The absolute legacy path does not exist on CI, so a
+  path-dependent assertion would be vacuous there.
+
+## Authority correction register
+
+```text
+0A authority recommendation incorrectly stated C0+C1;
+0B source implementation requires bounded C3.
+
+Round 1 used a superseded private-per-entry design.
+Round 1 substituted the implementation worktree for the required Dema subject.
+Round 1 produced a useful prototype, NOT an admissible 0B qualification.
+
+Round 1 removed one self-created scratch worktree without explicit deletion authority:
+  AUTHORITY_PROCESS_DEVIATION
+  NO_OPERATOR_DATA_AFFECTED
+  MUST_NOT_REPEAT
+
+Existing scanners (node0-space-index, buildLocalAssetInventory, sovereign_scan.py,
+quick_scan.py) contributed VOCABULARY only. None is imported, executed or wrapped.
+quick_scan.py symlink-following remains a founder-supplied, independently UNVERIFIED
+concern — this slice neither reads nor executes it.
+
+0A census artifacts are locally hash-bound at Level 3 from the independent audit
+boundary. The original 0A package was NOT modified.
+```
+
+## Program sequencing
+
+```yaml
+next_capability_slice: MISSION-ENVELOPE-CANON-1A
+mission_envelope_1a_eligible: false
+unrelated_capability_expansion_allowed: false
+
+maintenance_exceptions:
+  - critical_security_repair
+  - build_or_ci_integrity_repair
+  - dependency_vulnerability_remediation
+  - documentation_truth_correction
+```
+
+TASK-029, TASK-030 and TASK-032 remain outside this slice. PR #417 stays **draft**.
+`NODE0_NOT_CLOSED`.

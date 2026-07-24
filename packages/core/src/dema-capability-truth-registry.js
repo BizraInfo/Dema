@@ -91,6 +91,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_METRICS_BASELINE_1A",
   "DEMA_RECOVERY_MISSION_ENGINE_1A",
   "DEMA_RECOVERY_MISSION_GATHERER_1B",
+  "NODE00_THREE_ROOT_CENSUS_0B",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2371,6 +2372,35 @@ function defaultCapabilityRows() {
         "operator mutation",
         "unattended runtime",
         "content read",
+      ],
+    }),
+    capability({
+      capability_id: "NODE00_THREE_ROOT_CENSUS_0B",
+      truth_label: "NODE00_THREE_ROOT_CENSUS_MEASURED_REPO",
+      summary:
+        "Bounded multi-root metadata census with most-specific-root ownership and privacy-preserving portable evidence.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node00-three-root-census.js"],
+        test_paths: ["tests/node00-three-root-census.test.js"],
+        review_gate_paths: [
+          "scripts/review/node00-three-root-census-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE00_THREE_ROOT_CENSUS_0B.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE00_THREE_ROOT_CENSUS_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure kernel walks explicitly declared filesystem roots through an INJECTED metadata adapter exposing only lstat/readdir/now, and enforces the ownership law: every entry belongs to the most-specific declared root containing it, so a parent traversal reaching an admitted child root records a delegation marker and does NOT descend (nested-root double count is zero). Root admission fails closed on a missing, non-directory, symlinked or symlink-ancestored root and on two roots resolving to the same observed device+inode; identity is revalidated after traversal. Every admitted root carries an explicit scan_state (NOT_STARTED/COMPLETE/PARTIAL/FAILED) with its own reason and coverage counters: a root never reached because a census-wide bound was already exhausted is NOT_STARTED with GLOBAL_BOUND_EXHAUSTED, never a successfully-scanned empty root, and a global COMPLETE requires every root COMPLETE. Symlinks are recorded and never resolved or descended; cross-device entries are recorded and never descended; unreadable and vanished entries stay explicit evidence. Privacy is structural and aggregate: a root declared private is reported in PRIVATE_AGGREGATE mode and emits NO per-file record of any kind — no path, basename, path hash, exact size, exact mtime, device, inode, mode or depth — only counts plus extension/coarse-type/size-bucket/mtime-bucket distributions over declared vocabularies, with mtime expressed as ages against a declared reference time; the only private per-entry row permitted is a four-field delegation marker, private warnings are aggregated by reason code, and verifyPortableArtifacts() refuses any artifact set that violates this. A public root nested inside a private one withholds its own path because that path would disclose the parent's as a prefix. The implementation worktree that builds the slice is refused as a census subject. The body is content-addressed under bizra.canonical-json.v1, body-bound verified, and invariant to root argument order, run id, timestamp, PID and temp path; collections are digested by a chunked Merkle fold because the canonical contract caps a single array at 1024 elements. The ONLY fs surface is a separate effect adapter whose external proof writer screens the whole mutable ancestor chain before any write (group- or world-writable without the sticky bit is a hard refusal), returns a named envelope on every failure path instead of letting an fs exception escape, never deletes a pre-existing temporary directory, reclaims only the directory the current invocation created after revalidating its marker, and promotes by same-parent atomic rename.",
+      what_this_does_not_prove:
+        "It does not prove anything about the REAL three-root estate: no admissible real run exists. The corrected census is BLOCKED at SECURE_PROOF_ROOT_UNAVAILABLE because every durable proof location reachable in this environment is group-writable and is refused by this slice's own ancestor rule, so DEMA_REPO_BOUND_TO_LEGACY_SUBJECT and REAL_NESTED_DELEGATION_EXERCISED are UNPROVEN and all behaviour is proven by focused tests against synthetic trees only. The earlier 626,474-entry run is SUPERSEDED and privacy-contract-inadmissible (it emitted unsalted per-file path hashes plus exact size/device/inode/mode, an offline identification oracle, and censused the implementation worktree instead of the required subject) and must not be cited as qualification. It does not prove content identity (no file bytes are read), semantic meaning, deduplication, a persistent asset registry or physical file organization. It does not prove independent authenticity: verify() binds the whole body but has no external anchor, so a forger controlling every field and recomputing the hash is not detected. It does not prove reproducibility across a LIVE root. Proof-root parent substitution resistance is NOT_PROVEN_AGAINST_HOSTILE_CONCURRENT_MUTATOR: no descriptor-relative (openat2-grade) containment. It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
       ],
     }),
   ]);
