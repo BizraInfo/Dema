@@ -1,0 +1,23 @@
+{
+  "schema": "bizra.dema.authorship_signature.v0.1",
+  "author": {
+    "node": "Node0",
+    "key_type": "ed25519",
+    "public_key_fingerprint": "0f3c43c3184e707a552075eeebcee2b5f753631da4a44d0cb257e6e8e62517e8"
+  },
+  "artifact": {
+    "path": "fixtures/frozen-authorship-history.txt",
+    "sha256": "47b212e05a0dc0b277b31c9109e247318bcc869893a5bf7001ddf8419c5395f6"
+  },
+  "boundary": {
+    "network_used": false,
+    "legal_identity_asserted": false,
+    "production_claimed": false
+  },
+  "truth_label": "LOCAL_AUTHORSHIP_ATTESTED",
+  "signature": {
+    "algorithm": "ed25519",
+    "value": "w4m1BaB6c3c4Q1xcMJ2HVGbekoUq2MyDwUgm7AwzWYav74tqGJOcAn/8hFixVE/aqiLmNRLrqn0djDDdRA4dAg==",
+    "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAfHbj8Jr4R5QsLNPwYCVkbE2HYMHNnX5Cc76TAI62z44=\n-----END PUBLIC KEY-----\n"
+  }
+}

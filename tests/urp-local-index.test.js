@@ -189,8 +189,9 @@ describe("buildUrpLocalIndex", () => {
       assert.equal(result.index.truth_label, "LOCAL_VERIFIED_RESOURCE_INDEX");
       assert.equal(
         result.index.verification_scope,
-        "PASSPORT_ENVELOPE_AND_RECEIPTS",
+        "PASSPORT_ENVELOPE_AND_RECEIPT_SIGNATURE_INTEGRITY_ONLY",
       );
+      assert.equal(result.index.active_signer_trust_evaluated, false);
     } finally {
       restore();
     }

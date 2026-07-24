@@ -99,11 +99,14 @@ describe("dema proof passport verify --deep", () => {
       const result = JSON.parse(out);
       assert.equal(
         result.schema,
-        "bizra.dema.proof_passport_deep_verification.v0.1",
+        "bizra.dema.proof_passport_deep_verification.v0.2",
       );
       assert.equal(result.verified, true);
       assert.equal(result.verdict, "VERIFIED");
-      assert.equal(result.verification_scope, "PASSPORT_ENVELOPE_AND_RECEIPTS");
+      assert.equal(
+        result.verification_scope,
+        "PASSPORT_ENVELOPE_AND_RECEIPT_SIGNATURE_INTEGRITY_ONLY",
+      );
       assert.equal(result.truth_label, "LOCAL_PROOF_PASSPORT_DEEP_VERIFIED");
     } finally {
       restore();
@@ -215,7 +218,10 @@ describe("dema proof passport verify --deep", () => {
         { cwd: REPO_ROOT, env: ENV, timeout: 10000 },
       ).toString();
       assert.match(out, /Proof Passport Deep Verification: VERIFIED/);
-      assert.match(out, /Scope:\s+PASSPORT_ENVELOPE_AND_RECEIPTS/);
+      assert.match(
+        out,
+        /Scope:\s+PASSPORT_ENVELOPE_AND_RECEIPT_SIGNATURE_INTEGRITY_ONLY/,
+      );
       assert.match(out, /Truth:\s+LOCAL_PROOF_PASSPORT_DEEP_VERIFIED/);
     } finally {
       restore();

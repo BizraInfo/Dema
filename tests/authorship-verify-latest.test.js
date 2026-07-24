@@ -13,6 +13,7 @@ import {
 import {
   initAuthorshipKey,
   KEY_INIT_CONSENT_PHRASE,
+  loadAuthorshipTrustSnapshot,
 } from "../packages/receipts/src/authorship-key-store.js";
 import {
   signArtifact,
@@ -85,9 +86,14 @@ describe("verifyAuthorshipReceiptFile", () => {
   it("verifies a valid signed receipt", async () => {
     const { home, signResult, restore } = await homeWithSignedReceipt();
     try {
-      const result = await verifyAuthorshipReceiptFile(signResult.receipt_path);
+      const trust = await loadAuthorshipTrustSnapshot(home);
+      const result = await verifyAuthorshipReceiptFile(
+        signResult.receipt_path,
+        trust,
+      );
       assert.equal(result.verified, true);
       assert.equal(result.verdict, "VERIFIED");
+      assert.equal(result.verification_scope, "ACTIVE_SIGNER_TRUST");
       assert.ok(result.artifact);
       assert.ok(result.author);
       assert.equal(result.receipt_path, signResult.receipt_path);
@@ -102,7 +108,11 @@ describe("verifyAuthorshipReceiptFile", () => {
       const receipt = JSON.parse(readFileSync(signResult.receipt_path, "utf8"));
       receipt.artifact.sha256 = "0".repeat(64);
       writeFileSync(signResult.receipt_path, JSON.stringify(receipt));
-      const result = await verifyAuthorshipReceiptFile(signResult.receipt_path);
+      const trust = await loadAuthorshipTrustSnapshot(home);
+      const result = await verifyAuthorshipReceiptFile(
+        signResult.receipt_path,
+        trust,
+      );
       assert.equal(result.verified, false);
       assert.equal(result.verdict, "FAILED");
     } finally {
@@ -122,9 +132,13 @@ describe("verifyAuthorshipReceiptFile", () => {
 
 describe("formatAuthorshipVerification", () => {
   it("formats VERIFIED result", async () => {
-    const { signResult, restore } = await homeWithSignedReceipt();
+    const { home, signResult, restore } = await homeWithSignedReceipt();
     try {
-      const result = await verifyAuthorshipReceiptFile(signResult.receipt_path);
+      const trust = await loadAuthorshipTrustSnapshot(home);
+      const result = await verifyAuthorshipReceiptFile(
+        signResult.receipt_path,
+        trust,
+      );
       const text = formatAuthorshipVerification(result);
       assert.match(text, /VERIFIED/);
       assert.match(text, /Artifact:/);

@@ -1,6 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
-import { PROOF_PASSPORT_SCHEMA } from "./proof-passport.js";
+import {
+  LEGACY_PROOF_PASSPORT_SCHEMA,
+  PROOF_PASSPORT_SCHEMA,
+} from "./proof-passport.js";
 
 export const PASSPORT_VERIFY_SCHEMA =
   "bizra.dema.proof_passport_verification.v0.1";
@@ -8,6 +11,7 @@ export const PASSPORT_VERIFY_SCHEMA =
 const VERIFICATION_SCOPE = "PASSPORT_ENVELOPE_ONLY";
 const TRUTH_LABEL_VERIFIED = "LOCAL_PROOF_PASSPORT_ENVELOPE_VERIFIED";
 const TRUTH_LABEL_FAILED = "LOCAL_PROOF_PASSPORT_ENVELOPE_FAILED";
+const RECEIPT_INTEGRITY_SCOPE = "SIGNATURE_INTEGRITY_ONLY";
 
 const REQUIRED_BOUNDARY_KEYS = Object.freeze({
   passport_signed: false,
@@ -50,9 +54,11 @@ export function verifyProofPassport(passport, passportPath = null) {
   checks.push(check("is_object", isObject));
   if (!isObject) return fail("not_an_object", checks, passportPath);
 
+  const currentSchema = passport.schema === PROOF_PASSPORT_SCHEMA;
+  const legacySchema = passport.schema === LEGACY_PROOF_PASSPORT_SCHEMA;
   checks.push(
-    check("schema_matches", passport.schema === PROOF_PASSPORT_SCHEMA, {
-      expected: PROOF_PASSPORT_SCHEMA,
+    check("schema_matches", currentSchema || legacySchema, {
+      expected: [LEGACY_PROOF_PASSPORT_SCHEMA, PROOF_PASSPORT_SCHEMA],
       got: passport.schema,
     }),
   );
@@ -86,11 +92,54 @@ export function verifyProofPassport(passport, passportPath = null) {
   );
   checks.push(check("boundary_canonical", boundaryOk, { boundary }));
 
+  const scopeCompatible =
+    currentSchema
+      ? passport.verification_scope === RECEIPT_INTEGRITY_SCOPE &&
+        boundary.active_signer_trust_evaluated === false &&
+        boundary.receipt_verification_scope === RECEIPT_INTEGRITY_SCOPE
+      : legacySchema &&
+        (passport.verification_scope === undefined ||
+          passport.verification_scope === RECEIPT_INTEGRITY_SCOPE) &&
+        (boundary.active_signer_trust_evaluated === undefined ||
+          boundary.active_signer_trust_evaluated === false) &&
+        (boundary.receipt_verification_scope === undefined ||
+          boundary.receipt_verification_scope === RECEIPT_INTEGRITY_SCOPE);
+  checks.push(
+    check("integrity_scope_contract", scopeCompatible, {
+      passport_scope: passport.verification_scope ?? null,
+      active_signer_trust_evaluated:
+        boundary.active_signer_trust_evaluated ?? null,
+      receipt_scope: boundary.receipt_verification_scope ?? null,
+      legacy_schema: legacySchema,
+    }),
+  );
+
   const receipts = Array.isArray(passport.receipts) ? passport.receipts : null;
   checks.push(check("receipts_is_array", receipts !== null));
 
   const aggregate = passport.aggregate ?? {};
   if (receipts) {
+    const receiptScopesCompatible = receipts.every((receipt) => {
+      if (!receipt || typeof receipt !== "object") return false;
+      if (currentSchema) {
+        return (
+          receipt.verification_scope === RECEIPT_INTEGRITY_SCOPE &&
+          receipt.trust_state === "NOT_EVALUATED"
+        );
+      }
+      return (
+        (receipt.verification_scope === undefined ||
+          receipt.verification_scope === RECEIPT_INTEGRITY_SCOPE) &&
+        (receipt.trust_state === undefined ||
+          receipt.trust_state === "NOT_EVALUATED")
+      );
+    });
+    checks.push(
+      check("receipt_integrity_scope_contract", receiptScopesCompatible, {
+        legacy_schema: legacySchema,
+      }),
+    );
+
     const total = aggregate.total_receipts;
     const verifiedCount = receipts.filter(
       (r) => r.verdict === "VERIFIED",
@@ -180,6 +229,8 @@ export function verifyProofPassport(passport, passportPath = null) {
     truth_label: verified ? TRUTH_LABEL_VERIFIED : TRUTH_LABEL_FAILED,
     passport_path: passportPath,
     passport_hash: passport.passport_hash ?? null,
+    passport_schema: passport.schema ?? null,
+    legacy_compatibility: legacySchema,
     checks: Object.freeze(checks),
     boundary: VERIFIER_BOUNDARY,
   });

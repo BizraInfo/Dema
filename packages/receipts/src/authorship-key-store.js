@@ -20,6 +20,8 @@ export const KEY_MIGRATE_SCHEMA = "bizra.dema.authorship_key_migrate.v0.1";
 export const ACTIVE_POINTER_SCHEMA = "bizra.dema.authorship_active_key.v0.1";
 export const GENERATION_METADATA_SCHEMA =
   "bizra.dema.authorship_key_generation.v0.1";
+export const AUTHORSHIP_TRUST_SNAPSHOT_SCHEMA =
+  "bizra.dema.authorship_trust_snapshot.v0.1";
 
 const PRIVATE_KEY_FILENAME = "node0-ed25519.pem";
 const PUBLIC_KEY_FILENAME = "node0-ed25519.pub.pem";
@@ -29,6 +31,7 @@ const RETIRED_REGISTRY_FILENAME = "retired-registry.json";
 const TRANSACTIONS_DIRNAME = "transactions";
 const IDENTITY_LEASE_FILENAME = "identity-transition.lock";
 const REQUIRED_KEY_ALGORITHM = "ed25519";
+const SHA256_HEX = /^[0-9a-f]{64}$/;
 const NO_FOLLOW = constants.O_NOFOLLOW ?? 0;
 
 class UnsafeKeyPathError extends Error {
@@ -212,6 +215,15 @@ function derivePublicFromPrivate(privateKeyPem) {
   };
 }
 
+export function isSpkiPublicKeyPem(value) {
+  return (
+    typeof value === "string" &&
+    /^-----BEGIN PUBLIC KEY-----\r?\n/.test(value) &&
+    /\r?\n-----END PUBLIC KEY-----\r?\n?$/.test(value) &&
+    !value.includes("PRIVATE KEY")
+  );
+}
+
 // Finding #2 (review P1): pair consistency alone is not identity — an RSA or
 // P-256 pair is internally consistent yet unusable on the Ed25519 signing
 // path. Require BOTH keys to be Ed25519 before any authority write. Returns
@@ -219,6 +231,9 @@ function derivePublicFromPrivate(privateKeyPem) {
 // { ok:false } (mismatched pair).
 function pairConsistency(privateKeyPem, publicKeyPem) {
   try {
+    if (!isSpkiPublicKeyPem(publicKeyPem)) {
+      return { ok: false, error: "public_key_invalid" };
+    }
     const derived = derivePublicFromPrivate(privateKeyPem);
     const storedPub = createPublicKey(publicKeyPem);
     if (
@@ -568,6 +583,7 @@ const LOAD_ERROR_TO_RECOVERY_CLASS = Object.freeze({
   pair_mismatch: "CORRUPT_GENERATION",
   unsupported_key_algorithm: "CORRUPT_GENERATION",
   retired_generation: "RETIRED_GENERATION",
+  retired_registry_incomplete: "RECOVERY_STATE_UNKNOWN",
   // An unreadable registry cannot prove retired OR serviceable — UNKNOWN,
   // never a definitive class.
   retired_registry_unreadable: "RECOVERY_STATE_UNKNOWN",
@@ -829,27 +845,122 @@ export async function inspectIdentityRecovery(demaHome) {
   });
 }
 
-async function checkRetired(ap, fingerprint) {
+async function readRetiredFingerprints(ap) {
   const info = await lstatIfExists(ap.retiredRegistry);
-  if (!info) return null; // absent registry: safe to serve
+  if (!info) {
+    return Object.freeze({
+      ok: true,
+      present: false,
+      fingerprints: Object.freeze([]),
+    });
+  }
+  if (info.isSymbolicLink() || !info.isFile()) {
+    return pairFailure("retired_registry_unreadable");
+  }
   const raw = await readFileNoFollow(ap.retiredRegistry);
-  if (raw === null) return "retired_registry_unreadable";
+  if (raw === null) return pairFailure("retired_registry_unreadable");
   let registry;
   try {
     registry = JSON.parse(raw);
   } catch {
-    return "retired_registry_unreadable";
+    return pairFailure("retired_registry_unreadable");
   }
   const retired = Array.isArray(registry?.retired) ? registry.retired : null;
-  if (!retired) return "retired_registry_unreadable";
-  for (const entry of retired) {
-    if (entry?.fingerprint === fingerprint) return "retired_generation";
+  if (
+    !retired ||
+    retired.some(
+      (entry) =>
+        !entry ||
+        typeof entry !== "object" ||
+        Array.isArray(entry) ||
+        !SHA256_HEX.test(entry.fingerprint ?? ""),
+    )
+  ) {
+    return pairFailure("retired_registry_unreadable");
+  }
+  return Object.freeze({
+    ok: true,
+    present: true,
+    fingerprints: Object.freeze([
+      ...new Set(retired.map((entry) => entry.fingerprint)),
+    ].sort()),
+  });
+}
+
+async function checkRetired(ap, fingerprint, previousGeneration = null) {
+  const registry = await readRetiredFingerprints(ap);
+  if (!registry.ok) return registry.error;
+  if (registry.fingerprints.includes(fingerprint)) return "retired_generation";
+  if (
+    previousGeneration !== null &&
+    (!SHA256_HEX.test(previousGeneration) ||
+      !registry.fingerprints.includes(previousGeneration))
+  ) {
+    return "retired_registry_incomplete";
   }
   return null;
 }
 
 function pairFailure(error) {
   return Object.freeze({ ok: false, error });
+}
+
+async function resolveContainedGeneration(ap, doc) {
+  const keysInfo = await lstatIfExists(ap.dir);
+  const generationsInfo = await lstatIfExists(ap.generationsDir);
+  if (
+    !keysInfo ||
+    keysInfo.isSymbolicLink() ||
+    !keysInfo.isDirectory() ||
+    !generationsInfo ||
+    generationsInfo.isSymbolicLink() ||
+    !generationsInfo.isDirectory()
+  ) {
+    return pairFailure("pointer_escape");
+  }
+
+  let keysReal;
+  let generationsReal;
+  try {
+    keysReal = await realpath(ap.dir);
+    generationsReal = await realpath(ap.generationsDir);
+  } catch {
+    return pairFailure("pointer_escape");
+  }
+  if (
+    !isInsideOrSame(generationsReal, keysReal) ||
+    generationsReal === keysReal
+  ) {
+    return pairFailure("pointer_escape");
+  }
+
+  const generationPath = isAbsolute(doc.generation_path)
+    ? doc.generation_path
+    : join(ap.dir, doc.generation_path);
+  const generationInfo = await lstatIfExists(generationPath);
+  if (
+    !generationInfo ||
+    generationInfo.isSymbolicLink() ||
+    !generationInfo.isDirectory()
+  ) {
+    return pairFailure(
+      generationInfo ? "generation_unsafe" : "generation_missing",
+    );
+  }
+
+  let generationReal;
+  try {
+    generationReal = await realpath(generationPath);
+  } catch {
+    return pairFailure("pointer_escape");
+  }
+  if (
+    !isInsideOrSame(generationReal, generationsReal) ||
+    generationReal === generationsReal
+  ) {
+    return pairFailure("pointer_escape");
+  }
+  return Object.freeze({ ok: true, generationReal });
 }
 
 // Shared post-pointer verification over ONE pointer snapshot (doc + raw):
@@ -859,27 +970,9 @@ function pairFailure(error) {
 // two different pointer reads (1E.4 round-5 snapshot-coherence rule).
 async function verifyPointerDoc(ap, doc, raw) {
   try {
-    // Containment: the pointer may only select inside keys/generations/.
-    const generationPath = isAbsolute(doc.generation_path)
-      ? doc.generation_path
-      : join(ap.dir, doc.generation_path);
-    const genInfo = await lstatIfExists(generationPath);
-    if (!genInfo || genInfo.isSymbolicLink() || !genInfo.isDirectory()) {
-      return pairFailure(genInfo ? "generation_unsafe" : "generation_missing");
-    }
-    let generationReal;
-    try {
-      const generationsReal = await realpath(ap.generationsDir);
-      generationReal = await realpath(generationPath);
-      if (
-        !isInsideOrSame(generationReal, generationsReal) ||
-        generationReal === generationsReal
-      ) {
-        return pairFailure("pointer_escape");
-      }
-    } catch {
-      return pairFailure("pointer_escape");
-    }
+    const resolved = await resolveContainedGeneration(ap, doc);
+    if (!resolved.ok) return resolved;
+    const { generationReal } = resolved;
 
     const privateKeyPem = await readFileNoFollow(join(generationReal, "private.pem"));
     const publicKeyPem = await readFileNoFollow(join(generationReal, "public.pem"));
@@ -922,7 +1015,11 @@ async function verifyPointerDoc(ap, doc, raw) {
       return pairFailure("pair_mismatch");
     }
 
-    const retired = await checkRetired(ap, pair.fingerprint);
+    const retired = await checkRetired(
+      ap,
+      pair.fingerprint,
+      doc.previous_generation ?? null,
+    );
     if (retired) return pairFailure(retired);
 
     return Object.freeze({
@@ -948,6 +1045,97 @@ export async function loadActiveKeyPair(demaHome) {
     const pointer = await readActivePointer(ap);
     if (pointer.error) return pairFailure(pointer.error);
     return await verifyPointerDoc(ap, pointer.doc, pointer.raw);
+  } catch {
+    return pairFailure("load_failed");
+  }
+}
+
+// Public-only trust loader for receipt verification. This follows one active
+// pointer snapshot and validates only public authority material: pointer
+// containment, generation metadata, public-key bytes, canonical fingerprint,
+// and the retirement registry. It never opens private.pem, so historical
+// verification cannot accidentally depend on private-key readability.
+async function verifyPublicPointerDoc(ap, doc) {
+  try {
+    const resolved = await resolveContainedGeneration(ap, doc);
+    if (!resolved.ok) return resolved;
+    const { generationReal } = resolved;
+
+    const publicKeyPem = await readFileNoFollow(join(generationReal, "public.pem"));
+    const metadataRaw = await readFileNoFollow(join(generationReal, "metadata.json"));
+    if (publicKeyPem === null) return pairFailure("generation_unsafe");
+    if (metadataRaw === null) return pairFailure("metadata_corrupt");
+
+    let metadata;
+    try {
+      metadata = JSON.parse(metadataRaw);
+    } catch {
+      return pairFailure("metadata_corrupt");
+    }
+    if (
+      !metadata ||
+      metadata.schema !== GENERATION_METADATA_SCHEMA ||
+      metadata.fingerprint !== doc.generation_fingerprint ||
+      metadata.algorithm !== REQUIRED_KEY_ALGORITHM ||
+      !SHA256_HEX.test(metadata.private_content_hash ?? "") ||
+      !SHA256_HEX.test(metadata.public_content_hash ?? "") ||
+      basename(generationReal) !== doc.generation_fingerprint
+    ) {
+      return pairFailure("metadata_corrupt");
+    }
+    if (sha256(publicKeyPem) !== metadata.public_content_hash) {
+      return pairFailure("content_hash_mismatch");
+    }
+
+    if (!isSpkiPublicKeyPem(publicKeyPem)) {
+      return pairFailure("public_key_invalid");
+    }
+    let publicKey;
+    try {
+      publicKey = createPublicKey(publicKeyPem);
+    } catch {
+      return pairFailure("public_key_invalid");
+    }
+    if (publicKey.asymmetricKeyType !== REQUIRED_KEY_ALGORITHM) {
+      return pairFailure("unsupported_key_algorithm");
+    }
+    const publicDer = publicKey.export({ type: "spki", format: "der" });
+    const fingerprint = sha256(publicDer.toString("hex"));
+    if (fingerprint !== doc.generation_fingerprint) {
+      return pairFailure("public_key_fingerprint_mismatch");
+    }
+
+    const retired = await readRetiredFingerprints(ap);
+    if (!retired.ok) return retired;
+    if (retired.fingerprints.includes(fingerprint)) {
+      return pairFailure("retired_generation");
+    }
+    if (
+      doc.previous_generation !== null &&
+      doc.previous_generation !== undefined &&
+      (!SHA256_HEX.test(doc.previous_generation) ||
+        !retired.fingerprints.includes(doc.previous_generation))
+    ) {
+      return pairFailure("retired_registry_incomplete");
+    }
+
+    return Object.freeze({
+      schema: AUTHORSHIP_TRUST_SNAPSHOT_SCHEMA,
+      active_public_key_pem: publicKeyPem,
+      active_fingerprint: fingerprint,
+      retired_fingerprints: retired.fingerprints,
+    });
+  } catch {
+    return pairFailure("load_failed");
+  }
+}
+
+export async function loadAuthorshipTrustSnapshot(demaHome) {
+  try {
+    const ap = activeKeyPaths(demaHome);
+    const pointer = await readActivePointer(ap);
+    if (pointer.error) return pairFailure(pointer.error);
+    return await verifyPublicPointerDoc(ap, pointer.doc);
   } catch {
     return pairFailure("load_failed");
   }

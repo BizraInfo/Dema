@@ -141,7 +141,7 @@ describe("flow: consent-gated authorship → proof passport (persistent home)", 
 
       // 5. The passport aggregates the receipt and verifies it.
       const passport = runJson(home, ["proof", "passport", "--json"]);
-      assert.equal(passport.schema, "bizra.dema.proof_passport.v0.1");
+      assert.equal(passport.schema, "bizra.dema.proof_passport.v0.2");
       assert.equal(passport.aggregate.total_receipts, 1);
       assert.equal(passport.aggregate.verified_count, 1);
       assert.equal(passport.aggregate.verdict, "ALL_VERIFIED");

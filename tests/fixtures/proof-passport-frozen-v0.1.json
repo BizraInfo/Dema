@@ -1,0 +1,42 @@
+{
+  "schema": "bizra.dema.proof_passport.v0.1",
+  "mode": "LOCAL_EXPORT",
+  "subject": {
+    "node": "Node0",
+    "public_key_fingerprints": [
+      "0f3c43c3184e707a552075eeebcee2b5f753631da4a44d0cb257e6e8e62517e8"
+    ]
+  },
+  "receipts": [
+    {
+      "type": "authorship",
+      "receipt_filename": "authorship-frozen-v0.1.json",
+      "artifact_path": "fixtures/frozen-authorship-history.txt",
+      "artifact_sha256": "47b212e05a0dc0b277b31c9109e247318bcc869893a5bf7001ddf8419c5395f6",
+      "signature_algorithm": "ed25519",
+      "author_fingerprint": "0f3c43c3184e707a552075eeebcee2b5f753631da4a44d0cb257e6e8e62517e8",
+      "verdict": "VERIFIED",
+      "truth_label": "VERIFIED_LOCAL_AUTHORSHIP_RECEIPT"
+    }
+  ],
+  "aggregate": {
+    "total_receipts": 1,
+    "verified_count": 1,
+    "failed_count": 0,
+    "verdict": "ALL_VERIFIED"
+  },
+  "boundary": {
+    "passport_generated": true,
+    "passport_signed": false,
+    "private_key_loaded": false,
+    "network_used": false,
+    "federation_used": false,
+    "token_minted": false,
+    "legal_identity_asserted": false,
+    "production_claimed": false,
+    "receipt_content_included": false
+  },
+  "truth_label": "LOCAL_PROOF_PASSPORT_ALL_VERIFIED",
+  "passport_hash": "3fb1afceb970d388cfd6711eff092ac813b636a9612a6761a94cd0e1dd587310",
+  "generated_at": "2025-01-01T00:00:00.000Z"
+}
