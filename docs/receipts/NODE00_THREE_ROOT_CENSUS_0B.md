@@ -108,6 +108,14 @@ corrected semantics rather than left asserting the old behaviour.
 This is the re-identification risk the PR explicitly asked reviewers to probe, and it was
 real. Tests `G5` and `G6` pin both.
 
+### Fourth review round — 1 further P1 at `ac242d9`
+
+| # | Finding | Fix |
+| --- | --- | --- |
+| G7 | **Identity failure poisoned retries.** If `lstat(tempDir)` failed immediately after `mkdir`, `createdIdentity` stayed `null` and the writer carried on. Any later failure then could not authorise cleanup, so the directory was stranded and every same-run-id retry returned `STALE_TEMP_…`. | Without an identity the directory can never be proven ours, so the writer now refuses **before writing anything** and reclaims immediately. A **non-recursive** remove succeeds only on an empty directory, so a directory substituted underneath us is reported (`RECOVERABLE_TEMP_ARTIFACT_REQUIRES_HUMAN`) rather than destroyed. Test `G7`. |
+
+**Cumulative: 10 real defects found and fixed across four review rounds** (3 + 4 + 2 + 1).
+
 ### 6. CI-red repair
 
 The exact-head CI failure at `f47f4a5` was **this slice's own test**, not the
@@ -121,7 +129,7 @@ on CI.
 ## Gates
 
 ```bash
-node --test tests/node00-three-root-census.test.js     # 47 tests
+node --test tests/node00-three-root-census.test.js     # 48 tests
 node scripts/review/node00-three-root-census-check.mjs --json
 npm test
 npm run check
@@ -158,7 +166,7 @@ REAL_NESTED_DELEGATION_EXERCISED      BLOCKED (fixture-proven only)
 ```
 
 Delegation, ownership, privacy mode, scan states and writer refusals are all proven by
-the 47 focused tests against synthetic trees. They are **not** proven against the real
+the 48 focused tests against synthetic trees. They are **not** proven against the real
 three-root estate.
 
 ## Declared limits

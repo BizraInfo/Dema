@@ -931,6 +931,31 @@ test("the writer refuses to emit artifacts that violate the private-aggregate co
   assert.deepEqual(fs.state.wrote, [], "artifacts were written despite a privacy violation");
 });
 
+test("G7 an uncapturable temp-dir identity fails closed BEFORE writing and does not poison retries", () => {
+  // Previously, if lstat(tempDir) failed right after mkdir, createdIdentity stayed null
+  // and the writer carried on. Any later failure then could not authorise cleanup, so
+  // the directory was stranded and every same-run-id retry returned STALE_TEMP…
+  const result = runNode00ThreeRootCensusCheck();
+  const fs = fakeWriterFs(SAFE_TREE);
+  let blindOnce = true;
+  const baseLstat = fs.lstatSync;
+  fs.lstatSync = (p) => {
+    if (blindOnce && p === "/data/proofs/run/.tmp-RUN-G7") {
+      throw Object.assign(new Error("EIO"), { code: "EIO" });
+    }
+    return baseLstat(p);
+  };
+  const first = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-G7", result, scannedRoots: [], fs, currentUid: 1000 });
+  assert.equal(first.ok, false);
+  assert.ok(first.blocked_by.includes("temp_dir_identity_uncapturable"), first.blocked_by.join(", "));
+  assert.deepEqual(fs.state.wrote, [], "wrote into a directory whose identity could not be proven");
+  assert.ok(fs.state.removed.includes("/data/proofs/run/.tmp-RUN-G7"), "empty temp dir was not reclaimed");
+
+  blindOnce = false;
+  const retry = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-G7", result, scannedRoots: [], fs, currentUid: 1000 });
+  assert.equal(retry.ok, true, retry.blocked_by?.join(", "));
+});
+
 test("G5 run_id cannot re-target or escape the proof root", () => {
   // `/^[A-Za-z0-9._-]+$/` accepted "." and "..", so join(proofRoot, runId) resolved to
   // the proof root itself or its PARENT — masked only by incidental existsSync ordering.

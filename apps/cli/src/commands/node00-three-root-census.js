@@ -340,6 +340,30 @@ export function writeCensusProof({
   } catch {
     createdIdentity = null;
   }
+  if (!createdIdentity) {
+    // Without an identity we could never prove the directory is ours, so a later
+    // failure would strand it and poison every retry. Refuse BEFORE writing anything
+    // and reclaim now. A NON-recursive remove succeeds only on an empty directory, so
+    // a directory substituted underneath us is reported rather than destroyed.
+    let cleanupError = null;
+    try {
+      fs.rmSync(tempDir, { recursive: false });
+    } catch {
+      cleanupError = "temp_dir_cleanup_failed";
+    }
+    return cleanupError
+      ? Object.freeze({
+          ok: false,
+          blocked_by: Object.freeze([
+            "temp_dir_identity_uncapturable",
+            "RECOVERABLE_TEMP_ARTIFACT_REQUIRES_HUMAN",
+            cleanupError,
+          ]),
+          run_dir: null,
+          stale_temp_dir: tempDir,
+        })
+      : fail("temp_dir_identity_uncapturable");
+  }
 
   const abort = (code) => {
     const cleanupError = reclaimOwnTempDir({
