@@ -31,7 +31,9 @@
 // per-entry identifier. Only fixed-vocabulary aggregate distributions escape. An
 // unsalted per-file path hash is an offline identification oracle and is therefore NOT
 // emitted; exact size + device + inode would further strengthen correlation and are
-// not emitted either. The only per-entry row a private root may produce is a
+// not emitted either. Extension distributions for a private root are projected onto a
+// CLOSED declared vocabulary — a raw, unbounded suffix survives aggregation as an
+// identifying signal, so anything undeclared buckets to "other". The only per-entry row a private root may produce is a
 // delegation marker naming the child ROOT ID and nothing else.
 //
 // SYMLINK LAW: recorded as metadata, never resolved, never descended.
@@ -88,6 +90,24 @@ const MEDIA_EXTS = new Set([
 const ARCHIVE_EXTS = new Set([".zip", ".tar", ".gz", ".tgz", ".7z", ".rar"]);
 const MODEL_EXTS = new Set([".gguf", ".safetensors", ".onnx", ".pt", ".pth"]);
 const BINARY_EXTS = new Set([".bin", ".exe", ".dll", ".so", ".dylib"]);
+
+// The CLOSED extension vocabulary. Anything outside it is an unbounded, potentially
+// bespoke suffix (.kdbx, .ovpn, a proprietary tag) and is an identifying signal that
+// survives aggregation — so a PRIVATE root never reports it verbatim.
+export const DECLARED_EXTENSIONS = Object.freeze(
+  [...CODE_EXTS, ...DOC_EXTS, ...DATA_EXTS, ...MEDIA_EXTS, ...ARCHIVE_EXTS, ...MODEL_EXTS, ...BINARY_EXTS].sort(),
+);
+const DECLARED_EXTENSION_SET = new Set(DECLARED_EXTENSIONS);
+export const EXTENSION_VOCABULARY = Object.freeze([...DECLARED_EXTENSIONS, "none", "other"]);
+
+// Extension key permitted to escape for a given privacy mode. A public root may report
+// the observed extension; a private root is projected onto the closed vocabulary.
+export function extensionKeyFor(extension, privacyMode) {
+  const key = extension === "" ? "none" : extension;
+  if (privacyMode !== PRIVACY_PRIVATE_AGGREGATE) return key;
+  if (key === "none") return "none";
+  return DECLARED_EXTENSION_SET.has(key) ? key : "other";
+}
 
 export function coarseTypeForExtension(extension) {
   if (typeof extension !== "string" || extension === "") return "none";
@@ -597,7 +617,7 @@ function walkRoot(root, rootByPath, adapter, limits, entries, sinks, state) {
       if (crossesDevice) summary.device_boundary_count += 1;
       if (isDelegation) summary.delegated_root_count += 1;
       if (stat.type === "file") {
-        bump(summary.extension_distribution, extension === "" ? "none" : extension);
+        bump(summary.extension_distribution, extensionKeyFor(extension, root.privacy_mode));
         bump(summary.coarse_type_distribution, coarse);
         bump(summary.size_bucket_distribution, sizeBucket(stat.size_bytes));
         bump(summary.mtime_bucket_distribution, mtimeBucket(stat.mtime_ms, sinks.reference_time_ms));
@@ -718,6 +738,7 @@ export function buildNode00ThreeRootCensusPayload(census) {
     reference_time_ms: census.reference_time_ms,
     size_bucket_vocabulary: SIZE_BUCKETS,
     mtime_bucket_vocabulary: MTIME_BUCKETS,
+    private_extension_vocabulary: EXTENSION_VOCABULARY,
     topology: deriveCensusTopology(census.admitted),
     per_root: Object.freeze(perRoot),
     totals: Object.freeze({ ...totals, entries: census.entries.length, warnings: census.warnings.length }),
@@ -797,6 +818,16 @@ export function verifyNode00ThreeRootCensus(payload) {
     if (root.privacy_mode === PRIVACY_PRIVATE_AGGREGATE) {
       for (const field of ["path", "normalized_path_hash", "device", "inode", "mode"]) {
         if (root[field] !== null) reasons.push(`private_root_${field}_disclosed`);
+      }
+      // A raw suffix outside the declared vocabulary is an identifying signal.
+      for (const key of Object.keys(root.summary?.extension_distribution ?? {})) {
+        if (!EXTENSION_VOCABULARY.includes(key)) reasons.push("private_root_extension_outside_vocabulary");
+      }
+      for (const key of Object.keys(root.summary?.size_bucket_distribution ?? {})) {
+        if (!SIZE_BUCKETS.includes(key) && key !== "unknown") reasons.push("private_root_size_bucket_outside_vocabulary");
+      }
+      for (const key of Object.keys(root.summary?.mtime_bucket_distribution ?? {})) {
+        if (!MTIME_BUCKETS.includes(key)) reasons.push("private_root_mtime_bucket_outside_vocabulary");
       }
     } else if (root.visibility === "private") {
       reasons.push("private_root_not_in_aggregate_mode");

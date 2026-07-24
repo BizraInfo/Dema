@@ -18,6 +18,8 @@ import {
   foldDigest,
   sizeBucket,
   mtimeBucket,
+  extensionKeyFor,
+  EXTENSION_VOCABULARY,
   DIGEST_FOLD_WIDTH,
   CensusRootAdmissionError,
   COMPLETENESS_COMPLETE,
@@ -927,6 +929,71 @@ test("the writer refuses to emit artifacts that violate the private-aggregate co
   assert.equal(written.ok, false);
   assert.ok(written.blocked_by.includes("private_per_entry_row_emitted"));
   assert.deepEqual(fs.state.wrote, [], "artifacts were written despite a privacy violation");
+});
+
+test("G5 run_id cannot re-target or escape the proof root", () => {
+  // `/^[A-Za-z0-9._-]+$/` accepted "." and "..", so join(proofRoot, runId) resolved to
+  // the proof root itself or its PARENT — masked only by incidental existsSync ordering.
+  const result = runNode00ThreeRootCensusCheck();
+  for (const bad of [".", "..", "...", ".hidden", "-leading", ""]) {
+    const fs = fakeWriterFs(SAFE_TREE);
+    const out = writeCensusProof({ proofRoot: "/data/proofs/run", runId: bad, result, scannedRoots: [], fs, currentUid: 1000 });
+    assert.equal(out.ok, false, `runId ${JSON.stringify(bad)} was accepted`);
+    assert.ok(out.blocked_by.includes("run_id_malformed"), `${JSON.stringify(bad)} -> ${out.blocked_by.join(", ")}`);
+    assert.deepEqual(fs.state.made, [], `runId ${JSON.stringify(bad)} created a directory`);
+    assert.deepEqual(fs.state.wrote, [], `runId ${JSON.stringify(bad)} wrote a file`);
+  }
+  // A well-formed id is still accepted and stays strictly inside the proof root.
+  const fs = fakeWriterFs(SAFE_TREE);
+  const ok = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-2026", result, scannedRoots: [], fs, currentUid: 1000 });
+  assert.equal(ok.ok, true, ok.blocked_by?.join(", "));
+  assert.ok(ok.run_dir.startsWith("/data/proofs/run/"));
+});
+
+test("G6 a private root reports only DECLARED extensions — a bespoke suffix cannot survive aggregation", () => {
+  // An unbounded raw suffix (.kdbx, .ovpn, a proprietary tag) is an identifying signal
+  // that survives aggregation, so private roots project onto a closed vocabulary.
+  const tree = fixtureTree();
+  tree["/fx/downloads"].children = ["Dema", "photo.jpg", "shortcut", "locked", "vault.kdbx", "work.MyEmployerName"];
+  tree["/fx/downloads/vault.kdbx"] = { type: "file", device: 1, inode: 60, size_bytes: 100 };
+  tree["/fx/downloads/work.MyEmployerName"] = { type: "file", device: 1, inode: 61, size_bytes: 100 };
+
+  const result = censusRoots(fixtureInput({ adapter: makeMemoryAdapter(tree) }));
+  const dist = result.summaries.DOWNLOADS.extension_distribution;
+  for (const key of Object.keys(dist)) {
+    assert.ok(EXTENSION_VOCABULARY.includes(key), `undeclared extension "${key}" escaped a private root`);
+  }
+  assert.ok(!Object.keys(dist).includes(".kdbx"));
+  assert.ok(!Object.keys(dist).some((k) => k.toLowerCase().includes("myemployername")));
+  assert.equal(dist.other, 2, "both bespoke suffixes must bucket to 'other'");
+  assert.equal(extensionKeyFor(".kdbx", PRIVACY_PRIVATE_AGGREGATE), "other");
+  assert.equal(extensionKeyFor(".jpg", PRIVACY_PRIVATE_AGGREGATE), ".jpg");
+  // A PUBLIC root may still report the observed extension verbatim.
+  assert.equal(extensionKeyFor(".kdbx", PRIVACY_PUBLIC_PATHS), ".kdbx");
+
+  // No bespoke suffix reaches any portable artifact.
+  const run = runNode00ThreeRootCensus({
+    consent: NODE00_THREE_ROOT_CENSUS_GO_PHRASE,
+    input: fixtureInput({ adapter: makeMemoryAdapter(tree) }),
+  });
+  const tokens = [...stringValues(run.payload), ...stringValues(run.entries), ...stringValues(run.warnings)];
+  for (const secret of ["kdbx", "MyEmployerName", "vault", "work"]) {
+    assert.ok(!tokens.some((t) => t.includes(secret)), `"${secret}" escaped`);
+  }
+
+  // verify() refuses a forged manifest that re-introduces an undeclared key.
+  const payload = buildNode00ThreeRootCensusPayload(result);
+  const forged = {
+    ...payload,
+    per_root: payload.per_root.map((r) =>
+      r.root_id === "DOWNLOADS"
+        ? { ...r, summary: { ...r.summary, extension_distribution: { ...r.summary.extension_distribution, ".kdbx": 1 } } }
+        : r,
+    ),
+  };
+  const verdict = verifyNode00ThreeRootCensus(forged);
+  assert.equal(verdict.ok, false);
+  assert.ok(verdict.reasons.includes("private_root_extension_outside_vocabulary"));
 });
 
 test("hostile concurrent parent substitution is DECLARED UNPROVEN, not claimed defeated", () => {

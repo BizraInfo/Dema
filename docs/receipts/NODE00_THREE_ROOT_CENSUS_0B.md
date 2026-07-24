@@ -98,6 +98,16 @@ were reproduced before fixing.
 Three regression tests (`G2`, `G3`, `G4`) pin these; `M7` and `M13` were updated to the
 corrected semantics rather than left asserting the old behaviour.
 
+### Third review round — 2 further Major findings at `6a2b01b`
+
+| # | Finding | Fix |
+| --- | --- | --- |
+| G5 | **`run_id` allowed `.` and `..`** — `/^[A-Za-z0-9._-]+$/` accepted them, so `join(proofRoot, runId)` resolved to the proof root itself or its **parent**. Safety rested only on the incidental `existsSync` ordering, not on validation; any reordering would reopen a real path-traversal write. | Require a leading alphanumeric, reject `.`/`..` explicitly, and assert **explicit containment** of both `finalDir` and `tempDir` inside the proof root (`run_dir_escapes_proof_root`). |
+| G6 | **Private roots leaked raw, unbounded extensions** through `extension_distribution` — a bespoke suffix (`.kdbx`, `.ovpn`, a proprietary tag) is an identifying signal that survives aggregation, contradicting the "fixed-vocabulary aggregates only" contract. Nothing verified distribution keys. | Private roots project extensions onto a **closed** `EXTENSION_VOCABULARY`; anything undeclared buckets to `other`. `verify()` now refuses a private root whose extension / size-bucket / mtime-bucket keys fall outside their declared vocabularies. Public roots still report the observed extension. |
+
+This is the re-identification risk the PR explicitly asked reviewers to probe, and it was
+real. Tests `G5` and `G6` pin both.
+
 ### 6. CI-red repair
 
 The exact-head CI failure at `f47f4a5` was **this slice's own test**, not the
@@ -111,7 +121,7 @@ on CI.
 ## Gates
 
 ```bash
-node --test tests/node00-three-root-census.test.js     # 45 tests
+node --test tests/node00-three-root-census.test.js     # 47 tests
 node scripts/review/node00-three-root-census-check.mjs --json
 npm test
 npm run check
@@ -148,7 +158,7 @@ REAL_NESTED_DELEGATION_EXERCISED      BLOCKED (fixture-proven only)
 ```
 
 Delegation, ownership, privacy mode, scan states and writer refusals are all proven by
-the 45 focused tests against synthetic trees. They are **not** proven against the real
+the 47 focused tests against synthetic trees. They are **not** proven against the real
 three-root estate.
 
 ## Declared limits

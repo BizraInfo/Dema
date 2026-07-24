@@ -290,7 +290,13 @@ export function writeCensusProof({
 } = {}) {
   const plan = planProofOutput({ proofRoot, scannedRoots, demaHome, fs, currentUid });
   if (!plan.ok) return Object.freeze({ ok: false, blocked_by: plan.blocked_by, run_dir: null });
-  if (typeof runId !== "string" || !/^[A-Za-z0-9._-]+$/.test(runId)) return fail("run_id_malformed");
+  // `.` and `..` matched the old character class, so join(proofRoot, runId) resolved to
+  // the proof root itself or its PARENT. That was masked only by the incidental
+  // existsSync ordering, not by validation. Require a leading alphanumeric and reject
+  // the traversal spellings outright.
+  if (typeof runId !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(runId) || runId === "." || runId === "..") {
+    return fail("run_id_malformed");
+  }
   if (!result || result.ok !== true) return fail("census_not_ok");
 
   // The privacy contract is enforced again where evidence becomes PORTABLE —
@@ -304,6 +310,10 @@ export function writeCensusProof({
 
   const finalDir = join(plan.resolved, runId);
   const tempDir = join(plan.resolved, `.tmp-${runId}`); // SAME parent => rename cannot cross devices
+  // Explicit containment, not an incidental side effect of check ordering.
+  if (!isStrictlyInside(plan.resolved, finalDir) || !isStrictlyInside(plan.resolved, tempDir)) {
+    return fail("run_dir_escapes_proof_root");
+  }
 
   try {
     if (fs.existsSync(finalDir)) return fail("run_dir_exists");
