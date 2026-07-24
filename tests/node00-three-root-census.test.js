@@ -725,8 +725,14 @@ function fakeWriterFs(tree, { gitDirs = [], files = {} } = {}) {
       delete state.tree[p];
     },
     rmdirSync: (p) => {
-      const children = Object.keys(state.files).filter((f) => f.startsWith(p + "/"));
-      if (children.length > 0) throw Object.assign(new Error("ENOTEMPTY"), { code: "ENOTEMPTY" });
+      // Real rmdir refuses a non-empty directory — files OR subdirectories. Modelling
+      // both (not just files) keeps the fake from being weaker than node:fs, which is
+      // exactly how earlier doubles hid real defects in this slice.
+      const fileChildren = Object.keys(state.files).filter((f) => f.startsWith(p + "/"));
+      const dirChildren = Object.keys(state.tree).filter((f) => f.startsWith(p + "/"));
+      if (fileChildren.length > 0 || dirChildren.length > 0) {
+        throw Object.assign(new Error("ENOTEMPTY"), { code: "ENOTEMPTY" });
+      }
       state.removed.push(p);
       delete state.tree[p];
     },
@@ -834,9 +840,13 @@ test("M8 no artifact is created beneath a substituted proof root", () => {
   assert.equal(written.ok, false);
   assert.ok(written.blocked_by.includes("proof_root_identity_changed_before_promotion"), written.blocked_by.join(", "));
   assert.deepEqual(fs.state.renamed, [], "promotion happened despite a substituted root");
-  // The half-written run directory was reclaimed by IDENTITY, not left behind.
+  // The abort happened AFTER the artifact files were written, so the temp dir is
+  // non-empty. Cleanup is rmdir-only (never recursive), so its contents are PRESERVED
+  // for human recovery rather than destroyed — even though the directory is ours.
   const created8 = fs.state.made.find((p) => p.includes(".tmp-RUN-8-"));
-  assert.ok(fs.state.removed.includes(created8));
+  assert.ok(!fs.state.removed.includes(created8), "a non-empty temp dir was recursively removed");
+  assert.ok(fs.state.tree[created8], "the partial artifacts were destroyed instead of preserved");
+  assert.ok(written.blocked_by.includes("TEMP_DIR_NOT_EMPTY_REQUIRES_HUMAN"), written.blocked_by.join(", "));
 });
 
 test("M11 a failed write returns a NAMED envelope — no raw fs exception escapes", () => {
@@ -867,15 +877,20 @@ test("M12 current-run temporary output is safely reclaimed, and the same run id 
   };
   const first = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-12", result, scannedRoots: [], fs, currentUid: 1000 });
   assert.equal(first.ok, false);
-  // The temp dir this invocation created was revalidated and removed — no poisoning.
+  // The write failed AFTER earlier files landed, so the temp dir is non-empty and is
+  // PRESERVED (rmdir-only, never recursive). Retry is still clean because the temp name
+  // is invocation-unique — preservation and retry-safety are no longer in tension.
   const created12 = fs.state.made.find((p) => p.includes(".tmp-RUN-12-"));
-  assert.ok(fs.state.removed.includes(created12));
-  assert.equal(fs.state.tree[created12], undefined);
+  assert.ok(!fs.state.removed.includes(created12), "a non-empty temp dir was recursively removed");
+  assert.ok(fs.state.tree[created12], "partial artifacts were destroyed instead of preserved");
+  assert.ok(first.blocked_by.includes("TEMP_DIR_NOT_EMPTY_REQUIRES_HUMAN"), first.blocked_by.join(", "));
 
   failOnce = false;
   const retry = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-12", result, scannedRoots: [], fs, currentUid: 1000 });
   assert.equal(retry.ok, true, retry.blocked_by?.join(", "));
   assert.ok(!retry.blocked_by.includes("EEXIST"));
+  const temps12 = fs.state.made.filter((p) => p.includes(".tmp-RUN-12-"));
+  assert.equal(new Set(temps12).size, temps12.length, "a temp name was reused across invocations");
 });
 
 test("M13 an unrelated or unverifiable temporary path is never removed", () => {
@@ -992,8 +1007,16 @@ test("G8 REAL filesystem: mkdtemp mints a unique path, and no pathname-deletion 
 
   // The writer must mint unique temp dirs and must NOT delete by pathname anywhere.
   assert.ok(/mkdtempSync\(/.test(ADAPTER_CODE), "writer must mint an invocation-unique temp dir");
-  assert.ok(!/rmdirSync\(tempDir\)/.test(ADAPTER_CODE), "pathname-based deletion is reachable");
-  assert.ok(!/rmSync\(tempDir,\s*\{\s*recursive:\s*false/.test(ADAPTER_CODE));
+  // No RECURSIVE removal of a temp dir anywhere — that is the destructive primitive.
+  assert.ok(!/rmSync\(tempDir,\s*\{\s*recursive:\s*true/.test(ADAPTER_CODE), "recursive temp-dir removal is reachable");
+  assert.ok(!/rmSync\(tempDir,\s*\{\s*recursive:\s*false/.test(ADAPTER_CODE), "EISDIR-throwing rmSync is reachable");
+  // The ONLY temp-dir deletion is rmdirSync inside reclaimOwnTempDir, and it is reached
+  // only after full device+inode revalidation — never on an unverified pathname. Prove
+  // the guard sits above the call: `createdIdentity` mismatch returns before rmdir.
+  const reclaim = ADAPTER_CODE.slice(ADAPTER_CODE.indexOf("function reclaimOwnTempDir"), ADAPTER_CODE.indexOf("function reclaimOwnTempDir") + 900);
+  assert.ok(/createdIdentity/.test(reclaim) && reclaim.indexOf("createdIdentity") < reclaim.indexOf("rmdirSync"),
+    "rmdir is not guarded by an identity revalidation");
+  assert.ok(/rmdirSync\(tempDir\)/.test(reclaim), "identity-guarded rmdir cleanup is missing");
   for (const fn of ["mkdtempSync", "readdirSync", "rmdirSync"]) {
     assert.ok(Object.keys(DEFAULT_WRITER_FS).includes(fn), `DEFAULT_WRITER_FS missing ${fn}`);
   }
@@ -1143,6 +1166,67 @@ test("G11 a nested-under-private PUBLIC root withholds every location-encoding f
     const verdict = verifyNode00ThreeRootCensus(forged);
     assert.equal(verdict.ok, false, `verify accepted a re-disclosed ${field}`);
     assert.ok(verdict.reasons.includes("nested_root_discloses_private_parent_path"));
+  }
+});
+
+test("G13 identity-revalidated cleanup is rmdir-only: empty removed, non-empty PRESERVED", () => {
+  // The abort path used rmSync(recursive:true), which destroys descendants. Even after
+  // the directory node's device+inode is revalidated as ours, its CONTENTS cannot be
+  // proven exclusively ours, so recursive deletion is refused. rmdir removes only an
+  // empty directory; anything inside is preserved for a human.
+  const result = runNode00ThreeRootCensusCheck();
+
+  // (a) EMPTY temp dir at abort — the very first write (marker) fails. rmdir reclaims.
+  const fsEmpty = fakeWriterFs(SAFE_TREE);
+  fsEmpty.writeFileSync = (p) => {
+    throw Object.assign(new Error("ENOSPC"), { code: "ENOSPC" }); // first write fails, dir stays empty
+  };
+  const emptyRun = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-13E", result, scannedRoots: [], fs: fsEmpty, currentUid: 1000 });
+  const createdE = fsEmpty.state.made.find((p) => p.includes(".tmp-RUN-13E-"));
+  assert.equal(emptyRun.ok, false);
+  assert.ok(fsEmpty.state.removed.includes(createdE), "an empty, identity-matched temp dir was not reclaimed");
+  assert.ok(!emptyRun.blocked_by.includes("TEMP_DIR_NOT_EMPTY_REQUIRES_HUMAN"));
+
+  // (b) NON-EMPTY temp dir at abort — writes land, then promotion is refused. Preserve.
+  const fsFull = fakeWriterFs(SAFE_TREE);
+  let statCalls = 0;
+  const baseLstat = fsFull.lstatSync;
+  fsFull.lstatSync = (p) => {
+    const st = baseLstat(p);
+    if (p === "/data/proofs/run") { statCalls += 1; if (statCalls > 1) return { ...st, ino: st.ino + 1 }; }
+    return st;
+  };
+  const fullRun = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-13F", result, scannedRoots: [], fs: fsFull, currentUid: 1000 });
+  const createdF = fsFull.state.made.find((p) => p.includes(".tmp-RUN-13F-"));
+  assert.equal(fullRun.ok, false);
+  assert.ok(fullRun.blocked_by.includes("TEMP_DIR_NOT_EMPTY_REQUIRES_HUMAN"), fullRun.blocked_by.join(", "));
+  assert.ok(!fsFull.state.removed.includes(createdF), "a non-empty temp dir was removed");
+  // every artifact written into it survives
+  const survivors = Object.keys(fsFull.state.files).filter((f) => f.startsWith(createdF + "/"));
+  assert.ok(survivors.length > 0, "artifacts inside the preserved temp dir were destroyed");
+
+  // No recursive removal is reachable in the writer at all.
+  assert.ok(!/recursive:\\s*true/.test(ADAPTER_CODE.replace(/rmSync\\(base,[^)]*\\)/g, "")), "a recursive removal remains in the writer");
+});
+
+test("G13-realfs rmdir refuses a non-empty directory and removes an empty one (pins the primitive)", () => {
+  const base = realFs.mkdtempSync(join(realOs.tmpdir(), "node00-rmdir-"));
+  try {
+    const full = join(base, "full");
+    realFs.mkdirSync(full);
+    realFs.writeFileSync(join(full, "artifact.json"), "{}");
+    assert.throws(() => realFs.rmdirSync(full), (e) => e.code === "ENOTEMPTY", "rmdir must refuse a non-empty dir");
+    assert.ok(realFs.existsSync(join(full, "artifact.json")), "contents were destroyed");
+    // recursive rmSync WOULD have destroyed it — demonstrate the exact hazard being removed.
+    realFs.rmSync(full, { recursive: true, force: true });
+    assert.equal(realFs.existsSync(full), false);
+
+    const empty = join(base, "empty");
+    realFs.mkdirSync(empty);
+    realFs.rmdirSync(empty);
+    assert.equal(realFs.existsSync(empty), false, "rmdir must reclaim an empty dir");
+  } finally {
+    realFs.rmSync(base, { recursive: true, force: true });
   }
 });
 

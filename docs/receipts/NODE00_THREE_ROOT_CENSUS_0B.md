@@ -140,8 +140,32 @@ A fourth defect was self-inflicted and caught in-round: a bulk test-region repla
 silently deleted `G8`/`G9`/`G10`, and the net test count masked it. Restored, and the
 lesson generalises — **an edit whose blast radius is not asserted is an unverified edit.**
 
-**Cumulative: 16 real defects found and fixed across six review rounds**
-(3 + 4 + 2 + 1 + 3 + 3).
+### Seventh round — 0B.4, recursive-cleanup P1
+
+Greptile's exact-head review at `c3bd4f8` found one more, and it is the same law a
+seventh time. On the abort path, `reclaimOwnTempDir` deleted the temp directory with
+`rmSync(tempDir, { recursive: true })`. Device+inode revalidation proves the directory
+NODE is the one we created — but it says nothing about the directory's CONTENTS. A
+recursive delete therefore destroys whatever is inside, including a file a concurrent
+actor may have injected, which is itself evidence of the tampering.
+
+Fixed: cleanup is **empty-directory-only** (`rmdirSync`). An empty, identity-matched
+temp dir is removed; a non-empty one is **preserved** and the run returns
+`TEMP_DIR_NOT_EMPTY_REQUIRES_HUMAN`. Because the temp name is invocation-unique
+(0B.3), preservation never blocks a retry — the two goals that were in tension are now
+independent. A **real-filesystem** test (`G13-realfs`) pins that `rmdir` refuses a
+non-empty directory and that recursive `rmSync` would have destroyed it, so no fake can
+hide this again. `G13` covers empty→removed and non-empty→preserved; `M8`/`M12` were
+corrected to assert preservation rather than the old recursive removal; `G8`'s blanket
+"no rmdir" assertion was narrowed to "no recursive removal, and rmdir only behind an
+identity guard."
+
+The recurring shape across all seven rounds: **destructive or disclosing authority must
+derive from a captured, revalidated measurement — never from a name, a permission bit,
+an empty-directory heuristic, or the mere absence of a check.**
+
+**Cumulative: 17 real defects found and fixed across seven review rounds**
+(3 + 4 + 2 + 1 + 3 + 3 + 1).
 
 ### 6. CI-red repair
 
@@ -156,7 +180,7 @@ on CI.
 ## Gates
 
 ```bash
-node --test tests/node00-three-root-census.test.js     # 53 tests
+node --test tests/node00-three-root-census.test.js     # 55 tests
 node scripts/review/node00-three-root-census-check.mjs --json
 npm test
 npm run check
@@ -199,7 +223,7 @@ REAL_NESTED_DELEGATION_EXERCISED      BLOCKED (fixture-proven only)
 ```
 
 Delegation, ownership, privacy mode, scan states and writer refusals are all proven by
-the 53 focused tests against synthetic trees. They are **not** proven against the real
+the 55 focused tests against synthetic trees. They are **not** proven against the real
 three-root estate.
 
 ## Declared limits

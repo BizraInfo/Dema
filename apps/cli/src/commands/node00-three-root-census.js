@@ -290,9 +290,15 @@ function reclaimOwnTempDir({ fs, tempDir, proofRootResolved, createdIdentity, pr
   if (stat.dev !== createdIdentity.dev || stat.ino !== createdIdentity.ino) {
     return "temp_dir_substituted_since_creation";
   }
+  // Empty-directory-only cleanup. Even though the directory NODE is revalidated as ours
+  // by device+inode, its CONTENTS cannot be proven exclusively ours — a recursive delete
+  // could destroy an injected file that is itself evidence of tampering. rmdir removes
+  // ONLY an empty directory; a non-empty one is preserved for human recovery. Retry is
+  // unaffected because the temp name is invocation-unique.
   try {
-    fs.rmSync(tempDir, { recursive: true, force: false });
-  } catch {
+    fs.rmdirSync(tempDir);
+  } catch (err) {
+    if (err && err.code === "ENOTEMPTY") return "TEMP_DIR_NOT_EMPTY_REQUIRES_HUMAN";
     return "temp_dir_cleanup_failed";
   }
   return null;
