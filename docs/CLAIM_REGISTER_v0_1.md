@@ -141,23 +141,23 @@ The governing dispositions are:
 
 | Surface | Canonical claim disposition | Current authority |
 | --- | --- | --- |
-| Current live `bizra.ai` pages and unauthenticated API output | `UNKNOWN` where evidence is absent; `FORBIDDEN` where live economy, URP, or federation is implied | Release-blocking defect; not approved for reuse |
+| Initial `bizra.ai` pages and unauthenticated API output observed on 2026-07-24 | `UNKNOWN` where evidence was absent; `FORBIDDEN` where live economy, URP, or federation was implied | Historical release-blocking defect; not approved for reuse |
 | Inspected `award-winner-design` source at `568ab0b41c32f812b8ce4d20e7f4ffdf1ebffd6e` | `VERIFIED` as a source-review anchor only | Does not prove which SHA Vercel deployed |
-| Local containment candidate on `fix/public-claim-binding-1a` | `VERIFIED` as local source presence; operational qualifier `LOCAL_ONLY` | Not pushed, merged, deployed, or live |
-| Corrected public deployment | `UNKNOWN` | Requires explicit deployment consent, exact-SHA provenance, and post-deploy crawl |
+| Containment source on `fix/public-claim-binding-1a` | `VERIFIED` as source presence | Site PR #7 merged review head `ebb5cc42082a7348014fe50fd4b584ccbddbbdc7` as `6f7f545e6a1ac044cbb8d29a0a215e8a9f2885bf` |
+| GitHub `Production – award-winner-design` deployment record | `VERIFIED` within the record's scope | GitHub deployment `5590104450` reports success at `6f7f545e6a1ac044cbb8d29a0a215e8a9f2885bf`; its environment URL is a Vercel deployment URL, not the `bizra.ai` alias |
+| Corrected `bizra.ai` public surface | `MEASURED`; exact-source relationship `DERIVED` | The `2026-07-24T16:18:28.000Z` 62-surface crawl has zero known forbidden-phrase, private-200, or containment failures; a separate `2026-07-24T16:24:43.000Z` raw-body scan has zero public receipt-link or revoked-key-link matches. A live same-origin runtime asset embeds deployment identifier `dpl_C7hFkz6LZRSPK1XMHAXUYwJRJj2R`, matching the exact-commit Vercel status and deployment `5590104450`; the provider alias API was not readable, so the relationship is not promoted to `VERIFIED`. |
 | New signed public Claim Receipt | `UNKNOWN` | Not issued while signer rotation is pending |
 
-The local candidate reserves these stable claim identifiers. Their evidence
-links must pin the exact commit containing this incident record before any
-deployment:
+The containment boundary uses these stable claim identifiers. Their evidence
+links pin the exact commit containing this incident record:
 
 | Claim ID | Public statement boundary | Canonical label | Evidence and limit |
 | --- | --- | --- | --- |
-| `BIZRA-PUBLIC-001` | Dema is the local-first product face that reads local state, explains it, and previews safe next steps. | `VERIFIED` | `CURRENT_LIMITS.md`; this does not make Dema the whole BIZRA system or a governed runtime. |
-| `BIZRA-PUBLIC-002` | Federation, cross-node synchronization, shared URP runtime, token economics, and Proof-of-Impact rewards are not live. | `DESIGNED_NOT_LIVE` | `CURRENT_LIMITS.md` hard non-claims and the canonical lifecycle boundary. |
+| `BIZRA-PUBLIC-001` | Dema is the local-first product face that reads local state, explains it, and previews safe next steps. | `VERIFIED` | Exact incident-record commit [`26bb57359186a3ab533dd51e3623e0c84d5078e9`](https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md) and [Current Limits at the same commit](https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/CURRENT_LIMITS.md); this does not make Dema the whole BIZRA system or a governed runtime. |
+| `BIZRA-PUBLIC-002` | Federation, cross-node synchronization, shared URP runtime, token economics, and Proof-of-Impact rewards are not live. | `DESIGNED_NOT_LIVE` | Exact incident-record commit [`26bb57359186a3ab533dd51e3623e0c84d5078e9`](https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md) and [Current Limits hard non-claims at the same commit](https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/CURRENT_LIMITS.md). |
 | `BIZRA-PUBLIC-003` | The currently trusted public signing identity is not asserted while signer rotation remains pending. | `UNKNOWN` | TASK-029 remains open; no new public Claim Receipt is issued by this slice. |
-| `BIZRA-PUBLIC-004` | A health response is only a request-time observation of the web process. | `MEASURED` | Requires `measured_at`, scope `web_process_health_only`, and the immutable incident-record link in the response; it does not prove Node0, federation, persistence, or full-system health. |
-| `BIZRA-PUBLIC-005` | A beta-status or successful beta-admission response is only a request-time observation of the web access gate. | `MEASURED` | Requires `measured_at`, scope `web_access_gate_only`, and the immutable incident-record link in the response; it does not prove node activation or runtime capability. |
+| `BIZRA-PUBLIC-004` | A health response is only a request-time observation of the web process. | `MEASURED` | Requires `measured_at`, scope `web_process_health_only`, and exact incident-record commit [`26bb57359186a3ab533dd51e3623e0c84d5078e9`](https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md) in the response; it does not prove Node0, federation, persistence, or full-system health. |
+| `BIZRA-PUBLIC-005` | A beta-status or successful beta-admission response is only a request-time observation of the web access gate. | `MEASURED` | Requires `measured_at`, scope `web_access_gate_only`, and exact incident-record commit [`26bb57359186a3ab533dd51e3623e0c84d5078e9`](https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md) in the response; it does not prove node activation or runtime capability. |
 
 The route/source/evidence inventory, exact claim dispositions, local candidate
 paths, receipt boundary, and closure gates are recorded in

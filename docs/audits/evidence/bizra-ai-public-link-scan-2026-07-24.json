@@ -1,0 +1,84 @@
+{
+  "schema": "bizra.dema.public_link_scan.v0.1",
+  "observed_at": "2026-07-24T16:24:43.000Z",
+  "origin": "https://bizra.ai",
+  "declared_site_commit": "6f7f545e6a1ac044cbb8d29a0a215e8a9f2885bf",
+  "request_policy": {
+    "method": "GET",
+    "credentials": "omit",
+    "redirects": "manual",
+    "user_agent": "BIZRA-Public-Link-Scan/1.0"
+  },
+  "scan_policy": {
+    "scope": "all 62 fixed public-claim inventory routes; raw response bodies scanned in memory",
+    "extractors": [
+      "HTML href/src/action attributes",
+      "XML loc elements",
+      "robots Sitemap/Host directives",
+      "absolute HTTP(S) URL literals"
+    ],
+    "receipt_target_pattern": "(?:^|[/_-])receipts?(?:[/_.?#-]|$) over normalized URL pathname",
+    "revoked_key_target_pattern": "revok(?:ed|ation)|retired[-_/]?key over normalized URL",
+    "known_forbidden_phrases": [
+      "Live Receipt Chain",
+      "Live Network Data",
+      "Machine-enforced. No exceptions.",
+      "Live URP",
+      "SEED minted",
+      "12,680 tests"
+    ],
+    "raw_bodies_retained": false,
+    "request_paths_are_not_counted_as_extracted_links": true
+  },
+  "surface_count": 62,
+  "status_counts": {
+    "200": 5,
+    "307": 30,
+    "401": 27
+  },
+  "request_error_count": 0,
+  "response_digest_set_sha256": "918e44ea06f924b11e3ac10f86f476c3c92ab645a2a2c18ea7081397be9f5ef9",
+  "stable_response_anchors": {
+    "root_body_sha256": "473052c4bbcf7bf6092bbd9c075abf70c12e6b517878fe32c5ba3521fcaf18dd",
+    "sitemap_body_sha256": "86a205f06d60382391dfb47a8de1bddaa90c32706fadd76c7b3921537266ec51",
+    "robots_body_sha256": "e7a7956fe3e80a068b542a5b3ff0e9ccc3925bcacabb3fb067e4c75aa3264b0e",
+    "contained_redirect_body_sha256": "f076ad67ae6e2b23f69796c66bda0b1dbad9d140d6d7875b9df1b87fcaffb0ea",
+    "private_401_body_sha256": "ca730ec7fc2b7edb7277e5b8e58d6a474971ca59dafb499141a4856c06132638"
+  },
+  "extracted_link_targets": [
+    "http://www.sitemaps.org/schemas/sitemap/0.9",
+    "https://bizra.ai/",
+    "https://bizra.ai/_next/static/chunks/026e88bjtlt4d.js",
+    "https://bizra.ai/_next/static/chunks/03~yq9q893hmn.js",
+    "https://bizra.ai/_next/static/chunks/0afpj~0428~xs.js",
+    "https://bizra.ai/_next/static/chunks/0b-q_-_8~kej6.js",
+    "https://bizra.ai/_next/static/chunks/0bpwpns9dg~~r.js",
+    "https://bizra.ai/_next/static/chunks/0bynvgak05zh9.js",
+    "https://bizra.ai/_next/static/chunks/0g~5kbn3~g19u.css",
+    "https://bizra.ai/_next/static/chunks/0ow337phecaji.js",
+    "https://bizra.ai/_next/static/chunks/0z2-01x0wtc52.css",
+    "https://bizra.ai/_next/static/chunks/13vubzu9frbo7.js",
+    "https://bizra.ai/_next/static/chunks/15600zim9borz.js",
+    "https://bizra.ai/_next/static/chunks/turbopack-0v13~z8bo3pu7.js",
+    "https://bizra.ai/_next/static/media/05d29f0ed5b0e698-s.p.0ipr5zwy0u.~f.woff2",
+    "https://bizra.ai/_next/static/media/1062333f2bd32cfe-s.p.0l7ssxdh8f0nb.woff2",
+    "https://bizra.ai/_next/static/media/291696193ea1e96b-s.p.0mmds2ktxtq7_.woff2",
+    "https://bizra.ai/_next/static/media/2a65768255d6b625-s.p.14by5b4al-y~f.woff2",
+    "https://bizra.ai/_next/static/media/648474ecaeaf4c9a-s.p.0~rf1n5_6ke06.woff2",
+    "https://bizra.ai/_next/static/media/70bc3e132a0a741e-s.p.1409xf.ylxg8g.woff2",
+    "https://bizra.ai/_next/static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2",
+    "https://bizra.ai/_next/static/media/cc014fcb166cf364-s.p.0rbrcy8kuidpb.woff2",
+    "https://bizra.ai/sitemap.xml",
+    "https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/CLAIM_REGISTER_v0_1.md",
+    "https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/CLAIM_REGISTER_v0_1.md/",
+    "https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/CURRENT_LIMITS.md",
+    "https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/CURRENT_LIMITS.md/",
+    "https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md"
+  ],
+  "public_receipt_link_matches": [],
+  "public_receipt_link_match_count": 0,
+  "revoked_key_link_matches": [],
+  "revoked_key_link_match_count": 0,
+  "known_forbidden_phrase_hit_count": 0,
+  "boundary_note": "This is a dated raw-body link and phrase observation. Dynamic API response hashes may differ from the separate crawl because their measured_at fields change. The declared site commit is not itself proof that the custom domain aliases that deployment."
+}

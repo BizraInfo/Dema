@@ -1,0 +1,78 @@
+{
+  "schema": "bizra.dema.public_claim_site_validation.v0.1",
+  "recorded_at": "2026-07-24T16:07:33.000Z",
+  "repository": "BizraInfo/award-winner-design",
+  "review_head_commit": "ebb5cc42082a7348014fe50fd4b584ccbddbbdc7",
+  "runtime_source_commit": "d27b7a890452c416c86a27ed163c05e9b6e2950f",
+  "baseline_commit": "568ab0b41c32f812b8ce4d20e7f4ffdf1ebffd6e",
+  "environment": {
+    "node": "v22.22.2",
+    "pnpm": "10.33.0",
+    "os": "Linux 7.0.0-28-generic x86_64",
+    "cpu": "Intel(R) Core(TM) i9-14900HX",
+    "total_memory_mib": 128502,
+    "pnpm_lock_sha256": "0f72dd35e0881c17826a8b8a509b1c38c6fd1b4669e73bb6a71bd208708e96d2"
+  },
+  "checks": [
+    {
+      "command": "pnpm test",
+      "exit_code": 0,
+      "result": {
+        "test_files_passed": 22,
+        "tests_passed": 200
+      },
+      "artifact": {
+        "path": "coverage/test-results.json",
+        "sha256": "cd3d983ac28585d61ce06c3ea604ed653943b62a31bfb7f5dcc9d9a8db28ef21"
+      }
+    },
+    {
+      "command": "pnpm typecheck",
+      "exit_code": 0
+    },
+    {
+      "command": "pnpm build",
+      "exit_code": 0,
+      "result": {
+        "compiled": true,
+        "public_build_asset_check_files_scanned": 618
+      },
+      "artifact": {
+        "path": ".next/build-manifest.json",
+        "sha256": "62b17ad16433a7cfbf4535eb5c0d511f8451a7e42e477e3b191477a7f7cbe6d1"
+      }
+    },
+    {
+      "command": "git diff --name-only 568ab0b41c32f812b8ce4d20e7f4ffdf1ebffd6e..d27b7a890452c416c86a27ed163c05e9b6e2950f | rg '\\.(js|mjs|cjs|ts|tsx)$' | sort | xargs pnpm exec eslint --no-ignore --max-warnings 0",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    },
+    {
+      "command": "pnpm lint",
+      "exit_code": 1,
+      "baseline_only": true,
+      "result": {
+        "errors": 82,
+        "warnings": 199,
+        "error_files": [
+          {
+            "path": "public/films/support.js",
+            "errors": 82,
+            "warnings": 25,
+            "changed_by_slice": false
+          }
+        ]
+      }
+    }
+  ],
+  "boundary": {
+    "local_validation_only": true,
+    "deployment_provenance_proved_by_this_artifact": false,
+    "network_used": false,
+    "receipt_issued": false,
+    "signer_trust_asserted": false
+  }
+}
