@@ -114,7 +114,15 @@ real. Tests `G5` and `G6` pin both.
 | --- | --- | --- |
 | G7 | **Identity failure poisoned retries.** If `lstat(tempDir)` failed immediately after `mkdir`, `createdIdentity` stayed `null` and the writer carried on. Any later failure then could not authorise cleanup, so the directory was stranded and every same-run-id retry returned `STALE_TEMP_…`. | Without an identity the directory can never be proven ours, so the writer now refuses **before writing anything** and reclaims immediately. A **non-recursive** remove succeeds only on an empty directory, so a directory substituted underneath us is reported (`RECOVERABLE_TEMP_ARTIFACT_REQUIRES_HUMAN`) rather than destroyed. Test `G7`. |
 
-**Cumulative: 10 real defects found and fixed across four review rounds** (3 + 4 + 2 + 1).
+### Fifth round — founder review, 3 defects (2 of them defeating my own tests)
+
+| # | Finding | Fix |
+| --- | --- | --- |
+| G8 | **`rmSync(dir, {recursive:false})` cannot remove a directory** — it throws `ERR_FS_EISDIR` on a real filesystem. The round-4 "fix" therefore stranded the temp directory *in production* while the injected-adapter test passed, because the fake `rmSync` was a no-op recorder. **My own test hid the bug.** | Reclaim uses `rmdirSync`, which succeeds only on an **empty** directory — a substituted or populated path fails `ENOTEMPTY` and the evidence is preserved. The fake fs now models the real `EISDIR`/`ENOTEMPTY` semantics so this class cannot hide again, and a **real-filesystem** test pins the primitive. |
+| G9 | **Foreign-owned ancestors were admitted at mode 0755.** Permission bits are not the whole threat: a directory owned by another principal is replaceable through that owner's own write bit at any mode. | New `foreignOwned()` rule — only the current uid and root may own a directory on the proof path; unknown ownership fails closed. Refusal `proof_root_ancestor_foreign_owned`. |
+| G10 | **Subject binding was syntactic, not evidentiary.** The check only required a non-empty `binding_source`, so any caller could pass `"anything"`. | A `bizra.node00.root-binding.v0.1` object is now required and validated: 0A receipt hash, repository identity, expected head, observed `device:inode`, implementation-worktree identity, and `subject_equals_implementation_worktree: false`. **Admission re-measures the root and refuses a binding whose observed identity does not match reality** (`root_binding_identity_mismatch`). |
+
+**Cumulative: 13 real defects found and fixed across five review rounds** (3 + 4 + 2 + 1 + 3).
 
 ### 6. CI-red repair
 
@@ -129,7 +137,7 @@ on CI.
 ## Gates
 
 ```bash
-node --test tests/node00-three-root-census.test.js     # 48 tests
+node --test tests/node00-three-root-census.test.js     # 51 tests
 node scripts/review/node00-three-root-census-check.mjs --json
 npm test
 npm run check
@@ -148,13 +156,19 @@ every durable location writable from this environment. Measured, not assumed:
 | `/data/bizra` | `drwxrwxr-x` uid 1000 | **group-writable, non-sticky ⇒ refused** |
 | `/data/bizra/proofs` | `drwxrwxr-x` | refused |
 | `/data/bizra/proofs/node00-three-root-census-0b` | `drwxrwxr-x` | refused |
-| session `$TMPDIR` (`/tmp` sticky → `/tmp/claude-1000` `drwx------` uid 1000) | — | permission-admissible but **ephemeral**, not a durable proof root |
+| session `$TMPDIR` | `/tmp` `drwxrwxrwt` uid 65534 | `proof_root_ancestor_sticky_foreign_owned` |
+| `$HOME/.local/state/bizra-proofs/…` (the proposed location) | **not creatable** — `/home/bizra-operating-system/.local` is read-only to this process | and even if created: `/` and `/home` are uid **65534**, so `proof_root_ancestor_foreign_owned` fires |
 
-`planProofOutput()` run against the real paths returns
-`proof_root_itself_group_or_world_writable, proof_root_ancestor_group_writable` for
-every durable candidate. After the G2 fix the session `$TMPDIR` is refused as well
-(`/tmp` is sticky but owned by uid 65534, not by us or root), so **no** admissible proof
-root exists in this environment at all. Creating a clean parent under `/data` is denied (read-only),
+Every verdict above is a real `planProofOutput()` run against the real path, not an
+inference. After the G9 foreign-owner rule, **no admissible proof root exists in this
+environment at all** — in this sandbox `/` and `/home` are owned by uid 65534 (a
+user-namespace artifact where the host's root would normally be uid 0), so every chain
+rooted there is foreign-owned. The proposed `$HOME/.local/state/bizra-proofs/…` fails
+twice over: the path is read-only to this process, and its ancestors are foreign-owned.
+
+This is the anticipated outcome: a truthful refusal beats writing proof beneath a path
+another principal controls. The writer was **not** weakened and `/data/bizra/proofs` was
+**not** reused. Creating a clean parent under `/data` is denied (read-only),
 and changing permissions on shared directories is explicitly out of scope.
 
 Per the corrective contract, no artifacts are written before a proof-root plan is
@@ -166,7 +180,7 @@ REAL_NESTED_DELEGATION_EXERCISED      BLOCKED (fixture-proven only)
 ```
 
 Delegation, ownership, privacy mode, scan states and writer refusals are all proven by
-the 48 focused tests against synthetic trees. They are **not** proven against the real
+the 51 focused tests against synthetic trees. They are **not** proven against the real
 three-root estate.
 
 ## Declared limits

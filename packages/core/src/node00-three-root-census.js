@@ -65,6 +65,49 @@ export const COMPLETENESS_BOUNDED_PARTIAL = "BOUNDED_PARTIAL";
 export const PRIVACY_PRIVATE_AGGREGATE = "PRIVATE_AGGREGATE";
 export const PRIVACY_PUBLIC_PATHS = "PUBLIC_PATHS";
 
+// A root that demands provenance must carry an EVIDENTIARY binding, not a label. The
+// previous check only required a non-empty `binding_source` string, so any caller could
+// pass "anything" and satisfy it. This object binds the declared subject to the 0A
+// observation and to an OBSERVED device+inode that admission re-measures.
+export const ROOT_BINDING_SCHEMA = "bizra.node00.root-binding.v0.1";
+const SHA256_PATTERN = /^sha256:[0-9a-f]{64}$/;
+const GIT_SHA_PATTERN = /^[0-9a-f]{40}$/;
+
+export function validateRootBinding(binding) {
+  const problems = [];
+  if (!binding || typeof binding !== "object") return ["root_binding_missing"];
+  if (binding.schema !== ROOT_BINDING_SCHEMA) problems.push("root_binding_schema_mismatch");
+  if (typeof binding.binding_source !== "string" || binding.binding_source === "") {
+    problems.push("root_binding_source_missing");
+  }
+  if (typeof binding.zero_a_receipt_hash !== "string" || !SHA256_PATTERN.test(binding.zero_a_receipt_hash)) {
+    problems.push("root_binding_zero_a_receipt_hash_malformed");
+  }
+  if (typeof binding.repository_identity !== "string" || binding.repository_identity === "") {
+    problems.push("root_binding_repository_identity_missing");
+  }
+  if (typeof binding.expected_head !== "string" || !GIT_SHA_PATTERN.test(binding.expected_head)) {
+    problems.push("root_binding_expected_head_malformed");
+  }
+  const observed = binding.observed_root_identity;
+  if (!observed || typeof observed !== "object" ||
+      !Number.isInteger(observed.device) || !Number.isInteger(observed.inode)) {
+    problems.push("root_binding_observed_identity_malformed");
+  }
+  const impl = binding.implementation_worktree_identity;
+  if (impl !== undefined && impl !== null &&
+      (!Number.isInteger(impl.device) || !Number.isInteger(impl.inode))) {
+    problems.push("root_binding_implementation_identity_malformed");
+  }
+  if (binding.subject_equals_implementation_worktree !== false) {
+    problems.push("root_binding_subject_equals_implementation_worktree");
+  }
+  if (observed && impl && observed.device === impl.device && observed.inode === impl.inode) {
+    problems.push("root_binding_subject_identity_equals_implementation_worktree");
+  }
+  return problems;
+}
+
 export const SCAN_NOT_STARTED = "NOT_STARTED";
 export const SCAN_COMPLETE = "COMPLETE";
 export const SCAN_PARTIAL = "PARTIAL";
@@ -261,11 +304,11 @@ export function planNode00ThreeRootCensus({ consent, input } = {}) {
       if (implPath && typeof root.path === "string" && normalizedRootPath(root.path) === implPath) {
         blocked_by.push("dema_repo_subject_equals_implementation_worktree");
       }
-      // A root marked as requiring provenance must carry an explicit binding.
+      // A root marked as requiring provenance must carry an EVIDENTIARY binding.
       if (root.requires_binding === true) {
-        const b = root.binding;
-        if (!b || typeof b !== "object" || typeof b.binding_source !== "string" || b.binding_source === "") {
-          blocked_by.push("root_binding_unresolved");
+        const problems = validateRootBinding(root.binding);
+        if (problems.length > 0) {
+          blocked_by.push("root_binding_unresolved", ...problems);
         }
       }
     }
@@ -331,6 +374,13 @@ export function admitCensusRoots({ roots, adapter }) {
     const identity = `${stat.device}:${stat.inode}`;
     if (byIdentity.has(identity)) throw new CensusRootAdmissionError("duplicate_root_identity", id);
     byIdentity.set(identity, id);
+    // The binding is evidence only if the OBSERVED identity matches what it asserts.
+    if (declared.requires_binding === true) {
+      const observed = declared.binding?.observed_root_identity;
+      if (!observed || observed.device !== stat.device || observed.inode !== stat.inode) {
+        throw new CensusRootAdmissionError("root_binding_identity_mismatch", id);
+      }
+    }
     admitted.push(
       Object.freeze({
         id,
@@ -696,6 +746,9 @@ export function buildNode00ThreeRootCensusPayload(census) {
       scan_reason: scan.reason,
       visited_entries: scan.visited_entries,
       binding_source: root.binding?.binding_source ?? null,
+      binding_zero_a_receipt_hash: root.binding?.zero_a_receipt_hash ?? null,
+      binding_repository_identity: root.binding?.repository_identity ?? null,
+      binding_expected_head: root.binding?.expected_head ?? null,
       summary,
     };
     if (root.privacy_mode === PRIVACY_PRIVATE_AGGREGATE) {

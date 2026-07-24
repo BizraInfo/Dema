@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import * as realFs from "node:fs";
+import * as realOs from "node:os";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -22,6 +24,8 @@ import {
   EXTENSION_VOCABULARY,
   DIGEST_FOLD_WIDTH,
   CensusRootAdmissionError,
+  validateRootBinding,
+  ROOT_BINDING_SCHEMA,
   COMPLETENESS_COMPLETE,
   COMPLETENESS_BOUNDED_PARTIAL,
   PRIVACY_PRIVATE_AGGREGATE,
@@ -47,6 +51,8 @@ import {
   writeCensusProof,
   censusFsAdapter,
   replaceableByOthers,
+  foreignOwned,
+  DEFAULT_WRITER_FS,
   RUN_MARKER_FILENAME,
   PROOF_ROOT_SUBSTITUTION_RESISTANCE,
 } from "../apps/cli/src/commands/node00-three-root-census.js";
@@ -695,7 +701,21 @@ function fakeWriterFs(tree, { gitDirs = [], files = {} } = {}) {
     mkdirSync: (p) => { state.made.push(p); state.tree[p] = { type: "directory", device: 1, inode: 999, uid: 1000 }; },
     writeFileSync: (p, data) => { state.wrote.push(p); state.files[p] = data; },
     renameSync: (from, to) => { state.renamed.push([from, to]); },
-    rmSync: (p) => { state.removed.push(p); delete state.tree[p]; },
+    rmSync: (p, opts) => {
+      // Mirror the real primitive: rmSync with recursive:false CANNOT remove a
+      // directory (ERR_FS_EISDIR). Modelling this is what exposes a wrong reclaim.
+      if (!opts?.recursive && state.tree[p]?.type === "directory") {
+        throw Object.assign(new Error("EISDIR"), { code: "ERR_FS_EISDIR" });
+      }
+      state.removed.push(p);
+      delete state.tree[p];
+    },
+    rmdirSync: (p) => {
+      const children = Object.keys(state.files).filter((f) => f.startsWith(p + "/"));
+      if (children.length > 0) throw Object.assign(new Error("ENOTEMPTY"), { code: "ENOTEMPTY" });
+      state.removed.push(p);
+      delete state.tree[p];
+    },
   };
   return api;
 }
@@ -954,6 +974,115 @@ test("G7 an uncapturable temp-dir identity fails closed BEFORE writing and does 
   blindOnce = false;
   const retry = writeCensusProof({ proofRoot: "/data/proofs/run", runId: "RUN-G7", result, scannedRoots: [], fs, currentUid: 1000 });
   assert.equal(retry.ok, true, retry.blocked_by?.join(", "));
+});
+
+test("G8 REAL filesystem: rmdir is the only correct reclaim primitive for an empty dir", () => {
+  // The previous fix used rmSync(dir, {recursive:false}), which on a real filesystem
+  // throws ERR_FS_EISDIR and cannot remove a directory at all — so it stranded the
+  // directory in production while an injected-adapter test passed. This test runs
+  // against the REAL fs so the primitive can never silently regress again.
+  const base = realFs.mkdtempSync(join(realOs.tmpdir(), "node00-reclaim-"));
+  try {
+    const empty = join(base, "empty");
+    realFs.mkdirSync(empty);
+    assert.throws(
+      () => realFs.rmSync(empty, { recursive: false }),
+      (e) => e.code === "ERR_FS_EISDIR",
+      "rmSync{recursive:false} must be rejected as a directory reclaim primitive",
+    );
+    assert.ok(realFs.existsSync(empty), "the directory survived, i.e. it would have been stranded");
+
+    realFs.rmdirSync(empty);
+    assert.equal(realFs.existsSync(empty), false, "rmdir must reclaim an empty directory");
+
+    // A substituted or populated directory must be PRESERVED, not destroyed.
+    const populated = join(base, "populated");
+    realFs.mkdirSync(populated);
+    realFs.writeFileSync(join(populated, "someone-elses-evidence"), "x");
+    assert.throws(() => realFs.rmdirSync(populated), (e) => e.code === "ENOTEMPTY");
+    assert.ok(realFs.existsSync(join(populated, "someone-elses-evidence")), "evidence was destroyed");
+  } finally {
+    realFs.rmSync(base, { recursive: true, force: true });
+  }
+
+  // And the writer must actually use that primitive on the identity-uncapturable path.
+  assert.ok(/fs\.rmdirSync\(tempDir\)/.test(ADAPTER_CODE));
+  assert.ok(!/fs\.rmSync\(tempDir,\s*\{\s*recursive:\s*false/.test(ADAPTER_CODE));
+  assert.ok(Object.keys(DEFAULT_WRITER_FS).includes("rmdirSync"));
+});
+
+test("G9 a FOREIGN-OWNED ancestor is refused even at mode 0755 — its owner can still replace our path", () => {
+  // Permission bits are not the whole threat: a directory owned by another principal is
+  // replaceable through that owner's own write bit, at any mode.
+  const foreign = { ...SAFE_TREE, "/data/proofs": { type: "directory", device: 1, inode: 3, mode: 0o40755, uid: 4242 } };
+  const fs = fakeWriterFs(foreign);
+  const plan = planProofOutput({ proofRoot: "/data/proofs/run", fs, currentUid: 1000 });
+  assert.equal(plan.ok, false, "a foreign-owned 0755 ancestor was admitted");
+  assert.ok(plan.blocked_by.includes("proof_root_ancestor_foreign_owned"), plan.blocked_by.join(", "));
+
+  const written = writeCensusProof({
+    proofRoot: "/data/proofs/run", runId: "RUN-G9", result: runNode00ThreeRootCensusCheck(),
+    scannedRoots: [], fs, currentUid: 1000,
+  });
+  assert.equal(written.ok, false);
+  assert.deepEqual(fs.state.made, [], "a directory was created beneath a foreign-owned ancestor");
+  assert.deepEqual(fs.state.wrote, [], "a file was written beneath a foreign-owned ancestor");
+
+  // root-owned and self-owned ancestors remain admissible.
+  assert.equal(foreignOwned(0, 1000), false);
+  assert.equal(foreignOwned(1000, 1000), false);
+  assert.equal(foreignOwned(4242, 1000), true);
+  assert.equal(foreignOwned(undefined, 1000), true, "unknown ownership must fail closed");
+  assert.equal(planProofOutput({ proofRoot: "/data/proofs/run", fs: fakeWriterFs(SAFE_TREE), currentUid: 1000 }).ok, true);
+});
+
+test("G10 a root requiring provenance needs an EVIDENTIARY binding, not a label", () => {
+  const observed = { device: 2, inode: 30 };
+  const good = {
+    schema: ROOT_BINDING_SCHEMA,
+    binding_source: "ZERO_A_OBSERVED_LOCAL_REPOSITORY",
+    zero_a_receipt_hash: `sha256:${"a".repeat(64)}`,
+    repository_identity: "BizraInfo/Dema",
+    expected_head: "0".repeat(40),
+    observed_root_identity: observed,
+    implementation_worktree_identity: { device: 9, inode: 99 },
+    subject_equals_implementation_worktree: false,
+  };
+  const root = (binding) => ({ id: "DATA_LAKE_REPO", path: "/fx/lake", visibility: "public", requires_binding: true, binding });
+  const planFor = (binding) =>
+    planNode00ThreeRootCensus({
+      consent: NODE00_THREE_ROOT_CENSUS_GO_PHRASE,
+      input: fixtureInput({ roots: [root(binding), { id: "DOWNLOADS", path: "/fx/downloads", visibility: "private" }] }),
+    });
+
+  // The old check accepted any non-empty label. It must not any more.
+  const labelOnly = planFor({ binding_source: "anything" });
+  assert.equal(labelOnly.eligible, false);
+  assert.ok(labelOnly.blocked_by.includes("root_binding_schema_mismatch"), labelOnly.blocked_by.join(", "));
+  assert.ok(labelOnly.blocked_by.includes("root_binding_zero_a_receipt_hash_malformed"));
+
+  assert.deepEqual(validateRootBinding(good), []);
+  for (const [mutate, code] of [
+    [{ zero_a_receipt_hash: "not-a-hash" }, "root_binding_zero_a_receipt_hash_malformed"],
+    [{ expected_head: "abc" }, "root_binding_expected_head_malformed"],
+    [{ observed_root_identity: { device: "x", inode: 1 } }, "root_binding_observed_identity_malformed"],
+    [{ subject_equals_implementation_worktree: true }, "root_binding_subject_equals_implementation_worktree"],
+    [{ implementation_worktree_identity: observed }, "root_binding_subject_identity_equals_implementation_worktree"],
+    [{ repository_identity: "" }, "root_binding_repository_identity_missing"],
+  ]) {
+    assert.ok(validateRootBinding({ ...good, ...mutate }).includes(code), code);
+  }
+
+  // A well-formed binding whose OBSERVED identity does not match reality is refused at
+  // admission — the binding is evidence only if it survives re-measurement.
+  assert.throws(
+    () => admitCensusRoots({ roots: [root({ ...good, observed_root_identity: { device: 1, inode: 1 } })], adapter: makeMemoryAdapter(fixtureTree()) }),
+    (err) => err instanceof CensusRootAdmissionError && err.code === "root_binding_identity_mismatch",
+  );
+  // Matching identity is admitted, and the evidence reaches the portable body.
+  const admitted = admitCensusRoots({ roots: [root(good)], adapter: makeMemoryAdapter(fixtureTree()) });
+  assert.equal(admitted[0].binding.zero_a_receipt_hash, good.zero_a_receipt_hash);
+  assert.equal(planFor(good).eligible, true, planFor(good).blocked_by.join(", "));
 });
 
 test("G5 run_id cannot re-target or escape the proof root", () => {

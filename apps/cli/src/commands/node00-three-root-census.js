@@ -50,6 +50,7 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  rmdirSync,
   existsSync,
 } from "node:fs";
 import { isAbsolute, join, normalize, sep, dirname } from "node:path";
@@ -77,6 +78,7 @@ export const DEFAULT_WRITER_FS = Object.freeze({
   readFileSync,
   renameSync,
   rmSync,
+  rmdirSync,
   existsSync,
 });
 
@@ -146,6 +148,15 @@ export function replaceableByOthers(mode, ownerUid = null, currentUid = null) {
   return !(ownerUid === currentUid || ownerUid === 0);
 }
 
+// Permission bits are not the whole threat. A directory owned by a FOREIGN principal is
+// replaceable by that owner through their own write bit even at mode 0755 — they can
+// rename or replace our path component between validation and artifact creation. Only
+// the current uid and root are trusted to own a directory on the proof path.
+export function foreignOwned(ownerUid, currentUid) {
+  if (ownerUid === undefined || ownerUid === null || currentUid === null) return true; // fail closed
+  return !(ownerUid === currentUid || ownerUid === 0);
+}
+
 // Fail-closed validation of the output location. Every refusal is a NAMED block.
 export function planProofOutput({
   proofRoot,
@@ -203,6 +214,10 @@ export function planProofOutput({
             ? "proof_root_ancestor_world_writable"
             : "proof_root_ancestor_group_writable",
       );
+      break;
+    }
+    if (foreignOwned(aStat.uid, currentUid)) {
+      blocked_by.push("proof_root_ancestor_foreign_owned");
       break;
     }
   }
@@ -345,9 +360,14 @@ export function writeCensusProof({
     // failure would strand it and poison every retry. Refuse BEFORE writing anything
     // and reclaim now. A NON-recursive remove succeeds only on an empty directory, so
     // a directory substituted underneath us is reported rather than destroyed.
+    // rmSync(dir, {recursive:false}) throws ERR_FS_EISDIR on a real filesystem — it
+    // cannot remove a directory at all, so the previous version stranded the directory
+    // in production while an injected-adapter test passed. rmdir is the correct
+    // primitive: it succeeds ONLY on an empty directory, so a substituted or populated
+    // path fails with ENOTEMPTY and the evidence is preserved for a human.
     let cleanupError = null;
     try {
-      fs.rmSync(tempDir, { recursive: false });
+      fs.rmdirSync(tempDir);
     } catch {
       cleanupError = "temp_dir_cleanup_failed";
     }
