@@ -214,7 +214,7 @@ The candidate:
 
 - replaces `/` with a dated evidence-boundary page,
 - links the Dema Claim Register and Current Limits at Dema commit
-  `079fee557d7c230f2e6c076cc7a776418a393235`,
+  `26bb57359186a3ab533dd51e3623e0c84d5078e9`,
 - omits pinned public metrics,
 - [DECLARED] labels federation, shared URP, token economics, and Proof-of-Impact rewards
   `DESIGNED_NOT_LIVE`,
@@ -232,9 +232,9 @@ The candidate:
 - requires authentication for genesis and node-activation mutations even when
   beta access mode is public,
 - minimizes the unauthenticated health response to a timestamped,
-  `web_process_health_only` measurement,
+  `web_process_health_only` measurement bound to `BIZRA-PUBLIC-004`,
 - minimizes beta-status and successful beta-admission responses to one
-  request-scoped access schema,
+  request-scoped access schema bound to `BIZRA-PUBLIC-005`,
 - removes the known source-embedded demonstration credentials, holds login and
   refresh closed, and requires canary credentials through environment input,
 - inventories all `41` exported HTTP method/source pairs, never executes a
@@ -275,10 +275,44 @@ distribution qualifier is `LOCAL_ONLY`. Its public deployment state remains
 `UNKNOWN`: no push, merge, Vercel deployment, DNS change, or post-deploy crawl
 is represented by this document.
 
-The pinned Dema evidence commit predates this July containment audit. Before
-deployment, those links must move to the exact Dema commit that contains this
-audit and its Claim Register / Current Limits updates. A mutable `main` link or
-the older pin cannot prove the July correction.
+The exact site source candidate is local commit
+`d27b7a890452c416c86a27ed163c05e9b6e2950f`. Evidence-only follow-up commit
+`ebb5cc42082a7348014fe50fd4b584ccbddbbdc7` adds the loopback crawl without
+changing the runtime source. [MEASURED] Against the production build of the
+source commit, a credential-free crawl of all `62` inventoried surfaces
+recorded:
+
+- `4` HTTP `200`,
+- `30` HTTP `307`,
+- `27` HTTP `401`,
+- `1` HTTP `503` while the local health dependency was unavailable,
+- `0` truncated captures,
+- `0` expected-private HTTP `200` responses,
+- `0` containment status failures,
+- and `0` known forbidden-phrase hits.
+
+The local crawl is stored at
+`docs/launch/evidence/public-claim-local-candidate-capture-2026-07-24.json` in
+the site repository. Its SHA-256 is
+`2e7fac523e585c7cc6b1f236ccc59d40eea311b92d94fb572fcf7f251d83a3f2`.
+It declares source commit
+`d27b7a890452c416c86a27ed163c05e9b6e2950f`, retains no raw bodies, and marks
+deployment-source binding `UNVERIFIED`. This is local candidate evidence, not
+a production post-deploy crawl.
+
+[MEASURED] The source commit passed the focused public-boundary tests, the full
+site suite (`22` files and `200` tests), type checking, production build,
+generated-asset claim scanning, targeted lint for every changed source/test
+surface, and `git diff --check`. The repository-wide lint command remains red
+on pre-existing errors in unchanged `public/films/support.js`; this slice does
+not claim that baseline debt is repaired.
+
+The candidate now pins local Dema commit
+`26bb57359186a3ab533dd51e3623e0c84d5078e9`, which contains this audit and the
+Claim Register / Current Limits updates. That commit has not been pushed by
+this slice, so its GitHub URLs are not claimed reachable. Remote publication
+requires separate explicit push authorization; deployment remains blocked
+until the immutable links return HTTP `200`.
 
 ## Receipt and signer boundary
 
