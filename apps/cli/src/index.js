@@ -273,6 +273,8 @@ Orientation:
                     LOCAL_ONLY read-only re-derivation of a founder-impact receipt; no model/network/mint
   dema authorship key init [--json]
                     Generate and persist Ed25519 keypair (requires --consent)
+  dema authorship key rotate [--json]
+                    Back up the current key + generate a replacement (requires --consent); old key never destroyed without a verified backup
   dema authorship sign <artifact-path> [--json]
                     Sign a local artifact (requires --consent)
   dema authorship latest [--json]
