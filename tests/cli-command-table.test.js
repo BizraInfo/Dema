@@ -68,6 +68,8 @@ const COMMAND_SURFACE = [
   "orchestrator",
   "covenant",
   "assets",
+  "library",
+  "recovery",
   "contribute",
   "economy",
   "demo",

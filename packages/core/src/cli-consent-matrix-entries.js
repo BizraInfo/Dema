@@ -235,6 +235,23 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     ["tests/homebase-asset-awareness-cli.test.js", "tests/homebase-shareability-cli.test.js"],
   ),
   row(
+    "library",
+    ["read_only"],
+    "none",
+    "census and dedupe are metadata-only observations: no content is retained, no symlink followed, nothing moved or deleted, no network; dedupe emits a review plan only and never executes it",
+    ["tests/node0-library-census.test.js", "tests/node0-library-dedupe.test.js", "tests/node0-library-safe-plan.test.js"],
+  ),
+  row(
+    "recovery",
+    ["read_only", "preview_only"],
+    "exact_phrase",
+    "`dema recovery preview` requires the exact gatherer GO phrase via --consent and fails closed on any mismatch; the preview reads file metadata only, auto-selects nothing, mutates nothing, and emits an all-false boundary. --json and --proof-json are projections of ONE kernel build and fail closed when combined",
+    [
+      "tests/dema-recovery-mission-gatherer.test.js",
+      "tests/dema-recovery-verifiable-envelope.test.js",
+    ],
+  ),
+  row(
     "contribute",
     ["read_only", "preview_only", "local_write"],
     "subcommand_gated",

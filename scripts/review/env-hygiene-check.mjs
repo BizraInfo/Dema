@@ -33,6 +33,12 @@ const KNOWN_DEMA_ENV_VARS = Object.freeze([
   "DEMA_LM_STUDIO_URL",
   "DEMA_LOCAL_ASSET_ROOT",
   "DEMA_LOCAL_PROOF_LANE",
+  // Egress consent flag read by packages/dema-ui/src/app/api/melae/route.ts.
+  // Unset or != "1" the route refuses with consent_required and sends nothing;
+  // "1" opts the operator into an external third-party LLM call. An UNDECLARED
+  // egress flag is strictly more dangerous than a declared one, so this belongs
+  // in the inventory rather than being kept out of it.
+  "DEMA_MELAE_EXTERNAL_LLM",
   "DEMA_MODELS_SKIP_TCP",
   "DEMA_MODEL_DOWNLOADS_ROOT",
   "DEMA_MUMU_OUT",
@@ -40,6 +46,10 @@ const KNOWN_DEMA_ENV_VARS = Object.freeze([
   "DEMA_NODE0_STATUS_COMMAND",
   "DEMA_NO_TUI",
   "DEMA_OLLAMA_URL",
+  // Receipts root override read by packages/dema-ui/src/app/api/node-resources/
+  // route.ts; falls back to <cwd>/docs/receipts when unset. Read-only path
+  // resolution, no secret.
+  "DEMA_RECEIPTS_PATH",
   "DEMA_STAND_LOG_DIR",
   "DEMA_TALK_MODEL",
   "DEMA_TALK_PROVIDER",

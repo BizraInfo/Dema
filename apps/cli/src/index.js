@@ -41,6 +41,8 @@ import { cmd_witness } from "./commands/witness.js";
 import { cmd_attest } from "./commands/attest.js";
 import { cmd_verify_grounded } from "./commands/verify-grounded.js";
 import { cmd_assets } from "./commands/assets.js";
+import { cmd_library } from "./commands/library.js";
+import { cmd_recovery } from "./commands/recovery.js";
 import { cmd_stand } from "./commands/stand.js";
 import { cmd_poi } from "./commands/poi.js";
 import { cmd_away } from "./commands/away.js";
@@ -1267,6 +1269,8 @@ const COMMAND_TABLE = {
   orchestrator: cmd_orchestrator,
   covenant: cmdCovenant,
   assets: cmd_assets,
+  library: cmd_library,
+  recovery: cmd_recovery,
   contribute: cmd_contribute,
   demo: cmd_demo,
   "llm-router": cmd_llm_router,
