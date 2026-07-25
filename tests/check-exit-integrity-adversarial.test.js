@@ -301,13 +301,13 @@ test("A7 direct TAP is isolated and a later authoritative gate executes", () => 
     "--temp-log",
   ]);
   assert.equal(isolated[1].includes("--log"), false);
-  // +1 vs main: DEMA-REVERSIBLE-FILE-STEWARD-1C registers its review gate at
-  // command index 82, which shifts everything after it. These three are exact
+  // +2 vs main: DEMA-REVERSIBLE-FILE-STEWARD-1C (index 82) and UI-TRUTH-LABEL-GATE-1A
+  // (index 83) each register a review gate ahead of the isolated TAP command. These three are exact
   // positional snapshots and will drift again on the next gate added ahead of
   // the isolated TAP command; that coupling is this lane's to decide on.
-  assert.equal(commands.length, 198);
-  assert.equal(commands.indexOf(isolated), 122);
-  assert.deepEqual(commands[123].slice(0, 2), ["npm", ["run", "coverage"]]);
+  assert.equal(commands.length, 199);
+  assert.equal(commands.indexOf(isolated), 123);
+  assert.deepEqual(commands[124].slice(0, 2), ["npm", ["run", "coverage"]]);
 
   const evidence = [];
   const calls = [];

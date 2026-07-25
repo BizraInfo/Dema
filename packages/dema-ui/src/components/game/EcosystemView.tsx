@@ -50,6 +50,7 @@ export function EcosystemView() {
         title="Living Agent Office"
         glyph="✦"
         accent="proof"
+        truth="DESIGNED_NOT_LIVE"
         subtitle="Layer 4 · Multi-Agent Organization. Watch 11 specialists route, verify & release proof. Every move maps to the autopoietic loop — no decorative wandering."
         right={
           <div className="flex items-center gap-1.5">

@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Star, ShieldAlert, Sparkles, MapPin } from "lucide-react";
 import type { AgentId } from "@/lib/game/types";
-import { GlyphBadge } from "./primitives";
+import { GlyphBadge, TruthLabelBadge } from "./primitives";
 
 const XP_PER_LEVEL = 150;
 
@@ -51,6 +51,11 @@ export function AgentDetailDialog({
                 </span>
               </DialogTitle>
               <DialogDescription className="mt-1">{agent.role}</DialogDescription>
+              {/* The agent carries this from fleet-canon.ts. The detail view is where a
+                  user goes to understand an agent — the maturity must be visible here. */}
+              <div className="mt-1.5">
+                <TruthLabelBadge label={agent.truthLabel} size="xs" />
+              </div>
               <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <MapPin size={11} /> {zone?.name}
