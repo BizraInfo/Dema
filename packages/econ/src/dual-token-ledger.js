@@ -18,7 +18,7 @@
 //
 // Reuses (no duplication):
 //   - signPayload, verifyPayload              packages/receipts/src/authorship-signature.js
-//   - loadPrivateKey, loadPublicKey           packages/receipts/src/authorship-key-store.js
+//   - loadActiveKeyPair           packages/receipts/src/authorship-key-store.js
 //   - sha256, stableStringify                 packages/consent/src/consent-common.js
 //   - CONSENT_PROOF_SCHEMA                    packages/receipts/src/consent-proof.js
 //
@@ -44,8 +44,7 @@ import {
   verifyPayload,
 } from "../../receipts/src/authorship-signature.js";
 import {
-  loadPrivateKey,
-  loadPublicKey,
+  loadActiveKeyPair,
 } from "../../receipts/src/authorship-key-store.js";
 import { CONSENT_PROOF_SCHEMA } from "../../receipts/src/consent-proof.js";
 import { createPublicKey } from "node:crypto";
@@ -205,11 +204,12 @@ export async function buildLedgerEntry({
   }
 
   // ── (6) Load operator's key ──────────────────────────────────────
-  const privateKeyPem = await loadPrivateKey(demaHome);
+  const activePair = await loadActiveKeyPair(demaHome);
+  const privateKeyPem = activePair.ok ? activePair.private_key_pem : null;
   if (!privateKeyPem) {
     return fail("no_authorship_key");
   }
-  const publicKeyPem = await loadPublicKey(demaHome);
+  const publicKeyPem = activePair.ok ? activePair.public_key_pem : null;
   if (!publicKeyPem) {
     // Should not happen normally — the init writes both atomically — but
     // fail-closed defensively rather than crash on a half-wiped key dir.

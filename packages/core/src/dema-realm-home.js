@@ -18,6 +18,7 @@ import { readFile, access } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { inspectActiveIdentity } from "../../receipts/src/authorship-key-store.js";
 
 export const DEMA_REALM_HOME_SCHEMA = "bizra.dema.realm_home.v0.1";
 
@@ -113,11 +114,14 @@ export async function gatherDemaRealmState({
   const home = demaHome || process.env.DEMA_HOME || join(homedir(), ".dema");
 
   const profilePath = join(home, "memory", "profile.json");
-  const keyPath = join(home, "keys", "node0-ed25519.pub.pem");
   const checkpointPath = join(home, "realm", "last-checkpoint.json");
 
   const profile = await readJsonOrNull(profilePath);
-  const keyPresent = await fileExists(keyPath);
+  // Finding #3: VERIFIED requires a real loadActiveKeyPair() success — never
+  // mere presence. A blocked (corrupt/retired/invalid-pointer) identity must
+  // NOT read as VERIFIED.
+  const identity = await inspectActiveIdentity(home);
+  const keyVerified = identity.state === "VERIFIED";
   const checkpoint = await readJsonOrNull(checkpointPath);
 
   const operator =
@@ -126,8 +130,23 @@ export async function gatherDemaRealmState({
     (profile && (profile.role || profile.title)) ||
     (operator === "Operator" ? "Sovereign Builder" : "First Architect");
 
-  const identityStatus = keyPresent ? "VERIFIED" : "UNINITIALIZED";
-  const identityLabel = keyPresent ? "Ed25519 verified" : "not yet initialized";
+  // Finding #4: a legacy home (PRESENT_UNVERIFIED) is NOT empty — collapsing it
+  // to UNINITIALIZED sends the operator to init, which then refuses. Keep the
+  // state distinct and carry its recommended_action. Only a truly ABSENT
+  // identity reads as UNINITIALIZED.
+  const identityStatus = keyVerified
+    ? "VERIFIED"
+    : identity.state === "ABSENT"
+      ? "UNINITIALIZED"
+      : identity.state; // PRESENT_UNVERIFIED / BLOCKED_*
+  const identityLabel = keyVerified
+    ? "Ed25519 verified"
+    : identity.state === "ABSENT"
+      ? "not yet initialized"
+      : identity.state === "PRESENT_UNVERIFIED"
+        ? "legacy key present — migration required"
+        : `identity blocked (${identity.error ?? identity.state})`;
+  const recommendedAction = identity.recommended_action ?? "NONE";
 
   const lastCheckpointText = checkpoint
     ? checkpoint.label || checkpoint.next_quest || "checkpoint present"
@@ -137,7 +156,7 @@ export async function gatherDemaRealmState({
     { label: BOOT_STEP_LABELS[0], status: identityStatus, ok: true },
     {
       label: BOOT_STEP_LABELS[1],
-      status: keyPresent ? "PRESENT" : "ABSENT",
+      status: keyVerified ? "PRESENT" : "ABSENT",
       ok: true,
     },
     {
@@ -155,7 +174,7 @@ export async function gatherDemaRealmState({
     { label: BOOT_STEP_LABELS[6], status: "LIVE", ok: true },
   ];
 
-  const seedAwake = keyPresent;
+  const seedAwake = keyVerified;
   const awakenedLine = seedAwake
     ? "The sovereign seed is awake."
     : "The sovereign seed awaits initialization.";
@@ -173,7 +192,8 @@ export async function gatherDemaRealmState({
     identity: Object.freeze({
       status: identityStatus,
       label: identityLabel,
-      key_path: keyPath,
+      recommended_action: recommendedAction,
+      key_path: join(home, "keys", "active-key.json"),
     }),
     last_checkpoint: Object.freeze({
       present: Boolean(checkpoint),
@@ -207,7 +227,17 @@ function statusGlyph(status, useColor) {
   //              OFF -> ash (intentionally off).
   //              FAILED -> crimson (would be a true error -- not used in v0).
   const greenSet = new Set(["VERIFIED", "READY", "LIVE", "FOUND", "PRESENT"]);
-  const ashSet = new Set(["UNINITIALIZED", "ABSENT", "NONE", "EMPTY", "OFF"]);
+  const ashSet = new Set([
+    "UNINITIALIZED",
+    "PRESENT_UNVERIFIED",
+    "BLOCKED_CORRUPT",
+    "BLOCKED_RETIRED",
+    "BLOCKED_POINTER_INVALID",
+    "ABSENT",
+    "NONE",
+    "EMPTY",
+    "OFF",
+  ]);
   if (greenSet.has(status)) return color(status, ANSI.emerald, useColor);
   if (ashSet.has(status)) return color(status, ANSI.ash, useColor);
   if (status === "DECLARED") return color(status, ANSI.gold, useColor);

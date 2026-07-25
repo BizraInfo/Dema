@@ -21,8 +21,7 @@ import {
   verifyPayload,
 } from "../../receipts/src/authorship-signature.js";
 import {
-  loadPrivateKey,
-  loadPublicKey,
+  loadActiveKeyPair,
 } from "../../receipts/src/authorship-key-store.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 import { verifyConsentProof } from "../../receipts/src/consent-proof.js";
@@ -146,8 +145,9 @@ export async function buildNode0CompositionManifest({
   if (!isPlainObject(composition) || !isJsonSafe(composition)) {
     return fail("composition_invalid");
   }
-  const privateKeyPem = await loadPrivateKey(demaHome);
-  const publicKeyPem = await loadPublicKey(demaHome);
+  const activePair = await loadActiveKeyPair(demaHome);
+  const privateKeyPem = activePair.ok ? activePair.private_key_pem : null;
+  const publicKeyPem = activePair.ok ? activePair.public_key_pem : null;
   if (!privateKeyPem || !publicKeyPem) return fail("no_authorship_key");
 
   const fp = ed25519FingerprintFromPem(publicKeyPem);

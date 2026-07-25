@@ -8,7 +8,7 @@
 // existsSync only). fetchImpl / fsImpl / env / homedir are injectable so CI
 // runs with zero real network and zero real disk (mirrors dema-talk-loop-live).
 
-import { existsSync as nodeExistsSync } from "node:fs";
+import { existsSync as nodeExistsSync, lstatSync as nodeLstatSync } from "node:fs";
 import { homedir as osHomedir } from "node:os";
 import { join } from "node:path";
 
@@ -65,6 +65,26 @@ export async function gatherNode0ActivationObservations({
 } = {}) {
   const fetcher = fetchImpl || globalThis.fetch;
   const exists = (p) => (fsImpl && fsImpl.existsSync ? fsImpl.existsSync(p) : nodeExistsSync(p));
+  // Symlink-safe presence: a path that exists ONLY via a symlink is NOT a safe
+  // present identity (Finding #5). lstat never follows the link and never reads
+  // content — the observer stays key-material-free. Absent lstat impl → the
+  // path simply isn't confirmed safe-present (fail-closed to "not present").
+  const lstat = (p) => {
+    const impl = fsImpl && fsImpl.lstatSync ? fsImpl.lstatSync : nodeLstatSync;
+    try {
+      return impl(p);
+    } catch {
+      return null;
+    }
+  };
+  const safePresent = (p) => {
+    if (!exists(p)) return false;
+    const info = lstat(p);
+    // Finding B (1C): must be a REGULAR file, not merely non-symlink. A
+    // directory / FIFO / socket / device the loader would reject must not
+    // count as present. isFile() (via lstat) is already false for symlinks.
+    return Boolean(info) && info.isFile();
+  };
   const home = homedir || osHomedir();
   const demaHome = env.DEMA_HOME || join(home, ".dema");
 
@@ -125,9 +145,19 @@ export async function gatherNode0ActivationObservations({
     { path: dataLake, exists: exists(dataLake) },
   ];
 
-  // Identity — key-file PRESENCE only. Never read the key's content.
+  // Identity — Finding #5: presence must be symlink-safe so observation agrees
+  // with the authoritative loader on the safety-critical case (an escaped/
+  // symlinked pointer that the loader rejects must NOT read as present here).
+  // Content-free by design: the observer never reads key material — only lstat
+  // (metadata) + existsSync. Generation-store pointer OR a legacy flat key both
+  // count as a present key file; full VERIFIED verification (which requires
+  // reading the private key) is the loader's job, never the observer's.
   const keyPath = join(demaHome, "keys", "node0-ed25519.pub.pem");
-  const identity = { key_file_path: keyPath, key_file_present: exists(keyPath) };
+  const pointerPath = join(demaHome, "keys", "active-key.json");
+  const identity = {
+    key_file_path: keyPath,
+    key_file_present: safePresent(pointerPath) || safePresent(keyPath),
+  };
 
   return {
     dema_repo: { git_present: exists(join(process.cwd(), ".git")), package_name: "dema", command_surface_count: null },

@@ -218,12 +218,11 @@ describe("H19.1.1 hardening — determinism and portability", () => {
   it("preserves author fingerprint when local public key is removed", async () => {
     const { home, restore } = await homeWithSignedReceipt();
     try {
-      const { unlinkSync } = await import("node:fs");
-      const { keyPaths } =
-        await import("../packages/receipts/src/authorship-key-store.js");
-      const paths = keyPaths(home);
-      unlinkSync(paths.publicKey);
-      unlinkSync(paths.privateKey);
+      // Layout-agnostic: drop ALL local key material (legacy flat files and
+      // the generation store alike) — the passport must verify from the
+      // receipt's embedded material alone.
+      const { rmSync } = await import("node:fs");
+      rmSync(join(home, "keys"), { recursive: true, force: true });
 
       const passport = await buildProofPassport(home);
       assert.equal(passport.aggregate.verdict, "ALL_VERIFIED");

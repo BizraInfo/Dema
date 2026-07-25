@@ -9,7 +9,7 @@
 //
 // Reuses (no duplication):
 //   - signPayload, verifyPayload         packages/receipts/src/authorship-signature.js
-//   - loadPrivateKey, loadPublicKey      packages/receipts/src/authorship-key-store.js
+//   - loadActiveKeyPair      packages/receipts/src/authorship-key-store.js
 //   - verifyConsentProof                 packages/receipts/src/consent-proof.js
 //   - sha256, stableStringify            packages/consent/src/consent-common.js
 //
@@ -42,8 +42,7 @@ import {
   verifyPayload,
 } from "../../receipts/src/authorship-signature.js";
 import {
-  loadPrivateKey,
-  loadPublicKey,
+  loadActiveKeyPair,
 } from "../../receipts/src/authorship-key-store.js";
 import { verifyConsentProof } from "../../receipts/src/consent-proof.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
@@ -266,11 +265,12 @@ export async function buildAgentWallet({
   }
 
   // (4) Load operator key.
-  const privateKeyPem = await loadPrivateKey(demaHome);
+  const activePair = await loadActiveKeyPair(demaHome);
+  const privateKeyPem = activePair.ok ? activePair.private_key_pem : null;
   if (!privateKeyPem) {
     return fail("no_authorship_key");
   }
-  const publicKeyPem = await loadPublicKey(demaHome);
+  const publicKeyPem = activePair.ok ? activePair.public_key_pem : null;
   if (!publicKeyPem) {
     return fail("no_authorship_key");
   }

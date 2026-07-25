@@ -9,7 +9,7 @@
 //
 // Reuses (no duplication):
 // - signPayload, verifyPayload      packages/receipts/src/authorship-signature.js
-// - loadPrivateKey, loadPublicKey   packages/receipts/src/authorship-key-store.js
+// - loadActiveKeyPair   packages/receipts/src/authorship-key-store.js
 // - sha256, stableStringify         packages/consent/src/consent-common.js
 //
 // Spec reference: docs/security/MISSION_0_PREFLIGHT.md (§3 schema, §5
@@ -30,8 +30,7 @@ import {
   verifyPayload,
 } from "../../receipts/src/authorship-signature.js";
 import {
-  loadPrivateKey,
-  loadPublicKey,
+  loadActiveKeyPair,
 } from "../../receipts/src/authorship-key-store.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 import {
@@ -381,11 +380,12 @@ export async function buildMissionLifecycle({
   }
 
   // ── (5) Load operator's signing key (private + public) ─────────────
-  const privateKeyPem = await loadPrivateKey(demaHome);
+  const activePair = await loadActiveKeyPair(demaHome);
+  const privateKeyPem = activePair.ok ? activePair.private_key_pem : null;
   if (!privateKeyPem) {
     return fail("no_authorship_key");
   }
-  const publicKeyPem = await loadPublicKey(demaHome);
+  const publicKeyPem = activePair.ok ? activePair.public_key_pem : null;
 
   // ── (6) Normalize timestamps + derived consent_proof_hash ──────────
   const createdIso = createdAtIso || new Date().toISOString();
