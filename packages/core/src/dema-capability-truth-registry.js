@@ -87,6 +87,11 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_ROOT_CLAUSE_TRACE_REGISTRY_PREVIEW_1A",
   "DEMA_FDE_ISNAD_REPLAY_CAPSULE_PREVIEW_0A",
   "NODE0_AGENT_FLEET_ROLES_1A",
+  "NODE0_REALM_STATE_KERNEL_1A",
+  "NODE0_METRICS_BASELINE_1A",
+  "DEMA_RECOVERY_MISSION_ENGINE_1A",
+  "DEMA_RECOVERY_MISSION_GATHERER_1B",
+  "DEMA_REVERSIBLE_FILE_STEWARD_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2245,6 +2250,156 @@ function defaultCapabilityRows() {
         "agent training",
         "agent deliberation",
         "spawned agent",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_REALM_STATE_KERNEL_1A",
+      truth_label: "NODE0_REALM_STATE_KERNEL_MEASURED_REPO",
+      summary:
+        "Reconstruct Node0 realm state deterministically from an injected hash-chained event history while preserving an all-false execution boundary.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-realm-state-kernel.js"],
+        test_paths: ["tests/node0-realm-state-kernel.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-realm-state-kernel-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_REALM_STATE_KERNEL_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_REALM_STATE_KERNEL_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure kernel deterministically reduces an injected hash-chained event history into a derived realm state (missions, assets, authority head), halting fail-closed with a named block on any chain break, forged event id, unknown kind, authority widening, or verdict-less asset promotion; the payload is content-addressed and body-bound verified.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_METRICS_BASELINE_1A",
+      truth_label: "NODE0_METRICS_BASELINE_MEASURED_REPO",
+      summary:
+        "Derive event-bound baseline metrics from realm event history; UNKNOWN is never zero; every metric carries its derivation evidence.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-metrics-baseline.js"],
+        test_paths: ["tests/node0-metrics-baseline.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-metrics-baseline-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_METRICS_BASELINE_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_METRICS_BASELINE_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure kernel derives baseline metrics from a replayed realm event history: every MEASURED metric binds the exact event seqs it derives from, absent evidence yields UNKNOWN with a named reason (never zero), corrupt history yields no metrics at all, and the utilization rate counts attempts in its denominator; the payload is content-addressed and body-bound verified.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_RECOVERY_MISSION_ENGINE_1A",
+      truth_label: "DEMA_RECOVERY_MISSION_ENGINE_MEASURED_REPO",
+      summary:
+        "Deterministic human-gated Recovery Mission state machine: declare -> reconstruct -> candidates -> human revival -> use -> verify -> seal; every transition guarded, no auto-selection, worker output is evidence not authority.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-recovery-mission-engine.js"],
+        test_paths: ["tests/dema-recovery-mission-engine.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-recovery-mission-engine-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_RECOVERY_MISSION_ENGINE_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_RECOVERY_MISSION_ENGINE_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A deterministic, fail-closed state-machine reduction over an INJECTED event history (34/34 tests): MISSION_DECLARED is first-event-only; RECONSTRUCTED requires a non-empty consent_id and rejects orphan candidates and more than 7; AWAITING_HUMAN can only be exited by HUMAN_REVIVAL naming a surfaced candidate (no auto-selection path exists in code); WORKER_RESULT is evidence only and can only reach VERIFYING, never SEALED, by itself; VERIFIER_VERDICT seals only on PASS from a verifier independent of the worker (verifier_is_generator rejected) attesting the human-chosen asset (asset_not_used_in_mission rejected), FAIL stops the mission; STOP moves any non-terminal mission to STOPPED narrating one of four declared causes; SEALED/STOPPED are terminal. The reduction is chain-integrity-checked (contiguous seq, prev_event binding, event_id re-derivation, event_not_canonicalizable catch, unknown-kind rejection) and content-addressed; verify() re-derives the whole body and rejects forged-and-rehashed payloads on every declared invariant. The standalone reconstructRecoveryCandidates helper never emits an item outside the declared source_boundary, buckets unknown-time evidence under a literal UNKNOWN sentinel instead of interpolating, carries declared contradictions through verbatim, and ranks candidates by a labeled integer rank (never a decimal score) capped at 7.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, live federation, durable event-log persistence, or restart recovery — events are an injected array, not a persisted log. verify() proves internal body consistency only; it does NOT prove independent authenticity (a forger controlling every semantically permitted field and recomputing the hash is not detected without an external signature or anchor — a later slice). It does not prove that a surfaced candidate is actually the correct recovered asset, only that the state machine's guards were satisfied.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_RECOVERY_MISSION_GATHERER_1B",
+      truth_label: "DEMA_RECOVERY_MISSION_GATHERER_MEASURED_REPO",
+      summary:
+        "Read-only gatherer that feeds real file METADATA into the reused DEMA-RECOVERY-MISSION-ENGINE-1A candidate reconstruction: boundary-enforced, metadata-only, up to 7 ranked candidates + chronology + not_accessed_report; `dema recovery preview` CLI space-subcommand.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/dema-recovery-mission-gatherer.js",
+          "packages/core/src/dema-recovery-mission-cli-adapter.js",
+          "apps/cli/src/commands/dema-recovery-mission-fs-gatherer.js",
+          "apps/cli/src/commands/recovery.js",
+        ],
+        test_paths: ["tests/dema-recovery-mission-gatherer.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-recovery-mission-gatherer-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_RECOVERY_MISSION_GATHERER_1B.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_RECOVERY_MISSION_GATHERER_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure kernel maps INJECTED file-metadata rows (relative_path, extension, size_bytes, mtime_iso, root) into the evidence shape the reused reconstructRecoveryCandidates helper expects, and returns its {candidates<=7, chronology, contradiction_map, not_accessed_report} unmodified: a row whose declared root is undeclared, whose resolved root+relative_path escapes that root (path-traversal guard), or whose resolved path falls under a declared exclusion is EXCLUDED into not_accessed_report and never constructed into an evidence item; unknown-time rows bucket under the literal UNKNOWN chronology sentinel; a row claiming content_read:true fails closed at plan time (the whole request is refused, not silently dropped) — this slice reads no file content. The payload is content-addressed (bizra.canonical-json.v1) and body-bound verified; forged-and-rehashed payloads are rejected on every declared invariant (schema, truth label, canonicalization identity triplet, all-false boundary, content_read_allowed:false, candidate cap). The ONLY fs surface is a separate read-only effect adapter (apps/cli/src/commands/dema-recovery-mission-fs-gatherer.js) that walks one bounded root collecting metadata only, never follows a symlink escaping the root, and fails closed on a max-files cap overrun; the CLI adapter (packages/core/src) has no direct fs import — the gatherer is always caller-injected.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, live federation, or that a surfaced candidate is the correct recovered asset — only that the boundary/metadata-only guards were satisfied. It does not read file content and derives no relevance signal from metadata (candidates tie-break alphabetically by asset_id, never a fabricated score). verify() proves internal body consistency only; it does NOT prove independent authenticity (same declared limit as DEMA-RECOVERY-MISSION-ENGINE-1A and NODE0-REALM-STATE-KERNEL-1A). It does not select or revive a candidate — human revival remains a separate governed step (the engine's HUMAN_REVIVAL event), out of scope for this slice.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+        "content read",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_REVERSIBLE_FILE_STEWARD_1A",
+      truth_label: "DEMA_REVERSIBLE_FILE_STEWARD_MEASURED_REPO",
+      summary:
+        "Compose the proven reversible-rename, sanitizer, consent and receipt primitives into one bounded, consented, fully-reversible multi-file steward job (RENAME-only, metadata-only, no model/network).",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-reversible-file-steward.js"],
+        test_paths: ["tests/dema-reversible-file-steward.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-reversible-file-steward-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_REVERSIBLE_FILE_STEWARD_1A.md"],
+        documentation_paths: [
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure orchestrator plans and content-addresses a bounded, exact-consent-gated, sanitizer-gated, fully-reversible multi-RENAME steward job over the shipped reversible-rename and untrusted-corpus-sanitizer primitives, with an all-false boundary and a body-bound verifier. Proves the PLAN + ATTESTATION only.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
       ],
     }),
   ]);

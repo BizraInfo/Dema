@@ -44,10 +44,17 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // happened; only the clerical line was missing. T8 is now an invariant test
   // instead of a snapshot, so a legitimately growing allowlist no longer
   // forces a choice between a green suite and an honest gate.
+  //
+  // feat/reversible-file-steward-1c had independently back-registered the same
+  // four, which is corroboration rather than duplication: two lanes reached the
+  // identical conclusion about which consumers were legitimately missing.
   "packages/core/src/dema-recovery-mission-engine.js",
   "packages/core/src/dema-recovery-mission-gatherer.js",
   "packages/core/src/node0-metrics-baseline.js",
   "packages/core/src/node0-realm-state-kernel.js",
+  // DEMA-REVERSIBLE-FILE-STEWARD-1A / 1B — registered by the steward slice.
+  "packages/core/src/dema-reversible-file-steward.js",
+  "packages/core/src/dema-reversible-file-steward-execution.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 

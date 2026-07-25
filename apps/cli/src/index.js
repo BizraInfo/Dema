@@ -19,6 +19,7 @@ import { cmd_setup } from "./commands/setup.js";
 import { cmd_onboarding_lifecycle } from "./commands/onboarding-lifecycle.js";
 import { cmd_explain } from "./commands/explain.js";
 import { cmd_urp } from "./commands/urp.js";
+import { cmd_steward } from "./commands/steward.js";
 import { cmd_model_broker } from "./commands/model-broker.js";
 import { cmd_think } from "./commands/think.js";
 import { cmd_authorship } from "./commands/authorship.js";
@@ -27,6 +28,7 @@ import { cmd_delivery } from "./commands/delivery.js";
 import { cmd_foundation } from "./commands/foundation.js";
 import { cmd_realm } from "./commands/realm.js";
 import { cmd_mission } from "./commands/mission.js";
+import { cmd_recovery } from "./commands/recovery.js";
 import { cmd_founder } from "./commands/founder.js";
 import { cmd_voice } from "./commands/voice.js";
 import { cmd_memory } from "./commands/memory.js";
@@ -42,7 +44,6 @@ import { cmd_attest } from "./commands/attest.js";
 import { cmd_verify_grounded } from "./commands/verify-grounded.js";
 import { cmd_assets } from "./commands/assets.js";
 import { cmd_library } from "./commands/library.js";
-import { cmd_recovery } from "./commands/recovery.js";
 import { cmd_stand } from "./commands/stand.js";
 import { cmd_poi } from "./commands/poi.js";
 import { cmd_away } from "./commands/away.js";
@@ -516,6 +517,17 @@ Dema Realm (UX-1A, UX-1B):
                     Boundary honestly declares file_write_performed:true and
                     mutation_performed:true.
 
+Dema Recovery Mission (DEMA-RECOVERY-MISSION-GATHERER-1B):
+  dema recovery preview <--root abs --mission "objective" --consent "phrase">
+                    [--exclude <abs>]... [--max-files <n>] [--json]
+                    Read-only Recovery Mission candidate PREVIEW: walks --root
+                    for file METADATA ONLY (no content read), then
+                    reconstructs up to 7 ranked candidates + chronology +
+                    not_accessed_report via the gatherer kernel over the
+                    reused DEMA-RECOVERY-MISSION-ENGINE-1A helper. No
+                    mutation, no auto-selection — human revival is a separate
+                    governed step, not in this slice.
+
 Covenant Gate (v0.1 PROTOTYPE — per Omnidirectional Audit):
   dema covenant screen <proposal.json> [--json]
                     Run the deterministic screening engine on a project proposal.
@@ -698,6 +710,16 @@ Spine preview surfaces (canonical 16-key boundary · NODE0_LOCAL_SEED):
                            [--save-map --save-map-consent "GO: save local codebase architecture map"]
                            Read-only architecture map for any target repo (v0.1). Iterative bounded walker · stdlib only · deterministic. Default JSON (bizra.dema.codebase_architecture_map.v0.1) to stdout. --summary emits compact human summary. --hotspots enables content-reading hotspot probes. .env*, *secret*, *credential*, *.pem/.key/.crt/.p12, id_rsa* recorded as metadata only. Symlinks recorded but never followed. --save-map (with exact --save-map-consent) persists the envelope to $DEMA_HOME/receipts/codebase-map-<sha256>.json (atomic; 256 MiB serialized cap; preview persistence; NOT canonical chain-bound mint). --save-map cannot combine with --summary unless --json is also passed. NOT a model. NO network. NO mutation. NO chain-bound mint. NO PAT/SAT swarm. NO URP. NO token/economy.
 
+Reversible file steward (DEMA-REVERSIBLE-FILE-STEWARD-1C · sandbox-scoped, consent-bound):
+  dema steward plan --job <job.json> [--consent "GO: dema reversible file steward preview"]
+                           1A planner preview: bounded, sanitizer-gated, content-addressed multi-RENAME job plan; eligible only with the exact preview phrase; no mutation
+  dema steward verify --job <job.json> --consent "GO: execute reversible file steward job with backup and undo receipts"
+                           1B round-trip proof on a real sandbox: execute-all → undo-all restores genesis (user-file state-hash equality); backups + receipts via the shipped reversible-rename gate
+  dema steward run --job <job.json> --consent "<execute phrase>"
+                           Sequenced reversible execution; stops fail-closed at the first non-sealed atom; emits receipts JSON (save it to undo later)
+  dema steward undo --receipts <receipts.json>
+                           Reverse-order undo; every restoration proven against its independent on-disk backup
+
 Tasks and views:
   dema task         List registered tasks
   dema task NAME    Run a registered task (read-only in v{{DEMA_VERSION}})
@@ -743,6 +765,11 @@ const REGISTERED_COMMANDS_LIST = [
     description: "local canon retrieval surfaces (subcommand: first-lesson)",
   },
   { command: "node0", description: "Node0 Mumu closed-loop read-only face" },
+  {
+    command: "steward",
+    description:
+      "reversible file steward over proven kernels (subcommands: plan, verify, run, undo) — bounded multi-RENAME jobs with backups + proven undo",
+  },
   { command: "profiles", description: "profile foundation preview" },
   { command: "consent-card", description: "consent card preview" },
   { command: "mission-loop", description: "full mission lifecycle preview" },
@@ -835,6 +862,10 @@ const REGISTERED_COMMANDS_LIST = [
   { command: "diagnostics", description: "preview self-diagnostics harness" },
   { command: "consent", description: "preview a micro-consent scope" },
   { command: "mission", description: "preview mission draft or propose" },
+  {
+    command: "recovery",
+    description: "read-only Recovery Mission candidate preview (subcommand: preview)",
+  },
   { command: "voice", description: "preview voice-turn receipt (text transcript only)" },
   { command: "receipts", description: "list or show local receipts" },
   {
@@ -1270,7 +1301,6 @@ const COMMAND_TABLE = {
   covenant: cmdCovenant,
   assets: cmd_assets,
   library: cmd_library,
-  recovery: cmd_recovery,
   contribute: cmd_contribute,
   demo: cmd_demo,
   "llm-router": cmd_llm_router,
@@ -1290,6 +1320,7 @@ const COMMAND_TABLE = {
   diagnostics: cmd_diagnostics,
   consent: cmd_consent,
   mission: cmd_mission,
+  recovery: cmd_recovery,
   founder: cmd_founder,
   voice: cmd_voice,
   receipts: cmd_receipts,
@@ -1312,6 +1343,7 @@ const COMMAND_TABLE = {
   "agent-loop": cmd_agent_loop,
   task: cmd_task,
   sovereign: cmd_sovereign,
+  steward: cmd_steward,
   help: cmd_help,
 };
 
