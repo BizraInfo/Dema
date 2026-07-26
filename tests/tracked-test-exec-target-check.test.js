@@ -14,7 +14,15 @@ import { scanExecTargets } from "../scripts/review/tracked-test-exec-target-chec
  * by c51467e.
  */
 
-const url = (spec) => `const T = new URL("${spec}", import.meta.url);`;
+/**
+ * Fixtures are CONCATENATED, never written literally. This file is scanned by
+ * the guard it tests, so any literal `new URL("../x", import.meta.url)` here
+ * would be read as a real edge and fail the gate against a phantom target.
+ * Building the string keeps the source unmatchable while the fixture is exact.
+ */
+const NEW_URL = (spec) => "new URL(" + JSON.stringify(spec) + ", import.meta.url)";
+
+const url = (spec) => `const T = ${NEW_URL(spec)};`;
 
 // probe: relative path -> "file" | "dir" | "absent"
 const scan = (source, tracked, probe) =>
@@ -81,7 +89,7 @@ test("a bare specifier is not a path and is ignored", () => {
 
 test("regression: the node0-library-safe-plan shape is caught", () => {
   const source = [
-    `const REPLAY = fileURLToPath(new URL("../scripts/review/node0-library-safe-plan-replay.mjs", import.meta.url));`,
+    `const REPLAY = fileURLToPath(${NEW_URL("../scripts/review/node0-library-safe-plan-replay.mjs")});`,
     `execFileSync("node", [REPLAY, "--root", root]);`,
   ].join("\n");
   const r = scan(source, [], {
@@ -113,6 +121,29 @@ test("many tests aggregate into one verdict", () => {
   assert.equal(r.tracked_targets, 1);
   assert.equal(r.untracked_targets.length, 1);
   assert.equal(r.untracked_targets[0].test, "tests/b.test.js");
+});
+
+test("a target named only in a comment is prose, not an edge", () => {
+  // Regression: this guard's own JSDoc describes the defect using the pattern it
+  // scans for, so before stripComments existed it failed against itself in a
+  // clean checkout — target "x", from `new URL("../x", import.meta.url)` in a
+  // doc block. Caught at 708198c by clean-worktree verification.
+  const block = `/**\n * Example: ${NEW_URL("../does-not-exist.mjs")}\n */\n`;
+  const line = `// ${NEW_URL("../also-not-real.mjs")}\n`;
+  const r = scan(block + line, [], {});
+  assert.equal(r.ok, true);
+  assert.equal(r.file_edges, 0);
+});
+
+test("a `//` inside a string literal is not treated as a comment", () => {
+  const source = [
+    `const endpoint = "https://example.test/x";`,
+    url("../scripts/review/real.mjs"),
+  ].join("\n");
+  const r = scan(source, ["scripts/review/real.mjs"], { "scripts/review/real.mjs": "file" });
+  assert.equal(r.ok, true);
+  assert.equal(r.file_edges, 1);
+  assert.equal(r.tracked_targets, 1);
 });
 
 test("the report is a read-only audit and claims no mutation", () => {

@@ -31,6 +31,17 @@ export const SCHEMA = "bizra.dema.review.tracked_test_exec_target.v0.1";
 const URL_LITERAL = /new URL\(\s*"([^"]+)"\s*,\s*import\.meta\.url\s*\)/g;
 
 /**
+ * Comments are prose, not edges. A doc block or a commented-out line naming a
+ * path must not fail the gate — this guard's own header describes the defect
+ * using the very pattern it scans for, and flagged itself until this existed.
+ * `//` is only treated as a comment at line start or after whitespace, so the
+ * `//` inside a "https://…" literal survives.
+ */
+export function stripComments(source) {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|\s)\/\/.*$/gm, "$1");
+}
+
+/**
  * Pure. `tests` is [{path, source}], `tracked` a Set of repo-relative paths,
  * `probe` a repo-relative path -> "file" | "dir" | "absent".
  */
@@ -43,7 +54,7 @@ export function scanExecTargets({ tests, tracked, probe }) {
   const missing_targets = [];
 
   for (const { path, source } of tests) {
-    for (const [, spec] of source.matchAll(URL_LITERAL)) {
+    for (const [, spec] of stripComments(source).matchAll(URL_LITERAL)) {
       if (!spec.startsWith(".")) continue;
       const target = normalize(join(dirname(path), spec));
       if (target === "." || target === "") continue;
