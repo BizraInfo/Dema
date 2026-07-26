@@ -244,7 +244,13 @@ function snapshotCandidate(cand, index) {
         // serializer. JSON.parse of canonical bytes preserves own keys such as
         // `__proto__` as own DATA properties, which is what makes them real
         // fields rather than a prototype swap.
-        snapshot.output = JSON.parse(canonicalizeJsonV1(raw ?? null));
+        //
+        // `raw` is passed through UNCOERCED. A `?? null` here would turn an own
+        // `output: undefined` — outside the canonical domain — into canonical
+        // null, which is inside it, and the row would then certify a value the
+        // candidate never supplied. The serializer is the sole arbiter: it
+        // refuses undefined as `value_undefined` and accepts null as "null".
+        snapshot.output = JSON.parse(canonicalizeJsonV1(raw));
       } catch {
         snapshot.output = OUTPUT_NOT_CANONICALIZABLE;
       }
@@ -293,7 +299,8 @@ export function evaluateAgainstContract(output, contract) {
   const failed = [];
   let serial;
   try {
-    serial = canonicalizeJsonV1(output ?? null);
+    // Uncoerced: an absent or undefined output is not the canonical null value.
+    serial = canonicalizeJsonV1(output);
   } catch {
     return Object.freeze({ verdict: VERDICT_REJECT, failed_requirements: Object.freeze(["output_not_canonicalizable"]) });
   }
@@ -339,7 +346,9 @@ export function evaluateAgainstContract(output, contract) {
 
 function outputHash(output) {
   try {
-    return sha256CanonicalJsonV1(output ?? null);
+    // Uncoerced, for the same reason evaluate is: a value that cannot be
+    // represented gets NO hash, never the canonical hash of null.
+    return sha256CanonicalJsonV1(output);
   } catch {
     return null;
   }

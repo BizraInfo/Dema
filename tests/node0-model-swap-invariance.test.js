@@ -809,6 +809,94 @@ test("T41 field presence is own-property, not inherited", () => {
   );
 });
 
+// ── PR #423 review: normalisation must not manufacture meaning ──
+//
+// `raw ?? null` turned an own `output: undefined` — a value OUTSIDE the
+// canonical-JSON domain — into canonical `null`, which is inside it. Evaluation
+// and hashing then certified a value the candidate never supplied: measured on
+// 3fc4739, a candidate with `output: undefined` produced an ACCEPT row carrying
+// the canonical hash of null and a verifying attestation. Three states must stay
+// distinct: field absent, field present but unrepresentable, field present and
+// canonically null.
+
+const NULL_TOLERANT = { forbidden_substrings: ["zzz"] };
+
+test("T42 undefined output is never coerced into canonical null", async () => {
+  const { sha256CanonicalJsonV1 } = await import("../packages/canon/src/sha256-canonical-json-v1.js");
+  const nullHash = sha256CanonicalJsonV1(null);
+  const build = (first) =>
+    buildNode0ModelSwapInvariancePayload({
+      task: { task_id: "m", acceptance_contract: NULL_TOLERANT },
+      candidates: [first, { model_id: "b", output: { answer: "42" } }],
+    });
+
+  // 1-3. Present but unrepresentable: refused, and never wearing null's hash.
+  const undef = build({ model_id: "a", output: undefined }).candidates.find((c) => c.model_id === "a");
+  assert.equal(undef.verdict, "REJECT", "undefined is outside the canonical domain");
+  assert.deepEqual(undef.failed_requirements, ["output_not_canonicalizable"]);
+  assert.equal(undef.output_hash, null, "no hash for a value that cannot be represented");
+  assert.notEqual(undef.output_hash, nullHash, "and never the canonical hash of null");
+
+  // 4. Explicit canonical null stays a valid, evaluable value.
+  const explicitNull = build({ model_id: "a", output: null }).candidates.find((c) => c.model_id === "a");
+  assert.equal(explicitNull.verdict, "ACCEPT", "null IS inside the canonical domain");
+  assert.equal(explicitNull.output_hash, nullHash, "and hashes as null");
+
+  // 5. Absent field is not a supplied output.
+  const missing = build({ model_id: "a" }).candidates.find((c) => c.model_id === "a");
+  assert.equal(missing.verdict, "REJECT", "no output was supplied");
+  assert.equal(missing.output_hash, null);
+  const plan = planNode0ModelSwapInvariance({
+    consent: GO,
+    input: { task: { task_id: "m", acceptance_contract: NULL_TOLERANT }, candidates: [{ model_id: "a" }, { model_id: "b", output: { answer: "42" } }] },
+  });
+  assert.ok(plan.blocked_by.includes("candidate_output_missing:0"), plan.blocked_by.join(", "));
+
+  // The three states must be mutually distinguishable, not merely all-refused.
+  assert.notDeepEqual([undef.verdict, undef.output_hash], [explicitNull.verdict, explicitNull.output_hash]);
+});
+
+test("T43 an undefined-yielding accessor is read once per call and escapes nothing", () => {
+  // A hostile accessor is single-use, so each public entry point gets its own
+  // candidate: reusing one would let an earlier call disarm a later one, and the
+  // invariant is ONE read per public call, not one read for all time.
+  const counting = () => {
+    const state = { reads: 0 };
+    const cand = { model_id: "a" };
+    Object.defineProperty(cand, "output", {
+      enumerable: true,
+      get() {
+        state.reads += 1;
+        return undefined;
+      },
+    });
+    return { state, input: { task: { task_id: "m", acceptance_contract: NULL_TOLERANT }, candidates: [cand, { model_id: "b", output: { answer: "42" } }] } };
+  };
+
+  const b = counting();
+  let payload;
+  assert.doesNotThrow(() => (payload = buildNode0ModelSwapInvariancePayload(b.input)), "build must not throw");
+  assert.equal(b.state.reads, 1, `build must read once, not ${b.state.reads} times`);
+  assert.doesNotThrow(() => verifyNode0ModelSwapInvariance(payload), "verify must not throw");
+
+  const r = counting();
+  let run, plan;
+  assert.doesNotThrow(() => (plan = planNode0ModelSwapInvariance({ consent: GO, input: counting().input })), "plan must not throw");
+  assert.doesNotThrow(() => (run = runNode0ModelSwapInvariance({ consent: GO, input: r.input })), "run must not throw");
+  assert.equal(r.state.reads, 1, `run must read once, not ${r.state.reads} times`);
+
+  assert.equal(plan.eligible, true, "an unrepresentable output is a build-time verdict, not an admission defect");
+  // run.ok stays TRUE, and that is the honest outcome: a candidate whose output
+  // cannot be represented is REJECTED and recorded as such, which is a valid
+  // invariance measurement — not a broken proof. What must never happen is the
+  // row reading ACCEPT while carrying null's hash; T42 pins that.
+  assert.equal(run.ok, true, "a refused candidate is a real measurement, not a failed proof");
+  const row = payload.candidates.find((c) => c.model_id === "a");
+  assert.equal(row.verdict, "REJECT");
+  assert.equal(row.output_hash, null, "refused, and carrying no hash at all");
+  assert.ok(!payload.accepted_output_hashes.includes(null), "the accepted set never admits a null hash");
+});
+
 test("T16 the honest fixtures stay green after hardening", () => {
   assert.equal(evaluateAgainstContract(GOOD_OUTPUT, CONTRACT).verdict, "ACCEPT");
   assert.equal(planNode0ModelSwapInvariance({ consent: GO, input: VALID }).eligible, true);
