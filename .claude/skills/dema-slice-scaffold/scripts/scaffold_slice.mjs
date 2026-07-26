@@ -652,6 +652,11 @@ function main() {
           `the ${newWord} shipped pre-action spine capabilities`,
         );
         edits.push({ path: p, changed: true, note: `count prose ${oldWord}->${newWord}` });
+      } else {
+        // A missing prose anchor used to record nothing — WIRING_FAILED only
+        // sees notes already in `edits`, so the scaffold exited 0 with a
+        // required edit silently unapplied. Record the miss explicitly.
+        edits.push({ path: p, changed: false, note: "count prose anchor not found" });
       }
     }
 

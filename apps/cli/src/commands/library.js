@@ -8,6 +8,7 @@ import {
   confirmDuplicateSets,
   planQuarantine,
 } from "../../../../packages/core/src/node0-library-dedupe.js";
+import { isWithinRoot } from "../../../../packages/core/src/first-encounter-admission.js";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
 
 function sha256File(absPath) {
@@ -155,7 +156,20 @@ export async function cmd_library(ctx) {
       console.error("dema library dedupe: --quarantine <abs dir> is required (must be outside every --root).");
       return 1;
     }
-    const plan = await planDedupe({ census, roots, quarantine });
+    const qAbs = resolve(quarantine);
+    const rootAbs = roots.map((r) => resolve(r));
+    // Enforce the documented invariant before any hashing: quarantine must sit
+    // outside every scanned root (segment-aware — `/demo/corpus-secret` is OK
+    // next to `/demo/corpus`).
+    for (const r of rootAbs) {
+      if (isWithinRoot(r, qAbs)) {
+        console.error(
+          `dema library dedupe: --quarantine must be outside every --root (refused: ${qAbs} is inside ${r}).`,
+        );
+        return 1;
+      }
+    }
+    const plan = await planDedupe({ census, roots: rootAbs, quarantine: qAbs });
     const out = argValue(argv, "--out");
     if (out) {
       writeFileSync(out, JSON.stringify(plan, null, 2));

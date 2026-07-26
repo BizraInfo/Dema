@@ -163,3 +163,38 @@ test("the plan is steward-job shaped so it can only run through consent + undo",
   assert.ok(Array.isArray(plan.steward_job.atoms));
   assert.equal(plan.steward_job.atoms.length, plan.atoms.length);
 });
+
+test("empty root_priority is refused — containment cannot be skipped by omission", () => {
+  assert.throws(
+    () => planQuarantine(setOf(["/a/x", "/b/x"]), { quarantine_root: "/q" }),
+    /ROOT_PRIORITY_REQUIRED/,
+  );
+});
+
+test("trailing slash on quarantine_root does not produce a double-slash destination", () => {
+  const plan = planQuarantine(setOf(["/a/x", "/b/x"]), {
+    root_priority: ["/a"],
+    quarantine_root: "/q/",
+  });
+  assert.equal(plan.atoms[0].to, "/q/b/x");
+  assert.ok(!plan.atoms[0].to.includes("//"), plan.atoms[0].to);
+});
+
+test("segment-aware containment: a sibling path sharing a prefix is outside, not inside", () => {
+  // /demo/corpus-secret must NOT be treated as inside /demo/corpus
+  const plan = planQuarantine(setOf(["/demo/corpus/x", "/other/x"]), {
+    root_priority: ["/demo/corpus"],
+    quarantine_root: "/demo/corpus-secret",
+  });
+  assert.equal(plan.atoms.length, 1);
+});
+
+test("segment-aware containment: a true subpath of a source root is refused", () => {
+  assert.throws(
+    () => planQuarantine(setOf(["/demo/corpus/x", "/other/x"]), {
+      root_priority: ["/demo/corpus"],
+      quarantine_root: "/demo/corpus/quarantine",
+    }),
+    /QUARANTINE_INSIDE_SOURCE_ROOT/,
+  );
+});

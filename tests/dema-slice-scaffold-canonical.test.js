@@ -218,6 +218,41 @@ test("T9 scaffold fails closed when an anchored wiring edit cannot apply", (t) =
   );
 });
 
+test("T10 scaffold fails closed when registry count-prose anchor is missing", (t) => {
+  const tmp = makeStubRepo();
+  t.after(() => rmSync(tmp, { recursive: true, force: true }));
+
+  // Keep REQUIRED_CAPABILITY_IDS and defaultCapabilityRows anchors intact, but
+  // remove the count-prose sentence. Before the fix, step 2c recorded nothing
+  // on a miss — WIRING_FAILED only saw notes already in `edits` — so the
+  // scaffold exited 0 with a required edit silently unapplied.
+  writeFileSync(
+    join(tmp, "packages/core/src/dema-capability-truth-registry.js"),
+    'export const REQUIRED_CAPABILITY_IDS = Object.freeze([\n  "STUB_EXISTING_1A",\n]);\n\n' +
+      "// NO count-prose sentence here.\n" +
+      "function defaultCapabilityRows() {\n  return Object.freeze([\n  ]);\n}\n",
+  );
+
+  let err = null;
+  try {
+    runScaffold(
+      ["--id", "M5-PROSE-MISS-1A", "--intent", "x", "--no-arch", "--repo", tmp, "--json"],
+      { stdio: "pipe" },
+    );
+  } catch (e) {
+    err = e;
+  }
+
+  assert.ok(err, "scaffold must not report success when count prose is missing");
+  assert.equal(err.status, 3, "exit code 3 = wiring incomplete");
+  const report = JSON.parse(err.stdout);
+  assert.equal(report.ok, false);
+  assert.ok(
+    report.wiring_failures.some((f) => /count prose anchor not found/.test(f)),
+    JSON.stringify(report.wiring_failures),
+  );
+});
+
 test("real gate file carries the scaffold registration anchor", () => {
   const gate = readFileSync(join(REPO, "scripts/review/canonical-json-v1-check.mjs"), "utf8");
   assert.ok(gate.includes(GATE_ANCHOR), "anchored insertion point present");

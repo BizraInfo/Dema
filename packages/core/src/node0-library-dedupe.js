@@ -23,6 +23,8 @@
  *     receipts, and rolls back the whole job if any single atom fails.
  */
 
+import { isWithinRoot } from "./first-encounter-admission.js";
+
 export const NODE0_LIBRARY_DEDUPE_SCHEMA = "bizra.dema.node0_library_dedupe.v0.1";
 
 class DedupeError extends Error {
@@ -31,6 +33,13 @@ class DedupeError extends Error {
     this.name = "DedupeError";
     this.code = code;
   }
+}
+
+/** Strip trailing slashes so `/q/` + `/a/x` never becomes `/q//a/x`. Root `/` stays `/`. */
+function normalizeAbsDir(p) {
+  if (typeof p !== "string" || !p.startsWith("/")) return p;
+  if (p === "/") return "/";
+  return p.replace(/\/+$/, "");
 }
 
 /**
@@ -134,8 +143,19 @@ export function planQuarantine(duplicateSets, { root_priority = [], quarantine_r
   if (typeof quarantine_root !== "string" || !quarantine_root.startsWith("/")) {
     throw new DedupeError("QUARANTINE_ROOT_REQUIRED");
   }
+  // Containment is only meaningful against the scanned roots. An empty list
+  // would silently skip the "outside every source root" rule.
+  if (!Array.isArray(root_priority) || root_priority.length === 0) {
+    throw new DedupeError("ROOT_PRIORITY_REQUIRED");
+  }
+  const qRoot = normalizeAbsDir(quarantine_root);
   for (const root of root_priority) {
-    if (quarantine_root === root || quarantine_root.startsWith(`${root}/`)) {
+    const r = normalizeAbsDir(root);
+    if (typeof r !== "string" || !r.startsWith("/")) {
+      throw new DedupeError("INVALID_ROOT_PRIORITY", String(root));
+    }
+    // Segment-aware: `/demo/corpus-secret` is outside `/demo/corpus`.
+    if (isWithinRoot(r, qRoot)) {
       throw new DedupeError("QUARANTINE_INSIDE_SOURCE_ROOT", quarantine_root);
     }
   }
@@ -148,13 +168,14 @@ export function planQuarantine(duplicateSets, { root_priority = [], quarantine_r
     if (!Array.isArray(set.paths) || set.paths.length < 2) {
       throw new DedupeError("SINGLETON_IS_NOT_A_DUPLICATE", set.paths?.[0] ?? "(none)");
     }
-    const keeper = pickKeeper(set.paths, root_priority);
+    const keeper = pickKeeper(set.paths, root_priority.map(normalizeAbsDir));
     keep.push(keeper);
     for (const p of set.paths) {
       if (p === keeper) continue;
       // Mirror the full source path under the quarantine root so a restore is
       // unambiguous and two same-named duplicates cannot collide.
-      atoms.push(Object.freeze({ from: p, to: `${quarantine_root}${p}` }));
+      // qRoot has no trailing slash; p is absolute → `/q` + `/a/x` = `/q/a/x`.
+      atoms.push(Object.freeze({ from: p, to: `${qRoot}${p}` }));
       reclaimable += set.size;
     }
   }
@@ -170,7 +191,7 @@ export function planQuarantine(duplicateSets, { root_priority = [], quarantine_r
     atoms: Object.freeze(atoms),
     reclaimable_bytes: reclaimable,
     steward_job: Object.freeze({
-      sandbox_root: quarantine_root,
+      sandbox_root: qRoot,
       max_atoms: atoms.length,
       atoms: Object.freeze(atoms.map((a) => Object.freeze({ ...a }))),
     }),
