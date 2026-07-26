@@ -530,11 +530,29 @@ test("T32 an ACCEPT row must carry a well-formed output hash", async () => {
   }
 });
 
-test("T33 a REJECT row may carry a null hash, but never a malformed one", () => {
-  // Symmetry check: null is legitimate for REJECT (the output did not
-  // canonicalise), garbage never is.
-  const legit = buildNode0ModelSwapInvariancePayload(VALID);
-  assert.equal(verifyNode0ModelSwapInvariance(legit).ok, true, "honest payload unaffected");
+test("T33 a REJECT row may carry a null hash, but never a malformed one", async () => {
+  // Symmetry: null IS legitimate on a REJECT row — an output that fails to
+  // canonicalise is rejected as output_not_canonicalizable and gets no hash.
+  // Garbage never is. Without this, the ACCEPT-row guard could be written as a
+  // blanket "hash must be well-formed" and silently break the legitimate case.
+  const honest = buildNode0ModelSwapInvariancePayload(VALID);
+  const good = honest.candidates.find((c) => c.verdict === "ACCEPT");
+
+  const rows = (rejectHash) => [
+    { model_id: "a", output_hash: good.output_hash, verdict: "ACCEPT", failed_requirements: [] },
+    { model_id: "b", output_hash: rejectHash, verdict: "REJECT", failed_requirements: ["missing_key:evidence_ref"] },
+  ];
+  const build = async (rejectHash) =>
+    rehash({ ...honest, candidate_count: 2, accept_count: 1, accepted_output_hashes: [good.output_hash], candidates: rows(rejectHash) });
+
+  assert.equal(verifyNode0ModelSwapInvariance(await build(null)).evidence_ok, true, "null on a REJECT row is legitimate");
+  for (const bad of ["not-a-hash", "sha256:abc", `sha256:${"Z".repeat(64)}`, 42]) {
+    assert.equal(
+      verifyNode0ModelSwapInvariance(await build(bad)).evidence_ok,
+      false,
+      `malformed REJECT-row hash ${JSON.stringify(bad)} must be refused`,
+    );
+  }
 });
 
 test("T16 the honest fixtures stay green after hardening", () => {
