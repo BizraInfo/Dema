@@ -12,7 +12,7 @@ function readJson(path) {
 function listMarkdownFiles(dir, root = dir) {
   const files = [];
   for (const entry of readdirSync(dir)) {
-    if (entry === "node_modules" || entry === ".git") continue;
+    if (entry === "node_modules" || entry === ".git" || entry === ".next") continue;
     const path = join(dir, entry);
     const stat = statSync(path);
     if (stat.isDirectory()) {
@@ -28,7 +28,7 @@ function listSourceFiles(dir, root = dir) {
   const files = [];
   if (!existsSync(dir)) return files;
   for (const entry of readdirSync(dir)) {
-    if (entry === "node_modules" || entry === ".git") continue;
+    if (entry === "node_modules" || entry === ".git" || entry === ".next") continue;
     const path = join(dir, entry);
     const stat = statSync(path);
     if (stat.isDirectory()) {
