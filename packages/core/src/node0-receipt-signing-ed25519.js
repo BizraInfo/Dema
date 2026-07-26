@@ -10,8 +10,7 @@ import {
   verifyPayload,
 } from "../../receipts/src/authorship-signature.js";
 import {
-  loadPrivateKey,
-  loadPublicKey,
+  loadActiveKeyPair,
 } from "../../receipts/src/authorship-key-store.js";
 import {
   NODE0_REVERSIBLE_EXECUTE_RECEIPT_SCHEMA,
@@ -280,16 +279,16 @@ export async function signExecuteReceiptAttestationWithKeyStore({
   receipt,
   consent,
   demaHome,
-  loadPrivateKeyFn = loadPrivateKey,
-  loadPublicKeyFn = loadPublicKey,
+  loadActiveKeyPairFn = loadActiveKeyPair,
   signedAt,
 } = {}) {
   const plan = planReceiptSigning({ consent, receipt });
   if (!plan.eligible) {
     return blockedAttestation(plan);
   }
-  const privateKeyPem = await loadPrivateKeyFn(demaHome);
-  const publicKeyPem = await loadPublicKeyFn(demaHome);
+  const activePair = await loadActiveKeyPairFn(demaHome);
+  const privateKeyPem = activePair?.ok ? activePair.private_key_pem : null;
+  const publicKeyPem = activePair?.ok ? activePair.public_key_pem : null;
   if (!privateKeyPem || !publicKeyPem) {
     return blockedAttestation(plan, ["key_store_unavailable"]);
   }

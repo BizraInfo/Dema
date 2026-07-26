@@ -61,8 +61,9 @@ describe("initAuthorshipKey", () => {
     assert.equal(result.schema, KEY_INIT_SCHEMA);
     assert.equal(result.initialized, true);
     assert.match(result.public_key_fingerprint, /^[a-f0-9]{64}$/);
-    assert.ok(result.private_key_path.includes("node0-ed25519.pem"));
-    assert.ok(result.public_key_path.includes("node0-ed25519.pub.pem"));
+    assert.ok(result.private_key_path.endsWith("private.pem"));
+    assert.ok(result.public_key_path.endsWith("public.pem"));
+    assert.ok(result.generation_path.includes(result.public_key_fingerprint));
     assert.equal(result.boundary.key_persisted, true);
     assert.equal(result.boundary.network_used, false);
     assert.equal(result.boundary.federation_used, false);
@@ -71,24 +72,22 @@ describe("initAuthorshipKey", () => {
 
   it("writes private key with mode 0o600", async () => {
     const home = freshHome();
-    await initAuthorshipKey({
+    const result = await initAuthorshipKey({
       consent: KEY_INIT_CONSENT_PHRASE,
       demaHome: home,
     });
-    const paths = keyPaths(home);
-    const mode = statSync(paths.privateKey).mode & 0o777;
+    const mode = statSync(result.private_key_path).mode & 0o777;
     assert.equal(mode, 0o600);
   });
 
   it("writes valid PEM files", async () => {
     const home = freshHome();
-    await initAuthorshipKey({
+    const result = await initAuthorshipKey({
       consent: KEY_INIT_CONSENT_PHRASE,
       demaHome: home,
     });
-    const paths = keyPaths(home);
-    const priv = readFileSync(paths.privateKey, "utf8");
-    const pub = readFileSync(paths.publicKey, "utf8");
+    const priv = readFileSync(result.private_key_path, "utf8");
+    const pub = readFileSync(result.public_key_path, "utf8");
     assert.ok(priv.startsWith("-----BEGIN PRIVATE KEY-----"));
     assert.ok(pub.startsWith("-----BEGIN PUBLIC KEY-----"));
   });

@@ -22,8 +22,7 @@ import {
   verifyPayload,
 } from "../../receipts/src/authorship-signature.js";
 import {
-  loadPrivateKey,
-  loadPublicKey,
+  loadActiveKeyPair,
 } from "../../receipts/src/authorship-key-store.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 
@@ -119,8 +118,9 @@ export async function buildCoreFlywheelRunReceipt({
   const spineHash = phaseHash(phases[SPINE_PHASE]);
   if (!spineHash) return fail("spine_phase_missing_or_malformed");
 
-  const privateKeyPem = await loadPrivateKey(demaHome);
-  const publicKeyPem = await loadPublicKey(demaHome);
+  const activePair = await loadActiveKeyPair(demaHome);
+  const privateKeyPem = activePair.ok ? activePair.private_key_pem : null;
+  const publicKeyPem = activePair.ok ? activePair.public_key_pem : null;
   if (!privateKeyPem || !publicKeyPem) return fail("no_authorship_key");
   const fp = ed25519FingerprintFromPem(publicKeyPem);
   if (fp.error) return fail(fp.error);

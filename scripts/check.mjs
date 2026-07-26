@@ -1,8 +1,27 @@
 import { execFileSync } from "node:child_process";
+import { writeSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import {
+  CHECK_GATE_EVIDENCE_FD_ENV,
+  checkGateComplete,
+  checkGateFailure,
+  checkGateStart,
+} from "./ci/check-gate-evidence.mjs";
+
+function writeCheckGateEvidence(record) {
+  const rawFd = process.env[CHECK_GATE_EVIDENCE_FD_ENV];
+  if (rawFd === undefined) return;
+  const fd = /^\d+$/.test(rawFd) ? Number(rawFd) : Number.NaN;
+  if (!Number.isSafeInteger(fd) || fd < 3) {
+    throw new Error(`${CHECK_GATE_EVIDENCE_FD_ENV} must name an inherited fd >= 3`);
+  }
+  writeSync(fd, `${JSON.stringify(record)}\n`);
+}
 
 export const commands = [
   ["node", ["scripts/review/env-hygiene-check.mjs", "--strict"]],
+  ["node", ["scripts/review/identity-pair-coherence-check.mjs"]],
+  ["node", ["scripts/review/identity-recovery-refuse-report-check.mjs"]],
   ["node", ["scripts/review/cli-consent-matrix-check.mjs"]],
   ["node", ["scripts/review/operator-bridge-threat-model-check.mjs"]],
   ["node", ["scripts/review/consent-bridge-parity-check.mjs"]],
@@ -122,7 +141,20 @@ export const commands = [
   ["node", ["scripts/claims/claim-register-check.mjs"]],
   ["node", ["scripts/claims/generate-public-claims.mjs", "--check"]],
   ["node", ["scripts/claims/claim-corpus-gate.mjs"]],
-  ["node", ["--test", "--test-reporter=tap"]],
+  // Classify the exact auto-discovery command against its own fresh log before
+  // returning to the aggregate owner. A proved environmental exit 1 normalizes
+  // to zero here, so every later gate still runs; all other exits stay fatal.
+  [
+    "node",
+    [
+      "scripts/ci/run-with-classifier.mjs",
+      "--temp-log",
+      "--",
+      "node",
+      "--test",
+      "--test-reporter=tap",
+    ],
+  ],
   ["npm", ["run", "coverage"]],
   ["node", ["apps/cli/src/index.js", "welcome"]],
   ["node", ["apps/cli/src/index.js", "help"]],
@@ -300,16 +332,50 @@ export const commands = [
   ["node", ["scripts/perf-bench.mjs"]],
 ];
 
-export function runChecks(checks = commands) {
-  for (const entry of checks) {
+export function runChecks(
+  checks = commands,
+  {
+    execute = execFileSync,
+    log = console.log,
+    evidence = writeCheckGateEvidence,
+  } = {},
+) {
+  evidence(checkGateStart(checks.length));
+  for (const [index, entry] of checks.entries()) {
     const [bin, args, extraEnv] = entry;
-    console.log(`> ${bin} ${args.join(" ")}`);
-    const options = { stdio: "inherit" };
+    log(`> ${bin} ${args.join(" ")}`);
+    const childEnv = { ...process.env };
     if (extraEnv && typeof extraEnv === "object") {
-      options.env = { ...process.env, ...extraEnv };
+      Object.assign(childEnv, extraEnv);
     }
-    execFileSync(bin, args, options);
+    delete childEnv[CHECK_GATE_EVIDENCE_FD_ENV];
+    const options = { stdio: "inherit", env: childEnv };
+    try {
+      execute(bin, args, options);
+    } catch (error) {
+      const normalNonzeroExit =
+        Number.isInteger(error?.status) &&
+        error.status > 0 &&
+        !error?.signal;
+      const exitCode = normalNonzeroExit ? error.status : 1;
+      try {
+        evidence(
+          checkGateFailure({
+            index,
+            command: [bin, ...args],
+            exitCode,
+            maskPolicy: "authoritative",
+          }),
+        );
+      } catch {
+        log(
+          "[DEMA_CHECK_GATE_EVIDENCE_ERROR] failure evidence could not be written; the classifier will fail closed",
+        );
+      }
+      throw error;
+    }
   }
+  evidence(checkGateComplete(checks.length));
 }
 
 if (

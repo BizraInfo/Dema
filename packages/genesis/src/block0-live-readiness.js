@@ -3,7 +3,7 @@
 // Honest finding this kernel encodes (verified against the producers
 // 2026-06-04): a Block0 seal is intrinsically a SIGNING ceremony. Eleven of the
 // twelve prerequisite slots require the operator's PRIVATE Ed25519 key to
-// PRODUCE their signed proof (each producer calls loadPrivateKey + signPayload).
+// PRODUCE their signed proof (each producer calls loadActiveKeyPair + signPayload).
 // Only `poi_rule` is verifier-only (a canonical rule-identity recognition, no
 // signing). So there is NO read-only path to a real 12/12 sealable verdict —
 // producing the proofs IS the operator-only ceremony.
@@ -27,7 +27,7 @@ export const BLOCK0_LIVE_READINESS_SCHEMA =
   "bizra.dema.block0_live_readiness.v0.1";
 
 // Per-slot signing requirement, verified against each producer's source
-// 2026-06-04: every producer signs (loadPrivateKey + signPayload) except
+// 2026-06-04: every producer signs (loadActiveKeyPair + signPayload) except
 // poi_rule, which has no producer and is recognized by canonical-rule lookup.
 // Slot IDs align with BLOCK0_PREREQUISITE_SLOTS from block0-manifest-verifier.js.
 const SLOT_NEEDS_PRIVATE_KEY = Object.freeze({

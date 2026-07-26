@@ -271,6 +271,9 @@ Orientation:
                     LOCAL_ONLY read-only re-derivation of a founder-impact receipt; no model/network/mint
   dema authorship key init [--json]
                     Generate and persist Ed25519 keypair (requires --consent)
+  dema authorship key migrate [--json]
+                    One-time explicit migration of a legacy flat keypair into the
+                    immutable generation store + atomic active pointer (requires --consent)
   dema authorship sign <artifact-path> [--json]
                     Sign a local artifact (requires --consent)
   dema authorship latest [--json]

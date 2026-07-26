@@ -8,7 +8,7 @@
 //
 // Reuses (no new crypto, no new schema, no new consent kernel):
 // - signPayload                  packages/receipts/src/authorship-signature.js
-// - loadPrivateKey/loadPublicKey packages/receipts/src/authorship-key-store.js
+// - loadActiveKeyPair packages/receipts/src/authorship-key-store.js
 // - sha256, stableStringify      packages/consent/src/consent-common.js
 //
 // SCOPE (this slice):
@@ -21,8 +21,7 @@
 import { createPublicKey } from "node:crypto";
 import { signPayload } from "../../receipts/src/authorship-signature.js";
 import {
-  loadPrivateKey,
-  loadPublicKey,
+  loadActiveKeyPair,
 } from "../../receipts/src/authorship-key-store.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 import { verifyConsentProof } from "../../receipts/src/consent-proof.js";
@@ -261,11 +260,12 @@ export async function buildBlock0Manifest({
   }
 
   // ── (4) Load the operator's signing keypair from disk ────────────
-  const privateKeyPem = await loadPrivateKey(demaHome);
+  const activePair = await loadActiveKeyPair(demaHome);
+  const privateKeyPem = activePair.ok ? activePair.private_key_pem : null;
   if (!privateKeyPem) {
     return fail("no_authorship_key");
   }
-  const publicKeyPem = await loadPublicKey(demaHome);
+  const publicKeyPem = activePair.ok ? activePair.public_key_pem : null;
   if (!publicKeyPem) {
     return fail("no_authorship_key");
   }

@@ -23,8 +23,7 @@ import {
   verifyPayload,
 } from "../../receipts/src/authorship-signature.js";
 import {
-  loadPrivateKey,
-  loadPublicKey,
+  loadActiveKeyPair,
 } from "../../receipts/src/authorship-key-store.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 import { verifyConvergentTaskChain } from "./flywheel-task-convergence.js";
@@ -107,8 +106,9 @@ export async function attestConvergence({
     return fail("not_convergent", { convergence });
   }
 
-  const privateKeyPem = await loadPrivateKey(demaHome);
-  const publicKeyPem = await loadPublicKey(demaHome);
+  const activePair = await loadActiveKeyPair(demaHome);
+  const privateKeyPem = activePair.ok ? activePair.private_key_pem : null;
+  const publicKeyPem = activePair.ok ? activePair.public_key_pem : null;
   if (!privateKeyPem || !publicKeyPem) {
     return fail("no_authorship_key");
   }

@@ -23,8 +23,7 @@ import {
   verifyPayload,
 } from "../../receipts/src/authorship-signature.js";
 import {
-  loadPrivateKey,
-  loadPublicKey,
+  loadActiveKeyPair,
 } from "../../receipts/src/authorship-key-store.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 import {
@@ -113,8 +112,9 @@ export async function buildKeyconsentIntegrationProof({
   ) {
     return fail("created_at_iso_required");
   }
-  const privateKeyPem = await loadPrivateKey(demaHome);
-  const publicKeyPem = await loadPublicKey(demaHome);
+  const activePair = await loadActiveKeyPair(demaHome);
+  const privateKeyPem = activePair.ok ? activePair.private_key_pem : null;
+  const publicKeyPem = activePair.ok ? activePair.public_key_pem : null;
   if (!privateKeyPem || !publicKeyPem) return fail("no_authorship_key");
 
   const fp = ed25519FingerprintFromPem(publicKeyPem);

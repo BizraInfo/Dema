@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   readdirSync,
   symlinkSync,
   writeFileSync,
@@ -164,29 +165,40 @@ describe("initAuthorshipKey — symlink containment adversarial", () => {
 // ── no-clobber / re-init ──────────────────────────────────────────────────
 
 describe("initAuthorshipKey — no-clobber adversarial", () => {
-  it("force:true with consent replaces key and emits new fingerprint", async () => {
+  // Finding #2 (ADR-047): init ESTABLISHES the first generation; it must never
+  // REPLACE an active one, even with force:true. Identity replacement is
+  // exclusive to a governed rotation transaction.
+  it("force:true CANNOT replace an existing active generation", async () => {
     const home = freshHome();
     const first = await initAuthorshipKey({
       consent: KEY_INIT_CONSENT_PHRASE,
       demaHome: home,
     });
     assert.equal(first.initialized, true);
+    const pointerBefore = JSON.parse(
+      readFileSync(join(home, "keys", "active-key.json"), "utf8"),
+    );
 
     const second = await initAuthorshipKey({
       consent: KEY_INIT_CONSENT_PHRASE,
       force: true,
       demaHome: home,
     });
-    assert.equal(second.initialized, true);
-    assert.equal(second.boundary.key_persisted, true);
-    // A new keypair should produce a different fingerprint (astronomically likely)
-    assert.notEqual(
-      second.public_key_fingerprint,
+    assert.equal(second.initialized, false);
+    assert.equal(second.error, "key_already_exists");
+
+    // Active pointer + fingerprint are UNCHANGED — no new authoritative generation.
+    const pointerAfter = JSON.parse(
+      readFileSync(join(home, "keys", "active-key.json"), "utf8"),
+    );
+    assert.deepEqual(pointerAfter, pointerBefore);
+    assert.equal(
+      pointerAfter.generation_fingerprint,
       first.public_key_fingerprint,
     );
   });
 
-  it("force:true result envelope contains no private key material", async () => {
+  it("force:true on a FRESH home (no pointer) initializes without leaking key material", async () => {
     const home = freshHome();
     const result = await initAuthorshipKey({
       consent: KEY_INIT_CONSENT_PHRASE,
@@ -197,11 +209,11 @@ describe("initAuthorshipKey — no-clobber adversarial", () => {
     const json = JSON.stringify(result);
     assert.ok(
       !json.includes("BEGIN PRIVATE KEY"),
-      "no PEM private header in force-reinit envelope",
+      "no PEM private header in init envelope",
     );
     assert.ok(
       !json.includes("private_key_pem"),
-      "no raw key field in force-reinit envelope",
+      "no raw key field in init envelope",
     );
   });
 });
@@ -211,13 +223,12 @@ describe("initAuthorshipKey — no-clobber adversarial", () => {
 describe("loadPrivateKey — adversarial", () => {
   it("returns null for a zero-permission (unreadable) private key file", async () => {
     const home = freshHome();
-    await initAuthorshipKey({
+    const inited = await initAuthorshipKey({
       consent: KEY_INIT_CONSENT_PHRASE,
       demaHome: home,
     });
-    const paths = keyPaths(home);
     // make unreadable by owner — open(O_RDONLY) will fail
-    chmodSync(paths.privateKey, 0o000);
+    chmodSync(inited.private_key_path, 0o000);
     const result = await loadPrivateKey(home);
     assert.equal(result, null);
   });
@@ -261,12 +272,11 @@ describe("loadPublicKey — adversarial", () => {
 
   it("returns null for an unreadable public key file", async () => {
     const home = freshHome();
-    await initAuthorshipKey({
+    const inited = await initAuthorshipKey({
       consent: KEY_INIT_CONSENT_PHRASE,
       demaHome: home,
     });
-    const paths = keyPaths(home);
-    chmodSync(paths.publicKey, 0o000);
+    chmodSync(inited.public_key_path, 0o000);
     assert.equal(await loadPublicKey(home), null);
   });
 });

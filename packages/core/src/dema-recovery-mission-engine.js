@@ -15,7 +15,7 @@
 // codes. The scaffold auto-registers this kernel's path in
 // CANONICAL_JSON_V1_REGISTERED_CONSUMERS (scripts/review/canonical-json-v1-check.mjs);
 // review that one-line diff in this slice's PR.
-import { CANONICAL_JSON_V1_ALGORITHM } from "../../canon/src/canonical-json-v1.js";
+import { CANONICAL_JSON_V1_ALGORITHM, canonicalizeJsonV1 } from "../../canon/src/canonical-json-v1.js";
 import { sha256CanonicalJsonV1 } from "../../canon/src/sha256-canonical-json-v1.js";
 
 export const DEMA_RECOVERY_MISSION_ENGINE_SCHEMA = "bizra.dema.dema_recovery_mission_engine.v0.1";
@@ -458,6 +458,22 @@ export function buildDemaRecoveryMissionEnginePayload(input) {
 // checked; independent authenticity is NOT proved — an attacker controlling
 // every semantically permitted field and recomputing the hash still requires an
 // external signature or anchor to detect (a later slice).
+
+// Canonical structural equality for object-valued state projections
+// (VERIFIABLE-ENVELOPE family, slice 1D). Reference identity only answers
+// "same in-memory object" — a serialized proof parsed in another process
+// carries equal meaning in distinct objects. Canonical JSON v1 text is the
+// repository's ONE byte contract for structural meaning; equality of that
+// text is the projection rule. Noncanonical values fail closed as unequal.
+function canonicalProjectionEqual(left, right) {
+  if (left === right) return true;
+  try {
+    return canonicalizeJsonV1(left) === canonicalizeJsonV1(right);
+  } catch {
+    return false;
+  }
+}
+
 export function verifyDemaRecoveryMissionEngine(payload) {
   const blocked_by = [];
   if (!payload || typeof payload !== "object") {
@@ -487,8 +503,12 @@ export function verifyDemaRecoveryMissionEngine(payload) {
   }
   if (payload.mission_state !== null && payload.mission_state !== undefined && typeof payload.mission_state === "object") {
     if (payload.current_state !== payload.mission_state.current_state) blocked_by.push("current_state_mismatch");
-    if (payload.chronology !== (payload.mission_state.chronology ?? null)) blocked_by.push("chronology_mismatch");
-    if (payload.seal_receipt !== (payload.mission_state.seal_receipt ?? null)) blocked_by.push("seal_receipt_mismatch");
+    if (!canonicalProjectionEqual(payload.chronology, payload.mission_state.chronology ?? null)) {
+      blocked_by.push("chronology_mismatch");
+    }
+    if (!canonicalProjectionEqual(payload.seal_receipt, payload.mission_state.seal_receipt ?? null)) {
+      blocked_by.push("seal_receipt_mismatch");
+    }
   }
   let rederived = null;
   try {
