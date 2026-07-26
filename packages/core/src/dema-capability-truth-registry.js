@@ -91,6 +91,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_METRICS_BASELINE_1A",
   "DEMA_RECOVERY_MISSION_ENGINE_1A",
   "DEMA_RECOVERY_MISSION_GATHERER_1B",
+  "DEMA_MISSION_WORKER_HANDOFF_0A",
   "NODE0_MODEL_SWAP_INVARIANCE_1A",
 ]);
 
@@ -2372,6 +2373,35 @@ function defaultCapabilityRows() {
         "operator mutation",
         "unattended runtime",
         "content read",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_MISSION_WORKER_HANDOFF_0A",
+      truth_label: "DEMA_MISSION_WORKER_HANDOFF_PREVIEW_MEASURED_REPO",
+      summary:
+        "Minimum provable model-substitution case: a declared mission changes worker/model and records the swap as ONE deterministic hash-chained MISSION_CHECKPOINT in the existing Node0 realm event log — no parallel state machine, no model router, no persistence, no new authority.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-mission-worker-handoff.js"],
+        test_paths: ["tests/dema-mission-worker-handoff.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-mission-worker-handoff-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_MISSION_WORKER_HANDOFF_0A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_MISSION_WORKER_HANDOFF_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, worker selection/invocation, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Exact-consent deterministic kernel compiles a worker replacement over an INJECTED Node0 realm event history into one hash-chained MISSION_CHECKPOINT (checkpoint_type WORKER_HANDOFF) via the shipped realm event hasher/reducer: it is blocked unless the mission is already declared, the worker actually changes, every before/after invariant hash (mission_contract, acceptance_criteria, consent_scope, source_checkpoint) is equal, consent is an exact byte match, evidence/prohibited-effect sets are well-formed, and authority_delta is zero. The verifier replays the whole returned history and rejects a forged-and-rehashed authority increase, a forged-and-rehashed false continuity proof, extra fields on the envelope/event/payload, non-normalized set ordering, or a non-canonical all-false boundary. Proves mission continuity survives a model/worker swap while mission contract, acceptance, consent scope, source checkpoint, and authority remain invariant.",
+      what_this_does_not_prove:
+        "It does not prove durable event-log persistence, restart recovery, automatic failover, worker selection, model invocation, or independent authenticity — internal replay integrity is not an external anchor. No worker is selected or invoked; the realm reducer records the checkpoint seq but does not yet project current_worker into derived state. This is a minimum continuity proof, not production failover.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
       ],
     }),
     capability({

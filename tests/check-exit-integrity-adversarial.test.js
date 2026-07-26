@@ -301,11 +301,15 @@ test("A7 direct TAP is isolated and a later authoritative gate executes", () => 
     "--temp-log",
   ]);
   assert.equal(isolated[1].includes("--log"), false);
-  // NODE0-MODEL-SWAP-INVARIANCE-1A adds one review gate at index 82, ahead of
-  // the isolated TAP command — so the pinned length and both indices move by one.
-  assert.equal(commands.length, 198);
-  assert.equal(commands.indexOf(isolated), 122);
-  assert.deepEqual(commands[123].slice(0, 2), ["npm", ["run", "coverage"]]);
+  // NODE0-MODEL-SWAP-INVARIANCE-1A and DEMA-MISSION-WORKER-HANDOFF-0A each add
+  // one review gate ahead of the isolated TAP command. Both slices independently
+  // moved these pins by one to 198/122/123; with BOTH gates on main the real
+  // values are 199/123/124. The two branches agreed with each other and were
+  // both wrong — the conflict here was only the comment line, so git merged the
+  // numbers silently. Derived by importing `commands` from the merged check.mjs.
+  assert.equal(commands.length, 199);
+  assert.equal(commands.indexOf(isolated), 123);
+  assert.deepEqual(commands[124].slice(0, 2), ["npm", ["run", "coverage"]]);
 
   const evidence = [];
   const calls = [];
