@@ -330,7 +330,13 @@ export function evaluateAgainstContract(output, contract) {
     for (const [k, v] of Object.entries(c.expected)) {
       let ok;
       try {
-        ok = isPlainObject(output) && canonicalizeJsonV1(ownField(output, k) ?? null) === canonicalizeJsonV1(v ?? null);
+        // Presence and value are separate questions. `ownField(...) ?? null`
+        // collapsed them: an ABSENT field canonicalised to "null" and satisfied
+        // a declared `expected: { answer: null }`, so a predicate was met by a
+        // field the model never produced. Both sides are now uncoerced, and an
+        // own field holding an unrepresentable value throws into the catch.
+        const present = isPlainObject(output) && Object.hasOwn(output, k);
+        ok = present && canonicalizeJsonV1(ownField(output, k)) === canonicalizeJsonV1(v);
       } catch {
         ok = false;
       }

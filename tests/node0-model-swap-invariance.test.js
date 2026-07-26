@@ -897,6 +897,41 @@ test("T43 an undefined-yielding accessor is read once per call and escapes nothi
   assert.ok(!payload.accepted_output_hashes.includes(null), "the accepted set never admits a null hash");
 });
 
+test("T44 an absent field is not the value null", async () => {
+  // The same manufacture-meaning defect as T42, one level down. The expected
+  // comparison read `ownField(output, k) ?? null`, so an ABSENT field
+  // canonicalised to "null" and satisfied a declared `expected: { answer: null }`
+  // — a predicate met by a field the model never produced. Presence and value
+  // are different questions and must be asked separately.
+  const EXPECT_NULL = { expected: { answer: null } };
+
+  const absent = evaluateAgainstContract({ other: 1 }, EXPECT_NULL);
+  assert.equal(absent.verdict, "REJECT", "a field that was never produced cannot satisfy a predicate");
+  assert.deepEqual(absent.failed_requirements, ["mismatch:answer"]);
+
+  // A DECLARED null is a real canonical value and must still match.
+  assert.equal(evaluateAgainstContract({ answer: null }, EXPECT_NULL).verdict, "ACCEPT", "an explicit null field matches a declared null");
+
+  // Presence alone is not enough — the value must still agree.
+  assert.equal(evaluateAgainstContract({ answer: "42" }, EXPECT_NULL).verdict, "REJECT", "present but different is still a mismatch");
+  assert.equal(evaluateAgainstContract({ other: 1 }, { expected: { answer: "42" } }).verdict, "REJECT", "control: absent vs a non-null expectation");
+
+  // And it holds through the attestation, not only the evaluator.
+  const { sha256CanonicalJsonV1 } = await import("../packages/canon/src/sha256-canonical-json-v1.js");
+  const payload = buildNode0ModelSwapInvariancePayload({
+    task: { task_id: "m", acceptance_contract: EXPECT_NULL },
+    candidates: [
+      { model_id: "a", output: { other: 1 } },
+      { model_id: "b", output: { answer: null } },
+    ],
+  });
+  const rowA = payload.candidates.find((c) => c.model_id === "a");
+  const rowB = payload.candidates.find((c) => c.model_id === "b");
+  assert.equal(rowA.verdict, "REJECT", "the absent-field candidate is refused in the attestation too");
+  assert.equal(rowB.verdict, "ACCEPT", "the declared-null candidate is accepted");
+  assert.deepEqual(payload.accepted_output_hashes, [sha256CanonicalJsonV1({ answer: null })], "only the honest value is in the accepted set");
+});
+
 test("T16 the honest fixtures stay green after hardening", () => {
   assert.equal(evaluateAgainstContract(GOOD_OUTPUT, CONTRACT).verdict, "ACCEPT");
   assert.equal(planNode0ModelSwapInvariance({ consent: GO, input: VALID }).eligible, true);
