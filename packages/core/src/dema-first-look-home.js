@@ -5,6 +5,7 @@
 import { readFile, access, constants as fsConstants } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { hasAuthorshipKey } from "../../receipts/src/authorship-key-store.js";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
@@ -110,8 +111,7 @@ function buildRecommendedNextStep(profile, keyPresent) {
 export async function gatherFirstLookContext({ demaHome, now = new Date() } = {}) {
   const home = demaHome || process.env.DEMA_HOME || join(homedir(), ".dema");
   const profile = await readProfile(home);
-  const keyPath = join(home, "keys", "node0-ed25519.pub.pem");
-  const keyPresent = await fileReadable(keyPath);
+  const keyPresent = await hasAuthorshipKey(home);
   return Object.freeze({
     dema_home: home,
     profile,

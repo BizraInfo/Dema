@@ -8,7 +8,7 @@
 //
 // Reuses (no duplication):
 // - signPayload, verifyPayload      packages/receipts/src/authorship-signature.js
-// - loadPrivateKey, loadPublicKey   packages/receipts/src/authorship-key-store.js
+// - loadActiveKeyPair   packages/receipts/src/authorship-key-store.js
 // - sha256, stableStringify         packages/consent/src/consent-common.js
 //
 // Spec reference: docs/security/KEYCONSENT_PREFLIGHT.md (commit 68b9a78,
@@ -23,7 +23,7 @@
 
 import { randomBytes, createPublicKey } from "node:crypto";
 import { signPayload, verifyPayload } from "./authorship-signature.js";
-import { loadPrivateKey, loadPublicKey } from "./authorship-key-store.js";
+import { loadActiveKeyPair } from "./authorship-key-store.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 
 export const CONSENT_PROOF_SCHEMA = "bizra.dema.consent_proof.v0.1";
@@ -77,11 +77,12 @@ export async function buildConsentProof({
     return fail("action_scope_invalid");
   }
 
-  const privateKeyPem = await loadPrivateKey(demaHome);
+  const activePair = await loadActiveKeyPair(demaHome);
+  const privateKeyPem = activePair.ok ? activePair.private_key_pem : null;
   if (!privateKeyPem) {
     return fail("no_authorship_key");
   }
-  const publicKeyPem = await loadPublicKey(demaHome);
+  const publicKeyPem = activePair.ok ? activePair.public_key_pem : null;
 
   const nonceHex =
     typeof nonce === "string" && nonce.length > 0

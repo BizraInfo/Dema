@@ -1,39 +1,15 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import {
   classifyFailures,
-  evaluateLogFreshness,
   KNOWN_MASKABLE,
 } from "../scripts/ci/classify-known-harness-failures.mjs";
 
-const CLASSIFIER = fileURLToPath(
-  new URL("../scripts/ci/classify-known-harness-failures.mjs", import.meta.url),
-);
-
-// Run the classifier CLI against a --log path; capture exit code + combined output.
-function runClassifier(logPath) {
-  try {
-    const stdout = execFileSync("node", [CLASSIFIER, "--log", logPath], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    return { code: 0, output: stdout };
-  } catch (e) {
-    return {
-      code: e.status ?? 1,
-      output: `${e.stdout ?? ""}${e.stderr ?? ""}`,
-    };
-  }
-}
-
 describe("G8 classifier — hardened (per-failure allowlist)", () => {
   it("clean run (0 fail, 0 not-ok) → PASS", () => {
-    const r = classifyFailures("# tests 10\n# pass 10\n# fail 0\n");
+    const r = classifyFailures(
+      "TAP version 13\nok 1 - green\n1..1\n# tests 1\n# pass 1\n# fail 0\n",
+    );
     assert.equal(r.cleanRun, true);
     assert.equal(r.verdict, "PASS");
     assert.equal(r.unrecognized.length, 0);
@@ -41,12 +17,14 @@ describe("G8 classifier — hardened (per-failure allowlist)", () => {
 
   it("only the artifact-011 sandbox failure (with EROFS cause) → masked (recognized), PASS", () => {
     const log = [
-      "not ok 137 - isolated preflight CLI clears preview ceremony on fresh home",
+      "TAP version 13",
+      "not ok 1 - isolated preflight CLI clears preview ceremony on fresh home",
       "  ---",
       "  error: 'EROFS: read-only file system, mkdtemp'",
       "  ...",
-      "# tests 4496",
-      "# pass 4495",
+      "1..1",
+      "# tests 1",
+      "# pass 0",
       "# fail 1",
     ].join("\n");
     const r = classifyFailures(log);
@@ -76,14 +54,18 @@ describe("G8 classifier — hardened (per-failure allowlist)", () => {
 
   it("genuinely environmental failures (allowlisted name + env cause in block) → masked, PASS", () => {
     const log = [
-      "not ok 137 - isolated preflight CLI clears preview ceremony on fresh home",
+      "TAP version 13",
+      "not ok 1 - isolated preflight CLI clears preview ceremony on fresh home",
       "  ---",
       "  error: 'EROFS: read-only file system'",
       "  ...",
-      "not ok 200 - baseline-l1-diff emits canonical schema + truth label + snapshot_diff mode",
+      "not ok 2 - baseline-l1-diff emits canonical schema + truth label + snapshot_diff mode",
       "  ---",
       "  error: 'ENOENT: no such file or directory, open /tmp/baseline-diff-x/artifact.json'",
       "  ...",
+      "1..2",
+      "# tests 2",
+      "# pass 0",
       "# fail 2",
     ].join("\n");
     const r = classifyFailures(log);
@@ -134,6 +116,186 @@ describe("G8 classifier — hardened (per-failure allowlist)", () => {
     assert.equal(r.verdict, "FAIL");
   });
 
+  it("fails closed when a top-level not-ok contradicts # fail 0", () => {
+    const r = classifyFailures(
+      [
+        "TAP version 13",
+        "not ok 1 - isolated preflight CLI clears preview ceremony on fresh home",
+        "  EROFS: read-only file system, mkdtemp '/home/x'",
+        "1..1",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+      ].join("\n"),
+    );
+    assert.equal(r.verdict, "FAIL");
+    assert.ok(r.inconsistentFailureCount > 0);
+  });
+
+  it("fails closed when # fail reports more failures than were parsed", () => {
+    const r = classifyFailures(
+      [
+        "TAP version 13",
+        "not ok 1 - isolated preflight CLI clears preview ceremony on fresh home",
+        "  EROFS: read-only file system, mkdtemp '/home/x'",
+        "ok 2 - second point emitted",
+        "1..2",
+        "# tests 2",
+        "# pass 0",
+        "# fail 2",
+      ].join("\n"),
+    );
+    assert.equal(r.uncapturedFailures, 1);
+    assert.equal(r.verdict, "FAIL");
+  });
+
+  it("fails closed when an earlier complete TAP run precedes a truncated one", () => {
+    const r = classifyFailures(
+      [
+        "TAP version 13",
+        "ok 1 - green",
+        "1..1",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "TAP version 13",
+        "not ok 1 - isolated preflight CLI clears preview ceremony on fresh home",
+        "  EROFS: read-only file system, mkdtemp '/home/x'",
+      ].join("\n"),
+    );
+    assert.equal(r.complete, false);
+    assert.equal(r.verdict, "FAIL");
+  });
+
+  it("does not let a trailer before the final not-ok complete that failure", () => {
+    const r = classifyFailures(
+      [
+        "TAP version 13",
+        "1..1",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "not ok 1 - isolated preflight CLI clears preview ceremony on fresh home",
+        "  EROFS: read-only file system, mkdtemp '/home/x'",
+      ].join("\n"),
+    );
+    assert.equal(r.complete, false);
+    assert.equal(r.verdict, "FAIL");
+  });
+
+  it("binds failure counts per TAP run instead of balancing them globally", () => {
+    const r = classifyFailures(
+      [
+        "TAP version 13",
+        "not ok 1 - isolated preflight CLI clears preview ceremony on fresh home",
+        "  EROFS: read-only file system, mkdtemp '/home/x'",
+        "1..1",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "TAP version 13",
+        "ok 1 - second run body",
+        "1..1",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+      ].join("\n"),
+    );
+    assert.equal(r.inconsistentFailureCount, 2);
+    assert.equal(r.verdict, "FAIL");
+  });
+
+  it("rejects a top-level not-ok injected after the run plan", () => {
+    const r = classifyFailures(
+      [
+        "TAP version 13",
+        "ok 1 - actual point",
+        "1..1",
+        "not ok 1 - isolated preflight CLI clears preview ceremony on fresh home",
+        "  EROFS: read-only file system, mkdtemp '/home/x'",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+      ].join("\n"),
+    );
+    assert.equal(r.complete, false);
+    assert.equal(r.verdict, "FAIL");
+  });
+
+  it("rejects a top-level not-ok before a versioned run", () => {
+    const r = classifyFailures(
+      [
+        "not ok 1 - isolated preflight CLI clears preview ceremony on fresh home",
+        "  EROFS: read-only file system, mkdtemp '/home/x'",
+        "TAP version 13",
+        "ok 1 - actual point",
+        "1..1",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+      ].join("\n"),
+    );
+    assert.equal(r.complete, false);
+    assert.equal(r.verdict, "FAIL");
+  });
+
+  it("never allowlists an indented nested not-ok", () => {
+    const r = classifyFailures(
+      [
+        "TAP version 13",
+        "ok 1 - top-level point",
+        "    not ok 1 - isolated preflight CLI clears preview ceremony on fresh home",
+        "      EROFS: read-only file system, mkdtemp '/home/x'",
+        "1..1",
+        "# tests 2",
+        "# pass 2",
+        "# fail 0",
+      ].join("\n"),
+    );
+    assert.equal(r.recognized.length, 0);
+    assert.equal(r.unrecognized.length, 1);
+    assert.equal(r.verdict, "FAIL");
+  });
+
+  it("parses a bare top-level not-ok as an unrecognized failure", () => {
+    const r = classifyFailures(
+      [
+        "TAP version 13",
+        "not ok 1",
+        "1..1",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+      ].join("\n"),
+    );
+    assert.equal(r.notOk.length, 1);
+    assert.equal(r.unrecognized.length, 1);
+    assert.equal(r.verdict, "FAIL");
+  });
+
+  it("requires a coherent full TAP trailer, not one plan or summary field", () => {
+    for (const partial of ["1..1\n", "# tests 1\n", "# fail 0\n"]) {
+      const r = classifyFailures(partial);
+      assert.equal(r.complete, false, partial);
+      assert.equal(r.verdict, "FAIL", partial);
+    }
+  });
+
+  it("fails when the plan declares a top-level TAP point that was never emitted", () => {
+    const r = classifyFailures(
+      [
+        "TAP version 13",
+        "ok 1 - only emitted test",
+        "1..2",
+        "# tests 2",
+        "# pass 1",
+        "# fail 0",
+      ].join("\n"),
+    );
+    assert.equal(r.complete, false);
+    assert.equal(r.verdict, "FAIL");
+  });
+
   // PROOF-GATE-TEETH-HARDENING-1A · defect 2 (cause-bound masking)
   // The old classifier masked by test NAME alone: pattern /baseline-l1-diff/i
   // matched ALL baseline-l1-diff tests — including correctness tests like
@@ -159,12 +321,14 @@ describe("G8 classifier — hardened (per-failure allowlist)", () => {
 
   it("DEFECT-2: a failure WITH the environmental cause in its block IS masked", () => {
     const log = [
-      "not ok 137 - isolated preflight CLI clears preview ceremony on fresh home",
+      "TAP version 13",
+      "not ok 1 - isolated preflight CLI clears preview ceremony on fresh home",
       "  ---",
       "  error: 'EROFS: read-only file system, mkdtemp'",
       "  ...",
-      "# tests 4496",
-      "# pass 4495",
+      "1..1",
+      "# tests 1",
+      "# pass 0",
       "# fail 1",
     ].join("\n");
     const r = classifyFailures(log);
@@ -186,10 +350,35 @@ describe("G8 classifier — hardened (per-failure allowlist)", () => {
     assert.equal(r.verdict, "FAIL");
   });
 
-  it("DEFECT-3: a complete run with a TAP plan line (1..N, N>0) is recognized as complete", () => {
-    const r = classifyFailures(["TAP version 13", "ok 1 - a", "ok 2 - b", "1..2"].join("\n"));
+  it("DEFECT-3: a coherent full Node TAP trailer is recognized as complete", () => {
+    const r = classifyFailures(
+      [
+        "TAP version 13",
+        "ok 1 - a",
+        "ok 2 - b",
+        "1..2",
+        "# tests 2",
+        "# pass 2",
+        "# fail 0",
+      ].join("\n"),
+    );
     assert.equal(r.complete, true);
     assert.equal(r.cleanRun, true);
+    assert.equal(r.verdict, "PASS");
+  });
+
+  it("accepts Node trailers where nested tests make # tests exceed the top-level plan", () => {
+    const r = classifyFailures(
+      [
+        "TAP version 13",
+        "ok 1 - top-level suite",
+        "1..1",
+        "# tests 2",
+        "# pass 2",
+        "# fail 0",
+      ].join("\n"),
+    );
+    assert.equal(r.complete, true);
     assert.equal(r.verdict, "PASS");
   });
 
@@ -223,85 +412,5 @@ describe("G8 classifier — hardened (per-failure allowlist)", () => {
     const elapsed = Date.now() - t0;
     assert.ok(elapsed < 500, `parse took ${elapsed}ms — ReDoS regression`);
     assert.equal(r.notOk[0].name, "x"); // name extracted + trimmed
-  });
-});
-
-// GO: G8-HARDEN-TEST-LOG-FRESHNESS
-// Law: a verifier must verify its evidence freshness before verifying the result.
-// A stale/empty/unbound log must FAIL CLOSED — never be classified as a clean run.
-describe("G8 classifier — log freshness binding", () => {
-  it("empty content is not bound (tee failed → no captured output)", () => {
-    const r = evaluateLogFreshness("");
-    assert.equal(r.bound, false);
-  });
-
-  it("whitespace-only content is not bound", () => {
-    const r = evaluateLogFreshness("   \n\t\n  ");
-    assert.equal(r.bound, false);
-  });
-
-  it("content with no TAP markers is not bound (stale/garbage/truncated)", () => {
-    const r = evaluateLogFreshness(
-      "Read-only file system\nsome unrelated text\n",
-    );
-    assert.equal(r.bound, false);
-  });
-
-  it("a real node --test summary is bound", () => {
-    const log = [
-      "ok 1 - something passed",
-      "not ok 2 - something failed",
-      "# tests 2",
-      "# pass 1",
-      "# fail 1",
-    ].join("\n");
-    assert.equal(evaluateLogFreshness(log).bound, true);
-  });
-
-  it("a TAP plan line alone is bound", () => {
-    assert.equal(evaluateLogFreshness("1..42\nok 1 - a\n").bound, true);
-  });
-
-  it("CLI fails closed (exit 1 + freshness message) when the log file is missing", () => {
-    const missing = join(tmpdir(), "g8-does-not-exist-xyz.log");
-    const { code, output } = runClassifier(missing);
-    assert.notEqual(code, 0);
-    assert.match(output, /\[G8 FRESHNESS\]/);
-  });
-
-  it("CLI fails closed on an EMPTY log instead of reporting a clean run (the stale-/tmp trap)", () => {
-    const dir = mkdtempSync(join(tmpdir(), "g8-fresh-"));
-    try {
-      const empty = join(dir, "empty.log");
-      writeFileSync(empty, "");
-      const { code, output } = runClassifier(empty);
-      assert.notEqual(code, 0);
-      assert.match(output, /\[G8 FRESHNESS\]/);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("CLI still classifies a fresh, valid log correctly (artifact-011 only → exit 0)", () => {
-    const dir = mkdtempSync(join(tmpdir(), "g8-fresh-"));
-    try {
-      const logPath = join(dir, "run.log");
-      writeFileSync(
-        logPath,
-        [
-          "not ok 137 - isolated preflight CLI clears preview ceremony on fresh home",
-          "  ---",
-          "  error: 'EROFS: read-only file system, mkdtemp'",
-          "  ...",
-          "# tests 4503",
-          "# pass 4502",
-          "# fail 1",
-        ].join("\n"),
-      );
-      const { code } = runClassifier(logPath);
-      assert.equal(code, 0);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
   });
 });

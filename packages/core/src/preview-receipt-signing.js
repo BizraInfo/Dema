@@ -17,8 +17,7 @@ import {
   verifyPayload,
 } from "../../receipts/src/authorship-signature.js";
 import {
-  loadPrivateKey,
-  loadPublicKey,
+  loadActiveKeyPair,
 } from "../../receipts/src/authorship-key-store.js";
 
 export const PREVIEW_RECEIPT_SIGNING_SCHEMA = "bizra.dema.preview_receipt_signing.v0.1";
@@ -304,16 +303,16 @@ export async function signPreviewReceiptWithKeyStore({
   preview,
   consent,
   demaHome,
-  loadPrivateKeyFn = loadPrivateKey,
-  loadPublicKeyFn = loadPublicKey,
+  loadActiveKeyPairFn = loadActiveKeyPair,
   signedAt,
 } = {}) {
   const plan = planPreviewReceiptSigning({ consent, input: preview });
   if (!plan.eligible) {
     return blockedSigning(plan);
   }
-  const privateKeyPem = await loadPrivateKeyFn(demaHome);
-  const publicKeyPem = await loadPublicKeyFn(demaHome);
+  const activePair = await loadActiveKeyPairFn(demaHome);
+  const privateKeyPem = activePair?.ok ? activePair.private_key_pem : null;
+  const publicKeyPem = activePair?.ok ? activePair.public_key_pem : null;
   if (!privateKeyPem || !publicKeyPem) {
     return blockedSigning(plan, ["key_store_unavailable"]);
   }

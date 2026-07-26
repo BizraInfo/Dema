@@ -1,14 +1,34 @@
 import { constants } from "node:fs";
-import { mkdir, lstat, realpath, open } from "node:fs/promises";
-import { join, dirname, relative, isAbsolute, sep } from "node:path";
+import {
+  mkdir,
+  lstat,
+  realpath,
+  open,
+  rename,
+  unlink,
+  readdir,
+} from "node:fs/promises";
+import { join, dirname, basename, relative, isAbsolute, sep } from "node:path";
 import { homedir } from "node:os";
-import { generateEd25519Keypair } from "./authorship-signature.js";
+import { createPublicKey, createPrivateKey } from "node:crypto";
+import { generateEd25519Keypair, sha256 } from "./authorship-signature.js";
 
 export const KEY_INIT_CONSENT_PHRASE = "GENERATE AUTHORSHIP KEY";
 export const KEY_INIT_SCHEMA = "bizra.dema.authorship_key_init.v0.1";
+export const KEY_MIGRATE_CONSENT_PHRASE = "MIGRATE AUTHORSHIP KEY";
+export const KEY_MIGRATE_SCHEMA = "bizra.dema.authorship_key_migrate.v0.1";
+export const ACTIVE_POINTER_SCHEMA = "bizra.dema.authorship_active_key.v0.1";
+export const GENERATION_METADATA_SCHEMA =
+  "bizra.dema.authorship_key_generation.v0.1";
 
 const PRIVATE_KEY_FILENAME = "node0-ed25519.pem";
 const PUBLIC_KEY_FILENAME = "node0-ed25519.pub.pem";
+const ACTIVE_POINTER_FILENAME = "active-key.json";
+const GENERATIONS_DIRNAME = "generations";
+const RETIRED_REGISTRY_FILENAME = "retired-registry.json";
+const TRANSACTIONS_DIRNAME = "transactions";
+const IDENTITY_LEASE_FILENAME = "identity-transition.lock";
+const REQUIRED_KEY_ALGORITHM = "ed25519";
 const NO_FOLLOW = constants.O_NOFOLLOW ?? 0;
 
 class UnsafeKeyPathError extends Error {
@@ -27,12 +47,14 @@ class KeyAlreadyExistsError extends Error {
   }
 }
 
+function resolveHome(demaHome) {
+  return typeof demaHome === "string" && demaHome.length > 0
+    ? demaHome
+    : process.env.DEMA_HOME || join(homedir(), ".dema");
+}
+
 function keysDir(demaHome) {
-  const home =
-    typeof demaHome === "string" && demaHome.length > 0
-      ? demaHome
-      : process.env.DEMA_HOME || join(homedir(), ".dema");
-  return join(home, "keys");
+  return join(resolveHome(demaHome), "keys");
 }
 
 export function keyPaths(demaHome) {
@@ -41,6 +63,18 @@ export function keyPaths(demaHome) {
     dir,
     privateKey: join(dir, PRIVATE_KEY_FILENAME),
     publicKey: join(dir, PUBLIC_KEY_FILENAME),
+  };
+}
+
+export function activeKeyPaths(demaHome) {
+  const dir = keysDir(demaHome);
+  return {
+    dir,
+    activePointer: join(dir, ACTIVE_POINTER_FILENAME),
+    generationsDir: join(dir, GENERATIONS_DIRNAME),
+    retiredRegistry: join(dir, RETIRED_REGISTRY_FILENAME),
+    transactionsDir: join(dir, TRANSACTIONS_DIRNAME),
+    identityLease: join(dir, TRANSACTIONS_DIRNAME, IDENTITY_LEASE_FILENAME),
   };
 }
 
@@ -141,10 +175,979 @@ async function writeKeyFile(path, content, { mode, force }) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Generation store (IDENTITY-PAIR-COHERENCE-1A)
+//
+// keys/active-key.json is the sole canonical selector. Generation directories
+// under keys/generations/<fingerprint>/ are immutable after creation. A
+// signing consumer obtains its identity through loadActiveKeyPair() — one
+// call, one snapshot, one generation. Activation is a single atomic rename of
+// the pointer; private/public sequential activation is structurally
+// impossible because the pair lives inside one immutable directory.
+// ---------------------------------------------------------------------------
+
+async function readFileNoFollow(path) {
+  const info = await lstatIfExists(path);
+  if (!info || info.isSymbolicLink() || !info.isFile()) return null;
+  let handle;
+  try {
+    handle = await open(path, constants.O_RDONLY | NO_FOLLOW);
+    return await handle.readFile("utf8");
+  } catch {
+    return null;
+  } finally {
+    await handle?.close();
+  }
+}
+
+function derivePublicFromPrivate(privateKeyPem) {
+  const priv = createPrivateKey(privateKeyPem);
+  const pub = createPublicKey(priv);
+  const der = pub.export({ type: "spki", format: "der" });
+  return {
+    pem: pub.export({ type: "spki", format: "pem" }),
+    der,
+    fingerprint: sha256(der.toString("hex")),
+    algorithm: priv.asymmetricKeyType,
+  };
+}
+
+// Finding #2 (review P1): pair consistency alone is not identity — an RSA or
+// P-256 pair is internally consistent yet unusable on the Ed25519 signing
+// path. Require BOTH keys to be Ed25519 before any authority write. Returns
+// { ok, fingerprint } | { ok:false, error:"unsupported_key_algorithm" } |
+// { ok:false } (mismatched pair).
+function pairConsistency(privateKeyPem, publicKeyPem) {
+  try {
+    const derived = derivePublicFromPrivate(privateKeyPem);
+    const storedPub = createPublicKey(publicKeyPem);
+    if (
+      derived.algorithm !== REQUIRED_KEY_ALGORITHM ||
+      storedPub.asymmetricKeyType !== REQUIRED_KEY_ALGORITHM
+    ) {
+      return { ok: false, error: "unsupported_key_algorithm" };
+    }
+    const storedDer = storedPub.export({ type: "spki", format: "der" });
+    if (!derived.der.equals(storedDer)) return { ok: false };
+    return { ok: true, fingerprint: derived.fingerprint };
+  } catch {
+    return { ok: false };
+  }
+}
+
+// ── Transition lease (Finding #1, review P1) ───────────────────────────────
+// Atomic visibility (one rename) is NOT transactional exclusivity: two
+// initializers sharing one staged pointer path can interleave and return a
+// success whose fingerprint is not the one actually activated. An exclusive
+// O_EXCL lease admits exactly ONE transition owner; a concurrent caller does
+// zero mutation. A lease whose holder PID is dead is stale → RECOVERY_REQUIRED
+// (never auto-deleted by wall-clock — staleness is proven by process liveness,
+// not elapsed time).
+function pidAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    // EPERM = exists but not ours (alive); ESRCH = no such process (dead).
+    return e?.code === "EPERM";
+  }
+}
+
+// { acquired:true, release } | { acquired:false, reason } — reason is
+// "identity_transition_in_progress" (live holder) or "recovery_required"
+// (dead holder; lease preserved for operator adjudication).
+async function acquireIdentityLease(ap, { pid = process.pid } = {}) {
+  await mkdir(ap.transactionsDir, { recursive: true });
+  let handle;
+  try {
+    handle = await open(
+      ap.identityLease,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | NO_FOLLOW,
+      0o600,
+    );
+    await handle.writeFile(JSON.stringify({ pid, acquired_at_epoch_ns: null }), "utf8");
+    await handle.sync().catch(() => {});
+    await handle.close();
+    return {
+      acquired: true,
+      async release() {
+        await unlink(ap.identityLease).catch(() => {});
+      },
+    };
+  } catch (error) {
+    if (error?.code !== "EEXIST") throw error;
+    // Someone holds it. Alive → in-progress; dead → recovery_required.
+    const raw = await readFileNoFollow(ap.identityLease);
+    let holderPid = null;
+    try {
+      holderPid = JSON.parse(raw ?? "{}").pid ?? null;
+    } catch {
+      holderPid = null;
+    }
+    const alive = pidAlive(holderPid);
+    return {
+      acquired: false,
+      reason: alive ? "identity_transition_in_progress" : "recovery_required",
+    };
+  }
+}
+
+async function writeActivePointer(ap, pointerDoc, transitionId) {
+  // Finding #1: unique per-transition staged path — never a shared
+  // active-key.json.next that two transitions could clobber.
+  const suffix = transitionId ? `.${transitionId}` : "";
+  const staged = `${ap.activePointer}${suffix}.next`;
+  const bytes = `${JSON.stringify(pointerDoc, null, 2)}\n`;
+  let handle;
+  try {
+    handle = await open(
+      staged,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | NO_FOLLOW,
+      0o644,
+    );
+    await handle.writeFile(bytes, "utf8");
+    await handle.sync();
+  } finally {
+    await handle?.close();
+    handle = undefined;
+  }
+  // Verify the staged bytes parse before they can become authority.
+  JSON.parse(await readFileNoFollow(staged));
+  await rename(staged, ap.activePointer);
+  try {
+    const dirHandle = await open(ap.dir, constants.O_RDONLY);
+    await dirHandle.sync().catch(() => {});
+    await dirHandle.close();
+  } catch {
+    // Directory fsync is best-effort on platforms that refuse it.
+  }
+  return bytes;
+}
+
+// Write-if-absent so a resumed transition (Finding #3) fills only the missing
+// files and never overwrites an existing valid byte. classifyGeneration has
+// already proven any present file matches the expected pair, so a lingering
+// EEXIST here means a concurrent writer we should not fight — surface it.
+async function writeIfAbsent(path, content, mode) {
+  const info = await lstatIfExists(path);
+  if (info && !info.isSymbolicLink() && info.isFile()) return;
+  await writeKeyFile(path, content, { mode, force: false });
+}
+
+async function writeGeneration(ap, keys, { now, source }) {
+  const generationPath = join(ap.generationsDir, keys.public_key_fingerprint);
+  await mkdir(generationPath, { recursive: true });
+  const metadata = {
+    schema: GENERATION_METADATA_SCHEMA,
+    fingerprint: keys.public_key_fingerprint,
+    generation_id: keys.public_key_fingerprint,
+    algorithm: REQUIRED_KEY_ALGORITHM,
+    private_content_hash: sha256(keys.private_key_pem),
+    public_content_hash: sha256(keys.public_key_pem),
+    created_at: now,
+    source,
+  };
+  await writeIfAbsent(join(generationPath, "private.pem"), keys.private_key_pem, 0o600);
+  await writeIfAbsent(join(generationPath, "public.pem"), keys.public_key_pem, 0o644);
+  await writeIfAbsent(
+    join(generationPath, "metadata.json"),
+    `${JSON.stringify(metadata, null, 2)}\n`,
+    0o644,
+  );
+  return { generationPath, metadata };
+}
+
+async function activateGeneration(ap, { fingerprint, now, previous }) {
+  const transitionId = sha256(`${previous ?? "genesis"}->${fingerprint}@${now}`);
+  const pointerDoc = {
+    schema: ACTIVE_POINTER_SCHEMA,
+    generation_fingerprint: fingerprint,
+    generation_path: join(GENERATIONS_DIRNAME, fingerprint),
+    activated_at: now,
+    previous_generation: previous ?? null,
+    transition_id: transitionId,
+  };
+  const bytes = await writeActivePointer(ap, pointerDoc, transitionId);
+  return { pointerDoc, pointerHash: sha256(bytes) };
+}
+
+// Read a generation file only if it is a REGULAR non-symlink file. Returns
+// { kind: "absent" | "irregular" | "content", content }. A directory / FIFO /
+// socket / symlink at a generation-file path is "irregular" (never content).
+async function readRegularGenFile(path) {
+  const info = await lstatIfExists(path);
+  if (!info) return { kind: "absent" };
+  if (info.isSymbolicLink() || !info.isFile()) return { kind: "irregular" };
+  const content = await readFileNoFollow(path);
+  return content === null ? { kind: "irregular" } : { kind: "content", content };
+}
+
+// Full semantic verification of a generation dir against an expected pair —
+// the SAME contract loadActiveKeyPair enforces (Finding A, 1C). Presence of
+// three files is NOT completeness; only parse+schema+fingerprint+algorithm+
+// hashes+pair convergence is. Returns { ok:true } | { ok:false, error }.
+function verifyGenerationContent({ priv, pub, metaRaw, fingerprint }) {
+  if (priv === null || pub === null) return { ok: false, error: "generation_unsafe" };
+  if (metaRaw === null) return { ok: false, error: "metadata_corrupt" };
+  let metadata;
+  try {
+    metadata = JSON.parse(metaRaw);
+  } catch {
+    return { ok: false, error: "metadata_corrupt" };
+  }
+  if (
+    !metadata ||
+    metadata.schema !== GENERATION_METADATA_SCHEMA ||
+    metadata.fingerprint !== fingerprint ||
+    metadata.algorithm !== REQUIRED_KEY_ALGORITHM
+  ) {
+    return { ok: false, error: "metadata_corrupt" };
+  }
+  if (
+    sha256(priv) !== metadata.private_content_hash ||
+    sha256(pub) !== metadata.public_content_hash
+  ) {
+    return { ok: false, error: "content_hash_mismatch" };
+  }
+  const pair = pairConsistency(priv, pub);
+  if (pair.error === "unsupported_key_algorithm") {
+    return { ok: false, error: "unsupported_key_algorithm" };
+  }
+  if (!pair.ok || pair.fingerprint !== fingerprint) {
+    return { ok: false, error: "pair_mismatch" };
+  }
+  return { ok: true };
+}
+
+// Finding #3 (review P1) + Finding A (1C): a generation dir may already exist
+// from an interrupted transition. Classify it SEMANTICALLY so a retry resumes
+// only when the content is actually valid — never on mere file presence.
+// States: "absent" | "complete_verified" | "incomplete_repairable" |
+// "conflict" | "recovery_required". metadataMalformed flags a present-but-bad
+// metadata that repair may regenerate from the still-verified legacy pair.
+async function classifyGeneration(ap, fingerprint, expected) {
+  const generationPath = join(ap.generationsDir, fingerprint);
+  const info = await lstatIfExists(generationPath);
+  if (!info) return { state: "absent", generationPath };
+  if (info.isSymbolicLink() || !info.isDirectory()) {
+    return { state: "conflict", generationPath };
+  }
+
+  const privR = await readRegularGenFile(join(generationPath, "private.pem"));
+  const pubR = await readRegularGenFile(join(generationPath, "public.pem"));
+  const metaR = await readRegularGenFile(join(generationPath, "metadata.json"));
+
+  // Any irregular (non-regular-file) entry at a key/metadata path is a hazard,
+  // never silently repaired.
+  if ([privR, pubR, metaR].some((r) => r.kind === "irregular")) {
+    return { state: "recovery_required", generationPath };
+  }
+
+  const priv = privR.kind === "content" ? privR.content : null;
+  const pub = pubR.kind === "content" ? pubR.content : null;
+  const metaRaw = metaR.kind === "content" ? metaR.content : null;
+
+  // A present key byte that differs from the expected legacy pair is a genuine
+  // conflict — never overwrite differing key material.
+  if (priv !== null && priv !== expected.private_key_pem) {
+    return { state: "conflict", generationPath };
+  }
+  if (pub !== null && pub !== expected.public_key_pem) {
+    return { state: "conflict", generationPath };
+  }
+
+  // Full verification passes → truly complete.
+  const verified = verifyGenerationContent({ priv, pub, metaRaw, fingerprint });
+  if (verified.ok) return { state: "complete_verified", generationPath };
+
+  // Not verified, but present key files match the expected pair. Repairable
+  // ONLY when the failure is a regenerable metadata problem (missing or
+  // malformed) — key material is absent or the exact expected legacy bytes.
+  const metadataMalformed = metaRaw !== null && verified.error === "metadata_corrupt";
+  const metadataRegenerable =
+    verified.error === "metadata_corrupt" || verified.error === "generation_unsafe";
+  if (metadataRegenerable) {
+    return { state: "incomplete_repairable", generationPath, metadataMalformed };
+  }
+  // content_hash_mismatch / pair_mismatch on present, expected-matching keys
+  // means the on-disk state is internally inconsistent beyond safe repair.
+  return { state: "recovery_required", generationPath };
+}
+
+// Preserve malformed metadata as recovery evidence, then atomically install
+// canonical metadata (Finding A repair rule — never delete ambiguous material).
+async function repairGenerationMetadata(generationPath, keys, { now, source }) {
+  const metaPath = join(generationPath, "metadata.json");
+  const existing = await readRegularGenFile(metaPath);
+  if (existing.kind === "content") {
+    await writeIfAbsent(
+      join(generationPath, "metadata.json.recovery"),
+      existing.content,
+      0o600,
+    );
+  }
+  const metadata = {
+    schema: GENERATION_METADATA_SCHEMA,
+    fingerprint: keys.public_key_fingerprint,
+    generation_id: keys.public_key_fingerprint,
+    algorithm: REQUIRED_KEY_ALGORITHM,
+    private_content_hash: sha256(keys.private_key_pem),
+    public_content_hash: sha256(keys.public_key_pem),
+    created_at: now,
+    source,
+  };
+  const bytes = `${JSON.stringify(metadata, null, 2)}\n`;
+  const staged = `${metaPath}.next`;
+  let handle;
+  try {
+    handle = await open(
+      staged,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | NO_FOLLOW,
+      0o644,
+    );
+    await handle.writeFile(bytes, "utf8");
+    await handle.sync().catch(() => {});
+  } finally {
+    await handle?.close();
+  }
+  await rename(staged, metaPath);
+}
+
+async function readActivePointer(ap) {
+  const raw = await readFileNoFollow(ap.activePointer);
+  if (raw === null) {
+    const info = await lstatIfExists(ap.activePointer);
+    return { error: info ? "malformed_pointer" : "no_active_pointer" };
+  }
+  let doc;
+  try {
+    doc = JSON.parse(raw);
+  } catch {
+    return { error: "malformed_pointer", raw };
+  }
+  if (
+    !doc ||
+    doc.schema !== ACTIVE_POINTER_SCHEMA ||
+    typeof doc.generation_fingerprint !== "string" ||
+    !/^[0-9a-f]{64}$/.test(doc.generation_fingerprint) ||
+    typeof doc.generation_path !== "string"
+  ) {
+    return { error: "malformed_pointer", raw };
+  }
+  return { doc, raw };
+}
+
+// ── Refuse-and-report recovery (IDENTITY-RECOVERY-REFUSE-AND-REPORT-1E) ────
+// Founder decision: identity recovery is narrowed to REFUSE-AND-REPORT.
+// Detection and diagnosis are automatic and READ-ONLY; root-of-trust recovery
+// mutation requires a separate, explicitly consented C5 transaction
+// (IDENTITY-EXPLICIT-RECOVERY-TRANSACTION-1F — deliberately not this slice).
+// No automatic path may rename, delete, replace, restore, or repair an
+// invalid active identity, and none may generate a replacement keypair.
+
+export const RECOVERY_CLASSES = Object.freeze([
+  "NO_ACTIVE_IDENTITY",
+  "VALID_ACTIVE_IDENTITY",
+  "INVALID_GENESIS_POINTER",
+  "INVALID_PRIOR_POINTER",
+  "UNTRACKED_INVALID_POINTER",
+  "UNSAFE_POINTER_PATH",
+  "CORRUPT_GENERATION",
+  "RETIRED_GENERATION",
+  "IDENTITY_TRANSITION_IN_PROGRESS",
+  "RECOVERY_STATE_UNKNOWN",
+]);
+
+const LOAD_ERROR_TO_RECOVERY_CLASS = Object.freeze({
+  malformed_pointer: "UNTRACKED_INVALID_POINTER",
+  pointer_escape: "UNSAFE_POINTER_PATH",
+  generation_unsafe: "CORRUPT_GENERATION",
+  metadata_corrupt: "CORRUPT_GENERATION",
+  content_hash_mismatch: "CORRUPT_GENERATION",
+  pair_mismatch: "CORRUPT_GENERATION",
+  unsupported_key_algorithm: "CORRUPT_GENERATION",
+  retired_generation: "RETIRED_GENERATION",
+  // An unreadable registry cannot prove retired OR serviceable — UNKNOWN,
+  // never a definitive class.
+  retired_registry_unreadable: "RECOVERY_STATE_UNKNOWN",
+  load_failed: "RECOVERY_STATE_UNKNOWN",
+});
+
+// Read-only classification of the active-pointer authority state. Uses the
+// canonical loader, preserves its exact error, follows no unsafe symlink,
+// and mutates nothing. Returns { class, loader_error?, fingerprint?, doc? }.
+async function classifyPointerAuthority(demaHome) {
+  const ap = activeKeyPaths(demaHome);
+  const dirInfo = await lstatIfExists(ap.dir);
+  if (!dirInfo) return { class: "NO_ACTIVE_IDENTITY" };
+  if (dirInfo.isSymbolicLink() || !dirInfo.isDirectory()) {
+    // An unsafe keys DIR only becomes an unsafe ACTIVE IDENTITY when a
+    // pointer actually exists behind it; an empty unsafe dir stays
+    // NO_ACTIVE_IDENTITY so init keeps its established unsafe_key_path
+    // refusal (which is also read-only).
+    const behind = await lstatIfExists(ap.activePointer);
+    return behind
+      ? { class: "UNSAFE_POINTER_PATH" }
+      : { class: "NO_ACTIVE_IDENTITY" };
+  }
+  const info = await lstatIfExists(ap.activePointer);
+  if (!info) return { class: "NO_ACTIVE_IDENTITY" };
+  if (info.isSymbolicLink() || !info.isFile()) {
+    return { class: "UNSAFE_POINTER_PATH" };
+  }
+  // ONE pointer snapshot drives everything below — verdict, claims, and
+  // hashes all derive from this single read, so a concurrent swap can never
+  // pair one snapshot's loader error with another snapshot's evidence.
+  const pointer = await readActivePointer(ap);
+  if (pointer.error === "no_active_pointer") {
+    // lstat saw an entry that vanished before the read — state changed
+    // underneath; UNKNOWN, never re-normalized.
+    return { class: "RECOVERY_STATE_UNKNOWN", loader_error: pointer.error };
+  }
+  if (pointer.error) {
+    return {
+      class: "UNTRACKED_INVALID_POINTER",
+      loader_error: pointer.error,
+      raw: pointer.raw ?? null,
+    };
+  }
+  const { doc, raw } = pointer;
+  let load;
+  try {
+    load = await verifyPointerDoc(ap, doc, raw);
+  } catch {
+    load = pairFailure("load_failed");
+  }
+  if (load.ok) {
+    return {
+      class: "VALID_ACTIVE_IDENTITY",
+      fingerprint: load.fingerprint,
+      // Trusted facts come ONLY from this accepted snapshot's verification —
+      // containment-verified path, recorded lineage, and pointer hash.
+      generationPath: load.generation_path,
+      previousGeneration: load.previous_generation,
+      pointerHash: load.active_pointer_hash,
+    };
+  }
+  const cls =
+    load.error === "generation_missing"
+      ? doc.previous_generation == null
+        ? "INVALID_GENESIS_POINTER"
+        : "INVALID_PRIOR_POINTER"
+      : (LOAD_ERROR_TO_RECOVERY_CLASS[load.error] ?? "RECOVERY_STATE_UNKNOWN");
+  return { class: cls, loader_error: load.error, doc, raw };
+}
+
+function initRecoveryRefusal(cls) {
+  return Object.freeze({
+    schema: KEY_INIT_SCHEMA,
+    initialized: false,
+    error: "recovery_required",
+    recovery_class: cls.class,
+    loader_error: cls.loader_error ?? null,
+    recommended_action: "RUN_EXPLICIT_IDENTITY_RECOVERY",
+    active_pointer_preserved: true,
+    generation_preserved: true,
+    new_identity_generated: false,
+    authority_delta: 0,
+    boundary: buildBoundary(false),
+  });
+}
+
+function migrateRecoveryRefusal(cls) {
+  return Object.freeze({
+    schema: KEY_MIGRATE_SCHEMA,
+    migrated: false,
+    error: "recovery_required",
+    recovery_class: cls.class,
+    loader_error: cls.loader_error ?? null,
+    recommended_action: "RUN_EXPLICIT_IDENTITY_RECOVERY",
+    legacy_pair_preserved: true,
+    active_pointer_preserved: true,
+    authority_delta: 0,
+    boundary: buildBoundary(false),
+  });
+}
+
+// Read-only lease inspection — never creates, refreshes, or deletes a lease.
+async function inspectTransitionLease(ap) {
+  const info = await lstatIfExists(ap.identityLease);
+  if (!info) return { state: "NONE" };
+  if (info.isSymbolicLink() || !info.isFile()) return { state: "UNREADABLE" };
+  const raw = await readFileNoFollow(ap.identityLease);
+  if (raw === null) return { state: "UNREADABLE" };
+  let pid = null;
+  try {
+    pid = JSON.parse(raw).pid ?? null;
+  } catch {
+    return { state: "UNREADABLE" };
+  }
+  return { state: pidAlive(pid) ? "HOLDER_ALIVE" : "HOLDER_DEAD" };
+}
+
+// Bounded, read-only artifact-binding scan. DETECTED means the fingerprint
+// appears in a receipts file; NOT_DETECTED_BOUNDED_SCAN is explicitly NOT
+// proof of non-use; any incompleteness (no fingerprint, hazard entries,
+// unreadable content, over-bound directory) is UNKNOWN — never `false`.
+const ARTIFACT_SCAN_BOUND = 512;
+async function boundedArtifactBindingScan(demaHome, fingerprint) {
+  if (!fingerprint) return "UNKNOWN";
+  const receiptsDir = join(resolveHome(demaHome), "receipts");
+  const dirInfo = await lstatIfExists(receiptsDir);
+  if (!dirInfo) return "NOT_DETECTED_BOUNDED_SCAN";
+  if (dirInfo.isSymbolicLink() || !dirInfo.isDirectory()) return "UNKNOWN";
+  let entries;
+  try {
+    entries = await readdir(receiptsDir, { withFileTypes: true });
+  } catch {
+    return "UNKNOWN";
+  }
+  if (entries.length > ARTIFACT_SCAN_BOUND) return "UNKNOWN";
+  for (const entry of entries) {
+    if (!entry.isFile()) return "UNKNOWN";
+    const raw = await readFileNoFollow(join(receiptsDir, entry.name));
+    if (raw === null) return "UNKNOWN";
+    if (raw.includes(fingerprint)) return "DETECTED";
+  }
+  return "NOT_DETECTED_BOUNDED_SCAN";
+}
+
+// inspectIdentityRecovery — the read-only refuse-and-report inspector. Maps a
+// home to exactly one recovery class with the evidence an explicit C5
+// recovery transaction would need. Returns paths, hashes, and classes only —
+// never key material or receipt contents.
+//
+// Authority-precedence law (1E.6): a lease is LIVENESS evidence; a verified
+// pointer is AUTHORITY evidence. Liveness evidence never overrides verified
+// authority — a canonically valid identity always reports VALID regardless of
+// lease state (the lease stays observable in transition_lease_state). Only a
+// confirmed LIVE holder may classify a non-valid pointer state as an active
+// transition; a dead or unreadable lease is not proof of one.
+export async function inspectIdentityRecovery(demaHome) {
+  const ap = activeKeyPaths(demaHome);
+  const paths = keyPaths(demaHome);
+  const lease = await inspectTransitionLease(ap);
+  const pointerCls = await classifyPointerAuthority(demaHome);
+  const pointerValid = pointerCls.class === "VALID_ACTIVE_IDENTITY";
+  const liveTransition = !pointerValid && lease.state === "HOLDER_ALIVE";
+  const recoveryClass = pointerValid
+    ? "VALID_ACTIVE_IDENTITY"
+    : liveTransition
+      ? "IDENTITY_TRANSITION_IN_PROGRESS"
+      : pointerCls.class;
+  // Single-snapshot rule (Greptile round-4 TOCTOU): the inspector performs NO
+  // pointer read of its own. Trusted facts come from the loader's accepted
+  // snapshot (via the classifier); claims and claim-hashes come from the
+  // classifier's one diagnostic read. A re-read here could parse replacement
+  // bytes that were never validated.
+  const doc = pointerCls.doc ?? null;
+  const valid = pointerValid;
+  // 1E.6-F: a rejected doc's generation_fingerprint is an untrusted CLAIM —
+  // shape validity is not trust. It is published (and used for the artifact
+  // scan) ONLY when it is the canonical loader's verified fingerprint;
+  // otherwise the report carries a hash of the claim and the scan is not run.
+  const claimedFingerprint =
+    doc && typeof doc.generation_fingerprint === "string"
+      ? doc.generation_fingerprint
+      : null;
+  const fingerprint = valid ? (pointerCls.fingerprint ?? null) : null;
+  const fingerprintState = valid
+    ? "VERIFIED"
+    : claimedFingerprint !== null
+      ? "UNTRUSTED_CLAIM"
+      : "ABSENT";
+  // 1E.1 Finding A: a pointer document the canonical loader REJECTED is
+  // attacker-influencable evidence, not fact. Its raw generation_path claim is
+  // never republished — the report carries only a hash of the claim and an
+  // explicit trust state. The sole VERIFIED_CONTAINED source is the loader's
+  // own containment-checked path.
+  const claimedPath =
+    doc && typeof doc.generation_path === "string" ? doc.generation_path : null;
+  let generationPath = null;
+  let generationPathState = "ABSENT";
+  let claimedPathHash = null;
+  if (valid) {
+    generationPath = pointerCls.generationPath ?? null;
+    generationPathState = "VERIFIED_CONTAINED";
+  } else if (claimedPath !== null) {
+    generationPathState = "UNTRUSTED_OR_UNCONTAINED";
+    claimedPathHash = sha256(claimedPath);
+  }
+  let recommendedAction;
+  if (valid) {
+    recommendedAction = "NONE";
+  } else if (liveTransition) {
+    recommendedAction = "RETRY_AFTER_TRANSITION";
+  } else if (
+    pointerCls.class === "NO_ACTIVE_IDENTITY" &&
+    lease.state === "NONE"
+  ) {
+    recommendedAction = "INITIALIZE_AUTHORSHIP_KEY";
+  } else {
+    recommendedAction = "RUN_EXPLICIT_IDENTITY_RECOVERY";
+  }
+  return Object.freeze({
+    schema: "bizra.dema.identity_recovery_inspection.v0.1",
+    recovery_class: recoveryClass,
+    active_pointer_path: ap.activePointer,
+    active_pointer_hash: valid
+      ? (pointerCls.pointerHash ?? null)
+      : pointerCls.raw != null
+        ? sha256(pointerCls.raw)
+        : null,
+    generation_fingerprint: fingerprint,
+    generation_fingerprint_state: fingerprintState,
+    pointer_claimed_generation_fingerprint_hash:
+      !valid && claimedFingerprint !== null ? sha256(claimedFingerprint) : null,
+    generation_path: generationPath,
+    generation_path_state: generationPathState,
+    pointer_claimed_generation_path_hash: claimedPathHash,
+    loader_error: pointerCls.loader_error ?? null,
+    // Same laundering rule as generation_path: previous_generation from a
+    // loader-REJECTED doc is an attacker-influencable CLAIM — shape validity
+    // is not trust. It is published only from a loader-ACCEPTED pointer (the
+    // authoritative active record); otherwise the report carries only a hash
+    // of the claim. Genesis-vs-prior diagnosis stays in recovery_class.
+    previous_generation: valid ? (pointerCls.previousGeneration ?? null) : null,
+    pointer_claimed_previous_generation_hash:
+      !valid && typeof doc?.previous_generation === "string"
+        ? sha256(doc.previous_generation)
+        : null,
+    legacy_pair_presence: await isSafeExistingKeyPath(paths, paths.privateKey),
+    // The receipts scan runs ONLY against a loader-VERIFIED fingerprint — a
+    // rejected claim must never produce an apparently meaningful binding
+    // verdict, so every non-valid state is UNKNOWN.
+    artifact_binding_state: valid
+      ? await boundedArtifactBindingScan(demaHome, fingerprint)
+      : "UNKNOWN",
+    transition_lease_state: lease.state,
+    automatic_recovery_allowed: false,
+    required_consent_class: "C5",
+    recommended_action: recommendedAction,
+    authority_delta: 0,
+  });
+}
+
+async function checkRetired(ap, fingerprint) {
+  const info = await lstatIfExists(ap.retiredRegistry);
+  if (!info) return null; // absent registry: safe to serve
+  const raw = await readFileNoFollow(ap.retiredRegistry);
+  if (raw === null) return "retired_registry_unreadable";
+  let registry;
+  try {
+    registry = JSON.parse(raw);
+  } catch {
+    return "retired_registry_unreadable";
+  }
+  const retired = Array.isArray(registry?.retired) ? registry.retired : null;
+  if (!retired) return "retired_registry_unreadable";
+  for (const entry of retired) {
+    if (entry?.fingerprint === fingerprint) return "retired_generation";
+  }
+  return null;
+}
+
+function pairFailure(error) {
+  return Object.freeze({ ok: false, error });
+}
+
+// Shared post-pointer verification over ONE pointer snapshot (doc + raw):
+// containment, generation content, metadata, pair convergence, retirement —
+// exactly the loader contract. Both loadActiveKeyPair and
+// classifyPointerAuthority verify through here so a verdict can never mix
+// two different pointer reads (1E.4 round-5 snapshot-coherence rule).
+async function verifyPointerDoc(ap, doc, raw) {
+  try {
+    // Containment: the pointer may only select inside keys/generations/.
+    const generationPath = isAbsolute(doc.generation_path)
+      ? doc.generation_path
+      : join(ap.dir, doc.generation_path);
+    const genInfo = await lstatIfExists(generationPath);
+    if (!genInfo || genInfo.isSymbolicLink() || !genInfo.isDirectory()) {
+      return pairFailure(genInfo ? "generation_unsafe" : "generation_missing");
+    }
+    let generationReal;
+    try {
+      const generationsReal = await realpath(ap.generationsDir);
+      generationReal = await realpath(generationPath);
+      if (
+        !isInsideOrSame(generationReal, generationsReal) ||
+        generationReal === generationsReal
+      ) {
+        return pairFailure("pointer_escape");
+      }
+    } catch {
+      return pairFailure("pointer_escape");
+    }
+
+    const privateKeyPem = await readFileNoFollow(join(generationReal, "private.pem"));
+    const publicKeyPem = await readFileNoFollow(join(generationReal, "public.pem"));
+    const metadataRaw = await readFileNoFollow(join(generationReal, "metadata.json"));
+    if (privateKeyPem === null || publicKeyPem === null) {
+      return pairFailure("generation_unsafe");
+    }
+    if (metadataRaw === null) return pairFailure("metadata_corrupt");
+
+    let metadata;
+    try {
+      metadata = JSON.parse(metadataRaw);
+    } catch {
+      return pairFailure("metadata_corrupt");
+    }
+    if (
+      !metadata ||
+      metadata.schema !== GENERATION_METADATA_SCHEMA ||
+      metadata.fingerprint !== doc.generation_fingerprint ||
+      metadata.algorithm !== REQUIRED_KEY_ALGORITHM ||
+      basename(generationReal) !== doc.generation_fingerprint
+    ) {
+      return pairFailure("metadata_corrupt");
+    }
+
+    if (
+      sha256(privateKeyPem) !== metadata.private_content_hash ||
+      sha256(publicKeyPem) !== metadata.public_content_hash
+    ) {
+      return pairFailure("content_hash_mismatch");
+    }
+
+    // Finding #2: pairConsistency also proves both keys are Ed25519 and that
+    // the actual key algorithm agrees with the metadata's declared algorithm.
+    const pair = pairConsistency(privateKeyPem, publicKeyPem);
+    if (pair.error === "unsupported_key_algorithm") {
+      return pairFailure("unsupported_key_algorithm");
+    }
+    if (!pair.ok || pair.fingerprint !== doc.generation_fingerprint) {
+      return pairFailure("pair_mismatch");
+    }
+
+    const retired = await checkRetired(ap, pair.fingerprint);
+    if (retired) return pairFailure(retired);
+
+    return Object.freeze({
+      ok: true,
+      fingerprint: pair.fingerprint,
+      generation_path: generationReal,
+      // Lineage from the SAME accepted snapshot (1E.3 TOCTOU rule): consumers
+      // must never re-read the pointer to learn it.
+      previous_generation: doc.previous_generation ?? null,
+      private_key_pem: privateKeyPem,
+      public_key_pem: publicKeyPem,
+      metadata_hash: sha256(metadataRaw),
+      active_pointer_hash: sha256(raw),
+    });
+  } catch {
+    return pairFailure("load_failed");
+  }
+}
+
+export async function loadActiveKeyPair(demaHome) {
+  try {
+    const ap = activeKeyPaths(demaHome);
+    const pointer = await readActivePointer(ap);
+    if (pointer.error) return pairFailure(pointer.error);
+    return await verifyPointerDoc(ap, pointer.doc, pointer.raw);
+  } catch {
+    return pairFailure("load_failed");
+  }
+}
+
+export async function migrateLegacyAuthorshipKey({
+  consent,
+  demaHome,
+  now = new Date().toISOString(),
+} = {}) {
+  if (consent !== KEY_MIGRATE_CONSENT_PHRASE) {
+    return Object.freeze({
+      schema: KEY_MIGRATE_SCHEMA,
+      migrated: false,
+      error: "consent_required",
+      required_phrase: KEY_MIGRATE_CONSENT_PHRASE,
+      boundary: buildBoundary(false),
+    });
+  }
+
+  const ap = activeKeyPaths(demaHome);
+  // 1E refuse-and-report: a present pointer is not a blanket "already
+  // migrated". Classify it READ-ONLY — a valid identity refuses verified; an
+  // invalid one refuses to explicit recovery. Migration never quarantines,
+  // remigrates, or repairs over an invalid active identity.
+  const early = await classifyPointerAuthority(demaHome);
+  if (early.class === "VALID_ACTIVE_IDENTITY") {
+    return Object.freeze({
+      schema: KEY_MIGRATE_SCHEMA,
+      migrated: false,
+      error: "already_migrated",
+      verified_existing_identity: true,
+      authority_delta: 0,
+      boundary: buildBoundary(false),
+    });
+  }
+  if (early.class !== "NO_ACTIVE_IDENTITY") {
+    return migrateRecoveryRefusal(early);
+  }
+
+  const paths = keyPaths(demaHome);
+  const privateKeyPem = await readKeyFile(paths, paths.privateKey);
+  const publicKeyPem = await readKeyFile(paths, paths.publicKey);
+  if (!privateKeyPem || !publicKeyPem) {
+    return Object.freeze({
+      schema: KEY_MIGRATE_SCHEMA,
+      migrated: false,
+      error: "no_legacy_key",
+      boundary: buildBoundary(false),
+    });
+  }
+
+  const pair = pairConsistency(privateKeyPem, publicKeyPem);
+  if (pair.error === "unsupported_key_algorithm") {
+    // Finding #2: refuse a non-Ed25519 legacy pair BEFORE any mutation.
+    return Object.freeze({
+      schema: KEY_MIGRATE_SCHEMA,
+      migrated: false,
+      error: "unsupported_key_algorithm",
+      boundary: buildBoundary(false),
+    });
+  }
+  if (!pair.ok) {
+    return Object.freeze({
+      schema: KEY_MIGRATE_SCHEMA,
+      migrated: false,
+      error: "pair_mismatch",
+      boundary: buildBoundary(false),
+    });
+  }
+
+  // Finding #1: one exclusive transition owner. Finding #3: a generation from
+  // an interrupted prior migration is resumed, not fought.
+  const lease = await acquireIdentityLease(ap);
+  if (!lease.acquired) {
+    return Object.freeze({
+      schema: KEY_MIGRATE_SCHEMA,
+      migrated: false,
+      error: lease.reason, // identity_transition_in_progress | recovery_required
+      boundary: buildBoundary(false),
+    });
+  }
+
+  try {
+    // Re-classify UNDER the lease: a pointer that appeared since the early
+    // check belongs to a concurrent transition — refuse, never overwrite.
+    const pointerCls = await classifyPointerAuthority(demaHome);
+    if (pointerCls.class === "VALID_ACTIVE_IDENTITY") {
+      return Object.freeze({
+        schema: KEY_MIGRATE_SCHEMA,
+        migrated: false,
+        error: "already_migrated",
+        verified_existing_identity: true,
+        authority_delta: 0,
+        boundary: buildBoundary(false),
+      });
+    }
+    if (pointerCls.class !== "NO_ACTIVE_IDENTITY") {
+      return migrateRecoveryRefusal(pointerCls);
+    }
+
+    await mkdir(ap.generationsDir, { recursive: true });
+    const expected = {
+      public_key_fingerprint: pair.fingerprint,
+      private_key_pem: privateKeyPem,
+      public_key_pem: publicKeyPem,
+    };
+    const cls = await classifyGeneration(ap, pair.fingerprint, expected);
+    // Finding A (1C): only "absent" / "complete_verified" / "incomplete_
+    // repairable" may proceed. "conflict" / "recovery_required" halt with the
+    // evidence preserved — never a success over material we cannot verify.
+    if (cls.state === "conflict" || cls.state === "recovery_required") {
+      return Object.freeze({
+        schema: KEY_MIGRATE_SCHEMA,
+        migrated: false,
+        error: "recovery_required",
+        generation_path: cls.generationPath,
+        boundary: buildBoundary(false),
+      });
+    }
+
+    const keys = {
+      public_key_fingerprint: pair.fingerprint,
+      private_key_pem: privateKeyPem,
+      public_key_pem: publicKeyPem,
+    };
+    // write-if-absent fills only missing files; a present-but-malformed
+    // metadata is explicitly repaired (bad bytes preserved as recovery).
+    const { generationPath } = await writeGeneration(ap, keys, {
+      now,
+      source: "legacy_migration",
+    });
+    if (cls.state === "incomplete_repairable" && cls.metadataMalformed) {
+      await repairGenerationMetadata(cls.generationPath, keys, {
+        now,
+        source: "legacy_migration",
+      });
+    }
+    await activateGeneration(ap, {
+      fingerprint: pair.fingerprint,
+      now,
+      previous: null,
+    });
+
+    // Finding B (1C): a transition is complete only when the canonical
+    // post-transition loader ACCEPTS the result. Verify before claiming
+    // success — presence of files is not convergence.
+    const verified = await loadActiveKeyPair(demaHome);
+    if (
+      !verified.ok ||
+      verified.fingerprint !== pair.fingerprint ||
+      verified.generation_path !== generationPath
+    ) {
+      // 1E: the committed pointer and generation are PRESERVED as evidence —
+      // no automatic quarantine, remigration, or repair. Recovery is an
+      // explicit C5 transaction.
+      return Object.freeze({
+        schema: KEY_MIGRATE_SCHEMA,
+        migrated: false,
+        error: "recovery_required",
+        transition_state: "pointer_committed_verification_failed",
+        recommended_action: "RUN_EXPLICIT_IDENTITY_RECOVERY",
+        active_pointer_preserved: true,
+        generation_preserved: true,
+        authority_delta: 0,
+        generation_path: generationPath,
+        loader_error: verified.ok ? "fingerprint_or_path_mismatch" : verified.error,
+        boundary: buildBoundary(true),
+      });
+    }
+
+    return Object.freeze({
+      schema: KEY_MIGRATE_SCHEMA,
+      migrated: true,
+      fingerprint: pair.fingerprint,
+      generation_path: generationPath,
+      resumed: cls.state !== "absent",
+      legacy_policy: "preserved_in_place",
+      boundary: buildBoundary(true),
+    });
+  } catch (error) {
+    if (error instanceof UnsafeKeyPathError || error instanceof KeyAlreadyExistsError) {
+      return Object.freeze({
+        schema: KEY_MIGRATE_SCHEMA,
+        migrated: false,
+        error: "unsafe_or_existing_generation",
+        boundary: buildBoundary(false),
+      });
+    }
+    throw error;
+  } finally {
+    await lease.release();
+  }
+}
+
 export async function initAuthorshipKey({
   consent,
   demaHome,
   force = false,
+  now = new Date().toISOString(),
 } = {}) {
   if (consent !== KEY_INIT_CONSENT_PHRASE) {
     return Object.freeze({
@@ -157,6 +1160,28 @@ export async function initAuthorshipKey({
   }
 
   const paths = keyPaths(demaHome);
+  const ap = activeKeyPaths(demaHome);
+
+  // Finding #2 (ADR-047): initialization may ESTABLISH the first active
+  // generation; it must never REPLACE an existing one. `force` bypasses only
+  // the legacy flat-file existence check — an active pointer is the root of
+  // trust and can be changed ONLY by a governed rotation transaction, never
+  // by re-init. 1E refuse-and-report: the pointer is classified READ-ONLY
+  // BEFORE any directory preparation — a valid identity refuses verified, an
+  // invalid or unsafe one refuses to explicit C5 recovery with ZERO mutation
+  // (no keypair, no rename, no repair). This first check is an early-out; the
+  // authoritative one runs UNDER the lease below.
+  const early = await classifyPointerAuthority(demaHome);
+  if (early.class === "VALID_ACTIVE_IDENTITY") {
+    return keyAlreadyExistsResult(paths, {
+      verified_existing_identity: true,
+      authority_delta: 0,
+    });
+  }
+  if (early.class !== "NO_ACTIVE_IDENTITY") {
+    return initRecoveryRefusal(early);
+  }
+
   const unsafePath = await prepareKeyDirectory(paths);
   if (unsafePath) return unsafeKeyPathResult(unsafePath);
 
@@ -164,16 +1189,80 @@ export async function initAuthorshipKey({
     return keyAlreadyExistsResult(paths);
   }
 
-  const keys = generateEd25519Keypair();
+  // Finding #1: acquire the exclusive transition lease, then RE-CHECK the
+  // pointer under it — this closes the check-then-act race between two
+  // concurrent initializers. The loser mutates nothing.
+  const lease = await acquireIdentityLease(ap);
+  if (!lease.acquired) {
+    return Object.freeze({
+      schema: KEY_INIT_SCHEMA,
+      initialized: false,
+      error: lease.reason, // identity_transition_in_progress | recovery_required
+      boundary: buildBoundary(false),
+    });
+  }
 
   try {
-    await writeKeyFile(paths.privateKey, keys.private_key_pem, {
-      mode: 0o600,
-      force,
+    // Re-classify UNDER the lease — closes the check-then-act race. The
+    // loser (or any invalid state that appeared) mutates nothing.
+    const cls = await classifyPointerAuthority(demaHome);
+    if (cls.class === "VALID_ACTIVE_IDENTITY") {
+      return keyAlreadyExistsResult(paths, {
+        verified_existing_identity: true,
+        authority_delta: 0,
+      });
+    }
+    if (cls.class !== "NO_ACTIVE_IDENTITY") {
+      return initRecoveryRefusal(cls);
+    }
+
+    const keys = generateEd25519Keypair();
+    await mkdir(ap.generationsDir, { recursive: true });
+    const { generationPath } = await writeGeneration(ap, keys, {
+      now,
+      source: "init",
     });
-    await writeKeyFile(paths.publicKey, keys.public_key_pem, {
-      mode: 0o644,
-      force,
+    await activateGeneration(ap, {
+      fingerprint: keys.public_key_fingerprint,
+      now,
+      previous: null,
+    });
+
+    // Finding B (1C): init, like migration, is complete only when the
+    // canonical loader accepts the freshly established identity.
+    const verified = await loadActiveKeyPair(demaHome);
+    if (
+      !verified.ok ||
+      verified.fingerprint !== keys.public_key_fingerprint ||
+      verified.generation_path !== generationPath
+    ) {
+      // 1E: the committed pointer and generation are PRESERVED as evidence —
+      // no automatic quarantine or replacement. A retry re-classifies to a
+      // stable recovery class and never generates a second keypair; recovery
+      // itself is an explicit C5 transaction.
+      return Object.freeze({
+        schema: KEY_INIT_SCHEMA,
+        initialized: false,
+        error: "recovery_required",
+        transition_state: "pointer_committed_verification_failed",
+        recommended_action: "RUN_EXPLICIT_IDENTITY_RECOVERY",
+        active_pointer_preserved: true,
+        generation_preserved: true,
+        authority_delta: 0,
+        loader_error: verified.ok ? "fingerprint_or_path_mismatch" : verified.error,
+        boundary: buildBoundary(true),
+      });
+    }
+
+    return Object.freeze({
+      schema: KEY_INIT_SCHEMA,
+      initialized: true,
+      public_key_fingerprint: keys.public_key_fingerprint,
+      generation_path: generationPath,
+      active_pointer_path: ap.activePointer,
+      private_key_path: join(generationPath, "private.pem"),
+      public_key_path: join(generationPath, "public.pem"),
+      boundary: buildBoundary(true),
     });
   } catch (error) {
     if (error instanceof UnsafeKeyPathError) {
@@ -183,39 +1272,127 @@ export async function initAuthorshipKey({
       return keyAlreadyExistsResult(paths);
     }
     throw error;
+  } finally {
+    await lease.release();
   }
-
-  return Object.freeze({
-    schema: KEY_INIT_SCHEMA,
-    initialized: true,
-    public_key_fingerprint: keys.public_key_fingerprint,
-    private_key_path: paths.privateKey,
-    public_key_path: paths.publicKey,
-    boundary: buildBoundary(true),
-  });
 }
 
+// Legacy single-key loaders. Pointer-aware: when a generation store exists it
+// is the only authority; the legacy flat files are consulted ONLY when no
+// active pointer exists at all (pre-migration homes and hand-built fixtures).
+// A present-but-unloadable pointer fails closed — it never falls through to
+// stale legacy material. Signing consumers must use loadActiveKeyPair();
+// the identity-pair-coherence gate rejects paired use of these two.
 export async function loadPrivateKey(demaHome) {
+  const pair = await loadActiveKeyPair(demaHome);
+  if (pair.ok) return pair.private_key_pem;
+  if (pair.error !== "no_active_pointer") return null;
   const paths = keyPaths(demaHome);
   return readKeyFile(paths, paths.privateKey);
 }
 
 export async function loadPublicKey(demaHome) {
+  const pair = await loadActiveKeyPair(demaHome);
+  if (pair.ok) return pair.public_key_pem;
+  if (pair.error !== "no_active_pointer") return null;
   const paths = keyPaths(demaHome);
   return readKeyFile(paths, paths.publicKey);
 }
 
+// Finding #3 (ADR-047): presence is NOT verification. inspectActiveIdentity
+// maps a home to exactly one explicit state; VERIFIED requires a successful
+// loadActiveKeyPair(). Realm/status surfaces must derive "VERIFIED" from
+// state === "VERIFIED", never from mere key-file presence.
+export const IDENTITY_STATES = Object.freeze([
+  "ABSENT",
+  "PRESENT_UNVERIFIED",
+  "VERIFIED",
+  "BLOCKED_CORRUPT",
+  "BLOCKED_RETIRED",
+  "BLOCKED_POINTER_INVALID",
+]);
+
+const LOAD_ERROR_TO_STATE = Object.freeze({
+  no_active_pointer: "PRESENT_UNVERIFIED", // legacy flat files may still exist
+  malformed_pointer: "BLOCKED_POINTER_INVALID",
+  pointer_escape: "BLOCKED_POINTER_INVALID",
+  generation_missing: "BLOCKED_POINTER_INVALID",
+  generation_unsafe: "BLOCKED_CORRUPT",
+  metadata_corrupt: "BLOCKED_CORRUPT",
+  content_hash_mismatch: "BLOCKED_CORRUPT",
+  pair_mismatch: "BLOCKED_CORRUPT",
+  unsupported_key_algorithm: "BLOCKED_CORRUPT",
+  retired_generation: "BLOCKED_RETIRED",
+  retired_registry_unreadable: "BLOCKED_RETIRED",
+  load_failed: "BLOCKED_CORRUPT",
+});
+
+// The one operator instruction each identity state implies. PRESENT_UNVERIFIED
+// (Finding #4) must route to migration, never to a re-init that will refuse.
+const STATE_RECOMMENDED_ACTION = Object.freeze({
+  ABSENT: "INITIALIZE_AUTHORSHIP_KEY",
+  PRESENT_UNVERIFIED: "MIGRATE_AUTHORSHIP_KEY",
+  VERIFIED: "NONE",
+  BLOCKED_CORRUPT: "RECOVER_IDENTITY",
+  BLOCKED_RETIRED: "ROTATE_OR_RECOVER_IDENTITY",
+  BLOCKED_POINTER_INVALID: "RECOVER_IDENTITY",
+});
+
+export async function inspectActiveIdentity(demaHome) {
+  const pair = await loadActiveKeyPair(demaHome);
+  if (pair.ok) {
+    return Object.freeze({
+      state: "VERIFIED",
+      fingerprint: pair.fingerprint,
+      verified: true,
+      recommended_action: STATE_RECOMMENDED_ACTION.VERIFIED,
+    });
+  }
+  if (pair.error === "no_active_pointer") {
+    // No generation store. Distinguish a pre-migration legacy home (present
+    // but unverified) from a truly empty one.
+    const paths = keyPaths(demaHome);
+    const legacyPresent = await isSafeExistingKeyPath(paths, paths.privateKey);
+    const state = legacyPresent ? "PRESENT_UNVERIFIED" : "ABSENT";
+    return Object.freeze({
+      state,
+      fingerprint: null,
+      verified: false,
+      reason: legacyPresent ? "legacy_flat_files_unverified" : "no_active_identity",
+      recommended_action: STATE_RECOMMENDED_ACTION[state],
+    });
+  }
+  const state = LOAD_ERROR_TO_STATE[pair.error] ?? "BLOCKED_CORRUPT";
+  return Object.freeze({
+    state,
+    fingerprint: null,
+    verified: false,
+    error: pair.error,
+    recommended_action: STATE_RECOMMENDED_ACTION[state],
+  });
+}
+
+// Presence, not servability: a corrupt or retired generation still counts as
+// "a key exists" (callers then surface the precise load error), matching the
+// legacy semantics where a present-but-corrupt PEM answered true. For a
+// truthful VERIFIED/UNINITIALIZED display, use inspectActiveIdentity instead.
 export async function hasAuthorshipKey(demaHome) {
+  const ap = activeKeyPaths(demaHome);
+  const pointerInfo = await lstatIfExists(ap.activePointer);
+  if (pointerInfo && !pointerInfo.isSymbolicLink() && pointerInfo.isFile()) {
+    return true;
+  }
   const paths = keyPaths(demaHome);
   return isSafeExistingKeyPath(paths, paths.privateKey);
 }
 
-function keyAlreadyExistsResult(paths) {
+function keyAlreadyExistsResult(paths, extra = {}) {
   return Object.freeze({
     schema: KEY_INIT_SCHEMA,
     initialized: false,
     error: "key_already_exists",
     private_key_path: paths.privateKey,
+    ...extra,
     boundary: buildBoundary(false),
   });
 }

@@ -8,7 +8,7 @@
 //
 // Reuses (no duplication):
 // - signPayload, verifyPayload      packages/receipts/src/authorship-signature.js
-// - loadPrivateKey, loadPublicKey   packages/receipts/src/authorship-key-store.js
+// - loadActiveKeyPair   packages/receipts/src/authorship-key-store.js
 // - sha256, stableStringify         packages/consent/src/consent-common.js
 // - consent_proof verification      packages/receipts/src/consent-proof.js
 //
@@ -29,8 +29,7 @@ import {
   verifyPayload,
 } from "../../receipts/src/authorship-signature.js";
 import {
-  loadPrivateKey,
-  loadPublicKey,
+  loadActiveKeyPair,
 } from "../../receipts/src/authorship-key-store.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 import { verifyConsentProof } from "../../receipts/src/consent-proof.js";
@@ -173,11 +172,12 @@ export async function buildBaseline({
   }
 
   // (4) Load signing key.
-  const privateKeyPem = await loadPrivateKey(demaHome);
+  const activePair = await loadActiveKeyPair(demaHome);
+  const privateKeyPem = activePair.ok ? activePair.private_key_pem : null;
   if (!privateKeyPem) {
     return fail("no_authorship_key");
   }
-  const publicKeyPem = await loadPublicKey(demaHome);
+  const publicKeyPem = activePair.ok ? activePair.public_key_pem : null;
 
   // (5) Bind consent to this specific (metrics, context) pair.
   //     target_hash = sha256(stableStringify({baseline_metrics, measurement_context}))

@@ -23,6 +23,15 @@ import { generateEd25519Keypair } from "../packages/receipts/src/authorship-sign
 
 const CLI_PATH = "apps/cli/src/index.js";
 const VALID_PHRASE = "SIGN AUTHORSHIP RECEIPT";
+
+// Generation store: the public key lives inside the active generation dir,
+// selected by keys/active-key.json — not at the legacy flat path.
+async function activePubkeyPath(home) {
+  const pointer = JSON.parse(
+    await readFile(join(home, "keys", "active-key.json"), "utf8"),
+  );
+  return join(home, "keys", pointer.generation_path, "public.pem");
+}
 const VALID_ACTION_TYPE = "MINT_VERDICT_RECEIPT";
 const VALID_TARGET_HASH = "a".repeat(64);
 
@@ -360,7 +369,7 @@ describe("dema consent verify · CLI surface (KEYCONSENT-1C requirements 2,3,4,5
         ],
         { DEMA_HOME: home },
       );
-      const pubkeyPath = join(home, "keys", "node0-ed25519.pub.pem");
+      const pubkeyPath = await activePubkeyPath(home);
       // verify
       const r = await runCli(
         ["consent", "verify", proofPath, "--pubkey", pubkeyPath, "--json"],
@@ -405,7 +414,7 @@ describe("dema consent verify · CLI surface (KEYCONSENT-1C requirements 2,3,4,5
         ],
         { DEMA_HOME: home },
       );
-      const pubkeyPath = join(home, "keys", "node0-ed25519.pub.pem");
+      const pubkeyPath = await activePubkeyPath(home);
       const r = await runCli(
         ["consent", "verify", proofPath, "--pubkey", pubkeyPath],
         {},
@@ -495,7 +504,7 @@ describe("dema consent verify · CLI surface (KEYCONSENT-1C requirements 2,3,4,5
         ],
         { DEMA_HOME: home },
       );
-      const pubkeyPath = join(home, "keys", "node0-ed25519.pub.pem");
+      const pubkeyPath = await activePubkeyPath(home);
       for (const flags of [["--json"], []]) {
         const r = await runCli(
           ["consent", "verify", proofPath, "--pubkey", pubkeyPath, ...flags],
@@ -544,7 +553,7 @@ describe("dema consent verify · CLI surface (KEYCONSENT-1C requirements 2,3,4,5
         ],
         { DEMA_HOME: home },
       );
-      const pubkeyPath = join(home, "keys", "node0-ed25519.pub.pem");
+      const pubkeyPath = await activePubkeyPath(home);
       const r = await runCli(
         ["consent", "verify", proofPath, "--pubkey", pubkeyPath, "--json"],
         {},

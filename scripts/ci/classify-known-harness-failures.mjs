@@ -26,6 +26,8 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
+import { evaluateCheckGateEvidence } from "./check-gate-evidence.mjs";
+import { evaluateTapRunEvidence } from "./tap-run-evidence.mjs";
 
 // Explicit allowlist of failures that may be masked as environmental noise.
 //
@@ -80,9 +82,6 @@ function isTapMarkerLine(line) {
 }
 
 export function classifyFailures(content) {
-  const failMatch = content.match(/# fail\s+(\d+)/);
-  const reportedFailCount = failMatch ? parseInt(failMatch[1], 10) : 0;
-
   // Parse line-by-line so each `not ok` carries its diagnostic block (the lines
   // until the next TAP marker). Per-line `(.+)$` is linear (the `.` excludes
   // newline, `$` anchors line end) — no polynomial backtracking (CodeQL
@@ -90,18 +89,27 @@ export function classifyFailures(content) {
   const lines = content.split(/\r?\n/);
   const notOk = [];
   for (let i = 0; i < lines.length; i++) {
-    const m = lines[i].match(/^\s*not ok (\d+) - (.+)$/);
+    const m = lines[i].match(/^(\s*)not ok (\d+)(?:\s+-\s*(.*))?\s*$/);
     if (!m) continue;
     const blockLines = [];
     for (let j = i + 1; j < lines.length && !isTapMarkerLine(lines[j]); j++) {
       blockLines.push(lines[j]);
     }
     notOk.push({
-      num: Number(m[1]),
-      name: m[2].trim(),
+      num: Number(m[2]),
+      name: (m[3] ?? "").trim(),
       block: blockLines.join("\n"),
+      topLevel: m[1].length === 0,
+      lineIndex: i,
     });
   }
+
+  const {
+    complete,
+    reportedFailCount,
+    inconsistentFailureCount,
+    uncapturedFailures,
+  } = evaluateTapRunEvidence(lines, notOk.at(-1)?.lineIndex ?? -1);
   const coverageThresholdFailures = lines
     .filter((line) => COVERAGE_THRESHOLD_ERROR.test(line))
     .map((line) => line.replace(/^#\s*/, "").trim());
@@ -112,33 +120,27 @@ export function classifyFailures(content) {
     // Mask only when the test NAME is allowlisted AND the environmental CAUSE
     // signature appears in this failure's own diagnostic block. A real assertion
     // failure (no env signature) is never masked, even if its name matches.
-    const hit = KNOWN_MASKABLE.find(
-      (k) => k.pattern.test(f.name) && k.cause.test(f.block),
-    );
+    const hit = f.topLevel && f.name
+      ? KNOWN_MASKABLE.find(
+          (k) => k.pattern.test(f.name) && k.cause.test(f.block),
+        )
+      : null;
     if (hit) recognized.push({ ...f, id: hit.id, reason: hit.reason });
     else unrecognized.push(f);
   }
 
-  // Completeness: a run is "complete" only if it emitted an end-of-run marker —
-  // a TAP plan line (1..N, N>0) or a node --test summary (`# tests/# pass/# fail`).
-  // A truncated/crashed run has neither; treating its 0-not-ok output as a clean
-  // pass is a false green. (PROOF-GATE-TEETH-HARDENING-1A · defect 3.)
-  const planMatch = content.match(/^\s*1\.\.(\d+)\s*$/m);
-  const planN = planMatch ? parseInt(planMatch[1], 10) : null;
-  const hasSummary = /^#\s*(tests|pass|fail)\s+\d+/m.test(content);
-  const complete = (planN !== null && planN > 0) || hasSummary;
-
   const cleanRun =
     complete &&
+    inconsistentFailureCount === 0 &&
     reportedFailCount === 0 &&
     notOk.length === 0 &&
     coverageThresholdFailures.length === 0;
   // Fail closed when the summary reports more failures than we captured as named
   // `not ok` lines (a runner error or an unparseable failure). An uncaptured
   // failure is real — it must never pass as clean just because it had no name.
-  const uncapturedFailures = Math.max(0, reportedFailCount - notOk.length);
   const verdict =
     complete &&
+    inconsistentFailureCount === 0 &&
     unrecognized.length === 0 &&
     uncapturedFailures === 0 &&
     coverageThresholdFailures.length === 0
@@ -154,6 +156,7 @@ export function classifyFailures(content) {
     cleanRun,
     complete,
     uncapturedFailures,
+    inconsistentFailureCount,
     verdict,
   };
 }
@@ -197,16 +200,46 @@ export function evaluateLogFreshness(content) {
 }
 
 const USAGE = `Usage:
-  node scripts/ci/classify-known-harness-failures.mjs --log <file>
+  node scripts/ci/classify-known-harness-failures.mjs --log <file> [--check-exit <n>] [--require-check-gate-evidence --check-gate-evidence <jsonl>]
   node scripts/ci/classify-known-harness-failures.mjs --stdin   # or pipe to stdin
+
+--check-exit <n>: the REAL exit status of the command that produced the log
+(forwarded by scripts/ci/run-with-classifier.mjs). A nonzero n with a clean TAP
+log means a NON-TAP gate failed after the tests — that must fail closed, never
+be read as a pass (CHECK-EXIT-INTEGRITY-1B).
+
+--require-check-gate-evidence: require a bounded out-of-band start + terminal
+record whose terminal event agrees with --check-exit. This mode is for
+scripts/check.mjs only; standalone test/coverage masking remains compatible.
 `;
 
 function parseArgs(argv) {
   let logPath = null;
   let useStdin = false;
+  let checkExit = null;
+  let requireCheckGateEvidence = false;
+  let checkGateEvidence = null;
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--log" && argv[i + 1]) {
       logPath = argv[++i];
+    } else if (argv[i] === "--check-exit") {
+      const raw = argv[++i];
+      if (raw === undefined) {
+        checkExit = Number.NaN;
+        continue;
+      }
+      const numeric = Number(raw);
+      checkExit =
+        /^\d+$/.test(raw) && Number.isSafeInteger(numeric)
+          ? numeric
+          : Number.NaN;
+    } else if (argv[i] === "--require-check-gate-evidence") {
+      requireCheckGateEvidence = true;
+    } else if (
+      argv[i] === "--check-gate-evidence" &&
+      argv[i + 1] !== undefined
+    ) {
+      checkGateEvidence = argv[++i];
     } else if (argv[i] === "--stdin" || argv[i] === "-") {
       useStdin = true;
     } else if (argv[i] === "--help" || argv[i] === "-h") {
@@ -218,11 +251,22 @@ function parseArgs(argv) {
     console.error(USAGE);
     process.exit(2);
   }
-  return { logPath, useStdin };
+  return {
+    logPath,
+    useStdin,
+    checkExit,
+    requireCheckGateEvidence,
+    checkGateEvidence,
+  };
 }
 
 function main() {
-  const { logPath } = parseArgs(process.argv.slice(2));
+  const {
+    logPath,
+    checkExit,
+    requireCheckGateEvidence,
+    checkGateEvidence,
+  } = parseArgs(process.argv.slice(2));
 
   let content;
   try {
@@ -232,6 +276,56 @@ function main() {
       `[G8 FRESHNESS] cannot read log ${
         logPath ? `'${logPath}'` : "(stdin)"
       }: ${err.code || err.message}. The run's evidence is missing — failing closed. Exit 1.`,
+    );
+    process.exit(1);
+  }
+
+  if (Number.isNaN(checkExit)) {
+    console.error(
+      "[G8 EXIT] --check-exit must be a non-negative safe integer; failing closed.",
+    );
+    process.exit(1);
+  }
+
+  let checkGateFailure = null;
+  if (requireCheckGateEvidence) {
+    const assessment = evaluateCheckGateEvidence({
+      content: checkGateEvidence,
+      checkExit,
+    });
+    if (!assessment.ok) {
+      console.error(
+        `[G8 GATE EXIT EVIDENCE] ${assessment.reason}; failing closed.`,
+      );
+      process.exit(1);
+    }
+    checkGateFailure = assessment.failure;
+    if (checkGateFailure?.mask_policy === "authoritative") {
+      console.error(
+        `\n[G8 NON-TAP EXIT] gate ${checkGateFailure.index}: ${checkGateFailure.command.join(" ")} exited ${checkGateFailure.exit_code}; failing closed.`,
+      );
+      process.exit(1);
+    }
+    // In check-owner mode, `complete` is the aggregate proof: check.mjs emitted
+    // it only after every declared child returned zero. TAP-capable child gates
+    // (the raw test command and coverage) run through their own classifier and
+    // isolated log before returning to the owner. Reclassifying their
+    // concatenated stdout here would destroy that command boundary and let one
+    // run's trailer complete another run.
+    if (checkGateFailure === null) {
+      console.log(
+        "[G8 GATE EXIT EVIDENCE] aggregate check emitted start + complete; every declared gate returned zero after per-command TAP classification. Exit 0.",
+      );
+      process.exit(0);
+    }
+  }
+
+  // Node's ordinary test-failure status is exactly 1. Any larger status can be
+  // a runner/internal error and is authoritative even if the captured text also
+  // contains an allowlisted environmental failure.
+  if (checkExit !== null && checkExit > 1) {
+    console.error(
+      `\n[G8 EXIT] the gated command exited ${checkExit}; only exit 1 is eligible for enumerated TAP masking. Failing closed. Exit 1.`,
     );
     process.exit(1);
   }
@@ -253,17 +347,33 @@ function main() {
   console.log(`[G8 GATE] reported # fail: ${r.reportedFailCount}`);
   console.log(`[G8 GATE] raw not-ok lines: ${r.notOk.length}`);
 
-  // Completeness gate (defect 3): a run that emitted no TAP plan and no summary
-  // was truncated or crashed mid-flight. Its 0-not-ok output must never be read
-  // as a clean pass — fail closed so the false-green-on-crash cannot happen.
+  // Completeness gate: every TAP run needs a coherent plan plus full Node
+  // tests/pass/fail trailer. A neighbouring run cannot complete a truncated one.
   if (!r.complete) {
     console.error(
-      "[G8 GATE] log has no TAP plan (1..N) or test summary (# tests/# pass/# fail) — the run was truncated or crashed. A partial run must never pass as clean. Exit 1.",
+      "[G8 GATE] TAP evidence is incomplete or has inconsistent run trailers (TAP version, 1..N, # tests, # pass, # fail). A partial run must never pass as clean. Exit 1.",
+    );
+    process.exit(1);
+  }
+
+  if (r.inconsistentFailureCount > 0) {
+    console.error(
+      `\n[G8 GATE] top-level not-ok count contradicts the reported # fail total by ${r.inconsistentFailureCount}. Failing closed. Exit 1.`,
     );
     process.exit(1);
   }
 
   if (r.cleanRun) {
+    // CHECK-EXIT-INTEGRITY-1B: a clean TAP log cannot excuse a nonzero command
+    // exit — the failure was a NON-TAP gate (review/performance/etc.) running
+    // after the tests. The old `cmd | tee; classifier` wiring laundered exactly
+    // this case into exit 0. Failure must never be laundered into progress.
+    if (checkExit !== null && checkExit !== 0) {
+      console.error(
+        `\n[G8 EXIT] the gated command exited ${checkExit} but the log shows a clean TAP run — a non-TAP gate failed after green tests. Failing closed. Exit 1.`,
+      );
+      process.exit(1);
+    }
     console.log("[G8 GATE] Clean run: 0 failures, 0 not-ok lines. Exit 0.");
     process.exit(0);
   }
@@ -310,6 +420,18 @@ function main() {
     process.exit(1);
   }
 
+  if (r.recognized.length > 0 && checkExit !== 1) {
+    console.error(
+      `\n[G8 EXIT] enumerated TAP masking requires the producing command's exact exit 1; received ${
+        checkExit === null ? "no exit evidence" : checkExit
+      }. Failing closed. Exit 1.`,
+    );
+    process.exit(1);
+  }
+
+  // Only standalone, isolated test/coverage logs reach this masking branch.
+  // Check-owner success returned on start + complete; every terminal aggregate
+  // failure, including legacy tap_allowlist evidence, failed above.
   console.log(
     "\n[G8 GATE] All failures are named, allowlisted environmental noise. Exit 0.",
   );
