@@ -92,6 +92,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_RECOVERY_MISSION_ENGINE_1A",
   "DEMA_RECOVERY_MISSION_GATHERER_1B",
   "DEMA_MISSION_WORKER_HANDOFF_0A",
+  "NODE0_MODEL_SWAP_INVARIANCE_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2397,6 +2398,34 @@ function defaultCapabilityRows() {
         "Exact-consent deterministic kernel compiles a worker replacement over an INJECTED Node0 realm event history into one hash-chained MISSION_CHECKPOINT (checkpoint_type WORKER_HANDOFF) via the shipped realm event hasher/reducer: it is blocked unless the mission is already declared, the worker actually changes, every before/after invariant hash (mission_contract, acceptance_criteria, consent_scope, source_checkpoint) is equal, consent is an exact byte match, evidence/prohibited-effect sets are well-formed, and authority_delta is zero. The verifier replays the whole returned history and rejects a forged-and-rehashed authority increase, a forged-and-rehashed false continuity proof, extra fields on the envelope/event/payload, non-normalized set ordering, or a non-canonical all-false boundary. Proves mission continuity survives a model/worker swap while mission contract, acceptance, consent scope, source checkpoint, and authority remain invariant.",
       what_this_does_not_prove:
         "It does not prove durable event-log persistence, restart recovery, automatic failover, worker selection, model invocation, or independent authenticity — internal replay integrity is not an external anchor. No worker is selected or invoked; the realm reducer records the checkpoint seq but does not yet project current_worker into derived state. This is a minimum continuity proof, not production failover.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_MODEL_SWAP_INVARIANCE_1A",
+      truth_label: "NODE0_MODEL_SWAP_INVARIANCE_MEASURED_REPO",
+      summary:
+        "Pure kernel proving a mission-task verdict is invariant to which model produced the output: the system contract decides ACCEPT/REJECT, model identity never launders a failing output nor changes a passing one.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-model-swap-invariance.js"],
+        test_paths: ["tests/node0-model-swap-invariance.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-model-swap-invariance-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_MODEL_SWAP_INVARIANCE_1A.md"],
+        documentation_paths: [
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure kernel proves the system's ACCEPT/REJECT verdict on a mission-task is a function of (output, acceptance_contract) ONLY — model identity is never a parameter of the verdict. Constructively attests three invariants over injected candidate outputs: identical outputs from different models get identical verdicts (verdict_is_model_blind); a rejected output stays rejected under every model identity present, so a 'trusted' model cannot launder a contract-violating output into acceptance (no_identity_laundering); and permuting model-id labels leaves the accepted-output-hash set unchanged (relabel_invariant). Content-addressed + body-bound-verified; verify fails closed on a forged-false invariant flag or an extra boundary key even when rehashed. Proves the DECISION LOGIC is model-agnostic — the measured form of 'the LLM is a replaceable component; the system state is authoritative.'",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
