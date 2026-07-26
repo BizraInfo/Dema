@@ -7,6 +7,7 @@ import {
   verifyNode0ModelSwapInvariance,
   runNode0ModelSwapInvariance,
   evaluateAgainstContract,
+  validateAcceptanceContract,
   node0ModelSwapInvarianceBoundary,
   NODE0_MODEL_SWAP_INVARIANCE_SCHEMA,
   NODE0_MODEL_SWAP_INVARIANCE_TRUTH_LABEL,
@@ -354,10 +355,109 @@ test("T24 a vacuous contract cannot even be planned or run into a proof", () => 
   };
   const plan = planNode0ModelSwapInvariance({ consent: GO, input });
   assert.equal(plan.eligible, false, "a proof over no requirement must not be buildable");
-  assert.ok(plan.blocked_by.includes("acceptance_contract_vacuous"));
+  assert.ok(plan.blocked_by.includes("contract_vacuous:no_effective_predicate"));
   const run = runNode0ModelSwapInvariance({ consent: GO, input });
   assert.equal(run.ok, false);
   assert.equal(run.content_hash, null);
+});
+
+// ── CONTRACT-ADMISSION-GUARD-1C: malformed but NOT vacuous ──
+//
+// The 1B guard counts predicates; it does not check shape. A contract with one
+// good predicate AND a typo'd field passes that count, so the mission is admitted
+// — and then every candidate is rejected for the malformation. Uniform rejection
+// makes all three invariants hold trivially, so the run reports a PASS-shaped
+// attestation over a broken contract. Note this shape is a CONSEQUENCE of the 1A
+// fix: before it, a malformed contract accepted everything (loudly wrong);
+// after it, it rejects everything, which looks like an honest "nothing met the bar".
+
+const MALFORMED_NOT_VACUOUS = {
+  "unknown field beside a valid one": { required_output_keys: ["answer"], reqired_output_keys: ["misspelled"] },
+  "valid field beside a malformed one": { required_output_keys: ["answer"], forbidden_substrings: "guaranteed" },
+  "valid field beside a malformed expected": { required_output_keys: ["answer"], expected: "answer=42" },
+};
+
+test("T25 a malformed-but-non-vacuous contract is not an admissible proof subject", () => {
+  for (const [label, contract] of Object.entries(MALFORMED_NOT_VACUOUS)) {
+    const plan = planNode0ModelSwapInvariance({
+      consent: GO,
+      input: {
+        task: { task_id: "m", acceptance_contract: contract },
+        candidates: [
+          { model_id: "a", output: GOOD_OUTPUT },
+          { model_id: "b", output: GOOD_OUTPUT },
+        ],
+      },
+    });
+    assert.equal(plan.eligible, false, `${label}: must be refused at admission`);
+  }
+});
+
+test("T26 run() builds no success-shaped attestation over a malformed contract", () => {
+  for (const [label, contract] of Object.entries(MALFORMED_NOT_VACUOUS)) {
+    const run = runNode0ModelSwapInvariance({
+      consent: GO,
+      input: {
+        task: { task_id: "m", acceptance_contract: contract },
+        candidates: [
+          { model_id: "a", output: GOOD_OUTPUT },
+          { model_id: "b", output: GOOD_OUTPUT },
+        ],
+      },
+    });
+    assert.equal(run.ok, false, `${label}: uniform rejection must not read as a passing proof`);
+    assert.equal(run.content_hash, null, `${label}: no content hash for an inadmissible mission`);
+  }
+});
+
+test("T27 plan and evaluate share ONE definition of a valid contract — no drift", () => {
+  // Two independent notions of "valid contract" is how the 1B gap opened. The
+  // shared validator is the single source; both callers must report its codes.
+  const probes = [
+    {},
+    { required_output_keys: [] },
+    { required_output_keys: ["answer"], reqired_output_keys: ["x"] },
+    { required_output_keys: ["answer"], forbidden_substrings: "guaranteed" },
+    { required_output_keys: ["answer"] },
+    { expected: { answer: "42" } },
+  ];
+  for (const contract of probes) {
+    const v = validateAcceptanceContract(contract);
+    const plan = planNode0ModelSwapInvariance({
+      consent: GO,
+      input: {
+        task: { task_id: "m", acceptance_contract: contract },
+        candidates: [
+          { model_id: "a", output: GOOD_OUTPUT },
+          { model_id: "b", output: GOOD_OUTPUT },
+        ],
+      },
+    });
+    assert.equal(plan.eligible, v.valid, `plan eligibility must track the shared validator for ${JSON.stringify(contract)}`);
+    for (const code of v.blocked_by) assert.ok(plan.blocked_by.includes(code), `plan must surface ${code}`);
+    if (!v.valid) {
+      assert.deepEqual(
+        evaluateAgainstContract(GOOD_OUTPUT, contract).failed_requirements,
+        v.blocked_by,
+        "evaluate must report the same codes as the shared validator",
+      );
+    }
+  }
+});
+
+test("T28 the validator reports an honest effective-predicate count", () => {
+  assert.equal(validateAcceptanceContract({}).effective_predicate_count, 0);
+  assert.equal(validateAcceptanceContract({ required_output_keys: [] }).effective_predicate_count, 0);
+  assert.equal(validateAcceptanceContract({ required_output_keys: ["a", "b"] }).effective_predicate_count, 2);
+  assert.equal(validateAcceptanceContract(CONTRACT).effective_predicate_count, 2 + 3 + 1);
+  assert.equal(validateAcceptanceContract(CONTRACT).valid, true);
+});
+
+test("T29 a well-formed non-empty contract is still admitted and still proves", () => {
+  assert.equal(planNode0ModelSwapInvariance({ consent: GO, input: VALID }).eligible, true);
+  assert.equal(runNode0ModelSwapInvariance({ consent: GO, input: VALID }).ok, true);
+  assert.equal(evaluateAgainstContract(GOOD_OUTPUT, CONTRACT).verdict, "ACCEPT");
+  assert.equal(runNode0ModelSwapInvarianceCheck().ok, true);
 });
 
 test("T16 the honest fixtures stay green after hardening", () => {

@@ -63,6 +63,47 @@ function effectivePredicateCount(c) {
   return n;
 }
 
+// THE single definition of an admissible acceptance contract. Both the admission
+// gate (plan) and the decision function (evaluate) consume this one result, so
+// their notions of "valid contract" cannot drift apart — that drift is exactly
+// how a contract could be admitted as a proof subject while every candidate was
+// rejected for a malformation the planner never looked at. Uniform rejection
+// makes all three invariants hold trivially, so a broken contract produced a
+// PASS-shaped attestation.
+export function validateAcceptanceContract(contract) {
+  if (contract !== undefined && contract !== null && !isPlainObject(contract)) {
+    return Object.freeze({
+      valid: false,
+      blocked_by: Object.freeze(["contract_malformed:not_an_object"]),
+      effective_predicate_count: 0,
+    });
+  }
+  const c = isPlainObject(contract) ? contract : {};
+  const blocked_by = [];
+  for (const k of Object.keys(c)) {
+    if (!KNOWN_CONTRACT_KEYS.has(k)) blocked_by.push(`contract_unknown_field:${k}`);
+  }
+  if ("required_output_keys" in c && !isArrayOfNonEmptyStrings(c.required_output_keys)) {
+    blocked_by.push("contract_malformed:required_output_keys");
+  }
+  if ("forbidden_substrings" in c && !isArrayOfNonEmptyStrings(c.forbidden_substrings)) {
+    blocked_by.push("contract_malformed:forbidden_substrings");
+  }
+  if ("expected" in c && !isPlainObject(c.expected)) blocked_by.push("contract_malformed:expected");
+  const effective_predicate_count = effectivePredicateCount(c);
+  // Vacuity is checked only once the shape is sound, so a mistyped field keeps
+  // the more specific diagnosis instead of being reported as "empty".
+  if (blocked_by.length === 0 && effective_predicate_count === 0) {
+    blocked_by.push("contract_vacuous:no_effective_predicate");
+  }
+  blocked_by.sort();
+  return Object.freeze({
+    valid: blocked_by.length === 0,
+    blocked_by: Object.freeze(blocked_by),
+    effective_predicate_count,
+  });
+}
+
 // The heart of the thesis: a MODEL-BLIND verdict function. Its signature admits
 // only (output, contract) — model identity is not a parameter, so it cannot enter
 // the decision. Deterministic; canon-unserializable output fails closed as REJECT.
@@ -75,42 +116,26 @@ export function evaluateAgainstContract(output, contract) {
   } catch {
     return Object.freeze({ verdict: VERDICT_REJECT, failed_requirements: Object.freeze(["output_not_canonicalizable"]) });
   }
-  if (contract !== undefined && contract !== null && !isPlainObject(contract)) {
-    return Object.freeze({ verdict: VERDICT_REJECT, failed_requirements: Object.freeze(["contract_malformed:not_an_object"]) });
+  // Contract admissibility is a PRECONDITION, not a per-output failure: an
+  // inadmissible contract cannot decide anything, so it fails before evaluation
+  // and reports the shared validator's codes verbatim.
+  const contractCheck = validateAcceptanceContract(contract);
+  if (!contractCheck.valid) {
+    return Object.freeze({ verdict: VERDICT_REJECT, failed_requirements: contractCheck.blocked_by });
   }
   const c = isPlainObject(contract) ? contract : {};
-  // A mistyped or unrecognised contract field disables its own check, which
-  // widens acceptance to accept-everything — a silently weaker contract reads
-  // as a stronger one. Every field is therefore positively validated, and an
-  // unknown key is refused rather than ignored. Absence of a block is never
-  // validation (same rule planNode0ModelSwapInvariance states below).
-  for (const k of Object.keys(c)) {
-    if (!KNOWN_CONTRACT_KEYS.has(k)) failed.push(`contract_unknown_field:${k}`);
-  }
-  const rokMalformed = "required_output_keys" in c && !isArrayOfNonEmptyStrings(c.required_output_keys);
-  const fsMalformed = "forbidden_substrings" in c && !isArrayOfNonEmptyStrings(c.forbidden_substrings);
-  const expMalformed = "expected" in c && !isPlainObject(c.expected);
-  if (rokMalformed) failed.push("contract_malformed:required_output_keys");
-  if (fsMalformed) failed.push("contract_malformed:forbidden_substrings");
-  if (expMalformed) failed.push("contract_malformed:expected");
-  // Well-formed but empty of requirements is its own refusal, distinct from
-  // malformed — checked only once the shape is sound so the more specific
-  // diagnosis wins when a field is simply mistyped.
-  if (failed.length === 0 && effectivePredicateCount(c) === 0) {
-    failed.push("contract_vacuous:no_effective_predicate");
-  }
-  if (!rokMalformed && Array.isArray(c.required_output_keys)) {
+  if (Array.isArray(c.required_output_keys)) {
     for (const k of c.required_output_keys) {
       const present = isPlainObject(output) && output[k] !== undefined && output[k] !== null && output[k] !== "";
       if (!present) failed.push(`missing_key:${k}`);
     }
   }
-  if (!fsMalformed && Array.isArray(c.forbidden_substrings)) {
+  if (Array.isArray(c.forbidden_substrings)) {
     for (const s of c.forbidden_substrings) {
       if (serial.includes(s)) failed.push(`forbidden:${s}`);
     }
   }
-  if (!expMalformed && isPlainObject(c.expected)) {
+  if (isPlainObject(c.expected)) {
     for (const [k, v] of Object.entries(c.expected)) {
       let ok;
       try {
@@ -212,11 +237,13 @@ export function planNode0ModelSwapInvariance({ consent, input } = {}) {
   else {
     if (typeof task.task_id !== "string" || task.task_id.length === 0) blocked_by.push("task_id_missing");
     if (!isPlainObject(task.acceptance_contract)) blocked_by.push("acceptance_contract_missing");
-    // Refused here too, not only inside evaluateAgainstContract: a proof must
-    // not even be BUILT over a contract that requires nothing. verify() cannot
-    // catch this downstream — the attestation carries only `contract_hash`, so a
-    // receiver never sees the predicates. Stated, not silently relied upon.
-    else if (effectivePredicateCount(task.acceptance_contract) === 0) blocked_by.push("acceptance_contract_vacuous");
+    // Admission gate. A proof must not be BUILT over a contract that is malformed
+    // or requires nothing — both produce a uniform verdict across candidates,
+    // which satisfies every invariant trivially and reads as a passing proof.
+    // verify() cannot catch either downstream: the attestation carries only
+    // `contract_hash`, so a receiver never sees the predicates. Stated, not
+    // silently relied upon — and it consumes the SAME validator evaluate does.
+    else blocked_by.push(...validateAcceptanceContract(task.acceptance_contract).blocked_by);
   }
   if (!Array.isArray(input.candidates) || input.candidates.length === 0) blocked_by.push("candidates_empty");
   else {

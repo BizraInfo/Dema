@@ -20,7 +20,9 @@ The default gate must pass only while:
 - a forged body with a recomputed hash is still rejected,
 - the attestation carries an actual swap — at least two distinct `model_id`s, no duplicates,
 - a malformed, mistyped or unknown acceptance-contract field is refused, never skipped,
-- the acceptance contract imposes at least one effective predicate,
+- the acceptance contract is admissible — well-formed AND imposing at least one
+  effective predicate, decided by the single `validateAcceptanceContract()` that
+  both `plan` and `evaluateAgainstContract` consume,
 - the boundary stays all-false (no execution authority).
 
 ## What this proves, and what it does not
