@@ -192,3 +192,122 @@ test("T8 boundary set is exactly the frozen all-false 8-key set", () => {
   assert.ok(Object.values(b).every((v) => v === false));
   assert.equal(Object.keys(b).length, 8);
 });
+
+// ── PROOF-CONTRACT-HOTFIX-1A: the ways a FALSE PASS was reachable ──
+//
+// T6 above forges an invariant flag to `false` and checks it is refused. The
+// dangerous direction is the opposite one: forging a flag to `true`. The three
+// attacks below all produced `ok: true` on c64fedb, so a fabricated attestation,
+// a proof with no swap in it, and a malformed contract each read as PASS.
+
+const rehash = async (body) => {
+  const { sha256CanonicalJsonV1 } = await import("../packages/canon/src/sha256-canonical-json-v1.js");
+  const { content_hash: _drop, ...rest } = body;
+  return { ...rest, content_hash: sha256CanonicalJsonV1(rest) };
+};
+
+test("T9 verify refuses a body whose own candidate rows contradict its asserted invariants", async () => {
+  const payload = buildNode0ModelSwapInvariancePayload(VALID);
+  const hash = `sha256:${"a".repeat(64)}`;
+  // One output hash carrying BOTH verdicts is the literal negation of
+  // verdict_is_model_blind — yet the body asserts every invariant holds.
+  const forged = await rehash({
+    ...payload,
+    candidate_count: 2,
+    accept_count: 1,
+    accepted_output_hashes: [hash],
+    candidates: [
+      { model_id: "m-a", output_hash: hash, verdict: "ACCEPT", failed_requirements: [] },
+      { model_id: "m-b", output_hash: hash, verdict: "REJECT", failed_requirements: ["missing_key:answer"] },
+    ],
+    invariants: { verdict_is_model_blind: true, no_identity_laundering: true, relabel_invariant: true, all_hold: true },
+  });
+  const v = verifyNode0ModelSwapInvariance(forged);
+  assert.equal(v.hash_ok, true, "the forged body is internally hash-consistent");
+  assert.equal(v.invariants_ok, true, "and its asserted flags all read true");
+  assert.equal(v.evidence_ok, false, "but the rows themselves refute the claim");
+  assert.equal(v.ok, false, "a rehashed fabrication must not verify");
+});
+
+test("T10 verify refuses a forged summary that its own rows do not support", async () => {
+  const payload = buildNode0ModelSwapInvariancePayload(VALID);
+  const inflated = await rehash({ ...payload, accept_count: payload.accept_count + 1 });
+  assert.equal(verifyNode0ModelSwapInvariance(inflated).evidence_ok, false);
+  const widened = await rehash({ ...payload, accepted_output_hashes: [...payload.accepted_output_hashes, `sha256:${"b".repeat(64)}`] });
+  assert.equal(verifyNode0ModelSwapInvariance(widened).evidence_ok, false);
+});
+
+test("T11 a single candidate is not a swap — plan refuses it", () => {
+  const plan = planNode0ModelSwapInvariance({
+    consent: GO,
+    input: { task: { task_id: "m", acceptance_contract: CONTRACT }, candidates: [{ model_id: "only-one", output: GOOD_OUTPUT }] },
+  });
+  assert.equal(plan.eligible, false, "one model cannot prove invariance under model swap");
+  assert.ok(plan.blocked_by.includes("model_swap_absent"));
+});
+
+test("T12 two candidates from the SAME model are not a swap — plan refuses them", () => {
+  const plan = planNode0ModelSwapInvariance({
+    consent: GO,
+    input: {
+      task: { task_id: "m", acceptance_contract: CONTRACT },
+      candidates: [
+        { model_id: "same-model", output: GOOD_OUTPUT },
+        { model_id: "same-model", output: BAD_MISSING },
+      ],
+    },
+  });
+  assert.equal(plan.eligible, false);
+  assert.ok(plan.blocked_by.includes("duplicate_model_id"));
+  assert.ok(plan.blocked_by.includes("model_swap_absent"));
+});
+
+test("T13 a malformed contract field is REFUSED, never silently skipped", () => {
+  // Each of these is the same failure shape: a mistyped field disables its own
+  // check, and acceptance quietly widens to accept-everything.
+  assert.equal(evaluateAgainstContract({}, { required_output_keys: "answer" }).verdict, "REJECT");
+  assert.equal(evaluateAgainstContract({ answer: "42", evidence_ref: "r", note: "guaranteed" }, { forbidden_substrings: "guaranteed" }).verdict, "REJECT");
+  assert.equal(evaluateAgainstContract({ answer: "41" }, { expected: "answer=42" }).verdict, "REJECT");
+  assert.equal(evaluateAgainstContract({ answer: "42" }, "not-an-object").verdict, "REJECT");
+  assert.deepEqual(evaluateAgainstContract({}, { required_output_keys: "answer" }).failed_requirements, ["contract_malformed:required_output_keys"]);
+});
+
+test("T14 a non-string element inside a contract array is refused", () => {
+  assert.equal(evaluateAgainstContract({ answer: "42" }, { required_output_keys: ["answer", 7] }).verdict, "REJECT");
+  assert.equal(evaluateAgainstContract({ answer: "42" }, { forbidden_substrings: ["ok", null] }).verdict, "REJECT");
+});
+
+test("T15 an unknown contract field is refused rather than ignored", () => {
+  const r = evaluateAgainstContract({ answer: "42" }, { required_output_keys: ["answer"], reqired_output_keys: ["typo"] });
+  assert.equal(r.verdict, "REJECT", "a typo'd field name must not pass as no-requirement");
+  assert.ok(r.failed_requirements.includes("contract_unknown_field:reqired_output_keys"));
+});
+
+test("T17 a standalone one-model attestation does not verify as swap-invariance proof", () => {
+  // An attestation travels on its own. Blocking the vacuous case only at plan
+  // time still leaves a receiver accepting a body that proves nothing.
+  const single = buildNode0ModelSwapInvariancePayload({
+    task: { task_id: "m", acceptance_contract: CONTRACT },
+    candidates: [{ model_id: "only-one", output: GOOD_OUTPUT }],
+  });
+  const v = verifyNode0ModelSwapInvariance(single);
+  assert.equal(v.hash_ok, true, "the body is honestly built and hash-consistent");
+  assert.equal(v.evidence_ok, false, "but it carries no swap to be invariant under");
+  assert.equal(v.ok, false);
+
+  const dup = buildNode0ModelSwapInvariancePayload({
+    task: { task_id: "m", acceptance_contract: CONTRACT },
+    candidates: [
+      { model_id: "same", output: GOOD_OUTPUT },
+      { model_id: "same", output: BAD_MISSING },
+    ],
+  });
+  assert.equal(verifyNode0ModelSwapInvariance(dup).ok, false, "two rows, one model, still no swap");
+});
+
+test("T16 the honest fixtures stay green after hardening", () => {
+  assert.equal(evaluateAgainstContract(GOOD_OUTPUT, CONTRACT).verdict, "ACCEPT");
+  assert.equal(planNode0ModelSwapInvariance({ consent: GO, input: VALID }).eligible, true);
+  assert.equal(runNode0ModelSwapInvariance({ consent: GO, input: VALID }).ok, true);
+  assert.equal(runNode0ModelSwapInvarianceCheck().ok, true);
+});

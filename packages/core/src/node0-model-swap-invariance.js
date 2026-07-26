@@ -39,6 +39,14 @@ function isPlainObject(v) {
   return !!v && typeof v === "object" && !Array.isArray(v);
 }
 
+// The complete contract vocabulary. Anything outside it is refused, so a typo
+// like `reqired_output_keys` cannot pass as "no requirement".
+const KNOWN_CONTRACT_KEYS = new Set(["required_output_keys", "forbidden_substrings", "expected"]);
+
+function isNonEmptyStringArray(v) {
+  return Array.isArray(v) && v.every((x) => typeof x === "string" && x.length > 0);
+}
+
 // The heart of the thesis: a MODEL-BLIND verdict function. Its signature admits
 // only (output, contract) — model identity is not a parameter, so it cannot enter
 // the decision. Deterministic; canon-unserializable output fails closed as REJECT.
@@ -51,19 +59,36 @@ export function evaluateAgainstContract(output, contract) {
   } catch {
     return Object.freeze({ verdict: VERDICT_REJECT, failed_requirements: Object.freeze(["output_not_canonicalizable"]) });
   }
+  if (contract !== undefined && contract !== null && !isPlainObject(contract)) {
+    return Object.freeze({ verdict: VERDICT_REJECT, failed_requirements: Object.freeze(["contract_malformed:not_an_object"]) });
+  }
   const c = isPlainObject(contract) ? contract : {};
-  if (Array.isArray(c.required_output_keys)) {
+  // A mistyped or unrecognised contract field disables its own check, which
+  // widens acceptance to accept-everything — a silently weaker contract reads
+  // as a stronger one. Every field is therefore positively validated, and an
+  // unknown key is refused rather than ignored. Absence of a block is never
+  // validation (same rule planNode0ModelSwapInvariance states below).
+  for (const k of Object.keys(c)) {
+    if (!KNOWN_CONTRACT_KEYS.has(k)) failed.push(`contract_unknown_field:${k}`);
+  }
+  if ("required_output_keys" in c && !isNonEmptyStringArray(c.required_output_keys)) {
+    failed.push("contract_malformed:required_output_keys");
+  } else if (Array.isArray(c.required_output_keys)) {
     for (const k of c.required_output_keys) {
       const present = isPlainObject(output) && output[k] !== undefined && output[k] !== null && output[k] !== "";
       if (!present) failed.push(`missing_key:${k}`);
     }
   }
-  if (Array.isArray(c.forbidden_substrings)) {
+  if ("forbidden_substrings" in c && !isNonEmptyStringArray(c.forbidden_substrings)) {
+    failed.push("contract_malformed:forbidden_substrings");
+  } else if (Array.isArray(c.forbidden_substrings)) {
     for (const s of c.forbidden_substrings) {
-      if (typeof s === "string" && s.length > 0 && serial.includes(s)) failed.push(`forbidden:${s}`);
+      if (serial.includes(s)) failed.push(`forbidden:${s}`);
     }
   }
-  if (isPlainObject(c.expected)) {
+  if ("expected" in c && !isPlainObject(c.expected)) {
+    failed.push("contract_malformed:expected");
+  } else if (isPlainObject(c.expected)) {
     for (const [k, v] of Object.entries(c.expected)) {
       let ok;
       try {
@@ -175,6 +200,15 @@ export function planNode0ModelSwapInvariance({ consent, input } = {}) {
         if (!("output" in cand)) blocked_by.push(`candidate_output_missing:${i}`);
       }
     });
+    // There is no invariance-under-swap to measure unless a swap actually
+    // occurred. One candidate, or several sharing one model_id, makes every
+    // invariant hold vacuously — a proof that proves nothing while reading PASS.
+    const ids = input.candidates
+      .map((c) => (isPlainObject(c) && typeof c.model_id === "string" && c.model_id.length > 0 ? c.model_id : null))
+      .filter((m) => m !== null);
+    const distinct = new Set(ids);
+    if (distinct.size < 2) blocked_by.push("model_swap_absent");
+    if (distinct.size !== ids.length) blocked_by.push("duplicate_model_id");
   }
   return frozenPlan(blocked_by);
 }
@@ -219,9 +253,52 @@ export function buildNode0ModelSwapInvariancePayload(input) {
   return Object.freeze({ ...body, content_hash });
 }
 
+// Re-derive the claim from the payload's OWN candidate rows. `invariants` is a
+// CLAIM the body makes about itself; these rows are the evidence it carries. A
+// hash binds bytes, not truth — so a fabricated body can be rehashed and stay
+// internally consistent. Anything the rows can settle is therefore recomputed
+// here and compared, never trusted as asserted. This does not re-run the
+// contract (raw outputs are not in the attestation); it settles exactly what the
+// rows support: one output hash may never carry two verdicts, and the summary
+// counts must be the ones the rows produce.
+function rederiveFromRows(rows) {
+  if (!Array.isArray(rows)) return null;
+  const byOutput = new Map();
+  const accepted = new Set();
+  const modelIds = [];
+  let verdicts_consistent = true;
+  let accept_count = 0;
+  for (const r of rows) {
+    if (!isPlainObject(r)) return null;
+    if (r.verdict !== VERDICT_ACCEPT && r.verdict !== VERDICT_REJECT) return null;
+    if (typeof r.model_id === "string" && r.model_id.length > 0) modelIds.push(r.model_id);
+    if (r.verdict === VERDICT_ACCEPT) {
+      accept_count += 1;
+      if (typeof r.output_hash === "string") accepted.add(r.output_hash);
+    }
+    if (typeof r.output_hash !== "string") continue;
+    if (byOutput.has(r.output_hash)) {
+      if (byOutput.get(r.output_hash) !== r.verdict) verdicts_consistent = false;
+    } else byOutput.set(r.output_hash, r.verdict);
+  }
+  // The same "a proof needs an actual swap in it" rule the plan enforces, applied
+  // to the evidence. An attestation travels on its own, so a third party running
+  // verify() must not accept a one-model body as proof of model-independence.
+  const distinct = new Set(modelIds);
+  return {
+    verdicts_consistent,
+    swap_present: distinct.size >= 2 && distinct.size === modelIds.length && modelIds.length === rows.length,
+    candidate_count: rows.length,
+    accept_count,
+    accepted_output_hashes: [...accepted].sort(),
+  };
+}
+
 // Body-bound verifier: recompute the hash over the WHOLE body minus its hash field
 // and reject any mismatch, plus schema / label / all-false-boundary (deep-equal
-// key-set, never a vacuous subset) / invariants-hold checks.
+// key-set, never a vacuous subset) / invariants-hold checks, and — since a
+// rehashed forgery satisfies all of those — an independent re-derivation of the
+// claim from the body's own candidate rows (`evidence_ok`).
 export function verifyNode0ModelSwapInvariance(payload) {
   if (!isPlainObject(payload)) return Object.freeze({ ok: false, reason: "payload_not_object" });
   const { content_hash, ...body } = payload;
@@ -240,7 +317,25 @@ export function verifyNode0ModelSwapInvariance(payload) {
     isPlainObject(b) && Object.keys(b).length === Object.keys(ref).length && Object.keys(ref).every((k) => b[k] === false);
   const inv = payload.invariants;
   const invariants_ok = isPlainObject(inv) && inv.verdict_is_model_blind === true && inv.no_identity_laundering === true && inv.relabel_invariant === true && inv.all_hold === true;
-  return Object.freeze({ ok: hash_ok && schema_ok && label_ok && boundary_ok && invariants_ok, hash_ok, schema_ok, label_ok, boundary_ok, invariants_ok });
+  const d = rederiveFromRows(payload.candidates);
+  const evidence_ok =
+    d !== null &&
+    d.verdicts_consistent &&
+    d.swap_present &&
+    d.candidate_count === payload.candidate_count &&
+    d.accept_count === payload.accept_count &&
+    Array.isArray(payload.accepted_output_hashes) &&
+    d.accepted_output_hashes.length === payload.accepted_output_hashes.length &&
+    d.accepted_output_hashes.every((h, i) => h === payload.accepted_output_hashes[i]);
+  return Object.freeze({
+    ok: hash_ok && schema_ok && label_ok && boundary_ok && invariants_ok && evidence_ok,
+    hash_ok,
+    schema_ok,
+    label_ok,
+    boundary_ok,
+    invariants_ok,
+    evidence_ok,
+  });
 }
 
 // Orchestrator the review gate consumes: plan -> build -> verify -> tamper-reject.
