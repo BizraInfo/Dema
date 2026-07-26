@@ -663,6 +663,152 @@ test("T36 an own __proto__ key is an unknown field, not a silent prototype swap"
   assert.equal(evaluateAgainstContract({ answer: "42" }, contract).verdict, "REJECT");
 });
 
+// ── PR #423 audit: the candidate side of the same time-of-check/time-of-use gap ──
+//
+// The contract is now read once into an inert snapshot. Candidates were not.
+// `classifyCandidates` evaluated `cand.output` and then hashed `cand.output`
+// through a SECOND read, and every invariant read it again — seven reads per
+// build on c6906d0. A stateful candidate could therefore be judged as one value
+// and hashed as another, so an ACCEPT row bound bytes that were never accepted.
+// That is the attestation's central claim, so it is the load-bearing one.
+
+const SWAP_CONTRACT = { required_output_keys: ["answer"], expected: { answer: "42" } };
+const SWAP_GOOD = { answer: "42" };
+const SWAP_EVIL = { answer: "99" };
+
+// A candidate whose `output` yields SWAP_GOOD on the first read and SWAP_EVIL
+// after — the shape that separates the judged value from the hashed one.
+const flippingCandidate = () => {
+  const state = { reads: 0 };
+  const cand = { model_id: "a" };
+  Object.defineProperty(cand, "output", {
+    enumerable: true,
+    get() {
+      state.reads += 1;
+      return state.reads === 1 ? SWAP_GOOD : SWAP_EVIL;
+    },
+  });
+  return { cand, state };
+};
+
+const swapInput = (candidates) => ({ task: { task_id: "m", acceptance_contract: SWAP_CONTRACT }, candidates });
+
+test("T37 a candidate verdict and its output_hash bind the SAME bytes", async () => {
+  const { sha256CanonicalJsonV1 } = await import("../packages/canon/src/sha256-canonical-json-v1.js");
+  const { cand, state } = flippingCandidate();
+  const payload = buildNode0ModelSwapInvariancePayload(swapInput([cand, { model_id: "b", output: SWAP_GOOD }]));
+
+  assert.equal(state.reads, 1, `the candidate output must be read once, not ${state.reads} times`);
+  const row = payload.candidates.find((c) => c.model_id === "a");
+  assert.equal(row.verdict, "ACCEPT", "the first observed value satisfies the contract");
+  assert.equal(row.output_hash, sha256CanonicalJsonV1(SWAP_GOOD), "the row must hash the bytes it judged");
+  assert.notEqual(row.output_hash, sha256CanonicalJsonV1(SWAP_EVIL), "never the bytes a later read produced");
+  assert.ok(payload.accepted_output_hashes.includes(row.output_hash), "the accepted set carries the judged bytes");
+});
+
+test("T38 the reverse order binds too — rejected bytes are the bytes hashed", async () => {
+  const { sha256CanonicalJsonV1 } = await import("../packages/canon/src/sha256-canonical-json-v1.js");
+  let reads = 0;
+  const cand = { model_id: "a" };
+  Object.defineProperty(cand, "output", {
+    enumerable: true,
+    get() {
+      reads += 1;
+      return reads === 1 ? SWAP_EVIL : SWAP_GOOD;
+    },
+  });
+  const payload = buildNode0ModelSwapInvariancePayload(swapInput([cand, { model_id: "b", output: SWAP_GOOD }]));
+  const row = payload.candidates.find((c) => c.model_id === "a");
+  assert.equal(row.verdict, "REJECT", "the first observed value fails the contract");
+  assert.equal(row.output_hash, sha256CanonicalJsonV1(SWAP_EVIL), "and that is what is hashed");
+  assert.ok(!payload.accepted_output_hashes.includes(row.output_hash), "a rejected hash never enters the accepted set");
+});
+
+test("T39 an uninspectable candidate fails closed on every public path, never throws", () => {
+  const candBoom = () => {
+    throw new Error("hostile candidate");
+  };
+  const shapes = {
+    "output getter throws": () => {
+      const c = { model_id: "a" };
+      Object.defineProperty(c, "output", { enumerable: true, get: candBoom });
+      return c;
+    },
+    "candidate proxy get trap throws": () => new Proxy({ model_id: "a", output: SWAP_GOOD }, { get: candBoom }),
+    "candidate proxy descriptor trap throws": () =>
+      new Proxy({ model_id: "a", output: SWAP_GOOD }, { getOwnPropertyDescriptor: candBoom }),
+    "model_id getter throws": () => {
+      const c = { output: SWAP_GOOD };
+      Object.defineProperty(c, "model_id", { enumerable: true, get: candBoom });
+      return c;
+    },
+  };
+  for (const [label, make] of Object.entries(shapes)) {
+    let plan, run;
+    assert.doesNotThrow(() => (plan = planNode0ModelSwapInvariance({ consent: GO, input: swapInput([make(), { model_id: "b", output: SWAP_GOOD }]) })), `${label}: plan must not throw`);
+    assert.doesNotThrow(() => (run = runNode0ModelSwapInvariance({ consent: GO, input: swapInput([make(), { model_id: "b", output: SWAP_GOOD }]) })), `${label}: run must not throw`);
+    assert.equal(plan.eligible, false, `${label}: plan must block`);
+    assert.ok(plan.blocked_by.includes("candidate_uninspectable:0"), `${label}: indexed reason — got ${plan.blocked_by.join(", ")}`);
+    assert.equal(run.ok, false, `${label}: no passing proof`);
+    assert.equal(run.content_hash, null, `${label}: no PASS-shaped attestation`);
+  }
+});
+
+test("T39b a candidate trap the kernel never invokes cannot change the verdict", () => {
+  // The snapshot reads a candidate's two known fields BY NAME — `Object.hasOwn`
+  // plus a direct read — and never enumerates the wrapper, so an `ownKeys` trap
+  // is outside the read path by construction. It must therefore behave exactly
+  // like the inert candidate it wraps: not throw, and not be refused for
+  // carrying a trap nothing calls.
+  const plain = { model_id: "a", output: SWAP_GOOD };
+  const boomTrap = () => {
+    throw new Error("hostile candidate");
+  };
+  let hostile;
+  assert.doesNotThrow(
+    () => (hostile = runNode0ModelSwapInvariance({ consent: GO, input: swapInput([new Proxy({ ...plain }, { ownKeys: boomTrap }), { model_id: "b", output: SWAP_GOOD }]) })),
+    "an uninvoked ownKeys trap must not escape",
+  );
+  const honest = runNode0ModelSwapInvariance({ consent: GO, input: swapInput([plain, { model_id: "b", output: SWAP_GOOD }]) });
+  assert.equal(hostile.ok, honest.ok, "same verdict as the inert candidate");
+  assert.equal(hostile.content_hash, honest.content_hash, "and the same attestation bytes");
+});
+
+test("T40 a stateful model_id cannot differ between plan and build", () => {
+  let reads = 0;
+  const cand = { output: SWAP_GOOD };
+  Object.defineProperty(cand, "model_id", {
+    enumerable: true,
+    get() {
+      reads += 1;
+      return reads === 1 ? "a" : "b";
+    },
+  });
+  // "b" is also the honest candidate's id: a second read would forge a duplicate
+  // model_id into the attestation that the admission gate never saw.
+  const run = runNode0ModelSwapInvariance({ consent: GO, input: swapInput([cand, { model_id: "b", output: SWAP_GOOD }]) });
+  assert.equal(reads, 1, `model_id must be read once, not ${reads} times`);
+  assert.equal(run.ok, true, "one read, one identity, admitted as a real swap");
+});
+
+test("T41 field presence is own-property, not inherited", () => {
+  // An own `__proto__` DATA property — which JSON.parse produces — is a real
+  // canonical field and must satisfy an equivalent predicate. Inherited members
+  // are not fields and must never satisfy one.
+  const output = JSON.parse('{"__proto__":"value","answer":"42"}');
+  assert.deepEqual(Object.keys(output).sort(), ["__proto__", "answer"], "own data properties, not a prototype swap");
+  assert.equal(
+    evaluateAgainstContract(output, { required_output_keys: ["__proto__"], expected: JSON.parse('{"__proto__":"value"}') }).verdict,
+    "ACCEPT",
+    "an honest own __proto__ field satisfies its predicate",
+  );
+  assert.equal(
+    evaluateAgainstContract({ answer: "42" }, { required_output_keys: ["toString"] }).verdict,
+    "REJECT",
+    "an inherited member is not a declared field",
+  );
+});
+
 test("T16 the honest fixtures stay green after hardening", () => {
   assert.equal(evaluateAgainstContract(GOOD_OUTPUT, CONTRACT).verdict, "ACCEPT");
   assert.equal(planNode0ModelSwapInvariance({ consent: GO, input: VALID }).eligible, true);

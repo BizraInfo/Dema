@@ -39,6 +39,13 @@ function isPlainObject(v) {
   return !!v && typeof v === "object" && !Array.isArray(v);
 }
 
+// Field presence is an OWN-property question. `output.toString` is inherited
+// from Object.prototype, not something a model produced; an own `__proto__` data
+// property — which JSON.parse produces — IS a real canonical field.
+function ownField(o, k) {
+  return isPlainObject(o) && Object.hasOwn(o, k) ? o[k] : undefined;
+}
+
 // The complete contract vocabulary. Anything outside it is refused, so a typo
 // like `reqired_output_keys` cannot pass as "no requirement".
 const KNOWN_CONTRACT_KEYS = new Set(["required_output_keys", "forbidden_substrings", "expected"]);
@@ -212,6 +219,72 @@ function frozenContractCheck(blocked_by, effective_predicate_count, snapshot) {
   });
 }
 
+// A value the ONE canonical serializer always refuses. It carries "this output
+// existed but could not be canonicalised" through the inert snapshot without a
+// second status channel that could drift from the serializer's own verdict.
+const OUTPUT_NOT_CANONICALIZABLE = Object.freeze(new Map());
+
+// Read ONE candidate exactly once into inert data. Both the verdict and the
+// output hash are derived from the bytes captured here, so a stateful accessor
+// can no longer be judged as one value and hashed as another — which is the
+// attestation's central claim. A read that throws marks the row with an indexed
+// reason instead of escaping through the public API.
+function snapshotCandidate(cand, index) {
+  try {
+    if (!isPlainObject(cand)) return { candidate: cand, blocked: [] };
+    const model_id = cand.model_id; // the ONE read
+    // `Object.hasOwn`, never `in`: presence is an own-property question, and a
+    // `has` trap is not something the kernel needs to invoke.
+    const hasOutput = Object.hasOwn(cand, "output");
+    const raw = hasOutput ? cand.output : undefined; // the ONE read
+    const snapshot = { model_id: typeof model_id === "string" ? model_id : null };
+    if (hasOutput) {
+      try {
+        // Normalise through the ONE canonical byte contract — no second
+        // serializer. JSON.parse of canonical bytes preserves own keys such as
+        // `__proto__` as own DATA properties, which is what makes them real
+        // fields rather than a prototype swap.
+        snapshot.output = JSON.parse(canonicalizeJsonV1(raw ?? null));
+      } catch {
+        snapshot.output = OUTPUT_NOT_CANONICALIZABLE;
+      }
+    }
+    return { candidate: Object.freeze(snapshot), blocked: [] };
+  } catch {
+    return { candidate: null, blocked: [`candidate_uninspectable:${index}`] };
+  }
+}
+
+// THE single boundary the whole proof input crosses. Everything downstream —
+// plan, evaluate, hash, invariants — consumes only what comes back from here.
+// Snapshotting an already-inert input is idempotent and reads nothing hostile,
+// so each public entry point can safely call it on its own.
+function snapshotInput(input) {
+  const blocked_by = [];
+  try {
+    if (!isPlainObject(input)) return { input, blocked_by };
+    let task = input.task;
+    if (isPlainObject(task) && isPlainObject(task.acceptance_contract)) {
+      const snapshot = validateAcceptanceContract(task.acceptance_contract).snapshot;
+      // A contract that cannot be read at all is left in place: plan re-reports
+      // it under containment as contract_uninspectable, and blocks.
+      if (snapshot !== null) task = { ...task, acceptance_contract: snapshot };
+    }
+    let candidates = input.candidates;
+    if (Array.isArray(candidates)) {
+      candidates = candidates.map((cand, i) => {
+        const { candidate, blocked } = snapshotCandidate(cand, i);
+        blocked_by.push(...blocked);
+        return candidate;
+      });
+    }
+    return { input: { ...input, task, candidates }, blocked_by };
+  } catch {
+    // The input wrapper itself is hostile; plan reports the shape it can see.
+    return { input: null, blocked_by };
+  }
+}
+
 // The heart of the thesis: a MODEL-BLIND verdict function. Its signature admits
 // only (output, contract) — model identity is not a parameter, so it cannot enter
 // the decision. Deterministic; canon-unserializable output fails closed as REJECT.
@@ -237,8 +310,8 @@ export function evaluateAgainstContract(output, contract) {
   const c = contractCheck.snapshot;
   if (Array.isArray(c.required_output_keys)) {
     for (const k of c.required_output_keys) {
-      const present = isPlainObject(output) && output[k] !== undefined && output[k] !== null && output[k] !== "";
-      if (!present) failed.push(`missing_key:${k}`);
+      const v = ownField(output, k);
+      if (v === undefined || v === null || v === "") failed.push(`missing_key:${k}`);
     }
   }
   if (Array.isArray(c.forbidden_substrings)) {
@@ -250,7 +323,7 @@ export function evaluateAgainstContract(output, contract) {
     for (const [k, v] of Object.entries(c.expected)) {
       let ok;
       try {
-        ok = isPlainObject(output) && canonicalizeJsonV1(output[k] ?? null) === canonicalizeJsonV1(v ?? null);
+        ok = isPlainObject(output) && canonicalizeJsonV1(ownField(output, k) ?? null) === canonicalizeJsonV1(v ?? null);
       } catch {
         ok = false;
       }
@@ -276,10 +349,13 @@ function outputHash(output) {
 // provenance only — it is NEVER passed to evaluateAgainstContract.
 function classifyCandidates(contract, candidates) {
   return candidates.map((cand) => {
-    const evalResult = evaluateAgainstContract(cand.output, contract);
+    // ONE local binding, judged and hashed. Reading `cand.output` twice is
+    // exactly how an ACCEPT row came to carry bytes that were never accepted.
+    const output = cand?.output;
+    const evalResult = evaluateAgainstContract(output, contract);
     return Object.freeze({
       model_id: typeof cand?.model_id === "string" ? cand.model_id : null,
-      output_hash: outputHash(cand?.output),
+      output_hash: outputHash(output),
       verdict: evalResult.verdict,
       failed_requirements: evalResult.failed_requirements,
     });
@@ -339,6 +415,11 @@ function computeInvariants(contract, candidates, classified) {
 export function planNode0ModelSwapInvariance({ consent, input } = {}) {
   const blocked_by = [];
   if (consent !== NODE0_MODEL_SWAP_INVARIANCE_GO_PHRASE) blocked_by.push("consent_phrase_mismatch");
+  // Admission judges the inert snapshot, never the caller's objects — otherwise
+  // the shape the gate approved need not be the shape the builder attests.
+  const snapshot = snapshotInput(input);
+  blocked_by.push(...snapshot.blocked_by);
+  input = snapshot.input;
   if (!isPlainObject(input)) {
     blocked_by.push("input_not_object");
     return frozenPlan(blocked_by);
@@ -390,6 +471,7 @@ function frozenPlan(blocked_by) {
 // Content-addressed attestation. Robust to a minimal/empty input; the invariance
 // flags are the load-bearing proof. content_hash binds the WHOLE body.
 export function buildNode0ModelSwapInvariancePayload(input) {
+  input = snapshotInput(input).input;
   const task = isPlainObject(input?.task) ? input.task : {};
   // ONE guarded read of the caller's contract; classification, the invariants and
   // contract_hash all consume the inert copy. An uninspectable contract yields no
@@ -516,20 +598,11 @@ export function verifyNode0ModelSwapInvariance(payload) {
 
 // Orchestrator the review gate consumes: plan -> build -> verify -> tamper-reject.
 // Fails closed (named block) on any step. Boundary stays all-false — no model call.
-// Read the caller's contract ONCE and hand the same inert copy to both plan and
-// build. Two independent reads would let a stateful accessor pass admission and
-// then have something else attested. A contract that cannot be read at all is
-// left in place: plan re-reports it under containment, and blocks.
-function withInertContract(input) {
-  if (!isPlainObject(input) || !isPlainObject(input.task) || !isPlainObject(input.task.acceptance_contract)) return input;
-  const snapshot = validateAcceptanceContract(input.task.acceptance_contract).snapshot;
-  if (snapshot === null) return input;
-  return { ...input, task: { ...input.task, acceptance_contract: snapshot } };
-}
-
 export function runNode0ModelSwapInvariance({ consent, input } = {}) {
   const boundary = node0ModelSwapInvarianceBoundary();
-  const safeInput = withInertContract(input);
+  // Read every caller-controlled accessor ONCE, here. Plan and build then
+  // re-snapshot inert data, which costs nothing and reads nothing hostile.
+  const safeInput = snapshotInput(input).input;
   const plan = planNode0ModelSwapInvariance({ consent, input: safeInput });
   if (!plan.eligible) {
     return Object.freeze({
