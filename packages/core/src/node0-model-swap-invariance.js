@@ -96,7 +96,11 @@ function cloneCanonicalJsonValue(v, depth = 0) {
     return Object.freeze(out);
   }
   if (!isCanonicalPlainObject(v)) return NOT_CANONICAL;
-  const out = {};
+  // Prototype-less: `out[k] = …` with k === "__proto__" on a normal literal would
+  // set this object's PROTOTYPE instead of creating the key, so the copy would
+  // silently lose a field the caller declared. canonical-json-v1 accepts a null
+  // prototype, so the snapshot still hashes.
+  const out = Object.create(null);
   for (const [k, x] of Object.entries(v)) {
     const cloned = cloneCanonicalJsonValue(x, depth + 1);
     if (cloned === NOT_CANONICAL) return NOT_CANONICAL;
@@ -113,14 +117,22 @@ function cloneCanonicalJsonValue(v, depth = 0) {
 // planner and a different one to the builder. Throws propagate to the caller's
 // single try.
 function snapshotContract(c) {
-  const snapshot = {};
+  // Prototype-less for the same reason as the clone: an own `__proto__` key —
+  // which JSON.parse produces — would otherwise swap this object's prototype
+  // instead of being copied, so the unknown-field check would go blind to it
+  // while the predicate count silently read the INHERITED value.
+  const snapshot = Object.create(null);
   for (const k of Object.keys(c)) {
     const v = c[k];
     // `expected` is copied key-by-key so a bad value keeps its own diagnosis
     // (`contract_noncanonical:expected.<k>`) instead of collapsing the field.
-    snapshot[k] = isCanonicalPlainObject(v) && k === "expected"
-      ? Object.freeze(Object.fromEntries(Object.entries(v).map(([ek, ev]) => [ek, cloneCanonicalJsonValue(ev)])))
-      : cloneCanonicalJsonValue(v);
+    if (isCanonicalPlainObject(v) && k === "expected") {
+      const expected = Object.create(null);
+      for (const [ek, ev] of Object.entries(v)) expected[ek] = cloneCanonicalJsonValue(ev);
+      snapshot[k] = Object.freeze(expected);
+    } else {
+      snapshot[k] = cloneCanonicalJsonValue(v);
+    }
   }
   return Object.freeze(snapshot);
 }

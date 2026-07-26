@@ -647,6 +647,22 @@ test("T35 caller-controlled contract state is read exactly once per public call"
   assert.equal(run.ok, true, "the proof is built on the one inert snapshot that was admitted");
 });
 
+test("T36 an own __proto__ key is an unknown field, not a silent prototype swap", () => {
+  // JSON.parse produces an OWN enumerable `__proto__`. Copying it into a normal
+  // object literal sets that object's PROTOTYPE instead of keeping the key, so
+  // the unknown-field check sees nothing while predicate counting and evaluation
+  // consume the INHERITED predicate — a malformed contract admitted as a proof
+  // subject. The snapshot is therefore built prototype-less.
+  const contract = JSON.parse('{"__proto__":{"required_output_keys":["answer"]}}');
+  assert.ok(Object.keys(contract).includes("__proto__"), "fixture must carry an own __proto__ key");
+
+  const v = validateAcceptanceContract(contract);
+  assert.equal(v.valid, false, "a __proto__ field is not a known contract key");
+  assert.ok(v.blocked_by.includes("contract_unknown_field:__proto__"), v.blocked_by.join(", "));
+  assert.equal(v.effective_predicate_count, 0, "an inherited predicate must never be counted");
+  assert.equal(evaluateAgainstContract({ answer: "42" }, contract).verdict, "REJECT");
+});
+
 test("T16 the honest fixtures stay green after hardening", () => {
   assert.equal(evaluateAgainstContract(GOOD_OUTPUT, CONTRACT).verdict, "ACCEPT");
   assert.equal(planNode0ModelSwapInvariance({ consent: GO, input: VALID }).eligible, true);
