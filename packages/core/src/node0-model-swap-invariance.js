@@ -50,6 +50,30 @@ function isArrayOfNonEmptyStrings(v) {
   return Array.isArray(v) && v.every((x) => typeof x === "string" && x.length > 0);
 }
 
+// The exact shape sha256CanonicalJsonV1 produces. An ACCEPT row can never
+// legitimately carry anything else: an output that fails to canonicalise is
+// rejected as `output_not_canonicalizable`, so it never reaches ACCEPT.
+const OUTPUT_HASH_RE = /^sha256:[0-9a-f]{64}$/;
+
+// Is this value inside the canonical-JSON domain? A predicate outside it
+// (undefined, function, symbol, BigInt, non-finite number, Date/Map/Set, a
+// cycle) cannot be compared or hashed, so `evaluateAgainstContract` catches the
+// failure and rejects EVERY candidate — and uniform rejection satisfies all
+// three invariants trivially, yielding a PASS over a contract that never
+// compared anything. Recursive because `expected: { a: { b: undefined } }` is
+// the same defect one level down; the depth cap is what terminates a cycle.
+function isCanonicalJsonValue(v, depth = 0) {
+  if (depth > 64) return false;
+  if (v === null) return true;
+  const t = typeof v;
+  if (t === "string" || t === "boolean") return true;
+  if (t === "number") return Number.isFinite(v);
+  if (t === "undefined" || t === "function" || t === "symbol" || t === "bigint") return false;
+  if (Array.isArray(v)) return v.every((x) => isCanonicalJsonValue(x, depth + 1));
+  if (isPlainObject(v)) return Object.values(v).every((x) => isCanonicalJsonValue(x, depth + 1));
+  return false;
+}
+
 // How many predicates a contract actually imposes. A well-typed contract can
 // still be empty of requirements (`{}`, `required_output_keys: []`,
 // `expected: {}`), and an empty contract accepts EVERY output — so invariance
@@ -90,6 +114,14 @@ export function validateAcceptanceContract(contract) {
     blocked_by.push("contract_malformed:forbidden_substrings");
   }
   if ("expected" in c && !isPlainObject(c.expected)) blocked_by.push("contract_malformed:expected");
+  else if (isPlainObject(c.expected)) {
+    for (const [k, v] of Object.entries(c.expected)) {
+      if (!isCanonicalJsonValue(v)) blocked_by.push(`contract_noncanonical:expected.${k}`);
+    }
+  }
+  // Belt and braces: the contract must also hash as a whole, since contract_hash
+  // lands in the attestation and a null there would travel as if it were bound.
+  if (outputHash(c) === null) blocked_by.push("contract_not_hashable");
   const effective_predicate_count = effectivePredicateCount(c);
   // Vacuity is checked only once the shape is sound, so a mistyped field keeps
   // the more specific diagnosis instead of being reported as "empty".
@@ -326,9 +358,16 @@ function rederiveFromRows(rows) {
     if (!isPlainObject(r)) return null;
     if (r.verdict !== VERDICT_ACCEPT && r.verdict !== VERDICT_REJECT) return null;
     if (typeof r.model_id === "string" && r.model_id.length > 0) modelIds.push(r.model_id);
+    // A hash that is neither null nor well-formed is not something the builder
+    // can emit, so the row is refused rather than skipped past.
+    if (r.output_hash !== null && !OUTPUT_HASH_RE.test(r.output_hash)) return null;
     if (r.verdict === VERDICT_ACCEPT) {
+      // An ACCEPT row with no usable hash would inflate accept_count while
+      // contributing nothing to accepted_output_hashes — and both summaries
+      // would still agree, so the mismatch check alone cannot catch it.
+      if (!OUTPUT_HASH_RE.test(r.output_hash)) return null;
       accept_count += 1;
-      if (typeof r.output_hash === "string") accepted.add(r.output_hash);
+      accepted.add(r.output_hash);
     }
     if (typeof r.output_hash !== "string") continue;
     if (byOutput.has(r.output_hash)) {

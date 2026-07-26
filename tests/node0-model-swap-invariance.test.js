@@ -460,6 +460,83 @@ test("T29 a well-formed non-empty contract is still admitted and still proves", 
   assert.equal(runNode0ModelSwapInvarianceCheck().ok, true);
 });
 
+// ── PR #423 review: two P1s, found independently by Codex and Greptile ──
+
+test("T30 a predicate outside the canonical-JSON domain is not an admissible contract", () => {
+  // Such a value cannot be compared or hashed, so evaluate rejects EVERY
+  // candidate — and uniform rejection satisfies all three invariants trivially,
+  // producing a PASS over a contract that never compared anything.
+  const cycle = {};
+  cycle.self = cycle;
+  const cases = {
+    undefined: undefined,
+    function: () => 1,
+    symbol: Symbol("x"),
+    bigint: 10n,
+    infinity: Infinity,
+    nan: NaN,
+    date: new Date(0),
+    map: new Map(),
+    cycle,
+    "nested undefined": { deep: { x: undefined } },
+  };
+  for (const [label, value] of Object.entries(cases)) {
+    const contract = { expected: { answer: value } };
+    assert.equal(validateAcceptanceContract(contract).valid, false, `${label}: must not be admitted`);
+    const run = runNode0ModelSwapInvariance({
+      consent: GO,
+      input: {
+        task: { task_id: "m", acceptance_contract: contract },
+        candidates: [
+          { model_id: "a", output: GOOD_OUTPUT },
+          { model_id: "b", output: GOOD_OUTPUT },
+        ],
+      },
+    });
+    assert.equal(run.ok, false, `${label}: must not produce a passing proof`);
+    assert.equal(run.content_hash, null, `${label}: must fail closed, not crash or attest`);
+  }
+});
+
+test("T31 a contract that cannot be hashed as a whole is refused", () => {
+  // contract_hash travels in the attestation; a null there would move as though
+  // it were bound to something.
+  const v = validateAcceptanceContract({ required_output_keys: ["answer"], expected: { a: undefined } });
+  assert.equal(v.valid, false);
+  assert.ok(v.blocked_by.some((c) => c.startsWith("contract_noncanonical:expected.")));
+});
+
+test("T32 an ACCEPT row must carry a well-formed output hash", async () => {
+  // An ACCEPT row with no usable hash inflates accept_count while contributing
+  // nothing to accepted_output_hashes — and BOTH summaries still agree, so the
+  // mismatch check alone cannot catch it. The builder can never emit this: an
+  // output that fails to canonicalise is rejected, so it never reaches ACCEPT.
+  const honest = buildNode0ModelSwapInvariancePayload(VALID);
+  for (const bad of [null, "not-a-hash", "sha256:abc", `sha256:${"A".repeat(64)}`]) {
+    const forged = await rehash({
+      ...honest,
+      candidate_count: 2,
+      accept_count: 1,
+      accepted_output_hashes: [],
+      candidates: [
+        { model_id: "a", output_hash: bad, verdict: "ACCEPT", failed_requirements: [] },
+        { model_id: "b", output_hash: `sha256:${"c".repeat(64)}`, verdict: "REJECT", failed_requirements: ["missing_key:answer"] },
+      ],
+    });
+    const v = verifyNode0ModelSwapInvariance(forged);
+    assert.equal(v.hash_ok, true, "the forgery is internally hash-consistent");
+    assert.equal(v.evidence_ok, false, `ACCEPT row with hash ${JSON.stringify(bad)} must be refused`);
+    assert.equal(v.ok, false);
+  }
+});
+
+test("T33 a REJECT row may carry a null hash, but never a malformed one", () => {
+  // Symmetry check: null is legitimate for REJECT (the output did not
+  // canonicalise), garbage never is.
+  const legit = buildNode0ModelSwapInvariancePayload(VALID);
+  assert.equal(verifyNode0ModelSwapInvariance(legit).ok, true, "honest payload unaffected");
+});
+
 test("T16 the honest fixtures stay green after hardening", () => {
   assert.equal(evaluateAgainstContract(GOOD_OUTPUT, CONTRACT).verdict, "ACCEPT");
   assert.equal(planNode0ModelSwapInvariance({ consent: GO, input: VALID }).eligible, true);
