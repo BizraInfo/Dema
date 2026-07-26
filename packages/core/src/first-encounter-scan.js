@@ -44,7 +44,17 @@ export async function scanMetadataOnly(rootPath) {
   const skipped = [];
 
   async function walk(dirAbs) {
-    const entries = await readdir(dirAbs, { withFileTypes: true });
+    let entries;
+    try {
+      entries = await readdir(dirAbs, { withFileTypes: true });
+    } catch {
+      // One unreadable directory must cost that directory, not the whole scan.
+      skipped.push({
+        relative_path: relative(rootRealPath, dirAbs) || ".",
+        reason: "UNREADABLE_DIRECTORY",
+      });
+      return;
+    }
     entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
     for (const entry of entries) {
       const abs = join(dirAbs, entry.name);
@@ -71,9 +81,27 @@ export async function scanMetadataOnly(rootPath) {
         await walk(abs);
         continue;
       }
-      const stat = await lstat(abs);
+      let stat;
+      try {
+        stat = await lstat(abs);
+      } catch {
+        // Readable directory, unreadable entry (no +x on the parent), or an entry
+        // removed between readdir and lstat. Ledger it and keep the rest.
+        skipped.push({ relative_path: rel, reason: "UNREADABLE_FILE" });
+        continue;
+      }
       if (!stat.isFile()) {
         skipped.push({ relative_path: rel, reason: "NOT_A_REGULAR_FILE" });
+        continue;
+      }
+
+      let file_hash;
+      try {
+        file_hash = await sha256Streamed(abs);
+      } catch {
+        // stat can succeed on a file whose bytes are unreadable; the digest is
+        // the first call that actually opens it.
+        skipped.push({ relative_path: rel, reason: "UNREADABLE_FILE" });
         continue;
       }
 
@@ -83,7 +111,7 @@ export async function scanMetadataOnly(rootPath) {
           extension: extname(entry.name),
           size: stat.size,
           modified_time: new Date(stat.mtimeMs).toISOString(),
-          file_hash: await sha256Streamed(abs),
+          file_hash,
         }),
       );
     }

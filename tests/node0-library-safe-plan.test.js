@@ -226,3 +226,56 @@ test("no mutation primitive for user paths is reachable from the replay module",
     assert.ok(!src.includes(banned), `safe-plan module references ${banned}`);
   }
 });
+
+/* ── drift is a per-member fact, not a set-wide stain ─────────────────────── */
+
+/**
+ * Three byte-identical files in one set. One of them changes on disk between
+ * the hash phase and the precondition recapture; the other two do not. The
+ * drift label must land on the file that actually changed — wherever it sits
+ * in the sorted member order.
+ */
+async function planWithMidRunDrift(dir, driftedMember) {
+  for (const n of ["x1", "x2", "x3"]) {
+    mkdirSync(join(dir, n), { recursive: true });
+    writeFileSync(join(dir, n, "dup.bin"), "DRIFT-SET-PAYLOAD-0123456789");
+  }
+  return buildAuthoritativeSafePlan({
+    roots: [dir], rootPriority: [dir], measuredAt: "2026-07-25T00:00:00.000Z",
+    // "worktrees" is the last progress beat before preconditions are recaptured.
+    onProgress: (phase) => {
+      if (phase === "worktrees") writeFileSync(join(dir, driftedMember, "dup.bin"), "SHORT");
+    },
+  });
+}
+
+test("a drifting member never mislabels the clean siblings sorted after it", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "node0-drift-"));
+  try {
+    const p = await planWithMidRunDrift(dir, "x1");
+    const set = p.sets.find((s) => s.paths.length === 3);
+    assert.ok(set, "the three-member set was not formed");
+    const freshness = (n) => set.members.find((m) => m.path.includes(`/${n}/`)).freshness;
+    assert.equal(freshness("x1"), "PRECONDITION_DRIFT", "the file that changed must be flagged");
+    assert.equal(freshness("x2"), "FRESH", "an unchanged sibling sorted after the drift must stay FRESH");
+    assert.equal(freshness("x3"), "FRESH", "an unchanged sibling sorted after the drift must stay FRESH");
+    assert.equal(set.drifted, true, "the set as a whole must still refuse to act");
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("the drift label follows the file, not its position in the member order", async () => {
+  const first = mkdtempSync(join(tmpdir(), "node0-drift-"));
+  const last = mkdtempSync(join(tmpdir(), "node0-drift-"));
+  try {
+    const flagged = async (dirPath, member) => {
+      const p = await planWithMidRunDrift(dirPath, member);
+      const set = p.sets.find((s) => s.paths.length === 3);
+      return set.members.filter((m) => m.freshness === "PRECONDITION_DRIFT").map((m) => m.path.split("/").at(-2));
+    };
+    assert.deepEqual(await flagged(first, "x1"), ["x1"], "drifting the first member stained its siblings");
+    assert.deepEqual(await flagged(last, "x3"), ["x3"], "drifting the last member flagged the wrong file");
+  } finally {
+    rmSync(first, { recursive: true, force: true });
+    rmSync(last, { recursive: true, force: true });
+  }
+});

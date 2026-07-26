@@ -258,8 +258,12 @@ export async function buildAuthoritativeSafePlan({
     let unreadableMember = false;
     for (const p of set.paths) {
       const pre = capturePrecondition(p);
+      // Drift is a property of THIS file. `drifted` is the set-level OR of its
+      // members; reading it per member stains every sibling sorted after the
+      // first one that changed.
+      const memberDrifted = pre !== null && pre.size !== set.size_bytes;
       if (pre === null) { unreadableMember = true; perf.unreadable_files += 1; }
-      else if (pre.size !== set.size_bytes) { drifted = true; perf.changed_files += 1; }
+      else if (memberDrifted) { drifted = true; perf.changed_files += 1; }
       const zone = classifyZone(p, ctx);
       members.push({
         path: p,
@@ -267,7 +271,7 @@ export async function buildAuthoritativeSafePlan({
         protected_zone: zone,
         disposition: zoneDisposition(zone),
         readability: pre === null ? "UNREADABLE" : "READABLE",
-        freshness: pre === null ? "NOT_OBSERVED" : drifted ? "PRECONDITION_DRIFT" : "FRESH",
+        freshness: pre === null ? "NOT_OBSERVED" : memberDrifted ? "PRECONDITION_DRIFT" : "FRESH",
         evidence_refs: [`zone_rule=${zone}`, `stat_at=${measuredAt}`],
       });
     }

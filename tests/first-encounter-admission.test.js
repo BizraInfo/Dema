@@ -180,3 +180,135 @@ test("every admission verdict carries an all-false runtime boundary", () => {
 test("truth label stays local and unsigned until the signer lane closes", () => {
   assert.equal(contractOf().truth_label, "LOCAL_CONTENT_ADDRESSED");
 });
+
+/* ── scan resilience (real filesystem) ────────────────────────────────────────
+ *
+ * DEMA-FIRST-ENCOUNTER-SCAN-RESILIENCE-1B. Until this existed, nothing
+ * exercised scanMetadataOnly against a real filesystem at all: readdir, lstat
+ * and the digest's createReadStream were unguarded, so one permission-denied
+ * entry rejected the whole scan and discarded every record already collected.
+ * The P4 acceptance harness asserted `Array.isArray(payload.skipped)` and never
+ * that it POPULATES, so 31/31 passed straight over the gap.
+ *
+ * These use real chmod because the failure is a real primitive error — a fake
+ * fs that returns a benign value would hide exactly the bug under test. When
+ * the process can read anything regardless of mode (root, or a filesystem that
+ * ignores permissions), the restriction is not observable and the test skips
+ * rather than asserting something it did not create.
+ */
+
+const canEnforceModes = async (fsp, dir, path) => {
+  await fsp.chmod(path, 0o000);
+  try {
+    await fsp.readdir(path);
+    return false; // permissions not enforced here (root / no-perm filesystem)
+  } catch {
+    return true;
+  } finally {
+    await fsp.chmod(path, 0o755);
+  }
+};
+
+test("an unreadable directory is ledgered, and its siblings still scan", async (t) => {
+  const fsp = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { scanMetadataOnly } = await import("../packages/core/src/first-encounter-scan.js");
+
+  const root = await fsp.mkdtemp(join(tmpdir(), "fe-scan-"));
+  try {
+    await fsp.mkdir(join(root, "locked"));
+    await fsp.writeFile(join(root, "locked", "hidden.md"), "x");
+    await fsp.mkdir(join(root, "open"));
+    await fsp.writeFile(join(root, "open", "visible.md"), "hello");
+    await fsp.writeFile(join(root, "top.md"), "hi");
+
+    if (!(await canEnforceModes(fsp, root, join(root, "locked")))) {
+      t.skip("filesystem does not enforce modes for this process");
+      return;
+    }
+    await fsp.chmod(join(root, "locked"), 0o000);
+
+    const out = await scanMetadataOnly(root);
+
+    // The whole scan survived: both readable files are present.
+    const paths = out.inventory.files.map((r) => r.relative_path).sort();
+    assert.deepEqual(paths, ["open/visible.md", "top.md"]);
+
+    // And the failure is disclosed, not swallowed.
+    const entry = out.skipped.find((s) => s.relative_path === "locked");
+    assert.ok(entry, `expected a ledger entry for "locked", got ${JSON.stringify(out.skipped)}`);
+    assert.equal(entry.reason, "UNREADABLE_DIRECTORY");
+  } finally {
+    await fsp.chmod(join(root, "locked"), 0o755).catch(() => {});
+    await fsp.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("an unreadable file is ledgered at the digest, not thrown", async (t) => {
+  const fsp = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { scanMetadataOnly } = await import("../packages/core/src/first-encounter-scan.js");
+
+  const root = await fsp.mkdtemp(join(tmpdir(), "fe-scan-"));
+  try {
+    const secret = join(root, "secret.md");
+    await fsp.writeFile(secret, "unreadable bytes");
+    await fsp.writeFile(join(root, "readable.md"), "fine");
+
+    await fsp.chmod(secret, 0o000);
+    let enforced = true;
+    try {
+      await fsp.readFile(secret);
+      enforced = false;
+    } catch {
+      /* enforced */
+    }
+    if (!enforced) {
+      t.skip("filesystem does not enforce modes for this process");
+      return;
+    }
+
+    const out = await scanMetadataOnly(root);
+
+    assert.deepEqual(
+      out.inventory.files.map((r) => r.relative_path),
+      ["readable.md"],
+    );
+    const entry = out.skipped.find((s) => s.relative_path === "secret.md");
+    assert.ok(entry, `expected a ledger entry, got ${JSON.stringify(out.skipped)}`);
+    assert.equal(entry.reason, "UNREADABLE_FILE");
+  } finally {
+    await fsp.chmod(join(root, "secret.md"), 0o644).catch(() => {});
+    await fsp.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("a clean tree still scans, and the ledger stays empty and sorted", async () => {
+  const fsp = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { scanMetadataOnly } = await import("../packages/core/src/first-encounter-scan.js");
+
+  const root = await fsp.mkdtemp(join(tmpdir(), "fe-scan-"));
+  try {
+    await fsp.mkdir(join(root, "b"));
+    await fsp.writeFile(join(root, "b", "two.md"), "two");
+    await fsp.writeFile(join(root, "a.md"), "one");
+
+    const first = await scanMetadataOnly(root);
+    const second = await scanMetadataOnly(root);
+
+    assert.deepEqual(first.skipped, []);
+    assert.deepEqual(
+      first.inventory.files.map((r) => r.relative_path),
+      ["a.md", "b/two.md"],
+    );
+    // Deterministic across runs — the ledger must not depend on traversal timing.
+    assert.deepEqual(first.inventory, second.inventory);
+    assert.deepEqual(first.skipped, second.skipped);
+  } finally {
+    await fsp.rm(root, { recursive: true, force: true });
+  }
+});
