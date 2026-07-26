@@ -305,6 +305,61 @@ test("T17 a standalone one-model attestation does not verify as swap-invariance 
   assert.equal(verifyNode0ModelSwapInvariance(dup).ok, false, "two rows, one model, still no swap");
 });
 
+// ── EFFECTIVE-CONTRACT-GUARD-1B: well-typed but semantically empty ──
+//
+// Every contract below passes type validation and imposes ZERO predicates, so it
+// accepts every output. Invariance measured over it is vacuously true — the same
+// failure shape as T11/T12's one-model candidate set, and it survived the first
+// hotfix because `[].every()` is vacuously true and the helper was named as if it
+// checked the array was non-empty.
+
+test("T18 an empty contract is refused, not treated as no-requirements", () => {
+  assert.equal(evaluateAgainstContract({ literally: "anything" }, {}).verdict, "REJECT");
+  assert.deepEqual(evaluateAgainstContract({ x: 1 }, {}).failed_requirements, ["contract_vacuous:no_effective_predicate"]);
+});
+
+test("T19 required_output_keys: [] is refused", () => {
+  assert.equal(evaluateAgainstContract({ x: 1 }, { required_output_keys: [] }).verdict, "REJECT");
+});
+
+test("T20 forbidden_substrings: [] is refused", () => {
+  assert.equal(evaluateAgainstContract({ x: 1 }, { forbidden_substrings: [] }).verdict, "REJECT");
+});
+
+test("T21 expected: {} is refused when it is the only predicate", () => {
+  assert.equal(evaluateAgainstContract({ x: 1 }, { expected: {} }).verdict, "REJECT");
+  assert.equal(evaluateAgainstContract({ x: 1 }, { required_output_keys: [], forbidden_substrings: [], expected: {} }).verdict, "REJECT");
+});
+
+test("T22 one effective predicate is enough — the guard counts, it does not forbid", () => {
+  assert.equal(evaluateAgainstContract({ answer: "42" }, { required_output_keys: ["answer"] }).verdict, "ACCEPT");
+  assert.equal(evaluateAgainstContract({ answer: "42" }, { required_output_keys: [], expected: { answer: "42" } }).verdict, "ACCEPT");
+  assert.equal(evaluateAgainstContract({ answer: "42" }, { forbidden_substrings: ["nope"] }).verdict, "ACCEPT");
+});
+
+test("T23 malformed still reports malformed, not vacuous — the specific diagnosis wins", () => {
+  // A mistyped field is malformed, NOT vacuous; conflating them would lose the
+  // reason the contract is being refused.
+  assert.deepEqual(evaluateAgainstContract({}, { required_output_keys: "answer" }).failed_requirements, ["contract_malformed:required_output_keys"]);
+  assert.ok(evaluateAgainstContract({ answer: "42" }, { required_output_keys: ["answer"], reqired_output_keys: [] }).failed_requirements.includes("contract_unknown_field:reqired_output_keys"));
+});
+
+test("T24 a vacuous contract cannot even be planned or run into a proof", () => {
+  const input = {
+    task: { task_id: "m", acceptance_contract: {} },
+    candidates: [
+      { model_id: "a", output: { junk: 1 } },
+      { model_id: "b", output: { other: 2 } },
+    ],
+  };
+  const plan = planNode0ModelSwapInvariance({ consent: GO, input });
+  assert.equal(plan.eligible, false, "a proof over no requirement must not be buildable");
+  assert.ok(plan.blocked_by.includes("acceptance_contract_vacuous"));
+  const run = runNode0ModelSwapInvariance({ consent: GO, input });
+  assert.equal(run.ok, false);
+  assert.equal(run.content_hash, null);
+});
+
 test("T16 the honest fixtures stay green after hardening", () => {
   assert.equal(evaluateAgainstContract(GOOD_OUTPUT, CONTRACT).verdict, "ACCEPT");
   assert.equal(planNode0ModelSwapInvariance({ consent: GO, input: VALID }).eligible, true);

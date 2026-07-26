@@ -43,8 +43,24 @@ function isPlainObject(v) {
 // like `reqired_output_keys` cannot pass as "no requirement".
 const KNOWN_CONTRACT_KEYS = new Set(["required_output_keys", "forbidden_substrings", "expected"]);
 
-function isNonEmptyStringArray(v) {
+// Named for what it checks: every ELEMENT is a non-empty string. It says nothing
+// about the array being non-empty — `[].every()` is vacuously true — which is
+// exactly why the count below is a separate gate.
+function isArrayOfNonEmptyStrings(v) {
   return Array.isArray(v) && v.every((x) => typeof x === "string" && x.length > 0);
+}
+
+// How many predicates a contract actually imposes. A well-typed contract can
+// still be empty of requirements (`{}`, `required_output_keys: []`,
+// `expected: {}`), and an empty contract accepts EVERY output — so invariance
+// measured over it is vacuously true and proves nothing. Same failure shape as a
+// one-model candidate set: structurally valid, semantically empty.
+function effectivePredicateCount(c) {
+  let n = 0;
+  if (Array.isArray(c.required_output_keys)) n += c.required_output_keys.length;
+  if (Array.isArray(c.forbidden_substrings)) n += c.forbidden_substrings.length;
+  if (isPlainObject(c.expected)) n += Object.keys(c.expected).length;
+  return n;
 }
 
 // The heart of the thesis: a MODEL-BLIND verdict function. Its signature admits
@@ -71,24 +87,30 @@ export function evaluateAgainstContract(output, contract) {
   for (const k of Object.keys(c)) {
     if (!KNOWN_CONTRACT_KEYS.has(k)) failed.push(`contract_unknown_field:${k}`);
   }
-  if ("required_output_keys" in c && !isNonEmptyStringArray(c.required_output_keys)) {
-    failed.push("contract_malformed:required_output_keys");
-  } else if (Array.isArray(c.required_output_keys)) {
+  const rokMalformed = "required_output_keys" in c && !isArrayOfNonEmptyStrings(c.required_output_keys);
+  const fsMalformed = "forbidden_substrings" in c && !isArrayOfNonEmptyStrings(c.forbidden_substrings);
+  const expMalformed = "expected" in c && !isPlainObject(c.expected);
+  if (rokMalformed) failed.push("contract_malformed:required_output_keys");
+  if (fsMalformed) failed.push("contract_malformed:forbidden_substrings");
+  if (expMalformed) failed.push("contract_malformed:expected");
+  // Well-formed but empty of requirements is its own refusal, distinct from
+  // malformed — checked only once the shape is sound so the more specific
+  // diagnosis wins when a field is simply mistyped.
+  if (failed.length === 0 && effectivePredicateCount(c) === 0) {
+    failed.push("contract_vacuous:no_effective_predicate");
+  }
+  if (!rokMalformed && Array.isArray(c.required_output_keys)) {
     for (const k of c.required_output_keys) {
       const present = isPlainObject(output) && output[k] !== undefined && output[k] !== null && output[k] !== "";
       if (!present) failed.push(`missing_key:${k}`);
     }
   }
-  if ("forbidden_substrings" in c && !isNonEmptyStringArray(c.forbidden_substrings)) {
-    failed.push("contract_malformed:forbidden_substrings");
-  } else if (Array.isArray(c.forbidden_substrings)) {
+  if (!fsMalformed && Array.isArray(c.forbidden_substrings)) {
     for (const s of c.forbidden_substrings) {
       if (serial.includes(s)) failed.push(`forbidden:${s}`);
     }
   }
-  if ("expected" in c && !isPlainObject(c.expected)) {
-    failed.push("contract_malformed:expected");
-  } else if (isPlainObject(c.expected)) {
+  if (!expMalformed && isPlainObject(c.expected)) {
     for (const [k, v] of Object.entries(c.expected)) {
       let ok;
       try {
@@ -190,6 +212,11 @@ export function planNode0ModelSwapInvariance({ consent, input } = {}) {
   else {
     if (typeof task.task_id !== "string" || task.task_id.length === 0) blocked_by.push("task_id_missing");
     if (!isPlainObject(task.acceptance_contract)) blocked_by.push("acceptance_contract_missing");
+    // Refused here too, not only inside evaluateAgainstContract: a proof must
+    // not even be BUILT over a contract that requires nothing. verify() cannot
+    // catch this downstream — the attestation carries only `contract_hash`, so a
+    // receiver never sees the predicates. Stated, not silently relied upon.
+    else if (effectivePredicateCount(task.acceptance_contract) === 0) blocked_by.push("acceptance_contract_vacuous");
   }
   if (!Array.isArray(input.candidates) || input.candidates.length === 0) blocked_by.push("candidates_empty");
   else {

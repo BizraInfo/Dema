@@ -20,7 +20,25 @@ The default gate must pass only while:
 - a forged body with a recomputed hash is still rejected,
 - the attestation carries an actual swap — at least two distinct `model_id`s, no duplicates,
 - a malformed, mistyped or unknown acceptance-contract field is refused, never skipped,
+- the acceptance contract imposes at least one effective predicate,
 - the boundary stays all-false (no execution authority).
+
+## What this proves, and what it does not
+
+Two guarantees of different strength live in this kernel. Do not read the stronger
+for the weaker:
+
+| Path | Establishes |
+|---|---|
+| BUILD — `run()` over real injected candidates | The contract is actually executed and the invariants constructively recomputed. Verdict-invariance, measured. |
+| VERIFY — a *transported* attestation | Row-derived attestation consistency only: no output hash carries two verdicts, summary counts match the rows, at least two distinct models are present. |
+
+`verify()` cannot confirm that each output truly satisfied the contract, that
+`failed_requirements` reflects a real evaluation, or that the builder honestly ran
+`evaluateAgainstContract` — the payload carries `contract_hash` and candidate rows,
+never the contract predicates or the raw outputs. Closing that gap needs the
+canonical contract plus outputs in the envelope, or output commitments bound to an
+independently trusted evaluator receipt. Neither is built.
 
 `npm run check` runs `node0-model-swap-invariance-check.mjs` and keeps `NODE0_MODEL_SWAP_INVARIANCE_1A` at `MEASURED_REPO`.
 
