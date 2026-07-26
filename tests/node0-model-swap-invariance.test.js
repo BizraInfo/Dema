@@ -555,6 +555,98 @@ test("T33 a REJECT row may carry a null hash, but never a malformed one", async 
   }
 });
 
+// ── PR #423 review: uninspectable contracts (Greptile, reproduced on 78962c3) ──
+//
+// Every look at a caller-controlled contract is an exception-capable operation.
+// `Object.keys(c)`, `"expected" in c`, `c.expected` and `Object.entries(c.expected)`
+// all run attacker-supplied code when the contract carries an accessor or is a
+// Proxy. On 78962c3 those exceptions escaped the public API: validate, plan,
+// evaluate and run threw instead of failing closed, so a hostile contract took
+// the caller down rather than being refused with a reason.
+
+const boom = () => {
+  throw new Error("hostile contract");
+};
+
+// An own ENUMERABLE accessor — the shape Object.keys and Object.entries walk into.
+const getterOn = (prop, get = boom) => {
+  const o = {};
+  Object.defineProperty(o, prop, { enumerable: true, configurable: true, get });
+  return o;
+};
+
+const hostileInput = (contract) => ({
+  task: { task_id: "m", acceptance_contract: contract },
+  candidates: [
+    { model_id: "a", output: GOOD_OUTPUT },
+    { model_id: "b", output: GOOD_OUTPUT },
+  ],
+});
+
+// Each factory is called fresh per public path: a hostile contract is allowed to
+// be single-use, and reusing one would let an earlier call disarm a later one.
+const UNINSPECTABLE = {
+  "throwing getter under expected": () => ({ required_output_keys: ["answer"], expected: getterOn("answer") }),
+  "throwing getter on required_output_keys": () => getterOn("required_output_keys"),
+  "throwing getter on forbidden_substrings": () => getterOn("forbidden_substrings"),
+  "nested throwing getter under expected": () => ({ expected: { answer: { deep: getterOn("x") } } }),
+  "proxy ownKeys trap throws": () => new Proxy({ required_output_keys: ["answer"] }, { ownKeys: boom }),
+  "proxy get trap throws": () => new Proxy({ required_output_keys: ["answer"] }, { get: boom }),
+  "proxy getOwnPropertyDescriptor trap throws": () =>
+    new Proxy({ required_output_keys: ["answer"] }, { getOwnPropertyDescriptor: boom }),
+};
+
+test("T34 an uninspectable contract fails closed on every public path, never throws", () => {
+  for (const [label, make] of Object.entries(UNINSPECTABLE)) {
+    let v, plan, evaluated, run;
+    assert.doesNotThrow(() => (v = validateAcceptanceContract(make())), `${label}: validate must not throw`);
+    assert.doesNotThrow(() => (plan = planNode0ModelSwapInvariance({ consent: GO, input: hostileInput(make()) })), `${label}: plan must not throw`);
+    assert.doesNotThrow(() => (evaluated = evaluateAgainstContract(GOOD_OUTPUT, make())), `${label}: evaluate must not throw`);
+    assert.doesNotThrow(() => (run = runNode0ModelSwapInvariance({ consent: GO, input: hostileInput(make()) })), `${label}: run must not throw`);
+
+    assert.equal(v.valid, false, `${label}: must not be admitted`);
+    assert.deepEqual(v.blocked_by, ["contract_uninspectable"], `${label}: one deterministic reason`);
+    assert.equal(plan.eligible, false, `${label}: plan must block`);
+    assert.ok(plan.blocked_by.includes("contract_uninspectable"), `${label}: plan surfaces the same reason`);
+    assert.equal(evaluated.verdict, "REJECT", `${label}: evaluate fails closed`);
+    assert.deepEqual(evaluated.failed_requirements, ["contract_uninspectable"], `${label}: evaluate reports it verbatim`);
+    assert.equal(run.ok, false, `${label}: no passing proof`);
+    assert.equal(run.content_hash, null, `${label}: no PASS-shaped attestation`);
+  }
+});
+
+test("T34b a trap the kernel never invokes cannot change the verdict", () => {
+  // The other half of "inspect once": a contract is snapshotted through Object.keys
+  // and a single property read, so a `has` trap is never reached. It must therefore
+  // behave EXACTLY like the inert contract it wraps — not throw, and not be refused
+  // for carrying a trap nothing calls.
+  const plain = { required_output_keys: ["answer"] };
+  let hostile;
+  assert.doesNotThrow(() => (hostile = validateAcceptanceContract(new Proxy({ ...plain }, { has: boom }))), "has-trap must not escape");
+  assert.deepEqual(hostile, validateAcceptanceContract(plain), "an uninvoked trap changes nothing");
+});
+
+test("T35 caller-controlled contract state is read exactly once per public call", () => {
+  // Containment alone is not enough. On 78962c3 the contract was re-read by the
+  // validator, again by evaluate for every candidate, and again by every
+  // invariant — so a stateful accessor could show an admissible contract to the
+  // planner and a different one to the builder, and the attestation would bind
+  // neither. One read, one inert snapshot, is what closes it.
+  let reads = 0;
+  const contract = { required_output_keys: ["answer"] };
+  Object.defineProperty(contract, "expected", {
+    enumerable: true,
+    get() {
+      reads += 1;
+      return { answer: reads === 1 ? "42" : "99" };
+    },
+  });
+
+  const run = runNode0ModelSwapInvariance({ consent: GO, input: hostileInput(contract) });
+  assert.equal(reads, 1, `the contract must be inspected once, not ${reads} times`);
+  assert.equal(run.ok, true, "the proof is built on the one inert snapshot that was admitted");
+});
+
 test("T16 the honest fixtures stay green after hardening", () => {
   assert.equal(evaluateAgainstContract(GOOD_OUTPUT, CONTRACT).verdict, "ACCEPT");
   assert.equal(planNode0ModelSwapInvariance({ consent: GO, input: VALID }).eligible, true);

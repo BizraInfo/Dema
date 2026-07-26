@@ -55,23 +55,74 @@ function isArrayOfNonEmptyStrings(v) {
 // rejected as `output_not_canonicalizable`, so it never reaches ACCEPT.
 const OUTPUT_HASH_RE = /^sha256:[0-9a-f]{64}$/;
 
-// Is this value inside the canonical-JSON domain? A predicate outside it
+// A value outside the canonical-JSON domain. A dedicated sentinel, not null,
+// because null IS a legitimate contract value.
+const NOT_CANONICAL = Symbol("not_canonical");
+
+// Same plainness rule canonical-json-v1 enforces, so the snapshot's notion of
+// "copyable" cannot drift from the serializer's notion of "hashable".
+function isCanonicalPlainObject(v) {
+  if (!isPlainObject(v)) return false;
+  const proto = Object.getPrototypeOf(v);
+  return proto === Object.prototype || proto === null;
+}
+
+// Copy a value into INERT plain data, reading every property exactly once, and
+// return NOT_CANONICAL for anything the canonical-JSON domain excludes
 // (undefined, function, symbol, BigInt, non-finite number, Date/Map/Set, a
-// cycle) cannot be compared or hashed, so `evaluateAgainstContract` catches the
-// failure and rejects EVERY candidate — and uniform rejection satisfies all
-// three invariants trivially, yielding a PASS over a contract that never
-// compared anything. Recursive because `expected: { a: { b: undefined } }` is
-// the same defect one level down; the depth cap is what terminates a cycle.
-function isCanonicalJsonValue(v, depth = 0) {
-  if (depth > 64) return false;
-  if (v === null) return true;
+// cycle). Such a predicate cannot be compared or hashed, so evaluate would
+// reject EVERY candidate — and uniform rejection satisfies all three invariants
+// trivially, yielding a PASS over a contract that never compared anything.
+// Recursive because `expected: { a: { b: undefined } }` is the same defect one
+// level down; the depth cap is what terminates a cycle. Any exception a getter
+// or Proxy trap raises propagates to the ONE containment boundary in
+// validateAcceptanceContract — it is never swallowed here, where it would be
+// indistinguishable from an honest non-canonical value.
+function cloneCanonicalJsonValue(v, depth = 0) {
+  if (depth > 64) return NOT_CANONICAL;
+  if (v === null) return null;
   const t = typeof v;
-  if (t === "string" || t === "boolean") return true;
-  if (t === "number") return Number.isFinite(v);
-  if (t === "undefined" || t === "function" || t === "symbol" || t === "bigint") return false;
-  if (Array.isArray(v)) return v.every((x) => isCanonicalJsonValue(x, depth + 1));
-  if (isPlainObject(v)) return Object.values(v).every((x) => isCanonicalJsonValue(x, depth + 1));
-  return false;
+  if (t === "string" || t === "boolean") return v;
+  if (t === "number") return Number.isFinite(v) ? v : NOT_CANONICAL;
+  if (t !== "object") return NOT_CANONICAL;
+  if (Array.isArray(v)) {
+    if (Object.getPrototypeOf(v) !== Array.prototype) return NOT_CANONICAL;
+    const out = [];
+    for (const x of v) {
+      const cloned = cloneCanonicalJsonValue(x, depth + 1);
+      if (cloned === NOT_CANONICAL) return NOT_CANONICAL;
+      out.push(cloned);
+    }
+    return Object.freeze(out);
+  }
+  if (!isCanonicalPlainObject(v)) return NOT_CANONICAL;
+  const out = {};
+  for (const [k, x] of Object.entries(v)) {
+    const cloned = cloneCanonicalJsonValue(x, depth + 1);
+    if (cloned === NOT_CANONICAL) return NOT_CANONICAL;
+    out[k] = cloned;
+  }
+  return Object.freeze(out);
+}
+
+// THE one place caller-controlled contract state is read. Every access to the
+// untrusted object happens here — `Object.keys` walks its ownKeys and
+// getOwnPropertyDescriptor traps, `c[k]` runs its getters — and what comes back
+// is frozen data with no accessors and no traps. Downstream code consumes only
+// this copy, so a stateful accessor cannot show an admissible contract to the
+// planner and a different one to the builder. Throws propagate to the caller's
+// single try.
+function snapshotContract(c) {
+  const snapshot = {};
+  for (const k of Object.keys(c)) {
+    const v = c[k];
+    // `expected` is copied key-by-key so a bad value keeps its own diagnosis
+    // (`contract_noncanonical:expected.<k>`) instead of collapsing the field.
+    snapshot[k] = isCanonicalPlainObject(v) && k === "expected"
+      ? Object.freeze(Object.fromEntries(Object.entries(v).map(([ek, ev]) => [ek, cloneCanonicalJsonValue(ev)])))
+      : cloneCanonicalJsonValue(v);
+  }
+  return Object.freeze(snapshot);
 }
 
 // How many predicates a contract actually imposes. A well-typed contract can
@@ -96,13 +147,19 @@ function effectivePredicateCount(c) {
 // PASS-shaped attestation.
 export function validateAcceptanceContract(contract) {
   if (contract !== undefined && contract !== null && !isPlainObject(contract)) {
-    return Object.freeze({
-      valid: false,
-      blocked_by: Object.freeze(["contract_malformed:not_an_object"]),
-      effective_predicate_count: 0,
-    });
+    return frozenContractCheck(["contract_malformed:not_an_object"], 0, null);
   }
-  const c = isPlainObject(contract) ? contract : {};
+  let c;
+  try {
+    c = snapshotContract(isPlainObject(contract) ? contract : {});
+  } catch {
+    // A throwing getter, a hostile Proxy trap, or anything else raised by merely
+    // LOOKING at the contract. Nothing about it is knowable, so it is refused
+    // with one deterministic reason instead of escaping as a crash through
+    // validate / plan / evaluate / run.
+    return frozenContractCheck(["contract_uninspectable"], 0, null);
+  }
+  // From here down `c` is inert: no getters, no traps, frozen.
   const blocked_by = [];
   for (const k of Object.keys(c)) {
     if (!KNOWN_CONTRACT_KEYS.has(k)) blocked_by.push(`contract_unknown_field:${k}`);
@@ -116,7 +173,7 @@ export function validateAcceptanceContract(contract) {
   if ("expected" in c && !isPlainObject(c.expected)) blocked_by.push("contract_malformed:expected");
   else if (isPlainObject(c.expected)) {
     for (const [k, v] of Object.entries(c.expected)) {
-      if (!isCanonicalJsonValue(v)) blocked_by.push(`contract_noncanonical:expected.${k}`);
+      if (v === NOT_CANONICAL) blocked_by.push(`contract_noncanonical:expected.${k}`);
     }
   }
   // Belt and braces: the contract must also hash as a whole, since contract_hash
@@ -129,10 +186,17 @@ export function validateAcceptanceContract(contract) {
     blocked_by.push("contract_vacuous:no_effective_predicate");
   }
   blocked_by.sort();
+  return frozenContractCheck(blocked_by, effective_predicate_count, c);
+}
+
+function frozenContractCheck(blocked_by, effective_predicate_count, snapshot) {
   return Object.freeze({
     valid: blocked_by.length === 0,
     blocked_by: Object.freeze(blocked_by),
     effective_predicate_count,
+    // The inert copy every downstream consumer must use in place of the caller's
+    // object. null when nothing could be read at all.
+    snapshot,
   });
 }
 
@@ -155,7 +219,10 @@ export function evaluateAgainstContract(output, contract) {
   if (!contractCheck.valid) {
     return Object.freeze({ verdict: VERDICT_REJECT, failed_requirements: contractCheck.blocked_by });
   }
-  const c = isPlainObject(contract) ? contract : {};
+  // The inert snapshot the gate just admitted — NEVER the caller's object.
+  // Re-reading it here is precisely how a stateful accessor would decide
+  // differently than the admission gate that let it through.
+  const c = contractCheck.snapshot;
   if (Array.isArray(c.required_output_keys)) {
     for (const k of c.required_output_keys) {
       const present = isPlainObject(output) && output[k] !== undefined && output[k] !== null && output[k] !== "";
@@ -312,7 +379,11 @@ function frozenPlan(blocked_by) {
 // flags are the load-bearing proof. content_hash binds the WHOLE body.
 export function buildNode0ModelSwapInvariancePayload(input) {
   const task = isPlainObject(input?.task) ? input.task : {};
-  const contract = isPlainObject(task.acceptance_contract) ? task.acceptance_contract : {};
+  // ONE guarded read of the caller's contract; classification, the invariants and
+  // contract_hash all consume the inert copy. An uninspectable contract yields no
+  // snapshot, and the empty contract that stands in for it rejects every
+  // candidate as vacuous — fail-closed, never a crash.
+  const contract = validateAcceptanceContract(isPlainObject(task.acceptance_contract) ? task.acceptance_contract : {}).snapshot ?? {};
   const candidates = Array.isArray(input?.candidates) ? input.candidates : [];
   const classified = classifyCandidates(contract, candidates);
   const accepted_output_hashes = [
@@ -433,9 +504,21 @@ export function verifyNode0ModelSwapInvariance(payload) {
 
 // Orchestrator the review gate consumes: plan -> build -> verify -> tamper-reject.
 // Fails closed (named block) on any step. Boundary stays all-false — no model call.
+// Read the caller's contract ONCE and hand the same inert copy to both plan and
+// build. Two independent reads would let a stateful accessor pass admission and
+// then have something else attested. A contract that cannot be read at all is
+// left in place: plan re-reports it under containment, and blocks.
+function withInertContract(input) {
+  if (!isPlainObject(input) || !isPlainObject(input.task) || !isPlainObject(input.task.acceptance_contract)) return input;
+  const snapshot = validateAcceptanceContract(input.task.acceptance_contract).snapshot;
+  if (snapshot === null) return input;
+  return { ...input, task: { ...input.task, acceptance_contract: snapshot } };
+}
+
 export function runNode0ModelSwapInvariance({ consent, input } = {}) {
   const boundary = node0ModelSwapInvarianceBoundary();
-  const plan = planNode0ModelSwapInvariance({ consent, input });
+  const safeInput = withInertContract(input);
+  const plan = planNode0ModelSwapInvariance({ consent, input: safeInput });
   if (!plan.eligible) {
     return Object.freeze({
       ok: false,
@@ -446,7 +529,7 @@ export function runNode0ModelSwapInvariance({ consent, input } = {}) {
       blocked_by: plan.blocked_by,
     });
   }
-  const payload = buildNode0ModelSwapInvariancePayload(input);
+  const payload = buildNode0ModelSwapInvariancePayload(safeInput);
   const verified = verifyNode0ModelSwapInvariance(payload).ok === true;
   const tampered = { ...payload, content_hash: `sha256:${"0".repeat(64)}` };
   const tamper_rejected = verifyNode0ModelSwapInvariance(tampered).ok === false;
