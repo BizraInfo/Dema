@@ -24,7 +24,10 @@ function listSourceFiles(root, scanRoots = DEFAULT_SCAN_ROOTS) {
 
 function walk(dir, root, files) {
   for (const entry of readdirSync(dir)) {
-    if (entry === "node_modules" || entry === ".git") continue;
+    // Generated build output is not source. `.next` joins node_modules/.git for
+    // the same reason: `npm run genesis:node0` builds packages/dema-ui, and
+    // scanning Turbopack chunks for `eval(` audits Next.js, not Dema.
+    if (entry === "node_modules" || entry === ".git" || entry === ".next") continue;
     const path = join(dir, entry);
     const stat = statSync(path);
     if (stat.isDirectory()) {
