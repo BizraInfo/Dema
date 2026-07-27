@@ -22,8 +22,16 @@ const VOLATILE_PROBES = [
 
 const FORBIDDEN_TRACKED = /settings\.local\.json|hooks\/logs\/|\.claude\/bus\/|\.cc-writes/;
 
+// The credential-prefix branches are anchored with \b so they match a token
+// START, not a substring inside an ordinary word. Without it, `sk-[A-Za-z0-9]{10}`
+// matches "ta|sk-finalizati|on" — the phrase `backlog instructions
+// task-finalization` in .claude/agents/project-manager-backlog.md tripped this
+// gate as a secret. A real `sk-`/`ghp_` credential is always preceded by
+// whitespace, a quote, `=` or start-of-line, so \b keeps every true positive.
+// Fixed here rather than by rewording the document: contorting tracked content
+// to satisfy a scanner is the inversion this repo exists to prevent.
 const SECRET_PATTERN =
-  /GITHUB_TOKEN|OPENAI_API_KEY|ANTHROPIC_API_KEY|PRIVATE KEY|ghp_[A-Za-z0-9]|sk-[A-Za-z0-9]{10}/i;
+  /GITHUB_TOKEN|OPENAI_API_KEY|ANTHROPIC_API_KEY|PRIVATE KEY|\bghp_[A-Za-z0-9]|\bsk-[A-Za-z0-9]{10}/i;
 
 const failures = [];
 
