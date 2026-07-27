@@ -323,12 +323,28 @@ export const OATH_STEPS: OathStep[] = [
     body: "Your device becomes a Human Sovereign Node. Nothing leaves this machine without your consent. This is Layer 0 — immutable.",
     action: "Initialize Node0",
   },
+  // The fleet beat teaches the CANONICAL roster. It renders AGENTS + DEMA_ALPHA
+  // from data.ts, which binds every entry to fleet-canon.ts, which mirrors the
+  // kernel at packages/core/src/node0-agent-fleet-roles.js. Onboarding is the
+  // first thing a human learns about the architecture, so it must teach the real
+  // one. This beat previously showed the 11-agent office simulation under
+  // constitutional language ("Each has a SOUL and a boundary"), which taught the
+  // wrong count and flattened PAT/SAT from teams into two peers beside QA.
   {
-    id: "meet",
-    title: "The Agents Materialize",
+    id: "fleet",
+    title: "The Fleet Assembles",
     glyph: "✦",
-    body: "Eleven organizational agents assemble in the office — Planner, Architect, PAT, SAT, Security, QA, Performance, Documentation, Research, Release, Observability. Each has a SOUL and a boundary. They work for you; never the reverse.",
-    action: "Welcome the agents",
+    body: "Twelve role contracts, plus the face. PAT-7 serves you — Archivist, Extractor, Cartographer, Scout, Applicability Engineer, Reproduction Engineer, Scribe. SAT-5 serves truth and judges Node0 — Provenance, Consent Authority, Impact, Security Boundary, Governance Admissibility. Dema (Alpha) is the face, outside the fleet. PAT proposes and never certifies itself; SAT judges and never secretly does your work. All twelve are DESIGNED_NOT_LIVE — accounting objects, not running agents.",
+    action: "Welcome the fleet",
+  },
+  // The office is a spatial minigame. It is labeled as one, on screen, because
+  // the disclaimer that already lived in this file's header was never rendered.
+  {
+    id: "office",
+    title: "The Office",
+    glyph: "🗂",
+    body: "A spatial simulation of eleven job functions — Planner, Architect, PAT, SAT, Security, QA, Performance, Documentation, Research, Release, Observability. This is NOT the agent fleet and carries no role contracts: here \"PAT\" and \"SAT\" are single visual stand-ins for whole teams. It is a way to watch work move, nothing more.",
+    action: "Open the office",
   },
   {
     id: "loop",

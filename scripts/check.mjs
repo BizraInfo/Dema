@@ -123,6 +123,7 @@ export const commands = [
   ["node", ["scripts/review/mobile-companion-register-1a-check.mjs"]],
   ["node", ["scripts/review/npc-intent-binder-hardening-check.mjs"]],
   ["node", ["scripts/review/kernel-purity-check.mjs"]],
+  ["node", ["scripts/review/ui-truth-label-check.mjs"]],
   ["node", ["scripts/review/no-overclaim.mjs"]],
   ["node", ["scripts/review/proof-scope.mjs"]],
   ["node", ["scripts/review/agent-dna-root-coherence.mjs"]],

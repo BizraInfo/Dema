@@ -307,9 +307,11 @@ test("A7 direct TAP is isolated and a later authoritative gate executes", () => 
   // values are 199/123/124. The two branches agreed with each other and were
   // both wrong — the conflict here was only the comment line, so git merged the
   // numbers silently. Derived by importing `commands` from the merged check.mjs.
-  assert.equal(commands.length, 199);
-  assert.equal(commands.indexOf(isolated), 123);
-  assert.deepEqual(commands[124].slice(0, 2), ["npm", ["run", "coverage"]]);
+  // UI-TRUTH-LABEL-GATE-1A added one more review gate ahead of the isolated TAP
+  // command (inserted next to kernel-purity-check), moving these to 200/124/125.
+  assert.equal(commands.length, 200);
+  assert.equal(commands.indexOf(isolated), 124);
+  assert.deepEqual(commands[125].slice(0, 2), ["npm", ["run", "coverage"]]);
 
   const evidence = [];
   const calls = [];

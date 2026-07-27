@@ -4,12 +4,60 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGame } from "@/lib/game/store";
 import { OATH_STEPS, ORG_AGENTS } from "@/lib/game/ecosystem";
-import { COLOR_CLASS } from "@/lib/game/data";
+import { AGENTS, DEMA_ALPHA, COLOR_CLASS } from "@/lib/game/data";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, RotateCcw } from "lucide-react";
 
-const KEY = "bizra_node0_boot_v2";
+// Bumped: the ceremony now teaches the canonical fleet, so anyone who already
+// saw the old (wrong) roster is shown the corrected one once.
+const KEY = "bizra_node0_boot_v3";
+
+// One row of the canonical fleet. `offset` is where this row starts in the
+// single materialization counter, so PAT fills before SAT before the face.
+function FleetRow({
+  label,
+  note,
+  agents,
+  materialized,
+  offset,
+}: {
+  label: string;
+  note: string;
+  agents: { id: string; name: string; glyph: string; color: keyof typeof COLOR_CLASS; roleId?: string }[];
+  materialized: number;
+  offset: number;
+}) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-center gap-2">
+        <span className="font-mono text-[9px] uppercase tracking-wider text-foreground/70">{label}</span>
+        <span className="font-mono text-[8px] text-muted-foreground">{note}</span>
+      </div>
+      <div className="mt-1 flex flex-wrap justify-center gap-1.5">
+        {agents.map((a, i) => {
+          const visible = offset + i < materialized;
+          const c = COLOR_CLASS[a.color];
+          return (
+            <AnimatePresence key={a.id}>
+              {visible && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  className={cn("flex flex-col items-center gap-0.5 rounded-lg border p-1", c.border, c.bg)}
+                  title={a.roleId ?? a.id}
+                >
+                  <span className={cn("text-lg", c.text)}>{a.glyph}</span>
+                  <span className="font-mono text-[8px] uppercase text-foreground/70">{a.name}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export function SovereignBoot() {
   const [open, setOpen] = useState(false);
@@ -33,24 +81,35 @@ export function SovereignBoot() {
     }
   }, []);
 
-  // materialize agents during step 1
+  // Beats are addressed by id, never by index. The previous version keyed its
+  // renders off step===1/2/3, so inserting a beat silently showed the wrong
+  // panel — which is how the office roster came to occupy the fleet beat.
+  const cur = OATH_STEPS[step];
+  const isLast = step === OATH_STEPS.length - 1;
+
+  // The canonical roster, grouped as the constitution groups it.
+  const patAgents = AGENTS.filter((a) => a.team === "PAT");
+  const satAgents = AGENTS.filter((a) => a.team === "SAT");
+  const rosterLength =
+    cur.id === "fleet" ? AGENTS.length + 1 : cur.id === "office" ? ORG_AGENTS.length : 0;
+
   useEffect(() => {
-    if (step !== 1) return;
+    if (rosterLength === 0) return;
     let m = 0;
     const start = setTimeout(() => setMaterialized(0), 0);
     const t = setInterval(() => {
       m += 1;
-      if (m > ORG_AGENTS.length) {
+      if (m > rosterLength) {
         clearInterval(t);
         return;
       }
       setMaterialized(m);
-    }, 180);
+    }, 140);
     return () => {
       clearTimeout(start);
       clearInterval(t);
     };
-  }, [step]);
+  }, [step, rosterLength]);
 
   const close = () => {
     try {
@@ -70,9 +129,6 @@ export function SovereignBoot() {
       setSpeed(1);
     }, 400);
   };
-
-  const cur = OATH_STEPS[step];
-  const isLast = step === OATH_STEPS.length - 1;
 
   return (
     <AnimatePresence>
@@ -112,7 +168,7 @@ export function SovereignBoot() {
                 {/* sigil */}
                 <div className="flex justify-center">
                   <motion.div
-                    animate={step === 0 ? { scale: [0.5, 1.1, 1], rotate: [0, 180, 360] } : {}}
+                    animate={cur.id === "spawn" ? { scale: [0.5, 1.1, 1], rotate: [0, 180, 360] } : {}}
                     transition={{ duration: 1.2 }}
                     className="relative grid size-20 place-items-center rounded-full border-2 border-consent/50 bg-consent/5"
                   >
@@ -128,32 +184,67 @@ export function SovereignBoot() {
                   {cur.body}
                 </p>
 
-                {/* agent materialization on step 1 */}
-                {step === 1 && (
-                  <div className="mt-4 flex flex-wrap justify-center gap-1.5">
-                    {ORG_AGENTS.map((a, i) => {
-                      const visible = i < materialized;
-                      const c = COLOR_CLASS[a.color];
-                      return (
-                        <AnimatePresence key={a.id}>
-                          {visible && (
-                            <motion.div
-                              initial={{ opacity: 0, scale: 0, y: -10 }}
-                              animate={{ opacity: 1, scale: 1, y: 0 }}
-                              className={cn("flex flex-col items-center gap-0.5 rounded-lg border p-1", c.border, c.bg)}
-                            >
-                              <span className={cn("text-lg", c.text)}>{a.glyph}</span>
-                              <span className="font-mono text-[8px] uppercase text-foreground/70">{a.name}</span>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      );
-                    })}
+                {/* THE FLEET — the canonical roster, bound to fleet-canon.ts */}
+                {cur.id === "fleet" && (
+                  <div className="mt-4 space-y-2">
+                    <FleetRow
+                      label="PAT-7 · serves you"
+                      note="proposes · never certifies itself"
+                      agents={patAgents}
+                      materialized={materialized}
+                      offset={0}
+                    />
+                    <FleetRow
+                      label="SAT-5 · serves truth"
+                      note="judges Node0 · never secretly does your work"
+                      agents={satAgents}
+                      materialized={materialized}
+                      offset={patAgents.length}
+                    />
+                    <FleetRow
+                      label="The face · outside the fleet"
+                      note="presents · never governs"
+                      agents={[DEMA_ALPHA]}
+                      materialized={materialized}
+                      offset={patAgents.length + satAgents.length}
+                    />
+                    <p className="text-center font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+                      12 role contracts + 1 face · DESIGNED_NOT_LIVE
+                    </p>
                   </div>
                 )}
 
-                {/* loop ring on step 2 */}
-                {step === 2 && (
+                {/* THE OFFICE — a simulation, and it says so on screen */}
+                {cur.id === "office" && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-center font-mono text-[9px] uppercase tracking-wider text-amber-400/80">
+                      simulation · not the fleet · no role contracts
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-1.5">
+                      {ORG_AGENTS.map((a, i) => {
+                        const visible = i < materialized;
+                        const c = COLOR_CLASS[a.color];
+                        return (
+                          <AnimatePresence key={a.id}>
+                            {visible && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0, y: -10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                className={cn("flex flex-col items-center gap-0.5 rounded-lg border p-1", c.border, c.bg)}
+                              >
+                                <span className={cn("text-lg", c.text)}>{a.glyph}</span>
+                                <span className="font-mono text-[8px] uppercase text-foreground/70">{a.name}</span>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* loop ring */}
+                {cur.id === "loop" && (
                   <div className="relative mx-auto mt-4 aspect-square w-40">
                     <svg className="absolute inset-0" viewBox="0 0 100 100">
                       <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" className="text-proof/20" strokeWidth="1" strokeDasharray="2 3" />
@@ -177,8 +268,8 @@ export function SovereignBoot() {
                   </div>
                 )}
 
-                {/* oath affirmation on step 3 */}
-                {step === 3 && (
+                {/* oath affirmation */}
+                {cur.id === "oath" && (
                   <div className="mt-3 rounded-lg border border-consent/30 bg-consent/5 p-2 text-center font-mono text-[11px] italic text-foreground/80">
                     I consent to govern this node.<br />
                     Power without proof is overclaim.
