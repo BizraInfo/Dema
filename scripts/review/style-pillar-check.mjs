@@ -35,7 +35,7 @@ export function listJsSourceFiles(root, scanRoots = DEFAULT_SCAN_ROOTS) {
 
 function walkJs(dir, root, files) {
   for (const entry of readdirSync(dir)) {
-    if (entry === "node_modules" || entry === ".git") continue;
+    if (entry === "node_modules" || entry === ".git" || entry === ".next") continue;
     const path = join(dir, entry);
     const stat = statSync(path);
     if (stat.isDirectory()) {

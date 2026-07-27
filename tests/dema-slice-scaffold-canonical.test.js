@@ -26,12 +26,27 @@ const GATE_ANCHOR = "// scaffold:register-consumer";
 
 function makeStubRepo() {
   const tmp = mkdtempSync(join(tmpdir(), "m51b-scaffold-"));
+  // Faithful stubs: each carries the REAL anchor its wiring step targets, so a
+  // step that silently no-ops here is a scaffold defect rather than a fixture
+  // gap. These were empty strings, which meant five of the six anchored edits
+  // reported "anchor not found" on every run while the scaffold still returned
+  // ok:true — the fixture was hiding the fail-open it should have caught.
   const stubs = {
-    "scripts/check.mjs": "",
-    "packages/core/src/dema-capability-truth-registry.js": "",
-    "tests/dema-capability-truth-registry.test.js": "",
-    "docs/TESTING.md": "",
-    "docs/CURRENT_LIMITS.md": "",
+    "scripts/check.mjs":
+      'const REVIEW = [\n  ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],\n];\n',
+    "packages/core/src/dema-capability-truth-registry.js":
+      'export const REQUIRED_CAPABILITY_IDS = Object.freeze([\n  "STUB_EXISTING_1A",\n]);\n\n' +
+      "// Covers the one shipped pre-action spine capabilities.\n" +
+      "function defaultCapabilityRows() {\n  return Object.freeze([\n  ]);\n}\n",
+    "tests/dema-capability-truth-registry.test.js":
+      "// one-capability truth registry\n" +
+      "assert.equal(registry.capability_count, 1);\n" +
+      "assert.equal(registry.measured_repo_count, 1);\n",
+    "docs/TESTING.md":
+      "| Test | Purpose |\n| --- | --- |\n| `tests/stub-existing.test.js` | stub |\n\n" +
+      "```bash\nnode scripts/review/dema-capability-truth-registry-check.mjs\n```\n",
+    "docs/CURRENT_LIMITS.md":
+      "| Limit | Evidence |\n| --- | --- |\n| Stdlib-only dependency posture | package.json |\n",
     // Gate stub carries the real anchor so consumer auto-registration is provable.
     "scripts/review/canonical-json-v1-check.mjs":
       `export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([\n  ${GATE_ANCHOR}\n]);\n`,
@@ -128,30 +143,114 @@ test("T7 scaffold rejects a path-escaping slice id", () => {
   );
 });
 
-test("T8 adoption-freeze gate stays strict: every registered consumer is explicit and the gate passes", () => {
-  assert.ok(Object.isFrozen(CANONICAL_JSON_V1_REGISTERED_CONSUMERS));
+test("T8 adoption-freeze gate stays strict: every registered consumer is explicit, exact and load-bearing", () => {
+  const consumers = [...CANONICAL_JSON_V1_REGISTERED_CONSUMERS];
+
   // Registration is an allowlist of exact reviewed paths — never a wildcard.
-  // Consumers registered so far, each reviewed in its own slice PR:
-  // mission-corridor (first, M5.1B) and dema-program-graph (PROGRAM-GRAPH-NICHE-CELL-0A).
-  assert.deepEqual(
-    [...CANONICAL_JSON_V1_REGISTERED_CONSUMERS],
-    [
-      "packages/mission/src/mission-corridor.js",
-      "packages/mission/src/dema-program-graph.js",
-      // node0-realm-state-kernel (NODE0-REALM-STATE-KERNEL-1A, PR #401).
-      "packages/core/src/node0-realm-state-kernel.js",
-      // node0-metrics-baseline (NODE0-METRICS-BASELINE-1A, PR #402).
-      "packages/core/src/node0-metrics-baseline.js",
-      // dema-recovery-mission-engine (DEMA-RECOVERY-MISSION-ENGINE-1A).
-      "packages/core/src/dema-recovery-mission-engine.js",
-      // dema-recovery-mission-gatherer (DEMA-RECOVERY-MISSION-GATHERER-1B).
-      "packages/core/src/dema-recovery-mission-gatherer.js",
-      // node0-model-swap-invariance (NODE0-MODEL-SWAP-INVARIANCE-1A).
-      "packages/core/src/node0-model-swap-invariance.js",
-    ],
-  );
+  //
+  // This assertion used to be a deepEqual snapshot pinning the list to its
+  // first two entries. That contradicted T2-T4 above, which prove the scaffold
+  // APPENDS to this same list at its anchor: the first scaffolded consumer
+  // turns the snapshot red, and the only ways back to green are an
+  // unregistered importer or a hand-edited test. Four kernels sat unregistered
+  // on main for exactly that reason (#401 #402 #403 #405), and the gate — the
+  // one that exists to catch unregistered importers — was the thing reporting
+  // the failure. A count is not the invariant. These are.
+  assert.ok(Object.isFrozen(CANONICAL_JSON_V1_REGISTERED_CONSUMERS));
+  assert.equal(new Set(consumers).size, consumers.length, "no duplicate registrations");
+  assert.ok(consumers.length > 0, "allowlist is not empty");
+
+  for (const rel of consumers) {
+    // Exact repo-relative source path — no wildcard, glob, regex or escape.
+    assert.match(
+      rel,
+      /^(packages|apps|bin|scripts)\/[A-Za-z0-9_./-]+\.(js|mjs|cjs)$/,
+      `literal repo-relative path: ${rel}`,
+    );
+    assert.ok(!rel.includes("*") && !rel.includes(".."), `no wildcard or escape: ${rel}`);
+
+    // Stricter than the old snapshot on substance: a registration must be
+    // LOAD-BEARING. The path must exist (readFileSync throws otherwise) and
+    // must actually import canon — so the allowlist cannot be widened by
+    // accretion with entries that never needed to be on it.
+    const src = readFileSync(join(REPO, rel), "utf8");
+    assert.ok(
+      src.includes("canon/src/canonical-json") || src.includes("canon/src/sha256-canonical-json"),
+      `registered consumer must actually import canon: ${rel}`,
+    );
+  }
+
+  // ...and every canon importer outside tests and the gate is registered.
   const result = runCanonicalJsonV1Check();
   assert.equal(result.ok, true, JSON.stringify(result.blocked_by ?? []));
+});
+
+test("T9 scaffold fails closed when an anchored wiring edit cannot apply", (t) => {
+  const tmp = makeStubRepo();
+  t.after(() => rmSync(tmp, { recursive: true, force: true }));
+
+  // Break exactly one anchor — the canon gate's registration point — and leave
+  // the other five intact. Before this test the scaffold printed "Scaffolded
+  // M5-WIRE-FAIL-1A", returned ok:true and exited 0, having written five files
+  // that nothing was wired to.
+  writeFileSync(
+    join(tmp, "scripts/review/canonical-json-v1-check.mjs"),
+    "export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([]);\n",
+  );
+
+  let err = null;
+  try {
+    runScaffold(
+      ["--id", "M5-WIRE-FAIL-1A", "--intent", "x", "--no-arch", "--repo", tmp, "--json"],
+      { stdio: "pipe" },
+    );
+  } catch (e) {
+    err = e;
+  }
+
+  assert.ok(err, "scaffold must not report success when an anchor is missing");
+  assert.equal(err.status, 3, "exit code 3 = wiring incomplete");
+  const report = JSON.parse(err.stdout);
+  assert.equal(report.ok, false);
+  assert.ok(
+    report.wiring_failures.some((f) => f.includes("canonical-json-v1-check.mjs")),
+    JSON.stringify(report.wiring_failures),
+  );
+});
+
+test("T10 scaffold fails closed when registry count-prose anchor is missing", (t) => {
+  const tmp = makeStubRepo();
+  t.after(() => rmSync(tmp, { recursive: true, force: true }));
+
+  // Keep REQUIRED_CAPABILITY_IDS and defaultCapabilityRows anchors intact, but
+  // remove the count-prose sentence. Before the fix, step 2c recorded nothing
+  // on a miss — WIRING_FAILED only saw notes already in `edits` — so the
+  // scaffold exited 0 with a required edit silently unapplied.
+  writeFileSync(
+    join(tmp, "packages/core/src/dema-capability-truth-registry.js"),
+    'export const REQUIRED_CAPABILITY_IDS = Object.freeze([\n  "STUB_EXISTING_1A",\n]);\n\n' +
+      "// NO count-prose sentence here.\n" +
+      "function defaultCapabilityRows() {\n  return Object.freeze([\n  ]);\n}\n",
+  );
+
+  let err = null;
+  try {
+    runScaffold(
+      ["--id", "M5-PROSE-MISS-1A", "--intent", "x", "--no-arch", "--repo", tmp, "--json"],
+      { stdio: "pipe" },
+    );
+  } catch (e) {
+    err = e;
+  }
+
+  assert.ok(err, "scaffold must not report success when count prose is missing");
+  assert.equal(err.status, 3, "exit code 3 = wiring incomplete");
+  const report = JSON.parse(err.stdout);
+  assert.equal(report.ok, false);
+  assert.ok(
+    report.wiring_failures.some((f) => /count prose anchor not found/.test(f)),
+    JSON.stringify(report.wiring_failures),
+  );
 });
 
 test("real gate file carries the scaffold registration anchor", () => {

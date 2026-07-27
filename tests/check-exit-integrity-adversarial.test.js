@@ -301,15 +301,19 @@ test("A7 direct TAP is isolated and a later authoritative gate executes", () => 
     "--temp-log",
   ]);
   assert.equal(isolated[1].includes("--log"), false);
-  // NODE0-MODEL-SWAP-INVARIANCE-1A and DEMA-MISSION-WORKER-HANDOFF-0A each add
-  // one review gate ahead of the isolated TAP command. Both slices independently
-  // moved these pins by one to 198/122/123; with BOTH gates on main the real
-  // values are 199/123/124. The two branches agreed with each other and were
-  // both wrong — the conflict here was only the comment line, so git merged the
-  // numbers silently. Derived by importing `commands` from the merged check.mjs.
-  assert.equal(commands.length, 199);
-  assert.equal(commands.indexOf(isolated), 123);
-  assert.deepEqual(commands[124].slice(0, 2), ["npm", ["run", "coverage"]]);
+  // Positional pins, DERIVED by importing `commands` from the merged check.mjs —
+  // never carried over from either side of a merge. main stood at 199/123/124.
+  // This slice adds three review gates, ALL ahead of the isolated TAP command:
+  // DEMA-REVERSIBLE-FILE-STEWARD-1C (index 84), UI-TRUTH-LABEL-GATE-1A (85) and
+  // TRACKED-TEST-EXEC-TARGET-GUARD-1A (125, right after claim-corpus-gate). So
+  // 199+3 = 202 and the isolated index moves 123 -> 126.
+  // The guard sits ahead of the suite on purpose: it is a static scan, so it must
+  // fail fast rather than behind a TAP gate that fails closed and never reaches it.
+  // These are exact positional snapshots and will drift again on the next gate
+  // added ahead of the isolated TAP command; that coupling is this lane's to decide on.
+  assert.equal(commands.length, 202);
+  assert.equal(commands.indexOf(isolated), 126);
+  assert.deepEqual(commands[127].slice(0, 2), ["npm", ["run", "coverage"]]);
 
   const evidence = [];
   const calls = [];

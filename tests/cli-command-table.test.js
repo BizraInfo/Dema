@@ -1,8 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { dirname, join, resolve } from "node:path";
 
 import { COMMAND_TABLE } from "../apps/cli/src/index.js";
 
@@ -51,6 +52,7 @@ const COMMAND_SURFACE = [
   "mirror",
   "talk",
   "canon",
+  "steward",
   "profiles",
   "consent-card",
   "mission-loop",
@@ -68,6 +70,8 @@ const COMMAND_SURFACE = [
   "orchestrator",
   "covenant",
   "assets",
+  "library",
+  "recovery",
   "contribute",
   "economy",
   "demo",
@@ -164,4 +168,83 @@ test("prototype property command tokens fall through to the unknown-command sugg
 
 test("dashboard command avoids access-before-read TOCTOU pattern", () => {
   assert.doesNotMatch(CLI_SOURCE, /accessSync\(htmlPath/);
+});
+
+// ---------------------------------------------------------------------------
+// UNREACHABLE-COMMAND GUARD
+//
+// Found 2026-07-25: `apps/cli/src/commands/recovery.js` had been present,
+// complete, read-only and exact-string consent-gated for weeks, and was never
+// imported by index.js. Every invocation got "I don't have a `recovery`
+// command.", and all 20 T01..T20 envelope tests asserted against that reply.
+//
+// No gate could see it. The orphan-handler test above walks the OTHER
+// direction: dispatcher entry -> declared surface. Nothing walked file ->
+// dispatcher, so a command that exists but is unreachable was invisible.
+//
+// Reachability must follow dynamic `import()` as well as static `from`:
+// `dema node0 spine-run` lazy-loads node0-spine-run.js from node0.js, so a
+// static-only walk reports it as a false orphan.
+// ---------------------------------------------------------------------------
+
+const COMMANDS_DIR = fileURLToPath(new URL("../apps/cli/src/commands/", import.meta.url));
+
+/** Modules reachable from `entry` through static and dynamic relative imports. */
+function reachableFrom(entry) {
+  const seen = new Set();
+  const stack = [entry];
+  while (stack.length > 0) {
+    const file = stack.pop();
+    if (seen.has(file)) continue;
+    seen.add(file);
+    let source;
+    try {
+      source = readFileSync(file, "utf8");
+    } catch {
+      continue; // a specifier that does not resolve to a file on disk
+    }
+    for (const m of source.matchAll(/from\s+"(\.[^"]+)"|import\(\s*"(\.[^"]+)"/g)) {
+      stack.push(resolve(dirname(file), m[1] ?? m[2]));
+    }
+  }
+  return seen;
+}
+
+/** Command files that export a `cmd*` entrypoint — gatherers and helpers do not. */
+function commandEntrypointFiles() {
+  return readdirSync(COMMANDS_DIR)
+    .filter((n) => n.endsWith(".js"))
+    .filter((n) => /export\s+(async\s+)?function\s+cmd/.test(readFileSync(join(COMMANDS_DIR, n), "utf8")))
+    .map((n) => join(COMMANDS_DIR, n));
+}
+
+test("COMMAND-REACH-01: every cmd* command file is reachable from the CLI entrypoint", () => {
+  const reachable = reachableFrom(CLI);
+  const orphans = commandEntrypointFiles()
+    .filter((f) => !reachable.has(f))
+    .map((f) => f.slice(f.indexOf("apps/cli/")));
+  assert.deepEqual(
+    orphans,
+    [],
+    `command files exist but nothing routes to them: ${orphans.join(", ")}`,
+  );
+});
+
+test("COMMAND-REACH-02: the guard detects a file nothing imports", () => {
+  // Without this the guard could pass vacuously — an empty orphan list means
+  // nothing only if the walk can actually report something.
+  const reachable = reachableFrom(CLI);
+  const files = commandEntrypointFiles();
+  assert.ok(files.length > 50, `expected the real command surface, got ${files.length}`);
+  assert.ok(files.every((f) => reachable.has(f)));
+  const fabricated = join(COMMANDS_DIR, "__no-such-command__.js");
+  assert.equal(reachable.has(fabricated), false, "walk must not claim an absent file is reachable");
+});
+
+test("COMMAND-REACH-03: reachability follows dynamic import(), not just static from", () => {
+  // `dema node0 spine-run` is lazy-loaded, so a static-only walk would call it
+  // an orphan and this guard would push someone to wire an already-wired file.
+  const spineRun = join(COMMANDS_DIR, "node0-spine-run.js");
+  assert.ok(reachableFrom(CLI).has(spineRun), "node0-spine-run.js is reached via await import()");
+  assert.equal(reachableFrom(join(COMMANDS_DIR, "away.js")).has(spineRun), false);
 });
