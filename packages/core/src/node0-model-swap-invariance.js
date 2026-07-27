@@ -362,19 +362,33 @@ function outputHash(output) {
 
 // Classify every candidate by the model-blind verdict. `model_id` is recorded for
 // provenance only — it is NEVER passed to evaluateAgainstContract.
-function classifyCandidates(contract, candidates) {
+function classifyCandidates(contract, candidates, carryOutput = false) {
   return candidates.map((cand) => {
     // ONE local binding, judged and hashed. Reading `cand.output` twice is
     // exactly how an ACCEPT row came to carry bytes that were never accepted.
     const output = cand?.output;
     const evalResult = evaluateAgainstContract(output, contract);
-    return Object.freeze({
+    const row = {
       model_id: typeof cand?.model_id === "string" ? cand.model_id : null,
       output_hash: outputHash(output),
       verdict: evalResult.verdict,
       failed_requirements: evalResult.failed_requirements,
-    });
+    };
+    // The SAME binding that was judged and hashed also travels — never a second
+    // read of `cand.output`, which is the defect this function already guards.
+    if (carryOutput) row.output = output;
+    return Object.freeze(row);
   });
+}
+
+// Can every candidate's output ride along? An output outside the canonical domain
+// has no hash and cannot be re-derived by a receiver, so the envelope declines to
+// carry ANY of them rather than shipping a partial set the verifier must guess at.
+function outputsAreCarriable(candidates) {
+  return (
+    candidates.length > 0 &&
+    candidates.every((cand) => isPlainObject(cand) && Object.hasOwn(cand, "output") && outputHash(cand.output) !== null)
+  );
 }
 
 // The invariance attestation — every flag is CONSTRUCTIVELY re-checked, so if the
@@ -494,7 +508,13 @@ export function buildNode0ModelSwapInvariancePayload(input) {
   // candidate as vacuous — fail-closed, never a crash.
   const contract = validateAcceptanceContract(isPlainObject(task.acceptance_contract) ? task.acceptance_contract : {}).snapshot ?? {};
   const candidates = Array.isArray(input?.candidates) ? input.candidates : [];
-  const classified = classifyCandidates(contract, candidates);
+  // Transport is an explicit CALLER choice. The envelope grows only when asked, so
+  // a receiver's guarantee is never silently traded away against envelope size —
+  // and `verify` reports which guarantee it actually established, never this flag.
+  const transport = isPlainObject(input?.transport) ? input.transport : {};
+  const carryContract = transport.carry_contract === true;
+  const carryOutputs = transport.carry_outputs === true && outputsAreCarriable(candidates);
+  const classified = classifyCandidates(contract, candidates, carryOutputs);
   const accepted_output_hashes = [
     ...new Set(classified.filter((c) => c.verdict === VERDICT_ACCEPT && c.output_hash !== null).map((c) => c.output_hash)),
   ].sort();
@@ -506,6 +526,10 @@ export function buildNode0ModelSwapInvariancePayload(input) {
     text_encoding: "utf-8",
     task_id: typeof task.task_id === "string" ? task.task_id : null,
     contract_hash: outputHash(contract),
+    // The predicates themselves, not just their hash. Without these a receiver can
+    // never see a vacuous or malformed contract — the gap CURRENT_LIMITS declared
+    // uncatchable at verify time, because the evidence simply was not in the envelope.
+    ...(carryContract ? { acceptance_contract: contract } : {}),
     candidate_count: classified.length,
     accept_count: classified.filter((c) => c.verdict === VERDICT_ACCEPT).length,
     // sorted by (output_hash, model_id) so the attestation is order-independent —
@@ -567,6 +591,63 @@ function rederiveFromRows(rows) {
   };
 }
 
+const TIER_ROWS = "rows_consistent";
+const TIER_CONTRACT = "contract_reproduced";
+const TIER_VERDICT = "verdict_reproduced";
+
+// PRESENCE IS AN OBLIGATION. The envelope chooses how much evidence to carry, but
+// everything it carries is re-run HERE. A carried obligation that fails to
+// reproduce is a forgery, never a downgrade: `ok` goes false, and `established`
+// reports only the tier that genuinely held. Without this rule the tier is a badge
+// a builder awards itself; with it, the tier is a thing the receiver derived.
+function reproduceFromEnvelope(payload) {
+  const rows = Array.isArray(payload.candidates) ? payload.candidates : [];
+  const carried = payload.acceptance_contract;
+  const contractCarried = carried !== undefined;
+  const outputsCarried = rows.some((r) => isPlainObject(r) && Object.hasOwn(r, "output"));
+
+  let contract_ok = false;
+  let snapshot = null;
+  if (contractCarried) {
+    // Admissible, non-vacuous, AND the object contract_hash actually committed to.
+    // Any one failing means the carried predicates decide nothing.
+    const check = validateAcceptanceContract(carried);
+    snapshot = check.valid ? check.snapshot : null;
+    contract_ok = snapshot !== null && effectivePredicateCount(snapshot) >= 1 && outputHash(snapshot) === payload.contract_hash;
+  }
+
+  // EVERY row must carry one, each hashing to the row it travels in. A partial set
+  // would let a builder omit precisely the output that fails to reproduce.
+  const outputs_ok =
+    outputsCarried &&
+    rows.length > 0 &&
+    rows.every((r) => isPlainObject(r) && Object.hasOwn(r, "output") && outputHash(r.output) === r.output_hash);
+
+  let verdicts_ok = false;
+  if (contract_ok && outputs_ok) {
+    verdicts_ok = rows.every((r) => {
+      const re = evaluateAgainstContract(r.output, snapshot);
+      if (re.verdict !== r.verdict) return false;
+      // The DIAGNOSIS is re-derived too, not only the verdict — otherwise a row
+      // could carry an invented `failed_requirements` under a correct REJECT.
+      const claimed = r.failed_requirements;
+      return (
+        Array.isArray(claimed) &&
+        claimed.length === re.failed_requirements.length &&
+        re.failed_requirements.every((f, i) => f === claimed[i])
+      );
+    });
+  }
+
+  return {
+    established: contract_ok && outputs_ok && verdicts_ok ? TIER_VERDICT : contract_ok ? TIER_CONTRACT : TIER_ROWS,
+    obligations_met:
+      (!contractCarried || contract_ok) &&
+      (!outputsCarried || outputs_ok) &&
+      (!(contractCarried && outputsCarried) || verdicts_ok),
+  };
+}
+
 // Body-bound verifier: recompute the hash over the WHOLE body minus its hash field
 // and reject any mismatch, plus schema / label / all-false-boundary (deep-equal
 // key-set, never a vacuous subset) / invariants-hold checks, and — since a
@@ -600,14 +681,20 @@ export function verifyNode0ModelSwapInvariance(payload) {
     Array.isArray(payload.accepted_output_hashes) &&
     d.accepted_output_hashes.length === payload.accepted_output_hashes.length &&
     d.accepted_output_hashes.every((h, i) => h === payload.accepted_output_hashes[i]);
+  const transport = reproduceFromEnvelope(payload);
   return Object.freeze({
-    ok: hash_ok && schema_ok && label_ok && boundary_ok && invariants_ok && evidence_ok,
+    ok: hash_ok && schema_ok && label_ok && boundary_ok && invariants_ok && evidence_ok && transport.obligations_met,
     hash_ok,
     schema_ok,
     label_ok,
     boundary_ok,
     invariants_ok,
     evidence_ok,
+    // WHICH guarantee this verification established — derived from what the body
+    // actually carried, never read off an asserted field. Read it; do not assume
+    // the strongest tier from a passing `ok`.
+    established: transport.established,
+    transport_obligations_met: transport.obligations_met,
   });
 }
 

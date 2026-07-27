@@ -64,3 +64,71 @@ node --test tests/node0-model-swap-invariance.test.js
 node scripts/review/node0-model-swap-invariance-check.mjs --json
 npm run check
 ```
+
+---
+
+## NODE0-MODEL-SWAP-TRANSPORT-REPRODUCTION-2A
+
+1A/1B/1C hardened the **build** side. This slice closes the **transport** side.
+
+### What was open
+
+`CURRENT_LIMITS.md` stated the gap plainly, and the kernel repeated it in a comment:
+a transported attestation carried `contract_hash` and classified rows and nothing
+else, so a receiver could establish only that the rows agreed *with each other*. It
+could not confirm that any output satisfied the contract, that `failed_requirements`
+came from a real evaluation, or that the builder ran `evaluateAgainstContract` at all.
+The builder was trusted. The doc defended that with a bolded warning to humans —
+*"do not read the stronger for the weaker"* — which is not a gate.
+
+### What changed
+
+The envelope may now **opt in** to carrying evidence: `transport.carry_contract` puts
+the validated predicates in the body, `transport.carry_outputs` puts each judged output
+in its row. Nothing is carried by default, so the 1A envelope is byte-unchanged (T45).
+
+`verify()` returns `established` — the tier it **derived from what the body carried**,
+never a tier the body asserts. There is no tier field to forge:
+
+| tier | requires | establishes |
+| --- | --- | --- |
+| `rows_consistent` | rows only | the 1A/1B/1C guarantee — rows agree with each other |
+| `contract_reproduced` | + `acceptance_contract` | hash-bound to `contract_hash`, admissible, **non-vacuous** |
+| `verdict_reproduced` | + `candidates[].output` | each output hashes to its row, and the contract is **re-run** per row reproducing both `verdict` and `failed_requirements` |
+
+### The rule that makes it a gate
+
+> **Presence is an obligation.** Anything the envelope carries is re-run. Carried
+> evidence that fails to reproduce sets `ok:false` — never a silent downgrade to a
+> weaker tier.
+
+Without that, the tier is a badge a builder awards itself. A forger's only remaining
+move is to carry *less*, which changes the body and breaks `hash_ok`; rehashing after
+stripping yields an honest *weaker* attestation, which is the system working.
+
+### Measured
+
+Eight tests, red first at `badb1c18` before any implementation. T45 default envelope
+unchanged · T46 contract tier · T47 carried contract that does not hash to its
+commitment is refused and may not report the tier it failed · T48 a zero-predicate
+contract is refused **at verify time**, closing the 1B gap `CURRENT_LIMITS` had
+declared uncatchable by a receiver · T49 verdict tier by re-running the contract ·
+T50 a forged ACCEPT verdict is caught · T51 an invented `failed_requirements` is
+caught · T52 an output that does not hash to its row is refused.
+
+### What this does NOT prove
+
+At **every** tier, including `verdict_reproduced`: this proves the carried outputs
+reproduce the carried verdicts under a contract that hashes to `contract_hash`. It
+does **not** prove those outputs came from the stated `model_id`s. Model provenance
+remains unattested; the boundary stays all-false and no model is invoked. The
+alternative closure — output commitments bound to an independently trusted evaluator
+receipt — is still not built.
+
+## Commands
+
+```bash
+node --test tests/node0-model-swap-invariance.test.js
+node scripts/review/node0-model-swap-invariance-check.mjs --json
+npm test
+```

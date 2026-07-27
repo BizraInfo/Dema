@@ -938,3 +938,110 @@ test("T16 the honest fixtures stay green after hardening", () => {
   assert.equal(runNode0ModelSwapInvariance({ consent: GO, input: VALID }).ok, true);
   assert.equal(runNode0ModelSwapInvarianceCheck().ok, true);
 });
+
+// ── NODE0-MODEL-SWAP-TRANSPORT-REPRODUCTION-2A ──
+//
+// 1A/1B/1C hardened the BUILD side. This slice closes the TRANSPORT side.
+//
+// Before this slice `verify()` received `contract_hash` and classified rows and
+// nothing else, so a receiver could establish only that the rows agreed with each
+// other. It could not confirm that any output satisfied the contract, that
+// `failed_requirements` came from a real evaluation, or that the builder ran
+// `evaluateAgainstContract` at all. The builder was trusted — user space on the bus.
+//
+// The envelope may now optionally carry the validated contract and the candidate
+// outputs. `verify()` reports which guarantee it ACTUALLY established:
+//
+//   rows_consistent      rows agree with each other (1A/1B/1C behaviour)
+//   contract_reproduced  + contract present, hash-bound, admissible, non-vacuous
+//   verdict_reproduced   + outputs present, hash-bound, contract RE-RUN per row
+//
+// The rule that makes this a gate and not a badge:
+//   PRESENCE IS AN OBLIGATION. Anything the envelope carries is re-run. Carried
+//   evidence that fails to reproduce is ok:false — NEVER a silent downgrade.
+
+const CARRY_BOTH = Object.freeze({ ...VALID, transport: { carry_contract: true, carry_outputs: true } });
+const CARRY_CONTRACT = Object.freeze({ ...VALID, transport: { carry_contract: true } });
+
+test("T45 default transport is unchanged and establishes only rows_consistent", () => {
+  const payload = buildNode0ModelSwapInvariancePayload(VALID);
+  assert.equal(payload.acceptance_contract, undefined, "no contract is carried unless asked");
+  for (const row of payload.candidates) assert.equal(row.output, undefined, "no output is carried unless asked");
+  const v = verifyNode0ModelSwapInvariance(payload);
+  assert.equal(v.ok, true, "the 1A envelope must keep verifying");
+  assert.equal(v.established, "rows_consistent", "an envelope carrying no evidence establishes the weakest tier");
+});
+
+test("T46 carrying the contract establishes contract_reproduced and binds it to contract_hash", () => {
+  const payload = buildNode0ModelSwapInvariancePayload(CARRY_CONTRACT);
+  assert.ok(payload.acceptance_contract, "the contract is carried when asked");
+  const v = verifyNode0ModelSwapInvariance(payload);
+  assert.equal(v.ok, true, "an honest contract-carrying envelope verifies");
+  assert.equal(v.established, "contract_reproduced");
+});
+
+test("T47 a carried contract that does not hash to contract_hash is refused, not downgraded", async () => {
+  const payload = buildNode0ModelSwapInvariancePayload(CARRY_CONTRACT);
+  // Swap the carried contract for a DIFFERENT admissible one and rehash the body.
+  // The body is internally consistent; only contract_hash disagrees with it.
+  const forged = await rehash({ ...payload, acceptance_contract: { required_output_keys: ["something_else"] } });
+  const v = verifyNode0ModelSwapInvariance(forged);
+  assert.equal(v.ok, false, "carried evidence that contradicts the commitment fails closed");
+  assert.notEqual(v.established, "contract_reproduced", "a failed obligation may not report the tier it failed");
+});
+
+test("T48 verify refuses a carried contract with zero effective predicates", async () => {
+  // The gap CURRENT_LIMITS declares verify CANNOT catch: a well-typed contract
+  // imposing no requirement accepts every output, making invariance vacuously
+  // true. Once the predicates ride along, the receiver can finally see it.
+  const { sha256CanonicalJsonV1 } = await import("../packages/canon/src/sha256-canonical-json-v1.js");
+  const payload = buildNode0ModelSwapInvariancePayload(CARRY_CONTRACT);
+  const vacuous = { required_output_keys: [] };
+  // contract_hash is updated too, so the ONLY defect left is the vacuity itself.
+  const forged = await rehash({ ...payload, acceptance_contract: vacuous, contract_hash: sha256CanonicalJsonV1(vacuous) });
+  const v = verifyNode0ModelSwapInvariance(forged);
+  assert.equal(v.ok, false, "a proof over no requirement is not a proof");
+});
+
+test("T49 carrying outputs establishes verdict_reproduced by re-running the contract", () => {
+  const payload = buildNode0ModelSwapInvariancePayload(CARRY_BOTH);
+  for (const row of payload.candidates) assert.ok(Object.hasOwn(row, "output"), "every row carries its output");
+  const v = verifyNode0ModelSwapInvariance(payload);
+  assert.equal(v.ok, true, "an honest output-carrying envelope verifies");
+  assert.equal(v.established, "verdict_reproduced", "the receiver re-derived the verdict, it did not accept it");
+});
+
+test("T50 a forged ACCEPT verdict is caught when the output rides along", async () => {
+  // THE BUS FIX. Before this slice a builder could report ACCEPT for an output
+  // the contract rejects, and verify had no way to know.
+  const payload = buildNode0ModelSwapInvariancePayload(CARRY_BOTH);
+  const i = payload.candidates.findIndex((c) => c.verdict === "REJECT");
+  assert.notEqual(i, -1, "fixture must contain a REJECT row to forge");
+  const candidates = payload.candidates.map((c, n) => (n === i ? { ...c, verdict: "ACCEPT", failed_requirements: [] } : c));
+  const accepted = [...new Set(candidates.filter((c) => c.verdict === "ACCEPT").map((c) => c.output_hash))].sort();
+  const forged = await rehash({
+    ...payload,
+    candidates,
+    accept_count: candidates.filter((c) => c.verdict === "ACCEPT").length,
+    accepted_output_hashes: accepted,
+  });
+  const v = verifyNode0ModelSwapInvariance(forged);
+  assert.equal(v.ok, false, "the kernel re-runs the contract and refuses a verdict it cannot reproduce");
+});
+
+test("T51 fabricated failed_requirements are caught when the output rides along", async () => {
+  const payload = buildNode0ModelSwapInvariancePayload(CARRY_BOTH);
+  const i = payload.candidates.findIndex((c) => c.verdict === "REJECT");
+  const candidates = payload.candidates.map((c, n) => (n === i ? { ...c, failed_requirements: ["invented:reason"] } : c));
+  const forged = await rehash({ ...payload, candidates });
+  const v = verifyNode0ModelSwapInvariance(forged);
+  assert.equal(v.ok, false, "a diagnosis the evaluator never produced is refused");
+});
+
+test("T52 a carried output that does not hash to its row is refused, never downgraded", async () => {
+  const payload = buildNode0ModelSwapInvariancePayload(CARRY_BOTH);
+  const candidates = payload.candidates.map((c, n) => (n === 0 ? { ...c, output: { answer: "tampered" } } : c));
+  const forged = await rehash({ ...payload, candidates });
+  const v = verifyNode0ModelSwapInvariance(forged);
+  assert.equal(v.ok, false, "presence is an obligation");
+});
