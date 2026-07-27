@@ -1,0 +1,7 @@
+id,customer,request,raised,status,owner
+CR-011,Northgate,Daily manifest by email,2025-07-02,Shipped,L. Fenn
+CR-014,Brightwell,Damaged-goods flag,2025-07-19,Proposed,
+CR-017,Northgate,Bulk check-in for deliveries over 50 pallets,2025-08-04,Accepted,
+CR-019,Brightwell,Longer offline window,2025-08-30,Rejected,M. Sarraf
+CR-023,Northgate,Per-supervisor logins,2025-09-11,Accepted,
+CR-026,Ashford,Export to their WMS,2025-10-03,Proposed,

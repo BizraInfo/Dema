@@ -1,0 +1,11 @@
+{
+  "name": "meridian-api",
+  "version": "0.9.0",
+  "endpoints": [
+    { "method": "POST", "path": "/checkin", "auth": "operator", "idempotent": false },
+    { "method": "GET", "path": "/manifest/:depot/:date", "auth": "supervisor" },
+    { "method": "POST", "path": "/override", "auth": "supervisor" },
+    { "method": "GET", "path": "/health", "auth": "none" }
+  ],
+  "notes": "POST /checkin is not idempotent. REQ-011 duplicate detection is client-side only."
+}
