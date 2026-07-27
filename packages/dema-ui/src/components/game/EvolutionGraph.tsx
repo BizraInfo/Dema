@@ -30,6 +30,7 @@ export function EvolutionGraph({ asSheet = false }: { asSheet?: boolean }) {
       title="Evolution Graph"
       glyph="⑂"
       accent="knowledge"
+      truth="DESIGNED_NOT_LIVE"
       right={
         <span className="font-mono text-[10px] text-muted-foreground">
           {completed}✓ / {rejected}✗

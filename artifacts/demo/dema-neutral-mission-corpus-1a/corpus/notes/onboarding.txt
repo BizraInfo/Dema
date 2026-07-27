@@ -1,0 +1,16 @@
+MERIDIAN - notes for whoever picks this up
+
+Read the meeting notes first. Especially 2025-10-01. Most of the real decisions
+are there and nowhere else.
+
+The docs folder has several roadmaps. I do not know which is current. The one
+called "FINAL" is not the newest.
+
+There is a security review. I am told it is a blocker. The release plan says the
+security items are closed. Both cannot be right.
+
+There are some files that look like duplicates. Do not just delete them - at
+least one of them has something in it the original does not. I found that out
+the hard way.
+
+- M.S.

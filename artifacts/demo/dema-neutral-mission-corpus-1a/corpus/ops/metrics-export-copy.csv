@@ -1,0 +1,7 @@
+date,depot,checkins,duplicates_blocked,offline_minutes,errors
+2025-10-20,depot-1,412,7,0,2
+2025-10-20,depot-2,388,3,41,0
+2025-10-20,depot-3,201,11,132,9
+2025-10-21,depot-1,455,4,0,1
+2025-10-21,depot-2,401,6,12,0
+2025-10-21,depot-3,190,14,201,17

@@ -12,7 +12,8 @@
 //        [--go-phrase "GO: ..."] [--truth-label NODE0_FOO_BAR_MEASURED_REPO]
 //        [--no-arch] [--repo <root>] [--dry-run] [--force] [--json]
 //
-// Exit codes: 0 ok, 1 usage/validation error, 2 target collision (use --force).
+// Exit codes: 0 ok, 1 usage/validation error, 2 target collision (use --force),
+//             3 wiring incomplete (an anchored edit did not apply).
 
 import {
   existsSync,
@@ -651,6 +652,11 @@ function main() {
           `the ${newWord} shipped pre-action spine capabilities`,
         );
         edits.push({ path: p, changed: true, note: `count prose ${oldWord}->${newWord}` });
+      } else {
+        // A missing prose anchor used to record nothing — WIRING_FAILED only
+        // sees notes already in `edits`, so the scaffold exited 0 with a
+        // required edit silently unapplied. Record the miss explicitly.
+        edits.push({ path: p, changed: false, note: "count prose anchor not found" });
       }
     }
 
@@ -765,8 +771,21 @@ function main() {
   }
 
   // --- report ------------------------------------------------------------
+  // `ok` used to be the literal `true`. Every anchored wiring edit could
+  // silently no-op ("anchor not found") and the scaffold still announced
+  // success — the only signal a `·` instead of a `✓` in a list that scrolls
+  // past. That is fail-OPEN inside a fail-closed repo: a drifted anchor
+  // produces an unwired slice that reports itself as wired. Wiring is a
+  // required step. "inserted" and "already present" both pass; a missing
+  // anchor does not.
+  const WIRING_FAILED = /not found|no count anchors matched/;
+  const wiring_failures = edits
+    .filter((e) => WIRING_FAILED.test(e.note))
+    .map((e) => `${e.path} — ${e.note}`);
+
   const report = {
-    ok: true,
+    ok: wiring_failures.length === 0,
+    wiring_failures,
     dry_run: opts.dryRun,
     id: n.id,
     names: n,
@@ -800,6 +819,15 @@ function main() {
     for (const step of report.next) console.log(`    ${step}`);
     console.log("\n  RED-FIRST: the slice is intentionally failing. Build to green");
     console.log("  before any commit. Do not weaken the test to match an empty kernel.");
+  }
+
+  if (!report.ok) {
+    console.error(
+      `\nscaffold_slice: WIRING INCOMPLETE — ${wiring_failures.length} anchored edit(s) did not apply.`,
+    );
+    for (const f of wiring_failures) console.error(`  x ${f}`);
+    console.error("The slice is NOT wired. Repair the anchor(s), then re-run with --force.");
+    process.exit(3);
   }
 }
 

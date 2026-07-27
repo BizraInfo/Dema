@@ -93,6 +93,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_RECOVERY_MISSION_GATHERER_1B",
   "DEMA_MISSION_WORKER_HANDOFF_0A",
   "NODE0_MODEL_SWAP_INVARIANCE_1A",
+  "DEMA_REVERSIBLE_FILE_STEWARD_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2426,6 +2427,34 @@ function defaultCapabilityRows() {
         "TWO GUARANTEES OF DIFFERENT STRENGTH — do not read the stronger for the weaker. (A) BUILD-TIME, label VERDICT_INVARIANCE_MEASURED, requires the actual contract and the actual candidate outputs: run() executes the acceptance contract and constructively recomputes three invariants over injected candidate outputs — identical outputs from different models get identical verdicts (verdict_is_model_blind); a rejected output stays rejected under every model identity present, so a 'trusted' model cannot launder a contract-violating output into acceptance (no_identity_laundering); permuting model-id labels leaves the accepted-output-hash set unchanged (relabel_invariant). The mission is admitted only if the contract is well-formed AND imposes at least one effective predicate, and only if the candidate set carries a real swap (two or more distinct model_ids, no duplicates). That is the measured form of 'the LLM is a replaceable component; the system state is authoritative.' (B) TRANSPORT-TIME, label ROW_DERIVED_ATTESTATION_CONSISTENCY, independent_contract_verification: FALSE: verify() over a received attestation re-derives what the candidate rows support — no output hash carries two verdicts, the summary counts are the ones the rows produce, at least two distinct models are represented, the body-bound hash matches, the boundary key set is exactly all-false. It fails closed on an invariant flag forged in EITHER direction, including a rehashed fabrication.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation. Specifically for TRANSPORT-TIME verification: verify() CANNOT establish that any candidate output actually satisfied the acceptance contract, that failed_requirements reflects a real evaluation, that a candidate output_hash corresponds to an authentic output, or that the builder honestly ran evaluateAgainstContract — the payload carries contract_hash and candidate rows, never the contract predicates or the raw outputs. It also cannot re-check contract admissibility for the same reason, which is why that gate lives at build time. Closing this would require the canonical contract plus outputs in the envelope, or output commitments bound to an independently trusted evaluator receipt; neither is built. A consumer reading only the capability label must not treat (B) as (A).",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_REVERSIBLE_FILE_STEWARD_1A",
+      truth_label: "DEMA_REVERSIBLE_FILE_STEWARD_MEASURED_REPO",
+      summary:
+        "Compose the proven reversible-rename, sanitizer, consent and receipt primitives into one bounded, consented, fully-reversible multi-file steward job (RENAME-only, metadata-only, no model/network).",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-reversible-file-steward.js"],
+        test_paths: ["tests/dema-reversible-file-steward.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-reversible-file-steward-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_REVERSIBLE_FILE_STEWARD_1A.md"],
+        documentation_paths: [
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure orchestrator plans and content-addresses a bounded, exact-consent-gated, sanitizer-gated, fully-reversible multi-RENAME steward job over the shipped reversible-rename and untrusted-corpus-sanitizer primitives, with an all-false boundary and a body-bound verifier. Proves the PLAN + ATTESTATION only.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",

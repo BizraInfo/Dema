@@ -103,6 +103,8 @@ export const commands = [
   ["node", ["scripts/review/dema-recovery-mission-gatherer-check.mjs"]],
   ["node", ["scripts/review/node0-model-swap-invariance-check.mjs"]],
   ["node", ["scripts/review/dema-mission-worker-handoff-check.mjs"]],
+  ["node", ["scripts/review/dema-reversible-file-steward-check.mjs"]],
+  ["node", ["scripts/review/ui-truth-label-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
   ["node", ["scripts/review/boundary-vocab-unification-check.mjs"]],
   ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],
@@ -142,6 +144,7 @@ export const commands = [
   ["node", ["scripts/claims/claim-register-check.mjs"]],
   ["node", ["scripts/claims/generate-public-claims.mjs", "--check"]],
   ["node", ["scripts/claims/claim-corpus-gate.mjs"]],
+  ["node", ["scripts/review/tracked-test-exec-target-check.mjs"]],
   // Classify the exact auto-discovery command against its own fresh log before
   // returning to the aggregate owner. A proved environmental exit 1 normalizes
   // to zero here, so every later gate still runs; all other exits stay fatal.

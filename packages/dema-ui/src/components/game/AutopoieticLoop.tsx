@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useGame } from "@/lib/game/store";
 import { AUTOPOIETIC_STAGES, stationById } from "@/lib/game/ecosystem";
 import { COLOR_CLASS } from "@/lib/game/data";
+import { TruthLabelBadge } from "./primitives";
 import { cn } from "@/lib/utils";
 
 export function AutopoieticLoop({ compact = false }: { compact?: boolean }) {
@@ -21,14 +22,21 @@ export function AutopoieticLoop({ compact = false }: { compact?: boolean }) {
         <h3 className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           Autopoietic Loop
         </h3>
-        <span
-          className={cn(
-            "font-mono text-[10px]",
-            running ? "text-proof anim-pulse" : "text-muted-foreground"
-          )}
-        >
-          {running ? "● LIVE" : "○ IDLE"}
-        </span>
+        {/* Canon holds the autopoietic runtime as DESIGNED_NOT_LIVE. This panel is a
+            deterministic stage animation driven by a client-side tick, NOT a running
+            loop — so it must never render the word LIVE. See .claude/rules/00-claim-discipline.md
+            and scripts/review/ui-truth-label-check.mjs, which fails the build if it does. */}
+        <div className="flex items-center gap-2">
+          <TruthLabelBadge label="DESIGNED_NOT_LIVE" size="xs" />
+          <span
+            className={cn(
+              "font-mono text-[10px]",
+              running ? "text-consent anim-pulse" : "text-muted-foreground"
+            )}
+          >
+            {running ? "◐ ANIMATING" : "○ IDLE"}
+          </span>
+        </div>
       </div>
 
       <div className="relative mx-auto aspect-square w-full max-w-[260px]">

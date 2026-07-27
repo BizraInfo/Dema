@@ -1,0 +1,9 @@
+line_item,category,planned_gbp,actual_gbp,notes
+engineering,staff,84000,81000,contractor ended 2025-10
+handheld_devices,capex,4000,4000,spares only
+vendor_sdk_licence,opex,0,0,paid in Q3
+depot_connectivity,opex,7200,7200,
+external_security_review,opex,15000,15000,T. Okonkwo engagement
+credential_rotation_work,opex,8000,0,NOT STARTED
+contingency,reserve,12000,0,
+TOTAL,,130200,107200,

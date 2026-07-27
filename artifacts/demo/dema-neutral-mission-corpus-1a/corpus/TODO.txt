@@ -1,0 +1,7 @@
+- rotate depot supervisor credentials (SEC-004) <- blocking release
+- write the rollback procedure (REQ-013 / DEC-01)
+- lock timeout from the Aug incident
+- decide: is reporting cut or deferred? DEC-02 says cut, comms say post-launch
+- CR-017 bulk check-in - accepted in August, still no owner
+- merge requirements-copy.md back into requirements.md
+- work out which roadmap is real
