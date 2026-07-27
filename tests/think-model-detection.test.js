@@ -128,6 +128,26 @@ describe("checkModelReadiness — disk manifest detection", () => {
     }
   });
 
+  it("orders models with nullish sizes by name (deterministic proof hash)", async () => {
+    const savedFetch = globalThis.fetch;
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        models: [{ name: "zeta-text:latest" }, { name: "alpha-text:latest" }],
+      }),
+    });
+    try {
+      const result = await checkModelReadiness();
+      assert.deepEqual(result.available_models, [
+        "alpha-text:latest",
+        "zeta-text:latest",
+      ]);
+      assert.equal(result.recommended_model, "alpha-text:latest");
+    } finally {
+      globalThis.fetch = savedFetch;
+    }
+  });
+
   it("reports NOT_DETECTED when neither API nor disk manifests are available", async () => {
     const savedFetch = globalThis.fetch;
     const savedModels = process.env.OLLAMA_MODELS;
