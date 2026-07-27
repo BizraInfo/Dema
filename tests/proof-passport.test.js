@@ -78,7 +78,17 @@ describe("buildProofPassport", () => {
       assert.equal(passport.aggregate.total_receipts, 1);
       assert.equal(passport.aggregate.verified_count, 1);
       assert.equal(passport.aggregate.failed_count, 0);
+      assert.equal(
+        passport.verification_scope,
+        "SIGNATURE_INTEGRITY_ONLY",
+      );
       assert.equal(passport.receipts[0].verdict, "VERIFIED");
+      assert.equal(
+        passport.receipts[0].verification_scope,
+        "SIGNATURE_INTEGRITY_ONLY",
+      );
+      assert.equal(passport.receipts[0].trust_state, "NOT_EVALUATED");
+      assert.equal(passport.boundary.active_signer_trust_evaluated, false);
       assert.equal(passport.subject.public_key_fingerprints.length, 1);
       assert.match(
         passport.subject.public_key_fingerprints[0],

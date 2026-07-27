@@ -1,10 +1,12 @@
 import { readdir } from "node:fs/promises";
 import { join, basename } from "node:path";
 import { homedir } from "node:os";
-import { verifyAuthorshipReceiptFile } from "./authorship-verify.js";
+import { verifyAuthorshipReceiptIntegrityFile } from "./authorship-verify.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 
-export const PROOF_PASSPORT_SCHEMA = "bizra.dema.proof_passport.v0.1";
+export const LEGACY_PROOF_PASSPORT_SCHEMA =
+  "bizra.dema.proof_passport.v0.1";
+export const PROOF_PASSPORT_SCHEMA = "bizra.dema.proof_passport.v0.2";
 
 const BOUNDARY = Object.freeze({
   passport_generated: true,
@@ -16,6 +18,8 @@ const BOUNDARY = Object.freeze({
   legal_identity_asserted: false,
   production_claimed: false,
   receipt_content_included: false,
+  active_signer_trust_evaluated: false,
+  receipt_verification_scope: "SIGNATURE_INTEGRITY_ONLY",
 });
 
 function resolveHome(demaHome) {
@@ -44,6 +48,7 @@ export async function buildProofPassport(demaHome) {
     const emptyBody = {
       schema: PROOF_PASSPORT_SCHEMA,
       mode: "LOCAL_EXPORT",
+      verification_scope: "SIGNATURE_INTEGRITY_ONLY",
       subject: { node: "Node0", public_key_fingerprints: [] },
       receipts: [],
       aggregate: {
@@ -66,8 +71,8 @@ export async function buildProofPassport(demaHome) {
   const fingerprintSet = new Set();
 
   for (const path of receiptPaths) {
-    const verification = await verifyAuthorshipReceiptFile(path);
-    const fingerprint = verification.author?.public_key_fingerprint ?? null;
+    const verification = await verifyAuthorshipReceiptIntegrityFile(path);
+    const fingerprint = verification.embedded_fingerprint ?? null;
     if (fingerprint && verification.verified) {
       fingerprintSet.add(fingerprint);
     }
@@ -79,6 +84,8 @@ export async function buildProofPassport(demaHome) {
       signature_algorithm: "ed25519",
       author_fingerprint: fingerprint,
       verdict: verification.verdict,
+      verification_scope: verification.verification_scope,
+      trust_state: verification.trust_state ?? "NOT_EVALUATED",
       truth_label: verification.verified
         ? "VERIFIED_LOCAL_AUTHORSHIP_RECEIPT"
         : "FAILED_LOCAL_AUTHORSHIP_RECEIPT",
@@ -106,6 +113,7 @@ export async function buildProofPassport(demaHome) {
   const passportBody = {
     schema: PROOF_PASSPORT_SCHEMA,
     mode: "LOCAL_EXPORT",
+    verification_scope: "SIGNATURE_INTEGRITY_ONLY",
     subject: {
       node: "Node0",
       public_key_fingerprints: fingerprints,

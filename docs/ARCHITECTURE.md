@@ -42,6 +42,16 @@ Dema does not own dangerous execution. It talks to adapters. Adapters talk to go
 
 ## Command-to-surface map
 
+Authorship trust clarification (ADR-048 candidate): `dema authorship verify`
+and authorship closeout load the public active-signer trust snapshot and report
+`ACTIVE_SIGNER_TRUST`; they never load private key material. Proof Passport and
+deep Passport verification intentionally replay embedded signatures as
+`SIGNATURE_INTEGRITY_ONLY` and do not claim current signer trust. The older H18
+and H19 row descriptions below remain historical surface summaries where they
+use the broader word “verifies”: Passport v0.1 is accepted only through the
+legacy integrity path, while new Passports and deep-verification results use
+v0.2 with the integrity scope bound explicitly.
+
 | Command | Primary surface | Effect boundary |
 | --- | --- | --- |
 | `dema voice turn` `<file>` (with `--json`) | `apps/cli/src/commands/voice.js` + `packages/core/src/sovereign-voice-turn-preview.js` + `packages/core/src/node0-materialization-pulse-e2e-preview.js` | SOVEREIGN-VOICE-TURN-PREVIEW-1A: reads one transcript text file read-only, runs the merged Materialization Pulse E2E preview over that text, and prints a bounded spoken-response plan. Preview-only mouth layer: no microphone, STT, TTS, audio generation/playback, model invocation, network, real-world action, mint, wallet, federation, or live URP; boundary all-false and authority_delta 0. |

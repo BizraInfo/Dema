@@ -9,6 +9,7 @@ import {
   migrateLegacyAuthorshipKey,
   KEY_INIT_CONSENT_PHRASE,
   KEY_MIGRATE_CONSENT_PHRASE,
+  loadAuthorshipTrustSnapshot,
 } from "../../../../packages/receipts/src/authorship-key-store.js";
 import {
   signArtifact,
@@ -150,9 +151,10 @@ export async function cmd_authorship(ctx) {
       const latest = await findLatestAuthorshipReceipt();
       if (!latest) {
         const err = {
-          schema: "bizra.dema.authorship_verify_result.v0.1",
+          schema: "bizra.dema.authorship_verify_result.v0.2",
           verified: false,
           verdict: "FAILED",
+          verification_scope: "ACTIVE_SIGNER_TRUST",
           error: "no_authorship_receipts_found",
         };
         console.log(
@@ -174,7 +176,11 @@ export async function cmd_authorship(ctx) {
       process.exit(process.exitCode ?? 0);
     }
 
-    const result = await verifyAuthorshipReceiptFile(receiptPath);
+    const trustSnapshot = await loadAuthorshipTrustSnapshot();
+    const result = await verifyAuthorshipReceiptFile(
+      receiptPath,
+      trustSnapshot,
+    );
     if (wantJsonA) {
       console.log(JSON.stringify(result, null, 2));
     } else {

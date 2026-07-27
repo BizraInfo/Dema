@@ -49,8 +49,6 @@ export const NONCORE_IO_TIER_ALLOWLIST = Object.freeze({
     "readFile(receiptPath) of a local receipt JSON to verify signature; read-only, no network.",
   "packages/receipts/src/verdict-attest.js":
     "mkdir + writeFile verdict-<bodyHash>.json to $DEMA_HOME/receipts (resolveHome); no network.",
-  "packages/receipts/src/authorship-closeout.js":
-    "readFile(latest.path) of a local receipt under $DEMA_HOME/receipts; read-only, no network.",
   "packages/receipts/src/authorship-key-store.js":
     "key files under $DEMA_HOME/keys; mkdir+realpath+open with 0o700 and lstat checks; local key store, no network.",
   "packages/receipts/src/consent-nonce-registry.js":

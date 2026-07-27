@@ -19,6 +19,7 @@ import {
 } from "../packages/receipts/src/authorship-sign-command.js";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const FIXTURES_DIR = join(REPO_ROOT, "tests", "fixtures");
 
 function freshHome() {
   return mkdtempSync(join(tmpdir(), "dema-deep-verify-"));
@@ -79,7 +80,10 @@ describe("verifyProofPassportDeep", () => {
       assert.equal(result.verified, true);
       assert.equal(result.verdict, "VERIFIED");
       assert.equal(result.truth_label, "LOCAL_PROOF_PASSPORT_DEEP_VERIFIED");
-      assert.equal(result.verification_scope, "PASSPORT_ENVELOPE_AND_RECEIPTS");
+      assert.equal(
+        result.verification_scope,
+        "PASSPORT_ENVELOPE_AND_RECEIPT_SIGNATURE_INTEGRITY_ONLY",
+      );
       assert.equal(result.receipt_results.length, 1);
       const r = result.receipt_results[0];
       assert.equal(r.verified, true);
@@ -88,9 +92,108 @@ describe("verifyProofPassportDeep", () => {
       assert.equal(r.metadata_match.author_fingerprint, true);
       assert.equal(r.metadata_match.verdict, true);
       assert.equal(r.metadata_match.truth_label, true);
+      assert.equal(r.metadata_match.verification_scope, true);
+      assert.equal(r.metadata_match.trust_state, true);
+      assert.equal(r.verification_scope, "SIGNATURE_INTEGRITY_ONLY");
+      assert.equal(r.trust_state, "NOT_EVALUATED");
+      assert.equal(result.boundary.active_signer_trust_evaluated, false);
     } finally {
       restore();
     }
+  });
+
+  it("verifies a frozen v0.1 passport through the explicit legacy integrity path", async () => {
+    const home = freshHome();
+    const receiptsDir = join(home, "receipts");
+    mkdirSync(receiptsDir);
+    const receiptFilename = "authorship-frozen-v0.1.json";
+    writeFileSync(
+      join(receiptsDir, receiptFilename),
+      readFileSync(join(FIXTURES_DIR, receiptFilename), "utf8"),
+    );
+    const passport = JSON.parse(
+      readFileSync(
+        join(FIXTURES_DIR, "proof-passport-frozen-v0.1.json"),
+        "utf8",
+      ),
+    );
+
+    const result = await verifyProofPassportDeep(passport, { receiptsDir });
+
+    assert.equal(result.verified, true);
+    assert.equal(result.schema, DEEP_VERIFY_SCHEMA);
+    assert.equal(result.passport_schema, "bizra.dema.proof_passport.v0.1");
+    assert.equal(result.legacy_compatibility, true);
+    assert.equal(result.receipt_results[0].verified, true);
+    assert.equal(
+      result.receipt_results[0].verification_scope,
+      "SIGNATURE_INTEGRITY_ONLY",
+    );
+    assert.equal(result.receipt_results[0].trust_state, "NOT_EVALUATED");
+  });
+
+  it("rejects a rehashed current passport that claims active signer trust", async () => {
+    const { passport, receiptsDir, restore } = await homeWithSignedPassport();
+    try {
+      const { sha256, stableStringify } =
+        await import("../packages/consent/src/consent-common.js");
+      const { passport_hash, generated_at, ...body } = passport;
+      const hostileBody = {
+        ...body,
+        verification_scope: "ACTIVE_SIGNER_TRUST",
+        boundary: {
+          ...body.boundary,
+          active_signer_trust_evaluated: true,
+          receipt_verification_scope: "ACTIVE_SIGNER_TRUST",
+        },
+      };
+      const hostile = {
+        ...hostileBody,
+        passport_hash: sha256(stableStringify(hostileBody)),
+        generated_at,
+      };
+
+      const result = await verifyProofPassportDeep(hostile, { receiptsDir });
+
+      assert.equal(result.verified, false);
+      assert.equal(result.error, "envelope_verification_failed");
+      assert.ok(
+        result.envelope.checks.some(
+          (check) =>
+            check.name === "integrity_scope_contract" && !check.pass,
+        ),
+      );
+    } finally {
+      restore();
+    }
+  });
+
+  it("rejects an empty rehashed passport with a forged active-trust scope", async () => {
+    const home = freshHome();
+    const passport = await buildProofPassport(home);
+    const { sha256, stableStringify } =
+      await import("../packages/consent/src/consent-common.js");
+    const { passport_hash, generated_at, ...body } = passport;
+    const hostileBody = {
+      ...body,
+      verification_scope: "ACTIVE_SIGNER_TRUST",
+      boundary: {
+        ...body.boundary,
+        active_signer_trust_evaluated: true,
+      },
+    };
+    const hostile = {
+      ...hostileBody,
+      passport_hash: sha256(stableStringify(hostileBody)),
+      generated_at,
+    };
+
+    const result = await verifyProofPassportDeep(hostile, {
+      receiptsDir: join(home, "receipts"),
+    });
+
+    assert.equal(result.verified, false);
+    assert.equal(result.error, "envelope_verification_failed");
   });
 
   it("fails when receipt file is missing", async () => {

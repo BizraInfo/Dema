@@ -253,15 +253,15 @@ export async function checkModelReadiness() {
     const textModels = apiModels
       .filter((m) => !m.name.includes("embed"))
       .sort((a, b) => {
-        // Size ascending, name as tie-break, so the proof hash is deterministic.
-        //
-        // The subtraction must be tested for FALSINESS, not `!== 0`. When both
-        // sizes are nullish the expression is `Infinity - Infinity` = NaN, and
-        // `NaN !== 0` is true — so an `!== 0` guard returns NaN, which makes the
-        // comparator inconsistent and leaks raw API response order into the hash.
-        // `if (bySize)` is false for both 0 and NaN and correctly falls through.
-        const bySize = (a.size ?? Infinity) - (b.size ?? Infinity);
-        if (bySize) return bySize;
+        const leftSize =
+          typeof a.size === "number" && Number.isFinite(a.size) ? a.size : null;
+        const rightSize =
+          typeof b.size === "number" && Number.isFinite(b.size) ? b.size : null;
+        if (leftSize === null && rightSize !== null) return 1;
+        if (leftSize !== null && rightSize === null) return -1;
+        if (leftSize !== null && rightSize !== null && leftSize !== rightSize) {
+          return leftSize - rightSize;
+        }
         const leftName = String(a.name ?? "");
         const rightName = String(b.name ?? "");
         return leftName < rightName ? -1 : leftName > rightName ? 1 : 0;

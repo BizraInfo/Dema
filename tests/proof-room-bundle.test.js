@@ -168,7 +168,7 @@ test("redactProofRoomBundle scrubs repo_root + emits basename + sha256", () => {
     truth_label: "MEASURED",
     ok: true,
     generated_at: "2026-05-23T06:00:00.000Z",
-    repo_root: "/home/operator/Downloads/Dema",
+    repo_root: "/home/operator/Downloads/private-task-worktree",
     gates: [],
     self_harness: {
       gates_run: 0,
@@ -186,12 +186,17 @@ test("redactProofRoomBundle scrubs repo_root + emits basename + sha256", () => {
   const redacted = redactProofRoomBundle(original);
   assert.equal(redacted.repo_root, REDACTED_REPO_ROOT_PLACEHOLDER);
   assert.equal(redacted.repo_root_basename, "Dema");
+  assert.doesNotMatch(
+    JSON.stringify(redacted),
+    /private-task-worktree/,
+    "public-safe output must not disclose the checkout basename",
+  );
   assert.match(redacted.repo_root_sha256, /^[0-9a-f]{64}$/);
   assert.equal(redacted.redacted, true);
   assert.equal(redacted.truth_label, "PUBLIC_SAFE");
   assert.equal(
     original.repo_root,
-    "/home/operator/Downloads/Dema",
+    "/home/operator/Downloads/private-task-worktree",
     "input must not be mutated",
   );
 });
