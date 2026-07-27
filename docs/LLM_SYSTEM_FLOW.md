@@ -99,13 +99,33 @@ Preview commands stop at the boundary. Do not reinterpret a preview as permissio
 | Invariant                                               | Source                                                                                                                     |
 | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Dema is one face, not the whole ecosystem.              | [06-adr/ADR-001-dema-is-one-face.md](06-adr/ADR-001-dema-is-one-face.md)                                                   |
-| No runtime execution in this repo.                      | [ARCHITECTURE.md](ARCHITECTURE.md)                                                                                         |
+| No runtime execution in this repo **by default** — runtime lives only in explicitly named adapters, under consent (see below). | [06-adr/ADR-048-consented-local-genesis-runtime.md](06-adr/ADR-048-consented-local-genesis-runtime.md) |
 | No hidden daemon.                                       | [06-adr/ADR-002-no-shadow-state.md](06-adr/ADR-002-no-shadow-state.md)                                                     |
 | Exact-string consent only.                              | [06-adr/ADR-005-operator-actions-require-explicit-consent.md](06-adr/ADR-005-operator-actions-require-explicit-consent.md) |
 | All local Dema state is under `DEMA_HOME` or `~/.dema`. | [06-adr/ADR-004-local-first-memory.md](06-adr/ADR-004-local-first-memory.md)                                               |
 | Adapter input is untrusted.                             | [ARCHITECTURE.md](ARCHITECTURE.md)                                                                                         |
 | Receipts are read/list here; governed runtime issues.   | [RECEIPTS.md](RECEIPTS.md)                                                                                                 |
 | Node1 / Node2 are preview-only until proof gates pass.  | [GTM.md](GTM.md)                                                                                                           |
+
+### Runtime execution boundary (ADR-048)
+
+```text
+Pure kernels remain side-effect free.
+
+Runtime execution is allowed only in explicitly named runtime adapters or
+applications, under exact consent, bounded authority, append-only evidence,
+independent verification and reconstructable state.
+
+No hidden daemon.
+No implicit model invocation.
+No unreceipted state transition.
+```
+
+This is a narrowing, not a licence. Code outside a named adapter is exactly as
+constrained as before, and `packages/*/src` stays side-effect free — mechanically,
+via `scripts/review/kernel-purity-check.mjs`. The named adapters as of ADR-048 are
+the five `scripts/genesis/*` + `scripts/genesis-node0.mjs` paths of the
+GENESIS-RUNTIME-SPINE-1A.0 slice. Adding to that list is an ADR-level act.
 
 ## Hard stop gates
 

@@ -2,8 +2,11 @@
 
 ```text
 Dema is the face, not the whole system.
-No runtime execution in this repo unless a measured command already exists.
-No hidden daemon. No implicit model invocation.
+No runtime execution in this repo by default — only in explicitly named runtime
+adapters, under exact consent, bounded authority, append-only evidence,
+independent verification and reconstructable state (ADR-048).
+Pure kernels (packages/*/src) remain side-effect free — kernel-purity-check.mjs.
+No hidden daemon. No implicit model invocation. No unreceipted state transition.
 No external provider call by default.
 Exact-string consent only (packages/fate/src/fate.js).
 All local state under DEMA_HOME or ~/.dema unless explicitly scoped.

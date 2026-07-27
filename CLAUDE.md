@@ -25,8 +25,9 @@ If user-scope guidance and repo guidance overlap, use the repo-local rule for De
 
 ```text
 Dema is the face, not the whole system.
-No runtime execution in this repo.
-No hidden daemon.
+No runtime execution in this repo by default — only in named adapters (ADR-048).
+Pure kernels stay side-effect free; runtime needs consent + evidence + verification.
+No hidden daemon. No implicit model invocation. No unreceipted state transition.
 Exact-string consent only.
 All local state stays under DEMA_HOME or ~/.dema.
 Receipts are read/list here; governed runtime issues.
