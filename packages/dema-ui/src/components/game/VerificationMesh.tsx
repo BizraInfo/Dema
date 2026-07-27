@@ -21,7 +21,7 @@ export function VerificationMesh() {
 
   if (!proposal) {
     return (
-      <Panel title="Verification Mesh" glyph="⛓" accent="proof" bodyClassName="p-3">
+      <Panel title="Verification Mesh" glyph="⛓" accent="proof" truth="DESIGNED_NOT_LIVE" bodyClassName="p-3">
         <div className="flex flex-col items-center gap-2 py-6 text-center text-[11px] text-muted-foreground">
           <ShieldCheck size={22} className="opacity-40" />
           Select a proposal in the Evolution Graph to inspect its verification rails.
@@ -39,6 +39,7 @@ export function VerificationMesh() {
       title="Verification Mesh"
       glyph="⛓"
       accent="proof"
+      truth="DESIGNED_NOT_LIVE"
       right={
         <span className="font-mono text-[10px] text-muted-foreground">
           {Object.values(proposal.rails).filter(Boolean).length}/{VERIFICATION_RAILS.length}

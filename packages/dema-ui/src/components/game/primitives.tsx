@@ -66,6 +66,7 @@ export function Panel({
   title,
   glyph,
   accent = "proof",
+  truth,
   right,
   className,
   bodyClassName,
@@ -74,6 +75,10 @@ export function Panel({
   title?: string;
   glyph?: string;
   accent?: keyof typeof COLOR_CLASS;
+  /** Maturity of the capability this panel displays. SceneHeader already took a
+   *  `truth` prop; Panel did not, so panel-level surfaces shipped unlabeled.
+   *  Enforced by scripts/review/ui-truth-label-check.mjs. */
+  truth?: TruthLabel;
   right?: React.ReactNode;
   className?: string;
   bodyClassName?: string;
@@ -97,7 +102,10 @@ export function Panel({
               {title}
             </h3>
           </div>
-          {right}
+          <div className="flex items-center gap-2 shrink-0">
+            {truth && <TruthLabelBadge label={truth} size="xs" />}
+            {right}
+          </div>
         </div>
       )}
       <div className={cn("flex-1 min-h-0", bodyClassName)}>{children}</div>

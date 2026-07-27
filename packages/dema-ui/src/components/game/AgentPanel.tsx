@@ -3,7 +3,7 @@
 import { useGame } from "@/lib/game/store";
 import { AGENTS, COLOR_CLASS, ZONES } from "@/lib/game/data";
 import { cn } from "@/lib/utils";
-import { Panel } from "./primitives";
+import { Panel, TruthLabelBadge } from "./primitives";
 import { AgentDetailDialog } from "./AgentDetailDialog";
 import { useState } from "react";
 import type { AgentId } from "@/lib/game/types";
@@ -70,6 +70,12 @@ export function AgentPanel({ asSheet = false }: { asSheet?: boolean }) {
               </div>
               <div className="mt-0.5 truncate text-[9px] uppercase tracking-wider text-muted-foreground">
                 {zone?.short} · {a.role.split(",")[0]}
+              </div>
+              {/* Every AGENTS entry carries truthLabel from fleet-canon.ts. It was held in
+                  data but never rendered — a label the user cannot see is a comment, not a
+                  disclosure. The roster is DESIGNED_NOT_LIVE and must say so on screen. */}
+              <div className="mt-1">
+                <TruthLabelBadge label={a.truthLabel} size="xs" />
               </div>
             </div>
           </button>
