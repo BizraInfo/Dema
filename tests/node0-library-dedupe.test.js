@@ -198,3 +198,38 @@ test("segment-aware containment: a true subpath of a source root is refused", ()
     /QUARANTINE_INSIDE_SOURCE_ROOT/,
   );
 });
+
+test("normalizeAbsDir strips trailing slashes without polynomial backtracking", () => {
+  // normalizeAbsDir is module-private; planQuarantine is the public path into it.
+  // The same quarantine directory written with and without trailing slashes must
+  // produce the same plan — that is what the strip exists for.
+  const sets = confirmDuplicateSets([{ size: 100, paths: ["/demo/corpus/a", "/demo/corpus/b"] }], {
+    "/demo/corpus/a": "a".repeat(64),
+    "/demo/corpus/b": "a".repeat(64),
+  });
+  const plain = planQuarantine(sets, {
+    root_priority: ["/demo/corpus"],
+    quarantine_root: "/demo/quarantine",
+  });
+  const slashed = planQuarantine(sets, {
+    root_priority: ["/demo/corpus"],
+    quarantine_root: "/demo/quarantine///",
+  });
+  assert.deepEqual(slashed, plain, "trailing slashes must not change the plan");
+
+  // CodeQL js/polynomial-redos — see the comment on normalizeAbsDir. The attack
+  // input is a run of slashes followed by a NON-slash, so `\/+$` fails and retries
+  // from every start position; an all-slashes string matches on the first try and
+  // would stay fast even with the bug. Whether the path is accepted or refused is
+  // not this test's business, only that deciding is linear.
+  // Measured at n=50k: regex form 560ms, this fix 0.005ms.
+  const pathological = "/".repeat(50_000) + "x";
+  const started = process.hrtime.bigint();
+  try {
+    planQuarantine(sets, { root_priority: ["/demo/corpus"], quarantine_root: pathological });
+  } catch {
+    // a refusal is a fine outcome — it just must not take quadratic time to reach
+  }
+  const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
+  assert.ok(elapsedMs < 250, `trailing-slash strip must stay linear, took ${elapsedMs}ms`);
+});
