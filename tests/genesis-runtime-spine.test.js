@@ -4,6 +4,7 @@
 
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -30,6 +31,8 @@ import {
   worldState,
 } from "../scripts/genesis/urp0-runtime.mjs";
 import { loadEvents, resolveStateRootDir, statePermissions } from "../scripts/genesis/urp0-store.mjs";
+import { loopbackOrigins, startUrp0Server } from "../scripts/genesis/urp0-server.mjs";
+import { portFree, preflight } from "../scripts/genesis-node0.mjs";
 
 // One isolated world per test: its own DEMA_HOME and its own source tree.
 function makeWorld() {
@@ -396,4 +399,63 @@ test("the required phrase is bound to the root and the contract", () => {
 test("state lives under DEMA_HOME, never beside the source", () => {
   const dir = resolveStateRootDir({ DEMA_HOME: "/tmp/example-dema-home" });
   assert.equal(dir, "/tmp/example-dema-home/genesis/urp0");
+});
+
+// --- launcher: the three defects the operator's first real run exposed --------
+
+test("preflight refuses a port that is already held, naming the port", async () => {
+  const squatter = createServer();
+  await new Promise((r) => squatter.listen(0, "127.0.0.1", r));
+  const taken = squatter.address().port;
+  try {
+    assert.equal(await portFree(taken), false);
+
+    const gaps = await preflight({ needUi: false, apiPort: taken });
+    assert.equal(gaps.length, 1, JSON.stringify(gaps));
+    assert.match(gaps[0], new RegExp(`^api_port_in_use:${taken}`));
+    // The message has to be actionable, not just true.
+    assert.match(gaps[0], /ss -tlnp/);
+    assert.match(gaps[0], /GENESIS_API_PORT/);
+  } finally {
+    await new Promise((r) => squatter.close(r));
+  }
+  // Freed again once the squatter lets go.
+  assert.equal(await portFree(taken), true);
+});
+
+test("preflight passes when the ports are free", async () => {
+  const probe = createServer();
+  await new Promise((r) => probe.listen(0, "127.0.0.1", r));
+  const free = probe.address().port;
+  await new Promise((r) => probe.close(r));
+  assert.deepEqual(await preflight({ needUi: false, apiPort: free }), []);
+});
+
+test("CORS follows the UI port instead of hardcoding 3000", async () => {
+  const w = makeWorld();
+  const uiPort = 3117; // deliberately not 3000
+  const { server, url } = await startUrp0Server({ stateRootDir: w.stateRootDir, port: 0, uiPort });
+  try {
+    const allowed = await fetch(`${url}/readyz`, { headers: { origin: `http://127.0.0.1:${uiPort}` } });
+    assert.equal(allowed.headers.get("access-control-allow-origin"), `http://127.0.0.1:${uiPort}`);
+
+    const alsoAllowed = await fetch(`${url}/readyz`, { headers: { origin: `http://localhost:${uiPort}` } });
+    assert.equal(alsoAllowed.headers.get("access-control-allow-origin"), `http://localhost:${uiPort}`);
+
+    // The old hardcoded origin is NOT blessed when the UI runs elsewhere...
+    const stale = await fetch(`${url}/readyz`, { headers: { origin: "http://127.0.0.1:3000" } });
+    assert.equal(stale.headers.get("access-control-allow-origin"), null);
+
+    // ...and no origin at all is still refused a CORS header.
+    const foreign = await fetch(`${url}/readyz`, { headers: { origin: "http://evil.example" } });
+    assert.equal(foreign.headers.get("access-control-allow-origin"), null);
+  } finally {
+    await new Promise((r) => server.close(r));
+    w.cleanup();
+  }
+});
+
+test("loopbackOrigins covers both loopback spellings and nothing else", () => {
+  assert.deepEqual(loopbackOrigins(3000), ["http://127.0.0.1:3000", "http://localhost:3000"]);
+  assert.deepEqual(loopbackOrigins(3117), ["http://127.0.0.1:3117", "http://localhost:3117"]);
 });

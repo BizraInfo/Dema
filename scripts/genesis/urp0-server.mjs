@@ -25,18 +25,22 @@ export const DEFAULT_PORT = 4300;
 const MAX_BODY_BYTES = 64 * 1024;
 
 // The UI runs on its own loopback port; nothing else may talk to this server.
-const ALLOWED_ORIGINS = Object.freeze([
-  "http://127.0.0.1:3000",
-  "http://localhost:3000",
-]);
+// Derived from the port the UI was actually started on — hardcoding 3000 here
+// while the launcher accepted GENESIS_UI_PORT made the documented escape hatch
+// produce a CORS-blocked page.
+export function loopbackOrigins(port) {
+  return Object.freeze([`http://127.0.0.1:${port}`, `http://localhost:${port}`]);
+}
 
-function json(res, status, body, origin) {
+export const DEFAULT_UI_PORT = 3000;
+
+function json(res, status, body, origin, allowedOrigins) {
   const text = JSON.stringify(body, null, 2);
   const headers = {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
   };
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+  if (origin && allowedOrigins.includes(origin)) {
     headers["access-control-allow-origin"] = origin;
     headers["access-control-allow-headers"] = "content-type";
     headers["access-control-allow-methods"] = "GET,POST,OPTIONS";
@@ -81,13 +85,19 @@ function gitCommit(cwd) {
   }
 }
 
-export function createUrp0Server({ stateRootDir = resolveStateRootDir(), repoRoot = process.cwd(), now = () => new Date().toISOString() } = {}) {
+export function createUrp0Server({
+  stateRootDir = resolveStateRootDir(),
+  repoRoot = process.cwd(),
+  now = () => new Date().toISOString(),
+  uiPort = DEFAULT_UI_PORT,
+  allowedOrigins = loopbackOrigins(uiPort),
+} = {}) {
   return createServer(async (req, res) => {
     const origin = req.headers.origin;
     const url = new URL(req.url, `http://${BIND_HOST}`);
     const path = url.pathname;
 
-    if (req.method === "OPTIONS") return json(res, 204, {}, origin);
+    if (req.method === "OPTIONS") return json(res, 204, {}, origin, allowedOrigins);
 
     try {
       if (req.method === "GET" && path === "/readyz") {
@@ -100,21 +110,21 @@ export function createUrp0Server({ stateRootDir = resolveStateRootDir(), repoRoo
           blocked_by: disk.blocked_by,
           bind_host: BIND_HOST,
           public_gateway: false,
-        }, origin);
+        }, origin, allowedOrigins);
       }
 
       if (req.method === "GET" && path === "/api/realm") {
-        return json(res, 200, worldState(stateRootDir), origin);
+        return json(res, 200, worldState(stateRootDir), origin, allowedOrigins);
       }
 
       if (req.method === "GET" && path === "/api/admission-card") {
-        return json(res, 200, admissionCard(), origin);
+        return json(res, 200, admissionCard(), origin, allowedOrigins);
       }
 
       if (req.method === "POST" && path === "/api/admit") {
         const body = await readBody(req);
         const out = admitHuman0(stateRootDir, { phrase: body.phrase, now_iso: now() });
-        return json(res, out.ok ? 200 : 400, out, origin);
+        return json(res, out.ok ? 200 : 400, out, origin, allowedOrigins);
       }
 
       // Deriving a card writes nothing and executes nothing. It is a GET-shaped
@@ -122,7 +132,7 @@ export function createUrp0Server({ stateRootDir = resolveStateRootDir(), repoRoo
       if (req.method === "POST" && path === "/api/consent-card") {
         const body = await readBody(req);
         const out = missionConsentCard(stateRootDir, { root: body.root, now_iso: now() });
-        return json(res, out.ok ? 200 : 400, out, origin);
+        return json(res, out.ok ? 200 : 400, out, origin, allowedOrigins);
       }
 
       if (req.method === "POST" && path === "/api/authorize") {
@@ -132,7 +142,7 @@ export function createUrp0Server({ stateRootDir = resolveStateRootDir(), repoRoo
           phrase: body.phrase,
           now_iso: now(),
         });
-        return json(res, out.ok ? 200 : 400, out, origin);
+        return json(res, out.ok ? 200 : 400, out, origin, allowedOrigins);
       }
 
       if (req.method === "POST" && path === "/api/block0/seal") {
@@ -143,12 +153,12 @@ export function createUrp0Server({ stateRootDir = resolveStateRootDir(), repoRoo
           constitution_source_hash: body.constitution_source_hash ?? null,
           topology_source_hash: body.topology_source_hash ?? null,
         });
-        return json(res, out.ok ? 200 : 400, out, origin);
+        return json(res, out.ok ? 200 : 400, out, origin, allowedOrigins);
       }
 
-      return json(res, 404, { ok: false, blocked_by: ["route_unknown"], path }, origin);
+      return json(res, 404, { ok: false, blocked_by: ["route_unknown"], path }, origin, allowedOrigins);
     } catch (error) {
-      return json(res, 400, { ok: false, blocked_by: [error?.message ?? "request_failed"] }, origin);
+      return json(res, 400, { ok: false, blocked_by: [error?.message ?? "request_failed"] }, origin, allowedOrigins);
     }
   });
 }
