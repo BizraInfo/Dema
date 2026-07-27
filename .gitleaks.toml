@@ -53,3 +53,24 @@ paths = ['''(^|/)firebase-applet-config\.json$''']
 description = "False positive: ALLOWED_PROVENANCE_GATES gate-name literals in preflight source (not secrets)"
 paths = ['''(^|/)node0-genesis-key-ceremony-preflight\.js$''']
 regexes = ['''NODE0-GENESIS-KEY-CEREMONY-1A|MIGRATE-HISTORICAL-GENESIS-PROOF-1A|BLOCKED_BY_UNRESOLVED_PROVENANCE''']
+
+# ─── False-positive: "external key custody" prose in the PDMLC audit ─────────
+# The frozen PDMLC baseline audit enumerates what the project does NOT know:
+#
+#   **UNKNOWN:** live Node0 runtime behavior, production model/provider
+#   behavior, external key custody, federation/wallet/economy behavior, ...
+#
+# `generic-api-key` matches the word "key" followed by a comma-separated run of
+# mixed-case tokens, so a sentence ABOUT key custody trips a rule looking FOR a
+# key. Entropy 3.73 — English prose, not a credential.
+#
+# The document is a frozen audit artifact and must not be reworded to satisfy a
+# scanner; changing the text of a sealed audit to make a gate pass is exactly the
+# inversion this repo exists to prevent. The allowlist is the correct mechanism.
+#
+# Scoped to path AND the literal phrase, which gitleaks AND-joins: a real secret
+# anywhere else in this same file still fails the gate.
+[[allowlists]]
+description = "False positive: 'external key custody' prose in the frozen PDMLC baseline audit (not a secret)"
+paths = ['''(^|/)doc-002 - BIZRA-Product-and-Engineering-Lifecycle-Audit-v1\.md$''']
+regexes = ['''external key custody, federation/wallet/economy behavior''']
