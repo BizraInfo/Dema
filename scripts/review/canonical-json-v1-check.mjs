@@ -41,6 +41,10 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   "packages/core/src/dema-recovery-mission-engine.js",
   "packages/core/src/dema-recovery-mission-gatherer.js",
   "packages/core/src/node0-model-swap-invariance.js",
+  "packages/genesis/src/urp0-kernel.js",
+  "packages/genesis/src/urp0-mission-kernel.js",
+  "packages/genesis/src/urp0-sat5.js",
+  "scripts/genesis/urp0-runtime.mjs",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 

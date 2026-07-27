@@ -148,6 +148,13 @@ test("T8 adoption-freeze gate stays strict: every registered consumer is explici
       "packages/core/src/dema-recovery-mission-gatherer.js",
       // node0-model-swap-invariance (NODE0-MODEL-SWAP-INVARIANCE-1A).
       "packages/core/src/node0-model-swap-invariance.js",
+      // URP-0 local ignition (GENESIS-RUNTIME-SPINE-1A.0). Four consumers: the
+      // three pure genesis kernels plus the I/O-tier runtime, which hashes the
+      // admission and consent receipts it journals.
+      "packages/genesis/src/urp0-kernel.js",
+      "packages/genesis/src/urp0-mission-kernel.js",
+      "packages/genesis/src/urp0-sat5.js",
+      "scripts/genesis/urp0-runtime.mjs",
     ],
   );
   const result = runCanonicalJsonV1Check();
