@@ -13,12 +13,24 @@ truth level, this page names it.
 > - [`BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md`](BIZRA_NODE0_DEMA_GOAL_SCRIPT_v0_1.md) — the north-star goal this page tracks against. The goal names every subsystem; this page reports how much of each is `MEASURED` today.
 > - [`ROADMAP.md`](ROADMAP.md) — what slices are moving rows on this page from `PLANNED` / `DESIGNED_NOT_LIVE` toward `MEASURED`.
 
-> **Truth labels** used on this page:
+> **Canonical public-claim labels**:
 >
-> - `MEASURED` — verifiable from the local code or a captured artifact.
-> - `DESIGNED_NOT_LIVE` — schema/spec exists, runtime does not.
+> - `VERIFIED` — repeatable mechanism with a reachable evidence artifact.
+> - `MEASURED` — recorded conditions, reproducible command, and artifact.
+> - `DERIVED` — explicit derivation from a `VERIFIED` or `MEASURED` premise.
+> - `SCENARIO` — hypothetical output with assumptions named.
+> - `DESIGNED_NOT_LIVE` — design exists; runtime is not live.
+> - `UNKNOWN` — evidence is absent or incomplete.
+> - `FORBIDDEN` — the claim may not appear on a public surface.
+>
+> **Operational qualifiers used by this limits map**:
+>
 > - `PLANNED` — design intent only; not in code yet.
 > - `LOCAL_ONLY` — works locally but is not share-safe in its current form.
+>
+> `PLANNED` and `LOCAL_ONLY` are not extra public-claim labels. Before a row is
+> reused publicly, its sentence must receive exactly one canonical label from
+> the Claim Register.
 
 ---
 
@@ -182,6 +194,25 @@ who only sees the README.
 | `~/.dema/receipts/*.json`                                 | Local receipts are not designed to be shared outside the operator's machine without an explicit consent + redaction pass                                 |
 | `.proof-forge/`                                           | Operator-local proof receipts; gitignored by design                                                                                                      |
 
+## Public deployment claim containment
+
+The `2026-07-24` live-surface audit found that `bizra.ai` was still publishing
+unbound pinned metrics, “Live Receipt Chain,” “Live Network Data,” absolute
+enforcement wording, live economic/URP implications, and unauthenticated API
+responses carrying unbound operational claims.
+
+| Surface | Truth state | Current limit |
+| --- | --- | --- |
+| Live `bizra.ai` claim surface observed 2026-07-24 | `UNKNOWN` for unsupported facts; `FORBIDDEN` for live economy, URP, or federation claims | The current deployment is a claim defect. Do not cite it as evidence of runtime, identity, security, scale, economics, or federation. |
+| Live unauthenticated `bizra.ai` API output observed 2026-07-24 | `UNKNOWN` until each output is minimized, canonically labeled, and evidence-bound | Page redirects do not contain API output. Health, beta, ethics, scaffold, hardware, model, persistence, and metric responses require separate review. |
+| Local `award-winner-design` containment candidate | Source presence `VERIFIED`; distribution qualifier `LOCAL_ONLY`; deployment `UNKNOWN` | A dated root boundary, default route containment, authentication integrity hold, all-method API inventory, and credential-free fixed-GET capture exist only in a local candidate. Known demonstration credentials were removed from candidate source, but session invalidation, identity-provider repair, secret rotation, push, merge, deployment, and production correction are not claimed. |
+| Public signing identity | `UNKNOWN` | Signer rotation is pending. No new signed public Claim Receipt is issued by the containment slice. |
+
+See
+[`audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md`](audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md)
+for the route/source/evidence inventory, exact claim dispositions, candidate
+paths, and post-deploy closure gates.
+
 ## Hard non-claims
 
 These phrases are forbidden in any Dema-issued artifact unless each is
@@ -228,8 +259,14 @@ prevent.
 
 ---
 
-Last refreshed: 2026-06-28 (DEMA-CAPABILITY-TRUTH-REGISTRY-1A branch, based on merged #301 commit `2f81517`). Refresh trigger:
-DEMA-CAPABILITY-TRUTH-REGISTRY-1A test-count and surface row update.
+Public-claim containment addendum refreshed: 2026-07-24. This refresh adds the
+`bizra.ai` incident boundary only; it does not re-audit or promote the
+capability table.
+
+Capability-table baseline last refreshed: 2026-06-28
+(DEMA-CAPABILITY-TRUTH-REGISTRY-1A branch, based on merged #301 commit
+`2f81517`). Refresh trigger: DEMA-CAPABILITY-TRUTH-REGISTRY-1A test-count and
+surface row update.
 
 > Scope note for the 2026-06-27 refresh: corrected test count (5,396 → 5,813)
 > and rowed Node0 proof artifact export bundle (1A) as MEASURED with evidence

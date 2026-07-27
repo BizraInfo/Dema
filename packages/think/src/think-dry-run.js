@@ -252,7 +252,13 @@ export async function checkModelReadiness() {
   if (apiReachable) {
     const textModels = apiModels
       .filter((m) => !m.name.includes("embed"))
-      .sort((a, b) => (a.size ?? Infinity) - (b.size ?? Infinity));
+      .sort((a, b) => {
+        const sizeOrder = (a.size ?? Infinity) - (b.size ?? Infinity);
+        if (sizeOrder !== 0) return sizeOrder;
+        const leftName = String(a.name ?? "");
+        const rightName = String(b.name ?? "");
+        return leftName < rightName ? -1 : leftName > rightName ? 1 : 0;
+      });
     availableModels = textModels.map((m) => m.name);
     recommended = availableModels.length > 0 ? availableModels[0] : null;
   } else {

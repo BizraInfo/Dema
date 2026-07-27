@@ -127,6 +127,47 @@ Load-bearing surface. Every public surface authors must satisfy this table befor
 
 A new public-claim area not in this table is treated as `UNKNOWN` until added.
 
+### 9.1 bizra.ai containment incident — 2026-07-24
+
+The live `bizra.ai` deployment was observed publishing unsupported or unbound
+claims:
+
+- [MEASURED] Observed text included “Live Receipt Chain” and “Live Network Data.”
+- [MEASURED] Observed text included pinned metrics, absolute enforcement wording, and identity-adjacent Ed25519 wording.
+- [MEASURED] Observed presentation implied live economic and URP capability.
+- [MEASURED] Unauthenticated API responses exposed unbound health, ethics, hardware, model, persistence, and scaffold claims.
+
+The governing dispositions are:
+
+| Surface | Canonical claim disposition | Current authority |
+| --- | --- | --- |
+| Current live `bizra.ai` pages and unauthenticated API output | `UNKNOWN` where evidence is absent; `FORBIDDEN` where live economy, URP, or federation is implied | Release-blocking defect; not approved for reuse |
+| Inspected `award-winner-design` source at `568ab0b41c32f812b8ce4d20e7f4ffdf1ebffd6e` | `VERIFIED` as a source-review anchor only | Does not prove which SHA Vercel deployed |
+| Local containment candidate on `fix/public-claim-binding-1a` | `VERIFIED` as local source presence; operational qualifier `LOCAL_ONLY` | Not pushed, merged, deployed, or live |
+| Corrected public deployment | `UNKNOWN` | Requires explicit deployment consent, exact-SHA provenance, and post-deploy crawl |
+| New signed public Claim Receipt | `UNKNOWN` | Not issued while signer rotation is pending |
+
+The local candidate reserves these stable claim identifiers. Their evidence
+links must pin the exact commit containing this incident record before any
+deployment:
+
+| Claim ID | Public statement boundary | Canonical label | Evidence and limit |
+| --- | --- | --- | --- |
+| `BIZRA-PUBLIC-001` | Dema is the local-first product face that reads local state, explains it, and previews safe next steps. | `VERIFIED` | `CURRENT_LIMITS.md`; this does not make Dema the whole BIZRA system or a governed runtime. |
+| `BIZRA-PUBLIC-002` | Federation, cross-node synchronization, shared URP runtime, token economics, and Proof-of-Impact rewards are not live. | `DESIGNED_NOT_LIVE` | `CURRENT_LIMITS.md` hard non-claims and the canonical lifecycle boundary. |
+| `BIZRA-PUBLIC-003` | The currently trusted public signing identity is not asserted while signer rotation remains pending. | `UNKNOWN` | TASK-029 remains open; no new public Claim Receipt is issued by this slice. |
+| `BIZRA-PUBLIC-004` | A health response is only a request-time observation of the web process. | `MEASURED` | Requires `measured_at`, scope `web_process_health_only`, and the immutable incident-record link in the response; it does not prove Node0, federation, persistence, or full-system health. |
+| `BIZRA-PUBLIC-005` | A beta-status or successful beta-admission response is only a request-time observation of the web access gate. | `MEASURED` | Requires `measured_at`, scope `web_access_gate_only`, and the immutable incident-record link in the response; it does not prove node activation or runtime capability. |
+
+The route/source/evidence inventory, exact claim dispositions, local candidate
+paths, receipt boundary, and closure gates are recorded in
+[`audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md`](audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md).
+
+`LOCAL_ONLY` in this incident record is a distribution qualifier, not an
+additional claim label. The seven-label taxonomy in Section 8 remains exact.
+No local branch, test result, or documentation edit may be described as a live
+public correction before the post-deploy gates pass.
+
 ## 10. Forbidden Claims
 
 These claims are **forbidden** on every public surface (README, GTM, Canva, landing page, lighthouse invitation, visual emulator, decks, social, market analysis, public technical narrative) until proof exists. Quoting them in this Register or in other canon docs **for the purpose of labeling them forbidden** is explicit and allowed.
