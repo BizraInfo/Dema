@@ -36,10 +36,26 @@ const JSON_MODE = process.argv.includes("--json");
 export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   "packages/mission/src/mission-corridor.js",
   "packages/mission/src/dema-program-graph.js",
-  "packages/core/src/node0-realm-state-kernel.js",
-  "packages/core/src/node0-metrics-baseline.js",
+  // Back-registered 2026-07-25. These four landed on main (#401, #402, #403,
+  // #405) with the scaffold's registration comment already in their headers —
+  // dema-recovery-mission-gatherer.js says "reviewed in this slice's PR" — but
+  // the line was never added, because adding it turned the exact-list snapshot
+  // in tests/dema-slice-scaffold-canonical.test.js (T8) red. The review
+  // happened; only the clerical line was missing. T8 is now an invariant test
+  // instead of a snapshot, so a legitimately growing allowlist no longer
+  // forces a choice between a green suite and an honest gate.
+  //
+  // feat/reversible-file-steward-1c had independently back-registered the same
+  // four, which is corroboration rather than duplication: two lanes reached the
+  // identical conclusion about which consumers were legitimately missing.
   "packages/core/src/dema-recovery-mission-engine.js",
   "packages/core/src/dema-recovery-mission-gatherer.js",
+  "packages/core/src/node0-model-swap-invariance.js",
+  "packages/core/src/node0-metrics-baseline.js",
+  "packages/core/src/node0-realm-state-kernel.js",
+  // DEMA-REVERSIBLE-FILE-STEWARD-1A / 1B — registered by the steward slice.
+  "packages/core/src/dema-reversible-file-steward.js",
+  "packages/core/src/dema-reversible-file-steward-execution.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 

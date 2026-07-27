@@ -56,6 +56,12 @@ export const IO_TIER_ALLOWLIST = Object.freeze({
     "reads ~/.dema receipts/checkpoint/timeline for the read-only live status view",
   "dema-realm-council.js":
     "reads ~/.dema state to render the read-only council view",
+  "first-encounter-scan.js":
+    "metadata-only walk for the first-encounter admission gate; streams bytes to hash but retains none",
+  "node0-library-safe-plan.js":
+    "authoritative read-only replay gatherer for the Node0 library safe plan; reads and hashes only, holds no mutation primitive",
+  "node0-library-scan.js":
+    "read-only metadata walk for the Node0 library census; reads no content and hashes nothing",
   "local-model-inventory-scan.js":
     "read-only filesystem inventory of local model dirs (Ollama/LM Studio/gguf)",
   "safety-report.js":

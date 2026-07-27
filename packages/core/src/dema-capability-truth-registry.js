@@ -91,6 +91,9 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_METRICS_BASELINE_1A",
   "DEMA_RECOVERY_MISSION_ENGINE_1A",
   "DEMA_RECOVERY_MISSION_GATHERER_1B",
+  "DEMA_MISSION_WORKER_HANDOFF_0A",
+  "NODE0_MODEL_SWAP_INVARIANCE_1A",
+  "DEMA_REVERSIBLE_FILE_STEWARD_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2371,6 +2374,91 @@ function defaultCapabilityRows() {
         "operator mutation",
         "unattended runtime",
         "content read",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_MISSION_WORKER_HANDOFF_0A",
+      truth_label: "DEMA_MISSION_WORKER_HANDOFF_PREVIEW_MEASURED_REPO",
+      summary:
+        "Minimum provable model-substitution case: a declared mission changes worker/model and records the swap as ONE deterministic hash-chained MISSION_CHECKPOINT in the existing Node0 realm event log — no parallel state machine, no model router, no persistence, no new authority.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-mission-worker-handoff.js"],
+        test_paths: ["tests/dema-mission-worker-handoff.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-mission-worker-handoff-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_MISSION_WORKER_HANDOFF_0A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_MISSION_WORKER_HANDOFF_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, worker selection/invocation, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Exact-consent deterministic kernel compiles a worker replacement over an INJECTED Node0 realm event history into one hash-chained MISSION_CHECKPOINT (checkpoint_type WORKER_HANDOFF) via the shipped realm event hasher/reducer: it is blocked unless the mission is already declared, the worker actually changes, every before/after invariant hash (mission_contract, acceptance_criteria, consent_scope, source_checkpoint) is equal, consent is an exact byte match, evidence/prohibited-effect sets are well-formed, and authority_delta is zero. The verifier replays the whole returned history and rejects a forged-and-rehashed authority increase, a forged-and-rehashed false continuity proof, extra fields on the envelope/event/payload, non-normalized set ordering, or a non-canonical all-false boundary. Proves mission continuity survives a model/worker swap while mission contract, acceptance, consent scope, source checkpoint, and authority remain invariant.",
+      what_this_does_not_prove:
+        "It does not prove durable event-log persistence, restart recovery, automatic failover, worker selection, model invocation, or independent authenticity — internal replay integrity is not an external anchor. No worker is selected or invoked; the realm reducer records the checkpoint seq but does not yet project current_worker into derived state. This is a minimum continuity proof, not production failover.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_MODEL_SWAP_INVARIANCE_1A",
+      truth_label: "NODE0_MODEL_SWAP_INVARIANCE_MEASURED_REPO",
+      summary:
+        "Pure kernel proving a mission-task verdict is invariant to which model produced the output: the system contract decides ACCEPT/REJECT, model identity never launders a failing output nor changes a passing one.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-model-swap-invariance.js"],
+        test_paths: ["tests/node0-model-swap-invariance.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-model-swap-invariance-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_MODEL_SWAP_INVARIANCE_1A.md"],
+        documentation_paths: [
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "TWO GUARANTEES OF DIFFERENT STRENGTH — do not read the stronger for the weaker. (A) BUILD-TIME, label VERDICT_INVARIANCE_MEASURED, requires the actual contract and the actual candidate outputs: run() executes the acceptance contract and constructively recomputes three invariants over injected candidate outputs — identical outputs from different models get identical verdicts (verdict_is_model_blind); a rejected output stays rejected under every model identity present, so a 'trusted' model cannot launder a contract-violating output into acceptance (no_identity_laundering); permuting model-id labels leaves the accepted-output-hash set unchanged (relabel_invariant). The mission is admitted only if the contract is well-formed AND imposes at least one effective predicate, and only if the candidate set carries a real swap (two or more distinct model_ids, no duplicates). That is the measured form of 'the LLM is a replaceable component; the system state is authoritative.' (B) TRANSPORT-TIME, label ROW_DERIVED_ATTESTATION_CONSISTENCY, independent_contract_verification: FALSE: verify() over a received attestation re-derives what the candidate rows support — no output hash carries two verdicts, the summary counts are the ones the rows produce, at least two distinct models are represented, the body-bound hash matches, the boundary key set is exactly all-false. It fails closed on an invariant flag forged in EITHER direction, including a rehashed fabrication.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation. Specifically for TRANSPORT-TIME verification: verify() CANNOT establish that any candidate output actually satisfied the acceptance contract, that failed_requirements reflects a real evaluation, that a candidate output_hash corresponds to an authentic output, or that the builder honestly ran evaluateAgainstContract — the payload carries contract_hash and candidate rows, never the contract predicates or the raw outputs. It also cannot re-check contract admissibility for the same reason, which is why that gate lives at build time. Closing this would require the canonical contract plus outputs in the envelope, or output commitments bound to an independently trusted evaluator receipt; neither is built. A consumer reading only the capability label must not treat (B) as (A).",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_REVERSIBLE_FILE_STEWARD_1A",
+      truth_label: "DEMA_REVERSIBLE_FILE_STEWARD_MEASURED_REPO",
+      summary:
+        "Compose the proven reversible-rename, sanitizer, consent and receipt primitives into one bounded, consented, fully-reversible multi-file steward job (RENAME-only, metadata-only, no model/network).",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-reversible-file-steward.js"],
+        test_paths: ["tests/dema-reversible-file-steward.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-reversible-file-steward-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_REVERSIBLE_FILE_STEWARD_1A.md"],
+        documentation_paths: [
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure orchestrator plans and content-addresses a bounded, exact-consent-gated, sanitizer-gated, fully-reversible multi-RENAME steward job over the shipped reversible-rename and untrusted-corpus-sanitizer primitives, with an all-false boundary and a body-bound verifier. Proves the PLAN + ATTESTATION only.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
       ],
     }),
   ]);

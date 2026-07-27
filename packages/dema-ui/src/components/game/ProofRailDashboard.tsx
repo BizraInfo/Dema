@@ -9,7 +9,7 @@ export function ProofRailDashboard({ compact = false }: { compact?: boolean }) {
   const rails = useGame((s) => s.rails);
 
   return (
-    <Panel title="Proof Rails" glyph="△" accent="proof" bodyClassName="p-3">
+    <Panel title="Proof Rails" glyph="△" accent="proof" truth="PREVIEW_ONLY" bodyClassName="p-3">
       <div className={cn("grid gap-2", compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4")}>
         {RAIL_META.map((r) => {
           const lit = rails[r.key];

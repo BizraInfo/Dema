@@ -1,0 +1,8 @@
+line_item,category,planned_gbp,actual_gbp,notes
+engineering,staff,84000,86400,two FTE + contractor overrun
+handheld_devices,capex,22000,22000,45 units
+vendor_sdk_licence,opex,9000,9000,annual
+depot_connectivity,opex,6000,7200,Depot 3 backup line
+external_security_review,opex,0,0,not engaged this quarter
+contingency,reserve,12000,0,
+TOTAL,,133000,124600,
