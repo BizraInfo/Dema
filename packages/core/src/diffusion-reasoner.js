@@ -86,18 +86,34 @@ function reject(reason_code, details = {}) {
   return deepFreeze({ valid: false, rejected: true, reason_code, ...details });
 }
 
+// Markers match on word boundaries, never as bare substrings. Plain `includes`
+// scored any word merely CONTAINING a marker — "speak"/"peaked" hit `peak`,
+// "mighty" hit `might`, "perfectly" hit `perfect` — and made the repo's own
+// `dema peak-self-loop` command name unrepresentable in a converging draft.
+// The (?<![\w-]) / (?![\w-]) idiom mirrors the identifier safety already used by
+// scripts/review/no-overclaim.mjs, so hyphen/underscore-bound names read as names.
+// Markers are lowercase and the haystack is lowercased, so no `i` flag is needed.
+const escapeForRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const MARKER_PATTERNS = Object.freeze(
+  DIFFUSION_NOISE_MARKERS.map(
+    (m) => new RegExp(`(?<![\\w-])${escapeForRegex(m)}(?![\\w-])`, "u"),
+  ),
+);
+
 export function scoreDraftNoise(draft) {
   const haystack = text(draft).toLowerCase();
   let score = 0;
-  for (const marker of DIFFUSION_NOISE_MARKERS) {
-    if (haystack.includes(marker)) score += 1;
+  for (const pattern of MARKER_PATTERNS) {
+    if (pattern.test(haystack)) score += 1;
   }
   return score;
 }
 
 function markersFound(draft) {
   const haystack = text(draft).toLowerCase();
-  return Object.freeze(DIFFUSION_NOISE_MARKERS.filter((m) => haystack.includes(m)));
+  return Object.freeze(
+    DIFFUSION_NOISE_MARKERS.filter((_m, i) => MARKER_PATTERNS[i].test(haystack)),
+  );
 }
 
 function deriveStatus(noiseScores, divergedAtStep, evidenceCount) {

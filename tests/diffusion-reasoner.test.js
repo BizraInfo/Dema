@@ -181,3 +181,37 @@ test("15 · autonomy-overclaim phrasing scores as noise, not clean signal", () =
     ),
   );
 });
+
+// DIFFUSION-NOISE-MARKER-WORD-BOUNDARY-1A — the lexicon matched by bare substring,
+// so any word merely CONTAINING a marker scored as noise: "speak"/"peaked" hit
+// `peak`, "mighty" hit `might`, "perfectly" hit `perfect`. Worst case, the repo's
+// own `dema peak-self-loop` command name could not appear in a converging draft.
+// Boundary idiom reused from scripts/review/no-overclaim.mjs: (?<![\w-])..(?![\w-]).
+test("17 · noise markers match on word boundaries, not bare substrings", () => {
+  // Innocent words that merely CONTAIN a marker must score zero.
+  for (const clean of [
+    "We speak to the operator before every mutation.",
+    "The peaked roof shades the courtyard.",
+    "A mighty fine gate guards the sandbox.",
+    "The undo path is perfectly reversible and receipted.",
+  ]) {
+    assert.equal(scoreDraftNoise(clean), 0, `false positive on: ${clean}`);
+  }
+
+  // Identifier safety: hyphen/underscore-bound tokens are names, not bombast.
+  assert.equal(scoreDraftNoise("Wire dema peak-self-loop into the help output."), 0);
+  assert.equal(scoreDraftNoise("The peak_phase field is preview-only."), 0);
+
+  // Standalone markers must STILL score — the fix must not disarm the lexicon.
+  assert.equal(scoreDraftNoise("This is peak performance."), 1);
+  assert.equal(scoreDraftNoise("It might work."), 1);
+  assert.equal(scoreDraftNoise("The result is perfect."), 1);
+  // Multi-word and hyphenated markers keep matching.
+  assert.equal(scoreDraftNoise("It should work, trust me."), 2);
+  assert.equal(scoreDraftNoise("A world-class cutting-edge platform."), 2);
+
+  // Every marker in the lexicon must match itself standalone (no marker disarmed).
+  for (const m of DIFFUSION_NOISE_MARKERS) {
+    assert.ok(scoreDraftNoise(m) >= 1, `marker no longer matches itself: ${m}`);
+  }
+});
