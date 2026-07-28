@@ -30,7 +30,16 @@ import {
 } from "./preview-boundary.js";
 import { evaluateArtifactSafety } from "./artifact-safety-eval.js";
 
-const DEFAULT_OLLAMA_BASE = "http://localhost:11434";
+// Literal loopback IP, never the hostname "localhost": the default must not
+// depend on a resolver. MEASURED 2026-07-28 — in a sandbox with no readable
+// /etc/hosts, resolving "localhost" throws EAI_AGAIN, so a live Ollama on
+// 127.0.0.1:11434 was unreachable and every invocation failed with
+// "network_error · fetch failed". That misreports a healthy local node as a
+// network fault, which is the worst failure mode for a local-first tool. On a
+// normal machine localhost resolves to this address anyway, so nothing changes
+// there. Callers needing ::1 or the hostname can still pass an explicit base;
+// isLocalhostBaseUrl() accepts localhost, 127.0.0.1 and ::1.
+const DEFAULT_OLLAMA_BASE = "http://127.0.0.1:11434";
 const DEFAULT_TIMEOUT_MS = 60000;
 const MAX_PROMPT_LENGTH = 100000; // 100K chars · adversarial-safe cap
 const MAX_MODEL_NAME_LENGTH = 200;

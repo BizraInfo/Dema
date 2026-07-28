@@ -413,7 +413,17 @@ test("Exported constants are present and frozen", () => {
   assert.ok(LLM_ADAPTER_ALLOWED_MODEL_FAMILIES.includes("llama3.1"));
   assert.ok(LLM_ADAPTER_ALLOWED_MODEL_FAMILIES.includes("qwen2.5"));
   assert.equal(typeof LLM_ADAPTER_DEFAULT_BASE, "string");
-  assert.ok(LLM_ADAPTER_DEFAULT_BASE.startsWith("http://localhost"));
+  // The default must be a literal loopback IP, not the hostname "localhost".
+  // MEASURED 2026-07-28: in a sandbox with no readable /etc/hosts, resolving
+  // "localhost" throws EAI_AGAIN, so a live Ollama on 127.0.0.1:11434 was
+  // unreachable and every invocation failed with "network_error · fetch
+  // failed" — a working local node reported as a network fault. A literal IP
+  // needs no resolver and is identical on a normal machine.
+  assert.ok(
+    LLM_ADAPTER_DEFAULT_BASE.startsWith("http://127.0.0.1"),
+    `default base must not require DNS: ${LLM_ADAPTER_DEFAULT_BASE}`,
+  );
+  assert.doesNotMatch(LLM_ADAPTER_DEFAULT_BASE, /localhost/);
   assert.equal(typeof LLM_ADAPTER_MAX_PROMPT_LENGTH, "number");
   assert.equal(typeof llmAdapterConsentPhraseFor("llama3.1:8b"), "string");
   assert.equal(
