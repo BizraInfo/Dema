@@ -82,7 +82,11 @@ Boundary: no action without explicit consent.
 **What this tells you in one read:**
 
 - Dema knows your node is **Node0**.
-- Activation is **BLOCKED** — by design, until you complete setup.
+- Activation is **BLOCKED** — by design, and `dema setup` does not change it. The
+  gate is reported by a governed Node0 runtime, bridged with
+  `DEMA_NODE0_ADAPTER=gateway-http` + `DEMA_GATEWAY_URL`, or
+  `DEMA_NODE0_STATUS_COMMAND`. With no runtime bridged, BLOCKED is the correct
+  resting state for preview-only use.
 - Nothing is running. No daemon, no model, no mission.
 - The next safe action is `complete_setup`.
 

@@ -17,6 +17,10 @@ function defaultFailStatus() {
   };
 }
 
+// An all-ok node has an explicitly reachable gateway. This fixture used to rely
+// on `findings: []` alone, which passed only because the gatewayProbe predicate
+// inferred reachability from the absence of a substring — the defect TASK-036
+// closes. Reachability is now asserted, not inferred.
 function defaultOkStatus() {
   return {
     ready: true,
@@ -24,6 +28,7 @@ function defaultOkStatus() {
     activationGate: "EXPLICIT_GO_REQUIRED",
     daemonStatus: "stopped",
     findings: [],
+    gateway: { reachable: true },
   };
 }
 
@@ -60,7 +65,36 @@ test("evaluatePredicates: activation gate BLOCKED → fail with fix", () => {
   const preds = evaluatePredicates({ activationGate: "BLOCKED" });
   const gate = preds.find((p) => p.key === "activationGate");
   assert.equal(gate.status, "fail");
-  assert.match(gate.fix, /dema setup/);
+  assert.ok(typeof gate.fix === "string" && gate.fix.length > 0);
+});
+
+// TASK-036 defect 1: `dema setup` cannot move the activation gate. defaultStatus()
+// hardcodes activationGate:"BLOCKED" and setup never touches it; only the operator
+// bridge reports a different gate. Pointing the operator at setup is a dead end.
+test("evaluatePredicates: BLOCKED gate fix names the operator bridge, not `dema setup`", () => {
+  const preds = evaluatePredicates({ activationGate: "BLOCKED" });
+  const gate = preds.find((p) => p.key === "activationGate");
+  assert.doesNotMatch(
+    gate.fix,
+    /dema setup/,
+    "setup cannot move the gate; advising it strands the operator",
+  );
+  assert.match(
+    gate.fix,
+    /DEMA_NODE0_ADAPTER|DEMA_GATEWAY_URL|DEMA_NODE0_STATUS_COMMAND/,
+    "fix must name the bridge that actually reports the gate",
+  );
+});
+
+test("evaluatePredicates: not-ready fix does not point at `dema setup` either", () => {
+  const preds = evaluatePredicates({ ...defaultOkStatus(), ready: false });
+  const ready = preds.find((p) => p.key === "ready");
+  assert.equal(ready.status, "fail");
+  assert.doesNotMatch(
+    ready.fix,
+    /dema setup/,
+    "`ready` is reported by the adapter; setup does not set it",
+  );
 });
 
 test("evaluatePredicates: daemon running → fail", () => {
@@ -73,14 +107,90 @@ test("evaluatePredicates: daemon running → fail", () => {
   assert.ok(daemon.fix.length > 0);
 });
 
-test("evaluatePredicates: gateway unreachable → warn (not fail)", () => {
-  const preds = evaluatePredicates({
+// ── gatewayProbe (TASK-036 defect 2) ─────────────────────────────────────────
+//
+// The predicate used to synthesize reachability by sniffing the free-text
+// findings array for "not connected". It opened no socket, so it claimed
+// "reachable" for any payload that merely worded its failure differently — or
+// carried no findings at all. Reachability now comes from the structured
+// `status.gateway.reachable` field the adapter already populates, and the claim
+// is fail-closed: nothing short of an explicit `true` prints "reachable".
+
+const gw = (status) =>
+  evaluatePredicates(status).find((p) => p.key === "gatewayProbe");
+
+test("gatewayProbe: gateway.reachable=true → ok", () => {
+  const p = gw({ ...defaultOkStatus(), gateway: { reachable: true } });
+  assert.equal(p.status, "ok");
+  assert.match(p.value, /reachable/);
+});
+
+test("gatewayProbe: gateway.reachable=false → warn (not fail), not claimed reachable", () => {
+  const p = gw({ ...defaultOkStatus(), gateway: { reachable: false } });
+  assert.equal(p.status, "warn");
+  assert.equal(p.fix, undefined, "warn-only by design");
+  assert.doesNotMatch(p.value, /^reachable/);
+});
+
+// Adversarial input (a): nothing probed, so nothing may be claimed. The
+// predicate reports n/a — like the Daemon predicate's "n/a-via-gateway" — which
+// keeps a healthy legacy-bridge node able to reach a green verdict without
+// asserting a reachability it never measured.
+test("gatewayProbe: no gateway configured → n/a, never the bare 'reachable' claim", () => {
+  const p = gw({ ...defaultOkStatus(), findings: [], gateway: undefined });
+  assert.equal(p.status, "ok");
+  assert.match(p.value, /n\/a/);
+  assert.doesNotMatch(
+    p.value,
+    /\breachable\b/,
+    "must not claim reachability that was never measured",
+  );
+});
+
+// Adversarial input (b): a real failure worded differently than the old sniff.
+// A genuine gateway failure always populates gateway.reachable=false (proven by
+// the dead-gateway CLI test), so prose alone must not drive the predicate — but
+// it must not manufacture a "reachable" claim either.
+test("gatewayProbe: explicit failure findings worded differently → no reachable claim", () => {
+  const p = gw({
     ...defaultOkStatus(),
+    gateway: undefined,
+    findings: ["gateway refused connection at 127.0.0.1:8000 — ECONNREFUSED"],
+  });
+  assert.doesNotMatch(p.value, /\breachable\b/);
+});
+
+// The structured field is authoritative even when findings prose disagrees.
+test("gatewayProbe: gateway.reachable=false wins over silent findings", () => {
+  const p = gw({ ...defaultOkStatus(), findings: [], gateway: { reachable: false } });
+  assert.equal(p.status, "warn");
+  assert.doesNotMatch(p.value, /^reachable/);
+});
+
+// The old sniffed substring no longer drives the predicate at all.
+test("gatewayProbe: legacy 'not connected' finding does not drive the predicate", () => {
+  const sniffed = gw({
+    ...defaultOkStatus(),
+    gateway: undefined,
     findings: ["Node0 adapter not connected"],
   });
-  const gw = preds.find((p) => p.key === "gatewayProbe");
-  assert.equal(gw.status, "warn");
-  assert.equal(gw.fix, undefined);
+  const silent = gw({ ...defaultOkStatus(), gateway: undefined, findings: [] });
+  assert.equal(
+    sniffed.value,
+    silent.value,
+    "findings prose must not change the reachability verdict",
+  );
+  assert.equal(sniffed.fix, undefined, "warn-only by design, never a fix");
+});
+
+// A healthy legacy bridge (no gateway concept) must still reach a green verdict.
+test("formatDoctorDashboard: healthy legacy bridge with no gateway → ready and consent-gated", () => {
+  const preds = evaluatePredicates({
+    ...defaultOkStatus(),
+    gateway: undefined,
+  });
+  const output = formatDoctorDashboard(preds, { color: false });
+  assert.match(output, /ready and consent-gated/);
 });
 
 test("evaluatePredicates: empty/null status → all predicates render without throw", () => {

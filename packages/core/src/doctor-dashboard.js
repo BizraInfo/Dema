@@ -29,11 +29,12 @@ export function evaluatePredicates(status) {
   const daemonStatus = s.daemonStatus ?? "unknown";
   const daemonRunning = daemonStatus === "running";
 
-  // Gateway probe synthesized from findings array.
-  const findings = Array.isArray(s.findings) ? s.findings : [];
-  const gatewayUnreachable = findings.some(
-    (f) => typeof f === "string" && f.toLowerCase().includes("not connected"),
-  );
+  // Gateway reachability is read from the structured field the adapter
+  // populates — never inferred from findings prose. Sniffing free text for
+  // "not connected" claimed "reachable" for any payload that worded its
+  // failure differently, or carried no findings at all. Fail-closed on the
+  // claim: only an explicit `true` may print "reachable".
+  const gatewayReachable = s.gateway?.reachable;
 
   const predicates = [];
 
@@ -46,8 +47,11 @@ export function evaluatePredicates(status) {
     ...(gateOk
       ? {}
       : {
+          // `dema setup` cannot move this gate — defaultStatus() hardcodes
+          // BLOCKED and setup never touches it. Only the governed Node0
+          // runtime, reached through the operator bridge, reports a real gate.
           fix: gateFail
-            ? "activation gate is BLOCKED; run `dema setup` to initialize and check doctrine consent"
+            ? "activation gate is BLOCKED: no Node0 runtime is reporting a gate. Only a governed runtime can move it — bridge one with DEMA_NODE0_ADAPTER=gateway-http plus DEMA_GATEWAY_URL, or DEMA_NODE0_STATUS_COMMAND (see docs/QUICKSTART.md). For preview-only use, BLOCKED is the correct resting state."
             : `unexpected gate value ${activationGate}; expected EXPLICIT_GO_REQUIRED`,
         }),
   });
@@ -78,7 +82,8 @@ export function evaluatePredicates(status) {
     ...(ready
       ? {}
       : {
-          fix: "complete first-run setup with `dema setup`, then verify with `dema status`",
+          // `ready` mirrors the adapter payload; setup does not set it either.
+          fix: "`ready` is reported by the Node0 runtime, not set locally. Bridge a runtime (see the activation gate fix) and re-check with `dema status`. For preview-only use, false is expected.",
         }),
   });
 
@@ -100,10 +105,18 @@ export function evaluatePredicates(status) {
   predicates.push({
     key: "gatewayProbe",
     label: "Gateway probe",
-    value: gatewayUnreachable
-      ? "unreachable (by design when no runtime running)"
-      : "reachable",
-    status: gatewayUnreachable ? "warn" : "ok",
+    // Three states, never two: measured-reachable, measured-unreachable, and
+    // not-applicable. The n/a case mirrors the Daemon predicate's
+    // "n/a-via-gateway" — it asserts nothing, so a healthy legacy-shellout
+    // bridge (which has no gateway concept) can still reach a green verdict
+    // without anyone claiming a reachability that was never measured.
+    value:
+      gatewayReachable === true
+        ? "reachable"
+        : gatewayReachable === false
+          ? "unreachable (by design when no runtime running)"
+          : "n/a (no gateway configured)",
+    status: gatewayReachable === false ? "warn" : "ok",
   });
 
   return predicates;

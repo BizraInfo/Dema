@@ -45,6 +45,32 @@ test("dema doctor --json → JSON.parse succeeds, schema field present", async (
   assert.ok(typeof parsed.verdict === "string");
 });
 
+// TASK-036 defect 2, end to end: point the gateway adapter at a port with
+// nothing listening. The adapter payload is honest here (truth_label DEGRADED,
+// gateway.reachable false, four "unreachable" findings), so doctor must not
+// contradict it by printing a green reachable probe.
+test("dema doctor → a dead gateway is not reported as reachable", async () => {
+  const env = await freshEnv();
+  env.DEMA_NODE0_ADAPTER = "gateway-http";
+  env.DEMA_GATEWAY_URL = "http://127.0.0.1:9"; // discard port; nothing listens
+  const result = await execFileAsync(
+    "node",
+    [cliPath, "doctor", "--no-color"],
+    { env },
+  ).catch((e) => e);
+  const probeLine = result.stdout
+    .split("\n")
+    .find((l) => l.includes("Gateway probe"));
+  assert.ok(probeLine, "Gateway probe line expected in doctor output");
+  // \b does not break between "un" and "reachable", so this matches the bare
+  // claim only — "unreachable" and "not probed" both pass.
+  assert.doesNotMatch(
+    probeLine,
+    /\breachable\b/,
+    `dead gateway reported as reachable: ${probeLine}`,
+  );
+});
+
 test("dema doctor --no-color → stdout contains no ANSI escape codes", async () => {
   const env = await freshEnv();
   const result = await execFileAsync(
