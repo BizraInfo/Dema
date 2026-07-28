@@ -11,6 +11,30 @@ const KNOWN_TRUTH_LABELS = new Set(["DECLARED", "MEASURED", "ASSUMED"]);
 
 // ── structural integrity ──────────────────────────────────────────────────────
 
+// `dema doctor` prints "Type `dema explain doctor` for what each predicate
+// means." (doctor-dashboard.js:189). Before this entry existed, that command
+// answered "I don't have a definition for `doctor` yet." and exited 0 — a
+// silent dead end in the most-trafficked first-run surface. This test binds the
+// promise to the glossary so the two cannot drift apart again.
+test("glossary answers `doctor`, the term dema doctor tells users to look up", () => {
+  const entry = CANON_GLOSSARY.get("doctor");
+  assert.ok(entry, "doctor entry missing — `dema explain doctor` is a dead end");
+  // Must actually explain the predicates, which is what the footer promises.
+  for (const predicate of [
+    "Activation gate",
+    "Daemon",
+    "Ready",
+    "Console ready",
+    "Gateway probe",
+  ]) {
+    assert.match(
+      entry.long,
+      new RegExp(predicate.replace(/ /g, "\\s+"), "i"),
+      `doctor entry does not explain the "${predicate}" predicate`,
+    );
+  }
+});
+
 test("glossary has at least 28 entries", () => {
   assert.ok(
     CANON_GLOSSARY.size >= 28,
