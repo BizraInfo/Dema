@@ -1,9 +1,10 @@
 ---
 id: TASK-037
 title: 'SOVEREIGN-CMD-SCAFFOLD-GAP: dema sovereign is unreachable from a clean setup'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-07-28 05:24'
+updated_date: '2026-07-28 10:28'
 labels:
   - cli
   - ux
@@ -32,3 +33,9 @@ The failure itself is honest (clear message, nonzero exit, no false claim), so t
 - [ ] #1 dema sovereign either states its external prerequisite in help/refusal text, or the help entry marks it as requiring an out-of-repo scaffold
 - [ ] #2 A fresh `dema setup` followed by `dema sovereign` leaves the operator with an actionable next step, not a bare missing-path error
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Closed. Refusal now names the Python scaffold prerequisite (ships with governed runtime, not this repo, not created by dema setup), routes to node0 activation observe / status, states the boundary, and --json emits a schema-tagged refusal with reason sovereign_tui_scaffold_absent. Help entry carries the prerequisite so it is discoverable before failure. 4 new tests red-first; one pre-existing wording assertion updated with intent preserved. Baseline 7.
+<!-- SECTION:NOTES:END -->

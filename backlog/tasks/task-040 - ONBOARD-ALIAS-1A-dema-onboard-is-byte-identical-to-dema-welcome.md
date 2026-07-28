@@ -1,9 +1,10 @@
 ---
 id: TASK-040
 title: 'ONBOARD-ALIAS-1A: dema onboard is byte-identical to dema welcome'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-07-28 07:32'
+updated_date: '2026-07-28 10:10'
 labels:
   - cli
   - ux
@@ -41,3 +42,9 @@ This is the third instance found in one clean-home walkthrough of a single patte
 - [ ] #2 dema onboard surfaces the onboarding-lifecycle 7-stage path, or its help text is corrected to stop promising a guided path it does not provide
 - [ ] #3 A test asserts onboard and welcome outputs differ, so the alias cannot silently return
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Closed by commit on fix/doctor-first-run-truth-1a. onboard now renders the 7-stage onboarding-lifecycle as a path preview; welcome unchanged. Two defect-encoding tests updated and noted; boundary test strengthened from 2 sampled keys to all 16. 4 new tests red-first. Suite at measured baseline 7.
+<!-- SECTION:NOTES:END -->
