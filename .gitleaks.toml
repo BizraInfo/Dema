@@ -55,6 +55,9 @@ paths = ['''(^|/)firebase-applet-config\.json$''']
 # in any other location.
 [[allowlists]]
 description = "False positive: ALLOWED_PROVENANCE_GATES gate-name literals in preflight source (not secrets)"
+# Scoped to the rule actually measured at this path; without it the block would
+# suppress ANY rule that matched, not just this false positive.
+targetRules = ["generic-api-key"]
 # Without condition=AND this block was measured to blind the ENTIRE file: a
 # real high-entropy credential committed to this path went undetected, while
 # identical content at a control path was caught.
@@ -87,6 +90,9 @@ regexes = ['''NODE0-GENESIS-KEY-CEREMONY-1A|MIGRATE-HISTORICAL-GENESIS-PROOF-1A|
 # fixes — it pins the surrounding sentence rather than a generic token.
 [[allowlists]]
 description = "False positive: 'external key custody' prose in the frozen PDMLC baseline audit (not a secret)"
+# Scoped to the rule actually measured at this path; without it the block would
+# suppress ANY rule that matched on this line, not just this false positive.
+targetRules = ["generic-api-key"]
 condition = "AND"
 regexTarget = "line"
 paths = ['''(^|/)doc-002 - BIZRA-Product-and-Engineering-Lifecycle-Audit-v1\.md$''']
