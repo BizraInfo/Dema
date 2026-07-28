@@ -32,9 +32,13 @@ useDefault = true
 # gate.
 [[allowlists]]
 description = "Grandfathered: Firebase web SDK config of abandoned Genesis applet (project deleted 2026-05-24)"
-# Gitleaks v8 AND-joins all conditions within a single [[allowlists]] block,
-# so this matches ONLY findings where BOTH the commit AND the path match.
-# A re-leak of the same key text in any other commit or path still fails.
+# `condition` is REQUIRED for the intended narrowing. Gitleaks v8 defaults to
+# OR, not AND — the earlier comment here asserted the opposite and was wrong.
+# Under the default, `commits` alone would allowlist EVERY finding in that
+# commit and `paths` alone would allowlist EVERY finding in any file of that
+# name. With AND, this matches only findings where BOTH match; a re-leak of the
+# same key text in any other commit or path still fails.
+condition = "AND"
 commits = ["5057af345d71c0fa6ff2e437fbdd5164150aefb5"]
 paths = ['''(^|/)firebase-applet-config\.json$''']
 
@@ -51,6 +55,13 @@ paths = ['''(^|/)firebase-applet-config\.json$''']
 # in any other location.
 [[allowlists]]
 description = "False positive: ALLOWED_PROVENANCE_GATES gate-name literals in preflight source (not secrets)"
+# Scoped to the rule actually measured at this path; without it the block would
+# suppress ANY rule that matched, not just this false positive.
+targetRules = ["generic-api-key"]
+# Without condition=AND this block was measured to blind the ENTIRE file: a
+# real high-entropy credential committed to this path went undetected, while
+# identical content at a control path was caught.
+condition = "AND"
 paths = ['''(^|/)node0-genesis-key-ceremony-preflight\.js$''']
 regexes = ['''NODE0-GENESIS-KEY-CEREMONY-1A|MIGRATE-HISTORICAL-GENESIS-PROOF-1A|BLOCKED_BY_UNRESOLVED_PROVENANCE''']
 
@@ -68,9 +79,21 @@ regexes = ['''NODE0-GENESIS-KEY-CEREMONY-1A|MIGRATE-HISTORICAL-GENESIS-PROOF-1A|
 # scanner; changing the text of a sealed audit to make a gate pass is exactly the
 # inversion this repo exists to prevent. The allowlist is the correct mechanism.
 #
-# Scoped to path AND the literal phrase, which gitleaks AND-joins: a real secret
-# anywhere else in this same file still fails the gate.
+# Scoped to path AND the literal phrase. `condition = "AND"` is explicit because
+# gitleaks v8 defaults to OR, under which the path alone allowlisted the whole
+# file — a real secret anywhere in this audit would have gone undetected.
+#
+# `regexTarget = "line"` is also required: the rule's captured secret is the bare
+# span `federation/wallet/economy`, not the sentence around it, so matching the
+# descriptive phrase against the default target (the secret) never fires. Keeping
+# the long phrase and matching it against the LINE is the narrower of the two
+# fixes — it pins the surrounding sentence rather than a generic token.
 [[allowlists]]
 description = "False positive: 'external key custody' prose in the frozen PDMLC baseline audit (not a secret)"
+# Scoped to the rule actually measured at this path; without it the block would
+# suppress ANY rule that matched on this line, not just this false positive.
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
 paths = ['''(^|/)doc-002 - BIZRA-Product-and-Engineering-Lifecycle-Audit-v1\.md$''']
 regexes = ['''external key custody, federation/wallet/economy behavior''']
