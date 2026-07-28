@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { TopNav } from '@/components/bizra/top-nav'
 import { HeroIqra } from '@/components/bizra/hero-iqra'
 import { DividerLabel } from '@/components/bizra/primitives'
+import { HabitatSignatureBar, IqraMark, TruthLabel } from '@/components/bizra/habitat-brand'
 
 /* Code-splitting: the hero + nav load eagerly (above the fold). Every
  * below-the-fold section lazy-loads via next/dynamic so the initial
@@ -34,6 +35,7 @@ const SpearPoint = dynamic(() => import('@/components/bizra/spear').then((m) => 
 const Node0Runtime = dynamic(() => import('@/components/bizra/node0-runtime').then((m) => m.Node0Runtime))
 
 const HonestBoundary = dynamic(() => import('@/components/bizra/wisdom-thesis').then((m) => m.HonestBoundary))
+const SealedDoors = dynamic(() => import('@/components/bizra/sealed-doors').then((m) => m.SealedDoors))
 const GenesisClosureSprint = dynamic(() => import('@/components/bizra/node0-sprint').then((m) => m.GenesisClosureSprint))
 const InvestorDemo = dynamic(() => import('@/components/bizra/investor-demo').then((m) => m.InvestorDemo))
 const UnifiedInstaller = dynamic(() => import('@/components/bizra/installer').then((m) => m.UnifiedInstaller))
@@ -44,6 +46,7 @@ export default function Home() {
   return (
     <div className="bizra flex min-h-screen flex-col bg-[#0a0e1a] text-[#e8e6df]">
       <TopNav />
+      <HabitatSignatureBar />
 
       <main className="flex-1">
         <HeroIqra />
@@ -84,6 +87,8 @@ export default function Home() {
         <SpearPoint />
         <Node0Runtime />
         <HonestBoundary />
+
+        <SealedDoors />
         <GenesisClosureSprint />
 
         <div className="mx-auto w-full max-w-[1080px] px-4 sm:px-6">
@@ -97,7 +102,14 @@ export default function Home() {
       </main>
 
       <footer className="mt-auto border-t border-[#1c2438] bg-[#080b14]">
-        <div className="mx-auto w-full max-w-[1080px] px-4 py-9 text-center sm:px-6">
+        <div className="mx-auto w-full max-w-[1080px] px-4 py-10 text-center sm:px-6">
+          <div className="mb-6 flex flex-col items-center gap-3">
+            <IqraMark size="md" />
+            <TruthLabel state="DECLARED" />
+            <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-[#707b8f]">
+              The signature of the habitat · knowledge before assertion
+            </p>
+          </div>
           <p className="mx-auto max-w-2xl text-[12px] leading-[1.7] text-[#7c8597]">
             BIZRA stands on the shoulders of the giants, but it does not stop where they stopped. Movement
             A and the gold dot are Node0 — seeded reality today. The forest, the federation, and the
