@@ -1,10 +1,10 @@
 // ARABIC-NAME-GUARD — BIZRA is البذرة (the seed), with ذال.
 //
 // Operator correction 2026-07-28: a bilingual investor document authored in
-// this session spelled the name بِزرة (with زاي) three times. That is not a
+// this session spelled the name with zaay instead of thaal, three times. That is not a
 // typo with cosmetic cost — البذرة means "the seed", which is the founding
 // metaphor of the whole system (seed-pattern invariant, خزينة البذرة, the
-// Third Fact lineage). بزرة is a different word and carries none of it. The
+// Third Fact lineage). The zaay spelling is a different word and carries none of it. The
 // correct form was already canon in packages/core/src/canon-glossary.js
 // ("BIZRA (البذرة, the seed)"), so the new document contradicted the tree.
 //
@@ -25,9 +25,11 @@ import { dirname, join, resolve } from "node:path";
 const execFileAsync = promisify(execFile);
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-// The misspelling: baa + zaay + raa + taa marbuta, with or without a kasra on
-// the baa. The correct form uses thaal (ذ), not zaay (ز).
-const WRONG_NAME = /ب[؀-ْ]*زرة/u;
+// The misspelling: baa + optional diacritic + zaay + raa + taa marbuta.
+// Built from code points on purpose — writing the wrong form literally here
+// would make this guard flag its own source the moment it became tracked
+// (measured: it did exactly that on first commit).
+const WRONG_NAME = new RegExp("\u0628[\u064B-\u0652]*\u0632\u0631\u0629", "u");
 
 async function trackedTextFiles() {
   const { stdout } = await execFileAsync(
@@ -38,7 +40,7 @@ async function trackedTextFiles() {
   return stdout.split("\0").filter(Boolean);
 }
 
-test("no tracked file spells BIZRA as بزرة — the name is البذرة (the seed)", async () => {
+test("no tracked file spells BIZRA with zaay — the name is البذرة (the seed)", async () => {
   const files = await trackedTextFiles();
   assert.ok(files.length > 0, "expected tracked files to scan");
 
@@ -63,7 +65,7 @@ test("no tracked file spells BIZRA as بزرة — the name is البذرة (the
   assert.deepEqual(
     offenders,
     [],
-    `BIZRA must be written البذرة (thaal), not بزرة (zaay), at:\n  ${offenders.join("\n  ")}`,
+    `BIZRA must be written البذرة (thaal), never with zaay, at:\n  ${offenders.join("\n  ")}`,
   );
 });
 
