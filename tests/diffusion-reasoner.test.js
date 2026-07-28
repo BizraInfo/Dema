@@ -198,9 +198,19 @@ test("17 · noise markers match on word boundaries, not bare substrings", () => 
     assert.equal(scoreDraftNoise(clean), 0, `false positive on: ${clean}`);
   }
 
-  // Identifier safety: hyphen/underscore-bound tokens are names, not bombast.
-  assert.equal(scoreDraftNoise("Wire dema peak-self-loop into the help output."), 0);
+  // Identifier safety: UNDERSCORE-bound tokens are names, not bombast. "_" is a word
+  // character, so this holds under a \w-only boundary with no allowlist.
   assert.equal(scoreDraftNoise("The peak_phase field is preview-only."), 0);
+
+  // DELIBERATELY CHANGED by DIFFUSION-HYPHENATED-PROSE-BOUNDARY-1A (see test 18).
+  // This line previously asserted 0 — treating "-" as an identifier character so a
+  // hyphenated command name would not score. That assertion encoded the defect: the
+  // same rule zeroed "might-be" / "perfect-world" / "semi-perfect", a false negative
+  // on the predicate behind CONVERGED. Prose correctness outranks one command name,
+  // and 0 of 241 hyphenated tokens in `dema --help` contain a marker segment, so the
+  // allowlist that would rescue this case has no other member. Now asserts 1, so the
+  // trade is pinned and visible rather than silently reversed.
+  assert.equal(scoreDraftNoise("Wire dema peak-self-loop into the help output."), 1);
 
   // Standalone markers must STILL score — the fix must not disarm the lexicon.
   assert.equal(scoreDraftNoise("This is peak performance."), 1);
@@ -211,6 +221,35 @@ test("17 · noise markers match on word boundaries, not bare substrings", () => 
   assert.equal(scoreDraftNoise("A world-class cutting-edge platform."), 2);
 
   // Every marker in the lexicon must match itself standalone (no marker disarmed).
+  for (const m of DIFFUSION_NOISE_MARKERS) {
+    assert.ok(scoreDraftNoise(m) >= 1, `marker no longer matches itself: ${m}`);
+  }
+});
+
+// DIFFUSION-HYPHENATED-PROSE-BOUNDARY-1A — regression on test 17's fix. That fix used
+// (?<![\w-]) / (?![\w-]), putting the hyphen INSIDE the boundary class, which made "-"
+// behave like an identifier character on both sides. Ordinary prose compounds carrying a
+// real marker were then silently scored 0: "might-be", "perfect-world", "semi-perfect".
+// That is a FALSE NEGATIVE on the predicate that drives CONVERGED / ACCEPT_CONVERGED —
+// strictly worse than the substring false positive it replaced. Boundary is now \w only.
+test("18 · hyphenated prose compounds still score their marker", () => {
+  // The regression cases: a real marker joined by a hyphen must still count.
+  for (const noisy of [
+    "might-be", "semi-might", "perfect-world", "semi-perfect", "peak-performance",
+    "This might-be a problem.", "a perfect-world scenario", "the semi-perfect answer",
+  ]) {
+    assert.ok(scoreDraftNoise(noisy) >= 1, `false negative on: ${noisy}`);
+  }
+
+  // Test 17's guarantees must survive: substrings and underscore identifiers stay clean.
+  for (const clean of ["speak", "peaked", "perfectly", "mighty", "peak_phase", "might_be"]) {
+    assert.equal(scoreDraftNoise(clean), 0, `false positive on: ${clean}`);
+  }
+
+  // Hyphenated LEXICON entries must keep matching as whole markers.
+  assert.equal(scoreDraftNoise("A world-class cutting-edge platform."), 2);
+
+  // No marker may be disarmed by the boundary change.
   for (const m of DIFFUSION_NOISE_MARKERS) {
     assert.ok(scoreDraftNoise(m) >= 1, `marker no longer matches itself: ${m}`);
   }

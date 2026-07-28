@@ -11,3 +11,13 @@
 #    describe findings by location, never by content.
 bd21b536d00ada72867021275df0810d540aa156:backlog/docs/audits/bizra-pdmlc-baseline-1a/doc-002 - BIZRA-Product-and-Engineering-Lifecycle-Audit-v1.md:generic-api-key:484
 91c0fe7af13f452303a6d49ab7b0b0fb08aabc94:.gitleaksignore:generic-api-key:7
+# 3) Secret-detector test fixture: a deliberately credential-shaped, deliberately
+#    fake literal in the true-positive half of the gate-35 pattern test. That
+#    half exists to prove the pattern narrowing was not a weakening, so the
+#    fixture cannot be removed without removing the proof. No credential of any
+#    kind is present at that location.
+#    Fingerprint-scoped on purpose: a path-scoped [[allowlists]] entry in
+#    .gitleaks.toml was measured to blind the entire path (a real high-entropy
+#    credential in the same file went undetected), so the narrow form is the
+#    only safe one here.
+5da3cd562a75149962cdf5521fa80d9afe1d9f03:tests/repo-claude-secret-pattern.test.js:generic-api-key:58
