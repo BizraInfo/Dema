@@ -24,6 +24,30 @@ git diff --check
 It enforces the repo coverage floor with Node's native threshold flags:
 95% lines, 84% branches, and 95% functions.
 
+### Secret scanning — not covered by the gate above
+
+```bash
+npm run scan:secrets
+```
+
+**A green `npm run check` does not imply a green CI `scan` job.** The local gate's
+only secret check is gate 35 (`repo-claude-config-check.mjs`), which applies the
+repo's own narrow `secret-pattern.js` to `.claude/` config files. CI's `scan` job
+applies gitleaks' full default ruleset to the entire git history — a different
+detector over a different corpus. `pre-push:seal` does not cover secrets either.
+
+`npm run scan:secrets` closes that gap by running CI's job locally. It parses the
+version, SHA-256 pin and flags out of `.github/workflows/gitleaks.yml` rather than
+restating them, so it cannot drift from CI; it re-verifies the binary checksum on
+every run and refuses to execute on mismatch.
+
+It is deliberately **not** part of `npm run check` — it needs network on first run.
+Run it before pushing a branch that adds credential-shaped test fixtures. Those are
+legitimate (the secret-detector tests need real-looking inputs) and they trip
+gitleaks; suppress a confirmed-synthetic one with a `.gitleaksignore` fingerprint,
+never a path-scoped `[[allowlists]]` entry — see the `condition`/`targetRules`
+notes in `.gitleaks.toml`.
+
 Run one test file:
 
 ```bash
