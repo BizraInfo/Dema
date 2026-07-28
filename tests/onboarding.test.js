@@ -135,17 +135,27 @@ test("formatOnboardingGuide renders nontechnical CLI/TUI orientation", () => {
   assert.match(output, /Step 7 minting/);
 });
 
+// ONBOARD-ALIAS-1A (TASK-040): these two tests previously asserted that
+// `dema onboard` prints "Welcome to Dema" and emits the onboarding GUIDE
+// schema — i.e. they encoded the defect, because that made onboard a
+// byte-identical alias of `dema welcome` while help advertised a guided path.
+// onboard now renders the canonical 7-stage lifecycle; welcome keeps the
+// orientation text and is still covered by its own tests above.
 test("dema onboard supports human output and --json", async () => {
   const human = await execFileAsync("node", [cliPath, "onboard"]);
-  assert.match(human.stdout, /Welcome to Dema/);
-  assert.match(human.stdout, /Guided first run/);
+  assert.match(human.stdout, /guided setup path/i);
+  assert.match(human.stdout, /language/i);
+  assert.doesNotMatch(
+    human.stdout,
+    /Welcome to Dema/,
+    "onboard must not duplicate welcome",
+  );
 
   const json = await execFileAsync("node", [cliPath, "onboard", "--json"]);
-  const guide = JSON.parse(json.stdout);
-  assert.equal(guide.schema, "bizra.dema.onboarding.preview.v0.1");
-  assert.equal(guide.mode, "preview_only");
-  assert.equal(guide.boundaries.no_runtime, true);
-  assert.ok(guide.user_state.blocked_actions.includes("step7_mint"));
+  const preview = JSON.parse(json.stdout);
+  assert.equal(preview.schema, "bizra.dema.onboarding_lifecycle.v0.1");
+  assert.equal(preview.mode, "preview_only");
+  assert.ok(Array.isArray(preview.stages) && preview.stages.length > 0);
 });
 
 test("dema onboard does not call runtime adapters or network surfaces", async () => {
@@ -154,16 +164,19 @@ test("dema onboard does not call runtime adapters or network surfaces", async ()
     "onboard",
     "--json",
   ]);
-  const guide = JSON.parse(stdout);
+  const preview = JSON.parse(stdout);
   const source = await readFile(cliPath, "utf8");
   const onboardCase = source.slice(
     source.indexOf('case "welcome"'),
     source.indexOf('case "setup"'),
   );
 
-  assert.equal(guide.boundary.runtime_started, false);
-  assert.equal(guide.boundary.network_connection_attempted, false);
-  assert.equal(guide.boundaries.no_network, true);
+  // The lifecycle preview carries the canonical 16-key boundary; assert the
+  // whole set is false rather than sampling two keys, so a future stage that
+  // flips any effect flag cannot slip through this gate.
+  for (const [key, value] of Object.entries(preview.boundary)) {
+    assert.equal(value, false, `boundary key ${key} must be false`);
+  }
   assert.doesNotMatch(onboardCase, /adapter\.status\(/);
   assert.doesNotMatch(onboardCase, /createNode0Adapter\(/);
 });
