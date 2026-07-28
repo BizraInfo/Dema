@@ -1,0 +1,84 @@
+{
+  "schema": "bizra.site.open_problems.v0_1",
+  "source": "docs/CURRENT_LIMITS.md",
+  "generated_from_ledger_rows": 139,
+  "total_open": 10,
+  "by_kind": {
+    "blocked": 2,
+    "designed": 6,
+    "preview": 2,
+    "planned": 0
+  },
+  "problems": [
+    {
+      "surface": "First Light front door: a self-contained, zero-external-request static GUI preview rendered from a pure contract kernel — bilingual (Arabic first-class), consent-first, evidence-chipped, PREVIEW_ONLY. Renders the contract; the shipped HTML is gate-verified against it. (DEMA-FIRST-LIGHT-GUI-FRONT-DOOR-PREVIEW-1A)",
+      "status": "PREVIEW_ONLY",
+      "kind": "preview",
+      "meaning": "A surface exists and is honest about performing nothing.",
+      "evidence": "packages/core/src/dema-first-light-front-door-preview.js + apps/front-door/index.html + tests/dema-first-light-front-door-preview.test.js + scripts/review/dema-first-light-front…"
+    },
+    {
+      "surface": "URP supply-side resource reward contract (PREVIEW): encodes the public-market law — a provider earns base value from VERIFIED supply/availability/service, not from proving impact; the impact dividend is extra and requires a verified outcome. Computes reward-type eligibility previews; mints nothing, activates no live URP. Cost measured is not impact. (URP-SUPPLY-SIDE-RESOURCE-REWARD-CONTRACT-PREVIEW-1A)",
+      "status": "PREVIEW_ONLY",
+      "kind": "preview",
+      "meaning": "A surface exists and is honest about performing nothing.",
+      "evidence": "packages/core/src/urp-supply-side-resource-reward-contract-preview.js + tests/urp-supply-side-resource-reward-contract-preview.test.js + scripts/review/urp-supply-side-resource-…"
+    },
+    {
+      "surface": "Node0 proof-of-truth control plane (LOCAL_ONLY release ledger)",
+      "status": "BLOCKED",
+      "kind": "blocked",
+      "meaning": "Something concrete stands in the way. Name it and it moves.",
+      "evidence": "packages/core/src/node0-proof-of-truth-control-plane.js + scripts/audit/node0-proof-of-truth-control-plane.mjs + scripts/review/node0-proof-of-truth-control-plane-check.mjs — jo…"
+    },
+    {
+      "surface": "Proof-of-Impact / token economy",
+      "status": "DESIGNED_NOT_LIVE",
+      "kind": "designed",
+      "meaning": "The design exists. Nothing runs it yet.",
+      "evidence": "docs/02-architecture/dema-urp-resource-offer-v0.1.md, docs/02-architecture/DUAL_TOKEN_POI_ECONOMY_v0_1.md"
+    },
+    {
+      "surface": "Absence Steward Preview",
+      "status": "DESIGNED_NOT_LIVE",
+      "kind": "designed",
+      "meaning": "The design exists. Nothing runs it yet.",
+      "evidence": "docs/02-architecture/ABSENCE_STEWARD_PREVIEW_v0_1.md"
+    },
+    {
+      "surface": "Absence Steward Return Review",
+      "status": "DESIGNED_NOT_LIVE",
+      "kind": "designed",
+      "meaning": "The design exists. Nothing runs it yet.",
+      "evidence": "docs/02-architecture/ABSENCE_STEWARD_RETURN_REVIEW_v0_1.md"
+    },
+    {
+      "surface": "**PARTIAL: proposal-spine measured, queue DESIGNED_NOT_LIVE** Absence Steward Local Queue",
+      "status": "DESIGNED_NOT_LIVE",
+      "kind": "designed",
+      "meaning": "The design exists. Nothing runs it yet.",
+      "evidence": "packages/core/src/absence-steward-queue-{schema,verify,receipt}.js + apps/cli/src/commands/away.js (dema away queue draft) + scripts/review/absence-steward-queue-check.mjs + tes…"
+    },
+    {
+      "surface": "Ed25519 authorship signing (demo + verify)",
+      "status": "DESIGNED_NOT_LIVE",
+      "kind": "designed",
+      "meaning": "The design exists. Nothing runs it yet.",
+      "evidence": "packages/receipts/src/authorship-signature.js, docs/security/H18_3_AUTHORSHIP_PERSISTENCE_PREFLIGHT.md"
+    },
+    {
+      "surface": "**BLOCKED (re-land decision)** Authorship key rotation (AUTHORSHIP-KEY-ROTATE-1A)",
+      "status": "BLOCKED",
+      "kind": "blocked",
+      "meaning": "Something concrete stands in the way. Name it and it moves.",
+      "evidence": "tests/authorship-key-rotate.test.js (tracked, red-first) · implementation green on feat/authorship-key-rotate-1a (eb828a0b, also on origin) · packages/receipts/src/authorship-ke…"
+    },
+    {
+      "surface": "Layer 2 LLM-as-judge runtime (automated judging)",
+      "status": "DESIGNED_NOT_LIVE",
+      "kind": "designed",
+      "meaning": "The design exists. Nothing runs it yet.",
+      "evidence": "docs/06-adr/ADR-016-eval-layer2-scaffold-only.md (path b: scaffold-only)"
+    }
+  ]
+}
