@@ -8,6 +8,7 @@
 // recorded here, not in the kernel boundary — the kernel itself does no I/O.
 
 import { BIZRA_LOCAL_SMALL_SUITE } from "../../../../packages/core/src/model-eval-baseline.js";
+import { resolveLocalLlmBase } from "../../../../packages/models/src/model-common.js";
 
 export function isLocalUrl(url) {
   try {
@@ -75,7 +76,15 @@ async function getJson(fetcher, url, timeoutMs) {
 function providers(env) {
   return {
     ollama: {
-      base: env.OLLAMA_URL || "http://127.0.0.1:11434",
+      // PERIMETER-BRIDGE-PARITY-1A: `dema models discover` routes here, so this
+      // must honour the ADR-042 bridge DEMA_OLLAMA_URL — it previously read only
+      // the undeclared OLLAMA_URL, so discover and llm-invoke targeted different
+      // endpoints whenever an operator followed the ADR. DEMA_OLLAMA_URL wins;
+      // OLLAMA_URL stays as a lower-precedence legacy fallback.
+      base: resolveLocalLlmBase({
+        envValue: env.DEMA_OLLAMA_URL || env.OLLAMA_URL,
+        fallback: "http://127.0.0.1:11434",
+      }),
       list: (b) => `${b}/api/tags`,
       ids: (j) => (Array.isArray(j?.models) ? j.models.map((m) => m?.name).filter(Boolean) : []),
       gen: (b) => `${b}/api/generate`,
@@ -84,7 +93,10 @@ function providers(env) {
       out: (j) => (typeof j?.response === "string" ? j.response : ""),
     },
     lm_studio: {
-      base: env.LMSTUDIO_URL || "http://127.0.0.1:1234",
+      base: resolveLocalLlmBase({
+        envValue: env.DEMA_LM_STUDIO_URL || env.LMSTUDIO_URL,
+        fallback: "http://127.0.0.1:1234",
+      }),
       list: (b) => `${b}/v1/models`,
       ids: (j) => (Array.isArray(j?.data) ? j.data.map((m) => m?.id).filter(Boolean) : []),
       gen: (b) => `${b}/v1/chat/completions`,

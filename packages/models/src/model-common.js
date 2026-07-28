@@ -43,6 +43,56 @@ export function isLocalUrl(baseUrl) {
   }
 }
 
+// PERIMETER-BRIDGE-PARITY-1A — the single endpoint resolver.
+//
+// Every surface that needs a local LLM endpoint MUST call this, so two
+// surfaces can never derive the same fact from different sources. Measured
+// 2026-07-28: `dema models discover` honoured process.env.DEMA_OLLAMA_URL
+// while `dema llm-invoke` ignored it, so an operator following ADR-042 would
+// list models from one endpoint and invoke another.
+//
+// Precedence, fixed and identical everywhere:
+//   1. explicit  — an operator flag (--base) always wins over ambient state
+//   2. envValue  — the ADR-042 bridge (DEMA_OLLAMA_URL / DEMA_LM_STUDIO_URL / …)
+//   3. fallback  — the shipped literal-loopback default
+//
+// The localhost-only boundary is enforced AFTER resolution regardless of which
+// source supplied the value: a candidate that is not http:// on a loopback host
+// is discarded and resolution continues. Nothing here throws; malformed input
+// degrades to the fallback.
+export function resolveLocalLlmBase({
+  explicit = undefined,
+  envValue = undefined,
+  fallback = DEFAULT_OLLAMA_URL,
+} = {}) {
+  for (const candidate of [explicit, envValue]) {
+    if (typeof candidate !== "string") continue;
+    const trimmed = candidate.trim();
+    if (trimmed === "") continue;
+    if (!isLoopbackHttpUrl(trimmed)) continue;
+    return trimmed;
+  }
+  return fallback;
+}
+
+// http:// on 127.0.0.1, ::1 or localhost. Mirrors llm-adapter's
+// isLocalhostBaseUrl: URL parsing (not string matching) defeats
+// "localhost.evil.example" and "localhost@evil.example", because both parse to
+// a non-loopback hostname.
+export function isLoopbackHttpUrl(baseUrl) {
+  try {
+    const url = new URL(baseUrl);
+    if (url.protocol !== "http:") return false;
+    const host = url.hostname
+      .replace(/^\[|\]$/g, "")
+      .replace(/\.$/, "")
+      .toLowerCase();
+    return ["localhost", "127.0.0.1", "::1"].includes(host);
+  } catch {
+    return false;
+  }
+}
+
 export function isExposedAddress(address) {
   if (!address) return false;
   return !isLocalAddress(address.replace(/^\[|\]$/g, ""));

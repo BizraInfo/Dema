@@ -11,6 +11,7 @@ import {
   isModelFilename,
   isLocalUrl,
   portFor,
+  resolveLocalLlmBase,
   urlFor,
 } from "./model-common.js";
 import { buildRoutingRecommendations } from "./model-routing.js";
@@ -223,8 +224,16 @@ async function modelFileRecord(
 }
 
 export async function collectModelInventory({
-  ollamaUrl = process.env.DEMA_OLLAMA_URL || DEFAULT_OLLAMA_URL,
-  lmStudioUrl = process.env.DEMA_LM_STUDIO_URL || DEFAULT_LM_STUDIO_URL,
+  // PERIMETER-BRIDGE-PARITY-1A: same resolver the invoke path uses, so
+  // discover and llm-invoke can never target different endpoints.
+  ollamaUrl = resolveLocalLlmBase({
+    envValue: process.env.DEMA_OLLAMA_URL,
+    fallback: DEFAULT_OLLAMA_URL,
+  }),
+  lmStudioUrl = resolveLocalLlmBase({
+    envValue: process.env.DEMA_LM_STUDIO_URL,
+    fallback: DEFAULT_LM_STUDIO_URL,
+  }),
   downloadsRoot = defaultDownloadsRoot(),
   fetchImpl = fetch,
   timeoutMs = DEFAULT_TIMEOUT_MS,
