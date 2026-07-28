@@ -276,6 +276,9 @@ Orientation:
   dema authorship key migrate [--json]
                     One-time explicit migration of a legacy flat keypair into the
                     immutable generation store + atomic active pointer (requires --consent)
+  dema authorship key rotate [--json]
+                    Retire the active generation + install a replacement under the
+                    active-pointer model (requires --consent + ceremony envelope)
   dema authorship sign <artifact-path> [--json]
                     Sign a local artifact (requires --consent)
   dema authorship latest [--json]
