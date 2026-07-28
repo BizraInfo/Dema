@@ -49,6 +49,17 @@ const detectArgs = pick(/run: \.\/gitleaks (detect [^\n]+)/, "the detect command
 
 const url = urlTemplate.replace(/\$\{VERSION\}|\$VERSION/g, version);
 
+// The URL comes out of a file, so it is untrusted input to an outbound request:
+// anyone who can edit the workflow could otherwise point this at any host. Pin it
+// to the exact upstream release path. The checksum below is the second line of
+// defence; this is the first, and it is what keeps the request itself bounded.
+const ALLOWED_URL = new RegExp(
+  String.raw`^https://github\.com/gitleaks/gitleaks/releases/download/v\d+\.\d+\.\d+/gitleaks_\d+\.\d+\.\d+_linux_x64\.tar\.gz$`,
+);
+if (!ALLOWED_URL.test(url)) {
+  fail(`refusing to fetch a non-upstream URL parsed from ${WORKFLOW}:\n  ${url}`);
+}
+
 if (process.platform !== "linux" || process.arch !== "x64") {
   fail(
     `CI pins the linux_x64 build; this host is ${process.platform}/${process.arch}. ` +
@@ -82,11 +93,14 @@ if (actual !== sha256) {
   fail(`SHA-256 mismatch\n  expected: ${sha256}\n  actual:   ${actual}`);
 }
 
-if (!existsSync(binary)) {
-  execFileSync("tar", ["-xzf", tarball, "-C", CACHE, "gitleaks"]);
-  execFileSync("mv", [join(CACHE, "gitleaks"), binary]);
-  execFileSync("chmod", ["+x", binary]);
-}
+// Extracted on EVERY run, never reused from cache. Verifying the tarball and then
+// executing a binary that merely happens to sit next to it proves nothing about
+// the binary: anything with write access to node_modules/.cache could swap it and
+// the checksum above would still pass. Re-extracting is what binds the thing we
+// execute to the bytes we verified, and it costs ~100ms.
+execFileSync("tar", ["-xzf", tarball, "-C", CACHE, "gitleaks"]);
+execFileSync("mv", ["-f", join(CACHE, "gitleaks"), binary]);
+execFileSync("chmod", ["+x", binary]);
 
 console.log(`scan:secrets — gitleaks v${version} (sha256 verified) ${detectArgs.join(" ")}`);
 const run = spawnSync(binary, detectArgs, { stdio: "inherit" });
