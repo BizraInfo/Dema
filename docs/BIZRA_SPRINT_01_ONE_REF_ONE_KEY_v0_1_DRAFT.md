@@ -83,10 +83,13 @@ P0.1 existed to force, and it earned its place.
 
 ### Hard constraints now binding on P0.5
 
-1. **Ceremony order is `rotate → migrate`.** Not a preference. The reverse has no clean undo.
-2. **`migrateLegacyAuthorshipKey` is a mandatory ceremony step** — it was absent from this
-   sprint entirely. Without it, P0.5's own success gate cannot even be evaluated, because
-   main cannot read the home.
+1. **Ceremony order is `rotate → migrate` for the legacy `eb828a0` implementation.** Not a
+   preference. The reverse has no clean undo. A ported implementation must use the order
+   selected by its own real-layout C′/D′ fixture; it may not inherit the legacy order by
+   assumption.
+2. **`migrateLegacyAuthorshipKey` is a mandatory ceremony step whenever the selected
+   implementation and starting layout require it.** Without migration, current main may not
+   be able to read the home and P0.5's strict success gate cannot be evaluated.
 3. **Back up `~/.dema/keys/` before the ceremony.** Order A is unrecoverable in-tool; a
    filesystem copy is the only undo that exists. [DECLARED] — `migrate` was measured
    returning `recovery_required`; no exhaustive search for another repair path was run.
@@ -103,9 +106,8 @@ P0.1 existed to force, and it earned its place.
    registry anywhere under `~/.dema/keys` (`find -maxdepth 2 -type f` returns those two files
    and nothing else). Combined with `loadActiveKeyPair → no_active_pointer`, the real home is
    a **pristine pre-#419 layout — byte-for-byte the starting state order B was proven against
-   in fixture.** No prior retired entries exist to alter its behaviour, so the five green gate
-   checks transfer directly. Constraint 3 (filesystem backup) still stands: it is the only undo. [DECLARED] —
-   same basis as constraint 3 above.
+   in fixture.** No prior retired entries exist to alter its behaviour. Constraint 3
+   (filesystem backup) still stands. [DECLARED] — same basis as constraint 3 above.
 
 ---
 
@@ -135,12 +137,14 @@ shared code.
       Gate: a written verdict — compatible, or the exact incompatibility.
       **This decides P0.2's shape. No key ceremony before it returns.**
 
-- [ ] **P0.2 — One ref, forward-ported.** Agent, isolated worktree off `main`.
-      Depending on P0.1: either (a) rebase/port the 7 rotate commits onto `a148cf2` and
-      re-green the 24 tests, or (b) if compatible, land as-is.
-      Deliverable: **`dema authorship key rotate` present and green on a branch that
-      contains current main.** Then PR.
-      Gate: 24/24 rotate tests + `npm test` + `npm run check` on the exact SHA.
+- [ ] **P0.2 — One ref, forward-ported.** Agent, isolated worktree off the fetched current
+      `origin/main` SHA. Port the rotate commits and execute the implementation-specific
+      fixture matrix. B/B′ are compatibility evidence; C′/D′ are authoritative because they
+      reproduce the real pre-#419 home layout. Deliverable: `dema authorship key rotate`
+      present and green on a branch containing current main, with exactly one ceremony order
+      selected and pinned for the exact ported SHA.
+      Gate: rotate suite + C′/D′ real-layout matrix + `npm test` + `npm run check` on the
+      exact SHA. No real key access.
 
 - [ ] **P0.3 — Tag the dangling commit.** 10 seconds, preserves the audit trail:
       `git tag archive/authorship-key-rotate-1a-original 3fdfa61` (it is reachable from no
@@ -151,16 +155,81 @@ shared code.
       SHA the task never named).
 
 - [ ] **P0.5 — THE CEREMONY.** Operator + agent, separate exact consent, off-transcript.
-      Rotate the real `~/.dema/keys/node0-ed25519.pem` (unchanged since `Jun 18 14:05`,
-      named in task-029 as the leaked key).
-      Gate: new key active, old fingerprint in the retired registry, **an old-key receipt
-      now rejected as retired under current main's strict trust**, revocation receipt sealed.
+      This step is forbidden until P0.2's implementation-specific real-layout fixture has
+      selected the correct order for the exact command SHA that will be used.
+
+      **P0.5.0 — Preconditions**
+
+      - [ ] Operator is rested and explicitly authorizes this ceremony.
+      - [ ] Exact implementation SHA is recorded.
+      - [ ] Implementation class is recorded: `LEGACY_EB828A0` or `PORTED_ON_MAIN`.
+      - [ ] For `PORTED_ON_MAIN`, C′ and D′ results exist and select one order.
+      - [ ] No signer, watcher, cron, or background process can access the key directory.
+      - [ ] Network use is disabled unless a named verification step explicitly requires it.
+
+      **P0.5.1 — Verified recovery copy before mutation**
+
+      - [ ] Record filenames, permissions, sizes, timestamps, and public fingerprints without
+            printing private-key material.
+      - [ ] Create an encrypted offline recovery copy of `~/.dema/keys/` outside active
+            `DEMA_HOME`.
+      - [ ] Hash the encrypted recovery artifact.
+      - [ ] Verify the artifact is readable and structurally contains the expected files.
+      - [ ] Record the recovery hash and location in the private ceremony receipt.
+
+      If the recovery copy cannot be created and verified, **STOP**.
+
+      **P0.5.2 — Execute only the fixture-proven order**
+
+      - `LEGACY_EB828A0`: `legacy rotate → current-main migrate → current-main verify`.
+        Migration consent is exactly `MIGRATE AUTHORSHIP KEY`.
+      - `PORTED_ON_MAIN`: use only the C′/D′ order proven for the exact ported SHA. Do not
+        inherit the legacy order by assumption.
+
+      Execute no later step after an unexpected result.
+
+      **P0.5.3 — Strict postconditions; every item must pass**
+
+      - [ ] `loadActiveKeyPair` succeeds under current main.
+      - [ ] `loadAuthorshipTrustSnapshot` succeeds.
+      - [ ] Active fingerprint equals the newly generated fingerprint.
+      - [ ] Old fingerprint is present in the retired registry.
+      - [ ] New fingerprint is absent from the retired registry.
+      - [ ] A receipt signed by the old key is rejected specifically as retired.
+      - [ ] A receipt signed by the new key verifies successfully.
+      - [ ] Migration receipt is present when migration was required.
+      - [ ] Rotation and revocation evidence are sealed.
+      - [ ] No private-key bytes appeared in stdout, logs, CI, git, or receipts.
+      - [ ] Recovery artifact remains intact and independently readable.
+
+      Any failed postcondition means the ceremony is **not complete**. Do not update
+      `CURRENT_LIMITS.md` or close task-029.
+
+      **P0.5.4 — Recovery halt states**
+
+      If any step returns `retired_generation`, `recovery_required`, `no_active_pointer`, or
+      an active/retired fingerprint contradiction: halt immediately; perform no automatic
+      repair; preserve the failed state and receipts; use the verified offline copy only
+      through a separately reviewed recovery instruction; do not describe the identity as
+      rotated, migrated, or active.
 
 - [ ] **P0.6 — Same-slice ledger update.** `CURRENT_LIMITS.md` in the same commit.
       Nothing is `MEASURED` until that file says so.
 
-**Definition of done**: task-029 terminal per Backlog finalization rules, with a receipt
-proving the old key is retired and the new key verifies under current main.
+**Definition of done**:
+
+- task-029 is terminal under Backlog finalization rules;
+- the exact ceremony implementation SHA is recorded;
+- its real-layout fixture determined the ceremony order;
+- the recovery copy was created and verified before mutation;
+- the new key is active under current main;
+- the old fingerprint is retired and the new fingerprint is not retired;
+- an old-key receipt is rejected specifically as retired;
+- a new-key receipt verifies;
+- migration completed when required by the selected implementation and starting layout;
+- rotation, migration, verification, and revocation receipts are sealed;
+- `CURRENT_LIMITS.md` is updated in the same slice;
+- no unresolved recovery state remains.
 
 ---
 
@@ -193,9 +262,9 @@ proving the old key is retired and the new key verifies under current main.
 
 | Risk | Mitigation |
 | --- | --- |
-| P0.1 returns "incompatible" → P0.2 becomes a port, not a push | Budgeted. The 7 commits are small and the 24 tests are the safety net. |
-| Rotating from a worktree whose tooling isn't on main | P0.2 exists precisely to prevent this. **Do not shortcut it.** |
-| Operator fatigue during an irreversible ceremony | P0.5 is the one irreversible step in the sprint. It should be the *first* thing done rested, not the last thing done tired. |
+| P0.1 returns "incompatible" → P0.2 becomes a port, not a push | Budgeted. The commits are small and the rotate tests are the safety net. |
+| Rotating from a worktree whose tooling is not on main | P0.2 exists precisely to prevent this. **Do not shortcut it.** |
+| Operator fatigue during an irreversible ceremony | P0.5 is the one irreversible step in the sprint. It must be the first thing done rested, not the last thing done tired. |
 | Two branches both named task-029 work | Named in S5. `-transaction-1b` = fixture; `-key-rotate-1a` = the command. |
 
 ## What this sprint does not promise
