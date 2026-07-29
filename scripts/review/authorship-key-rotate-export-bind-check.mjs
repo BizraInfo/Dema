@@ -22,12 +22,85 @@ export const REQUIRED_SYMBOLS = Object.freeze([
 
 const JSON_MODE = process.argv.includes("--json");
 
+// Blank out comment bodies and string/template literal contents, preserving
+// newlines so the remaining text is still structurally scannable. Regex
+// literals are deliberately NOT tracked: the failure mode of mistaking one for
+// a string is OVER-blanking, which can only hide an export and therefore only
+// fails this gate closed. Under-blanking — treating prose as code — is the
+// direction that manufactures a false PASS, and that cannot happen here.
+export function stripCommentsAndLiterals(source) {
+  let out = "";
+  let i = 0;
+  const n = source.length;
+  while (i < n) {
+    const c = source[i];
+    const d = source[i + 1];
+    if (c === "/" && d === "/") {
+      while (i < n && source[i] !== "\n") {
+        out += " ";
+        i += 1;
+      }
+      continue;
+    }
+    if (c === "/" && d === "*") {
+      out += "  ";
+      i += 2;
+      while (i < n && !(source[i] === "*" && source[i + 1] === "/")) {
+        out += source[i] === "\n" ? "\n" : " ";
+        i += 1;
+      }
+      out += i < n ? "  " : "";
+      i += 2;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") {
+      out += " ";
+      i += 1;
+      while (i < n) {
+        if (source[i] === "\\") {
+          out += "  ";
+          i += 2;
+          continue;
+        }
+        if (source[i] === c) {
+          out += " ";
+          i += 1;
+          break;
+        }
+        out += source[i] === "\n" ? "\n" : " ";
+        i += 1;
+      }
+      continue;
+    }
+    out += c;
+    i += 1;
+  }
+  return out;
+}
+
+// The set of names this module actually EXPORTS — not the set of identifiers it
+// happens to mention. `export { rotateAuthorshipKey as legacyRotate }` exports
+// `legacyRotate`; the local name is not importable and must not satisfy the
+// gate. `export * from` is unresolvable without following the graph and is
+// therefore ignored (fails closed rather than guessing).
+export function collectExportedNames(source) {
+  const clean = stripCommentsAndLiterals(source);
+  const names = new Set();
+  const declRe =
+    /\bexport\s+(?:async\s+)?(?:function\s*\*?|class|const|let|var)\s+([A-Za-z_$][\w$]*)/g;
+  for (const match of clean.matchAll(declRe)) names.add(match[1]);
+  for (const block of clean.matchAll(/\bexport\s*\{([^}]*)\}/g)) {
+    for (const specifier of block[1].split(",")) {
+      const parts = specifier.trim().split(/\s+as\s+/);
+      const exported = parts[parts.length - 1].trim();
+      if (/^[A-Za-z_$][\w$]*$/.test(exported)) names.add(exported);
+    }
+  }
+  return names;
+}
+
 export function storeExportsSymbol(storeSource, symbol) {
-  const decl = new RegExp(
-    `export\\s+(?:async\\s+)?(?:const|function)\\s+${symbol}\\b`,
-  );
-  const named = new RegExp(`export\\s*\\{[^}]*\\b${symbol}\\b`);
-  return decl.test(storeSource) || named.test(storeSource);
+  return collectExportedNames(storeSource).has(symbol);
 }
 
 export function parseImportedRotateSymbols(testSource) {

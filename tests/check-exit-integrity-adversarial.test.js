@@ -60,18 +60,78 @@ function evidenceJsonl(...records) {
   return `${records.map((record) => JSON.stringify(record)).join("\n")}\n`;
 }
 
-function findIsolatedTapCommand() {
-  return commands.find((entry) => {
-    const args = entry[1] ?? [];
-    const separator = args.indexOf("--");
-    return (
-      entry[0] === "node" &&
-      args[0] === "scripts/ci/run-with-classifier.mjs" &&
-      separator >= 0 &&
-      args.slice(separator + 1).join(" ") ===
-        "node --test --test-reporter=tap"
-    );
-  });
+function isIsolatedTapCommand(entry) {
+  const args = entry[1] ?? [];
+  const separator = args.indexOf("--");
+  return (
+    entry[0] === "node" &&
+    args[0] === "scripts/ci/run-with-classifier.mjs" &&
+    separator >= 0 &&
+    args.slice(separator + 1).join(" ") === "node --test --test-reporter=tap"
+  );
+}
+
+function findIsolatedTapCommand(entries = commands) {
+  return entries.find(isIsolatedTapCommand);
+}
+
+function isCoverageCommand(entry) {
+  return entry[0] === "npm" && (entry[1] ?? []).join(" ") === "run coverage";
+}
+
+function isRotateExportBindGate(entry) {
+  return (
+    entry[0] === "node" &&
+    (entry[1] ?? []).some(
+      (arg) =>
+        typeof arg === "string" &&
+        arg.includes("authorship-key-rotate-export-bind-check"),
+    )
+  );
+}
+
+// Semantic gate-sequence invariants, asserted by SHAPE rather than by absolute
+// count or index. The previous form pinned commands.length/indexOf to exact
+// integers, so every unrelated gate added ahead of the isolated TAP command
+// turned this test red and had to be paid for by editing the numbers — which is
+// how a positional snapshot silently becomes the thing under test instead of
+// the ordering policy it was meant to protect.
+function assertGateSequenceInvariants(entries, label) {
+  const isolatedMatches = entries.filter(isIsolatedTapCommand);
+  const coverageMatches = entries.filter(isCoverageCommand);
+  const exportBindMatches = entries.filter(isRotateExportBindGate);
+
+  assert.equal(
+    isolatedMatches.length,
+    1,
+    `${label}: exactly one isolated TAP command`,
+  );
+  assert.equal(
+    coverageMatches.length,
+    1,
+    `${label}: exactly one coverage command`,
+  );
+  assert.equal(
+    exportBindMatches.length,
+    1,
+    `${label}: exactly one authorship-key-rotate export-bind gate`,
+  );
+
+  const isolatedIndex = entries.indexOf(isolatedMatches[0]);
+  const coverageIndex = entries.indexOf(coverageMatches[0]);
+  const exportBindIndex = entries.indexOf(exportBindMatches[0]);
+
+  assert.equal(
+    coverageIndex,
+    isolatedIndex + 1,
+    `${label}: coverage immediately follows the isolated TAP command`,
+  );
+  // Policy: static scans run ahead of the TAP boundary so they fail fast rather
+  // than sitting behind a gate that fails closed and never reaches them.
+  assert.ok(
+    exportBindIndex < isolatedIndex,
+    `${label}: export-bind gate runs before the TAP/coverage boundary`,
+  );
 }
 
 function runIsolatedTapThenLateGate(lateExit) {
@@ -301,19 +361,49 @@ test("A7 direct TAP is isolated and a later authoritative gate executes", () => 
     "--temp-log",
   ]);
   assert.equal(isolated[1].includes("--log"), false);
-  // Positional pins, DERIVED by importing `commands` from the merged check.mjs —
-  // never carried over from either side of a merge. main stood at 199/123/124.
-  // This slice adds three review gates, ALL ahead of the isolated TAP command:
-  // DEMA-REVERSIBLE-FILE-STEWARD-1C (index 84), UI-TRUTH-LABEL-GATE-1A (85) and
-  // TRACKED-TEST-EXEC-TARGET-GUARD-1A (125, right after claim-corpus-gate). So
-  // 199+3 = 202 and the isolated index moves 123 -> 126.
-  // The guard sits ahead of the suite on purpose: it is a static scan, so it must
-  // fail fast rather than behind a TAP gate that fails closed and never reaches it.
-  // These are exact positional snapshots and will drift again on the next gate
-  // added ahead of the isolated TAP command; that coupling is this lane's to decide on.
-  assert.equal(commands.length, 202);
-  assert.equal(commands.indexOf(isolated), 126);
-  assert.deepEqual(commands[127].slice(0, 2), ["npm", ["run", "coverage"]]);
+
+  // The ordering policy this test exists to protect, asserted by shape.
+  assertGateSequenceInvariants(commands, "check.mjs");
+
+  // And the property the absolute pins could not express: adding an unrelated
+  // valid gate ahead of the boundary must keep every invariant true without a
+  // single number in this file changing. This is the regression guard against
+  // re-pinning positions the next time a gate lands.
+  const isolatedIndex = commands.indexOf(isolated);
+  const withUnrelatedGate = [...commands];
+  withUnrelatedGate.splice(isolatedIndex, 0, [
+    "node",
+    ["scripts/review/unrelated-example-gate.mjs"],
+  ]);
+  assertGateSequenceInvariants(
+    withUnrelatedGate,
+    "with an unrelated gate inserted before the boundary",
+  );
+  assert.equal(withUnrelatedGate.length, commands.length + 1);
+
+  // Teeth. Semantic invariants are worthless if they cannot fail, so prove each
+  // one rejects the shape it exists to forbid — otherwise this test would have
+  // traded brittle-but-real pins for assertions that pass on anything.
+  const exportBindEntry = commands.find(isRotateExportBindGate);
+  const movedPastBoundary = commands.filter((e) => !isRotateExportBindGate(e));
+  movedPastBoundary.push(exportBindEntry);
+  assert.throws(
+    () => assertGateSequenceInvariants(movedPastBoundary, "violating"),
+    /before the TAP\/coverage boundary/,
+    "export-bind gate after the boundary must be rejected",
+  );
+  assert.throws(
+    () => assertGateSequenceInvariants([...commands, exportBindEntry], "dup"),
+    /exactly one authorship-key-rotate export-bind gate/,
+    "a duplicated export-bind gate must be rejected",
+  );
+  const coverageDetached = commands.filter((e) => !isCoverageCommand(e));
+  coverageDetached.unshift(commands.find(isCoverageCommand));
+  assert.throws(
+    () => assertGateSequenceInvariants(coverageDetached, "detached coverage"),
+    /coverage immediately follows the isolated TAP command/,
+    "coverage not adjacent to the isolated TAP must be rejected",
+  );
 
   const evidence = [];
   const calls = [];
