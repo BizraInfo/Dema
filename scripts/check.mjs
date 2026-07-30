@@ -18,6 +18,28 @@ function writeCheckGateEvidence(record) {
   writeSync(fd, `${JSON.stringify(record)}\n`);
 }
 
+// Explicit Habitat boundary identity. Role is declared here — never inferred
+// from argv resemblance or array position. Validators and tests import these
+// handles by reference; runChecks still executes ordinary [bin, args] tuples.
+export const ISOLATED_TAP_BOUNDARY_COMMAND = [
+  "node",
+  [
+    "scripts/ci/run-with-classifier.mjs",
+    "--temp-log",
+    "--",
+    "node",
+    "--test",
+    "--test-reporter=tap",
+  ],
+];
+
+export const COVERAGE_COMMAND = ["npm", ["run", "coverage"]];
+
+export const CHECK_BOUNDARY_CONTRACT = Object.freeze({
+  isolatedTap: ISOLATED_TAP_BOUNDARY_COMMAND,
+  coverage: COVERAGE_COMMAND,
+});
+
 export const commands = [
   ["node", ["scripts/review/env-hygiene-check.mjs", "--strict"]],
   ["node", ["scripts/review/identity-pair-coherence-check.mjs"]],
@@ -148,18 +170,8 @@ export const commands = [
   // Classify the exact auto-discovery command against its own fresh log before
   // returning to the aggregate owner. A proved environmental exit 1 normalizes
   // to zero here, so every later gate still runs; all other exits stay fatal.
-  [
-    "node",
-    [
-      "scripts/ci/run-with-classifier.mjs",
-      "--temp-log",
-      "--",
-      "node",
-      "--test",
-      "--test-reporter=tap",
-    ],
-  ],
-  ["npm", ["run", "coverage"]],
+  ISOLATED_TAP_BOUNDARY_COMMAND,
+  COVERAGE_COMMAND,
   ["node", ["apps/cli/src/index.js", "welcome"]],
   ["node", ["apps/cli/src/index.js", "help"]],
   ["node", ["apps/cli/src/index.js", "onboard"]],
