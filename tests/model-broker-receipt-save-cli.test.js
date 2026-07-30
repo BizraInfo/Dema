@@ -239,6 +239,8 @@ test("operator registry file + --save-receipt persists selected-entry route rece
       "--task",
       "synthesis",
       "--use-local-registry",
+      "--registry-consent",
+      "GO: load operator model registry",
       "--save-receipt",
       "--consent",
       SAVE_CONSENT,

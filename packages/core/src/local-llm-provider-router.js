@@ -26,6 +26,37 @@ import {
   llmAdapterIsLocalhostBaseUrl,
   llmAdapterConsentPhraseFor,
 } from "./llm-adapter.js";
+import {
+  resolveLocalLlmBase,
+} from "../../models/src/model-common.js";
+
+/** ADR-042 bridge env → shared resolver, preserving /v1 for OpenAI-compat providers. */
+function resolveProviderBaseUrl(providerKey, registryBaseUrl) {
+  const envByProvider = {
+    ollama: process.env.DEMA_OLLAMA_URL,
+    lmstudio: process.env.DEMA_LM_STUDIO_URL,
+    llamacpp: process.env.DEMA_LLAMACPP_URL,
+  };
+  const envValue = envByProvider[providerKey];
+  // No bridge set → keep the fixed registry URL (localhost hostnames as shipped).
+  if (typeof envValue !== "string" || envValue.trim() === "") {
+    return registryBaseUrl;
+  }
+  const resolved = resolveLocalLlmBase({
+    envValue,
+    fallback: registryBaseUrl,
+  });
+  // OpenAI-compatible routes need the /v1 suffix the registry ships with.
+  if (
+    providerKey !== "ollama" &&
+    typeof registryBaseUrl === "string" &&
+    registryBaseUrl.endsWith("/v1") &&
+    !String(resolved).endsWith("/v1")
+  ) {
+    return `${String(resolved).replace(/\/$/, "")}/v1`;
+  }
+  return resolved;
+}
 
 export const LOCAL_LLM_PROVIDER_ROUTER_SCHEMA =
   "bizra.dema.local_llm_provider_router.v0.1";
@@ -215,6 +246,8 @@ export function buildLocalLlmProviderRoute({
       ? "family"
       : null;
   const consentModel = modelSafe.length > 0 ? modelSafe : "<model>";
+  // PERIMETER-BRIDGE-PARITY-1A: same resolveLocalLlmBase inventory/adapter use.
+  const providerBaseUrl = resolveProviderBaseUrl(key, entry.base_url);
 
   return deepFreeze({
     schema: LOCAL_LLM_PROVIDER_ROUTER_SCHEMA,
@@ -224,7 +257,7 @@ export function buildLocalLlmProviderRoute({
     error: null,
     requested_provider: defaulted ? null : key,
     selected_provider: key,
-    provider_base_url: entry.base_url,
+    provider_base_url: providerBaseUrl,
     provider_is_default: entry.is_default === true,
     provider_is_legacy: entry.is_legacy === true,
     provider_role: entry.role,
@@ -236,7 +269,7 @@ export function buildLocalLlmProviderRoute({
     // (invokeDemaTalkLive) enforces — so the previewed phrase == the gate phrase.
     consent_phrase: llmAdapterConsentPhraseFor(consentModel, key),
     consent_phrase_status: "enforced_by_live_gate",
-    target_is_localhost: llmAdapterIsLocalhostBaseUrl(entry.base_url),
+    target_is_localhost: llmAdapterIsLocalhostBaseUrl(providerBaseUrl),
     prompt_too_long: promptTooLong,
     known_providers: KNOWN_PROVIDERS,
     next_safe_actions: Object.freeze([
