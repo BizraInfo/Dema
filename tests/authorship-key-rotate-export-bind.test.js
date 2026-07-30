@@ -1,5 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import {
   classifySlash,
@@ -544,9 +545,40 @@ describe("scanSource · regex literals cannot leak interior text as code", () =>
   it("a regex containing a backtick inside interpolation keeps frames aligned", () => {
     // This desynchronised the round-2 scanner: the regex backtick opened a
     // TEMPLATE frame from inside TEMPLATE_EXPRESSION.
+    //
+    // Asserting only that `rotateAuthorshipKey` is absent would be VACUOUS —
+    // this fixture never contains that symbol, so the assertion would hold even
+    // if every frame unwound wrongly. The load-bearing claim is that the REAL
+    // trailing export is still reachable, which is only true if the regex and
+    // template frames both closed at the right place.
+    const source =
+      'const t = `${x.replace(/[`]/g, "")}`;\nexport const other = 1;';
+    const scan = scanSource(source);
+    assert.equal(scan.ok, true, "frames must unwind, not refuse");
+    const collected = collectExportedNames(source);
+    assert.equal(collected.ok, true);
+    assert.ok(
+      collected.names.has("other"),
+      "the trailing real export must survive the regex-in-interpolation",
+    );
+    assert.equal(collected.names.has(SYMBOL), false, "no phantom export");
+    assert.equal(collected.names.size, 1, "exactly the one real export");
+  });
+
+  it("export-like text inside that same regex stays hidden", () => {
+    // Negative variant of the frame-alignment fixture: the regex body now
+    // carries the canonical symbol, and the real trailing export is still
+    // present. Frames must unwind AND the regex interior must stay blanked.
+    const source =
+      'const t = `${x.replace(/[`]export { rotateAuthorshipKey }/g, "")}`;\n' +
+      "export const other = 1;";
+    const collected = collectExportedNames(source);
+    assert.equal(collected.ok, true);
+    assert.ok(collected.names.has("other"), "real export still reachable");
     assert.equal(
-      exported('const t = `${x.replace(/[`]/g, "")}`; export const other = 1;'),
+      collected.names.has(SYMBOL),
       false,
+      "regex interior must not be collected",
     );
   });
 
@@ -667,5 +699,229 @@ describe("scanSource · regex literals cannot leak interior text as code", () =>
     const collected = collectExportedNames(readFileSync(path, "utf8"));
     assert.equal(collected.ok, true, "real store must scan");
     assert.ok(collected.names.size > 0, "real store must expose exports");
+  });
+});
+
+// ROUND 4 — review closure.
+//
+// A whitespace-based `)`/`}` slash heuristic was proposed in review to stop
+// `f(x) / y` being over-refused. It is unsafe, and this is the executable proof
+// rather than an argument.
+describe("slash ambiguity · a whitespace heuristic would reopen the bypass", () => {
+  // Faithful simulation: the heuristic calls a whitespace-flanked slash after
+  // `)`/`}` a DIVISION OPERATOR, so it is emitted as code and opens no frame.
+  // Deleting it reproduces exactly the CODE text that scanner would collect.
+  const asHeuristicWouldSee = (src) =>
+    src.replace(/([)}])(\s+)\/(\s+)/g, "$1$2 $3");
+
+  // Both are VALID JavaScript — a regex literal as a control-flow consequent.
+  const REGEX_CONSEQUENTS = [
+    "if (condition) / export { rotateAuthorshipKey } / .test(value);",
+    "while (condition) / export function rotateAuthorshipKey() {} / .test(value);",
+  ];
+
+  it("the heuristic would collect a phantom export from regex bodies", () => {
+    for (const source of REGEX_CONSEQUENTS) {
+      const leaked = collectExportedNames(asHeuristicWouldSee(source));
+      assert.equal(leaked.ok, true, "heuristic scan would succeed");
+      assert.ok(
+        leaked.names.has(SYMBOL),
+        `heuristic leaks a phantom export from: ${source}`,
+      );
+    }
+  });
+
+  it("the current policy refuses those instead, and leaks nothing", () => {
+    for (const source of REGEX_CONSEQUENTS) {
+      const scan = scanSource(source);
+      assert.equal(scan.ok, false);
+      assert.equal(scan.reason, "ambiguous_slash_context");
+      assert.equal(exported(source), false);
+      const report = evaluateRotateExportBind({
+        storeSource: source,
+        testExists: false,
+      });
+      assert.equal(report.ok, false, "gate must fail closed");
+    }
+  });
+
+  it("division after ) or } is over-refused, which is the acceptable cost", () => {
+    // These are the cases the heuristic wanted to rescue. Refusing them costs a
+    // refusal; mis-reading a regex consequent costs the gate's whole purpose.
+    for (const source of ["f(x) / y;", "({ value: 1 }) / divisor;"]) {
+      const scan = scanSource(source);
+      assert.equal(scan.ok, false);
+      assert.equal(scan.reason, "ambiguous_slash_context");
+    }
+  });
+
+  it("whitespace is not a grammar: the two shapes are lexically identical", () => {
+    const regexConsequent = "if (condition) / a / .test(value);";
+    const division = "f(condition) / a / 2;";
+    const surface = (s) => /\)\s+\/\s+/.test(s);
+    assert.ok(surface(regexConsequent) && surface(division));
+    // Same surface, opposite grammar — so the surface cannot decide it.
+    assert.equal(scanSource(regexConsequent).reason, "ambiguous_slash_context");
+    assert.equal(scanSource(division).reason, "ambiguous_slash_context");
+  });
+});
+
+describe("evaluateRotateExportBind · single-scan refactor is behaviour-preserving", () => {
+  const MEASURED = "| [MEASURED] rotation (AUTHORSHIP-KEY-ROTATE-1B) | ev |";
+  const STORES = {
+    all_exported: [
+      "export const KEY_ROTATE_CONSENT_PHRASE = 'ROTATE';",
+      "export const KEY_ROTATE_SCHEMA = 'schema';",
+      "export async function rotateAuthorshipKey() {}",
+    ].join("\n"),
+    none_exported: "export const unrelated = 1;",
+    aliased_away: [
+      "function rotateAuthorshipKey(){}",
+      "export { rotateAuthorshipKey as legacyRotate };",
+      "export const KEY_ROTATE_SCHEMA = 's';",
+    ].join("\n"),
+    commented_out: "// export async function rotateAuthorshipKey() {}",
+  };
+
+  it("the evaluator's verdict equals the per-symbol public contract", () => {
+    for (const [label, storeSource] of Object.entries(STORES)) {
+      const report = evaluateRotateExportBind({
+        storeSource,
+        limitsSource: MEASURED,
+        testExists: false,
+      });
+      // storeExportsSymbol is still the public single-symbol contract; the
+      // refactored evaluator must agree with it symbol for symbol.
+      const expectedMissing = [
+        "KEY_ROTATE_CONSENT_PHRASE",
+        "KEY_ROTATE_SCHEMA",
+        "rotateAuthorshipKey",
+      ].filter((s) => !storeExportsSymbol(storeSource, s));
+      assert.deepEqual(
+        [...report.missing_exports].sort(),
+        expectedMissing.sort(),
+        `${label}: evaluator and storeExportsSymbol must agree`,
+      );
+      assert.equal(report.ok, expectedMissing.length === 0, label);
+    }
+  });
+
+  it("imported-symbol binding also reads the single collected set", () => {
+    const testSource = `import { rotateAuthorshipKey } ${STORE_IMPORT};`;
+    const bound = evaluateRotateExportBind({
+      testSource,
+      storeSource: STORES.all_exported,
+      testExists: true,
+    });
+    assert.equal(bound.ok, true);
+    assert.deepEqual(bound.imported_symbols, ["rotateAuthorshipKey"]);
+
+    const unbound = evaluateRotateExportBind({
+      testSource,
+      storeSource: STORES.aliased_away,
+      testExists: true,
+    });
+    assert.equal(unbound.ok, false);
+    assert.deepEqual(unbound.missing_exports, ["rotateAuthorshipKey"]);
+    assert.ok(
+      unbound.reasons.includes("test_imports_missing_store_exports"),
+    );
+  });
+
+  it("unscannable source still fails before any membership check", () => {
+    const report = evaluateRotateExportBind({
+      storeSource: "const p = /unterminated;",
+      limitsSource: MEASURED,
+      testExists: true,
+    });
+    assert.equal(report.ok, false);
+    assert.ok(
+      report.reasons.some((r) => r.startsWith("store_source_unscannable")),
+    );
+    assert.deepEqual(report.imported_symbols, []);
+  });
+
+  it("storeExportsSymbol keeps its standalone public contract", () => {
+    assert.equal(
+      storeExportsSymbol("export function rotateAuthorshipKey() {}", SYMBOL),
+      true,
+    );
+    assert.equal(storeExportsSymbol("const p = /unterminated;", SYMBOL), false);
+  });
+});
+
+// The substantive proof this gate could not give on #441 alone: run it against
+// #440's REAL sources, which carry the rotation test, the rotate exports, and
+// the [MEASURED] ledger row. Read via git so neither PR is modified. Skipped
+// where the ref is unavailable (a shallow CI clone), because a skipped
+// cross-branch probe must never read as a failure — or as a pass.
+describe("cross-PR substantive proof against #440's real sources", () => {
+  const REF = "feat/authorship-key-rotate-1b-on-main";
+  const readFromRef = (path) => {
+    for (const ref of [REF, `origin/${REF}`]) {
+      try {
+        return execFileSync("git", ["show", `${ref}:${path}`], {
+          encoding: "utf8",
+          maxBuffer: 64 * 1024 * 1024,
+          stdio: ["ignore", "pipe", "ignore"],
+        });
+      } catch {
+        /* try the next ref */
+      }
+    }
+    return null;
+  };
+
+  it("binds test imports to real exports under a real MEASURED row", () => {
+    const testSource = readFromRef("tests/authorship-key-rotate.test.js");
+    const storeSource = readFromRef(
+      "packages/receipts/src/authorship-key-store.js",
+    );
+    const limitsSource = readFromRef("docs/CURRENT_LIMITS.md");
+    if (!testSource || !storeSource || !limitsSource) {
+      // Ref unavailable — no claim either way.
+      return;
+    }
+    const collected = collectExportedNames(storeSource);
+    assert.equal(collected.ok, true, "#440 store must scan statically");
+
+    const report = evaluateRotateExportBind({
+      testSource,
+      storeSource,
+      limitsSource,
+      testExists: true,
+    });
+    assert.equal(report.test_absent, false, "rotation test is present on #440");
+    assert.equal(report.measured_claim, true, "#440 ledger claims MEASURED");
+    assert.deepEqual(report.missing_exports, [], "every symbol is exported");
+    assert.equal(report.ok, true, "substantive bind must PASS");
+    assert.ok(
+      report.imported_symbols.length > 0,
+      "the bind must actually have imported symbols to check",
+    );
+  });
+
+  it("mutating #440's store away from canonical names fails the bind", () => {
+    const testSource = readFromRef("tests/authorship-key-rotate.test.js");
+    const storeSource = readFromRef(
+      "packages/receipts/src/authorship-key-store.js",
+    );
+    const limitsSource = readFromRef("docs/CURRENT_LIMITS.md");
+    if (!testSource || !storeSource || !limitsSource) return;
+    // Real-source negative mutation: rename the rotation export away, exactly
+    // the alias defect from round 1, on real bytes rather than a fixture.
+    const mutated = storeSource.replace(
+      /export\s+(async\s+)?function\s+rotateAuthorshipKey/,
+      "function rotateAuthorshipKey",
+    );
+    assert.notEqual(mutated, storeSource, "mutation must actually apply");
+    const report = evaluateRotateExportBind({
+      testSource,
+      storeSource: mutated,
+      limitsSource,
+      testExists: true,
+    });
+    assert.equal(report.ok, false, "removing the export must fail the bind");
+    assert.ok(report.missing_exports.includes("rotateAuthorshipKey"));
   });
 });

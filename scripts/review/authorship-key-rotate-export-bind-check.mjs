@@ -69,6 +69,21 @@ const isIdentifierPart = (ch) => /[\w$]/.test(ch);
 // `}` genuinely depend on parse context this token-level scanner does not have
 // (`if (x) /re/.test(y)` vs `f(x) / y`; a block close vs an object-literal
 // close), so those refuse instead of guessing.
+//
+// WHY NOT "whitespace on both sides means division": that heuristic was
+// proposed in review to rescue `f(x) / y`, and it is unsafe. These are both
+// VALID JavaScript with the identical lexical surface `) / `:
+//
+//   if (condition) / export { rotateAuthorshipKey } / .test(value);   // regex
+//   f(x) / y;                                                          // division
+//
+// Under the heuristic the first is read as division, so the regex body becomes
+// CODE and `rotateAuthorshipKey` is collected as an export the module never
+// had — measured, a reproducible false PASS. Whitespace is not a grammar:
+// a control-flow regex consequent and a division expression are
+// whitespace-identical. Over-refusing `f(x) / y` costs a refusal; under-refusing
+// the regex consequent costs the gate's entire purpose. See the adversarial
+// regression in tests/authorship-key-rotate-export-bind.test.js.
 export function classifySlash(lastToken) {
   if (!lastToken) return "regex"; // start of source: expression position
   switch (lastToken.kind) {
@@ -505,8 +520,13 @@ export function evaluateRotateExportBind({
     });
   }
 
+  // ONE lexical scan per evaluator call. Every membership question below reads
+  // the set already collected above; calling storeExportsSymbol per symbol
+  // re-scanned the whole module once for each of them.
+  const isExported = (symbol) => exportScan.names.has(symbol);
+
   const missingForHonesty = measuredClaim
-    ? REQUIRED_SYMBOLS.filter((s) => !storeExportsSymbol(storeSource, s))
+    ? REQUIRED_SYMBOLS.filter((s) => !isExported(s))
     : [];
 
   if (!testExists) {
@@ -543,9 +563,7 @@ export function evaluateRotateExportBind({
   }
 
   const imported = parseImportedRotateSymbols(testSource);
-  const missingFromImports = imported.filter(
-    (s) => !storeExportsSymbol(storeSource, s),
-  );
+  const missingFromImports = imported.filter((s) => !isExported(s));
   const missing_exports = [
     ...new Set([...missingFromImports, ...missingForHonesty]),
   ];
