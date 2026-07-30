@@ -60,17 +60,88 @@ function evidenceJsonl(...records) {
   return `${records.map((record) => JSON.stringify(record)).join("\n")}\n`;
 }
 
-function findIsolatedTapCommand() {
-  return commands.find((entry) => {
-    const args = entry[1] ?? [];
-    const separator = args.indexOf("--");
-    return (
-      entry[0] === "node" &&
-      args[0] === "scripts/ci/run-with-classifier.mjs" &&
-      separator >= 0 &&
-      args.slice(separator + 1).join(" ") ===
-        "node --test --test-reporter=tap"
-    );
+const CLASSIFIER_ENTRY = "scripts/ci/run-with-classifier.mjs";
+
+// The TAP/coverage boundary is check-habitat infrastructure, so it is identified
+// by SHAPE and ADJACENCY — never by absolute command count or array index.
+//
+// Position-based identification made the command list effectively append-only:
+// any gate added ahead of the boundary, and any legitimate runtime flag added to
+// the child command, broke this test for a reason unrelated to the ordering law
+// it protects, and the only way to pay for it was editing a literal. That turns
+// the snapshot into the thing under test instead of the policy.
+//
+// These predicates carry no knowledge of which gates exist. Adding, removing or
+// reordering unrelated gates ahead of the boundary requires no change here.
+
+// Structural identity of a classifier-wrapped child command: the child argv
+// after `--`, with the child executable removed — or null if this entry is not
+// a classifier wrapper spawning node.
+function classifierChildArgv(entry) {
+  if (!Array.isArray(entry) || entry[0] !== "node") return null;
+  const args = entry[1];
+  if (!Array.isArray(args) || args[0] !== CLASSIFIER_ENTRY) return null;
+  const separator = args.indexOf("--");
+  if (separator < 0) return null;
+  const child = args.slice(separator + 1);
+  if (child[0] !== "node") return null;
+  return child.slice(1);
+}
+
+// Recognise the isolated TAP boundary. Node runtime flags may sit between the
+// child `node` and `--test`; their presence or order carries no meaning here.
+// Containing the word "test" is NOT sufficient — the classifier wrapper, a node
+// child, `--test` and the TAP reporter must all be present.
+function isIsolatedTapBoundary(entry) {
+  const argv = classifierChildArgv(entry);
+  if (!argv) return false;
+  return argv.includes("--test") && argv.includes("--test-reporter=tap");
+}
+
+// Recognise coverage by its own command identity, not by where it sits.
+function isCoverageCommand(entry) {
+  return (
+    Array.isArray(entry) &&
+    entry[0] === "npm" &&
+    Array.isArray(entry[1]) &&
+    entry[1].join(" ") === "run coverage"
+  );
+}
+
+function findIsolatedTapCommand(entries = commands) {
+  return entries.find(isIsolatedTapBoundary);
+}
+
+// The boundary law, asserted by shape. Fails loudly on every malformed or
+// duplicated form; see the dedicated teeth test below.
+function assertTapBoundaryShape(entries, label) {
+  const boundaries = entries.filter(isIsolatedTapBoundary);
+  const coverages = entries.filter(isCoverageCommand);
+  assert.equal(
+    boundaries.length,
+    1,
+    `${label}: exactly one isolated TAP boundary`,
+  );
+  assert.equal(coverages.length, 1, `${label}: exactly one coverage command`);
+  assert.equal(
+    isCoverageCommand(boundaries[0]),
+    false,
+    `${label}: the boundary is not the coverage command`,
+  );
+  assert.equal(
+    entries.indexOf(coverages[0]),
+    entries.indexOf(boundaries[0]) + 1,
+    `${label}: coverage immediately follows the isolated TAP boundary`,
+  );
+}
+
+// Add a legitimate Node runtime flag to the boundary's child command.
+function withChildRuntimeFlag(entries, flag) {
+  return entries.map((entry) => {
+    if (!isIsolatedTapBoundary(entry)) return entry;
+    const args = [...entry[1]];
+    args.splice(args.indexOf("--") + 2, 0, flag);
+    return [entry[0], args];
   });
 }
 
@@ -301,19 +372,36 @@ test("A7 direct TAP is isolated and a later authoritative gate executes", () => 
     "--temp-log",
   ]);
   assert.equal(isolated[1].includes("--log"), false);
-  // Positional pins, DERIVED by importing `commands` from the merged check.mjs —
-  // never carried over from either side of a merge. main stood at 199/123/124.
-  // This slice adds three review gates, ALL ahead of the isolated TAP command:
-  // DEMA-REVERSIBLE-FILE-STEWARD-1C (index 84), UI-TRUTH-LABEL-GATE-1A (85) and
-  // TRACKED-TEST-EXEC-TARGET-GUARD-1A (125, right after claim-corpus-gate). So
-  // 199+3 = 202 and the isolated index moves 123 -> 126.
-  // The guard sits ahead of the suite on purpose: it is a static scan, so it must
-  // fail fast rather than behind a TAP gate that fails closed and never reaches it.
-  // These are exact positional snapshots and will drift again on the next gate
-  // added ahead of the isolated TAP command; that coupling is this lane's to decide on.
-  assert.equal(commands.length, 202);
-  assert.equal(commands.indexOf(isolated), 126);
-  assert.deepEqual(commands[127].slice(0, 2), ["npm", ["run", "coverage"]]);
+
+  // The ordering law, by shape. No absolute count or index carries authority.
+  assertTapBoundaryShape(commands, "check.mjs");
+
+  // A gate may enter ahead of the boundary without editing anything here.
+  const withGate = [...commands];
+  withGate.splice(commands.indexOf(isolated), 0, [
+    "node",
+    ["scripts/review/unrelated-example-gate.mjs"],
+  ]);
+  assertTapBoundaryShape(withGate, "with an unrelated gate inserted");
+  assert.equal(withGate.length, commands.length + 1);
+
+  // A legitimate child Node runtime flag preserves boundary recognition.
+  const withFlag = withChildRuntimeFlag(commands, "--experimental-vm-modules");
+  assertTapBoundaryShape(withFlag, "with a child runtime flag");
+  assert.ok(
+    classifierChildArgv(findIsolatedTapCommand(withFlag)).includes(
+      "--experimental-vm-modules",
+    ),
+    "the flag must actually be present in the recognised child argv",
+  );
+
+  // Reordering unrelated gates ahead of the boundary is irrelevant to the law.
+  const boundaryAt = commands.indexOf(isolated);
+  const reordered = [
+    ...commands.slice(0, boundaryAt).reverse(),
+    ...commands.slice(boundaryAt),
+  ];
+  assertTapBoundaryShape(reordered, "with pre-boundary gates reordered");
 
   const evidence = [];
   const calls = [];
@@ -388,4 +476,89 @@ process.exit(1);`,
   );
   assert.equal(r.status, 0, `stdout:\n${r.stdout}\nstderr:\n${r.stderr}`);
   assert.match(r.stdout, /G8 MASKED/);
+});
+
+test("A7b semantic boundary predicates reject every malformed shape", () => {
+  const isolated = findIsolatedTapCommand();
+  const coverage = commands.find(isCoverageCommand);
+  const boundaryAt = commands.indexOf(isolated);
+  const rejects = (entries, label, pattern) =>
+    assert.throws(
+      () => assertTapBoundaryShape(entries, label),
+      pattern,
+      `${label} must be rejected`,
+    );
+
+  // A semantic predicate that cannot fail is worse than the literal it replaced,
+  // so every invalid boundary shape is proven to throw.
+  rejects(
+    [...commands, isolated],
+    "duplicate TAP boundary",
+    /exactly one isolated TAP boundary/,
+  );
+  rejects(
+    commands.filter((entry) => entry !== isolated),
+    "removed TAP boundary",
+    /exactly one isolated TAP boundary/,
+  );
+  rejects(
+    [...commands, coverage],
+    "duplicate coverage",
+    /exactly one coverage command/,
+  );
+  rejects(
+    commands.filter((entry) => !isCoverageCommand(entry)),
+    "removed coverage",
+    /exactly one coverage command/,
+  );
+  rejects(
+    [coverage, ...commands.filter((entry) => !isCoverageCommand(entry))],
+    "coverage detached from the boundary",
+    /coverage immediately follows/,
+  );
+
+  // Near-miss shapes must NOT be recognised as the boundary.
+  const nearMisses = {
+    // `--test` present, but no classifier wrapper at all.
+    unwrapped_test: ["node", ["--test", "--test-reporter=tap"]],
+    // Classifier wrapper, but the child executable is not node.
+    child_not_node: [
+      "node",
+      [CLASSIFIER_ENTRY, "--temp-log", "--", "npm", "--test"],
+    ],
+    // Classifier wrapper spawning node, but no TAP reporter.
+    missing_tap_reporter: [
+      "node",
+      [CLASSIFIER_ENTRY, "--temp-log", "--", "node", "--test"],
+    ],
+    // Classifier wrapper spawning node, but no --test at all.
+    missing_test_flag: [
+      "node",
+      [CLASSIFIER_ENTRY, "--temp-log", "--", "node", "--test-reporter=tap"],
+    ],
+    // No child-process separator.
+    missing_separator: [
+      "node",
+      [CLASSIFIER_ENTRY, "--temp-log", "node", "--test", "--test-reporter=tap"],
+    ],
+    // A command merely mentioning the word test.
+    word_test_only: ["node", ["scripts/review/test-something-check.mjs"]],
+  };
+  for (const [label, entry] of Object.entries(nearMisses)) {
+    assert.equal(
+      isIsolatedTapBoundary(entry),
+      false,
+      `${label} must not be recognised as the TAP boundary`,
+    );
+    // Adding a near-miss ahead of the boundary must not disturb the law.
+    const withNearMiss = [...commands];
+    withNearMiss.splice(boundaryAt, 0, entry);
+    assertTapBoundaryShape(withNearMiss, `near-miss ${label} inserted`);
+  }
+
+  // Coverage must not be mistaken for a TAP boundary, nor the reverse.
+  assert.equal(isIsolatedTapBoundary(coverage), false);
+  assert.equal(isCoverageCommand(isolated), false);
+  assert.equal(isCoverageCommand(["npm", ["run", "coverage:html"]]), false);
+  assert.equal(classifierChildArgv(coverage), null);
 });
