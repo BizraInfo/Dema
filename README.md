@@ -43,7 +43,28 @@ Dema does not ask you to trust a black box. It tells you what it knows, what it 
 
 ## First run
 
-Five commands. Each one is safe and reversible.
+### Obtain the `dema` command (before anything else)
+
+Dema runs with zero `npm install` from a clone. Use Node against the repo binary:
+
+```bash
+git clone https://github.com/BizraInfo/Dema
+cd Dema
+node bin/dema welcome
+```
+
+Optional aliases for the session (so the five commands below work verbatim):
+
+```bash
+alias dema='node bin/dema'
+# or: export PATH="$PWD/bin:$PATH"   # requires execute bit on bin/dema
+```
+
+Contributor / CI install (`npm install`, global link) stays under **Developer install** below. Do not start there for first contact.
+
+### Five commands
+
+Each one is safe and reversible. After the alias (or with `node bin/dema` substituted):
 
 ```bash
 dema welcome              # 1. read the product promise
