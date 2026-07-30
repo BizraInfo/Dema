@@ -7,8 +7,10 @@ import {
 import {
   initAuthorshipKey,
   migrateLegacyAuthorshipKey,
+  rotateAuthorshipKey,
   KEY_INIT_CONSENT_PHRASE,
   KEY_MIGRATE_CONSENT_PHRASE,
+  KEY_ROTATE_CONSENT_PHRASE,
   loadAuthorshipTrustSnapshot,
 } from "../../../../packages/receipts/src/authorship-key-store.js";
 import {
@@ -56,7 +58,7 @@ export async function cmd_authorship(ctx) {
       );
     } else if (result.error === "key_already_exists") {
       console.error(
-        `Key already exists at ${result.private_key_path}. Use dema authorship key rotate (future) to replace.`,
+        `Key already exists at ${result.private_key_path}. Use dema authorship key rotate to replace.`,
       );
     } else if (result.error === "unsafe_key_path") {
       console.error(`Unsafe authorship key path refused: ${result.key_path}`);
@@ -89,6 +91,47 @@ export async function cmd_authorship(ctx) {
       console.error(`Migration refused: ${result.error}`);
     }
     if (!result.migrated) process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
+  if (subCmdA === "key" && argv[2] === "rotate") {
+    const consent = argValue(argv, "--consent") ?? "";
+    const result = await rotateAuthorshipKey({ consent });
+    if (wantJsonA) {
+      console.log(JSON.stringify(result, null, 2));
+    } else if (result.rotated) {
+      console.log("Authorship Key Rotated");
+      console.log("=".repeat(40));
+      console.log(
+        `  Old fingerprint: ${result.old_fingerprint} (retired, denylisted)`,
+      );
+      console.log(`  New fingerprint: ${result.new_fingerprint}`);
+      console.log(`  Old key quarantined: ${result.quarantine_dir}`);
+      console.log(`  Rotation receipt: ${result.receipt_path}`);
+      console.log(
+        "  Next: classify receipts signed during the exposure interval and",
+      );
+      console.log(
+        "  confirm runtime loads the new fingerprint before re-arming.",
+      );
+    } else if (result.error === "consent_required") {
+      console.error(
+        `Consent required. Use: --consent "${KEY_ROTATE_CONSENT_PHRASE}"`,
+      );
+    } else if (String(result.error).startsWith("consent_envelope")) {
+      console.error(
+        `A nonce-bearing consent envelope is required for a real rotation (${result.error}). The bare CLI cannot perform a governed rotation; a ceremony must supply the envelope. No key was changed.`,
+      );
+    } else if (result.error === "no_key_to_rotate") {
+      console.error(
+        `No authorship key to rotate. Use dema authorship key init first.`,
+      );
+    } else if (result.error === "unsafe_key_path") {
+      console.error(`Unsafe authorship key path refused: ${result.key_path}`);
+    } else {
+      console.error(`Rotation refused: ${result.error}`);
+    }
+    if (!result.rotated) process.exitCode = 1;
     process.exit(process.exitCode ?? 0);
   }
 
@@ -232,7 +275,7 @@ export async function cmd_authorship(ctx) {
   }
 
   console.error(
-    "Usage: dema authorship key init | key migrate | sign <path> | latest | closeout | verify <receipt> | demo",
+    "Usage: dema authorship key init | key migrate | key rotate | sign <path> | latest | closeout | verify <receipt> | demo",
   );
   process.exitCode = 1;
   process.exit(process.exitCode ?? 0);
