@@ -22,85 +22,227 @@ export const REQUIRED_SYMBOLS = Object.freeze([
 
 const JSON_MODE = process.argv.includes("--json");
 
-// Blank out comment bodies and string/template literal contents, preserving
-// newlines so the remaining text is still structurally scannable. Regex
-// literals are deliberately NOT tracked: the failure mode of mistaking one for
-// a string is OVER-blanking, which can only hide an export and therefore only
-// fails this gate closed. Under-blanking — treating prose as code — is the
-// direction that manufactures a false PASS, and that cannot happen here.
-export function stripCommentsAndLiterals(source) {
+export const SCAN_STATES = Object.freeze([
+  "CODE",
+  "LINE_COMMENT",
+  "BLOCK_COMMENT",
+  "SINGLE_QUOTE",
+  "DOUBLE_QUOTE",
+  "TEMPLATE",
+  "TEMPLATE_EXPRESSION",
+]);
+
+// Lexical scanner reducing a module to CODE-only text, with every non-code
+// region blanked and newlines preserved.
+//
+// It keeps an explicit FRAME STACK rather than a single in-string flag, because
+// template literals nest: `${`inner`}` re-enters TEMPLATE from inside
+// TEMPLATE_EXPRESSION. A flat scanner closes the outer template on the inner
+// backtick and then emits the interior as code, which is exactly how prose can
+// manufacture an export. Interpolation content is lexically tracked (so brace
+// depth and nested quotes close the right scope) but still blanked, since an
+// `export` is not legal in expression position and blanking can only fail
+// closed.
+//
+// BOUNDED CONTRACT — read this before trusting it:
+// Tracked: line comments, block comments, single- and double-quoted strings,
+// template literals, `${...}` interpolation with nested frames and brace depth,
+// and backslash escapes.
+// NOT tracked: regular-expression literals. Distinguishing `/` as division from
+// `/` as a regex start needs previous-token context this scanner does not keep.
+// A regex literal containing an unpaired quote or backtick (e.g. /['"`]/) can
+// therefore desynchronise it. That is a REAL limitation, not a safe one: it
+// usually ends the scan unbalanced and fails closed, but a crafted input could
+// resynchronise and mis-classify a region. Do not describe this as "cannot
+// under-blank". The trust basis is that the scanned file is repo-controlled
+// source under review, not attacker-supplied input; an unscannable or
+// ambiguous result fails the gate rather than passing it.
+export function scanSource(source) {
+  const stack = [{ state: "CODE", braceDepth: 0 }];
+  const top = () => stack[stack.length - 1];
   let out = "";
   let i = 0;
   const n = source.length;
+  const blank = (ch) => {
+    out += ch === "\n" ? "\n" : " ";
+  };
+
   while (i < n) {
+    const state = top().state;
     const c = source[i];
     const d = source[i + 1];
-    if (c === "/" && d === "/") {
-      while (i < n && source[i] !== "\n") {
-        out += " ";
-        i += 1;
+
+    if (state === "CODE" || state === "TEMPLATE_EXPRESSION") {
+      const inExpression = state === "TEMPLATE_EXPRESSION";
+      if (c === "/" && d === "/") {
+        stack.push({ state: "LINE_COMMENT", braceDepth: 0 });
+        blank(" ");
+        blank(" ");
+        i += 2;
+        continue;
       }
-      continue;
-    }
-    if (c === "/" && d === "*") {
-      out += "  ";
-      i += 2;
-      while (i < n && !(source[i] === "*" && source[i + 1] === "/")) {
-        out += source[i] === "\n" ? "\n" : " ";
-        i += 1;
+      if (c === "/" && d === "*") {
+        stack.push({ state: "BLOCK_COMMENT", braceDepth: 0 });
+        blank(" ");
+        blank(" ");
+        i += 2;
+        continue;
       }
-      out += i < n ? "  " : "";
-      i += 2;
-      continue;
-    }
-    if (c === '"' || c === "'" || c === "`") {
-      out += " ";
+      if (c === "'" || c === '"') {
+        stack.push({
+          state: c === "'" ? "SINGLE_QUOTE" : "DOUBLE_QUOTE",
+          braceDepth: 0,
+        });
+        blank(" ");
+        i += 1;
+        continue;
+      }
+      if (c === "`") {
+        stack.push({ state: "TEMPLATE", braceDepth: 0 });
+        blank(" ");
+        i += 1;
+        continue;
+      }
+      if (inExpression) {
+        if (c === "{") {
+          top().braceDepth += 1;
+        } else if (c === "}") {
+          if (top().braceDepth === 0) {
+            stack.pop();
+            blank(" ");
+            i += 1;
+            continue;
+          }
+          top().braceDepth -= 1;
+        }
+        blank(c);
+        i += 1;
+        continue;
+      }
+      out += c;
       i += 1;
-      while (i < n) {
-        if (source[i] === "\\") {
-          out += "  ";
-          i += 2;
-          continue;
-        }
-        if (source[i] === c) {
-          out += " ";
-          i += 1;
-          break;
-        }
-        out += source[i] === "\n" ? "\n" : " ";
-        i += 1;
-      }
       continue;
     }
-    out += c;
+
+    if (state === "LINE_COMMENT") {
+      if (c === "\n") {
+        stack.pop();
+        out += "\n";
+        i += 1;
+        continue;
+      }
+      blank(c);
+      i += 1;
+      continue;
+    }
+
+    if (state === "BLOCK_COMMENT") {
+      if (c === "*" && d === "/") {
+        stack.pop();
+        blank(" ");
+        blank(" ");
+        i += 2;
+        continue;
+      }
+      blank(c);
+      i += 1;
+      continue;
+    }
+
+    if (state === "SINGLE_QUOTE" || state === "DOUBLE_QUOTE") {
+      const quote = state === "SINGLE_QUOTE" ? "'" : '"';
+      if (c === "\\") {
+        blank(" ");
+        if (i + 1 < n) blank(source[i + 1]);
+        i += 2;
+        continue;
+      }
+      // A raw newline inside a quoted string is a syntax error; refuse rather
+      // than guess where the string was meant to end.
+      if (c === "\n") {
+        return Object.freeze({
+          ok: false,
+          reason: `unterminated_${state.toLowerCase()}`,
+        });
+      }
+      if (c === quote) {
+        stack.pop();
+        blank(" ");
+        i += 1;
+        continue;
+      }
+      blank(c);
+      i += 1;
+      continue;
+    }
+
+    // TEMPLATE
+    if (c === "\\") {
+      blank(" ");
+      if (i + 1 < n) blank(source[i + 1]);
+      i += 2;
+      continue;
+    }
+    if (c === "$" && d === "{") {
+      stack.push({ state: "TEMPLATE_EXPRESSION", braceDepth: 0 });
+      blank(" ");
+      blank(" ");
+      i += 2;
+      continue;
+    }
+    if (c === "`") {
+      stack.pop();
+      blank(" ");
+      i += 1;
+      continue;
+    }
+    blank(c);
     i += 1;
   }
-  return out;
+
+  // EOF ends a line comment legally; anything else still open is malformed.
+  while (top().state === "LINE_COMMENT") stack.pop();
+  if (stack.length !== 1 || top().state !== "CODE") {
+    return Object.freeze({
+      ok: false,
+      reason: `unterminated_${top().state.toLowerCase()}`,
+    });
+  }
+  return Object.freeze({ ok: true, code: out });
 }
 
-// The set of names this module actually EXPORTS — not the set of identifiers it
-// happens to mention. `export { rotateAuthorshipKey as legacyRotate }` exports
+// The set of names this module actually EXPORTS — not the identifiers it
+// mentions. `export { rotateAuthorshipKey as legacyRotate }` exports
 // `legacyRotate`; the local name is not importable and must not satisfy the
-// gate. `export * from` is unresolvable without following the graph and is
-// therefore ignored (fails closed rather than guessing).
+// gate. `export * from` is unresolvable without following the module graph and
+// is ignored rather than guessed. Returns ok:false when the source cannot be
+// scanned, so callers fail closed instead of reading an empty set as "absent".
 export function collectExportedNames(source) {
-  const clean = stripCommentsAndLiterals(source);
+  const scan = scanSource(source);
+  if (!scan.ok) {
+    return Object.freeze({
+      ok: false,
+      reason: scan.reason,
+      names: Object.freeze(new Set()),
+    });
+  }
   const names = new Set();
   const declRe =
     /\bexport\s+(?:async\s+)?(?:function\s*\*?|class|const|let|var)\s+([A-Za-z_$][\w$]*)/g;
-  for (const match of clean.matchAll(declRe)) names.add(match[1]);
-  for (const block of clean.matchAll(/\bexport\s*\{([^}]*)\}/g)) {
+  for (const match of scan.code.matchAll(declRe)) names.add(match[1]);
+  for (const block of scan.code.matchAll(/\bexport\s*\{([^}]*)\}/g)) {
     for (const specifier of block[1].split(",")) {
       const parts = specifier.trim().split(/\s+as\s+/);
       const exported = parts[parts.length - 1].trim();
       if (/^[A-Za-z_$][\w$]*$/.test(exported)) names.add(exported);
     }
   }
-  return names;
+  return Object.freeze({ ok: true, names });
 }
 
 export function storeExportsSymbol(storeSource, symbol) {
-  return collectExportedNames(storeSource).has(symbol);
+  const collected = collectExportedNames(storeSource);
+  return collected.ok && collected.names.has(symbol);
 }
 
 export function parseImportedRotateSymbols(testSource) {
@@ -116,17 +258,30 @@ export function parseImportedRotateSymbols(testSource) {
   return [...imported];
 }
 
+export const ROTATE_IDENTIFIER = /AUTHORSHIP-KEY-ROTATE-\d+[A-Z]/;
+// Explicit truth markers ONLY. The live ledger uses [MEASURED] (78 rows;
+// **MEASURED** appears zero times but is accepted as the same explicit marker).
+// Bare prose containing the word MEASURED is not a claim — the real BLOCKED
+// rotation row says "Missing for MEASURED: an operator decision to re-land",
+// which describes an ABSENT measurement and must never activate the bind.
+export const MEASURED_MARKER = /\[MEASURED\]|\*\*MEASURED\*\*/;
+
+// A row is a positive rotation measurement claim when THE SAME row carries both
+// a rotate identifier and an explicit [MEASURED] marker. In this ledger one
+// Markdown table row is one line, so the conjunction is evaluated per line and
+// never across the document.
+//
+// The previous form cancelled the claim whenever the row contained the word
+// BLOCKED. That was a bypass, not a safeguard: a genuine [MEASURED] rotation row
+// legitimately describes blocked limitations or a blocked failure state in its
+// prose, and one such word silently disarmed the honesty bind. Status is now
+// read from the explicit marker alone; descriptive prose — including BLOCKED or
+// [BLOCKED] appearing elsewhere in the row — cannot cancel it.
 export function limitsClaimsMeasuredRotate(limitsSource) {
   if (!limitsSource) return false;
-  return limitsSource.split("\n").some((line) => {
-    if (!/AUTHORSHIP-KEY-ROTATE-\d+[A-Z]/.test(line)) return false;
-    if (/\bBLOCKED\b/.test(line)) return false;
-    return (
-      /\*\*MEASURED\*\*|\[MEASURED\]|MEASURED\s+Authorship key rotation/i.test(
-        line,
-      ) && /MEASURED/.test(line)
-    );
-  });
+  return limitsSource
+    .split("\n")
+    .some((row) => ROTATE_IDENTIFIER.test(row) && MEASURED_MARKER.test(row));
 }
 
 export function evaluateRotateExportBind({
@@ -136,6 +291,32 @@ export function evaluateRotateExportBind({
   testExists = false,
 } = {}) {
   const measuredClaim = limitsClaimsMeasuredRotate(limitsSource);
+
+  // Requirement: unscannable input fails the gate. An empty export set from a
+  // malformed module is indistinguishable from "exports genuinely absent", so
+  // refuse to answer rather than let ambiguity read as a vacuous PASS. This is
+  // checked before test_absent, because the non-applicable path must not become
+  // a way for unparseable source to slip through.
+  const exportScan = collectExportedNames(storeSource);
+  if (!exportScan.ok) {
+    return Object.freeze({
+      schema: "bizra.dema.authorship_key_rotate_export_bind_check.v0.1",
+      ok: false,
+      test_absent: !testExists,
+      measured_claim: measuredClaim,
+      missing_exports: Object.freeze([...REQUIRED_SYMBOLS]),
+      imported_symbols: Object.freeze([]),
+      reasons: Object.freeze([
+        `store_source_unscannable:${exportScan.reason}`,
+      ]),
+      boundary: Object.freeze({
+        runtime_execution: false,
+        mutation_performed: false,
+        network_used: false,
+      }),
+    });
+  }
+
   const missingForHonesty = measuredClaim
     ? REQUIRED_SYMBOLS.filter((s) => !storeExportsSymbol(storeSource, s))
     : [];
