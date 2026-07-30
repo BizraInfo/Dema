@@ -20,6 +20,25 @@ function writeCheckGateEvidence(record) {
 
 export const commands = [
   ["node", ["scripts/review/env-hygiene-check.mjs", "--strict"]],
+  // EXPORT-BIND-LINKER-2A gate placement is DEFERRED, deliberately.
+  //
+  // Adding an entry here changes commands.length and every absolute index after
+  // it, and tests/check-exit-integrity-adversarial.test.js on this base pins
+  // those as literals. Wiring the gate would turn that test red and could only be
+  // repaired by renumbering the pins — the exact brittleness PR #441 replaced
+  // with shape-based invariants, on the exact lines #441 edits.
+  //
+  // So this slice ships the gate plus its proof, and the one-line placement lands
+  // after #441 does, where adding a gate provably requires no number to change.
+  // Until then the gate is invoked from its own entrypoint under the experimental
+  // vm-modules flag, and its behaviour is covered by
+  // tests/rotate-export-link-check.test.js, which DOES run in the suite below.
+  //
+  // NOTE: this comment deliberately carries no command-shaped array literal.
+  // scripts/review/integration-check.mjs derives the smoke-command set by TEXT
+  // PARSING this file, so an illustrative literal in a comment is read as a real
+  // declaration and then demanded in docs/TESTING.md. A text parser mistaking a
+  // comment for code is precisely the defect class the new gate exists to remove.
   ["node", ["scripts/review/identity-pair-coherence-check.mjs"]],
   ["node", ["scripts/review/identity-recovery-refuse-report-check.mjs"]],
   ["node", ["scripts/review/cli-consent-matrix-check.mjs"]],
@@ -155,6 +174,14 @@ export const commands = [
       "--temp-log",
       "--",
       "node",
+      // NOTE: --experimental-vm-modules is deliberately NOT added here.
+      // tests/check-exit-integrity-adversarial.test.js pins this post-`--`
+      // command as the exact string "node --test --test-reporter=tap", so any
+      // added flag makes findIsolatedTapCommand() miss and turns that test red.
+      // The linker tests therefore skip-with-reason under this entrypoint and
+      // run fully under `npm test`, which does carry the flag. Both this and the
+      // gate-list placement above land once PR #441 replaces those literal pins
+      // with shape-based invariants.
       "--test",
       "--test-reporter=tap",
     ],
