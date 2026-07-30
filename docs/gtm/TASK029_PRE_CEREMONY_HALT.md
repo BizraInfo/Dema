@@ -12,7 +12,7 @@ Truth: **no production signing posture claim** until founder ceremony completes.
 ## What this GTM cycle does NOT do
 
 - No real key generation
-- No revocation receipt on operator `~/.dema`
+- No revocation receipt on operator Dema home (`DEMA_HOME`)
 - No registry mutation
 - No cron change
 
