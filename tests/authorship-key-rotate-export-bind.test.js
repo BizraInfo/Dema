@@ -1,6 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { existsSync, readFileSync } from "node:fs";
 import {
+  classifySlash,
   collectExportedNames,
   evaluateRotateExportBind,
   limitsClaimsMeasuredRotate,
@@ -485,5 +487,185 @@ describe("limitsClaimsMeasuredRotate · BLOCKED prose cannot cancel a MEASURED c
       "KEY_ROTATE_SCHEMA",
       "rotateAuthorshipKey",
     ]);
+  });
+});
+
+// ROUND 3 — regex-literal lexical closure.
+//
+// Measured at parent 26f76ad: four of the five fixtures below were VALID
+// JavaScript that leaked an export from regex interior, because the scanner did
+// not model regex literals and the interior backtick/quote opened a template or
+// string frame. `/`x`export { rotateAuthorshipKey }/` reported the symbol as
+// exported. These are the attack, not a control.
+const SYMBOL = "rotateAuthorshipKey";
+const exported = (src) => {
+  const collected = collectExportedNames(src);
+  return collected.ok && collected.names.has(SYMBOL);
+};
+
+describe("scanSource · regex literals cannot leak interior text as code", () => {
+  it("1-2. fake named export and fake declaration inside a regex", () => {
+    assert.equal(exported("const p = /`x`export { rotateAuthorshipKey }/;"), false);
+    assert.equal(
+      exported("const p = /`x`export function rotateAuthorshipKey() {}/;"),
+      false,
+    );
+  });
+
+  it("3. fake exports containing single and double quotes", () => {
+    assert.equal(exported("const p = /'x'export { rotateAuthorshipKey }/;"), false);
+    assert.equal(exported('const p = /"x"export { rotateAuthorshipKey }/;'), false);
+  });
+
+  it("4-6. character classes, escaped slashes, and mixed delimiters", () => {
+    assert.equal(exported("const p = /[export { rotateAuthorshipKey }]/;"), false);
+    assert.equal(exported("const p = /x\\/y export { rotateAuthorshipKey }/;"), false);
+    assert.equal(exported("const p = /[/'\"`]export { rotateAuthorshipKey }/;"), false);
+  });
+
+  it("7-8. a regex containing // or /* does not become a comment", () => {
+    assert.equal(
+      exported("const p = /a\\/\\/b export { rotateAuthorshipKey }/;"),
+      false,
+    );
+    assert.equal(
+      exported("const p = /a\\/\\*b export { rotateAuthorshipKey }/;"),
+      false,
+    );
+  });
+
+  it("9. backticks and ${ } stay regex content", () => {
+    assert.equal(
+      exported("const p = /[$]{1}[`]export { rotateAuthorshipKey }/;"),
+      false,
+    );
+  });
+
+  it("a regex containing a backtick inside interpolation keeps frames aligned", () => {
+    // This desynchronised the round-2 scanner: the regex backtick opened a
+    // TEMPLATE frame from inside TEMPLATE_EXPRESSION.
+    assert.equal(
+      exported('const t = `${x.replace(/[`]/g, "")}`; export const other = 1;'),
+      false,
+    );
+  });
+
+  it("10-13. genuine exports still resolve, alias direction still respected", () => {
+    assert.equal(exported("export function rotateAuthorshipKey() {}"), true);
+    assert.equal(
+      exported("function rotateAuthorshipKey(){}\nexport { rotateAuthorshipKey };"),
+      true,
+    );
+    assert.equal(
+      exported(
+        "function rotateAuthorshipKey(){}\nexport { rotateAuthorshipKey as legacyRotate };",
+      ),
+      false,
+    );
+    assert.equal(
+      exported(
+        "function legacyRotate(){}\nexport { legacyRotate as rotateAuthorshipKey };",
+      ),
+      true,
+    );
+  });
+
+  it("a genuine export after a regex line is still detected (frame pops)", () => {
+    assert.equal(
+      exported("const p = /a`b`/; export function rotateAuthorshipKey() {}"),
+      true,
+    );
+  });
+
+  it("14-17. division and division-assignment scan without becoming regex", () => {
+    for (const src of [
+      "const ratio = numerator / denominator;",
+      "const ratio = a / b / c;",
+      "let value = 8; value /= divisor;",
+      "const pattern = /abc/;",
+    ]) {
+      const scan = scanSource(src);
+      assert.equal(scan.ok, true, `must scan: ${src}`);
+      assert.equal(exported(src), false);
+    }
+  });
+
+  it("classifySlash separates operand from expression position", () => {
+    assert.equal(classifySlash({ kind: "identifier", text: "a" }), "division");
+    assert.equal(classifySlash({ kind: "number", text: "" }), "division");
+    assert.equal(classifySlash({ kind: "punctuator", text: "=" }), "regex");
+    assert.equal(classifySlash({ kind: "punctuator", text: "," }), "regex");
+    assert.equal(classifySlash({ kind: "regex_keyword", text: "return" }), "regex");
+    assert.equal(classifySlash({ kind: "punctuator", text: "++" }), "division");
+    assert.equal(classifySlash({ kind: "punctuator", text: "]" }), "division");
+    assert.equal(classifySlash(null), "regex");
+    // Genuinely context-dependent: refuse rather than guess.
+    assert.equal(classifySlash({ kind: "punctuator", text: ")" }), "ambiguous");
+    assert.equal(classifySlash({ kind: "punctuator", text: "}" }), "ambiguous");
+  });
+
+  it("18-19. regex after return works; after ) it refuses rather than guesses", () => {
+    const afterReturn =
+      "function f(v){ return /a`b`export { rotateAuthorshipKey }/.test(v); }";
+    assert.equal(scanSource(afterReturn).ok, true);
+    assert.equal(exported(afterReturn), false);
+
+    const afterParen =
+      "function f(v){ if (v) /a`b`export { rotateAuthorshipKey }/.test(v); }";
+    const scan = scanSource(afterParen);
+    assert.equal(scan.ok, false);
+    assert.equal(scan.reason, "ambiguous_slash_context");
+    assert.equal(exported(afterParen), false);
+  });
+
+  it("20-22. malformed regex input fails the gate closed", () => {
+    const cases = {
+      unterminated_regex_literal: "const p = /abc;",
+      unterminated_regex_character_class: "const p = /a[bc;",
+      unterminated_regex: "const p = /abc\ndef/;",
+    };
+    for (const [reason, src] of Object.entries(cases)) {
+      const scan = scanSource(src);
+      assert.equal(scan.ok, false, `${reason}: must refuse`);
+      assert.equal(scan.reason, reason);
+      const report = evaluateRotateExportBind({
+        storeSource: src,
+        testExists: false,
+      });
+      assert.equal(report.ok, false, `${reason}: gate must FAIL CLOSED`);
+      assert.ok(
+        report.reasons.some((r) => r.startsWith("store_source_unscannable")),
+      );
+    }
+  });
+
+  it("23. a store of only regex decoys cannot satisfy a MEASURED rotation row", () => {
+    const decoys = [
+      "const a = /`x`export { rotateAuthorshipKey }/;",
+      "const b = /`x`export { KEY_ROTATE_SCHEMA }/;",
+      "const c = /`x`export { KEY_ROTATE_CONSENT_PHRASE }/;",
+    ].join("\n");
+    const report = evaluateRotateExportBind({
+      storeSource: decoys,
+      limitsSource: "| [MEASURED] rotation (AUTHORSHIP-KEY-ROTATE-1B) | ev |",
+      testExists: false,
+    });
+    assert.equal(report.ok, false);
+    assert.deepEqual(report.missing_exports, [
+      "KEY_ROTATE_CONSENT_PHRASE",
+      "KEY_ROTATE_SCHEMA",
+      "rotateAuthorshipKey",
+    ]);
+  });
+
+  it("24. the real authorship-key-store.js scans statically, without execution", () => {
+    const path = new URL(
+      "../packages/receipts/src/authorship-key-store.js",
+      import.meta.url,
+    );
+    if (!existsSync(path)) return; // absent on branches that do not carry it
+    const collected = collectExportedNames(readFileSync(path, "utf8"));
+    assert.equal(collected.ok, true, "real store must scan");
+    assert.ok(collected.names.size > 0, "real store must expose exports");
   });
 });

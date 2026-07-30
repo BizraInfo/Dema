@@ -30,7 +30,70 @@ export const SCAN_STATES = Object.freeze([
   "DOUBLE_QUOTE",
   "TEMPLATE",
   "TEMPLATE_EXPRESSION",
+  "REGEX_LITERAL",
+  "REGEX_CHARACTER_CLASS",
 ]);
+
+// Keywords after which a `/` begins a regular expression rather than division.
+const REGEX_PRECEDING_KEYWORDS = new Set([
+  "return",
+  "throw",
+  "case",
+  "yield",
+  "await",
+  "typeof",
+  "instanceof",
+  "in",
+  "of",
+  "new",
+  "delete",
+  "void",
+  "do",
+  "else",
+]);
+
+// Keywords that are VALUES, so a following `/` is division.
+const VALUE_KEYWORDS = new Set(["this", "super", "true", "false", "null"]);
+
+// Punctuator characters tokenised as a run. `/`, quotes and backticks are
+// excluded because each needs its own classification.
+const PUNCTUATOR_CHARS = new Set([
+  ..."+-*%=<>!&|^~?:;,.()[]{}",
+]);
+
+const isIdentifierStart = (ch) => /[A-Za-z_$]/.test(ch);
+const isIdentifierPart = (ch) => /[\w$]/.test(ch);
+
+// Decide whether a `/` opens a regex literal, is a division operator, or is
+// grammatically ambiguous. Ambiguity is NEVER resolved by assumption: `)` and
+// `}` genuinely depend on parse context this token-level scanner does not have
+// (`if (x) /re/.test(y)` vs `f(x) / y`; a block close vs an object-literal
+// close), so those refuse instead of guessing.
+export function classifySlash(lastToken) {
+  if (!lastToken) return "regex"; // start of source: expression position
+  switch (lastToken.kind) {
+    case "identifier":
+    case "number":
+    case "value_keyword":
+    case "string":
+    case "template":
+    case "regex":
+      return "division";
+    case "regex_keyword":
+      return "regex";
+    case "punctuator": {
+      const text = lastToken.text;
+      // Postfix ++/-- yield a value, so the following slash is division.
+      if (text.endsWith("++") || text.endsWith("--")) return "division";
+      const last = text[text.length - 1];
+      if (last === ")" || last === "}") return "ambiguous";
+      if (last === "]") return "division";
+      return "regex";
+    }
+    default:
+      return "ambiguous";
+  }
+}
 
 // Lexical scanner reducing a module to CODE-only text, with every non-code
 // region blanked and newlines preserved.
@@ -47,16 +110,28 @@ export const SCAN_STATES = Object.freeze([
 // BOUNDED CONTRACT — read this before trusting it:
 // Tracked: line comments, block comments, single- and double-quoted strings,
 // template literals, `${...}` interpolation with nested frames and brace depth,
-// and backslash escapes.
-// NOT tracked: regular-expression literals. Distinguishing `/` as division from
-// `/` as a regex start needs previous-token context this scanner does not keep.
-// A regex literal containing an unpaired quote or backtick (e.g. /['"`]/) can
-// therefore desynchronise it. That is a REAL limitation, not a safe one: it
-// usually ends the scan unbalanced and fails closed, but a crafted input could
-// resynchronise and mis-classify a region. Do not describe this as "cannot
-// under-blank". The trust basis is that the scanned file is repo-controlled
-// source under review, not attacker-supplied input; an unscannable or
-// ambiguous result fails the gate rather than passing it.
+// regular-expression literals, regex character classes, regex flags, backslash
+// escapes, and enough previous-token context to tell a regex from a division.
+//
+// Regex literals ARE now tracked. They previously were not, and that was a
+// reproduced false-PASS: `/`x`export { rotateAuthorshipKey }/` is valid
+// JavaScript in which the backticks opened and closed a template frame, so the
+// regex interior was emitted as code and manufactured an export the module never
+// had. The same held for interior single and double quotes.
+//
+// Slash classification is token-based, not character-based, and refuses rather
+// than guesses. After `)` or `}` the grammar genuinely depends on parse context
+// this scanner does not reconstruct, so such a slash returns
+// `ambiguous_slash_context` and the scan fails. That is a deliberate
+// over-refusal: it can reject source a real parser would accept, and it can
+// never let regex contents reach the export collector.
+//
+// Still NOT modelled: JSX, TypeScript type syntax, HTML-comment legacy syntax,
+// and `<!--`/`-->` line comments. Any of those may cause a refusal. The
+// direction of every remaining gap is refusal or over-blanking, both of which
+// fail the gate closed; none of them can raise the gate's confidence.
+// The trust basis is that the scanned file is repo-controlled source under
+// review, not that this is a JavaScript parser.
 export function scanSource(source) {
   const stack = [{ state: "CODE", braceDepth: 0 }];
   const top = () => stack[stack.length - 1];
@@ -66,6 +141,8 @@ export function scanSource(source) {
   const blank = (ch) => {
     out += ch === "\n" ? "\n" : " ";
   };
+  // Last significant token, used only to classify a following `/`.
+  let lastToken = null;
 
   while (i < n) {
     const state = top().state;
@@ -74,6 +151,11 @@ export function scanSource(source) {
 
     if (state === "CODE" || state === "TEMPLATE_EXPRESSION") {
       const inExpression = state === "TEMPLATE_EXPRESSION";
+      const put = (ch) => {
+        if (inExpression) blank(ch);
+        else out += ch;
+      };
+      // Comments are recognised before any regex decision, per the grammar.
       if (c === "/" && d === "/") {
         stack.push({ state: "LINE_COMMENT", braceDepth: 0 });
         blank(" ");
@@ -86,6 +168,26 @@ export function scanSource(source) {
         blank(" ");
         blank(" ");
         i += 2;
+        continue;
+      }
+      if (c === "/") {
+        const kind = classifySlash(lastToken);
+        if (kind === "ambiguous") {
+          return Object.freeze({
+            ok: false,
+            reason: "ambiguous_slash_context",
+          });
+        }
+        if (kind === "regex") {
+          stack.push({ state: "REGEX_LITERAL", braceDepth: 0 });
+          blank(" ");
+          i += 1;
+          continue;
+        }
+        // division / division-assignment: an operator, never a literal
+        lastToken = { kind: "punctuator", text: d === "=" ? "/=" : "/" };
+        put(c);
+        i += 1;
         continue;
       }
       if (c === "'" || c === '"') {
@@ -103,23 +205,60 @@ export function scanSource(source) {
         i += 1;
         continue;
       }
-      if (inExpression) {
-        if (c === "{") {
-          top().braceDepth += 1;
-        } else if (c === "}") {
-          if (top().braceDepth === 0) {
-            stack.pop();
-            blank(" ");
-            i += 1;
-            continue;
-          }
-          top().braceDepth -= 1;
+      if (isIdentifierStart(c)) {
+        let word = "";
+        while (i < n && isIdentifierPart(source[i])) {
+          word += source[i];
+          put(source[i]);
+          i += 1;
         }
-        blank(c);
-        i += 1;
+        lastToken = {
+          kind: REGEX_PRECEDING_KEYWORDS.has(word)
+            ? "regex_keyword"
+            : VALUE_KEYWORDS.has(word)
+              ? "value_keyword"
+              : "identifier",
+          text: word,
+        };
         continue;
       }
-      out += c;
+      if (c >= "0" && c <= "9") {
+        while (i < n && /[\w.]/.test(source[i])) {
+          put(source[i]);
+          i += 1;
+        }
+        lastToken = { kind: "number", text: "" };
+        continue;
+      }
+      if (PUNCTUATOR_CHARS.has(c)) {
+        let text = "";
+        while (i < n && PUNCTUATOR_CHARS.has(source[i])) {
+          const ch = source[i];
+          if (inExpression) {
+            if (ch === "{") {
+              top().braceDepth += 1;
+            } else if (ch === "}") {
+              if (top().braceDepth === 0) break;
+              top().braceDepth -= 1;
+            }
+          }
+          text += ch;
+          put(ch);
+          i += 1;
+        }
+        if (text.length === 0) {
+          // `}` closing this interpolation frame.
+          stack.pop();
+          blank(" ");
+          i += 1;
+          continue;
+        }
+        lastToken = { kind: "punctuator", text };
+        continue;
+      }
+      // Whitespace and anything not tokenised above: carried through without
+      // disturbing lastToken, so `a\n/re/` still sees `a` as the last token.
+      put(c);
       i += 1;
       continue;
     }
@@ -167,8 +306,56 @@ export function scanSource(source) {
       }
       if (c === quote) {
         stack.pop();
+        lastToken = { kind: "string", text: "" };
         blank(" ");
         i += 1;
+        continue;
+      }
+      blank(c);
+      i += 1;
+      continue;
+    }
+
+    if (state === "REGEX_LITERAL" || state === "REGEX_CHARACTER_CLASS") {
+      const inClass = state === "REGEX_CHARACTER_CLASS";
+      if (c === "\\") {
+        blank(" ");
+        if (i + 1 < n) blank(source[i + 1]);
+        i += 2;
+        continue;
+      }
+      // A regex literal may not span a line terminator.
+      if (c === "\n") {
+        return Object.freeze({
+          ok: false,
+          reason: inClass
+            ? "unterminated_regex_character_class"
+            : "unterminated_regex",
+        });
+      }
+      if (inClass) {
+        if (c === "]") stack.pop();
+        blank(c);
+        i += 1;
+        continue;
+      }
+      // `[` opens a character class in which `/` does NOT close the regex.
+      if (c === "[") {
+        stack.push({ state: "REGEX_CHARACTER_CLASS", braceDepth: 0 });
+        blank(" ");
+        i += 1;
+        continue;
+      }
+      if (c === "/") {
+        stack.pop();
+        blank(" ");
+        i += 1;
+        // Consume trailing flags so they are not tokenised as an identifier.
+        while (i < n && /[a-z]/.test(source[i])) {
+          blank(" ");
+          i += 1;
+        }
+        lastToken = { kind: "regex", text: "" };
         continue;
       }
       blank(c);
@@ -192,6 +379,7 @@ export function scanSource(source) {
     }
     if (c === "`") {
       stack.pop();
+      lastToken = { kind: "template", text: "" };
       blank(" ");
       i += 1;
       continue;
