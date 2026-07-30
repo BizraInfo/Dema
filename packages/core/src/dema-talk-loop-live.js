@@ -26,8 +26,68 @@ import { LLM_ADAPTER_MAX_PROMPT_LENGTH } from "./llm-adapter.js";
 export const DEMA_TALK_LOOP_LIVE_RESULT_SCHEMA =
   "bizra.dema.talk_loop_live_result.v0.1";
 
+// A returned answer must stay comfortably inside canonical JSON's per-string
+// cap (65536 bytes) so a receipt built from it can never fail canonicalization
+// after the fact. 32 KiB keeps 50% headroom.
+export const DEMA_TALK_LOOP_RESPONSE_TEXT_MAX_BYTES = 32768;
+// The raw HTTP body is capped well above the answer cap (JSON envelope, usage
+// counters, provider metadata) but still far below anything that could exhaust
+// memory if a local server streams without end.
+export const DEMA_TALK_LOOP_RESPONSE_BODY_MAX_BYTES = 262144;
+
 const DEFAULT_TIMEOUT_MS = 60000;
 const RESPONSE_PREVIEW_CHARS = 500;
+
+const UTF8_ENCODER = new TextEncoder();
+const UTF8_DECODER = new TextDecoder("utf-8");
+
+function utf8ByteLength(value) {
+  return UTF8_ENCODER.encode(value).byteLength;
+}
+
+// Read the response body through its stream so the cap is enforced DURING
+// transfer. The moment the cap is passed the buffered chunks are dropped and
+// the source is cancelled, so an oversized or hostile localhost server can
+// never be fully buffered — let alone retained in a result or a receipt.
+async function readBoundedBody(response) {
+  const stream = response.body;
+  if (!stream || typeof stream.getReader !== "function") {
+    const whole = await response.text();
+    return utf8ByteLength(whole) > DEMA_TALK_LOOP_RESPONSE_BODY_MAX_BYTES
+      ? { tooLarge: true }
+      : { text: whole };
+  }
+  const reader = stream.getReader();
+  let chunks = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > DEMA_TALK_LOOP_RESPONSE_BODY_MAX_BYTES) {
+        chunks = [];
+        await reader.cancel("response_body_too_large");
+        return { tooLarge: true };
+      }
+      chunks.push(value);
+    }
+  } catch (err) {
+    try {
+      await reader.cancel("response_stream_error");
+    } catch {
+      /* the stream is already torn down; the read error is what matters */
+    }
+    return { error: String(err).slice(0, 200) };
+  }
+  const merged = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { text: UTF8_DECODER.decode(merged) };
+}
 
 const WHAT_THIS_DOES_NOT_PROVE = Object.freeze([
   "That the model's answer is correct, or an authority — it is a SUGGESTION only, never an action you did not ask for.",
@@ -52,7 +112,12 @@ function buildResult({
   promptSafetyVerdict = null,
   responseSafetyVerdict = null,
   responseTextPreviewOverride = undefined,
+  includeResponseText = false,
   promptLengthChars = null,
+  providerReportedModel = null,
+  providerModelStatus = "unreported",
+  requestUrl = null,
+  observedResponseUrl = null,
 }) {
   // Per ADR-018 §C3: a runtime emission uses the sibling boundary vocabulary —
   // 6 keys MAY be true (network/model_loaded/model_invocation/prompt_executed/
@@ -79,6 +144,11 @@ function buildResult({
     responseTextPreview = null;
   }
 
+  const responseTextFull =
+    responseTextPreviewOverride !== undefined
+      ? responseTextPreviewOverride
+      : responseText;
+
   return Object.freeze({
     schema: DEMA_TALK_LOOP_LIVE_RESULT_SCHEMA,
     truth_label: truthLabel,
@@ -86,8 +156,16 @@ function buildResult({
     invocation_status: status,
     provider,
     model,
+    // `model` stays the legacy requested-model field; these three record WHICH
+    // model actually answered, so a provider silently serving a different model
+    // is visible instead of being laundered into the receipt.
+    requested_model: model,
+    provider_reported_model: providerReportedModel,
+    provider_model_status: providerModelStatus,
     target_endpoint: endpoint,
     endpoint_family: endpointFamily,
+    request_url: requestUrl,
+    observed_response_url: observedResponseUrl,
     required_consent: requiredConsent,
     consent_phrase_verified: consentVerified === true,
     error_reason: errorReason,
@@ -101,6 +179,10 @@ function buildResult({
     verdict_role: "suggestion",
     prompt_safety_verdict: promptSafetyVerdict,
     response_safety_verdict: responseSafetyVerdict,
+    ...(includeResponseText === true &&
+    typeof responseTextFull === "string"
+      ? { response_text: responseTextFull }
+      : {}),
     boundary,
     what_this_does_not_prove: WHAT_THIS_DOES_NOT_PROVE,
   });
@@ -113,6 +195,7 @@ export async function invokeDemaTalkLive({
   consentPhrase = "",
   timeoutMs = DEFAULT_TIMEOUT_MS,
   fetchImpl = undefined,
+  includeResponseText = false,
 } = {}) {
   const modelSafe = typeof model === "string" ? model : "";
   const promptSafe = typeof prompt === "string" ? prompt : "";
@@ -235,49 +318,81 @@ export async function invokeDemaTalkLive({
     });
     clearTimeout(timeoutHandle);
 
-    if (!response.ok) {
-      return buildResult({
+    const wire = {
+      requestUrl: url,
+      observedResponseUrl:
+        typeof response.url === "string" && response.url ? response.url : null,
+    };
+    const failWire = (errorReason, extra = {}) =>
+      buildResult({
         ...base,
+        ...wire,
+        ...extra,
         status: "failed",
         truthLabel: "INVOCATION_FAILED",
         consentVerified: true,
         fetchAttempted: true,
         promptSafetyVerdict: promptVerdict,
         durationMs: Date.now() - startedAt,
-        errorReason: `http_status_${response.status} · ${response.statusText || "unknown"}`,
+        errorReason,
       });
+
+    if (!response.ok) {
+      return failWire(
+        `http_status_${response.status} · ${response.statusText || "unknown"}`,
+      );
+    }
+
+    const bounded = await readBoundedBody(response);
+    if (bounded.tooLarge) {
+      return failWire(
+        `response_body_too_large · > ${DEMA_TALK_LOOP_RESPONSE_BODY_MAX_BYTES} bytes · stream cancelled, body discarded`,
+      );
+    }
+    if (bounded.error) {
+      return failWire(`response_stream_error · ${bounded.error}`);
     }
 
     let body;
     try {
-      body = await response.json();
+      body = JSON.parse(bounded.text);
     } catch (parseErr) {
-      return buildResult({
-        ...base,
-        status: "failed",
-        truthLabel: "INVOCATION_FAILED",
-        consentVerified: true,
-        fetchAttempted: true,
-        promptSafetyVerdict: promptVerdict,
-        durationMs: Date.now() - startedAt,
-        errorReason: `response_not_json · ${String(parseErr).slice(0, 200)}`,
-      });
+      return failWire(`response_not_json · ${String(parseErr).slice(0, 200)}`);
+    }
+
+    // Which model actually answered? A provider that serves a different model
+    // than the consented one breaks the exact provider+model consent, so the
+    // answer is withheld rather than attributed to the requested model.
+    const reported = typeof body?.model === "string" ? body.model.trim() : "";
+    const providerReportedModel = reported || null;
+    const providerModelStatus =
+      providerReportedModel === null
+        ? "unreported"
+        : providerReportedModel === modelSafe
+          ? "reported_match"
+          : "reported_mismatch";
+    const identity = { providerReportedModel, providerModelStatus };
+    if (providerModelStatus === "reported_mismatch") {
+      return failWire(
+        `provider_model_mismatch · consented '${modelSafe}' · provider reported '${providerReportedModel}' · answer withheld`,
+        identity,
+      );
     }
 
     const responseText = isOpenAi
       ? body?.choices?.[0]?.message?.content
       : body?.response;
     if (typeof responseText !== "string") {
-      return buildResult({
-        ...base,
-        status: "failed",
-        truthLabel: "INVOCATION_FAILED",
-        consentVerified: true,
-        fetchAttempted: true,
-        promptSafetyVerdict: promptVerdict,
-        durationMs: Date.now() - startedAt,
-        errorReason: "malformed_response_payload · 200 OK but no string content",
-      });
+      return failWire(
+        "malformed_response_payload · 200 OK but no string content",
+        identity,
+      );
+    }
+    if (utf8ByteLength(responseText) > DEMA_TALK_LOOP_RESPONSE_TEXT_MAX_BYTES) {
+      return failWire(
+        `response_text_too_large · > ${DEMA_TALK_LOOP_RESPONSE_TEXT_MAX_BYTES} bytes · answer withheld`,
+        identity,
+      );
     }
 
     // Outbound Layer-1 scan, same loosening as inbound: a local PATH the model
@@ -296,6 +411,8 @@ export async function invokeDemaTalkLive({
         : undefined;
     return buildResult({
       ...base,
+      ...wire,
+      ...identity,
       status: "completed",
       truthLabel: "MEASURED",
       consentVerified: true,
@@ -306,6 +423,7 @@ export async function invokeDemaTalkLive({
       promptSafetyVerdict: promptVerdict,
       responseSafetyVerdict: responseVerdict,
       responseTextPreviewOverride: override,
+      includeResponseText,
     });
   } catch (err) {
     clearTimeout(timeoutHandle);
@@ -319,6 +437,7 @@ export async function invokeDemaTalkLive({
           : `network_error · ${String(err).slice(0, 200)}`;
     return buildResult({
       ...base,
+      requestUrl: url,
       status: "failed",
       truthLabel: "INVOCATION_FAILED",
       consentVerified: true,

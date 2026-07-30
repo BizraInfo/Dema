@@ -17,13 +17,18 @@ const MODEL = "whiterabbitneo-v3:7b-q4_K_M";
 
 // Mock fetch returns both Ollama and OpenAI shapes so the test is robust to the
 // endpoint family the router selects. NEVER a real network call.
-const mockFetch = async () => ({
-  ok: true,
-  json: async () => ({
-    response: "Propose: run npm test then open a feat/ PR.",
-    choices: [{ message: { content: "Propose: run npm test then open a feat/ PR." } }],
-  }),
-});
+const mockFetch = async () =>
+  new Response(
+    JSON.stringify({
+      model: MODEL,
+      response: "Propose: run npm test then open a feat/ PR.",
+      choices: [{ message: { content: "Propose: run npm test then open a feat/ PR." } }],
+    }),
+    {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    },
+  );
 
 async function liveCompleted() {
   const prompt = buildLiveBlackboardProposePrompt(SEED);

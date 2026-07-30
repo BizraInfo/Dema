@@ -5,7 +5,8 @@
   "description": "Dema — sovereign AI node companion",
   "type": "module",
   "bin": {
-    "dema": "bin/dema"
+    "dema": "bin/dema",
+    "bizra": "bin/bizra"
   },
   "scripts": {
     "dev": "node apps/cli/src/index.js status",

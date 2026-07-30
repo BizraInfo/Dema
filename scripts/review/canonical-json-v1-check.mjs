@@ -56,6 +56,12 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // DEMA-REVERSIBLE-FILE-STEWARD-1A / 1B — registered by the steward slice.
   "packages/core/src/dema-reversible-file-steward.js",
   "packages/core/src/dema-reversible-file-steward-execution.js",
+  // NODE0-FIRST-LIGHT-0A — content-addressed local index, consent scope,
+  // receipt, and Proof Card persistence.
+  "packages/core/src/node0-first-light.js",
+  "apps/cli/src/commands/first-light-storage.js",
+  "apps/cli/src/commands/first-light-resume.js",
+  "apps/cli/src/commands/first-light-context.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
