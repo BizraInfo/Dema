@@ -84,8 +84,8 @@ test("the canonical spelling is present in the glossary, so the guard has a refe
 // ARABIC-LIGATURE-GUARD — the lam-alef (لإ) ligature must never decompose backwards.
 //
 // Measured 2026-07-31: the canon tagline reached docs/gtm/ — and an open PR —
-// as `اإلنسانية` (U+0627 U+0625 U+0644 …) where canon is `الإنسانية`
-// (U+0627 U+0644 U+0625 …). The lam and the hamza-carrying alef are
+// with the tagline's second word opening U+0627 U+0625 U+0644 … where canon
+// opens U+0627 U+0644 U+0625 …. The lam and the hamza-carrying alef are
 // transposed: the signature of a lam-alef presentation form (ﻹ) converted
 // back to base characters in the wrong order, which is what PDF text
 // extraction does — and the root canon lives in docs/root-canon/source/*.pdf.
@@ -131,6 +131,9 @@ test("no tracked file carries a backwards lam-alef ligature", async () => {
   assert.deepEqual(
     offenders,
     [],
-    `backwards lam-alef ligature — an alef immediately followed by a hamza-alef — at:\n  ${offenders.join("\n  ")}\nRestore the lam before the hamza-alef (الإنسانية, not اإلنسانية).`,
+    // The broken sequence is named by code point, never rendered. Writing it
+    // literally here is what made this guard fail on its own assertion message
+    // — the file is tracked, so the scan reads this line too.
+    `backwards lam-alef ligature — an alef immediately followed by a hamza-alef (U+0627 then U+0625/U+0623/U+0622) — at:\n  ${offenders.join("\n  ")}\nRestore the lam before the hamza-alef: the word must open U+0627 U+0644 U+0625, as in الإنسانية.`,
   );
 });

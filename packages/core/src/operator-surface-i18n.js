@@ -60,6 +60,23 @@ const EN = Object.freeze({
     fix_blocked:
       "activation gate is BLOCKED: no Node0 runtime is reporting a gate. Only a governed runtime can move it — bridge one with DEMA_NODE0_ADAPTER=gateway-http plus DEMA_GATEWAY_URL, or DEMA_NODE0_STATUS_COMMAND (see docs/QUICKSTART.md). For preview-only use, BLOCKED is the correct resting state.",
     explain_hint: "Type `dema explain doctor` for what each predicate means.",
+    // DOCTOR-PREVIEW-RESTING-STATE notes. These accompany the `expected` (⏸)
+    // rows, which are false-but-correct on an unbridged install. They shipped
+    // hardcoded in English while the labels beside them were already localized,
+    // so an Arabic operator read Arabic labels with English explanations.
+    note_preview_gate:
+      "expected with no runtime bridged — bridge one with DEMA_NODE0_ADAPTER=gateway-http plus DEMA_GATEWAY_URL, or DEMA_NODE0_STATUS_COMMAND, to move it",
+    note_ready_unbridged: "reported by the Node0 runtime — none is bridged",
+    note_console_no_gateway: "no gateway configured",
+    preview_footer_nothing_broken:
+      "Nothing is broken. This is the expected state before a runtime is bridged.",
+    preview_footer_exit_code:
+      "`dema doctor` still exits non-zero because this node is not operational.",
+    preview_footer_preview_flag:
+      "To validate the preview environment itself: `dema doctor --preview` (exits 0).",
+    fix_label: "Fix",
+    note_label: "Note",
+    summary_awaiting: "awaiting a bridged runtime",
   }),
   stage_titles: Object.freeze({
     language: "What language should I speak with you?",
@@ -122,6 +139,20 @@ const AR = Object.freeze({
     fix_blocked:
       "بوابة التفعيل محظورة (BLOCKED): لا يوجد وقت تشغيل Node0 يبلّغ عن بوابة. فقط وقت تشغيل محكوم يمكنه تحريكها — اربط عبر DEMA_NODE0_ADAPTER=gateway-http مع DEMA_GATEWAY_URL، أو DEMA_NODE0_STATUS_COMMAND (انظر docs/QUICKSTART.md). للاستخدام بالمعاينة فقط، BLOCKED هي الحالة الصحيحة.",
     explain_hint: "اكتب `dema explain doctor` لمعرفة معنى كل شرط.",
+    note_preview_gate:
+      "متوقّعة ما دام لا يوجد وقت تشغيل مربوط — اربط واحداً عبر DEMA_NODE0_ADAPTER=gateway-http مع DEMA_GATEWAY_URL، أو DEMA_NODE0_STATUS_COMMAND، لتحريكها",
+    note_ready_unbridged:
+      "يبلّغ عنها وقت تشغيل Node0 — ولا يوجد وقت تشغيل مربوط",
+    note_console_no_gateway: "لا توجد بوابة مُعدّة",
+    preview_footer_nothing_broken:
+      "لا يوجد خلل. هذه هي الحالة المتوقّعة قبل ربط وقت التشغيل.",
+    preview_footer_exit_code:
+      "الأمر `dema doctor` يخرج بقيمة غير صفرية لأن هذه العقدة ليست في وضع التشغيل.",
+    preview_footer_preview_flag:
+      "للتحقق من بيئة المعاينة نفسها: `dema doctor --preview` (يخرج بصفر).",
+    fix_label: "إصلاح",
+    note_label: "ملاحظة",
+    summary_awaiting: "بانتظار ربط وقت التشغيل",
   }),
   stage_titles: Object.freeze({
     language: "بأي لغة تريدني أن أخاطبك؟",

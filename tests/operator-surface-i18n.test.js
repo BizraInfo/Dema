@@ -41,6 +41,44 @@ test("onboard stage titles localize under ar", () => {
   assert.notEqual(localized[0].title, stages[0].title);
 });
 
+test("localizeOnboardingStages is a no-op outside ar and for non-arrays", () => {
+  const stages = [{ id: "language", order: 0, title: "What language?" }];
+  assert.equal(localizeOnboardingStages(stages, "en"), stages);
+  assert.equal(localizeOnboardingStages(null, "ar"), null);
+  assert.equal(localizeOnboardingStages(undefined, "ar"), undefined);
+});
+
+test("localizeOnboardingStages leaves unknown stage ids untouched", () => {
+  const stage = { id: "not_a_stage", order: 9, title: "Untranslated" };
+  const [out] = localizeOnboardingStages([stage], "ar");
+  assert.equal(out, stage);
+  assert.equal(out.title, "Untranslated");
+});
+
+test("localizeOnboardingStages keeps the {ordinal} placeholder when both packs carry it", () => {
+  const [out] = localizeOnboardingStages(
+    [
+      {
+        id: "node_role",
+        order: 2,
+        title: "You are being prepared as Node{ordinal}. Do you understand what that means?",
+      },
+    ],
+    "ar",
+  );
+  assert.match(out.title, /\{ordinal\}/);
+  assert.match(out.title, /عقدة/);
+});
+
+test("localizeOnboardingStages substitutes a concrete ordinal from the English title", () => {
+  const [out] = localizeOnboardingStages(
+    [{ id: "node_role", order: 2, title: "You are being prepared as Node0." }],
+    "ar",
+  );
+  assert.doesNotMatch(out.title, /\{ordinal\}/);
+  assert.match(out.title, /Node0/);
+});
+
 test("doctor predicates use Arabic labels under ar", () => {
   const predicates = evaluatePredicates(
     {

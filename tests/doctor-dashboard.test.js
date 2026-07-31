@@ -6,6 +6,7 @@ import {
   doctorVerdict,
   doctorState,
 } from "../packages/core/src/doctor-dashboard.js";
+import { displayWidth } from "../packages/core/src/display-width.js";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -482,4 +483,39 @@ test("formatDoctorDashboard: unbridged still prints no ❌ and states nothing is
   assert.ok(!output.includes("❌"), "expected state must not render as failure");
   assert.match(output, /Nothing is broken/i);
   assert.match(output, /--preview/, "must name the flag that exits 0");
+});
+
+// REGRESSION — Arabic column alignment (transports the real defect).
+//
+// The pre-fix bug: formatDoctorDashboard padded with `.length`, which counts
+// Arabic non-spacing marks as if they occupied columns. A vocalised label was
+// therefore padded SHORT by exactly its mark count, shifting the value column
+// left and ragging the whole dashboard.
+//
+// This test deliberately uses a tashkeel-bearing label. A mark-free label
+// cannot fail here — it would test the control, not the attack. Every label
+// shipped today happens to be mark-free, which is why the defect was latent
+// and why the design handoff's vocalised vocabulary would have exposed it.
+test("Arabic labels with tashkeel align on rendered columns, not code units", () => {
+  const output = formatDoctorDashboard(
+    [
+      // .length 11 / renders 7 — the 4-mark case measured from the handoff.
+      { label: "المُقَرْنَص", value: "BLOCKED", status: "expected" },
+      // .length 8 / renders 8 — mark-free, so it sets the column on true width.
+      { label: "الجاهزية", value: "false", status: "expected" },
+    ],
+    { color: false, language_code: "ar" },
+  );
+
+  const valueColumn = (needle) => {
+    const line = output.split("\n").find((l) => l.includes(needle));
+    assert.ok(line, `expected a row containing ${needle}`);
+    return displayWidth(line.slice(0, line.indexOf(needle)));
+  };
+
+  assert.equal(
+    valueColumn("BLOCKED"),
+    valueColumn("false"),
+    "both values must start at the same rendered column",
+  );
 });

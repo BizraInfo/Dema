@@ -21,6 +21,7 @@ function colorize(text, code, color) {
 }
 
 import { resolveOperatorSurfaceI18n } from "./operator-surface-i18n.js";
+import { displayWidth, padToWidth } from "./display-width.js";
 
 // Returns an array of predicate objects from a status snapshot.
 // Each object: { key, label, value, status: 'ok'|'fail'|'warn', fix? }
@@ -59,8 +60,7 @@ export function evaluatePredicates(status, { language_code = null } = {}) {
 
   // Shared by the three readiness predicates below. Keeping one note means the
   // operator reads the bridge instructions once, not three times.
-  const previewNote =
-    "expected with no runtime bridged — bridge one with DEMA_NODE0_ADAPTER=gateway-http plus DEMA_GATEWAY_URL, or DEMA_NODE0_STATUS_COMMAND, to move it";
+  const previewNote = d.note_preview_gate;
 
   const predicates = [];
 
@@ -116,7 +116,7 @@ export function evaluatePredicates(status, { language_code = null } = {}) {
     ...(ready
       ? {}
       : unbridged
-        ? { note: "reported by the Node0 runtime — none is bridged" }
+        ? { note: d.note_ready_unbridged }
         : {
             // `ready` mirrors the adapter payload; setup does not set it either.
             fix: "`ready` is reported by the Node0 runtime, not set locally. Bridge a runtime (see the activation gate fix) and re-check with `dema status`.",
@@ -133,7 +133,7 @@ export function evaluatePredicates(status, { language_code = null } = {}) {
     ...(consoleReady
       ? {}
       : unbridged
-        ? { note: "no gateway configured" }
+        ? { note: d.note_console_no_gateway }
         : {
             fix: "gateway unreachable; if you intend to run governed runtime, confirm it's started (separate repo).",
           }),
@@ -214,6 +214,7 @@ export function formatDoctorDashboard(
   { color = true, language_code = null } = {},
 ) {
   const i18n = resolveOperatorSurfaceI18n(language_code);
+  const dLabels = i18n.strings.doctor;
   const dirMark = i18n.script_direction === "rtl" ? "\u200F" : "";
   const lines = [];
   lines.push(`${dirMark}Dema Doctor — Node0 readiness check`);
@@ -226,7 +227,9 @@ export function formatDoctorDashboard(
     (p) => p.status === "expected",
   ).length;
 
-  const maxLabel = Math.max(...predicates.map((p) => p.label.length));
+  // Rendered columns, not code units. Arabic tashkeel are zero-width, so
+  // .length over-counts every vocalised label and shifts the value column.
+  const maxLabel = Math.max(...predicates.map((p) => displayWidth(p.label)));
 
   for (const p of predicates) {
     let icon;
@@ -246,8 +249,7 @@ export function formatDoctorDashboard(
     }
 
     const iconStr = color ? `${iconColor}${icon}${ANSI_RESET}` : icon;
-    const padding = " ".repeat(maxLabel - p.label.length);
-    lines.push(`  ${iconStr} ${p.label}${padding}   ${p.value}`);
+    lines.push(`  ${iconStr} ${padToWidth(p.label, maxLabel)}   ${p.value}`);
 
     // A fix is an instruction to repair something broken; a note explains why
     // a false value is the right one. They never coexist on one predicate.
@@ -258,7 +260,7 @@ export function formatDoctorDashboard(
         ? colorize("  →", isFix ? ANSI_RED : ANSI_CYAN, true)
         : "  →";
       const detailLines = detail.split(";").map((s) => s.trim());
-      lines.push(`     ${arrow} ${isFix ? "Fix" : "Note"}: ${detailLines[0]}`);
+      lines.push(`     ${arrow} ${isFix ? dLabels.fix_label : dLabels.note_label}: ${detailLines[0]}`);
       for (let i = 1; i < detailLines.length; i++) {
         lines.push(`       ${detailLines[i]}`);
       }
@@ -288,7 +290,7 @@ export function formatDoctorDashboard(
   if (warnCount > 0)
     summaryParts.push(`${warnCount} warning${warnCount > 1 ? "s" : ""}`);
   if (expectedCount > 0)
-    summaryParts.push(`${expectedCount} awaiting a bridged runtime`);
+    summaryParts.push(`${expectedCount} ${dLabels.summary_awaiting}`);
   if (okCount > 0) summaryParts.push(`${okCount} OK`);
   lines.push(`  ${summaryParts.join(" · ")}`);
 
@@ -297,15 +299,9 @@ export function formatDoctorDashboard(
   // than let a calm screen imply a green machine answer.
   if (previewOnly) {
     lines.push("");
-    lines.push(
-      "  Nothing is broken. This is the expected state before a runtime is bridged.",
-    );
-    lines.push(
-      "  `dema doctor` still exits non-zero because this node is not operational.",
-    );
-    lines.push(
-      "  To validate the preview environment itself: `dema doctor --preview` (exits 0).",
-    );
+    lines.push(`  ${dLabels.preview_footer_nothing_broken}`);
+    lines.push(`  ${dLabels.preview_footer_exit_code}`);
+    lines.push(`  ${dLabels.preview_footer_preview_flag}`);
   }
 
   lines.push("");
