@@ -6,6 +6,16 @@ import {
   DEFAULT_SAMPLE_REGISTRY,
   buildRegistryFromConfig,
 } from "../../../../packages/models/src/model-registry-config-preview.js";
+
+/** Exact consent required to load an operator roster file (TASK-043). */
+export const MODEL_REGISTRY_LOAD_CONSENT =
+  "GO: load operator model registry";
+
+/**
+ * Documented operator roster location (under DEMA_HOME).
+ * Schema: { entries: [ { id, provider, model_name, role, size_class,
+ *   locality, allowed_tasks, max_concurrency, context_limit, status } ] }
+ */
 import {
   ROUTE_RECEIPT_SAVE_CONSENT,
   serializeRouteReceiptForSave,
@@ -269,6 +279,21 @@ export async function cmd_model_broker(ctx) {
       // honored; falls back to ~/.dema per repo convention).
       const home = process.env.DEMA_HOME || pathJoin(homedir(), ".dema");
       targetPath = pathJoin(home, "models", "registry.json");
+    }
+
+    const registryConsent = argValue(argv, "--registry-consent") ?? null;
+    if (registryConsent !== MODEL_REGISTRY_LOAD_CONSENT) {
+      process.stderr.write(
+        `dema model-broker route: loading an operator roster requires --registry-consent "${MODEL_REGISTRY_LOAD_CONSENT}"\n`,
+      );
+      process.stderr.write(
+        "  roster path (default): $DEMA_HOME/models/registry.json\n",
+      );
+      process.stderr.write(
+        "  schema: { entries: [{ id, provider, model_name, role, size_class, locality, allowed_tasks, max_concurrency, context_limit, status }] }\n",
+      );
+      process.exitCode = 1;
+      process.exit(process.exitCode ?? 0);
     }
 
     // Read-only load through a single file handle with bounded read.

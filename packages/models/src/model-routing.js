@@ -1,8 +1,9 @@
 export function allModelCandidates(providers) {
   return [
-    ...(providers.ollama.models ?? []),
-    ...(providers.lm_studio.models ?? []),
-    ...(providers.downloads.models ?? []),
+    ...(providers.ollama?.models ?? []),
+    ...(providers.lm_studio?.models ?? []),
+    ...(providers.llamacpp?.models ?? []),
+    ...(providers.downloads?.models ?? []),
   ];
 }
 

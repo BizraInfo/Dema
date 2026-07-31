@@ -105,9 +105,17 @@ test("model-broker route rejects invalid flag combinations before effects", asyn
 });
 
 test("model-broker route reports local registry file failures and route success", async () => {
+  const consent = ["--registry-consent", "GO: load operator model registry"];
   const home = await mkdtemp(join(tmpdir(), "dema-model-broker-inprocess-"));
   const missingRegistry = await runModelBroker(
-    ["model-broker", "route", "--task", "synthesis", "--use-local-registry"],
+    [
+      "model-broker",
+      "route",
+      "--task",
+      "synthesis",
+      "--use-local-registry",
+      ...consent,
+    ],
     { env: { DEMA_HOME: home } },
   );
   assert.equal(missingRegistry.exitCode, 1);
@@ -116,7 +124,14 @@ test("model-broker route reports local registry file failures and route success"
   await mkdir(join(home, "models"), { recursive: true });
   await writeFile(join(home, "models", "registry.json"), "{\"entries\":[]}\n");
   const success = await runModelBroker(
-    ["model-broker", "route", "--task", "synthesis", "--use-local-registry"],
+    [
+      "model-broker",
+      "route",
+      "--task",
+      "synthesis",
+      "--use-local-registry",
+      ...consent,
+    ],
     { env: { DEMA_HOME: home } },
   );
   assert.equal(success.exitCode, 0);

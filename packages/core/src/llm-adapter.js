@@ -29,8 +29,21 @@ import {
   buildRuntimeEmissionBoundary,
 } from "./preview-boundary.js";
 import { evaluateArtifactSafety } from "./artifact-safety-eval.js";
+// PERIMETER-BRIDGE-PARITY-1A: the single endpoint resolver, shared with
+// packages/models model-inventory so discover and invoke can never disagree
+// about where the local model lives.
+import { resolveLocalLlmBase } from "../../models/src/model-common.js";
 
-const DEFAULT_OLLAMA_BASE = "http://localhost:11434";
+// Literal loopback IP, never the hostname "localhost": the default must not
+// depend on a resolver. MEASURED 2026-07-28 — in a sandbox with no readable
+// /etc/hosts, resolving "localhost" throws EAI_AGAIN, so a live Ollama on
+// 127.0.0.1:11434 was unreachable and every invocation failed with
+// "network_error · fetch failed". That misreports a healthy local node as a
+// network fault, which is the worst failure mode for a local-first tool. On a
+// normal machine localhost resolves to this address anyway, so nothing changes
+// there. Callers needing ::1 or the hostname can still pass an explicit base;
+// isLocalhostBaseUrl() accepts localhost, 127.0.0.1 and ::1.
+const DEFAULT_OLLAMA_BASE = "http://127.0.0.1:11434";
 const DEFAULT_TIMEOUT_MS = 60000;
 const MAX_PROMPT_LENGTH = 100000; // 100K chars · adversarial-safe cap
 const MAX_MODEL_NAME_LENGTH = 200;
@@ -192,20 +205,24 @@ function scanOutboundResponse(text) {
 export function buildLLMInvocationPreview({
   model = "",
   prompt = "",
-  ollamaBaseUrl = DEFAULT_OLLAMA_BASE,
+  ollamaBaseUrl = undefined,
   timeoutMs = DEFAULT_TIMEOUT_MS,
 } = {}) {
   const modelSafe = typeof model === "string" ? model : "";
   const promptSafe = safeString(prompt, "");
-  const baseUrl =
-    typeof ollamaBaseUrl === "string" ? ollamaBaseUrl : DEFAULT_OLLAMA_BASE;
   const timeoutSafe =
     typeof timeoutMs === "number" && timeoutMs > 0 && timeoutMs <= 600000
       ? timeoutMs
       : DEFAULT_TIMEOUT_MS;
 
   const modelAllowed = isAllowedModelName(modelSafe);
-  const urlSafe = isLocalhostBaseUrl(baseUrl) ? baseUrl : DEFAULT_OLLAMA_BASE;
+  // Shared resolver: explicit --base > DEMA_OLLAMA_URL bridge > loopback
+  // default, with the localhost-only boundary enforced after resolution.
+  const urlSafe = resolveLocalLlmBase({
+    explicit: ollamaBaseUrl,
+    envValue: process.env.DEMA_OLLAMA_URL,
+    fallback: DEFAULT_OLLAMA_BASE,
+  });
 
   return Object.freeze({
     schema: "bizra.dema.llm_invocation_preview.v0.1",
@@ -360,15 +377,26 @@ export async function invokeLocalLLM({
   model = "",
   prompt = "",
   consentPhrase = "",
-  ollamaBaseUrl = DEFAULT_OLLAMA_BASE,
+  ollamaBaseUrl = undefined,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   fetchImpl = undefined, // optional · for testing
 } = {}) {
   const modelSafe = typeof model === "string" ? model : "";
   const promptSafe = typeof prompt === "string" ? prompt : "";
   const consentSafe = typeof consentPhrase === "string" ? consentPhrase : "";
+  // Parity with the preview path for AMBIENT sources (env bridge, default),
+  // but an EXPLICIT endpoint is never silently rewritten here: on the invoke
+  // path a caller-supplied non-loopback URL must reach Gate 1 and be REFUSED,
+  // not quietly replaced with the default. Silently falling back would mask a
+  // smuggling attempt as a normal local call. Preview may fall back because it
+  // performs no I/O; invoke may not, because it does.
   const baseUrl =
-    typeof ollamaBaseUrl === "string" ? ollamaBaseUrl : DEFAULT_OLLAMA_BASE;
+    typeof ollamaBaseUrl === "string" && ollamaBaseUrl.trim() !== ""
+      ? ollamaBaseUrl
+      : resolveLocalLlmBase({
+          envValue: process.env.DEMA_OLLAMA_URL,
+          fallback: DEFAULT_OLLAMA_BASE,
+        });
   const timeoutSafe =
     typeof timeoutMs === "number" && timeoutMs > 0 && timeoutMs <= 600000
       ? timeoutMs

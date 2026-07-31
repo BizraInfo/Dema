@@ -64,12 +64,48 @@ const OPERATOR_TEST_DEMA_FACE_ENTRY = {
   status: "active",
 };
 
+const REGISTRY_CONSENT = "GO: load operator model registry";
+const consentArgs = ["--registry-consent", REGISTRY_CONSENT];
+
+test("no roster flag keeps placeholders — no silent auto-admission", async () => {
+  const { stdout, exitCode } = await runCli([
+    "model-broker",
+    "route",
+    "--task",
+    "synthesis",
+  ]);
+  assert.equal(exitCode, 0);
+  const receipt = JSON.parse(stdout);
+  assert.equal(receipt.selected_model_id, null);
+  assert.match(receipt.reason ?? "", /no_acceptable_candidate|status_source_pending|rejected/i);
+});
+
+test("'--use-local-registry' without consent refuses load", async () => {
+  const home = await makeDemaHome({
+    withRegistry: { entries: [OPERATOR_TEST_DEMA_FACE_ENTRY] },
+  });
+  const { stdout, stderr, exitCode } = await runCli(
+    ["model-broker", "route", "--task", "synthesis", "--use-local-registry"],
+    { env: { DEMA_HOME: home } },
+  );
+  assert.notEqual(exitCode, 0);
+  assert.equal(stdout, "");
+  assert.match(stderr, /registry-consent/);
+});
+
 test("'--use-local-registry' with valid $DEMA_HOME/models/registry.json routes synthesis to operator entry", async () => {
   const home = await makeDemaHome({
     withRegistry: { entries: [OPERATOR_TEST_DEMA_FACE_ENTRY] },
   });
   const { stdout, exitCode } = await runCli(
-    ["model-broker", "route", "--task", "synthesis", "--use-local-registry"],
+    [
+      "model-broker",
+      "route",
+      "--task",
+      "synthesis",
+      "--use-local-registry",
+      ...consentArgs,
+    ],
     { env: { DEMA_HOME: home } },
   );
   assert.equal(exitCode, 0, "expected exit 0");
@@ -84,7 +120,14 @@ test("'--use-local-registry' when registry file is missing exits non-zero with h
   // Create DEMA_HOME but no models/registry.json
   const home = await makeDemaHome();
   const { stdout, stderr, exitCode } = await runCli(
-    ["model-broker", "route", "--task", "synthesis", "--use-local-registry"],
+    [
+      "model-broker",
+      "route",
+      "--task",
+      "synthesis",
+      "--use-local-registry",
+      ...consentArgs,
+    ],
     { env: { DEMA_HOME: home } },
   );
   assert.notEqual(exitCode, 0);
@@ -107,10 +150,27 @@ test("'--registry-file /abs/path' with valid operator entry routes synthesis cor
     "synthesis",
     "--registry-file",
     filePath,
+    ...consentArgs,
   ]);
   assert.equal(exitCode, 0);
   const receipt = JSON.parse(stdout);
   assert.equal(receipt.selected_model_id, "operator-test-dema-face");
+});
+
+test("discovered-but-undeclared model is never auto-selected without roster", async () => {
+  // Even with a populated DEMA_HOME, omitting --use-local-registry must not
+  // admit discovered models.
+  const home = await makeDemaHome({
+    withRegistry: { entries: [OPERATOR_TEST_DEMA_FACE_ENTRY] },
+  });
+  const { stdout, exitCode } = await runCli(
+    ["model-broker", "route", "--task", "synthesis"],
+    { env: { DEMA_HOME: home } },
+  );
+  assert.equal(exitCode, 0);
+  const receipt = JSON.parse(stdout);
+  assert.notEqual(receipt.selected_model_id, "operator-test-dema-face");
+  assert.equal(receipt.selected_model_id, null);
 });
 
 test("'--registry-file relative/path' exits non-zero with 'must be absolute' error", async () => {
@@ -121,6 +181,7 @@ test("'--registry-file relative/path' exits non-zero with 'must be absolute' err
     "synthesis",
     "--registry-file",
     "relative/path.json",
+    ...consentArgs,
   ]);
   assert.notEqual(exitCode, 0);
   assert.equal(stdout, "");
@@ -136,6 +197,7 @@ test("'--registry-file /nonexistent.json' exits non-zero with file-not-found err
     "synthesis",
     "--registry-file",
     "/tmp/this-file-does-not-exist-12345.json",
+    ...consentArgs,
   ]);
   assert.notEqual(exitCode, 0);
   assert.equal(stdout, "");
@@ -153,6 +215,7 @@ test("'--registry-file <malformed.json>' exits non-zero gracefully", async () =>
     "synthesis",
     "--registry-file",
     malformedPath,
+    ...consentArgs,
   ]);
   assert.notEqual(exitCode, 0);
   assert.equal(stdout, "");
@@ -178,6 +241,7 @@ test("'--registry-file <oversized.json>' over 1 MB exits non-zero with size-limi
     "synthesis",
     "--registry-file",
     oversizedPath,
+    ...consentArgs,
   ]);
   assert.notEqual(exitCode, 0);
   assert.equal(stdout, "");
@@ -254,7 +318,14 @@ test("file-loaded registry still emits receipt boundary with no model_invocation
     withRegistry: { entries: [OPERATOR_TEST_DEMA_FACE_ENTRY] },
   });
   const { stdout, exitCode } = await runCli(
-    ["model-broker", "route", "--task", "synthesis", "--use-local-registry"],
+    [
+      "model-broker",
+      "route",
+      "--task",
+      "synthesis",
+      "--use-local-registry",
+      ...consentArgs,
+    ],
     { env: { DEMA_HOME: home } },
   );
   assert.equal(exitCode, 0);
