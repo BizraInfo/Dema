@@ -176,14 +176,29 @@ test("doctor CLI lists specific failing predicates when gateway is not configure
     [cliPath, "doctor", "--no-color"],
     { env },
   ).catch((e) => e);
-  assert.equal(result.code, 1);
-  // Dashboard format: row-based predicates with ❌ icons and Verdict line.
-  // Default-status fingerprint: ready=false, consoleReady=false, activationGate=BLOCKED,
-  // daemonStatus=unknown (daemon predicate does NOT fail — unknown is ok).
-  assert.match(result.stdout, /Verdict: blocked/);
-  assert.match(result.stdout, /❌ Ready\s+false/);
-  assert.match(result.stdout, /❌ Console ready\s+false/);
-  assert.match(result.stdout, /❌ Activation gate\s+BLOCKED/);
+  // This scenario bridges no runtime at all, so the default-status fingerprint —
+  // ready=false, consoleReady=false, activationGate=BLOCKED, daemonStatus=unknown
+  // (daemon does NOT fail) — is the correct resting state, not an outage. The
+  // rows are still named individually and still carry their real values.
+  //
+  // The exit code is unchanged at 1 and deliberately so: it answers "is this
+  // node operational?", and an unbridged node is not. Only the RENDERING
+  // softened — ⏸ with a note instead of ❌ with a fix. `--preview` is the
+  // opt-in that asks the narrower "is the preview shell intact?" and exits 0.
+  // A bridged-but-failing runtime still prints ❌ and Verdict: blocked; see
+  // tests/doctor-dashboard.test.js for those regression guards.
+  assert.equal(result.code, 1, "unbridged doctor is not operational");
+  assert.match(result.stdout, /Verdict: preview-only — runtime not bridged/);
+  assert.match(result.stdout, /⏸ Ready\s+false/);
+  assert.match(result.stdout, /⏸ Console ready\s+false/);
+  assert.match(result.stdout, /⏸ Activation gate\s+BLOCKED/);
+  assert.doesNotMatch(
+    result.stdout,
+    /healthy/,
+    "an unbridged node has earned no health claim",
+  );
+  // The operator must still be told what would move these.
+  assert.match(result.stdout, /DEMA_NODE0_ADAPTER/);
 });
 
 test("mission propose CLI remains preview-only", async () => {

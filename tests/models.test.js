@@ -63,7 +63,12 @@ test("collectModelInventory inventories Ollama, LM Studio, downloads, and exposu
         models: [{ name: "qwen3-coder-next:q4_K_M", size: 51741611823 }],
       });
     }
-    if (String(url).endsWith("/v1/models")) {
+    // PERIMETER-BRIDGE-PARITY-1A added a third provider, llama.cpp, and it
+    // speaks the same OpenAI-compatible /v1/models as LM Studio. Match on the
+    // PORT, not the path suffix — a suffix-only match hands the LM Studio
+    // payload to the llama.cpp probe as well, which double-counts every
+    // flagged model name and silently inflates the safety report.
+    if (String(url).includes(":1234") && String(url).endsWith("/v1/models")) {
       return jsonResponse({
         data: [
           { id: "qwen3.6-35b-a3b-uncensored-hauhaucs-aggressive" },
@@ -71,6 +76,11 @@ test("collectModelInventory inventories Ollama, LM Studio, downloads, and exposu
           { id: "text-embedding-nomic-embed-text-v1.5" },
         ],
       });
+    }
+    // llama.cpp reachable but serving nothing — the third provider is probed
+    // and handled, and contributes no models to the counts below.
+    if (String(url).includes(":8080") && String(url).endsWith("/v1/models")) {
+      return jsonResponse({ data: [] });
     }
     throw new Error(`unexpected fetch: ${url}`);
   };
@@ -92,6 +102,7 @@ test("collectModelInventory inventories Ollama, LM Studio, downloads, and exposu
   assert.equal(inventory.providers.ollama.model_count, 4);
   assert.equal(inventory.providers.ollama.active_count, 1);
   assert.equal(inventory.providers.lm_studio.model_count, 3);
+  assert.equal(inventory.providers.llamacpp.model_count, 0);
   assert.equal(inventory.providers.downloads.model_count, 3);
   assert.equal(inventory.safety.exposures.length, 1);
   assert.equal(inventory.safety.exposures[0].provider, "lm_studio");
@@ -118,10 +129,14 @@ test("collectModelInventory inventories Ollama, LM Studio, downloads, and exposu
     "mmproj-Qwen3VL-f16.gguf",
   );
 
+  // The exact perimeter, enumerated. This is the assertion that would catch a
+  // provider quietly reaching somewhere new, so it lists every URL probed —
+  // including llama.cpp on :8080, added by PERIMETER-BRIDGE-PARITY-1A.
   assert.deepEqual(requested.sort(), [
     "http://127.0.0.1:11434/api/ps",
     "http://127.0.0.1:11434/api/tags",
     "http://127.0.0.1:1234/v1/models",
+    "http://127.0.0.1:8080/v1/models",
   ]);
 
   const formatted = formatModelInventory(inventory);
@@ -145,6 +160,12 @@ test("collectModelInventory redacts absolute local model paths by default", asyn
   const inventory = await collectModelInventory({
     ollamaUrl: "https://models.example.test",
     lmStudioUrl: "https://lm.example.test",
+    // The llama.cpp provider must be pointed off-box too. Left at its default it
+    // resolves to 127.0.0.1:8080 — a legitimate LOCAL probe that still trips the
+    // fetch flag, which reads as "an external endpoint was fetched" and hides what
+    // these tests actually guard. Every provider gets a non-local URL so the
+    // refusal is total and the assertion means what it says.
+    llamacppUrl: "https://llama.example.test",
     downloadsRoot,
     fetchImpl: async () => {
       throw new Error("should not fetch external endpoints");
@@ -180,6 +201,12 @@ test("collectModelInventory exposes absolute model paths only by explicit debug 
   const inventory = await collectModelInventory({
     ollamaUrl: "https://models.example.test",
     lmStudioUrl: "https://lm.example.test",
+    // The llama.cpp provider must be pointed off-box too. Left at its default it
+    // resolves to 127.0.0.1:8080 — a legitimate LOCAL probe that still trips the
+    // fetch flag, which reads as "an external endpoint was fetched" and hides what
+    // these tests actually guard. Every provider gets a non-local URL so the
+    // refusal is total and the assertion means what it says.
+    llamacppUrl: "https://llama.example.test",
     downloadsRoot,
     includeAbsolutePaths: true,
     fetchImpl: async () => {
@@ -263,6 +290,12 @@ test("collectModelInventory refuses non-local model server endpoints", async () 
   const inventory = await collectModelInventory({
     ollamaUrl: "https://models.example.test",
     lmStudioUrl: "https://lm.example.test",
+    // The llama.cpp provider must be pointed off-box too. Left at its default it
+    // resolves to 127.0.0.1:8080 — a legitimate LOCAL probe that still trips the
+    // fetch flag, which reads as "an external endpoint was fetched" and hides what
+    // these tests actually guard. Every provider gets a non-local URL so the
+    // refusal is total and the assertion means what it says.
+    llamacppUrl: "https://llama.example.test",
     downloadsRoot,
     fetchImpl: async () => {
       called = true;

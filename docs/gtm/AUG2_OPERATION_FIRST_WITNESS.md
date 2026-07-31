@@ -179,7 +179,7 @@ It's called BIZRA — البذرة, "the seed." One working node. Not a launch. 
 Don't believe the words. Clone it. Run `node bin/dema welcome`. Run `doctor`. Read
 `CURRENT_LIMITS.md`. Try to break it — and tell me what you find.
 
-.‫اإلنسانية ليست وقوداً. اإلنسانية هي البنية التحتية‬
+.‫الإنسانية ليست وقوداً. الإنسانية هي البنية التحتية‬
 Humanity is not the fuel. Humanity is the infrastructure.
 
 [repo link] · [CURRENT_LIMITS link] · [Third Fact link]
@@ -202,7 +202,7 @@ Humanity is not the fuel. Humanity is the infrastructure.
 ‫لا تصدق الكلام. افحص العقدة. شغّل الإثبات. راجع الحدود.‬
 
 .‫كل إنسان عقدة. وكل عقدة بذرة. وكل بذرة لها إمكانية لا نهائية‬
-.‫اإلنسانية ليست وقوداً. اإلنسانية هي البنية التحتية‬
+.‫الإنسانية ليست وقوداً. الإنسانية هي البنية التحتية‬
 
 ---
 
