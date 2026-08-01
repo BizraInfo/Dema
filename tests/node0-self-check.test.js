@@ -106,10 +106,22 @@ test("self-check reports avoid raw private data and public claims", async () => 
     ),
   ).then((parts) => parts.join("\n"));
 
+  // userInfo() THROWS where the process has no passwd entry (hardened container,
+  // read-only /etc). Building the array inline let that abort the whole privacy
+  // assertion, so the leak check silently never ran. Collect every candidate
+  // identifier instead; .filter(Boolean) drops whichever are unavailable.
+  // ponytail: duplicated in node0-local-urp-proof.test.js — extract if a third caller appears.
+  const usernames = [process.env.USER, process.env.LOGNAME];
+  try {
+    usernames.push(userInfo().username);
+  } catch {
+    /* no passwd entry — the env candidates above still gate the leak check */
+  }
+
   const forbiddenFragments = [
     homedir(),
     hostname(),
-    userInfo().username,
+    ...usernames,
     "/home/",
     "public_network_enabled",
     "node1_connected",
