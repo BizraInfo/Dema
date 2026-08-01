@@ -61,6 +61,7 @@ import { cmd_llm_router } from "./commands/llm-router.js";
 import { cmd_process_mining } from "./commands/process-mining.js";
 import { cmd_key_maker_check } from "./commands/key-maker-check.js";
 import { cmd_llm_invoke } from "./commands/llm-invoke.js";
+import { cmd_ask } from "./commands/ask.js";
 import { cmd_today } from "./commands/today.js";
 import { cmd_doctor } from "./commands/doctor.js";
 import { cmd_dashboard } from "./commands/dashboard.js";
@@ -767,6 +768,11 @@ const REGISTERED_COMMANDS_LIST = [
     description: "preview a local-model talk request: model route + exact consent phrase (no call)",
   },
   {
+    command: "ask",
+    description:
+      "sanitizer-gated corpus ask (H3/H4): ALLOWED-only index + truth-graph receipt under DEMA_HOME/ask",
+  },
+  {
     command: "canon",
     description: "local canon retrieval surfaces (subcommand: first-lesson)",
   },
@@ -1317,6 +1323,7 @@ const COMMAND_TABLE = {
   "process-mining": cmd_process_mining,
   "key-maker-check": cmd_key_maker_check,
   "llm-invoke": cmd_llm_invoke,
+  ask: cmd_ask,
   today: cmd_today,
   doctor: cmd_doctor,
   dashboard: cmd_dashboard,
