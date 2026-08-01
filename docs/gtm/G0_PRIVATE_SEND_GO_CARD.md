@@ -11,8 +11,13 @@ Status: **HALTED pending explicit operator GO**
 ## What you must type to authorize
 
 ```text
-GO: send private Evaluation Pack to named ICP-0 evaluators
+GO send pack to <name>
 ```
+
+One line per evaluator, `<name>` replaced with the real name. This is the canonical
+phrase — the one named in `scripts/gtm-readiness-check.mjs` and
+`docs/gtm/BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md`. An earlier version of this card
+carried an invented phrase; corrected 2026-07-31.
 
 Include: evaluator names/emails (1–3), and confirm no public blast.
 

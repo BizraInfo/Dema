@@ -83,7 +83,10 @@ fix + honest docs); carve remainder has a named landing time.
 1. Mumu: final read of the post exactly as it will appear. Then publish (channel is
    your call — §5 note). Record the URL.
 2. Mumu: type the exact phrase from the GO card with names:
-   **`GO: send private Evaluation Pack to named ICP-0 evaluators`** + the 3 names.
+   **`GO send pack to <name>`** — one line per evaluator, `<name>` replaced with the
+   real name. (Canonical phrase: it is the string named in `scripts/gtm-readiness-check.mjs`
+   and `docs/gtm/BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md`. An earlier draft of this plan
+   carried a different invented phrase — corrected 2026-07-31.)
 3. Agent: execute sends · record send receipts + `gtm:readiness` Phase-1 evidence
    under DEMA_HOME · log the operation receipt (post URL, SHA, timestamps).
 4. Mumu: start the drain clock — minutes of manual involvement today is the first C9
