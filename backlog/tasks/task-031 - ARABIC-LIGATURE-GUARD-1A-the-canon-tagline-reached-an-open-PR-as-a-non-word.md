@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-07-31 00:45'
-updated_date: '2026-07-31 00:46'
+updated_date: '2026-07-31 07:13'
 labels:
   - arabic
   - canon
@@ -22,7 +22,7 @@ ordinal: 31000
 <!-- SECTION:DESCRIPTION:BEGIN -->
 MEASURED 2026-07-31 on ops/first-witness-d2 (PR #446).
 
-The canon tagline shipped into docs/gtm/AUG2_OPERATION_FIRST_WITNESS.md as `اإلنسانية` — code points U+0627 U+0625 U+0644 — where canon is `الإنسانية` = U+0627 U+0644 U+0625. The lam and the hamza-carrying alef are transposed. That is the signature of a lam-alef presentation form (ﻹ) being converted back to base characters in the wrong order, which is what PDF text extraction does, and the root canon lives in docs/root-canon/source/*.pdf. The result is not an Arabic word.
+The canon tagline shipped into docs/gtm/AUG2_OPERATION_FIRST_WITNESS.md opening U+0627 U+0625 U+0644 where canon opens U+0627 U+0644 U+0625 (`الإنسانية`). The corrupted form is named by code point and never rendered in this record: backlog/*.md is tracked and therefore scanned by the guard this task created, so writing it literally made the guard fail on its own paperwork. The lam and the hamza-carrying alef are transposed. That is the signature of a lam-alef presentation form (ﻹ) being converted back to base characters in the wrong order, which is what PDF text extraction does, and the root canon lives in docs/root-canon/source/*.pdf. The result is not an Arabic word.
 
 It was committed on the branch at lines 182 (EN section) and 205 (AR section), 4 instances total, in the file carrying the Aug 2 post — the single most quoted line the project has, in front of an EU-AI-Act audience.
 
