@@ -45,10 +45,26 @@ test("PSL-04: composes SNR, convergence, HHMM, craftsmanship, proactive_self", (
   assert.equal(out.autonomous_rsi.not_autonomous_runtime, true);
 });
 
-test("PSL-05: default SNR favors signal (9 signal vs 3 noise)", () => {
+test("PSL-05: default 9 signal fixtures are declared-only and cannot score", () => {
   const out = buildPeakSelfLoopPreview();
-  assert.equal(out.snr_framework.signal_count, 9);
+  assert.equal(out.snr_framework.declared_signal_count, 9);
   assert.equal(out.snr_framework.noise_count, 3);
+  assert.equal(out.snr_framework.verified_signal_count, 0);
+  assert.equal(out.snr_framework.score, 0);
+  assert.equal(out.autonomous_rsi.merged_verdict, "HOLD_AND_REDUCE_NOISE");
+});
+
+test("PSL-05b: binding evidence to those same 9 events restores CONTINUE", () => {
+  const bound = Array.from({ length: 9 }, (_, i) => ({
+    id: `bound-${i}`,
+    type: "gate_passed",
+    weight: 1,
+    truth_label: "MEASURED",
+    source_ref: `receipts/gate-${i}.json`,
+    source_sha256: String(i).repeat(64).slice(0, 64),
+  }));
+  const out = buildPeakSelfLoopPreview({ signal_events: bound });
+  assert.equal(out.snr_framework.verified_signal_count, 9);
   assert.ok(out.snr_framework.score >= 0.7);
   assert.equal(out.autonomous_rsi.merged_verdict, "CONTINUE_MICRO_SLICE");
 });
@@ -160,6 +176,90 @@ test("PSL-18: ultra_micro_compose maps all proactive reasoning subsystems", () =
   );
   assert.ok(out.ultra_micro_compose.subsystems.length >= 10);
   assert.ok(out.proof_spine_backlog.length >= 3);
+});
+
+// ---------------------------------------------------------------------------
+// PEAK-EVIDENCE-BINDING-1A — declared fixtures must never authorize CONTINUE.
+// A signal event is eligible only when it carries its own evidence binding:
+// truth_label VERIFIED|MEASURED + non-empty source_ref + 64-hex source_sha256.
+// ---------------------------------------------------------------------------
+
+const BOUND_SIGNAL = Object.freeze({
+  id: "gate-run-1",
+  type: "gate_passed",
+  weight: 1,
+  truth_label: "MEASURED",
+  source_ref: "scripts/review/kernel-purity-check.mjs",
+  source_sha256: "a".repeat(64),
+});
+
+test("PEB-01: no-arg build yields zero verified signal and HOLDs", () => {
+  const out = buildPeakSelfLoopPreview();
+  assert.equal(out.snr_framework.verified_signal_count, 0);
+  assert.equal(out.autonomous_rsi.merged_verdict, "HOLD_AND_REDUCE_NOISE");
+});
+
+test("PEB-02: declared fixtures stay visible but are excluded from score", () => {
+  const out = buildPeakSelfLoopPreview();
+  assert.equal(out.snr_framework.declared_signal_count, 9);
+  assert.equal(out.snr_framework.excluded_signal_count, 9);
+  assert.ok(out.snr_framework.evidence_debt.length >= 1);
+});
+
+test("PEB-03: one evidence-bound event contributes one verified signal", () => {
+  const out = buildPeakSelfLoopPreview({
+    signal_events: [BOUND_SIGNAL],
+    noise_events: [],
+  });
+  assert.equal(out.snr_framework.verified_signal_count, 1);
+  assert.equal(out.snr_framework.excluded_signal_count, 0);
+});
+
+test("PEB-04: missing source_sha256 is excluded as evidence debt", () => {
+  const { source_sha256, ...unbound } = BOUND_SIGNAL;
+  const out = buildPeakSelfLoopPreview({
+    signal_events: [unbound],
+    noise_events: [],
+  });
+  assert.equal(out.snr_framework.verified_signal_count, 0);
+  assert.equal(out.snr_framework.excluded_signal_count, 1);
+});
+
+test("PEB-05: forged truth_label is rejected, not trusted as carried", () => {
+  const out = buildPeakSelfLoopPreview({
+    signal_events: [{ ...BOUND_SIGNAL, truth_label: "TOTALLY_VERIFIED" }],
+    noise_events: [],
+  });
+  assert.equal(out.snr_framework.verified_signal_count, 0);
+});
+
+test("PEB-06: duplicate ids fail closed — one receipt cannot be amplified", () => {
+  const nine = Array.from({ length: 9 }, () => ({ ...BOUND_SIGNAL }));
+  const out = buildPeakSelfLoopPreview({ signal_events: nine, noise_events: [] });
+  assert.equal(out.snr_framework.verified_signal_count, 1);
+  assert.equal(out.snr_framework.excluded_signal_count, 8);
+});
+
+// PEB-08 asserts a KNOWN CEILING, not a desired feature. It transports the real
+// attack so the limit stays visible: if someone later adds content re-derivation,
+// this test fails loudly and must be rewritten — not deleted quietly.
+test("PEB-08: CEILING — shape-valid envelopes for nonexistent files still pass", () => {
+  const forged = Array.from({ length: 9 }, (_, i) => ({
+    id: `totally-real-${i}`,
+    type: "gate_passed",
+    weight: 1,
+    truth_label: "MEASURED",
+    source_ref: `receipts/does-not-exist-${i}.json`,
+    source_sha256: String(i).repeat(64).slice(0, 64),
+  }));
+  const out = buildPeakSelfLoopPreview({ signal_events: forged });
+  assert.equal(out.snr_framework.verified_signal_count, 9);
+  assert.equal(out.autonomous_rsi.merged_verdict, "CONTINUE_MICRO_SLICE");
+});
+
+test("PEB-07: evidence binding does not weaken the canonical boundary", () => {
+  const out = buildPeakSelfLoopPreview({ signal_events: [BOUND_SIGNAL] });
+  assert.equal(isCanonicalBoundary(out.boundary), true);
 });
 
 test("PSL-19: companion disconnected surfaces in self-critique gaps", () => {

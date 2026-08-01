@@ -116,6 +116,67 @@ const DEFAULT_NOISE_EVENTS = Object.freeze([
   }),
 ]);
 
+// PEAK-EVIDENCE-BINDING-1A — a signal event may raise SNR only when it carries
+// its own evidence binding. The defaults above are DECLARED FIXTURES: they stay
+// visible in the event hash table but score zero, so remembered narrative can
+// never authorize CONTINUE_MICRO_SLICE.
+// ponytail: no freshness/observed_at check — that needs a clock, and
+// .claude/rules/paths/core-kernels.md forbids one without documented injection.
+//
+// CEILING — this validates evidence SHAPE, never evidence BINDING. A pure kernel
+// cannot read source_ref, so it cannot re-derive source_sha256 from real content:
+// a structurally valid envelope pointing at a nonexistent file scores as verified
+// (see PEB-08, which transports that attack). This raises laundering from a kernel
+// DEFAULT to a caller ACT; it does not prevent forgery.
+// Upgrade path: whichever gatherer/CLI layer constructs signal_events must hash
+// source_ref itself and reject mismatches BEFORE calling this kernel. No such
+// caller exists yet — the CLI passes no events and therefore HOLDs.
+const EVIDENCE_TRUTH_LABELS = Object.freeze(["VERIFIED", "MEASURED"]);
+const SOURCE_SHA256_PATTERN = /^[0-9a-f]{64}$/;
+
+function evidenceBindingGap(event) {
+  if (!event || typeof event !== "object" || Array.isArray(event)) {
+    return "not_an_object";
+  }
+  if (!EVIDENCE_TRUTH_LABELS.includes(event.truth_label)) {
+    return "truth_label_not_verified_or_measured";
+  }
+  if (typeof event.source_ref !== "string" || event.source_ref.trim() === "") {
+    return "source_ref_missing";
+  }
+  if (
+    typeof event.source_sha256 !== "string" ||
+    !SOURCE_SHA256_PATTERN.test(event.source_sha256)
+  ) {
+    return "source_sha256_missing_or_malformed";
+  }
+  return null;
+}
+
+function partitionSignalsByEvidence(events) {
+  const verified = [];
+  const excluded = [];
+  const seenIds = new Set();
+  for (const event of events) {
+    const id =
+      event && typeof event === "object" && !Array.isArray(event)
+        ? (event.id ?? null)
+        : null;
+    const gap = evidenceBindingGap(event);
+    if (gap) {
+      excluded.push(Object.freeze({ id, gap }));
+      continue;
+    }
+    if (seenIds.has(id)) {
+      excluded.push(Object.freeze({ id, gap: "duplicate_event_id" }));
+      continue;
+    }
+    seenIds.add(id);
+    verified.push(event);
+  }
+  return { verified, excluded: Object.freeze(excluded) };
+}
+
 const DEFAULT_CONVERGENCE_CLAIMS = Object.freeze([
   Object.freeze({
     id: "delivery-spine-face",
@@ -625,8 +686,14 @@ export function buildPeakSelfLoopPreview({
     ? noise_events
     : [...DEFAULT_NOISE_EVENTS];
 
+  const { verified: verifiedSignalEvents, excluded: excludedSignalEvents } =
+    partitionSignalsByEvidence(signalEvents);
+
   const snr = computeSNRValue({
-    signalEvents: signalEvents.map((e) => ({ type: e.type, weight: e.weight })),
+    signalEvents: verifiedSignalEvents.map((e) => ({
+      type: e.type,
+      weight: e.weight,
+    })),
     noiseEvents: noiseEvents.map((e) => ({ type: e.type, weight: e.weight })),
   });
 
@@ -677,8 +744,12 @@ export function buildPeakSelfLoopPreview({
     noise_definition: "speculative implementation detail",
     score: snr.score,
     verdict: snr.verdict,
-    signal_count: signalEvents.length,
+    signal_count: verifiedSignalEvents.length,
     noise_count: noiseEvents.length,
+    declared_signal_count: signalEvents.length,
+    verified_signal_count: verifiedSignalEvents.length,
+    excluded_signal_count: excludedSignalEvents.length,
+    evidence_debt: excludedSignalEvents,
   });
 
   const snrDominates =
