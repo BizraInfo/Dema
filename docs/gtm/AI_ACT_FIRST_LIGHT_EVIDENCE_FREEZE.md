@@ -19,8 +19,15 @@ clean_worktree:                false            # 45 modified/untracked paths re
 focused_suite:                 green            # omega0 10/10
 composed_suite:                green            # 5 sealed suites 69/69; +peak pair 92/92
 fresh_process_replay:          verified         # replayed=true, seal_head_matches=true
-before_manifest_hash:          present          # 93ac3954838d89fd...0406e20
-after_manifest_hash:           present          # 93543b7b00814a97...4fec3a0d
+# THE WITNESS CONTRACT — full values, from the committed harness at fe2d864.
+# These are CONTENT-bound: identical on any machine and any work directory.
+# Superseded values 93ac3954… / 93543b7b… came from the pre-harness scratchpad
+# run over COPIES OF REPO FILES; that fixture drifted with every commit and is
+# not reproducible. Do not cite it anywhere.
+before_manifest_hash: 403db0b4b5d97b53e9a3836c49749f86d2965bcd7d81f3d989782c779cfd2202
+after_manifest_hash:  89eb646f08b7f56c9ac173a9e83d0b4999429372ea14cfc871e3936ba3f0265b
+# seal_head is PATH-bound — stable per directory, different across machines.
+# Never publish it as a cross-machine constant (asserted both ways by FL-07).
 undo_manifest_hash:            present          # restored_hash == before_manifest_hash
 restored_manifest_matches_before: true
 final_receipt:                 recomputable     # seal 1001014c90c07261...f619af40
@@ -63,7 +70,10 @@ gates 127–202   72 PASS / 4 FAIL
 TOTAL           197 / 202 PASS
 ```
 
-Full suite: **8380 tests, 8371 pass, 6 fail** (best-case environment).
+Full suite at the carved branch tip: **8388 tests · 8379 pass · 6 fail · 3 skipped · 0 todo · 0 cancelled**.
+The three skipped tests are why `pass + fail ≠ tests`; publish all six figures or none.
+**Never write "0 failures" or "suite green"** — six failures are real, and their being
+environmental is a *diagnosis*, not a pass. (Earlier best-case run: 8380 · 8371 · 6.)
 Every failure is environmental, and each is named:
 
 | Failure | Cause | Class |
