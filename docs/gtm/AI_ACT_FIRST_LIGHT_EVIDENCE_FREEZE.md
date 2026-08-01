@@ -86,6 +86,35 @@ Every failure is environmental, and each is named:
 **Zero failures are attributable to the sealed code.** Verified two ways: 2938/3807 pass
 31/31 with `GIT_DIR` unset, and no sealed-slice test appears in any failure set.
 
+### 3.1 Later measurement at merged main — `2272cdd` (2026-08-01)
+
+The figures above are **frozen at the carved branch tip and are not edited**. This is a
+separate, later measurement at a different commit on a different machine.
+
+```
+MAIN_SHA  2272cdd40aacc05881e2ef66bb8df7218283bdf4
+          8397 tests · 427 suites · 8397 pass · 0 fail · 0 skipped · 0 todo · 0 cancelled
+          G8 GATE: reported # fail 0 · raw not-ok lines 0 · Exit 0 · 23.1 s
+machine   Bizra-Node0 (operator reference machine), working git, writable HOME
+```
+
+The delta from §3 reconciles exactly, which is why both records are kept:
+`tests +9` (the PEAK-EVIDENCE-BINDING-1A slice added PEB-01…08 and PSL-05b);
+`pass +18` (those 9, plus the 6 environmental failures and the 3 environmental
+skips, all of which cleared). No test was deleted or disabled to reach this.
+
+**The six failures were environmental and did not reproduce here** once `.git/index.lock`
+was cleared and `HOME` was writable. That confirms the §3 diagnosis; it does not retract it.
+
+**Wording rule, updated and still bounded.** The §3 prohibition on writing "0 failures"
+was correct for the sealed branch, where six failures were real. At `2272cdd` the
+measurement genuinely is 0. Publish it **bound to the SHA and the machine** — never as
+"the suite is green" unqualified. One green run on one machine is not a property of the
+software. Evaluators in constrained environments may still hit the sandbox classes
+(`uv_os_get_passwd ENOENT`, `EROFS`), which remain documented in
+`scripts/ci/classify-known-harness-failures.mjs`; seeing them is expected, not a defect
+report. A failure *outside* those classes is still signal and still wanted.
+
 ---
 
 ## 4. Findings that change the launch
