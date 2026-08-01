@@ -83,6 +83,7 @@ const COMMAND_SURFACE = [
   "process-mining",
   "key-maker-check",
   "llm-invoke",
+  "ask",
   "today",
   "doctor",
   "dashboard",

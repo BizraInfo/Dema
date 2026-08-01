@@ -21,6 +21,10 @@ import {
 } from "./process-value-preview.js";
 import { buildPreviewBoundary } from "./preview-boundary.js";
 import { buildSelfLoopOodaCycle } from "./self-loop-ooda.js";
+import {
+  buildPeakVerificationAdmissionDefault,
+  evaluateVerificationAdmission,
+} from "./verification-admission.js";
 import { buildRsiProposalPreview } from "./rsi-proposal-preview.js";
 
 export const PEAK_SELF_LOOP_PREVIEW_SCHEMA =
@@ -190,6 +194,10 @@ function deepFreeze(value) {
     return value;
   for (const child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
+}
+
+function text(value) {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function buildEventHashTable(signalEvents, noiseEvents) {
@@ -434,6 +442,11 @@ function buildProactiveSelf({
   consentPhrase,
   ciAdvisoryBlocked = false,
   companionDeviceConnected = false,
+  proposed_act = "",
+  verifier = "",
+  proposer = "",
+  certifier = "",
+  verifier_bindings = {},
 }) {
   const localHarnessGates = Object.freeze([
     "ux-first-look-gate",
@@ -442,10 +455,22 @@ function buildProactiveSelf({
     "kernel-purity-check",
     "dema-harness-integration",
     "node0-proof-of-truth-control-plane-check",
+    "peak-verify-admission",
   ]);
   const nextGate = ciAdvisoryBlocked
     ? "DONE_LOCAL slices + operator seal; remote CI advisory when billing clears"
     : "reviewer PR merge + CI remote green";
+
+  const verification_admission =
+    text(proposed_act) || text(verifier)
+      ? evaluateVerificationAdmission({
+          proposed_act,
+          verifier,
+          proposer,
+          certifier,
+          bindings: verifier_bindings,
+        })
+      : buildPeakVerificationAdmissionDefault();
 
   return Object.freeze({
     critique: Object.freeze({
@@ -468,6 +493,9 @@ function buildProactiveSelf({
           !companionDeviceConnected
             ? "Mobile companion declared (Z Fold 6) but not connected — export-and-index bridge only"
             : null,
+          verification_admission.self_verifiable !== true
+            ? `VERIFY admission refused (${verification_admission.refusal_reason}) — output not eligible as next INPUT`
+            : null,
         ].filter(Boolean),
       ),
       limitation:
@@ -481,6 +509,7 @@ function buildProactiveSelf({
         "dema harness --summary --json",
         "npm test",
         "npm run check",
+        "dema peak-self-loop --json",
       ]),
     }),
     consent: Object.freeze({
@@ -498,13 +527,16 @@ function buildProactiveSelf({
       no_autonomous_runtime: true,
       no_network: true,
       no_token_mint: true,
+      reinsert_requires_judge_free_admission: true,
+      reinsert_eligible: verification_admission.reinsert_eligible === true,
     }),
+    verification_admission,
     awareness: Object.freeze({
       truth_label: "NODE0_LOCAL_SEED",
       what_this_proves:
-        "Declared self-loop composition is structurally coherent and gate-aligned",
+        "Declared self-loop composition is structurally coherent and gate-aligned; VERIFY admission is judge-free",
       what_this_does_not_prove:
-        "Autonomy, live scoring, HHMM runtime, economic rights, or federation",
+        "Autonomy, live scoring, HHMM runtime, economic rights, federation, or closed re-insert loop",
     }),
     loop_engineering: Object.freeze({
       hhmm_current: hhmm.peak_phase,
@@ -517,6 +549,7 @@ function buildProactiveSelf({
         "SETTLE→federation without proof ladder",
         "ACT→operator mutation outside sandbox",
         "ACT→mobile node control without ADR",
+        "EVAL→INPUT without judge-free admission",
       ]),
     }),
   });
@@ -530,6 +563,7 @@ function buildUltraMicroComposeMap() {
       "proactive_self.harness",
       "proactive_self.consent",
       "proactive_self.compliance",
+      "proactive_self.verification_admission",
       "reasoning_modes.sequential",
       "reasoning_modes.analogical",
       "reasoning_modes.critical",
@@ -578,6 +612,11 @@ export function buildPeakSelfLoopPreview({
   consent_phrase = "GO: act on peak-self-loop suggestion",
   ci_advisory_blocked = false,
   companion_device_connected = false,
+  proposed_act = "",
+  verifier = "",
+  proposer = "",
+  certifier = "",
+  verifier_bindings = {},
 } = {}) {
   const signalEvents = Array.isArray(signal_events)
     ? signal_events
@@ -671,6 +710,11 @@ export function buildPeakSelfLoopPreview({
     consentPhrase: consent_phrase,
     ciAdvisoryBlocked: ci_advisory_blocked === true,
     companionDeviceConnected: companion_device_connected === true,
+    proposed_act,
+    verifier,
+    proposer,
+    certifier,
+    verifier_bindings,
   });
 
   const agent_orchestration = buildAgentOrchestrationPosture({
@@ -746,7 +790,8 @@ export function renderPeakSelfLoopPreview(preview, { useColor = false } = {}) {
     `  critique:    ${preview.proactive_self.critique.verdict}`,
     `  harness:     ${preview.proactive_self.harness.active_gates.length} gates active`,
     `  consent:     ${preview.proactive_self.consent.required_phrase}`,
-    `  compliance:  MC ${preview.proactive_self.compliance.master_craftsmanship_compliant ? "OK" : "GAP"}`,
+    `  compliance:  MC ${preview.proactive_self.compliance.master_craftsmanship_compliant ? "OK" : "GAP"} · reinsert ${preview.proactive_self.compliance.reinsert_eligible ? "ELIGIBLE" : "BLOCKED"}`,
+    `  admission:   self_verifiable=${preview.proactive_self.verification_admission.self_verifiable} · ${preview.proactive_self.verification_admission.refusal_reason ?? preview.proactive_self.verification_admission.named_verifier ?? "awaiting_act"}`,
     `  awareness:   ${preview.proactive_self.awareness.what_this_proves}`,
     `  loop:        ${preview.proactive_self.loop_engineering.hhmm_current} → ${preview.proactive_self.loop_engineering.next_safe_transition}`,
     "",

@@ -43,6 +43,9 @@ export const FORBIDDEN_TOKENS = Object.freeze([
 // (acceptance #8). A declared entry that no longer matches is reported as
 // `stale_allowlist` (mirrors the env-hygiene sync discipline).
 export const IO_TIER_ALLOWLIST = Object.freeze({
+  // --- Acting tier: the I/O IS the proof surface (not a reader) ---
+  "l1-micro-loop.js":
+    "L1-MICRO-LOOP-1A (ADR-049 #5): fs IS the act — one rename plus checkpoint copy and phase/receipt writes, all under the caller's sandboxRoot. Confined by lease (scope·expiry·budget) checked before any mutation, by realpath-resolved scope so a symlink cannot escape the root, by refusal to target its own `.l1/` audit state, and by refusal to overwrite an occupied dst. No deletes, no recursion, no network, no child_process, no clock/random except injected `now`.",
   // --- Read-only operator/repo state readers (legitimate I/O tier) ---
   "system-snapshot.js":
     "reads ~/.dema receipts + repo files to compose a read-only status snapshot",
