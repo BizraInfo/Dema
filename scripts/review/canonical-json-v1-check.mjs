@@ -36,6 +36,11 @@ const JSON_MODE = process.argv.includes("--json");
 export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   "packages/mission/src/mission-corridor.js",
   "packages/mission/src/dema-program-graph.js",
+  // Gate C, C2 — the mission-closure transaction log. Canonicalises the
+  // transaction descriptor, each event body, and the semantic-evidence subset
+  // that settles concurrent appends, so every hash it publishes is stable
+  // across writers and processes.
+  "packages/receipts/src/mission-closure-transaction.js",
   // Back-registered 2026-07-25. These four landed on main (#401, #402, #403,
   // #405) with the scaffold's registration comment already in their headers —
   // dema-recovery-mission-gatherer.js says "reviewed in this slice's PR" — but
