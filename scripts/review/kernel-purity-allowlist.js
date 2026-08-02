@@ -21,6 +21,8 @@ export const NONCORE_IO_TIER_ALLOWLIST = Object.freeze({
     "readdir/readFile from node:fs/promises over DEMA_HOME||~/.dema; reads profile.json and memory/<name>.json one level deep, no recursion; entry names traversal-guarded by /^[A-Za-z0-9_-]+$/; no network/child_process.",
   "packages/mission/src/health-snapshot.js":
     "writes/reads under DEMA_HOME||~/.dema/receipts only; atomic mkdir+writeFile{wx}+rename via realpath; reads one receipt to verify; network_used:false, no recursion.",
+  "packages/mission/src/corridor-closure-gatherer.js":
+    "the BINDING caller for mission-corridor-closure.js (the pure weld): binds the injected consent registry to O_EXCL nonce files, appendReceipt to the canonical ledger, the effect adapter to a single in-scope rename, and the anchor log to $DEMA_HOME/anchors — all scoped to DEMA_HOME||~/.dema. readFileSync/readdirSync/renameSync/statSync/appendFileSync/mkdirSync only; no network, no child_process, no model.",
   "packages/mission/src/mission-closeout.js":
     "readdir/readFile/stat on DEMA_HOME||~/.dema/receipts to resolve/render one mission receipt; bounded single-level listing, no recursion/network.",
   "packages/mission/src/mission-probe.js":
@@ -53,6 +55,8 @@ export const NONCORE_IO_TIER_ALLOWLIST = Object.freeze({
     "key files under $DEMA_HOME/keys; mkdir+realpath+open with 0o700 and lstat checks; local key store, no network.",
   "packages/receipts/src/consent-nonce-registry.js":
     "single used-nonces.json under $DEMA_HOME/consent for within-host replay protection; local file, no network.",
+  "packages/receipts/src/consent-nonce-registry-atomic.js":
+    "one file per nonce under $DEMA_HOME/consent/nonces created with O_EXCL (wx) — the atomic replacement for the shared-file registry above; mkdir/writeFile/readFile/readdir only, nonce shape-guarded against path escape, reads fail CLOSED; local file, no network.",
   "packages/receipts/src/canonical-ledger.js":
     "read/append canonical-ledger.ndjson under $DEMA_HOME/receipts via atomic rename; local chain file, no network.",
   "packages/receipts/src/codebase-map-save.js":

@@ -34,7 +34,21 @@ import {
   buildCorridorConsentContext,
   evaluateCorridorWriteConsent,
   MISSION_ID_RE,
+  CORRIDOR_TRANSITIONS,
 } from "../../../../packages/mission/src/mission-corridor.js";
+import {
+  runCorridorClosure,
+  verifyCorridorClosure,
+} from "../../../../packages/mission/src/mission-corridor-closure.js";
+import {
+  buildDiskConsentRegistry,
+  buildLedgerAppender,
+  buildRenameEffectAdapter,
+  observeCanonicalLedger,
+  readClosureAnchorLog,
+  appendClosureAnchor,
+} from "../../../../packages/mission/src/corridor-closure-gatherer.js";
+import { evaluateVerificationAdmission } from "../../../../packages/core/src/verification-admission.js";
 import { buildPreviewBoundary } from "../../../../packages/core/src/boundary-schema.js";
 import {
   wantsJson,
@@ -44,6 +58,7 @@ import { statusWithLocalIdentity } from "../lib/status-identity.js";
 
 // NODE0-LOCAL-MISSION-HARNESS-PREVIEW-1A — `dema mission pulse <file>` effect layer.
 import { mkdir, readFile as readFileFs, readdir, realpath, rename, stat, writeFile } from "node:fs/promises";
+import { unlinkSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, isAbsolute, resolve } from "node:path";
 import { createHash } from "node:crypto";
@@ -1524,6 +1539,34 @@ function nonceMarkerPath(argv, nonce) {
   return join(corridorHome(argv), "missions", "consent-nonces", `${digest}.json`);
 }
 
+// Two processes that each read a journal of length N both mint index N and both
+// append — producing a FORKED chain that verifyCorridorJournal rejects, so the
+// mission becomes unverifiable. Measured before this guard: 1 of 6 concurrent
+// `corridor complete` runs left indices 0,1,2,3,4,5,6,7,7 on disk.
+//
+// The append is therefore gated by an exclusive create keyed to the exact index
+// being written: the filesystem picks the winner, exactly as reserveNonce does
+// for consent. A claimed-but-unwritten index fails closed — safer than a forked
+// journal — and the refusal names the file so an operator can inspect it.
+async function appendCorridorJournalEvent(dir, event) {
+  const marker = join(dir, `.journal-index-${event.index}.claim`);
+  try {
+    await writeFile(
+      marker,
+      `${JSON.stringify({ index: event.index, event_hash: event.event_hash, state: event.state })}\n`,
+      { flag: "wx", mode: 0o600 },
+    );
+  } catch (err) {
+    if (err && err.code === "EEXIST") {
+      corridorFail(
+        `journal index ${event.index} was already claimed by another process (${marker}) — refusing to fork the chain; nothing was written.`,
+      );
+    }
+    corridorFail(`journal index reservation failed closed (${err?.code ?? "unknown_error"}) — nothing was written.`);
+  }
+  await writeFile(join(dir, "journal.jsonl"), `${JSON.stringify(event)}\n`, { flag: "a", mode: 0o600 });
+}
+
 async function reserveNonce(argv, { nonce, consent_context_hash, mission_id, kind, contract_hash, reserved_at_iso }) {
   const marker = nonceMarkerPath(argv, nonce);
   // Two distinct failure domains, never conflated: a guard-directory problem
@@ -1558,7 +1601,7 @@ async function reserveNonce(argv, { nonce, consent_context_hash, mission_id, kin
 // consent card (required phrase + consent_context_hash) and write NOTHING.
 // Step 2: validate phrase + nonce + expiry + context commitment fail-closed,
 // then the caller performs the disclosed write. A phrase alone is never enough.
-async function corridorConsentGate(argv, { kind, mission_id, contract_hash, permitted_actions, mission_root, now_iso, wantJson, cardExtra = {}, rerunHint = "" }) {
+async function corridorConsentGate(argv, { kind, mission_id, contract_hash, permitted_actions, mission_root, now_iso, wantJson, cardExtra = {}, rerunHint = "", requested_state }) {
   const nonce = argValue(argv, "--nonce") ?? "";
   const expires_at = argValue(argv, "--expires") ?? "";
   const phrase = argValue(argv, "--consent");
@@ -1568,7 +1611,7 @@ async function corridorConsentGate(argv, { kind, mission_id, contract_hash, perm
       "root-bound consent requires --nonce <unique> and --expires <iso> (a phrase alone is not authority) — nothing was written.",
     );
   }
-  const ctx = buildCorridorConsentContext({ kind, mission_id, contract_hash, permitted_actions, mission_root, nonce, expires_at });
+  const ctx = buildCorridorConsentContext({ kind, mission_id, contract_hash, permitted_actions, mission_root, nonce, expires_at, requested_state });
   if (!ctx.ok) corridorFail(`consent context blocked: ${ctx.blocked_by.join(", ")} — nothing was written.`);
   if (!phrase) {
     const rerun = `${rerunHint}--nonce ${nonce} --expires ${expires_at} --consent "${ctx.envelope.required_phrase}" --consent-context ${ctx.envelope.consent_context_hash}`;
@@ -1606,6 +1649,7 @@ async function corridorConsentGate(argv, { kind, mission_id, contract_hash, perm
     kind, mission_id, contract_hash, permitted_actions, mission_root,
     phrase, nonce, expires_at, consent_context_hash,
     now: now_iso,
+    requested_state,
   });
   if (!verdict.ok) {
     corridorFail(`root-bound consent BLOCKED: ${verdict.blocked_by.join(", ")} — nothing was written.`);
@@ -1789,14 +1833,294 @@ async function cmdMissionCorridor(argv) {
       },
     });
     if (!r.ok) corridorFail(`corridor stop blocked: ${r.blocked_by.join(", ")}`);
-    await writeFile(join(dir, "journal.jsonl"), `${JSON.stringify(r.event)}\n`, { flag: "a", mode: 0o600 });
+    await appendCorridorJournalEvent(dir, r.event);
     const out = { ok: true, mission_id: id, state: "STOPPED", event_hash: r.event.event_hash, consent_context_hash: verdict.consent_context_hash, boundary: corridorIoBoundary({ read: true, wrote: true, consented: true }) };
     if (wantJson) console.log(JSON.stringify(out, null, 2));
     else console.log(`DEMA · mission corridor stopped: ${id} (kill switch honored; journal sealed)`);
     return;
   }
 
+  // Walk the corridor one consented state at a time. Every advance is a durable
+  // journal event; the TARGET STATE is bound into the consent phrase, so an
+  // approved advance can never be replayed against a different transition.
+  if (verb === "advance") {
+    const id = argv[3];
+    if (!id || !MISSION_ID_RE.test(id)) corridorFail("mission corridor id required (lowercase kebab).");
+    const to = (argValue(argv, "--to") ?? "").toUpperCase();
+    if (!to) corridorFail("--to <STATE> required (the target state is part of the consent phrase).");
+    const dir = join(corridorHome(argv), "missions", id);
+    const loaded = await readCorridor(dir);
+    const chain = verifyCorridorJournal({
+      contract: loaded.contractDoc.contract,
+      contract_hash: loaded.contractDoc.contract_hash,
+      journal: loaded.journal,
+    });
+    if (!chain.ok) corridorFail(`refusing to extend a tampered/corrupt journal: ${chain.blocked_by.join(", ")}`);
+    const last = loaded.journal[loaded.journal.length - 1];
+    const allowed = CORRIDOR_TRANSITIONS[last.state] ?? [];
+    if (!allowed.includes(to)) {
+      corridorFail(
+        `transition not allowed: ${last.state} → ${to}. Allowed from ${last.state}: ${allowed.join(", ") || "(terminal)"} — nothing was written.`,
+      );
+    }
+    if (to === "COMPLETE") {
+      corridorFail("COMPLETE is not reachable via advance — use `dema mission corridor complete <id>`, which runs the verified closure. Nothing was written.");
+    }
+    const nowIso = argValue(argv, "--now") || new Date().toISOString();
+    const verdict = await corridorConsentGate(argv, {
+      kind: "ADVANCE",
+      mission_id: id,
+      contract_hash: loaded.contractDoc.contract_hash,
+      permitted_actions: [...loaded.contractDoc.contract.permitted_actions],
+      mission_root: dir,
+      now_iso: nowIso,
+      wantJson,
+      requested_state: to,
+    });
+    if (!verdict) return; // consent card printed; nothing written
+    await reserveNonce(argv, {
+      nonce: verdict.nonce,
+      consent_context_hash: verdict.consent_context_hash,
+      mission_id: id,
+      kind: "ADVANCE",
+      contract_hash: loaded.contractDoc.contract_hash,
+      reserved_at_iso: nowIso,
+    });
+    const r = appendCorridorEvent({
+      contract_hash: loaded.contractDoc.contract_hash,
+      journal: loaded.journal,
+      event: {
+        state: to,
+        at_iso: nowIso,
+        note: `${argValue(argv, "--note") || `operator advance → ${to}`} · consent_context: ${verdict.consent_context_hash}`,
+        next_command: to === "CHECKPOINT" ? `dema mission corridor complete ${id}` : `dema mission corridor status ${id}`,
+      },
+    });
+    if (!r.ok) corridorFail(`corridor advance blocked: ${r.blocked_by.join(", ")}`);
+    await appendCorridorJournalEvent(dir, r.event);
+    const out = {
+      ok: true, mission_id: id, state: to, event_hash: r.event.event_hash,
+      consent_context_hash: verdict.consent_context_hash,
+      boundary: corridorIoBoundary({ read: true, wrote: true, consented: true }),
+    };
+    if (wantJson) console.log(JSON.stringify(out, null, 2));
+    else console.log(`DEMA · mission corridor advanced: ${id} → ${to}`);
+    return;
+  }
+
+  // THE WELD, bound to disk. The corridor authorises; Omega0 performs one
+  // bounded, anchored, reversible effect; an independent verifier admits it;
+  // the canonical ledger records it; only then may COMPLETE exist.
+  if (verb === "complete") {
+    const id = argv[3];
+    if (!id || !MISSION_ID_RE.test(id)) corridorFail("mission corridor id required (lowercase kebab).");
+    const home = corridorHome(argv);
+    const dir = join(home, "missions", id);
+    const loaded = await readCorridor(dir);
+    const chain = verifyCorridorJournal({
+      contract: loaded.contractDoc.contract,
+      contract_hash: loaded.contractDoc.contract_hash,
+      journal: loaded.journal,
+    });
+    if (!chain.ok) corridorFail(`refusing to complete a tampered/corrupt journal: ${chain.blocked_by.join(", ")}`);
+    const last = loaded.journal[loaded.journal.length - 1];
+    if (last.state !== "CHECKPOINT") {
+      corridorFail(
+        `COMPLETE is reachable only from CHECKPOINT; corridor is at ${last.state}. Advance it first — nothing was written.`,
+      );
+    }
+
+    // The leased scope is the mission's evidence estate. The bounded effect is a
+    // single rename inside it: Omega0 verifies content conservation, so the act
+    // must preserve the file count — a rename qualifies, a create does not.
+    const estate = join(dir, "estate");
+    const fromName = argValue(argv, "--from") || "closure-evidence.draft.json";
+    const toName = argValue(argv, "--to") || "closure-evidence.sealed.json";
+    try {
+      await stat(join(estate, fromName));
+    } catch {
+      corridorFail(
+        `no evidence to seal: ${join(estate, fromName)} does not exist. The closure act promotes a drafted evidence file to its sealed name; create it first (mkdir -p "${estate}" && write ${fromName}) — nothing was written.`,
+      );
+    }
+
+    // Serialize the ENTIRE closure, not just the journal append. Two processes
+    // that both reach Omega0 will both rename, both append a ledger receipt,
+    // and then race for one journal index — at which point the loser's refusal
+    // discards a closure that already changed the world. Measured before this
+    // lock: 8 of 10 concurrent runs lost the real COMPLETE that way. The append
+    // guard alone is not enough; the transaction is the critical section.
+    const closureLock = join(dir, ".closure.lock");
+    try {
+      await writeFile(closureLock, `${JSON.stringify({ pid: process.pid, mission_id: id })}\n`, { flag: "wx", mode: 0o600 });
+    } catch (err) {
+      if (err && err.code === "EEXIST") {
+        corridorFail(
+          `another closure is already running for ${id} (${closureLock}) — nothing was written. If no dema process is running, that file is stale: remove it and retry.`,
+        );
+      }
+      corridorFail(`closure lock failed closed (${err?.code ?? "unknown_error"}) — nothing was written.`);
+    }
+    // Released on EVERY exit path. A finally block would not run, because
+    // corridorFail exits the process directly.
+    process.on("exit", () => {
+      try { unlinkSync(closureLock); } catch { /* already released */ }
+    });
+
+    const nowIso = argValue(argv, "--now") || new Date().toISOString();
+    const verdict = await corridorConsentGate(argv, {
+      kind: "COMPLETE",
+      mission_id: id,
+      contract_hash: loaded.contractDoc.contract_hash,
+      permitted_actions: [...loaded.contractDoc.contract.permitted_actions],
+      mission_root: dir,
+      now_iso: nowIso,
+      wantJson,
+      requested_state: "COMPLETE",
+    });
+    if (!verdict) return; // consent card printed; nothing written
+
+    // The weld's single-use registry is path-addressed, so the nonce must be
+    // path-safe. Refusing here gives a truthful reason; letting it through would
+    // surface later as the misleading "consent_already_consumed".
+    if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(verdict.nonce)) {
+      corridorFail("--nonce must match [A-Za-z0-9][A-Za-z0-9_-]{0,127} (it addresses a single-use consent file) — nothing was written.");
+    }
+    await reserveNonce(argv, {
+      nonce: verdict.nonce,
+      consent_context_hash: verdict.consent_context_hash,
+      mission_id: id,
+      kind: "COMPLETE",
+      contract_hash: loaded.contractDoc.contract_hash,
+      reserved_at_iso: nowIso,
+    });
+
+    // Anchor inputs are observed BEFORE the effect — the anchor law is a
+    // precondition, and a post-hoc observation would testify about a world the
+    // act already changed.
+    const observed = await observeCanonicalLedger({ demaHome: home });
+    const anchorLog = readClosureAnchorLog({ demaHome: home });
+    const expiresMs = Date.parse(verdict.expires_at);
+    const result = await runCorridorClosure({
+      contract: { mission_id: id },
+      contract_hash: loaded.contractDoc.contract_hash,
+      journal: loaded.journal,
+      mission: { objective: loaded.contractDoc.contract.objective, root: estate },
+      // The lease may never outlive the consent that authorised it.
+      lease: { lease_id: `corridor-${id}`, scope_root: estate, expires_at: expiresMs, budget_acts: 1 },
+      consent: { by: "operator", ref: verdict.consent_context_hash, nonce: verdict.nonce },
+      anchorDir: join(home, "anchors"),
+      effect: buildRenameEffectAdapter({ scopeRoot: estate, from: fromName, to: toName, anchorLog, observed }),
+      now: Date.parse(nowIso),
+      appendReceipt: buildLedgerAppender({ demaHome: home, now: nowIso }),
+      // Judge-free and structurally independent: the party that proposed the act
+      // is not the party that certifies it (verification-admission F2).
+      verifyAdmission: ({ card }) => {
+        const a = evaluateVerificationAdmission({
+          proposed_act: `corridor-closure:${id}`,
+          verifier: "hash_equality",
+          proposer: "corridor-closure-effect-adapter",
+          certifier: "omega0-mechanical-closure-route",
+          bindings: { expected_post_sha256: card.after_hash },
+        });
+        return { admitted: a.self_verifiable === true, reason: a.refusal_reason ?? null };
+      },
+      consentRegistry: buildDiskConsentRegistry({
+        demaHome: home,
+        targetHash: loaded.contractDoc.contract_hash,
+        consentProofHash: verdict.consent_context_hash,
+      }),
+    });
+
+    // A refusal BEFORE the bounded transaction carries no Omega0 card: no
+    // effect ran, no seal exists, the ledger is untouched. Sealing the corridor
+    // STOPPED for a caller or infrastructure fault would kill a live mission
+    // over a condition that changed nothing in the world. Refuse loudly and
+    // journal nothing — only a refusal the route actually reached is a verdict.
+    if (!result.omega0_card) {
+      corridorFail(
+        `closure refused before any effect: ${result.terminal_outcome}${result.reason_detail ? ` (${result.reason_detail})` : ""} — nothing was written and the corridor remains at ${last.state}. The nonce is burned by design; re-run with a fresh --nonce once the cause is fixed.`,
+      );
+    }
+
+    const completed = result.state === "COMPLETE";
+    // Witness AFTER the artifact: the anchor testifies about a ledger that now
+    // includes this closure's receipt.
+    let anchorRecord = null;
+    if (completed && result.ledger_head) {
+      anchorRecord = appendClosureAnchor({
+        demaHome: home,
+        entries: observed.entries + 1,
+        head: result.ledger_head,
+      });
+    }
+
+    // The durable corridor event is minted by the corridor's own canonical
+    // serializer — never by the weld, whose event shape is a different chain.
+    const ev = appendCorridorEvent({
+      contract_hash: loaded.contractDoc.contract_hash,
+      journal: loaded.journal,
+      event: {
+        state: completed ? "COMPLETE" : "STOPPED",
+        at_iso: nowIso,
+        terminal_outcome: result.terminal_outcome,
+        requires_human: !completed,
+        note: `corridor closure · outcome ${result.terminal_outcome}${result.omega0_card?.seal_head ? ` · seal ${result.omega0_card.seal_head}` : ""}${result.ledger_head ? ` · ledger ${result.ledger_head}` : ""} · consent_context: ${verdict.consent_context_hash}`,
+        next_command: `dema mission corridor status ${id}`,
+      },
+    });
+    if (!ev.ok) corridorFail(`corridor closure event blocked: ${ev.blocked_by.join(", ")}`);
+    await appendCorridorJournalEvent(dir, ev.event);
+
+    // The closure receipt an outsider reads: everything needed to re-derive the
+    // verdict offline, with nothing asserted that the artifacts do not carry.
+    await writeFile(
+      join(dir, "closure.json"),
+      `${JSON.stringify({
+        schema: "bizra.dema.mission_corridor_closure_record.v0.1",
+        mission_id: id,
+        contract_hash: loaded.contractDoc.contract_hash,
+        state: ev.event.state,
+        terminal_outcome: result.terminal_outcome,
+        event_hash: ev.event.event_hash,
+        seal_head: result.omega0_card?.seal_head ?? null,
+        ledger_head: result.ledger_head ?? null,
+        anchor_hash: anchorRecord?.anchor_hash ?? null,
+        omega0_card: result.omega0_card ?? null,
+        at_iso: nowIso,
+        verify_with: `dema mission corridor status ${id}`,
+      }, null, 2)}\n`,
+      { mode: 0o600 },
+    );
+
+    const out = {
+      ok: completed,
+      mission_id: id,
+      state: ev.event.state,
+      terminal_outcome: result.terminal_outcome,
+      event_hash: ev.event.event_hash,
+      seal_head: result.omega0_card?.seal_head ?? null,
+      ledger_head: result.ledger_head ?? null,
+      anchor_hash: anchorRecord?.anchor_hash ?? null,
+      consent_context_hash: verdict.consent_context_hash,
+      boundary: corridorIoBoundary({ read: true, wrote: true, consented: true }),
+    };
+    if (wantJson) console.log(JSON.stringify(out, null, 2));
+    else if (completed) {
+      console.log(`DEMA · mission corridor COMPLETE: ${id}`);
+      console.log(`  terminal_outcome: ${result.terminal_outcome}`);
+      console.log(`  seal:   ${result.omega0_card?.seal_head}`);
+      console.log(`  ledger: ${result.ledger_head}`);
+      console.log(`  anchor: ${anchorRecord?.anchor_hash ?? "(none)"}`);
+    } else {
+      console.log(`DEMA · mission corridor did NOT complete: ${id}`);
+      console.log(`  terminal_outcome: ${result.terminal_outcome} (journal sealed STOPPED; no COMPLETE was claimed)`);
+    }
+    if (!completed) process.exitCode = 1;
+    return;
+  }
+
   corridorFail(
-    "unknown mission corridor verb. Use `dema mission corridor start --id <id> … --nonce <n> --expires <iso>` (prints the consent card incl. created_at_iso and the exact rerun line), then re-run with `--created-at <iso> --consent \"GO: start mission corridor <id>\" --consent-context <hash>`; `dema mission corridor status <id>`; `dema mission corridor resume <id>`; or `dema mission corridor stop <id> --nonce <n> --expires <iso>` then `--consent \"GO: stop mission corridor <id>\" --consent-context <hash>` — root-bound consent; control plane only; nothing runs.",
+    "unknown mission corridor verb. Use `dema mission corridor start --id <id> … --nonce <n> --expires <iso>` (prints the consent card incl. created_at_iso and the exact rerun line), then re-run with `--created-at <iso> --consent \"GO: start mission corridor <id>\" --consent-context <hash>`; `dema mission corridor status <id>`; `dema mission corridor resume <id>`; `dema mission corridor advance <id> --to <STATE> --nonce <n> --expires <iso>` then `--consent \"GO: advance mission corridor <id> to <STATE>\" --consent-context <hash>`; `dema mission corridor complete <id> --nonce <n> --expires <iso>` then `--consent \"GO: complete mission corridor <id>\" --consent-context <hash>`; or `dema mission corridor stop <id> --nonce <n> --expires <iso>` then `--consent \"GO: stop mission corridor <id>\" --consent-context <hash>` — root-bound consent; control plane only; nothing runs.",
   );
 }
