@@ -26,7 +26,15 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, readFile, readdir } from "node:fs/promises";
+import {
+  link as fsLink,
+  mkdtemp,
+  mkdir,
+  writeFile,
+  readFile,
+  readdir,
+  unlink as fsUnlink,
+} from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -77,6 +85,19 @@ const eventPath = (home, txId, seq) => join(eventsDir(home, txId), `${String(seq
 
 async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
+}
+
+function fsError(code) {
+  return Object.assign(new Error(code), { code });
+}
+
+function publicationOps(overrides = {}) {
+  return {
+    linkFile: fsLink,
+    unlinkTemp: fsUnlink,
+    fsyncDir: async () => {},
+    ...overrides,
+  };
 }
 
 /** Drive the happy chain forward n phases, returning the replay state. */
@@ -466,5 +487,485 @@ describe("TXJ — mission-closure transaction history (C2)", () => {
       assert.equal(phase.startsWith("CORRIDOR_"), false, `${phase} duplicates corridor state vocabulary`);
     }
     assert.equal(TERMINAL_OUTCOMES.includes("COMPLETED_VERIFIED"), true);
+  });
+
+  test("TXJ-17 unavailable native no-replace publication fails closed without advancing state", async () => {
+    for (const code of ["EXDEV", "EPERM", "EIO"]) {
+      const home = await freshHome();
+      const claim = await claimed(home, { nonce: `${NONCE}-${code}`, transactionId: `tx-${code}` });
+      await openClosureTransaction({ claim, demaHome: home });
+      const before = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+      const cleaned = [];
+      let renameCalls = 0;
+
+      const result = await _internal.appendClosureEventWithPublicationOps({
+        demaHome: home,
+        transactionId: claim.transaction_id,
+        expectedSequence: 1,
+        expectedPreviousEventHash: before.head_event_hash,
+        phase: "EFFECT_INTENT_PERSISTED",
+      }, publicationOps({
+          linkFile: async () => { throw fsError(code); },
+          unlinkTemp: async (path) => {
+            cleaned.push(path);
+            await fsUnlink(path);
+          },
+          renameFile: async () => { renameCalls += 1; },
+        }));
+
+      assert.deepEqual(result, {
+        appended: false,
+        reason: `event_publication_unavailable:${code}`,
+        escalate_to_human: true,
+      });
+      assert.equal(cleaned.length, 1, `${code}: cleanup must be attempted`);
+      assert.equal(renameCalls, 0, `${code}: rename fallback must stay unreachable`);
+      assert.equal(existsSync(eventPath(home, claim.transaction_id, 1)), false);
+      const after = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+      assert.equal(after.ok, true);
+      assert.equal(after.sequence, before.sequence);
+      assert.equal(after.head_event_hash, before.head_event_hash);
+    }
+  });
+
+  test("TXJ-18 EEXIST with a valid semantic winner settles idempotently", async () => {
+    const home = await freshHome();
+    const claim = await claimed(home, { nonce: `${NONCE}-eexist-same`, transactionId: "tx-eexist-same" });
+    await openClosureTransaction({ claim, demaHome: home });
+    const before = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+
+    const result = await _internal.appendClosureEventWithPublicationOps({
+      demaHome: home,
+      transactionId: claim.transaction_id,
+      expectedSequence: 1,
+      expectedPreviousEventHash: before.head_event_hash,
+      phase: "EFFECT_INTENT_PERSISTED",
+    }, publicationOps({
+        linkFile: async (temp, finalPath) => {
+          await fsLink(temp, finalPath);
+          throw fsError("EEXIST");
+        },
+      }));
+
+    assert.equal(result.appended, false);
+    assert.equal(result.reason, "already_applied_idempotently");
+    assert.equal(result.idempotent, true);
+    const after = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+    assert.equal(after.ok, true);
+    assert.equal(after.phase, "EFFECT_INTENT_PERSISTED");
+  });
+
+  test("TXJ-19 EEXIST with a valid different winner settles as a transition conflict", async () => {
+    const home = await freshHome();
+    const claim = await claimed(home, { nonce: `${NONCE}-eexist-other`, transactionId: "tx-eexist-other" });
+    await openClosureTransaction({ claim, demaHome: home });
+    const before = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+
+    const result = await _internal.appendClosureEventWithPublicationOps({
+      demaHome: home,
+      transactionId: claim.transaction_id,
+      expectedSequence: 1,
+      expectedPreviousEventHash: before.head_event_hash,
+      phase: "EFFECT_INTENT_PERSISTED",
+    }, publicationOps({
+        linkFile: async (candidateTemp, finalPath) => {
+          const winner = JSON.parse(await readFile(candidateTemp, "utf8"));
+          winner.phase = "RESOLVED";
+          winner.terminal_outcome = "REFUSED_POLICY";
+          winner.semantic_evidence_hash = _internal.hashSemantic(winner);
+          winner.event_hash = _internal.hashEvent(winner);
+          const competitorTemp = `${candidateTemp}-competitor`;
+          await writeFile(competitorTemp, `${JSON.stringify(winner, null, 2)}\n`);
+          await fsLink(competitorTemp, finalPath);
+          await fsUnlink(competitorTemp);
+          throw fsError("EEXIST");
+        },
+      }));
+
+    assert.equal(result.appended, false);
+    assert.equal(result.reason, "transaction_transition_conflict");
+    assert.equal(result.escalate_to_human, true);
+    const after = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+    assert.equal(after.ok, true);
+    assert.equal(after.phase, "RESOLVED");
+  });
+
+  test("TXJ-20 cleanup failure preserves both diagnoses and leaves temporary bytes non-authoritative", async () => {
+    const home = await freshHome();
+    const claim = await claimed(home, { nonce: `${NONCE}-cleanup`, transactionId: "tx-cleanup" });
+    await openClosureTransaction({ claim, demaHome: home });
+    const before = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+
+    const result = await _internal.appendClosureEventWithPublicationOps({
+      demaHome: home,
+      transactionId: claim.transaction_id,
+      expectedSequence: 1,
+      expectedPreviousEventHash: before.head_event_hash,
+      phase: "EFFECT_INTENT_PERSISTED",
+    }, publicationOps({
+        linkFile: async () => { throw fsError("EIO"); },
+        unlinkTemp: async () => { throw fsError("EPERM"); },
+      }));
+
+    assert.deepEqual(result, {
+      appended: false,
+      reason: "event_publication_unavailable:EIO",
+      cleanup_failure: "event_temp_cleanup_failed:EPERM",
+      escalate_to_human: true,
+    });
+    assert.equal(existsSync(eventPath(home, claim.transaction_id, 1)), false);
+    const entries = await readdir(eventsDir(home, claim.transaction_id));
+    assert.equal(entries.some((name) => name.startsWith(".tmp-")), true);
+    const after = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+    assert.equal(after.ok, true);
+    assert.equal(after.sequence, before.sequence);
+    assert.equal(after.head_event_hash, before.head_event_hash);
+  });
+
+  test("TXJ-21 directory fsync uncertainty is not acknowledged and replay never duplicates", async () => {
+    const home = await freshHome();
+    const claim = await claimed(home, { nonce: `${NONCE}-dirsync`, transactionId: "tx-dirsync" });
+    await openClosureTransaction({ claim, demaHome: home });
+    const before = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+    const proposal = {
+      demaHome: home,
+      transactionId: claim.transaction_id,
+      expectedSequence: 1,
+      expectedPreviousEventHash: before.head_event_hash,
+      phase: "EFFECT_INTENT_PERSISTED",
+    };
+    let cleanupAttempts = 0;
+
+    const uncertain = await _internal.appendClosureEventWithPublicationOps(
+      proposal,
+      publicationOps({
+        fsyncDir: async () => { throw fsError("EIO"); },
+        unlinkTemp: async (path) => {
+          cleanupAttempts += 1;
+          await fsUnlink(path);
+        },
+      }),
+    );
+
+    assert.deepEqual(uncertain, {
+      appended: false,
+      reason: "event_publication_durability_uncertain:EIO",
+      durability_uncertain: true,
+      canonical_event_visible: true,
+      effect_retry_forbidden: true,
+      replay_required: true,
+      escalate_to_human: true,
+    });
+    assert.equal(cleanupAttempts, 1);
+    const replayed = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+    assert.equal(replayed.ok, true);
+    assert.equal(replayed.sequence, 1);
+    assert.equal(replayed.phase, "EFFECT_INTENT_PERSISTED");
+
+    const retry = await appendClosureEvent(proposal);
+    assert.equal(retry.appended, false);
+    assert.equal(retry.reason, "already_applied_idempotently");
+    assert.deepEqual((await readdir(eventsDir(home, claim.transaction_id))).sort(), ["000000.json", "000001.json"]);
+  });
+
+  test("TXJ-22 EEXIST winner is chain-verified before semantic settlement", async () => {
+    const home = await freshHome();
+    const claim = await claimed(home, { nonce: `${NONCE}-winner-invalid`, transactionId: "tx-winner-invalid" });
+    await openClosureTransaction({ claim, demaHome: home });
+    const before = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+
+    const result = await _internal.appendClosureEventWithPublicationOps({
+      demaHome: home,
+      transactionId: claim.transaction_id,
+      expectedSequence: 1,
+      expectedPreviousEventHash: before.head_event_hash,
+      phase: "EFFECT_INTENT_PERSISTED",
+    }, publicationOps({
+      linkFile: async (candidateTemp, finalPath) => {
+        const winner = JSON.parse(await readFile(candidateTemp, "utf8"));
+        winner.event_hash = "sha256:" + "0".repeat(64);
+        const competitorTemp = `${candidateTemp}-invalid-winner`;
+        await writeFile(competitorTemp, `${JSON.stringify(winner, null, 2)}\n`);
+        await fsLink(competitorTemp, finalPath);
+        await fsUnlink(competitorTemp);
+        throw fsError("EEXIST");
+      },
+    }));
+
+    assert.deepEqual(result, {
+      appended: false,
+      reason: "event_published_winner_invalid:event_hash_mismatch",
+      escalate_to_human: true,
+    });
+  });
+
+  test("TXJ-23 EEXIST cannot settle when the loser cannot make the winner durable", async () => {
+    const home = await freshHome();
+    const claim = await claimed(home, { nonce: `${NONCE}-winner-dirsync`, transactionId: "tx-winner-dirsync" });
+    await openClosureTransaction({ claim, demaHome: home });
+    const before = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+
+    const result = await _internal.appendClosureEventWithPublicationOps({
+      demaHome: home,
+      transactionId: claim.transaction_id,
+      expectedSequence: 1,
+      expectedPreviousEventHash: before.head_event_hash,
+      phase: "EFFECT_INTENT_PERSISTED",
+    }, publicationOps({
+      linkFile: async (temp, finalPath) => {
+        await fsLink(temp, finalPath);
+        throw fsError("EEXIST");
+      },
+      fsyncDir: async () => { throw fsError("EIO"); },
+    }));
+
+    assert.deepEqual(result, {
+      appended: false,
+      reason: "event_publication_durability_uncertain:EIO",
+      durability_uncertain: true,
+      canonical_event_visible: true,
+      effect_retry_forbidden: true,
+      replay_required: true,
+      escalate_to_human: true,
+    });
+  });
+
+  test("TXJ-24 a forged semantic evidence hash cannot manufacture idempotence", async () => {
+    const home = await freshHome();
+    const claim = await claimed(home, { nonce: `${NONCE}-semantic-forgery`, transactionId: "tx-semantic-forgery" });
+    await openClosureTransaction({ claim, demaHome: home });
+    const before = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+
+    const result = await _internal.appendClosureEventWithPublicationOps({
+      demaHome: home,
+      transactionId: claim.transaction_id,
+      expectedSequence: 1,
+      expectedPreviousEventHash: before.head_event_hash,
+      phase: "EFFECT_INTENT_PERSISTED",
+    }, publicationOps({
+      linkFile: async (candidateTemp, finalPath) => {
+        const winner = JSON.parse(await readFile(candidateTemp, "utf8"));
+        winner.evidence_refs = [{ type: "forged", hash: "sha256:not-the-candidate" }];
+        winner.event_hash = _internal.hashEvent(winner);
+        const competitorTemp = `${candidateTemp}-semantic-forgery`;
+        await writeFile(competitorTemp, `${JSON.stringify(winner, null, 2)}\n`);
+        await fsLink(competitorTemp, finalPath);
+        await fsUnlink(competitorTemp);
+        throw fsError("EEXIST");
+      },
+    }));
+
+    assert.deepEqual(result, {
+      appended: false,
+      reason: "event_published_winner_invalid:semantic_evidence_hash_mismatch",
+      escalate_to_human: true,
+    });
+  });
+
+  test("TXJ-25 durable publication stays acknowledged when only temp cleanup fails", async () => {
+    const home = await freshHome();
+    const claim = await claimed(home, { nonce: `${NONCE}-cleanup-after-success`, transactionId: "tx-cleanup-after-success" });
+    await openClosureTransaction({ claim, demaHome: home });
+    const before = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+    const proposal = {
+      demaHome: home,
+      transactionId: claim.transaction_id,
+      expectedSequence: 1,
+      expectedPreviousEventHash: before.head_event_hash,
+      phase: "EFFECT_INTENT_PERSISTED",
+    };
+
+    const result = await _internal.appendClosureEventWithPublicationOps(
+      proposal,
+      publicationOps({ unlinkTemp: async () => { throw fsError("EPERM"); } }),
+    );
+
+    assert.equal(result.appended, true);
+    assert.equal(result.cleanup_failure, "event_temp_cleanup_failed:EPERM");
+    const replayed = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+    assert.equal(replayed.ok, true);
+    assert.equal(replayed.sequence, 1);
+    const retry = await appendClosureEvent(proposal);
+    assert.equal(retry.appended, false);
+    assert.equal(retry.reason, "already_applied_idempotently");
+  });
+
+  test("TXJ-26 stale retry remains durability-uncertain when directory fsync still fails", async () => {
+    const home = await freshHome();
+    const claim = await claimed(home, { nonce: `${NONCE}-stale-dirsync`, transactionId: "tx-stale-dirsync" });
+    await openClosureTransaction({ claim, demaHome: home });
+    const before = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+    const proposal = {
+      demaHome: home,
+      transactionId: claim.transaction_id,
+      expectedSequence: 1,
+      expectedPreviousEventHash: before.head_event_hash,
+      phase: "EFFECT_INTENT_PERSISTED",
+    };
+
+    const first = await _internal.appendClosureEventWithPublicationOps(
+      proposal,
+      publicationOps({ fsyncDir: async () => { throw fsError("EIO"); } }),
+    );
+    assert.equal(first.reason, "event_publication_durability_uncertain:EIO");
+
+    const retry = await _internal.appendClosureEventWithPublicationOps(
+      proposal,
+      publicationOps({
+        linkFile: async () => { throw new Error("stale retry must not publish"); },
+        fsyncDir: async () => { throw fsError("EPERM"); },
+      }),
+    );
+
+    assert.deepEqual(retry, {
+      appended: false,
+      reason: "event_publication_durability_uncertain:EPERM",
+      durability_uncertain: true,
+      canonical_event_visible: true,
+      effect_retry_forbidden: true,
+      replay_required: true,
+      escalate_to_human: true,
+    });
+    assert.deepEqual((await readdir(eventsDir(home, claim.transaction_id))).sort(), ["000000.json", "000001.json"]);
+
+    const recovered = await appendClosureEvent(proposal);
+    assert.equal(recovered.appended, false);
+    assert.equal(recovered.reason, "already_applied_idempotently");
+  });
+
+  test("TXJ-27 PREPARED recovery re-establishes directory durability before success", async () => {
+    const home = await freshHome();
+    const claim = await claimed(home, { nonce: `${NONCE}-prepared-dirsync`, transactionId: "tx-prepared-dirsync" });
+
+    const first = await _internal.openClosureTransactionWithPublicationOps(
+      { claim, demaHome: home },
+      publicationOps({ fsyncDir: async () => { throw fsError("EIO"); } }),
+    );
+    assert.equal(first.ok, false);
+    assert.equal(first.reason, "event_publication_durability_uncertain:EIO");
+    assert.equal(first.durability_uncertain, true);
+
+    const visible = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+    assert.equal(visible.ok, true);
+    assert.equal(visible.sequence, 0);
+    assert.equal(visible.phase, "PREPARED");
+
+    const stillUncertain = await _internal.openClosureTransactionWithPublicationOps(
+      { claim, demaHome: home },
+      publicationOps({
+        linkFile: async () => { throw new Error("visible PREPARED must not be republished"); },
+        fsyncDir: async () => { throw fsError("EPERM"); },
+      }),
+    );
+    assert.equal(stillUncertain.ok, false);
+    assert.equal(stillUncertain.reason, "event_publication_durability_uncertain:EPERM");
+    assert.equal(stillUncertain.durability_uncertain, true);
+
+    const recovered = await openClosureTransaction({ claim, demaHome: home });
+    assert.equal(recovered.ok, true);
+    assert.equal(recovered.reason, "already_prepared");
+    assert.deepEqual((await readdir(eventsDir(home, claim.transaction_id))).sort(), ["000000.json"]);
+  });
+
+  test("TXJ-28 replay rejects an event-hash-valid event with an extra field", async () => {
+    const home = await freshHome();
+    const claim = await claimed(home, { nonce: `${NONCE}-shape`, transactionId: "tx-shape" });
+    await openClosureTransaction({ claim, demaHome: home });
+
+    const zeroPath = eventPath(home, claim.transaction_id, 0);
+    const forged = { ...(await readJson(zeroPath)), injected_authority: true };
+    forged.event_hash = _internal.hashEvent(forged);
+    await writeFile(zeroPath, `${JSON.stringify(forged, null, 2)}\n`);
+
+    const replayed = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+    assert.equal(replayed.ok, false);
+    assert.equal(replayed.reason, "event_shape_mismatch");
+  });
+
+  test("TXJ-29 replay rejects an event-hash-valid predecessor with stale semantic evidence", async () => {
+    const home = await freshHome();
+    const claim = await claimed(home, { nonce: `${NONCE}-predecessor`, transactionId: "tx-predecessor" });
+    await openClosureTransaction({ claim, demaHome: home });
+
+    const zeroPath = eventPath(home, claim.transaction_id, 0);
+    const forged = await readJson(zeroPath);
+    forged.evidence_refs = [{ type: "forged", hash: "sha256:changed" }];
+    forged.event_hash = _internal.hashEvent(forged);
+    await writeFile(zeroPath, `${JSON.stringify(forged, null, 2)}\n`);
+
+    const replayed = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+    assert.equal(replayed.ok, false);
+    assert.equal(replayed.reason, "semantic_evidence_hash_mismatch");
+  });
+
+  test("TXJ-30 EEXIST settlement rejects an event-hash-valid malformed winner", async () => {
+    const home = await freshHome();
+    const claim = await claimed(home, { nonce: `${NONCE}-winner-shape`, transactionId: "tx-winner-shape" });
+    await openClosureTransaction({ claim, demaHome: home });
+    const before = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+
+    const result = await _internal.appendClosureEventWithPublicationOps({
+      demaHome: home,
+      transactionId: claim.transaction_id,
+      expectedSequence: 1,
+      expectedPreviousEventHash: before.head_event_hash,
+      phase: "EFFECT_INTENT_PERSISTED",
+    }, publicationOps({
+      linkFile: async (candidateTemp, finalPath) => {
+        const winner = JSON.parse(await readFile(candidateTemp, "utf8"));
+        winner.injected_authority = true;
+        winner.event_hash = _internal.hashEvent(winner);
+        const competitorTemp = `${candidateTemp}-malformed-winner`;
+        await writeFile(competitorTemp, `${JSON.stringify(winner, null, 2)}\n`);
+        await fsLink(competitorTemp, finalPath);
+        await fsUnlink(competitorTemp);
+        throw fsError("EEXIST");
+      },
+    }));
+
+    assert.deepEqual(result, {
+      appended: false,
+      reason: "event_published_winner_invalid:event_shape_mismatch",
+      escalate_to_human: true,
+    });
+  });
+
+  test("TXJ-31 stale malformed proposals fail closed without throwing or publishing", async () => {
+    const home = await freshHome();
+    const claim = await claimed(home, { nonce: `${NONCE}-candidate`, transactionId: "tx-candidate" });
+    await openClosureTransaction({ claim, demaHome: home });
+    const before = await replayClosureTransaction({ demaHome: home, transactionId: claim.transaction_id });
+    const base = {
+      demaHome: home,
+      transactionId: claim.transaction_id,
+      expectedSequence: 1,
+      expectedPreviousEventHash: before.head_event_hash,
+      phase: "EFFECT_INTENT_PERSISTED",
+    };
+    assert.equal((await appendClosureEvent(base)).appended, true);
+
+    const bigint = await appendClosureEvent({ ...base, evidenceRefs: [{ value: 1n }] });
+    assert.deepEqual(bigint, {
+      appended: false,
+      reason: "event_candidate_invalid:value_bigint",
+    });
+
+    const cyclic = {};
+    cyclic.self = cyclic;
+    const cycle = await appendClosureEvent({ ...base, evidenceRefs: [cyclic] });
+    assert.deepEqual(cycle, {
+      appended: false,
+      reason: "event_candidate_invalid:circular_reference",
+    });
+
+    const hostileHash = await appendClosureEvent({
+      ...base,
+      expectedPreviousEventHash: Symbol("hostile"),
+    });
+    assert.deepEqual(hostileHash, {
+      appended: false,
+      reason: "expected_previous_event_hash_invalid",
+    });
+    assert.deepEqual((await readdir(eventsDir(home, claim.transaction_id))).sort(), ["000000.json", "000001.json"]);
   });
 });

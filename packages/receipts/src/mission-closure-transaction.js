@@ -81,6 +81,15 @@ const COMPLETED_VERIFIED_PREDECESSOR = "ANCHORED";
 const TX_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const EVENT_FILE_RE = /^(\d{6})\.json$/;
 const TEMP_FILE_RE = /^\.tmp-[A-Za-z0-9._-]+$/;
+const RAW_SHA256_RE = /^[0-9a-f]{64}$/;
+const TAGGED_SHA256_RE = /^sha256:[0-9a-f]{64}$/;
+const EVENT_FIELDS = Object.freeze([
+  "schema", "domain", "canonicalization", "transaction_id", "sequence",
+  "phase", "terminal_outcome", "previous_event_hash", "consent_claim_hash",
+  "transaction_hash", "evidence_refs", "at_iso", "semantic_evidence_hash",
+  "event_hash",
+]);
+const EVENT_FIELDS_SORTED = Object.freeze([...EVENT_FIELDS].sort());
 
 const sha256 = (s) => "sha256:" + createHash("sha256").update(s).digest("hex");
 
@@ -146,13 +155,143 @@ const hashEvent = (e) => {
   return sha256(MISSION_CLOSURE_TX_EVENT_DOMAIN + "\0" + canonicalizeJsonV1(rest));
 };
 
+const canonicalErrorCode = (err) =>
+  typeof err?.code === "string" && err.code.length > 0 ? err.code : "canonicalization_failed";
+
+function isCanonicalIso(value) {
+  if (typeof value !== "string") return false;
+  const milliseconds = Date.parse(value);
+  return Number.isFinite(milliseconds) && new Date(milliseconds).toISOString() === value;
+}
+
+function validateStoredEvent(body, {
+  transactionId,
+  sequence,
+  previousEventHash,
+  bindings = null,
+} = {}) {
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    return "event_shape_mismatch";
+  }
+  let keys;
+  try {
+    keys = Object.keys(body).sort();
+  } catch {
+    return "event_shape_mismatch";
+  }
+  if (keys.length !== EVENT_FIELDS_SORTED.length
+    || keys.some((key, index) => key !== EVENT_FIELDS_SORTED[index])) {
+    return "event_shape_mismatch";
+  }
+  if (body.schema !== MISSION_CLOSURE_TX_EVENT_SCHEMA) return "event_schema_mismatch";
+  if (body.domain !== MISSION_CLOSURE_TX_EVENT_DOMAIN) return "event_domain_mismatch";
+  if (body.canonicalization !== CANONICALIZATION) return "event_canonicalization_mismatch";
+  if (body.transaction_id !== transactionId || !TX_ID_RE.test(body.transaction_id)) {
+    return "event_transaction_id_mismatch";
+  }
+  if (!Number.isInteger(body.sequence) || body.sequence < 0 || body.sequence !== sequence) {
+    return "event_sequence_filename_mismatch";
+  }
+  if (!Object.hasOwn(TX_TRANSITIONS, body.phase)) return "event_phase_unknown";
+  if (body.phase === "RESOLVED") {
+    if (!TERMINAL_OUTCOMES.includes(body.terminal_outcome)) return "event_terminal_outcome_invalid";
+  } else if (body.terminal_outcome !== null) {
+    return "event_terminal_outcome_on_nonterminal_phase";
+  }
+  if (body.previous_event_hash !== previousEventHash) return "event_previous_hash_broken";
+  if (sequence === 0) {
+    if (body.previous_event_hash !== null) return "event_previous_hash_invalid";
+  } else if (!TAGGED_SHA256_RE.test(body.previous_event_hash)) {
+    return "event_previous_hash_invalid";
+  }
+  if (!RAW_SHA256_RE.test(body.consent_claim_hash)) return "event_consent_claim_hash_invalid";
+  if (!TAGGED_SHA256_RE.test(body.transaction_hash)) return "event_transaction_hash_invalid";
+  if (!Array.isArray(body.evidence_refs)) return "event_evidence_refs_invalid";
+  if (!isCanonicalIso(body.at_iso)) return "event_at_iso_invalid";
+  if (!TAGGED_SHA256_RE.test(body.semantic_evidence_hash)) {
+    return "event_semantic_evidence_hash_invalid";
+  }
+  if (!TAGGED_SHA256_RE.test(body.event_hash)) return "event_hash_invalid";
+  if (bindings
+    && (body.consent_claim_hash !== bindings.consent_claim_hash
+      || body.transaction_hash !== bindings.transaction_hash)) {
+    return "event_binding_mismatch";
+  }
+  try {
+    if (hashSemantic(body) !== body.semantic_evidence_hash) {
+      return "semantic_evidence_hash_mismatch";
+    }
+    if (hashEvent(body) !== body.event_hash) return "event_hash_mismatch";
+  } catch (err) {
+    return `event_canonicalization_invalid:${canonicalErrorCode(err)}`;
+  }
+  return null;
+}
+
+function validateAppendProposal({
+  expectedSequence,
+  expectedPreviousEventHash,
+  phase,
+  terminalOutcome,
+  evidenceRefs,
+  atIso,
+}) {
+  if (!Number.isInteger(expectedSequence) || expectedSequence < 0) return "expected_sequence_invalid";
+  if (expectedSequence === 0) {
+    if (expectedPreviousEventHash !== null) return "expected_previous_event_hash_invalid";
+  } else if (typeof expectedPreviousEventHash !== "string"
+    || !TAGGED_SHA256_RE.test(expectedPreviousEventHash)) {
+    return "expected_previous_event_hash_invalid";
+  }
+  if (!Object.hasOwn(TX_TRANSITIONS, phase)) return "phase_unknown";
+  if (phase === "RESOLVED") {
+    if (!TERMINAL_OUTCOMES.includes(terminalOutcome)) return "terminal_outcome_required";
+  } else if (terminalOutcome !== null) {
+    return "terminal_outcome_on_nonterminal_phase";
+  }
+  if (!Array.isArray(evidenceRefs)) return "event_candidate_invalid:evidence_refs_invalid";
+  if (atIso !== undefined && !isCanonicalIso(atIso)) return "event_candidate_invalid:at_iso_invalid";
+  try {
+    canonicalizeJsonV1(evidenceRefs);
+  } catch (err) {
+    return `event_candidate_invalid:${canonicalErrorCode(err)}`;
+  }
+  return null;
+}
+
 /**
  * Someone already holds this sequence. Whether that is our own completed work
  * or a competing decision is settled ONLY by semantic equality — the one place
  * that question is answered, for both the in-flight race and the crash retry.
  */
 function settleAgainstPublished(published, candidate) {
-  if (published.semantic_evidence_hash === hashSemantic(candidate)) {
+  let publishedSemantic;
+  try {
+    publishedSemantic = hashSemantic(published);
+  } catch (err) {
+    return {
+      appended: false,
+      reason: `event_published_winner_invalid:event_canonicalization_invalid:${canonicalErrorCode(err)}`,
+      escalate_to_human: true,
+    };
+  }
+  if (published?.semantic_evidence_hash !== publishedSemantic) {
+    return {
+      appended: false,
+      reason: "event_published_winner_invalid:semantic_evidence_hash_mismatch",
+      escalate_to_human: true,
+    };
+  }
+  let candidateSemantic;
+  try {
+    candidateSemantic = hashSemantic(candidate);
+  } catch (err) {
+    return {
+      appended: false,
+      reason: `event_candidate_invalid:${canonicalErrorCode(err)}`,
+    };
+  }
+  if (published.semantic_evidence_hash === candidateSemantic) {
     return {
       appended: false, reason: "already_applied_idempotently",
       idempotent: true, event: Object.freeze(published),
@@ -164,25 +303,31 @@ function settleAgainstPublished(published, candidate) {
   };
 }
 
+function withCleanupFailure(result, cleanupFailure) {
+  return cleanupFailure ? { ...result, cleanup_failure: cleanupFailure } : result;
+}
+
 /** fsync a path; a directory handle is how the link itself is made durable. */
 async function fsyncPath(path) {
-  let fh;
+  const fh = await open(path, "r");
   try {
-    fh = await open(path, "r");
     await fh.sync();
-  } catch {
-    // Durability degradation, not a correctness break: the no-replace guarantee
-    // comes from link(), which has already succeeded or already failed.
   } finally {
-    await fh?.close();
+    await fh.close();
   }
 }
+
+const DEFAULT_PUBLICATION_OPS = Object.freeze({
+  linkFile: link,
+  unlinkTemp: unlink,
+  fsyncDir: fsyncPath,
+});
 
 /**
  * Publish bytes at `finalPath` with no-replace semantics, or refuse.
  * @returns {Promise<{published:true}|{published:false, reason:string}>}
  */
-async function publishNoReplace(dir, finalPath, bytes) {
+async function publishNoReplace(dir, finalPath, bytes, ops = DEFAULT_PUBLICATION_OPS) {
   const temp = join(dir, `.tmp-${randomUUID()}`);
   try {
     const fh = await open(temp, "wx", 0o600);
@@ -196,17 +341,54 @@ async function publishNoReplace(dir, finalPath, bytes) {
     return { published: false, reason: `event_temp_write_failed:${err?.code ?? "unknown"}` };
   }
 
+  let result;
   try {
-    await link(temp, finalPath); // fails EEXIST — never overwrites a published event
-    await fsyncPath(dir);
-    return { published: true };
+    await ops.linkFile(temp, finalPath);
+    try {
+      await ops.fsyncDir(dir);
+      result = { published: true, durable: true };
+    } catch (err) {
+      result = {
+        published: true,
+        durable: false,
+        reason: `event_publication_durability_uncertain:${err?.code ?? "unknown"}`,
+        durability_uncertain: true,
+        canonical_event_visible: true,
+        effect_retry_forbidden: true,
+        replay_required: true,
+      };
+    }
   } catch (err) {
-    if (err?.code === "EEXIST") return { published: false, reason: "event_already_published" };
-    // No portable no-replace publication ⇒ fail closed. Never fall back to rename.
-    return { published: false, reason: `event_publication_unavailable:${err?.code ?? "unknown"}` };
-  } finally {
-    await unlink(temp).catch(() => {});
+    if (err?.code === "EEXIST") {
+      try {
+        await ops.fsyncDir(dir);
+        result = { published: false, durable: true, reason: "event_already_published" };
+      } catch (syncErr) {
+        result = {
+          published: false,
+          durable: false,
+          reason: `event_publication_durability_uncertain:${syncErr?.code ?? "unknown"}`,
+          durability_uncertain: true,
+          canonical_event_visible: true,
+          effect_retry_forbidden: true,
+          replay_required: true,
+        };
+      }
+    } else {
+      result = {
+        published: false,
+        durable: false,
+        reason: `event_publication_unavailable:${err?.code ?? "unknown"}`,
+      };
+    }
   }
+
+  try {
+    await ops.unlinkTemp(temp);
+  } catch (err) {
+    result.cleanup_failure = `event_temp_cleanup_failed:${err?.code ?? "unknown"}`;
+  }
+  return result;
 }
 
 /**
@@ -253,6 +435,7 @@ export async function replayClosureTransaction({ demaHome, transactionId } = {})
 
   const events = [];
   let previous = null;
+  let bindings = null;
   for (let i = 0; i < seqs.length; i += 1) {
     if (seqs[i] !== i) return refuse("event_sequence_gap", { escalate_to_human: true, expected: i, found: seqs[i] });
 
@@ -267,26 +450,32 @@ export async function replayClosureTransaction({ demaHome, transactionId } = {})
         escalate_to_human: true, terminal_outcome: "RECOVERY_REQUIRED", sequence: i,
       });
     }
-    if (body?.transaction_id !== transactionId) {
-      return refuse("event_transaction_id_mismatch", { escalate_to_human: true, sequence: i });
-    }
-    if (body?.sequence !== i) {
-      return refuse("event_sequence_filename_mismatch", { escalate_to_human: true, sequence: i });
-    }
-    if (hashEvent(body) !== body?.event_hash) {
-      return refuse("event_hash_mismatch", { escalate_to_human: true, sequence: i });
-    }
-    if (body.previous_event_hash !== previous) {
-      return refuse("event_previous_hash_broken", { escalate_to_human: true, sequence: i });
-    }
+    const invalid = validateStoredEvent(body, {
+      transactionId,
+      sequence: i,
+      previousEventHash: previous,
+      bindings,
+    });
+    if (invalid) return refuse(invalid, { escalate_to_human: true, sequence: i });
     if (i === 0 && body.phase !== "PREPARED") {
       return refuse("first_event_not_prepared", { escalate_to_human: true });
     }
     if (i > 0 && !TX_TRANSITIONS[events[i - 1].phase]?.includes(body.phase)) {
       return refuse("illegal_phase_in_history", { escalate_to_human: true, sequence: i });
     }
+    if (body.phase === "RESOLVED"
+      && body.terminal_outcome === "COMPLETED_VERIFIED"
+      && events[i - 1]?.phase !== COMPLETED_VERIFIED_PREDECESSOR) {
+      return refuse("completed_verified_requires_anchored", { escalate_to_human: true, sequence: i });
+    }
+    if (bindings === null) {
+      bindings = Object.freeze({
+        consent_claim_hash: body.consent_claim_hash,
+        transaction_hash: body.transaction_hash,
+      });
+    }
     previous = body.event_hash;
-    events.push(body);
+    events.push(Object.freeze(body));
   }
 
   const head = events[events.length - 1] ?? null;
@@ -315,7 +504,10 @@ function descriptorDrift(stored, expected) {
  * because the claim itself carries the intent and the recovery policy. This
  * never creates, consumes, releases or reinterprets consent.
  */
-export async function openClosureTransaction({ claim, demaHome, atIso } = {}) {
+async function openClosureTransactionWithPublicationOps(
+  { claim, demaHome, atIso } = {},
+  publicationOps = DEFAULT_PUBLICATION_OPS,
+) {
   if (!claim || typeof claim !== "object") return refuse("claim_missing");
   if (typeof claim.claim_hash !== "string") return refuse("claim_hash_missing");
   const txId = claim.transaction_id;
@@ -356,6 +548,17 @@ export async function openClosureTransaction({ claim, demaHome, atIso } = {}) {
   const state = await replayClosureTransaction({ demaHome: home, transactionId: txId });
   if (!state.ok) return refuse(state.reason, { escalate_to_human: true });
   if (state.exists) {
+    try {
+      await publicationOps.fsyncDir(events);
+    } catch (err) {
+      return refuse(`event_publication_durability_uncertain:${err?.code ?? "unknown"}`, {
+        durability_uncertain: true,
+        canonical_event_visible: true,
+        effect_retry_forbidden: true,
+        replay_required: true,
+        escalate_to_human: true,
+      });
+    }
     return Object.freeze({ ok: true, reason: "already_prepared", transaction: Object.freeze(stored), state });
   }
 
@@ -363,14 +566,30 @@ export async function openClosureTransaction({ claim, demaHome, atIso } = {}) {
     home, txId, sequence: 0, phase: "PREPARED", terminalOutcome: null,
     previousEventHash: null, claimHash: claim.claim_hash,
     transactionHash: descriptor.transaction_hash, evidenceRefs: [], atIso,
-  });
-  if (!published.appended) return refuse(published.reason, { escalate_to_human: Boolean(published.escalate_to_human) });
+  }, publicationOps);
+  if (!published.appended) {
+    const { appended: _appended, reason, ...details } = published;
+    return refuse(reason, {
+      ...details,
+      escalate_to_human: Boolean(published.escalate_to_human),
+    });
+  }
 
-  return Object.freeze({ ok: true, reason: "prepared", transaction: Object.freeze(stored), event: published.event });
+  return Object.freeze({
+    ok: true,
+    reason: "prepared",
+    transaction: Object.freeze(stored),
+    event: published.event,
+    ...(published.cleanup_failure ? { cleanup_failure: published.cleanup_failure } : {}),
+  });
+}
+
+export async function openClosureTransaction(args = {}) {
+  return openClosureTransactionWithPublicationOps(args);
 }
 
 /** Build, publish, and resolve the race for exactly one event. */
-async function writeEvent(p) {
+async function writeEvent(p, publicationOps = DEFAULT_PUBLICATION_OPS) {
   const event = {
     schema: MISSION_CLOSURE_TX_EVENT_SCHEMA,
     domain: MISSION_CLOSURE_TX_EVENT_DOMAIN,
@@ -385,26 +604,72 @@ async function writeEvent(p) {
     evidence_refs: p.evidenceRefs ?? [],
     at_iso: p.atIso ?? new Date().toISOString(),
   };
-  event.semantic_evidence_hash = hashSemantic(event);
-  event.event_hash = hashEvent(event);
+  if (!Array.isArray(event.evidence_refs)) {
+    return { appended: false, reason: "event_candidate_invalid:evidence_refs_invalid" };
+  }
+  if (!isCanonicalIso(event.at_iso)) {
+    return { appended: false, reason: "event_candidate_invalid:at_iso_invalid" };
+  }
+  try {
+    event.semantic_evidence_hash = hashSemantic(event);
+    event.event_hash = hashEvent(event);
+  } catch (err) {
+    return { appended: false, reason: `event_candidate_invalid:${canonicalErrorCode(err)}` };
+  }
 
   const dir = eventsDirOf(p.home, p.txId);
   const finalPath = join(dir, eventName(p.sequence));
-  const res = await publishNoReplace(dir, finalPath, `${JSON.stringify(event, null, 2)}\n`);
-  if (res.published) return { appended: true, event: Object.freeze(event) };
+  const res = await publishNoReplace(
+    dir,
+    finalPath,
+    `${JSON.stringify(event, null, 2)}\n`,
+    publicationOps,
+  );
+  if (res.published && res.durable) {
+    return withCleanupFailure(
+      { appended: true, event: Object.freeze(event) },
+      res.cleanup_failure,
+    );
+  }
   if (res.reason !== "event_already_published") {
-    return { appended: false, reason: res.reason, escalate_to_human: true };
+    const failure = { appended: false, reason: res.reason };
+    if (res.cleanup_failure) failure.cleanup_failure = res.cleanup_failure;
+    if (res.durability_uncertain) failure.durability_uncertain = true;
+    if (res.canonical_event_visible) failure.canonical_event_visible = true;
+    if (res.effect_retry_forbidden) failure.effect_retry_forbidden = true;
+    if (res.replay_required) failure.replay_required = true;
+    failure.escalate_to_human = true;
+    return failure;
   }
 
   // Someone else published this sequence first. Whether that is success or a
   // conflict is decided by SEMANTIC equality, never by bytes or timestamps.
-  let winner;
-  try {
-    winner = JSON.parse(await readFile(finalPath, "utf8"));
-  } catch {
-    return { appended: false, reason: "event_unparseable", escalate_to_human: true };
+  const replayed = await replayClosureTransaction({ demaHome: p.home, transactionId: p.txId });
+  if (!replayed.ok) {
+    return withCleanupFailure({
+      appended: false,
+      reason: `event_published_winner_invalid:${replayed.reason}`,
+      escalate_to_human: true,
+    }, res.cleanup_failure);
   }
-  return settleAgainstPublished(winner, event);
+  const winner = replayed.events[p.sequence];
+  const bindingFields = [
+    "schema", "domain", "canonicalization", "transaction_id", "sequence",
+    "previous_event_hash", "consent_claim_hash", "transaction_hash",
+  ];
+  for (const field of bindingFields) {
+    if (winner?.[field] !== event[field]) {
+      return withCleanupFailure({
+        appended: false,
+        reason: `event_published_winner_invalid:${field}_mismatch`,
+        escalate_to_human: true,
+      }, res.cleanup_failure);
+    }
+  }
+  return withCleanupFailure(
+    settleAgainstPublished(winner, event),
+    res.cleanup_failure,
+  );
 }
 
 /**
@@ -414,30 +679,35 @@ async function writeEvent(p) {
  * never append: the whole history is re-verified, the transition is checked
  * against the closed map, and publication is no-replace.
  */
-export async function appendClosureEvent({
+async function appendClosureEventWithPublicationOps({
   demaHome, transactionId, expectedSequence, expectedPreviousEventHash,
   phase, terminalOutcome = null, evidenceRefs = [], atIso,
-} = {}) {
+} = {}, publicationOps = DEFAULT_PUBLICATION_OPS) {
   if (typeof transactionId !== "string" || !TX_ID_RE.test(transactionId)) {
     return Object.freeze({ appended: false, reason: "transaction_id_malformed" });
   }
-  if (!Object.hasOwn(TX_TRANSITIONS, phase)) {
-    return Object.freeze({ appended: false, reason: "phase_unknown" });
-  }
+  const invalidProposal = validateAppendProposal({
+    expectedSequence,
+    expectedPreviousEventHash,
+    phase,
+    terminalOutcome,
+    evidenceRefs,
+    atIso,
+  });
+  if (invalidProposal) return Object.freeze({ appended: false, reason: invalidProposal });
   const home = resolveHome(demaHome);
   const state = await replayClosureTransaction({ demaHome: home, transactionId });
 
+  if (!state.ok) {
+    return Object.freeze({ appended: false, reason: state.reason, escalate_to_human: true });
+  }
   if (!state.exists) {
     // Nothing on disk yet: the only event that may open a history is PREPARED,
     // and only openClosureTransaction may write it (it alone binds the claim).
     if (phase !== "PREPARED") {
       return Object.freeze({ appended: false, reason: "first_event_must_be_prepared" });
     }
-    if (!state.ok) return Object.freeze({ appended: false, reason: state.reason, escalate_to_human: true });
     return Object.freeze({ appended: false, reason: "use_open_closure_transaction" });
-  }
-  if (!state.ok) {
-    return Object.freeze({ appended: false, reason: state.reason, escalate_to_human: true });
   }
   if (expectedSequence !== state.sequence + 1) {
     // A worker that died AFTER publishing but before recording success retries
@@ -447,6 +717,19 @@ export async function appendClosureEvent({
     // step into escalation and invite a duplicate effect on the next attempt.
     const published = state.events[expectedSequence];
     if (published) {
+      try {
+        await publicationOps.fsyncDir(eventsDirOf(home, transactionId));
+      } catch (err) {
+        return Object.freeze({
+          appended: false,
+          reason: `event_publication_durability_uncertain:${err?.code ?? "unknown"}`,
+          durability_uncertain: true,
+          canonical_event_visible: true,
+          effect_retry_forbidden: true,
+          replay_required: true,
+          escalate_to_human: true,
+        });
+      }
       return Object.freeze(
         settleAgainstPublished(published, {
           domain: MISSION_CLOSURE_TX_EVENT_DOMAIN,
@@ -488,11 +771,17 @@ export async function appendClosureEvent({
     home, txId: transactionId, sequence: expectedSequence, phase, terminalOutcome,
     previousEventHash: state.head_event_hash, claimHash: head.consent_claim_hash,
     transactionHash: head.transaction_hash, evidenceRefs, atIso,
-  });
+  }, publicationOps);
   return Object.freeze(res);
+}
+
+export async function appendClosureEvent(args = {}) {
+  return appendClosureEventWithPublicationOps(args);
 }
 
 export const _internal = Object.freeze({
   TX_ID_RE, EVENT_FILE_RE, TEMP_FILE_RE, transactionDir, eventsDirOf, eventName,
   hashDescriptor, hashEvent, hashSemantic, descriptorBody, publishNoReplace,
+  openClosureTransactionWithPublicationOps, appendClosureEventWithPublicationOps,
+  DEFAULT_PUBLICATION_OPS,
 });
