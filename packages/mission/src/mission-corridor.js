@@ -57,6 +57,16 @@ export const MISSION_ID_RE = /^[a-z0-9][a-z0-9-]{2,63}$/;
 // it — the closure depends on the corridor, never the reverse.
 const TERMINAL_OUTCOME_RE = /^[A-Z][A-Z_]{2,63}$/;
 const SHA40_RE = /^[0-9a-f]{40}$/;
+const RAW_SHA256_RE = /^[0-9a-f]{64}$/;
+const TAGGED_SHA256_RE = /^sha256:[0-9a-f]{64}$/;
+const CLOSURE_TRANSACTION_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+const CLOSURE_BINDING_HASH_FIELDS = Object.freeze({
+  consent_claim_hash: RAW_SHA256_RE,
+  prepared_intent_hash: TAGGED_SHA256_RE,
+  seal_head: RAW_SHA256_RE,
+  ledger_head: RAW_SHA256_RE,
+  anchor_hash: RAW_SHA256_RE,
+});
 const MAX_OBJECTIVE_CHARS = 2000;
 const MAX_TIME_BUDGET_HOURS = 168;
 const MAX_REPAIR_BUDGET = 10;
@@ -167,6 +177,53 @@ export function buildMissionContract({
   });
 }
 
+function validateCorridorEventSemantics(event) {
+  const blocked_by = [];
+  const {
+    state, terminal_outcome, closure_transaction_id, consent_claim_hash,
+    prepared_intent_hash, seal_head, ledger_head, anchor_hash,
+  } = event;
+
+  if (terminal_outcome !== undefined) {
+    if (typeof terminal_outcome !== "string" || !TERMINAL_OUTCOME_RE.test(terminal_outcome)) {
+      blocked_by.push("terminal_outcome_malformed");
+    }
+    if (!TERMINAL_STATES.includes(state)) blocked_by.push("terminal_outcome_on_nonterminal_state");
+  }
+
+  const closureBindings = {
+    closure_transaction_id,
+    consent_claim_hash,
+    prepared_intent_hash,
+    seal_head,
+    ledger_head,
+    anchor_hash,
+  };
+  const suppliedClosureBindings = Object.entries(closureBindings)
+    .filter(([, value]) => value !== undefined);
+  if (suppliedClosureBindings.length > 0) {
+    if (state !== "COMPLETE") blocked_by.push("closure_binding_on_noncomplete_state");
+    if (suppliedClosureBindings.length !== Object.keys(closureBindings).length) {
+      blocked_by.push("closure_binding_incomplete");
+    }
+    if (typeof closure_transaction_id !== "string"
+        || !CLOSURE_TRANSACTION_ID_RE.test(closure_transaction_id)) {
+      blocked_by.push("closure_transaction_id_invalid");
+    }
+    for (const [field, shape] of Object.entries(CLOSURE_BINDING_HASH_FIELDS)) {
+      if (typeof closureBindings[field] !== "string" || !shape.test(closureBindings[field])) {
+        blocked_by.push(`${field}_invalid`);
+      }
+    }
+  }
+
+  return {
+    blocked_by,
+    closureBindings,
+    hasClosureBindings: suppliedClosureBindings.length > 0,
+  };
+}
+
 export function appendCorridorEvent({ contract_hash, journal, event } = {}) {
   const blocked_by = [];
   if (typeof contract_hash !== "string" || !/^sha256:[0-9a-f]{64}$/.test(contract_hash)) {
@@ -192,12 +249,8 @@ export function appendCorridorEvent({ contract_hash, journal, event } = {}) {
   // (canonical-json.v1 serializes present keys; an absent key changes nothing).
   // The vocabulary itself belongs to mission-corridor-closure.js — validating it
   // here would invert the dependency, so this checks SHAPE and PLACEMENT only.
-  if (terminal_outcome !== undefined) {
-    if (typeof terminal_outcome !== "string" || !TERMINAL_OUTCOME_RE.test(terminal_outcome)) {
-      blocked_by.push("terminal_outcome_malformed");
-    }
-    if (!TERMINAL_STATES.includes(state)) blocked_by.push("terminal_outcome_on_nonterminal_state");
-  }
+  const semantics = validateCorridorEventSemantics(event);
+  blocked_by.push(...semantics.blocked_by);
 
   const last = journal.length > 0 ? journal[journal.length - 1] : null;
   if (!last) {
@@ -243,6 +296,7 @@ export function appendCorridorEvent({ contract_hash, journal, event } = {}) {
     // here would add the key to every event and rewrite every existing
     // event_hash on disk.
     ...(terminal_outcome === undefined ? {} : { terminal_outcome }),
+    ...(semantics.hasClosureBindings ? semantics.closureBindings : {}),
   };
   const sealed = Object.freeze({ ...body, event_hash: sha256CanonicalJsonV1(body) });
   return Object.freeze({
@@ -277,6 +331,9 @@ export function verifyCorridorJournal({ contract, contract_hash, journal } = {})
     // A timestamp that cannot parse would make the monotonicity comparison
     // vacuous (NaN < x is always false) — block it explicitly instead.
     if (!isValidIso(e.at_iso)) blocked_by.push(`at_iso_invalid:${i}`);
+    for (const reason of validateCorridorEventSemantics(e).blocked_by) {
+      blocked_by.push(`${reason}:${i}`);
+    }
     // hash covers everything EXCEPT event_hash itself
     const { event_hash: _stored, ...bodyOnly } = e;
     if (sha256CanonicalJsonV1(bodyOnly) !== e.event_hash) blocked_by.push(`event_hash_mismatch:${i}`);
@@ -393,6 +450,7 @@ export function buildCorridorConsentContext({
   nonce,
   expires_at,
   requested_state,
+  prepared_intent_hash,
 } = {}) {
   const blocked_by = [];
   if (!CONSENT_KINDS.includes(kind)) blocked_by.push("consent_kind_invalid");
@@ -409,6 +467,10 @@ export function buildCorridorConsentContext({
   }
   if (typeof mission_id !== "string" || !MISSION_ID_RE.test(mission_id)) blocked_by.push("mission_id_invalid");
   if (typeof contract_hash !== "string" || !CONTRACT_HASH_RE.test(contract_hash)) blocked_by.push("contract_hash_invalid");
+  if (kind === "COMPLETE"
+    && (typeof prepared_intent_hash !== "string" || !CONTRACT_HASH_RE.test(prepared_intent_hash))) {
+    blocked_by.push("prepared_intent_hash_invalid");
+  }
   if (
     kind === "START" &&
     (!Array.isArray(permitted_actions) || permitted_actions.length === 0)
@@ -442,6 +504,7 @@ export function buildCorridorConsentContext({
       mission_id,
       contract_hash,
       requested_state: target,
+      ...(kind === "COMPLETE" ? { prepared_intent_hash } : {}),
     });
   }
   const SCOPE_ACTIONS = {
@@ -483,9 +546,11 @@ export function evaluateCorridorWriteConsent({
   now,
   used_nonces = [],
   requested_state,
+  prepared_intent_hash,
 } = {}) {
   const built = buildCorridorConsentContext({
-    kind, mission_id, contract_hash, permitted_actions, mission_root, nonce, expires_at, requested_state,
+    kind, mission_id, contract_hash, permitted_actions, mission_root, nonce, expires_at,
+    requested_state, prepared_intent_hash,
   });
   if (!built.ok) {
     return Object.freeze({

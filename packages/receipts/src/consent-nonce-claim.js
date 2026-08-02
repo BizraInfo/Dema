@@ -98,28 +98,52 @@ function claimBody(p, digest) {
 const hashClaim = (body) => sha256(JSON.stringify(body));
 const stripHash = (rec) => { const { claim_hash: _drop, ...rest } = rec ?? {}; return rest; };
 
-async function exists(path) {
-  try { await access(path); return true; } catch { return false; }
+async function probePath(path) {
+  try {
+    await access(path);
+    return Object.freeze({ present: true, error: null });
+  } catch (err) {
+    if (err?.code === "ENOENT") return Object.freeze({ present: false, error: null });
+    return Object.freeze({ present: false, error: err?.code ?? "unknown" });
+  }
 }
 
 /** Which superseded store, if any, already holds this nonce. */
-async function legacyRefs(home, nonce, digest) {
+async function legacyRefs(home, nonce) {
   const refs = [];
-  const cli = join(home, LEGACY_NAMESPACES.cliReservation, `${digest}.json`);
-  if (await exists(cli)) {
+  const errors = [];
+  // The retired CLI writer pre-dates C1's domain-separated key and wrote
+  // missions/consent-nonces/<sha256(raw nonce)>.json. Compatibility must use
+  // that exact historical algorithm; nonceDigest() is reserved for the new C1
+  // namespace and deliberately produces a different key.
+  const legacyCliDigest = sha256(String(nonce));
+  const cli = join(home, LEGACY_NAMESPACES.cliReservation, `${legacyCliDigest}.json`);
+  const cliProbe = await probePath(cli);
+  if (cliProbe.error) {
+    errors.push(Object.freeze({
+      namespace: LEGACY_NAMESPACES.cliReservation,
+      error: cliProbe.error,
+    }));
+  } else if (cliProbe.present) {
     refs.push(Object.freeze({
       namespace: LEGACY_NAMESPACES.cliReservation, key: "sha256(nonce)", status: "LEGACY_CONSUMED",
     }));
   }
   if (LEGACY_RAW_SAFE_RE.test(nonce)) {
     const weld = join(home, LEGACY_NAMESPACES.weldRegistry, `${nonce}.json`);
-    if (await exists(weld)) {
+    const weldProbe = await probePath(weld);
+    if (weldProbe.error) {
+      errors.push(Object.freeze({
+        namespace: LEGACY_NAMESPACES.weldRegistry,
+        error: weldProbe.error,
+      }));
+    } else if (weldProbe.present) {
       refs.push(Object.freeze({
         namespace: LEGACY_NAMESPACES.weldRegistry, key: "raw", status: "LEGACY_CONSUMED",
       }));
     }
   }
-  return refs;
+  return Object.freeze({ refs: Object.freeze(refs), errors: Object.freeze(errors) });
 }
 
 /**
@@ -139,11 +163,21 @@ export async function claimConsentNonce(p = {}) {
 
   // Superseded stores are authoritative for REFUSAL only. Checked before the
   // create so a nonce spent under the old regime can never be re-won here.
-  const legacy = await legacyRefs(home, nonce, digest);
-  if (legacy.length > 0) {
+  const legacy = await legacyRefs(home, nonce);
+  if (legacy.errors.length > 0) {
+    const error = legacy.errors[0].error;
+    return Object.freeze({
+      claimed: false,
+      reason: `consent_nonce_legacy_lookup_failed_closed:${error}`,
+      resumable: false,
+      escalate_to_human: true,
+      legacy_errors: legacy.errors,
+    });
+  }
+  if (legacy.refs.length > 0) {
     return Object.freeze({
       claimed: false, reason: "consent_nonce_legacy_consumed", resumable: false,
-      legacy_refs: Object.freeze(legacy),
+      legacy_refs: legacy.refs,
     });
   }
 
@@ -191,6 +225,8 @@ export async function claimConsentNonce(p = {}) {
         ["action_kind", p.actionKind],
         ["action_class", p.actionClass],
         ["checkpoint_event_hash", p.checkpointEventHash],
+        ["prepared_intent_hash", p.preparedIntentHash],
+        ["recovery_policy_hash", p.recoveryPolicyHash],
       ].filter(([k, v]) => v !== undefined && existing[k] !== v).map(([k]) => k);
       if (drift.length > 0) {
         return Object.freeze({
@@ -226,15 +262,25 @@ export async function inspectConsentNonce({ nonce, demaHome } = {}) {
   }
   const home = resolveHome(demaHome);
   const digest = nonceDigest(nonce);
-  const legacy = await legacyRefs(home, nonce, digest);
+  const legacy = await legacyRefs(home, nonce);
+  if (legacy.errors.length > 0) {
+    const error = legacy.errors[0].error;
+    return Object.freeze({
+      used: true,
+      corrupt: true,
+      reason: `consent_nonce_legacy_lookup_failed_closed:${error}`,
+      escalate_to_human: true,
+      legacy_errors: legacy.errors,
+    });
+  }
   let raw;
   try {
     raw = await readFile(claimPath(home, digest), "utf8");
   } catch (err) {
     if (err?.code === "ENOENT") {
       return Object.freeze({
-        used: legacy.length > 0, corrupt: false,
-        legacy_refs: Object.freeze(legacy),
+        used: legacy.refs.length > 0, corrupt: false,
+        legacy_refs: legacy.refs,
       });
     }
     return Object.freeze({ used: true, corrupt: true, reason: err?.code ?? "unreadable" });
@@ -252,10 +298,10 @@ export async function inspectConsentNonce({ nonce, demaHome } = {}) {
     // An edited claim body is not a softer state than a missing one.
     escalate_to_human: !valid,
     claim: Object.freeze(body),
-    legacy_refs: Object.freeze(legacy),
+    legacy_refs: legacy.refs,
   });
 }
 
 export const _internal = Object.freeze({
-  DIGEST_PREFIX, NONCE_SHAPE_RE, LEGACY_RAW_SAFE_RE, claimDir, claimPath, hashClaim,
+  DIGEST_PREFIX, NONCE_SHAPE_RE, LEGACY_RAW_SAFE_RE, claimDir, claimPath, hashClaim, probePath,
 });

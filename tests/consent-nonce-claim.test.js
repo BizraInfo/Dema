@@ -1,4 +1,4 @@
-// NRC-01…12 — ONE CANONICAL ATOMIC CONSENT CLAIM (Gate C).
+// NRC-01…14 — ONE CANONICAL ATOMIC CONSENT CLAIM (Gate C).
 //
 // Measured defect this replaces: the corridor had TWO replay authorities with
 // different key derivations, so a nonce consumed by one was invisible to the other.
@@ -17,6 +17,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, writeFile, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -100,8 +101,10 @@ describe("NRC · one canonical atomic consent claim", () => {
 
   test("NRC-05: a nonce present only in the LEGACY digest namespace is refused", async () => {
     const demaHome = await home();
-    const digest = nonceDigest("nrc-nonce-1");
-    // The legacy CLI store keyed by sha256(nonce) — bytes preserved, never rewritten.
+    // The actual legacy CLI store uses plain sha256(nonce), not C1's new
+    // domain-separated nonceDigest(). This fixture must reproduce the retired
+    // writer byte-for-byte or it cannot prove compatibility with that store.
+    const digest = createHash("sha256").update("nrc-nonce-1").digest("hex");
     const dir = join(demaHome, LEGACY_NAMESPACES.cliReservation);
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, `${digest}.json`), JSON.stringify({ legacy: true, kind: "START" }));
@@ -206,5 +209,42 @@ describe("NRC · one canonical atomic consent claim", () => {
     // write-ahead genesis: the claim carries recovery intent, not just the fact
     assert.ok(body.prepared_intent_hash && body.recovery_policy_hash && body.checkpoint_event_hash);
     assert.equal(Object.prototype.hasOwnProperty.call(body, "nonce"), false, "raw nonce never persisted");
+  });
+
+  test("NRC-13: recovery cannot re-aim spent authority at a different intent or policy", async () => {
+    const demaHome = await home();
+    const first = await claimConsentNonce({ ...CLAIM(), demaHome });
+    assert.equal(first.claimed, true);
+
+    for (const [field, override] of [
+      ["prepared_intent_hash", { preparedIntentHash: `sha256:${"2".repeat(64)}` }],
+      ["recovery_policy_hash", { recoveryPolicyHash: `sha256:${"3".repeat(64)}` }],
+    ]) {
+      const reaimed = await claimConsentNonce({ ...CLAIM(override), demaHome });
+      assert.equal(reaimed.claimed, false);
+      assert.equal(reaimed.resumable, false, `${field} drift must not be recovery`);
+      assert.equal(reaimed.reason, "consent_nonce_binding_mismatch");
+      assert.deepEqual(reaimed.drifted_fields, [field]);
+    }
+  });
+
+  test("NRC-14: an unreadable legacy authority fails closed instead of looking empty", async () => {
+    const demaHome = await home();
+    const legacyParent = join(demaHome, "missions");
+    await mkdir(legacyParent, { recursive: true });
+    // The retired namespace must be a directory. Making it a regular file makes
+    // access(<namespace>/<digest>.json) fail with ENOTDIR; that is corruption,
+    // not evidence that the nonce is unused.
+    await writeFile(join(legacyParent, "consent-nonces"), "not a directory");
+
+    const claimed = await claimConsentNonce({ ...CLAIM(), demaHome });
+    assert.equal(claimed.claimed, false);
+    assert.equal(claimed.reason, "consent_nonce_legacy_lookup_failed_closed:ENOTDIR");
+    assert.equal(claimed.escalate_to_human, true);
+
+    const inspected = await inspectConsentNonce({ nonce: CLAIM().nonce, demaHome });
+    assert.equal(inspected.used, true);
+    assert.equal(inspected.corrupt, true);
+    assert.equal(inspected.reason, "consent_nonce_legacy_lookup_failed_closed:ENOTDIR");
   });
 });

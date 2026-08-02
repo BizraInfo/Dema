@@ -22,7 +22,7 @@ export const NONCORE_IO_TIER_ALLOWLIST = Object.freeze({
   "packages/mission/src/health-snapshot.js":
     "writes/reads under DEMA_HOME||~/.dema/receipts only; atomic mkdir+writeFile{wx}+rename via realpath; reads one receipt to verify; network_used:false, no recursion.",
   "packages/mission/src/corridor-closure-gatherer.js":
-    "the BINDING caller for mission-corridor-closure.js (the pure weld): binds the injected consent registry to O_EXCL nonce files, appendReceipt to the canonical ledger, the effect adapter to a single in-scope rename, and the anchor log to $DEMA_HOME/anchors — all scoped to DEMA_HOME||~/.dema. readFileSync/readdirSync/renameSync/statSync/appendFileSync/mkdirSync only; no network, no child_process, no model.",
+    "I/O-tier C3 binding caller: re-reads the canonical C1 claim, persists/replays the C2 event log, appends the canonical ledger, performs one no-replace in-scope local file move with scope-root revalidation, and verifies/fsyncs the anchor under DEMA_HOME||~/.dema. No network, child_process, or model invocation.",
   "packages/mission/src/mission-closeout.js":
     "readdir/readFile/stat on DEMA_HOME||~/.dema/receipts to resolve/render one mission receipt; bounded single-level listing, no recursion/network.",
   "packages/mission/src/mission-probe.js":

@@ -13,7 +13,17 @@
 
 import { describe, it } from "node:test";
 import { strict as assert } from "node:assert";
-import { mkdtemp, rm, readFile, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  rm,
+  readFile,
+  writeFile,
+  readdir,
+  mkdir,
+  open,
+  rename,
+  unlink,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -52,6 +62,21 @@ function appendArgs(home, body, overrides = {}) {
     now: nextNow(),
     ...overrides,
   };
+}
+
+function realPublicationOps(overrides = {}) {
+  return { mkdir, open, rename, unlink, ...overrides };
+}
+
+async function ledgerPublicationArtifacts(home) {
+  try {
+    return (await readdir(join(home, "receipts"))).filter((name) =>
+      name.startsWith("canonical-ledger.ndjson"),
+    );
+  } catch (err) {
+    if (err?.code === "ENOENT") return [];
+    throw err;
+  }
 }
 
 describe("RECEIPT-CHAIN-1B · canonical ledger on disk", () => {
@@ -172,6 +197,147 @@ describe("RECEIPT-CHAIN-1B · canonical ledger on disk", () => {
       const r = await appendCanonicalReceipt(appendArgs(home, { step: 2 }));
       assert.equal(r.appended, false);
       assert.equal(r.error, "ledger_unreadable");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("publishes with no-clobber temp → file fsync → rename → parent fsync", async () => {
+    const home = await freshKeyedHome();
+    const events = [];
+    try {
+      const publicationOps = realPublicationOps({
+        async open(path, flags, mode) {
+          const handle = await open(path, flags, mode);
+          if (flags === "wx") {
+            events.push("open-wx");
+            return {
+              writeFile: (...args) => handle.writeFile(...args),
+              async sync() {
+                events.push("file-fsync");
+                await handle.sync();
+              },
+              close: () => handle.close(),
+            };
+          }
+          assert.equal(flags, "r");
+          events.push("open-parent");
+          return {
+            async sync() {
+              events.push("parent-fsync");
+              await handle.sync();
+            },
+            close: () => handle.close(),
+          };
+        },
+        async rename(from, to) {
+          events.push("rename");
+          await rename(from, to);
+        },
+      });
+
+      const result = await appendCanonicalReceipt(
+        appendArgs(home, { step: "durable" }, { publicationOps }),
+      );
+
+      assert.equal(result.appended, true);
+      assert.deepEqual(events, [
+        "open-wx",
+        "file-fsync",
+        "rename",
+        "open-parent",
+        "parent-fsync",
+      ]);
+      assert.deepEqual(await ledgerPublicationArtifacts(home), [
+        "canonical-ledger.ndjson",
+      ]);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("file fsync failure is not acknowledged and removes the private temp", async () => {
+    const home = await freshKeyedHome();
+    try {
+      const publicationOps = realPublicationOps({
+        async open(path, flags, mode) {
+          const handle = await open(path, flags, mode);
+          if (flags !== "wx") return handle;
+          return {
+            writeFile: (...args) => handle.writeFile(...args),
+            async sync() {
+              const err = new Error("injected_file_fsync_failure");
+              err.code = "EIO";
+              throw err;
+            },
+            close: () => handle.close(),
+          };
+        },
+      });
+
+      await assert.rejects(
+        appendCanonicalReceipt(
+          appendArgs(home, { step: "file-fsync" }, { publicationOps }),
+        ),
+        /injected_file_fsync_failure/,
+      );
+      assert.deepEqual(await ledgerPublicationArtifacts(home), []);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("rename failure is not acknowledged and removes the private temp", async () => {
+    const home = await freshKeyedHome();
+    try {
+      const publicationOps = realPublicationOps({
+        async rename() {
+          const err = new Error("injected_rename_failure");
+          err.code = "EIO";
+          throw err;
+        },
+      });
+
+      await assert.rejects(
+        appendCanonicalReceipt(
+          appendArgs(home, { step: "rename" }, { publicationOps }),
+        ),
+        /injected_rename_failure/,
+      );
+      assert.deepEqual(await ledgerPublicationArtifacts(home), []);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("parent fsync failure is not acknowledged after canonical publication", async () => {
+    const home = await freshKeyedHome();
+    try {
+      const publicationOps = realPublicationOps({
+        async open(path, flags, mode) {
+          const handle = await open(path, flags, mode);
+          if (flags === "wx") return handle;
+          return {
+            async sync() {
+              const err = new Error("injected_parent_fsync_failure");
+              err.code = "EIO";
+              throw err;
+            },
+            close: () => handle.close(),
+          };
+        },
+      });
+
+      await assert.rejects(
+        appendCanonicalReceipt(
+          appendArgs(home, { step: "parent-fsync" }, { publicationOps }),
+        ),
+        /injected_parent_fsync_failure/,
+      );
+      assert.deepEqual(await ledgerPublicationArtifacts(home), [
+        "canonical-ledger.ndjson",
+      ]);
+      assert.equal((await loadCanonicalLedger({ demaHome: home })).length, 1);
     } finally {
       await rm(home, { recursive: true, force: true });
     }

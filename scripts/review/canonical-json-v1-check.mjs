@@ -35,6 +35,11 @@ const JSON_MODE = process.argv.includes("--json");
 // (outside tests and this gate) still fails the scan.
 export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   "packages/mission/src/mission-corridor.js",
+  // Gate C, C3 — the disk-bound closure orchestrator and CLI derive the exact
+  // prepared-effect / transaction identity with canonical JSON v1. Registration
+  // is adoption review only; it does not promote the dirty candidate or Node0.
+  "packages/mission/src/corridor-closure-gatherer.js",
+  "apps/cli/src/commands/mission.js",
   "packages/mission/src/dema-program-graph.js",
   // Gate C, C2 — the mission-closure transaction log. Canonicalises the
   // transaction descriptor, each event body, and the semantic-evidence subset

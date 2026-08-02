@@ -12,13 +12,14 @@ import {
   replaySeal,
   runMechanicalClosure,
 } from "../packages/core/src/omega0-mechanical-closure.js";
+import * as omega0 from "../packages/core/src/omega0-mechanical-closure.js";
 
 const sha256 = (s) => createHash("sha256").update(s).digest("hex");
 const NOW = 1_700_000_000_000;
 const H = (n) => String(n).repeat(64).slice(0, 64);
 
 /** Real-filesystem effect adapter: moves loose files into buckets, reversibly. */
-function fileAdapter(root, { breakIt = null } = {}) {
+function fileAdapter(root, { breakIt = null, calls = null } = {}) {
   let journal = [];
   return {
     propose() {
@@ -40,6 +41,7 @@ function fileAdapter(root, { breakIt = null } = {}) {
       return out.sort((a, b) => a.path.localeCompare(b.path));
     },
     apply(plan) {
+      if (calls) calls.apply = (calls.apply ?? 0) + 1;
       journal = [];
       mkdirSync(join(root, "bucket"), { recursive: true });
       for (const op of plan) {
@@ -52,7 +54,12 @@ function fileAdapter(root, { breakIt = null } = {}) {
       }
       return journal.slice();
     },
+    recoverApplied(plan) {
+      if (calls) calls.recover = (calls.recover ?? 0) + 1;
+      return plan.slice();
+    },
     undo(applied) {
+      if (calls) calls.undo = (calls.undo ?? 0) + 1;
       for (const op of [...applied].reverse()) {
         renameSync(join(root, op.dst), join(root, op.src));
       }
@@ -81,6 +88,26 @@ function baseArgs(root, over = {}) {
     effect: fileAdapter(root),
     now: NOW,
     ...over,
+  };
+}
+
+function genericMoveIntent(effect, scopeRoot) {
+  const plan = effect.propose();
+  const before = effect.manifest();
+  const expectedAfter = before
+    .map((entry) => {
+      const move = plan.find((op) => op.op === "move" && op.src === entry.path);
+      return move ? { ...entry, path: move.dst } : { ...entry };
+    })
+    .sort((a, b) => a.path.localeCompare(b.path));
+  return {
+    scope_root: scopeRoot,
+    plan,
+    plan_hash: sha256(JSON.stringify(plan)),
+    before_manifest: before,
+    before_hash: sha256(JSON.stringify(before)),
+    expected_after_manifest: expectedAfter,
+    expected_after_hash: sha256(JSON.stringify(expectedAfter)),
   };
 }
 
@@ -233,4 +260,123 @@ test("OM0-10: every terminal state emits a card with a named reason (law 5)", ()
   assert.equal(sealed.reason, null);
   assert.equal(Object.isFrozen(sealed), true);
   assert.ok(sealed.what_this_does_not_prove.includes("unattended"));
+});
+
+test("OM0-11: preparation binds the persisted intent without mutating the world", () => {
+  const root = sandbox();
+  const args = baseArgs(root);
+  const intent = genericMoveIntent(args.effect, root);
+
+  const prepared = omega0.prepareMechanicalClosure({ ...args, intent });
+
+  assert.equal(prepared.status, "PREPARED");
+  assert.equal(prepared.intent.plan_hash, intent.plan_hash);
+  assert.equal(prepared.intent.before_hash, intent.before_hash);
+  assert.equal(prepared.intent.expected_after_hash, intent.expected_after_hash);
+  assert.equal(Object.isFrozen(prepared), true);
+  assert.deepEqual(readdirSync(root).sort(), ["a.txt", "b.txt"], "prepare must be read-only");
+});
+
+test("OM0-12: applyPrepared applies exactly once from the measured pre-state", () => {
+  const root = sandbox();
+  const calls = {};
+  const effect = fileAdapter(root, { calls });
+  const args = baseArgs(root, { effect });
+  const prepared = omega0.prepareMechanicalClosure({ ...args, intent: genericMoveIntent(effect, root) });
+
+  const applied = omega0.applyPreparedMechanicalClosure({ prepared, effect });
+
+  assert.equal(applied.status, "APPLIED");
+  assert.equal(applied.recovery_mode, "APPLIED_FROM_PRE_STATE");
+  assert.equal(calls.apply, 1);
+  assert.equal(calls.recover ?? 0, 0);
+  assert.deepEqual(readdirSync(join(root, "bucket")).sort(), ["a.txt", "b.txt"]);
+});
+
+test("OM0-13: finalizeApplied proves restoration and seals the split happy path", () => {
+  const root = sandbox();
+  const calls = {};
+  const effect = fileAdapter(root, { calls });
+  const args = baseArgs(root, { effect });
+  const intent = genericMoveIntent(effect, root);
+  const prepared = omega0.prepareMechanicalClosure({ ...args, intent });
+  const applied = omega0.applyPreparedMechanicalClosure({ prepared, effect });
+
+  const sealed = omega0.finalizeAppliedMechanicalClosure({ applied, effect });
+
+  assert.equal(sealed.status, "SEALED");
+  assert.equal(sealed.before_hash, intent.before_hash);
+  assert.equal(sealed.after_hash, intent.expected_after_hash);
+  assert.equal(sealed.reversibility.proven, true);
+  assert.equal(sealed.proof_card.status, "VERIFIED_WITHIN_DECLARED_SCOPE");
+  assert.equal(calls.undo, 1);
+  assert.equal(calls.apply, 2, "one initial apply plus one reversibility reapply");
+  assert.deepEqual(readdirSync(join(root, "bucket")).sort(), ["a.txt", "b.txt"]);
+});
+
+test("OM0-14: cold recovery prepares from expected post-state without an initial reapply", () => {
+  const root = sandbox();
+  const firstEffect = fileAdapter(root);
+  const firstArgs = baseArgs(root, { effect: firstEffect });
+  const persistedIntent = JSON.parse(JSON.stringify(genericMoveIntent(firstEffect, root)));
+
+  // Model the first process dying immediately after the real mutation: only the
+  // persisted intent and the post-state survive into the fresh process.
+  firstEffect.apply(persistedIntent.plan);
+
+  const calls = {};
+  const freshEffect = fileAdapter(root, { calls });
+  const prepared = omega0.prepareMechanicalClosure({
+    ...firstArgs,
+    effect: freshEffect,
+    intent: persistedIntent,
+  });
+  const applied = omega0.applyPreparedMechanicalClosure({ prepared, effect: freshEffect });
+
+  assert.equal(prepared.status, "PREPARED");
+  assert.equal(applied.status, "APPLIED");
+  assert.equal(applied.recovery_mode, "RECOVERED_FROM_EXPECTED_POST_STATE");
+  assert.equal(calls.recover, 1, "fresh process reconstructs the undo handle");
+  assert.equal(calls.apply ?? 0, 0, "fresh process must not perform a second initial apply");
+
+  const sealed = omega0.finalizeAppliedMechanicalClosure({ applied, effect: freshEffect });
+  assert.equal(sealed.status, "SEALED");
+  assert.equal(calls.undo, 1);
+  assert.equal(calls.apply, 1, "only the deliberate reapply after verified undo is permitted");
+});
+
+test("OM0-15: a third observed state blocks with RECOVERY_REQUIRED-compatible evidence", () => {
+  const root = sandbox();
+  const calls = {};
+  const effect = fileAdapter(root, { calls });
+  const args = baseArgs(root, { effect });
+  const intent = genericMoveIntent(effect, root);
+  writeFileSync(join(root, "unexpected.txt"), "unaccounted state\n");
+
+  const blocked = omega0.prepareMechanicalClosure({ ...args, intent });
+
+  assert.equal(blocked.status, "BLOCKED");
+  assert.equal(blocked.reason, "restoration_failed");
+  assert.equal(blocked.recovery_class, "RECOVERY_REQUIRED");
+  assert.equal(blocked.reason_detail, "observed_state_is_neither_pre_nor_expected_post");
+  assert.equal(calls.apply ?? 0, 0);
+  assert.equal(calls.recover ?? 0, 0);
+});
+
+test("OM0-16: a scope-bearing intent cannot redirect authority to another estate", () => {
+  const authorisedRoot = sandbox(["authorised.txt"]);
+  const otherRoot = sandbox(["other.txt"]);
+  const calls = {};
+  const otherEffect = fileAdapter(otherRoot, { calls });
+  const args = baseArgs(authorisedRoot, { effect: otherEffect });
+  const intent = genericMoveIntent(otherEffect, otherRoot);
+
+  const blocked = omega0.prepareMechanicalClosure({ ...args, intent });
+
+  assert.equal(blocked.status, "BLOCKED");
+  assert.equal(blocked.reason, "authority_mismatch");
+  assert.equal(blocked.reason_detail, "prepared_intent_scope_mismatch");
+  assert.deepEqual(readdirSync(authorisedRoot), ["authorised.txt"]);
+  assert.deepEqual(readdirSync(otherRoot), ["other.txt"]);
+  assert.equal(calls.apply ?? 0, 0);
 });

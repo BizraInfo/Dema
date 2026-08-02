@@ -1,6 +1,6 @@
 // MISSION-CORRIDOR-CLOSURE-1A — THE WELD.
 //
-// Joins the two halves that today have zero references to each other:
+// Joins the two halves that historically had zero references to each other:
 //   packages/mission/src/mission-corridor.js   durable, resumable, hash-chained
 //                                              journal — but PREVIEW_ONLY, no execution
 //   packages/core/src/omega0-mechanical-closure.js
@@ -20,7 +20,7 @@
 // (canonical-ledger) and `verifyAdmission` (verification-admission), so the kernel
 // stays deterministic and tests can model a hostile world directly.
 //
-// ── KNOWN CEILING · single-use consent is SHAPE-checked, not BINDING-checked ──
+// ── DIRECT-KERNEL CEILING · consent is SHAPE-checked, not BINDING-checked ──
 //
 // MCW-16 closes the absent-registry hole: with no `consentRegistry`, single-use
 // cannot be PROVEN, so the route refuses (BLOCKED_MISSING_EVIDENCE). Measured
@@ -35,30 +35,29 @@
 // purity forbids this kernel from reading the durable nonce store, so it can
 // check that a registry is well-shaped but never that it is telling the truth.
 //
-// The fix has the same shape as PEAK-EVIDENCE-GATHERER-1A: a CALLER binds to a
-// real on-disk registry and passes one backed by actual bytes. That caller now
-// exists — `corridor-closure-gatherer.js` (buildDiskConsentRegistry, O_EXCL per
-// nonce). The single-use guarantee therefore holds ON THE BOUND PATH ONLY; this
-// kernel called directly with a hand-made object is still shape-checked only.
+// The production CLI path closes that ceiling through
+// `corridor-closure-gatherer.js`: one canonical C1 nonce claim is bound to the
+// prepared intent and recovery policy, and the same claim identity is carried
+// into the C2 transaction. The single-use guarantee therefore holds ON THE
+// BOUND PATH ONLY; this kernel called directly with a hand-made object is still
+// shape-checked only.
 //
-// The legacy consent-nonce-registry.js:153-184 is a TOCTOU read-modify-write over
-// one shared JSON file (backlog task-017); the bound caller uses the ATOMIC
-// replacement (consent-nonce-registry-atomic.js) instead, so the race is not
-// inherited.
+// The two legacy nonce adapters remain compatibility/test surfaces only. The
+// production C3 path re-reads the exact canonical C1 claim and never creates a
+// second authority marker.
 //
-// ── OPEN · the two consent stores are NOT one replay domain ──
-// The CLI's reserveNonce writes missions/consent-nonces/<sha256(nonce)>.json while
-// this kernel's bound registry writes consent/nonces/<nonce>.json. Different store,
-// different key derivation: a nonce consumed by one is INVISIBLE to the other.
-// Unifying them is Gate C and is NOT done.
+// C3 does not make this pure kernel a transaction store. The I/O-tier caller
+// persists C2 at the boundaries it actually observes and replays the sealed
+// Omega0 card here for the ledger/terminal tail.
 //
-// STATUS: 16/16 (tests/mission-corridor-closure.test.js) + 10/10 bound-path
-// (tests/mission-corridor-closure-binding.test.js).
+// Exact current counts live in docs/TESTING.md; no count in this header is a
+// release or Node0-closure claim.
 
 import { createHash } from "node:crypto";
-import { runMechanicalClosure } from "../../core/src/omega0-mechanical-closure.js";
+import { replaySeal, runMechanicalClosure } from "../../core/src/omega0-mechanical-closure.js";
 
 const __hash = (s) => "sha256:" + createHash("sha256").update(s).digest("hex");
+const __rawHash = (s) => createHash("sha256").update(s).digest("hex");
 
 export const MISSION_CORRIDOR_CLOSURE_SCHEMA =
   "bizra.dema.mission_corridor_closure.v0.1";
@@ -200,8 +199,39 @@ export async function runCorridorClosure(p = {}) {
     return terminal("REFUSED_POLICY", null, { reason_detail: "consent_already_consumed" });
   }
 
-  // ── The bounded Omega0 transaction. The corridor authorises; Omega0 performs.
-  const card = runMechanicalClosure({ mission, lease, consent, anchorDir, effect, now });
+  // ── The bounded Omega0 transaction. The ordinary pure-kernel path performs
+  // it here. The disk-bound C3 caller may instead supply the SEALED card already
+  // recorded in C2; it is accepted only after this kernel replays the seal,
+  // observes the post-state, and rebinds mission, consent, lease and plan.
+  let card = p.omega0Card;
+  if (card !== undefined) {
+    let replayed = null;
+    let expectedPlanHash = null;
+    try {
+      replayed = replaySeal(card, effect);
+      expectedPlanHash = __rawHash(JSON.stringify(effect.propose()));
+    } catch {
+      replayed = null;
+    }
+    const expectedMissionHash = __rawHash(JSON.stringify(mission));
+    const expectedConsentHash = __rawHash(JSON.stringify({
+      by: consent.by,
+      ref: consent.ref,
+      plan_hash: expectedPlanHash,
+    }));
+    if (replayed?.replayed !== true
+        || card.mission_hash !== expectedMissionHash
+        || card.consent_hash !== expectedConsentHash
+        || card.plan_hash !== expectedPlanHash
+        || card.lease_id !== lease?.lease_id
+        || card.anchor_dir !== anchorDir) {
+      return terminal("RECOVERY_REQUIRED", card ?? null, {
+        reason_detail: "persisted_omega0_card_binding_mismatch",
+      });
+    }
+  } else {
+    card = runMechanicalClosure({ mission, lease, consent, anchorDir, effect, now });
+  }
 
   if (card.status !== "SEALED") {
     return terminal(mapOmega0ReasonToOutcome(card.reason), card);
@@ -241,6 +271,11 @@ export async function runCorridorClosure(p = {}) {
         seal_head: sealed.seal_head,
         before_hash: card.before_hash,
         after_hash: card.after_hash,
+        ...(p.transactionBinding ? {
+          closure_transaction_id: p.transactionBinding.transaction_id,
+          consent_claim_hash: p.transactionBinding.consent_claim_hash,
+          prepared_intent_hash: p.transactionBinding.prepared_intent_hash,
+        } : {}),
       },
       // MEASURED_LOCAL, never MEASURED: this closure is measured on ONE local
       // host. Nothing here is remotely verified, and the canonical receipt
@@ -269,6 +304,7 @@ export async function runCorridorClosure(p = {}) {
     mission_id: contract.mission_id,
     seal_head: sealed.seal_head,
     ledger_head: ledger.head,
+    ledger_length: ledger.length ?? null,
   };
   const journal_event = Object.freeze({ ...body, event_hash: __hash(JSON.stringify(body)) });
 
@@ -277,6 +313,7 @@ export async function runCorridorClosure(p = {}) {
     persisted_journal: Object.freeze([...prior, journal_event]),
     persisted_ledger: Object.freeze([{ head: ledger.head, mission_id: contract.mission_id }]),
     ledger_head: ledger.head,
+    ledger_length: ledger.length ?? null,
     effect_performed: true,
     legacy_refs: (legacy_refs ?? []).map((l) =>
       Object.freeze({ ...l, migration_status: "PROVENANCE_ONLY" }),
