@@ -59,7 +59,7 @@ contacted in this campaign.
 | Message | Proof point (`V` unless noted) |
 | --- | --- |
 | Nothing executes without your exact typed consent | exact-string consent kernel; 105-command consent matrix, 30 mutating, 3 high-sensitivity |
-| Every governed action leaves a tamper-evident, replayable receipt | Ed25519 attestation → proof chain → signed head; tamper tests fail closed |
+| Every governed action leaves a tamper-evident, replayable receipt | [MEASURED, LOCAL_ONLY] Ed25519 attestation → proof chain → signed head; tamper tests fail closed. Scope: governed actions on ONE local host, signed by a fixture or operator key. Not a second host, not federation, and — until TASK-029 completes — receipts signed after 2026-07-21 are custody-uncertain. |
 | The model proposes; it never certifies its own work | SAT verifiers independent of executor; `sat-placeholder` can never return PERMIT |
 | **There is no lane for manipulation — it is refused at the kernel, not promised in a policy** | `behavioral-modulation.js` refuses `covert_persuasion`, `manipulation`, `dark_pattern` by pattern code; ADR-020 constraints forbid engagement optimization, outrage amplification, pay-to-rank |
 | The limits are published | `CURRENT_LIMITS.md` — the honesty map names every DESIGNED_NOT_LIVE surface |

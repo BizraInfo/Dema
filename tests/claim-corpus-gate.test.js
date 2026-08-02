@@ -80,6 +80,25 @@ test("corpusFiles includes README and top-level docs, returns absolute paths", (
   );
 });
 
+// DoD §15 box 9: the Claim Register's scope is "every public-facing surface".
+// docs/gtm/ is that material and was, until 2026-08-02, outside every claim
+// gate in the tree. This test is the guard against the scope silently
+// regressing — dropping the directory again would make the ratchet green while
+// the loudest public surface drifted unwatched.
+test("corpusFiles covers the public-facing docs/gtm surface", () => {
+  const files = corpusFiles();
+  const gtm = files.filter((p) => p.includes("/docs/gtm/"));
+  assert.ok(gtm.length > 0, "docs/gtm/*.md must be in the claim corpus scope");
+  assert.ok(
+    gtm.some((p) => p.endsWith("/BIZRA_90_Day_GTM_v0_1.md")),
+    "the 90-day GTM plan is public-facing and must be gated",
+  );
+  assert.ok(
+    gtm.every((p) => p.endsWith(".md")),
+    "only markdown is scanned",
+  );
+});
+
 test("verifyCitations passes when every cited id resolves to the register", () => {
   const r = verifyCitations({
     citations: [{ file: "a.md", line: 1, id: "C-TOKEN-ECONOMY" }],

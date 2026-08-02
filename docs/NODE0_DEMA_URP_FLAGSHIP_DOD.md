@@ -207,7 +207,7 @@ Node0 + Dema + URP flagship DoD is complete when:
 - [x] Receipts can be listed/read without mutating verification state. (The 5SAT receipt is read back from disk and `dema urp list --json` reports `file_write_performed: false`; both inside the journey, boundary all-false.)
 - [ ] Public bridge spec exists before any public connection.
 - [ ] Node1 handshake preview exists before Node1.
-- [ ] Claim Register remains consistent with every public-facing sentence.
+- [x] Claim Register remains consistent with every public-facing sentence. (Enforced, not asserted: the claim-corpus ratchet now covers `docs/gtm/**`, which had previously sat outside every claim gate in the tree. All 14 findings reviewed 2026-08-02; three were genuine and are labelled, including a **material correction** to the Node0 identity table, which presented custody as clean while the mission-signing key leaked on 2026-07-21 remains unrotated. `tests/claim-corpus-gate.test.js` guards the scope against regression. `docs/public/**` and `docs/market/**` join the same list if they are ever created.)
 - [ ] `npm test`, `npm run check`, `npm run llm:guidance`, and `git diff --check`
       pass on the sealing commit.
 
