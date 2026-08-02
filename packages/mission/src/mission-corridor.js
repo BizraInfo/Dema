@@ -52,7 +52,21 @@ const TERMINAL_STATES = Object.freeze(["STOPPED", "COMPLETE"]);
 const MERGE_POLICIES = Object.freeze(["checkpoint_required"]);
 // path-safe by construction: lowercase kebab, no separators, no dots.
 export const MISSION_ID_RE = /^[a-z0-9][a-z0-9-]{2,63}$/;
+// SHAPE of a typed terminal outcome. The vocabulary lives in
+// mission-corridor-closure.js (TERMINAL_OUTCOMES); the corridor must not import
+// it — the closure depends on the corridor, never the reverse.
+const TERMINAL_OUTCOME_RE = /^[A-Z][A-Z_]{2,63}$/;
 const SHA40_RE = /^[0-9a-f]{40}$/;
+const RAW_SHA256_RE = /^[0-9a-f]{64}$/;
+const TAGGED_SHA256_RE = /^sha256:[0-9a-f]{64}$/;
+const CLOSURE_TRANSACTION_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+const CLOSURE_BINDING_HASH_FIELDS = Object.freeze({
+  consent_claim_hash: RAW_SHA256_RE,
+  prepared_intent_hash: TAGGED_SHA256_RE,
+  seal_head: RAW_SHA256_RE,
+  ledger_head: RAW_SHA256_RE,
+  anchor_hash: RAW_SHA256_RE,
+});
 const MAX_OBJECTIVE_CHARS = 2000;
 const MAX_TIME_BUDGET_HOURS = 168;
 const MAX_REPAIR_BUDGET = 10;
@@ -163,6 +177,53 @@ export function buildMissionContract({
   });
 }
 
+function validateCorridorEventSemantics(event) {
+  const blocked_by = [];
+  const {
+    state, terminal_outcome, closure_transaction_id, consent_claim_hash,
+    prepared_intent_hash, seal_head, ledger_head, anchor_hash,
+  } = event;
+
+  if (terminal_outcome !== undefined) {
+    if (typeof terminal_outcome !== "string" || !TERMINAL_OUTCOME_RE.test(terminal_outcome)) {
+      blocked_by.push("terminal_outcome_malformed");
+    }
+    if (!TERMINAL_STATES.includes(state)) blocked_by.push("terminal_outcome_on_nonterminal_state");
+  }
+
+  const closureBindings = {
+    closure_transaction_id,
+    consent_claim_hash,
+    prepared_intent_hash,
+    seal_head,
+    ledger_head,
+    anchor_hash,
+  };
+  const suppliedClosureBindings = Object.entries(closureBindings)
+    .filter(([, value]) => value !== undefined);
+  if (suppliedClosureBindings.length > 0) {
+    if (state !== "COMPLETE") blocked_by.push("closure_binding_on_noncomplete_state");
+    if (suppliedClosureBindings.length !== Object.keys(closureBindings).length) {
+      blocked_by.push("closure_binding_incomplete");
+    }
+    if (typeof closure_transaction_id !== "string"
+        || !CLOSURE_TRANSACTION_ID_RE.test(closure_transaction_id)) {
+      blocked_by.push("closure_transaction_id_invalid");
+    }
+    for (const [field, shape] of Object.entries(CLOSURE_BINDING_HASH_FIELDS)) {
+      if (typeof closureBindings[field] !== "string" || !shape.test(closureBindings[field])) {
+        blocked_by.push(`${field}_invalid`);
+      }
+    }
+  }
+
+  return {
+    blocked_by,
+    closureBindings,
+    hasClosureBindings: suppliedClosureBindings.length > 0,
+  };
+}
+
 export function appendCorridorEvent({ contract_hash, journal, event } = {}) {
   const blocked_by = [];
   if (typeof contract_hash !== "string" || !/^sha256:[0-9a-f]{64}$/.test(contract_hash)) {
@@ -174,10 +235,22 @@ export function appendCorridorEvent({ contract_hash, journal, event } = {}) {
     return Object.freeze({ ok: false, blocked_by: Object.freeze(blocked_by), event: null, journal: null });
   }
 
-  const { state, at_iso, note, branch, head_sha, failing_gate, next_command, requires_human, repair_rounds_used } =
-    event;
+  const {
+    state, at_iso, note, branch, head_sha, failing_gate, next_command, requires_human, repair_rounds_used,
+    terminal_outcome,
+  } = event;
   if (!CORRIDOR_STATES.includes(state)) blocked_by.push("state_unknown");
   if (!isValidIso(at_iso)) blocked_by.push("at_iso_invalid");
+
+  // A typed terminal outcome rides the terminal EVENT rather than adding new
+  // corridor STATES: nine more states would invalidate every corridor journal
+  // already on disk against verifyCorridorJournal. The key is emitted only when
+  // supplied, so events that predate this field hash exactly as they did before
+  // (canonical-json.v1 serializes present keys; an absent key changes nothing).
+  // The vocabulary itself belongs to mission-corridor-closure.js — validating it
+  // here would invert the dependency, so this checks SHAPE and PLACEMENT only.
+  const semantics = validateCorridorEventSemantics(event);
+  blocked_by.push(...semantics.blocked_by);
 
   const last = journal.length > 0 ? journal[journal.length - 1] : null;
   if (!last) {
@@ -219,6 +292,11 @@ export function appendCorridorEvent({ contract_hash, journal, event } = {}) {
     requires_human: requires_human === true || state === "STOPPED",
     repair_rounds_used: rounds,
     note: note ?? null,
+    // Emitted ONLY when supplied — see the placement check above. `?? null`
+    // here would add the key to every event and rewrite every existing
+    // event_hash on disk.
+    ...(terminal_outcome === undefined ? {} : { terminal_outcome }),
+    ...(semantics.hasClosureBindings ? semantics.closureBindings : {}),
   };
   const sealed = Object.freeze({ ...body, event_hash: sha256CanonicalJsonV1(body) });
   return Object.freeze({
@@ -253,6 +331,9 @@ export function verifyCorridorJournal({ contract, contract_hash, journal } = {})
     // A timestamp that cannot parse would make the monotonicity comparison
     // vacuous (NaN < x is always false) — block it explicitly instead.
     if (!isValidIso(e.at_iso)) blocked_by.push(`at_iso_invalid:${i}`);
+    for (const reason of validateCorridorEventSemantics(e).blocked_by) {
+      blocked_by.push(`${reason}:${i}`);
+    }
     // hash covers everything EXCEPT event_hash itself
     const { event_hash: _stored, ...bodyOnly } = e;
     if (sha256CanonicalJsonV1(bodyOnly) !== e.event_hash) blocked_by.push(`event_hash_mismatch:${i}`);
@@ -336,13 +417,24 @@ export function deriveCorridorStatus({ contract, contract_hash, journal, now_iso
 // Pure: everything injected (nonce, expiry, now); no clock, no fs, no network.
 
 export const CORRIDOR_STOP_REQUEST_SCHEMA = "bizra.dema.mission_corridor_stop_request.v0.1";
+// A distinct schema for non-STOP transition requests. Deliberately NOT reusing
+// the stop-request schema: even if a caller asked to "advance" to STOPPED, the
+// two payload hashes must never collide, so a stop consent can never be
+// replayed as an advance consent or the reverse.
+export const CORRIDOR_TRANSITION_REQUEST_SCHEMA =
+  "bizra.dema.mission_corridor_transition_request.v0.1";
 export const CORRIDOR_WRITE_ACTION_CLASS = "C3_LOCAL_WRITE";
 const CONTRACT_HASH_RE = /^sha256:[0-9a-f]{64}$/;
+const CONSENT_KINDS = Object.freeze(["START", "STOP", "ADVANCE", "COMPLETE"]);
 
-export function corridorRequiredPhrase(kind, mission_id) {
-  return kind === "STOP"
-    ? `GO: stop mission corridor ${mission_id}`
-    : `GO: start mission corridor ${mission_id}`;
+export function corridorRequiredPhrase(kind, mission_id, requested_state) {
+  if (kind === "STOP") return `GO: stop mission corridor ${mission_id}`;
+  // The TARGET STATE is part of the phrase the human reads and types. Without
+  // it, one approved "advance" phrase would authorize an advance to ANY state —
+  // including straight to COMPLETE.
+  if (kind === "ADVANCE") return `GO: advance mission corridor ${mission_id} to ${requested_state}`;
+  if (kind === "COMPLETE") return `GO: complete mission corridor ${mission_id}`;
+  return `GO: start mission corridor ${mission_id}`;
 }
 
 // Derive the exact consent envelope for a corridor write. START binds the
@@ -357,11 +449,28 @@ export function buildCorridorConsentContext({
   mission_root,
   nonce,
   expires_at,
+  requested_state,
+  prepared_intent_hash,
 } = {}) {
   const blocked_by = [];
-  if (kind !== "START" && kind !== "STOP") blocked_by.push("consent_kind_invalid");
+  if (!CONSENT_KINDS.includes(kind)) blocked_by.push("consent_kind_invalid");
+  // ADVANCE must name a real target state; COMPLETE may only ever mean COMPLETE.
+  const target = kind === "COMPLETE" ? "COMPLETE" : requested_state;
+  if (kind === "ADVANCE" || kind === "COMPLETE") {
+    if (!CORRIDOR_STATES.includes(target)) blocked_by.push("requested_state_invalid");
+    else if (kind === "ADVANCE" && TERMINAL_STATES.includes(target)) {
+      // Terminals have their own consent kinds (STOP / COMPLETE) with their own
+      // phrases. Letting ADVANCE reach a terminal would give one phrase shape
+      // authority over mission death or mission completion.
+      blocked_by.push("advance_to_terminal_forbidden");
+    }
+  }
   if (typeof mission_id !== "string" || !MISSION_ID_RE.test(mission_id)) blocked_by.push("mission_id_invalid");
   if (typeof contract_hash !== "string" || !CONTRACT_HASH_RE.test(contract_hash)) blocked_by.push("contract_hash_invalid");
+  if (kind === "COMPLETE"
+    && (typeof prepared_intent_hash !== "string" || !CONTRACT_HASH_RE.test(prepared_intent_hash))) {
+    blocked_by.push("prepared_intent_hash_invalid");
+  }
   if (
     kind === "START" &&
     (!Array.isArray(permitted_actions) || permitted_actions.length === 0)
@@ -373,28 +482,48 @@ export function buildCorridorConsentContext({
     return Object.freeze({ ok: false, blocked_by: Object.freeze(blocked_by), envelope: null });
   }
 
-  const payload_hash =
-    kind === "START"
-      ? contract_hash
-      : sha256CanonicalJsonV1({
-          schema: CORRIDOR_STOP_REQUEST_SCHEMA,
-          ...CANONICALIZATION_IDENTITY,
-          mission_id,
-          contract_hash,
-          requested_state: "STOPPED",
-        });
+  // START binds the full contract as payload. Every other kind binds a request
+  // body carrying the TARGET STATE, so consent for one transition can never
+  // authorize a different one. STOP keeps its original schema and shape
+  // byte-for-byte — changing it would invalidate consent already approved.
+  let payload_hash;
+  if (kind === "START") {
+    payload_hash = contract_hash;
+  } else if (kind === "STOP") {
+    payload_hash = sha256CanonicalJsonV1({
+      schema: CORRIDOR_STOP_REQUEST_SCHEMA,
+      ...CANONICALIZATION_IDENTITY,
+      mission_id,
+      contract_hash,
+      requested_state: "STOPPED",
+    });
+  } else {
+    payload_hash = sha256CanonicalJsonV1({
+      schema: CORRIDOR_TRANSITION_REQUEST_SCHEMA,
+      ...CANONICALIZATION_IDENTITY,
+      mission_id,
+      contract_hash,
+      requested_state: target,
+      ...(kind === "COMPLETE" ? { prepared_intent_hash } : {}),
+    });
+  }
+  const SCOPE_ACTIONS = {
+    STOP: ["stop_corridor"],
+    ADVANCE: ["advance_corridor"],
+    COMPLETE: ["complete_corridor"],
+  };
   const envelope = buildConsentContext({
     proposal_hash: contract_hash,
     action_class: CORRIDOR_WRITE_ACTION_CLASS,
     capability_scope_hash: sha256CanonicalJsonV1({
       kind,
-      permitted_actions: kind === "START" ? [...permitted_actions] : ["stop_corridor"],
+      permitted_actions: kind === "START" ? [...permitted_actions] : SCOPE_ACTIONS[kind],
     }),
     payload_hash,
     root_set_hash: sha256CanonicalJsonV1({ roots: [mission_root] }),
     nonce,
     expires_at,
-    required_phrase: corridorRequiredPhrase(kind, mission_id),
+    required_phrase: corridorRequiredPhrase(kind, mission_id, target),
   });
   return Object.freeze({ ok: true, blocked_by: Object.freeze([]), envelope });
 }
@@ -416,9 +545,12 @@ export function evaluateCorridorWriteConsent({
   consent_context_hash,
   now,
   used_nonces = [],
+  requested_state,
+  prepared_intent_hash,
 } = {}) {
   const built = buildCorridorConsentContext({
     kind, mission_id, contract_hash, permitted_actions, mission_root, nonce, expires_at,
+    requested_state, prepared_intent_hash,
   });
   if (!built.ok) {
     return Object.freeze({

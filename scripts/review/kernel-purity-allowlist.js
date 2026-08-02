@@ -21,6 +21,8 @@ export const NONCORE_IO_TIER_ALLOWLIST = Object.freeze({
     "readdir/readFile from node:fs/promises over DEMA_HOME||~/.dema; reads profile.json and memory/<name>.json one level deep, no recursion; entry names traversal-guarded by /^[A-Za-z0-9_-]+$/; no network/child_process.",
   "packages/mission/src/health-snapshot.js":
     "writes/reads under DEMA_HOME||~/.dema/receipts only; atomic mkdir+writeFile{wx}+rename via realpath; reads one receipt to verify; network_used:false, no recursion.",
+  "packages/mission/src/corridor-closure-gatherer.js":
+    "I/O-tier C3 binding caller: re-reads the canonical C1 claim, persists/replays the C2 event log, appends the canonical ledger, performs one no-replace in-scope local file move with scope-root revalidation, and verifies/fsyncs the anchor under DEMA_HOME||~/.dema. No network, child_process, or model invocation.",
   "packages/mission/src/mission-closeout.js":
     "readdir/readFile/stat on DEMA_HOME||~/.dema/receipts to resolve/render one mission receipt; bounded single-level listing, no recursion/network.",
   "packages/mission/src/mission-probe.js":
@@ -53,6 +55,12 @@ export const NONCORE_IO_TIER_ALLOWLIST = Object.freeze({
     "key files under $DEMA_HOME/keys; mkdir+realpath+open with 0o700 and lstat checks; local key store, no network.",
   "packages/receipts/src/consent-nonce-registry.js":
     "single used-nonces.json under $DEMA_HOME/consent for within-host replay protection; local file, no network.",
+  "packages/receipts/src/consent-nonce-claim.js":
+    "the ONE canonical atomic consent claim (Gate C): a single O_EXCL create under $DEMA_HOME/consent/nonces-v1/<digest>.json IS consumption — no has()-then-add(), no second consumed record. mkdir/writeFile{wx}/readFile/access only; raw nonce never becomes a path (domain-separated sha256 key); reads fail CLOSED and an untrusted body escalates; also read-only-checks the two superseded namespaces for refusal without ever migrating them. Local file, no network.",
+  "packages/receipts/src/mission-closure-transaction.js":
+    "the immutable mission-closure transaction history (Gate C, C2): append-only events under $DEMA_HOME/transactions/mission-closure/<transaction_id>/ recording what happened AFTER the nonces-v1 claim consumed authority — it references consent_claim_hash and can never create, consume or reinterpret consent. Publication is no-replace by construction (write private temp → fsync → link() → fsync dir → unlink temp), so a torn write never appears at an authoritative path and rename can never overwrite a published event; where link() is unavailable it fails CLOSED rather than degrading to overwrite. Compare-and-append re-verifies the whole chain before every write, so a stale head cannot append; races and crash retries are settled by semantic_evidence_hash (at_iso excluded — clocks differ between workers). Phases SUBORDINATE to CORRIDOR_TRANSITIONS: RESOLVED is the only terminal and carries an existing corridor TERMINAL_OUTCOME, so no second lifecycle vocabulary is introduced. transaction_id is shape-guarded against path escape; the raw nonce is never persisted. mkdir/open/writeFile/readFile/readdir/link/unlink only, all under DEMA_HOME. Local file, no network.",
+  "packages/receipts/src/consent-nonce-registry-atomic.js":
+    "one file per nonce under $DEMA_HOME/consent/nonces created with O_EXCL (wx) — the atomic replacement for the shared-file registry above; mkdir/writeFile/readFile/readdir only, nonce shape-guarded against path escape, reads fail CLOSED; local file, no network.",
   "packages/receipts/src/canonical-ledger.js":
     "read/append canonical-ledger.ndjson under $DEMA_HOME/receipts via atomic rename; local chain file, no network.",
   "packages/receipts/src/codebase-map-save.js":

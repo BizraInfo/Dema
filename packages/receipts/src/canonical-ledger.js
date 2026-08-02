@@ -9,14 +9,15 @@
 // does not verify, the append is refused and nothing is written.
 //
 // Reuses RECEIPT-CHAIN-1A (buildCanonicalReceipt / verifyCanonicalChain). Append
-// is atomic (tmp + rename). Fail-closed on consent (delegated to 1A) and on a
-// broken existing chain.
+// publishes through a private no-clobber temp, file fsync, rename, and parent
+// directory fsync. Fail-closed on consent (delegated to 1A), publication errors,
+// and a broken existing chain.
 //
 // SCOPE (1B): writes a dedicated canonical ledger file under demaHome. Does NOT
 // migrate the legacy flat receipts (those are pre-canonical; left untouched).
 // No token/PoI/economy/federation.
 
-import { mkdir, readFile, writeFile, rename, unlink } from "node:fs/promises";
+import { mkdir, open, readFile, rename, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { loadPublicKey } from "./authorship-key-store.js";
@@ -27,6 +28,8 @@ import {
 } from "./canonical-receipt.js";
 
 export const CANONICAL_LEDGER_RELPATH = "receipts/canonical-ledger.ndjson";
+
+const DEFAULT_PUBLICATION_OPS = Object.freeze({ mkdir, open, rename, unlink });
 
 function resolveHome(override) {
   if (typeof override === "string" && override.length > 0) return override;
@@ -80,6 +83,7 @@ export async function appendCanonicalReceipt({
   consent,
   demaHome,
   now,
+  publicationOps = DEFAULT_PUBLICATION_OPS,
 } = {}) {
   if (consent !== CANONICAL_RECEIPT_CONSENT_PHRASE) {
     return Object.freeze({ appended: false, error: "consent_required" });
@@ -143,22 +147,57 @@ export async function appendCanonicalReceipt({
     return Object.freeze({ appended: false, error: built.error });
   }
 
-  // atomic append: rewrite the canonical ledger via tmp + rename.
+  // Durable atomic append: private no-clobber temp → file fsync → rename →
+  // parent-directory fsync. A publication failure throws as before, so callers
+  // cannot persist a later phase from a false appended:true acknowledgement.
   const path = ledgerPath(demaHome);
-  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+  const parent = dirname(path);
+  await publicationOps.mkdir(parent, { recursive: true, mode: 0o700 });
   const content =
     [...entries, built.receipt].map((r) => JSON.stringify(r)).join("\n") + "\n";
   // Unique tmp per append (content-addressed) so concurrent appends can't
   // collide on a shared temp file. Deterministic — no random/clock.
   const tmp = `${path}.${built.receipt.receipt_id.slice(0, 12)}.tmp`;
+  let tmpHandle = null;
+  let parentHandle = null;
+  let tmpCreated = false;
+  let published = false;
   try {
-    await writeFile(tmp, content, { encoding: "utf8", mode: 0o600 });
-    await rename(tmp, path);
+    tmpHandle = await publicationOps.open(tmp, "wx", 0o600);
+    tmpCreated = true;
+    await tmpHandle.writeFile(content, { encoding: "utf8" });
+    await tmpHandle.sync();
+    await tmpHandle.close();
+    tmpHandle = null;
+
+    await publicationOps.rename(tmp, path);
+    published = true;
+
+    parentHandle = await publicationOps.open(parent, "r");
+    await parentHandle.sync();
+    await parentHandle.close();
+    parentHandle = null;
   } catch (err) {
-    try {
-      await unlink(tmp);
-    } catch {
-      /* tmp already gone */
+    if (tmpHandle) {
+      try {
+        await tmpHandle.close();
+      } catch {
+        /* preserve the primary publication failure */
+      }
+    }
+    if (parentHandle) {
+      try {
+        await parentHandle.close();
+      } catch {
+        /* preserve the primary publication failure */
+      }
+    }
+    if (tmpCreated && !published) {
+      try {
+        await publicationOps.unlink(tmp);
+      } catch {
+        /* best-effort cleanup; the private temp remains non-authoritative */
+      }
     }
     throw err;
   }

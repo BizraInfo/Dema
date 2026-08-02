@@ -175,3 +175,13 @@ test("scanCorpus returns findings with relative file, kind, text shape", () => {
     assert.ok("text" in x);
   }
 });
+
+test("the reviewed claim corpus matches its committed baseline without drift", () => {
+  const current = scanCorpus(corpusFiles());
+  const baseline = loadBaseline();
+  const gate = evaluateCorpusGate({ current, baseline });
+
+  assert.equal(gate.ok, true);
+  assert.deepEqual(gate.added, []);
+  assert.deepEqual(gate.removed, []);
+});

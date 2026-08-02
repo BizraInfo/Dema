@@ -25,6 +25,34 @@ async function readReport(name, root = repoRoot) {
   return JSON.parse(await readFile(join(root, proofDir, name), "utf8"));
 }
 
+// HERMETIC-BY-DEGRADATION: the host-derived fragments (home dir, hostname, OS
+// account name) are the strongest signal — on a real operator machine they catch
+// a generator that leaks the actual identity. But `os.userInfo()` reads the OS
+// account database, which some sandboxes deny outright (uv_os_get_passwd ENOENT),
+// and a privacy test must not FAIL because it could not look up the very string
+// it hopes to be absent.
+//
+// So: collect every host fragment that is obtainable, record the ones that are
+// not, and assert below that the host-INDEPENDENT literals still ran. The test
+// can degrade in reach on a restricted host; it can never degrade to vacuous.
+function collectHostPrivateFragments() {
+  const fragments = [];
+  const unavailable = [];
+  for (const [label, get] of [
+    ["homedir", () => homedir()],
+    ["hostname", () => hostname()],
+    ["userInfo.username", () => userInfo().username],
+  ]) {
+    try {
+      const v = get();
+      if (v) fragments.push(v);
+    } catch {
+      unavailable.push(label);
+    }
+  }
+  return { fragments, unavailable };
+}
+
 test("self-check reports exist and verify byte-for-byte", async () => {
   const result = await verifySelfCheckReports({ root: repoRoot });
 
@@ -106,10 +134,8 @@ test("self-check reports avoid raw private data and public claims", async () => 
     ),
   ).then((parts) => parts.join("\n"));
 
-  const forbiddenFragments = [
-    homedir(),
-    hostname(),
-    userInfo().username,
+  const { fragments: hostFragments, unavailable } = collectHostPrivateFragments();
+  const hostIndependent = [
     "/home/",
     "public_network_enabled",
     "node1_connected",
@@ -117,6 +143,18 @@ test("self-check reports avoid raw private data and public claims", async () => 
     '"real_token_value": true',
     '"sat_permit_claimed": true',
   ].filter(Boolean);
+
+  // A restricted host may hide its own identity strings; it may never hide these.
+  assert.ok(
+    hostIndependent.length >= 4,
+    "privacy test degenerated: the host-independent forbidden list is too small",
+  );
+  const forbiddenFragments = [...hostFragments, ...hostIndependent];
+  if (unavailable.length > 0) {
+    // Visible, not silent: a reduced-reach run must announce which host signals
+    // it could not obtain, so a green result is never mistaken for full reach.
+    console.log(`# host private fragments unavailable: ${unavailable.join(", ")}`);
+  }
 
   for (const fragment of forbiddenFragments) {
     assert.equal(
