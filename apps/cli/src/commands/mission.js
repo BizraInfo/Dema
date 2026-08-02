@@ -1909,7 +1909,7 @@ async function cmdMissionCorridor(argv) {
   }
 
   // THE WELD, bound to disk. The corridor authorises; Omega0 performs one
-  // bounded, anchored, reversible effect; an independent verifier admits it;
+  // bounded, anchored, reversible effect; an in-process judge-free verifier admits it;
   // the canonical ledger records it; only then may COMPLETE exist.
   if (verb === "complete") {
     const id = argv[3];
@@ -2013,8 +2013,9 @@ async function cmdMissionCorridor(argv) {
       effect: buildRenameEffectAdapter({ scopeRoot: estate, from: fromName, to: toName, anchorLog, observed }),
       now: Date.parse(nowIso),
       appendReceipt: buildLedgerAppender({ demaHome: home, now: nowIso }),
-      // Judge-free and structurally independent: the party that proposed the act
-      // is not the party that certifies it (verification-admission F2).
+      // Judge-free and STRUCTURALLY separated: the party that proposed the act is
+      // not the party that certifies it (verification-admission F2). Both still run
+      // in THIS process — this is not organisational or cryptographic independence.
       verifyAdmission: ({ card }) => {
         const a = evaluateVerificationAdmission({
           proposed_act: `corridor-closure:${id}`,

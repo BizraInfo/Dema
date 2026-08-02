@@ -100,9 +100,9 @@ export function buildLedgerAppender({ demaHome, now }) {
       // read here, so the receipt cannot drift from the authorised transition.
       now,
       whatProves:
-        "One consented corridor mission reached COMPLETE: anchored, independently verified, sealed, and appended to the canonical receipt ledger",
+        "One consented corridor mission reached COMPLETE: anchored, re-derived by in-process judge-free verification, sealed, and appended to the canonical receipt ledger",
       whatDoesNotProve:
-        "Federation, token economy, PoI rewards, autonomous PAT/SAT, or that the mission's objective was useful to a human",
+        "Federation, token economy, PoI rewards, autonomous PAT/SAT, verification by any separate process/key/organisation (the verifier runs IN-PROCESS inside the same trust boundary), or that the mission's objective was useful to a human",
       consent: CANONICAL_RECEIPT_CONSENT_PHRASE,
       demaHome: home,
     });

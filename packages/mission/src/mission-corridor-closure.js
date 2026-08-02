@@ -1,18 +1,18 @@
-// MISSION-CORRIDOR-CLOSURE-1A — THE WELD (deliberately RED).
+// MISSION-CORRIDOR-CLOSURE-1A — THE WELD.
 //
 // Joins the two halves that today have zero references to each other:
 //   packages/mission/src/mission-corridor.js   durable, resumable, hash-chained
 //                                              journal — but PREVIEW_ONLY, no execution
 //   packages/core/src/omega0-mechanical-closure.js
 //                                              consent → lease → MANDATORY anchor →
-//                                              bounded effect → independent verify →
+//                                              bounded effect → in-process judge-free verify →
 //                                              seal → Proof Card → replay
 //
 // DEC-1 LAW: the corridor is the sole canonical mission authority. Omega0 is a bounded
 // TRANSACTION the corridor authorises at the execution edge — never a second lifecycle.
 //
-//   corridor authorises → invokes Omega0 → typed outcome → INDEPENDENT verification
-//   → seal → canonical ledger append → durable terminal transition
+//   corridor authorises → invokes Omega0 → typed outcome → IN-PROCESS JUDGE-FREE
+//   verification → seal → canonical ledger append → durable terminal transition
 //
 // A successful Omega0 return ALONE must never produce COMPLETE.
 //
@@ -35,18 +35,25 @@
 // purity forbids this kernel from reading the durable nonce store, so it can
 // check that a registry is well-shaped but never that it is telling the truth.
 //
-// The fix has the same shape as PEAK-EVIDENCE-GATHERER-1A: a CALLER binds to the
-// real `packages/receipts/src/consent-nonce-registry.js` on disk and passes a
-// registry backed by actual bytes. Until that caller exists, the single-use
-// guarantee holds ONLY on the bound path — exactly as the evidence guarantee
-// holds only on the gatherer path.
+// The fix has the same shape as PEAK-EVIDENCE-GATHERER-1A: a CALLER binds to a
+// real on-disk registry and passes one backed by actual bytes. That caller now
+// exists — `corridor-closure-gatherer.js` (buildDiskConsentRegistry, O_EXCL per
+// nonce). The single-use guarantee therefore holds ON THE BOUND PATH ONLY; this
+// kernel called directly with a hand-made object is still shape-checked only.
 //
-// Note this ceiling compounds with a known defect: consent-nonce-registry.js:153-184
-// is a TOCTOU read-modify-write on one shared JSON file (backlog task-017, plan D3).
-// Binding to it before that is fixed would inherit the race.
+// The legacy consent-nonce-registry.js:153-184 is a TOCTOU read-modify-write over
+// one shared JSON file (backlog task-017); the bound caller uses the ATOMIC
+// replacement (consent-nonce-registry-atomic.js) instead, so the race is not
+// inherited.
 //
-// STATUS: 12/16 green. Red: MCW-05/06 (resumeCorridorClosure), MCW-10/11
-// (verifyCorridorClosure). Tests encode the contract; implement to green.
+// ── OPEN · the two consent stores are NOT one replay domain ──
+// The CLI's reserveNonce writes missions/consent-nonces/<sha256(nonce)>.json while
+// this kernel's bound registry writes consent/nonces/<nonce>.json. Different store,
+// different key derivation: a nonce consumed by one is INVISIBLE to the other.
+// Unifying them is Gate C and is NOT done.
+//
+// STATUS: 16/16 (tests/mission-corridor-closure.test.js) + 10/10 bound-path
+// (tests/mission-corridor-closure-binding.test.js).
 
 import { createHash } from "node:crypto";
 import { runMechanicalClosure } from "../../core/src/omega0-mechanical-closure.js";
@@ -203,7 +210,10 @@ export async function runCorridorClosure(p = {}) {
   // SEALED is a CANDIDATE. Everything below must also succeed.
   await registry.add(consentKey);
 
-  // ── Independent verification (judge-free; the actor never certifies itself).
+  // ── IN-PROCESS JUDGE-FREE verification. The proposer and certifier identifiers
+  // differ, so the actor does not certify itself — but both run inside THIS
+  // process and trust boundary. That is structural separation, NOT organisational,
+  // cryptographic or remote independence. Never call it "independently verified".
   const v = verifyAdmission?.({ card, mission, lease });
   if (!v?.admitted) {
     try { effect?.undo?.(); } catch { /* restoration reported by outcome */ }
