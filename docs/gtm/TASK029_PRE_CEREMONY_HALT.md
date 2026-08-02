@@ -8,6 +8,18 @@ Truth: **no production signing posture claim** until founder ceremony completes.
 - P0.2b crash matrix (2026-07-29) found **CP5** blocking defect: crash after
   `appendRetiredRegistry` and before `activateGeneration` can leave
   `retired_generation` with no usable active key. Ceremony blocked until CP5 closes.
+- **CP5 CLOSED (2026-08-02, AUTHORSHIP-ROTATION-RESUME-1A).** The crash is
+  reproduced by a real child `SIGKILL` at the pointer-commit boundary, and the
+  measured pre-fix posture is **fail-closed, not unsafe** — nothing ever signs
+  with a retired key — so CP5 was a liveness defect. `resumeAuthorshipRotation`
+  rolls an interrupted rotation forward under the exact phrase
+  `RESUME AUTHORSHIP ROTATION`, after re-verifying the already-archived
+  generation through the same contract `loadActiveKeyPair` enforces. Read-only
+  inspection reports the state and repairs nothing. Fixture homes only — no real
+  key was generated or rotated. See `docs/CURRENT_LIMITS.md`
+  (AUTHORSHIP-ROTATION-RESUME-1A) and `tests/authorship-rotation-resume.test.js`.
+  **This unblocks the ceremony gate; it does not perform, replace, or reduce the
+  ceremony.** Everything below still stands.
 
 ## What this GTM cycle does NOT do
 
