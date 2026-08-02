@@ -28,6 +28,9 @@ export const KEY_ROTATE_RECEIPT_SCHEMA =
   "bizra.dema.authorship_key_rotate_receipt.v0.1";
 export const KEY_ROTATE_JOURNAL_SCHEMA =
   "bizra.dema.authorship_rotation_journal.v0.1";
+export const KEY_ROTATE_RESUME_CONSENT_PHRASE = "RESUME AUTHORSHIP ROTATION";
+export const KEY_ROTATE_RESUME_SCHEMA =
+  "bizra.dema.authorship_rotation_resume.v0.1";
 export const RETIRED_REGISTRY_SCHEMA = "bizra.dema.retired_key_registry.v0.1";
 export const ACTIVE_POINTER_SCHEMA = "bizra.dema.authorship_active_key.v0.1";
 export const GENERATION_METADATA_SCHEMA =
@@ -815,9 +818,16 @@ export async function inspectIdentityRecovery(demaHome) {
   } else {
     recommendedAction = "RUN_EXPLICIT_IDENTITY_RECOVERY";
   }
+  // CP5 (P0.2b crash matrix, 2026-07-29): a rotation interrupted between the
+  // retirement append and the pointer commit is REPORTED here and repaired
+  // nowhere. This root is read-only by contract (identity-recovery refuse-and-
+  // report gate); the operator runs resumeAuthorshipRotation explicitly.
+  const rotationJournal = await readRotationJournalDoc(paths);
   return Object.freeze({
     schema: "bizra.dema.identity_recovery_inspection.v0.1",
     recovery_class: recoveryClass,
+    rotation_journal_state: rotationJournal.state,
+    rotation_resume_state: await classifyRotationResume(ap, rotationJournal),
     active_pointer_path: ap.activePointer,
     active_pointer_hash: valid
       ? (pointerCls.pointerHash ?? null)
@@ -897,6 +907,58 @@ async function readRetiredFingerprints(ap) {
       ...new Set(retired.map((entry) => entry.fingerprint)),
     ].sort()),
   });
+}
+
+// --- CP5: interrupted-rotation reading (no mutation reachable from here) ---
+
+// Parse the rotation journal without ever trusting it as authority. An absent
+// journal is ABSENT, unparseable bytes are CORRUPT — never "fine".
+async function readRotationJournalDoc(paths) {
+  const raw = await readExactIfPresent(join(paths.dir, "rotation-journal.json"));
+  if (raw === null || raw === undefined) {
+    return Object.freeze({ state: "ABSENT", doc: null });
+  }
+  let doc;
+  try {
+    doc = JSON.parse(raw);
+  } catch {
+    return Object.freeze({ state: "CORRUPT", doc: null });
+  }
+  if (
+    !doc ||
+    typeof doc !== "object" ||
+    doc.schema !== KEY_ROTATE_JOURNAL_SCHEMA ||
+    typeof doc.state !== "string"
+  ) {
+    return Object.freeze({ state: "CORRUPT", doc: null });
+  }
+  return Object.freeze({ state: doc.state, doc: Object.freeze({ ...doc }) });
+}
+
+// Read-only verdict over the interrupted-rotation window. RESUMABLE_FORWARD is
+// claimed ONLY when the retirement is durably committed and the pointer has not
+// moved — the exact CP5 post-state. Everything else is named, never repaired.
+async function classifyRotationResume(ap, journal) {
+  if (journal.state === "CORRUPT") return "JOURNAL_CORRUPT";
+  if (journal.state !== "ACTIVATING") return "NOT_INTERRUPTED";
+  const { old_fingerprint: oldFp, new_fingerprint: newFp } = journal.doc ?? {};
+  if (!SHA256_HEX.test(oldFp ?? "") || !SHA256_HEX.test(newFp ?? "")) {
+    return "JOURNAL_CORRUPT";
+  }
+  const registry = await readRetiredFingerprints(ap);
+  if (!registry.ok) return "REGISTRY_UNREADABLE";
+  if (!registry.fingerprints.includes(oldFp)) return "RETIREMENT_NOT_COMMITTED";
+  const raw = await readFileNoFollow(ap.activePointer);
+  if (raw === null) return "POINTER_UNREADABLE";
+  let doc;
+  try {
+    doc = JSON.parse(raw);
+  } catch {
+    return "POINTER_UNREADABLE";
+  }
+  if (doc?.generation_fingerprint === newFp) return "ALREADY_ACTIVE";
+  if (doc?.generation_fingerprint !== oldFp) return "POINTER_UNEXPECTED";
+  return "RESUMABLE_FORWARD";
 }
 
 async function checkRetired(ap, fingerprint, previousGeneration = null) {
@@ -1985,6 +2047,174 @@ export async function rotateAuthorshipKey({
       receipt_path: receiptPath,
       private_key_path: join(generationPath, "private.pem"),
       public_key_path: join(generationPath, "public.pem"),
+      boundary: buildBoundary(true),
+    });
+  } finally {
+    await lease.release();
+  }
+}
+
+// CP5 closure (P0.2b crash matrix 2026-07-29; docs/gtm/TASK029_PRE_CEREMONY_HALT.md).
+//
+// A rotation killed between `appendRetiredRegistry` and the active-pointer
+// commit leaves the old fingerprint retired while the pointer still names it:
+// nothing signs (loadActiveKeyPair -> retired_generation, loadGuardedActiveKey
+// -> rotation_in_progress), and nothing can move. That is a LIVENESS defect,
+// not an unsafe one, so the repair is a separate consented act rather than an
+// automatic one — the rejected PR #414 auto-quarantine design stays extinct and
+// the read-only inspection roots keep reporting instead of repairing.
+//
+// Recovery rolls FORWARD, never back: the new generation's bytes were archived
+// and byte-verified BEFORE the retirement was written, so the target is already
+// durable. It is re-verified here through `verifyPointerDoc` — the same contract
+// `loadActiveKeyPair` enforces — before the pointer is allowed to move.
+export async function resumeAuthorshipRotation({
+  consent,
+  demaHome,
+  resumedAt,
+} = {}) {
+  const refuse = (error, detail) =>
+    Object.freeze({
+      schema: KEY_ROTATE_RESUME_SCHEMA,
+      resumed: false,
+      error,
+      ...(detail ? { detail } : {}),
+      ...(error === "consent_required"
+        ? { required_phrase: KEY_ROTATE_RESUME_CONSENT_PHRASE }
+        : {}),
+      authority_delta: 0,
+      boundary: buildBoundary(false),
+    });
+
+  if (consent !== KEY_ROTATE_RESUME_CONSENT_PHRASE) return refuse("consent_required");
+
+  const paths = keyPaths(demaHome);
+  const ap = activeKeyPaths(demaHome);
+  const journalPath = join(paths.dir, "rotation-journal.json");
+  const nowIso =
+    typeof resumedAt === "string" && resumedAt
+      ? resumedAt
+      : new Date().toISOString();
+
+  const journal = await readRotationJournalDoc(paths);
+  const verdict = await classifyRotationResume(ap, journal);
+
+  // Idempotency BEFORE any write: an exact re-run of a completed resume must
+  // change no durable byte.
+  if (verdict === "ALREADY_ACTIVE" || verdict === "NOT_INTERRUPTED") {
+    const settled = await loadActiveKeyPair(demaHome);
+    if (settled.ok && settled.fingerprint === journal.doc?.new_fingerprint) {
+      return Object.freeze({
+        schema: KEY_ROTATE_RESUME_SCHEMA,
+        resumed: true,
+        already_resolved: true,
+        active_fingerprint: settled.fingerprint,
+        retired_fingerprint: journal.doc?.old_fingerprint ?? null,
+        transaction_state: journal.state,
+        boundary: buildBoundary(false),
+      });
+    }
+    return refuse("no_interrupted_rotation", verdict);
+  }
+  if (verdict !== "RESUMABLE_FORWARD") return refuse("not_resumable", verdict);
+
+  const oldFp = journal.doc.old_fingerprint;
+  const newFp = journal.doc.new_fingerprint;
+
+  // A rotation killed mid-transition leaves its lease behind on purpose: a dead
+  // holder is preserved as `recovery_required` for operator adjudication. This
+  // consented call IS that adjudication, so it may take the stale lease over —
+  // but a LIVE holder still refuses, and the O_EXCL re-acquire keeps two
+  // concurrent resumes from both proceeding.
+  let lease = await acquireIdentityLease(ap);
+  if (!lease.acquired && lease.reason === "recovery_required") {
+    await unlink(ap.identityLease).catch(() => {});
+    lease = await acquireIdentityLease(ap);
+  }
+  if (!lease.acquired) return refuse("identity_lease_unavailable", lease.reason);
+  try {
+    // Re-verify under the lease: the world may have changed since the
+    // unsynchronized read above.
+    if ((await classifyRotationResume(ap, journal)) !== "RESUMABLE_FORWARD") {
+      return refuse("not_resumable", "state_changed_under_lease");
+    }
+
+    const targetDoc = {
+      schema: ACTIVE_POINTER_SCHEMA,
+      generation_fingerprint: newFp,
+      generation_path: join(GENERATIONS_DIRNAME, newFp),
+      activated_at: nowIso,
+      previous_generation: oldFp,
+    };
+    const target = await verifyPointerDoc(
+      ap,
+      targetDoc,
+      JSON.stringify(targetDoc),
+    );
+    if (!target.ok) return refuse("generation_unverifiable", target.error);
+
+    await activateGeneration(ap, {
+      fingerprint: newFp,
+      now: nowIso,
+      previous: oldFp,
+    });
+
+    const verified = await loadActiveKeyPair(demaHome);
+    if (
+      !verified.ok ||
+      verified.fingerprint !== newFp ||
+      !keypairMatches(verified.private_key_pem, verified.public_key_pem)
+    ) {
+      await writeRotationJournal(
+        journalPath,
+        "ACTIVE_RETIREMENT_PENDING",
+        oldFp,
+        newFp,
+        nowIso,
+      );
+      return refuse(
+        "post_activation_verify_failed",
+        verified.ok ? "fingerprint_or_pair_mismatch" : verified.error,
+      );
+    }
+
+    await writeRotationJournal(journalPath, "COMPLETE", oldFp, newFp, nowIso);
+
+    // ponytail: the resume seals its OWN receipt bound to the resume phrase. It
+    // cannot honestly reproduce the interrupted ceremony's consent envelope —
+    // that nonce is not persisted in the journal — so it records what it can
+    // witness (which rotation it finished, and that a human authorized the
+    // finish) rather than forging the original binding.
+    const receipt = {
+      schema: KEY_ROTATE_RECEIPT_SCHEMA,
+      old_fingerprint: oldFp,
+      new_fingerprint: newFp,
+      generation_dir: target.generation_path,
+      retired_at: journal.doc.at ?? null,
+      resumed_at: nowIso,
+      reason: "interrupted_rotation_resumed_forward",
+      retired_registry_path: ap.retiredRegistry,
+      journal_path: journalPath,
+      completed_by: "resume",
+      runtime_activation: "not_verified_no_runtime",
+      revocation_state: "retired_local_denylisted",
+      consent_binding: Object.freeze({
+        strength: "resume_phrase_only",
+        consent_phrase_sha256: sha256(consent),
+        note: "completes an interrupted rotation; the original ceremony envelope is not replayable from the journal",
+      }),
+      private_key_material_included: false,
+    };
+    const receiptPath = await writeRotationReceipt(paths, newFp, receipt);
+
+    return Object.freeze({
+      schema: KEY_ROTATE_RESUME_SCHEMA,
+      resumed: true,
+      already_resolved: false,
+      active_fingerprint: newFp,
+      retired_fingerprint: oldFp,
+      transaction_state: "COMPLETE",
+      receipt_path: receiptPath,
       boundary: buildBoundary(true),
     });
   } finally {
