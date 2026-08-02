@@ -55,6 +55,8 @@ export const NONCORE_IO_TIER_ALLOWLIST = Object.freeze({
     "key files under $DEMA_HOME/keys; mkdir+realpath+open with 0o700 and lstat checks; local key store, no network.",
   "packages/receipts/src/consent-nonce-registry.js":
     "single used-nonces.json under $DEMA_HOME/consent for within-host replay protection; local file, no network.",
+  "packages/receipts/src/consent-nonce-claim.js":
+    "the ONE canonical atomic consent claim (Gate C): a single O_EXCL create under $DEMA_HOME/consent/nonces-v1/<digest>.json IS consumption — no has()-then-add(), no second consumed record. mkdir/writeFile{wx}/readFile/access only; raw nonce never becomes a path (domain-separated sha256 key); reads fail CLOSED and an untrusted body escalates; also read-only-checks the two superseded namespaces for refusal without ever migrating them. Local file, no network.",
   "packages/receipts/src/consent-nonce-registry-atomic.js":
     "one file per nonce under $DEMA_HOME/consent/nonces created with O_EXCL (wx) — the atomic replacement for the shared-file registry above; mkdir/writeFile/readFile/readdir only, nonce shape-guarded against path escape, reads fail CLOSED; local file, no network.",
   "packages/receipts/src/canonical-ledger.js":
