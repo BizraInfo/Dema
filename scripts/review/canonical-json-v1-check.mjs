@@ -46,6 +46,13 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // that settles concurrent appends, so every hash it publishes is stable
   // across writers and processes.
   "packages/receipts/src/mission-closure-transaction.js",
+  // NODE0-CLEAN-STATE-JOURNEY-1A — the witness harness publishes ONE
+  // cross-machine value (`journey_invariant_hash`) over the subset of a
+  // clean-state run that is legitimately identical on every machine. That value
+  // is compared by strangers, so it must not depend on key order: canonical
+  // JSON v1 is exactly the contract for it. Registration is adoption review
+  // only; it does not promote Node0 or close any DoD gate by itself.
+  "scripts/proof/node0-clean-state-journey.mjs",
   // Back-registered 2026-07-25. These four landed on main (#401, #402, #403,
   // #405) with the scaffold's registration comment already in their headers —
   // dema-recovery-mission-gatherer.js says "reviewed in this slice's PR" — but

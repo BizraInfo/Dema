@@ -189,7 +189,7 @@ Until then, public wording must stay design-level and non-financial.
 
 | Gap | Why it blocks Genesis seal |
 | --- | --- |
-| Node0 closed-loop clean-state demo not yet complete. | Genesis needs replayable proof, not only green CI. |
+| ~~Node0 closed-loop clean-state demo not yet complete.~~ **CLOSED 2026-08-02** by NODE0-CLEAN-STATE-JOURNEY-1A. | Genesis needs replayable proof, not only green CI. The harness publishes one `journey_invariant_hash` that is identical across independent clean homes, with the run-varying values reported separately and deliberately excluded -- so a stranger's reproduction can actually agree. |
 | Public URP bridge not yet specified. | Network opening requires capability, quarantine, and receipt boundaries. |
 | Node1 handshake not yet tested in preview. | A second node must not inherit ambiguous rules. |
 | Proof-of-Impact economy not implemented. | Reward language must remain quarantined. |
@@ -199,12 +199,12 @@ Until then, public wording must stay design-level and non-financial.
 
 Node0 + Dema + URP flagship DoD is complete when:
 
-- [ ] `docs/genesis/BIZRA_GENESIS_BLOCK_v0.1.md` is present and linked.
-- [ ] This DoD is present and linked.
-- [ ] One clean-state Node0 demo executes the full local loop through Dema.
-- [ ] URP 5SAT declaration is reproduced and verified from clean `DEMA_HOME`.
-- [ ] Covenant Gate screens one proposal and records prototype evidence.
-- [ ] Receipts can be listed/read without mutating verification state.
+- [x] `docs/genesis/BIZRA_GENESIS_BLOCK_v0.1.md` is present and linked. (Verified 2026-08-02: file present; linked from `docs/INDEX.md` and this DoD.)
+- [x] This DoD is present and linked. (Verified 2026-08-02: linked from `docs/INDEX.md` and the genesis block.)
+- [x] One clean-state Node0 demo executes the full local loop through Dema. (NODE0-CLEAN-STATE-JOURNEY-1A: `node scripts/proof/node0-clean-state-journey.mjs` drives the real `bin/dema` through welcome -> setup -> setup-check -> status -> URP 5SAT -> receipt read -> Covenant screen -> consent refusal -> receipt list, against a DEMA_HOME the harness creates and removes. 9 steps, exit 0.)
+- [x] URP 5SAT declaration is reproduced and verified from clean `DEMA_HOME`. (Reproduced from two INDEPENDENT clean homes; the declared content -- active SAT set, lock, blocked manipulators, truth label -- is byte-identical, while `launch_hash` legitimately differs per home. CSJ-02/CSJ-03.)
+- [x] Covenant Gate screens one proposal and records prototype evidence. (`fixtures/covenant/example-impact-proposal.json` screened; verdicts carried under the gate's own PROTOTYPE/DESIGN claim labels, `status: needs_human_consent`. The consent step is proven to REFUSE without a signing key -- CSJ-04.)
+- [x] Receipts can be listed/read without mutating verification state. (The 5SAT receipt is read back from disk and `dema urp list --json` reports `file_write_performed: false`; both inside the journey, boundary all-false.)
 - [ ] Public bridge spec exists before any public connection.
 - [ ] Node1 handshake preview exists before Node1.
 - [ ] Claim Register remains consistent with every public-facing sentence.
