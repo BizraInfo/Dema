@@ -210,16 +210,20 @@ who only sees the README.
 
 ## Public deployment claim containment
 
-The `2026-07-24` live-surface audit found that `bizra.ai` was still publishing
+The initial `2026-07-24` live-surface audit found that `bizra.ai` was publishing
 unbound pinned metrics, “Live Receipt Chain,” “Live Network Data,” absolute
 enforcement wording, live economic/URP implications, and unauthenticated API
-responses carrying unbound operational claims.
+responses carrying unbound operational claims. A later exact-SHA deployment
+and credential-free crawl record the containment state separately; they do not
+turn the corrected web boundary into evidence of Node0 runtime capability.
 
 | Surface | Truth state | Current limit |
 | --- | --- | --- |
-| Live `bizra.ai` claim surface observed 2026-07-24 | `UNKNOWN` for unsupported facts; `FORBIDDEN` for live economy, URP, or federation claims | The current deployment is a claim defect. Do not cite it as evidence of runtime, identity, security, scale, economics, or federation. |
-| Live unauthenticated `bizra.ai` API output observed 2026-07-24 | `UNKNOWN` until each output is minimized, canonically labeled, and evidence-bound | Page redirects do not contain API output. Health, beta, ethics, scaffold, hardware, model, persistence, and metric responses require separate review. |
-| Local `award-winner-design` containment candidate | Source presence `VERIFIED`; distribution qualifier `LOCAL_ONLY`; deployment `UNKNOWN` | A dated root boundary, default route containment, authentication integrity hold, all-method API inventory, and credential-free fixed-GET capture exist only in a local candidate. Known demonstration credentials were removed from candidate source, but session invalidation, identity-provider repair, secret rotation, push, merge, deployment, and production correction are not claimed. |
+| Initial live `bizra.ai` claim surface observed 2026-07-24 | `UNKNOWN` for unsupported facts; `FORBIDDEN` for live economy, URP, or federation claims | Historical claim defect. Do not cite the captured legacy copy as evidence of runtime, identity, security, scale, economics, or federation. |
+| GitHub `Production – award-winner-design` deployment record | `VERIFIED` within the record's scope | GitHub deployment `5590104450`, created by `vercel[bot]`, reports `success` at exact `award-winner-design` commit `6f7f545e6a1ac044cbb8d29a0a215e8a9f2885bf`. Its environment URL is a Vercel deployment URL; this does not directly prove the `bizra.ai` alias. |
+| Corrected public pages, static text, metadata, and fixed unauthenticated APIs | `MEASURED` from `2026-07-24T17:11:43.617Z` through `2026-07-24T17:11:46.037Z`; exact-source relationship `DERIVED` | Credential-free crawl covered `62` inventoried surfaces: `5` HTTP 200, `30` contained redirects, `27` expected-private 401, and zero truncation, request errors, private 200s, containment failures, or known forbidden phrases. The internally recorded completion follows the latest embedded API `measured_at` (`2026-07-24T17:11:45.595Z`). A committed raw-body-in-memory scanner ran from `2026-07-24T17:11:52.390Z` through `2026-07-24T17:11:53.245Z`, retained per-route status/byte length/SHA-256/link and match results, and found zero public receipt-link or revoked-key-link matches without retaining raw bodies. Root body SHA-256: `473052c4bbcf7bf6092bbd9c075abf70c12e6b517878fe32c5ba3521fcaf18dd`. A live same-origin runtime asset embeds Vercel deployment identifier `dpl_C7hFkz6LZRSPK1XMHAXUYwJRJj2R`, matching the exact-commit Vercel status and deployment `5590104450`; the provider alias API was not readable, so the relationship is not promoted to `VERIFIED`. This is a dated web observation, not system-health proof. |
+| Authentication integrity beyond public containment | `UNKNOWN` | Known source-embedded demonstration credentials were removed and public login/refresh are held closed, but session invalidation, external identity-provider repair, secret rotation, and restored authentication are not proven. |
+| Current Dema evidence update | Source presence `VERIFIED`; distribution qualifier `LOCAL_ONLY` | Post-deploy capture and deployment binding exist on the Dema review branch but are not remotely published until separately authorized push and review. |
 | Public signing identity | `UNKNOWN` | Signer rotation is pending. No new signed public Claim Receipt is issued by the containment slice. |
 
 See
@@ -273,9 +277,10 @@ prevent.
 
 ---
 
-Public-claim containment addendum refreshed: 2026-07-24. This refresh adds the
-`bizra.ai` incident boundary only; it does not re-audit or promote the
-capability table.
+Public-claim containment addendum refreshed: 2026-07-24. This refresh records
+the `bizra.ai` incident boundary, exact-SHA site deployment provenance, and
+dated post-deploy crawl only; it does not re-audit or promote the capability
+table.
 
 Capability-table baseline last refreshed: 2026-06-28
 (DEMA-CAPABILITY-TRUTH-REGISTRY-1A branch, based on merged #301 commit

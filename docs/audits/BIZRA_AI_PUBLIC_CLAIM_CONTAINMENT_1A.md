@@ -3,9 +3,12 @@
 ## Status
 
 - Review date: `2026-07-24`
-- Live-surface observation: `MEASURED`
-- Candidate-remediation distribution qualifier: `LOCAL_ONLY`
-- Candidate-remediation deployment state: `UNKNOWN` — no deployment was performed or inferred
+- Initial live-surface defect observation: `MEASURED`
+- Corrected site source: `VERIFIED` — `BizraInfo/award-winner-design@6f7f545e6a1ac044cbb8d29a0a215e8a9f2885bf`
+- Production deployment record: `VERIFIED` within the GitHub record's scope — deployment `5590104450`, environment label `Production – award-winner-design`, status `success`
+- Custom-domain-to-deployment relationship: `DERIVED` — a live same-origin runtime asset embeds the matching Vercel deployment identifier; the provider alias API was not readable
+- Credential-free production crawl: `MEASURED` — `62` inventoried surfaces from `2026-07-24T17:11:43.617Z` through `2026-07-24T17:11:46.037Z`
+- This Dema evidence update: `LOCAL_ONLY` until its review branch is pushed and approved
 - Public signing state: `UNKNOWN` — signer rotation is pending
 - Governed receipt: not issued
 
@@ -17,18 +20,22 @@ or `FORBIDDEN`.
 
 ## Purpose
 
-This audit contains the current `bizra.ai` public-claim defect without
-pretending that a local correction is already public. It records:
+This audit records the `bizra.ai` public-claim defect and the later production
+containment without treating either event as evidence of Node0 runtime
+capability. It records:
 
 1. what the live deployment displayed during the dated observation,
 2. which source routes and files can produce public claims,
 3. why the observed claims are unsupported or unbound,
-4. what the local candidate changes,
-5. and which proof gates remain before any corrected deployment may be called
-   live.
+4. what the containment candidate changed,
+5. which exact source commit the Vercel GitHub deployment integration recorded
+   under environment label `Production – award-winner-design`,
+6. what the credential-free post-deploy crawl measured,
+7. and which signer and Dema-review gates remain open.
 
 This is a governance and documentation artifact. It does not activate a
-runtime, rotate a key, issue a receipt, push a branch, or deploy a site.
+runtime, rotate a key, or issue a receipt. This evidence update did not perform
+the already-recorded site merge or deployment.
 
 ## Capture boundary
 
@@ -93,9 +100,13 @@ curl -sSIL https://bizra.ai
 curl -sS -o /dev/null -w '%{http_code}' "https://bizra.ai/<route>"
 ```
 
-The observation proves what those URLs returned at that time only. It does not
-identify the deployed git commit. Vercel's response did not expose a source
-SHA, so deployment-to-source provenance remains `UNKNOWN`.
+The observation proves what those URLs returned at that time only. The response
+did not expose a source SHA, so that initial capture could not identify the
+deployment commit. The later GitHub deployment record supplies exact source
+provenance for its own environment record, while the post-deploy capture
+supplies current custom-domain evidence. Without a retained Vercel alias
+record, the relationship between those two records is `DERIVED`; neither
+record retroactively assigns a commit to the initial observation.
 
 ## Route, source, and evidence inventory
 
@@ -204,9 +215,9 @@ Every row above fails at least one step of the
 deployment therefore remains a release-blocking claim defect until corrected
 and re-crawled.
 
-## Local candidate remediation
+## Containment remediation and validation
 
-A local candidate exists in `BizraInfo/award-winner-design` on branch
+A containment candidate was built in `BizraInfo/award-winner-design` on branch
 `fix/public-claim-binding-1a`, based on
 `568ab0b41c32f812b8ce4d20e7f4ffdf1ebffd6e`.
 
@@ -270,10 +281,13 @@ Candidate source and test surfaces:
 - `tests/unit/public/public-surface-inventory.test.ts`
 - `tests/unit/security/middleware.test.ts`
 
-The candidate's existence is `VERIFIED` by those local source paths. Its
-distribution qualifier is `LOCAL_ONLY`. Its public deployment state remains
-`UNKNOWN`: no push, merge, Vercel deployment, DNS change, or post-deploy crawl
-is represented by this document.
+The candidate's existence is `VERIFIED` by those source paths. Site PR
+[`#7`](https://github.com/BizraInfo/award-winner-design/pull/7) merged head
+`ebb5cc42082a7348014fe50fd4b584ccbddbbdc7` as
+`6f7f545e6a1ac044cbb8d29a0a215e8a9f2885bf` at
+`2026-07-24T14:06:32Z`. The merge was performed by the non-bot `BizraInfo`
+account. Merge provenance does not by itself prove production behavior; that
+is measured separately below.
 
 The exact site source candidate is local commit
 `d27b7a890452c416c86a27ed163c05e9b6e2950f`. Evidence-only follow-up commit
@@ -300,19 +314,128 @@ It declares source commit
 deployment-source binding `UNVERIFIED`. This is local candidate evidence, not
 a production post-deploy crawl.
 
-[MEASURED] The source commit passed the focused public-boundary tests, the full
-site suite (`22` files and `200` tests), type checking, production build,
-generated-asset claim scanning, targeted lint for every changed source/test
-surface, and `git diff --check`. The repository-wide lint command remains red
-on pre-existing errors in unchanged `public/films/support.js`; this slice does
-not claim that baseline debt is repaired.
+[MEASURED] At `2026-07-24T16:07:33.000Z`, site review head
+`ebb5cc42082a7348014fe50fd4b584ccbddbbdc7` was revalidated with Node
+`v22.22.2`, pnpm `10.33.0`, Linux `7.0.0-28-generic` x86_64, an Intel Core
+i9-14900HX, `128502` MiB total memory, and pnpm lockfile SHA-256
+`0f72dd35e0881c17826a8b8a509b1c38c6fd1b4669e73bb6a71bd208708e96d2`.
+The exact commands, exit codes, source SHAs, result counts, and generated test
+and build artifact hashes are recorded in
+[`evidence/bizra-ai-public-claim-site-validation-2026-07-24.json`](evidence/bizra-ai-public-claim-site-validation-2026-07-24.json),
+SHA-256
+`ad266e71a1cf821a5e322ac8c3300c64db628662ba53bf343cf5f57c9b641047`.
+`pnpm test` passed `22` files / `200` tests; `pnpm typecheck`, `pnpm build`,
+the generated-asset scan over `618` build files, changed-surface ESLint with
+`--no-ignore --max-warnings 0`, and `git diff --check` passed. The
+repository-wide `pnpm lint` remains baseline-red with `82` errors and `199`
+warnings; every error is in unchanged `public/films/support.js`. This slice
+does not claim that baseline debt is repaired.
 
-The candidate now pins local Dema commit
-`26bb57359186a3ab533dd51e3623e0c84d5078e9`, which contains this audit and the
-Claim Register / Current Limits updates. That commit has not been pushed by
-this slice, so its GitHub URLs are not claimed reachable. Remote publication
-requires separate explicit push authorization; deployment remains blocked
-until the immutable links return HTTP `200`.
+The deployed boundary pins Dema commit
+`26bb57359186a3ab533dd51e3623e0c84d5078e9`. GitHub's repository-contents API
+resolved the Claim Register, Current Limits, and this incident record at that
+exact commit, with git blob IDs and sizes recorded in the deployment-binding
+artifact below. The current local Dema review update is not yet pushed and is
+not represented as remotely published.
+
+## Production deployment and post-deploy crawl
+
+[VERIFIED] GitHub deployment record
+[`5590104450`](https://api.github.com/repos/BizraInfo/award-winner-design/deployments/5590104450),
+created by `vercel[bot]` at `2026-07-24T14:07:12Z`, binds its environment label
+`Production – award-winner-design` to exact site commit
+`6f7f545e6a1ac044cbb8d29a0a215e8a9f2885bf`. Its
+[status record](https://api.github.com/repos/BizraInfo/award-winner-design/deployments/5590104450/statuses)
+reports `success` and “Deployment has completed.” Its environment URL is a
+Vercel deployment URL, not the `bizra.ai` alias.
+
+[DERIVED] The `bizra.ai` root references same-origin Turbopack runtime asset
+`/_next/static/chunks/turbopack-0v13~z8bo3pu7.js`. At
+`2026-07-24T16:28:12.000Z`, that asset had SHA-256
+`ca465e67a8c8d357d7a6052a505b05bd8f535f33bf58ae6e4aa2655c3dbc5c37`
+and embedded Vercel deployment identifier
+`dpl_C7hFkz6LZRSPK1XMHAXUYwJRJj2R`. The exact-commit GitHub status context
+`Vercel – award-winner-design` targets the matching identifier
+`C7hFkz6LZRSPK1XMHAXUYwJRJj2R`, and deployment `5590104450` records the same
+commit and project. The provider alias API was not readable without additional
+Vercel account authorization, so this mechanism-backed relationship remains
+`DERIVED`, not `VERIFIED`.
+
+[MEASURED] A credential-free `GET` crawl of `https://bizra.ai` started at
+`2026-07-24T17:11:43.617Z` and completed at
+`2026-07-24T17:11:46.037Z`. It covered all `62` inventoried, fixed,
+non-secret surfaces and recorded:
+
+- `5` HTTP `200`,
+- `30` HTTP `307` containment redirects,
+- `27` HTTP `401` expected-private responses,
+- `0` truncated captures,
+- `0` request errors,
+- `0` expected-private HTTP `200` responses,
+- `0` containment status failures,
+- and `0` known forbidden-phrase hits.
+
+The root returned boundary header `reviewed` and body SHA-256
+`473052c4bbcf7bf6092bbd9c075abf70c12e6b517878fe32c5ba3521fcaf18dd`.
+The latest request-scoped API `measured_at` embedded in the retained redacted
+text is `2026-07-24T17:11:45.595Z`, before the internally recorded crawl
+completion. The earlier externally supplied timestamp ambiguity is not carried
+forward.
+The crawl, including request path, source path, status, redirect location,
+content type, byte count, body hash, and retained redacted public text, is
+stored at
+[`evidence/bizra-ai-public-claim-postdeploy-2026-07-24.json`](evidence/bizra-ai-public-claim-postdeploy-2026-07-24.json),
+SHA-256
+`3cfda09417b3c4637229e4f03c3b5e98a2637633d266946445b80afc7d0fe385`.
+
+[MEASURED] A separate committed scanner started at
+`2026-07-24T17:11:52.390Z` and completed at
+`2026-07-24T17:11:53.245Z`. It scanned each raw body in memory under manual
+redirects, omitted credentials, and a five-second per-request timeout, then
+retained no raw body. For every one of the same `62` fixed routes it recorded
+status, byte length, body SHA-256, normalized extracted links, receipt-link
+matches, revoked-key matches, exact-phrase matches, and any bounded request
+error. It recorded `0` request errors, `0` public receipt-link matches, `0`
+revoked-key link matches, and `0` known forbidden-phrase hits.
+
+The scanner and its adversarial tests are committed at:
+
+- `scripts/audit/public-link-scan.mjs`
+- `scripts/audit/public-link-scan-core.mjs`
+- `tests/public-link-scan.test.js`
+
+The refresh command is:
+
+```bash
+node scripts/audit/public-link-scan.mjs \
+  --inventory docs/audits/evidence/bizra-ai-public-claim-postdeploy-2026-07-24.json
+```
+
+The evidence file contains the complete per-route results and the canonical
+projection rules needed to recompute response-digest-set SHA-256
+`d81a96675b28bd7a7ec4a7e7db37867fdc008cf31f685ca1a238f801047bca3c`
+and route-result-set SHA-256
+`14cb6af0b0ac350749de0c8275997b3f75485023582ac07aaa095294afbea6cd`.
+It is stored in
+[`evidence/bizra-ai-public-link-scan-2026-07-24.json`](evidence/bizra-ai-public-link-scan-2026-07-24.json),
+SHA-256
+`28eadd28741ace42d4859322f07dbb3636ef7e6f99fd4183ae64424f8dc99d56`.
+
+The raw crawler deliberately leaves `deploymentCommit` null and
+`deploymentSourceBinding` `UNVERIFIED`; it does not infer deployment
+provenance from an HTTP response. [DERIVED] The matching corrected boundary,
+exact immutable evidence anchors, successful GitHub deployment record, live
+response, immutable Dema evidence lookup, crawl summary, and link scan are
+bound without upgrading the missing custom-domain alias proof in
+[`evidence/bizra-ai-public-claim-deployment-binding-2026-07-24.json`](evidence/bizra-ai-public-claim-deployment-binding-2026-07-24.json),
+SHA-256
+`ec7b1de91888f0c1a157e6cea11114ed0ce70cf550b247a97f5f9d6a5cd36dce`.
+
+This proves the dated public containment boundary and narrow request-time API
+observations only. The custom-domain relationship to the exact GitHub
+deployment remains `DERIVED` until direct alias metadata is retained. None of
+this proves Node0 activation, signer trust, federation, persistence,
+full-system health, token state, economic state, or governed receipt issuance.
 
 ## Receipt and signer boundary
 
@@ -351,11 +474,15 @@ The containment incident is not closed until all of the following are true:
 - the Claim Register and Current Limits links resolve from production;
 - and any future signed claim receipt uses the rotated trusted signer.
 
-Until those gates pass, the truthful state is:
+The production containment and crawl gates are now measured. The remaining
+truth is:
 
 ```text
-LIVE CLAIM DEFECT: OBSERVED
-LOCAL CONTAINMENT CANDIDATE: PRESENT
-CORRECTED DEPLOYMENT: NOT CLAIMED
+INITIAL LIVE CLAIM DEFECT: OBSERVED AND HISTORICALLY RECORDED
+CORRECTED SITE DEPLOYMENT: VERIFIED BY GITHUB DEPLOYMENT RECORD
+CUSTOM-DOMAIN EXACT-SOURCE RELATIONSHIP: DERIVED, DIRECT ALIAS PROOF PENDING
+POST-DEPLOY PUBLIC CLAIM CRAWL: MEASURED GREEN THROUGH 2026-07-24T17:11:46.037Z
+DEMA EVIDENCE UPDATE: LOCAL_ONLY, PENDING PUSH AND REVIEW
+PUBLIC SIGNER TRUST: UNKNOWN, TASK-029 OPEN
 NEW CRYPTOGRAPHIC RECEIPT: NOT ISSUED
 ```

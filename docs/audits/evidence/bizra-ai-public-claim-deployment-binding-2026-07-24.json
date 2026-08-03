@@ -1,0 +1,148 @@
+{
+  "schema": "bizra.dema.public_claim_deployment_binding.v0.3",
+  "crawl_started_at": "2026-07-24T17:11:43.617Z",
+  "crawl_captured_at": "2026-07-24T17:11:46.037Z",
+  "deployment_record_observed_at": "2026-07-24T16:28:12.000Z",
+  "link_scan_started_at": "2026-07-24T17:11:52.390Z",
+  "link_scan_observed_at": "2026-07-24T17:11:53.245Z",
+  "link_scan_completed_at": "2026-07-24T17:11:53.245Z",
+  "binding_generated_at": "2026-07-24T17:14:16.928Z",
+  "live_origin": "https://bizra.ai",
+  "production_deployment": {
+    "repository": "BizraInfo/award-winner-design",
+    "deployment_id": 5590104450,
+    "environment": "Production – award-winner-design",
+    "commit": "6f7f545e6a1ac044cbb8d29a0a215e8a9f2885bf",
+    "ref": "6f7f545e6a1ac044cbb8d29a0a215e8a9f2885bf",
+    "created_at": "2026-07-24T14:07:12Z",
+    "creator": "vercel[bot]",
+    "status": "success",
+    "status_description": "Deployment has completed",
+    "status_updated_at": "2026-07-24T14:07:12Z",
+    "environment_url": "https://award-winner-design-7m4zcwmhm-bizrainfos-projects.vercel.app",
+    "deployment_api_url": "https://api.github.com/repos/BizraInfo/award-winner-design/deployments/5590104450",
+    "statuses_api_url": "https://api.github.com/repos/BizraInfo/award-winner-design/deployments/5590104450/statuses",
+    "proof_scope": "VERIFIED GitHub deployment record only; this record does not by itself bind the custom domain alias"
+  },
+  "custom_domain_binding": {
+    "truth_label": "DERIVED",
+    "custom_domain": "https://bizra.ai",
+    "deployment_commit": "6f7f545e6a1ac044cbb8d29a0a215e8a9f2885bf",
+    "live_runtime_asset_url": "https://bizra.ai/_next/static/chunks/turbopack-0v13~z8bo3pu7.js",
+    "live_runtime_asset_observed_at": "2026-07-24T16:28:12.000Z",
+    "live_runtime_asset_sha256": "ca465e67a8c8d357d7a6052a505b05bd8f535f33bf58ae6e4aa2655c3dbc5c37",
+    "live_runtime_asset_deployment_id": "dpl_C7hFkz6LZRSPK1XMHAXUYwJRJj2R",
+    "commit_status_context": "Vercel – award-winner-design",
+    "commit_status_target_url": "https://vercel.com/bizrainfos-projects/award-winner-design/C7hFkz6LZRSPK1XMHAXUYwJRJj2R",
+    "commit_status_observed_at": "2026-07-24T16:28:12.000Z",
+    "basis": [
+      "The custom-domain root references the same-origin Turbopack runtime asset retained in the link-scan inventory",
+      "That live asset embeds Vercel deployment id dpl_C7hFkz6LZRSPK1XMHAXUYwJRJj2R",
+      "The exact-commit GitHub status Vercel – award-winner-design targets deployment identifier C7hFkz6LZRSPK1XMHAXUYwJRJj2R",
+      "GitHub deployment 5590104450 records success for the same commit and Vercel project"
+    ],
+    "missing_direct_proof": "The provider alias API was not readable without additional Vercel account authorization, so the relationship remains DERIVED rather than promoted to VERIFIED"
+  },
+  "excluded_same_commit_deployment": {
+    "deployment_id": 5590101337,
+    "environment": "Production – bizra-ai",
+    "vercel_deployment_id": "dpl_GfkPQaGyQN4Qpzkch6jQS47Sqpqr",
+    "reason": "The live runtime asset embeds dpl_C7hFkz6LZRSPK1XMHAXUYwJRJj2R, so deployment 5590101337 is not used as the custom-domain provenance anchor"
+  },
+  "live_observation": {
+    "root_status": 200,
+    "root_body_sha256": "473052c4bbcf7bf6092bbd9c075abf70c12e6b517878fe32c5ba3521fcaf18dd",
+    "root_boundary_header": "reviewed",
+    "capture_path": "docs/audits/evidence/bizra-ai-public-claim-postdeploy-2026-07-24.json",
+    "capture_sha256": "3cfda09417b3c4637229e4f03c3b5e98a2637633d266946445b80afc7d0fe385",
+    "declared_site_source_review_commit": "6f7f545e6a1ac044cbb8d29a0a215e8a9f2885bf",
+    "raw_capture_deployment_commit": null,
+    "raw_capture_deployment_source_binding": "UNVERIFIED",
+    "surface_count": 62,
+    "status_counts": {
+      "200": 5,
+      "307": 30,
+      "401": 27
+    },
+    "truncated_capture_count": 0,
+    "request_error_count": 0,
+    "expected_private_200_count": 0,
+    "containment_failure_count": 0,
+    "known_forbidden_phrase_hit_count": 0,
+    "root_boundary_header_observed_at": "2026-07-24T17:13:39.000Z",
+    "capture_started_at": "2026-07-24T17:11:43.617Z",
+    "capture_completed_at": "2026-07-24T17:11:46.037Z",
+    "latest_embedded_measured_at": "2026-07-24T17:11:45.595Z",
+    "capture_timestamp_order_valid": true
+  },
+  "live_link_observation": {
+    "scan_path": "docs/audits/evidence/bizra-ai-public-link-scan-2026-07-24.json",
+    "scan_sha256": "28eadd28741ace42d4859322f07dbb3636ef7e6f99fd4183ae64424f8dc99d56",
+    "generator": {
+      "command": "node scripts/audit/public-link-scan.mjs --inventory docs/audits/evidence/bizra-ai-public-claim-postdeploy-2026-07-24.json",
+      "output": "stdout JSON; redirect explicitly to the evidence path when refreshing",
+      "files": [
+        {
+          "path": "scripts/audit/public-link-scan.mjs",
+          "sha256": "296606865cb79c7efc996bbea8594f262e2f421c2684c6bd62dc6cf55f7510c1"
+        },
+        {
+          "path": "scripts/audit/public-link-scan-core.mjs",
+          "sha256": "ddcff898c7e47fa55e6ca9e2ca629933c6b0c094cc2a381bc702e8001c600223"
+        }
+      ]
+    },
+    "scan_started_at": "2026-07-24T17:11:52.390Z",
+    "scan_completed_at": "2026-07-24T17:11:53.245Z",
+    "surface_count": 62,
+    "per_route_result_count": 62,
+    "request_error_count": 0,
+    "response_digest_set_sha256": "d81a96675b28bd7a7ec4a7e7db37867fdc008cf31f685ca1a238f801047bca3c",
+    "route_result_set_sha256": "14cb6af0b0ac350749de0c8275997b3f75485023582ac07aaa095294afbea6cd",
+    "aggregate_digests_recomputed_from_route_results": true,
+    "known_forbidden_phrase_hit_count": 0,
+    "public_receipt_link_match_count": 0,
+    "revoked_key_link_match_count": 0,
+    "raw_bodies_retained": false
+  },
+  "candidate_validation": {
+    "path": "docs/audits/evidence/bizra-ai-public-claim-site-validation-2026-07-24.json",
+    "sha256": "ad266e71a1cf821a5e322ac8c3300c64db628662ba53bf343cf5f57c9b641047",
+    "review_head": "ebb5cc42082a7348014fe50fd4b584ccbddbbdc7"
+  },
+  "immutable_dema_evidence": {
+    "commit": "26bb57359186a3ab533dd51e3623e0c84d5078e9",
+    "files": [
+      {
+        "path": "docs/CLAIM_REGISTER_v0_1.md",
+        "git_blob_sha1": "bf200a047681aa895b739394ccf7f09e05f2feca",
+        "size": 51220
+      },
+      {
+        "path": "docs/CURRENT_LIMITS.md",
+        "git_blob_sha1": "eabba5e311709bc919f273595c849262060535b9",
+        "size": 162031
+      },
+      {
+        "path": "docs/audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md",
+        "git_blob_sha1": "ba3c3d91a2632b7c811ee90bc2212f9fcc0bafb5",
+        "size": 16074
+      }
+    ],
+    "contents_api_template": "https://api.github.com/repos/BizraInfo/Dema/contents/{path}?ref=26bb57359186a3ab533dd51e3623e0c84d5078e9"
+  },
+  "binding_method": {
+    "deployment_source": "GitHub deployment 5590104450 plus exact-commit Vercel status for project award-winner-design",
+    "live_surface": "credential-free fixed-route capture of https://bizra.ai with internally recorded request-bracketing timestamps",
+    "live_links": "committed stdout-only scanner over the same fixed route inventory; per-route response digests and match results are retained while raw bodies remain memory-only",
+    "live_source_bridge": "same-origin Turbopack asset referenced by the live root embeds a deployment id that matches the exact-commit Vercel status target",
+    "note": "The raw capture intentionally leaves deploymentCommit null and deploymentSourceBinding UNVERIFIED. This companion derives the live custom-domain source relationship from independent live-asset and GitHub records; without a readable provider alias record, it does not promote that relationship above DERIVED. Aggregate scan hashes are recomputable from the committed per-route results and digest policy."
+  },
+  "boundary": {
+    "signer_trust_asserted": false,
+    "claim_receipt_issued": false,
+    "node0_runtime_proved": false,
+    "federation_proved": false,
+    "token_or_economic_state_proved": false
+  }
+}
