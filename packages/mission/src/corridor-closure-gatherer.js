@@ -974,7 +974,12 @@ function rollbackSettled({ state, terminalOutcome, reason, recoveryMode = null }
   });
 }
 
-function rollbackRecoveryRequired({ state = null, reason, restorationReason = null }) {
+/**
+ * Recovery is required AND the chain proved it. Reachable only after
+ * classifySettledMechanicalRecovery returned RECOVERY_REQUIRED, so it is the one
+ * result that may later be offered as grounds to stop the corridor.
+ */
+function rollbackQualifiedRecovery({ state = null, reason, restorationReason = null }) {
   return Object.freeze({
     ok: false,
     rollback_verified: false,
@@ -1005,6 +1010,33 @@ function rollbackNotQualified({ state, recoveryClass, reason }) {
     transaction_state: state,
     authority_delta: 0,
     escalate_to_human: true,
+    reason,
+  });
+}
+
+/**
+ * A refusal: recovery is required, but this path never established a qualified
+ * chain — it refused before or during adjudication.
+ *
+ * MEASURED DEFECT this closes: every refusal used to report the QUALIFIED class.
+ * Under C4B2B that class maps to STOP_CONSENT_REQUIRED, so a post-ledger
+ * divergence, an unreadable transaction or a failed durability probe would each
+ * invite the operator to stop the corridor on evidence that was never
+ * established. The STOP gate re-verifies and refuses, so it failed closed — but
+ * the handoff was a lie. A class must be measured, never asserted.
+ */
+function rollbackUnqualifiedRecovery({ state = null, reason, restorationReason = null }) {
+  return Object.freeze({
+    ok: false,
+    rollback_verified: false,
+    recovery_required: true,
+    recovery_class: "RECOVERY_REQUIRED_UNQUALIFIED",
+    terminal_outcome: state?.terminal_outcome ?? null,
+    effect_retry_forbidden: true,
+    transaction_state: state,
+    authority_delta: 0,
+    escalate_to_human: true,
+    restoration_reason: restorationReason,
     reason,
   });
 }
@@ -1044,7 +1076,7 @@ function reportSettled({ state, context, reason, restorationReason = null }) {
     });
   }
   if (recoveryClass === "RECOVERY_REQUIRED") {
-    return rollbackRecoveryRequired({ state, reason, restorationReason });
+    return rollbackQualifiedRecovery({ state, reason, restorationReason });
   }
   // A RECOVERY_REQUIRED terminal that failed qualification still needs recovery.
   if (state?.terminal_outcome === "RECOVERY_REQUIRED") {
@@ -1073,16 +1105,16 @@ export async function settleMechanicalFailureWithVerifiedRollback({
   const transactionId = claim?.transaction_id;
   const reason = failure?.reason ?? failure?.omega0_card?.reason ?? "mechanical_failure";
   if (typeof transactionId !== "string" || transactionId.length === 0) {
-    return rollbackRecoveryRequired({ state: transactionState, reason: "rollback_transaction_id_missing" });
+    return rollbackUnqualifiedRecovery({ state: transactionState, reason: "rollback_transaction_id_missing" });
   }
 
   // 1 — the transaction as DISK tells it, not as the caller remembers it.
   let state = await replayClosureTransaction({ demaHome: home, transactionId });
   if (!state.ok) {
-    return rollbackRecoveryRequired({ reason: `rollback_replay_refused:${state.reason}` });
+    return rollbackUnqualifiedRecovery({ reason: `rollback_replay_refused:${state.reason}` });
   }
   if (!state.exists) {
-    return rollbackRecoveryRequired({ state, reason: "rollback_transaction_not_prepared" });
+    return rollbackUnqualifiedRecovery({ state, reason: "rollback_transaction_not_prepared" });
   }
 
   // 2 — AUTHORITATIVE CONTEXT, before any append and before any world mutation.
@@ -1094,7 +1126,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
     demaHome: home, transactionId, expectedHeadEventHash: state.head_event_hash,
   });
   if (!bound.ok) {
-    return rollbackRecoveryRequired({ state, reason: `rollback_binding_refused:${bound.reason}` });
+    return rollbackUnqualifiedRecovery({ state, reason: `rollback_binding_refused:${bound.reason}` });
   }
   // Continue on the FRESH disk state the derivation returned, never the snapshot
   // this function arrived with.
@@ -1106,7 +1138,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
   // The caller's prepared object is supporting evidence only — it may never
   // replace the disk-derived context, and a disagreement is a hard stop.
   if (prepared?.prepared_intent_hash && prepared.prepared_intent_hash !== preparedIntentHash) {
-    return rollbackRecoveryRequired({ state, reason: "rollback_prepared_intent_disagrees_with_disk" });
+    return rollbackUnqualifiedRecovery({ state, reason: "rollback_prepared_intent_disagrees_with_disk" });
   }
 
   // 3 — already settled: classify, never assume.
@@ -1115,7 +1147,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
   // 4 — the ledger is the authority past this line; a rollback would contradict
   //     a signed receipt. Forward reconciliation is C4C, not this writer.
   if (POST_LEDGER_PHASES.includes(state.phase)) {
-    return rollbackRecoveryRequired({
+    return rollbackUnqualifiedRecovery({
       state, reason: "rollback_after_ledger_authority_forbidden",
     });
   }
@@ -1123,11 +1155,11 @@ export async function settleMechanicalFailureWithVerifiedRollback({
   // 5 — durability uncertainty: prove WHICH head is canonical, then decide.
   if (isDurabilityUncertain(failure)) {
     if (!eventDirectoryDurable(home, transactionId)) {
-      return rollbackRecoveryRequired({ state, reason: "rollback_durability_unresolved:fsync_failed" });
+      return rollbackUnqualifiedRecovery({ state, reason: "rollback_durability_unresolved:fsync_failed" });
     }
     state = await replayClosureTransaction({ demaHome: home, transactionId });
     if (!state.ok || !state.exists) {
-      return rollbackRecoveryRequired({ reason: "rollback_durability_unresolved:replay_unverifiable" });
+      return rollbackUnqualifiedRecovery({ reason: "rollback_durability_unresolved:replay_unverifiable" });
     }
     if (state.terminal) return reportSettled({ state, context, reason });
     const decided = decideUncertainResume({
@@ -1135,7 +1167,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
     });
     if (!decided.ok) {
       // No helper mutation, no effect retry, no phase on an unproven head.
-      return rollbackRecoveryRequired({
+      return rollbackUnqualifiedRecovery({
         state, reason: `rollback_durability_unresolved:${decided.resume.toLowerCase()}`,
       });
     }
@@ -1168,7 +1200,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
     });
     if (!started.ok) {
       // The helper was NOT called. The world is exactly where the failure left it.
-      return rollbackRecoveryRequired({
+      return rollbackUnqualifiedRecovery({
         state, reason: `rollback_started_not_durable:${started.reason}`,
       });
     }
@@ -1181,7 +1213,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
   const startedEvent = state.events.find((e) => e.phase === "ROLLBACK_STARTED");
   const invalidAdjudication = validateRollbackStartedEvidence(startedEvent?.evidence_refs, context);
   if (invalidAdjudication !== null) {
-    return rollbackRecoveryRequired({
+    return rollbackUnqualifiedRecovery({
       state, reason: `rollback_adjudication_invalid:${invalidAdjudication}`,
     });
   }
@@ -1218,7 +1250,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
         atIso,
       });
       if (!flagged.ok) {
-        return rollbackRecoveryRequired({
+        return rollbackUnqualifiedRecovery({
           state, reason: `rollback_recovery_not_durable:${flagged.reason}`,
           restorationReason: restoration?.reason ?? null,
         });
@@ -1238,7 +1270,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
       atIso,
     });
     if (!resolved.ok) {
-      return rollbackRecoveryRequired({
+      return rollbackUnqualifiedRecovery({
         state, reason: `rollback_recovery_terminal_not_durable:${resolved.reason}`,
         restorationReason: restoration?.reason ?? null,
       });
@@ -1269,7 +1301,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
       atIso,
     });
     if (!rolled.ok) {
-      return rollbackRecoveryRequired({ state, reason: `rolled_back_not_durable:${rolled.reason}` });
+      return rollbackUnqualifiedRecovery({ state, reason: `rolled_back_not_durable:${rolled.reason}` });
     }
     state = rolled.state;
   }
@@ -1291,7 +1323,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
       atIso,
     });
     if (!verified.ok) {
-      return rollbackRecoveryRequired({
+      return rollbackUnqualifiedRecovery({
         state, reason: `before_state_verified_not_durable:${verified.reason}`,
       });
     }
@@ -1313,7 +1345,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
   if (!resolved.ok) {
     // The restoration proof is durable; only the terminal is missing. A retry
     // resumes from BEFORE_STATE_VERIFIED and reuses this exact frozen outcome.
-    return rollbackRecoveryRequired({
+    return rollbackUnqualifiedRecovery({
       state, reason: `rollback_resolved_not_durable:${resolved.reason}`,
     });
   }

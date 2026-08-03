@@ -378,8 +378,14 @@ function validateRestorationEvidence(evidenceRefs, context) {
 // These schemas are validated at append AND replay, but only when a ref
 // actually claims one of them: chains written before they existed carry other
 // shapes and must stay replayable forever.
+// v2, not v1: this shape's KEY SET changed when the premature terminal freeze
+// was replaced by (recovery_objective, rollback_success_outcome,
+// recovery_fallback_outcome). A schema name is a contract, and mutating its keys
+// while keeping its version is the silent drift this estate keeps paying for.
+// Safe to renumber rather than dual-alias because nothing carrying the v1 shape
+// was ever published — no committed fixture or durable chain references it.
 export const CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA =
-  "bizra.dema.corridor_rollback_started_evidence.v1";
+  "bizra.dema.corridor_rollback_started_evidence.v2";
 export const CORRIDOR_ROLLBACK_COMPLETED_EVIDENCE_SCHEMA =
   "bizra.dema.corridor_rollback_completed_evidence.v1";
 export const CORRIDOR_ROLLBACK_RECOVERY_EVIDENCE_SCHEMA =

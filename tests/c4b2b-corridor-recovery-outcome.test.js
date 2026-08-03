@@ -562,3 +562,84 @@ test("C4B2B1-09: a journal carrying a v0.2 bound event still verifies end to end
   assert.equal(stop.journal[0].schema, "bizra.dema.mission_corridor_event.v0.1");
   assert.equal(stop.journal.at(-1).schema, MISSION_CORRIDOR_EVENT_SCHEMA_V0_2);
 });
+
+// ── C4B2B-Q — A CLASS MUST BE MEASURED, NEVER ASSERTED ──────────────────────
+//
+// MEASURED DEFECT. Every refusal path in the recovery writer reported the
+// QUALIFIED class RECOVERY_REQUIRED — including refusals that classified
+// nothing: a post-ledger divergence, an unreadable transaction, a failed
+// durability probe. Under C4B2B that class maps to STOP_CONSENT_REQUIRED, so
+// each of those invited the operator to end the corridor on evidence that was
+// never established. The STOP gate re-verifies and refuses, so it failed closed
+// — but the handoff was a lie, and the same assertion leaked into
+// terminal_outcome, which named a terminal the transaction never reached.
+
+test("C4B2B-Q1: a post-ledger refusal reports the UNQUALIFIED class, not the earned one", async () => {
+  const s = await settledRecovery("postledger");
+  // Advance the transaction past the ledger boundary.
+  const st = await replayClosureTransaction({ demaHome: s.demaHome, transactionId: s.txId });
+  assert.equal(st.terminal, true, "the fixture settles first");
+
+  const g = await import("../packages/mission/src/corridor-closure-gatherer.js");
+  const settled = await g.settleMechanicalFailureWithVerifiedRollback({
+    demaHome: s.demaHome,
+    claim: { transaction_id: "tx-does-not-exist" },
+    prepared: null,
+    effect: null,
+    failure: { stage: "EFFECT_APPLY", reason: "x", omega0_card: { reason: "effect_failed" } },
+  });
+  assert.equal(settled.recovery_required, true, "recovery genuinely is required");
+  assert.equal(settled.recovery_class, "RECOVERY_REQUIRED_UNQUALIFIED",
+    "a refusal must not claim the qualified class");
+  assert.equal(settled.terminal_outcome, null, "a refusal settled no terminal");
+  assert.equal(settled.rollback_verified, false);
+});
+
+test("C4B2B-Q2: the unqualified class offers no stop and ends no corridor", () => {
+  const v = mapRecoveryClassToCorridor("RECOVERY_REQUIRED_UNQUALIFIED");
+  assert.equal(v.verdict, "CORRIDOR_UNCHANGED");
+  assert.equal(v.terminal_outcome, null);
+  assert.equal(v.requires_human, true, "a human is still needed");
+  assert.equal(v.required_consent_kind, null, "but no stop may be offered on unearned evidence");
+  assert.equal(v.fresh_attempt_permitted, false);
+  // Only the measured class may ever ask for STOP consent.
+  assert.equal(mapRecoveryClassToCorridor("RECOVERY_REQUIRED").required_consent_kind, "STOP");
+});
+
+test("C4B2B-Q3: exactly one helper may emit the qualified class", () => {
+  const src = readFileSync(
+    join(process.cwd(), "packages/mission/src/corridor-closure-gatherer.js"), "utf8",
+  );
+  // The distinction is structural: refusals cannot reach the qualified shape.
+  assert.equal((src.match(/recovery_class: "RECOVERY_REQUIRED",/g) ?? []).length, 1,
+    "only rollbackQualifiedRecovery may set the earned class");
+  const qualified = src.indexOf("function rollbackQualifiedRecovery(");
+  const reportSettled = src.indexOf("function reportSettled(");
+  assert.ok(qualified > 0 && reportSettled > 0);
+  // …and it is called only from the path that classified first.
+  // Exclude the declaration itself; count invocations only.
+  const calls = [...src.matchAll(/(?<!function )rollbackQualifiedRecovery\(\{/g)];
+  assert.equal(calls.length, 1, "exactly one invocation");
+  const body = src.slice(reportSettled, src.indexOf("\n}\n", reportSettled));
+  assert.ok(body.includes("rollbackQualifiedRecovery({"),
+    "the only caller is the one that ran classifySettledMechanicalRecovery");
+});
+
+test("C4B2B-Q4: the rollback-started schema declares v2 after its key set changed", async () => {
+  const tx = await import("../packages/receipts/src/mission-closure-transaction.js");
+  assert.equal(tx.CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA,
+    "bizra.dema.corridor_rollback_started_evidence.v2");
+  // The keys it now carries are the monotonic-recovery triple, not the frozen
+  // single terminal the v1 name described.
+  const s = await settledRecovery("schema");
+  const started = s.state.events.find((e) => e.phase === "ROLLBACK_STARTED");
+  assert.ok(started, "the fixture produced a real adjudication");
+  const ev = started.evidence_refs[0];
+  assert.equal(ev.schema, "bizra.dema.corridor_rollback_started_evidence.v2");
+  assert.deepEqual(Object.keys(ev).sort(), [
+    "failure_reason_code", "failure_stage", "prepared_intent_hash",
+    "recovery_fallback_outcome", "recovery_objective", "rollback_success_outcome",
+    "schema", "transaction_hash",
+  ]);
+  assert.equal(ev.intended_terminal_outcome, undefined, "the v1 field is gone, not aliased");
+});

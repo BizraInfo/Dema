@@ -217,6 +217,17 @@ const RECOVERY_CLASS_TO_CORRIDOR = Object.freeze({
     fresh_attempt_permitted: false,
     required_consent_kind: "STOP",
   },
+  // Recovery is required, but this result refused before or during adjudication:
+  // nothing was classified, so nothing was proven. Explicit rather than left to
+  // the unknown-class fallback — "not cleanly qualified" and "not operationally
+  // actionable" are different, and only the first applies here.
+  RECOVERY_REQUIRED_UNQUALIFIED: {
+    verdict: "CORRIDOR_UNCHANGED",
+    terminal_outcome: null,
+    requires_human: true,
+    fresh_attempt_permitted: false,
+    required_consent_kind: null,
+  },
   // Evidence or protocol corruption. Needs a human, but has NOT earned the
   // authority to end the corridor by itself.
   INVALID: {

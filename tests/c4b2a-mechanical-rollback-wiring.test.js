@@ -428,7 +428,11 @@ test("C4B2A-03: durability-uncertain publication never mutates and never retries
 
   assert.equal(settled.recovery_required, true);
   assert.equal(settled.rollback_verified, false);
-  assert.equal(settled.terminal_outcome, "RECOVERY_REQUIRED");
+  // A REFUSAL settled nothing, so it reports no terminal outcome and the
+  // unqualified class. Claiming RECOVERY_REQUIRED here would assert both a
+  // terminal the transaction never reached and a qualification never earned.
+  assert.equal(settled.terminal_outcome, null);
+  assert.equal(settled.recovery_class, "RECOVERY_REQUIRED_UNQUALIFIED");
   assert.equal(settled.effect_retry_forbidden, true);
   assert.deepEqual(base.manifest(), worldBefore, "the settler must not mutate under uncertainty");
 });
