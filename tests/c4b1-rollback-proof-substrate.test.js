@@ -32,6 +32,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -42,6 +43,11 @@ import {
   TX_APPEND_TRANSITIONS,
   BEFORE_STATE_VERIFIED_EVIDENCE_SCHEMA,
   CORRIDOR_RENAME_INTENT_EVIDENCE_SCHEMA,
+  CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA,
+  CORRIDOR_ROLLBACK_COMPLETED_EVIDENCE_SCHEMA,
+  CORRIDOR_ROLLBACK_RECOVERY_EVIDENCE_SCHEMA,
+  CORRIDOR_ROLLBACK_TERMINAL_EVIDENCE_SCHEMA,
+  appendRequiresRollbackEvidence,
   openClosureTransaction,
   appendClosureEvent,
   replayClosureTransaction,
@@ -91,9 +97,76 @@ async function openTx(home, overrides = {}) {
   return { claim: res.claim, txId: res.claim.transaction_id };
 }
 
+// C4B2A made the WRITER strict: a rollback phase must carry its exact current
+// evidence schema, and omitting it no longer buys legacy privileges. These tests
+// prove the PHASE law, not the evidence law, so the fixture supplies whatever
+// the current writer requires. Deliberately malformed evidence is passed
+// explicitly by the tests that exercise the evidence law, and is never replaced.
+const PLACEHOLDER = [{ type: "test", hash: "sha256:ev" }];
+const isPlaceholder = (refs) =>
+  Array.isArray(refs) && refs.length === 1 && refs[0]?.type === "test";
+
+function descriptorOf(home, txId) {
+  return JSON.parse(
+    readFileSync(join(home, "transactions", "mission-closure", txId, "transaction.json"), "utf8"),
+  );
+}
+
+/** The evidence the current writer law demands for this phase, or null. */
+function currentRollbackEvidence(home, txId, phase, terminalOutcome, beforeHash = BEFORE_HASH) {
+  if (!appendRequiresRollbackEvidence(phase, terminalOutcome)) return null;
+  const d = descriptorOf(home, txId);
+  const base = { prepared_intent_hash: d.prepared_intent_hash };
+  if (phase === "ROLLBACK_STARTED") {
+    return [{
+      schema: CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA,
+      transaction_hash: d.transaction_hash,
+      ...base,
+      failure_stage: "EFFECT_APPLY",
+      failure_reason_code: "EFFECT_FAILED",
+      recovery_objective: "RESTORE_EXACT_BEFORE_STATE",
+      rollback_success_outcome: "EXECUTION_FAILED_ROLLED_BACK",
+      recovery_fallback_outcome: "RECOVERY_REQUIRED",
+    }];
+  }
+  if (phase === "ROLLED_BACK") {
+    return [{
+      schema: CORRIDOR_ROLLBACK_COMPLETED_EVIDENCE_SCHEMA,
+      ...base,
+      before_hash: beforeHash,
+      restored_hash: beforeHash,
+      recovery_mode: "ALREADY_BEFORE_STATE",
+    }];
+  }
+  if (phase === "RECOVERY_REQUIRED") {
+    return [{
+      schema: CORRIDOR_ROLLBACK_RECOVERY_EVIDENCE_SCHEMA,
+      ...base,
+      failure_reason_code: "EFFECT_FAILED",
+      restoration_reason_code: "RESTORATION_WORLD_UNRECOGNISED",
+    }];
+  }
+  if (phase === "RESOLVED") {
+    return [{
+      schema: CORRIDOR_ROLLBACK_TERMINAL_EVIDENCE_SCHEMA,
+      ...base,
+      terminal_outcome: terminalOutcome,
+    }];
+  }
+  return null;
+}
+
 /** Append one phase at the current head. Returns the raw append result. */
-async function append(home, txId, phase, evidenceRefs = [{ type: "test", hash: "sha256:ev" }], terminalOutcome = null) {
+async function append(home, txId, phase, evidenceRefs = PLACEHOLDER, terminalOutcome = null, beforeHash = BEFORE_HASH) {
   const state = await replayClosureTransaction({ demaHome: home, transactionId: txId });
+  // A chain that no longer replays cannot be appended to. Surface the replay's
+  // own refusal instead of proposing a NaN sequence on top of a broken history:
+  // once a chain carries current rollback evidence, a corrupted descriptor fails
+  // closed at REPLAY, which is earlier than — not instead of — the append check.
+  if (!state.ok) return { appended: false, reason: state.reason, escalate_to_human: true };
+  const refs = isPlaceholder(evidenceRefs)
+    ? (currentRollbackEvidence(home, txId, phase, terminalOutcome, beforeHash) ?? evidenceRefs)
+    : evidenceRefs;
   return await appendClosureEvent({
     demaHome: home,
     transactionId: txId,
@@ -101,7 +174,7 @@ async function append(home, txId, phase, evidenceRefs = [{ type: "test", hash: "
     expectedPreviousEventHash: state.head_event_hash,
     phase,
     terminalOutcome,
-    evidenceRefs,
+    evidenceRefs: refs,
     atIso: "2026-08-02T04:05:00.000Z",
   });
 }
@@ -135,13 +208,31 @@ async function toRolledBack(home, txId, beforeHash = BEFORE_HASH) {
   const steps = [
     ["EFFECT_INTENT_PERSISTED", intentEvidence],
     ["EFFECT_APPLIED", [{ type: "test", hash: "sha256:ev" }]],
-    ["ROLLBACK_STARTED", [{ type: "test", hash: "sha256:ev" }]],
-    ["ROLLED_BACK", [{ type: "test", hash: "sha256:ev" }]],
+    ["ROLLBACK_STARTED", PLACEHOLDER],
+    ["ROLLED_BACK", PLACEHOLDER],
   ];
   for (const [p, ev] of steps) {
-    const r = await append(home, txId, p, ev);
+    const r = await append(home, txId, p, ev, null, beforeHash);
     assert.equal(r.appended, true, `${p} must append: ${r.reason ?? ""}`);
   }
+}
+
+
+/**
+ * Walk toward BEFORE_STATE_VERIFIED and return the FIRST refusal encountered.
+ *
+ * C4B2A made the writer strict for EVERY rollback phase, so a corrupt descriptor
+ * or an underivable intent now fails closed at the FIRST rollback append rather
+ * than only at the restoration proof. That is earlier, not weaker: the law under
+ * test is "this chain can never produce a restoration proof", and where the
+ * refusal surfaces is an implementation detail of how early the binding runs.
+ */
+async function firstRollbackRefusal(home, txId, restorationRefs, phases = ["EFFECT_APPLIED", "ROLLBACK_STARTED", "ROLLED_BACK"]) {
+  for (const p of phases) {
+    const r = await append(home, txId, p);
+    if (r.appended !== true) return r;
+  }
+  return await append(home, txId, "BEFORE_STATE_VERIFIED", restorationRefs);
 }
 
 // ─────────────────────────── transaction phase law ───────────────────────────
@@ -483,10 +574,8 @@ describe("C4B1H — durable intent cross-binding", () => {
     const home = await freshHome();
     const { txId } = await openTx(home);
     // EFFECT_INTENT_PERSISTED carrying NO corridor intent evidence.
-    for (const p of ["EFFECT_INTENT_PERSISTED", "EFFECT_APPLIED", "ROLLBACK_STARTED", "ROLLED_BACK"]) {
-      assert.equal((await append(home, txId, p)).appended, true);
-    }
-    const res = await append(home, txId, "BEFORE_STATE_VERIFIED", restorationEvidence());
+    const res = await firstRollbackRefusal(home, txId, restorationEvidence(),
+      ["EFFECT_INTENT_PERSISTED", "EFFECT_APPLIED", "ROLLBACK_STARTED", "ROLLED_BACK"]);
     assert.equal(res.appended, false, "no derivable intent binding must fail closed");
     // Any authoritative-binding refusal is correct here; the law is fail-closed,
     // not one specific reason string.
@@ -741,10 +830,7 @@ describe("C4B1A — authoritative binding context", () => {
       intent: DURABLE_INTENT,
     }];
     assert.equal((await append(home, txId, "EFFECT_INTENT_PERSISTED", intentEvidence)).appended, true);
-    for (const p of ["EFFECT_APPLIED", "ROLLBACK_STARTED", "ROLLED_BACK"]) {
-      assert.equal((await append(home, txId, p)).appended, true);
-    }
-    const res = await append(home, txId, "BEFORE_STATE_VERIFIED",
+    const res = await firstRollbackRefusal(home, txId,
       restorationEvidence({ prepared_intent_hash: fake }));
     assert.equal(res.appended, false, "self-consistent but underived hashes must be refused");
     assert.match(String(res.reason), /intent_prepared_intent_hash_ne_descriptor|intent_hash_not_derived_from_intent_bytes/);
@@ -765,10 +851,7 @@ describe("C4B1A — authoritative binding context", () => {
         ...bad,
       }];
       assert.equal((await append(home, txId, "EFFECT_INTENT_PERSISTED", intentEvidence)).appended, true);
-      for (const p of ["EFFECT_APPLIED", "ROLLBACK_STARTED", "ROLLED_BACK"]) {
-        assert.equal((await append(home, txId, p)).appended, true);
-      }
-      const res = await append(home, txId, "BEFORE_STATE_VERIFIED", restorationEvidence());
+      const res = await firstRollbackRefusal(home, txId, restorationEvidence());
       assert.equal(res.appended, false, `${Object.keys(bad)[0]} drift must be refused`);
       assert.match(String(res.reason), /_ne_descriptor$/);
     }
@@ -788,10 +871,7 @@ describe("C4B1A — authoritative binding context", () => {
       intent,
     }];
     assert.equal((await append(home, txId, "EFFECT_INTENT_PERSISTED", intentEvidence)).appended, true);
-    for (const p of ["EFFECT_APPLIED", "ROLLBACK_STARTED", "ROLLED_BACK"]) {
-      assert.equal((await append(home, txId, p)).appended, true);
-    }
-    const res = await append(home, txId, "BEFORE_STATE_VERIFIED",
+    const res = await firstRollbackRefusal(home, txId,
       restorationEvidence({ before_hash: "e".repeat(64), restored_hash: "e".repeat(64) }));
     assert.equal(res.appended, false);
     assert.equal(res.reason, "intent_before_hash_not_derived_from_manifest");
@@ -809,10 +889,7 @@ describe("C4B1A — authoritative binding context", () => {
       intent,
     }];
     assert.equal((await append(home, txId, "EFFECT_INTENT_PERSISTED", intentEvidence)).appended, true);
-    for (const p of ["EFFECT_APPLIED", "ROLLBACK_STARTED", "ROLLED_BACK"]) {
-      assert.equal((await append(home, txId, p)).appended, true);
-    }
-    const res = await append(home, txId, "BEFORE_STATE_VERIFIED", restorationEvidence());
+    const res = await firstRollbackRefusal(home, txId, restorationEvidence());
     assert.equal(res.appended, false);
     assert.equal(res.reason, "intent_before_manifest_malformed");
   });
@@ -830,10 +907,7 @@ describe("C4B1A — authoritative binding context", () => {
       { type: "smuggled", hash: "sha256:ev" },
     ];
     assert.equal((await append(home, txId, "EFFECT_INTENT_PERSISTED", intentEvidence)).appended, true);
-    for (const p of ["EFFECT_APPLIED", "ROLLBACK_STARTED", "ROLLED_BACK"]) {
-      assert.equal((await append(home, txId, p)).appended, true);
-    }
-    const res = await append(home, txId, "BEFORE_STATE_VERIFIED", restorationEvidence());
+    const res = await firstRollbackRefusal(home, txId, restorationEvidence());
     assert.equal(res.appended, false, "filtering for one match must not accept extras");
     assert.equal(res.reason, "intent_evidence_not_exactly_one");
   });

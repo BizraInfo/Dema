@@ -58,7 +58,15 @@ export const MISSION_CLOSURE_TX_RELDIR = join("transactions", "mission-closure")
 // and it always carries a corridor TERMINAL_OUTCOME.
 export const TX_TRANSITIONS = Object.freeze({
   PREPARED: Object.freeze(["EFFECT_INTENT_PERSISTED", "RESOLVED"]),
-  EFFECT_INTENT_PERSISTED: Object.freeze(["EFFECT_APPLIED", "RESOLVED"]),
+  // ROLLBACK_STARTED is reachable from here because the production route crosses
+  // the effect boundary BEFORE it appends EFFECT_APPLIED. A crash in that window
+  // leaves the world changed while the durable head still reads
+  // EFFECT_INTENT_PERSISTED; without this edge that exact state — the one the
+  // ordering actually produces — would be unrecoverable by construction.
+  // It does NOT weaken the chain: settlement still has to route through
+  // ROLLBACK_STARTED → ROLLED_BACK → BEFORE_STATE_VERIFIED, so no rollback can
+  // shortcut past its own restoration proof.
+  EFFECT_INTENT_PERSISTED: Object.freeze(["EFFECT_APPLIED", "ROLLBACK_STARTED", "RESOLVED"]),
   EFFECT_APPLIED: Object.freeze(["VERIFIED", "ROLLBACK_STARTED"]),
   VERIFIED: Object.freeze(["SEALED", "ROLLBACK_STARTED"]),
   SEALED: Object.freeze(["LEDGER_COMMITTED", "RESOLVED"]),
@@ -253,8 +261,62 @@ function deriveRollbackBindingContext({ descriptor, events, transactionId } = {}
       recovery_policy_hash: descriptor.recovery_policy_hash,
       checkpoint_event_hash: descriptor.checkpoint_event_hash,
       before_hash: intent.before_hash,
+      // The verified intent itself: a live recovery path must restore FROM the
+      // bytes this function proved, never from a separately-located copy.
+      intent,
     }),
   };
+}
+
+/**
+ * The ONE authoritative rollback context for live recovery.
+ *
+ * A recovery path that located the intent itself would be a second, weaker
+ * validator — and the weaker one becomes the real policy the moment they drift.
+ * This reads the descriptor from disk and runs the exact validation replay uses,
+ * so the live writer and the replay verifier can never disagree about what
+ * "before" means.
+ *
+ * @returns {Promise<{ok:true, context:object}|{ok:false, reason:string}>}
+ */
+export async function readRollbackBindingContext({
+  demaHome, transactionId, expectedHeadEventHash = null,
+} = {}) {
+  if (typeof transactionId !== "string" || !TX_ID_RE.test(transactionId)) {
+    return Object.freeze({ ok: false, reason: "transaction_id_malformed" });
+  }
+  const home = resolveHome(demaHome);
+  // ALWAYS from disk. A caller-supplied state is a hint about where the caller
+  // believes the head was — never the source of descriptor, intent or event
+  // authority. Accepting one would let a fabricated snapshot authorise a
+  // restoration the disk does not support.
+  const replayed = await replayClosureTransaction({ demaHome: home, transactionId });
+  if (!replayed?.ok) {
+    return Object.freeze({ ok: false, reason: replayed?.reason ?? "transaction_replay_refused" });
+  }
+  if (!replayed.exists) return Object.freeze({ ok: false, reason: "transaction_not_prepared" });
+  const headMismatch = expectedHeadEventHash !== null
+    && expectedHeadEventHash !== replayed.head_event_hash;
+
+  let storedDescriptor = null;
+  try {
+    storedDescriptor = JSON.parse(
+      await readFile(join(transactionDir(home, transactionId), "transaction.json"), "utf8"),
+    );
+  } catch {
+    return Object.freeze({ ok: false, reason: "transaction_descriptor_unreadable" });
+  }
+  const derived = deriveRollbackBindingContext({
+    descriptor: storedDescriptor, events: replayed.events, transactionId,
+  });
+  if (derived.error) {
+    return Object.freeze({ ok: false, reason: derived.error, state: replayed, head_mismatch: headMismatch });
+  }
+  // The FRESH state travels with the context so callers cannot keep acting on
+  // the stale snapshot they arrived with.
+  return Object.freeze({
+    ok: true, context: derived.context, state: replayed, head_mismatch: headMismatch,
+  });
 }
 
 /**
@@ -308,10 +370,270 @@ function validateRestorationEvidence(evidenceRefs, context) {
   return null;
 }
 
+// ── C4B2A HARDENING — EXACT ROLLBACK EVIDENCE ──
+// Immutable evidence carries bounded CODES, never exception text. A raw
+// `err.message` can embed absolute paths, operand bytes or stack fragments, and
+// an immutable event is exactly the artifact you cannot redact afterwards.
+//
+// These schemas are validated at append AND replay, but only when a ref
+// actually claims one of them: chains written before they existed carry other
+// shapes and must stay replayable forever.
+export const CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA =
+  "bizra.dema.corridor_rollback_started_evidence.v1";
+export const CORRIDOR_ROLLBACK_COMPLETED_EVIDENCE_SCHEMA =
+  "bizra.dema.corridor_rollback_completed_evidence.v1";
+export const CORRIDOR_ROLLBACK_RECOVERY_EVIDENCE_SCHEMA =
+  "bizra.dema.corridor_rollback_recovery_evidence.v1";
+export const CORRIDOR_ROLLBACK_TERMINAL_EVIDENCE_SCHEMA =
+  "bizra.dema.corridor_rollback_terminal_evidence.v1";
+
+export const ROLLBACK_FAILURE_STAGES = Object.freeze([
+  "EFFECT_APPLY", "EFFECT_APPLIED_PERSISTENCE", "MECHANICAL_FINALIZE",
+  "VERIFICATION_PERSISTENCE", "SEAL_PERSISTENCE", "UNKNOWN",
+]);
+
+export const ROLLBACK_FAILURE_REASON_CODES = Object.freeze([
+  "EFFECT_FAILED", "VERIFICATION_FAILED", "RESTORATION_FAILED",
+  "ADAPTER_INCOMPLETE", "AUTHORITY_MISMATCH", "EVENT_PERSISTENCE_FAILED",
+  "DURABILITY_UNCERTAIN", "UNKNOWN",
+]);
+
+export const ROLLBACK_RESTORATION_REASON_CODES = Object.freeze([
+  "RESTORATION_NOT_ATTEMPTED", "RESTORATION_WORLD_UNRECOGNISED",
+  "RESTORATION_HASH_MISMATCH", "RESTORATION_INVERSE_FAILED",
+  "RESTORATION_BACKWARD_FAILED", "RESTORATION_IDENTITY_MISMATCH",
+  "RESTORATION_OBSERVATION_FAILED", "RESTORATION_UNAVAILABLE", "UNKNOWN",
+]);
+
+// The only terminals a VERIFIED rollback may carry.
+export const ROLLBACK_TERMINAL_OUTCOMES = Object.freeze([
+  "EXECUTION_FAILED_ROLLED_BACK",
+  "VERIFICATION_FAILED_ROLLED_BACK",
+  "SEAL_FAILED_NO_COMPLETE",
+]);
+
+// ── FREEZE THE CAUSE. MEASURE THE RECOVERY. ──
+// An earlier design froze a single `intended_terminal_outcome` at
+// ROLLBACK_STARTED and then demanded that a qualified RECOVERY_REQUIRED chain
+// had already intended RECOVERY_REQUIRED. That is impossible by construction:
+// whether restoration succeeds is not known when the adjudication is written.
+//
+// What may be frozen is the CAUSE and the OBJECTIVE, plus the two outcomes the
+// measurement can select between. The recovery result itself is measured, and
+// may degrade monotonically from "rollback intended" to "human needed" — never
+// the other way.
+export const ROLLBACK_RECOVERY_OBJECTIVES = Object.freeze(["RESTORE_EXACT_BEFORE_STATE"]);
+export const ROLLBACK_FALLBACK_OUTCOME = "RECOVERY_REQUIRED";
+
+const ROLLBACK_STARTED_KEYS = Object.freeze([
+  "schema", "transaction_hash", "prepared_intent_hash",
+  "failure_stage", "failure_reason_code",
+  "recovery_objective", "rollback_success_outcome", "recovery_fallback_outcome",
+]);
+const ROLLED_BACK_KEYS = Object.freeze([
+  "schema", "prepared_intent_hash", "before_hash", "restored_hash", "recovery_mode",
+]);
+const ROLLBACK_RECOVERY_KEYS = Object.freeze([
+  "schema", "prepared_intent_hash", "failure_reason_code", "restoration_reason_code",
+]);
+const ROLLBACK_TERMINAL_KEYS = Object.freeze([
+  "schema", "prepared_intent_hash", "terminal_outcome",
+]);
+
+/** Exact shape, primitives only — the same discipline as restoration evidence. */
+function validateExactEvidence(refs, schema, keys, checks) {
+  if (!Array.isArray(refs) || refs.length !== 1) return `${schema}:not_exactly_one`;
+  const ev = refs[0];
+  if (!ev || typeof ev !== "object" || Array.isArray(ev)) return `${schema}:not_object`;
+  const present = Object.keys(ev);
+  if (present.length !== keys.length) return `${schema}:shape_mismatch`;
+  for (const k of keys) if (!Object.hasOwn(ev, k)) return `${schema}:missing_field:${k}`;
+  for (const k of present) {
+    if (!keys.includes(k)) return `${schema}:unknown_field:${k}`;
+    const v = ev[k];
+    if (v !== null && typeof v === "object") return `${schema}:nonprimitive:${k}`;
+  }
+  return checks(ev);
+}
+
+/** A phase's refs claim a rollback schema only if one of them says so. */
+const claimsSchema = (refs, schema) =>
+  Array.isArray(refs) && refs.some((r) => r?.schema === schema);
+
+export function validateRollbackStartedEvidence(refs, context) {
+  return validateExactEvidence(refs, CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA, ROLLBACK_STARTED_KEYS, (ev) => {
+    if (!TAGGED_SHA256_RE.test(ev.transaction_hash)) return "rollback_started_transaction_hash_format";
+    if (!TAGGED_SHA256_RE.test(ev.prepared_intent_hash)) return "rollback_started_prepared_intent_hash_format";
+    if (!ROLLBACK_FAILURE_STAGES.includes(ev.failure_stage)) return "rollback_started_failure_stage_unknown";
+    if (!ROLLBACK_FAILURE_REASON_CODES.includes(ev.failure_reason_code)) return "rollback_started_reason_code_unknown";
+    if (!ROLLBACK_RECOVERY_OBJECTIVES.includes(ev.recovery_objective)) {
+      return "rollback_started_recovery_objective_unknown";
+    }
+    // The success outcome is CONDITIONAL on exact restoration, so it may only be
+    // one of the three rollback terminals — never RECOVERY_REQUIRED, which is
+    // what the measurement selects when restoration does not hold.
+    if (!ROLLBACK_TERMINAL_OUTCOMES.includes(ev.rollback_success_outcome)) {
+      return "rollback_started_success_outcome_unknown";
+    }
+    if (ev.recovery_fallback_outcome !== ROLLBACK_FALLBACK_OUTCOME) {
+      return "rollback_started_fallback_outcome_invalid";
+    }
+    if (!context) return null;
+    if (ev.transaction_hash !== context.transaction_hash) return "rollback_started_transaction_hash_mismatch";
+    if (ev.prepared_intent_hash !== context.prepared_intent_hash) return "rollback_started_prepared_intent_hash_mismatch";
+    return null;
+  });
+}
+
+export function validateRolledBackEvidence(refs, context) {
+  return validateExactEvidence(refs, CORRIDOR_ROLLBACK_COMPLETED_EVIDENCE_SCHEMA, ROLLED_BACK_KEYS, (ev) => {
+    if (!TAGGED_SHA256_RE.test(ev.prepared_intent_hash)) return "rolled_back_prepared_intent_hash_format";
+    if (!RAW_SHA256_RE.test(ev.before_hash)) return "rolled_back_before_hash_format";
+    if (!RAW_SHA256_RE.test(ev.restored_hash)) return "rolled_back_restored_hash_format";
+    if (ev.restored_hash !== ev.before_hash) return "rolled_back_restored_hash_ne_before_hash";
+    if (!RESTORATION_RECOVERY_MODES.includes(ev.recovery_mode)) return "rolled_back_recovery_mode_unknown";
+    if (!context) return null;
+    if (ev.prepared_intent_hash !== context.prepared_intent_hash) return "rolled_back_prepared_intent_hash_mismatch";
+    if (ev.before_hash !== context.before_hash) return "rolled_back_before_hash_not_bound_to_intent";
+    return null;
+  });
+}
+
+export function validateRollbackRecoveryEvidence(refs, context) {
+  return validateExactEvidence(refs, CORRIDOR_ROLLBACK_RECOVERY_EVIDENCE_SCHEMA, ROLLBACK_RECOVERY_KEYS, (ev) => {
+    if (!TAGGED_SHA256_RE.test(ev.prepared_intent_hash)) return "rollback_recovery_prepared_intent_hash_format";
+    if (!ROLLBACK_FAILURE_REASON_CODES.includes(ev.failure_reason_code)) return "rollback_recovery_reason_code_unknown";
+    if (!ROLLBACK_RESTORATION_REASON_CODES.includes(ev.restoration_reason_code)) {
+      return "rollback_recovery_restoration_code_unknown";
+    }
+    if (context && ev.prepared_intent_hash !== context.prepared_intent_hash) {
+      return "rollback_recovery_prepared_intent_hash_mismatch";
+    }
+    return null;
+  });
+}
+
+export function validateRollbackTerminalEvidence(refs, context, expectedOutcome = null) {
+  return validateExactEvidence(refs, CORRIDOR_ROLLBACK_TERMINAL_EVIDENCE_SCHEMA, ROLLBACK_TERMINAL_KEYS, (ev) => {
+    if (!TAGGED_SHA256_RE.test(ev.prepared_intent_hash)) return "rollback_terminal_prepared_intent_hash_format";
+    if (!TERMINAL_OUTCOMES.includes(ev.terminal_outcome)) return "rollback_terminal_outcome_unknown";
+    // The receipt may not disagree with the event it settles.
+    if (expectedOutcome !== null && ev.terminal_outcome !== expectedOutcome) {
+      return "rollback_terminal_outcome_ne_event_outcome";
+    }
+    if (context && ev.prepared_intent_hash !== context.prepared_intent_hash) {
+      return "rollback_terminal_prepared_intent_hash_mismatch";
+    }
+    return null;
+  });
+}
+
+// ── APPEND POLICY IS NOT REPLAY POLICY ──
+// Compatibility belongs to replay; strictness belongs to writers. A NEW writer
+// must never obtain legacy privileges by OMITTING the schema that would have
+// constrained it, so the PHASE — and for RESOLVED the terminal outcome — decides
+// whether the current evidence law applies. The evidence never gets a vote on
+// whether it is going to be checked.
+const ROLLBACK_PHASE_EVIDENCE = Object.freeze({
+  ROLLBACK_STARTED: [CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA, validateRollbackStartedEvidence],
+  ROLLED_BACK: [CORRIDOR_ROLLBACK_COMPLETED_EVIDENCE_SCHEMA, validateRolledBackEvidence],
+  BEFORE_STATE_VERIFIED: [BEFORE_STATE_VERIFIED_EVIDENCE_SCHEMA, validateRestorationEvidence],
+  RECOVERY_REQUIRED: [CORRIDOR_ROLLBACK_RECOVERY_EVIDENCE_SCHEMA, validateRollbackRecoveryEvidence],
+});
+
+/** RESOLVED outcomes that are rollback claims and so need rollback evidence. */
+const ROLLBACK_RESOLVED_OUTCOMES = Object.freeze([
+  ...ROLLBACK_TERMINAL_OUTCOMES, "RECOVERY_REQUIRED",
+]);
+
+/** Does this write fall under the current rollback evidence law? Phase decides. */
+export function appendRequiresRollbackEvidence(phase, terminalOutcome = null) {
+  if (Object.hasOwn(ROLLBACK_PHASE_EVIDENCE, phase)) return true;
+  return phase === "RESOLVED" && ROLLBACK_RESOLVED_OUTCOMES.includes(terminalOutcome);
+}
+
+/**
+ * The strict law for NEW rollback writes. Unconditional: an absent, wrong,
+ * legacy, duplicated or padded evidence array is a refusal, not a fallback.
+ */
+export function validateRollbackEvidenceForAppend({
+  phase, terminalOutcome = null, evidenceRefs, context, events = null,
+} = {}) {
+  const entry = ROLLBACK_PHASE_EVIDENCE[phase];
+  if (entry) return entry[1](evidenceRefs, context);
+  if (phase === "RESOLVED" && ROLLBACK_RESOLVED_OUTCOMES.includes(terminalOutcome)) {
+    const invalid = validateRollbackTerminalEvidence(evidenceRefs, context, terminalOutcome);
+    if (invalid !== null) return invalid;
+    // A rollback terminal must equal one of the two outcomes the FIRST
+    // adjudication froze — the conditional success one, or the fallback.
+    if (Array.isArray(events)) {
+      const started = events.find((e) => e.phase === "ROLLBACK_STARTED");
+      if (!started) return "rollback_terminal_without_adjudication";
+      const bad = validateRollbackStartedEvidence(started.evidence_refs, context);
+      if (bad !== null) return bad;
+      const adj = started.evidence_refs[0];
+      const permitted = terminalOutcome === ROLLBACK_FALLBACK_OUTCOME
+        ? adj.recovery_fallback_outcome
+        : adj.rollback_success_outcome;
+      if (terminalOutcome !== permitted) return "rollback_terminal_ne_durable_adjudication";
+    }
+  }
+  return null;
+}
+
+/**
+ * A chain is CURRENT once it carries any C4B2A marker. From that point every
+ * rollback phase in it must satisfy the current law — one current marker must
+ * never let the remaining phases fall back to legacy interpretation, which is
+ * exactly how a half-legacy chain would launder itself into qualification.
+ */
+function isCurrentRollbackChain(events) {
+  const schemas = [
+    ...Object.values(ROLLBACK_PHASE_EVIDENCE).map(([schema]) => schema),
+    CORRIDOR_ROLLBACK_TERMINAL_EVIDENCE_SCHEMA,
+  ];
+  return events.some((e) =>
+    e.phase === "BEFORE_STATE_VERIFIED"
+    || schemas.some((schema) => claimsSchema(e.evidence_refs, schema)));
+}
+
 // Success is not a phase you may assert — it is a position in the chain. The
 // ledger may commit and the anchor still fail; only ANCHORED has proven the
 // receipt chain was not erased.
 const COMPLETED_VERIFIED_PREDECESSOR = "ANCHORED";
+
+// ── TERMINAL PREDECESSOR LAW — NEW APPENDS ONLY ──
+// A terminal outcome is a claim about how the transaction ended, so the phase it
+// settles FROM is part of that claim: "rolled back" is only true if a
+// restoration proof precedes it. These rules bind the writer.
+//
+// They are deliberately NOT enforced during replay. Chains settled before
+// BEFORE_STATE_VERIFIED existed carry a direct ROLLED_BACK → RESOLVED edge and
+// are immutable history; enforcing a newer, stricter law against them would
+// retroactively invalidate honest receipts. Same split, same reason, as
+// TX_APPEND_TRANSITIONS.
+const TERMINAL_OUTCOME_APPEND_PREDECESSORS = Object.freeze({
+  COMPLETED_VERIFIED: COMPLETED_VERIFIED_PREDECESSOR,
+  EXECUTION_FAILED_ROLLED_BACK: "BEFORE_STATE_VERIFIED",
+  VERIFICATION_FAILED_ROLLED_BACK: "BEFORE_STATE_VERIFIED",
+  RECOVERY_REQUIRED: "RECOVERY_REQUIRED",
+});
+
+// SEAL_FAILED_NO_COMPLETE is conditional: it is a rollback claim only when the
+// transaction actually crossed the effect boundary. A seal that failed before
+// any world change has nothing to have rolled back, and must keep settling
+// directly.
+const crossedEffectBoundary = (events) => events.some((e) => e.phase === "EFFECT_APPLIED");
+
+function requiredTerminalPredecessor(terminalOutcome, events) {
+  if (Object.hasOwn(TERMINAL_OUTCOME_APPEND_PREDECESSORS, terminalOutcome)) {
+    return TERMINAL_OUTCOME_APPEND_PREDECESSORS[terminalOutcome];
+  }
+  if (terminalOutcome === "SEAL_FAILED_NO_COMPLETE" && crossedEffectBoundary(events)) {
+    return "BEFORE_STATE_VERIFIED";
+  }
+  return null;
+}
 
 // transaction_id becomes a directory name. Anything that could climb out of the
 // store is refused before it is ever joined to a path.
@@ -722,7 +1044,12 @@ export async function replayClosureTransaction({ demaHome, transactionId } = {})
   // event with a correctly recomputed event hash would otherwise replay clean.
   // Runs only when that phase is present, so historical chains without it —
   // including legacy direct ROLLED_BACK → RESOLVED — are untouched.
-  if (events.some((e) => e.phase === "BEFORE_STATE_VERIFIED")) {
+  // Runs when a restoration proof exists, or when any event CLAIMS one of the
+  // C4B2A rollback schemas. Keyed on the claim rather than on the phase, so a
+  // pre-C4B2A chain carrying a rollback phase with some other evidence shape is
+  // never retroactively invalidated.
+  const needsRollbackBinding = isCurrentRollbackChain(events);
+  if (needsRollbackBinding) {
     // The descriptor is read only on this path, so ordinary replays pay nothing.
     let storedDescriptor = null;
     try {
@@ -738,12 +1065,17 @@ export async function replayClosureTransaction({ demaHome, transactionId } = {})
     if (derived.error) {
       return refuse(derived.error, { escalate_to_human: true });
     }
+    // Every rollback phase in a CURRENT chain is held to the current law —
+    // unconditionally, exactly as the writer was.
     for (let i = 0; i < events.length; i += 1) {
-      if (events[i].phase !== "BEFORE_STATE_VERIFIED") continue;
-      const invalid = validateRestorationEvidence(events[i].evidence_refs, derived.context);
-      if (invalid !== null) {
-        return refuse(invalid, { escalate_to_human: true, sequence: i });
-      }
+      const invalid = validateRollbackEvidenceForAppend({
+        phase: events[i].phase,
+        terminalOutcome: events[i].terminal_outcome,
+        evidenceRefs: events[i].evidence_refs,
+        context: derived.context,
+        events,
+      });
+      if (invalid !== null) return refuse(invalid, { escalate_to_human: true, sequence: i });
     }
   }
 
@@ -759,6 +1091,87 @@ export async function replayClosureTransaction({ demaHome, transactionId } = {})
     consent_claim_hash: head?.consent_claim_hash ?? null,
     events: Object.freeze(events),
   });
+}
+
+/**
+ * Classify a SETTLED transaction. Replay compatibility lets old history stay
+ * readable; it does not let old, unproven history — or an unrelated terminal —
+ * be promoted into a verified rollback.
+ *
+ * Exactly one class is returned, and only VERIFIED_ROLLBACK may ever be
+ * reported to a caller as `rollback_verified: true`.
+ *
+ * @param context the authoritative binding context, or null when unavailable
+ * @returns {"VERIFIED_ROLLBACK"|"RECOVERY_REQUIRED"|"LEGACY_UNQUALIFIED_ROLLBACK"
+ *          |"FORWARD_COMPLETED"|"NON_ROLLBACK_TERMINAL"|"INVALID"}
+ */
+export function classifySettledMechanicalRecovery({ state, context = null } = {}) {
+  if (!state?.ok || state.exists !== true || state.terminal !== true) return "INVALID";
+  const phases = state.events.map((e) => e.phase);
+  const outcome = state.terminal_outcome;
+
+  // Forward completion is never a rollback, however the chain got there.
+  if (outcome === "COMPLETED_VERIFIED") return "FORWARD_COMPLETED";
+
+  if (outcome === "RECOVERY_REQUIRED") {
+    // Position is not qualification. Before this may ever map to a corridor
+    // STOPPED verdict it must carry the whole adjudicated chain: the exact
+    // suffix, a bound context, and three exact evidence shapes.
+    const suffix = phases.slice(-3);
+    const shape = suffix.length === 3
+      && suffix[0] === "ROLLBACK_STARTED"
+      && suffix[1] === "RECOVERY_REQUIRED"
+      && suffix[2] === "RESOLVED";
+    if (!shape) {
+      return phases.includes("ROLLED_BACK") ? "LEGACY_UNQUALIFIED_ROLLBACK" : "NON_ROLLBACK_TERMINAL";
+    }
+    if (!context) return "INVALID";
+    const started = state.events.find((e) => e.phase === "ROLLBACK_STARTED");
+    if (validateRollbackStartedEvidence(started?.evidence_refs, context) !== null) return "INVALID";
+    // The fallback is what the measurement selects when restoration does not
+    // hold. A chain that began intending EXECUTION_FAILED_ROLLED_BACK and then
+    // measured a failed restoration settles here LAWFULLY — that is monotonic
+    // degradation, not a divergent adjudication.
+    if (started.evidence_refs[0].recovery_fallback_outcome !== outcome) return "INVALID";
+    const flagged = state.events.find((e) => e.phase === "RECOVERY_REQUIRED");
+    if (validateRollbackRecoveryEvidence(flagged?.evidence_refs, context) !== null) return "INVALID";
+    const resolved = state.events[state.events.length - 1];
+    if (validateRollbackTerminalEvidence(resolved.evidence_refs, context, "RECOVERY_REQUIRED") !== null) {
+      return "INVALID";
+    }
+    return "RECOVERY_REQUIRED";
+  }
+
+  // The exact ordered suffix. Anything else that merely contains ROLLED_BACK is
+  // pre-C4B1 history: still replayable, never eligible for corridor mapping.
+  const suffix = phases.slice(-4);
+  const qualifiedShape = suffix.length === 4
+    && suffix[0] === "ROLLBACK_STARTED"
+    && suffix[1] === "ROLLED_BACK"
+    && suffix[2] === "BEFORE_STATE_VERIFIED"
+    && suffix[3] === "RESOLVED";
+  if (!qualifiedShape) {
+    return phases.includes("ROLLED_BACK") ? "LEGACY_UNQUALIFIED_ROLLBACK" : "NON_ROLLBACK_TERMINAL";
+  }
+  if (!ROLLBACK_TERMINAL_OUTCOMES.includes(outcome)) return "NON_ROLLBACK_TERMINAL";
+
+  // Shape alone is not qualification: the evidence must bind, and the settled
+  // terminal must equal the outcome the FIRST adjudication froze.
+  if (!context) return "INVALID";
+  const started = state.events.find((e) => e.phase === "ROLLBACK_STARTED");
+  if (validateRollbackStartedEvidence(started?.evidence_refs, context) !== null) return "INVALID";
+  // A verified rollback must land on the outcome the adjudication reserved for
+  // exact restoration — never on the fallback, never on something else.
+  if (started.evidence_refs[0].rollback_success_outcome !== outcome) return "INVALID";
+  const rolled = state.events.find((e) => e.phase === "ROLLED_BACK");
+  if (validateRolledBackEvidence(rolled?.evidence_refs, context) !== null) return "INVALID";
+  const restored = state.events.find((e) => e.phase === "BEFORE_STATE_VERIFIED");
+  if (validateRestorationEvidence(restored?.evidence_refs, context) !== null) return "INVALID";
+  const resolvedEvent = state.events[state.events.length - 1];
+  if (validateRollbackTerminalEvidence(resolvedEvent.evidence_refs, context, outcome) !== null) {
+    return "INVALID";
+  }
+  return "VERIFIED_ROLLBACK";
 }
 
 /** Descriptor must reproduce exactly from the claim; drift is corruption. */
@@ -1025,7 +1438,11 @@ async function appendClosureEventWithPublicationOps({
   if (!TX_APPEND_TRANSITIONS[state.phase]?.includes(phase)) {
     return Object.freeze({ appended: false, reason: "illegal_phase_transition", from: state.phase, to: phase });
   }
-  if (phase === "BEFORE_STATE_VERIFIED") {
+  // STRICT WRITER LAW. The phase (and, for RESOLVED, the terminal outcome)
+  // decides that the current evidence law applies — never the evidence itself.
+  // Deciding from the evidence let a new append buy legacy privileges simply by
+  // omitting the schema that would have constrained it.
+  if (appendRequiresRollbackEvidence(phase, terminalOutcome)) {
     // prepared_intent_hash is descriptor-bound, not event-bound, so the binding
     // is read from the authoritative descriptor rather than inferred from an
     // event that never carried it.
@@ -1043,17 +1460,26 @@ async function appendClosureEventWithPublicationOps({
     if (derived.error) {
       return Object.freeze({ appended: false, reason: derived.error, from: state.phase, to: phase });
     }
-    const invalidEvidence = validateRestorationEvidence(evidenceRefs, derived.context);
-    if (invalidEvidence !== null) {
-      return Object.freeze({ appended: false, reason: invalidEvidence, from: state.phase, to: phase });
+    const invalid = validateRollbackEvidenceForAppend({
+      phase, terminalOutcome, evidenceRefs, context: derived.context, events: state.events,
+    });
+    if (invalid !== null) {
+      return Object.freeze({ appended: false, reason: invalid, from: state.phase, to: phase });
     }
   }
   if (phase === "RESOLVED") {
     if (!TERMINAL_OUTCOMES.includes(terminalOutcome)) {
       return Object.freeze({ appended: false, reason: "terminal_outcome_required" });
     }
-    if (terminalOutcome === "COMPLETED_VERIFIED" && state.phase !== COMPLETED_VERIFIED_PREDECESSOR) {
-      return Object.freeze({ appended: false, reason: "completed_verified_requires_anchored", from: state.phase });
+    const required = requiredTerminalPredecessor(terminalOutcome, state.events);
+    if (required !== null && state.phase !== required) {
+      // Reason strings stay derived, so COMPLETED_VERIFIED still reports the
+      // exact `completed_verified_requires_anchored` other callers assert on.
+      return Object.freeze({
+        appended: false,
+        reason: `${terminalOutcome.toLowerCase()}_requires_${required.toLowerCase()}`,
+        from: state.phase,
+      });
     }
   } else if (terminalOutcome !== null) {
     return Object.freeze({ appended: false, reason: "terminal_outcome_on_nonterminal_phase" });

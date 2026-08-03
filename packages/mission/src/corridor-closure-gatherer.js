@@ -40,6 +40,7 @@ import {
   finalizeAppliedMechanicalClosure,
   prepareMechanicalClosure,
   replaySeal,
+  restoreToBeforeState,
 } from "../../core/src/omega0-mechanical-closure.js";
 import { sha256CanonicalJsonV1 } from "../../canon/src/sha256-canonical-json-v1.js";
 import {
@@ -57,6 +58,16 @@ import {
 } from "../../receipts/src/consent-nonce-claim.js";
 import {
   openClosureTransaction, replayClosureTransaction, appendClosureEvent,
+  BEFORE_STATE_VERIFIED_EVIDENCE_SCHEMA, MISSION_CLOSURE_TX_RELDIR,
+  TX_APPEND_TRANSITIONS,
+  CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA,
+  CORRIDOR_ROLLBACK_COMPLETED_EVIDENCE_SCHEMA,
+  CORRIDOR_ROLLBACK_RECOVERY_EVIDENCE_SCHEMA,
+  CORRIDOR_ROLLBACK_TERMINAL_EVIDENCE_SCHEMA,
+  classifySettledMechanicalRecovery,
+  readRollbackBindingContext,
+  validateRollbackStartedEvidence,
+  ROLLBACK_FALLBACK_OUTCOME,
 } from "../../receipts/src/mission-closure-transaction.js";
 
 export const CORRIDOR_CLOSURE_ANCHOR_RELPATH = "anchors/corridor-closure-anchors.ndjson";
@@ -583,11 +594,29 @@ export async function runTransactionalMechanicalClosure({
     });
   }
 
+  // ── THE EFFECT BOUNDARY ──
+  // Everything from here on may have changed the world, so every failure exit
+  // below settles with durable rollback history instead of merely refusing.
   const applied = applyPreparedMechanicalClosure({ prepared: mechanicalPrepared, effect });
   if (applied.status !== "APPLIED") {
-    return txRefusal(applied.reason ?? "mechanical_apply_blocked", {
-      omega0_card: applied,
-      transaction_state: intentPhase.state,
+    if (PRE_EFFECT_BOUNDARY_OMEGA0_REASONS.includes(applied.reason)) {
+      // Refused by a guard clause before Omega0 observed or touched anything.
+      return txRefusal(applied.reason ?? "mechanical_apply_blocked", {
+        omega0_card: applied,
+        transaction_state: intentPhase.state,
+      });
+    }
+    return await settleMechanicalFailureWithVerifiedRollback({
+      demaHome: home,
+      claim,
+      prepared,
+      effect,
+      failure: {
+        stage: "EFFECT_APPLY",
+        reason: applied.reason ?? "mechanical_apply_blocked",
+        omega0_card: applied,
+      },
+      transactionState: intentPhase.state,
     });
   }
 
@@ -605,19 +634,35 @@ export async function runTransactionalMechanicalClosure({
     atIso: claim.claimed_at_iso,
   });
   if (!appliedPhase.ok) {
-    return txRefusal(appliedPhase.reason ?? "effect_applied_persistence_failed", {
-      omega0_card: applied,
-      transaction_state: appliedPhase.state ?? intentPhase.state,
-      effect_retry_forbidden: true,
+    // The world changed but its proof did not land. Recovery starts from the
+    // last DURABLE phase, which is still EFFECT_INTENT_PERSISTED.
+    return await settleMechanicalFailureWithVerifiedRollback({
+      demaHome: home,
+      claim,
+      prepared,
+      effect,
+      failure: {
+        stage: "EFFECT_APPLIED_PERSISTENCE",
+        reason: appliedPhase.reason ?? "effect_applied_persistence_failed",
+        details: appliedPhase.details,
+      },
+      transactionState: appliedPhase.state ?? intentPhase.state,
     });
   }
 
   const sealed = finalizeAppliedMechanicalClosure({ applied, effect });
   if (sealed.status !== "SEALED") {
-    return txRefusal(sealed.reason ?? "mechanical_finalize_blocked", {
-      omega0_card: sealed,
-      transaction_state: appliedPhase.state,
-      effect_retry_forbidden: true,
+    return await settleMechanicalFailureWithVerifiedRollback({
+      demaHome: home,
+      claim,
+      prepared,
+      effect,
+      failure: {
+        stage: "MECHANICAL_FINALIZE",
+        reason: sealed.reason ?? "mechanical_finalize_blocked",
+        omega0_card: sealed,
+      },
+      transactionState: appliedPhase.state,
     });
   }
 
@@ -636,10 +681,17 @@ export async function runTransactionalMechanicalClosure({
     atIso: claim.claimed_at_iso,
   });
   if (!verifiedPhase.ok) {
-    return txRefusal(verifiedPhase.reason ?? "verification_persistence_failed", {
-      omega0_card: sealed,
-      transaction_state: verifiedPhase.state ?? appliedPhase.state,
-      effect_retry_forbidden: true,
+    return await settleMechanicalFailureWithVerifiedRollback({
+      demaHome: home,
+      claim,
+      prepared,
+      effect,
+      failure: {
+        stage: "VERIFICATION_PERSISTENCE",
+        reason: verifiedPhase.reason ?? "verification_persistence_failed",
+        details: verifiedPhase.details,
+      },
+      transactionState: verifiedPhase.state ?? appliedPhase.state,
     });
   }
 
@@ -656,10 +708,19 @@ export async function runTransactionalMechanicalClosure({
     atIso: claim.claimed_at_iso,
   });
   if (!sealedPhase.ok) {
-    return txRefusal(sealedPhase.reason ?? "seal_persistence_failed", {
-      omega0_card: sealed,
-      transaction_state: sealedPhase.state ?? verifiedPhase.state,
-      effect_retry_forbidden: true,
+    // Last exit before this function returns a SEALED transaction. Everything
+    // after it — ledger, anchor, corridor terminal — belongs to other slices.
+    return await settleMechanicalFailureWithVerifiedRollback({
+      demaHome: home,
+      claim,
+      prepared,
+      effect,
+      failure: {
+        stage: "SEAL_PERSISTENCE",
+        reason: sealedPhase.reason ?? "seal_persistence_failed",
+        details: sealedPhase.details,
+      },
+      transactionState: sealedPhase.state ?? verifiedPhase.state,
     });
   }
 
@@ -673,6 +734,590 @@ export async function runTransactionalMechanicalClosure({
     omega0_card: sealed,
     transaction_state: sealedPhase.state,
   });
+}
+// ── C4B2A — DURABLE MECHANICAL ROLLBACK HISTORY ─────────────────────────────
+//
+// The route above crosses the effect boundary BEFORE it appends EFFECT_APPLIED,
+// so a failure in that window leaves the world changed while the durable head
+// still reads EFFECT_INTENT_PERSISTED. Recovery therefore begins from the last
+// DURABLE phase, never from what this process remembers doing.
+//
+// This is the ONE production writer of ROLLBACK_STARTED, ROLLED_BACK,
+// BEFORE_STATE_VERIFIED and RECOVERY_REQUIRED. It is reachable only from
+// post-effect-boundary failure exits inside runTransactionalMechanicalClosure,
+// it never touches the canonical ledger, the closure anchor, the corridor
+// journal or consent, and it never retries the original effect.
+//
+// FOUR LAWS THIS WRITER OBEYS
+//
+//  1. AUTHORITATIVE CONTEXT BEFORE MUTATION. The descriptor and durable intent
+//     are revalidated by the C4B1 binding derivation — the same one replay uses
+//     — before ROLLBACK_STARTED is appended and before the world is touched. A
+//     recovery-local "find the intent event" helper would be a second, weaker
+//     validator, and the weaker one becomes the real policy once they drift.
+//  2. THE FIRST ADJUDICATION OWNS THE OUTCOME. ROLLBACK_STARTED freezes the
+//     intended terminal outcome. A retry carrying a differently-classifying
+//     failure object is non-authoritative context and can never change history.
+//  3. ONLY A FULLY PROVEN CHAIN IS A VERIFIED ROLLBACK. Terminal state is
+//     classified, never assumed: COMPLETED_VERIFIED, an unrelated refusal, and
+//     a pre-C4B1 unqualified ROLLED_BACK chain all report rollback_verified
+//     false.
+//  4. EVIDENCE CARRIES CODES, NOT TEXT. No exception message, path or stack
+//     fragment enters an immutable event.
+//
+// Mapping a rollback result onto a corridor CHECKPOINT or STOPPED verdict is
+// deliberately NOT done here — that is C4B2B.
+
+/** The closed set of post-boundary failure sites this writer serves. */
+export const MECHANICAL_FAILURE_STAGES = Object.freeze([
+  "EFFECT_APPLY",
+  "EFFECT_APPLIED_PERSISTENCE",
+  "MECHANICAL_FINALIZE",
+  "VERIFICATION_PERSISTENCE",
+  "SEAL_PERSISTENCE",
+]);
+
+// The rollback evidence schemas and their validators live with the append/replay
+// verifier that enforces them; re-exported here because this module is the only
+// thing that writes them.
+export {
+  CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA,
+  CORRIDOR_ROLLBACK_COMPLETED_EVIDENCE_SCHEMA,
+  CORRIDOR_ROLLBACK_RECOVERY_EVIDENCE_SCHEMA,
+  CORRIDOR_ROLLBACK_TERMINAL_EVIDENCE_SCHEMA,
+} from "../../receipts/src/mission-closure-transaction.js";
+
+// Once the ledger has committed, the receipt chain is the authority and undoing
+// the world beneath it would contradict a signed receipt. Recovery past this
+// line is forward reconciliation (C4C), never a rollback.
+const POST_LEDGER_PHASES = Object.freeze(["LEDGER_COMMITTED", "ANCHORED"]);
+
+const ROLLBACK_PHASES = Object.freeze([
+  "ROLLBACK_STARTED", "ROLLED_BACK", "BEFORE_STATE_VERIFIED", "RECOVERY_REQUIRED",
+]);
+
+// Stages whose CONDITIONAL success outcome is fixed by WHERE they failed.
+const STAGE_TERMINAL_OUTCOMES = Object.freeze({
+  EFFECT_APPLIED_PERSISTENCE: "EXECUTION_FAILED_ROLLED_BACK",
+  VERIFICATION_PERSISTENCE: "VERIFICATION_FAILED_ROLLED_BACK",
+  SEAL_PERSISTENCE: "SEAL_FAILED_NO_COMPLETE",
+});
+
+// For the two stages where the world-facing kernel decides, its own reason
+// selects the outcome that applies IF exact restoration is later verified.
+// `restoration_failed` maps to the stage's own terminal rather than to
+// RECOVERY_REQUIRED: whether recovery is required is measured afterwards, not
+// asserted here.
+const OMEGA0_REASON_TERMINAL_OUTCOMES = Object.freeze({
+  effect_failed: "EXECUTION_FAILED_ROLLED_BACK",
+  verification_failed: "VERIFICATION_FAILED_ROLLED_BACK",
+});
+
+// The stage's default conditional success outcome when the card reason does not
+// select one. An unknown post-boundary failure still crossed the effect
+// boundary, so a verified restoration of it is an execution rollback.
+const STAGE_DEFAULT_SUCCESS_OUTCOME = Object.freeze({
+  EFFECT_APPLY: "EXECUTION_FAILED_ROLLED_BACK",
+  MECHANICAL_FINALIZE: "VERIFICATION_FAILED_ROLLED_BACK",
+});
+
+// Omega0 refuses these before it observes or touches the world, so they are not
+// post-boundary failures and must keep the route's existing refusal behaviour.
+export const PRE_EFFECT_BOUNDARY_OMEGA0_REASONS = Object.freeze([
+  "authority_mismatch",
+  "adapter_incomplete",
+]);
+
+// ── BOUNDED VOCABULARY ──
+// Every string that reaches an immutable event comes from one of these maps.
+const OMEGA0_REASON_CODES = Object.freeze({
+  effect_failed: "EFFECT_FAILED",
+  verification_failed: "VERIFICATION_FAILED",
+  restoration_failed: "RESTORATION_FAILED",
+  adapter_incomplete: "ADAPTER_INCOMPLETE",
+  authority_mismatch: "AUTHORITY_MISMATCH",
+});
+
+const STAGE_REASON_CODES = Object.freeze({
+  EFFECT_APPLIED_PERSISTENCE: "EVENT_PERSISTENCE_FAILED",
+  VERIFICATION_PERSISTENCE: "EVENT_PERSISTENCE_FAILED",
+  SEAL_PERSISTENCE: "EVENT_PERSISTENCE_FAILED",
+});
+
+const RESTORATION_REASON_CODES = Object.freeze({
+  restoration_world_unrecognised: "RESTORATION_WORLD_UNRECOGNISED",
+  restoration_hash_mismatch: "RESTORATION_HASH_MISMATCH",
+  restoration_inverse_failed: "RESTORATION_INVERSE_FAILED",
+  restoration_inverse_unavailable: "RESTORATION_UNAVAILABLE",
+  restoration_backward_recovery_failed: "RESTORATION_BACKWARD_FAILED",
+  restoration_backward_recovery_unavailable: "RESTORATION_UNAVAILABLE",
+  restoration_observation_failed: "RESTORATION_OBSERVATION_FAILED",
+  restoration_intermediate_classification_failed: "RESTORATION_IDENTITY_MISMATCH",
+  restoration_intent_missing: "RESTORATION_UNAVAILABLE",
+  restoration_effect_missing: "RESTORATION_UNAVAILABLE",
+  restoration_before_hash_missing: "RESTORATION_UNAVAILABLE",
+  rename_source_identity_mismatch: "RESTORATION_IDENTITY_MISMATCH",
+  rename_target_identity_mismatch: "RESTORATION_IDENTITY_MISMATCH",
+  rename_publication_identity_mismatch: "RESTORATION_IDENTITY_MISMATCH",
+  rename_intermediate_state_mismatch: "RESTORATION_WORLD_UNRECOGNISED",
+  rename_backward_restoration_failed: "RESTORATION_BACKWARD_FAILED",
+  rename_root_identity_mismatch: "RESTORATION_IDENTITY_MISMATCH",
+});
+
+/**
+ * The ONE place a mechanical failure becomes a terminal outcome.
+ *
+ * Callers pass a structured stage, never a string fragment: inferring outcomes
+ * from substrings at several call sites is how two exits silently disagree
+ * about what the same failure meant.
+ */
+export function classifyMechanicalFailureOutcome(failure) {
+  const stage = failure?.stage;
+  if (!MECHANICAL_FAILURE_STAGES.includes(stage)) return "EXECUTION_FAILED_ROLLED_BACK";
+  if (Object.hasOwn(STAGE_TERMINAL_OUTCOMES, stage)) return STAGE_TERMINAL_OUTCOMES[stage];
+  const reason = failure?.omega0_card?.reason;
+  return OMEGA0_REASON_TERMINAL_OUTCOMES[reason]
+    ?? STAGE_DEFAULT_SUCCESS_OUTCOME[stage]
+    ?? "EXECUTION_FAILED_ROLLED_BACK";
+}
+
+/** Failure -> bounded reason code. Never the raw message. */
+export function classifyMechanicalFailureReasonCode(failure) {
+  if (isDurabilityUncertain(failure)) return "DURABILITY_UNCERTAIN";
+  const omega0 = OMEGA0_REASON_CODES[failure?.omega0_card?.reason];
+  if (omega0) return omega0;
+  const staged = STAGE_REASON_CODES[failure?.stage];
+  if (staged) return staged;
+  return "UNKNOWN";
+}
+
+const restorationReasonCode = (reason) =>
+  RESTORATION_REASON_CODES[reason] ?? (reason === undefined ? "RESTORATION_NOT_ATTEMPTED" : "UNKNOWN");
+
+const failureStageCode = (failure) =>
+  MECHANICAL_FAILURE_STAGES.includes(failure?.stage) ? failure.stage : "UNKNOWN";
+
+/**
+ * A durability-uncertain publication is not a normal failure: the canonical
+ * event may already be visible but unconfirmed, so retrying the effect or
+ * stacking another phase on that head would build on something unproven.
+ */
+function isDurabilityUncertain(failure) {
+  if (failure?.details?.durability_uncertain === true) return true;
+  const reason = failure?.reason;
+  return typeof reason === "string"
+    && reason.startsWith("event_publication_durability_uncertain:");
+}
+
+// Which event was mid-publication when the uncertainty arose.
+const UNCERTAIN_INTENDED_PHASE = Object.freeze({
+  EFFECT_APPLIED_PERSISTENCE: "EFFECT_APPLIED",
+  VERIFICATION_PERSISTENCE: "VERIFIED",
+  SEAL_PERSISTENCE: "SEALED",
+});
+
+/**
+ * Decide whether an uncertain publication may be resumed.
+ *
+ * A successful directory fsync proves the directory is durable — NOT that the
+ * event we tried to write is the one that won. The replayed head is the only
+ * thing that answers that, so it is classified rather than assumed.
+ */
+function decideUncertainResume({ state, intendedPhase }) {
+  const head = state.phase;
+  if (intendedPhase && head === intendedPhase) {
+    return { ok: true, resume: "INTENDED_EVENT_CANONICAL" };
+  }
+  if (ROLLBACK_PHASES.includes(head)) {
+    return { ok: true, resume: "ROLLBACK_ALREADY_STARTED" };
+  }
+  // Rollback may begin from any durable phase the strict writer allows it from.
+  if (TX_APPEND_TRANSITIONS[head]?.includes("ROLLBACK_STARTED")) {
+    return { ok: true, resume: "PRIOR_HEAD_CANONICAL" };
+  }
+  return { ok: false, resume: "DIVERGENT_HEAD" };
+}
+
+function closureEventsDir(home, transactionId) {
+  return join(home, MISSION_CLOSURE_TX_RELDIR, transactionId, "events");
+}
+
+/** Durably acknowledge the event directory, or report that we cannot. */
+function eventDirectoryDurable(home, transactionId) {
+  let fd = null;
+  try {
+    fd = openSync(closureEventsDir(home, transactionId), "r");
+    fsyncSync(fd);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (fd !== null) closeSync(fd);
+  }
+}
+
+const hasPhase = (state, phase) => state.events.some((e) => e.phase === phase);
+
+function rollbackSettled({ state, terminalOutcome, reason, recoveryMode = null }) {
+  return Object.freeze({
+    ok: false,
+    rollback_verified: true,
+    recovery_required: false,
+    recovery_class: "VERIFIED_ROLLBACK",
+    terminal_outcome: terminalOutcome,
+    effect_retry_forbidden: true,
+    transaction_state: state,
+    authority_delta: 0,
+    recovery_mode: recoveryMode,
+    reason,
+  });
+}
+
+function rollbackRecoveryRequired({ state = null, reason, restorationReason = null }) {
+  return Object.freeze({
+    ok: false,
+    rollback_verified: false,
+    recovery_required: true,
+    recovery_class: "RECOVERY_REQUIRED",
+    terminal_outcome: "RECOVERY_REQUIRED",
+    effect_retry_forbidden: true,
+    transaction_state: state,
+    authority_delta: 0,
+    escalate_to_human: true,
+    restoration_reason: restorationReason,
+    reason,
+  });
+}
+
+/**
+ * A settled transaction that is NOT a verified rollback and NOT a
+ * RECOVERY_REQUIRED settlement. Reported honestly, never as either.
+ */
+function rollbackNotQualified({ state, recoveryClass, reason }) {
+  return Object.freeze({
+    ok: false,
+    rollback_verified: false,
+    recovery_required: false,
+    recovery_class: recoveryClass,
+    terminal_outcome: state.terminal_outcome ?? null,
+    effect_retry_forbidden: true,
+    transaction_state: state,
+    authority_delta: 0,
+    escalate_to_human: true,
+    reason,
+  });
+}
+
+/**
+ * A settlement that genuinely needs recovery but does NOT qualify as a clean
+ * RECOVERY_REQUIRED adjudication — e.g. an adjudication that intended to roll
+ * back and then could not restore. Recovery is still required; the class stays
+ * honest so C4B2B can never map it to a corridor verdict.
+ */
+function rollbackRecoveryUnqualified({ state, recoveryClass, reason, restorationReason = null }) {
+  return Object.freeze({
+    ok: false,
+    rollback_verified: false,
+    recovery_required: true,
+    recovery_class: recoveryClass,
+    terminal_outcome: state?.terminal_outcome ?? "RECOVERY_REQUIRED",
+    effect_retry_forbidden: true,
+    transaction_state: state,
+    authority_delta: 0,
+    escalate_to_human: true,
+    restoration_reason: restorationReason,
+    reason,
+  });
+}
+
+/** Report an already-settled transaction by CLASS, never by assumption. */
+function reportSettled({ state, context, reason, restorationReason = null }) {
+  const recoveryClass = classifySettledMechanicalRecovery({ state, context });
+  if (recoveryClass === "VERIFIED_ROLLBACK") {
+    return rollbackSettled({
+      state,
+      terminalOutcome: state.terminal_outcome,
+      reason,
+      recoveryMode: state.events.find((e) => e.phase === "BEFORE_STATE_VERIFIED")
+        ?.evidence_refs?.[0]?.recovery_mode ?? null,
+    });
+  }
+  if (recoveryClass === "RECOVERY_REQUIRED") {
+    return rollbackRecoveryRequired({ state, reason, restorationReason });
+  }
+  // A RECOVERY_REQUIRED terminal that failed qualification still needs recovery.
+  if (state?.terminal_outcome === "RECOVERY_REQUIRED") {
+    return rollbackRecoveryUnqualified({ state, recoveryClass, reason, restorationReason });
+  }
+  return rollbackNotQualified({ state, recoveryClass, reason });
+}
+
+/**
+ * Settle one post-effect-boundary mechanical failure with durable proof.
+ *
+ * Produces exactly one of: verified rollback history
+ * (ROLLBACK_STARTED → ROLLED_BACK → BEFORE_STATE_VERIFIED → RESOLVED), or an
+ * explicit RECOVERY_REQUIRED with no destructive guess.
+ *
+ * Requires only the C1 claim identity, the transaction descriptor, the
+ * transaction events, the persisted intent, and the observed world — so a fresh
+ * process can complete a recovery the dead one started.
+ *
+ * @returns {Promise<Readonly<object>>} typed, immutable; never "COMPLETE"
+ */
+export async function settleMechanicalFailureWithVerifiedRollback({
+  demaHome, claim, prepared = null, effect, failure, transactionState = null,
+} = {}) {
+  const home = resolveDemaHome(demaHome);
+  const transactionId = claim?.transaction_id;
+  const reason = failure?.reason ?? failure?.omega0_card?.reason ?? "mechanical_failure";
+  if (typeof transactionId !== "string" || transactionId.length === 0) {
+    return rollbackRecoveryRequired({ state: transactionState, reason: "rollback_transaction_id_missing" });
+  }
+
+  // 1 — the transaction as DISK tells it, not as the caller remembers it.
+  let state = await replayClosureTransaction({ demaHome: home, transactionId });
+  if (!state.ok) {
+    return rollbackRecoveryRequired({ reason: `rollback_replay_refused:${state.reason}` });
+  }
+  if (!state.exists) {
+    return rollbackRecoveryRequired({ state, reason: "rollback_transaction_not_prepared" });
+  }
+
+  // 2 — AUTHORITATIVE CONTEXT, before any append and before any world mutation.
+  //     Same derivation replay uses: descriptor shape, descriptor hash, chain
+  //     binding, exactly one intent event, exactly one intent reference,
+  //     intent hash re-derived from bytes, before_hash re-derived from the
+  //     manifest, and the policy/checkpoint bindings.
+  const bound = await readRollbackBindingContext({
+    demaHome: home, transactionId, expectedHeadEventHash: state.head_event_hash,
+  });
+  if (!bound.ok) {
+    return rollbackRecoveryRequired({ state, reason: `rollback_binding_refused:${bound.reason}` });
+  }
+  // Continue on the FRESH disk state the derivation returned, never the snapshot
+  // this function arrived with.
+  state = bound.state;
+  const context = bound.context;
+  const intent = context.intent;
+  const preparedIntentHash = context.prepared_intent_hash;
+
+  // The caller's prepared object is supporting evidence only — it may never
+  // replace the disk-derived context, and a disagreement is a hard stop.
+  if (prepared?.prepared_intent_hash && prepared.prepared_intent_hash !== preparedIntentHash) {
+    return rollbackRecoveryRequired({ state, reason: "rollback_prepared_intent_disagrees_with_disk" });
+  }
+
+  // 3 — already settled: classify, never assume.
+  if (state.terminal) return reportSettled({ state, context, reason });
+
+  // 4 — the ledger is the authority past this line; a rollback would contradict
+  //     a signed receipt. Forward reconciliation is C4C, not this writer.
+  if (POST_LEDGER_PHASES.includes(state.phase)) {
+    return rollbackRecoveryRequired({
+      state, reason: "rollback_after_ledger_authority_forbidden",
+    });
+  }
+
+  // 5 — durability uncertainty: prove WHICH head is canonical, then decide.
+  if (isDurabilityUncertain(failure)) {
+    if (!eventDirectoryDurable(home, transactionId)) {
+      return rollbackRecoveryRequired({ state, reason: "rollback_durability_unresolved:fsync_failed" });
+    }
+    state = await replayClosureTransaction({ demaHome: home, transactionId });
+    if (!state.ok || !state.exists) {
+      return rollbackRecoveryRequired({ reason: "rollback_durability_unresolved:replay_unverifiable" });
+    }
+    if (state.terminal) return reportSettled({ state, context, reason });
+    const decided = decideUncertainResume({
+      state, intendedPhase: UNCERTAIN_INTENDED_PHASE[failure?.stage] ?? null,
+    });
+    if (!decided.ok) {
+      // No helper mutation, no effect retry, no phase on an unproven head.
+      return rollbackRecoveryRequired({
+        state, reason: `rollback_durability_unresolved:${decided.resume.toLowerCase()}`,
+      });
+    }
+  }
+
+  const atIso = state.events[0].at_iso;
+
+  // 6 — ROLLBACK_STARTED: durable recovery adjudication begins, and FREEZES the
+  //     intended terminal outcome. No recovery helper may mutate anything until
+  //     this event has settled.
+  if (!hasPhase(state, "ROLLBACK_STARTED")) {
+    const started = await appendDurableClosurePhase({
+      demaHome: home,
+      transactionId,
+      phase: "ROLLBACK_STARTED",
+      evidenceRefs: [{
+        schema: CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA,
+        transaction_hash: context.transaction_hash,
+        prepared_intent_hash: preparedIntentHash,
+        // FROZEN: the cause and the objective.
+        failure_stage: failureStageCode(failure),
+        failure_reason_code: classifyMechanicalFailureReasonCode(failure),
+        recovery_objective: "RESTORE_EXACT_BEFORE_STATE",
+        // FROZEN as the two outcomes the MEASUREMENT may select between —
+        // not as a claim that the first one is already the final result.
+        rollback_success_outcome: classifyMechanicalFailureOutcome(failure),
+        recovery_fallback_outcome: ROLLBACK_FALLBACK_OUTCOME,
+      }],
+      atIso,
+    });
+    if (!started.ok) {
+      // The helper was NOT called. The world is exactly where the failure left it.
+      return rollbackRecoveryRequired({
+        state, reason: `rollback_started_not_durable:${started.reason}`,
+      });
+    }
+    state = started.state;
+  }
+
+  // 7 — THE DURABLE ADJUDICATION IS THE AUTHORITY FROM HERE ON.
+  //     A retry carrying a differently-classifying failure object is
+  //     non-authoritative context; it can never rewrite what was frozen.
+  const startedEvent = state.events.find((e) => e.phase === "ROLLBACK_STARTED");
+  const invalidAdjudication = validateRollbackStartedEvidence(startedEvent?.evidence_refs, context);
+  if (invalidAdjudication !== null) {
+    return rollbackRecoveryRequired({
+      state, reason: `rollback_adjudication_invalid:${invalidAdjudication}`,
+    });
+  }
+  const adjudication = startedEvent.evidence_refs[0];
+  const durableOutcome = adjudication.rollback_success_outcome;
+  const fallbackOutcome = adjudication.recovery_fallback_outcome;
+
+  // 8 — MEASURE the recovery. The helper is idempotent by observation and
+  //     refuses a world it does not recognise, so attempting it is always safe:
+  //     it can restore, or it can report that it cannot. What it may never do is
+  //     guess. The result of this measurement — not the adjudication — decides
+  //     which of the two frozen outcomes applies.
+  let restoration = null;
+  if (!hasPhase(state, "BEFORE_STATE_VERIFIED")) {
+    restoration = restoreToBeforeState({ intent, effect });
+  }
+
+  // 9 — restoration failed or could not be verified: degrade monotonically to
+  //     the frozen fallback. This is lawful even when the adjudication reserved
+  //     EXECUTION_FAILED_ROLLED_BACK for success — that outcome was always
+  //     conditional on exact restoration holding.
+  if (restoration && restoration.ok !== true) {
+    if (!hasPhase(state, "RECOVERY_REQUIRED")) {
+      const flagged = await appendDurableClosurePhase({
+        demaHome: home,
+        transactionId,
+        phase: "RECOVERY_REQUIRED",
+        evidenceRefs: [{
+          schema: CORRIDOR_ROLLBACK_RECOVERY_EVIDENCE_SCHEMA,
+          prepared_intent_hash: preparedIntentHash,
+          failure_reason_code: adjudication.failure_reason_code,
+          restoration_reason_code: restorationReasonCode(restoration?.reason),
+        }],
+        atIso,
+      });
+      if (!flagged.ok) {
+        return rollbackRecoveryRequired({
+          state, reason: `rollback_recovery_not_durable:${flagged.reason}`,
+          restorationReason: restoration?.reason ?? null,
+        });
+      }
+      state = flagged.state;
+    }
+    const resolved = await appendDurableClosurePhase({
+      demaHome: home,
+      transactionId,
+      phase: "RESOLVED",
+      terminalOutcome: fallbackOutcome,
+      evidenceRefs: [{
+        schema: CORRIDOR_ROLLBACK_TERMINAL_EVIDENCE_SCHEMA,
+        prepared_intent_hash: preparedIntentHash,
+        terminal_outcome: fallbackOutcome,
+      }],
+      atIso,
+    });
+    if (!resolved.ok) {
+      return rollbackRecoveryRequired({
+        state, reason: `rollback_recovery_terminal_not_durable:${resolved.reason}`,
+        restorationReason: restoration?.reason ?? null,
+      });
+    }
+    // Classify the settled recovery chain: only a fully adjudicated one
+    // qualifies, and a rollback intent that failed to restore never does.
+    return reportSettled({
+      state: resolved.state, context, reason,
+      restorationReason: restoration?.reason ?? null,
+    });
+  }
+
+  // 10 — verified rollback. The proof discloses the mode the helper actually
+  //      used, so an already-restored world is never dressed up as an inverse.
+  const proof = restoration ?? null;
+  if (!hasPhase(state, "ROLLED_BACK")) {
+    const rolled = await appendDurableClosurePhase({
+      demaHome: home,
+      transactionId,
+      phase: "ROLLED_BACK",
+      evidenceRefs: [{
+        schema: CORRIDOR_ROLLBACK_COMPLETED_EVIDENCE_SCHEMA,
+        prepared_intent_hash: preparedIntentHash,
+        before_hash: intent.before_hash,
+        restored_hash: proof?.restored_hash ?? intent.before_hash,
+        recovery_mode: proof?.recovery_mode ?? "ALREADY_BEFORE_STATE",
+      }],
+      atIso,
+    });
+    if (!rolled.ok) {
+      return rollbackRecoveryRequired({ state, reason: `rolled_back_not_durable:${rolled.reason}` });
+    }
+    state = rolled.state;
+  }
+
+  if (!hasPhase(state, "BEFORE_STATE_VERIFIED")) {
+    const verified = await appendDurableClosurePhase({
+      demaHome: home,
+      transactionId,
+      phase: "BEFORE_STATE_VERIFIED",
+      evidenceRefs: [{
+        schema: BEFORE_STATE_VERIFIED_EVIDENCE_SCHEMA,
+        prepared_intent_hash: preparedIntentHash,
+        before_hash: proof.before_hash,
+        restored_hash: proof.restored_hash,
+        restoration_verified: true,
+        recovery_mode: proof.recovery_mode,
+        undo_success_pct: proof.undo_success_pct,
+      }],
+      atIso,
+    });
+    if (!verified.ok) {
+      return rollbackRecoveryRequired({
+        state, reason: `before_state_verified_not_durable:${verified.reason}`,
+      });
+    }
+    state = verified.state;
+  }
+
+  const resolved = await appendDurableClosurePhase({
+    demaHome: home,
+    transactionId,
+    phase: "RESOLVED",
+    terminalOutcome: durableOutcome,
+    evidenceRefs: [{
+      schema: CORRIDOR_ROLLBACK_TERMINAL_EVIDENCE_SCHEMA,
+      prepared_intent_hash: preparedIntentHash,
+      terminal_outcome: durableOutcome,
+    }],
+    atIso,
+  });
+  if (!resolved.ok) {
+    // The restoration proof is durable; only the terminal is missing. A retry
+    // resumes from BEFORE_STATE_VERIFIED and reuses this exact frozen outcome.
+    return rollbackRecoveryRequired({
+      state, reason: `rollback_resolved_not_durable:${resolved.reason}`,
+    });
+  }
+  // Report by CLASS: the chain must prove itself even to its own writer.
+  return reportSettled({ state: resolved.state, context, reason });
 }
 
 /**
