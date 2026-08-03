@@ -194,8 +194,9 @@ function terminal(outcome, card, extra = {}) {
 // STOP phrase. Only `dema mission corridor stop`, under fresh context-bound STOP
 // consent, may append CHECKPOINT → STOPPED.
 export const CORRIDOR_RECOVERY_VERDICTS = Object.freeze([
-  "STOP_CONSENT_REQUIRED", // stopping is proven necessary; authority is absent
-  "CORRIDOR_UNCHANGED",    // leave the corridor exactly where it is
+  "STOP_CONSENT_REQUIRED",           // stopping is proven necessary; authority is absent
+  "RECONCILIATION_CONSENT_REQUIRED", // the record and the world disagree; nobody is yet authorized to move either
+  "CORRIDOR_UNCHANGED",              // leave the corridor exactly where it is
 ]);
 
 const RECOVERY_CLASS_TO_CORRIDOR = Object.freeze({
@@ -264,6 +265,47 @@ const RECOVERY_CLASS_TO_CORRIDOR = Object.freeze({
 });
 
 /**
+ * Map a post-commit continuation classification onto a corridor verdict.
+ *
+ * Divergence is deliberately NOT routed through the recovery map. A verified
+ * failed restoration proved the world was returned and earned the right to ask
+ * for STOP consent. A post-commit divergence proved only that the record and the
+ * world disagree — which of them should move is a REMEDY CHOICE, and choosing a
+ * remedy is exactly what fresh consent exists for.
+ *
+ * So this offers no stop, claims no terminal, and writes nothing.
+ */
+export function mapPostCommitClassToCorridor(classification) {
+  if (classification === "FORWARD_COMPLETION_ELIGIBLE") {
+    return Object.freeze({
+      verdict: "CORRIDOR_UNCHANGED",
+      terminal_outcome: null,
+      requires_human: false,
+      compensation_performed: false,
+      fresh_attempt_permitted: false,
+      stop_consent_offered: false,
+      required_consent_kind: null,
+      post_commit_class: classification,
+    });
+  }
+  const known = POST_COMMIT_CONTINUATION_CLASSES.includes(classification);
+  return Object.freeze({
+    // Everything else needs a human and a separately bounded remediation. Note
+    // this is never RECOVERY_REQUIRED and never STOP_CONSENT_REQUIRED.
+    verdict: classification === "ALREADY_TERMINAL"
+      ? "CORRIDOR_UNCHANGED"
+      : "RECONCILIATION_CONSENT_REQUIRED",
+    terminal_outcome: null,
+    requires_human: classification !== "ALREADY_TERMINAL",
+    compensation_performed: false,
+    fresh_attempt_permitted: false,
+    stop_consent_offered: false,
+    required_consent_kind: null,
+    post_commit_class: known ? classification : "FORWARD_RECONCILIATION_UNQUALIFIED",
+  });
+}
+
+/**
  * Map a C4B2A recovery classification onto a corridor verdict.
  *
  * Pure. Decides only what the corridor MAY do; it never writes, and it never
@@ -288,6 +330,141 @@ export function mapRecoveryClassToCorridor(recoveryClass) {
     });
   }
   return Object.freeze({ ...mapped, recovery_class: recoveryClass });
+}
+
+// ── C4C — POST-COMMIT COMPLETION AND DIVERGENCE ─────────────────────────────
+//
+// Once the ledger has committed, a signed receipt asserts what happened. From
+// there the original consent still authorizes ONE thing: deterministically
+// finishing the proof trail of the act it already approved. It authorizes
+// nothing whose purpose is to change the world so the world agrees with the
+// record.
+//
+//   original consent
+//     ├── may finish recording the already-authorized result
+//     └── may NOT manufacture a world that matches the record
+//
+// So this makes a THREE-WAY distinction, and the third branch is the point:
+//
+//   exact artifact already exists        → adopt it and continue
+//   exact pre-authorized artifact is
+//     safely appendable                  → append once and continue
+//   world, head, context or evidence
+//     diverged                           → mutate NOTHING; a new remediation
+//                                          transaction is required
+//
+// Divergence is NOT recovery. A verified failed restoration and a post-commit
+// divergence are different facts: the first proved the world was returned, the
+// second proved the record and the world disagree and nobody has yet been
+// authorized to decide which one moves.
+export const POST_COMMIT_CONTINUATION_CLASSES = Object.freeze([
+  "FORWARD_COMPLETION_ELIGIBLE",
+  "POST_COMMIT_CONTEXT_DIVERGENCE",
+  "POST_COMMIT_WORLD_DIVERGENCE",
+  "POST_COMMIT_LEDGER_DIVERGENCE",
+  "FORWARD_RECONCILIATION_UNQUALIFIED",
+  "ALREADY_TERMINAL",
+]);
+
+// The phases at which forward completion is even a question. Before the ledger
+// commits there is no committed record to complete, and C4B2A owns that region.
+const POST_COMMIT_PHASES = Object.freeze(["LEDGER_COMMITTED", "ANCHORED"]);
+
+const unqualified = (reason) => Object.freeze({
+  classification: "FORWARD_RECONCILIATION_UNQUALIFIED", reason, may_append: false,
+});
+const diverged = (classification, reason) => Object.freeze({
+  classification, reason, may_append: false,
+});
+
+/**
+ * Classify what may lawfully happen next for a post-commit transaction.
+ *
+ * PURE. Every input is an already-made observation; this decides, it never
+ * looks and never writes. `may_append` is true only for completion-only
+ * continuation of the exact, already-frozen, already-authorized artifact.
+ *
+ * @param {object}  p.state             replayed C2 transaction
+ * @param {boolean} p.ledgerEntryExact  the exact intended ledger entry is present
+ * @param {boolean} p.ledgerConflict    the ledger holds conflicting material for this transaction
+ * @param {boolean} p.ledgerContextIntact the expected ledger predecessor still holds
+ * @param {boolean} p.anchorExact       the exact intended anchor record is present
+ * @param {boolean} p.anchorContextIntact the expected anchor predecessor still holds
+ * @param {boolean} p.worldMatchesReceipt the observed world still equals what the receipt asserts
+ * @returns {Readonly<{classification:string, reason:string, may_append:boolean,
+ *                     next_phase?:string}>}
+ */
+export function classifyPostCommitContinuation({
+  state,
+  ledgerEntryExact,
+  ledgerConflict = false,
+  ledgerContextIntact = true,
+  anchorExact,
+  anchorContextIntact = true,
+  worldMatchesReceipt,
+} = {}) {
+  if (!state?.ok || state.exists !== true) return unqualified("c2_transaction_unverifiable");
+
+  // An already-settled transaction is returned as-is; replay must never mutate.
+  if (state.terminal === true) {
+    return Object.freeze({
+      classification: "ALREADY_TERMINAL",
+      reason: `already_${String(state.terminal_outcome ?? "resolved").toLowerCase()}`,
+      may_append: false,
+    });
+  }
+  if (!POST_COMMIT_PHASES.includes(state.phase)) {
+    return unqualified(`not_post_commit:${state.phase ?? "none"}`);
+  }
+
+  // ── divergence, checked before ANY continuation ──
+  // A conflicting ledger is the gravest: two records claim the same transaction.
+  if (ledgerConflict === true) {
+    return diverged("POST_COMMIT_LEDGER_DIVERGENCE", "ledger_holds_conflicting_material");
+  }
+  // The record says the world is X. If the world is Y, the ONLY lawful automatic
+  // act is none: making them agree is compensation, and compensation is a new
+  // world-changing act that this consent never covered.
+  if (worldMatchesReceipt === false) {
+    return diverged("POST_COMMIT_WORLD_DIVERGENCE", "observed_world_differs_from_receipt");
+  }
+  // A moved head means the artifact we were authorized to append is no longer
+  // the artifact that would result.
+  if (ledgerContextIntact === false) {
+    return diverged("POST_COMMIT_CONTEXT_DIVERGENCE", "ledger_context_changed");
+  }
+  if (anchorContextIntact === false) {
+    return diverged("POST_COMMIT_CONTEXT_DIVERGENCE", "anchor_context_changed");
+  }
+  if (worldMatchesReceipt !== true) return unqualified("world_observation_unavailable");
+
+  if (state.phase === "LEDGER_COMMITTED") {
+    if (ledgerEntryExact !== true) {
+      return diverged("POST_COMMIT_CONTEXT_DIVERGENCE", "committed_ledger_entry_absent");
+    }
+    // Adopt-or-append are the same lawful continuation; the appender is
+    // idempotent, so an anchor already present is adopted rather than duplicated.
+    return Object.freeze({
+      classification: "FORWARD_COMPLETION_ELIGIBLE",
+      reason: anchorExact === true ? "anchor_already_present_adopt" : "anchor_appendable_once",
+      may_append: true,
+      next_phase: "ANCHORED",
+    });
+  }
+
+  // ANCHORED: both committed artifacts must still be exactly the ones bound.
+  if (ledgerEntryExact !== true) {
+    return diverged("POST_COMMIT_CONTEXT_DIVERGENCE", "committed_ledger_entry_absent");
+  }
+  if (anchorExact !== true) {
+    return diverged("POST_COMMIT_CONTEXT_DIVERGENCE", "committed_anchor_absent");
+  }
+  return Object.freeze({
+    classification: "FORWARD_COMPLETION_ELIGIBLE",
+    reason: "terminal_appendable_once",
+    may_append: true,
+    next_phase: "RESOLVED",
+  });
 }
 
 export async function runCorridorClosure(p = {}) {

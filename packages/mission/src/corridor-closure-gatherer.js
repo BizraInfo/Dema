@@ -36,6 +36,7 @@ import { homedir } from "node:os";
 
 import { buildAnchorRecord, verifyAnchorLog } from "../../core/src/chain-anchor.js";
 import { CORRIDOR_RECOVERY_STOP_BINDING_SCHEMA } from "./mission-corridor.js";
+import { classifyPostCommitContinuation } from "./mission-corridor-closure.js";
 import {
   applyPreparedMechanicalClosure,
   finalizeAppliedMechanicalClosure,
@@ -1351,6 +1352,113 @@ export async function settleMechanicalFailureWithVerifiedRollback({
   }
   // Report by CLASS: the chain must prove itself even to its own writer.
   return reportSettled({ state: resolved.state, context, reason });
+}
+
+// ── C4C — POST-COMMIT OBSERVATION ───────────────────────────────────────────
+//
+// Gathers the facts the pure classifier decides on. It READS only: the C2
+// transaction, the canonical ledger, the anchor log and the observed world. It
+// never appends, never compensates, and never retries the original effect.
+//
+// The classifier owns the law; this owns only the looking.
+
+/**
+ * Observe a post-commit transaction and classify what may lawfully follow.
+ *
+ * @returns {Promise<Readonly<object>>} the classification plus the observations
+ *          it was derived from, so a caller can report WHY without re-reading.
+ */
+export async function observePostCommitContinuation({
+  demaHome, claim, effect, seal = null,
+} = {}) {
+  const home = resolveDemaHome(demaHome);
+  const transactionId = claim?.transaction_id;
+  const refuse = (reason) => Object.freeze({
+    classification: "FORWARD_RECONCILIATION_UNQUALIFIED",
+    reason, may_append: false, transaction_state: null,
+  });
+  if (typeof transactionId !== "string" || transactionId.length === 0) {
+    return refuse("post_commit_transaction_id_missing");
+  }
+
+  const state = await replayClosureTransaction({ demaHome: home, transactionId });
+  if (!state.ok) return refuse(`post_commit_replay_refused:${state.reason}`);
+
+  // ── the committed ledger entry ──
+  let entries;
+  try {
+    entries = await loadCanonicalLedger({ demaHome: home });
+  } catch {
+    return refuse("post_commit_ledger_unreadable");
+  }
+  const matches = entries.filter(
+    (e) => e?.canonical_body?.closure_transaction_id === transactionId,
+  );
+  // Two records claiming one transaction is a conflict no automatic act resolves.
+  const ledgerConflict = matches.length > 1;
+  const ledgerEntry = matches.length === 1 ? matches[0] : null;
+
+  const committed = state.events.find((e) => e.phase === "LEDGER_COMMITTED")
+    ?.evidence_refs?.find((r) => r?.schema === "bizra.dema.corridor_ledger_commit_evidence.v1");
+  // "Exact" means the entry the transaction already recorded, not merely one
+  // that mentions this transaction.
+  const ledgerEntryExact = Boolean(ledgerEntry) && Boolean(committed)
+    && ledgerEntry.receipt_id === committed.receipt_id;
+  const ledgerContextIntact = !committed
+    || !ledgerEntry
+    || entries.indexOf(ledgerEntry) + 1 === committed.ledger_prefix_length;
+
+  // ── the committed anchor ──
+  let anchorLog;
+  try {
+    anchorLog = readClosureAnchorLog({ demaHome: home });
+  } catch {
+    return refuse("post_commit_anchor_unreadable");
+  }
+  const anchored = state.events.find((e) => e.phase === "ANCHORED")
+    ?.evidence_refs?.find((r) => r?.schema === "bizra.dema.corridor_anchor_evidence.v1");
+  const anchorExact = Boolean(anchored)
+    && anchorLog.some((rec) => rec?.anchor_hash === anchored.anchor_hash
+      && rec?.head === anchored.receipt_id);
+  const anchorContextIntact = !anchored
+    || !anchorExact
+    || anchorLog.some((rec) => rec?.anchor_hash === anchored.anchor_hash
+      && rec?.entries === anchored.ledger_prefix_length);
+
+  // ── the world the receipt asserts ──
+  // A sealed card plus the adapter is the only honest way to ask "is the world
+  // still what the receipt says". Absent either, the answer is UNKNOWN, never
+  // an optimistic true.
+  let worldMatchesReceipt;
+  const sealedCard = seal ?? state.events.find((e) => e.phase === "SEALED")
+    ?.evidence_refs?.find((r) => r?.schema === "bizra.dema.corridor_rename_seal_evidence.v1")
+    ?.omega0_card ?? null;
+  if (!sealedCard || !effect || typeof effect.manifest !== "function") {
+    worldMatchesReceipt = undefined;
+  } else {
+    try {
+      worldMatchesReceipt = replaySeal(sealedCard, effect).world_state_matches === true;
+    } catch {
+      worldMatchesReceipt = undefined;
+    }
+  }
+
+  const verdict = classifyPostCommitContinuation({
+    state, ledgerEntryExact, ledgerConflict, ledgerContextIntact,
+    anchorExact, anchorContextIntact, worldMatchesReceipt,
+  });
+  return Object.freeze({
+    ...verdict,
+    transaction_state: state,
+    observed: Object.freeze({
+      ledger_entry_exact: ledgerEntryExact,
+      ledger_conflict: ledgerConflict,
+      ledger_context_intact: ledgerContextIntact,
+      anchor_exact: anchorExact,
+      anchor_context_intact: anchorContextIntact,
+      world_matches_receipt: worldMatchesReceipt ?? null,
+    }),
+  });
 }
 
 // ── C4B2B.1 — CROSS-ARTIFACT RECOVERY-STOP VERIFIER ─────────────────────────

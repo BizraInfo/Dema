@@ -1,3 +1,4 @@
+import { readdirSync, existsSync, rmSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -480,4 +481,55 @@ test("T14 child extraEnv cannot reintroduce the private evidence fd selector", (
     evidence.map((record) => record.event),
     ["start", "complete"],
   );
+});
+
+// A nested `node --test` inherits NODE_TEST_CONTEXT from this runner and then
+// emits the runner's internal reporter shape instead of plain TAP, which the
+// freshness gate correctly refuses. Strip it so the child is a real TAP run.
+function nestedTestEnv() {
+  const { NODE_TEST_CONTEXT: _drop, ...env } = process.env;
+  return env;
+}
+
+// ── G8 LOG PRESERVATION ─────────────────────────────────────────────────────
+//
+// MEASURED HARNESS DEFECT. `--temp-log` deleted its log unconditionally in
+// finish(), including on a NONZERO exit. check.mjs runs gate 126 (the full
+// auto-discovered suite) through execFileSync, which reports `stdout: null` when
+// the child fails — so a full-suite failure inside `npm run check` left NO
+// artifact anywhere, in the temp dir or the check log. That is why the same
+// intermittent failure was unidentifiable across three slices.
+//
+// Green runs must still clean up (that is what --temp-log is for); only the
+// failing ones are preserved, and the path must be printed so it can be found.
+
+test("G8-LOG-01: a failing --temp-log run preserves its log and discloses the path", () => {
+  const before = new Set(readdirSync(tmpdir()).filter((n) => n.startsWith("bizra-classifier-log-")));
+  const red = spawnSync(process.execPath, [
+    "scripts/ci/run-with-classifier.mjs", "--temp-log", "--",
+    "node", "--test", "--test-reporter=tap", "tests/__c4c_absent__.test.js",
+  ], { encoding: "utf8", cwd: process.cwd(), env: nestedTestEnv() });
+  assert.notEqual(red.status, 0, "the run must fail");
+  const disclosed = /preserved failing run log: (\S+)/.exec(`${red.stderr}${red.stdout}`);
+  assert.ok(disclosed, `the preserved path must be disclosed: ${red.stderr}`);
+  assert.equal(existsSync(disclosed[1]), true, "the failing run's log must survive");
+  // Clean up only what this test created.
+  const after = readdirSync(tmpdir()).filter((n) => n.startsWith("bizra-classifier-log-"));
+  for (const dir of after) {
+    if (!before.has(dir)) rmSync(join(tmpdir(), dir), { recursive: true, force: true });
+  }
+});
+
+test("G8-LOG-02: a green --temp-log run still cleans up after itself", () => {
+  const before = new Set(readdirSync(tmpdir()).filter((n) => n.startsWith("bizra-classifier-log-")));
+  const green = spawnSync(process.execPath, [
+    "scripts/ci/run-with-classifier.mjs", "--temp-log", "--",
+    "node", "--test", "--test-reporter=tap", "tests/c4c-post-commit-continuation.test.js",
+  ], { encoding: "utf8", cwd: process.cwd(), env: nestedTestEnv() });
+  assert.equal(green.status, 0, `the run must pass: ${green.stderr}`);
+  const after = readdirSync(tmpdir()).filter((n) => n.startsWith("bizra-classifier-log-"));
+  const leaked = after.filter((d) => !before.has(d));
+  assert.deepEqual(leaked, [], "a green run must leave no log behind");
+  assert.ok(!/preserved failing run log/.test(`${green.stderr}${green.stdout}`),
+    "a green run must not disclose a preserved path");
 });

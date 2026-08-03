@@ -116,9 +116,18 @@ test("C4B2B-06: an unknown class fails closed", () => {
 });
 
 test("C4B2B-07: the verdict set is closed and every result is frozen", () => {
-  assert.deepEqual([...CORRIDOR_RECOVERY_VERDICTS], ["STOP_CONSENT_REQUIRED", "CORRIDOR_UNCHANGED"]);
+  // C4C added RECONCILIATION_CONSENT_REQUIRED to the vocabulary. The load-bearing
+  // assertion is unchanged: no corridor TERMINAL is in it, and the recovery map
+  // emits only its own two.
+  assert.deepEqual([...CORRIDOR_RECOVERY_VERDICTS],
+    ["STOP_CONSENT_REQUIRED", "RECONCILIATION_CONSENT_REQUIRED", "CORRIDOR_UNCHANGED"]);
   assert.ok(!CORRIDOR_RECOVERY_VERDICTS.includes("CORRIDOR_STOPPED"),
     "this map may never emit a corridor terminal");
+  const emitted = new Set(["VERIFIED_ROLLBACK", "RECOVERY_REQUIRED", "RECOVERY_REQUIRED_UNQUALIFIED",
+    "INVALID", "LEGACY_UNQUALIFIED_ROLLBACK", "NON_ROLLBACK_TERMINAL", "FORWARD_COMPLETED", "NOPE"]
+    .map((c) => mapRecoveryClassToCorridor(c).verdict));
+  assert.deepEqual([...emitted].sort(), ["CORRIDOR_UNCHANGED", "STOP_CONSENT_REQUIRED"],
+    "the recovery map never emits the reconciliation verdict");
   assert.ok(Object.isFrozen(CORRIDOR_RECOVERY_VERDICTS));
   for (const c of ["VERIFIED_ROLLBACK", "RECOVERY_REQUIRED", "INVALID", "NOPE"]) {
     const v = mapRecoveryClassToCorridor(c);

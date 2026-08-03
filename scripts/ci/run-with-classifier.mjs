@@ -58,8 +58,20 @@ if (useTempLog) {
   tempLogDir = mkdtempSync(join(tmpdir(), "bizra-classifier-log-"));
   log = join(tempLogDir, "run.log");
 }
-function cleanupTempLog() {
-  if (tempLogDir) rmSync(tempLogDir, { recursive: true, force: true });
+// A FAILING run's log is the only evidence of what failed. Deleting it was why
+// gate-126 failures were unidentifiable across three slices: check.mjs invokes
+// this through execFileSync, which reports `stdout: null` on a nonzero exit, and
+// the TAP had already been removed here — so a full-suite failure inside
+// `npm run check` left no artifact anywhere. Green runs still clean up, which is
+// the whole point of --temp-log; only the failing ones are preserved, and their
+// path is printed so it can actually be found.
+function cleanupTempLog(exitCode) {
+  if (!tempLogDir) return;
+  if (exitCode !== 0) {
+    console.error(`[G8 LOG] preserved failing run log: ${log}`);
+    return;
+  }
+  rmSync(tempLogDir, { recursive: true, force: true });
 }
 
 let child = null;
@@ -85,7 +97,7 @@ function finish(exitCode, message = null) {
   stopProcess(classifier);
   stopProcess(child);
   if (!out.destroyed) out.destroy();
-  cleanupTempLog();
+  cleanupTempLog(exitCode);
   process.exit(exitCode);
 }
 
