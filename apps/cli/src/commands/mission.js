@@ -29,6 +29,7 @@ import { buildMissionReplayReport } from "../../../../packages/core/src/node0-mi
 import {
   buildMissionContract,
   appendCorridorEvent,
+  CORRIDOR_RECOVERY_STOP_BINDING_SCHEMA,
   deriveCorridorStatus,
   verifyCorridorJournal,
   buildCorridorConsentContext,
@@ -2222,7 +2223,23 @@ async function cmdMissionCorridor(argv) {
       if (cls !== "RECOVERY_REQUIRED") {
         corridorFail(`--closure-transaction ${closureTxId} classifies ${cls}, not RECOVERY_REQUIRED — it does not justify a stop; nothing was written.`);
       }
-      recoveryBinding = { closureTxId, recovery_class: cls };
+      if (bound.state.terminal_outcome !== "RECOVERY_REQUIRED") {
+        corridorFail(`--closure-transaction ${closureTxId} settled ${bound.state.terminal_outcome}, not RECOVERY_REQUIRED — nothing was written.`);
+      }
+      // EVERY binding field is DERIVED FROM DISK. The CLI supplies only the
+      // transaction id, and that is a LOCATOR — it names where to look, never
+      // what is true. Nothing here is taken on the caller's word.
+      recoveryBinding = {
+        recovery_class: cls,
+        binding: {
+          schema: CORRIDOR_RECOVERY_STOP_BINDING_SCHEMA,
+          closure_transaction_id: closureTxId,
+          transaction_hash: bound.context.transaction_hash,
+          prepared_intent_hash: bound.context.prepared_intent_hash,
+          terminal_event_hash: bound.state.head_event_hash,
+          terminal_outcome: bound.state.terminal_outcome,
+        },
+      };
     }
     const r = appendCorridorEvent({
       contract_hash: loaded.contractDoc.contract_hash,
@@ -2231,13 +2248,16 @@ async function cmdMissionCorridor(argv) {
         state: "STOPPED",
         at_iso: nowIso,
         requires_human: true,
-        ...(recoveryBinding ? { terminal_outcome: "RECOVERY_REQUIRED" } : {}),
-        note: `${argValue(argv, "--note") || "operator stop"}${recoveryBinding ? ` · recovery ${recoveryBinding.recovery_class} · closure_transaction ${recoveryBinding.closureTxId}` : ""} · consent_context: ${verdict.consent_context_hash}`,
+        ...(recoveryBinding ? {
+          terminal_outcome: "RECOVERY_REQUIRED",
+          recovery_stop_binding: recoveryBinding.binding,
+        } : {}),
+        note: `${argValue(argv, "--note") || "operator stop"}${recoveryBinding ? ` · recovery ${recoveryBinding.recovery_class}` : ""} · consent_context: ${verdict.consent_context_hash}`,
       },
     });
     if (!r.ok) corridorFail(`corridor stop blocked: ${r.blocked_by.join(", ")}`);
     await appendCorridorJournalEvent(dir, r.event);
-    const out = { ok: true, mission_id: id, state: "STOPPED", event_hash: r.event.event_hash, consent_context_hash: verdict.consent_context_hash, ...(recoveryBinding ? { terminal_outcome: "RECOVERY_REQUIRED", closure_transaction_id: recoveryBinding.closureTxId, recovery_class: recoveryBinding.recovery_class } : {}), boundary: corridorIoBoundary({ read: true, wrote: true, consented: true }) };
+    const out = { ok: true, mission_id: id, state: "STOPPED", event_hash: r.event.event_hash, consent_context_hash: verdict.consent_context_hash, ...(recoveryBinding ? { terminal_outcome: "RECOVERY_REQUIRED", recovery_stop_binding: recoveryBinding.binding, recovery_class: recoveryBinding.recovery_class } : {}), boundary: corridorIoBoundary({ read: true, wrote: true, consented: true }) };
     if (wantJson) console.log(JSON.stringify(out, null, 2));
     else console.log(`DEMA · mission corridor stopped: ${id} (kill switch honored; journal sealed)`);
     return;

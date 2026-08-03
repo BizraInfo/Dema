@@ -26,6 +26,14 @@ import {
 
 export const MISSION_CORRIDOR_SCHEMA = "bizra.dema.mission_corridor.v0.1";
 export const MISSION_CORRIDOR_EVENT_SCHEMA = "bizra.dema.mission_corridor_event.v0.1";
+// C4B2B.1 — a STOPPED caused by a verified recovery carries a typed causal
+// binding, so the journal can later PROVE which failure made the stop
+// necessary rather than relying on a human-readable note. The event shape
+// genuinely differs, so it declares a different schema; v0.1 events keep their
+// exact bytes and replay unchanged.
+export const MISSION_CORRIDOR_EVENT_SCHEMA_V0_2 = "bizra.dema.mission_corridor_event.v0.2";
+export const CORRIDOR_RECOVERY_STOP_BINDING_SCHEMA =
+  "bizra.dema.corridor_recovery_stop_binding.v0.1";
 export const MISSION_CORRIDOR_STATUS_SCHEMA = "bizra.dema.mission_corridor_status.v0.1";
 export const MISSION_CORRIDOR_TRUTH_LABEL = "PREVIEW_ONLY";
 
@@ -60,6 +68,19 @@ const SHA40_RE = /^[0-9a-f]{40}$/;
 const RAW_SHA256_RE = /^[0-9a-f]{64}$/;
 const TAGGED_SHA256_RE = /^sha256:[0-9a-f]{64}$/;
 const CLOSURE_TRANSACTION_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+// The recovery-stop binding is a DISTINCT contract, never the COMPLETE one with
+// nulls: a failed closure legitimately has no seal_head, ledger_head or
+// anchor_hash, and padding them would weaken the completion binding.
+const RECOVERY_STOP_BINDING_KEYS = Object.freeze([
+  "schema", "closure_transaction_id", "transaction_hash",
+  "prepared_intent_hash", "terminal_event_hash", "terminal_outcome",
+]);
+const RECOVERY_STOP_BINDING_HASH_FIELDS = Object.freeze({
+  transaction_hash: TAGGED_SHA256_RE,
+  prepared_intent_hash: TAGGED_SHA256_RE,
+  terminal_event_hash: TAGGED_SHA256_RE,
+});
+
 const CLOSURE_BINDING_HASH_FIELDS = Object.freeze({
   consent_claim_hash: RAW_SHA256_RE,
   prepared_intent_hash: TAGGED_SHA256_RE,
@@ -217,10 +238,57 @@ function validateCorridorEventSemantics(event) {
     }
   }
 
+  // ── recovery-stop binding · SHAPE and PLACEMENT only ──
+  // The REQUIREMENT that it be present lives in appendCorridorEvent: a writer
+  // may get stricter, but replay must never retroactively invalidate a journal
+  // written before this contract existed.
+  const { recovery_stop_binding: rsb } = event;
+  if (rsb !== undefined) {
+    if (state !== "STOPPED") blocked_by.push("recovery_stop_binding_on_nonstopped_state");
+    if (terminal_outcome !== "RECOVERY_REQUIRED") {
+      blocked_by.push("recovery_stop_binding_outcome_mismatch");
+    }
+    if (!rsb || typeof rsb !== "object" || Array.isArray(rsb)) {
+      blocked_by.push("recovery_stop_binding_not_object");
+    } else {
+      const keys = Object.keys(rsb);
+      if (keys.length !== RECOVERY_STOP_BINDING_KEYS.length) {
+        blocked_by.push("recovery_stop_binding_shape_mismatch");
+      }
+      for (const k of RECOVERY_STOP_BINDING_KEYS) {
+        if (!Object.hasOwn(rsb, k)) blocked_by.push(`recovery_stop_binding_missing:${k}`);
+      }
+      for (const k of keys) {
+        if (!RECOVERY_STOP_BINDING_KEYS.includes(k)) {
+          blocked_by.push(`recovery_stop_binding_unknown:${k}`);
+        } else if (rsb[k] !== null && typeof rsb[k] === "object") {
+          blocked_by.push(`recovery_stop_binding_nonprimitive:${k}`);
+        }
+      }
+      if (rsb.schema !== CORRIDOR_RECOVERY_STOP_BINDING_SCHEMA) {
+        blocked_by.push("recovery_stop_binding_schema_mismatch");
+      }
+      if (typeof rsb.closure_transaction_id !== "string"
+          || !CLOSURE_TRANSACTION_ID_RE.test(rsb.closure_transaction_id)) {
+        blocked_by.push("recovery_stop_binding_transaction_id_invalid");
+      }
+      for (const [field, shape] of Object.entries(RECOVERY_STOP_BINDING_HASH_FIELDS)) {
+        if (typeof rsb[field] !== "string" || !shape.test(rsb[field])) {
+          blocked_by.push(`recovery_stop_binding_${field}_invalid`);
+        }
+      }
+      if (rsb.terminal_outcome !== "RECOVERY_REQUIRED") {
+        blocked_by.push("recovery_stop_binding_terminal_outcome_invalid");
+      }
+    }
+  }
+
   return {
     blocked_by,
     closureBindings,
     hasClosureBindings: suppliedClosureBindings.length > 0,
+    recoveryStopBinding: rsb,
+    hasRecoveryStopBinding: rsb !== undefined,
   };
 }
 
@@ -252,6 +320,15 @@ export function appendCorridorEvent({ contract_hash, journal, event } = {}) {
   const semantics = validateCorridorEventSemantics(event);
   blocked_by.push(...semantics.blocked_by);
 
+  // STRICT WRITER LAW. A new STOPPED caused by a verified recovery must carry
+  // its causal binding — the gate proves the stop was permitted, the binding
+  // preserves which verified failure made it necessary. Append-only: replay
+  // stays compatible with journals written before this contract existed.
+  if (state === "STOPPED" && terminal_outcome === "RECOVERY_REQUIRED"
+      && !semantics.hasRecoveryStopBinding) {
+    blocked_by.push("recovery_stop_binding_required");
+  }
+
   const last = journal.length > 0 ? journal[journal.length - 1] : null;
   if (!last) {
     if (state !== "CREATED") blocked_by.push("first_event_must_be_created");
@@ -276,7 +353,12 @@ export function appendCorridorEvent({ contract_hash, journal, event } = {}) {
   }
 
   const body = {
-    schema: MISSION_CORRIDOR_EVENT_SCHEMA,
+    // The shape genuinely differs when the causal binding rides along, so the
+    // event declares the schema it actually is. Events without it keep v0.1 and
+    // hash exactly as before.
+    schema: semantics.hasRecoveryStopBinding
+      ? MISSION_CORRIDOR_EVENT_SCHEMA_V0_2
+      : MISSION_CORRIDOR_EVENT_SCHEMA,
     ...CANONICALIZATION_IDENTITY,
     contract_hash,
     index: journal.length,
@@ -297,6 +379,9 @@ export function appendCorridorEvent({ contract_hash, journal, event } = {}) {
     // event_hash on disk.
     ...(terminal_outcome === undefined ? {} : { terminal_outcome }),
     ...(semantics.hasClosureBindings ? semantics.closureBindings : {}),
+    ...(semantics.hasRecoveryStopBinding
+      ? { recovery_stop_binding: semantics.recoveryStopBinding }
+      : {}),
   };
   const sealed = Object.freeze({ ...body, event_hash: sha256CanonicalJsonV1(body) });
   return Object.freeze({

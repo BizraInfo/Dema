@@ -36,6 +36,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { sha256CanonicalJsonV1 } from "../packages/canon/src/sha256-canonical-json-v1.js";
 
 import {
   mapRecoveryClassToCorridor,
@@ -259,20 +260,30 @@ test("C4B2B-15: a STOPPED event carrying closure bindings is refused by the sche
 test("C4B2B-16: the STOP path's event shape is accepted and terminal", () => {
   const { contract_hash, journal } = journalAtCheckpoint();
   // What `dema mission corridor stop --closure-transaction` actually writes:
-  // a typed terminal outcome, no closure bindings, requires_human forced true.
+  // a typed terminal outcome plus the C4B2B.1 causal binding (required since
+  // that slice), no COMPLETE-shaped closure bindings, requires_human forced true.
   const r = appendCorridorEvent({
     contract_hash, journal,
     event: {
       state: "STOPPED", at_iso: "2026-08-02T10:01:00.000Z",
       terminal_outcome: "RECOVERY_REQUIRED", requires_human: true,
-      note: "operator stop · recovery RECOVERY_REQUIRED · closure_transaction tx-1",
+      recovery_stop_binding: {
+        schema: "bizra.dema.corridor_recovery_stop_binding.v0.1",
+        closure_transaction_id: "tx-1",
+        transaction_hash: `sha256:${"1".repeat(64)}`,
+        prepared_intent_hash: `sha256:${"2".repeat(64)}`,
+        terminal_event_hash: `sha256:${"3".repeat(64)}`,
+        terminal_outcome: "RECOVERY_REQUIRED",
+      },
+      note: "operator stop · recovery RECOVERY_REQUIRED",
     },
   });
   assert.equal(r.ok, true, r.blocked_by?.join(", "));
   assert.equal(r.event.state, "STOPPED");
   assert.equal(r.event.terminal_outcome, "RECOVERY_REQUIRED");
   assert.equal(r.event.requires_human, true);
-  assert.ok(r.event.note.includes("closure_transaction tx-1"), "the recovery transaction is named");
+  assert.equal(r.event.recovery_stop_binding.closure_transaction_id, "tx-1",
+    "the recovery transaction is named by a TYPED binding, not prose");
   // Terminal: the corridor cannot be extended afterwards.
   const after = appendCorridorEvent({
     contract_hash, journal: r.journal,
@@ -305,4 +316,249 @@ test("C4B2B-18: COMPLETE and STOP remain separate authorities", () => {
   const region = src.slice(start, start + 2400);
   assert.ok(region.includes('corridorRequiredPhrase("STOP", id)'));
   assert.ok(!region.includes('corridorRequiredPhrase("COMPLETE"'));
+});
+
+// ── C4B2B.1 — DURABLE RECOVERY-STOP BINDING ─────────────────────────────────
+//
+// The GATE proves the stop was permitted at the moment it happened. It does not
+// let the journal LATER prove which verified failure made that stop necessary:
+// journal law checks hashing, index order, contract binding, transition legality
+// and terminality, but derives no causal link to C2. A note naming the
+// transaction is tamper-evident (the event is hashed) yet is not a typed,
+// machine-validated proof relationship.
+//
+// So a recovery-caused STOPPED carries an exact typed binding — a DISTINCT
+// contract, never the COMPLETE one padded with nulls, because a failed closure
+// legitimately has no seal_head, ledger_head or anchor_hash.
+
+import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { claimConsentNonce } from "../packages/receipts/src/consent-nonce-claim.js";
+import {
+  replayClosureTransaction,
+  readRollbackBindingContext,
+} from "../packages/receipts/src/mission-closure-transaction.js";
+import {
+  buildRenameEffectAdapter, buildRenameEffectIntent,
+  runTransactionalMechanicalClosure,
+  verifyRecoveryStopBinding, CORRIDOR_RENAME_RECOVERY_POLICY_HASH,
+} from "../packages/mission/src/corridor-closure-gatherer.js";
+import {
+  CORRIDOR_RECOVERY_STOP_BINDING_SCHEMA,
+  MISSION_CORRIDOR_EVENT_SCHEMA_V0_2,
+  verifyCorridorJournal,
+} from "../packages/mission/src/mission-corridor.js";
+
+const AT = "2026-08-02T12:00:00.000Z";
+const NOW = 1_786_000_000_000;
+
+/** Drive a REAL closure to a settled, qualified RECOVERY_REQUIRED transaction. */
+async function settledRecovery(tag) {
+  const demaHome = await mkdtemp(join(tmpdir(), `c4b2b1-${tag}-`));
+  const estate = join(demaHome, "estate");
+  await mkdir(estate, { recursive: true });
+  await writeFile(join(estate, "a.draft.json"), "{}\n");
+  const prepared = buildRenameEffectIntent({ scopeRoot: estate, from: "a.draft.json", to: "a.sealed.json" });
+  const cr = await claimConsentNonce({
+    nonce: `n-${tag}`, actionClass: "C3_LOCAL_WRITE", actionKind: "COMPLETE", missionId: "m",
+    contractHash: `sha256:${"c".repeat(64)}`, consentContextHash: `sha256:${"d".repeat(64)}`,
+    transactionId: `tx-${tag}`, checkpointEventHash: `sha256:${"e".repeat(64)}`,
+    preparedIntentHash: prepared.prepared_intent_hash,
+    recoveryPolicyHash: CORRIDOR_RENAME_RECOVERY_POLICY_HASH, claimedAtIso: AT, demaHome,
+  });
+  const base = buildRenameEffectAdapter({ scopeRoot: estate, from: "a.draft.json", to: "a.sealed.json" });
+  const r = await runTransactionalMechanicalClosure({
+    demaHome, claim: cr.claim, prepared,
+    mission: { objective: "one rename", root: estate },
+    lease: { lease_id: "l", scope_root: estate, expires_at: NOW + 60_000, budget_acts: 1 },
+    consent: { by: "operator", ref: cr.claim.consent_context_hash, nonce: `n-${tag}`, plan_hash: prepared.intent.plan_hash },
+    anchorDir: join(demaHome, "anchors"),
+    // Apply for real, then fail; the settler's undo lies, so restoration cannot
+    // be verified and the transaction escalates to RECOVERY_REQUIRED.
+    effect: Object.freeze({
+      ...base,
+      apply: (plan) => { base.apply(plan); throw Object.assign(new Error("post-apply"), { code: "effect_failed" }); },
+      undo: () => true,
+    }),
+    now: NOW, atIso: AT,
+  });
+  assert.equal(r.recovery_required, true, r.reason);
+  const state = await replayClosureTransaction({ demaHome, transactionId: `tx-${tag}` });
+  assert.equal(state.terminal_outcome, "RECOVERY_REQUIRED");
+  const bound = await readRollbackBindingContext({ demaHome, transactionId: `tx-${tag}` });
+  assert.equal(bound.ok, true, bound.reason);
+  return { demaHome, txId: `tx-${tag}`, state, bound };
+}
+
+/** The binding the STOP gate derives — every field from disk. */
+const bindingFrom = ({ txId, state, bound }) => ({
+  schema: CORRIDOR_RECOVERY_STOP_BINDING_SCHEMA,
+  closure_transaction_id: txId,
+  transaction_hash: bound.context.transaction_hash,
+  prepared_intent_hash: bound.context.prepared_intent_hash,
+  terminal_event_hash: state.head_event_hash,
+  terminal_outcome: state.terminal_outcome,
+});
+
+const stoppedEvent = (binding) => ({
+  state: "STOPPED", at_iso: "2026-08-02T10:01:00.000Z",
+  terminal_outcome: "RECOVERY_REQUIRED", requires_human: true,
+  recovery_stop_binding: binding,
+});
+
+test("C4B2B1-01: a recovery STOPPED without its binding is refused on append", () => {
+  const { contract_hash, journal } = journalAtCheckpoint();
+  const r = appendCorridorEvent({
+    contract_hash, journal,
+    event: { state: "STOPPED", at_iso: "2026-08-02T10:01:00.000Z",
+      terminal_outcome: "RECOVERY_REQUIRED", requires_human: true },
+  });
+  assert.equal(r.ok, false);
+  assert.ok(r.blocked_by.includes("recovery_stop_binding_required"));
+});
+
+test("C4B2B1-02: an ordinary operator STOP stays legal and stays v0.1", () => {
+  const { contract_hash, journal } = journalAtCheckpoint();
+  const r = appendCorridorEvent({
+    contract_hash, journal,
+    event: { state: "STOPPED", at_iso: "2026-08-02T10:01:00.000Z", requires_human: true, note: "operator stop" },
+  });
+  assert.equal(r.ok, true, r.blocked_by?.join(", "));
+  assert.equal(r.event.schema, "bizra.dema.mission_corridor_event.v0.1");
+  assert.equal(r.event.recovery_stop_binding, undefined, "no binding may be added to a manual stop");
+});
+
+test("C4B2B1-03: a bound recovery STOPPED is accepted and declares v0.2", async () => {
+  const s = await settledRecovery("ok");
+  const { contract_hash, journal } = journalAtCheckpoint();
+  const r = appendCorridorEvent({ contract_hash, journal, event: stoppedEvent(bindingFrom(s)) });
+  assert.equal(r.ok, true, r.blocked_by?.join(", "));
+  assert.equal(r.event.schema, MISSION_CORRIDOR_EVENT_SCHEMA_V0_2);
+  assert.equal(r.event.recovery_stop_binding.closure_transaction_id, s.txId);
+  // v0.1 events in the same journal are untouched and the whole chain verifies.
+  assert.equal(journal[0].schema, "bizra.dema.mission_corridor_event.v0.1");
+  const contract = { schema: "x" };
+  void contract;
+});
+
+test("C4B2B1-04: the binding replays through the full cross-artifact chain", async () => {
+  const s = await settledRecovery("chain");
+  const { contract_hash, journal } = journalAtCheckpoint();
+  const r = appendCorridorEvent({ contract_hash, journal, event: stoppedEvent(bindingFrom(s)) });
+  assert.equal(r.ok, true, r.blocked_by?.join(", "));
+  const v = await verifyRecoveryStopBinding({ demaHome: s.demaHome, event: r.event });
+  assert.equal(v.ok, true, v.reason);
+  assert.equal(v.recovery_class, "RECOVERY_REQUIRED");
+});
+
+test("C4B2B1-05: every forged binding field is rejected by the verifier", async () => {
+  const s = await settledRecovery("forge");
+  const good = bindingFrom(s);
+  const cases = [
+    ["closure_transaction_id", "tx-does-not-exist", /closure_transaction_unverifiable/],
+    ["transaction_hash", `sha256:${"0".repeat(64)}`, /transaction_hash_mismatch/],
+    ["prepared_intent_hash", `sha256:${"1".repeat(64)}`, /prepared_intent_hash_mismatch/],
+    ["terminal_event_hash", `sha256:${"2".repeat(64)}`, /terminal_event_hash_mismatch/],
+  ];
+  for (const [field, forged, expected] of cases) {
+    const v = await verifyRecoveryStopBinding({
+      demaHome: s.demaHome,
+      event: { state: "STOPPED", terminal_outcome: "RECOVERY_REQUIRED",
+        recovery_stop_binding: { ...good, [field]: forged } },
+    });
+    assert.equal(v.ok, false, `${field} forgery must be refused`);
+    assert.match(v.reason, expected, `${field}: ${v.reason}`);
+  }
+});
+
+test("C4B2B1-06: a head that advanced invalidates the binding", async () => {
+  const s = await settledRecovery("head");
+  const good = bindingFrom(s);
+  // The terminal_event_hash pins the exact head. Any other head is refused.
+  const stale = { ...good, terminal_event_hash: s.state.events[0].event_hash };
+  const v = await verifyRecoveryStopBinding({
+    demaHome: s.demaHome,
+    event: { state: "STOPPED", terminal_outcome: "RECOVERY_REQUIRED", recovery_stop_binding: stale },
+  });
+  assert.equal(v.ok, false);
+  assert.equal(v.reason, "terminal_event_hash_mismatch");
+});
+
+test("C4B2B1-07: a non-recovery transaction can never justify a recovery stop", async () => {
+  const s = await settledRecovery("nonrec");
+  // Point the binding at a transaction that settled a VERIFIED rollback.
+  const other = await (async () => {
+    const demaHome = await mkdtemp(join(tmpdir(), "c4b2b1-vr-"));
+    const estate = join(demaHome, "estate");
+    await mkdir(estate, { recursive: true });
+    await writeFile(join(estate, "a.draft.json"), "{}\n");
+    const prepared = buildRenameEffectIntent({ scopeRoot: estate, from: "a.draft.json", to: "a.sealed.json" });
+    const cr = await claimConsentNonce({
+      nonce: "n-vr", actionClass: "C3_LOCAL_WRITE", actionKind: "COMPLETE", missionId: "m",
+      contractHash: `sha256:${"c".repeat(64)}`, consentContextHash: `sha256:${"d".repeat(64)}`,
+      transactionId: "tx-vr", checkpointEventHash: `sha256:${"e".repeat(64)}`,
+      preparedIntentHash: prepared.prepared_intent_hash,
+      recoveryPolicyHash: CORRIDOR_RENAME_RECOVERY_POLICY_HASH, claimedAtIso: AT, demaHome,
+    });
+    const base = buildRenameEffectAdapter({ scopeRoot: estate, from: "a.draft.json", to: "a.sealed.json" });
+    const r = await runTransactionalMechanicalClosure({
+      demaHome, claim: cr.claim, prepared,
+      mission: { objective: "one rename", root: estate },
+      lease: { lease_id: "l", scope_root: estate, expires_at: NOW + 60_000, budget_acts: 1 },
+      consent: { by: "operator", ref: cr.claim.consent_context_hash, nonce: "n-vr", plan_hash: prepared.intent.plan_hash },
+      anchorDir: join(demaHome, "anchors"),
+      effect: Object.freeze({ ...base,
+        apply: (plan) => { base.apply(plan); throw Object.assign(new Error("x"), { code: "effect_failed" }); } }),
+      now: NOW, atIso: AT,
+    });
+    assert.equal(r.rollback_verified, true, r.reason);
+    const state = await replayClosureTransaction({ demaHome, transactionId: "tx-vr" });
+    const bound = await readRollbackBindingContext({ demaHome, transactionId: "tx-vr" });
+    return { demaHome, txId: "tx-vr", state, bound };
+  })();
+
+  const v = await verifyRecoveryStopBinding({
+    demaHome: other.demaHome,
+    event: { state: "STOPPED", terminal_outcome: "RECOVERY_REQUIRED",
+      recovery_stop_binding: bindingFrom(other) },
+  });
+  assert.equal(v.ok, false, "a verified rollback must never justify a stop");
+  // The transaction settled EXECUTION_FAILED_ROLLED_BACK, so the binding it
+  // would produce cannot claim RECOVERY_REQUIRED.
+  assert.match(v.reason, /terminal_outcome_invalid|outcome_not_recovery_required|unqualified/,
+    `unexpected reason: ${v.reason}`);
+  void s;
+});
+
+test("C4B2B1-08: the STOP gate derives every binding field from disk", () => {
+  const src = cli();
+  const stop = src.indexOf('if (verb === "stop")');
+  const region = src.slice(stop, stop + 5000);
+  assert.ok(region.includes("transaction_hash: bound.context.transaction_hash"));
+  assert.ok(region.includes("prepared_intent_hash: bound.context.prepared_intent_hash"));
+  assert.ok(region.includes("terminal_event_hash: bound.state.head_event_hash"));
+  assert.ok(region.includes("terminal_outcome: bound.state.terminal_outcome"));
+  // The only caller-supplied member is the locator.
+  assert.ok(region.includes("closure_transaction_id: closureTxId"));
+  assert.ok(region.includes("is a LOCATOR"), "the locator-not-authority law must be stated");
+});
+
+test("C4B2B1-09: a journal carrying a v0.2 bound event still verifies end to end", async () => {
+  const s = await settledRecovery("verify");
+  const contract = { schema: "bizra.demo.contract", mission_id: "m" };
+  const contract_hash = sha256CanonicalJsonV1(contract);
+  let journal = [];
+  for (const state of ["CREATED", "PREFLIGHT", "PLANNING", "IMPLEMENTING",
+    "VERIFYING", "SAT_REVIEW", "CHECKPOINT"]) {
+    const r = appendCorridorEvent({ contract_hash, journal, event: { state, at_iso: "2026-08-02T10:00:00.000Z" } });
+    assert.equal(r.ok, true, r.blocked_by?.join(", "));
+    journal = r.journal;
+  }
+  const stop = appendCorridorEvent({ contract_hash, journal, event: stoppedEvent(bindingFrom(s)) });
+  assert.equal(stop.ok, true, stop.blocked_by?.join(", "));
+  const verified = verifyCorridorJournal({ contract, contract_hash, journal: stop.journal });
+  assert.equal(verified.ok, true, verified.blocked_by?.join(", "));
+  // Mixed schemas in one chain, and the hash chain still holds.
+  assert.equal(stop.journal[0].schema, "bizra.dema.mission_corridor_event.v0.1");
+  assert.equal(stop.journal.at(-1).schema, MISSION_CORRIDOR_EVENT_SCHEMA_V0_2);
 });

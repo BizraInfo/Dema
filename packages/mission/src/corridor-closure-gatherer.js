@@ -35,6 +35,7 @@ import { dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
 
 import { buildAnchorRecord, verifyAnchorLog } from "../../core/src/chain-anchor.js";
+import { CORRIDOR_RECOVERY_STOP_BINDING_SCHEMA } from "./mission-corridor.js";
 import {
   applyPreparedMechanicalClosure,
   finalizeAppliedMechanicalClosure,
@@ -1318,6 +1319,75 @@ export async function settleMechanicalFailureWithVerifiedRollback({
   }
   // Report by CLASS: the chain must prove itself even to its own writer.
   return reportSettled({ state: resolved.state, context, reason });
+}
+
+// ── C4B2B.1 — CROSS-ARTIFACT RECOVERY-STOP VERIFIER ─────────────────────────
+//
+// The STOP gate proves the stop was PERMITTED at the moment it happened. This
+// proves, later and independently, WHICH verified failure made it necessary:
+//
+//   corridor STOPPED event
+//     → recovery_stop_binding
+//       → the exact C2 transaction descriptor
+//         → the exact terminal event hash
+//           → the exact RECOVERY_REQUIRED suffix
+//             → a qualified RECOVERY_REQUIRED classification
+//
+// A note naming the transaction is tamper-evident because the event is hashed,
+// but it is not a machine-checkable proof relationship. This is.
+
+/**
+ * Re-prove a recovery-caused corridor STOPPED event against C2 on disk.
+ *
+ * @returns {Promise<Readonly<{ok:boolean, reason?:string, recovery_class?:string}>>}
+ */
+export async function verifyRecoveryStopBinding({ demaHome, event } = {}) {
+  const fail = (reason) => Object.freeze({ ok: false, reason });
+  if (!event || typeof event !== "object") return fail("event_missing");
+  if (event.state !== "STOPPED") return fail("event_not_stopped");
+  if (event.terminal_outcome !== "RECOVERY_REQUIRED") return fail("event_outcome_not_recovery_required");
+  const binding = event.recovery_stop_binding;
+  if (!binding || typeof binding !== "object" || Array.isArray(binding)) {
+    return fail("recovery_stop_binding_missing");
+  }
+  if (binding.schema !== CORRIDOR_RECOVERY_STOP_BINDING_SCHEMA) {
+    return fail("recovery_stop_binding_schema_mismatch");
+  }
+  if (binding.terminal_outcome !== "RECOVERY_REQUIRED") {
+    return fail("recovery_stop_binding_terminal_outcome_invalid");
+  }
+
+  const home = resolveDemaHome(demaHome);
+  // Disk is the authority. Nothing in the binding is trusted; every field is
+  // re-derived and compared.
+  const bound = await readRollbackBindingContext({
+    demaHome: home, transactionId: binding.closure_transaction_id,
+  });
+  if (!bound.ok) return fail(`closure_transaction_unverifiable:${bound.reason}`);
+
+  if (bound.context.transaction_hash !== binding.transaction_hash) {
+    return fail("transaction_hash_mismatch");
+  }
+  if (bound.context.prepared_intent_hash !== binding.prepared_intent_hash) {
+    return fail("prepared_intent_hash_mismatch");
+  }
+  // A head that advanced or differs means this binding no longer describes the
+  // transaction it claims to.
+  if (bound.state.head_event_hash !== binding.terminal_event_hash) {
+    return fail("terminal_event_hash_mismatch");
+  }
+  if (bound.state.terminal !== true) return fail("closure_transaction_not_settled");
+  if (bound.state.terminal_outcome !== "RECOVERY_REQUIRED") {
+    return fail("closure_transaction_outcome_not_recovery_required");
+  }
+
+  const recoveryClass = classifySettledMechanicalRecovery({
+    state: bound.state, context: bound.context,
+  });
+  if (recoveryClass !== "RECOVERY_REQUIRED") {
+    return fail(`closure_transaction_unqualified:${recoveryClass}`);
+  }
+  return Object.freeze({ ok: true, recovery_class: recoveryClass });
 }
 
 /**
