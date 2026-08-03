@@ -1031,6 +1031,37 @@ export function buildRenameEffectAdapter({ scopeRoot, from, to, anchorLog = [], 
         return { applied: intent.plan };
       });
     },
+    // BACKWARD twin of recoverIntermediate(). That one unlinks the SOURCE to
+    // complete forward to expected_after; this one unlinks the TARGET to return
+    // to before. They are deliberately separate methods with opposite meanings:
+    // reusing the forward one during a rollback would finish the very operation
+    // the caller is abandoning.
+    //
+    // inspectIntermediate is the whole guard — it proves both names identify the
+    // consented inode AND the observed manifest equals the expected two-link
+    // state. Only the target link is retired; the original source name and inode
+    // are never touched. Any mismatch fails closed with no mutation.
+    restoreIntermediateBackward(intent) {
+      validatePlan(intent?.plan);
+      return withRoot((boundRoot) => {
+        const inspected = inspectIntermediate(boundRoot, intent);
+        if (!inspected.recoverable) {
+          throw pathRefusal(
+            "rename_intermediate_state_mismatch",
+            "rename intermediate is not the consented two-link state",
+          );
+        }
+        unlinkSync(join(boundRoot, to));
+        const after = readRenameManifest(boundRoot);
+        if (sha256(JSON.stringify(after)) !== intent.before_hash) {
+          throw pathRefusal(
+            "rename_backward_restoration_failed",
+            "target unlink did not reach the durable before state",
+          );
+        }
+        return Object.freeze({ restored: true, restored_hash: intent.before_hash });
+      });
+    },
     apply(plan) {
       validatePlan(plan);
       withRoot((boundRoot) => {

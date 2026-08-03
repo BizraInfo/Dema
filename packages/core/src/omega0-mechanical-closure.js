@@ -612,3 +612,128 @@ export function replaySeal(sealed, effect) {
     observed_after_hash: observed_after,
   });
 }
+
+// ── C4B1 — VERIFIED BACKWARD RESTORATION ──
+//
+// The reversibility proof above runs undo → verify → REAPPLY → seal: it proves
+// the effect *can* be reversed, then puts the world back where the mission
+// wanted it. Rollback is the opposite intent. It must run
+// restore → verify → STOP IN THE BEFORE STATE, because reapplying would
+// re-enter the very world-change the caller is abandoning.
+//
+// This helper therefore never calls apply(), and never calls
+// recoverIntermediate() — that completes FORWARD to the expected post-state,
+// which during a rollback is precisely the wrong direction.
+//
+// It is idempotent by observation, not by bookkeeping: it classifies the world
+// first and only acts on a state it recognises. An unrecognised world is never
+// "cleaned up" — a destructive guess is how a rollback turns a recoverable
+// incident into an unrecoverable one.
+//
+// It reports evidence. It does not decide lifecycle: no phase, no corridor
+// verdict, no COMPLETED/RESOLVED. Those belong to C2 and the Mission Corridor.
+
+const restorationRefusal = (reason, extra = {}) => deepFreeze({
+  ok: false,
+  restoration_verified: false,
+  recovery_class: "RECOVERY_REQUIRED",
+  reason,
+  authority_delta: 0,
+  ...extra,
+});
+
+/**
+ * Restore an already-authorized, already-persisted intent to its before state.
+ *
+ * @param {object}   p.intent  persisted intent carrying before_hash / expected_after_hash
+ * @param {object}   p.effect  adapter: manifest() undo() [classifyRecoverableIntermediate()]
+ *                             [restoreIntermediateBackward()]
+ * @returns {object} frozen restoration evidence — never a lifecycle verdict
+ */
+export function restoreToBeforeState({ intent, effect } = {}) {
+  if (!intent || typeof intent !== "object") return restorationRefusal("restoration_intent_missing");
+  if (!effect || typeof effect !== "object") return restorationRefusal("restoration_effect_missing");
+  const beforeHash = intent.before_hash;
+  const afterHash = intent.expected_after_hash;
+  if (typeof beforeHash !== "string") return restorationRefusal("restoration_before_hash_missing");
+
+  const observe = () => (typeof effect.manifestHash === "function"
+    ? effect.manifestHash()
+    : sha256(JSON.stringify(effect.manifest())));
+
+  let observed;
+  try {
+    observed = observe();
+  } catch (err) {
+    return restorationRefusal(err?.code ?? "restoration_observation_failed");
+  }
+
+  const verified = (mode, restoredHash) => deepFreeze({
+    ok: true,
+    restoration_verified: true,
+    before_hash: beforeHash,
+    restored_hash: restoredHash,
+    recovery_mode: mode,
+    undo_success_pct: 100,
+    authority_delta: 0,
+  });
+
+  // Already restored — the idempotent path. No inverse act, no mutation.
+  if (observed === beforeHash) return verified("ALREADY_BEFORE_STATE", observed);
+
+  // The exact consented two-link intermediate: both names identify the consented
+  // inode. Restore BACKWARD by retiring the target link; never complete forward.
+  let intermediate = null;
+  if (typeof effect.classifyRecoverableIntermediate === "function") {
+    try {
+      intermediate = effect.classifyRecoverableIntermediate(intent);
+    } catch (err) {
+      return restorationRefusal(err?.code ?? "restoration_intermediate_classification_failed");
+    }
+  }
+  if (intermediate?.recoverable === true) {
+    if (typeof effect.restoreIntermediateBackward !== "function") {
+      return restorationRefusal("restoration_backward_recovery_unavailable", { observed_hash: observed });
+    }
+    try {
+      effect.restoreIntermediateBackward(intent);
+    } catch (err) {
+      return restorationRefusal(err?.code ?? "restoration_backward_recovery_failed", { observed_hash: observed });
+    }
+    let restored;
+    try {
+      restored = observe();
+    } catch (err) {
+      return restorationRefusal(err?.code ?? "restoration_observation_failed");
+    }
+    if (restored !== beforeHash) {
+      return restorationRefusal("restoration_hash_mismatch", { restored_hash: restored, before_hash: beforeHash });
+    }
+    return verified("INTERMEDIATE_RESTORED_BACKWARD", restored);
+  }
+
+  // The expected post-state: run the deterministic inverse exactly once.
+  if (typeof afterHash === "string" && observed === afterHash) {
+    if (typeof effect.undo !== "function") {
+      return restorationRefusal("restoration_inverse_unavailable", { observed_hash: observed });
+    }
+    try {
+      effect.undo({ applied: intent.plan });
+    } catch (err) {
+      return restorationRefusal(err?.code ?? "restoration_inverse_failed", { observed_hash: observed });
+    }
+    let restored;
+    try {
+      restored = observe();
+    } catch (err) {
+      return restorationRefusal(err?.code ?? "restoration_observation_failed");
+    }
+    if (restored !== beforeHash) {
+      return restorationRefusal("restoration_hash_mismatch", { restored_hash: restored, before_hash: beforeHash });
+    }
+    return verified("INVERSE_APPLIED", restored);
+  }
+
+  // Neither before, nor expected-after, nor the consented intermediate.
+  return restorationRefusal("restoration_world_unrecognised", { observed_hash: observed });
+}
