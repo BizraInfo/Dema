@@ -70,6 +70,7 @@ import {
   MECHANICAL_FAILURE_STAGES,
   CORRIDOR_RENAME_RECOVERY_POLICY_HASH,
 } from "../packages/mission/src/corridor-closure-gatherer.js";
+import { mapRecoveryClassToCorridor } from "../packages/mission/src/mission-corridor-closure.js";
 
 const NOW = 1_786_000_000_000;
 const AT = "2026-08-02T12:00:00.000Z";
@@ -2232,9 +2233,16 @@ test("C4B2AM-17: a restoration-failure chain qualifies for future Corridor STOPP
   });
   assert.equal(classifySettledMechanicalRecovery({ state, context: bound.context }), "RECOVERY_REQUIRED");
   assert.equal(result.recovery_required, true);
-  // The mapping itself belongs to C4B2B and must NOT exist yet.
-  const mission = readFileSync(join(process.cwd(), "apps/cli/src/commands/mission.js"), "utf8");
-  assert.ok(!mission.includes("recovery_class"), "corridor mapping must not exist yet");
+  // C4B2B consumes this class. The scope guard that once asserted "mapping must
+  // not exist yet" was removed by the authorized C4B2B slice; what must hold now
+  // is that this class — and only this class — routes to a corridor STOPPED.
+  // C4B2B consumes this class as a HANDOFF, never as authority: it proves that
+  // stopping is necessary and asks the operator for the separate STOP consent.
+  const v = mapRecoveryClassToCorridor("RECOVERY_REQUIRED");
+  assert.equal(v.verdict, "STOP_CONSENT_REQUIRED");
+  assert.equal(v.terminal_outcome, null, "recognition carries no corridor terminal");
+  assert.equal(v.required_consent_kind, "STOP");
+  assert.equal(v.requires_human, true);
 });
 
 test("C4B2AM-18: a verified-restoration chain qualifies for future Corridor CHECKPOINT", async () => {
@@ -2244,8 +2252,12 @@ test("C4B2AM-18: a verified-restoration chain qualifies for future Corridor CHEC
   });
   assert.equal(classifySettledMechanicalRecovery({ state, context: bound.context }), "VERIFIED_ROLLBACK");
   assert.equal(result.rollback_verified, true);
-  const mission = readFileSync(join(process.cwd(), "apps/cli/src/commands/mission.js"), "utf8");
-  assert.ok(!mission.includes("rollback_verified"), "corridor mapping must not exist yet");
+  // A restored world leaves the corridor exactly where it was: the mission is
+  // healthy and a separately consented fresh attempt is legitimate.
+  const v = mapRecoveryClassToCorridor("VERIFIED_ROLLBACK");
+  assert.equal(v.verdict, "CORRIDOR_UNCHANGED");
+  assert.equal(v.terminal_outcome, null);
+  assert.equal(v.fresh_attempt_permitted, true);
 });
 
 test("C4B2AM-19: historical chains without current schemas stay replayable and unqualified", () => {

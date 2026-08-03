@@ -162,6 +162,123 @@ function terminal(outcome, card, extra = {}) {
   });
 }
 
+// ── C4B2B — MECHANICAL RECOVERY → CORRIDOR VERDICT ──────────────────────────
+//
+// C4B2A settles a post-effect-boundary failure into a qualified recovery class.
+// This is the ONE pure map from that class onto what the corridor may do.
+//
+// TWO FACTS SHAPE IT.
+//
+//  1. The corridor is already at CHECKPOINT when a closure runs (COMPLETE is
+//     reachable only from CHECKPOINT). So a VERIFIED_ROLLBACK — where the world
+//     was restored and nothing happened — must write NOTHING. The mission is
+//     healthy and stays exactly where it was. Writing a terminal there would
+//     kill a mission that merely declined to complete.
+//  2. STOPPED is terminal (`STOPPED: []`). Publishing it permanently ends the
+//     corridor, so only a chain that PROVED itself may cause one.
+//
+// ── RECOGNITION IS NOT AUTHORITY ──
+// A qualified RECOVERY_REQUIRED proves that stopping is NECESSARY. It does not
+// grant permission to stop. STOP and COMPLETE are separate corridor authorities
+// with separate phrases, separate hashed payloads and separate capability scopes
+// (`stop_corridor` vs `complete_corridor`), and a closure runs holding a COMPLETE
+// claim. Ending the corridor under it would convert a recognition into a kill.
+//
+// Disclosing the possibility on the consent card does not fix this: disclosure
+// is presentational by construction — it is deliberately outside the hashed
+// envelope so existing claims stay valid — which is exactly why it grants no
+// cryptographically bound stop authority.
+//
+// So this map NEVER emits a corridor write. Its strongest output is a HANDOFF:
+// the corridor stays at CHECKPOINT and the operator is handed the exact existing
+// STOP phrase. Only `dema mission corridor stop`, under fresh context-bound STOP
+// consent, may append CHECKPOINT → STOPPED.
+export const CORRIDOR_RECOVERY_VERDICTS = Object.freeze([
+  "STOP_CONSENT_REQUIRED", // stopping is proven necessary; authority is absent
+  "CORRIDOR_UNCHANGED",    // leave the corridor exactly where it is
+]);
+
+const RECOVERY_CLASS_TO_CORRIDOR = Object.freeze({
+  // World restored, nothing happened: the corridor stays at CHECKPOINT and a
+  // separately consented fresh attempt is legitimate.
+  VERIFIED_ROLLBACK: {
+    verdict: "CORRIDOR_UNCHANGED",
+    terminal_outcome: null,
+    requires_human: false,
+    fresh_attempt_permitted: true,
+    required_consent_kind: null,
+  },
+  // Proved itself, and the proof says a human is needed. It earns a HANDOFF,
+  // not a kill: nothing is written and the operator is asked for STOP consent.
+  RECOVERY_REQUIRED: {
+    verdict: "STOP_CONSENT_REQUIRED",
+    terminal_outcome: null,
+    requires_human: true,
+    fresh_attempt_permitted: false,
+    required_consent_kind: "STOP",
+  },
+  // Evidence or protocol corruption. Needs a human, but has NOT earned the
+  // authority to end the corridor by itself.
+  INVALID: {
+    verdict: "CORRIDOR_UNCHANGED",
+    terminal_outcome: null,
+    requires_human: true,
+    fresh_attempt_permitted: false,
+    required_consent_kind: null,
+  },
+  // Pre-C4B1 history: replayable, never promoted, never a corridor verdict.
+  LEGACY_UNQUALIFIED_ROLLBACK: {
+    verdict: "CORRIDOR_UNCHANGED",
+    terminal_outcome: null,
+    requires_human: true,
+    fresh_attempt_permitted: false,
+    required_consent_kind: null,
+  },
+  // Settled as something that is not a rollback at all.
+  NON_ROLLBACK_TERMINAL: {
+    verdict: "CORRIDOR_UNCHANGED",
+    terminal_outcome: null,
+    requires_human: true,
+    fresh_attempt_permitted: false,
+    required_consent_kind: null,
+  },
+  // The transaction completed forward; the normal completion path owns it.
+  FORWARD_COMPLETED: {
+    verdict: "CORRIDOR_UNCHANGED",
+    terminal_outcome: null,
+    requires_human: false,
+    fresh_attempt_permitted: false,
+    required_consent_kind: null,
+  },
+});
+
+/**
+ * Map a C4B2A recovery classification onto a corridor verdict.
+ *
+ * Pure. Decides only what the corridor MAY do; it never writes, and it never
+ * decides whether the classification itself was earned — that is C4B2A's.
+ *
+ * @returns {Readonly<{verdict:string, terminal_outcome:string|null,
+ *                     requires_human:boolean, fresh_attempt_permitted:boolean,
+ *                     recovery_class:string}>}
+ */
+export function mapRecoveryClassToCorridor(recoveryClass) {
+  const mapped = RECOVERY_CLASS_TO_CORRIDOR[recoveryClass];
+  if (!mapped) {
+    // Fail closed: an unrecognised class must never reach the corridor, and
+    // must never silently look benign.
+    return Object.freeze({
+      verdict: "CORRIDOR_UNCHANGED",
+      terminal_outcome: null,
+      requires_human: true,
+      fresh_attempt_permitted: false,
+      required_consent_kind: null,
+      recovery_class: typeof recoveryClass === "string" ? recoveryClass : "UNKNOWN",
+    });
+  }
+  return Object.freeze({ ...mapped, recovery_class: recoveryClass });
+}
+
 export async function runCorridorClosure(p = {}) {
   const {
     mission, lease, consent, anchorDir, effect, now = 0,

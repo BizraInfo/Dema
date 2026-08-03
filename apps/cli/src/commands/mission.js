@@ -32,6 +32,7 @@ import {
   deriveCorridorStatus,
   verifyCorridorJournal,
   buildCorridorConsentContext,
+  corridorRequiredPhrase,
   evaluateCorridorWriteConsent,
   MISSION_ID_RE,
   CORRIDOR_TRANSITIONS,
@@ -40,6 +41,7 @@ import {
 import {
   runCorridorClosure,
   verifyCorridorClosure,
+  mapRecoveryClassToCorridor,
 } from "../../../../packages/mission/src/mission-corridor-closure.js";
 import {
   buildClaimBoundConsentRegistry,
@@ -56,7 +58,11 @@ import {
 import {
   claimConsentNonce, inspectConsentNonce,
 } from "../../../../packages/receipts/src/consent-nonce-claim.js";
-import { replayClosureTransaction } from "../../../../packages/receipts/src/mission-closure-transaction.js";
+import {
+  replayClosureTransaction,
+  readRollbackBindingContext,
+  classifySettledMechanicalRecovery,
+} from "../../../../packages/receipts/src/mission-closure-transaction.js";
 import {
   loadCanonicalLedger, verifyCanonicalLedger,
 } from "../../../../packages/receipts/src/canonical-ledger.js";
@@ -1494,6 +1500,17 @@ export async function cmd_mission(ctx) {
 //   $DEMA_HOME/missions/<id>/journal.jsonl   (append-only)
 // Writes require an exact consent phrase. status/resume are read-only.
 
+// What a `GO: complete` phrase actually authorizes. Both are terminals of ONE
+// governed act: the closure either verifies and completes, or it fails, proves a
+// verified-recovery-required rollback, and stops. Disclosed on the consent card
+// so the operator types the phrase knowing the measured pair.
+const CORRIDOR_COMPLETE_LAWFUL_TERMINALS = Object.freeze([
+  "COMPLETE (effect verified and sealed) — the only terminal this phrase authorizes",
+  "no completion: the effect is rolled back or recovery is required, the corridor "
+  + "is left unchanged, and ending it then needs its own separate authorization "
+  + "(\"GO: stop mission corridor <id>\")",
+]);
+
 function corridorFail(message) {
   console.error(`Dema error: ${message}`);
   process.exit(1);
@@ -1966,6 +1983,10 @@ async function corridorConsentGate(argv, {
       console.log(`  binds: contract ${contract_hash}`);
       if (prepared_intent_hash) console.log(`         prepared intent ${prepared_intent_hash}`);
       console.log(`         root ${mission_root} · class ${ctx.envelope.action_class} · nonce ${nonce} · expires ${expires_at}`);
+      if (Array.isArray(cardExtra.lawful_terminals)) {
+        console.log("  this phrase authorizes:");
+        for (const t of cardExtra.lawful_terminals) console.log(`    · ${t}`);
+      }
       console.log(`  authorize exactly this context by re-running with: ${rerun}`);
     }
     return null; // consent card printed; no write happens
@@ -2181,6 +2202,28 @@ async function cmdMissionCorridor(argv) {
       checkpoint_event_hash: loaded.journal.at(-1)?.event_hash,
       claimed_at_iso: nowIso,
     });
+    // ── C4B2B handoff · optional binding to a settled qualified recovery ──
+    // When the operator is stopping BECAUSE a closure proved RECOVERY_REQUIRED,
+    // the stop is gated on that proof: the transaction is replayed from disk,
+    // its authoritative context re-derived, and its class re-classified here.
+    // A transaction that does not classify RECOVERY_REQUIRED cannot be used to
+    // justify a stop. The corridor event schema permits closure bindings only on
+    // COMPLETE, so the durable binding is the gate plus the typed terminal
+    // outcome — the full binding lives in C2, which this re-reads.
+    const closureTxId = argValue(argv, "--closure-transaction");
+    let recoveryBinding = null;
+    if (closureTxId) {
+      const home = corridorHome(argv);
+      const bound = await readRollbackBindingContext({ demaHome: home, transactionId: closureTxId });
+      if (!bound.ok) {
+        corridorFail(`--closure-transaction ${closureTxId} is not a verifiable closure transaction (${bound.reason}) — nothing was written.`);
+      }
+      const cls = classifySettledMechanicalRecovery({ state: bound.state, context: bound.context });
+      if (cls !== "RECOVERY_REQUIRED") {
+        corridorFail(`--closure-transaction ${closureTxId} classifies ${cls}, not RECOVERY_REQUIRED — it does not justify a stop; nothing was written.`);
+      }
+      recoveryBinding = { closureTxId, recovery_class: cls };
+    }
     const r = appendCorridorEvent({
       contract_hash: loaded.contractDoc.contract_hash,
       journal: loaded.journal,
@@ -2188,12 +2231,13 @@ async function cmdMissionCorridor(argv) {
         state: "STOPPED",
         at_iso: nowIso,
         requires_human: true,
-        note: `${argValue(argv, "--note") || "operator stop"} · consent_context: ${verdict.consent_context_hash}`,
+        ...(recoveryBinding ? { terminal_outcome: "RECOVERY_REQUIRED" } : {}),
+        note: `${argValue(argv, "--note") || "operator stop"}${recoveryBinding ? ` · recovery ${recoveryBinding.recovery_class} · closure_transaction ${recoveryBinding.closureTxId}` : ""} · consent_context: ${verdict.consent_context_hash}`,
       },
     });
     if (!r.ok) corridorFail(`corridor stop blocked: ${r.blocked_by.join(", ")}`);
     await appendCorridorJournalEvent(dir, r.event);
-    const out = { ok: true, mission_id: id, state: "STOPPED", event_hash: r.event.event_hash, consent_context_hash: verdict.consent_context_hash, boundary: corridorIoBoundary({ read: true, wrote: true, consented: true }) };
+    const out = { ok: true, mission_id: id, state: "STOPPED", event_hash: r.event.event_hash, consent_context_hash: verdict.consent_context_hash, ...(recoveryBinding ? { terminal_outcome: "RECOVERY_REQUIRED", closure_transaction_id: recoveryBinding.closureTxId, recovery_class: recoveryBinding.recovery_class } : {}), boundary: corridorIoBoundary({ read: true, wrote: true, consented: true }) };
     if (wantJson) console.log(JSON.stringify(out, null, 2));
     else console.log(`DEMA · mission corridor stopped: ${id} (kill switch honored; journal sealed)`);
     return;
@@ -2502,6 +2546,12 @@ async function cmdMissionCorridor(argv) {
       wantJson,
       requested_state: "COMPLETE",
       prepared_intent_hash: prepared.prepared_intent_hash,
+      // Disclosure of what this phrase does and does NOT authorize. It covers
+      // COMPLETE only; a failed closure leaves the corridor untouched and a
+      // stop needs its own phrase. Presentational by construction — outside the
+      // hashed envelope, so consent_context_hash is unchanged — which is
+      // precisely why it can never be read as granting stop authority.
+      cardExtra: { lawful_terminals: CORRIDOR_COMPLETE_LAWFUL_TERMINALS },
     });
     if (!verdict) return; // consent card printed; nothing written
 
@@ -2573,8 +2623,54 @@ async function cmdMissionCorridor(argv) {
       effect,
     });
     if (!mechanical.ok) {
+      // ── C4B2B — RECOGNITION IS NOT AUTHORITY ──
+      // This closure holds a COMPLETE claim. STOP is a separate corridor
+      // authority with its own phrase, its own hashed payload and its own
+      // capability scope, so no outcome here may append a terminal STOPPED —
+      // that would convert "stopping is necessary" into "kill the mission".
+      // Every path below writes NOTHING to the journal.
+      const corridorVerdict = mapRecoveryClassToCorridor(mechanical.recovery_class);
+      const at = mechanical.transaction_state?.phase ?? "C1";
+
+      if (corridorVerdict.verdict === "STOP_CONSENT_REQUIRED") {
+        const requiredPhrase = corridorRequiredPhrase("STOP", id);
+        const handoff = {
+          ok: false,
+          mission_id: id,
+          verdict: "STOP_CONSENT_REQUIRED",
+          corridor_state: last.state,
+          corridor_write_performed: false,
+          recovery_class: mechanical.recovery_class,
+          terminal_outcome: null,
+          requires_human: true,
+          effect_retry_forbidden: true,
+          fresh_attempt_permitted: false,
+          required_consent_kind: corridorVerdict.required_consent_kind,
+          required_phrase: requiredPhrase,
+          next_command: `dema mission corridor stop ${id} --closure-transaction ${consentClaim.transaction_id}`,
+          closure_transaction_id: consentClaim.transaction_id,
+          reason: mechanical.reason,
+          boundary: corridorIoBoundary({ read: true, wrote: false, consented: true }),
+        };
+        if (wantJson) console.log(JSON.stringify(handoff, null, 2));
+        else {
+          console.error(`Dema: recovery required at ${at} (${mechanical.reason}).`);
+          console.error(`  The corridor is UNCHANGED at ${last.state}; nothing was written.`);
+          console.error("  The world could not be returned to its before state and verified.");
+          console.error("  This transaction is settled and must NOT be re-run.");
+          console.error(`  Stopping the corridor needs its own authorization: "${requiredPhrase}"`);
+          console.error(`  ${handoff.next_command}`);
+        }
+        process.exit(1);
+      }
+
+      // Every other class: no corridor event, honest class, no retry posture.
+      const restored = corridorVerdict.fresh_attempt_permitted;
       corridorFail(
-        `closure transaction requires recovery at ${mechanical.transaction_state?.phase ?? "C1"}: ${mechanical.reason} — no corridor terminal was written; re-run this exact transaction after inspection.`,
+        `closure did not complete at ${at}: ${mechanical.recovery_class} (${mechanical.reason}) — the corridor is unchanged at ${last.state} and nothing was written. `
+        + (restored
+          ? "The world was restored to its verified before state, so this transaction changed nothing; a NEW consented closure may be started."
+          : `requires_human: this transaction is settled and must NOT be re-run — inspect the estate, then authorize a stop with "${corridorRequiredPhrase("STOP", id)}"`),
       );
     }
 
