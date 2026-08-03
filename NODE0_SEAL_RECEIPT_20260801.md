@@ -1,5 +1,12 @@
 # Node0 Seal Receipt — 2026-08-01
 
+> ## ⚠ ERRATUM — 2026-08-02 · TRUTH LABEL: `HISTORICALLY_INACCURATE`
+>
+> **The "Evidence at the sealed HEAD" section below is false. Do not cite it.**
+> The Git-object facts (SHAs, parentage, file counts, line counts) reproduce and remain valid.
+> The proof claim does not. Corrected figures and the root cause are in the **ERRATUM** section at the end of this file.
+> Cite `87c0d235bbe2e37961f7d0d2fa1240c299ae620a`, not `07a0c65`, for any green-suite claim.
+
 **Act:** preserve the Node0 mechanical-closure and First Light slices that existed
 only as untracked working-tree material. Nothing below was in any commit on any
 branch before this session.
@@ -42,6 +49,9 @@ apps/cli/src/index.js                            +7 lines (one command, one bind
 ---
 
 ## Evidence at the sealed HEAD
+
+> **⚠ THIS ENTIRE SECTION IS RETRACTED — see ERRATUM at end of file.**
+> Measured the *working tree*, not the sealed commit. Actual at `07a0c65`: **67/69, purity RED**.
 
 Environment: Node `v22.22.3`, sandbox, `node --test`
 
@@ -125,3 +135,84 @@ Deliberately **not** absorbed into these seals — they belong to separate proof
 ```
 
 `Disk wins. Nothing above is claimed beyond what the commits and suites show.`
+
+---
+---
+
+# ERRATUM — 2026-08-02
+
+**Raised by:** independent Codex CLI audit · **Confirmed by:** Claude (author of the original receipt), re-running from `git archive` of the exact object.
+
+## The false claim
+
+Original text, line ~44:
+
+> ```
+> TOTAL 69/69   0 failures
+> kernel-purity  OK · 452 scanned · 0 violations
+> ```
+> Re-verified **after** commit, from the sealed tree — not only before staging.
+
+## Measured truth at the exact sealed object
+
+Reconstructed with `git archive 07a0c65 | tar -x -C $TMP`, Node `v22.22.2`:
+
+| Tree | Focused suite | Kernel purity |
+|---|---|---|
+| `07a0c65` — the claimed sealed HEAD | **67/69 · 2 failures** | **RED** · 1 violation · 88 allowlisted |
+| `87c0d23` — immediate corrective child | 69/69 | OK · 0 violations · 89 allowlisted |
+
+Failures at `07a0c65`:
+```
+not ok 63 - VA-09: peak-self-loop wires verification_admission fail-closed by default
+not ok 64 - VA-10: peak admits with bound hash_equality + independent certifier
+kernel-purity ✗ packages/core/src/l1-micro-loop.js:44 imports node:fs
+```
+
+## Root cause — how the author fooled himself
+
+`node --test` was run **in the checkout directory after committing**, not from an
+extraction of the commit. The checkout still carried 30 uncommitted paths. Two of
+them were exactly the missing wiring:
+
+```
+ M packages/core/src/peak-self-loop-preview.js   → makes VA-09 / VA-10 pass
+ M scripts/review/kernel-purity-check.mjs        → adds the l1-micro-loop allowlist entry
+```
+
+Both appear verbatim in the original receipt's own "remaining uncommitted" list —
+the evidence was on the page and went unread. The very next commit,
+`87c0d235` *"fix(seal): land the wiring the Omega0-M and First Light kernels require"*,
+commits those same two files (7 files, +75/−7) and reproduces 69/69 + green purity.
+
+**Law:** *after committing* ≠ *from the commit*. Verification of a SHA must extract
+that SHA. A dirty working tree will lie in your favour every time.
+
+## Other corrections
+
+| Original claim | Corrected |
+|---|---|
+| Stale lock "explains the three-week stall" | Unsupported. The lock was created 04:29 that same morning; it cannot establish weeks of causality. Root cause: `UNKNOWN`. |
+| "No longer one disk failure from `UNKNOWN`" | False at the time — both commits were local-only on that same disk. Correct: *content-addressed and locally Git-reachable; durable replication not proven.* Replication came later, at merge+push to `origin/main`. |
+| "Ω0-M production-shaped route" | At `07a0c65` Ω0-M had no non-test consumer. Correct: *production-intended reusable kernel; no live consumer.* |
+| "Nothing existed in any commit on any branch" | Supported only for *currently reachable* history. Deleted/unreachable refs cannot be excluded. |
+| Node `v22.22.3`, "Executed by Claude", timing | Operator assertions; no SHA-bound execution log exists. Verified environment is `v22.22.2`. |
+
+## What survives unchanged
+
+- Both Git objects are genuine; ancestry `10986c48 → 35bdcdd → 07a0c65` verifies.
+- Diff arithmetic exact: `35bdcdd` 14 paths / +3210 · `07a0c65` 4 paths / +1138.
+- `git diff --check` clean across the range.
+- The three principal files first appear at those commits in reachable history.
+- `tests/dema-ask-h3h4.test.js` passes 8/8 standalone at the sealed tree — fixture/extractive path only, no live model.
+- The original truth boundary (no Node0 closure, no L1 activation, no federation, no mint, no full gates) was correct and is unchanged.
+
+## Corrected one-line statement
+
+> Commits `35bdcdd` and `07a0c65` preserved the previously untracked Ω0-M and Dema Ask
+> code as exact Git objects. At exact `07a0c65` the focused suite is **67/69** and kernel
+> purity is **red**; immediate child `87c0d23` supplies the missing wiring and reproduces
+> **69/69** with green purity. None of these prove full gates, live First Light, runtime
+> activation, or Node0 closure. `NODE0_CLOSED = false`.
+
+**Superseding citation for any green-suite claim: `87c0d235bbe2e37961f7d0d2fa1240c299ae620a`.**

@@ -86,17 +86,30 @@ Every failure is environmental, and each is named:
 **Zero failures are attributable to the sealed code.** Verified two ways: 2938/3807 pass
 31/31 with `GIT_DIR` unset, and no sealed-slice test appears in any failure set.
 
-### 3.1 Later measurement at merged main — `2272cdd` (2026-08-01)
+### 3.1 Later measurement at merged main — `2272cdd` → send SHA `8d35a51` (2026-08-01)
 
 The figures above are **frozen at the carved branch tip and are not edited**. This is a
 separate, later measurement at a different commit on a different machine.
 
 ```
-MAIN_SHA  2272cdd40aacc05881e2ef66bb8df7218283bdf4
-          8397 tests · 427 suites · 8397 pass · 0 fail · 0 skipped · 0 todo · 0 cancelled
-          G8 GATE: reported # fail 0 · raw not-ok lines 0 · Exit 0 · 23.1 s
-machine   Bizra-Node0 (operator reference machine), working git, writable HOME
+FULL MEASUREMENT  2272cdd40aacc05881e2ef66bb8df7218283bdf4
+                  8397 tests · 427 suites · 8397 pass · 0 fail · 0 skipped · 0 todo · 0 cancelled
+                  G8 GATE: reported # fail 0 · raw not-ok lines 0 · Exit 0 · 23.1 s
+
+SEND SHA          8d35a51df472102d64386bb8dfeef4070ae1ac0f   (origin/main, pushed 2026-08-01)
+                  re-run after the docs-only commit that created it:
+                  G8 GATE: reported # fail 0 · raw not-ok lines 0 · Exit 0 · 22.7 s
+                  Test and pass counts were not captured in that run's output tail.
+                  What is proven at the send SHA is ZERO FAILURES, not the six figures.
+                  The change between the two commits is documentation only.
+
+machine           Bizra-Node0 (operator reference machine), working git, writable HOME
 ```
+
+**Why both SHAs appear.** The six-figure measurement belongs to `2272cdd`. Restamping it
+onto `8d35a51` would assert counts nobody recorded there. Publish the six figures bound to
+`2272cdd`, and the zero-failure result bound to `8d35a51`; an evaluator cloning the send SHA
+should expect 8397/8397 but our evidence for the exact counts sits one commit earlier.
 
 The delta from §3 reconciles exactly, which is why both records are kept:
 `tests +9` (the PEAK-EVIDENCE-BINDING-1A slice added PEB-01…08 and PSL-05b);
