@@ -18,6 +18,8 @@
     "claim:check:corpus:update": "node scripts/claims/claim-corpus-gate.mjs --update-baseline",
     "claims:register": "node scripts/claims/claim-register-check.mjs",
     "claims:generate": "node scripts/claims/generate-public-claims.mjs",
+    "claims:receipt-binding": "node scripts/review/public-claim-receipt-binding-check.mjs",
+    "claims:receipt-binding:require-closed": "node scripts/review/public-claim-receipt-binding-check.mjs --require-closed",
     "env-hygiene": "node scripts/review/env-hygiene-check.mjs",
     "env-hygiene:strict": "node scripts/review/env-hygiene-check.mjs --strict",
     "test": "node scripts/ci/run-with-classifier.mjs --log \"${TMPDIR:-/tmp}/bizra-test-output.$$.log\" -- node --test --test-reporter=tap tests/*.test.js",

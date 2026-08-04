@@ -1,0 +1,121 @@
+{
+  "schema": "bizra.dema.public_claim_receipt_binding_evidence.v0.1",
+  "observed_at": "2026-08-04T15:31:37.984Z",
+  "origin": "https://bizra.ai",
+  "scan": {
+    "schema": "bizra.dema.public_link_scan.v0.2",
+    "surface_count": 62,
+    "request_error_count": 0,
+    "response_digest_set_sha256": "f292f19a51da003147582e79e5c07b96bc780d7057c4f9220f34ebd611d8279a",
+    "route_result_set_sha256": "4efd76fc884a078eadeb92314be7b54b25a0adf0ca44bdb1a3efd6fa76ac34eb"
+  },
+  "route_observations": [
+    {
+      "route": "/",
+      "status": 200,
+      "body_sha256": "473052c4bbcf7bf6092bbd9c075abf70c12e6b517878fe32c5ba3521fcaf18dd",
+      "claim_ids": [
+        "BIZRA-PUBLIC-001",
+        "BIZRA-PUBLIC-002",
+        "BIZRA-PUBLIC-003"
+      ]
+    },
+    {
+      "route": "/api/beta/status",
+      "status": 200,
+      "body_sha256": "13e644533d3fbfe502cacbd8a11bc05aab602c18a8c00ea1985d987cc8546165",
+      "claim_ids": [
+        "BIZRA-PUBLIC-005"
+      ]
+    },
+    {
+      "route": "/api/health",
+      "status": 200,
+      "body_sha256": "0b3d2ea5f8b6e0dae8bffa3f8ecffcb6e5583addd5d6cb5c5e0fc3d12f0a31c2",
+      "claim_ids": [
+        "BIZRA-PUBLIC-004"
+      ]
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "BIZRA-PUBLIC-001",
+      "routes": [
+        "/"
+      ],
+      "evidence_commits": [
+        "26bb57359186a3ab533dd51e3623e0c84d5078e9"
+      ],
+      "receipt_hashes": [],
+      "receipt_links": [],
+      "disposition": "RECEIPT_UNBOUND",
+      "blocker": "GOVERNED_RECEIPT_NOT_ISSUED"
+    },
+    {
+      "claim_id": "BIZRA-PUBLIC-002",
+      "routes": [
+        "/"
+      ],
+      "evidence_commits": [
+        "26bb57359186a3ab533dd51e3623e0c84d5078e9"
+      ],
+      "receipt_hashes": [],
+      "receipt_links": [],
+      "disposition": "RECEIPT_UNBOUND",
+      "blocker": "GOVERNED_RECEIPT_NOT_ISSUED"
+    },
+    {
+      "claim_id": "BIZRA-PUBLIC-003",
+      "routes": [
+        "/"
+      ],
+      "evidence_commits": [
+        "26bb57359186a3ab533dd51e3623e0c84d5078e9"
+      ],
+      "receipt_hashes": [],
+      "receipt_links": [],
+      "disposition": "RECEIPT_UNBOUND",
+      "blocker": "TRUSTED_SIGNER_ROTATION_PENDING"
+    },
+    {
+      "claim_id": "BIZRA-PUBLIC-004",
+      "routes": [
+        "/api/health"
+      ],
+      "evidence_commits": [
+        "26bb57359186a3ab533dd51e3623e0c84d5078e9"
+      ],
+      "receipt_hashes": [],
+      "receipt_links": [],
+      "disposition": "RECEIPT_UNBOUND",
+      "blocker": "GOVERNED_RECEIPT_NOT_ISSUED"
+    },
+    {
+      "claim_id": "BIZRA-PUBLIC-005",
+      "routes": [
+        "/api/beta/status"
+      ],
+      "evidence_commits": [
+        "26bb57359186a3ab533dd51e3623e0c84d5078e9"
+      ],
+      "receipt_hashes": [],
+      "receipt_links": [],
+      "disposition": "RECEIPT_UNBOUND",
+      "blocker": "GOVERNED_RECEIPT_NOT_ISSUED"
+    }
+  ],
+  "summary": {
+    "claim_count": 5,
+    "bound_count": 0,
+    "removed_count": 0,
+    "unbound_count": 5,
+    "closure_status": "BLOCKED_PENDING_RECEIPT_BINDING"
+  },
+  "boundary": {
+    "read_only_scan": true,
+    "credentials_included": false,
+    "raw_bodies_retained": false,
+    "runtime_mutation_performed": false,
+    "receipt_issued": false
+  }
+}

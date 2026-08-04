@@ -225,6 +225,32 @@ turn the corrected web boundary into evidence of Node0 runtime capability.
 | Authentication integrity beyond public containment | `UNKNOWN` | Known source-embedded demonstration credentials were removed and public login/refresh are held closed, but session invalidation, external identity-provider repair, secret rotation, and restored authentication are not proven. |
 | Current Dema evidence update | Source presence `VERIFIED`; distribution qualifier `LOCAL_ONLY` | Post-deploy capture and deployment binding exist on the Dema review branch but are not remotely published until separately authorized push and review. |
 | Public signing identity | `UNKNOWN` | Signer rotation is pending. No new signed public Claim Receipt is issued by the containment slice. |
+| Current live claim-to-receipt binding (TASK-030 recheck) | `MEASURED` and `BLOCKED_PENDING_RECEIPT_BINDING` at `2026-08-04T15:31:37.984Z` | A credential-free `62`-surface scan found `BIZRA-PUBLIC-001` through `BIZRA-PUBLIC-005` live, commit-bound to `26bb57359186a3ab533dd51e3623e0c84d5078e9`, and receipt-unbound: `0` receipt hashes/links. Evidence: `docs/audits/evidence/bizra-ai-public-claim-receipt-binding-2026-08-04.json`; closeout: `docs/receipts/PUBLIC_CLAIM_RECEIPT_BINDING_1A.md`. `npm run claims:receipt-binding` validates the honest blocked manifest; `npm run claims:receipt-binding:require-closed` must remain non-zero until all five claims are bound or removed. |
+
+### Dependabot triage snapshot (TASK-030) — 2026-08-04
+
+The TASK-030 description recorded "4 moderate" findings. Current GitHub
+evidence for `BizraInfo/Dema` shows `13` open Dependabot alerts (`7` high,
+`6` medium), all in `packages/dema-ui/package-lock.json`.
+
+Evidence command:
+
+```bash
+gh api repos/BizraInfo/Dema/dependabot/alerts?state=open\&per_page=100
+```
+
+Medium-severity triage verdicts (minimum task ask met, plus current extras):
+
+| Alert | GHSA | Package | First patched version | Verdict |
+| --- | --- | --- | --- | --- |
+| [#17](https://github.com/BizraInfo/Dema/security/dependabot/17) | `GHSA-68g3-v927-f742` | `next` | `16.2.11` | `INWARD` — remediate by upgrading `next` in `packages/dema-ui`. |
+| [#16](https://github.com/BizraInfo/Dema/security/dependabot/16) | `GHSA-4633-3j49-mh5q` | `next` | `16.2.11` | `INWARD` — same remediation lane as `#17`. |
+| [#15](https://github.com/BizraInfo/Dema/security/dependabot/15) | `GHSA-4c39-4ccg-62r3` | `next` | `16.2.11` | `INWARD` — same remediation lane as `#17`. |
+| [#13](https://github.com/BizraInfo/Dema/security/dependabot/13) | `GHSA-q8wf-6r8g-63ch` | `next` | `16.2.11` | `INWARD` — same remediation lane as `#17`. |
+| [#12](https://github.com/BizraInfo/Dema/security/dependabot/12) | `GHSA-955p-x3mx-jcvp` | `next` | `16.2.11` | `INWARD` — same remediation lane as `#17`. |
+| [#2](https://github.com/BizraInfo/Dema/security/dependabot/2) | `GHSA-qx2v-qp2m-jg93` | `postcss` | `8.5.10` | `INWARD` — resolve in the same lockfile refresh pass. |
+
+This slice records triage only; it does not claim remediation completion.
 
 See
 [`audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md`](audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md)
