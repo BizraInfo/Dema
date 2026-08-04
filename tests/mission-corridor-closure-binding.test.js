@@ -28,6 +28,7 @@ import {
   buildDiskConsentRegistry, buildRenameEffectAdapter, buildRenameEffectIntent,
   readClosureAnchorLog,
 } from "../packages/mission/src/corridor-closure-gatherer.js";
+import { inspectClosureOwnership } from "../packages/receipts/src/mission-closure-ownership.js";
 import { initAuthorshipKey, KEY_INIT_CONSENT_PHRASE, loadPublicKey } from "../packages/receipts/src/authorship-key-store.js";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -695,5 +696,68 @@ describe("CCB · corridor closure BINDING — real consent, real nonces, real le
       "PREPARED", "EFFECT_INTENT_PERSISTED", "EFFECT_APPLIED", "VERIFIED",
       "SEALED", "LEDGER_COMMITTED", "ANCHORED", "RESOLVED",
     ]);
+  });
+
+  test("CCB-20: already-COMPLETE terminal recovery reacquires ownership before RESOLVED", async () => {
+    const home = await newHome();
+    await startedCorridor(home);
+    await walkToCheckpoint(home);
+    await seedEstate(home);
+
+    const nonce = "ccb-terminal-ownership";
+    const expires = future();
+    const base = ["mission", "corridor", "complete", ID,
+      "--nonce", nonce, "--expires", expires];
+    const card = JSON.parse(run(home, base));
+    const authorised = [
+      ...base,
+      "--consent", card.required_phrase,
+      "--consent-context", card.consent_context_hash,
+    ];
+    const completed = JSON.parse(run(home, authorised));
+    assert.equal(completed.state, "COMPLETE");
+
+    const claimed = await inspectConsentNonce({ nonce, demaHome: home });
+    assert.equal(claimed.claim_hash_valid, true);
+    const transactionId = claimed.claim.transaction_id;
+    const transactionDir = join(home, MISSION_CLOSURE_TX_RELDIR, transactionId);
+    const eventsDir = join(transactionDir, "events");
+    const eventNames = await readdir(eventsDir);
+    let resolvedName = null;
+    for (const name of eventNames) {
+      const event = JSON.parse(await readFile(join(eventsDir, name), "utf8"));
+      if (event.phase === "RESOLVED") resolvedName = name;
+    }
+    assert.ok(resolvedName, "the completed fixture must contain RESOLVED");
+    await unlink(join(eventsDir, resolvedName));
+
+    const interrupted = await replayClosureTransaction({
+      demaHome: home,
+      transactionId,
+    });
+    assert.equal(interrupted.ok, true, interrupted.reason);
+    assert.equal(interrupted.phase, "ANCHORED");
+    const ownershipBefore = await inspectClosureOwnership({
+      demaHome: home,
+      transactionId,
+    });
+    assert.equal(ownershipBefore.state, "PRESENT");
+
+    const recovered = JSON.parse(run(home, authorised));
+    assert.equal(recovered.ok, true);
+    assert.equal(recovered.recovered, true);
+
+    const ownershipAfter = await inspectClosureOwnership({
+      demaHome: home,
+      transactionId,
+    });
+    assert.equal(ownershipAfter.state, "PRESENT");
+    assert.ok(
+      ownershipAfter.generation > ownershipBefore.generation,
+      "terminal recovery must acquire a newer owner generation before writing RESOLVED",
+    );
+    const final = await replayClosureTransaction({ demaHome: home, transactionId });
+    assert.equal(final.phase, "RESOLVED");
+    assert.equal(final.terminal_outcome, "COMPLETED_VERIFIED");
   });
 });

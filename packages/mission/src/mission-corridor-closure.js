@@ -551,9 +551,56 @@ export async function runCorridorClosure(p = {}) {
   // cryptographic or remote independence. Never call it "independently verified".
   const v = verifyAdmission?.({ card, mission, lease });
   if (!v?.admitted) {
-    try { effect?.undo?.(); } catch { /* restoration reported by outcome */ }
+    // C4D: the injected undo may be ASYNC — the owned adapter re-derives
+    // ownership from disk before delegating. Firing it without `await` let this
+    // corridor publish a verified rollback before knowing whether the undo was
+    // authorized, or whether it happened at all, and orphaned its rejection into
+    // an unhandledRejection. The governing distinction is:
+    //
+    //   undo requested ≠ undo authorized ≠ undo completed ≠ before-state verified
+    //
+    // Only the last may justify a *_ROLLED_BACK outcome. Awaiting an INJECTED
+    // adapter costs no purity: this kernel still imports no node:fs, no ownership
+    // module, no process inspection, and knows nothing of fencing tokens.
+    //
+    // `undo` itself must stay SYNCHRONOUS: Omega0's reversibility probe calls it
+    // at omega0-mechanical-closure.js:347/401/414/721 inside NON-async functions
+    // and hashes the world on the very next line. An async `undo` returns a
+    // pending Promise there, the restore has not happened when the hash is taken,
+    // reversibility fails and every card comes back BLOCKED. Measured: admission
+    // was never even reached. So ownership rides a SEPARATE async `undoOwned`,
+    // used only here — after the effect boundary, where a fresh fence is required.
+    const verificationReason = v?.reason ?? "not_admitted";
+    const restore = typeof effect?.undoOwned === "function"
+      ? () => effect.undoOwned()
+      : (typeof effect?.undo === "function" ? () => effect.undo() : null);
+    let undoCompleted = false;
+    try {
+      if (restore === null) {
+        return terminal("RECOVERY_REQUIRED", card, {
+          reason_detail: "verification_failure_restoration_absent",
+          verification_reason: verificationReason,
+        });
+      }
+      await restore();
+      undoCompleted = true;
+    } catch (err) {
+      // Disclose the sanitized CODE only — never a message, stack, path,
+      // ownership claim or fencing token.
+      return terminal("RECOVERY_REQUIRED", card, {
+        reason_detail: "verification_failure_restoration_unverified",
+        restoration_error: typeof err?.code === "string" ? err.code : "restoration_failed",
+        verification_reason: verificationReason,
+      });
+    }
+    if (!undoCompleted) {
+      return terminal("RECOVERY_REQUIRED", card, {
+        reason_detail: "verification_failure_restoration_absent",
+        verification_reason: verificationReason,
+      });
+    }
     return terminal("VERIFICATION_FAILED_ROLLED_BACK", card, {
-      verification_reason: v?.reason ?? "not_admitted",
+      verification_reason: verificationReason,
     });
   }
 

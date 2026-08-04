@@ -166,8 +166,18 @@ const INTENT_EVIDENCE_KEYS = Object.freeze([
  *
  * @returns {{context: object}|{error: string}}
  */
-function deriveRollbackBindingContext({ descriptor, events, transactionId } = {}) {
-  // ── descriptor integrity ──
+/**
+ * Descriptor integrity, on its own.
+ *
+ * Split out of deriveRollbackBindingContext so that a caller needing only the
+ * authoritative transaction_hash — C4D ownership, which must bind BEFORE any
+ * durable intent event exists — runs the SAME checks rather than a second,
+ * weaker copy of them. The rollback path keeps calling this and then adds its
+ * own intent requirements on top.
+ *
+ * @returns {{transaction_hash: string}|{error: string}}
+ */
+function verifyDescriptorAgainstChain({ descriptor, events, transactionId } = {}) {
   if (!descriptor || typeof descriptor !== "object" || Array.isArray(descriptor)) {
     return { error: "descriptor_not_object" };
   }
@@ -196,6 +206,51 @@ function deriveRollbackBindingContext({ descriptor, events, transactionId } = {}
   if (chain.some((e) => e.transaction_hash !== storedTxHash)) {
     return { error: "descriptor_not_bound_to_event_chain" };
   }
+  return { transaction_hash: storedTxHash };
+}
+
+/**
+ * The authoritative transaction_hash for one transaction, read and verified
+ * from disk. C4D ownership binds to THIS, never to prepared_intent_hash — they
+ * are two different C2 facts (the descriptor body contains the prepared intent
+ * hash among other fields, and transaction_hash is the hash OF that body), so
+ * substituting one for the other makes an ownership claim that says "owner of
+ * this prepared intent" while its schema claims "owner of this exact C2
+ * transaction". Never accepts a caller-supplied or in-memory value.
+ *
+ * @returns {Promise<{ok:true, transaction_hash:string}|{ok:false, reason:string}>}
+ */
+export async function readVerifiedTransactionHash({ demaHome, transactionId } = {}) {
+  const home = resolveHome(demaHome);
+  const replayed = await replayClosureTransaction({ demaHome: home, transactionId });
+  if (!replayed.ok) return Object.freeze({ ok: false, reason: replayed.reason ?? "transaction_replay_refused" });
+  if (!replayed.exists) return Object.freeze({ ok: false, reason: "transaction_not_prepared" });
+  let storedDescriptor = null;
+  try {
+    storedDescriptor = JSON.parse(
+      await readFile(join(transactionDir(home, transactionId), "transaction.json"), "utf8"),
+    );
+  } catch {
+    return Object.freeze({ ok: false, reason: "transaction_descriptor_unreadable" });
+  }
+  const verified = verifyDescriptorAgainstChain({
+    descriptor: storedDescriptor, events: replayed.events, transactionId,
+  });
+  if (verified.error) return Object.freeze({ ok: false, reason: verified.error });
+  return Object.freeze({
+    ok: true,
+    transaction_hash: verified.transaction_hash,
+    // Returned only so callers can PROVE the two are distinct; never for binding.
+    prepared_intent_hash: storedDescriptor.prepared_intent_hash,
+  });
+}
+
+function deriveRollbackBindingContext({ descriptor, events, transactionId } = {}) {
+  // ── descriptor integrity ──
+  const verified = verifyDescriptorAgainstChain({ descriptor, events, transactionId });
+  if (verified.error) return { error: verified.error };
+  const storedTxHash = verified.transaction_hash;
+  const chain = events ?? [];
 
   // ── durable intent event ──
   const intents = chain.filter((e) => e?.phase === "EFFECT_INTENT_PERSISTED");

@@ -46,6 +46,12 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // that settles concurrent appends, so every hash it publishes is stable
   // across writers and processes.
   "packages/receipts/src/mission-closure-transaction.js",
+  // Gate C, C4D — cross-process ownership claims. The fencing token IS the
+  // canonical hash of the claim body, and two different processes must derive
+  // the identical token from the identical claim or the fence cannot arbitrate
+  // between them, so key-order stability is the whole contract. Registration is
+  // adoption review only; it does not promote Node0 or close any DoD gate.
+  "packages/receipts/src/mission-closure-ownership.js",
   // NODE0-CLEAN-STATE-JOURNEY-1A — the witness harness publishes ONE
   // cross-machine value (`journey_invariant_hash`) over the subset of a
   // clean-state run that is legitimately identical on every machine. That value

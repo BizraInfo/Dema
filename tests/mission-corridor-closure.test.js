@@ -237,3 +237,114 @@ describe("MCW · the weld — corridor authorises, Omega0 performs, neither comp
     assert.equal(TERMINAL_OUTCOMES.length, 10, "9 failure outcomes + COMPLETED_VERIFIED");
   });
 });
+
+// ── C4D-OWNED-CLOSURE-TAIL-1B — Task 3: the verification-failure undo must be
+//    AWAITED before any rollback is claimed.
+//
+// The owned undo adapter is async (it re-derives ownership from disk before
+// delegating). The kernel fired `effect?.undo?.()` without awaiting and returned
+// VERIFICATION_FAILED_ROLLED_BACK immediately — so a stale owner could be
+// rejected AFTER the corridor had already published a verified rollback.
+//
+//   undo requested  ≠  undo authorized  ≠  undo completed  ≠  before-state verified
+//
+// Only the last may justify a *_ROLLED_BACK outcome. Awaiting an INJECTED
+// adapter costs no purity: the kernel still imports no fs, ownership or process.
+
+describe("C4D-TAIL-03 · awaited verification-failure undo", () => {
+  // Omega0's reversibility probe calls effect.undo up to four times BEFORE
+  // admission (omega0-mechanical-closure.js:347/401/414/721). Only undos after
+  // admission fails belong to the verification-failure path. The world's own
+  // `undoCount` field is never incremented — it reads 0 always and proves nothing.
+  const failVerification = (p, phase) => {
+    p.verifyAdmission = () => {
+      if (phase) phase.admissionFailed = true;
+      return { admitted: false, reason: "self_certification" };
+    };
+    return p;
+  };
+
+  test("C4D-TAIL-03a: an async undo is awaited before the corridor answers", async () => {
+    const p = failVerification(BASE());
+    let resolved = false;
+    const realUndoA = p.effect.undo;
+    p.effect = { ...p.effect, undoOwned: async (applied) => {
+      await new Promise((r) => setTimeout(r, 15));
+      resolved = true;
+      return realUndoA(applied);
+    } };
+    const r = await runCorridorClosure(p);
+    assert.equal(resolved, true, "the corridor answered before undo finished");
+    assert.equal(r.terminal_outcome, "VERIFICATION_FAILED_ROLLED_BACK");
+  });
+
+  test("C4D-TAIL-03b: an undo that rejects may not be reported as rolled back", async () => {
+    const p = failVerification(BASE());
+    p.effect = { ...p.effect, undoOwned: async () => {
+      throw Object.assign(new Error("/secret/path stale owner sha256:deadbeef"),
+        { code: "stale_owner_fenced" });
+    } };
+    const r = await runCorridorClosure(p);
+    assert.notEqual(r.terminal_outcome, "VERIFICATION_FAILED_ROLLED_BACK");
+    assert.equal(r.terminal_outcome, "RECOVERY_REQUIRED");
+    assert.equal(r.reason_detail, "verification_failure_restoration_unverified");
+  });
+
+  test("C4D-TAIL-03c: a rejected undo leaks no path, token or stack", async () => {
+    const p = failVerification(BASE());
+    p.effect = { ...p.effect, undoOwned: async () => {
+      throw Object.assign(new Error("/secret/path fencing_token=sha256:deadbeef"),
+        { code: "stale_owner_fenced", stack: "SECRET STACK" });
+    } };
+    const r = await runCorridorClosure(p);
+    const json = JSON.stringify(r);
+    for (const leak of ["/secret/path", "fencing_token", "deadbeef", "SECRET STACK"]) {
+      assert.equal(json.includes(leak), false, `leaked: ${leak}`);
+    }
+    assert.equal(r.restoration_error, "stale_owner_fenced", "the sanitized CODE may be disclosed");
+  });
+
+  test("C4D-TAIL-03d: a rejecting undo raises no unhandled rejection", async () => {
+    const seen = [];
+    const onUnhandled = (e) => seen.push(e);
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      const p = failVerification(BASE());
+      p.effect = { ...p.effect, undoOwned: async () => { throw new Error("late"); } };
+      await runCorridorClosure(p);
+      await new Promise((r) => setTimeout(r, 30));
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+    assert.deepEqual(seen, [], "an awaited undo must not orphan its rejection");
+  });
+
+  test("C4D-TAIL-03e: a successful async undo runs exactly once, then rolls back", async () => {
+    const phase = { admissionFailed: false };
+    const p = failVerification(BASE(), phase);
+    let calls = 0;
+    const realUndoE = p.effect.undo;
+    p.effect = { ...p.effect, undo: async (applied) => {
+      if (phase.admissionFailed) calls += 1;
+      return realUndoE(applied);
+    } };
+    const r = await runCorridorClosure(p);
+    assert.equal(calls, 1, "exactly one undo");
+    assert.equal(r.terminal_outcome, "VERIFICATION_FAILED_ROLLED_BACK");
+  });
+
+  test("C4D-TAIL-03f: synchronous undo adapters stay compatible", async () => {
+    const phase = { admissionFailed: false };
+    const p = failVerification(BASE(), phase);
+    let calls = 0;
+    const realUndoF = p.effect.undo;
+    p.effect = { ...p.effect, undo: (applied) => {
+      if (phase.admissionFailed) calls += 1;
+      return realUndoF(applied);
+    } };
+    const r = await runCorridorClosure(p);
+    assert.equal(calls, 1);
+    assert.equal(r.terminal_outcome, "VERIFICATION_FAILED_ROLLED_BACK",
+      "await accepts a non-Promise, so sync adapters are unaffected");
+  });
+});

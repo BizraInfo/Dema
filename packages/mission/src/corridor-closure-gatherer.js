@@ -59,7 +59,190 @@ import {
   inspectConsentNonce, nonceDigest,
 } from "../../receipts/src/consent-nonce-claim.js";
 import {
+  acquireClosureOwnership, validateFencingToken,
+  OWNERSHIP_ACQUIRED, STALE_OWNER_FENCED,
+  OWNERSHIP_STATUS_UNVERIFIABLE, TRANSACTION_HASH_MISMATCH,
+} from "../../receipts/src/mission-closure-ownership.js";
+
+// ── C4D-OWNED-CLOSURE-TAIL — the owned closure session ──────────────────────
+//
+// C4C says the original consent MAY finish this proof trail. C4D says only the
+// CURRENT owner may perform each mutation in it. Authority and ownership are
+// separate requirements, and idempotence is not fencing — an idempotent writer
+// still lets a stale worker write.
+//
+// The capability lives in a module-private WeakMap, NOT on a property key.
+// A Symbol key would be fully reflectable: Object.getOwnPropertySymbols() and
+// Reflect.ownKeys() both return it, and result[sym] would then hand out the
+// fencing token to any reflecting caller. A WeakMap adds no own key at all, so
+// the capability is absent from JSON.stringify, Object.keys, Reflect.ownKeys,
+// CLI --json envelopes and error messages BY CONSTRUCTION, and is unreachable
+// without a reference to this module-scoped binding.
+const OWNERSHIP_CAPABILITIES = new WeakMap();
+
+function attachOwnershipCapability(result, capability) {
+  OWNERSHIP_CAPABILITIES.set(result, Object.freeze(capability));
+  return result;
+}
+
+export function hasOwnershipCapability(result) {
+  return Boolean(result) && OWNERSHIP_CAPABILITIES.has(result);
+}
+
+/**
+ * Run the closure tail under the SAME owner that crossed the effect boundary.
+ * The callback never receives the token itself — only operations bound to it,
+ * each of which re-derives ownership from disk immediately before acting.
+ */
+export async function withCurrentClosureOwnership(result, fn) {
+  const cap = result ? OWNERSHIP_CAPABILITIES.get(result) : undefined;
+  if (!cap) throw new Error("ownership_capability_absent");
+  const { demaHome, transactionId, fencingToken } = cap;
+  const assertOwned = async () => {
+    const fence = await validateCurrentC2Ownership({ demaHome, transactionId, fencingToken });
+    if (!fence.valid) {
+      const e = new Error(fence.reason ?? fence.status);
+      e.fence = fence;
+      throw e;
+    }
+    return fence;
+  };
+  return fn(Object.freeze({
+    transactionId,
+    assert: assertOwned,
+    async appendPhase(args) {
+      return appendDurableClosurePhase({ ...args, demaHome, transactionId, fencingToken });
+    },
+    ledgerAppender({ now }) {
+      const inner = buildLedgerAppender({ demaHome, now, transactionId });
+      return async (args) => { await assertOwned(); return inner(args); };
+    },
+    ownedEffect(base) {
+      // `undo` stays SYNCHRONOUS and unwrapped. Omega0's reversibility probe
+      // calls it from non-async functions and hashes the world immediately after
+      // (omega0-mechanical-closure.js:347/401/414/721); an async undo there
+      // returns a pending Promise and every card comes back BLOCKED. Those probe
+      // sites run before the effect boundary, already under the pre-effect fence.
+      //
+      // The post-boundary verification-failure path is the one needing a FRESH
+      // fence, so ownership rides a separate async `undoOwned` that the kernel
+      // prefers when present. Fencing the injected ADAPTER keeps the kernel pure.
+      return Object.freeze({
+        ...base,
+        undoOwned: async (applied) => { await assertOwned(); return base.undo(applied); },
+      });
+    },
+  }));
+}
+
+/**
+ * Acquire a capability for a transaction that is already in its durable tail.
+ *
+ * Authority remains the caller's responsibility; this function decides only
+ * current process ownership against the verified C2 descriptor on disk.
+ */
+export async function acquireCurrentClosureOwnership({
+  demaHome,
+  transactionId,
+} = {}) {
+  const home = resolveDemaHome(demaHome);
+  const verified = await readVerifiedTransactionHash({
+    demaHome: home,
+    transactionId,
+  });
+  if (!verified.ok) {
+    return Object.freeze({
+      ok: false,
+      reason: "transaction_descriptor_unverified",
+      reason_detail: verified.reason,
+      mutation_performed: false,
+    });
+  }
+
+  const ownership = await acquireClosureOwnership({
+    demaHome: home,
+    transactionId,
+    transactionHash: verified.transaction_hash,
+  });
+  if (ownership.status !== OWNERSHIP_ACQUIRED) {
+    return Object.freeze({
+      ok: false,
+      reason:
+        ownership.status === STALE_OWNER_FENCED
+          ? "stale_owner_fenced"
+          : ownership.status.toLowerCase(),
+      ownership_status: ownership.status,
+      current_owner_claim_hash: ownership.current_owner_claim_hash ?? null,
+      requires_human: ownership.requires_human ?? false,
+      mutation_performed: false,
+    });
+  }
+
+  const fencingToken = ownership.fencing_token;
+  if (typeof fencingToken !== "string" || !fencingToken.startsWith("sha256:")) {
+    return Object.freeze({
+      ok: false,
+      reason: "ownership_token_invalid",
+      mutation_performed: false,
+    });
+  }
+
+  return attachOwnershipCapability(
+    Object.freeze({
+      ok: true,
+      reason: null,
+      authority_delta: 0,
+      transaction_id: transactionId,
+    }),
+    { demaHome: home, transactionId, fencingToken },
+  );
+}
+
+/**
+ * THE FENCE, evaluated against C2 as it exists RIGHT NOW.
+ *
+ * An earlier version passed the transaction hash verified at acquisition time.
+ * That proved "the current owner claim matches the transaction I checked
+ * earlier" — not "…matches the transaction that exists on disk at the instant I
+ * am about to touch reality." Between those two moments the descriptor or chain
+ * can be corrupted, replaced by an accidental competing writer, or drift in a
+ * fixture, and a cached hash would still agree with the owner claim while the
+ * authority underneath it had changed. So the hash is re-derived from disk here,
+ * every time, through the same shared C2 verifier.
+ *
+ * Performs no mutation itself. The caller's own replay still happens after this
+ * returns, because compare-and-append needs the head it is appending onto —
+ * these are two different reads serving two different purposes, not a duplicate.
+ */
+async function validateCurrentC2Ownership({ demaHome, transactionId, fencingToken } = {}) {
+  const verified = await readVerifiedTransactionHash({ demaHome, transactionId });
+  if (!verified.ok) {
+    return Object.freeze({
+      valid: false,
+      status: OWNERSHIP_STATUS_UNVERIFIABLE,
+      reason: "transaction_binding_unverifiable",
+      detail: verified.reason,
+      requires_human: true,
+      mutation_performed: false,
+      event_appended: false,
+      effect_retry_forbidden: true,
+    });
+  }
+  const fence = await validateFencingToken({
+    demaHome, transactionId, fencingToken,
+    expectedTransactionHash: verified.transaction_hash,
+  });
+  if (!fence.valid && fence.status === TRANSACTION_HASH_MISMATCH) {
+    // The owner is current; C2 underneath it is not the one it claimed. That is
+    // not an ordinary stale-worker arbitration — no newer owner exists to defer
+    // to — so it escalates rather than silently deferring.
+    return Object.freeze({ ...fence, reason: "claim_bound_to_noncurrent_transaction" });
+  }
+  return fence;
+}
+import {
   openClosureTransaction, replayClosureTransaction, appendClosureEvent,
+  readVerifiedTransactionHash,
   BEFORE_STATE_VERIFIED_EVIDENCE_SCHEMA, MISSION_CLOSURE_TX_RELDIR,
   TX_APPEND_TRANSITIONS,
   CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA,
@@ -321,7 +504,24 @@ export function buildClaimBoundConsentRegistry({ demaHome, claim }) {
 
 async function appendDurableClosurePhase({
   demaHome, transactionId, phase, terminalOutcome = null, evidenceRefs = [], atIso,
+  fencingToken = null,
 }) {
+  // C4D: every durable C2 append routes through here, so one fence at this
+  // chokepoint covers intent, applied, verified, sealed, and every rollback
+  // phase — a guard at each of the six call sites would be a larger diff and
+  // would rot the first time a seventh is added. The token is re-read from disk
+  // inside validateFencingToken; a token checked against cached state proves
+  // nothing about who owns the transaction right now.
+  if (fencingToken !== null) {
+    const fence = await validateCurrentC2Ownership({ demaHome, transactionId, fencingToken });
+    if (!fence.valid) {
+      return Object.freeze({
+        ok: false,
+        reason: fence.status === STALE_OWNER_FENCED ? "stale_owner_fenced" : "ownership_unverifiable",
+        ownership: fence,
+      });
+    }
+  }
   const before = await replayClosureTransaction({ demaHome, transactionId });
   if (!before.ok || !before.exists) {
     return Object.freeze({ ok: false, reason: before.reason ?? "transaction_not_prepared" });
@@ -541,8 +741,56 @@ export async function runTransactionalMechanicalClosure({
     return txRefusal(opened.reason ?? "transaction_open_refused", { details: opened });
   }
 
+  // ── C4D: ACQUIRE BEFORE ANYTHING DURABLE OR WORLD-CHANGING ──
+  // Ownership binds to the exact immutable C2 descriptor hash, re-read and
+  // verified from disk — never to prepared_intent_hash, and never to the
+  // in-memory open result. They are two different C2 facts: the descriptor BODY
+  // contains prepared_intent_hash among other fields, and transaction_hash is
+  // the hash OF that body. Substituting one for the other yields a claim that
+  // means "owner of this prepared intent" while its schema says "owner of this
+  // exact C2 transaction" — and one prepared intent can be shared by more than
+  // one descriptor.
+  const verifiedTx = await readVerifiedTransactionHash({
+    demaHome: home,
+    transactionId: claim.transaction_id,
+  });
+  if (!verifiedTx.ok) {
+    return txRefusal("transaction_descriptor_unverified", {
+      reason_detail: verifiedTx.reason,
+      requires_human: true,
+      mutation_performed: false,
+    });
+  }
+  const ownership = await acquireClosureOwnership({
+    demaHome: home,
+    transactionId: claim.transaction_id,
+    transactionHash: verifiedTx.transaction_hash,
+  });
+  if (ownership.status !== OWNERSHIP_ACQUIRED) {
+    // A live owner, or an owner whose liveness cannot be established. Either
+    // way this process performs zero mutation and zero durable publication.
+    return txRefusal(
+      ownership.status === STALE_OWNER_FENCED ? "stale_owner_fenced" : ownership.status.toLowerCase(),
+      {
+        ownership_status: ownership.status,
+        current_owner_claim_hash: ownership.current_owner_claim_hash ?? null,
+        requires_human: ownership.requires_human ?? false,
+        mutation_performed: false,
+      },
+    );
+  }
+  const fencingToken = ownership.fencing_token;
+  // The append chokepoint treats a null token as "no fence requested", which is
+  // right for the generic exported helper and wrong for this route: a null here
+  // would silently unfence every phase below. Production states its requirement
+  // explicitly rather than inheriting a permissive default.
+  if (typeof fencingToken !== "string" || !fencingToken.startsWith("sha256:")) {
+    return txRefusal("ownership_token_invalid", { mutation_performed: false });
+  }
+
   const intentPhase = await appendDurableClosurePhase({
     demaHome: home,
+    fencingToken,
     transactionId: claim.transaction_id,
     phase: "EFFECT_INTENT_PERSISTED",
     evidenceRefs: [{
@@ -568,7 +816,7 @@ export async function runTransactionalMechanicalClosure({
   });
   if (persistedSeal?.ok === false) return persistedSeal;
   if (persistedSeal?.ok === true) {
-    return Object.freeze({
+    return attachOwnershipCapability(Object.freeze({
       ok: true,
       reason: null,
       authority_delta: 0,
@@ -576,7 +824,7 @@ export async function runTransactionalMechanicalClosure({
       reused_sealed_card: true,
       omega0_card: persistedSeal.sealed,
       transaction_state: intentPhase.state,
-    });
+    }), { demaHome: home, transactionId: claim.transaction_id, fencingToken });
   }
 
   const mechanicalPrepared = prepareMechanicalClosure({
@@ -599,6 +847,26 @@ export async function runTransactionalMechanicalClosure({
   // ── THE EFFECT BOUNDARY ──
   // Everything from here on may have changed the world, so every failure exit
   // below settles with durable rollback history instead of merely refusing.
+  //
+  // C4D: this is the last instant at which refusing is still free, so the fence
+  // is re-validated from disk HERE rather than trusting the token acquired
+  // earlier. Between acquisition and this line we replayed, re-observed the
+  // world, and prepared — ample time for this process to have been taken over
+  // after its own death was (wrongly or rightly) concluded elsewhere.
+  const preEffectFence = await validateCurrentC2Ownership({
+    demaHome: home, transactionId: claim.transaction_id, fencingToken,
+  });
+  if (!preEffectFence.valid) {
+    return txRefusal(
+      preEffectFence.status === STALE_OWNER_FENCED ? "stale_owner_fenced" : "ownership_unverifiable",
+      {
+        ownership: preEffectFence,
+        mutation_performed: false,
+        effect_retry_forbidden: true,
+        transaction_state: intentPhase.state,
+      },
+    );
+  }
   const applied = applyPreparedMechanicalClosure({ prepared: mechanicalPrepared, effect });
   if (applied.status !== "APPLIED") {
     if (PRE_EFFECT_BOUNDARY_OMEGA0_REASONS.includes(applied.reason)) {
@@ -610,6 +878,7 @@ export async function runTransactionalMechanicalClosure({
     }
     return await settleMechanicalFailureWithVerifiedRollback({
       demaHome: home,
+      fencingToken,
       claim,
       prepared,
       effect,
@@ -624,6 +893,7 @@ export async function runTransactionalMechanicalClosure({
 
   const appliedPhase = await appendDurableClosurePhase({
     demaHome: home,
+    fencingToken,
     transactionId: claim.transaction_id,
     phase: "EFFECT_APPLIED",
     evidenceRefs: [{
@@ -640,6 +910,7 @@ export async function runTransactionalMechanicalClosure({
     // last DURABLE phase, which is still EFFECT_INTENT_PERSISTED.
     return await settleMechanicalFailureWithVerifiedRollback({
       demaHome: home,
+      fencingToken,
       claim,
       prepared,
       effect,
@@ -656,6 +927,7 @@ export async function runTransactionalMechanicalClosure({
   if (sealed.status !== "SEALED") {
     return await settleMechanicalFailureWithVerifiedRollback({
       demaHome: home,
+      fencingToken,
       claim,
       prepared,
       effect,
@@ -670,6 +942,7 @@ export async function runTransactionalMechanicalClosure({
 
   const verifiedPhase = await appendDurableClosurePhase({
     demaHome: home,
+    fencingToken,
     transactionId: claim.transaction_id,
     phase: "VERIFIED",
     evidenceRefs: [{
@@ -685,6 +958,7 @@ export async function runTransactionalMechanicalClosure({
   if (!verifiedPhase.ok) {
     return await settleMechanicalFailureWithVerifiedRollback({
       demaHome: home,
+      fencingToken,
       claim,
       prepared,
       effect,
@@ -699,6 +973,7 @@ export async function runTransactionalMechanicalClosure({
 
   const sealedPhase = await appendDurableClosurePhase({
     demaHome: home,
+    fencingToken,
     transactionId: claim.transaction_id,
     phase: "SEALED",
     evidenceRefs: [{
@@ -714,6 +989,7 @@ export async function runTransactionalMechanicalClosure({
     // after it — ledger, anchor, corridor terminal — belongs to other slices.
     return await settleMechanicalFailureWithVerifiedRollback({
       demaHome: home,
+      fencingToken,
       claim,
       prepared,
       effect,
@@ -726,7 +1002,7 @@ export async function runTransactionalMechanicalClosure({
     });
   }
 
-  return Object.freeze({
+  return attachOwnershipCapability(Object.freeze({
     ok: true,
     reason: null,
     authority_delta: 0,
@@ -735,7 +1011,7 @@ export async function runTransactionalMechanicalClosure({
     reused_sealed_card: false,
     omega0_card: sealed,
     transaction_state: sealedPhase.state,
-  });
+  }), { demaHome: home, transactionId: claim.transaction_id, fencingToken });
 }
 // ── C4B2A — DURABLE MECHANICAL ROLLBACK HISTORY ─────────────────────────────
 //
@@ -1101,6 +1377,7 @@ function reportSettled({ state, context, reason, restorationReason = null }) {
  */
 export async function settleMechanicalFailureWithVerifiedRollback({
   demaHome, claim, prepared = null, effect, failure, transactionState = null,
+  fencingToken = null,
 } = {}) {
   const home = resolveDemaHome(demaHome);
   const transactionId = claim?.transaction_id;
@@ -1181,6 +1458,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
   //     this event has settled.
   if (!hasPhase(state, "ROLLBACK_STARTED")) {
     const started = await appendDurableClosurePhase({
+      fencingToken,
       demaHome: home,
       transactionId,
       phase: "ROLLBACK_STARTED",
@@ -1229,6 +1507,25 @@ export async function settleMechanicalFailureWithVerifiedRollback({
   //     which of the two frozen outcomes applies.
   let restoration = null;
   if (!hasPhase(state, "BEFORE_STATE_VERIFIED")) {
+    // C4D: restoration MOVES THE FILESYSTEM, so it must hold the same law as the
+    // original effect. The ROLLBACK_STARTED chokepoint does NOT cover this: when
+    // a worker crashes after that phase is durable, its successor resumes here
+    // directly and the append fence is never re-entered. Measured — a stale
+    // token reached restoration and called into the effect. This is the last
+    // unfenced world mutation in the rollback tail.
+    if (fencingToken !== null) {
+      const fence = await validateCurrentC2Ownership({ demaHome: home, transactionId, fencingToken });
+      if (!fence.valid) {
+        return rollbackUnqualifiedRecovery({
+          state,
+          reason: fence.status === OWNERSHIP_STATUS_UNVERIFIABLE
+            || fence.status === TRANSACTION_HASH_MISMATCH
+            || fence.reason === "transaction_binding_unverifiable"
+            ? "restoration_ownership_unverifiable"
+            : "restoration_owner_fenced",
+        });
+      }
+    }
     restoration = restoreToBeforeState({ intent, effect });
   }
 
@@ -1239,6 +1536,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
   if (restoration && restoration.ok !== true) {
     if (!hasPhase(state, "RECOVERY_REQUIRED")) {
       const flagged = await appendDurableClosurePhase({
+        fencingToken,
         demaHome: home,
         transactionId,
         phase: "RECOVERY_REQUIRED",
@@ -1259,6 +1557,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
       state = flagged.state;
     }
     const resolved = await appendDurableClosurePhase({
+      fencingToken,
       demaHome: home,
       transactionId,
       phase: "RESOLVED",
@@ -1289,6 +1588,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
   const proof = restoration ?? null;
   if (!hasPhase(state, "ROLLED_BACK")) {
     const rolled = await appendDurableClosurePhase({
+      fencingToken,
       demaHome: home,
       transactionId,
       phase: "ROLLED_BACK",
@@ -1309,6 +1609,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
 
   if (!hasPhase(state, "BEFORE_STATE_VERIFIED")) {
     const verified = await appendDurableClosurePhase({
+      fencingToken,
       demaHome: home,
       transactionId,
       phase: "BEFORE_STATE_VERIFIED",
@@ -1332,6 +1633,7 @@ export async function settleMechanicalFailureWithVerifiedRollback({
   }
 
   const resolved = await appendDurableClosurePhase({
+    fencingToken,
     demaHome: home,
     transactionId,
     phase: "RESOLVED",

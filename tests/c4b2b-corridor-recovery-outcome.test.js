@@ -150,7 +150,7 @@ test("C4B2B-08: STOPPED really is terminal, so only a proven chain may cause one
 test("C4B2B-09: the mechanical exit writes no corridor event at all", () => {
   const src = cli();
   const start = src.indexOf("if (!mechanical.ok) {");
-  const end = src.indexOf("const result = await runCorridorClosure", start);
+  const end = src.indexOf("const result = await runOwnedCorridorWeld", start);
   assert.ok(start > 0 && end > start);
   const region = src.slice(start, end);
   assert.ok(region.includes("mapRecoveryClassToCorridor(mechanical.recovery_class)"));
@@ -177,7 +177,7 @@ test("C4B2B-10: the handoff exposes the EXACT existing STOP phrase, not a copy",
 test("C4B2B-11: the retry-asserting message is gone from the mechanical exit", () => {
   const src = cli();
   const start = src.indexOf("if (!mechanical.ok) {");
-  const end = src.indexOf("const result = await runCorridorClosure", start);
+  const end = src.indexOf("const result = await runOwnedCorridorWeld", start);
   const region = src.slice(start, end);
   assert.ok(start > 0 && end > start);
   assert.ok(

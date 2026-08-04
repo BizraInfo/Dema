@@ -46,10 +46,11 @@ import {
 } from "../../../../packages/mission/src/mission-corridor-closure.js";
 import {
   buildClaimBoundConsentRegistry,
-  buildLedgerAppender,
   buildRenameEffectAdapter,
   resolveRenameEffectIntent,
   runTransactionalMechanicalClosure,
+  acquireCurrentClosureOwnership,
+  withCurrentClosureOwnership,
   appendClosureTransactionPhase,
   observeCanonicalLedger,
   readClosureAnchorLog,
@@ -1933,6 +1934,184 @@ async function verifyBoundClosureArtifacts({
   return Object.freeze({ ok: true, sealedRef, ledgerEntry: entry, anchorRecord: anchors[0] });
 }
 
+export async function runOwnedCorridorWeld({
+  mechanical,
+  effect,
+  nowIso,
+  closureArgs,
+}) {
+  return withCurrentClosureOwnership(
+    mechanical,
+    (owned) =>
+      runCorridorClosure({
+        ...closureArgs,
+        effect: owned.ownedEffect(effect),
+        appendReceipt: owned.ledgerAppender({ now: nowIso }),
+      }),
+  );
+}
+
+export async function runOwnedCorridorEvidenceTail({
+  mechanical,
+  home,
+  transactionId,
+  consentClaimHash,
+  preparedIntentHash,
+  nowIso,
+  closureResult,
+  contractHash,
+  journal,
+  buildTerminalEvent,
+  onBoundary = async () => {},
+}) {
+  return withCurrentClosureOwnership(mechanical, async (owned) => {
+    await onBoundary("BEFORE_LEDGER_COMMITTED");
+    const ledgerPhase = await owned.appendPhase({
+      phase: "LEDGER_COMMITTED",
+      evidenceRefs: [{
+        schema: "bizra.dema.corridor_ledger_commit_evidence.v1",
+        receipt_id: closureResult.ledger_head,
+        ledger_prefix_length: closureResult.ledger_length,
+        seal_head: closureResult.omega0_card.seal_head,
+      }],
+      atIso: nowIso,
+    });
+    if (!ledgerPhase.ok) {
+      return Object.freeze({
+        ok: false,
+        stage: "LEDGER_COMMITTED",
+        reason: ledgerPhase.reason,
+      });
+    }
+
+    await onBoundary("AFTER_LEDGER_COMMITTED");
+    await owned.assert();
+    let anchorRecord;
+    try {
+      anchorRecord = appendClosureAnchor({
+        demaHome: home,
+        entries: closureResult.ledger_length,
+        head: closureResult.ledger_head,
+      });
+    } catch (error) {
+      return Object.freeze({
+        ok: false,
+        stage: "ANCHOR_PUBLISH",
+        reason: error?.code ?? "anchor_publish_failed",
+      });
+    }
+
+    await onBoundary("AFTER_ANCHOR_PUBLISHED");
+    const anchorPhase = await owned.appendPhase({
+      phase: "ANCHORED",
+      evidenceRefs: [{
+        schema: "bizra.dema.corridor_anchor_evidence.v1",
+        anchor_hash: anchorRecord.anchor_hash,
+        receipt_id: closureResult.ledger_head,
+        ledger_prefix_length: closureResult.ledger_length,
+      }],
+      atIso: nowIso,
+    });
+    if (!anchorPhase.ok) {
+      return Object.freeze({
+        ok: false,
+        stage: "ANCHORED",
+        reason: anchorPhase.reason,
+        anchorRecord,
+      });
+    }
+
+    const boundArtifacts = await verifyBoundClosureArtifacts({
+      home,
+      terminal: {
+        closure_transaction_id: transactionId,
+        consent_claim_hash: consentClaimHash,
+        prepared_intent_hash: preparedIntentHash,
+        seal_head: closureResult.omega0_card.seal_head,
+        ledger_head: closureResult.ledger_head,
+        anchor_hash: anchorRecord.anchor_hash,
+      },
+      transactionState: anchorPhase.state,
+    });
+    if (!boundArtifacts.ok) {
+      return Object.freeze({
+        ok: false,
+        stage: "ANCHORED_ARTIFACTS",
+        reason: boundArtifacts.reason,
+        anchorRecord,
+        anchorPhase,
+      });
+    }
+
+    await onBoundary("AFTER_ANCHORED");
+    await owned.assert();
+    const terminalEvent = appendCorridorEvent({
+      contract_hash: contractHash,
+      journal,
+      event: buildTerminalEvent(anchorRecord),
+    });
+    if (!terminalEvent.ok) {
+      return Object.freeze({
+        ok: false,
+        stage: "COMPLETE_EVENT",
+        reason: terminalEvent.blocked_by.join(", "),
+        anchorRecord,
+        anchorPhase,
+      });
+    }
+
+    await onBoundary("BEFORE_RESOLVED");
+    const resolvedPhase = await owned.appendPhase({
+      phase: "RESOLVED",
+      terminalOutcome: "COMPLETED_VERIFIED",
+      evidenceRefs: [{
+        schema: "bizra.dema.corridor_terminal_evidence.v1",
+        corridor_event_hash: terminalEvent.event.event_hash,
+        corridor_event_index: terminalEvent.event.index,
+        anchor_hash: anchorRecord.anchor_hash,
+      }],
+      atIso: nowIso,
+    });
+    if (!resolvedPhase.ok) {
+      return Object.freeze({
+        ok: false,
+        stage: "RESOLVED",
+        reason: resolvedPhase.reason,
+        anchorRecord,
+        anchorPhase,
+        terminalEvent,
+      });
+    }
+
+    const resolvedArtifacts = await verifyBoundClosureArtifacts({
+      home,
+      terminal: terminalEvent.event,
+      transactionState: resolvedPhase.state,
+      requireResolved: true,
+    });
+    if (!resolvedArtifacts.ok) {
+      return Object.freeze({
+        ok: false,
+        stage: "RESOLVED_ARTIFACTS",
+        reason: resolvedArtifacts.reason,
+        anchorRecord,
+        anchorPhase,
+        terminalEvent,
+        resolvedPhase,
+      });
+    }
+
+    return Object.freeze({
+      ok: true,
+      closureResult,
+      anchorRecord,
+      anchorPhase,
+      terminalEvent,
+      resolvedPhase,
+    });
+  });
+}
+
 // Two-step root-bound consent for a corridor write
 // (ROOT_BOUND_CONSENT_ENVELOPE_PREVIEW_REUSED — the envelope kernel is imported
 // unmodified via the corridor kernel). Step 1 (no --consent): print the derived
@@ -2416,19 +2595,30 @@ async function cmdMissionCorridor(argv) {
         corridorFail(`terminal artifact recovery failed closed (${artifacts.reason}).`);
       }
       const sealedRef = artifacts.sealedRef;
-      const resolved = await appendClosureTransactionPhase({
+      const recoveryOwnership = await acquireCurrentClosureOwnership({
         demaHome: home,
         transactionId: resumedClaim.transaction_id,
-        phase: "RESOLVED",
-        terminalOutcome: "COMPLETED_VERIFIED",
-        evidenceRefs: [{
-          schema: "bizra.dema.corridor_terminal_evidence.v1",
-          corridor_event_hash: last.event_hash,
-          corridor_event_index: last.index,
-          anchor_hash: last.anchor_hash,
-        }],
-        atIso: claim.claimed_at_iso,
       });
+      if (!recoveryOwnership.ok) {
+        corridorFail(
+          `terminal C2 ownership recovery failed closed (${recoveryOwnership.reason}).`,
+        );
+      }
+      const resolved = await withCurrentClosureOwnership(
+        recoveryOwnership,
+        (owned) =>
+          owned.appendPhase({
+            phase: "RESOLVED",
+            terminalOutcome: "COMPLETED_VERIFIED",
+            evidenceRefs: [{
+              schema: "bizra.dema.corridor_terminal_evidence.v1",
+              corridor_event_hash: last.event_hash,
+              corridor_event_index: last.index,
+              anchor_hash: last.anchor_hash,
+            }],
+            atIso: claim.claimed_at_iso,
+          }),
+      );
       if (!resolved.ok) corridorFail(`terminal C2 recovery failed closed (${resolved.reason}).`);
       const resolvedArtifacts = await verifyBoundClosureArtifacts({
         home,
@@ -2694,41 +2884,46 @@ async function cmdMissionCorridor(argv) {
       );
     }
 
-    const result = await runCorridorClosure({
-      contract: { mission_id: id },
-      contract_hash: loaded.contractDoc.contract_hash,
-      journal: loaded.journal,
-      mission,
-      lease,
-      consent,
-      anchorDir,
+    const result = await runOwnedCorridorWeld({
+      mechanical,
       effect,
-      now: Date.parse(nowIso),
-      omega0Card: mechanical.omega0_card,
-      transactionBinding: {
-        transaction_id: consentClaim.transaction_id,
-        consent_claim_hash: consentClaim.claim_hash,
-        prepared_intent_hash: prepared.prepared_intent_hash,
+      nowIso,
+      closureArgs: {
+          contract: { mission_id: id },
+          contract_hash: loaded.contractDoc.contract_hash,
+          journal: loaded.journal,
+          mission,
+          lease,
+          consent,
+          anchorDir,
+          now: Date.parse(nowIso),
+          omega0Card: mechanical.omega0_card,
+          transactionBinding: {
+            transaction_id: consentClaim.transaction_id,
+            consent_claim_hash: consentClaim.claim_hash,
+            prepared_intent_hash: prepared.prepared_intent_hash,
+          },
+          // Judge-free and STRUCTURALLY separated: the party that proposed the act is
+          // not the party that certifies it (verification-admission F2). Both still run
+          // in THIS process — this is not organisational or cryptographic independence.
+          verifyAdmission: ({ card }) => {
+            const a = evaluateVerificationAdmission({
+              proposed_act: `corridor-closure:${id}`,
+              verifier: "hash_equality",
+              proposer: "corridor-closure-effect-adapter",
+              certifier: "omega0-mechanical-closure-route",
+              bindings: { expected_post_sha256: card.after_hash },
+            });
+            return {
+              admitted: a.self_verifiable === true,
+              reason: a.refusal_reason ?? null,
+            };
+          },
+          consentRegistry: buildClaimBoundConsentRegistry({
+            demaHome: home,
+            claim: consentClaim,
+          }),
       },
-      appendReceipt: buildLedgerAppender({
-        demaHome: home,
-        now: nowIso,
-        transactionId: consentClaim.transaction_id,
-      }),
-      // Judge-free and STRUCTURALLY separated: the party that proposed the act is
-      // not the party that certifies it (verification-admission F2). Both still run
-      // in THIS process — this is not organisational or cryptographic independence.
-      verifyAdmission: ({ card }) => {
-        const a = evaluateVerificationAdmission({
-          proposed_act: `corridor-closure:${id}`,
-          verifier: "hash_equality",
-          proposer: "corridor-closure-effect-adapter",
-          certifier: "omega0-mechanical-closure-route",
-          bindings: { expected_post_sha256: card.after_hash },
-        });
-        return { admitted: a.self_verifiable === true, reason: a.refusal_reason ?? null };
-      },
-      consentRegistry: buildClaimBoundConsentRegistry({ demaHome: home, claim: consentClaim }),
     });
     if (result.state !== "COMPLETE" || !result.ledger_head || !result.ledger_length) {
       corridorFail(
@@ -2736,69 +2931,17 @@ async function cmdMissionCorridor(argv) {
       );
     }
 
-    const ledgerPhase = await appendClosureTransactionPhase({
-      demaHome: home,
-      transactionId: consentClaim.transaction_id,
-      phase: "LEDGER_COMMITTED",
-      evidenceRefs: [{
-        schema: "bizra.dema.corridor_ledger_commit_evidence.v1",
-        receipt_id: result.ledger_head,
-        ledger_prefix_length: result.ledger_length,
-        seal_head: result.omega0_card.seal_head,
-      }],
-      atIso: nowIso,
-    });
-    if (!ledgerPhase.ok) {
-      corridorFail(`C2 ledger witness failed closed (${ledgerPhase.reason}) — re-run this exact transaction.`);
-    }
-
-    let anchorRecord;
-    try {
-      anchorRecord = appendClosureAnchor({
-        demaHome: home,
-        entries: result.ledger_length,
-        head: result.ledger_head,
-      });
-    } catch (err) {
-      corridorFail(`closure anchor failed closed (${err?.message ?? "unknown"}) — re-run this exact transaction.`);
-    }
-    const anchorPhase = await appendClosureTransactionPhase({
-      demaHome: home,
-      transactionId: consentClaim.transaction_id,
-      phase: "ANCHORED",
-      evidenceRefs: [{
-        schema: "bizra.dema.corridor_anchor_evidence.v1",
-        anchor_hash: anchorRecord.anchor_hash,
-        receipt_id: result.ledger_head,
-        ledger_prefix_length: result.ledger_length,
-      }],
-      atIso: nowIso,
-    });
-    if (!anchorPhase.ok) {
-      corridorFail(`C2 anchor witness failed closed (${anchorPhase.reason}) — re-run this exact transaction.`);
-    }
-    const boundArtifacts = await verifyBoundClosureArtifacts({
+    const tail = await runOwnedCorridorEvidenceTail({
+      mechanical,
       home,
-      terminal: {
-        closure_transaction_id: consentClaim.transaction_id,
-        consent_claim_hash: consentClaim.claim_hash,
-        prepared_intent_hash: prepared.prepared_intent_hash,
-        seal_head: result.omega0_card.seal_head,
-        ledger_head: result.ledger_head,
-        anchor_hash: anchorRecord.anchor_hash,
-      },
-      transactionState: anchorPhase.state,
-    });
-    if (!boundArtifacts.ok) {
-      corridorFail(`closure artifact binding failed closed (${boundArtifacts.reason}) — no corridor terminal was written.`);
-    }
-
-    // The durable corridor event is minted by the corridor's own canonical
-    // serializer — never by the weld, whose event shape is a different chain.
-    const ev = appendCorridorEvent({
-      contract_hash: loaded.contractDoc.contract_hash,
+      transactionId: consentClaim.transaction_id,
+      consentClaimHash: consentClaim.claim_hash,
+      preparedIntentHash: prepared.prepared_intent_hash,
+      nowIso,
+      closureResult: result,
+      contractHash: loaded.contractDoc.contract_hash,
       journal: loaded.journal,
-      event: {
+      buildTerminalEvent: (anchorRecord) => ({
         state: "COMPLETE",
         at_iso: nowIso,
         terminal_outcome: "COMPLETED_VERIFIED",
@@ -2811,38 +2954,18 @@ async function cmdMissionCorridor(argv) {
         seal_head: result.omega0_card.seal_head,
         ledger_head: result.ledger_head,
         anchor_hash: anchorRecord.anchor_hash,
-      },
+      }),
     });
-    if (!ev.ok) corridorFail(`corridor closure event blocked: ${ev.blocked_by.join(", ")}`);
-    // C2 resolves from ANCHORED before the corridor exposes COMPLETE. The
-    // deterministic event is built first so RESOLVED can bind its exact hash;
-    // if journal publication then fails, the same transaction replays this
-    // exact event without a second effect, receipt, anchor, or C2 terminal.
-    const resolvedPhase = await appendClosureTransactionPhase({
-      demaHome: home,
-      transactionId: consentClaim.transaction_id,
-      phase: "RESOLVED",
-      terminalOutcome: "COMPLETED_VERIFIED",
-      evidenceRefs: [{
-        schema: "bizra.dema.corridor_terminal_evidence.v1",
-        corridor_event_hash: ev.event.event_hash,
-        corridor_event_index: ev.event.index,
-        anchor_hash: anchorRecord.anchor_hash,
-      }],
-      atIso: nowIso,
-    });
-    if (!resolvedPhase.ok) {
-      corridorFail(`C2 terminal witness failed closed (${resolvedPhase.reason}) — re-run this exact transaction.`);
+    if (!tail.ok) {
+      corridorFail(
+        `closure evidence tail failed closed at ${tail.stage} (${tail.reason}) — re-run this exact transaction.`,
+      );
     }
-    const resolvedArtifacts = await verifyBoundClosureArtifacts({
-      home,
-      terminal: ev.event,
-      transactionState: resolvedPhase.state,
-      requireResolved: true,
-    });
-    if (!resolvedArtifacts.ok) {
-      corridorFail(`C2 terminal verification failed closed (${resolvedArtifacts.reason}) — no corridor terminal was written.`);
-    }
+    const {
+      anchorRecord,
+      terminalEvent: ev,
+      resolvedPhase,
+    } = tail;
     await appendCorridorJournalEvent(dir, ev.event);
 
     // Compact closure index. `verify_with` re-reads C2, the signed ledger and

@@ -60,6 +60,7 @@ import {
   openClosureTransaction,
   replayClosureTransaction,
   appendClosureEvent,
+  readVerifiedTransactionHash,
   _internal as txInternal,
 } from "../packages/receipts/src/mission-closure-transaction.js";
 import {
@@ -71,6 +72,17 @@ import {
   CORRIDOR_RENAME_RECOVERY_POLICY_HASH,
 } from "../packages/mission/src/corridor-closure-gatherer.js";
 import { mapRecoveryClassToCorridor } from "../packages/mission/src/mission-corridor-closure.js";
+import {
+  probeProcessIdentity,
+  deriveClaimHash,
+  acquireClosureOwnership,
+  inspectClosureOwnership,
+  validateFencingToken,
+  MISSION_CLOSURE_OWNERSHIP_SCHEMA,
+  MISSION_CLOSURE_OWNERSHIP_DOMAIN,
+  CLAIM_KIND_ACQUIRE,
+  _internal as ownInternal,
+} from "../packages/receipts/src/mission-closure-ownership.js";
 
 const NOW = 1_786_000_000_000;
 const AT = "2026-08-02T12:00:00.000Z";
@@ -2291,4 +2303,903 @@ test("C4B2AM-20: no raw exception, path, stack, nonce or source bytes in new evi
       assert.ok(v === null || typeof v !== "object", `${e.phase} carries a nested object`);
     }
   }
+});
+
+// ── C4D behavioural fencing, driven through the REAL production route ──────
+// The C4D matrix proves the ownership module in isolation and greps the call
+// graph, but a grep proves a fence is CALLED, not that its verdict is OBEYED.
+// Mutation testing showed exactly that gap: neutering the effect-boundary check
+// and the acquisition check both left the isolated suite green. These two tests
+// drive runTransactionalMechanicalClosure itself and assert on the world.
+
+/** Seed a current-owner claim for a foreign process, as a crash or rival leaves it. */
+async function seedForeignOwner(demaHome, transactionId, transactionHash, identity) {
+  const dir = ownInternal.ownershipDir(demaHome, transactionId);
+  await mkdir(join(dir, "claims"), { recursive: true });
+  const body = {
+    schema: MISSION_CLOSURE_OWNERSHIP_SCHEMA,
+    domain: MISSION_CLOSURE_OWNERSHIP_DOMAIN,
+    transaction_id: transactionId,
+    transaction_hash: transactionHash,
+    owner_instance_id: "foreign-owner",
+    pid: identity.pid,
+    process_start_identity: identity.process_start_identity,
+    boot_identity_hash: identity.boot_identity_hash,
+    acquired_at_iso: "2026-08-04T00:00:00.000Z",
+    predecessor_claim_hash: null,
+    claim_kind: CLAIM_KIND_ACQUIRE,
+  };
+  const claim = { ...body, claim_hash: deriveClaimHash({ ...body, claim_hash: null }) };
+  await writeFile(join(dir, "current.gen0"), JSON.stringify(claim, null, 2));
+  return claim;
+}
+
+/**
+ * Open C2 and return the AUTHORITATIVE descriptor hash, verified from disk.
+ * Ownership binds to this, never to prepared_intent_hash — the descriptor body
+ * contains the prepared intent hash among other fields, and transaction_hash is
+ * the hash OF that body, so one prepared intent can belong to more than one
+ * descriptor.
+ */
+async function openAndVerify(f) {
+  const opened = await openClosureTransaction({
+    claim: f.claim, demaHome: f.demaHome, atIso: f.claim.claimed_at_iso,
+  });
+  assert.equal(opened.ok, true, opened.reason);
+  const verified = await readVerifiedTransactionHash({
+    demaHome: f.demaHome, transactionId: f.claim.transaction_id,
+  });
+  assert.equal(verified.ok, true, verified.reason);
+  return verified;
+}
+
+async function seedForeignOwnerAt(demaHome, transactionId, transactionHash, identity, gen) {
+  const dir = ownInternal.ownershipDir(demaHome, transactionId);
+  await mkdir(join(dir, "claims"), { recursive: true });
+  const body = {
+    schema: MISSION_CLOSURE_OWNERSHIP_SCHEMA,
+    domain: MISSION_CLOSURE_OWNERSHIP_DOMAIN,
+    transaction_id: transactionId,
+    transaction_hash: transactionHash,
+    owner_instance_id: `foreign-owner-gen${gen}`,
+    pid: identity.pid,
+    process_start_identity: identity.process_start_identity,
+    boot_identity_hash: identity.boot_identity_hash,
+    acquired_at_iso: "2026-08-04T00:00:00.000Z",
+    predecessor_claim_hash: `sha256:${"1".repeat(64)}`,
+    claim_kind: "DEAD_OWNER_TAKEOVER",
+  };
+  const claim = { ...body, claim_hash: deriveClaimHash({ ...body, claim_hash: null }) };
+  await writeFile(join(dir, `current.gen${gen}`), JSON.stringify(claim, null, 2));
+  return claim;
+}
+
+test("C4D-BIND-01/02: ownership binds the verified C2 descriptor hash, which is NOT the prepared-intent hash", async () => {
+  const f = await fixture();
+  const verified = await openAndVerify(f);
+
+  assert.match(verified.transaction_hash, /^sha256:[0-9a-f]{64}$/);
+  assert.notEqual(
+    verified.transaction_hash,
+    verified.prepared_intent_hash,
+    "the two C2 facts must be genuinely different for this binding to mean anything",
+  );
+  assert.equal(verified.prepared_intent_hash, f.prepared.prepared_intent_hash);
+
+  const own = await acquireClosureOwnership({
+    demaHome: f.demaHome,
+    transactionId: f.claim.transaction_id,
+    transactionHash: verified.transaction_hash,
+  });
+  assert.equal(own.status, "ACQUIRED");
+  assert.equal(own.claim.transaction_hash, verified.transaction_hash);
+  assert.notEqual(own.claim.transaction_hash, verified.prepared_intent_hash);
+});
+
+test("C4D-BIND-03/07: the production route publishes a claim bound to the descriptor, not the intent", async () => {
+  const f = await fixture();
+  const base = f.build();
+  const result = await runTransactionalMechanicalClosure({ ...f.argsWith(base), effect: base });
+  assert.equal(result.ok, true, result.reason);
+
+  // Inspect what the REAL route actually published — not a source regex.
+  const verified = await readVerifiedTransactionHash({
+    demaHome: f.demaHome, transactionId: f.claim.transaction_id,
+  });
+  assert.equal(verified.ok, true);
+  const current = await inspectClosureOwnership({
+    demaHome: f.demaHome, transactionId: f.claim.transaction_id,
+  });
+  assert.equal(current.state, "PRESENT");
+  assert.equal(
+    current.claim.transaction_hash,
+    verified.transaction_hash,
+    "the published ownership claim must name the exact C2 descriptor",
+  );
+  assert.notEqual(
+    current.claim.transaction_hash,
+    f.prepared.prepared_intent_hash,
+    "substituting prepared_intent_hash would make this pass — it must not",
+  );
+});
+
+test("C4D-BIND-06: a validly-hashed claim bound to a DIFFERENT descriptor cannot authorize", async () => {
+  const f = await fixture();
+  const verified = await openAndVerify(f);
+  const own = await acquireClosureOwnership({
+    demaHome: f.demaHome,
+    transactionId: f.claim.transaction_id,
+    transactionHash: verified.transaction_hash,
+  });
+  assert.equal(own.status, "ACQUIRED");
+
+  // The token is current and the claim hash is genuinely valid; only the
+  // descriptor it names is wrong.
+  const fence = await validateFencingToken({
+    demaHome: f.demaHome,
+    transactionId: f.claim.transaction_id,
+    fencingToken: own.fencing_token,
+    expectedTransactionHash: f.prepared.prepared_intent_hash,
+  });
+  assert.equal(fence.valid, false);
+  assert.equal(fence.status, "TRANSACTION_HASH_MISMATCH");
+  assert.equal(fence.mutation_performed, false);
+  assert.equal(fence.event_appended, false);
+  assert.equal(fence.requires_human, true);
+});
+
+test("C4D-BIND-09: an unreadable C2 descriptor fails closed with zero mutation", async () => {
+  const f = await fixture();
+  await openAndVerify(f);
+  const descriptor = join(txInternal.transactionDir
+    ? txInternal.transactionDir(f.demaHome, f.claim.transaction_id)
+    : join(f.demaHome, "transactions", "mission-closure", f.claim.transaction_id), "transaction.json");
+  await writeFile(descriptor, "{ not json");
+
+  let applyCalls = 0;
+  const base = f.build();
+  const result = await runTransactionalMechanicalClosure({
+    ...f.argsWith(base),
+    effect: wrapEffect(base, { apply: (plan) => { applyCalls += 1; return base.apply(plan); } }),
+  });
+  assert.equal(applyCalls, 0, "an unverifiable descriptor must not reach the world");
+  assert.equal(result.ok, false);
+  // An earlier authority read reaches the corrupt descriptor first and refuses
+  // with the more specific `unreadable`; the C4D binding check is the backstop
+  // behind it. Either is a fail-closed refusal, and the load-bearing claim is
+  // that NOTHING moved — so accept both rather than pin an incidental ordering.
+  assert.ok(
+    ["transaction_descriptor_unreadable", "transaction_descriptor_unverified"].includes(result.reason),
+    `expected a descriptor refusal, got ${result.reason}`,
+  );
+  assert.equal(existsSync(f.sourcePath), true);
+  assert.equal(existsSync(f.targetPath), false);
+});
+
+test("C4D-P1: a LIVE foreign owner stops the production route before the world moves", async () => {
+  const f = await fixture();
+  // The parent process is genuinely alive and its identity is genuinely
+  // readable, so this is a real live owner, not a mocked one.
+  const parent = await probeProcessIdentity(process.ppid);
+  assert.ok(parent, "the parent process identity must be readable for this test to mean anything");
+  const verified = await openAndVerify(f);
+  await seedForeignOwner(f.demaHome, f.claim.transaction_id, verified.transaction_hash, parent);
+
+  let applyCalls = 0;
+  const base = f.build();
+  const result = await runTransactionalMechanicalClosure({
+    ...f.argsWith(base),
+    effect: wrapEffect(base, { apply: (plan) => { applyCalls += 1; return base.apply(plan); } }),
+  });
+
+  assert.equal(applyCalls, 0, "a non-owner must not touch the world");
+  assert.equal(result.ok, false);
+  assert.equal(result.mutation_performed, false);
+  // The refusal must NAME the live owner. Falling through to an incidental
+  // downstream refusal would stop the world but tell the operator the wrong
+  // story — and would mean the acquisition guard itself is dead code.
+  assert.equal(result.reason, "ownership_held", `expected a live-owner refusal, got ${result.reason}`);
+  assert.equal(result.ownership_status, "OWNERSHIP_HELD");
+  assert.equal(existsSync(f.sourcePath), true, "the source file must be untouched");
+  assert.equal(existsSync(f.targetPath), false, "no rename may have happened");
+});
+
+test("C4D-P2: losing ownership mid-flight fences the effect at the boundary", async () => {
+  const f = await fixture();
+  const parent = await probeProcessIdentity(process.ppid);
+  assert.ok(parent);
+  const verifiedTx = await openAndVerify(f);
+
+  // manifest() is called during prepare — after this process acquired ownership
+  // and before the effect boundary. Taking over there models a rival that
+  // concluded we were dead while we were still working.
+  let applyCalls = 0;
+  let seeded = false;
+  const base = f.build();
+  const result = await runTransactionalMechanicalClosure({
+    ...f.argsWith(base),
+    effect: wrapEffect(base, {
+      manifest: () => {
+        if (!seeded) {
+          seeded = true;
+          const dir = ownInternal.ownershipDir(f.demaHome, f.claim.transaction_id);
+          // gen1 supersedes our gen0 claim: our token is now stale.
+          const body = {
+            schema: MISSION_CLOSURE_OWNERSHIP_SCHEMA,
+            domain: MISSION_CLOSURE_OWNERSHIP_DOMAIN,
+            transaction_id: f.claim.transaction_id,
+            transaction_hash: verifiedTx.transaction_hash,
+            owner_instance_id: "rival-owner",
+            pid: parent.pid,
+            process_start_identity: parent.process_start_identity,
+            boot_identity_hash: parent.boot_identity_hash,
+            acquired_at_iso: "2026-08-04T00:00:01.000Z",
+            predecessor_claim_hash: `sha256:${"1".repeat(64)}`,
+            claim_kind: "DEAD_OWNER_TAKEOVER",
+          };
+          const claim = { ...body, claim_hash: deriveClaimHash({ ...body, claim_hash: null }) };
+          writeFileSync(join(dir, "current.gen1"), JSON.stringify(claim, null, 2));
+        }
+        return base.manifest();
+      },
+      apply: (plan) => { applyCalls += 1; return base.apply(plan); },
+    }),
+  });
+
+  assert.equal(applyCalls, 0, "a fenced worker must never cross the effect boundary");
+  assert.equal(result.ok, false);
+  assert.equal(existsSync(f.sourcePath), true, "the source file must be untouched");
+  assert.equal(existsSync(f.targetPath), false, "no rename may have happened");
+});
+
+test("C4D-REL: production relies on death + takeover, not explicit release — and that is safe", async () => {
+  // MEASURED, not assumed: releaseClosureOwnership() exists in the ownership
+  // module but the production route never calls it. So the retirement path is
+  // "the owner dies and a successor proves it dead", and what must hold is that
+  // a dead owner's unreleased claim can never (a) let the effect run twice, or
+  // (b) permanently block a lawful retry.
+  const gatherer = readFileSync(
+    new URL("../packages/mission/src/corridor-closure-gatherer.js", import.meta.url), "utf8",
+  );
+  assert.ok(gatherer.length > 1000, "source must be non-empty for this scan to mean anything");
+  assert.equal(
+    gatherer.includes("releaseClosureOwnership"),
+    false,
+    "if production starts releasing explicitly, this characterization must be re-measured",
+  );
+
+  const f = await fixture();
+  const base = f.build();
+  let applyCalls = 0;
+  const counted = wrapEffect(base, { apply: (plan) => { applyCalls += 1; return base.apply(plan); } });
+
+  const first = await runTransactionalMechanicalClosure({ ...f.argsWith(base), effect: counted });
+  assert.equal(first.ok, true, first.reason);
+  // Baseline rather than an asserted constant: the load-bearing property is that
+  // a TERMINAL transaction never re-enters the effect, not how many adapter
+  // calls one successful closure happens to make.
+  const applyCallsAfterFirst = applyCalls;
+  assert.ok(applyCallsAfterFirst >= 1, "the effect ran at least once");
+  const terminal = await replayClosureTransaction({
+    demaHome: f.demaHome, transactionId: f.claim.transaction_id,
+  });
+  const terminalHead = terminal.head_event_hash;
+
+  // The owner dies without releasing: overwrite the current pointer with a
+  // provably dead claim at the next generation.
+  const verified = await readVerifiedTransactionHash({
+    demaHome: f.demaHome, transactionId: f.claim.transaction_id,
+  });
+  const dir = ownInternal.ownershipDir(f.demaHome, f.claim.transaction_id);
+  const gens = await ownInternal.readGenerations(dir);
+  await seedForeignOwnerAt(f.demaHome, f.claim.transaction_id, verified.transaction_hash,
+    { pid: 999_997, process_start_identity: "1", boot_identity_hash: (await probeProcessIdentity(process.pid)).boot_identity_hash },
+    gens[gens.length - 1] + 1);
+
+  // A successor arrives on a terminal transaction.
+  const second = await runTransactionalMechanicalClosure({ ...f.argsWith(base), effect: counted });
+
+  assert.equal(applyCalls, applyCallsAfterFirst, "a terminal transaction must never re-enter the effect");
+  const after = await replayClosureTransaction({
+    demaHome: f.demaHome, transactionId: f.claim.transaction_id,
+  });
+  assert.equal(after.head_event_hash, terminalHead, "authority did not advance");
+  assert.ok(second !== undefined, "the successor got an answer rather than hanging");
+
+  // Ownership generations MAY advance (the successor proved the predecessor
+  // dead); authority did not. An unreleased dead claim therefore never becomes
+  // a permanent lock.
+  const finalGens = await ownInternal.readGenerations(dir);
+  assert.ok(finalGens.length >= gens.length, "generations may advance");
+  const current = await inspectClosureOwnership({
+    demaHome: f.demaHome, transactionId: f.claim.transaction_id,
+  });
+  assert.equal(current.state, "PRESENT");
+  assert.equal(current.claim.transaction_hash, verified.transaction_hash);
+});
+
+// ── C4D TOCTOU: the fence must bind CURRENT C2, not a remembered one ────────
+// Binding at acquisition proves "I own the transaction I checked earlier". These
+// prove the stronger claim: "I still own the exact transaction that exists NOW,
+// at the instant I touch reality." The seam is effect.manifest(), which runs
+// after ownership is acquired and before the effect boundary — so anything it
+// does models a change that lands inside the window.
+
+function descriptorPath(f) {
+  return join(txInternal.transactionDir(f.demaHome, f.claim.transaction_id), "transaction.json");
+}
+
+test("C4D-TOCTOU-01/09: C2 corrupted AFTER acquisition, BEFORE the effect — nothing touches the world", async () => {
+  const f = await fixture();
+  const base = f.build();
+  let applyCalls = 0;
+  let tampered = false;
+
+  const result = await runTransactionalMechanicalClosure({
+    ...f.argsWith(base),
+    effect: wrapEffect(base, {
+      manifest: () => {
+        if (!tampered) {
+          tampered = true;
+          // Ownership is already held and valid at this point. Only C2 changed.
+          writeFileSync(descriptorPath(f), "{ corrupted after acquisition");
+        }
+        return base.manifest();
+      },
+      apply: (plan) => { applyCalls += 1; return base.apply(plan); },
+    }),
+  });
+
+  assert.equal(tampered, true, "the seam must actually have fired, or this proves nothing");
+  assert.equal(applyCalls, 0, "a token validated against a remembered C2 would have let this through");
+  assert.equal(result.ok, false);
+  assert.equal(existsSync(f.sourcePath), true, "the world is untouched");
+  assert.equal(existsSync(f.targetPath), false);
+});
+
+test("C4D-TOCTOU-03: C2 chain corrupted mid-flight — no durable append lands", async () => {
+  const f = await fixture();
+  const base = f.build();
+  let tampered = false;
+  let headBefore = null;
+
+  await runTransactionalMechanicalClosure({
+    ...f.argsWith(base),
+    effect: wrapEffect(base, {
+      manifest: () => {
+        if (!tampered) {
+          tampered = true;
+          const evDir = txInternal.eventsDirOf(f.demaHome, f.claim.transaction_id);
+          const names = readdirSync(evDir).filter((n) => !n.startsWith("."));
+          assert.ok(names.length > 0, "there must be events to corrupt");
+          headBefore = names.length;
+          writeFileSync(join(evDir, names[0]), "{ corrupted event");
+        }
+        return base.manifest();
+      },
+    }),
+  });
+
+  assert.equal(tampered, true);
+  const evDir = txInternal.eventsDirOf(f.demaHome, f.claim.transaction_id);
+  const after = readdirSync(evDir).filter((n) => !n.startsWith(".")).length;
+  assert.equal(after, headBefore, "no new event may be appended onto an unverifiable chain");
+  assert.equal(existsSync(f.targetPath), false, "and the world stays untouched");
+});
+
+test("C4D-TOCTOU-07: an untampered closure still runs green", async () => {
+  const f = await fixture();
+  const base = f.build();
+  const result = await runTransactionalMechanicalClosure({ ...f.argsWith(base), effect: base });
+  assert.equal(result.ok, true, result.reason);
+  assert.equal(existsSync(f.targetPath), true, "the normal path is unaffected by the fence");
+});
+
+// ---------------------------------------------------------------------------
+// C4D-OWNED-CLOSURE-TAIL-1B — Task 1 (red-first). Lives here because fixture()
+// and runTransactionalMechanicalClosure do; the plan's file map placed it in the
+// c4d file, which has neither.
+//
+// AMENDED 2026-08-04: the capability must be held in a module-private WeakMap,
+// not on a Symbol key. A Symbol key is fully reflectable via
+// Object.getOwnPropertySymbols() / Reflect.ownKeys(), which would publish the
+// fencing token. The original assertions scanned only getOwnPropertyNames(),
+// which excludes symbols — it could not fail on the design it was guarding.
+// ---------------------------------------------------------------------------
+
+test("C4D-TAIL-13: the ownership capability is unreachable by reflection", async () => {
+  const mod = await import(
+    new URL("../packages/mission/src/corridor-closure-gatherer.js", import.meta.url).href
+  );
+  assert.equal(typeof mod.hasOwnershipCapability, "function",
+    "hasOwnershipCapability must be exported by the I/O tier");
+
+  const f = await fixture();
+  const base = f.build();
+  const result = await runTransactionalMechanicalClosure({ ...f.argsWith(base), effect: base });
+  assert.equal(result.ok, true, result.reason);
+
+  assert.equal(mod.hasOwnershipCapability(result), true, "the tail needs the capability");
+
+  // The three assertions that can actually see a Symbol-key leak.
+  assert.deepEqual(Object.getOwnPropertySymbols(result), [],
+    "no symbol key may carry the capability");
+  const ownKeys = Reflect.ownKeys(result);
+  assert.equal(ownKeys.every((k) => typeof k === "string"), true,
+    "Reflect.ownKeys must expose no non-string key");
+  for (const k of ownKeys) {
+    const v = result[k];
+    assert.equal(typeof v === "object" && v !== null && "fencingToken" in v, false,
+      `reachable capability under key ${String(k)}`);
+  }
+
+  const json = JSON.stringify(result);
+  assert.equal(json.includes("fencing_token"), false);
+  assert.equal(json.includes("fencingToken"), false);
+});
+
+// ---------------------------------------------------------------------------
+// C4D-OWNED-CLOSURE-TAIL-1B — Task 2: fence restoreToBeforeState.
+//
+// Restoration MOVES THE FILESYSTEM. It must hold the same law as the original
+// effect: a takeover between the effect and restoration must fence the old
+// worker BEFORE undo runs. `manifestHash` is the first thing
+// restoreToBeforeState touches, so a zero count proves the helper was never
+// entered — not merely that it declined once inside.
+// ---------------------------------------------------------------------------
+
+async function ownedRollbackFixture() {
+  // The settler refuses on binding grounds unless the effect genuinely crossed
+  // the boundary — restoration is never reached, and a test built without this
+  // would assert on a refusal it never triggered.
+  const f = await fixture();
+  const base = f.build();
+  const outage = await crossBoundaryDuringOutage(f, base);
+  assert.equal(outage.ok, false, "the outage must leave the world mutated and unsettled");
+  assert.equal(existsSync(f.targetPath), true, "the effect really did happen");
+
+  const verified = await readVerifiedTransactionHash({
+    demaHome: f.demaHome, transactionId: f.claim.transaction_id,
+  });
+  assert.equal(verified.ok, true, verified.reason);
+  const own = await acquireClosureOwnership({
+    demaHome: f.demaHome,
+    transactionId: f.claim.transaction_id,
+    transactionHash: verified.transaction_hash,
+  });
+  assert.ok(["ACQUIRED", "HELD"].includes(own.status), `ownership: ${own.status}`);
+  return { f, verified, fencingToken: own.claim.claim_hash };
+}
+
+async function takeOwnershipAway(f, verified) {
+  const dir = ownInternal.ownershipDir(f.demaHome, f.claim.transaction_id);
+  const gens = await ownInternal.readGenerations(dir);
+  const parent = await probeProcessIdentity(process.pid);
+  await seedForeignOwnerAt(f.demaHome, f.claim.transaction_id, verified.transaction_hash,
+    { pid: 999_993, process_start_identity: "1", boot_identity_hash: parent.boot_identity_hash },
+    gens[gens.length - 1] + 1);
+}
+
+
+
+// MEASURED 2026-08-04 — Task 2 threat model is NARROWER than the plan assumed.
+// A takeover seeded before settle is already caught transitively at the
+// ROLLBACK_STARTED chokepoint (appendDurableClosurePhase fences there), and a
+// failed restoration degrades monotonically to RECOVERY_REQUIRED -> RESOLVED,
+// which is terminal — a resumed settler never re-enters restoration (probe:
+// manifestCalls = 0). So restoreToBeforeState is reachable unfenced ONLY in the
+// crash window: a worker appends ROLLBACK_STARTED durably, dies before
+// restoration, and a successor resumes. That is not provable in-process.
+// Task 2 therefore DEPENDS ON the Task 9 child-process harness. TAIL-01/TAIL-02
+// are withheld until that harness exists rather than shipped as assertions that
+// pass without the fence.
+test("C4D-TAIL-01b: the current owner still restores exactly once", async () => {
+  const { f, fencingToken } = await ownedRollbackFixture();
+  let manifestCalls = 0;
+  const base = f.build();
+  const spied = wrapEffect(base, {
+    manifestHash: () => { manifestCalls += 1; return base.manifestHash(); },
+  });
+
+  const result = await settleMechanicalFailureWithVerifiedRollback({
+    demaHome: f.demaHome, claim: f.claim, prepared: f.prepared, effect: spied,
+    failure: { stage: "EFFECT_APPLIED_PERSISTENCE", reason: "effect_applied_persistence_failed" },
+    fencingToken,
+  });
+
+  assert.ok(manifestCalls >= 1, "the lawful owner must be permitted to restore");
+  assert.notEqual(result.reason, "restoration_owner_fenced");
+  assert.notEqual(result.reason, "restoration_ownership_unverifiable");
+});
+
+// ── C4D-OWNED-CLOSURE-TAIL-1B — Task 9 harness: real crash-window worker ─────
+//
+// The single-process probe proved restoreToBeforeState is unreachable by a
+// fenced worker in-process: the ROLLBACK_STARTED chokepoint catches a takeover
+// first, and a failed restoration degrades terminally so no resume re-enters.
+// The ONLY unfenced path is the crash window — a worker makes ROLLBACK_STARTED
+// durable, dies before restoration, and a successor resumes.
+//
+// The child dies inside effect.manifestHash(), which restoreToBeforeState calls
+// FIRST. SIGKILL to its own pid gives a real uncatchable death at exactly the
+// restoration entry — no unwind, no finally, no terminal phase appended.
+// Follows the existing in-file spawnSync(--input-type=module) idiom rather than
+// adding a tracked fixture file.
+
+function crashWorkerScript(f, tokenPath) {
+  const G = JSON.stringify(join(process.cwd(), "packages/mission/src/corridor-closure-gatherer.js"));
+  const O = JSON.stringify(join(process.cwd(), "packages/receipts/src/mission-closure-ownership.js"));
+  const X = JSON.stringify(join(process.cwd(), "packages/receipts/src/mission-closure-transaction.js"));
+  return `
+import { writeFileSync } from "node:fs";
+import { buildRenameEffectAdapter, settleMechanicalFailureWithVerifiedRollback } from ${G};
+import { acquireClosureOwnership } from ${O};
+import { readVerifiedTransactionHash } from ${X};
+const home = ${JSON.stringify(f.demaHome)};
+const txId = ${JSON.stringify(f.claim.transaction_id)};
+const v = await readVerifiedTransactionHash({ demaHome: home, transactionId: txId });
+const own = await acquireClosureOwnership({
+  demaHome: home, transactionId: txId, transactionHash: v.transaction_hash,
+});
+// writeFileSync, never stdout: a piped stdout is buffered and SIGKILL discards it.
+writeFileSync(${JSON.stringify(tokenPath)}, JSON.stringify({ acquired: own.status, token: own.fencing_token ?? null }));
+const base = buildRenameEffectAdapter({
+  scopeRoot: ${JSON.stringify(f.estate)},
+  from: ${JSON.stringify(SOURCE)},
+  to: ${JSON.stringify(TARGET)},
+});
+const suicidal = { ...base, manifestHash: () => { process.kill(process.pid, "SIGKILL"); } };
+await settleMechanicalFailureWithVerifiedRollback({
+  demaHome: home,
+  claim: ${JSON.stringify({ transaction_id: f.claim.transaction_id })},
+  prepared: null,
+  effect: suicidal,
+  failure: { stage: "VERIFICATION_PERSISTENCE", reason: "verification_persistence_failed" },
+  fencingToken: own.fencing_token ?? null,
+});
+writeFileSync(${JSON.stringify(tokenPath)} + ".survived", "1");
+`;
+}
+
+/** Make the current ownership holder provably dead so a successor may take over. */
+async function retireCurrentOwnerAsDead(f, deadPid) {
+  const verified = await readVerifiedTransactionHash({
+    demaHome: f.demaHome, transactionId: f.claim.transaction_id,
+  });
+  const dir = ownInternal.ownershipDir(f.demaHome, f.claim.transaction_id);
+  const gens = await ownInternal.readGenerations(dir);
+  await seedForeignOwnerAt(f.demaHome, f.claim.transaction_id, verified.transaction_hash,
+    { pid: deadPid, process_start_identity: "1",
+      boot_identity_hash: (await probeProcessIdentity(process.pid)).boot_identity_hash },
+    gens[gens.length - 1] + 1);
+}
+
+/** Run a worker that dies at the restoration entry. Returns its ownership token. */
+function runCrashWorker(f) {
+  const tokenPath = join(f.demaHome, "crash-worker.json");
+  const child = spawnSync(process.execPath,
+    ["--input-type=module", "-e", crashWorkerScript(f, tokenPath)], { encoding: "utf8" });
+  assert.equal(existsSync(`${tokenPath}.survived`), false,
+    "the worker must die at restoration, not complete it");
+  assert.notEqual(child.status, 0, "a SIGKILLed worker must not exit 0");
+  assert.equal(existsSync(tokenPath), true,
+    `child never acquired ownership: status=${child.status} stderr=${child.stderr}`);
+  const acq = JSON.parse(readFileSync(tokenPath, "utf8"));
+  assert.ok(acq.token, `child must hold a fencing token: ${JSON.stringify(acq)}`);
+  return acq.token;
+}
+
+test("C4D-TAIL-01: a successor resuming a crashed worker's rollback must be fenced before restoring", async () => {
+  const f = await fixture();
+  const base = f.build();
+  const outage = await crossBoundaryDuringOutage(f, base, { blockOn: "undo" });
+  assert.equal(outage.ok, false, "the world must be mutated and unsettled");
+
+  // The in-process route that crossed the boundary still HOLDS ownership, so a
+  // child would only get OWNERSHIP_HELD and no token. Retire that holder first
+  // by making it provably dead — which is this scenario's premise anyway.
+  await retireCurrentOwnerAsDead(f, 999_995);
+
+  // A real worker takes over, makes ROLLBACK_STARTED durable, and dies AT the
+  // restoration entry. Nothing terminal is appended, so the window stays open.
+  const deadToken = runCrashWorker(f);
+
+  const mid = await replay(f);
+  assert.ok(phases(mid).includes("ROLLBACK_STARTED"), `phases: ${phases(mid)}`);
+  assert.equal(phases(mid).includes("BEFORE_STATE_VERIFIED"), false, "restoration must be unfinished");
+  assert.equal(mid.terminal_outcome ?? null, null, "the crash window must not be terminal");
+
+  // A successor lawfully takes over the provably dead worker.
+  const verified = await readVerifiedTransactionHash({
+    demaHome: f.demaHome, transactionId: f.claim.transaction_id,
+  });
+  const dir = ownInternal.ownershipDir(f.demaHome, f.claim.transaction_id);
+  const gens = await ownInternal.readGenerations(dir);
+  await seedForeignOwnerAt(f.demaHome, f.claim.transaction_id, verified.transaction_hash,
+    { pid: 999_991, process_start_identity: "1",
+      boot_identity_hash: (await probeProcessIdentity(process.pid)).boot_identity_hash },
+    gens[gens.length - 1] + 1);
+
+  // The dead worker's token is now stale. Resuming with it reaches restoration
+  // directly — ROLLBACK_STARTED is already durable, so the chokepoint fence is
+  // not re-entered. This is the ONLY unfenced world-mutation path left.
+  let manifestCalls = 0;
+  const spied = wrapEffect(base, {
+    manifestHash: () => { manifestCalls += 1; return base.manifestHash(); },
+  });
+  const result = await settleMechanicalFailureWithVerifiedRollback({
+    demaHome: f.demaHome, claim: f.claim, prepared: f.prepared, effect: spied,
+    failure: { stage: "VERIFICATION_PERSISTENCE", reason: "verification_persistence_failed" },
+    fencingToken: deadToken,
+  });
+
+  assert.equal(manifestCalls, 0,
+    "a stale worker must be fenced BEFORE restoration touches the filesystem");
+  assert.notEqual(result.rollback_verified, true, "no verified rollback may be claimed");
+});
+
+// ── Task 4: the canonical ledger append is owner-fenced ─────────────────────
+// owned.ledgerAppender() already asserts ownership before delegating (Task 1).
+// This proves it, and mutation R3 proves the proof is not vacuous.
+
+const GATHERER_MOD = () => import(
+  new URL("../packages/mission/src/corridor-closure-gatherer.js", import.meta.url).href
+);
+const LEDGER_MOD = () => import(
+  new URL("../packages/receipts/src/canonical-ledger.js", import.meta.url).href
+);
+
+const ledgerBody = (f) => ({
+  domain: "bizra.dema.corridor_closure",
+  mission_id: "c4b2a",
+  seal_head: `sha256:${"a".repeat(64)}`,
+  closure_transaction_id: f.claim.transaction_id,
+});
+
+test("C4D-TAIL-04: a stale owner appends no canonical receipt", async () => {
+  const { withCurrentClosureOwnership } = await GATHERER_MOD();
+  const { loadCanonicalLedger } = await LEDGER_MOD();
+  const f = await fixture();
+  const base = f.build();
+  const mech = await runTransactionalMechanicalClosure({ ...f.argsWith(base), effect: base });
+  assert.equal(mech.ok, true, mech.reason);
+
+  const before = (await loadCanonicalLedger({ demaHome: f.demaHome })).length;
+
+  // A successor takes over, so mech's capability now carries a stale token.
+  await retireCurrentOwnerAsDead(f, 999_989);
+
+  let rejection = null;
+  await withCurrentClosureOwnership(mech, async (owned) => {
+    const append = owned.ledgerAppender({ now: AT });
+    await assert.rejects(
+      () => append({ canonicalBody: ledgerBody(f), truthLabel: "MEASURED_LOCAL" }),
+      (err) => { rejection = String(err?.message ?? err); return true; },
+    );
+  });
+
+  // POSITIVE assertion. An allow-list of "not these two reasons" let the test
+  // pass on `truth_label_invalid` — the append never reached the ledger at all,
+  // so mutation R3 could not kill it. Requiring an OWNERSHIP-shaped refusal makes
+  // the test self-diagnosing: a malformed body now fails here instead of hiding.
+  assert.equal(/ledger append refused/.test(rejection), false,
+    `refused by the ledger, not the fence — the body never reached it: ${rejection}`);
+  assert.equal(/stale_owner|fenced|unverifiable|mismatch/i.test(rejection), true,
+    `not an ownership refusal: ${rejection}`);
+
+  const after = (await loadCanonicalLedger({ demaHome: f.demaHome })).length;
+  assert.equal(after, before, "a stale worker must append no canonical receipt");
+});
+
+test("C4D-TAIL-04b: the current owner is not refused on ownership grounds", async () => {
+  const { withCurrentClosureOwnership } = await GATHERER_MOD();
+  const f = await fixture();
+  const base = f.build();
+  const mech = await runTransactionalMechanicalClosure({ ...f.argsWith(base), effect: base });
+  assert.equal(mech.ok, true, mech.reason);
+
+  let refusal = null;
+  await withCurrentClosureOwnership(mech, async (owned) => {
+    const append = owned.ledgerAppender({ now: AT });
+    try { await append({ canonicalBody: ledgerBody(f), truthLabel: "MEASURED_LOCAL" }); }
+    catch (err) { refusal = String(err?.message ?? err); }
+  });
+  assert.equal(/stale_owner_fenced|ownership|unverifiable/i.test(refusal ?? ""), false,
+    `the lawful owner was fenced: ${refusal}`);
+});
+
+// ── Task 5: LEDGER_COMMITTED, anchor and ANCHORED are owner-fenced ──────────
+
+test("C4D-TAIL-05a: a stale owner's LEDGER_COMMITTED is refused and moves no head", async () => {
+  const { withCurrentClosureOwnership } = await GATHERER_MOD();
+  const f = await fixture();
+  const base = f.build();
+  const mech = await runTransactionalMechanicalClosure({ ...f.argsWith(base), effect: base });
+  assert.equal(mech.ok, true, mech.reason);
+  const before = await replay(f);
+
+  await retireCurrentOwnerAsDead(f, 999_987);
+
+  await withCurrentClosureOwnership(mech, async (owned) => {
+    const r = await owned.appendPhase({
+      phase: "LEDGER_COMMITTED",
+      evidenceRefs: [{
+        schema: "bizra.dema.corridor_ledger_commit_evidence.v1",
+        receipt_id: `sha256:${"b".repeat(64)}`,
+        ledger_prefix_length: 1,
+        seal_head: `sha256:${"c".repeat(64)}`,
+      }],
+      atIso: AT,
+    });
+    assert.equal(r.ok, false, "a stale owner must not append LEDGER_COMMITTED");
+    assert.equal(/stale_owner_fenced|ownership_unverifiable/.test(r.reason), true,
+      `refused for the wrong reason: ${r.reason}`);
+  });
+
+  const after = await replay(f);
+  assert.equal(after.head_event_hash, before.head_event_hash, "durable head must not advance");
+  assert.equal(after.sequence, before.sequence, "sequence must not advance");
+});
+
+test("C4D-TAIL-05b: a stale owner's assert() rejects, so the anchor is unreachable", async () => {
+  const { withCurrentClosureOwnership } = await GATHERER_MOD();
+  const f = await fixture();
+  const base = f.build();
+  const mech = await runTransactionalMechanicalClosure({ ...f.argsWith(base), effect: base });
+  assert.equal(mech.ok, true, mech.reason);
+
+  await withCurrentClosureOwnership(mech, async (owned) => {
+    await owned.assert();                       // still the owner: permitted
+  });
+
+  await retireCurrentOwnerAsDead(f, 999_986);
+
+  await withCurrentClosureOwnership(mech, async (owned) => {
+    await assert.rejects(() => owned.assert(),
+      (err) => /stale_owner|fenced|unverifiable|mismatch/i.test(String(err?.message)),
+      "the fence immediately before publication must refuse a stale owner");
+  });
+});
+
+test("C4D-TAIL-05c: the CLI tail routes LEDGER_COMMITTED, the anchor and ANCHORED through the owner", () => {
+  const cli = readFileSync(join(process.cwd(), "apps/cli/src/commands/mission.js"), "utf8");
+  assert.ok(cli.length > 1000, "source must be non-empty for this scan to mean anything");
+
+  assert.ok(cli.includes("runOwnedCorridorWeld({"),
+    "the production CLI must call the shared owned weld");
+  assert.ok(cli.includes("runOwnedCorridorEvidenceTail({"),
+    "the production CLI must call the shared owned evidence tail");
+
+  const weldStart = cli.indexOf("export async function runOwnedCorridorWeld");
+  const weldEnd = cli.indexOf("export async function runOwnedCorridorEvidenceTail", weldStart);
+  assert.ok(weldStart > 0 && weldEnd > weldStart, "the owned weld must be locatable");
+  const weld = cli.slice(weldStart, weldEnd);
+  assert.ok(weld.includes("effect: owned.ownedEffect(effect)"),
+    "the production weld must receive the owned effect adapter");
+  assert.ok(weld.includes("appendReceipt: owned.ledgerAppender({ now: nowIso })"),
+    "the production weld must receive the owned canonical-ledger appender");
+
+  const start = weldEnd;
+  const end = cli.indexOf("// Two-step root-bound consent", start);
+  assert.ok(end > start, "the owned evidence tail must be locatable");
+  const tail = cli.slice(start, end);
+
+  for (const phase of ["LEDGER_COMMITTED", "ANCHORED"]) {
+    assert.equal(
+      new RegExp(`appendClosureTransactionPhase\\([^)]*?phase: "${phase}"`, "s").test(tail), false,
+      `${phase} must not be appended outside the owner`,
+    );
+    assert.equal(
+      new RegExp(`owned\\.appendPhase\\(\\{\\s*\\n?\\s*phase: "${phase}"`, "s").test(tail), true,
+      `${phase} must route through owned.appendPhase`,
+    );
+  }
+
+  // A fresh fence immediately before the anchor is published.
+  const anchorIdx = tail.indexOf("appendClosureAnchor({");
+  assert.ok(anchorIdx > 0, "the anchor call must exist in the tail");
+  assert.ok(tail.lastIndexOf("owned.assert()", anchorIdx) > 0,
+    "a fresh owned.assert() must precede appendClosureAnchor");
+});
+
+// ── Task 6: corridor COMPLETE and C2 RESOLVED are owner-fenced ─────────────
+
+test("C4D-TAIL-06a: a stale owner's RESOLVED append is refused and moves no head", async () => {
+  const { withCurrentClosureOwnership } = await GATHERER_MOD();
+  const f = await fixture();
+  const base = f.build();
+  const mech = await runTransactionalMechanicalClosure({ ...f.argsWith(base), effect: base });
+  assert.equal(mech.ok, true, mech.reason);
+  const before = await replay(f);
+
+  await retireCurrentOwnerAsDead(f, 999_985);
+
+  await withCurrentClosureOwnership(mech, async (owned) => {
+    const r = await owned.appendPhase({
+      phase: "RESOLVED",
+      terminalOutcome: "COMPLETED_VERIFIED",
+      evidenceRefs: [{
+        schema: "bizra.dema.corridor_terminal_evidence.v1",
+        corridor_event_hash: `sha256:${"d".repeat(64)}`,
+        corridor_event_index: 1,
+        anchor_hash: `sha256:${"e".repeat(64)}`,
+      }],
+      atIso: AT,
+    });
+    assert.equal(r.ok, false, "a stale owner must not append RESOLVED");
+    assert.equal(/stale_owner_fenced|ownership_unverifiable/.test(r.reason), true,
+      `refused for the wrong reason: ${r.reason}`);
+  });
+
+  const after = await replay(f);
+  assert.equal(after.head_event_hash, before.head_event_hash, "durable head must not advance");
+  assert.equal(after.sequence, before.sequence, "sequence must not advance");
+});
+
+test("C4D-TAIL-06b: the CLI routes COMPLETE and RESOLVED through the current owner", () => {
+  const cli = readFileSync(join(process.cwd(), "apps/cli/src/commands/mission.js"), "utf8");
+  assert.ok(cli.length > 1000, "source must be non-empty for this scan to mean anything");
+
+  const start = cli.indexOf("export async function runOwnedCorridorEvidenceTail");
+  const end = cli.indexOf("// Two-step root-bound consent", start);
+  assert.ok(start > 0 && end > start, "the closure publication region must be locatable");
+  const tail = cli.slice(start, end);
+
+  const completeIdx = tail.indexOf("appendCorridorEvent({");
+  assert.ok(completeIdx > 0, "the COMPLETE event builder must exist");
+  assert.ok(tail.lastIndexOf("owned.assert()", completeIdx) > 0,
+    "a fresh owned.assert() must precede the COMPLETE event");
+
+  assert.equal(
+    /appendClosureTransactionPhase\(\{[\s\S]*?phase: "RESOLVED"/.test(tail),
+    false,
+    "RESOLVED must not be appended outside the owner",
+  );
+  assert.equal(
+    /owned\.appendPhase\(\{\s*phase: "RESOLVED"/.test(tail),
+    true,
+    "RESOLVED must route through owned.appendPhase",
+  );
+});
+
+test("C4D-TAIL-10a: terminal recovery can reacquire an opaque current-owner capability", async () => {
+  const {
+    acquireCurrentClosureOwnership,
+    hasOwnershipCapability,
+    withCurrentClosureOwnership,
+  } = await GATHERER_MOD();
+  const f = await fixture();
+  const base = f.build();
+  const mech = await runTransactionalMechanicalClosure({ ...f.argsWith(base), effect: base });
+  assert.equal(mech.ok, true, mech.reason);
+
+  const recoveryOwnership = await acquireCurrentClosureOwnership({
+    demaHome: f.demaHome,
+    transactionId: f.claim.transaction_id,
+  });
+  assert.equal(recoveryOwnership.ok, true, recoveryOwnership.reason);
+  assert.equal(hasOwnershipCapability(recoveryOwnership), true);
+  await withCurrentClosureOwnership(recoveryOwnership, async (owned) => {
+    const fence = await owned.assert();
+    assert.equal(fence.valid, true);
+  });
+});
+
+test("C4D-TAIL-10b: the already-COMPLETE recovery route appends RESOLVED through ownership", () => {
+  const cli = readFileSync(join(process.cwd(), "apps/cli/src/commands/mission.js"), "utf8");
+  const start = cli.indexOf('if (last.state === "COMPLETE")');
+  const end = cli.indexOf("const closureRecord = {", start);
+  assert.ok(start > 0 && end > start, "the terminal recovery region must be locatable");
+  const recovery = cli.slice(start, end);
+
+  assert.ok(recovery.includes("acquireCurrentClosureOwnership"),
+    "terminal recovery must acquire current transaction ownership");
+  assert.ok(recovery.includes("withCurrentClosureOwnership"),
+    "terminal recovery must consume the opaque capability");
+  assert.ok(recovery.includes('phase: "RESOLVED"'));
+  assert.equal(
+    /appendClosureTransactionPhase\(\{[\s\S]*?phase: "RESOLVED"/.test(recovery),
+    false,
+    "terminal recovery must not append RESOLVED without ownership",
+  );
 });
