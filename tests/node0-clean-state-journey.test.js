@@ -24,6 +24,7 @@ import {
   NODE0_JOURNEY_SCHEMA,
   NODE0_JOURNEY_TRUTH_LABEL,
 } from "../scripts/proof/node0-clean-state-journey.mjs";
+import { sha256CanonicalJsonV1 } from "../packages/canon/src/sha256-canonical-json-v1.js";
 
 const EXPECTED_STEPS = [
   "welcome",
@@ -71,13 +72,47 @@ describe("NODE0 clean-state journey", () => {
       "launch_hash is environment-bound — publishing it as a constant would fail honest reproductions",
     );
     assert.notEqual(
-      a.environment_bound.covenant_decision_id,
-      b.environment_bound.covenant_decision_id,
-      "decision_id embeds a live clock read",
-    );
-    assert.notEqual(
       a.environment_bound.profile_sha256,
       b.environment_bound.profile_sha256,
+    );
+    // covenant_decision_id is a CONTENT address, not an occurrence id. Production
+    // hashes {…, created_at: Math.floor(Date.now() / 1000)}, so two journeys inside
+    // one wall-clock second lawfully agree — and must, or the consent phrase shown
+    // in the proposal run would not validate in the later consent run. Asserting it
+    // must DIFFER demanded a guarantee production never made, and failed this suite
+    // ~11% of the time. The deterministic clock contract is proven in
+    // tests/covenant-gate.test.js; what CSJ-03 must prove here is PLACEMENT.
+    for (const run of [a, b]) {
+      assert.match(
+        run.environment_bound.covenant_decision_id,
+        /^sha256:[0-9a-f]{64}$/,
+        "decision_id must keep its exact content-address form",
+      );
+      assert.equal(
+        Number.isInteger(run.environment_bound.covenant_created_at),
+        true,
+        "created_at must be an integer epoch-second value",
+      );
+    }
+    // Anti-vacuity: neither may ever be promoted into the published witness.
+    const invariantsJson = JSON.stringify(a.cross_machine_invariants);
+    assert.ok(
+      invariantsJson.length > 2,
+      "cross_machine_invariants is empty — the exclusion checks below would pass vacuously",
+    );
+    assert.equal(
+      invariantsJson.includes(a.environment_bound.covenant_decision_id),
+      false,
+      "decision_id must never be published as a cross-machine invariant",
+    );
+    assert.equal(invariantsJson.includes("covenant_decision_id"), false);
+    assert.equal(invariantsJson.includes("covenant_created_at"), false);
+    // …and the witness is a pure function of the invariants, so it structurally
+    // cannot depend on decision_id, created_at, or any absolute path.
+    assert.equal(
+      sha256CanonicalJsonV1(a.cross_machine_invariants),
+      a.journey_invariant_hash,
+      "journey_invariant_hash must derive only from cross_machine_invariants",
     );
     // …while the content-bound covenant hash is the same object every time.
     assert.equal(

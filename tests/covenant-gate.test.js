@@ -115,6 +115,28 @@ test("C2: changed nested evidence hash changes decision ID", () => {
   assert.notEqual(a.decision_id, b.decision_id);
 });
 
+test("C3: the same decision content in the same second yields the same decision ID", () => {
+  // decision_id addresses the DECISION, not the occurrence. A human is shown
+  // `GO: SIGN COVENANT RECEIPT <id>` in the proposal run and types it back in a
+  // later consent run; if the id carried entropy or sub-second resolution, exact
+  // string consent could never validate. This is the contract CSJ-03 used to deny.
+  const a = screenAt(EXAMPLE_PROPOSAL);
+  const b = screenAt(EXAMPLE_PROPOSAL);
+
+  assert.equal(a.created_at, b.created_at);
+  assert.equal(a.decision_id, b.decision_id);
+  assert.equal(expectedConsentPhrase(a), expectedConsentPhrase(b));
+});
+
+test("C3: the next second yields a different decision ID for the same proposal", () => {
+  const a = screenAt(EXAMPLE_PROPOSAL, 1770000000);
+  const b = screenAt(EXAMPLE_PROPOSAL, 1770000001);
+
+  assert.equal(b.created_at, a.created_at + 1);
+  assert.notEqual(a.decision_id, b.decision_id);
+  assert.equal(a.proposal_hash, b.proposal_hash, "the proposal itself did not change");
+});
+
 test("C2: missing proposal still screens as unknown with a proposal hash", () => {
   const decision = screenAt(undefined);
 
