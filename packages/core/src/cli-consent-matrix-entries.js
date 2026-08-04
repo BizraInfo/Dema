@@ -319,6 +319,13 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     "plan/verify preview; run/save require exact consent gates",
     ["tests/health-snapshot.test.js", "tests/mission-closeout.test.js"],
   ),
+  row(
+    "season",
+    ["read_only", "local_write"],
+    "subcommand_gated",
+    "status/resume are read-only reconstruction (resume never grants pending consent); save writes one content-addressed checkpoint + receipt + HEAD strictly under DEMA_HOME",
+    ["tests/node0-minimum-season-save-resume.test.js"],
+  ),
   preview("recovery", "tests/dema-recovery-mission-gatherer.test.js"),
   readOnly("receipts", "tests/receipt-store-format.test.js"),
   row(

@@ -94,6 +94,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_MISSION_WORKER_HANDOFF_0A",
   "NODE0_MODEL_SWAP_INVARIANCE_1A",
   "DEMA_REVERSIBLE_FILE_STEWARD_1A",
+  "NODE0_MINIMUM_SEASON_SAVE_RESUME_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2453,6 +2454,35 @@ function defaultCapabilityRows() {
         "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
       what_this_proves:
         "A pure orchestrator plans and content-addresses a bounded, exact-consent-gated, sanitizer-gated, fully-reversible multi-RENAME steward job over the shipped reversible-rename and untrusted-corpus-sanitizer primitives, with an all-false boundary and a body-bound verifier. Proves the PLAN + ATTESTATION only.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_MINIMUM_SEASON_SAVE_RESUME_1A",
+      truth_label: "NODE0_MINIMUM_SEASON_SAVE_RESUME_MEASURED_REPO",
+      summary:
+        "Durable local season state: save, status and resume a bounded Node0 continuation checkpoint from disk alone.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-minimum-season-save-resume.js"],
+        test_paths: ["tests/node0-minimum-season-save-resume.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-minimum-season-save-resume-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_MINIMUM_SEASON_SAVE_RESUME_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_MINIMUM_SEASON_SAVE_RESUME_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A new operating-system process, given only the repository checkout and an isolated DEMA_HOME, reconstructs the active mission id, phase, completed steps, must-not-repeat list, pending consent and the single next safe action from stored bytes alone \u2014 no chat transcript, no model memory, no shared in-memory object. Save is crash-atomic: state, receipt and a sequence fence are published no-replace and fsynced before the HEAD pointer is replaced by rename, so a real process death (proven by process.exit mid-transaction) leaves either the previous valid HEAD or the complete new one. Verification re-derives every hash and refuses tampered state, tampered HEAD, broken previous-state links, sequence regression, repository drift, secret-bearing state and stale concurrent writers with typed, bounded outcomes.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [

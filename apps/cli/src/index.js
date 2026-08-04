@@ -28,6 +28,7 @@ import { cmd_delivery } from "./commands/delivery.js";
 import { cmd_foundation } from "./commands/foundation.js";
 import { cmd_realm } from "./commands/realm.js";
 import { cmd_mission } from "./commands/mission.js";
+import { cmd_season } from "./commands/season.js";
 import { cmd_recovery } from "./commands/recovery.js";
 import { cmd_founder } from "./commands/founder.js";
 import { cmd_voice } from "./commands/voice.js";
@@ -233,6 +234,14 @@ Orientation:
                     Verify a witness receipt (latest or by path)
   dema mission run health [--dry-run] [--json]
                     Node0 health snapshot mission; requires --consent to save
+  dema season save --season <id> --mission <id> --phase <PHASE> --next <ACTION> --repo-commit <sha40> --repo-tree <sha40> [--step <s>]... [--must-not-repeat <s>]... [--pending-consent none|<phrase>::<scope>]... [--from <state.json>] [--dema-home <path>] [--json]
+                    Durably persist ONE bounded season checkpoint under DEMA_HOME:
+                    content-addressed state + save receipt + atomically replaced HEAD.
+  dema season status [--season <id>] [--dema-home <path>] [--json]
+                    Verify and report the authoritative checkpoint (read-only; typed EMPTY when none)
+  dema season resume [--season <id>] [--repo-commit <sha40>] [--repo-tree <sha40>] [--dema-home <path>] [--json]
+                    Reconstruct the continuation from stored bytes alone — no chat history,
+                    no execution, pending consent preserved as pending
   dema mission verify <path> [--json]
                     Verify a mission receipt
   dema mission pulse <file> --claim ... --task ... --boundary ... [--json]
@@ -738,6 +747,11 @@ Dema v{{DEMA_VERSION}} — Active Command Kernel. Local-first. Consent-bound. Re
 
 // Top-level tokens the switch handles. Used by the command suggester only.
 const REGISTERED_COMMANDS_LIST = [
+  {
+    command: "season",
+    description:
+      "durable local season state: save / status / resume a bounded continuation checkpoint",
+  },
   { command: "status", description: "show Node0 readiness" },
   { command: "status:json", description: "machine-readable status" },
   { command: "state", description: "Node0 state preview" },
@@ -1333,6 +1347,7 @@ const COMMAND_TABLE = {
   diagnostics: cmd_diagnostics,
   consent: cmd_consent,
   mission: cmd_mission,
+  season: cmd_season,
   recovery: cmd_recovery,
   founder: cmd_founder,
   voice: cmd_voice,

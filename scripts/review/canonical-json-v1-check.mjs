@@ -79,6 +79,7 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // DEMA-REVERSIBLE-FILE-STEWARD-1A / 1B — registered by the steward slice.
   "packages/core/src/dema-reversible-file-steward.js",
   "packages/core/src/dema-reversible-file-steward-execution.js",
+  "packages/core/src/node0-minimum-season-save-resume.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
