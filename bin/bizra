@@ -1,0 +1,9 @@
+#!/usr/bin/env node
+import("../apps/cli/src/bizra.js")
+  .then(async ({ runBizraCli }) => {
+    process.exitCode = await runBizraCli();
+  })
+  .catch((error) => {
+    console.error(error && error.stack ? error.stack : error);
+    process.exitCode = 1;
+  });
