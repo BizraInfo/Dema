@@ -85,10 +85,12 @@ import {
 import {
   readExecutingRepositoryBinding, REPO_ROOT as BINDING_REPO_ROOT,
 } from "../../../../packages/mission/src/executing-repository-binding.js";
-// FATE (Mind Three) shape judgment, used to gate the REAL effect below.
-import {
-  assessReversibility, assessBlastRadius,
-} from "../../../../packages/core/src/node0-fate-contract.js";
+// NOTE: assessReversibility/assessBlastRadius were imported here to gate the
+// real effect. Defect D4 (b3e7942) replaced that pair with the complete typed
+// `evaluateFatePolicy`, reached through corridorRenameSeasonFateGate — calling
+// only those two predicates was never the FATE contract. The imports outlived
+// the call sites and are removed; keeping them suggested a gate that no longer
+// runs from here.
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -3005,6 +3007,14 @@ async function cmdMissionCorridor(argv) {
     //
     // The gate now sits where the prepared intent is known but NOTHING has been
     // claimed, and it calls the complete typed contract.
+    // `seasonGate` is INTENTIONALLY unread, and must stay bound. Static
+    // analysis reports it as an unused variable; it is not dead. The gate
+    // refuses by calling corridorFail() -> process.exit(1), so there is no
+    // verdict to inspect — and `tests/node0-closure-sprint-correction.test.js`
+    // D3b anchors on the literal source text `const seasonGate = await
+    // corridorRenameSeasonFateGate` to prove this gate precedes consent, nonce,
+    // lock and transaction. Inlining the call to satisfy the linter deletes
+    // that anchor and the ordering proof with it (measured: D3b went red).
     const seasonGate = await corridorRenameSeasonFateGate(argv, {
       missionId: id,
       scopeRoot: estate,

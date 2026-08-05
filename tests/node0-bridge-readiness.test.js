@@ -289,7 +289,7 @@ describe("NODE0-BRIDGE-READINESS-1A", () => {
     }
   });
 
-  it("BR-12 closes the loop: only a bridged snapshot yields an ok endurance sample", async () => {
+  it("BR-12 closes the loop: neither injected side yields an ok endurance sample", async () => {
     const { home, restore } = await witnessedHome();
     try {
       assert.equal(HEALTHY_MISSION_VERDICT, "CLEAN");
@@ -346,7 +346,7 @@ describe("NODE0-BRIDGE-READINESS-1A", () => {
     }
   }
 
-  it("BR-13 real adapter: a bridged runtime reaches CLEAN with no injection", async () => {
+  it("BR-13 real adapter: favourable shell output is OPERATOR_ASSERTED, not CLEAN", async () => {
     const { home, restore } = await witnessedHome();
     try {
       const snap = await snapshotViaRealAdapter(
