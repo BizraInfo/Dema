@@ -2220,6 +2220,14 @@ async function corridorSeasonConsentPreflight(argv, ctxParams, wantJson) {
   }
 
   const seasonLoad = await loadSeasonHead({ demaHome, seasonId });
+  // PROMOTION-CORRECTION-1C item 1. `state` was referenced below but never
+  // bound in this function — the only binding lived in
+  // corridorRenameSeasonFateGate — so `--season-preflight --effect-root`
+  // raised a ReferenceError and the caller got a stack trace instead of a
+  // structured refusal. Bound fail-closed: an unusable Season load yields
+  // `null` here and the bridge REFUSES on the evidence, rather than the
+  // preview crashing before it can report anything.
+  const state = seasonLoad?.ok === true ? (seasonLoad.state ?? null) : null;
   // The executing repository is measured independently of anything the Season
   // State claims. There is deliberately no fallback to state-supplied values.
   const executingRepository = await readExecutingRepositoryBinding({ runGit: realGitRunner });
@@ -2238,7 +2246,7 @@ async function corridorSeasonConsentPreflight(argv, ctxParams, wantJson) {
       undoable: true,
       inverse_kind: argValue(argv, "--effect-kind") ?? "bounded_local_rename",
       before_hash: argValue(argv, "--effect-before-hash"),
-      before_manifest: state.pending_effect ? [state.pending_effect] : null,
+      before_manifest: state?.pending_effect ? [state.pending_effect] : null,
       authority_delta: 0,
     }
     : undefined;
@@ -2260,7 +2268,16 @@ async function corridorSeasonConsentPreflight(argv, ctxParams, wantJson) {
   } else {
     console.log("DEMA · corridor Season consent preflight (verification only · nothing written)");
     console.log(`  stage: ${verdict.stage} · verdict: ${verdict.verdict}`);
-    console.log(`  fate: ${verdict.fate_verdict ?? "-"} (reversible ${verdict.effect_reversible} · bounded ${verdict.effect_scope_bounded})`);
+    // PROMOTION-CORRECTION-1C item 3. This line used to print `fate: <verdict>`
+    // while the footer said no independent FATE policy decision was claimed —
+    // the same output asserting both. What the consent bridge produces is an
+    // effect SHAPE assessment (reversible / bounded), not the typed FATE policy
+    // contract, which runs only on the real effect route. Labelled for what it
+    // is, so the header and the footer can both be true.
+    console.log(`  effect shape: reversible ${verdict.effect_reversible} · bounded ${verdict.effect_scope_bounded}`);
+    if (verdict.fate_verdict !== undefined && verdict.fate_verdict !== null) {
+      console.log(`  shape_assessment: ${verdict.fate_verdict} — NOT an independent FATE policy decision`);
+    }
     console.log(`  season: ${verdict.season_id ?? "-"} · sequence: ${verdict.authoritative_sequence ?? "-"}`);
     console.log(`  claimed commit:   ${verdict.claimed_repository_commit ?? "-"}`);
     console.log(`  executing commit: ${verdict.executing_repository_commit ?? "-"}`);
