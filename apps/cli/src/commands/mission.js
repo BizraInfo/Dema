@@ -60,6 +60,29 @@ import {
 import {
   claimConsentNonce, inspectConsentNonce,
 } from "../../../../packages/receipts/src/consent-nonce-claim.js";
+// NODE0-CORRIDOR-SEASON-CONSENT-BRIDGE-1A — the corridor consent preflight binds
+// an AUTHORITATIVE verified Season State and an INDEPENDENTLY MEASURED executing
+// repository before constructing root-bound consent. It verifies consent only:
+// it claims no independent FATE policy decision and executes no effect.
+import { loadSeasonHead } from "../../../../packages/receipts/src/season-state-store.js";
+import {
+  evaluateCorridorSeasonConsentBridge,
+} from "../../../../packages/mission/src/corridor-season-consent-bridge.js";
+import {
+  readExecutingRepositoryBinding, REPO_ROOT as BINDING_REPO_ROOT,
+} from "../../../../packages/mission/src/executing-repository-binding.js";
+import { execFile as execFileCb } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsyncGit = promisify(execFileCb);
+
+// The real `git` runner. It lives in the CLI layer because a process boundary is
+// not permitted inside packages/*/src (kernel purity); the binding module itself
+// holds no process capability and refuses if no runner is supplied.
+const realGitRunner = async (args, { cwd } = {}) => {
+  const { stdout } = await execFileAsyncGit("git", args, { cwd: cwd ?? BINDING_REPO_ROOT });
+  return stdout;
+};
 import {
   replayClosureTransaction,
   readRollbackBindingContext,
@@ -2139,6 +2162,80 @@ export async function runOwnedCorridorEvidenceTail({
 // consent card (required phrase + consent_context_hash) and write NOTHING.
 // Step 2: validate phrase + nonce + expiry + context commitment fail-closed,
 // then the caller performs the disclosed write. A phrase alone is never enough.
+// NODE0-CORRIDOR-SEASON-CONSENT-BRIDGE-1A — the authoritative Season → consent preflight.
+//
+// ── WHY THE SELECTION SURFACE IS `--season <id> --dema-home <path>` ──
+// A caller-supplied state FILE can be valid JSON and cryptographically
+// self-consistent without being the authoritative Season HEAD. Loading through
+// the durable store is what preserves the ambiguity protection built by
+// NODE0-MINIMUM-SEASON-SAVE-RESUME-1A: `loadSeasonHead` cross-checks HEAD
+// against the sequence fence and refuses `head_candidates_conflict`. A file path
+// is fixture tooling, never product authority.
+//
+// ── WHY THE REPOSITORY BINDING COMES FROM git, NOT FROM THE STATE ──
+// `verifyRepositoryBinding` compares `state.repository_commit !== expected`.
+// Passing the state's own field as `expected` is `x !== x` — always false, so
+// the check can never fail. The state supplies the CLAIMED values; the executing
+// repository supplies the EXPECTED ones, measured independently.
+//
+// This preflight VERIFIES ONLY. It returns before nonce claim, transaction
+// preparation and mutation on every path, so it can never itself write.
+async function corridorSeasonConsentPreflight(argv, ctxParams, wantJson) {
+  // Explicit opt-in. Off this flag the corridor behaves exactly as before, so no
+  // existing caller is re-routed by this slice.
+  if (!argv.includes("--season-preflight")) return null;
+
+  const seasonId = argValue(argv, "--season");
+  if (!seasonId) {
+    corridorFail(
+      "season_selection_required: the Season consent preflight requires --season <id> — a caller-supplied state file is not authority; nothing was written.",
+    );
+  }
+
+  const demaHome = argValue(argv, "--dema-home");
+  if (!demaHome) {
+    corridorFail(
+      "dema_home_required: the Season consent preflight requires --dema-home <isolated-path> so the authoritative Season HEAD is loaded from an explicit store — nothing was written.",
+    );
+  }
+
+  const seasonLoad = await loadSeasonHead({ demaHome, seasonId });
+  // The executing repository is measured independently of anything the Season
+  // State claims. There is deliberately no fallback to state-supplied values.
+  const executingRepository = await readExecutingRepositoryBinding({ runGit: realGitRunner });
+
+  const verdict = evaluateCorridorSeasonConsentBridge({
+    seasonLoad,
+    executingRepository,
+    actionId: argValue(argv, "--action") ?? "CORRIDOR_RENAME_EXECUTE",
+    corridorContext: ctxParams,
+    presentedPhrase: argValue(argv, "--consent"),
+    presentedConsentContextHash: argValue(argv, "--consent-context"),
+    now: ctxParams.now_iso,
+    usedNonces: [],
+  });
+
+  if (wantJson) {
+    console.log(JSON.stringify({ preview_only: true, ...verdict }, null, 2));
+  } else {
+    console.log("DEMA · corridor Season consent preflight (verification only · nothing written)");
+    console.log(`  stage: ${verdict.stage} · verdict: ${verdict.verdict}`);
+    console.log(`  season: ${verdict.season_id ?? "-"} · sequence: ${verdict.authoritative_sequence ?? "-"}`);
+    console.log(`  claimed commit:   ${verdict.claimed_repository_commit ?? "-"}`);
+    console.log(`  executing commit: ${verdict.executing_repository_commit ?? "-"}`);
+    console.log(`  repository_binding_valid: ${verdict.repository_binding_valid}`);
+    if (verdict.required_phrase) console.log(`  required phrase:      "${verdict.required_phrase}"`);
+    if (verdict.consent_context_hash) console.log(`  consent_context_hash: ${verdict.consent_context_hash}`);
+    if (verdict.blocked_by.length) console.log(`  blocked_by: ${verdict.blocked_by.join(", ")}`);
+    console.log(`  reason: ${verdict.reason}`);
+    console.log(
+      "  verification only: no independent FATE policy decision is claimed; "
+      + "no nonce claimed, no transaction prepared, no pending effect, no mutation.",
+    );
+  }
+  return verdict;
+}
+
 async function corridorConsentGate(argv, {
   kind, mission_id, contract_hash, permitted_actions, mission_root, now_iso,
   wantJson, cardExtra = {}, rerunHint = "", requested_state, prepared_intent_hash,
@@ -2152,6 +2249,14 @@ async function corridorConsentGate(argv, {
       "root-bound consent requires --nonce <unique> and --expires <iso> (a phrase alone is not authority) — nothing was written.",
     );
   }
+  // Slice: the authoritative Season → consent preflight. When engaged it
+  // VERIFIES and STOPS — it returns before the nonce claim below, so this path
+  // can never write. Off the opt-in flag it returns null and changes nothing.
+  const seasonPreflight = await corridorSeasonConsentPreflight(argv, {
+    kind, mission_id, contract_hash, permitted_actions, mission_root,
+    nonce, expires_at, requested_state, prepared_intent_hash, now_iso,
+  }, wantJson);
+  if (seasonPreflight) return null; // verification only; nothing written
   const ctx = buildCorridorConsentContext({
     kind, mission_id, contract_hash, permitted_actions, mission_root, nonce,
     expires_at, requested_state, prepared_intent_hash,
