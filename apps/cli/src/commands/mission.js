@@ -65,6 +65,20 @@ import {
 // repository before constructing root-bound consent. It verifies consent only:
 // it claims no independent FATE policy decision and executes no effect.
 import { loadSeasonHead } from "../../../../packages/receipts/src/season-state-store.js";
+// The Season predicate and the COMPLETE typed FATE contract, called directly by
+// the corridor rename effect gate (not transitively through the preflight bridge).
+import {
+  evaluateSeasonActionAuthority,
+} from "../../../../packages/core/src/node0-minimum-season-save-resume.js";
+import {
+  evaluateFatePolicy,
+  PERMITTED_EFFECT_KINDS,
+} from "../../../../packages/core/src/node0-fate-contract.js";
+
+// The canonical Season action this effect route performs. Bound to the effect
+// kind the FATE policy is competent to judge, so the two can never drift apart.
+const CORRIDOR_FATE_ACTION_ID = "CORRIDOR_RENAME_EXECUTE";
+const CORRIDOR_FATE_EFFECT_KIND = PERMITTED_EFFECT_KINDS[0];
 import {
   evaluateCorridorSeasonConsentBridge,
 } from "../../../../packages/mission/src/corridor-season-consent-bridge.js";
@@ -2261,6 +2275,109 @@ async function corridorSeasonConsentPreflight(argv, ctxParams, wantJson) {
   return verdict;
 }
 
+// NODE0-CLOSURE-SPRINT-CORRECTION-1A — the Season + full FATE gate on the REAL
+// corridor rename effect path.
+//
+// ── ORDER IS THE WHOLE POINT ──
+// This runs after the prepared intent is known (so FATE sees the ACTUAL
+// before-state and operands) but BEFORE consent, the nonce claim and the
+// closure locks. A refusal here therefore writes nothing, and can say so
+// truthfully.
+//
+// ── SCOPE ──
+// It gates the corridor RENAME effect specifically, which is what makes
+// CORRIDOR_RENAME_SEASON_GATE_LIVE and
+// MUST_NOT_REPEAT_EFFECT_GATE_ENFORCED_FOR_CORRIDOR_RENAME true.
+// It does NOT gate every DEMA effect; global enforcement stays false.
+async function corridorRenameSeasonFateGate(argv, {
+  missionId, scopeRoot, fromName, toName, prepared,
+}) {
+  const seasonId = argValue(argv, "--season");
+  const demaHome = argValue(argv, "--dema-home");
+  if (!seasonId) {
+    corridorFail(
+      "season_required_for_corridor_rename: the corridor rename effect is Season-gated — supply --season <id> "
+      + "(and --dema-home <path>). No consent was requested, no nonce claimed, no lock taken; nothing was written.",
+    );
+  }
+  if (!demaHome) {
+    corridorFail(
+      "dema_home_required: --season requires --dema-home <isolated-path> so the authoritative Season HEAD is loaded "
+      + "from an explicit store. Nothing was written.",
+    );
+  }
+
+  // 1. authoritative Season load
+  const seasonLoad = await loadSeasonHead({ demaHome, seasonId });
+  if (!seasonLoad.ok || seasonLoad.outcome !== "OK") {
+    corridorFail(
+      `season_state_unusable:${seasonLoad.reason ?? seasonLoad.outcome} — nothing was written.`,
+    );
+  }
+  const state = seasonLoad.state;
+
+  // 2. independent repository binding — measured, never taken from the state
+  const executing = await readExecutingRepositoryBinding({ runGit: realGitRunner });
+  if (!executing.ok) {
+    corridorFail(`executing_repository_unresolved:${executing.reason} — nothing was written.`);
+  }
+  if (state.repository_commit !== executing.commit) {
+    corridorFail("repository_commit_mismatch — the Season State claims a different commit than the executing repository; nothing was written.");
+  }
+  if (state.repository_tree !== executing.tree) {
+    corridorFail("repository_tree_mismatch — the Season State claims a different tree than the executing repository; nothing was written.");
+  }
+
+  // 3. Season action eligibility against the EXECUTING repository
+  const authority = evaluateSeasonActionAuthority({
+    actionId: CORRIDOR_FATE_ACTION_ID,
+    seasonState: state,
+    repositoryCommit: executing.commit,
+    repositoryTree: executing.tree,
+  });
+  if (!authority.ok) {
+    corridorFail(
+      `season_action_refused:${authority.reason} — no consent context was constructed, no FATE decision was reached, `
+      + "no nonce claimed, no lock taken; nothing was written.",
+    );
+  }
+
+  // 4+5. the COMPLETE typed FATE contract, on the ACTUAL effect facts
+  const fate = evaluateFatePolicy({
+    seasonAuthority: authority,
+    effect: {
+      kind: CORRIDOR_FATE_EFFECT_KIND,
+      root: scopeRoot,
+      from: fromName,
+      to: toName,
+      undoable: true,
+      inverse_kind: CORRIDOR_FATE_EFFECT_KIND,
+      before_hash: prepared.intent.before_hash,
+      before_manifest: prepared.intent.before_manifest,
+      authority_delta: 0,
+    },
+  });
+  if (!fate.ok) {
+    corridorFail(
+      `fate_policy_refused:${fate.reason} (${(fate.blocked_by ?? []).join(", ")}) — no consent was requested, `
+      + "no nonce claimed, no lock taken, no transaction prepared, no rename performed; nothing was written.",
+    );
+  }
+
+  return Object.freeze({
+    season_id: seasonId,
+    authoritative_sequence: state.state_sequence,
+    executing_repository_commit: executing.commit,
+    executing_repository_tree: executing.tree,
+    season_authority_verdict: authority.verdict,
+    canonical_action: authority.canonical_action,
+    fate_verdict: fate.verdict,
+    fate_means: fate.means,
+    mission_id: missionId,
+    authority_delta: 0,
+  });
+}
+
 async function corridorConsentGate(argv, {
   kind, mission_id, contract_hash, permitted_actions, mission_root, now_iso,
   wantJson, cardExtra = {}, rerunHint = "", requested_state, prepared_intent_hash,
@@ -2875,6 +2992,27 @@ async function cmdMissionCorridor(argv) {
       corridorFail(`closure effect intent blocked: ${prepared.reason} — nothing was written.`);
     }
 
+    // ── SEASON + FULL FATE CONTRACT, BEFORE CONSENT, NONCE AND LOCKS ──
+    //
+    // ── THE DEFECT THIS REPLACES ──
+    // The first implementation placed a FATE check AFTER corridorConsentGate
+    // (which claims the single-use nonce) and AFTER acquireClosureLock. Its
+    // refusal message said "nothing was written" — which was FALSE: a nonce
+    // file and a lock file already existed. It also called only
+    // assessReversibility/assessBlastRadius, skipping Season eligibility,
+    // repository binding, policy version and effect-kind entirely, so it was
+    // not the FATE contract at all — only two of its predicates.
+    //
+    // The gate now sits where the prepared intent is known but NOTHING has been
+    // claimed, and it calls the complete typed contract.
+    const seasonGate = await corridorRenameSeasonFateGate(argv, {
+      missionId: id,
+      scopeRoot: estate,
+      fromName,
+      toName,
+      prepared,
+    });
+
     let recoveryPhase = null;
     if (recoveryClaim) {
       const recoveryTx = await replayClosureTransaction({
@@ -2972,35 +3110,6 @@ async function cmdMissionCorridor(argv) {
     const effect = buildRenameEffectAdapter({
       scopeRoot: estate, from: fromName, to: toName, anchorLog, observed,
     });
-
-    // ── FATE (Mind Three) gates the REAL effect, not only the preflight ──
-    //
-    // Canon, first law of invitation: participation must be "voluntary,
-    // informed, scoped and reversible wherever reversal remains technically
-    // possible." Consent has already established voluntary and informed. This
-    // gate establishes SCOPED and REVERSIBLE — the two properties a human
-    // cannot verify by reading a phrase.
-    //
-    // Season eligibility is deliberately NOT required here: that is the
-    // preflight's question, and gating the effect on it would flip
-    // CORRIDOR_RENAME_SEASON_GATE_LIVE, which is a separate claim. This gate
-    // judges the effect's SHAPE only, and fails closed.
-    const fateShape = {
-      reversible: assessReversibility({
-        undoable: typeof effect?.undo === "function",
-        inverse_kind: "bounded_local_rename",
-        before_hash: prepared.intent.before_hash,
-        before_manifest: prepared.intent.before_manifest,
-      }),
-      radius: assessBlastRadius({ root: estate, from: fromName, to: toName }),
-    };
-    if (!fateShape.reversible.reversible || !fateShape.reversible.before_state_bound || !fateShape.radius.scope_bounded) {
-      const blocked = [...fateShape.reversible.findings, ...fateShape.radius.findings];
-      corridorFail(
-        `FATE policy REFUSED the effect (${blocked.join(", ")}) — the effect is not provably reversible or not bounded; `
-        + "no transaction was run, no rename occurred, nothing was written.",
-      );
-    }
 
     const mechanical = await runTransactionalMechanicalClosure({
       demaHome: home,

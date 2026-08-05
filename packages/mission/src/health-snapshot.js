@@ -31,8 +31,20 @@ function deriveMissionVerdict(results) {
   return "FAILED";
 }
 
-export async function buildHealthSnapshot({ now = new Date() } = {}) {
-  const home = process.env.DEMA_HOME || join(homedir(), ".dema");
+/**
+ * `demaHome` is now explicit and ADDITIVE: omitting it preserves the previous
+ * environment-derived behaviour byte-for-byte, so no existing caller changes.
+ *
+ * It exists because a caller that thinks it is inspecting installation X while
+ * this function silently reads `process.env.DEMA_HOME` is not observing the
+ * thing it reports on. An endurance record written under one home while a
+ * different home was actually inspected is not evidence — it is a category
+ * error that reads exactly like evidence.
+ */
+export async function buildHealthSnapshot({ now = new Date(), demaHome } = {}) {
+  const home = typeof demaHome === "string" && demaHome.length > 0
+    ? demaHome
+    : (process.env.DEMA_HOME || join(homedir(), ".dema"));
 
   const setup = await checkSetup(home);
   const harness = buildHarnessIntegrationSummary();

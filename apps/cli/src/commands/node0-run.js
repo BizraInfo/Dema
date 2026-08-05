@@ -51,6 +51,60 @@ function runDir(home, runId) {
   return join(home, ENDURANCE_RELDIR, runId);
 }
 
+// The ONLY mission verdict that counts as a healthy endurance sample.
+// `ATTENTION` means the node is degraded but running; for an endurance claim
+// that is a failure, not a pass.
+export const HEALTHY_MISSION_VERDICT = "CLEAN";
+
+/**
+ * Take one observation.
+ *
+ * ── THE DEFECT THIS REPLACES ──
+ * The first implementation wrote `ok: snap?.ok !== false`. `buildHealthSnapshot`
+ * returns NO top-level `ok` — its result lives at `attests.mission_verdict` — so
+ * that expression was `undefined !== false`, which is ALWAYS true. Every sample
+ * was healthy by construction, including one attesting `mission_verdict: FAILED`.
+ * The test that "checked" it asserted `typeof s.ok === "boolean"` and passed
+ * vacuously, because `true` is a boolean.
+ *
+ * Health is now derived ONLY from the verdict the snapshot actually attests, the
+ * inspected home is recorded so a caller can prove WHAT was observed, and an
+ * unrecognised verdict fails closed.
+ */
+export async function takeSample({ at, demaHome, snapshotFn = buildHealthSnapshot }) {
+  try {
+    const snap = await snapshotFn({ now: new Date(at), demaHome });
+    const verdict = snap?.attests?.mission_verdict ?? null;
+    const inspected = snap?.attests?.results?.memory?.home ?? null;
+    return {
+      at_ms: at,
+      // Fail closed: only an explicit CLEAN is healthy. null, undefined,
+      // ATTENTION, FAILED and any future verdict are all false.
+      ok: verdict === HEALTHY_MISSION_VERDICT,
+      mission_verdict: verdict,
+      inspected_home: inspected,
+      // Binding the home the caller ASKED for alongside the one actually read
+      // makes a mismatch visible in the record instead of invisible.
+      requested_home: demaHome ?? null,
+      home_matches: inspected === (demaHome ?? null),
+      content_hash: snap?.content_hash ?? null,
+    };
+  } catch (err) {
+    // An observation that FAILED is still an observation. Recording it is what
+    // separates DEGRADED (we watched it struggle) from BROKEN (we stopped watching).
+    return {
+      at_ms: at,
+      ok: false,
+      mission_verdict: null,
+      inspected_home: null,
+      requested_home: demaHome ?? null,
+      home_matches: false,
+      content_hash: null,
+      error: String(err?.message ?? err).slice(0, 200),
+    };
+  }
+}
+
 /** Append one line and fsync it, so a kill cannot lose an observation already made. */
 async function appendSampleLine(path, line) {
   const fh = await open(path, "a");
@@ -158,15 +212,7 @@ export async function cmdNode0Run(ctx) {
 
   while (!stopping) {
     const at = Date.now();
-    let sample;
-    try {
-      const snap = await buildHealthSnapshot({ now: new Date(at) });
-      sample = { at_ms: at, ok: snap?.ok !== false, checks: snap?.checks ?? null };
-    } catch (err) {
-      // An observation that FAILED is still an observation. Recording it is what
-      // separates DEGRADED (we watched it struggle) from BROKEN (we stopped watching).
-      sample = { at_ms: at, ok: false, error: String(err?.message ?? err).slice(0, 200) };
-    }
+    const sample = await takeSample({ at, demaHome: home });
     await appendSampleLine(samplesPath, JSON.stringify(sample));
     taken += 1;
     if (!wantJson) process.stdout.write(`  sample ${taken} · ok=${sample.ok} · ${new Date(at).toISOString()}\n`);

@@ -35,12 +35,52 @@ const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DEMA = join(REPO, "bin/dema");
 const ID = "ccb-closure-probe";
 
-const newHome = () => mkdtemp(join(tmpdir(), "ccb-"));
+// NODE0-CLOSURE-SPRINT-CORRECTION-1A — the corridor rename effect is now
+// Season-gated (CORRIDOR_RENAME_SEASON_GATE_LIVE). Every `complete` therefore
+// needs an authoritative Season HEAD in the SAME home the CLI reads, whose
+// repository binding matches the EXECUTING checkout — the binding is measured
+// from git, never taken from the state, so a fabricated commit would refuse.
+const CCB_SEASON = "ccb-season";
+
+function executingRepo() {
+  const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: REPO, encoding: "utf8" }).trim();
+  const tree = execFileSync("git", ["rev-parse", "HEAD^{tree}"], { cwd: REPO, encoding: "utf8" }).trim();
+  return { commit, tree };
+}
+
+async function seedSeason(home) {
+  const { saveSeasonState } = await import("../packages/receipts/src/season-state-store.js");
+  const { commit, tree } = executingRepo();
+  const r = await saveSeasonState({
+    demaHome: home,
+    state: {
+      season_id: CCB_SEASON,
+      mission_id: "ccb-closure-probe",
+      mission_phase: "LOCAL_EFFECT_PREPARED",
+      completed_steps: [],
+      next_safe_action: "ACTION:CORRIDOR_RENAME_EXECUTE",
+      must_not_repeat: [],
+      pending_consent: [{ phrase: "GO: complete mission corridor ccb-closure-probe", scope: "corridor" }],
+      repository_commit: commit,
+      repository_tree: tree,
+      saved_at: "2026-08-05T09:00:00Z",
+    },
+  });
+  assert.equal(r.ok, true, `season fixture failed: ${r.reason ?? ""}`);
+  return home;
+}
+
+const newHome = async () => seedSeason(await mkdtemp(join(tmpdir(), "ccb-")));
 const future = () => new Date(Date.now() + 3_600_000).toISOString();
 
 function run(home, args, { allowFail = false } = {}) {
+  // The rename effect route is Season-gated; supply the authoritative season id
+  // seeded into this home. Other verbs are unaffected.
+  const seasoned = args.includes("complete") && !args.includes("--season")
+    ? [...args, "--season", CCB_SEASON]
+    : args;
   try {
-    return execFileSync("node", [DEMA, ...args, "--dema-home", home, "--json"], {
+    return execFileSync("node", [DEMA, ...seasoned, "--dema-home", home, "--json"], {
       cwd: REPO, encoding: "utf8", env: { ...process.env, DEMA_HOME: home },
     });
   } catch (e) {
@@ -288,7 +328,7 @@ describe("CCB · corridor closure BINDING — real consent, real nonces, real le
     // against a completely unguarded implementation.
     const outcomes = await Promise.all(authorised.map((args) =>
       new Promise((resolve) => {
-        execFile("node", [DEMA, ...args, "--dema-home", home, "--json"],
+        execFile("node", [DEMA, ...args, "--season", CCB_SEASON, "--dema-home", home, "--json"],
           { cwd: REPO, env: { ...process.env, DEMA_HOME: home } },
           (err, stdout, stderr) => resolve({ ok: !err, out: `${stdout ?? ""}${stderr ?? ""}` }));
       })));
@@ -460,6 +500,8 @@ describe("CCB · corridor closure BINDING — real consent, real nonces, real le
     ];
     const authorised = [
       ...authorisedArgs,
+      // Season-gated effect route (CORRIDOR_RENAME_SEASON_GATE_LIVE).
+      "--season", CCB_SEASON,
       "--dema-home", home,
       "--json",
     ];
