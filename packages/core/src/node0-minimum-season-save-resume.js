@@ -192,7 +192,12 @@ export function validateSeasonStateInput(input, { requireSequence = false } = {}
   if (!ID_RE.test(String(input.season_id ?? ""))) push("season_id_malformed");
   if (!ID_RE.test(String(input.mission_id ?? ""))) push("mission_id_malformed");
   if (!PHASE_RE.test(String(input.mission_phase ?? ""))) push("mission_phase_malformed");
-  if (!ACTION_RE.test(String(input.next_safe_action ?? ""))) push("next_safe_action_malformed");
+  // NODE0-SEASON-ACTION-AUTHORITY-1A widened this STRICTLY: a bare
+  // UPPER_SNAKE token stays legal exactly as before, and the canonical
+  // `ACTION:<ID>` form is additionally accepted so a machine-checkable action
+  // can be named here. Widening only adds accepted values — every state that
+  // validated before this change still validates, and its hash is untouched.
+  if (!isSeasonNextActionToken(input.next_safe_action)) push("next_safe_action_malformed");
 
   if (!SHA40_RE.test(String(input.repository_commit ?? ""))) push("repository_commit_malformed");
   if (!SHA40_RE.test(String(input.repository_tree ?? ""))) push("repository_tree_malformed");
@@ -258,6 +263,11 @@ export function validateSeasonStateInput(input, { requireSequence = false } = {}
     push("pending_consent_shape_invalid");
   }
 
+  // pending_effect is OPTIONAL. Absent is legal; present must be exact.
+  if (input.pending_effect !== undefined && input.pending_effect !== null) {
+    for (const reason of validatePendingEffect(input.pending_effect)) push(reason);
+  }
+
   if (input.saved_at !== undefined && !ISO_RE.test(String(input.saved_at))) push("saved_at_malformed");
 
   if (findSecretBearingFields(input).length > 0) push("secret_bearing_state");
@@ -265,10 +275,76 @@ export function validateSeasonStateInput(input, { requireSequence = false } = {}
   return Object.freeze({ ok: blocked_by.length === 0, blocked_by: Object.freeze(blocked_by) });
 }
 
+// ── NODE0-SEASON-ACTION-AUTHORITY-1A ────────────────────────────────────────
+// A canonical action entry is the machine-readable half of `next_safe_action`
+// and `must_not_repeat`. Human prose in those arrays is PRESERVED but is never
+// interpreted: policy is exact-string or it is not policy. `ACTION_RE` above is
+// reused unchanged — the action-ID law was already this kernel's contract.
+export const SEASON_ACTION_PREFIX = "ACTION:";
+export const SEASON_PENDING_EFFECT_SCHEMA = "bizra.dema.season_pending_effect.v0.1";
+export const SEASON_PENDING_EFFECT_KIND = "bounded_local_rename";
+export const SEASON_PENDING_EFFECT_FIELDS = Object.freeze([
+  "schema", "action_id", "transaction_id", "prepared_intent_hash", "effect_kind",
+]);
+
+/** Exact canonical entry for an action id. No trimming, folding or normalizing. */
+export function canonicalSeasonAction(actionId) {
+  return `${SEASON_ACTION_PREFIX}${actionId}`;
+}
+
+export function isValidSeasonActionId(actionId) {
+  return typeof actionId === "string" && ACTION_RE.test(actionId);
+}
+
+/**
+ * A legal `next_safe_action`: either the historical bare UPPER_SNAKE token or
+ * the canonical `ACTION:<ID>` form. Bare tokens remain legal so no persisted
+ * state is invalidated by this slice.
+ */
+export function isSeasonNextActionToken(value) {
+  const s = String(value ?? "");
+  if (ACTION_RE.test(s)) return true;
+  return s.startsWith(SEASON_ACTION_PREFIX) && ACTION_RE.test(s.slice(SEASON_ACTION_PREFIX.length));
+}
+
+/**
+ * Shape law for the optional pending-effect binding. Pure.
+ * Partial, over-specified or mistyped objects fail closed.
+ */
+export function validatePendingEffect(pe) {
+  const bad = [];
+  if (pe === null || typeof pe !== "object" || Array.isArray(pe)) return ["pending_effect_shape_invalid"];
+  const keys = Object.keys(pe).sort();
+  const expect = [...SEASON_PENDING_EFFECT_FIELDS].sort();
+  if (keys.length !== expect.length || keys.some((k, i) => k !== expect[i])) {
+    bad.push("pending_effect_fields_unexpected");
+  }
+  if (pe.schema !== SEASON_PENDING_EFFECT_SCHEMA) bad.push("pending_effect_schema_invalid");
+  if (!isValidSeasonActionId(pe.action_id)) bad.push("pending_effect_action_id_malformed");
+  // Typed before matched. `String(7)` yields "7", which satisfies ID_RE — so a
+  // number would have been accepted as a transaction id. A non-string is a type
+  // confusion, not a formatting slip, and must fail before the regex runs.
+  if (typeof pe.transaction_id !== "string" || !ID_RE.test(pe.transaction_id)) {
+    bad.push("pending_effect_transaction_id_malformed");
+  }
+  if (typeof pe.prepared_intent_hash !== "string" || !TAGGED_SHA256_RE.test(pe.prepared_intent_hash)) {
+    bad.push("pending_effect_intent_hash_malformed");
+  }
+  if (pe.effect_kind !== SEASON_PENDING_EFFECT_KIND) bad.push("pending_effect_kind_invalid");
+  return bad;
+}
+
 /** The exact subset the state hash covers, assembled in contract order. */
 export function semanticStateBody(state) {
   const body = {};
   for (const f of SEMANTIC_STATE_FIELDS) body[f] = state[f];
+  // Additive by omission: the key is present in the canonical bytes ONLY when
+  // the state actually carries a pending effect. A historical state therefore
+  // hashes to exactly what it hashed to before this field existed — no
+  // migration, no `pending_effect: null` placeholder, no changed identity.
+  if (state.pending_effect !== undefined && state.pending_effect !== null) {
+    body.pending_effect = state.pending_effect;
+  }
   return body;
 }
 
@@ -311,6 +387,19 @@ export function buildSeasonState(input) {
     boundary: node0MinimumSeasonSaveResumeBoundary(),
   };
 
+  // Carried through ONLY when supplied, mirroring semanticStateBody: an absent
+  // pending effect must leave the state shape — and therefore the hash —
+  // byte-identical to a pre-slice state.
+  if (input.pending_effect !== undefined && input.pending_effect !== null) {
+    body.pending_effect = Object.freeze({
+      schema: input.pending_effect.schema,
+      action_id: input.pending_effect.action_id,
+      transaction_id: input.pending_effect.transaction_id,
+      prepared_intent_hash: input.pending_effect.prepared_intent_hash,
+      effect_kind: input.pending_effect.effect_kind,
+    });
+  }
+
   let state_hash;
   try {
     state_hash = hashSeasonState(body);
@@ -322,6 +411,123 @@ export function buildSeasonState(input) {
   return Object.freeze({
     ok: true,
     state: Object.freeze({ ...body, saved_at: input.saved_at ?? null, state_hash }),
+  });
+}
+
+/**
+ * NODE0-SEASON-ACTION-AUTHORITY-1A — the canonical Season action predicate.
+ *
+ * Answers exactly one question: does this verified Season State permit ASKING
+ * for this action? It is pure — no disk, network, clock, randomness, process,
+ * consent or FATE — and it carries `authority_delta: 0` by construction.
+ *
+ * A successful result means ELIGIBLE_TO_REQUEST_CONSENT_AND_FATE and nothing
+ * more. It is not consent, not a FATE verdict, and not permission to execute.
+ * Absence from `must_not_repeat` grants nothing; it only fails to forbid.
+ */
+export function evaluateSeasonActionAuthority({
+  actionId,
+  seasonState,
+  repositoryCommit,
+  repositoryTree,
+} = {}) {
+  const deny = (verdict, reason, extra = {}) =>
+    Object.freeze({
+      ok: false,
+      verdict,
+      action_id: typeof actionId === "string" ? actionId : null,
+      canonical_action: isValidSeasonActionId(actionId) ? canonicalSeasonAction(actionId) : null,
+      next_action_matches: false,
+      repository_binding_valid: false,
+      matched_prohibition: null,
+      duplicate_prohibition: false,
+      consent_still_required: true,
+      fate_still_required: true,
+      authority_delta: 0,
+      reason,
+      ...extra,
+    });
+
+  if (!isValidSeasonActionId(actionId)) return deny("REFUSED", "action_id_malformed");
+  if (!seasonState || typeof seasonState !== "object" || Array.isArray(seasonState)) {
+    return deny("REFUSED", "season_state_not_object");
+  }
+
+  const verified = verifySeasonState(seasonState);
+  if (!verified.ok) return deny("REFUSED", `season_state_unverified:${verified.reason}`);
+
+  const canonical = canonicalSeasonAction(actionId);
+
+  const binding = verifyRepositoryBinding(seasonState, { repositoryCommit, repositoryTree });
+  if (!binding.ok) return deny("REFUSED", binding.reason);
+
+  // Duplicate canonical entries are ambiguous policy. Fail closed rather than
+  // pick one — two rules for one action is a contract defect, not a tie.
+  const mnr = Array.isArray(seasonState.must_not_repeat) ? seasonState.must_not_repeat : [];
+  const exactHits = mnr.filter((e) => e === canonical).length;
+  if (exactHits > 1) {
+    return Object.freeze({
+      ok: false,
+      verdict: "REFUSED",
+      action_id: actionId,
+      canonical_action: canonical,
+      next_action_matches: seasonState.next_safe_action === canonical,
+      repository_binding_valid: true,
+      matched_prohibition: canonical,
+      duplicate_prohibition: true,
+      consent_still_required: true,
+      fate_still_required: true,
+      authority_delta: 0,
+      reason: "duplicate_canonical_prohibition",
+    });
+  }
+  if (exactHits === 1) {
+    return Object.freeze({
+      ok: false,
+      verdict: "REFUSED",
+      action_id: actionId,
+      canonical_action: canonical,
+      next_action_matches: seasonState.next_safe_action === canonical,
+      repository_binding_valid: true,
+      matched_prohibition: canonical,
+      duplicate_prohibition: false,
+      consent_still_required: true,
+      fate_still_required: true,
+      authority_delta: 0,
+      reason: "action_prohibited_by_must_not_repeat",
+    });
+  }
+
+  if (seasonState.next_safe_action !== canonical) {
+    return Object.freeze({
+      ok: false,
+      verdict: "REFUSED",
+      action_id: actionId,
+      canonical_action: canonical,
+      next_action_matches: false,
+      repository_binding_valid: true,
+      matched_prohibition: null,
+      duplicate_prohibition: false,
+      consent_still_required: true,
+      fate_still_required: true,
+      authority_delta: 0,
+      reason: "next_safe_action_mismatch",
+    });
+  }
+
+  return Object.freeze({
+    ok: true,
+    verdict: "ELIGIBLE_TO_REQUEST_CONSENT_AND_FATE",
+    action_id: actionId,
+    canonical_action: canonical,
+    next_action_matches: true,
+    repository_binding_valid: true,
+    matched_prohibition: null,
+    duplicate_prohibition: false,
+    consent_still_required: true,
+    fate_still_required: true,
+    authority_delta: 0,
+    reason: "eligible_to_request_consent_and_fate",
   });
 }
 
@@ -342,10 +548,19 @@ export function verifySeasonState(state) {
   }
   // An alien or missing field changes what the file MEANS even when the covered
   // subset still hashes correctly, so the field set is part of the contract.
-  const present = Object.keys(state).sort();
+  // `pending_effect` is the one optional field: allowed when present, required
+  // to be absent-or-exact. Everything else stays a closed set, so an alien key
+  // is still a contract violation rather than silently-ignored data.
+  const present = Object.keys(state).filter((k) => k !== "pending_effect").sort();
   const expected = [...STATE_FIELDS].sort();
   if (present.length !== expected.length || present.some((k, i) => k !== expected[i])) {
     return Object.freeze({ ok: false, reason: "state_fields_unexpected" });
+  }
+  if (state.pending_effect !== undefined && state.pending_effect !== null) {
+    const peBad = validatePendingEffect(state.pending_effect);
+    if (peBad.length) {
+      return Object.freeze({ ok: false, reason: "state_contract_violated", blocked_by: Object.freeze(peBad) });
+    }
   }
   const check = validateSeasonStateInput(state, { requireSequence: true });
   if (!check.ok) return Object.freeze({ ok: false, reason: "state_contract_violated", blocked_by: check.blocked_by });
