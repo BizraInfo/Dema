@@ -311,11 +311,15 @@ test("A7 direct TAP is isolated and a later authoritative gate executes", () => 
   // the isolated TAP command: 202 -> 203, isolated 126 -> 127, coverage 127 -> 128.
   // The guard sits ahead of the suite on purpose: it is a static scan, so it must
   // fail fast rather than behind a TAP gate that fails closed and never reaches it.
+  // NODE0-RESURRECTION-CORRECTION-1B appends node0-local-season-resurrection-check
+  // at index 87, again ahead of the isolated TAP command: 203 -> 204, isolated
+  // 127 -> 128, coverage 128 -> 129. Positions MEASURED by importing `commands`,
+  // not carried over from the previous slice's arithmetic.
   // These are exact positional snapshots and will drift again on the next gate
   // added ahead of the isolated TAP command; that coupling is this lane's to decide on.
-  assert.equal(commands.length, 203);
-  assert.equal(commands.indexOf(isolated), 127);
-  assert.deepEqual(commands[128].slice(0, 2), ["npm", ["run", "coverage"]]);
+  assert.equal(commands.length, 204);
+  assert.equal(commands.indexOf(isolated), 128);
+  assert.deepEqual(commands[129].slice(0, 2), ["npm", ["run", "coverage"]]);
 
   const evidence = [];
   const calls = [];

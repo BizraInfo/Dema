@@ -517,6 +517,8 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/dema-reversible-file-steward-execution.test.js` | DEMA-REVERSIBLE-FILE-STEWARD-1B (`packages/core/src/dema-reversible-file-steward-execution.js`): sequenced **transactional** execution + proven undo over the shipped reversible-rename gate. Proves the whole job round-trips against a REAL fs — execute-all → undo-all returns the sandbox's user-file set to genesis, every undo proven against its on-disk backup; and a later-atom failure **auto-rolls-back** the already-applied atoms to genesis (all-or-nothing, net executed_count 0), never leaving a partial mutation. Executed boundary (sandbox_only + reversible + undo_available; no network/model/mint). 6 tests. |
 | `tests/steward-cli.test.js` | DEMA-REVERSIBLE-FILE-STEWARD-1C (`apps/cli/src/commands/steward.js`): the `dema steward plan\|verify\|run\|undo` CLI surface over the proven 1A planner + 1B execution kernels. Spawned-CLI proof: plan fail-closed without / eligible with the exact preview phrase; verify round-trips a real sandbox back to genesis; run refuses wrong consent with zero mutation; run + undo --receipts restores original names; empty-atoms job refused. 7 tests. |
 | `tests/node0-minimum-season-save-resume.test.js`        | NODE0-MINIMUM-SEASON-SAVE-RESUME-1A (`packages/core/src/node0-minimum-season-save-resume.js` + `scripts/review/node0-minimum-season-save-resume-check.mjs`): Durable local season state: save, status and resume a bounded Node0 continuation checkpoint from disk alone. Red-first scaffold — fill the kernel bodies and turn the proof contract green. N tests. Wired into `npm run check`. |
+| `tests/mission-run-health-cli-dispatch.test.js`         | NODE0-RESURRECTION-CORRECTION-1B (`apps/cli/src/commands/mission.js`): `dema mission run health` CLI dispatch. The generic `run` branch had no `argv[2]` guard and calls `process.exit()`, so the documented health route was unreachable and no test covered the CLI path. Covers dry-run, consent refusal, exact-consent save, verifier verdict, the receipt-verification-vs-health-verdict split, generic file-run, the reserved `health` token, and bounded failure on malformed input. Wired into `npm test`. |
+| `tests/node0-local-season-resurrection-gate.test.js`    | NODE0-RESURRECTION-CORRECTION-1B (`scripts/review/node0-local-season-resurrection-check.mjs`): the promotion gate. Drives the full resurrection proof through the real CLI, then proves that a failed verification leaves sequence 3 unwritten, HEAD at sequence 2, and a nonzero exit — `evidence verified → then authority state promoted`, never the reverse. Wired into `npm run check`. |
 
 ## Smoke checks
 
@@ -667,6 +669,7 @@ node scripts/review/node0-model-swap-invariance-check.mjs
 node scripts/review/dema-mission-worker-handoff-check.mjs
 node scripts/review/dema-reversible-file-steward-check.mjs
 node scripts/review/node0-minimum-season-save-resume-check.mjs
+node scripts/review/node0-local-season-resurrection-check.mjs
 node scripts/review/dema-capability-truth-registry-check.mjs
 node scripts/review/boundary-vocab-unification-check.mjs
 node scripts/review/dema-fde-dual-diagnostic-check.mjs

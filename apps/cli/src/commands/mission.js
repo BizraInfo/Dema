@@ -786,7 +786,12 @@ export async function cmd_mission(ctx) {
     if (!out.ok) process.exitCode = 1;
     process.exit(process.exitCode ?? 0);
   }
-  if (subcommand === "run") {
+  // `health` is a RESERVED run target, not a path. This guard exists because the
+  // generic branch below calls process.exit(), so without it the dedicated
+  // `run health` branch further down is unreachable and `dema mission run health`
+  // fails as `file_not_found: health`. A file literally named `health` is not
+  // runnable through this path by design — pass `./health` to reach the file.
+  if (subcommand === "run" && argv[2] !== "health") {
     // NODE0-MATERIALIZATION-PULSE-E2E-PREVIEW-1A — run one real local file END-TO-END through the
     // assembled Pulse stations (sanitize → plan-branch → FATE → claim-gate → pulse-receipt). The train
     // runs. PREVIEW_ONLY: no model, no network, no write, no mint. Composes existing pure kernels.
@@ -1312,6 +1317,22 @@ export async function cmd_mission(ctx) {
       process.exit(process.exitCode ?? 0);
     }
     const result = await saveHealthSnapshotReceipt({ consent, dryRun });
+    // Two separate truths that must never be reported as one: whether the RECEIPT
+    // verifies (integrity of what we wrote) and what the HEALTH MISSION found
+    // (state of the environment). A VERIFIED receipt recording a FAILED health
+    // verdict is the correct, expected output on an unhealthy home — collapsing
+    // them into a single "ok" would report an unhealthy runtime as success.
+    if (result.saved && result.path) {
+      const verification = await verifyHealthSnapshotReceipt(result.path);
+      result.receipt_verification = {
+        verdict: verification.verdict,
+        checks_total: verification.checks_total,
+        checks_passing: verification.checks_passing,
+        checks_failing: verification.checks_failing,
+      };
+      result.health_mission_verdict = result.attests?.mission_verdict ?? null;
+      if (verification.verdict !== "VERIFIED") process.exitCode = 1;
+    }
     if (wantJsonM) {
       console.log(JSON.stringify(result, null, 2));
     } else {
