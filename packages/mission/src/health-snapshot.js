@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
-import { mkdir, writeFile, rename, unlink, realpath } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, writeFile, rename, unlink, realpath, readFile } from "node:fs/promises";
+import { join, basename } from "node:path";
 import { homedir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
 import { buildHarnessIntegrationSummary } from "../../core/src/harness-integration.js";
 import { checkSetup } from "../../installer/src/setup.js";
@@ -17,6 +18,41 @@ import {
   buildRuntimeObservation,
   isCleanEligibleObservation,
 } from "../../core/src/node0-runtime-observation.js";
+
+/**
+ * PROMOTION-CORRECTION-1C item 13. Witness v0.2 carries a `code_identity`
+ * binding, and the health call site never supplied an expectation for it — so
+ * the field verified against nothing and "this witness belongs to these exact
+ * executing bytes" was advertised, not enforced.
+ *
+ * The identity is measured from the modules that actually DECIDE the verdict.
+ * Bytes, not a git revision: a dirty tree at a clean commit reports the clean
+ * commit, i.e. names code that did not run. Same reasoning as the endurance
+ * runner's code hash, and deliberately the same shape.
+ *
+ * Cached per process: these files cannot change under a running process in a
+ * way this snapshot could act on, and re-reading them per sample would put a
+ * disk read on the endurance loop's hot path.
+ */
+const VERDICT_CODE_FILES = Object.freeze([
+  new URL("./health-snapshot.js", import.meta.url),
+  new URL("../../core/src/node0-runtime-observation.js", import.meta.url),
+  new URL("../../receipts/src/witness-verify.js", import.meta.url),
+  new URL("../../core/src/doctor-dashboard.js", import.meta.url),
+]);
+
+let cachedCodeIdentity = null;
+
+export async function measureVerdictCodeIdentity() {
+  if (cachedCodeIdentity) return cachedCodeIdentity;
+  const parts = {};
+  for (const url of VERDICT_CODE_FILES) {
+    const path = fileURLToPath(url);
+    parts[basename(path)] = sha256(await readFile(path, "utf8"));
+  }
+  cachedCodeIdentity = sha256(stableStringify(parts));
+  return cachedCodeIdentity;
+}
 
 const SCHEMA = "bizra.dema.mission_receipt.health_snapshot.v0.1";
 const TRUTH_LABEL = "LOCAL_OPERATOR_MISSION";
@@ -134,6 +170,7 @@ export async function buildHealthSnapshot({
           ? "OBSERVED"
           : "OPERATOR_ASSERTED";
 
+  const codeIdentity = await measureVerdictCodeIdentity();
   const observation = buildRuntimeObservation({
     adapterMode: source,
     configuredEndpoint: status.gateway?.endpoint ?? null,
@@ -149,6 +186,7 @@ export async function buildHealthSnapshot({
     raw: status.runtime_raw ?? status,
     evidenceClass,
     observedAt: now.toISOString(),
+    executedCodeHash: codeIdentity,
     hash: (facts) => sha256(stableStringify(facts)),
   });
 
@@ -159,6 +197,8 @@ export async function buildHealthSnapshot({
     expectedRuntimeIdentity: observation.runtime_identity,
     expectedEndpoint: observation.observed_endpoint,
     expectedObservationHash: observation.observation_hash,
+    // Item 13: the expectation the verifier was never given.
+    expectedCodeIdentity: codeIdentity,
   };
   let witnessPath = await findBoundWitness(home, expectedBinding);
   // Fall back to the legacy selection only to REPORT what exists; a v0.1

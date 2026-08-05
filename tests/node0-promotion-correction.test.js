@@ -13,6 +13,9 @@ import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
 import { initAuthorshipKey, KEY_INIT_CONSENT_PHRASE } from "../packages/receipts/src/authorship-key-store.js";
 import { saveSeasonState } from "../packages/receipts/src/season-state-store.js";
+import { measureVerdictCodeIdentity, buildHealthSnapshot } from "../packages/mission/src/health-snapshot.js";
+import { evaluateWitnessBinding, WITNESS_RUNTIME_BOUND_SCHEMA } from "../packages/receipts/src/witness-verify.js";
+import { runMissionProbe } from "../packages/mission/src/mission-probe.js";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -332,5 +335,79 @@ describe("PROMOTION-CORRECTION-1C", () => {
     for (const k of ["daemon", "model_invoked", "effect_executed", "nonce_claimed", "transaction_prepared"]) {
       assert.equal(receipt.boundary[k], false, `${k} must remain false`);
     }
+  });
+
+  // ── item 13: code identity supplied AND enforced ────────────────────────
+  it("PC-12 the snapshot measures a code identity and binds it to the observation", async () => {
+    const id = await measureVerdictCodeIdentity();
+    assert.match(id, /^[0-9a-f]{64}$/, "a code identity must be a sha256 of the deciding bytes");
+    assert.equal(await measureVerdictCodeIdentity(), id, "stable within a process");
+
+    const home = await freshHome("codeid");
+    const snap = await buildHealthSnapshot({ demaHome: home });
+    assert.equal(
+      snap.attests.results.observation.executed_code_hash, id,
+      "the observation must carry the identity of the code that judged it",
+    );
+  });
+
+  it("PC-13 a witness bound to different executing bytes is refused", () => {
+    const base = {
+      home_identity: "/h", runtime_identity: "n0", observed_endpoint: "http://127.0.0.1:1",
+      observation_hash: "abc", code_identity: "CODE-A", authority_delta: 0, federation_invoked: false,
+    };
+    const receipt = { schema: WITNESS_RUNTIME_BOUND_SCHEMA, attests: { binding: base } };
+    const expected = {
+      expectedHomeIdentity: "/h", expectedRuntimeIdentity: "n0",
+      expectedEndpoint: "http://127.0.0.1:1", expectedObservationHash: "abc",
+    };
+    assert.equal(evaluateWitnessBinding(receipt, { ...expected, expectedCodeIdentity: "CODE-A" }).valid, true);
+    const stale = evaluateWitnessBinding(receipt, { ...expected, expectedCodeIdentity: "CODE-B" });
+    assert.equal(stale.valid, false, "a witness for other bytes cannot satisfy CLEAN");
+    assert.ok(stale.mismatches.includes("code_identity_mismatch"));
+  });
+
+  // ── item 17: transport coverage is disclosed, not denied ────────────────
+  it("PC-14 the probe scans the transport tier and discloses its capability", async () => {
+    const r = await runMissionProbe(REPO);
+    const b = r.probes.find((p) => p.name === "boundary_observed_v0_1");
+    const t = b.evidence.transport_tier;
+    assert.ok(t, "the transport tier must be reported at all — its absence was the gap");
+    assert.equal(t.reachable_from_health, true);
+    assert.equal(t.capability_present, true, "the adapter genuinely has transport capability");
+    assert.ok(t.capability_hits > 0);
+    // The PURE tier must still be clean: capability may live in the adapter,
+    // never in the kernel chain.
+    assert.equal(b.evidence.network_used.forbidden_imports, 0);
+  });
+
+  // ── item 15: a SUCCESSFUL closure must record what permitted it ─────────
+  it("PC-15 the closure record persists the Season and FATE authorization", async () => {
+    const home = await newCorridorHome();
+    await corridorAtCheckpoint(home);
+    await seedSeason(home);
+
+    const base = [
+      "mission", "corridor", "complete", ID,
+      "--season", SEASON,
+      "--nonce", "pc1c-close", "--expires", future(),
+    ];
+    const card = JSON.parse(runDema(home, base));
+    assert.equal(card.step, "CONSENT_CARD", `expected a consent card, got: ${JSON.stringify(card).slice(0, 300)}`);
+    const done = JSON.parse(runDema(home, [
+      ...base, "--consent", card.required_phrase, "--consent-context", card.consent_context_hash,
+    ]));
+    assert.equal(done.ok, true, `closure must succeed: ${JSON.stringify(done).slice(0, 300)}`);
+
+    const rec = JSON.parse(await readFile(join(home, "missions", ID, "closure.json"), "utf8"));
+    // The refusal path was loud and the permission path was silent. A closure
+    // that succeeded must be able to say WHICH Season and WHICH FATE decision
+    // allowed it, or the authorization is unauditable after the fact.
+    assert.ok(rec.season_authority, "closure record must carry the authorization evidence");
+    assert.equal(rec.season_authority.season_id, SEASON);
+    assert.equal(typeof rec.season_authority.season_authority_verdict, "string");
+    assert.equal(typeof rec.season_authority.fate_verdict, "string");
+    assert.match(rec.season_authority.executing_repository_commit, /^[0-9a-f]{40}$/);
+    assert.equal(typeof rec.season_authority.authoritative_sequence, "number");
   });
 });

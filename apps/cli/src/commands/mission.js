@@ -2917,6 +2917,30 @@ async function cmdMissionCorridor(argv) {
         corridorFail(`terminal C2 recovery verification failed closed (${resolvedArtifacts.reason}).`);
       }
 
+      // PROMOTION-CORRECTION-1C item 15, recovery half.
+      //
+      // The primary path records WHICH Season and FATE decision permitted the
+      // closure. This path replays a closure that already happened, and it must
+      // NOT re-authorize: re-running the gate here would mint a fresh
+      // permission during recovery, which is the opposite of what recovery
+      // means. So the recorded authorization is carried forward from the
+      // closure record already on disk.
+      //
+      // Both builders must also emit byte-identical JSON — the EEXIST branch
+      // below compares bytes to detect semantic drift, so a field present in
+      // one builder and absent in the other turns every ordinary recovery into
+      // a false "closure record conflict". Measured: CCB-15 and CCB-20 went red
+      // exactly that way when only the primary builder carried this field.
+      let recordedSeasonAuthority = null;
+      try {
+        recordedSeasonAuthority =
+          JSON.parse(await readFileFs(join(dir, "closure.json"), "utf8")).season_authority ?? null;
+      } catch {
+        // No prior record (or unreadable): the closure is being written for the
+        // first time on this path, and there is no authorization to carry.
+        recordedSeasonAuthority = null;
+      }
+
       const closureRecord = {
         schema: "bizra.dema.mission_corridor_closure_record.v0.1",
         mission_id: id,
@@ -2931,6 +2955,7 @@ async function cmdMissionCorridor(argv) {
         consent_claim_hash: last.consent_claim_hash,
         prepared_intent_hash: last.prepared_intent_hash,
         omega0_card: sealedRef.omega0_card,
+        season_authority: recordedSeasonAuthority,
         at_iso: last.at_iso,
         verify_with: `dema mission corridor status ${id}`,
       };
@@ -3301,6 +3326,31 @@ async function cmdMissionCorridor(argv) {
         consent_claim_hash: consentClaim.claim_hash,
         prepared_intent_hash: prepared.prepared_intent_hash,
         omega0_card: result.omega0_card ?? null,
+        // PROMOTION-CORRECTION-1C item 15. The Season/FATE gate computed a full
+        // authorization record and the closure threw it away, so a SUCCESSFUL
+        // closure could not say which Season and which FATE decision permitted
+        // it — only that something had refused nothing. The refusal path was
+        // loud; the permission path was silent, which is the wrong way round
+        // for evidence. Persisted verbatim from the gate's own frozen return.
+        //
+        // This also retires the "unused variable" reading of `seasonGate`: it
+        // was never dead, and now it is visibly load-bearing.
+        season_authority: seasonGate
+          ? {
+            season_id: seasonGate.season_id,
+            authoritative_sequence: seasonGate.authoritative_sequence,
+            executing_repository_commit: seasonGate.executing_repository_commit,
+            executing_repository_tree: seasonGate.executing_repository_tree,
+            season_authority_verdict: seasonGate.season_authority_verdict,
+            canonical_action: seasonGate.canonical_action,
+            fate_verdict: seasonGate.fate_verdict,
+            fate_means: seasonGate.fate_means,
+          }
+          // Absent only when the corridor rename route ran without --season,
+          // which the gate itself already refuses for the effect path. Recorded
+          // as an explicit null so a reader can tell "not applicable" from
+          // "forgotten".
+          : null,
         at_iso: nowIso,
         verify_with: `dema mission corridor status ${id}`,
     };
