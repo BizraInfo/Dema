@@ -20,8 +20,9 @@
 // endurance kernel reads that loss as a GAP, never as health.
 
 import { mkdir, open, readFile, writeFile, rename } from "node:fs/promises";
-import { join } from "node:path";
+import { join, basename } from "node:path";
 import { homedir } from "node:os";
+import { fileURLToPath } from "node:url";
 
 import { buildHealthSnapshot } from "../../../../packages/mission/src/health-snapshot.js";
 import {
@@ -29,9 +30,50 @@ import {
   ENDURANCE_TARGETS,
   NODE0_ENDURANCE_SCHEMA,
 } from "../../../../packages/core/src/node0-endurance.js";
+import {
+  chainEnduranceRecord,
+  buildEnduranceAnchor,
+  verifyEnduranceChain,
+  ENDURANCE_HEADER_KIND,
+  ENDURANCE_SAMPLE_KIND,
+  ENDURANCE_EVIDENCE_CLASSES,
+} from "../../../../packages/core/src/node0-endurance-chain.js";
+import { sha256CanonicalJsonV1 } from "../../../../packages/canon/src/sha256-canonical-json-v1.js";
 
 export const NODE0_RUN_SCHEMA = "bizra.dema.node0_run_receipt.v0.1";
 export const ENDURANCE_RELDIR = join("node0", "endurance");
+export const ENDURANCE_ANCHOR_FILE = "anchor.json";
+
+/**
+ * The files whose bytes decide what a sample MEANS.
+ *
+ * ── WHY BYTES, NOT A GIT REVISION ──
+ * The obvious binding is the commit and tree the runner was started from. It is
+ * the weaker fact: a dirty working tree at a clean commit reports the clean
+ * commit, so the record would name code that is not the code that ran. Hashing
+ * the executed files binds the record to what actually produced it.
+ *
+ * It also costs no new capability. Measuring git needs `node:child_process`,
+ * which R5 forbids the runner outright — and moving that spawn into a
+ * neighbouring module to slip past a source scan would be evasion, not
+ * compliance. The git revision remains a real but separate fact; this record
+ * does not claim it.
+ */
+const RUNNER_CODE_FILES = Object.freeze([
+  new URL("./node0-run.js", import.meta.url),
+  new URL("../../../../packages/core/src/node0-endurance.js", import.meta.url),
+  new URL("../../../../packages/core/src/node0-endurance-chain.js", import.meta.url),
+  new URL("../../../../packages/mission/src/health-snapshot.js", import.meta.url),
+]);
+
+export async function measureRunnerCodeHash() {
+  const parts = {};
+  for (const url of RUNNER_CODE_FILES) {
+    const path = fileURLToPath(url);
+    parts[basename(path)] = sha256CanonicalJsonV1(await readFile(path, "utf8"));
+  }
+  return sha256CanonicalJsonV1(parts);
+}
 
 const DEFAULT_INTERVAL_MS = 5 * 60 * 1000;
 // Continuity allowance: a sample may be late, but not absent. Three missed
@@ -116,7 +158,8 @@ async function appendSampleLine(path, line) {
   }
 }
 
-export async function readSamples({ demaHome, runId }) {
+/** Every line of the record, header included. */
+export async function readRecords({ demaHome, runId }) {
   const path = join(runDir(demaHome, runId), "samples.jsonl");
   let raw;
   try {
@@ -138,14 +181,82 @@ export async function readSamples({ demaHome, runId }) {
   return out;
 }
 
-/** Judge a run that already exists on disk. Read-only. */
+/** Observations only. The run header is chain metadata, not a health sample. */
+export async function readSamples({ demaHome, runId }) {
+  const records = await readRecords({ demaHome, runId });
+  return records.filter((r) => r?.kind !== ENDURANCE_HEADER_KIND);
+}
+
+export async function readAnchor({ demaHome, runId }) {
+  try {
+    return JSON.parse(await readFile(join(runDir(demaHome, runId), ENDURANCE_ANCHOR_FILE), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Judge a run that already exists on disk. Read-only.
+ *
+ * ── WHY INTEGRITY GATES THE VERDICT ──
+ * Measured before this slice: deleting the last 10 of 26 samples left the
+ * verdict at `HEALTHY ok:true`, still reporting "continuously observed", with no
+ * field anywhere in the result that even mentioned integrity. Coverage was
+ * judged over whatever bytes happened to remain.
+ *
+ * A record whose chain does not verify, or which the anchor says is missing its
+ * tail, is not weak evidence — it is not evidence. It can never read HEALTHY.
+ * An UNWITNESSED record (`ABSENT`: written before this slice existed) is left
+ * judged as before but is explicitly marked not tamper-evident, because
+ * accusing it of tampering would be as dishonest as vouching for it.
+ */
 export async function judgeRun({ demaHome, runId, targetMs, intervalMs = DEFAULT_INTERVAL_MS }) {
-  const samples = await readSamples({ demaHome, runId });
-  return evaluateEndurance({
+  const records = await readRecords({ demaHome, runId });
+  const chain = verifyEnduranceChain({
+    records,
+    anchor: await readAnchor({ demaHome, runId }),
+    runId,
+  });
+  const samples = records.filter((r) => r?.kind !== ENDURANCE_HEADER_KIND);
+  const verdict = evaluateEndurance({
     samples,
     targetMs,
     maxGapMs: intervalMs * GAP_MULTIPLIER,
   });
+
+  if (!chain.ok && chain.chain_state !== "ABSENT") {
+    return Object.freeze({
+      ...verdict,
+      ok: false,
+      verdict: "BROKEN",
+      reason: `endurance_record_integrity_failed:${chain.chain_state}:${chain.reason}`,
+      chain,
+    });
+  }
+  return Object.freeze({
+    ...verdict,
+    // An elapsed-run target claim needs BOTH a healthy judgment and a witnessed
+    // ELAPSED record. A CUSTOM_TEST chain proves the judgment works, never that
+    // a node endured anything.
+    target_met_by_elapsed_run: verdict.ok === true && chain.ok === true && chain.elapsed_evidence === true,
+    chain,
+  });
+}
+
+/**
+ * Rewrite the out-of-band anchor.
+ *
+ * ORDER IS LOAD-BEARING: the sample is appended and fsynced FIRST, then the
+ * anchor is replaced. That way the records may lead the anchor by exactly one
+ * (a crash in the window — recoverable, judged TORN_TAIL) but the anchor can
+ * never lead the records except by removal, which is what makes truncation
+ * detectable at all.
+ */
+async function writeAnchorAtomic({ dir, anchor }) {
+  const finalPath = join(dir, ENDURANCE_ANCHOR_FILE);
+  const temp = `${finalPath}.tmp`;
+  await writeFile(temp, `${JSON.stringify(anchor, null, 2)}\n`);
+  await rename(temp, finalPath);
 }
 
 async function writeReceiptAtomic({ demaHome, runId, receipt }) {
@@ -207,13 +318,59 @@ export async function cmdNode0Run(ctx) {
   console.log(`  interval: ${intervalMs}ms · target: ${targetMs}ms · samples: ${samplesPath}`);
   console.log("  foreground process · no daemon, no model, no network, no effect. Ctrl-C to end and seal.");
 
+  // ── establish the chain head before observing anything ──
+  const existing = await readRecords({ demaHome: home, runId });
+  let prev = null;
+  if (existing.length === 0) {
+    // The header is seq 0, so every sample chains transitively to the code that
+    // produced it. Measured from the executing bytes, never asserted.
+    prev = chainEnduranceRecord({
+      record: {
+        kind: ENDURANCE_HEADER_KIND,
+        run_id: runId,
+        runner_code_hash: await measureRunnerCodeHash(),
+        // Only an actual runner loop reaches this line. It is not settable from
+        // the CLI, so a synthesised record cannot mint ELAPSED through it.
+        evidence_class: ENDURANCE_EVIDENCE_CLASSES.ELAPSED,
+        interval_ms: intervalMs,
+        target_ms: targetMs,
+        started_at_ms: Date.now(),
+      },
+    });
+    await appendSampleLine(samplesPath, JSON.stringify(prev));
+    await writeAnchorAtomic({ dir, anchor: buildEnduranceAnchor({ head: prev, runId }) });
+  } else {
+    const resumed = verifyEnduranceChain({
+      records: existing,
+      anchor: await readAnchor({ demaHome: home, runId }),
+      runId,
+    });
+    if (!resumed.ok) {
+      // Appending to a record whose integrity cannot be established would launder
+      // the damage into an otherwise-clean tail. Refuse; a new --run-id is free.
+      console.error(
+        `Dema error: refusing to extend run '${runId}' — ${resumed.chain_state}: ${resumed.reason}. `
+        + "Nothing was written. Start a new --run-id.",
+      );
+      process.exitCode = 1;
+      return;
+    }
+    prev = existing[existing.length - 1];
+  }
+
   const startedAt = Date.now();
   let taken = 0;
 
   while (!stopping) {
     const at = Date.now();
     const sample = await takeSample({ at, demaHome: home });
-    await appendSampleLine(samplesPath, JSON.stringify(sample));
+    const record = chainEnduranceRecord({
+      record: { kind: ENDURANCE_SAMPLE_KIND, run_id: runId, ...sample },
+      prev,
+    });
+    await appendSampleLine(samplesPath, JSON.stringify(record));
+    await writeAnchorAtomic({ dir, anchor: buildEnduranceAnchor({ head: record, runId }) });
+    prev = record;
     taken += 1;
     if (!wantJson) process.stdout.write(`  sample ${taken} · ok=${sample.ok} · ${new Date(at).toISOString()}\n`);
 
@@ -234,6 +391,13 @@ export async function cmdNode0Run(ctx) {
     samples_taken: taken,
     stopped_by_signal: stopping,
     verdict,
+    // Surfaced at the top level so a reader never has to infer integrity from
+    // the absence of a complaint.
+    tamper_evident: verdict.chain?.tamper_evident === true,
+    chain_state: verdict.chain?.chain_state ?? null,
+    evidence_class: verdict.chain?.evidence_class ?? null,
+    runner_code_hash: verdict.chain?.runner_code_hash ?? null,
+    target_met_by_elapsed_run: verdict.target_met_by_elapsed_run === true,
     boundary: {
       daemon: false, model_invoked: false, network: false,
       effect_executed: false, nonce_claimed: false, transaction_prepared: false,
