@@ -13,7 +13,7 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, writeFile, chmod } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { buildHealthSnapshot } from "../packages/mission/src/health-snapshot.js";
@@ -305,6 +305,90 @@ describe("NODE0-BRIDGE-READINESS-1A", () => {
       });
       assert.equal(unbridged.mission_verdict, "ATTENTION");
       assert.equal(unbridged.ok, false, "an unbridged node must never sample healthy");
+    } finally {
+      restore();
+    }
+  });
+
+  // BR-01..BR-12 all inject `statusFn`, which bypasses createNode0Adapter AND
+  // normalizeNode0Status. That leaves the real seam — raw snake_case runtime
+  // JSON translated into the status shape this verdict reads — proven by
+  // nothing. These three drive the DEFAULT path with no injection at all.
+  // They exercise the wiring; they do not claim any node is bridged.
+  async function statusCommand(home, raw, tag) {
+    const p = join(home, `status-${tag}.sh`);
+    await writeFile(p, `#!/bin/bash\ncat <<'EOF'\n${raw}\nEOF\n`);
+    await chmod(p, 0o755);
+    return p;
+  }
+
+  // The runtime's own contract is snake_case; the fixtures below are deliberately
+  // written in it, so a rename in normalizeNode0Status breaks these tests rather
+  // than silently downgrading every real node to unbridged.
+  async function snapshotViaRealAdapter(home, raw, tag) {
+    const old = process.env.DEMA_NODE0_STATUS_COMMAND;
+    try {
+      if (raw === null) delete process.env.DEMA_NODE0_STATUS_COMMAND;
+      else process.env.DEMA_NODE0_STATUS_COMMAND = await statusCommand(home, raw, tag);
+      return await buildHealthSnapshot({ now: FIXED_NOW, demaHome: home });
+    } finally {
+      if (old === undefined) delete process.env.DEMA_NODE0_STATUS_COMMAND;
+      else process.env.DEMA_NODE0_STATUS_COMMAND = old;
+    }
+  }
+
+  it("BR-13 real adapter: a bridged runtime reaches CLEAN with no injection", async () => {
+    const { home, restore } = await witnessedHome();
+    try {
+      const snap = await snapshotViaRealAdapter(
+        home,
+        JSON.stringify({
+          activation_gate: "EXPLICIT_GO_REQUIRED",
+          ready: true,
+          console_ready: true,
+          daemon_status: "unknown",
+        }),
+        "bridged",
+      );
+      assert.equal(snap.attests.results.bridge.available, true);
+      assert.equal(snap.attests.results.bridge.activation_gate, "EXPLICIT_GO_REQUIRED");
+      assert.equal(snap.attests.results.doctor.fail, 0);
+      assert.equal(snap.attests.mission_verdict, "CLEAN");
+    } finally {
+      restore();
+    }
+  });
+
+  it("BR-14 real adapter: a reachable runtime reporting BLOCKED is not CLEAN", async () => {
+    const { home, restore } = await witnessedHome();
+    try {
+      // AC2 through the real seam: the adapter answered, so the node is visible
+      // — and it is still not authorized. A bridged node reporting not-ready
+      // yields genuine `fail` predicates rather than the unbridged softening,
+      // which is correct: there is something there, and it is not ready.
+      const snap = await snapshotViaRealAdapter(
+        home,
+        JSON.stringify({ activation_gate: "BLOCKED", ready: false, console_ready: false }),
+        "blocked",
+      );
+      assert.equal(snap.attests.results.bridge.available, true);
+      assert.equal(snap.attests.results.bridge.activation_gate, "BLOCKED");
+      assert.notEqual(snap.attests.mission_verdict, "CLEAN");
+    } finally {
+      restore();
+    }
+  });
+
+  it("BR-15 real adapter: no status command configured is unbridged, not healthy", async () => {
+    const { home, restore } = await witnessedHome();
+    try {
+      const snap = await snapshotViaRealAdapter(home, null, "none");
+      assert.equal(snap.attests.results.bridge.available, false);
+      assert.equal(
+        snap.attests.results.bridge.reason,
+        "legacy_status_command_not_configured",
+      );
+      assert.notEqual(snap.attests.mission_verdict, "CLEAN");
     } finally {
       restore();
     }
