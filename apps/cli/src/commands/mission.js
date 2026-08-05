@@ -71,6 +71,10 @@ import {
 import {
   readExecutingRepositoryBinding, REPO_ROOT as BINDING_REPO_ROOT,
 } from "../../../../packages/mission/src/executing-repository-binding.js";
+// FATE (Mind Three) shape judgment, used to gate the REAL effect below.
+import {
+  assessReversibility, assessBlastRadius,
+} from "../../../../packages/core/src/node0-fate-contract.js";
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -2204,11 +2208,31 @@ async function corridorSeasonConsentPreflight(argv, ctxParams, wantJson) {
   // State claims. There is deliberately no fallback to state-supplied values.
   const executingRepository = await readExecutingRepositoryBinding({ runGit: realGitRunner });
 
+  // The effect DECLARATION that FATE (Mind Three) will judge. It is declared
+  // explicitly rather than inferred: the policy must see the operands it is
+  // being asked to permit. A missing or malformed declaration is REFUSED by the
+  // policy — the preflight never invents one to make itself pass.
+  const effectRoot = argValue(argv, "--effect-root");
+  const declaredEffect = effectRoot
+    ? {
+      kind: argValue(argv, "--effect-kind") ?? "bounded_local_rename",
+      root: effectRoot,
+      from: argValue(argv, "--effect-from"),
+      to: argValue(argv, "--effect-to"),
+      undoable: true,
+      inverse_kind: argValue(argv, "--effect-kind") ?? "bounded_local_rename",
+      before_hash: argValue(argv, "--effect-before-hash"),
+      before_manifest: state.pending_effect ? [state.pending_effect] : null,
+      authority_delta: 0,
+    }
+    : undefined;
+
   const verdict = evaluateCorridorSeasonConsentBridge({
     seasonLoad,
     executingRepository,
     actionId: argValue(argv, "--action") ?? "CORRIDOR_RENAME_EXECUTE",
     corridorContext: ctxParams,
+    effect: declaredEffect,
     presentedPhrase: argValue(argv, "--consent"),
     presentedConsentContextHash: argValue(argv, "--consent-context"),
     now: ctxParams.now_iso,
@@ -2220,6 +2244,7 @@ async function corridorSeasonConsentPreflight(argv, ctxParams, wantJson) {
   } else {
     console.log("DEMA · corridor Season consent preflight (verification only · nothing written)");
     console.log(`  stage: ${verdict.stage} · verdict: ${verdict.verdict}`);
+    console.log(`  fate: ${verdict.fate_verdict ?? "-"} (reversible ${verdict.effect_reversible} · bounded ${verdict.effect_scope_bounded})`);
     console.log(`  season: ${verdict.season_id ?? "-"} · sequence: ${verdict.authoritative_sequence ?? "-"}`);
     console.log(`  claimed commit:   ${verdict.claimed_repository_commit ?? "-"}`);
     console.log(`  executing commit: ${verdict.executing_repository_commit ?? "-"}`);
@@ -2947,6 +2972,35 @@ async function cmdMissionCorridor(argv) {
     const effect = buildRenameEffectAdapter({
       scopeRoot: estate, from: fromName, to: toName, anchorLog, observed,
     });
+
+    // ── FATE (Mind Three) gates the REAL effect, not only the preflight ──
+    //
+    // Canon, first law of invitation: participation must be "voluntary,
+    // informed, scoped and reversible wherever reversal remains technically
+    // possible." Consent has already established voluntary and informed. This
+    // gate establishes SCOPED and REVERSIBLE — the two properties a human
+    // cannot verify by reading a phrase.
+    //
+    // Season eligibility is deliberately NOT required here: that is the
+    // preflight's question, and gating the effect on it would flip
+    // CORRIDOR_RENAME_SEASON_GATE_LIVE, which is a separate claim. This gate
+    // judges the effect's SHAPE only, and fails closed.
+    const fateShape = {
+      reversible: assessReversibility({
+        undoable: typeof effect?.undo === "function",
+        inverse_kind: "bounded_local_rename",
+        before_hash: prepared.intent.before_hash,
+        before_manifest: prepared.intent.before_manifest,
+      }),
+      radius: assessBlastRadius({ root: estate, from: fromName, to: toName }),
+    };
+    if (!fateShape.reversible.reversible || !fateShape.reversible.before_state_bound || !fateShape.radius.scope_bounded) {
+      const blocked = [...fateShape.reversible.findings, ...fateShape.radius.findings];
+      corridorFail(
+        `FATE policy REFUSED the effect (${blocked.join(", ")}) — the effect is not provably reversible or not bounded; `
+        + "no transaction was run, no rename occurred, nothing was written.",
+      );
+    }
 
     const mechanical = await runTransactionalMechanicalClosure({
       demaHome: home,

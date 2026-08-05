@@ -12,6 +12,13 @@ export async function cmd_node0(ctx) {
       ? argv[operatorIdx + 1]
       : "Mumu";
 
+  // NODE0-RUN-1A — start the node, observe it, record what happened.
+  // Explicit foreground process: no daemon, no model, no network, no effect.
+  if (sub === "run") {
+    const { cmdNode0Run } = await import("./node0-run.js");
+    return cmdNode0Run(ctx);
+  }
+
   if (sub === "map") {
     const { buildNode0RosettaConstitutionPreview } = await import(
       "../../../../packages/core/src/node0-rosetta-constitution-preview.js"

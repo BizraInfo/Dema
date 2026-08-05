@@ -101,6 +101,24 @@ function corridorContext(over = {}) {
   };
 }
 
+// A constitutionally permissible effect: bounded, reversible, delta-free.
+// FATE (Mind Three) now gates BEFORE consent, so every path that expects to
+// reach the consent stages must present one.
+function permissibleEffect(over = {}) {
+  return {
+    kind: "bounded_local_rename",
+    root: "missions/bridge-mission",
+    from: "a.txt",
+    to: "b.txt",
+    undoable: true,
+    inverse_kind: "bounded_local_rename",
+    before_hash: `sha256:${"a".repeat(64)}`,
+    before_manifest: [{ path: "a.txt", size: 12 }],
+    authority_delta: 0,
+    ...over,
+  };
+}
+
 async function bridge(over = {}) {
   const home = over.home ?? (await storeWith(over.seasonOver ?? {}));
   const seasonLoad = await loadSeasonHead({ demaHome: home, seasonId: over.seasonId ?? SEASON });
@@ -109,6 +127,7 @@ async function bridge(over = {}) {
     executingRepository: over.executingRepository ?? (await execBinding()),
     actionId: over.actionId ?? ACTION,
     corridorContext: over.corridorContext ?? corridorContext(),
+    effect: "effect" in over ? over.effect : permissibleEffect(),
     presentedPhrase: over.presentedPhrase,
     presentedConsentContextHash: over.presentedConsentContextHash,
     now: over.now ?? NOW,
@@ -290,10 +309,65 @@ async function withPhrase(over = {}) {
     presentedPhrase: over.phrase ?? probe.required_phrase,
     presentedConsentContextHash: over.contextHash ?? probe.consent_context_hash,
     corridorContext: over.corridorContext ?? corridorContext(),
+    effect: "effect" in over ? over.effect : permissibleEffect(),
     now: over.now ?? NOW,
     usedNonces: over.usedNonces ?? [],
   });
 }
+
+// ── B26–B29 · FATE (Mind Three) gates BEFORE consent ───────────────────────
+
+test("B26 FATE refuses an irreversible effect before consent is ever requested", async () => {
+  const r = await bridge({ effect: permissibleEffect({ undoable: false, inverse_kind: undefined }) });
+  assert.equal(r.stage, "FATE_POLICY");
+  assert.equal(r.verdict, "REFUSED");
+  assert.match(r.reason, /^fate_refused:/);
+  assert.equal(r.fate_checked, true);
+  assert.equal(r.fate_verdict, "REFUSE");
+  assert.equal(r.effect_reversible, false);
+  // The human was never asked: no phrase and no context hash were produced.
+  assert.equal(r.required_phrase, null, "a consent phrase was exposed for an impermissible effect");
+  assert.equal(r.consent_context_hash, null);
+  assertGrantsNothing(r);
+});
+
+test("B27 FATE refuses an unbounded blast radius before consent", async () => {
+  const r = await bridge({ effect: permissibleEffect({ to: "../../escape" }) });
+  assert.equal(r.stage, "FATE_POLICY");
+  assert.equal(r.effect_scope_bounded, false);
+  assert.equal(r.required_phrase, null);
+  assertGrantsNothing(r);
+});
+
+test("B28 FATE cannot be satisfied by a declared verdict", async () => {
+  // A caller that simply asserts PERMIT supplies no policy findings; the bridge
+  // must not treat a bare object as a decision.
+  const home = await storeWith();
+  const seasonLoad = await loadSeasonHead({ demaHome: home, seasonId: SEASON });
+  const r = evaluateCorridorSeasonConsentBridge({
+    seasonLoad,
+    executingRepository: await execBinding(),
+    actionId: ACTION,
+    corridorContext: corridorContext(),
+    effect: permissibleEffect(),
+    now: NOW,
+    evaluateFate: () => ({ ok: true, verdict: "AUTHORIZED_TO_EXECUTE" }),
+  });
+  assert.equal(r.stage, "FATE_POLICY");
+  assert.equal(r.reason, "fate_result_malformed");
+  assertGrantsNothing(r);
+});
+
+test("B29 a permitted effect carries its FATE findings into the consent stage", async () => {
+  const r = await bridge({});
+  assert.equal(r.verdict, "CONSENT_REQUIRED");
+  assert.equal(r.fate_checked, true);
+  assert.equal(r.fate_verdict, "PERMIT");
+  assert.equal(r.effect_reversible, true);
+  assert.equal(r.effect_scope_bounded, true);
+  // Order: FATE was decided before the phrase was ever exposed.
+  assert.ok(r.required_phrase, "consent stage not reached");
+});
 
 test("B15 wrong phrase blocks", async () => {
   const r = await withPhrase({ phrase: "GO: something else entirely" });
