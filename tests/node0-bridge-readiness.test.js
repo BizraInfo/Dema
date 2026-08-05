@@ -201,7 +201,12 @@ describe("NODE0-BRIDGE-READINESS-1A", () => {
     }
   });
 
-  it("BR-07 only a genuinely bridged, witnessed node reaches CLEAN (AC6)", async () => {
+  // SUPERSEDED BY CORRECTION-1B (operator order, 2026-08-06). This asserted
+  // that a favourable INJECTED status reaches CLEAN. Under the corrected
+  // contract an injected status is TEST_INJECTION — it can exercise
+  // composition and can never prove bridge readiness — so the same fixture
+  // must now be REFUSED. The bridge fields it did assert remain pinned.
+  it("BR-07 an injected status is bridged-shaped and still cannot reach CLEAN", async () => {
     const { home, restore } = await witnessedHome();
     try {
       const snap = await buildHealthSnapshot({
@@ -209,12 +214,13 @@ describe("NODE0-BRIDGE-READINESS-1A", () => {
         demaHome: home,
         statusFn: async () => bridgedStatus(),
       });
-      assert.equal(snap.attests.mission_verdict, "CLEAN");
       assert.equal(snap.attests.results.bridge.available, true);
       assert.equal(
         snap.attests.results.bridge.activation_gate,
         "EXPLICIT_GO_REQUIRED",
       );
+      assert.equal(snap.attests.evidence_class, "TEST_INJECTION");
+      assert.notEqual(snap.attests.mission_verdict, "CLEAN");
     } finally {
       restore();
     }
@@ -294,8 +300,11 @@ describe("NODE0-BRIDGE-READINESS-1A", () => {
         snapshotFn: (args) =>
           buildHealthSnapshot({ ...args, statusFn: async () => bridgedStatus() }),
       });
-      assert.equal(bridged.mission_verdict, "CLEAN");
-      assert.equal(bridged.ok, true, "a bridged node must produce a healthy sample");
+      // SUPERSEDED BY CORRECTION-1B: an injected status is TEST_INJECTION, so
+      // even a bridged-SHAPED one can no longer mint a healthy sample. The loop
+      // still closes — it now closes on refusal, which is the safer direction.
+      assert.notEqual(bridged.mission_verdict, "CLEAN");
+      assert.equal(bridged.ok, false, "an injected status must never sample healthy");
 
       const unbridged = await takeSample({
         at: FIXED_NOW,
@@ -350,10 +359,20 @@ describe("NODE0-BRIDGE-READINESS-1A", () => {
         }),
         "bridged",
       );
+      // SUPERSEDED BY CORRECTION-1B: the legacy adapter is an operator-owned
+      // shell-out, so favourable JSON from an arbitrary script is
+      // OPERATOR_ASSERTED_STATUS — real, useful for diagnostics, and never
+      // proof of runtime identity. Translation and wiring are still pinned;
+      // CLEAN is now refused.
       assert.equal(snap.attests.results.bridge.available, true);
       assert.equal(snap.attests.results.bridge.activation_gate, "EXPLICIT_GO_REQUIRED");
       assert.equal(snap.attests.results.doctor.fail, 0);
-      assert.equal(snap.attests.mission_verdict, "CLEAN");
+      assert.equal(snap.attests.evidence_class, "OPERATOR_ASSERTED");
+      assert.equal(
+        snap.attests.results.observation.verdict,
+        "OPERATOR_ASSERTED_STATUS",
+      );
+      assert.notEqual(snap.attests.mission_verdict, "CLEAN");
     } finally {
       restore();
     }
@@ -373,6 +392,91 @@ describe("NODE0-BRIDGE-READINESS-1A", () => {
       );
       assert.equal(snap.attests.results.bridge.available, true);
       assert.equal(snap.attests.results.bridge.activation_gate, "BLOCKED");
+      assert.notEqual(snap.attests.mission_verdict, "CLEAN");
+    } finally {
+      restore();
+    }
+  });
+
+  // The receipt must not lie about its own effects. Wiring the adapter gave
+  // this mission the power to spawn a child process or open a local connection,
+  // while the attested boundary still said it had done neither. A receipt that
+  // under-reports its own effect is worse than no receipt: it is evidence
+  // pointing the wrong way.
+  it("BR-16 a shellout observation attests the tool it actually executed", async () => {
+    const { home, restore } = await witnessedHome();
+    try {
+      const snap = await snapshotViaRealAdapter(
+        home,
+        JSON.stringify({ activation_gate: "EXPLICIT_GO_REQUIRED", ready: true, console_ready: true }),
+        "effects",
+      );
+      const b = snap.attests.boundary;
+      assert.equal(snap.attests.results.bridge.source, "legacy-shellout");
+      assert.equal(b.tool_executed, true, "a child process was executed");
+      assert.equal(b.child_process_invoked, true);
+      assert.equal(b.runtime_execution_performed, true);
+      assert.equal(b.external_call_performed, true);
+      assert.equal(b.network_used, false, "the shellout path uses no network");
+      // CORRECTION-1B: a shell-out talks to a COMMAND. It is not provably a
+      // connection to the node, so this must be false until independently
+      // proven — my 1A version asserted true, which over-claimed the link.
+      assert.equal(b.node_connection_performed, false);
+      assert.equal(b.local_loopback_used, false);
+      // The verifier requires this to stay false, and it is true: the bridge is
+      // a local runtime, never an external provider (rules/01-dema-boundary).
+      assert.equal(b.public_network_used, false);
+    } finally {
+      restore();
+    }
+  });
+
+  it("BR-17 an observation that executed nothing attests nothing", async () => {
+    const { home, restore } = await witnessedHome();
+    try {
+      const snap = await snapshotViaRealAdapter(home, null, "noeffect");
+      const b = snap.attests.boundary;
+      assert.equal(
+        snap.attests.results.bridge.reason,
+        "legacy_status_command_not_configured",
+      );
+      for (const k of [
+        "tool_executed",
+        "runtime_execution_performed",
+        "node_connection_performed",
+        "external_call_performed",
+        "network_used",
+      ]) {
+        assert.equal(b[k], false, `${k} must be false when nothing ran`);
+      }
+    } finally {
+      restore();
+    }
+  });
+
+  it("BR-18 an adapter that threw still attests the attempt, never silence", async () => {
+    const { home, restore } = await witnessedHome();
+    try {
+      // Fail-open on DISCLOSURE: we cannot prove the adapter died before it
+      // spawned, so the effect is declared. Over-reporting an effect is
+      // conservative; under-reporting one is a false boundary.
+      const snap = await buildHealthSnapshot({
+        now: FIXED_NOW,
+        demaHome: home,
+        statusFn: async () => {
+          throw new Error("died mid-spawn");
+        },
+      });
+      // CORRECTION-1B: with a typed observation the class is NONE — the adapter
+      // never produced an observation at all — so the honest disclosure is that
+      // nothing was observed, and the verdict is refused on the observation
+      // rather than on a guessed effect.
+      assert.equal(snap.attests.results.bridge.available, false);
+      // The SOURCE was an injection, so that is what the receipt says — the
+      // class describes where the status came from, not how well it went. The
+      // observation separately records that nothing was configured to observe.
+      assert.equal(snap.attests.evidence_class, "TEST_INJECTION");
+      assert.equal(snap.attests.results.observation.verdict, "UNCONFIGURED");
       assert.notEqual(snap.attests.mission_verdict, "CLEAN");
     } finally {
       restore();

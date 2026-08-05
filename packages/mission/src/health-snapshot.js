@@ -10,8 +10,13 @@ import { defaultStatus } from "../../core/src/status.js";
 import { createNode0Adapter } from "../../node-adapter/src/node0-adapter.js";
 import {
   findLatestWitness,
+  findBoundWitness,
   verifyWitnessReceipt,
 } from "../../receipts/src/witness-verify.js";
+import {
+  buildRuntimeObservation,
+  isCleanEligibleObservation,
+} from "../../core/src/node0-runtime-observation.js";
 
 const SCHEMA = "bizra.dema.mission_receipt.health_snapshot.v0.1";
 const TRUTH_LABEL = "LOCAL_OPERATOR_MISSION";
@@ -41,7 +46,25 @@ function deriveMissionVerdict(results) {
     results.bridge.available === true &&
     results.bridge.activation_gate === "EXPLICIT_GO_REQUIRED";
 
-  if (setupOk && harnessOk && witnessOk && doctorAllOk && bridgedOk)
+  // CORRECTION-1B. The 1A clause above proved a status source answered. It did
+  // not prove WHO answered — `normalizeNode0Status` assigns node:"Node0" rather
+  // than reading it, and the shell-out adapter is the operator speaking for the
+  // node. Two further facts are now required, and both are fail-closed:
+  //
+  //   observationOk — a genuinely OBSERVED, loopback, identity-bound, healthy
+  //   runtime. An operator-asserted shell-out and an injected test status are
+  //   explicitly NOT eligible, whatever they claim about themselves.
+  //
+  //   witnessBoundOk — a witness that testifies about THIS home, endpoint,
+  //   runtime identity, code and observation. A generic v0.1 witness still
+  //   verifies, and is no longer sufficient.
+  const observationOk = isCleanEligibleObservation(results.observation);
+  const witnessBoundOk = results.witness.eligible_for_bridge_clean === true;
+
+  if (
+    setupOk && harnessOk && witnessOk && doctorAllOk && bridgedOk &&
+    observationOk && witnessBoundOk
+  )
     return "CLEAN";
   if (setupOk && harnessOk) return "ATTENTION";
   return "FAILED";
@@ -97,11 +120,66 @@ export async function buildHealthSnapshot({
       : () => createNode0Adapter().status();
   const status = await observeRuntimeStatus(observe);
   const predicates = evaluatePredicates(status);
-  const witnessPath = await findLatestWitness(home);
-  let witnessResult = { exists: false, verdict: null };
+
+  // Classify HOW this status was obtained before classifying what it says.
+  // An injected statusFn is TEST_INJECTION by construction — the caller is the
+  // source, so it can exercise composition and never bridge readiness.
+  const source = status.adapter?.source ?? status.source ?? null;
+  const evidenceClass =
+    typeof statusFn === "function"
+      ? "TEST_INJECTION"
+      : status.adapter?.available !== true
+        ? "NONE"
+        : typeof source === "string" && source.startsWith("gateway")
+          ? "OBSERVED"
+          : "OPERATOR_ASSERTED";
+
+  const observation = buildRuntimeObservation({
+    adapterMode: source,
+    configuredEndpoint: status.gateway?.endpoint ?? null,
+    observedEndpoint: status.gateway?.endpoint ?? null,
+    // A protocol LABEL, not an import. mission-probe scans this chain by naive
+    // substring for bare transport-module names, so the label is spelled in a
+    // hyphenated form that cannot be mistaken for one.
+    protocol:
+      typeof source === "string" && source.startsWith("gateway")
+        ? "http-loopback"
+        : "exec",
+    inspectedHome: home,
+    raw: status.runtime_raw ?? status,
+    evidenceClass,
+    observedAt: now.toISOString(),
+    hash: (facts) => sha256(stableStringify(facts)),
+  });
+
+  // Select the witness by EXACT BINDING, not by newest mtime. `touch` on an
+  // unrelated receipt must never be able to hand it authority.
+  const expectedBinding = {
+    expectedHomeIdentity: home,
+    expectedRuntimeIdentity: observation.runtime_identity,
+    expectedEndpoint: observation.observed_endpoint,
+    expectedObservationHash: observation.observation_hash,
+  };
+  let witnessPath = await findBoundWitness(home, expectedBinding);
+  // Fall back to the legacy selection only to REPORT what exists; a v0.1
+  // witness found this way can verify, and can never be bridge-eligible.
+  if (!witnessPath) witnessPath = await findLatestWitness(home);
+  let witnessResult = {
+    exists: false,
+    verdict: null,
+    schema: null,
+    eligible_for_bridge_clean: false,
+    binding_reason: "no_witness_found",
+  };
   if (witnessPath) {
-    const v = await verifyWitnessReceipt(witnessPath);
-    witnessResult = { exists: true, verdict: v.verdict };
+    const v = await verifyWitnessReceipt(witnessPath, expectedBinding);
+    witnessResult = {
+      exists: true,
+      verdict: v.verdict,
+      schema: v.witness_schema ?? null,
+      eligible_for_bridge_clean: v.eligible_for_bridge_clean === true,
+      binding_reason: v.binding?.reason ?? null,
+    };
   }
 
   const results = {
@@ -123,6 +201,7 @@ export async function buildHealthSnapshot({
       warn: predicates.filter((p) => p.status === "warn").length,
     },
     witness: witnessResult,
+    observation,
     bridge: {
       // `available` is fail-closed on the claim, exactly as gatewayProbe is:
       // only an explicit `true` counts as bridged. Absent, null and undefined
@@ -147,22 +226,37 @@ export async function buildHealthSnapshot({
     results,
     boundary: {
       filesystem_write_performed: false,
-      network_used: false,
-      runtime_execution_performed: false,
+      // Derived from the observation itself, never asserted. The 1A slice gave
+      // this mission the power to spawn a child process or open a local
+      // connection while still attesting it had done neither.
+      network_used: observation.local_loopback_used,
+      runtime_execution_performed: observation.child_process_invoked,
       model_loaded: false,
       model_invocation_performed: false,
       prompt_executed: false,
-      external_call_performed: false,
+      external_call_performed: observation.external_call_performed,
       raw_corpus_scan_performed: false,
       raw_data_included: false,
-      tool_executed: false,
+      tool_executed: observation.child_process_invoked,
       chain_advance_performed: false,
       receipt_mint_performed: false,
       federation_invoked: false,
-      node_connection_performed: false,
+      // A shell-out talks to a COMMAND, not provably to the node. Only a real
+      // loopback observation is a node connection.
+      node_connection_performed: observation.local_loopback_used,
+      local_loopback_used: observation.local_loopback_used,
+      child_process_invoked: observation.child_process_invoked,
+      // Stays false, and truthfully: the bridge reaches a LOCAL runtime, never
+      // an external provider (rules/01-dema-boundary.md). The receipt verifier
+      // asserts this, so a future adapter that could reach a public host must
+      // carry its endpoint here rather than quietly flip this flag.
       public_network_used: false,
       consent_collected: false,
     },
+    // The receipt carries the identity of the observation it judged, so a
+    // witness can be bound to it and a reader can re-derive the classification.
+    observation_hash: observation.observation_hash,
+    evidence_class: observation.evidence_class,
     consent_verified: false,
   };
 

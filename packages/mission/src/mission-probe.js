@@ -43,6 +43,11 @@ const STATIC_CHECKED_KEYS = [
   "prompt_executed",
   "external_call_performed",
   "public_network_used",
+  // CORRECTION-1B added these two capability-disclosure keys to the health
+  // boundary. They are classified with their siblings rather than left
+  // unclassified — an unclassified boundary key is a claim nobody is checking.
+  "local_loopback_used",
+  "child_process_invoked",
 ];
 const DECLARED_NOT_OBSERVABLE_KEYS = [
   "raw_corpus_scan_performed",
