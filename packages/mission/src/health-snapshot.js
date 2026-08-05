@@ -7,6 +7,7 @@ import { buildHarnessIntegrationSummary } from "../../core/src/harness-integrati
 import { checkSetup } from "../../installer/src/setup.js";
 import { evaluatePredicates } from "../../core/src/doctor-dashboard.js";
 import { defaultStatus } from "../../core/src/status.js";
+import { createNode0Adapter } from "../../node-adapter/src/node0-adapter.js";
 import {
   findLatestWitness,
   verifyWitnessReceipt,
@@ -26,9 +27,45 @@ function deriveMissionVerdict(results) {
     results.witness.exists && results.witness.verdict === "VERIFIED";
   const doctorAllOk = results.doctor.fail === 0 && results.doctor.warn === 0;
 
-  if (setupOk && harnessOk && witnessOk && doctorAllOk) return "CLEAN";
+  // An unbridged preview install passes every check above. Its three readiness
+  // predicates soften to `expected` — neither fail nor warn — so `doctorAllOk`
+  // is true while nothing whatsoever is observing Node0. Without this clause,
+  // "no runtime is bridged" and "the runtime is healthy" produce the same
+  // CLEAN, and an endurance soak would report HEALTHY for a node nobody looked
+  // at. CLEAN must mean observed, not merely un-refuted.
+  //
+  // Both facts are required, and availability alone is deliberately not enough:
+  // being able to SEE the node is not the node authorizing anything. The gate
+  // is read from the runtime and never synthesized here.
+  const bridgedOk =
+    results.bridge.available === true &&
+    results.bridge.activation_gate === "EXPLICIT_GO_REQUIRED";
+
+  if (setupOk && harnessOk && witnessOk && doctorAllOk && bridgedOk)
+    return "CLEAN";
   if (setupOk && harnessOk) return "ATTENTION";
   return "FAILED";
+}
+
+// Fail-closed observation. An adapter that throws, times out, or answers with
+// something that is not a status object leaves us knowing nothing — and
+// "nothing" must read as unbridged, never as fine. The preview default is
+// reused for the predicate shape, but `available:false` is stamped explicitly
+// so the doctor's unbridged softening applies while `bridgedOk` stays false.
+async function observeRuntimeStatus(statusFn) {
+  try {
+    const observed = await statusFn();
+    if (observed && typeof observed === "object") return observed;
+    return {
+      ...defaultStatus(),
+      adapter: { available: false, reason: "adapter_returned_non_object" },
+    };
+  } catch (err) {
+    return {
+      ...defaultStatus(),
+      adapter: { available: false, reason: `adapter_error: ${err.message}` },
+    };
+  }
 }
 
 /**
@@ -41,14 +78,25 @@ function deriveMissionVerdict(results) {
  * different home was actually inspected is not evidence — it is a category
  * error that reads exactly like evidence.
  */
-export async function buildHealthSnapshot({ now = new Date(), demaHome } = {}) {
+export async function buildHealthSnapshot({
+  now = new Date(),
+  demaHome,
+  statusFn,
+} = {}) {
   const home = typeof demaHome === "string" && demaHome.length > 0
     ? demaHome
     : (process.env.DEMA_HOME || join(homedir(), ".dema"));
 
   const setup = await checkSetup(home);
   const harness = buildHarnessIntegrationSummary();
-  const predicates = evaluatePredicates(defaultStatus());
+  // Observed, not assumed. This previously judged a hardcoded `defaultStatus()`
+  // literal, so the doctor reported on a constant rather than on Node0.
+  const observe =
+    typeof statusFn === "function"
+      ? statusFn
+      : () => createNode0Adapter().status();
+  const status = await observeRuntimeStatus(observe);
+  const predicates = evaluatePredicates(status);
   const witnessPath = await findLatestWitness(home);
   let witnessResult = { exists: false, verdict: null };
   if (witnessPath) {
@@ -75,6 +123,15 @@ export async function buildHealthSnapshot({ now = new Date(), demaHome } = {}) {
       warn: predicates.filter((p) => p.status === "warn").length,
     },
     witness: witnessResult,
+    bridge: {
+      // `available` is fail-closed on the claim, exactly as gatewayProbe is:
+      // only an explicit `true` counts as bridged. Absent, null and undefined
+      // are all "we did not observe a bridge".
+      available: status.adapter?.available === true,
+      activation_gate: status.activationGate ?? null,
+      source: status.adapter?.source ?? status.source ?? null,
+      ...(status.adapter?.reason ? { reason: status.adapter.reason } : {}),
+    },
     memory: {
       entries: setup.checks.filter((c) => c.present).length,
       home,
