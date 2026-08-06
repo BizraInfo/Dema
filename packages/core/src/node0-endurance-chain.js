@@ -113,8 +113,13 @@ export function verifyEnduranceChain({ records, anchor = null, runId = null } = 
 
   // An anchor only ever exists because a run appended something. That makes its
   // survival the ESTABLISHED PRECONDITION which separates erasure from absence.
+  // PROMOTION-CORRECTION-1C. `Number.isInteger(-1)` is true, so a negative
+  // head_seq used to name a head. A sequence counts appends; it cannot be
+  // negative. Admitting one let malformed evidence read as a real head here,
+  // and reach the torn-tail arithmetic below as a valid value.
   const anchorNamesAHead = !!anchor && typeof anchor === "object" && !Array.isArray(anchor)
-    && Number.isInteger(anchor.head_seq) && isNonEmptyString(anchor.head_hash);
+    && Number.isInteger(anchor.head_seq) && anchor.head_seq >= 0
+    && isNonEmptyString(anchor.head_hash);
 
   if (records.length === 0) {
     // Reporting a wiped run as "no records" would make it indistinguishable from
@@ -194,7 +199,12 @@ export function verifyEnduranceChain({ records, anchor = null, runId = null } = 
   if (anchor.run_id !== chainRunId) {
     return refuse("BROKEN", `anchor_run_id_mismatch:${String(anchor.run_id)}`, withHead);
   }
-  if (!Number.isInteger(anchor.head_seq) || !isNonEmptyString(anchor.head_hash)) {
+  // PROMOTION-CORRECTION-1C. A negative head_seq passed Number.isInteger and
+  // fell through to the torn-tail branches below, where `last.seq - anchor.head_seq`
+  // produced a nonsense lag instead of a refusal. Malformed evidence is BROKEN,
+  // never a head and never an absence.
+  if (!Number.isInteger(anchor.head_seq) || anchor.head_seq < 0
+    || !isNonEmptyString(anchor.head_hash)) {
     return refuse("BROKEN", "anchor_malformed", withHead);
   }
   if (anchor.head_seq > last.seq) {

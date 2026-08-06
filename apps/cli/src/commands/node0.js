@@ -230,6 +230,12 @@ export async function cmd_node0(ctx) {
         "  dema node0 map [--json]\n" +
         "  dema node0 activation observe [--json]\n" +
         "  dema node0 ladder [--json]\n" +
+        // PROMOTION-CORRECTION-1C. `run` is dispatched above but was never
+        // listed, so the only way to discover a shipped public subcommand was to
+        // read the source. Only implemented flags are documented here; there is
+        // no --preflight on this branch.
+        "  dema node0 run [--dema-home <dir>] [--run-id <id>] [--interval-ms <n>]\n" +
+        "                 [--duration-ms <n>] [--target <key>] [--judge] [--json]\n" +
         "  dema node0 chain [--pain ...] [--goal ...] [--baseline <abs.json>] [--self-loop] [--json]\n" +
         "  dema node0 mumu status [--json] [--out <dir>]\n" +
         "  dema node0 mumu verify [--json] [--out <dir>]\n" +

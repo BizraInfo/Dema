@@ -305,6 +305,56 @@ describe("EC · the endurance record is tamper-evident", () => {
     const after = (await readFile(path, "utf8")).trim().split("\n");
     assert.equal(after.length, recs.length - 1, "a refused run must append nothing");
   });
+
+  // PROMOTION-CORRECTION-1C. `Number.isInteger(-1)` is true, so a negative
+  // head_seq used to pass `anchor_malformed` at both guard sites: the
+  // records-erased precondition and the main verifier. A sequence counts
+  // appends and cannot be negative; admitting one let malformed evidence reach
+  // the torn-tail arithmetic, where `last.seq - anchor.head_seq` produced a
+  // nonsense lag instead of a refusal.
+  test("EC-11 a malformed head_seq is BROKEN — never a head, never an absence", () => {
+    const records = buildRecord({ count: 4 });
+    const good = buildEnduranceAnchor({ head: records.at(-1), runId: "ec-run" });
+
+    for (const bad of [-1, -100, 1.5, "0", NaN, Infinity, null, undefined]) {
+      const v = verifyEnduranceChain({
+        records, anchor: { ...good, head_seq: bad }, runId: "ec-run",
+      });
+      assert.equal(v.ok, false, `head_seq ${String(bad)} was accepted`);
+      // verifyEnduranceChain returns the FLAT refuse() shape; the nested
+      // `.chain` form belongs to judgeRun's wrapper, not to this call.
+      assert.equal(v.chain_state, "BROKEN",
+        `head_seq ${String(bad)} produced ${v.chain_state}, not BROKEN`);
+      assert.match(v.reason, /anchor_malformed/,
+        `head_seq ${String(bad)} refused for the wrong reason: ${v.reason}`);
+    }
+
+    // Control: the same anchor with a valid head_seq is accepted, so the loop
+    // above is refusing on the value and not on the fixture being unusable.
+    const control = verifyEnduranceChain({ records, anchor: good, runId: "ec-run" });
+    assert.equal(control.ok, true, `control anchor must verify, got: ${control.reason}`);
+  });
+
+  test("EC-12 a negative head_seq on an EMPTY record set is BROKEN, not TRUNCATED", () => {
+    const records = buildRecord({ count: 3 });
+    const good = buildEnduranceAnchor({ head: records.at(-1), runId: "ec-run" });
+
+    // With zero records the module decides erasure-vs-absence from whether the
+    // anchor names a head. A negative sequence must not qualify as one — that
+    // would report fabricated evidence as a real erased run.
+    const v = verifyEnduranceChain({
+      records: [], anchor: { ...good, head_seq: -1 }, runId: "ec-run",
+    });
+    assert.equal(v.ok, false);
+    assert.notEqual(v.chain_state, "TRUNCATED",
+      "a negative sequence was read as a genuine erased head");
+
+    // Control: a valid head_seq with zero records IS the erasure case.
+    const erased = verifyEnduranceChain({ records: [], anchor: good, runId: "ec-run" });
+    assert.equal(erased.chain_state, "TRUNCATED",
+      `control: real erasure must still report TRUNCATED, got ${erased.chain_state}`);
+    assert.match(erased.reason, /records_erased/);
+  });
 });
 
 // ─────────────────── LOOP: the reversible effect, end to end ───────────────────

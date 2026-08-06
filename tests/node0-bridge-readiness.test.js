@@ -326,7 +326,10 @@ describe("NODE0-BRIDGE-READINESS-1A", () => {
   // They exercise the wiring; they do not claim any node is bridged.
   async function statusCommand(home, raw, tag) {
     const p = join(home, `status-${tag}.sh`);
-    await writeFile(p, `#!/bin/bash\ncat <<'EOF'\n${raw}\nEOF\n`);
+    // PROMOTION-CORRECTION-1C. This was `#!/bin/bash`, which Alpine-based and
+    // other minimal CI images do not ship. The body is a single quoted heredoc
+    // — pure POSIX — so /bin/sh runs it identically and is present everywhere.
+    await writeFile(p, `#!/bin/sh\ncat <<'EOF'\n${raw}\nEOF\n`);
     await chmod(p, 0o755);
     return p;
   }
