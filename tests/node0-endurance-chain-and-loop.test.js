@@ -346,8 +346,18 @@ describe("EC · the endurance record is tamper-evident", () => {
       records: [], anchor: { ...good, head_seq: -1 }, runId: "ec-run",
     });
     assert.equal(v.ok, false);
-    assert.notEqual(v.chain_state, "TRUNCATED",
-      "a negative sequence was read as a genuine erased head");
+    // Requiring BROKEN, not merely "not TRUNCATED". The weaker assertion passed
+    // on ABSENT, which is the same conflation from the other side: ABSENT means
+    // a run that never started, and an anchor object on disk proves one did.
+    assert.equal(v.chain_state, "BROKEN",
+      `malformed evidence must be BROKEN, got ${v.chain_state}`);
+    assert.match(v.reason, /anchor_malformed/);
+
+    // And a genuinely absent anchor with no records is still ABSENT, so the
+    // change above narrowed the right case and not the neighbouring one.
+    const nothing = verifyEnduranceChain({ records: [], anchor: null, runId: "ec-run" });
+    assert.equal(nothing.chain_state, "ABSENT",
+      `no anchor and no records must stay ABSENT, got ${nothing.chain_state}`);
 
     // Control: a valid head_seq with zero records IS the erasure case.
     const erased = verifyEnduranceChain({ records: [], anchor: good, runId: "ec-run" });

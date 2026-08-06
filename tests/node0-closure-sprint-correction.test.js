@@ -297,25 +297,51 @@ test("FO-01 the Season/FATE gate refuses BEFORE consent is evaluated", async () 
   assert.equal(after.transactions, before.transactions, "a transaction was written before the gate refused");
 });
 
-test("FO-02 a VALID consent phrase cannot override a Season/FATE refusal", async () => {
+test("FO-02 a GENUINE consent envelope cannot override a Season/FATE refusal", async () => {
   const home = await newHome();
   await corridorAtCheckpoint(home);
-  await seedSeason(home, { must_not_repeat: ["ACTION:CORRIDOR_RENAME_EXECUTE"] });
 
+  // A fabricated --consent-context would make this test vacuous: consent would
+  // fail on its own, so a refusal could not be attributed to the Season gate.
+  // The envelope must be REAL. It binds mission id, contract hash, capability
+  // scope, mission root, action class, nonce and expiry -- and deliberately NOT
+  // the Season -- so an envelope minted while the Season PERMITS the action
+  // stays valid for the same home, nonce and expiry once the Season prohibits it.
+  const nonce = "fo-02";
+  const expires = future();
+
+  // 1. Season permits -> the route reaches consent and issues a real card.
+  await seedSeason(home);
+  const card = run(home, [
+    "mission", "corridor", "complete", ID,
+    "--season", SEASON, "--nonce", nonce, "--expires", expires,
+  ], { allowFail: true });
+
+  // The harness drives the CLI in --json mode, so read the card as JSON rather
+  // than scraping the human-readable rendering.
+  const parsed = JSON.parse(card.slice(card.indexOf("{"), card.lastIndexOf("}") + 1));
+  assert.equal(parsed.step, "CONSENT_CARD",
+    `control: a consent card must be issued while the Season permits, got step=${parsed.step}`);
+  const phrase = parsed.required_phrase;
+  const contextHash = parsed.consent_context_hash;
+  assert.ok(phrase, `control: the card must carry a required phrase: ${card.slice(0, 400)}`);
+  assert.ok(contextHash && /^sha256:[0-9a-f]{64}$/.test(contextHash),
+    `control: the card must carry a real consent_context_hash, got: ${String(contextHash)}`);
+
+  // 2. Same home, same nonce, same expiry -- only the Season now prohibits it.
+  await seedSeason(home, { must_not_repeat: ["ACTION:CORRIDOR_RENAME_EXECUTE"] });
   const before = await writtenArtefacts(home);
 
-  // Everything the human can supply is correct. Only the Season prohibits it.
   const out = run(home, [
     "mission", "corridor", "complete", ID,
-    "--season", SEASON,
-    "--nonce", "fo-02", "--expires", future(),
-    "--consent", `GO: complete mission corridor ${ID}`,
-    "--consent-context", `sha256:${"0".repeat(64)}`,
+    "--season", SEASON, "--nonce", nonce, "--expires", expires,
+    "--consent", phrase,
+    "--consent-context", contextHash,
   ], { allowFail: true });
 
   assert.equal(/no corridor found/.test(out), false, `never reached the gate: ${out.slice(0, 300)}`);
   assert.match(out, /season_action_refused/,
-    `human consent overrode the constitutional gate: ${out.slice(0, 400)}`);
+    `a genuine consent envelope overrode the constitutional gate: ${out.slice(0, 400)}`);
 
   const after = await writtenArtefacts(home);
   assert.equal(after.nonces, before.nonces, "consent claimed a nonce despite the refusal");

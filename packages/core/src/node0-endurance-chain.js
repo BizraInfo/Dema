@@ -117,7 +117,14 @@ export function verifyEnduranceChain({ records, anchor = null, runId = null } = 
   // head_seq used to name a head. A sequence counts appends; it cannot be
   // negative. Admitting one let malformed evidence read as a real head here,
   // and reach the torn-tail arithmetic below as a valid value.
-  const anchorNamesAHead = !!anchor && typeof anchor === "object" && !Array.isArray(anchor)
+  //
+  // Anchor PRESENCE and anchor VALIDITY are two different facts and must stay
+  // separate. Collapsing them is what let the first version of this guard move
+  // the bug instead of fixing it: rejecting a negative head_seq stopped it being
+  // read as TRUNCATED, and it fell through to ABSENT — "a run that never
+  // started" — which is the same conflation from the other side.
+  const anchorPresent = !!anchor && typeof anchor === "object" && !Array.isArray(anchor);
+  const anchorNamesAHead = anchorPresent
     && Number.isInteger(anchor.head_seq) && anchor.head_seq >= 0
     && isNonEmptyString(anchor.head_hash);
 
@@ -128,6 +135,10 @@ export function verifyEnduranceChain({ records, anchor = null, runId = null } = 
     if (anchorNamesAHead) {
       return refuse("TRUNCATED", `records_erased:anchor_head_seq_${anchor.head_seq}_but_no_records_remain`);
     }
+    // An anchor object exists but does not name a usable head. Something was
+    // written and is now corrupt. That is BROKEN evidence, and it is emphatically
+    // not the absence of a run.
+    if (anchorPresent) return refuse("BROKEN", "anchor_malformed");
     return refuse("ABSENT", "no_records");
   }
 
