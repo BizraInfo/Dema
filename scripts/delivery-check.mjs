@@ -363,7 +363,7 @@ async function main() {
       );
       const hasId = result.local_writer_result_id && result.local_writer_result_id.startsWith('sha256:');
       const hasPerformed = result.write_result_status === 'local_write_performed_local_only';
-      const hasPathInside = result.final_local_path && result.final_local_path.startsWith(tempRoot);
+      const hasPathInside = result.final_local_path && `${result.final_local_path}/`.startsWith(`${tempRoot}/`);
       const hasHashes = !!result.content_hash && !!result.integrity_hash;
       const hasVerified = result.read_back_verified === true;
       const hasMode = result.file_mode_expected === '0o600';
