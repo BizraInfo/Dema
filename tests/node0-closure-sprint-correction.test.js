@@ -9,10 +9,10 @@
 // D3 FATE ran AFTER the nonce and locks were taken, while claiming nothing was written
 // D4 the "FATE gate" called two predicates, not the typed contract
 
-import test from "node:test";
+import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtemp, mkdir, writeFile, readFile, readdir } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -34,6 +34,13 @@ async function newHome() {
   homes.push(h);
   return h;
 }
+
+// PROMOTION-CORRECTION-1C. `homes` accumulated every temporary DEMA home and
+// nothing ever read it, so each run left a directory tree behind — including,
+// and especially, when a test failed. `after` runs on the failure path too.
+after(async () => {
+  for (const h of homes) await rm(h, { recursive: true, force: true });
+});
 
 function executingRepo() {
   const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: REPO, encoding: "utf8" }).trim();
@@ -236,23 +243,144 @@ test("D3 a FATE/Season refusal writes no nonce, no lock and no transaction", asy
   assert.equal(after.transactions, before.transactions, "a transaction record was written before the refusal");
 });
 
-test("D3b the gate is positioned before consent, nonce and lock acquisition", async () => {
+// ── D3b · BEHAVIORAL FATE ORDER PROOF (PROMOTION-CORRECTION-1C item 16) ────
+//
+// D3b used to read mission.js as a STRING and compare the character offsets of
+// `const seasonGate = await corridorRenameSeasonFateGate`, `corridorConsentGate(`,
+// `claimCorridorWriteNonce(`, `acquireClosureLock({` and
+// `runTransactionalMechanicalClosure({`. That proved source LAYOUT, not order of
+// execution: renaming the binding, reformatting, or moving the call into a helper
+// broke it while the shipped behavior was unchanged. Worse, it forced `seasonGate`
+// to stay bound as a deliberately-unread variable purely so the test could find it.
+//
+// ── HOW ORDER IS PROVEN WITHOUT READING SOURCE, AND WITHOUT A TRACE SEAM ──
+// By DIFFERENTIAL REFUSAL. If gate A runs strictly before gate B, then a run in
+// which BOTH would refuse must report A's refusal, never B's. Break two gates at
+// once and the one that speaks is the earlier one. No event recorder, no injected
+// observer, and no production change is required to observe it — the refusal
+// message and the set of artefacts on disk are already the observation.
+//
+// FO-01 proves gate-before-consent by making the consent phrase invalid at the
+// same time the Season prohibits the action: a Season refusal (not a consent
+// error) can only mean the Season/FATE gate ran first.
+
+test("FO-01 the Season/FATE gate refuses BEFORE consent is evaluated", async () => {
+  const home = await newHome();
+  await corridorAtCheckpoint(home);
+  await seedSeason(home, { must_not_repeat: ["ACTION:CORRIDOR_RENAME_EXECUTE"] });
+
+  const before = await writtenArtefacts(home);
+
+  // BOTH gates would refuse: the Season prohibits the action AND the consent
+  // phrase is wrong. Whichever runs first is the one that speaks.
+  const out = run(home, [
+    "mission", "corridor", "complete", ID,
+    "--season", SEASON,
+    "--nonce", "fo-01", "--expires", future(),
+    "--consent", "GO: this is not the required phrase",
+    "--consent-context", `sha256:${"0".repeat(64)}`,
+  ], { allowFail: true });
+
+  // Non-vacuity: an early exit would make the whole assertion meaningless.
+  assert.equal(/no corridor found/.test(out), false, `never reached the gate: ${out.slice(0, 300)}`);
+
+  assert.match(out, /season_action_refused/,
+    `the Season/FATE gate must speak first; got: ${out.slice(0, 400)}`);
+  // A consent card is what the consent gate emits when it is reached. Its
+  // absence is the positive evidence that consent evaluation never began.
+  assert.equal(/CONSENT_CARD/.test(out), false,
+    `a consent card was issued, so consent ran before the gate: ${out.slice(0, 400)}`);
+
+  const after = await writtenArtefacts(home);
+  assert.equal(after.nonces, before.nonces, "a nonce was claimed before the gate refused");
+  assert.equal(after.locks, before.locks, "a lock was taken before the gate refused");
+  assert.equal(after.transactions, before.transactions, "a transaction was written before the gate refused");
+});
+
+test("FO-02 a VALID consent phrase cannot override a Season/FATE refusal", async () => {
+  const home = await newHome();
+  await corridorAtCheckpoint(home);
+  await seedSeason(home, { must_not_repeat: ["ACTION:CORRIDOR_RENAME_EXECUTE"] });
+
+  const before = await writtenArtefacts(home);
+
+  // Everything the human can supply is correct. Only the Season prohibits it.
+  const out = run(home, [
+    "mission", "corridor", "complete", ID,
+    "--season", SEASON,
+    "--nonce", "fo-02", "--expires", future(),
+    "--consent", `GO: complete mission corridor ${ID}`,
+    "--consent-context", `sha256:${"0".repeat(64)}`,
+  ], { allowFail: true });
+
+  assert.equal(/no corridor found/.test(out), false, `never reached the gate: ${out.slice(0, 300)}`);
+  assert.match(out, /season_action_refused/,
+    `human consent overrode the constitutional gate: ${out.slice(0, 400)}`);
+
+  const after = await writtenArtefacts(home);
+  assert.equal(after.nonces, before.nonces, "consent claimed a nonce despite the refusal");
+  assert.equal(after.locks, before.locks, "consent took a lock despite the refusal");
+  assert.equal(after.transactions, before.transactions, "consent opened a transaction despite the refusal");
+});
+
+test("FO-03 a consent-stage refusal claims no nonce — consent precedes the nonce", async () => {
+  const home = await newHome();
+  await corridorAtCheckpoint(home);
+  // Season PERMITS the action, so the route passes the gate and reaches consent.
+  await seedSeason(home);
+
+  const before = await writtenArtefacts(home);
+
+  const out = run(home, [
+    "mission", "corridor", "complete", ID,
+    "--season", SEASON,
+    "--nonce", "fo-03", "--expires", future(),
+    "--consent", "GO: this is not the required phrase",
+    "--consent-context", `sha256:${"0".repeat(64)}`,
+  ], { allowFail: true });
+
+  assert.equal(/no corridor found/.test(out), false, `never reached the route: ${out.slice(0, 300)}`);
+  // The Season gate must NOT be what refused here — that would prove nothing
+  // about the consent -> nonce edge.
+  assert.equal(/season_action_refused/.test(out), false,
+    `expected to pass the Season gate and refuse at consent; got: ${out.slice(0, 400)}`);
+
+  const after = await writtenArtefacts(home);
+  assert.equal(after.nonces, before.nonces,
+    "a nonce was claimed even though consent did not succeed — the nonce precedes consent");
+  assert.equal(after.locks, before.locks, "a lock was taken before consent succeeded");
+  assert.equal(after.transactions, before.transactions, "a transaction was opened before consent succeeded");
+});
+
+// FO-04 is the one source assertion that is legitimately about ABSENCE of a
+// specific, named, previously-shipped defect. It is a regression guard for one
+// exact string that must never return to the effect path, not a proof of order.
+test("FO-04 the superseded post-lock shape check is absent from the effect path", async () => {
   const src = await readFile(CLI, "utf8");
-  const gate = src.indexOf("const seasonGate = await corridorRenameSeasonFateGate");
-  assert.ok(gate > 0, "the season/FATE gate is absent from the effect route");
+  assert.equal(src.includes("assessReversibility("), false,
+    "the post-lock shape check is back on the effect path");
+});
 
-  const after = src.slice(gate);
-  const iConsent = after.indexOf("corridorConsentGate(argv");
-  const iNonce = after.indexOf("claimCorridorWriteNonce(argv");
-  const iLock = after.indexOf("acquireClosureLock({");
-  const iTx = after.indexOf("runTransactionalMechanicalClosure({");
-  for (const [name, i] of [["consent", iConsent], ["nonce", iNonce], ["lock", iLock], ["transaction", iTx]]) {
-    assert.ok(i > 0, `${name} not found after the gate — ordering cannot be established`);
+// FO-05 pins the property that made D3b brittle: the proof must survive a
+// refactor that renames or inlines the gate binding. If a future change can
+// break FO-01..FO-03 only by changing BEHAVIOR, this suite has done its job.
+// The gate binding is deliberately NOT referenced by name anywhere above.
+test("FO-05 the ordering proof does not depend on any source identifier", async () => {
+  const thisFile = await readFile(
+    join(REPO, "tests", "node0-closure-sprint-correction.test.js"), "utf8",
+  );
+  const behavioral = thisFile.slice(thisFile.indexOf("test(\"FO-01"), thisFile.indexOf("test(\"FO-04"));
+  for (const identifier of [
+    "const seasonGate",
+    "corridorRenameSeasonFateGate",
+    "corridorConsentGate(",
+    "claimCorridorWriteNonce(",
+    "acquireClosureLock({",
+    "runTransactionalMechanicalClosure({",
+  ]) {
+    assert.equal(behavioral.includes(identifier), false,
+      `FO-01..FO-03 reference the production identifier ${identifier} — the proof is not behavioral`);
   }
-  assert.ok(iConsent < iNonce && iNonce < iLock && iLock < iTx, "expected consent -> nonce -> lock -> transaction after the gate");
-
-  // The superseded post-lock shape check must be gone.
-  assert.equal(src.includes("assessReversibility("), false, "the post-lock shape check is still on the effect path");
 });
 
 // ── D4 ─────────────────────────────────────────────────────────────────────

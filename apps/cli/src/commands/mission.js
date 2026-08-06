@@ -3049,14 +3049,27 @@ async function cmdMissionCorridor(argv) {
     //
     // The gate now sits where the prepared intent is known but NOTHING has been
     // claimed, and it calls the complete typed contract.
-    // `seasonGate` is INTENTIONALLY unread, and must stay bound. Static
-    // analysis reports it as an unused variable; it is not dead. The gate
-    // refuses by calling corridorFail() -> process.exit(1), so there is no
-    // verdict to inspect — and `tests/node0-closure-sprint-correction.test.js`
-    // D3b anchors on the literal source text `const seasonGate = await
-    // corridorRenameSeasonFateGate` to prove this gate precedes consent, nonce,
-    // lock and transaction. Inlining the call to satisfy the linter deletes
-    // that anchor and the ordering proof with it (measured: D3b went red).
+    // `seasonGate` IS read: item 15 made it the source of the durable
+    // `season_authority` evidence persisted into the closure record below (see
+    // the season_authority block). It is not a dead binding and must stay.
+    //
+    // PROMOTION-CORRECTION-1C item 16. The comment that stood here claimed the
+    // binding was "INTENTIONALLY unread" and had to survive only because
+    // `tests/node0-closure-sprint-correction.test.js` D3b anchored on the literal
+    // source text `const seasonGate = await corridorRenameSeasonFateGate` to
+    // prove ordering. Both halves had rotted: item 15 had already made the
+    // binding load-bearing, and a source-text index comparison proves layout, not
+    // execution order. D3b is replaced by FO-01..FO-03, which prove the same
+    // ordering by DIFFERENTIAL REFUSAL — break two gates at once and the one that
+    // speaks is the earlier one. Measured: with this call moved after
+    // corridorConsentGate, FO-01, FO-02, FO-03, D3 and D4b all turn red.
+    //
+    // Measured the same session: inlining this call to satisfy the unused-variable
+    // reading left `seasonGate` undefined at the season_authority block, and all
+    // 12 tests in node0-closure-sprint-correction.test.js still passed — none of
+    // them reaches a SUCCESSFUL closure. Success-path coverage lives elsewhere
+    // (node0-corridor-season-consent-bridge, node0-fate-contract). A file passing
+    // is not evidence that a path was executed.
     const seasonGate = await corridorRenameSeasonFateGate(argv, {
       missionId: id,
       scopeRoot: estate,
