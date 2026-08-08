@@ -1,10 +1,12 @@
 // HTTP adapter for the bizra-cognition-gateway (per ADR-003).
 //
-// Reads-only: the adapter calls four gateway endpoints in parallel
+// Reads-only: the ordinary status path calls four gateway endpoints in parallel
 // (/health, /chain, /poi/summary, /resources/list) and composes a
-// schema-tagged status envelope. NEVER calls POST. NEVER fabricates
-// fields that the gateway does not expose — those land in `unknown[]`
-// or carry a `_truth: "NOT_EXPOSED_BY_GATEWAY"` marker.
+// schema-tagged status envelope. A separate principalStatus() read consumes
+// /principal/status without silently promoting it into Node0 CLEAN readiness.
+// NEVER calls POST. NEVER fabricates fields that the gateway does not expose —
+// those land in `unknown[]` or carry a `_truth: "NOT_EXPOSED_BY_GATEWAY"`
+// marker.
 //
 // Composed schema: bizra.dema.node0_status.v0.2 — superset of the
 // shellout adapter's bizra.dema.status.v0.1 (preserves the fields
@@ -20,6 +22,7 @@
 const DEFAULT_GATEWAY_URL = "http://127.0.0.1:7421";
 const DEFAULT_TIMEOUT_MS = 5000;
 const GATEWAY_DOMAIN = "bizra-cognition-gateway-v1";
+const PRINCIPAL_STATUS_PATH = "/principal/status";
 const GATEWAY_ENDPOINTS = Object.freeze([
   ["health", "/health"],
   ["chain", "/chain"],
@@ -67,6 +70,36 @@ async function fetchEndpoint(url, label, signal) {
     return { ok: true, label, url, json: await response.json() };
   } catch (err) {
     return { ok: false, label, url, error: err?.message ?? String(err) };
+  }
+}
+
+/**
+ * Read the producer's chain-verified principal identity status without changing
+ * the ordinary Node0 status envelope or granting any readiness/authority.
+ *
+ * The transport boundary is deliberately the same localhost-only boundary as
+ * the rest of the gateway adapter. The producer response is returned as
+ * evidence; this function does not reinterpret VERIFIED as Dema CLEAN, does
+ * not mint a witness, and performs no mutation.
+ */
+export async function fetchPrincipalStatus(
+  baseUrl = DEFAULT_GATEWAY_URL,
+  { timeoutMs = DEFAULT_TIMEOUT_MS } = {},
+) {
+  if (!isLocalGatewayUrl(baseUrl)) {
+    return refusedEndpoint(baseUrl, "principal", PRINCIPAL_STATUS_PATH);
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetchEndpoint(
+      `${baseUrl}${PRINCIPAL_STATUS_PATH}`,
+      "principal",
+      controller.signal,
+    );
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -207,6 +240,9 @@ export function createGatewayHttpAdapter({ baseUrl, timeoutMs } = {}) {
     async status() {
       const state = await fetchGatewayState(resolvedBaseUrl, { timeoutMs });
       return composeNode0StatusFromGateway(state);
+    },
+    async principalStatus() {
+      return fetchPrincipalStatus(resolvedBaseUrl, { timeoutMs });
     },
     async listReceipts() {
       return [];
