@@ -71,6 +71,46 @@ Useful flags:
    `tests/dema-capability-truth-registry.test.js`. The count bump fires only when the
    row is newly added, so re-runs do not over-count.
 
+   Note: if the registry's count sentence has been migrated to a computed
+   `${...length}` expression, there is no number-word to bump and the report says
+   `count prose is computed — no bump needed`. That is informational, not a failure.
+
+### What it does NOT wire — a new `dema <command>`
+
+The scaffold wires the **kernel** slice. A slice that also adds a CLI command has
+**six** further wiring points, none of them scaffolded. Miss one and the focused
+suite still passes — three of them fail only under full `npm test`, so they arrive
+late and read as unrelated breakage (measured 2026-08-05 on `68b8efd`):
+
+1. `apps/cli/src/index.js` — import + `COMMAND_TABLE` entry.
+2. `apps/cli/src/index.js` — `REGISTERED_COMMANDS_LIST` (the suggester).
+3. `apps/cli/src/index.js` — help text. The help extractor parses it.
+4. `packages/core/src/cli-consent-matrix-entries.js` — one `row(...)`, else
+   `cli-consent-matrix-check.mjs` fails *missing matrix row*.
+5. `tests/cli-command-table.test.js` — `COMMAND_SURFACE`, else *orphan handlers
+   not in surface*.
+6. `docs/ARCHITECTURE.md` — one table row per help command, else
+   `integration-check.mjs` fails `help_commands_in_architecture_map`. The expected
+   string is the help line truncated at the first `<placeholder>` — e.g.
+   `dema season save --season`, not `dema season save`.
+
+Plus: a review gate added ahead of the isolated TAP command shifts **three**
+positional snapshots in `tests/check-exit-integrity-adversarial.test.js`
+(`commands.length`, `indexOf(isolated)`, and the `commands[N]` coverage pin).
+Those are deliberate exact snapshots, not a bug.
+
+Check point 6 without running the whole suite:
+
+```bash
+node -e 'import("./scripts/review/integration-check.mjs").then(async m=>{
+  const r=await m.buildIntegrationCheckReport();
+  console.log("ok:",r.ok); for(const c of r.checks) if(!c.ok) console.log(c);})'
+```
+
+Also remember the CLI exit contract: the dispatcher turns a refusal into exit 1
+via a `{refused:true}` sentinel. Returning a number from a command handler is
+silently discarded.
+
 ## Workflow
 
 1. **Dry-run first.** Confirm the report shows every wiring edit as `✓ inserted`

@@ -17,8 +17,13 @@ Run at the end of every implementation slice. **Report-only** — does not mutat
 npm test
 npm run check
 npm run llm:guidance
+npm run claim:check:corpus   # required whenever a claim-bearing doc was touched
 git diff --check
 ```
+
+If the slice touched `docs/CURRENT_LIMITS.md`, `docs/TESTING.md`,
+`docs/ARCHITECTURE.md` or `docs/CLAIM_REGISTER_v0_1.md`, the corpus gate is not
+optional — those files are exactly what it scans.
 
 4. If docs claimed `MEASURED`, confirm `docs/CURRENT_LIMITS.md` matches disk.
 5. Emit closeout block:
