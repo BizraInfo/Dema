@@ -7,7 +7,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-08-09 13:23'
-updated_date: '2026-08-09 13:31'
+updated_date: '2026-08-09 14:41'
 labels: []
 dependencies: []
 modified_files:
@@ -61,6 +61,12 @@ Tier separation measured, not assumed, so AMB-02 and AMB-04 are not vacuous gree
 Registered in the review gate against a declared probe task named review-gate-acceptance-model-blindness-probe, so the fixture provenance is inside the attestation content hash the published source string carries. Anyone reading the ledger can see the observation came from this gate exercising the shipped acceptance function, not from production traffic; CURRENT_LIMITS, TESTING and the receipt all say so explicitly rather than letting the count imply otherwise.
 
 Gates on final bytes, fresh extraction of bf6d995 with the slice overlaid, writable HOME: npm test 8662 total = 8659 pass + 3 skipped + 0 fail, exit 0; npm run check exit 0 with the ledger printed inside it as '1 satisfied, 0 violated, 9 unknown of 10'; coverage exit 0 at 95.34 lines / 84.17 branches / 97.65 functions; guidance 7 PASS; kernel purity OK 465 scanned 0 violations; registry gate PASS at 74 capabilities.
+
+REBASE 2026-08-09 (operator ruling NODE0-CANONICAL-REBASE-AND-REQUALIFY-1A): the closure line was rebased onto pinned canonical main b89d8718. Pre-rebase tip 53bbe7b / tree f5cdb72f, merge-base 53e636c8, 19 ahead / 13 behind. Backup ref refs/backup/pre-rebase-53bbe7b-2026-08-09 preserves the pre-rebase tip locally. Post-rebase tip 8ef2fd7 / tree 069fa30e, 19 ahead / 0 behind, and the branch-to-main diff went from 95 files -14935 deletions to 56 files -27. No file present on canonical main is absent from HEAD.
+
+Conflicts were resolved as semantic union, never ours/theirs: docs/TESTING.md rows from both sides, and the A7 positional pins in tests/check-exit-integrity-adversarial.test.js re-derived by importing the merged check.mjs commands array rather than carried from either branch, exactly as that test's own comment requires. One integration commit was needed: the capability truth registry count pin is a merge artifact because both sides added capabilities, so it was re-measured from the merged registry (75) instead of taking either side's number.
+
+The rebased ledger was re-measured, not assumed: still 1 SATISFIED / 9 UNKNOWN, verdict OPEN, same attestation hash. CORRECTION accepted from the operator: an instrument existing on canonical main does not settle an invariant. Save/resume, rollback, corridor recovery, ownership fencing and season action authority BEAR ON several remaining invariants; each becomes closure evidence only after a scoped adapter locates the authoritative artifact, verifies it, re-derives the property, binds its bytes and emits exactly one required observation scope. No adapter was added in this act.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

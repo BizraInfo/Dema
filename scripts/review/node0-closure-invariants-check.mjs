@@ -15,6 +15,8 @@
 //
 // Reads nothing, writes nothing, invokes no model, opens no socket.
 
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import {
@@ -87,8 +89,83 @@ export function gatherClosureEvidence(adapters = CLOSURE_EVIDENCE_ADAPTERS) {
   return evidence;
 }
 
+/// THE ONE file permitted to emit a node-scope closure flag. Everything else may
+/// READ it; nothing else may PRODUCE it.
+export const CLOSURE_AUTHORITY_OWNER =
+  "packages/core/src/node0-closure-invariants.js";
+
+/// Closure-SHAPED verdicts that are deliberately NOT node closure. Each carries
+/// its own schema and its own scope, so none of them can be mistaken for the
+/// node's closure decision — that separation is the thing this gate protects.
+export const SUBORDINATE_CLOSURE_SCHEMAS = Object.freeze([
+  "bizra.dema.mission_corridor_closure.v0.1",
+  "bizra.dema.node0_local_closure_readiness.v0.1",
+  "bizra.dema.omega0_mechanical_closure.v0.1",
+]);
+
+/// Emission, not mention. `node0_closed:` is an object key being PRODUCED;
+/// `report.node0_closed` is a consumer READING the owner's verdict, which is
+/// exactly what subordinate surfaces are supposed to do. A gate that failed on
+/// mention would forbid reading the ledger at all.
+const EMITS_NODE_SCOPE_CLOSURE = /(^|[^.\w])node0_closed\s*:/;
+
+const SCAN_ROOTS = ["packages", "apps"];
+const SKIP_DIR = /(^|\/)(node_modules|\.git|coverage|dist)(\/|$)/;
+
+function* sourceFiles(dir) {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    if (SKIP_DIR.test(full)) continue;
+    if (entry.isDirectory()) yield* sourceFiles(full);
+    else if (/\.(js|mjs|cjs|ts|tsx)$/.test(entry.name)) yield full;
+  }
+}
+
+/// Fail-closed: an unreadable file is a finding, never a silent skip. A scan
+/// that quietly dropped a file would report "single owner" from a partial look —
+/// the exact shape TASK-060 was created to refuse.
+export function findClosureAuthorityProducers(roots = SCAN_ROOTS) {
+  const producers = [];
+  const unreadable = [];
+  for (const root of roots) {
+    for (const file of sourceFiles(root)) {
+      let source;
+      try {
+        source = readFileSync(file, "utf8");
+      } catch {
+        unreadable.push(file);
+        continue;
+      }
+      if (EMITS_NODE_SCOPE_CLOSURE.test(source)) producers.push(file);
+    }
+  }
+  return { producers: producers.sort(), unreadable: unreadable.sort() };
+}
+
 export function runNode0ClosureInvariantsCheck() {
   const blocked_by = [];
+
+  // 0. SEMANTIC closure ownership, not lexical. Measured 2026-08-09: four
+  //    closure-SHAPED verdict producers exist (corridor, local-readiness,
+  //    omega0, invariants), each with its own schema and scope, and only the
+  //    invariant ledger emits a node-scope flag. If a second surface ever
+  //    starts producing one, two independent paths could proclaim the node
+  //    closed and the ledger stops being the authority.
+  const authority = findClosureAuthorityProducers();
+  if (authority.unreadable.length > 0) blocked_by.push("closure_scan_incomplete");
+  const foreign = authority.producers.filter((p) => p !== CLOSURE_AUTHORITY_OWNER);
+  if (foreign.length > 0) blocked_by.push(`parallel_closure_authority:${foreign.join(",")}`);
+  if (!authority.producers.includes(CLOSURE_AUTHORITY_OWNER)) {
+    // Positive control: if the owner itself stopped emitting, the scan is broken
+    // and its "no foreign producer" result would be vacuously clean.
+    blocked_by.push("closure_owner_emits_nothing");
+  }
 
   // 1. The set is the set.
   if (CLOSURE_INVARIANTS.length !== 10) blocked_by.push("invariant_count_not_ten");
@@ -125,6 +202,10 @@ export function runNode0ClosureInvariantsCheck() {
     schema: NODE0_CLOSURE_INVARIANTS_SCHEMA,
     truth_label: NODE0_CLOSURE_INVARIANTS_TRUTH_LABEL,
     adapters_registered: CLOSURE_EVIDENCE_ADAPTERS.length,
+    closure_authority_owner: CLOSURE_AUTHORITY_OWNER,
+    closure_authority_producers: Object.freeze(authority.producers),
+    subordinate_closure_schemas: SUBORDINATE_CLOSURE_SCHEMAS,
+    semantic_closure_owner: foreign.length === 0 && authority.unreadable.length === 0 ? "SINGLE" : "PARALLEL_OR_UNVERIFIED",
     verdict: report.verdict,
     satisfied_count: report.satisfied_count,
     violated_count: report.violated_count,
@@ -160,6 +241,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.log("DEMA - NODE0-CLOSURE-INVARIANTS-1A");
     console.log(`  schema: ${result.schema}`);
     console.log(`  adapters registered: ${result.adapters_registered} of ${INVARIANT_IDS.length}`);
+    console.log(`  semantic closure owner: ${result.semantic_closure_owner} (${result.closure_authority_producers.length} producer(s))`);
     console.log(
       `  ledger: ${result.verdict} - ${result.satisfied_count} satisfied, ` +
         `${result.violated_count} violated, ${result.unknown_count} unknown of ${result.total}`,
