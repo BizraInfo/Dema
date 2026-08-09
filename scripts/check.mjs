@@ -47,6 +47,7 @@ export const commands = [
   ["node", ["scripts/review/node0-space-index-check.mjs"]],
   ["node", ["scripts/review/node0-evidence-source-registry-check.mjs"]],
   ["node", ["scripts/review/node0-local-closure-readiness-check.mjs"]],
+  ["node", ["scripts/review/node0-closure-invariants-check.mjs"]],
   ["node", ["scripts/review/dema-stand-check.mjs"]],
   ["node", ["scripts/review/dema-steward-chain-check.mjs"]],
   ["node", ["scripts/review/poi-time-compression-check.mjs"]],

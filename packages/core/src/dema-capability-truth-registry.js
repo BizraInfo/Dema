@@ -95,6 +95,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_MODEL_SWAP_INVARIANCE_1A",
   "DEMA_REVERSIBLE_FILE_STEWARD_1A",
   "NODE0_MINIMUM_SEASON_SAVE_RESUME_1A",
+  "NODE0_CLOSURE_INVARIANTS_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -707,6 +708,33 @@ function defaultCapabilityRows() {
         "token minted",
         "live execution",
         "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_CLOSURE_INVARIANTS_1A",
+      truth_label: "IMPLEMENTED_LOCAL",
+      summary:
+        "Evaluate the ten Node0 closure invariants from sourced, scope-declared observations and re-derive the verdict from the rows; the published ledger is OPEN with zero evidence adapters wired.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-closure-invariants.js"],
+        test_paths: ["tests/node0-closure-invariants.test.js"],
+        review_gate_paths: ["scripts/review/node0-closure-invariants-check.mjs"],
+        receipt_paths: ["docs/receipts/NODE0_CLOSURE_INVARIANTS_1A.md"],
+        documentation_paths: ["docs/CURRENT_LIMITS.md", "docs/TESTING.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim Node0 closure, a satisfied invariant, endurance, activation, live runtime, or that any observation was honestly measured. Promotion requires a governed evidence adapter per invariant, each declaring the invariant's exact required observation scope.",
+      what_this_proves:
+        "Dema can name the ten closure invariants, refuse an unsourced or wrongly scoped observation, score silence as UNKNOWN rather than satisfaction, re-derive the verdict and every summary field from the rows, and refuse a forged CLOSED report.",
+      what_this_does_not_prove:
+        "It does not prove Node0 closure, any satisfied invariant, endurance, activation, live runtime, worker handoff, replay, or that any observation was honestly measured. Zero evidence adapters are wired: the ledger is OPEN at 0 satisfied of 10.",
+      forbidden_claims: [
+        "node0 closed",
+        "invariant satisfied",
+        "closure proven",
+        "endurance demonstrated",
+        "live execution",
         "unattended runtime",
       ],
     }),

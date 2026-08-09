@@ -1,0 +1,137 @@
+#!/usr/bin/env node
+// NODE0-CLOSURE-INVARIANTS-1A — review gate.
+//
+// WHAT THIS GATE ASSERTS. That the closure ledger is internally sound and that
+// it reports its own state honestly. It does NOT assert that Node0 is closed —
+// a gate that failed while closure was OPEN would be a gate demanding a lie.
+//
+// So the pass condition is the TRUTH surface, not the ACTION surface:
+//   1. the ten are exactly the ten, in order;
+//   2. the verdict re-derives from the rows (positive control);
+//   3. a forged CLOSED report is refused (negative control) — without this,
+//      step 2 would pass against a verifier that only ever says ok;
+//   4. the published ledger state is printed, so `npm run check` shows the
+//      operator how many invariants are actually settled and by what.
+//
+// Reads nothing, writes nothing, invokes no model, opens no socket.
+
+import { pathToFileURL } from "node:url";
+
+import {
+  evaluateNode0ClosureInvariants,
+  verifyClosureVerdict,
+  CLOSURE_INVARIANTS,
+  INVARIANT_IDS,
+  INVARIANT_STATUS,
+  NODE0_CLOSURE_INVARIANTS_SCHEMA,
+  NODE0_CLOSURE_INVARIANTS_TRUTH_LABEL,
+} from "../../packages/core/src/node0-closure-invariants.js";
+
+/// Every adapter the tree currently ships for a closure invariant. It is empty
+/// on purpose and the emptiness is the point: nine invariants have never had an
+/// instrument, and the tenth (`remote_write`) has one whose scope review
+/// demoted it to `null`. A future adapter registers here and the ledger moves.
+export const CLOSURE_EVIDENCE_ADAPTERS = Object.freeze([]);
+
+/// Gathers whatever the registered adapters can honestly observe. An adapter
+/// returning null contributes nothing — silence, which the kernel scores as
+/// UNKNOWN, never as satisfaction.
+export function gatherClosureEvidence(adapters = CLOSURE_EVIDENCE_ADAPTERS) {
+  const evidence = {};
+  for (const adapter of adapters) {
+    const observation = adapter.observe();
+    if (observation !== null && observation !== undefined) {
+      evidence[adapter.invariant_id] = observation;
+    }
+  }
+  return evidence;
+}
+
+export function runNode0ClosureInvariantsCheck() {
+  const blocked_by = [];
+
+  // 1. The set is the set.
+  if (CLOSURE_INVARIANTS.length !== 10) blocked_by.push("invariant_count_not_ten");
+  if (CLOSURE_INVARIANTS.some((i) => typeof i.required_scope !== "string" || !i.required_scope)) {
+    blocked_by.push("invariant_missing_required_scope");
+  }
+
+  // 2. Positive control — the verifier can say ok, over a fully evidenced set.
+  const fullySatisfied = {};
+  for (const inv of CLOSURE_INVARIANTS) {
+    fullySatisfied[inv.id] = {
+      observed: inv.required,
+      source: "review-gate-positive-control",
+      scope: inv.required_scope,
+    };
+  }
+  const controlReport = evaluateNode0ClosureInvariants(fullySatisfied);
+  if (controlReport.verdict !== "CLOSED") blocked_by.push("positive_control_not_closed");
+  if (verifyClosureVerdict(controlReport).ok !== true) {
+    blocked_by.push("positive_control_not_verifiable");
+  }
+
+  // 3. Negative control — a forged CLOSED verdict over empty evidence is refused.
+  const openReport = evaluateNode0ClosureInvariants({});
+  const forged = { ...openReport, node0_closed: true, verdict: "CLOSED" };
+  if (verifyClosureVerdict(forged).ok !== false) blocked_by.push("forged_verdict_accepted");
+
+  // 4. The published state, from whatever adapters exist today.
+  const report = evaluateNode0ClosureInvariants(gatherClosureEvidence());
+  if (verifyClosureVerdict(report).ok !== true) blocked_by.push("published_ledger_not_verifiable");
+
+  return Object.freeze({
+    ok: blocked_by.length === 0,
+    schema: NODE0_CLOSURE_INVARIANTS_SCHEMA,
+    truth_label: NODE0_CLOSURE_INVARIANTS_TRUTH_LABEL,
+    adapters_registered: CLOSURE_EVIDENCE_ADAPTERS.length,
+    verdict: report.verdict,
+    satisfied_count: report.satisfied_count,
+    violated_count: report.violated_count,
+    unknown_count: report.unknown_count,
+    total: report.total,
+    invariants: report.invariants.map((row) =>
+      Object.freeze({ id: row.id, status: row.status, source: row.source }),
+    ),
+    boundary: Object.freeze({
+      execution_allowed: false,
+      daemon_started: false,
+      network_used: false,
+      token_minted: false,
+      wallet_accessed: false,
+      live_execution_performed: false,
+      file_mutation_performed: false,
+      model_invocation_performed: false,
+    }),
+    what_this_proves:
+      "The closure ledger is internally consistent, refuses a forged CLOSED verdict, and publishes its true settled count.",
+    what_this_does_not_prove:
+      "Does not prove Node0 is closed, that any invariant is satisfied, or that any observation was honestly measured.",
+    blocked_by: Object.freeze(blocked_by),
+  });
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const result = runNode0ClosureInvariantsCheck();
+
+  if (process.argv.includes("--json")) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log("DEMA - NODE0-CLOSURE-INVARIANTS-1A");
+    console.log(`  schema: ${result.schema}`);
+    console.log(`  adapters registered: ${result.adapters_registered} of ${INVARIANT_IDS.length}`);
+    console.log(
+      `  ledger: ${result.verdict} - ${result.satisfied_count} satisfied, ` +
+        `${result.violated_count} violated, ${result.unknown_count} unknown of ${result.total}`,
+    );
+    for (const row of result.invariants) {
+      const mark = row.status === INVARIANT_STATUS.SATISFIED ? "+" : " ";
+      console.log(`   ${mark} ${row.status.padEnd(9)} ${row.id}${row.source ? ` <- ${row.source}` : ""}`);
+    }
+    console.log(`  result: ${result.ok ? "PASS" : "FAIL"}`);
+    console.log("  note: PASS means the ledger is sound and honest, NOT that Node0 is closed.");
+    for (const code of result.blocked_by) console.log(`    ${code}`);
+  }
+
+  if (!result.ok) process.exit(1);
+}

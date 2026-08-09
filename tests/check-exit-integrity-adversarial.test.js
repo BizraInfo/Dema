@@ -320,15 +320,21 @@ test("A7 direct TAP is isolated and a later authoritative gate executes", () => 
   // not carried over from the previous slice's arithmetic.
   // These are exact positional snapshots and will drift again on the next gate
   // added ahead of the isolated TAP command; that coupling is this lane's to decide on.
-  assert.equal(commands.length, 206);
-  assert.equal(commands.indexOf(isolated), 130);
-  assert.deepEqual(commands[131].slice(0, 2), ["npm", ["run", "coverage"]]);
-  assert.equal(commands.length, 206);
-  assert.equal(commands.indexOf(isolated), 130);
-  assert.deepEqual(commands[131].slice(0, 2), ["npm", ["run", "coverage"]]);
-  assert.equal(commands.length, 206);
-  assert.equal(commands.indexOf(isolated), 130);
-  assert.deepEqual(commands[131].slice(0, 2), ["npm", ["run", "coverage"]]);
+  assert.equal(commands.length, 207);
+  assert.equal(commands.indexOf(isolated), 131);
+  assert.deepEqual(commands[132].slice(0, 2), ["npm", ["run", "coverage"]]);
+  assert.equal(commands.length, 207);
+  assert.equal(commands.indexOf(isolated), 131);
+  assert.deepEqual(commands[132].slice(0, 2), ["npm", ["run", "coverage"]]);
+  assert.equal(commands.length, 207);
+  assert.equal(commands.indexOf(isolated), 131);
+  assert.deepEqual(commands[132].slice(0, 2), ["npm", ["run", "coverage"]]);
+  // 2026-08-09: NODE0-CLOSURE-INVARIANTS-1A's ledger gate is added right after
+  // node0-local-closure-readiness-check, which is ahead of the isolated TAP
+  // command, so 204 -> 205 and the isolated index 128 -> 129.
+  assert.equal(commands.length, 207);
+  assert.equal(commands.indexOf(isolated), 131);
+  assert.deepEqual(commands[132].slice(0, 2), ["npm", ["run", "coverage"]]);
 
   const evidence = [];
   const calls = [];
