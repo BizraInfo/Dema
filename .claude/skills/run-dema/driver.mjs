@@ -37,6 +37,12 @@ const CHECKS = [
     argv: ["peak-self-loop", "--json"],
     marker: "bizra.dema.peak_self_loop_preview",
   },
+  // NODE0-MINIMUM-SEASON-SAVE-RESUME-1A. Against a throwaway DEMA_HOME there is
+  // no season yet, so both must return typed EMPTY and still exit 0 — absence of
+  // a first save is a legitimate state, not a failure. This is the read-only
+  // half of the surface; `season save` writes and is deliberately not smoked here.
+  { argv: ["season", "status", "--json"], marker: '"outcome": "EMPTY"' },
+  { argv: ["season", "resume", "--json"], marker: '"outcome": "EMPTY"' },
 ];
 
 let failed = 0;

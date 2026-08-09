@@ -38,8 +38,10 @@ PASS  dema readiness
 PASS  dema state
 PASS  dema peak-self-loop --json
 PASS  peak-self-loop --json: mode=preview_only + boundary all-false
+PASS  dema season status --json
+PASS  dema season resume --json
 
-OK — 7 checks, 0 failure(s). DEMA_HOME=/tmp/dema-smoke-XXXXXX
+OK — 9 checks, 0 failure(s). DEMA_HOME=/tmp/dema-smoke-XXXXXX
 ```
 
 Exit 0 = all green; exit 1 = a command regressed (the FAIL line names which,

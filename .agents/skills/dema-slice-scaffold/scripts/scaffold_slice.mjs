@@ -652,6 +652,18 @@ function main() {
           `the ${newWord} shipped pre-action spine capabilities`,
         );
         edits.push({ path: p, changed: true, note: `count prose ${oldWord}->${newWord}` });
+      } else if (/\$\{\s*[A-Za-z_$][\w$]*(?:\.[\w$]+)*\.length\s*\}\s*shipped pre-action spine capabilities/.test(content)) {
+        // The registry migrated this sentence to a COMPUTED count
+        // (`${sortedCapabilities.length} shipped pre-action spine
+        // capabilities`), so there is no number-word left to bump and nothing
+        // is stale — the prose re-derives itself from the row list.
+        //
+        // Measured 2026-08-05 on 68b8efd: treating this as "anchor not found"
+        // made a fully-wired scaffold exit 3 with "The slice is NOT wired",
+        // which is worse than the silent no-op it replaced — it tells the next
+        // session to repair wiring that is already correct. The note text must
+        // stay clear of /not found/ or WIRING_FAILED re-trips on it.
+        edits.push({ path: p, changed: false, note: "count prose is computed — no bump needed" });
       } else {
         // A missing prose anchor used to record nothing — WIRING_FAILED only
         // sees notes already in `edits`, so the scaffold exited 0 with a
