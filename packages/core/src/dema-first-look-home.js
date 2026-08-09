@@ -98,33 +98,91 @@ function buildGreeting(profile) {
   });
 }
 
-function buildRecommendedNextStep(profile, keyPresent) {
+function buildRecommendedNextStep(profile, keyPresent, mission) {
   if (!profile.source_present) {
     return "Complete first setup with dema setup — your local companion stays preview-only until you choose.";
   }
   if (!keyPresent) {
     return "Initialize your authorship key with dema authorship init when you are ready to sign local work.";
   }
+  // A live mission outranks the generic suggestion. Without this the home
+  // screen greets you and recommends reading receipts while a real mission is
+  // open, which forces the human to be the pointer — the exact work the node
+  // exists to carry.
+  if (mission?.next_safe_action) {
+    return `Continue the open mission: ${mission.next_safe_action}`;
+  }
   return "Review your latest receipts with dema receipts — proof stays local until you explicitly share.";
 }
 
-export async function gatherFirstLookContext({ demaHome, now = new Date() } = {}) {
+/// The pointer is DESCRIPTIVE state, never authority. It is surfaced with its
+/// own age so a stale pointer is visibly stale rather than silently obeyed, and
+/// it can never widen what Dema is permitted to do.
+function buildMissionView(mission, now) {
+  if (!mission) {
+    return Object.freeze({
+      present: false,
+      note: "No mission pointer found. Dema shows only local state.",
+    });
+  }
+  const updatedAt = mission.updated_at_utc ?? null;
+  const parsed = updatedAt ? Date.parse(updatedAt) : Number.NaN;
+  const ageHours = Number.isFinite(parsed)
+    ? Math.max(0, (now.getTime() - parsed) / 3_600_000)
+    : null;
+  return Object.freeze({
+    present: true,
+    status: mission.status ?? null,
+    next_safe_action: mission.next_safe_action ?? null,
+    updated_at_utc: updatedAt,
+    age_hours: ageHours === null ? null : Number(ageHours.toFixed(1)),
+    authority: "descriptive_only",
+    note: "Pointer describes state; it does not grant authority. Disk wins.",
+  });
+}
+
+/// Read-only, fail-soft. An unreadable or malformed pointer must never break
+/// the home screen: absence degrades to the generic next step, it does not
+/// throw and it does not invent a mission.
+async function readMissionPointer(explicitPath) {
+  const path =
+    explicitPath ||
+    process.env.BIZRA_ACTIVE_MISSION ||
+    "/data/bizra/ACTIVE_MISSION.json";
+  try {
+    const raw = await readFile(path, "utf8");
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function gatherFirstLookContext({
+  demaHome,
+  now = new Date(),
+  missionPointerPath,
+} = {}) {
   const home = demaHome || process.env.DEMA_HOME || join(homedir(), ".dema");
   const profile = await readProfile(home);
   const keyPresent = await hasAuthorshipKey(home);
+  const mission = await readMissionPointer(missionPointerPath);
   return Object.freeze({
     dema_home: home,
     profile,
     key_present: keyPresent,
+    mission,
     now,
   });
 }
 
 export function buildFirstLookHome(ctx) {
   const greeting = buildGreeting(ctx.profile);
+  const mission = buildMissionView(ctx.mission ?? null, ctx.now);
   const recommended_next_step = buildRecommendedNextStep(
     ctx.profile,
     ctx.key_present,
+    ctx.mission ?? null,
   );
   const boundary = Object.freeze({
     mode: "preview_only",
@@ -147,6 +205,7 @@ export function buildFirstLookHome(ctx) {
     dema_version: PKG_VERSION,
     greeting,
     recommended_next_step,
+    mission,
     simple_actions: SIMPLE_ACTIONS,
     preview_boundary:
       "Preview-only · no runtime execution from this screen. Governed work stays behind explicit consent.",
@@ -177,6 +236,16 @@ export function renderFirstLookHome(envelope, { noColor = false, useColor } = {}
     bold("Recommended next step"),
     `  ${envelope.recommended_next_step}`,
     "",
+    ...(envelope.mission?.present
+      ? [
+          bold("Open mission"),
+          `  ${envelope.mission.status ?? "(no status)"}`,
+          dim(
+            `  observed ${envelope.mission.age_hours ?? "?"}h ago · descriptive only, not authority`,
+          ),
+          "",
+        ]
+      : []),
     bold("Three simple actions"),
     ...envelope.simple_actions.map(
       (a, i) => `  ${i + 1}. ${a.label} — ${dim(a.command)}`,
