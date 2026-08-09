@@ -35,6 +35,7 @@ import {
 import { buildNode0ModelSwapInvariancePayload } from "../../packages/core/src/node0-model-swap-invariance.js";
 import {
   workerHandoffObservation,
+  workerHandoffDiagnostic,
   WORKER_HANDOFF_INVARIANT_ID,
 } from "../../packages/core/src/node0-worker-handoff-adapter.js";
 
@@ -89,6 +90,9 @@ export const CLOSURE_EVIDENCE_ADAPTERS = Object.freeze([
   Object.freeze({
     invariant_id: WORKER_HANDOFF_INVARIANT_ID,
     observe: () => workerHandoffObservation(),
+    // Reason-only channel; see gatherAdapterDiagnostics. Never consulted by the
+    // evaluator, so it cannot settle this row however it answers.
+    diagnose: () => workerHandoffDiagnostic(),
   }),
 ]);
 
@@ -104,6 +108,33 @@ export function gatherClosureEvidence(adapters = CLOSURE_EVIDENCE_ADAPTERS) {
     }
   }
   return evidence;
+}
+
+/// Why each registered adapter fell silent.
+///
+/// An adapter returning null is correct behaviour, but seven different refusals
+/// used to produce one identical silence — so "nobody ran the producer" and
+/// "someone edited the artefact" rendered the same. This asks each adapter that
+/// offers a `diagnose()` for its reason.
+///
+/// These are REASONS, never evidence. They are reported beside the ledger and
+/// are structurally incapable of settling a row: `gatherClosureEvidence` above
+/// is the only path into the evaluator, and it never reads this.
+export function gatherAdapterDiagnostics(adapters = CLOSURE_EVIDENCE_ADAPTERS) {
+  const out = [];
+  for (const adapter of adapters) {
+    if (typeof adapter.diagnose !== "function") continue;
+    const d = adapter.diagnose();
+    if (!d || typeof d !== "object") continue;
+    out.push(
+      Object.freeze({
+        invariant_id: adapter.invariant_id,
+        state: typeof d.state === "string" ? d.state : "UNKNOWN",
+        integrity_suspect: d.integrity_suspect === true,
+      }),
+    );
+  }
+  return Object.freeze(out);
 }
 
 /// THE ONE file permitted to emit a node-scope closure flag. Everything else may
@@ -219,6 +250,7 @@ export function runNode0ClosureInvariantsCheck() {
     schema: NODE0_CLOSURE_INVARIANTS_SCHEMA,
     truth_label: NODE0_CLOSURE_INVARIANTS_TRUTH_LABEL,
     adapters_registered: CLOSURE_EVIDENCE_ADAPTERS.length,
+    adapter_diagnostics: gatherAdapterDiagnostics(),
     closure_authority_owner: CLOSURE_AUTHORITY_OWNER,
     closure_authority_producers: Object.freeze(authority.producers),
     subordinate_closure_schemas: SUBORDINATE_CLOSURE_SCHEMAS,
@@ -263,6 +295,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       `  ledger: ${result.verdict} - ${result.satisfied_count} satisfied, ` +
         `${result.violated_count} violated, ${result.unknown_count} unknown of ${result.total}`,
     );
+    for (const d of result.adapter_diagnostics) {
+      if (d.state === "ACCEPTED") continue;
+      const flag = d.integrity_suspect ? "!! INTEGRITY" : "   no evidence";
+      console.log(`  ${flag}: ${d.invariant_id} -> ${d.state}`);
+    }
     for (const row of result.invariants) {
       const mark = row.status === INVARIANT_STATUS.SATISFIED ? "+" : " ";
       console.log(`   ${mark} ${row.status.padEnd(9)} ${row.id}${row.source ? ` <- ${row.source}` : ""}`);

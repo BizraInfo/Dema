@@ -59,6 +59,83 @@ export function currentKernelHash(kernelPath = KERNEL_PATH) {
   }
 }
 
+/// Every way the recorded handoff can be judged. Closed vocabulary: a state not
+/// listed here cannot be reported.
+export const HANDOFF_DIAGNOSTIC_STATES = Object.freeze([
+  "NOT_RECORDED",          // no artefact — the system working, nothing has run
+  "UNREADABLE",            // present but not parseable as an object
+  "SCHEMA_MISMATCH",
+  "SCOPE_MISMATCH",
+  "HASH_UNVERIFIED",       // the carried digest does not re-derive
+  "NOT_CLEAN_ELIGIBLE",    // injected, asserted, or an honestly failed handoff
+  "KERNEL_BYTES_MISMATCH", // judged by rules that are no longer the rules
+  "ACCEPTED",
+]);
+
+/// States that mean something is WRONG rather than merely absent.
+///
+/// `NOT_RECORDED` is deliberately excluded: nobody having run the producer is
+/// the ordinary state of a clean machine. The three below are different — each
+/// means an artefact exists and failed a check it should have passed, which is
+/// what a hand-edited or misrouted artefact looks like. Collapsing them into
+/// absence is the inverse of the estate's rule that an empty result from a
+/// broken query reads exactly like a clean pass.
+export const HANDOFF_INTEGRITY_SUSPECT_STATES = Object.freeze([
+  "HASH_UNVERIFIED",
+  "NOT_CLEAN_ELIGIBLE",
+  "KERNEL_BYTES_MISMATCH",
+]);
+
+/**
+ * The ONE classifier. Both the evidence path and the diagnostic path consume
+ * this, so an artefact can never be accepted by one and rejected by the other.
+ * Returns `{ state, artefact }`; `artefact` is present only when ACCEPTED.
+ */
+function classifyHandoffArtefact({ demaHome, kernelPath, readFile }) {
+  let raw;
+  try {
+    raw = readFile(join(demaHome, HANDOFF_ARTEFACT_RELPATH));
+  } catch (err) {
+    // "No file" and "a file I could not read" are different facts.
+    return { state: err?.code === "ENOENT" ? "NOT_RECORDED" : "UNREADABLE", artefact: null };
+  }
+
+  let artefact;
+  try {
+    artefact = JSON.parse(raw);
+  } catch {
+    return { state: "UNREADABLE", artefact: null };
+  }
+  if (!artefact || typeof artefact !== "object" || Array.isArray(artefact)) {
+    return { state: "UNREADABLE", artefact: null };
+  }
+
+  if (artefact.schema !== NODE0_WORKER_HANDOFF_SCHEMA) {
+    return { state: "SCHEMA_MISMATCH", artefact: null };
+  }
+  if (artefact.scope !== NODE0_WORKER_HANDOFF_SCOPE) {
+    return { state: "SCOPE_MISMATCH", artefact: null };
+  }
+  // Re-derive rather than trust. An artefact edited after recording — including
+  // one whose verdict was upgraded by hand — fails here.
+  if (!verifyWorkerHandoffHash(artefact, sha256CanonicalJsonV1)) {
+    return { state: "HASH_UNVERIFIED", artefact: null };
+  }
+  // Only a genuinely observed, fully proven handoff. TEST_INJECTION and
+  // OPERATOR_ASSERTED are refused by the kernel's own eligibility rule.
+  if (!isCleanEligibleHandoff(artefact)) {
+    return { state: "NOT_CLEAN_ELIGIBLE", artefact: null };
+  }
+  // The verdict must have been computed by the kernel as it stands now. Relax
+  // the classification rules and every artefact recorded under the old ones
+  // stops counting, which is the intended direction of failure.
+  const kernelHash = currentKernelHash(kernelPath);
+  if (kernelHash === null || artefact.executed_code_hash !== kernelHash) {
+    return { state: "KERNEL_BYTES_MISMATCH", artefact: null };
+  }
+  return { state: "ACCEPTED", artefact };
+}
+
 /**
  * Read the recorded handoff, if any, and convert it into a closure observation.
  *
@@ -67,36 +144,17 @@ export function currentKernelHash(kernelPath = KERNEL_PATH) {
  * the kernel scores a missing observation as UNKNOWN, never as satisfaction, and
  * an adapter that explained itself by returning a partial observation would be
  * offering the ledger something it must not score.
+ *
+ * When you need to know WHY it fell silent, call `workerHandoffDiagnostic` —
+ * which reports a reason and can never settle anything.
  */
 export function workerHandoffObservation({
   demaHome = resolveDemaHome(),
   kernelPath = KERNEL_PATH,
   readFile = (p) => readFileSync(p, "utf8"),
 } = {}) {
-  let artefact;
-  try {
-    artefact = JSON.parse(readFile(join(demaHome, HANDOFF_ARTEFACT_RELPATH)));
-  } catch {
-    return null; // absent or unreadable — nothing was recorded
-  }
-
-  if (!artefact || typeof artefact !== "object") return null;
-  if (artefact.schema !== NODE0_WORKER_HANDOFF_SCHEMA) return null;
-  if (artefact.scope !== NODE0_WORKER_HANDOFF_SCOPE) return null;
-
-  // Re-derive rather than trust. An artefact edited after recording — including
-  // one whose verdict was upgraded by hand — fails here.
-  if (!verifyWorkerHandoffHash(artefact, sha256CanonicalJsonV1)) return null;
-
-  // Only a genuinely observed, fully proven handoff. TEST_INJECTION and
-  // OPERATOR_ASSERTED are refused by the kernel's own eligibility rule.
-  if (!isCleanEligibleHandoff(artefact)) return null;
-
-  // The verdict must have been computed by the kernel as it stands now. Relax
-  // the classification rules and every artefact recorded under the old ones
-  // stops counting, which is the intended direction of failure.
-  const kernelHash = currentKernelHash(kernelPath);
-  if (kernelHash === null || artefact.executed_code_hash !== kernelHash) return null;
+  const { state, artefact } = classifyHandoffArtefact({ demaHome, kernelPath, readFile });
+  if (state !== "ACCEPTED") return null;
 
   return Object.freeze({
     observed: true,
@@ -104,5 +162,32 @@ export function workerHandoffObservation({
     // it: a source naming only the kernel would be satisfied by any run.
     source: `NODE0-WORKER-HANDOFF-1A ${artefact.verdict} ${artefact.observation_hash}`,
     scope: NODE0_WORKER_HANDOFF_SCOPE,
+  });
+}
+
+/**
+ * Why the row is UNKNOWN — a reason, never evidence.
+ *
+ * This exists because seven distinct refusals previously produced one identical
+ * silence, so a hand-edited artefact was indistinguishable from a machine on
+ * which nothing had ever run. The first is the system working; the others are
+ * signals.
+ *
+ * It carries NO `observed` and NO `source` field, by construction: a diagnostic
+ * that could be mistaken for an observation would be a second, weaker path to
+ * SATISFIED. It also does not report the home path — the ledger is a publishable
+ * truth surface and the operator's filesystem layout is not part of the claim.
+ */
+export function workerHandoffDiagnostic({
+  demaHome = resolveDemaHome(),
+  kernelPath = KERNEL_PATH,
+  readFile = (p) => readFileSync(p, "utf8"),
+} = {}) {
+  const { state } = classifyHandoffArtefact({ demaHome, kernelPath, readFile });
+  return Object.freeze({
+    invariant_id: WORKER_HANDOFF_INVARIANT_ID,
+    state,
+    integrity_suspect: HANDOFF_INTEGRITY_SUSPECT_STATES.includes(state),
+    settles_nothing: true,
   });
 }
