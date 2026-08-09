@@ -312,6 +312,20 @@ test("NCI-15 the summary is re-derived from the rows, field by field", () => {
     );
   }
 
+  // `-0 === 0`, but it is not the canonical count emitted by the evaluator.
+  // SameValue comparison is required for an exact in-process envelope.
+  const open = evaluateNode0ClosureInvariants({});
+  for (const report of [honest, open]) {
+    for (const field of ["satisfied_count", "violated_count", "unknown_count"]) {
+      if (!Object.is(report[field], 0)) continue;
+      assert.equal(
+        verifyClosureVerdict({ ...report, [field]: -0 }).reason,
+        "summary_not_supported_by_rows",
+        `signed-zero edit of ${field} must be caught`,
+      );
+    }
+  }
+
   // blocked_by must be exactly the non-satisfied rows — neither padded nor pruned.
   assert.equal(
     verifyClosureVerdict({
@@ -320,7 +334,6 @@ test("NCI-15 the summary is re-derived from the rows, field by field", () => {
     }).reason,
     "blocked_by_not_supported_by_rows",
   );
-  const open = evaluateNode0ClosureInvariants({});
   assert.equal(
     verifyClosureVerdict({ ...open, blocked_by: [] }).reason,
     "blocked_by_not_supported_by_rows",

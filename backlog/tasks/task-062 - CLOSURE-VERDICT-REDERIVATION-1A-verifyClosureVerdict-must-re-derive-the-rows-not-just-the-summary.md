@@ -5,9 +5,9 @@ title: >-
   not just the summary
 status: Done
 assignee:
-  - '@claude'
+  - '@codex'
 created_date: '2026-08-09 11:35'
-updated_date: '2026-08-09 12:53'
+updated_date: '2026-08-09 16:15'
 labels: []
 dependencies: []
 modified_files:
@@ -42,42 +42,40 @@ Outcome: verify the exact canonical in-process data envelope. Snapshot enumerabl
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-1. RED: add adversarial controls for structural blocked_by equality, missing row evidence fields, unsupported or malformed reason values, forged report-boundary fields, sparse or annotated arrays, accessors, and split-view Proxies.
-2. GREEN: snapshot canonical record and array data once; re-derive decision-bearing evidence; compare blocked_by structurally; bind the canonical truth label and proof-boundary strings; refuse unreadable reflective input.
-3. Keep the evaluator API, invariant scopes, honest OPEN/CLOSED paths, and NCI-09 established failure reasons stable. Do not add adapters, check wiring, registry rows, runtime, or remote effects.
-4. Correct only TASK-062 proof language so it states what is independently re-derived and what remains instrument or transport provenance.
-5. Run focused and complete proof gates on final bytes, obtain independent review, then seal locally only if every residual acceptance criterion is observed.
+1. RED: extend NCI-15 with signed-zero edits for every derived count whose honest value is +0; prove the verifier incorrectly accepts them.
+2. GREEN: compare all four re-derived numeric summary fields with Object.is so +0 is canonical and -0 is refused.
+3. Re-run the 38-test focused pair, required project gates, diff checks, and independent adversarial review.
+4. Update only TASK-062 evidence and return it to Done if AC #3 is re-proven on final bytes.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
 RED and root cause:
-- On 097447d, NCI-14/NCI-15 reproduced a verifier that trusted forged row statuses and summary fields.
-- On 021e2f1, NCI-16 through NCI-21 reproduced delimiter collision, unchecked row/report fields, and unchecked proof labels.
-- NCI-22 through NCI-25 reproduced accessor and TOCTOU reads, sparse or annotated arrays, schema-v0.3 proof-text drift, and throwing reflective input.
-- NCI-26 reproduced an active Proxy whose honest descriptor view verified while normal reads and JSON exposed forged values.
+- The original TASK-062 controls reproduced trusted forged row statuses, summary fields, delimiter-collapsed blockers, unchecked report fields, accessors, sparse arrays, reflective failures, and split-view Proxies.
+- Exact HEAD b9276f1 retained one residual: four honest derived +0 counts could be edited to -0 and still return {ok:true}. NCI-15 produced 25 pass / 1 fail before the repair.
 
 GREEN:
-- Canonical records are snapshotted once from exact enumerable own data properties; report, row, and blocker Proxies are refused.
-- Invariant and blocker arrays must be dense ordinary arrays with exact index and length descriptors; holes, annotations, symbols, accessor indices, custom prototypes, and Proxies are refused.
-- Row status, all counts, ordered structural blocked_by, truth label, proof boundaries, schema, and verdict are checked from stable snapshots.
-- The original v0.3 proof-boundary string remains byte-compatible. NCI-09 established failure reasons remain unchanged.
+- Canonical records and dense arrays remain snapshotted and structurally checked; report, row, array, and blocker Proxies remain refused.
+- Object.is now compares all four numeric summary fields to their re-derived values, so canonical +0 and supplied -0 cannot collapse under strict equality.
+- NCI-15 rejects every honest signed-zero mutation with summary_not_supported_by_rows. The closure test passes 26/26 and the closure plus remote-write focused pair passes 38/38.
+- Source SHA-256: 9788ba44117b55387ef1bdb2c1e3a9e26311bc4e00bb52763e4e75729275cddc.
+- Test SHA-256: 9b580321cb0484ad51a05eac211eceac23033b074fe2ccd9213f46ab8b398494.
 
-Final-byte proof before local seal:
-- focused closure plus remote-write tests: 38 pass / 0 fail / 0 skipped.
-- npm test: 8651 total / 8651 pass / 0 fail / 0 skipped, exit 0.
-- npm run check: exit 0 with aggregate gate-exit evidence.
-- npm run coverage: exit 0; 95.42 percent lines / 84.34 branches / 97.69 functions.
-- npm run llm:guidance: 7 PASS.
-- kernel purity: 464 scanned / 0 violations / 93 allowlisted.
-- git diff --check and cached diff check: clean.
-- independent adversarial review: code APPROVE; 14 hostile-object probes found no remaining false-CLOSED path.
+Independent and project proof:
+- Hostile matrix: 178/178 expected outcomes, 0 unexpected, including 104 count-domain mutations and honest OPEN/CLOSED JSON round-trips.
+- Exact candidate npm test: 9001 tests / 9001 pass / 0 fail / 0 skipped, classifier exit 0.
+- Exact candidate npm run check: aggregate gate-exit evidence and coverage exit 0.
+- npm run llm:guidance: 7 PASS. git diff --check and cached diff check: clean.
+
+Harness qualifier:
+- The parent tree tracks node_modules as an absolute self-referential symlink inherited from 8ef2fd7. Default npm lifecycle startup fails with ELOOP before repository tests.
+- Exact repository bytes were therefore verified with a temporary shell that only reset PATH to the repository Node 22 binary. The shell was removed after proof; TASK-062 did not alter node_modules.
 
 Honest limits:
-- Schema v0.3 normalizes refused observations, so an allowed UNKNOWN reason is vocabulary-checked but its specific cause is not independently re-derived.
-- Arbitrary non-satisfying observed values are not certified JSON-serializable.
-- No evidence adapter or consumer is wired; the empty-evidence evaluation remains OPEN at 0 SATISFIED / 10 UNKNOWN.
+- No additional closure-decision verifier bypass survived the exercised matrix; this is not a universal proof over unexercised inputs.
+- Evaluator getter snapshot behavior, authenticated instrument provenance, allowed UNKNOWN cause selection, and JSON safety of arbitrary observed values remain outside this verifier-only slice.
+- No adapter, runtime, remote effect, or closure observation was added. The current ledger remains OPEN at 1 SATISFIED / 9 UNKNOWN.
 <!-- SECTION:NOTES:END -->
 
 ## Comments
@@ -88,10 +86,16 @@ created: 2026-08-09 12:09
 ---
 Reopened by explicit operator GO after independent review reproduced residual verifier bypasses on 021e2f1. Scope is TASK-062 verifier repair only.
 ---
+
+author: @codex
+created: 2026-08-09 15:46
+---
+Exact-HEAD revalidation on b9276f1 reproduced one residual: an OPEN report with satisfied_count or violated_count changed from +0 to -0 verifies {ok:true}. Object.is proves the supplied value differs from the evaluator output. Scope remains TASK-062 count-envelope verification only.
+---
 <!-- COMMENTS:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-Repaired TASK-062 verifier bypasses only. verifyClosureVerdict now validates a stable canonical in-process data envelope: exact enumerable data records, dense arrays, no accessors or Proxies, decision-bearing row status re-derivation, structural ordered blockers, exact counts, schema, truth label, proof boundaries, and verdict. NCI-14 through NCI-26 transport each reproduced bypass; 38 focused tests and the 8651-test suite pass with zero failures or skips, aggregate checks and coverage pass, and independent review found no remaining false-CLOSED path. No closure observation, adapter, consumer, runtime, or remote effect was added; closure evidence remains 0 of 10.
+Repaired the TASK-062 signed-zero verifier residual only: Object.is now refuses -0 where the evaluator emitted a canonical +0 count, and NCI-15 records the RED-to-GREEN case. Verification: 38/38 focused tests; 178/178 independent hostile outcomes with zero unexpected; exact candidate 9001/9001 full tests; aggregate check and coverage exit 0; LLM guidance 7/7; diff checks clean. The npm lifecycle used a temporary Node 22 PATH sanitizer because the parent tree tracks a pre-existing self-referential node_modules symlink; no repository byte was changed to bypass it. No additional closure-decision verifier bypass survived the exercised matrix. Node0 remains OPEN at 1 satisfied / 9 unknown. Evaluator getter snapshot behavior and instrument provenance remain outside this verifier-only slice.
 <!-- SECTION:FINAL_SUMMARY:END -->

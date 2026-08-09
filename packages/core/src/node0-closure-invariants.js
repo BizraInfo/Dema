@@ -443,10 +443,10 @@ function verifyCanonicalClosureVerdict(report) {
   const tally = (status) => derived.filter((derivedStatus) => derivedStatus === status).length;
   const satisfied = tally(INVARIANT_STATUS.SATISFIED);
   if (
-    canonicalReport.satisfied_count !== satisfied ||
-    canonicalReport.violated_count !== tally(INVARIANT_STATUS.VIOLATED) ||
-    canonicalReport.unknown_count !== tally(INVARIANT_STATUS.UNKNOWN) ||
-    canonicalReport.total !== CLOSURE_INVARIANTS.length
+    !Object.is(canonicalReport.satisfied_count, satisfied) ||
+    !Object.is(canonicalReport.violated_count, tally(INVARIANT_STATUS.VIOLATED)) ||
+    !Object.is(canonicalReport.unknown_count, tally(INVARIANT_STATUS.UNKNOWN)) ||
+    !Object.is(canonicalReport.total, CLOSURE_INVARIANTS.length)
   ) {
     return Object.freeze({ ok: false, reason: "summary_not_supported_by_rows" });
   }
