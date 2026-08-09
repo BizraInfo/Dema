@@ -10,13 +10,16 @@ import {
   INVARIANT_STATUS,
 } from "../packages/core/src/node0-closure-invariants.js";
 
-const obs = (v, source = "test-fixture") => ({ observed: v, source });
+const obs = (v, source = "test-fixture", scope = null) =>
+  scope ? { observed: v, source, scope } : { observed: v, source };
 
 /// A fully satisfying set, used as the positive control. Note the two inverted
 /// invariants: authority_delta must be 0 and remote_write must be false.
 function allSatisfied(overrides = {}) {
   const e = {};
-  for (const inv of CLOSURE_INVARIANTS) e[inv.id] = obs(inv.required);
+  for (const inv of CLOSURE_INVARIANTS) {
+    e[inv.id] = obs(inv.required, "test-fixture", inv.required_scope ?? null);
+  }
   return { ...e, ...overrides };
 }
 
@@ -111,7 +114,11 @@ test("NCI-07 the inverted invariants cannot be satisfied by truthiness", () => {
   // remote_write true is a violation, not merely unknown.
   const w = evaluateNode0ClosureInvariants({
     ...allSatisfied(),
-    remote_write: obs(true),
+    remote_write: obs(
+      true,
+      "deployment-fixture",
+      "node0_deployment_remote_write",
+    ),
   });
   const row = w.invariants.find((i) => i.id === "remote_write");
   assert.equal(row.status, INVARIANT_STATUS.VIOLATED);
@@ -153,4 +160,20 @@ test("NCI-10 the report refuses to overclaim what it checked", () => {
   assert.match(r.what_this_does_not_prove, /federation/i);
   // The honest limit: it audits the answers, not the instruments.
   assert.match(r.what_this_does_not_prove, /not the instruments/i);
+});
+
+test("NCI-11 source-scoped evidence cannot satisfy deployment remote_write", () => {
+  // Direct-bypass control: callers must not be able to wrap a CLEAR source scan
+  // in the generic observation shape and thereby promote it at the ledger edge.
+  const r = evaluateNode0ClosureInvariants({
+    ...allSatisfied(),
+    remote_write: {
+      observed: false,
+      source: "NODE0-SOURCE-LISTENER-SCAN-1A CLEAR",
+    },
+  });
+  const row = r.invariants.find((i) => i.id === "remote_write");
+  assert.equal(row.status, INVARIANT_STATUS.UNKNOWN);
+  assert.equal(row.reason, "observation_scope_mismatch");
+  assert.equal(r.node0_closed, false);
 });

@@ -24,8 +24,10 @@
 // refuse.
 
 export const NODE0_CLOSURE_INVARIANTS_SCHEMA =
-  "bizra.dema.node0_closure_invariants.v0.1";
+  "bizra.dema.node0_closure_invariants.v0.2";
 export const NODE0_CLOSURE_INVARIANTS_TRUTH_LABEL = "IMPLEMENTED_LOCAL";
+export const REMOTE_WRITE_OBSERVATION_SCOPE =
+  "node0_deployment_remote_write";
 
 export const INVARIANT_STATUS = Object.freeze({
   SATISFIED: "SATISFIED",
@@ -87,6 +89,7 @@ export const CLOSURE_INVARIANTS = Object.freeze([
   Object.freeze({
     id: "remote_write",
     required: false,
+    required_scope: REMOTE_WRITE_OBSERVATION_SCOPE,
     question: "Can any external party silently mutate local sovereign state? It must not.",
   }),
 ]);
@@ -96,8 +99,8 @@ export const INVARIANT_IDS = Object.freeze(CLOSURE_INVARIANTS.map((i) => i.id));
 /// Evidence must be an OBSERVATION, not an assertion. A bare `true` is refused:
 /// the shape carries where the value came from, so a caller cannot satisfy an
 /// invariant by simply believing it.
-function readObservation(evidence, id) {
-  const entry = evidence?.[id];
+function readObservation(evidence, invariant) {
+  const entry = evidence?.[invariant.id];
   if (entry === undefined || entry === null) {
     return { present: false, reason: "no_evidence" };
   }
@@ -111,7 +114,18 @@ function readObservation(evidence, id) {
   if (typeof entry.source !== "string" || entry.source.trim() === "") {
     return { present: false, reason: "no_source" };
   }
-  return { present: true, observed: entry.observed, source: entry.source };
+  if (
+    invariant.required_scope &&
+    entry.scope !== invariant.required_scope
+  ) {
+    return { present: false, reason: "observation_scope_mismatch" };
+  }
+  return {
+    present: true,
+    observed: entry.observed,
+    source: entry.source,
+    scope: entry.scope ?? null,
+  };
 }
 
 /**
@@ -120,7 +134,7 @@ function readObservation(evidence, id) {
  */
 export function evaluateNode0ClosureInvariants(evidence = {}) {
   const results = CLOSURE_INVARIANTS.map((inv) => {
-    const obs = readObservation(evidence, inv.id);
+    const obs = readObservation(evidence, inv);
     if (!obs.present) {
       return Object.freeze({
         id: inv.id,
@@ -128,6 +142,8 @@ export function evaluateNode0ClosureInvariants(evidence = {}) {
         required: inv.required,
         observed: null,
         source: null,
+        scope: null,
+        required_scope: inv.required_scope ?? null,
         reason: obs.reason,
       });
     }
@@ -138,6 +154,8 @@ export function evaluateNode0ClosureInvariants(evidence = {}) {
       required: inv.required,
       observed: obs.observed,
       source: obs.source,
+      scope: obs.scope,
+      required_scope: inv.required_scope ?? null,
       reason: null,
     });
   });
