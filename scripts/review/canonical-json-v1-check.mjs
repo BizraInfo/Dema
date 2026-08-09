@@ -73,6 +73,14 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // DEMA-REVERSIBLE-FILE-STEWARD-1A / 1B — registered by the steward slice.
   "packages/core/src/dema-reversible-file-steward.js",
   "packages/core/src/dema-reversible-file-steward-execution.js",
+  // DEMA-CONVENE-PERSONAL-COUNCIL-1A — the alpha edge publishes ONE value that
+  // must be stable across processes: the digest binding a convened plan to the
+  // intent it was charged with. DCC-09 uses it to catch an edited plan passing
+  // as the one the council actually received, so key order must not change the
+  // hash — which is exactly this canon's contract. Registration is adoption
+  // review only; it promotes nothing and closes no gate. Convening performs no
+  // model call and no dispatch.
+  "packages/core/src/dema-convene-personal-council.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
