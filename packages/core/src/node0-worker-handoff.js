@@ -14,6 +14,17 @@
 //
 // Nothing here grants authority. `authority_delta` is 0 on every path, and a
 // proven handoff is still not permission to do anything.
+//
+// ── NOT THE SAME THING AS dema-mission-worker-handoff.js ──
+// Two kernels in this tree have "worker handoff" in the name and they model
+// opposite events. DEMA-MISSION-WORKER-HANDOFF-0A is a PLANNED substitution —
+// its four reasons are capability_mismatch, capacity_exhausted,
+// operator_reassignment and provider_unavailable, all of them decisions — and it
+// is PREVIEW_ONLY, consent-bearing, with no death and no fence. This kernel is
+// the UNPLANNED case: nobody chose it, there is no consent, the predecessor is a
+// corpse, and the fence transfer has to be proven because the dead worker cannot
+// be asked to stand down. Reach for that one when a model is swapped on purpose;
+// reach for this one when a process is killed.
 
 export const NODE0_WORKER_HANDOFF_SCHEMA =
   "bizra.dema.node0_worker_handoff_observation.v0.1";
