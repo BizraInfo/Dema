@@ -71,13 +71,25 @@ async function getJson(fetcher, url, timeoutMs) {
   }
 }
 
+// MODEL-ARTIFACT-IDENTITY-INGRESS-1A — a provider list entry is an ALIAS, not an
+// artifact. `ids()` therefore yields { id, identity }: identity is the strongest
+// artifact fingerprint the list endpoint itself supplies (Ollama's manifest
+// digest), or null when the provider offers none. Never a second request — the
+// identity must come from the same read that produced the alias.
+function descriptors(entries, idKey) {
+  if (!Array.isArray(entries)) return [];
+  return entries
+    .map((m) => ({ id: m?.[idKey], identity: typeof m?.digest === "string" && m.digest ? m.digest : null }))
+    .filter((m) => Boolean(m.id));
+}
+
 // Provider adapters: { listUrl, ids(json), genUrl(base), genBody(model, prompt), genOut(json) }
 function providers(env) {
   return {
     ollama: {
       base: env.OLLAMA_URL || "http://127.0.0.1:11434",
       list: (b) => `${b}/api/tags`,
-      ids: (j) => (Array.isArray(j?.models) ? j.models.map((m) => m?.name).filter(Boolean) : []),
+      ids: (j) => descriptors(j?.models, "name"),
       gen: (b) => `${b}/api/generate`,
       body: (model, prompt) => ({ model, prompt, stream: false, options: { num_predict: 64 } }),
       warm: (model) => ({ model, prompt: "ready", stream: false, options: { num_predict: 1 } }),
@@ -86,7 +98,7 @@ function providers(env) {
     lm_studio: {
       base: env.LMSTUDIO_URL || "http://127.0.0.1:1234",
       list: (b) => `${b}/v1/models`,
-      ids: (j) => (Array.isArray(j?.data) ? j.data.map((m) => m?.id).filter(Boolean) : []),
+      ids: (j) => descriptors(j?.data, "id"),
       gen: (b) => `${b}/v1/chat/completions`,
       body: (model, prompt) => ({ model, messages: [{ role: "user", content: prompt }], max_tokens: 64 }),
       warm: (model) => ({ model, messages: [{ role: "user", content: "ready" }], max_tokens: 1 }),
@@ -95,7 +107,7 @@ function providers(env) {
     llamacpp: {
       base: env.LLAMACPP_URL || "http://127.0.0.1:8080",
       list: (b) => `${b}/v1/models`,
-      ids: (j) => (Array.isArray(j?.data) ? j.data.map((m) => m?.id).filter(Boolean) : []),
+      ids: (j) => descriptors(j?.data, "id"),
       gen: (b) => `${b}/v1/chat/completions`,
       body: (model, prompt) => ({ model, messages: [{ role: "user", content: prompt }], max_tokens: 64 }),
       warm: (model) => ({ model, messages: [{ role: "user", content: "ready" }], max_tokens: 1 }),
@@ -109,7 +121,7 @@ export async function discoverLocalModels({ fetchImpl, env = process.env, includ
   const fetcher = fetchImpl || globalThis.fetch;
   const provs = providers(env);
   const provider_discovery = {};
-  const models = []; // { key, provider, model }
+  const models = []; // { key, provider, model, identity, identity_status }
   for (const [name, p] of Object.entries(provs)) {
     if (!isLocalUrl(p.base) && !includeExternalProviders) {
       provider_discovery[name] = { reachable: false, model_count: 0 };
@@ -118,9 +130,49 @@ export async function discoverLocalModels({ fetchImpl, env = process.env, includ
     const r = await getJson(fetcher, p.list(p.base), timeoutMs);
     const ids = r.ok ? p.ids(r.json) : [];
     provider_discovery[name] = { reachable: r.ok, model_count: ids.length };
-    for (const id of ids) models.push({ key: `${name}:${id}`, provider: name, model: id });
+    for (const { id, identity } of ids) {
+      models.push({
+        key: `${name}:${id}`,
+        provider: name,
+        model: id,
+        identity,
+        identity_status: identity ? "PROVIDER_DIGEST" : "UNVERIFIED_PROVIDER_IDENTITY",
+      });
+    }
   }
   return { provider_discovery, models };
+}
+
+// Collapse alias tags onto the artifact they actually name, BEFORE any bound is
+// applied. Grouping key is (provider, identity): a digest namespace belongs to
+// the provider that issued it, so an identical string under two providers is two
+// artifacts. An absent identity NEVER merges — absence of evidence is not
+// evidence of sameness, so each unverified alias stays its own artifact.
+// The first alias in discovery order is canonical, so the choice is deterministic.
+// NUL delimiter: the one byte that cannot occur in a provider name or a digest,
+// so `a` + `bc` can never collide with `ab` + `c`. Written as an escape rather
+// than a literal NUL so the file stays TEXT to git: a raw NUL makes the whole
+// source binary and the diff unreviewable.
+const SEP = "\u0000";
+
+export function dedupeByArtifact(models) {
+  const byArtifact = new Map();
+  for (const m of models) {
+    const groupKey = m.identity ? `${m.provider}${SEP}${m.identity}` : `${SEP}unverified${SEP}${m.key}`;
+    const seen = byArtifact.get(groupKey);
+    if (seen) seen.aliases.push(m.key);
+    else byArtifact.set(groupKey, { canonical: m, aliases: [m.key] });
+  }
+  const groups = [...byArtifact.values()];
+  return {
+    unique: groups.map((g) => g.canonical),
+    artifact_identity: {
+      alias_count: models.length,
+      unique_artifact_count: groups.length,
+      aliases_by_model: Object.fromEntries(groups.map((g) => [g.canonical.key, [...g.aliases].sort()])),
+      identity_status_by_model: Object.fromEntries(groups.map((g) => [g.canonical.key, g.canonical.identity_status])),
+    },
+  };
 }
 
 // A chat-suite model only — embedding endpoints cannot answer a chat prompt, so
@@ -163,8 +215,10 @@ export async function gatherModelEvalBaseline({
   const fetcher = fetchImpl || globalThis.fetch;
   const provs = providers(env);
   const { provider_discovery, models } = await discoverLocalModels({ fetchImpl, env, includeExternalProviders, timeoutMs });
-  const eligible = interleaveByProvider(models.filter((m) => isChatCandidate(m.model)));
-  const chosen = eligible.slice(0, maxModels);
+  // Identity BEFORE the bound: aliases must not consume maxModels slots, and one
+  // artifact must not race itself on latency.
+  const { unique, artifact_identity } = dedupeByArtifact(models.filter((m) => isChatCandidate(m.model)));
+  const chosen = interleaveByProvider(unique).slice(0, maxModels);
   const results_by_model = {};
   for (const { key, provider, model } of chosen) {
     const p = provs[provider];
@@ -198,6 +252,7 @@ export async function gatherModelEvalBaseline({
     generated_at_iso: time().toISOString(),
     suite_id: suiteId,
     provider_discovery,
+    artifact_identity,
     models_tested: chosen.map((c) => c.key),
     results_by_model,
   };
