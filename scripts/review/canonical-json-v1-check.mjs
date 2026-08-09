@@ -98,6 +98,15 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // The adapter performs one file read — no execution, mutation or network —
   // and the ledger does not move until a producer actually runs.
   "packages/core/src/node0-worker-handoff-adapter.js",
+  // NODE0-WORKER-HANDOFF-1A producer — the writing half of the same contract.
+  // It records the digest that the adapter above later re-derives, in a DIFFERENT
+  // process from the one that reads it, which is precisely why key-order
+  // stability is load-bearing: an unstable serializer would make every honest
+  // artefact fail its own verification. Registered separately from the adapter
+  // because writing a digest and reading one are distinct adoptions, and this
+  // one performs real execution (two spawns and a SIGKILL) while the adapter
+  // performs none.
+  "scripts/proof/node0-worker-handoff-proof.mjs",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 

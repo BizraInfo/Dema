@@ -113,15 +113,25 @@ export function buildWorkerHandoffObservation({
     !suc ||
     suc.claim_kind !== TAKEOVER ||
     suc.predecessor_fence_status !== FENCED ||
-    !isPositiveInt(suc.fencing_token) ||
-    !isPositiveInt(suc.predecessor_fencing_token) ||
-    suc.fencing_token <= suc.predecessor_fencing_token
+    !isNonEmptyString(suc.fencing_token) ||
+    !isNonEmptyString(suc.predecessor_fencing_token) ||
+    !isNonEmptyString(pre.fencing_token) ||
+    suc.fencing_token === suc.predecessor_fencing_token ||
+    // The successor must name the EXACT claim it displaced. A takeover that
+    // fenced some other claim fenced the wrong worker, and one that names
+    // nothing cannot be shown to have fenced anyone.
+    suc.predecessor_fencing_token !== pre.fencing_token
   ) {
-    // Outliving the predecessor is not fencing it. Without a superseding token
+    // Outliving the predecessor is not fencing it. Without a superseding claim
     // the predecessor could still write, so the state the successor resumed is
     // not exclusively its own.
+    //
+    // A fencing token here is the canonical hash of the claim body, not a
+    // counter — see packages/receipts/src/mission-closure-ownership.js, where
+    // two processes must derive the identical token from the identical claim or
+    // the fence cannot arbitrate between them.
     verdict = "FENCE_NOT_TRANSFERRED";
-    blocked.push("predecessor_not_fenced_by_superseding_token");
+    blocked.push("predecessor_not_fenced_by_a_claim_naming_it");
   } else if (suc.season_id !== pre.season_id || !isNonEmptyString(suc.resumed_from_head_hash)) {
     // The most flattering near-miss: the successor comes up healthy and works.
     // It began again. Nothing crossed the exit.
@@ -158,10 +168,9 @@ export function buildWorkerHandoffObservation({
     successor_boot_identity_hash: suc?.boot_identity_hash ?? null,
     claim_kind: suc?.claim_kind ?? null,
     predecessor_fence_status: suc?.predecessor_fence_status ?? null,
-    fencing_token: isPositiveInt(suc?.fencing_token) ? suc.fencing_token : null,
-    predecessor_fencing_token: isPositiveInt(suc?.predecessor_fencing_token)
-      ? suc.predecessor_fencing_token
-      : null,
+    predecessor_fencing_token_held: pre?.fencing_token ?? null,
+    fencing_token: suc?.fencing_token ?? null,
+    fenced_predecessor_token: suc?.predecessor_fencing_token ?? null,
     resumed_sequence: isPositiveInt(suc?.resumed_sequence) ? suc.resumed_sequence : null,
     resumed_from_head_hash: suc?.resumed_from_head_hash ?? null,
     season_id: pre?.season_id ?? suc?.season_id ?? null,

@@ -38,12 +38,13 @@ function provenArtefact(over = {}) {
     observedAt: "2026-08-09T00:00:00.000Z",
     predecessor: {
       worker_id: "A", pid: 11, boot_identity_hash: "boot:x", exited: true,
-      checkpoint_sequence: 3, checkpoint_head_hash: "head:3", season_id: "s1",
+      checkpoint_sequence: 3, checkpoint_head_hash: "head:3",
+      fencing_token: "sha256:claim-A", season_id: "s1",
     },
     successor: {
       worker_id: "B", pid: 12, boot_identity_hash: "boot:x",
       claim_kind: "DEAD_OWNER_TAKEOVER", predecessor_fence_status: "STALE_OWNER_FENCED",
-      fencing_token: 2, predecessor_fencing_token: 1,
+      fencing_token: "sha256:claim-B", predecessor_fencing_token: "sha256:claim-A",
       resumed_sequence: 4, resumed_from_head_hash: "head:3", season_id: "s1",
     },
     hash: sha256CanonicalJsonV1,

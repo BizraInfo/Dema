@@ -44,6 +44,7 @@ function provenFacts(over = {}) {
       exited: true,
       checkpoint_sequence: 7,
       checkpoint_head_hash: "head:seq7",
+      fencing_token: "sha256:claim-A",
       season_id: "season-1",
     },
     successor: {
@@ -52,8 +53,8 @@ function provenFacts(over = {}) {
       boot_identity_hash: "boot:aaa",
       claim_kind: "DEAD_OWNER_TAKEOVER",
       predecessor_fence_status: "STALE_OWNER_FENCED",
-      fencing_token: 2,
-      predecessor_fencing_token: 1,
+      fencing_token: "sha256:claim-B",
+      predecessor_fencing_token: "sha256:claim-A",
       resumed_sequence: 8,
       resumed_from_head_hash: "head:seq7",
       season_id: "season-1",
@@ -114,9 +115,15 @@ test("WHO-05 the successor must have fenced the predecessor, not merely outlived
     verdictOf({ successor: { ...provenFacts().successor, predecessor_fence_status: "OWNERSHIP_STATUS_UNVERIFIABLE" } }),
     "FENCE_NOT_TRANSFERRED",
   );
-  // A fencing token that does not supersede is the same failure wearing a number.
+  // A token here is the canonical hash of the claim body, not a counter. A
+  // takeover that names some OTHER claim fenced the wrong worker, and one that
+  // names its own token fenced nobody.
   assert.equal(
-    verdictOf({ successor: { ...provenFacts().successor, fencing_token: 1, predecessor_fencing_token: 1 } }),
+    verdictOf({ successor: { ...provenFacts().successor, predecessor_fencing_token: "sha256:claim-Z" } }),
+    "FENCE_NOT_TRANSFERRED",
+  );
+  assert.equal(
+    verdictOf({ successor: { ...provenFacts().successor, fencing_token: "sha256:claim-A" } }),
     "FENCE_NOT_TRANSFERRED",
   );
 });
