@@ -1,0 +1,190 @@
+// NODE0-CLOSURE-INVARIANTS-1A — the ten booleans that decide whether the seed
+// is genetically complete.
+//
+// NOT ML. NOT runtime. NOT an activation. This asks ten questions of supplied
+// evidence and returns a verdict; it executes nothing and closes nothing.
+//
+// WHY THIS EXISTS. Measured 2026-08-09: nine of the ten capabilities below
+// already exist in this tree — replay/isnad in 96 files, authority_delta in 95,
+// receipt chain in 50 — but NOT ONE was named as an invariant, and no kernel
+// evaluated them together. The node therefore could not answer "am I closed?"
+// The DNA was present; nothing read it as a whole. Only `remote_write` had no
+// guard anywhere, which is why it is the one invariant that starts UNKNOWN
+// rather than merely unnamed.
+//
+// CLOSURE IS NOT ENDURANCE. Seventy-two hours of uptime is later evidence, not
+// the definition. Closure is: one bounded effect survives a kill, resumes
+// deterministically, refuses a forged verification, seals a receipt, grants
+// itself nothing, and returns without the human carrying the state by hand.
+//
+// FAIL-CLOSED, AND UNKNOWN IS NOT TRUE. An invariant with no evidence is
+// UNKNOWN and counts against closure exactly as a violation does. A system that
+// treated silence as satisfaction would declare itself closed the moment it
+// stopped looking — which is the precise failure this whole estate exists to
+// refuse.
+
+export const NODE0_CLOSURE_INVARIANTS_SCHEMA =
+  "bizra.dema.node0_closure_invariants.v0.1";
+export const NODE0_CLOSURE_INVARIANTS_TRUTH_LABEL = "IMPLEMENTED_LOCAL";
+
+export const INVARIANT_STATUS = Object.freeze({
+  SATISFIED: "SATISFIED",
+  VIOLATED: "VIOLATED",
+  UNKNOWN: "UNKNOWN",
+});
+
+/**
+ * The ten. `required` is the value the invariant must hold. Two are inverted on
+ * purpose: authority_delta must be zero and remote_write must be false, because
+ * both describe something the node must NOT have done.
+ */
+export const CLOSURE_INVARIANTS = Object.freeze([
+  Object.freeze({
+    id: "mission_is_primary_state",
+    required: true,
+    question: "Is the mission contract the primary state, with models as temporary workers?",
+  }),
+  Object.freeze({
+    id: "worker_is_replaceable",
+    required: true,
+    question: "If a worker exits, can another resume from the checkpoint?",
+  }),
+  Object.freeze({
+    id: "contract_is_immutable",
+    required: true,
+    question: "Is the contract frozen, so the system cannot widen its own scope?",
+  }),
+  Object.freeze({
+    id: "acceptance_is_model_blind",
+    required: true,
+    question: "Does acceptance judge the output without knowing which model produced it?",
+  }),
+  Object.freeze({
+    id: "verification_is_external",
+    required: true,
+    question: "Is verification performed by something that did not do the work?",
+  }),
+  Object.freeze({
+    id: "authority_delta",
+    required: 0,
+    question: "Did the cycle grant itself any authority? It must be exactly zero.",
+  }),
+  Object.freeze({
+    id: "recovery_after_worker_exit",
+    required: true,
+    question: "After a kill, does the loop resume deterministically without human hands?",
+  }),
+  Object.freeze({
+    id: "receipt_per_transition",
+    required: true,
+    question: "Is every state change hash-chained and tamper-evident?",
+  }),
+  Object.freeze({
+    id: "full_history_replayable",
+    required: true,
+    question: "Can the past be reconstructed exactly from the chain?",
+  }),
+  Object.freeze({
+    id: "remote_write",
+    required: false,
+    question: "Can any external party silently mutate local sovereign state? It must not.",
+  }),
+]);
+
+export const INVARIANT_IDS = Object.freeze(CLOSURE_INVARIANTS.map((i) => i.id));
+
+/// Evidence must be an OBSERVATION, not an assertion. A bare `true` is refused:
+/// the shape carries where the value came from, so a caller cannot satisfy an
+/// invariant by simply believing it.
+function readObservation(evidence, id) {
+  const entry = evidence?.[id];
+  if (entry === undefined || entry === null) {
+    return { present: false, reason: "no_evidence" };
+  }
+  if (typeof entry !== "object" || Array.isArray(entry)) {
+    // A raw boolean is exactly the self-assertion this refuses.
+    return { present: false, reason: "unsourced_assertion" };
+  }
+  if (!("observed" in entry)) {
+    return { present: false, reason: "no_observed_value" };
+  }
+  if (typeof entry.source !== "string" || entry.source.trim() === "") {
+    return { present: false, reason: "no_source" };
+  }
+  return { present: true, observed: entry.observed, source: entry.source };
+}
+
+/**
+ * Pure. Evaluates the ten invariants against supplied observations.
+ * Returns CLOSED only when all ten are SATISFIED.
+ */
+export function evaluateNode0ClosureInvariants(evidence = {}) {
+  const results = CLOSURE_INVARIANTS.map((inv) => {
+    const obs = readObservation(evidence, inv.id);
+    if (!obs.present) {
+      return Object.freeze({
+        id: inv.id,
+        status: INVARIANT_STATUS.UNKNOWN,
+        required: inv.required,
+        observed: null,
+        source: null,
+        reason: obs.reason,
+      });
+    }
+    const satisfied = Object.is(obs.observed, inv.required);
+    return Object.freeze({
+      id: inv.id,
+      status: satisfied ? INVARIANT_STATUS.SATISFIED : INVARIANT_STATUS.VIOLATED,
+      required: inv.required,
+      observed: obs.observed,
+      source: obs.source,
+      reason: null,
+    });
+  });
+
+  const satisfied = results.filter((r) => r.status === INVARIANT_STATUS.SATISFIED);
+  const violated = results.filter((r) => r.status === INVARIANT_STATUS.VIOLATED);
+  const unknown = results.filter((r) => r.status === INVARIANT_STATUS.UNKNOWN);
+
+  // Unknown counts against closure exactly as a violation does.
+  const closed = satisfied.length === CLOSURE_INVARIANTS.length;
+
+  return Object.freeze({
+    schema: NODE0_CLOSURE_INVARIANTS_SCHEMA,
+    truth_label: NODE0_CLOSURE_INVARIANTS_TRUTH_LABEL,
+    node0_closed: closed,
+    verdict: closed ? "CLOSED" : "OPEN",
+    satisfied_count: satisfied.length,
+    violated_count: violated.length,
+    unknown_count: unknown.length,
+    total: CLOSURE_INVARIANTS.length,
+    blocked_by: Object.freeze(
+      [...violated, ...unknown].map((r) =>
+        Object.freeze({ id: r.id, status: r.status, reason: r.reason }),
+      ),
+    ),
+    invariants: Object.freeze(results),
+    what_this_proves:
+      "Whether the ten closure invariants are satisfied by supplied, sourced observations.",
+    what_this_does_not_prove:
+      "Does not prove endurance, federation readiness, activation, or that any observation was itself honestly measured; it checks the ledger of answers, not the instruments that produced them.",
+  });
+}
+
+/// Re-derives the verdict from the per-invariant rows, so a hand-edited summary
+/// cannot report CLOSED over a set that does not support it.
+export function verifyClosureVerdict(report) {
+  const rows = report?.invariants;
+  if (!Array.isArray(rows) || rows.length !== CLOSURE_INVARIANTS.length) {
+    return Object.freeze({ ok: false, reason: "invariant_row_count_mismatch" });
+  }
+  const ids = rows.map((r) => r.id);
+  if (ids.join("|") !== INVARIANT_IDS.join("|")) {
+    return Object.freeze({ ok: false, reason: "invariant_set_mismatch" });
+  }
+  const allSatisfied = rows.every((r) => r.status === INVARIANT_STATUS.SATISFIED);
+  if (allSatisfied !== report.node0_closed) {
+    return Object.freeze({ ok: false, reason: "verdict_not_supported_by_rows" });
+  }
+  return Object.freeze({ ok: true });
+}
