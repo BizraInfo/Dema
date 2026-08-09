@@ -168,6 +168,67 @@ additional claim label. The seven-label taxonomy in Section 8 remains exact.
 No local branch, test result, or documentation edit may be described as a live
 public correction before the post-deploy gates pass.
 
+### 9.2 TASK-030 receipt-binding recheck — 2026-08-04
+
+A fresh credential-free `62`-surface scan completed at
+`2026-08-04T15:31:37.984Z` with `0` request errors, `0` known forbidden-phrase
+hits, and `0` public receipt-link matches. The root still publishes
+`BIZRA-PUBLIC-001`, `BIZRA-PUBLIC-002`, and `BIZRA-PUBLIC-003`;
+`/api/health` publishes `BIZRA-PUBLIC-004`; `/api/beta/status` publishes
+`BIZRA-PUBLIC-005`.
+
+All five claims name evidence commit
+`26bb57359186a3ab533dd51e3623e0c84d5078e9`, but none exposes a governed
+Claim Receipt hash or public receipt link. A commit evidence link is not a
+Claim Receipt.
+
+| Claim IDs | Live route | Commit evidence | Receipt evidence | TASK-030 disposition |
+| --- | --- | --- | --- | --- |
+| `BIZRA-PUBLIC-001` through `BIZRA-PUBLIC-003` | `/` | Present | Absent | `RECEIPT_UNBOUND` |
+| `BIZRA-PUBLIC-004` | `/api/health` | Present | Absent | `RECEIPT_UNBOUND` |
+| `BIZRA-PUBLIC-005` | `/api/beta/status` | Present | Absent | `RECEIPT_UNBOUND` |
+
+The machine-readable evidence is
+[`audits/evidence/bizra-ai-public-claim-receipt-binding-2026-08-04.json`](audits/evidence/bizra-ai-public-claim-receipt-binding-2026-08-04.json).
+The implementation closeout is
+[`receipts/PUBLIC_CLAIM_RECEIPT_BINDING_1A.md`](receipts/PUBLIC_CLAIM_RECEIPT_BINDING_1A.md).
+`npm run claims:receipt-binding` validates that the manifest is internally
+coherent while honestly blocked. `npm run claims:receipt-binding:require-closed`
+exits non-zero until every live claim is `BOUND` to both commit and governed
+receipt evidence or is `REMOVED` with removal-commit evidence.
+
+Closure requires one of two separately authorized outward acts:
+
+1. rotate and accept the trusted signer, issue governed Claim Receipts, and
+   publish per-claim receipt hashes/links; or
+2. remove the five claims from the website source and deploy the removal.
+
+Neither act occurred in this Dema slice. TASK-030 acceptance criterion 1 remains
+open.
+
+### 9.3 Dependabot triage snapshot — 2026-08-04 (TASK-030)
+
+The task description referenced four moderate findings. Current GitHub evidence
+on `2026-08-04` shows a larger open set on `BizraInfo/Dema`:
+
+- `13` open Dependabot alerts total (`7` high, `6` medium).
+- All open alerts point to `packages/dema-ui/package-lock.json`.
+- Source of record: `gh api repos/BizraInfo/Dema/dependabot/alerts?state=open&per_page=100`.
+
+Medium-severity findings are triaged below with explicit verdicts:
+
+| Alert | GHSA | Package | First patched version | Verdict |
+| --- | --- | --- | --- | --- |
+| [#17](https://github.com/BizraInfo/Dema/security/dependabot/17) | `GHSA-68g3-v927-f742` | `next` | `16.2.11` | `INWARD` — remediate in `packages/dema-ui` by upgrading `next` to `>=16.2.11`; not fixed in this claim-containment slice. |
+| [#16](https://github.com/BizraInfo/Dema/security/dependabot/16) | `GHSA-4633-3j49-mh5q` | `next` | `16.2.11` | `INWARD` — same remediation lane as alert `#17`; consolidate in one dependency bump slice. |
+| [#15](https://github.com/BizraInfo/Dema/security/dependabot/15) | `GHSA-4c39-4ccg-62r3` | `next` | `16.2.11` | `INWARD` — same remediation lane as alert `#17`; verify App Router and Server Actions behavior after bump. |
+| [#13](https://github.com/BizraInfo/Dema/security/dependabot/13) | `GHSA-q8wf-6r8g-63ch` | `next` | `16.2.11` | `INWARD` — same remediation lane as alert `#17`; include image optimization regression checks in the bump slice. |
+| [#12](https://github.com/BizraInfo/Dema/security/dependabot/12) | `GHSA-955p-x3mx-jcvp` | `next` | `16.2.11` | `INWARD` — same remediation lane as alert `#17`; verify internal server-function exposure is closed by patched release. |
+| [#2](https://github.com/BizraInfo/Dema/security/dependabot/2) | `GHSA-qx2v-qp2m-jg93` | `postcss` | `8.5.10` | `INWARD` — resolve by upgrading `postcss` to `>=8.5.10` in the same lockfile refresh pass. |
+
+This section is triage only. It does not claim that vulnerability remediation is
+complete.
+
 ## 10. Forbidden Claims
 
 These claims are **forbidden** on every public surface (README, GTM, Canva, landing page, lighthouse invitation, visual emulator, decks, social, market analysis, public technical narrative) until proof exists. Quoting them in this Register or in other canon docs **for the purpose of labeling them forbidden** is explicit and allowed.
