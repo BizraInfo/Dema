@@ -327,10 +327,10 @@ export async function cmd_ask(ctx) {
   const consent = argValue(argv, "--consent") ?? "";
   const demaHome = argValue(argv, "--dema-home");
   const wantsInvoke = argv.includes("--invoke");
-  const model = argValue(argv, "--model") ?? "llama3.2";
-  const llmConsent =
-    argValue(argv, "--llm-consent") ??
-    (wantsInvoke ? llmAdapterConsentPhraseFor(model) : undefined);
+  // ASK-INVOKE-CONSENT-FAIL-CLOSED-1A — no default model, no self-issued
+  // consent. Both must come from the human; see the gate below.
+  const model = argValue(argv, "--model");
+  const llmConsent = argValue(argv, "--llm-consent");
 
   if (!consent || consent !== DEMA_ASK_H3H4_GO_PHRASE) {
     const preview = {
@@ -344,6 +344,28 @@ export async function cmd_ask(ctx) {
     console.log(JSON.stringify(preview, null, 2));
     process.exitCode = 1;
     process.exit(process.exitCode ?? 0);
+  }
+
+  // ASK-INVOKE-CONSENT-FAIL-CLOSED-1A — the CLI checks PRESENCE only; the
+  // adapter remains the sole judge of correctness (exact-string match). The
+  // CLI must never issue the phrase on the human's behalf: the party doing the
+  // invoking cannot also be the party certifying it was authorized. Refuses
+  // before runAskCommand, so no corpus is read on this path either.
+  if (wantsInvoke) {
+    if (!model) {
+      process.stderr.write(
+        "dema ask: --invoke requires --model <name> — no default; the human names the model.\n",
+      );
+      process.exitCode = 1;
+      process.exit(process.exitCode ?? 0);
+    }
+    if (!llmConsent) {
+      process.stderr.write(
+        `dema ask: --invoke requires --llm-consent "${llmAdapterConsentPhraseFor(model)}" — typed by you, never issued by the CLI.\n`,
+      );
+      process.exitCode = 1;
+      process.exit(process.exitCode ?? 0);
+    }
   }
 
   const out = await runAskCommand({
