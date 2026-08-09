@@ -176,9 +176,30 @@ export async function gatherFirstLookContext({
   });
 }
 
+/// COMPOSITION, not new capability. The bases and the council already existed
+/// as their own kernels and neither reached the screen the operator actually
+/// types. Surfacing them here is the difference between a node that HAS
+/// awareness and a node that SHOWS it. Both are injected, so this stays pure
+/// and the home screen degrades to its old shape when either is absent.
+function buildNodeView(constellation, council) {
+  const bases = constellation?.bases ?? null;
+  return Object.freeze({
+    bases_known: bases ? bases.length : null,
+    dark_capacity_gb: constellation?.dark_capacity_gb ?? null,
+    attached_not_enrolled: constellation?.attached_not_enrolled ?? null,
+    council_seats: council?.convened ? council.seat_count : null,
+    // Carried verbatim from the council rather than recomputed, so the home
+    // screen can never present convening as thinking.
+    council_reasoning_performed: council?.convened
+      ? council.reasoning_performed
+      : null,
+  });
+}
+
 export function buildFirstLookHome(ctx) {
   const greeting = buildGreeting(ctx.profile);
   const mission = buildMissionView(ctx.mission ?? null, ctx.now);
+  const node = buildNodeView(ctx.constellation ?? null, ctx.council ?? null);
   const recommended_next_step = buildRecommendedNextStep(
     ctx.profile,
     ctx.key_present,
@@ -206,6 +227,7 @@ export function buildFirstLookHome(ctx) {
     greeting,
     recommended_next_step,
     mission,
+    node,
     simple_actions: SIMPLE_ACTIONS,
     preview_boundary:
       "Preview-only · no runtime execution from this screen. Governed work stays behind explicit consent.",
@@ -243,6 +265,31 @@ export function renderFirstLookHome(envelope, { noColor = false, useColor } = {}
           dim(
             `  observed ${envelope.mission.age_hours ?? "?"}h ago · descriptive only, not authority`,
           ),
+          "",
+        ]
+      : []),
+    ...(envelope.node?.bases_known || envelope.node?.council_seats
+      ? [
+          bold("Your node"),
+          ...(envelope.node.bases_known
+            ? [
+                `  ${envelope.node.bases_known} base(s)` +
+                  (envelope.node.dark_capacity_gb
+                    ? ` · ${envelope.node.dark_capacity_gb} GB unreachable`
+                    : "") +
+                  (envelope.node.attached_not_enrolled
+                    ? ` · ${envelope.node.attached_not_enrolled} attached, not enrolled`
+                    : ""),
+              ]
+            : []),
+          ...(envelope.node.council_seats
+            ? [
+                `  ${envelope.node.council_seats} council seats` +
+                  (envelope.node.council_reasoning_performed === false
+                    ? dim(" · convened, not yet reasoning")
+                    : ""),
+              ]
+            : []),
           "",
         ]
       : []),
