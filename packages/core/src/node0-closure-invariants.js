@@ -43,10 +43,15 @@ export const INVARIANT_STATUS = Object.freeze({
  * `required_scope` names the KIND of observation that can settle the row. It is
  * mandatory on every invariant, not a special case: measured 2026-08-09, a source
  * scan that could only see declarations was one adapter away from settling
- * `remote_write`, a question about deployment. The scope is what makes an
- * instrument declare what it actually looked at, so a narrow one cannot be
- * mistaken for a broad one. Nine of these rows have no adapter yet — the rule is
- * installed before the first arrives rather than retrofitted after.
+ * `remote_write`, a question about deployment.
+ *
+ * WHAT THE SCOPE IS AND IS NOT. It is a caller-supplied DECLARATION, matched
+ * exactly, that stops a narrow instrument from being routed to a broad question.
+ * It does not prove the declaration true: an adapter that stamps
+ * `node0_deployment_remote_write` on a source scan still gets in. Scope makes the
+ * lie explicit and attributable instead of implicit — which is the most a ledger
+ * can do about instruments it does not run. Nine of these rows have no adapter
+ * yet, so the rule is installed before the first arrives rather than retrofitted.
  */
 export const CLOSURE_INVARIANTS = Object.freeze([
   Object.freeze({
@@ -210,19 +215,95 @@ export function evaluateNode0ClosureInvariants(evidence = {}) {
   });
 }
 
-/// Re-derives the verdict from the per-invariant rows, so a hand-edited summary
-/// cannot report CLOSED over a set that does not support it.
+/// What a row's OWN evidence supports, re-derived against the canonical invariant
+/// rather than read off the row's `status`. `null` means the row is not a row of
+/// this ledger at all — it redefined what its invariant requires.
+///
+/// MEASURED DEFECT this refuses to inherit (2026-08-09): the previous verifier
+/// compared "do all rows say SATISFIED" to `node0_closed` and nothing else, so a
+/// report with ten rows claiming SATISFIED while carrying `source: null`,
+/// `scope: null` and reason `no_evidence` returned `{ok: true}`. Only the summary
+/// was bound to the rows; the rows were bound to nothing.
+function rederiveRowStatus(row) {
+  if (!row || typeof row !== "object") return null;
+  const canon = CLOSURE_INVARIANTS.find((i) => i.id === row.id);
+  if (!canon) return null;
+  // A row may not restate its own contract. Letting it do so would mean a forger
+  // supplies both the answer and the question it is graded against.
+  if (!Object.is(row.required, canon.required)) return null;
+  if (row.required_scope !== canon.required_scope) return null;
+
+  const sourced = typeof row.source === "string" && row.source.trim() !== "";
+  const scoped = row.scope === canon.required_scope;
+  if (!sourced || !scoped) return INVARIANT_STATUS.UNKNOWN;
+  return Object.is(row.observed, canon.required)
+    ? INVARIANT_STATUS.SATISFIED
+    : INVARIANT_STATUS.VIOLATED;
+}
+
+/// Re-derives the WHOLE report from the per-invariant rows, and each row from its
+/// own evidence, so neither a hand-edited summary nor a hand-edited row set can
+/// report CLOSED over evidence that does not support it. Nothing here is read as
+/// asserted: schema, every status, all four counts, `blocked_by` and the verdict
+/// are recomputed and compared exactly.
+///
+/// It still cannot tell you whether the observation was honestly MEASURED — that
+/// is the instrument's problem, not the ledger's. What it now guarantees is that
+/// the ledger's own arithmetic and its evidence agree.
 export function verifyClosureVerdict(report) {
-  const rows = report?.invariants;
+  if (report?.schema !== NODE0_CLOSURE_INVARIANTS_SCHEMA) {
+    return Object.freeze({ ok: false, reason: "schema_mismatch" });
+  }
+  const rows = report.invariants;
   if (!Array.isArray(rows) || rows.length !== CLOSURE_INVARIANTS.length) {
     return Object.freeze({ ok: false, reason: "invariant_row_count_mismatch" });
   }
-  const ids = rows.map((r) => r.id);
+  const ids = rows.map((r) => r?.id);
   if (ids.join("|") !== INVARIANT_IDS.join("|")) {
     return Object.freeze({ ok: false, reason: "invariant_set_mismatch" });
   }
-  const allSatisfied = rows.every((r) => r.status === INVARIANT_STATUS.SATISFIED);
-  if (allSatisfied !== report.node0_closed) {
+
+  const derived = rows.map(rederiveRowStatus);
+  if (derived.some((d) => d === null)) {
+    return Object.freeze({ ok: false, reason: "invariant_definition_mismatch" });
+  }
+  for (let i = 0; i < rows.length; i += 1) {
+    if (rows[i].status !== derived[i]) {
+      return Object.freeze({ ok: false, reason: "row_status_not_supported_by_row_evidence" });
+    }
+    // An UNKNOWN row must say why, and a settled row must not invent a reason.
+    const hasReason = typeof rows[i].reason === "string" && rows[i].reason.length > 0;
+    if ((derived[i] === INVARIANT_STATUS.UNKNOWN) !== hasReason) {
+      return Object.freeze({ ok: false, reason: "row_reason_not_supported_by_row_evidence" });
+    }
+  }
+
+  const tally = (status) => derived.filter((d) => d === status).length;
+  const satisfied = tally(INVARIANT_STATUS.SATISFIED);
+  if (
+    report.satisfied_count !== satisfied ||
+    report.violated_count !== tally(INVARIANT_STATUS.VIOLATED) ||
+    report.unknown_count !== tally(INVARIANT_STATUS.UNKNOWN) ||
+    report.total !== CLOSURE_INVARIANTS.length
+  ) {
+    return Object.freeze({ ok: false, reason: "summary_not_supported_by_rows" });
+  }
+
+  // Violated first, then unknown — the order the report itself publishes. Pruning
+  // a blocker is the forgery that would otherwise read as a clean ledger.
+  const expectedBlocked = [
+    ...rows.filter((r) => r.status === INVARIANT_STATUS.VIOLATED),
+    ...rows.filter((r) => r.status === INVARIANT_STATUS.UNKNOWN),
+  ].map((r) => `${r.id}|${r.status}|${r.reason}`);
+  const claimedBlocked = Array.isArray(report.blocked_by)
+    ? report.blocked_by.map((b) => `${b?.id}|${b?.status}|${b?.reason}`)
+    : null;
+  if (claimedBlocked === null || claimedBlocked.join("~") !== expectedBlocked.join("~")) {
+    return Object.freeze({ ok: false, reason: "blocked_by_not_supported_by_rows" });
+  }
+
+  const closed = satisfied === CLOSURE_INVARIANTS.length;
+  if (closed !== report.node0_closed || report.verdict !== (closed ? "CLOSED" : "OPEN")) {
     return Object.freeze({ ok: false, reason: "verdict_not_supported_by_rows" });
   }
   return Object.freeze({ ok: true });

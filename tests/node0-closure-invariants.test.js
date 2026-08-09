@@ -8,6 +8,7 @@ import {
   CLOSURE_INVARIANTS,
   INVARIANT_IDS,
   INVARIANT_STATUS,
+  NODE0_CLOSURE_INVARIANTS_SCHEMA,
 } from "../packages/core/src/node0-closure-invariants.js";
 
 const obs = (v, source = "test-fixture", scope = null) =>
@@ -228,6 +229,106 @@ test("NCI-13 the scope rule is general, not a remote_write special case", () => 
     assert.equal(wrongRow.status, INVARIANT_STATUS.UNKNOWN, `${inv.id} accepted a borrowed scope`);
     assert.equal(wrongRow.reason, "observation_scope_mismatch");
   }
+});
+
+test("NCI-14 NEGATIVE CONTROL — forged SATISFIED rows are caught, not just a forged summary", () => {
+  // NCI-09 forges the SUMMARY over honest rows. Measured on 097447d: forging the
+  // ROWS instead returned {ok:true} — ten rows claiming SATISFIED while carrying
+  // no source, no scope, an observed value that is not the required one, and
+  // reason "no_evidence", under a summary that still said satisfied_count 0. The
+  // verifier compared the flag to the rows and never asked the rows for evidence.
+  const forged = {
+    schema: NODE0_CLOSURE_INVARIANTS_SCHEMA,
+    node0_closed: true,
+    verdict: "CLOSED",
+    satisfied_count: 10,
+    violated_count: 0,
+    unknown_count: 0,
+    total: 10,
+    blocked_by: [],
+    invariants: CLOSURE_INVARIANTS.map((inv) => ({
+      id: inv.id,
+      status: INVARIANT_STATUS.SATISFIED,
+      required: inv.required,
+      observed: inv.required,
+      source: null,
+      scope: null,
+      required_scope: inv.required_scope,
+      reason: null,
+    })),
+  };
+  const v = verifyClosureVerdict(forged);
+  assert.equal(v.ok, false, "an unsourced row may not be certified SATISFIED");
+  assert.equal(v.reason, "row_status_not_supported_by_row_evidence");
+
+  // Supplying a source but not the declared scope must fail the same way: this is
+  // TASK-060's rule enforced at the verifier as well as the evaluator.
+  const scopeless = {
+    ...forged,
+    invariants: forged.invariants.map((r) => ({ ...r, source: "plausible" })),
+  };
+  assert.equal(verifyClosureVerdict(scopeless).reason, "row_status_not_supported_by_row_evidence");
+
+  // A row may not redefine what its own invariant requires.
+  const redefined = {
+    ...forged,
+    invariants: forged.invariants.map((r, i) =>
+      i === 0 ? { ...r, source: "s", scope: r.required_scope, required: "anything-i-say" } : r,
+    ),
+  };
+  assert.equal(verifyClosureVerdict(redefined).reason, "invariant_definition_mismatch");
+
+  const rescoped = {
+    ...forged,
+    invariants: forged.invariants.map((r, i) =>
+      i === 0 ? { ...r, source: "s", scope: "my_own_scope", required_scope: "my_own_scope" } : r,
+    ),
+  };
+  assert.equal(verifyClosureVerdict(rescoped).reason, "invariant_definition_mismatch");
+
+  // A foreign schema cannot borrow this verifier's authority.
+  const openReport = evaluateNode0ClosureInvariants({});
+  assert.equal(
+    verifyClosureVerdict({ ...openReport, schema: "something.else.v0.1" }).reason,
+    "schema_mismatch",
+  );
+});
+
+test("NCI-15 the summary is re-derived from the rows, field by field", () => {
+  // Every number the report publishes must be the one its rows produce. Without
+  // this, a reader who trusts the counts is trusting an assertion.
+  const honest = evaluateNode0ClosureInvariants(allSatisfied());
+  assert.deepEqual(verifyClosureVerdict(honest), { ok: true });
+
+  for (const [field, value] of [
+    ["satisfied_count", 9],
+    ["violated_count", 1],
+    ["unknown_count", 1],
+    ["total", 11],
+  ]) {
+    assert.equal(
+      verifyClosureVerdict({ ...honest, [field]: value }).reason,
+      "summary_not_supported_by_rows",
+      `edited ${field} must be caught`,
+    );
+  }
+
+  // blocked_by must be exactly the non-satisfied rows — neither padded nor pruned.
+  assert.equal(
+    verifyClosureVerdict({
+      ...honest,
+      blocked_by: [{ id: "remote_write", status: "UNKNOWN", reason: "no_evidence" }],
+    }).reason,
+    "blocked_by_not_supported_by_rows",
+  );
+  const open = evaluateNode0ClosureInvariants({});
+  assert.equal(
+    verifyClosureVerdict({ ...open, blocked_by: [] }).reason,
+    "blocked_by_not_supported_by_rows",
+    "hiding the blockers must not read as clean",
+  );
+  // And the honest OPEN report still verifies.
+  assert.deepEqual(verifyClosureVerdict(open), { ok: true });
 });
 
 test("NCI-11 source-scoped evidence cannot satisfy deployment remote_write", () => {
