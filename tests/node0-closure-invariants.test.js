@@ -13,6 +13,10 @@ import {
 const obs = (v, source = "test-fixture", scope = null) =>
   scope ? { observed: v, source, scope } : { observed: v, source };
 
+/// The scope an invariant declares. Fixtures that mean to test a VALUE must carry
+/// the right scope, or they measure the scope gate instead and pass vacuously.
+const scopeOf = (id) => CLOSURE_INVARIANTS.find((i) => i.id === id).required_scope;
+
 /// A fully satisfying set, used as the positive control. Note the two inverted
 /// invariants: authority_delta must be 0 and remote_write must be false.
 function allSatisfied(overrides = {}) {
@@ -103,12 +107,20 @@ test("NCI-06 an observation without a source is refused", () => {
 });
 
 test("NCI-07 the inverted invariants cannot be satisfied by truthiness", () => {
-  // authority_delta must be exactly 0 — not "falsy", not 1, not "0".
+  // authority_delta must be exactly 0 — not "falsy", not 1, not "0". The fixture
+  // carries the declared scope so this measures the VALUE rule; without it the
+  // scope gate would refuse first and the test would pass without ever comparing.
   for (const bad of [1, "0", false, null]) {
     const r = evaluateNode0ClosureInvariants({
       ...allSatisfied(),
-      authority_delta: obs(bad),
+      authority_delta: obs(bad, "test-fixture", scopeOf("authority_delta")),
     });
+    const row = r.invariants.find((i) => i.id === "authority_delta");
+    assert.equal(
+      row.status,
+      INVARIANT_STATUS.VIOLATED,
+      `authority_delta ${JSON.stringify(bad)} must be compared and rejected, not skipped`,
+    );
     assert.equal(r.node0_closed, false, `authority_delta ${JSON.stringify(bad)} must not pass`);
   }
   // remote_write true is a violation, not merely unknown.
@@ -127,7 +139,11 @@ test("NCI-07 the inverted invariants cannot be satisfied by truthiness", () => {
 test("NCI-08 a violation is reported as violation, distinct from unknown", () => {
   const r = evaluateNode0ClosureInvariants({
     ...allSatisfied(),
-    worker_is_replaceable: obs(false, "kill-test-2026-08-09"),
+    worker_is_replaceable: obs(
+      false,
+      "kill-test-2026-08-09",
+      scopeOf("worker_is_replaceable"),
+    ),
   });
   const row = r.invariants.find((i) => i.id === "worker_is_replaceable");
   assert.equal(row.status, INVARIANT_STATUS.VIOLATED);
@@ -160,6 +176,58 @@ test("NCI-10 the report refuses to overclaim what it checked", () => {
   assert.match(r.what_this_does_not_prove, /federation/i);
   // The honest limit: it audits the answers, not the instruments.
   assert.match(r.what_this_does_not_prove, /not the instruments/i);
+});
+
+test("NCI-12 every invariant declares the observation scope that can settle it", () => {
+  // TASK-060 gave remote_write a required_scope because a narrow source scan had
+  // tried to settle a deployment question. Nothing made that a rule, so the other
+  // nine stayed open to the same promotion. A scope-less invariant is a row any
+  // observation can claim.
+  for (const inv of CLOSURE_INVARIANTS) {
+    assert.equal(
+      typeof inv.required_scope,
+      "string",
+      `${inv.id} must declare a required_scope`,
+    );
+    assert.ok(inv.required_scope.length > 0, `${inv.id} required_scope is empty`);
+  }
+  // The scopes are distinct: two invariants sharing one scope would let evidence
+  // gathered for one settle the other.
+  const scopes = CLOSURE_INVARIANTS.map((i) => i.required_scope);
+  assert.equal(new Set(scopes).size, scopes.length, "scopes must be distinct");
+  // The shipped remote_write scope is load-bearing for NCI-11 and must not drift.
+  const rw = CLOSURE_INVARIANTS.find((i) => i.id === "remote_write");
+  assert.equal(rw.required_scope, "node0_deployment_remote_write");
+});
+
+test("NCI-13 the scope rule is general, not a remote_write special case", () => {
+  // The generalization control. Without it, nine rows could still be settled by
+  // an observation that never says what kind of thing it looked at.
+  for (const inv of CLOSURE_INVARIANTS) {
+    const missing = evaluateNode0ClosureInvariants({
+      ...allSatisfied(),
+      [inv.id]: { observed: inv.required, source: "plausible-sounding-source" },
+    });
+    const missingRow = missing.invariants.find((r) => r.id === inv.id);
+    assert.equal(
+      missingRow.status,
+      INVARIANT_STATUS.UNKNOWN,
+      `${inv.id} accepted an observation with no scope`,
+    );
+    assert.equal(missingRow.reason, "observation_scope_mismatch");
+    assert.equal(missing.node0_closed, false);
+
+    // A scope borrowed from a different invariant is equally refused, so the
+    // check is a match and not merely a presence test.
+    const borrowed = CLOSURE_INVARIANTS.find((i) => i.id !== inv.id).required_scope;
+    const wrong = evaluateNode0ClosureInvariants({
+      ...allSatisfied(),
+      [inv.id]: { observed: inv.required, source: "s", scope: borrowed },
+    });
+    const wrongRow = wrong.invariants.find((r) => r.id === inv.id);
+    assert.equal(wrongRow.status, INVARIANT_STATUS.UNKNOWN, `${inv.id} accepted a borrowed scope`);
+    assert.equal(wrongRow.reason, "observation_scope_mismatch");
+  }
 });
 
 test("NCI-11 source-scoped evidence cannot satisfy deployment remote_write", () => {

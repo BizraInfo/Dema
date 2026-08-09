@@ -24,7 +24,7 @@
 // refuse.
 
 export const NODE0_CLOSURE_INVARIANTS_SCHEMA =
-  "bizra.dema.node0_closure_invariants.v0.2";
+  "bizra.dema.node0_closure_invariants.v0.3";
 export const NODE0_CLOSURE_INVARIANTS_TRUTH_LABEL = "IMPLEMENTED_LOCAL";
 export const REMOTE_WRITE_OBSERVATION_SCOPE =
   "node0_deployment_remote_write";
@@ -39,51 +39,68 @@ export const INVARIANT_STATUS = Object.freeze({
  * The ten. `required` is the value the invariant must hold. Two are inverted on
  * purpose: authority_delta must be zero and remote_write must be false, because
  * both describe something the node must NOT have done.
+ *
+ * `required_scope` names the KIND of observation that can settle the row. It is
+ * mandatory on every invariant, not a special case: measured 2026-08-09, a source
+ * scan that could only see declarations was one adapter away from settling
+ * `remote_write`, a question about deployment. The scope is what makes an
+ * instrument declare what it actually looked at, so a narrow one cannot be
+ * mistaken for a broad one. Nine of these rows have no adapter yet — the rule is
+ * installed before the first arrives rather than retrofitted after.
  */
 export const CLOSURE_INVARIANTS = Object.freeze([
   Object.freeze({
     id: "mission_is_primary_state",
     required: true,
+    required_scope: "node0_runtime_state_ownership",
     question: "Is the mission contract the primary state, with models as temporary workers?",
   }),
   Object.freeze({
     id: "worker_is_replaceable",
     required: true,
+    required_scope: "node0_runtime_worker_handoff",
     question: "If a worker exits, can another resume from the checkpoint?",
   }),
   Object.freeze({
     id: "contract_is_immutable",
     required: true,
+    required_scope: "node0_contract_artifact_immutability",
     question: "Is the contract frozen, so the system cannot widen its own scope?",
   }),
   Object.freeze({
     id: "acceptance_is_model_blind",
     required: true,
+    required_scope: "node0_acceptance_function_model_blindness",
     question: "Does acceptance judge the output without knowing which model produced it?",
   }),
   Object.freeze({
     id: "verification_is_external",
     required: true,
+    required_scope: "node0_verifier_independence",
     question: "Is verification performed by something that did not do the work?",
   }),
   Object.freeze({
     id: "authority_delta",
     required: 0,
+    required_scope: "node0_cycle_authority_delta",
     question: "Did the cycle grant itself any authority? It must be exactly zero.",
   }),
   Object.freeze({
     id: "recovery_after_worker_exit",
     required: true,
+    required_scope: "node0_runtime_kill_resume",
     question: "After a kill, does the loop resume deterministically without human hands?",
   }),
   Object.freeze({
     id: "receipt_per_transition",
     required: true,
+    required_scope: "node0_transition_receipt_chain",
     question: "Is every state change hash-chained and tamper-evident?",
   }),
   Object.freeze({
     id: "full_history_replayable",
     required: true,
+    required_scope: "node0_history_replay",
     question: "Can the past be reconstructed exactly from the chain?",
   }),
   Object.freeze({
@@ -114,10 +131,14 @@ function readObservation(evidence, invariant) {
   if (typeof entry.source !== "string" || entry.source.trim() === "") {
     return { present: false, reason: "no_source" };
   }
-  if (
-    invariant.required_scope &&
-    entry.scope !== invariant.required_scope
-  ) {
+  // Scope is mandatory for every invariant. A row that declared no scope would
+  // accept any observation at all, so it fails closed rather than falling back to
+  // the permissive behaviour — that fallback is what let a source scan reach a
+  // deployment question in the first place.
+  if (typeof invariant.required_scope !== "string" || invariant.required_scope === "") {
+    return { present: false, reason: "invariant_declares_no_scope" };
+  }
+  if (entry.scope !== invariant.required_scope) {
     return { present: false, reason: "observation_scope_mismatch" };
   }
   return {
