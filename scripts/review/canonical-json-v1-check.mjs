@@ -88,6 +88,16 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // review only; it promotes nothing and closes no gate. Convening performs no
   // model call and no dispatch.
   "packages/core/src/dema-convene-personal-council.js",
+  // NODE0-WORKER-HANDOFF-1A — the adapter re-derives a recorded handoff's hash
+  // instead of trusting the one it carries, and compares the artefact's
+  // `executed_code_hash` against the classification kernel's bytes on disk. Both
+  // comparisons are made by a READER against a digest written earlier by a
+  // different process, so key-order stability is the entire contract: an
+  // unstable serializer would silently invalidate every honest artefact and
+  // validate none. Registration is adoption review only; it promotes nothing.
+  // The adapter performs one file read — no execution, mutation or network —
+  // and the ledger does not move until a producer actually runs.
+  "packages/core/src/node0-worker-handoff-adapter.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 

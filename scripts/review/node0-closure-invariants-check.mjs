@@ -33,6 +33,10 @@ import {
   ACCEPTANCE_MODEL_BLIND_INVARIANT_ID,
 } from "../../packages/core/src/node0-acceptance-model-blind-adapter.js";
 import { buildNode0ModelSwapInvariancePayload } from "../../packages/core/src/node0-model-swap-invariance.js";
+import {
+  workerHandoffObservation,
+  WORKER_HANDOFF_INVARIANT_ID,
+} from "../../packages/core/src/node0-worker-handoff-adapter.js";
 
 /// The probe task the acceptance adapter judges. It is a FIXTURE and says so in
 /// its own `task_id`, which the attestation's content hash covers — so anyone
@@ -60,11 +64,20 @@ const ACCEPTANCE_PROBE = Object.freeze({
   transport: Object.freeze({ carry_contract: true, carry_outputs: true }),
 });
 
-/// Every adapter the tree currently ships for a closure invariant. Nine of the
-/// ten are absent because no instrument exists: six of those describe a RUNNING
-/// LOOP observed across a worker exit and cannot be settled from this repository
-/// at all, and `remote_write` has an instrument whose scope review demoted it to
-/// `null`. An adapter registers here and the ledger moves; nothing else does.
+/// Every adapter the tree currently ships for a closure invariant. Eight of the
+/// ten are absent because no instrument exists: five of those describe a RUNNING
+/// LOOP observed across a worker exit, and `remote_write` has an instrument whose
+/// scope review demoted it to `null`. An adapter registers here and the ledger
+/// moves; nothing else does.
+///
+/// The two registered adapters answer in different ways, and the difference is
+/// the point. `acceptance_is_model_blind` MEASURES here, because it is a pure
+/// function and this gate can call it. `worker_is_replaceable` cannot be measured
+/// by anything that does not kill a process, so its adapter READS a recorded
+/// artefact instead — the execution happened in a producer and is disclosed in
+/// the artefact, which is how the gate keeps `execution_allowed: false` honest
+/// while still being able to learn the answer. With no producer run yet it
+/// returns `null`, and the row stays UNKNOWN.
 export const CLOSURE_EVIDENCE_ADAPTERS = Object.freeze([
   Object.freeze({
     invariant_id: ACCEPTANCE_MODEL_BLIND_INVARIANT_ID,
@@ -72,6 +85,10 @@ export const CLOSURE_EVIDENCE_ADAPTERS = Object.freeze([
       acceptanceModelBlindObservation(
         buildNode0ModelSwapInvariancePayload(ACCEPTANCE_PROBE),
       ),
+  }),
+  Object.freeze({
+    invariant_id: WORKER_HANDOFF_INVARIANT_ID,
+    observe: () => workerHandoffObservation(),
   }),
 ]);
 
