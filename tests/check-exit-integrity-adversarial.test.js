@@ -307,14 +307,15 @@ test("A7 direct TAP is isolated and a later authoritative gate executes", () => 
   // DEMA-REVERSIBLE-FILE-STEWARD-1C (index 84), UI-TRUTH-LABEL-GATE-1A (85) and
   // TRACKED-TEST-EXEC-TARGET-GUARD-1A (125, right after claim-corpus-gate). So
   // 199+3+1 = 203 and the isolated index moves 123 -> 127. The final +1 is
-  // TASK-030's public-claim receipt-binding evidence gate.
+  // TASK-030's public-claim receipt-binding evidence gate, and +1 for
+  // NODE0-AUTHORITY-GRAPH-1A's separation-of-powers gate.
   // The guard sits ahead of the suite on purpose: it is a static scan, so it must
   // fail fast rather than behind a TAP gate that fails closed and never reaches it.
   // These are exact positional snapshots and will drift again on the next gate
   // added ahead of the isolated TAP command; that coupling is this lane's to decide on.
-  assert.equal(commands.length, 203);
-  assert.equal(commands.indexOf(isolated), 127);
-  assert.deepEqual(commands[128].slice(0, 2), ["npm", ["run", "coverage"]]);
+  assert.equal(commands.length, 204);
+  assert.equal(commands.indexOf(isolated), 128);
+  assert.deepEqual(commands[129].slice(0, 2), ["npm", ["run", "coverage"]]);
 
   const evidence = [];
   const calls = [];

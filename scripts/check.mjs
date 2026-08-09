@@ -145,6 +145,7 @@ export const commands = [
   ["node", ["scripts/claims/generate-public-claims.mjs", "--check"]],
   ["node", ["scripts/claims/claim-corpus-gate.mjs"]],
   ["node", ["scripts/review/public-claim-receipt-binding-check.mjs"]],
+  ["node", ["scripts/review/node0-authority-graph-check.mjs"]],
   ["node", ["scripts/review/tracked-test-exec-target-check.mjs"]],
   // Classify the exact auto-discovery command against its own fresh log before
   // returning to the aggregate owner. A proved environmental exit 1 normalizes
