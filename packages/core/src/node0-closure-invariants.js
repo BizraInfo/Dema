@@ -23,11 +23,51 @@
 // stopped looking — which is the precise failure this whole estate exists to
 // refuse.
 
+import { types as nodeUtilTypes } from "node:util";
+
 export const NODE0_CLOSURE_INVARIANTS_SCHEMA =
   "bizra.dema.node0_closure_invariants.v0.3";
 export const NODE0_CLOSURE_INVARIANTS_TRUTH_LABEL = "IMPLEMENTED_LOCAL";
 export const REMOTE_WRITE_OBSERVATION_SCOPE =
   "node0_deployment_remote_write";
+
+const WHAT_THIS_PROVES =
+  "Whether the ten closure invariants are satisfied by supplied, sourced observations.";
+const WHAT_THIS_DOES_NOT_PROVE =
+  "Does not prove endurance, federation readiness, activation, or that any observation was itself honestly measured; it checks the ledger of answers, not the instruments that produced them.";
+
+const REPORT_KEYS = Object.freeze([
+  "schema",
+  "truth_label",
+  "node0_closed",
+  "verdict",
+  "satisfied_count",
+  "violated_count",
+  "unknown_count",
+  "total",
+  "blocked_by",
+  "invariants",
+  "what_this_proves",
+  "what_this_does_not_prove",
+]);
+const ROW_KEYS = Object.freeze([
+  "id",
+  "status",
+  "required",
+  "observed",
+  "source",
+  "scope",
+  "required_scope",
+  "reason",
+]);
+const BLOCKER_KEYS = Object.freeze(["id", "status", "reason"]);
+const UNKNOWN_REASON_CODES = Object.freeze([
+  "no_evidence",
+  "unsourced_assertion",
+  "no_observed_value",
+  "no_source",
+  "observation_scope_mismatch",
+]);
 
 export const INVARIANT_STATUS = Object.freeze({
   SATISFIED: "SATISFIED",
@@ -208,11 +248,87 @@ export function evaluateNode0ClosureInvariants(evidence = {}) {
       ),
     ),
     invariants: Object.freeze(results),
-    what_this_proves:
-      "Whether the ten closure invariants are satisfied by supplied, sourced observations.",
-    what_this_does_not_prove:
-      "Does not prove endurance, federation readiness, activation, or that any observation was itself honestly measured; it checks the ledger of answers, not the instruments that produced them.",
+    what_this_proves: WHAT_THIS_PROVES,
+    what_this_does_not_prove: WHAT_THIS_DOES_NOT_PROVE,
   });
+}
+
+/// Reads one canonical in-process data record without invoking any accessor. The
+/// returned object is a stable snapshot: verdict arithmetic never re-reads a
+/// caller-controlled object after its shape has been accepted.
+function readCanonicalRecord(value, expectedKeys) {
+  if (value === null || typeof value !== "object") {
+    return null;
+  }
+  if (nodeUtilTypes.isProxy(value) || Array.isArray(value)) {
+    return null;
+  }
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    return null;
+  }
+  const actualKeys = Reflect.ownKeys(value);
+  if (actualKeys.length !== expectedKeys.length) return null;
+
+  const snapshot = Object.create(null);
+  for (const key of expectedKeys) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (
+      descriptor === undefined ||
+      !Object.hasOwn(descriptor, "value") ||
+      descriptor.enumerable !== true
+    ) {
+      return null;
+    }
+    snapshot[key] = descriptor.value;
+  }
+  return Object.freeze(snapshot);
+}
+
+/// Reads a dense, ordinary array as data. Holes, accessors, annotations,
+/// symbols, and custom prototypes are all non-canonical. `Array#every` cannot
+/// enforce this because it deliberately skips holes.
+function readCanonicalArray(value, expectedLength) {
+  if (value !== null && typeof value === "object" && nodeUtilTypes.isProxy(value)) {
+    return Object.freeze({ ok: false, reason: "shape_mismatch" });
+  }
+  if (!Array.isArray(value)) {
+    return Object.freeze({ ok: false, reason: "not_array" });
+  }
+  if (Object.getPrototypeOf(value) !== Array.prototype) {
+    return Object.freeze({ ok: false, reason: "shape_mismatch" });
+  }
+
+  const lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+  if (
+    lengthDescriptor === undefined ||
+    !Object.hasOwn(lengthDescriptor, "value") ||
+    lengthDescriptor.enumerable !== false
+  ) {
+    return Object.freeze({ ok: false, reason: "shape_mismatch" });
+  }
+  if (lengthDescriptor.value !== expectedLength) {
+    return Object.freeze({ ok: false, reason: "length_mismatch" });
+  }
+
+  const actualKeys = Reflect.ownKeys(value);
+  if (actualKeys.length !== expectedLength + 1) {
+    return Object.freeze({ ok: false, reason: "shape_mismatch" });
+  }
+
+  const snapshot = [];
+  for (let index = 0; index < expectedLength; index += 1) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    if (
+      descriptor === undefined ||
+      !Object.hasOwn(descriptor, "value") ||
+      descriptor.enumerable !== true
+    ) {
+      return Object.freeze({ ok: false, reason: "shape_mismatch" });
+    }
+    snapshot.push(descriptor.value);
+  }
+  return Object.freeze({ ok: true, value: Object.freeze(snapshot) });
 }
 
 /// What a row's OWN evidence supports, re-derived against the canonical invariant
@@ -241,70 +357,156 @@ function rederiveRowStatus(row) {
     : INVARIANT_STATUS.VIOLATED;
 }
 
-/// Re-derives the WHOLE report from the per-invariant rows, and each row from its
-/// own evidence, so neither a hand-edited summary nor a hand-edited row set can
-/// report CLOSED over evidence that does not support it. Nothing here is read as
-/// asserted: schema, every status, all four counts, `blocked_by` and the verdict
-/// are recomputed and compared exactly.
+/// Verifies the whole canonical report envelope from the per-invariant rows, and
+/// each decision-bearing row status from its normalized evidence, so neither a
+/// hand-edited summary nor a hand-edited row set can report CLOSED over evidence
+/// that does not support it. Schema, shape, truth label, proof boundaries, every
+/// status, all four counts, `blocked_by` and the verdict are checked exactly.
 ///
-/// It still cannot tell you whether the observation was honestly MEASURED — that
-/// is the instrument's problem, not the ledger's. What it now guarantees is that
-/// the ledger's own arithmetic and its evidence agree.
-export function verifyClosureVerdict(report) {
-  if (report?.schema !== NODE0_CLOSURE_INVARIANTS_SCHEMA) {
+/// UNKNOWN CAUSE IS NOT RE-DERIVED. Schema v0.3 normalizes every refused raw
+/// observation to the same null evidence triple, so its specific diagnostic
+/// reason is vocabulary-checked and structurally bound, not independently
+/// reconstructed. Honest measurement and diagnostic provenance remain the
+/// instrument's problem, not the ledger's.
+function verifyCanonicalClosureVerdict(report) {
+  const canonicalReport = readCanonicalRecord(report, REPORT_KEYS);
+  if (canonicalReport === null) {
+    return Object.freeze({ ok: false, reason: "report_shape_mismatch" });
+  }
+  if (canonicalReport.schema !== NODE0_CLOSURE_INVARIANTS_SCHEMA) {
     return Object.freeze({ ok: false, reason: "schema_mismatch" });
   }
-  const rows = report.invariants;
-  if (!Array.isArray(rows) || rows.length !== CLOSURE_INVARIANTS.length) {
+  if (canonicalReport.truth_label !== NODE0_CLOSURE_INVARIANTS_TRUTH_LABEL) {
+    return Object.freeze({ ok: false, reason: "truth_label_mismatch" });
+  }
+  if (
+    canonicalReport.what_this_proves !== WHAT_THIS_PROVES ||
+    canonicalReport.what_this_does_not_prove !== WHAT_THIS_DOES_NOT_PROVE
+  ) {
+    return Object.freeze({ ok: false, reason: "proof_boundary_mismatch" });
+  }
+
+  const canonicalRows = readCanonicalArray(
+    canonicalReport.invariants,
+    CLOSURE_INVARIANTS.length,
+  );
+  if (
+    !canonicalRows.ok &&
+    (canonicalRows.reason === "not_array" || canonicalRows.reason === "length_mismatch")
+  ) {
     return Object.freeze({ ok: false, reason: "invariant_row_count_mismatch" });
   }
-  const ids = rows.map((r) => r?.id);
+  if (!canonicalRows.ok) {
+    return Object.freeze({ ok: false, reason: "invariant_array_shape_mismatch" });
+  }
+
+  const rows = [];
+  for (const row of canonicalRows.value) {
+    const canonicalRow = readCanonicalRecord(row, ROW_KEYS);
+    if (canonicalRow === null) {
+      return Object.freeze({ ok: false, reason: "row_shape_mismatch" });
+    }
+    rows.push(canonicalRow);
+  }
+  Object.freeze(rows);
+
+  const ids = rows.map((row) => row.id);
   if (ids.join("|") !== INVARIANT_IDS.join("|")) {
     return Object.freeze({ ok: false, reason: "invariant_set_mismatch" });
   }
 
   const derived = rows.map(rederiveRowStatus);
-  if (derived.some((d) => d === null)) {
+  if (derived.some((status) => status === null)) {
     return Object.freeze({ ok: false, reason: "invariant_definition_mismatch" });
   }
-  for (let i = 0; i < rows.length; i += 1) {
-    if (rows[i].status !== derived[i]) {
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    const derivedStatus = derived[index];
+    if (row.status !== derivedStatus) {
       return Object.freeze({ ok: false, reason: "row_status_not_supported_by_row_evidence" });
     }
-    // An UNKNOWN row must say why, and a settled row must not invent a reason.
-    const hasReason = typeof rows[i].reason === "string" && rows[i].reason.length > 0;
-    if ((derived[i] === INVARIANT_STATUS.UNKNOWN) !== hasReason) {
+    if (
+      derivedStatus === INVARIANT_STATUS.UNKNOWN &&
+      (row.observed !== null || row.source !== null || row.scope !== null)
+    ) {
+      return Object.freeze({ ok: false, reason: "row_unknown_shape_not_canonical" });
+    }
+    const reasonIsCanonical =
+      derivedStatus === INVARIANT_STATUS.UNKNOWN
+        ? UNKNOWN_REASON_CODES.includes(row.reason)
+        : row.reason === null;
+    if (!reasonIsCanonical) {
       return Object.freeze({ ok: false, reason: "row_reason_not_supported_by_row_evidence" });
     }
   }
 
-  const tally = (status) => derived.filter((d) => d === status).length;
+  const tally = (status) => derived.filter((derivedStatus) => derivedStatus === status).length;
   const satisfied = tally(INVARIANT_STATUS.SATISFIED);
   if (
-    report.satisfied_count !== satisfied ||
-    report.violated_count !== tally(INVARIANT_STATUS.VIOLATED) ||
-    report.unknown_count !== tally(INVARIANT_STATUS.UNKNOWN) ||
-    report.total !== CLOSURE_INVARIANTS.length
+    canonicalReport.satisfied_count !== satisfied ||
+    canonicalReport.violated_count !== tally(INVARIANT_STATUS.VIOLATED) ||
+    canonicalReport.unknown_count !== tally(INVARIANT_STATUS.UNKNOWN) ||
+    canonicalReport.total !== CLOSURE_INVARIANTS.length
   ) {
     return Object.freeze({ ok: false, reason: "summary_not_supported_by_rows" });
   }
 
-  // Violated first, then unknown — the order the report itself publishes. Pruning
-  // a blocker is the forgery that would otherwise read as a clean ledger.
-  const expectedBlocked = [
-    ...rows.filter((r) => r.status === INVARIANT_STATUS.VIOLATED),
-    ...rows.filter((r) => r.status === INVARIANT_STATUS.UNKNOWN),
-  ].map((r) => `${r.id}|${r.status}|${r.reason}`);
-  const claimedBlocked = Array.isArray(report.blocked_by)
-    ? report.blocked_by.map((b) => `${b?.id}|${b?.status}|${b?.reason}`)
-    : null;
-  if (claimedBlocked === null || claimedBlocked.join("~") !== expectedBlocked.join("~")) {
+  // Violated first, then unknown — the order the evaluator publishes. Build the
+  // expectation only from the stable row snapshots, never from live input.
+  const expectedBlocked = [];
+  for (const status of [INVARIANT_STATUS.VIOLATED, INVARIANT_STATUS.UNKNOWN]) {
+    for (let index = 0; index < rows.length; index += 1) {
+      if (derived[index] === status) {
+        expectedBlocked.push(
+          Object.freeze({
+            id: rows[index].id,
+            status,
+            reason: rows[index].reason,
+          }),
+        );
+      }
+    }
+  }
+
+  const canonicalBlockers = readCanonicalArray(
+    canonicalReport.blocked_by,
+    expectedBlocked.length,
+  );
+  if (!canonicalBlockers.ok) {
     return Object.freeze({ ok: false, reason: "blocked_by_not_supported_by_rows" });
+  }
+  for (let index = 0; index < expectedBlocked.length; index += 1) {
+    const claimed = readCanonicalRecord(canonicalBlockers.value[index], BLOCKER_KEYS);
+    const expected = expectedBlocked[index];
+    if (
+      claimed === null ||
+      claimed.id !== expected.id ||
+      claimed.status !== expected.status ||
+      claimed.reason !== expected.reason
+    ) {
+      return Object.freeze({ ok: false, reason: "blocked_by_not_supported_by_rows" });
+    }
   }
 
   const closed = satisfied === CLOSURE_INVARIANTS.length;
-  if (closed !== report.node0_closed || report.verdict !== (closed ? "CLOSED" : "OPEN")) {
+  if (
+    closed !== canonicalReport.node0_closed ||
+    canonicalReport.verdict !== (closed ? "CLOSED" : "OPEN")
+  ) {
     return Object.freeze({ ok: false, reason: "verdict_not_supported_by_rows" });
   }
   return Object.freeze({ ok: true });
+}
+
+export function verifyClosureVerdict(report) {
+  try {
+    if (nodeUtilTypes.isProxy(report)) {
+      return Object.freeze({ ok: false, reason: "unreadable_report" });
+    }
+    return verifyCanonicalClosureVerdict(report);
+  } catch {
+    // Reflective input (for example a revoked Proxy) is unreadable evidence, not
+    // an exception the caller must turn into a verdict.
+    return Object.freeze({ ok: false, reason: "unreadable_report" });
+  }
 }
