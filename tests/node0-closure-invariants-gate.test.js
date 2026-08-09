@@ -23,6 +23,10 @@ test("NCG-01 the gate passes while the ledger is OPEN", () => {
   assert.equal(r.ok, true);
   assert.equal(r.verdict, "OPEN");
   assert.deepEqual(r.blocked_by, []);
+  // One adapter exists, so exactly one row is settled. Nine is not a rounding
+  // error away from ten: six of the nine describe a running loop.
+  assert.equal(r.satisfied_count, 1);
+  assert.equal(r.unknown_count, 9);
 });
 
 test("NCG-02 the gate publishes the true settled count, not a hopeful one", () => {
@@ -32,15 +36,22 @@ test("NCG-02 the gate publishes the true settled count, not a hopeful one", () =
     r.satisfied_count + r.violated_count + r.unknown_count,
     CLOSURE_INVARIANTS.length,
   );
-  // Measured on this tree: no adapter exists for any invariant, so every row is
-  // UNKNOWN and every row is sourceless. If this ever changes, it must change
-  // because an adapter landed — not because the gate started guessing.
+  // Every settled row must name the adapter that settled it. If the count ever
+  // rises, it must rise because an adapter landed — never because the gate
+  // started guessing. The one settled row today binds to an attestation hash.
   assert.equal(r.adapters_registered, CLOSURE_EVIDENCE_ADAPTERS.length);
   for (const row of r.invariants) {
     if (row.status !== INVARIANT_STATUS.UNKNOWN) {
       assert.ok(row.source, `${row.id} is settled and must name its source`);
+      assert.match(row.source, /sha256:[0-9a-f]{64}/, `${row.id} source must bind to an artifact`);
     }
   }
+  // The settled row is the acceptance one, and it is the only one.
+  const settled = r.invariants.filter((row) => row.status === INVARIANT_STATUS.SATISFIED);
+  assert.deepEqual(
+    settled.map((row) => row.id),
+    ["acceptance_is_model_blind"],
+  );
 });
 
 test("NCG-03 an adapter returning null contributes nothing, and never satisfaction", () => {

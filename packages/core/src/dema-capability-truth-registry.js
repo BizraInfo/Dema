@@ -96,6 +96,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_REVERSIBLE_FILE_STEWARD_1A",
   "NODE0_MINIMUM_SEASON_SAVE_RESUME_1A",
   "NODE0_CLOSURE_INVARIANTS_1A",
+  "ACCEPTANCE_MODEL_BLIND_ADAPTER_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -734,6 +735,32 @@ function defaultCapabilityRows() {
         "invariant satisfied",
         "closure proven",
         "endurance demonstrated",
+        "live execution",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "ACCEPTANCE_MODEL_BLIND_ADAPTER_1A",
+      truth_label: "IMPLEMENTED_LOCAL",
+      summary:
+        "Convert one NODE0-MODEL-SWAP-INVARIANCE-1A attestation into a scoped closure observation for acceptance_is_model_blind, and emit nothing unless the verifier independently re-derived the verdicts.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-acceptance-model-blind-adapter.js"],
+        test_paths: ["tests/node0-acceptance-model-blind-adapter.test.js"],
+        review_gate_paths: ["scripts/review/node0-closure-invariants-check.mjs"],
+        receipt_paths: ["docs/receipts/NODE0_CLOSURE_INVARIANTS_1A.md"],
+        documentation_paths: ["docs/CURRENT_LIMITS.md", "docs/TESTING.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim Node0 closure, live runtime, production acceptance traffic, or that the remaining nine invariants are settled. The observation covers the acceptance function exercised on a declared probe task; it is not a measurement of production traffic.",
+      what_this_proves:
+        "The shipped acceptance function decided a real two-model swap under a non-vacuous contract, an independent verifier re-derived every verdict and diagnosis from the carried contract and outputs, and the resulting observation settles exactly one closure invariant at its declared scope.",
+      what_this_does_not_prove:
+        "It does not prove Node0 closure, the other nine invariants, production acceptance behaviour, endurance, activation, or live runtime. Nine invariants remain UNKNOWN and six of them cannot be settled from this repository at all.",
+      forbidden_claims: [
+        "node0 closed",
+        "closure proven",
+        "production acceptance measured",
         "live execution",
         "unattended runtime",
       ],

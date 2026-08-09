@@ -26,12 +26,52 @@ import {
   NODE0_CLOSURE_INVARIANTS_SCHEMA,
   NODE0_CLOSURE_INVARIANTS_TRUTH_LABEL,
 } from "../../packages/core/src/node0-closure-invariants.js";
+import {
+  acceptanceModelBlindObservation,
+  ACCEPTANCE_MODEL_BLIND_INVARIANT_ID,
+} from "../../packages/core/src/node0-acceptance-model-blind-adapter.js";
+import { buildNode0ModelSwapInvariancePayload } from "../../packages/core/src/node0-model-swap-invariance.js";
 
-/// Every adapter the tree currently ships for a closure invariant. It is empty
-/// on purpose and the emptiness is the point: nine invariants have never had an
-/// instrument, and the tenth (`remote_write`) has one whose scope review
-/// demoted it to `null`. A future adapter registers here and the ledger moves.
-export const CLOSURE_EVIDENCE_ADAPTERS = Object.freeze([]);
+/// The probe task the acceptance adapter judges. It is a FIXTURE and says so in
+/// its own `task_id`, which the attestation's content hash covers — so anyone
+/// reading the published source string can see the observation came from this
+/// gate exercising the shipped acceptance function, not from production traffic.
+/// Two distinct models, one passing output and one failing one, under a contract
+/// that actually imposes predicates: without a real swap and a non-vacuous
+/// contract, model-independence holds vacuously and proves nothing.
+const ACCEPTANCE_PROBE = Object.freeze({
+  task: Object.freeze({
+    task_id: "review-gate-acceptance-model-blindness-probe",
+    acceptance_contract: Object.freeze({
+      required_output_keys: ["answer"],
+      forbidden_substrings: ["I cannot"],
+      expected: Object.freeze({ answer: 42 }),
+    }),
+  }),
+  candidates: Object.freeze([
+    Object.freeze({ model_id: "probe-model-a", output: Object.freeze({ answer: 42 }) }),
+    Object.freeze({ model_id: "probe-model-b", output: Object.freeze({ answer: 41 }) }),
+  ]),
+  // Carry everything: the adapter only accepts an attestation whose verifier
+  // independently RE-RAN the acceptance decision, which requires the contract
+  // and every output to travel.
+  transport: Object.freeze({ carry_contract: true, carry_outputs: true }),
+});
+
+/// Every adapter the tree currently ships for a closure invariant. Nine of the
+/// ten are absent because no instrument exists: six of those describe a RUNNING
+/// LOOP observed across a worker exit and cannot be settled from this repository
+/// at all, and `remote_write` has an instrument whose scope review demoted it to
+/// `null`. An adapter registers here and the ledger moves; nothing else does.
+export const CLOSURE_EVIDENCE_ADAPTERS = Object.freeze([
+  Object.freeze({
+    invariant_id: ACCEPTANCE_MODEL_BLIND_INVARIANT_ID,
+    observe: () =>
+      acceptanceModelBlindObservation(
+        buildNode0ModelSwapInvariancePayload(ACCEPTANCE_PROBE),
+      ),
+  }),
+]);
 
 /// Gathers whatever the registered adapters can honestly observe. An adapter
 /// returning null contributes nothing — silence, which the kernel scores as

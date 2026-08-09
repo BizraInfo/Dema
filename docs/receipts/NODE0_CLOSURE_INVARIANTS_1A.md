@@ -27,14 +27,25 @@ The review gate (`scripts/review/node0-closure-invariants-check.mjs`) publishes
 the ledger on every `npm run check`:
 
 ```
-adapters registered: 0 of 10
-ledger: OPEN - 0 satisfied, 0 violated, 10 unknown of 10
+adapters registered: 1 of 10
+ledger: OPEN - 1 satisfied, 0 violated, 9 unknown of 10
+  + SATISFIED acceptance_is_model_blind <- NODE0-MODEL-SWAP-INVARIANCE-1A verdict_reproduced sha256:...
 ```
 
-**Zero evidence adapters exist.** Nine invariants have never had an instrument.
-The tenth, `remote_write`, has one — `NODE0-SOURCE-LISTENER-SCAN-1A` — whose
-scope review (TASK-060) demoted it to returning `null`, because a source scan
-cannot settle a deployment question.
+**One evidence adapter exists.** `ACCEPTANCE-MODEL-BLIND-ADAPTER-1A` settles
+`acceptance_is_model_blind` from a model-swap attestation whose verifier
+independently re-derived every verdict and diagnosis from the carried contract
+and carried outputs. A weaker tier returns `null`: evidence omitted is evidence
+absent, and no builder may reach a satisfied invariant by carrying less.
+
+That observation exercises the **shipped** acceptance function on a **declared
+probe task** (`review-gate-acceptance-model-blindness-probe`, covered by the
+attestation content hash). It is not a measurement of production traffic, and
+the receipt says so rather than letting the ledger imply otherwise.
+
+Eight invariants have never had an instrument. The tenth, `remote_write`, has
+one — `NODE0-SOURCE-LISTENER-SCAN-1A` — whose scope review (TASK-060) demoted it
+to returning `null`, because a source scan cannot settle a deployment question.
 
 ## What the gate asserts, and what it deliberately does not
 
