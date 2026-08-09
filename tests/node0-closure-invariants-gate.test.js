@@ -20,6 +20,7 @@ import {
   CLOSURE_INVARIANTS,
   INVARIANT_STATUS,
   NODE0_CLOSURE_INVARIANTS_SCHEMA,
+  evaluateNode0ClosureInvariants,
 } from "../packages/core/src/node0-closure-invariants.js";
 
 test("NCG-01 the gate passes while the ledger is OPEN", () => {
@@ -146,4 +147,61 @@ test("NCG-08 the subordinate closure schemas are distinct from the ledger's", ()
     assert.notEqual(schema, NODE0_CLOSURE_INVARIANTS_SCHEMA);
   }
   assert.equal(new Set(SUBORDINATE_CLOSURE_SCHEMAS).size, SUBORDINATE_CLOSURE_SCHEMAS.length);
+});
+
+test("NCG-09 every registered adapter claims exactly the scope its invariant requires", () => {
+  // Nothing structural binds an adapter's scope to the registry's: each adapter
+  // retypes the string as its own literal rather than importing it.
+  //
+  // Drift is not currently invisible — but it is only caught by accident. NCG-01
+  // pins `satisfied_count` at 1 and NCG-02 pins the settled row's identity, so a
+  // typo trips them with "wrong settled count" rather than naming the cause. Both
+  // must be edited whenever an adapter legitimately lands, which makes them a
+  // moving tripwire rather than an invariant. The one real binding assertion
+  // lives in node0-acceptance-model-blind-adapter.test.js and covers that
+  // adapter alone.
+  //
+  // This states the binding as a property of the registry, so adapter #2 inherits
+  // it without anyone remembering to write it again.
+  assert.ok(CLOSURE_EVIDENCE_ADAPTERS.length > 0, "a registry with no adapters proves nothing");
+
+  for (const adapter of CLOSURE_EVIDENCE_ADAPTERS) {
+    const invariant = CLOSURE_INVARIANTS.find((i) => i.id === adapter.invariant_id);
+    assert.ok(invariant, `adapter targets unknown invariant: ${adapter.invariant_id}`);
+    const observation = adapter.observe();
+    // Silence is legitimate — an adapter with nothing to report contributes
+    // nothing. Only a produced observation carries a scope to bind.
+    if (observation === null || observation === undefined) continue;
+    assert.equal(
+      observation.scope,
+      invariant.required_scope,
+      `${adapter.invariant_id}: adapter scope must equal the registry's required_scope`,
+    );
+  }
+
+  // NEGATIVE CONTROL. The loop above passes trivially if a mismatch could never
+  // be detected, so drift one scope deliberately and prove it IS caught — and
+  // prove what the runtime does with it. The row does not become VIOLATED and
+  // the verdict does not change: it degrades to UNKNOWN, the exact shape of
+  // "no instrument exists". A settled invariant is silently unsettled, and the
+  // ledger's own verdict cannot tell you it happened.
+  const subject = CLOSURE_INVARIANTS.find(
+    (i) => i.id === CLOSURE_EVIDENCE_ADAPTERS[0].invariant_id,
+  );
+  const honest = evaluateNode0ClosureInvariants(gatherClosureEvidence());
+  assert.equal(
+    honest.invariants.find((r) => r.id === subject.id).status,
+    INVARIANT_STATUS.SATISFIED,
+    "the control needs a satisfied subject to degrade",
+  );
+
+  const drifted = gatherClosureEvidence();
+  drifted[subject.id] = { ...drifted[subject.id], scope: `${subject.required_scope}_typo` };
+  const report = evaluateNode0ClosureInvariants(drifted);
+  const row = report.invariants.find((r) => r.id === subject.id);
+
+  assert.equal(row.status, INVARIANT_STATUS.UNKNOWN);
+  assert.equal(row.reason, "observation_scope_mismatch");
+  assert.equal(report.satisfied_count, honest.satisfied_count - 1);
+  assert.equal(report.verdict, "OPEN", "the drift must not be visible as a verdict change");
 });
