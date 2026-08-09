@@ -45,12 +45,14 @@ async function seededHome(t, profile = { preferred_name: "Mumu" }) {
 
 // The kernel is pure, so these build ctx directly — no temp home, no key
 // fixture, no machine coupling.
-function ctxWith({ keyPresent = true, mission = null, now } = {}) {
+function ctxWith({ keyPresent = true, mission = null, now, constellation = null, council = null } = {}) {
   return {
     dema_home: "/nonexistent",
     profile: { source_present: true, preferred_name: "Mumu", language_code: null },
     key_present: keyPresent,
     mission,
+    constellation,
+    council,
     now: now ?? new Date("2026-08-09T05:00:00Z"),
   };
 }
@@ -126,6 +128,45 @@ test("FLM-04 a pointer without next_safe_action does not fabricate one", async (
   assert.equal(envelope.mission.present, true);
   assert.equal(envelope.mission.next_safe_action, null);
   assert.doesNotMatch(envelope.recommended_next_step, /Continue the open mission/);
+});
+
+test("FLM-05 the home screen composes bases and council when injected", () => {
+  const envelope = buildFirstLookHome(
+    ctxWith({
+      mission: OPEN_MISSION,
+      constellation: {
+        bases: [{ base_id: "base:host" }, { base_id: "base:attached:x" }],
+        dark_capacity_gb: 1022.1,
+        attached_not_enrolled: 1,
+      },
+      council: { convened: true, seat_count: 7, reasoning_performed: false },
+    }),
+  );
+  assert.equal(envelope.node.bases_known, 2);
+  assert.equal(envelope.node.dark_capacity_gb, 1022.1);
+  assert.equal(envelope.node.attached_not_enrolled, 1);
+  assert.equal(envelope.node.council_seats, 7);
+  // Carried verbatim: the home screen must never present convening as thinking.
+  assert.equal(envelope.node.council_reasoning_performed, false);
+  const text = renderFirstLookHome(envelope, { noColor: true });
+  assert.match(text, /Your node/);
+  assert.match(text, /1022\.1 GB unreachable/);
+  assert.match(text, /not yet reasoning/);
+});
+
+test("FLM-06 NEGATIVE CONTROL — absent awareness degrades, it does not fabricate", () => {
+  const envelope = buildFirstLookHome(ctxWith({ mission: OPEN_MISSION }));
+  assert.equal(envelope.node.bases_known, null);
+  assert.equal(envelope.node.council_seats, null);
+  assert.equal(envelope.node.dark_capacity_gb, null);
+  const text = renderFirstLookHome(envelope, { noColor: true });
+  assert.doesNotMatch(text, /Your node/, "no section without evidence for it");
+  // A council that refused must not be reported as seats.
+  const refused = buildFirstLookHome(
+    ctxWith({ council: { convened: false, reason: "authority_edge_refused" } }),
+  );
+  assert.equal(refused.node.council_seats, null);
+  assert.equal(refused.node.council_reasoning_performed, null);
 });
 
 test("first-look greeting uses profile preferred_name", async () => {
