@@ -49,6 +49,11 @@ import {
   VERIFIER_INDEPENDENCE_INVARIANT_ID,
   CYCLE_AUTHORITY_DELTA_INVARIANT_ID,
 } from "../../packages/core/src/node0-runtime-mission-adapter.js";
+import {
+  recoveryAfterWorkerExitObservation,
+  recoveryDiagnostic,
+  RECOVERY_INVARIANT_ID,
+} from "../../packages/core/src/node0-recovery-adapter.js";
 
 /// The probe task the acceptance adapter judges. It is a FIXTURE and says so in
 /// its own `task_id`, which the attestation's content hash covers — so anyone
@@ -129,6 +134,15 @@ export const CLOSURE_EVIDENCE_ADAPTERS = Object.freeze([
     invariant_id: CYCLE_AUTHORITY_DELTA_INVARIANT_ID,
     observe: () => cycleAuthorityDeltaObservation(),
     diagnose: () => runtimeMissionDiagnostic(),
+  }),
+  // NODE0-RECOVERY-OBSERVATION-1A. Its own artefact, because the evidence comes
+  // from a different experiment: a supervisor behind the governed Node0 boundary
+  // that was never told about the kill. The observation is supplied by an
+  // INDEPENDENT observer process, never by the supervisor that conducted it.
+  Object.freeze({
+    invariant_id: RECOVERY_INVARIANT_ID,
+    observe: () => recoveryAfterWorkerExitObservation(),
+    diagnose: () => recoveryDiagnostic(),
   }),
 ]);
 

@@ -157,6 +157,16 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // fresh one. Predecessor and successor never share memory — only bytes on disk
   // — so key-order stability is what makes the comparison mean anything.
   "scripts/proof/node0-runtime-mission-worker.mjs",
+  // NODE0-RECOVERY-OBSERVATION-1A. Four processes and no shared memory: worker A
+  // hashes the checkpoint it leaves behind, the supervisor never sees it, worker B
+  // resumes it, and an INDEPENDENT observer re-derives the contract hash from the
+  // persisted fields to decide whether B resumed the same mission. Every one of
+  // those comparisons is between bytes written by one dead process and read by
+  // another, so key-order stability is the entire basis of the claim.
+  "packages/core/src/node0-recovery-adapter.js",
+  "scripts/proof/node0-recovery-proof.mjs",
+  "scripts/proof/node0-recovery-worker.mjs",
+  "scripts/proof/node0-recovery-observer.mjs",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
