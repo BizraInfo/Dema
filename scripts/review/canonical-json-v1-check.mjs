@@ -107,6 +107,17 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // one performs real execution (two spawns and a SIGKILL) while the adapter
   // performs none.
   "scripts/proof/node0-worker-handoff-proof.mjs",
+  // MISSION-CONTRACT-STATE-0A (TASK-026 phase 01) — the mission contract IS its
+  // hash: immutability is enforced by content-addressing, not by a guard, so an
+  // unstable serializer would not weaken the rule, it would abolish it. A
+  // key-order-dependent digest would let the identical contract present two
+  // identities, and `contract_binding_mismatch` — the check that stops a resuming
+  // worker adopting the wrong mission — would refuse honest resumes and admit
+  // nothing. The state snapshot has the same contract across a worker exit: the
+  // process that writes the checkpoint is not the process that verifies it.
+  // Registration is adoption review only; the kernel is pure, promotes nothing,
+  // and conducts no mission.
+  "packages/core/src/mission-contract-state.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
