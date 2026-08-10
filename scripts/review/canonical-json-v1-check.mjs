@@ -167,6 +167,13 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   "scripts/proof/node0-recovery-proof.mjs",
   "scripts/proof/node0-recovery-worker.mjs",
   "scripts/proof/node0-recovery-observer.mjs",
+  // NODE0-TRANSITION-COVERAGE-1A \u2014 the first artefact that can carry a
+  // REFUTATION into the closure ledger, so its digest is the thing standing
+  // between a measured violation and a forged one. The producer re-derives every
+  // counterexample from source and a reader in a different process re-derives the
+  // digest; key-order instability would let an edited artefact keep its hash.
+  "packages/core/src/node0-transition-coverage-adapter.js",
+  "scripts/proof/node0-transition-coverage-proof.mjs",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 

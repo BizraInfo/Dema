@@ -54,6 +54,11 @@ import {
   recoveryDiagnostic,
   RECOVERY_INVARIANT_ID,
 } from "../../packages/core/src/node0-recovery-adapter.js";
+import {
+  transitionCoverageObservation,
+  transitionCoverageDiagnostic,
+  TRANSITION_COVERAGE_INVARIANT_ID,
+} from "../../packages/core/src/node0-transition-coverage-adapter.js";
 
 /// The probe task the acceptance adapter judges. It is a FIXTURE and says so in
 /// its own `task_id`, which the attestation's content hash covers — so anyone
@@ -143,6 +148,15 @@ export const CLOSURE_EVIDENCE_ADAPTERS = Object.freeze([
     invariant_id: RECOVERY_INVARIANT_ID,
     observe: () => recoveryAfterWorkerExitObservation(),
     diagnose: () => recoveryDiagnostic(),
+  }),
+  // NODE0-TRANSITION-COVERAGE-1A. The FIRST adapter that can emit a refutation:
+  // `observed:false` against `required:true` scores VIOLATED, not UNKNOWN. It
+  // emits nothing unless the recorded verdict actually carries an observed value,
+  // so an incomplete registry contributes silence rather than a false negative.
+  Object.freeze({
+    invariant_id: TRANSITION_COVERAGE_INVARIANT_ID,
+    observe: () => transitionCoverageObservation(),
+    diagnose: () => transitionCoverageDiagnostic(),
   }),
 ]);
 
