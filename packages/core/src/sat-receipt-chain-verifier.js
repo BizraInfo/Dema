@@ -214,7 +214,7 @@ function buildVerdict({
     schema: VERDICT_SCHEMA,
     truth_label:
       verdict === "empty_chain"
-        ? "NO_VERDICT"
+        ? "UNKNOWN"
         : passed
           ? "MEASURED"
           : "CHAIN_VIOLATION",
