@@ -17,6 +17,8 @@ import {
   keypairMatches,
   sha256,
 } from "./authorship-signature.js";
+// stableStringify only — consent-common imports nothing from receipts, so no cycle.
+import { stableStringify } from "../../consent/src/consent-common.js";
 
 export const KEY_INIT_CONSENT_PHRASE = "GENERATE AUTHORSHIP KEY";
 export const KEY_INIT_SCHEMA = "bizra.dema.authorship_key_init.v0.1";
@@ -1774,6 +1776,165 @@ async function stageQuarantine(paths, fp, privPem, pubPem) {
   }
 }
 
+// ── ISNAD-AUTHORITY-SUCCESSION-1A · canonical-ledger bridge ─────────────────
+//
+// Imported dynamically. canonical-receipt.js imports loadActiveKeyPair from this
+// module, so a static import here would close a cycle. Deferring it to call time
+// keeps module evaluation order irrelevant and keeps the ONE canonical ledger as
+// the only proof store — no parallel succession log exists.
+async function canonicalLedgerModule() {
+  return import("./canonical-ledger.js");
+}
+
+const SUCCESSION_TRUTH_LABEL = "MEASURED_LOCAL";
+
+async function appendSuccessionIntent({
+  demaHome, rotationTxId, oldFingerprint, newFp, successorPublicKeyPem,
+  consentBindingSha256, expectedPointerStateSha256, now,
+}) {
+  try {
+    const { appendCanonicalReceipt } = await canonicalLedgerModule();
+    const { buildSuccessionIntentBody } = await import("./authority-succession.js");
+    const { CANONICAL_RECEIPT_CONSENT_PHRASE } = await import("./canonical-receipt.js");
+    const r = await appendCanonicalReceipt({
+      canonicalBody: buildSuccessionIntentBody({
+        rotationTxId,
+        predecessorFingerprint: oldFingerprint,
+        successorFingerprint: newFp,
+        successorPublicKeyPem,
+        successorPublicKeySha256: sha256(successorPublicKeyPem),
+        consentBindingSha256,
+        expectedPointerStateSha256,
+      }),
+      truthLabel: SUCCESSION_TRUTH_LABEL,
+      whatProves:
+        "the authority in force authorized this exact successor for this rotation transaction, before any pointer moved",
+      whatDoesNotProve:
+        "it does NOT prove the successor became authoritative; only a matching commit signed by the successor does that",
+      consent: CANONICAL_RECEIPT_CONSENT_PHRASE,
+      demaHome,
+      now,
+    });
+    return r.appended
+      ? { ok: true, receipt_id: r.receipt.receipt_id }
+      : { ok: false, reason: r.reason ?? r.error };
+  } catch (error) {
+    return { ok: false, reason: error?.message ?? String(error) };
+  }
+}
+
+async function appendSuccessionCommit({
+  demaHome, ap, rotationTxId, oldFingerprint, newFp, intentReceiptId, now,
+}) {
+  try {
+    const { appendCanonicalReceipt } = await canonicalLedgerModule();
+    const { buildSuccessionCommitBody } = await import("./authority-succession.js");
+    const { CANONICAL_RECEIPT_CONSENT_PHRASE } = await import("./canonical-receipt.js");
+    // Observed, not intended: the pointer and registry are re-read from disk so
+    // the commit attests to the world as it actually is.
+    const pointerRaw = await readExact(ap.activePointer);
+    const registryRaw = await readExact(ap.retiredRegistry).catch(() => "");
+    const r = await appendCanonicalReceipt({
+      canonicalBody: buildSuccessionCommitBody({
+        rotationTxId,
+        predecessorFingerprint: oldFingerprint,
+        successorFingerprint: newFp,
+        intentReceiptId,
+        observedPointerStateSha256: sha256(pointerRaw),
+        generationFingerprint: newFp,
+        retirementRelationSha256: sha256(registryRaw),
+      }),
+      truthLabel: SUCCESSION_TRUTH_LABEL,
+      whatProves:
+        "the successor holds its private key and attests that the authoritative pointer now selects it, completing exactly the succession its predecessor authorized",
+      whatDoesNotProve:
+        "it does not re-authorize itself; the authorization it completes was signed by the predecessor before the switch",
+      consent: CANONICAL_RECEIPT_CONSENT_PHRASE,
+      demaHome,
+      now,
+    });
+    return r.appended
+      ? { ok: true, receipt_id: r.receipt.receipt_id }
+      : { ok: false, reason: r.reason ?? r.error };
+  } catch (error) {
+    return { ok: false, reason: error?.message ?? String(error) };
+  }
+}
+
+/**
+ * Complete a succession whose commit half never landed.
+ *
+ * The measured crash state: the pointer selects K_new, a K_old-signed intent is
+ * in the ledger, and no commit exists. Before this, `resumeAuthorshipRotation`
+ * reported `already_resolved` and wrote nothing, so the transition stayed
+ * authoritative and unevidenced permanently.
+ *
+ * Idempotent by construction: it derives the pending successor from the chain
+ * itself, so a chain with no open intent has nothing to finalize and returns
+ * `already_complete` without writing a byte.
+ *
+ * FAILS CLOSED, and never fabricates the missing half in the other direction: if
+ * the pointer has switched but no valid predecessor-signed intent exists, this
+ * refuses with `requires_human`. Predecessor authorization cannot be
+ * manufactured after the authority has already moved — that is the one thing
+ * nothing in the system is entitled to do.
+ */
+export async function finalizeAuthoritySuccession({ demaHome, now } = {}) {
+  const ap = activeKeyPaths(demaHome);
+  const refuse = (reason) =>
+    Object.freeze({ finalized: false, requires_human: true, reason, authority_delta: 0 });
+  try {
+    const { loadCanonicalLedger } = await canonicalLedgerModule();
+    const entries = await loadCanonicalLedger({ demaHome });
+    if (entries.length === 0) {
+      return Object.freeze({ finalized: false, already_complete: true, reason: "no_ledger", authority_delta: 0 });
+    }
+    const { verifyCanonicalAuthorityChain } = await import("./canonical-receipt.js");
+    const rootFp = entries[0]?.operator_public_key_fingerprint;
+    const rootPem = await loadGenerationPublicKey(demaHome, rootFp);
+    if (!rootPem) return refuse("root_authority_unresolvable");
+
+    const walk = verifyCanonicalAuthorityChain({ entries, genesisPubkeyPem: rootPem });
+    if (!walk.verified) return refuse(`chain_unverifiable:${walk.reason}`);
+    if (!walk.pending_successor) {
+      return Object.freeze({ finalized: false, already_complete: true, authority_delta: 0 });
+    }
+
+    const pending = walk.pending_successor;
+    const active = await loadActiveKeyPair(demaHome);
+    if (!active.ok) return refuse(`active_identity_unreadable:${active.error}`);
+    // Only the key the predecessor NAMED may complete. A pointer that landed on
+    // some other generation is an ambiguity, not a rotation to finish.
+    if (active.fingerprint !== pending.successor_fingerprint) {
+      return refuse("active_identity_is_not_the_authorized_successor");
+    }
+
+    const intentBody = entries[pending.intent_index].canonical_body;
+    const commit = await appendSuccessionCommit({
+      demaHome,
+      ap,
+      rotationTxId: intentBody.rotation_tx_id,
+      oldFingerprint: intentBody.predecessor_fingerprint,
+      newFp: intentBody.successor_fingerprint,
+      intentReceiptId: pending.intent_receipt_id,
+      now: typeof now === "string" && now ? now : new Date().toISOString(),
+    });
+    if (!commit.ok) return refuse(`succession_commit_unrecordable:${commit.reason}`);
+
+    return Object.freeze({
+      finalized: true,
+      already_complete: false,
+      rotation_tx_id: intentBody.rotation_tx_id,
+      predecessor_fingerprint: intentBody.predecessor_fingerprint,
+      successor_fingerprint: intentBody.successor_fingerprint,
+      commit_receipt_id: commit.receipt_id,
+      authority_delta: 0,
+    });
+  } catch (error) {
+    return refuse(error?.message ?? String(error));
+  }
+}
+
 async function writeRotationReceipt(paths, newFingerprint, receipt) {
   const dir = join(paths.dir, "rotation-receipts");
   await mkdir(dir, { recursive: true });
@@ -1921,6 +2082,39 @@ export async function rotateAuthorshipKey({
       nowIso,
     );
 
+    // ── ISNAD-AUTHORITY-SUCCESSION-1A · half one of two ──────────────────────
+    //
+    // The predecessor authorizes this exact successor, BEFORE the pointer moves
+    // and therefore while the predecessor is still the authority. Appending it
+    // here is what makes the pair possible at all: after the switch, K_old can
+    // no longer sign anything the chain will accept.
+    //
+    // A refusal here aborts the rotation. An authority transition that could not
+    // record its own authorization must not proceed — that is exactly the
+    // measured defect (authority changed, proof trail absent) this slice exists
+    // to remove, and letting it through "because the key store still works"
+    // would reproduce it under a new name.
+    const rotationTxId = sha256(
+      stableStringify({ old: oldFingerprint, new: newFp, at: nowIso, reason }),
+    );
+    const intent = await appendSuccessionIntent({
+      demaHome,
+      rotationTxId,
+      oldFingerprint,
+      newFp,
+      successorPublicKeyPem: keys.public_key_pem,
+      consentBindingSha256: sha256(
+        stableStringify({ consent, envelope: envelope ?? null, reason }),
+      ),
+      expectedPointerStateSha256: sha256(
+        stableStringify({ generation_fingerprint: newFp, previous_generation: oldFingerprint }),
+      ),
+      now: nowIso,
+    });
+    if (!intent.ok) {
+      return rotateFailClosed("succession_intent_unrecordable", intent.reason);
+    }
+
     // Registry-first: previous_generation must already be retired before the
     // pointer commits, or loadActiveKeyPair returns retired_registry_incomplete.
     try {
@@ -2004,8 +2198,33 @@ export async function rotateAuthorshipKey({
       await recordUsedNonce(paths, envelope.nonce, nowIso).catch(() => {});
     }
 
+    // ── ISNAD-AUTHORITY-SUCCESSION-1A · half two of two ──────────────────────
+    //
+    // The successor proves possession and attests completion of exactly the
+    // succession its predecessor authorized. Only reachable once the pointer has
+    // selected K_new, so this signature is itself the possession proof.
+    //
+    // A crash between the two halves leaves an authorized-but-uncommitted intent
+    // — a legible state, which `finalizeAuthoritySuccession` below completes
+    // from durable facts alone.
+    const commit = await appendSuccessionCommit({
+      demaHome,
+      ap,
+      rotationTxId,
+      oldFingerprint,
+      newFp,
+      intentReceiptId: intent.receipt_id,
+      now: nowIso,
+    });
+    if (!commit.ok) {
+      return rotateFailClosed("succession_commit_unrecordable", commit.reason);
+    }
+
     const receipt = {
       schema: KEY_ROTATE_RECEIPT_SCHEMA,
+      succession_intent_receipt_id: intent.receipt_id,
+      succession_commit_receipt_id: commit.receipt_id,
+      rotation_tx_id: rotationTxId,
       old_fingerprint: oldFingerprint,
       new_fingerprint: newFp,
       generation_dir: generationPath,
@@ -2104,10 +2323,25 @@ export async function resumeAuthorshipRotation({
   if (verdict === "ALREADY_ACTIVE" || verdict === "NOT_INTERRUPTED") {
     const settled = await loadActiveKeyPair(demaHome);
     if (settled.ok && settled.fingerprint === journal.doc?.new_fingerprint) {
+      // ISNAD-AUTHORITY-SUCCESSION-1A. "The pointer already moved" used to end
+      // here, and that was the defect: a rotation killed between the authority
+      // switch and its evidence left the transition authoritative and
+      // unevidenced, and this branch reported it settled while writing nothing.
+      //
+      // The pointer moving is not the transition completing. If the predecessor
+      // authorized a successor whose commit never landed, finalize it from
+      // durable facts. Idempotent — a chain with no open intent finalizes
+      // nothing and writes no byte, so an exact re-run still changes nothing.
+      const succession = await finalizeAuthoritySuccession({ demaHome, resumedAt: nowIso, now: nowIso });
+      if (succession.requires_human === true) {
+        return refuse("succession_unfinalizable", succession.reason);
+      }
       return Object.freeze({
         schema: KEY_ROTATE_RESUME_SCHEMA,
         resumed: true,
         already_resolved: true,
+        succession_finalized: succession.finalized === true,
+        succession_commit_receipt_id: succession.commit_receipt_id ?? null,
         active_fingerprint: settled.fingerprint,
         retired_fingerprint: journal.doc?.old_fingerprint ?? null,
         transaction_state: journal.state,
@@ -2180,6 +2414,15 @@ export async function resumeAuthorshipRotation({
 
     await writeRotationJournal(journalPath, "COMPLETE", oldFp, newFp, nowIso);
 
+    // The pointer moved on THIS path too, so the same law applies: an authority
+    // that changed must carry its evidence. Finalizes the commit half the
+    // interrupted ceremony never reached, and refuses rather than inventing a
+    // predecessor authorization that was never signed.
+    const succession = await finalizeAuthoritySuccession({ demaHome, now: nowIso });
+    if (succession.requires_human === true) {
+      return refuse("succession_unfinalizable", succession.reason);
+    }
+
     // ponytail: the resume seals its OWN receipt bound to the resume phrase. It
     // cannot honestly reproduce the interrupted ceremony's consent envelope —
     // that nonce is not persisted in the journal — so it records what it can
@@ -2224,6 +2467,32 @@ export async function resumeAuthorshipRotation({
 
 // Heavier mid-rotation / journal checks stay OFF the hot path (loadPrivateKey /
 // loadPublicKey) so a leftover journal never DoS-blocks signing consumers.
+/**
+ * Read one archived generation's PUBLIC key by fingerprint.
+ *
+ * ISNAD-AUTHORITY-SUCCESSION-1A. The chain walk resolves a successor's key from
+ * the intent body, so an external verifier needs no filesystem. This exists for
+ * the LOCAL side only: the appender must resolve the authority that signed the
+ * chain's first entry in order to walk forward from it.
+ *
+ * It returns the archived bytes and nothing else. It establishes no ancestry —
+ * a generation existing on this disk is not evidence that it was ever the
+ * legitimate authority, which is precisely what the succession links prove.
+ * Returns null when absent or unreadable; callers must fail closed on null.
+ */
+export async function loadGenerationPublicKey(demaHome, fingerprint) {
+  if (typeof fingerprint !== "string" || !/^[0-9a-f]{16,128}$/.test(fingerprint)) {
+    return null;
+  }
+  try {
+    const ap = activeKeyPaths(demaHome);
+    const pem = await readExact(join(ap.generationsDir, fingerprint, "public.pem"));
+    return isSpkiPublicKeyPem(pem) ? pem : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function loadGuardedActiveKey(demaHome) {
   const paths = keyPaths(demaHome);
   const journal = await readExactIfPresent(

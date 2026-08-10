@@ -29,48 +29,51 @@ import {
 } from "../packages/receipts/src/canonical-receipt.js";
 
 /**
- * ROW8-AUTHORSHIP-IDENTITY-ROTATION · CHARACTERIZATION, PINNED NOT FIXED.
+ * ROW8-AUTHORSHIP-IDENTITY-ROTATION — the experiment, RE-RUN after repair.
  *
- * `receipt_per_transition` is VIOLATED with exactly one proven counterexample,
- * `authorship_identity_rotation`. These tests establish WHY, by measurement
- * rather than by reading the producer's verdict back to itself, and they pin
- * the current behaviour so a future repair has a baseline to move.
+ * This file first PINNED two defects measured on 0952c16.
+ * ISNAD-AUTHORITY-SUCCESSION-1A repaired both, so the pins are re-run here
+ * rather than deleted: a characterization never re-measured after the repair it
+ * motivated degrades into an assertion that the repair happened.
  *
- * They take no position on the repair. Two independent findings are recorded.
+ * ── FINDING 1 · authority could change with no evidence, and recovery could
+ *    not finalize it ────────────────────────────────────────────────────────
  *
- * ── FINDING 1 · authority can change with no evidence, and recovery cannot
- *    finalize it ─────────────────────────────────────────────────────────────
+ * `rotateAuthorshipKey` ordered its writes: journal PREPARED → ACTIVATING →
+ * retire the old fingerprint → activate the new generation (THE AUTHORITY
+ * SWITCH) → verify → journal → write the rotation receipt → COMPLETE.
  *
- * `rotateAuthorshipKey` orders its writes: journal PREPARED → journal ACTIVATING
- * → retire the old fingerprint → activate the new generation (THE AUTHORITY
- * SWITCH) → verify → journal RETIREMENT_COMMITTED → write the rotation receipt →
- * journal COMPLETE.
+ * A kill after the pointer rename left the new generation authoritative with no
+ * evidence, and `resumeAuthorshipRotation` classified that state ALREADY_ACTIVE,
+ * answered `already_resolved: true` and wrote nothing — it existed to roll a
+ * stalled pointer forward, not to reconstruct missing evidence. The forbidden
+ * pair, and permanent. The pre-existing CP5 fixture kills on the OTHER side of
+ * the same rename and yields a liveness stall, which is how the hole survived a
+ * crash matrix that already existed.
  *
- * A kill after the pointer rename and before the receipt write therefore leaves
- * the new generation authoritative with no rotation receipt. On restart,
- * `resumeAuthorshipRotation` classifies that state as ALREADY_ACTIVE and returns
- * `already_resolved: true` WITHOUT writing anything — by design, since it exists
- * to roll a stalled pointer forward, not to reconstruct missing evidence.
+ * NOW: the predecessor appends a signed SUCCESSION INTENT while it is still the
+ * authority, before the pointer moves. A crash on the far side therefore leaves
+ * an authorized-but-uncommitted intent — a legible state — and resume finalizes
+ * the successor-signed COMMIT from durable facts alone, with no human
+ * reconstruction. The local rotation-receipt FILE is still absent after such a
+ * crash; it is no longer the evidence that matters.
  *
- * The result is the forbidden pair: authority changed, proof trail absent, and
- * no path that finalizes it. The existing CP5 fixture kills on the OTHER side of
- * the same rename and produces a liveness stall instead, which is why this hole
- * survived a crash matrix that already existed.
+ * ── FINDING 2 · the canonical ledger could not survive a rotation ───────────
  *
- * ── FINDING 2 · the canonical ledger cannot survive a rotation ──────────────
+ * `verifyCanonicalChain` took ONE `pubkeyPem` and verified every entry against
+ * it; entries carried no key identity and the chain had no notion of
+ * succession. After a rotation the chain reported `signature_invalid` and
+ * `appendCanonicalReceipt` refused with `ledger_chain_broken` — which is
+ * precisely why finding 1 could not be repaired by "just emit a receipt".
  *
- * `verifyCanonicalChain` takes ONE `pubkeyPem` and verifies every entry against
- * it; entries carry no key identity and the chain has no notion of key
- * succession. After a rotation, `verifyCanonicalLedger` against the new active
- * key reports `signature_invalid` on the pre-rotation entries, and
- * `appendCanonicalReceipt` refuses to extend with `ledger_chain_broken`.
+ * NOW: verification walks the authority forward from an externally supplied
+ * genesis anchor, advancing only across a valid two-half succession link.
+ * Passing the CURRENT active key still fails, loudly and correctly: the anchor
+ * is the root of trust, not the key in force today.
  *
- * This is measured on the unmodified base and is not caused by the rotation
- * repair — it CONSTRAINS it. The obvious repair for finding 1 is to emit
- * canonical transition evidence, and the commit half of that evidence would have
- * to be appended after the authority switch, which is exactly the append that
- * cannot succeed. Whether the ledger should carry key succession is a
- * cryptographic authority decision, not a test's call.
+ * The adversarial matrix over the verifier itself lives in
+ * `tests/authority-succession.test.js`. This file stays what it was — the real
+ * SIGKILL, end to end.
  *
  * FIXTURE KEYS ONLY. Disposable DEMA_HOME only. No real ~/.dema is touched.
  */
@@ -133,7 +136,7 @@ function crashRotationAfterPointerCommit(home) {
   return ap;
 }
 
-describe("ROW8-A · authority changes with no evidence, and recovery cannot finalize it", () => {
+describe("ROW8-A · a changed authority now carries its evidence, and recovery finalizes it", () => {
   it("ROW8-A1: POSITIVE CONTROL — an uninterrupted rotation DOES write a rotation receipt", async () => {
     await withHome(async (home) => {
       await seedKey(home);
@@ -165,18 +168,33 @@ describe("ROW8-A · authority changes with no evidence, and recovery cannot fina
     });
   });
 
-  it("ROW8-A3: PINNED DEFECT — authority changed and NO rotation receipt exists", async () => {
+  it("ROW8-A3: RESOLVED — the crash leaves a predecessor-signed INTENT, not silence", async () => {
     await withHome(async (home) => {
       await seedKey(home);
+      const genesis = await loadPublicKey(home);
       crashRotationAfterPointerCommit(home);
-      assert.deepEqual(rotationReceipts(home), [],
-        "PINNED: the transition is authoritative and unevidenced");
+
+      // The local rotation-receipt file is still absent. It was never the
+      // evidence the invariant asks for, and pinning its absence again would
+      // pin the wrong thing.
+      assert.deepEqual(rotationReceipts(home), []);
+
+      const entries = await loadCanonicalLedger({ demaHome: home });
+      assert.equal(entries.length, 1, "exactly the intent — the commit never ran");
+
+      const walk = await verifyCanonicalLedger({ demaHome: home, pubkeyPem: genesis });
+      assert.equal(walk.verified, true, "the chain still verifies from the genesis anchor");
+      assert.ok(walk.pending_successor, "and it names an authorized-but-uncommitted successor");
+      const active = await loadActiveKeyPair(home);
+      assert.equal(walk.pending_successor.successor_fingerprint, active.fingerprint,
+        "the pending successor is exactly the generation the pointer selected");
     });
   });
 
-  it("ROW8-A4: PINNED DEFECT — resume reports already_resolved and finalizes nothing", async () => {
+  it("ROW8-A4: RESOLVED — resume finalizes the succession, and is idempotent", async () => {
     await withHome(async (home) => {
       await seedKey(home);
+      const genesis = await loadPublicKey(home);
       crashRotationAfterPointerCommit(home);
 
       const resumed = await resumeAuthorshipRotation({
@@ -185,27 +203,52 @@ describe("ROW8-A · authority changes with no evidence, and recovery cannot fina
         resumedAt: "2026-08-11T00:05:00.000Z",
       });
       assert.equal(resumed.resumed, true);
-      assert.equal(resumed.already_resolved, true,
-        "resume classifies the state as settled because the pointer already moved");
-      assert.deepEqual(rotationReceipts(home), [],
-        "PINNED: recovery creates no evidence, so the gap is permanent, not transient");
+      assert.equal(resumed.succession_finalized, true,
+        "recovery completes the evidence rather than declaring the state settled");
+
+      const after = await loadCanonicalLedger({ demaHome: home });
+      assert.equal(after.length, 2, "intent + commit");
+      const walk = await verifyCanonicalLedger({ demaHome: home, pubkeyPem: genesis });
+      assert.equal(walk.verified, true);
+      assert.equal(walk.successions.length, 1);
+      assert.equal(walk.pending_successor, null, "nothing is left open");
+      const active = await loadActiveKeyPair(home);
+      assert.equal(walk.final_authority_fingerprint, active.fingerprint,
+        "the lineage lands on the key that is actually authoritative");
+
+      // Idempotence: an exact re-run must change no durable byte.
+      const again = await resumeAuthorshipRotation({
+        consent: KEY_ROTATE_RESUME_CONSENT_PHRASE,
+        demaHome: home,
+        resumedAt: "2026-08-11T00:06:00.000Z",
+      });
+      assert.equal(again.succession_finalized, false, "there is nothing left to finalize");
+      assert.equal((await loadCanonicalLedger({ demaHome: home })).length, 2);
     });
   });
 
-  it("ROW8-A5: the transition emits no canonical ledger entry even when it COMPLETES", async () => {
+  it("ROW8-A5: RESOLVED — a completed rotation emits both halves into the canonical ledger", async () => {
     await withHome(async (home) => {
       await seedKey(home);
+      const genesis = await loadPublicKey(home);
       const before = await loadCanonicalLedger({ demaHome: home });
       const r = await rotate(home);
-      assert.equal(r.rotated, true);
+      assert.equal(r.rotated, true, r.error ?? "");
       const after = await loadCanonicalLedger({ demaHome: home });
-      assert.equal(after.length, before.length,
-        "this is what the Row-8 producer measures: the authoritative transition touches no canonical ledger");
+      assert.equal(after.length, before.length + 2,
+        "this is what the Row-8 producer measures: the authoritative transition now touches the canonical ledger");
+      assert.equal(typeof r.succession_intent_receipt_id, "string");
+      assert.equal(typeof r.succession_commit_receipt_id, "string");
+      assert.notEqual(r.succession_intent_receipt_id, r.succession_commit_receipt_id);
+
+      const walk = await verifyCanonicalLedger({ demaHome: home, pubkeyPem: genesis });
+      assert.equal(walk.verified, true);
+      assert.equal(walk.successions.length, 1);
     });
   });
 });
 
-describe("ROW8-B · the canonical ledger cannot survive a rotation", () => {
+describe("ROW8-B · the canonical ledger survives a rotation, anchored on genesis", () => {
   const append = (home, body, now) => appendCanonicalReceipt({
     canonicalBody: body,
     truthLabel: LABEL,
@@ -216,54 +259,83 @@ describe("ROW8-B · the canonical ledger cannot survive a rotation", () => {
     now,
   });
 
-  it("ROW8-B1: PINNED — a rotation invalidates every pre-rotation ledger entry", async () => {
+  it("ROW8-B1: RESOLVED — a chain spanning a rotation verifies from the GENESIS anchor", async () => {
     await withHome(async (home) => {
       await seedKey(home);
+      const genesis = await loadPublicKey(home); // captured BEFORE any rotation
       const a = await append(home, { probe: "pre-rotation" }, "2026-08-11T00:00:00.000Z");
       assert.equal(a.appended, true, a.error ?? "");
 
       // NON-VACUITY: an empty ledger verifies as a "verified empty chain", so a
       // pass on an empty ledger would prove nothing at all.
-      const entries = await loadCanonicalLedger({ demaHome: home });
-      assert.equal(entries.length, 1, "the ledger must be non-empty for the verify to mean anything");
+      assert.equal((await loadCanonicalLedger({ demaHome: home })).length, 1);
 
-      const before = await verifyCanonicalLedger({ demaHome: home, pubkeyPem: await loadPublicKey(home) });
+      const before = await verifyCanonicalLedger({ demaHome: home, pubkeyPem: genesis });
       assert.equal(before.verified, true, "POSITIVE CONTROL: the chain verifies before the rotation");
 
       const r = await rotate(home);
       assert.equal(r.rotated, true, r.error ?? "");
 
-      const after = await verifyCanonicalLedger({ demaHome: home, pubkeyPem: await loadPublicKey(home) });
-      assert.equal(after.verified, false, "PINNED: the chain no longer verifies against the new active key");
-      assert.equal(after.error ?? after.reason, "signature_invalid");
+      const after = await verifyCanonicalLedger({ demaHome: home, pubkeyPem: genesis });
+      assert.equal(after.verified, true, "the retired key's entries remain valid under the walked authority");
+      assert.equal(after.successions.length, 1);
+      assert.equal(after.final_authority_fingerprint, r.new_fingerprint);
     });
   });
 
-  it("ROW8-B2: PINNED — no canonical receipt can be appended after a rotation", async () => {
+  it("ROW8-B1b: the CURRENT active key is not an anchor, and saying so is not optional", async () => {
     await withHome(async (home) => {
       await seedKey(home);
       assert.equal((await append(home, { probe: "pre" }, "2026-08-11T00:00:00.000Z")).appended, true);
       assert.equal((await rotate(home)).rotated, true);
 
-      const post = await append(home, { probe: "post" }, "2026-08-11T00:01:00.000Z");
-      assert.equal(post.appended, false, "PINNED: the ledger is closed to further appends after a rotation");
-      assert.equal(post.error, "ledger_chain_broken");
-      // This is the constraint on the repair: the COMMIT half of any canonical
-      // transition evidence would have to be appended here, and cannot be.
+      // CONTRACT MIGRATION. `pubkeyPem` is the root-trust anchor now. Handing it
+      // the key in force today asks the chain to certify its own ancestry, and
+      // it must fail rather than appear to verify a history that key never
+      // signed. Failing loudly here is the whole point of the change.
+      const wrong = await verifyCanonicalLedger({ demaHome: home, pubkeyPem: await loadPublicKey(home) });
+      assert.equal(wrong.verified, false);
+      assert.equal(wrong.reason, "signature_invalid");
     });
   });
 
-  it("ROW8-B3: the failure is key succession, not corruption — an empty ledger rotates fine", async () => {
+  it("ROW8-B2: RESOLVED — canonical receipts append normally after a rotation", async () => {
     await withHome(async (home) => {
       await seedKey(home);
+      const genesis = await loadPublicKey(home);
+      assert.equal((await append(home, { probe: "pre" }, "2026-08-11T00:00:00.000Z")).appended, true);
       assert.equal((await rotate(home)).rotated, true);
-      const v = await verifyCanonicalLedger({ demaHome: home, pubkeyPem: await loadPublicKey(home) });
-      assert.equal(v.verified, true, "with no pre-rotation entries there is nothing signed by the retired key");
-      assert.equal(v.total_entries, 0);
-      // So B1/B2 are caused by entries signed under the RETIRED key, not by the
-      // rotation damaging the ledger file.
-      const post = await append(home, { probe: "post-only" }, "2026-08-11T00:02:00.000Z");
-      assert.equal(post.appended, true, "and a ledger started after the rotation works normally");
+
+      const post = await append(home, { probe: "post" }, "2026-08-11T00:01:00.000Z");
+      assert.equal(post.appended, true, "the ledger is no longer closed by a rotation");
+
+      const walk = await verifyCanonicalLedger({ demaHome: home, pubkeyPem: genesis });
+      assert.equal(walk.verified, true, "and the post-rotation entry verifies under the evolved authority");
+    });
+  });
+
+  it("ROW8-B3: two sequential successions walk K0 → K1 → K2 from one anchor", async () => {
+    await withHome(async (home) => {
+      await seedKey(home);
+      const genesis = await loadPublicKey(home);
+      assert.equal((await append(home, { probe: "e0" }, "2026-08-11T00:00:00.000Z")).appended, true);
+      const r1 = await rotate(home);
+      assert.equal((await append(home, { probe: "e1" }, "2026-08-11T00:01:00.000Z")).appended, true);
+      const r2 = await rotateAuthorshipKey({
+        consent: KEY_ROTATE_CONSENT_PHRASE, demaHome: home, retiredAt: "2026-08-11T00:02:00.000Z",
+        reason: "compromised_key_rotation",
+        envelope: { nonce: "row8-nonce-2", ceremony_id: "row8-cer-2", reason: "row8" },
+      });
+      assert.equal(r2.rotated, true, r2.error ?? "");
+      assert.equal((await append(home, { probe: "e2" }, "2026-08-11T00:03:00.000Z")).appended, true);
+
+      const walk = await verifyCanonicalLedger({ demaHome: home, pubkeyPem: genesis });
+      assert.equal(walk.verified, true);
+      assert.equal(walk.successions.length, 2, "both links are recorded, in order");
+      assert.equal(walk.successions[0].successor_fingerprint, r1.new_fingerprint);
+      assert.equal(walk.successions[1].predecessor_fingerprint, r1.new_fingerprint);
+      assert.equal(walk.final_authority_fingerprint, r2.new_fingerprint);
+      assert.equal(walk.total_entries, 7, "3 ordinary + 2 intents + 2 commits");
     });
   });
 });
