@@ -120,6 +120,50 @@ test("Verdict deep-frozen + canonical boundary", () => {
   assert.ok(isCanonicalBoundary(v.boundary));
 });
 
+// ── NAMESPACE TRAP · pinned, not fixed ──────────────────────────────────────
+// Every fixture above uses this verifier's OWN vocabulary: bare 64-hex ids and
+// `prev_hash` / `prev_receipt_hash`. The chain the estate actually writes
+// (scripts/node0-mumu-loop.mjs → receipts/receipt-chain.v0.1.jsonl) uses
+// 16-hex `receipt_id` and `previous_receipt_hash` with a `sha256:` prefix.
+//
+// Measured 2026-08-10 against the real 11-link chain in DEMA_HOME: this
+// verifier returns chain_violated, while `verifyReplay` in
+// scripts/node0-mumu-replay.mjs returns ok:true with zero tamper on the same
+// bytes. The chain is sound; the reader is looking for different field names.
+//
+// These two tests pin BOTH directions of the failure. They assert current
+// behaviour and take no position on which surface is authoritative — that is
+// an operator ruling, not a test's call. They exist so that whoever wires
+// receipt_per_transition does not mistake a false red for a real violation.
+test("verifyReceiptChain · MISREADS the estate's own chain shape (false red)", () => {
+  // Verbatim shape of the on-disk chain, minus payload fields.
+  const v = verifyReceiptChain({
+    receipts: [
+      { receipt_id: "3877b7f1268f8ba9", previous_receipt_hash: null },
+      {
+        receipt_id: "3374416cf0c63ad9",
+        previous_receipt_hash:
+          "sha256:e495472d73e9049dbe22c9cad0791d2bb76694980b8d2417672cc73f5e038f0a",
+      },
+    ],
+  });
+  assert.equal(v.passed, false, "a sound chain is reported violated");
+  assert.ok(v.violations.some((x) => x.includes("invalid_hash_format")));
+  // The sharpest part: link 1 DOES carry a predecessor hash on disk, and this
+  // verifier reports it missing, because it never reads that field name.
+  assert.ok(
+    v.violations.some((x) => x.includes("missing_prev_hash_for_non_genesis_receipt")),
+  );
+});
+
+test("verifyReceiptChain · empty chain passes (false green)", () => {
+  // The mirror hazard. Point this at a namespace it cannot parse and you get a
+  // red; point it at nothing and you get a green. An adapter that settles a
+  // closure row from this must rule out the empty case first — which
+  // `verifyReplay` does explicitly (`receipts.length > 0`) and this does not.
+  assert.equal(verifyReceiptChain({ receipts: [] }).passed, true);
+});
+
 test("Summary + exports · kernel pre-configured", () => {
   const s = buildSATReceiptChainVerifierSummary();
   const k = buildSATReceiptChainVerifierKernel();
